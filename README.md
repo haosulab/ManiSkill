@@ -190,9 +190,9 @@ Thus we recommend that, after you convert actions into different control modes, 
 
 ## ManiSkill 2022 Challenge
 
-We have an accompanying ManiSkill 2022 challenge. See our [website](https://sapien.ucsd.edu/challenges/maniskill/2022/) for additional competition details. You can register for the competition here. After registering and logging in, make sure to create a team for yourself so you can start submitting to the challenge.
+The ManiSkill 2022 challenge is an ongoing competition using the ManiSkill2 benchmark. See our [website](https://sapien.ucsd.edu/challenges/maniskill/2022/) for additional competition details and follow the [getting started](https://sapien.ucsd.edu/challenges/maniskill/2022#getting-started) section to learn how to compete.
 
-To submit to the competition, follow [the instructions on our wiki](https://github.com/haosulab/ManiSkill2/wiki/Participation-Guidelines) on how to create a submission and submit it to the leaderboard.
+To create a submission for the competition, follow [the instructions on our wiki](https://github.com/haosulab/ManiSkill2/wiki/Participation-Guidelines) on how to create a submission and submit it to the leaderboard.
 
 Previous results of the ManiSkill 2021 challenge can be found [here](https://sapien.ucsd.edu/challenges/maniskill/2022/#maniskill2021). Winning solutions and their codes can be found in the previous challenge.
 
