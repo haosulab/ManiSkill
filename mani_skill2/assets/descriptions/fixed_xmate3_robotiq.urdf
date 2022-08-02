@@ -1,0 +1,853 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot
+  name="xmate3gripper">
+  <material name="black">
+    <color rgba="0.0 0.0 0.0 1.0"/>
+  </material>
+  <material name="blue">
+    <color rgba="0.0 0.0 0.8 1.0"/>
+  </material>
+  <material name="green">
+    <color rgba="0.0 0.8 0.0 1.0"/>
+  </material>
+  <material name="grey">
+    <color rgba="0.2 0.2 0.2 1.0"/>
+  </material>
+  <material name="orange">
+    <color rgba="1.0 0.423529411765 0.0392156862745 1.0"/>
+  </material>
+  <material name="brown">
+    <color rgba="0.870588235294 0.811764705882 0.764705882353 1.0"/>
+  </material>
+  <material name="red">
+    <color rgba="0.8 0.0 0.0 1.0"/>
+  </material>
+  <material name="white">
+    <color rgba="1.0 1.0 1.0 1.0"/>
+  </material>
+  <material name="Beige">
+    <color rgba="1.0 0.784 0.5765 1.0"/>
+  </material>
+  <material name="aluminum">
+    <color rgba="0.5 0.5 0.5 1"/>
+  </material>
+  <material name="plastic">
+    <color rgba="0.1 0.1 0.1 1"/>
+  </material>
+  <!-- xmate3_base -->
+  <link name="world">
+  <inertial>
+    <mass value="1"/>
+    <inertia ixx="0.04" ixy="0.00" ixz="0.00" iyy="0.04" iyz="0.00" izz="0.02"/>
+  </inertial>
+  </link>
+  <joint name="xmate3_base_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+    <parent link="world"/>
+    <child link="xmate3_base"/>
+  </joint>
+<!--   table -->
+<!--  <link name="table">-->
+<!--    <visual>-->
+<!--      <geometry>-->
+<!--        <mesh filename="optical_table/visual/optical_table.dae"/>-->
+<!--      </geometry>-->
+<!--    </visual>-->
+<!--    <collision>-->
+<!--      <geometry>-->
+<!--        <mesh filename="optical_table/visual/optical_table.dae"/>-->
+<!--      </geometry>-->
+<!--    </collision>-->
+<!--  </link>-->
+<!--  <joint name="table_joint" type="fixed">-->
+<!--    <parent link="world"/>-->
+<!--    <child link="table"/>-->
+<!--    <origin rpy="0.0 0.0 0.0" xyz="0.36 0.0 -0.06"/>-->
+<!--  </joint>-->
+  <!--base-->
+  <link name="xmate3_base">
+    <visual>
+      <geometry>
+        <mesh filename="xmate3_description/meshes/visual/xmate3_base.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <material name="white"/>
+    </visual>
+    <inertial>
+      <mass value="5.48267"/>
+      <inertia ixx="0.056" ixy="0" ixz="0" iyy="0.066" iyz="0" izz="0.035"/>
+      <origin rpy="0 0 0" xyz="-0.0183 0 0.067"/>
+    </inertial>
+    <collision>
+      <geometry>
+        <mesh filename="xmate3_description/meshes/collision/xmate3_base.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0.0 0.0 0.0"/>
+    </collision>
+  </link>
+  <joint name="joint1" type="revolute">
+    <parent link="xmate3_base"/>
+    <child link="xmate3_link1"/>
+    <limit effort="300" lower="-3.0527" upper="3.0527" velocity="10"/>
+    <axis xyz="0 0 1"/>
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+  </joint>
+  <transmission name="tran1">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="joint1">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="motor1">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+  <!--link 1-->
+  <link name="xmate3_link1">
+    <visual>
+      <geometry>
+        <mesh filename="xmate3_description/meshes/visual/xmate3_link1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <material name="white"/>
+    </visual>
+    <inertial>
+      <mass value="3.37289"/>
+      <inertia ixx="0.314" ixy="0" ixz="0" iyy="0.310" iyz="0" izz="0.01"/>
+      <origin rpy="0 0 0" xyz="0 -0.023 0.295"/>
+    </inertial>
+    <collision>
+      <geometry>
+        <mesh filename="xmate3_description/meshes/collision/xmate3_link1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+    </collision>
+  </link>
+  <joint name="joint2" type="revolute">
+    <parent link="xmate3_link1"/>
+    <child link="xmate3_link2"/>
+    <limit effort="300" lower="-2.0933" upper="2.0933" velocity="10"/>
+    <axis xyz="0 1 0"/>
+    <origin rpy="0 0 0" xyz="0 0 0.34260487"/>
+  </joint>
+  <transmission name="tran2">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="joint2">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="motor2">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+  <!--link 2-->
+  <link name="xmate3_link2">
+    <visual>
+      <geometry>
+        <mesh filename="xmate3_description/meshes/visual/xmate3_link2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0.0"/>
+      <material name="white"/>
+    </visual>
+    <inertial>
+      <mass value="3.74765"/>
+      <inertia ixx="0.074" ixy="0" ixz="0" iyy="0.067" iyz="0" izz="0.014"/>
+      <origin rpy="0 0 0" xyz="0 0.032 0.095"/>
+    </inertial>
+    <collision>
+      <geometry>
+        <mesh filename="xmate3_description/meshes/collision/xmate3_link2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0.0"/>
+    </collision>
+  </link>
+  <joint name="joint3" type="revolute">
+    <parent link="xmate3_link2"/>
+    <child link="xmate3_link3"/>
+    <limit effort="300" lower="-3.0527" upper="3.0527" velocity="10"/>
+    <axis xyz="0 0 1"/>
+    <origin rpy="0 0 0" xyz="0 0 0.23743878"/>
+  </joint>
+  <transmission name="tran3">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="joint3">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="motor3">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+  <!--link 3-->
+  <link name="xmate3_link3">
+    <visual>
+      <geometry>
+        <mesh filename="xmate3_description/meshes/visual/xmate3_link3.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0.15549959"/>
+      <material name="white"/>
+    </visual>
+    <inertial>
+      <mass value="3.38216"/>
+      <inertia ixx="0.028" ixy="0" ixz="0" iyy="0.025" iyz="0" izz="0.01"/>
+      <origin rpy="0 0 0" xyz="0 -0.023 -0.048"/>
+    </inertial>
+    <collision>
+      <geometry>
+        <mesh filename="xmate3_description/meshes/visual/xmate3_link3.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0.15549959"/>
+    </collision>
+  </link>
+  <joint name="joint4" type="revolute">
+    <parent link="xmate3_link3"/>
+    <child link="xmate3_link4"/>
+   <limit effort="300" lower="-2.0933" upper="2.0933" velocity="10"/>
+<!--     lower="-2.79" upper="2.79" -->
+    <axis xyz="0 1 0"/>
+<!--     <origin rpy="0 0 0" xyz="0.585 0.0 0.035"/> -->
+    <origin rpy="0 0 0" xyz="0 0 0.15549959"/>
+  </joint>
+  <transmission name="tran4">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="joint4">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="motor4">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+  <!--link 4-->
+  <link name="xmate3_link4">
+    <visual>
+      <geometry>
+        <mesh filename="xmate3_description/meshes/visual/xmate3_link4.stl" scale=".001 0.001 0.001"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0.0 0.0 0.0"/>
+      <material name="white"/>
+    </visual>
+    <inertial>
+      <mass value="3.21031"/>
+      <inertia ixx="0.027" ixy="0" ixz="0" iyy="0.024" iyz="0" izz="0.007"/>
+      <origin rpy="0 0 0" xyz="0 0.037 0.075"/>
+    </inertial>
+    <collision>
+      <geometry>
+        <mesh filename="xmate3_description/meshes/collision/xmate3_link4.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0.0 0.0 0.0"/>
+    </collision>
+  </link>
+  <joint name="joint5" type="revolute">
+    <parent link="xmate3_link4"/>
+    <child link="xmate3_link5"/>
+    <limit effort="300" lower="-3.0527" upper="3.0527" velocity="10"/>
+    <axis xyz="0 0 1"/>
+    <origin rpy="0 0 0" xyz="0 0 0.22044633"/>
+  </joint>
+  <transmission name="tran5">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="joint5">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="motor5">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+  <!--link 5-->
+  <link name="xmate3_link5">
+    <visual>
+      <geometry>
+        <mesh filename="xmate3_description/meshes/visual/xmate3_link5.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0.14512568"/>
+      <material name="white"/>
+    </visual>
+    <inertial>
+      <mass value="1.7"/>
+      <inertia ixx="0.022" ixy="0" ixz="0" iyy="0.018" iyz="0" izz="0.0076"/>
+      <origin rpy="0 0 0" xyz="0 -0.025 -0.052"/>
+    </inertial>
+    <collision>
+      <geometry>
+        <mesh filename="xmate3_description/meshes/collision/xmate3_link5.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0.14512568"/>
+    </collision>
+  </link>
+  <joint name="joint6" type="revolute">
+    <parent link="xmate3_link5"/>
+    <child link="xmate3_link6"/>
+    <limit effort="300" lower="-2.0933" upper="2.0933" velocity="10"/>
+    <axis xyz="0 1 0"/>
+    <origin xyz="0 0 0.14512568" rpy="0.0 0.0 0.0" />
+  </joint>
+  <transmission name="tran6">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="joint6">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="motor6">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+  <!--link 6-->
+  <link name="xmate3_link6">
+    <visual>
+      <geometry>
+        <mesh filename="xmate3_description/meshes/visual/xmate3_link6.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0.0 0.0 0.0"/>
+      <material name="white"/>
+    </visual>
+    <inertial>
+      <mass value="2.6002"/>
+      <inertia ixx="0.016" ixy="-0.000000" ixz="-0.000000" iyy="0.0156" iyz="-0.000000" izz="0.0042"/>
+      <origin rpy="0 0 0" xyz="0 0.02 0.073"/>
+    </inertial>
+    <collision>
+      <geometry>
+        <mesh filename="xmate3_description/meshes/collision/xmate3_link6.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0.0 0.0 0.0"/>
+    </collision>
+  </link>
+  <joint name="joint7" type="revolute">
+    <parent link="xmate3_link6"/>
+    <child link="xmate3_link7"/>
+    <limit effort="300" lower="-6.283" upper="2.993" velocity="10"/>
+    <axis xyz="0 0 1"/>
+    <origin xyz="0 0 0.25090877" rpy="0.0 0.0 0.0" />
+  </joint>
+  <transmission name="tran7">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="joint7">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="motor7">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+<!--link 7-->
+  <link name="xmate3_link7">
+    <visual>
+      <geometry>
+        <mesh filename="xmate3_description/meshes/visual/xmate3_link7.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0.0 0.0 0"/>
+      <material name="white"/>
+    </visual>
+    <inertial>
+      <mass value="1.50517"/>
+      <inertia ixx="0.0037" ixy="0" ixz="0" iyy="0.0021" iyz="0" izz="0.0030"/>
+      <origin rpy="0 0 0" xyz="0 0.023 -0.044"/>
+    </inertial>
+    <collision>
+      <geometry>
+        <mesh filename="xmate3_description/meshes/collision/xmate3_link7.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0.0 0.0 0"/>
+    </collision>
+  </link>
+<!--robotiq adjusted gripper-->
+  <link
+    name="robotiq_connector">
+    <inertial>
+      <origin
+        xyz="-0.0011437 0.013539 0.0070148"
+        rpy="0 0 0" />
+      <mass
+        value="0.17371" />
+      <inertia
+        ixx="0.00015634"
+        ixy="-2.6899E-06"
+        ixz="-3.7656E-07"
+        iyy="5.565E-05"
+        iyz="1.4996E-06"
+        izz="0.00020436" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="xmate3_description/meshes/robotiq_connector.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.89804 0.91765 0.92941 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="xmate3_description/meshes/robotiq_connector.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="robotiq_connector_joint"
+    type="fixed">
+    <origin
+      xyz="0 0 0"
+      rpy="0 0 0" />
+    <parent
+      link="xmate3_link7" />
+    <child
+      link="robotiq_connector" />
+    <axis
+      xyz="0 0 0" />
+  </joint>
+  <joint
+    name="robotiq_base_joint"
+    type="fixed">
+    <origin
+      xyz="0 0 0.014"
+      rpy="0 0 -1.5708" />
+    <parent
+      link="robotiq_connector" />
+    <child
+      link="robotiq_arg2f_base_link" />
+    <axis
+      xyz="0 0 0" />
+  </joint>
+
+<!-- eye-in-hand camera -->
+  <joint name="realsense_hand_joint" type="fixed">
+    <origin rpy="2.12574149 -1.55582192  2.58286879" xyz="0.04028231  0.07736792  0.01266915"/>
+    <parent link="xmate3_link7"/>
+    <child link="camera_hand_color_frame"/>
+  </joint>
+  <link name="camera_hand_link">
+    <visual>
+      <origin rpy="1.5707963267948966 0 1.5707963267948966" xyz="0.00987 -0.02 -0.02"/>
+      <geometry>
+        <mesh filename="realsense2_description/meshes/d415.stl"/>
+      </geometry>
+      <material name="aluminum"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 -0.02 0"/>
+      <geometry>
+        <box size="0.02005 0.099 0.023"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.564"/>
+      <origin xyz="0 0 0"/>
+      <inertia ixx="0.003881243" ixy="0.0" ixz="0.0" iyy="0.000498940" iyz="0.0" izz="0.003879257"/>
+    </inertial>
+  </link>
+
+  <!-- camera color joints and links -->
+  <joint name="camera_hand_color_joint" type="fixed">
+    <origin xyz="0 -0.015 0" rpy="0 0 0"/>
+    <parent link="camera_hand_color_frame"/>
+    <child link="camera_hand_link"/>
+  </joint>
+  <link name="camera_hand_color_frame"/>
+
+  <joint name="camera_hand_color_optical_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="-1.571 -0.000 -1.571"/>
+    <parent link="camera_hand_color_frame"/>
+    <child link="camera_hand_color_optical_frame"/>
+  </joint>
+  <link name="camera_hand_color_optical_frame"/>
+<!--  <gazebo reference="camera_hand_color_frame">-->
+<!--    <sensor type="depth" name="camera_hand">-->
+<!--      <camera>-->
+<!--        <horizontal_fov>1.2108</horizontal_fov>-->
+<!--        <image>-->
+<!--          <width>1920</width>-->
+<!--          <height>1080</height>-->
+<!--        </image>-->
+<!--        <clip>-->
+<!--          <near>0.01</near>-->
+<!--          <far>100</far>-->
+<!--        </clip>-->
+<!--      </camera>-->
+<!--    </sensor>-->
+<!--  </gazebo>-->
+  <!-- Only used when processing real point cloud since it requires camera_hand_depth_optical_frame -->
+  <joint name="camera_hand_depth_optical_joint" type="fixed">
+    <origin xyz="-0.000 -0.015 -0.000" rpy="-1.573 0.003 -1.576"/>
+    <parent link="camera_hand_color_frame"/>
+    <child link="camera_hand_depth_optical_frame"/>
+  </joint>
+  <link name="camera_hand_depth_optical_frame"/>
+ 
+  <!--  Begin Robotiq-140-->
+  <link name="robotiq_arg2f_base_link">
+    <inertial>
+      <origin rpy="0 0 0" xyz="8.625E-08 -4.6583E-06 0.03145"/>
+      <mass value="0.22652"/>
+      <inertia ixx="0.00020005" ixy="-4.2442E-10" ixz="-2.9069E-10" iyy="0.00017832" iyz="-3.4402E-08"
+               izz="0.00013478"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="robotiq_description/visual/robotiq_arg2f_base_link.dae"/>
+      </geometry>
+      <material name="">
+        <color rgba="0.1 0.1 0.1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="robotiq_description/collision/robotiq_arg2f_base_link.stl"/>
+      </geometry>
+    </collision>
+  </link>
+  <link name="grasp_convenient_link"/>
+  <joint name="grasp_convenient_joint" type="fixed">
+    <origin rpy="0 -1.57079 0" xyz="0 0 0.225"/>
+    <parent link="robotiq_arg2f_base_link"/>
+    <child link="grasp_convenient_link"/>
+  </joint>
+  <link name="left_outer_knuckle">
+    <inertial>
+      <origin rpy="0 0 0" xyz="-0.000200000000003065 0.0199435877845359 0.0292245259211331"/>
+      <mass value="0.00853198276973456"/>
+      <inertia ixx="2.89328108496468E-04" ixy="-1.57935047237397E-19" ixz="-1.93980378593255E-19"
+               iyy="1.86719750325683E-04" iyz="-1.21858577871576E-04" izz="1.21905238907251E-04"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh
+            filename="robotiq_description/visual/robotiq_arg2f_140_outer_knuckle.dae"/>
+      </geometry>
+      <material name="">
+        <color rgba="0.792156862745098 0.819607843137255 0.933333333333333 1"/>
+      </material>
+    </visual>
+    <!--    <collision>-->
+    <!--      <origin rpy="0 0 0" xyz="0 0 0"/>-->
+    <!--      <geometry>-->
+    <!--        <mesh-->
+    <!--            filename="package://robotiq_2f_140_gripper_visualization/meshes/collision/robotiq_arg2f_140_outer_knuckle.stl"/>-->
+    <!--      </geometry>-->
+    <!--    </collision>-->
+  </link>
+  <link name="left_outer_finger">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.00030115855001899 0.0373907951953854 -0.0208027427000385"/>
+      <mass value="0.022614240507152"/>
+      <inertia ixx="1.52518312458174E-03" ixy="9.76583423954399E-10" ixz="-5.43838577022588E-10"
+               iyy="6.17694243867776E-04" iyz="6.78636130740228E-04" izz="1.16494917907219E-03"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh
+            filename="robotiq_description/visual/robotiq_arg2f_140_outer_finger.dae"/>
+      </geometry>
+      <material name="">
+        <color rgba="0.1 0.1 0.1 1"/>
+      </material>
+    </visual>
+    <!--    <collision>-->
+    <!--      <origin rpy="0 0 0" xyz="0 0 0"/>-->
+    <!--      <geometry>-->
+    <!--        <mesh-->
+    <!--            filename="package://robotiq_2f_140_gripper_visualization/meshes/collision/robotiq_arg2f_140_outer_finger.stl"/>-->
+    <!--      </geometry>-->
+    <!--    </collision>-->
+  </link>
+  <link name="left_inner_finger">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.000299999999999317 0.0160078233491243 -0.0136945669206257"/>
+      <mass value="0.0104003125914103"/>
+      <inertia ixx="2.71909453810972E-04" ixy="1.35402465472579E-21" ixz="-7.1817349065269E-22"
+               iyy="7.69100314106116E-05" iyz="6.74715432769696E-05" izz="2.30315190420171E-04"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh
+            filename="robotiq_description/visual/robotiq_arg2f_140_inner_finger.dae"/>
+      </geometry>
+      <material name="">
+        <color rgba="0.1 0.1 0.1 1"/>
+      </material>
+    </visual>
+  </link>
+  <link name="left_inner_finger_pad">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <box size="0.027 0.065 0.0075"/>
+      </geometry>
+      <material name="">
+        <color rgba="0.9 0.9 0.9 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <box size="0.03 0.07 0.0075"/>
+      </geometry>
+      <material name="">
+        <color rgba="0.9 0.0 0.0 1"/>
+      </material>
+    </collision>
+  </link>
+  <link name="left_inner_knuckle">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.000123011831763771 0.0507850843201817 0.00103968640075166"/>
+      <mass value="0.0271177346495152"/>
+      <inertia ixx="2.61910379223783E-03" ixy="-2.43616858946494E-05" ixz="-6.37789906117123E-09"
+               iyy="2.8270243746167E-04" iyz="-5.37200748039765E-05" izz="2.83695868220296E-04"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh
+            filename="robotiq_description/visual/robotiq_arg2f_140_inner_knuckle.dae"/>
+      </geometry>
+      <material name="">
+        <color rgba="0.1 0.1 0.1 1"/>
+      </material>
+    </visual>
+  </link>
+  <link name="right_outer_knuckle">
+    <inertial>
+      <origin rpy="0 0 0" xyz="-0.000200000000003065 0.0199435877845359 0.0292245259211331"/>
+      <mass value="0.00853198276973456"/>
+      <inertia ixx="2.89328108496468E-06" ixy="-1.57935047237397E-19" ixz="-1.93980378593255E-19"
+               iyy="1.86719750325683E-06" iyz="-1.21858577871576E-06" izz="1.21905238907251E-06"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh
+            filename="robotiq_description/visual/robotiq_arg2f_140_outer_knuckle.dae"/>
+      </geometry>
+      <material name="">
+        <color rgba="0.792156862745098 0.819607843137255 0.933333333333333 1"/>
+      </material>
+    </visual>
+  </link>
+  <link name="right_outer_finger">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.00030115855001899 0.0373907951953854 -0.0208027427000385"/>
+      <mass value="0.022614240507152"/>
+      <inertia ixx="1.52518312458174E-03" ixy="9.76583423954399E-10" ixz="-5.43838577022588E-10"
+               iyy="6.17694243867776E-03" iyz="6.78636130740228E-04" izz="1.16494917907219E-03"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh
+            filename="robotiq_description/visual/robotiq_arg2f_140_outer_finger.dae"/>
+      </geometry>
+      <material name="">
+        <color rgba="0.1 0.1 0.1 1"/>
+      </material>
+    </visual>
+  </link>
+  <link name="right_inner_finger">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.000299999999999317 0.0160078233491243 -0.0136945669206257"/>
+      <mass value="0.0104003125914103"/>
+      <inertia ixx="2.71909453810972E-03" ixy="1.35402465472579E-21" ixz="-7.1817349065269E-22"
+               iyy="7.69100314106116E-04" iyz="6.74715432769696E-04" izz="2.30315190420171E-03"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh
+            filename="robotiq_description/visual/robotiq_arg2f_140_inner_finger.dae"/>
+      </geometry>
+      <material name="">
+        <color rgba="0.1 0.1 0.1 1"/>
+      </material>
+    </visual>
+  </link>
+  <link name="right_inner_finger_pad">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <box size="0.027 0.065 0.0075"/>
+      </geometry>
+      <material name="">
+        <color rgba="0.9 0.9 0.9 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <box size="0.03 0.07 0.0075"/>
+      </geometry>
+      <material name="">
+        <color rgba="0.9 0.0 0.0 1"/>
+      </material>
+    </collision>
+  </link>
+  <link name="right_inner_knuckle">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.000123011831763771 0.0507850843201817 0.00103968640075166"/>
+      <mass value="0.0271177346495152"/>
+      <inertia ixx="2.61910379223783E-02" ixy="-2.43616858946494E-04" ixz="-6.37789906117123E-06"
+               iyy="2.8270243746167E-03" iyz="-5.37200748039765E-04" izz="2.83695868220296E-02"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh
+            filename="robotiq_description/visual/robotiq_arg2f_140_inner_knuckle.dae"/>
+      </geometry>
+      <material name="">
+        <color rgba="0.1 0.1 0.1 1"/>
+      </material>
+    </visual>
+  </link>
+
+  <joint name="robotiq_2f_140_left_driver_joint" type="prismatic">
+    <origin rpy="1.57079 0 0" xyz="0 -0.068 0.177"/>
+    <parent link="robotiq_arg2f_base_link"/>
+    <child link="left_inner_finger_pad"/>
+    <axis xyz="0 0.35112344 -0.93632918"/>
+    <limit effort="1000" lower="0" upper="0.06835" velocity="2.0"/>
+  </joint>
+  <joint name="robotiq_2f_140_right_driver_joint" type="prismatic">
+    <origin rpy="1.57079 0 -3.14" xyz="0 0.068 0.177"/>
+    <parent link="robotiq_arg2f_base_link"/>
+    <child link="right_inner_finger_pad"/>
+    <axis xyz="0 0.35112344 -0.93632918"/>
+    <limit effort="1000" lower="0" upper="0.06835" velocity="2.0"/>
+  </joint>
+
+  <joint name="robotiq_2f_140_left_driver_mimic_joint" type="fixed">
+    <origin rpy="2.29579632679 0 0" xyz="0 -0.030601 0.054905"/>
+    <parent link="robotiq_arg2f_base_link"/>
+    <child link="left_outer_knuckle"/>
+    <axis xyz="-1 0 0"/>
+<!--    <limit effort="1000" lower="0" upper="0.725" velocity="2.0"/>-->
+<!--    <mimic joint="robotiq_2f_140_left_driver_joint" multiplier="-1" offset="0"/>-->
+  </joint>
+  <joint name="robotiq_2f_140_left_coupler_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="0 0.01821998610742 0.0260018192872234"/>
+    <parent link="left_outer_knuckle"/>
+    <child link="left_outer_finger"/>
+    <axis xyz="1 0 0"/>
+  </joint>
+  <joint name="robotiq_2f_140_left_spring_link_joint" type="fixed">
+    <origin rpy="2.29579632679 0 0.0" xyz="0 -0.0127 0.06142"/>
+    <parent link="robotiq_arg2f_base_link"/>
+    <child link="left_inner_knuckle"/>
+    <axis xyz="-1 0 0"/>
+<!--    <limit effort="1000" lower="0" upper="0.8757" velocity="2.0"/>-->
+<!--    <mimic joint="robotiq_2f_140_left_driver_joint" multiplier="-1" offset="0"/>-->
+  </joint>
+  <joint name="robotiq_2f_140_left_pad_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="0 -0.0457554015893473 0.0272203446692936"/>
+    <child link="left_inner_finger"/>
+    <parent link="left_inner_finger_pad"/>
+    <axis xyz="0 0 1"/>
+  </joint>
+
+  <joint name="robotiq_2f_140_right_driver_mimic_joint" type="fixed">
+    <origin rpy="2.29579632679 0 3.14159265359" xyz="0 0.030601 0.054905"/>
+    <parent link="robotiq_arg2f_base_link"/>
+    <child link="right_outer_knuckle"/>
+    <axis xyz="-1 0 0"/>
+<!--    <limit effort="1000" lower="0.0" upper="0.725" velocity="2.0"/>-->
+<!--    <mimic joint="robotiq_2f_140_left_driver_joint" multiplier="-1" offset="0"/>-->
+  </joint>
+  <joint name="robotiq_2f_140_right_coupler_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="0 0.01821998610742 0.0260018192872234"/>
+    <parent link="right_outer_knuckle"/>
+    <child link="right_outer_finger"/>
+    <axis xyz="1 0 0"/>
+  </joint>
+  <joint name="robotiq_2f_140_right_spring_link_joint" type="fixed">
+    <origin rpy="2.29579632679 0 -3.14159265359" xyz="0 0.0127 0.06142"/>
+    <parent link="robotiq_arg2f_base_link"/>
+    <child link="right_inner_knuckle"/>
+    <axis xyz="-1 0 0"/>
+<!--    <limit effort="1000" lower="0" upper="0.8757" velocity="2.0"/>-->
+<!--    <mimic joint="robotiq_2f_140_left_driver_joint" multiplier="-1" offset="0"/>-->
+  </joint>
+  <joint name="robotiq_2f_140_right_pad_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="0 -0.0457554015893473 0.0272203446692936"/>
+    <child link="right_inner_finger"/>
+    <parent link="right_inner_finger_pad"/>
+    <axis xyz="0 0 1"/>
+  </joint>
+<!-- eye-on-base camera -->
+  <joint name="realsense_base_joint" type="fixed">
+    <!-- <origin rpy="-0.026407443096889277 0.5109299626903319 0.4578676884689042" xyz="0.05793063 -0.50792133 0.65201918"/> -->
+    <origin rpy="-0.01909744  0.51414666  0.46018937" xyz="0.05880015 -0.51058289  0.64973008"/>
+    <parent link="xmate3_base"/>
+    <child link="camera_base_color_frame"/>
+  </joint>
+  <link name="camera_base_color_frame"/>
+
+  <joint name="camera_base_color_joint" type="fixed">
+    <origin xyz="0 -0.015 0" rpy="0.001 0.005 -0.012"/>
+    <child link="camera_base_link"/>
+    <parent link="camera_base_color_frame"/>
+  </joint>
+  <link name="camera_base_link">
+    <visual>
+      <origin rpy="1.5707963267948966 0 1.5707963267948966" xyz="0.00987 -0.02 -0.02"/>
+      <geometry>
+        <mesh filename="realsense2_description/meshes/d415.stl"/>
+      </geometry>
+      <material name="aluminum"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 -0.02 0"/>
+      <geometry>
+        <box size="0.02005 0.099 0.023"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.564"/>
+      <origin xyz="0 0 0"/>
+      <inertia ixx="0.003881243" ixy="0.0" ixz="0.0" iyy="0.000498940" iyz="0.0" izz="0.003879257"/>
+    </inertial>
+  </link>
+  <joint name="camera_base_color_optical_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="-1.571 -0.000 -1.571"/>
+    <parent link="camera_base_color_frame"/>
+    <child link="camera_base_color_optical_frame"/>
+  </joint>
+  <link name="camera_base_color_optical_frame"/>
+
+<!--  <gazebo reference="camera_base_color_frame">-->
+<!--    <sensor type="depth" name="camera_base">-->
+<!--      <camera>-->
+<!--        <horizontal_fov>1.2108</horizontal_fov>-->
+<!--        <image>-->
+<!--          <width>1920</width>-->
+<!--          <height>1080</height>-->
+<!--        </image>-->
+<!--        <clip>-->
+<!--          <near>0.01</near>-->
+<!--          <far>100</far>-->
+<!--        </clip>-->
+<!--      </camera>-->
+<!--    </sensor>-->
+<!--  </gazebo>-->
+  <!-- Only used when processing real point cloud since it requires camera_base_depth_optical_frame -->
+  <joint name="camera_base_depth_optical_joint" type="fixed">
+    <origin xyz="-0.000 -0.015 -0.000" rpy="-1.576 0.001 -1.583"/>
+    <parent link="camera_base_color_frame"/>
+    <child link="camera_base_depth_optical_frame"/>
+  </joint>
+  <link name="camera_base_depth_optical_frame"/>
+
+</robot>

@@ -1,0 +1,26 @@
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.8
+  - pip
+  - numpy # to be compatible with pytorch
+  - scipy
+  - pip:
+      # core
+      - "gym>=0.18.3,<=0.21.0"
+      - sapien==2.1.0
+      # basic
+      - GitPython
+      - pyyaml
+      - tabulate
+      - tqdm
+      - h5py
+      # vision
+      - transforms3d
+      - opencv-python
+      - imageio
+      - imageio[ffmpeg]
+      - trimesh
+      - open3d
+      - rtree

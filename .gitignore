@@ -1,0 +1,35 @@
+# compilation and distribution
+__pycache__
+_ext
+*.pyc
+*.so
+build/
+dist/
+*.egg-info/
+
+# ipython/jupyter notebooks
+*.ipynb
+**/.ipynb_checkpoints/
+
+# Editor temporaries
+*.swn
+*.swo
+*.swp
+*~
+
+# MacOS
+*.DS_Store
+
+# Pycharm editor settings
+.idea
+
+# VSCode editor settings
+.vscode
+
+# project-relevant
+imgui.ini
+
+# directories that should be ignored in general
+# but can be excluded explicitly
+demos/*
+tmp/*
