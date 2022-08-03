@@ -2,7 +2,7 @@ import argparse
 
 import gym
 import numpy as np
-
+from pprint import pprint
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.utils.visualization.cv2_utils import OpenCVViewer
 from mani_skill2.utils.wrappers import RecordEpisode
@@ -55,8 +55,10 @@ def main():
         else:
             return f"{space.__class__.__name__} {space.shape}"
         return obj
-    pprint("Observation space", get_formatted_space(env.observation_space))
-    pprint("Action space", get_formatted_space(env.action_space))
+    print("Observation Space")
+    pprint(get_formatted_space(env.observation_space))
+    print("Action Space")
+    pprint(get_formatted_space(env.action_space))
     print("Control mode", env.control_mode)
     print("Reward mode", env.reward_mode)
 
