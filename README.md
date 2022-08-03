@@ -14,6 +14,7 @@ The ManiSkill2 is a large-scale robotic manipulation benchmark, focusing on lear
 - [Demonstrations](#demonstrations)
 - [ManiSkill 2022 Challenge](#maniskill-2022-challenge)
 - [Leaderboard](#leaderboard)
+- [License](#license)
 
 ## Installation
 
@@ -199,3 +200,10 @@ Previous results of the ManiSkill 2021 challenge can be found [here](https://sap
 ## Leaderboard
 
 You can find the leaderboard on the challenge website: <https://sapien.ucsd.edu/challenges/maniskill/challenges/ms2022>.
+
+## License
+
+All rigid body environments in ManiSkill are licensed under fully permissive licenses (e.g., Apache-2.0).
+
+However, the soft body environments will follow Warp's license. Currently, they are licensed under
+[NVIDIA Source Code License for Warp](https://github.com/NVIDIA/warp/blob/main/LICENSE.md).
