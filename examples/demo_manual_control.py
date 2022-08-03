@@ -46,8 +46,17 @@ def main():
         record_dir = record_dir.format(env_id=args.env_id)
         env = RecordEpisode(env, record_dir, render_mode=args.render_mode)
 
-    print("Observation space", env.observation_space)
-    print("Action space", env.action_space)
+    def get_formatted_space(space: gym.Space):
+        obj = {}
+        if isinstance(space, gym.spaces.Dict):
+            for k in space.keys():
+                fmt = get_formatted_space(space[k])
+                obj[k] = fmt
+        else:
+            return f"{space.__class__.__name__} {space.shape}"
+        return obj
+    pprint("Observation space", get_formatted_space(env.observation_space))
+    pprint("Action space", get_formatted_space(env.action_space))
     print("Control mode", env.control_mode)
     print("Reward mode", env.reward_mode)
 
