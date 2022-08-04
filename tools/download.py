@@ -1,4 +1,5 @@
 import argparse
+import hashlib
 import shutil
 import tempfile
 import urllib.request
@@ -13,10 +14,12 @@ from mani_skill2.utils.io_utils import load_json
 DATA_SOURCES = {}
 DATA_SOURCES["ycb"] = dict(
     url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/mani_skill2_ycb.zip",
+    checksum="ae06464f436b14be8d483d3cf46965df8be4fa939f10baa21e295cb16729b81d",
     output_dir=ASSET_DIR,
 )
 DATA_SOURCES["egad"] = dict(
     url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/mani_skill2_egad.zip",
+    checksum="a06f335148a1aa420625f89ef94674dbd59932c6d86beb20784c095c7f915970",
     output_dir=ASSET_DIR,
 )
 DATA_SOURCES["faucet"] = dict(
@@ -44,6 +47,7 @@ def prompt_yes_no(message):
 def download(
     url,
     output_dir,
+    checksum=None,
     ignore_exist=False,
     chunk_size=1024 * 32,
     verbose=True,
@@ -69,24 +73,33 @@ def download(
         if to_remove:
             shutil.rmtree(output_dir)
 
+    hasher = hashlib.sha256()
     if verbose:
         print(f"Downloading {url}...")
+
     with tempfile.TemporaryFile() as fp:
         pbar = (
             tqdm(total=r.length, unit="iB", unit_scale=True, unit_divisor=1024)
             if verbose
             else None
         )
+
         for chunk in iter(lambda: r.read(chunk_size), b""):
             # filter out keep-alive new chunks
             if not chunk:
                 continue
 
             fp.write(chunk)
+            hasher.update(chunk)
+
             if pbar is not None:
                 pbar.update(len(chunk))
+
         if pbar is not None:
             pbar.close()
+
+        if checksum is not None and hasher.hexdigest() != checksum:
+            raise IOError("Downloaded zip file's SHA-256 hash does not match record")
 
         z = zipfile.ZipFile(fp)
         if verbose:
