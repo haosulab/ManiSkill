@@ -138,13 +138,13 @@ def from_pd_joint_pos_to_ee(
 
             if (np.abs(arm_action[:3])).max() > 1:  # position clipping
                 if verbose:
-                    pbar.write(f"Position action is clipped: {arm_action[:3]}")
+                    tqdm.write(f"Position action is clipped: {arm_action[:3]}")
                 arm_action[:3] = np.clip(arm_action[:3], -1, 1)
                 flag = False
             if not pos_only:
                 if np.linalg.norm(arm_action[3:]) > 1:  # rotation clipping
                     if verbose:
-                        pbar.write(f"Rotation action is clipped: {arm_action[3:]}")
+                        tqdm.write(f"Rotation action is clipped: {arm_action[3:]}")
                     arm_action[3:] = arm_action[3:] / np.linalg.norm(arm_action[3:])
                     flag = False
 
@@ -214,7 +214,7 @@ def from_pd_joint_pos(
             # Assume normalized action
             if np.max(np.abs(arm_action)) > 1 + 1e-3:
                 if verbose:
-                    pbar.write(f"Arm action is clipped: {arm_action}")
+                    tqdm.write(f"Arm action is clipped: {arm_action}")
                 flag = False
             arm_action = np.clip(arm_action, -1, 1)
             output_action_dict["arm"] = arm_action
@@ -320,10 +320,7 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
             pbar.set_description(f"Replaying {traj_id}")
 
         if traj_id not in ori_h5_file:
-            if pbar is not None:
-                pbar.write(f"{traj_id} does not exist in {traj_path}")
-            else:
-                print(f"{traj_id} does not exist in {traj_path}")
+            tqdm.write(f"{traj_id} does not exist in {traj_path}")
             continue
 
         reset_kwargs = ep["reset_kwargs"].copy()
@@ -384,12 +381,7 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
                 # Rollback episode id for failed attempts
                 env._episode_id -= 1
         else:
-            if pbar is not None:
-                pbar.write(
-                    f"Episode {episode_id} is not replayed successfully. Skipping"
-                )
-            else:
-                print(f"Episode {episode_id} is not replayed successfully. Skipping")
+            tqdm.write(f"Episode {episode_id} is not replayed successfully. Skipping")
 
     # Cleanup
     env.close()
@@ -416,10 +408,10 @@ def main():
             output_path = res[0][: -len("0.h5")] + "h5"
             merge_h5(output_path, res)
             for h5_path in res:
-                print("Remove", h5_path)
+                tqdm.write(f"Remove {h5_path}")
                 os.remove(h5_path)
                 json_path = h5_path.replace(".h5", ".json")
-                print("Remove", json_path)
+                tqdm.write(f"Remove {json_path}")
                 os.remove(json_path)
     else:
         _main(args)
