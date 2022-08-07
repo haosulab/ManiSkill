@@ -54,7 +54,7 @@ def task(meshes):
 
 class MPMBaseEnv(BaseEnv):
     SUPPORTED_OBS_MODES = ("none", "rgbd", "pointcloud")
-    SUPPORTED_REWARD_MODES = ("sparse", "dense")
+    SUPPORTED_REWARD_MODES = ("dense", "sparse")
 
     def __init__(
         self,
