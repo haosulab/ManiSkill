@@ -2,7 +2,7 @@
 
 ![teaser](figures/teaser.jpg)
 
-The ManiSkill2 is a large-scale robotic manipulation benchmark, focusing on learning generalizable robot agents and manipulation skills. It features 2000+ diverse objects, 20 task categories, and a large-scale demonstration set in [SAPIEN](https://sapien.ucsd.edu/), a fully-physical, realistic simulator. The benchmark can be used to study imitation learning, reinforcement learning, and motion planning with our environments, etc. We invite you to participate in the associated [ManiSkill 2022 challenge](https://sapien.ucsd.edu/challenges/maniskill/2022/) where we will be awarding prizes to the teams who achieve the highest success rates in our environments.
+ManiSkill2 is a large-scale robotic manipulation benchmark, focusing on learning generalizable robot agents and manipulation skills. It features 2000+ diverse objects, 20 task categories, and a large-scale demonstration set in [SAPIEN](https://sapien.ucsd.edu/), a fully-physical, realistic simulator. The benchmark can be used to study 2D & 3D vision-based imitation learning, reinforcement learning, and motion planning, etc. We invite you to participate in the associated [ManiSkill 2022 challenge](https://sapien.ucsd.edu/challenges/maniskill/2022/) where we will be awarding prizes to the teams who achieve the highest success rates in our environments.
 
 **Table of Contents**
 
