@@ -398,7 +398,7 @@ def build_actor_egad(
     scene: sapien.Scene,
     scale: float = 1.0,
     physical_material: sapien.PhysicalMaterial = None,
-    density=1000,
+    density=100,
     render_material: sapien.RenderMaterial = None,
 ):
     builder = scene.create_actor_builder()
@@ -445,7 +445,11 @@ class PickSingleEGADEnv(PickSingleEnv):
         mat.roughness = 0.1
 
         self.obj = build_actor_egad(
-            self.model_id, self._scene, scale=self.model_scale, render_material=mat
+            self.model_id,
+            self._scene,
+            scale=self.model_scale,
+            render_material=mat,
+            density=100,
         )
         self.obj.name = self.model_id
 
