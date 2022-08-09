@@ -169,16 +169,16 @@ The raw demonstration files contain all necessary information (e.g. initial stat
 # Replay demonstrations with control_mode=pd_joint_delta_pos
 python tools/replay_trajectory.py --traj-path demos/rigid_body_envs/PickCube-v0/trajectory.h5 \
   --save-traj --target-control-mode pd_joint_delta_pos --obs-mode none --num-procs 10
-  
-# For soft-body environments, if you haven't used an environment in the past and 
-#   want to parallelize trajectory conversion, you need to first use 
-#   "--num-procs=1" to generate SDF for the environment, etc (--num-procs=X will report
-#   errors during this process if X > 1). After this process has been done and 
-#   trajectories start to be converted, use ctrl+c to halt the convert process, and use 
-#   --num-procs=X (X>1) to start parallelized trajectory conversion.
 ```
 
 > The script requires `trajectory.h5` and `trajectory.json` to be both under the same directory
+
+> For soft-body environments, if you haven't used an environment in the past and 
+> want to parallelize trajectory conversion, you need to first use 
+> "--num-procs=1" to generate SDF for the environment, etc (--num-procs=X will report
+> errors during this process if X > 1). After this process has been done and 
+> trajectories start to be converted, use ctrl+c to halt the convert process, and use 
+> --num-procs=X (X>1) to start parallelized trajectory conversion.
 
 <details>
   
