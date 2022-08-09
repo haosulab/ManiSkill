@@ -1,3 +1,6 @@
+import argparse
+from pathlib import Path
+
 import h5py
 
 from mani_skill2.utils.io_utils import dump_json, load_json
@@ -54,3 +57,25 @@ def merge_h5(output_path: str, traj_paths, recompute_id=True):
     # Ignore commit info
     merged_h5_file.close()
     dump_json(merged_json_path, merged_json_data, indent=2)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-i", "--input-dirs", nargs="+")
+    parser.add_argument("-o", "--output-path", type=str)
+    parser.add_argument("-p", "--pattern", type=str, default="trajectory.h5")
+    args = parser.parse_args()
+
+    traj_paths = []
+    for input_dir in args.input_dirs:
+        input_dir = Path(input_dir)
+        traj_paths.extend(sorted(input_dir.rglob(args.pattern)))
+
+    output_dir = Path(args.output_path).parent
+    output_dir.mkdir(exist_ok=True, parents=True)
+
+    merge_h5(args.output_path, traj_paths)
+
+
+if __name__ == "__main__":
+    main()

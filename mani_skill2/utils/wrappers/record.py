@@ -257,11 +257,9 @@ class RecordEpisode(gym.Wrapper):
         )
 
     def close(self) -> None:
-        if self.reorder_trajectories:
-            self._h5_file, self._json_data = reorder_trajectories(
-                self._h5_file, self._json_data
-            )
         if self.save_trajectory:
+            if self.reorder_trajectories:
+                reorder_trajectories(self._h5_file, self._json_data)
             self._h5_file.close()
             dump_json(self._json_path, self._json_data, indent=2)
         return super().close()
