@@ -168,7 +168,14 @@ The raw demonstration files contain all necessary information (e.g. initial stat
 ```bash
 # Replay demonstrations with control_mode=pd_joint_delta_pos
 python tools/replay_trajectory.py --traj-path demos/rigid_body_envs/PickCube-v0/trajectory.h5 \
-  --save-traj --target-control-mode pd_joint_delta_pos --num-procs 10
+  --save-traj --target-control-mode pd_joint_delta_pos --obs-mode none --num-procs 10
+  
+# For soft-body environments, if you haven't used an environment in the past and 
+#   want to parallelize trajectory conversion, you need to first use 
+#   "--num-procs=1" to generate SDF for the environment, etc (--num-procs=X will report
+#   errors during this process if X > 1). After this process has been done and 
+#   trajectories start to be converted, use ctrl+c to halt the convert process, and use 
+#   --num-procs=X (X>1) to start parallelized trajectory conversion.
 ```
 
 > The script requires `trajectory.h5` and `trajectory.json` to be both under the same directory
@@ -179,13 +186,14 @@ python tools/replay_trajectory.py --traj-path demos/rigid_body_envs/PickCube-v0/
 
 - `--save-traj`: save the replayed trajectory to the same folder as the original trajectory file.
 - `--num-procs=10`: split trajectories to multiple processes (e.g., 10 processes) for acceleration.
+- `--obs-mode=none`: (not included in the script above) specify the observation mode as `none`, i.e. not saving any observations.
 - `--obs-mode=rgbd`: (not included in the script above) specify the observation mode as `rgbd` to replay the trajectory. If `--save-traj`, the saved trajectory will contain the RGBD observations. RGB images are saved as uint8 and depth images (multiplied by 1024) are saved as uint16.
 - `--obs-mode=pointcloud`: (not included in the script above) specify the observation mode as `pointcloud`. We discourage using it directly.
 - `--obs-mode=state`: (not included in the script above) specify the observation mode as `state`. Note that the `state` observation mode is not allowed for challenge submission.
   
 </details>
 
-We recommend using our script only for converting actions into different control modes  and not record any observation information (i.e. without passing `--obs-mode`). The reason is that (1) some observation modes, e.g. point cloud, can take much space without any post-processing, e.g., point cloud downsampling; in addition, the `state` mode for soft-body environments also has a similar issue, since the states of those environments are particles. (2) Some algorithms  (e.g. GAIL) require custom keys stored in the demonstration files, e.g. next-observation.
+We recommend using our script only for converting actions into different control modes  and not record any observation information (i.e. passing `--obs-mode=none`). The reason is that (1) some observation modes, e.g. point cloud, can take much space without any post-processing, e.g., point cloud downsampling; in addition, the `state` mode for soft-body environments also has a similar issue, since the states of those environments are particles. (2) Some algorithms  (e.g. GAIL) require custom keys stored in the demonstration files, e.g. next-observation.
   
 Thus we recommend that, after you convert actions into different control modes, implement your own custom environment wrappers for observation processing. After this, use another script to render and save the corresponding post-processed visual demonstrations. [ManiSkill2-Learn](https://github.com/haosulab/ManiSkill2-Learn) has included such observation processing wrapper and demonstration conversion script (with multi-processing), so we recommend referring to the repo for more details.
 
