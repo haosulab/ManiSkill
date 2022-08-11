@@ -27,6 +27,10 @@ DATA_SOURCES["faucet"] = dict(
     output_dir=ASSET_DIR / "partnet_mobility" / "dataset",
     model_db=load_json(ASSET_DIR / "partnet_mobility/meta/info_faucet_train.json"),
 )
+DATA_SOURCES["avoid_obstacles"] = dict(
+    url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/avoid_obstacles/panda_train_2k.json.gz",
+    output_dir=ASSET_DIR / "avoid_obstacles",
+)
 
 
 def prompt_yes_no(message):
@@ -77,30 +81,36 @@ def download(
     if verbose:
         print(f"Downloading {url}...")
 
-    with tempfile.TemporaryFile() as fp:
-        pbar = (
-            tqdm(total=r.length, unit="iB", unit_scale=True, unit_divisor=1024)
-            if verbose
-            else None
-        )
+    fp = (
+        tempfile.TemporaryFile()
+        if url.endswith("zip")
+        else open(output_dir / url.split("/")[-1], "wb")
+    )
 
-        for chunk in iter(lambda: r.read(chunk_size), b""):
-            # filter out keep-alive new chunks
-            if not chunk:
-                continue
+    pbar = (
+        tqdm(total=r.length, unit="iB", unit_scale=True, unit_divisor=1024)
+        if verbose
+        else None
+    )
 
-            fp.write(chunk)
-            hasher.update(chunk)
+    for chunk in iter(lambda: r.read(chunk_size), b""):
+        # filter out keep-alive new chunks
+        if not chunk:
+            continue
 
-            if pbar is not None:
-                pbar.update(len(chunk))
+        fp.write(chunk)
+        hasher.update(chunk)
 
         if pbar is not None:
-            pbar.close()
+            pbar.update(len(chunk))
 
-        if checksum is not None and hasher.hexdigest() != checksum:
-            raise IOError("Downloaded zip file's SHA-256 hash does not match record")
+    if pbar is not None:
+        pbar.close()
 
+    if checksum is not None and hasher.hexdigest() != checksum:
+        raise IOError("Downloaded file's SHA-256 hash does not match record")
+
+    if url.endswith("zip"):
         z = zipfile.ZipFile(fp)
         if verbose:
             print(f"Extracting {url} to {output_dir}...")
@@ -108,6 +118,8 @@ def download(
                 z.extract(file, output_dir)
         else:
             z.extractall(output_dir)
+
+    fp.close()
 
 
 def parse_args():
