@@ -26,8 +26,6 @@ from mani_skill2.utils.trimesh_utils import get_actor_mesh
 
 
 class TurnFaucetBaseEnv(BaseEnv):
-    SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "rgbd", "pointcloud")
-    SUPPORTED_REWARD_MODES = ("dense", "sparse")
     SUPPORTED_ROBOTS = {"panda": Panda}
     agent: Panda
 

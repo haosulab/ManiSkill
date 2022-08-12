@@ -93,19 +93,18 @@ class StackCubeEnv(StationaryManipulationEnv):
         self.cubeB.set_pose(cubeB_pose)
 
     def _get_obs_extra(self):
-        if self._obs_mode in ["rgbd", "pointcloud"]:
-            return OrderedDict(
-                tcp_pose=vectorize_pose(self.tcp.pose),
-            )
-        else:
-            return OrderedDict(
-                tcp_pose=vectorize_pose(self.tcp.pose),
+        obs = OrderedDict(
+            tcp_pose=vectorize_pose(self.tcp.pose),
+        )
+        if self._obs_mode in ["state", "state_dict"]:
+            obs.udpate(
                 cubeA_pose=vectorize_pose(self.cubeA.pose),
                 cubeB_pose=vectorize_pose(self.cubeB.pose),
                 tcp_to_cubeA_pos=self.cubeA.pose.p - self.tcp.pose.p,
                 tcp_to_cubeB_pos=self.cubeB.pose.p - self.tcp.pose.p,
                 cubeA_to_cubeB_pos=self.cubeB.pose.p - self.cubeA.pose.p,
             )
+        return obs
 
     def _check_cubeA_on_cubeB(self):
         cubeA_pose_at_cubeB = self.cubeB.pose.inv() * self.cubeA.pose

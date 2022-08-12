@@ -81,6 +81,8 @@ def get_dtype_bounds(dtype: np.dtype):
     elif np.issubdtype(dtype, np.integer):
         info = np.iinfo(dtype)
         return info.min, info.max
+    elif np.issctype(dtype, bool):
+        return 0, 1
     else:
         raise TypeError(dtype)
 

@@ -13,7 +13,6 @@ from .base_env import StationaryManipulationEnv
 
 @register_gym_env(name="PegInsertionSide-v0", max_episode_steps=200)
 class PegInsertionSideEnv(StationaryManipulationEnv):
-    SUPPORTED_REWARD_MODES = ("dense", "sparse")
     _clearance = 0.003
 
     def reset(self, reconfigure=True, **kwargs):
@@ -148,16 +147,15 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
         # self.peg.set_pose(self.goal_pose)
 
     def _get_obs_extra(self) -> OrderedDict:
-        if self._obs_mode in ["rgbd", "pointcloud"]:
-            return OrderedDict(tcp_pose=vectorize_pose(self.tcp.pose))
-        else:
-            return OrderedDict(
-                tcp_pose=vectorize_pose(self.tcp.pose),
+        obs = OrderedDict(tcp_pose=vectorize_pose(self.tcp.pose))
+        if self._obs_mode in ["state", "state_dict"]:
+            obs.update(
                 peg_pose=vectorize_pose(self.peg.pose),
                 peg_half_size=self.peg_half_size,
                 box_hole_pose=vectorize_pose(self.box_hole_pose),
                 box_hole_radius=self.box_hole_radius,
             )
+        return obs
 
     def has_peg_inserted(self):
         # Only head position is used in fact

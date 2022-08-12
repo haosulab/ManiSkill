@@ -14,8 +14,6 @@ from .base_env import StationaryManipulationEnv
 
 @register_gym_env(name="PlugCharger-v0", max_episode_steps=200)
 class PlugChargerEnv(StationaryManipulationEnv):
-    SUPPORTED_REWARD_MODES = ("dense", "sparse")
-
     _base_size = [2e-2, 1.5e-2, 1.2e-2]  # charger base half size
     _peg_size = [8e-3, 0.75e-3, 3.2e-3]  # charger peg half size
     _peg_gap = 7e-3  # charger peg gap
@@ -149,15 +147,14 @@ class PlugChargerEnv(StationaryManipulationEnv):
         return self.charger.pose.transform(Pose([-self._base_size[0], 0, 0]))
 
     def _get_obs_extra(self) -> OrderedDict:
-        if self._obs_mode in ["rgbd", "pointcloud"]:
-            return OrderedDict(tcp_pose=vectorize_pose(self.tcp.pose))
-        else:
-            return OrderedDict(
-                tcp_pose=vectorize_pose(self.tcp.pose),
+        obs = OrderedDict(tcp_pose=vectorize_pose(self.tcp.pose))
+        if self._obs_mode in ["state", "state_dict"]:
+            obs.update(
                 charger_pose=vectorize_pose(self.charger.pose),
                 receptacle_pose=vectorize_pose(self.receptacle.pose),
                 goal_pose=vectorize_pose(self.goal_pose),
             )
+        return obs
 
     def evaluate(self, **kwargs):
         obj_to_goal_dist, obj_to_goal_angle = self._compute_distance()

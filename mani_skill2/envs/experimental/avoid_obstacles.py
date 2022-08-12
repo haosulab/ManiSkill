@@ -21,8 +21,6 @@ from mani_skill2.utils.sapien_utils import (
 
 class AvoidObstaclesBaseEnv(BaseEnv):
     DEFAULT_EPISODE_JSON: str
-    SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "rgbd", "pointcloud")
-    SUPPORTED_REWARD_MODES = ("dense", "sparse")
 
     tcp: sapien.Link  # Tool Center Point of the robot
 

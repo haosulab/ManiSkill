@@ -8,11 +8,7 @@ from sapien.utils import Viewer
 
 from mani_skill2 import logger
 from mani_skill2.agents.base_agent import BaseAgent
-from mani_skill2.agents.camera import (
-    get_camera_images,
-    get_camera_pcd,
-    get_camera_rgb,
-)
+from mani_skill2.agents.camera import get_camera_images, get_camera_pcd, get_camera_rgb
 from mani_skill2.utils.common import (
     convert_observation_to_space,
     flatten_state_dict,
@@ -49,8 +45,14 @@ class BaseEnv(gym.Env):
         device (str): GPU device for renderer, e.g., 'cuda:x'
     """
 
-    SUPPORTED_OBS_MODES: Tuple[str] = ()
-    SUPPORTED_REWARD_MODES: Tuple[str] = ()
+    # fmt: off
+    SUPPORTED_OBS_MODES = (
+        "state", "state_dict", "none", "rgbd", "pointcloud", 
+        "rgbd_robot_seg", "pointcloud_robot_seg",
+    )
+    SUPPORTED_REWARD_MODES = ("dense", "sparse")
+    # fmt: on
+
     agent: BaseAgent
     _cameras: Dict[str, sapien.CameraEntity]
 
@@ -158,6 +160,10 @@ class BaseEnv(gym.Env):
             return self._get_obs_rgbd()
         elif self._obs_mode == "pointcloud":
             return self._get_obs_pointcloud()
+        elif self._obs_mode == "rgbd_robot_seg":
+            return self._get_obs_rgbd_robot_seg()
+        elif self._obs_mode == "pointcloud_robot_seg":
+            return self._get_obs_pointcloud_robot_seg()
         else:
             raise NotImplementedError(self._obs_mode)
 
@@ -234,7 +240,7 @@ class BaseEnv(gym.Env):
 
         pcds = self.agent.get_camera_pcd(fuse=False, **kwargs)
         for name, camera in self._cameras.items():
-            pcd = get_camera_pcd(camera)
+            pcd = get_camera_pcd(camera, **kwargs)
             T = camera.get_model_matrix()
             pcd["xyzw"] = pcd["xyzw"] @ T.T
             pcds[name] = pcd
@@ -246,6 +252,25 @@ class BaseEnv(gym.Env):
             agent=self._get_obs_agent(),
             extra=self._get_obs_extra(),
         )
+
+    def _get_robot_seg(self, actor_seg):
+        return np.uint8(np.isin(actor_seg, self.agent.robot_link_ids))
+
+    def _get_obs_rgbd_robot_seg(self):
+        images = self._get_obs_images(actor_seg=True)
+        for image in images.values():
+            image["robot_seg"] = self._get_robot_seg(image.pop("actor_seg"))
+        return OrderedDict(
+            image=images,
+            agent=self._get_obs_agent(),
+            extra=self._get_obs_extra(),
+        )
+
+    def _get_obs_pointcloud_robot_seg(self):
+        obs = self._get_obs_pointcloud(actor_seg=True)
+        pointcloud = obs["pointcloud"]
+        pointcloud["robot_seg"] = self._get_robot_seg(pointcloud.pop("actor_seg"))
+        return obs
 
     # -------------------------------------------------------------------------- #
     # Reward mode
@@ -276,9 +301,9 @@ class BaseEnv(gym.Env):
         self._clear()
 
         self._setup_scene()
+        self._load_agent()
         self._load_actors()
         self._load_articulations()
-        self._load_agent()
         self._setup_cameras()
         self._setup_lighting()
 

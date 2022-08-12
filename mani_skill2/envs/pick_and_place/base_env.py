@@ -16,8 +16,6 @@ from mani_skill2.utils.sapien_utils import (
 
 
 class StationaryManipulationEnv(BaseEnv):
-    SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "rgbd", "pointcloud")
-    SUPPORTED_REWARD_MODES = ("dense", "sparse")
     SUPPORTED_ROBOTS = {"panda": Panda, "xmate3_robotiq": Xmate3Robotiq}
     agent: Union[Panda, Xmate3Robotiq]
 

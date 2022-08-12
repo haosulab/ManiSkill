@@ -129,6 +129,9 @@ class BaseAgent:
         assert self.robot is not None, f"Fail to load URDF from {urdf_path}"
         self.robot.set_name(Path(urdf_path).stem)
 
+        # Cache robot link ids
+        self.robot_link_ids = [link.get_id() for link in self.robot.get_links()]
+
     def _setup_controllers(self):
         self.controllers = OrderedDict()
         for uuid, config in self.controller_configs.items():

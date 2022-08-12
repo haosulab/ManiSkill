@@ -53,8 +53,9 @@ def task(meshes):
 
 
 class MPMBaseEnv(BaseEnv):
-    SUPPORTED_OBS_MODES = ("none", "rgbd", "pointcloud")
-    SUPPORTED_REWARD_MODES = ("dense", "sparse")
+    # fmt: off
+    SUPPORTED_OBS_MODES = ("none", "rgbd", "pointcloud", "rgbd_robot_seg", "pointcloud_robot_seg")
+    # fmt: on
 
     def __init__(
         self,
@@ -97,10 +98,11 @@ class MPMBaseEnv(BaseEnv):
 
     def reconfigure(self):
         self._clear()
+
         self._setup_scene()
+        self._load_agent()
         self._load_actors()
         self._load_articulations()
-        self._load_agent()
         self._setup_cameras()
         self._setup_lighting()
 
@@ -113,11 +115,6 @@ class MPMBaseEnv(BaseEnv):
         # Cache actors and articulations
         self._actors = self.get_actors()
         self._articulations = self.get_articulations()
-        # Cache initial simulation state
-
-        # HACK: initialize to avoid problems
-        self.initialize_episode()
-        self._initial_sim_state = self.get_sim_state()
 
     def _load_actors(self):
         self._scene.add_ground(altitude=0.0, render=False)
