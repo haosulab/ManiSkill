@@ -63,9 +63,10 @@ def get_camera_rgb(camera: sapien.CameraEntity, uint8=True):
 def get_camera_depth(camera: sapien.CameraEntity):
     # position texture is in OpenGL frame, and thus depth is negative.
     # The unit is meter
-    depth = -get_texture(camera, "Position")[..., [2]]  # [H, W, 1]
-    # mask = get_texture(camera, "Position")[..., [3]]
-    # depth[mask == 1] = camera.far
+    position = get_texture(camera, "Position")
+    # NOTE(jigu): Depth is 0 if beyond camera far.
+    depth = -position[..., [2]]  # [H, W, 1]
+    # depth[position[..., [3]] == 1] = camera.far
     return depth
 
 
@@ -108,9 +109,8 @@ def get_camera_pcd(
     pcd = OrderedDict()
     # Each pixel is (x, y, z, z_buffer_depth) in OpenGL camera space
     position = get_texture(camera, "Position")  # [H, W, 4]
-    # # Remove invalid points
-    # mask = position[..., -1] < 1
-    pcd["xyz"] = position[..., :3].reshape(-1, 3)
+    position[..., 3] = position[..., 3] < 1
+    pcd["xyzw"] = position.reshape(-1, 4)
     if rgb:
         pcd["rgb"] = get_camera_rgb(camera).reshape(-1, 3)
     if visual_seg or actor_seg:

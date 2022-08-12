@@ -236,7 +236,7 @@ class BaseEnv(gym.Env):
         for name, camera in self._cameras.items():
             pcd = get_camera_pcd(camera)
             T = camera.get_model_matrix()
-            pcd["xyz"] = pcd["xyz"] @ T[:3, :3].T + T[:3, 3]
+            pcd["xyzw"] = pcd["xyzw"] @ T.T
             pcds[name] = pcd
 
         fused_pcd = merge_dicts(pcds.values(), True)

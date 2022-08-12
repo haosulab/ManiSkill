@@ -281,7 +281,7 @@ class BaseAgent:
             # Model matrix is the transformation from OpenGL camera space to SAPIEN world space
             # camera.get_model_matrix() must be called after scene.update_render()!
             T = cam.get_model_matrix()
-            pcd["xyz"] = pcd["xyz"] @ T[:3, :3].T + T[:3, 3]
+            pcd["xyzw"] = pcd["xyzw"] @ T.T
             ret[name] = pcd
 
         if fuse:
