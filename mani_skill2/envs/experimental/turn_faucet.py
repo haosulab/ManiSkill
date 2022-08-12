@@ -26,7 +26,7 @@ from mani_skill2.utils.trimesh_utils import get_actor_mesh
 
 
 class TurnFaucetBaseEnv(BaseEnv):
-    SUPPORTED_OBS_MODES = ("none", "rgbd", "pointcloud")
+    SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "rgbd", "pointcloud")
     SUPPORTED_REWARD_MODES = ("dense", "sparse")
     SUPPORTED_ROBOTS = {"panda": Panda}
     agent: Panda
@@ -65,6 +65,11 @@ class TurnFaucetBaseEnv(BaseEnv):
             self.agent.robot.set_pose(Pose([-0.56, 0, 0]))
         else:
             raise NotImplementedError(self.robot_uuid)
+
+    def _get_obs_agent(self):
+        obs = self.agent.get_proprioception()
+        obs["base_pose"] = vectorize_pose(self.agent.robot.pose)
+        return obs
 
     def _setup_cameras(self):
         self.render_camera = self._scene.add_camera(
@@ -235,7 +240,9 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
         qpos[self.target_joint_idx] = self.init_angle
         self.faucet.set_qpos(qpos)
 
+        # -------------------------------------------------------------------------- #
         # For dense reward
+        # -------------------------------------------------------------------------- #
         # NOTE(jigu): trimesh uses np.random to sample
         with np_random(self._episode_seed):
             self.lfinger_pcd = self.lfinger_mesh.sample(256)
@@ -250,7 +257,7 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
         idx = random_choice(np.arange(n_switch_links), self._episode_rng)
 
         self.target_link_name = self.switch_link_names[idx]
-        self.target_link = self.switch_links[idx]
+        self.target_link: sapien.Link = self.switch_links[idx]
         self.target_joint: sapien.Joint = self.switch_joints[idx]
         self.target_joint_idx = self.faucet.get_active_joints().index(self.target_joint)
 
@@ -263,6 +270,11 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
         # NOTE(jigu): trimesh uses np.random to sample
         with np_random(self._episode_seed):
             self.target_link_pcd = self.target_link_mesh.sample(256)
+
+        # NOTE(jigu): joint origin can be anywhere on the joint axis.
+        # Thus, I use the center of mass at the beginning instead
+        cmass_pose = self.target_link.pose * self.target_link.cmass_local_pose
+        self.target_link_pos = cmass_pose.p
 
     def _set_init_and_target_angle(self):
         qmin, qmax = self.target_joint.get_limits()[0]
@@ -280,19 +292,24 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
         self.target_angle_diff = self.target_angle - self.init_angle
 
     def _get_obs_extra(self) -> OrderedDict:
-        return OrderedDict(
+        obs = OrderedDict(
             tcp_pose=vectorize_pose(self.tcp.pose),
             target_angle_diff=self.target_angle_diff,
-            joint_axis=self.target_joint_axis,
+            target_joint_axis=self.target_joint_axis,
+            target_link_pos=self.target_link_pos,
         )
+        if self._obs_mode in ["state", "state_dict"]:
+            angle_dist = self.target_angle - self.current_angle
+            obs["angle_dist"] = angle_dist
+        return obs
 
     @property
     def current_angle(self):
         return self.faucet.get_qpos()[self.target_joint_idx]
 
     def evaluate(self, **kwargs):
-        angle_dist = self.current_angle - self.target_angle
-        return dict(success=angle_dist >= 0, angle_dist=angle_dist)
+        angle_dist = self.target_angle - self.current_angle
+        return dict(success=angle_dist < 0, angle_dist=angle_dist)
 
     def _compute_distance(self):
         """Compute the distance between the tap and robot fingers."""

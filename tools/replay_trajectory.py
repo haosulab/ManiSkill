@@ -21,7 +21,7 @@ import mani_skill2.envs
 from mani_skill2.agents.base_controller import CombinedController
 from mani_skill2.agents.controllers import *
 from mani_skill2.envs.sapien_env import BaseEnv
-from mani_skill2.utils.common import inv_scale_action
+from mani_skill2.utils.common import clip_and_scale_action, inv_scale_action
 from mani_skill2.utils.io_utils import load_json
 from mani_skill2.utils.sapien_utils import get_entity_by_name
 from mani_skill2.utils.wrappers import RecordEpisode
@@ -230,6 +230,52 @@ def from_pd_joint_pos(
     return info
 
 
+def from_pd_joint_delta_pos(
+    output_mode,
+    ori_actions,
+    ori_env: BaseEnv,
+    env: BaseEnv,
+    render=False,
+    pbar=None,
+    verbose=False,
+):
+    n = len(ori_actions)
+    if pbar is not None:
+        pbar.reset(total=n)
+
+    ori_controller: CombinedController = ori_env.agent.controller
+    controller: CombinedController = env.agent.controller
+    ori_arm_controller: PDJointPosController = ori_controller.controllers["arm"]
+
+    assert output_mode == "pd_joint_pos", output_mode
+    low, high = ori_arm_controller.config.lower, ori_arm_controller.config.upper
+
+    info = {}
+
+    for t in range(n):
+        if pbar is not None:
+            pbar.update()
+
+        ori_action = ori_actions[t]
+        ori_action_dict = ori_controller.to_action_dict(ori_action)
+        output_action_dict = ori_action_dict.copy()  # do not in-place modify
+
+        prev_arm_qpos = ori_arm_controller.qpos
+        delta_qpos = clip_and_scale_action(ori_action_dict["arm"], low, high)
+        arm_action = prev_arm_qpos + delta_qpos
+
+        ori_env.step(ori_action)
+
+        output_action_dict["arm"] = arm_action
+        output_action = controller.from_action_dict(output_action_dict)
+        _, _, _, info = env.step(output_action)
+
+        if render:
+            env.render()
+
+    return info
+
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--traj-path", type=str, required=True)
@@ -359,6 +405,18 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
             # From joint position to others
             elif ori_control_mode == "pd_joint_pos":
                 info = from_pd_joint_pos(
+                    target_control_mode,
+                    ori_actions,
+                    ori_env,
+                    env,
+                    render=args.vis,
+                    pbar=pbar,
+                    verbose=args.verbose,
+                )
+
+            # From joint delta position to others
+            elif ori_control_mode == "pd_joint_delta_pos":
+                info = from_pd_joint_delta_pos(
                     target_control_mode,
                     ori_actions,
                     ori_env,
