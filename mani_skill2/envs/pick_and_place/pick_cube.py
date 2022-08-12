@@ -52,21 +52,18 @@ class PickCubeEnv(StationaryManipulationEnv):
         self.goal_site.set_pose(Pose(self.goal_pos))
 
     def _get_obs_extra(self) -> OrderedDict:
-        if self._obs_mode in ["rgbd", "pointcloud"]:
-            return OrderedDict(
-                tcp_pose=vectorize_pose(self.tcp.pose),
-                goal_pos=self.goal_pos,
-                tcp_to_goal_pos=self.goal_pos - self.tcp.pose.p,
-            )
-        else:
-            return OrderedDict(
-                tcp_pose=vectorize_pose(self.tcp.pose),
-                goal_pos=self.goal_pos,
+        obs = OrderedDict(
+            tcp_pose=vectorize_pose(self.tcp.pose),
+            goal_pos=self.goal_pos,
+        )
+        if self._obs_mode in ["state", "state_dict"]:
+            obs.update(
                 tcp_to_goal_pos=self.goal_pos - self.tcp.pose.p,
                 obj_pose=vectorize_pose(self.obj.pose),
                 tcp_to_obj_pos=self.obj.pose.p - self.tcp.pose.p,
                 obj_to_goal_pos=self.goal_pos - self.obj.pose.p,
             )
+        return obs
 
     def check_obj_placed(self):
         return np.linalg.norm(self.goal_pos - self.obj.pose.p) <= self.goal_thresh
@@ -136,16 +133,15 @@ class LiftCubeEnv(PickCubeEnv):
         self.goal_site.set_pose(Pose(self.goal_pos))
 
     def _get_obs_extra(self) -> OrderedDict:
-        if self._obs_mode in ["rgbd", "pointcloud"]:
-            return OrderedDict(
-                tcp_pose=vectorize_pose(self.tcp.pose),
-            )
-        else:
-            return OrderedDict(
-                tcp_pose=vectorize_pose(self.tcp.pose),
+        obs = OrderedDict(
+            tcp_pose=vectorize_pose(self.tcp.pose),
+        )
+        if self._obs_mode in ["state", "state_dict"]:
+            obs.update(
                 obj_pose=vectorize_pose(self.obj.pose),
                 tcp_to_obj_pos=self.obj.pose.p - self.tcp.pose.p,
             )
+        return obs
 
     def check_obj_placed(self):
         return self.obj.pose.p[2] >= self.goal_height + self.cube_half_size[2]

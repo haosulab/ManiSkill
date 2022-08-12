@@ -171,21 +171,18 @@ class PickSingleEnv(StationaryManipulationEnv):
         self.goal_site.set_pose(Pose(self.goal_pos))
 
     def _get_obs_extra(self) -> OrderedDict:
-        if self._obs_mode in ["rgbd", "pointcloud"]:
-            return OrderedDict(
-                tcp_pose=vectorize_pose(self.tcp.pose),
-                goal_pos=self.goal_pos,
-                tcp_to_goal_pos=self.goal_pos - self.tcp.pose.p,
-            )
-        else:
-            return OrderedDict(
-                tcp_pose=vectorize_pose(self.tcp.pose),
-                goal_pos=self.goal_pos,
+        obs = OrderedDict(
+            tcp_pose=vectorize_pose(self.tcp.pose),
+            goal_pos=self.goal_pos,
+        )
+        if self._obs_mode in ["state", "state_dict"]:
+            obs.update(
                 tcp_to_goal_pos=self.goal_pos - self.tcp.pose.p,
                 obj_pose=vectorize_pose(self.obj_pose),
                 tcp_to_obj_pos=self.obj_pose.p - self.tcp.pose.p,
                 obj_to_goal_pos=self.goal_pos - self.obj_pose.p,
             )
+        return obs
 
     def check_robot_static(self, thresh=0.2):
         # Assume that the last two DoF is gripper
