@@ -327,7 +327,8 @@ class PourEnv(MPMBaseEnv):
             if not success:
                 continue
 
-            result[-2:] = 0.4
+            # TODO: remove hardcode
+            result[-2:] = 0.04
             self._init_qpos = result
             return
 
