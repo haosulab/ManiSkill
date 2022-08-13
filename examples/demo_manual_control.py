@@ -144,6 +144,28 @@ def main():
             after_reset = True
             continue
 
+        # Visualize observation
+        if key == "v":
+            if "rgbd" in env.obs_mode:
+                from itertools import chain
+                from mani_skill2.utils.visualization.misc import (
+                    observations_to_images,
+                    tile_images,
+                )
+
+                images = list(
+                    chain(*[observations_to_images(x) for x in obs["image"].values()])
+                )
+                render_frame = tile_images(images)
+                opencv_viewer.imshow(render_frame)
+            elif "pointcloud" in env.obs_mode:
+                import trimesh
+
+                xyz = obs["pointcloud"]["xyzw"][..., :3]
+                rgb = obs["pointcloud"]["rgb"]
+                # rgb = np.tile(obs["pointcloud"]["robot_seg"] * 255, [1, 3])
+                trimesh.PointCloud(xyz, rgb).show()
+
         action = ee_action
         if has_gripper:
             action = np.hstack([ee_action, gripper_action])
