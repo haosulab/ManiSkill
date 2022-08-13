@@ -66,20 +66,20 @@ def observations_to_images(observations, max_depth=None) -> List[np.ndarray]:
             rgb = observations[sensor_name]
             if rgb.dtype == np.float32:
                 rgb = np.clip(rgb * 255, 0, 255).astype(np.uint8)
-            rgb = cv2.resize(rgb, [128, 128])
+            # rgb = cv2.resize(rgb, [128, 128])
             images.append(rgb)
         elif "depth" in sensor_name:
             depth = observations[sensor_name]  # [H, W, 1]
             depth = normalize_depth(depth, max_depth=max_depth)
             depth = np.clip(depth * 255, 0, 255).astype(np.uint8)
             depth = np.repeat(depth, 3, axis=-1)
-            depth = cv2.resize(depth, [128, 128])
+            # depth = cv2.resize(depth, [128, 128])
             images.append(depth)
         elif "seg" in sensor_name:
-            seg = observations[sensor_name]  # [H, W]
+            seg = observations[sensor_name]  # [H, W, 1]
             seg = (seg * 255).astype(np.uint8)
-            seg = np.repeat(seg[..., np.newaxis], 3, axis=-1)
-            seg = cv2.resize(seg, [128, 128])
+            seg = np.repeat(seg, 3, axis=-1)
+            # seg = cv2.resize(seg, [128, 128])
             images.append(seg)
     return images
 

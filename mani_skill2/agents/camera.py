@@ -93,9 +93,9 @@ def get_camera_images(
     if visual_seg or actor_seg:
         seg = get_camera_seg(camera)
         if visual_seg:
-            images["visual_seg"] = seg[..., 0]
+            images["visual_seg"] = seg[..., 0:1]
         if actor_seg:
-            images["actor_seg"] = seg[..., 1]
+            images["actor_seg"] = seg[..., 1:2]
     return images
 
 
@@ -116,9 +116,9 @@ def get_camera_pcd(
     if visual_seg or actor_seg:
         seg = get_camera_seg(camera)
         if visual_seg:
-            pcd["visual_seg"] = seg[..., 0].reshape(-1)
+            pcd["visual_seg"] = seg[..., 0].reshape(-1, 1)
         if actor_seg:
-            pcd["actor_seg"] = seg[..., 1].reshape(-1)
+            pcd["actor_seg"] = seg[..., 1].reshape(-1, 1)
     return pcd
 
 
@@ -148,6 +148,7 @@ class MountedCameraConfig:
 
     def build(self, articulation: sapien.Articulation, scene: sapien.Scene, name=""):
         camera_mount = get_entity_by_name(articulation.get_links(), self.mount_link)
+        assert camera_mount is not None, self.mount_link
         mount_pose = sapien.Pose(self.mount_p, self.mount_q)
         camera = scene.add_mounted_camera(
             name,
