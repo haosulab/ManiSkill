@@ -153,6 +153,8 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
 
     def _load_articulations(self):
         self.faucet = self._load_faucet()
+        # Cache qpos to restore
+        self._faucet_init_qpos = self.faucet.get_qpos()
 
         # Set friction and damping for all joints
         for joint in self.faucet.get_active_joints():
@@ -234,7 +236,7 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
         self._set_target_link()
         self._set_init_and_target_angle()
 
-        qpos = self.faucet.get_qpos()
+        qpos = self._faucet_init_qpos.copy()
         qpos[self.target_joint_idx] = self.init_angle
         self.faucet.set_qpos(qpos)
 
