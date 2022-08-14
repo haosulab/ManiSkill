@@ -76,9 +76,11 @@ def observations_to_images(observations, max_depth=None) -> List[np.ndarray]:
             # depth = cv2.resize(depth, [128, 128])
             images.append(depth)
         elif "seg" in sensor_name:
-            seg = observations[sensor_name]  # [H, W, 1]
-            seg = (seg * 255).astype(np.uint8)
-            seg = np.repeat(seg, 3, axis=-1)
+            seg: np.ndarray = observations[sensor_name]  # [H, W, 1]
+            assert seg.ndim == 3 and seg.shape[-1] == 1, seg.shape
+            # A heuristic way to colorize labels
+            seg = np.uint8(seg * [11, 61, 127])
+            # seg = np.repeat(seg, 3, axis=-1)
             # seg = cv2.resize(seg, [128, 128])
             images.append(seg)
     return images

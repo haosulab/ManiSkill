@@ -65,6 +65,7 @@ class BaseEnv(gym.Env):
         control_freq: int = 20,
         device: str = "",
         enable_shadow=False,
+        enable_gt_seg=False,
     ):
         # SAPIEN
         self._engine = sapien.Engine()
@@ -100,6 +101,9 @@ class BaseEnv(gym.Env):
 
         # Rendering
         self.enable_shadow = enable_shadow
+
+        # For training purpose
+        self.enable_gt_seg = enable_gt_seg
 
         # TODO(jigu): `seed` is deprecated in the latest gym.
         self.seed()
@@ -182,9 +186,14 @@ class BaseEnv(gym.Env):
         """Get task-relevant extra observations."""
         return OrderedDict()
 
-    def _get_obs_rgbd(self) -> OrderedDict:
+    def _get_obs_rgbd(self, **kwargs) -> OrderedDict:
+        # Overwrite options if using GT segmentation
+        if self.enable_gt_seg:
+            kwargs["visual_seg"] = True
+            kwargs["actor_seg"] = True
+        
         return OrderedDict(
-            image=self._get_obs_images(),
+            image=self._get_obs_images(**kwargs),
             agent=self._get_obs_agent(),
             extra=self._get_obs_extra(),
         )
@@ -231,6 +240,11 @@ class BaseEnv(gym.Env):
 
     def _get_obs_pointcloud(self, **kwargs):
         """Fuse pointclouds from all cameras in the world frame."""
+        # Overwrite options if using GT segmentation
+        if self.enable_gt_seg:
+            kwargs["visual_seg"] = True
+            kwargs["actor_seg"] = True
+
         self.update_render()
 
         # Take pictures first, which is non-blocking
@@ -254,17 +268,15 @@ class BaseEnv(gym.Env):
         )
 
     def _get_robot_seg(self, actor_seg):
-        return np.uint8(np.isin(actor_seg, self.agent.robot_link_ids))
+        """Get the segmentation mask of robot links."""
+        mask = np.isin(actor_seg, self.agent.robot_link_ids)
+        return actor_seg * mask
 
     def _get_obs_rgbd_robot_seg(self):
-        images = self._get_obs_images(actor_seg=True)
-        for image in images.values():
+        obs = self._get_obs_rgbd(actor_seg=True)
+        for image in obs["image"].values():
             image["robot_seg"] = self._get_robot_seg(image.pop("actor_seg"))
-        return OrderedDict(
-            image=images,
-            agent=self._get_obs_agent(),
-            extra=self._get_obs_extra(),
-        )
+        return obs
 
     def _get_obs_pointcloud_robot_seg(self):
         obs = self._get_obs_pointcloud(actor_seg=True)
@@ -582,7 +594,9 @@ class BaseEnv(gym.Env):
             # NOTE(jigu): Must update renderer again
             # since some visual-only sites like goals should be hidden.
             self.update_render()
-            cameras_images = self._get_obs_images()
+            cameras_images = self._get_obs_images(
+                actor_seg=self.enable_gt_seg, visual_seg=self.enable_gt_seg
+            )
             for camera_images in cameras_images.values():
                 images.extend(observations_to_images(camera_images))
             return tile_images(images)
