@@ -16,6 +16,7 @@ def parse_args():
     parser.add_argument("-c", "--control-mode", type=str, default="pd_ee_delta_pose")
     parser.add_argument("--render-mode", type=str, default="cameras")
     parser.add_argument("--enable-sapien-viewer", action="store_true")
+    parser.add_argument("--enable-shadow", type=bool, default=True)
     parser.add_argument("--record-dir", type=str)
     args, opts = parser.parse_known_args()
 
@@ -38,6 +39,7 @@ def main():
         obs_mode=args.obs_mode,
         reward_mode=args.reward_mode,
         control_mode=args.control_mode,
+        enable_shadow=args.enable_shadow,
         **args.env_kwargs
     )
 
