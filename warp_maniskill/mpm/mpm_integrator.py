@@ -135,6 +135,7 @@ def zero_everything(
         if state.grid_m[grid_x, grid_y, grid_z] > 0.0:
             state.grid_m[grid_x, grid_y, grid_z] = 0.0
             state.grid_mv[grid_x, grid_y, grid_z] = wp.vec3(0.0)
+            state.grid_v[grid_x, grid_y, grid_z] = wp.vec3(0.0)
 
 
 @wp.kernel
@@ -340,6 +341,8 @@ def g2p(
 
     if wp.isnan(new_x[0]) or wp.isnan(new_x[1]) or wp.isnan(new_x[2]) or state_in.error[0] == 1:
         state_out.error[0] = 1
+    else:
+        state_out.error[0] = 0
 
     new_x = wp.vec3(
         wp.max(new_x[0], 3.0 * model.dx),

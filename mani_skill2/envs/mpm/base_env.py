@@ -82,6 +82,8 @@ class MPMBaseEnv(BaseEnv):
         sapien.VulkanRenderer.set_camera_shader_dir(shader_dir)
         sapien.VulkanRenderer.set_viewer_shader_dir(shader_dir)
 
+        self.sim_crashed = False
+
         self._mpm_step_per_sapien_step = mpm_freq // sim_freq
         self._mpm_dt = 1 / mpm_freq
         self.max_particles = max_particles
@@ -338,7 +340,7 @@ class MPMBaseEnv(BaseEnv):
             color=(0.65237011, 0.14198029, 0.02201299),
             random_state=self._episode_rng,
         )
-        self.model_builder.init_model_state(self.mpm_model, self.mpm_states[0])
+        self.model_builder.init_model_state(self.mpm_model, self.mpm_states)
         self.mpm_model.struct.static_ke = 100.0
         self.mpm_model.struct.static_kd = 0.0
         self.mpm_model.struct.static_mu = 1.0
@@ -387,7 +389,11 @@ class MPMBaseEnv(BaseEnv):
         mpm_state = self.get_mpm_state()
 
         if self._obs_mode == "particles":
-            obs = OrderedDict(particles=mpm_state, agent=self._get_obs_agent())
+            obs = OrderedDict(
+                particles=mpm_state,
+                agent=self._get_obs_agent(),
+                extra=self._get_obs_extra(),
+            )
         else:
             obs = super().get_obs()
 

@@ -98,7 +98,7 @@ class HangEnv(MPMBaseEnv):
             color=(1, 1, 0.5),
             random_state=self._episode_rng,
         )
-        self.model_builder.init_model_state(self.mpm_model, self.mpm_states[0])
+        self.model_builder.init_model_state(self.mpm_model, self.mpm_states)
         self.mpm_model.struct.static_ke = 100.0
         self.mpm_model.struct.static_kd = 0.0
         self.mpm_model.struct.static_mu = 1.0
