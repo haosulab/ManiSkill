@@ -28,14 +28,12 @@ class ExcavateEnv(MPMBaseEnv):
         *args,
         sim_freq=500,
         mpm_freq=2000,
-        max_particles=15000,
         **kwargs,
     ):
         super().__init__(
             *args,
             sim_freq=sim_freq,
             mpm_freq=mpm_freq,
-            max_particles=max_particles,
             **kwargs,
         )
 
