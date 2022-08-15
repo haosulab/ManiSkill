@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "Thanks for using ManiSkill2. If you use this software, please cite it as below."
+authors:
+- family-names: "Gu"
+  given-names: "Jiayuan"
+  orcid: "https://orcid.org/0000-0002-3207-7921"
+- family-names: "Xiang"
+  given-names: "Fanbo"
+- family-names: "Wei"
+  given-names: "Xinyue"
+- family-names: "Li"
+  given-names: "Xuanlin"
+- family-names: "Liu"
+  given-names: "Xiqiang"
+- family-names: "Tang"
+  given-names: "Yihe"
+title: "ManiSkill2"
+version: 0.1.0
+date-released: 2022-08-01
+url: "https://github.com/haosulab/ManiSkill2"
