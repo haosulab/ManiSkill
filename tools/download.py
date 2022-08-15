@@ -31,6 +31,11 @@ DATA_SOURCES["avoid_obstacles"] = dict(
     url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/avoid_obstacles/panda_train_2k.json.gz",
     output_dir=ASSET_DIR / "avoid_obstacles",
 )
+DATA_SOURCES["assembling_kits"] = dict(
+    url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/assembling_kits.zip",
+    checksum="be93332248187975d4dc2ca172ef00b1774c51f71f51ae10502218b17f5206a6",
+    output_dir=ASSET_DIR,
+)
 
 
 def prompt_yes_no(message):
