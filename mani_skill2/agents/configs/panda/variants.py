@@ -59,8 +59,8 @@ class PandaBucketConfig(PandaDefaultConfig):
         return dict(
             hand_camera=MountedCameraConfig(
                 mount_link="bucket",
-                mount_p=[0.0, 0.0, 0.0],
-                mount_q=[0.0, 0, 0.0, 0],
+                mount_p=[0.0, 0.08, 0.0],
+                mount_q=[0.5, -0.5, -0.5, -0.5],
                 hide_mount_link=False,
                 width=128,
                 height=128,

@@ -28,14 +28,12 @@ class ExcavateEnv(MPMBaseEnv):
         *args,
         sim_freq=500,
         mpm_freq=2000,
-        max_particles=15000,
         **kwargs,
     ):
         super().__init__(
             *args,
             sim_freq=sim_freq,
             mpm_freq=mpm_freq,
-            max_particles=max_particles,
             **kwargs,
         )
 
@@ -78,7 +76,7 @@ class ExcavateEnv(MPMBaseEnv):
             random_state=self._episode_rng,
         )
 
-        self.model_builder.init_model_state(self.mpm_model, self.mpm_states[0])
+        self.model_builder.init_model_state(self.mpm_model, self.mpm_states)
         self.mpm_model.struct.static_ke = 100.0
         self.mpm_model.struct.static_kd = 0.0
         self.mpm_model.struct.static_mu = 1.0

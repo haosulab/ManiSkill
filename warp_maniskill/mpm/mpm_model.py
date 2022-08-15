@@ -509,7 +509,7 @@ class MPMModelBuilder(ModelBuilder):
 
         return m
 
-    def init_model_state(self, model: MPMModel, state: MPMState):
+    def init_model_state(self, model: MPMModel, states):
         assert len(self.mpm_particle_q) <= model.max_n_particles
         model.struct.n_particles = len(self.mpm_particle_q)
         model.struct.particle_vol.assign(
@@ -524,23 +524,32 @@ class MPMModelBuilder(ModelBuilder):
         model.struct.particle_friction_cohesion.assign(
             np.array(self.mpm_particle_friction_cohesion, dtype=np.float32)
         )
-        model.struct.particle_type.assign(
-            np.array(self.mpm_particle_type, dtype=int)
-        )
+        model.struct.particle_type.assign(np.array(self.mpm_particle_type, dtype=int))
         model.mpm_particle_colors = np.array(self.mpm_particle_colors, dtype=np.float32)
 
-        state.struct.particle_q.assign(np.array(self.mpm_particle_q, dtype=np.float32))
-        state.struct.particle_qd.assign(
-            np.array(self.mpm_particle_qd, dtype=np.float32)
-        )
+        for state in states:
+            state.struct.particle_q.assign(
+                np.array(self.mpm_particle_q, dtype=np.float32)
+            )
+            state.struct.particle_qd.assign(
+                np.array(self.mpm_particle_qd, dtype=np.float32)
+            )
 
-        eye = np.array([np.eye(3, dtype=np.float32)] * model.max_n_particles)
-        state.struct.particle_F.assign(eye)
-        state.struct.particle_volume_correction.zero_()
-        state.struct.particle_C.zero_()
-        state.struct.particle_vol.assign(
-            np.array(self.mpm_particle_volume, dtype=np.float32)
-        )
+            eye = np.array([np.eye(3, dtype=np.float32)] * model.max_n_particles)
+            state.struct.particle_F.assign(eye)
+            state.struct.particle_volume_correction.zero_()
+            state.struct.particle_C.zero_()
+            state.struct.particle_vol.assign(
+                np.array(self.mpm_particle_volume, dtype=np.float32)
+            )
+
+            state.struct.grid_lower.zero_()
+            state.struct.grid_upper.zero_()
+            state.struct.particle_f.zero_()
+            state.struct.grid_m.zero_()
+            state.struct.grid_mv.zero_()
+            state.struct.grid_v.zero_()
+            state.struct.error.zero_()
 
 
 def mpm_collide(model: MPMModel, state: MPMState):
