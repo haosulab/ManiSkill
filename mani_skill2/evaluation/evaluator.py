@@ -1,50 +1,43 @@
-import os
 from collections import OrderedDict
 from typing import Callable, List, Type
 
 import gym
 import numpy as np
-from tqdm import tqdm
 
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.utils.common import extract_scalars_from_info, merge_dicts
-from mani_skill2.utils.io_utils import dump_json, write_txt
 
 from .solution import BasePolicy
 
 
-class Evaluator:
+class BaseEvaluator:
     env: gym.Env
     policy: BasePolicy
 
     MAX_EPISODE_STEPS = 1000
 
-    def __init__(self, env_id: str, output_dir: str):
+    def setup(self, env_id: str, policy_cls: Type[BasePolicy], env_kwargs=None):
+        """Setup environment and policy."""
         self.env_id = env_id
-        if os.path.exists(output_dir):
-            print(f"{output_dir} exists.")
-        else:
-            os.makedirs(output_dir)
-        self.output_dir = output_dir
-        self.result = OrderedDict()
-        self.merged_metrics = OrderedDict()
+        self.env_kwargs = {} if env_kwargs is None else env_kwargs
 
-    def setup(self, policy_cls: Type[BasePolicy]):
-        obs_mode = policy_cls.get_obs_mode(self.env_id)
-        control_mode = policy_cls.get_control_mode(self.env_id)
+        obs_mode = policy_cls.get_obs_mode(env_id)
+        control_mode = policy_cls.get_control_mode(env_id)
+
         self.env: BaseEnv = gym.make(
-            self.env_id, obs_mode=obs_mode, control_mode=control_mode
+            self.env_id, obs_mode=obs_mode, control_mode=control_mode, **self.env_kwargs
         )
         self.policy = policy_cls(
             self.env_id, self.env.observation_space, self.env.action_space
         )
+        self.result = OrderedDict()
 
-    def evaluate_episode(self, env_kwargs, render_mode=None):
+    def evaluate_episode(self, reset_kwargs, render_mode=None):
         """Evaluate a single episode."""
         env = self.env
         policy = self.policy
 
-        obs = env.reset(**env_kwargs)
+        obs = env.reset(**reset_kwargs)
         policy.reset(obs)
 
         # NOTE(jigu): Use for-loop rather than while-loop
@@ -63,14 +56,20 @@ class Evaluator:
                 return metrics
 
     def evaluate_episodes(self, episode_cfgs: List[dict], callback: Callable = None):
-        """
-        Evaluate each episode using the config given in each element of episode_cfgs
+        """Evaluate episodes according to configurations.
 
-        Optionally provide a callback that accepts arguments n (episodes completed) and metrics (the results of the latest evaluated episode)
+        Args:
+            episode_cfgs (List[dict]): a list of episode configurations.
+                The configuration should contain "reset_kwargs".
+            callback (Callable, optional): callback function to report progress.
+                It accepts two arguments:
+                    int: the number of completed episodes
+                    dict: the results of the latest evaluated episode
         """
-        for i, episode_cfg in enumerate(tqdm(episode_cfgs)):
-            episode_id = episode_cfg["episode_id"]
-            metrics = self.evaluate_episode(episode_cfg.get("env_kwargs", {}))
+        for i, episode_cfg in enumerate(episode_cfgs):
+            episode_id = episode_cfg.get("episode_id", i)
+            reset_kwargs = episode_cfg.get("reset_kwargs", {})
+            metrics = self.evaluate_episode(reset_kwargs)
             if metrics is None:
                 raise RuntimeError(
                     "Episode {}: check whether time limit is set".format(episode_id)
@@ -78,31 +77,20 @@ class Evaluator:
             if episode_id in self.result:
                 raise RuntimeError("Episode id {} is not unique.".format(episode_id))
             self.result[episode_id] = metrics
-            # TODO(jigu): update progress
+
             if callback is not None:
                 callback(i + 1, metrics)
 
-    def generate_episode_configs(self, num_episodes: int):
-        """Generate (dummy) episode configs."""
-        return [dict(episode_id=i) for i in range(num_episodes)]
+    def generate_dummy_config(self, env_id, num_episodes: int):
+        """Generate dummy configuration."""
+        env_info = dict(env_id=env_id)
+        episodes = [dict(episode_id=i) for i in range(num_episodes)]
+        return dict(env_info=env_info, episodes=episodes)
 
     def merge_result(self):
         merged_result = merge_dicts(self.result.values())
         merged_metrics = {k: np.mean(v) for k, v in merged_result.items()}
         return merged_metrics
-
-    def submit(self):
-        # Export per-episode results
-        json_path = os.path.join(self.output_dir, "episode_results.json")
-        dump_json(json_path, self.result)
-        print("The per-episode evaluation result is saved to {}.".format(json_path))
-
-        # Export average result
-        json_path = os.path.join(self.output_dir, "average_metrics.json")
-        merged_metrics = self.merge_result()
-        self.merged_metrics = merged_metrics
-        dump_json(json_path, merged_metrics)
-        print("The averaged evaluation result is saved to {}.".format(json_path))
 
     def export_to_csv(self, path):
         """Average results and export to a csv file."""
@@ -121,5 +109,8 @@ class Evaluator:
             csv_writer.writerows(data)
         print("The evaluation result is saved to {}.".format(path))
 
-    def error(self, *args):
-        write_txt(os.path.join(self.output_dir, "error.log"), args)
+    def submit(self):
+        raise NotImplementedError
+
+    def error(self, *args, **kwargs):
+        raise NotImplementedError
