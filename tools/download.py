@@ -129,21 +129,37 @@ def download(
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--uid", type=str, required=True)
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--uid", type=str)
+    group.add_argument("--all", action="store_true")
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
-    kwargs = DATA_SOURCES[args.uid]
-    download(**kwargs)
-    print("=" * 50)
-    print(
-        "Dataset ({}) successfully downloaded to {}.".format(
-            args.uid, kwargs["output_dir"]
+    if args.all:
+        print("Downloading all assets")
+        for source in DATA_SOURCES:
+            kwargs = DATA_SOURCES[source]
+            download(**kwargs)
+            print("=" * 50)
+            print(
+                "Dataset ({}) successfully downloaded to {}.".format(
+                    source, kwargs["output_dir"]
+                )
+            )
+            print("=" * 50)
+        print("Downloaded all assets")
+    else:
+        kwargs = DATA_SOURCES[args.uid]
+        download(**kwargs)
+        print("=" * 50)
+        print(
+            "Dataset ({}) successfully downloaded to {}.".format(
+                args.uid, kwargs["output_dir"]
+            )
         )
-    )
-    print("=" * 50)
+        print("=" * 50)
 
 
 if __name__ == "__main__":
