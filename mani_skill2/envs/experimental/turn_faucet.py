@@ -173,7 +173,7 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
         loader.load_multiple_collisions_from_file = True
         assert (
             urdf_path.exists()
-        ), f"{urdf_path} is not found. Please download Partnet-Mobility (ManiSkill2022) first."
+        ), f"{urdf_path} is not found. Please download Partnet-Mobility (ManiSkill2022) first using `python tools/download.py --uid faucet`."
 
         density = self.model_info.get("density", 8e3)
         articulation = loader.load(str(urdf_path), config={"density": density})

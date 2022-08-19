@@ -27,7 +27,14 @@ class AvoidObstaclesBaseEnv(BaseEnv):
     def __init__(self, json_path=None, **kwargs):
         if json_path is None:
             json_path = self.DEFAULT_EPISODE_JSON
-        self.episodes = load_json(json_path)
+        try:
+            self.episodes = load_json(json_path)
+        except FileNotFoundError as e:
+            print(e)
+            print(
+                f"AvoidObstacles models not found. Please download AvoidObstacles models using `python tools/download.py --uid avoid_obstacles`."
+            )
+            exit(0)
         self.episode_idx = None
         self.episode_config = None
         super().__init__(**kwargs)
