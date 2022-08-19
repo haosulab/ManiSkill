@@ -345,7 +345,7 @@ def build_actor_ycb(
     model_dir = YCB_DIR / "models" / model_id
     assert (
         model_dir.exists()
-    ), f"{model_dir} is not found. Please download YCB models first."
+    ), f"{model_dir} is not found. Please download YCB models first using `python tools/download.py --uid ycb`."
 
     collision_file = str(model_dir / "convex.obj")
     builder.add_multiple_collisions_from_file(
@@ -405,7 +405,7 @@ def build_actor_egad(
     collision_file = EGAD_DIR / f"egad_{split}_set_coacd" / f"{model_id}.obj"
     assert (
         collision_file.exists()
-    ), f"{collision_file} is not found. Please download EGAD models first."
+    ), f"{collision_file} is not found. Please download EGAD models first using `python tools/download.py --uid egad`."
     builder.add_multiple_collisions_from_file(
         filename=str(collision_file),
         scale=[scale] * 3,
@@ -416,7 +416,7 @@ def build_actor_egad(
     visual_file = EGAD_DIR / f"egad_{split}_set" / f"{model_id}.obj"
     assert (
         visual_file.exists()
-    ), f"{visual_file} is not found. Please download EGAD models first."
+    ), f"{visual_file} is not found. Please download EGAD models first using `python tools/download.py --uid egad`."
     builder.add_visual_from_file(
         filename=str(visual_file), scale=[scale] * 3, material=render_material
     )

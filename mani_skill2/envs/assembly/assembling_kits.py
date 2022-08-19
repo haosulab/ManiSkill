@@ -19,6 +19,10 @@ class AssemblingKitsEnv(StationaryManipulationEnv):
     def __init__(self, json_path=None, **kwargs):
         self._kit_dir = ASSET_DIR / "assembling_kits" / "kits"
         self._models_dir = ASSET_DIR / "assembling_kits" / "models"
+        assert (
+            self._kit_dir.exists() and self._models_dir.exists()
+        ), f"{self._kit_dir} or {self._models_dir} is not found. Please download AssemblingKits models using `python tools/download.py --uid assembling_kits`."
+
         if json_path is None:
             json_path = self.DEFAULT_EPISODE_JSON
 
@@ -135,7 +139,7 @@ class AssemblingKitsEnv(StationaryManipulationEnv):
         obs = dict(
             tcp_pose=vectorize_pose(self.tcp.pose),
             obj_init_pos=self._obj_init_pos,
-            obj_goal_pos=self._obj_goal_pos
+            obj_goal_pos=self._obj_goal_pos,
         )
         if self._obs_mode in ["state", "state_dict"]:
             obs.update(
