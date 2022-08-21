@@ -135,15 +135,23 @@ def parse_args():
 
 def main():
     args = parse_args()
-    kwargs = DATA_SOURCES[args.uid]
-    download(**kwargs)
-    print("=" * 50)
-    print(
-        "Dataset ({}) successfully downloaded to {}.".format(
-            args.uid, kwargs["output_dir"]
+    
+    if args.uid == "all":
+        print("Downloading all assets")
+        uids = list(DATA_SOURCES.keys())
+    else:
+        uids = [args.uid]
+    
+    for uid in uids:
+        kwargs = DATA_SOURCES[uid]
+        download(**kwargs)
+        print("=" * 50)
+        print(
+            "Dataset ({}) successfully downloaded to {}.".format(
+                args.uid, kwargs["output_dir"]
+            )
         )
-    )
-    print("=" * 50)
+        print("=" * 50)
 
 
 if __name__ == "__main__":
