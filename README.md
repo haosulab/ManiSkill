@@ -95,7 +95,7 @@ Press `i` (or `j`, `k`, `l`, `u`, `o`) to move the end-effector. Press any key b
 
 For `PickCube-v0`, the green sphere indicates the goal position to move the cube to. See our wiki pages for more [rigid-body environments](https://github.com/haosulab/ManiSkill2/wiki/Rigid-Body-Environments) and [soft-body environments](https://github.com/haosulab/ManiSkill2/wiki/Soft-Body-Environments).
 
-Note that some environments (e.g. `TurnFaucet-v0`, `AssemblingKits-v0`) require **downloading assets** first. Please refer to the above wiki pages and `tools/download.py` for more details.
+Note that some environments (e.g. `TurnFaucet-v0`, `AssemblingKits-v0`) require **downloading assets** first. Please refer to the above wiki pages and `tools/download.py` for more details. You can also download all assets by `python tools/download.py --uid all`.
 
 ### Environment Interface
 
