@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import List
 
 import numpy as np
@@ -14,15 +15,16 @@ from .base_env import StationaryManipulationEnv
 
 @register_gym_env("AssemblingKits-v0", max_episode_steps=200)
 class AssemblingKitsEnv(StationaryManipulationEnv):
-    DEFAULT_EPISODE_JSON = ASSET_DIR / "assembling_kits" / "episodes.json"
+    def __init__(self, asset_root=None, **kwargs):
+        if asset_root is not None:
+            self._asset_root = Path(asset_root.format(ASSET_DIR=ASSET_DIR))
+        else:
+            self._asset_root = ASSET_DIR / "assembling_kits"
 
-    def __init__(self, json_path=None, **kwargs):
-        self._kit_dir = ASSET_DIR / "assembling_kits" / "kits"
-        self._models_dir = ASSET_DIR / "assembling_kits" / "models"
-        if json_path is None:
-            json_path = self.DEFAULT_EPISODE_JSON
+        self._kit_dir = self._asset_root / "kits"
+        self._models_dir = self._asset_root / "models"
 
-        self._episode_json = load_json(json_path)
+        self._episode_json = load_json(self._asset_root / "episodes.json")
         self._episodes = self._episode_json["episodes"]
         self.episode_idx = None
 
@@ -135,7 +137,7 @@ class AssemblingKitsEnv(StationaryManipulationEnv):
         obs = dict(
             tcp_pose=vectorize_pose(self.tcp.pose),
             obj_init_pos=self._obj_init_pos,
-            obj_goal_pos=self._obj_goal_pos
+            obj_goal_pos=self._obj_goal_pos,
         )
         if self._obs_mode in ["state", "state_dict"]:
             obs.update(
