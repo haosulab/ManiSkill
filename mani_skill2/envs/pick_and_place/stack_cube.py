@@ -97,7 +97,7 @@ class StackCubeEnv(StationaryManipulationEnv):
             tcp_pose=vectorize_pose(self.tcp.pose),
         )
         if self._obs_mode in ["state", "state_dict"]:
-            obs.udpate(
+            obs.update(
                 cubeA_pose=vectorize_pose(self.cubeA.pose),
                 cubeB_pose=vectorize_pose(self.cubeB.pose),
                 tcp_to_cubeA_pos=self.cubeA.pose.p - self.tcp.pose.p,
@@ -107,10 +107,13 @@ class StackCubeEnv(StationaryManipulationEnv):
         return obs
 
     def _check_cubeA_on_cubeB(self):
-        cubeA_pose_at_cubeB = self.cubeB.pose.inv() * self.cubeA.pose
-        pos = cubeA_pose_at_cubeB.p
-        xy_flag = np.all(np.abs(pos[:2]) <= self.box_half_size[:2])
-        z_flag = np.abs(pos[2] - self.box_half_size[2] * 2) <= 0.005
+        pos_A = self.cubeA.pose.p
+        pos_B = self.cubeB.pose.p
+        offset = pos_A - pos_B
+        xy_flag = (
+            np.linalg.norm(offset[:2]) <= np.linalg.norm(self.box_half_size[:2]) + 0.005
+        )
+        z_flag = np.abs(offset[2] - self.box_half_size[2] * 2) <= 0.005
         return bool(xy_flag and z_flag)
 
     def evaluate(self, **kwargs):
