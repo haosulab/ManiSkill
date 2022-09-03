@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from pathlib import Path
 from typing import Dict, List
 
 import numpy as np
@@ -17,11 +18,14 @@ from .base_env import StationaryManipulationEnv
 
 
 class PickSingleEnv(StationaryManipulationEnv):
+    DEFAULT_ASSET_ROOT: str
     DEFAULT_MODEL_JSON: str
+
     obj: sapien.Actor  # target object
 
     def __init__(
         self,
+        asset_root: str = None,
         model_json: str = None,
         model_ids: List[str] = (),
         obj_init_rot_z=True,
@@ -29,9 +33,17 @@ class PickSingleEnv(StationaryManipulationEnv):
         goal_thresh=0.025,
         **kwargs,
     ):
+        if asset_root is None:
+            asset_root = self.DEFAULT_ASSET_ROOT
+        self._asset_root = Path(asset_root.format(ASSET_DIR=ASSET_DIR))
+
         if model_json is None:
             model_json = self.DEFAULT_MODEL_JSON
+        # NOTE(jigu): absolute path will overwrite asset_root
+        model_json = self._asset_root / model_json
+
         self.model_db: Dict[str, Dict] = load_json(model_json)
+
         if isinstance(model_ids, str):
             model_ids = [model_ids]
         if len(model_ids) == 0:
@@ -47,7 +59,12 @@ class PickSingleEnv(StationaryManipulationEnv):
         self.obj_init_rot = obj_init_rot
         self.goal_thresh = goal_thresh
 
+        self._check_assets()
         super().__init__(**kwargs)
+
+    def _check_assets(self):
+        """Check whether the assets exist."""
+        pass
 
     def _load_actors(self):
         self._add_ground()
@@ -339,15 +356,12 @@ def build_actor_ycb(
     scale: float = 1.0,
     physical_material: sapien.PhysicalMaterial = None,
     density=1000,
+    root_dir=YCB_DIR,
 ):
     builder = scene.create_actor_builder()
+    model_dir = Path(root_dir) / "models" / model_id
 
-    model_dir = YCB_DIR / "models" / model_id
-    assert (
-        model_dir.exists()
-    ), f"{model_dir} is not found. Please download YCB models first."
-
-    collision_file = str(model_dir / "convex.obj")
+    collision_file = str(model_dir / "collision.obj")
     builder.add_multiple_collisions_from_file(
         filename=collision_file,
         scale=[scale] * 3,
@@ -364,12 +378,33 @@ def build_actor_ycb(
 
 @register_gym_env("PickSingleYCB-v0", max_episode_steps=200)
 class PickSingleYCBEnv(PickSingleEnv):
-    DEFAULT_MODEL_JSON = str(YCB_DIR / "info_pick_v0.json")
+    DEFAULT_ASSET_ROOT = str(YCB_DIR)
+    DEFAULT_MODEL_JSON = "info_pick_v0.json"
+
+    def _check_assets(self):
+        models_dir = self._asset_root / "models"
+        for model_id in self.model_ids:
+            model_dir = models_dir / model_id
+            if not model_dir.exists():
+                raise FileNotFoundError(
+                    f"{model_dir} is not found. Please download YCB models first."
+                )
+
+            collision_file = model_dir / "collision.obj"
+            if not collision_file.exists():
+                raise FileNotFoundError(
+                    "convex.obj has been renamed to collision.obj. "
+                    "Please re-download YCB models."
+                )
 
     def _load_model(self):
         density = self.model_db[self.model_id].get("density", 1000)
         self.obj = build_actor_ycb(
-            self.model_id, self._scene, scale=self.model_scale, density=density
+            self.model_id,
+            self._scene,
+            scale=self.model_scale,
+            density=density,
+            root_dir=self._asset_root,
         )
         self.obj.name = self.model_id
 
@@ -397,15 +432,13 @@ def build_actor_egad(
     physical_material: sapien.PhysicalMaterial = None,
     density=100,
     render_material: sapien.RenderMaterial = None,
+    root_dir=EGAD_DIR,
 ):
     builder = scene.create_actor_builder()
     # A heuristic way to infer split
     split = "train" if "_" in model_id else "eval"
 
-    collision_file = EGAD_DIR / f"egad_{split}_set_coacd" / f"{model_id}.obj"
-    assert (
-        collision_file.exists()
-    ), f"{collision_file} is not found. Please download EGAD models first."
+    collision_file = Path(root_dir) / f"egad_{split}_set_coacd" / f"{model_id}.obj"
     builder.add_multiple_collisions_from_file(
         filename=str(collision_file),
         scale=[scale] * 3,
@@ -413,10 +446,7 @@ def build_actor_egad(
         density=density,
     )
 
-    visual_file = EGAD_DIR / f"egad_{split}_set" / f"{model_id}.obj"
-    assert (
-        visual_file.exists()
-    ), f"{visual_file} is not found. Please download EGAD models first."
+    visual_file = Path(root_dir) / f"egad_{split}_set" / f"{model_id}.obj"
     builder.add_visual_from_file(
         filename=str(visual_file), scale=[scale] * 3, material=render_material
     )
@@ -427,7 +457,23 @@ def build_actor_egad(
 
 @register_gym_env("PickSingleEGAD-v0", max_episode_steps=200, obj_init_rot=0.2)
 class PickSingleEGADEnv(PickSingleEnv):
-    DEFAULT_MODEL_JSON = str(EGAD_DIR / "info_pick_train_v0.json")
+    DEFAULT_ASSET_ROOT = str(EGAD_DIR)
+    DEFAULT_MODEL_JSON = "info_pick_train_v0.json"
+
+    def _check_assets(self):
+        splits = set()
+        for model_id in self.model_ids:
+            split = "train" if "_" in model_id else "eval"
+            splits.add(split)
+
+        for split in splits:
+            collision_dir = self._asset_root / f"egad_{split}_set_coacd"
+            visual_dir = self._asset_root / f"egad_{split}_set"
+            if not (collision_dir.exists() and visual_dir.exists()):
+                raise FileNotFoundError(
+                    f"{collision_dir} or {visual_dir} is not found. "
+                    "Please download EGAD models first."
+                )
 
     def _load_model(self):
         # NOTE(jigu): add a dummy camera to add material
@@ -447,6 +493,7 @@ class PickSingleEGADEnv(PickSingleEnv):
             scale=self.model_scale,
             render_material=mat,
             density=100,
+            root_dir=self._asset_root,
         )
         self.obj.name = self.model_id
 

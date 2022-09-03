@@ -13,8 +13,8 @@ from mani_skill2.utils.io_utils import load_json
 
 DATA_SOURCES = {}
 DATA_SOURCES["ycb"] = dict(
-    url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/mani_skill2_ycb.zip",
-    checksum="ae06464f436b14be8d483d3cf46965df8be4fa939f10baa21e295cb16729b81d",
+    url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/mani_skill2_ycb_v1.zip",
+    checksum="adc9c0931cdb8f8d304f1bcff2446a084682ec8a79c01f2081b2d2cfaedc629c",
     output_dir=ASSET_DIR,
 )
 DATA_SOURCES["egad"] = dict(
@@ -135,13 +135,13 @@ def parse_args():
 
 def main():
     args = parse_args()
-    
+
     if args.uid == "all":
         print("Downloading all assets")
         uids = list(DATA_SOURCES.keys())
     else:
         uids = [args.uid]
-    
+
     for uid in uids:
         kwargs = DATA_SOURCES[uid]
         download(**kwargs)

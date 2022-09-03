@@ -27,7 +27,6 @@ from mani_skill2.utils.trimesh_utils import (
 )
 from mani_skill2.utils.visualization.misc import (
     observations_to_images,
-    put_info_on_image,
     tile_images,
 )
 
@@ -69,8 +68,8 @@ class BaseEnv(gym.Env):
     ):
         # SAPIEN
         self._engine = sapien.Engine()
-        sapien.VulkanRenderer.set_log_level("off")
         self._renderer = sapien.VulkanRenderer(default_mipmap_levels=1, device=device)
+        self._renderer.set_log_level("off")
         self._engine.set_renderer(self._renderer)
         self._viewer = None
 
@@ -191,7 +190,7 @@ class BaseEnv(gym.Env):
         if self.enable_gt_seg:
             kwargs["visual_seg"] = True
             kwargs["actor_seg"] = True
-        
+
         return OrderedDict(
             image=self._get_obs_images(**kwargs),
             agent=self._get_obs_agent(),
