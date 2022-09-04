@@ -34,6 +34,8 @@ python setup.py develop
 
 `gym>0.21` introduces breaking changes, e.g., deprecating `env.seed()`. We recommend `pip install gym==0.18.3 --no-deps`.
 
+Some environments require **downloading assets**. You can download all the assets by `python tools/download.py --uid all`.
+
 ---
 
 > The following section is to install Warp for soft-body environments. Skip if you do not need it.
@@ -91,11 +93,9 @@ python examples/demo_manual_control.py -e PickCube-v0
 # PickCube-v0 can be replaced with other environment id.
 ```
 
-Press `i` (or `j`, `k`, `l`, `u`, `o`) to move the end-effector. Press any key between `1` to `6` to rotate the end-effector. Press `f` or `g` to open or close the gripper.
+Press `i` (or `j`, `k`, `l`, `u`, `o`) to move the end-effector. Press any key between `1` to `6` to rotate the end-effector. Press `f` or `g` to open or close the gripper. Press `esc` to exit the program.
 
-For `PickCube-v0`, the green sphere indicates the goal position to move the cube to. See our wiki pages for more [rigid-body environments](https://github.com/haosulab/ManiSkill2/wiki/Rigid-Body-Environments) and [soft-body environments](https://github.com/haosulab/ManiSkill2/wiki/Soft-Body-Environments).
-
-Note that some environments (e.g. `TurnFaucet-v0`, `AssemblingKits-v0`) require **downloading assets** first. Please refer to the above wiki pages and `tools/download.py` for more details. You can also download all assets by `python tools/download.py --uid all`.
+For `PickCube-v0`, the green sphere indicates the goal position to move the cube to. See our wiki pages for more [rigid-body environments](https://github.com/haosulab/ManiSkill2/wiki/Rigid-Body-Environments) and [soft-body environments](https://github.com/haosulab/ManiSkill2/wiki/Soft-Body-Environments). You can also download assets individually for certain environments (e.g. `PickSingleYCB-v0`, `TurnFaucet-v0`, `AssemblingKits-v0`)  following the above wiki pages.
 
 ### Environment Interface
 
@@ -131,8 +131,9 @@ We provide [ManiSkill2-Learn](https://github.com/haosulab/ManiSkill2-Learn), an 
 
 ## Demonstrations
 
-We provide a dataset of expert demonstrations to facilitate learning-from-demonstrations approaches, e.g., [Shen et. al.](https://arxiv.org/pdf/2203.02107.pdf). The datasets can be downloaded from [Google Drive](https://drive.google.com/drive/folders/1hVdUNPGCHh0OULPCowBClPYIXSwsx-J9), which is organized by rigid and soft-body environments.
-For those who cannot access Google Drive, we are currently working on an alternative (ScienceDB.cn). Stay tuned.
+We provide a dataset of expert demonstrations to facilitate learning-from-demonstrations approaches, e.g., [Shen et. al.](https://arxiv.org/pdf/2203.02107.pdf).
+The datasets can be downloaded from [Google Drive](https://drive.google.com/drive/folders/1hVdUNPGCHh0OULPCowBClPYIXSwsx-J9).
+For those who cannot access Google Drive, the datasets can be downloaded from [ScienceDB.cn](http://doi.org/10.57760/sciencedb.02239).
 
 To bulk download demonstrations, you can use the following scripts:
 
@@ -211,3 +212,5 @@ All rigid body environments in ManiSkill are licensed under fully permissive lic
 
 However, the soft body environments will follow Warp's license. Currently, they are licensed under
 [NVIDIA Source Code License for Warp](https://github.com/NVIDIA/warp/blob/main/LICENSE.md).
+
+The assets are licensed under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/legalcode).
