@@ -102,12 +102,15 @@ def from_pd_joint_pos_to_ee(
 
     ori_controller: CombinedController = ori_env.agent.controller
     controller: CombinedController = env.agent.controller
-    assert controller.controllers["arm"].config.frame == "ee"
 
-    ee_link: sapien.Link = controller.controllers["arm"].ee_link
-    ori_ee_link: sapien.Link = get_entity_by_name(
-        ori_controller.articulation.get_links(), ee_link.name
-    )
+    # NOTE(jigu): We need to track the end-effector pose in the original env,
+    # given target joint positions instead of current joint positions.
+    # Thus, we need to compute forward kinematics
+    pin_model = ori_controller.articulation.create_pinocchio_model()
+    ori_arm_controller: PDJointPosController = ori_controller.controllers["arm"]
+    arm_controller: PDEEPoseController = controller.controllers["arm"]
+    assert arm_controller.config.frame == "ee"
+    ee_link: sapien.Link = arm_controller.ee_link
 
     info = {}
 
@@ -119,21 +122,28 @@ def from_pd_joint_pos_to_ee(
         ori_action_dict = ori_controller.to_action_dict(ori_action)
         output_action_dict = ori_action_dict.copy()  # do not in-place modify
 
+        # Keep the joint positions with all DoF
+        full_qpos = ori_controller.articulation.get_qpos()
+
         ori_env.step(ori_action)
-        current_ee_pose = ori_ee_link.pose  # in world frame
+
+        # Use target joint positions for arm only
+        full_qpos[ori_arm_controller.joint_indices] = ori_arm_controller._target_qpos
+        pin_model.compute_forward_kinematics(full_qpos)
+        target_ee_pose = pin_model.get_link_pose(arm_controller.ee_link_idx)
+
         flag = True
 
         for _ in range(2):
             if target_mode:
-                previous_ee_pose = (
-                    env.agent.robot.pose * controller.controllers["arm"]._target_pose
-                )
+                prev_ee_pose_at_base = arm_controller._target_pose
             else:
-                previous_ee_pose = ee_link.pose
+                base_pose = arm_controller.articulation.pose
+                prev_ee_pose_at_base = base_pose.inv() * ee_link.pose
 
-            ee_pose_ee_frame = previous_ee_pose.inv() * current_ee_pose
+            ee_pose_at_ee = prev_ee_pose_at_base.inv() * target_ee_pose
             arm_action = delta_pose_to_pd_ee_delta(
-                controller.controllers["arm"], ee_pose_ee_frame, pos_only=pos_only
+                arm_controller, ee_pose_at_ee, pos_only=pos_only
             )
 
             if (np.abs(arm_action[:3])).max() > 1:  # position clipping
@@ -248,6 +258,7 @@ def from_pd_joint_delta_pos(
     ori_arm_controller: PDJointPosController = ori_controller.controllers["arm"]
 
     assert output_mode == "pd_joint_pos", output_mode
+    assert ori_arm_controller.config.normalize_action
     low, high = ori_arm_controller.config.lower, ori_arm_controller.config.upper
 
     info = {}
