@@ -218,111 +218,37 @@ class PickSingleEnv(StationaryManipulationEnv):
         )
 
     def compute_dense_reward(self, info, **kwargs):
+
+        # Sep. 14, 2022:
+        # We changed the original complex reward to simple reward,
+        # since the original reward can be unfriendly for RL,
+        # even though MPC can solve many objects through the original reward.
+
         reward = 0.0
-        # hard code gripper info
-        finger_length = 0.025
-        gripper_width = (
-            self.agent.robot.get_qlimits()[-1, 1] * 2
-        )  # NOTE: hard-coded with panda
 
         if info["success"]:
             reward = 10.0
         else:
             obj_pose = self.obj_pose
-            # grasp pose rotation reward
-            grasp_rot_loss_fxn = lambda A: np.tanh(
-                1 / 8 * np.trace(A.T @ A)
-            )  # trace(A.T @ A) has range [0,8] for A being difference of rotation matrices
-            tcp_pose_wrt_obj = obj_pose.inv() * self.tcp.pose
-            tcp_rot_wrt_obj = tcp_pose_wrt_obj.to_transformation_matrix()[:3, :3]
-            gt_rot_x_diff_1 = (
-                np.array([[0, 1, 0], [1, 0, 0], [0, 0, -1]]) - tcp_rot_wrt_obj
-            )
-            gt_rot_x_diff_2 = (
-                np.array([[0, -1, 0], [-1, 0, 0], [0, 0, -1]]) - tcp_rot_wrt_obj
-            )
-            gt_rot_y_diff_1 = (
-                np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]) - tcp_rot_wrt_obj
-            )
-            gt_rot_y_diff_2 = (
-                np.array([[-1, 0, 0], [0, 1, 0], [0, 0, -1]]) - tcp_rot_wrt_obj
-            )
 
-            bbox_x_loss = np.minimum(
-                grasp_rot_loss_fxn(gt_rot_x_diff_1), grasp_rot_loss_fxn(gt_rot_x_diff_2)
+            # reaching reward
+            tcp_wrt_obj_pose = obj_pose.inv() * self.tcp.pose
+            tcp_to_obj_dist = np.linalg.norm(tcp_wrt_obj_pose.p)
+            reaching_reward = 1 - np.tanh(
+                3.0 * np.maximum(tcp_to_obj_dist - np.linalg.norm(self.model_bbox_size))
             )
-            bbox_y_loss = np.minimum(
-                grasp_rot_loss_fxn(gt_rot_y_diff_1), grasp_rot_loss_fxn(gt_rot_y_diff_2)
-            )
-            grasp_rot_loss = 1.0
-            should_rotate = False
-            if self.model_bbox_size[0] < gripper_width:
-                should_rotate = True
-                grasp_rot_loss = np.minimum(grasp_rot_loss, bbox_x_loss)
-            if self.model_bbox_size[1] < gripper_width:
-                should_rotate = True
-                grasp_rot_loss = np.minimum(grasp_rot_loss, bbox_y_loss)
-            rotated_properly = not should_rotate or grasp_rot_loss < 0.1
-            reward = reward + (1 - grasp_rot_loss)
+            reward = reward + reaching_reward
 
-            if rotated_properly:
-                # reaching reward
-                tcp_wrt_obj_pose = obj_pose.inv() * self.tcp.pose
-                tcp_to_obj_dist = tcp_wrt_obj_pose.p
-                grasp_from_above_height_offset = (
-                    self.model_bbox_size[2] / 2 - finger_length
-                )  # account for finger length
-                if grasp_from_above_height_offset > 0.01:
-                    # for objects that are tall, gripper should try to grasp the top of the object
-                    tcp_to_obj_dist[2] -= grasp_from_above_height_offset
-                else:
-                    # for objects that are flat, gripper should try to reach deeper in the object
-                    tcp_to_obj_dist[2] += min(self.model_bbox_size[2] / 2, 0.005)
-                tcp_to_obj_dist = np.linalg.norm(tcp_to_obj_dist)
-                reaching_reward = 1 - np.tanh(4.0 * tcp_to_obj_dist)
-                if self.model_bbox_size[2] / 2 > finger_length:
-                    reached = tcp_to_obj_dist < 0.01
-                else:
-                    reached = tcp_to_obj_dist < finger_length + 0.005
-                reward += reaching_reward
-                if not reached and should_rotate:
-                    # encourage grippers to open
-                    reward = (
-                        reward
-                        + (
-                            gripper_width
-                            - np.sum(
-                                gripper_width / 2 - self.agent.robot.get_qpos()[-2:]
-                            )
-                        )
-                        / gripper_width
-                    )
-                else:
-                    reward = reward + 1
-                    # grasp reward
-                    is_grasped = self.agent.check_grasp(self.obj, max_angle=30)
-                    reward += 2.0 if is_grasped else 0.0
+            # grasp reward
+            is_grasped = self.agent.check_grasp(self.obj, max_angle=30)
+            reward += 3.0 if is_grasped else 0.0
 
-                    # reaching-goal reward
-                    if is_grasped:
-                        obj_to_goal_pos = self.goal_pos - obj_pose.p
-                        obj_to_goal_dist = np.linalg.norm(obj_to_goal_pos)
-                        reaching_reward2 = 2 * (1 - np.tanh(3 * obj_to_goal_dist))
-                        reward += reaching_reward2
-            else:
-                reward = reward - 15 * np.maximum(
-                    obj_pose.p[2]
-                    + self.model_bbox_size[2] / 2
-                    + 0.02
-                    - self.tcp.pose.p[2],
-                    0.0,
-                )
-                reward = reward - 15 * np.linalg.norm(
-                    obj_pose.p[:2] - self.tcp.pose.p[:2]
-                )
-                reward = reward - 15 * np.sum(
-                    gripper_width / 2 - self.agent.robot.get_qpos()[-2:]
-                )  # ensures that gripper is open
+            # reaching-goal reward
+            if is_grasped:
+                obj_to_goal_pos = self.goal_pos - obj_pose.p
+                obj_to_goal_dist = np.linalg.norm(obj_to_goal_pos)
+                reaching_goal_reward = 3 * (1 - np.tanh(3.0 * obj_to_goal_dist))
+                reward += reaching_goal_reward
 
         return reward
 
