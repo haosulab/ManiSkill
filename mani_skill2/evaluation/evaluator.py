@@ -9,6 +9,7 @@ from tqdm import tqdm
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.utils.common import extract_scalars_from_info, merge_dicts
 from mani_skill2.utils.io_utils import dump_json, write_txt
+from mani_skill2.utils.wrappers import RecordEpisode
 
 from .solution import BasePolicy
 
@@ -19,7 +20,7 @@ class Evaluator:
 
     MAX_EPISODE_STEPS = 1000
 
-    def __init__(self, env_id: str, output_dir: str):
+    def __init__(self, env_id: str, output_dir: str, record_dir: str):
         self.env_id = env_id
         if os.path.exists(output_dir):
             print(f"{output_dir} exists.")
@@ -28,6 +29,9 @@ class Evaluator:
         self.output_dir = output_dir
         self.result = OrderedDict()
         self.merged_metrics = OrderedDict()
+        self.record_dir = None
+        if record_dir:
+            self.record_dir = record_dir.format(env_id=env_id)
 
     def setup(self, policy_cls: Type[BasePolicy]):
         obs_mode = policy_cls.get_obs_mode(self.env_id)
@@ -68,6 +72,8 @@ class Evaluator:
 
         Optionally provide a callback that accepts arguments n (episodes completed) and metrics (the results of the latest evaluated episode)
         """
+        if self.record_dir:
+            self.env = RecordEpisode(self.env, self.record_dir)
         for i, episode_cfg in enumerate(tqdm(episode_cfgs)):
             episode_id = episode_cfg["episode_id"]
             metrics = self.evaluate_episode(episode_cfg.get("env_kwargs", {}))
@@ -81,6 +87,8 @@ class Evaluator:
             # TODO(jigu): update progress
             if callback is not None:
                 callback(i + 1, metrics)
+        if self.record_dir:
+            self.env.flush_video()
 
     def generate_episode_configs(self, num_episodes: int):
         """Generate (dummy) episode configs."""

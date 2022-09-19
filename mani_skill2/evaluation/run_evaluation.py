@@ -13,6 +13,7 @@ def parse_args():
     parser.add_argument("--cfg", dest="episode_cfgs_json", type=str)
     parser.add_argument("-n", "--num-episodes", type=int, default=1)
     parser.add_argument("--use-random-policy", action="store_true")
+    parser.add_argument("--record-dir", type=str)
 
     args = parser.parse_args()
     return args
@@ -21,7 +22,7 @@ def parse_args():
 def main():
     args = parse_args()
 
-    evaluator = Evaluator(args.env_id, args.output_dir)
+    evaluator = Evaluator(args.env_id, args.output_dir, args.record_dir)
 
     # Get the user policy
     if args.use_random_policy:
