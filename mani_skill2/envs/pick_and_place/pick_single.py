@@ -235,7 +235,7 @@ class PickSingleEnv(StationaryManipulationEnv):
             tcp_wrt_obj_pose = obj_pose.inv() * self.tcp.pose
             tcp_to_obj_dist = np.linalg.norm(tcp_wrt_obj_pose.p)
             reaching_reward = 1 - np.tanh(
-                3.0 * np.maximum(tcp_to_obj_dist - np.linalg.norm(self.model_bbox_size))
+                3.0 * np.maximum(tcp_to_obj_dist - np.linalg.norm(self.model_bbox_size), 0.0)
             )
             reward = reward + reaching_reward
 
