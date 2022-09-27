@@ -6,16 +6,15 @@ ManiSkill2 is a large-scale robotic manipulation benchmark, focusing on learning
 
 **Table of Contents**
 
-- [ManiSkill2](#maniskill2)
-  - [Installation](#installation)
-  - [Getting Started](#getting-started)
-    - [Interactive play](#interactive-play)
-    - [Environment Interface](#environment-interface)
-  - [Reinforcement Learning Example with ManiSkill2-Learn](#reinforcement-learning-example-with-maniskill2-learn)
-  - [Demonstrations](#demonstrations)
-  - [ManiSkill 2022 Challenge](#maniskill-2022-challenge)
-  - [Leaderboard](#leaderboard)
-  - [License](#license)
+- [Installation](#installation)
+- [Getting Started](#getting-started)
+  - [Interactive play](#interactive-play)
+  - [Environment Interface](#environment-interface)
+- [Reinforcement Learning Example with ManiSkill2-Learn](#reinforcement-learning-example-with-maniskill2-learn)
+- [Demonstrations](#demonstrations)
+- [ManiSkill 2022 Challenge](#maniskill-2022-challenge)
+- [Leaderboard](#leaderboard)
+- [License](#license)
 
 ## Installation
 
