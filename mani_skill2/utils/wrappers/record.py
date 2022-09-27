@@ -222,7 +222,7 @@ class RecordEpisode(gym.Wrapper):
                 else:
                     group.create_dataset("obs/" + k, data=v, dtype=v.dtype)
         elif isinstance(obs[0], np.ndarray):
-            obs = np.concatenate(obs)
+            obs = np.stack(obs)
             group.create_dataset("obs", data=obs, dtype=obs.dtype)
         else:
             raise NotImplementedError(type(obs[0]))
