@@ -176,7 +176,7 @@ class RecordEpisode(gym.Wrapper):
         return obs, rew, done, info
 
     def flush_trajectory(self, verbose=False):
-        if not self.save_trajectory or len(self._episode_data) == 0:
+        if not self.save_trajectory or len(self._episode_data) <= 1:
             return
 
         traj_id = "traj_{}".format(self._episode_id)
