@@ -5,6 +5,7 @@ from pathlib import Path
 import gym
 import h5py
 import numpy as np
+from gym import spaces
 
 from mani_skill2 import get_commit_info, logger
 from mani_skill2.envs.mpm.base_env import MPMBaseEnv
@@ -26,33 +27,46 @@ def parse_env_info(env: gym.Env):
     )
 
 
-def reorder_trajectories(h5_file: h5py.File, json_dict: dict):
-    """Reorder trajectories in the form of "traj_0, traj_1, ..., traj_n
+def clean_trajectories(h5_file: h5py.File, json_dict: dict, prune_empty_action=True):
+    """Clean trajectories by renaming and pruning trajectories in place.
+
+    After cleanup, trajectory names are consecutive integers (traj_0, traj_1, ...),
+    and trajectories with empty action are pruned.
 
     Args:
-        h5_file: h5 file containing unordered trajectories
-        json_dict: JSON dict containing unordered trajectories
-
-    Return:
-        h5_file: h5 file with trajectories reordered
-        json_dict: JSON dict with trajectories reordered
+        h5_file: raw h5 file
+        json_dict: raw JSON dict
+        prune_empty_action: whether to prune trajectories with empty action
     """
-    assert "episodes" in json_dict
-    assert len(h5_file) == len(json_dict["episodes"])
+    json_episodes = json_dict["episodes"]
+    assert len(h5_file) == len(json_episodes)
 
-    # assumes trajectories follow the format "traj_{i}"
-    for i, k in enumerate(sorted(h5_file, key=lambda x: int(x[len("traj_") :]))):
-        traj_name = f"traj_{i}"
-        # this trajectory is already in order, skipping
-        # requires the groups in h5 to be in ascending order
-        if traj_name == k:
+    # Assumes each trajectory is named "traj_{i}"
+    prefix_length = len("traj_")
+    ep_ids = sorted([int(x[prefix_length:]) for x in h5_file.keys()])
+
+    new_json_episodes = []
+    new_ep_id = 0
+
+    for i, ep_id in enumerate(ep_ids):
+        traj_id = f"traj_{ep_id}"
+        ep = json_episodes[i]
+        assert ep["episode_id"] == ep_id
+        new_traj_id = f"traj_{new_ep_id}"
+
+        if prune_empty_action and ep["elapsed_steps"] == 0:
+            del h5_file[traj_id]
             continue
 
-        json_dict["episodes"][i]["episode_id"] = i
-        h5_file[f"traj_{i}"] = h5_file[k]
-        del h5_file[k]
+        if new_traj_id != traj_id:
+            ep["episode_id"] = new_ep_id
+            h5_file[new_traj_id] = h5_file[traj_id]
+            del h5_file[traj_id]
 
-    return h5_file, json_dict
+        new_json_episodes.append(ep)
+        new_ep_id += 1
+
+    json_dict["episodes"] = new_json_episodes
 
 
 class RecordEpisode(gym.Wrapper):
@@ -67,9 +81,8 @@ class RecordEpisode(gym.Wrapper):
         save_video: whether to save video
         render_mode: rendering mode passed to `env.render`
         save_on_reset: whether to save the previous trajectory automatically when resetting
-        reorder_trajectories: by default, we skip failed trajectories names
-        when saving new trajectories. set `reorder_trajectories` to true to rename
-        all trajectories one-by-one, sequentially.
+        clean_on_close: whether to rename and prune trajectories when closed.
+            See `clean_trajectories` for details.
     """
 
     def __init__(
@@ -82,7 +95,7 @@ class RecordEpisode(gym.Wrapper):
         info_on_video=False,
         render_mode="rgb_array",
         save_on_reset=True,
-        reorder_trajectories=False,
+        clean_on_close=True,
     ):
         super().__init__(env)
 
@@ -96,7 +109,7 @@ class RecordEpisode(gym.Wrapper):
         self._episode_info = {}
 
         self.save_trajectory = save_trajectory
-        self.reorder_trajectories = reorder_trajectories
+        self.clean_on_close = clean_on_close
         if self.save_trajectory:
             if not trajectory_name:
                 trajectory_name = time.strftime("%Y%m%d_%H%M%S")
@@ -201,7 +214,12 @@ class RecordEpisode(gym.Wrapper):
                     )
                 elif "depth" in k and v.ndim in (3, 4):
                     # NOTE(jigu): uint16 is more efficient to store at cost of precision
-                    assert np.all(np.logical_and(v >= 0, v < 2**6)), k
+                    if not np.all(np.logical_and(v >= 0, v < 2**6)):
+                        raise RuntimeError(
+                            "The depth map({}) is invalid with min({}) and max({}).".format(
+                                k, v.min(), v.max()
+                            )
+                        )
                     v = (v * (2**10)).astype(np.uint16)
                     group.create_dataset(
                         "obs/" + k,
@@ -227,11 +245,20 @@ class RecordEpisode(gym.Wrapper):
         else:
             raise NotImplementedError(type(obs[0]))
 
-        # NOTE(jigu): The format is designed to be compatible with ManiSkill-Learn (pyrl).
-        # Record transitions (ignore the first padded values during reset)
-        actions = np.stack([x["a"] for x in self._episode_data[1:]])
-        # NOTE(jigu): "dones" need to stand for task success excluding time limit.
-        dones = np.stack([x["info"]["success"] for x in self._episode_data[1:]])
+        if len(self._episode_data) == 1:
+            action_space = self.env.action_space
+            assert isinstance(action_space, spaces.Box), action_space
+            actions = np.empty(
+                shape=(0,) + action_space.shape,
+                dtype=action_space.dtype,
+            )
+            dones = np.empty(shape=(0,), dtype=bool)
+        else:
+            # NOTE(jigu): The format is designed to be compatible with ManiSkill-Learn (pyrl).
+            # Record transitions (ignore the first padded values during reset)
+            actions = np.stack([x["a"] for x in self._episode_data[1:]])
+            # NOTE(jigu): "dones" need to stand for task success excluding time limit.
+            dones = np.stack([x["info"]["success"] for x in self._episode_data[1:]])
 
         # Only support array like states now
         env_states = np.stack([x["s"] for x in self._episode_data])
@@ -267,8 +294,8 @@ class RecordEpisode(gym.Wrapper):
 
     def close(self) -> None:
         if self.save_trajectory:
-            if self.reorder_trajectories:
-                reorder_trajectories(self._h5_file, self._json_data)
+            if self.clean_on_close:
+                clean_trajectories(self._h5_file, self._json_data)
             self._h5_file.close()
             dump_json(self._json_path, self._json_data, indent=2)
         return super().close()
