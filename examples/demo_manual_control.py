@@ -143,6 +143,8 @@ def main():
             gripper_action = 1
             after_reset = True
             continue
+        elif key == "q":  # exit
+            break
 
         # Visualize observation
         if key == "v":
@@ -174,6 +176,8 @@ def main():
         print("reward", reward)
         print("done", done)
         print("info", info)
+
+    env.close()
 
 
 if __name__ == "__main__":
