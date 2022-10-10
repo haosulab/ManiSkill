@@ -187,7 +187,7 @@ python tools/replay_trajectory.py --traj-path demos/rigid_body_envs/PickCube-v0/
 - `--num-procs=10`: split trajectories to multiple processes (e.g., 10 processes) for acceleration.
 - `--obs-mode=none`: specify the observation mode as `none`, i.e. not saving any observations.
 - `--obs-mode=rgbd`: (not included in the script above) specify the observation mode as `rgbd` to replay the trajectory. If `--save-traj`, the saved trajectory will contain the RGBD observations. RGB images are saved as uint8 and depth images (multiplied by 1024) are saved as uint16.
-- `--obs-mode=pointcloud`: (not included in the script above) specify the observation mode as `pointcloud`. We discourage using it directly.
+- `--obs-mode=pointcloud`: (not included in the script above) specify the observation mode as `pointcloud`. We encourage you to further process the point cloud instead of using this point clould directly.
 - `--obs-mode=state`: (not included in the script above) specify the observation mode as `state`. Note that the `state` observation mode is not allowed for challenge submission.
   
 </details>
