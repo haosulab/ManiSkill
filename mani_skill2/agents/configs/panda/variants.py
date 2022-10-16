@@ -72,39 +72,6 @@ class PandaBucketConfig(PandaDefaultConfig):
         )
 
 
-class PandaPinConfig(PandaDefaultConfig):
-    def __init__(self) -> None:
-        super().__init__()
-
-        self.urdf_path = "{description}/panda_rolling_pin.urdf"
-        self.ee_link_name = "rolling_pin"
-
-    @property
-    def controllers(self):
-        controller_configs = super().controllers
-        for k, v in controller_configs.items():
-            if isinstance(v, dict) and "gripper" in v:
-                v.pop("gripper")
-        return controller_configs
-
-    @property
-    def cameras(self):
-        return dict(
-            hand_camera=MountedCameraConfig(
-                mount_link="rolling_pin",
-                mount_p=[0.0, 0.0, 0.0],
-                mount_q=[0.0, 0, 0.0, 0],
-                hide_mount_link=False,
-                width=128,
-                height=128,
-                near=0.01,
-                far=10,
-                fx=64,
-                fy=64,
-            )
-        )
-
-
 class PandaStickConfig(PandaDefaultConfig):
     def __init__(self) -> None:
         super().__init__()
@@ -135,3 +102,18 @@ class PandaStickConfig(PandaDefaultConfig):
             if isinstance(v, dict) and "gripper" in v:
                 v.pop("gripper")
         return controller_configs
+
+
+class PandaPinchConfig(PandaDefaultConfig):
+    def __init__(self) -> None:
+        super().__init__()
+        self.urdf_path = "{description}/panda_pinch.urdf"
+
+    @property
+    def controllers(self):
+        controllers = super().controllers
+
+        for key in controllers:
+            controllers[key]["gripper"].upper = 0.06
+
+        return controllers

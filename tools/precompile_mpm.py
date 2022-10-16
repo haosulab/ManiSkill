@@ -2,7 +2,7 @@ import gym
 
 from mani_skill2.envs import mpm
 
-ENV_IDS = ["Excavate-v0", "Fill-v0", "Pour-v0", "Hang-v0"]
+ENV_IDS = ["Excavate-v0", "Fill-v0", "Pour-v0", "Hang-v0", "Write-v0", "Pinch-v0"]
 
 
 if __name__ == "__main__":

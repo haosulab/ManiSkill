@@ -44,10 +44,6 @@
     <disable_collisions link1="panda_hand" link2="panda_link6" reason="Never"/>
     <disable_collisions link1="panda_hand" link2="panda_link7" reason="Default"/>
     <disable_collisions link1="panda_hand" link2="panda_rightfinger" reason="Adjacent"/>
-    <disable_collisions link1="panda_leftfinger" link2="panda_link3" reason="Never"/>
-    <disable_collisions link1="panda_leftfinger" link2="panda_link4" reason="Never"/>
-    <disable_collisions link1="panda_leftfinger" link2="panda_link6" reason="Never"/>
-    <disable_collisions link1="panda_leftfinger" link2="panda_link7" reason="Never"/>
     <disable_collisions link1="panda_link0" link2="panda_link1" reason="Adjacent"/>
     <disable_collisions link1="panda_link0" link2="panda_link2" reason="Never"/>
     <disable_collisions link1="panda_link0" link2="panda_link3" reason="Never"/>
@@ -62,15 +58,11 @@
     <disable_collisions link1="panda_link3" link2="panda_link5" reason="Never"/>
     <disable_collisions link1="panda_link3" link2="panda_link6" reason="Never"/>
     <disable_collisions link1="panda_link3" link2="panda_link7" reason="Never"/>
-    <disable_collisions link1="panda_link3" link2="panda_rightfinger" reason="Never"/>
     <disable_collisions link1="panda_link4" link2="panda_link5" reason="Adjacent"/>
     <disable_collisions link1="panda_link4" link2="panda_link6" reason="Never"/>
     <disable_collisions link1="panda_link4" link2="panda_link7" reason="Never"/>
-    <disable_collisions link1="panda_link4" link2="panda_rightfinger" reason="Never"/>
     <disable_collisions link1="panda_link5" link2="panda_link6" reason="Adjacent"/>
     <disable_collisions link1="panda_link5" link2="panda_link7" reason="Default"/>
     <disable_collisions link1="panda_link6" link2="panda_link7" reason="Adjacent"/>
-    <disable_collisions link1="panda_link6" link2="panda_rightfinger" reason="Never"/>
-    <disable_collisions link1="panda_link7" link2="panda_rightfinger" reason="Never"/>
     <disable_collisions link1="panda_link7" link2="panda_hand" reason="Default"/>
 </robot>

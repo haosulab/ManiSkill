@@ -1,5 +1,9 @@
-import sapien.core as sapien
+from collections import OrderedDict
+from typing import Union
+
+import h5py
 import numpy as np
+import sapien.core as sapien
 import trimesh
 
 
@@ -130,3 +134,13 @@ def trimesh2sdf(meshes, margin, dx, bbox=None):
         "scale": np.ones(3) * dx,
         "dim": res,
     }
+
+
+def load_h5_as_dict(h5file: Union[h5py.File, h5py.Group]):
+    out = OrderedDict()
+    for key in h5file.keys():
+        if isinstance(h5file[key], h5py.Group):
+            out[key] = load_h5_as_dict(h5file[key])
+        else:
+            out[key] = h5file[key][:]
+    return out

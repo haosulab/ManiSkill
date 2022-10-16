@@ -223,7 +223,7 @@
     <visual>
       <origin xyz="0 0 0.1" rpy="0 0 0"/>
       <geometry>
-        <capsule radius="0.015" length="0.1"/>
+        <capsule radius="0.008" length="0.1"/>
       </geometry>
     </visual>
     <collision>
@@ -234,8 +234,14 @@
     <collision>
       <origin xyz="0 0 0.1" rpy="0 0 0"/>
       <geometry>
-        <capsule radius="0.015" length="0.1"/>
+        <capsule radius="0.008" length="0.1"/>
       </geometry>
     </collision>
   </link>
+  <link name="panda_hand_tcp"/>
+  <joint name="panda_hand_tcp_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="0 0 0.15"/>
+    <parent link="panda_hand"/>
+    <child link="panda_hand_tcp"/>
+  </joint>
 </robot>

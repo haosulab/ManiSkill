@@ -36,7 +36,16 @@ DATA_SOURCES["assembling_kits"] = dict(
     checksum="be93332248187975d4dc2ca172ef00b1774c51f71f51ae10502218b17f5206a6",
     output_dir=ASSET_DIR,
 )
-
+DATA_SOURCES["pinch"] = dict(
+    url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/pinch.zip",
+    checksum="3281d2d777fad42e6d37371b2d3ee16fb1c39984907176718ca2e4f447326fe7",
+    output_dir=ASSET_DIR,
+)
+DATA_SOURCES["write"] = dict(
+    url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/write.zip",
+    checksum="c5b49e581bfed9cfb2107a607faf52795f840e93f5a7ad389290314513b4b634",
+    output_dir=ASSET_DIR,
+)
 
 def prompt_yes_no(message):
     r"""Prints a message and prompts the user for "y" or "n" returning True or False."""
