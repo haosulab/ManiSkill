@@ -36,6 +36,11 @@ DATA_SOURCES["assembling_kits"] = dict(
     checksum="be93332248187975d4dc2ca172ef00b1774c51f71f51ae10502218b17f5206a6",
     output_dir=ASSET_DIR,
 )
+DATA_SOURCES["pick_clutter"] = dict(
+    url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/pick_clutter/ycb_train_5k.json.gz",
+    checksum="6485c3b302a1dbde22711831f2611c498bebb4981b78f79d1a9c739be1eb45fe",
+    output_dir=ASSET_DIR,
+)
 DATA_SOURCES["pinch"] = dict(
     url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/pinch.zip",
     checksum="3281d2d777fad42e6d37371b2d3ee16fb1c39984907176718ca2e4f447326fe7",

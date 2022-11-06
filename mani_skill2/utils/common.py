@@ -71,7 +71,7 @@ def random_choice(x: Sequence, rng: np.random.RandomState = np.random):
     if len(x) == 1:
         return x[0]
     else:
-        return x[rng.choice(len(x))]
+        return x[rng.randint(len(x))]
 
 
 def get_dtype_bounds(dtype: np.dtype):
