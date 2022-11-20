@@ -21,13 +21,11 @@ import mani_skill2.envs
 from mani_skill2.agents.base_controller import CombinedController
 from mani_skill2.agents.controllers import *
 from mani_skill2.envs.sapien_env import BaseEnv
+from mani_skill2.trajectory.merge_trajectory import merge_h5
 from mani_skill2.utils.common import clip_and_scale_action, inv_scale_action
 from mani_skill2.utils.io_utils import load_json
 from mani_skill2.utils.sapien_utils import get_entity_by_name
 from mani_skill2.utils.wrappers import RecordEpisode
-
-# isort: off
-from merge_trajectory import merge_h5
 
 
 def qpos_to_pd_joint_delta_pos(controller: PDJointPosController, qpos):

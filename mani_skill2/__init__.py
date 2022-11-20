@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from .utils.logging import logger
+from .utils.logging_utils import logger
 
 ROOT_DIR = Path(__file__).parent.resolve()
 ASSET_DIR = ROOT_DIR / "assets"
