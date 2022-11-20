@@ -51,7 +51,7 @@ class WriteEnv(MPMBaseEnv):
         self.all_filepaths = sorted(self.level_dir.glob("*.h5"))
         if len(self.all_filepaths) == 0:
             raise RuntimeError(
-                "Please download required assets for Write by running 'python tools/download.py --uid write'"
+                "Please download required assets for Write by running 'python -m mani_skill2.utils.download --uid write'"
             )
         super().__init__(*args, **kwargs)
 

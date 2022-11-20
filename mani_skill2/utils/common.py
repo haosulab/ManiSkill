@@ -5,7 +5,7 @@ import gym
 import numpy as np
 from gym import spaces
 
-from .logging import logger
+from .logging_utils import logger
 
 
 # -------------------------------------------------------------------------- #

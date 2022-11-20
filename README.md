@@ -36,7 +36,7 @@ python setup.py develop
 
 `gym>0.21` introduces breaking changes, e.g., deprecating `env.seed()`. We recommend `pip install gym==0.18.3 --no-deps`.
 
-Some environments require **downloading assets**. You can download all the assets by `python tools/download.py --uid all`.
+Some environments require **downloading assets**. You can download all the assets by `python -m mani_skill2.utils.download --uid all`.
 
 ---
 
@@ -161,10 +161,10 @@ To replay the demonstrations (without changing the observation mode and control 
 
 ```bash
 # Replay and view trajectories through sapien viewer
-python tools/replay_trajectory.py --traj-path demos/rigid_body_envs/PickCube-v0/trajectory.h5 --vis
+python -m mani_skill2.trajectory.replay_trajectory --traj-path demos/rigid_body_envs/PickCube-v0/trajectory.h5 --vis
 
 # Save videos of trajectories 
-python tools/replay_trajectory.py --traj-path demos/rigid_body_envs/PickCube-v0/trajectory.h5 --save-video
+python -m mani_skill2.trajectory.replay_trajectory --traj-path demos/rigid_body_envs/PickCube-v0/trajectory.h5 --save-video
 ```
 
 > The script requires `trajectory.h5` and `trajectory.json` to be both under the same directory
@@ -173,7 +173,7 @@ The raw demonstration files contain all necessary information (e.g. initial stat
 
 ```bash
 # Replay demonstrations with control_mode=pd_joint_delta_pos
-python tools/replay_trajectory.py --traj-path demos/rigid_body_envs/PickCube-v0/trajectory.h5 \
+python -m mani_skill2.trajectory.replay_trajectory --traj-path demos/rigid_body_envs/PickCube-v0/trajectory.h5 \
   --save-traj --target-control-mode pd_joint_delta_pos --obs-mode none --num-procs 10
 ```
 

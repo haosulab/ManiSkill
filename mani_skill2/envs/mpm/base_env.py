@@ -33,7 +33,7 @@ from warp_maniskill.mpm.mpm_model import MPMModelBuilder
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.envs.mpm.utils import actor2meshes, trimesh2sdf
 from mani_skill2.utils.sapien_utils import vectorize_pose
-from mani_skill2.utils.logging import logger
+from mani_skill2.utils.logging_utils import logger
 import hashlib
 import trimesh
 

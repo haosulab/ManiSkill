@@ -30,7 +30,7 @@ class PinchEnv(MPMBaseEnv):
         self.all_filepaths = sorted(self.level_dir.glob("*.h5"))
         if len(self.all_filepaths) == 0:
             raise RuntimeError(
-                "Please download required assets for Pinch by running 'python tools/download.py --uid pinch'"
+                "Please download required assets for Pinch by running `python -m mani_skill2.utils.download --uid pinch`"
             )
 
         super().__init__(*args, **kwargs)
@@ -47,9 +47,7 @@ class PinchEnv(MPMBaseEnv):
 
     def _setup_mpm(self):
         self.model_builder = MPMModelBuilder()
-        self.model_builder.set_mpm_domain(
-            domain_size=[0.5, 0.5, 0.5], grid_length=0.01
-        )
+        self.model_builder.set_mpm_domain(domain_size=[0.5, 0.5, 0.5], grid_length=0.01)
         self.model_builder.reserve_mpm_particles(count=self.max_particles)
 
         self._setup_mpm_bodies()
