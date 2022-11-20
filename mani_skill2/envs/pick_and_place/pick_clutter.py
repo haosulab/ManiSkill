@@ -57,11 +57,16 @@ class PickClutterEnv(StationaryManipulationEnv):
         self._add_ground()
 
         self.objs: List[sapien.Actor] = []
+        self.bbox_sizes = []
         for actor_cfg in self.episode["actors"]:
             model_id = actor_cfg["model_id"]
             model_scale = actor_cfg["scale"]
             obj = self._load_model(model_id, model_scale=model_scale)
             self.objs.append(obj)
+
+            bbox = self.model_db[model_id]["bbox"]
+            bbox_size = np.array(bbox["max"]) - np.array(bbox["min"])
+            self.bbox_sizes.append(bbox_size * model_scale)
 
         self.target_site = self._build_sphere_site(
             0.01, color=(1, 1, 0), name="_target_site"
@@ -141,6 +146,7 @@ class PickClutterEnv(StationaryManipulationEnv):
         self.obj = self.objs[actor_idx]
         obj_rep_pts = self.episode["actors"][actor_idx]["rep_pts"]
         self.obj_start_pos = random_choice(obj_rep_pts, self._episode_rng)
+        self.bbox_size = self.bbox_sizes[actor_idx]
 
         self.target_site.set_pose(Pose(self.obj_start_pos))
 
@@ -181,7 +187,33 @@ class PickClutterEnv(StationaryManipulationEnv):
         )
 
     def compute_dense_reward(self, info, **kwargs):
-        return 0.0
+        reward = 0.0
+
+        if info["success"]:
+            reward = 10.0
+        else:
+            obj_pose = self.obj_pose
+
+            # reaching reward
+            tcp_wrt_obj_pose = obj_pose.inv() * self.tcp.pose
+            tcp_to_obj_dist = np.linalg.norm(tcp_wrt_obj_pose.p)
+            reaching_reward = 1 - np.tanh(
+                3.0 * np.maximum(tcp_to_obj_dist - np.linalg.norm(self.bbox_size), 0.0)
+            )
+            reward = reward + reaching_reward
+
+            # grasp reward
+            is_grasped = self.agent.check_grasp(self.obj, max_angle=60)
+            reward += 3.0 if is_grasped else 0.0
+
+            # reaching-goal reward
+            if is_grasped:
+                obj_to_goal_pos = self.goal_pos - obj_pose.p
+                obj_to_goal_dist = np.linalg.norm(obj_to_goal_pos)
+                reaching_goal_reward = 3 * (1 - np.tanh(3.0 * obj_to_goal_dist))
+                reward += reaching_goal_reward
+
+        return reward
 
     def _setup_cameras(self):
         super()._setup_cameras()
