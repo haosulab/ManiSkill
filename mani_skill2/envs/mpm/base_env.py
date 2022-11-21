@@ -173,6 +173,7 @@ class MPMBaseEnv(BaseEnv):
 
         # compute signature for current meshes
         hash = hashlib.sha256()
+        hash.update(bytes("v2", encoding="utf-8"))
         for meshes in actor_meshes:
             for m in meshes:
                 hash.update(m.vertices.tobytes())
@@ -206,8 +207,9 @@ class MPMBaseEnv(BaseEnv):
                 )
 
             with open(self.sdf_cache, "wb") as f:
+                meshes = [[(np.array(m.vertices), np.array(m.faces)) for m in ms]for ms in actor_meshes]
                 pickle.dump(
-                    {"signature": signature, "sdfs": sdfs, "meshes": actor_meshes}, f
+                    {"signature": signature, "sdfs": sdfs, "meshes": meshes}, f
                 )
 
         # convert sdfs to dense volumes
