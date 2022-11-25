@@ -336,8 +336,8 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
     if pbar is not None:
         pbar.set_postfix(
             {
-                "control_mode": env_kwargs["control_mode"],
-                "obs_mode": env_kwargs["obs_mode"],
+                "control_mode": env_kwargs.get("control_mode"),
+                "obs_mode": env_kwargs.get("obs_mode"),
             }
         )
 

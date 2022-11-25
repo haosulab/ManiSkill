@@ -1,0 +1,118 @@
+{
+    "4000": {
+        "partnet_mobility_id": 4000,
+        "scale": 0.3
+    },
+    "4001": {
+        "partnet_mobility_id": 4001,
+        "scale": 0.3
+    },
+    "4003": {
+        "partnet_mobility_id": 4003,
+        "scale": 0.3
+    },
+    "4006": {
+        "partnet_mobility_id": 4006,
+        "scale": 0.3
+    },
+    "4008": {
+        "partnet_mobility_id": 4008,
+        "scale": 0.3
+    },
+    "4009": {
+        "partnet_mobility_id": 4009,
+        "scale": 0.3
+    },
+    "4010": {
+        "partnet_mobility_id": 4010,
+        "scale": 0.3
+    },
+    "4011": {
+        "partnet_mobility_id": 4011,
+        "scale": 0.3
+    },
+    "4012": {
+        "partnet_mobility_id": 4012,
+        "scale": 0.3
+    },
+    "4016": {
+        "partnet_mobility_id": 4016,
+        "scale": 0.3
+    },
+    "4017": {
+        "partnet_mobility_id": 4017,
+        "scale": 0.3
+    },
+    "4018": {
+        "partnet_mobility_id": 4018,
+        "scale": 0.35
+    },
+    "4019": {
+        "partnet_mobility_id": 4019,
+        "scale": 0.3
+    },
+    "4020": {
+        "partnet_mobility_id": 4020,
+        "scale": 0.3
+    },
+    "4021": {
+        "partnet_mobility_id": 4021,
+        "scale": 0.3
+    },
+    "4022": {
+        "partnet_mobility_id": 4022,
+        "scale": 0.3
+    },
+    "4023": {
+        "partnet_mobility_id": 4023,
+        "scale": 0.3
+    },
+    "4024": {
+        "partnet_mobility_id": 4024,
+        "scale": 0.3
+    },
+    "4025": {
+        "partnet_mobility_id": 4025,
+        "scale": 0.3
+    },
+    "4031": {
+        "partnet_mobility_id": 4031,
+        "scale": 0.3
+    },
+    "4032": {
+        "partnet_mobility_id": 4032,
+        "scale": 0.3
+    },
+    "4035": {
+        "partnet_mobility_id": 4035,
+        "scale": 0.3
+    },
+    "4043": {
+        "partnet_mobility_id": 4043,
+        "scale": 0.3
+    },
+    "4044": {
+        "partnet_mobility_id": 4044,
+        "scale": 0.3
+    },
+    "4045": {
+        "partnet_mobility_id": 4045,
+        "scale": 0.3
+    },
+    "4051": {
+        "partnet_mobility_id": 4051,
+        "scale": 0.3
+    },
+    "4052": {
+        "partnet_mobility_id": 4052,
+        "scale": 0.3
+    },
+    "4055": {
+        "partnet_mobility_id": 4055,
+        "scale": 0.3
+    },
+    "4056": {
+        "partnet_mobility_id": 4056,
+        "scale": 0.3
+    }
+}

@@ -8,10 +8,19 @@ from pathlib import Path
 
 from tqdm.auto import tqdm
 
-from mani_skill2 import ASSET_DIR
+from mani_skill2 import ASSET_DIR, DESCRIPTION_DIR
 from mani_skill2.utils.io_utils import load_json
 
 DATA_SOURCES = {}
+
+# Robots
+DATA_SOURCES["sciurus17"] = dict(
+    url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/sciurus17.zip",
+    checksum="dd4765b3bc2b296f7f8780b5daa6bfb909781242a3250322e795818aa243c036",
+    output_dir=DESCRIPTION_DIR,
+)
+
+# Task assets
 DATA_SOURCES["ycb"] = dict(
     url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/mani_skill2_ycb_v1.zip",
     checksum="adc9c0931cdb8f8d304f1bcff2446a084682ec8a79c01f2081b2d2cfaedc629c",
@@ -22,23 +31,9 @@ DATA_SOURCES["egad"] = dict(
     checksum="a06f335148a1aa420625f89ef94674dbd59932c6d86beb20784c095c7f915970",
     output_dir=ASSET_DIR,
 )
-DATA_SOURCES["faucet"] = dict(
-    url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/partnet_mobility/dataset/{}.zip",
-    output_dir=ASSET_DIR / "partnet_mobility" / "dataset",
-    model_db=load_json(ASSET_DIR / "partnet_mobility/meta/info_faucet_train.json"),
-)
-DATA_SOURCES["avoid_obstacles"] = dict(
-    url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/avoid_obstacles/panda_train_2k.json.gz",
-    output_dir=ASSET_DIR / "avoid_obstacles",
-)
 DATA_SOURCES["assembling_kits"] = dict(
     url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/assembling_kits.zip",
     checksum="be93332248187975d4dc2ca172ef00b1774c51f71f51ae10502218b17f5206a6",
-    output_dir=ASSET_DIR,
-)
-DATA_SOURCES["pick_clutter"] = dict(
-    url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/pick_clutter/ycb_train_5k.json.gz",
-    checksum="6485c3b302a1dbde22711831f2611c498bebb4981b78f79d1a9c739be1eb45fe",
     output_dir=ASSET_DIR,
 )
 DATA_SOURCES["pinch"] = dict(
@@ -51,6 +46,46 @@ DATA_SOURCES["write"] = dict(
     checksum="c5b49e581bfed9cfb2107a607faf52795f840e93f5a7ad389290314513b4b634",
     output_dir=ASSET_DIR,
 )
+
+# Task configurations
+DATA_SOURCES["avoid_obstacles"] = dict(
+    url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/avoid_obstacles/panda_train_2k.json.gz",
+    output_dir=ASSET_DIR / "avoid_obstacles",
+)
+DATA_SOURCES["pick_clutter"] = dict(
+    url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/pick_clutter/ycb_train_5k.json.gz",
+    checksum="6485c3b302a1dbde22711831f2611c498bebb4981b78f79d1a9c739be1eb45fe",
+    output_dir=ASSET_DIR,
+)
+
+# PartNet Mobility
+DATA_SOURCES["faucet"] = dict(
+    url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/partnet_mobility/dataset/{}.zip",
+    output_dir=ASSET_DIR / "partnet_mobility" / "dataset",
+    model_db=load_json(ASSET_DIR / "partnet_mobility/meta/info_faucet_train.json"),
+)
+cabinet_drawer_model_ids = set(
+    load_json(ASSET_DIR / "partnet_mobility/meta/info_cabinet_drawer_train.json").keys()
+)
+cabinet_door_model_ids = set(
+    load_json(ASSET_DIR / "partnet_mobility/meta/info_cabinet_door_train.json").keys()
+)
+DATA_SOURCES["cabinet"] = dict(
+    url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/partnet_mobility/dataset/{}.zip",
+    output_dir=ASSET_DIR / "partnet_mobility" / "dataset_zip",
+    model_db=cabinet_drawer_model_ids.union(cabinet_door_model_ids),
+)
+DATA_SOURCES["chair"] = dict(
+    url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/partnet_mobility/dataset/{}.zip",
+    output_dir=ASSET_DIR / "partnet_mobility" / "dataset",
+    model_db=load_json(ASSET_DIR / "partnet_mobility/meta/info_chair_train.json"),
+)
+DATA_SOURCES["bucket"] = dict(
+    url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/partnet_mobility/dataset/{}.zip",
+    output_dir=ASSET_DIR / "partnet_mobility" / "dataset",
+    model_db=load_json(ASSET_DIR / "partnet_mobility/meta/info_bucket_train.json"),
+)
+
 
 def prompt_yes_no(message):
     r"""Prints a message and prompts the user for "y" or "n" returning True or False."""

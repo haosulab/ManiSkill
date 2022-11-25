@@ -12,8 +12,9 @@ from mani_skill2.utils.sapien_utils import (
 
 class Xmate3Robotiq(BaseAgent):
     _config: defaults.Xmate3RobotiqDefaultConfig
-
-    def get_default_config(self):
+    
+    @classmethod
+    def get_default_config(cls):
         return defaults.Xmate3RobotiqDefaultConfig()
 
     def _after_init(self):

@@ -1,5 +1,6 @@
 from contextlib import contextmanager
-from typing import List, Optional, Tuple, Union
+from copy import deepcopy
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import sapien.core as sapien
@@ -94,6 +95,59 @@ def get_entity_by_name(entities, name: str, is_unique=True):
         return None
 
 
+def check_urdf_config(urdf_config: dict):
+    """Check whether the urdf config is valid for SAPIEN.
+
+    Args:
+        urdf_config (dict): dict passed to `sapien.URDFLoader.load`.
+    """
+    allowed_keys = ["material", "density", "link"]
+    for k in urdf_config.keys():
+        if k not in allowed_keys:
+            raise KeyError(
+                f"Not allowed key ({k}) for `sapien.URDFLoader.load`. Allowed keys are f{allowed_keys}"
+            )
+
+    allowed_keys = ["material", "density", "patch_radius", "min_patch_radius"]
+    for k, v in urdf_config.get("link", {}).items():
+        for kk in v.keys():
+            # In fact, it should support specifying collision-shape-level materials.
+            if kk not in allowed_keys:
+                raise KeyError(
+                    f"Not allowed key ({kk}) for `sapien.URDFLoader.load`. Allowed keys are f{allowed_keys}"
+                )
+
+
+def parse_urdf_config(config_dict: dict, scene: sapien.Scene) -> Dict:
+    """Parse config from dict for SAPIEN URDF loader.
+
+    Args:
+        config_dict (dict): a dict containing link physical properties.
+        scene (sapien.Scene): simualtion scene
+
+    Returns:
+        Dict: urdf config passed to `sapien.URDFLoader.load`.
+    """
+    urdf_config = deepcopy(config_dict)
+
+    # Create the global physical material for all links
+    mtl_cfg = urdf_config.pop("material", None)
+    if mtl_cfg is not None:
+        urdf_config["material"] = scene.create_physical_material(**mtl_cfg)
+
+    # Create link-specific physical materials
+    materials = {}
+    for k, v in urdf_config.pop("_materials", {}).items():
+        materials[k] = scene.create_physical_material(**v)
+
+    # Specify properties for links
+    for link_config in urdf_config.get("link", {}).values():
+        # Substitute with actual material
+        link_config["material"] = materials[link_config["material"]]
+
+    return urdf_config
+
+
 # -------------------------------------------------------------------------- #
 # Entity state
 # -------------------------------------------------------------------------- #
@@ -133,6 +187,18 @@ def set_articulation_state(articulation: sapien.Articulation, state: np.ndarray)
     qpos, qvel = np.split(state[13:], 2)
     articulation.set_qpos(qpos)
     articulation.set_qvel(qvel)
+
+
+def get_articulation_padded_state(articulation: sapien.Articulation, max_dof: int):
+    state = get_articulation_state(articulation)
+    qpos, qvel = np.split(state[13:], 2)
+    nq = len(qpos)
+    assert max_dof >= nq, (max_dof, nq)
+    padded_state = np.zeros(13 + 2 * max_dof, dtype=np.float32)
+    padded_state[:13] = state[:13]
+    padded_state[13 : 13 + nq] = qpos
+    padded_state[13 + max_dof : 13 + max_dof + nq] = qvel
+    return padded_state
 
 
 # -------------------------------------------------------------------------- #

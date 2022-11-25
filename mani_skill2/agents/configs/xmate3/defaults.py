@@ -6,10 +6,10 @@ class Xmate3RobotiqDefaultConfig:
     def __init__(self) -> None:
         self.urdf_path = "{description}/fixed_xmate3_robotiq.urdf"
         self.urdf_config = dict(
-            materials=dict(
+            _materials=dict(
                 gripper=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)
             ),
-            links=dict(
+            link=dict(
                 panda_leftfinger=dict(
                     material="gripper", patch_radius=0.1, min_patch_radius=0.1
                 ),

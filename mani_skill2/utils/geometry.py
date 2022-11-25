@@ -2,7 +2,7 @@ from typing import Dict
 
 import numpy as np
 import sapien.core as sapien
-from sapien.core import Articulation, Pose
+from sapien.core import Articulation, Actor, Link, Pose
 from scipy.spatial.transform import Rotation
 from mani_skill2.utils.bounding_cylinder import aabc
 
@@ -83,7 +83,7 @@ def get_axis_aligned_bbox_for_articulation(art: Articulation):
     return mins, maxs
 
 
-def get_axis_aligned_bbox_for_actor(actor):
+def get_axis_aligned_bbox_for_actor(actor: Actor):
     mins = np.ones(3) * np.inf
     maxs = -mins
 
@@ -98,7 +98,7 @@ def get_axis_aligned_bbox_for_actor(actor):
     return mins, maxs
 
 
-def get_local_axis_aligned_bbox_for_link(link):
+def get_local_axis_aligned_bbox_for_link(link: Link):
     mins = np.array([np.inf, np.inf, np.inf])
     maxs = -mins
     for s in link.get_collision_shapes():

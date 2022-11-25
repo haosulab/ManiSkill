@@ -81,6 +81,8 @@ def get_dtype_bounds(dtype: np.dtype):
     elif np.issubdtype(dtype, np.integer):
         info = np.iinfo(dtype)
         return info.min, info.max
+    elif np.issubdtype(dtype, np.bool):
+        return 0, 1
     elif np.issctype(dtype, bool):
         return 0, 1
     else:
@@ -108,7 +110,7 @@ def convert_observation_to_space(observation, prefix=""):
         low = np.full(shape, dtype_min)
         high = np.full(shape, dtype_max)
         space = spaces.Box(low, high, dtype=dtype)
-    elif isinstance(observation, float):
+    elif isinstance(observation, (float, np.float32)):
         logger.warning(f"The observation ({prefix}) is a float")
         space = spaces.Box(-np.inf, np.inf, shape=[1], dtype=np.float32)
     else:
@@ -166,13 +168,14 @@ def flatten_state_dict(state_dict: OrderedDict):
     for key, value in state_dict.items():
         if isinstance(value, dict):
             states.append(flatten_state_dict(value))
-        elif isinstance(value, (int, float, tuple, list)):
+        elif isinstance(value, (int, float, tuple, list, np.float32)):
             states.append(value)
         elif isinstance(value, np.ndarray):
             assert value.ndim <= 1, "Too many dimensions({}) for {}".format(
                 value.ndim, key
             )
-            states.append(value)
+            if value.size > 0:
+                states.append(value)
         elif isinstance(value, np.bool_):
             # x = np.array(1) > 0 is np.bool_ instead of ndarray
             states.append(value.astype(int))

@@ -164,12 +164,13 @@ class DictController(BaseController):
         self._assert_fully_actuated()
 
     def _initialize_action_space(self):
-        self.action_space = spaces.Dict(
-            {
-                uuid: controller.action_space
-                for uuid, controller in self.controllers.items()
-            }
-        )
+        # Explicitly create a list of key-value tuples
+        # Otherwise, spaces.Dict will sort keys if a dict is provided
+        named_spaces = [
+            (uuid, controller.action_space)
+            for uuid, controller in self.controllers.items()
+        ]
+        self.action_space = spaces.Dict(named_spaces)
 
     def _initialize_joints(self):
         self.joints = []

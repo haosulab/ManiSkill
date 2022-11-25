@@ -57,7 +57,7 @@ def main():
     # Viewer
     if args.enable_sapien_viewer:
         env.render(mode="human")
-    opencv_viewer = OpenCVViewer()
+    opencv_viewer = OpenCVViewer(exit_on_esc=False)
 
     def render_wait():
         if not args.enable_sapien_viewer:
@@ -67,7 +67,10 @@ def main():
             if sapien_viewer.window.key_down("0"):
                 break
 
-    has_gripper = "gripper" in env.agent.controller.configs
+    # Embodiment
+    has_base = "base" in env.agent.controller.configs
+    num_arms = sum("arm" in x for x in env.agent.controller.configs)
+    has_gripper = any("gripper" in x for x in env.agent.controller.configs)
     gripper_action = 1
     EE_ACTION = 0.1
 
@@ -85,7 +88,7 @@ def main():
             # Re-focus on opencv viewer
             if args.enable_sapien_viewer:
                 opencv_viewer.close()
-                opencv_viewer = OpenCVViewer()
+                opencv_viewer = OpenCVViewer(exit_on_esc=False)
 
         # -------------------------------------------------------------------------- #
         # Interaction
@@ -93,47 +96,81 @@ def main():
         # Input
         key = opencv_viewer.imshow(render_frame)
 
+        if has_base:
+            assert args.control_mode in ["base_pd_joint_vel_arm_pd_ee_delta_pose"]
+            base_action = np.zeros([4])  # hardcoded
+        else:
+            base_action = np.zeros([0])
+
         # Parse end-effector action
-        if args.control_mode in ["pd_ee_delta_pose", "pd_ee_target_delta_pose"]:
+        if (
+            "pd_ee_delta_pose" in args.control_mode
+            or "pd_ee_target_delta_pose" in args.control_mode
+        ):
             ee_action = np.zeros([6])
-        elif args.control_mode in ["pd_ee_delta_pos", "pd_ee_target_delta_pos"]:
+        elif (
+            "pd_ee_delta_pos" in args.control_mode
+            or "pd_ee_target_delta_pos" in args.control_mode
+        ):
             ee_action = np.zeros([3])
         else:
             raise NotImplementedError(args.control_mode)
 
-        # Position
-        if key == "i":  # +x
-            ee_action[0] = EE_ACTION
-        elif key == "k":  # -x
-            ee_action[0] = -EE_ACTION
-        elif key == "j":  # +y
-            ee_action[1] = EE_ACTION
-        elif key == "l":  # -y
-            ee_action[1] = -EE_ACTION
-        elif key == "u":  # +z
-            ee_action[2] = EE_ACTION
-        elif key == "o":  # -z
-            ee_action[2] = -EE_ACTION
+        # Base
+        if has_base:
+            if key == "w":  # forward
+                base_action[0] = 1
+            elif key == "s":  # backward
+                base_action[0] = -1
+            elif key == "a":  # left
+                base_action[1] = 1
+            elif key == "d":  # right
+                base_action[1] = -1
+            elif key == "q":  # rotate counter
+                base_action[2] = 1
+            elif key == "e":  # rotate clockwise
+                base_action[2] = -1
+            elif key == "z":  # lift
+                base_action[3] = 1
+            elif key == "x":  # lower
+                base_action[3] = -1
 
-        # Rotation (axis-angle)
-        if key == "1":
-            ee_action[3:6] = (1, 0, 0)
-        elif key == "2":
-            ee_action[3:6] = (-1, 0, 0)
-        elif key == "3":
-            ee_action[3:6] = (0, 1, 0)
-        elif key == "4":
-            ee_action[3:6] = (0, -1, 0)
-        elif key == "5":
-            ee_action[3:6] = (0, 0, 1)
-        elif key == "6":
-            ee_action[3:6] = (0, 0, -1)
+        # End-effector
+        if num_arms > 0:
+            # Position
+            if key == "i":  # +x
+                ee_action[0] = EE_ACTION
+            elif key == "k":  # -x
+                ee_action[0] = -EE_ACTION
+            elif key == "j":  # +y
+                ee_action[1] = EE_ACTION
+            elif key == "l":  # -y
+                ee_action[1] = -EE_ACTION
+            elif key == "u":  # +z
+                ee_action[2] = EE_ACTION
+            elif key == "o":  # -z
+                ee_action[2] = -EE_ACTION
 
-        # Parse
-        if key == "f":  # open gripper
-            gripper_action = 1
-        elif key == "g":  # close gripper
-            gripper_action = -1
+            # Rotation (axis-angle)
+            if key == "1":
+                ee_action[3:6] = (1, 0, 0)
+            elif key == "2":
+                ee_action[3:6] = (-1, 0, 0)
+            elif key == "3":
+                ee_action[3:6] = (0, 1, 0)
+            elif key == "4":
+                ee_action[3:6] = (0, -1, 0)
+            elif key == "5":
+                ee_action[3:6] = (0, 0, 1)
+            elif key == "6":
+                ee_action[3:6] = (0, 0, -1)
+
+        # Gripper
+        if has_gripper:
+            if key == "f":  # open gripper
+                gripper_action = 1
+            elif key == "g":  # close gripper
+                gripper_action = -1
 
         # Other functions
         if key == "0":  # switch to SAPIEN viewer
@@ -143,13 +180,14 @@ def main():
             gripper_action = 1
             after_reset = True
             continue
-        elif key == "q":  # exit
+        elif key == None:  # exit
             break
 
         # Visualize observation
         if key == "v":
             if "rgbd" in env.obs_mode:
                 from itertools import chain
+
                 from mani_skill2.utils.visualization.misc import (
                     observations_to_images,
                     tile_images,
@@ -168,9 +206,27 @@ def main():
                 # rgb = np.tile(obs["pointcloud"]["robot_seg"] * 255, [1, 3])
                 trimesh.PointCloud(xyz, rgb).show()
 
-        action = ee_action
-        if has_gripper:
-            action = np.hstack([ee_action, gripper_action])
+        # -------------------------------------------------------------------------- #
+        # Post-process action
+        # -------------------------------------------------------------------------- #
+        MS1_ENV_IDS = [
+            "OpenCabinetDoor-v1",
+            "OpenCabinetDrawer-v1",
+            "PushChair-v1",
+            "MoveBucket-v1",
+        ]
+        if args.env_id in MS1_ENV_IDS:
+            action_dict = dict(
+                base=base_action,
+                right_arm=ee_action,
+                right_gripper=gripper_action,
+                left_arm=np.zeros_like(ee_action),
+                left_gripper=np.zeros_like(gripper_action),
+            )
+            action = env.agent.controller.from_action_dict(action_dict)
+        else:
+            action_dict = dict(base=base_action, arm=ee_action, gripper=gripper_action)
+            action = env.agent.controller.from_action_dict(action_dict)
 
         obs, reward, done, info = env.step(action)
         print("reward", reward)

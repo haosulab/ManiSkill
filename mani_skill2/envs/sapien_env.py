@@ -126,8 +126,9 @@ class BaseEnv(gym.Env):
         # For training purpose
         self._enable_gt_seg = enable_gt_seg
 
-        # TODO(jigu): `seed` is deprecated in the latest gym.
-        self.seed()
+        # NOTE(jigu): `seed` is deprecated in the latest gym.
+        # Use a fixed seed to initialize to enhance determinism
+        self.seed(2022)
         obs = self.reset(reconfigure=True)
         self.observation_space = convert_observation_to_space(obs)
         self.action_space = self.agent.action_space
@@ -354,11 +355,14 @@ class BaseEnv(gym.Env):
         self._articulations = self.get_articulations()
 
     def _add_ground(self, altitude=0.0, render=True):
-        rend_mtl = self._renderer.create_material()
-        rend_mtl.base_color = [0.06, 0.08, 0.12, 1]
-        rend_mtl.metallic = 0.0
-        rend_mtl.roughness = 0.9
-        rend_mtl.specular = 0.8
+        if render:
+            rend_mtl = self._renderer.create_material()
+            rend_mtl.base_color = [0.06, 0.08, 0.12, 1]
+            rend_mtl.metallic = 0.0
+            rend_mtl.roughness = 0.9
+            rend_mtl.specular = 0.8
+        else:
+            rend_mtl = None
         return self._scene.add_ground(
             altitude=altitude,
             render=render,
@@ -459,7 +463,7 @@ class BaseEnv(gym.Env):
 
         obs = self.get_obs()
         info = self.get_info(obs=obs)
-        reward = self.get_reward(obs=obs, info=info)
+        reward = self.get_reward(obs=obs, action=action, info=info)
         done = self.get_done(obs=obs, info=info)
 
         return obs, reward, done, info

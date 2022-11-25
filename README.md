@@ -95,7 +95,7 @@ python examples/demo_manual_control.py -e PickCube-v0
 # PickCube-v0 can be replaced with other environment id.
 ```
 
-Press `i` (or `j`, `k`, `l`, `u`, `o`) to move the end-effector. Press any key between `1` to `6` to rotate the end-effector. Press `f` or `g` to open or close the gripper. Press `q` to close the viewer and exit the program.
+Press `i` (or `j`, `k`, `l`, `u`, `o`) to move the end-effector. Press any key between `1` to `6` to rotate the end-effector. Press `f` or `g` to open or close the gripper. Press `esc` to close the viewer and exit the program.
 
 For `PickCube-v0`, the green sphere indicates the goal position to move the cube to. See our wiki pages for more [rigid-body environments](https://github.com/haosulab/ManiSkill2/wiki/Rigid-Body-Environments) and [soft-body environments](https://github.com/haosulab/ManiSkill2/wiki/Soft-Body-Environments). You can also download assets individually for certain environments (e.g. `PickSingleYCB-v0`, `TurnFaucet-v0`, `AssemblingKits-v0`)  following the above wiki pages.
 

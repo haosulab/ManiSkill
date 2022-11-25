@@ -13,7 +13,8 @@ from mani_skill2.utils.sapien_utils import (
 class Panda(BaseAgent):
     _config: defaults.PandaDefaultConfig
 
-    def get_default_config(self):
+    @classmethod
+    def get_default_config(cls):
         return defaults.PandaDefaultConfig()
 
     def _after_init(self):

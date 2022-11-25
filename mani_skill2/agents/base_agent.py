@@ -1,4 +1,4 @@
-from collections import OrderedDict, deque
+from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Union
@@ -8,39 +8,11 @@ import sapien.core as sapien
 from gym import spaces
 
 from mani_skill2 import DESCRIPTION_DIR
+from mani_skill2.utils.common import merge_dicts
+from mani_skill2.utils.sapien_utils import parse_urdf_config, check_urdf_config
+
 from .base_controller import BaseController, CombinedController, ControllerConfig
 from .camera import MountedCameraConfig, get_camera_images, get_camera_pcd
-from mani_skill2.utils.common import merge_dicts
-
-
-def parse_urdf_config(config_dict: dict, scene: sapien.Scene) -> Dict:
-    """Parse config from dict for SAPIEN URDF loader.
-
-    Args:
-        config_dict (dict): a dict containing link physical properties.
-        scene (sapien.Scene): simualtion scene
-
-    Returns:
-        Dict: urdf config passed to `sapien.URDFLoader.load`.
-    """
-    urdf_config = {}
-
-    # Create physical materials
-    materials = {}
-    for k, v in config_dict.get("materials", {}).items():
-        materials[k] = scene.create_physical_material(**v)
-
-    # Specify properties for links
-    link_configs = {}
-    for link_name, link_config in config_dict.get("links", {}).items():
-        link_config = link_config.copy()
-        # substitute with actual material
-        link_config["material"] = materials[link_config["material"]]
-        link_configs[link_name] = link_config
-    if link_configs:
-        urdf_config["link"] = link_configs
-
-    return urdf_config
 
 
 @dataclass
@@ -112,7 +84,8 @@ class BaseAgent:
         self._setup_cameras()
         self._after_init()
 
-    def get_default_config(self) -> AgentConfig:
+    @classmethod
+    def get_default_config(cls) -> AgentConfig:
         raise NotImplementedError
 
     def _load_articulation(self):
@@ -123,6 +96,7 @@ class BaseAgent:
         urdf_path = urdf_path.format(description=DESCRIPTION_DIR)
 
         urdf_config = parse_urdf_config(self.urdf_config, self.scene)
+        check_urdf_config(urdf_config)
 
         # TODO(jigu): support loading multiple convex collision shapes
         self.robot = loader.load(str(urdf_path), urdf_config)

@@ -1,4 +1,4 @@
-from typing import List
+from typing import Dict, List
 
 import numpy as np
 import sapien.core as sapien
@@ -6,7 +6,7 @@ import trimesh
 
 
 def get_actor_meshes(actor: sapien.ActorBase):
-    """Get actor meshes in the actor frame."""
+    """Get actor (collision) meshes in the actor frame."""
     meshes = []
     for col_shape in actor.get_collision_shapes():
         geom = col_shape.geometry
@@ -24,14 +24,32 @@ def get_actor_meshes(actor: sapien.ActorBase):
             geom, (sapien.ConvexMeshGeometry, sapien.NonconvexMeshGeometry)
         ):
             vertices = geom.vertices  # [n, 3]
-            faces = geom.indices  # [m * 3]
-            faces = [faces[i : i + 3] for i in range(0, len(faces), 3)]
+            faces = geom.indices.reshape(-1, 3)  # [m * 3]
             vertices = vertices * geom.scale
             mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
         else:
             raise TypeError(type(geom))
         mesh.apply_transform(col_shape.get_local_pose().to_transformation_matrix())
         meshes.append(mesh)
+    return meshes
+
+
+def get_visual_body_meshes(visual_body: sapien.RenderBody):
+    meshes = []
+    for render_shape in visual_body.get_render_shapes():
+        vertices = render_shape.mesh.vertices * visual_body.scale  # [n, 3]
+        faces = render_shape.mesh.indices.reshape(-1, 3)  # [m * 3]
+        mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
+        mesh.apply_transform(visual_body.local_pose.to_transformation_matrix())
+        meshes.append(mesh)
+    return meshes
+
+
+def get_actor_visual_meshes(actor: sapien.ActorBase):
+    """Get actor (visual) meshes in the actor frame."""
+    meshes = []
+    for vb in actor.get_visual_bodies():
+        meshes.extend(get_visual_body_meshes(vb))
     return meshes
 
 
@@ -55,6 +73,13 @@ def get_actor_mesh(actor: sapien.ActorBase, to_world_frame=True):
     if to_world_frame:
         T = actor.pose.to_transformation_matrix()
         mesh.apply_transform(T)
+    return mesh
+
+
+def get_actor_visual_mesh(actor: sapien.ActorBase):
+    mesh = merge_meshes(get_actor_visual_meshes(actor))
+    if mesh is None:
+        return None
     return mesh
 
 
