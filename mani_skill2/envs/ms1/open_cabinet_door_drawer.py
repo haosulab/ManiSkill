@@ -27,8 +27,9 @@ def clip_and_normalize(x, a_min, a_max=None):
 
 
 class OpenCabinetEnv(MS1BaseEnv):
-    agent: MobilePandaSingleArm
+    ASSET_UID = "cabinet"
     MAX_DOF = 8
+    agent: MobilePandaSingleArm
 
     def __init__(self, *args, fixed_target_link_idx: int = None, **kwargs):
         # The index in target links (not all links)

@@ -23,6 +23,7 @@ from .base_env import MS1BaseEnv
 @register_gym_env(name="MoveBucket-v1", max_episode_steps=200)
 class MoveBucketEnv(MS1BaseEnv):
     DEFAULT_MODEL_JSON = "{ASSET_DIR}/partnet_mobility/meta/info_bucket_train.json"
+    ASSET_UID = "bucket"
 
     def _setup_cameras(self):
         super()._setup_cameras()
@@ -248,7 +249,9 @@ class MoveBucketEnv(MS1BaseEnv):
             "bucket_above_platform": dist_bucket_to_target < 0.3,
             "bucket_standing": bucket_tilt < 0.1 * np.pi,
             # "bucket_static": (vel_norm < 0.1 and ang_vel_norm < 0.2),
-            "bucket_static": self.check_actor_static(self.root_link, max_v=0.1, max_ang_v=0.2),
+            "bucket_static": self.check_actor_static(
+                self.root_link, max_v=0.1, max_ang_v=0.2
+            ),
         }
 
         return dict(

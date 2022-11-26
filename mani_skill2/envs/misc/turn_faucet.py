@@ -89,7 +89,7 @@ class TurnFaucetBaseEnv(BaseEnv):
 
 @register_gym_env(name="TurnFaucet-v0", max_episode_steps=200)
 class TurnFaucetEnv(TurnFaucetBaseEnv):
-    DEFAULT_MODEL_JSON = ASSET_DIR / "partnet_mobility/meta/info_faucet_train.json"
+    DEFAULT_MODEL_JSON = "{ASSET_DIR}/partnet_mobility/meta/info_faucet_train.json"
 
     target_link: sapien.Link
     target_joint: sapien.Joint
@@ -97,6 +97,7 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
     def __init__(self, model_json: str = None, model_ids: List[str] = (), **kwargs):
         if model_json is None:
             model_json = self.DEFAULT_MODEL_JSON
+        model_json = model_json.format(ASSET_DIR=ASSET_DIR)
         self.model_db: Dict[str, Dict] = load_json(model_json)
 
         if isinstance(model_ids, str):
@@ -110,7 +111,27 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
         self.model_id = None
         self.model_scale = None
 
+        # Find and check urdf paths
+        self.model_urdf_paths = {}
+        for model_id in self.model_ids:
+            self.model_urdf_paths[model_id] = self.find_urdf_path(model_id)
+
         super().__init__(**kwargs)
+
+    def find_urdf_path(self, model_id):
+        model_dir = ASSET_DIR / f"partnet_mobility/dataset/{model_id}"
+
+        urdf_names = ["mobility_cvx.urdf"]
+        for urdf_name in urdf_names:
+            urdf_path = model_dir / urdf_name
+            if urdf_path.exists():
+                return urdf_path
+
+        raise FileNotFoundError(
+            f"No valid URDF is found for {model_id}."
+            "Please download Partnet-Mobility (ManiSkill2022):"
+            "`python -m mani_skill2.utils.download --uid faucet`."
+        )
 
     def reset(self, seed=None, reconfigure=False, model_id=None, model_scale=None):
         self.set_episode_rng(seed)
@@ -171,9 +192,6 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
         model_dir = ASSET_DIR / f"partnet_mobility/dataset/{self.model_id}"
         urdf_path = model_dir / "mobility_cvx.urdf"
         loader.load_multiple_collisions_from_file = True
-        assert (
-            urdf_path.exists()
-        ), f"{urdf_path} is not found. Please download Partnet-Mobility (ManiSkill2022) first."
 
         density = self.model_info.get("density", 8e3)
         articulation = loader.load(str(urdf_path), config={"density": density})

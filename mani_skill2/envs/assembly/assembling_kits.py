@@ -23,6 +23,12 @@ class AssemblingKitsEnv(StationaryManipulationEnv):
 
         self._kit_dir = self._asset_root / "kits"
         self._models_dir = self._asset_root / "models"
+        if not (self._kit_dir.exists() and self._models_dir.exists()):
+            raise FileNotFoundError(
+                "The objects/kits are not found."
+                "Please download (ManiSkill2) AssemblingKits assets:"
+                "`python -m mani_skill2.utils.download --uid assembling_kits`."
+            )
 
         self._episode_json = load_json(self._asset_root / "episodes.json")
         self._episodes = self._episode_json["episodes"]
