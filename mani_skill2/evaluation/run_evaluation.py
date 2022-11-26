@@ -5,17 +5,25 @@ from tqdm import tqdm
 
 from mani_skill2.evaluation.evaluator import BaseEvaluator
 from mani_skill2.utils.io_utils import dump_json, load_json, write_txt
+from mani_skill2.utils.wrappers import RecordEpisode
 
 
 class Evaluator(BaseEvaluator):
     """Local evaluation."""
 
-    def __init__(self, output_dir: str):
+    def __init__(self, output_dir: str, record_dir=None):
         if os.path.exists(output_dir):
             print(f"{output_dir} exists.")
         else:
             os.makedirs(output_dir)
         self.output_dir = output_dir
+
+        self.record_dir = record_dir
+
+    def setup(self, *args, **kwargs):
+        super().setup(*args, **kwargs)
+        if self.record_dir is not None:
+            self.env = RecordEpisode(self.env, self.record_dir)
 
     def submit(self):
         # Export per-episode results
@@ -53,6 +61,7 @@ def parse_args():
     # For debug only
     parser.add_argument("--num-episodes", type=int, default=1)
     parser.add_argument("--use-random-policy", action="store_true")
+    parser.add_argument("--record-dir", type=str)
 
     args = parser.parse_args()
     return args
@@ -61,7 +70,7 @@ def parse_args():
 def main():
     args = parse_args()
 
-    evaluator = Evaluator(args.output_dir)
+    evaluator = Evaluator(args.output_dir, record_dir=args.record_dir)
 
     # ---------------------------------------------------------------------------- #
     # Load evaluation configuration
@@ -111,6 +120,7 @@ def main():
         exit(3)
 
     evaluator.submit()
+    evaluator.close()
 
 
 if __name__ == "__main__":
