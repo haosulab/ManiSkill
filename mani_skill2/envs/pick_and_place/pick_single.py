@@ -235,7 +235,10 @@ class PickSingleEnv(StationaryManipulationEnv):
             tcp_wrt_obj_pose = obj_pose.inv() * self.tcp.pose
             tcp_to_obj_dist = np.linalg.norm(tcp_wrt_obj_pose.p)
             reaching_reward = 1 - np.tanh(
-                3.0 * np.maximum(tcp_to_obj_dist - np.linalg.norm(self.model_bbox_size), 0.0)
+                3.0
+                * np.maximum(
+                    tcp_to_obj_dist - np.linalg.norm(self.model_bbox_size), 0.0
+                )
             )
             reward = reward + reaching_reward
 
@@ -251,12 +254,12 @@ class PickSingleEnv(StationaryManipulationEnv):
                 reward += reaching_goal_reward
 
         return reward
-    
+
     def compute_dense_reward_legacy(self, info, **kwargs):
         # original complex reward that is geometry-independent,
         # which ensures that MPC can successfully pick up most objects,
         # but can be unfriendly for RL.
-        
+
         reward = 0.0
         # hard code gripper info
         finger_length = 0.025
@@ -363,7 +366,7 @@ class PickSingleEnv(StationaryManipulationEnv):
                     gripper_width / 2 - self.agent.robot.get_qpos()[-2:]
                 )  # ensures that gripper is open
 
-        return reward    
+        return reward
 
     def render(self, mode="human"):
         if mode in ["human", "rgb_array"]:
@@ -426,7 +429,9 @@ class PickSingleYCBEnv(PickSingleEnv):
             model_dir = models_dir / model_id
             if not model_dir.exists():
                 raise FileNotFoundError(
-                    f"{model_dir} is not found. Please download YCB models first."
+                    f"{model_dir} is not found."
+                    "Please download (ManiSkill2) YCB models:"
+                    "`python -m mani_skill2.utils.download --uid ycb`."
                 )
 
             collision_file = model_dir / "collision.obj"
@@ -511,7 +516,8 @@ class PickSingleEGADEnv(PickSingleEnv):
             if not (collision_dir.exists() and visual_dir.exists()):
                 raise FileNotFoundError(
                     f"{collision_dir} or {visual_dir} is not found. "
-                    "Please download EGAD models first."
+                    "Please download (ManiSkill2) EGAD models:"
+                    "`python -m mani_skill2.utils.download --uid egad`."
                 )
 
     def _load_model(self):

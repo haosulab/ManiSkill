@@ -34,6 +34,12 @@ class PickClutterEnv(StationaryManipulationEnv):
         if episode_json is None:
             episode_json = self.DEFAULT_EPISODE_JSON
         episode_json = episode_json.format(ASSET_DIR=ASSET_DIR)
+        if not Path(episode_json).exists():
+            raise FileNotFoundError(
+                f"Episode json ({episode_json}) is not found."
+                "To download default json:"
+                "`python -m mani_skill2.utils.download --uid pick_clutter`."
+            )
         self.episodes: List[Dict] = load_json(episode_json)
 
         # Root directory of object models
@@ -242,7 +248,7 @@ class PickClutterEnv(StationaryManipulationEnv):
 
 @register_gym_env("PickClutterYCB-v0", max_episode_steps=200)
 class PickClutterYCBEnv(PickClutterEnv):
-    DEFAULT_EPISODE_JSON = str(ASSET_DIR / "pick_clutter/ycb_train_5k.json.gz")
+    DEFAULT_EPISODE_JSON = "{ASSET_DIR}/pick_clutter/ycb_train_5k.json.gz"
     DEFAULT_ASSET_ROOT = PickSingleYCBEnv.DEFAULT_ASSET_ROOT
     DEFAULT_MODEL_JSON = PickSingleYCBEnv.DEFAULT_MODEL_JSON
 

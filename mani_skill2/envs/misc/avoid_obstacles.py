@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from pathlib import Path
 
 import numpy as np
 import sapien.core as sapien
@@ -24,10 +25,17 @@ class AvoidObstaclesBaseEnv(BaseEnv):
 
     tcp: sapien.Link  # Tool Center Point of the robot
 
-    def __init__(self, json_path=None, **kwargs):
-        if json_path is None:
-            json_path = self.DEFAULT_EPISODE_JSON
-        self.episodes = load_json(json_path)
+    def __init__(self, episode_json=None, **kwargs):
+        if episode_json is None:
+            episode_json = self.DEFAULT_EPISODE_JSON
+        episode_json = episode_json.format(ASSET_DIR=ASSET_DIR)
+        if not Path(episode_json).exists():
+            raise FileNotFoundError(
+                f"Episode json ({episode_json}) is not found."
+                "To download default json:"
+                "`python -m mani_skill2.utils.download --uid avoid_obstacles`."
+            )
+        self.episodes = load_json(episode_json)
         self.episode_idx = None
         self.episode_config = None
         super().__init__(**kwargs)
@@ -223,7 +231,7 @@ class AvoidObstaclesBaseEnv(BaseEnv):
 
 @register_gym_env("PandaAvoidObstacles-v0", max_episode_steps=500)
 class PandaAvoidObstaclesEnv(AvoidObstaclesBaseEnv):
-    DEFAULT_EPISODE_JSON = str(ASSET_DIR / "avoid_obstacles/panda_train_2k.json.gz")
+    DEFAULT_EPISODE_JSON = "{ASSET_DIR}/avoid_obstacles/panda_train_2k.json.gz"
 
     def _load_agent(self):
         self.robot_uuid = "panda"

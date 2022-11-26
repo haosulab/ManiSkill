@@ -5,7 +5,7 @@ import numpy as np
 import sapien.core as sapien
 from sapien.core import Pose
 
-from mani_skill2 import ASSET_DIR
+from mani_skill2 import ASSET_DIR, DESCRIPTION_DIR
 from mani_skill2.agents.robots.mobile_panda import DummyMobileAgent
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.utils.common import random_choice
@@ -19,6 +19,7 @@ from mani_skill2.utils.sapien_utils import (
 
 class MS1BaseEnv(BaseEnv):
     DEFAULT_MODEL_JSON: str
+    ASSET_UID: str
     agent: DummyMobileAgent
 
     def __init__(
@@ -46,10 +47,18 @@ class MS1BaseEnv(BaseEnv):
         for model_id in self.model_ids:
             self.model_urdf_paths[model_id] = self.find_urdf_path(model_id)
 
+        # check robot assets
+        robot_asset_dir = DESCRIPTION_DIR / "sciurus17_description"
+        if not robot_asset_dir.exists():
+            raise FileNotFoundError(
+                f"The assets for mobile panda ({robot_asset_dir}) are not found. "
+                "Please download sciurus17 models:"
+                "`python -m mani_skill2.utils.download --uid sciurus17`."
+            )
+
         super().__init__(*args, **kwargs)
 
-    @staticmethod
-    def find_urdf_path(model_id):
+    def find_urdf_path(self, model_id):
         model_dir = ASSET_DIR / f"partnet_mobility/dataset/{model_id}"
 
         urdf_names = ["mobility_cvx.urdf", "mobility_fixed.urdf"]
@@ -60,7 +69,8 @@ class MS1BaseEnv(BaseEnv):
 
         raise FileNotFoundError(
             f"No valid URDF is found for {model_id}."
-            "Please download Partnet-Mobility (ManiSkill2022)."
+            "Please download Partnet-Mobility (ManiSkill2022):"
+            "`python -m mani_skill2.utils.download --uid {}`".format(self.ASSET_UID)
         )
 
     # -------------------------------------------------------------------------- #
