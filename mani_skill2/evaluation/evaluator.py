@@ -80,6 +80,9 @@ class BaseEvaluator:
 
             if callback is not None:
                 callback(i + 1, metrics)
+    
+    def close(self):
+        self.env.close()
 
     def generate_dummy_config(self, env_id, num_episodes: int):
         """Generate dummy configuration."""

@@ -194,8 +194,10 @@ class RecordEpisode(gym.Wrapper):
 
         return obs, rew, done, info
 
-    def flush_trajectory(self, verbose=False):
-        if not self.save_trajectory or len(self._episode_data) == 0:
+    def flush_trajectory(self, verbose=False, ignore_empty_transition=False):
+        if not self.save_trajectory:
+            return
+        if ignore_empty_transition and len(self._episode_data) <= 1:
             return
 
         traj_id = "traj_{}".format(self._episode_id)
@@ -300,8 +302,11 @@ class RecordEpisode(gym.Wrapper):
 
     def close(self) -> None:
         if self.save_trajectory:
+            self.flush_trajectory(ignore_empty_transition=True)
             if self.clean_on_close:
                 clean_trajectories(self._h5_file, self._json_data)
             self._h5_file.close()
             dump_json(self._json_path, self._json_data, indent=2)
+        if self.save_video:
+            self.flush_video()
         return super().close()
