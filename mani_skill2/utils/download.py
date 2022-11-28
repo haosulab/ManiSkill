@@ -54,7 +54,7 @@ DATA_SOURCES["avoid_obstacles"] = dict(
 )
 DATA_SOURCES["pick_clutter"] = dict(
     url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/pick_clutter/ycb_train_5k.json.gz",
-    checksum="6485c3b302a1dbde22711831f2611c498bebb4981b78f79d1a9c739be1eb45fe",
+    checksum="70ec176c7036f326ea7813b77f8c03bea9db5960198498957a49b2895a9ec338",
     output_dir=ASSET_DIR,
 )
 
