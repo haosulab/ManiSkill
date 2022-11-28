@@ -220,7 +220,6 @@ class MoveBucketEnv(MS1BaseEnv):
     # -------------------------------------------------------------------------- #
     # Success metric and shaped reward
     # -------------------------------------------------------------------------- #
-
     def evaluate(self, **kwargs):
         w2b = (
             self.bucket_body_link.pose.inv().to_transformation_matrix()
@@ -394,10 +393,13 @@ class MoveBucketEnv(MS1BaseEnv):
     # ---------------------------------------------------------------------------- #
     # Observation
     # ---------------------------------------------------------------------------- #
-
     def _get_task_actors(self):
         return self.balls
 
     def _get_task_articulations(self):
         # bucket max dof is 1 in our data
         return [(self.bucket, 2)]
+
+    def set_state(self, state: np.ndarray):
+        super().set_state(state)
+        self._prev_actor_pose = self.bucket.pose

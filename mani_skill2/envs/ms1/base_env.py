@@ -84,6 +84,7 @@ class MS1BaseEnv(BaseEnv):
         return scene_config
 
     def reset(self, seed=None, reconfigure=False, model_id=None):
+        self._prev_actor_pose = None
         self.set_episode_rng(seed)
         _reconfigure = self._set_model(model_id)
         reconfigure = _reconfigure or reconfigure

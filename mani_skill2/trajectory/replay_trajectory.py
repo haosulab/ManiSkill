@@ -288,16 +288,33 @@ def from_pd_joint_delta_pos(
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--traj-path", type=str, required=True)
-    parser.add_argument("-o", "--obs-mode", type=str)
-    parser.add_argument("-c", "--target-control-mode", type=str)
+    parser.add_argument("-o", "--obs-mode", type=str, help="target observation mode")
+    parser.add_argument(
+        "-c", "--target-control-mode", type=str, help="target control mode"
+    )
     parser.add_argument("--verbose", action="store_true")
-    parser.add_argument("--save-traj", action="store_true")
-    parser.add_argument("--save-video", action="store_true")
+    parser.add_argument(
+        "--save-traj", action="store_true", help="whether to save trajectories"
+    )
+    parser.add_argument(
+        "--save-video", action="store_true", help="whether to save videos"
+    )
     parser.add_argument("--num-procs", type=int, default=1)
     parser.add_argument("--max-retry", type=int, default=0)
-    parser.add_argument("--discard-timeout", action="store_true")
-    parser.add_argument("--allow-failure", action="store_true")
+    parser.add_argument(
+        "--discard-timeout",
+        action="store_true",
+        help="whether to discard timeout episodes",
+    )
+    parser.add_argument(
+        "--allow-failure", action="store_true", help="whether to allow failure episodes"
+    )
     parser.add_argument("--vis", action="store_true")
+    parser.add_argument(
+        "--use-env-states",
+        action="store_true",
+        help="whether to replay by env states instead of actions",
+    )
     return parser.parse_args()
 
 
@@ -397,6 +414,10 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
             # Original actions to replay
             ori_actions = ori_h5_file[traj_id]["actions"][:]
 
+            # Original env states to replay
+            if args.use_env_states:
+                ori_env_states = ori_h5_file[traj_id]["env_states"][1:]
+
             info = {}
 
             # Without conversion between control modes
@@ -404,12 +425,14 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
                 n = len(ori_actions)
                 if pbar is not None:
                     pbar.reset(total=n)
-                for a in ori_actions:
+                for t, a in enumerate(ori_actions):
                     if pbar is not None:
                         pbar.update()
                     _, _, _, info = env.step(a)
                     if args.vis:
                         env.render()
+                    if args.use_env_states:
+                        env.set_state(ori_env_states[t])
 
             # From joint position to others
             elif ori_control_mode == "pd_joint_pos":
@@ -447,6 +470,8 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
             else:
                 # Rollback episode id for failed attempts
                 env._episode_id -= 1
+                if args.verbose:
+                    print("info", info)
         else:
             tqdm.write(f"Episode {episode_id} is not replayed successfully. Skipping")
 

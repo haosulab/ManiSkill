@@ -400,6 +400,10 @@ class OpenCabinetEnv(MS1BaseEnv):
         # The maximum DoF is 6 in our data.
         return [(self.cabinet, 8)]
 
+    def set_state(self, state: np.ndarray):
+        super().set_state(state)
+        self._prev_actor_pose = self.target_link.pose
+
 
 @register_gym_env(name="OpenCabinetDoor-v1", max_episode_steps=200)
 class OpenCabinetDoorEnv(OpenCabinetEnv):

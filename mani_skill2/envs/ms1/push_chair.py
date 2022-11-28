@@ -348,3 +348,7 @@ class PushChairEnv(MS1BaseEnv):
     def _get_task_articulations(self):
         # The maximum DoF is 20 in our data.
         return [(self.chair, 25)]
+
+    def set_state(self, state: np.ndarray):
+        super().set_state(state)
+        self._prev_actor_pose = self.root_link.pose
