@@ -23,7 +23,7 @@ class Evaluator(BaseEvaluator):
     def setup(self, *args, **kwargs):
         super().setup(*args, **kwargs)
         if self.record_dir is not None:
-            self.env = RecordEpisode(self.env, self.record_dir)
+            self.env = RecordEpisode(self.env, self.record_dir, clean_on_close=False)
 
     def submit(self):
         # Export per-episode results

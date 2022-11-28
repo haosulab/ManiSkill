@@ -195,9 +195,9 @@ class RecordEpisode(gym.Wrapper):
         return obs, rew, done, info
 
     def flush_trajectory(self, verbose=False, ignore_empty_transition=False):
-        if not self.save_trajectory:
+        if not self.save_trajectory or len(self._episode_data) == 0:
             return
-        if ignore_empty_transition and len(self._episode_data) <= 1:
+        if ignore_empty_transition and len(self._episode_data) == 1:
             return
 
         traj_id = "traj_{}".format(self._episode_id)
@@ -286,9 +286,12 @@ class RecordEpisode(gym.Wrapper):
         if verbose:
             print("Record the {}-th episode".format(self._episode_id))
 
-    def flush_video(self, suffix="", verbose=False):
+    def flush_video(self, suffix="", verbose=False, ignore_empty_transition=False):
         if not self.save_video or len(self._render_images) == 0:
             return
+        if ignore_empty_transition and len(self._render_images) == 1:
+            return
+
         video_name = "{}".format(self._episode_id)
         if suffix:
             video_name += "_" + suffix
@@ -302,11 +305,18 @@ class RecordEpisode(gym.Wrapper):
 
     def close(self) -> None:
         if self.save_trajectory:
-            self.flush_trajectory(ignore_empty_transition=True)
+            # Handle the last episode only when `save_on_reset=True`
+            if self.save_on_reset:
+                traj_id = "traj_{}".format(self._episode_id)
+                if traj_id in self._h5_file:
+                    logger.warning(f"{traj_id} exists in h5.")
+                else:
+                    self.flush_trajectory(ignore_empty_transition=True)
             if self.clean_on_close:
                 clean_trajectories(self._h5_file, self._json_data)
             self._h5_file.close()
             dump_json(self._json_path, self._json_data, indent=2)
         if self.save_video:
-            self.flush_video()
+            if self.save_on_reset:
+                self.flush_video(ignore_empty_transition=True)
         return super().close()

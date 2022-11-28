@@ -13,7 +13,7 @@ def parse_args():
     parser.add_argument("-o", "--obs-mode", type=str, default="none")
     parser.add_argument("--reward-mode", type=str)
     parser.add_argument("-c", "--control-mode", type=str)
-    parser.add_argument("--render-mode", type=str, default="cameras")
+    parser.add_argument("--render-mode", type=str)
     parser.add_argument("--record-dir", type=str)
     args, opts = parser.parse_known_args()
 
@@ -50,14 +50,18 @@ def main():
     print("Reward mode", env.reward_mode)
 
     obs = env.reset()
+    if args.render_mode is not None:
+        env.render(args.render_mode)
 
     while True:
-        env.render()
         action = env.action_space.sample()
         obs, reward, done, info = env.step(action)
         print("reward", reward)
         print("done", done)
         print("info", info)
+
+        if args.render_mode is not None:
+            env.render(args.render_mode)
 
         if done:
             break
