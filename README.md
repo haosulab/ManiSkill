@@ -189,7 +189,7 @@ python -m mani_skill2.trajectory.replay_trajectory --traj-path demos/rigid_body_
 - `--obs-mode=rgbd`: (not included in the script above) specify the observation mode as `rgbd` to replay the trajectory. If `--save-traj`, the saved trajectory will contain the RGBD observations. RGB images are saved as uint8 and depth images (multiplied by 1024) are saved as uint16.
 - `--obs-mode=pointcloud`: (not included in the script above) specify the observation mode as `pointcloud`. We encourage you to further process the point cloud instead of using this point cloud directly.
 - `--obs-mode=state`: (not included in the script above) specify the observation mode as `state`. Note that the `state` observation mode is not allowed for challenge submission.
-- `--use-env-states`: use the recorded state to set the environment after the action is replayed at each step. It is necessary to replay trajectories recorded by MPC or RL (e.g., tasks migrated from ManiSkill1).
+- `--use-env-states`: For each time step $t$, after replaying the action at this time step and obtaining a new observation at $t+1$, set the environment state at time $t+1$ as the recorded environment state at time $t+1$. This is necessary for successfully replaying trajectories for the tasks migrated from ManiSkill1.
   
 </details>
 
