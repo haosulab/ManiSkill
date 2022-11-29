@@ -119,7 +119,8 @@ class StationaryManipulationEnv(BaseEnv):
         base_camera = self._scene.add_camera(
             "base_camera", 128, 128, np.pi / 2, 0.01, 10
         )
-        base_camera.set_local_pose(look_at([0.2, 0, 0.4], [0, 0, 0]))
+        # base_camera.set_local_pose(look_at([0.2, 0, 0.4], [0, 0, 0]))
+        base_camera.set_local_pose(look_at([0.3, 0, 0.6], [-0.1, 0, 0.1]))
         self._cameras["base_camera"] = base_camera
 
     def _setup_viewer(self):
