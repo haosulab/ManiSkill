@@ -22,21 +22,6 @@ def vectorize_pose(pose: sapien.Pose):
     return np.hstack([pose.p, pose.q])
 
 
-def get_actor_by_name(actors, names: Union[List[str], str]):
-    assert isinstance(actors, (list, tuple))
-    # Actors can be joint and link
-    if isinstance(names, str):
-        names = [names]
-        sign = True
-    else:
-        sign = False
-    ret = [None for _ in names]
-    for actor in actors:
-        if actor.get_name() in names:
-            ret[names.index(actor.get_name())] = actor
-    return ret[0] if sign else ret
-
-
 def set_actor_visibility(actor: sapien.Actor, visibility):
     for v in actor.get_visual_bodies():
         v.set_visibility(visibility)
@@ -329,9 +314,6 @@ def look_at(eye, target, up=(0, 0, 1)) -> sapien.Pose:
         target: looking-at location
         up: a general direction of "up" from the camera.
 
-    Raises:
-        RuntimeError: @up and @right are both None.
-
     Returns:
         sapien.Pose: camera pose
     """
@@ -371,6 +353,9 @@ def set_articulation_render_material(articulation: sapien.Articulation, **kwargs
                 s.set_material(mat)
 
 
+# -------------------------------------------------------------------------- #
+# Misc
+# -------------------------------------------------------------------------- #
 def check_joint_stuck(
     articulation: sapien.Articulation,
     active_joint_idx: int,
