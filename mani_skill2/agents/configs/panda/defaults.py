@@ -2,6 +2,7 @@ from copy import deepcopy
 
 from mani_skill2.agents.camera import MountedCameraConfig
 from mani_skill2.agents.controllers import *
+from mani_skill2.sensors.camera import CameraConfig
 
 
 class PandaDefaultConfig:
@@ -180,20 +181,35 @@ class PandaDefaultConfig:
 
     @property
     def cameras(self):
+        # return dict(
+        #     hand_camera=MountedCameraConfig(
+        #         mount_link="panda_hand",
+        #         # mount_p=[0.1, 0.0, 0.0],
+        #         # mount_q=[0.0, 0.60876137, 0.0, 0.7933534],
+        #         mount_p=[0.0464982, -0.0200011, 0.0360011],
+        #         mount_q=[0, 0.70710678, 0, 0.70710678],
+        #         hide_mount_link=False,
+        #         width=128,
+        #         height=128,
+        #         near=0.01,
+        #         far=10,
+        #         fx=64,
+        #         fy=64,
+        #     )
+        # )
         return dict(
-            hand_camera=MountedCameraConfig(
-                mount_link="panda_hand",
-                # mount_p=[0.1, 0.0, 0.0],
-                # mount_q=[0.0, 0.60876137, 0.0, 0.7933534],
-                mount_p=[0.0464982, -0.0200011, 0.0360011],
-                mount_q=[0, 0.70710678, 0, 0.70710678],
-                hide_mount_link=False,
+            hand_camera=CameraConfig(
+                uuid="hand_camera",
+                p=[0.0464982, -0.0200011, 0.0360011],
+                q=[0, 0.70710678, 0, 0.70710678],
                 width=128,
                 height=128,
+                fov=1.57,
                 near=0.01,
                 far=10,
-                fx=64,
-                fy=64,
+                # TODO(jigu): easy-to-understand way to specify articulation
+                articulation_uuid="panda_v2",
+                actor_uuid="panda_hand",
             )
         )
 

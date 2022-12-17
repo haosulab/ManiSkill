@@ -4,6 +4,7 @@ import numpy as np
 import sapien.core as sapien
 from sapien.core import Pose
 
+from mani_skill2.agents.base_agent import BaseAgent
 from mani_skill2.agents.robots.panda import Panda
 from mani_skill2.agents.robots.xmate3 import Xmate3Robotiq
 from mani_skill2.envs.sapien_env import BaseEnv
@@ -13,6 +14,7 @@ from mani_skill2.utils.sapien_utils import (
     set_articulation_render_material,
     vectorize_pose,
 )
+from mani_skill2.sensors.camera import CameraConfig
 
 
 class StationaryManipulationEnv(BaseEnv):
@@ -59,7 +61,7 @@ class StationaryManipulationEnv(BaseEnv):
         self.tcp: sapien.Link = get_entity_by_name(
             self.agent.robot.get_links(), self.agent._config.ee_link_name
         )
-        set_articulation_render_material(self.agent.robot, specular=0.9, roughness=0.3)
+        # set_articulation_render_material(self.agent.robot, specular=0.9, roughness=0.3)
 
     def _initialize_agent(self):
         if self.robot_uuid == "panda":
@@ -109,19 +111,19 @@ class StationaryManipulationEnv(BaseEnv):
         else:
             raise NotImplementedError(self.robot_uuid)
 
-    def _setup_cameras(self):
-        # Camera only for rendering, not included in `_cameras`
-        self.render_camera = self._scene.add_camera(
-            "render_camera", 512, 512, 1, 0.01, 10
-        )
-        self.render_camera.set_local_pose(look_at([1.0, 1.0, 0.8], [0.0, 0.0, 0.5]))
+    # def _setup_cameras(self):
+    #     # Camera only for rendering, not included in `_cameras`
+    #     self.render_camera = self._scene.add_camera(
+    #         "render_camera", 512, 512, 1, 0.01, 10
+    #     )
+    #     self.render_camera.set_local_pose(look_at([1.0, 1.0, 0.8], [0.0, 0.0, 0.5]))
 
-        base_camera = self._scene.add_camera(
-            "base_camera", 128, 128, np.pi / 2, 0.01, 10
-        )
-        # base_camera.set_local_pose(look_at([0.2, 0, 0.4], [0, 0, 0]))
-        base_camera.set_local_pose(look_at([0.3, 0, 0.6], [-0.1, 0, 0.1]))
-        self._cameras["base_camera"] = base_camera
+    #     base_camera = self._scene.add_camera(
+    #         "base_camera", 128, 128, np.pi / 2, 0.01, 10
+    #     )
+    #     # base_camera.set_local_pose(look_at([0.2, 0, 0.4], [0, 0, 0]))
+    #     base_camera.set_local_pose(look_at([0.3, 0, 0.6], [-0.1, 0, 0.1]))
+    #     self._cameras["base_camera"] = base_camera
 
     def _setup_viewer(self):
         super()._setup_viewer()
@@ -132,3 +134,20 @@ class StationaryManipulationEnv(BaseEnv):
         obs = self.agent.get_proprioception()
         obs["base_pose"] = vectorize_pose(self.agent.robot.pose)
         return obs
+
+    def _set_agent_cfg(self):
+        agent_cls: Type[BaseAgent] = self.SUPPORTED_ROBOTS[self.robot_uuid]
+        self._agent_cfg = agent_cls.get_default_config()
+
+    def _get_camera_cfgs(self):
+        pose = look_at([1.0, 1.0, 0.8], [0.0, 0.0, 0.5])
+        render_camera = CameraConfig(
+            "render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10
+        )
+
+        pose = look_at([0.3, 0, 0.6], [-0.1, 0, 0.1])
+        base_camera = CameraConfig(
+            "base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10
+        )
+
+        return {x.uuid: x for x in [render_camera, base_camera]}

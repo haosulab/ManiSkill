@@ -8,8 +8,9 @@ import sapien.core as sapien
 from gym import spaces
 
 from mani_skill2 import DESCRIPTION_DIR
+from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.common import merge_dicts
-from mani_skill2.utils.sapien_utils import parse_urdf_config, check_urdf_config
+from mani_skill2.utils.sapien_utils import check_urdf_config, parse_urdf_config
 
 from .base_controller import BaseController, CombinedController, ControllerConfig
 from .camera import MountedCameraConfig, get_camera_images, get_camera_pcd
@@ -29,7 +30,8 @@ class AgentConfig:
     urdf_path: str
     urdf_config: dict
     controllers: Dict[str, Union[ControllerConfig, Dict[str, ControllerConfig]]]
-    cameras: Dict[str, MountedCameraConfig]
+    # cameras: Dict[str, MountedCameraConfig]
+    cameras: Dict[str, CameraConfig]
 
 
 class BaseAgent:
@@ -81,7 +83,7 @@ class BaseAgent:
         self._load_articulation()
         self._setup_controllers()
         self.set_control_mode(control_mode)
-        self._setup_cameras()
+        # self._setup_cameras()
         self._after_init()
 
     @classmethod
@@ -118,10 +120,10 @@ class BaseAgent:
                     config, self.robot, self._control_freq
                 )
 
-    def _setup_cameras(self):
-        self.cameras = OrderedDict()
-        for uuid, config in self.camera_configs.items():
-            self.cameras[uuid] = config.build(self.robot, self.scene, name=uuid)
+    # def _setup_cameras(self):
+    #     self.cameras = OrderedDict()
+    #     for uuid, config in self.camera_configs.items():
+    #         self.cameras[uuid] = config.build(self.robot, self.scene, name=uuid)
 
     def _after_init(self):
         """After initialization. E.g., caching the end-effector link."""

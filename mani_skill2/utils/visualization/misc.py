@@ -63,7 +63,7 @@ def observations_to_images(observations, max_depth=None) -> List[np.ndarray]:
     images = []
     for sensor_name in observations:
         if "rgb" in sensor_name:
-            rgb = observations[sensor_name]
+            rgb = observations[sensor_name][..., :3]
             if rgb.dtype == np.float32:
                 rgb = np.clip(rgb * 255, 0, 255).astype(np.uint8)
             # rgb = cv2.resize(rgb, [128, 128])
