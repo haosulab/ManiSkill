@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from typing import Dict, Iterable, List, Sequence
 
 import gym
@@ -81,9 +80,7 @@ def get_dtype_bounds(dtype: np.dtype):
     elif np.issubdtype(dtype, np.integer):
         info = np.iinfo(dtype)
         return info.min, info.max
-    elif np.issubdtype(dtype, np.bool):
-        return 0, 1
-    elif np.issctype(dtype, bool):
+    elif np.issubdtype(dtype, np.bool_):
         return 0, 1
     else:
         raise TypeError(dtype)
@@ -106,13 +103,19 @@ def convert_observation_to_space(observation, prefix=""):
     elif isinstance(observation, np.ndarray):
         shape = observation.shape
         dtype = observation.dtype
-        dtype_min, dtype_max = get_dtype_bounds(dtype)
-        low = np.full(shape, dtype_min)
-        high = np.full(shape, dtype_max)
-        space = spaces.Box(low, high, dtype=dtype)
-    elif isinstance(observation, (float, np.float32)):
-        logger.warning(f"The observation ({prefix}) is a float")
+        low, high = get_dtype_bounds(dtype)
+        if np.issubdtype(dtype, np.floating):
+            low, high = -np.inf, np.inf
+        space = spaces.Box(low, high, shape=shape, dtype=dtype)
+    elif isinstance(observation, (float, np.float32, np.float64)):
+        logger.debug(f"The observation ({prefix}) is a (float) scalar")
         space = spaces.Box(-np.inf, np.inf, shape=[1], dtype=np.float32)
+    elif isinstance(observation, (int, np.int32, np.int64)):
+        logger.debug(f"The observation ({prefix}) is a (integer) scalar")
+        space = spaces.Box(-np.inf, np.inf, shape=[1], dtype=int)
+    elif isinstance(observation, (bool, np.bool_)):
+        logger.debug(f"The observation ({prefix}) is a (bool) scalar")
+        space = spaces.Box(0, 1, shape=[1], dtype=int)
     else:
         raise NotImplementedError(type(observation), observation)
 
@@ -144,47 +147,45 @@ def inv_scale_action(action, low, high):
     return (action - 0.5 * (high + low)) / (0.5 * (high - low))
 
 
-def flatten_state_dict(state_dict: OrderedDict):
-    """Flatten an ordered dict containing states recursively.
+def flatten_state_dict(state_dict: dict) -> np.ndarray:
+    """Flatten a dictionary containing states recursively.
 
     Args:
-        state_dict (OrderedDict): an ordered dict containing states.
+        state_dict: a dictionary containing scalars or 1-dim vectors.
 
     Raises:
-        TypeError: If @state_dict is not an OrderedDict.
-        TypeError: If a value of @state_dict is a dict instead of OrderedDict.
         AssertionError: If a value of @state_dict is an ndarray with ndim > 1.
 
     Returns:
         np.ndarray: flattened states.
+
+    Notes:
+        The input is recommended to be ordered (e.g. OrderedDict).
+        However, since python 3.7, dictionary order is guaranteed to be insertion order.
+
     """
-    # if not isinstance(state_dict, OrderedDict):
-    #     raise TypeError(
-    #         "Must be an OrderedDict, but received {}".format(type(state_dict))
-    #     )
     if len(state_dict) == 0:
         return np.empty(0)
     states = []
     for key, value in state_dict.items():
         if isinstance(value, dict):
             states.append(flatten_state_dict(value))
-        elif isinstance(value, (int, float, tuple, list, np.float32)):
+        elif isinstance(value, (tuple, list)):
             states.append(value)
+        elif isinstance(value, (bool, np.bool_, int, np.int32, np.int64)):
+            # x = np.array(1) > 0 is np.bool_ instead of ndarray
+            states.append(int(value))
+        elif isinstance(value, (float, np.float32, np.float64)):
+            states.append(np.float32(value))
         elif isinstance(value, np.ndarray):
             assert value.ndim <= 1, "Too many dimensions({}) for {}".format(
                 value.ndim, key
             )
-            if value.size > 0:
-                states.append(value)
-        elif isinstance(value, np.bool_):
-            # x = np.array(1) > 0 is np.bool_ instead of ndarray
-            states.append(value.astype(int))
+            # assert value.size > 0, "Empty array for {}".format(key)
+            states.append(value)
         else:
             raise TypeError("Unsupported type: {}".format(type(value)))
-    if states:
-        return np.hstack(states)
-    else:
-        return []
+    return np.hstack(states)
 
 
 def flatten_dict_keys(d: dict, prefix=""):

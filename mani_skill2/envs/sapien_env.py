@@ -236,7 +236,6 @@ class BaseEnv(gym.Env):
             # Some cases do not need observations, e.g., MPC
             return OrderedDict()
         elif self._obs_mode == "state":
-            # TODO(jigu): first flatten keys, then concatenate values
             state_dict = self._get_obs_state_dict()
             return flatten_state_dict(state_dict)
         elif self._obs_mode == "state_dict":
