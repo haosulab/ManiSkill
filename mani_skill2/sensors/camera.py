@@ -179,7 +179,8 @@ class Camera:
     def get_params(self):
         """Get camera parameters."""
         return dict(
-            extrinsic=self.camera.get_extrinsic_matrix(),
+            # extrinsic=self.camera.get_extrinsic_matrix(),
+            cam2world=self.camera.get_model_matrix(),
             intrinsic=self.camera.get_intrinsic_matrix(),
         )
 

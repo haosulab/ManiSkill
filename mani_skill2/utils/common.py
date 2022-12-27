@@ -1,4 +1,5 @@
-from typing import Dict, Iterable, List, Sequence
+from collections import defaultdict
+from typing import Dict, Sequence
 
 import gym
 import numpy as np
@@ -10,23 +11,16 @@ from .logging_utils import logger
 # -------------------------------------------------------------------------- #
 # Basic
 # -------------------------------------------------------------------------- #
-def validate_keys(ds: Iterable[dict]):
-    """Validate whether keys are same."""
-    keys = None
-    for metrics in ds:
-        metrics_keys = list(metrics.keys())
-        if keys is None:
-            keys = metrics_keys
-        elif keys != metrics_keys:
-            raise RuntimeError(
-                "Different keys exist: {} vs. {}".format(keys, metrics_keys)
-            )
-    return keys
-
-
-def merge_dicts(ds: Iterable[Dict], asarray=False):
-    keys = validate_keys(ds)
-    ret = {k: [d[k] for d in ds] for k in keys}
+def merge_dicts(ds: Sequence[Dict], asarray=False):
+    """Merge multiple dicts with the same keys to a single one."""
+    # NOTE(jigu): To be compatible with generator, we only iterate once.
+    ret = defaultdict(list)
+    for d in ds:
+        for k in d:
+            ret[k].append(d[k])
+    ret = dict(ret)
+    # Sanity check (length)
+    assert len(set(len(v) for v in ret.values())) == 1, "Keys are not same."
     if asarray:
         ret = {k: np.concatenate(v) for k, v in ret.items()}
     return ret

@@ -678,6 +678,9 @@ class BaseEnv(gym.Env):
         else:
             raise NotImplementedError(f"Unsupported render mode {mode}.")
 
+    # ---------------------------------------------------------------------------- #
+    # Advanced
+    # ---------------------------------------------------------------------------- #
     def gen_scene_pcd(self, num_points: int = int(1e5)) -> np.ndarray:
         """Generate scene point cloud for motion planning, excluding the robot"""
         meshes = []
