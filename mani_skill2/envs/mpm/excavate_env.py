@@ -3,7 +3,7 @@ import sapien.core as sapien
 from mani_skill2.agents.configs.panda.variants import PandaBucketConfig
 from mani_skill2.agents.robots.panda import Panda
 from mani_skill2.envs.mpm.base_env import MPMBaseEnv
-from mani_skill2.utils.registration import register_gym_env
+from mani_skill2.utils.registration import register_env
 
 from mani_skill2.utils.sapien_utils import (
     get_entity_by_name,
@@ -21,7 +21,7 @@ from mani_skill2.envs.mpm import perlin
 from mani_skill2.envs.mpm.utils import actor2meshes
 
 
-@register_gym_env("Excavate-v0", max_episode_steps=250)
+@register_env("Excavate-v0", max_episode_steps=250)
 class ExcavateEnv(MPMBaseEnv):
     def __init__(
         self,

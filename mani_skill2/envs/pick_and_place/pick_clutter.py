@@ -9,7 +9,7 @@ from sapien.core import Pose
 from mani_skill2 import ASSET_DIR
 from mani_skill2.utils.common import random_choice
 from mani_skill2.utils.io_utils import load_json
-from mani_skill2.utils.registration import register_gym_env
+from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import set_actor_visibility, vectorize_pose, look_at
 
 from .base_env import StationaryManipulationEnv
@@ -246,7 +246,7 @@ class PickClutterEnv(StationaryManipulationEnv):
         super().set_state(state[:-3])
 
 
-@register_gym_env("PickClutterYCB-v0", max_episode_steps=200)
+@register_env("PickClutterYCB-v0", max_episode_steps=200)
 class PickClutterYCBEnv(PickClutterEnv):
     DEFAULT_EPISODE_JSON = "{ASSET_DIR}/pick_clutter/ycb_train_5k.json.gz"
     DEFAULT_ASSET_ROOT = PickSingleYCBEnv.DEFAULT_ASSET_ROOT

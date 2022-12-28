@@ -7,7 +7,7 @@ from transforms3d.quaternions import axangle2quat
 from mani_skill2.envs.mpm.base_env import MPMBaseEnv, MPMModelBuilder
 from mani_skill2.agents.robots.panda import Panda
 from mani_skill2.agents.configs.panda.defaults import PandaDefaultConfig
-from mani_skill2.utils.registration import register_gym_env
+from mani_skill2.utils.registration import register_env
 from warp_maniskill.mpm.mpm_simulator import (
     Simulator as MPMSimulator,
 )
@@ -27,7 +27,7 @@ from collections import OrderedDict
 import warp as wp
 
 
-@register_gym_env("Hang-v0", max_episode_steps=350)
+@register_env("Hang-v0", max_episode_steps=350)
 class HangEnv(MPMBaseEnv):
     def __init__(
         self,

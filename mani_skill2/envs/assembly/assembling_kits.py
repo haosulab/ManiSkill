@@ -7,13 +7,13 @@ from transforms3d.euler import euler2quat, quat2euler
 
 from mani_skill2 import ASSET_DIR
 from mani_skill2.utils.io_utils import load_json
-from mani_skill2.utils.registration import register_gym_env
+from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import look_at, vectorize_pose
 
 from .base_env import StationaryManipulationEnv
 
 
-@register_gym_env("AssemblingKits-v0", max_episode_steps=200)
+@register_env("AssemblingKits-v0", max_episode_steps=200)
 class AssemblingKitsEnv(StationaryManipulationEnv):
     def __init__(self, asset_root=None, **kwargs):
         if asset_root is not None:

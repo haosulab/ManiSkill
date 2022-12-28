@@ -10,7 +10,7 @@ from mani_skill2.agents.configs.panda.defaults import PandaRealSensed435Config
 from mani_skill2.agents.robots.panda import Panda
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.utils.io_utils import load_json
-from mani_skill2.utils.registration import register_gym_env
+from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import (
     get_articulation_max_impulse_norm,
     get_entity_by_name,
@@ -229,7 +229,7 @@ class AvoidObstaclesBaseEnv(BaseEnv):
         return ret
 
 
-@register_gym_env("PandaAvoidObstacles-v0", max_episode_steps=500)
+@register_env("PandaAvoidObstacles-v0", max_episode_steps=500)
 class PandaAvoidObstaclesEnv(AvoidObstaclesBaseEnv):
     DEFAULT_EPISODE_JSON = "{ASSET_DIR}/avoid_obstacles/panda_train_2k.json.gz"
 

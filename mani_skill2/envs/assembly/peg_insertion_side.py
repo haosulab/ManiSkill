@@ -5,13 +5,13 @@ import sapien.core as sapien
 from sapien.core import Pose
 from transforms3d.euler import euler2quat
 
-from mani_skill2.utils.registration import register_gym_env
+from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import hex2rgba, look_at, vectorize_pose
 
 from .base_env import StationaryManipulationEnv
 
 
-@register_gym_env(name="PegInsertionSide-v0", max_episode_steps=200)
+@register_env(uuid="PegInsertionSide-v0", max_episode_steps=200)
 class PegInsertionSideEnv(StationaryManipulationEnv):
     _clearance = 0.003
 

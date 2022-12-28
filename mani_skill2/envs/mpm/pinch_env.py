@@ -10,7 +10,7 @@ from mani_skill2.agents.configs.panda.variants import PandaPinchConfig
 
 from mani_skill2.agents.robots.panda import Panda
 from mani_skill2.envs.mpm.base_env import MPMBaseEnv, MPMModelBuilder, MPMSimulator
-from mani_skill2.utils.registration import register_gym_env
+from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import get_entity_by_name, vectorize_pose
 from mani_skill2.envs.mpm.utils import load_h5_as_dict
 
@@ -18,7 +18,7 @@ import warp as wp
 from warp.distance import compute_chamfer_distance
 
 
-@register_gym_env("Pinch-v0", max_episode_steps=300)
+@register_env("Pinch-v0", max_episode_steps=300)
 class PinchEnv(MPMBaseEnv):
     def __init__(
         self,

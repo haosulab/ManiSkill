@@ -5,7 +5,7 @@ from mani_skill2.envs.mpm.base_env import MPMBaseEnv
 from mani_skill2 import ASSET_DIR
 from mani_skill2.agents.robots.panda import Panda
 from mani_skill2.agents.configs.panda.variants import PandaBucketConfig
-from mani_skill2.utils.registration import register_gym_env
+from mani_skill2.utils.registration import register_env
 
 from transforms3d.euler import euler2quat
 from mani_skill2.utils.sapien_utils import get_entity_by_name
@@ -45,7 +45,7 @@ def success_kernel(
             wp.atomic_add(output, 2, 1)
 
 
-@register_gym_env("Fill-v0", max_episode_steps=250)
+@register_env("Fill-v0", max_episode_steps=250)
 class FillEnv(MPMBaseEnv):
     def _setup_mpm(self):
         super()._setup_mpm()

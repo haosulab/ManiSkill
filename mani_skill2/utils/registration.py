@@ -1,62 +1,126 @@
-import re
+from copy import deepcopy
+from functools import partial
+from typing import Dict, Type
 
 import gym
+from gym.envs.registration import EnvSpec as GymEnvSpec
 
-REGISTERED_ENV_IDS = set()
-env_id_re = re.compile(r"^(?:[\w:-]+\/)?([\w:.-]+)-v(\d+)$")
+from mani_skill2 import logger
+from mani_skill2.envs.sapien_env import BaseEnv
+from mani_skill2.utils.wrappers.observation import (
+    PointCloudObservationWrapper,
+    RGBDObservationWrapper,
+)
 
 
-def register(name, entry_point, max_episode_steps, kwargs):
-    """A wrapper of gym.register."""
-    if name in REGISTERED_ENV_IDS:
-        gym.logger.warn(f"{name} is registered in gym already!")
-    else:
-        REGISTERED_ENV_IDS.add(name)
-        gym.register(
-            name,
-            entry_point=entry_point,
-            max_episode_steps=max_episode_steps,
-            kwargs=kwargs,
+class EnvSpec:
+    def __init__(
+        self,
+        uuid: str,
+        cls: Type[BaseEnv],
+        max_episode_steps=None,
+        default_kwargs: dict = None,
+    ):
+        """A specification for a ManiSkill2 environment."""
+        self.uuid = uuid
+        self.cls = cls
+        self.max_episode_steps = max_episode_steps
+        self.default_kwargs = {} if default_kwargs is None else default_kwargs
+
+    def make(self, **kwargs):
+        _kwargs = self.default_kwargs.copy()
+        _kwargs.update(kwargs)
+        return self.cls(**_kwargs)
+
+    @property
+    def gym_spec(self):
+        """Return a gym EnvSpec for this env"""
+        entry_point = self.cls.__module__ + ":" + self.cls.__name__
+        return GymEnvSpec(
+            self.uuid,
+            entry_point,
+            max_episode_steps=self.max_episode_steps,
+            kwargs=self.default_kwargs,
         )
 
 
-def register_gym_env(name: str, max_episode_steps=None, **kwargs):
-    """A decorator to register ManiSkill environments in gym.
+REGISTERED_ENVS: Dict[str, EnvSpec] = {}
+
+
+def register(
+    name: str, cls: Type[BaseEnv], max_episode_steps=None, default_kwargs: dict = None
+):
+    """Register a ManiSkill2 environment."""
+    if name in REGISTERED_ENVS:
+        logger.warn(f"Env {name} already registered")
+    if not issubclass(cls, BaseEnv):
+        raise TypeError(f"Env {name} must inherit from BaseEnv")
+    REGISTERED_ENVS[name] = EnvSpec(
+        name, cls, max_episode_steps=max_episode_steps, default_kwargs=default_kwargs
+    )
+
+
+def make(env_id, from_gym=False, **kwargs):
+    """Instantiate a ManiSkill2 environment."""
+    if env_id not in REGISTERED_ENVS:
+        raise KeyError("Env {} not found in registry".format(env_id))
+
+    # Dispatch observation mode
+    obs_mode = kwargs.get("obs_mode")
+    if obs_mode not in ["state", "state_dict", "none"]:
+        kwargs["obs_mode"] = "image"
+
+    env_spec = REGISTERED_ENVS[env_id]
+    env = env_spec.make(**kwargs)
+
+    # Dispatch observation wrapper
+    if obs_mode == "rgbd":
+        env = RGBDObservationWrapper(env)
+        env.obs_mode = obs_mode
+    elif obs_mode == "pointcloud":
+        env = PointCloudObservationWrapper(env)
+        env.obs_mode = obs_mode
+
+    # To make it compatible with gym
+    if not from_gym:
+        env.unwrapped.spec = env_spec.gym_spec
+        if env_spec.max_episode_steps is not None:
+            env = gym.wrappers.TimeLimit(
+                env, max_episode_steps=env_spec.max_episode_steps
+            )
+
+    return env
+
+
+def register_env(uuid: str, max_episode_steps=None, **kwargs):
+    """A decorator to register ManiSkill2 environments.
 
     Args:
-        name (str): a unique id to register in gym.
+        uuid (str): unique id of the environment.
 
     Notes:
-        ManiSkill envs should maintain `max_episode_steps` by itself, rather than gym TimeLimit wrapper.
-        `gym.EnvSpec` uses kwargs instead of **kwargs!
+        - `max_episode_steps` is processed differently from other keyword arguments in gym.
+          `gym.make` wraps the env with `gym.wrappers.TimeLimit` to limit the maximum number of steps.
+        - `gym.EnvSpec` uses kwargs instead of **kwargs!
     """
 
-    def _register_gym_env(cls):
-        entry_point = "{}:{}".format(cls.__module__, cls.__name__)
-
+    def _register_env(cls):
+        # Register for ManiSkil2
         register(
-            name,
-            entry_point=entry_point,
+            uuid,
+            cls,
             max_episode_steps=max_episode_steps,
-            kwargs=kwargs,
+            default_kwargs=deepcopy(kwargs),
         )
 
-        # Register different observation modes for simplicity
-        if hasattr(cls, "SUPPORTED_OBS_MODES"):
-            match = env_id_re.search(name)
-            env_name = match.group(1)
-            env_version = match.group(2)
-            for obs_mode in cls.SUPPORTED_OBS_MODES:
-                env_kwargs = {"obs_mode": obs_mode}
-                env_kwargs.update(kwargs)
-                env_id = f"{env_name}-{obs_mode}-v{env_version}"
-                register(
-                    env_id,
-                    entry_point=entry_point,
-                    max_episode_steps=max_episode_steps,
-                    kwargs=kwargs,
-                )
+        # Register for gym
+        gym.register(
+            uuid,
+            entry_point=partial(make, env_id=uuid, from_gym=True),
+            max_episode_steps=max_episode_steps,
+            kwargs=deepcopy(kwargs),
+        )
 
         return cls
 
-    return _register_gym_env
+    return _register_env

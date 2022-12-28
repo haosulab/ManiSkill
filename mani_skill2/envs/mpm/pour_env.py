@@ -11,7 +11,7 @@ from mani_skill2.utils.geometry import (
     get_local_axis_aligned_bbox_for_link,
     get_local_aabc_for_actor,
 )
-from mani_skill2.utils.registration import register_gym_env
+from mani_skill2.utils.registration import register_env
 from transforms3d.euler import euler2quat
 from mani_skill2.utils.sapien_utils import (
     get_entity_by_name,
@@ -86,7 +86,7 @@ def create_ring():
     return vertices, np.array(indices)
 
 
-@register_gym_env("Pour-v0", max_episode_steps=350)
+@register_env("Pour-v0", max_episode_steps=350)
 class PourEnv(MPMBaseEnv):
     def __init__(
         self,

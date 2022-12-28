@@ -8,7 +8,6 @@ import numpy as np
 from gym import spaces
 
 from mani_skill2 import get_commit_info, logger
-from mani_skill2.envs.mpm.base_env import MPMBaseEnv
 
 from ..common import extract_scalars_from_info, flatten_dict_keys
 from ..io_utils import dump_json
@@ -134,6 +133,9 @@ class RecordEpisode(gym.Wrapper):
         self.info_on_video = info_on_video
         self.render_mode = render_mode
         self._render_images = []
+
+        # Avoid circular import
+        from mani_skill2.envs.mpm.base_env import MPMBaseEnv
 
         if isinstance(env.unwrapped, MPMBaseEnv):
             self.init_state_only = True

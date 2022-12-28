@@ -11,7 +11,7 @@ from transforms3d.quaternions import axangle2quat, qmult
 from mani_skill2 import ASSET_DIR
 from mani_skill2.utils.common import random_choice
 from mani_skill2.utils.io_utils import load_json
-from mani_skill2.utils.registration import register_gym_env
+from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import set_actor_visibility, vectorize_pose
 
 from .base_env import StationaryManipulationEnv
@@ -418,7 +418,7 @@ def build_actor_ycb(
     return actor
 
 
-@register_gym_env("PickSingleYCB-v0", max_episode_steps=200)
+@register_env("PickSingleYCB-v0", max_episode_steps=200)
 class PickSingleYCBEnv(PickSingleEnv):
     DEFAULT_ASSET_ROOT = str(YCB_DIR)
     DEFAULT_MODEL_JSON = "info_pick_v0.json"
@@ -499,7 +499,7 @@ def build_actor_egad(
     return actor
 
 
-@register_gym_env("PickSingleEGAD-v0", max_episode_steps=200, obj_init_rot=0.2)
+@register_env("PickSingleEGAD-v0", max_episode_steps=200, obj_init_rot=0.2)
 class PickSingleEGADEnv(PickSingleEnv):
     DEFAULT_ASSET_ROOT = str(EGAD_DIR)
     DEFAULT_MODEL_JSON = "info_pick_train_v0.json"

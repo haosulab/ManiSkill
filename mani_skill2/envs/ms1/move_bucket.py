@@ -14,13 +14,13 @@ from mani_skill2.utils.geometry import (
     get_local_axis_aligned_bbox_for_link,
     transform_points,
 )
-from mani_skill2.utils.registration import register_gym_env
+from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.trimesh_utils import get_actor_visual_mesh
 
 from .base_env import MS1BaseEnv
 
 
-@register_gym_env(name="MoveBucket-v1", max_episode_steps=200)
+@register_env(uuid="MoveBucket-v1", max_episode_steps=200)
 class MoveBucketEnv(MS1BaseEnv):
     DEFAULT_MODEL_JSON = "{ASSET_DIR}/partnet_mobility/meta/info_bucket_train.json"
     ASSET_UID = "bucket"

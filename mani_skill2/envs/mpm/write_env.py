@@ -9,7 +9,7 @@ from mani_skill2 import ASSET_DIR
 from mani_skill2.agents.configs.panda.variants import PandaStickConfig
 from mani_skill2.agents.robots.panda import Panda
 from mani_skill2.envs.mpm.base_env import MPMBaseEnv, MPMModelBuilder, MPMSimulator
-from mani_skill2.utils.registration import register_gym_env
+from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import vectorize_pose
 
 from mani_skill2.envs.mpm.utils import load_h5_as_dict
@@ -39,7 +39,7 @@ def success_iou_kernel(
         wp.atomic_add(out, 1, 1)
 
 
-@register_gym_env("Write-v0", max_episode_steps=200)
+@register_env("Write-v0", max_episode_steps=200)
 class WriteEnv(MPMBaseEnv):
     def __init__(
         self,

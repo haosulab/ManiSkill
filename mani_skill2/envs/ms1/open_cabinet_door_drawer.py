@@ -9,7 +9,7 @@ from scipy.spatial import distance as sdist
 from mani_skill2.agents.robots.mobile_panda import MobilePandaSingleArm
 from mani_skill2.utils.common import np_random, random_choice
 from mani_skill2.utils.geometry import angle_distance, transform_points
-from mani_skill2.utils.registration import register_gym_env
+from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.trimesh_utils import (
     get_articulation_meshes,
     get_visual_body_meshes,
@@ -405,7 +405,7 @@ class OpenCabinetEnv(MS1BaseEnv):
         self._prev_actor_pose = self.target_link.pose
 
 
-@register_gym_env(name="OpenCabinetDoor-v1", max_episode_steps=200)
+@register_env(uuid="OpenCabinetDoor-v1", max_episode_steps=200)
 class OpenCabinetDoorEnv(OpenCabinetEnv):
     DEFAULT_MODEL_JSON = (
         "{ASSET_DIR}/partnet_mobility/meta/info_cabinet_door_train.json"
@@ -415,7 +415,7 @@ class OpenCabinetDoorEnv(OpenCabinetEnv):
         super()._set_cabinet_handles("revolute")
 
 
-@register_gym_env(name="OpenCabinetDrawer-v1", max_episode_steps=200)
+@register_env(uuid="OpenCabinetDrawer-v1", max_episode_steps=200)
 class OpenCabinetDrawerEnv(OpenCabinetEnv):
     DEFAULT_MODEL_JSON = (
         "{ASSET_DIR}/partnet_mobility/meta/info_cabinet_drawer_train.json"

@@ -14,7 +14,7 @@ from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.utils.common import np_random, random_choice
 from mani_skill2.utils.geometry import transform_points
 from mani_skill2.utils.io_utils import load_json
-from mani_skill2.utils.registration import register_gym_env
+from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import (
     get_entity_by_name,
     hex2rgba,
@@ -87,7 +87,7 @@ class TurnFaucetBaseEnv(BaseEnv):
         self._viewer.set_camera_rpy(0, -0.5, 3.14)
 
 
-@register_gym_env(name="TurnFaucet-v0", max_episode_steps=200)
+@register_env(uuid="TurnFaucet-v0", max_episode_steps=200)
 class TurnFaucetEnv(TurnFaucetBaseEnv):
     DEFAULT_MODEL_JSON = "{ASSET_DIR}/partnet_mobility/meta/info_faucet_train.json"
 
