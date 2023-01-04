@@ -33,3 +33,7 @@ imgui.ini
 # but can be excluded explicitly
 demos/*
 tmp/*
+
+# tutorials and examples
+examples/tutorials/PickCube-v0
+examples/tutorials/logs
