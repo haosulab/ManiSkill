@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+from typing import Dict, Optional, Sequence, Union
 
 import gym
 import numpy as np
@@ -8,18 +8,13 @@ from sapien.utils import Viewer
 
 from mani_skill2 import logger
 from mani_skill2.agents.base_agent import AgentConfig, BaseAgent
-from mani_skill2.agents.camera import get_camera_images, get_camera_pcd, get_camera_rgb
 from mani_skill2.sensors.camera import (
     Camera,
     CameraConfig,
     parse_camera_cfgs,
     update_camera_cfgs_from_dict,
 )
-from mani_skill2.utils.common import (
-    convert_observation_to_space,
-    flatten_state_dict,
-    merge_dicts,
-)
+from mani_skill2.utils.common import convert_observation_to_space, flatten_state_dict
 from mani_skill2.utils.sapien_utils import (
     get_actor_state,
     get_articulation_state,
@@ -294,57 +289,6 @@ class BaseEnv(gym.Env):
             image=self.get_images(),
         )
 
-    def _get_obs_pointcloud(self, **kwargs):
-        """Fuse pointclouds from all cameras in the world frame."""
-        # Overwrite options if using GT segmentation
-        if self._enable_gt_seg:
-            kwargs.update(visual_seg=True, actor_seg=True)
-
-        # Overwrite options if using KuaFu renderer
-        if self._enable_kuafu:
-            raise NotImplementedError(
-                "Do not support pointcloud mode for KuafuRenderer yet."
-            )
-
-        self.update_render()
-
-        # Take pictures first, which is non-blocking
-        self.agent.take_picture()
-        for camera in self._cameras.values():
-            camera.take_picture()
-
-        pcds = self.agent.get_camera_pcd(fuse=False, **kwargs)
-        for name, camera in self._cameras.items():
-            pcd = get_camera_pcd(camera, **kwargs)
-            T = camera.get_model_matrix()
-            pcd["xyzw"] = pcd["xyzw"] @ T.T
-            pcds[name] = pcd
-
-        fused_pcd = merge_dicts(pcds.values(), True)
-
-        return OrderedDict(
-            pointcloud=fused_pcd,
-            agent=self._get_obs_agent(),
-            extra=self._get_obs_extra(),
-        )
-
-    def _get_robot_seg(self, actor_seg):
-        """Get the segmentation mask of robot links."""
-        mask = np.isin(actor_seg, self.agent.robot_link_ids)
-        return actor_seg * mask
-
-    def _get_obs_rgbd_robot_seg(self):
-        obs = self._get_obs_rgbd(actor_seg=True)
-        for image in obs["image"].values():
-            image["robot_seg"] = self._get_robot_seg(image.pop("actor_seg"))
-        return obs
-
-    def _get_obs_pointcloud_robot_seg(self):
-        obs = self._get_obs_pointcloud(actor_seg=True)
-        pointcloud = obs["pointcloud"]
-        pointcloud["robot_seg"] = self._get_robot_seg(pointcloud.pop("actor_seg"))
-        return obs
-
     # -------------------------------------------------------------------------- #
     # Reward mode
     # -------------------------------------------------------------------------- #
@@ -416,11 +360,13 @@ class BaseEnv(gym.Env):
         for uuid, camera_cfg in self._camera_cfgs.items():
             self._cameras[uuid] = Camera(camera_cfg, self._scene, self._renderer_type)
 
+        # Cameras for rendering only
         self._render_cameras = OrderedDict()
-        for uuid, camera_cfg in self._render_camera_cfgs.items():
-            self._render_cameras[uuid] = Camera(
-                camera_cfg, self._scene, self._renderer_type
-            )
+        if self._renderer_type != "client":
+            for uuid, camera_cfg in self._render_camera_cfgs.items():
+                self._render_cameras[uuid] = Camera(
+                    camera_cfg, self._scene, self._renderer_type
+                )
 
     def _setup_lighting(self):
         shadow = self.enable_shadow

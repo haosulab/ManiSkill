@@ -350,7 +350,7 @@ def set_articulation_render_material(articulation: sapien.Articulation, **kwargs
             for s in b.get_render_shapes():
                 mat = s.material
                 set_render_material(mat, **kwargs)
-                s.set_material(mat)
+                # s.set_material(mat)
 
 
 # -------------------------------------------------------------------------- #
