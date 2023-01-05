@@ -323,12 +323,10 @@ class VecEnv:
         indices = self._get_indices(indices)
         return [self.remotes[i] for i in indices]
 
-    def __del__(self):
-        if not getattr(self, "closed", True):
-            self.close()
-
     def __repr__(self):
-        return self.env_method("__repr__", indices=0)[0]
+        return "{}({})".format(
+            self.__class__.__name__, self.env_method("__repr__", indices=0)[0]
+        )
 
 
 def stack_observation_space(space: spaces.Space, n_envs: int):
@@ -381,3 +379,65 @@ def stack_obs(
         return np.stack(obs, out=buffer)
     else:
         raise NotImplementedError(type(space))
+
+
+class VecEnvWrapper(VecEnv):
+    def __init__(self, venv: VecEnv):
+        self.venv = venv
+        self.num_envs = venv.num_envs
+        self.observation_space = venv.observation_space
+        self.action_space = venv.action_space
+
+    def step_async(self, actions: np.ndarray) -> None:
+        self.venv.step_async(actions)
+
+    def step_wait(self):
+        return self.venv.step_wait()
+
+    def reset_async(self):
+        self.venv.reset_async()
+
+    def reset_wait(self):
+        return self.venv.reset_wait()
+
+    def seed(self, seed: Optional[int] = None) -> List[Union[None, int]]:
+        return self.venv.seed(seed)
+
+    def close(self) -> None:
+        return self.venv.close()
+
+    def get_attr(self, attr_name: str, indices=None) -> List:
+        return self.venv.get_attr(attr_name, indices)
+
+    def set_attr(self, attr_name: str, value, indices=None) -> None:
+        return self.venv.set_attr(attr_name, value, indices)
+
+    def env_method(
+        self,
+        method_name: str,
+        *method_args,
+        indices=None,
+        **method_kwargs,
+    ) -> List:
+        return self.venv.env_method(
+            method_name, *method_args, indices=indices, **method_kwargs
+        )
+
+    def __getattr__(self, name):
+        if name in self.__dict__:
+            return self.__dict__[name]
+        else:
+            return getattr(self.venv, name)
+
+
+class VecEnvObservationWrapper(VecEnvWrapper):
+    def reset_wait(self, **kwargs):
+        observation = self.venv.reset_wait(**kwargs)
+        return self.observation(observation)
+
+    def step_wait(self):
+        observation, reward, done, info = self.venv.step_wait()
+        return self.observation(observation), reward, done, info
+
+    def observation(self, observation):
+        raise NotImplementedError
