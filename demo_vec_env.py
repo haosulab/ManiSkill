@@ -79,12 +79,20 @@ def main():
             if args.vis:
                 if env.obs_mode in ["image", "rgbd"]:
                     images = []
-                    for cam_images in obs["image"].values():
-                        images.extend(
-                            observations_to_images(
-                                {k: v[0].cpu().numpy() for k, v in cam_images.items()}
+                    for i_env in range(args.n_envs):
+                        for cam_images in obs["image"].values():
+                            images.append(
+                                np.concatenate(
+                                    observations_to_images(
+                                        {
+                                            k: v[i_env].cpu().numpy()
+                                            for k, v in cam_images.items()
+                                        }
+                                    ),
+                                    axis=0,
+                                )
                             )
-                        )
+
                     viewer.imshow(tile_images(images))
                 elif env.obs_mode == "pointcloud":
                     import trimesh
@@ -93,6 +101,8 @@ def main():
                     for i_env in range(args.n_envs):
                         xyz = obs["pointcloud"]["xyzw"][i_env, ..., :3].cpu().numpy()
                         rgb = obs["pointcloud"]["rgb"][i_env].cpu().numpy()
+                        # rgb = obs["pointcloud"]["robot_seg"][i_env].cpu().numpy()
+                        # rgb = np.tile(rgb * 255, [1, 3])
                         # trimesh.PointCloud(xyz, rgb).show()
                         T = np.eye(4)
                         T[2, 3] = i_env * 1.0

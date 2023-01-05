@@ -73,7 +73,7 @@ def _worker(
     except EOFError:
         logger.info("Worker EOF")
     except Exception as err:
-        logger.error(err)
+        logger.error(err, exec_info=1)
     finally:
         env.close()
 
@@ -182,8 +182,11 @@ class VecEnv:
 
         if self.server_address is not None:
             self.handshake()  # To make sure environments are all initialized
-            # TODO(jigu): adjust textures accordingly
-            self.texture_names = ["Color", "Position"]
+            image_obs_space = self.observation_space["image"]
+            texture_names = set()
+            for name, subspace in image_obs_space.spaces.items():
+                texture_names.update(subspace.spaces.keys())
+            self.texture_names = tuple(texture_names)
             # List of [n_envs, n_cams, H, W, C]
             self._obs_tensors = self.server.auto_allocate_torch_tensors(
                 self.texture_names

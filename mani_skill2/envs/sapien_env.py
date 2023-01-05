@@ -289,6 +289,11 @@ class BaseEnv(gym.Env):
             image=self.get_images(),
         )
 
+    @property
+    def robot_link_ids(self):
+        """Get link ids for the robot. This is used for segmentation observations."""
+        return self.agent.robot_link_ids
+
     # -------------------------------------------------------------------------- #
     # Reward mode
     # -------------------------------------------------------------------------- #

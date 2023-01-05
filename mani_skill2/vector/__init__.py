@@ -1,5 +1,9 @@
 from .vec_env import VecEnv, VecEnvWrapper
-from .wrappers.observation import PointCloudObservationWrapper, RGBDObservationWrapper
+from .wrappers.observation import (
+    PointCloudObservationWrapper,
+    RGBDObservationWrapper,
+    RobotSegmentationObservationWrapper,
+)
 
 
 def make(env_id, num_envs, server_address=None, **kwargs):
@@ -18,6 +22,13 @@ def make(env_id, num_envs, server_address=None, **kwargs):
     if obs_mode not in ["state", "state_dict", "none"]:
         kwargs["obs_mode"] = "image"
 
+    # Whether to enable robot segmentation
+    enable_robot_seg = kwargs.get("enable_robot_seg", False)
+    if enable_robot_seg:
+        camera_cfgs = kwargs.get("camera_cfgs", {})
+        camera_cfgs["add_segmentation"] = True
+        kwargs["camera_cfgs"] = camera_cfgs
+
     env_spec = REGISTERED_ENVS[env_id]
     env_fn = partial(env_spec.make, **kwargs)
 
@@ -30,6 +41,9 @@ def make(env_id, num_envs, server_address=None, **kwargs):
         logger.info("Auto server address: {}".format(server_address))
 
     venv = VecEnv([env_fn for _ in range(num_envs)], server_address=server_address)
+
+    if enable_robot_seg:
+        venv = RobotSegmentationObservationWrapper(venv)
 
     # Dispatch observation wrapper
     if obs_mode == "rgbd":

@@ -49,7 +49,7 @@ class CameraConfig:
 
         self.articulation_uuid = articulation_uuid
         self.actor_uuid = actor_uuid
-        self.texture_names = texture_names
+        self.texture_names = tuple(texture_names)
 
     def __repr__(self) -> str:
         return self.__class__.__name__ + "(" + str(self.__dict__) + ")"
@@ -67,8 +67,12 @@ def update_camera_cfgs_from_dict(
         if k in camera_cfgs:
             continue
         for cfg in camera_cfgs.values():
-            assert hasattr(cfg, k), f"{k} is not a valid attribute of CameraConfig"
-            setattr(cfg, k, v)
+            if k == "add_segmentation":
+                cfg.texture_names += ("Segmentation",)
+            elif not hasattr(cfg, k):
+                raise AttributeError(f"{k} is not a valid attribute of CameraConfig")
+            else:
+                setattr(cfg, k, v)
     # Then, apply camera-specific configuration
     for name, v in cfg_dict.items():
         if name not in camera_cfgs:
@@ -136,6 +140,10 @@ class Camera:
             )
         else:
             self.texture_names = camera_cfg.texture_names
+
+    @property
+    def uuid(self):
+        return self.camera_cfg.uuid
 
     @staticmethod
     def get_mount_actor(scene: sapien.Scene, articulation_uuid, actor_uuid):

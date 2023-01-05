@@ -10,6 +10,7 @@ from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.utils.wrappers.observation import (
     PointCloudObservationWrapper,
     RGBDObservationWrapper,
+    RobotSegmentationObservationWrapper,
 )
 
 
@@ -70,8 +71,18 @@ def make(env_id, from_gym=False, **kwargs):
     if obs_mode not in ["state", "state_dict", "none"]:
         kwargs["obs_mode"] = "image"
 
+    # Whether to enable robot segmentation
+    enable_robot_seg = kwargs.get("enable_robot_seg", False)
+    if enable_robot_seg:
+        camera_cfgs = kwargs.get("camera_cfgs", {})
+        camera_cfgs["add_segmentation"] = True
+        kwargs["camera_cfgs"] = camera_cfgs
+
     env_spec = REGISTERED_ENVS[env_id]
     env = env_spec.make(**kwargs)
+
+    if enable_robot_seg:
+        env = RobotSegmentationObservationWrapper(env)
 
     # Dispatch observation wrapper
     if obs_mode == "rgbd":
