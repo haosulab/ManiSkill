@@ -2,8 +2,8 @@ from copy import deepcopy
 
 import numpy as np
 
-from mani_skill2.agents.camera import MountedCameraConfig
 from mani_skill2.agents.controllers import *
+from mani_skill2.sensors.camera import CameraConfig
 
 
 class MobilePandaDualArmDefaultConfig:
@@ -222,30 +222,30 @@ class MobilePandaDualArmDefaultConfig:
 
     @property
     def cameras(self):
-        fovy = np.pi / 3
-        fy = 160 / (np.tan(fovy / 2) * 2)
-        # mount_q = transforms3d.euler.euler2quat(-np.pi/3*k, np.pi/4, 0, 'rzyx')
-        camera_1 = MountedCameraConfig(
-            mount_link="mobile_base",
-            mount_p=[0, 0, self.camera_h],
-            mount_q=[0.9238795, 0, 0.3826834, 0],
-            hide_mount_link=False,
-            width=400,
-            height=160,
-            near=0.1,
-            far=10,
-            fx=fy,
-            fy=fy,
-        )
-        camera_2 = deepcopy(camera_1)
-        camera_2.mount_q = [0.46193977, 0.33141357, 0.19134172, -0.80010315]
-        camera_3 = deepcopy(camera_1)
-        camera_3.mount_q = [-0.46193977, 0.33141357, -0.19134172, -0.80010315]
-        return dict(
-            overhead_camera_1=camera_1,
-            overhead_camera_2=camera_2,
-            overhead_camera_3=camera_3,
-        )
+        cameras = []
+        qs = [
+            [0.9238795, 0, 0.3826834, 0],
+            [0.46193977, 0.33141357, 0.19134172, -0.80010315],
+            [-0.46193977, 0.33141357, -0.19134172, -0.80010315],
+        ]
+        robot_name = self.urdf_path.split("/")[-1].rstrip(".urdf")
+        for i in range(3):
+            # q = transforms3d.euler.euler2quat(-np.pi/3*i, np.pi/4, 0, 'rzyx')
+            q = qs[i]
+            camera = CameraConfig(
+                f"overhead_camera_{i}",
+                p=[0, 0, self.camera_h],
+                q=q,
+                width=400,
+                height=160,
+                near=0.1,
+                far=10,
+                fov=np.pi / 3,
+                articulation_uuid=robot_name,
+                actor_uuid="mobile_base"
+            )
+            cameras.append(camera)
+        return cameras
 
 
 class MobilePandaSingleArmDefaultConfig(MobilePandaDualArmDefaultConfig):

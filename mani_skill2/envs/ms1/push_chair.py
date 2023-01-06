@@ -24,11 +24,11 @@ class PushChairEnv(MS1BaseEnv):
         scene_config.solver_iterations = 15
         return scene_config
 
-    def _setup_cameras(self):
-        super()._setup_cameras()
-        self.render_camera.set_local_pose(
-            Pose(p=[0, 0, 4], q=[0.70710678, 0.0, 0.70710678, 0.0])
-        )
+    def _register_render_cameras(self):
+        cam_cfg = super()._register_render_cameras()
+        cam_cfg.p = [0, 0, 4]
+        cam_cfg.q = [0.70710678, 0.0, 0.70710678, 0.0]
+        return cam_cfg
 
     # -------------------------------------------------------------------------- #
     # Reconfigure
@@ -108,11 +108,13 @@ class PushChairEnv(MS1BaseEnv):
         builder.add_sphere_visual(radius=0.15, color=(1, 0, 0))
         self.target_indicator = builder.build_static(name="target_indicator")
 
+    def _configure_agent(self):
+        self._agent_cfg = MobilePandaDualArm.get_default_config()
+        self._agent_cfg.camera_h = 2
+
     def _load_agent(self):
-        agent_config = MobilePandaDualArm.get_default_config()
-        agent_config.camera_h = 2
         self.agent = MobilePandaDualArm(
-            self._scene, self._control_freq, self._control_mode, config=agent_config
+            self._scene, self._control_freq, self._control_mode, config=self._agent_cfg
         )
 
     def _set_chair_links_mesh(self):

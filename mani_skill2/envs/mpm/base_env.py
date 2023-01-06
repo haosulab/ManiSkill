@@ -54,7 +54,7 @@ def task(meshes):
 
 class MPMBaseEnv(BaseEnv):
     # fmt: off
-    SUPPORTED_OBS_MODES = ("none", "rgbd", "pointcloud", "rgbd_robot_seg", "pointcloud_robot_seg")
+    SUPPORTED_OBS_MODES = ("none", "image")
     # fmt: on
 
     def __init__(
@@ -207,10 +207,11 @@ class MPMBaseEnv(BaseEnv):
                 )
 
             with open(self.sdf_cache, "wb") as f:
-                meshes = [[(np.array(m.vertices), np.array(m.faces)) for m in ms]for ms in actor_meshes]
-                pickle.dump(
-                    {"signature": signature, "sdfs": sdfs, "meshes": meshes}, f
-                )
+                meshes = [
+                    [(np.array(m.vertices), np.array(m.faces)) for m in ms]
+                    for ms in actor_meshes
+                ]
+                pickle.dump({"signature": signature, "sdfs": sdfs, "meshes": meshes}, f)
 
         # convert sdfs to dense volumes
         for actor, sdf, meshes, primitives in zip(
@@ -513,10 +514,6 @@ class MPMBaseEnv(BaseEnv):
             [1, 1, -1], [1, 1, 1], shadow=True, scale=5, shadow_map_size=2048
         )
         self._scene.add_directional_light([0, 0, -1], [1, 1, 1])
-
-    def _setup_camera(self):
-        self._camera = self._scene.add_camera("frontview", 512, 512, 1, 0.01, 10)
-        self._camera.set_local_pose(sapien.Pose([1, 0, 1.2], euler2quat(0, 0.5, 3.14)))
 
     # -------------------------------------------------------------------------- #
     # Step

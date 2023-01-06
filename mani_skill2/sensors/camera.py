@@ -58,6 +58,11 @@ class CameraConfig:
     def pose(self):
         return sapien.Pose(self.p, self.q)
 
+    @pose.setter
+    def pose(self, pose: sapien.Pose):
+        self.p = pose.p
+        self.q = pose.q
+
 
 def update_camera_cfgs_from_dict(
     camera_cfgs: Dict[str, CameraConfig], cfg_dict: Dict[str, dict]

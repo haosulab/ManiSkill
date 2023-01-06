@@ -12,6 +12,7 @@ from mani_skill2.utils.geometry import (
     get_local_aabc_for_actor,
 )
 from mani_skill2.utils.registration import register_env
+from mani_skill2.sensors.camera import CameraConfig
 from transforms3d.euler import euler2quat
 from mani_skill2.utils.sapien_utils import (
     get_entity_by_name,
@@ -124,12 +125,15 @@ class PourEnv(MPMBaseEnv):
             (self.target_beaker, "visual"),
         ]
 
+    def _configure_agent(self):
+        self._agent_cfg = PandaPourConfig()
+
     def _load_agent(self):
         self.agent = Panda(
             self._scene,
             self._control_freq,
             control_mode=self._control_mode,
-            config=PandaPourConfig(),
+            config=self._agent_cfg,
         )
         self.grasp_site: sapien.Link = get_entity_by_name(
             self.agent.robot.get_links(), "panda_hand_tcp"
@@ -231,22 +235,13 @@ class PourEnv(MPMBaseEnv):
         self.agent.reset(self._init_qpos)
         self.agent.robot.set_pose(sapien.Pose([-0.55, 0, 0]))
 
-    def _setup_cameras(self):
-        # Camera only for rendering, not included in `_cameras`
-        self.render_camera = self._scene.add_camera(
-            "render_camera", 512, 512, 1, 0.001, 10
-        )
-        self.render_camera.set_local_pose(
-            sapien.Pose([-0.05, 0.7, 0.3], euler2quat(0, np.pi / 10, -np.pi / 2))
-        )
+    def _register_cameras(self):
+        p, q = [0.4, 0, 0.3], euler2quat(0, np.pi / 10, -np.pi)
+        return CameraConfig("base_camera", p, q, 128, 128, np.pi / 2, 0.001, 10)
 
-        base_camera = self._scene.add_camera(
-            "base_camera", 128, 128, np.pi / 2, 0.001, 10
-        )
-        base_camera.set_local_pose(
-            sapien.Pose([0.4, 0, 0.3], euler2quat(0, np.pi / 10, -np.pi))
-        )
-        self._cameras["base_camera"] = base_camera
+    def _register_render_cameras(self):
+        p, q = [-0.05, 0.7, 0.3], euler2quat(0, np.pi / 10, -np.pi / 2)
+        return CameraConfig("render_camera", p, q, 512, 512, 1, 0.001, 10)
 
     def initialize_episode(self):
         super().initialize_episode()

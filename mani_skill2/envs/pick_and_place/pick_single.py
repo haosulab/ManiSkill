@@ -521,10 +521,6 @@ class PickSingleEGADEnv(PickSingleEnv):
                 )
 
     def _load_model(self):
-        # NOTE(jigu): add a dummy camera to add material
-        cam = self._scene.add_camera("dummy_camera", 1, 1, 1, 0.01, 10)
-        self._scene.remove_camera(cam)
-
         mat = self._renderer.create_material()
         color = self._episode_rng.uniform(0.2, 0.8, 3)
         color = np.hstack([color, 1.0])

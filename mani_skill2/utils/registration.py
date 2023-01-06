@@ -65,9 +65,12 @@ def make(env_id, from_gym=False, **kwargs):
     """Instantiate a ManiSkill2 environment."""
     if env_id not in REGISTERED_ENVS:
         raise KeyError("Env {} not found in registry".format(env_id))
+    env_spec = REGISTERED_ENVS[env_id]
 
     # Dispatch observation mode
     obs_mode = kwargs.get("obs_mode")
+    if obs_mode is None:
+        obs_mode = env_spec.cls.SUPPORTED_OBS_MODES[0]
     if obs_mode not in ["state", "state_dict", "none"]:
         kwargs["obs_mode"] = "image"
 
@@ -78,7 +81,6 @@ def make(env_id, from_gym=False, **kwargs):
         camera_cfgs["add_segmentation"] = True
         kwargs["camera_cfgs"] = camera_cfgs
 
-    env_spec = REGISTERED_ENVS[env_id]
     env = env_spec.make(**kwargs)
 
     if enable_robot_seg:

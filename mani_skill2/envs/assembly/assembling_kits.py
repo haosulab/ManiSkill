@@ -75,9 +75,6 @@ class AssemblingKitsEnv(StationaryManipulationEnv):
         kit_path = str(self._kit_dir / f"{self.kit_id}.obj")
         builder.add_nonconvex_collision_from_file(kit_path)
 
-        # Add a dummy camera in order to decide shader
-        camera = self._scene.add_camera("dummy_camera", 1, 1, 1, 0.01, 10)
-        self._scene.remove_camera(camera)
         material = self._renderer.create_material()
         material.set_base_color([0.27807487, 0.20855615, 0.16934046, 1.0])
         material.metallic = 0.0
@@ -96,9 +93,6 @@ class AssemblingKitsEnv(StationaryManipulationEnv):
             str(collision_path), scale=self.object_scale
         )
 
-        # Add a dummy camera in order to decide shader
-        camera = self._scene.add_camera("dummy_camera", 1, 1, 1, 0.01, 10)
-        self._scene.remove_camera(camera)
         material = self._renderer.create_material()
         material.set_base_color(self.color[self._episode_rng.choice(len(self.color))])
         material.metallic = 0.0
@@ -231,7 +225,12 @@ class AssemblingKitsEnv(StationaryManipulationEnv):
 
         return reward
 
-    def _setup_cameras(self):
-        super()._setup_cameras()
-        self.render_camera.set_local_pose(look_at([0.3, 0.3, 0.8], [0.0, 0.0, 0.1]))
-        self._cameras["base_camera"].set_local_pose(look_at([0.2, 0, 0.4], [0, 0, 0]))
+    def _register_cameras(self):
+        cam_cfg = super()._register_cameras()
+        cam_cfg.pose = look_at([0.2, 0, 0.4], [0, 0, 0])
+        return cam_cfg
+
+    def _register_render_cameras(self):
+        cam_cfg = super()._register_render_cameras()
+        cam_cfg.pose = look_at([0.3, 0.3, 0.8], [0.0, 0.0, 0.1])
+        return cam_cfg

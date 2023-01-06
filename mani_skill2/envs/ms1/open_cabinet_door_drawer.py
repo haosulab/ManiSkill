@@ -37,11 +37,11 @@ class OpenCabinetEnv(MS1BaseEnv):
         self._cache_bboxes = {}
         super().__init__(*args, **kwargs)
 
-    def _setup_cameras(self):
-        super()._setup_cameras()
-        self.render_camera.set_local_pose(
-            Pose(p=[-1.5, 0, 1.5], q=[0.9238795, 0, 0.3826834, 0])
-        )
+    def _register_render_cameras(self):
+        cam_cfg = super()._register_render_cameras()
+        cam_cfg.p = [-1.5, 0, 1.5]
+        cam_cfg.q = [0.9238795, 0, 0.3826834, 0]
+        return cam_cfg
 
     # -------------------------------------------------------------------------- #
     # Reconfigure
@@ -144,9 +144,12 @@ class OpenCabinetEnv(MS1BaseEnv):
                 g0, g1, g2, g3 = s.get_collision_groups()
                 s.set_collision_groups(g0, g1, g2 | 1 << 31, g3)
 
+    def _configure_agent(self):
+        self._agent_cfg = MobilePandaSingleArm.get_default_config()
+
     def _load_agent(self):
         self.agent = MobilePandaSingleArm(
-            self._scene, self._control_freq, self._control_mode
+            self._scene, self._control_freq, self._control_mode, config=self._agent_cfg
         )
 
     # -------------------------------------------------------------------------- #

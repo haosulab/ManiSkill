@@ -15,6 +15,7 @@ from mani_skill2.utils.sapien_utils import (
     get_articulation_padded_state,
     parse_urdf_config,
 )
+from mani_skill2.sensors.camera import CameraConfig
 
 
 class MS1BaseEnv(BaseEnv):
@@ -140,13 +141,10 @@ class MS1BaseEnv(BaseEnv):
         articulation = loader.load(str(urdf_path), config=urdf_config)
         return articulation
 
-    def _setup_cameras(self):
-        self.render_camera = self._scene.add_camera(
-            name="render_camera", width=512, height=512, fovy=1, near=0.01, far=10
-        )
-        self.render_camera.set_local_pose(
-            Pose(p=[-1.5, 0, 1.5], q=[0.9238795, 0, 0.3826834, 0])
-        )
+    def _register_render_cameras(self):
+        p = [-1.5, 0, 1.5]
+        q = [0.9238795, 0, 0.3826834, 0]
+        return CameraConfig("render_camera", p, q, 512, 512, 1, 0.01, 10)
 
     def _setup_viewer(self):
         super()._setup_viewer()

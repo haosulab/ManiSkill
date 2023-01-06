@@ -151,7 +151,7 @@ class PickClutterEnv(StationaryManipulationEnv):
         actor_idx = random_choice(visible_inds, self._episode_rng)
         self.obj = self.objs[actor_idx]
         obj_rep_pts = self.episode["actors"][actor_idx]["rep_pts"]
-        self.obj_start_pos = random_choice(obj_rep_pts, self._episode_rng)
+        self.obj_start_pos = np.float32(random_choice(obj_rep_pts, self._episode_rng))
         self.bbox_size = self.bbox_sizes[actor_idx]
 
         self.target_site.set_pose(Pose(self.obj_start_pos))
@@ -221,9 +221,10 @@ class PickClutterEnv(StationaryManipulationEnv):
 
         return reward
 
-    def _setup_cameras(self):
-        super()._setup_cameras()
-        self.render_camera.set_local_pose(look_at([0.3, 0, 1.0], [0.0, 0.0, 0.5]))
+    def _register_render_cameras(self):
+        cam_cfg = super()._register_render_cameras()
+        cam_cfg.pose = look_at([0.3, 0, 1.0], [0.0, 0.0, 0.5])
+        return cam_cfg
 
     def render(self, mode="human"):
         if mode in ["human", "rgb_array"]:

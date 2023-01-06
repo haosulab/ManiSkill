@@ -181,22 +181,7 @@ class PandaDefaultConfig:
 
     @property
     def cameras(self):
-        # return dict(
-        #     hand_camera=MountedCameraConfig(
-        #         mount_link="panda_hand",
-        #         # mount_p=[0.1, 0.0, 0.0],
-        #         # mount_q=[0.0, 0.60876137, 0.0, 0.7933534],
-        #         mount_p=[0.0464982, -0.0200011, 0.0360011],
-        #         mount_q=[0, 0.70710678, 0, 0.70710678],
-        #         hide_mount_link=False,
-        #         width=128,
-        #         height=128,
-        #         near=0.01,
-        #         far=10,
-        #         fx=64,
-        #         fy=64,
-        #     )
-        # )
+        robot_name = self.urdf_path.split("/")[-1].rstrip(".urdf")
         return dict(
             hand_camera=CameraConfig(
                 uuid="hand_camera",
@@ -208,7 +193,7 @@ class PandaDefaultConfig:
                 near=0.01,
                 far=10,
                 # TODO(jigu): easy-to-understand way to specify articulation
-                articulation_uuid="panda_v2",
+                articulation_uuid=robot_name,
                 actor_uuid="panda_hand",
             )
         )
@@ -221,17 +206,16 @@ class PandaRealSensed435Config(PandaDefaultConfig):
 
     @property
     def cameras(self):
-        return dict(
-            hand_camera=MountedCameraConfig(
-                mount_link="camera_link",
-                mount_p=[0, 0, 0],
-                mount_q=[1, 0, 0, 0],
-                hide_mount_link=False,
-                width=128,
-                height=128,
-                near=0.01,
-                far=10,
-                fx=64,
-                fy=64,
-            )
+        return CameraConfig(
+            uuid="hand_camera",
+            p=[0, 0, 0],
+            q=[1, 0, 0, 0],
+            width=128,
+            height=128,
+            fov=1.57,
+            near=0.01,
+            far=10,
+            # TODO(jigu): easy-to-understand way to specify articulation
+            articulation_uuid="panda_v3",
+            actor_uuid="camera_link",
         )

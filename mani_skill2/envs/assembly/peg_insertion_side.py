@@ -259,12 +259,15 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
 
         return reward
 
-    def _setup_cameras(self):
-        super()._setup_cameras()
-        self.render_camera.set_local_pose(look_at([1.0, -1.0, 0.8], [0.0, 0.0, 0.5]))
-        self._cameras["base_camera"].set_local_pose(
-            look_at([0, -0.3, 0.2], [0, 0, 0.1])
-        )
+    def _register_cameras(self):
+        cam_cfg = super()._register_cameras()
+        cam_cfg.pose = look_at([0, -0.3, 0.2], [0, 0, 0.1])
+        return cam_cfg
+
+    def _register_render_cameras(self):
+        cam_cfg = super()._register_render_cameras()
+        cam_cfg.pose = look_at([1.0, -1.0, 0.8], [0.0, 0.0, 0.5])
+        return cam_cfg
 
     def set_state(self, state):
         super().set_state(state)

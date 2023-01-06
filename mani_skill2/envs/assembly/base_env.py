@@ -4,10 +4,12 @@ import numpy as np
 import sapien.core as sapien
 from sapien.core import Pose
 
+from mani_skill2.agents.base_agent import BaseAgent
 from mani_skill2.agents.configs.panda.defaults import PandaRealSensed435Config
 from mani_skill2.agents.robots.panda import Panda
 from mani_skill2.agents.robots.xmate3 import Xmate3Robotiq
 from mani_skill2.envs.sapien_env import BaseEnv
+from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.sapien_utils import (
     get_entity_by_name,
     look_at,
@@ -30,13 +32,17 @@ class StationaryManipulationEnv(BaseEnv):
         scene_config.enable_pcm = True
         return scene_config
 
+    def _configure_agent(self):
+        agent_cls: Type[BaseAgent] = self.SUPPORTED_ROBOTS[self.robot_uuid]
+        if self.robot_uuid == "panda":
+            self._agent_cfg = PandaRealSensed435Config()
+        else:
+            self._agent_cfg = agent_cls.get_default_config()
+
     def _load_agent(self):
         agent_cls: Type[Panda] = self.SUPPORTED_ROBOTS[self.robot_uuid]
-        agent_config = None
-        if self.robot_uuid == "panda":
-            agent_config = PandaRealSensed435Config()
         self.agent = agent_cls(
-            self._scene, self._control_freq, self._control_mode, config=agent_config
+            self._scene, self._control_freq, self._control_mode, config=self._agent_cfg
         )
         self.tcp: sapien.Link = get_entity_by_name(
             self.agent.robot.get_links(), self.agent._config.ee_link_name
@@ -68,17 +74,15 @@ class StationaryManipulationEnv(BaseEnv):
         else:
             raise NotImplementedError(self.robot_uuid)
 
-    def _setup_cameras(self):
-        self.render_camera = self._scene.add_camera(
-            "render_camera", 512, 512, 1, 0.01, 10
+    def _register_cameras(self):
+        pose = look_at([0.2, 0, 0.4], [0, 0, 0])
+        return CameraConfig(
+            "base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10
         )
-        self.render_camera.set_local_pose(look_at([1.0, 1.0, 0.8], [0.0, 0.0, 0.5]))
 
-        base_camera = self._scene.add_camera(
-            "base_camera", 128, 128, np.pi / 2, 0.01, 10
-        )
-        base_camera.set_local_pose(look_at([0.2, 0, 0.4], [0, 0, 0]))
-        self._cameras["base_camera"] = base_camera
+    def _register_render_cameras(self):
+        pose = look_at([1.0, 1.0, 0.8], [0.0, 0.0, 0.5])
+        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
 
     def _setup_viewer(self):
         super()._setup_viewer()
