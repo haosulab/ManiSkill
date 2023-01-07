@@ -33,3 +33,5 @@ imgui.ini
 # but can be excluded explicitly
 demos/*
 tmp/*
+
+examples/tutorials/demos
