@@ -52,5 +52,3 @@ def download_all_datasets(output_dir: str = "demos"):
     """
     for env_id in DATASET_SOURCES.keys():
         download_dataset(env_id, output_dir)
-
-download_all_datasets()
