@@ -140,7 +140,7 @@ For those who cannot access Google Drive, the datasets can be downloaded from [S
 To bulk download demonstrations, you can use the following scripts:
 
 ```bash
-pip install gdown
+pip install --upgrade --no-cache-dir gdown
 
 # Download all rigid-body demonstrations
 gdown https://drive.google.com/drive/folders/1pd9Njg2sOR1VSSmp-c1mT7zCgJEnF8r7 --folder -O demos/
