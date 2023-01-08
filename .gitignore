@@ -37,3 +37,4 @@ tmp/*
 # tutorials and examples
 examples/tutorials/logs
 examples/tutorials/demos
+examples/tutorials/*.pth
