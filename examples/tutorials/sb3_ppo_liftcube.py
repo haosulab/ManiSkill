@@ -23,7 +23,6 @@ SB3 won't be able to use ManiSkill observations out of the box so we can define 
 make the ManiSkill environment conform with SB3. Here, we are simply going to take the two RGB images, 
 two depth images from both cameras (base camera and hand camera) and the state data and create a workable observation for SB3.
 """
-
 class ManiSkillRGBDWrapper(gym.ObservationWrapper):
     def __init__(self, env, image_size=(128, 128)) -> None:
         super().__init__(env)
@@ -36,8 +35,10 @@ class ManiSkillRGBDWrapper(gym.ObservationWrapper):
             obs_space["agent"]['base_pose'], # pose of the robot
             obs_space["agent"]['qpos'], # robot configuration position
             obs_space["agent"]['qvel'], # robot configuration velocity
-            obs_space["extra"]['tcp_pose'], # the gripper's pose
         ]
+        for k in obs_space["extra"]:
+            # includes gripper pose and goal information depending on environment
+            state_spaces.append(obs_space["extra"][k])
         # Define the new state space
         state_size = sum([space.shape[0] for space in state_spaces])
         state_space = spaces.Box(-float("inf"), float("inf"), shape=(state_size, ))
@@ -57,7 +58,8 @@ class ManiSkillRGBDWrapper(gym.ObservationWrapper):
             "state": state_space
         })
 
-    def observation(self, observation):
+    @staticmethod # make this static so both RL and IL tutorials can use this
+    def convert_observation(observation, image_size):
         # This function replaces the original observations. We scale down images by 255 and 
         # flatten the states in the original observations
         image_obs = observation["image"]
@@ -65,11 +67,11 @@ class ManiSkillRGBDWrapper(gym.ObservationWrapper):
         depth = image_obs["base_camera"]["depth"]
         rgb2 = image_obs["hand_camera"]["rgb"] / 255.0
         depth2 = image_obs["hand_camera"]["depth"]
-        if self.image_size is not None and self.image_size != (rgb.shape[0], rgb.shape[1]):
-            rgb = cv2.resize(rgb, self.image_size, interpolation=cv2.INTER_LINEAR)
-            depth = cv2.resize(depth, self.image_size, interpolation=cv2.INTER_LINEAR)[:,:,None]
-            rgb2 = cv2.resize(rgb2, self.image_size, interpolation=cv2.INTER_LINEAR)
-            depth2 = cv2.resize(depth2, self.image_size, interpolation=cv2.INTER_LINEAR)[:,:,None]
+        if image_size is not None and image_size != (rgb.shape[0], rgb.shape[1]):
+            rgb = cv2.resize(rgb, image_size, interpolation=cv2.INTER_LINEAR)
+            depth = cv2.resize(depth, image_size, interpolation=cv2.INTER_LINEAR)[:,:,None]
+            rgb2 = cv2.resize(rgb2, image_size, interpolation=cv2.INTER_LINEAR)
+            depth2 = cv2.resize(depth2, image_size, interpolation=cv2.INTER_LINEAR)[:,:,None]
         from mani_skill2.utils.common import flatten_state_dict
         state = np.hstack([
             flatten_state_dict(observation["agent"]),
@@ -80,6 +82,8 @@ class ManiSkillRGBDWrapper(gym.ObservationWrapper):
         rgbd = np.concatenate([rgb, depth, rgb2, depth2], axis=2)
         obs = dict(rgbd=rgbd, state=state)
         return obs
+    def observation(self, observation):
+        return ManiSkillRGBDWrapper.convert_observation(observation, image_size=self.image_size)
 
     def step(self, action):
         o, r, d, info = super().step(action)
@@ -90,7 +94,6 @@ class ManiSkillRGBDWrapper(gym.ObservationWrapper):
             info["TimeLimit.truncated"] = True
             d = True
         return o,r,d,info
-
 
 """
 SB3 natively doesn't support processing RGB data with depth information, so we will need to create a custom network 

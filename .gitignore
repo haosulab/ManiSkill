@@ -35,5 +35,5 @@ demos/*
 tmp/*
 
 # tutorials and examples
-examples/tutorials/PickCube-v0
 examples/tutorials/logs
+examples/tutorials/demos
