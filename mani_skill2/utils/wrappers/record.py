@@ -201,7 +201,7 @@ class RecordEpisode(gym.Wrapper):
             return
 
         traj_id = "traj_{}".format(self._episode_id)
-        group = self._h5_file.create_group(traj_id)
+        group = self._h5_file.create_group(traj_id, track_order=True)
 
         # Observations need special processing
         obs = [x["o"] for x in self._episode_data]
