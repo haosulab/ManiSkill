@@ -5,9 +5,6 @@ from tqdm.notebook import tqdm
 import numpy as np
 import mani_skill2.envs
 from mani_skill2.utils.wrappers import RecordEpisode
-import h5py
-from mani_skill2.utils.io_utils import load_json
-import matplotlib.pyplot as plt
 import torch.nn as nn
 import torch as th
 import cv2
