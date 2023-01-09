@@ -144,9 +144,9 @@ To bulk download demonstrations, you can use the following scripts:
 pip install --upgrade --no-cache-dir gdown # gdown is a dependency for the below commands
 
 # Download all rigid-body demonstrations
-python -m mani_skill2.utils.download_demo rigid_body -O demos
+python -m mani_skill2.utils.download_demo rigid_body -o demos
 # Download all soft-body demonstrations
-python -m mani_skill2.utils.download_demo soft_body -O demos
+python -m mani_skill2.utils.download_demo soft_body -o demos
 
 # Download task-specific demonstrations
 python -m mani_skill2.utils.download_demo PickCube-v0

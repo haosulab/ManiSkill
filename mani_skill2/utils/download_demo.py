@@ -1,8 +1,9 @@
 import argparse
 import os.path as osp
+
 import gdown
 
-VALID_ENV_TYPES = ['rigid_body', 'soft_body']
+VALID_ENV_TYPES = ["rigid_body", "soft_body"]
 
 DATASET_SOURCES = {}
 
@@ -90,7 +91,7 @@ DATASET_SOURCES["Fill-v0"] = dict(
 )
 
 
-def download_demo(env_id: str, output_dir: str = "demos"):
+def download_demo(env_id: str, output_dir: str):
     """
     download a demonstration dataset for a specific environment
     """
@@ -108,17 +109,20 @@ def download_demo(env_id: str, output_dir: str = "demos"):
     # TODO add mirror links
 
     if result == False:
-        print("All links failed, please report this issue to the maintainers by posting an issue to https://github.com/haosulab/ManiSkill2/issues")
+        print(
+            "All links failed, please report this issue to the maintainers by posting an issue to https://github.com/haosulab/ManiSkill2/issues"
+        )
 
 
-def download_all_demos(output_dir: str = "demos"):
+def download_all_demos(output_dir: str):
     """
     calls download_demo for all environments with demonstrations available
     """
     for env_id in DATASET_SOURCES.keys():
         download_demo(env_id, output_dir)
 
-def download_demos_by_type(env_type: str, output_dir: str = "demos"):
+
+def download_demos_by_type(env_type: str, output_dir: str):
     """
     calls download_demo for all environments with demonstrations available with matching environment type
     """
@@ -130,10 +134,21 @@ def download_demos_by_type(env_type: str, output_dir: str = "demos"):
     if download_count == 0:
         print(f"Env type {env_type} has no available demonstrations")
 
+
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("env", type=str, help="Specify either 'all', an env type (e.g. rigid_body, soft_body), or a specific env id (e.g. PickCube-v0")
-    parser.add_argument("-o", "--output_dir", type=str, required=False, help="The directory to save demonstrations to. The files will then be saved to <output_dir>/<env_type>/<env_id>")
+    parser.add_argument(
+        "env",
+        type=str,
+        help="Specify either 'all', an env type (e.g. rigid_body, soft_body), or a specific env id (e.g. PickCube-v0)",
+    )
+    parser.add_argument(
+        "-o",
+        "--output_dir",
+        type=str,
+        default="demos",
+        help="The directory to save demonstrations to. The files will then be saved to <output_dir>/<env_type>/<env_id>",
+    )
     return parser.parse_args()
 
 
@@ -146,6 +161,7 @@ def main():
         download_all_demos(output_dir=args.output_dir)
     else:
         download_demo(args.env, output_dir=args.output_dir)
+
 
 if __name__ == "__main__":
     main()
