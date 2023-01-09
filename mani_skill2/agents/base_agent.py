@@ -9,11 +9,9 @@ from gym import spaces
 
 from mani_skill2 import DESCRIPTION_DIR
 from mani_skill2.sensors.camera import CameraConfig
-from mani_skill2.utils.common import merge_dicts
 from mani_skill2.utils.sapien_utils import check_urdf_config, parse_urdf_config
 
 from .base_controller import BaseController, CombinedController, ControllerConfig
-from .camera import MountedCameraConfig, get_camera_images, get_camera_pcd
 
 
 @dataclass
@@ -30,7 +28,6 @@ class AgentConfig:
     urdf_path: str
     urdf_config: dict
     controllers: Dict[str, Union[ControllerConfig, Dict[str, ControllerConfig]]]
-    # cameras: Dict[str, MountedCameraConfig]
     cameras: Dict[str, CameraConfig]
 
 
@@ -49,7 +46,6 @@ class BaseAgent:
 
     robot: sapien.Articulation
     controllers: Dict[str, BaseController]
-    cameras: Dict[str, sapien.CameraEntity]
 
     def __init__(
         self,
@@ -62,23 +58,20 @@ class BaseAgent:
         self.scene = scene
         self._control_freq = control_freq
 
-        self._config = config or self.get_default_config()
+        self.config = config or self.get_default_config()
 
         # URDF
-        self.urdf_path = self._config.urdf_path
+        self.urdf_path = self.config.urdf_path
         self.fix_root_link = fix_root_link
-        self.urdf_config = self._config.urdf_config
+        self.urdf_config = self.config.urdf_config
 
         # Controller
-        self.controller_configs = self._config.controllers
+        self.controller_configs = self.config.controllers
         self.supported_control_modes = list(self.controller_configs.keys())
         if control_mode is None:
             control_mode = self.supported_control_modes[0]
         # The control mode after reset for consistency
         self._default_control_mode = control_mode
-
-        # Sensors
-        self.camera_configs = self._config.cameras
 
         self._load_articulation()
         self._setup_controllers()
@@ -212,52 +205,3 @@ class BaseAgent:
 
         if not ignore_controller and "controller" in state:
             self.controller.set_state(state["controller"])
-
-    def take_picture(self):
-        # NOTE(jigu): take_picture, which starts rendering pipelines, is non-blocking.
-        # Thus, calling it before other computation is more efficient.
-        for cam in self.cameras.values():
-            cam.take_picture()
-
-    def get_camera_images(
-        self, rgb=True, depth=False, visual_seg=False, actor_seg=False
-    ) -> Dict[str, Dict[str, np.ndarray]]:
-        # Assume scene.update_render() and camera.take_picture() are called
-        ret = OrderedDict()
-        base2world = self.robot.pose.to_transformation_matrix()
-
-        for name, cam in self.cameras.items():
-            images = get_camera_images(
-                cam, rgb=rgb, depth=depth, visual_seg=visual_seg, actor_seg=actor_seg
-            )
-            images["camera_intrinsic"] = cam.get_intrinsic_matrix()
-            images["camera_extrinsic"] = cam.get_extrinsic_matrix()
-            images["camera_extrinsic_base_frame"] = (
-                images["camera_extrinsic"] @ base2world
-            )
-            ret[name] = images
-
-        return ret
-
-    def get_camera_poses(self) -> Dict[str, np.ndarray]:
-        poses = OrderedDict()
-        for name, cam in self.cameras.items():
-            poses[name] = cam.get_pose().to_transformation_matrix()
-        return poses
-
-    def get_camera_pcd(self, rgb=True, visual_seg=False, actor_seg=False, fuse=False):
-        # Assume scene.update_render() and camera.take_picture() are called
-        ret = OrderedDict()
-
-        for name, cam in self.cameras.items():
-            pcd = get_camera_pcd(cam, rgb, visual_seg, actor_seg)  # dict
-            # Model matrix is the transformation from OpenGL camera space to SAPIEN world space
-            # camera.get_model_matrix() must be called after scene.update_render()!
-            T = cam.get_model_matrix()
-            pcd["xyzw"] = pcd["xyzw"] @ T.T
-            ret[name] = pcd
-
-        if fuse:
-            return merge_dicts(ret.values())
-        else:
-            return ret

@@ -66,6 +66,7 @@ class BaseEnv(gym.Env):
     _agent_cfg: AgentConfig
     _cameras: Dict[str, Camera]
     _camera_cfgs: Dict[str, CameraConfig]
+    _agent_camera_cfgs: Dict[str, CameraConfig]
     _render_cameras: Dict[str, Camera]
     _render_camera_cfgs: Dict[str, CameraConfig]
 
@@ -177,8 +178,11 @@ class BaseEnv(gym.Env):
     def _configure_cameras(self):
         self._camera_cfgs = OrderedDict()
         self._camera_cfgs.update(parse_camera_cfgs(self._register_cameras()))
+
+        self._agent_camera_cfgs = OrderedDict()
         if self._agent_cfg is not None:
-            self._camera_cfgs.update(parse_camera_cfgs(self._agent_cfg.cameras))
+            self._agent_camera_cfgs = parse_camera_cfgs(self._agent_cfg.cameras)
+            self._camera_cfgs.update(self._agent_camera_cfgs)
 
     def _register_cameras(
         self,
@@ -363,7 +367,13 @@ class BaseEnv(gym.Env):
     def _setup_cameras(self):
         self._cameras = OrderedDict()
         for uuid, camera_cfg in self._camera_cfgs.items():
-            self._cameras[uuid] = Camera(camera_cfg, self._scene, self._renderer_type)
+            if uuid in self._agent_camera_cfgs:
+                articulation = self.agent.robot
+            else:
+                articulation = None
+            self._cameras[uuid] = Camera(
+                camera_cfg, self._scene, self._renderer_type, articulation=articulation
+            )
 
         # Cameras for rendering only
         self._render_cameras = OrderedDict()

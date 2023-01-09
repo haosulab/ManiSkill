@@ -1,6 +1,5 @@
 from copy import deepcopy
 
-from mani_skill2.agents.camera import MountedCameraConfig
 from mani_skill2.agents.controllers import *
 from mani_skill2.sensors.camera import CameraConfig
 
@@ -181,21 +180,16 @@ class PandaDefaultConfig:
 
     @property
     def cameras(self):
-        robot_name = self.urdf_path.split("/")[-1].rstrip(".urdf")
-        return dict(
-            hand_camera=CameraConfig(
-                uuid="hand_camera",
-                p=[0.0464982, -0.0200011, 0.0360011],
-                q=[0, 0.70710678, 0, 0.70710678],
-                width=128,
-                height=128,
-                fov=1.57,
-                near=0.01,
-                far=10,
-                # TODO(jigu): easy-to-understand way to specify articulation
-                articulation_uuid=robot_name,
-                actor_uuid="panda_hand",
-            )
+        return CameraConfig(
+            uuid="hand_camera",
+            p=[0.0464982, -0.0200011, 0.0360011],
+            q=[0, 0.70710678, 0, 0.70710678],
+            width=128,
+            height=128,
+            fov=1.57,
+            near=0.01,
+            far=10,
+            actor_uuid="panda_hand",
         )
 
 
@@ -215,7 +209,5 @@ class PandaRealSensed435Config(PandaDefaultConfig):
             fov=1.57,
             near=0.01,
             far=10,
-            # TODO(jigu): easy-to-understand way to specify articulation
-            articulation_uuid="panda_v3",
             actor_uuid="camera_link",
         )

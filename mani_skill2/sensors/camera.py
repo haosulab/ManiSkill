@@ -19,8 +19,8 @@ class CameraConfig:
         fov: float,
         near: float,
         far: float,
-        articulation_uuid: str = None,
         actor_uuid: str = None,
+        hide_link: bool = False,
         texture_names: Sequence[str] = ("Color", "Position"),
     ):
         """Camera configuration.
@@ -34,8 +34,8 @@ class CameraConfig:
             fov (float): field of view of the camera
             near (float): near plane of the camera
             far (float): far plane of the camera
-            articulation_uuid (str, optional): uuid of the articulation to mount the camera. Defaults to None.
             actor_uuid (str, optional): uuid of the actor to mount the camera. Defaults to None.
+            hide_link (bool, optional): whether to hide the link to mount the camera. Defaults to False.
             texture_names (Sequence[str], optional): texture names to render. Defaults to ("Color", "Position").
         """
         self.uuid = uuid
@@ -47,8 +47,8 @@ class CameraConfig:
         self.near = near
         self.far = far
 
-        self.articulation_uuid = articulation_uuid
         self.actor_uuid = actor_uuid
+        self.hide_link = hide_link
         self.texture_names = tuple(texture_names)
 
     def __repr__(self) -> str:
@@ -105,15 +105,25 @@ class Camera:
     TEXTURE_DTYPE = {"Color": "float", "Position": "float", "Segmentation": "uint32"}
 
     def __init__(
-        self, camera_cfg: CameraConfig, scene: sapien.Scene, renderer_type: str
+        self,
+        camera_cfg: CameraConfig,
+        scene: sapien.Scene,
+        renderer_type: str,
+        articulation: sapien.Articulation = None,
     ):
         self.camera_cfg = camera_cfg
         self.renderer_type = renderer_type
 
-        # TODO(jigu): more efficient way
-        self.actor = self.get_mount_actor(
-            scene, camera_cfg.articulation_uuid, camera_cfg.actor_uuid
-        )
+        actor_uuid = camera_cfg.actor_uuid
+        if actor_uuid is None:
+            self.actor = None
+        else:
+            if articulation is None:
+                self.actor = get_entity_by_name(scene.get_all_actors(), actor_uuid)
+            else:
+                self.actor = get_entity_by_name(articulation.get_links(), actor_uuid)
+            if self.actor is None:
+                raise RuntimeError(f"Mount actor ({actor_uuid}) is not found")
 
         # Add camera
         if self.actor is None:
@@ -138,6 +148,9 @@ class Camera:
                 camera_cfg.far,
             )
 
+        if camera_cfg.hide_link:
+            self.actor.hide_visual()
+
         # Filter texture names according to renderer type
         if self.renderer_type == "kuafu":
             self.texture_names = tuple(
@@ -149,22 +162,6 @@ class Camera:
     @property
     def uuid(self):
         return self.camera_cfg.uuid
-
-    @staticmethod
-    def get_mount_actor(scene: sapien.Scene, articulation_uuid, actor_uuid):
-        if actor_uuid is not None:
-            if articulation_uuid is None:
-                actor = get_entity_by_name(scene.get_all_actors(), actor_uuid)
-            else:
-                articulation = get_entity_by_name(
-                    scene.get_all_articulations(), articulation_uuid
-                )
-                actor = get_entity_by_name(articulation.get_links(), actor_uuid)
-                if actor is None:
-                    raise RuntimeError(f"Mount actor ({actor_uuid}) is not found")
-        else:
-            actor = None
-        return actor
 
     def take_picture(self):
         self.camera.take_picture()

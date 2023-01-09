@@ -67,7 +67,6 @@ class PandaBucketConfig(PandaDefaultConfig):
             near=0.01,
             far=10,
             fov=np.pi / 2,
-            articulation_uuid="panda_bucket",
             actor_uuid="bucket",
         )
 

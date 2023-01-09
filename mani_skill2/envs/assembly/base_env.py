@@ -45,7 +45,7 @@ class StationaryManipulationEnv(BaseEnv):
             self._scene, self._control_freq, self._control_mode, config=self._agent_cfg
         )
         self.tcp: sapien.Link = get_entity_by_name(
-            self.agent.robot.get_links(), self.agent._config.ee_link_name
+            self.agent.robot.get_links(), self.agent.config.ee_link_name
         )
         set_articulation_render_material(self.agent.robot, specular=0.9, roughness=0.3)
 

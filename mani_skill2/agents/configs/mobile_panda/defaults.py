@@ -228,7 +228,6 @@ class MobilePandaDualArmDefaultConfig:
             [0.46193977, 0.33141357, 0.19134172, -0.80010315],
             [-0.46193977, 0.33141357, -0.19134172, -0.80010315],
         ]
-        robot_name = self.urdf_path.split("/")[-1].rstrip(".urdf")
         for i in range(3):
             # q = transforms3d.euler.euler2quat(-np.pi/3*i, np.pi/4, 0, 'rzyx')
             q = qs[i]
@@ -241,8 +240,7 @@ class MobilePandaDualArmDefaultConfig:
                 near=0.1,
                 far=10,
                 fov=np.pi / 3,
-                articulation_uuid=robot_name,
-                actor_uuid="mobile_base"
+                actor_uuid="mobile_base",
             )
             cameras.append(camera)
         return cameras
