@@ -109,7 +109,7 @@ def convert_observation_to_space(observation, prefix=""):
         space = spaces.Box(-np.inf, np.inf, shape=[1], dtype=int)
     elif isinstance(observation, (bool, np.bool_)):
         logger.debug(f"The observation ({prefix}) is a (bool) scalar")
-        space = spaces.Box(0, 1, shape=[1], dtype=int)
+        space = spaces.Box(0, 1, shape=[1], dtype=np.bool_)
     else:
         raise NotImplementedError(type(observation), observation)
 

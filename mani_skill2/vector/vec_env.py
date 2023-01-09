@@ -73,7 +73,7 @@ def _worker(
     except EOFError:
         logger.info("Worker EOF")
     except Exception as err:
-        logger.error(err, exec_info=1)
+        logger.error(err, exc_info=1)
     finally:
         env.close()
 
@@ -218,7 +218,7 @@ class VecEnv:
         if seed is None:
             seed = np.random.randint(0, 2**32)
         for idx, remote in enumerate(self.remotes):
-            remote.send(("seed", seed + idx))
+            remote.send(("env_method", ("seed", [seed + idx], {})))
         return [remote.recv() for remote in self.remotes]
 
     def reset_async(self):

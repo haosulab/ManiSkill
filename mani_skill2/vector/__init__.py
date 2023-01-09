@@ -43,6 +43,7 @@ def make(env_id, num_envs, server_address=None, **kwargs):
         logger.info("Auto server address: {}".format(server_address))
 
     venv = VecEnv([env_fn for _ in range(num_envs)], server_address=server_address)
+    venv.obs_mode = obs_mode
 
     if enable_robot_seg:
         venv = RobotSegmentationObservationWrapper(venv)
@@ -50,9 +51,7 @@ def make(env_id, num_envs, server_address=None, **kwargs):
     # Dispatch observation wrapper
     if obs_mode == "rgbd":
         venv = RGBDObservationWrapper(venv)
-        venv.obs_mode = obs_mode
     elif obs_mode == "pointcloud":
         venv = PointCloudObservationWrapper(venv)
-        venv.obs_mode = obs_mode
 
     return venv

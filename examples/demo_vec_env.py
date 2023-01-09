@@ -1,11 +1,9 @@
 import argparse
 import time
-from functools import partial
 
 import gym
 import numpy as np
 
-from mani_skill2.utils.visualization.cv2_utils import OpenCVViewer
 from mani_skill2.utils.visualization.misc import observations_to_images, tile_images
 from mani_skill2.vector import VecEnv, make
 
@@ -13,7 +11,7 @@ from mani_skill2.vector import VecEnv, make
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--env-id", type=str, default="PickCube-v0")
-    parser.add_argument("-o", "--obs-mode", type=str, default="pointcloud")
+    parser.add_argument("-o", "--obs-mode", type=str, default="rgbd")
     parser.add_argument("--reward-mode", type=str)
     parser.add_argument("-c", "--control-mode", type=str)
     parser.add_argument("-n", "--n-envs", type=int, default=4)
@@ -34,20 +32,7 @@ def main():
     np.set_printoptions(suppress=True, precision=3)
     args = parse_args()
 
-    env_fns = []
-    for pid in range(args.n_envs):
-        env_fn = partial(
-            gym.make,
-            id=args.env_id,
-            obs_mode=args.obs_mode,
-            reward_mode=args.reward_mode,
-            control_mode=args.control_mode,
-            **args.env_kwargs,
-        )
-        env_fns.append(env_fn)
-
-    # env = VecEnv(env_fns, server_address="localhost:15003")
-    env = make(
+    env: VecEnv = make(
         args.env_id,
         args.n_envs,
         server_address="auto",
@@ -59,12 +44,10 @@ def main():
     print("env", env)
     print("Observation space", env.observation_space)
     print("Action space", env.action_space)
+    env.seed(0)
 
     n_ep = 10
     l_ep = 50
-
-    if args.vis:
-        viewer = OpenCVViewer()
 
     tic = time.time()
     for i in range(n_ep):
@@ -76,38 +59,36 @@ def main():
             # print(t, reward, info, done)
 
             # Visualize
-            if args.vis:
-                if env.obs_mode in ["image", "rgbd"]:
-                    images = []
-                    for i_env in range(args.n_envs):
-                        for cam_images in obs["image"].values():
-                            images.append(
-                                np.concatenate(
-                                    observations_to_images(
-                                        {
-                                            k: v[i_env].cpu().numpy()
-                                            for k, v in cam_images.items()
-                                        }
-                                    ),
-                                    axis=0,
-                                )
-                            )
+            if args.vis and env.obs_mode in ["image", "rgbd"]:
+                import cv2
 
-                    viewer.imshow(tile_images(images))
-                elif env.obs_mode == "pointcloud":
-                    import trimesh
+                images = []
+                for i_env in range(args.n_envs):
+                    for cam_images in obs["image"].values():
+                        images_i = observations_to_images(
+                            {k: v[i_env].cpu().numpy() for k, v in cam_images.items()}
+                        )
+                        images.append(np.concatenate(images_i, axis=0))
+                cv2.imshow("vis", tile_images(images)[..., ::-1])
+                cv2.waitKey(0)
 
-                    scene = trimesh.Scene()
-                    for i_env in range(args.n_envs):
-                        xyz = obs["pointcloud"]["xyzw"][i_env, ..., :3].cpu().numpy()
-                        rgb = obs["pointcloud"]["rgb"][i_env].cpu().numpy()
-                        # rgb = obs["pointcloud"]["robot_seg"][i_env].cpu().numpy()
-                        # rgb = np.tile(rgb * 255, [1, 3])
-                        # trimesh.PointCloud(xyz, rgb).show()
-                        T = np.eye(4)
-                        T[2, 3] = i_env * 1.0
-                        scene.add_geometry(trimesh.PointCloud(xyz, rgb), transform=T)
-                    scene.show()
+            if args.vis and env.obs_mode == "pointcloud":
+                import trimesh
+
+                scene = trimesh.Scene()
+                for i_env in range(args.n_envs):
+                    pcd_obs = obs["pointcloud"]
+                    xyz = pcd_obs["xyzw"][i_env, ..., :3].cpu().numpy()
+                    rgb = pcd_obs["rgb"][i_env].cpu().numpy()
+                    if "robot_seg" in pcd_obs:
+                        rgb = pcd_obs["robot_seg"][i_env].cpu().numpy()
+                        rgb = np.tile(rgb * 255, [1, 3])
+                    # trimesh.PointCloud(xyz, rgb).show()
+                    # Distribute point clouds in z axis
+                    T = np.eye(4)
+                    T[2, 3] = i_env * 1.0
+                    scene.add_geometry(trimesh.PointCloud(xyz, rgb), transform=T)
+                scene.show()
 
     toc = time.time()
     print("FPS", n_ep * l_ep * args.n_envs / (toc - tic))

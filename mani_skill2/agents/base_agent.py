@@ -83,7 +83,6 @@ class BaseAgent:
         self._load_articulation()
         self._setup_controllers()
         self.set_control_mode(control_mode)
-        # self._setup_cameras()
         self._after_init()
 
     @classmethod
@@ -119,11 +118,6 @@ class BaseAgent:
                 self.controllers[uuid] = config.controller_cls(
                     config, self.robot, self._control_freq
                 )
-
-    # def _setup_cameras(self):
-    #     self.cameras = OrderedDict()
-    #     for uuid, config in self.camera_configs.items():
-    #         self.cameras[uuid] = config.build(self.robot, self.scene, name=uuid)
 
     def _after_init(self):
         """After initialization. E.g., caching the end-effector link."""
