@@ -33,8 +33,3 @@ imgui.ini
 # but can be excluded explicitly
 demos/*
 tmp/*
-
-# tutorials and examples
-examples/tutorials/logs
-examples/tutorials/demos
-examples/tutorials/*.pth
