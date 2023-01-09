@@ -55,7 +55,7 @@ DATA_SOURCES["avoid_obstacles"] = dict(
 DATA_SOURCES["pick_clutter"] = dict(
     url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/pick_clutter/ycb_train_5k.json.gz",
     checksum="70ec176c7036f326ea7813b77f8c03bea9db5960198498957a49b2895a9ec338",
-    output_dir=ASSET_DIR,
+    output_dir=ASSET_DIR / "pick_clutter",
 )
 
 # PartNet Mobility
@@ -72,7 +72,7 @@ cabinet_door_model_ids = set(
 )
 DATA_SOURCES["cabinet"] = dict(
     url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/partnet_mobility/dataset/{}.zip",
-    output_dir=ASSET_DIR / "partnet_mobility" / "dataset_zip",
+    output_dir=ASSET_DIR / "partnet_mobility" / "dataset",
     model_db=cabinet_drawer_model_ids.union(cabinet_door_model_ids),
 )
 DATA_SOURCES["chair"] = dict(

@@ -11,10 +11,11 @@ from transforms3d.euler import euler2quat
 from mani_skill2 import ASSET_DIR
 from mani_skill2.agents.robots.panda import Panda
 from mani_skill2.envs.sapien_env import BaseEnv
+from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.common import np_random, random_choice
 from mani_skill2.utils.geometry import transform_points
 from mani_skill2.utils.io_utils import load_json
-from mani_skill2.utils.registration import register_gym_env
+from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import (
     get_entity_by_name,
     hex2rgba,
@@ -43,11 +44,17 @@ class TurnFaucetBaseEnv(BaseEnv):
     def _load_actors(self):
         self._add_ground()
 
+    def _configure_agent(self):
+        agent_cls = self.SUPPORTED_ROBOTS[self.robot_uuid]
+        self._agent_cfg = agent_cls.get_default_config()
+
     def _load_agent(self):
         agent_cls = self.SUPPORTED_ROBOTS[self.robot_uuid]
-        self.agent = agent_cls(self._scene, self._control_freq, self._control_mode)
+        self.agent = agent_cls(
+            self._scene, self._control_freq, self._control_mode, config=self._agent_cfg
+        )
         self.tcp: sapien.Link = get_entity_by_name(
-            self.agent.robot.get_links(), self.agent._config.ee_link_name
+            self.agent.robot.get_links(), self.agent.config.ee_link_name
         )
         set_articulation_render_material(self.agent.robot, specular=0.9, roughness=0.3)
 
@@ -69,17 +76,15 @@ class TurnFaucetBaseEnv(BaseEnv):
         obs["base_pose"] = vectorize_pose(self.agent.robot.pose)
         return obs
 
-    def _setup_cameras(self):
-        self.render_camera = self._scene.add_camera(
-            "render_camera", 512, 512, 1, 0.01, 10
+    def _register_cameras(self):
+        pose = look_at([-0.4, 0, 0.3], [0, 0, 0.1])
+        return CameraConfig(
+            "base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10
         )
-        self.render_camera.set_local_pose(look_at([1.0, 1.0, 0.8], [0.0, 0.0, 0.5]))
 
-        base_camera = self._scene.add_camera(
-            "base_camera", 128, 128, np.pi / 2, 0.01, 10
-        )
-        base_camera.set_local_pose(look_at([-0.4, 0, 0.3], [0, 0, 0.1]))
-        self._cameras["base_camera"] = base_camera
+    def _register_render_cameras(self):
+        pose = look_at([1.0, 1.0, 0.8], [0.0, 0.0, 0.5])
+        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
 
     def _setup_viewer(self):
         super()._setup_viewer()
@@ -87,7 +92,7 @@ class TurnFaucetBaseEnv(BaseEnv):
         self._viewer.set_camera_rpy(0, -0.5, 3.14)
 
 
-@register_gym_env(name="TurnFaucet-v0", max_episode_steps=200)
+@register_env(uuid="TurnFaucet-v0", max_episode_steps=200)
 class TurnFaucetEnv(TurnFaucetBaseEnv):
     DEFAULT_MODEL_JSON = "{ASSET_DIR}/partnet_mobility/meta/info_faucet_train.json"
 
@@ -197,8 +202,6 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
         articulation = loader.load(str(urdf_path), config={"density": density})
         articulation.set_name("faucet")
 
-        cam = self._scene.add_camera("dummy_camera", 1, 1, 1, 0.01, 10)
-        self._scene.remove_camera(cam)
         set_articulation_render_material(
             articulation, color=hex2rgba("#AAAAAA"), metallic=1, roughness=0.4
         )

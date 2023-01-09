@@ -1,5 +1,5 @@
-from mani_skill2.agents.camera import MountedCameraConfig
 from mani_skill2.agents.controllers import *
+from mani_skill2.sensors.camera import CameraConfig
 
 
 class Xmate3RobotiqDefaultConfig:
@@ -118,29 +118,30 @@ class Xmate3RobotiqDefaultConfig:
 
     @property
     def cameras(self):
-        return dict(
-            base_camera=MountedCameraConfig(
-                mount_link="camera_base_link",
-                mount_p=[0.0, 0.0, 0.0],
-                mount_q=[1, 0, 0, 0],
-                hide_mount_link=True,
+        return [
+            CameraConfig(
+                uuid="base_camera",
+                p=[0.0, 0.0, 0.0],
+                q=[1, 0, 0, 0],
                 width=128,
                 height=128,
+                fov=1.5707,
                 near=0.01,
                 far=10,
-                fx=64,
-                fy=64,
+                actor_uuid="camera_base_link",
+                hide_link=True,
             ),
-            hand_camera=MountedCameraConfig(
-                mount_link="camera_hand_link",
-                mount_p=[0.0, 0.0, 0.0],
-                mount_q=[1, 0, 0, 0],
-                hide_mount_link=True,
+            CameraConfig(
+                uuid="hand_camera",
+                p=[0.0, 0.0, 0.0],
+                q=[1, 0, 0, 0],
                 width=128,
                 height=128,
+                fov=1.5707,
                 near=0.01,
                 far=10,
-                fx=64,
-                fy=64,
+                actor_uuid="camera_hand_link",
+                hide_link=True,
             ),
-        )
+        ]
+       
