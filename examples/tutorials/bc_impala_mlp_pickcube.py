@@ -11,6 +11,7 @@ from mani_skill2.utils.io_utils import load_json
 import matplotlib.pyplot as plt
 import torch.nn as nn
 import torch as th
+import torch.nn.functional as F
 import cv2
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback
@@ -89,71 +90,108 @@ class ManiSkillRGBDWrapper(gym.ObservationWrapper):
     def step(self, action):
         o, r, d, info = super().step(action)
         d = False
-        if info["elapsed_steps"] >= 100:
+        if info["elapsed_steps"] >= 200:
             # trunate episodes after 100 steps rather than the default 200 steps for faster training
             # set TimeLimit.truncated to True to tell SB3 it's a truncation and not task success
             info["TimeLimit.truncated"] = True
             d = True
         return o,r,d,info
 
-# Custom Feature extractor using the SB3 API. This same code is used in the reinforcement learning starter code as well
-class CustomExtractor(BaseFeaturesExtractor):
-    def __init__(self, observation_space: gym.spaces.Dict):
-        super().__init__(observation_space, features_dim=1)
 
-        extractors = {}
+class IMPALA(nn.Module):
+    def __init__(self, in_channel, num_pixels, out_feature_size=384, out_channel=None):
+        super(IMPALA, self).__init__()
+        self.in_channel = in_channel
+        self.out_channel = out_channel
 
-        total_concat_size = 0
-        feature_size = 256
+        self.feat_convs = []
+        self.resnet1 = []
+        self.resnet2 = []
+        self.convs = []
+        in_channel = in_channel
+        fcs = [64, 64, 64]
 
-        for key, subspace in observation_space.spaces.items():
-            # We go through all subspaces in the observation space.
-            # We know there will only be "rgbd" and "state", so we handle those below
-            if key == "rgbd":
-                # here we use a NatureCNN architecture to process images, but any architecture is permissble here
-                in_channels = subspace.shape[-1]
-                cnn = nn.Sequential(
-                    nn.Conv2d(in_channels=in_channels, out_channels=32, kernel_size=8, stride=4, padding=0),
-                    nn.ReLU(),
-                    nn.Conv2d(in_channels=32, out_channels=64, kernel_size=4, stride=2, padding=0),
-                    nn.ReLU(),
-                    nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=0),
-                    nn.ReLU(),
-                    nn.Flatten()
+        self.stem = nn.Conv2d(in_channel, fcs[0], kernel_size=4, stride=4)
+        in_channel = fcs[0]
+
+        for num_ch in fcs:
+            feats_convs = []
+            feats_convs.append(
+                nn.Conv2d(
+                    in_channels=in_channel,
+                    out_channels=num_ch,
+                    kernel_size=3,
+                    stride=1,
+                    padding=1,
                 )
-                
-                # to easily figure out the dimensions after flattening, we pass a test tensor
-                test_tensor = th.zeros([subspace.shape[2], subspace.shape[0], subspace.shape[1]])
-                with th.no_grad():
-                    n_flatten = cnn(test_tensor[None]).shape[1]
-                fc = nn.Sequential(nn.Linear(n_flatten, feature_size), nn.ReLU())
-                extractors["rgbd"] = nn.Sequential(cnn, fc)
-                total_concat_size += feature_size
-            elif key == "state":
-                # for state data we simply pass it through a single linear layer
-                state_size = subspace.shape[0]
-                extractors["state"] = nn.Linear(state_size, 64)
-                total_concat_size += 64
+            )
+            feats_convs.append(nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
+            self.feat_convs.append(nn.Sequential(*feats_convs))
+            in_channel = num_ch
+            for i in range(2):
+                resnet_block = []
+                resnet_block.append(nn.ReLU())
+                resnet_block.append(
+                    nn.Conv2d(
+                        in_channels=in_channel,
+                        out_channels=num_ch,
+                        kernel_size=3,
+                        stride=1,
+                        padding=1,
+                    )
+                )
+                resnet_block.append(nn.ReLU())
+                resnet_block.append(
+                    nn.Conv2d(
+                        in_channels=in_channel,
+                        out_channels=num_ch,
+                        kernel_size=3,
+                        stride=1,
+                        padding=1,
+                    )
+                )
+                if i == 0:
+                    self.resnet1.append(nn.Sequential(*resnet_block))
+                else:
+                    self.resnet2.append(nn.Sequential(*resnet_block))
 
-        self.extractors = nn.ModuleDict(extractors)
-        self._features_dim = total_concat_size
+        self.feat_convs = nn.ModuleList(self.feat_convs)
+        self.resnet1 = nn.ModuleList(self.resnet1)
+        self.resnet2 = nn.ModuleList(self.resnet2)
+        self.img_feat_size = num_pixels // (4**len(fcs) * 16) * fcs[-1]
 
-    def forward(self, observations) -> th.Tensor:
-        encoded_tensor_list = []
-        # self.extractors contain nn.Modules that do all the processing.
-        for key, extractor in self.extractors.items():
-            if key == "rgbd":
-                observations[key] = observations[key].permute((0, 3, 1, 2))
-            encoded_tensor_list.append(extractor(observations[key]))
-        # Return a (B, self._features_dim) PyTorch tensor, where B is batch dimension.
-        return th.cat(encoded_tensor_list, dim=1)
+        self.fc = nn.Linear(self.img_feat_size, out_feature_size)
+        self.final = nn.Linear(out_feature_size, self.out_channel) if out_channel else None
+
+    def forward(self, rgbd, **kwargs):
+        x = self.stem(rgbd)
+        # x = feature
+        res_input = None
+        for i, fconv in enumerate(self.feat_convs):
+            x = fconv(x)
+            res_input = x
+            x = self.resnet1[i](x)
+            x += res_input
+            res_input = x
+            x = self.resnet2[i](x)
+            x += res_input
+
+        x = F.relu(x)
+        x = x.reshape(x.shape[0], self.img_feat_size)
+        x = F.relu(self.fc(x))
+
+        if self.final:
+            x = self.final(x)
+
+        return x
+
 
 class Policy(nn.Module):
-    def __init__(self, observation_space, action_space, hidden_units=[128, 128], activation=nn.ReLU):
+    def __init__(self, observation_space, action_space, hidden_units=[256, 128], activation=nn.ReLU):
         super().__init__()
-        self.feature_extractor = CustomExtractor(observation_space)
+        self.feature_extractor = IMPALA(in_channel=8, num_pixels=(128*128), out_feature_size=384)
         mlp_layers = []
-        prev_units = self.feature_extractor._features_dim
+        prev_units = 384 + observation_space['state'].shape[0]
         for h in hidden_units[:-1]:
             mlp_layers += [nn.Linear(prev_units, h), activation()]
             prev_units = h
@@ -161,14 +199,15 @@ class Policy(nn.Module):
         self.mlp = nn.Sequential(*mlp_layers)
 
     def forward(self, observations) -> th.Tensor:
-        features = self.feature_extractor(observations)
+        features = self.feature_extractor(observations['rgbd'].permute((0, 3, 1, 2)))
+        features = th.cat([features, observations['state']], dim=1)
         return self.mlp(features)
 
 """
 Define a Pytorch dataset that we can create a Dataloader from and iterate over for training
 """
 class ManiSkillRGBDDataset(Dataset):
-    def __init__(self, dataset_file: str, image_size=(128, 128)) -> None:
+    def __init__(self, dataset_file: str, image_size=(128, 128), load_count: int = -1) -> None:
         self.dataset_file = dataset_file
         self.image_size = image_size
         import h5py
@@ -196,8 +235,9 @@ class ManiSkillRGBDDataset(Dataset):
             return out
         self.trajectories = []
         self.total_frames = 0
-        for eps_id in tqdm(range(len(self.episodes))):
-            if eps_id >= 200: break
+        if load_count == -1:
+            load_count = len(self.episodes)
+        for eps_id in tqdm(range(load_count)):
             eps = self.episodes[eps_id]
             ep_len = eps["elapsed_steps"]
             self.total_frames += ep_len
@@ -241,9 +281,7 @@ if __name__ == "__main__":
     
     num_cpu = 8
     batch_size = 256
-    dataset = ManiSkillRGBDDataset(dataset_file="./demos/rigid_body/PickCube-v0/trajectory.rgbd.pd_ee_delta_pose.h5")
-    dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=0, pin_memory=True, drop_last=True, shuffle=True)
-    print(len(dataset))
+   
 
     def make_env(env_id: str, rank: int, seed: int = 0, record_dir: str = None):
         def _init() -> gym.Env:
@@ -262,27 +300,26 @@ if __name__ == "__main__":
     eval_env.reset()
 
     # create our policy
-    policy = Policy(eval_env.observation_space, eval_env.action_space, hidden_units=[256, 256], activation=nn.ReLU)
+    policy = Policy(eval_env.observation_space, eval_env.action_space, hidden_units=[256, 128], activation=nn.ReLU)
     device = "cuda" if th.cuda.is_available() else "cpu"
     policy = policy.to(device)
 
     # simple training loop. We leave out adding validation sets, regularization techniques, metric logging etc. to the user
     loss_fn = nn.MSELoss()
-    optim = th.optim.Adam(policy.parameters(), lr=2e-4)
+    optim = th.optim.Adam(policy.parameters(), lr=3e-4)
     iterations = 100000
-    epochs = 1000
+    epochs = 10000
     
-    import tensorboard
 
-    evaluate=False
-    if evaluate:
-        save_data=th.load("best.pth")
-        policy.load_state_dict(save_data["policy"])
-        print(save_data['step'], save_data['best_epoch_loss'])
-    steps = 0
+    evaluate=True
+
     if not evaluate:
+        dataset = ManiSkillRGBDDataset(dataset_file="./demos/rigid_body/PickCube-v0/trajectory.rgbd.pd_ee_delta_pose.h5")
+        dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=0, pin_memory=True, drop_last=True, shuffle=True)
+        print(len(dataset))
         from torch.utils.tensorboard import SummaryWriter
-        writer = SummaryWriter("logs/bc_pickcube_xuanlin_rightscale")
+        writer = SummaryWriter("logs/bc_pickcube_xuanlin_impala")
+        steps = 0
         best_epoch_loss = 9999
         pbar = tqdm(dataloader, total=iterations)
         for epoch in range(epochs):
@@ -305,6 +342,15 @@ if __name__ == "__main__":
                 epoch_loss += loss_val
                 pbar.set_postfix(dict(loss=loss_val))
                 pbar.update(1)
+                if steps % 25000 == 0:
+                    save_data = dict(
+                        optim=optim.state_dict(),
+                        policy=policy.state_dict(),
+                        step=steps,
+                        best_epoch_loss=best_epoch_loss,
+                    )
+                    print(f"save checkpoint {steps}")
+                    th.save(save_data, f"ckpt_{steps}.pth")
                 if steps >= iterations:
                     break
             
@@ -319,15 +365,7 @@ if __name__ == "__main__":
                 )
                 print(f"New best loss {best_epoch_loss}, saving to best.pth")
                 th.save(save_data, "best.pth")
-            if steps % 25000 == 0:
-                save_data = dict(
-                    optim=optim.state_dict(),
-                    policy=policy.state_dict(),
-                    step=steps,
-                    best_epoch_loss=best_epoch_loss,
-                )
-                print(f"save checkpoint {steps}")
-                th.save(save_data, f"ckpt_{steps}.pth")
+            
             writer.add_scalar("train/mse_loss_epoch", epoch_loss, epoch)
             if steps >= iterations:
                 break
@@ -338,16 +376,26 @@ if __name__ == "__main__":
             best_epoch_loss=best_epoch_loss
         )
         th.save(save_data, "end.pth")
-
+    else:
+        # pass
+        save_data=th.load("best.pth")
+        policy.load_state_dict(save_data["policy"])
+        print(save_data['step'], save_data['best_epoch_loss'])
     traj_id = 0
-    obs=eval_env.reset()
-
+    obs=eval_env.reset(seed=traj_id)
+    policy.eval()
     for i in range(10000):
+        # gt_actions = dataset.data[f"traj_{traj_id}"]["actions"]
         for k in obs:
             obs[k] = th.from_numpy(obs[k]).float()[None].to(device)
         with th.no_grad():
             acts = policy(obs)
             acts = acts.cpu().numpy()[0]
+        
+        # if i < 39:
+        #     gta=gt_actions[i]
+        #     print(((gta-acts)**2).mean())
+        #     acts=gta
         obs, r, d, info = eval_env.step(acts)
 
         eval_env.render()
@@ -356,8 +404,9 @@ if __name__ == "__main__":
         if info["success"]:
             print("success", traj_id)
             traj_id += 1
-            obs=eval_env.reset()
+            obs=eval_env.reset(seed=traj_id)
             # obs = eval_env.reset(seed=dataset.episodes[traj_id]["episode_seed"])
         elif d:
             print("fail", traj_id)
-            obs = eval_env.reset()
+            traj_id += 1
+            obs = eval_env.reset(seed=traj_id)
