@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, Optional, Sequence, Union
 
 import gym
 import numpy as np
@@ -7,13 +7,14 @@ import sapien.core as sapien
 from sapien.utils import Viewer
 
 from mani_skill2 import logger
-from mani_skill2.agents.base_agent import BaseAgent
-from mani_skill2.agents.camera import get_camera_images, get_camera_pcd, get_camera_rgb
-from mani_skill2.utils.common import (
-    convert_observation_to_space,
-    flatten_state_dict,
-    merge_dicts,
+from mani_skill2.agents.base_agent import AgentConfig, BaseAgent
+from mani_skill2.sensors.camera import (
+    Camera,
+    CameraConfig,
+    parse_camera_cfgs,
+    update_camera_cfgs_from_dict,
 )
+from mani_skill2.utils.common import convert_observation_to_space, flatten_state_dict
 from mani_skill2.utils.sapien_utils import (
     get_actor_state,
     get_articulation_state,
@@ -25,10 +26,7 @@ from mani_skill2.utils.trimesh_utils import (
     get_articulation_meshes,
     merge_meshes,
 )
-from mani_skill2.utils.visualization.misc import (
-    observations_to_images,
-    tile_images,
-)
+from mani_skill2.utils.visualization.misc import observations_to_images, tile_images
 
 
 class BaseEnv(gym.Env):
@@ -41,24 +39,36 @@ class BaseEnv(gym.Env):
             "*" represents all registered controllers and action space is a dict.
         sim_freq (int): simulation frequency (Hz)
         control_freq (int): control frequency (Hz)
-        device (str): GPU device for renderer, e.g., 'cuda:x'
+        renderer (str): type of renderer. "vulkan", "kuafu" or "client".
+            `KuafuRenderer` (ray-tracing) is only experimentally and partially supported now.
         enable_shadow (bool): whether to enable shadow for lights. Defaults to False.
-        enable_gt_seg (bool): whether to include GT segmentaiton masks in observations. Defaults to False.
-        enable_kuafu (bool): whether to use KuafuRenderer (ray-tracing).
-            KuafuRenderer is only experimentally and partially supported now.
-        kuafu_kwargs (dict, optional): kwargs to set KuafuRenderer.
+
+    Keyword Args:
+        vulkan_kwargs (dict): kwargs to initialize `VulkanRenderer`. For example:
+            - device (str): GPU device for renderer, e.g., 'cuda:x'.
+        kuafu_kwargs (dict): kwargs to initialize `KuafuRenderer`.
+        client_kwargs (dict): kwargs to initialize `RenderClient`.
+        camera_cfgs (dict): configurations of cameras. See notes for more details.
+        render_camera_cfgs (dict): configurations of rendering cameras. Similar usage as @camera_cfgs.
+
+    Note:
+        `camera_cfgs` is used to update environement-specific camera configurations.
+        If the key is one of camera names, the value will be applied to the corresponding camera.
+        Otherwise, the value will be applied to all cameras (but overridden by camera-specific values).
     """
 
     # fmt: off
-    SUPPORTED_OBS_MODES = (
-        "state", "state_dict", "none", "rgbd", "pointcloud", 
-        "rgbd_robot_seg", "pointcloud_robot_seg",
-    )
+    SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "image")
     SUPPORTED_REWARD_MODES = ("dense", "sparse")
     # fmt: on
 
     agent: BaseAgent
-    _cameras: Dict[str, sapien.CameraEntity]
+    _agent_cfg: AgentConfig
+    _cameras: Dict[str, Camera]
+    _camera_cfgs: Dict[str, CameraConfig]
+    _agent_camera_cfgs: Dict[str, CameraConfig]
+    _render_cameras: Dict[str, Camera]
+    _render_camera_cfgs: Dict[str, CameraConfig]
 
     def __init__(
         self,
@@ -67,29 +77,33 @@ class BaseEnv(gym.Env):
         control_mode=None,
         sim_freq: int = 500,
         control_freq: int = 20,
-        device: str = "",
+        renderer: str = "vulkan",
         enable_shadow=False,
-        enable_gt_seg=False,
-        enable_kuafu=False,
-        kuafu_kwargs: Optional[dict] = None,
+        **kwargs,
     ):
         # Create SAPIEN engine
         self._engine = sapien.Engine()
 
         # Create SAPIEN renderer
-        self._enable_kuafu = enable_kuafu
-        if self._enable_kuafu:
+        self._renderer_type = renderer
+        if self._renderer_type == "vulkan":
+            vulkan_kwargs = kwargs.get("vulkan_kwargs", {})
+            self._renderer = sapien.VulkanRenderer(**vulkan_kwargs)
+            self._renderer.set_log_level("warn")
+        elif self._renderer_type == "kuafu":
             kuafu_config = sapien.KuafuConfig()
-            if kuafu_kwargs is not None:
-                for k, v in kuafu_kwargs.items():
-                    setattr(kuafu_config, k, v)
+            kuafu_kwargs = kwargs.get("kuafu_kwargs", {})
+            for k, v in kuafu_kwargs.items():
+                setattr(kuafu_config, k, v)
             self._renderer = sapien.KuafuRenderer(kuafu_config)
             logger.warning("Only rgb is supported by KuafuRenderer.")
+            self._renderer.set_log_level("warn")
+        elif self._renderer_type == "client":
+            client_kwargs = kwargs["client_kwargs"]
+            self._renderer = sapien.RenderClient(**client_kwargs)
+            # TODO(jigu): add `set_log_level` for RenderClient?
         else:
-            self._renderer = sapien.VulkanRenderer(
-                default_mipmap_levels=1, device=device
-            )
-        self._renderer.set_log_level("off")
+            raise NotImplementedError(self._renderer_type)
 
         self._engine.set_renderer(self._renderer)
         self._viewer = None
@@ -117,20 +131,34 @@ class BaseEnv(gym.Env):
             raise NotImplementedError("Unsupported reward mode: {}".format(reward_mode))
         self._reward_mode = reward_mode
 
+        # TODO(jigu): support dict action space and check whether the name is good
         # Control mode
         self._control_mode = control_mode
 
-        # Rendering
-        self.enable_shadow = enable_shadow
+        # NOTE(jigu): Agent and camera configurations should not change after initialization.
+        self._configure_agent()
+        self._configure_cameras()
+        self._configure_render_cameras()
+        # Override camera configurations
+        if "camera_cfgs" in kwargs:
+            update_camera_cfgs_from_dict(self._camera_cfgs, kwargs["camera_cfgs"])
+        if "render_camera_cfgs" in kwargs:
+            update_camera_cfgs_from_dict(
+                self._render_camera_cfgs, kwargs["render_camera_cfgs"]
+            )
 
-        # For training purpose
-        self._enable_gt_seg = enable_gt_seg
+        # Lighting
+        self.enable_shadow = enable_shadow
 
         # NOTE(jigu): `seed` is deprecated in the latest gym.
         # Use a fixed seed to initialize to enhance determinism
         self.seed(2022)
         obs = self.reset(reconfigure=True)
         self.observation_space = convert_observation_to_space(obs)
+        if self._obs_mode == "image":
+            image_obs_space = self.observation_space.spaces["image"]
+            for name, camera in self._cameras.items():
+                image_obs_space.spaces[name] = camera.observation_space
         self.action_space = self.agent.action_space
 
     def seed(self, seed=None):
@@ -142,6 +170,34 @@ class BaseEnv(gym.Env):
         self._main_seed = seed
         self._main_rng = np.random.RandomState(self._main_seed)
         return [self._main_seed]
+
+    def _configure_agent(self):
+        # TODO(jigu): Support a dummy agent for simulation only
+        raise NotImplementedError
+
+    def _configure_cameras(self):
+        self._camera_cfgs = OrderedDict()
+        self._camera_cfgs.update(parse_camera_cfgs(self._register_cameras()))
+
+        self._agent_camera_cfgs = OrderedDict()
+        if self._agent_cfg is not None:
+            self._agent_camera_cfgs = parse_camera_cfgs(self._agent_cfg.cameras)
+            self._camera_cfgs.update(self._agent_camera_cfgs)
+
+    def _register_cameras(
+        self,
+    ) -> Union[CameraConfig, Sequence[CameraConfig], Dict[str, CameraConfig]]:
+        """Register (non-agent) cameras for the environment."""
+        return []
+
+    def _configure_render_cameras(self):
+        self._render_camera_cfgs = parse_camera_cfgs(self._register_render_cameras())
+
+    def _register_render_cameras(
+        self,
+    ) -> Union[CameraConfig, Sequence[CameraConfig], Dict[str, CameraConfig]]:
+        """Register cameras for rendering."""
+        return []
 
     @property
     def sim_freq(self):
@@ -175,142 +231,72 @@ class BaseEnv(gym.Env):
         return self._obs_mode
 
     def get_obs(self):
-        if self._obs_mode == "none":  # for cases do not need obs, like MPC
+        if self._obs_mode == "none":
+            # Some cases do not need observations, e.g., MPC
             return OrderedDict()
         elif self._obs_mode == "state":
             state_dict = self._get_obs_state_dict()
             return flatten_state_dict(state_dict)
         elif self._obs_mode == "state_dict":
             return self._get_obs_state_dict()
-        elif self._obs_mode == "rgbd":
-            return self._get_obs_rgbd()
-        elif self._obs_mode == "pointcloud":
-            return self._get_obs_pointcloud()
-        elif self._obs_mode == "rgbd_robot_seg":
-            return self._get_obs_rgbd_robot_seg()
-        elif self._obs_mode == "pointcloud_robot_seg":
-            return self._get_obs_pointcloud_robot_seg()
+        elif self._obs_mode == "image":
+            return self._get_obs_images()
         else:
             raise NotImplementedError(self._obs_mode)
 
-    def _get_obs_state_dict(self) -> OrderedDict:
+    def _get_obs_state_dict(self):
         """Get (GT) state-based observations."""
         return OrderedDict(
             agent=self._get_obs_agent(),
             extra=self._get_obs_extra(),
         )
 
-    def _get_obs_agent(self) -> OrderedDict:
+    def _get_obs_agent(self):
         """Get observations from the agent's sensors, e.g., proprioceptive sensors."""
         return self.agent.get_proprioception()
 
-    def _get_obs_extra(self) -> OrderedDict:
+    def _get_obs_extra(self):
         """Get task-relevant extra observations."""
         return OrderedDict()
 
-    def _get_obs_rgbd(self, **kwargs) -> OrderedDict:
-        # Overwrite options if using GT segmentation
-        if self._enable_gt_seg:
-            kwargs.update(visual_seg=True, actor_seg=True)
+    def update_render(self):
+        """Update renderer(s). This function should be called before any rendering,
+        to sync simulator and renderer."""
+        self._scene.update_render()
 
-        # Overwrite options if using KuaFu renderer
-        if self._enable_kuafu:
-            kwargs.update(depth=False, visual_seg=False, actor_seg=False)
+    def take_picture(self):
+        """Take pictures from all cameras (non-blocking)."""
+        for cam in self._cameras.values():
+            cam.take_picture()
 
+    def get_images(self) -> Dict[str, Dict[str, np.ndarray]]:
+        """Get (raw) images from all cameras (blocking)."""
+        images = OrderedDict()
+        for name, cam in self._cameras.items():
+            images[name] = cam.get_images()
+        return images
+
+    def get_camera_params(self) -> Dict[str, Dict[str, np.ndarray]]:
+        """Get camera parameters from all cameras."""
+        params = OrderedDict()
+        for name, cam in self._cameras.items():
+            params[name] = cam.get_params()
+        return params
+
+    def _get_obs_images(self) -> OrderedDict:
+        self.update_render()
+        self.take_picture()
         return OrderedDict(
-            image=self._get_obs_images(**kwargs),
             agent=self._get_obs_agent(),
             extra=self._get_obs_extra(),
+            camera_param=self.get_camera_params(),
+            image=self.get_images(),
         )
 
-    def _get_obs_images(
-        self, rgb=True, depth=True, visual_seg=False, actor_seg=False
-    ) -> OrderedDict:
-        """Get observations from cameras.
-
-        Args:
-            rgb: whether to include RGB
-            depth: whether to include depth
-            visual_seg: whether to include visual-level (most fine-grained) segmentation
-            actor_seg: whether to include actor-level segmentation (indexed by actor id)
-
-        Returns:
-            OrderedDict: The key is the camera name, and the value is an OrderedDict
-                containing camera observations (rgb, depth, ...).
-                For example, {"hand_camera": {"rgb": array([H, W, 3], np.uint8)}}
-        """
-        self.update_render()
-
-        # Take pictures first, which is non-blocking
-        self.agent.take_picture()
-        for camera in self._cameras.values():
-            camera.take_picture()
-
-        obs_dict = self.agent.get_camera_images(
-            rgb=rgb, depth=depth, visual_seg=visual_seg, actor_seg=actor_seg
-        )
-        for name, camera in self._cameras.items():
-            obs_dict[name] = self._get_camera_images(
-                camera, rgb=rgb, depth=depth, visual_seg=visual_seg, actor_seg=actor_seg
-            )
-        return obs_dict
-
-    def _get_camera_images(self, camera: sapien.CameraEntity, **kwargs) -> OrderedDict:
-        obs_dict = get_camera_images(camera, **kwargs)
-        obs_dict.update(
-            camera_intrinsic=camera.get_intrinsic_matrix(),
-            camera_extrinsic=camera.get_extrinsic_matrix(),
-        )
-        return obs_dict
-
-    def _get_obs_pointcloud(self, **kwargs):
-        """Fuse pointclouds from all cameras in the world frame."""
-        # Overwrite options if using GT segmentation
-        if self._enable_gt_seg:
-            kwargs.update(visual_seg=True, actor_seg=True)
-
-        # Overwrite options if using KuaFu renderer
-        if self._enable_kuafu:
-            raise NotImplementedError("Do not support pointcloud mode for KuafuRenderer yet.")
-
-        self.update_render()
-
-        # Take pictures first, which is non-blocking
-        self.agent.take_picture()
-        for camera in self._cameras.values():
-            camera.take_picture()
-
-        pcds = self.agent.get_camera_pcd(fuse=False, **kwargs)
-        for name, camera in self._cameras.items():
-            pcd = get_camera_pcd(camera, **kwargs)
-            T = camera.get_model_matrix()
-            pcd["xyzw"] = pcd["xyzw"] @ T.T
-            pcds[name] = pcd
-
-        fused_pcd = merge_dicts(pcds.values(), True)
-
-        return OrderedDict(
-            pointcloud=fused_pcd,
-            agent=self._get_obs_agent(),
-            extra=self._get_obs_extra(),
-        )
-
-    def _get_robot_seg(self, actor_seg):
-        """Get the segmentation mask of robot links."""
-        mask = np.isin(actor_seg, self.agent.robot_link_ids)
-        return actor_seg * mask
-
-    def _get_obs_rgbd_robot_seg(self):
-        obs = self._get_obs_rgbd(actor_seg=True)
-        for image in obs["image"].values():
-            image["robot_seg"] = self._get_robot_seg(image.pop("actor_seg"))
-        return obs
-
-    def _get_obs_pointcloud_robot_seg(self):
-        obs = self._get_obs_pointcloud(actor_seg=True)
-        pointcloud = obs["pointcloud"]
-        pointcloud["robot_seg"] = self._get_robot_seg(pointcloud.pop("actor_seg"))
-        return obs
+    @property
+    def robot_link_ids(self):
+        """Get link ids for the robot. This is used for segmentation observations."""
+        return self.agent.robot_link_ids
 
     # -------------------------------------------------------------------------- #
     # Reward mode
@@ -380,6 +366,22 @@ class BaseEnv(gym.Env):
 
     def _setup_cameras(self):
         self._cameras = OrderedDict()
+        for uuid, camera_cfg in self._camera_cfgs.items():
+            if uuid in self._agent_camera_cfgs:
+                articulation = self.agent.robot
+            else:
+                articulation = None
+            self._cameras[uuid] = Camera(
+                camera_cfg, self._scene, self._renderer_type, articulation=articulation
+            )
+
+        # Cameras for rendering only
+        self._render_cameras = OrderedDict()
+        if self._renderer_type != "client":
+            for uuid, camera_cfg in self._render_camera_cfgs.items():
+                self._render_cameras[uuid] = Camera(
+                    camera_cfg, self._scene, self._renderer_type
+                )
 
     def _setup_lighting(self):
         shadow = self.enable_shadow
@@ -517,6 +519,8 @@ class BaseEnv(gym.Env):
         scene_config.enable_pcm = False
         scene_config.solver_iterations = 25
         scene_config.solver_velocity_iterations = 0
+        if self._renderer_type == "client":
+            scene_config.disable_collision_visual = True
         return scene_config
 
     def _setup_scene(self, scene_config: Optional[sapien.SceneConfig] = None):
@@ -535,6 +539,7 @@ class BaseEnv(gym.Env):
         self._close_viewer()
         self.agent = None
         self._cameras = OrderedDict()
+        self._render_cameras = OrderedDict()
         self._scene = None
 
     def close(self):
@@ -592,22 +597,15 @@ class BaseEnv(gym.Env):
     # -------------------------------------------------------------------------- #
     _viewer: Viewer
 
-    # Camera used for rendering only, should be created in `_setup_cameras`
-    render_camera: sapien.CameraEntity
-
     def _setup_viewer(self):
         """Setup the interactive viewer.
-        The function should be called in reset(), and overrided to adjust camera.
+        The function should be called in reconfigure().
+        To adjust the camera, override this function.
         """
         # CAUTION: call `set_scene` after assets are loaded.
         self._viewer.set_scene(self._scene)
         self._viewer.toggle_axes(False)
         self._viewer.toggle_camera_lines(False)
-
-    def update_render(self):
-        """Update renderer(s). This function should be called before any rendering,
-        to sync simulator and renderer."""
-        self._scene.update_render()
 
     def render(self, mode="human", **kwargs):
         self.update_render()
@@ -618,29 +616,32 @@ class BaseEnv(gym.Env):
             self._viewer.render()
             return self._viewer
         elif mode == "rgb_array":
-            self.render_camera.take_picture()
-            return get_camera_rgb(self.render_camera)
+            images = []
+            for camera in self._render_cameras.values():
+                rgba = camera.get_images(take_picture=True)["Color"]
+                rgb = np.clip(rgba[..., :3] * 255, 0, 255).astype(np.uint8)
+                images.append(rgb)
+            if len(images) == 1:
+                return images[0]
+            return tile_images(images)
         elif mode == "cameras":
             images = [self.render("rgb_array")]
+
             # NOTE(jigu): Must update renderer again
             # since some visual-only sites like goals should be hidden.
             self.update_render()
+            self.take_picture()
+            cameras_images = self.get_images()
 
-            # Overwrite options if using GT segmentation
-            if self._enable_gt_seg:
-                kwargs.update(visual_seg=True, actor_seg=True)
-
-            # Overwrite options if using KuaFu renderer
-            if self._enable_kuafu:
-                kwargs.update(depth=False, visual_seg=False, actor_seg=False)
-
-            cameras_images = self._get_obs_images(**kwargs)
             for camera_images in cameras_images.values():
                 images.extend(observations_to_images(camera_images))
             return tile_images(images)
         else:
             raise NotImplementedError(f"Unsupported render mode {mode}.")
 
+    # ---------------------------------------------------------------------------- #
+    # Advanced
+    # ---------------------------------------------------------------------------- #
     def gen_scene_pcd(self, num_points: int = int(1e5)) -> np.ndarray:
         """Generate scene point cloud for motion planning, excluding the robot"""
         meshes = []

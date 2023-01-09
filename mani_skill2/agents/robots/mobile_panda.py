@@ -160,7 +160,8 @@ class MobilePandaDualArm(DummyMobileAgent):
 class MobilePandaSingleArm(DummyMobileAgent):
     _config: defaults.MobilePandaSingleArmDefaultConfig
 
-    def get_default_config(self):
+    @classmethod
+    def get_default_config(cls):
         return defaults.MobilePandaSingleArmDefaultConfig()
 
     def _after_init(self):

@@ -8,6 +8,14 @@ from mani_skill2.utils.visualization.cv2_utils import OpenCVViewer
 from mani_skill2.utils.wrappers import RecordEpisode
 
 
+MS1_ENV_IDS = [
+    "OpenCabinetDoor-v1",
+    "OpenCabinetDrawer-v1",
+    "PushChair-v1",
+    "MoveBucket-v1",
+]
+
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--env-id", type=str, required=True)
@@ -32,6 +40,10 @@ def parse_args():
 def main():
     np.set_printoptions(suppress=True, precision=3)
     args = parse_args()
+
+    if args.env_id in MS1_ENV_IDS:
+        if args.control_mode is not None and not args.control_mode.startswith("base"):
+            args.control_mode = "base_pd_joint_vel_arm_" + args.control_mode
 
     env: BaseEnv = gym.make(
         args.env_id,
@@ -209,12 +221,6 @@ def main():
         # -------------------------------------------------------------------------- #
         # Post-process action
         # -------------------------------------------------------------------------- #
-        MS1_ENV_IDS = [
-            "OpenCabinetDoor-v1",
-            "OpenCabinetDrawer-v1",
-            "PushChair-v1",
-            "MoveBucket-v1",
-        ]
         if args.env_id in MS1_ENV_IDS:
             action_dict = dict(
                 base=base_action,

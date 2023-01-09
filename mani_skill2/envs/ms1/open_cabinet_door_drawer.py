@@ -9,7 +9,7 @@ from scipy.spatial import distance as sdist
 from mani_skill2.agents.robots.mobile_panda import MobilePandaSingleArm
 from mani_skill2.utils.common import np_random, random_choice
 from mani_skill2.utils.geometry import angle_distance, transform_points
-from mani_skill2.utils.registration import register_gym_env
+from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.trimesh_utils import (
     get_articulation_meshes,
     get_visual_body_meshes,
@@ -37,11 +37,11 @@ class OpenCabinetEnv(MS1BaseEnv):
         self._cache_bboxes = {}
         super().__init__(*args, **kwargs)
 
-    def _setup_cameras(self):
-        super()._setup_cameras()
-        self.render_camera.set_local_pose(
-            Pose(p=[-1.5, 0, 1.5], q=[0.9238795, 0, 0.3826834, 0])
-        )
+    def _register_render_cameras(self):
+        cam_cfg = super()._register_render_cameras()
+        cam_cfg.p = [-1.5, 0, 1.5]
+        cam_cfg.q = [0.9238795, 0, 0.3826834, 0]
+        return cam_cfg
 
     # -------------------------------------------------------------------------- #
     # Reconfigure
@@ -144,9 +144,12 @@ class OpenCabinetEnv(MS1BaseEnv):
                 g0, g1, g2, g3 = s.get_collision_groups()
                 s.set_collision_groups(g0, g1, g2 | 1 << 31, g3)
 
+    def _configure_agent(self):
+        self._agent_cfg = MobilePandaSingleArm.get_default_config()
+
     def _load_agent(self):
         self.agent = MobilePandaSingleArm(
-            self._scene, self._control_freq, self._control_mode
+            self._scene, self._control_freq, self._control_mode, config=self._agent_cfg
         )
 
     # -------------------------------------------------------------------------- #
@@ -405,7 +408,7 @@ class OpenCabinetEnv(MS1BaseEnv):
         self._prev_actor_pose = self.target_link.pose
 
 
-@register_gym_env(name="OpenCabinetDoor-v1", max_episode_steps=200)
+@register_env(uuid="OpenCabinetDoor-v1", max_episode_steps=200)
 class OpenCabinetDoorEnv(OpenCabinetEnv):
     DEFAULT_MODEL_JSON = (
         "{ASSET_DIR}/partnet_mobility/meta/info_cabinet_door_train.json"
@@ -415,7 +418,7 @@ class OpenCabinetDoorEnv(OpenCabinetEnv):
         super()._set_cabinet_handles("revolute")
 
 
-@register_gym_env(name="OpenCabinetDrawer-v1", max_episode_steps=200)
+@register_env(uuid="OpenCabinetDrawer-v1", max_episode_steps=200)
 class OpenCabinetDrawerEnv(OpenCabinetEnv):
     DEFAULT_MODEL_JSON = (
         "{ASSET_DIR}/partnet_mobility/meta/info_cabinet_drawer_train.json"

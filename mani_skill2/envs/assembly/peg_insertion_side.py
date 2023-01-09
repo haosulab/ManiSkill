@@ -5,13 +5,13 @@ import sapien.core as sapien
 from sapien.core import Pose
 from transforms3d.euler import euler2quat
 
-from mani_skill2.utils.registration import register_gym_env
+from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import hex2rgba, look_at, vectorize_pose
 
 from .base_env import StationaryManipulationEnv
 
 
-@register_gym_env(name="PegInsertionSide-v0", max_episode_steps=200)
+@register_env(uuid="PegInsertionSide-v0", max_episode_steps=200)
 class PegInsertionSideEnv(StationaryManipulationEnv):
     _clearance = 0.003
 
@@ -259,12 +259,15 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
 
         return reward
 
-    def _setup_cameras(self):
-        super()._setup_cameras()
-        self.render_camera.set_local_pose(look_at([1.0, -1.0, 0.8], [0.0, 0.0, 0.5]))
-        self._cameras["base_camera"].set_local_pose(
-            look_at([0, -0.3, 0.2], [0, 0, 0.1])
-        )
+    def _register_cameras(self):
+        cam_cfg = super()._register_cameras()
+        cam_cfg.pose = look_at([0, -0.3, 0.2], [0, 0, 0.1])
+        return cam_cfg
+
+    def _register_render_cameras(self):
+        cam_cfg = super()._register_render_cameras()
+        cam_cfg.pose = look_at([1.0, -1.0, 0.8], [0.0, 0.0, 0.5])
+        return cam_cfg
 
     def set_state(self, state):
         super().set_state(state)
