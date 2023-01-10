@@ -45,7 +45,7 @@ class PandaBucketConfig(PandaDefaultConfig):
     def __init__(self) -> None:
         super().__init__()
 
-        self.urdf_path = "{description}/panda_bucket.urdf"
+        self.urdf_path = "{PACKAGE_ASSET_DIR}/descriptions/panda_bucket.urdf"
         self.ee_link_name = "bucket"
 
     @property
@@ -75,7 +75,7 @@ class PandaStickConfig(PandaDefaultConfig):
     def __init__(self) -> None:
         super().__init__()
 
-        self.urdf_path = "{description}/panda_stick.urdf"
+        self.urdf_path = "{PACKAGE_ASSET_DIR}/descriptions/panda_stick.urdf"
         self.ee_link_name = "panda_hand"
 
     @property
@@ -106,7 +106,7 @@ class PandaStickConfig(PandaDefaultConfig):
 class PandaPinchConfig(PandaDefaultConfig):
     def __init__(self) -> None:
         super().__init__()
-        self.urdf_path = "{description}/panda_pinch.urdf"
+        self.urdf_path = "{PACKAGE_ASSET_DIR}/descriptions/panda_pinch.urdf"
 
     @property
     def controllers(self):

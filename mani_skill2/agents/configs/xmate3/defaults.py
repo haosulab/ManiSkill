@@ -4,7 +4,7 @@ from mani_skill2.sensors.camera import CameraConfig
 
 class Xmate3RobotiqDefaultConfig:
     def __init__(self) -> None:
-        self.urdf_path = "{description}/fixed_xmate3_robotiq.urdf"
+        self.urdf_path = "{PACKAGE_ASSET_DIR}/descriptions/fixed_xmate3_robotiq.urdf"
         self.urdf_config = dict(
             _materials=dict(
                 gripper=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)

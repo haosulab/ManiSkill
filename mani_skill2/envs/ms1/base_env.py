@@ -5,7 +5,7 @@ import numpy as np
 import sapien.core as sapien
 from sapien.core import Pose
 
-from mani_skill2 import ASSET_DIR, DESCRIPTION_DIR
+from mani_skill2 import ASSET_DIR, PACKAGE_ASSET_DIR
 from mani_skill2.agents.robots.mobile_panda import DummyMobileAgent
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.utils.common import random_choice
@@ -49,7 +49,7 @@ class MS1BaseEnv(BaseEnv):
             self.model_urdf_paths[model_id] = self.find_urdf_path(model_id)
 
         # check robot assets
-        robot_asset_dir = DESCRIPTION_DIR / "sciurus17_description"
+        robot_asset_dir = PACKAGE_ASSET_DIR / "descriptions" / "sciurus17_description"
         if not robot_asset_dir.exists():
             raise FileNotFoundError(
                 f"The assets for mobile panda ({robot_asset_dir}) are not found. "

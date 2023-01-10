@@ -8,7 +8,7 @@ from mani_skill2.sensors.camera import CameraConfig
 
 class MobilePandaDualArmDefaultConfig:
     def __init__(self) -> None:
-        self.urdf_path = "{description}/mobile_panda_dual_arm.urdf"
+        self.urdf_path = "{PACKAGE_ASSET_DIR}/descriptions/mobile_panda_dual_arm.urdf"
         self.urdf_config = dict(
             _materials=dict(
                 gripper=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)
@@ -249,7 +249,7 @@ class MobilePandaDualArmDefaultConfig:
 class MobilePandaSingleArmDefaultConfig(MobilePandaDualArmDefaultConfig):
     def __init__(self) -> None:
         super().__init__()
-        self.urdf_path = "{description}/mobile_panda_single_arm.urdf"
+        self.urdf_path = "{PACKAGE_ASSET_DIR}/descriptions/mobile_panda_single_arm.urdf"
         self.urdf_config = dict(
             _materials=dict(
                 gripper=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)

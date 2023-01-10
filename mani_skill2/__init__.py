@@ -1,11 +1,15 @@
+import os
 from pathlib import Path
 
 from .utils.logging_utils import logger
 
-ROOT_DIR = Path(__file__).parent.resolve()
-ASSET_DIR = ROOT_DIR / "assets"
-AGENT_CONFIG_DIR = ASSET_DIR / "config_files/agents"
-DESCRIPTION_DIR = ASSET_DIR / "descriptions"
+# ---------------------------------------------------------------------------- #
+# Setup paths
+# ---------------------------------------------------------------------------- #
+PACKAGE_DIR = Path(__file__).parent.resolve()
+PACKAGE_ASSET_DIR = PACKAGE_DIR / "assets"
+# Non-package data
+ASSET_DIR = Path(os.getenv("MS2_ASSET_DIR", "data"))
 
 
 def get_commit_info(show_modified_files=False, show_untracked_files=False):
@@ -14,7 +18,7 @@ def get_commit_info(show_modified_files=False, show_untracked_files=False):
     import git
 
     try:
-        repo = git.Repo(ROOT_DIR.parent)
+        repo = git.Repo(PACKAGE_DIR.parent)
     except git.InvalidGitRepositoryError as err:
         logger.warning("mani_skill2 is not installed with git.")
         return None

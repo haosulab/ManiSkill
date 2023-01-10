@@ -1,0 +1,19 @@
+# core
+numpy
+scipy
+gym>=0.18.3,<=0.21.0
+sapien==2.1.0
+# basic
+h5py
+pyyaml
+tqdm
+# utilties
+GitPython
+tabulate
+# vision
+transforms3d
+opencv-python
+imageio
+imageio[ffmpeg]
+trimesh
+rtree
