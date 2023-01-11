@@ -17,13 +17,13 @@ from mani_skill2.utils.wrappers.observation import (
 class EnvSpec:
     def __init__(
         self,
-        uuid: str,
+        uid: str,
         cls: Type[BaseEnv],
         max_episode_steps=None,
         default_kwargs: dict = None,
     ):
         """A specification for a ManiSkill2 environment."""
-        self.uuid = uuid
+        self.uid = uid
         self.cls = cls
         self.max_episode_steps = max_episode_steps
         self.default_kwargs = {} if default_kwargs is None else default_kwargs
@@ -38,7 +38,7 @@ class EnvSpec:
         """Return a gym EnvSpec for this env"""
         entry_point = self.cls.__module__ + ":" + self.cls.__name__
         return GymEnvSpec(
-            self.uuid,
+            self.uid,
             entry_point,
             max_episode_steps=self.max_episode_steps,
             kwargs=self.default_kwargs,
@@ -105,11 +105,11 @@ def make(env_id, from_gym=False, **kwargs):
     return env
 
 
-def register_env(uuid: str, max_episode_steps=None, **kwargs):
+def register_env(uid: str, max_episode_steps=None, **kwargs):
     """A decorator to register ManiSkill2 environments.
 
     Args:
-        uuid (str): unique id of the environment.
+        uid (str): unique id of the environment.
 
     Notes:
         - `max_episode_steps` is processed differently from other keyword arguments in gym.
@@ -120,7 +120,7 @@ def register_env(uuid: str, max_episode_steps=None, **kwargs):
     def _register_env(cls):
         # Register for ManiSkil2
         register(
-            uuid,
+            uid,
             cls,
             max_episode_steps=max_episode_steps,
             default_kwargs=deepcopy(kwargs),
@@ -128,8 +128,8 @@ def register_env(uuid: str, max_episode_steps=None, **kwargs):
 
         # Register for gym
         gym.register(
-            uuid,
-            entry_point=partial(make, env_id=uuid, from_gym=True),
+            uid,
+            entry_point=partial(make, env_id=uid, from_gym=True),
             max_episode_steps=max_episode_steps,
             kwargs=deepcopy(kwargs),
         )

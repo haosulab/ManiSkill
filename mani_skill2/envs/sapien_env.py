@@ -366,20 +366,20 @@ class BaseEnv(gym.Env):
 
     def _setup_cameras(self):
         self._cameras = OrderedDict()
-        for uuid, camera_cfg in self._camera_cfgs.items():
-            if uuid in self._agent_camera_cfgs:
+        for uid, camera_cfg in self._camera_cfgs.items():
+            if uid in self._agent_camera_cfgs:
                 articulation = self.agent.robot
             else:
                 articulation = None
-            self._cameras[uuid] = Camera(
+            self._cameras[uid] = Camera(
                 camera_cfg, self._scene, self._renderer_type, articulation=articulation
             )
 
         # Cameras for rendering only
         self._render_cameras = OrderedDict()
         if self._renderer_type != "client":
-            for uuid, camera_cfg in self._render_camera_cfgs.items():
-                self._render_cameras[uuid] = Camera(
+            for uid, camera_cfg in self._render_camera_cfgs.items():
+                self._render_cameras[uid] = Camera(
                     camera_cfg, self._scene, self._renderer_type
                 )
 

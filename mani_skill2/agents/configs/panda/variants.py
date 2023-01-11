@@ -59,7 +59,7 @@ class PandaBucketConfig(PandaDefaultConfig):
     @property
     def cameras(self):
         return CameraConfig(
-            uuid="hand_camera",
+            uid="hand_camera",
             p=[0.0, 0.08, 0.0],
             q=[0.5, -0.5, -0.5, -0.5],
             width=128,
@@ -67,7 +67,7 @@ class PandaBucketConfig(PandaDefaultConfig):
             near=0.01,
             far=10,
             fov=np.pi / 2,
-            actor_uuid="bucket",
+            actor_uid="bucket",
         )
 
 

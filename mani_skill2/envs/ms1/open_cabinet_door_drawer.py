@@ -408,7 +408,7 @@ class OpenCabinetEnv(MS1BaseEnv):
         self._prev_actor_pose = self.target_link.pose
 
 
-@register_env(uuid="OpenCabinetDoor-v1", max_episode_steps=200)
+@register_env("OpenCabinetDoor-v1", max_episode_steps=200)
 class OpenCabinetDoorEnv(OpenCabinetEnv):
     DEFAULT_MODEL_JSON = (
         "{ASSET_DIR}/partnet_mobility/meta/info_cabinet_door_train.json"
@@ -418,7 +418,7 @@ class OpenCabinetDoorEnv(OpenCabinetEnv):
         super()._set_cabinet_handles("revolute")
 
 
-@register_env(uuid="OpenCabinetDrawer-v1", max_episode_steps=200)
+@register_env("OpenCabinetDrawer-v1", max_episode_steps=200)
 class OpenCabinetDrawerEnv(OpenCabinetEnv):
     DEFAULT_MODEL_JSON = (
         "{PACKAGE_ASSET_DIR}/partnet_mobility/meta/info_cabinet_drawer_train.json"

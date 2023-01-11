@@ -236,7 +236,7 @@ class PandaAvoidObstaclesEnv(AvoidObstaclesBaseEnv):
         self._agent_cfg = PandaRealSensed435Config()
 
     def _load_agent(self):
-        self.robot_uuid = "panda"
+        self.robot_uid = "panda"
         self.agent = Panda(
             self._scene, self._control_freq, self._control_mode, config=self._agent_cfg
         )

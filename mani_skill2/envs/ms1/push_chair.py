@@ -14,7 +14,7 @@ from mani_skill2.utils.trimesh_utils import get_actor_visual_mesh
 from .base_env import MS1BaseEnv
 
 
-@register_env(uuid="PushChair-v1", max_episode_steps=200)
+@register_env("PushChair-v1", max_episode_steps=200)
 class PushChairEnv(MS1BaseEnv):
     DEFAULT_MODEL_JSON = "{PACKAGE_ASSET_DIR}/partnet_mobility/meta/info_chair_train.json"
     ASSET_UID = "chair"

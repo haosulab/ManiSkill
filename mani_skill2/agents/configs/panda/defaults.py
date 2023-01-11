@@ -181,7 +181,7 @@ class PandaDefaultConfig:
     @property
     def cameras(self):
         return CameraConfig(
-            uuid="hand_camera",
+            uid="hand_camera",
             p=[0.0464982, -0.0200011, 0.0360011],
             q=[0, 0.70710678, 0, 0.70710678],
             width=128,
@@ -189,7 +189,7 @@ class PandaDefaultConfig:
             fov=1.57,
             near=0.01,
             far=10,
-            actor_uuid="panda_hand",
+            actor_uid="panda_hand",
         )
 
 
@@ -201,7 +201,7 @@ class PandaRealSensed435Config(PandaDefaultConfig):
     @property
     def cameras(self):
         return CameraConfig(
-            uuid="hand_camera",
+            uid="hand_camera",
             p=[0, 0, 0],
             q=[1, 0, 0, 0],
             width=128,
@@ -209,5 +209,5 @@ class PandaRealSensed435Config(PandaDefaultConfig):
             fov=1.57,
             near=0.01,
             far=10,
-            actor_uuid="camera_link",
+            actor_uid="camera_link",
         )

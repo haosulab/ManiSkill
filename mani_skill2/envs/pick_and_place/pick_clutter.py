@@ -118,7 +118,7 @@ class PickClutterEnv(StationaryManipulationEnv):
             self._scene.step()
 
     def _initialize_agent(self):
-        if self.robot_uuid == "panda":
+        if self.robot_uid == "panda":
             # fmt: off
             qpos = np.array(
                 [0.0, 0, 0, -np.pi * 2 / 3, 0, np.pi * 2 / 3, np.pi / 4, 0.04, 0.04]
@@ -130,7 +130,7 @@ class PickClutterEnv(StationaryManipulationEnv):
             self.agent.reset(qpos)
             self.agent.robot.set_pose(Pose([-0.544, 0, 0]))
         else:
-            raise NotImplementedError(self.robot_uuid)
+            raise NotImplementedError(self.robot_uid)
 
     @property
     def obj_pose(self):

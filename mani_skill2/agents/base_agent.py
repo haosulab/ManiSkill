@@ -39,7 +39,7 @@ class BaseAgent:
     Args:
         scene (sapien.Scene): simulation scene instance.
         control_freq (int): control frequency (Hz).
-        control_mode: uuid of controller to use
+        control_mode: uid of controller to use
         fix_root_link: whether to fix the robot root link
         config: agent configuration
     """
@@ -101,13 +101,13 @@ class BaseAgent:
 
     def _setup_controllers(self):
         self.controllers = OrderedDict()
-        for uuid, config in self.controller_configs.items():
+        for uid, config in self.controller_configs.items():
             if isinstance(config, dict):
-                self.controllers[uuid] = CombinedController(
+                self.controllers[uid] = CombinedController(
                     config, self.robot, self._control_freq
                 )
             else:
-                self.controllers[uuid] = config.controller_cls(
+                self.controllers[uid] = config.controller_cls(
                     config, self.robot, self._control_freq
                 )
 
@@ -117,7 +117,7 @@ class BaseAgent:
 
     @property
     def control_mode(self):
-        """Get the currently activated controller uuid."""
+        """Get the currently activated controller uid."""
         return self._control_mode
 
     def set_control_mode(self, control_mode):
@@ -143,8 +143,8 @@ class BaseAgent:
         if self._control_mode is None:
             return spaces.Dict(
                 {
-                    uuid: controller.action_space
-                    for uuid, controller in self.controllers.items()
+                    uid: controller.action_space
+                    for uid, controller in self.controllers.items()
                 }
             )
         else:

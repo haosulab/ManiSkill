@@ -120,7 +120,7 @@ class Xmate3RobotiqDefaultConfig:
     def cameras(self):
         return [
             CameraConfig(
-                uuid="base_camera",
+                uid="base_camera",
                 p=[0.0, 0.0, 0.0],
                 q=[1, 0, 0, 0],
                 width=128,
@@ -128,11 +128,11 @@ class Xmate3RobotiqDefaultConfig:
                 fov=1.5707,
                 near=0.01,
                 far=10,
-                actor_uuid="camera_base_link",
+                actor_uid="camera_base_link",
                 hide_link=True,
             ),
             CameraConfig(
-                uuid="hand_camera",
+                uid="hand_camera",
                 p=[0.0, 0.0, 0.0],
                 q=[1, 0, 0, 0],
                 width=128,
@@ -140,7 +140,7 @@ class Xmate3RobotiqDefaultConfig:
                 fov=1.5707,
                 near=0.01,
                 far=10,
-                actor_uuid="camera_hand_link",
+                actor_uid="camera_hand_link",
                 hide_link=True,
             ),
         ]

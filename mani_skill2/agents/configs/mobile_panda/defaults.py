@@ -240,7 +240,7 @@ class MobilePandaDualArmDefaultConfig:
                 near=0.1,
                 far=10,
                 fov=np.pi / 3,
-                actor_uuid="mobile_base",
+                actor_uid="mobile_base",
             )
             cameras.append(camera)
         return cameras

@@ -38,7 +38,7 @@ class TurnFaucetBaseEnv(BaseEnv):
         robot_init_qpos_noise=0.02,
         **kwargs,
     ):
-        self.robot_uuid = robot
+        self.robot_uid = robot
         self.robot_init_qpos_noise = robot_init_qpos_noise
         super().__init__(*args, **kwargs)
 
@@ -46,11 +46,11 @@ class TurnFaucetBaseEnv(BaseEnv):
         self._add_ground()
 
     def _configure_agent(self):
-        agent_cls = self.SUPPORTED_ROBOTS[self.robot_uuid]
+        agent_cls = self.SUPPORTED_ROBOTS[self.robot_uid]
         self._agent_cfg = agent_cls.get_default_config()
 
     def _load_agent(self):
-        agent_cls = self.SUPPORTED_ROBOTS[self.robot_uuid]
+        agent_cls = self.SUPPORTED_ROBOTS[self.robot_uid]
         self.agent = agent_cls(
             self._scene, self._control_freq, self._control_mode, config=self._agent_cfg
         )
@@ -60,7 +60,7 @@ class TurnFaucetBaseEnv(BaseEnv):
         set_articulation_render_material(self.agent.robot, specular=0.9, roughness=0.3)
 
     def _initialize_agent(self):
-        if self.robot_uuid == "panda":
+        if self.robot_uid == "panda":
             # fmt: off
             qpos = np.array([0, -0.785, 0, -2.356, 0, 1.57, 0.785, 0, 0])
             # fmt: on
@@ -70,7 +70,7 @@ class TurnFaucetBaseEnv(BaseEnv):
             self.agent.reset(qpos)
             self.agent.robot.set_pose(Pose([-0.56, 0, 0]))
         else:
-            raise NotImplementedError(self.robot_uuid)
+            raise NotImplementedError(self.robot_uid)
 
     def _get_obs_agent(self):
         obs = self.agent.get_proprioception()
@@ -93,7 +93,7 @@ class TurnFaucetBaseEnv(BaseEnv):
         self._viewer.set_camera_rpy(0, -0.5, 3.14)
 
 
-@register_env(uuid="TurnFaucet-v0", max_episode_steps=200)
+@register_env("TurnFaucet-v0", max_episode_steps=200)
 class TurnFaucetEnv(TurnFaucetBaseEnv):
     target_link: sapien.Link
     target_joint: sapien.Joint
