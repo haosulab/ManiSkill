@@ -12,6 +12,14 @@ PACKAGE_ASSET_DIR = PACKAGE_DIR / "assets"
 ASSET_DIR = Path(os.getenv("MS2_ASSET_DIR", "data"))
 
 
+def format_path(p: str):
+    return p.format(
+        PACKAGE_DIR=PACKAGE_DIR,
+        PACKAGE_ASSET_DIR=PACKAGE_ASSET_DIR,
+        ASSET_DIR=ASSET_DIR,
+    )
+
+
 def get_commit_info(show_modified_files=False, show_untracked_files=False):
     """Get git commit information."""
     # isort: off

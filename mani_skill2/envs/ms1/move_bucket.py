@@ -22,7 +22,7 @@ from .base_env import MS1BaseEnv
 
 @register_env(uuid="MoveBucket-v1", max_episode_steps=200)
 class MoveBucketEnv(MS1BaseEnv):
-    DEFAULT_MODEL_JSON = "{ASSET_DIR}/partnet_mobility/meta/info_bucket_train.json"
+    DEFAULT_MODEL_JSON = "{PACKAGE_ASSET_DIR}/partnet_mobility/meta/info_bucket_train.json"
     ASSET_UID = "bucket"
 
     def _register_render_cameras(self):

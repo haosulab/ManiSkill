@@ -7,7 +7,7 @@ import numpy as np
 import sapien.core as sapien
 from gym import spaces
 
-from mani_skill2 import PACKAGE_ASSET_DIR
+from mani_skill2 import format_path
 from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.sapien_utils import check_urdf_config, parse_urdf_config
 
@@ -86,14 +86,13 @@ class BaseAgent:
         loader = self.scene.create_urdf_loader()
         loader.fix_root_link = self.fix_root_link
 
-        urdf_path = str(self.urdf_path)
-        urdf_path = urdf_path.format(PACKAGE_ASSET_DIR=PACKAGE_ASSET_DIR)
+        urdf_path = format_path(str(self.urdf_path))
 
         urdf_config = parse_urdf_config(self.urdf_config, self.scene)
         check_urdf_config(urdf_config)
 
         # TODO(jigu): support loading multiple convex collision shapes
-        self.robot = loader.load(str(urdf_path), urdf_config)
+        self.robot = loader.load(urdf_path, urdf_config)
         assert self.robot is not None, f"Fail to load URDF from {urdf_path}"
         self.robot.set_name(Path(urdf_path).stem)
 

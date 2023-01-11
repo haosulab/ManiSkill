@@ -1,11 +1,12 @@
 from collections import OrderedDict
 from typing import Dict, List, Tuple
+from pathlib import Path
 
 import numpy as np
 import sapien.core as sapien
 from sapien.core import Pose
 
-from mani_skill2 import ASSET_DIR, PACKAGE_ASSET_DIR
+from mani_skill2 import format_path
 from mani_skill2.agents.robots.mobile_panda import DummyMobileAgent
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.utils.common import random_choice
@@ -26,13 +27,16 @@ class MS1BaseEnv(BaseEnv):
     def __init__(
         self,
         *args,
+        asset_root: str = "{ASSET_DIR}/partnet_mobility/dataset",
         model_json: str = None,
         model_ids: List[str] = (),
         **kwargs,
     ):
+        self.asset_root = Path(format_path(asset_root))
+
         if model_json is None:
             model_json = self.DEFAULT_MODEL_JSON
-        model_json = model_json.format(ASSET_DIR=ASSET_DIR)
+        model_json = format_path(model_json)
         self.model_db: Dict[str, Dict] = load_json(model_json)
 
         if isinstance(model_ids, str):
@@ -48,19 +52,10 @@ class MS1BaseEnv(BaseEnv):
         for model_id in self.model_ids:
             self.model_urdf_paths[model_id] = self.find_urdf_path(model_id)
 
-        # check robot assets
-        robot_asset_dir = PACKAGE_ASSET_DIR / "descriptions" / "sciurus17_description"
-        if not robot_asset_dir.exists():
-            raise FileNotFoundError(
-                f"The assets for mobile panda ({robot_asset_dir}) are not found. "
-                "Please download sciurus17 models:"
-                "`python -m mani_skill2.utils.download --uid sciurus17`."
-            )
-
         super().__init__(*args, **kwargs)
 
     def find_urdf_path(self, model_id):
-        model_dir = ASSET_DIR / f"partnet_mobility/dataset/{model_id}"
+        model_dir = self.asset_root / str(model_id)
 
         urdf_names = ["mobility_cvx.urdf", "mobility_fixed.urdf"]
         for urdf_name in urdf_names:

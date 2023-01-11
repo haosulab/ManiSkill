@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from pathlib import Path
 from typing import Dict, List, Union
 
 import numpy as np
@@ -8,7 +9,7 @@ from sapien.core import Pose
 from scipy.spatial.distance import cdist
 from transforms3d.euler import euler2quat
 
-from mani_skill2 import ASSET_DIR
+from mani_skill2 import format_path
 from mani_skill2.agents.robots.panda import Panda
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
@@ -94,15 +95,19 @@ class TurnFaucetBaseEnv(BaseEnv):
 
 @register_env(uuid="TurnFaucet-v0", max_episode_steps=200)
 class TurnFaucetEnv(TurnFaucetBaseEnv):
-    DEFAULT_MODEL_JSON = "{ASSET_DIR}/partnet_mobility/meta/info_faucet_train.json"
-
     target_link: sapien.Link
     target_joint: sapien.Joint
 
-    def __init__(self, model_json: str = None, model_ids: List[str] = (), **kwargs):
-        if model_json is None:
-            model_json = self.DEFAULT_MODEL_JSON
-        model_json = model_json.format(ASSET_DIR=ASSET_DIR)
+    def __init__(
+        self,
+        asset_root: str = "{ASSET_DIR}/partnet_mobility/dataset",
+        model_json: str = "{PACKAGE_ASSET_DIR}/partnet_mobility/meta/info_faucet_train.json",
+        model_ids: List[str] = (),
+        **kwargs,
+    ):
+        self.asset_root = Path(format_path(asset_root))
+
+        model_json = format_path(model_json)
         self.model_db: Dict[str, Dict] = load_json(model_json)
 
         if isinstance(model_ids, str):
@@ -124,7 +129,7 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
         super().__init__(**kwargs)
 
     def find_urdf_path(self, model_id):
-        model_dir = ASSET_DIR / f"partnet_mobility/dataset/{model_id}"
+        model_dir = self.asset_root / str(model_id)
 
         urdf_names = ["mobility_cvx.urdf"]
         for urdf_name in urdf_names:
@@ -194,7 +199,7 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
         loader.scale = self.model_scale
         loader.fix_root_link = True
 
-        model_dir = ASSET_DIR / f"partnet_mobility/dataset/{self.model_id}"
+        model_dir = self.asset_root / str(self.model_id)
         urdf_path = model_dir / "mobility_cvx.urdf"
         loader.load_multiple_collisions_from_file = True
 

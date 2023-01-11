@@ -5,7 +5,7 @@ import numpy as np
 import sapien.core as sapien
 from sapien.core import Pose
 
-from mani_skill2 import ASSET_DIR
+from mani_skill2 import format_path
 from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.agents.configs.panda.defaults import PandaRealSensed435Config
 from mani_skill2.agents.robots.panda import Panda
@@ -29,7 +29,7 @@ class AvoidObstaclesBaseEnv(BaseEnv):
     def __init__(self, episode_json=None, **kwargs):
         if episode_json is None:
             episode_json = self.DEFAULT_EPISODE_JSON
-        episode_json = episode_json.format(ASSET_DIR=ASSET_DIR)
+        episode_json = format_path(episode_json)
         if not Path(episode_json).exists():
             raise FileNotFoundError(
                 f"Episode json ({episode_json}) is not found."

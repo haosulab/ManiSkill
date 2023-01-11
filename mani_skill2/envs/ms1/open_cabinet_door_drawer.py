@@ -421,7 +421,7 @@ class OpenCabinetDoorEnv(OpenCabinetEnv):
 @register_env(uuid="OpenCabinetDrawer-v1", max_episode_steps=200)
 class OpenCabinetDrawerEnv(OpenCabinetEnv):
     DEFAULT_MODEL_JSON = (
-        "{ASSET_DIR}/partnet_mobility/meta/info_cabinet_drawer_train.json"
+        "{PACKAGE_ASSET_DIR}/partnet_mobility/meta/info_cabinet_drawer_train.json"
     )
 
     def _set_cabinet_handles(self):

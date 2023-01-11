@@ -6,7 +6,7 @@ import numpy as np
 import sapien.core as sapien
 from sapien.core import Pose
 
-from mani_skill2 import ASSET_DIR
+from mani_skill2 import format_path
 from mani_skill2.utils.common import random_choice
 from mani_skill2.utils.io_utils import load_json
 from mani_skill2.utils.registration import register_env
@@ -33,7 +33,7 @@ class PickClutterEnv(StationaryManipulationEnv):
         # Load episode configurations
         if episode_json is None:
             episode_json = self.DEFAULT_EPISODE_JSON
-        episode_json = episode_json.format(ASSET_DIR=ASSET_DIR)
+        episode_json = format_path(episode_json)
         if not Path(episode_json).exists():
             raise FileNotFoundError(
                 f"Episode json ({episode_json}) is not found."
@@ -45,12 +45,12 @@ class PickClutterEnv(StationaryManipulationEnv):
         # Root directory of object models
         if asset_root is None:
             asset_root = self.DEFAULT_ASSET_ROOT
-        self._asset_root = Path(asset_root.format(ASSET_DIR=ASSET_DIR))
+        self.asset_root = Path(format_path(asset_root))
 
         # Information of object models
         if model_json is None:
             model_json = self.DEFAULT_MODEL_JSON
-        model_json = self._asset_root / model_json
+        model_json = self.asset_root / format_path(model_json)
         self.model_db: Dict[str, Dict] = load_json(model_json)
 
         self.episode_idx = -1
@@ -260,7 +260,7 @@ class PickClutterYCBEnv(PickClutterEnv):
             self._scene,
             scale=model_scale,
             density=density,
-            root_dir=self._asset_root,
+            root_dir=self.asset_root,
         )
         obj.name = model_id
         obj.set_damping(0.1, 0.1)
