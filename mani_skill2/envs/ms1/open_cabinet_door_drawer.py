@@ -27,7 +27,7 @@ def clip_and_normalize(x, a_min, a_max=None):
 
 
 class OpenCabinetEnv(MS1BaseEnv):
-    ASSET_UID = "cabinet"
+    ASSET_UID = "partnet_mobility_cabinet"
     MAX_DOF = 8
     agent: MobilePandaSingleArm
 

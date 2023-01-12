@@ -428,7 +428,7 @@ class PickSingleYCBEnv(PickSingleEnv):
                 raise FileNotFoundError(
                     f"{model_dir} is not found."
                     "Please download (ManiSkill2) YCB models:"
-                    "`python -m mani_skill2.utils.download --uid ycb`."
+                    "`python -m mani_skill2.utils.download_asset ycb`."
                 )
 
             collision_file = model_dir / "collision.obj"
@@ -511,7 +511,7 @@ class PickSingleEGADEnv(PickSingleEnv):
                 raise FileNotFoundError(
                     f"{collision_dir} or {visual_dir} is not found. "
                     "Please download (ManiSkill2) EGAD models:"
-                    "`python -m mani_skill2.utils.download --uid egad`."
+                    "`python -m mani_skill2.utils.download_asset egad`."
                 )
 
     def _load_model(self):

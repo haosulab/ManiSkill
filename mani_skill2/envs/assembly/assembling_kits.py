@@ -24,7 +24,7 @@ class AssemblingKitsEnv(StationaryManipulationEnv):
             raise FileNotFoundError(
                 "The objects/kits are not found."
                 "Please download (ManiSkill2) AssemblingKits assets:"
-                "`python -m mani_skill2.utils.download --uid assembling_kits`."
+                "`python -m mani_skill2.utils.download_asset assembling_kits`."
             )
 
         self._episode_json = load_json(self.asset_root / "episodes.json")

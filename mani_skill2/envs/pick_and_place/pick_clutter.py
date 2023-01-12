@@ -38,7 +38,7 @@ class PickClutterEnv(StationaryManipulationEnv):
             raise FileNotFoundError(
                 f"Episode json ({episode_json}) is not found."
                 "To download default json:"
-                "`python -m mani_skill2.utils.download --uid pick_clutter`."
+                "`python -m mani_skill2.utils.download_asset pick_clutter_ycb`."
             )
         self.episodes: List[Dict] = load_json(episode_json)
 

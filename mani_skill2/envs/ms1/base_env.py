@@ -66,7 +66,7 @@ class MS1BaseEnv(BaseEnv):
         raise FileNotFoundError(
             f"No valid URDF is found for {model_id}."
             "Please download Partnet-Mobility (ManiSkill2022):"
-            "`python -m mani_skill2.utils.download --uid {}`".format(self.ASSET_UID)
+            "`python -m mani_skill2.utils.download_asset {}`".format(self.ASSET_UID)
         )
 
     # -------------------------------------------------------------------------- #

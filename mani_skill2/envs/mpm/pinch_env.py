@@ -3,20 +3,18 @@ from collections import OrderedDict
 import h5py
 import numpy as np
 import sapien.core as sapien
+import warp as wp
 from transforms3d.euler import euler2quat
+from warp.distance import compute_chamfer_distance
 
 from mani_skill2 import ASSET_DIR
 from mani_skill2.agents.configs.panda.variants import PandaPinchConfig
-from mani_skill2.sensors.camera import CameraConfig
-
 from mani_skill2.agents.robots.panda import Panda
 from mani_skill2.envs.mpm.base_env import MPMBaseEnv, MPMModelBuilder, MPMSimulator
+from mani_skill2.envs.mpm.utils import load_h5_as_dict
+from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import get_entity_by_name, vectorize_pose
-from mani_skill2.envs.mpm.utils import load_h5_as_dict
-
-import warp as wp
-from warp.distance import compute_chamfer_distance
 
 
 @register_env("Pinch-v0", max_episode_steps=300)
@@ -30,8 +28,9 @@ class PinchEnv(MPMBaseEnv):
         self.level_dir = ASSET_DIR / level_dir
         self.all_filepaths = sorted(self.level_dir.glob("*.h5"))
         if len(self.all_filepaths) == 0:
-            raise RuntimeError(
-                "Please download required assets for Pinch by running `python -m mani_skill2.utils.download --uid pinch`"
+            raise FileNotFoundError(
+                "Please download required assets for Pinch:"
+                "`python -m mani_skill2.utils.download_asset pinch`"
             )
 
         super().__init__(*args, **kwargs)
