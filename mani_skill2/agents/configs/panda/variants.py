@@ -45,7 +45,7 @@ class PandaBucketConfig(PandaDefaultConfig):
     def __init__(self) -> None:
         super().__init__()
 
-        self.urdf_path = "{description}/panda_bucket.urdf"
+        self.urdf_path = "{PACKAGE_ASSET_DIR}/descriptions/panda_bucket.urdf"
         self.ee_link_name = "bucket"
 
     @property
@@ -59,7 +59,7 @@ class PandaBucketConfig(PandaDefaultConfig):
     @property
     def cameras(self):
         return CameraConfig(
-            uuid="hand_camera",
+            uid="hand_camera",
             p=[0.0, 0.08, 0.0],
             q=[0.5, -0.5, -0.5, -0.5],
             width=128,
@@ -67,7 +67,7 @@ class PandaBucketConfig(PandaDefaultConfig):
             near=0.01,
             far=10,
             fov=np.pi / 2,
-            actor_uuid="bucket",
+            actor_uid="bucket",
         )
 
 
@@ -75,7 +75,7 @@ class PandaStickConfig(PandaDefaultConfig):
     def __init__(self) -> None:
         super().__init__()
 
-        self.urdf_path = "{description}/panda_stick.urdf"
+        self.urdf_path = "{PACKAGE_ASSET_DIR}/descriptions/panda_stick.urdf"
         self.ee_link_name = "panda_hand"
 
     @property
@@ -106,7 +106,7 @@ class PandaStickConfig(PandaDefaultConfig):
 class PandaPinchConfig(PandaDefaultConfig):
     def __init__(self) -> None:
         super().__init__()
-        self.urdf_path = "{description}/panda_pinch.urdf"
+        self.urdf_path = "{PACKAGE_ASSET_DIR}/descriptions/panda_pinch.urdf"
 
     @property
     def controllers(self):

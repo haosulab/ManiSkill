@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from pathlib import Path
 from typing import Dict, List, Union
 
 import numpy as np
@@ -8,7 +9,7 @@ from sapien.core import Pose
 from scipy.spatial.distance import cdist
 from transforms3d.euler import euler2quat
 
-from mani_skill2 import ASSET_DIR
+from mani_skill2 import format_path
 from mani_skill2.agents.robots.panda import Panda
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
@@ -37,7 +38,7 @@ class TurnFaucetBaseEnv(BaseEnv):
         robot_init_qpos_noise=0.02,
         **kwargs,
     ):
-        self.robot_uuid = robot
+        self.robot_uid = robot
         self.robot_init_qpos_noise = robot_init_qpos_noise
         super().__init__(*args, **kwargs)
 
@@ -45,11 +46,11 @@ class TurnFaucetBaseEnv(BaseEnv):
         self._add_ground()
 
     def _configure_agent(self):
-        agent_cls = self.SUPPORTED_ROBOTS[self.robot_uuid]
+        agent_cls = self.SUPPORTED_ROBOTS[self.robot_uid]
         self._agent_cfg = agent_cls.get_default_config()
 
     def _load_agent(self):
-        agent_cls = self.SUPPORTED_ROBOTS[self.robot_uuid]
+        agent_cls = self.SUPPORTED_ROBOTS[self.robot_uid]
         self.agent = agent_cls(
             self._scene, self._control_freq, self._control_mode, config=self._agent_cfg
         )
@@ -59,7 +60,7 @@ class TurnFaucetBaseEnv(BaseEnv):
         set_articulation_render_material(self.agent.robot, specular=0.9, roughness=0.3)
 
     def _initialize_agent(self):
-        if self.robot_uuid == "panda":
+        if self.robot_uid == "panda":
             # fmt: off
             qpos = np.array([0, -0.785, 0, -2.356, 0, 1.57, 0.785, 0, 0])
             # fmt: on
@@ -69,7 +70,7 @@ class TurnFaucetBaseEnv(BaseEnv):
             self.agent.reset(qpos)
             self.agent.robot.set_pose(Pose([-0.56, 0, 0]))
         else:
-            raise NotImplementedError(self.robot_uuid)
+            raise NotImplementedError(self.robot_uid)
 
     def _get_obs_agent(self):
         obs = self.agent.get_proprioception()
@@ -92,17 +93,21 @@ class TurnFaucetBaseEnv(BaseEnv):
         self._viewer.set_camera_rpy(0, -0.5, 3.14)
 
 
-@register_env(uuid="TurnFaucet-v0", max_episode_steps=200)
+@register_env("TurnFaucet-v0", max_episode_steps=200)
 class TurnFaucetEnv(TurnFaucetBaseEnv):
-    DEFAULT_MODEL_JSON = "{ASSET_DIR}/partnet_mobility/meta/info_faucet_train.json"
-
     target_link: sapien.Link
     target_joint: sapien.Joint
 
-    def __init__(self, model_json: str = None, model_ids: List[str] = (), **kwargs):
-        if model_json is None:
-            model_json = self.DEFAULT_MODEL_JSON
-        model_json = model_json.format(ASSET_DIR=ASSET_DIR)
+    def __init__(
+        self,
+        asset_root: str = "{ASSET_DIR}/partnet_mobility/dataset",
+        model_json: str = "{PACKAGE_ASSET_DIR}/partnet_mobility/meta/info_faucet_train.json",
+        model_ids: List[str] = (),
+        **kwargs,
+    ):
+        self.asset_root = Path(format_path(asset_root))
+
+        model_json = format_path(model_json)
         self.model_db: Dict[str, Dict] = load_json(model_json)
 
         if isinstance(model_ids, str):
@@ -124,7 +129,7 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
         super().__init__(**kwargs)
 
     def find_urdf_path(self, model_id):
-        model_dir = ASSET_DIR / f"partnet_mobility/dataset/{model_id}"
+        model_dir = self.asset_root / str(model_id)
 
         urdf_names = ["mobility_cvx.urdf"]
         for urdf_name in urdf_names:
@@ -135,7 +140,7 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
         raise FileNotFoundError(
             f"No valid URDF is found for {model_id}."
             "Please download Partnet-Mobility (ManiSkill2022):"
-            "`python -m mani_skill2.utils.download --uid faucet`."
+            "`python -m mani_skill2.utils.download_asset partnet_mobility_faucet`."
         )
 
     def reset(self, seed=None, reconfigure=False, model_id=None, model_scale=None):
@@ -194,7 +199,7 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
         loader.scale = self.model_scale
         loader.fix_root_link = True
 
-        model_dir = ASSET_DIR / f"partnet_mobility/dataset/{self.model_id}"
+        model_dir = self.asset_root / str(self.model_id)
         urdf_path = model_dir / "mobility_cvx.urdf"
         loader.load_multiple_collisions_from_file = True
 

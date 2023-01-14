@@ -94,7 +94,7 @@ class PourEnv(MPMBaseEnv):
         *args,
         **kwargs,
     ):
-        self.robot_uuid = "panda"
+        self.robot_uid = "panda"
         self._ring = None
         super().__init__(*args, **kwargs)
 

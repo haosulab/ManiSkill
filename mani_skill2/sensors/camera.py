@@ -11,7 +11,7 @@ from mani_skill2.utils.sapien_utils import get_entity_by_name
 class CameraConfig:
     def __init__(
         self,
-        uuid: str,
+        uid: str,
         p: List[float],
         q: List[float],
         width: int,
@@ -19,14 +19,14 @@ class CameraConfig:
         fov: float,
         near: float,
         far: float,
-        actor_uuid: str = None,
+        actor_uid: str = None,
         hide_link: bool = False,
         texture_names: Sequence[str] = ("Color", "Position"),
     ):
         """Camera configuration.
 
         Args:
-            uuid (str): uuid of the camera
+            uid (str): unique id of the camera
             p (List[float]): position of the camera
             q (List[float]): quaternion of the camera
             width (int): width of the camera
@@ -34,11 +34,11 @@ class CameraConfig:
             fov (float): field of view of the camera
             near (float): near plane of the camera
             far (float): far plane of the camera
-            actor_uuid (str, optional): uuid of the actor to mount the camera. Defaults to None.
+            actor_uid (str, optional): unique id of the actor to mount the camera. Defaults to None.
             hide_link (bool, optional): whether to hide the link to mount the camera. Defaults to False.
             texture_names (Sequence[str], optional): texture names to render. Defaults to ("Color", "Position").
         """
-        self.uuid = uuid
+        self.uid = uid
         self.p = p
         self.q = q
         self.width = width
@@ -47,7 +47,7 @@ class CameraConfig:
         self.near = near
         self.far = far
 
-        self.actor_uuid = actor_uuid
+        self.actor_uid = actor_uid
         self.hide_link = hide_link
         self.texture_names = tuple(texture_names)
 
@@ -90,11 +90,11 @@ def update_camera_cfgs_from_dict(
 
 def parse_camera_cfgs(camera_cfgs):
     if isinstance(camera_cfgs, (tuple, list)):
-        return OrderedDict([(cfg.uuid, cfg) for cfg in camera_cfgs])
+        return OrderedDict([(cfg.uid, cfg) for cfg in camera_cfgs])
     elif isinstance(camera_cfgs, dict):
         return OrderedDict(camera_cfgs)
     elif isinstance(camera_cfgs, CameraConfig):
-        return OrderedDict([(camera_cfgs.uuid, camera_cfgs)])
+        return OrderedDict([(camera_cfgs.uid, camera_cfgs)])
     else:
         raise TypeError(type(camera_cfgs))
 
@@ -114,21 +114,21 @@ class Camera:
         self.camera_cfg = camera_cfg
         self.renderer_type = renderer_type
 
-        actor_uuid = camera_cfg.actor_uuid
-        if actor_uuid is None:
+        actor_uid = camera_cfg.actor_uid
+        if actor_uid is None:
             self.actor = None
         else:
             if articulation is None:
-                self.actor = get_entity_by_name(scene.get_all_actors(), actor_uuid)
+                self.actor = get_entity_by_name(scene.get_all_actors(), actor_uid)
             else:
-                self.actor = get_entity_by_name(articulation.get_links(), actor_uuid)
+                self.actor = get_entity_by_name(articulation.get_links(), actor_uid)
             if self.actor is None:
-                raise RuntimeError(f"Mount actor ({actor_uuid}) is not found")
+                raise RuntimeError(f"Mount actor ({actor_uid}) is not found")
 
         # Add camera
         if self.actor is None:
             self.camera = scene.add_camera(
-                camera_cfg.uuid,
+                camera_cfg.uid,
                 camera_cfg.width,
                 camera_cfg.height,
                 camera_cfg.fov,
@@ -138,7 +138,7 @@ class Camera:
             self.camera.set_local_pose(camera_cfg.pose)
         else:
             self.camera = scene.add_mounted_camera(
-                camera_cfg.uuid,
+                camera_cfg.uid,
                 self.actor,
                 camera_cfg.pose,
                 camera_cfg.width,
@@ -160,8 +160,8 @@ class Camera:
             self.texture_names = camera_cfg.texture_names
 
     @property
-    def uuid(self):
-        return self.camera_cfg.uuid
+    def uid(self):
+        return self.camera_cfg.uid
 
     def take_picture(self):
         self.camera.take_picture()

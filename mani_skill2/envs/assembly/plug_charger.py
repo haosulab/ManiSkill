@@ -12,7 +12,7 @@ from mani_skill2.utils.sapien_utils import hex2rgba, look_at, vectorize_pose
 from .base_env import StationaryManipulationEnv
 
 
-@register_env(uuid="PlugCharger-v0", max_episode_steps=200)
+@register_env("PlugCharger-v0", max_episode_steps=200)
 class PlugChargerEnv(StationaryManipulationEnv):
     _base_size = [2e-2, 1.5e-2, 1.2e-2]  # charger base half size
     _peg_size = [8e-3, 0.75e-3, 3.2e-3]  # charger peg half size

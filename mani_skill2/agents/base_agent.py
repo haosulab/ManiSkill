@@ -7,7 +7,7 @@ import numpy as np
 import sapien.core as sapien
 from gym import spaces
 
-from mani_skill2 import DESCRIPTION_DIR
+from mani_skill2 import format_path
 from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.sapien_utils import check_urdf_config, parse_urdf_config
 
@@ -19,7 +19,7 @@ class AgentConfig:
     """Agent configuration.
 
     Args:
-        urdf_path: path to URDF file. Support placeholders like {description}.
+        urdf_path: path to URDF file. Support placeholders like {PACKAGE_ASSET_DIR}.
         urdf_config: a dict to specify materials and simulation parameters when loading URDF from SAPIEN.
         controllers: a dict of controller configurations
         cameras: a dict of onboard camera configurations
@@ -39,7 +39,7 @@ class BaseAgent:
     Args:
         scene (sapien.Scene): simulation scene instance.
         control_freq (int): control frequency (Hz).
-        control_mode: uuid of controller to use
+        control_mode: uid of controller to use
         fix_root_link: whether to fix the robot root link
         config: agent configuration
     """
@@ -86,14 +86,13 @@ class BaseAgent:
         loader = self.scene.create_urdf_loader()
         loader.fix_root_link = self.fix_root_link
 
-        urdf_path = str(self.urdf_path)
-        urdf_path = urdf_path.format(description=DESCRIPTION_DIR)
+        urdf_path = format_path(str(self.urdf_path))
 
         urdf_config = parse_urdf_config(self.urdf_config, self.scene)
         check_urdf_config(urdf_config)
 
         # TODO(jigu): support loading multiple convex collision shapes
-        self.robot = loader.load(str(urdf_path), urdf_config)
+        self.robot = loader.load(urdf_path, urdf_config)
         assert self.robot is not None, f"Fail to load URDF from {urdf_path}"
         self.robot.set_name(Path(urdf_path).stem)
 
@@ -102,13 +101,13 @@ class BaseAgent:
 
     def _setup_controllers(self):
         self.controllers = OrderedDict()
-        for uuid, config in self.controller_configs.items():
+        for uid, config in self.controller_configs.items():
             if isinstance(config, dict):
-                self.controllers[uuid] = CombinedController(
+                self.controllers[uid] = CombinedController(
                     config, self.robot, self._control_freq
                 )
             else:
-                self.controllers[uuid] = config.controller_cls(
+                self.controllers[uid] = config.controller_cls(
                     config, self.robot, self._control_freq
                 )
 
@@ -118,7 +117,7 @@ class BaseAgent:
 
     @property
     def control_mode(self):
-        """Get the currently activated controller uuid."""
+        """Get the currently activated controller uid."""
         return self._control_mode
 
     def set_control_mode(self, control_mode):
@@ -144,8 +143,8 @@ class BaseAgent:
         if self._control_mode is None:
             return spaces.Dict(
                 {
-                    uuid: controller.action_space
-                    for uuid, controller in self.controllers.items()
+                    uid: controller.action_space
+                    for uid, controller in self.controllers.items()
                 }
             )
         else:

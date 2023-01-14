@@ -20,10 +20,12 @@ from mani_skill2.utils.trimesh_utils import get_actor_visual_mesh
 from .base_env import MS1BaseEnv
 
 
-@register_env(uuid="MoveBucket-v1", max_episode_steps=200)
+@register_env("MoveBucket-v1", max_episode_steps=200)
 class MoveBucketEnv(MS1BaseEnv):
-    DEFAULT_MODEL_JSON = "{ASSET_DIR}/partnet_mobility/meta/info_bucket_train.json"
-    ASSET_UID = "bucket"
+    DEFAULT_MODEL_JSON = (
+        "{PACKAGE_ASSET_DIR}/partnet_mobility/meta/info_bucket_train.json"
+    )
+    ASSET_UID = "partnet_mobility_bucket"
 
     def _register_render_cameras(self):
         cam_cfg = super()._register_render_cameras()

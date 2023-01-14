@@ -366,20 +366,20 @@ class BaseEnv(gym.Env):
 
     def _setup_cameras(self):
         self._cameras = OrderedDict()
-        for uuid, camera_cfg in self._camera_cfgs.items():
-            if uuid in self._agent_camera_cfgs:
+        for uid, camera_cfg in self._camera_cfgs.items():
+            if uid in self._agent_camera_cfgs:
                 articulation = self.agent.robot
             else:
                 articulation = None
-            self._cameras[uuid] = Camera(
+            self._cameras[uid] = Camera(
                 camera_cfg, self._scene, self._renderer_type, articulation=articulation
             )
 
         # Cameras for rendering only
         self._render_cameras = OrderedDict()
         if self._renderer_type != "client":
-            for uuid, camera_cfg in self._render_camera_cfgs.items():
-                self._render_cameras[uuid] = Camera(
+            for uid, camera_cfg in self._render_camera_cfgs.items():
+                self._render_cameras[uid] = Camera(
                     camera_cfg, self._scene, self._renderer_type
                 )
 
@@ -518,7 +518,8 @@ class BaseEnv(gym.Env):
         scene_config.contact_offset = 0.02
         scene_config.enable_pcm = False
         scene_config.solver_iterations = 25
-        scene_config.solver_velocity_iterations = 0
+        # NOTE(fanbo): solver_velocity_iterations=0 is undefined in PhysX
+        scene_config.solver_velocity_iterations = 1
         if self._renderer_type == "client":
             scene_config.disable_collision_visual = True
         return scene_config
