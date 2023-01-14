@@ -518,7 +518,8 @@ class BaseEnv(gym.Env):
         scene_config.contact_offset = 0.02
         scene_config.enable_pcm = False
         scene_config.solver_iterations = 25
-        scene_config.solver_velocity_iterations = 0
+        # NOTE(fanbo): solver_velocity_iterations=0 is undefined in PhysX
+        scene_config.solver_velocity_iterations = 1
         if self._renderer_type == "client":
             scene_config.disable_collision_visual = True
         return scene_config
