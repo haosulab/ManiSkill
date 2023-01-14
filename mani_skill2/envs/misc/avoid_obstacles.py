@@ -5,11 +5,11 @@ import numpy as np
 import sapien.core as sapien
 from sapien.core import Pose
 
-from mani_skill2 import ASSET_DIR
-from mani_skill2.sensors.camera import CameraConfig
+from mani_skill2 import format_path
 from mani_skill2.agents.configs.panda.defaults import PandaRealSensed435Config
 from mani_skill2.agents.robots.panda import Panda
 from mani_skill2.envs.sapien_env import BaseEnv
+from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.io_utils import load_json
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import (
@@ -23,23 +23,25 @@ from mani_skill2.utils.sapien_utils import (
 
 class AvoidObstaclesBaseEnv(BaseEnv):
     DEFAULT_EPISODE_JSON: str
+    ASSET_UID: str
 
     tcp: sapien.Link  # Tool Center Point of the robot
 
     def __init__(self, episode_json=None, **kwargs):
         if episode_json is None:
             episode_json = self.DEFAULT_EPISODE_JSON
-        episode_json = episode_json.format(ASSET_DIR=ASSET_DIR)
+        episode_json = format_path(episode_json)
         if not Path(episode_json).exists():
             raise FileNotFoundError(
                 f"Episode json ({episode_json}) is not found."
                 "To download default json:"
-                "`python -m mani_skill2.utils.download --uid avoid_obstacles`."
+                "`python -m mani_skill2.utils.download_asset {}`.".format(self.ASSET_UID)
             )
         self.episodes = load_json(episode_json)
         self.episode_idx = None
         self.episode_config = None
         super().__init__(**kwargs)
+
 
     def _get_default_scene_config(self):
         scene_config = super()._get_default_scene_config()
@@ -231,12 +233,13 @@ class AvoidObstaclesBaseEnv(BaseEnv):
 @register_env("PandaAvoidObstacles-v0", max_episode_steps=500)
 class PandaAvoidObstaclesEnv(AvoidObstaclesBaseEnv):
     DEFAULT_EPISODE_JSON = "{ASSET_DIR}/avoid_obstacles/panda_train_2k.json.gz"
+    ASSET_UID = "panda_avoid_obstacles"
 
     def _configure_agent(self):
         self._agent_cfg = PandaRealSensed435Config()
 
     def _load_agent(self):
-        self.robot_uuid = "panda"
+        self.robot_uid = "panda"
         self.agent = Panda(
             self._scene, self._control_freq, self._control_mode, config=self._agent_cfg
         )

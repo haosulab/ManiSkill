@@ -36,7 +36,7 @@ python setup.py develop
 
 `gym>0.21` introduces breaking changes, e.g., deprecating `env.seed()`. We recommend `pip install gym==0.18.3 --no-deps`.
 
-Some environments require **downloading assets**. You can download all the assets by `python -m mani_skill2.utils.download --uid all`.
+Some environments require **downloading assets**. You can download all the assets by `python -m mani_skill2.utils.download_asset all`.
 
 ---
 

@@ -11,7 +11,7 @@ from mani_skill2.utils.sapien_utils import hex2rgba, look_at, vectorize_pose
 from .base_env import StationaryManipulationEnv
 
 
-@register_env(uuid="PegInsertionSide-v0", max_episode_steps=200)
+@register_env("PegInsertionSide-v0", max_episode_steps=200)
 class PegInsertionSideEnv(StationaryManipulationEnv):
     _clearance = 0.003
 
@@ -111,7 +111,7 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
         self.box.set_pose(Pose(pos, quat))
 
     def _initialize_agent(self):
-        if self.robot_uuid == "panda":
+        if self.robot_uid == "panda":
             # fmt: off
             qpos = np.array(
                 [0.0, np.pi / 8, 0, -np.pi * 5 / 8, 0, np.pi * 3 / 4, -np.pi / 4, 0.04, 0.04]
@@ -123,7 +123,7 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
             self.agent.reset(qpos)
             self.agent.robot.set_pose(Pose([-0.615, 0, 0]))
         else:
-            raise NotImplementedError(self.robot_uuid)
+            raise NotImplementedError(self.robot_uid)
 
     @property
     def peg_head_pos(self):

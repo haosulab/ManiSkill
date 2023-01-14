@@ -5,7 +5,7 @@ import numpy as np
 import sapien.core as sapien
 from transforms3d.euler import euler2quat, quat2euler
 
-from mani_skill2 import ASSET_DIR
+from mani_skill2 import format_path
 from mani_skill2.utils.io_utils import load_json
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import look_at, vectorize_pose
@@ -15,22 +15,19 @@ from .base_env import StationaryManipulationEnv
 
 @register_env("AssemblingKits-v0", max_episode_steps=200)
 class AssemblingKitsEnv(StationaryManipulationEnv):
-    def __init__(self, asset_root=None, **kwargs):
-        if asset_root is not None:
-            self._asset_root = Path(asset_root.format(ASSET_DIR=ASSET_DIR))
-        else:
-            self._asset_root = ASSET_DIR / "assembling_kits"
+    def __init__(self, asset_root="{ASSET_DIR}/assembling_kits", **kwargs):
+        self.asset_root = Path(format_path(asset_root))
 
-        self._kit_dir = self._asset_root / "kits"
-        self._models_dir = self._asset_root / "models"
+        self._kit_dir = self.asset_root / "kits"
+        self._models_dir = self.asset_root / "models"
         if not (self._kit_dir.exists() and self._models_dir.exists()):
             raise FileNotFoundError(
                 "The objects/kits are not found."
                 "Please download (ManiSkill2) AssemblingKits assets:"
-                "`python -m mani_skill2.utils.download --uid assembling_kits`."
+                "`python -m mani_skill2.utils.download_asset assembling_kits`."
             )
 
-        self._episode_json = load_json(self._asset_root / "episodes.json")
+        self._episode_json = load_json(self.asset_root / "episodes.json")
         self._episodes = self._episode_json["episodes"]
         self.episode_idx = None
 

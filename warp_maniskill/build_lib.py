@@ -57,6 +57,10 @@ def build(args):
             dll_path = os.path.join(build_path, "bin/warp.dylib")
         else:
             dll_path = os.path.join(build_path, "bin/warp.so")
+        
+        # If installed from pip, "bin" needs to exist
+        if not os.path.exists(os.path.join(build_path, "bin")):
+            os.mkdir(os.path.join(build_path, "bin"))
 
         # no CUDA toolchain found
         if (warp.config.cuda_path == None):
