@@ -188,9 +188,12 @@ class RecordEpisode(gym.Wrapper):
             image = self.env.render(self.render_mode)
 
             if self.info_on_video:
-                texts = [f"reward: {rew}", f"action: {action.round(2).tolist()}"]
-                info_processed = extract_scalars_from_info(info)
-                image = put_info_on_image(image, info_processed, extras=texts)
+                scalar_info = extract_scalars_from_info(info)
+                extra_texts = [
+                    f"reward: {rew:.3f}",
+                    "action: {}".format(",".join([f"{x:.2f}" for x in action])),
+                ]
+                image = put_info_on_image(image, scalar_info, extras=extra_texts)
 
             self._render_images.append(image)
 
