@@ -23,6 +23,7 @@ setup(
         exclude=["warp_maniskill.warp.tests"],
     ),
     python_requires=">=3.7",
+    setup_requires=["setuptools>=62.3.0"],
     install_requires=read_requirements(),
     # Glob patterns do not automatically match dotfiles
     package_data={
