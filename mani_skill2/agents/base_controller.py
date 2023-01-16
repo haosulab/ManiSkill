@@ -215,7 +215,9 @@ class DictController(BaseController):
     def get_state(self) -> dict:
         states = {}
         for uid, controller in self.controllers.items():
-            states[uid] = controller.get_state()
+            state = controller.get_state()
+            if len(state) > 0:
+                states[uid] = state
         return states
 
     def set_state(self, state: dict):

@@ -208,7 +208,7 @@ class VecEnv:
         self.waiting = False
         obs, rews, dones, infos = zip(*results)
         vec_obs = self.vectorize_obs(obs)
-        return vec_obs, rews, dones, infos
+        return vec_obs, np.array(rews), np.array(dones), infos
 
     def step(self, actions):
         self.step_async(actions)
