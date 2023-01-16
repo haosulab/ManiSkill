@@ -148,7 +148,7 @@ def flatten_state_dict(state_dict: dict) -> np.ndarray:
         state_dict: a dictionary containing scalars or 1-dim vectors.
 
     Raises:
-        AssertionError: If a value of @state_dict is an ndarray with ndim > 1.
+        AssertionError: If a value of @state_dict is an ndarray with ndim > 2.
 
     Returns:
         np.ndarray: flattened states.
@@ -156,30 +156,34 @@ def flatten_state_dict(state_dict: dict) -> np.ndarray:
     Notes:
         The input is recommended to be ordered (e.g. OrderedDict).
         However, since python 3.7, dictionary order is guaranteed to be insertion order.
-
     """
-    if len(state_dict) == 0:
-        return np.empty(0)
     states = []
     for key, value in state_dict.items():
         if isinstance(value, dict):
-            states.append(flatten_state_dict(value))
+            state = flatten_state_dict(value)
+            if state.size == 0:
+                state = None
         elif isinstance(value, (tuple, list)):
-            states.append(value)
+            state = None if len(value) == 0 else value
         elif isinstance(value, (bool, np.bool_, int, np.int32, np.int64)):
             # x = np.array(1) > 0 is np.bool_ instead of ndarray
-            states.append(int(value))
+            state = int(value)
         elif isinstance(value, (float, np.float32, np.float64)):
-            states.append(np.float32(value))
+            state = np.float32(value)
         elif isinstance(value, np.ndarray):
-            assert value.ndim <= 1, "Too many dimensions({}) for {}".format(
-                value.ndim, key
-            )
-            # assert value.size > 0, "Empty array for {}".format(key)
-            states.append(value)
+            if value.ndim > 2:
+                raise AssertionError(
+                    "The dimension of {} should not be more than 2.".format(key)
+                )
+            state = value if value.size > 0 else None
         else:
             raise TypeError("Unsupported type: {}".format(type(value)))
-    return np.hstack(states)
+        if state is not None:
+            states.append(state)
+    if len(states) == 0:
+        return np.empty(0)
+    else:
+        return np.hstack(states)
 
 
 def flatten_dict_keys(d: dict, prefix=""):
