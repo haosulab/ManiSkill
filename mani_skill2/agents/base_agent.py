@@ -168,12 +168,11 @@ class BaseAgent:
     # Observations
     # -------------------------------------------------------------------------- #
     def get_proprioception(self):
-        return OrderedDict(
-            qpos=self.robot.get_qpos(),
-            qvel=self.robot.get_qvel(),
-            # TODO(jigu): Shall we allow an empty dict here?
-            controller=self.controller.get_state(),
-        )
+        obs = OrderedDict(qpos=self.robot.get_qpos(), qvel=self.robot.get_qvel())
+        controller_state = self.controller.get_state()
+        if len(controller_state) > 0:
+            obs.update(controller=controller_state)
+        return obs
 
     def get_state(self) -> Dict:
         """Get current state for MPC, including robot state and controller state"""
