@@ -21,13 +21,13 @@ class ManiskillVecEnvToSB3VecEnv(SB3VecEnv):
     """
 
     def __init__(
-        self, venv: VecEnv, max_time_steps=200, start_method: Optional[str] = None
+        self, venv: VecEnv, max_episode_steps=200, start_method: Optional[str] = None
     ):
         SB3VecEnv.__init__(
             self, venv.num_envs, venv.observation_space, venv.action_space
         )
         self.venv = venv
-        self.max_time_steps = max_time_steps
+        self.max_episode_steps = max_episode_steps
 
     def step_async(self, actions: np.ndarray) -> None:
         return self.venv.step_async(actions)
@@ -36,7 +36,7 @@ class ManiskillVecEnvToSB3VecEnv(SB3VecEnv):
         vec_obs, rews, dones, infos = self.venv.step_wait()
 
         elapsed_steps = infos[0]["elapsed_steps"]
-        past_timelimit = elapsed_steps >= self.max_time_steps
+        past_timelimit = elapsed_steps >= self.max_episode_steps
         for i in range(len(infos)):
 
             info = infos[i]
