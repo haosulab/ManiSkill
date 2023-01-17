@@ -110,8 +110,8 @@ def main(args):
         verbose=1,
         n_steps=3200 // num_envs,
         batch_size=400,
-        gamma=0.95,
-        n_epochs=5,
+        gamma=0.85,
+        n_epochs=10,
         tensorboard_log=logs,
         target_kl=0.2,
     )
@@ -124,7 +124,7 @@ def main(args):
     model.save(osp.join(logs, "latest_model"))
 
     # Load the saved model
-    model = model.load(osp.join(logs, "/latest_model"))
+    model = model.load(osp.join(logs, "latest_model"))
 
     # Evaluate the model
     results = evaluate_policy(
