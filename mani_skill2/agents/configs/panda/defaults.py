@@ -121,8 +121,8 @@ class PandaDefaultConfig:
         )
         arm_pd_joint_delta_pos_vel = PDJointPosVelControllerConfig(
             self.arm_joint_names,
-            -0.05,
-            0.05,
+            -0.1,
+            0.1,
             self.arm_stiffness,
             self.arm_damping,
             self.arm_force_limit,
