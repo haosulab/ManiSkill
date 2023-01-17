@@ -85,7 +85,8 @@ class RecordEpisode(gym.Wrapper):
         trajectory_name: name of trajectory file (.h5). Use timestamp if not provided.
         save_video: whether to save video
         render_mode: rendering mode passed to `env.render`
-        save_on_reset: whether to save the previous trajectory automatically when resetting
+        save_on_reset: whether to save the previous trajectory automatically when resetting.
+            If True, the trajectory with empty transition will be ignored automatically.
         clean_on_close: whether to rename and prune trajectories when closed.
             See `clean_trajectories` for details.
     """
@@ -109,6 +110,7 @@ class RecordEpisode(gym.Wrapper):
             self.output_dir.mkdir(parents=True, exist_ok=True)
         self.save_on_reset = save_on_reset
 
+        self._elapsed_steps = 0
         self._episode_id = -1
         self._episode_data = []
         self._episode_info = {}
@@ -144,11 +146,14 @@ class RecordEpisode(gym.Wrapper):
             self.init_state_only = False
 
     def reset(self, **kwargs):
-        if self.save_on_reset:
-            self.flush_trajectory()
-            self.flush_video()
+        if self.save_on_reset and self._episode_id >= 0:
+            if self._elapsed_steps == 0:
+                self._episode_id -= 1
+            self.flush_trajectory(ignore_empty_transition=True)
+            self.flush_video(ignore_empty_transition=True)
 
         # Clear cache
+        self._elapsed_steps = 0
         self._episode_id += 1
         self._episode_data = []
         self._episode_info = {}
@@ -176,6 +181,7 @@ class RecordEpisode(gym.Wrapper):
 
     def step(self, action):
         obs, rew, done, info = super().step(action)
+        self._elapsed_steps += 1
 
         if self.save_trajectory:
             state = self.env.get_state()

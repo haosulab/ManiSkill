@@ -114,7 +114,7 @@ class PointCloudObservationWrapper(gym.ObservationWrapper):
             position = images["Position"]
             position[..., 3] = position[..., 3] < 1
             # Convert to world space
-            cam2world = camera_params[name]["cam2world"]  # OpenGL convention
+            cam2world = camera_params[name]["cam2world_gl"]  # OpenGL convention
             xyzw = position.reshape(-1, 4) @ cam2world.T
             pcds["xyzw"] = xyzw
 

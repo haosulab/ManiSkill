@@ -115,7 +115,7 @@ class PointCloudObservationWrapper(VecEnvObservationWrapper):
             # TODO(jigu): inplace?
             position[..., 3] = position[..., 3] < 1
             # Convert to world space
-            cam2world = camera_params[name]["cam2world"]  # OpenGL convention
+            cam2world = camera_params[name]["cam2world_gl"]  # OpenGL convention
             cam2world = torch.from_numpy(cam2world).to(
                 device=position.device, non_blocking=True
             )
