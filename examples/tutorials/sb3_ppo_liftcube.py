@@ -23,91 +23,48 @@ make the ManiSkill environment conform with SB3. Here, we are simply going to ta
 two depth images from both cameras (base camera and hand camera) and the state data and create a workable observation for SB3.
 """
 
-
-class ManiSkillRGBDWrapper(gym.ObservationWrapper):
-    def __init__(self, env, image_size=(128, 128)) -> None:
-        super().__init__(env)
-        obs_space = env.observation_space
-        self.image_size = image_size
-        # We want the following states to be kept in the observations.
-        # obs_space is the original environment's observation space
-        state_spaces = [
-            obs_space["agent"]["base_pose"],  # pose of the robot
-            obs_space["agent"]["qpos"],  # robot configuration position
-            obs_space["agent"]["qvel"],  # robot configuration velocity
-        ]
-        
-        for k in obs_space["extra"]:
-            # includes gripper pose and goal information depending on environment
-            state_spaces.append(obs_space["extra"][k])
-        # Define the new state space
-        state_size = sum([space.shape[0] for space in state_spaces])
-        state_space = spaces.Box(-float("inf"), float("inf"), shape=(state_size,))
-
-        # Get the image dimensions. Note that there is a base_camera and a hand_camera, both of which output the same shape
-        h, w, _ = obs_space["image"]["base_camera"]["rgb"].shape
-        if self.image_size is not None:
-            h, w = self.image_size
-        new_shape = (
-            h,
-            w,
-            8,
-        )  # the shape is HxWx8, where 8 comes from combining two RGB images and two depth images
-        low = np.full(new_shape, -float("inf"))
-        high = np.full(new_shape, float("inf"))
-        rgbd_space = spaces.Box(
-            low, high, dtype=obs_space["image"]["base_camera"]["rgb"].dtype
-        )
-
-        # create the observation space
-        self.observation_space = spaces.Dict({"rgbd": rgbd_space, "state": state_space})
-    @staticmethod  # make this static so both RL and IL tutorials can use this
-    def convert_observation(observation):
-        # This function replaces the original observations. We scale down images by 255 and
-        # flatten the states in the original observations
-        image_obs = observation["image"]
-        rgb = image_obs["base_camera"]["rgb"] / 255.0
-        depth = image_obs["base_camera"]["depth"]
-        rgb2 = image_obs["hand_camera"]["rgb"] / 255.0
-        depth2 = image_obs["hand_camera"]["depth"]
-        from mani_skill2.utils.common import flatten_state_dict
-
-        state = np.hstack(
-            [
-                flatten_state_dict(observation["agent"]),
-                flatten_state_dict(observation["extra"]),
-            ]
-        )
-
-        # combine the RGB and depth images
-        rgbd = np.concatenate([rgb, depth, rgb2, depth2], axis=2)
-        obs = dict(rgbd=rgbd, state=state)
-        return obs
-
-    def observation(self, observation):
-        return ManiSkillRGBDWrapper.convert_observation(
-            observation)
-
-    def step(self, action):
-        o, r, d, info = super().step(action)
-        d = False
-        if info["elapsed_steps"] >= 100:
-            # trunate episodes after 100 steps rather than the default 200 steps for faster training
-            # set TimeLimit.truncated to True to tell SB3 it's a truncation and not task success
-            info["TimeLimit.truncated"] = True
-            d = True
-        return o, r, d, info
 def tensor_to_numpy(x):
     # moves all tensors to numpy. This is just for SB3 as SB3 does not optimize for observations stored on the GPU.
     if th.is_tensor(x):
         return x.cpu().numpy()
     return x
+
+# we pull these functions out so multiple wrappers and tools can use them.
+def convert_observation(observation):
+    # This function replaces the original observations. We scale down images by 255 and
+    # flatten the states in the original observations
+    image_obs = observation["image"]
+    rgb = image_obs["base_camera"]["rgb"] / 255.0
+    depth = image_obs["base_camera"]["depth"]
+    rgb2 = image_obs["hand_camera"]["rgb"] / 255.0
+    depth2 = image_obs["hand_camera"]["depth"]
+    rgb = tensor_to_numpy(rgb)
+    depth = tensor_to_numpy(depth)
+    rgb2 = tensor_to_numpy(rgb2)
+    depth2 = tensor_to_numpy(depth2)
+    from mani_skill2.utils.common import flatten_state_dict
+    state = np.hstack(
+        [
+            flatten_state_dict(observation["agent"]),
+            flatten_state_dict(observation["extra"]),
+        ]
+    )
+
+    # combine the RGB and depth images
+    rgbd = np.concatenate([rgb, depth, rgb2, depth2], axis=-1)
+    obs = dict(rgbd=rgbd, state=state)
+    return obs
+
+# We first define the ManiSkill VecEnv wrapper which will wrap around 
+# vec env's returned by `make_vec_env` 
 class ManiSkillRGBDVecEnvWrapper(VecEnvObservationWrapper):
     metadata = {}
     def __init__(self, env) -> None:
         super().__init__(env)
+        self.observation_space = ManiSkillRGBDVecEnvWrapper.init_observation_space(env)
+    @staticmethod
+    def init_observation_space(env):
         obs_space = env.observation_space
-
         # We want the following states to be kept in the observations.
         # obs_space is the original environment's observation space
         state_spaces = [
@@ -133,40 +90,19 @@ class ManiSkillRGBDVecEnvWrapper(VecEnvObservationWrapper):
         )
 
         # create the observation space
-        self.observation_space = spaces.Dict({"rgbd": rgbd_space, "state": state_space})
-    
-    
-    @staticmethod  # make this static so both RL and IL tutorials can use this
-    def convert_observation(observation):
-        # This function replaces the original observations. We scale down images by 255 and
-        # flatten the states in the original observations
-        image_obs = observation["image"]
-        rgb = image_obs["base_camera"]["rgb"] / 255.0
-        depth = image_obs["base_camera"]["depth"]
-        rgb2 = image_obs["hand_camera"]["rgb"] / 255.0
-        depth2 = image_obs["hand_camera"]["depth"]
-        rgb = tensor_to_numpy(rgb)
-        depth = tensor_to_numpy(depth)
-        rgb2 = tensor_to_numpy(rgb2)
-        depth2 = tensor_to_numpy(depth2)
-        from mani_skill2.utils.common import flatten_state_dict
-        state = np.hstack(
-            [
-                flatten_state_dict(observation["agent"]),
-                flatten_state_dict(observation["extra"]),
-            ]
-        )
-
-        # combine the RGB and depth images
-        rgbd = np.concatenate([rgb, depth, rgb2, depth2], axis=-1)
-        obs = dict(rgbd=rgbd, state=state)
-        return obs
-
+        return spaces.Dict({"rgbd": rgbd_space, "state": state_space})    
     def observation(self, observation):
-        return ManiSkillRGBDVecEnvWrapper.convert_observation(
-            observation
-        )
+        return convert_observation(observation)
 
+# we also define an observation wrapper using the gym API, this is for evaluation
+# environments that also record videos
+class ManiSkillRGBDWrapper(gym.ObservationWrapper):
+    def __init__(self, env) -> None:
+        super().__init__(env)
+        # use vec env version to initialize spaces
+        self.observation_space = ManiSkillRGBDVecEnvWrapper.init_observation_space(env)
+    def observation(self, observation):
+        return convert_observation(observation)
 """
 SB3 natively doesn't support processing RGB data with depth information, so we will need to create a custom network 
 to process that data. We can make use of the SB3 BaseExtractor class to do this so we can fit our model into any of SB3's algorithms.
@@ -293,7 +229,7 @@ if __name__ == "__main__":
         control_mode=control_mode,
     )        
     env = ManiSkillRGBDVecEnvWrapper(env)
-    env = ManiskillVecEnvToSB3VecEnv(env) # convert to SB3 compatible
+    env = ManiskillVecEnvToSB3VecEnv(env, max_time_steps=100) # convert to SB3 compatible
     env = VecMonitor(env)
     obs = env.reset()
     
@@ -334,7 +270,7 @@ if __name__ == "__main__":
     )
     # Train an agent with PPO for 200_000 interactions
     model.learn(
-        200_000,
+        250_000,
         callback=[checkpoint_callback, eval_callback],
     )
     # Save the final model
