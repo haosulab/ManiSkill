@@ -47,6 +47,7 @@ def main(args):
     num_envs = args.n_envs
     max_episode_steps = args.max_episode_steps
     logs = args.logs
+    rollout_steps = 3200
 
     obs_mode = "state"
     control_mode = "pd_ee_delta_pose"
@@ -89,12 +90,12 @@ def main(args):
         eval_env,
         best_model_save_path=logs,
         log_path=logs,
-        eval_freq=4000,
+        eval_freq=10 * rollout_steps // num_envs,
         deterministic=True,
         render=False,
     )
     checkpoint_callback = CheckpointCallback(
-        save_freq=4000,
+        save_freq=10 * rollout_steps // num_envs,
         save_path=logs,
         name_prefix="rl_model",
         save_replay_buffer=True,
@@ -108,14 +109,14 @@ def main(args):
         env,
         policy_kwargs=policy_kwargs,
         verbose=1,
-        n_steps=3200 // num_envs,
+        n_steps=rollout_steps // num_envs,
         batch_size=400,
         gamma=0.85,
-        n_epochs=10,
+        n_epochs=15,
         tensorboard_log=logs,
-        target_kl=0.2,
+        target_kl=0.05,
     )
-    # Train an agent with PPO for 250_000 interactions
+    # Train an agent with PPO for 320_000 interactions
     model.learn(
         350_000,
         callback=[checkpoint_callback, eval_callback],
@@ -124,7 +125,7 @@ def main(args):
     model.save(osp.join(logs, "latest_model"))
 
     # Load the saved model
-    model = model.load(osp.join(logs, "latest_model"))
+    # model = model.load(osp.join(logs, "rl_model_320000_steps"))
 
     # Evaluate the model
     results = evaluate_policy(
