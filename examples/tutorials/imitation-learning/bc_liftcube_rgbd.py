@@ -255,16 +255,14 @@ def main(args):
         while i < num_episodes:
             # convert observation to our desired shape and move to appropriate device
             obs = convert_observation(obs)
+            obs['rgbd'] = rescale_rgbd(obs['rgbd'])
             obs_device = dict()
             # unsqueeze adds an extra batch dimension and we permute rgbd since PyTorch expects the channel dimension to be first
-            obs['rgbd'] = rescale_rgbd(obs['rgbd'])
             obs_device['rgbd'] = th.from_numpy(obs['rgbd']).float().permute(2,0,1).unsqueeze(0).to(device)
-            
             obs_device['state'] = th.from_numpy(obs['state']).float().unsqueeze(0).to(device)
             with th.no_grad():
                 action = policy(obs_device).cpu().numpy()[0]
             obs, reward, done, info = env.step(action)
-            env.render()
             if done:
                 successes.append(info['success'])
                 i += 1
@@ -298,7 +296,7 @@ def main(args):
             pbar.update(1)
 
             # periodically save the policy
-            if steps % 500 == 0: save_model(policy, f"ckpt_{steps}.pt")
+            if steps % 2000 == 0: save_model(policy, f"ckpt_{steps}.pt")
             if steps >= iterations: break
         
         epoch_loss = epoch_loss / len(dataloader)
