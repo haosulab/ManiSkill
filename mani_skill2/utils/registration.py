@@ -61,8 +61,15 @@ def register(
     )
 
 
-def make(env_id, from_gym=False, **kwargs):
-    """Instantiate a ManiSkill2 environment."""
+def make(env_id, as_gym=True, enable_segmentation=False, **kwargs):
+    """Instantiate a ManiSkill2 environment.
+
+    Args:
+        env_id (str): Environment ID.
+        as_gym (bool, optional): Add TimeLimit wrapper as gym.
+        enable_segmentation (bool, optional): Whether to include Segmentation in observations.
+        **kwargs: Keyword arguments to pass to the environment.
+    """
     if env_id not in REGISTERED_ENVS:
         raise KeyError("Env {} not found in registry".format(env_id))
     env_spec = REGISTERED_ENVS[env_id]
@@ -71,31 +78,35 @@ def make(env_id, from_gym=False, **kwargs):
     obs_mode = kwargs.get("obs_mode")
     if obs_mode is None:
         obs_mode = env_spec.cls.SUPPORTED_OBS_MODES[0]
-    if obs_mode not in ["state", "state_dict", "none"]:
+    if obs_mode not in ["state", "state_dict", "none", "particles"]:
         kwargs["obs_mode"] = "image"
 
-    # Whether to enable robot segmentation
-    enable_robot_seg = kwargs.get("enable_robot_seg", False)
-    if enable_robot_seg:
+    # Add segmentation texture
+    if "robot_seg" in obs_mode:
+        enable_segmentation = True
+    if enable_segmentation:
         camera_cfgs = kwargs.get("camera_cfgs", {})
         camera_cfgs["add_segmentation"] = True
         kwargs["camera_cfgs"] = camera_cfgs
 
     env = env_spec.make(**kwargs)
 
-    if enable_robot_seg:
+    # Dispatch observation wrapper
+    if "rgbd" in obs_mode:
+        env = RGBDObservationWrapper(env)
+    elif "pointcloud" in obs_mode:
+        env = PointCloudObservationWrapper(env)
+
+    # Add robot segmentation wrapper
+    if "robot_seg" in obs_mode:
         env = RobotSegmentationObservationWrapper(env)
 
-    # Dispatch observation wrapper
-    if obs_mode == "rgbd":
-        env = RGBDObservationWrapper(env)
-        env.obs_mode = obs_mode
-    elif obs_mode == "pointcloud":
-        env = PointCloudObservationWrapper(env)
+    # Set observation mode on the wrapper
+    if isinstance(env, gym.Wrapper):
         env.obs_mode = obs_mode
 
-    # To make it compatible with gym
-    if not from_gym:
+    # Compatible with gym.make
+    if as_gym:
         env.unwrapped.spec = env_spec.gym_spec
         if env_spec.max_episode_steps is not None:
             env = gym.wrappers.TimeLimit(
@@ -129,7 +140,7 @@ def register_env(uid: str, max_episode_steps=None, **kwargs):
         # Register for gym
         gym.register(
             uid,
-            entry_point=partial(make, env_id=uid, from_gym=True),
+            entry_point=partial(make, env_id=uid, as_gym=False),
             max_episode_steps=max_episode_steps,
             kwargs=deepcopy(kwargs),
         )
