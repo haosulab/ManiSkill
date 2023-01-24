@@ -320,7 +320,7 @@ def main(args):
     model.save(osp.join(logs, "latest_model"))
 
     # Load the saved model
-    model = model.load(osp.join(logs, "/latest_model"))
+    model = model.load(osp.join(logs, "latest_model"))
 
     # Evaluate the model
     results = evaluate_policy(

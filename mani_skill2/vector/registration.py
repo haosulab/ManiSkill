@@ -1,9 +1,26 @@
+from functools import partial
 from typing import Sequence
 
 import gym
 
 from .vec_env import PointCloudVecEnv, RGBDVecEnv, VecEnv
 from .wrappers.observation import VecRobotSegmentationObservationWrapper
+
+
+def _make_env(env_spec, wrappers: Sequence[gym.Wrapper] = None, **kwargs):
+    env = env_spec.make(**kwargs)
+
+    # Follow gym.make
+    env.unwrapped.spec = env_spec.gym_spec
+    if env_spec.max_episode_steps is not None:
+        env = gym.wrappers.TimeLimit(env, max_episode_steps=env_spec.max_episode_steps)
+
+    # Add wrappers
+    if wrappers is not None:
+        for wrapper in wrappers:
+            env = wrapper(env)
+
+    return env
 
 
 def make(
@@ -14,18 +31,18 @@ def make(
     enable_segmentation=False,
     **kwargs,
 ) -> VecEnv:
-    """Instantiate a vectorized ManiSkill2 environment.
+    """Instantiate vectorized ManiSkill2 environments.
 
     Args:
         env_id (str): Environment ID.
         num_envs (int): Number of environments.
-        server_address (str, optional): Server address.
-        wrappers (Sequence[gym.Wrapper], optional): Wrappers to wrap the environment.
-        enable_segmentation (bool, optional): Whether to include Segmentation in observations.
+        server_address (str, optional): The network address of the SAPIEN RenderServer.
+            If "auto", the server will be created automatically at an avaiable port.
+            Otherwise, it should be a networkd address, e.g. "localhost:12345".
+        wrappers (Sequence[gym.Wrapper], optional): Wrappers for the individual environment.
+        enable_segmentation (bool, optional): Whether to include "Segmentation" texture in observations.
         **kwargs: Keyword arguments to pass to the environment.
     """
-    from functools import partial
-
     # Avoid circular import
     from mani_skill2.utils.registration import REGISTERED_ENVS
 
@@ -48,7 +65,8 @@ def make(
         camera_cfgs["add_segmentation"] = True
         kwargs["camera_cfgs"] = camera_cfgs
 
-    env_fn = partial(env_spec.make, wrappers=wrappers, **kwargs)
+    env_fn = partial(_make_env, env_spec, wrappers, **kwargs)
+
     # Dispatch observation mode
     if "image" in obs_mode:
         venv_cls = VecEnv
