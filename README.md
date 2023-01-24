@@ -172,10 +172,10 @@ To replay the demonstrations (without changing the observation mode and control 
 
 ```bash
 # Replay and view trajectories through sapien viewer
-python -m mani_skill2.trajectory.replay_trajectory --traj-path demos/rigid_body_envs/PickCube-v0/trajectory.h5 --vis
+python -m mani_skill2.trajectory.replay_trajectory --traj-path demos/rigid_body/PickCube-v0/trajectory.h5 --vis
 
 # Save videos of trajectories 
-python -m mani_skill2.trajectory.replay_trajectory --traj-path demos/rigid_body_envs/PickCube-v0/trajectory.h5 --save-video
+python -m mani_skill2.trajectory.replay_trajectory --traj-path demos/rigid_body/PickCube-v0/trajectory.h5 --save-video
 ```
 
 > The script requires `trajectory.h5` and `trajectory.json` to be both under the same directory
@@ -184,7 +184,7 @@ The raw demonstration files contain all necessary information (e.g. initial stat
 
 ```bash
 # Replay demonstrations with control_mode=pd_joint_delta_pos
-python -m mani_skill2.trajectory.replay_trajectory --traj-path demos/rigid_body_envs/PickCube-v0/trajectory.h5 \
+python -m mani_skill2.trajectory.replay_trajectory --traj-path demos/rigid_body/PickCube-v0/trajectory.h5 \
   --save-traj --target-control-mode pd_joint_delta_pos --obs-mode none --num-procs 10
 ```
 
