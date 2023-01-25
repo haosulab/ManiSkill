@@ -8,6 +8,7 @@ ManiSkill2 is a large-scale robotic manipulation benchmark, focusing on learning
 
 **Table of Contents**
 
+- [Citation](#citation)
 - [Installation](#installation)
 - [Getting Started](#getting-started)
   - [Interactive play](#interactive-play)
@@ -17,6 +18,19 @@ ManiSkill2 is a large-scale robotic manipulation benchmark, focusing on learning
 - [ManiSkill 2022 Challenge](#maniskill-2022-challenge)
 - [Leaderboard](#leaderboard)
 - [License](#license)
+
+## Citation
+
+If you use ManiSkill2 or its assets and models, consider citing the following publication:
+
+```
+@inproceedings{gu2023maniskill2,
+  title={ManiSkill2: A Unified Benchmark for Generalizable Manipulation Skills},
+  author={Gu, Jiayuan and Xiang, Fanbo and Li, Xuanlin and Ling, Zhan and Liu, Xiqiaing and Mu, Tongzhou and Tang, Yihe and Tao, Stone and Wei, Xinyue and Yao, Yunchao and Yuan, Xiaodi and Xie, Pengwei and Huang, Zhiao and Chen, Rui and Su, Hao},
+  booktitle={International Conference on Learning Representations},
+  year={2023}
+}
+```
 
 ## Installation
 
