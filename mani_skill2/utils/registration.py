@@ -116,11 +116,13 @@ def make(env_id, as_gym=True, enable_segmentation=False, **kwargs):
     return env
 
 
-def register_env(uid: str, max_episode_steps=None, **kwargs):
+def register_env(uid: str, max_episode_steps=None, override=False, **kwargs):
     """A decorator to register ManiSkill2 environments.
 
     Args:
         uid (str): unique id of the environment.
+        max_episode_steps (int): maximum number of steps in an episode.
+        override (bool): whether to override the environment if it is already registered.
 
     Notes:
         - `max_episode_steps` is processed differently from other keyword arguments in gym.
@@ -129,6 +131,17 @@ def register_env(uid: str, max_episode_steps=None, **kwargs):
     """
 
     def _register_env(cls):
+        if uid in REGISTERED_ENVS:
+            if override:
+                from gym.envs.registration import registry
+
+                logger.warn(f"Override registered env {uid}")
+                REGISTERED_ENVS.pop(uid)
+                registry.env_specs.pop(uid)
+            else:
+                logger.warn(f"Env {uid} is already registered. Skip registration.")
+                return cls
+
         # Register for ManiSkil2
         register(
             uid,
