@@ -1,128 +1,139 @@
 # Import required packages
 import argparse
 import os.path as osp
-import time
+from functools import partial
 
 import gym
 import gym.spaces as spaces
 import numpy as np
 import torch as th
 import torch.nn as nn
-from gym.wrappers import TimeLimit
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from stable_baselines3.common.utils import set_random_seed
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecMonitor
-from tqdm.notebook import tqdm
 
 import mani_skill2.envs
+from mani_skill2.utils.common import flatten_dict_space_keys, flatten_state_dict
 from mani_skill2.utils.wrappers import RecordEpisode
+from mani_skill2.vector import VecEnv
+from mani_skill2.vector import make as make_vec_env
 from mani_skill2.vector.vec_env import VecEnvObservationWrapper
-from mani_skill2.vector.wrappers.sb3 import ManiskillVecEnvToSB3VecEnv
+from mani_skill2.vector.wrappers.sb3 import SB3VecEnvWrapper
 
 
-def tensor_to_numpy(x):
-    # moves all tensors to numpy. This is just for SB3 as SB3 does not optimize for observations stored on the GPU.
-    if th.is_tensor(x):
-        return x.cpu().numpy()
-    return x
-
-
-# we pull these functions out so multiple wrappers and tools can use them.
-def convert_observation(observation):
-    # This function replaces the original observations. We scale down images by 255 and
-    # flatten the states in the original observations
-    image_obs = observation["image"]
-    rgb = image_obs["base_camera"]["rgb"] / 255.0
-    depth = image_obs["base_camera"]["depth"]
-    rgb2 = image_obs["hand_camera"]["rgb"] / 255.0
-    depth2 = image_obs["hand_camera"]["depth"]
-    rgb = tensor_to_numpy(rgb)
-    depth = tensor_to_numpy(depth)
-    rgb2 = tensor_to_numpy(rgb2)
-    depth2 = tensor_to_numpy(depth2)
-    from mani_skill2.utils.common import flatten_state_dict
-
-    state = np.hstack(
-        [
-            flatten_state_dict(observation["agent"]),
-            flatten_state_dict(observation["extra"]),
-        ]
-    )
-
-    # combine the RGB and depth images
-    rgbd = np.concatenate([rgb, depth, rgb2, depth2], axis=-1)
-    obs = dict(rgbd=rgbd, state=state)
-    return obs
-
-
-# We first define the ManiSkill VecEnv wrapper which will wrap around
-# vec env's returned by `make_vec_env`
-class ManiSkillRGBDVecEnvWrapper(VecEnvObservationWrapper):
-    metadata = {}
-
-    def __init__(self, env) -> None:
+# Defines a continuous, infinite horizon, task where done is always False
+# unless a timelimit is reached.
+class ContinuousTaskWrapper(gym.Wrapper):
+    def __init__(self, env, max_episode_steps: int) -> None:
         super().__init__(env)
-        self.observation_space = ManiSkillRGBDVecEnvWrapper.init_observation_space(env)
+        self._elapsed_steps = 0
+        self._max_episode_steps = max_episode_steps
+
+    def reset(self):
+        self._elapsed_steps = 0
+        return super().reset()
+
+    def step(self, action):
+        ob, rew, done, info = super().step(action)
+        self._elapsed_steps += 1
+        if self._elapsed_steps >= self._max_episode_steps:
+            done = True
+            info["TimeLimit.truncated"] = True
+        else:
+            done = False
+            info["TimeLimit.truncated"] = False
+        return ob, rew, done, info
+
+# A simple wrapper that adds a is_success key which SB3 tracks
+class SuccessInfoWrapper(gym.Wrapper):
+    def step(self, action):
+        ob, rew, done, info = super().step(action)
+        info["is_success"] = info["success"]
+        return ob, rew, done, info
+
+
+class ManiSkillRGBDWrapper(gym.ObservationWrapper):
+    def __init__(self, env):
+        super().__init__(env)
+        assert env.obs_mode == "rgbd"
+        self.observation_space = self.init_observation_space(env.observation_space)
 
     @staticmethod
-    def init_observation_space(env):
-        obs_space = env.observation_space
-        # We want the following states to be kept in the observations.
-        # obs_space is the original environment's observation space
-        state_spaces = [
-            obs_space["agent"]["base_pose"],  # pose of the robot
-            obs_space["agent"]["qpos"],  # robot configuration position
-            obs_space["agent"]["qvel"],  # robot configuration velocity
-        ]
-
-        for k in obs_space["extra"]:
-            # includes gripper pose and goal information depending on environment
-            state_spaces.append(obs_space["extra"][k])
-        # Define the new state space
+    def init_observation_space(obs_space: spaces.Dict):
+        # States include robot proprioception (agent) and task information (extra)
+        # NOTE: SB3 does not support nested observation spaces, so we convert them to flat spaces
+        state_spaces = []
+        state_spaces.extend(flatten_dict_space_keys(obs_space["agent"]).spaces.values())
+        state_spaces.extend(flatten_dict_space_keys(obs_space["extra"]).spaces.values())
+        # Concatenate all the state spaces
         state_size = sum([space.shape[0] for space in state_spaces])
-        state_space = spaces.Box(-float("inf"), float("inf"), shape=(state_size,))
+        state_space = spaces.Box(-np.inf, np.inf, shape=(state_size,))
 
-        # Get the image dimensions. Note that there is a base_camera and a hand_camera, both of which output the same shape
-        h, w, _ = obs_space["image"]["base_camera"]["rgb"].shape
-        new_shape = (
-            h,
-            w,
-            8,
-        )  # the shape is HxWx8, where 8 comes from combining two RGB images and two depth images
-        low = np.full(new_shape, -float("inf"))
-        high = np.full(new_shape, float("inf"))
-        rgbd_space = spaces.Box(
-            low, high, dtype=obs_space["image"]["base_camera"]["rgb"].dtype
-        )
+        # Concatenate all the image spaces
+        image_shapes = []
+        for cam_uid in obs_space["image"]:
+            cam_space = obs_space["image"][cam_uid]
+            image_shapes.append(cam_space["rgb"].shape)
+            image_shapes.append(cam_space["depth"].shape)
+        image_shapes = np.array(image_shapes)
+        assert np.all(image_shapes[0, :2] == image_shapes[:, :2]), image_shapes
+        h, w = image_shapes[0, :2]
+        c = image_shapes[:, 2].sum(0)
+        rgbd_space = spaces.Box(0, np.inf, shape=(h, w, c))
 
-        # create the observation space
+        # Create the new observation space
         return spaces.Dict({"rgbd": rgbd_space, "state": state_space})
 
+    @staticmethod
+    def convert_observation(observation):
+        # Process images. RGB is normalized to [0, 1].
+        images = []
+        for cam_uid, cam_obs in observation["image"].items():
+            rgb = cam_obs["rgb"] / 255.0
+            depth = cam_obs["depth"]
+
+            # NOTE: SB3 does not support GPU tensors, so we transfer them to CPU.
+            # For other RL frameworks that natively support GPU tensors, this step is not necessary.
+            if isinstance(rgb, th.Tensor):
+                rgb = rgb.to(device="cpu", non_blocking=True)
+            if isinstance(depth, th.Tensor):
+                depth = depth.to(device="cpu", non_blocking=True)
+
+            images.append(rgb)
+            images.append(depth)
+
+        # Concatenate all the images
+        rgbd = np.concatenate(images, axis=-1)
+
+        # Concatenate all the states
+        state = np.hstack(
+            [
+                flatten_state_dict(observation["agent"]),
+                flatten_state_dict(observation["extra"]),
+            ]
+        )
+
+        return dict(rgbd=rgbd, state=state)
+
     def observation(self, observation):
-        return convert_observation(observation)
+        return self.convert_observation(observation)
 
 
-# we also define an observation wrapper using the gym API, this is for evaluation
-# environments that also record videos
-class ManiSkillRGBDWrapper(gym.ObservationWrapper):
-    def __init__(self, env) -> None:
+# We separately define an VecEnv observation wrapper for the ManiSkill VecEnv
+# as the gpu optimization makes it incompatible with the SB3 wrapper
+class ManiSkillRGBDVecEnvWrapper(VecEnvObservationWrapper):
+    def __init__(self, env):
         super().__init__(env)
-        # use vec env version to initialize spaces
-        self.observation_space = ManiSkillRGBDVecEnvWrapper.init_observation_space(env)
+        assert env.obs_mode == "rgbd"
+        self.observation_space = ManiSkillRGBDWrapper.init_observation_space(
+            env.observation_space
+        )
 
     def observation(self, observation):
-        return convert_observation(observation)
-
-
-"""
-SB3 natively doesn't support processing RGB data with depth information, so we will need to create a custom network 
-to process that data. We can make use of the SB3 BaseExtractor class to do this so we can fit our model into any of SB3's algorithms.
-For more details on feature extractors see the SB3 docs: 
-https://stable-baselines3.readthedocs.io/en/master/guide/custom_policy.html#custom-feature-extractor
-"""
+        return ManiSkillRGBDWrapper.convert_observation(observation)
 
 
 class CustomExtractor(BaseFeaturesExtractor):
@@ -198,8 +209,9 @@ class CustomExtractor(BaseFeaturesExtractor):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.description = "Simple script demonstrating how to use Stable Baselines 3 with ManiSkill2 and RGBD Observations"
+    parser = argparse.ArgumentParser(
+        description="Simple script demonstrating how to use Stable Baselines 3 with ManiSkill2 and RGBD Observations"
+    )
     parser.add_argument("-e", "--env-id", type=str, default="LiftCube-v0")
     parser.add_argument(
         "-n",
@@ -215,112 +227,161 @@ def parse_args():
         help="Max steps per episode before truncating them",
     )
     parser.add_argument(
-        "--logs",
+        "--total-timesteps",
+        type=int,
+        default=250_000,
+        help="Total timesteps for training",
+    )
+    parser.add_argument(
+        "--log-dir",
         type=str,
         default="logs",
         help="path for where logs, checkpoints, and videos are saved",
+    )
+    parser.add_argument(
+        "--eval", action="store_true", help="whether to only evaluate policy"
+    )
+    parser.add_argument(
+        "--model-path", type=str, help="path to sb3 model for evaluation"
     )
     args = parser.parse_args()
     return args
 
 
-def main(args):
+def main():
+    args = parse_args()
+
     env_id = args.env_id
     num_envs = args.n_envs
+    log_dir = args.log_dir
     max_episode_steps = args.max_episode_steps
-    logs = args.logs
+    total_timesteps = args.total_timesteps
 
     obs_mode = "rgbd"
+    # NOTE: The end-effector space controller is usually more friendly to pick-and-place tasks
     control_mode = "pd_ee_delta_pose"
-    reward_mode = "dense"
+    use_ms2_vec_env = True
 
-    def make_env(env_id: str, rank: int, seed: int = 0, record_dir: str = None):
-        def _init() -> gym.Env:
-            import mani_skill2.envs
+    set_random_seed(0)
 
-            env = gym.make(
+    # define a make_env function for Stable Baselines
+    def make_env(
+        env_id: str,
+        obs_mode: str,
+        control_mode: str = None,
+        max_episode_steps=None,
+        record_dir: str = None,
+    ):
+        # NOTE: Import envs here so that they are registered with gym in subprocesses
+        import mani_skill2.envs
+
+        env = gym.make(env_id, obs_mode=obs_mode, control_mode=control_mode)
+        # For training, we regard the task as a continuous task with infinite horizon.
+        # you can use the ContinuousTaskWrapper here for that
+        if max_episode_steps is not None:
+            env = ContinuousTaskWrapper(env, max_episode_steps)
+        env = ManiSkillRGBDWrapper(env)
+        # For evaluation, we record videos
+        if record_dir is not None:
+            env = SuccessInfoWrapper(env)
+            env = RecordEpisode(
+                env,
+                record_dir,
+                save_trajectory=False,
+                info_on_video=True,
+                render_mode="cameras",
+            )
+        return env
+
+    # Create an environment for evaluation
+    if args.eval:
+        record_dir = osp.join(log_dir, "videos/eval")
+    else:
+        record_dir = osp.join(log_dir, "videos")
+    env_fn = partial(
+        make_env,
+        env_id,
+        obs_mode=obs_mode,
+        control_mode=control_mode,
+        record_dir=record_dir,
+    )
+    eval_env = SubprocVecEnv([env_fn for _ in range(1)])
+    eval_env = VecMonitor(eval_env)  # Attach a monitor to log episode info
+    eval_env.seed(2022)
+
+    if args.eval:
+        env = eval_env
+    else:
+        # Create vectorized environments for training
+        if use_ms2_vec_env:
+            env = make_vec_env(
+                env_id,
+                num_envs,
+                obs_mode=obs_mode,
+                control_mode=control_mode,
+                # specify wrappers for each individual environment
+                # e.g here we specify the Continuous task wrapper and pass in the max_episode_steps parameter
+                wrappers=[
+                    partial(ContinuousTaskWrapper, max_episode_steps=max_episode_steps)
+                ],
+            )
+            env = ManiSkillRGBDVecEnvWrapper(env)
+            env = SB3VecEnvWrapper(env)
+        else:
+            env_fn = partial(
+                make_env,
                 env_id,
                 obs_mode=obs_mode,
-                reward_mode=reward_mode,
                 control_mode=control_mode,
+                max_episode_steps=max_episode_steps,
             )
-            env = ManiSkillRGBDWrapper(env)
-            env = TimeLimit(env, max_episode_steps=max_episode_steps)
-            if record_dir is not None:
-                env = RecordEpisode(
-                    env, record_dir, info_on_video=True, render_mode="cameras"
-                )
-            env.seed(seed + rank)
-            return env
-
-        set_random_seed(seed)
-        return _init
-
-    # create one eval environment
-    eval_env = SubprocVecEnv(
-        [make_env(env_id, i, record_dir=osp.join(logs, "videos")) for i in range(1)]
-    )
-    eval_env = VecMonitor(eval_env)  # attach this so SB3 can log reward metrics
-    eval_env.reset()
-
-    from mani_skill2.vector import VecEnv, make
-
-    env: VecEnv = make(
-        env_id,
-        num_envs,
-        server_address="auto",
-        obs_mode=obs_mode,
-        reward_mode=reward_mode,
-        control_mode=control_mode,
-    )
-    env = ManiSkillRGBDVecEnvWrapper(env)
-    env = ManiskillVecEnvToSB3VecEnv(
-        env, max_episode_steps=max_episode_steps
-    )  # convert to SB3 compatible
-    env = VecMonitor(env)
-    obs = env.reset()
-
-    # define callbacks to periodically save our model and evaluate it to help monitor training
-    eval_callback = EvalCallback(
-        eval_env,
-        best_model_save_path=logs,
-        log_path=logs,
-        eval_freq=4000,
-        deterministic=True,
-        render=False,
-    )
-    checkpoint_callback = CheckpointCallback(
-        save_freq=4000,
-        save_path=logs,
-        name_prefix="rl_model",
-        save_replay_buffer=True,
-        save_vecnormalize=True,
-    )
+            env = SubprocVecEnv([env_fn for _ in range(num_envs)])
+        # Attach a monitor to log episode info
+        env = VecMonitor(env)
+        env.seed(2022)
 
     # Define the policy configuration and algorithm configuration
-    policy_kwargs = dict(features_extractor_class=CustomExtractor, net_arch=[256, 128])
+    policy_kwargs = dict(
+        features_extractor_class=CustomExtractor, net_arch=[256, 128], log_std_init=-0.5
+    )
     model = PPO(
         "MultiInputPolicy",
         env,
-        policy_kwargs=policy_kwargs,
-        verbose=1,
         n_steps=3200 // num_envs,
         batch_size=400,
-        gamma=0.8,
         n_epochs=5,
-        tensorboard_log=logs,
+        gamma=0.8,
         target_kl=0.2,
+        tensorboard_log=log_dir,
+        policy_kwargs=policy_kwargs,
+        verbose=1,
     )
-    # Train an agent with PPO for 500_000 interactions
-    model.learn(
-        250_000,
-        callback=[checkpoint_callback, eval_callback],
-    )
-    # Save the final model
-    model.save(osp.join(logs, "latest_model"))
 
-    # Load the saved model
-    model = model.load(osp.join(logs, "latest_model"))
+    if args.eval:
+        model_path = args.model_path
+        if model_path is None:
+            model_path = osp.join(log_dir, "latest_model")
+        # Load the saved model
+        model = model.load(model_path)
+    else:
+        # Define callbacks to periodically save our model and evaluate it to help monitor training
+        checkpoint_callback = CheckpointCallback(
+            save_freq=32000 // num_envs,
+            save_path=log_dir,
+        )
+        eval_callback = EvalCallback(
+            eval_env,
+            eval_freq=32000 // num_envs,
+            log_path=log_dir,
+            best_model_save_path=log_dir,
+            deterministic=True,
+            render=False,
+        )
+
+        # Train an agent with PPO
+        model.learn(total_timesteps, callback=[checkpoint_callback, eval_callback])
+        # Save the final model
+        model.save(osp.join(log_dir, "latest_model"))
 
     # Evaluate the model
     results = evaluate_policy(
@@ -335,4 +396,4 @@ def main(args):
 
 
 if __name__ == "__main__":
-    main(parse_args())
+    main()

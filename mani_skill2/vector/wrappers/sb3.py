@@ -1,10 +1,7 @@
-import multiprocessing as mp
-from collections import OrderedDict
-from typing import Any, Callable, List, Optional, Sequence, Tuple, Type, Union
+from typing import Any, List, Optional, Sequence, Tuple, Type, Union
 
 import gym
 import numpy as np
-from stable_baselines3.common.vec_env.base_vec_env import CloudpickleWrapper
 from stable_baselines3.common.vec_env.base_vec_env import VecEnv as SB3VecEnv
 from stable_baselines3.common.vec_env.base_vec_env import (
     VecEnvIndices,
@@ -15,58 +12,22 @@ from stable_baselines3.common.vec_env.base_vec_env import (
 from mani_skill2.vector.vec_env import VecEnv
 
 
-class ManiskillVecEnvToSB3VecEnv(SB3VecEnv):
-    """
-    A Stable Baselines 3 VecEnv wrapper to convert a ManiskillVecEnv into one compatible with SB3
-    """
+def select_index_from_dict(data: dict, i: int):
+    out = dict()
+    for k, v in data.items():
+        if isinstance(v, dict):
+            out[k] = select_index_from_dict(v, i)
+        else:
+            out[k] = v[i]
+    return out
 
-    def __init__(
-        self, venv: VecEnv, max_episode_steps=200, start_method: Optional[str] = None
-    ):
-        SB3VecEnv.__init__(
-            self, venv.num_envs, venv.observation_space, venv.action_space
-        )
+
+class SB3VecEnvWrapper(SB3VecEnv):
+    """A wrapper for SB3 VecEnv to make it compatible with ManiSkill2 VecEnv."""
+
+    def __init__(self, venv: VecEnv):
+        super().__init__(venv.num_envs, venv.observation_space, venv.action_space)
         self.venv = venv
-        self.max_episode_steps = max_episode_steps
-
-    def step_async(self, actions: np.ndarray) -> None:
-        return self.venv.step_async(actions)
-
-    def step_wait(self) -> VecEnvStepReturn:
-        vec_obs, rews, dones, infos = self.venv.step_wait()
-
-        elapsed_steps = infos[0]["elapsed_steps"]
-        past_timelimit = elapsed_steps >= self.max_episode_steps
-        for i in range(len(infos)):
-
-            info = infos[i]
-            info["is_success"] = False
-            if dones[i]:
-                # set is_success to True if there is an actual success and let SB3 know
-                info["is_success"] = True
-            dones[i] = False
-            if past_timelimit:
-                dones[i] = True
-                # treat as infinite horizons. If not succesful, then we truncated it
-                info["TimeLimit.truncated"] = not info["is_success"]
-
-                def select_index_from_dict(data, i):
-                    out = dict()
-                    for k in data:
-                        if isinstance(data[k], dict):
-                            out[k] = select_index_from_dict(data[k], i)
-                        else:
-                            out[k] = data[k][i]
-
-                info["terminal_observation"] = select_index_from_dict(vec_obs, i)
-        if past_timelimit:
-            # auto reset here
-            vec_obs = self.reset()
-        return vec_obs, rews, dones, infos
-
-    def step(self, actions):
-        self.step_async(actions)
-        return self.venv.step_wait()
 
     def seed(self, seed: Optional[int] = None) -> List[Union[None, int]]:
         return self.venv.seed(seed)
@@ -74,17 +35,26 @@ class ManiskillVecEnvToSB3VecEnv(SB3VecEnv):
     def reset(self) -> VecEnvObs:
         return self.venv.reset()
 
+    def step_async(self, actions: np.ndarray) -> None:
+        return self.venv.step_async(actions)
+
+    def step_wait(self) -> VecEnvStepReturn:
+        vec_obs, rews, dones, infos = self.venv.step_wait()
+
+        if not dones.any():
+            return vec_obs, rews, dones, infos
+
+        for i, done in enumerate(dones):
+            if done:
+                # NOTE: ensure that it will not be inplace modified when reset
+                infos[i]["terminal_observation"] = select_index_from_dict(vec_obs, i)
+
+        reset_indices = np.where(dones)[0]
+        vec_obs = self.venv.reset(indices=reset_indices)
+        return vec_obs, rews, dones, infos
+
     def close(self) -> None:
         return self.venv.close()
-
-    # TODO stao: once we are able to render with ManiSkillVecEnv, we can add this back in
-    # def get_images(self) -> Sequence[np.ndarray]:
-    #     for pipe in self.remotes:
-    #         # gather images from subprocesses
-    #         # `mode` will be taken into account later
-    #         pipe.send(("render", "rgb_array"))
-    #     imgs = [pipe.recv() for pipe in self.remotes]
-    #     return imgs
 
     def get_attr(self, attr_name: str, indices: VecEnvIndices = None) -> List[Any]:
         return self.venv.get_attr(attr_name, indices)
@@ -101,14 +71,11 @@ class ManiskillVecEnvToSB3VecEnv(SB3VecEnv):
         indices: VecEnvIndices = None,
         **method_kwargs
     ) -> List[Any]:
-        return self.venv.env_method(method_name, *method_args, **method_kwargs)
+        return self.venv.env_method(
+            method_name, *method_args, indices=indices, **method_kwargs
+        )
 
     def env_is_wrapped(
         self, wrapper_class: Type[gym.Wrapper], indices: VecEnvIndices = None
     ) -> List[bool]:
-        """Check if worker environments are wrapped with a given wrapper"""
-        target_remotes = self._get_target_remotes(indices)
-        return [True for _ in target_remotes]
-
-    def _get_target_remotes(self, indices: VecEnvIndices) -> List[Any]:
-        return self.venv._get_target_remotes(indices)
+        return [False] * self.num_envs
