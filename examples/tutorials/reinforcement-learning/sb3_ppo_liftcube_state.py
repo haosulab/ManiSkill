@@ -15,9 +15,42 @@ import mani_skill2.envs
 from mani_skill2.utils.wrappers import RecordEpisode
 
 
+# Defines a continuous, infinite horizon, task where done is always False
+# unless a timelimit is reached.
+class ContinuousTaskWrapper(gym.Wrapper):
+    def __init__(self, env, max_episode_steps: int) -> None:
+        super().__init__(env)
+        self._elapsed_steps = 0
+        self._max_episode_steps = max_episode_steps
+
+    def reset(self):
+        self._elapsed_steps = 0
+        return super().reset()
+
+    def step(self, action):
+        ob, rew, done, info = super().step(action)
+        self._elapsed_steps += 1
+        if self._elapsed_steps >= self._max_episode_steps:
+            done = True
+            info["TimeLimit.truncated"] = True
+        else:
+            done = False
+            info["TimeLimit.truncated"] = False
+        return ob, rew, done, info
+
+
+# A simple wrapper that adds a is_success key which SB3 tracks
+class SuccessInfoWrapper(gym.Wrapper):
+    def step(self, action):
+        ob, rew, done, info = super().step(action)
+        info["is_success"] = info["success"]
+        return ob, rew, done, info
+
+
 def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.description = "Simple script demonstrating how to use Stable Baselines 3 with ManiSkill2 and state based Observations"
+    parser = argparse.ArgumentParser(
+        description="Simple script demonstrating how to use Stable Baselines 3 with ManiSkill2 and RGBD Observations"
+    )
     parser.add_argument("-e", "--env-id", type=str, default="LiftCube-v0")
     parser.add_argument(
         "-n",
@@ -27,34 +60,61 @@ def parse_args():
         help="number of parallel envs to run. Note that increasing this does not increase rollout size",
     )
     parser.add_argument(
+        "--seed",
+        type=int,
+        help="Random seed to initialize training with",
+    )
+    parser.add_argument(
         "--max-episode-steps",
         type=int,
         default=100,
         help="Max steps per episode before truncating them",
     )
     parser.add_argument(
-        "--logs",
+        "--total-timesteps",
+        type=int,
+        default=350_000,
+        help="Total timesteps for training",
+    )
+    parser.add_argument(
+        "--log-dir",
         type=str,
         default="logs",
         help="path for where logs, checkpoints, and videos are saved",
+    )
+    parser.add_argument(
+        "--eval", action="store_true", help="whether to only evaluate policy"
+    )
+    parser.add_argument(
+        "--model-path", type=str, help="path to sb3 model for evaluation"
     )
     args = parser.parse_args()
     return args
 
 
-def main(args):
+def main():
+    args = parse_args()
     env_id = args.env_id
     num_envs = args.n_envs
     max_episode_steps = args.max_episode_steps
-    logs = args.logs
+    log_dir = args.log_dir
     rollout_steps = 3200
 
     obs_mode = "state"
     control_mode = "pd_ee_delta_pose"
     reward_mode = "dense"
+    if args.seed is not None:
+        set_random_seed(args.seed)
 
-    def make_env(env_id: str, rank: int, seed: int = 0, record_dir: str = None):
+    def make_env(
+        env_id: str,
+        rank: int,
+        seed: int = 0,
+        max_episode_steps: int = None,
+        record_dir: str = None,
+    ):
         def _init() -> gym.Env:
+            # NOTE: Import envs here so that they are registered with gym in subprocesses
             import mani_skill2.envs
 
             env = gym.make(
@@ -63,8 +123,12 @@ def main(args):
                 reward_mode=reward_mode,
                 control_mode=control_mode,
             )
-            env = TimeLimit(env, max_episode_steps=max_episode_steps)
+            # For training, we regard the task as a continuous task with infinite horizon.
+            # you can use the ContinuousTaskWrapper here for that
+            if max_episode_steps is not None:
+                env = ContinuousTaskWrapper(env, max_episode_steps)
             if record_dir is not None:
+                env = SuccessInfoWrapper(env)
                 env = RecordEpisode(
                     env, record_dir, info_on_video=True, render_mode="cameras"
                 )
@@ -74,33 +138,34 @@ def main(args):
         set_random_seed(seed)
         return _init
 
-    # create one eval environment
+    # create eval environment
+    if args.eval:
+        record_dir = osp.join(log_dir, "videos/eval")
+    else:
+        record_dir = osp.join(log_dir, "videos")
     eval_env = SubprocVecEnv(
-        [make_env(env_id, i, record_dir=osp.join(logs, "videos")) for i in range(1)]
+        [
+            make_env(
+                env_id, i, max_episode_steps=max_episode_steps, record_dir=record_dir
+            )
+            for i in range(1)
+        ]
     )
     eval_env = VecMonitor(eval_env)  # attach this so SB3 can log reward metrics
     eval_env.reset()
 
-    env = SubprocVecEnv([make_env(env_id, i) for i in range(num_envs)])
-    env = VecMonitor(env)
-    env.reset()
-
-    # define callbacks to periodically save our model and evaluate it to help monitor training
-    eval_callback = EvalCallback(
-        eval_env,
-        best_model_save_path=logs,
-        log_path=logs,
-        eval_freq=10 * rollout_steps // num_envs,
-        deterministic=True,
-        render=False,
-    )
-    checkpoint_callback = CheckpointCallback(
-        save_freq=10 * rollout_steps // num_envs,
-        save_path=logs,
-        name_prefix="rl_model",
-        save_replay_buffer=True,
-        save_vecnormalize=True,
-    )
+    if args.eval:
+        env = eval_env
+    else:
+        # Create vectorized environments for training
+        env = SubprocVecEnv(
+            [
+                make_env(env_id, i, max_episode_steps=max_episode_steps)
+                for i in range(num_envs)
+            ]
+        )
+        env = VecMonitor(env)
+        env.reset()
 
     # Define the policy configuration and algorithm configuration
     policy_kwargs = dict(net_arch=[256, 256])
@@ -113,19 +178,42 @@ def main(args):
         batch_size=400,
         gamma=0.85,
         n_epochs=15,
-        tensorboard_log=logs,
+        tensorboard_log=log_dir,
         target_kl=0.05,
     )
-    # Train an agent with PPO for 320_000 interactions
-    model.learn(
-        350_000,
-        callback=[checkpoint_callback, eval_callback],
-    )
-    # Save the final model
-    model.save(osp.join(logs, "latest_model"))
+    
+    if args.eval:
+        model_path = args.model_path
+        if model_path is None:
+            model_path = osp.join(log_dir, "latest_model")
+        # Load the saved model
+        model = model.load(model_path)
+    else:
 
-    # Load the saved model
-    # model = model.load(osp.join(logs, "rl_model_320000_steps"))
+        # define callbacks to periodically save our model and evaluate it to help monitor training
+        # the below freq values will save every 10 rollouts
+        eval_callback = EvalCallback(
+            eval_env,
+            best_model_save_path=log_dir,
+            log_path=log_dir,
+            eval_freq=10 * rollout_steps // num_envs,
+            deterministic=True,
+            render=False,
+        )
+        checkpoint_callback = CheckpointCallback(
+            save_freq=10 * rollout_steps // num_envs,
+            save_path=log_dir,
+            name_prefix="rl_model",
+            save_replay_buffer=True,
+            save_vecnormalize=True,
+        )
+        # Train an agent with PPO for args.total_timesteps interactions
+        model.learn(
+            args.total_timesteps,
+            callback=[checkpoint_callback, eval_callback],
+        )
+        # Save the final model
+        model.save(osp.join(log_dir, "latest_model"))
 
     # Evaluate the model
     results = evaluate_policy(
@@ -140,4 +228,4 @@ def main(args):
 
 
 if __name__ == "__main__":
-    main(parse_args())
+    main()
