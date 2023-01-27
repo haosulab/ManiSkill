@@ -151,13 +151,8 @@ class Camera:
         if camera_cfg.hide_link:
             self.actor.hide_visual()
 
-        # Filter texture names according to renderer type
-        if self.renderer_type == "kuafu":
-            self.texture_names = tuple(
-                x for x in camera_cfg.texture_names if x in ["Color"]
-            )
-        else:
-            self.texture_names = camera_cfg.texture_names
+        # Filter texture names according to renderer type if necessary (legacy for Kuafu)
+        self.texture_names = camera_cfg.texture_names
 
     @property
     def uid(self):

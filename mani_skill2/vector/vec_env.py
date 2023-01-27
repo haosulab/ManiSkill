@@ -177,7 +177,7 @@ class VecEnv:
         # Wrap env_fn
         for i, env_fn in enumerate(env_fns):
             client_kwargs = {"address": self.server_address, "process_index": i}
-            env_fns[i] = partial(env_fn, renderer="client", client_kwargs=client_kwargs)
+            env_fns[i] = partial(env_fn, renderer="client", renderer_kwargs=client_kwargs)
 
         # Initialize workers
         self.remotes, self.work_remotes = zip(*[ctx.Pipe() for _ in range(n_envs)])

@@ -39,15 +39,17 @@ class BaseEnv(gym.Env):
             "*" represents all registered controllers and action space is a dict.
         sim_freq (int): simulation frequency (Hz)
         control_freq (int): control frequency (Hz)
-        renderer (str): type of renderer. "vulkan", "kuafu" or "client".
-            `KuafuRenderer` (ray-tracing) is only experimentally and partially supported now.
+        renderer (str): type of renderer. "sapien" or "client".
         enable_shadow (bool): whether to enable shadow for lights. Defaults to False.
+        enable_rt (bool): whether to enable ray tracing for SapienRenderer. Defaults to False.
 
     Keyword Args:
-        vulkan_kwargs (dict): kwargs to initialize `VulkanRenderer`. For example:
+        renderer_kwargs (dict): kwargs to initialize the renderer.
+            Example kwargs for `SapienRenderer` (renderer_type=='sapien'):
+            - offscreen_only: tell the renderer the user does not need to present onto a screen.
             - device (str): GPU device for renderer, e.g., 'cuda:x'.
-        kuafu_kwargs (dict): kwargs to initialize `KuafuRenderer`.
-        client_kwargs (dict): kwargs to initialize `RenderClient`.
+        render_config (dict): kwargs to configure the renderer. Only for `SapienRenderer`.
+            See `sapien.RenderConfig` for more details.
         camera_cfgs (dict): configurations of cameras. See notes for more details.
         render_camera_cfgs (dict): configurations of rendering cameras. Similar usage as @camera_cfgs.
 
@@ -77,8 +79,9 @@ class BaseEnv(gym.Env):
         control_mode=None,
         sim_freq: int = 500,
         control_freq: int = 20,
-        renderer: str = "vulkan",
+        renderer: str = "sapien",
         enable_shadow=False,
+        enable_rt=False,
         **kwargs,
     ):
         # Create SAPIEN engine
@@ -86,21 +89,25 @@ class BaseEnv(gym.Env):
 
         # Create SAPIEN renderer
         self._renderer_type = renderer
-        if self._renderer_type == "vulkan":
-            vulkan_kwargs = kwargs.get("vulkan_kwargs", {})
-            self._renderer = sapien.VulkanRenderer(**vulkan_kwargs)
-            self._renderer.set_log_level("warn")
-        elif self._renderer_type == "kuafu":
-            kuafu_config = sapien.KuafuConfig()
-            kuafu_kwargs = kwargs.get("kuafu_kwargs", {})
-            for k, v in kuafu_kwargs.items():
-                setattr(kuafu_config, k, v)
-            self._renderer = sapien.KuafuRenderer(kuafu_config)
-            logger.warning("Only rgb is supported by KuafuRenderer.")
+        renderer_kwargs = kwargs.get("renderer_kwargs", {})
+        if self._renderer_type == "sapien":
+            self._renderer = sapien.SapienRenderer(**renderer_kwargs)
+            if enable_rt:
+                render_config = dict(
+                    camera_shader_dir="rt",
+                    viewer_shader_dir="rt",
+                    rt_samples_per_pixel=32,
+                    rt_max_path_depth=8,
+                    rt_use_denoiser=True,
+                )
+            else:
+                render_config = dict(camera_shader_dir="ibl", viewer_shader_dir="ibl")
+            render_config.update(kwargs.get("render_config", {}))
+            for k, v in render_config.items():
+                setattr(sapien.render_config, k, v)
             self._renderer.set_log_level("warn")
         elif self._renderer_type == "client":
-            client_kwargs = kwargs["client_kwargs"]
-            self._renderer = sapien.RenderClient(**client_kwargs)
+            self._renderer = sapien.RenderClient(**renderer_kwargs)
             # TODO(jigu): add `set_log_level` for RenderClient?
         else:
             raise NotImplementedError(self._renderer_type)
