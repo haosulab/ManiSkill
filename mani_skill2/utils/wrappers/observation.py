@@ -41,7 +41,7 @@ class RGBDObservationWrapper(gym.ObservationWrapper):
                     )
                 else:
                     new_cam_space[key] = ori_cam_space[key]
-            image_space[cam_uid] = spaces.Dict(new_cam_space)
+            image_space.spaces[cam_uid] = spaces.Dict(new_cam_space)
 
     def observation(self, observation: dict):
         image_obs = observation["image"]
@@ -116,7 +116,7 @@ class PointCloudObservationWrapper(gym.ObservationWrapper):
             pcd_space[cam_uid] = spaces.Dict(cam_pcd_space)
 
         pcd_space = merge_dict_spaces(pcd_space.values())
-        space["pointcloud"] = pcd_space
+        space.spaces["pointcloud"] = pcd_space
 
     def observation(self, observation: dict):
         image_obs = observation.pop("image")
