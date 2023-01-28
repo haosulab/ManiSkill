@@ -26,14 +26,14 @@ def initialize_sources():
     DATA_SOURCES["ycb"] = dict(
         url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/mani_skill2_ycb_v2.zip",
         target_path="mani_skill2_ycb",
-        checksum="8ca21d8c14dad6b89d789776636d2092e58f7a0415446cda1ac5541861b0a709",
+        checksum="b83afbe9c38a780f5625f2c97afad712db49fcb533d4814ac0c827b0514a504b",
     )
     DATA_GROUPS["PickSingleYCB-v0"] = ["ycb"]
 
     DATA_SOURCES["egad"] = dict(
         url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/mani_skill2_egad_v1.zip",
         target_path="mani_skill2_egad",
-        checksum="5c278adbd47c474a95f25e377623fbc5c320ca0cbf1b04b5d3564df71bfe64b5",
+        checksum="4b5d841256e0151c2a615a98d4e92afa12ad6d795e2565b364586e3940d3aa36",
     )
     DATA_GROUPS["PickSingleEGAD-v0"] = ["egad"]
 
@@ -47,7 +47,7 @@ def initialize_sources():
     DATA_SOURCES["assembling_kits"] = dict(
         url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/assembling_kits_v1.zip",
         target_path="assembling_kits",
-        checksum="f33eaff705c78774ba4d796b558a70f3362e0367c074ad580197997eb7258986",
+        checksum="e3371f17a07a012edaa3a0b3604fb1577f3fb921876c3d5ed59733dd75a6b4a0",
     )
     DATA_GROUPS["AssemblingKits-v0"] = ["assembling_kits"]
 
@@ -101,7 +101,7 @@ def initialize_sources():
     DATA_GROUPS["OpenCabinetDoor-v1"] = category_uids["cabinet_door"]
     DATA_GROUPS["PushChair-v1"] = category_uids["chair"]
     DATA_GROUPS["MoveBucket-v1"] = category_uids["bucket"]
-    DATA_GROUPS["TurnFaucet-v1"] = category_uids["faucet"]
+    DATA_GROUPS["TurnFaucet-v0"] = category_uids["faucet"]
 
 
 def initialize_extra_sources():
@@ -223,7 +223,10 @@ def parse_args():
     )
     parser.add_argument("--quiet", action="store_true", help="Disable verbose output.")
     parser.add_argument(
-        "--non-interactive", action="store_true", help="Disable prompts."
+        "-y", "--non-interactive", action="store_true", help="Disable prompts."
+    )
+    parser.add_argument(
+        "-o", "--output-dir", type=str, help="Directory to save assets."
     )
     return parser.parse_args()
 
@@ -260,6 +263,8 @@ def main():
         kwargs = DATA_SOURCES[uid].copy()
         kwargs["verbose"] = verbose
         kwargs["non_interactive"] = args.non_interactive
+        if args.output_dir is not None:
+            kwargs["output_dir"] = args.output_dir
         output_path = download(**kwargs)
 
         if output_path is not None and verbose:
