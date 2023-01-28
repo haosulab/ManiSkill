@@ -215,7 +215,7 @@ def parse_args():
         help="path for where logs, checkpoints, and videos are saved",
     )
     parser.add_argument(
-        "--steps", type=int, help="numbr of training steps", default=10000
+        "--steps", type=int, help="numbr of training steps", default=30000
     )
     parser.add_argument(
         "--eval", action="store_true", help="whether to only evaluate policy"

@@ -93,13 +93,18 @@ def parse_args():
         "-d", "--demos", type=str, help="path to demonstration dataset .h5py file"
     )
     parser.add_argument(
+        "-s", "--seed",
+        type=int,
+        help="Random seed to initialize training with",
+    )
+    parser.add_argument(
         "--log-dir",
         type=str,
         default="logs/bc_state",
         help="path for where logs, checkpoints, and videos are saved",
     )
     parser.add_argument(
-        "--steps", type=int, help="numbr of training steps", default=10000
+        "--steps", type=int, help="numbr of training steps", default=30000
     )
     parser.add_argument(
         "--eval", action="store_true", help="whether to only evaluate policy"
@@ -118,6 +123,10 @@ def main():
     log_dir = args.log_dir
     iterations = args.steps
 
+    if args.seed is not None:
+        th.manual_seed(args.seed)
+        np.random.seed(args.seed)
+
     ckpt_dir = osp.join(log_dir, "checkpoints")
     Path(ckpt_dir).mkdir(parents=True, exist_ok=True)
 
@@ -129,11 +138,11 @@ def main():
     )
     # RecordEpisode wrapper auto records a new video once an episode is completed
     env = RecordEpisode(env, output_dir=osp.join(log_dir, "videos"))
-
+    env.seed(0)
     if args.eval:
         model_path = args.model_path
         if model_path is None:
-            model_path = osp.join(log_dir, "models/ckpt_latest.pt")
+            model_path = osp.join(log_dir, "checkpoints/ckpt_latest.pt")
         # Load the saved model
         policy = th.load(model_path)
     else:
@@ -152,7 +161,6 @@ def main():
         print("Action:", action.shape)
         # create our policy
         obs, action = dataset[0]
-        th.manual_seed(0)
         policy = Policy(obs.shape[0], action.shape[0], hidden_units=[256, 256])
     # move model to gpu if possible
     device = "cuda" if th.cuda.is_available() else "cpu"
@@ -183,7 +191,7 @@ def main():
         obs = env.reset(seed=0)
         successes = []
         i = 0
-        pbar = tqdm(total=num_episodes)
+        pbar = tqdm(total=num_episodes, leave=False)
         while i < num_episodes:
             # move to appropriate device and unsqueeze to add a batch dimension
             obs_device = th.from_numpy(obs).float().unsqueeze(0).to(device)
