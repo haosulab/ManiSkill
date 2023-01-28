@@ -168,12 +168,10 @@ def main():
     def train_step(policy, obs, actions, optim, loss_fn):
         optim.zero_grad()
         # move data to appropriate device first
-        obs_device = dict()
-        for k in obs:
-            obs_device[k] = obs[k].to(device)
+        obs = obs.to(device)
         actions = actions.to(device)
 
-        pred_actions = policy(obs_device)
+        pred_actions = policy(obs)
 
         # compute loss and optimize
         loss = loss_fn(actions, pred_actions)
@@ -200,7 +198,7 @@ def main():
         success_rate = np.mean(successes)
         return success_rate
 
-    if args.eval:
+    if not args.eval:
         writer = SummaryWriter(log_dir)
 
         optim = th.optim.Adam(policy.parameters(), lr=1e-3)
