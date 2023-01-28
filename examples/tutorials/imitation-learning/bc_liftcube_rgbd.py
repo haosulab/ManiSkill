@@ -1,6 +1,7 @@
 # Import required packages
 import argparse
 import os.path as osp
+from pathlib import Path
 
 import gym
 import h5py
@@ -10,7 +11,6 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
-from pathlib import Path
 
 import mani_skill2.envs
 from mani_skill2.utils.wrappers import RecordEpisode
@@ -253,7 +253,9 @@ def main():
         # Load the saved model
         policy = th.load(model_path)
     else:
-        assert demo_path is not None, "Need to provide a demonstration dataset via --demos"
+        assert (
+            demo_path is not None
+        ), "Need to provide a demonstration dataset via --demos"
         dataset = ManiSkill2Dataset(demo_path)
         dataloader = DataLoader(
             dataset,
@@ -377,10 +379,11 @@ def main():
             writer.add_scalar("train/mse_loss_epoch", epoch_loss, epoch)
             epoch += 1
         save_model(policy, osp.join(ckpt_dir, "ckpt_latest.pt"))
-    
+
     # run a final evaluation
     success_rate = evaluate_policy(env, policy)
     print(f"Final Success Rate {success_rate}")
+
 
 if __name__ == "__main__":
     main()

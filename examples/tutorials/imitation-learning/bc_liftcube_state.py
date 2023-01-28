@@ -1,6 +1,7 @@
 # Import required packages
 import argparse
 import os.path as osp
+from pathlib import Path
 
 import gym
 import h5py
@@ -10,10 +11,10 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
-from pathlib import Path
 
 import mani_skill2.envs
 from mani_skill2.utils.wrappers import RecordEpisode
+
 
 # loads h5 data into memory for faster access
 def load_h5_data(data):
@@ -25,13 +26,16 @@ def load_h5_data(data):
             out[k] = load_h5_data(data[k])
     return out
 
+
 class ManiSkill2Dataset(Dataset):
     def __init__(self, dataset_file: str, load_count=-1) -> None:
         self.dataset_file = dataset_file
         # for details on how the code below works, see the
         # quick start tutorial
         import h5py
+
         from mani_skill2.utils.io_utils import load_json
+
         self.data = h5py.File(dataset_file, "r")
         json_path = dataset_file.replace(".h5", ".json")
         self.json_data = load_json(json_path)
@@ -49,7 +53,7 @@ class ManiSkill2Dataset(Dataset):
             eps = self.episodes[eps_id]
             trajectory = self.data[f"traj_{eps['episode_id']}"]
             trajectory = load_h5_data(trajectory)
-            # we use :-1 here to ignore the last observation as that 
+            # we use :-1 here to ignore the last observation as that
             # is the terminal observation which has no actions
             self.observations.append(trajectory["obs"][:-1])
             self.actions.append(trajectory["actions"])
@@ -63,6 +67,7 @@ class ManiSkill2Dataset(Dataset):
         action = th.from_numpy(self.actions[idx]).float()
         obs = th.from_numpy(self.observations[idx]).float()
         return obs, action
+
 
 class Policy(nn.Module):
     def __init__(
@@ -85,6 +90,7 @@ class Policy(nn.Module):
     def forward(self, observations) -> th.Tensor:
         return self.mlp(observations)
 
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.description = "Simple script demonstrating how to train an agent with imitation learning (behavior cloning) using ManiSkill2 environmnets and demonstrations"
@@ -93,7 +99,8 @@ def parse_args():
         "-d", "--demos", type=str, help="path to demonstration dataset .h5py file"
     )
     parser.add_argument(
-        "-s", "--seed",
+        "-s",
+        "--seed",
         type=int,
         help="Random seed to initialize training with",
     )
@@ -146,7 +153,9 @@ def main():
         # Load the saved model
         policy = th.load(model_path)
     else:
-        assert demo_path is not None, "Need to provide a demonstration dataset via --demos"
+        assert (
+            demo_path is not None
+        ), "Need to provide a demonstration dataset via --demos"
         dataset = ManiSkill2Dataset(demo_path)
         dataloader = DataLoader(
             dataset,
@@ -246,10 +255,11 @@ def main():
             writer.add_scalar("train/mse_loss_epoch", epoch_loss, epoch)
             epoch += 1
         save_model(policy, osp.join(ckpt_dir, "ckpt_latest.pt"))
-    
+
     # run a final evaluation
     success_rate = evaluate_policy(env, policy)
     print(f"Final Success Rate {success_rate}")
+
 
 if __name__ == "__main__":
     main()
