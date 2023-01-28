@@ -4,12 +4,14 @@ This folder contains some simple tutorials (notebooks and single-file implementa
 
 The learning tutorials use PyTorch and Stable Baselines 3 but ManiSkill2 can easily work with other frameworks as well. 
 
-Getting Starteed: https://colab.research.google.com/github/haosulab/ManiSkill2/blob/tutorials/examples/tutorials/1_quickstart.ipynb
+Getting Started: https://colab.research.google.com/github/haosulab/ManiSkill2/blob/main/examples/tutorials/1_quickstart.ipynb
 
 Reinforcement Learning:
- - Notebook https://colab.research.google.com/github/haosulab/ManiSkill2/blob/tutorials/examples/tutorials/2_reinforcement_learning.ipynb
- - Single-file implementations: https://github.com/haosulab/ManiSkill2/tree/tutorials/examples/tutorials/reinforcement-learning
+ - Notebook https://colab.research.google.com/github/haosulab/ManiSkill2/blob/main/examples/tutorials/2_reinforcement_learning.ipynb
+ - Single-file implementations: https://github.com/haosulab/ManiSkill2/tree/main/examples/tutorials/reinforcement-learning
 
 Imitation Learning: 
- - Notebook https://colab.research.google.com/github/haosulab/ManiSkill2/blob/tutorials/examples/tutorials/3_reinforcement_learning.ipynb
- - Single-file implementations: https://github.com/haosulab/ManiSkill2/tree/tutorials/examples/tutorials/imitation-learning
+ - Notebook https://colab.research.google.com/github/haosulab/ManiSkill2/blob/main/examples/tutorials/3_imitation_learning.ipynb
+ - Single-file implementations: https://github.com/haosulab/ManiSkill2/tree/main/examples/tutorials/imitation-learning
+
+Environment Customization: https://colab.research.google.com/github/haosulab/ManiSkill2/blob/main/examples/tutorials/customize_environments.ipynb
