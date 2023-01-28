@@ -194,9 +194,12 @@ class RecordEpisode(gym.Wrapper):
             image = self.env.render(self.render_mode)
 
             if self.info_on_video:
-                texts = [f"reward: {rew}", f"action: {action.round(2).tolist()}"]
-                info_processed = extract_scalars_from_info(info)
-                image = put_info_on_image(image, info_processed, extras=texts)
+                scalar_info = extract_scalars_from_info(info)
+                extra_texts = [
+                    f"reward: {rew:.3f}",
+                    "action: {}".format(",".join([f"{x:.2f}" for x in action])),
+                ]
+                image = put_info_on_image(image, scalar_info, extras=extra_texts)
 
             self._render_images.append(image)
 
@@ -323,7 +326,6 @@ class RecordEpisode(gym.Wrapper):
             if self.clean_on_close:
                 clean_trajectories(self._h5_file, self._json_data)
             self._h5_file.close()
-            dump_json(self._json_path, self._json_data, indent=2)
         if self.save_video:
             if self.save_on_reset:
                 self.flush_video(ignore_empty_transition=True)

@@ -82,6 +82,14 @@ def observations_to_images(observations, max_depth=None) -> List[np.ndarray]:
             # A heuristic way to colorize labels
             seg = np.uint8(seg * [11, 61, 127])  # [H, W, 3]
             images.append(seg)
+        elif "Segmentation" in key:
+            seg: np.ndarray = observations[key]  # [H, W, 4]
+            assert seg.ndim == 3 and seg.shape[-1] == 4, seg.shape
+            # A heuristic way to colorize labels
+            visual_seg = np.uint8(seg[..., 0:1] * [11, 61, 127])  # [H, W, 3]
+            actor_seg = np.uint8(seg[..., 1:2] * [11, 61, 127])  # [H, W, 3]
+            images.append(visual_seg)
+            images.append(actor_seg)
     return images
 
 

@@ -4,16 +4,16 @@ from mani_skill2.sensors.camera import CameraConfig
 
 class Xmate3RobotiqDefaultConfig:
     def __init__(self) -> None:
-        self.urdf_path = "{PACKAGE_ASSET_DIR}/descriptions/fixed_xmate3_robotiq.urdf"
+        self.urdf_path = "{ASSET_DIR}/xmate3_robotiq/xmate3_robotiq.urdf"
         self.urdf_config = dict(
             _materials=dict(
                 gripper=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)
             ),
             link=dict(
-                panda_leftfinger=dict(
+                left_inner_finger_pad=dict(
                     material="gripper", patch_radius=0.1, min_patch_radius=0.1
                 ),
-                panda_rightfinger=dict(
+                right_inner_finger_pad=dict(
                     material="gripper", patch_radius=0.1, min_patch_radius=0.1
                 ),
             ),
@@ -58,8 +58,8 @@ class Xmate3RobotiqDefaultConfig:
         )
         arm_pd_joint_delta_pos = PDJointPosControllerConfig(
             self.arm_joint_names,
-            -0.05,
-            0.05,
+            -0.1,
+            0.1,
             self.arm_stiffness,
             self.arm_damping,
             self.arm_force_limit,
@@ -69,8 +69,8 @@ class Xmate3RobotiqDefaultConfig:
         # PD ee position
         arm_pd_ee_delta_pos = PDEEPosControllerConfig(
             self.arm_joint_names,
-            -0.01,
-            0.01,
+            -0.1,
+            0.1,
             self.arm_stiffness,
             self.arm_damping,
             self.arm_force_limit,
@@ -78,10 +78,9 @@ class Xmate3RobotiqDefaultConfig:
         )
         arm_pd_ee_delta_pose = PDEEPoseControllerConfig(
             self.arm_joint_names,
-            -0.01,
-            0.01,
-            -0.05,
-            0.05,
+            -0.1,
+            0.1,
+            0.1,
             self.arm_stiffness,
             self.arm_damping,
             self.arm_force_limit,
@@ -129,7 +128,7 @@ class Xmate3RobotiqDefaultConfig:
                 near=0.01,
                 far=10,
                 actor_uid="camera_base_link",
-                hide_link=True,
+                hide_link=False,
             ),
             CameraConfig(
                 uid="hand_camera",
@@ -141,7 +140,7 @@ class Xmate3RobotiqDefaultConfig:
                 near=0.01,
                 far=10,
                 actor_uid="camera_hand_link",
-                hide_link=True,
+                hide_link=False,
             ),
         ]
        

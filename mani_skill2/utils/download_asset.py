@@ -104,6 +104,14 @@ def initialize_sources():
     DATA_GROUPS["TurnFaucet-v0"] = category_uids["faucet"]
 
 
+def initialize_extra_sources():
+    DATA_SOURCES["xmate3_robotiq"] = dict(
+        url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/xmate3_robotiq.zip",
+        target_path="xmate3_robotiq",
+        checksum="ddda102a20eb41e28a0a501702e240e5d7f4084221a44f580e729f08b7c12d1a",
+    )
+
+
 def prompt_yes_no(message):
     r"""Prints a message and prompts the user for "y" or "n" returning True or False."""
     # https://github.com/facebookresearch/habitat-sim/blob/main/src_python/habitat_sim/utils/datasets_download.py
@@ -228,6 +236,7 @@ def main():
     verbose = not args.quiet
 
     initialize_sources()
+    initialize_extra_sources()
 
     if args.uid == "":
         print("Available asset (group) uids:")

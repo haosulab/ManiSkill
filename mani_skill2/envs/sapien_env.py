@@ -626,7 +626,10 @@ class BaseEnv(gym.Env):
                 return images[0]
             return tile_images(images)
         elif mode == "cameras":
-            images = [self.render("rgb_array")]
+            if len(self._render_cameras) > 0:
+                images = [self.render("rgb_array")]
+            else:
+                images = []
 
             # NOTE(jigu): Must update renderer again
             # since some visual-only sites like goals should be hidden.

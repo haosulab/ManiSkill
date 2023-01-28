@@ -3,6 +3,7 @@ import argparse
 import gym
 import numpy as np
 
+from mani_skill2 import make_box_space_readable
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.utils.visualization.cv2_utils import OpenCVViewer
 from mani_skill2.utils.wrappers import RecordEpisode
@@ -38,6 +39,7 @@ def parse_args():
 
 
 def main():
+    make_box_space_readable()
     np.set_printoptions(suppress=True, precision=3)
     args = parse_args()
 
@@ -215,7 +217,9 @@ def main():
 
                 xyz = obs["pointcloud"]["xyzw"][..., :3]
                 rgb = obs["pointcloud"]["rgb"]
-                # rgb = np.tile(obs["pointcloud"]["robot_seg"] * 255, [1, 3])
+                if "robot_seg" in obs["pointcloud"]:
+                    robot_seg = obs["pointcloud"]["robot_seg"]
+                    rgb = np.uint8(robot_seg * [11, 61, 127])
                 trimesh.PointCloud(xyz, rgb).show()
 
         # -------------------------------------------------------------------------- #

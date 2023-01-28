@@ -6,7 +6,11 @@ import gym
 import numpy as np
 from gym import spaces
 
-from mani_skill2.utils.common import merge_dicts
+from mani_skill2.utils.common import (
+    flatten_dict_keys,
+    flatten_dict_space_keys,
+    merge_dicts,
+)
 
 
 class RGBDObservationWrapper(gym.ObservationWrapper):
@@ -15,43 +19,45 @@ class RGBDObservationWrapper(gym.ObservationWrapper):
     def __init__(self, env):
         super().__init__(env)
         self.observation_space = deepcopy(env.observation_space)
+        self.update_observation_space(self.observation_space)
 
-        # Update image observation spaces
-        image_obs_spaces: spaces.Dict = self.observation_space.spaces["image"]
-        for name in image_obs_spaces:
-            ori_obs_spaces = image_obs_spaces[name]
-            new_obs_spaces = OrderedDict()
-            for key in ori_obs_spaces:
+    @staticmethod
+    def update_observation_space(space: spaces.Dict):
+        # Update image observation space
+        image_space: spaces.Dict = space.spaces["image"]
+        for cam_uid in image_space:
+            ori_cam_space = image_space[cam_uid]
+            new_cam_space = OrderedDict()
+            for key in ori_cam_space:
                 if key == "Color":
-                    height, width = ori_obs_spaces[key].shape[:2]
-                    new_obs_spaces["rgb"] = spaces.Box(
+                    height, width = ori_cam_space[key].shape[:2]
+                    new_cam_space["rgb"] = spaces.Box(
                         low=0, high=255, shape=(height, width, 3), dtype=np.uint8
                     )
                 elif key == "Position":
-                    height, width = ori_obs_spaces[key].shape[:2]
-                    new_obs_spaces["depth"] = spaces.Box(
+                    height, width = ori_cam_space[key].shape[:2]
+                    new_cam_space["depth"] = spaces.Box(
                         low=0, high=np.inf, shape=(height, width, 1), dtype=np.float32
                     )
                 else:
-                    new_obs_spaces[key] = ori_obs_spaces[key]
-            image_obs_spaces.spaces[name] = spaces.Dict(new_obs_spaces)
+                    new_cam_space[key] = ori_cam_space[key]
+            image_space.spaces[cam_uid] = spaces.Dict(new_cam_space)
 
     def observation(self, observation: dict):
         image_obs = observation["image"]
-        for name, ori_images in image_obs.items():
+        for cam_uid, ori_images in image_obs.items():
             new_images = OrderedDict()
             for key in ori_images:
                 if key == "Color":
-                    rgb = np.clip(ori_images[key][..., :3] * 255, 0, 255).astype(
-                        np.uint8
-                    )
-                    new_images["rgb"] = rgb
+                    rgb = ori_images[key][..., :3]  # [H, W, 4]
+                    rgb = np.clip(rgb * 255, 0, 255).astype(np.uint8)
+                    new_images["rgb"] = rgb  # [H, W, 4]
                 elif key == "Position":
                     depth = -ori_images[key][..., [2]]  # [H, W, 1]
                     new_images["depth"] = depth
                 else:
                     new_images[key] = ori_images[key]
-            image_obs[name] = new_images
+            image_obs[cam_uid] = new_images
         return observation
 
 
@@ -63,7 +69,9 @@ def merge_dict_spaces(dict_spaces: Sequence[spaces.Dict]):
             assert isinstance(x, spaces.Box), type(x)
             low.append(x.low)
             high.append(x.high)
-        new_space = spaces.Box(low=np.concatenate(low), high=np.concatenate(high))
+        low = np.concatenate(low)
+        high = np.concatenate(high)
+        new_space = spaces.Box(low=low, high=high, dtype=low.dtype)
         reverse_spaces[key] = new_space
     return spaces.Dict(OrderedDict(reverse_spaces))
 
@@ -74,61 +82,73 @@ class PointCloudObservationWrapper(gym.ObservationWrapper):
     def __init__(self, env):
         super().__init__(env)
         self.observation_space = deepcopy(env.observation_space)
+        self.update_observation_space(self.observation_space)
+        self._buffer = {}
+        for key, space in self.observation_space["pointcloud"].spaces.items():
+            self._buffer[key] = np.zeros(space.shape, dtype=space.dtype)
 
+    @staticmethod
+    def update_observation_space(space: spaces.Dict):
         # Replace image observation spaces with point cloud ones
-        image_obs_spaces: spaces.Dict = self.observation_space.spaces.pop("image")
-        self.observation_space.spaces.pop("camera_param")
-        pcd_obs_spaces = OrderedDict()
-        for name in image_obs_spaces:
-            ori_obs_spaces = image_obs_spaces[name]
-            new_obs_spaces = OrderedDict()
+        image_space: spaces.Dict = space.spaces.pop("image")
+        space.spaces.pop("camera_param")
+        pcd_space = OrderedDict()
 
-            h, w = ori_obs_spaces["Position"].shape[:2]
-            new_obs_spaces["xyzw"] = spaces.Box(
+        for cam_uid in image_space:
+            cam_image_space = image_space[cam_uid]
+            cam_pcd_space = OrderedDict()
+
+            h, w = cam_image_space["Position"].shape[:2]
+            cam_pcd_space["xyzw"] = spaces.Box(
                 low=-np.inf, high=np.inf, shape=(h * w, 4), dtype=np.float32
             )
 
-            if "Color" in ori_obs_spaces:
-                new_obs_spaces["rgb"] = spaces.Box(
+            # Extra keys
+            if "Color" in cam_image_space.spaces:
+                cam_pcd_space["rgb"] = spaces.Box(
                     low=0, high=255, shape=(h * w, 3), dtype=np.uint8
                 )
-
-            if "robot_seg" in ori_obs_spaces:
-                new_obs_spaces["robot_seg"] = spaces.Box(
-                    low=0, high=1, shape=(h * w, 1), dtype=np.bool_
+            if "Segmentation" in cam_image_space.spaces:
+                cam_pcd_space["Segmentation"] = spaces.Box(
+                    low=0, high=(2**32 - 1), shape=(h * w, 4), dtype=np.uint32
                 )
 
-            pcd_obs_spaces[name] = spaces.Dict(new_obs_spaces)
+            pcd_space[cam_uid] = spaces.Dict(cam_pcd_space)
 
-        pcd_obs_spaces = merge_dict_spaces(pcd_obs_spaces.values())
-        self.observation_space.spaces["pointcloud"] = pcd_obs_spaces
+        pcd_space = merge_dict_spaces(pcd_space.values())
+        space.spaces["pointcloud"] = pcd_space
 
     def observation(self, observation: dict):
         image_obs = observation.pop("image")
         camera_params = observation.pop("camera_param")
         pointcloud_obs = OrderedDict()
-        for name, images in image_obs.items():
-            pcds = {}
+
+        for cam_uid, images in image_obs.items():
+            cam_pcd = {}
 
             # Each pixel is (x, y, z, z_buffer_depth) in OpenGL camera space
             position = images["Position"]
             position[..., 3] = position[..., 3] < 1
-            # Convert to world space
-            cam2world = camera_params[name]["cam2world_gl"]  # OpenGL convention
-            xyzw = position.reshape(-1, 4) @ cam2world.T
-            pcds["xyzw"] = xyzw
 
+            # Convert to world space
+            cam2world = camera_params[cam_uid]["cam2world_gl"]
+            xyzw = position.reshape(-1, 4) @ cam2world.T
+            cam_pcd["xyzw"] = xyzw
+
+            # Extra keys
             if "Color" in images:
                 rgb = images["Color"][..., :3]
                 rgb = np.clip(rgb * 255, 0, 255).astype(np.uint8)
-                pcds["rgb"] = rgb.reshape(-1, 3)
+                cam_pcd["rgb"] = rgb.reshape(-1, 3)
+            if "Segmentation" in images:
+                cam_pcd["Segmentation"] = images["Segmentation"].reshape(-1, 4)
 
-            if "robot_seg" in images:
-                pcds["robot_seg"] = images["robot_seg"].reshape(-1, 1)
+            pointcloud_obs[cam_uid] = cam_pcd
 
-            pointcloud_obs[name] = pcds
+        pointcloud_obs = merge_dicts(pointcloud_obs.values())
+        for key, value in pointcloud_obs.items():
+            pointcloud_obs[key] = np.concatenate(value, out=self._buffer[key])
 
-        pointcloud_obs = merge_dicts(pointcloud_obs.values(), asarray=True)
         observation["pointcloud"] = pointcloud_obs
         return observation
 
@@ -139,39 +159,78 @@ class RobotSegmentationObservationWrapper(gym.ObservationWrapper):
     def __init__(self, env, replace=True):
         super().__init__(env)
         self.observation_space = deepcopy(env.observation_space)
+        self.init_observation_space(self.observation_space, replace=replace)
         self.replace = replace
-
-        # Update image observation spaces
-        image_obs_spaces: spaces.Dict = self.observation_space.spaces["image"]
-        for name in image_obs_spaces:
-            ori_obs_spaces = image_obs_spaces[name]
-            if "Segmentation" not in ori_obs_spaces.spaces:
-                continue
-            height, width = ori_obs_spaces["Segmentation"].shape[:2]
-            new_obs_space = spaces.Box(
-                low=0, high=1, shape=(height, width, 1), dtype=np.bool_
-            )
-            if self.replace:
-                ori_obs_spaces.spaces.pop("Segmentation")
-            ori_obs_spaces.spaces["robot_seg"] = new_obs_space
-
         # Cache robot link ids
         self.robot_link_ids = self.env.robot_link_ids
+
+    @staticmethod
+    def init_observation_space(space: spaces.Dict, replace: bool):
+        # Update image observation spaces
+        if "image" in space.spaces:
+            image_space = space["image"]
+            for cam_uid in image_space:
+                cam_space = image_space[cam_uid]
+                if "Segmentation" not in cam_space.spaces:
+                    continue
+                height, width = cam_space["Segmentation"].shape[:2]
+                new_space = spaces.Box(
+                    low=0, high=1, shape=(height, width, 1), dtype="bool"
+                )
+                if replace:
+                    cam_space.spaces.pop("Segmentation")
+                cam_space.spaces["robot_seg"] = new_space
+
+        # Update pointcloud observation spaces
+        if "pointcloud" in space.spaces:
+            pcd_space = space["pointcloud"]
+            if "Segmentation" in pcd_space.spaces:
+                n = pcd_space["Segmentation"].shape[0]
+                new_space = spaces.Box(low=0, high=1, shape=(n, 1), dtype="bool")
+                if replace:
+                    pcd_space.spaces.pop("Segmentation")
+                pcd_space.spaces["robot_seg"] = new_space
 
     def reset(self, **kwargs):
         observation = self.env.reset(**kwargs)
         self.robot_link_ids = self.env.robot_link_ids
         return self.observation(observation)
 
-    def observation(self, observation: dict):
+    def observation_image(self, observation: dict):
         image_obs = observation["image"]
-        for name, ori_images in image_obs.items():
-            if "Segmentation" not in ori_images:
+        for cam_images in image_obs.values():
+            if "Segmentation" not in cam_images:
                 continue
-            seg = ori_images["Segmentation"]
+            seg = cam_images["Segmentation"]
             robot_seg = np.isin(seg[..., 1:2], self.robot_link_ids)
-            robot_seg = robot_seg
             if self.replace:
-                ori_images.pop("Segmentation")
-            ori_images["robot_seg"] = robot_seg
+                cam_images.pop("Segmentation")
+            cam_images["robot_seg"] = robot_seg
         return observation
+
+    def observation_pointcloud(self, observation: dict):
+        pointcloud_obs = observation["pointcloud"]
+        if "Segmentation" not in pointcloud_obs:
+            return observation
+        seg = pointcloud_obs["Segmentation"]
+        robot_seg = np.isin(seg[..., 1:2], self.robot_link_ids)
+        if self.replace:
+            pointcloud_obs.pop("Segmentation")
+        pointcloud_obs["robot_seg"] = robot_seg
+        return observation
+
+    def observation(self, observation: dict):
+        if "image" in observation:
+            observation = self.observation_image(observation)
+        if "pointcloud" in observation:
+            observation = self.observation_pointcloud(observation)
+        return observation
+
+
+class FlattenObservationWrapper(gym.ObservationWrapper):
+    def __init__(self, env) -> None:
+        super().__init__(env)
+        self.observation_space = flatten_dict_space_keys(self.observation_space)
+
+    def observation(self, observation):
+        return flatten_dict_keys(observation)

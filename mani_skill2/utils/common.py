@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from typing import Dict, Sequence
 
 import gym
@@ -227,3 +227,14 @@ def extract_scalars_from_info(info: dict, blacklist=()) -> Dict[str, float]:
         elif np.size(v) == 1 and not isinstance(v, str):
             ret[k] = float(v)
     return ret
+
+
+def flatten_dict_space_keys(space: spaces.Dict, prefix="") -> spaces.Dict:
+    """Flatten a dict of spaces by expanding its keys recursively."""
+    out = OrderedDict()
+    for k, v in space.spaces.items():
+        if isinstance(v, spaces.Dict):
+            out.update(flatten_dict_space_keys(v, prefix + k + "/"))
+        else:
+            out[prefix + k] = v
+    return spaces.Dict(out)
