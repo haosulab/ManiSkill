@@ -3,13 +3,12 @@ import argparse
 import os.path as osp
 
 import gym
-from gym.wrappers import TimeLimit
+import numpy as np
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.utils import set_random_seed
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecMonitor
-from tqdm.notebook import tqdm
 
 import mani_skill2.envs
 from mani_skill2.utils.wrappers import RecordEpisode
@@ -209,7 +208,7 @@ def main():
         model.save(osp.join(log_dir, "latest_model"))
 
     # Evaluate the model
-    results = evaluate_policy(
+    returns, ep_lens = evaluate_policy(
         model,
         eval_env,
         deterministic=True,
@@ -217,7 +216,11 @@ def main():
         return_episode_rewards=True,
         n_eval_episodes=10,
     )
-    print(results)
+    print("Returns", returns)
+    print("Episode Lengths", ep_lens)
+    success = np.array(ep_lens) < 200
+    success_rate = success.mean()
+    print("Success Rate:", success_rate)
 
 
 if __name__ == "__main__":

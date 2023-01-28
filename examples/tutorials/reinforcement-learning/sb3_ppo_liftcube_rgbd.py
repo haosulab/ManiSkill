@@ -47,6 +47,7 @@ class ContinuousTaskWrapper(gym.Wrapper):
             info["TimeLimit.truncated"] = False
         return ob, rew, done, info
 
+
 # A simple wrapper that adds a is_success key which SB3 tracks
 class SuccessInfoWrapper(gym.Wrapper):
     def step(self, action):
@@ -221,6 +222,11 @@ def parse_args():
         help="number of parallel envs to run. Note that increasing this does not increase rollout size",
     )
     parser.add_argument(
+        "--seed",
+        type=int,
+        help="Random seed to initialize training with",
+    )
+    parser.add_argument(
         "--max-episode-steps",
         type=int,
         default=100,
@@ -256,19 +262,19 @@ def main():
     log_dir = args.log_dir
     max_episode_steps = args.max_episode_steps
     total_timesteps = args.total_timesteps
+    rollout_steps = 3200
 
     obs_mode = "rgbd"
     # NOTE: The end-effector space controller is usually more friendly to pick-and-place tasks
     control_mode = "pd_ee_delta_pose"
     use_ms2_vec_env = True
 
-    set_random_seed(0)
+    if args.seed is not None:
+        set_random_seed(args.seed)
 
     # define a make_env function for Stable Baselines
     def make_env(
         env_id: str,
-        obs_mode: str,
-        control_mode: str = None,
         max_episode_steps=None,
         record_dir: str = None,
     ):
@@ -301,26 +307,24 @@ def main():
     env_fn = partial(
         make_env,
         env_id,
-        obs_mode=obs_mode,
-        control_mode=control_mode,
         record_dir=record_dir,
     )
     eval_env = SubprocVecEnv([env_fn for _ in range(1)])
     eval_env = VecMonitor(eval_env)  # Attach a monitor to log episode info
-    eval_env.seed(2022)
+    eval_env.seed(args.seed)
 
     if args.eval:
         env = eval_env
     else:
         # Create vectorized environments for training
         if use_ms2_vec_env:
-            env = make_vec_env(
+            env: VecEnv = make_vec_env(
                 env_id,
                 num_envs,
                 obs_mode=obs_mode,
                 control_mode=control_mode,
-                # specify wrappers for each individual environment
-                # e.g here we specify the Continuous task wrapper and pass in the max_episode_steps parameter
+                # specify wrappers for each individual environment e.g here we specify the
+                # Continuous task wrapper and pass in the max_episode_steps parameter via the partial tool
                 wrappers=[
                     partial(ContinuousTaskWrapper, max_episode_steps=max_episode_steps)
                 ],
@@ -331,14 +335,12 @@ def main():
             env_fn = partial(
                 make_env,
                 env_id,
-                obs_mode=obs_mode,
-                control_mode=control_mode,
                 max_episode_steps=max_episode_steps,
             )
             env = SubprocVecEnv([env_fn for _ in range(num_envs)])
         # Attach a monitor to log episode info
         env = VecMonitor(env)
-        env.seed(2022)
+        env.seed(args.seed)
 
     # Define the policy configuration and algorithm configuration
     policy_kwargs = dict(
@@ -347,7 +349,7 @@ def main():
     model = PPO(
         "MultiInputPolicy",
         env,
-        n_steps=3200 // num_envs,
+        n_steps=rollout_steps // num_envs,
         batch_size=400,
         n_epochs=5,
         gamma=0.8,
@@ -366,12 +368,12 @@ def main():
     else:
         # Define callbacks to periodically save our model and evaluate it to help monitor training
         checkpoint_callback = CheckpointCallback(
-            save_freq=32000 // num_envs,
+            save_freq=10 * rollout_steps // num_envs,
             save_path=log_dir,
         )
         eval_callback = EvalCallback(
             eval_env,
-            eval_freq=32000 // num_envs,
+            eval_freq=10 * rollout_steps // num_envs,
             log_path=log_dir,
             best_model_save_path=log_dir,
             deterministic=True,
@@ -384,7 +386,7 @@ def main():
         model.save(osp.join(log_dir, "latest_model"))
 
     # Evaluate the model
-    results = evaluate_policy(
+    returns, ep_lens = evaluate_policy(
         model,
         eval_env,
         deterministic=True,
@@ -392,7 +394,11 @@ def main():
         return_episode_rewards=True,
         n_eval_episodes=10,
     )
-    print(results)
+    print("Returns", returns)
+    print("Episode Lengths", ep_lens)
+    success = np.array(ep_lens) < 200
+    success_rate = success.mean()
+    print("Success Rate:", success_rate)
 
 
 if __name__ == "__main__":
