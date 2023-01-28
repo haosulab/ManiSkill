@@ -108,8 +108,6 @@ def main():
 
     def make_env(
         env_id: str,
-        rank: int,
-        seed: int = 0,
         max_episode_steps: int = None,
         record_dir: str = None,
     ):
@@ -132,10 +130,8 @@ def main():
                 env = RecordEpisode(
                     env, record_dir, info_on_video=True, render_mode="cameras"
                 )
-            env.seed(seed + rank)
             return env
 
-        set_random_seed(seed)
         return _init
 
     # create eval environment
@@ -144,14 +140,10 @@ def main():
     else:
         record_dir = osp.join(log_dir, "videos")
     eval_env = SubprocVecEnv(
-        [
-            make_env(
-                env_id, i, max_episode_steps=max_episode_steps, record_dir=record_dir
-            )
-            for i in range(1)
-        ]
+        [make_env(env_id, record_dir=record_dir) for _ in range(1)]
     )
     eval_env = VecMonitor(eval_env)  # attach this so SB3 can log reward metrics
+    eval_env.seed(args.seed)
     eval_env.reset()
 
     if args.eval:
@@ -160,11 +152,12 @@ def main():
         # Create vectorized environments for training
         env = SubprocVecEnv(
             [
-                make_env(env_id, i, max_episode_steps=max_episode_steps)
-                for i in range(num_envs)
+                make_env(env_id, max_episode_steps=max_episode_steps)
+                for _ in range(num_envs)
             ]
         )
         env = VecMonitor(env)
+        env.seed(args.seed)
         env.reset()
 
     # Define the policy configuration and algorithm configuration
@@ -181,7 +174,7 @@ def main():
         tensorboard_log=log_dir,
         target_kl=0.05,
     )
-    
+
     if args.eval:
         model_path = args.model_path
         if model_path is None:
