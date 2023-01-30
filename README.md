@@ -62,7 +62,7 @@ If `nvcc` is included in `$PATH`, we will try to figure out the variable `CUDA_P
 To verify CUDA is properly set up for ManiSkill2, run the following in the root directory of this repository to compile warp.
 
 ``` bash
-python warp_maniskill/build_lib.py
+python -m warp_maniskill.build_lib
 ```
 
 For soft body environments, you need to make sure only 1 CUDA device is visible:
@@ -81,7 +81,7 @@ can run the following to compile and generate cache in advance. **This step is
 required if you run soft body environments in parallel with multiple processes.**
 
 ``` bash
-python tools/precompile_mpm.py
+python -m mani_skill2.tools.precompile_mpm
 ```
 
 ## Getting Started
@@ -91,7 +91,7 @@ python tools/precompile_mpm.py
 We provide a demo script to interactively play with our environments.
 
 ```bash
-python examples/demo_manual_control.py -e PickCube-v0
+python -m mani_skill2.examples.demo_manual_control -e PickCube-v0
 # PickCube-v0 can be replaced with other environment id.
 ```
 
