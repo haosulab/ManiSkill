@@ -14,6 +14,7 @@ from mani_skill2.sensors.camera import (
     parse_camera_cfgs,
     update_camera_cfgs_from_dict,
 )
+from mani_skill2.sensors.depth_camera import DepthCamera, DepthCameraConfig
 from mani_skill2.utils.common import convert_observation_to_space, flatten_state_dict
 from mani_skill2.utils.sapien_utils import (
     get_actor_state,
@@ -87,6 +88,8 @@ class BaseEnv(gym.Env):
     ):
         # Create SAPIEN engine
         self._engine = sapien.Engine()
+        # TODO(jigu): Change to `warning` after lighting in VecEnv is fixed.
+        self._engine.set_log_level("error")
 
         # Create SAPIEN renderer
         self._renderer_type = renderer
@@ -158,6 +161,10 @@ class BaseEnv(gym.Env):
             update_camera_cfgs_from_dict(
                 self._render_camera_cfgs, kwargs["render_camera_cfgs"]
             )
+        # Update cameras to depth cameras
+        if kwargs.get("use_stereo_depth", False):
+            for uid, cam_cfg in self._camera_cfgs.items():
+                self._camera_cfgs[uid] = DepthCameraConfig.fromCameraConfig(cam_cfg)
 
         # Lighting
         self.enable_shadow = enable_shadow
@@ -169,8 +176,8 @@ class BaseEnv(gym.Env):
         self.observation_space = convert_observation_to_space(obs)
         if self._obs_mode == "image":
             image_obs_space = self.observation_space.spaces["image"]
-            for name, camera in self._cameras.items():
-                image_obs_space.spaces[name] = camera.observation_space
+            for uid, camera in self._cameras.items():
+                image_obs_space.spaces[uid] = camera.observation_space
         self.action_space = self.agent.action_space
 
     def seed(self, seed=None):
@@ -383,8 +390,15 @@ class BaseEnv(gym.Env):
                 articulation = self.agent.robot
             else:
                 articulation = None
-            self._cameras[uid] = Camera(
-                camera_cfg, self._scene, self._renderer_type, articulation=articulation
+            if isinstance(camera_cfg, DepthCameraConfig):
+                cam_cls = DepthCamera
+            else:
+                cam_cls = Camera
+            self._cameras[uid] = cam_cls(
+                camera_cfg,
+                self._scene,
+                self._renderer_type,
+                articulation=articulation,
             )
 
         # Cameras for rendering only

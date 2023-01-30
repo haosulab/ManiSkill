@@ -215,12 +215,13 @@ def main():
             elif "pointcloud" in env.obs_mode:
                 import trimesh
 
-                xyz = obs["pointcloud"]["xyzw"][..., :3]
+                xyzw = obs["pointcloud"]["xyzw"]
+                mask = xyzw[..., 3] > 0
                 rgb = obs["pointcloud"]["rgb"]
                 if "robot_seg" in obs["pointcloud"]:
                     robot_seg = obs["pointcloud"]["robot_seg"]
                     rgb = np.uint8(robot_seg * [11, 61, 127])
-                trimesh.PointCloud(xyz, rgb).show()
+                trimesh.PointCloud(xyzw[mask, :3], rgb[mask]).show()
 
         # -------------------------------------------------------------------------- #
         # Post-process action

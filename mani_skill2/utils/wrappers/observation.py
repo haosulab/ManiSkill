@@ -128,7 +128,8 @@ class PointCloudObservationWrapper(gym.ObservationWrapper):
 
             # Each pixel is (x, y, z, z_buffer_depth) in OpenGL camera space
             position = images["Position"]
-            position[..., 3] = position[..., 3] < 1
+            # position[..., 3] = position[..., 3] < 1
+            position[..., 3] = position[..., 2] < 0
 
             # Convert to world space
             cam2world = camera_params[cam_uid]["cam2world_gl"]
