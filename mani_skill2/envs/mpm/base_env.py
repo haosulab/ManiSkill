@@ -79,8 +79,6 @@ class MPMBaseEnv(BaseEnv):
         wp.init()
 
         shader_dir = os.path.join(os.path.dirname(__file__), "shader", "point")
-        sapien.VulkanRenderer.set_camera_shader_dir(shader_dir)
-        sapien.VulkanRenderer.set_viewer_shader_dir(shader_dir)
 
         self.sim_crashed = False
 
@@ -92,7 +90,7 @@ class MPMBaseEnv(BaseEnv):
             os.path.dirname(__file__), self.__class__.__name__ + ".sdf"
         )
 
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, shader_dir=shader_dir, **kwargs)
 
     # ---------------------------------------------------------------------------- #
     # Setup

@@ -41,7 +41,8 @@ class BaseEnv(gym.Env):
         control_freq (int): control frequency (Hz)
         renderer (str): type of renderer. "sapien" or "client".
         enable_shadow (bool): whether to enable shadow for lights. Defaults to False.
-        enable_rt (bool): whether to enable ray tracing for SapienRenderer. Defaults to False.
+        shader_dir (str): shader directory. Defaults to "ibl".
+            "ibl" and "rt" are built-in options with SAPIEN. Other options are user-defined.
 
     Keyword Args:
         renderer_kwargs (dict): kwargs to initialize the renderer.
@@ -81,7 +82,7 @@ class BaseEnv(gym.Env):
         control_freq: int = 20,
         renderer: str = "sapien",
         enable_shadow=False,
-        enable_rt=False,
+        shader_dir="ibl",
         **kwargs,
     ):
         # Create SAPIEN engine
@@ -92,7 +93,9 @@ class BaseEnv(gym.Env):
         renderer_kwargs = kwargs.get("renderer_kwargs", {})
         if self._renderer_type == "sapien":
             self._renderer = sapien.SapienRenderer(**renderer_kwargs)
-            if enable_rt:
+            if shader_dir == "ibl":
+                render_config = dict(camera_shader_dir="ibl", viewer_shader_dir="ibl")
+            elif shader_dir == "rt":
                 render_config = dict(
                     camera_shader_dir="rt",
                     viewer_shader_dir="rt",
@@ -101,7 +104,9 @@ class BaseEnv(gym.Env):
                     rt_use_denoiser=True,
                 )
             else:
-                render_config = dict(camera_shader_dir="ibl", viewer_shader_dir="ibl")
+                render_config = dict(
+                    camera_shader_dir=shader_dir, viewer_shader_dir=shader_dir
+                )
             render_config.update(kwargs.get("render_config", {}))
             for k, v in render_config.items():
                 setattr(sapien.render_config, k, v)
