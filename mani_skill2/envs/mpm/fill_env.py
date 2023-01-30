@@ -2,7 +2,7 @@ import os
 import numpy as np
 import sapien.core as sapien
 from mani_skill2.envs.mpm.base_env import MPMBaseEnv
-from mani_skill2 import ASSET_DIR
+from mani_skill2 import PACKAGE_ASSET_DIR
 from mani_skill2.agents.robots.panda import Panda
 from mani_skill2.agents.configs.panda.variants import PandaBucketConfig
 from mani_skill2.utils.registration import register_env
@@ -143,7 +143,7 @@ class FillEnv(MPMBaseEnv):
 
     def _load_actors(self):
         super()._load_actors()
-        beaker_file = os.path.join(ASSET_DIR, "deformable_manipulation", "beaker.glb")
+        beaker_file = os.path.join(PACKAGE_ASSET_DIR, "deformable_manipulation", "beaker.glb")
 
         b = self._scene.create_actor_builder()
         b.add_visual_from_file(beaker_file, scale=[0.04] * 3)

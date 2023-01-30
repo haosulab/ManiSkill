@@ -6,7 +6,7 @@ import copy
 import typing
 import ctypes
 
-from mani_skill2 import ASSET_DIR
+from mani_skill2 import PACKAGE_ASSET_DIR
 
 warp_path = os.path.join(os.path.dirname(mani_skill2.__file__), "..", "warp_maniskill")
 warp_path = os.path.normpath(warp_path)
@@ -121,7 +121,7 @@ class MPMBaseEnv(BaseEnv):
     def _load_actors(self):
         self._scene.add_ground(altitude=0.0, render=False)
         b = self._scene.create_actor_builder()
-        b.add_visual_from_file(str(ASSET_DIR / "maniskill2-scene-2.glb"))
+        b.add_visual_from_file(str(PACKAGE_ASSET_DIR / "maniskill2-scene-2.glb"))
         b.build_kinematic()
 
     def _get_coupling_actors(
