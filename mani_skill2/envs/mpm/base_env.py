@@ -78,6 +78,9 @@ class MPMBaseEnv(BaseEnv):
 
         wp.init()
 
+        if "shader_dir" in kwargs:
+            logger.warning("`shader_dir` is ignored for soft-body environments.")
+            kwargs.pop("shader_dir")
         shader_dir = os.path.join(os.path.dirname(__file__), "shader", "point")
 
         self.sim_crashed = False
