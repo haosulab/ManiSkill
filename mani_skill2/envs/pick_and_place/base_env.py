@@ -124,7 +124,7 @@ class StationaryManipulationEnv(BaseEnv):
         )
 
     def _register_render_cameras(self):
-        pose = look_at([1.0, 1.0, 0.8], [0.0, 0.0, 0.5])
+        pose = look_at([0.4, 0.4, 0.8], [0.0, 0.0, 0.4])
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
 
     def _setup_viewer(self):
