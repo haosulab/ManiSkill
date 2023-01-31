@@ -151,7 +151,7 @@ class PickClutterEnv(StationaryManipulationEnv):
         actor_idx = random_choice(visible_inds, self._episode_rng)
         self.obj = self.objs[actor_idx]
         obj_rep_pts = self.episode["actors"][actor_idx]["rep_pts"]
-        self.obj_start_pos = random_choice(obj_rep_pts, self._episode_rng)
+        self.obj_start_pos = np.float32(random_choice(obj_rep_pts, self._episode_rng))
         self.bbox_size = self.bbox_sizes[actor_idx]
 
         self.target_site.set_pose(Pose(self.obj_start_pos))
