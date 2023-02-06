@@ -41,17 +41,15 @@ class BaseEnv(gym.Env):
         sim_freq (int): simulation frequency (Hz)
         control_freq (int): control frequency (Hz)
         renderer (str): type of renderer. "sapien" or "client".
-        enable_shadow (bool): whether to enable shadow for lights. Defaults to False.
-        shader_dir (str): shader directory. Defaults to "ibl".
-            "ibl" and "rt" are built-in options with SAPIEN. Other options are user-defined.
-
-    Keyword Args:
         renderer_kwargs (dict): kwargs to initialize the renderer.
             Example kwargs for `SapienRenderer` (renderer_type=='sapien'):
             - offscreen_only: tell the renderer the user does not need to present onto a screen.
             - device (str): GPU device for renderer, e.g., 'cuda:x'.
+        shader_dir (str): shader directory. Defaults to "ibl".
+            "ibl" and "rt" are built-in options with SAPIEN. Other options are user-defined.
         render_config (dict): kwargs to configure the renderer. Only for `SapienRenderer`.
             See `sapien.RenderConfig` for more details.
+        enable_shadow (bool): whether to enable shadow for lights. Defaults to False.
         camera_cfgs (dict): configurations of cameras. See notes for more details.
         render_camera_cfgs (dict): configurations of rendering cameras. Similar usage as @camera_cfgs.
 
@@ -82,9 +80,13 @@ class BaseEnv(gym.Env):
         sim_freq: int = 500,
         control_freq: int = 20,
         renderer: str = "sapien",
-        enable_shadow=False,
+        renderer_kwargs: dict = None,
         shader_dir="ibl",
-        **kwargs,
+        render_config: dict = None,
+        enable_shadow=False,
+        camera_cfgs: dict = None,
+        render_camera_cfgs: dict = None,
+        use_stereo_depth=False,
     ):
         # Create SAPIEN engine
         self._engine = sapien.Engine()
@@ -93,13 +95,14 @@ class BaseEnv(gym.Env):
 
         # Create SAPIEN renderer
         self._renderer_type = renderer
-        renderer_kwargs = kwargs.get("renderer_kwargs", {})
+        if renderer_kwargs is None:
+            renderer_kwargs = {}
         if self._renderer_type == "sapien":
             self._renderer = sapien.SapienRenderer(**renderer_kwargs)
             if shader_dir == "ibl":
-                render_config = dict(camera_shader_dir="ibl", viewer_shader_dir="ibl")
+                _render_config = dict(camera_shader_dir="ibl", viewer_shader_dir="ibl")
             elif shader_dir == "rt":
-                render_config = dict(
+                _render_config = dict(
                     camera_shader_dir="rt",
                     viewer_shader_dir="rt",
                     rt_samples_per_pixel=32,
@@ -107,10 +110,12 @@ class BaseEnv(gym.Env):
                     rt_use_denoiser=True,
                 )
             else:
-                render_config = dict(
+                _render_config = dict(
                     camera_shader_dir=shader_dir, viewer_shader_dir=shader_dir
                 )
-            render_config.update(kwargs.get("render_config", {}))
+            if render_config is None:
+                render_config = {}
+            render_config.update(_render_config)
             for k, v in render_config.items():
                 setattr(sapien.render_config, k, v)
             self._renderer.set_log_level("warn")
@@ -155,14 +160,14 @@ class BaseEnv(gym.Env):
         self._configure_cameras()
         self._configure_render_cameras()
         # Override camera configurations
-        if "camera_cfgs" in kwargs:
-            update_camera_cfgs_from_dict(self._camera_cfgs, kwargs["camera_cfgs"])
-        if "render_camera_cfgs" in kwargs:
-            update_camera_cfgs_from_dict(
-                self._render_camera_cfgs, kwargs["render_camera_cfgs"]
-            )
+        if camera_cfgs is not None:
+            update_camera_cfgs_from_dict(self._camera_cfgs, camera_cfgs)
+        if render_camera_cfgs is not None:
+            update_camera_cfgs_from_dict(self._render_camera_cfgs, render_camera_cfgs)
+        
+        # CAUTION: stereo depth camera is only experimentally supported
         # Update cameras to depth cameras
-        if kwargs.get("use_stereo_depth", False):
+        if use_stereo_depth:
             for uid, cam_cfg in self._camera_cfgs.items():
                 self._camera_cfgs[uid] = DepthCameraConfig.fromCameraConfig(cam_cfg)
 
