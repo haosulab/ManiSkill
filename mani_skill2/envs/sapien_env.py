@@ -115,8 +115,8 @@ class BaseEnv(gym.Env):
                 )
             if render_config is None:
                 render_config = {}
-            render_config.update(_render_config)
-            for k, v in render_config.items():
+            _render_config.update(render_config)
+            for k, v in _render_config.items():
                 setattr(sapien.render_config, k, v)
             self._renderer.set_log_level("warn")
         elif self._renderer_type == "client":
