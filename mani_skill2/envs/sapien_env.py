@@ -426,13 +426,21 @@ class BaseEnv(gym.Env):
         if self.bg_name is None:
             pass
         else:
-            # TODO(jigu): add actual background
-            builder = self._scene.create_actor_builder()
-            path = ""
-            builder.add_visual_from_file(path)
-            self.visual_bg = builder.build_kinematic()
-            pose = sapien.Pose()
-            self.visual_bg.set_pose(pose)
+            from ..utils import background as bg
+            if not hasattr(bg, self.bg_name):
+                return
+
+            for l in self._scene.get_all_lights():
+                self._scene.remove_light(l)
+            getattr(bg, self.bg_name)(self._scene)
+
+            # # TODO(jigu): add actual background
+            # builder = self._scene.create_actor_builder()
+            # path = ""
+            # builder.add_visual_from_file(path)
+            # self.visual_bg = builder.build_kinematic()
+            # pose = sapien.Pose()
+            # self.visual_bg.set_pose(pose)
 
     # -------------------------------------------------------------------------- #
     # Reset
