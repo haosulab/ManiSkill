@@ -84,8 +84,6 @@ class PointCloudObservationWrapper(gym.ObservationWrapper):
         self.observation_space = deepcopy(env.observation_space)
         self.update_observation_space(self.observation_space)
         self._buffer = {}
-        for key, space in self.observation_space["pointcloud"].spaces.items():
-            self._buffer[key] = np.zeros(space.shape, dtype=space.dtype)
 
     @staticmethod
     def update_observation_space(space: spaces.Dict):
@@ -148,7 +146,9 @@ class PointCloudObservationWrapper(gym.ObservationWrapper):
 
         pointcloud_obs = merge_dicts(pointcloud_obs.values())
         for key, value in pointcloud_obs.items():
-            pointcloud_obs[key] = np.concatenate(value, out=self._buffer[key])
+            buffer = self._buffer.get(key, None)
+            pointcloud_obs[key] = np.concatenate(value, out=buffer)
+            self._buffer[key] = pointcloud_obs[key]
 
         observation["pointcloud"] = pointcloud_obs
         return observation

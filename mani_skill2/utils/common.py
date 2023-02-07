@@ -234,7 +234,7 @@ def flatten_dict_space_keys(space: spaces.Dict, prefix="") -> spaces.Dict:
     out = OrderedDict()
     for k, v in space.spaces.items():
         if isinstance(v, spaces.Dict):
-            out.update(flatten_dict_space_keys(v, prefix + k + "/"))
+            out.update(flatten_dict_space_keys(v, prefix + k + "/").spaces)
         else:
             out[prefix + k] = v
     return spaces.Dict(out)
