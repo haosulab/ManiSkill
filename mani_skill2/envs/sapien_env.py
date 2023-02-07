@@ -14,7 +14,7 @@ from mani_skill2.sensors.camera import (
     parse_camera_cfgs,
     update_camera_cfgs_from_dict,
 )
-from mani_skill2.sensors.depth_camera import DepthCamera, DepthCameraConfig
+from mani_skill2.sensors.depth_camera import StereoDepthCamera, StereoDepthCameraConfig
 from mani_skill2.utils.common import convert_observation_to_space, flatten_state_dict
 from mani_skill2.utils.sapien_utils import (
     get_actor_state,
@@ -86,7 +86,6 @@ class BaseEnv(gym.Env):
         enable_shadow: bool = False,
         camera_cfgs: dict = None,
         render_camera_cfgs: dict = None,
-        use_stereo_depth: bool = False,
         bg_name: str = None,
     ):
         # Create SAPIEN engine
@@ -165,12 +164,6 @@ class BaseEnv(gym.Env):
             update_camera_cfgs_from_dict(self._camera_cfgs, camera_cfgs)
         if render_camera_cfgs is not None:
             update_camera_cfgs_from_dict(self._render_camera_cfgs, render_camera_cfgs)
-
-        # CAUTION: stereo depth camera is only experimentally supported
-        # Update cameras to depth cameras
-        if use_stereo_depth:
-            for uid, cam_cfg in self._camera_cfgs.items():
-                self._camera_cfgs[uid] = DepthCameraConfig.fromCameraConfig(cam_cfg)
 
         # Lighting
         self.enable_shadow = enable_shadow
@@ -400,8 +393,8 @@ class BaseEnv(gym.Env):
                 articulation = self.agent.robot
             else:
                 articulation = None
-            if isinstance(camera_cfg, DepthCameraConfig):
-                cam_cls = DepthCamera
+            if isinstance(camera_cfg, StereoDepthCameraConfig):
+                cam_cls = StereoDepthCamera
             else:
                 cam_cls = Camera
             self._cameras[uid] = cam_cls(
