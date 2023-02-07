@@ -22,7 +22,7 @@ class PickCubeEnv(StationaryManipulationEnv):
         super().__init__(*args, **kwargs)
 
     def _load_actors(self):
-        self._add_ground()
+        self._add_ground(render=self.bg_name is None)
         self.obj = self._build_cube(self.cube_half_size)
         self.goal_site = self._build_sphere_site(self.goal_thresh)
 

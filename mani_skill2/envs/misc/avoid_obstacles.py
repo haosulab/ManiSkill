@@ -111,7 +111,7 @@ class AvoidObstaclesBaseEnv(BaseEnv):
         return actor
 
     def _load_actors(self):
-        self._add_ground()
+        self._add_ground(render=self.bg_name is None)
 
         # Add a wall
         if "wall" in self.episode_config:

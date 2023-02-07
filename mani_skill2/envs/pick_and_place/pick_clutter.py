@@ -60,7 +60,7 @@ class PickClutterEnv(StationaryManipulationEnv):
         super().__init__(**kwargs)
 
     def _load_actors(self):
-        self._add_ground()
+        self._add_ground(render=self.bg_name is None)
 
         self.objs: List[sapien.Actor] = []
         self.bbox_sizes = []

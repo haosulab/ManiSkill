@@ -67,7 +67,7 @@ class PickSingleEnv(StationaryManipulationEnv):
         pass
 
     def _load_actors(self):
-        self._add_ground()
+        self._add_ground(render=self.bg_name is None)
         self._load_model()
         self.obj.set_damping(0.1, 0.1)
         self.goal_site = self._build_sphere_site(self.goal_thresh)

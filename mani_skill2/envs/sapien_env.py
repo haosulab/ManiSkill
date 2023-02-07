@@ -6,7 +6,7 @@ import numpy as np
 import sapien.core as sapien
 from sapien.utils import Viewer
 
-from mani_skill2 import logger
+from mani_skill2 import ASSET_DIR, logger
 from mani_skill2.agents.base_agent import AgentConfig, BaseAgent
 from mani_skill2.sensors.camera import (
     Camera,
@@ -81,12 +81,13 @@ class BaseEnv(gym.Env):
         control_freq: int = 20,
         renderer: str = "sapien",
         renderer_kwargs: dict = None,
-        shader_dir="ibl",
+        shader_dir: str = "ibl",
         render_config: dict = None,
-        enable_shadow=False,
+        enable_shadow: bool = False,
         camera_cfgs: dict = None,
         render_camera_cfgs: dict = None,
-        use_stereo_depth=False,
+        use_stereo_depth: bool = False,
+        bg_name: str = None,
     ):
         # Create SAPIEN engine
         self._engine = sapien.Engine()
@@ -164,7 +165,7 @@ class BaseEnv(gym.Env):
             update_camera_cfgs_from_dict(self._camera_cfgs, camera_cfgs)
         if render_camera_cfgs is not None:
             update_camera_cfgs_from_dict(self._render_camera_cfgs, render_camera_cfgs)
-        
+
         # CAUTION: stereo depth camera is only experimentally supported
         # Update cameras to depth cameras
         if use_stereo_depth:
@@ -173,6 +174,9 @@ class BaseEnv(gym.Env):
 
         # Lighting
         self.enable_shadow = enable_shadow
+
+        # Visual background
+        self.bg_name = bg_name
 
         # NOTE(jigu): `seed` is deprecated in the latest gym.
         # Use a fixed seed to initialize to enhance determinism
@@ -356,6 +360,7 @@ class BaseEnv(gym.Env):
         self._load_articulations()
         self._setup_cameras()
         self._setup_lighting()
+        self._load_background()
 
         if self._viewer is not None:
             self._setup_viewer()
@@ -415,6 +420,7 @@ class BaseEnv(gym.Env):
                 )
 
     def _setup_lighting(self):
+        # TODO: Adjust lights according to background
         shadow = self.enable_shadow
         self._scene.set_ambient_light([0.3, 0.3, 0.3])
         # Only the first of directional lights can have shadow
@@ -422,6 +428,18 @@ class BaseEnv(gym.Env):
             [1, 1, -1], [1, 1, 1], shadow=shadow, scale=5, shadow_map_size=2048
         )
         self._scene.add_directional_light([0, 0, -1], [1, 1, 1])
+
+    def _load_background(self):
+        if self.bg_name is None:
+            pass
+        else:
+            # TODO(jigu): add actual background
+            builder = self._scene.create_actor_builder()
+            path = ""
+            builder.add_visual_from_file(path)
+            self.visual_bg = builder.build_kinematic()
+            pose = sapien.Pose()
+            self.visual_bg.set_pose(pose)
 
     # -------------------------------------------------------------------------- #
     # Reset

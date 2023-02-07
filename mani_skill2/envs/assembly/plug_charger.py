@@ -95,7 +95,7 @@ class PlugChargerEnv(StationaryManipulationEnv):
         return builder.build_static(name="receptacle")
 
     def _load_actors(self):
-        self._add_ground()
+        self._add_ground(render=self.bg_name is None)
         self.charger = self._build_charger(
             self._peg_size,
             self._base_size,

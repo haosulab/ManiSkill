@@ -43,7 +43,7 @@ class TurnFaucetBaseEnv(BaseEnv):
         super().__init__(*args, **kwargs)
 
     def _load_actors(self):
-        self._add_ground()
+        self._add_ground(render=self.bg_name is None)
 
     def _configure_agent(self):
         agent_cls = self.SUPPORTED_ROBOTS[self.robot_uid]

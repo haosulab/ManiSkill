@@ -110,17 +110,18 @@ class MS1BaseEnv(BaseEnv):
         cg[2] = cg[2] | 1 << 30
         cs.set_collision_groups(*cg)
 
-        # Create a visual ground box
-        rend_mtl = self._renderer.create_material()
-        rend_mtl.base_color = [0.06, 0.08, 0.12, 1]
-        rend_mtl.metallic = 0.0
-        rend_mtl.roughness = 0.9
-        rend_mtl.specular = 0.8
-        builder = self._scene.create_actor_builder()
-        builder.add_box_visual(
-            pose=Pose([0, 0, -1]), half_size=[50, 50, 1], material=rend_mtl
-        )
-        visual_ground = builder.build_static(name="visual_ground")
+        if self.bg_name is None:
+            # Create a visual ground box
+            rend_mtl = self._renderer.create_material()
+            rend_mtl.base_color = [0.06, 0.08, 0.12, 1]
+            rend_mtl.metallic = 0.0
+            rend_mtl.roughness = 0.9
+            rend_mtl.specular = 0.8
+            builder = self._scene.create_actor_builder()
+            builder.add_box_visual(
+                pose=Pose([0, 0, -1]), half_size=[50, 50, 1], material=rend_mtl
+            )
+            visual_ground = builder.build_static(name="visual_ground")
 
     def _load_partnet_mobility(
         self, fix_root_link=True, scale=1.0, urdf_config: dict = None
