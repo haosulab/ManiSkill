@@ -445,7 +445,7 @@ class BaseEnv(gym.Env):
         if not path.exists():
             raise FileNotFoundError(
                 f"The visual background asset is not found: {path}."
-                "Please download the background asset by `python -m mani_skill2.utils.download_assets {}`".format(
+                "Please download the background asset by `python -m mani_skill2.utils.download_asset {}`".format(
                     self.bg_name
                 )
             )
