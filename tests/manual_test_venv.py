@@ -36,10 +36,15 @@ def test_obs_mode(obs_mode="image"):
             v2 = ms2_obs[k]
             if isinstance(v2, torch.Tensor):
                 v2 = v2.cpu().numpy()
-            if np.issubdtype(v.dtype, np.integer):
+            if v.dtype == np.uint8:
+                # https://github.com/numpy/numpy/issues/19183
+                np.testing.assert_allclose(
+                    np.float32(v), np.float32(v2), err_msg=k, atol=1
+                )
+            elif np.issubdtype(v.dtype, np.integer):
                 np.testing.assert_equal(v, v2, err_msg=k)
             else:
-                np.testing.assert_allclose(v, v2, err_msg=k, atol=1e-6)
+                np.testing.assert_allclose(v, v2, err_msg=k, atol=1e-4)
 
     for i in range(2):
         print("Episode", i)

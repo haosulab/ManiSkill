@@ -6,7 +6,7 @@ import numpy as np
 import sapien.core as sapien
 from sapien.utils import Viewer
 
-from mani_skill2 import logger
+from mani_skill2 import ASSET_DIR, logger
 from mani_skill2.agents.base_agent import AgentConfig, BaseAgent
 from mani_skill2.sensors.camera import (
     Camera,
@@ -14,7 +14,7 @@ from mani_skill2.sensors.camera import (
     parse_camera_cfgs,
     update_camera_cfgs_from_dict,
 )
-from mani_skill2.sensors.depth_camera import DepthCamera, DepthCameraConfig
+from mani_skill2.sensors.depth_camera import StereoDepthCamera, StereoDepthCameraConfig
 from mani_skill2.utils.common import convert_observation_to_space, flatten_state_dict
 from mani_skill2.utils.sapien_utils import (
     get_actor_state,
@@ -41,17 +41,15 @@ class BaseEnv(gym.Env):
         sim_freq (int): simulation frequency (Hz)
         control_freq (int): control frequency (Hz)
         renderer (str): type of renderer. "sapien" or "client".
-        enable_shadow (bool): whether to enable shadow for lights. Defaults to False.
-        shader_dir (str): shader directory. Defaults to "ibl".
-            "ibl" and "rt" are built-in options with SAPIEN. Other options are user-defined.
-
-    Keyword Args:
         renderer_kwargs (dict): kwargs to initialize the renderer.
             Example kwargs for `SapienRenderer` (renderer_type=='sapien'):
             - offscreen_only: tell the renderer the user does not need to present onto a screen.
             - device (str): GPU device for renderer, e.g., 'cuda:x'.
+        shader_dir (str): shader directory. Defaults to "ibl".
+            "ibl" and "rt" are built-in options with SAPIEN. Other options are user-defined.
         render_config (dict): kwargs to configure the renderer. Only for `SapienRenderer`.
             See `sapien.RenderConfig` for more details.
+        enable_shadow (bool): whether to enable shadow for lights. Defaults to False.
         camera_cfgs (dict): configurations of cameras. See notes for more details.
         render_camera_cfgs (dict): configurations of rendering cameras. Similar usage as @camera_cfgs.
 
@@ -82,9 +80,13 @@ class BaseEnv(gym.Env):
         sim_freq: int = 500,
         control_freq: int = 20,
         renderer: str = "sapien",
-        enable_shadow=False,
-        shader_dir="ibl",
-        **kwargs,
+        renderer_kwargs: dict = None,
+        shader_dir: str = "ibl",
+        render_config: dict = None,
+        enable_shadow: bool = False,
+        camera_cfgs: dict = None,
+        render_camera_cfgs: dict = None,
+        bg_name: str = None,
     ):
         # Create SAPIEN engine
         self._engine = sapien.Engine()
@@ -93,13 +95,14 @@ class BaseEnv(gym.Env):
 
         # Create SAPIEN renderer
         self._renderer_type = renderer
-        renderer_kwargs = kwargs.get("renderer_kwargs", {})
+        if renderer_kwargs is None:
+            renderer_kwargs = {}
         if self._renderer_type == "sapien":
             self._renderer = sapien.SapienRenderer(**renderer_kwargs)
             if shader_dir == "ibl":
-                render_config = dict(camera_shader_dir="ibl", viewer_shader_dir="ibl")
+                _render_config = dict(camera_shader_dir="ibl", viewer_shader_dir="ibl")
             elif shader_dir == "rt":
-                render_config = dict(
+                _render_config = dict(
                     camera_shader_dir="rt",
                     viewer_shader_dir="rt",
                     rt_samples_per_pixel=32,
@@ -107,11 +110,13 @@ class BaseEnv(gym.Env):
                     rt_use_denoiser=True,
                 )
             else:
-                render_config = dict(
+                _render_config = dict(
                     camera_shader_dir=shader_dir, viewer_shader_dir=shader_dir
                 )
-            render_config.update(kwargs.get("render_config", {}))
-            for k, v in render_config.items():
+            if render_config is None:
+                render_config = {}
+            _render_config.update(render_config)
+            for k, v in _render_config.items():
                 setattr(sapien.render_config, k, v)
             self._renderer.set_log_level("warn")
         elif self._renderer_type == "client":
@@ -155,19 +160,16 @@ class BaseEnv(gym.Env):
         self._configure_cameras()
         self._configure_render_cameras()
         # Override camera configurations
-        if "camera_cfgs" in kwargs:
-            update_camera_cfgs_from_dict(self._camera_cfgs, kwargs["camera_cfgs"])
-        if "render_camera_cfgs" in kwargs:
-            update_camera_cfgs_from_dict(
-                self._render_camera_cfgs, kwargs["render_camera_cfgs"]
-            )
-        # Update cameras to depth cameras
-        if kwargs.get("use_stereo_depth", False):
-            for uid, cam_cfg in self._camera_cfgs.items():
-                self._camera_cfgs[uid] = DepthCameraConfig.fromCameraConfig(cam_cfg)
+        if camera_cfgs is not None:
+            update_camera_cfgs_from_dict(self._camera_cfgs, camera_cfgs)
+        if render_camera_cfgs is not None:
+            update_camera_cfgs_from_dict(self._render_camera_cfgs, render_camera_cfgs)
 
         # Lighting
         self.enable_shadow = enable_shadow
+
+        # Visual background
+        self.bg_name = bg_name
 
         # NOTE(jigu): `seed` is deprecated in the latest gym.
         # Use a fixed seed to initialize to enhance determinism
@@ -359,6 +361,8 @@ class BaseEnv(gym.Env):
         self._actors = self.get_actors()
         self._articulations = self.get_articulations()
 
+        self._load_background()
+
     def _add_ground(self, altitude=0.0, render=True):
         if render:
             rend_mtl = self._renderer.create_material()
@@ -390,8 +394,8 @@ class BaseEnv(gym.Env):
                 articulation = self.agent.robot
             else:
                 articulation = None
-            if isinstance(camera_cfg, DepthCameraConfig):
-                cam_cls = DepthCamera
+            if isinstance(camera_cfg, StereoDepthCameraConfig):
+                cam_cls = StereoDepthCamera
             else:
                 cam_cls = Camera
             self._cameras[uid] = cam_cls(
@@ -410,6 +414,9 @@ class BaseEnv(gym.Env):
                 )
 
     def _setup_lighting(self):
+        if self.bg_name is not None:
+            return
+
         shadow = self.enable_shadow
         self._scene.set_ambient_light([0.3, 0.3, 0.3])
         # Only the first of directional lights can have shadow
@@ -417,6 +424,36 @@ class BaseEnv(gym.Env):
             [1, 1, -1], [1, 1, 1], shadow=shadow, scale=5, shadow_map_size=2048
         )
         self._scene.add_directional_light([0, 0, -1], [1, 1, 1])
+
+    def _load_background(self):
+        if self.bg_name is None:
+            return
+
+        # Remove all existing lights
+        for l in self._scene.get_all_lights():
+            self._scene.remove_light(l)
+
+        if self.bg_name == "minimal_bedroom":
+            # "Minimalistic Modern Bedroom" (https://skfb.ly/oCnNx) by dylanheyes is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
+            path = ASSET_DIR / "background/minimalistic_modern_bedroom.glb"
+            pose = sapien.Pose([0, 0, 1.7], [0.5, 0.5, -0.5, -0.5])
+            self._scene.set_ambient_light([0.1, 0.1, 0.1])
+            self._scene.add_point_light([-0.349, 0, 1.4], [1.0, 0.9, 0.9])
+        else:
+            raise NotImplementedError("Unsupported background: {}".format(self.bg_name))
+
+        if not path.exists():
+            raise FileNotFoundError(
+                f"The visual background asset is not found: {path}."
+                "Please download the background asset by `python -m mani_skill2.utils.download_assets {}`".format(
+                    self.bg_name
+                )
+            )
+
+        builder = self._scene.create_actor_builder()
+        builder.add_visual_from_file(str(path))
+        self.visual_bg = builder.build_kinematic()
+        self.visual_bg.set_pose(pose)
 
     # -------------------------------------------------------------------------- #
     # Reset

@@ -11,40 +11,29 @@ from mani_skill2.utils.sapien_utils import get_entity_by_name
 from .camera import Camera, CameraConfig
 
 
-class DepthCameraConfig(CameraConfig):
-    def __init__(
-        self,
-        uid: str,
-        p: List[float],
-        q: List[float],
-        actor_uid: str = None,
-        hide_link: bool = False,
-        texture_names: Sequence[str] = ("Color", "Position"),
-    ):
-        self.uid = uid
-        self.p = p
-        self.q = q
+class StereoDepthCameraConfig(CameraConfig):
+    def __init__(self, *args, min_depth: float = 0.05, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.min_depth = min_depth
 
-        self.actor_uid = actor_uid
-        self.hide_link = hide_link
-        self.texture_names = tuple(texture_names)
+    @property
+    def rgb_resolution(self):
+        return (self.width, self.height)
+
+    @property
+    def rgb_intrinsic(self):
+        fy = (self.height / 2) / np.tan(self.fov / 2)
+        return np.array([[fy, 0, self.width / 2], [0, fy, self.height / 2], [0, 0, 1]])
 
     @classmethod
     def fromCameraConfig(cls, cfg: CameraConfig):
-        return cls(
-            cfg.uid,
-            cfg.p,
-            cfg.q,
-            actor_uid=cfg.actor_uid,
-            hide_link=cfg.hide_link,
-            texture_names=cfg.texture_names,
-        )
+        return cls(**cfg.__dict__)
 
 
-class DepthCamera(Camera):
+class StereoDepthCamera(Camera):
     def __init__(
         self,
-        camera_cfg: DepthCameraConfig,
+        camera_cfg: StereoDepthCameraConfig,
         scene: sapien.Scene,
         renderer_type: str,
         articulation: sapien.Articulation = None,
@@ -66,6 +55,9 @@ class DepthCamera(Camera):
 
         # Add camera
         sensor_config = StereoDepthSensorConfig()
+        sensor_config.rgb_resolution = camera_cfg.rgb_resolution
+        sensor_config.rgb_intrinsic = camera_cfg.rgb_intrinsic
+        sensor_config.min_depth = camera_cfg.min_depth
         if self.actor is None:
             self.camera = StereoDepthSensor(
                 camera_cfg.uid, scene, sensor_config, mount=self.actor

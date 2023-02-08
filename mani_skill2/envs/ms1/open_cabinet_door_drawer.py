@@ -411,7 +411,7 @@ class OpenCabinetEnv(MS1BaseEnv):
 @register_env("OpenCabinetDoor-v1", max_episode_steps=200)
 class OpenCabinetDoorEnv(OpenCabinetEnv):
     DEFAULT_MODEL_JSON = (
-        "{ASSET_DIR}/partnet_mobility/meta/info_cabinet_door_train.json"
+        "{PACKAGE_ASSET_DIR}/partnet_mobility/meta/info_cabinet_door_train.json"
     )
 
     def _set_cabinet_handles(self):

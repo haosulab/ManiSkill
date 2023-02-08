@@ -111,6 +111,20 @@ def initialize_extra_sources():
         checksum="ddda102a20eb41e28a0a501702e240e5d7f4084221a44f580e729f08b7c12d1a",
     )
 
+    # ---------------------------------------------------------------------------- #
+    # Visual backgrounds
+    # ---------------------------------------------------------------------------- #
+    DATA_SOURCES["minimalistic_modern_bedroom"] = dict(
+        url="https://storage1.ucsd.edu/datasets/ManiSkill-background/minimalistic_modern_bedroom.glb",
+        output_dir=ASSET_DIR / "background",
+        checksum="9d9ea14c8cdfab1ebafe3e8ff5a071b77b361c1abd24e9c59b0f08e1d1a3421a",
+    )
+    # Alias
+    DATA_GROUPS["minimal_bedroom"] = ["minimalistic_modern_bedroom"]
+
+    # All backgrounds
+    DATA_GROUPS["backgrounds"] = ["minimalistic_modern_bedroom"]
+
 
 def prompt_yes_no(message):
     r"""Prints a message and prompts the user for "y" or "n" returning True or False."""
