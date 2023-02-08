@@ -8,7 +8,6 @@ DATASET_SOURCES = {}
 # Rigid body envs
 DATASET_SOURCES["LiftCube-v0"] = dict(
     env_type="rigid_body",
-    s1_url="",
     gd_url="https://drive.google.com/drive/folders/1TZ2rWOWHELT66JA8S-Z3aWKC7pM-Kw8l?usp=share_link",
 )
 DATASET_SOURCES["PickClutterYCB-v0"] = dict(
