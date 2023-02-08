@@ -108,7 +108,6 @@ class MPMBaseEnv(BaseEnv):
         self._load_articulations()
         self._setup_cameras()
         self._setup_lighting()
-        self._load_background()
 
         self._setup_mpm()
         self._setup_render_particles()
@@ -119,6 +118,8 @@ class MPMBaseEnv(BaseEnv):
         # Cache actors and articulations
         self._actors = self.get_actors()
         self._articulations = self.get_articulations()
+
+        self._load_background()
 
     def _load_actors(self):
         self._scene.add_ground(altitude=0.0, render=False)

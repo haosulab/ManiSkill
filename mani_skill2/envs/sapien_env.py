@@ -353,7 +353,6 @@ class BaseEnv(gym.Env):
         self._load_articulations()
         self._setup_cameras()
         self._setup_lighting()
-        self._load_background()
 
         if self._viewer is not None:
             self._setup_viewer()
@@ -361,6 +360,8 @@ class BaseEnv(gym.Env):
         # Cache actors and articulations
         self._actors = self.get_actors()
         self._articulations = self.get_articulations()
+
+        self._load_background()
 
     def _add_ground(self, altitude=0.0, render=True):
         if render:
@@ -413,7 +414,9 @@ class BaseEnv(gym.Env):
                 )
 
     def _setup_lighting(self):
-        # TODO: Adjust lights according to background
+        if self.bg_name is not None:
+            return
+
         shadow = self.enable_shadow
         self._scene.set_ambient_light([0.3, 0.3, 0.3])
         # Only the first of directional lights can have shadow
@@ -424,23 +427,33 @@ class BaseEnv(gym.Env):
 
     def _load_background(self):
         if self.bg_name is None:
-            pass
+            return
+
+        # Remove all existing lights
+        for l in self._scene.get_all_lights():
+            self._scene.remove_light(l)
+
+        if self.bg_name == "minimal_bedroom":
+            # "Minimalistic Modern Bedroom" (https://skfb.ly/oCnNx) by dylanheyes is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
+            path = ASSET_DIR / "background/minimalistic_modern_bedroom.glb"
+            pose = sapien.Pose([0, 0, 1.7], [0.5, 0.5, -0.5, -0.5])
+            self._scene.set_ambient_light([0.1, 0.1, 0.1])
+            self._scene.add_point_light([-0.349, 0, 1.4], [1.0, 0.9, 0.9])
         else:
-            from ..utils import background as bg
-            if not hasattr(bg, self.bg_name):
-                return
+            raise NotImplementedError("Unsupported background: {}".format(self.bg_name))
 
-            for l in self._scene.get_all_lights():
-                self._scene.remove_light(l)
-            getattr(bg, self.bg_name)(self._scene)
+        if not path.exists():
+            raise FileNotFoundError(
+                f"The visual background asset is not found: {path}."
+                "Please download the background asset by `python -m mani_skill2.utils.download_assets {}`".format(
+                    self.bg_name
+                )
+            )
 
-            # # TODO(jigu): add actual background
-            # builder = self._scene.create_actor_builder()
-            # path = ""
-            # builder.add_visual_from_file(path)
-            # self.visual_bg = builder.build_kinematic()
-            # pose = sapien.Pose()
-            # self.visual_bg.set_pose(pose)
+        builder = self._scene.create_actor_builder()
+        builder.add_visual_from_file(str(path))
+        self.visual_bg = builder.build_kinematic()
+        self.visual_bg.set_pose(pose)
 
     # -------------------------------------------------------------------------- #
     # Reset
