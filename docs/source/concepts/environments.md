@@ -1,5 +1,7 @@
 # Environments
 
+[asset-badge]: https://img.shields.io/badge/download%20asset-yes-blue.svg
+
 ## Rigid-body
 
 ### Pick-and-Place
@@ -34,6 +36,8 @@ alt: StackCube-v0
 ```
 
 #### PickSingleYCB-v0
+
+![download-asset][asset-badge]
 
 - Objective: Pick up a YCB object and move it to a goal position.
 - Success metric: The object is within 2.5 cm of the goal position, and the robot is static.
@@ -72,6 +76,8 @@ Model ids can be found in `mani_skill2/assets/mani_skill2_ycb/info_pick_v0.json`
 
 #### PickSingleEGAD-v0
 
+![download-asset][asset-badge]
+
 - Objective: Pick up an EGAD object and move it to a goal position.
 - Note: The color for the EGAD object is randomized.
 - Success metric: The object is within 2.5 cm of the goal position, and the robot is static.
@@ -91,6 +97,8 @@ alt: PickSingleEGAD-v0
 You can use a similar way as `PickSingleYCB` to select models. Model ids can be found in `mani_skill2/assets/mani_skill2_egad/info_pick_train_v0.json`.
 
 #### PickClutterYCB-v0
+
+![download-asset][asset-badge]
 
 - Objective: Pick up an object from a clutter of 4-8 YCB objects
 - Success metric: The object is within 2.5 cm of the goal position, and the robot is static.
@@ -139,6 +147,8 @@ alt: PlugCharger-v0
 
 #### AssemblingKits
 
+![download-asset][asset-badge]
+
 - Objective: Insert an object into the corresponding slot on a board.
 - Success metric: An object must fully fit into its slot, which must simultaneously satisfy 3 criteria: (1) height of the object center is within 3mm of the height of the board; (2) rotation error is within 4 degrees; (3) position error is within 2cm.
 - Demonstration: a total of 1720 trajectories for 337 kit configurations and 20 objects.
@@ -157,6 +167,8 @@ alt: AssemblingKits-v0
 
 #### PandaAvoidObstacles-v0
 
+![download-asset][asset-badge]
+
 - Objective: Navigate the (Panda) robot arm through a region of dense obstacles and move the end-effector to a goal pose.
 - Note: The shape and color of dense obstacles are randomized.
 - Success metric: The end-effector pose is within 2.5 cm and 15 degrees of the goal pose.
@@ -172,6 +184,8 @@ alt: PandaAvoidObstacles-v0
 ```
 
 #### TurnFaucet-v0
+
+![download-asset][asset-badge]
 
 - Objective: Turn on a faucet by rotating its handle.
 - Success metric: The faucet handle has been turned past a target angular distance.
@@ -212,6 +226,8 @@ Model ids can be found in `mani_skill2/assets/partnet_mobility/meta/info_faucet_
 
 #### OpenCabinetDoor-v1
 
+![download-asset][asset-badge]
+
 - Objective: A single-arm mobile robot needs to open a designated target door on a cabinet.
 - Note: The friction and damping parameters for the door joints are randomized.
 - Success metric: The target door has been opened to at least 90\% of the maximum range, and the target door is static.
@@ -229,6 +245,8 @@ alt: OpenCabinetDoor-v1
 ```
 
 #### OpenCabinetDrawer-v1
+
+![download-asset][asset-badge]
 
 - Objective: A single-arm mobile robot needs to open a designated target drawer on a cabinet.
 - Note: The friction and damping parameters for the drawer joints are randomized.
@@ -248,6 +266,8 @@ alt: OpenCabinetDrawer-v1
 
 #### PushChair-v1
 
+![download-asset][asset-badge]
+
 - Objective: A dual-arm mobile robot needs to push a swivel chair to a target location on the ground (indicated by a red hemisphere) and prevent it from falling over.
 - Note: The friction and damping parameters for the chair joints are randomized.
 - Success metric: The chair is close enough (within 15 cm) to the target location, is static, and does not fall over.
@@ -264,6 +284,8 @@ alt: PushChair-v1
 ```
 
 #### MoveBucket-v1
+
+![download-asset][asset-badge]
 
 - Objective: A dual-arm mobile robot needs to move a bucket with a ball inside and lift it onto a platform.
 - Success metric: The bucket is placed on or above the platform at the upright position, and the bucket is static, and the ball remains in the bucket.
@@ -343,6 +365,8 @@ alt: Hang-v0
 
 ### Pinch-v0
 
+![download-asset][asset-badge]
+
 - Objective: Deform plasticine into a target shape.
 - Success metric: The Chamfer distance between the current plasticine and the target shape is less than $0.3t$, where $t$ is the Chamfer distance between the initial shape and target shape.
 - Goal specification: RGBD / point cloud observations of the target plasticine from 4 different views.
@@ -357,6 +381,8 @@ alt: Pinch-v0
 ```
 
 ### Write-v0
+
+![download-asset][asset-badge]
 
 - Objective: Write a given character on clay. The target character is randomly sampled from an alphabet of over 50 characters.
 - Success metric: The IoU (Intersection over Union) between the current pattern and the target character is larger than 0.8.
