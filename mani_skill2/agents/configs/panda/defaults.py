@@ -1,12 +1,12 @@
 from copy import deepcopy
 
-from mani_skill2.agents.camera import MountedCameraConfig
 from mani_skill2.agents.controllers import *
+from mani_skill2.sensors.camera import CameraConfig
 
 
 class PandaDefaultConfig:
     def __init__(self) -> None:
-        self.urdf_path = "{description}/panda_v2.urdf"
+        self.urdf_path = "{PACKAGE_ASSET_DIR}/descriptions/panda_v2.urdf"
         self.urdf_config = dict(
             _materials=dict(
                 gripper=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)
@@ -121,8 +121,8 @@ class PandaDefaultConfig:
         )
         arm_pd_joint_delta_pos_vel = PDJointPosVelControllerConfig(
             self.arm_joint_names,
-            -0.05,
-            0.05,
+            -0.1,
+            0.1,
             self.arm_stiffness,
             self.arm_damping,
             self.arm_force_limit,
@@ -180,42 +180,34 @@ class PandaDefaultConfig:
 
     @property
     def cameras(self):
-        return dict(
-            hand_camera=MountedCameraConfig(
-                mount_link="panda_hand",
-                # mount_p=[0.1, 0.0, 0.0],
-                # mount_q=[0.0, 0.60876137, 0.0, 0.7933534],
-                mount_p=[0.0464982, -0.0200011, 0.0360011],
-                mount_q=[0, 0.70710678, 0, 0.70710678],
-                hide_mount_link=False,
-                width=128,
-                height=128,
-                near=0.01,
-                far=10,
-                fx=64,
-                fy=64,
-            )
+        return CameraConfig(
+            uid="hand_camera",
+            p=[0.0464982, -0.0200011, 0.0360011],
+            q=[0, 0.70710678, 0, 0.70710678],
+            width=128,
+            height=128,
+            fov=1.57,
+            near=0.01,
+            far=10,
+            actor_uid="panda_hand",
         )
 
 
 class PandaRealSensed435Config(PandaDefaultConfig):
     def __init__(self) -> None:
         super().__init__()
-        self.urdf_path = "{description}/panda_v3.urdf"
+        self.urdf_path = "{PACKAGE_ASSET_DIR}/descriptions/panda_v3.urdf"
 
     @property
     def cameras(self):
-        return dict(
-            hand_camera=MountedCameraConfig(
-                mount_link="camera_link",
-                mount_p=[0, 0, 0],
-                mount_q=[1, 0, 0, 0],
-                hide_mount_link=False,
-                width=128,
-                height=128,
-                near=0.01,
-                far=10,
-                fx=64,
-                fy=64,
-            )
+        return CameraConfig(
+            uid="hand_camera",
+            p=[0, 0, 0],
+            q=[1, 0, 0, 0],
+            width=128,
+            height=128,
+            fov=1.57,
+            near=0.01,
+            far=10,
+            actor_uid="camera_link",
         )

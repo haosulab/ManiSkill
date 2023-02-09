@@ -6,10 +6,10 @@ import numpy as np
 import sapien.core as sapien
 from sapien.core import Pose
 
-from mani_skill2 import ASSET_DIR
+from mani_skill2 import format_path
 from mani_skill2.utils.common import random_choice
 from mani_skill2.utils.io_utils import load_json
-from mani_skill2.utils.registration import register_gym_env
+from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import set_actor_visibility, vectorize_pose, look_at
 
 from .base_env import StationaryManipulationEnv
@@ -33,24 +33,24 @@ class PickClutterEnv(StationaryManipulationEnv):
         # Load episode configurations
         if episode_json is None:
             episode_json = self.DEFAULT_EPISODE_JSON
-        episode_json = episode_json.format(ASSET_DIR=ASSET_DIR)
+        episode_json = format_path(episode_json)
         if not Path(episode_json).exists():
             raise FileNotFoundError(
                 f"Episode json ({episode_json}) is not found."
                 "To download default json:"
-                "`python -m mani_skill2.utils.download --uid pick_clutter`."
+                "`python -m mani_skill2.utils.download_asset pick_clutter_ycb`."
             )
         self.episodes: List[Dict] = load_json(episode_json)
 
         # Root directory of object models
         if asset_root is None:
             asset_root = self.DEFAULT_ASSET_ROOT
-        self._asset_root = Path(asset_root.format(ASSET_DIR=ASSET_DIR))
+        self.asset_root = Path(format_path(asset_root))
 
         # Information of object models
         if model_json is None:
             model_json = self.DEFAULT_MODEL_JSON
-        model_json = self._asset_root / model_json
+        model_json = self.asset_root / format_path(model_json)
         self.model_db: Dict[str, Dict] = load_json(model_json)
 
         self.episode_idx = -1
@@ -60,7 +60,7 @@ class PickClutterEnv(StationaryManipulationEnv):
         super().__init__(**kwargs)
 
     def _load_actors(self):
-        self._add_ground()
+        self._add_ground(render=self.bg_name is None)
 
         self.objs: List[sapien.Actor] = []
         self.bbox_sizes = []
@@ -118,7 +118,7 @@ class PickClutterEnv(StationaryManipulationEnv):
             self._scene.step()
 
     def _initialize_agent(self):
-        if self.robot_uuid == "panda":
+        if self.robot_uid == "panda":
             # fmt: off
             qpos = np.array(
                 [0.0, 0, 0, -np.pi * 2 / 3, 0, np.pi * 2 / 3, np.pi / 4, 0.04, 0.04]
@@ -130,7 +130,7 @@ class PickClutterEnv(StationaryManipulationEnv):
             self.agent.reset(qpos)
             self.agent.robot.set_pose(Pose([-0.544, 0, 0]))
         else:
-            raise NotImplementedError(self.robot_uuid)
+            raise NotImplementedError(self.robot_uid)
 
     @property
     def obj_pose(self):
@@ -221,9 +221,10 @@ class PickClutterEnv(StationaryManipulationEnv):
 
         return reward
 
-    def _setup_cameras(self):
-        super()._setup_cameras()
-        self.render_camera.set_local_pose(look_at([0.3, 0, 1.0], [0.0, 0.0, 0.5]))
+    def _register_render_cameras(self):
+        cam_cfg = super()._register_render_cameras()
+        cam_cfg.pose = look_at([0.3, 0, 1.0], [0.0, 0.0, 0.5])
+        return cam_cfg
 
     def render(self, mode="human"):
         if mode in ["human", "rgb_array"]:
@@ -246,7 +247,7 @@ class PickClutterEnv(StationaryManipulationEnv):
         super().set_state(state[:-3])
 
 
-@register_gym_env("PickClutterYCB-v0", max_episode_steps=200)
+@register_env("PickClutterYCB-v0", max_episode_steps=200)
 class PickClutterYCBEnv(PickClutterEnv):
     DEFAULT_EPISODE_JSON = "{ASSET_DIR}/pick_clutter/ycb_train_5k.json.gz"
     DEFAULT_ASSET_ROOT = PickSingleYCBEnv.DEFAULT_ASSET_ROOT
@@ -259,7 +260,7 @@ class PickClutterYCBEnv(PickClutterEnv):
             self._scene,
             scale=model_scale,
             density=density,
-            root_dir=self._asset_root,
+            root_dir=self.asset_root,
         )
         obj.name = model_id
         obj.set_damping(0.1, 0.1)

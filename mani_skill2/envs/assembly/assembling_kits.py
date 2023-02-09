@@ -5,32 +5,29 @@ import numpy as np
 import sapien.core as sapien
 from transforms3d.euler import euler2quat, quat2euler
 
-from mani_skill2 import ASSET_DIR
+from mani_skill2 import format_path
 from mani_skill2.utils.io_utils import load_json
-from mani_skill2.utils.registration import register_gym_env
+from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import look_at, vectorize_pose
 
 from .base_env import StationaryManipulationEnv
 
 
-@register_gym_env("AssemblingKits-v0", max_episode_steps=200)
+@register_env("AssemblingKits-v0", max_episode_steps=200)
 class AssemblingKitsEnv(StationaryManipulationEnv):
-    def __init__(self, asset_root=None, **kwargs):
-        if asset_root is not None:
-            self._asset_root = Path(asset_root.format(ASSET_DIR=ASSET_DIR))
-        else:
-            self._asset_root = ASSET_DIR / "assembling_kits"
+    def __init__(self, asset_root="{ASSET_DIR}/assembling_kits", **kwargs):
+        self.asset_root = Path(format_path(asset_root))
 
-        self._kit_dir = self._asset_root / "kits"
-        self._models_dir = self._asset_root / "models"
+        self._kit_dir = self.asset_root / "kits"
+        self._models_dir = self.asset_root / "models"
         if not (self._kit_dir.exists() and self._models_dir.exists()):
             raise FileNotFoundError(
                 "The objects/kits are not found."
                 "Please download (ManiSkill2) AssemblingKits assets:"
-                "`python -m mani_skill2.utils.download --uid assembling_kits`."
+                "`python -m mani_skill2.utils.download_asset assembling_kits`."
             )
 
-        self._episode_json = load_json(self._asset_root / "episodes.json")
+        self._episode_json = load_json(self.asset_root / "episodes.json")
         self._episodes = self._episode_json["episodes"]
         self.episode_idx = None
 
@@ -75,9 +72,6 @@ class AssemblingKitsEnv(StationaryManipulationEnv):
         kit_path = str(self._kit_dir / f"{self.kit_id}.obj")
         builder.add_nonconvex_collision_from_file(kit_path)
 
-        # Add a dummy camera in order to decide shader
-        camera = self._scene.add_camera("dummy_camera", 1, 1, 1, 0.01, 10)
-        self._scene.remove_camera(camera)
         material = self._renderer.create_material()
         material.set_base_color([0.27807487, 0.20855615, 0.16934046, 1.0])
         material.metallic = 0.0
@@ -96,9 +90,6 @@ class AssemblingKitsEnv(StationaryManipulationEnv):
             str(collision_path), scale=self.object_scale
         )
 
-        # Add a dummy camera in order to decide shader
-        camera = self._scene.add_camera("dummy_camera", 1, 1, 1, 0.01, 10)
-        self._scene.remove_camera(camera)
         material = self._renderer.create_material()
         material.set_base_color(self.color[self._episode_rng.choice(len(self.color))])
         material.metallic = 0.0
@@ -111,7 +102,7 @@ class AssemblingKitsEnv(StationaryManipulationEnv):
         return builder.build(f"obj_{object_id:02d}")
 
     def _load_actors(self):
-        self._add_ground()
+        self._add_ground(render=self.bg_name is None)
 
         self.kit = self._load_kit()
         self.obj = self._load_object(self.object_id)
@@ -231,7 +222,12 @@ class AssemblingKitsEnv(StationaryManipulationEnv):
 
         return reward
 
-    def _setup_cameras(self):
-        super()._setup_cameras()
-        self.render_camera.set_local_pose(look_at([0.3, 0.3, 0.8], [0.0, 0.0, 0.1]))
-        self._cameras["base_camera"].set_local_pose(look_at([0.2, 0, 0.4], [0, 0, 0]))
+    def _register_cameras(self):
+        cam_cfg = super()._register_cameras()
+        cam_cfg.pose = look_at([0.2, 0, 0.4], [0, 0, 0])
+        return cam_cfg
+
+    def _register_render_cameras(self):
+        cam_cfg = super()._register_render_cameras()
+        cam_cfg.pose = look_at([0.3, 0.3, 0.8], [0.0, 0.0, 0.1])
+        return cam_cfg

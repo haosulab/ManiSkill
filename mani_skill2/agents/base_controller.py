@@ -154,8 +154,8 @@ class DictController(BaseController):
         self.balance_passive_force = balance_passive_force
 
         self.controllers: Dict[str, BaseController] = OrderedDict()
-        for uuid, config in configs.items():
-            self.controllers[uuid] = config.controller_cls(
+        for uid, config in configs.items():
+            self.controllers[uid] = config.controller_cls(
                 config, articulation, control_freq, sim_freq=sim_freq
             )
 
@@ -167,8 +167,8 @@ class DictController(BaseController):
         # Explicitly create a list of key-value tuples
         # Otherwise, spaces.Dict will sort keys if a dict is provided
         named_spaces = [
-            (uuid, controller.action_space)
-            for uuid, controller in self.controllers.items()
+            (uid, controller.action_space)
+            for uid, controller in self.controllers.items()
         ]
         self.action_space = spaces.Dict(named_spaces)
 
@@ -198,8 +198,8 @@ class DictController(BaseController):
             controller.reset()
 
     def set_action(self, action: Dict[str, np.ndarray]):
-        for uuid, controller in self.controllers.items():
-            controller.set_action(action[uuid])
+        for uid, controller in self.controllers.items():
+            controller.set_action(action[uid])
 
     def before_simulation_step(self):
         if self.balance_passive_force:
@@ -214,13 +214,15 @@ class DictController(BaseController):
 
     def get_state(self) -> dict:
         states = {}
-        for uuid, controller in self.controllers.items():
-            states[uuid] = controller.get_state()
+        for uid, controller in self.controllers.items():
+            state = controller.get_state()
+            if len(state) > 0:
+                states[uid] = state
         return states
 
     def set_state(self, state: dict):
-        for uuid, controller in self.controllers.items():
-            controller.set_state(state.get(uuid))
+        for uid, controller in self.controllers.items():
+            controller.set_state(state.get(uid))
 
 
 class CombinedController(DictController):
@@ -237,8 +239,8 @@ class CombinedController(DictController):
         action_dim = self.action_space.shape[0]
         assert action.shape == (action_dim,), (action.shape, action_dim)
 
-        for uuid, controller in self.controllers.items():
-            start, end = self.action_mapping[uuid]
+        for uid, controller in self.controllers.items():
+            start, end = self.action_mapping[uid]
             controller.set_action(action[start:end])
 
     def to_action_dict(self, action: np.ndarray):
@@ -248,11 +250,11 @@ class CombinedController(DictController):
         assert action.shape == (action_dim,), (action.shape, action_dim)
 
         action_dict = {}
-        for uuid, controller in self.controllers.items():
-            start, end = self.action_mapping[uuid]
-            action_dict[uuid] = action[start:end]
+        for uid, controller in self.controllers.items():
+            start, end = self.action_mapping[uid]
+            action_dict[uid] = action[start:end]
         return action_dict
 
     def from_action_dict(self, action_dict: dict):
         """Convert a dict of actions to a flat action."""
-        return np.hstack([action_dict[uuid] for uuid in self.controllers])
+        return np.hstack([action_dict[uid] for uid in self.controllers])

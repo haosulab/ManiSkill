@@ -6,7 +6,7 @@ import copy
 import typing
 import ctypes
 
-from mani_skill2 import ASSET_DIR
+from mani_skill2 import PACKAGE_ASSET_DIR
 
 warp_path = os.path.join(os.path.dirname(mani_skill2.__file__), "..", "warp_maniskill")
 warp_path = os.path.normpath(warp_path)
@@ -54,7 +54,7 @@ def task(meshes):
 
 class MPMBaseEnv(BaseEnv):
     # fmt: off
-    SUPPORTED_OBS_MODES = ("none", "rgbd", "pointcloud", "rgbd_robot_seg", "pointcloud_robot_seg")
+    SUPPORTED_OBS_MODES = ("none", "image")
     # fmt: on
 
     def __init__(
@@ -78,9 +78,10 @@ class MPMBaseEnv(BaseEnv):
 
         wp.init()
 
+        if "shader_dir" in kwargs:
+            logger.warning("`shader_dir` is ignored for soft-body environments.")
+            kwargs.pop("shader_dir")
         shader_dir = os.path.join(os.path.dirname(__file__), "shader", "point")
-        sapien.VulkanRenderer.set_camera_shader_dir(shader_dir)
-        sapien.VulkanRenderer.set_viewer_shader_dir(shader_dir)
 
         self.sim_crashed = False
 
@@ -92,7 +93,7 @@ class MPMBaseEnv(BaseEnv):
             os.path.dirname(__file__), self.__class__.__name__ + ".sdf"
         )
 
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, shader_dir=shader_dir, **kwargs)
 
     # ---------------------------------------------------------------------------- #
     # Setup
@@ -118,11 +119,14 @@ class MPMBaseEnv(BaseEnv):
         self._actors = self.get_actors()
         self._articulations = self.get_articulations()
 
+        self._load_background()
+
     def _load_actors(self):
         self._scene.add_ground(altitude=0.0, render=False)
-        b = self._scene.create_actor_builder()
-        b.add_visual_from_file(str(ASSET_DIR / "maniskill2-scene-2.glb"))
-        b.build_kinematic()
+        if self.bg_name is None:
+            b = self._scene.create_actor_builder()
+            b.add_visual_from_file(str(PACKAGE_ASSET_DIR / "maniskill2-scene-2.glb"))
+            b.build_kinematic()
 
     def _get_coupling_actors(
         self,
@@ -207,10 +211,11 @@ class MPMBaseEnv(BaseEnv):
                 )
 
             with open(self.sdf_cache, "wb") as f:
-                meshes = [[(np.array(m.vertices), np.array(m.faces)) for m in ms]for ms in actor_meshes]
-                pickle.dump(
-                    {"signature": signature, "sdfs": sdfs, "meshes": meshes}, f
-                )
+                meshes = [
+                    [(np.array(m.vertices), np.array(m.faces)) for m in ms]
+                    for ms in actor_meshes
+                ]
+                pickle.dump({"signature": signature, "sdfs": sdfs, "meshes": meshes}, f)
 
         # convert sdfs to dense volumes
         for actor, sdf, meshes, primitives in zip(
@@ -513,10 +518,6 @@ class MPMBaseEnv(BaseEnv):
             [1, 1, -1], [1, 1, 1], shadow=True, scale=5, shadow_map_size=2048
         )
         self._scene.add_directional_light([0, 0, -1], [1, 1, 1])
-
-    def _setup_camera(self):
-        self._camera = self._scene.add_camera("frontview", 512, 512, 1, 0.01, 10)
-        self._camera.set_local_pose(sapien.Pose([1, 0, 1.2], euler2quat(0, 0.5, 3.14)))
 
     # -------------------------------------------------------------------------- #
     # Step

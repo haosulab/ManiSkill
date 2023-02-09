@@ -6,13 +6,13 @@ from sapien.core import Pose
 from transforms3d.euler import euler2quat
 from transforms3d.quaternions import qinverse, qmult, quat2axangle
 
-from mani_skill2.utils.registration import register_gym_env
+from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import hex2rgba, look_at, vectorize_pose
 
 from .base_env import StationaryManipulationEnv
 
 
-@register_gym_env(name="PlugCharger-v0", max_episode_steps=200)
+@register_env("PlugCharger-v0", max_episode_steps=200)
 class PlugChargerEnv(StationaryManipulationEnv):
     _base_size = [2e-2, 1.5e-2, 1.2e-2]  # charger base half size
     _peg_size = [8e-3, 0.75e-3, 3.2e-3]  # charger peg half size
@@ -95,7 +95,7 @@ class PlugChargerEnv(StationaryManipulationEnv):
         return builder.build_static(name="receptacle")
 
     def _load_actors(self):
-        self._add_ground()
+        self._add_ground(render=self.bg_name is None)
         self.charger = self._build_charger(
             self._peg_size,
             self._base_size,
@@ -133,9 +133,10 @@ class PlugChargerEnv(StationaryManipulationEnv):
         self.receptacle.set_pose(Pose(pos, quat))
 
         # Adjust render camera
-        self.render_camera.set_local_pose(
-            self.receptacle.pose * look_at([0.3, 0.4, 0.1], [0, 0, 0])
-        )
+        if "render_camera" in self._render_cameras:
+            self._render_cameras["render_camera"].camera.set_local_pose(
+                self.receptacle.pose * look_at([0.3, 0.4, 0.1], [0, 0, 0])
+            )
 
     def _initialize_task(self):
         self.goal_pose = self.receptacle.pose.transform(Pose(q=euler2quat(0, 0, np.pi)))
@@ -282,12 +283,15 @@ class PlugChargerEnv(StationaryManipulationEnv):
 
         return reward
 
-    def _setup_cameras(self):
-        super()._setup_cameras()
-        self.render_camera.set_local_pose(look_at([-0.3, -0.4, 0.2], [0, 0, 0.1]))
-        self._cameras["base_camera"].set_local_pose(
-            look_at([-0.3, 0, 0.1], [0, 0, 0.1])
-        )
+    def _register_cameras(self):
+        cam_cfg = super()._register_cameras()
+        cam_cfg.pose = look_at([-0.3, 0, 0.1], [0, 0, 0.1])
+        return cam_cfg
+
+    def _register_render_cameras(self):
+        cam_cfg = super()._register_render_cameras()
+        cam_cfg.pose = look_at([-0.3, -0.4, 0.2], [0, 0, 0.1])
+        return cam_cfg
 
     def _setup_lighting(self):
         super()._setup_lighting()

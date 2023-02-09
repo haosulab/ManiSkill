@@ -5,12 +5,13 @@ import numpy as np
 import sapien.core as sapien
 from sapien.core import Pose
 
-from mani_skill2 import ASSET_DIR
+from mani_skill2 import format_path
 from mani_skill2.agents.configs.panda.defaults import PandaRealSensed435Config
 from mani_skill2.agents.robots.panda import Panda
 from mani_skill2.envs.sapien_env import BaseEnv
+from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.io_utils import load_json
-from mani_skill2.utils.registration import register_gym_env
+from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import (
     get_articulation_max_impulse_norm,
     get_entity_by_name,
@@ -22,23 +23,25 @@ from mani_skill2.utils.sapien_utils import (
 
 class AvoidObstaclesBaseEnv(BaseEnv):
     DEFAULT_EPISODE_JSON: str
+    ASSET_UID: str
 
     tcp: sapien.Link  # Tool Center Point of the robot
 
     def __init__(self, episode_json=None, **kwargs):
         if episode_json is None:
             episode_json = self.DEFAULT_EPISODE_JSON
-        episode_json = episode_json.format(ASSET_DIR=ASSET_DIR)
+        episode_json = format_path(episode_json)
         if not Path(episode_json).exists():
             raise FileNotFoundError(
                 f"Episode json ({episode_json}) is not found."
                 "To download default json:"
-                "`python -m mani_skill2.utils.download --uid avoid_obstacles`."
+                "`python -m mani_skill2.utils.download_asset {}`.".format(self.ASSET_UID)
             )
         self.episodes = load_json(episode_json)
         self.episode_idx = None
         self.episode_config = None
         super().__init__(**kwargs)
+
 
     def _get_default_scene_config(self):
         scene_config = super()._get_default_scene_config()
@@ -108,7 +111,7 @@ class AvoidObstaclesBaseEnv(BaseEnv):
         return actor
 
     def _load_actors(self):
-        self._add_ground()
+        self._add_ground(render=self.bg_name is None)
 
         # Add a wall
         if "wall" in self.episode_config:
@@ -202,17 +205,15 @@ class AvoidObstaclesBaseEnv(BaseEnv):
         reward = close_to_goal_reward + angular_reward - 50.0 * max_impulse_norm
         return reward
 
-    def _setup_cameras(self):
-        self.render_camera = self._scene.add_camera(
-            "render_camera", 512, 512, 1, 0.01, 10
+    def _register_cameras(self):
+        pose = look_at([-0.25, 0, 1.2], [0.6, 0, 0.6])
+        return CameraConfig(
+            "base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10
         )
-        self.render_camera.set_local_pose(look_at([1.5, 0, 1.5], [0.0, 0.0, 0.5]))
 
-        base_camera = self._scene.add_camera(
-            "base_camera", 128, 128, np.pi / 2, 0.01, 10
-        )
-        base_camera.set_local_pose(look_at([-0.25, 0, 1.2], [0.6, 0, 0.6]))
-        self._cameras["base_camera"] = base_camera
+    def _register_render_cameras(self):
+        pose = look_at([1.5, 0, 1.5], [0.0, 0.0, 0.5])
+        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
 
     def _setup_viewer(self):
         super()._setup_viewer()
@@ -229,17 +230,21 @@ class AvoidObstaclesBaseEnv(BaseEnv):
         return ret
 
 
-@register_gym_env("PandaAvoidObstacles-v0", max_episode_steps=500)
+@register_env("PandaAvoidObstacles-v0", max_episode_steps=500)
 class PandaAvoidObstaclesEnv(AvoidObstaclesBaseEnv):
     DEFAULT_EPISODE_JSON = "{ASSET_DIR}/avoid_obstacles/panda_train_2k.json.gz"
+    ASSET_UID = "panda_avoid_obstacles"
+
+    def _configure_agent(self):
+        self._agent_cfg = PandaRealSensed435Config()
 
     def _load_agent(self):
-        self.robot_uuid = "panda"
-        agent_config = PandaRealSensed435Config()
+        self.robot_uid = "panda"
         self.agent = Panda(
-            self._scene, self._control_freq, self._control_mode, config=agent_config
+            self._scene, self._control_freq, self._control_mode, config=self._agent_cfg
         )
         self.tcp: sapien.Link = get_entity_by_name(
-            self.agent.robot.get_links(), self.agent._config.ee_link_name
+            self.agent.robot.get_links(), self.agent.config.ee_link_name
         )
         set_articulation_render_material(self.agent.robot, specular=0.9, roughness=0.3)
+    

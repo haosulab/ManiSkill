@@ -1,19 +1,19 @@
-from mani_skill2.agents.camera import MountedCameraConfig
 from mani_skill2.agents.controllers import *
+from mani_skill2.sensors.camera import CameraConfig
 
 
 class Xmate3RobotiqDefaultConfig:
     def __init__(self) -> None:
-        self.urdf_path = "{description}/fixed_xmate3_robotiq.urdf"
+        self.urdf_path = "{ASSET_DIR}/xmate3_robotiq/xmate3_robotiq.urdf"
         self.urdf_config = dict(
             _materials=dict(
                 gripper=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)
             ),
             link=dict(
-                panda_leftfinger=dict(
+                left_inner_finger_pad=dict(
                     material="gripper", patch_radius=0.1, min_patch_radius=0.1
                 ),
-                panda_rightfinger=dict(
+                right_inner_finger_pad=dict(
                     material="gripper", patch_radius=0.1, min_patch_radius=0.1
                 ),
             ),
@@ -58,8 +58,8 @@ class Xmate3RobotiqDefaultConfig:
         )
         arm_pd_joint_delta_pos = PDJointPosControllerConfig(
             self.arm_joint_names,
-            -0.05,
-            0.05,
+            -0.1,
+            0.1,
             self.arm_stiffness,
             self.arm_damping,
             self.arm_force_limit,
@@ -69,8 +69,8 @@ class Xmate3RobotiqDefaultConfig:
         # PD ee position
         arm_pd_ee_delta_pos = PDEEPosControllerConfig(
             self.arm_joint_names,
-            -0.01,
-            0.01,
+            -0.1,
+            0.1,
             self.arm_stiffness,
             self.arm_damping,
             self.arm_force_limit,
@@ -78,10 +78,9 @@ class Xmate3RobotiqDefaultConfig:
         )
         arm_pd_ee_delta_pose = PDEEPoseControllerConfig(
             self.arm_joint_names,
-            -0.01,
-            0.01,
-            -0.05,
-            0.05,
+            -0.1,
+            0.1,
+            0.1,
             self.arm_stiffness,
             self.arm_damping,
             self.arm_force_limit,
@@ -118,29 +117,30 @@ class Xmate3RobotiqDefaultConfig:
 
     @property
     def cameras(self):
-        return dict(
-            base_camera=MountedCameraConfig(
-                mount_link="camera_base_link",
-                mount_p=[0.0, 0.0, 0.0],
-                mount_q=[1, 0, 0, 0],
-                hide_mount_link=True,
+        return [
+            CameraConfig(
+                uid="base_camera",
+                p=[0.0, 0.0, 0.0],
+                q=[1, 0, 0, 0],
                 width=128,
                 height=128,
+                fov=1.5707,
                 near=0.01,
                 far=10,
-                fx=64,
-                fy=64,
+                actor_uid="camera_base_link",
+                hide_link=False,
             ),
-            hand_camera=MountedCameraConfig(
-                mount_link="camera_hand_link",
-                mount_p=[0.0, 0.0, 0.0],
-                mount_q=[1, 0, 0, 0],
-                hide_mount_link=True,
+            CameraConfig(
+                uid="hand_camera",
+                p=[0.0, 0.0, 0.0],
+                q=[1, 0, 0, 0],
                 width=128,
                 height=128,
+                fov=1.5707,
                 near=0.01,
                 far=10,
-                fx=64,
-                fy=64,
+                actor_uid="camera_hand_link",
+                hide_link=False,
             ),
-        )
+        ]
+       

@@ -14,22 +14,24 @@ from mani_skill2.utils.geometry import (
     get_local_axis_aligned_bbox_for_link,
     transform_points,
 )
-from mani_skill2.utils.registration import register_gym_env
+from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.trimesh_utils import get_actor_visual_mesh
 
 from .base_env import MS1BaseEnv
 
 
-@register_gym_env(name="MoveBucket-v1", max_episode_steps=200)
+@register_env("MoveBucket-v1", max_episode_steps=200)
 class MoveBucketEnv(MS1BaseEnv):
-    DEFAULT_MODEL_JSON = "{ASSET_DIR}/partnet_mobility/meta/info_bucket_train.json"
-    ASSET_UID = "bucket"
+    DEFAULT_MODEL_JSON = (
+        "{PACKAGE_ASSET_DIR}/partnet_mobility/meta/info_bucket_train.json"
+    )
+    ASSET_UID = "partnet_mobility_bucket"
 
-    def _setup_cameras(self):
-        super()._setup_cameras()
-        self.render_camera.set_local_pose(
-            Pose(p=[0, 0, 4], q=[0.70710678, 0.0, 0.70710678, 0.0])
-        )
+    def _register_render_cameras(self):
+        cam_cfg = super()._register_render_cameras()
+        cam_cfg.p = [0, 0, 4]
+        cam_cfg.q = [0.70710678, 0.0, 0.70710678, 0.0]
+        return cam_cfg
 
     # -------------------------------------------------------------------------- #
     # Reconfigure
@@ -96,9 +98,12 @@ class MoveBucketEnv(MS1BaseEnv):
             actor = builder.build(name="ball_{:d}".format(i + 1))
             self.balls.append(actor)
 
+    def _configure_agent(self):
+        self._agent_cfg = MobilePandaDualArm.get_default_config()
+
     def _load_agent(self):
         self.agent = MobilePandaDualArm(
-            self._scene, self._control_freq, self._control_mode
+            self._scene, self._control_freq, self._control_mode, config=self._agent_cfg
         )
 
     # -------------------------------------------------------------------------- #

@@ -2,10 +2,11 @@ import os
 import numpy as np
 import sapien.core as sapien
 from mani_skill2.envs.mpm.base_env import MPMBaseEnv
-from mani_skill2 import ASSET_DIR
+from mani_skill2 import PACKAGE_ASSET_DIR
 from mani_skill2.agents.robots.panda import Panda
 from mani_skill2.agents.configs.panda.variants import PandaBucketConfig
-from mani_skill2.utils.registration import register_gym_env
+from mani_skill2.utils.registration import register_env
+from mani_skill2.sensors.camera import CameraConfig
 
 from transforms3d.euler import euler2quat
 from mani_skill2.utils.sapien_utils import get_entity_by_name
@@ -45,7 +46,7 @@ def success_kernel(
             wp.atomic_add(output, 2, 1)
 
 
-@register_gym_env("Fill-v0", max_episode_steps=250)
+@register_env("Fill-v0", max_episode_steps=250)
 class FillEnv(MPMBaseEnv):
     def _setup_mpm(self):
         super()._setup_mpm()
@@ -111,13 +112,15 @@ class FillEnv(MPMBaseEnv):
         self.mpm_model.struct.ground_sticky = 1
         self.mpm_model.struct.particle_radius = 0.0025
 
+    def _configure_agent(self):
+        self._agent_cfg = PandaBucketConfig()
+
     def _load_agent(self):
-        default_config = PandaBucketConfig()
         self.agent = Panda(
             self._scene,
             self._control_freq,
             control_mode=self._control_mode,
-            config=default_config,
+            config=self._agent_cfg,
         )
 
         self.grasp_site: sapien.Link = get_entity_by_name(
@@ -130,28 +133,17 @@ class FillEnv(MPMBaseEnv):
         self.agent.reset(qpos)
         self.agent.robot.set_pose(sapien.Pose([-0.6, 0, 0]))
 
-    def _setup_cameras(self):
-        # Camera only for rendering, not included in `_cameras`
-        self.render_camera = self._scene.add_camera(
-            "render_camera", 512, 512, 1, 0.001, 10
-        )
-        self.render_camera.set_local_pose(
-            sapien.Pose(
-                [-0.5, -0.4, 0.6], euler2quat(0, np.pi / 6, np.pi / 2 - np.pi / 5)
-            )
-        )
+    def _register_cameras(self):
+        p, q = [-0.4, -0.0, 0.4], euler2quat(0, np.pi / 6, 0)
+        return CameraConfig("base_camera", p, q, 128, 128, np.pi / 2, 0.001, 10)
 
-        base_camera = self._scene.add_camera(
-            "base_camera", 128, 128, np.pi / 2, 0.001, 10
-        )
-        base_camera.set_local_pose(
-            sapien.Pose([-0.4, -0.0, 0.4], euler2quat(0, np.pi / 6, 0))
-        )
-        self._cameras["base_camera"] = base_camera
+    def _register_render_cameras(self):
+        p, q = [-0.5, -0.4, 0.6], euler2quat(0, np.pi / 6, np.pi / 2 - np.pi / 5)
+        return CameraConfig("render_camera", p, q, 512, 512, 1, 0.001, 10)
 
     def _load_actors(self):
         super()._load_actors()
-        beaker_file = os.path.join(ASSET_DIR, "deformable_manipulation", "beaker.glb")
+        beaker_file = os.path.join(PACKAGE_ASSET_DIR, "deformable_manipulation", "beaker.glb")
 
         b = self._scene.create_actor_builder()
         b.add_visual_from_file(beaker_file, scale=[0.04] * 3)

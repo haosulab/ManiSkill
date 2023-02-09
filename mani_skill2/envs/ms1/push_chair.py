@@ -8,27 +8,29 @@ from transforms3d.euler import euler2quat, quat2euler
 from mani_skill2.agents.robots.mobile_panda import MobilePandaDualArm
 from mani_skill2.utils.common import np_random
 from mani_skill2.utils.geometry import transform_points
-from mani_skill2.utils.registration import register_gym_env
+from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.trimesh_utils import get_actor_visual_mesh
 
 from .base_env import MS1BaseEnv
 
 
-@register_gym_env(name="PushChair-v1", max_episode_steps=200)
+@register_env("PushChair-v1", max_episode_steps=200)
 class PushChairEnv(MS1BaseEnv):
-    DEFAULT_MODEL_JSON = "{ASSET_DIR}/partnet_mobility/meta/info_chair_train.json"
-    ASSET_UID = "chair"
+    DEFAULT_MODEL_JSON = (
+        "{PACKAGE_ASSET_DIR}/partnet_mobility/meta/info_chair_train.json"
+    )
+    ASSET_UID = "partnet_mobility_chair"
 
     def _get_default_scene_config(self):
         scene_config = super()._get_default_scene_config()
         scene_config.solver_iterations = 15
         return scene_config
 
-    def _setup_cameras(self):
-        super()._setup_cameras()
-        self.render_camera.set_local_pose(
-            Pose(p=[0, 0, 4], q=[0.70710678, 0.0, 0.70710678, 0.0])
-        )
+    def _register_render_cameras(self):
+        cam_cfg = super()._register_render_cameras()
+        cam_cfg.p = [0, 0, 4]
+        cam_cfg.q = [0.70710678, 0.0, 0.70710678, 0.0]
+        return cam_cfg
 
     # -------------------------------------------------------------------------- #
     # Reconfigure
@@ -108,11 +110,13 @@ class PushChairEnv(MS1BaseEnv):
         builder.add_sphere_visual(radius=0.15, color=(1, 0, 0))
         self.target_indicator = builder.build_static(name="target_indicator")
 
+    def _configure_agent(self):
+        self._agent_cfg = MobilePandaDualArm.get_default_config()
+        self._agent_cfg.camera_h = 2
+
     def _load_agent(self):
-        agent_config = MobilePandaDualArm.get_default_config()
-        agent_config.camera_h = 2
         self.agent = MobilePandaDualArm(
-            self._scene, self._control_freq, self._control_mode, config=agent_config
+            self._scene, self._control_freq, self._control_mode, config=self._agent_cfg
         )
 
     def _set_chair_links_mesh(self):

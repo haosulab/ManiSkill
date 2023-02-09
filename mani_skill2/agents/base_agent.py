@@ -7,12 +7,11 @@ import numpy as np
 import sapien.core as sapien
 from gym import spaces
 
-from mani_skill2 import DESCRIPTION_DIR
-from mani_skill2.utils.common import merge_dicts
-from mani_skill2.utils.sapien_utils import parse_urdf_config, check_urdf_config
+from mani_skill2 import format_path
+from mani_skill2.sensors.camera import CameraConfig
+from mani_skill2.utils.sapien_utils import check_urdf_config, parse_urdf_config
 
 from .base_controller import BaseController, CombinedController, ControllerConfig
-from .camera import MountedCameraConfig, get_camera_images, get_camera_pcd
 
 
 @dataclass
@@ -20,7 +19,7 @@ class AgentConfig:
     """Agent configuration.
 
     Args:
-        urdf_path: path to URDF file. Support placeholders like {description}.
+        urdf_path: path to URDF file. Support placeholders like {PACKAGE_ASSET_DIR}.
         urdf_config: a dict to specify materials and simulation parameters when loading URDF from SAPIEN.
         controllers: a dict of controller configurations
         cameras: a dict of onboard camera configurations
@@ -29,7 +28,7 @@ class AgentConfig:
     urdf_path: str
     urdf_config: dict
     controllers: Dict[str, Union[ControllerConfig, Dict[str, ControllerConfig]]]
-    cameras: Dict[str, MountedCameraConfig]
+    cameras: Dict[str, CameraConfig]
 
 
 class BaseAgent:
@@ -40,14 +39,13 @@ class BaseAgent:
     Args:
         scene (sapien.Scene): simulation scene instance.
         control_freq (int): control frequency (Hz).
-        control_mode: uuid of controller to use
+        control_mode: uid of controller to use
         fix_root_link: whether to fix the robot root link
         config: agent configuration
     """
 
     robot: sapien.Articulation
     controllers: Dict[str, BaseController]
-    cameras: Dict[str, sapien.CameraEntity]
 
     def __init__(
         self,
@@ -60,28 +58,24 @@ class BaseAgent:
         self.scene = scene
         self._control_freq = control_freq
 
-        self._config = config or self.get_default_config()
+        self.config = config or self.get_default_config()
 
         # URDF
-        self.urdf_path = self._config.urdf_path
+        self.urdf_path = self.config.urdf_path
         self.fix_root_link = fix_root_link
-        self.urdf_config = self._config.urdf_config
+        self.urdf_config = self.config.urdf_config
 
         # Controller
-        self.controller_configs = self._config.controllers
+        self.controller_configs = self.config.controllers
         self.supported_control_modes = list(self.controller_configs.keys())
         if control_mode is None:
             control_mode = self.supported_control_modes[0]
         # The control mode after reset for consistency
         self._default_control_mode = control_mode
 
-        # Sensors
-        self.camera_configs = self._config.cameras
-
         self._load_articulation()
         self._setup_controllers()
         self.set_control_mode(control_mode)
-        self._setup_cameras()
         self._after_init()
 
     @classmethod
@@ -92,14 +86,13 @@ class BaseAgent:
         loader = self.scene.create_urdf_loader()
         loader.fix_root_link = self.fix_root_link
 
-        urdf_path = str(self.urdf_path)
-        urdf_path = urdf_path.format(description=DESCRIPTION_DIR)
+        urdf_path = format_path(str(self.urdf_path))
 
         urdf_config = parse_urdf_config(self.urdf_config, self.scene)
         check_urdf_config(urdf_config)
 
         # TODO(jigu): support loading multiple convex collision shapes
-        self.robot = loader.load(str(urdf_path), urdf_config)
+        self.robot = loader.load(urdf_path, urdf_config)
         assert self.robot is not None, f"Fail to load URDF from {urdf_path}"
         self.robot.set_name(Path(urdf_path).stem)
 
@@ -108,20 +101,15 @@ class BaseAgent:
 
     def _setup_controllers(self):
         self.controllers = OrderedDict()
-        for uuid, config in self.controller_configs.items():
+        for uid, config in self.controller_configs.items():
             if isinstance(config, dict):
-                self.controllers[uuid] = CombinedController(
+                self.controllers[uid] = CombinedController(
                     config, self.robot, self._control_freq
                 )
             else:
-                self.controllers[uuid] = config.controller_cls(
+                self.controllers[uid] = config.controller_cls(
                     config, self.robot, self._control_freq
                 )
-
-    def _setup_cameras(self):
-        self.cameras = OrderedDict()
-        for uuid, config in self.camera_configs.items():
-            self.cameras[uuid] = config.build(self.robot, self.scene, name=uuid)
 
     def _after_init(self):
         """After initialization. E.g., caching the end-effector link."""
@@ -129,7 +117,7 @@ class BaseAgent:
 
     @property
     def control_mode(self):
-        """Get the currently activated controller uuid."""
+        """Get the currently activated controller uid."""
         return self._control_mode
 
     def set_control_mode(self, control_mode):
@@ -155,8 +143,8 @@ class BaseAgent:
         if self._control_mode is None:
             return spaces.Dict(
                 {
-                    uuid: controller.action_space
-                    for uuid, controller in self.controllers.items()
+                    uid: controller.action_space
+                    for uid, controller in self.controllers.items()
                 }
             )
         else:
@@ -180,12 +168,11 @@ class BaseAgent:
     # Observations
     # -------------------------------------------------------------------------- #
     def get_proprioception(self):
-        return OrderedDict(
-            qpos=self.robot.get_qpos(),
-            qvel=self.robot.get_qvel(),
-            # TODO(jigu): Shall we allow an empty dict here?
-            controller=self.controller.get_state(),
-        )
+        obs = OrderedDict(qpos=self.robot.get_qpos(), qvel=self.robot.get_qvel())
+        controller_state = self.controller.get_state()
+        if len(controller_state) > 0:
+            obs.update(controller=controller_state)
+        return obs
 
     def get_state(self) -> Dict:
         """Get current state for MPC, including robot state and controller state"""
@@ -216,52 +203,3 @@ class BaseAgent:
 
         if not ignore_controller and "controller" in state:
             self.controller.set_state(state["controller"])
-
-    def take_picture(self):
-        # NOTE(jigu): take_picture, which starts rendering pipelines, is non-blocking.
-        # Thus, calling it before other computation is more efficient.
-        for cam in self.cameras.values():
-            cam.take_picture()
-
-    def get_camera_images(
-        self, rgb=True, depth=False, visual_seg=False, actor_seg=False
-    ) -> Dict[str, Dict[str, np.ndarray]]:
-        # Assume scene.update_render() and camera.take_picture() are called
-        ret = OrderedDict()
-        base2world = self.robot.pose.to_transformation_matrix()
-
-        for name, cam in self.cameras.items():
-            images = get_camera_images(
-                cam, rgb=rgb, depth=depth, visual_seg=visual_seg, actor_seg=actor_seg
-            )
-            images["camera_intrinsic"] = cam.get_intrinsic_matrix()
-            images["camera_extrinsic"] = cam.get_extrinsic_matrix()
-            images["camera_extrinsic_base_frame"] = (
-                images["camera_extrinsic"] @ base2world
-            )
-            ret[name] = images
-
-        return ret
-
-    def get_camera_poses(self) -> Dict[str, np.ndarray]:
-        poses = OrderedDict()
-        for name, cam in self.cameras.items():
-            poses[name] = cam.get_pose().to_transformation_matrix()
-        return poses
-
-    def get_camera_pcd(self, rgb=True, visual_seg=False, actor_seg=False, fuse=False):
-        # Assume scene.update_render() and camera.take_picture() are called
-        ret = OrderedDict()
-
-        for name, cam in self.cameras.items():
-            pcd = get_camera_pcd(cam, rgb, visual_seg, actor_seg)  # dict
-            # Model matrix is the transformation from OpenGL camera space to SAPIEN world space
-            # camera.get_model_matrix() must be called after scene.update_render()!
-            T = cam.get_model_matrix()
-            pcd["xyzw"] = pcd["xyzw"] @ T.T
-            ret[name] = pcd
-
-        if fuse:
-            return merge_dicts(ret.values())
-        else:
-            return ret

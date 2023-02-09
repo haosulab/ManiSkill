@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from pathlib import Path
 from typing import Dict, List, Union
 
 import numpy as np
@@ -8,13 +9,14 @@ from sapien.core import Pose
 from scipy.spatial.distance import cdist
 from transforms3d.euler import euler2quat
 
-from mani_skill2 import ASSET_DIR
+from mani_skill2 import format_path
 from mani_skill2.agents.robots.panda import Panda
 from mani_skill2.envs.sapien_env import BaseEnv
+from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.common import np_random, random_choice
 from mani_skill2.utils.geometry import transform_points
 from mani_skill2.utils.io_utils import load_json
-from mani_skill2.utils.registration import register_gym_env
+from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import (
     get_entity_by_name,
     hex2rgba,
@@ -36,23 +38,29 @@ class TurnFaucetBaseEnv(BaseEnv):
         robot_init_qpos_noise=0.02,
         **kwargs,
     ):
-        self.robot_uuid = robot
+        self.robot_uid = robot
         self.robot_init_qpos_noise = robot_init_qpos_noise
         super().__init__(*args, **kwargs)
 
     def _load_actors(self):
-        self._add_ground()
+        self._add_ground(render=self.bg_name is None)
+
+    def _configure_agent(self):
+        agent_cls = self.SUPPORTED_ROBOTS[self.robot_uid]
+        self._agent_cfg = agent_cls.get_default_config()
 
     def _load_agent(self):
-        agent_cls = self.SUPPORTED_ROBOTS[self.robot_uuid]
-        self.agent = agent_cls(self._scene, self._control_freq, self._control_mode)
+        agent_cls = self.SUPPORTED_ROBOTS[self.robot_uid]
+        self.agent = agent_cls(
+            self._scene, self._control_freq, self._control_mode, config=self._agent_cfg
+        )
         self.tcp: sapien.Link = get_entity_by_name(
-            self.agent.robot.get_links(), self.agent._config.ee_link_name
+            self.agent.robot.get_links(), self.agent.config.ee_link_name
         )
         set_articulation_render_material(self.agent.robot, specular=0.9, roughness=0.3)
 
     def _initialize_agent(self):
-        if self.robot_uuid == "panda":
+        if self.robot_uid == "panda":
             # fmt: off
             qpos = np.array([0, -0.785, 0, -2.356, 0, 1.57, 0.785, 0, 0])
             # fmt: on
@@ -62,24 +70,22 @@ class TurnFaucetBaseEnv(BaseEnv):
             self.agent.reset(qpos)
             self.agent.robot.set_pose(Pose([-0.56, 0, 0]))
         else:
-            raise NotImplementedError(self.robot_uuid)
+            raise NotImplementedError(self.robot_uid)
 
     def _get_obs_agent(self):
         obs = self.agent.get_proprioception()
         obs["base_pose"] = vectorize_pose(self.agent.robot.pose)
         return obs
 
-    def _setup_cameras(self):
-        self.render_camera = self._scene.add_camera(
-            "render_camera", 512, 512, 1, 0.01, 10
+    def _register_cameras(self):
+        pose = look_at([-0.4, 0, 0.3], [0, 0, 0.1])
+        return CameraConfig(
+            "base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10
         )
-        self.render_camera.set_local_pose(look_at([1.0, 1.0, 0.8], [0.0, 0.0, 0.5]))
 
-        base_camera = self._scene.add_camera(
-            "base_camera", 128, 128, np.pi / 2, 0.01, 10
-        )
-        base_camera.set_local_pose(look_at([-0.4, 0, 0.3], [0, 0, 0.1]))
-        self._cameras["base_camera"] = base_camera
+    def _register_render_cameras(self):
+        pose = look_at([0.5, 0.5, 1.0], [0.0, 0.0, 0.5])
+        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
 
     def _setup_viewer(self):
         super()._setup_viewer()
@@ -87,17 +93,21 @@ class TurnFaucetBaseEnv(BaseEnv):
         self._viewer.set_camera_rpy(0, -0.5, 3.14)
 
 
-@register_gym_env(name="TurnFaucet-v0", max_episode_steps=200)
+@register_env("TurnFaucet-v0", max_episode_steps=200)
 class TurnFaucetEnv(TurnFaucetBaseEnv):
-    DEFAULT_MODEL_JSON = "{ASSET_DIR}/partnet_mobility/meta/info_faucet_train.json"
-
     target_link: sapien.Link
     target_joint: sapien.Joint
 
-    def __init__(self, model_json: str = None, model_ids: List[str] = (), **kwargs):
-        if model_json is None:
-            model_json = self.DEFAULT_MODEL_JSON
-        model_json = model_json.format(ASSET_DIR=ASSET_DIR)
+    def __init__(
+        self,
+        asset_root: str = "{ASSET_DIR}/partnet_mobility/dataset",
+        model_json: str = "{PACKAGE_ASSET_DIR}/partnet_mobility/meta/info_faucet_train.json",
+        model_ids: List[str] = (),
+        **kwargs,
+    ):
+        self.asset_root = Path(format_path(asset_root))
+
+        model_json = format_path(model_json)
         self.model_db: Dict[str, Dict] = load_json(model_json)
 
         if isinstance(model_ids, str):
@@ -119,7 +129,7 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
         super().__init__(**kwargs)
 
     def find_urdf_path(self, model_id):
-        model_dir = ASSET_DIR / f"partnet_mobility/dataset/{model_id}"
+        model_dir = self.asset_root / str(model_id)
 
         urdf_names = ["mobility_cvx.urdf"]
         for urdf_name in urdf_names:
@@ -130,7 +140,7 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
         raise FileNotFoundError(
             f"No valid URDF is found for {model_id}."
             "Please download Partnet-Mobility (ManiSkill2022):"
-            "`python -m mani_skill2.utils.download --uid faucet`."
+            "`python -m mani_skill2.utils.download_asset partnet_mobility_faucet`."
         )
 
     def reset(self, seed=None, reconfigure=False, model_id=None, model_scale=None):
@@ -189,7 +199,7 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
         loader.scale = self.model_scale
         loader.fix_root_link = True
 
-        model_dir = ASSET_DIR / f"partnet_mobility/dataset/{self.model_id}"
+        model_dir = self.asset_root / str(self.model_id)
         urdf_path = model_dir / "mobility_cvx.urdf"
         loader.load_multiple_collisions_from_file = True
 
@@ -197,8 +207,6 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
         articulation = loader.load(str(urdf_path), config={"density": density})
         articulation.set_name("faucet")
 
-        cam = self._scene.add_camera("dummy_camera", 1, 1, 1, 0.01, 10)
-        self._scene.remove_camera(cam)
         set_articulation_render_material(
             articulation, color=hex2rgba("#AAAAAA"), metallic=1, roughness=0.4
         )

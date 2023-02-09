@@ -8,10 +8,10 @@ from sapien.core import Pose
 from transforms3d.euler import euler2quat
 from transforms3d.quaternions import axangle2quat, qmult
 
-from mani_skill2 import ASSET_DIR
+from mani_skill2 import ASSET_DIR, format_path
 from mani_skill2.utils.common import random_choice
 from mani_skill2.utils.io_utils import load_json
-from mani_skill2.utils.registration import register_gym_env
+from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import set_actor_visibility, vectorize_pose
 
 from .base_env import StationaryManipulationEnv
@@ -35,12 +35,12 @@ class PickSingleEnv(StationaryManipulationEnv):
     ):
         if asset_root is None:
             asset_root = self.DEFAULT_ASSET_ROOT
-        self._asset_root = Path(asset_root.format(ASSET_DIR=ASSET_DIR))
+        self.asset_root = Path(format_path(asset_root))
 
         if model_json is None:
             model_json = self.DEFAULT_MODEL_JSON
         # NOTE(jigu): absolute path will overwrite asset_root
-        model_json = self._asset_root / model_json
+        model_json = self.asset_root / format_path(model_json)
 
         self.model_db: Dict[str, Dict] = load_json(model_json)
 
@@ -67,7 +67,7 @@ class PickSingleEnv(StationaryManipulationEnv):
         pass
 
     def _load_actors(self):
-        self._add_ground()
+        self._add_ground(render=self.bg_name is None)
         self._load_model()
         self.obj.set_damping(0.1, 0.1)
         self.goal_site = self._build_sphere_site(self.goal_thresh)
@@ -389,16 +389,13 @@ class PickSingleEnv(StationaryManipulationEnv):
 # ---------------------------------------------------------------------------- #
 # YCB
 # ---------------------------------------------------------------------------- #
-YCB_DIR = ASSET_DIR / "mani_skill2_ycb"
-
-
 def build_actor_ycb(
     model_id: str,
     scene: sapien.Scene,
     scale: float = 1.0,
     physical_material: sapien.PhysicalMaterial = None,
     density=1000,
-    root_dir=YCB_DIR,
+    root_dir=ASSET_DIR / "mani_skill2_ycb",
 ):
     builder = scene.create_actor_builder()
     model_dir = Path(root_dir) / "models" / model_id
@@ -418,20 +415,20 @@ def build_actor_ycb(
     return actor
 
 
-@register_gym_env("PickSingleYCB-v0", max_episode_steps=200)
+@register_env("PickSingleYCB-v0", max_episode_steps=200)
 class PickSingleYCBEnv(PickSingleEnv):
-    DEFAULT_ASSET_ROOT = str(YCB_DIR)
+    DEFAULT_ASSET_ROOT = "{ASSET_DIR}/mani_skill2_ycb"
     DEFAULT_MODEL_JSON = "info_pick_v0.json"
 
     def _check_assets(self):
-        models_dir = self._asset_root / "models"
+        models_dir = self.asset_root / "models"
         for model_id in self.model_ids:
             model_dir = models_dir / model_id
             if not model_dir.exists():
                 raise FileNotFoundError(
                     f"{model_dir} is not found."
                     "Please download (ManiSkill2) YCB models:"
-                    "`python -m mani_skill2.utils.download --uid ycb`."
+                    "`python -m mani_skill2.utils.download_asset ycb`."
                 )
 
             collision_file = model_dir / "collision.obj"
@@ -448,7 +445,7 @@ class PickSingleYCBEnv(PickSingleEnv):
             self._scene,
             scale=self.model_scale,
             density=density,
-            root_dir=self._asset_root,
+            root_dir=self.asset_root,
         )
         self.obj.name = self.model_id
 
@@ -466,9 +463,6 @@ class PickSingleYCBEnv(PickSingleEnv):
 # ---------------------------------------------------------------------------- #
 # EGAD
 # ---------------------------------------------------------------------------- #
-EGAD_DIR = ASSET_DIR / "mani_skill2_egad"
-
-
 def build_actor_egad(
     model_id: str,
     scene: sapien.Scene,
@@ -476,7 +470,7 @@ def build_actor_egad(
     physical_material: sapien.PhysicalMaterial = None,
     density=100,
     render_material: sapien.RenderMaterial = None,
-    root_dir=EGAD_DIR,
+    root_dir=ASSET_DIR / "mani_skill2_egad",
 ):
     builder = scene.create_actor_builder()
     # A heuristic way to infer split
@@ -499,9 +493,9 @@ def build_actor_egad(
     return actor
 
 
-@register_gym_env("PickSingleEGAD-v0", max_episode_steps=200, obj_init_rot=0.2)
+@register_env("PickSingleEGAD-v0", max_episode_steps=200, obj_init_rot=0.2)
 class PickSingleEGADEnv(PickSingleEnv):
-    DEFAULT_ASSET_ROOT = str(EGAD_DIR)
+    DEFAULT_ASSET_ROOT = "{ASSET_DIR}/mani_skill2_egad"
     DEFAULT_MODEL_JSON = "info_pick_train_v0.json"
 
     def _check_assets(self):
@@ -511,20 +505,16 @@ class PickSingleEGADEnv(PickSingleEnv):
             splits.add(split)
 
         for split in splits:
-            collision_dir = self._asset_root / f"egad_{split}_set_coacd"
-            visual_dir = self._asset_root / f"egad_{split}_set"
+            collision_dir = self.asset_root / f"egad_{split}_set_coacd"
+            visual_dir = self.asset_root / f"egad_{split}_set"
             if not (collision_dir.exists() and visual_dir.exists()):
                 raise FileNotFoundError(
                     f"{collision_dir} or {visual_dir} is not found. "
                     "Please download (ManiSkill2) EGAD models:"
-                    "`python -m mani_skill2.utils.download --uid egad`."
+                    "`python -m mani_skill2.utils.download_asset egad`."
                 )
 
     def _load_model(self):
-        # NOTE(jigu): add a dummy camera to add material
-        cam = self._scene.add_camera("dummy_camera", 1, 1, 1, 0.01, 10)
-        self._scene.remove_camera(cam)
-
         mat = self._renderer.create_material()
         color = self._episode_rng.uniform(0.2, 0.8, 3)
         color = np.hstack([color, 1.0])
@@ -538,7 +528,7 @@ class PickSingleEGADEnv(PickSingleEnv):
             scale=self.model_scale,
             render_material=mat,
             density=100,
-            root_dir=self._asset_root,
+            root_dir=self.asset_root,
         )
         self.obj.name = self.model_id
 

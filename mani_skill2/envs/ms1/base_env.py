@@ -1,11 +1,12 @@
 from collections import OrderedDict
 from typing import Dict, List, Tuple
+from pathlib import Path
 
 import numpy as np
 import sapien.core as sapien
 from sapien.core import Pose
 
-from mani_skill2 import ASSET_DIR, DESCRIPTION_DIR
+from mani_skill2 import format_path
 from mani_skill2.agents.robots.mobile_panda import DummyMobileAgent
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.utils.common import random_choice
@@ -15,6 +16,7 @@ from mani_skill2.utils.sapien_utils import (
     get_articulation_padded_state,
     parse_urdf_config,
 )
+from mani_skill2.sensors.camera import CameraConfig
 
 
 class MS1BaseEnv(BaseEnv):
@@ -25,13 +27,16 @@ class MS1BaseEnv(BaseEnv):
     def __init__(
         self,
         *args,
+        asset_root: str = "{ASSET_DIR}/partnet_mobility/dataset",
         model_json: str = None,
         model_ids: List[str] = (),
         **kwargs,
     ):
+        self.asset_root = Path(format_path(asset_root))
+
         if model_json is None:
             model_json = self.DEFAULT_MODEL_JSON
-        model_json = model_json.format(ASSET_DIR=ASSET_DIR)
+        model_json = format_path(model_json)
         self.model_db: Dict[str, Dict] = load_json(model_json)
 
         if isinstance(model_ids, str):
@@ -47,19 +52,10 @@ class MS1BaseEnv(BaseEnv):
         for model_id in self.model_ids:
             self.model_urdf_paths[model_id] = self.find_urdf_path(model_id)
 
-        # check robot assets
-        robot_asset_dir = DESCRIPTION_DIR / "sciurus17_description"
-        if not robot_asset_dir.exists():
-            raise FileNotFoundError(
-                f"The assets for mobile panda ({robot_asset_dir}) are not found. "
-                "Please download sciurus17 models:"
-                "`python -m mani_skill2.utils.download --uid sciurus17`."
-            )
-
         super().__init__(*args, **kwargs)
 
     def find_urdf_path(self, model_id):
-        model_dir = ASSET_DIR / f"partnet_mobility/dataset/{model_id}"
+        model_dir = self.asset_root / str(model_id)
 
         urdf_names = ["mobility_cvx.urdf", "mobility_fixed.urdf"]
         for urdf_name in urdf_names:
@@ -70,7 +66,7 @@ class MS1BaseEnv(BaseEnv):
         raise FileNotFoundError(
             f"No valid URDF is found for {model_id}."
             "Please download Partnet-Mobility (ManiSkill2022):"
-            "`python -m mani_skill2.utils.download --uid {}`".format(self.ASSET_UID)
+            "`python -m mani_skill2.utils.download_asset {}`".format(self.ASSET_UID)
         )
 
     # -------------------------------------------------------------------------- #
@@ -114,17 +110,18 @@ class MS1BaseEnv(BaseEnv):
         cg[2] = cg[2] | 1 << 30
         cs.set_collision_groups(*cg)
 
-        # Create a visual ground box
-        rend_mtl = self._renderer.create_material()
-        rend_mtl.base_color = [0.06, 0.08, 0.12, 1]
-        rend_mtl.metallic = 0.0
-        rend_mtl.roughness = 0.9
-        rend_mtl.specular = 0.8
-        builder = self._scene.create_actor_builder()
-        builder.add_box_visual(
-            pose=Pose([0, 0, -1]), half_size=[50, 50, 1], material=rend_mtl
-        )
-        visual_ground = builder.build_static(name="visual_ground")
+        if self.bg_name is None:
+            # Create a visual ground box
+            rend_mtl = self._renderer.create_material()
+            rend_mtl.base_color = [0.06, 0.08, 0.12, 1]
+            rend_mtl.metallic = 0.0
+            rend_mtl.roughness = 0.9
+            rend_mtl.specular = 0.8
+            builder = self._scene.create_actor_builder()
+            builder.add_box_visual(
+                pose=Pose([0, 0, -1]), half_size=[50, 50, 1], material=rend_mtl
+            )
+            visual_ground = builder.build_static(name="visual_ground")
 
     def _load_partnet_mobility(
         self, fix_root_link=True, scale=1.0, urdf_config: dict = None
@@ -140,13 +137,10 @@ class MS1BaseEnv(BaseEnv):
         articulation = loader.load(str(urdf_path), config=urdf_config)
         return articulation
 
-    def _setup_cameras(self):
-        self.render_camera = self._scene.add_camera(
-            name="render_camera", width=512, height=512, fovy=1, near=0.01, far=10
-        )
-        self.render_camera.set_local_pose(
-            Pose(p=[-1.5, 0, 1.5], q=[0.9238795, 0, 0.3826834, 0])
-        )
+    def _register_render_cameras(self):
+        p = [-1.5, 0, 1.5]
+        q = [0.9238795, 0, 0.3826834, 0]
+        return CameraConfig("render_camera", p, q, 512, 512, 1, 0.01, 10)
 
     def _setup_viewer(self):
         super()._setup_viewer()

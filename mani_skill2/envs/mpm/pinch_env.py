@@ -3,22 +3,21 @@ from collections import OrderedDict
 import h5py
 import numpy as np
 import sapien.core as sapien
+import warp as wp
 from transforms3d.euler import euler2quat
+from warp.distance import compute_chamfer_distance
 
 from mani_skill2 import ASSET_DIR
 from mani_skill2.agents.configs.panda.variants import PandaPinchConfig
-
 from mani_skill2.agents.robots.panda import Panda
 from mani_skill2.envs.mpm.base_env import MPMBaseEnv, MPMModelBuilder, MPMSimulator
-from mani_skill2.utils.registration import register_gym_env
-from mani_skill2.utils.sapien_utils import get_entity_by_name, vectorize_pose
 from mani_skill2.envs.mpm.utils import load_h5_as_dict
+from mani_skill2.sensors.camera import CameraConfig
+from mani_skill2.utils.registration import register_env
+from mani_skill2.utils.sapien_utils import get_entity_by_name, vectorize_pose
 
-import warp as wp
-from warp.distance import compute_chamfer_distance
 
-
-@register_gym_env("Pinch-v0", max_episode_steps=300)
+@register_env("Pinch-v0", max_episode_steps=300)
 class PinchEnv(MPMBaseEnv):
     def __init__(
         self,
@@ -29,8 +28,9 @@ class PinchEnv(MPMBaseEnv):
         self.level_dir = ASSET_DIR / level_dir
         self.all_filepaths = sorted(self.level_dir.glob("*.h5"))
         if len(self.all_filepaths) == 0:
-            raise RuntimeError(
-                "Please download required assets for Pinch by running `python -m mani_skill2.utils.download --uid pinch`"
+            raise FileNotFoundError(
+                "Please download required assets for Pinch:"
+                "`python -m mani_skill2.utils.download_asset pinch`"
             )
 
         super().__init__(*args, **kwargs)
@@ -124,12 +124,15 @@ class PinchEnv(MPMBaseEnv):
             if l.name in ["panda_hand", "panda_leftfinger", "panda_rightfinger"]
         ]
 
+    def _configure_agent(self):
+        self._agent_cfg = PandaPinchConfig()
+
     def _load_agent(self):
         self.agent = Panda(
             self._scene,
             self.control_freq,
             control_mode=self._control_mode,
-            config=PandaPinchConfig(),
+            config=self._agent_cfg,
         )
         self.grasp_site: sapien.Link = get_entity_by_name(
             self.agent.robot.get_links(), "panda_hand_tcp"
@@ -146,23 +149,13 @@ class PinchEnv(MPMBaseEnv):
         self._chamfer_dist = None
         return super().step(*args, **kwargs)
 
-    def _setup_cameras(self):
-        # Camera only for rendering, not included in `_cameras`
-        self.render_camera = self._scene.add_camera(
-            "render_camera", 512, 512, 1, 0.001, 10
-        )
-        self.render_camera.set_local_pose(
-            sapien.Pose([-0.05, 0.7, 0.3], euler2quat(0, np.pi / 10, -np.pi / 2))
-        )
+    def _register_cameras(self):
+        p, q = [0.4, 0, 0.3], euler2quat(0, np.pi / 10, -np.pi)
+        return CameraConfig("base_camera", p, q, 128, 128, np.pi / 2, 0.001, 10)
 
-        base_camera = self._scene.add_camera(
-            "base_camera", 128, 128, np.pi / 2, 0.01, 10
-        )
-        base_camera.set_local_pose(
-            sapien.Pose([0.4, 0, 0.3], euler2quat(0, np.pi / 10, -np.pi))
-        )
-
-        self._cameras["base_camera"] = base_camera
+    def _register_render_cameras(self):
+        p, q = [-0.05, 0.7, 0.3], euler2quat(0, np.pi / 10, -np.pi / 2)
+        return CameraConfig("render_camera", p, q, 512, 512, 1, 0.001, 10)
 
     def compute_dense_reward(self, **kwargs):
 

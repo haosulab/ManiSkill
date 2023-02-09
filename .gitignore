@@ -8,7 +8,7 @@ dist/
 *.egg-info/
 
 # ipython/jupyter notebooks
-*.ipynb
+# *.ipynb
 **/.ipynb_checkpoints/
 
 # Editor temporaries
@@ -31,5 +31,6 @@ imgui.ini
 
 # directories that should be ignored in general
 # but can be excluded explicitly
-demos/*
-tmp/*
+tmp/
+data/
+demos/

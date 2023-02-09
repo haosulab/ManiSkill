@@ -5,13 +5,13 @@ import sapien.core as sapien
 from sapien.core import Pose
 from transforms3d.euler import euler2quat
 
-from mani_skill2.utils.registration import register_gym_env
+from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import vectorize_pose
 
 from .base_env import StationaryManipulationEnv
 
 
-@register_gym_env("PickCube-v0", max_episode_steps=200)
+@register_env("PickCube-v0", max_episode_steps=200)
 class PickCubeEnv(StationaryManipulationEnv):
     goal_thresh = 0.025
     min_goal_dist = 0.05
@@ -22,7 +22,7 @@ class PickCubeEnv(StationaryManipulationEnv):
         super().__init__(*args, **kwargs)
 
     def _load_actors(self):
-        self._add_ground()
+        self._add_ground(render=self.bg_name is None)
         self.obj = self._build_cube(self.cube_half_size)
         self.goal_site = self._build_sphere_site(self.goal_thresh)
 
@@ -122,7 +122,7 @@ class PickCubeEnv(StationaryManipulationEnv):
         super().set_state(state[:-3])
 
 
-@register_gym_env("LiftCube-v0", max_episode_steps=200)
+@register_env("LiftCube-v0", max_episode_steps=200)
 class LiftCubeEnv(PickCubeEnv):
     """Lift the cube to a certain height."""
 

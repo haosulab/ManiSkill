@@ -61,28 +61,35 @@ def normalize_depth(depth, min_depth=0, max_depth=None):
 def observations_to_images(observations, max_depth=None) -> List[np.ndarray]:
     """Parse images from camera observations."""
     images = []
-    for sensor_name in observations:
-        if "rgb" in sensor_name:
-            rgb = observations[sensor_name]
+    for key in observations:
+        if "rgb" in key or "Color" in key:
+            rgb = observations[key][..., :3]
             if rgb.dtype == np.float32:
                 rgb = np.clip(rgb * 255, 0, 255).astype(np.uint8)
-            # rgb = cv2.resize(rgb, [128, 128])
             images.append(rgb)
-        elif "depth" in sensor_name:
-            depth = observations[sensor_name]  # [H, W, 1]
+        elif "depth" in key or "Position" in key:
+            depth = observations[key]
+            if "Position" in key:  # [H, W, 4]
+                depth = -depth[..., 2:3]
+            # [H, W, 1]
             depth = normalize_depth(depth, max_depth=max_depth)
             depth = np.clip(depth * 255, 0, 255).astype(np.uint8)
             depth = np.repeat(depth, 3, axis=-1)
-            # depth = cv2.resize(depth, [128, 128])
             images.append(depth)
-        elif "seg" in sensor_name:
-            seg: np.ndarray = observations[sensor_name]  # [H, W, 1]
+        elif "seg" in key:
+            seg: np.ndarray = observations[key]  # [H, W, 1]
             assert seg.ndim == 3 and seg.shape[-1] == 1, seg.shape
             # A heuristic way to colorize labels
-            seg = np.uint8(seg * [11, 61, 127])
-            # seg = np.repeat(seg, 3, axis=-1)
-            # seg = cv2.resize(seg, [128, 128])
+            seg = np.uint8(seg * [11, 61, 127])  # [H, W, 3]
             images.append(seg)
+        elif "Segmentation" in key:
+            seg: np.ndarray = observations[key]  # [H, W, 4]
+            assert seg.ndim == 3 and seg.shape[-1] == 4, seg.shape
+            # A heuristic way to colorize labels
+            visual_seg = np.uint8(seg[..., 0:1] * [11, 61, 127])  # [H, W, 3]
+            actor_seg = np.uint8(seg[..., 1:2] * [11, 61, 127])  # [H, W, 3]
+            images.append(visual_seg)
+            images.append(actor_seg)
     return images
 
 

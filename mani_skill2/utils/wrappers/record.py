@@ -8,7 +8,6 @@ import numpy as np
 from gym import spaces
 
 from mani_skill2 import get_commit_info, logger
-from mani_skill2.envs.mpm.base_env import MPMBaseEnv
 
 from ..common import extract_scalars_from_info, flatten_dict_keys
 from ..io_utils import dump_json
@@ -86,7 +85,8 @@ class RecordEpisode(gym.Wrapper):
         trajectory_name: name of trajectory file (.h5). Use timestamp if not provided.
         save_video: whether to save video
         render_mode: rendering mode passed to `env.render`
-        save_on_reset: whether to save the previous trajectory automatically when resetting
+        save_on_reset: whether to save the previous trajectory automatically when resetting.
+            If True, the trajectory with empty transition will be ignored automatically.
         clean_on_close: whether to rename and prune trajectories when closed.
             See `clean_trajectories` for details.
     """
@@ -110,6 +110,7 @@ class RecordEpisode(gym.Wrapper):
             self.output_dir.mkdir(parents=True, exist_ok=True)
         self.save_on_reset = save_on_reset
 
+        self._elapsed_steps = 0
         self._episode_id = -1
         self._episode_data = []
         self._episode_info = {}
@@ -135,6 +136,9 @@ class RecordEpisode(gym.Wrapper):
         self.render_mode = render_mode
         self._render_images = []
 
+        # Avoid circular import
+        from mani_skill2.envs.mpm.base_env import MPMBaseEnv
+
         if isinstance(env.unwrapped, MPMBaseEnv):
             self.init_state_only = True
             logger.info("Soft-body (MPM) environment detected, record init_state only")
@@ -142,11 +146,14 @@ class RecordEpisode(gym.Wrapper):
             self.init_state_only = False
 
     def reset(self, **kwargs):
-        if self.save_on_reset:
-            self.flush_trajectory()
-            self.flush_video()
+        if self.save_on_reset and self._episode_id >= 0:
+            if self._elapsed_steps == 0:
+                self._episode_id -= 1
+            self.flush_trajectory(ignore_empty_transition=True)
+            self.flush_video(ignore_empty_transition=True)
 
         # Clear cache
+        self._elapsed_steps = 0
         self._episode_id += 1
         self._episode_data = []
         self._episode_info = {}
@@ -174,6 +181,7 @@ class RecordEpisode(gym.Wrapper):
 
     def step(self, action):
         obs, rew, done, info = super().step(action)
+        self._elapsed_steps += 1
 
         if self.save_trajectory:
             state = self.env.get_state()
@@ -186,9 +194,12 @@ class RecordEpisode(gym.Wrapper):
             image = self.env.render(self.render_mode)
 
             if self.info_on_video:
-                texts = [f"reward: {rew}", f"action: {action.round(2).tolist()}"]
-                info_processed = extract_scalars_from_info(info)
-                image = put_info_on_image(image, info_processed, extras=texts)
+                scalar_info = extract_scalars_from_info(info)
+                extra_texts = [
+                    f"reward: {rew:.3f}",
+                    "action: {}".format(",".join([f"{x:.2f}" for x in action])),
+                ]
+                image = put_info_on_image(image, scalar_info, extras=extra_texts)
 
             self._render_images.append(image)
 
@@ -315,7 +326,6 @@ class RecordEpisode(gym.Wrapper):
             if self.clean_on_close:
                 clean_trajectories(self._h5_file, self._json_data)
             self._h5_file.close()
-            dump_json(self._json_path, self._json_data, indent=2)
         if self.save_video:
             if self.save_on_reset:
                 self.flush_video(ignore_empty_transition=True)

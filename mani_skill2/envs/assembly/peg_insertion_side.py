@@ -5,13 +5,13 @@ import sapien.core as sapien
 from sapien.core import Pose
 from transforms3d.euler import euler2quat
 
-from mani_skill2.utils.registration import register_gym_env
+from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import hex2rgba, look_at, vectorize_pose
 
 from .base_env import StationaryManipulationEnv
 
 
-@register_gym_env(name="PegInsertionSide-v0", max_episode_steps=200)
+@register_env("PegInsertionSide-v0", max_episode_steps=200)
 class PegInsertionSideEnv(StationaryManipulationEnv):
     _clearance = 0.003
 
@@ -51,7 +51,7 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
         return builder.build_static(name)
 
     def _load_actors(self):
-        self._add_ground()
+        self._add_ground(render=self.bg_name is None)
 
         # peg
         # length, radius = 0.1, 0.02
@@ -111,7 +111,7 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
         self.box.set_pose(Pose(pos, quat))
 
     def _initialize_agent(self):
-        if self.robot_uuid == "panda":
+        if self.robot_uid == "panda":
             # fmt: off
             qpos = np.array(
                 [0.0, np.pi / 8, 0, -np.pi * 5 / 8, 0, np.pi * 3 / 4, -np.pi / 4, 0.04, 0.04]
@@ -123,7 +123,7 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
             self.agent.reset(qpos)
             self.agent.robot.set_pose(Pose([-0.615, 0, 0]))
         else:
-            raise NotImplementedError(self.robot_uuid)
+            raise NotImplementedError(self.robot_uid)
 
     @property
     def peg_head_pos(self):
@@ -259,12 +259,15 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
 
         return reward
 
-    def _setup_cameras(self):
-        super()._setup_cameras()
-        self.render_camera.set_local_pose(look_at([1.0, -1.0, 0.8], [0.0, 0.0, 0.5]))
-        self._cameras["base_camera"].set_local_pose(
-            look_at([0, -0.3, 0.2], [0, 0, 0.1])
-        )
+    def _register_cameras(self):
+        cam_cfg = super()._register_cameras()
+        cam_cfg.pose = look_at([0, -0.3, 0.2], [0, 0, 0.1])
+        return cam_cfg
+
+    def _register_render_cameras(self):
+        cam_cfg = super()._register_render_cameras()
+        cam_cfg.pose = look_at([0.5, -0.5, 0.8], [0.05, -0.1, 0.4])
+        return cam_cfg
 
     def set_state(self, state):
         super().set_state(state)

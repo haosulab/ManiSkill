@@ -4,9 +4,11 @@ import numpy as np
 import sapien.core as sapien
 from sapien.core import Pose
 
+from mani_skill2.agents.base_agent import BaseAgent
 from mani_skill2.agents.robots.panda import Panda
 from mani_skill2.agents.robots.xmate3 import Xmate3Robotiq
 from mani_skill2.envs.sapien_env import BaseEnv
+from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.sapien_utils import (
     get_entity_by_name,
     look_at,
@@ -20,7 +22,7 @@ class StationaryManipulationEnv(BaseEnv):
     agent: Union[Panda, Xmate3Robotiq]
 
     def __init__(self, *args, robot="panda", robot_init_qpos_noise=0.02, **kwargs):
-        self.robot_uuid = robot
+        self.robot_uid = robot
         self.robot_init_qpos_noise = robot_init_qpos_noise
         super().__init__(*args, **kwargs)
 
@@ -53,16 +55,22 @@ class StationaryManipulationEnv(BaseEnv):
         sphere.hide_visual()
         return sphere
 
+    def _configure_agent(self):
+        agent_cls: Type[BaseAgent] = self.SUPPORTED_ROBOTS[self.robot_uid]
+        self._agent_cfg = agent_cls.get_default_config()
+
     def _load_agent(self):
-        agent_cls: Type[Panda] = self.SUPPORTED_ROBOTS[self.robot_uuid]
-        self.agent = agent_cls(self._scene, self._control_freq, self._control_mode)
+        agent_cls: Type[Panda] = self.SUPPORTED_ROBOTS[self.robot_uid]
+        self.agent = agent_cls(
+            self._scene, self._control_freq, self._control_mode, config=self._agent_cfg
+        )
         self.tcp: sapien.Link = get_entity_by_name(
-            self.agent.robot.get_links(), self.agent._config.ee_link_name
+            self.agent.robot.get_links(), self.agent.config.ee_link_name
         )
         set_articulation_render_material(self.agent.robot, specular=0.9, roughness=0.3)
 
     def _initialize_agent(self):
-        if self.robot_uuid == "panda":
+        if self.robot_uid == "panda":
             # fmt: off
             # EE at [0.615, 0, 0.17]
             qpos = np.array(
@@ -74,7 +82,7 @@ class StationaryManipulationEnv(BaseEnv):
             )
             self.agent.reset(qpos)
             self.agent.robot.set_pose(Pose([-0.615, 0, 0]))
-        elif self.robot_uuid == "xmate3_robotiq":
+        elif self.robot_uid == "xmate3_robotiq":
             qpos = np.array(
                 [0, np.pi / 6, 0, np.pi / 3, 0, np.pi / 2, -np.pi / 2, 0, 0]
             )
@@ -84,11 +92,11 @@ class StationaryManipulationEnv(BaseEnv):
             self.agent.reset(qpos)
             self.agent.robot.set_pose(Pose([-0.562, 0, 0]))
         else:
-            raise NotImplementedError(self.robot_uuid)
+            raise NotImplementedError(self.robot_uid)
 
     def _initialize_agent_v1(self):
         """Higher EE pos."""
-        if self.robot_uuid == "panda":
+        if self.robot_uid == "panda":
             # fmt: off
             qpos = np.array(
                 [0.0, 0, 0, -np.pi * 2 / 3, 0, np.pi * 2 / 3, np.pi / 4, 0.04, 0.04]
@@ -99,7 +107,7 @@ class StationaryManipulationEnv(BaseEnv):
             )
             self.agent.reset(qpos)
             self.agent.robot.set_pose(Pose([-0.615, 0, 0]))
-        elif self.robot_uuid == "xmate3_robotiq":
+        elif self.robot_uid == "xmate3_robotiq":
             qpos = np.array([0, 0.6, 0, 1.3, 0, 1.3, -1.57, 0, 0])
             qpos[:-2] += self._episode_rng.normal(
                 0, self.robot_init_qpos_noise, len(qpos) - 2
@@ -107,21 +115,20 @@ class StationaryManipulationEnv(BaseEnv):
             self.agent.reset(qpos)
             self.agent.robot.set_pose(Pose([-0.562, 0, 0]))
         else:
-            raise NotImplementedError(self.robot_uuid)
+            raise NotImplementedError(self.robot_uid)
 
-    def _setup_cameras(self):
-        # Camera only for rendering, not included in `_cameras`
-        self.render_camera = self._scene.add_camera(
-            "render_camera", 512, 512, 1, 0.01, 10
+    def _register_cameras(self):
+        pose = look_at([0.3, 0, 0.6], [-0.1, 0, 0.1])
+        return CameraConfig(
+            "base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10
         )
-        self.render_camera.set_local_pose(look_at([1.0, 1.0, 0.8], [0.0, 0.0, 0.5]))
 
-        base_camera = self._scene.add_camera(
-            "base_camera", 128, 128, np.pi / 2, 0.01, 10
-        )
-        # base_camera.set_local_pose(look_at([0.2, 0, 0.4], [0, 0, 0]))
-        base_camera.set_local_pose(look_at([0.3, 0, 0.6], [-0.1, 0, 0.1]))
-        self._cameras["base_camera"] = base_camera
+    def _register_render_cameras(self):
+        if self.robot_uid == "panda":
+            pose = look_at([0.4, 0.4, 0.8], [0.0, 0.0, 0.4])
+        else:
+            pose = look_at([0.5, 0.5, 1.0], [0.0, 0.0, 0.5])
+        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
 
     def _setup_viewer(self):
         super()._setup_viewer()

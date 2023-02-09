@@ -7,7 +7,8 @@ from transforms3d.quaternions import axangle2quat
 from mani_skill2.envs.mpm.base_env import MPMBaseEnv, MPMModelBuilder
 from mani_skill2.agents.robots.panda import Panda
 from mani_skill2.agents.configs.panda.defaults import PandaDefaultConfig
-from mani_skill2.utils.registration import register_gym_env
+from mani_skill2.utils.registration import register_env
+from mani_skill2.sensors.camera import CameraConfig
 from warp_maniskill.mpm.mpm_simulator import (
     Simulator as MPMSimulator,
 )
@@ -27,7 +28,7 @@ from collections import OrderedDict
 import warp as wp
 
 
-@register_gym_env("Hang-v0", max_episode_steps=350)
+@register_env("Hang-v0", max_episode_steps=350)
 class HangEnv(MPMBaseEnv):
     def __init__(
         self,
@@ -153,13 +154,15 @@ class HangEnv(MPMBaseEnv):
 
         self.selected_indices = [index1, index2, index3, index4, index5]
 
+    def _configure_agent(self):
+        self._agent_cfg = PandaDefaultConfig()
+
     def _load_agent(self):
-        default_config = PandaDefaultConfig()
         self.agent = Panda(
             self._scene,
             self._control_freq,
             control_mode=self._control_mode,
-            config=default_config,
+            config=self._agent_cfg,
         )
         self.grasp_site: sapien.Link = get_entity_by_name(
             self.agent.robot.get_links(), "panda_hand"
@@ -179,22 +182,13 @@ class HangEnv(MPMBaseEnv):
         builder.add_box_visual(half_size=[0.3, 0.01, 0.01], color=[1, 0, 0, 1])
         self.rod = builder.build_kinematic("rod")
 
-    def _setup_cameras(self):
-        # Camera only for rendering, not included in `_cameras`
-        self.render_camera = self._scene.add_camera(
-            "render_camera", 512, 512, 1, 0.001, 10
-        )
-        self.render_camera.set_local_pose(
-            sapien.Pose([0.2, 1.0, 0.5], euler2quat(0, 0.2, 4.4))
-        )
+    def _register_cameras(self):
+        p, q = [0.45, -0.0, 0.5], euler2quat(0, np.pi / 5, np.pi)
+        return CameraConfig("base_camera", p, q, 128, 128, np.pi / 2, 0.001, 10)
 
-        base_camera = self._scene.add_camera(
-            "base_camera", 128, 128, np.pi / 2, 0.001, 10
-        )
-        base_camera.set_local_pose(
-            sapien.Pose([0.45, -0.0, 0.5], euler2quat(0, np.pi / 5, np.pi))
-        )
-        self._cameras["base_camera"] = base_camera
+    def _register_render_cameras(self):
+        p, q = [0.2, 1.0, 0.5], euler2quat(0, 0.2, 4.4)
+        return CameraConfig("render_camera", p, q, 512, 512, 1, 0.001, 10)
 
     def initialize_episode(self):
         super().initialize_episode()

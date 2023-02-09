@@ -5,7 +5,7 @@ import numpy as np
 import sapien.core as sapien
 from transforms3d.euler import euler2quat
 
-from mani_skill2.utils.registration import register_gym_env
+from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import check_actor_static, vectorize_pose
 
 from .base_env import StationaryManipulationEnv
@@ -59,7 +59,7 @@ class UniformSampler:
         return pos
 
 
-@register_gym_env("StackCube-v0", max_episode_steps=200)
+@register_env("StackCube-v0", max_episode_steps=200)
 class StackCubeEnv(StationaryManipulationEnv):
     def _get_default_scene_config(self):
         scene_config = super()._get_default_scene_config()
@@ -67,7 +67,7 @@ class StackCubeEnv(StationaryManipulationEnv):
         return scene_config
 
     def _load_actors(self):
-        self._add_ground()
+        self._add_ground(render=self.bg_name is None)
 
         self.box_half_size = np.float32([0.02] * 3)
         self.cubeA = self._build_cube(self.box_half_size, color=(1, 0, 0), name="cubeA")
