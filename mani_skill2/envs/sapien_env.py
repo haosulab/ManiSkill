@@ -305,8 +305,13 @@ class BaseEnv(gym.Env):
         return params
 
     def _get_obs_images(self) -> OrderedDict:
-        self.update_render()
-        self.take_picture()
+        if self._renderer_type == "client":
+            # NOTE: not compatible with StereoDepthCamera
+            cameras = [x.camera for x in self._cameras.values()]
+            self._scene._update_render_and_take_pictures(cameras)
+        else:
+            self.update_render()
+            self.take_picture()
         return OrderedDict(
             agent=self._get_obs_agent(),
             extra=self._get_obs_extra(),
