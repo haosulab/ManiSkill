@@ -10,6 +10,7 @@ tqdm
 # utilties
 GitPython
 tabulate
+gdown>=4.6.0
 # vision
 transforms3d
 opencv-python
