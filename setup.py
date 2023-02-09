@@ -31,4 +31,20 @@ setup(
         "warp_maniskill.warp": ["native/*", "native/nanovdb/*"],
     },
     exclude_package_data={"": ["*.convex.stl"]},
+    extras_require={
+        "tests": ["pytest", "black", "isort"],
+        "docs": [
+            "sphinx",
+            "sphinx-autobuild",
+            "sphinx-rtd-theme",
+            # For spelling
+            "sphinxcontrib.spelling",
+            # Type hints support
+            "sphinx-autodoc-typehints",
+            # Copy button for code snippets
+            "sphinx_copybutton",
+            # Markdown parser
+            "myst-parser",
+        ],
+    },
 )
