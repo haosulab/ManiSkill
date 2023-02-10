@@ -32,7 +32,7 @@ RUN curl -o ~/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest
 ENV PATH /opt/conda/bin:$PATH
 SHELL ["/bin/bash", "-c"]
 
-COPY environment.yml /root
-RUN conda env update -n base -f /root/environment.yml \
-    && pip install gym==0.18.3 --no-deps \
-    && conda clean -ya && pip cache purge
+# https://github.com/haosulab/ManiSkill/issues/9
+COPY nvidia_icd.json /usr/share/vulkan/icd.d/nvidia_icd.json
+
+RUN pip install mani-skill2==0.4.0 && pip cache purge

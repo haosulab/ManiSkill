@@ -28,12 +28,13 @@ It is a flat version of *state_dict*. The observation space is `gym.spaces.Box`.
 In addition to `agent` and `extra`, `image` and `camera_param` are introduced.
 
 - image: RGB, depth, and other images taken by cameras
-  - `{camera_name}`:
+  - `{camera_uid}`:
     - `Color`: [H, W, 4], `np.float32`. RGBA.
     - `Position`: [H, W, 4], `np.float32`. The first 3 dimensions stand for (x, y, z) coordinates in the OpenGL/Blender convension. The unit is meter.
 - `camera_param`: camera parameters
-  - `cam2world`: [4, 4], transformation from the camera frame to the world frame (OpenGL/Blender convention)
-  - `intrinsic`: [3, 3], camera intrinsic
+  - `cam2world_gl`: [4, 4], transformation from the camera frame to the world frame (OpenGL/Blender convention)
+  - `extrinsic_cv`: [4, 4], camera extrinsic (OpenCV convention)
+  - `intrinsic_cv`: [3, 3], camera intrinsic (OpenCV convention)
 
 Unless specified otherwise, there are two cameras: *base_camera* (fixed relative to the robot base) and *hand_camera* (mounted on the robot hand). Environments migrated from ManiSkill1 use 3 cameras mounted above the robot: *overhead_camera_{i}*.
 
@@ -42,7 +43,7 @@ Unless specified otherwise, there are two cameras: *base_camera* (fixed relative
 We postprocess the raw image observation to obtain RGB-D images.
 
 - `image`: RGB, depth, and other images taken by cameras
-  - `{camera_name}`:
+  - `{camera_uid}`:
     - `rgb`: [H, W, 3], `np.uint8`. RGB.
     - `depth`: [H, W, 1], `np.float32`. 0 stands for an invalid pixel (beyond the camera far).
 
@@ -60,23 +61,30 @@ Note that the point cloud does not contain more information than RGB-D images un
 
 `rgbd+robot_seg` or `pointcloud+robot_seg`  can be used to acquire the segmentation mask of robot links. `robot_seg` is appended.
 
+- `pointcloud+robot_seg`:
+  - `robot_seg`: [N, 1], a binary mask where 1 for robot and 0 for others.
+
+- `rgbd+robot_seg`:
+  - {camera_uid}
+  - `robot_seg`: [N, 1], a binary mask where 1 for robot and 0 for others.
+
 ## Ground-truth Segmentation
 
 Ground-truth segmentation can be used to generate training data for computer vision, reinforcement learning, and many other applications.
 
 ```python
-env = gym.make(env_id, enable_gt_seg=True)
+env = gym.make(env_id, camera_cfgs={"add_segmentation": True})
 ```
 
-There will be two additional keys: *visual_seg* and *actor_seg*. For `obs_mode="rgbd"`:
+There will be an additional key: *Segmentation*.
+
+For `obs_mode="rgbd"`:
 
 - `image`:
-  - `{camera_name}`
-    - `visual_seg`: [H, W, 1], `np.uint32`. Mesh-level (part) segmentation.
-    - `actor_seg`: [H, W, 1], `np.uint32`. Actor-level (object) segmentation.
+  - `{camera_uid}`
+    - `Segmentation`: [H, W, 4], `np.uint32`. The 1st dimension is mesh-level (part) segmentation. The 2nd dimension is actor-level (object/link) segmentation.
 
 For `obs_mode="pointcloud"`:
 
 - `pointcloud`:
-  - `visual_seg`: [N, 1], `np.uint32`
-  - `actor_seg`: [N, 1], `np.uint32`
+  - `Segmentation`: [N, 4], `np.uint32`

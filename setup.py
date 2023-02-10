@@ -12,7 +12,7 @@ def read_requirements():
 
 setup(
     name="mani_skill2",
-    version="0.3.2",
+    version="0.3.3",
     description="ManiSkill2: A Unified Benchmark for Generalizable Manipulation Skills",
     long_description=long_description,
     long_description_content_type="text/markdown",

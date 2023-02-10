@@ -2,84 +2,70 @@
 
 ![teaser](figures/teaser.jpg)
 
-ManiSkill2 is a large-scale robotic manipulation benchmark, focusing on learning generalizable robot agents and manipulation skills. It features 2000+ diverse objects, 20 task categories, and a large-scale demonstration set in [SAPIEN](https://sapien.ucsd.edu/), a fully-physical, realistic simulator. The benchmark can be used to study 2D & 3D vision-based imitation learning, reinforcement learning, and motion planning, etc. We invite you to participate in the associated [ManiSkill 2022 challenge](https://sapien.ucsd.edu/challenges/maniskill/2022/) where we will be awarding prizes to the teams who achieve the highest success rates in our environments.
+[![PyPI version](https://badge.fury.io/py/mani-skill2.svg)](https://badge.fury.io/py/mani-skill2)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/haosulab/ManiSkill2/blob/main/examples/tutorials/1_quickstart.ipynb)
+[![Docs status](https://img.shields.io/badge/docs-passing-brightgreen.svg)](https://haosulab.github.io/ManiSkill2)
+<!-- [![Docs](https://github.com/haosulab/ManiSkill2/actions/workflows/gh-pages.yml/badge.svg)](https://haosulab.github.io/ManiSkill2) -->
 
-**Notes**: We are actively introducing new functionalities and improvements (e.g. new tasks and highly efficient system for visual RL). See the [roadmap](https://github.com/haosulab/ManiSkill2/discussions/30) for more details.
+ManiSkill2 is a unified benchmark for learning generalizable robotic manipulation skills powered by [SAPIEN](https://sapien.ucsd.edu/). **It features 20 out-of-box task families with 2000+ diverse object models and 4M+ demonstration frames**. Moreover, it empowers fast visual input learning algorithms
+so that **a CNN-based policy can collect samples at about 2000 FPS with 1 GPU and 16 processes on a workstation**. The benchmark can be used to study a wide range of algorithms: 2D & 3D vision-based reinforcement learning, imitation learning, sense-plan-act, etc.
+
+Please refer our [documentation](https://haosulab.github.io/ManiSkill2) to learn more information.
+
+We invite you to participate in the associated [ManiSkill2 challenge](https://sapien.ucsd.edu/challenges/maniskill/2022/) where the top teams will be awarded prizes.
 
 **Table of Contents**
 
-- [Citation](#citation)
 - [Installation](#installation)
 - [Getting Started](#getting-started)
   - [Interactive play](#interactive-play)
   - [Environment Interface](#environment-interface)
 - [Reinforcement Learning Example with ManiSkill2-Learn](#reinforcement-learning-example-with-maniskill2-learn)
 - [Demonstrations](#demonstrations)
-- [ManiSkill 2022 Challenge](#maniskill-2022-challenge)
+- [ManiSkill2 Challenge](#maniskill2-challenge)
 - [Leaderboard](#leaderboard)
 - [License](#license)
-
-## Citation
-
-If you use ManiSkill2 or its assets and models, consider citing the following publication:
-
-```
-@inproceedings{gu2023maniskill2,
-  title={ManiSkill2: A Unified Benchmark for Generalizable Manipulation Skills},
-  author={Gu, Jiayuan and Xiang, Fanbo and Li, Xuanlin and Ling, Zhan and Liu, Xiqiaing and Mu, Tongzhou and Tang, Yihe and Tao, Stone and Wei, Xinyue and Yao, Yunchao and Yuan, Xiaodi and Xie, Pengwei and Huang, Zhiao and Chen, Rui and Su, Hao},
-  booktitle={International Conference on Learning Representations},
-  year={2023}
-}
-```
+- [Citation](#citation)
 
 ## Installation
 
-First, clone the repo:
+From pip:
+
+```bash
+pip install mani_skill2
+```
+
+From github:
+
+```bash
+pip install --upgrade git+https://github.com/haosulab/ManiSkill2.git
+```
+
+From source:
 
 ```bash
 git clone https://github.com/haosulab/ManiSkill2.git
+cd ManiSkill && pip install -e .
 ```
-
-Then, install dependencies and this package `mani_skill2`:
-
-```bash
-conda env create -n mani_skill2 -f environment.yml
-conda activate mani_skill2
-python setup.py develop
-```
-
-`gym>0.21` introduces breaking changes, e.g., deprecating `env.seed()`. We recommend `pip install gym==0.18.3 --no-deps`.
-
-Some environments require **downloading assets**. You can download all the assets by `python -m mani_skill2.utils.download_asset all`.
 
 ---
 
-> The following section is to install Warp for soft-body environments. Skip if you do not need it.
+GPU is required to enable rendering for ManiSkill2. The rigid-body environments, powered by SAPIEN, are ready to use after installation.
 
-To run soft body environments, **CUDA toolkit >= 11.3 and gcc** are required.
-You can download and install the CUDA toolkit from
-<https://developer.nvidia.com/cuda-downloads?target_os=Linux>.
-Assuming the CUDA toolkit is installed at `/usr/local/cuda`, you need to ensure `CUDA_PATH` or `CUDA_HOME` is set properly:
+Test your installation:
 
 ```bash
-export CUDA_PATH=/usr/local/cuda
-
-# The following command should print a CUDA compiler version >= 11.3
-${CUDA_PATH}/bin/nvcc --version
-
-# The following command should output a valid gcc version
-gcc --version
+# Run an episode (at most 200 steps) of "PickCube-v0" (a rigid-body environment) with random actions
+python -m mani_skill2.examples.demo_random_action
 ```
 
-If `nvcc` is included in `$PATH`, we will try to figure out the variable `CUDA_PATH` automatically.
+Some environments require **downloading assets**. You can download all the assets by `python -m mani_skill2.utils.download_asset all` or download task-specific assets by `python -m mani_skill2.utils.download_asset ${ENV_ID}`.
 
-To verify CUDA is properly set up for ManiSkill2, run the following in the root directory of this repository to compile warp.
+---
 
-``` bash
-python -m warp_maniskill.build_lib
-```
+The soft-body environments are based on SAPIEN and customized [NVIDIA Warp](https://github.com/NVIDIA/warp), which requires **CUDA toolkit >= 11.3 and gcc** to compile. Please refer to the [documentation](https://haosulab.github.io/ManiSkill2/getting_started/installation.html#warp-maniskill2-version) for more details about installing ManiSkill2 Warp.
 
-For soft body environments, you need to make sure only 1 CUDA device is visible:
+For soft-body environments, you need to make sure only 1 CUDA device is visible:
 
 ``` bash
 # Select the first CUDA device. Change 0 to other integer for other device.
@@ -90,12 +76,12 @@ If multiple CUDA devices are visible, the environment will give an error. If you
 want to interactively visualize the environment, you need to assign the id of
 the GPU connected to your display (e.g., monitor screen).
 
-All soft body environments require runtime compilation and cache generation. You
+All soft-body environments require runtime compilation and cache generation. You
 can run the following to compile and generate cache in advance. **This step is
-required if you run soft body environments in parallel with multiple processes.**
+required before you run soft body environments in parallel with multiple processes.**
 
 ``` bash
-python -m mani_skill2.tools.precompile_mpm
+python -m mani_skill2.utils.precompile_mpm
 ```
 
 ## Getting Started
@@ -105,13 +91,20 @@ python -m mani_skill2.tools.precompile_mpm
 We provide a demo script to interactively play with our environments.
 
 ```bash
-python -m mani_skill2.examples.demo_manual_control -e PickCube-v0
 # PickCube-v0 can be replaced with other environment id.
+python -m mani_skill2.examples.demo_manual_control -e PickCube-v0
 ```
 
-Press `i` (or `j`, `k`, `l`, `u`, `o`) to move the end-effector. Press any key between `1` to `6` to rotate the end-effector. Press `f` or `g` to open or close the gripper. Press `esc` to close the viewer and exit the program.
+Keyboard controls:
 
-For `PickCube-v0`, the green sphere indicates the goal position to move the cube to. See our wiki pages for more [rigid-body environments](https://github.com/haosulab/ManiSkill2/wiki/Rigid-Body-Environments) and [soft-body environments](https://github.com/haosulab/ManiSkill2/wiki/Soft-Body-Environments). You can also download assets individually for certain environments (e.g. `PickSingleYCB-v0`, `TurnFaucet-v0`, `AssemblingKits-v0`)  following the above wiki pages.
+- Press `i` (or `j`, `k`, `l`, `u`, `o`) to move the end-effector.
+- Press any key between `1` to `6` to rotate the end-effector.
+- Press `f` or `g` to open or close the gripper.
+- Press `w` (or `a`, `s`, `d`) to translate the base if the robot is mobile. Press `q` or `e` to rotate the base. Press `z` or `x` to lift the torso.
+- Press `esc` to close the viewer and exit the program.
+
+For `PickCube-v0`, the green sphere indicates the goal position to move the cube to. Please refer to [Environments](https://haosulab.github.io/ManiSkill2/concepts/environments.html) for all supported environments and whether they require downloading assets.
+
 
 ### Environment Interface
 
@@ -137,9 +130,9 @@ env.close()
 
 Each `mani_skill2` environment supports different **observation modes** and **control modes**, which determine the **observation space** and **action space**. They can be specified by `gym.make(env_id, obs_mode=..., control_mode=...)`.
 
-The supported observation modes are `pointcloud`, `rgbd`, `state_dict` and `state`. Note that for the Maniskill 2022 Challenge, only `pointcloud` and `rgbd` are permitted.
+The basic observation modes supported are `pointcloud`, `rgbd`, `state_dict` and `state`. Additional observation modes which include robot segmentation masks are `pointcloud+robot_seg` and `rgbd+robot_seg`. Note that for the Maniskill2 Challenge, only `pointcloud` and `rgbd` (and their `robot_seg` versions) are permitted.
 
-Please refer to our wiki for information on the [observation](https://github.com/haosulab/ManiSkill2/wiki/Observation-Space) and [control](https://github.com/haosulab/ManiSkill2/wiki/Controllers) modes available and their details.
+Please refer to our documentation for information on the [observation](https://haosulab.github.io/ManiSkill2/concepts/observation.html) and [control](https://haosulab.github.io/ManiSkill2/concepts/controllers.html) modes available and their details.
 
 ## Reinforcement Learning Example with ManiSkill2-Learn
 
@@ -155,10 +148,9 @@ For those who cannot access Google Drive, the datasets can be downloaded from [S
 To bulk download demonstrations, you can use the following scripts:
 
 ```bash
-pip install --upgrade --no-cache-dir gdown # gdown is a dependency for the below commands
-
 # Download all rigid-body demonstrations
 python -m mani_skill2.utils.download_demo rigid_body -o demos
+
 # Download all soft-body demonstrations
 python -m mani_skill2.utils.download_demo soft_body -o demos
 
@@ -208,9 +200,9 @@ We recommend using our script only for converting actions into different control
   
 Thus we recommend that, after you convert actions into different control modes, implement your custom environment wrappers for observation processing. After this, use another script to render and save the corresponding post-processed visual demonstrations. [ManiSkill2-Learn](https://github.com/haosulab/ManiSkill2-Learn) has included such observation processing wrapper and demonstration conversion script (with multi-processing), so we recommend referring to the repo for more details.
 
-## ManiSkill 2022 Challenge
+## ManiSkill2 Challenge
 
-The ManiSkill 2022 challenge is an ongoing competition using the ManiSkill2 benchmark. See our [website](https://sapien.ucsd.edu/challenges/maniskill/2022/) for additional competition details and follow the [getting started](https://sapien.ucsd.edu/challenges/maniskill/2022#getting-started) section to learn how to compete.
+The ManiSkill2 challenge is an ongoing competition using the ManiSkill2 benchmark. See our [website](https://sapien.ucsd.edu/challenges/maniskill/2022/) for additional competition details and follow the [getting started](https://sapien.ucsd.edu/challenges/maniskill/2022#getting-started) section to learn how to compete.
 
 To create a submission for the competition, follow [the instructions on our wiki](https://github.com/haosulab/ManiSkill2/wiki/Participation-Guidelines) on how to create a submission and submit it to the leaderboard.
 
@@ -228,3 +220,16 @@ However, the soft body environments will follow Warp's license. Currently, they 
 [NVIDIA Source Code License for Warp](https://github.com/NVIDIA/warp/blob/main/LICENSE.md).
 
 The assets are licensed under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/legalcode).
+
+## Citation
+
+If you use ManiSkill2 or its assets and models, consider citing the following publication:
+
+```
+@inproceedings{gu2023maniskill2,
+  title={ManiSkill2: A Unified Benchmark for Generalizable Manipulation Skills},
+  author={Gu, Jiayuan and Xiang, Fanbo and Li, Xuanlin and Ling, Zhan and Liu, Xiqiaing and Mu, Tongzhou and Tang, Yihe and Tao, Stone and Wei, Xinyue and Yao, Yunchao and Yuan, Xiaodi and Xie, Pengwei and Huang, Zhiao and Chen, Rui and Su, Hao},
+  booktitle={International Conference on Learning Representations},
+  year={2023}
+}
+```
