@@ -12,7 +12,7 @@ so that **a CNN-based policy can collect samples at about 2000 FPS with 1 GPU an
 
 Please refer our [documentation](https://haosulab.github.io/ManiSkill2) to learn more information.
 
-We invite you to participate in the associated [ManiSkill 2022 challenge](https://sapien.ucsd.edu/challenges/maniskill/2022/) where the top teams will be awarded prizes.
+We invite you to participate in the associated [ManiSkill2 challenge](https://sapien.ucsd.edu/challenges/maniskill/2022/) where the top teams will be awarded prizes.
 
 **Table of Contents**
 
@@ -22,7 +22,7 @@ We invite you to participate in the associated [ManiSkill 2022 challenge](https:
   - [Environment Interface](#environment-interface)
 - [Reinforcement Learning Example with ManiSkill2-Learn](#reinforcement-learning-example-with-maniskill2-learn)
 - [Demonstrations](#demonstrations)
-- [ManiSkill 2022 Challenge](#maniskill-2022-challenge)
+- [ManiSkill2 Challenge](#maniskill2-challenge)
 - [Leaderboard](#leaderboard)
 - [License](#license)
 - [Citation](#citation)
@@ -130,7 +130,7 @@ env.close()
 
 Each `mani_skill2` environment supports different **observation modes** and **control modes**, which determine the **observation space** and **action space**. They can be specified by `gym.make(env_id, obs_mode=..., control_mode=...)`.
 
-The bascially supported observation modes are `pointcloud`, `rgbd`, `state_dict` and `state`. Extra observation modes are `pointcloud_robot_seg` and `rgbd_robot_seg`, which include robot segmentation masks in addition. Note that for the Maniskill 2022 Challenge, only `pointcloud` and `rgbd` (and their `robot_seg` versions) are permitted.
+The basic observation modes supported are `pointcloud`, `rgbd`, `state_dict` and `state`. Additional observation modes which include robot segmentation masks are `pointcloud+robot_seg` and `rgbd+robot_seg`. Note that for the Maniskill2 Challenge, only `pointcloud` and `rgbd` (and their `robot_seg` versions) are permitted.
 
 Please refer to our documentation for information on the [observation](https://haosulab.github.io/ManiSkill2/concepts/observation.html) and [control](https://haosulab.github.io/ManiSkill2/concepts/controllers.html) modes available and their details.
 
@@ -200,9 +200,9 @@ We recommend using our script only for converting actions into different control
   
 Thus we recommend that, after you convert actions into different control modes, implement your custom environment wrappers for observation processing. After this, use another script to render and save the corresponding post-processed visual demonstrations. [ManiSkill2-Learn](https://github.com/haosulab/ManiSkill2-Learn) has included such observation processing wrapper and demonstration conversion script (with multi-processing), so we recommend referring to the repo for more details.
 
-## ManiSkill 2022 Challenge
+## ManiSkill2 Challenge
 
-The ManiSkill 2022 challenge is an ongoing competition using the ManiSkill2 benchmark. See our [website](https://sapien.ucsd.edu/challenges/maniskill/2022/) for additional competition details and follow the [getting started](https://sapien.ucsd.edu/challenges/maniskill/2022#getting-started) section to learn how to compete.
+The ManiSkill2 challenge is an ongoing competition using the ManiSkill2 benchmark. See our [website](https://sapien.ucsd.edu/challenges/maniskill/2022/) for additional competition details and follow the [getting started](https://sapien.ucsd.edu/challenges/maniskill/2022#getting-started) section to learn how to compete.
 
 To create a submission for the competition, follow [the instructions on our wiki](https://github.com/haosulab/ManiSkill2/wiki/Participation-Guidelines) on how to create a submission and submit it to the leaderboard.
 
