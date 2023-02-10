@@ -1,6 +1,8 @@
 from setuptools import find_packages, setup
 
-long_description = """ManiSkill2 is a large-scale robotic manipulation benchmark, focusing on learning generalizable robot agents and manipulation skills. It features 2000+ diverse objects, 20 task categories, and a large-scale demonstration set in [SAPIEN](https://sapien.ucsd.edu/), a fully-physical, realistic simulator. The benchmark can be used to study 2D & 3D vision-based imitation learning, reinforcement learning, and motion planning, etc."""
+long_description = """ManiSkill2 is a unified benchmark for learning generalizable robotic manipulation skills powered by [SAPIEN](https://sapien.ucsd.edu/). **It features 20 out-of-box task families with 2000+ diverse object models and 4M+ demonstration frames**. Moreover, it empowers fast visual input learning algorithms so that **a CNN-based policy can collect samples at about 2000 FPS with 1 GPU and 16 processes on a workstation**. The benchmark can be used to study a wide range of algorithms: 2D & 3D vision-based reinforcement learning, imitation learning, sense-plan-act, etc.
+
+Please refer our [documentation](https://haosulab.github.io/ManiSkill2) to learn more information."""
 
 
 def read_requirements():
@@ -12,7 +14,7 @@ def read_requirements():
 
 setup(
     name="mani_skill2",
-    version="0.3.3",
+    version="0.4.0",
     description="ManiSkill2: A Unified Benchmark for Generalizable Manipulation Skills",
     long_description=long_description,
     long_description_content_type="text/markdown",
