@@ -13,9 +13,8 @@ class Evaluator(BaseEvaluator):
 
     def __init__(self, output_dir: str, record_dir=None):
         if os.path.exists(output_dir):
-            print(f"{output_dir} exists.")
-        else:
-            os.makedirs(output_dir)
+            print(f"{output_dir} already exists.")
+        os.makedirs(output_dir, exist_ok=True)
         self.output_dir = output_dir
 
         self.record_dir = record_dir
@@ -55,13 +54,33 @@ def parse_args():
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-e", "--env-id", type=str, required=True)
-    parser.add_argument("-o", "--output-dir", type=str, required=True)
-    parser.add_argument("--config-file", type=str)
+    parser.add_argument(
+        "-e", "--env-id", type=str, required=True, help="Environment ID"
+    )
+    parser.add_argument(
+        "-o",
+        "--output-dir",
+        type=str,
+        required=True,
+        help="Directory to save evaluation results.",
+    )
+    parser.add_argument(
+        "--config-file",
+        type=str,
+        help="Path to the config file. If None, use the dummy config.",
+    )
     # For debug only
-    parser.add_argument("--num-episodes", type=int, default=1)
-    parser.add_argument("--use-random-policy", action="store_true")
-    parser.add_argument("--record-dir", type=str)
+    parser.add_argument("-n", "--num-episodes", type=int, help="Number of episodes.")
+    parser.add_argument(
+        "--use-random-policy",
+        action="store_true",
+        help="Whether to use a random policy.",
+    )
+    parser.add_argument(
+        "--record-dir",
+        type=str,
+        help="Directory to record videos and trajectories. If it is '@', use the output directory.",
+    )
 
     args = parser.parse_args()
     return args
@@ -70,6 +89,8 @@ def parse_args():
 def main():
     args = parse_args()
 
+    if args.record_dir == "@":
+        args.record_dir = args.output_dir
     evaluator = Evaluator(args.output_dir, record_dir=args.record_dir)
 
     # ---------------------------------------------------------------------------- #
@@ -111,8 +132,11 @@ def main():
     evaluator.setup(args.env_id, UserPolicy, env_kwargs)
 
     try:
-        cb = TqdmCallback(len(config["episodes"]))
-        evaluator.evaluate_episodes(config["episodes"], callback=cb)
+        episodes = config["episodes"]
+        if args.num_episodes is not None:
+            episodes = episodes[: args.num_episodes]
+        cb = TqdmCallback(len(episodes))
+        evaluator.evaluate_episodes(episodes, callback=cb)
     except:
         exc_info = sys.exc_info()
         print("Error during evaluation", exc_info[:-1])
