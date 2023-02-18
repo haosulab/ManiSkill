@@ -1,3 +1,4 @@
+import os
 from collections import OrderedDict
 from typing import Dict, Optional, Sequence, Union
 
@@ -91,7 +92,7 @@ class BaseEnv(gym.Env):
         # Create SAPIEN engine
         self._engine = sapien.Engine()
         # TODO(jigu): Change to `warning` after lighting in VecEnv is fixed.
-        self._engine.set_log_level("error")
+        self._engine.set_log_level(os.getenv("MS2_SIM_LOG_LEVEL", "error"))
 
         # Create SAPIEN renderer
         self._renderer_type = renderer
@@ -118,7 +119,7 @@ class BaseEnv(gym.Env):
             _render_config.update(render_config)
             for k, v in _render_config.items():
                 setattr(sapien.render_config, k, v)
-            self._renderer.set_log_level("warn")
+            self._renderer.set_log_level(os.getenv("MS2_RENDERER_LOG_LEVEL", "warn"))
         elif self._renderer_type == "client":
             self._renderer = sapien.RenderClient(**renderer_kwargs)
             # TODO(jigu): add `set_log_level` for RenderClient?
