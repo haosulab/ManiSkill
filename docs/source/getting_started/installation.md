@@ -1,13 +1,13 @@
 # Installation
 
-From pip:
+From pip (stable version):
 
 ```bash
 # `mani-skill2` or `mani_skill2` is equivalent for pip
 pip install mani-skill2
 ```
 
-From github:
+From github (latest commit):
 
 ```bash
 pip install --upgrade git+https://github.com/haosulab/ManiSkill2.git
@@ -21,7 +21,7 @@ cd ManiSkill && pip install -e .
 ```
 
 :::{note}
-A GPU with the Vulkan driver installed is required to enable rendering in ManiSkill2. See [here](vulkan) for how to install Vulkan on Ubuntu.
+A GPU with the Vulkan driver installed is required to enable rendering in ManiSkill2. See [here](vulkan) for how to install and configure Vulkan on Ubuntu.
 :::
 
 The rigid-body environments, powered by SAPIEN, are ready to use after installation. Test your installation:
@@ -29,6 +29,8 @@ The rigid-body environments, powered by SAPIEN, are ready to use after installat
 ```bash
 python -m mani_skill2.examples.demo_random_action
 ```
+
+Besides, we provide a docker image: `haosulab/mani-skill2` and its corresponding [Dockerfile](https://github.com/haosulab/ManiSkill2/blob/main/docker/Dockerfile). 
 
 ## Warp (ManiSkill2-version)
 
@@ -95,9 +97,12 @@ sudo apt-get install vulkan-utils
 vulkaninfo
 ```
 
-If `vulkaninfo` fails to show the information about Vulkan, you need to create `/usr/share/vulkan/icd.d/nvidia_icd.json` and set the environment variable `VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/nvidia_icd.json`.
+If `vulkaninfo` fails to show the information about Vulkan, please check whether the following files exist:
 
-The content of `nvidia_icd.json`:
+- `/usr/share/vulkan/icd.d/nvidia_icd.json`:
+- `/usr/share/glvnd/egl_vendor.d/10_nvidia.json`
+
+If `/usr/share/vulkan/icd.d/nvidia_icd.json` does not exist, try to create the file with the following content:
 
 ```json
 {
@@ -108,6 +113,19 @@ The content of `nvidia_icd.json`:
     }
 }
 ```
+
+If `/usr/share/glvnd/egl_vendor.d/10_nvidia.json` does not exist, you can try `sudo apt-get install libglvnd-dev`. `10_nvidia.json` contains the following content:
+
+```json
+{
+    "file_format_version" : "1.0.0",
+    "ICD" : {
+        "library_path" : "libEGL_nvidia.so.0"
+    }
+}
+```
+
+More discussions can be found [here](https://github.com/haosulab/SAPIEN/issues/115).
 
 ---
 

@@ -25,7 +25,7 @@ Welcome to ManiSkill2's documentation!
    :maxdepth: 1
    :caption: Benchmark
 
-   benchmark/challenge
+   benchmark/submission
 
 .. Indices and tables
 .. ==================

@@ -2,7 +2,7 @@
 
 ## Gym Interface
 
-Here is a basic example of how to make a ManiSKill2 environment following the interface of [OpenAI Gym](https://github.com/openai/gym) and run a random policy.
+Here is a basic example of how to make a ManiSkill2 environment following the interface of [OpenAI Gym](https://github.com/openai/gym) and run a random policy.
 
 ```python
 import gym
@@ -65,3 +65,9 @@ alt: SAPIEN viewer
 
 ## Tutorials
 
+We provide hands-on tutorials about ManiSkill2. All the tutorials can be found [here](https://github.com/haosulab/ManiSkill2/blob/main/examples/tutorials).
+
+- Getting Started: [Jupyter Notebook](https://github.com/haosulab/ManiSkill2/blob/main/examples/tutorials/1_quickstart.ipynb), [Colab](https://colab.research.google.com/github/haosulab/ManiSkill2/blob/main/examples/tutorials/1_quickstart.ipynb)
+- Reinforcement Learning: [Jupyter Notebook](https://github.com/haosulab/ManiSkill2/blob/main/examples/tutorials/2_reinforcement_learning.ipynb), [Colab](https://colab.research.google.com/github/haosulab/ManiSkill2/blob/main/examples/tutorials/2_reinforcement_learning.ipynb)
+- Imitation Learning: [Jupyter Notebook](https://github.com/haosulab/ManiSkill2/blob/main/examples/tutorials/3_imitation_learning.ipynb), [Colab](https://colab.research.google.com/github/haosulab/ManiSkill2/blob/main/examples/tutorials/3_imitation_learning.ipynb)
+- Environment Customization: [Jupyter Notebook](https://github.com/haosulab/ManiSkill2/blob/main/examples/tutorials/customize_environments.ipynb), [Colab](https://colab.research.google.com/github/haosulab/ManiSkill2/blob/main/examples/tutorials/customize_environments.ipynb)
