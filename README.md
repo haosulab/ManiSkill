@@ -11,7 +11,7 @@ ManiSkill2 is a unified benchmark for learning generalizable robotic manipulatio
 
 Please refer our [documentation](https://haosulab.github.io/ManiSkill2) to learn more information. There are also hands-on [tutorials](examples/tutorials) (e.g, [quickstart colab tutorial](https://colab.research.google.com/github/haosulab/ManiSkill2/blob/main/examples/tutorials/1_quickstart.ipynb)).
 
-We invite you to participate in the associated [ManiSkill2 challenge](https://sapien.ucsd.edu/challenges/maniskill/2022/) where the top teams will be awarded prizes.
+We invite you to participate in the associated [ManiSkill2 challenge](https://sapien.ucsd.edu/challenges/maniskill/) where the top teams will be awarded prizes.
 
 **Table of Contents**
 
@@ -201,15 +201,15 @@ Thus we recommend that, after you convert actions into different control modes, 
 
 ## ManiSkill2 Challenge
 
-The ManiSkill2 challenge is an ongoing competition using the ManiSkill2 benchmark. See our [website](https://sapien.ucsd.edu/challenges/maniskill/2022/) for additional competition details and follow the [getting started](https://sapien.ucsd.edu/challenges/maniskill/2022#getting-started) section to learn how to compete.
+The ManiSkill2 challenge is an ongoing competition using the ManiSkill2 benchmark. See our [website](https://sapien.ucsd.edu/challenges/maniskill/) for additional competition details and follow the [getting started](https://sapien.ucsd.edu/challenges/maniskill#getting-started) section to learn how to compete.
 
 To create a submission for the competition, follow [the instructions on our wiki](https://github.com/haosulab/ManiSkill2/wiki/Participation-Guidelines) on how to create a submission and submit it to the leaderboard.
 
-Previous results of the ManiSkill 2021 challenge can be found [here](https://sapien.ucsd.edu/challenges/maniskill/2022/#maniskill2021). Winning solutions and their codes can be found in the previous challenge.
+Previous results of the ManiSkill 2021 challenge can be found [here](https://sapien.ucsd.edu/challenges/maniskill#maniskill2021). Winning solutions and their codes can be found in the previous challenge.
 
 ## Leaderboard
 
-You can find the leaderboard on the challenge website: <https://sapien.ucsd.edu/challenges/maniskill/challenges/ms2022>.
+You can find the leaderboard on the challenge website: <https://sapien.ucsd.edu/challenges/maniskill/challenges/ms2>.
 
 ## License
 

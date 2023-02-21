@@ -1,6 +1,6 @@
 # Submission
 
-To participate in the ManiSkill2 challenge, please register on the [challenge website](https://sapien.ucsd.edu/challenges/maniskill/2022/). After registering an account, [create/join a team](https://sapien.ucsd.edu/challenges/maniskill/challenges/ms2022/team). After creating/joining a team, you will be allowed to create submissions.
+To participate in the ManiSkill2 challenge, please register on the [challenge website](https://sapien.ucsd.edu/challenges/maniskill/). After registering an account, [create/join a team](https://sapien.ucsd.edu/challenges/maniskill/challenges/ms2/team). After creating/joining a team, you will be allowed to create submissions.
 
 To submit to the challenge, you need to submit a URL to your docker image which contains your codes and dependencies (e.g., model weights). Before submitting, you should test the submission docker locally. Instructions for local evaluation and online submission are provided below.
 
