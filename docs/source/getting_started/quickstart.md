@@ -24,7 +24,7 @@ env.close()
 
 Each ManiSkill2 environment supports different **observation modes** and **control modes**, which determine its **observation space** and **action space**. They can be specified by `gym.make(env_id, obs_mode=..., control_mode=...)`.
 
-The common observation modes are `state`, `rgbd`, `pointcloud`. We also support `state_dict` (states organized as a hierachical dictionary) and `image` (raw visual observations without postprocessing). Please refer to [Observation](../concepts/observation.md) for more details.
+The common observation modes are `state`, `rgbd`, `pointcloud`. We also support `state_dict` (states organized as a hierarchical dictionary) and `image` (raw visual observations without postprocessing). Please refer to [Observation](../concepts/observation.md) for more details.
 
 We support a wide range of controllers. Different controllers can have different effects on your algorithms. Thus, it is recommended to understand the action space you are going to use. Please refer to [Controllers](../concepts/controllers.md) for more details.
 
@@ -47,7 +47,7 @@ Keyboard controls:
 - Press `w` (or `a`, `s`, `d`) to translate the base if the robot is mobile. Press `q` or `e` to rotate the base. Press `z` or `x` to lift the torso.
 - Press `esc` to close the viewer and exit the program.
 
-To enable an interactive viewer supported by SAPIEN, you can add `--enable-sapien-viewer`. The interactive SAPIEN viewer is more powerful for debugging (e.g., checking collision shapes, getting currrent poses). There will be two windows: an OpenCV window and a SAPIEN (GL) window. Pressing `0` on the focused window can switch the control to the other one.
+To enable an interactive viewer supported by SAPIEN, you can add `--enable-sapien-viewer`. The interactive SAPIEN viewer is more powerful for debugging (e.g., checking collision shapes, getting current poses). There will be two windows: an OpenCV window and a SAPIEN (GL) window. Pressing `0` on the focused window can switch the control to the other one.
 
 ```{image} images/OpenCV-viewer.png
 ---
@@ -71,3 +71,6 @@ We provide hands-on tutorials about ManiSkill2. All the tutorials can be found [
 - Reinforcement Learning: [Jupyter Notebook](https://github.com/haosulab/ManiSkill2/blob/main/examples/tutorials/2_reinforcement_learning.ipynb), [Colab](https://colab.research.google.com/github/haosulab/ManiSkill2/blob/main/examples/tutorials/2_reinforcement_learning.ipynb)
 - Imitation Learning: [Jupyter Notebook](https://github.com/haosulab/ManiSkill2/blob/main/examples/tutorials/3_imitation_learning.ipynb), [Colab](https://colab.research.google.com/github/haosulab/ManiSkill2/blob/main/examples/tutorials/3_imitation_learning.ipynb)
 - Environment Customization: [Jupyter Notebook](https://github.com/haosulab/ManiSkill2/blob/main/examples/tutorials/customize_environments.ipynb), [Colab](https://colab.research.google.com/github/haosulab/ManiSkill2/blob/main/examples/tutorials/customize_environments.ipynb)
+- Advanced Rendering (ray tracing, stereo depth sensor): [Jupyter Notebook](https://github.com/haosulab/ManiSkill2/blob/main/examples/tutorials/advanced_rendering.ipynb)
+
+ManiSkill2 is based on SAPIEN. SAPIEN tutorials are [here](https://sapien.ucsd.edu/docs/latest/).

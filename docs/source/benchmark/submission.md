@@ -90,7 +90,7 @@ docker kill ${CONTAINER_NAME}
 
 ## Online Submission
 
-Once you have built and pushed a docker image, you are ready to submit to the competition. Go to the competition [submissions page](https://sapien.ucsd.edu/challenges/maniskill/challenges/ms2022/submit) and give your submission a name and enter the docker image name+tag (format: `registry.hub.docker.com/USERNAME/IMG_NAME:TAG`; Do not use the `latest` tag). Then select which track you are submitting to. Lastly, tick/untick which tasks you would like to evaluate your submission on.
+Once you have built and pushed a docker image, you are ready to submit to the competition. Go to the competition [submissions page](https://sapien.ucsd.edu/challenges/maniskill/challenges/ms2/submit) and give your submission a name and enter the docker image name+tag (format: `registry.hub.docker.com/USERNAME/IMG_NAME:TAG`; Do not use the `latest` tag). Then select which track you are submitting to. Lastly, tick/untick which tasks you would like to evaluate your submission on.
 
 To ensure reproducibility, we do not allow you to submit the same docker image and tag twice, we require you to give a new tag to your image before submitting. You can create a new tag as so `docker tag <image_name> <image_name>:<tag_name>`
 

@@ -30,7 +30,7 @@ The rigid-body environments, powered by SAPIEN, are ready to use after installat
 python -m mani_skill2.examples.demo_random_action
 ```
 
-Besides, we provide a docker image: `haosulab/mani-skill2` and its corresponding [Dockerfile](https://github.com/haosulab/ManiSkill2/blob/main/docker/Dockerfile). 
+Besides, we provide a docker image: `haosulab/mani-skill2` and its corresponding [Dockerfile](https://github.com/haosulab/ManiSkill2/blob/main/docker/Dockerfile).
 
 ## Warp (ManiSkill2-version)
 
@@ -75,7 +75,7 @@ want to interactively visualize the environment, you need to assign the id of
 the GPU connected to your display (e.g., monitor screen).
 
 :::{warning}
-All soft-body environments require runtime compilation and cache generation. Cache is generated in parallel. Thus, to avoid race condition, before you create soft-body environments in parallel, please make sure cache is already generated. You can generate cache in advance by `python -m mani_skill2.utils.precompile_mpm -e {ENV_ID}` (or without option for all soft-body environments).
+All soft-body environments require runtime compilation and cache generation. The cache is generated in parallel. Thus, to avoid race conditions, before you create soft-body environments in parallel, please make sure the cache is already generated. You can generate cache in advance by `python -m mani_skill2.utils.precompile_mpm -e {ENV_ID}` (or without an option for all soft-body environments).
 :::
 
 ## Troubleshooting
