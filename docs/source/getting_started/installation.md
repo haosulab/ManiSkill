@@ -30,7 +30,7 @@ The rigid-body environments, powered by SAPIEN, are ready to use after installat
 python -m mani_skill2.examples.demo_random_action
 ```
 
-Besides, we provide a docker image: `haosulab/mani-skill2` and its corresponding [Dockerfile](https://github.com/haosulab/ManiSkill2/blob/main/docker/Dockerfile).
+Besides, we provide a docker image (`haosulab/mani-skill2`) and its corresponding [Dockerfile](https://github.com/haosulab/ManiSkill2/blob/main/docker/Dockerfile).
 
 ## Warp (ManiSkill2-version)
 

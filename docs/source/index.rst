@@ -12,6 +12,7 @@ Welcome to ManiSkill2's documentation!
 
    getting_started/installation
    getting_started/quickstart
+   getting_started/docker
 
 .. toctree::
    :maxdepth: 1

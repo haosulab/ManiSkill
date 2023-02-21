@@ -1,23 +1,27 @@
 FROM nvidia/cudagl:11.3.1-devel-ubuntu20.04
+ENV NVIDIA_DRIVER_CAPABILITIES all
 
 # Install os-level packages
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-    build-essential \
-    cmake \
-    git \
-    curl \
-    vim \
-    tmux \
-    wget \
-    unzip \
-    htop \
-    rsync \
-    ca-certificates \
     bash-completion \
+    build-essential \
+    ca-certificates \
+    cmake \
+    curl \
+    git \
+    htop \
+    libegl1 \
+    libxext6 \
     libjpeg-dev \
     libpng-dev  \
     libvulkan1 \
-    mesa-utils \
+    rsync \
+    tmux \
+    unzip \
+    vim \
+    vulkan-utils \
+    wget \
+    xvfb \
     && rm -rf /var/lib/apt/lists/*
 
 # Install (mini) conda
