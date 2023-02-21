@@ -21,6 +21,11 @@ Welcome to ManiSkill2's documentation!
    concepts/observation
    concepts/controllers
 
+.. toctree::
+   :maxdepth: 1
+   :caption: Benchmark
+
+   benchmark/submission
 
 .. Indices and tables
 .. ==================
