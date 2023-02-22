@@ -21,6 +21,7 @@ Welcome to ManiSkill2's documentation!
    concepts/environments
    concepts/observation
    concepts/controllers
+   concepts/demonstrations
 
 .. toctree::
    :maxdepth: 1
