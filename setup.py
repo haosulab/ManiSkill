@@ -29,7 +29,11 @@ setup(
     install_requires=read_requirements(),
     # Glob patterns do not automatically match dotfiles
     package_data={
-        "mani_skill2": ["assets/**", "envs/mpm/shader/**"],
+        "mani_skill2": [
+            "assets/**",
+            "envs/mpm/shader/**",
+            "envs/mpm/RopeInit.pkl",
+        ],
         "warp_maniskill.warp": ["native/*", "native/nanovdb/*"],
     },
     exclude_package_data={"": ["*.convex.stl"]},
