@@ -41,7 +41,7 @@ Here is an example of how to customize the base docker image.
 FROM haosulab/mani-skill2:latest
 
 # Install additional python packages you need
-RUN pip install pytorch==1.12.1
+RUN pip install torch==1.12.1
 
 # Copy your codes (including user_solution.py) and model weights
 COPY ${YOUR_CODES_AND_WEIGHTS_IN_HOST} ${YOUR_CODES_AND_WEIGHTS_IN_CONTAINER}
