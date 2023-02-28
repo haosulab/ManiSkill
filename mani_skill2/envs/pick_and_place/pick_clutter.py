@@ -1,6 +1,6 @@
 from collections import OrderedDict
-from typing import Dict, List
 from pathlib import Path
+from typing import Dict, List
 
 import numpy as np
 import sapien.core as sapien
@@ -10,7 +10,7 @@ from mani_skill2 import format_path
 from mani_skill2.utils.common import random_choice
 from mani_skill2.utils.io_utils import load_json
 from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import set_actor_visibility, vectorize_pose, look_at
+from mani_skill2.utils.sapien_utils import look_at, set_actor_visibility, vectorize_pose
 
 from .base_env import StationaryManipulationEnv
 from .pick_single import PickSingleYCBEnv, build_actor_ycb
