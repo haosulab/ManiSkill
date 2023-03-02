@@ -44,7 +44,7 @@ From source:
 
 ```bash
 git clone https://github.com/haosulab/ManiSkill2.git
-cd ManiSkill && pip install -e .
+cd ManiSkill2 && pip install -e .
 ```
 
 ---
