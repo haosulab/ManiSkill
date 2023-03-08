@@ -15,3 +15,5 @@ Imitation Learning:
  - Single-file implementations: https://github.com/haosulab/ManiSkill2/tree/main/examples/tutorials/imitation-learning
 
 Environment Customization: https://colab.research.google.com/github/haosulab/ManiSkill2/blob/main/examples/tutorials/customize_environments.ipynb
+
+Advanced Rendering: https://colab.research.google.com/github/haosulab/ManiSkill2/blob/main/examples/tutorials/advanced_rendering.ipynb
