@@ -42,6 +42,12 @@ class PickSingleEnv(StationaryManipulationEnv):
         # NOTE(jigu): absolute path will overwrite asset_root
         model_json = self.asset_root / format_path(model_json)
 
+        if not model_json.exists():
+            raise FileNotFoundError(
+                f"{model_json} is not found."
+                "Please download the corresponding assets:"
+                "`python -m mani_skill2.utils.download_asset ${ENV_ID}`."
+            )
         self.model_db: Dict[str, Dict] = load_json(model_json)
 
         if isinstance(model_ids, str):
