@@ -58,7 +58,7 @@ python -m mani_skill2.examples.demo_random_action
 
 Some environments require **downloading assets**. You can download all the assets by `python -m mani_skill2.utils.download_asset all` or download task-specific assets by `python -m mani_skill2.utils.download_asset ${ENV_ID}`.
 
-Please refer to our [documentation](https://haosulab.github.io/ManiSkill2/concepts/environments.html) for a list of all supported environments and including details on which environments require downloading assets.
+Please refer to our [documentation](https://haosulab.github.io/ManiSkill2/concepts/environments.html) for details on all supported environments. The documentation also indicates which environments require downloading assets.
 
 ---
 
