@@ -63,6 +63,35 @@ alt: SAPIEN viewer
 ---
 ```
 
+## Vectorized Environment
+
+We provide an implementation of vectorized environments (for rigid-body environments) optimized for visual observations, powered by the SAPIEN RPC-based render server-client system. Importantly, our vectorized environment parallelizes rendering (visual observations) and computing non-visual observations as well as rewards, in a communication-efficient way (visual observation tensors are kept on the GPU to avoid unnecessary data transfer).
+
+It is easy to create a vectorized environment:
+
+```python
+from mani_skill2.vector import VecEnv, make
+env: VecEnv = make("PickCube-v0", num_envs=4)
+```
+
+Please see `mani_skill2/examples/demo_vec_env.py` for a complete example:
+
+```bash
+python -m mani_skill2.examples.demo_vec_env -e PickCube-v0 -n 4
+```
+
+We provide examples to use our `VecEnv` with [Stable-baselines3](https://stable-baselines3.readthedocs.io/en/master/). Please refer to our [notebook](https://github.com/haosulab/ManiSkill2/blob/main/examples/tutorials/2_reinforcement_learning.ipynb) or [example scripts](https://github.com/haosulab/ManiSkill2/tree/main/examples/tutorials/reinforcement-learning).
+
+---
+
+**Implementation details**: The vectorized environment is optimized for visual observations. In short, the vectorized environment creates multiple python processes (workers) to run the physical simulation for each environment. For each timestep, each worker will compute non-visual observations and rewards in parallel with rendering visual observations. Specifically, the worker (client) sends information needed for rendering to the main process (server), and the actual work of rendering is done by the server. Thus, non-visual and visual observations are obtained in parallel, and the amount of information to communicate between processes is minimized.
+
+:::{note}
+- The vectorized environment only supports observation modes including visual observations (`rgbd`, `pointcloud`, `image`). If only state observations are needed, most RL libraries (like Stable-baselines3) provide their implementations of multi-process vectorized environments.
+- The visual observations (rendered from cameras) are `torch.Tensor` while non-visual observations are `numpy.ndarray`. It is critical to keep tensors on the GPU for overall efficiency.
+- `env.render()` is not supported in the vectorized environment. We suggest that you only use our implementation of vectorized environments for training.
+:::
+
 ## Tutorials
 
 We provide hands-on tutorials about ManiSkill2. All the tutorials can be found [here](https://github.com/haosulab/ManiSkill2/blob/main/examples/tutorials).
