@@ -65,7 +65,7 @@ The soft-body environments are based on SAPIEN and customized [NVIDIA Warp](http
 
 ---
 
-Besides, we provide a docker image (`haosulab/mani-skill2`) on [Docker Hub](https://hub.docker.com/repository/docker/haosulab/mani-skill2/general) and its corresponding [Dockerfile](./docker/Dockerfile).
+We further provide a docker image (`haosulab/mani-skill2`) on [Docker Hub](https://hub.docker.com/repository/docker/haosulab/mani-skill2/general) and its corresponding [Dockerfile](./docker/Dockerfile).
 
 If you encounter any issues with installation, please see the [troubleshooting](https://haosulab.github.io/ManiSkill2/getting_started/installation.html#troubleshooting) section for common fixes or submit an [issue](https://github.com/haosulab/ManiSkill2/issues).
 
@@ -96,7 +96,7 @@ Each `mani_skill2` environment supports different **observation modes** and **co
 The basic observation modes supported are `pointcloud`, `rgbd`, `state_dict` and `state`.
 Please refer to our documentation for information on the [observation](https://haosulab.github.io/ManiSkill2/concepts/observation.html) and [control](https://haosulab.github.io/ManiSkill2/concepts/controllers.html) modes available and their details.
 
-Besides, we provide an [example](https://haosulab.github.io/ManiSkill2/getting_started/quickstart.html#interactive-play) of interactively playing with our environments.
+Moreover, you can follow the [example](https://haosulab.github.io/ManiSkill2/getting_started/quickstart.html#interactive-play) to interactively play with our environments.
 
 ---
 

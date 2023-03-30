@@ -65,14 +65,16 @@ alt: SAPIEN viewer
 
 ## Vectorized Environment
 
-We provide an implementation of vectorized environments (for rigid-body environments) powered by the SAPIEN RPC-based render server-client system.
+We provide an implementation of vectorized environments (for rigid-body environments) optimized for visual observations, powered by the SAPIEN RPC-based render server-client system. Importantly, our vectorized environment parallelizes rendering (visual observations) and computing non-visual observations as well as rewards, in a communication-efficient way (visual observation tensors are kept on the GPU to avoid unnecessary data transfer).
+
+It is easy to create a vectorized environment:
 
 ```python
 from mani_skill2.vector import VecEnv, make
 env: VecEnv = make("PickCube-v0", num_envs=4)
 ```
 
-Please see `mani_skill2/examples/demo_vec_env.py` for an example:
+Please see `mani_skill2/examples/demo_vec_env.py` for a complete example:
 
 ```bash
 python -m mani_skill2.examples.demo_vec_env -e PickCube-v0 -n 4
