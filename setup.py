@@ -51,6 +51,7 @@ setup(
             "sphinx_copybutton",
             # Markdown parser
             "myst-parser",
+            "sphinx-subfigure",
         ],
     },
 )
