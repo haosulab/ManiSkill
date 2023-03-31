@@ -8,6 +8,8 @@
 
 #### PickCube-v0
 
+(pickcube-v0)=
+
 - Objective: Pick up a cube and move it to a goal position.
 - Success metric: The cube is within 2.5 cm of the goal position, and the robot is static.
 - Goal specification: 3D goal position.
@@ -36,6 +38,8 @@ alt: StackCube-v0
 ```
 
 #### PickSingleYCB-v0
+
+(picksingleycb-v0)=
 
 ![download-asset][asset-badge]
 
@@ -226,6 +230,8 @@ Model ids can be found in `mani_skill2/assets/partnet_mobility/meta/info_faucet_
 
 #### OpenCabinetDoor-v1
 
+(opencabinetdoor-v1)=
+
 ![download-asset][asset-badge]
 
 - Objective: A single-arm mobile robot needs to open a designated target door on a cabinet.
@@ -265,6 +271,8 @@ alt: OpenCabinetDrawer-v1
 ```
 
 #### PushChair-v1
+
+(pushchair-v1)=
 
 ![download-asset][asset-badge]
 

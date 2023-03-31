@@ -20,10 +20,13 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx_copybutton",
     "myst_parser",
+    "sphinx_subfigure",
 ]
 
 # https://myst-parser.readthedocs.io/en/latest/syntax/optional.html
 myst_enable_extensions = ["colon_fence", "dollarmath"]
+# https://github.com/executablebooks/MyST-Parser/issues/519#issuecomment-1037239655
+myst_heading_anchors = 4
 
 templates_path = ["_templates"]
 exclude_patterns = []
