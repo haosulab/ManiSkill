@@ -1,6 +1,6 @@
 import argparse
 
-import gym
+import gymnasium as gym
 import numpy as np
 
 from mani_skill2.envs.sapien_env import BaseEnv

@@ -56,8 +56,8 @@ def get_commit_info(show_modified_files=False, show_untracked_files=False):
 
 def make_box_space_readable():
     """A workaround for gym>0.18.3,<0.22.0"""
-    import gym
-    from gym import spaces
+    import gymnasium as gym
+    from gymnasium import spaces
 
     def custom_repr(self: spaces.Box):
         return f"Box({self.low.min()}, {self.high.max()}, {self.shape}, {self.dtype})"

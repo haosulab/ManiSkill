@@ -10,7 +10,7 @@ import os
 from copy import deepcopy
 from typing import Union
 
-import gym
+import gymnasium as gym
 import h5py
 import numpy as np
 import sapien.core as sapien

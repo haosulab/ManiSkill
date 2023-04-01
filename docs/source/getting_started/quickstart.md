@@ -5,7 +5,7 @@
 Here is a basic example of how to make a ManiSkill2 environment following the interface of [OpenAI Gym](https://github.com/openai/gym) and run a random policy.
 
 ```python
-import gym
+import gymnasium as gym
 import mani_skill2.envs  # import to register all environments in gym
 
 env = gym.make("PickCube-v0", obs_mode="rgbd", control_mode="pd_ee_delta_pose")

@@ -2,7 +2,7 @@ import os
 from collections import OrderedDict
 from typing import Dict, Optional, Sequence, Union
 
-import gym
+import gymnasium as gym
 import numpy as np
 import sapien.core as sapien
 from sapien.utils import Viewer
@@ -175,7 +175,7 @@ class BaseEnv(gym.Env):
         # NOTE(jigu): `seed` is deprecated in the latest gym.
         # Use a fixed seed to initialize to enhance determinism
         self.seed(2022)
-        obs = self.reset(reconfigure=True)
+        obs, _ = self.reset(reconfigure=True)
         self.observation_space = convert_observation_to_space(obs)
         if self._obs_mode == "image":
             image_obs_space = self.observation_space.spaces["image"]
@@ -464,9 +464,13 @@ class BaseEnv(gym.Env):
     # -------------------------------------------------------------------------- #
     # Reset
     # -------------------------------------------------------------------------- #
-    def reset(self, seed=None, reconfigure=False):
+    def reset(self, seed=None,  options=dict(reconfigure=False), reconfigure=False):
         self.set_episode_rng(seed)
         self._elapsed_steps = 0
+
+        if options is not None:
+            if "reconfigure" in options:
+                reconfigure = options["reconfigure"]
 
         if reconfigure:
             # Reconfigure the scene if assets change
@@ -478,7 +482,7 @@ class BaseEnv(gym.Env):
         self.set_episode_rng(self._episode_seed)
         self.initialize_episode()
 
-        return self.get_obs()
+        return self.get_obs(), {}
 
     def set_episode_rng(self, seed):
         """Set the random generator for current episode."""
@@ -536,8 +540,10 @@ class BaseEnv(gym.Env):
         info = self.get_info(obs=obs)
         reward = self.get_reward(obs=obs, action=action, info=info)
         done = self.get_done(obs=obs, info=info)
+        terminated, truncated = False, False
+        terminated = done
 
-        return obs, reward, done, info
+        return obs, reward, terminated, truncated, info
 
     def step_action(self, action):
         if action is None:  # simulation without action
@@ -562,7 +568,6 @@ class BaseEnv(gym.Env):
         raise NotImplementedError
 
     def get_done(self, info: dict, **kwargs):
-        # NOTE(jigu): cast to bool explicitly for gym >=0.24
         return bool(info["success"])
 
     def get_info(self, **kwargs):
@@ -677,15 +682,15 @@ class BaseEnv(gym.Env):
         self._viewer.toggle_axes(False)
         self._viewer.toggle_camera_lines(False)
 
-    def render(self, mode="human", **kwargs):
+    def render(self):
         self.update_render()
-        if mode == "human":
+        if self.render_mode == "human":
             if self._viewer is None:
                 self._viewer = Viewer(self._renderer)
                 self._setup_viewer()
             self._viewer.render()
             return self._viewer
-        elif mode == "rgb_array":
+        elif self.render_mode == "rgb_array":
             images = []
             for camera in self._render_cameras.values():
                 rgba = camera.get_images(take_picture=True)["Color"]
@@ -694,7 +699,7 @@ class BaseEnv(gym.Env):
             if len(images) == 1:
                 return images[0]
             return tile_images(images)
-        elif mode == "cameras":
+        elif self.render_mode == "cameras":
             if len(self._render_cameras) > 0:
                 images = [self.render("rgb_array")]
             else:
@@ -710,7 +715,7 @@ class BaseEnv(gym.Env):
                 images.extend(observations_to_images(camera_images))
             return tile_images(images)
         else:
-            raise NotImplementedError(f"Unsupported render mode {mode}.")
+            raise NotImplementedError(f"Unsupported render mode {self.render_mode}.")
 
     # ---------------------------------------------------------------------------- #
     # Advanced

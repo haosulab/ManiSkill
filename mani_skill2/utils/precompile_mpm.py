@@ -1,4 +1,4 @@
-import gym
+import gymnasium as gym
 
 from mani_skill2.envs import mpm
 

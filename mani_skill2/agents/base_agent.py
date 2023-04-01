@@ -5,7 +5,7 @@ from typing import Dict, Union
 
 import numpy as np
 import sapien.core as sapien
-from gym import spaces
+from gymnasium import spaces
 
 from mani_skill2 import format_path
 from mani_skill2.sensors.camera import CameraConfig

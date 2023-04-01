@@ -1,6 +1,6 @@
 from functools import partial
 
-import gym
+import gymnasium as gym
 import numpy as np
 import torch
 from stable_baselines3.common.vec_env import SubprocVecEnv

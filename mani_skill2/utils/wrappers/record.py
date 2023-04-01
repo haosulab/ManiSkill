@@ -2,10 +2,10 @@ import copy
 import time
 from pathlib import Path
 
-import gym
+import gymnasium as gym
 import h5py
 import numpy as np
-from gym import spaces
+from gymnasium import spaces
 
 from mani_skill2 import get_commit_info, logger
 
@@ -15,7 +15,7 @@ from ..visualization.misc import images_to_video, put_info_on_image
 
 
 def parse_env_info(env: gym.Env):
-    # spec can be None if not initialized from gym.make
+    # spec can be None if not initialized from gymnasium.make
     env = env.unwrapped
     if env.spec is None:
         return None

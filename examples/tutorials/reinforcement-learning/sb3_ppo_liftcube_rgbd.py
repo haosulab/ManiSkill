@@ -3,8 +3,8 @@ import argparse
 import os.path as osp
 from functools import partial
 
-import gym
-import gym.spaces as spaces
+import gymnasium as gym
+import gymnasium.spaces as spaces
 import numpy as np
 import torch as th
 import torch.nn as nn

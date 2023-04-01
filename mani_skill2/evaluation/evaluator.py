@@ -1,7 +1,7 @@
 from collections import OrderedDict
 from typing import Callable, List, Type
 
-import gym
+import gymnasium as gym
 import numpy as np
 
 from mani_skill2.envs.sapien_env import BaseEnv

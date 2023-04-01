@@ -1,4 +1,4 @@
-import gym
+import gymnasium as gym
 import pytest
 
 from mani_skill2.envs.sapien_env import BaseEnv

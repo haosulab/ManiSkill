@@ -1,6 +1,6 @@
 from typing import Any, List, Optional, Sequence, Tuple, Type, Union
 
-import gym
+import gymnasium as gym
 import numpy as np
 from stable_baselines3.common.vec_env.base_vec_env import VecEnv as SB3VecEnv
 from stable_baselines3.common.vec_env.base_vec_env import (

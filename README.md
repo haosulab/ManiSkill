@@ -75,7 +75,7 @@ If you encounter any issues with installation, please see the [troubleshooting](
 Here is a basic example of how to make an [OpenAI Gym](https://github.com/openai/gym) environment and run a random policy.
 
 ```python
-import gym
+import gymnasium as gym
 import mani_skill2.envs
 
 env = gym.make("PickCube-v0", obs_mode="rgbd", control_mode="pd_joint_delta_pos")

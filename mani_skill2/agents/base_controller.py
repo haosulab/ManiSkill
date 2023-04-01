@@ -4,7 +4,7 @@ from typing import Dict, List
 
 import numpy as np
 import sapien.core as sapien
-from gym import spaces
+from gymnasium import spaces
 
 from mani_skill2.utils.common import clip_and_scale_action, normalize_action_space
 

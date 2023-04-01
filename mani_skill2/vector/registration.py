@@ -1,7 +1,7 @@
 from functools import partial
 from typing import Sequence
 
-import gym
+import gymnasium as gym
 
 from .vec_env import PointCloudVecEnv, RGBDVecEnv, VecEnv
 from .wrappers.observation import VecRobotSegmentationObservationWrapper

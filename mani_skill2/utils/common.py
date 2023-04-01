@@ -1,9 +1,9 @@
 from collections import defaultdict, OrderedDict
 from typing import Dict, Sequence
 
-import gym
+import gymnasium as gym
 import numpy as np
-from gym import spaces
+from gymnasium import spaces
 
 from .logging_utils import logger
 
