@@ -155,6 +155,7 @@ def register_env(uid: str, max_episode_steps=None, override=False, **kwargs):
             uid,
             entry_point=partial(make, env_id=uid, as_gym=False),
             max_episode_steps=max_episode_steps,
+            disable_env_checker=True,
             kwargs=deepcopy(kwargs),
         )
 

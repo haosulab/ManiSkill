@@ -1,6 +1,6 @@
 import os
 from collections import OrderedDict
-from typing import Dict, Optional, Sequence, Union
+from typing import Dict, Optional, Sequence, Union, Any
 
 import gymnasium as gym
 import numpy as np
@@ -73,6 +73,8 @@ class BaseEnv(gym.Env):
     _render_cameras: Dict[str, Camera]
     _render_camera_cfgs: Dict[str, CameraConfig]
 
+    metadata: dict[str, Any] = {"render_modes": ["human", "rgb_array", "cameras"], "render_fps": 20}
+
     def __init__(
         self,
         obs_mode=None,
@@ -88,6 +90,7 @@ class BaseEnv(gym.Env):
         camera_cfgs: dict = None,
         render_camera_cfgs: dict = None,
         bg_name: str = None,
+        render_mode: str = None,
     ):
         # Create SAPIEN engine
         self._engine = sapien.Engine()
@@ -96,6 +99,7 @@ class BaseEnv(gym.Env):
 
         # Create SAPIEN renderer
         self._renderer_type = renderer
+        self.render_mode = render_mode
         if renderer_kwargs is None:
             renderer_kwargs = {}
         if self._renderer_type == "sapien":
@@ -175,7 +179,7 @@ class BaseEnv(gym.Env):
         # NOTE(jigu): `seed` is deprecated in the latest gym.
         # Use a fixed seed to initialize to enhance determinism
         self.seed(2022)
-        obs, _ = self.reset(reconfigure=True)
+        obs, _ = self.reset(options=dict(reconfigure=True))
         self.observation_space = convert_observation_to_space(obs)
         if self._obs_mode == "image":
             image_obs_space = self.observation_space.spaces["image"]
@@ -464,7 +468,7 @@ class BaseEnv(gym.Env):
     # -------------------------------------------------------------------------- #
     # Reset
     # -------------------------------------------------------------------------- #
-    def reset(self, seed=None,  options=dict(reconfigure=False), reconfigure=False):
+    def reset(self, seed=None, options=dict(reconfigure=False), reconfigure=False):
         self.set_episode_rng(seed)
         self._elapsed_steps = 0
 
@@ -689,7 +693,6 @@ class BaseEnv(gym.Env):
                 self._viewer = Viewer(self._renderer)
                 self._setup_viewer()
             self._viewer.render()
-            return self._viewer
         elif self.render_mode == "rgb_array":
             images = []
             for camera in self._render_cameras.values():

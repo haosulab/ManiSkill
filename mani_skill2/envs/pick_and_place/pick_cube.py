@@ -104,13 +104,13 @@ class PickCubeEnv(StationaryManipulationEnv):
 
         return reward
 
-    def render(self, mode="human"):
-        if mode in ["human", "rgb_array"]:
+    def render(self):
+        if self.render_mode in ["human", "rgb_array"]:
             self.goal_site.unhide_visual()
-            ret = super().render(mode=mode)
+            ret = super().render()
             self.goal_site.hide_visual()
         else:
-            ret = super().render(mode=mode)
+            ret = super().render()
         return ret
 
     def get_state(self) -> np.ndarray:
