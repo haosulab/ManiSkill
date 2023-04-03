@@ -53,7 +53,7 @@ Given a Dockerfile, you can build your submission docker image.
 ```bash
 # It is suggested to run this command under the directory containing Dockerfile
 # See https://docs.docker.com/engine/reference/commandline/build/ for more details
-# Here PATH_TO_BUILD_CONTEXT is the path context under which the docker building instructions like COPY should reference the files.
+# Here PATH_TO_BUILD_CONTEXT is the local path context under which the docker building instructions like COPY should reference the files.
 docker build -f ${PATH_TO_YOUR_DOCKERFILE} ${PATH_TO_BUILD_CONTEXT} -t mani-skill2-submission
 ```
 
