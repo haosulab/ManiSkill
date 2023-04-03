@@ -38,5 +38,6 @@ SHELL ["/bin/bash", "-c"]
 
 # https://github.com/haosulab/ManiSkill/issues/9
 COPY nvidia_icd.json /usr/share/vulkan/icd.d/nvidia_icd.json
+COPY nvidia_layers.json /etc/vulkan/implicit_layer.d/nvidia_layers.json
 
-RUN pip install mani-skill2==0.4.1 && pip cache purge
+RUN pip install mani-skill2==0.4.2 && pip cache purge
