@@ -28,7 +28,7 @@ The common observation modes are `state`, `rgbd`, `pointcloud`. We also support 
 
 We support a wide range of controllers. Different controllers can have different effects on your algorithms. Thus, it is recommended to understand the action space you are going to use. Please refer to [Controllers](../concepts/controllers.md) for more details.
 
-Some environments require **downloading assets**. You can download all the assets by `python -m mani_skill2.utils.download_asset all` or download task-specific assets by `python -m mani_skill2.utils.download_asset ${ENV_ID}`. Please refer to [Environments](../concepts/environments.md) for all supported environments, and which environments require downloading assets.
+Some environments require **downloading assets**. You can download all the assets by `python -m mani_skill2.utils.download_asset all` or download task-specific assets by `python -m mani_skill2.utils.download_asset ${ENV_ID}`. The assets will be downloaded to `./data/` by default, and you can also use the environment variable `MS2_ASSET_DIR` to specify this destination. Please refer to [Environments](../concepts/environments.md) for all supported environments, and which environments require downloading assets.
 
 ## Interactive Play
 
