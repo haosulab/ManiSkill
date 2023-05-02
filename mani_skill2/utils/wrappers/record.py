@@ -158,7 +158,7 @@ class RecordEpisode(gym.Wrapper):
         self._render_images = []
 
         reset_kwargs = copy.deepcopy(kwargs)
-        obs = super().reset(**kwargs)
+        obs, info = super().reset(**kwargs)
 
         if self.save_trajectory:
             state = self.env.get_state()
@@ -175,7 +175,7 @@ class RecordEpisode(gym.Wrapper):
         if self.save_video:
             self._render_images.append(self.env.render())
 
-        return obs
+        return obs, info
 
     def step(self, action):
         obs, rew, terminated, truncated, info = super().step(action)
