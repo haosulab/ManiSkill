@@ -79,12 +79,12 @@ class MS1BaseEnv(BaseEnv):
         scene_config.default_static_friction = 0.5
         return scene_config
 
-    def reset(self, seed=None, reconfigure=False, model_id=None):
+    def reset(self, seed=None, reconfigure=False, model_id=None, **kwargs):
         self._prev_actor_pose = None
         self.set_episode_rng(seed)
         _reconfigure = self._set_model(model_id)
         reconfigure = _reconfigure or reconfigure
-        ret = super().reset(seed=self._episode_seed, reconfigure=reconfigure)
+        ret = super().reset(seed=self._episode_seed, reconfigure=reconfigure, **kwargs)
         return ret
 
     def _set_model(self, model_id):

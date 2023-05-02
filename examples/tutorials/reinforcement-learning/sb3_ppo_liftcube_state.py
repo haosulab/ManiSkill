@@ -22,9 +22,9 @@ class ContinuousTaskWrapper(gym.Wrapper):
         self._elapsed_steps = 0
         self._max_episode_steps = max_episode_steps
 
-    def reset(self):
+    def reset(self, *args, **kwargs):
         self._elapsed_steps = 0
-        return super().reset()
+        return super().reset(*args, **kwargs)
 
     def step(self, action):
         ob, rew, done, info = super().step(action)
@@ -119,6 +119,7 @@ def main():
                 obs_mode=obs_mode,
                 reward_mode=reward_mode,
                 control_mode=control_mode,
+                render_mode="cameras"
             )
             # For training, we regard the task as a continuous task with infinite horizon.
             # you can use the ContinuousTaskWrapper here for that
@@ -127,7 +128,7 @@ def main():
             if record_dir is not None:
                 env = SuccessInfoWrapper(env)
                 env = RecordEpisode(
-                    env, record_dir, info_on_video=True, render_mode="cameras"
+                    env, record_dir, info_on_video=True
                 )
             return env
 

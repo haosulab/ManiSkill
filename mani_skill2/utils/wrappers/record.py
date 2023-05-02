@@ -99,7 +99,6 @@ class RecordEpisode(gym.Wrapper):
         trajectory_name=None,
         save_video=True,
         info_on_video=False,
-        render_mode="rgb_array",
         save_on_reset=True,
         clean_on_close=True,
     ):
@@ -133,7 +132,6 @@ class RecordEpisode(gym.Wrapper):
 
         self.save_video = save_video
         self.info_on_video = info_on_video
-        self.render_mode = render_mode
         self._render_images = []
 
         # Avoid circular import
@@ -175,7 +173,7 @@ class RecordEpisode(gym.Wrapper):
             )
 
         if self.save_video:
-            self._render_images.append(self.env.render(self.render_mode))
+            self._render_images.append(self.env.render())
 
         return obs
 

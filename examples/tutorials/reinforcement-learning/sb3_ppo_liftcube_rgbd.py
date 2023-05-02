@@ -32,9 +32,9 @@ class ContinuousTaskWrapper(gym.Wrapper):
         self._elapsed_steps = 0
         self._max_episode_steps = max_episode_steps
 
-    def reset(self):
+    def reset(self, *args, **kwargs):
         self._elapsed_steps = 0
-        return super().reset()
+        return super().reset(*args, **kwargs)
 
     def step(self, action):
         ob, rew, done, info = super().step(action)
