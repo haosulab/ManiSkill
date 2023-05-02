@@ -374,13 +374,13 @@ class PickSingleEnv(StationaryManipulationEnv):
 
         return reward
 
-    def render(self, mode="human"):
-        if mode in ["human", "rgb_array"]:
+    def render(self):
+        if self.render_mode in ["human", "rgb_array"]:
             set_actor_visibility(self.goal_site, 0.5)
-            ret = super().render(mode=mode)
+            ret = super().render()
             set_actor_visibility(self.goal_site, 0.0)
         else:
-            ret = super().render(mode=mode)
+            ret = super().render()
         return ret
 
     def get_state(self) -> np.ndarray:

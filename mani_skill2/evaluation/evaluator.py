@@ -39,7 +39,7 @@ class BaseEvaluator:
 
         obs = env.reset(**reset_kwargs)
         policy.reset(obs)
-
+        # TODO(stao): Fix render functions here to fit gymnasium api
         # NOTE(jigu): Use for-loop rather than while-loop
         # in case time limit is not correctly set.
         for _ in range(self.MAX_EPISODE_STEPS):
@@ -47,8 +47,8 @@ class BaseEvaluator:
             # NOTE(jigu): render after action in case action is needed to visualize
             if render_mode is not None:
                 env.render(mode=render_mode)
-            obs, reward, done, info = env.step(action)
-            if done:
+            obs, reward, terminated, truncated, info = env.step(action)
+            if terminated or truncated:
                 if render_mode is not None:
                     env.render(mode=render_mode)
                 assert "success" in info, sorted(info.keys())

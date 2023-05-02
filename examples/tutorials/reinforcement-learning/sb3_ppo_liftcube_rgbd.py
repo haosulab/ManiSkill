@@ -24,36 +24,26 @@ from mani_skill2.vector.vec_env import VecEnvObservationWrapper
 from mani_skill2.vector.wrappers.sb3 import SB3VecEnvWrapper
 
 
-# Defines a continuous, infinite horizon, task where done is always False
+# Defines a continuous, infinite horizon, task where terminated is always False
 # unless a timelimit is reached.
 class ContinuousTaskWrapper(gym.Wrapper):
-    def __init__(self, env, max_episode_steps: int) -> None:
+    def __init__(self, env) -> None:
         super().__init__(env)
-        self._elapsed_steps = 0
-        self._max_episode_steps = max_episode_steps
 
     def reset(self, *args, **kwargs):
-        self._elapsed_steps = 0
         return super().reset(*args, **kwargs)
 
     def step(self, action):
-        ob, rew, done, info = super().step(action)
-        self._elapsed_steps += 1
-        if self._elapsed_steps >= self._max_episode_steps:
-            done = True
-            info["TimeLimit.truncated"] = True
-        else:
-            done = False
-            info["TimeLimit.truncated"] = False
-        return ob, rew, done, info
+        ob, rew, terminated, truncated, info = super().step(action)
+        return ob, rew, False, truncated, info
 
 
 # A simple wrapper that adds a is_success key which SB3 tracks
 class SuccessInfoWrapper(gym.Wrapper):
     def step(self, action):
-        ob, rew, done, info = super().step(action)
+        ob, rew, terminated, truncated, info = super().step(action)
         info["is_success"] = info["success"]
-        return ob, rew, done, info
+        return ob, rew, terminated, truncated, info
 
 
 class ManiSkillRGBDWrapper(gym.ObservationWrapper):

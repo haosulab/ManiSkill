@@ -14,36 +14,26 @@ import mani_skill2.envs
 from mani_skill2.utils.wrappers import RecordEpisode
 
 
-# Defines a continuous, infinite horizon, task where done is always False
+# Defines a continuous, infinite horizon, task where terminated is always False
 # unless a timelimit is reached.
 class ContinuousTaskWrapper(gym.Wrapper):
-    def __init__(self, env, max_episode_steps: int) -> None:
+    def __init__(self, env) -> None:
         super().__init__(env)
-        self._elapsed_steps = 0
-        self._max_episode_steps = max_episode_steps
 
     def reset(self, *args, **kwargs):
-        self._elapsed_steps = 0
         return super().reset(*args, **kwargs)
 
     def step(self, action):
-        ob, rew, done, info = super().step(action)
-        self._elapsed_steps += 1
-        if self._elapsed_steps >= self._max_episode_steps:
-            done = True
-            info["TimeLimit.truncated"] = True
-        else:
-            done = False
-            info["TimeLimit.truncated"] = False
-        return ob, rew, done, info
+        ob, rew, terminated, truncated, info = super().step(action)
+        return ob, rew, False, truncated, info
 
 
 # A simple wrapper that adds a is_success key which SB3 tracks
 class SuccessInfoWrapper(gym.Wrapper):
     def step(self, action):
-        ob, rew, done, info = super().step(action)
+        ob, rew, terminated, truncated, info = super().step(action)
         info["is_success"] = info["success"]
-        return ob, rew, done, info
+        return ob, rew, terminated, truncated, info
 
 
 def parse_args():
@@ -119,12 +109,13 @@ def main():
                 obs_mode=obs_mode,
                 reward_mode=reward_mode,
                 control_mode=control_mode,
-                render_mode="cameras"
+                render_mode="cameras",
+                max_episode_steps=max_episode_steps,
             )
             # For training, we regard the task as a continuous task with infinite horizon.
             # you can use the ContinuousTaskWrapper here for that
             if max_episode_steps is not None:
-                env = ContinuousTaskWrapper(env, max_episode_steps)
+                env = ContinuousTaskWrapper(env)
             if record_dir is not None:
                 env = SuccessInfoWrapper(env)
                 env = RecordEpisode(

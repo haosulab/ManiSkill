@@ -330,8 +330,8 @@ def main():
             )
             with th.no_grad():
                 action = policy(obs_device).cpu().numpy()[0]
-            obs, reward, done, info = env.step(action)
-            if done:
+            obs, reward, terminated, truncated, info = env.step(action)
+            if terminated or truncated:
                 successes.append(info["success"])
                 i += 1
                 obs = env.reset(seed=i)

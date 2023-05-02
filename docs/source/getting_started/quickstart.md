@@ -6,18 +6,17 @@ Here is a basic example of how to make a ManiSkill2 environment following the in
 
 ```python
 import gymnasium as gym
-import mani_skill2.envs  # import to register all environments in gym
+import mani_skill2.envs
 
-env = gym.make("PickCube-v0", obs_mode="rgbd", control_mode="pd_ee_delta_pose")
+env = gym.make("PickCube-v0", obs_mode="rgbd", control_mode="pd_joint_delta_pos", render_mode="human")
 print("Observation space", env.observation_space)
 print("Action space", env.action_space)
 
-env.seed(0)  # specify a seed for randomness
-obs = env.reset()
-done = False
-while not done:
+obs = env.reset(seed=0) # reset with a seed for randomness
+terminated, truncated = False, False
+while not terminated and not truncated:
     action = env.action_space.sample()
-    obs, reward, done, info = env.step(action)
+    obs, reward, terminated, truncated, info = env.step(action)
     env.render()  # a display is required to render
 env.close()
 ```

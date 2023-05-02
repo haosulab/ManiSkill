@@ -51,19 +51,19 @@ def main():
 
     obs = env.reset()
     if args.render_mode is not None:
-        env.render(args.render_mode)
+        env.render()
 
     while True:
         action = env.action_space.sample()
-        obs, reward, done, info = env.step(action)
+        obs, reward, terminated, truncated, info = env.step(action)
         print("reward", reward)
-        print("done", done)
+        print("terminated", terminated, "truncateD", truncated)
         print("info", info)
 
         if args.render_mode is not None:
-            env.render(args.render_mode)
+            env.render()
 
-        if done:
+        if terminated or truncated:
             break
 
 

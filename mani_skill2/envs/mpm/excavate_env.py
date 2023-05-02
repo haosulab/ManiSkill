@@ -423,12 +423,12 @@ class ExcavateEnv(MPMBaseEnv):
             }
         return reward
 
-    def render(self, mode="human", draw_box=False, draw_target=False):
+    def render(self, draw_box=False, draw_target=False):
         if draw_target:
             bbox = self.target_box
             box = self._add_draw_box(bbox)
 
-        img = super().render(mode, draw_box)
+        img = super().render(draw_box)
         if draw_target:
             self._remove_draw_box(box)
         return img

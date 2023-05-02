@@ -57,8 +57,8 @@ def _worker(
         while True:
             cmd, data = remote.recv()
             if cmd == "step":
-                obs, reward, done, info = env.step(data)
-                remote.send((obs, reward, done, info))
+                obs, reward, terminated, truncated, info = env.step(data)
+                remote.send((obs, reward, terminated, truncated, info))
             elif cmd == "reset":
                 obs = env.reset()
                 remote.send(obs)
@@ -308,7 +308,7 @@ class VecEnv:
             process.join()
         self.closed = True
 
-    def render(self, mode=""):
+    def render(self):
         raise NotImplementedError
 
     def get_attr(self, attr_name: str, indices=None) -> List:
@@ -562,8 +562,8 @@ class VecEnvWrapper(VecEnv):
     def close(self):
         return self.venv.close()
 
-    def render(self, mode=""):
-        return self.venv.render(mode)
+    def render(self):
+        return self.venv.render()
 
     def get_attr(self, attr_name: str, indices=None) -> List:
         return self.venv.get_attr(attr_name, indices)
@@ -600,8 +600,8 @@ class VecEnvObservationWrapper(VecEnvWrapper):
         return self.observation(observation)
 
     def step_wait(self):
-        observation, reward, done, info = self.venv.step_wait()
-        return self.observation(observation), reward, done, info
+        observation, reward, terminated, truncated, info = self.venv.step_wait()
+        return self.observation(observation), reward, terminated, truncated, info
 
     def observation(self, observation):
         raise NotImplementedError

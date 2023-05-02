@@ -569,14 +569,14 @@ class MPMBaseEnv(BaseEnv):
 
     def step(self, action: Union[None, np.ndarray, Dict]):
         if not self.sim_crashed:
-            obs, rew, done, info = super().step(action)
+            obs, rew, terminated, truncated, info = super().step(action)
             info["crashed"] = False
-            return obs, rew, done, info
+            return obs, rew, terminated, truncated, info
 
         logger.warn("simulation has crashed!")
         info = self.get_info(obs=self._last_obs)
         info["crashed"] = True
-        return self._last_obs, -10, True, info
+        return self._last_obs, -10, True, False, info
 
     def step_action(self, action: np.ndarray):
         if action is None:
@@ -669,11 +669,11 @@ class MPMBaseEnv(BaseEnv):
     def _remove_draw_box(self, lineset):
         self._scene.get_renderer_scene()._internal_scene.remove_node(lineset)
 
-    def render(self, mode="human", draw_box=False):
+    def render(self, draw_box=False):
         if draw_box:
             bbox = self._get_bbox(5)
             box = self._add_draw_box(bbox)
-        img = super().render(mode)
+        img = super().render(self.render_mode)
         if draw_box:
             self._remove_draw_box(box)
         return img

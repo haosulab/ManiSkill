@@ -46,12 +46,13 @@ def main():
     if args.env_id in MS1_ENV_IDS:
         if args.control_mode is not None and not args.control_mode.startswith("base"):
             args.control_mode = "base_pd_joint_vel_arm_" + args.control_mode
-
+    
     env: BaseEnv = gym.make(
         args.env_id,
         obs_mode=args.obs_mode,
         reward_mode=args.reward_mode,
         control_mode=args.control_mode,
+        render_mode=args.render_mode,
         **args.env_kwargs
     )
 
@@ -70,14 +71,14 @@ def main():
 
     # Viewer
     if args.enable_sapien_viewer:
-        env.render(mode="human")
+        env._render(mode="human")
     opencv_viewer = OpenCVViewer(exit_on_esc=False)
 
     def render_wait():
         if not args.enable_sapien_viewer:
             return
         while True:
-            sapien_viewer = env.render(mode="human")
+            sapien_viewer = env._render(mode="human")
             if sapien_viewer.window.key_down("0"):
                 break
 
@@ -93,9 +94,10 @@ def main():
         # Visualization
         # -------------------------------------------------------------------------- #
         if args.enable_sapien_viewer:
-            env.render(mode="human")
+            # using internal _render function as there is a separate render mode as well
+            env._render(mode="human")
 
-        render_frame = env.render(mode=args.render_mode)
+        render_frame = env.render()
 
         if after_reset:
             after_reset = False
@@ -239,9 +241,9 @@ def main():
             action_dict = dict(base=base_action, arm=ee_action, gripper=gripper_action)
             action = env.agent.controller.from_action_dict(action_dict)
 
-        obs, reward, done, info = env.step(action)
+        obs, reward, terminated, truncated, info = env.step(action)
         print("reward", reward)
-        print("done", done)
+        print("terminated", terminated, "truncated", truncated)
         print("info", info)
 
     env.close()

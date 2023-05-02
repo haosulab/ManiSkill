@@ -52,7 +52,7 @@ def main():
     print("Action space", env.action_space)
 
     np.random.seed(2022)
-    env.seed(2022)
+    env.reset(seed=2022)
 
     tic = time.time()
     for i in range(n_ep):
@@ -60,12 +60,10 @@ def main():
 
         # NOTE(jigu): reset is a costly operation
         obs = env.reset()
-        # env.reset(indices=[j for j in range(args.n_envs) if j % 2 == i % 2])
 
         for t in range(l_ep):
             action = [env.action_space.sample() for _ in range(args.n_envs)]
-            obs, reward, info, done = env.step(action)
-            # print(t, reward, info, done)
+            obs, reward, terminated, truncated, info = env.step(action)
 
             # Visualize
             if args.vis and env.obs_mode in ["image", "rgbd", "rgbd_robot_seg"]:

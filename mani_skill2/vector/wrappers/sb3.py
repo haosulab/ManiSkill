@@ -39,8 +39,8 @@ class SB3VecEnvWrapper(SB3VecEnv):
         return self.venv.step_async(actions)
 
     def step_wait(self) -> VecEnvStepReturn:
-        vec_obs, rews, dones, infos = self.venv.step_wait()
-
+        vec_obs, rews, terminations, truncations, infos = self.venv.step_wait()
+        dones = terminations | truncations
         if not dones.any():
             return vec_obs, rews, dones, infos
 

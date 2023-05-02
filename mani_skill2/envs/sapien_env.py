@@ -535,10 +535,8 @@ class BaseEnv(gym.Env):
         obs = self.get_obs()
         info = self.get_info(obs=obs)
         reward = self.get_reward(obs=obs, action=action, info=info)
-        done = self.get_done(obs=obs, info=info)
+        terminated = self.get_done(obs=obs, info=info)
         terminated, truncated = False, False
-        terminated = done
-
         return obs, reward, terminated, truncated, info
 
     def step_action(self, action):

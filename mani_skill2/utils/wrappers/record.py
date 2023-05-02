@@ -162,7 +162,7 @@ class RecordEpisode(gym.Wrapper):
 
         if self.save_trajectory:
             state = self.env.get_state()
-            data = dict(s=state, o=obs, a=None, r=None, done=None, info=None)
+            data = dict(s=state, o=obs, a=None, r=None, terminated=None, truncated=None, info=None)
             self._episode_data.append(data)
             self._episode_info.update(
                 episode_id=self._episode_id,
@@ -178,18 +178,18 @@ class RecordEpisode(gym.Wrapper):
         return obs
 
     def step(self, action):
-        obs, rew, done, info = super().step(action)
+        obs, rew, terminated, truncated, info = super().step(action)
         self._elapsed_steps += 1
 
         if self.save_trajectory:
             state = self.env.get_state()
-            data = dict(s=state, o=obs, a=action, r=rew, done=done, info=info)
+            data = dict(s=state, o=obs, a=action, r=rew, terminated=terminated, truncated=truncated, info=info)
             self._episode_data.append(data)
             self._episode_info["elapsed_steps"] += 1
             self._episode_info["info"] = info
 
         if self.save_video:
-            image = self.env.render(self.render_mode)
+            image = self.env.render()
 
             if self.info_on_video:
                 scalar_info = extract_scalars_from_info(info)
@@ -201,7 +201,7 @@ class RecordEpisode(gym.Wrapper):
 
             self._render_images.append(image)
 
-        return obs, rew, done, info
+        return obs, rew, terminated, truncated, info
 
     def flush_trajectory(self, verbose=False, ignore_empty_transition=False):
         if not self.save_trajectory or len(self._episode_data) == 0:
