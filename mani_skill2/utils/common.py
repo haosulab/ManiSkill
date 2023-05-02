@@ -88,11 +88,13 @@ def convert_observation_to_space(observation, prefix=""):
     Modified from `gym.envs.mujoco_env`
     """
     if isinstance(observation, (dict)):
+        # CATUION: Explicitly create a list of key-value tuples
+        # Otherwise, spaces.Dict will sort keys if a dict is provided
         space = spaces.Dict(
-            {
-                k: convert_observation_to_space(v, prefix + "/" + k)
+            [
+                (k, convert_observation_to_space(v, prefix + "/" + k))
                 for k, v in observation.items()
-            }
+            ]
         )
     elif isinstance(observation, np.ndarray):
         shape = observation.shape
