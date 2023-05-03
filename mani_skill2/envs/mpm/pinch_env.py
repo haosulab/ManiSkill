@@ -158,7 +158,6 @@ class PinchEnv(MPMBaseEnv):
         return CameraConfig("render_camera", p, q, 512, 512, 1, 0.001, 10)
 
     def compute_dense_reward(self, **kwargs):
-
         # reaching reward
         gripper_mat = self.grasp_site.get_pose().to_transformation_matrix()
         gripper_bottom_mat = np.array(

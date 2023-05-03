@@ -143,7 +143,9 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
             "`python -m mani_skill2.utils.download_asset partnet_mobility_faucet`."
         )
 
-    def reset(self, seed=None, reconfigure=False, model_id=None, model_scale=None, **kwargs):
+    def reset(
+        self, seed=None, reconfigure=False, model_id=None, model_scale=None, **kwargs
+    ):
         self.set_episode_rng(seed)
         _reconfigure = self._set_model(model_id, model_scale)
         reconfigure = _reconfigure or reconfigure

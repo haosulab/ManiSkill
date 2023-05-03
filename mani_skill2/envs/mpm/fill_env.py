@@ -143,7 +143,9 @@ class FillEnv(MPMBaseEnv):
 
     def _load_actors(self):
         super()._load_actors()
-        beaker_file = os.path.join(PACKAGE_ASSET_DIR, "deformable_manipulation", "beaker.glb")
+        beaker_file = os.path.join(
+            PACKAGE_ASSET_DIR, "deformable_manipulation", "beaker.glb"
+        )
 
         b = self._scene.create_actor_builder()
         b.add_visual_from_file(beaker_file, scale=[0.04] * 3)
@@ -326,7 +328,6 @@ class FillEnv(MPMBaseEnv):
 
 
 if __name__ == "__main__":
-
     env = FillEnv()
     env.reset()
 

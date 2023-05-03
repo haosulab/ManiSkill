@@ -45,7 +45,7 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
         mat.roughness = 0.5
         mat.specular = 0.5
 
-        for (half_size, pose) in zip(half_sizes, poses):
+        for half_size, pose in zip(half_sizes, poses):
             builder.add_box_collision(pose, half_size)
             builder.add_box_visual(pose, half_size, material=mat)
         return builder.build_static(name)

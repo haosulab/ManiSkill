@@ -270,7 +270,7 @@ class VecEnv(VectorEnv):
         self,
         seed: Optional[Union[int, List[int]]] = None,
         options: Optional[dict] = None,
-        indices = None,
+        indices=None,
     ):
         remotes = self._get_target_remotes(indices)
         if seed is None:
@@ -286,10 +286,13 @@ class VecEnv(VectorEnv):
             remote.send(("reset", single_kwargs))
         self.waiting = True
 
-    def reset_wait(self, timeout: Optional[Union[int, float]] = None,
+    def reset_wait(
+        self,
+        timeout: Optional[Union[int, float]] = None,
         seed: Optional[int] = None,
         options: Optional[dict] = None,
-        indices=None):
+        indices=None,
+    ):
         # TODO(stao): May be a good idea to adopt the code from Gymnasium directly for functions like this which include some nice assertions
         # TODO(stao): MS2 doesn't return any infos per environment at the moment. So for now this info data is not handled the same as Gymnasium. It should be in the future
         remotes = self._get_target_remotes(indices)
@@ -301,9 +304,13 @@ class VecEnv(VectorEnv):
         vec_obs.update(deepcopy(self._obs_np_buffer))
         return vec_obs, info_data
 
-    def reset(self, *,
+    def reset(
+        self,
+        *,
         seed: Optional[Union[int, List[int]]] = None,
-        options: Optional[dict] = None,indices=None):
+        options: Optional[dict] = None,
+        indices=None,
+    ):
         self.reset_async(seed=seed, options=options, indices=indices)
         return self.reset_wait(seed=seed, options=options, indices=indices)
 
@@ -319,7 +326,13 @@ class VecEnv(VectorEnv):
         vec_obs = self._get_torch_observations()
         self._update_np_buffer(obs_list)
         vec_obs.update(deepcopy(self._obs_np_buffer))
-        return vec_obs, np.array(rews), np.array(terminateds, dtype=np.bool_), np.array(truncateds, dtype=np.bool_), infos
+        return (
+            vec_obs,
+            np.array(rews),
+            np.array(terminateds, dtype=np.bool_),
+            np.array(truncateds, dtype=np.bool_),
+            infos,
+        )
 
     def step(self, actions):
         self.step_async(actions)

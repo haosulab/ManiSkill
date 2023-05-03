@@ -46,7 +46,7 @@ def main():
     if args.env_id in MS1_ENV_IDS:
         if args.control_mode is not None and not args.control_mode.startswith("base"):
             args.control_mode = "base_pd_joint_vel_arm_" + args.control_mode
-    
+
     env: BaseEnv = gym.make(
         args.env_id,
         obs_mode=args.obs_mode,

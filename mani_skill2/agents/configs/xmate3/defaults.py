@@ -143,4 +143,3 @@ class Xmate3RobotiqDefaultConfig:
                 hide_link=False,
             ),
         ]
-       

@@ -82,7 +82,9 @@ class PickSingleEnv(StationaryManipulationEnv):
         """Load the target object."""
         raise NotImplementedError
 
-    def reset(self, seed=None, reconfigure=False, model_id=None, model_scale=None, **kwargs):
+    def reset(
+        self, seed=None, reconfigure=False, model_id=None, model_scale=None, **kwargs
+    ):
         self.set_episode_rng(seed)
         _reconfigure = self._set_model(model_id, model_scale)
         reconfigure = _reconfigure or reconfigure
@@ -224,7 +226,6 @@ class PickSingleEnv(StationaryManipulationEnv):
         )
 
     def compute_dense_reward(self, info, **kwargs):
-
         # Sep. 14, 2022:
         # We changed the original complex reward to simple reward,
         # since the original reward can be unfriendly for RL,

@@ -271,7 +271,9 @@ def main():
         # NOTE: Import envs here so that they are registered with gym in subprocesses
         import mani_skill2.envs
 
-        env = gym.make(env_id, obs_mode=obs_mode, control_mode=control_mode, render_mode="cameras")
+        env = gym.make(
+            env_id, obs_mode=obs_mode, control_mode=control_mode, render_mode="cameras"
+        )
         # For training, we regard the task as a continuous task with infinite horizon.
         # you can use the ContinuousTaskWrapper here for that
         if max_episode_steps is not None:
@@ -285,7 +287,6 @@ def main():
                 record_dir,
                 save_trajectory=False,
                 info_on_video=True,
-                
             )
         return env
 
@@ -316,9 +317,7 @@ def main():
                 control_mode=control_mode,
                 # specify wrappers for each individual environment e.g here we specify the
                 # Continuous task wrapper and pass in the max_episode_steps parameter via the partial tool
-                wrappers=[
-                    partial(ContinuousTaskWrapper)
-                ],
+                wrappers=[partial(ContinuousTaskWrapper)],
             )
             env = ManiSkillRGBDVecEnvWrapper(env)
             env = SB3VecEnvWrapper(env)
@@ -331,9 +330,8 @@ def main():
             env = SubprocVecEnv([env_fn for _ in range(num_envs)])
         # Attach a monitor to log episode info
         env = VecMonitor(env)
-        env.seed(seed=args.seed) # Note SB3 vec envs don't use the gymnasium API
+        env.seed(seed=args.seed)  # Note SB3 vec envs don't use the gymnasium API
         env.reset()
-        
 
     # Define the policy configuration and algorithm configuration
     policy_kwargs = dict(

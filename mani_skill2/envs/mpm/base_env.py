@@ -65,7 +65,6 @@ class MPMBaseEnv(BaseEnv):
         max_particles=65536,
         **kwargs,
     ):
-
         if not os.path.isfile(dll):
 
             class ARGS:

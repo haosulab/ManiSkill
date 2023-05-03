@@ -75,7 +75,10 @@ class BaseEnv(gym.Env):
     _render_cameras: Dict[str, Camera]
     _render_camera_cfgs: Dict[str, CameraConfig]
 
-    metadata: dict[str, Any] = {"render_modes": list(SUPPORTED_RENDER_MODES), "render_fps": 20}
+    metadata: dict[str, Any] = {
+        "render_modes": list(SUPPORTED_RENDER_MODES),
+        "render_fps": 20,
+    }
 
     def __init__(
         self,
@@ -460,7 +463,7 @@ class BaseEnv(gym.Env):
     # -------------------------------------------------------------------------- #
     def reset(self, seed=None, options=None, reconfigure=False):
         """
-        Reset a Sapien based environment. All environments come with two random number generators (RNGs). 
+        Reset a Sapien based environment. All environments come with two random number generators (RNGs).
         A main RNG (_np_random) which is initialized randomly via Gymnasium, and an episode RNG which is the RNG
         used for the current episode before the next reset call.
         """
@@ -675,8 +678,10 @@ class BaseEnv(gym.Env):
         self._viewer.set_scene(self._scene)
         self._viewer.toggle_axes(False)
         self._viewer.toggle_camera_lines(False)
+
     def render(self):
         return self._render(self.render_mode)
+
     def _render(self, mode: str):
         self.update_render()
         if mode == "human":

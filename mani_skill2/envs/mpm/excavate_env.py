@@ -443,7 +443,6 @@ class ExcavateEnv(MPMBaseEnv):
 
 
 if __name__ == "__main__":
-
     env = ExcavateEnv(reward_mode="dense")
     env.reset()
     env.agent.set_control_mode("pd_ee_delta_pose")

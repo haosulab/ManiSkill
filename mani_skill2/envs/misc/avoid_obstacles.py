@@ -35,13 +35,14 @@ class AvoidObstaclesBaseEnv(BaseEnv):
             raise FileNotFoundError(
                 f"Episode json ({episode_json}) is not found."
                 "To download default json:"
-                "`python -m mani_skill2.utils.download_asset {}`.".format(self.ASSET_UID)
+                "`python -m mani_skill2.utils.download_asset {}`.".format(
+                    self.ASSET_UID
+                )
             )
         self.episodes = load_json(episode_json)
         self.episode_idx = None
         self.episode_config = None
         super().__init__(**kwargs)
-
 
     def _get_default_scene_config(self):
         scene_config = super()._get_default_scene_config()
@@ -247,4 +248,3 @@ class PandaAvoidObstaclesEnv(AvoidObstaclesBaseEnv):
             self.agent.robot.get_links(), self.agent.config.ee_link_name
         )
         set_articulation_render_material(self.agent.robot, specular=0.9, roughness=0.3)
-    

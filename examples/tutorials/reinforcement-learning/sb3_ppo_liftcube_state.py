@@ -118,9 +118,7 @@ def main():
                 env = ContinuousTaskWrapper(env)
             if record_dir is not None:
                 env = SuccessInfoWrapper(env)
-                env = RecordEpisode(
-                    env, record_dir, info_on_video=True
-                )
+                env = RecordEpisode(env, record_dir, info_on_video=True)
             return env
 
         return _init
@@ -173,7 +171,6 @@ def main():
         # Load the saved model
         model = model.load(model_path)
     else:
-
         # define callbacks to periodically save our model and evaluate it to help monitor training
         # the below freq values will save every 10 rollouts
         eval_callback = EvalCallback(

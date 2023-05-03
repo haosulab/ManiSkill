@@ -80,7 +80,7 @@ class BaseEvaluator:
 
             if callback is not None:
                 callback(i + 1, metrics)
-    
+
     def close(self):
         self.env.close()
 

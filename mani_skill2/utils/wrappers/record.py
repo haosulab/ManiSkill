@@ -162,7 +162,15 @@ class RecordEpisode(gym.Wrapper):
 
         if self.save_trajectory:
             state = self.env.get_state()
-            data = dict(s=state, o=obs, a=None, r=None, terminated=None, truncated=None, info=None)
+            data = dict(
+                s=state,
+                o=obs,
+                a=None,
+                r=None,
+                terminated=None,
+                truncated=None,
+                info=None,
+            )
             self._episode_data.append(data)
             self._episode_info.update(
                 episode_id=self._episode_id,
@@ -183,7 +191,15 @@ class RecordEpisode(gym.Wrapper):
 
         if self.save_trajectory:
             state = self.env.get_state()
-            data = dict(s=state, o=obs, a=action, r=rew, terminated=terminated, truncated=truncated, info=info)
+            data = dict(
+                s=state,
+                o=obs,
+                a=action,
+                r=rew,
+                terminated=terminated,
+                truncated=truncated,
+                info=info,
+            )
             self._episode_data.append(data)
             self._episode_info["elapsed_steps"] += 1
             self._episode_info["info"] = info
