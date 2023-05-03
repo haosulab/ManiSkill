@@ -62,7 +62,7 @@ def parse_args():
     parser.add_argument(
         "--total-timesteps",
         type=int,
-        default=300_000,
+        default=500_000,
         help="Total timesteps for training",
     )
     parser.add_argument(
@@ -160,7 +160,7 @@ def main():
         verbose=1,
         n_steps=rollout_steps // num_envs,
         batch_size=400,
-        gamma=0.85,
+        gamma=0.8,
         n_epochs=15,
         tensorboard_log=log_dir,
         target_kl=0.05,

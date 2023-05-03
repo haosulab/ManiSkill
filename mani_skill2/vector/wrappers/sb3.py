@@ -28,12 +28,13 @@ class SB3VecEnvWrapper(SB3VecEnv):
     def __init__(self, venv: VecEnv):
         super().__init__(venv.num_envs, venv.observation_space, venv.action_space)
         self.venv = venv
+        self._last_seed = None
 
     def seed(self, seed: Optional[int] = None) -> List[Union[None, int]]:
-        return self.venv.seed(seed)
+        self._last_seed = seed
 
     def reset(self) -> VecEnvObs:
-        return self.venv.reset()
+        return self.venv.reset(seed=self._last_seed)[0]
 
     def step_async(self, actions: np.ndarray) -> None:
         return self.venv.step_async(actions)

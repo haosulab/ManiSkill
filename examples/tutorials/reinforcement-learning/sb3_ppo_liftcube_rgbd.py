@@ -135,7 +135,7 @@ class CustomExtractor(BaseFeaturesExtractor):
 
         total_concat_size = 0
         feature_size = 128
-
+        import ipdb;ipdb.set_trace()
         for key, subspace in observation_space.spaces.items():
             # We go through all subspaces in the observation space.
             # We know there will only be "rgbd" and "state", so we handle those below
@@ -225,7 +225,7 @@ def parse_args():
     parser.add_argument(
         "--total-timesteps",
         type=int,
-        default=160_000,
+        default=500_000,
         help="Total timesteps for training",
     )
     parser.add_argument(
@@ -271,11 +271,11 @@ def main():
         # NOTE: Import envs here so that they are registered with gym in subprocesses
         import mani_skill2.envs
 
-        env = gym.make(env_id, obs_mode=obs_mode, control_mode=control_mode)
+        env = gym.make(env_id, obs_mode=obs_mode, control_mode=control_mode, render_mode="cameras")
         # For training, we regard the task as a continuous task with infinite horizon.
         # you can use the ContinuousTaskWrapper here for that
         if max_episode_steps is not None:
-            env = ContinuousTaskWrapper(env, max_episode_steps)
+            env = ContinuousTaskWrapper(env)
         env = ManiSkillRGBDWrapper(env)
         # For evaluation, we record videos
         if record_dir is not None:
@@ -285,7 +285,7 @@ def main():
                 record_dir,
                 save_trajectory=False,
                 info_on_video=True,
-                render_mode="cameras",
+                
             )
         return env
 
@@ -301,7 +301,8 @@ def main():
     )
     eval_env = SubprocVecEnv([env_fn for _ in range(1)])
     eval_env = VecMonitor(eval_env)  # Attach a monitor to log episode info
-    eval_env.seed(args.seed)
+    eval_env.seed(seed=args.seed)
+    eval_env.reset()
 
     if args.eval:
         env = eval_env
@@ -316,7 +317,7 @@ def main():
                 # specify wrappers for each individual environment e.g here we specify the
                 # Continuous task wrapper and pass in the max_episode_steps parameter via the partial tool
                 wrappers=[
-                    partial(ContinuousTaskWrapper, max_episode_steps=max_episode_steps)
+                    partial(ContinuousTaskWrapper)
                 ],
             )
             env = ManiSkillRGBDVecEnvWrapper(env)
@@ -330,7 +331,9 @@ def main():
             env = SubprocVecEnv([env_fn for _ in range(num_envs)])
         # Attach a monitor to log episode info
         env = VecMonitor(env)
-        env.seed(args.seed)
+        env.seed(seed=args.seed) # Note SB3 vec envs don't use the gymnasium API
+        env.reset()
+        
 
     # Define the policy configuration and algorithm configuration
     policy_kwargs = dict(

@@ -260,6 +260,7 @@ class RecordEpisode(gym.Wrapper):
             obs = np.stack(obs)
             group.create_dataset("obs", data=obs, dtype=obs.dtype)
         else:
+            print(obs[0])
             raise NotImplementedError(type(obs[0]))
 
         if len(self._episode_data) == 1:
