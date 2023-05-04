@@ -11,9 +11,11 @@ from copy import deepcopy
 from functools import partial
 from multiprocessing.connection import Connection
 from typing import Callable, Dict, List, Optional, Sequence, Type, Union
-
+import functools
 import gymnasium as gym
-from gymnasium.vector.vector_env import VectorEnv
+from gymnasium.vector.vector_env import VectorEnv, VectorEnvWrapper
+from gymnasium.vector.utils.spaces import batch_space
+
 import numpy as np
 import sapien.core as sapien
 from gymnasium import spaces
@@ -478,7 +480,8 @@ class RGBDVecEnv(VecEnv):
 
         from mani_skill2.utils.wrappers.observation import RGBDObservationWrapper
 
-        RGBDObservationWrapper.update_observation_space(self.observation_space)
+        RGBDObservationWrapper.update_observation_space(self.single_observation_space)
+        self.observation_space = batch_space(self.single_observation_space, n=self.num_envs) # need to re-batch observation space to conform to Gymnasium API
 
     def _get_torch_observations(self):
         observation = super()._get_torch_observations()
@@ -506,7 +509,8 @@ class PointCloudVecEnv(VecEnv):
 
         from mani_skill2.utils.wrappers.observation import PointCloudObservationWrapper
 
-        PointCloudObservationWrapper.update_observation_space(self.observation_space)
+        PointCloudObservationWrapper.update_observation_space(self.single_observation_space)
+        self.observation_space = batch_space(self.single_observation_space) # need to re-batch observation space to conform to Gymnasium API
         self._buffer = {}
 
     def _get_torch_observations(self):
@@ -578,7 +582,6 @@ class PointCloudVecEnv(VecEnv):
         obs, rews, terminateds, truncateds, infos = super().step_wait()
         return self.observation(obs), rews, terminateds, truncateds, infos
 
-
 class VecEnvWrapper(VecEnv):
     def __init__(self, venv: VecEnv):
         self.venv = venv
@@ -634,9 +637,15 @@ class VecEnvWrapper(VecEnv):
             return self.__dict__[name]
         else:
             return getattr(self.venv, name)
-
-
+        
 class VecEnvObservationWrapper(VecEnvWrapper):
+
+    def __init__(self, venv: VecEnv, single_observation_space: gym.Space):
+        super().__init__(venv)
+        # this is done to pin observation space attribute to single observation space for vector observation wrappers like RGBD and PointCloud
+        self.observation_space = batch_space(single_observation_space, n=self.num_envs)
+        self.single_observation_space = single_observation_space
+        
     def reset_wait(self, **kwargs):
         observation, info = self.venv.reset_wait(**kwargs)
         return self.observation(observation), info

@@ -1,2 +1,2 @@
-from .vec_env import VecEnv, VecEnvWrapper
+from .vec_env import VecEnv
 from .registration import make

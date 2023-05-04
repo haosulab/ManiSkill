@@ -45,7 +45,7 @@ class VecRobotSegmentationObservationWrapper(VecEnvObservationWrapper):
             RobotSegmentationObservationWrapper,
         )
 
-        self.observation_space = deepcopy(venv.observation_space)
+        self.observation_space = deepcopy(venv.single_observation_space)
         RobotSegmentationObservationWrapper.init_observation_space(
             self.observation_space, replace=replace
         )

@@ -26,7 +26,7 @@ class SB3VecEnvWrapper(SB3VecEnv):
     """A wrapper for SB3 VecEnv to make it compatible with ManiSkill2 VecEnv."""
 
     def __init__(self, venv: VecEnv):
-        super().__init__(venv.num_envs, venv.observation_space, venv.action_space)
+        super().__init__(venv.num_envs, venv.single_observation_space, venv.single_action_space)
         self.venv = venv
         self._last_seed = None
 
@@ -41,6 +41,8 @@ class SB3VecEnvWrapper(SB3VecEnv):
 
     def step_wait(self) -> VecEnvStepReturn:
         vec_obs, rews, terminations, truncations, infos = self.venv.step_wait()
+        import ipdb;ipdb.set_trace()
+        # infos[env_idx]["TimeLimit.truncated"] = truncated and not terminated
         dones = terminations | truncations
         if not dones.any():
             return vec_obs, rews, dones, infos
@@ -51,7 +53,8 @@ class SB3VecEnvWrapper(SB3VecEnv):
                 infos[i]["terminal_observation"] = select_index_from_dict(vec_obs, i)
 
         reset_indices = np.where(dones)[0]
-        vec_obs = self.venv.reset(indices=reset_indices)
+
+        vec_obs = self.venv.reset(indices=reset_indices)[0]
         return vec_obs, rews, dones, infos
 
     def close(self) -> None:

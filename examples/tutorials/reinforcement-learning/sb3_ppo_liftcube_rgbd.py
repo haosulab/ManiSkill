@@ -117,11 +117,13 @@ class ManiSkillRGBDWrapper(gym.ObservationWrapper):
 # as the gpu optimization makes it incompatible with the SB3 wrapper
 class ManiSkillRGBDVecEnvWrapper(VecEnvObservationWrapper):
     def __init__(self, env):
-        super().__init__(env)
+        
         assert env.obs_mode == "rgbd"
-        self.observation_space = ManiSkillRGBDWrapper.init_observation_space(
-            env.observation_space
+        # we simply define the single env observation space. The inherited wrapper automatically computes the batched version
+        single_observation_space = ManiSkillRGBDWrapper.init_observation_space(
+            env.single_observation_space
         )
+        super().__init__(env, single_observation_space)
 
     def observation(self, observation):
         return ManiSkillRGBDWrapper.convert_observation(observation)
@@ -135,7 +137,7 @@ class CustomExtractor(BaseFeaturesExtractor):
 
         total_concat_size = 0
         feature_size = 128
-        import ipdb;ipdb.set_trace()
+
         for key, subspace in observation_space.spaces.items():
             # We go through all subspaces in the observation space.
             # We know there will only be "rgbd" and "state", so we handle those below
@@ -315,8 +317,9 @@ def main():
                 num_envs,
                 obs_mode=obs_mode,
                 control_mode=control_mode,
+                #TODO(stao): Allow specification of max episode steps here easily for make vec env somehow
                 # specify wrappers for each individual environment e.g here we specify the
-                # Continuous task wrapper and pass in the max_episode_steps parameter via the partial tool
+                # Continuous task wrapper
                 wrappers=[partial(ContinuousTaskWrapper)],
             )
             env = ManiSkillRGBDVecEnvWrapper(env)
