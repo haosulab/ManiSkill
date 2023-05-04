@@ -227,7 +227,7 @@ def parse_args():
     parser.add_argument(
         "--total-timesteps",
         type=int,
-        default=500_000,
+        default=256_000,
         help="Total timesteps for training",
     )
     parser.add_argument(

@@ -41,8 +41,8 @@ class SB3VecEnvWrapper(SB3VecEnv):
 
     def step_wait(self) -> VecEnvStepReturn:
         vec_obs, rews, terminations, truncations, infos = self.venv.step_wait()
-        import ipdb;ipdb.set_trace()
-        # infos[env_idx]["TimeLimit.truncated"] = truncated and not terminated
+        for env_idx in range(self.num_envs):
+            infos[env_idx]["TimeLimit.truncated"] = truncations[env_idx] and not terminations[env_idx]
         dones = terminations | truncations
         if not dones.any():
             return vec_obs, rews, dones, infos
