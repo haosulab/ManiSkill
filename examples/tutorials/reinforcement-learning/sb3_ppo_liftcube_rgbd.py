@@ -274,7 +274,7 @@ def main():
         import mani_skill2.envs
 
         env = gym.make(
-            env_id, obs_mode=obs_mode, control_mode=control_mode, render_mode="cameras"
+            env_id, obs_mode=obs_mode, control_mode=control_mode, render_mode="cameras", max_episode_steps=max_episode_steps
         )
         # For training, we regard the task as a continuous task with infinite horizon.
         # you can use the ContinuousTaskWrapper here for that
