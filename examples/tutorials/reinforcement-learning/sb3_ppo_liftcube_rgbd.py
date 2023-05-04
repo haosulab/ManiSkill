@@ -323,7 +323,7 @@ def main():
                 wrappers=[partial(ContinuousTaskWrapper)],
             )
             env = ManiSkillRGBDVecEnvWrapper(env)
-            env = SB3VecEnvWrapper(env)
+            env = SB3VecEnvWrapper(env) # makes MS2VecEnvs compatible with SB3. It's equivalent to SubprocVecEnv
         else:
             env_fn = partial(
                 make_env,
@@ -333,9 +333,8 @@ def main():
             env = SubprocVecEnv([env_fn for _ in range(num_envs)])
         # Attach a monitor to log episode info
         env = VecMonitor(env)
-        env.seed(seed=args.seed)  # Note SB3 vec envs don't use the gymnasium API
+        env.seed(seed=args.seed) # Note SB3 vec envs don't use the gymnasium API
         env.reset()
-
     # Define the policy configuration and algorithm configuration
     policy_kwargs = dict(
         features_extractor_class=CustomExtractor, net_arch=[256, 128], log_std_init=-0.5
@@ -393,6 +392,10 @@ def main():
     success = np.array(ep_lens) < 200
     success_rate = success.mean()
     print("Success Rate:", success_rate)
+
+    # close all envs
+    eval_env.close()
+    if not args.eval: env.close()
 
 
 if __name__ == "__main__":
