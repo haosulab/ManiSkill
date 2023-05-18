@@ -12,7 +12,7 @@ from mani_skill2 import get_commit_info, logger
 from ..common import extract_scalars_from_info, flatten_dict_keys
 from ..io_utils import dump_json
 from ..visualization.misc import images_to_video, put_info_on_image
-
+import copy
 
 def parse_env_info(env: gym.Env):
     # spec can be None if not initialized from gymnasium.make
@@ -164,7 +164,7 @@ class RecordEpisode(gym.Wrapper):
             state = self.env.get_state()
             data = dict(
                 s=state,
-                o=obs,
+                o=copy.deepcopy(obs),
                 a=None,
                 r=None,
                 terminated=None,
@@ -193,7 +193,7 @@ class RecordEpisode(gym.Wrapper):
             state = self.env.get_state()
             data = dict(
                 s=state,
-                o=obs,
+                o=copy.deepcopy(obs),
                 a=action,
                 r=rew,
                 terminated=terminated,
