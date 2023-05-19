@@ -1,6 +1,6 @@
 import os
 from collections import OrderedDict
-from typing import Dict, Optional, Sequence, Union, Any
+from typing import Dict, Optional, Sequence, Union
 
 import gymnasium as gym
 import numpy as np
@@ -38,8 +38,8 @@ class BaseEnv(gym.Env):
         obs_mode: observation mode registered in @SUPPORTED_OBS_MODES.
         reward_mode: reward mode registered in @SUPPORTED_REWARD_MODES.
         control_mode: control mode of the agent.
-            "*" represents all registered controllers and action space is a dict.
-        render_mode: render mode of the environment registered in @SUPPORTED_RENDER_MODES
+            "*" represents all registered controllers, and the action space will be a dict.
+        render_mode: render mode registered in @SUPPORTED_RENDER_MODES.
         sim_freq (int): simulation frequency (Hz)
         control_freq (int): control frequency (Hz)
         renderer (str): type of renderer. "sapien" or "client".
@@ -64,8 +64,10 @@ class BaseEnv(gym.Env):
     # fmt: off
     SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "image")
     SUPPORTED_REWARD_MODES = ("dense", "sparse")
-    SUPPORTED_RENDER_MODES = ("dense", "rgb_array", "cameras")
+    SUPPORTED_RENDER_MODES = ("human", "rgb_array", "cameras")
     # fmt: on
+
+    metadata = {"render_modes": SUPPORTED_RENDER_MODES}
 
     agent: BaseAgent
     _agent_cfg: AgentConfig
@@ -75,16 +77,11 @@ class BaseEnv(gym.Env):
     _render_cameras: Dict[str, Camera]
     _render_camera_cfgs: Dict[str, CameraConfig]
 
-    metadata: dict[str, Any] = {
-        "render_modes": list(SUPPORTED_RENDER_MODES),
-        "render_fps": 20,
-    }
-
     def __init__(
         self,
-        obs_mode=None,
-        reward_mode=None,
-        control_mode=None,
+        obs_mode: str = None,
+        reward_mode: str = None,
+        control_mode: str = None,
         render_mode: str = None,
         sim_freq: int = 500,
         control_freq: int = 20,
@@ -104,7 +101,6 @@ class BaseEnv(gym.Env):
 
         # Create SAPIEN renderer
         self._renderer_type = renderer
-        self.render_mode = render_mode
         if renderer_kwargs is None:
             renderer_kwargs = {}
         if self._renderer_type == "sapien":
@@ -136,7 +132,6 @@ class BaseEnv(gym.Env):
             raise NotImplementedError(self._renderer_type)
 
         self._engine.set_renderer(self._renderer)
-        self._viewer = None
 
         # Set simulation and control frequency
         self._sim_freq = sim_freq
@@ -161,9 +156,15 @@ class BaseEnv(gym.Env):
             raise NotImplementedError("Unsupported reward mode: {}".format(reward_mode))
         self._reward_mode = reward_mode
 
-        # TODO(jigu): support dict action space and check whether the name is good
         # Control mode
         self._control_mode = control_mode
+        # TODO(jigu): Support dict action space
+        if control_mode == "*":
+            raise NotImplementedError("Multiple controllers are not supported yet.")
+
+        # Render mode
+        self.render_mode = render_mode
+        self._viewer = None
 
         # NOTE(jigu): Agent and camera configurations should not change after initialization.
         self._configure_agent()
@@ -181,7 +182,8 @@ class BaseEnv(gym.Env):
         # Visual background
         self.bg_name = bg_name
 
-        # Use a fixed seed to initialize to enhance determinism
+        # Use a fixed (main) seed to enhance determinism
+        self.set_main_rng(2022)
         obs, _ = self.reset(seed=2022, reconfigure=True)
         self.observation_space = convert_observation_to_space(obs)
         if self._obs_mode == "image":
@@ -357,14 +359,14 @@ class BaseEnv(gym.Env):
         self._setup_cameras()
         self._setup_lighting()
 
-        if self._viewer is not None:
-            self._setup_viewer()
-
         # Cache actors and articulations
         self._actors = self.get_actors()
         self._articulations = self.get_articulations()
 
         self._load_background()
+
+        if self._viewer is not None:
+            self._setup_viewer()
 
     def _add_ground(self, altitude=0.0, render=True):
         if render:
@@ -461,12 +463,7 @@ class BaseEnv(gym.Env):
     # -------------------------------------------------------------------------- #
     # Reset
     # -------------------------------------------------------------------------- #
-    def reset(self, seed=None, options=None, reconfigure=False):
-        """
-        Reset a Sapien based environment. All environments come with two random number generators (RNGs).
-        A main RNG (_np_random) which is initialized randomly via Gymnasium, and an episode RNG which is the RNG
-        used for the current episode before the next reset call.
-        """
+    def reset(self, seed=None, reconfigure=False, options=None):
         self.set_episode_rng(seed)
         self._elapsed_steps = 0
 
@@ -476,17 +473,23 @@ class BaseEnv(gym.Env):
         else:
             self._clear_sim_state()
 
-        # To guarantee seed reproducibility
+        # Set the episode rng again after reconfiguration to guarantee seed reproducibility
         self.set_episode_rng(self._episode_seed)
         self.initialize_episode()
 
         return self.get_obs(), {}
 
+    def set_main_rng(self, seed):
+        """Set the main random generator (e.g., to generate the seed for each episode)."""
+        if seed is None:
+            seed = np.random.RandomState().randint(2**32)
+        self._main_seed = seed
+        self._main_rng = np.random.RandomState(self._main_seed)
+
     def set_episode_rng(self, seed):
         """Set the random generator for current episode."""
         if seed is None:
-            np_random = self.np_random
-            self._episode_seed = np_random.integers(0, 2**32)
+            self._episode_seed = self._main_rng.randint(2**32)
         else:
             self._episode_seed = seed
         self._episode_rng = np.random.RandomState(self._episode_seed)
@@ -538,9 +541,8 @@ class BaseEnv(gym.Env):
         obs = self.get_obs()
         info = self.get_info(obs=obs)
         reward = self.get_reward(obs=obs, action=action, info=info)
-        terminated, truncated = False, False
         terminated = self.get_done(obs=obs, info=info)
-        return obs, reward, terminated, truncated, info
+        return obs, reward, terminated, False, info
 
     def step_action(self, action):
         if action is None:  # simulation without action
@@ -667,51 +669,68 @@ class BaseEnv(gym.Env):
     # -------------------------------------------------------------------------- #
     # Visualization
     # -------------------------------------------------------------------------- #
-    _viewer: Viewer
+    @property
+    def viewer(self):
+        return self._viewer
 
     def _setup_viewer(self):
         """Setup the interactive viewer.
-        The function should be called in reconfigure().
-        To adjust the camera, override this function.
+
+        The function should be called after a new scene is configured.
+        In subclasses, this function can be overridden to set viewer cameras.
         """
-        # CAUTION: call `set_scene` after assets are loaded.
+        # CAUTION: `set_scene` should be called after assets are loaded.
         self._viewer.set_scene(self._scene)
         self._viewer.toggle_axes(False)
         self._viewer.toggle_camera_lines(False)
 
-    def render(self):
-        return self._render(self.render_mode)
-
-    def _render(self, mode: str):
+    def render_human(self):
         self.update_render()
-        if mode == "human":
-            if self._viewer is None:
-                self._viewer = Viewer(self._renderer)
-                self._setup_viewer()
-            self._viewer.render()
-        elif mode == "rgb_array":
+        if self._viewer is None:
+            self._viewer = Viewer(self._renderer)
+            self._setup_viewer()
+        self._viewer.render()
+
+    def render_rgb_array(self, camera_name: str = None):
+        """Render an RGB image from the specified camera."""
+        self.update_render()
+        images = []
+        for name, camera in self._render_cameras.items():
+            if camera_name is not None and name != camera_name:
+                continue
+            rgba = camera.get_images(take_picture=True)["Color"]
+            rgb = np.uint8(np.clip(rgba[..., :3], 0, 1) * 255)
+            images.append(rgb)
+        if len(images) == 0:
+            return None
+        if len(images) == 1:
+            return images[0]
+        return tile_images(images)
+
+    def _render_cameras_images(self):
+        images = []
+        self.update_render()
+        self.take_picture()
+        cameras_images = self.get_images()
+        for camera_images in cameras_images.values():
+            images.extend(observations_to_images(camera_images))
+        return images
+
+    def render(self):
+        if self.render_mode is None:
+            raise RuntimeError("render_mode is not set.")
+        if self.render_mode == "human":
+            return self.render_human()
+        elif self.render_mode == "rgb_array":
+            return self.render_rgb_array()
+        elif self.render_mode == "cameras":
             images = []
-            for camera in self._render_cameras.values():
-                rgba = camera.get_images(take_picture=True)["Color"]
-                rgb = np.clip(rgba[..., :3] * 255, 0, 255).astype(np.uint8)
-                images.append(rgb)
-            if len(images) == 1:
-                return images[0]
-            return tile_images(images)
-        elif mode == "cameras":
-            if len(self._render_cameras) > 0:
-                images = [self._render("rgb_array")]
-            else:
-                images = []
-
-            # NOTE(jigu): Must update renderer again
-            # since some visual-only sites like goals should be hidden.
-            self.update_render()
-            self.take_picture()
-            cameras_images = self.get_images()
-
-            for camera_images in cameras_images.values():
-                images.extend(observations_to_images(camera_images))
+            self.render_mode = "rgb_array"
+            rgb_array = self.render()
+            self.render_mode = "cameras"
+            if rgb_array is not None:
+                images.append(rgb_array)
+            images.extend(self._render_cameras_images())
             return tile_images(images)
         else:
             raise NotImplementedError(f"Unsupported render mode {self.render_mode}.")

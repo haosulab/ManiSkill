@@ -36,13 +36,14 @@ def main():
         obs_mode=args.obs_mode,
         reward_mode=args.reward_mode,
         control_mode=args.control_mode,
+        render_mode=args.render_mode,
         **args.env_kwargs
     )
 
     record_dir = args.record_dir
     if record_dir:
         record_dir = record_dir.format(env_id=args.env_id)
-        env = RecordEpisode(env, record_dir, render_mode=args.render_mode)
+        env = RecordEpisode(env, record_dir)
 
     print("Observation space", env.observation_space)
     print("Action space", env.action_space)
@@ -57,7 +58,8 @@ def main():
         action = env.action_space.sample()
         obs, reward, terminated, truncated, info = env.step(action)
         print("reward", reward)
-        print("terminated", terminated, "truncateD", truncated)
+        print("terminated", terminated)
+        print("truncated", truncated)
         print("info", info)
 
         if args.render_mode is not None:

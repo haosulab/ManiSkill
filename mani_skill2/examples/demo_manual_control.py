@@ -3,7 +3,6 @@ import argparse
 import gymnasium as gym
 import numpy as np
 
-from mani_skill2 import make_box_space_readable
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.utils.visualization.cv2_utils import OpenCVViewer
 from mani_skill2.utils.wrappers import RecordEpisode
@@ -39,7 +38,6 @@ def parse_args():
 
 
 def main():
-    make_box_space_readable()
     np.set_printoptions(suppress=True, precision=3)
     args = parse_args()
 
@@ -71,14 +69,14 @@ def main():
 
     # Viewer
     if args.enable_sapien_viewer:
-        env._render(mode="human")
+        env.render_human()
     opencv_viewer = OpenCVViewer(exit_on_esc=False)
 
     def render_wait():
         if not args.enable_sapien_viewer:
             return
         while True:
-            sapien_viewer = env._render(mode="human")
+            sapien_viewer = env.viewer
             if sapien_viewer.window.key_down("0"):
                 break
 
@@ -94,8 +92,7 @@ def main():
         # Visualization
         # -------------------------------------------------------------------------- #
         if args.enable_sapien_viewer:
-            # using internal _render function as there is a separate render mode as well
-            env._render(mode="human")
+            env.render_human()
 
         render_frame = env.render()
 

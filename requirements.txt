@@ -1,7 +1,7 @@
 # core
 numpy<1.24
 scipy
-gymnasium==0.28.1
+gymnasium>=0.28.1
 sapien==2.2.1
 # basic
 h5py

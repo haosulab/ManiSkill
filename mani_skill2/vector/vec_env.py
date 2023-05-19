@@ -11,15 +11,13 @@ from copy import deepcopy
 from functools import partial
 from multiprocessing.connection import Connection
 from typing import Callable, Dict, List, Optional, Sequence, Type, Union
-import functools
 import gymnasium as gym
-from gymnasium.vector.vector_env import VectorEnv, VectorEnvWrapper
+from gymnasium.vector.vector_env import VectorEnv
 from gymnasium.vector.utils.spaces import batch_space
 
 import numpy as np
 import sapien.core as sapien
 from gymnasium import spaces
-from gymnasium.vector.utils.shared_memory import *
 
 try:
     import torch

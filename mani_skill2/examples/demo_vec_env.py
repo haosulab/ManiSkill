@@ -4,7 +4,6 @@ import time
 import gymnasium as gym
 import numpy as np
 
-from mani_skill2 import make_box_space_readable
 from mani_skill2.utils.visualization.misc import observations_to_images, tile_images
 from mani_skill2.vector import VecEnv, make
 
@@ -32,7 +31,6 @@ def parse_args():
 
 
 def main():
-    make_box_space_readable()
     np.set_printoptions(suppress=True, precision=3)
 
     args = parse_args()
@@ -52,7 +50,6 @@ def main():
     print("Action space", env.action_space)
 
     np.random.seed(2022)
-    env.reset(seed=2022)
 
     tic = time.time()
     for i in range(n_ep):
@@ -62,7 +59,7 @@ def main():
         obs = env.reset()
 
         for t in range(l_ep):
-            action = [env.action_space.sample() for _ in range(args.n_envs)]
+            action = env.action_space.sample()
             obs, reward, terminated, truncated, info = env.step(action)
 
             # Visualize
