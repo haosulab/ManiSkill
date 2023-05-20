@@ -1,5 +1,6 @@
 FROM nvidia/cudagl:11.3.1-devel-ubuntu20.04
 ENV NVIDIA_DRIVER_CAPABILITIES all
+ARG PYTHON_VERSION=3.8
 
 # Install os-level packages
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -30,7 +31,7 @@ RUN curl -o ~/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest
     ~/miniconda.sh -b -p /opt/conda && \
     rm ~/miniconda.sh && \
     /opt/conda/bin/conda init && \
-    /opt/conda/bin/conda install -y python=3.8 && \
+    /opt/conda/bin/conda install -y python="$PYTHON_VERSION" && \
     /opt/conda/bin/conda clean -ya
 
 ENV PATH /opt/conda/bin:$PATH
