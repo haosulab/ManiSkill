@@ -1,22 +1,31 @@
 #!/bin/bash
 
-# Test script to run all pytests with docker images
+# Test script to run all pytests with different python versions via docker
+# Assumes you are running from the root directory of ManiSkill2 repository and you have downloaded all assets via
+# python -m mani_skill2.utils.download_asset all
+
 TESTED_PYTHON_VERSIONS=('3.8' '3.9' '3.10' '3.11')
 
 for PYTHON_VERSION in "${TESTED_PYTHON_VERSIONS[@]}"
 do
     echo "=== Building Docker with Python Version ${PYTHON_VERSION} ==="
-    cd docker && docker build -t "haosulab/mani-skill2_py$PYTHON_VERSION" --build-arg PYTHON_VERSION="$PYTHON_VERSION" .
+    docker build -t "haosulab/mani-skill2_py$PYTHON_VERSION" --build-arg PYTHON_VERSION="$PYTHON_VERSION" docker
 done
 
 for PYTHON_VERSION in "${TESTED_PYTHON_VERSIONS[@]}"
 do
     echo "=== Testing Python Version ${PYTHON_VERSION} ==="
-    docker run -d --rm -t --gpus all --name "maniskill2_test" \
+    container_name="maniskill2_test_${PYTHON_VERSION}"
+
+    # stop and delete container if it is up already, ignore if it doesn't exist
+    docker container stop ${container_name} || true
+
+    docker run -d --rm -t --gpus all --name ${container_name} \
         -v "$(pwd)":/root/ \
         "haosulab/mani-skill2_py$PYTHON_VERSION"
-    # uninstall the pypi mani_skill2, install the local version and pytest and run pytest
+    # uninstall the pypi mani_skill2, install the local version and pytest, then run pytest
     echo "Installing Dependencies"
-    docker exec "maniskill2_test" /bin/bash -c "cd ~ && pip uninstall -y mani_skill2 && pip install -e . && pip install pytest" > /dev/null 2>&1
-    docker exec "maniskill2_test" /bin/bash -c "pytest tests"
+    docker exec ${container_name} /bin/bash -c "cd ~ && pip uninstall -y mani_skill2 && pip install -e . && pip install pytest" > /dev/null 2>&1
+    docker exec ${container_name} /bin/bash -c "cd ~ && pytest tests"
+    docker container stop ${container_name}
 done
