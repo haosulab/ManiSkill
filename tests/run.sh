@@ -18,7 +18,8 @@ do
     container_name="maniskill2_test_${PYTHON_VERSION}"
 
     # stop and delete container if it is up already, ignore if it doesn't exist
-    docker container stop ${container_name} || true
+    docker container stop ${container_name} > /dev/null 2>&1 || true
+    docker container rm ${container_name} > /dev/null 2>&1 || true
 
     docker run -d --rm -t --gpus all --name ${container_name} \
         -v "$(pwd)":/root/ \
@@ -28,4 +29,5 @@ do
     docker exec ${container_name} /bin/bash -c "cd ~ && pip uninstall -y mani_skill2 && pip install -e . && pip install pytest" > /dev/null 2>&1
     docker exec ${container_name} /bin/bash -c "cd ~ && pytest tests"
     docker container stop ${container_name}
+    docker container rm ${container_name}
 done
