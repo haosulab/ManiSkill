@@ -202,7 +202,7 @@ class AvoidObstaclesBaseEnv(BaseEnv):
                 )
 
         contacts = self._scene.get_contacts()
-        max_impulse_norm = get_articulation_max_impulse_norm(contacts, self.agent.robot)
+        max_impulse_norm = np.minimum(get_articulation_max_impulse_norm(contacts, self.agent.robot), 2.0)
         reward = close_to_goal_reward + angular_reward - 50.0 * max_impulse_norm
         return reward
 
