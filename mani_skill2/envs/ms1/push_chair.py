@@ -9,6 +9,7 @@ from mani_skill2.agents.robots.mobile_panda import MobilePandaDualArm
 from mani_skill2.utils.common import np_random
 from mani_skill2.utils.geometry import transform_points
 from mani_skill2.utils.registration import register_env
+from mani_skill2.utils.sapien_utils import get_entity_by_name, vectorize_pose
 from mani_skill2.utils.trimesh_utils import get_actor_visual_mesh
 
 from .base_env import MS1BaseEnv
@@ -118,6 +119,10 @@ class PushChairEnv(MS1BaseEnv):
         self.agent = MobilePandaDualArm(
             self._scene, self._control_freq, self._control_mode, config=self._agent_cfg
         )
+
+        links = self.agent.robot.get_links()
+        self.left_tcp: sapien.Link = get_entity_by_name(links, "left_panda_hand_tcp")
+        self.right_tcp: sapien.Link = get_entity_by_name(links, "right_panda_hand_tcp")
 
     def _set_chair_links_mesh(self):
         self.links_info = {}
@@ -356,3 +361,10 @@ class PushChairEnv(MS1BaseEnv):
     def set_state(self, state: np.ndarray):
         super().set_state(state)
         self._prev_actor_pose = self.root_link.pose
+
+    def _get_obs_extra(self):
+        obs = super()._get_obs_extra()
+        if self._obs_mode not in ["state", "state_dict"]:
+            obs["left_tcp_pose"] = vectorize_pose(self.left_tcp.pose)
+            obs["right_tcp_pose"] = vectorize_pose(self.right_tcp.pose)
+        return obs
