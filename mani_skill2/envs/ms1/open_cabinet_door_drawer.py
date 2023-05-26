@@ -10,6 +10,7 @@ from mani_skill2.agents.robots.mobile_panda import MobilePandaSingleArm
 from mani_skill2.utils.common import np_random, random_choice
 from mani_skill2.utils.geometry import angle_distance, transform_points
 from mani_skill2.utils.registration import register_env
+from mani_skill2.utils.sapien_utils import get_entity_by_name, vectorize_pose
 from mani_skill2.utils.trimesh_utils import (
     get_articulation_meshes,
     get_visual_body_meshes,
@@ -151,6 +152,9 @@ class OpenCabinetEnv(MS1BaseEnv):
         self.agent = MobilePandaSingleArm(
             self._scene, self._control_freq, self._control_mode, config=self._agent_cfg
         )
+
+        links = self.agent.robot.get_links()
+        self.tcp: sapien.Link = get_entity_by_name(links, "right_panda_hand_tcp")
 
     # -------------------------------------------------------------------------- #
     # Reset
@@ -392,6 +396,7 @@ class OpenCabinetEnv(MS1BaseEnv):
                 target_joint_axis=self.target_joint_axis,
                 target_link_pos=self.target_link_pos,
             )
+            obs["tcp_pose"] = vectorize_pose(self.tcp.pose)
         return obs
 
     def _get_obs_priviledged(self):

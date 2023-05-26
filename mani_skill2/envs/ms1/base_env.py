@@ -15,6 +15,7 @@ from mani_skill2.utils.sapien_utils import (
     get_actor_state,
     get_articulation_padded_state,
     parse_urdf_config,
+    vectorize_pose
 )
 from mani_skill2.sensors.camera import CameraConfig
 
@@ -179,6 +180,12 @@ class MS1BaseEnv(BaseEnv):
     # ---------------------------------------------------------------------------- #
     # Observation
     # ---------------------------------------------------------------------------- #
+    def _get_obs_agent(self):
+        obs = super()._get_obs_agent()
+        if self._obs_mode not in ["state", "state_dict"]:
+            obs["base_pose"] = vectorize_pose(self.agent.base_pose)
+        return obs
+    
     def _get_obs_extra(self) -> OrderedDict:
         obs = OrderedDict()
         if self._obs_mode in ["state", "state_dict"]:
