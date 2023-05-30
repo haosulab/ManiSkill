@@ -9,6 +9,11 @@ if sys.version_info[0] < 3:
 import os
 import argparse
 
+package_dir = os.path.join(os.path.dirname(__file__))
+package_dir = os.path.normpath(package_dir)
+if package_dir not in sys.path:
+    sys.path.append(package_dir)
+
 import warp.config
 import warp.build
 
