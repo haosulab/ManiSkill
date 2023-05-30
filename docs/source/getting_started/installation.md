@@ -61,8 +61,10 @@ If `nvcc` is included in `$PATH`, we will try to figure out the variable `CUDA_P
 After CUDA is properly set up, compile Warp customized for ManiSkill2:
 
 ``` bash
+# If you encounter "ModuleNotFoundError: No module named 'warp'", please add warp_maniskill to the python path. 
+export PYTHONPATH=/path/to/ManiSkill2/warp_maniskill:$PYTHONPATH
 # warp.so is generated under warp_maniskill/warp/bin
-PYTHONPATH="$PWD"/warp_maniskill:$PYTHONPATH python -m warp_maniskill.build_lib
+python -m warp_maniskill.build_lib
 ```
 
 For soft-body environments, you need to make sure only 1 CUDA device is visible:
