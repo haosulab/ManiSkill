@@ -422,6 +422,9 @@ class ExcavateEnv(MPMBaseEnv):
                 "height_dist": height_dist,
             }
         return reward
+    
+    def compute_normalized_dense_reward(self, **kwargs):
+        return self.compute_dense_reward(**kwargs) / 6.0
 
     def render(self, draw_box=False, draw_target=False):
         if draw_target:

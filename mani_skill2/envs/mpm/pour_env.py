@@ -538,6 +538,9 @@ class PourEnv(MPMBaseEnv):
             + reward_dist
             + reward_finger
         )
+        
+    def compute_normalized_dense_reward(self, **kwargs):
+        return self.compute_dense_reward(**kwargs) / 15.0
 
     def get_mpm_state(self):
         n = self.mpm_model.struct.n_particles

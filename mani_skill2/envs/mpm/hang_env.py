@@ -363,6 +363,9 @@ class HangEnv(MPMBaseEnv):
                 "bottom_pos": np.min(particles_x[:, 2]),
             }
         return reward
+    
+    def compute_normalized_dense_reward(self, **kwargs):
+        return self.compute_dense_reward(**kwargs) / 6.0
 
     def get_state(self) -> np.ndarray:
         state = super().get_state()

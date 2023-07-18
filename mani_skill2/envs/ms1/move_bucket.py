@@ -55,7 +55,7 @@ class MoveBucketEnv(MS1BaseEnv):
         lim[0, 1] -= v
         self.bucket.get_active_joints()[0].set_limits(lim)
 
-        if self._reward_mode == "dense":
+        if self._reward_mode in ["dense", "normalized_dense"]:
             self._set_bucket_links_mesh()
 
     def _set_bucket_links_mesh(self):
@@ -116,7 +116,7 @@ class MoveBucketEnv(MS1BaseEnv):
         self._initialize_bucket()
         self._initialize_robot()
         self._initialize_balls()
-        if self._reward_mode == "dense":
+        if self._reward_mode in ["dense", "normalized_dense"]:
             self._set_bucket_links_pcd()
 
         for _ in range(25):
@@ -394,6 +394,9 @@ class MoveBucketEnv(MS1BaseEnv):
             ees_height_diff=ees_height_diff,
         )
         return reward
+    
+    def compute_normalized_dense_reward(self, **kwargs):
+        return self.compute_dense_reward(**kwargs) / 20.0
 
     # ---------------------------------------------------------------------------- #
     # Observation
