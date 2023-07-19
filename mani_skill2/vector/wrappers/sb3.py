@@ -23,7 +23,7 @@ def select_index_from_dict(data: dict, i: int):
 
 
 class SB3VecEnvWrapper(SB3VecEnv):
-    """A wrapper for SB3 VecEnv to make it compatible with ManiSkill2 VecEnv."""
+    """A wrapper for ManiSkill2 VecEnv to make it compatible with SB3 VecEnv"""
 
     def __init__(self, venv: VecEnv):
         super().__init__(venv.num_envs, venv.single_observation_space, venv.single_action_space)

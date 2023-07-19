@@ -63,7 +63,7 @@ class BaseEnv(gym.Env):
 
     # fmt: off
     SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "image")
-    SUPPORTED_REWARD_MODES = ("dense", "normalized_dense", "sparse")
+    SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "sparse")
     SUPPORTED_RENDER_MODES = ("human", "rgb_array", "cameras")
     # fmt: on
 

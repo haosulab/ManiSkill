@@ -56,7 +56,7 @@ def parse_args():
     parser.add_argument(
         "--max-episode-steps",
         type=int,
-        default=100,
+        default=50,
         help="Max steps per episode before truncating them",
     )
     parser.add_argument(
@@ -91,7 +91,7 @@ def main():
 
     obs_mode = "state"
     control_mode = "pd_ee_delta_pose"
-    reward_mode = "dense"
+    reward_mode = "normalized_dense"
     if args.seed is not None:
         set_random_seed(args.seed)
 
