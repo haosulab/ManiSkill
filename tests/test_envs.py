@@ -52,8 +52,9 @@ def test_states(env_id):
 
 @pytest.mark.parametrize("env_id", ENV_IDS)
 @pytest.mark.parametrize("robot", ROBOTS)
-@pytest.mark.skip(reason="xmate robot not added yet")
 def test_robots(env_id, robot):
+    if env_id in ["PandaAvoidObstacles-v0", "PegInsertionSide-v0", "TurnFaucet-v0", "OpenCabinetDoor-v1", "OpenCabinetDrawer-v1", "PushChair-v1", "MoveBucket-v1"]:
+        pytest.skip(reason=f"Env {env_id} does not support robots other than panda")
     env = gym.make(env_id, robot=robot)
     env.reset()
     action_space = env.action_space
