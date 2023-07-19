@@ -262,7 +262,9 @@ class RecordEpisode(gym.Wrapper):
                         compression_opts=5,
                     )
                 elif "seg" in k and v.ndim in (3, 4):
-                    assert np.issubdtype(v.dtype, np.integer), v.dtype
+                    print("TYPE", v.dtype)
+                    assert np.issubdtype(v.dtype, np.integer) or v.dtype == np.bool_, v.dtype
+                    
                     group.create_dataset(
                         "obs/" + k,
                         data=v,

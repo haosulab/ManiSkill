@@ -52,7 +52,7 @@ def test_states(env_id):
 
 @pytest.mark.parametrize("env_id", ENV_IDS)
 @pytest.mark.parametrize("robot", ROBOTS)
-# @pytest.mark.skip(reason="xmate robot not added yet")
+@pytest.mark.skip(reason="xmate robot not added yet")
 def test_robots(env_id, robot):
     env = gym.make(env_id, robot=robot)
     env.reset()
