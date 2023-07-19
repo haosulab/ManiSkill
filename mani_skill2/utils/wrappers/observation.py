@@ -193,10 +193,10 @@ class RobotSegmentationObservationWrapper(gym.ObservationWrapper):
                 pcd_space.spaces["robot_seg"] = new_space
 
     def reset(self, **kwargs):
-        observation = self.env.reset(**kwargs)
+        observation, reset_info = self.env.reset(**kwargs)
         self.robot_link_ids = self.env.robot_link_ids
-        return self.observation(observation)
-
+        obs = self.observation(observation)
+        return obs, reset_info
     def observation_image(self, observation: dict):
         image_obs = observation["image"]
         for cam_images in image_obs.values():
