@@ -380,6 +380,9 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
         self.last_angle_diff = angle_diff
 
         return reward
+    
+    def compute_normalized_dense_reward(self, **kwargs):
+        return self.compute_dense_reward(**kwargs) / 10.0
 
     def get_state(self) -> np.ndarray:
         state = super().get_state()

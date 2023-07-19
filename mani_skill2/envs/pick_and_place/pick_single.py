@@ -261,6 +261,9 @@ class PickSingleEnv(StationaryManipulationEnv):
                 reward += reaching_goal_reward
 
         return reward
+    
+    def compute_normalized_dense_reward(self, **kwargs):
+        return self.compute_dense_reward(**kwargs) / 10.0
 
     def compute_dense_reward_legacy(self, info, **kwargs):
         # original complex reward that is geometry-independent,

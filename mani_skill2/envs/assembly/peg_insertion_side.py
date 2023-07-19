@@ -259,6 +259,9 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
 
         return reward
 
+    def compute_normalized_dense_reward(self, **kwargs):
+        return self.compute_dense_reward(**kwargs) / 25.0
+        
     def _register_cameras(self):
         cam_cfg = super()._register_cameras()
         cam_cfg.pose = look_at([0, -0.3, 0.2], [0, 0, 0.1])

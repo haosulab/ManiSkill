@@ -296,3 +296,6 @@ class WriteEnv(MPMBaseEnv):
         reward_orientation = 1 - angle
 
         return iou + 0.1 * reaching_reward + 0.1 * reward_orientation
+    
+    def compute_normalized_dense_reward(self, **kwargs):
+        return self.compute_dense_reward(**kwargs) # no normalization for now since original reward scale is already low

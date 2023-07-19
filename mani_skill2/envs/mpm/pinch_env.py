@@ -199,6 +199,9 @@ class PinchEnv(MPMBaseEnv):
             + 0.1 * reaching_reward
             + 0.1 * reward_orientation
         )
+        
+    def compute_normalized_dense_reward(self, **kwargs):
+        return self.compute_dense_reward(**kwargs) # original reward scale is low, so we don't normalize for now
 
     def check_success(self, **kwargs):
         self.compute_dense_reward()

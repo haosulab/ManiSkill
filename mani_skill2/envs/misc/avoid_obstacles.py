@@ -205,6 +205,9 @@ class AvoidObstaclesBaseEnv(BaseEnv):
         max_impulse_norm = np.minimum(get_articulation_max_impulse_norm(contacts, self.agent.robot), 2.0)
         reward = close_to_goal_reward + angular_reward - 50.0 * max_impulse_norm
         return reward
+    
+    def compute_normalized_dense_reward(self, **kwargs):
+        return self.compute_dense_reward(**kwargs) / 10.0
 
     def _register_cameras(self):
         pose = look_at([-0.25, 0, 1.2], [0.6, 0, 0.6])

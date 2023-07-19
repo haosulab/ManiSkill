@@ -103,6 +103,9 @@ class PickCubeEnv(StationaryManipulationEnv):
             reward += place_reward
 
         return reward
+    
+    def compute_normalized_dense_reward(self, **kwargs):
+        return self.compute_dense_reward(**kwargs) / 5.0
 
     def render(self):
         if self.render_mode in ["human", "rgb_array"]:
@@ -173,3 +176,6 @@ class LiftCubeEnv(PickCubeEnv):
             reward += lifting_reward
 
         return reward
+
+    def compute_normalized_dense_reward(self, **kwargs):
+        return self.compute_dense_reward(**kwargs) / 2.25

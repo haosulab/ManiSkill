@@ -63,7 +63,7 @@ class BaseEnv(gym.Env):
 
     # fmt: off
     SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "image")
-    SUPPORTED_REWARD_MODES = ("dense", "sparse")
+    SUPPORTED_REWARD_MODES = ("dense", "normalized_dense", "sparse")
     SUPPORTED_RENDER_MODES = ("human", "rgb_array", "cameras")
     # fmt: on
 
@@ -337,10 +337,15 @@ class BaseEnv(gym.Env):
             return float(eval_info["success"])
         elif self._reward_mode == "dense":
             return self.compute_dense_reward(**kwargs)
+        elif self._reward_mode == "normalized_dense":
+            return self.compute_normalized_dense_reward(**kwargs)
         else:
             raise NotImplementedError(self._reward_mode)
 
     def compute_dense_reward(self, **kwargs):
+        raise NotImplementedError
+    
+    def compute_normalized_dense_reward(self, **kwargs):
         raise NotImplementedError
 
     # -------------------------------------------------------------------------- #

@@ -60,7 +60,7 @@ class OpenCabinetEnv(MS1BaseEnv):
         self._set_cabinet_handles()
         self._ignore_collision()
 
-        if self._reward_mode == "dense":
+        if self._reward_mode in ["dense", "normalized_dense"]:
             # NOTE(jigu): Explicit `set_pose` is needed.
             self.cabinet.set_pose(Pose())
             self._set_cabinet_handles_mesh()
@@ -245,7 +245,7 @@ class OpenCabinetEnv(MS1BaseEnv):
         self.target_link_pos = cmass_pose.p
 
         # Cache handle point cloud
-        if self._reward_mode == "dense":
+        if self._reward_mode in ["dense", "normalized_dense"]:
             self._set_target_handle_info()
 
     def _set_target_handle_info(self):
@@ -382,6 +382,9 @@ class OpenCabinetEnv(MS1BaseEnv):
 
         reward += stage_reward
         return reward
+    
+    def compute_normalized_dense_reward(self, *args, info: dict, **kwargs):
+        return self.compute_dense_reward(*args, info=info, **kwargs) / 10.0
 
     # -------------------------------------------------------------------------- #
     # Observations
