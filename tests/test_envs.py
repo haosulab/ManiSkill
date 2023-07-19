@@ -1,8 +1,16 @@
 import gymnasium as gym
-import pytest
-from tests.utils import assert_obs_equal, ENV_IDS, OBS_MODES, ROBOTS, CONTROL_MODES_STATIONARY_SINGLE_ARM, STATIONARY_ENV_IDS
-from mani_skill2.envs.sapien_env import BaseEnv
 import numpy as np
+import pytest
+
+from mani_skill2.envs.sapien_env import BaseEnv
+from tests.utils import (
+    CONTROL_MODES_STATIONARY_SINGLE_ARM,
+    ENV_IDS,
+    OBS_MODES,
+    ROBOTS,
+    STATIONARY_ENV_IDS,
+    assert_obs_equal,
+)
 
 
 @pytest.mark.parametrize("env_id", ENV_IDS)
@@ -15,6 +23,7 @@ def test_envs(env_id, obs_mode):
         env.step(action_space.sample())
     env.close()
     del env
+
 
 @pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS)
 @pytest.mark.parametrize("control_mode", CONTROL_MODES_STATIONARY_SINGLE_ARM)
@@ -64,7 +73,15 @@ def test_states(env_id):
 @pytest.mark.parametrize("env_id", ENV_IDS)
 @pytest.mark.parametrize("robot", ROBOTS)
 def test_robots(env_id, robot):
-    if env_id in ["PandaAvoidObstacles-v0", "PegInsertionSide-v0", "TurnFaucet-v0", "OpenCabinetDoor-v1", "OpenCabinetDrawer-v1", "PushChair-v1", "MoveBucket-v1"]:
+    if env_id in [
+        "PandaAvoidObstacles-v0",
+        "PegInsertionSide-v0",
+        "TurnFaucet-v0",
+        "OpenCabinetDoor-v1",
+        "OpenCabinetDrawer-v1",
+        "PushChair-v1",
+        "MoveBucket-v1",
+    ]:
         pytest.skip(reason=f"Env {env_id} does not support robots other than panda")
     env = gym.make(env_id, robot=robot)
     env.reset()

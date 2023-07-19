@@ -5,11 +5,10 @@ import gymnasium as gym
 import numpy as np
 import torch
 from stable_baselines3.common.vec_env import SubprocVecEnv
+from utils import assert_obs_equal
 
 from mani_skill2.utils.common import flatten_dict_keys
 from mani_skill2.vector import make as make_vec_env
-
-from utils import assert_obs_equal
 
 
 def make_env(env_id, obs_mode):
