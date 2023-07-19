@@ -20,6 +20,21 @@ ENV_IDS = [
     "PushChair-v1",
     "MoveBucket-v1",
 ]
+
+STATIONARY_ENV_IDS = [
+    "LiftCube-v0",
+    "PickCube-v0",
+    "StackCube-v0",
+    "PickSingleYCB-v0",
+    "PickSingleEGAD-v0",
+    "PickClutterYCB-v0",
+    "AssemblingKits-v0",
+    "PegInsertionSide-v0",
+    "PlugCharger-v0",
+    "PandaAvoidObstacles-v0",
+    "TurnFaucet-v0",
+]
+
 REWARD_MODES = ["dense", "normalized_dense", "sparse"]
 CONTROL_MODES_STATIONARY_SINGLE_ARM = [
     "pd_joint_delta_pos",

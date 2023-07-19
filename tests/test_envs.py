@@ -1,6 +1,6 @@
 import gymnasium as gym
 import pytest
-from tests.utils import assert_obs_equal, ENV_IDS, OBS_MODES, ROBOTS
+from tests.utils import assert_obs_equal, ENV_IDS, OBS_MODES, ROBOTS, CONTROL_MODES_STATIONARY_SINGLE_ARM, STATIONARY_ENV_IDS
 from mani_skill2.envs.sapien_env import BaseEnv
 import numpy as np
 
@@ -9,6 +9,17 @@ import numpy as np
 @pytest.mark.parametrize("obs_mode", OBS_MODES)
 def test_envs(env_id, obs_mode):
     env = gym.make(env_id, obs_mode=obs_mode)
+    env.reset()
+    action_space = env.action_space
+    for _ in range(5):
+        env.step(action_space.sample())
+    env.close()
+    del env
+
+@pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS)
+@pytest.mark.parametrize("control_mode", CONTROL_MODES_STATIONARY_SINGLE_ARM)
+def test_env_control_modes(env_id, control_mode):
+    env = gym.make(env_id, control_mode=control_mode)
     env.reset()
     action_space = env.action_space
     for _ in range(5):
