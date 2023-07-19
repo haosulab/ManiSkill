@@ -61,8 +61,8 @@ def _worker(
                 obs, reward, terminated, truncated, info = env.step(data)
                 remote.send((obs, reward, terminated, truncated, info))
             elif cmd == "reset":
-                obs = env.reset()
-                remote.send(obs)
+                obs, reset_info = env.reset(seed=data)
+                remote.send((obs, reset_info))
             elif cmd == "close":
                 remote.close()
                 break
@@ -278,12 +278,7 @@ class VecEnv(VectorEnv):
         if isinstance(seed, int):
             seed = [seed + i for i in range(len(remotes))]
         for remote, single_seed in zip(remotes, seed):
-            single_kwargs = {}
-            if single_seed is not None:
-                single_kwargs["seed"] = single_seed
-            if options is not None:
-                single_kwargs["options"] = options
-            remote.send(("reset", single_kwargs))
+            remote.send(("reset", single_seed))
         self.waiting = True
 
     def reset_wait(

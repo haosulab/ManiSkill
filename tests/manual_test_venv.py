@@ -29,7 +29,7 @@ def test_obs_mode(obs_mode="image"):
 
     np.random.seed(2022)
     sb3_env.seed(2022)
-    ms2_env.seed(2022)
+    ms2_obs, _ = ms2_env.reset(seed=2022)
 
     def check_fn(sb3_obs, ms2_obs):
         ms2_obs = flatten_dict_keys(ms2_obs)
@@ -50,18 +50,26 @@ def test_obs_mode(obs_mode="image"):
     for i in range(2):
         print("Episode", i)
         sb3_obs = sb3_env.reset()
-        ms2_obs = ms2_env.reset()
+        if i != 0:
+            # SB3 after env.seed(x), the first reset is a seeded reset, so we skip MS2 reset here the first time
+            ms2_obs, _ = ms2_env.reset()
+
         check_fn(sb3_obs, ms2_obs)
 
         for t in range(5):
-            actions = [ms2_env.action_space.sample() for _ in range(n_envs)]
-
+            actions = ms2_env.action_space.sample()
             sb3_obs, sb3_rews, sb3_dones, sb3_infos = sb3_env.step(actions)
-            ms2_obs, ms2_rews, ms2_dones, ms2_infos = ms2_env.step(actions)
+            (
+                ms2_obs,
+                ms2_rews,
+                ms2_terminations,
+                ms2_truncations,
+                ms2_infos,
+            ) = ms2_env.step(actions)
 
             check_fn(sb3_obs, ms2_obs)
             np.testing.assert_allclose(sb3_rews, ms2_rews)
-
+            np.testing.assert_equal(sb3_dones, ms2_terminations | ms2_truncations)
     sb3_env.close()
     ms2_env.close()
 
@@ -74,5 +82,5 @@ if __name__ == "__main__":
         "rgbd_robot_seg",
         "pointcloud_robot_seg",
     ]:
-        print("Testing", obs_mode)
+        print("Testing observation mode:", obs_mode)
         test_obs_mode(obs_mode)

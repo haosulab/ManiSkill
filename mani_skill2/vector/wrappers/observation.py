@@ -48,6 +48,7 @@ class VecRobotSegmentationObservationWrapper(VecEnvObservationWrapper):
         RobotSegmentationObservationWrapper.init_observation_space(
             single_observation_space, replace=replace
         )
+        self.replace = replace
         super().__init__(venv, single_observation_space)
 
         # Cache robot link ids
