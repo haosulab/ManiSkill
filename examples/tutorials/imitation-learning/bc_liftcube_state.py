@@ -144,7 +144,6 @@ def main():
     )
     # RecordEpisode wrapper auto records a new video once an episode is completed
     env = RecordEpisode(env, output_dir=osp.join(log_dir, "videos"), info_on_video=True)
-    env.seed(0)
     if args.eval:
         model_path = args.model_path
         if model_path is None:
