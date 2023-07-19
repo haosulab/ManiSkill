@@ -159,7 +159,7 @@ def from_pd_joint_pos_to_ee(
             output_action_dict["arm"] = arm_action
             output_action = controller.from_action_dict(output_action_dict)
 
-            _, _, _, info = env.step(output_action)
+            _, _, _, _, info = env.step(output_action)
             if render:
                 env.render()
 
@@ -228,7 +228,7 @@ def from_pd_joint_pos(
             output_action_dict["arm"] = arm_action
 
             output_action = controller.from_action_dict(output_action_dict)
-            _, _, _, info = env.step(output_action)
+            _, _, _, _, info = env.step(output_action)
             if render:
                 env.render()
 
@@ -277,7 +277,7 @@ def from_pd_joint_delta_pos(
 
         output_action_dict["arm"] = arm_action
         output_action = controller.from_action_dict(output_action_dict)
-        _, _, _, info = env.step(output_action)
+        _, _, _, _, info = env.step(output_action)
 
         if render:
             env.render()
@@ -435,7 +435,7 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
                 for t, a in enumerate(ori_actions):
                     if pbar is not None:
                         pbar.update()
-                    _, _, _, info = env.step(a)
+                    _, _, _, _, info = env.step(a)
                     if args.vis:
                         env.render()
                     if args.use_env_states:
