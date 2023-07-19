@@ -34,3 +34,7 @@ imgui.ini
 tmp/
 data/
 demos/
+
+# testing
+.coverage
+htmlcov

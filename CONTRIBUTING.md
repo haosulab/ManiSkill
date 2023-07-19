@@ -11,7 +11,9 @@ conda create -n "ms2_dev" "python==3.9"
 git clone https://github.com/haosulab/ManiSkill2.git
 cd ManiSkill2
 pip install -e .
+# TODO combine below into a .[dev] version?
 pip install pytest-xdist[psutil]
+pip install coverage
 ```
 
 ## Testing
@@ -20,4 +22,6 @@ After you make changes, be sure to add any necessary tests to cover any new code
 
 ```
 pytest -n auto tests
+coverage run -m pytest tests
+coverage html --include=mani_skill2/**/*.py
 ```
