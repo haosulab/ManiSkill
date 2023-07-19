@@ -19,12 +19,7 @@ def parse_env_info(env: gym.Env):
     env = env.unwrapped
     if env.spec is None:
         return None
-    if hasattr(env.spec, "_kwargs"):
-        # gym<=0.21
-        env_kwargs = env.spec._kwargs
-    else:
-        # gym>=0.22
-        env_kwargs = env.spec.kwargs
+    env_kwargs = env.spec.kwargs
     return dict(
         env_id=env.spec.id,
         max_episode_steps=env.spec.max_episode_steps,
