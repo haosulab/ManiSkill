@@ -64,7 +64,7 @@ def main():
     print("Control mode", env.control_mode)
     print("Reward mode", env.reward_mode)
 
-    obs = env.reset()
+    obs, _ = env.reset()
     after_reset = True
 
     # Viewer
@@ -189,7 +189,7 @@ def main():
         if key == "0":  # switch to SAPIEN viewer
             render_wait()
         elif key == "r":  # reset env
-            obs = env.reset()
+            obs, _ = env.reset()
             gripper_action = 1
             after_reset = True
             continue

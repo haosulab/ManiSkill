@@ -84,8 +84,7 @@ class MS1BaseEnv(BaseEnv):
         self.set_episode_rng(seed)
         _reconfigure = self._set_model(model_id)
         reconfigure = _reconfigure or reconfigure
-        ret = super().reset(seed=self._episode_seed, reconfigure=reconfigure, **kwargs)
-        return ret
+        return super().reset(seed=self._episode_seed, reconfigure=reconfigure, **kwargs)
 
     def _set_model(self, model_id):
         """Set the model id. If not provided, choose one randomly."""

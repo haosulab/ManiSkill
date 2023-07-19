@@ -191,7 +191,7 @@ class CartPoleSwingUpEnv(TestSapienEnv):
         self.cartpole.set_qpos([0, np.pi])
         self.cartpole.set_qvel([0, 0])
         self._scene.step()
-        return self._get_obs()
+        return self._get_obs(), {}
 
     def _get_obs(self):
         qpos = self.cartpole.get_qpos()
@@ -258,7 +258,7 @@ def main():
         env.render("rgbd")
         render_time += time.time() - t
         if done:
-            obs = env.reset()
+            obs, _ = env.reset()
 
     print("Num steps:", num_steps)
     print("Simulation time:", sim_time, "FPS:", num_steps / sim_time)

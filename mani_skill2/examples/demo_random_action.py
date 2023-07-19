@@ -50,7 +50,7 @@ def main():
     print("Control mode", env.control_mode)
     print("Reward mode", env.reward_mode)
 
-    obs = env.reset()
+    obs, _ = env.reset()
     if args.render_mode is not None:
         env.render()
 

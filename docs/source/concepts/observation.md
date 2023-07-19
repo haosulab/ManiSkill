@@ -133,7 +133,7 @@ import mani_skill2.envs, gym
 import numpy as np
 
 env = gym.make('PickSingleYCB-v0', obs_mode='rgbd', camera_cfgs={'add_segmentation': True})
-obs = env.reset()
+obs, _ = env.reset()
 
 print(env.get_actors()) # e.g., [Actor(name="ground", id="14"), Actor(name="008_pudding_box", id="15"), Actor(name="goal_site", id="16")]
 print([x.name for x in env.get_articulations()]) # ['panda_v2']
@@ -164,7 +164,7 @@ import mani_skill2.envs, gym
 import numpy as np
 
 env = gym.make('OpenCabinetDoor-v1', obs_mode='rgbd', camera_cfgs={'add_segmentation': True})
-obs = env.reset()
+obs, _ = env.reset()
 
 print(env.get_actors()) # e.g., [Actor(name="ground", id="20"), Actor(name="visual_ground", id="21")], which are not very helpful
 print([x.name for x in env.get_articulations()]) # e.g., ['mobile_panda_single_arm', '1017']

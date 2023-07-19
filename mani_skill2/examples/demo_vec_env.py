@@ -56,7 +56,7 @@ def main():
         print("Episode", i)
 
         # NOTE(jigu): reset is a costly operation
-        obs = env.reset()
+        obs, _ = env.reset()
 
         for t in range(l_ep):
             action = env.action_space.sample()

@@ -197,7 +197,7 @@ def main():
         return loss.item()
 
     def evaluate_policy(env, policy, num_episodes=10):
-        obs = env.reset(seed=0)
+        obs, _ = env.reset(seed=0)
         successes = []
         i = 0
         pbar = tqdm(total=num_episodes, leave=False)
@@ -210,7 +210,7 @@ def main():
             if terminated or truncated:
                 successes.append(info["success"])
                 i += 1
-                obs = env.reset(seed=i)
+                obs, _ = env.reset(seed=i)
                 pbar.update(1)
         success_rate = np.mean(successes)
         return success_rate
