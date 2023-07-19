@@ -22,6 +22,6 @@ After you make changes, be sure to add any necessary tests to cover any new code
 
 ```
 pytest -n auto tests
-coverage run -m pytest tests
+coverage run --source=mani_skill2/ -a -m pytest tests
 coverage html --include=mani_skill2/**/*.py
 ```

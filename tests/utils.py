@@ -52,6 +52,13 @@ OBS_MODES = [
     "rgbd_robot_seg",
     "pointcloud_robot_seg",
 ]
+VENV_OBS_MODES = [
+    "image",
+    "rgbd",
+    "pointcloud",
+    "rgbd_robot_seg",
+    "pointcloud_robot_seg",
+]
 ROBOTS = ["panda", "xmate3_robotiq"]
 
 
