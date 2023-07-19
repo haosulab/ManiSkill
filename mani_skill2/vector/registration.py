@@ -7,12 +7,14 @@ from .vec_env import PointCloudVecEnv, RGBDVecEnv, VecEnv
 from .wrappers.observation import VecRobotSegmentationObservationWrapper
 
 
-def _make_env(env_spec, wrappers: Sequence[gym.Wrapper] = None, **kwargs):
+def _make_env(env_spec, wrappers: Sequence[gym.Wrapper] = None, max_episode_steps: int = None, **kwargs):
     env = env_spec.make(**kwargs)
 
     # Follow gym.make
     env.unwrapped.spec = env_spec.gym_spec
-    if env_spec.max_episode_steps is not None:
+    if max_episode_steps is not None:
+        env = gym.wrappers.TimeLimit(env, max_episode_steps)
+    elif env_spec.max_episode_steps is not None:
         env = gym.wrappers.TimeLimit(env, max_episode_steps=env_spec.max_episode_steps)
 
     # Add wrappers

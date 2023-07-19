@@ -221,7 +221,7 @@ def parse_args():
     parser.add_argument(
         "--max-episode-steps",
         type=int,
-        default=100,
+        default=50,
         help="Max steps per episode before truncating them",
     )
     parser.add_argument(
@@ -317,10 +317,8 @@ def main():
                 num_envs,
                 obs_mode=obs_mode,
                 control_mode=control_mode,
-                #TODO(stao): Allow specification of max episode steps here easily for make vec env somehow
-                # specify wrappers for each individual environment e.g here we specify the
-                # Continuous task wrapper
                 wrappers=[partial(ContinuousTaskWrapper)],
+                max_episode_steps=max_episode_steps,
             )
             env = ManiSkillRGBDVecEnvWrapper(env)
             env = SB3VecEnvWrapper(env) # makes MS2VecEnvs compatible with SB3. It's equivalent to SubprocVecEnv
