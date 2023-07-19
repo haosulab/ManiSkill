@@ -87,7 +87,7 @@ def main():
     num_envs = args.n_envs
     max_episode_steps = args.max_episode_steps
     log_dir = args.log_dir
-    rollout_steps = 3200
+    rollout_steps = 4800
 
     obs_mode = "state"
     control_mode = "pd_ee_delta_pose"
