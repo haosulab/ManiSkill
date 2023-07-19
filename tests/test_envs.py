@@ -4,6 +4,7 @@ from tests.utils import assert_obs_equal, ENV_IDS, OBS_MODES, ROBOTS
 from mani_skill2.envs.sapien_env import BaseEnv
 import numpy as np
 
+
 @pytest.mark.parametrize("env_id", ENV_IDS)
 @pytest.mark.parametrize("obs_mode", OBS_MODES)
 def test_envs(env_id, obs_mode):
@@ -15,6 +16,7 @@ def test_envs(env_id, obs_mode):
     env.close()
     del env
 
+
 def test_env_seeded_reset():
     env = gym.make(ENV_IDS[0])
     obs, _ = env.reset(seed=2000)
@@ -22,12 +24,13 @@ def test_env_seeded_reset():
         env.step(env.action_space.sample())
     new_obs, _ = env.reset(seed=2000)
     assert_obs_equal(obs, new_obs)
-    
+
     env.reset()
     new_obs, _ = env.reset(seed=2000)
     assert_obs_equal(obs, new_obs)
     env.close()
     del env
+
 
 @pytest.mark.parametrize("env_id", ENV_IDS)
 def test_states(env_id):
@@ -37,7 +40,7 @@ def test_states(env_id):
         env.step(env.action_space.sample())
     state = env.get_state()
     obs = env.get_obs()
-    
+
     for _ in range(50):
         env.step(env.action_space.sample())
     env.set_state(state)
@@ -46,9 +49,10 @@ def test_states(env_id):
     env.close()
     del env
 
+
 @pytest.mark.parametrize("env_id", ENV_IDS)
 @pytest.mark.parametrize("robot", ROBOTS)
-@pytest.mark.skip(reason="xmate robot not added yet")
+# @pytest.mark.skip(reason="xmate robot not added yet")
 def test_robots(env_id, robot):
     env = gym.make(env_id, robot=robot)
     env.reset()

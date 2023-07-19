@@ -11,6 +11,7 @@ from mani_skill2.vector import make as make_vec_env
 
 from utils import assert_obs_equal
 
+
 def make_env(env_id, obs_mode):
     import mani_skill2.envs  # fmt: skip
     from mani_skill2.utils.wrappers.observation import FlattenObservationWrapper

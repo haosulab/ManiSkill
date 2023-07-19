@@ -2,6 +2,7 @@ import numpy as np
 import torch
 
 from mani_skill2.utils.common import flatten_dict_keys
+
 ENV_IDS = [
     "LiftCube-v0",
     "PickCube-v0",
@@ -19,6 +20,15 @@ ENV_IDS = [
     "PushChair-v1",
     "MoveBucket-v1",
 ]
+REWARD_MODES = ["dense", "normalized_dense", "sparse"]
+CONTROL_MODES_STATIONARY_SINGLE_ARM = [
+    "pd_joint_delta_pos",
+    "pd_joint_pos",
+    "pd_joint_vel",
+    "pd_joint_pos_vel",
+    "pd_ee_delta_pose",
+    "pd_ee_delta_pos",
+]
 OBS_MODES = [
     "state_dict",
     "state",
@@ -27,9 +37,9 @@ OBS_MODES = [
     "rgbd_robot_seg",
     "pointcloud_robot_seg",
 ]
-ROBOTS = [
-    "panda", "xmate3_robotiq"
-]
+ROBOTS = ["panda", "xmate3_robotiq"]
+
+
 def assert_obs_equal(obs1, obs2):
     if isinstance(obs1, dict):
         obs2 = flatten_dict_keys(obs2)
