@@ -672,7 +672,7 @@ class MPMBaseEnv(BaseEnv):
         if draw_box:
             bbox = self._get_bbox(5)
             box = self._add_draw_box(bbox)
-        img = super().render(self.render_mode)
+        img = super().render()
         if draw_box:
             self._remove_draw_box(box)
         return img
