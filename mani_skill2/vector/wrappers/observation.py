@@ -99,6 +99,6 @@ class VecRobotSegmentationObservationWrapper(VecEnvObservationWrapper):
         return observation
 
     def reset_wait(self, indices=None, **kwargs):
-        obs = super().reset_wait(indices=indices, **kwargs)
+        obs, reset_info = super().reset_wait(indices=indices, **kwargs)
         self.update_robot_link_ids(indices=indices)
-        return self.observation(obs)
+        return self.observation(obs), reset_info
