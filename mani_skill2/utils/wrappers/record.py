@@ -79,7 +79,6 @@ class RecordEpisode(gym.Wrapper):
         save_trajectory: whether to save trajectory
         trajectory_name: name of trajectory file (.h5). Use timestamp if not provided.
         save_video: whether to save video
-        render_mode: rendering mode passed to `env.render`
         save_on_reset: whether to save the previous trajectory automatically when resetting.
             If True, the trajectory with empty transition will be ignored automatically.
         clean_on_close: whether to rename and prune trajectories when closed.
