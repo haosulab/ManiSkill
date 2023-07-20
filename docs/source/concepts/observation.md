@@ -129,7 +129,7 @@ The segmentation image is a `[H, W, 4]` array. The second channel corresponds to
 Thus, given the actors, you can use the ids of these actors (`actor.id`) to query the actor segmentation to segment out a particular object. For example,
 
 ```python
-import mani_skill2.envs, gym
+import mani_skill2.envs, gymnasium as gym
 import numpy as np
 
 env = gym.make('PickSingleYCB-v0', obs_mode='rgbd', camera_cfgs={'add_segmentation': True})
@@ -160,7 +160,7 @@ for camera_name in obs['image'].keys():
 However, the actor segmentations do not contain finegrained information on object parts, such as handles and door surfaces of cabinets. In this case, you need to leverage the mesh-level segmentations and the fine-grained visual bodies of actors to obtain the segmentations to e.g., handles and door surfaces. For example,
 
 ```python
-import mani_skill2.envs, gym
+import mani_skill2.envs, gymnasium as gym
 import numpy as np
 
 env = gym.make('OpenCabinetDoor-v1', obs_mode='rgbd', camera_cfgs={'add_segmentation': True})
