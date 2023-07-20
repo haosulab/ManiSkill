@@ -37,7 +37,7 @@ class BaseEvaluator:
         env = self.env
         policy = self.policy
 
-        obs = env.reset(**reset_kwargs)
+        obs, _ = env.reset(**reset_kwargs)
         policy.reset(obs)
         # TODO(stao): Fix render functions here to fit gymnasium api
         # NOTE(jigu): Use for-loop rather than while-loop
