@@ -19,7 +19,12 @@ def parse_env_info(env: gym.Env):
     env = env.unwrapped
     if env.spec is None:
         return None
-    env_kwargs = env.spec.kwargs
+    if hasattr(env.spec, "_kwargs"):
+        # gym<=0.21
+        env_kwargs = env.spec._kwargs
+    else:
+        # gym>=0.22
+        env_kwargs = env.spec.kwargs
     return dict(
         env_id=env.spec.id,
         max_episode_steps=env.spec.max_episode_steps,
@@ -79,6 +84,7 @@ class RecordEpisode(gym.Wrapper):
         save_trajectory: whether to save trajectory
         trajectory_name: name of trajectory file (.h5). Use timestamp if not provided.
         save_video: whether to save video
+        render_mode: rendering mode passed to `env.render`
         save_on_reset: whether to save the previous trajectory automatically when resetting.
             If True, the trajectory with empty transition will be ignored automatically.
         clean_on_close: whether to rename and prune trajectories when closed.
@@ -256,7 +262,6 @@ class RecordEpisode(gym.Wrapper):
                         compression_opts=5,
                     )
                 elif "seg" in k and v.ndim in (3, 4):
-                    print("TYPE", v.dtype)
                     assert np.issubdtype(v.dtype, np.integer) or v.dtype == np.bool_, v.dtype
                     
                     group.create_dataset(

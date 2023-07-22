@@ -695,6 +695,7 @@ class BaseEnv(gym.Env):
             self._viewer = Viewer(self._renderer)
             self._setup_viewer()
         self._viewer.render()
+        return self._viewer
 
     def render_rgb_array(self, camera_name: str = None):
         """Render an RGB image from the specified camera."""
