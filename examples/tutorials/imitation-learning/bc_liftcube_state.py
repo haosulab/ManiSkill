@@ -111,7 +111,7 @@ def parse_args():
         help="path for where logs, checkpoints, and videos are saved",
     )
     parser.add_argument(
-        "--steps", type=int, help="number of training steps", default=50000
+        "--steps", type=int, help="number of training steps", default=10000
     )
     parser.add_argument(
         "--eval", action="store_true", help="whether to only evaluate policy"
@@ -157,7 +157,7 @@ def main():
         dataset = ManiSkill2Dataset(demo_path)
         dataloader = DataLoader(
             dataset,
-            batch_size=100,
+            batch_size=512,
             num_workers=4,
             pin_memory=True,
             drop_last=True,
@@ -195,7 +195,7 @@ def main():
         return loss.item()
 
     def evaluate_policy(env, policy, num_episodes=10):
-        obs, _ = env.reset(seed=0)
+        obs, _ = env.reset()
         successes = []
         i = 0
         pbar = tqdm(total=num_episodes, leave=False)
