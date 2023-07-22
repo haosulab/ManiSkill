@@ -231,6 +231,7 @@ class RecordEpisode(gym.Wrapper):
         # Observations need special processing
         obs = [x["o"] for x in self._episode_data]
         if isinstance(obs[0], dict):
+            obs_group = group.create_group("obs", track_order=True)
             # NOTE(jigu): If each obs is empty, then nothing will be stored.
             obs = [flatten_dict_keys(x) for x in obs]
             obs = {k: [x[k] for x in obs] for k in obs[0].keys()}
