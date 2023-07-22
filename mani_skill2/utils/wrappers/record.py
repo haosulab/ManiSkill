@@ -227,6 +227,7 @@ class RecordEpisode(gym.Wrapper):
 
         traj_id = "traj_{}".format(self._episode_id)
         group = self._h5_file.create_group(traj_id, track_order=True)
+        obs_group = group.create_group("obs", track_order=True)
 
         # Observations need special processing
         obs = [x["o"] for x in self._episode_data]
@@ -236,6 +237,15 @@ class RecordEpisode(gym.Wrapper):
             obs = {k: [x[k] for x in obs] for k in obs[0].keys()}
             obs = {k: np.stack(v) for k, v in obs.items()}
             for k, v in obs.items():
+                # create subgroups if they don't exist yet. Can be removed once https://github.com/h5py/h5py/issues/1471 is fixed
+                subgroups = k.split("/")[:-1]
+                curr_group = obs_group
+                for subgroup in subgroups:
+                    if subgroup in curr_group:
+                        curr_group = curr_group[subgroup]
+                    else:
+                        curr_group = curr_group.create_group(subgroup, track_order=True)
+
                 if "rgb" in k and v.ndim == 4:
                     # NOTE(jigu): It is more efficient to use gzip than png for a sequence of images.
                     group.create_dataset(
@@ -263,7 +273,6 @@ class RecordEpisode(gym.Wrapper):
                     )
                 elif "seg" in k and v.ndim in (3, 4):
                     assert np.issubdtype(v.dtype, np.integer) or v.dtype == np.bool_, v.dtype
-                    
                     group.create_dataset(
                         "obs/" + k,
                         data=v,
