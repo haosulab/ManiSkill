@@ -27,7 +27,6 @@ class BaseEvaluator:
         self.env: BaseEnv = gym.make(
             self.env_id, obs_mode=obs_mode, control_mode=control_mode, render_mode=render_mode, **self.env_kwargs
         )
-        print("RENDERMODE", self.env.render_mode, self.env_kwargs)
         self.policy = policy_cls(
             self.env_id, self.env.observation_space, self.env.action_space
         )
