@@ -1,9 +1,8 @@
 import gymnasium as gym
 import pytest
 
-from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.utils.wrappers import RecordEpisode
-from tests.utils import ENV_IDS, OBS_MODES, ROBOTS, assert_obs_equal
+from tests.utils import ENV_IDS, OBS_MODES
 
 
 @pytest.mark.parametrize("env_id", ENV_IDS)
