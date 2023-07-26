@@ -468,7 +468,8 @@ class BaseEnv(gym.Env):
     # -------------------------------------------------------------------------- #
     # Reset
     # -------------------------------------------------------------------------- #
-    def reset(self, seed=None, options=dict()):
+    def reset(self, seed=None, options=None):
+        if options is None: options = dict()
         self.set_episode_rng(seed)
         self._elapsed_steps = 0
         reconfigure = options.get("reconfigure", False)

@@ -38,8 +38,9 @@ class PinchEnv(MPMBaseEnv):
     def reset(
         self,
         seed=None,
-        options=dict(),
-    ):  
+        options=None
+    ):
+        if options is None: options = dict()
         self.level_file = options.get("level_file")
         return super().reset(seed=seed, options=options)
 

@@ -79,7 +79,8 @@ class MS1BaseEnv(BaseEnv):
         scene_config.default_static_friction = 0.5
         return scene_config
 
-    def reset(self, seed=None, options=dict()):
+    def reset(self, seed=None, options=None):
+        if options is None: options = dict()
         self._prev_actor_pose = None
         self.set_episode_rng(seed)
         model_id = options.get("model_id")

@@ -37,7 +37,8 @@ class AssemblingKitsEnv(StationaryManipulationEnv):
 
         super().__init__(**kwargs)
 
-    def reset(self, seed=None, options=dict()):
+    def reset(self, seed=None, options=None):
+        if options is None: options = dict()
         self.set_episode_rng(seed)
         episode_idx = options.get("episode_idx")
         reconfigure = options.get("reconfigure", False)

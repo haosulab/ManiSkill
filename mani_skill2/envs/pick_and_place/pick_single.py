@@ -83,8 +83,9 @@ class PickSingleEnv(StationaryManipulationEnv):
         raise NotImplementedError
 
     def reset(
-        self, seed=None, options=dict()
+        self, seed=None, options=None
     ):
+        if options is None: options = dict()
         self.set_episode_rng(seed)
         model_scale = options.get("model_scale")
         model_id = options.get("model_id")

@@ -168,7 +168,8 @@ class ExcavateEnv(MPMBaseEnv):
             target=np.array([self.target_num]),
         )
 
-    def reset(self, seed=None, options=dict()):
+    def reset(self, seed=None, options=None):
+        if options is None: options = dict()
         target_num = options.get("target_num")
         ret = super().reset(seed=seed, options=options)
         if target_num is not None:

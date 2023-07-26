@@ -155,7 +155,8 @@ class OpenCabinetEnv(MS1BaseEnv):
     # -------------------------------------------------------------------------- #
     # Reset
     # -------------------------------------------------------------------------- #
-    def reset(self, seed=None, options=dict()):
+    def reset(self, seed=None, options=None):
+        if options is None: options = dict()
         return super().reset(
             seed=seed, options=options
         )

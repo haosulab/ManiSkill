@@ -57,7 +57,8 @@ class WriteEnv(MPMBaseEnv):
             )
         super().__init__(*args, **kwargs)
 
-    def reset(self, seed=None, options=dict()):
+    def reset(self, seed=None, options=None):
+        if options is None: options = dict()
         self.level_file = options.get("level_file")
         return super().reset(seed=seed, options=options)
 

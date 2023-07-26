@@ -76,6 +76,7 @@ def test_robots(env_id, robot):
     if env_id in [
         "PandaAvoidObstacles-v0",
         "PegInsertionSide-v0",
+        "PickClutterYCB-v0",
         "TurnFaucet-v0",
         "OpenCabinetDoor-v1",
         "OpenCabinetDrawer-v1",
