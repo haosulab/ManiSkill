@@ -84,11 +84,14 @@ class PickClutterEnv(StationaryManipulationEnv):
     def _load_model(self, model_id, model_scale=1.0) -> sapien.Actor:
         raise NotImplementedError
 
-    def reset(self, seed=None, reconfigure=False, episode_idx=None, **kwargs):
+    def reset(self, seed=None, options=dict()):
         self.set_episode_rng(seed)
+        episode_idx = options.get("episode_idx")
+        reconfigure = options.get("reconfigure", False)
         _reconfigure = self._set_episode(episode_idx)
         reconfigure = _reconfigure or reconfigure
-        return super().reset(seed=self._episode_seed, reconfigure=reconfigure, **kwargs)
+        options["reconfigure"] = reconfigure
+        return super().reset(seed=self._episode_seed, options=options)
 
     def _set_episode(self, episode_idx=None):
         reconfigure = False

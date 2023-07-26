@@ -57,9 +57,9 @@ class WriteEnv(MPMBaseEnv):
             )
         super().__init__(*args, **kwargs)
 
-    def reset(self, *args, seed=None, level_file=None, **kwargs):
-        self.level_file = level_file
-        return super().reset(*args, seed=seed, **kwargs)
+    def reset(self, seed=None, options=dict()):
+        self.level_file = options.get("level_file")
+        return super().reset(seed=seed, options=options)
 
     def _get_obs_extra(self):
         return OrderedDict(

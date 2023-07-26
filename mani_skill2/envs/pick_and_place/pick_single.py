@@ -83,12 +83,16 @@ class PickSingleEnv(StationaryManipulationEnv):
         raise NotImplementedError
 
     def reset(
-        self, seed=None, reconfigure=False, model_id=None, model_scale=None, **kwargs
+        self, seed=None, options=dict()
     ):
         self.set_episode_rng(seed)
+        model_scale = options.get("model_scale")
+        model_id = options.get("model_id")
+        reconfigure = options.get("reconfigure", False)
         _reconfigure = self._set_model(model_id, model_scale)
         reconfigure = _reconfigure or reconfigure
-        return super().reset(seed=self._episode_seed, reconfigure=reconfigure, **kwargs)
+        options["reconfigure"] = reconfigure
+        return super().reset(seed=self._episode_seed, options=options)
 
     def _set_model(self, model_id, model_scale):
         """Set the model id and scale. If not provided, choose one randomly."""

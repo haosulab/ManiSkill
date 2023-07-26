@@ -155,9 +155,9 @@ class OpenCabinetEnv(MS1BaseEnv):
     # -------------------------------------------------------------------------- #
     # Reset
     # -------------------------------------------------------------------------- #
-    def reset(self, seed=None, reconfigure=False, model_id=None, **kwargs):
+    def reset(self, seed=None, options=dict()):
         return super().reset(
-            seed=seed, reconfigure=reconfigure, model_id=model_id, **kwargs
+            seed=seed, options=options
         )
 
     def _initialize_task(self):

@@ -37,13 +37,11 @@ class PinchEnv(MPMBaseEnv):
 
     def reset(
         self,
-        *args,
         seed=None,
-        level_file=None,
-        **kwargs,
-    ):
-        self.level_file = level_file
-        return super().reset(*args, seed=seed, **kwargs)
+        options=dict(),
+    ):  
+        self.level_file = options.get("level_file")
+        return super().reset(seed=seed, options=options)
 
     def _setup_mpm(self):
         self.model_builder = MPMModelBuilder()

@@ -49,16 +49,19 @@ class AvoidObstaclesBaseEnv(BaseEnv):
         scene_config.contact_offset = 0.01
         return scene_config
 
-    def reset(self, *args, seed=None, episode_idx=None, reconfigure=False, **kwargs):
+    def reset(self, *args, seed=None, options=dict()):
         self.set_episode_rng(seed)
+        episode_idx = options.get("episode_idx")
+        reconfigure = options.get("reconfigure", False)
         if episode_idx is None:
             episode_idx = self._episode_rng.choice(len(self.episodes))
         if episode_idx != self.episode_idx:
             reconfigure = True
         self.episode_idx = episode_idx
         self.episode_config = self.episodes[episode_idx]
+        options["reconfigure"] = reconfigure
         return super().reset(
-            *args, seed=self._episode_seed, reconfigure=reconfigure, **kwargs
+            *args, seed=self._episode_seed, options=options
         )
 
     def _build_cube(

@@ -184,7 +184,7 @@ class BaseEnv(gym.Env):
 
         # Use a fixed (main) seed to enhance determinism
         self.set_main_rng(2022)
-        obs, _ = self.reset(seed=2022, reconfigure=True)
+        obs, _ = self.reset(seed=2022, options=dict(reconfigure=True))
         self.observation_space = convert_observation_to_space(obs)
         if self._obs_mode == "image":
             image_obs_space = self.observation_space.spaces["image"]
@@ -468,10 +468,10 @@ class BaseEnv(gym.Env):
     # -------------------------------------------------------------------------- #
     # Reset
     # -------------------------------------------------------------------------- #
-    def reset(self, seed=None, reconfigure=False, options=None):
+    def reset(self, seed=None, options=dict()):
         self.set_episode_rng(seed)
         self._elapsed_steps = 0
-
+        reconfigure = options.get("reconfigure", False)
         if reconfigure:
             # Reconfigure the scene if assets change
             self.reconfigure()
