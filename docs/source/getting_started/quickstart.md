@@ -75,11 +75,14 @@ from mani_skill2.vector import VecEnv, make
 env: VecEnv = make("PickCube-v0", num_envs=4)
 ```
 
-Please see `mani_skill2/examples/demo_vec_env.py` for a complete example:
+Please see `mani_skill2/examples/demo_vec_env.py` for a complete example of how to use the ManiSkill2 vectorized environment as well as some simple profiling code to test speed of environment sampling with different environments and settings. You can run it directly as so below:
 
 ```bash
 python -m mani_skill2.examples.demo_vec_env -e PickCube-v0 -n 4
 ```
+
+You can compare the speed difference by passing in `--vecenv-type "gym"` to use the default gym vectorized environment. 
+
 
 We provide examples to use our `VecEnv` with [Stable-baselines3](https://stable-baselines3.readthedocs.io/en/master/). Please refer to our [notebook](https://github.com/haosulab/ManiSkill2/blob/main/examples/tutorials/2_reinforcement_learning.ipynb) or [example scripts](https://github.com/haosulab/ManiSkill2/tree/main/examples/tutorials/reinforcement-learning).
 
