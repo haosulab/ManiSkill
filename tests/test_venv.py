@@ -9,7 +9,6 @@ from mani_skill2.utils.common import flatten_dict_keys
 from mani_skill2.vector import make as make_vec_env
 from tests.utils import ENV_IDS, ROBOTS, VENV_OBS_MODES, assert_obs_equal
 
-
 @pytest.mark.skip()
 def make_env(env_id, obs_mode):
     import mani_skill2.envs  # fmt: skip
@@ -18,10 +17,9 @@ def make_env(env_id, obs_mode):
     env = gym.make(env_id, obs_mode=obs_mode)
     return FlattenObservationWrapper(env)
 
-
+@pytest.mark.parametrize("env_id", ["PickCube-v0", "TurnFaucet-v0"])
 @pytest.mark.parametrize("obs_mode", VENV_OBS_MODES)
-def test_vecenv_obs_mode(obs_mode):
-    env_id = "TurnFaucet-v0"
+def test_vecenv_obs_mode(env_id, obs_mode):
     n_envs = 2
 
     env_fns = [partial(make_env, env_id, obs_mode=obs_mode) for _ in range(n_envs)]
