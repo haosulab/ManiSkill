@@ -21,7 +21,7 @@ def make_env(env_id, obs_mode):
 
 @pytest.mark.parametrize("obs_mode", VENV_OBS_MODES)
 def test_vecenv_obs_mode(obs_mode):
-    env_id = "PickCube-v0"
+    env_id = "TurnFaucet-v0"
     n_envs = 2
 
     env_fns = [partial(make_env, env_id, obs_mode=obs_mode) for _ in range(n_envs)]
