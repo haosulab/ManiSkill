@@ -10,14 +10,15 @@ from mani_skill2.vector import VecEnv, make
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-e", "--env-id", type=str, default="PickCube-v0")
-    parser.add_argument("-o", "--obs-mode", type=str, default="image")
-    parser.add_argument("-c", "--control-mode", type=str)
-    parser.add_argument("--reward-mode", type=str)
-    parser.add_argument("-n", "--n-envs", type=int, default=4)
-    parser.add_argument("--vis", action="store_true")
-    parser.add_argument("--n-ep", type=int, default=5)
-    parser.add_argument("--l-ep", type=int, default=200)
+    parser.add_argument("-e", "--env-id", type=str, default="PickCube-v0", help="The environment to this demo on")
+    parser.add_argument("-o", "--obs-mode", type=str, default="image", help="The observation mode to use")
+    parser.add_argument("-c", "--control-mode", type=str, help="The control mode to use")
+    parser.add_argument("--reward-mode", type=str, help="The reward mode to use")
+    parser.add_argument("-n", "--n-envs", type=int, default=4, help="Number of parallel environments to run")
+    parser.add_argument("--vis", action="store_true", help="Whether to visualize the environments")
+    parser.add_argument("--n-ep", type=int, default=5, help="Number of episodes to run per parallel environment")
+    parser.add_argument("--l-ep", type=int, default=200, help="Max number of timesteps per episode")
+    parser.add_argument("--vecenv-type", type=str, default="ms2", help="Type of VecEnv to use. Can be ms2 or gym")
     args, opts = parser.parse_known_args()
 
     # Parse env kwargs
@@ -37,15 +38,28 @@ def main():
     n_ep = args.n_ep
     l_ep = args.l_ep
 
-    env: VecEnv = make(
-        args.env_id,
-        args.n_envs,
-        obs_mode=args.obs_mode,
-        reward_mode=args.reward_mode,
-        control_mode=args.control_mode,
-        **args.env_kwargs,
-    )
-    print("env", env)
+    if args.vecenv_type == "ms2":
+        env: VecEnv = make(
+            args.env_id,
+            args.n_envs,
+            obs_mode=args.obs_mode,
+            reward_mode=args.reward_mode,
+            control_mode=args.control_mode,
+            **args.env_kwargs,
+        )
+    elif args.vecenv_type == "gym":
+        env = gym.make_vec(
+            args.env_id,
+            args.n_envs,
+            vectorization_mode="async",
+            reward_mode=args.reward_mode,
+            obs_mode=args.obs_mode,
+            control_mode=args.control_mode,
+            vector_kwargs=dict(context="fork")
+        )
+    else: 
+        raise ValueError(f"{args.vecenv_type} is invalid. Must be ms2 or gym")
+    print(f"Environment {args.env_id} - {args.n_envs} parallel envs")
     print("Observation space", env.observation_space)
     print("Action space", env.action_space)
 

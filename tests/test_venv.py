@@ -55,3 +55,43 @@ def test_vecenv_obs_mode(env_id, obs_mode):
             np.testing.assert_equal(sb3_dones, ms2_terminations | ms2_truncations)
     sb3_env.close()
     ms2_env.close()
+
+
+@pytest.mark.parametrize("env_id", ["PickCube-v0", "TurnFaucet-v0"])
+@pytest.mark.parametrize("obs_mode", VENV_OBS_MODES)
+def test_gymnasium_vecenv(env_id, obs_mode):
+    n_envs = 2
+
+    env_fns = [partial(make_env, env_id, obs_mode=obs_mode) for _ in range(n_envs)]
+    sb3_env = SubprocVecEnv(env_fns)
+    ms2_env = make_vec_env(env_id, n_envs, obs_mode=obs_mode)
+
+    np.random.seed(2022)
+    sb3_env.seed(2022)
+    ms2_obs, _ = ms2_env.reset(seed=2022)
+
+    for i in range(2):
+        print("Episode", i)
+        sb3_obs = sb3_env.reset()
+        if i != 0:
+            # SB3 after env.seed(x), the first reset is a seeded reset, so we skip MS2 reset here the first time
+            ms2_obs, _ = ms2_env.reset()
+
+        assert_obs_equal(sb3_obs, ms2_obs)
+
+        for t in range(5):
+            actions = ms2_env.action_space.sample()
+            sb3_obs, sb3_rews, sb3_dones, sb3_infos = sb3_env.step(actions)
+            (
+                ms2_obs,
+                ms2_rews,
+                ms2_terminations,
+                ms2_truncations,
+                ms2_infos,
+            ) = ms2_env.step(actions)
+
+            assert_obs_equal(sb3_obs, ms2_obs)
+            np.testing.assert_allclose(sb3_rews, ms2_rews)
+            np.testing.assert_equal(sb3_dones, ms2_terminations | ms2_truncations)
+    sb3_env.close()
+    ms2_env.close()
