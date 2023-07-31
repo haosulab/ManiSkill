@@ -82,7 +82,7 @@ env = gym.make("PickCube-v0", obs_mode="rgbd", control_mode="pd_joint_delta_pos"
 print("Observation space", env.observation_space)
 print("Action space", env.action_space)
 
-obs, _reset_info_ = env.reset(seed=0) # reset with a seed for randomness
+obs, reset_info = env.reset(seed=0) # reset with a seed for randomness
 terminated, truncated = False, False
 while not terminated and not truncated:
     action = env.action_space.sample()
