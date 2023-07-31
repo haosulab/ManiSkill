@@ -6,7 +6,7 @@ import numpy as np
 
 from mani_skill2.utils.visualization.misc import observations_to_images, tile_images
 from mani_skill2.vector import VecEnv, make
-
+from tqdm import tqdm
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -65,9 +65,12 @@ def main():
 
     np.random.seed(2022)
 
+    samples_so_far = 0
+    total_samples = n_ep * l_ep * args.n_envs
     tic = time.time()
-    for i in range(n_ep):
-        print("Episode", i)
+    
+    pbar = tqdm(range(n_ep))
+    for i in pbar:
 
         # NOTE(jigu): reset is a costly operation
         obs, _ = env.reset()
@@ -75,6 +78,7 @@ def main():
         for t in range(l_ep):
             action = env.action_space.sample()
             obs, reward, terminated, truncated, info = env.step(action)
+            samples_so_far += args.n_envs
 
             # Visualize
             if args.vis and env.obs_mode in ["image", "rgbd", "rgbd_robot_seg"]:
@@ -110,9 +114,10 @@ def main():
                         trimesh.PointCloud(xyz[w > 0], rgb[w > 0]), transform=T
                     )
                 scene.show()
-
+        fps = samples_so_far / (time.time() - tic)
+        pbar.set_postfix(dict(FPS=f"{fps:0.2f}"))
     toc = time.time()
-    print("FPS", n_ep * l_ep * args.n_envs / (toc - tic))
+    print(f"FPS {total_samples / (toc - tic):0.2f}")
     env.close()
 
 
