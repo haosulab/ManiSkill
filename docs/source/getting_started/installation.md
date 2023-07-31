@@ -61,6 +61,8 @@ If `nvcc` is included in `$PATH`, we will try to figure out the variable `CUDA_P
 After CUDA is properly set up, compile Warp customized for ManiSkill2:
 
 ``` bash
+# If you encounter "ModuleNotFoundError: No module named 'warp'", please add warp_maniskill to the python path. 
+export PYTHONPATH=/path/to/ManiSkill2/warp_maniskill:$PYTHONPATH
 # warp.so is generated under warp_maniskill/warp/bin
 python -m warp_maniskill.build_lib
 ```
@@ -169,7 +171,7 @@ The following errors can happen if the Vulkan driver is broken. Try to reinstall
 If the soft-body environment throws a **memory error**, you can try compiling Warp in the debug mode.
 
 ```bash
-python -m warp_maniskill.build_lib --mode debug
+PYTHONPATH="$PWD"/warp_maniskill:$PYTHONPATH python -m warp_maniskill.build_lib --mode debug
 ```
 
 Remember to compile again in the release mode after you finish debugging. In the debug mode, if the error becomes `unsupported toolchain`, it means you have a conflicting CUDA version.

@@ -462,6 +462,8 @@ def stack_obs(obs: Sequence, space: spaces.Space, buffer: Optional[np.ndarray] =
             ret[key] = stack_obs(_obs, space[key], buffer=_buffer)
         return ret
     elif isinstance(space, spaces.Box):
+        if len(np.array(obs[0]).shape) == 0: # check for 0-dimensional parameter
+            obs = [np.array(o)[None] for o in obs] # convert float to array and add dimension
         return np.stack(obs, out=buffer)
     else:
         raise NotImplementedError(type(space))

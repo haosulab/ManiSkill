@@ -34,7 +34,7 @@ jobs:
         with:
           python-version: "3.8"
       - name: Install dependencies
-        run: pip install -e .[docs]
+        run: pip install --upgrade wheel==0.38.4 setuptools==65.5.1 && pip install -e .[docs]
       - name: Build docs
         working-directory: ./docs
         run: make html
