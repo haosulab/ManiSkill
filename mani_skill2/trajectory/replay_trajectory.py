@@ -408,13 +408,14 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
             assert reset_kwargs["seed"] == ep["episode_seed"]
         else:
             reset_kwargs["seed"] = ep["episode_seed"]
+        seed = reset_kwargs.pop("seed")
 
         ori_control_mode = ep["control_mode"]
 
         for _ in range(args.max_retry + 1):
-            env.reset(**reset_kwargs)
+            env.reset(seed=seed, options=reset_kwargs)
             if ori_env is not None:
-                ori_env.reset(**reset_kwargs)
+                ori_env.reset(seed=seed, options=reset_kwargs)
 
             if args.vis:
                 env.render()
