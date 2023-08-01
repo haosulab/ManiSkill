@@ -68,7 +68,7 @@ def test_gymnasium_vecenv(env_id, obs_mode):
     n_envs = 2
 
     gym_env = gym.make_vec(
-        env_id, n_envs, obs_mode=obs_mode
+        env_id, n_envs, obs_mode=obs_mode, wrappers=[FlattenObservationWrapper]
     )
     ms2_env = make_vec_env(env_id, n_envs, obs_mode=obs_mode)
 
