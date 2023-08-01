@@ -354,6 +354,7 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
     if target_control_mode is not None:
         env_kwargs["control_mode"] = target_control_mode
     env_kwargs["bg_name"] = args.bg_name
+    env_kwargs["render_mode"] = "human"
     env = gym.make(env_id, **env_kwargs)
     if pbar is not None:
         pbar.set_postfix(
