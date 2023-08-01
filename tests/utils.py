@@ -62,7 +62,12 @@ VENV_OBS_MODES = [
 ROBOTS = ["panda", "xmate3_robotiq"]
 
 
-def assert_obs_equal(obs1, obs2):
+def assert_obs_equal(obs1, obs2, ignore_col_vector_shape_mismatch=False):
+    """ Check if two observations are equal
+    
+    ignore_col_vector_shape_mismatch - If true, will ignore shape mismatch if one shape is (n, 1) but another is (n, ). this is added since
+        SB3 outputs scalars as (n, ) whereas Gymnasium and ManiSkill2 use (n, 1)
+    """
     if isinstance(obs1, dict):
         obs2 = flatten_dict_keys(obs2)
         for k, v in obs1.items():
@@ -77,6 +82,11 @@ def assert_obs_equal(obs1, obs2):
             elif np.issubdtype(v.dtype, np.integer):
                 np.testing.assert_equal(v, v2, err_msg=k)
             else:
+                if ignore_col_vector_shape_mismatch:
+                    if v.ndim == 1 or v2.ndim == 1:
+                        assert v.shape[0] == v2.shape[0]
+                        v = v.reshape(-1)
+                        v2 = v2.reshape(-1)
                 np.testing.assert_allclose(v, v2, err_msg=k, atol=1e-4)
     else:
         np.testing.assert_allclose(obs1, obs2, atol=1e-4)

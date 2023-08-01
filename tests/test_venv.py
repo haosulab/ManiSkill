@@ -39,7 +39,7 @@ def test_vecenv_obs_mode(env_id, obs_mode):
             # SB3 after env.seed(x), the first reset is a seeded reset, so we skip MS2 reset here the first time
             ms2_obs, _ = ms2_env.reset()
 
-        assert_obs_equal(sb3_obs, ms2_obs)
+        assert_obs_equal(sb3_obs, ms2_obs, ignore_col_vector_shape_mismatch=True)
 
         for t in range(5):
             actions = ms2_env.action_space.sample()
@@ -52,18 +52,18 @@ def test_vecenv_obs_mode(env_id, obs_mode):
                 ms2_truncations,
                 ms2_infos,
             ) = ms2_env.step(actions)
-            assert 0
-            assert_obs_equal(sb3_obs, ms2_obs)
+            assert_obs_equal(sb3_obs, ms2_obs, ignore_col_vector_shape_mismatch=True)
             np.testing.assert_allclose(sb3_rews, ms2_rews)
             np.testing.assert_equal(sb3_dones, ms2_terminations | ms2_truncations)
     sb3_env.close()
     ms2_env.close()
     del sb3_env
     del ms2_env
-
+#  import matplotlib.pyplot as plt
+# plt.imshow(v[0]); plt.savefig("v1");plt.imshow(v2[0]); plt.savefig("v2");plt.imshow(v[0]-v2[0]); plt.savefig("vdiff")
 
 @pytest.mark.parametrize("env_id", ["PickCube-v0", "TurnFaucet-v0"])
-@pytest.mark.parametrize("obs_mode", ["rgbd"])
+@pytest.mark.parametrize("obs_mode", VENV_OBS_MODES)
 def test_gymnasium_vecenv(env_id, obs_mode):
     n_envs = 2
 
