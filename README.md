@@ -1,4 +1,6 @@
-# ManiSkill2
+# ManiSkill2(Sim2Real)
+
+This is the sim2real repo of ManiSkill2. Installation please follow orginal instructions bellow.
 
 ![teaser](figures/teaser_v2.jpg)
 
