@@ -2,6 +2,13 @@
 
 **This is the sim2real repo of ManiSkill2. Installation please follow orginal instructions bellow.**
 
+You are recommanded to create a new environment by conda:
+
+```bash
+conda create -n ms2-s2r python=3.8
+```
+
+
 **Note**: You need to install the lower version of stable-baseline3 which is compatible with this version of ManiSkill2 release. Use:
 ```bash
 pip install "stable-baseline3[extra]<2.0.0"
