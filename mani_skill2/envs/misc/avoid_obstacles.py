@@ -52,8 +52,8 @@ class AvoidObstaclesBaseEnv(BaseEnv):
     def reset(self, *args, seed=None, options=None):
         if options is None: options = dict()
         self.set_episode_rng(seed)
-        episode_idx = options.get("episode_idx")
-        reconfigure = options.get("reconfigure", False)
+        episode_idx = options.pop("episode_idx", None)
+        reconfigure = options.pop("reconfigure", False)
         if episode_idx is None:
             episode_idx = self._episode_rng.choice(len(self.episodes))
         if episode_idx != self.episode_idx:

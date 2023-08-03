@@ -87,8 +87,8 @@ class PickClutterEnv(StationaryManipulationEnv):
     def reset(self, seed=None, options=None):
         if options is None: options = dict()
         self.set_episode_rng(seed)
-        episode_idx = options.get("episode_idx")
-        reconfigure = options.get("reconfigure", False)
+        episode_idx = options.pop("episode_idx", None)
+        reconfigure = options.pop("reconfigure", False)
         _reconfigure = self._set_episode(episode_idx)
         reconfigure = _reconfigure or reconfigure
         options["reconfigure"] = reconfigure

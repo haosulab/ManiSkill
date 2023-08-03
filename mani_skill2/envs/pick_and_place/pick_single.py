@@ -87,9 +87,9 @@ class PickSingleEnv(StationaryManipulationEnv):
     ):
         if options is None: options = dict()
         self.set_episode_rng(seed)
-        model_scale = options.get("model_scale")
-        model_id = options.get("model_id")
-        reconfigure = options.get("reconfigure", False)
+        model_scale = options.pop("model_scale", None)
+        model_id = options.pop("model_id", None)
+        reconfigure = options.pop("reconfigure", False)
         _reconfigure = self._set_model(model_id, model_scale)
         reconfigure = _reconfigure or reconfigure
         options["reconfigure"] = reconfigure

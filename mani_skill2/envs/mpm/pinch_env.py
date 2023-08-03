@@ -41,7 +41,7 @@ class PinchEnv(MPMBaseEnv):
         options=None
     ):
         if options is None: options = dict()
-        self.level_file = options.get("level_file")
+        self.level_file = options.pop("level_file", None)
         return super().reset(seed=seed, options=options)
 
     def _setup_mpm(self):

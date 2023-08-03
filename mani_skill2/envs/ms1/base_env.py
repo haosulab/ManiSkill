@@ -84,8 +84,8 @@ class MS1BaseEnv(BaseEnv):
         if options is None: options = dict()
         self._prev_actor_pose = None
         self.set_episode_rng(seed)
-        model_id = options.get("model_id")
-        reconfigure = options.get("reconfigure", False)
+        model_id = options.pop("model_id", None)
+        reconfigure = options.pop("reconfigure", False)
         _reconfigure = self._set_model(model_id)
         reconfigure = _reconfigure or reconfigure
         options["reconfigure"] = reconfigure

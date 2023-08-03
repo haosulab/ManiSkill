@@ -170,7 +170,7 @@ class ExcavateEnv(MPMBaseEnv):
 
     def reset(self, seed=None, options=None):
         if options is None: options = dict()
-        target_num = options.get("target_num")
+        target_num = options.pop("target_num", None)
         ret = super().reset(seed=seed, options=options)
         if target_num is not None:
             self.target_num = int(target_num)

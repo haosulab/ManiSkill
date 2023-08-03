@@ -148,9 +148,9 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
     ):
         if options is None: options = dict()
         self.set_episode_rng(seed)
-        model_id = options.get("model_id")
-        model_scale = options.get("model_scale")
-        reconfigure = options.get("reconfigure", False)
+        model_id = options.pop("model_id", None)
+        model_scale = options.pop("model_scale", None)
+        reconfigure = options.pop("reconfigure", False)
         
         _reconfigure = self._set_model(model_id, model_scale)
         reconfigure = _reconfigure or reconfigure

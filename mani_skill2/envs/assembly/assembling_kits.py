@@ -40,8 +40,8 @@ class AssemblingKitsEnv(StationaryManipulationEnv):
     def reset(self, seed=None, options=None):
         if options is None: options = dict()
         self.set_episode_rng(seed)
-        episode_idx = options.get("episode_idx")
-        reconfigure = options.get("reconfigure", False)
+        episode_idx = options.pop("episode_idx", None)
+        reconfigure = options.pop("reconfigure", False)
         if episode_idx is None:
             episode_idx = self._episode_rng.randint(len(self._episodes))
         if self.episode_idx != episode_idx:
