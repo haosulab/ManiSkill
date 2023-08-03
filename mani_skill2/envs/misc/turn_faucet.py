@@ -5,6 +5,7 @@ from typing import Dict, List, Union
 import numpy as np
 import sapien.core as sapien
 import trimesh
+import trimesh.sample
 from sapien.core import Pose
 from scipy.spatial.distance import cdist
 from transforms3d.euler import euler2quat
@@ -230,7 +231,7 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
         self.switch_link_names = switch_link_names
 
         self.switch_links = []
-        self.switch_links_mesh = []
+        self.switch_links_mesh: List[trimesh.Trimesh] = []
         self.switch_joints = []
         all_links = self.faucet.get_links()
         all_joints = self.faucet.get_joints()
@@ -277,11 +278,8 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
         # For dense reward
         # -------------------------------------------------------------------------- #
         # NOTE(jigu): trimesh uses np.random to sample
-        with np_random(self._episode_seed):
-            self.lfinger_pcd = self.lfinger_mesh.sample(256)
-            self.rfinger_pcd = self.rfinger_mesh.sample(256)
-        # trimesh.PointCloud(self.lfinger_pcd).show()
-        # trimesh.PointCloud(self.rfinger_pcd).show()
+        self.lfinger_pcd = trimesh.sample.sample_surface(self.lfinger_mesh, 256, seed=self._episode_seed)[0]
+        self.rfinger_pcd = trimesh.sample.sample_surface(self.rfinger_mesh, 256, seed=self._episode_seed)[0]
 
         self.last_angle_diff = self.target_angle - self.current_angle
 
@@ -299,10 +297,10 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
         joint_pose = self.target_joint.get_global_pose().to_transformation_matrix()
         self.target_joint_axis = joint_pose[:3, 0]
 
-        self.target_link_mesh = self.switch_links_mesh[idx]
+        self.target_link_mesh: trimesh.Trimesh = self.switch_links_mesh[idx]
+        
         # NOTE(jigu): trimesh uses np.random to sample
-        with np_random(self._episode_seed):
-            self.target_link_pcd = self.target_link_mesh.sample(256)
+        self.target_link_pcd = trimesh.sample.sample_surface(self.target_link_mesh, 256, seed=self._episode_seed)[0]
 
         # NOTE(jigu): joint origin can be anywhere on the joint axis.
         # Thus, I use the center of mass at the beginning instead
