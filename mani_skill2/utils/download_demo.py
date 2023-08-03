@@ -95,13 +95,14 @@ DATASET_SOURCES["Fill-v0"] = dict(
 )
 
 
-def parse_args():
+def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "uid",
         type=str,
         help="An environment id (e.g. PickCube-v0), a type of environments (rigid_body/soft_body), or 'all' for all available demonstrations.",
     )
+    parser.add_argument("--quiet", action="store_true", help="Disable verbose output.")
     parser.add_argument(
         "-o",
         "--output_dir",
@@ -109,19 +110,18 @@ def parse_args():
         default="demos",
         help="The directory to save demonstrations to. The files will then be saved to <output_dir>/<env_type>/<env_id>",
     )
-    return parser.parse_args()
+    return parser.parse_args(args)
 
 
-def main():
-    args = parse_args()
-
+def main(args):
+    verbose = not args.quiet
     if args.uid == "":
         print("Available uids:")
         print(list(DATASET_SOURCES.keys()))
         return
 
     if args.uid == "all":
-        print("All demonstrations will be downloaded. This may take a while.")
+        if verbose: print("All demonstrations will be downloaded. This may take a while.")
         uids = list(DATASET_SOURCES.keys())
         show_progress = True
     elif args.uid in ["rigid_body", "soft_body"]:
@@ -137,7 +137,7 @@ def main():
         raise KeyError("{} not found.".format(args.uid))
 
     for i, uid in enumerate(uids):
-        if show_progress:
+        if show_progress and verbose:
             print("Downloading demonstrations: {}/{}".format(i + 1, len(uids)))
 
         meta = DATASET_SOURCES[uid]
@@ -154,17 +154,17 @@ def main():
             filename = gdown.download(url, output=output_path)
             is_failed = filename is None
 
-        if is_failed:
+        if is_failed and verbose:
             print(f"Google drive link failed: {url}")
         elif not is_folder:
             with zipfile.ZipFile(filename, "r") as zip_ref:
                 zip_ref.extractall(osp.dirname(filename))
-            print("Unzip file: {}".format(filename))
+            if verbose: print("Unzip file: {}".format(filename))
             os.remove(filename)
 
-        if is_failed:
+        if is_failed and verbose:
             print("Failed to download demonstrations for {}".format(uid))
 
 
 if __name__ == "__main__":
-    main()
+    main(parse_args())

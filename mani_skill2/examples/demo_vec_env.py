@@ -8,7 +8,7 @@ from mani_skill2.utils.visualization.misc import observations_to_images, tile_im
 from mani_skill2.vector import VecEnv, make
 from tqdm import tqdm
 
-def parse_args():
+def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--env-id", type=str, default="PickCube-v0", help="The environment to this demo on")
     parser.add_argument("-o", "--obs-mode", type=str, default="image", help="The observation mode to use")
@@ -19,22 +19,23 @@ def parse_args():
     parser.add_argument("--n-ep", type=int, default=5, help="Number of episodes to run per parallel environment")
     parser.add_argument("--l-ep", type=int, default=200, help="Max number of timesteps per episode")
     parser.add_argument("--vecenv-type", type=str, default="ms2", help="Type of VecEnv to use. Can be ms2 or gym")
-    args, opts = parser.parse_known_args()
+    parser.add_argument("--quiet", action="store_true", help="Disable verbose output.")
+    args, opts = parser.parse_known_args(args)
 
     # Parse env kwargs
-    print("opts:", opts)
+    if not args.quiet: print("opts:", opts)
     eval_str = lambda x: eval(x[1:]) if x.startswith("@") else x
     env_kwargs = dict((x, eval_str(y)) for x, y in zip(opts[0::2], opts[1::2]))
-    print("env_kwargs:", env_kwargs)
+    if not args.quiet: print("env_kwargs:", env_kwargs)
     args.env_kwargs = env_kwargs
 
     return args
 
 
-def main():
+def main(args):
     np.set_printoptions(suppress=True, precision=3)
 
-    args = parse_args()
+    verbose = not args.quiet
     n_ep = args.n_ep
     l_ep = args.l_ep
 
@@ -59,9 +60,10 @@ def main():
         )
     else: 
         raise ValueError(f"{args.vecenv_type} is invalid. Must be ms2 or gym")
-    print(f"Environment {args.env_id} - {args.n_envs} parallel envs")
-    print("Observation space", env.observation_space)
-    print("Action space", env.action_space)
+    if verbose:
+        print(f"Environment {args.env_id} - {args.n_envs} parallel envs")
+        print("Observation space", env.observation_space)
+        print("Action space", env.action_space)
 
     np.random.seed(2022)
 
@@ -117,7 +119,7 @@ def main():
         fps = samples_so_far / (time.time() - tic)
         pbar.set_postfix(dict(FPS=f"{fps:0.2f}"))
     toc = time.time()
-    print(f"FPS {total_samples / (toc - tic):0.2f}")
+    if verbose: print(f"FPS {total_samples / (toc - tic):0.2f}")
     env.close()
 
 
