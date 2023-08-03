@@ -53,6 +53,7 @@ def _worker(
 
     parent_remote.close()
 
+    env = None
     try:
         env = env_fn()
         while True:
@@ -84,7 +85,7 @@ def _worker(
     except Exception as err:
         logger.error(err, exc_info=1)
     finally:
-        env.close()
+        if env is not None: env.close()
 
 
 class VecEnv(VectorEnv):
@@ -121,7 +122,9 @@ class VecEnv(VectorEnv):
     """
 
     device: torch.device
-
+    remotes: List[Connection] = []
+    work_remotes: List[Connection] = []
+    processes: List[mp.Process] = []
     def __init__(
         self,
         env_fns: List[Callable[[], BaseEnv]],
@@ -191,7 +194,7 @@ class VecEnv(VectorEnv):
             env_fn = env_fns[rank]
             args = (rank, work_remote, remote, env_fn)
             # daemon=True: if the main process crashes, we should not cause things to hang
-            process = ctx.Process(
+            process: mp.Process = ctx.Process(
                 target=_worker, args=args, daemon=True
             )  # pytype:disable=attribute-error
             process.start()
