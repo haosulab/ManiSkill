@@ -15,6 +15,13 @@ from .base_env import StationaryManipulationEnv
 class PegInsertionSideEnv(StationaryManipulationEnv):
     _clearance = 0.003
 
+    def reset(self, seed=None, options=None):
+        if options is None:
+            options = {}
+        if options.get('reconfigure') is None:
+            options['reconfigure'] = True
+        return super().reset(seed, options)
+    
     def _build_box_with_hole(
         self, inner_radius, outer_radius, depth, center=(0, 0), name="box_with_hole"
     ):
