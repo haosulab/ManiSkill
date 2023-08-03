@@ -161,7 +161,7 @@ def from_pd_joint_pos_to_ee(
 
             _, _, _, _, info = env.step(output_action)
             if render:
-                env.render()
+                env.render_human()
 
             if flag:
                 break
@@ -230,7 +230,7 @@ def from_pd_joint_pos(
             output_action = controller.from_action_dict(output_action_dict)
             _, _, _, _, info = env.step(output_action)
             if render:
-                env.render()
+                env.render_human()
 
             if flag:
                 break
@@ -280,12 +280,12 @@ def from_pd_joint_delta_pos(
         _, _, _, _, info = env.step(output_action)
 
         if render:
-            env.render()
+            env.render_human()
 
     return info
 
 
-def parse_args():
+def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--traj-path", type=str, required=True)
     parser.add_argument("-o", "--obs-mode", type=str, help="target observation mode")
@@ -321,7 +321,7 @@ def parse_args():
         default=None,
         help="background scene to use",
     )
-    return parser.parse_args()
+    return parser.parse_args(args)
 
 
 def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
@@ -354,7 +354,7 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
     if target_control_mode is not None:
         env_kwargs["control_mode"] = target_control_mode
     env_kwargs["bg_name"] = args.bg_name
-    env_kwargs["render_mode"] = "human"
+    env_kwargs["render_mode"] = "rgb_array" # note this only affects the videos saved as RecordEpisode wrapper calls env.render
     env = gym.make(env_id, **env_kwargs)
     if pbar is not None:
         pbar.set_postfix(
@@ -418,7 +418,7 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
                 ori_env.reset(seed=seed, options=reset_kwargs)
 
             if args.vis:
-                env.render()
+                env.render_human()
 
             # Original actions to replay
             ori_actions = ori_h5_file[traj_id]["actions"][:]
@@ -439,7 +439,7 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
                         pbar.update()
                     _, _, _, _, info = env.step(a)
                     if args.vis:
-                        env.render()
+                        env.render_human()
                     if args.use_env_states:
                         env.set_state(ori_env_states[t])
 
@@ -496,8 +496,8 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
     return output_h5_path
 
 
-def main():
-    args = parse_args()
+def main(args):
+    
 
     if args.num_procs > 1:
         pool = mp.Pool(args.num_procs)
@@ -521,4 +521,4 @@ def main():
 if __name__ == "__main__":
     # spawn is needed due to warp init issue
     mp.set_start_method("spawn")
-    main()
+    main(parse_args())

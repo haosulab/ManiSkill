@@ -107,13 +107,15 @@ class PickCubeEnv(StationaryManipulationEnv):
     def compute_normalized_dense_reward(self, **kwargs):
         return self.compute_dense_reward(**kwargs) / 5.0
 
-    def render(self):
-        if self.render_mode in ["human", "rgb_array"]:
-            self.goal_site.unhide_visual()
-            ret = super().render()
-            self.goal_site.hide_visual()
-        else:
-            ret = super().render()
+    def render_human(self):
+        self.goal_site.unhide_visual()
+        ret = super().render_human()
+        self.goal_site.hide_visual()
+        return ret
+    def render_rgb_array(self):
+        self.goal_site.unhide_visual()
+        ret = super().render_rgb_array()
+        self.goal_site.hide_visual()
         return ret
 
     def get_state(self) -> np.ndarray:

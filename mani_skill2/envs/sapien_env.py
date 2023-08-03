@@ -713,7 +713,15 @@ class BaseEnv(gym.Env):
         if len(images) == 1:
             return images[0]
         return tile_images(images)
-
+    def render_cameras(self):
+        images = []
+        self.render_mode = "rgb_array"
+        rgb_array = self.render()
+        self.render_mode = "cameras"
+        if rgb_array is not None:
+            images.append(rgb_array)
+        images.extend(self._render_cameras_images())
+        return tile_images(images)
     def _render_cameras_images(self):
         images = []
         self.update_render()
@@ -731,14 +739,7 @@ class BaseEnv(gym.Env):
         elif self.render_mode == "rgb_array":
             return self.render_rgb_array()
         elif self.render_mode == "cameras":
-            images = []
-            self.render_mode = "rgb_array"
-            rgb_array = self.render()
-            self.render_mode = "cameras"
-            if rgb_array is not None:
-                images.append(rgb_array)
-            images.extend(self._render_cameras_images())
-            return tile_images(images)
+            return self.render_cameras()
         else:
             raise NotImplementedError(f"Unsupported render mode {self.render_mode}.")
 

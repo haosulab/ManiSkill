@@ -1,5 +1,4 @@
 import pathlib
-import runpy
 import pytest
 
 scripts = pathlib.Path(__file__, '..', 'scripts').resolve().glob('*.py')
