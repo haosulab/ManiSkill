@@ -327,13 +327,13 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
     def _get_obs_extra(self) -> OrderedDict:
         obs = OrderedDict(
             tcp_pose=vectorize_pose(self.tcp.pose),
-            target_angle_diff=self.target_angle_diff,
+            target_angle_diff=np.array(self.target_angle_diff),
             target_joint_axis=self.target_joint_axis,
             target_link_pos=self.target_link_pos,
         )
         if self._obs_mode in ["state", "state_dict"]:
             angle_dist = self.target_angle - self.current_angle
-            obs["angle_dist"] = angle_dist
+            obs["angle_dist"] = np.array(angle_dist)
         return obs
 
     @property

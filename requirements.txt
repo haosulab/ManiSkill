@@ -2,7 +2,7 @@
 numpy<1.24
 scipy
 gymnasium>=0.28.1
-sapien==2.2.1
+sapien==2.2.2
 # basic
 h5py
 pyyaml
