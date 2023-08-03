@@ -7,7 +7,7 @@
 pip install "stable-baseline3[extra]<2.0.0"
 ```
 
-**Original instructions are below**
+**Original README starts from here**
 
 ![teaser](figures/teaser_v2.jpg)
 
