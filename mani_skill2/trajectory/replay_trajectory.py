@@ -321,6 +321,12 @@ def parse_args(args=None):
         default=None,
         help="background scene to use",
     )
+    parser.add_argument(
+        "--count",
+        type=int,
+        default=None,
+        help="number of demonstrations to replay before exiting. By default will replay all demonstrations"
+    )
     return parser.parse_args(args)
 
 
@@ -386,7 +392,7 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
     else:
         output_h5_path = None
 
-    episodes = json_data["episodes"]
+    episodes = json_data["episodes"][:args.count]
     n_ep = len(episodes)
     inds = np.arange(n_ep)
     inds = np.array_split(inds, num_procs)[proc_id]
