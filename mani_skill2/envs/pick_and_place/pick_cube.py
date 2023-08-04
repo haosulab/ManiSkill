@@ -121,6 +121,37 @@ class PickCubeEnv(StationaryManipulationEnv):
         self.goal_pos = state[-3:]
         super().set_state(state[:-3])
 
+@register_env("PickCube-v1", max_episode_steps=200)
+class PickCubeEnv_v1(PickCubeEnv):
+    # better reward
+    def compute_dense_reward(self, info, **kwargs):
+        reward = 0.0
+
+        if info["success"]:
+            reward += 5
+            return reward
+
+        tcp_to_obj_pos = self.obj.pose.p - self.tcp.pose.p
+        tcp_to_obj_dist = np.linalg.norm(tcp_to_obj_pos)
+        reaching_reward = 1 - np.tanh(5 * tcp_to_obj_dist)
+        reward += reaching_reward
+
+        is_grasped = self.agent.check_grasp(self.obj) # remove max_angle=30 yeilds much better performance
+        reward += 1 if is_grasped else 0.0
+
+        if is_grasped:
+            obj_to_goal_dist = np.linalg.norm(self.goal_pos - self.obj.pose.p)
+            place_reward = 1 - np.tanh(5 * obj_to_goal_dist)
+            reward += place_reward
+
+            # static reward
+            if self.check_obj_placed():
+                qvel = self.agent.robot.get_qvel()[:-2]
+                static_reward = 1 - np.tanh(5 * np.linalg.norm(qvel))
+                reward += static_reward
+
+        return reward
+
 
 @register_env("LiftCube-v0", max_episode_steps=200)
 class LiftCubeEnv(PickCubeEnv):
