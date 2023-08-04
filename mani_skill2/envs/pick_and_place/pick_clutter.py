@@ -233,15 +233,19 @@ class PickClutterEnv(StationaryManipulationEnv):
         cam_cfg.pose = look_at([0.3, 0, 1.0], [0.0, 0.0, 0.5])
         return cam_cfg
 
-    def render(self):
-        if self.render_mode in ["human", "rgb_array"]:
-            set_actor_visibility(self.target_site, 0.8)
-            set_actor_visibility(self.goal_site, 0.5)
-            ret = super().render()
-            set_actor_visibility(self.target_site, 0)
-            set_actor_visibility(self.goal_site, 0)
-        else:
-            ret = super().render()
+    def render_human(self):
+        set_actor_visibility(self.target_site, 0.8)
+        set_actor_visibility(self.goal_site, 0.5)
+        ret = super().render_human()
+        set_actor_visibility(self.target_site, 0)
+        set_actor_visibility(self.goal_site, 0)
+        return ret
+    def render_rgb_array(self):
+        set_actor_visibility(self.target_site, 0.8)
+        set_actor_visibility(self.goal_site, 0.5)
+        ret = super().render_rgb_array()
+        set_actor_visibility(self.target_site, 0)
+        set_actor_visibility(self.goal_site, 0)
         return ret
 
     def get_state(self) -> np.ndarray:
