@@ -50,7 +50,7 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Use Stable Baselines 3 PPO to train ManiSkill2 tasks"
     )
-    parser.add_argument("-e", "--env-id", type=str, default="PickCube-v0")
+    parser.add_argument("-e", "--env-id", type=str, default="PickCube-v1")
     parser.add_argument(
         "-n",
         "--n-envs",
@@ -72,7 +72,7 @@ def parse_args():
     parser.add_argument(
         "--total-timesteps",
         type=int,
-        default=500_000,
+        default=2_000_000,
         help="Total timesteps for training",
     )
     parser.add_argument(
