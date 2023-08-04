@@ -31,6 +31,7 @@ def make(
     server_address="auto",
     wrappers: Sequence[gym.Wrapper] = None,
     enable_segmentation=False,
+    max_episode_steps: int = None,
     **kwargs,
 ) -> VecEnv:
     """Instantiate vectorized ManiSkill2 environments.
@@ -43,6 +44,8 @@ def make(
             Otherwise, it should be a networkd address, e.g. "localhost:12345".
         wrappers (Sequence[gym.Wrapper], optional): Wrappers for the individual environment.
         enable_segmentation (bool, optional): Whether to include "Segmentation" texture in observations.
+        max_episode_steps (int, optional): Override any existing max_episode_steps/TimeLimitWrapper 
+            used in the initial specification of the environment.
         **kwargs: Keyword arguments to pass to the environment.
     """
     # Avoid circular import
