@@ -228,15 +228,16 @@ class AvoidObstaclesBaseEnv(BaseEnv):
         self._viewer.set_camera_xyz(1.5, 0.0, 1.5)
         self._viewer.set_camera_rpy(0, -0.6, 3.14)
 
-    def render(self):
-        if self.render_mode in ["human", "rgb_array"]:
-            self.goal_site.unhide_visual()
-            ret = super().render()
-            self.goal_site.hide_visual()
-        else:
-            ret = super().render()
+    def render_human(self):
+        self.goal_site.unhide_visual()
+        ret = super().render_human()
+        self.goal_site.hide_visual()
         return ret
-
+    def render_rgb_array(self):
+        self.goal_site.unhide_visual()
+        ret = super().render_rgb_array()
+        self.goal_site.hide_visual()
+        return ret
 
 @register_env("PandaAvoidObstacles-v0", max_episode_steps=500)
 class PandaAvoidObstaclesEnv(AvoidObstaclesBaseEnv):
