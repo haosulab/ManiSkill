@@ -70,7 +70,7 @@ def make(
         camera_cfgs["add_segmentation"] = True
         kwargs["camera_cfgs"] = camera_cfgs
 
-    env_fn = partial(_make_env, env_spec, wrappers, **kwargs)
+    env_fn = partial(_make_env, env_spec, wrappers, max_episode_steps=max_episode_steps, **kwargs)
 
     # Dispatch observation mode
     if "image" in obs_mode:
