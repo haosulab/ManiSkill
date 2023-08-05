@@ -164,8 +164,8 @@ class BaseEnv(gym.Env):
             raise NotImplementedError("Unsupported reward mode: {}".format(reward_mode))
         self.low_level_control_mode = low_level_control_mode
         # Add break conditions for position control
-        self.time_out = 1000
-        self.qpos_threshold = 0.01
+        self.time_out = 500
+        self.qpos_threshold = 0.05
         self.qvel_threshold = 0.01
 
         # NOTE(jigu): Agent and camera configurations should not change after initialization.
@@ -569,7 +569,7 @@ class BaseEnv(gym.Env):
             sim_step = 0
             while True:
                 if sim_step >= self.time_out:
-                    print(sim_step)
+                    # print(sim_step)
                     break
                 sim_step += 1
                 qpos = self.agent.robot.get_qpos()

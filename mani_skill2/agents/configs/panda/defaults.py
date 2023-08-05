@@ -30,16 +30,16 @@ class PandaDefaultConfig:
             "panda_joint6",
             "panda_joint7",
         ]
-        self.arm_stiffness = 1e3
-        self.arm_damping = 1e2
+        self.arm_stiffness = 1e5    # NOTE:increase from 1e3
+        self.arm_damping = 2e3  # NOTE:increase from 1e2
         self.arm_force_limit = 100
 
         self.gripper_joint_names = [
             "panda_finger_joint1",
             "panda_finger_joint2",
         ]
-        self.gripper_stiffness = 1e3
-        self.gripper_damping = 1e2
+        self.gripper_stiffness = 1e5    # NOTE：increase from 1e3
+        self.gripper_damping = 2e3  # NOTE:increase from 1e2
         self.gripper_force_limit = 100
 
         self.ee_link_name = "panda_hand_tcp"
@@ -60,8 +60,8 @@ class PandaDefaultConfig:
         )
         arm_pd_joint_delta_pos = PDJointPosControllerConfig(
             self.arm_joint_names,
-            -0.1,
-            0.1,
+            -0.25,   # NOTE: increase from 0.1
+            0.25,    # NOTE: increase from 0.1
             self.arm_stiffness,
             self.arm_damping,
             self.arm_force_limit,
@@ -73,8 +73,8 @@ class PandaDefaultConfig:
         # PD ee position
         arm_pd_ee_delta_pos = PDEEPosControllerConfig(
             self.arm_joint_names,
-            -0.1,
-            0.1,
+            -0.25,   # NOTE: increase from 0.1
+            0.25,    # NOTE: increase from 0.1
             self.arm_stiffness,
             self.arm_damping,
             self.arm_force_limit,
@@ -82,9 +82,9 @@ class PandaDefaultConfig:
         )
         arm_pd_ee_delta_pose = PDEEPoseControllerConfig(
             self.arm_joint_names,
-            -0.1,
-            0.1,
-            0.1,
+            -0.25,   # NOTE: increase from -0.1
+            0.25,    # NOTE: increase from 0.1
+            0.25,    # NOTE: increase from 0.1
             self.arm_stiffness,
             self.arm_damping,
             self.arm_force_limit,
