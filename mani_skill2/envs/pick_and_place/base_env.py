@@ -7,6 +7,7 @@ from sapien.core import Pose
 from mani_skill2.agents.base_agent import BaseAgent
 from mani_skill2.agents.robots.panda import Panda
 from mani_skill2.agents.robots.xmate3 import Xmate3Robotiq
+from mani_skill2.agents.robots.xarm import XArm7
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.sapien_utils import (
@@ -18,10 +19,10 @@ from mani_skill2.utils.sapien_utils import (
 
 
 class StationaryManipulationEnv(BaseEnv):
-    SUPPORTED_ROBOTS = {"panda": Panda, "xmate3_robotiq": Xmate3Robotiq}
-    agent: Union[Panda, Xmate3Robotiq]
+    SUPPORTED_ROBOTS = {"panda": Panda, "xmate3_robotiq": Xmate3Robotiq, "xarm7": XArm7}
+    agent: Union[Panda, Xmate3Robotiq, XArm7]
 
-    def __init__(self, *args, robot="panda", robot_init_qpos_noise=0.02, **kwargs):
+    def __init__(self, *args, robot="xarm7", robot_init_qpos_noise=0.02, **kwargs):
         self.robot_uid = robot
         self.robot_init_qpos_noise = robot_init_qpos_noise
         super().__init__(*args, **kwargs)
@@ -91,6 +92,16 @@ class StationaryManipulationEnv(BaseEnv):
             )
             self.agent.reset(qpos)
             self.agent.robot.set_pose(Pose([-0.562, 0, 0]))
+        elif self.robot_uid in ['xarm7', 'xarm7_d435']:
+            # TODO: calculate IK to determine a initial pose
+            qpos = np.array(
+                [0, 0, 0, np.pi / 3, 0, np.pi / 3, -np.pi / 2, 0.0446430, 0.0446430]
+            )
+            qpos[:-2] += self._episode_rng.normal(
+                0, self.robot_init_qpos_noise, len(qpos) - 2
+            )
+            self.agent.reset(qpos)
+            self.agent.robot.set_pose(Pose([0.0, 0.0, 0.0]))
         else:
             raise NotImplementedError(self.robot_uid)
 
