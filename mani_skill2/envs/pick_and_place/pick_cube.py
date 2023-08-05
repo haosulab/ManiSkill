@@ -121,8 +121,8 @@ class PickCubeEnv(StationaryManipulationEnv):
         self.goal_pos = state[-3:]
         super().set_state(state[:-3])
 
-# Note: 30 steps is more suitable for position control
-@register_env("PickCube-v1", max_episode_steps=30)
+# Note: 50 steps is more suitable for position control
+@register_env("PickCube-v1", max_episode_steps=50)
 class PickCubeEnv_v1(PickCubeEnv):
     # better reward
     def compute_dense_reward(self, info, **kwargs):

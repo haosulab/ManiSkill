@@ -108,6 +108,15 @@ class BaseController:
         """Get target qpos.
         """
         raise NotImplementedError
+    
+    def get_target_ee_pose(self):
+        """Get target end effector pose
+        """
+    
+    def get_ee_pose(self):
+        """Get end effector's pose
+        """
+        raise NotImplementedError
 
     def before_simulation_step(self):
         """Called before each simulation step in one control step."""
@@ -253,6 +262,14 @@ class CombinedController(DictController):
         for uid, controller in self.controllers.items():
             target_qpos.append(controller.get_target_qpos())
         return np.hstack(target_qpos)
+    
+    def get_target_ee_pose(self):
+        for uid, controller in self.controllers.items():
+            return controller.get_target_ee_pose()
+    
+    def get_ee_pose(self):
+        for uid, controller in self.controllers.items():
+            return controller.get_ee_pose()
 
     def to_action_dict(self, action: np.ndarray):
         """Convert a flat action to a dict of actions."""

@@ -163,6 +163,12 @@ class BaseAgent:
 
     def get_target_qpos(self):
         return self.controller.get_target_qpos()
+    
+    def get_target_ee_pose(self):
+        return self.controller.get_target_ee_pose()
+    
+    def get_ee_pose(self):
+        return self.controller.get_ee_pose()
 
     def before_simulation_step(self):
         self.controller.before_simulation_step()

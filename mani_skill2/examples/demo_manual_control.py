@@ -86,7 +86,7 @@ def main():
     num_arms = sum("arm" in x for x in env.agent.controller.configs)
     has_gripper = any("gripper" in x for x in env.agent.controller.configs)
     gripper_action = 1
-    EE_ACTION = 0.1
+    EE_ACTION = 1
 
     while True:
         # -------------------------------------------------------------------------- #

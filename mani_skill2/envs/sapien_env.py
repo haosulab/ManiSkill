@@ -165,8 +165,10 @@ class BaseEnv(gym.Env):
         self.low_level_control_mode = low_level_control_mode
         # Add break conditions for position control
         self.time_out = 500
-        self.qpos_threshold = 0.05
+        self.qpos_threshold = 0.01
         self.qvel_threshold = 0.01
+        self.ee_p_threshold = 0.002
+        self.ee_q_threshold = 0.2
 
         # NOTE(jigu): Agent and camera configurations should not change after initialization.
         self._configure_agent()
@@ -567,22 +569,32 @@ class BaseEnv(gym.Env):
         self._before_control_step()
         if self.low_level_control_mode == 'position':
             sim_step = 0
+            qvel_max = 0
             while True:
                 if sim_step >= self.time_out:
-                    # print(sim_step)
+                    # print('time_out')
+                    # print('qpos:' + str((qpos_dis < self.qpos_threshold).all()) + 'qvel:' + str((qvel < self.qvel_threshold).all()))
+                    # print('ee_p_dis:' + str(ee_p_dis) + 'ee_q_dis:' + str(ee_q_dis))
+                    # print(qvel_max)
                     break
                 sim_step += 1
-                qpos = self.agent.robot.get_qpos()
-                target_qpos = self.agent.get_target_qpos()
+                qpos, target_qpos = self.agent.robot.get_qpos(), self.agent.get_target_qpos()
                 qpos_dis = np.abs(target_qpos - qpos)
                 qvel = self.agent.robot.get_qvel()
-                if (qpos_dis < self.qpos_threshold).all() and (qvel < self.qvel_threshold).all():
-                    # print(sim_step)
+                # if np.max(np.abs(qvel) > qvel_max):
+                #     qvel_max = np.max(np.abs(qvel))
+                ee_pose, ee_target_pose = self.agent.get_ee_pose(), self.agent.get_target_ee_pose()
+                ee_pose_dis = ee_target_pose * ee_pose.inv()
+                ee_p_dis = np.linalg.norm(ee_pose_dis.p, 2)
+                ee_q_dis = np.arccos(np.clip(np.power(np.sum(ee_pose_dis.q), 2) * 2 - 1, -1 + 1e-8, 1 - 1e-8))
+                if (qpos_dis < self.qpos_threshold).all() and (qvel < self.qvel_threshold).all() \
+                            and ee_p_dis < self.ee_p_threshold and ee_q_dis < self.ee_q_threshold:
+                    # print("Sim step:" + str(sim_step) + "; ee_p_dis:" + str(ee_p_dis) + "; ee_q_dis:" + str(ee_q_dis))
+                    # print(qvel_max)
                     break                
                 self.agent.before_simulation_step()
                 self._scene.step()
                 self._after_simulation_step()
-        
         elif self.low_level_control_mode == 'impedance':
             for _ in range(self._sim_steps_per_control):
                 self.agent.before_simulation_step()

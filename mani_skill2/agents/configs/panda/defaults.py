@@ -60,8 +60,8 @@ class PandaDefaultConfig:
         )
         arm_pd_joint_delta_pos = PDJointPosControllerConfig(
             self.arm_joint_names,
-            -0.25,   # NOTE: increase from 0.1
-            0.25,    # NOTE: increase from 0.1
+            -0.1,
+            0.1,
             self.arm_stiffness,
             self.arm_damping,
             self.arm_force_limit,
@@ -73,8 +73,8 @@ class PandaDefaultConfig:
         # PD ee position
         arm_pd_ee_delta_pos = PDEEPosControllerConfig(
             self.arm_joint_names,
-            -0.25,   # NOTE: increase from 0.1
-            0.25,    # NOTE: increase from 0.1
+            -0.1,
+            0.1,
             self.arm_stiffness,
             self.arm_damping,
             self.arm_force_limit,
@@ -82,9 +82,9 @@ class PandaDefaultConfig:
         )
         arm_pd_ee_delta_pose = PDEEPoseControllerConfig(
             self.arm_joint_names,
-            -0.25,   # NOTE: increase from -0.1
-            0.25,    # NOTE: increase from 0.1
-            0.25,    # NOTE: increase from 0.1
+            -0.1,
+            0.1,
+            0.1,
             self.arm_stiffness,
             self.arm_damping,
             self.arm_force_limit,
