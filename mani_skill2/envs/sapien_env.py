@@ -577,7 +577,7 @@ class BaseEnv(gym.Env):
                 qpos_dis = np.abs(target_qpos - qpos)
                 qvel = self.agent.robot.get_qvel()
                 if (qpos_dis < self.qpos_threshold).all() and (qvel < self.qvel_threshold).all():
-                    print(sim_step)
+                    # print(sim_step)
                     break                
                 self.agent.before_simulation_step()
                 self._scene.step()
