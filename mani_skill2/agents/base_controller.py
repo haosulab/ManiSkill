@@ -103,6 +103,11 @@ class BaseController:
         The action can be low-level control signals or high-level abstract commands.
         """
         raise NotImplementedError
+    
+    def get_target_qpos(self):
+        """Get target qpos.
+        """
+        raise NotImplementedError
 
     def before_simulation_step(self):
         """Called before each simulation step in one control step."""
@@ -242,6 +247,12 @@ class CombinedController(DictController):
         for uid, controller in self.controllers.items():
             start, end = self.action_mapping[uid]
             controller.set_action(action[start:end])
+    
+    def get_target_qpos(self):
+        target_qpos = []
+        for uid, controller in self.controllers.items():
+            target_qpos.append(controller.get_target_qpos())
+        return np.hstack(target_qpos)
 
     def to_action_dict(self, action: np.ndarray):
         """Convert a flat action to a dict of actions."""

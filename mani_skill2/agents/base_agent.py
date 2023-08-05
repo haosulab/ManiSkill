@@ -161,6 +161,9 @@ class BaseAgent:
     def set_action(self, action):
         self.controller.set_action(action)
 
+    def get_target_qpos(self):
+        return self.controller.get_target_qpos()
+
     def before_simulation_step(self):
         self.controller.before_simulation_step()
 

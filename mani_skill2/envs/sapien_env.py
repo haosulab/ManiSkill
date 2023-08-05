@@ -63,6 +63,7 @@ class BaseEnv(gym.Env):
     # fmt: off
     SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "image")
     SUPPORTED_REWARD_MODES = ("dense", "sparse")
+    SUPPORTED_LOW_LEVEL_CONTROL_MODES = ("position", "impedance")
     # fmt: on
 
     agent: BaseAgent
@@ -88,6 +89,7 @@ class BaseEnv(gym.Env):
         camera_cfgs: dict = None,
         render_camera_cfgs: dict = None,
         bg_name: str = None,
+        low_level_control_mode: str = None
     ):
         # Create SAPIEN engine
         self._engine = sapien.Engine()
@@ -155,6 +157,16 @@ class BaseEnv(gym.Env):
         # TODO(jigu): support dict action space and check whether the name is good
         # Control mode
         self._control_mode = control_mode
+        # Low level control mode
+        if low_level_control_mode is None:
+            low_level_control_mode = self.SUPPORTED_LOW_LEVEL_CONTROL_MODES[0]
+        if low_level_control_mode not in self.SUPPORTED_LOW_LEVEL_CONTROL_MODES:
+            raise NotImplementedError("Unsupported reward mode: {}".format(reward_mode))
+        self.low_level_control_mode = low_level_control_mode
+        # Add break conditions for position control
+        self.time_out = 1000
+        self.qpos_threshold = 0.01
+        self.qvel_threshold = 0.01
 
         # NOTE(jigu): Agent and camera configurations should not change after initialization.
         self._configure_agent()
@@ -551,11 +563,31 @@ class BaseEnv(gym.Env):
         else:
             raise TypeError(type(action))
 
+        # NOTE(chichu): add position control here. The original one is impedance control.
         self._before_control_step()
-        for _ in range(self._sim_steps_per_control):
-            self.agent.before_simulation_step()
-            self._scene.step()
-            self._after_simulation_step()
+        if self.low_level_control_mode == 'position':
+            sim_step = 0
+            while True:
+                if sim_step >= self.time_out:
+                    print(sim_step)
+                    break
+                sim_step += 1
+                qpos = self.agent.robot.get_qpos()
+                target_qpos = self.agent.get_target_qpos()
+                qpos_dis = np.abs(target_qpos - qpos)
+                qvel = self.agent.robot.get_qvel()
+                if (qpos_dis < self.qpos_threshold).all() and (qvel < self.qvel_threshold).all():
+                    print(sim_step)
+                    break                
+                self.agent.before_simulation_step()
+                self._scene.step()
+                self._after_simulation_step()
+        
+        elif self.low_level_control_mode == 'impedance':
+            for _ in range(self._sim_steps_per_control):
+                self.agent.before_simulation_step()
+                self._scene.step()
+                self._after_simulation_step()
 
     def evaluate(self, **kwargs) -> dict:
         """Evaluate whether the task succeeds."""

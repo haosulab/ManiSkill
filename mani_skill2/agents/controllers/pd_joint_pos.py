@@ -67,6 +67,9 @@ class PDJointPosController(BaseController):
         else:
             self.set_drive_targets(self._target_qpos)
 
+    def get_target_qpos(self):
+        return self._target_qpos
+
     def before_simulation_step(self):
         self._step += 1
 
