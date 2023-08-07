@@ -55,7 +55,7 @@ def parse_args():
         "-n",
         "--n-envs",
         type=int,
-        default=4,
+        default=16,
         help="number of parallel envs to run. Note that increasing this does not increase rollout size",
     )
     parser.add_argument(
@@ -72,13 +72,13 @@ def parse_args():
     parser.add_argument(
         "--total-timesteps",
         type=int,
-        default=250_000,
+        default=1_000_000,
         help="Total timesteps for training",
     )
     parser.add_argument(
         "--log-dir",
         type=str,
-        default="logs",
+        default="logs/PPO",
         help="path for where logs, checkpoints, and videos are saved",
     )
     parser.add_argument(
@@ -97,7 +97,7 @@ def main():
     num_envs = args.n_envs
     max_episode_steps = args.max_episode_steps
     log_dir = args.log_dir
-    rollout_steps = 1000 # use to be 3200
+    rollout_steps = 4000 # use to be 3200
 
     obs_mode = "state"
     control_mode = "pd_ee_delta_pose"
@@ -168,10 +168,11 @@ def main():
         verbose=1,
         n_steps=rollout_steps // num_envs,
         batch_size=400,
-        gamma=0.85,     # default = 0.85
-        n_epochs=15,
+        gamma=0.8,     # default = 0.85
+        gae_lambda=0.9,
+        n_epochs=20,
         tensorboard_log=log_dir,
-        target_kl=0.05,
+        target_kl=0.1,
     )
 
     if args.eval:

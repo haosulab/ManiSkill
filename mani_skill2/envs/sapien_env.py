@@ -79,7 +79,7 @@ class BaseEnv(gym.Env):
         obs_mode=None,
         reward_mode=None,
         control_mode=None,
-        sim_freq: int = 500,
+        sim_freq: int = 500,    # TODO: what if we change sim_freq to 200?
         control_freq: int = 20,
         renderer: str = "sapien",
         renderer_kwargs: dict = None,
@@ -569,7 +569,7 @@ class BaseEnv(gym.Env):
         self._before_control_step()
         if self.low_level_control_mode == 'position':
             sim_step = 0
-            qvel_max = 0
+            # qvel_max = 0
             while True:
                 if sim_step >= self.time_out:
                     # print('time_out')
