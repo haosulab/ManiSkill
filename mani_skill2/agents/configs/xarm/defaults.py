@@ -21,7 +21,7 @@ class XArmDefaultConfig:
             ),
         )
 
-        self.arm_stiffness = 1e5    # NOTE: increase from 1e5
+        self.arm_stiffness = 1e5    # NOTE: increase from 1e3
         self.arm_damping = 2e3  # NOTE: increase from 1e2
         self.arm_force_limit = 100
 
@@ -29,7 +29,7 @@ class XArmDefaultConfig:
             "left_finger_joint",
             "right_finger_joint",
         ]
-        self.gripper_stiffness = 1e5    # NOTE: increase from 1e5
+        self.gripper_stiffness = 1e5    # NOTE: increase from 1e3
         self.gripper_damping = 2e3  # NOTE: increase from 1e2
         self.gripper_force_limit = 100
 

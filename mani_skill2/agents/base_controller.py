@@ -110,8 +110,9 @@ class BaseController:
         raise NotImplementedError
     
     def get_target_ee_pose(self):
-        """Get target end effector pose
+        """Get target end effector's pose
         """
+        raise NotImplementedError
     
     def get_ee_pose(self):
         """Get end effector's pose

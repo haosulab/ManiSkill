@@ -50,7 +50,7 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Use Stable Baselines 3 PPO to train ManiSkill2 tasks"
     )
-    parser.add_argument("-e", "--env-id", type=str, default="PickCube-v1")
+    parser.add_argument("-e", "--env-id", type=str, default="StackCube-v1")
     parser.add_argument(
         "-n",
         "--n-envs",

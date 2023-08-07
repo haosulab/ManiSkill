@@ -93,7 +93,7 @@ class StationaryManipulationEnv(BaseEnv):
             self.agent.reset(qpos)
             self.agent.robot.set_pose(Pose([-0.562, 0, 0]))
         elif self.robot_uid in ['xarm7', 'xarm7_d435']:
-            # TODO: calculate IK to determine a initial pose
+            # TODO: verify the initial pose of ee
             qpos = np.array(
                 [0, 0, 0, np.pi / 3, 0, np.pi / 3, -np.pi / 2, 0.0446430, 0.0446430]
             )
@@ -101,7 +101,7 @@ class StationaryManipulationEnv(BaseEnv):
                 0, self.robot_init_qpos_noise, len(qpos) - 2
             )
             self.agent.reset(qpos)
-            self.agent.robot.set_pose(Pose([0.0, 0.0, 0.0]))
+            self.agent.robot.set_pose(Pose([-0.480, 0.0, 0.0]))
         else:
             raise NotImplementedError(self.robot_uid)
 
