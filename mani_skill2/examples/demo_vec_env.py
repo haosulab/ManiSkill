@@ -56,7 +56,7 @@ def main(args):
             reward_mode=args.reward_mode,
             obs_mode=args.obs_mode,
             control_mode=args.control_mode,
-            vector_kwargs=dict(context="fork")
+            vector_kwargs=dict(context="forkserver")
         )
     else: 
         raise ValueError(f"{args.vecenv_type} is invalid. Must be ms2 or gym")
@@ -124,4 +124,4 @@ def main(args):
 
 
 if __name__ == "__main__":
-    main()
+    main(parse_args())

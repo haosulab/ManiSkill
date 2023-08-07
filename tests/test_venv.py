@@ -67,7 +67,7 @@ def test_gymnasium_vecenv(env_id, obs_mode):
 
     gym_env = gym.make_vec(
         env_id, n_envs, obs_mode=obs_mode, wrappers=[FlattenObservationWrapper],
-        vectorization_mode="sync", #vector_kwargs=dict(context="forkserver")
+        vectorization_mode="async", vector_kwargs=dict(context="forkserver")
     )
     ms2_env = make_vec_env(env_id, n_envs, obs_mode=obs_mode)
 
