@@ -164,7 +164,7 @@ class BaseEnv(gym.Env):
             raise NotImplementedError("Unsupported reward mode: {}".format(reward_mode))
         self.low_level_control_mode = low_level_control_mode
         # Add break conditions for position control
-        self.time_out = 200
+        self.time_out = 100
         self.qpos_threshold = 0.01
         self.qvel_threshold = 0.01
         self.ee_p_threshold = 0.002
@@ -589,7 +589,7 @@ class BaseEnv(gym.Env):
                 ee_q_dis = np.arccos(np.clip(np.power(np.sum(ee_pose_dis.q), 2) * 2 - 1, -1 + 1e-8, 1 - 1e-8))
                 if (qpos_dis < self.qpos_threshold).all() and (qvel < self.qvel_threshold).all() \
                             and ee_p_dis < self.ee_p_threshold and ee_q_dis < self.ee_q_threshold:
-                    # print("Sim step:" + str(sim_step) + "; ee_p_dis:" + str(ee_p_dis) + "; ee_q_dis:" + str(ee_q_dis))
+                    print("Sim step:" + str(sim_step) + "; ee_p_dis:" + str(ee_p_dis) + "; ee_q_dis:" + str(ee_q_dis))
                     # print(qvel_max)
                     break                
                 self.agent.before_simulation_step()
