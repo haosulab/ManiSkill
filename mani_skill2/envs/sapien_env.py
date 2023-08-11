@@ -79,7 +79,7 @@ class BaseEnv(gym.Env):
         obs_mode=None,
         reward_mode=None,
         control_mode=None,
-        sim_freq: int = 500,    # TODO: what if we change sim_freq to 200?
+        sim_freq: int = 200,    # TODO: what if we change sim_freq to 200?
         control_freq: int = 20,
         renderer: str = "sapien",
         renderer_kwargs: dict = None,
@@ -164,7 +164,7 @@ class BaseEnv(gym.Env):
             raise NotImplementedError("Unsupported reward mode: {}".format(reward_mode))
         self.low_level_control_mode = low_level_control_mode
         # Add break conditions for position control
-        self.time_out = 500
+        self.time_out = 200
         self.qpos_threshold = 0.01
         self.qvel_threshold = 0.01
         self.ee_p_threshold = 0.002
