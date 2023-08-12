@@ -47,10 +47,11 @@ class SuccessInfoWrapper(gym.Wrapper):
 
 
 def parse_args():
+    env_id = "StackCube-v1"
     parser = argparse.ArgumentParser(
         description="Use Stable Baselines 3 PPO to train ManiSkill2 tasks"
     )
-    parser.add_argument("-e", "--env-id", type=str, default="StackCube-v1")
+    parser.add_argument("-e", "--env-id", type=str, default=env_id)
     parser.add_argument(
         "-n",
         "--n-envs",
@@ -78,7 +79,7 @@ def parse_args():
     parser.add_argument(
         "--log-dir",
         type=str,
-        default="logs/PPO",
+        default="logs/PPO/"+env_id,
         help="path for where logs, checkpoints, and videos are saved",
     )
     parser.add_argument(

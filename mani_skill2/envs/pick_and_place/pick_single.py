@@ -464,6 +464,44 @@ class PickSingleYCBEnv(PickSingleEnv):
             return super()._initialize_agent_v1()
         else:
             return super()._initialize_agent()
+        
+
+@register_env("PickSingleYCB-v1", max_episode_steps=200)
+class PickSingleYCBEnv_v1(PickSingleYCBEnv):
+    def check_obj_placed(self):
+        obj_to_goal_pos = self.goal_pos - self.obj_pose.p
+        return np.linalg.norm(obj_to_goal_pos) <= self.goal_thresh
+
+    def reaching_reward(self):
+        tcp_to_obj_pos = self.obj.pose.p - self.tcp.pose.p
+        tcp_to_obj_dist = np.linalg.norm(tcp_to_obj_pos)
+        reaching_reward = 1 - np.tanh(5 * tcp_to_obj_dist)
+        return reaching_reward
+
+    def place_reward(self):
+        obj_to_goal_dist = np.linalg.norm(self.goal_pos - self.obj.pose.p)
+        place_reward = 1 - np.tanh(5 * obj_to_goal_dist)
+        return place_reward
+
+    def static_reward(self):
+        qvel = self.agent.robot.get_qvel()[:-2]
+        static_reward = 1 - np.tanh(5 * np.linalg.norm(qvel))
+        return static_reward
+
+    def compute_dense_reward(self, info, **kwargs):
+        reward = 0.0
+
+        reward += 1 + self.reaching_reward()
+        if self.agent.check_grasp(self.obj):
+            reward += 1 + self.place_reward()
+            if self.check_obj_placed():
+                reward += 1 + self.static_reward()
+                if info["success"]:
+                    reward += 1
+
+        # reward = reward - 8
+
+        return reward
 
 
 # ---------------------------------------------------------------------------- #

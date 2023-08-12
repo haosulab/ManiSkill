@@ -219,7 +219,7 @@ class StackCubeEnv(StationaryManipulationEnv):
 
         return reward
         
-@register_env("StackCube-v1", max_episode_steps=50)
+@register_env("StackCube-v1", max_episode_steps=100)
 class StackCubeEnv_v1(StackCubeEnv):
     def reaching_reward(self):
         # reaching object reward

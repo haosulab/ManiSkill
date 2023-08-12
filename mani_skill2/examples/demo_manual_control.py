@@ -19,7 +19,7 @@ MS1_ENV_IDS = [
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-e", "--env-id", type=str, default="StackCube-v1")
+    parser.add_argument("-e", "--env-id", type=str, default="PickSingleYCB-v1")
     parser.add_argument("-o", "--obs-mode", type=str)
     parser.add_argument("--reward-mode", type=str)
     parser.add_argument("-c", "--control-mode", type=str, default="pd_ee_delta_pose")
