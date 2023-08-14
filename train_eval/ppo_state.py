@@ -47,9 +47,9 @@ class SuccessInfoWrapper(gym.Wrapper):
 
 
 def parse_args():
-    env_id = "StackCube-v1"
+    env_id = "PickCube-v1"
     parser = argparse.ArgumentParser(
-        description="Use Stable Baselines 3 PPO to train ManiSkill2 tasks"
+        description="Use Stable-Baselines-3 PPO to train ManiSkill2 tasks"
     )
     parser.add_argument("-e", "--env-id", type=str, default=env_id)
     parser.add_argument(
@@ -83,7 +83,7 @@ def parse_args():
         help="path for where logs, checkpoints, and videos are saved",
     )
     parser.add_argument(
-        "--eval", action="store_true", help="whether to only evaluate policy"
+        "--eval", action="store_false", help="whether to only evaluate policy"
     )
     parser.add_argument(
         "--model-path", type=str, help="path to sb3 model for evaluation"
@@ -208,7 +208,7 @@ def main():
             progress_bar=True,
         )
         # Save the final model
-        model.save(osp.join(log_dir, "latest_model"))
+        model.save(osp.join(log_dir, "best_model"))
 
     # Evaluate the model
     returns, ep_lens = evaluate_policy(
@@ -221,7 +221,7 @@ def main():
     )
     print("Returns", returns)
     print("Episode Lengths", ep_lens)
-    success = np.array(ep_lens) < 200
+    success = np.array(ep_lens) < 50
     success_rate = success.mean()
     print("Success Rate:", success_rate)
 
