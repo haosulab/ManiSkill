@@ -19,7 +19,9 @@ class PickCubeEnv(StationaryManipulationEnv):
     def __init__(self, *args, obj_init_rot_z=True, **kwargs):
         self.obj_init_rot_z = obj_init_rot_z
         self.cube_half_size = np.array([0.02] * 3, np.float32)  # (chichu) change the half size of cube from 0.02 to 0.049/2 to align the real cube.
-        super().__init__(*args, **kwargs)
+        from real_robot.real_robot.envs.base_env import XArmBaseEnv
+        if not isinstance(self, XArmBaseEnv):
+            super().__init__(*args, **kwargs)
 
     def _load_actors(self):
         self._add_ground(render=self.bg_name is None)
