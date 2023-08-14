@@ -69,7 +69,7 @@ class StackCubeEnv(StationaryManipulationEnv):
     def _load_actors(self):
         self._add_ground(render=self.bg_name is None)
 
-        self.box_half_size = np.float32([0.0245] * 3) # increase from 0.02 to 0.0245
+        self.box_half_size = np.float32([0.02] * 3) # increase from 0.02 to 0.0245
         self.cubeA = self._build_cube(self.box_half_size, color=(1, 0, 0), name="cubeA")
         self.cubeB = self._build_cube(
             self.box_half_size, color=(0, 1, 0), name="cubeB", static=False
