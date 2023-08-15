@@ -13,7 +13,10 @@ from mani_skill2.utils.common import (
 )
 
 class BaseGymObservationWrapper(gym.ObservationWrapper):
-    """This fixes a particular bug where using the default gym.make_vec_env does not work as it tries to set the spec of an env"""
+    """ManiSkill2 uses a custom registration function that uses observation wrappers to change observation mode based on env kwargs. 
+    By default gymnasium does not expect custom registration and so creating an with gymnasium may sometimes raise an error as it tries to set the spec of an env
+    which is possible if the registered env is not wrapped.
+    """
     @property
     def spec(self):
         return self.unwrapped.spec

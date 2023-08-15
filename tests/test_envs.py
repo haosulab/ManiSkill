@@ -15,7 +15,7 @@ from tests.utils import (
 
 @pytest.mark.parametrize("env_id", ENV_IDS)
 @pytest.mark.parametrize("obs_mode", OBS_MODES)
-def test_envs(env_id, obs_mode):
+def test_envs_obs_modes(env_id, obs_mode):
     env = gym.make(env_id, obs_mode=obs_mode)
     env.reset()
     action_space = env.action_space
