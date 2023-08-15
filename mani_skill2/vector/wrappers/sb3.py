@@ -34,8 +34,9 @@ class SB3VecEnvWrapper(SB3VecEnv):
         self._last_seed = seed
 
     def reset(self) -> VecEnvObs:
-        return self.venv.reset(seed=self._last_seed)[0]
-
+        obs = self.venv.reset(seed=self._last_seed)[0]
+        self._last_seed = None # use seed from call to seed() once
+        return obs
     def step_async(self, actions: np.ndarray) -> None:
         return self.venv.step_async(actions)
 
