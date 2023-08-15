@@ -9,4 +9,4 @@ extend-exclude = '''^/warp_maniskill|^/docs'''
 
 [tool.isort]
 profile = "black"
-skip_glob = ["*/build/*", "*/warp_maniskill/*", "*/docs/*"]
+skip_glob = ["*/build/*", "*/warp_maniskill/*", "*/docs/*", "*/data/*", "*/demos/*"]

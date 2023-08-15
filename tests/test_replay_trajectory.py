@@ -1,5 +1,6 @@
 import pytest
-from tests.utils import ENV_IDS, OBS_MODES, CONTROL_MODES_STATIONARY_SINGLE_ARM
+
+from tests.utils import CONTROL_MODES_STATIONARY_SINGLE_ARM, ENV_IDS, OBS_MODES
 
 
 @pytest.mark.parametrize(

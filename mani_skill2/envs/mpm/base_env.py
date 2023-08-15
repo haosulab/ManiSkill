@@ -1,11 +1,11 @@
-from typing import Dict, List, Optional, Tuple, Union
+import copy
+import ctypes
 import os
 import sys
-import mani_skill2
-import copy
 import typing
-import ctypes
+from typing import Dict, List, Optional, Tuple, Union
 
+import mani_skill2
 from mani_skill2 import PACKAGE_ASSET_DIR
 
 warp_path = os.path.join(os.path.dirname(mani_skill2.__file__), "..", "warp_maniskill")
@@ -14,30 +14,28 @@ if warp_path not in sys.path:
     sys.path.append(warp_path)
 
 # build warp if warp.so does not exist
-from warp_maniskill.build_lib import build_path, build
+from warp_maniskill.build_lib import build, build_path
 
 dll = os.path.join(build_path, "bin/warp.so")
 
-from collections import OrderedDict
-import numpy as np
-from transforms3d.quaternions import quat2mat
-from transforms3d.euler import euler2quat
-import sapien.core as sapien
-from warp_maniskill.mpm.mpm_simulator import (
-    Simulator as MPMSimulator,
-    Mesh as MPMMesh,
-    DenseVolume as MPMVolume,
-)
-from warp_maniskill.mpm.mpm_model import MPMModelBuilder
-
-from mani_skill2.envs.sapien_env import BaseEnv
-from mani_skill2.envs.mpm.utils import actor2meshes, trimesh2sdf
-from mani_skill2.utils.sapien_utils import vectorize_pose
-from mani_skill2.utils.logging_utils import logger
 import hashlib
-import trimesh
+from collections import OrderedDict
 
+import numpy as np
+import sapien.core as sapien
+import trimesh
 import warp as wp
+from transforms3d.euler import euler2quat
+from transforms3d.quaternions import quat2mat
+
+from mani_skill2.envs.mpm.utils import actor2meshes, trimesh2sdf
+from mani_skill2.envs.sapien_env import BaseEnv
+from mani_skill2.utils.logging_utils import logger
+from mani_skill2.utils.sapien_utils import vectorize_pose
+from warp_maniskill.mpm.mpm_model import MPMModelBuilder
+from warp_maniskill.mpm.mpm_simulator import DenseVolume as MPMVolume
+from warp_maniskill.mpm.mpm_simulator import Mesh as MPMMesh
+from warp_maniskill.mpm.mpm_simulator import Simulator as MPMSimulator
 
 
 def task(meshes):
@@ -197,8 +195,9 @@ class MPMBaseEnv(BaseEnv):
                         sdfs = None
 
         if sdfs is None:
-            import tqdm
             from multiprocessing import Pool
+
+            import tqdm
 
             print("generating cached SDF volumes")
             with Pool(8) as p:

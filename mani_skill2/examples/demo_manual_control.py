@@ -7,7 +7,6 @@ from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.utils.visualization.cv2_utils import OpenCVViewer
 from mani_skill2.utils.wrappers import RecordEpisode
 
-
 MS1_ENV_IDS = [
     "OpenCabinetDoor-v1",
     "OpenCabinetDrawer-v1",

@@ -1,6 +1,6 @@
 from collections import OrderedDict
-from typing import Dict, List, Tuple
 from pathlib import Path
+from typing import Dict, List, Tuple
 
 import numpy as np
 import sapien.core as sapien
@@ -9,6 +9,7 @@ from sapien.core import Pose
 from mani_skill2 import format_path
 from mani_skill2.agents.robots.mobile_panda import DummyMobileAgent
 from mani_skill2.envs.sapien_env import BaseEnv
+from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.common import random_choice
 from mani_skill2.utils.io_utils import load_json
 from mani_skill2.utils.sapien_utils import (
@@ -17,7 +18,6 @@ from mani_skill2.utils.sapien_utils import (
     parse_urdf_config,
     vectorize_pose,
 )
-from mani_skill2.sensors.camera import CameraConfig
 
 
 class MS1BaseEnv(BaseEnv):

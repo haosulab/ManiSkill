@@ -1,4 +1,4 @@
-from collections import defaultdict, OrderedDict
+from collections import OrderedDict, defaultdict
 from typing import Dict, Sequence
 
 import gymnasium as gym

@@ -3,10 +3,10 @@ import time
 
 import gymnasium as gym
 import numpy as np
+from tqdm import tqdm
 
 from mani_skill2.utils.visualization.misc import observations_to_images, tile_images
 from mani_skill2.vector import VecEnv, make
-from tqdm import tqdm
 
 
 def parse_args(args=None):

@@ -12,7 +12,6 @@ from mani_skill2 import get_commit_info, logger
 from ..common import extract_scalars_from_info, flatten_dict_keys
 from ..io_utils import dump_json
 from ..visualization.misc import images_to_video, put_info_on_image
-import copy
 
 
 def parse_env_info(env: gym.Env):

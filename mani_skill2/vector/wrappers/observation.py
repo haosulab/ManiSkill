@@ -39,10 +39,11 @@ class VecRobotSegmentationObservationWrapper(VecEnvObservationWrapper):
     """Add a binary mask for robot links."""
 
     def __init__(self, venv: VecEnv, replace=True):
+        from gymnasium.vector.utils.spaces import batch_space
+
         from mani_skill2.utils.wrappers.observation import (
             RobotSegmentationObservationWrapper,
         )
-        from gymnasium.vector.utils.spaces import batch_space
 
         single_observation_space = deepcopy(venv.single_observation_space)
         RobotSegmentationObservationWrapper.init_observation_space(

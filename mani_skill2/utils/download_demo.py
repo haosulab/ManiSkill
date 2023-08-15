@@ -1,8 +1,9 @@
 import argparse
 import os
 import os.path as osp
-from tqdm import tqdm
 import urllib.request
+
+from tqdm import tqdm
 
 DATASET_SOURCES = {}
 

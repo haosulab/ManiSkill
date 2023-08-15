@@ -3,20 +3,18 @@ from collections import OrderedDict
 import h5py
 import numpy as np
 import sapien.core as sapien
+import warp as wp
+from mpm.height_rasterizer import rasterize_clear_kernel, rasterize_kernel
 from transforms3d.euler import euler2quat
 
 from mani_skill2 import ASSET_DIR
 from mani_skill2.agents.configs.panda.variants import PandaStickConfig
 from mani_skill2.agents.robots.panda import Panda
 from mani_skill2.envs.mpm.base_env import MPMBaseEnv, MPMModelBuilder, MPMSimulator
+from mani_skill2.envs.mpm.utils import load_h5_as_dict
+from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import vectorize_pose
-from mani_skill2.sensors.camera import CameraConfig
-
-from mani_skill2.envs.mpm.utils import load_h5_as_dict
-
-import warp as wp
-from mpm.height_rasterizer import rasterize_clear_kernel, rasterize_kernel
 
 
 @wp.kernel

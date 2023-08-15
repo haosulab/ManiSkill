@@ -1,6 +1,5 @@
 import logging
 
-
 # https://github.com/openai/gym/blob/master/gym/utils/colorize.py
 color2num = dict(
     gray=30,
