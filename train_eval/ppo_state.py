@@ -83,7 +83,7 @@ def parse_args():
         help="path for where logs, checkpoints, and videos are saved",
     )
     parser.add_argument(
-        "--eval", action="store_false", help="whether to only evaluate policy"
+        "--eval", action="store_true", help="whether to only evaluate policy"
     )
     parser.add_argument(
         "--model-path", type=str, help="path to sb3 model for evaluation"

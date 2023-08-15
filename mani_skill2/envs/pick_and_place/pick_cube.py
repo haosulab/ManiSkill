@@ -19,11 +19,12 @@ class PickCubeEnv(StationaryManipulationEnv):
     def __init__(self, *args, obj_init_rot_z=True, **kwargs):
         self.obj_init_rot_z = obj_init_rot_z
         self.cube_half_size = np.array([0.02] * 3, np.float32)  # (chichu) change the half size of cube from 0.02 to 0.049/2 to align the real cube.
-        import sys
-        sys.path.append('/home/chichu/Documents/Sapien/ManiSkill2-Sim2Real')
-        from real_robot.envs.base_env import XArmBaseEnv
-        if not isinstance(self, XArmBaseEnv):
-            super().__init__(*args, **kwargs)
+        # TODO(chichu): need to be removed
+        # import sys
+        # sys.path.append('/home/chichu/Documents/Sapien/ManiSkill2-Sim2Real')
+        # from real_robot.envs.base_env import XArmBaseEnv
+        # if not isinstance(self, XArmBaseEnv):
+        super().__init__(*args, **kwargs)
 
     def _load_actors(self):
         self._add_ground(render=self.bg_name is None)
@@ -31,6 +32,7 @@ class PickCubeEnv(StationaryManipulationEnv):
         self.goal_site = self._build_sphere_site(self.goal_thresh)
 
     def _initialize_actors(self):
+        # NOTE(chichu): can be fixed to a certain pose when evaluate on real robot with simulation.
         xy = self._episode_rng.uniform(-0.1, 0.1, [2])
         xyz = np.hstack([xy, self.cube_half_size[2]])
         q = [1, 0, 0, 0]
@@ -42,6 +44,7 @@ class PickCubeEnv(StationaryManipulationEnv):
     def _initialize_task(self, max_trials=100, verbose=False):
         obj_pos = self.obj.pose.p
 
+        # NOTE(chichu): set to a fixed point when evaluate real robot with simulation
         # Sample a goal position far enough from the object
         for i in range(max_trials):
             goal_xy = self._episode_rng.uniform(-0.1, 0.1, [2])

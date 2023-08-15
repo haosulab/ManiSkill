@@ -35,6 +35,8 @@ class XArmDefaultConfig:
 
         self.ee_link_name = "link_tcp"
 
+        self.arm_use_target = True # NOTE(chichu): enable to calculate next_target_pose based on current_target_pose  
+
     @property
     def controllers(self):
         # -------------------------------------------------------------------------- #
@@ -48,6 +50,7 @@ class XArmDefaultConfig:
             self.arm_damping,
             self.arm_force_limit,
             normalize_action=False,
+            use_target=self.arm_use_target, 
         )
         arm_pd_joint_delta_pos = PDJointPosControllerConfig(
             self.arm_joint_names,
@@ -57,6 +60,7 @@ class XArmDefaultConfig:
             self.arm_damping,
             self.arm_force_limit,
             use_delta=True,
+            use_target=self.arm_use_target,
         )
 
         # PD ee position
@@ -68,6 +72,7 @@ class XArmDefaultConfig:
             self.arm_damping,
             self.arm_force_limit,
             ee_link=self.ee_link_name,
+            use_target=self.arm_use_target,
         )
         arm_pd_ee_delta_pose = PDEEPoseControllerConfig(
             self.arm_joint_names,
@@ -78,6 +83,7 @@ class XArmDefaultConfig:
             self.arm_damping,
             self.arm_force_limit,
             ee_link=self.ee_link_name,
+            use_target=self.arm_use_target,
         )
 
         # -------------------------------------------------------------------------- #
@@ -92,6 +98,7 @@ class XArmDefaultConfig:
             self.gripper_stiffness,
             self.gripper_damping,
             self.gripper_force_limit,
+            use_target=self.arm_use_target,
         )
 
         controller_configs = dict(

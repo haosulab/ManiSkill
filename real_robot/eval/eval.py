@@ -1,3 +1,4 @@
+# TODO(chichu): need to be removed
 import sys
 sys.path.append('/home/chichu/Documents/Sapien/ManiSkill2-Sim2Real')
 
