@@ -117,7 +117,6 @@ class ManiSkillRGBDWrapper(gym.ObservationWrapper):
 # as the gpu optimization makes it incompatible with the SB3 wrapper
 class ManiSkillRGBDVecEnvWrapper(VecEnvObservationWrapper):
     def __init__(self, env):
-        
         assert env.obs_mode == "rgbd"
         # we simply define the single env observation space. The inherited wrapper automatically computes the batched version
         single_observation_space = ManiSkillRGBDWrapper.init_observation_space(
@@ -274,7 +273,11 @@ def main():
         import mani_skill2.envs
 
         env = gym.make(
-            env_id, obs_mode=obs_mode, control_mode=control_mode, render_mode="cameras", max_episode_steps=max_episode_steps
+            env_id,
+            obs_mode=obs_mode,
+            control_mode=control_mode,
+            render_mode="cameras",
+            max_episode_steps=max_episode_steps,
         )
         # For training, we regard the task as a continuous task with infinite horizon.
         # you can use the ContinuousTaskWrapper here for that
@@ -321,7 +324,9 @@ def main():
                 max_episode_steps=max_episode_steps,
             )
             env = ManiSkillRGBDVecEnvWrapper(env)
-            env = SB3VecEnvWrapper(env) # makes MS2VecEnvs compatible with SB3. It's equivalent to SubprocVecEnv
+            env = SB3VecEnvWrapper(
+                env
+            )  # makes MS2VecEnvs compatible with SB3. It's equivalent to SubprocVecEnv
         else:
             env_fn = partial(
                 make_env,
@@ -331,7 +336,7 @@ def main():
             env = SubprocVecEnv([env_fn for _ in range(num_envs)])
         # Attach a monitor to log episode info
         env = VecMonitor(env)
-        env.seed(seed=args.seed) # Note SB3 vec envs don't use the gymnasium API
+        env.seed(seed=args.seed)  # Note SB3 vec envs don't use the gymnasium API
         env.reset()
     # Define the policy configuration and algorithm configuration
     policy_kwargs = dict(
@@ -393,7 +398,8 @@ def main():
 
     # close all envs
     eval_env.close()
-    if not args.eval: env.close()
+    if not args.eval:
+        env.close()
 
 
 if __name__ == "__main__":

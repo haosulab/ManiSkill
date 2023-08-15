@@ -60,14 +60,19 @@ def test_vecenv_obs_mode(env_id, obs_mode):
     del sb3_env
     del ms2_env
 
+
 @pytest.mark.parametrize("env_id", ["PickCube-v0", "TurnFaucet-v0"])
 @pytest.mark.parametrize("obs_mode", VENV_OBS_MODES)
 def test_gymnasium_vecenv(env_id, obs_mode):
     n_envs = 2
 
     gym_env = gym.make_vec(
-        env_id, n_envs, obs_mode=obs_mode, wrappers=[FlattenObservationWrapper],
-        vectorization_mode="async", vector_kwargs=dict(context="forkserver")
+        env_id,
+        n_envs,
+        obs_mode=obs_mode,
+        wrappers=[FlattenObservationWrapper],
+        vectorization_mode="async",
+        vector_kwargs=dict(context="forkserver"),
     )
     ms2_env = make_vec_env(env_id, n_envs, obs_mode=obs_mode)
 

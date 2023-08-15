@@ -85,7 +85,8 @@ class PickClutterEnv(StationaryManipulationEnv):
         raise NotImplementedError
 
     def reset(self, seed=None, options=None):
-        if options is None: options = dict()
+        if options is None:
+            options = dict()
         self.set_episode_rng(seed)
         episode_idx = options.pop("episode_idx", None)
         reconfigure = options.pop("reconfigure", False)
@@ -224,7 +225,7 @@ class PickClutterEnv(StationaryManipulationEnv):
                 reward += reaching_goal_reward
 
         return reward
-    
+
     def compute_normalized_dense_reward(self, **kwargs):
         return self.compute_dense_reward(**kwargs) / 10.0
 
@@ -240,6 +241,7 @@ class PickClutterEnv(StationaryManipulationEnv):
         set_actor_visibility(self.target_site, 0)
         set_actor_visibility(self.goal_site, 0)
         return ret
+
     def render_rgb_array(self):
         set_actor_visibility(self.target_site, 0.8)
         set_actor_visibility(self.goal_site, 0.5)

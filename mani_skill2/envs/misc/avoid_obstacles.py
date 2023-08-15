@@ -50,7 +50,8 @@ class AvoidObstaclesBaseEnv(BaseEnv):
         return scene_config
 
     def reset(self, *args, seed=None, options=None):
-        if options is None: options = dict()
+        if options is None:
+            options = dict()
         self.set_episode_rng(seed)
         episode_idx = options.pop("episode_idx", None)
         reconfigure = options.pop("reconfigure", False)
@@ -61,9 +62,7 @@ class AvoidObstaclesBaseEnv(BaseEnv):
         self.episode_idx = episode_idx
         self.episode_config = self.episodes[episode_idx]
         options["reconfigure"] = reconfigure
-        return super().reset(
-            *args, seed=self._episode_seed, options=options
-        )
+        return super().reset(*args, seed=self._episode_seed, options=options)
 
     def _build_cube(
         self,
@@ -206,10 +205,12 @@ class AvoidObstaclesBaseEnv(BaseEnv):
                 )
 
         contacts = self._scene.get_contacts()
-        max_impulse_norm = np.minimum(get_articulation_max_impulse_norm(contacts, self.agent.robot), 2.0)
+        max_impulse_norm = np.minimum(
+            get_articulation_max_impulse_norm(contacts, self.agent.robot), 2.0
+        )
         reward = close_to_goal_reward + angular_reward - 50.0 * max_impulse_norm
         return reward
-    
+
     def compute_normalized_dense_reward(self, **kwargs):
         return self.compute_dense_reward(**kwargs) / 10.0
 
@@ -233,11 +234,13 @@ class AvoidObstaclesBaseEnv(BaseEnv):
         ret = super().render_human()
         self.goal_site.hide_visual()
         return ret
+
     def render_rgb_array(self):
         self.goal_site.unhide_visual()
         ret = super().render_rgb_array()
         self.goal_site.hide_visual()
         return ret
+
 
 @register_env("PandaAvoidObstacles-v0", max_episode_steps=500)
 class PandaAvoidObstaclesEnv(AvoidObstaclesBaseEnv):

@@ -344,7 +344,7 @@ class BaseEnv(gym.Env):
 
     def compute_dense_reward(self, **kwargs):
         raise NotImplementedError
-    
+
     def compute_normalized_dense_reward(self, **kwargs):
         raise NotImplementedError
 
@@ -469,7 +469,8 @@ class BaseEnv(gym.Env):
     # Reset
     # -------------------------------------------------------------------------- #
     def reset(self, seed=None, options=None):
-        if options is None: options = dict()
+        if options is None:
+            options = dict()
         self.set_main_rng(seed)
         self.set_episode_rng(seed)
         self._elapsed_steps = 0
@@ -714,6 +715,7 @@ class BaseEnv(gym.Env):
         if len(images) == 1:
             return images[0]
         return tile_images(images)
+
     def render_cameras(self):
         images = []
         self.render_mode = "rgb_array"
@@ -723,6 +725,7 @@ class BaseEnv(gym.Env):
             images.append(rgb_array)
         images.extend(self._render_cameras_images())
         return tile_images(images)
+
     def _render_cameras_images(self):
         images = []
         self.update_render()

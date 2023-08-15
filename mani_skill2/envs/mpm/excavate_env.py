@@ -169,7 +169,8 @@ class ExcavateEnv(MPMBaseEnv):
         )
 
     def reset(self, seed=None, options=None):
-        if options is None: options = dict()
+        if options is None:
+            options = dict()
         target_num = options.pop("target_num", None)
         ret = super().reset(seed=seed, options=options)
         if target_num is not None:
@@ -424,7 +425,7 @@ class ExcavateEnv(MPMBaseEnv):
                 "height_dist": height_dist,
             }
         return reward
-    
+
     def compute_normalized_dense_reward(self, **kwargs):
         return self.compute_dense_reward(**kwargs) / 6.0
 

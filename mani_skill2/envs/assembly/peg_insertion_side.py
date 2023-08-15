@@ -18,10 +18,10 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
     def reset(self, seed=None, options=None):
         if options is None:
             options = {}
-        if options.get('reconfigure') is None:
-            options['reconfigure'] = True
+        if options.get("reconfigure") is None:
+            options["reconfigure"] = True
         return super().reset(seed, options)
-    
+
     def _build_box_with_hole(
         self, inner_radius, outer_radius, depth, center=(0, 0), name="box_with_hole"
     ):
@@ -265,7 +265,7 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
 
     def compute_normalized_dense_reward(self, **kwargs):
         return self.compute_dense_reward(**kwargs) / 25.0
-        
+
     def _register_cameras(self):
         cam_cfg = super()._register_cameras()
         cam_cfg.pose = look_at([0, -0.3, 0.2], [0, 0, 0.1])

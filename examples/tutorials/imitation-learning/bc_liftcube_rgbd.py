@@ -246,7 +246,11 @@ def main():
         env_id, obs_mode=obs_mode, control_mode=control_mode, render_mode="cameras"
     )
     # RecordEpisode wrapper auto records a new video once an episode is completed
-    env = RecordEpisode(env, output_dir=osp.join(log_dir, "eval_videos" if args.eval else "videos"), info_on_video=True)
+    env = RecordEpisode(
+        env,
+        output_dir=osp.join(log_dir, "eval_videos" if args.eval else "videos"),
+        info_on_video=True,
+    )
     dataset = ManiSkill2Dataset(demo_path)
     if args.eval:
         model_path = args.model_path

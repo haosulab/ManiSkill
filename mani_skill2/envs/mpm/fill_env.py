@@ -307,7 +307,7 @@ class FillEnv(MPMBaseEnv):
                 "tilt_reward": tilt_reward,
             }
         return reaching_reward * 0.1 + inside_reward + spill_reward + tilt_reward * 0.5
-    
+
     def compute_normalized_dense_reward(self, **kwargs):
         return self.compute_dense_reward(**kwargs) / 2.5
 

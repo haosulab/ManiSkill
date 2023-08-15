@@ -26,7 +26,9 @@ class SB3VecEnvWrapper(SB3VecEnv):
     """A wrapper for ManiSkill2 VecEnv to make it compatible with SB3 VecEnv"""
 
     def __init__(self, venv: VecEnv):
-        super().__init__(venv.num_envs, venv.single_observation_space, venv.single_action_space)
+        super().__init__(
+            venv.num_envs, venv.single_observation_space, venv.single_action_space
+        )
         self.venv = venv
         self._last_seed = None
 
@@ -35,15 +37,18 @@ class SB3VecEnvWrapper(SB3VecEnv):
 
     def reset(self) -> VecEnvObs:
         obs = self.venv.reset(seed=self._last_seed)[0]
-        self._last_seed = None # use seed from call to seed() once
+        self._last_seed = None  # use seed from call to seed() once
         return obs
+
     def step_async(self, actions: np.ndarray) -> None:
         return self.venv.step_async(actions)
 
     def step_wait(self) -> VecEnvStepReturn:
         vec_obs, rews, terminations, truncations, infos = self.venv.step_wait()
         for env_idx in range(self.num_envs):
-            infos[env_idx]["TimeLimit.truncated"] = truncations[env_idx] and not terminations[env_idx]
+            infos[env_idx]["TimeLimit.truncated"] = (
+                truncations[env_idx] and not terminations[env_idx]
+            )
         dones = terminations | truncations
         if not dones.any():
             return vec_obs, rews, dones, infos

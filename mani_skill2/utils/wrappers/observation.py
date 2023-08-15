@@ -12,11 +12,13 @@ from mani_skill2.utils.common import (
     merge_dicts,
 )
 
+
 class BaseGymObservationWrapper(gym.ObservationWrapper):
-    """ManiSkill2 uses a custom registration function that uses observation wrappers to change observation mode based on env kwargs. 
+    """ManiSkill2 uses a custom registration function that uses observation wrappers to change observation mode based on env kwargs.
     By default gymnasium does not expect custom registration and so creating an with gymnasium may sometimes raise an error as it tries to set the spec of an env
     which is possible if the registered env is not wrapped.
     """
+
     @property
     def spec(self):
         return self.unwrapped.spec
@@ -25,9 +27,10 @@ class BaseGymObservationWrapper(gym.ObservationWrapper):
     def spec(self, spec):
         self.unwrapped.spec = spec
 
+
 class RGBDObservationWrapper(BaseGymObservationWrapper):
     """Map raw textures (Color and Position) to rgb and depth."""
-    
+
     def __init__(self, env):
         super().__init__(env)
         self.observation_space = deepcopy(env.observation_space)
@@ -209,6 +212,7 @@ class RobotSegmentationObservationWrapper(BaseGymObservationWrapper):
         self.robot_link_ids = self.env.robot_link_ids
         obs = self.observation(observation)
         return obs, reset_info
+
     def observation_image(self, observation: dict):
         image_obs = observation["image"]
         for cam_images in image_obs.values():

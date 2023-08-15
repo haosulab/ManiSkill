@@ -144,15 +144,14 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
             "`python -m mani_skill2.utils.download_asset partnet_mobility_faucet`."
         )
 
-    def reset(
-        self, seed=None, options=None
-    ):
-        if options is None: options = dict()
+    def reset(self, seed=None, options=None):
+        if options is None:
+            options = dict()
         self.set_episode_rng(seed)
         model_id = options.pop("model_id", None)
         model_scale = options.pop("model_scale", None)
         reconfigure = options.pop("reconfigure", False)
-        
+
         _reconfigure = self._set_model(model_id, model_scale)
         reconfigure = _reconfigure or reconfigure
         options["reconfigure"] = reconfigure
@@ -278,8 +277,12 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
         # For dense reward
         # -------------------------------------------------------------------------- #
         # NOTE(jigu): trimesh uses np.random to sample
-        self.lfinger_pcd = trimesh.sample.sample_surface(self.lfinger_mesh, 256, seed=self._episode_seed)[0]
-        self.rfinger_pcd = trimesh.sample.sample_surface(self.rfinger_mesh, 256, seed=self._episode_seed)[0]
+        self.lfinger_pcd = trimesh.sample.sample_surface(
+            self.lfinger_mesh, 256, seed=self._episode_seed
+        )[0]
+        self.rfinger_pcd = trimesh.sample.sample_surface(
+            self.rfinger_mesh, 256, seed=self._episode_seed
+        )[0]
 
         self.last_angle_diff = self.target_angle - self.current_angle
 
@@ -298,9 +301,11 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
         self.target_joint_axis = joint_pose[:3, 0]
 
         self.target_link_mesh: trimesh.Trimesh = self.switch_links_mesh[idx]
-        
+
         # NOTE(jigu): trimesh uses np.random to sample
-        self.target_link_pcd = trimesh.sample.sample_surface(self.target_link_mesh, 256, seed=self._episode_seed)[0]
+        self.target_link_pcd = trimesh.sample.sample_surface(
+            self.target_link_mesh, 256, seed=self._episode_seed
+        )[0]
 
         # NOTE(jigu): joint origin can be anywhere on the joint axis.
         # Thus, I use the center of mass at the beginning instead
@@ -383,7 +388,7 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
         self.last_angle_diff = angle_diff
 
         return reward
-    
+
     def compute_normalized_dense_reward(self, **kwargs):
         return self.compute_dense_reward(**kwargs) / 10.0
 

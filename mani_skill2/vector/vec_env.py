@@ -85,7 +85,8 @@ def _worker(
     except Exception as err:
         logger.error(err, exc_info=1)
     finally:
-        if env is not None: env.close()
+        if env is not None:
+            env.close()
 
 
 class VecEnv(VectorEnv):
@@ -125,6 +126,7 @@ class VecEnv(VectorEnv):
     remotes: List[Connection] = []
     work_remotes: List[Connection] = []
     processes: List[mp.Process] = []
+
     def __init__(
         self,
         env_fns: List[Callable[[], BaseEnv]],
@@ -465,8 +467,10 @@ def stack_obs(obs: Sequence, space: spaces.Space, buffer: Optional[np.ndarray] =
             ret[key] = stack_obs(_obs, space[key], buffer=_buffer)
         return ret
     elif isinstance(space, spaces.Box):
-        if not isinstance(obs[0], np.ndarray): # check for 0-dimensional parameter
-            obs = [np.array(o)[None] for o in obs] # convert float to array and add dimension
+        if not isinstance(obs[0], np.ndarray):  # check for 0-dimensional parameter
+            obs = [
+                np.array(o)[None] for o in obs
+            ]  # convert float to array and add dimension
         return np.stack(obs, out=buffer)
     else:
         raise NotImplementedError(type(space))
@@ -479,7 +483,9 @@ class RGBDVecEnv(VecEnv):
         from mani_skill2.utils.wrappers.observation import RGBDObservationWrapper
 
         RGBDObservationWrapper.update_observation_space(self.single_observation_space)
-        self.observation_space = batch_space(self.single_observation_space, n=self.num_envs) # need to re-batch observation space to conform to Gymnasium API
+        self.observation_space = batch_space(
+            self.single_observation_space, n=self.num_envs
+        )  # need to re-batch observation space to conform to Gymnasium API
 
     def _get_torch_observations(self):
         observation = super()._get_torch_observations()
@@ -507,8 +513,12 @@ class PointCloudVecEnv(VecEnv):
 
         from mani_skill2.utils.wrappers.observation import PointCloudObservationWrapper
 
-        PointCloudObservationWrapper.update_observation_space(self.single_observation_space)
-        self.observation_space = batch_space(self.single_observation_space) # need to re-batch observation space to conform to Gymnasium API
+        PointCloudObservationWrapper.update_observation_space(
+            self.single_observation_space
+        )
+        self.observation_space = batch_space(
+            self.single_observation_space
+        )  # need to re-batch observation space to conform to Gymnasium API
         self._buffer = {}
 
     def _get_torch_observations(self):
@@ -580,6 +590,7 @@ class PointCloudVecEnv(VecEnv):
         obs, rews, terminateds, truncateds, infos = super().step_wait()
         return self.observation(obs), rews, terminateds, truncateds, infos
 
+
 class VecEnvWrapper(VecEnv):
     def __init__(self, venv: VecEnv):
         self.venv = venv
@@ -635,15 +646,15 @@ class VecEnvWrapper(VecEnv):
             return self.__dict__[name]
         else:
             return getattr(self.venv, name)
-        
-class VecEnvObservationWrapper(VecEnvWrapper):
 
+
+class VecEnvObservationWrapper(VecEnvWrapper):
     def __init__(self, venv: VecEnv, single_observation_space: gym.Space):
         super().__init__(venv)
         # this is done to pin observation space attribute to single observation space for vector observation wrappers like RGBD and PointCloud
         self.observation_space = batch_space(single_observation_space, n=self.num_envs)
         self.single_observation_space = single_observation_space
-        
+
     def reset_wait(self, **kwargs):
         observation, info = self.venv.reset_wait(**kwargs)
         return self.observation(observation), info

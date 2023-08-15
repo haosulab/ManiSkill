@@ -160,10 +160,9 @@ class OpenCabinetEnv(MS1BaseEnv):
     # Reset
     # -------------------------------------------------------------------------- #
     def reset(self, seed=None, options=None):
-        if options is None: options = dict()
-        return super().reset(
-            seed=seed, options=options
-        )
+        if options is None:
+            options = dict()
+        return super().reset(seed=seed, options=options)
 
     def _initialize_task(self):
         self._initialize_cabinet()
@@ -387,7 +386,7 @@ class OpenCabinetEnv(MS1BaseEnv):
 
         reward += stage_reward
         return reward
-    
+
     def compute_normalized_dense_reward(self, *args, info: dict, **kwargs):
         return self.compute_dense_reward(*args, info=info, **kwargs) / 10.0
 

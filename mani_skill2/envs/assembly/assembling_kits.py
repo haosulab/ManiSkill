@@ -38,7 +38,8 @@ class AssemblingKitsEnv(StationaryManipulationEnv):
         super().__init__(**kwargs)
 
     def reset(self, seed=None, options=None):
-        if options is None: options = dict()
+        if options is None:
+            options = dict()
         self.set_episode_rng(seed)
         episode_idx = options.pop("episode_idx", None)
         reconfigure = options.pop("reconfigure", False)
@@ -48,13 +49,13 @@ class AssemblingKitsEnv(StationaryManipulationEnv):
             reconfigure = True
         self.episode_idx = episode_idx
         options["reconfigure"] = reconfigure
-        
+
         episode = self._episodes[episode_idx]
         self.kit_id: int = episode["kit"]
         self.spawn_pos = np.float32(episode["spawn_pos"])
         self.object_id: int = episode["obj_to_place"]
         self._other_objects_id: List[int] = episode["obj_in_place"]
-        
+
         return super().reset(seed=self._episode_seed, options=options)
 
     def _parse_json(self, path):
@@ -224,7 +225,7 @@ class AssemblingKitsEnv(StationaryManipulationEnv):
                     )
 
         return reward
-    
+
     def compute_normalized_dense_reward(self, **kwargs):
         return self.compute_dense_reward(**kwargs) / 10.0
 

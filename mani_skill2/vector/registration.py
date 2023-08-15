@@ -7,7 +7,12 @@ from .vec_env import PointCloudVecEnv, RGBDVecEnv, VecEnv
 from .wrappers.observation import VecRobotSegmentationObservationWrapper
 
 
-def _make_env(env_spec, wrappers: Sequence[gym.Wrapper] = None, max_episode_steps: int = None, **kwargs):
+def _make_env(
+    env_spec,
+    wrappers: Sequence[gym.Wrapper] = None,
+    max_episode_steps: int = None,
+    **kwargs,
+):
     env = env_spec.make(**kwargs)
 
     # Follow gym.make
@@ -44,7 +49,7 @@ def make(
             Otherwise, it should be a networkd address, e.g. "localhost:12345".
         wrappers (Sequence[gym.Wrapper], optional): Wrappers for the individual environment.
         enable_segmentation (bool, optional): Whether to include "Segmentation" texture in observations.
-        max_episode_steps (int, optional): Override any existing max_episode_steps/TimeLimitWrapper 
+        max_episode_steps (int, optional): Override any existing max_episode_steps/TimeLimitWrapper
             used in the initial specification of the environment.
         **kwargs: Keyword arguments to pass to the environment.
     """
@@ -70,7 +75,9 @@ def make(
         camera_cfgs["add_segmentation"] = True
         kwargs["camera_cfgs"] = camera_cfgs
 
-    env_fn = partial(_make_env, env_spec, wrappers, max_episode_steps=max_episode_steps, **kwargs)
+    env_fn = partial(
+        _make_env, env_spec, wrappers, max_episode_steps=max_episode_steps, **kwargs
+    )
 
     # Dispatch observation mode
     if "image" in obs_mode:

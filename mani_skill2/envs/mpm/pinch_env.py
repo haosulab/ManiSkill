@@ -35,12 +35,9 @@ class PinchEnv(MPMBaseEnv):
 
         super().__init__(*args, **kwargs)
 
-    def reset(
-        self,
-        seed=None,
-        options=None
-    ):
-        if options is None: options = dict()
+    def reset(self, seed=None, options=None):
+        if options is None:
+            options = dict()
         self.level_file = options.pop("level_file", None)
         return super().reset(seed=seed, options=options)
 
@@ -198,9 +195,11 @@ class PinchEnv(MPMBaseEnv):
             + 0.1 * reaching_reward
             + 0.1 * reward_orientation
         )
-        
+
     def compute_normalized_dense_reward(self, **kwargs):
-        return self.compute_dense_reward(**kwargs) # original reward scale is low, so we don't normalize for now
+        return self.compute_dense_reward(
+            **kwargs
+        )  # original reward scale is low, so we don't normalize for now
 
     def check_success(self, **kwargs):
         self.compute_dense_reward()

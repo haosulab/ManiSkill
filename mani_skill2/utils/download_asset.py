@@ -202,7 +202,8 @@ def download(
                 pbar.update(bs)
 
         filename, _ = urllib.request.urlretrieve(url, reporthook=show_progress)
-        if verbose: pbar.close()
+        if verbose:
+            pbar.close()
     except URLError as err:
         print(f"Failed to download {url}")
         raise err
@@ -229,7 +230,7 @@ def download(
     return output_path
 
 
-def parse_args(args = None):
+def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "uid",
@@ -247,7 +248,6 @@ def parse_args(args = None):
 
 
 def main(args):
-    
     verbose = not args.quiet
 
     initialize_sources()
@@ -259,7 +259,8 @@ def main(args):
         return
 
     if args.uid == "all":
-        if verbose: print("All assets will be downloaded. This may take a while.")
+        if verbose:
+            print("All assets will be downloaded. This may take a while.")
         uids = list(DATA_SOURCES.keys())
         show_progress = True
     elif args.uid in DATA_GROUPS:

@@ -82,10 +82,9 @@ class PickSingleEnv(StationaryManipulationEnv):
         """Load the target object."""
         raise NotImplementedError
 
-    def reset(
-        self, seed=None, options=None
-    ):
-        if options is None: options = dict()
+    def reset(self, seed=None, options=None):
+        if options is None:
+            options = dict()
         self.set_episode_rng(seed)
         model_scale = options.pop("model_scale", None)
         model_id = options.pop("model_id", None)
@@ -266,7 +265,7 @@ class PickSingleEnv(StationaryManipulationEnv):
                 reward += reaching_goal_reward
 
         return reward
-    
+
     def compute_normalized_dense_reward(self, **kwargs):
         return self.compute_dense_reward(**kwargs) / 10.0
 

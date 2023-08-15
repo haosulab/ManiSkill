@@ -58,7 +58,8 @@ class WriteEnv(MPMBaseEnv):
         super().__init__(*args, **kwargs)
 
     def reset(self, seed=None, options=None):
-        if options is None: options = dict()
+        if options is None:
+            options = dict()
         self.level_file = options.pop("level_file", None)
         return super().reset(seed=seed, options=options)
 
@@ -297,6 +298,8 @@ class WriteEnv(MPMBaseEnv):
         reward_orientation = 1 - angle
 
         return iou + 0.1 * reaching_reward + 0.1 * reward_orientation
-    
+
     def compute_normalized_dense_reward(self, **kwargs):
-        return self.compute_dense_reward(**kwargs) # no normalization for now since original reward scale is already low
+        return self.compute_dense_reward(
+            **kwargs
+        )  # no normalization for now since original reward scale is already low

@@ -213,7 +213,9 @@ def main():
 
     # close all envs
     eval_env.close()
-    if not args.eval: env.close()
+    if not args.eval:
+        env.close()
+
 
 if __name__ == "__main__":
     main()

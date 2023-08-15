@@ -19,10 +19,12 @@ def parse_args(args=None):
     args, opts = parser.parse_known_args(args)
 
     # Parse env kwargs
-    if not args.quiet: print("opts:", opts)
+    if not args.quiet:
+        print("opts:", opts)
     eval_str = lambda x: eval(x[1:]) if x.startswith("@") else x
     env_kwargs = dict((x, eval_str(y)) for x, y in zip(opts[0::2], opts[1::2]))
-    if not args.quiet: print("env_kwargs:", env_kwargs)
+    if not args.quiet:
+        print("env_kwargs:", env_kwargs)
     args.env_kwargs = env_kwargs
 
     return args

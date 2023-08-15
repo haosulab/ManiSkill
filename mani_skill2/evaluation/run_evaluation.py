@@ -129,7 +129,9 @@ def main():
     # Main
     # ---------------------------------------------------------------------------- #
     env_kwargs = config["env_info"].get("env_kwargs")
-    evaluator.setup(args.env_id, UserPolicy, render_mode="cameras", env_kwargs=env_kwargs)
+    evaluator.setup(
+        args.env_id, UserPolicy, render_mode="cameras", env_kwargs=env_kwargs
+    )
 
     episodes = config["episodes"]
     if args.num_episodes is not None:

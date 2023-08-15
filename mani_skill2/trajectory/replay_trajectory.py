@@ -325,7 +325,7 @@ def parse_args(args=None):
         "--count",
         type=int,
         default=None,
-        help="number of demonstrations to replay before exiting. By default will replay all demonstrations"
+        help="number of demonstrations to replay before exiting. By default will replay all demonstrations",
     )
     return parser.parse_args(args)
 
@@ -360,7 +360,9 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
     if target_control_mode is not None:
         env_kwargs["control_mode"] = target_control_mode
     env_kwargs["bg_name"] = args.bg_name
-    env_kwargs["render_mode"] = "rgb_array" # note this only affects the videos saved as RecordEpisode wrapper calls env.render
+    env_kwargs[
+        "render_mode"
+    ] = "rgb_array"  # note this only affects the videos saved as RecordEpisode wrapper calls env.render
     env = gym.make(env_id, **env_kwargs)
     if pbar is not None:
         pbar.set_postfix(
@@ -392,7 +394,7 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
     else:
         output_h5_path = None
 
-    episodes = json_data["episodes"][:args.count]
+    episodes = json_data["episodes"][: args.count]
     n_ep = len(episodes)
     inds = np.arange(n_ep)
     inds = np.array_split(inds, num_procs)[proc_id]
@@ -503,8 +505,6 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
 
 
 def main(args):
-    
-
     if args.num_procs > 1:
         pool = mp.Pool(args.num_procs)
         proc_args = [(deepcopy(args), i, args.num_procs) for i in range(args.num_procs)]

@@ -140,7 +140,10 @@ def main():
     obs_mode = "state"
     control_mode = "pd_ee_delta_pose"
     env = gym.make(
-        env_id, obs_mode=obs_mode, control_mode=control_mode, render_mode="cameras",
+        env_id,
+        obs_mode=obs_mode,
+        control_mode=control_mode,
+        render_mode="cameras",
     )
     # RecordEpisode wrapper auto records a new video once an episode is completed
     env = RecordEpisode(env, output_dir=osp.join(log_dir, "videos"), info_on_video=True)

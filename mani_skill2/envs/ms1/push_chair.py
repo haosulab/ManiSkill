@@ -350,7 +350,7 @@ class PushChairEnv(MS1BaseEnv):
             stage_reward=stage_reward,
         )
         return reward
-    
+
     def compute_normalized_dense_reward(self, **kwargs):
         return self.compute_dense_reward(**kwargs) / 10.0
 

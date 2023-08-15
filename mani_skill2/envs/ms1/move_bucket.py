@@ -399,7 +399,7 @@ class MoveBucketEnv(MS1BaseEnv):
             ees_height_diff=ees_height_diff,
         )
         return reward
-    
+
     def compute_normalized_dense_reward(self, **kwargs):
         return self.compute_dense_reward(**kwargs) / 20.0
 

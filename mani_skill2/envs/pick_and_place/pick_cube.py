@@ -103,7 +103,7 @@ class PickCubeEnv(StationaryManipulationEnv):
             reward += place_reward
 
         return reward
-    
+
     def compute_normalized_dense_reward(self, **kwargs):
         return self.compute_dense_reward(**kwargs) / 5.0
 
@@ -112,6 +112,7 @@ class PickCubeEnv(StationaryManipulationEnv):
         ret = super().render_human()
         self.goal_site.hide_visual()
         return ret
+
     def render_rgb_array(self):
         self.goal_site.unhide_visual()
         ret = super().render_rgb_array()

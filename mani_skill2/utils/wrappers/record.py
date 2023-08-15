@@ -14,6 +14,7 @@ from ..io_utils import dump_json
 from ..visualization.misc import images_to_video, put_info_on_image
 import copy
 
+
 def parse_env_info(env: gym.Env):
     # spec can be None if not initialized from gymnasium.make
     env = env.unwrapped
@@ -272,7 +273,9 @@ class RecordEpisode(gym.Wrapper):
                         compression_opts=5,
                     )
                 elif "seg" in k and v.ndim in (3, 4):
-                    assert np.issubdtype(v.dtype, np.integer) or v.dtype == np.bool_, v.dtype
+                    assert (
+                        np.issubdtype(v.dtype, np.integer) or v.dtype == np.bool_
+                    ), v.dtype
                     group.create_dataset(
                         "obs/" + k,
                         data=v,
