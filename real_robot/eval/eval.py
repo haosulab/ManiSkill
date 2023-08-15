@@ -8,7 +8,7 @@ import numpy as np
 
 from stable_baselines3 import PPO
 
-env_id = 'PickCubeRealXArm7'
+env_id = 'PickCubeRealXArm7-v0'
 log_dir = "./logs/PickCube-v1"
 rollout_steps = 4000
 num_envs = 16

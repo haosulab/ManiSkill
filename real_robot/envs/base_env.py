@@ -10,7 +10,7 @@ from mani_skill2.envs.sapien_env import BaseEnv as MS2BaseEnv
 from real_robot.utils.common import (
     convert_observation_to_space, vectorize_pose, flatten_state_dict
 )
-from real_robot.utils.visualization import Visualizer
+# from real_robot.utils.visualization import Visualizer
 from real_robot.sensors.camera import (
     CALIB_CAMERA_POSES,
     CameraConfig,
@@ -83,7 +83,7 @@ class XArmBaseEnv(gym.Env):
         self._configure_render_cameras()
 
         # TODO: check Visualizer
-        self.visualizer = Visualizer()
+        # self.visualizer = Visualizer()
 
         # NOTE: `seed` is deprecated in the latest gym.
         # Use a fixed seed to initialize to enhance determinism

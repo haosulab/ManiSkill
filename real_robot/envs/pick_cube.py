@@ -8,7 +8,7 @@ from mani_skill2.envs.pick_and_place.pick_cube import (
 from .base_env import XArmBaseEnv
 
 
-@register_env("PickCubeRealXArm7", max_episode_steps=50)
+@register_env("PickCubeRealXArm7-v0", max_episode_steps=50)
 class PickCubeRealEnv(XArmBaseEnv, PickCubeEnv_v1):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
