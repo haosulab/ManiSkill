@@ -34,11 +34,13 @@ class PickCubeEnv(StationaryManipulationEnv):
     def _initialize_actors(self):
         # NOTE(chichu): can be fixed to a certain pose when evaluate on real robot with simulation.
         xy = self._episode_rng.uniform(-0.1, 0.1, [2])
+        # xy = np.array([0.0, 0.0])
         xyz = np.hstack([xy, self.cube_half_size[2]])
         q = [1, 0, 0, 0]
         if self.obj_init_rot_z:
             ori = self._episode_rng.uniform(0, 2 * np.pi)
             q = euler2quat(0, 0, ori)
+        # q = [1, 0, 0, 0]
         self.obj.set_pose(Pose(xyz, q))
 
     def _initialize_task(self, max_trials=100, verbose=False):
@@ -50,6 +52,7 @@ class PickCubeEnv(StationaryManipulationEnv):
             goal_xy = self._episode_rng.uniform(-0.1, 0.1, [2])
             goal_z = self._episode_rng.uniform(0, 0.5) + obj_pos[2]
             goal_pos = np.hstack([goal_xy, goal_z])
+            # goal_pos = np.array([0.05, 0.05, 0.2])
             if np.linalg.norm(goal_pos - obj_pos) > self.min_goal_dist:
                 if verbose:
                     print(f"Found a valid goal at {i}-th trial")
@@ -138,6 +141,42 @@ class PickCubeEnv_v1(PickCubeEnv):
         if info["success"]:
             reward += 5
             return reward
+
+        tcp_to_obj_pos = self.obj.pose.p - self.tcp.pose.p
+        tcp_to_obj_dist = np.linalg.norm(tcp_to_obj_pos)
+        reaching_reward = 1 - np.tanh(5 * tcp_to_obj_dist)
+        reward += reaching_reward
+
+        is_grasped = self.agent.check_grasp(self.obj) # remove max_angle=30 yeilds much better performance
+        reward += 1 if is_grasped else 0.0
+
+        if is_grasped:
+            obj_to_goal_dist = np.linalg.norm(self.goal_pos - self.obj.pose.p)
+            place_reward = 1 - np.tanh(5 * obj_to_goal_dist)
+            reward += place_reward
+
+            # static reward
+            if self.check_obj_placed():
+                qvel = self.agent.robot.get_qvel()[:-2]
+                static_reward = 1 - np.tanh(5 * np.linalg.norm(qvel))
+                reward += static_reward
+
+        return reward
+
+
+# Note: 50 steps is more suitable for position control
+@register_env("PickCube-v2", max_episode_steps=50)
+class PickCubeEnv_v2(PickCubeEnv):
+    # better reward
+    def compute_dense_reward(self, info, **kwargs):
+        reward = 0.0
+
+        if info["success"]:
+            reward += 5
+            return reward
+        
+        if info["time_out"]:
+            reward -= 1
 
         tcp_to_obj_pos = self.obj.pose.p - self.tcp.pose.p
         tcp_to_obj_dist = np.linalg.norm(tcp_to_obj_pos)

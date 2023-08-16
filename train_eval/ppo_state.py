@@ -47,7 +47,7 @@ class SuccessInfoWrapper(gym.Wrapper):
 
 
 def parse_args():
-    env_id = "PickCube-v1"
+    env_id = "PickCube-v2"
     parser = argparse.ArgumentParser(
         description="Use Stable-Baselines-3 PPO to train ManiSkill2 tasks"
     )
@@ -73,7 +73,7 @@ def parse_args():
     parser.add_argument(
         "--total-timesteps",
         type=int,
-        default=2_000_000,
+        default=2_500_000,
         help="Total timesteps for training",
     )
     parser.add_argument(
@@ -83,7 +83,7 @@ def parse_args():
         help="path for where logs, checkpoints, and videos are saved",
     )
     parser.add_argument(
-        "--eval", action="store_true", help="whether to only evaluate policy"
+        "--eval", action="store_false", help="whether to only evaluate policy"
     )
     parser.add_argument(
         "--model-path", type=str, help="path to sb3 model for evaluation"
@@ -179,7 +179,7 @@ def main():
     if args.eval:
         model_path = args.model_path
         if model_path is None:
-            model_path = osp.join(log_dir, "latest_model")
+            model_path = osp.join(log_dir, "best_model")
         # Load the saved model
         model = model.load(model_path)
     else:
@@ -215,7 +215,7 @@ def main():
         model,
         eval_env,
         deterministic=True,
-        render=False,
+        render=True,
         return_episode_rewards=True,
         n_eval_episodes=10,
     )

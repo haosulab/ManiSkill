@@ -481,6 +481,7 @@ class BaseEnv(gym.Env):
     def reset(self, seed=None, reconfigure=False):
         self.set_episode_rng(seed)
         self._elapsed_steps = 0
+        self._time_out = False
 
         if reconfigure:
             # Reconfigure the scene if assets change
@@ -572,6 +573,7 @@ class BaseEnv(gym.Env):
             # qvel_max = 0
             while True:
                 if sim_step >= self.time_out:
+                    self._time_out = True
                     # print('time_out')
                     # print('qpos:' + str((qpos_dis < self.qpos_threshold).all()) + 'qvel:' + str((qvel < self.qvel_threshold).all()))
                     # print('ee_p_dis:' + str(ee_p_dis) + 'ee_q_dis:' + str(ee_q_dis))
@@ -591,6 +593,7 @@ class BaseEnv(gym.Env):
                             and ee_p_dis < self.ee_p_threshold and ee_q_dis < self.ee_q_threshold:
                     # print("Sim step:" + str(sim_step) + "; ee_p_dis:" + str(ee_p_dis) + "; ee_q_dis:" + str(ee_q_dis))
                     # print(qvel_max)
+                    self._time_out = False
                     break                
                 # print(sim_step)
                 # print((qpos_dis < self.qpos_threshold).all())
@@ -615,7 +618,7 @@ class BaseEnv(gym.Env):
         return bool(info["success"])
 
     def get_info(self, **kwargs):
-        info = dict(elapsed_steps=self._elapsed_steps)
+        info = dict(elapsed_steps=self._elapsed_steps, time_out=self._time_out)
         info.update(self.evaluate(**kwargs))
         return info
 
