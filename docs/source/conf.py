@@ -9,7 +9,7 @@
 project = "ManiSkill2"
 copyright = "2023, ManiSkill2 Contributors"
 author = "ManiSkill2 Contributors"
-release = "0.4.0"
+release = "0.5.0"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

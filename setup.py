@@ -40,7 +40,7 @@ setup(
     extras_require={
         "tests": ["pytest", "black", "isort"],
         "docs": [
-            "sphinx",
+            "sphinx==6.2.1",
             "sphinx-autobuild",
             "sphinx-rtd-theme",
             # For spelling
