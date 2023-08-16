@@ -3,20 +3,18 @@ from collections import OrderedDict
 import h5py
 import numpy as np
 import sapien.core as sapien
+import warp as wp
+from mpm.height_rasterizer import rasterize_clear_kernel, rasterize_kernel
 from transforms3d.euler import euler2quat
 
 from mani_skill2 import ASSET_DIR
 from mani_skill2.agents.configs.panda.variants import PandaStickConfig
 from mani_skill2.agents.robots.panda import Panda
 from mani_skill2.envs.mpm.base_env import MPMBaseEnv, MPMModelBuilder, MPMSimulator
+from mani_skill2.envs.mpm.utils import load_h5_as_dict
+from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import vectorize_pose
-from mani_skill2.sensors.camera import CameraConfig
-
-from mani_skill2.envs.mpm.utils import load_h5_as_dict
-
-import warp as wp
-from mpm.height_rasterizer import rasterize_clear_kernel, rasterize_kernel
 
 
 @wp.kernel
@@ -57,9 +55,11 @@ class WriteEnv(MPMBaseEnv):
             )
         super().__init__(*args, **kwargs)
 
-    def reset(self, *args, seed=None, level_file=None, **kwargs):
-        self.level_file = level_file
-        return super().reset(*args, seed=seed, **kwargs)
+    def reset(self, seed=None, options=None):
+        if options is None:
+            options = dict()
+        self.level_file = options.pop("level_file", None)
+        return super().reset(seed=seed, options=options)
 
     def _get_obs_extra(self):
         return OrderedDict(
@@ -296,3 +296,8 @@ class WriteEnv(MPMBaseEnv):
         reward_orientation = 1 - angle
 
         return iou + 0.1 * reaching_reward + 0.1 * reward_orientation
+
+    def compute_normalized_dense_reward(self, **kwargs):
+        return self.compute_dense_reward(
+            **kwargs
+        )  # no normalization for now since original reward scale is already low

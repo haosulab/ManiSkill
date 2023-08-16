@@ -1,25 +1,17 @@
-import numpy as np
-import sapien.core as sapien
-from mani_skill2.agents.configs.panda.variants import PandaBucketConfig
-from mani_skill2.agents.robots.panda import Panda
-from mani_skill2.envs.mpm.base_env import MPMBaseEnv
-from mani_skill2.utils.registration import register_env
-from mani_skill2.sensors.camera import CameraConfig
-
-from mani_skill2.utils.sapien_utils import (
-    get_entity_by_name,
-    vectorize_pose,
-)
-
 from collections import OrderedDict
 
+import numpy as np
+import sapien.core as sapien
 from transforms3d.euler import euler2quat
-from mani_skill2.utils.sapien_utils import (
-    get_entity_by_name,
-)
-from mani_skill2.envs.mpm import perlin
 
+from mani_skill2.agents.configs.panda.variants import PandaBucketConfig
+from mani_skill2.agents.robots.panda import Panda
+from mani_skill2.envs.mpm import perlin
+from mani_skill2.envs.mpm.base_env import MPMBaseEnv
 from mani_skill2.envs.mpm.utils import actor2meshes
+from mani_skill2.sensors.camera import CameraConfig
+from mani_skill2.utils.registration import register_env
+from mani_skill2.utils.sapien_utils import get_entity_by_name, vectorize_pose
 
 
 @register_env("Excavate-v0", max_episode_steps=250)
@@ -168,8 +160,11 @@ class ExcavateEnv(MPMBaseEnv):
             target=np.array([self.target_num]),
         )
 
-    def reset(self, seed=None, reconfigure=False, target_num=None):
-        ret = super().reset(seed=seed, reconfigure=reconfigure)
+    def reset(self, seed=None, options=None):
+        if options is None:
+            options = dict()
+        target_num = options.pop("target_num", None)
+        ret = super().reset(seed=seed, options=options)
         if target_num is not None:
             self.target_num = int(target_num)
         return ret
@@ -423,12 +418,15 @@ class ExcavateEnv(MPMBaseEnv):
             }
         return reward
 
-    def render(self, mode="human", draw_box=False, draw_target=False):
+    def compute_normalized_dense_reward(self, **kwargs):
+        return self.compute_dense_reward(**kwargs) / 6.0
+
+    def render(self, draw_box=False, draw_target=False):
         if draw_target:
             bbox = self.target_box
             box = self._add_draw_box(bbox)
 
-        img = super().render(mode, draw_box)
+        img = super().render(draw_box)
         if draw_target:
             self._remove_draw_box(box)
         return img
@@ -443,7 +441,6 @@ class ExcavateEnv(MPMBaseEnv):
 
 
 if __name__ == "__main__":
-
     env = ExcavateEnv(reward_mode="dense")
     env.reset()
     env.agent.set_control_mode("pd_ee_delta_pose")

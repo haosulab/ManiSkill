@@ -2,8 +2,8 @@ from copy import deepcopy
 from functools import partial
 from typing import Dict, Type
 
-import gym
-from gym.envs.registration import EnvSpec as GymEnvSpec
+import gymnasium as gym
+from gymnasium.envs.registration import EnvSpec as GymEnvSpec
 
 from mani_skill2 import logger
 from mani_skill2.envs.sapien_env import BaseEnv
@@ -133,7 +133,7 @@ def register_env(uid: str, max_episode_steps=None, override=False, **kwargs):
     def _register_env(cls):
         if uid in REGISTERED_ENVS:
             if override:
-                from gym.envs.registration import registry
+                from gymnasium.envs.registration import registry
 
                 logger.warn(f"Override registered env {uid}")
                 REGISTERED_ENVS.pop(uid)
@@ -155,6 +155,7 @@ def register_env(uid: str, max_episode_steps=None, override=False, **kwargs):
             uid,
             entry_point=partial(make, env_id=uid, as_gym=False),
             max_episode_steps=max_episode_steps,
+            disable_env_checker=True, # Temporary solution as we allow empty observation spaces
             kwargs=deepcopy(kwargs),
         )
 

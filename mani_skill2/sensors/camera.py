@@ -3,7 +3,7 @@ from typing import Dict, List, Sequence
 
 import numpy as np
 import sapien.core as sapien
-from gym import spaces
+from gymnasium import spaces
 
 from mani_skill2.utils.sapien_utils import get_entity_by_name
 

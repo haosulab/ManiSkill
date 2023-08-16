@@ -35,30 +35,34 @@ class AvoidObstaclesBaseEnv(BaseEnv):
             raise FileNotFoundError(
                 f"Episode json ({episode_json}) is not found."
                 "To download default json:"
-                "`python -m mani_skill2.utils.download_asset {}`.".format(self.ASSET_UID)
+                "`python -m mani_skill2.utils.download_asset {}`.".format(
+                    self.ASSET_UID
+                )
             )
         self.episodes = load_json(episode_json)
         self.episode_idx = None
         self.episode_config = None
         super().__init__(**kwargs)
 
-
     def _get_default_scene_config(self):
         scene_config = super()._get_default_scene_config()
         scene_config.contact_offset = 0.01
         return scene_config
 
-    def reset(self, *args, seed=None, episode_idx=None, reconfigure=False, **kwargs):
+    def reset(self, *args, seed=None, options=None):
+        if options is None:
+            options = dict()
         self.set_episode_rng(seed)
+        episode_idx = options.pop("episode_idx", None)
+        reconfigure = options.pop("reconfigure", False)
         if episode_idx is None:
             episode_idx = self._episode_rng.choice(len(self.episodes))
         if episode_idx != self.episode_idx:
             reconfigure = True
         self.episode_idx = episode_idx
         self.episode_config = self.episodes[episode_idx]
-        return super().reset(
-            *args, seed=self._episode_seed, reconfigure=reconfigure, **kwargs
-        )
+        options["reconfigure"] = reconfigure
+        return super().reset(*args, seed=self._episode_seed, options=options)
 
     def _build_cube(
         self,
@@ -201,9 +205,14 @@ class AvoidObstaclesBaseEnv(BaseEnv):
                 )
 
         contacts = self._scene.get_contacts()
-        max_impulse_norm = get_articulation_max_impulse_norm(contacts, self.agent.robot)
+        max_impulse_norm = np.minimum(
+            get_articulation_max_impulse_norm(contacts, self.agent.robot), 2.0
+        )
         reward = close_to_goal_reward + angular_reward - 50.0 * max_impulse_norm
         return reward
+
+    def compute_normalized_dense_reward(self, **kwargs):
+        return self.compute_dense_reward(**kwargs) / 10.0
 
     def _register_cameras(self):
         pose = look_at([-0.25, 0, 1.2], [0.6, 0, 0.6])
@@ -220,13 +229,16 @@ class AvoidObstaclesBaseEnv(BaseEnv):
         self._viewer.set_camera_xyz(1.5, 0.0, 1.5)
         self._viewer.set_camera_rpy(0, -0.6, 3.14)
 
-    def render(self, mode="human"):
-        if mode in ["human", "rgb_array"]:
-            self.goal_site.unhide_visual()
-            ret = super().render(mode=mode)
-            self.goal_site.hide_visual()
-        else:
-            ret = super().render(mode=mode)
+    def render_human(self):
+        self.goal_site.unhide_visual()
+        ret = super().render_human()
+        self.goal_site.hide_visual()
+        return ret
+
+    def render_rgb_array(self):
+        self.goal_site.unhide_visual()
+        ret = super().render_rgb_array()
+        self.goal_site.hide_visual()
         return ret
 
 
@@ -247,4 +259,3 @@ class PandaAvoidObstaclesEnv(AvoidObstaclesBaseEnv):
             self.agent.robot.get_links(), self.agent.config.ee_link_name
         )
         set_articulation_render_material(self.agent.robot, specular=0.9, roughness=0.3)
-    

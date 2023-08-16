@@ -3,7 +3,7 @@ import argparse
 import os.path as osp
 from pathlib import Path
 
-import gym
+import gymnasium as gym
 import h5py
 import numpy as np
 import torch as th
@@ -111,7 +111,7 @@ def parse_args():
         help="path for where logs, checkpoints, and videos are saved",
     )
     parser.add_argument(
-        "--steps", type=int, help="numbr of training steps", default=30000
+        "--steps", type=int, help="number of training steps", default=30000
     )
     parser.add_argument(
         "--eval", action="store_true", help="whether to only evaluate policy"
@@ -139,13 +139,14 @@ def main():
 
     obs_mode = "state"
     control_mode = "pd_ee_delta_pose"
-    reward_mode = "dense"
     env = gym.make(
-        env_id, obs_mode=obs_mode, control_mode=control_mode, reward_mode=reward_mode
+        env_id,
+        obs_mode=obs_mode,
+        control_mode=control_mode,
+        render_mode="cameras",
     )
     # RecordEpisode wrapper auto records a new video once an episode is completed
-    env = RecordEpisode(env, output_dir=osp.join(log_dir, "videos"))
-    env.seed(0)
+    env = RecordEpisode(env, output_dir=osp.join(log_dir, "videos"), info_on_video=True)
     if args.eval:
         model_path = args.model_path
         if model_path is None:
@@ -159,7 +160,7 @@ def main():
         dataset = ManiSkill2Dataset(demo_path)
         dataloader = DataLoader(
             dataset,
-            batch_size=100,
+            batch_size=128,
             num_workers=4,
             pin_memory=True,
             drop_last=True,
@@ -197,7 +198,7 @@ def main():
         return loss.item()
 
     def evaluate_policy(env, policy, num_episodes=10):
-        obs = env.reset(seed=0)
+        obs, _ = env.reset()
         successes = []
         i = 0
         pbar = tqdm(total=num_episodes, leave=False)
@@ -206,11 +207,11 @@ def main():
             obs_device = th.from_numpy(obs).float().unsqueeze(0).to(device)
             with th.no_grad():
                 action = policy(obs_device).cpu().numpy()[0]
-            obs, reward, done, info = env.step(action)
-            if done:
+            obs, reward, terminated, truncated, info = env.step(action)
+            if terminated or truncated:
                 successes.append(info["success"])
                 i += 1
-                obs = env.reset(seed=i)
+                obs, _ = env.reset(seed=i)
                 pbar.update(1)
         success_rate = np.mean(successes)
         return success_rate

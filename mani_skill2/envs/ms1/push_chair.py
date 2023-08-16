@@ -49,7 +49,7 @@ class PushChairEnv(MS1BaseEnv):
         self._set_chair_links()
         self._ignore_collision()
 
-        if self._reward_mode == "dense":
+        if self._reward_mode in ["dense", "normalized_dense"]:
             self._set_chair_links_mesh()
 
     @staticmethod
@@ -141,7 +141,7 @@ class PushChairEnv(MS1BaseEnv):
         self._initialize_chair()
         self._initialize_robot()
 
-        if self._reward_mode == "dense":
+        if self._reward_mode in ["dense", "normalized_dense"]:
             self._set_chair_links_pcd()
         self._set_joint_physical_parameters()
 
@@ -350,6 +350,9 @@ class PushChairEnv(MS1BaseEnv):
             stage_reward=stage_reward,
         )
         return reward
+
+    def compute_normalized_dense_reward(self, **kwargs):
+        return self.compute_dense_reward(**kwargs) / 10.0
 
     # ---------------------------------------------------------------------------- #
     # Observations

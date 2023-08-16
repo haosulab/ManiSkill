@@ -3,11 +3,11 @@ from typing import Sequence, Union
 
 import numpy as np
 import sapien.core as sapien
-from gym import spaces
+from gymnasium import spaces
 from scipy.spatial.transform import Rotation
 
-from mani_skill2.utils.sapien_utils import get_entity_by_name, vectorize_pose
 from mani_skill2.utils.common import clip_and_scale_action
+from mani_skill2.utils.sapien_utils import get_entity_by_name, vectorize_pose
 
 from ..base_controller import BaseController, ControllerConfig
 from .pd_joint_pos import PDJointPosController

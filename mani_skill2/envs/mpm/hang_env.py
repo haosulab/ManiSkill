@@ -1,31 +1,21 @@
 import os
-import sys
 import pickle
-import numpy as np
-import sapien.core as sapien
-from transforms3d.quaternions import axangle2quat
-from mani_skill2.envs.mpm.base_env import MPMBaseEnv, MPMModelBuilder
-from mani_skill2.agents.robots.panda import Panda
-from mani_skill2.agents.configs.panda.defaults import PandaDefaultConfig
-from mani_skill2.utils.registration import register_env
-from mani_skill2.sensors.camera import CameraConfig
-from warp_maniskill.mpm.mpm_simulator import (
-    Simulator as MPMSimulator,
-)
-
-from transforms3d.euler import euler2quat
-from mani_skill2.utils.sapien_utils import (
-    get_entity_by_name,
-)
-
-from mani_skill2.utils.sapien_utils import (
-    get_entity_by_name,
-    vectorize_pose,
-)
-
+import sys
 from collections import OrderedDict
 
+import numpy as np
+import sapien.core as sapien
 import warp as wp
+from transforms3d.euler import euler2quat
+from transforms3d.quaternions import axangle2quat
+
+from mani_skill2.agents.configs.panda.defaults import PandaDefaultConfig
+from mani_skill2.agents.robots.panda import Panda
+from mani_skill2.envs.mpm.base_env import MPMBaseEnv, MPMModelBuilder
+from mani_skill2.sensors.camera import CameraConfig
+from mani_skill2.utils.registration import register_env
+from mani_skill2.utils.sapien_utils import get_entity_by_name, vectorize_pose
+from warp_maniskill.mpm.mpm_simulator import Simulator as MPMSimulator
 
 
 @register_env("Hang-v0", max_episode_steps=350)
@@ -363,6 +353,9 @@ class HangEnv(MPMBaseEnv):
                 "bottom_pos": np.min(particles_x[:, 2]),
             }
         return reward
+
+    def compute_normalized_dense_reward(self, **kwargs):
+        return self.compute_dense_reward(**kwargs) / 6.0
 
     def get_state(self) -> np.ndarray:
         state = super().get_state()

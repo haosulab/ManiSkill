@@ -84,11 +84,16 @@ class PickClutterEnv(StationaryManipulationEnv):
     def _load_model(self, model_id, model_scale=1.0) -> sapien.Actor:
         raise NotImplementedError
 
-    def reset(self, seed=None, reconfigure=False, episode_idx=None):
+    def reset(self, seed=None, options=None):
+        if options is None:
+            options = dict()
         self.set_episode_rng(seed)
+        episode_idx = options.pop("episode_idx", None)
+        reconfigure = options.pop("reconfigure", False)
         _reconfigure = self._set_episode(episode_idx)
         reconfigure = _reconfigure or reconfigure
-        return super().reset(seed=self._episode_seed, reconfigure=reconfigure)
+        options["reconfigure"] = reconfigure
+        return super().reset(seed=self._episode_seed, options=options)
 
     def _set_episode(self, episode_idx=None):
         reconfigure = False
@@ -221,20 +226,28 @@ class PickClutterEnv(StationaryManipulationEnv):
 
         return reward
 
+    def compute_normalized_dense_reward(self, **kwargs):
+        return self.compute_dense_reward(**kwargs) / 10.0
+
     def _register_render_cameras(self):
         cam_cfg = super()._register_render_cameras()
         cam_cfg.pose = look_at([0.3, 0, 1.0], [0.0, 0.0, 0.5])
         return cam_cfg
 
-    def render(self, mode="human"):
-        if mode in ["human", "rgb_array"]:
-            set_actor_visibility(self.target_site, 0.8)
-            set_actor_visibility(self.goal_site, 0.5)
-            ret = super().render(mode=mode)
-            set_actor_visibility(self.target_site, 0)
-            set_actor_visibility(self.goal_site, 0)
-        else:
-            ret = super().render(mode=mode)
+    def render_human(self):
+        set_actor_visibility(self.target_site, 0.8)
+        set_actor_visibility(self.goal_site, 0.5)
+        ret = super().render_human()
+        set_actor_visibility(self.target_site, 0)
+        set_actor_visibility(self.goal_site, 0)
+        return ret
+
+    def render_rgb_array(self):
+        set_actor_visibility(self.target_site, 0.8)
+        set_actor_visibility(self.goal_site, 0.5)
+        ret = super().render_rgb_array()
+        set_actor_visibility(self.target_site, 0)
+        set_actor_visibility(self.goal_site, 0)
         return ret
 
     def get_state(self) -> np.ndarray:

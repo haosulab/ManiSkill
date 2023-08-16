@@ -2,10 +2,10 @@ import copy
 import time
 from pathlib import Path
 
-import gym
+import gymnasium as gym
 import h5py
 import numpy as np
-from gym import spaces
+from gymnasium import spaces
 
 from mani_skill2 import get_commit_info, logger
 
@@ -15,7 +15,7 @@ from ..visualization.misc import images_to_video, put_info_on_image
 
 
 def parse_env_info(env: gym.Env):
-    # spec can be None if not initialized from gym.make
+    # spec can be None if not initialized from gymnasium.make
     env = env.unwrapped
     if env.spec is None:
         return None
@@ -99,7 +99,6 @@ class RecordEpisode(gym.Wrapper):
         trajectory_name=None,
         save_video=True,
         info_on_video=False,
-        render_mode="rgb_array",
         save_on_reset=True,
         clean_on_close=True,
     ):
@@ -133,7 +132,6 @@ class RecordEpisode(gym.Wrapper):
 
         self.save_video = save_video
         self.info_on_video = info_on_video
-        self.render_mode = render_mode
         self._render_images = []
 
         # Avoid circular import
@@ -160,11 +158,19 @@ class RecordEpisode(gym.Wrapper):
         self._render_images = []
 
         reset_kwargs = copy.deepcopy(kwargs)
-        obs = super().reset(**kwargs)
+        obs, info = super().reset(**kwargs)
 
         if self.save_trajectory:
             state = self.env.get_state()
-            data = dict(s=state, o=obs, a=None, r=None, done=None, info=None)
+            data = dict(
+                s=state,
+                o=copy.deepcopy(obs),
+                a=None,
+                r=None,
+                terminated=None,
+                truncated=None,
+                info=None,
+            )
             self._episode_data.append(data)
             self._episode_info.update(
                 episode_id=self._episode_id,
@@ -175,23 +181,31 @@ class RecordEpisode(gym.Wrapper):
             )
 
         if self.save_video:
-            self._render_images.append(self.env.render(self.render_mode))
+            self._render_images.append(self.env.render())
 
-        return obs
+        return obs, info
 
     def step(self, action):
-        obs, rew, done, info = super().step(action)
+        obs, rew, terminated, truncated, info = super().step(action)
         self._elapsed_steps += 1
 
         if self.save_trajectory:
             state = self.env.get_state()
-            data = dict(s=state, o=obs, a=action, r=rew, done=done, info=info)
+            data = dict(
+                s=state,
+                o=copy.deepcopy(obs),
+                a=action,
+                r=rew,
+                terminated=terminated,
+                truncated=truncated,
+                info=info,
+            )
             self._episode_data.append(data)
             self._episode_info["elapsed_steps"] += 1
             self._episode_info["info"] = info
 
         if self.save_video:
-            image = self.env.render(self.render_mode)
+            image = self.env.render()
 
             if self.info_on_video:
                 scalar_info = extract_scalars_from_info(info)
@@ -203,7 +217,7 @@ class RecordEpisode(gym.Wrapper):
 
             self._render_images.append(image)
 
-        return obs, rew, done, info
+        return obs, rew, terminated, truncated, info
 
     def flush_trajectory(self, verbose=False, ignore_empty_transition=False):
         if not self.save_trajectory or len(self._episode_data) == 0:
@@ -217,11 +231,21 @@ class RecordEpisode(gym.Wrapper):
         # Observations need special processing
         obs = [x["o"] for x in self._episode_data]
         if isinstance(obs[0], dict):
+            obs_group = group.create_group("obs", track_order=True)
             # NOTE(jigu): If each obs is empty, then nothing will be stored.
             obs = [flatten_dict_keys(x) for x in obs]
             obs = {k: [x[k] for x in obs] for k in obs[0].keys()}
             obs = {k: np.stack(v) for k, v in obs.items()}
             for k, v in obs.items():
+                # create subgroups if they don't exist yet. Can be removed once https://github.com/h5py/h5py/issues/1471 is fixed
+                subgroups = k.split("/")[:-1]
+                curr_group = obs_group
+                for subgroup in subgroups:
+                    if subgroup in curr_group:
+                        curr_group = curr_group[subgroup]
+                    else:
+                        curr_group = curr_group.create_group(subgroup, track_order=True)
+
                 if "rgb" in k and v.ndim == 4:
                     # NOTE(jigu): It is more efficient to use gzip than png for a sequence of images.
                     group.create_dataset(
@@ -248,7 +272,9 @@ class RecordEpisode(gym.Wrapper):
                         compression_opts=5,
                     )
                 elif "seg" in k and v.ndim in (3, 4):
-                    assert np.issubdtype(v.dtype, np.integer), v.dtype
+                    assert (
+                        np.issubdtype(v.dtype, np.integer) or v.dtype == np.bool_
+                    ), v.dtype
                     group.create_dataset(
                         "obs/" + k,
                         data=v,
@@ -262,6 +288,7 @@ class RecordEpisode(gym.Wrapper):
             obs = np.stack(obs)
             group.create_dataset("obs", data=obs, dtype=obs.dtype)
         else:
+            print(obs[0])
             raise NotImplementedError(type(obs[0]))
 
         if len(self._episode_data) == 1:

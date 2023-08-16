@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import Sequence, Union
 
-from gym import spaces
 import numpy as np
+from gymnasium import spaces
 
 from ..base_controller import BaseController, ControllerConfig
 

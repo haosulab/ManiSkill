@@ -37,14 +37,18 @@ class AssemblingKitsEnv(StationaryManipulationEnv):
 
         super().__init__(**kwargs)
 
-    def reset(self, seed=None, episode_idx=None, reconfigure=False, **kwargs):
+    def reset(self, seed=None, options=None):
+        if options is None:
+            options = dict()
         self.set_episode_rng(seed)
-
+        episode_idx = options.pop("episode_idx", None)
+        reconfigure = options.pop("reconfigure", False)
         if episode_idx is None:
             episode_idx = self._episode_rng.randint(len(self._episodes))
         if self.episode_idx != episode_idx:
             reconfigure = True
         self.episode_idx = episode_idx
+        options["reconfigure"] = reconfigure
 
         episode = self._episodes[episode_idx]
         self.kit_id: int = episode["kit"]
@@ -52,7 +56,7 @@ class AssemblingKitsEnv(StationaryManipulationEnv):
         self.object_id: int = episode["obj_to_place"]
         self._other_objects_id: List[int] = episode["obj_in_place"]
 
-        return super().reset(seed=self._episode_seed, reconfigure=reconfigure, **kwargs)
+        return super().reset(seed=self._episode_seed, options=options)
 
     def _parse_json(self, path):
         """Parse kit JSON information"""
@@ -221,6 +225,9 @@ class AssemblingKitsEnv(StationaryManipulationEnv):
                     )
 
         return reward
+
+    def compute_normalized_dense_reward(self, **kwargs):
+        return self.compute_dense_reward(**kwargs) / 10.0
 
     def _register_cameras(self):
         cam_cfg = super()._register_cameras()

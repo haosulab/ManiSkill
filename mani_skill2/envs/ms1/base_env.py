@@ -1,6 +1,6 @@
 from collections import OrderedDict
-from typing import Dict, List, Tuple
 from pathlib import Path
+from typing import Dict, List, Tuple
 
 import numpy as np
 import sapien.core as sapien
@@ -9,15 +9,15 @@ from sapien.core import Pose
 from mani_skill2 import format_path
 from mani_skill2.agents.robots.mobile_panda import DummyMobileAgent
 from mani_skill2.envs.sapien_env import BaseEnv
+from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.common import random_choice
 from mani_skill2.utils.io_utils import load_json
 from mani_skill2.utils.sapien_utils import (
     get_actor_state,
     get_articulation_padded_state,
     parse_urdf_config,
-    vectorize_pose
+    vectorize_pose,
 )
-from mani_skill2.sensors.camera import CameraConfig
 
 
 class MS1BaseEnv(BaseEnv):
@@ -80,13 +80,17 @@ class MS1BaseEnv(BaseEnv):
         scene_config.default_static_friction = 0.5
         return scene_config
 
-    def reset(self, seed=None, reconfigure=False, model_id=None):
+    def reset(self, seed=None, options=None):
+        if options is None:
+            options = dict()
         self._prev_actor_pose = None
         self.set_episode_rng(seed)
+        model_id = options.pop("model_id", None)
+        reconfigure = options.pop("reconfigure", False)
         _reconfigure = self._set_model(model_id)
         reconfigure = _reconfigure or reconfigure
-        ret = super().reset(seed=self._episode_seed, reconfigure=reconfigure)
-        return ret
+        options["reconfigure"] = reconfigure
+        return super().reset(seed=self._episode_seed, options=options)
 
     def _set_model(self, model_id):
         """Set the model id. If not provided, choose one randomly."""
@@ -185,7 +189,7 @@ class MS1BaseEnv(BaseEnv):
         if self._obs_mode not in ["state", "state_dict"]:
             obs["base_pose"] = vectorize_pose(self.agent.base_pose)
         return obs
-    
+
     def _get_obs_extra(self) -> OrderedDict:
         obs = OrderedDict()
         if self._obs_mode in ["state", "state_dict"]:

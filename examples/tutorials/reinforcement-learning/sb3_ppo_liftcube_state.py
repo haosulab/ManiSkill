@@ -2,7 +2,7 @@
 import argparse
 import os.path as osp
 
-import gym
+import gymnasium as gym
 import numpy as np
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
@@ -14,36 +14,26 @@ import mani_skill2.envs
 from mani_skill2.utils.wrappers import RecordEpisode
 
 
-# Defines a continuous, infinite horizon, task where done is always False
+# Defines a continuous, infinite horizon, task where terminated is always False
 # unless a timelimit is reached.
 class ContinuousTaskWrapper(gym.Wrapper):
-    def __init__(self, env, max_episode_steps: int) -> None:
+    def __init__(self, env) -> None:
         super().__init__(env)
-        self._elapsed_steps = 0
-        self._max_episode_steps = max_episode_steps
 
-    def reset(self):
-        self._elapsed_steps = 0
-        return super().reset()
+    def reset(self, *args, **kwargs):
+        return super().reset(*args, **kwargs)
 
     def step(self, action):
-        ob, rew, done, info = super().step(action)
-        self._elapsed_steps += 1
-        if self._elapsed_steps >= self._max_episode_steps:
-            done = True
-            info["TimeLimit.truncated"] = True
-        else:
-            done = False
-            info["TimeLimit.truncated"] = False
-        return ob, rew, done, info
+        ob, rew, terminated, truncated, info = super().step(action)
+        return ob, rew, False, truncated, info
 
 
 # A simple wrapper that adds a is_success key which SB3 tracks
 class SuccessInfoWrapper(gym.Wrapper):
     def step(self, action):
-        ob, rew, done, info = super().step(action)
+        ob, rew, terminated, truncated, info = super().step(action)
         info["is_success"] = info["success"]
-        return ob, rew, done, info
+        return ob, rew, terminated, truncated, info
 
 
 def parse_args():
@@ -66,13 +56,13 @@ def parse_args():
     parser.add_argument(
         "--max-episode-steps",
         type=int,
-        default=100,
+        default=50,
         help="Max steps per episode before truncating them",
     )
     parser.add_argument(
         "--total-timesteps",
         type=int,
-        default=300_000,
+        default=500_000,
         help="Total timesteps for training",
     )
     parser.add_argument(
@@ -97,11 +87,11 @@ def main():
     num_envs = args.n_envs
     max_episode_steps = args.max_episode_steps
     log_dir = args.log_dir
-    rollout_steps = 3200
+    rollout_steps = 4800
 
     obs_mode = "state"
     control_mode = "pd_ee_delta_pose"
-    reward_mode = "dense"
+    reward_mode = "normalized_dense"
     if args.seed is not None:
         set_random_seed(args.seed)
 
@@ -119,16 +109,16 @@ def main():
                 obs_mode=obs_mode,
                 reward_mode=reward_mode,
                 control_mode=control_mode,
+                render_mode="cameras",
+                max_episode_steps=max_episode_steps,
             )
             # For training, we regard the task as a continuous task with infinite horizon.
             # you can use the ContinuousTaskWrapper here for that
             if max_episode_steps is not None:
-                env = ContinuousTaskWrapper(env, max_episode_steps)
+                env = ContinuousTaskWrapper(env)
             if record_dir is not None:
                 env = SuccessInfoWrapper(env)
-                env = RecordEpisode(
-                    env, record_dir, info_on_video=True, render_mode="cameras"
-                )
+                env = RecordEpisode(env, record_dir, info_on_video=True)
             return env
 
         return _init
@@ -168,7 +158,7 @@ def main():
         verbose=1,
         n_steps=rollout_steps // num_envs,
         batch_size=400,
-        gamma=0.85,
+        gamma=0.8,
         n_epochs=15,
         tensorboard_log=log_dir,
         target_kl=0.05,
@@ -181,7 +171,6 @@ def main():
         # Load the saved model
         model = model.load(model_path)
     else:
-
         # define callbacks to periodically save our model and evaluate it to help monitor training
         # the below freq values will save every 10 rollouts
         eval_callback = EvalCallback(
@@ -221,6 +210,11 @@ def main():
     success = np.array(ep_lens) < 200
     success_rate = success.mean()
     print("Success Rate:", success_rate)
+
+    # close all envs
+    eval_env.close()
+    if not args.eval:
+        env.close()
 
 
 if __name__ == "__main__":

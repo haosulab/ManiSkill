@@ -39,17 +39,18 @@ class VecRobotSegmentationObservationWrapper(VecEnvObservationWrapper):
     """Add a binary mask for robot links."""
 
     def __init__(self, venv: VecEnv, replace=True):
-        super().__init__(venv)
+        from gymnasium.vector.utils.spaces import batch_space
 
         from mani_skill2.utils.wrappers.observation import (
             RobotSegmentationObservationWrapper,
         )
 
-        self.observation_space = deepcopy(venv.observation_space)
+        single_observation_space = deepcopy(venv.single_observation_space)
         RobotSegmentationObservationWrapper.init_observation_space(
-            self.observation_space, replace=replace
+            single_observation_space, replace=replace
         )
         self.replace = replace
+        super().__init__(venv, single_observation_space)
 
         # Cache robot link ids
         # NOTE(jigu): Assume robots are the same and thus can be batched
@@ -99,6 +100,6 @@ class VecRobotSegmentationObservationWrapper(VecEnvObservationWrapper):
         return observation
 
     def reset_wait(self, indices=None, **kwargs):
-        obs = super().reset_wait(indices=indices, **kwargs)
+        obs, reset_info = super().reset_wait(indices=indices, **kwargs)
         self.update_robot_link_ids(indices=indices)
-        return self.observation(obs)
+        return self.observation(obs), reset_info

@@ -1,7 +1,22 @@
 # Imitation Learning with ManiSkill2
 
-This contains single-file implementations that solve with LiftCube environment with rgbd or state observations. All scripts contain the same arguments and can be run as so
+This contains single-file implementations that solve with LiftCube environment with rgbd or state observations.
 
+To download the dataset and preprocess it for training, run the following commands
+
+```
+python -m mani_skill2.utils.download_demo "LiftCube-v0" # download base dataset
+
+# preprocess dataset into one that contains rgbd observations and pd_ee_delta_pose control actions
+python -m mani_skill2.trajectory.replay_trajectory --traj-path demos/rigid_body/LiftCube-v0/trajectory.h5 \
+    --save-traj -o rgbd -c pd_ee_delta_pose --num-procs 8
+
+# preprocess dataset into one that contains state observations and pd_ee_delta_pose control actions
+python -m mani_skill2.trajectory.replay_trajectory --traj-path demos/rigid_body/LiftCube-v0/trajectory.h5 \
+    --save-traj -o state -c pd_ee_delta_pose --num-procs 8
+```
+
+With the data downloaded and processed, you can test Behavior Cloning (BC) with the following commands. All scripts share the same command line arguments.
 
 ```
 # Training

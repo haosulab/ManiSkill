@@ -129,19 +129,15 @@ def main():
     # Main
     # ---------------------------------------------------------------------------- #
     env_kwargs = config["env_info"].get("env_kwargs")
-    evaluator.setup(args.env_id, UserPolicy, env_kwargs)
+    evaluator.setup(
+        args.env_id, UserPolicy, render_mode="cameras", env_kwargs=env_kwargs
+    )
 
-    try:
-        episodes = config["episodes"]
-        if args.num_episodes is not None:
-            episodes = episodes[: args.num_episodes]
-        cb = TqdmCallback(len(episodes))
-        evaluator.evaluate_episodes(episodes, callback=cb)
-    except:
-        exc_info = sys.exc_info()
-        print("Error during evaluation", exc_info[:-1])
-        evaluator.error("Error during evaluation", str(exc_info[0]))
-        exit(3)
+    episodes = config["episodes"]
+    if args.num_episodes is not None:
+        episodes = episodes[: args.num_episodes]
+    cb = TqdmCallback(len(episodes))
+    evaluator.evaluate_episodes(episodes, callback=cb)
 
     evaluator.submit()
     evaluator.close()

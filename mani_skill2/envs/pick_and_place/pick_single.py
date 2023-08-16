@@ -82,11 +82,17 @@ class PickSingleEnv(StationaryManipulationEnv):
         """Load the target object."""
         raise NotImplementedError
 
-    def reset(self, seed=None, reconfigure=False, model_id=None, model_scale=None):
+    def reset(self, seed=None, options=None):
+        if options is None:
+            options = dict()
         self.set_episode_rng(seed)
+        model_scale = options.pop("model_scale", None)
+        model_id = options.pop("model_id", None)
+        reconfigure = options.pop("reconfigure", False)
         _reconfigure = self._set_model(model_id, model_scale)
         reconfigure = _reconfigure or reconfigure
-        return super().reset(seed=self._episode_seed, reconfigure=reconfigure)
+        options["reconfigure"] = reconfigure
+        return super().reset(seed=self._episode_seed, options=options)
 
     def _set_model(self, model_id, model_scale):
         """Set the model id and scale. If not provided, choose one randomly."""
@@ -224,7 +230,6 @@ class PickSingleEnv(StationaryManipulationEnv):
         )
 
     def compute_dense_reward(self, info, **kwargs):
-
         # Sep. 14, 2022:
         # We changed the original complex reward to simple reward,
         # since the original reward can be unfriendly for RL,
@@ -260,6 +265,9 @@ class PickSingleEnv(StationaryManipulationEnv):
                 reward += reaching_goal_reward
 
         return reward
+
+    def compute_normalized_dense_reward(self, **kwargs):
+        return self.compute_dense_reward(**kwargs) / 10.0
 
     def compute_dense_reward_legacy(self, info, **kwargs):
         # original complex reward that is geometry-independent,
@@ -374,13 +382,13 @@ class PickSingleEnv(StationaryManipulationEnv):
 
         return reward
 
-    def render(self, mode="human"):
-        if mode in ["human", "rgb_array"]:
+    def render(self):
+        if self.render_mode in ["human", "rgb_array"]:
             set_actor_visibility(self.goal_site, 0.5)
-            ret = super().render(mode=mode)
+            ret = super().render()
             set_actor_visibility(self.goal_site, 0.0)
         else:
-            ret = super().render(mode=mode)
+            ret = super().render()
         return ret
 
     def get_state(self) -> np.ndarray:

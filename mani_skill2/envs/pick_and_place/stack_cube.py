@@ -218,3 +218,6 @@ class StackCubeEnv(StationaryManipulationEnv):
                     reward += np.maximum(reaching_reward2, 0.0)
 
         return reward
+
+    def compute_normalized_dense_reward(self, **kwargs):
+        return self.compute_dense_reward(**kwargs) / 15.0

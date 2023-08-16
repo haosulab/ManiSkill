@@ -3,8 +3,8 @@ import argparse
 import os.path as osp
 from functools import partial
 
-import gym
-import gym.spaces as spaces
+import gymnasium as gym
+import gymnasium.spaces as spaces
 import numpy as np
 import torch as th
 import torch.nn as nn
@@ -24,36 +24,26 @@ from mani_skill2.vector.vec_env import VecEnvObservationWrapper
 from mani_skill2.vector.wrappers.sb3 import SB3VecEnvWrapper
 
 
-# Defines a continuous, infinite horizon, task where done is always False
+# Defines a continuous, infinite horizon, task where terminated is always False
 # unless a timelimit is reached.
 class ContinuousTaskWrapper(gym.Wrapper):
-    def __init__(self, env, max_episode_steps: int) -> None:
+    def __init__(self, env) -> None:
         super().__init__(env)
-        self._elapsed_steps = 0
-        self._max_episode_steps = max_episode_steps
 
-    def reset(self):
-        self._elapsed_steps = 0
-        return super().reset()
+    def reset(self, *args, **kwargs):
+        return super().reset(*args, **kwargs)
 
     def step(self, action):
-        ob, rew, done, info = super().step(action)
-        self._elapsed_steps += 1
-        if self._elapsed_steps >= self._max_episode_steps:
-            done = True
-            info["TimeLimit.truncated"] = True
-        else:
-            done = False
-            info["TimeLimit.truncated"] = False
-        return ob, rew, done, info
+        ob, rew, terminated, truncated, info = super().step(action)
+        return ob, rew, False, truncated, info
 
 
 # A simple wrapper that adds a is_success key which SB3 tracks
 class SuccessInfoWrapper(gym.Wrapper):
     def step(self, action):
-        ob, rew, done, info = super().step(action)
+        ob, rew, terminated, truncated, info = super().step(action)
         info["is_success"] = info["success"]
-        return ob, rew, done, info
+        return ob, rew, terminated, truncated, info
 
 
 class ManiSkillRGBDWrapper(gym.ObservationWrapper):
@@ -127,11 +117,12 @@ class ManiSkillRGBDWrapper(gym.ObservationWrapper):
 # as the gpu optimization makes it incompatible with the SB3 wrapper
 class ManiSkillRGBDVecEnvWrapper(VecEnvObservationWrapper):
     def __init__(self, env):
-        super().__init__(env)
         assert env.obs_mode == "rgbd"
-        self.observation_space = ManiSkillRGBDWrapper.init_observation_space(
-            env.observation_space
+        # we simply define the single env observation space. The inherited wrapper automatically computes the batched version
+        single_observation_space = ManiSkillRGBDWrapper.init_observation_space(
+            env.single_observation_space
         )
+        super().__init__(env, single_observation_space)
 
     def observation(self, observation):
         return ManiSkillRGBDWrapper.convert_observation(observation)
@@ -229,13 +220,13 @@ def parse_args():
     parser.add_argument(
         "--max-episode-steps",
         type=int,
-        default=100,
+        default=50,
         help="Max steps per episode before truncating them",
     )
     parser.add_argument(
         "--total-timesteps",
         type=int,
-        default=160_000,
+        default=256_000,
         help="Total timesteps for training",
     )
     parser.add_argument(
@@ -281,11 +272,17 @@ def main():
         # NOTE: Import envs here so that they are registered with gym in subprocesses
         import mani_skill2.envs
 
-        env = gym.make(env_id, obs_mode=obs_mode, control_mode=control_mode)
+        env = gym.make(
+            env_id,
+            obs_mode=obs_mode,
+            control_mode=control_mode,
+            render_mode="cameras",
+            max_episode_steps=max_episode_steps,
+        )
         # For training, we regard the task as a continuous task with infinite horizon.
         # you can use the ContinuousTaskWrapper here for that
         if max_episode_steps is not None:
-            env = ContinuousTaskWrapper(env, max_episode_steps)
+            env = ContinuousTaskWrapper(env)
         env = ManiSkillRGBDWrapper(env)
         # For evaluation, we record videos
         if record_dir is not None:
@@ -295,7 +292,6 @@ def main():
                 record_dir,
                 save_trajectory=False,
                 info_on_video=True,
-                render_mode="cameras",
             )
         return env
 
@@ -311,7 +307,8 @@ def main():
     )
     eval_env = SubprocVecEnv([env_fn for _ in range(1)])
     eval_env = VecMonitor(eval_env)  # Attach a monitor to log episode info
-    eval_env.seed(args.seed)
+    eval_env.seed(seed=args.seed)
+    eval_env.reset()
 
     if args.eval:
         env = eval_env
@@ -323,14 +320,13 @@ def main():
                 num_envs,
                 obs_mode=obs_mode,
                 control_mode=control_mode,
-                # specify wrappers for each individual environment e.g here we specify the
-                # Continuous task wrapper and pass in the max_episode_steps parameter via the partial tool
-                wrappers=[
-                    partial(ContinuousTaskWrapper, max_episode_steps=max_episode_steps)
-                ],
+                wrappers=[partial(ContinuousTaskWrapper)],
+                max_episode_steps=max_episode_steps,
             )
             env = ManiSkillRGBDVecEnvWrapper(env)
-            env = SB3VecEnvWrapper(env)
+            env = SB3VecEnvWrapper(
+                env
+            )  # makes MS2VecEnvs compatible with SB3. It's equivalent to SubprocVecEnv
         else:
             env_fn = partial(
                 make_env,
@@ -340,8 +336,8 @@ def main():
             env = SubprocVecEnv([env_fn for _ in range(num_envs)])
         # Attach a monitor to log episode info
         env = VecMonitor(env)
-        env.seed(args.seed)
-
+        env.seed(seed=args.seed)  # Note SB3 vec envs don't use the gymnasium API
+        env.reset()
     # Define the policy configuration and algorithm configuration
     policy_kwargs = dict(
         features_extractor_class=CustomExtractor, net_arch=[256, 128], log_std_init=-0.5
@@ -399,6 +395,11 @@ def main():
     success = np.array(ep_lens) < 200
     success_rate = success.mean()
     print("Success Rate:", success_rate)
+
+    # close all envs
+    eval_env.close()
+    if not args.eval:
+        env.close()
 
 
 if __name__ == "__main__":

@@ -2,22 +2,23 @@
 
 ## Gym Interface
 
-Here is a basic example of how to make a ManiSkill2 environment following the interface of [OpenAI Gym](https://github.com/openai/gym) and run a random policy.
+Here is a basic example of how to make a ManiSkill2 environment following the interface of [Gymnasium](https://gymnasium.farama.org/) and run a random policy.
+
+**Note**: starting from ManiSkill2 v0.5.0, we have switched to the [Gymnasium](https://gymnasium.farama.org/) interface in place of the old [OpenAI Gym](https://github.com/openai/gym). The instructions below apply to the latest version of ManiSkill2 with Gymnasium. If you are using ManiSkill2 versions prior to v0.5.0, please follow the OpenAI Gym interface (i.e., replace `import gymnasium as gym` with `import gym`, and replace `obs, reward, terminated, truncated, info = env.step(action)` with `obs, reward, done, info = env.step(action)`).
 
 ```python
-import gym
-import mani_skill2.envs  # import to register all environments in gym
+import gymnasium as gym
+import mani_skill2.envs
 
-env = gym.make("PickCube-v0", obs_mode="rgbd", control_mode="pd_ee_delta_pose")
+env = gym.make("PickCube-v0", obs_mode="rgbd", control_mode="pd_joint_delta_pos", render_mode="human")
 print("Observation space", env.observation_space)
 print("Action space", env.action_space)
 
-env.seed(0)  # specify a seed for randomness
-obs = env.reset()
-done = False
-while not done:
+obs, _ = env.reset(seed=0) # reset with a seed for randomness
+terminated, truncated = False, False
+while not terminated and not truncated:
     action = env.action_space.sample()
-    obs, reward, done, info = env.step(action)
+    obs, reward, terminated, truncated, info = env.step(action)
     env.render()  # a display is required to render
 env.close()
 ```
@@ -74,11 +75,14 @@ from mani_skill2.vector import VecEnv, make
 env: VecEnv = make("PickCube-v0", num_envs=4)
 ```
 
-Please see `mani_skill2/examples/demo_vec_env.py` for a complete example:
+Please see `mani_skill2/examples/demo_vec_env.py` for a complete example of how to use the ManiSkill2 vectorized environment as well as some simple profiling code to test speed of environment sampling with different environments and settings. You can run it directly as so below:
 
 ```bash
 python -m mani_skill2.examples.demo_vec_env -e PickCube-v0 -n 4
 ```
+
+You can compare the speed difference by passing in `--vecenv-type "gym"` to use the default gym vectorized environment. 
+
 
 We provide examples to use our `VecEnv` with [Stable-baselines3](https://stable-baselines3.readthedocs.io/en/master/). Please refer to our [notebook](https://github.com/haosulab/ManiSkill2/blob/main/examples/tutorials/2_reinforcement_learning.ipynb) or [example scripts](https://github.com/haosulab/ManiSkill2/tree/main/examples/tutorials/reinforcement-learning).
 

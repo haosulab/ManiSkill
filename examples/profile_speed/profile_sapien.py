@@ -1,17 +1,16 @@
 """CartPole-Swingup."""
 
+import cv2
+import gymnasium as gym
 import numpy as np
-from transforms3d.quaternions import axangle2quat
-import gym
-from gym.utils import seeding
-from gym import spaces
-
+import PIL.Image as Image
 import sapien.core as sapien
+from gymnasium import spaces
+from gymnasium.utils import seeding
 from sapien.core import Pose
 from sapien.utils.viewer import Viewer
-import PIL.Image as Image
 from transforms3d.euler import euler2quat
-import cv2
+from transforms3d.quaternions import axangle2quat
 
 
 class TestSapienEnv(gym.Env):
@@ -191,7 +190,7 @@ class CartPoleSwingUpEnv(TestSapienEnv):
         self.cartpole.set_qpos([0, np.pi])
         self.cartpole.set_qvel([0, 0])
         self._scene.step()
-        return self._get_obs()
+        return self._get_obs(), {}
 
     def _get_obs(self):
         qpos = self.cartpole.get_qpos()
@@ -258,7 +257,7 @@ def main():
         env.render("rgbd")
         render_time += time.time() - t
         if done:
-            obs = env.reset()
+            obs, _ = env.reset()
 
     print("Num steps:", num_steps)
     print("Simulation time:", sim_time, "FPS:", num_steps / sim_time)

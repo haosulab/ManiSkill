@@ -1,27 +1,22 @@
 import os
-import numpy as np
-from mani_skill2.agents.robots.panda import Panda
-from mani_skill2 import PACKAGE_ASSET_DIR
-import sapien.core as sapien
 from collections import OrderedDict
-from mani_skill2.agents.configs.panda.variants import PandaPourConfig
-from mani_skill2.envs.mpm.base_env import MPMBaseEnv, MPMModelBuilder, MPMSimulator
 
+import numpy as np
+import sapien.core as sapien
+import warp as wp
+from transforms3d.euler import euler2quat
+
+from mani_skill2 import PACKAGE_ASSET_DIR
+from mani_skill2.agents.configs.panda.variants import PandaPourConfig
+from mani_skill2.agents.robots.panda import Panda
+from mani_skill2.envs.mpm.base_env import MPMBaseEnv, MPMModelBuilder, MPMSimulator
+from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.geometry import (
-    get_local_axis_aligned_bbox_for_link,
     get_local_aabc_for_actor,
+    get_local_axis_aligned_bbox_for_link,
 )
 from mani_skill2.utils.registration import register_env
-from mani_skill2.sensors.camera import CameraConfig
-from transforms3d.euler import euler2quat
-from mani_skill2.utils.sapien_utils import (
-    get_entity_by_name,
-    vectorize_pose,
-)
-
-from collections import OrderedDict
-
-import warp as wp
+from mani_skill2.utils.sapien_utils import get_entity_by_name, vectorize_pose
 
 
 @wp.kernel
@@ -100,8 +95,12 @@ class PourEnv(MPMBaseEnv):
 
     def _load_actors(self):
         super()._load_actors()
-        bottle_file = os.path.join(PACKAGE_ASSET_DIR, "deformable_manipulation", "bottle.glb")
-        beaker_file = os.path.join(PACKAGE_ASSET_DIR, "deformable_manipulation", "beaker.glb")
+        bottle_file = os.path.join(
+            PACKAGE_ASSET_DIR, "deformable_manipulation", "bottle.glb"
+        )
+        beaker_file = os.path.join(
+            PACKAGE_ASSET_DIR, "deformable_manipulation", "beaker.glb"
+        )
 
         b = self._scene.create_actor_builder()
         b.add_visual_from_file(bottle_file, scale=[0.025] * 3)
@@ -297,7 +296,7 @@ class PourEnv(MPMBaseEnv):
             t = self._episode_rng.uniform(np.pi, np.pi * 2)
             self._source_pos = sapien.Pose([r * np.cos(t), r * np.sin(t), 0.0])
 
-            from transforms3d.quaternions import qmult, axangle2quat
+            from transforms3d.quaternions import axangle2quat, qmult
 
             q = qmult(
                 axangle2quat(
@@ -534,6 +533,9 @@ class PourEnv(MPMBaseEnv):
             + reward_dist
             + reward_finger
         )
+
+    def compute_normalized_dense_reward(self, **kwargs):
+        return self.compute_dense_reward(**kwargs) / 15.0
 
     def get_mpm_state(self):
         n = self.mpm_model.struct.n_particles

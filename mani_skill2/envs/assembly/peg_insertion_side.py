@@ -15,8 +15,12 @@ from .base_env import StationaryManipulationEnv
 class PegInsertionSideEnv(StationaryManipulationEnv):
     _clearance = 0.003
 
-    def reset(self, reconfigure=True, **kwargs):
-        return super().reset(reconfigure=reconfigure, **kwargs)
+    def reset(self, seed=None, options=None):
+        if options is None:
+            options = {}
+        if options.get("reconfigure") is None:
+            options["reconfigure"] = True
+        return super().reset(seed, options)
 
     def _build_box_with_hole(
         self, inner_radius, outer_radius, depth, center=(0, 0), name="box_with_hole"
@@ -45,7 +49,7 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
         mat.roughness = 0.5
         mat.specular = 0.5
 
-        for (half_size, pose) in zip(half_sizes, poses):
+        for half_size, pose in zip(half_sizes, poses):
             builder.add_box_collision(pose, half_size)
             builder.add_box_visual(pose, half_size, material=mat)
         return builder.build_static(name)
@@ -258,6 +262,9 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
             )
 
         return reward
+
+    def compute_normalized_dense_reward(self, **kwargs):
+        return self.compute_dense_reward(**kwargs) / 25.0
 
     def _register_cameras(self):
         cam_cfg = super()._register_cameras()

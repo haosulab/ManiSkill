@@ -1,23 +1,18 @@
 import os
-import numpy as np
-import sapien.core as sapien
-from mani_skill2.envs.mpm.base_env import MPMBaseEnv
-from mani_skill2 import PACKAGE_ASSET_DIR
-from mani_skill2.agents.robots.panda import Panda
-from mani_skill2.agents.configs.panda.variants import PandaBucketConfig
-from mani_skill2.utils.registration import register_env
-from mani_skill2.sensors.camera import CameraConfig
-
-from transforms3d.euler import euler2quat
-from mani_skill2.utils.sapien_utils import get_entity_by_name
-from mani_skill2.utils.sapien_utils import (
-    get_entity_by_name,
-    vectorize_pose,
-)
-
 from collections import OrderedDict
 
+import numpy as np
+import sapien.core as sapien
 import warp as wp
+from transforms3d.euler import euler2quat
+
+from mani_skill2 import PACKAGE_ASSET_DIR
+from mani_skill2.agents.configs.panda.variants import PandaBucketConfig
+from mani_skill2.agents.robots.panda import Panda
+from mani_skill2.envs.mpm.base_env import MPMBaseEnv
+from mani_skill2.sensors.camera import CameraConfig
+from mani_skill2.utils.registration import register_env
+from mani_skill2.utils.sapien_utils import get_entity_by_name, vectorize_pose
 
 
 @wp.kernel
@@ -143,7 +138,9 @@ class FillEnv(MPMBaseEnv):
 
     def _load_actors(self):
         super()._load_actors()
-        beaker_file = os.path.join(PACKAGE_ASSET_DIR, "deformable_manipulation", "beaker.glb")
+        beaker_file = os.path.join(
+            PACKAGE_ASSET_DIR, "deformable_manipulation", "beaker.glb"
+        )
 
         b = self._scene.create_actor_builder()
         b.add_visual_from_file(beaker_file, scale=[0.04] * 3)
@@ -306,11 +303,14 @@ class FillEnv(MPMBaseEnv):
             }
         return reaching_reward * 0.1 + inside_reward + spill_reward + tilt_reward * 0.5
 
-    def render(self, mode="human", draw_box=False, draw_target=False):
+    def compute_normalized_dense_reward(self, **kwargs):
+        return self.compute_dense_reward(**kwargs) / 2.5
+
+    def render(self, draw_box=False, draw_target=False):
         if draw_target:
             bbox = self.target_box
             box = self._add_draw_box(bbox)
-        img = super().render(mode, draw_box)
+        img = super().render(draw_box)
         if draw_target:
             self._remove_draw_box(box)
         return img
@@ -326,7 +326,6 @@ class FillEnv(MPMBaseEnv):
 
 
 if __name__ == "__main__":
-
     env = FillEnv()
     env.reset()
 

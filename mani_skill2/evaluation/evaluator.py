@@ -1,7 +1,7 @@
 from collections import OrderedDict
 from typing import Callable, List, Type
 
-import gym
+import gymnasium as gym
 import numpy as np
 
 from mani_skill2.envs.sapien_env import BaseEnv
@@ -16,7 +16,13 @@ class BaseEvaluator:
 
     MAX_EPISODE_STEPS = 1000
 
-    def setup(self, env_id: str, policy_cls: Type[BasePolicy], env_kwargs=None):
+    def setup(
+        self,
+        env_id: str,
+        policy_cls: Type[BasePolicy],
+        render_mode="cameras",
+        env_kwargs=None,
+    ):
         """Setup environment and policy."""
         self.env_id = env_id
         self.env_kwargs = {} if env_kwargs is None else env_kwargs
@@ -25,32 +31,35 @@ class BaseEvaluator:
         control_mode = policy_cls.get_control_mode(env_id)
 
         self.env: BaseEnv = gym.make(
-            self.env_id, obs_mode=obs_mode, control_mode=control_mode, **self.env_kwargs
+            self.env_id,
+            obs_mode=obs_mode,
+            control_mode=control_mode,
+            render_mode=render_mode,
+            **self.env_kwargs
         )
         self.policy = policy_cls(
             self.env_id, self.env.observation_space, self.env.action_space
         )
         self.result = OrderedDict()
 
-    def evaluate_episode(self, reset_kwargs, render_mode=None):
+    def evaluate_episode(self, reset_kwargs, render=False):
         """Evaluate a single episode."""
         env = self.env
         policy = self.policy
 
-        obs = env.reset(**reset_kwargs)
+        obs, _ = env.reset(**reset_kwargs)
         policy.reset(obs)
-
         # NOTE(jigu): Use for-loop rather than while-loop
         # in case time limit is not correctly set.
         for _ in range(self.MAX_EPISODE_STEPS):
             action = policy.act(obs)
             # NOTE(jigu): render after action in case action is needed to visualize
-            if render_mode is not None:
-                env.render(mode=render_mode)
-            obs, reward, done, info = env.step(action)
-            if done:
-                if render_mode is not None:
-                    env.render(mode=render_mode)
+            if render:
+                env.render()
+            obs, reward, terminated, truncated, info = env.step(action)
+            if terminated or truncated:
+                if render:
+                    env.render()
                 assert "success" in info, sorted(info.keys())
                 metrics = extract_scalars_from_info(info, "TimeLimit.truncated")
                 return metrics
@@ -80,7 +89,7 @@ class BaseEvaluator:
 
             if callback is not None:
                 callback(i + 1, metrics)
-    
+
     def close(self):
         self.env.close()
 

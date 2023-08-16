@@ -12,7 +12,7 @@ ManiSkill2 is a unified benchmark for learning generalizable robotic manipulatio
 
 Please refer to our [documentation](https://haosulab.github.io/ManiSkill2) to learn more information. There are also hands-on [tutorials](examples/tutorials) (e.g, [quickstart colab tutorial](https://colab.research.google.com/github/haosulab/ManiSkill2/blob/main/examples/tutorials/1_quickstart.ipynb)).
 
-We invite you to participate in the associated [ManiSkill2 challenge](https://sapien.ucsd.edu/challenges/maniskill/) where the top teams will be awarded prizes.
+<!-- We invite you to participate in the associated [ManiSkill2 challenge](https://sapien.ucsd.edu/challenges/maniskill/) where the top teams will be awarded prizes. -->
 
 **Table of Contents**
 
@@ -20,7 +20,7 @@ We invite you to participate in the associated [ManiSkill2 challenge](https://sa
 - [Getting Started](#getting-started)
 - [Reinforcement Learning Example with ManiSkill2-Learn](#reinforcement-learning-example-with-maniskill2-learn)
 - [Demonstrations](#demonstrations)
-- [ManiSkill2 Challenge](#maniskill2-challenge)
+<!-- - [ManiSkill2 Challenge](#maniskill2-challenge) -->
 - [Leaderboard](#leaderboard)
 - [License](#license)
 - [Citation](#citation)
@@ -72,22 +72,21 @@ If you encounter any issues with installation, please see the [troubleshooting](
 
 ## Getting Started
 
-Here is a basic example of how to make an [OpenAI Gym](https://github.com/openai/gym) environment and run a random policy.
+Here is a basic example of how to make an [Gym/Gymnasium](https://github.com/farama-foundation/gymnasium) environment and run a random policy.
 
 ```python
-import gym
+import gymnasium as gym
 import mani_skill2.envs
 
-env = gym.make("PickCube-v0", obs_mode="rgbd", control_mode="pd_joint_delta_pos")
+env = gym.make("PickCube-v0", obs_mode="rgbd", control_mode="pd_joint_delta_pos", render_mode="human")
 print("Observation space", env.observation_space)
 print("Action space", env.action_space)
 
-env.seed(0)  # specify a seed for randomness
-obs = env.reset()
-done = False
-while not done:
+obs, reset_info = env.reset(seed=0) # reset with a seed for randomness
+terminated, truncated = False, False
+while not terminated and not truncated:
     action = env.action_space.sample()
-    obs, reward, done, info = env.step(action)
+    obs, reward, terminated, truncated, info = env.step(action)
     env.render()  # a display is required to render
 env.close()
 ```
@@ -119,7 +118,7 @@ We provide [ManiSkill2-Learn](https://github.com/haosulab/ManiSkill2-Learn), an 
 
 Please see our [documentation](https://haosulab.github.io/ManiSkill2/concepts/demonstrations.html) for more details.
 
-## ManiSkill2 Challenge
+<!-- ## ManiSkill2 Challenge
 
 The ManiSkill2 challenge is an ongoing competition using the ManiSkill2 benchmark. See our [website](https://sapien.ucsd.edu/challenges/maniskill/) for additional competition details and follow the [getting started](https://sapien.ucsd.edu/challenges/maniskill#getting-started) section to learn how to compete.
 
@@ -129,7 +128,7 @@ Previous results of the ManiSkill 2021 challenge can be found [here](https://sap
 
 ## Leaderboard
 
-You can find the leaderboard on the challenge website: <https://sapien.ucsd.edu/challenges/maniskill/challenges/ms2>.
+You can find the leaderboard on the challenge website: <https://sapien.ucsd.edu/challenges/maniskill/challenges/ms2>. -->
 
 ## License
 

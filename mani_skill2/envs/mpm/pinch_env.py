@@ -35,15 +35,11 @@ class PinchEnv(MPMBaseEnv):
 
         super().__init__(*args, **kwargs)
 
-    def reset(
-        self,
-        *args,
-        seed=None,
-        level_file=None,
-        **kwargs,
-    ):
-        self.level_file = level_file
-        return super().reset(*args, seed=seed, **kwargs)
+    def reset(self, seed=None, options=None):
+        if options is None:
+            options = dict()
+        self.level_file = options.pop("level_file", None)
+        return super().reset(seed=seed, options=options)
 
     def _setup_mpm(self):
         self.model_builder = MPMModelBuilder()
@@ -158,7 +154,6 @@ class PinchEnv(MPMBaseEnv):
         return CameraConfig("render_camera", p, q, 512, 512, 1, 0.001, 10)
 
     def compute_dense_reward(self, **kwargs):
-
         # reaching reward
         gripper_mat = self.grasp_site.get_pose().to_transformation_matrix()
         gripper_bottom_mat = np.array(
@@ -200,6 +195,11 @@ class PinchEnv(MPMBaseEnv):
             + 0.1 * reaching_reward
             + 0.1 * reward_orientation
         )
+
+    def compute_normalized_dense_reward(self, **kwargs):
+        return self.compute_dense_reward(
+            **kwargs
+        )  # original reward scale is low, so we don't normalize for now
 
     def check_success(self, **kwargs):
         self.compute_dense_reward()

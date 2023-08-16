@@ -12,11 +12,12 @@ from functools import partial
 from multiprocessing.connection import Connection
 from typing import Callable, Dict, List, Optional, Sequence, Type, Union
 
-import gym
+import gymnasium as gym
 import numpy as np
 import sapien.core as sapien
-from gym import spaces
-from gym.vector.utils.shared_memory import *
+from gymnasium import spaces
+from gymnasium.vector.utils.spaces import batch_space
+from gymnasium.vector.vector_env import VectorEnv
 
 try:
     import torch
@@ -52,16 +53,17 @@ def _worker(
 
     parent_remote.close()
 
+    env = None
     try:
         env = env_fn()
         while True:
             cmd, data = remote.recv()
             if cmd == "step":
-                obs, reward, done, info = env.step(data)
-                remote.send((obs, reward, done, info))
+                obs, reward, terminated, truncated, info = env.step(data)
+                remote.send((obs, reward, terminated, truncated, info))
             elif cmd == "reset":
-                obs = env.reset()
-                remote.send(obs)
+                obs, reset_info = env.reset(seed=data)
+                remote.send((obs, reset_info))
             elif cmd == "close":
                 remote.close()
                 break
@@ -83,10 +85,11 @@ def _worker(
     except Exception as err:
         logger.error(err, exc_info=1)
     finally:
-        env.close()
+        if env is not None:
+            env.close()
 
 
-class VecEnv:
+class VecEnv(VectorEnv):
     """Vectorized environment modified from Stable Baselines3 for ManiSkill2.
     Image observations can stay on GPU to avoid unnecessary data transfer.
 
@@ -120,6 +123,9 @@ class VecEnv:
     """
 
     device: torch.device
+    remotes: List[Connection] = []
+    work_remotes: List[Connection] = []
+    processes: List[mp.Process] = []
 
     def __init__(
         self,
@@ -148,9 +154,9 @@ class VecEnv:
         process.start()
         work_remote.close()
         remote.send(("get_attr", "observation_space"))
-        self.observation_space: spaces.Dict = remote.recv()
+        observation_space: spaces.Dict = remote.recv()
         remote.send(("get_attr", "action_space"))
-        self.action_space: spaces.Space = remote.recv()
+        action_space: spaces.Space = remote.recv()
         remote.send(("close", None))
         remote.close()
         process.join()
@@ -160,7 +166,7 @@ class VecEnv:
         self.num_envs = n_envs
 
         # Allocate numpy buffers
-        self.non_image_obs_space = deepcopy(self.observation_space)
+        self.non_image_obs_space = deepcopy(observation_space)
         self.image_obs_space = self.non_image_obs_space.spaces.pop("image")
         self._last_obs_np = [None for _ in range(n_envs)]
         self._obs_np_buffer = create_np_buffer(self.non_image_obs_space, n=n_envs)
@@ -190,7 +196,7 @@ class VecEnv:
             env_fn = env_fns[rank]
             args = (rank, work_remote, remote, env_fn)
             # daemon=True: if the main process crashes, we should not cause things to hang
-            process = ctx.Process(
+            process: mp.Process = ctx.Process(
                 target=_worker, args=args, daemon=True
             )  # pytype:disable=attribute-error
             process.start()
@@ -215,6 +221,12 @@ class VecEnv:
             torch.Tensor
         ] = self.server.auto_allocate_torch_tensors(self.texture_names)
         self.device = self._obs_torch_buffer[0].device
+
+        super().__init__(
+            num_envs=len(env_fns),
+            observation_space=observation_space,
+            action_space=action_space,
+        )
 
     # ---------------------------------------------------------------------------- #
     # Observations
@@ -252,31 +264,55 @@ class VecEnv:
     # ---------------------------------------------------------------------------- #
     # Interfaces
     # ---------------------------------------------------------------------------- #
-    def seed(self, seed: Optional[int] = None) -> List[Union[None, int]]:
-        if seed is None:
-            seed = np.random.randint(0, 2**32)
-        for idx, remote in enumerate(self.remotes):
-            remote.send(("env_method", ("seed", [seed + idx], {})))
-        return [remote.recv() for remote in self.remotes]
+    # def seed(self, seed: Optional[int] = None) -> List[Union[None, int]]:
+    #     if seed is None:
+    #         seed = np.random.randint(0, 2**32)
+    #     for idx, remote in enumerate(self.remotes):
+    #         remote.send(("env_method", ("seed", [seed + idx], {})))
+    #     return [remote.recv() for remote in self.remotes]
 
-    def reset_async(self, indices=None):
+    def reset_async(
+        self,
+        seed: Optional[Union[int, List[int]]] = None,
+        options: Optional[dict] = None,
+        indices=None,
+    ):
         remotes = self._get_target_remotes(indices)
-        for remote in remotes:
-            remote.send(("reset", None))
+        if seed is None:
+            seed = [None for _ in range(len(remotes))]
+        if isinstance(seed, int):
+            seed = [seed + i for i in range(len(remotes))]
+        for remote, single_seed in zip(remotes, seed):
+            remote.send(("reset", single_seed))
         self.waiting = True
 
-    def reset_wait(self, indices=None):
+    def reset_wait(
+        self,
+        timeout: Optional[Union[int, float]] = None,
+        seed: Optional[int] = None,
+        options: Optional[dict] = None,
+        indices=None,
+    ):
+        # TODO(stao): May be a good idea to adopt the code from Gymnasium directly for functions like this which include some nice assertions
+        # TODO(stao): MS2 doesn't return any infos per environment at the moment. So for now this info data is not handled the same as Gymnasium. It should be in the future
         remotes = self._get_target_remotes(indices)
         results = [remote.recv() for remote in remotes]
         self.waiting = False
+        results, info_data = zip(*results)
         vec_obs = self._get_torch_observations()
         self._update_np_buffer(results, indices)
         vec_obs.update(deepcopy(self._obs_np_buffer))
-        return vec_obs
+        return vec_obs, info_data
 
-    def reset(self, indices=None):
-        self.reset_async(indices=indices)
-        return self.reset_wait(indices=indices)
+    def reset(
+        self,
+        *,
+        seed: Optional[Union[int, List[int]]] = None,
+        options: Optional[dict] = None,
+        indices=None,
+    ):
+        self.reset_async(seed=seed, options=options, indices=indices)
+        return self.reset_wait(seed=seed, options=options, indices=indices)
 
     def step_async(self, actions: np.ndarray) -> None:
         for remote, action in zip(self.remotes, actions):
@@ -286,11 +322,17 @@ class VecEnv:
     def step_wait(self):
         results = [remote.recv() for remote in self.remotes]
         self.waiting = False
-        obs_list, rews, dones, infos = zip(*results)
+        obs_list, rews, terminateds, truncateds, infos = zip(*results)
         vec_obs = self._get_torch_observations()
         self._update_np_buffer(obs_list)
         vec_obs.update(deepcopy(self._obs_np_buffer))
-        return vec_obs, np.array(rews), np.array(dones), infos
+        return (
+            vec_obs,
+            np.array(rews),
+            np.array(terminateds, dtype=np.bool_),
+            np.array(truncateds, dtype=np.bool_),
+            infos,
+        )
 
     def step(self, actions):
         self.step_async(actions)
@@ -308,7 +350,7 @@ class VecEnv:
             process.join()
         self.closed = True
 
-    def render(self, mode=""):
+    def render(self):
         raise NotImplementedError
 
     def get_attr(self, attr_name: str, indices=None) -> List:
@@ -425,6 +467,10 @@ def stack_obs(obs: Sequence, space: spaces.Space, buffer: Optional[np.ndarray] =
             ret[key] = stack_obs(_obs, space[key], buffer=_buffer)
         return ret
     elif isinstance(space, spaces.Box):
+        if not isinstance(obs[0], np.ndarray):  # check for 0-dimensional parameter
+            obs = [
+                np.array(o)[None] for o in obs
+            ]  # convert float to array and add dimension
         return np.stack(obs, out=buffer)
     else:
         raise NotImplementedError(type(space))
@@ -436,7 +482,10 @@ class RGBDVecEnv(VecEnv):
 
         from mani_skill2.utils.wrappers.observation import RGBDObservationWrapper
 
-        RGBDObservationWrapper.update_observation_space(self.observation_space)
+        RGBDObservationWrapper.update_observation_space(self.single_observation_space)
+        self.observation_space = batch_space(
+            self.single_observation_space, n=self.num_envs
+        )  # need to re-batch observation space to conform to Gymnasium API
 
     def _get_torch_observations(self):
         observation = super()._get_torch_observations()
@@ -464,7 +513,12 @@ class PointCloudVecEnv(VecEnv):
 
         from mani_skill2.utils.wrappers.observation import PointCloudObservationWrapper
 
-        PointCloudObservationWrapper.update_observation_space(self.observation_space)
+        PointCloudObservationWrapper.update_observation_space(
+            self.single_observation_space
+        )
+        self.observation_space = batch_space(
+            self.single_observation_space
+        )  # need to re-batch observation space to conform to Gymnasium API
         self._buffer = {}
 
     def _get_torch_observations(self):
@@ -529,12 +583,12 @@ class PointCloudVecEnv(VecEnv):
         return observation
 
     def reset_wait(self, *args, **kargs):
-        obs = super().reset_wait(*args, **kargs)
-        return self.observation(obs)
+        obs, info = super().reset_wait(*args, **kargs)
+        return self.observation(obs), info
 
     def step_wait(self):
-        obs, rews, dones, infos = super().step_wait()
-        return self.observation(obs), rews, dones, infos
+        obs, rews, terminateds, truncateds, infos = super().step_wait()
+        return self.observation(obs), rews, terminateds, truncateds, infos
 
 
 class VecEnvWrapper(VecEnv):
@@ -562,8 +616,8 @@ class VecEnvWrapper(VecEnv):
     def close(self):
         return self.venv.close()
 
-    def render(self, mode=""):
-        return self.venv.render(mode)
+    def render(self):
+        return self.venv.render()
 
     def get_attr(self, attr_name: str, indices=None) -> List:
         return self.venv.get_attr(attr_name, indices)
@@ -595,13 +649,19 @@ class VecEnvWrapper(VecEnv):
 
 
 class VecEnvObservationWrapper(VecEnvWrapper):
+    def __init__(self, venv: VecEnv, single_observation_space: gym.Space):
+        super().__init__(venv)
+        # this is done to pin observation space attribute to single observation space for vector observation wrappers like RGBD and PointCloud
+        self.observation_space = batch_space(single_observation_space, n=self.num_envs)
+        self.single_observation_space = single_observation_space
+
     def reset_wait(self, **kwargs):
-        observation = self.venv.reset_wait(**kwargs)
-        return self.observation(observation)
+        observation, info = self.venv.reset_wait(**kwargs)
+        return self.observation(observation), info
 
     def step_wait(self):
-        observation, reward, done, info = self.venv.step_wait()
-        return self.observation(observation), reward, done, info
+        observation, reward, terminated, truncated, info = self.venv.step_wait()
+        return self.observation(observation), reward, terminated, truncated, info
 
     def observation(self, observation):
         raise NotImplementedError

@@ -1,13 +1,11 @@
 import argparse
 
-import gym
+import gymnasium as gym
 import numpy as np
 
-from mani_skill2 import make_box_space_readable
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.utils.visualization.cv2_utils import OpenCVViewer
 from mani_skill2.utils.wrappers import RecordEpisode
-
 
 MS1_ENV_IDS = [
     "OpenCabinetDoor-v1",
@@ -39,7 +37,6 @@ def parse_args():
 
 
 def main():
-    make_box_space_readable()
     np.set_printoptions(suppress=True, precision=3)
     args = parse_args()
 
@@ -52,6 +49,7 @@ def main():
         obs_mode=args.obs_mode,
         reward_mode=args.reward_mode,
         control_mode=args.control_mode,
+        render_mode=args.render_mode,
         **args.env_kwargs
     )
 
@@ -65,19 +63,19 @@ def main():
     print("Control mode", env.control_mode)
     print("Reward mode", env.reward_mode)
 
-    obs = env.reset()
+    obs, _ = env.reset()
     after_reset = True
 
     # Viewer
     if args.enable_sapien_viewer:
-        env.render(mode="human")
+        env.render_human()
     opencv_viewer = OpenCVViewer(exit_on_esc=False)
 
     def render_wait():
         if not args.enable_sapien_viewer:
             return
         while True:
-            sapien_viewer = env.render(mode="human")
+            sapien_viewer = env.viewer
             if sapien_viewer.window.key_down("0"):
                 break
 
@@ -93,9 +91,9 @@ def main():
         # Visualization
         # -------------------------------------------------------------------------- #
         if args.enable_sapien_viewer:
-            env.render(mode="human")
+            env.render_human()
 
-        render_frame = env.render(mode=args.render_mode)
+        render_frame = env.render()
 
         if after_reset:
             after_reset = False
@@ -190,7 +188,7 @@ def main():
         if key == "0":  # switch to SAPIEN viewer
             render_wait()
         elif key == "r":  # reset env
-            obs = env.reset()
+            obs, _ = env.reset()
             gripper_action = 1
             after_reset = True
             continue
@@ -239,9 +237,9 @@ def main():
             action_dict = dict(base=base_action, arm=ee_action, gripper=gripper_action)
             action = env.agent.controller.from_action_dict(action_dict)
 
-        obs, reward, done, info = env.step(action)
+        obs, reward, terminated, truncated, info = env.step(action)
         print("reward", reward)
-        print("done", done)
+        print("terminated", terminated, "truncated", truncated)
         print("info", info)
 
     env.close()

@@ -1,18 +1,25 @@
 from functools import partial
 from typing import Sequence
 
-import gym
+import gymnasium as gym
 
 from .vec_env import PointCloudVecEnv, RGBDVecEnv, VecEnv
 from .wrappers.observation import VecRobotSegmentationObservationWrapper
 
 
-def _make_env(env_spec, wrappers: Sequence[gym.Wrapper] = None, **kwargs):
+def _make_env(
+    env_spec,
+    wrappers: Sequence[gym.Wrapper] = None,
+    max_episode_steps: int = None,
+    **kwargs,
+):
     env = env_spec.make(**kwargs)
 
     # Follow gym.make
     env.unwrapped.spec = env_spec.gym_spec
-    if env_spec.max_episode_steps is not None:
+    if max_episode_steps is not None:
+        env = gym.wrappers.TimeLimit(env, max_episode_steps)
+    elif env_spec.max_episode_steps is not None:
         env = gym.wrappers.TimeLimit(env, max_episode_steps=env_spec.max_episode_steps)
 
     # Add wrappers
@@ -29,6 +36,7 @@ def make(
     server_address="auto",
     wrappers: Sequence[gym.Wrapper] = None,
     enable_segmentation=False,
+    max_episode_steps: int = None,
     **kwargs,
 ) -> VecEnv:
     """Instantiate vectorized ManiSkill2 environments.
@@ -41,6 +49,8 @@ def make(
             Otherwise, it should be a networkd address, e.g. "localhost:12345".
         wrappers (Sequence[gym.Wrapper], optional): Wrappers for the individual environment.
         enable_segmentation (bool, optional): Whether to include "Segmentation" texture in observations.
+        max_episode_steps (int, optional): Override any existing max_episode_steps/TimeLimitWrapper
+            used in the initial specification of the environment.
         **kwargs: Keyword arguments to pass to the environment.
     """
     # Avoid circular import
@@ -65,7 +75,9 @@ def make(
         camera_cfgs["add_segmentation"] = True
         kwargs["camera_cfgs"] = camera_cfgs
 
-    env_fn = partial(_make_env, env_spec, wrappers, **kwargs)
+    env_fn = partial(
+        _make_env, env_spec, wrappers, max_episode_steps=max_episode_steps, **kwargs
+    )
 
     # Dispatch observation mode
     if "image" in obs_mode:

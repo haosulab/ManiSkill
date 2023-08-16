@@ -19,6 +19,8 @@
 # If not, see <http://www.gnu.org/licenses/>.
 #
 
+# fmt: off
+# isort: skip_file
 import math, random
 import numpy as np
 
