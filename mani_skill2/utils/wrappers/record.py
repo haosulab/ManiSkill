@@ -11,7 +11,7 @@ from mani_skill2 import get_commit_info, logger
 
 from ..common import extract_scalars_from_info, flatten_dict_keys
 from ..io_utils import dump_json
-from ..visualization.misc import images_to_video, put_info_on_image
+from ..visualization.misc import images_to_video, put_info_on_image, generate_motion_profile
 
 
 def parse_env_info(env: gym.Env):
@@ -102,6 +102,7 @@ class RecordEpisode(gym.Wrapper):
         render_mode="rgb_array",
         save_on_reset=True,
         clean_on_close=True,
+        save_motion_profile=True,
     ):
         super().__init__(env)
 
@@ -135,6 +136,8 @@ class RecordEpisode(gym.Wrapper):
         self.info_on_video = info_on_video
         self.render_mode = render_mode
         self._render_images = []
+        self.save_motion_profile = save_motion_profile
+        self._motion_datas = dict(qpos_datas=[], qvel_datas=[], qacc_datas=[], indexs=[])
 
         # Avoid circular import
         from mani_skill2.envs.mpm.base_env import MPMBaseEnv
@@ -151,6 +154,7 @@ class RecordEpisode(gym.Wrapper):
                 self._episode_id -= 1
             self.flush_trajectory(ignore_empty_transition=True)
             self.flush_video(ignore_empty_transition=True)
+            self.flush_motion_profile(ignore_empty_transition=True)
 
         # Clear cache
         self._elapsed_steps = 0
@@ -158,6 +162,7 @@ class RecordEpisode(gym.Wrapper):
         self._episode_data = []
         self._episode_info = {}
         self._render_images = []
+        self._motion_datas = dict(qpos_datas=[], qvel_datas=[], qacc_datas=[], indexs=[])
 
         reset_kwargs = copy.deepcopy(kwargs)
         obs = super().reset(**kwargs)
@@ -176,6 +181,14 @@ class RecordEpisode(gym.Wrapper):
 
         if self.save_video:
             self._render_images.append(self.env.render(self.render_mode))
+        
+        if self.save_motion_profile:
+            motion_data = self.env.get_motion_data()
+            # TODO: write code in more beautiful style.
+            self._motion_datas['qpos_datas'].extend(motion_data['qpos_data'])
+            self._motion_datas['qvel_datas'].extend(motion_data['qvel_data'])
+            self._motion_datas['qacc_datas'].extend(motion_data['qacc_data'])
+            self._motion_datas['indexs'].append(motion_data['index'])
 
         return obs
 
@@ -202,6 +215,13 @@ class RecordEpisode(gym.Wrapper):
                 image = put_info_on_image(image, scalar_info, extras=extra_texts)
 
             self._render_images.append(image)
+        
+        if self.save_motion_profile:
+            motion_data = self.env.get_motion_data()
+            self._motion_datas['qpos_datas'].extend(motion_data['qpos_data'])
+            self._motion_datas['qvel_datas'].extend(motion_data['qvel_data'])
+            self._motion_datas['qacc_datas'].extend(motion_data['qacc_data'])
+            self._motion_datas['indexs'].append(motion_data['index'])
 
         return obs, rew, done, info
 
@@ -314,6 +334,24 @@ class RecordEpisode(gym.Wrapper):
             verbose=verbose,
         )
 
+    def flush_motion_profile(self, suffix="", verbose=False, ignore_empty_transition=False):
+        if not self.save_motion_profile or len(self._motion_datas) == 0:
+            return
+        if ignore_empty_transition and len(self._motion_datas['indexs']) == 1:
+            return
+        
+        motion_profile_name = "{}".format(self._episode_id)
+        if suffix:
+            motion_profile_name += "_" + suffix
+        for key in self._motion_datas:
+            self._motion_datas[key] = np.array(self._motion_datas[key])
+        generate_motion_profile(
+            self._motion_datas,
+            str(self.output_dir),
+            motion_profile_name=motion_profile_name,
+            verbose=verbose
+        )
+        
     def close(self) -> None:
         if self.save_trajectory:
             # Handle the last episode only when `save_on_reset=True`
