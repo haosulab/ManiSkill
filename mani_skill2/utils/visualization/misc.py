@@ -4,6 +4,7 @@ from typing import Dict, List, Optional
 import cv2
 import imageio
 import numpy as np
+import matplotlib.pyplot as plt
 import tqdm
 
 
@@ -47,6 +48,35 @@ def images_to_video(
         writer.append_data(im)
     writer.close()
 
+def plot_subplot(ax, timestamp, data, title, colors, labels):
+    for i in range(data.shape[1]):
+        ax.plot(timestamp, data[:, i], color=colors[i], label=labels[i])
+    ax.set_title(title)
+    ax.legend(loc='upper right', shadow=True)
+
+def generate_motion_profile(
+    motion_datas: List[dict], 
+    output_dir: str, 
+    motion_profile_name: str, 
+    verbose: bool = True,
+    sim_step: float = 1 / 200.0
+):
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    motion_profile_name = motion_profile_name.replace(" ", "_").replace("\n", "_") + '.jpg'
+    plt.ioff()
+    colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w', 'darkorange']
+    labels = ['joint1', 'joint2', 'joint3', 'joint4', 'joint5', 'joint6', 'joint7', 'finger_l', 'finger_r']
+    fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(27, 18))
+    timestamp = [(i + 1) * sim_step for i in range(motion_datas['qpos_datas'].shape[0])]
+    plot_subplot(axs[0, 0], timestamp, motion_datas["qpos_datas"], "qpos", colors, labels)
+    plot_subplot(axs[0, 1], timestamp, motion_datas["qvel_datas"], "qvel", colors, labels)
+    plot_subplot(axs[1, 0], timestamp, motion_datas["qacc_datas"], "qacc", colors, labels)
+    plt.tight_layout()
+    plt.savefig(output_dir + "/" + motion_profile_name)
+    if verbose:
+        print(f"Motion profile created: {output_dir}")
+    
 
 def normalize_depth(depth, min_depth=0, max_depth=None):
     if min_depth is None:

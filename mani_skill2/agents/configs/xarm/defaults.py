@@ -35,7 +35,7 @@ class XArmDefaultConfig:
 
         self.ee_link_name = "link_tcp"
 
-        self.arm_use_target = True # NOTE(chichu): enable to calculate next_target_pose based on current_target_pose  
+        self.arm_use_target = True # NOTE(chichu): enable to calculate next_target_pose based on current_target_pose, making it easier for sim2real
 
     @property
     def controllers(self):

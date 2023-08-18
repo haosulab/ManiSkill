@@ -158,17 +158,7 @@ class BaseEnv(gym.Env):
         # Control mode
         self._control_mode = control_mode
         # Low level control mode
-        if low_level_control_mode is None:
-            low_level_control_mode = self.SUPPORTED_LOW_LEVEL_CONTROL_MODES[0]
-        if low_level_control_mode not in self.SUPPORTED_LOW_LEVEL_CONTROL_MODES:
-            raise NotImplementedError("Unsupported reward mode: {}".format(reward_mode))
-        self.low_level_control_mode = low_level_control_mode
-        # Add break conditions for position control
-        self.time_out = 50
-        self.qpos_threshold = 0.01
-        self.qvel_threshold = 0.5   # 0.01
-        self.ee_p_threshold = 0.002
-        self.ee_q_threshold = 0.2
+        self._config_low_level_control(low_level_control_mode)
 
         # NOTE(jigu): Agent and camera configurations should not change after initialization.
         self._configure_agent()
@@ -206,6 +196,22 @@ class BaseEnv(gym.Env):
         self._main_seed = seed
         self._main_rng = np.random.RandomState(self._main_seed)
         return [self._main_seed]
+
+    def _config_low_level_control(self, low_level_control_mode):
+        if low_level_control_mode is None:
+            low_level_control_mode = self.SUPPORTED_LOW_LEVEL_CONTROL_MODES[0]
+        if low_level_control_mode not in self.SUPPORTED_LOW_LEVEL_CONTROL_MODES:
+            raise NotImplementedError("Unsupported low level control mode: {}".format(low_level_control_mode))
+        self.low_level_control_mode = low_level_control_mode
+        # Add break conditions for position control
+        self.time_out = 50
+        self.qpos_threshold = 0.01
+        self.qvel_threshold = 0.5   # 0.01
+        self.ee_p_threshold = 0.002
+        self.ee_q_threshold = 0.2
+    
+    def _reset_motion_profile_storage(self):
+        self.qpos_data, self.qvel_data, self.qacc_data = [], [], []
 
     def _configure_agent(self):
         # TODO(jigu): Support a dummy agent for simulation only
@@ -383,6 +389,8 @@ class BaseEnv(gym.Env):
 
         self._load_background()
 
+        self._reset_motion_profile_storage()
+
     def _add_ground(self, altitude=0.0, render=True):
         if render:
             rend_mtl = self._renderer.create_material()
@@ -539,6 +547,7 @@ class BaseEnv(gym.Env):
             articulation.set_qvel(np.zeros(articulation.dof))
             articulation.set_root_velocity([0, 0, 0])
             articulation.set_root_angular_velocity([0, 0, 0])
+        self._reset_motion_profile_storage()
 
     # -------------------------------------------------------------------------- #
     # Step
@@ -623,10 +632,15 @@ class BaseEnv(gym.Env):
         return info
 
     def _before_control_step(self):
-        pass
+        self._reset_motion_profile_storage()
 
     def _after_simulation_step(self):
-        pass
+        qpos = self.agent.robot.get_qpos()
+        qvel = self.agent.robot.get_qvel()
+        qacc = self.agent.robot.get_qacc()
+        self.qpos_data.append(qpos)
+        self.qvel_data.append(qvel)
+        self.qacc_data.append(qacc)
 
     # -------------------------------------------------------------------------- #
     # Simulation and other gym interfaces
@@ -713,6 +727,12 @@ class BaseEnv(gym.Env):
     def set_state(self, state: np.ndarray):
         """Set environment state. Override to include task information (e.g., goal)"""
         return self.set_sim_state(state)
+    
+    def get_motion_data(self):
+        """Get the motion profile of one rl step."""
+        motion_data = dict(qpos_data=self.qpos_data, qvel_data=self.qvel_data, qacc_data=self.qacc_data,\
+                            index=len(self.qpos_data))
+        return motion_data
 
     # -------------------------------------------------------------------------- #
     # Visualization
