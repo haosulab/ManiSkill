@@ -12,6 +12,7 @@ from stable_baselines3.common.vec_env import SubprocVecEnv, VecMonitor
 
 import mani_skill2.envs
 from mani_skill2.utils.wrappers import RecordEpisode
+from mani_skill2.utils.generate_sim_params import generate_sim_params
 
 
 # Defines a continuous, infinite horizon, task where done is always False
@@ -124,6 +125,7 @@ def main():
                 control_mode=control_mode,
                 low_level_control_mode=low_level_control_mode,
                 motion_data_type=motion_data_type,
+                sim_params = generate_sim_params()
             )
             # For training, we regard the task as a continuous task with infinite horizon.
             # you can use the ContinuousTaskWrapper here for that

@@ -56,14 +56,14 @@ class StationaryManipulationEnv(BaseEnv):
         sphere.hide_visual()
         return sphere
 
-    def _configure_agent(self):
+    def _configure_agent(self, sim_params):
         agent_cls: Type[BaseAgent] = self.SUPPORTED_ROBOTS[self.robot_uid]
-        self._agent_cfg = agent_cls.get_default_config()
+        self._agent_cfg = agent_cls.get_default_config(sim_params)
 
-    def _load_agent(self):
+    def _load_agent(self, sim_params):
         agent_cls: Type[Panda] = self.SUPPORTED_ROBOTS[self.robot_uid]
         self.agent = agent_cls(
-            self._scene, self._control_freq, self._control_mode, config=self._agent_cfg
+            self._scene, self._control_freq, self._control_mode, config=self._agent_cfg, sim_params=sim_params
         )
         self.tcp: sapien.Link = get_entity_by_name(
             self.agent.robot.get_links(), self.agent.config.ee_link_name

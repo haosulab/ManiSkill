@@ -6,10 +6,12 @@ from mani_skill2.sensors.camera import CameraConfig
 
 
 class XArmDefaultConfig:
-    def __init__(self) -> None:
+    def __init__(self, sim_params) -> None:
         self.urdf_config = dict(
             _materials=dict(
-                gripper=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)
+                gripper=dict(static_friction=sim_params['robot_fri_static'], 
+                            dynamic_friction=sim_params['robot_fri_dynamic'], 
+                            restitution=sim_params['robot_restitution'])
             ),
             link=dict(
                 left_finger=dict(
@@ -21,17 +23,17 @@ class XArmDefaultConfig:
             ),
         )
 
-        self.arm_stiffness = 1e5    # NOTE: increase from 1e3
-        self.arm_damping = 2e3  # NOTE: increase from 1e2
-        self.arm_force_limit = 100
+        self.arm_stiffness = sim_params['stiffness']    # NOTE: increase from 1e3
+        self.arm_damping = sim_params['damping']  # NOTE: increase from 1e2
+        self.arm_force_limit = sim_params['force_limit']
 
         self.gripper_joint_names = [
             "left_finger_joint",
             "right_finger_joint",
         ]
-        self.gripper_stiffness = 1e5    # NOTE: increase from 1e3
-        self.gripper_damping = 2e3  # NOTE: increase from 1e2
-        self.gripper_force_limit = 100
+        self.gripper_stiffness = sim_params['stiffness']    # NOTE: increase from 1e3
+        self.gripper_damping = sim_params['damping']  # NOTE: increase from 1e2
+        self.gripper_force_limit = sim_params['force_limit']
 
         self.ee_link_name = "link_tcp"
 
@@ -131,8 +133,8 @@ class XArmDefaultConfig:
 
 
 class XArm7DefaultConfig(XArmDefaultConfig):
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, sim_params) -> None:
+        super().__init__(sim_params)
         self.urdf_path = "{PACKAGE_ASSET_DIR}/descriptions/xarm7_textured_with_gripper_reduced_dof_v2.urdf"
         self.arm_joint_names = [
             "joint1",

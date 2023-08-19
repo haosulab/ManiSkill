@@ -54,11 +54,12 @@ class BaseAgent:
         control_mode: str = None,
         fix_root_link=True,
         config: AgentConfig = None,
+        sim_params: dict = None,
     ):
         self.scene = scene
         self._control_freq = control_freq
 
-        self.config = config or self.get_default_config()
+        self.config = config or self.get_default_config(sim_params)
 
         # URDF
         self.urdf_path = self.config.urdf_path

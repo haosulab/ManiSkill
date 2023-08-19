@@ -79,7 +79,7 @@ class BaseEnv(gym.Env):
         obs_mode=None,
         reward_mode=None,
         control_mode=None,
-        sim_freq: int = 200,    # TODO: what if we change sim_freq to 200?
+        # sim_freq: int = 200,    # TODO: what if we change sim_freq to 200?
         control_freq: int = 20,
         renderer: str = "sapien",
         renderer_kwargs: dict = None,
@@ -91,6 +91,7 @@ class BaseEnv(gym.Env):
         bg_name: str = None,
         low_level_control_mode: str = None,
         motion_data_type: List[str] = None,
+        sim_params: dict = None,
     ):
         # Create SAPIEN engine
         self._engine = sapien.Engine()
@@ -133,13 +134,13 @@ class BaseEnv(gym.Env):
         self._viewer = None
 
         # Set simulation and control frequency
-        self._sim_freq = sim_freq
+        self._sim_freq = sim_params['sim_freq']
         self._control_freq = control_freq
-        if sim_freq % control_freq != 0:
+        if self._sim_freq % control_freq != 0:
             logger.warning(
-                f"sim_freq({sim_freq}) is not divisible by control_freq({control_freq}).",
+                f"sim_freq({self._sim_freq}) is not divisible by control_freq({control_freq}).",
             )
-        self._sim_steps_per_control = sim_freq // control_freq
+        self._sim_steps_per_control = self._sim_freq // control_freq
 
         # Observation mode
         if obs_mode is None:
@@ -159,12 +160,12 @@ class BaseEnv(gym.Env):
         # Control mode
         self._control_mode = control_mode
         # Low level control mode
-        self._config_low_level_control(low_level_control_mode)
+        self._config_low_level_control(low_level_control_mode, sim_params)
         # Motion Profile
         self._motion_data_type = motion_data_type
 
         # NOTE(jigu): Agent and camera configurations should not change after initialization.
-        self._configure_agent()
+        self._configure_agent(sim_params)
         self._configure_cameras()
         self._configure_render_cameras()
         # Override camera configurations
@@ -182,7 +183,7 @@ class BaseEnv(gym.Env):
         # NOTE(jigu): `seed` is deprecated in the latest gym.
         # Use a fixed seed to initialize to enhance determinism
         self.seed(2022)
-        obs = self.reset(reconfigure=True)
+        obs = self.reset(reconfigure=True, sim_params=sim_params)
         self.observation_space = convert_observation_to_space(obs)
         if self._obs_mode == "image":
             image_obs_space = self.observation_space.spaces["image"]
@@ -200,14 +201,14 @@ class BaseEnv(gym.Env):
         self._main_rng = np.random.RandomState(self._main_seed)
         return [self._main_seed]
 
-    def _config_low_level_control(self, low_level_control_mode):
+    def _config_low_level_control(self, low_level_control_mode, sim_params):
         if low_level_control_mode is None:
             low_level_control_mode = self.SUPPORTED_LOW_LEVEL_CONTROL_MODES[0]
         if low_level_control_mode not in self.SUPPORTED_LOW_LEVEL_CONTROL_MODES:
             raise NotImplementedError("Unsupported low level control mode: {}".format(low_level_control_mode))
         self.low_level_control_mode = low_level_control_mode
         # Add break conditions for position control
-        self.time_out = 50
+        self.time_out = sim_params['time_out']
         self.qpos_threshold = 0.01
         self.qvel_threshold = 0.5   # 0.01
         self.ee_p_threshold = 0.002
@@ -217,7 +218,6 @@ class BaseEnv(gym.Env):
         self._motion_data = dict()
         for data_type in self._motion_data_type:
             self._motion_data[data_type + '_data'] = []
-        # self.qpos_data, self.qvel_data, self.qacc_data = [], [], []
 
     def _configure_agent(self):
         # TODO(jigu): Support a dummy agent for simulation only
@@ -373,14 +373,14 @@ class BaseEnv(gym.Env):
     # -------------------------------------------------------------------------- #
     # Reconfigure
     # -------------------------------------------------------------------------- #
-    def reconfigure(self):
+    def reconfigure(self, sim_params):
         """Reconfigure the simulation scene instance.
         This function should clear the previous scene, and create a new one.
         """
         self._clear()
 
-        self._setup_scene()
-        self._load_agent()
+        self._setup_scene(sim_params=sim_params)
+        self._load_agent(sim_params=sim_params)
         self._load_actors()
         self._load_articulations()
         self._setup_cameras()
@@ -492,14 +492,14 @@ class BaseEnv(gym.Env):
     # -------------------------------------------------------------------------- #
     # Reset
     # -------------------------------------------------------------------------- #
-    def reset(self, seed=None, reconfigure=False):
+    def reset(self, seed=None, reconfigure=False, sim_params=None):
         self.set_episode_rng(seed)
         self._elapsed_steps = 0
         self._time_out = False
 
         if reconfigure:
             # Reconfigure the scene if assets change
-            self.reconfigure()
+            self.reconfigure(sim_params)
         else:
             self._clear_sim_state()
 
@@ -654,11 +654,11 @@ class BaseEnv(gym.Env):
     # -------------------------------------------------------------------------- #
     # Simulation and other gym interfaces
     # -------------------------------------------------------------------------- #
-    def _get_default_scene_config(self):
+    def _get_default_scene_config(self, sim_params):
         scene_config = sapien.SceneConfig()
-        scene_config.default_dynamic_friction = 1.0
-        scene_config.default_static_friction = 1.0
-        scene_config.default_restitution = 0.0
+        scene_config.default_dynamic_friction = sim_params['obj_fri_dynamic']
+        scene_config.default_static_friction = sim_params['obj_fri_static']
+        scene_config.default_restitution = sim_params['obj_restitution']
         scene_config.contact_offset = 0.02
         scene_config.enable_pcm = False
         scene_config.solver_iterations = 25
@@ -668,12 +668,12 @@ class BaseEnv(gym.Env):
             scene_config.disable_collision_visual = True
         return scene_config
 
-    def _setup_scene(self, scene_config: Optional[sapien.SceneConfig] = None):
+    def _setup_scene(self, scene_config: Optional[sapien.SceneConfig] = None, sim_params = None):
         """Setup the simulation scene instance.
         The function should be called in reset().
         """
         if scene_config is None:
-            scene_config = self._get_default_scene_config()
+            scene_config = self._get_default_scene_config(sim_params)
         self._scene = self._engine.create_scene(scene_config)
         self._scene.set_timestep(1.0 / self._sim_freq)
 
