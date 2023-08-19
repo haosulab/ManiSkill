@@ -104,7 +104,7 @@ def main():
     control_mode = "pd_ee_delta_pose"
     reward_mode = "dense"
     low_level_control_mode = 'position'
-    motion_data_type = ['qpos', 'qvel', 'qacc']
+    motion_data_type = ['qpos', 'qvel', 'qacc', 'qf - passive_qf', 'qf']
     if args.seed is not None:
         set_random_seed(args.seed)
 

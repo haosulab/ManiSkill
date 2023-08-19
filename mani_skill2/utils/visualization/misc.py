@@ -62,16 +62,16 @@ def generate_motion_profile(
     verbose: bool = True,
     sim_step: float = 1 / 200.0,
     motion_data_type: List[str] = None,
-    nrows: int = 2,
-    ncols: int = 2,
 ):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     motion_profile_name = motion_profile_name.replace(" ", "_").replace("\n", "_") + '.jpg'
+    nrows = len(motion_data_type) // 3 + 1
+    ncols = len(motion_data_type) if len(motion_data_type) < 3 else 3
     plt.ioff()
     colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w', 'darkorange']
     labels = ['joint1', 'joint2', 'joint3', 'joint4', 'joint5', 'joint6', 'joint7', 'finger_l', 'finger_r']
-    fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(27, 18)) 
+    fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(32, 18)) 
     timestamp = [(i + 1) * sim_step for i in range(motion_datas[next(iter(motion_datas))].shape[0])]
     for i, key in enumerate(motion_datas):
         if key != 'indexs':
