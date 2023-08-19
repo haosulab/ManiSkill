@@ -103,6 +103,7 @@ class RecordEpisode(gym.Wrapper):
         save_on_reset=True,
         clean_on_close=True,
         save_motion_profile=True,
+        motion_data_type=None,
     ):
         super().__init__(env)
 
@@ -136,8 +137,13 @@ class RecordEpisode(gym.Wrapper):
         self.info_on_video = info_on_video
         self.render_mode = render_mode
         self._render_images = []
+
         self.save_motion_profile = save_motion_profile
-        self._motion_datas = dict(qpos_datas=[], qvel_datas=[], qacc_datas=[], indexs=[])
+        self._motion_data_type = motion_data_type
+        self._motion_datas = dict()
+        for type in self._motion_data_type:
+            self._motion_datas[type + '_datas'] = []
+        self._motion_datas['indexs'] = []
 
         # Avoid circular import
         from mani_skill2.envs.mpm.base_env import MPMBaseEnv
@@ -162,7 +168,10 @@ class RecordEpisode(gym.Wrapper):
         self._episode_data = []
         self._episode_info = {}
         self._render_images = []
-        self._motion_datas = dict(qpos_datas=[], qvel_datas=[], qacc_datas=[], indexs=[])
+        self._motion_datas = dict()
+        for type in self._motion_data_type:
+            self._motion_datas[type + '_datas'] = []
+        self._motion_datas['indexs'] = []
 
         reset_kwargs = copy.deepcopy(kwargs)
         obs = super().reset(**kwargs)
@@ -185,10 +194,11 @@ class RecordEpisode(gym.Wrapper):
         if self.save_motion_profile:
             motion_data = self.env.get_motion_data()
             # TODO: write code in more beautiful style.
-            self._motion_datas['qpos_datas'].extend(motion_data['qpos_data'])
-            self._motion_datas['qvel_datas'].extend(motion_data['qvel_data'])
-            self._motion_datas['qacc_datas'].extend(motion_data['qacc_data'])
-            self._motion_datas['indexs'].append(motion_data['index'])
+            for key in self._motion_datas:
+                if key == 'indexs':
+                    self._motion_datas[key].append(motion_data[key[:-1]])
+                else:
+                    self._motion_datas[key].extend(motion_data[key[:-1]])
 
         return obs
 
@@ -218,10 +228,11 @@ class RecordEpisode(gym.Wrapper):
         
         if self.save_motion_profile:
             motion_data = self.env.get_motion_data()
-            self._motion_datas['qpos_datas'].extend(motion_data['qpos_data'])
-            self._motion_datas['qvel_datas'].extend(motion_data['qvel_data'])
-            self._motion_datas['qacc_datas'].extend(motion_data['qacc_data'])
-            self._motion_datas['indexs'].append(motion_data['index'])
+            for key in self._motion_datas:
+                if key == 'indexs':
+                    self._motion_datas[key].append(motion_data[key[:-1]])
+                else:
+                    self._motion_datas[key].extend(motion_data[key[:-1]])
 
         return obs, rew, done, info
 
@@ -349,7 +360,8 @@ class RecordEpisode(gym.Wrapper):
             self._motion_datas,
             str(self.output_dir),
             motion_profile_name=motion_profile_name,
-            verbose=verbose
+            verbose=verbose,
+            motion_data_type=self._motion_data_type
         )
         
     def close(self) -> None:

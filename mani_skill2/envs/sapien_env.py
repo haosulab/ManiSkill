@@ -1,6 +1,6 @@
 import os
 from collections import OrderedDict
-from typing import Dict, Optional, Sequence, Union
+from typing import List, Dict, Optional, Sequence, Union
 
 import gym
 import numpy as np
@@ -89,7 +89,8 @@ class BaseEnv(gym.Env):
         camera_cfgs: dict = None,
         render_camera_cfgs: dict = None,
         bg_name: str = None,
-        low_level_control_mode: str = None
+        low_level_control_mode: str = None,
+        motion_data_type: List[str] = None,
     ):
         # Create SAPIEN engine
         self._engine = sapien.Engine()
@@ -159,6 +160,8 @@ class BaseEnv(gym.Env):
         self._control_mode = control_mode
         # Low level control mode
         self._config_low_level_control(low_level_control_mode)
+        # Motion Profile
+        self._motion_data_type = motion_data_type
 
         # NOTE(jigu): Agent and camera configurations should not change after initialization.
         self._configure_agent()
@@ -211,7 +214,10 @@ class BaseEnv(gym.Env):
         self.ee_q_threshold = 0.2
     
     def _reset_motion_profile_storage(self):
-        self.qpos_data, self.qvel_data, self.qacc_data = [], [], []
+        self._motion_data = dict()
+        for data_type in self._motion_data_type:
+            self._motion_data[data_type + '_data'] = []
+        # self.qpos_data, self.qvel_data, self.qacc_data = [], [], []
 
     def _configure_agent(self):
         # TODO(jigu): Support a dummy agent for simulation only
@@ -635,12 +641,9 @@ class BaseEnv(gym.Env):
         self._reset_motion_profile_storage()
 
     def _after_simulation_step(self):
-        qpos = self.agent.robot.get_qpos()
-        qvel = self.agent.robot.get_qvel()
-        qacc = self.agent.robot.get_qacc()
-        self.qpos_data.append(qpos)
-        self.qvel_data.append(qvel)
-        self.qacc_data.append(qacc)
+        _motion_data = [self.agent.robot.get_qpos(), self.agent.robot.get_qvel(), self.agent.robot.get_qacc()]
+        for i, key in enumerate(self._motion_data):
+            self._motion_data[key].append(_motion_data[i])
 
     # -------------------------------------------------------------------------- #
     # Simulation and other gym interfaces
@@ -730,9 +733,9 @@ class BaseEnv(gym.Env):
     
     def get_motion_data(self):
         """Get the motion profile of one rl step."""
-        motion_data = dict(qpos_data=self.qpos_data, qvel_data=self.qvel_data, qacc_data=self.qacc_data,\
-                            index=len(self.qpos_data))
-        return motion_data
+        # return motion_data
+        self._motion_data['index'] = len(self._motion_data[next(iter(self._motion_data))])
+        return self._motion_data
 
     # -------------------------------------------------------------------------- #
     # Visualization

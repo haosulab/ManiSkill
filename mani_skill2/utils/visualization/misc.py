@@ -53,13 +53,17 @@ def plot_subplot(ax, timestamp, data, title, colors, labels):
         ax.plot(timestamp, data[:, i], color=colors[i], label=labels[i])
     ax.set_title(title)
     ax.legend(loc='upper right', shadow=True)
+    ax.set_xlabel('time/s')
 
 def generate_motion_profile(
     motion_datas: List[dict], 
     output_dir: str, 
     motion_profile_name: str, 
     verbose: bool = True,
-    sim_step: float = 1 / 200.0
+    sim_step: float = 1 / 200.0,
+    motion_data_type: List[str] = None,
+    nrows: int = 2,
+    ncols: int = 2,
 ):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -67,11 +71,11 @@ def generate_motion_profile(
     plt.ioff()
     colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w', 'darkorange']
     labels = ['joint1', 'joint2', 'joint3', 'joint4', 'joint5', 'joint6', 'joint7', 'finger_l', 'finger_r']
-    fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(27, 18))
-    timestamp = [(i + 1) * sim_step for i in range(motion_datas['qpos_datas'].shape[0])]
-    plot_subplot(axs[0, 0], timestamp, motion_datas["qpos_datas"], "qpos", colors, labels)
-    plot_subplot(axs[0, 1], timestamp, motion_datas["qvel_datas"], "qvel", colors, labels)
-    plot_subplot(axs[1, 0], timestamp, motion_datas["qacc_datas"], "qacc", colors, labels)
+    fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(27, 18)) 
+    timestamp = [(i + 1) * sim_step for i in range(motion_datas[next(iter(motion_datas))].shape[0])]
+    for i, key in enumerate(motion_datas):
+        if key != 'indexs':
+            plot_subplot(axs[i // ncols, i % ncols], timestamp, motion_datas[key], motion_data_type[i], colors, labels)
     plt.tight_layout()
     plt.savefig(output_dir + "/" + motion_profile_name)
     if verbose:

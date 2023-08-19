@@ -103,6 +103,8 @@ def main():
     obs_mode = "state"
     control_mode = "pd_ee_delta_pose"
     reward_mode = "dense"
+    low_level_control_mode = 'position'
+    motion_data_type = ['qpos', 'qvel', 'qacc']
     if args.seed is not None:
         set_random_seed(args.seed)
 
@@ -120,6 +122,8 @@ def main():
                 obs_mode=obs_mode,
                 reward_mode=reward_mode,
                 control_mode=control_mode,
+                low_level_control_mode=low_level_control_mode,
+                motion_data_type=motion_data_type,
             )
             # For training, we regard the task as a continuous task with infinite horizon.
             # you can use the ContinuousTaskWrapper here for that
@@ -128,7 +132,7 @@ def main():
             if record_dir is not None:
                 env = SuccessInfoWrapper(env)
                 env = RecordEpisode(
-                    env, record_dir, info_on_video=True, render_mode="cameras"
+                    env, record_dir, info_on_video=True, render_mode="cameras", motion_data_type=motion_data_type
                 )
             return env
 
