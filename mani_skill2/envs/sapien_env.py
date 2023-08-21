@@ -1,6 +1,7 @@
 import os
 from collections import OrderedDict
 from typing import List, Dict, Optional, Sequence, Union
+from queue import Queue
 
 import gym
 import numpy as np
@@ -133,14 +134,16 @@ class BaseEnv(gym.Env):
         self._engine.set_renderer(self._renderer)
         self._viewer = None
 
-        # Set simulation and control frequency
+        # Set simulation frequency, control frequency, and observation latency
         self._sim_freq = sim_params['sim_freq']
         self._control_freq = control_freq
+        self._obs_latency = sim_params['obs_latency']
         if self._sim_freq % control_freq != 0:
             logger.warning(
                 f"sim_freq({self._sim_freq}) is not divisible by control_freq({control_freq}).",
             )
         self._sim_steps_per_control = self._sim_freq // control_freq
+        self._sim_steps_latency = int(self._obs_latency // (1 / self._sim_freq)) + 1
 
         # Observation mode
         if obs_mode is None:
@@ -148,6 +151,9 @@ class BaseEnv(gym.Env):
         if obs_mode not in self.SUPPORTED_OBS_MODES:
             raise NotImplementedError("Unsupported obs mode: {}".format(obs_mode))
         self._obs_mode = obs_mode
+        # Observation history is used for simulating latency.
+        self._obs_history = Queue(maxsize=self._sim_steps_latency)
+        self._total_sim_step = 0   # Used for stack history observation
 
         # Reward mode
         if reward_mode is None:
@@ -277,6 +283,18 @@ class BaseEnv(gym.Env):
     @property
     def obs_mode(self):
         return self._obs_mode
+    
+    def empty_obs_history(self):
+        while not self._obs_history.empty():
+            self._obs_history.get()
+
+    def stack_obs(self):
+        if self._obs_history.full():
+            self._obs_history.get()
+        self._obs_history.put(self.get_obs())
+
+    def fetch_obs(self):
+        return self._obs_history.queue[0]
 
     def get_obs(self):
         if self._obs_mode == "none":
@@ -396,6 +414,8 @@ class BaseEnv(gym.Env):
         self._load_background()
 
         self._reset_motion_profile_storage()
+        self.empty_obs_history()
+        self._total_sim_step = 0
 
     def _add_ground(self, altitude=0.0, render=True):
         if render:
@@ -506,8 +526,10 @@ class BaseEnv(gym.Env):
         # To guarantee seed reproducibility
         self.set_episode_rng(self._episode_seed)
         self.initialize_episode()
+        self.stack_obs()
 
-        return self.get_obs()
+        return self.fetch_obs()
+        # return self.get_obs()
 
     def set_episode_rng(self, seed):
         """Set the random generator for current episode."""
@@ -554,6 +576,8 @@ class BaseEnv(gym.Env):
             articulation.set_root_velocity([0, 0, 0])
             articulation.set_root_angular_velocity([0, 0, 0])
         self._reset_motion_profile_storage()
+        self._total_sim_step = 0
+        self.empty_obs_history()
 
     # -------------------------------------------------------------------------- #
     # Step
@@ -562,7 +586,8 @@ class BaseEnv(gym.Env):
         self.step_action(action)
         self._elapsed_steps += 1
 
-        obs = self.get_obs()
+        # obs = self.get_obs()
+        obs = self.fetch_obs()
         info = self.get_info(obs=obs)
         reward = self.get_reward(obs=obs, action=action, info=info)
         done = self.get_done(obs=obs, info=info)
@@ -587,6 +612,7 @@ class BaseEnv(gym.Env):
             sim_step = 0
             # qvel_max = 0
             while True:
+                # Determine if it's time out
                 if sim_step >= self.time_out:
                     self._time_out = True
                     # print('time_out')
@@ -594,7 +620,6 @@ class BaseEnv(gym.Env):
                     # print('ee_p_dis:' + str(ee_p_dis) + 'ee_q_dis:' + str(ee_q_dis))
                     # print(qvel_max)
                     break
-                sim_step += 1
                 qpos, target_qpos = self.agent.robot.get_qpos(), self.agent.get_target_qpos()
                 qpos_dis = np.abs(target_qpos - qpos)
                 qvel = self.agent.robot.get_qvel()
@@ -618,6 +643,8 @@ class BaseEnv(gym.Env):
                 self.agent.before_simulation_step()
                 self._scene.step()
                 self._after_simulation_step()
+                sim_step += 1
+                
         elif self.low_level_control_mode == 'impedance':
             for _ in range(self._sim_steps_per_control):
                 self.agent.before_simulation_step()
@@ -650,6 +677,11 @@ class BaseEnv(gym.Env):
 
         for i, key in enumerate(self._motion_data):
             self._motion_data[key].append(_motion_data[i])
+
+        # Stack history observation
+        self.stack_obs()
+
+        self._total_sim_step += 1
 
     # -------------------------------------------------------------------------- #
     # Simulation and other gym interfaces

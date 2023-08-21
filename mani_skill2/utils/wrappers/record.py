@@ -108,7 +108,7 @@ class RecordEpisode(gym.Wrapper):
         super().__init__(env)
 
         self.output_dir = Path(output_dir)
-        if save_trajectory or save_video:
+        if save_trajectory or save_video or save_motion_profile:
             self.output_dir.mkdir(parents=True, exist_ok=True)
         self.save_on_reset = save_on_reset
 
@@ -193,7 +193,6 @@ class RecordEpisode(gym.Wrapper):
         
         if self.save_motion_profile:
             motion_data = self.env.get_motion_data()
-            # TODO: write code in more beautiful style.
             for key in self._motion_datas:
                 if key == 'indexs':
                     self._motion_datas[key].append(motion_data[key[:-1]])
