@@ -8,14 +8,18 @@ import gym
 import numpy as np
 
 from stable_baselines3 import PPO
+from mani_skill2.utils.generate_sim_params import generate_sim_params
 
 env_id = 'PickCubeRealXArm7-v0'
-log_dir = "./logs/PickCube-v1"
+log_dir = "./logs/PickCube-v2"
 rollout_steps = 4000
 num_envs = 16
 obs_mode = "state"
 control_mode = "pd_ee_delta_pose"
 reward_mode = "dense"
+low_level_control_mode = 'position'
+motion_data_type = ['qpos', 'qvel', 'qacc', 'qf - passive_qf', 'qf']
+sim_params = generate_sim_params()
 
 import real_robot.envs
 env = gym.make(
@@ -23,6 +27,8 @@ env = gym.make(
     obs_mode=obs_mode,
     reward_mode=reward_mode,
     control_mode=control_mode,
+    low_level_control_mode=low_level_control_mode,
+    sim_params=sim_params
 )
 
 # Define the policy configuration and algorithm configuration

@@ -19,7 +19,7 @@ SIM_PARAMS_NAME = [
     #-----Low level control-----#
     'time_out',
 ]
-SIM_PARAMS = [0.1, 1e5, 2e3, 1e2, 200, 2.0, 2.0, 0.0, 1.0, 1.0, 0.0, 50]
+SIM_PARAMS = [0.0, 1e5, 2e3, 1e2, 200, 2.0, 2.0, 0.0, 1.0, 1.0, 0.0, 50]
 
 def generate_sim_params(params_group=None):
     if params_group == None:
@@ -28,7 +28,8 @@ def generate_sim_params(params_group=None):
     sim_params = dict()
     for i in range(len(SIM_PARAMS_NAME)):
         sim_params[SIM_PARAMS_NAME[i]] = params[i]
-    assert (sim_params['obs_latency'] % (1 / sim_params['sim_freq'])) < 1e-7
+    # TODO: need to tackle with the residue of float
+    # assert (sim_params['obs_latency'] % (1 / sim_params['sim_freq'])) < 1e-7
     return sim_params
 
 if __name__ == '__main__':

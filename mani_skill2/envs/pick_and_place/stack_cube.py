@@ -61,8 +61,8 @@ class UniformSampler:
 
 @register_env("StackCube-v0", max_episode_steps=200)
 class StackCubeEnv(StationaryManipulationEnv):
-    def _get_default_scene_config(self):
-        scene_config = super()._get_default_scene_config()
+    def _get_default_scene_config(self, sim_params):
+        scene_config = super()._get_default_scene_config(sim_params)
         scene_config.enable_pcm = True
         return scene_config
 

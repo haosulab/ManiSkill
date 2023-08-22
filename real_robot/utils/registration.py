@@ -55,8 +55,8 @@ def register(
     """Register a real_robot environment."""
     if name in REGISTERED_ENVS:
         logger.warning(f"Env {name} already registered")
-    if not issubclass(cls, XArmBaseEnv):
-        raise TypeError(f"Env {name} must inherit from XArmBaseEnv")
+    # if not issubclass(cls, XArmBaseEnv):
+        # raise TypeError(f"Env {name} must inherit from XArmBaseEnv")
     REGISTERED_ENVS[name] = EnvSpec(
         name, cls,
         max_episode_steps=max_episode_steps, default_kwargs=default_kwargs

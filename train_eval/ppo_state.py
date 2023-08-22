@@ -48,7 +48,7 @@ class SuccessInfoWrapper(gym.Wrapper):
 
 
 def parse_args():
-    env_id = "PickCube-v2"
+    env_id = "StackCube-v2"
     parser = argparse.ArgumentParser(
         description="Use Stable-Baselines-3 PPO to train ManiSkill2 tasks"
     )
@@ -57,7 +57,7 @@ def parse_args():
         "-n",
         "--n-envs",
         type=int,
-        default=16,
+        default=8,
         help="number of parallel envs to run. Note that increasing this does not increase rollout size",
     )
     parser.add_argument(
@@ -84,7 +84,7 @@ def parse_args():
         help="path for where logs, checkpoints, and videos are saved",
     )
     parser.add_argument(
-        "--eval", action="store_false", help="whether to only evaluate policy"
+        "--eval", action="store_true", help="whether to only evaluate policy"
     )
     parser.add_argument(
         "--model-path", type=str, help="path to sb3 model for evaluation"
@@ -99,7 +99,7 @@ def main():
     num_envs = args.n_envs
     max_episode_steps = args.max_episode_steps
     log_dir = args.log_dir
-    rollout_steps = 4000 # use to be 3200
+    rollout_steps = 4096 # use to be 3200
 
     obs_mode = "state"
     control_mode = "pd_ee_delta_pose"
@@ -174,7 +174,7 @@ def main():
         policy_kwargs=policy_kwargs,
         verbose=1,
         n_steps=rollout_steps // num_envs,
-        batch_size=400,
+        batch_size=512, # 400
         gamma=0.8,     # default = 0.85
         gae_lambda=0.9,
         n_epochs=20,
