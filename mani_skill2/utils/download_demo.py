@@ -2,9 +2,10 @@ import argparse
 import os
 import os.path as osp
 import urllib.request
+import zipfile
 
 from tqdm import tqdm
-import zipfile
+
 DATASET_SOURCES = {}
 
 # Rigid body envs
@@ -263,7 +264,11 @@ def main(args):
             )
             if osp.splitext(local_path)[1] == ".zip":
                 with zipfile.ZipFile(local_path, "r") as zip_ref:
-                    zip_ref.extractall(osp.join(args.output_dir, f"v{download_version}", meta["env_type"]))
+                    zip_ref.extractall(
+                        osp.join(
+                            args.output_dir, f"v{download_version}", meta["env_type"]
+                        )
+                    )
                 os.remove(local_path)
 
 
