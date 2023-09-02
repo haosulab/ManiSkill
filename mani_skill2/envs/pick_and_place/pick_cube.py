@@ -31,19 +31,20 @@ class PickCubeEnv(StationaryManipulationEnv):
         self.obj = self._build_cube(self.cube_half_size)
         self.goal_site = self._build_sphere_site(self.goal_thresh)
 
-    def _initialize_actors(self):
+    def _initialize_actors(self, fix=True):
         # NOTE(chichu): can be fixed to a certain pose when evaluate on real robot with simulation.
         xy = self._episode_rng.uniform(-0.1, 0.1, [2])
-        # xy = np.array([0.0, 0.0])
         xyz = np.hstack([xy, self.cube_half_size[2]])
         q = [1, 0, 0, 0]
         if self.obj_init_rot_z:
             ori = self._episode_rng.uniform(0, 2 * np.pi)
             q = euler2quat(0, 0, ori)
-        # q = [1, 0, 0, 0]
+        if fix:
+            xy = np.array([-0.0, 0.0])
+            q = [1, 0, 0, 0]
         self.obj.set_pose(Pose(xyz, q))
 
-    def _initialize_task(self, max_trials=100, verbose=False):
+    def _initialize_task(self, max_trials=100, verbose=False, fix=True,):
         obj_pos = self.obj.pose.p
 
         # NOTE(chichu): set to a fixed point when evaluate real robot with simulation
@@ -52,7 +53,8 @@ class PickCubeEnv(StationaryManipulationEnv):
             goal_xy = self._episode_rng.uniform(-0.1, 0.1, [2])
             goal_z = self._episode_rng.uniform(0, 0.5) + obj_pos[2]
             goal_pos = np.hstack([goal_xy, goal_z])
-            # goal_pos = np.array([0.05, 0.05, 0.2])
+            if fix:
+                goal_pos = np.array([0.05, 0.05, 0.2])
             if np.linalg.norm(goal_pos - obj_pos) > self.min_goal_dist:
                 if verbose:
                     print(f"Found a valid goal at {i}-th trial")
