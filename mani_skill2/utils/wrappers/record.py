@@ -340,7 +340,7 @@ class RecordEpisode(gym.Wrapper):
             self._render_images,
             str(self.output_dir),
             video_name=video_name,
-            fps=20,
+            fps=1,     # change from 20, aim to capture more details.
             verbose=verbose,
         )
 

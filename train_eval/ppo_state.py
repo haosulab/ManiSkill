@@ -106,6 +106,10 @@ def main():
     reward_mode = "dense"
     low_level_control_mode = 'position'
     motion_data_type = ['qpos', 'qvel', 'qacc', 'qf - passive_qf', 'qf']
+    render_mode = 'cameras' # 'human', 'cameras'
+    fix_task_configuration = True
+    render_by_sim_step = False
+    paused = False
     if args.seed is not None:
         set_random_seed(args.seed)
 
@@ -125,7 +129,10 @@ def main():
                 control_mode=control_mode,
                 low_level_control_mode=low_level_control_mode,
                 motion_data_type=motion_data_type,
-                sim_params = generate_sim_params()
+                sim_params = generate_sim_params(),
+                fix_task_configuration = fix_task_configuration,
+                render_by_sim_step = render_by_sim_step,
+                paused=paused,
             )
             # For training, we regard the task as a continuous task with infinite horizon.
             # you can use the ContinuousTaskWrapper here for that
@@ -134,7 +141,7 @@ def main():
             if record_dir is not None:
                 env = SuccessInfoWrapper(env)
                 env = RecordEpisode(
-                    env, record_dir, info_on_video=True, render_mode="cameras", motion_data_type=motion_data_type
+                    env, record_dir, info_on_video=True, render_mode=render_mode, motion_data_type=motion_data_type
                 )
             return env
 

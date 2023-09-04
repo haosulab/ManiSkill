@@ -93,6 +93,9 @@ class BaseEnv(gym.Env):
         low_level_control_mode: str = None,
         motion_data_type: List[str] = None,
         sim_params: dict = None,
+        fix_task_configuration: bool = False,
+        render_by_sim_step: bool = False,
+        paused: bool = False,
     ):
         # Create SAPIEN engine
         self._engine = sapien.Engine()
@@ -185,6 +188,11 @@ class BaseEnv(gym.Env):
 
         # Visual background
         self.bg_name = bg_name
+
+        # Facilitate monitoring task evaluation
+        self.fix_task_configuration = fix_task_configuration
+        self.render_by_sim_step = render_by_sim_step
+        self.paused = paused
 
         # NOTE(jigu): `seed` is deprecated in the latest gym.
         # Use a fixed seed to initialize to enhance determinism
@@ -528,6 +536,10 @@ class BaseEnv(gym.Env):
         self.initialize_episode()
         self.stack_obs()
 
+        # Pause
+        if self._viewer is not None:
+            self._viewer.toggle_pause(paused=self.paused)
+
         return self.fetch_obs()
         # return self.get_obs()
 
@@ -585,6 +597,7 @@ class BaseEnv(gym.Env):
     def step(self, action: Union[None, np.ndarray, Dict]):
         self.step_action(action)
         self._elapsed_steps += 1
+        # print("Elpased step: {}".format(self._elapsed_steps))
 
         # obs = self.get_obs()
         obs = self.fetch_obs()
@@ -642,6 +655,9 @@ class BaseEnv(gym.Env):
                 # print(ee_q_dis < self.ee_q_threshold)
                 self.agent.before_simulation_step()
                 self._scene.step()
+                if self.render_by_sim_step:
+                    self.update_render()
+                    self.render()
                 self._after_simulation_step()
                 sim_step += 1
                 
@@ -682,6 +698,7 @@ class BaseEnv(gym.Env):
         self.stack_obs()
 
         self._total_sim_step += 1
+        # print("Total sim step: {}".format(self._total_sim_step))
 
     # -------------------------------------------------------------------------- #
     # Simulation and other gym interfaces
@@ -797,7 +814,7 @@ class BaseEnv(gym.Env):
                 self._viewer = Viewer(self._renderer)
                 self._setup_viewer()
             self._viewer.render()
-            return self._viewer
+            return (self._viewer.window.get_float_texture('Color') * 255).clip(0, 255).astype("uint8")[:,:,0:3]
         elif mode == "rgb_array":
             images = []
             for camera in self._render_cameras.values():
