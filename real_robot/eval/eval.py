@@ -17,7 +17,7 @@ from real_robot.agents.xarm import XArm7
 class RealRobotEval():
     def __init__(self, env, model,
                  xarm_ip='192.168.1.229',
-                 real_control_mode='pd_ee_delta_pos',
+                 real_control_mode='pd_ee_delta_pose_axangle',
                  robot_action_scale=100) -> None:
         self.env = env
         self.model = model
@@ -33,14 +33,13 @@ class RealRobotEval():
         return obs
     
     def step(self, action):
-        action_real = np.concatenate([action[:3], np.expand_dims(np.array(action[-1]), axis=0)])
-        self.real_robot.set_action(action_real, wait=True, action_scale=self.robot_action_scale)
-        obs, action, done, info= self.env.step(action)
+        self.real_robot.set_action(action, wait=True)
+        obs, action, done, info = self.env.step(action)
 
         return obs, action, done, info
     
-    def predict(self, obs):
-        action = self.model.predict(obs)
+    def predict(self, obs, deterministic):
+        action = self.model.predict(obs, deterministic=deterministic)
         return action
 
     def _configure_real_robot(self):
@@ -62,6 +61,10 @@ def main():
     low_level_control_mode = 'position'
     motion_data_type = ['qpos', 'qvel', 'qacc', 'qf - passive_qf', 'qf']
     sim_params = generate_sim_params()
+    render_mode = 'human' # 'human', 'cameras'
+    fix_task_configuration = True
+    render_by_sim_step = True
+    paused = True
 
     # import real_robot.envs
     import mani_skill2.envs
@@ -72,11 +75,14 @@ def main():
         control_mode=control_mode,
         low_level_control_mode=low_level_control_mode,
         motion_data_type=motion_data_type,
-        sim_params = sim_params
+        sim_params=sim_params,
+        fix_task_configuration=fix_task_configuration,
+        render_by_sim_step=render_by_sim_step,
+        paused=paused,
     )
 
     env = SuccessInfoWrapper(env)
-    env = RecordEpisode(env, record_dir, info_on_video=True, render_mode="cameras", motion_data_type=motion_data_type)
+    env = RecordEpisode(env, record_dir, info_on_video=True, render_mode=render_mode, motion_data_type=motion_data_type)
 
     #-----Load ppo policy-----#
     policy_kwargs = dict(net_arch=[256, 256])
@@ -104,7 +110,7 @@ def main():
     done = False
     obs = realroboteval.reset()
     while not done:
-        action = realroboteval.predict(obs)[0]
+        action = realroboteval.predict(obs, deterministic=True)[0]
         obs, action, done, info = realroboteval.step(action)
 
 if __name__ == '__main__':

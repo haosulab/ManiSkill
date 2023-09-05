@@ -31,11 +31,13 @@ def depth2xyz(depth_image, intrinsics, depth_scale=1000.0) -> np.ndarray:
 
 
 def transform_points(pts: np.ndarray, H: np.ndarray) -> np.ndarray:
-    """Transform points by 4x4 transformation matrix H"""
+    """Transform points by 4x4 transformation matrix H
+    :return out: same shape as pts
+    """
     assert H.shape == (4, 4), H.shape
-    assert pts.ndim >= 2 and pts.shape[-1] == 3, pts.shape
+    assert pts.shape[-1] == 3, pts.shape
 
-    return (pts.reshape(-1, 3) @ H[:3, :3].T + H[:3, 3]).reshape(pts.shape)
+    return pts @ H[:3, :3].T + H[:3, 3]
 
 
 def resize_obs_image(rgb_image, depth_image, intr_params: Tuple, new_shape,

@@ -16,6 +16,7 @@ isMacOS = (platform.system() == "Darwin")
 
 class Settings:
     UNLIT = "defaultUnlit"
+    UNLIT_LINE = "unlitLine"
     LIT = "defaultLit"
     NORMALS = "normals"
     DEPTH = "depth"
@@ -158,6 +159,7 @@ class Settings:
         self._materials = {
             Settings.LIT: rendering.MaterialRecord(),
             Settings.UNLIT: rendering.MaterialRecord(),
+            Settings.UNLIT_LINE: rendering.MaterialRecord(),
             Settings.NORMALS: rendering.MaterialRecord(),
             Settings.DEPTH: rendering.MaterialRecord()
         }
@@ -165,6 +167,9 @@ class Settings:
         self._materials[Settings.LIT].shader = Settings.LIT
         self._materials[Settings.UNLIT].base_color = [0.9, 0.9, 0.9, 1.0]
         self._materials[Settings.UNLIT].shader = Settings.UNLIT
+        self._materials[Settings.UNLIT_LINE].base_color = [0.9, 0.9, 0.9, 1.0]
+        self._materials[Settings.UNLIT_LINE].shader = Settings.UNLIT_LINE
+        self._materials[Settings.UNLIT_LINE].line_width = 3.0
         self._materials[Settings.NORMALS].shader = Settings.NORMALS
         self._materials[Settings.DEPTH].shader = Settings.DEPTH
 
@@ -208,6 +213,7 @@ class GeometryNode:
     children: List['GeometryNode'] = field(default_factory=list)
     cell: gui.Widget = None
     # Material settings values
+    mat_changed: bool = False
     mat_shader_index: int = 0  # Settings.LIT
     mat_prefab_text: str = Settings.DEFAULT_MATERIAL_NAME
     mat_color: gui.Color = gui.Color(0.9, 0.9, 0.9, 1.0)
@@ -242,9 +248,10 @@ class O3DGUIVisualizer:
 
     DEFAULT_IBL = "default"
 
-    MATERIAL_NAMES = ["Standard (Lit)", "Unlit", "Normal Map", "Depth"]
+    MATERIAL_NAMES = ["Standard (Lit)", "Unlit", "Unlit Line", "Normal Map", "Depth"]
     MATERIAL_SHADERS = [
-        Settings.LIT, Settings.UNLIT, Settings.NORMALS, Settings.DEPTH
+        Settings.LIT, Settings.UNLIT, Settings.UNLIT_LINE,
+        Settings.NORMALS, Settings.DEPTH
     ]
 
     def __init__(self, window_name="Point Clouds", window_size=(1920, 1080)):
@@ -506,6 +513,7 @@ class O3DGUIVisualizer:
         self._shader.add_item(self.MATERIAL_NAMES[1])
         self._shader.add_item(self.MATERIAL_NAMES[2])
         self._shader.add_item(self.MATERIAL_NAMES[3])
+        self._shader.add_item(self.MATERIAL_NAMES[4])
         self._shader.set_on_selection_changed(self._on_shader)
         self._material_prefab = gui.Combobox()
         for prefab_name in sorted(Settings.PREFAB.keys()):
@@ -534,6 +542,15 @@ class O3DGUIVisualizer:
         grid.add_child(gui.Label("Point size"))
         grid.add_child(self._point_size)
         material_settings.add_child(grid)
+
+        h = gui.Horiz(0.25 * em)
+        self._material_reset_button = gui.Button("Reset")
+        self._material_reset_button.set_on_clicked(self._on_material_reset)
+        self._material_reset_button.horizontal_padding_em = 0.5
+        self._material_reset_button.vertical_padding_em = 0
+        h.add_child(self._material_reset_button)
+        h.add_stretch()
+        material_settings.add_child(h)
 
         self._settings_panel.add_fixed(separation_height)
         self._settings_panel.add_child(material_settings)
@@ -685,7 +702,7 @@ class O3DGUIVisualizer:
         self._material_color.color_value = c
         self._point_size.double_value = self.settings.material.point_size
 
-    def _update_selected_geometry_material(self):
+    def _update_selected_geometry_material(self, reset=False):
         """Update selected geometries using self.settings.material
         Update material settings values in GeometryNode
         """
@@ -697,6 +714,7 @@ class O3DGUIVisualizer:
             node = unvisited_nodes.pop()
 
             # Update material settings values in GeometryNode
+            node.mat_changed = not reset
             node.mat_shader_index = self._shader.selected_index
             node.mat_prefab_text = self._material_prefab.selected_text
             color = self._material_color.color_value
@@ -868,8 +886,38 @@ class O3DGUIVisualizer:
 
     def _on_point_size(self, size: float):
         self.settings.material.point_size = int(size)
+        self.settings.material.line_width = int(size)
         self.settings.apply_material = True
         self._apply_settings()
+
+    def _on_material_reset(self):
+        """Callback function when _material_reset_button is clicked"""
+        # Reset to default material settings
+        self._update_material_from_node(GeometryNode)
+        # Update selected geometries using self.settings.material
+        self._update_selected_geometry_material(reset=True)
+
+    def _update_material_from_node(self, node: GeometryNode):
+        """Update material widget and settings.material from node
+        :param node: GeometryNode
+        """
+        # Update material control widget
+        self._shader.selected_index = shader_index = node.mat_shader_index
+        self._material_prefab.selected_text = prefab = node.mat_prefab_text
+        self._material_prefab.enabled = prefab_enabled = shader_index == 0
+        self._material_color.color_value = color = node.mat_color
+        self._point_size.double_value = point_size = node.mat_point_size
+
+        # Update material (same as material controls callbacks)
+        self.settings.material = self.settings._materials[
+            self.MATERIAL_SHADERS[shader_index]
+        ]
+        if prefab_enabled:  # Settings.LIT
+            self.settings.apply_material_prefab(prefab)
+        self.settings.material.base_color = [
+            color.red, color.green, color.blue, color.alpha
+        ]
+        self.settings.material.point_size = int(point_size)
 
     # ---------------------------------------------------------------------- #
     # Geometries callbacks
@@ -906,24 +954,7 @@ class O3DGUIVisualizer:
         Update material control widget GUI and update self.settings.material
         """
         node = self.id_to_geometry_nodes[new_item_id]
-
-        # Update material control widget
-        self._shader.selected_index = shader_index = node.mat_shader_index
-        self._material_prefab.selected_text = prefab = node.mat_prefab_text
-        self._material_prefab.enabled = prefab_enabled = shader_index == 0
-        self._material_color.color_value = color = node.mat_color
-        self._point_size.double_value = point_size = node.mat_point_size
-
-        # Update material (same as material controls callbacks)
-        self.settings.material = self.settings._materials[
-            self.MATERIAL_SHADERS[shader_index]
-        ]
-        if prefab_enabled:  # Settings.LIT
-            self.settings.apply_material_prefab(prefab)
-        self.settings.material.base_color = [
-            color.red, color.green, color.blue, color.alpha
-        ]
-        self.settings.material.point_size = int(point_size)
+        self._update_material_from_node(node)
 
     def _on_geometry_remove(self):
         """Callback function when _geometry_remove_button is clicked"""
@@ -1166,12 +1197,21 @@ class O3DGUIVisualizer:
         if name in self.geometries:
             self._scene.scene.remove_geometry(name)
         try:
+            unlit_line_geometry = False
             if isinstance(geometry, rendering.TriangleMeshModel):
                 self._scene.scene.add_model(name, geometry)
+            elif isinstance(geometry, (o3d.geometry.LineSet,
+                                       o3d.geometry.AxisAlignedBoundingBox,
+                                       o3d.geometry.OrientedBoundingBox)):
+                unlit_line_geometry = True
+                self._scene.scene.add_geometry(
+                    name, geometry, self.settings._materials[Settings.UNLIT_LINE]
+                )
             elif isinstance(geometry, (o3d.geometry.Geometry3D,
                                        o3d.t.geometry.Geometry)):
-                self._scene.scene.add_geometry(name, geometry,
-                                               self.settings.material)
+                self._scene.scene.add_geometry(
+                    name, geometry, self.settings.material
+                )
         except Exception as e:
             print(e)
 
@@ -1192,7 +1232,17 @@ class O3DGUIVisualizer:
                 self.geometry_groups[group_name] = parent_node
             # Add geometry to _geometries_tree
             node = self._create_geometry_node(name, parent_node)
+            if unlit_line_geometry:
+                node.mat_shader_index = 2  # Settings.UNLIT_LINE
             self.geometries[name] = node
+        elif (node := self.geometries[name]).mat_changed:  # update geometry material
+            current_selected_item = self._geometry_tree.selected_item
+            self._on_geometry_tree(node.id)
+            # Update geometry material using self.settings.material
+            self._scene.scene.modify_geometry_material(
+                node.name, self.settings.material
+            )
+            self._on_geometry_tree(current_selected_item)
 
         # Toggle geometry checkbox and show/hide
         self._on_geometry_toggle(show, self.geometries[name])

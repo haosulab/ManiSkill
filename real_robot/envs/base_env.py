@@ -10,7 +10,7 @@ from mani_skill2.envs.sapien_env import BaseEnv as MS2BaseEnv
 from real_robot.utils.common import (
     convert_observation_to_space, vectorize_pose, flatten_state_dict
 )
-# from real_robot.utils.visualization import Visualizer
+from real_robot.utils.visualization import Visualizer
 from real_robot.sensors.camera import (
     CALIB_CAMERA_POSES,
     CameraConfig,
@@ -24,15 +24,16 @@ class XArmBaseEnv(gym.Env):
     """Superclass for XArm real robot environments."""
 
     SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "image")
-    SUPPORTED_IMAGE_OBS_MODES = ("hand_front", "front")
+    SUPPORTED_IMAGE_OBS_MODES = ("hand_front", "front", "hand")
 
     def __init__(
         self, *args,
         xarm_ip="192.168.1.229",
         obs_mode=None,
         control_mode="pd_ee_delta_pos",
+        xarm_motion_mode="position",
         image_obs_mode=None,
-        robot_action_scale=100,
+        robot_translation_scale=100,
         **kwargs
     ):
         super().__init__(*args, **kwargs)
@@ -54,6 +55,7 @@ class XArmBaseEnv(gym.Env):
 
         # Control mode
         self._control_mode = control_mode
+        self._xarm_motion_mode = xarm_motion_mode
 
         # Image obs mode
         if image_obs_mode is None:
@@ -77,13 +79,13 @@ class XArmBaseEnv(gym.Env):
 
         # Configure agent and cameras
         self.xarm_ip = xarm_ip
-        self.robot_action_scale = robot_action_scale
-        self._configure_agent()  # FIXME: comment for debug
+        self.robot_translation_scale = robot_translation_scale
+        self._configure_agent()
         self._configure_cameras()
         self._configure_render_cameras()
 
         # TODO: check Visualizer
-        # self.visualizer = Visualizer()
+        self.visualizer = Visualizer()
 
         # NOTE: `seed` is deprecated in the latest gym.
         # Use a fixed seed to initialize to enhance determinism
@@ -94,7 +96,7 @@ class XArmBaseEnv(gym.Env):
             image_obs_space = self.observation_space.spaces["image"]
             for uid, camera in self._cameras.items():
                 image_obs_space.spaces[uid] = camera.observation_space
-        self.action_space = self.agent.action_space  # FIXME: comment for debug
+        self.action_space = self.agent.action_space
 
     def seed(self, seed=None):
         # For each episode, seed can be passed through `reset(seed=...)`,
@@ -116,7 +118,8 @@ class XArmBaseEnv(gym.Env):
     def _configure_agent(self):
         """Create real robot agent"""
         self.agent = XArm7(
-            self.xarm_ip, control_mode=self._control_mode,
+            self.xarm_ip,
+            control_mode=self._control_mode, motion_mode=self._xarm_motion_mode,
             safety_boundary=[550, 0, 50, -600, 280, 0]
         )
 
@@ -137,7 +140,6 @@ class XArmBaseEnv(gym.Env):
         self._camera_cfgs = OrderedDict()
         self._camera_cfgs.update(parse_camera_cfgs(self._register_cameras()))
 
-        # FIXME: comment for debug
         self._agent_camera_cfgs = parse_camera_cfgs(self.agent.cameras)
         self._camera_cfgs.update(self._agent_camera_cfgs)
 
@@ -145,6 +147,8 @@ class XArmBaseEnv(gym.Env):
         camera_cfgs = OrderedDict()
         if self._image_obs_mode == "front":
             camera_cfgs["front_camera"] = self._camera_cfgs["front_camera"]
+        elif self._image_obs_mode == "hand":
+            camera_cfgs["hand_camera"] = self._camera_cfgs["hand_camera"]
         elif self._image_obs_mode == "hand_front":
             camera_cfgs["front_camera"] = self._camera_cfgs["front_camera"]
             camera_cfgs["hand_camera"] = self._camera_cfgs["hand_camera"]
@@ -178,7 +182,7 @@ class XArmBaseEnv(gym.Env):
         self.set_episode_rng(seed)
         self._elapsed_steps = 0
 
-        self.agent.reset()  # FIXME: comment for debug
+        self.agent.reset()
 
         # self.recent_sam_obs = OrderedDict()
 
@@ -278,14 +282,14 @@ class XArmBaseEnv(gym.Env):
 
     def _get_obs_agent(self):
         obs = OrderedDict()
-        obs = self.agent.get_proprioception()  # FIXME: comment for debug
-        obs["base_pose"] = vectorize_pose(self.agent.robot.pose)  # FIXME: comment for debug
+        obs = self.agent.get_proprioception()
+        obs["base_pose"] = vectorize_pose(self.agent.robot.pose)
         return obs
 
     def _get_obs_extra(self) -> OrderedDict:
         # TODO: add using SAM on images for state obs
         obs = OrderedDict(
-            tcp_pose=vectorize_pose(self.agent.get_tcp_pose()),  # FIXME: comment for debug
+            tcp_pose=vectorize_pose(self.agent.get_tcp_pose()),
         )
         return obs
 
@@ -362,10 +366,12 @@ class XArmBaseEnv(gym.Env):
 
         return obs, reward, done, info
 
-    def step_action(self, action):
-        self.agent.set_action(action, wait=True,
-                              action_scale=self.robot_action_scale)  # FIXME: comment for debug
-        pass
+    def step_action(self, action, speed=None, mvacc=None,
+                    skip_gripper=False, wait=True):
+        self.agent.set_action(action,
+                              translation_scale=self.robot_translation_scale,
+                              speed=speed, mvacc=mvacc,
+                              skip_gripper=skip_gripper, wait=wait)
 
     def evaluate(self, **kwargs) -> dict:
         """Evaluate whether the task succeeds."""
@@ -393,7 +399,6 @@ class XArmBaseEnv(gym.Env):
     # ---------------------------------------------------------------------- #
     # Visualization
     # ---------------------------------------------------------------------- #
-    # TODO: continue
     def render(self, mode="human"):
         if mode == "human":
             obs_dict = defaultdict(list)
@@ -407,7 +412,7 @@ class XArmBaseEnv(gym.Env):
                 obs_dict["color_images"] = list(
                     self.recent_sam_obs["sam_rgb_images"]
                 )
-                obs_dict.pop("depth_images")  # FIXME: visualize resized depth images
+                obs_dict.pop("depth_images")  # TODO: visualize resized depth images
                 obs_dict["pred_masks"] = list(
                     self.recent_sam_obs["pred_masks"]
                 )

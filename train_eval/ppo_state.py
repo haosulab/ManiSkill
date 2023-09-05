@@ -107,7 +107,7 @@ def main():
     low_level_control_mode = 'position'
     motion_data_type = ['qpos', 'qvel', 'qacc', 'qf - passive_qf', 'qf']
     render_mode = 'cameras' # 'human', 'cameras'
-    fix_task_configuration = True
+    fix_task_configuration = False
     render_by_sim_step = False
     paused = False
     if args.seed is not None:

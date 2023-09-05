@@ -135,7 +135,7 @@ class XArmDefaultConfig:
 class XArm7DefaultConfig(XArmDefaultConfig):
     def __init__(self, sim_params) -> None:
         super().__init__(sim_params)
-        self.urdf_path = "{PACKAGE_ASSET_DIR}/descriptions/xarm7_textured_with_gripper_reduced_dof_v2.urdf"
+        self.urdf_path = "{PACKAGE_ASSET_DIR}/descriptions/xarm7_textured_with_gripper_reduced_dof_d435_v2.urdf"
         self.arm_joint_names = [
             "joint1",
             "joint2",

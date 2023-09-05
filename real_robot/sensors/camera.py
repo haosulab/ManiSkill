@@ -18,7 +18,7 @@ T_CAM_CV = np.linalg.inv(T_CV_CAM)
 
 CALIB_CAMERA_POSE_DIR = Path(
     os.getenv("HEC_CAMERA_POSE_DIR",
-              "real_robot/hec_camera_poses")
+              "./real_robot/hec_camera_poses")
 )
 CALIB_CAMERA_POSES = {
     "front_camera": Pose().from_transformation_matrix(np.load(

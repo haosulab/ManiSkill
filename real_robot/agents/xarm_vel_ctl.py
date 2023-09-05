@@ -1,15 +1,17 @@
 import numpy as np
-import transforms3d
 from sapien.core import Pose
 from xarm.wrapper import XArmAPI
 from real_robot.utils.logger import get_logger
+from transforms3d.quaternions import axangle2quat
+from transforms3d.euler import euler2quat, quat2euler
 import time
 
 
 class XArm7:
-    def __init__(self, ip="192.168.1.229", servo=False, 
+    def __init__(self, ip="192.168.1.229", control_mode='pd_ee_delta_pos', servo=False, 
                  velocity_ctrl=False, cartesian_velocity_ctrl=False, 
-                 ignore_gripper_action=False, debug=False):
+                 ignore_gripper_action=False, ms2_transform=False,
+                 use_ms2_ik=False, debug=False):
         self.logger = get_logger("XArm7")
         self.arm = XArmAPI(ip, is_radian=True)
         self.servo = servo
@@ -29,6 +31,7 @@ class XArm7:
         self.ignore_gripper_action = ignore_gripper_action
         self.debug = debug
 
+        self.ms2_transform = ms2_transform # whether to translate from/to maniskill2 qpos / action representations
         self.joint_limits_ms2 = np.array(
             [[-6.2831855, 6.2831855],
              [-2.059, 2.0944],
@@ -42,15 +45,34 @@ class XArm7:
         )  # joint limits in maniskill2
         self.gripper_limits = np.array([-10, 850]).astype(float)
         self.gripper_ms2_action_qpos_mapping = np.array([0.0, 0.0446430]) # ms2 action -1 maps to ms2 gripper qpos -0.01; ms2 action 1 maps to ms2 gripper qpos 0.044
-        self.init_qpos = np.array(
-            [0, 0, 0, np.pi / 3, 0, np.pi / 3, -np.pi / 2, 0.044643, 0.044643]
-        )
+        if self.ms2_transform:
+            self.init_qpos = np.array(
+                [0, 0, 0, np.pi / 3, 0, np.pi / 3, -np.pi / 2, 0.044643, 0.044643]
+            )
+        else:
+            self.init_qpos = np.array(
+                [0, 0, 0, np.pi / 3, 0, np.pi / 3, -np.pi / 2, self.gripper_limits[1], self.gripper_limits[1]]
+            )
 
-        self._control_mode = "pd_ee_delta_pos"
+        self._control_mode = control_mode
+        assert self._control_mode in ["pd_ee_delta_pos", "pd_ee_delta_pose_axangle", "pd_ee_delta_pose_quat",
+                                      "pd_ee_pos", "pd_ee_pose_axangle", "pd_ee_pose_quat"]
 
         # Avoid hitting the table or moving robot arm too far that it causes kinematic errors
         self.tgt_tcp_bounds_min = np.array([0.20, -0.40, 0.01]) # xmin, ymin, zmin
         self.tgt_tcp_bounds_max = np.array([0.55, 0.05, 0.28]) # xmax, ymax, zmax
+        
+        # Whether to use maniskill2 to compute inverse kinematics; if not, XArm's inverse kinematics is used
+        self.use_ms2_ik = use_ms2_ik
+        if self.use_ms2_ik:
+            self.logger.info("Using ManiSkill2 IK")
+            import mani_skill2.envs, gym
+            self.ms2_dummy_env = gym.make('PickCube-v0', robot='xarm7', control_mode='pd_ee_delta_pose')
+            self.ms2_dummy_env.reset()
+            self.ms2_ik_fxn = self.ms2_dummy_env.agent.controller.controllers['arm'].compute_ik
+        else:
+            self.ms2_dummy_env = None
+            self.ms2_ik_fxn = None
 
         self.reset()
 
@@ -133,9 +155,10 @@ class XArm7:
         _, gripper_pos = self.arm.get_gripper_position()
         return gripper_pos
 
-    def set_action(self, action, action_scale=100.0, wait=False):
+    def set_action(self, action, translation_scale=100.0, axangle_scale=0.1, wait=False):
         """
-        :param action_scale: action [-1, 1] maps to [-100mm, 100mm]
+        :param translation_scale: e.g. 100.0 =>  [-1, 1] maps to [-100mm, 100mm]
+        :param axangle_scale: e.g., 0.1 => angle encoded by the rotation component of action is multiplied by 0.1 (axis remains the same)
         """
         while self.arm.has_err_warn:
             error_code, warn_code = self.arm.get_err_warn_code()
@@ -146,62 +169,93 @@ class XArm7:
                 self.arm.get_err_warn_code(show=True)
                 _ = input("Press enter after cleaning error")
 
-        if self._control_mode == "pd_ee_delta_pos":
+        if self._control_mode in ["pd_ee_delta_pos", "pd_ee_pos"]:
             assert action.size == 4
-
-            delta_xyz = action[:3] * action_scale # in milimeters
-            cur_tcp_pose = self.get_tcp_pose()
-            cur_tcp_pose = Pose(p=cur_tcp_pose[:3], q=cur_tcp_pose[3:])
-            tgt_tcp_pose = cur_tcp_pose * Pose(p=delta_xyz / 1000) # in meters
-            tgt_tcp_pose_p, tgt_tcp_pose_q = tgt_tcp_pose.p, tgt_tcp_pose.q
-            tgt_tcp_pose_p = np.clip(tgt_tcp_pose_p, self.tgt_tcp_bounds_min, self.tgt_tcp_bounds_max)
-            actual_delta_xyz = (cur_tcp_pose.inv() * Pose(p=tgt_tcp_pose_p, q=tgt_tcp_pose_q)).p * 1000 # in milimeters
-            # [-1, 1] => [gripper_max, gripper_min]
-            gripper_action = self.xarm_gripper_action_from_ms2_gripper_action(gripper_action=action[-1])
-            self.logger.info(f"{delta_xyz = } {actual_delta_xyz = } {gripper_action = }")
-
-            ret_gripper = -1
-            if not self.ignore_gripper_action:
-                ret_gripper = self.arm.set_gripper_position(gripper_action, wait=wait) # this waits execution regardless of wait=True/False...
-
-            if self.servo:
-                actual_delta_xyz_norm = np.linalg.norm(actual_delta_xyz)
-                actual_delta_xyz = actual_delta_xyz / np.clip(actual_delta_xyz_norm, 1e-3, None) * np.clip(actual_delta_xyz_norm, 1e-3, 5.0)
-                ret_arm = self.arm.set_servo_cartesian(
-                    np.concatenate([actual_delta_xyz, np.zeros(4)]),
-                    is_tool_coord=True,
-                    **self.servo_args
-                )
-                time.sleep(0.2)
-            elif self.velocity_ctrl:
-                tgt_tcp_pose_p = np.clip(tgt_tcp_pose_p, cur_tcp_pose.p - 0.03, cur_tcp_pose.p + 0.03) # clip delta pos to prevent undesired rotation due to ik solutions
-                _, tgt_joint_states = self.arm.get_inverse_kinematics(
-                    np.concatenate([tgt_tcp_pose_p * 1000, self.get_base_to_tcp_6d()[3:]]), 
-                    input_is_radian=True, return_is_radian=True)
-                _, (cur_joint_states, _, _) = self.arm.get_joint_states(is_radian=True)
-                diff_joint_states = np.array(tgt_joint_states) - np.array(cur_joint_states)
-                timestep = 1.0
-                joint_vel = diff_joint_states / timestep
-                joint_vel_clipped = np.clip(joint_vel, -0.3, 0.3)
-                ret_arm = self.arm.vc_set_joint_velocity(joint_vel_clipped, is_radian=True, is_sync=True, duration=timestep)
-                time.sleep(timestep - 0.2)
-            elif self.cartesian_velocity_ctrl:
-                actual_delta_xyz_norm = np.linalg.norm(actual_delta_xyz)
-                actual_delta_xyz = actual_delta_xyz / np.clip(actual_delta_xyz_norm, 1e-3, None) * np.clip(actual_delta_xyz_norm, 1e-3, 50.0)
-                ret_arm = self.arm.vc_set_cartesian_velocity(
-                    np.concatenate([actual_delta_xyz, np.zeros(3)]), 
-                    is_tool_coord=True, 
-                    duration=1.0,
-                )
-                time.sleep(0.2)
-            else:
-                ret_arm = self.arm.set_tool_position(
-                    x=actual_delta_xyz[0], y=actual_delta_xyz[1], z=actual_delta_xyz[2],
-                    wait=wait
-                ) # if wait=False, this adds action to the queue, and action will be exec to the full following orders in the queue
-            return ret_arm, ret_gripper
+            action = np.concatenate([action[:3], [1, 0, 0, 0], action[-1:]])
+        elif self._control_mode in ['pd_ee_delta_pose_axangle', 'pd_ee_pose_axangle']:
+            assert action.size == 7
+            axangle = action[3:6]
+            ax = axangle / (np.linalg.norm(axangle) + 1e-6)
+            angle = np.linalg.norm(axangle) * axangle_scale
+            action = np.concatenate([action[:3], axangle2quat(ax, angle), action[-1:]])
+        elif self._control_mode in ['pd_ee_delta_pose_quat', 'pd_ee_pose_quat']:
+            assert action.size == 8
         else:
             raise NotImplementedError()
+
+        cur_tcp_pose = self.get_tcp_pose()
+        cur_tcp_pose = Pose(p=cur_tcp_pose[:3], q=cur_tcp_pose[3:])
+        
+        if 'delta' in self._control_mode:
+            delta_xyz = action[:3] * translation_scale # in milimeters
+            delta_quat = action[3:7]
+            tgt_tcp_pose = cur_tcp_pose * Pose(p=delta_xyz / 1000, q=delta_quat) # p in meters
+            tgt_tcp_pose_p, tgt_tcp_pose_q = tgt_tcp_pose.p, tgt_tcp_pose.q
+            tgt_tcp_pose_p = np.clip(tgt_tcp_pose_p, self.tgt_tcp_bounds_min, self.tgt_tcp_bounds_max)
+        else:
+            tgt_tcp_pose_p = action[:3] * translation_scale / 1000 # in meters
+            tgt_tcp_pose_p = np.clip(tgt_tcp_pose_p, self.tgt_tcp_bounds_min, self.tgt_tcp_bounds_max)
+            tgt_tcp_pose_q = action[3:7]
+            
+        actual_delta_pose = cur_tcp_pose.inv() * Pose(p=tgt_tcp_pose_p, q=tgt_tcp_pose_q)
+        actual_delta_xyz = actual_delta_pose.p * 1000 # in milimeters
+        actual_delta_quat = actual_delta_pose.q
+            
+        if self.ms2_transform:
+            # [-1, 1] => [gripper_max, gripper_min]
+            gripper_action = self.xarm_gripper_action_from_ms2_gripper_action(gripper_action=action[-1])
+        else:
+            gripper_action = action[-1]
+        self.logger.info(f"{tgt_tcp_pose_p = } {tgt_tcp_pose_q = } {actual_delta_quat = } {gripper_action = }")
+
+        ret_gripper = -1
+        if not self.ignore_gripper_action:
+            ret_gripper = self.arm.set_gripper_position(gripper_action, wait=wait) # this waits execution regardless of wait=True/False...
+
+        if self.servo:
+            assert self._control_mode in ["pd_ee_delta_pos", "pd_ee_pos"]
+            actual_delta_xyz_norm = np.linalg.norm(actual_delta_xyz)
+            actual_delta_xyz = actual_delta_xyz / np.clip(actual_delta_xyz_norm, 1e-3, None) * np.clip(actual_delta_xyz_norm, 1e-3, 5.0)
+            ret_arm = self.arm.set_servo_cartesian(
+                np.concatenate([actual_delta_xyz, np.zeros(4)]),
+                is_tool_coord=True,
+                **self.servo_args
+            )
+            time.sleep(0.2)
+        elif self.velocity_ctrl:
+            if not self.use_ms2_ik:
+                tgt_tcp_pose_p = np.clip(tgt_tcp_pose_p, cur_tcp_pose.p - 0.03, cur_tcp_pose.p + 0.03) # clip delta pos to prevent undesired rotation due to ik solutions
+                _, tgt_joint_states = self.arm.get_inverse_kinematics(
+                    np.concatenate([tgt_tcp_pose_p * 1000, quat2euler(tgt_tcp_pose_q, axes='sxyz')]), 
+                    input_is_radian=True, return_is_radian=True)
+            else:
+                self.ms2_dummy_env.set_qpos(np.concatenate([self.get_qpos()[:-2], 0.0, 0.0]))
+                tgt_tcp_pose_p = np.clip(tgt_tcp_pose_p, cur_tcp_pose.p - 0.10, cur_tcp_pose.p + 0.10)
+                tgt_joint_states = self.ms2_ik_fxn(Pose(p=tgt_tcp_pose_p, q=tgt_tcp_pose_q))
+            _, (cur_joint_states, _, _) = self.arm.get_joint_states(is_radian=True)
+            diff_joint_states = np.array(tgt_joint_states) - np.array(cur_joint_states)
+            timestep = 0.5
+            joint_vel = diff_joint_states / timestep
+            joint_vel_clipped = np.clip(joint_vel, -0.3, 0.3)
+            ret_arm = self.arm.vc_set_joint_velocity(joint_vel_clipped, is_radian=True, is_sync=True, duration=timestep)
+            # time.sleep(timestep - 0.2)
+        elif self.cartesian_velocity_ctrl:
+            assert self._control_mode in ["pd_ee_delta_pos", "pd_ee_pos"]
+            actual_delta_xyz_norm = np.linalg.norm(actual_delta_xyz)
+            actual_delta_xyz = actual_delta_xyz / np.clip(actual_delta_xyz_norm, 1e-3, None) * np.clip(actual_delta_xyz_norm, 1e-3, 50.0)
+            ret_arm = self.arm.vc_set_cartesian_velocity(
+                np.concatenate([actual_delta_xyz, np.zeros(3)]), 
+                is_tool_coord=True, 
+                duration=1.0,
+            )
+            time.sleep(0.2)
+        else:
+            assert self._control_mode in ["pd_ee_delta_pos", "pd_ee_pos"]
+            ret_arm = self.arm.set_tool_position(
+                x=actual_delta_xyz[0], y=actual_delta_xyz[1], z=actual_delta_xyz[2],
+                wait=wait
+            ) # if wait=False, this adds action to the queue, and action will be exec to the full following orders in the queue
+        return ret_arm, ret_gripper
 
     def set_qpos(self, qpos, wait=False):
         """Set xarm qpos using maniskill2 qpos"""
@@ -210,7 +264,10 @@ class XArm7:
                                            wait=wait)
 
         gripper_qpos = gripper_qpos[0]  # NOTE: mimic action
-        gripper_pos = self.xarm_gripper_qpos_from_ms2_gripper_qpos(gripper_qpos)
+        if self.ms2_transform:
+            gripper_pos = self.xarm_gripper_qpos_from_ms2_gripper_qpos(gripper_qpos)
+        else:
+            gripper_pos = gripper_qpos
         # print("Gripper pos:", gripper_pos)
 
         ret_gripper = -1
@@ -223,7 +280,8 @@ class XArm7:
         _, (qpos, qvel, effort) = self.arm.get_joint_states(is_radian=True)
         _, gripper_pos = self.arm.get_gripper_position()
 
-        gripper_qpos = self.ms2_gripper_qpos_from_xarm_gripper_qpos(gripper_pos)
+        if self.ms2_transform:
+            gripper_qpos = self.ms2_gripper_qpos_from_xarm_gripper_qpos(gripper_pos)
         return np.hstack([qpos, [gripper_qpos, gripper_qpos]])
 
     def get_qvel(self):
@@ -245,6 +303,6 @@ class XArm7:
         # print("base_to_joint7", base_to_joint7)
         base_to_tcp_pose = Pose(
             p=base_to_tcp[:3],
-            q=transforms3d.euler.euler2quat(*base_to_tcp[3:6], axes='sxyz')
+            q=euler2quat(*base_to_tcp[3:6], axes='sxyz')
         )
         return np.hstack([base_to_tcp_pose.p, base_to_tcp_pose.q])

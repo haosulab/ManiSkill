@@ -61,7 +61,7 @@ class StationaryManipulationEnv(BaseEnv):
         self._agent_cfg = agent_cls.get_default_config(sim_params)
 
     def _load_agent(self, sim_params):
-        agent_cls: Type[Panda] = self.SUPPORTED_ROBOTS[self.robot_uid]
+        agent_cls: Type[XArm7] = self.SUPPORTED_ROBOTS[self.robot_uid]
         self.agent = agent_cls(
             self._scene, self._control_freq, self._control_mode, config=self._agent_cfg, sim_params=sim_params
         )

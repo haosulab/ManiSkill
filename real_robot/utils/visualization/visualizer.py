@@ -4,12 +4,11 @@ import numpy as np
 import cv2
 import open3d as o3d
 
-from seg_and_track_anything.seg_track_anything import draw_mask, colorize_mask
-
 from ..logger import get_logger
 from ..lib3d import np2pcd
 from .cv2_visualizer import CV2Visualizer
 from .o3d_gui_visualizer import O3DGUIVisualizer
+from .utils import draw_mask, colorize_mask
 try:
     from pynput.keyboard import Key, KeyCode, Listener
 except ImportError as e:
@@ -103,7 +102,7 @@ class Visualizer:
         # Sort images based on key
         self.cv2_vis.show_images([img for _, img in sorted(images.items())])
         for name, geometry in o3d_geometries.items():
-            self.o3d_vis.add_geometry(name, geometry, show="xyz_image" in name)
+            self.o3d_vis.add_geometry(name, geometry, show=True)# show="xyz_image" in name)
 
     #@staticmethod
     #def update_aabb_geometry(aabb_dst, aabb_src):
