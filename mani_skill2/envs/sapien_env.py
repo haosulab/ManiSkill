@@ -183,6 +183,7 @@ class BaseEnv(gym.Env):
         self.bg_name = bg_name
 
         # Use a fixed (main) seed to enhance determinism
+        self._main_seed = None
         self.set_main_rng(2022)
         obs, _ = self.reset(seed=2022, options=dict(reconfigure=True))
         self.observation_space = convert_observation_to_space(obs)
@@ -490,6 +491,8 @@ class BaseEnv(gym.Env):
     def set_main_rng(self, seed):
         """Set the main random generator (e.g., to generate the seed for each episode)."""
         if seed is None:
+            if self._main_seed is not None:
+                return
             seed = np.random.RandomState().randint(2**32)
         self._main_seed = seed
         self._main_rng = np.random.RandomState(self._main_seed)
