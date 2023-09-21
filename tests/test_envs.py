@@ -70,6 +70,14 @@ def test_env_seeded_sequence_reset():
     assert_obs_equal(obs, first_obs)
     del env
 
+def test_env_raise_value_error_for_nan_actions():
+    env = gym.make(ENV_IDS[0])
+    obs, _ = env.reset(seed=2000)
+    with pytest.raises(ValueError):
+        env.step(env.action_space.sample() * np.nan)
+    env.close()
+    del env
+
 
 @pytest.mark.parametrize("env_id", ENV_IDS)
 def test_states(env_id):
