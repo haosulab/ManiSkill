@@ -60,7 +60,6 @@ def test_env_seeded_sequence_reset():
         first_obs, _, _, truncated, _ = env.step(actions[i])
         if truncated:
             first_obs, _ = env.reset()
-    print("====")
     obs, _ = env.reset(seed=2000)
     for i in range(17):
         obs, _, _, truncated, _ = env.step(actions[i])
