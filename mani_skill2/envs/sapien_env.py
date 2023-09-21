@@ -472,8 +472,12 @@ class BaseEnv(gym.Env):
     def reset(self, seed=None, options=None):
         if options is None:
             options = dict()
+
+        # when giving a specific seed, we always set the main RNG based on that seed. This then deterministically changes the **sequence** of RNG 
+        # used for each episode after each call to reset with seed=none. By default this sequence of rng starts with the default main seed used which is 2022,
+        # which means that when creating an environment and resetting without a seed, it will always have the same sequence of RNG for each episode.
         self.set_main_rng(seed)
-        self.set_episode_rng(seed)
+        self.set_episode_rng(seed) # we first set the first episode seed to allow environments to use it to reconfigure the environment with a seed
         self._elapsed_steps = 0
         reconfigure = options.get("reconfigure", False)
         if reconfigure:

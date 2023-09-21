@@ -12,8 +12,8 @@ We recommend using Python 3.9 to build and develop on ManiSkill2 (MS2), although
 conda create -n "ms2_dev" "python==3.9"
 git clone https://github.com/haosulab/ManiSkill2.git
 cd ManiSkill2
-pip install -e .
-pip install pytest coverage
+pip install -e . # install MS2 locally
+pip install pytest coverage stable-baselines3 # add development dependencies for testing purposes
 ```
 
 ## Testing
