@@ -26,3 +26,13 @@ After you make changes, be sure to add any necessary tests to cover any new code
 coverage run --source=mani_skill2/ -a -m pytest tests # run tests
 coverage html --include=mani_skill2/**/*.py # see the test coverage results
 ```
+
+
+## Building
+
+Adapted from https://packaging.python.org/en/latest/tutorials/packaging-projects/. For some reason running build directly does not work, you have to pass in -s and -w.
+
+```
+python3 -m build -s -w
+python3 -m twine upload --repository testpypi dist/*
+```
