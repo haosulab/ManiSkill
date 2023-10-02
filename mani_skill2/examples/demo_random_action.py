@@ -71,6 +71,7 @@ def main(args):
 
         if terminated or truncated:
             break
+    env.close()
 
 
 if __name__ == "__main__":

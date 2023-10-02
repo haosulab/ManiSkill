@@ -4,7 +4,7 @@
 
 Here is a basic example of how to make a ManiSkill2 environment following the interface of [Gymnasium](https://gymnasium.farama.org/) and run a random policy.
 
-**Note**: starting from ManiSkill2 v0.5.0, we have switched to the [Gymnasium](https://gymnasium.farama.org/) interface in place of the old [OpenAI Gym](https://github.com/openai/gym). The instructions below apply to the latest version of ManiSkill2 with Gymnasium. If you are using ManiSkill2 versions prior to v0.5.0, please follow the OpenAI Gym interface (i.e., replace `import gymnasium as gym` with `import gym`, and replace `obs, reward, terminated, truncated, info = env.step(action)` with `obs, reward, done, info = env.step(action)`).
+**Note**: starting from ManiSkill2 v0.5.0, we have switched to the [Gymnasium](https://gymnasium.farama.org/) interface in place of the old [OpenAI Gym](https://github.com/openai/gym). The instructions below apply to the latest version of ManiSkill2 with Gymnasium. If you are using ManiSkill2 versions prior to v0.5.0, please follow the OpenAI Gym interface (i.e., replace `import gymnasium as gym` with `import gym`; replace `obs, _ = env.reset(seed=0)` with `obs = env.reset(seed=0)`; replace `obs, reward, terminated, truncated, info = env.step(action)` with `obs, reward, done, info = env.step(action)`).
 
 ```python
 import gymnasium as gym

@@ -137,7 +137,7 @@ def register_env(uid: str, max_episode_steps=None, override=False, **kwargs):
 
                 logger.warn(f"Override registered env {uid}")
                 REGISTERED_ENVS.pop(uid)
-                registry.env_specs.pop(uid)
+                registry.pop(uid)
             else:
                 logger.warn(f"Env {uid} is already registered. Skip registration.")
                 return cls

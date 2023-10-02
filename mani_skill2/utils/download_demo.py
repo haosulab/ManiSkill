@@ -2,6 +2,7 @@ import argparse
 import os
 import os.path as osp
 import urllib.request
+import zipfile
 
 from tqdm import tqdm
 
@@ -56,8 +57,7 @@ DATASET_SOURCES["PickSingleEGAD-v0"] = dict(
 DATASET_SOURCES["PickSingleYCB-v0"] = dict(
     env_type="rigid_body",
     object_paths=[
-        "rigid_body/PickSingleYCB-v0/trajectory.h5",
-        "rigid_body/PickSingleYCB-v0/trajectory.json",
+        "rigid_body/PickSingleYCB-v0/PickSingleYCB-v0.zip",
     ],
     latest_version=0,
 )
@@ -117,48 +117,48 @@ DATASET_SOURCES["MoveBucket-v1"] = dict(
 DATASET_SOURCES["Write-v0"] = dict(
     env_type="soft_body",
     object_paths=[
-        "rigid_body/Write-v0/trajectory.h5",
-        "rigid_body/Write-v0/trajectory.json",
+        "soft_body/Write-v0/trajectory.h5",
+        "soft_body/Write-v0/trajectory.json",
     ],
     latest_version=0,
 )
 DATASET_SOURCES["Pinch-v0"] = dict(
     env_type="soft_body",
     object_paths=[
-        "rigid_body/Pinch-v0/trajectory.h5",
-        "rigid_body/Pinch-v0/trajectory.json",
+        "soft_body/Pinch-v0/trajectory.h5",
+        "soft_body/Pinch-v0/trajectory.json",
     ],
     latest_version=0,
 )
 DATASET_SOURCES["Hang-v0"] = dict(
     env_type="soft_body",
     object_paths=[
-        "rigid_body/Hang-v0/trajectory.h5",
-        "rigid_body/Hang-v0/trajectory.json",
+        "soft_body/Hang-v0/trajectory.h5",
+        "soft_body/Hang-v0/trajectory.json",
     ],
     latest_version=0,
 )
 DATASET_SOURCES["Pour-v0"] = dict(
     env_type="soft_body",
     object_paths=[
-        "rigid_body/Pour-v0/trajectory.h5",
-        "rigid_body/Pour-v0/trajectory.json",
+        "soft_body/Pour-v0/trajectory.h5",
+        "soft_body/Pour-v0/trajectory.json",
     ],
     latest_version=0,
 )
 DATASET_SOURCES["Excavate-v0"] = dict(
     env_type="soft_body",
     object_paths=[
-        "rigid_body/Excavate-v0/trajectory.h5",
-        "rigid_body/Excavate-v0/trajectory.json",
+        "soft_body/Excavate-v0/trajectory.h5",
+        "soft_body/Excavate-v0/trajectory.json",
     ],
     latest_version=0,
 )
 DATASET_SOURCES["Fill-v0"] = dict(
     env_type="soft_body",
     object_paths=[
-        "rigid_body/Fill-v0/trajectory.h5",
-        "rigid_body/Fill-v0/trajectory.json",
+        "soft_body/Fill-v0/trajectory.h5",
+        "soft_body/Fill-v0/trajectory.json",
     ],
     latest_version=0,
 )
@@ -259,9 +259,17 @@ def main(args):
 
         object_paths = meta["object_paths"]
         for object_path in object_paths:
-            download_file(
+            local_path = download_file(
                 osp.join(args.output_dir), object_path, version=download_version
             )
+            if osp.splitext(local_path)[1] == ".zip":
+                with zipfile.ZipFile(local_path, "r") as zip_ref:
+                    zip_ref.extractall(
+                        osp.join(
+                            args.output_dir, f"v{download_version}", meta["env_type"]
+                        )
+                    )
+                os.remove(local_path)
 
 
 if __name__ == "__main__":
