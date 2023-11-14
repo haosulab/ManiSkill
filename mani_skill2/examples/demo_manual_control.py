@@ -75,6 +75,7 @@ def main():
         if not args.enable_sapien_viewer:
             return
         while True:
+            env.render_human()
             sapien_viewer = env.viewer
             if sapien_viewer.window.key_down("0"):
                 break
