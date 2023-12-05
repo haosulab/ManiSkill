@@ -2,7 +2,8 @@
 numpy<1.24
 scipy
 gymnasium>=0.28.1
-sapien==2.2.2
+# TODO (stao): Change this to ==3.0.0 when sapien 3 is officially released
+sapien==3.0.0.dev.0
 # basic
 h5py
 pyyaml
