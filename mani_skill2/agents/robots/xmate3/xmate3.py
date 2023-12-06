@@ -75,7 +75,7 @@ class Xmate3Robotiq(BaseAgent):
         )
 
     @property
-    def controllers(self):
+    def controller_configs(self):
         # -------------------------------------------------------------------------- #
         # Arm
         # -------------------------------------------------------------------------- #
