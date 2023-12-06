@@ -1,10 +1,11 @@
+from mani_skill2 import ASSET_DIR
 from mani_skill2.agents.controllers import *
 from mani_skill2.sensors.camera import CameraConfig
 
 
 class Xmate3RobotiqDefaultConfig:
     def __init__(self) -> None:
-        self.urdf_path = "{ASSET_DIR}/xmate3_robotiq/xmate3_robotiq.urdf"
+        self.urdf_path = f"{ASSET_DIR}/robots/xmate3_robotiq/xmate3_robotiq.urdf"
         self.urdf_config = dict(
             _materials=dict(
                 gripper=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)
@@ -116,7 +117,7 @@ class Xmate3RobotiqDefaultConfig:
         return deepcopy_dict(controller_configs)
 
     @property
-    def cameras(self):
+    def sensors(self):
         return [
             CameraConfig(
                 uid="base_camera",
@@ -127,7 +128,7 @@ class Xmate3RobotiqDefaultConfig:
                 fov=1.5707,
                 near=0.01,
                 far=10,
-                actor_uid="camera_base_link",
+                entity_uid="camera_base_link",
                 hide_link=False,
             ),
             CameraConfig(
@@ -139,7 +140,7 @@ class Xmate3RobotiqDefaultConfig:
                 fov=1.5707,
                 near=0.01,
                 far=10,
-                actor_uid="camera_hand_link",
+                entity_uid="camera_hand_link",
                 hide_link=False,
             ),
         ]

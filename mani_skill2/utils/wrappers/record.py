@@ -101,6 +101,7 @@ class RecordEpisode(gym.Wrapper):
         info_on_video=False,
         save_on_reset=True,
         clean_on_close=True,
+        video_fps=20,
     ):
         super().__init__(env)
 
@@ -108,7 +109,7 @@ class RecordEpisode(gym.Wrapper):
         if save_trajectory or save_video:
             self.output_dir.mkdir(parents=True, exist_ok=True)
         self.save_on_reset = save_on_reset
-
+        self.video_fps = video_fps
         self._elapsed_steps = 0
         self._episode_id = -1
         self._episode_data = []
@@ -161,7 +162,7 @@ class RecordEpisode(gym.Wrapper):
         obs, info = super().reset(**kwargs)
 
         if self.save_trajectory:
-            state = self.env.get_state()
+            state = self.env.unwrapped.get_state()
             data = dict(
                 s=state,
                 o=copy.deepcopy(obs),
@@ -190,7 +191,7 @@ class RecordEpisode(gym.Wrapper):
         self._elapsed_steps += 1
 
         if self.save_trajectory:
-            state = self.env.get_state()
+            state = self.env.unwrapped.get_state()
             data = dict(
                 s=state,
                 o=copy.deepcopy(obs),
@@ -337,7 +338,7 @@ class RecordEpisode(gym.Wrapper):
             self._render_images,
             str(self.output_dir),
             video_name=video_name,
-            fps=20,
+            fps=self.video_fps,
             verbose=verbose,
         )
 

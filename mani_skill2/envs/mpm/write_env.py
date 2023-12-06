@@ -2,14 +2,13 @@ from collections import OrderedDict
 
 import h5py
 import numpy as np
-import sapien.core as sapien
+import sapien
 import warp as wp
 from mpm.height_rasterizer import rasterize_clear_kernel, rasterize_kernel
 from transforms3d.euler import euler2quat
 
 from mani_skill2 import ASSET_DIR
-from mani_skill2.agents.configs.panda.variants import PandaStickConfig
-from mani_skill2.agents.robots.panda import Panda
+from mani_skill2.agents.robots.panda.variants import PandaStick
 from mani_skill2.envs.mpm.base_env import MPMBaseEnv, MPMModelBuilder, MPMSimulator
 from mani_skill2.envs.mpm.utils import load_h5_as_dict
 from mani_skill2.sensors.camera import CameraConfig
@@ -175,7 +174,7 @@ class WriteEnv(MPMBaseEnv):
             self.mpm_model.state() for _ in range(self._mpm_step_per_sapien_step + 1)
         ]
 
-    def _register_cameras(self):
+    def _register_sensors(self):
         p, q = [-0.2, 0, 0.3], euler2quat(0, np.pi / 6, 0)
         return CameraConfig("base_camera", p, q, 128, 128, np.pi / 2, 0.001, 10)
 
@@ -183,15 +182,11 @@ class WriteEnv(MPMBaseEnv):
         p, q = [-0.3, 0, 0.4], euler2quat(0, np.pi / 5, 0)
         return CameraConfig("render_camera", p, q, 512, 512, 1, 0.001, 10)
 
-    def _configure_agent(self):
-        self._agent_cfg = PandaStickConfig()
-
     def _load_agent(self):
-        self.agent = Panda(
+        self.agent = PandaStick(
             self._scene,
             self._control_freq,
             control_mode=self._control_mode,
-            config=self._agent_cfg,
         )
         self.end_effector = self.agent.robot.get_links()[-1]
 

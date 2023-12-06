@@ -61,6 +61,7 @@ def register(
     )
 
 
+# TODO (stao): Can we refactor out this whole extra wrapper thing to make the base env have the correct observation setup?
 def make(env_id, as_gym=True, enable_segmentation=False, **kwargs):
     """Instantiate a ManiSkill2 environment.
 
@@ -155,7 +156,7 @@ def register_env(uid: str, max_episode_steps=None, override=False, **kwargs):
             uid,
             entry_point=partial(make, env_id=uid, as_gym=False),
             max_episode_steps=max_episode_steps,
-            disable_env_checker=True, # Temporary solution as we allow empty observation spaces
+            disable_env_checker=True,  # Temporary solution as we allow empty observation spaces
             kwargs=deepcopy(kwargs),
         )
 

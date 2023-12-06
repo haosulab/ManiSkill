@@ -2,19 +2,19 @@ from collections import OrderedDict
 
 import h5py
 import numpy as np
-import sapien.core as sapien
+import sapien
+import sapien.physx as physx
 import warp as wp
 from transforms3d.euler import euler2quat
 from warp.distance import compute_chamfer_distance
 
 from mani_skill2 import ASSET_DIR
-from mani_skill2.agents.configs.panda.variants import PandaPinchConfig
-from mani_skill2.agents.robots.panda import Panda
+from mani_skill2.agents.robots.panda.variants import PandaPinch
 from mani_skill2.envs.mpm.base_env import MPMBaseEnv, MPMModelBuilder, MPMSimulator
 from mani_skill2.envs.mpm.utils import load_h5_as_dict
 from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import get_entity_by_name, vectorize_pose
+from mani_skill2.utils.sapien_utils import get_obj_by_name, vectorize_pose
 
 
 @register_env("Pinch-v0", max_episode_steps=300)
@@ -120,17 +120,13 @@ class PinchEnv(MPMBaseEnv):
             if l.name in ["panda_hand", "panda_leftfinger", "panda_rightfinger"]
         ]
 
-    def _configure_agent(self):
-        self._agent_cfg = PandaPinchConfig()
-
     def _load_agent(self):
-        self.agent = Panda(
+        self.agent = PandaPinch(
             self._scene,
             self.control_freq,
             control_mode=self._control_mode,
-            config=self._agent_cfg,
         )
-        self.grasp_site: sapien.Link = get_entity_by_name(
+        self.grasp_site: physx.PhysxArticulationLinkComponent = get_obj_by_name(
             self.agent.robot.get_links(), "panda_hand_tcp"
         )
 
@@ -145,7 +141,7 @@ class PinchEnv(MPMBaseEnv):
         self._chamfer_dist = None
         return super().step(*args, **kwargs)
 
-    def _register_cameras(self):
+    def _register_sensors(self):
         p, q = [0.4, 0, 0.3], euler2quat(0, np.pi / 10, -np.pi)
         return CameraConfig("base_camera", p, q, 128, 128, np.pi / 2, 0.001, 10)
 
