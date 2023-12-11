@@ -2,13 +2,12 @@ import os
 from collections import OrderedDict
 
 import numpy as np
-import sapien.core as sapien
+import sapien
 import warp as wp
 from transforms3d.euler import euler2quat
 
 from mani_skill2 import PACKAGE_ASSET_DIR
-from mani_skill2.agents.configs.panda.variants import PandaPourConfig
-from mani_skill2.agents.robots.panda import Panda
+from mani_skill2.agents.robots.panda.variants import PandaPour
 from mani_skill2.envs.mpm.base_env import MPMBaseEnv, MPMModelBuilder, MPMSimulator
 from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.geometry import (
@@ -16,7 +15,7 @@ from mani_skill2.utils.geometry import (
     get_local_axis_aligned_bbox_for_link,
 )
 from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import get_entity_by_name, vectorize_pose
+from mani_skill2.utils.sapien_utils import get_obj_by_name, vectorize_pose
 
 
 @wp.kernel
@@ -104,14 +103,16 @@ class PourEnv(MPMBaseEnv):
 
         b = self._scene.create_actor_builder()
         b.add_visual_from_file(bottle_file, scale=[0.025] * 3)
-        b.add_collision_from_file(bottle_file, scale=[0.025] * 3, density=300)
+        b.add_convex_collision_from_file(bottle_file, scale=[0.025] * 3, density=300)
         self.source_container = b.build("bottle")
         self.source_aabb = get_local_axis_aligned_bbox_for_link(self.source_container)
 
         target_radius = 0.04
         b = self._scene.create_actor_builder()
         b.add_visual_from_file(beaker_file, scale=[target_radius] * 3)
-        b.add_collision_from_file(beaker_file, scale=[target_radius] * 3, density=300)
+        b.add_convex_collision_from_file(
+            beaker_file, scale=[target_radius] * 3, density=300
+        )
         self.target_beaker = b.build_kinematic("target_beaker")
         self.target_aabb = get_local_axis_aligned_bbox_for_link(self.target_beaker)
         self.target_aabc = get_local_aabc_for_actor(self.target_beaker)
@@ -124,23 +125,17 @@ class PourEnv(MPMBaseEnv):
             (self.target_beaker, "visual"),
         ]
 
-    def _configure_agent(self):
-        self._agent_cfg = PandaPourConfig()
-
     def _load_agent(self):
-        self.agent = Panda(
+        self.agent = PandaPour(
             self._scene,
             self._control_freq,
             control_mode=self._control_mode,
-            config=self._agent_cfg,
         )
-        self.grasp_site: sapien.Link = get_entity_by_name(
+        self.grasp_site: sapien.Link = get_obj_by_name(
             self.agent.robot.get_links(), "panda_hand_tcp"
         )
-        self.lfinger = get_entity_by_name(
-            self.agent.robot.get_links(), "panda_leftfinger"
-        )
-        self.rfinger = get_entity_by_name(
+        self.lfinger = get_obj_by_name(self.agent.robot.get_links(), "panda_leftfinger")
+        self.rfinger = get_obj_by_name(
             self.agent.robot.get_links(), "panda_rightfinger"
         )
 
@@ -234,7 +229,7 @@ class PourEnv(MPMBaseEnv):
         self.agent.reset(self._init_qpos)
         self.agent.robot.set_pose(sapien.Pose([-0.55, 0, 0]))
 
-    def _register_cameras(self):
+    def _register_sensors(self):
         p, q = [0.4, 0, 0.3], euler2quat(0, np.pi / 10, -np.pi)
         return CameraConfig("base_camera", p, q, 128, 128, np.pi / 2, 0.001, 10)
 
@@ -419,10 +414,10 @@ class PourEnv(MPMBaseEnv):
 
         if grasp_site_dist < 0.05:
             reward_grasp_site = 0
-            check_grasp = self.agent.check_grasp(self.source_container)
-            reward_grasp = float(check_grasp)
+            is_grasping = self.agent.is_grasping(self.source_container)
+            reward_grasp = float(is_grasping)
         else:
-            check_grasp = False
+            is_grasping = False
             reward_grasp = 0
 
         top_center = np.zeros(3)
@@ -461,7 +456,7 @@ class PourEnv(MPMBaseEnv):
         z = source_mat[:3, 2]
         edist = 0
         bot_hdist = 0
-        if not check_grasp:
+        if not is_grasping:
             # not grasping the bottle
             reward_orientation = 0
             reward_dist = 0

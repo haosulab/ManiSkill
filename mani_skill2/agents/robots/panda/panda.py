@@ -1,26 +1,40 @@
 from copy import deepcopy
 
+import numpy as np
+import sapien
+import sapien.physx as physx
+
+from mani_skill2 import PACKAGE_ASSET_DIR
+from mani_skill2.agents.base_agent import BaseAgent
 from mani_skill2.agents.controllers import *
 from mani_skill2.sensors.camera import CameraConfig
+from mani_skill2.utils.common import compute_angle_between
+from mani_skill2.utils.sapien_utils import (
+    compute_total_impulse,
+    get_actor_contacts,
+    get_obj_by_name,
+    get_pairwise_contact_impulse,
+)
 
 
-class PandaDefaultConfig:
-    def __init__(self) -> None:
-        self.urdf_path = "{PACKAGE_ASSET_DIR}/descriptions/panda_v2.urdf"
-        self.urdf_config = dict(
-            _materials=dict(
-                gripper=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)
+class Panda(BaseAgent):
+    uid = "panda"
+    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/panda/panda_v2.urdf"
+    urdf_config = dict(
+        _materials=dict(
+            gripper=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)
+        ),
+        link=dict(
+            panda_leftfinger=dict(
+                material="gripper", patch_radius=0.1, min_patch_radius=0.1
             ),
-            link=dict(
-                panda_leftfinger=dict(
-                    material="gripper", patch_radius=0.1, min_patch_radius=0.1
-                ),
-                panda_rightfinger=dict(
-                    material="gripper", patch_radius=0.1, min_patch_radius=0.1
-                ),
+            panda_rightfinger=dict(
+                material="gripper", patch_radius=0.1, min_patch_radius=0.1
             ),
-        )
+        ),
+    )
 
+    def __init__(self, *args, **kwargs):
         self.arm_joint_names = [
             "panda_joint1",
             "panda_joint2",
@@ -44,8 +58,10 @@ class PandaDefaultConfig:
 
         self.ee_link_name = "panda_hand_tcp"
 
+        super().__init__(*args, **kwargs)
+
     @property
-    def controllers(self):
+    def controller_configs(self):
         # -------------------------------------------------------------------------- #
         # Arm
         # -------------------------------------------------------------------------- #
@@ -178,9 +194,8 @@ class PandaDefaultConfig:
         # Make a deepcopy in case users modify any config
         return deepcopy_dict(controller_configs)
 
-    @property
-    def cameras(self):
-        return CameraConfig(
+    sensor_configs = [
+        CameraConfig(
             uid="hand_camera",
             p=[0.0464982, -0.0200011, 0.0360011],
             q=[0, 0.70710678, 0, 0.70710678],
@@ -189,25 +204,62 @@ class PandaDefaultConfig:
             fov=1.57,
             near=0.01,
             far=10,
-            actor_uid="panda_hand",
+            entity_uid="panda_hand",
+        )
+    ]
+
+    def _after_init(self):
+        self.finger1_link: sapien.Entity = get_obj_by_name(
+            self.robot.get_links(), "panda_leftfinger"
+        ).entity
+        self.finger2_link: sapien.Entity = get_obj_by_name(
+            self.robot.get_links(), "panda_rightfinger"
+        ).entity
+        self.tcp: physx.PhysxArticulationLinkComponent = get_obj_by_name(
+            self.robot.get_links(), self.ee_link_name
         )
 
+    def is_grasping(self, object: sapien.Entity = None, min_impulse=1e-6, max_angle=85):
+        contacts = self.scene.get_contacts()
+        if object is None:
+            finger1_contacts = get_actor_contacts(contacts, self.finger1_link)
+            finger2_contacts = get_actor_contacts(contacts, self.finger2_link)
+            return (
+                np.linalg.norm(compute_total_impulse(finger1_contacts)) >= min_impulse
+                and np.linalg.norm(compute_total_impulse(finger2_contacts))
+                >= min_impulse
+            )
+        else:
+            limpulse = get_pairwise_contact_impulse(contacts, self.finger1_link, object)
+            rimpulse = get_pairwise_contact_impulse(contacts, self.finger2_link, object)
 
-class PandaRealSensed435Config(PandaDefaultConfig):
-    def __init__(self) -> None:
-        super().__init__()
-        self.urdf_path = "{PACKAGE_ASSET_DIR}/descriptions/panda_v3.urdf"
+            # direction to open the gripper
+            ldirection = self.finger1_link.pose.to_transformation_matrix()[:3, 1]
+            rdirection = -self.finger2_link.pose.to_transformation_matrix()[:3, 1]
 
-    @property
-    def cameras(self):
-        return CameraConfig(
-            uid="hand_camera",
-            p=[0, 0, 0],
-            q=[1, 0, 0, 0],
-            width=128,
-            height=128,
-            fov=1.57,
-            near=0.01,
-            far=10,
-            actor_uid="camera_link",
-        )
+            # angle between impulse and open direction
+            langle = compute_angle_between(ldirection, limpulse)
+            rangle = compute_angle_between(rdirection, rimpulse)
+
+            lflag = (
+                np.linalg.norm(limpulse) >= min_impulse
+                and np.rad2deg(langle) <= max_angle
+            )
+            rflag = (
+                np.linalg.norm(rimpulse) >= min_impulse
+                and np.rad2deg(rangle) <= max_angle
+            )
+
+            return all([lflag, rflag])
+
+    @staticmethod
+    def build_grasp_pose(approaching, closing, center):
+        """Build a grasp pose (panda_hand_tcp)."""
+        assert np.abs(1 - np.linalg.norm(approaching)) < 1e-3
+        assert np.abs(1 - np.linalg.norm(closing)) < 1e-3
+        assert np.abs(approaching @ closing) <= 1e-3
+        ortho = np.cross(closing, approaching)
+        T = np.eye(4)
+        T[:3, :3] = np.stack([ortho, closing, approaching], axis=1)
+        T[:3, 3] = center
+        return sapien.Pose(T)

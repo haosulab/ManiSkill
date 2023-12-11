@@ -1,8 +1,15 @@
-from typing import Dict
+from typing import Any, Dict
 
 import numpy as np
-import sapien.core as sapien
-from sapien.core import Actor, Articulation, Link, Pose
+import sapien
+import sapien.physx as physx
+
+# from sapien import Actor, Articulation, Link, Pose
+# TODO: Temporary. We may not need these bbox functions anyway once added to sapien.
+Actor = Any
+Articulation = Any
+Link = Any
+Pose = Any
 from scipy.spatial.transform import Rotation
 
 from mani_skill2.utils.bounding_cylinder import aabc
@@ -69,7 +76,7 @@ def angle_distance(q0: sapien.Pose, q1: sapien.Pose):
     return 2 * np.arctan2(np.linalg.norm(qd[1:]), qd[0]) / np.pi
 
 
-def get_axis_aligned_bbox_for_articulation(art: Articulation):
+def get_axis_aligned_bbox_for_articulation(art: physx.PhysxArticulation):
     mins = np.array([np.inf, np.inf, np.inf])
     maxs = -mins
     for link in art.get_links():
@@ -77,19 +84,23 @@ def get_axis_aligned_bbox_for_articulation(art: Articulation):
         for s in link.get_collision_shapes():
             p = lp * s.get_local_pose()
             T = p.to_transformation_matrix()
-            vertices = s.geometry.vertices * s.geometry.scale
+            assert isinstance(s, physx.PhysxCollisionShapeConvexMesh)
+            vertices = s.vertices * s.scale
             vertices = vertices @ T[:3, :3].T + T[:3, 3]
             mins = np.minimum(mins, vertices.min(0))
             maxs = np.maximum(maxs, vertices.max(0))
     return mins, maxs
 
 
-def get_axis_aligned_bbox_for_actor(actor: Actor):
+def get_axis_aligned_bbox_for_actor(actor: sapien.Entity):
     mins = np.ones(3) * np.inf
     maxs = -mins
 
-    for shape in actor.get_collision_shapes():  # this is CollisionShape
-        scaled_vertices = shape.geometry.vertices * shape.geometry.scale
+    for shape in actor.find_component_by_type(
+        physx.PhysxRigidDynamicComponent
+    ).get_collision_shapes():  # this is CollisionShape
+        assert isinstance(shape, physx.PhysxCollisionShapeConvexMesh)
+        scaled_vertices = shape.vertices * shape.scale
         local_pose = shape.get_local_pose()
         mat = (actor.get_pose() * local_pose).to_transformation_matrix()
         world_vertices = scaled_vertices @ (mat[:3, :3].T) + mat[:3, 3]
@@ -99,25 +110,29 @@ def get_axis_aligned_bbox_for_actor(actor: Actor):
     return mins, maxs
 
 
-def get_local_axis_aligned_bbox_for_link(link: Link):
+def get_local_axis_aligned_bbox_for_link(link: physx.PhysxArticulationLinkComponent):
     mins = np.array([np.inf, np.inf, np.inf])
     maxs = -mins
     for s in link.get_collision_shapes():
+        assert isinstance(s, physx.PhysxCollisionShapeConvexMesh)
         p = s.get_local_pose()
         T = p.to_transformation_matrix()
-        vertices = s.geometry.vertices * s.geometry.scale
+        vertices = s.vertices * s.scale
         vertices = vertices @ T[:3, :3].T + T[:3, 3]
         mins = np.minimum(mins, vertices.min(0))
         maxs = np.maximum(maxs, vertices.max(0))
     return mins, maxs
 
 
-def get_local_aabc_for_actor(actor):
+def get_local_aabc_for_actor(actor: sapien.Entity):
     all_vertices = []
-    for s in actor.get_collision_shapes():
+    for s in actor.find_component_by_type(
+        physx.PhysxRigidDynamicComponent
+    ).get_collision_shapes():
+        assert isinstance(s, physx.PhysxCollisionShapeConvexMesh)
         p = s.get_local_pose()
         T = p.to_transformation_matrix()
-        vertices = s.geometry.vertices * s.geometry.scale
+        vertices = s.vertices * s.scale
         vertices = vertices @ T[:3, :3].T + T[:3, 3]
         all_vertices.append(vertices)
     vertices = np.vstack(all_vertices)

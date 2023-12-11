@@ -1,34 +1,40 @@
 from copy import deepcopy
 
 import numpy as np
+from sapien import Pose
 
+from mani_skill2 import PACKAGE_ASSET_DIR
 from mani_skill2.agents.controllers import *
 from mani_skill2.sensors.camera import CameraConfig
+from mani_skill2.utils.sapien_utils import get_objs_by_names
+
+from .base_mobile_agent import DummyMobileAgent
 
 
-class MobilePandaDualArmDefaultConfig:
-    def __init__(self) -> None:
-        self.urdf_path = "{PACKAGE_ASSET_DIR}/descriptions/mobile_panda_dual_arm.urdf"
-        self.urdf_config = dict(
-            _materials=dict(
-                gripper=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)
+class MobilePandaDualArm(DummyMobileAgent):
+    uid = "mobile_panda_dual_arm"
+    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/panda/mobile_panda_dual_arm.urdf"
+    urdf_config = dict(
+        _materials=dict(
+            gripper=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)
+        ),
+        link=dict(
+            right_panda_leftfinger=dict(
+                material="gripper", patch_radius=0.1, min_patch_radius=0.1
             ),
-            link=dict(
-                right_panda_leftfinger=dict(
-                    material="gripper", patch_radius=0.1, min_patch_radius=0.1
-                ),
-                right_panda_rightfinger=dict(
-                    material="gripper", patch_radius=0.1, min_patch_radius=0.1
-                ),
-                left_panda_leftfinger=dict(
-                    material="gripper", patch_radius=0.1, min_patch_radius=0.1
-                ),
-                left_panda_rightfinger=dict(
-                    material="gripper", patch_radius=0.1, min_patch_radius=0.1
-                ),
+            right_panda_rightfinger=dict(
+                material="gripper", patch_radius=0.1, min_patch_radius=0.1
             ),
-        )
+            left_panda_leftfinger=dict(
+                material="gripper", patch_radius=0.1, min_patch_radius=0.1
+            ),
+            left_panda_rightfinger=dict(
+                material="gripper", patch_radius=0.1, min_patch_radius=0.1
+            ),
+        ),
+    )
 
+    def __init__(self, scene, control_freq, control_mode=None, fix_root_link=True):
         self.base_joint_names = [
             "root_x_axis_joint",
             "root_y_axis_joint",
@@ -73,9 +79,73 @@ class MobilePandaDualArmDefaultConfig:
         }
 
         self.camera_h = 1.5
+        super().__init__(scene, control_freq, control_mode, fix_root_link)
+
+    def _after_init(self):
+        super()._after_init()
+
+        (
+            self.rfinger1_joint,
+            self.rfinger2_joint,
+            self.lfinger1_joint,
+            self.lfinger2_joint,
+        ) = get_objs_by_names(
+            self.robot.get_joints(),
+            [
+                "right_panda_finger_joint1",
+                "right_panda_finger_joint2",
+                "left_panda_finger_joint1",
+                "left_panda_finger_joint2",
+            ],
+        )
+        (
+            self.rfinger1_link,
+            self.rfinger2_link,
+            self.lfinger1_link,
+            self.lfinger2_link,
+        ) = get_objs_by_names(
+            self.robot.get_links(),
+            [
+                "right_panda_leftfinger",
+                "right_panda_rightfinger",
+                "left_panda_leftfinger",
+                "left_panda_rightfinger",
+            ],
+        )
+
+        self.rhand, self.lhand = get_objs_by_names(
+            self.robot.get_links(), ["right_panda_hand", "left_panda_hand"]
+        )
+
+    # Define some useful functions for this robot
+    def get_fingers_info(self):
+        fingers_pos = self.get_ee_coords().flatten()
+        fingers_vel = self.get_ee_vels().flatten()
+        return {
+            "fingers_pos": fingers_pos,
+            "fingers_vel": fingers_vel,
+        }
+
+    def get_ee_coords(self):
+        finger_tips = [
+            (self.rfinger2_joint.get_global_pose() * Pose([0, 0.035, 0])).p,
+            (self.rfinger1_joint.get_global_pose() * Pose([0, -0.035, 0])).p,
+            (self.lfinger2_joint.get_global_pose() * Pose([0, 0.035, 0])).p,
+            (self.lfinger1_joint.get_global_pose() * Pose([0, -0.035, 0])).p,
+        ]
+        return np.array(finger_tips)
+
+    def get_ee_vels(self):
+        finger_vels = [
+            self.rfinger1_link.get_linear_velocity(),
+            self.rfinger2_link.get_linear_velocity(),
+            self.lfinger1_link.get_linear_velocity(),
+            self.lfinger2_link.get_linear_velocity(),
+        ]
+        return np.array(finger_vels)
 
     @property
-    def controllers(self):
+    def controller_configs(self):
         _C = {}  # controller configs for each component
 
         # -------------------------------------------------------------------------- #
@@ -221,15 +291,14 @@ class MobilePandaDualArmDefaultConfig:
         return deepcopy_dict(controller_configs)
 
     @property
-    def cameras(self):
-        cameras = []
+    def sensor_configs(self):
+        sensors = []
         qs = [
             [0.9238795, 0, 0.3826834, 0],
             [0.46193977, 0.33141357, 0.19134172, -0.80010315],
             [-0.46193977, 0.33141357, -0.19134172, -0.80010315],
         ]
         for i in range(3):
-            # q = transforms3d.euler.euler2quat(-np.pi/3*i, np.pi/4, 0, 'rzyx')
             q = qs[i]
             camera = CameraConfig(
                 f"overhead_camera_{i}",
@@ -240,46 +309,7 @@ class MobilePandaDualArmDefaultConfig:
                 near=0.1,
                 far=10,
                 fov=np.pi / 3,
-                actor_uid="mobile_base",
+                entity_uid="mobile_base",
             )
-            cameras.append(camera)
-        return cameras
-
-
-class MobilePandaSingleArmDefaultConfig(MobilePandaDualArmDefaultConfig):
-    def __init__(self) -> None:
-        super().__init__()
-        self.urdf_path = "{PACKAGE_ASSET_DIR}/descriptions/mobile_panda_single_arm.urdf"
-        self.urdf_config = dict(
-            _materials=dict(
-                gripper=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)
-            ),
-            link=dict(
-                right_panda_leftfinger=dict(
-                    material="gripper", patch_radius=0.1, min_patch_radius=0.1
-                ),
-                right_panda_rightfinger=dict(
-                    material="gripper", patch_radius=0.1, min_patch_radius=0.1
-                ),
-            ),
-        )
-
-        self.arm_joint_names = {
-            "right": self.arm_joint_names["right"],
-        }
-        self.gripper_joint_names = {
-            "right": self.gripper_joint_names["right"],
-        }
-        self.ee_link_name = {
-            "right": self.ee_link_name["right"],
-        }
-
-
-def test():
-    a = MobilePandaDualArmDefaultConfig()
-    # print_dict(a.controllers)
-    d = a.controllers
-    for k, v in d.items():
-        print(k, ":")
-        print(v)
-        print("------------")
+            sensors.append(camera)
+        return sensors

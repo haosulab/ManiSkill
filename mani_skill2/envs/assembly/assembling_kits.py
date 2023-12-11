@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import List
 
 import numpy as np
-import sapien.core as sapien
+import sapien
 from transforms3d.euler import euler2quat, quat2euler
 
 from mani_skill2 import format_path
@@ -40,7 +40,7 @@ class AssemblingKitsEnv(StationaryManipulationEnv):
     def reset(self, seed=None, options=None):
         if options is None:
             options = dict()
-        self.set_episode_rng(seed)
+        self._set_episode_rng(seed)
         episode_idx = options.pop("episode_idx", None)
         reconfigure = options.pop("reconfigure", False)
         if episode_idx is None:
@@ -90,7 +90,7 @@ class AssemblingKitsEnv(StationaryManipulationEnv):
         visual_path = self._models_dir / "visual" / f"{object_id:02d}.obj"
 
         builder = self._scene.create_actor_builder()
-        builder.add_multiple_collisions_from_file(
+        builder.add_multiple_convex_collisions_from_file(
             str(collision_path), scale=self.object_scale
         )
 
@@ -136,14 +136,14 @@ class AssemblingKitsEnv(StationaryManipulationEnv):
 
     def _get_obs_extra(self):
         obs = dict(
-            tcp_pose=vectorize_pose(self.tcp.pose),
+            tcp_pose=vectorize_pose(self.agent.tcp.pose),
             obj_init_pos=self._obj_init_pos,
             obj_goal_pos=self._obj_goal_pos,
         )
         if self._obs_mode in ["state", "state_dict"]:
             obs.update(
                 obj_pose=vectorize_pose(self.obj.pose),
-                tcp_to_obj_pos=self.obj.pose.p - self.tcp.pose.p,
+                tcp_to_obj_pos=self.obj.pose.p - self.agent.tcp.pose.p,
                 obj_to_goal_pos=self.objects_pos[self.object_id] - self.obj.pose.p,
             )
         return obs
@@ -165,7 +165,7 @@ class AssemblingKitsEnv(StationaryManipulationEnv):
                 rot_diff = self.symmetry[self.object_id] - rot_diff
         return rot_diff, rot_diff < rot_eps
 
-    def _check_in_slot(self, obj: sapien.Actor, height_eps=3e-3):
+    def _check_in_slot(self, obj: sapien.Entity, height_eps=3e-3):
         return obj.pose.p[2] < height_eps
 
     def evaluate(self, **kwargs) -> dict:
@@ -188,11 +188,11 @@ class AssemblingKitsEnv(StationaryManipulationEnv):
 
         reward = 0.0
         gripper_width = (
-            self.agent.robot.get_qlimits()[-1, 1] * 2
+            self.agent.robot.get_qlimit()[-1, 1] * 2
         )  # NOTE: hard-coded with panda
 
         # reaching reward
-        gripper_to_obj_dist = np.linalg.norm(self.tcp.pose.p - self.obj.pose.p)
+        gripper_to_obj_dist = np.linalg.norm(self.agent.tcp.pose.p - self.obj.pose.p)
         reaching_reward = 1 - np.tanh(4.0 * np.maximum(gripper_to_obj_dist - 0.01, 0.0))
         reward += reaching_reward
 
@@ -207,7 +207,7 @@ class AssemblingKitsEnv(StationaryManipulationEnv):
             reward += 1.0
 
         # grasp reward
-        is_grasped = self.agent.check_grasp(
+        is_grasped = self.agent.is_grasping(
             self.obj, max_angle=30
         )  # max_angle ensures that the gripper grasps the object appropriately, not in a strange pose
         if is_grasped or object_well_positioned:
@@ -229,8 +229,8 @@ class AssemblingKitsEnv(StationaryManipulationEnv):
     def compute_normalized_dense_reward(self, **kwargs):
         return self.compute_dense_reward(**kwargs) / 10.0
 
-    def _register_cameras(self):
-        cam_cfg = super()._register_cameras()
+    def _register_sensors(self):
+        cam_cfg = super()._register_sensors()
         cam_cfg.pose = look_at([0.2, 0, 0.4], [0, 0, 0])
         return cam_cfg
 

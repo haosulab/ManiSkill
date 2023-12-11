@@ -3,31 +3,36 @@ from collections import OrderedDict
 from typing import Dict, Sequence
 
 import numpy as np
-import sapien.core as sapien
+import sapien
+import sapien.physx as physx
 from gymnasium import spaces
 
 
-def get_joint_indices(articulation: sapien.Articulation, joint_names: Sequence[str]):
+def get_joint_indices(
+    articulation: physx.PhysxArticulation, joint_names: Sequence[str]
+):
     all_joint_names = [x.name for x in articulation.get_joints()]
     joint_indices = [all_joint_names.index(x) for x in joint_names]
     return joint_indices
 
 
 def get_active_joint_indices(
-    articulation: sapien.Articulation, joint_names: Sequence[str]
+    articulation: physx.PhysxArticulation, joint_names: Sequence[str]
 ):
     all_joint_names = [x.name for x in articulation.get_active_joints()]
     joint_indices = [all_joint_names.index(x) for x in joint_names]
     return joint_indices
 
 
-def get_joints(articulation: sapien.Articulation, joint_names: Sequence[str]):
+def get_joints(articulation: physx.PhysxArticulation, joint_names: Sequence[str]):
     joints = articulation.get_joints()
     joint_indices = get_joint_indices(articulation, joint_names)
     return [joints[idx] for idx in joint_indices]
 
 
-def get_active_joints(articulation: sapien.Articulation, joint_names: Sequence[str]):
+def get_active_joints(
+    articulation: physx.PhysxArticulation, joint_names: Sequence[str]
+):
     joints = articulation.get_active_joints()
     joint_indices = get_active_joint_indices(articulation, joint_names)
     return [joints[idx] for idx in joint_indices]

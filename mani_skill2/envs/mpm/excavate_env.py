@@ -1,17 +1,16 @@
 from collections import OrderedDict
 
 import numpy as np
-import sapien.core as sapien
+import sapien
 from transforms3d.euler import euler2quat
 
-from mani_skill2.agents.configs.panda.variants import PandaBucketConfig
-from mani_skill2.agents.robots.panda import Panda
+from mani_skill2.agents.robots.panda.variants import PandaBucket
 from mani_skill2.envs.mpm import perlin
 from mani_skill2.envs.mpm.base_env import MPMBaseEnv
 from mani_skill2.envs.mpm.utils import actor2meshes
 from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import get_entity_by_name, vectorize_pose
+from mani_skill2.utils.sapien_utils import get_obj_by_name, vectorize_pose
 
 
 @register_env("Excavate-v0", max_episode_steps=250)
@@ -89,18 +88,14 @@ class ExcavateEnv(MPMBaseEnv):
 
         self.mpm_model.struct.particle_radius = 0.0025
 
-    def _configure_agent(self):
-        self._agent_cfg = PandaBucketConfig()
-
     def _load_agent(self):
-        self.agent = Panda(
+        self.agent = PandaBucket(
             self._scene,
             self._control_freq,
             control_mode=self._control_mode,
-            config=self._agent_cfg,
         )
 
-        self.grasp_site: sapien.Link = get_entity_by_name(
+        self.grasp_site: sapien.Link = get_obj_by_name(
             self.agent.robot.get_links(), "bucket"
         )
 
@@ -146,7 +141,7 @@ class ExcavateEnv(MPMBaseEnv):
             (l, "visual") for l in self.agent.robot.get_links() if l.name == "bucket"
         ] + self.walls
 
-    def _register_cameras(self):
+    def _register_sensors(self):
         p, q = [-0.2, -0, 0.4], euler2quat(0, np.pi / 6, 0)
         return CameraConfig("base_camera", p, q, 128, 128, np.pi / 2, 0.001, 10)
 

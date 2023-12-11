@@ -107,7 +107,7 @@ def initialize_sources():
 def initialize_extra_sources():
     DATA_SOURCES["xmate3_robotiq"] = dict(
         url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/xmate3_robotiq.zip",
-        target_path="xmate3_robotiq",
+        target_path="robots/xmate3_robotiq",
         checksum="ddda102a20eb41e28a0a501702e240e5d7f4084221a44f580e729f08b7c12d1a",
     )
 
