@@ -101,6 +101,7 @@ class RecordEpisode(gym.Wrapper):
         info_on_video=False,
         save_on_reset=True,
         clean_on_close=True,
+        record_reward=False,
         video_fps=20,
     ):
         super().__init__(env)
@@ -117,6 +118,7 @@ class RecordEpisode(gym.Wrapper):
 
         self.save_trajectory = save_trajectory
         self.clean_on_close = clean_on_close
+        self.record_reward = record_reward
         if self.save_trajectory:
             if not trajectory_name:
                 trajectory_name = time.strftime("%Y%m%d_%H%M%S")
@@ -313,6 +315,11 @@ class RecordEpisode(gym.Wrapper):
         # Dump
         group.create_dataset("actions", data=actions, dtype=np.float32)
         group.create_dataset("success", data=dones, dtype=bool)
+
+        if self.record_reward:
+            rewards = np.stack([x["r"] for x in self._episode_data]).astype(np.float32)
+            group.create_dataset("rewards",data=rewards, dtype=np.float32)
+        
         if self.init_state_only:
             group.create_dataset("env_init_state", data=env_states[0], dtype=np.float32)
         else:
