@@ -336,7 +336,6 @@ def parse_args(args=None):
         "--record-rewards", type=bool, help="whether the replayed trajectory should include rewards", default=False
     )
 
-    parser.add_argument("--store")
     return parser.parse_args(args)
 
 
