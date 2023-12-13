@@ -12,7 +12,7 @@ Link = Any
 Pose = Any
 from scipy.spatial.transform import Rotation
 
-from mani_skill2.utils.bounding_cylinder import aabc
+from mani_skill2.utils.geometry.bounding_cylinder import aabc
 
 
 def sample_on_unit_sphere(rng):

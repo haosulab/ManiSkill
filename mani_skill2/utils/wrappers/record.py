@@ -318,8 +318,8 @@ class RecordEpisode(gym.Wrapper):
 
         if self.record_reward:
             rewards = np.stack([x["r"] for x in self._episode_data]).astype(np.float32)
-            group.create_dataset("rewards",data=rewards, dtype=np.float32)
-        
+            group.create_dataset("rewards", data=rewards, dtype=np.float32)
+
         if self.init_state_only:
             group.create_dataset("env_init_state", data=env_states[0], dtype=np.float32)
         else:
