@@ -69,6 +69,7 @@ class BaseAgent:
         self._default_control_mode = control_mode
 
         self._load_articulation()
+        self._after_loading_articulation()
         self._setup_controllers()
         self.set_control_mode(control_mode)
         self._after_init()
@@ -95,6 +96,10 @@ class BaseAgent:
         # Cache robot link ids
         self.robot_link_ids = [link.name for link in self.robot.get_links()]
 
+    def _after_loading_articulation(self):
+        """After loading articulation and before setting up controller. Not recommended, but is useful for when creating 
+        robot classes that inherit controllers from another and only change which joints are controlled"""
+        pass
     def _after_init(self):
         """After initialization. E.g., caching the end-effector link."""
         pass

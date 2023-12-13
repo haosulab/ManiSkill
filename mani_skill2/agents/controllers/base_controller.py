@@ -7,9 +7,12 @@ import sapien
 import sapien.physx as physx
 from gymnasium import spaces
 
+from mani_skill2.agents.utils import (
+    flatten_action_spaces,
+    get_active_joint_indices,
+    get_active_joints,
+)
 from mani_skill2.utils.common import clip_and_scale_action, normalize_action_space
-
-from mani_skill2.agents.utils import flatten_action_spaces, get_active_joint_indices, get_active_joints
 
 
 class BaseController:

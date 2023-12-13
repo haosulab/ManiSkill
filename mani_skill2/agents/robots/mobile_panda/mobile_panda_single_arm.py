@@ -26,7 +26,7 @@ class MobilePandaSingleArm(MobilePandaDualArm):
         ),
     )
 
-    def __init__(self, scene, control_freq, control_mode=None, fix_root_link=True):
+    def _after_loading_articulation(self):
         self.arm_joint_names = {
             "right": self.arm_joint_names["right"],
         }
@@ -36,7 +36,6 @@ class MobilePandaSingleArm(MobilePandaDualArm):
         self.ee_link_name = {
             "right": self.ee_link_name["right"],
         }
-        super().__init__(scene, control_freq, control_mode, fix_root_link)
 
     def _after_init(self):
         super()._after_init()
