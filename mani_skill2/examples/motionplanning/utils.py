@@ -6,7 +6,7 @@ import trimesh
 from transforms3d import quaternions
 
 from mani_skill2.utils.common import normalize_vector
-from mani_skill2.utils.trimesh_utils import get_component_mesh
+from mani_skill2.utils.geometry.trimesh_utils import get_component_mesh
 
 
 def get_actor_obb(actor: sapien.Entity, to_world_frame=True, vis=False):
