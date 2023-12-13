@@ -7,6 +7,7 @@ from transforms3d.euler import euler2quat
 
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import hide_entity, show_entity, vectorize_pose
+from mani_skill2.utils.scene_builder import TableSceneBuilder
 
 from .base_env import StationaryManipulationEnv
 
@@ -22,7 +23,7 @@ class PickCubeEnv(StationaryManipulationEnv):
         super().__init__(*args, **kwargs)
 
     def _load_actors(self):
-        self._add_ground(render=self.bg_name is None)
+        TableSceneBuilder().build(self._scene)
         self.obj = self._build_cube(self.cube_half_size)
         self.goal_site = self._build_sphere_site(self.goal_thresh)
 

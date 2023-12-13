@@ -27,7 +27,7 @@ class StationaryManipulationEnv(BaseEnv):
         return scene_config
 
     def _initialize_agent(self):
-        if self.robot_uid == "panda":
+        if self.robot_uid == "panda" or self.robot_uid == "panda_realsensed435":
             # fmt: off
             # EE at [0.615, 0, 0.17]
             qpos = np.array(

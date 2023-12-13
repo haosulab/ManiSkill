@@ -9,6 +9,7 @@ from transforms3d.quaternions import qinverse, qmult, quat2axangle
 
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import hex2rgba, look_at, vectorize_pose
+from mani_skill2.utils.scene_builder import TableSceneBuilder
 
 from .base_env import StationaryManipulationEnv
 
@@ -96,7 +97,7 @@ class PlugChargerEnv(StationaryManipulationEnv):
         return builder.build_static(name="receptacle")
 
     def _load_actors(self):
-        self._add_ground(render=self.bg_name is None)
+        TableSceneBuilder().build(self._scene)
         self.charger = self._build_charger(
             self._peg_size,
             self._base_size,

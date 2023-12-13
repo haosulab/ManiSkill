@@ -16,6 +16,7 @@ from mani_skill2.utils.sapien_utils import (
     set_entity_visibility,
     vectorize_pose,
 )
+from mani_skill2.utils.scene_builder import TableSceneBuilder
 
 from .base_env import StationaryManipulationEnv
 from .pick_single import PickSingleYCBEnv, build_actor_ycb
@@ -65,7 +66,7 @@ class PickClutterEnv(StationaryManipulationEnv):
         super().__init__(**kwargs)
 
     def _load_actors(self):
-        self._add_ground(render=self.bg_name is None)
+        TableSceneBuilder().build(self._scene)
 
         self.objs: List[sapien.Entity] = []
         self.bbox_sizes = []

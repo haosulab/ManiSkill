@@ -20,6 +20,7 @@ from mani_skill2.utils.sapien_utils import (
     show_entity,
     vectorize_pose,
 )
+from mani_skill2.utils.scene_builder import TableSceneBuilder
 
 from .base_env import StationaryManipulationEnv
 
@@ -80,7 +81,7 @@ class PickSingleEnv(StationaryManipulationEnv):
         pass
 
     def _load_actors(self):
-        self._add_ground(render=self.bg_name is None)
+        TableSceneBuilder().build(self._scene)
         self._load_model()
         obj_comp = self.obj.find_component_by_type(physx.PhysxRigidDynamicComponent)
         obj_comp.set_linear_damping(0.1)

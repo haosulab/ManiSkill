@@ -1,3 +1,4 @@
+import os.path as osp
 from collections import OrderedDict
 from pathlib import Path
 from typing import Dict, List, Union
@@ -5,6 +6,7 @@ from typing import Dict, List, Union
 import numpy as np
 import sapien
 import sapien.physx as physx
+import sapien.render
 import trimesh
 import trimesh.sample
 from sapien import Pose
@@ -15,8 +17,10 @@ from mani_skill2 import format_path
 from mani_skill2.agents.robots.panda.panda import Panda
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
+from mani_skill2.utils.building.ground import build_tesselated_square_floor
 from mani_skill2.utils.common import np_random, random_choice
 from mani_skill2.utils.geometry import transform_points
+from mani_skill2.utils.geometry.trimesh_utils import get_component_mesh
 from mani_skill2.utils.io_utils import load_json
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import (
@@ -26,7 +30,6 @@ from mani_skill2.utils.sapien_utils import (
     set_articulation_render_material,
     vectorize_pose,
 )
-from mani_skill2.utils.trimesh_utils import get_component_mesh
 
 
 class TurnFaucetBaseEnv(BaseEnv):
@@ -43,7 +46,43 @@ class TurnFaucetBaseEnv(BaseEnv):
         super().__init__(*args, robot_uid=robot_uid, **kwargs)
 
     def _load_actors(self):
-        self._add_ground(render=self.bg_name is None)
+        # builder = self._scene.create_actor_builder()
+        # model_dir = Path(osp.dirname(__file__)) / "assets"
+        # scale = 1
+        # collision_file = str(model_dir / "Sink_19.glb")  # a metal table
+        # sink_pose = sapien.Pose(q=euler2quat(np.pi / 2, 0, 0))
+        # builder.add_nonconvex_collision_from_file(
+        #     filename=collision_file, scale=[scale] * 3, material=None, pose=sink_pose
+        # )
+        # visual_file = str(model_dir / "Sink_19.glb")
+        # builder.add_visual_from_file(
+        #     filename=visual_file, scale=[scale] * 3, pose=sink_pose
+        # )
+        # self.sink = builder.build_static(name="sink")
+        # aabb = self.sink.find_component_by_type(
+        #     sapien.render.RenderBodyComponent
+        # ).compute_global_aabb_tight()
+        # sink_height = aabb[1, 2] - aabb[0, 2]
+
+        # self.sink.set_pose(
+        #     Pose(p=[-0.24, 0, -sink_height], q=euler2quat(0, 0, -np.pi / 2))
+        # )
+
+        build_tesselated_square_floor(self._scene)
+
+        # # add wall
+        # wall_mtl = sapien.render.RenderMaterial(
+        #     base_color=[32 / 255, 67 / 255, 80 / 255, 1],
+        #     metallic=0,
+        #     roughness=0.9,
+        #     specular=0.8,
+        # )
+        # wall = self._scene.create_actor_builder()
+        # half_size = (0.02, 6, 2.1)
+        # wall.add_box_collision(half_size=half_size)
+        # wall.add_box_visual(half_size=half_size, material=wall_mtl)
+        # self.wall = wall.build_static("wall")
+        # self.wall.set_pose(Pose(p=[0.25, 0, 1]))
 
     def _initialize_agent(self):
         if self.robot_uid == "panda":
@@ -70,13 +109,12 @@ class TurnFaucetBaseEnv(BaseEnv):
         )
 
     def _register_render_cameras(self):
-        pose = look_at([0.5, 0.5, 1.0], [0.0, 0.0, 0.5])
+        pose = look_at([-1.3, 0.6, 0.6], [0.0, 0.0, 0.4])
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
 
     def _setup_viewer(self):
         super()._setup_viewer()
-        self._viewer.set_camera_xyz(1.0, 0.0, 1.2)
-        self._viewer.set_camera_rpy(0, -0.5, 3.14)
+        self._viewer.set_camera_pose(look_at([-1.3, 0.6, 0.6], [0.0, 0.0, 0.4]))
 
 
 @register_env("TurnFaucet-v0", max_episode_steps=200)
@@ -199,6 +237,7 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
         loader.set_density(density)
         articulation.set_name("faucet")
 
+        # TODO (stao): find out why we did this before
         set_articulation_render_material(
             articulation, color=hex2rgba("#AAAAAA"), metallic=1, roughness=0.4
         )
@@ -250,6 +289,8 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
         ori = self._episode_rng.uniform(-np.pi / 12, np.pi / 12)
         q = euler2quat(0, 0, ori)
         self.faucet.set_pose(Pose(p, q))
+        # self.sink.set_pose(self.sink.pose * Pose(p=[p[0], p[1], 0.011], q=q))
+        # self.wall.set_pose(self.wall.pose * Pose(p=[p[0], p[1], 0], q=q))
 
     def _initialize_task(self):
         self._set_target_link()
@@ -319,7 +360,7 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
 
     def _get_obs_extra(self) -> OrderedDict:
         obs = OrderedDict(
-            tcp_pose=vectorize_pose(self.tcp.pose),
+            tcp_pose=vectorize_pose(self.agent.tcp.pose),
             target_angle_diff=np.array(self.target_angle_diff),
             target_joint_axis=self.target_joint_axis,
             target_link_pos=self.target_link_pos,

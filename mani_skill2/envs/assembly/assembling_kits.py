@@ -9,6 +9,7 @@ from mani_skill2 import format_path
 from mani_skill2.utils.io_utils import load_json
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import look_at, vectorize_pose
+from mani_skill2.utils.scene_builder import TableSceneBuilder
 
 from .base_env import StationaryManipulationEnv
 
@@ -106,7 +107,7 @@ class AssemblingKitsEnv(StationaryManipulationEnv):
         return builder.build(f"obj_{object_id:02d}")
 
     def _load_actors(self):
-        self._add_ground(render=self.bg_name is None)
+        TableSceneBuilder().build(self._scene)
 
         self.kit = self._load_kit()
         self.obj = self._load_object(self.object_id)

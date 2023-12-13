@@ -10,9 +10,9 @@ from transforms3d.euler import euler2quat, quat2euler
 from mani_skill2.agents.robots.mobile_panda import MobilePandaDualArm
 from mani_skill2.utils.common import np_random
 from mani_skill2.utils.geometry import transform_points
+from mani_skill2.utils.geometry.trimesh_utils import get_actor_visual_mesh
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import get_obj_by_name, vectorize_pose
-from mani_skill2.utils.trimesh_utils import get_actor_visual_mesh
 
 from .base_env import MS1BaseEnv
 

@@ -106,16 +106,13 @@ class StationaryManipulationEnv(BaseEnv):
         )
 
     def _register_render_cameras(self):
-        if self.robot_uid == "panda":
-            pose = look_at([0.4, 0.4, 0.8], [0.0, 0.0, 0.4])
-        else:
-            pose = look_at([0.5, 0.5, 1.0], [0.0, 0.0, 0.5])
+        pose = look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
 
     def _setup_viewer(self):
         super()._setup_viewer()
-        self._viewer.set_camera_xyz(0.8, 0, 1.0)
-        self._viewer.set_camera_rpy(0, -0.5, 3.14)
+        pose = look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
+        self._viewer.set_camera_pose(pose)
 
     def _get_obs_agent(self):
         obs = self.agent.get_proprioception()

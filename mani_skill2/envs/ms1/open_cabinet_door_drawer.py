@@ -12,14 +12,14 @@ from scipy.spatial import distance as sdist
 from mani_skill2.agents.robots.mobile_panda import MobilePandaSingleArm
 from mani_skill2.utils.common import np_random, random_choice
 from mani_skill2.utils.geometry import angle_distance, transform_points
-from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import get_obj_by_name, vectorize_pose
-from mani_skill2.utils.trimesh_utils import (
+from mani_skill2.utils.geometry.trimesh_utils import (
     get_articulation_meshes,
     get_render_body_meshes,
     get_render_shape_meshes,
     merge_meshes,
 )
+from mani_skill2.utils.registration import register_env
+from mani_skill2.utils.sapien_utils import get_obj_by_name, vectorize_pose
 
 from .base_env import MS1BaseEnv
 

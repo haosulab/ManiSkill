@@ -7,6 +7,7 @@ from transforms3d.euler import euler2quat
 
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import hex2rgba, look_at, vectorize_pose
+from mani_skill2.utils.scene_builder import TableSceneBuilder
 
 from .base_env import StationaryManipulationEnv
 
@@ -56,7 +57,7 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
         return builder.build_static(name)
 
     def _load_actors(self):
-        self._add_ground(render=self.bg_name is None)
+        TableSceneBuilder().build(self._scene)
 
         # peg
         # length, radius = 0.1, 0.02

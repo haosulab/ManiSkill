@@ -22,6 +22,11 @@ from mani_skill2.sensors.camera import (
 )
 from mani_skill2.sensors.depth_camera import StereoDepthCamera, StereoDepthCameraConfig
 from mani_skill2.utils.common import convert_observation_to_space, flatten_state_dict
+from mani_skill2.utils.geometry.trimesh_utils import (
+    get_articulation_meshes,
+    get_component_meshes,
+    merge_meshes,
+)
 from mani_skill2.utils.sapien_utils import (
     get_actor_state,
     get_articulation_state,
@@ -29,11 +34,6 @@ from mani_skill2.utils.sapien_utils import (
     set_actor_state,
     set_articulation_render_material,
     set_articulation_state,
-)
-from mani_skill2.utils.trimesh_utils import (
-    get_articulation_meshes,
-    get_component_meshes,
-    merge_meshes,
 )
 from mani_skill2.utils.visualization.misc import observations_to_images, tile_images
 
