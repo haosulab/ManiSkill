@@ -329,11 +329,17 @@ def parse_args(args=None):
     )
 
     parser.add_argument(
-        "--reward-mode", type=str, help="specifies the reward type that the env should use", default="normalized_dense"
+        "--reward-mode",
+        type=str,
+        help="specifies the reward type that the env should use",
+        default="normalized_dense",
     )
-    
+
     parser.add_argument(
-        "--record-rewards", type=bool, help="whether the replayed trajectory should include rewards", default=False
+        "--record-rewards",
+        type=bool,
+        help="whether the replayed trajectory should include rewards",
+        default=False,
     )
 
     return parser.parse_args(args)
@@ -395,7 +401,7 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
         save_trajectory=args.save_traj,
         trajectory_name=new_traj_name,
         save_video=args.save_video,
-        record_reward=args.record_rewards
+        record_reward=args.record_rewards,
     )
 
     if env.save_trajectory:
