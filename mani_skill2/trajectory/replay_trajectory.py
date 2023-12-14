@@ -13,18 +13,18 @@ from typing import Union
 import gymnasium as gym
 import h5py
 import numpy as np
-import sapien.core as sapien
+import sapien
 from tqdm.auto import tqdm
 from transforms3d.quaternions import quat2axangle
 
 import mani_skill2.envs
-from mani_skill2.agents.base_controller import CombinedController
 from mani_skill2.agents.controllers import *
+from mani_skill2.agents.controllers.base_controller import CombinedController
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.trajectory.merge_trajectory import merge_h5
 from mani_skill2.utils.common import clip_and_scale_action, inv_scale_action
 from mani_skill2.utils.io_utils import load_json
-from mani_skill2.utils.sapien_utils import get_entity_by_name
+from mani_skill2.utils.sapien_utils import get_obj_by_name
 from mani_skill2.utils.wrappers import RecordEpisode
 
 
@@ -137,7 +137,7 @@ def from_pd_joint_pos_to_ee(
                 prev_ee_pose_at_base = arm_controller._target_pose
             else:
                 base_pose = arm_controller.articulation.pose
-                prev_ee_pose_at_base = base_pose.inv() * ee_link.pose
+                prev_ee_pose_at_base = base_pose.inv() * ee_link.entity_pose
 
             ee_pose_at_ee = prev_ee_pose_at_base.inv() * target_ee_pose
             arm_action = delta_pose_to_pd_ee_delta(
@@ -327,6 +327,21 @@ def parse_args(args=None):
         default=None,
         help="number of demonstrations to replay before exiting. By default will replay all demonstrations",
     )
+
+    parser.add_argument(
+        "--reward-mode",
+        type=str,
+        help="specifies the reward type that the env should use",
+        default="normalized_dense",
+    )
+
+    parser.add_argument(
+        "--record-rewards",
+        type=bool,
+        help="whether the replayed trajectory should include rewards",
+        default=False,
+    )
+
     return parser.parse_args(args)
 
 
@@ -359,7 +374,7 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
         env_kwargs["obs_mode"] = target_obs_mode
     if target_control_mode is not None:
         env_kwargs["control_mode"] = target_control_mode
-    env_kwargs["bg_name"] = args.bg_name
+    env_kwargs["reward_mode"] = args.reward_mode
     env_kwargs[
         "render_mode"
     ] = "rgb_array"  # note this only affects the videos saved as RecordEpisode wrapper calls env.render
@@ -386,6 +401,7 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
         save_trajectory=args.save_traj,
         trajectory_name=new_traj_name,
         save_video=args.save_video,
+        record_reward=args.record_rewards,
     )
 
     if env.save_trajectory:

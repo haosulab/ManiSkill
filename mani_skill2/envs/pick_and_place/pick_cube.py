@@ -1,12 +1,13 @@
 from collections import OrderedDict
 
 import numpy as np
-import sapien.core as sapien
-from sapien.core import Pose
+import sapien
+from sapien import Pose
 from transforms3d.euler import euler2quat
 
 from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import vectorize_pose
+from mani_skill2.utils.sapien_utils import hide_entity, show_entity, vectorize_pose
+from mani_skill2.utils.scene_builder import TableSceneBuilder
 
 from .base_env import StationaryManipulationEnv
 
@@ -22,7 +23,7 @@ class PickCubeEnv(StationaryManipulationEnv):
         super().__init__(*args, **kwargs)
 
     def _load_actors(self):
-        self._add_ground(render=self.bg_name is None)
+        TableSceneBuilder().build(self._scene)
         self.obj = self._build_cube(self.cube_half_size)
         self.goal_site = self._build_sphere_site(self.goal_thresh)
 
@@ -53,14 +54,14 @@ class PickCubeEnv(StationaryManipulationEnv):
 
     def _get_obs_extra(self) -> OrderedDict:
         obs = OrderedDict(
-            tcp_pose=vectorize_pose(self.tcp.pose),
+            tcp_pose=vectorize_pose(self.agent.tcp.pose),
             goal_pos=self.goal_pos,
         )
         if self._obs_mode in ["state", "state_dict"]:
             obs.update(
-                tcp_to_goal_pos=self.goal_pos - self.tcp.pose.p,
+                tcp_to_goal_pos=self.goal_pos - self.agent.tcp.pose.p,
                 obj_pose=vectorize_pose(self.obj.pose),
-                tcp_to_obj_pos=self.obj.pose.p - self.tcp.pose.p,
+                tcp_to_obj_pos=self.obj.pose.p - self.agent.tcp.pose.p,
                 obj_to_goal_pos=self.goal_pos - self.obj.pose.p,
             )
         return obs
@@ -89,12 +90,12 @@ class PickCubeEnv(StationaryManipulationEnv):
             reward += 5
             return reward
 
-        tcp_to_obj_pos = self.obj.pose.p - self.tcp.pose.p
+        tcp_to_obj_pos = self.obj.pose.p - self.agent.tcp.pose.p
         tcp_to_obj_dist = np.linalg.norm(tcp_to_obj_pos)
         reaching_reward = 1 - np.tanh(5 * tcp_to_obj_dist)
         reward += reaching_reward
 
-        is_grasped = self.agent.check_grasp(self.obj, max_angle=30)
+        is_grasped = self.agent.is_grasping(self.obj, max_angle=30)
         reward += 1 if is_grasped else 0.0
 
         if is_grasped:
@@ -108,15 +109,15 @@ class PickCubeEnv(StationaryManipulationEnv):
         return self.compute_dense_reward(**kwargs) / 5.0
 
     def render_human(self):
-        self.goal_site.unhide_visual()
+        show_entity(self.goal_site)
         ret = super().render_human()
-        self.goal_site.hide_visual()
+        hide_entity(self.goal_site)
         return ret
 
     def render_rgb_array(self):
-        self.goal_site.unhide_visual()
+        show_entity(self.goal_site)
         ret = super().render_rgb_array()
-        self.goal_site.hide_visual()
+        hide_entity(self.goal_site)
         return ret
 
     def get_state(self) -> np.ndarray:
@@ -140,12 +141,12 @@ class LiftCubeEnv(PickCubeEnv):
 
     def _get_obs_extra(self) -> OrderedDict:
         obs = OrderedDict(
-            tcp_pose=vectorize_pose(self.tcp.pose),
+            tcp_pose=vectorize_pose(self.agent.tcp.pose),
         )
         if self._obs_mode in ["state", "state_dict"]:
             obs.update(
                 obj_pose=vectorize_pose(self.obj.pose),
-                tcp_to_obj_pos=self.obj.pose.p - self.tcp.pose.p,
+                tcp_to_obj_pos=self.obj.pose.p - self.agent.tcp.pose.p,
             )
         return obs
 
@@ -160,13 +161,13 @@ class LiftCubeEnv(PickCubeEnv):
             return reward
 
         # reaching reward
-        gripper_pos = self.tcp.get_pose().p
+        gripper_pos = self.agent.tcp.get_pose().p
         obj_pos = self.obj.get_pose().p
         dist = np.linalg.norm(gripper_pos - obj_pos)
         reaching_reward = 1 - np.tanh(5 * dist)
         reward += reaching_reward
 
-        is_grasped = self.agent.check_grasp(self.obj, max_angle=30)
+        is_grasped = self.agent.is_grasping(self.obj, max_angle=30)
 
         # grasp reward
         if is_grasped:

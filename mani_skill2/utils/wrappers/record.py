@@ -101,6 +101,8 @@ class RecordEpisode(gym.Wrapper):
         info_on_video=False,
         save_on_reset=True,
         clean_on_close=True,
+        record_reward=False,
+        video_fps=20,
     ):
         super().__init__(env)
 
@@ -108,7 +110,7 @@ class RecordEpisode(gym.Wrapper):
         if save_trajectory or save_video:
             self.output_dir.mkdir(parents=True, exist_ok=True)
         self.save_on_reset = save_on_reset
-
+        self.video_fps = video_fps
         self._elapsed_steps = 0
         self._episode_id = -1
         self._episode_data = []
@@ -116,6 +118,7 @@ class RecordEpisode(gym.Wrapper):
 
         self.save_trajectory = save_trajectory
         self.clean_on_close = clean_on_close
+        self.record_reward = record_reward
         if self.save_trajectory:
             if not trajectory_name:
                 trajectory_name = time.strftime("%Y%m%d_%H%M%S")
@@ -161,7 +164,7 @@ class RecordEpisode(gym.Wrapper):
         obs, info = super().reset(**kwargs)
 
         if self.save_trajectory:
-            state = self.env.get_state()
+            state = self.env.unwrapped.get_state()
             data = dict(
                 s=state,
                 o=copy.deepcopy(obs),
@@ -190,7 +193,7 @@ class RecordEpisode(gym.Wrapper):
         self._elapsed_steps += 1
 
         if self.save_trajectory:
-            state = self.env.get_state()
+            state = self.env.unwrapped.get_state()
             data = dict(
                 s=state,
                 o=copy.deepcopy(obs),
@@ -312,6 +315,11 @@ class RecordEpisode(gym.Wrapper):
         # Dump
         group.create_dataset("actions", data=actions, dtype=np.float32)
         group.create_dataset("success", data=dones, dtype=bool)
+
+        if self.record_reward:
+            rewards = np.stack([x["r"] for x in self._episode_data]).astype(np.float32)
+            group.create_dataset("rewards", data=rewards, dtype=np.float32)
+
         if self.init_state_only:
             group.create_dataset("env_init_state", data=env_states[0], dtype=np.float32)
         else:
@@ -337,7 +345,7 @@ class RecordEpisode(gym.Wrapper):
             self._render_images,
             str(self.output_dir),
             video_name=video_name,
-            fps=20,
+            fps=self.video_fps,
             verbose=verbose,
         )
 

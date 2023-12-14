@@ -4,10 +4,14 @@ from typing import Sequence, Union
 import numpy as np
 from gymnasium import spaces
 
-from ..base_controller import BaseController, ControllerConfig
+from .base_controller import BaseController, ControllerConfig
 
 
 class PassiveController(BaseController):
+    """
+    Passive controller that does not do anything
+    """
+
     config: "PassiveControllerConfig"
 
     def set_drive_property(self):

@@ -16,6 +16,12 @@ def parse_args(args=None):
     parser.add_argument("--render-mode", type=str)
     parser.add_argument("--record-dir", type=str)
     parser.add_argument("--quiet", action="store_true", help="Disable verbose output.")
+    parser.add_argument(
+        "-s",
+        "--seed",
+        type=int,
+        help="Seed the random actions and simulator. Default is no seed",
+    )
     args, opts = parser.parse_known_args(args)
 
     # Parse env kwargs
@@ -33,6 +39,8 @@ def parse_args(args=None):
 def main(args):
     np.set_printoptions(suppress=True, precision=3)
     verbose = not args.quiet
+    if args.seed is not None:
+        np.random.seed(args.seed)
     env: BaseEnv = gym.make(
         args.env_id,
         obs_mode=args.obs_mode,
@@ -50,10 +58,11 @@ def main(args):
     if verbose:
         print("Observation space", env.observation_space)
         print("Action space", env.action_space)
-        print("Control mode", env.control_mode)
-        print("Reward mode", env.reward_mode)
+        print("Control mode", env.unwrapped.control_mode)
+        print("Reward mode", env.unwrapped.reward_mode)
 
-    obs, _ = env.reset()
+    obs, _ = env.reset(seed=args.seed)
+    env.action_space.seed(args.seed)
     if args.render_mode is not None:
         env.render()
 

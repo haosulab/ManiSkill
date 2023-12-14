@@ -2,11 +2,13 @@ from collections import OrderedDict
 from typing import List, Tuple
 
 import numpy as np
-import sapien.core as sapien
+import sapien
+import sapien.physx as physx
 from transforms3d.euler import euler2quat
 
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import check_actor_static, vectorize_pose
+from mani_skill2.utils.scene_builder import TableSceneBuilder
 
 from .base_env import StationaryManipulationEnv
 
@@ -67,7 +69,7 @@ class StackCubeEnv(StationaryManipulationEnv):
         return scene_config
 
     def _load_actors(self):
-        self._add_ground(render=self.bg_name is None)
+        TableSceneBuilder().build(self._scene)
 
         self.box_half_size = np.float32([0.02] * 3)
         self.cubeA = self._build_cube(self.box_half_size, color=(1, 0, 0), name="cubeA")
@@ -94,14 +96,14 @@ class StackCubeEnv(StationaryManipulationEnv):
 
     def _get_obs_extra(self):
         obs = OrderedDict(
-            tcp_pose=vectorize_pose(self.tcp.pose),
+            tcp_pose=vectorize_pose(self.agent.tcp.pose),
         )
         if self._obs_mode in ["state", "state_dict"]:
             obs.update(
                 cubeA_pose=vectorize_pose(self.cubeA.pose),
                 cubeB_pose=vectorize_pose(self.cubeB.pose),
-                tcp_to_cubeA_pos=self.cubeA.pose.p - self.tcp.pose.p,
-                tcp_to_cubeB_pos=self.cubeB.pose.p - self.tcp.pose.p,
+                tcp_to_cubeA_pos=self.cubeA.pose.p - self.agent.tcp.pose.p,
+                tcp_to_cubeB_pos=self.cubeB.pose.p - self.agent.tcp.pose.p,
                 cubeA_to_cubeB_pos=self.cubeB.pose.p - self.cubeA.pose.p,
             )
         return obs
@@ -119,7 +121,7 @@ class StackCubeEnv(StationaryManipulationEnv):
     def evaluate(self, **kwargs):
         is_cubeA_on_cubeB = self._check_cubeA_on_cubeB()
         is_cubeA_static = check_actor_static(self.cubeA)
-        is_cubeA_grasped = self.agent.check_grasp(self.cubeA)
+        is_cubeA_grasped = self.agent.is_grasping(self.cubeA)
         success = is_cubeA_on_cubeB and is_cubeA_static and (not is_cubeA_grasped)
 
         return {
@@ -133,7 +135,7 @@ class StackCubeEnv(StationaryManipulationEnv):
 
     def compute_dense_reward(self, info, **kwargs):
         gripper_width = (
-            self.agent.robot.get_qlimits()[-1, 1] * 2
+            self.agent.robot.get_qlimit()[-1, 1] * 2
         )  # NOTE: hard-coded with panda
         reward = 0.0
 
@@ -144,7 +146,7 @@ class StackCubeEnv(StationaryManipulationEnv):
             grasp_rot_loss_fxn = lambda A: np.tanh(
                 1 / 8 * np.trace(A.T @ A)
             )  # trace(A.T @ A) has range [0,8] for A being difference of rotation matrices
-            tcp_pose_wrt_cubeA = self.cubeA.pose.inv() * self.tcp.pose
+            tcp_pose_wrt_cubeA = self.cubeA.pose.inv() * self.agent.tcp.pose
             tcp_rot_wrt_cubeA = tcp_pose_wrt_cubeA.to_transformation_matrix()[:3, :3]
             gt_rots = [
                 np.array([[0, 1, 0], [1, 0, 0], [0, 0, -1]]),
@@ -157,13 +159,16 @@ class StackCubeEnv(StationaryManipulationEnv):
             )
             reward += 1 - grasp_rot_loss
 
-            cubeB_vel_penalty = np.linalg.norm(self.cubeB.velocity) + np.linalg.norm(
-                self.cubeB.angular_velocity
+            cubeB_comp = self.cubeB.find_component_by_type(
+                physx.PhysxRigidDynamicComponent
             )
+            cubeB_vel_penalty = np.linalg.norm(
+                cubeB_comp.linear_velocity
+            ) + np.linalg.norm(cubeB_comp.angular_velocity)
             reward -= cubeB_vel_penalty
 
             # reaching object reward
-            tcp_pose = self.tcp.pose.p
+            tcp_pose = self.agent.tcp.pose.p
             cubeA_pos = self.cubeA.pose.p
             cubeA_to_tcp_dist = np.linalg.norm(tcp_pose - cubeA_pos)
             reaching_reward = 1 - np.tanh(3.0 * cubeA_to_tcp_dist)
@@ -185,7 +190,7 @@ class StackCubeEnv(StationaryManipulationEnv):
             if cubeA_on_cubeB:
                 reward = 10.0
                 # ungrasp reward
-                is_cubeA_grasped = self.agent.check_grasp(self.cubeA)
+                is_cubeA_grasped = self.agent.is_grasping(self.cubeA)
                 if not is_cubeA_grasped:
                     reward += 2.0
                 else:
@@ -195,7 +200,7 @@ class StackCubeEnv(StationaryManipulationEnv):
                     )
             else:
                 # grasping reward
-                is_cubeA_grasped = self.agent.check_grasp(self.cubeA)
+                is_cubeA_grasped = self.agent.is_grasping(self.cubeA)
                 if is_cubeA_grasped:
                     reward += 1.0
 

@@ -1,21 +1,25 @@
 from collections import OrderedDict
+from typing import List
 
 import numpy as np
-import sapien.core as sapien
+import sapien
+import sapien.physx as physx
+import sapien.render
 import trimesh
-from sapien.core import Pose
+from sapien import Pose
 from scipy.spatial import distance as sdist
 
 from mani_skill2.agents.robots.mobile_panda import MobilePandaSingleArm
 from mani_skill2.utils.common import np_random, random_choice
 from mani_skill2.utils.geometry import angle_distance, transform_points
-from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import get_entity_by_name, vectorize_pose
-from mani_skill2.utils.trimesh_utils import (
+from mani_skill2.utils.geometry.trimesh_utils import (
     get_articulation_meshes,
-    get_visual_body_meshes,
+    get_render_body_meshes,
+    get_render_shape_meshes,
     merge_meshes,
 )
+from mani_skill2.utils.registration import register_env
+from mani_skill2.utils.sapien_utils import get_obj_by_name, vectorize_pose
 
 from .base_env import MS1BaseEnv
 
@@ -67,20 +71,22 @@ class OpenCabinetEnv(MS1BaseEnv):
             self._set_cabinet_handles_mesh()
             self._compute_handles_grasp_poses()
 
-    def _set_cabinet_handles(self, joint_type: str):
+    def _set_cabinet_handles(self, joint_types: List[str]):
         self.target_links = []
         self.target_joints = []
         self.target_handles = []
 
         # NOTE(jigu): links and their parent joints.
         for link, joint in zip(self.cabinet.get_links(), self.cabinet.get_joints()):
-            if joint.type != joint_type:
+            if joint.type not in joint_types:
                 continue
             handles = []
-            for visual_body in link.get_visual_bodies():
-                if "handle" not in visual_body.name:
+            for render_shape in link.entity.find_component_by_type(
+                sapien.render.RenderBodyComponent
+            ).render_shapes:
+                if "handle" not in render_shape.name:
                     continue
-                handles.append(visual_body)
+                handles.append(render_shape)
             if len(handles) > 0:
                 self.target_links.append(link)
                 self.target_joints.append(joint)
@@ -91,8 +97,8 @@ class OpenCabinetEnv(MS1BaseEnv):
 
         for handle_visuals in self.target_handles:
             meshes = []
-            for visual_body in handle_visuals:
-                meshes.extend(get_visual_body_meshes(visual_body))
+            for render_shape in handle_visuals:
+                meshes.extend(get_render_shape_meshes(render_shape))
             handle_mesh = merge_meshes(meshes)
             # Legacy issue: convex hull is assumed for further computation
             handle_mesh = trimesh.convex.convex_hull(handle_mesh)
@@ -143,18 +149,17 @@ class OpenCabinetEnv(MS1BaseEnv):
         for link in self.cabinet.get_links():
             for s in link.get_collision_shapes():
                 g0, g1, g2, g3 = s.get_collision_groups()
-                s.set_collision_groups(g0, g1, g2 | 1 << 31, g3)
-
-    def _configure_agent(self):
-        self._agent_cfg = MobilePandaSingleArm.get_default_config()
+                s.set_collision_groups([g0, g1, g2 | 1 << 31, g3])
 
     def _load_agent(self):
         self.agent = MobilePandaSingleArm(
-            self._scene, self._control_freq, self._control_mode, config=self._agent_cfg
+            self._scene, self._control_freq, self._control_mode
         )
 
         links = self.agent.robot.get_links()
-        self.tcp: sapien.Link = get_entity_by_name(links, "right_panda_hand_tcp")
+        self.tcp: physx.PhysxArticulationLinkComponent = get_obj_by_name(
+            links, "right_panda_hand_tcp"
+        )
 
     # -------------------------------------------------------------------------- #
     # Reset
@@ -226,8 +231,12 @@ class OpenCabinetEnv(MS1BaseEnv):
             self.target_link_idx = self._fixed_target_link_idx
         assert self.target_link_idx < len(self.target_links), self.target_link_idx
 
-        self.target_link: sapien.Link = self.target_links[self.target_link_idx]
-        self.target_joint: sapien.Joint = self.target_joints[self.target_link_idx]
+        self.target_link: physx.PhysxArticulationLinkComponent = self.target_links[
+            self.target_link_idx
+        ]
+        self.target_joint: physx.PhysxJointComponent = self.target_joints[
+            self.target_link_idx
+        ]
         # The index in active joints
         self.target_joint_idx_q = self.cabinet.get_active_joints().index(
             self.target_joint
@@ -272,13 +281,13 @@ class OpenCabinetEnv(MS1BaseEnv):
         return self.cabinet.get_qvel()[self.target_joint_idx_q]
 
     def evaluate(self, **kwargs) -> dict:
-        vel_norm = np.linalg.norm(self.target_link.velocity)
+        vel_norm = np.linalg.norm(self.target_link.linear_velocity)
         ang_vel_norm = np.linalg.norm(self.target_link.angular_velocity)
         link_qpos = self.link_qpos
 
         flags = dict(
             # cabinet_static=vel_norm <= 0.1 and ang_vel_norm <= 1,
-            cabinet_static=self.check_actor_static(
+            cabinet_static=self.check_link_static(
                 self.target_link, max_v=0.1, max_ang_v=1
             ),
             open_enough=link_qpos >= self.target_qpos,
@@ -425,7 +434,7 @@ class OpenCabinetDoorEnv(OpenCabinetEnv):
     )
 
     def _set_cabinet_handles(self):
-        super()._set_cabinet_handles("revolute")
+        super()._set_cabinet_handles(["revolute", "revolute_unwrapped"])
 
 
 @register_env("OpenCabinetDrawer-v1", max_episode_steps=200)

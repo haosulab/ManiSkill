@@ -1,16 +1,18 @@
 import numpy as np
-import sapien.core as sapien
+import sapien
+import sapien.physx as physx
+import sapien.render
 import trimesh
-from sapien.core import Pose
+from sapien import Pose
 from scipy.spatial import distance as sdist
 from transforms3d.euler import euler2quat, quat2euler
 
 from mani_skill2.agents.robots.mobile_panda import MobilePandaDualArm
 from mani_skill2.utils.common import np_random
 from mani_skill2.utils.geometry import transform_points
+from mani_skill2.utils.geometry.trimesh_utils import get_actor_visual_mesh
 from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import get_entity_by_name, vectorize_pose
-from mani_skill2.utils.trimesh_utils import get_actor_visual_mesh
+from mani_skill2.utils.sapien_utils import get_obj_by_name, vectorize_pose
 
 from .base_env import MS1BaseEnv
 
@@ -53,10 +55,13 @@ class PushChairEnv(MS1BaseEnv):
             self._set_chair_links_mesh()
 
     @staticmethod
-    def _check_link_types(link: sapien.LinkBase):
+    def _check_link_types(link: physx.PhysxArticulationLinkComponent):
         link_types = []
-        for visual_body in link.get_visual_bodies():
-            name = visual_body.name
+        comp = link.entity.find_component_by_type(sapien.render.RenderBodyComponent)
+        if comp is None:
+            return link_types
+        for shape in comp.render_shapes:
+            name = shape.name
             if "wheel" in name:
                 link_types.append("wheel")
             if "seat" in name:
@@ -101,33 +106,38 @@ class PushChairEnv(MS1BaseEnv):
             shapes = link.get_collision_shapes()
             for s in shapes:
                 g0, g1, g2, g3 = s.get_collision_groups()
-                s.set_collision_groups(g0, g1, g2 | 1 << 31, g3)
+                s.set_collision_groups([g0, g1, g2 | 1 << 31, g3])
 
     def _load_actors(self):
         super()._load_actors()
 
         # A red sphere to indicate the target to push the chair.
         builder = self._scene.create_actor_builder()
-        builder.add_sphere_visual(radius=0.15, color=(1, 0, 0))
-        self.target_indicator = builder.build_static(name="target_indicator")
-
-    def _configure_agent(self):
-        self._agent_cfg = MobilePandaDualArm.get_default_config()
-        self._agent_cfg.camera_h = 2
+        builder.add_sphere_visual(
+            radius=0.15, material=sapien.render.RenderMaterial(base_color=(1, 0, 0, 1))
+        )
+        self.target_indicator = builder.set_physx_body_type("static").build(
+            name="target_indicator"
+        )
 
     def _load_agent(self):
         self.agent = MobilePandaDualArm(
-            self._scene, self._control_freq, self._control_mode, config=self._agent_cfg
+            self._scene, self._control_freq, self._control_mode
         )
+        self.agent.camera_h = 2
 
         links = self.agent.robot.get_links()
-        self.left_tcp: sapien.Link = get_entity_by_name(links, "left_panda_hand_tcp")
-        self.right_tcp: sapien.Link = get_entity_by_name(links, "right_panda_hand_tcp")
+        self.left_tcp: physx.PhysxArticulationLinkComponent = get_obj_by_name(
+            links, "left_panda_hand_tcp"
+        )
+        self.right_tcp: physx.PhysxArticulationLinkComponent = get_obj_by_name(
+            links, "right_panda_hand_tcp"
+        )
 
     def _set_chair_links_mesh(self):
         self.links_info = {}
         for link in self.chair.get_links():
-            mesh = get_actor_visual_mesh(link)
+            mesh = get_actor_visual_mesh(link.entity)
             if mesh is None:
                 continue
             self.links_info[link.name] = [link, mesh]
@@ -249,14 +259,14 @@ class PushChairEnv(MS1BaseEnv):
         z_axis_chair = self.root_link.pose.to_transformation_matrix()[:3, 2]
         chair_tilt = np.arccos(z_axis_chair[2])
 
-        vel_norm = np.linalg.norm(self.root_link.velocity)
+        vel_norm = np.linalg.norm(self.root_link.linear_velocity)
         ang_vel_norm = np.linalg.norm(self.root_link.angular_velocity)
 
         flags = dict(
             chair_close_to_target=dist_chair_to_target < 0.15,
             chair_standing=chair_tilt < 0.05 * np.pi,
             # chair_static=(vel_norm < 0.1 and ang_vel_norm < 0.2),
-            chair_static=self.check_actor_static(
+            chair_static=self.check_link_static(
                 self.root_link, max_v=0.1, max_ang_v=0.2
             ),
         )
@@ -273,7 +283,7 @@ class PushChairEnv(MS1BaseEnv):
         """Get the point cloud of the chair given its current joint positions."""
         links_pcd = []
         for name, info in self.links_info.items():
-            link: sapien.LinkBase = info[0]
+            link: physx.PhysxArticulationLinkComponent = info[0]
             pcd: np.ndarray = info[2]
             T = link.pose.to_transformation_matrix()
             pcd = transform_points(T, pcd)
@@ -306,7 +316,7 @@ class PushChairEnv(MS1BaseEnv):
 
         # Chair velocity
         # Legacy version uses full velocity instead of xy-plane velocity
-        chair_vel = self.root_link.velocity[:2]
+        chair_vel = self.root_link.linear_velocity[:2]
         chair_vel_norm = np.linalg.norm(chair_vel)
         disp_chair_to_target = self.root_link.get_pose().p[:2] - self.target_xy
         cos_chair_vel_to_target = sdist.cosine(disp_chair_to_target, chair_vel)

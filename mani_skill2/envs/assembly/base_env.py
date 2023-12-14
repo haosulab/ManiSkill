@@ -1,56 +1,33 @@
 from typing import Type, Union
 
 import numpy as np
-import sapien.core as sapien
-from sapien.core import Pose
+import sapien
+from sapien import Pose
 
 from mani_skill2.agents.base_agent import BaseAgent
-from mani_skill2.agents.configs.panda.defaults import PandaRealSensed435Config
-from mani_skill2.agents.robots.panda import Panda
+from mani_skill2.agents.robots.panda import Panda, PandaRealSensed435
 from mani_skill2.agents.robots.xmate3 import Xmate3Robotiq
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
-from mani_skill2.utils.sapien_utils import (
-    get_entity_by_name,
-    look_at,
-    set_articulation_render_material,
-    vectorize_pose,
-)
+from mani_skill2.utils.sapien_utils import look_at, vectorize_pose
 
 
 class StationaryManipulationEnv(BaseEnv):
-    SUPPORTED_ROBOTS = {"panda": Panda, "xmate3_robotiq": Xmate3Robotiq}
     agent: Union[Panda, Xmate3Robotiq]
 
-    def __init__(self, *args, robot="panda", robot_init_qpos_noise=0.02, **kwargs):
-        self.robot_uid = robot
+    def __init__(
+        self, *args, robot_uid=PandaRealSensed435, robot_init_qpos_noise=0.02, **kwargs
+    ):
         self.robot_init_qpos_noise = robot_init_qpos_noise
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, robot_uid=robot_uid, **kwargs)
 
     def _get_default_scene_config(self):
         scene_config = super()._get_default_scene_config()
         scene_config.enable_pcm = True
         return scene_config
 
-    def _configure_agent(self):
-        agent_cls: Type[BaseAgent] = self.SUPPORTED_ROBOTS[self.robot_uid]
-        if self.robot_uid == "panda":
-            self._agent_cfg = PandaRealSensed435Config()
-        else:
-            self._agent_cfg = agent_cls.get_default_config()
-
-    def _load_agent(self):
-        agent_cls: Type[Panda] = self.SUPPORTED_ROBOTS[self.robot_uid]
-        self.agent = agent_cls(
-            self._scene, self._control_freq, self._control_mode, config=self._agent_cfg
-        )
-        self.tcp: sapien.Link = get_entity_by_name(
-            self.agent.robot.get_links(), self.agent.config.ee_link_name
-        )
-        set_articulation_render_material(self.agent.robot, specular=0.9, roughness=0.3)
-
     def _initialize_agent(self):
-        if self.robot_uid == "panda":
+        if self.robot_uid == "panda" or self.robot_uid == "panda_realsensed435":
             # fmt: off
             # EE at [0.615, 0, 0.17]
             qpos = np.array(
@@ -74,7 +51,7 @@ class StationaryManipulationEnv(BaseEnv):
         else:
             raise NotImplementedError(self.robot_uid)
 
-    def _register_cameras(self):
+    def _register_sensors(self):
         pose = look_at([0.2, 0, 0.4], [0, 0, 0])
         return CameraConfig(
             "base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10
