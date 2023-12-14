@@ -97,9 +97,11 @@ class BaseAgent:
         self.robot_link_ids = [link.name for link in self.robot.get_links()]
 
     def _after_loading_articulation(self):
-        """After loading articulation and before setting up controller. Not recommended, but is useful for when creating 
-        robot classes that inherit controllers from another and only change which joints are controlled"""
+        """After loading articulation and before setting up controller. Not recommended, but is useful for when creating
+        robot classes that inherit controllers from another and only change which joints are controlled
+        """
         pass
+
     def _after_init(self):
         """After initialization. E.g., caching the end-effector link."""
         pass

@@ -467,6 +467,7 @@ class BaseEnv(gym.Env):
                 )
 
     def _setup_lighting(self):
+        # TODO (stao): remove this code out. refactor it to be inside scene builders
         """Setup lighting in the scene. Called by `self.reconfigure`"""
 
         shadow = self.enable_shadow
@@ -728,6 +729,9 @@ class BaseEnv(gym.Env):
         if self._viewer is None:
             self._viewer = Viewer(self._renderer)
             self._setup_viewer()
+            self._viewer.set_camera_pose(
+                self._render_cameras["render_camera"].camera.global_pose
+            )
         self._viewer.render()
         return self._viewer
 

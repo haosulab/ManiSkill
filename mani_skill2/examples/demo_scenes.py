@@ -20,8 +20,9 @@ Code is setup so that if you press the "r" key, a new scene is loaded and shown.
 `python -m mani_skill2.examples.demo_scenes` and explore around.
 """
 import gymnasium as gym
-import sapien.render
 import numpy as np
+import sapien.render
+
 import mani_skill2.envs
 from mani_skill2.utils.scene_builder.ai2thor import (
     ArchitecTHORSceneBuilder,
@@ -41,8 +42,8 @@ if __name__ == "__main__":
     )
 
     # optionally set these to make it more realistic
-    sapien.render.set_camera_shader_dir("rt")
-    sapien.render.set_viewer_shader_dir("rt")
+    sapien.render.set_camera_shader_dir("rt2")
+    sapien.render.set_viewer_shader_dir("rt2")
     sapien.render.set_ray_tracing_samples_per_pixel(4)
     sapien.render.set_ray_tracing_path_depth(2)
     sapien.render.set_ray_tracing_denoiser("optix")

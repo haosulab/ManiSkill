@@ -47,13 +47,33 @@ class ArticulationMetadata:
     movable_links: List[str]
 
 
-model_dbs: Dict[str, Dict[str, Dict]] = {}
+def build_articulation_from_file(
+    scene: sapien.Scene,
+    urdf_path: str,
+    fix_root_link=True,
+    scale: float = 1.0,
+    decomposition="none",
+    set_object_on_ground=True,
+):
+    loader = scene.create_urdf_loader()
+    loader.multiple_collisions_decomposition = decomposition
+    loader.fix_root_link = fix_root_link
+    loader.scale = scale
+    loader.load_multiple_collisions_from_file = True
+    articulation: physx.PhysxArticulation = loader.load(urdf_path)
+    articulation.set_qpos(articulation.qpos)
+    bounds = merge_meshes(get_articulation_meshes(articulation)).bounds
+    if set_object_on_ground:
+        articulation.set_pose(Pose([0, 0, -bounds[0, 2]]))
+    return articulation, bounds
 
-# TODO optimization: we can cache some results in building articulations and reuse them
+
+# cache model metadata here if needed
+model_dbs: Dict[str, Dict[str, Dict]] = {}
 
 
 ### Build articulations ###
-def build_partnet_mobility_articulation(
+def build_preprocessed_partnet_mobility_articulation(
     scene: sapien.Scene,
     model_id: str,
     fix_root_link=True,
@@ -61,7 +81,10 @@ def build_partnet_mobility_articulation(
     set_object_on_ground=True,
 ):
     """
-    Builds a physx.PhysxArticulation object into the scene and returns metadata containing annotations of the object's links and joints
+    Builds a physx.PhysxArticulation object into the scene and returns metadata containing annotations of the object's links and joints.
+
+    This uses preprocessed data from the ManiSkill team where assets were annotated with correct scales and provided
+    proper convex decompositions of the articulations.
 
     Args:
         scene: the sapien scene to add articulation to
@@ -85,9 +108,6 @@ def build_partnet_mobility_articulation(
     articulation: physx.PhysxArticulation = loader.load(str(urdf_path))
 
     metadata = ArticulationMetadata(joints=dict(), links=dict(), movable_links=[])
-    target_links = []
-    target_joints = []
-    target_handles = []
 
     # NOTE(jigu): links and their parent joints.
     for link, joint in zip(articulation.get_links(), articulation.get_joints()):
@@ -122,22 +142,15 @@ def build_partnet_mobility_articulation(
         bounds = merge_meshes(get_articulation_meshes(articulation)).bounds
         articulation.set_pose(Pose([0, 0, -bounds[0, 2]]))
 
-    # for link in self.articulation_metadata.movable_links:
-    #         link_name = self.articulation_metadata.links[link].name
-    #         b = self.articulation_metadata.joints[f"joint_{link.split('_')[1]}"].type
-    #         c = self.articulation_metadata.joints[f"joint_{link.split('_')[1]}"].name
-    #         print(link, link_name, b, c)
-
     return articulation, metadata
 
 
 def _load_partnet_mobility_dataset():
-    # load PartnetMobility
+    """loads preprocssed partnet mobility metadata"""
     model_dbs["PartnetMobility"] = {
         "model_data": load_json(
             PACKAGE_ASSET_DIR / "partnet_mobility/meta/info_cabinet_drawer_train.json"
         ),
-        "builder": build_partnet_mobility_articulation,
     }
 
     def find_urdf_path(model_id):
@@ -147,6 +160,7 @@ def _load_partnet_mobility_dataset():
             urdf_path = model_dir / urdf_name
             if urdf_path.exists():
                 return urdf_path
+
     model_dbs["PartnetMobility"]["model_urdf_paths"] = {
         k: find_urdf_path(k) for k in model_dbs["PartnetMobility"]["model_data"].keys()
     }

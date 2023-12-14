@@ -1,5 +1,5 @@
 """
-Run python mani_skill2/envs/scenes/adapters/hssd/download.py <HF_TOKEN>
+Run python -m mani_skill2.utils.scene_builder.ai2thor.download <HF_TOKEN>
 """
 
 import os.path as osp

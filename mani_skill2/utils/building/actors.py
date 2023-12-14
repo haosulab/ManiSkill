@@ -151,6 +151,9 @@ def build_fourcolor_peg(
     dynamic: bool = True,
     add_collision: bool = True,
 ):
+    """
+    A peg with four sections and four different colors. Useful for visualizing every possible rotation without any symmetries
+    """
     builder = scene.create_actor_builder()
     if add_collision:
         builder.add_box_collision(
@@ -200,6 +203,9 @@ def build_actor(model_id: str, scene: sapien.Scene, name: str):
     pass
 
 
+### YCB Dataset ###
+
+
 def build_actor_ycb(
     model_id: str,
     scene: sapien.Scene,
@@ -241,12 +247,24 @@ def _load_ycb_dataset():
     }
 
 
+### AI2THOR Object Dataset ###
+
+
 def build_actor_ai2(
     model_id: str,
     scene: sapien.Scene,
     name: str,
     kinematic: bool = False,
+    set_object_on_ground=True,
 ):
+    """
+    Builds an actor/object from the AI2THOR assets.
+
+    TODO (stao): Automatically makes the origin of the object be the center of the object.
+
+    set_object_on_ground: bool
+        if True, will set the pose of the created actor automatically so that the lowest point of the actor is at z = 0
+    """
     model_path = (
         Path(ASSET_DIR)
         / "scene_datasets/ai2thor/ai2thorhab-uncompressed/assets/objects"
@@ -254,22 +272,22 @@ def build_actor_ai2(
     )
     actor_id = name
     builder = scene.create_actor_builder()
-    builder.add_visual_from_file(str(model_path))
+    q = transforms3d.quaternions.axangle2quat(np.array([1, 0, 0]), theta=np.deg2rad(90))
+    pose = sapien.Pose(q=q)
+    builder.add_visual_from_file(str(model_path), pose=pose)
     if kinematic:
-        builder.add_nonconvex_collision_from_file(str(model_path))
+        builder.add_nonconvex_collision_from_file(str(model_path), pose=pose)
         actor = builder.build_kinematic(name=actor_id)
     else:
         builder.add_multiple_convex_collisions_from_file(
-            str(model_path), decomposition="coacd"
+            str(model_path), decomposition="coacd", pose=pose
         )
         actor = builder.build(name=actor_id)
 
-    q = transforms3d.quaternions.axangle2quat(np.array([1, 0, 0]), theta=np.deg2rad(90))
-    pose = sapien.Pose(q=q)
-    actor.set_pose(pose)
     aabb = actor.find_component_by_type(
         sapien.render.RenderBodyComponent
     ).compute_global_aabb_tight()
-    height = aabb[1, 1] - aabb[0, 1]
-    actor.set_pose(sapien.Pose(p=[0, 0, 0], q=actor.pose.q))
+    height = aabb[1, 2] - aabb[0, 2]
+    if set_object_on_ground:
+        actor.set_pose(sapien.Pose(p=[0, 0, 0]))
     return actor

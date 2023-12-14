@@ -60,7 +60,11 @@ class SceneManipulationEnv(BaseEnv):
         return super().reset(seed, options)
 
     def _load_actors(self):
-        self.scene_builder.build(self._scene, scene_id=self.sampled_scene_idx, convex_decomposition=self.convex_decomposition)
+        self.scene_builder.build(
+            self._scene,
+            scene_id=self.sampled_scene_idx,
+            convex_decomposition=self.convex_decomposition,
+        )
 
     def _initialize_agent(self):
         if self.robot_uid == "panda":
