@@ -2,14 +2,14 @@ from dataclasses import dataclass
 from typing import Sequence, Union
 
 import numpy as np
-import sapien.core as sapien
+import sapien
 from gymnasium import spaces
 from scipy.spatial.transform import Rotation
 
 from mani_skill2.utils.common import clip_and_scale_action
-from mani_skill2.utils.sapien_utils import get_entity_by_name, vectorize_pose
+from mani_skill2.utils.sapien_utils import get_obj_by_name, vectorize_pose
 
-from ..base_controller import BaseController, ControllerConfig
+from .base_controller import BaseController, ControllerConfig
 from .pd_joint_pos import PDJointPosController
 
 
@@ -26,7 +26,7 @@ class PDEEPosController(PDJointPosController):
         self.qmask[self.joint_indices] = 1
 
         if self.config.ee_link:
-            self.ee_link = get_entity_by_name(
+            self.ee_link = get_obj_by_name(
                 self.articulation.get_links(), self.config.ee_link
             )
         else:
@@ -50,7 +50,7 @@ class PDEEPosController(PDJointPosController):
     @property
     def ee_pose_at_base(self):
         to_base = self.articulation.pose.inv()
-        return to_base.transform(self.ee_pose)
+        return to_base * (self.ee_pose)
 
     def reset(self):
         super().reset()

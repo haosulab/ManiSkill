@@ -1,9 +1,11 @@
 import numpy as np
-import sapien.core as sapien
+import sapien
+import sapien.physx as physx
+import sapien.render
 import trimesh
-from sapien.core import Pose
+from sapien import Pose
 from scipy.spatial import distance as sdist
-from transforms3d.euler import euler2quat, quat2euler
+from transforms3d.euler import euler2quat
 from transforms3d.quaternions import quat2mat
 
 from mani_skill2.agents.robots.mobile_panda import MobilePandaDualArm
@@ -14,9 +16,9 @@ from mani_skill2.utils.geometry import (
     get_local_axis_aligned_bbox_for_link,
     transform_points,
 )
+from mani_skill2.utils.geometry.trimesh_utils import get_actor_visual_mesh
 from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import get_entity_by_name, vectorize_pose
-from mani_skill2.utils.trimesh_utils import get_actor_visual_mesh
+from mani_skill2.utils.sapien_utils import get_obj_by_name, vectorize_pose
 
 from .base_env import MS1BaseEnv
 
@@ -50,11 +52,11 @@ class MoveBucketEnv(MS1BaseEnv):
         self.bucket.set_name(self.model_id)
 
         # Restrict the handle's range of motion
-        lim = self.bucket.get_active_joints()[0].get_limits()
+        lim = self.bucket.get_active_joints()[0].get_limit()
         v = (lim[0, 1] - lim[0, 0]) * 0.1
         lim[0, 0] += v
         lim[0, 1] -= v
-        self.bucket.get_active_joints()[0].set_limits(lim)
+        self.bucket.get_active_joints()[0].set_limit(lim)
 
         if self._reward_mode in ["dense", "normalized_dense"]:
             self._set_bucket_links_mesh()
@@ -62,7 +64,7 @@ class MoveBucketEnv(MS1BaseEnv):
     def _set_bucket_links_mesh(self):
         self.links_info = {}
         for link in self.bucket.get_links():
-            mesh = get_actor_visual_mesh(link)
+            mesh = get_actor_visual_mesh(link.entity)
             if mesh is None:
                 continue
             self.links_info[link.name] = [link, mesh]
@@ -85,31 +87,36 @@ class MoveBucketEnv(MS1BaseEnv):
         builder.add_box_collision(
             half_size=box_half_size, material=obj_material, density=1000
         )
-        self.target_platform = builder.build_static(name="target_platform")
+        self.target_platform = builder.set_physx_body_type("static").build(
+            name="target_platform"
+        )
 
         # balls
         R = 0.05
         self.balls_radius = R
         builder = self._scene.create_actor_builder()
         builder.add_sphere_collision(radius=R, density=1000)
-        builder.add_sphere_visual(radius=R, color=[0, 1, 1])
+        builder.add_sphere_visual(
+            radius=R, material=sapien.render.RenderMaterial(base_color=[0, 1, 1, 1])
+        )
         self.balls = []
         self.GX = self.GY = self.GZ = 1
         for i in range(self.GX * self.GY * self.GZ):
             actor = builder.build(name="ball_{:d}".format(i + 1))
             self.balls.append(actor)
 
-    def _configure_agent(self):
-        self._agent_cfg = MobilePandaDualArm.get_default_config()
-
     def _load_agent(self):
         self.agent = MobilePandaDualArm(
-            self._scene, self._control_freq, self._control_mode, config=self._agent_cfg
+            self._scene, self._control_freq, self._control_mode
         )
 
         links = self.agent.robot.get_links()
-        self.left_tcp: sapien.Link = get_entity_by_name(links, "left_panda_hand_tcp")
-        self.right_tcp: sapien.Link = get_entity_by_name(links, "right_panda_hand_tcp")
+        self.left_tcp: physx.PhysxArticulationLinkComponent = get_obj_by_name(
+            links, "left_panda_hand_tcp"
+        )
+        self.right_tcp: physx.PhysxArticulationLinkComponent = get_obj_by_name(
+            links, "right_panda_hand_tcp"
+        )
 
     # -------------------------------------------------------------------------- #
     # Reset
@@ -169,12 +176,11 @@ class MoveBucketEnv(MS1BaseEnv):
         self.bucket.set_pose(pose)
         self.init_bucket_height = (
             self.bucket_body_link.get_pose()
-            .transform(self.bucket_body_link.get_cmass_local_pose())
-            .p[2]
-        )
+            * self.bucket_body_link.get_cmass_local_pose()
+        ).p[2]
 
         # Finalize the bucket joint state
-        self.bucket.set_qpos(self.bucket.get_qlimits()[:, 0])
+        self.bucket.set_qpos(self.bucket.get_qlimit()[:, 0])
         self.bucket.set_qvel(np.zeros(self.bucket.dof))
 
     def _initialize_robot(self):
@@ -250,7 +256,7 @@ class MoveBucketEnv(MS1BaseEnv):
             self.root_link.get_pose().p[:2] - self.target_xy
         )
 
-        vel_norm = np.linalg.norm(self.root_link.velocity)
+        vel_norm = np.linalg.norm(self.root_link.linear_velocity)
         ang_vel_norm = np.linalg.norm(self.root_link.angular_velocity)
 
         flags = {
@@ -258,7 +264,7 @@ class MoveBucketEnv(MS1BaseEnv):
             "bucket_above_platform": dist_bucket_to_target < 0.3,
             "bucket_standing": bucket_tilt < 0.1 * np.pi,
             # "bucket_static": (vel_norm < 0.1 and ang_vel_norm < 0.2),
-            "bucket_static": self.check_actor_static(
+            "bucket_static": self.check_link_static(
                 self.root_link, max_v=0.1, max_ang_v=0.2
             ),
         }
@@ -276,7 +282,7 @@ class MoveBucketEnv(MS1BaseEnv):
         """Get the point cloud of the bucket given its current joint positions."""
         links_pcd = []
         for name, info in self.links_info.items():
-            link: sapien.LinkBase = info[0]
+            link: physx.PhysxArticulationLinkComponent = info[0]
             pcd: np.ndarray = info[2]
             T = link.pose.to_transformation_matrix()
             pcd = transform_points(T, pcd)
@@ -303,9 +309,8 @@ class MoveBucketEnv(MS1BaseEnv):
         # EE adjust height
         bucket_mid = (
             self.bucket_body_link.get_pose()
-            .transform(self.bucket_body_link.get_cmass_local_pose())
-            .p
-        )
+            * self.bucket_body_link.get_cmass_local_pose()
+        ).p
         bucket_mid[2] += self.bucket_center_offset
         v1 = ee_mids[0] - bucket_mid
         v2 = ee_mids[1] - bucket_mid
@@ -327,7 +332,7 @@ class MoveBucketEnv(MS1BaseEnv):
         reward -= action_norm * 1e-6
 
         # Bucket velocity
-        actor_vel = actor.get_velocity()
+        actor_vel = actor.get_linear_velocity()
         actor_vel_norm = np.linalg.norm(actor_vel)
         disp_bucket_to_target = self.root_link.get_pose().p[:2] - self.target_xy
         actor_vel_dir = sdist.cosine(actor_vel[:2], disp_bucket_to_target)
@@ -340,9 +345,8 @@ class MoveBucketEnv(MS1BaseEnv):
 
         bucket_height = (
             self.bucket_body_link.get_pose()
-            .transform(self.bucket_body_link.get_cmass_local_pose())
-            .p[2]
-        )
+            * self.bucket_body_link.get_cmass_local_pose()
+        ).p[2]
         dist_bucket_height = np.linalg.norm(
             bucket_height - self.init_bucket_height - 0.2
         )
@@ -354,9 +358,8 @@ class MoveBucketEnv(MS1BaseEnv):
 
             bucket_height = (
                 self.bucket_body_link.get_pose()
-                .transform(self.bucket_body_link.get_cmass_local_pose())
-                .p[2]
-            )
+                * self.bucket_body_link.get_cmass_local_pose()
+            ).p[2]
             dist_bucket_height = np.linalg.norm(
                 bucket_height - self.init_bucket_height - 0.2
             )

@@ -1,14 +1,19 @@
 import os
 from collections import OrderedDict
-from typing import Dict, Optional, Sequence, Union
+from typing import Dict, List, Optional, Sequence, Type, Union
 
 import gymnasium as gym
 import numpy as np
-import sapien.core as sapien
+import sapien
+import sapien.physx as physx
+import sapien.render
+import sapien.utils.viewer.control_window
 from sapien.utils import Viewer
 
 from mani_skill2 import ASSET_DIR, logger
-from mani_skill2.agents.base_agent import AgentConfig, BaseAgent
+from mani_skill2.agents.base_agent import BaseAgent
+from mani_skill2.agents.robots import ROBOTS
+from mani_skill2.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill2.sensors.camera import (
     Camera,
     CameraConfig,
@@ -17,16 +22,18 @@ from mani_skill2.sensors.camera import (
 )
 from mani_skill2.sensors.depth_camera import StereoDepthCamera, StereoDepthCameraConfig
 from mani_skill2.utils.common import convert_observation_to_space, flatten_state_dict
+from mani_skill2.utils.geometry.trimesh_utils import (
+    get_articulation_meshes,
+    get_component_meshes,
+    merge_meshes,
+)
 from mani_skill2.utils.sapien_utils import (
     get_actor_state,
     get_articulation_state,
+    get_obj_by_type,
     set_actor_state,
+    set_articulation_render_material,
     set_articulation_state,
-)
-from mani_skill2.utils.trimesh_utils import (
-    get_actor_meshes,
-    get_articulation_meshes,
-    merge_meshes,
 )
 from mani_skill2.utils.visualization.misc import observations_to_images, tile_images
 
@@ -47,18 +54,18 @@ class BaseEnv(gym.Env):
             Example kwargs for `SapienRenderer` (renderer_type=='sapien'):
             - offscreen_only: tell the renderer the user does not need to present onto a screen.
             - device (str): GPU device for renderer, e.g., 'cuda:x'.
-        shader_dir (str): shader directory. Defaults to "ibl".
-            "ibl" and "rt" are built-in options with SAPIEN. Other options are user-defined.
+        shader_dir (str): shader directory. Defaults to "default".
+            "default" and "rt" are built-in options with SAPIEN. Other options are user-defined.
         render_config (dict): kwargs to configure the renderer. Only for `SapienRenderer`.
             See `sapien.RenderConfig` for more details.
         enable_shadow (bool): whether to enable shadow for lights. Defaults to False.
-        camera_cfgs (dict): configurations of cameras. See notes for more details.
+        sensor_cfgs (dict): configurations of sensors. See notes for more details.
         render_camera_cfgs (dict): configurations of rendering cameras. Similar usage as @camera_cfgs.
 
     Note:
-        `camera_cfgs` is used to update environement-specific camera configurations.
-        If the key is one of camera names, the value will be applied to the corresponding camera.
-        Otherwise, the value will be applied to all cameras (but overridden by camera-specific values).
+        `sensor_cfgs` is used to update environement-specific sensor configurations.
+        If the key is one of sensor names (e.g. a camera), the value will be applied to the corresponding sensor.
+        Otherwise, the value will be applied to all sensors (but overridden by sensor-specific values).
     """
 
     # fmt: off
@@ -69,11 +76,13 @@ class BaseEnv(gym.Env):
 
     metadata = {"render_modes": SUPPORTED_RENDER_MODES}
 
+    _agent_cls: Type[BaseAgent]
     agent: BaseAgent
-    _agent_cfg: AgentConfig
-    _cameras: Dict[str, Camera]
-    _camera_cfgs: Dict[str, CameraConfig]
+    _sensors: Dict[str, BaseSensor]
+    _sensor_cfgs: Dict[str, BaseSensorConfig]
     _agent_camera_cfgs: Dict[str, CameraConfig]
+
+    # TODO (stao): do render cameras need to be separate from sensors?
     _render_cameras: Dict[str, Camera]
     _render_camera_cfgs: Dict[str, CameraConfig]
 
@@ -87,17 +96,20 @@ class BaseEnv(gym.Env):
         control_freq: int = 20,
         renderer: str = "sapien",
         renderer_kwargs: dict = None,
-        shader_dir: str = "ibl",
+        shader_dir: str = "default",
         render_config: dict = None,
         enable_shadow: bool = False,
-        camera_cfgs: dict = None,
+        sensor_cfgs: dict = None,
         render_camera_cfgs: dict = None,
-        bg_name: str = None,
+        robot_uid: Union[str, BaseAgent] = None,
     ):
         # Create SAPIEN engine
         self._engine = sapien.Engine()
         # TODO(jigu): Change to `warning` after lighting in VecEnv is fixed.
-        self._engine.set_log_level(os.getenv("MS2_SIM_LOG_LEVEL", "error"))
+        # TODO Ms2 set log level. What to do now?
+        # self._engine.set_log_level(os.getenv("MS2_SIM_LOG_LEVEL", "error"))
+
+        self.bg_name = None  # TODO refactor
 
         # Create SAPIEN renderer
         self._renderer_type = renderer
@@ -105,31 +117,31 @@ class BaseEnv(gym.Env):
             renderer_kwargs = {}
         if self._renderer_type == "sapien":
             self._renderer = sapien.SapienRenderer(**renderer_kwargs)
-            if shader_dir == "ibl":
-                _render_config = dict(camera_shader_dir="ibl", viewer_shader_dir="ibl")
+            if shader_dir == "default":
+                sapien.render.set_camera_shader_dir("default")
+                sapien.render.set_viewer_shader_dir("default")
             elif shader_dir == "rt":
-                _render_config = dict(
-                    camera_shader_dir="rt",
-                    viewer_shader_dir="rt",
-                    rt_samples_per_pixel=32,
-                    rt_max_path_depth=8,
-                    rt_use_denoiser=True,
-                )
-            else:
-                _render_config = dict(
-                    camera_shader_dir=shader_dir, viewer_shader_dir=shader_dir
-                )
-            if render_config is None:
-                render_config = {}
-            _render_config.update(render_config)
-            for k, v in _render_config.items():
-                setattr(sapien.render_config, k, v)
-            self._renderer.set_log_level(os.getenv("MS2_RENDERER_LOG_LEVEL", "warn"))
-        elif self._renderer_type == "client":
-            self._renderer = sapien.RenderClient(**renderer_kwargs)
-            # TODO(jigu): add `set_log_level` for RenderClient?
-        else:
-            raise NotImplementedError(self._renderer_type)
+                sapien.render.set_camera_shader_dir("rt")
+                sapien.render.set_viewer_shader_dir("rt")
+                sapien.render.set_ray_tracing_samples_per_pixel(32)
+                sapien.render.set_ray_tracing_path_depth(16)
+                sapien.render.set_ray_tracing_denoiser(
+                    "optix"
+                )  # TODO "optix or oidn?" previous value was just True
+            elif shader_dir == "rt-fast":
+                sapien.render.set_camera_shader_dir("rt")
+                sapien.render.set_viewer_shader_dir("rt")
+                sapien.render.set_ray_tracing_samples_per_pixel(2)
+                sapien.render.set_ray_tracing_path_depth(1)
+                sapien.render.set_ray_tracing_denoiser("optix")
+            sapien.render.set_log_level(os.getenv("MS2_RENDERER_LOG_LEVEL", "warn"))
+
+        # TODO (stao): what here?
+        # elif self._renderer_type == "client":
+        #     self._renderer = sapien.RenderClient(**renderer_kwargs)
+        #     # TODO(jigu): add `set_log_level` for RenderClient?
+        # else:
+        #     raise NotImplementedError(self._renderer_type)
 
         self._engine.set_renderer(self._renderer)
 
@@ -166,50 +178,65 @@ class BaseEnv(gym.Env):
         self.render_mode = render_mode
         self._viewer = None
 
+        if robot_uid is not None:
+            if isinstance(robot_uid, type(BaseAgent)):
+                self._agent_cls = robot_uid
+                robot_uid = self._agent_cls.uid
+            else:
+                self._agent_cls = ROBOTS[robot_uid]
+            self.robot_uid = robot_uid
+
+        # NOTE (stao): The next two lines are a little hacky as some agents/robots need to be instantiated first before
+        # we can retrieve sensor configurations. This is an artifact of MS1 robot code where a single robot class could have editable
+        # sensors configurations
+        self._setup_scene()
+        self._load_agent()
+
         # NOTE(jigu): Agent and camera configurations should not change after initialization.
-        self._configure_agent()
-        self._configure_cameras()
+        self._configure_sensors()
         self._configure_render_cameras()
         # Override camera configurations
-        if camera_cfgs is not None:
-            update_camera_cfgs_from_dict(self._camera_cfgs, camera_cfgs)
+        if sensor_cfgs is not None:
+            update_camera_cfgs_from_dict(self._sensor_cfgs, sensor_cfgs)
         if render_camera_cfgs is not None:
             update_camera_cfgs_from_dict(self._render_camera_cfgs, render_camera_cfgs)
 
         # Lighting
         self.enable_shadow = enable_shadow
 
-        # Visual background
-        self.bg_name = bg_name
-
         # Use a fixed (main) seed to enhance determinism
         self._main_seed = None
-        self.set_main_rng(2022)
+        self._set_main_rng(2022)
         obs, _ = self.reset(seed=2022, options=dict(reconfigure=True))
         self.observation_space = convert_observation_to_space(obs)
         if self._obs_mode == "image":
             image_obs_space = self.observation_space.spaces["image"]
-            for uid, camera in self._cameras.items():
+            for uid, camera in self._sensors.items():
                 image_obs_space.spaces[uid] = camera.observation_space
         self.action_space = self.agent.action_space
 
-    def _configure_agent(self):
-        # TODO(jigu): Support a dummy agent for simulation only
-        raise NotImplementedError
+    def _load_agent(self):
+        agent_cls: Type[BaseAgent] = self._agent_cls
+        self.agent = agent_cls(self._scene, self._control_freq, self._control_mode)
+        set_articulation_render_material(self.agent.robot, specular=0.9, roughness=0.3)
 
-    def _configure_cameras(self):
-        self._camera_cfgs = OrderedDict()
-        self._camera_cfgs.update(parse_camera_cfgs(self._register_cameras()))
+    def _configure_sensors(self):
+        self._sensor_cfgs = OrderedDict()
 
+        # Add task/external sensors
+        self._sensor_cfgs.update(parse_camera_cfgs(self._register_sensors()))
+
+        # Add agent sensors
         self._agent_camera_cfgs = OrderedDict()
-        if self._agent_cfg is not None:
-            self._agent_camera_cfgs = parse_camera_cfgs(self._agent_cfg.cameras)
-            self._camera_cfgs.update(self._agent_camera_cfgs)
+        self._agent_camera_cfgs = parse_camera_cfgs(self.agent.sensor_configs)
+        self._sensor_cfgs.update(self._agent_camera_cfgs)
 
-    def _register_cameras(
+    def _register_sensors(
         self,
-    ) -> Union[CameraConfig, Sequence[CameraConfig], Dict[str, CameraConfig]]:
-        """Register (non-agent) cameras for the environment."""
+    ) -> Union[
+        BaseSensorConfig, Sequence[BaseSensorConfig], Dict[str, BaseSensorConfig]
+    ]:
+        """Register (non-agent) sensors for the environment."""
         return []
 
     def _configure_render_cameras(self):
@@ -217,7 +244,9 @@ class BaseEnv(gym.Env):
 
     def _register_render_cameras(
         self,
-    ) -> Union[CameraConfig, Sequence[CameraConfig], Dict[str, CameraConfig]]:
+    ) -> Union[
+        BaseSensorConfig, Sequence[BaseSensorConfig], Dict[str, BaseSensorConfig]
+    ]:
         """Register cameras for rendering."""
         return []
 
@@ -253,6 +282,9 @@ class BaseEnv(gym.Env):
         return self._obs_mode
 
     def get_obs(self):
+        """
+        Return the current observation of the environment
+        """
         if self._obs_mode == "none":
             # Some cases do not need observations, e.g., MPC
             return OrderedDict()
@@ -267,7 +299,7 @@ class BaseEnv(gym.Env):
             raise NotImplementedError(self._obs_mode)
 
     def _get_obs_state_dict(self):
-        """Get (GT) state-based observations."""
+        """Get (ground-truth) state-based observations."""
         return OrderedDict(
             agent=self._get_obs_agent(),
             extra=self._get_obs_extra(),
@@ -284,31 +316,35 @@ class BaseEnv(gym.Env):
     def update_render(self):
         """Update renderer(s). This function should be called before any rendering,
         to sync simulator and renderer."""
+        # TODO (stao): note that update_render has some overhead. Currently when using image observation mode + using render() for recording videos
+        # this is called twice
         self._scene.update_render()
 
     def take_picture(self):
         """Take pictures from all cameras (non-blocking)."""
-        for cam in self._cameras.values():
+        for cam in self._sensors.values():
             cam.take_picture()
 
     def get_images(self) -> Dict[str, Dict[str, np.ndarray]]:
         """Get (raw) images from all cameras (blocking)."""
         images = OrderedDict()
-        for name, cam in self._cameras.items():
+        for name, cam in self._sensors.items():
             images[name] = cam.get_images()
         return images
 
     def get_camera_params(self) -> Dict[str, Dict[str, np.ndarray]]:
         """Get camera parameters from all cameras."""
         params = OrderedDict()
-        for name, cam in self._cameras.items():
+        for name, cam in self._sensors.items():
             params[name] = cam.get_params()
         return params
 
     def _get_obs_images(self) -> OrderedDict:
+        # TODO (stao): do we still need this part?
         if self._renderer_type == "client":
             # NOTE: not compatible with StereoDepthCamera
-            cameras = [x.camera for x in self._cameras.values()]
+            cameras = [x.camera for x in self._sensors.values()]
+            # TODO: upgrade
             self._scene._update_render_and_take_pictures(cameras)
         else:
             self.update_render()
@@ -334,8 +370,7 @@ class BaseEnv(gym.Env):
 
     def get_reward(self, **kwargs):
         if self._reward_mode == "sparse":
-            eval_info = self.evaluate(**kwargs)
-            return float(eval_info["success"])
+            return float(kwargs["info"]["success"])
         elif self._reward_mode == "dense":
             return self.compute_dense_reward(**kwargs)
         elif self._reward_mode == "normalized_dense":
@@ -354,7 +389,14 @@ class BaseEnv(gym.Env):
     # -------------------------------------------------------------------------- #
     def reconfigure(self):
         """Reconfigure the simulation scene instance.
-        This function should clear the previous scene, and create a new one.
+        This function clears the previous scene and creates a new one.
+
+        Note this function is not always called when an environment is reset, and
+        should only be used if any agents, assets, sensors, lighting need to change
+        to save compute time.
+
+        Tasks like PegInsertionSide and TurnFaucet will call this each time as the peg
+        shape changes each time and the faucet model changes each time respectively.
         """
         self._clear()
 
@@ -362,14 +404,12 @@ class BaseEnv(gym.Env):
         self._load_agent()
         self._load_actors()
         self._load_articulations()
-        self._setup_cameras()
+        self._setup_sensors()
         self._setup_lighting()
 
-        # Cache actors and articulations
+        # Cache entites and articulations
         self._actors = self.get_actors()
         self._articulations = self.get_articulations()
-
-        self._load_background()
 
         if self._viewer is not None:
             self._setup_viewer()
@@ -390,17 +430,19 @@ class BaseEnv(gym.Env):
         )
 
     def _load_actors(self):
+        """Loads all actors into the scene. Called by `self.reconfigure`"""
         pass
 
     def _load_articulations(self):
+        """Loads all articulations into the scene. Called by `self.reconfigure`"""
         pass
 
-    def _load_agent(self):
-        pass
+    # TODO (stao): refactor this into sensor API
+    def _setup_sensors(self):
+        """Setup cameras in the scene. Called by `self.reconfigure`"""
+        self._sensors = OrderedDict()
 
-    def _setup_cameras(self):
-        self._cameras = OrderedDict()
-        for uid, camera_cfg in self._camera_cfgs.items():
+        for uid, camera_cfg in self._sensor_cfgs.items():
             if uid in self._agent_camera_cfgs:
                 articulation = self.agent.robot
             else:
@@ -409,7 +451,7 @@ class BaseEnv(gym.Env):
                 cam_cls = StereoDepthCamera
             else:
                 cam_cls = Camera
-            self._cameras[uid] = cam_cls(
+            self._sensors[uid] = cam_cls(
                 camera_cfg,
                 self._scene,
                 self._renderer_type,
@@ -425,46 +467,16 @@ class BaseEnv(gym.Env):
                 )
 
     def _setup_lighting(self):
-        if self.bg_name is not None:
-            return
+        # TODO (stao): remove this code out. refactor it to be inside scene builders
+        """Setup lighting in the scene. Called by `self.reconfigure`"""
 
         shadow = self.enable_shadow
         self._scene.set_ambient_light([0.3, 0.3, 0.3])
         # Only the first of directional lights can have shadow
         self._scene.add_directional_light(
-            [1, 1, -1], [1, 1, 1], shadow=shadow, scale=5, shadow_map_size=2048
+            [1, 1, -1], [1, 1, 1], shadow=shadow, shadow_scale=5, shadow_map_size=2048
         )
         self._scene.add_directional_light([0, 0, -1], [1, 1, 1])
-
-    def _load_background(self):
-        if self.bg_name is None:
-            return
-
-        # Remove all existing lights
-        for l in self._scene.get_all_lights():
-            self._scene.remove_light(l)
-
-        if self.bg_name == "minimal_bedroom":
-            # "Minimalistic Modern Bedroom" (https://skfb.ly/oCnNx) by dylanheyes is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
-            path = ASSET_DIR / "background/minimalistic_modern_bedroom.glb"
-            pose = sapien.Pose([0, 0, 1.7], [0.5, 0.5, -0.5, -0.5])
-            self._scene.set_ambient_light([0.1, 0.1, 0.1])
-            self._scene.add_point_light([-0.349, 0, 1.4], [1.0, 0.9, 0.9])
-        else:
-            raise NotImplementedError("Unsupported background: {}".format(self.bg_name))
-
-        if not path.exists():
-            raise FileNotFoundError(
-                f"The visual background asset is not found: {path}."
-                "Please download the background asset by `python -m mani_skill2.utils.download_asset {}`".format(
-                    self.bg_name
-                )
-            )
-
-        builder = self._scene.create_actor_builder()
-        builder.add_visual_from_file(str(path))
-        self.visual_bg = builder.build_kinematic()
-        self.visual_bg.set_pose(pose)
 
     # -------------------------------------------------------------------------- #
     # Reset
@@ -473,11 +485,13 @@ class BaseEnv(gym.Env):
         if options is None:
             options = dict()
 
-        # when giving a specific seed, we always set the main RNG based on that seed. This then deterministically changes the **sequence** of RNG 
+        # when giving a specific seed, we always set the main RNG based on that seed. This then deterministically changes the **sequence** of RNG
         # used for each episode after each call to reset with seed=none. By default this sequence of rng starts with the default main seed used which is 2022,
         # which means that when creating an environment and resetting without a seed, it will always have the same sequence of RNG for each episode.
-        self.set_main_rng(seed)
-        self.set_episode_rng(seed) # we first set the first episode seed to allow environments to use it to reconfigure the environment with a seed
+        self._set_main_rng(seed)
+        self._set_episode_rng(
+            seed
+        )  # we first set the first episode seed to allow environments to use it to reconfigure the environment with a seed
         self._elapsed_steps = 0
         reconfigure = options.get("reconfigure", False)
         if reconfigure:
@@ -487,12 +501,12 @@ class BaseEnv(gym.Env):
             self._clear_sim_state()
 
         # Set the episode rng again after reconfiguration to guarantee seed reproducibility
-        self.set_episode_rng(self._episode_seed)
+        self._set_episode_rng(self._episode_seed)
         self.initialize_episode()
 
         return self.get_obs(), {}
 
-    def set_main_rng(self, seed):
+    def _set_main_rng(self, seed):
         """Set the main random generator (e.g., to generate the seed for each episode)."""
         if seed is None:
             if self._main_seed is not None:
@@ -501,7 +515,7 @@ class BaseEnv(gym.Env):
         self._main_seed = seed
         self._main_rng = np.random.RandomState(self._main_seed)
 
-    def set_episode_rng(self, seed):
+    def _set_episode_rng(self, seed):
         """Set the random generator for current episode."""
         if seed is None:
             self._episode_seed = self._main_rng.randint(2**32)
@@ -510,7 +524,8 @@ class BaseEnv(gym.Env):
         self._episode_rng = np.random.RandomState(self._episode_seed)
 
     def initialize_episode(self):
-        """Initialize the episode, e.g., poses of actors and articulations, and robot configuration.
+        # TODO (stao): should we even split these into 4 separate functions?
+        """Initialize the episode, e.g., poses of entities and articulations, and robot configuration.
         No new assets are created. Task-relevant information can be initialized here, like goals.
         """
         self._initialize_actors()
@@ -519,28 +534,29 @@ class BaseEnv(gym.Env):
         self._initialize_task()
 
     def _initialize_actors(self):
-        """Initialize the poses of actors."""
+        """Initialize the poses of actors. Called by `self.initialize_episode`"""
         pass
 
     def _initialize_articulations(self):
-        """Initialize the (joint) poses of articulations."""
+        """Initialize the (joint) poses of articulations. Called by `self.initialize_episode`"""
         pass
 
     def _initialize_agent(self):
-        """Initialize the (joint) poses of agent(robot)."""
+        """Initialize the (joint) poses of agent(robot). Called by `self.initialize_episode`"""
         pass
 
     def _initialize_task(self):
-        """Initialize task-relevant information, like goals."""
+        """Initialize task-relevant information, like goals. Called by `self.initialize_episode`"""
         pass
 
     def _clear_sim_state(self):
         """Clear simulation state (velocities)"""
         for actor in self._scene.get_all_actors():
-            if actor.type != "static":
-                # TODO(fxiang): kinematic actor may need another way.
-                actor.set_velocity([0, 0, 0])
-                actor.set_angular_velocity([0, 0, 0])
+            component = actor.find_component_by_type(physx.PhysxRigidDynamicComponent)
+            if component is None:
+                continue
+            component.set_linear_velocity([0, 0, 0])
+            component.set_angular_velocity([0, 0, 0])
         for articulation in self._scene.get_all_articulations():
             articulation.set_qvel(np.zeros(articulation.dof))
             articulation.set_root_velocity([0, 0, 0])
@@ -552,11 +568,12 @@ class BaseEnv(gym.Env):
     def step(self, action: Union[None, np.ndarray, Dict]):
         self.step_action(action)
         self._elapsed_steps += 1
-
+        # TODO (stao): I think evaluation should always occur first before generating observations
+        # as evaluation is more likely to use privileged information whereas observations only sometimes should include privileged information
         obs = self.get_obs()
         info = self.get_info(obs=obs)
         reward = self.get_reward(obs=obs, action=action, info=info)
-        terminated = self.get_done(obs=obs, info=info)
+        terminated = bool(info["success"])
         return obs, reward, terminated, False, info
 
     def step_action(self, action):
@@ -578,13 +595,13 @@ class BaseEnv(gym.Env):
             self._after_simulation_step()
 
     def evaluate(self, **kwargs) -> dict:
-        """Evaluate whether the task succeeds."""
+        """Evaluate whether the environment is currently in a success state."""
         raise NotImplementedError
 
-    def get_done(self, info: dict, **kwargs):
-        return bool(info["success"])
-
     def get_info(self, **kwargs):
+        """
+        Get info about the current environment state, include elapsed steps and evaluation information
+        """
         info = dict(elapsed_steps=self._elapsed_steps)
         info.update(self.evaluate(**kwargs))
         return info
@@ -600,9 +617,10 @@ class BaseEnv(gym.Env):
     # -------------------------------------------------------------------------- #
     def _get_default_scene_config(self):
         scene_config = sapien.SceneConfig()
-        scene_config.default_dynamic_friction = 1.0
-        scene_config.default_static_friction = 1.0
-        scene_config.default_restitution = 0.0
+        # note these frictions are same as unity
+        physx.set_default_material(
+            dynamic_friction=0.3, static_friction=0.3, restitution=0
+        )
         scene_config.contact_offset = 0.02
         scene_config.enable_pcm = False
         scene_config.solver_iterations = 25
@@ -614,8 +632,7 @@ class BaseEnv(gym.Env):
 
     def _setup_scene(self, scene_config: Optional[sapien.SceneConfig] = None):
         """Setup the simulation scene instance.
-        The function should be called in reset().
-        """
+        The function should be called in reset(). Called by `self.reconfigure`"""
         if scene_config is None:
             scene_config = self._get_default_scene_config()
         self._scene = self._engine.create_scene(scene_config)
@@ -624,10 +641,11 @@ class BaseEnv(gym.Env):
     def _clear(self):
         """Clear the simulation scene instance and other buffers.
         The function can be called in reset() before a new scene is created.
+        Called by `self.reconfigure` and when the environment is closed/deleted
         """
         self._close_viewer()
         self.agent = None
-        self._cameras = OrderedDict()
+        self._sensors = OrderedDict()
         self._render_cameras = OrderedDict()
         self._scene = None
 
@@ -646,7 +664,7 @@ class BaseEnv(gym.Env):
     def get_actors(self):
         return self._scene.get_all_actors()
 
-    def get_articulations(self):
+    def get_articulations(self) -> List[physx.PhysxArticulation]:
         articulations = self._scene.get_all_articulations()
         # NOTE(jigu): There might be dummy articulations used by controllers.
         # TODO(jigu): Remove dummy articulations if exist.
@@ -693,17 +711,27 @@ class BaseEnv(gym.Env):
 
         The function should be called after a new scene is configured.
         In subclasses, this function can be overridden to set viewer cameras.
+
+        Called by `self.reconfigure`
         """
         # CAUTION: `set_scene` should be called after assets are loaded.
         self._viewer.set_scene(self._scene)
-        self._viewer.toggle_axes(False)
-        self._viewer.toggle_camera_lines(False)
+        control_window: sapien.utils.viewer.control_window.ControlWindow = (
+            get_obj_by_type(
+                self._viewer.plugins, sapien.utils.viewer.control_window.ControlWindow
+            )
+        )
+        control_window.show_joint_axes = False
+        control_window.show_camera_linesets = False
 
     def render_human(self):
         self.update_render()
         if self._viewer is None:
             self._viewer = Viewer(self._renderer)
             self._setup_viewer()
+            self._viewer.set_camera_pose(
+                self._render_cameras["render_camera"].camera.global_pose
+            )
         self._viewer.render()
         return self._viewer
 
@@ -743,6 +771,9 @@ class BaseEnv(gym.Env):
         return images
 
     def render(self):
+        """
+        Either opens a viewer if render_mode is "human", or returns an array that you can use to save videos
+        """
         if self.render_mode is None:
             raise RuntimeError("render_mode is not set.")
         if self.render_mode == "human":
@@ -769,7 +800,7 @@ class BaseEnv(gym.Env):
                 meshes.append(articulation_mesh)
 
         for actor in self._scene.get_all_actors():
-            actor_mesh = merge_meshes(get_actor_meshes(actor))
+            actor_mesh = merge_meshes(get_component_meshes(actor))
             if actor_mesh:
                 meshes.append(
                     actor_mesh.apply_transform(

@@ -3,8 +3,10 @@ from pathlib import Path
 from typing import Dict, List
 
 import numpy as np
-import sapien.core as sapien
-from sapien.core import Pose
+import sapien
+import sapien.physx as physx
+import sapien.render
+from sapien import Pose
 from transforms3d.euler import euler2quat
 from transforms3d.quaternions import axangle2quat, qmult
 
@@ -12,7 +14,13 @@ from mani_skill2 import ASSET_DIR, format_path
 from mani_skill2.utils.common import random_choice
 from mani_skill2.utils.io_utils import load_json
 from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import set_actor_visibility, vectorize_pose
+from mani_skill2.utils.sapien_utils import (
+    hide_entity,
+    set_entity_visibility,
+    show_entity,
+    vectorize_pose,
+)
+from mani_skill2.utils.scene_builder import TableSceneBuilder
 
 from .base_env import StationaryManipulationEnv
 
@@ -21,7 +29,7 @@ class PickSingleEnv(StationaryManipulationEnv):
     DEFAULT_ASSET_ROOT: str
     DEFAULT_MODEL_JSON: str
 
-    obj: sapien.Actor  # target object
+    obj: sapien.Entity  # target object
 
     def __init__(
         self,
@@ -73,10 +81,13 @@ class PickSingleEnv(StationaryManipulationEnv):
         pass
 
     def _load_actors(self):
-        self._add_ground(render=self.bg_name is None)
+        TableSceneBuilder().build(self._scene)
         self._load_model()
-        self.obj.set_damping(0.1, 0.1)
+        obj_comp = self.obj.find_component_by_type(physx.PhysxRigidDynamicComponent)
+        obj_comp.set_linear_damping(0.1)
+        obj_comp.set_angular_damping(0.1)
         self.goal_site = self._build_sphere_site(self.goal_thresh)
+        set_entity_visibility(self.goal_site, 0.5)
 
     def _load_model(self):
         """Load the target object."""
@@ -85,7 +96,7 @@ class PickSingleEnv(StationaryManipulationEnv):
     def reset(self, seed=None, options=None):
         if options is None:
             options = dict()
-        self.set_episode_rng(seed)
+        self._set_episode_rng(seed)
         model_scale = options.pop("model_scale", None)
         model_id = options.pop("model_id", None)
         reconfigure = options.pop("reconfigure", False)
@@ -150,34 +161,41 @@ class PickSingleEnv(StationaryManipulationEnv):
             axis = axis / max(np.linalg.norm(axis), 1e-6)
             ori = self._episode_rng.uniform(0, self.obj_init_rot)
             q = qmult(q, axangle2quat(axis, ori, True))
-        self.obj.set_pose(Pose(p, q))
+
+        obj_comp = self.obj.find_component_by_type(physx.PhysxRigidDynamicComponent)
+        obj_comp.set_pose(Pose(p, q))
 
         # Move the robot far away to avoid collision
         # The robot should be initialized later
         self.agent.robot.set_pose(Pose([-10, 0, 0]))
 
         # Lock rotation around x and y
-        self.obj.lock_motion(0, 0, 0, 1, 1, 0)
+        obj_comp.set_locked_motion_axes([0, 0, 0, 1, 1, 0])
         self._settle(0.5)
 
         # Unlock motion
-        self.obj.lock_motion(0, 0, 0, 0, 0, 0)
-        # NOTE(jigu): Explicit set pose to ensure the actor does not sleep
-        self.obj.set_pose(self.obj.pose)
-        self.obj.set_velocity(np.zeros(3))
-        self.obj.set_angular_velocity(np.zeros(3))
+        obj_comp.set_locked_motion_axes([0, 0, 0, 0, 0, 0])
+        # NOTE(jigu): Explicit set pose to ensure the entity does not sleep
+        obj_comp.set_pose(obj_comp.pose)
+        obj_comp.set_linear_velocity(np.zeros(3))
+        obj_comp.set_angular_velocity(np.zeros(3))
         self._settle(0.5)
 
         # Some objects need longer time to settle
-        lin_vel = np.linalg.norm(self.obj.velocity)
-        ang_vel = np.linalg.norm(self.obj.angular_velocity)
+        lin_vel = np.linalg.norm(obj_comp.linear_velocity)
+        ang_vel = np.linalg.norm(obj_comp.angular_velocity)
         if lin_vel > 1e-3 or ang_vel > 1e-2:
             self._settle(0.5)
 
     @property
     def obj_pose(self):
         """Get the center of mass (COM) pose."""
-        return self.obj.pose.transform(self.obj.cmass_local_pose)
+        return (
+            self.obj.pose
+            * self.obj.find_component_by_type(
+                physx.PhysxRigidDynamicComponent
+            ).cmass_local_pose
+        )
 
     def _initialize_task(self, max_trials=100):
         REGION = [[-0.15, -0.25], [0.15, 0.25]]
@@ -201,14 +219,14 @@ class PickSingleEnv(StationaryManipulationEnv):
 
     def _get_obs_extra(self) -> OrderedDict:
         obs = OrderedDict(
-            tcp_pose=vectorize_pose(self.tcp.pose),
+            tcp_pose=vectorize_pose(self.agent.tcp.pose),
             goal_pos=self.goal_pos,
         )
         if self._obs_mode in ["state", "state_dict"]:
             obs.update(
-                tcp_to_goal_pos=self.goal_pos - self.tcp.pose.p,
+                tcp_to_goal_pos=self.goal_pos - self.agent.tcp.pose.p,
                 obj_pose=vectorize_pose(self.obj_pose),
-                tcp_to_obj_pos=self.obj_pose.p - self.tcp.pose.p,
+                tcp_to_obj_pos=self.obj_pose.p - self.agent.tcp.pose.p,
                 obj_to_goal_pos=self.goal_pos - self.obj_pose.p,
             )
         return obs
@@ -243,7 +261,7 @@ class PickSingleEnv(StationaryManipulationEnv):
             obj_pose = self.obj_pose
 
             # reaching reward
-            tcp_wrt_obj_pose = obj_pose.inv() * self.tcp.pose
+            tcp_wrt_obj_pose = obj_pose.inv() * self.agent.tcp.pose
             tcp_to_obj_dist = np.linalg.norm(tcp_wrt_obj_pose.p)
             reaching_reward = 1 - np.tanh(
                 3.0
@@ -254,7 +272,7 @@ class PickSingleEnv(StationaryManipulationEnv):
             reward = reward + reaching_reward
 
             # grasp reward
-            is_grasped = self.agent.check_grasp(self.obj, max_angle=30)
+            is_grasped = self.agent.is_grasping(self.obj, max_angle=30)
             reward += 3.0 if is_grasped else 0.0
 
             # reaching-goal reward
@@ -289,7 +307,7 @@ class PickSingleEnv(StationaryManipulationEnv):
             grasp_rot_loss_fxn = lambda A: np.tanh(
                 1 / 8 * np.trace(A.T @ A)
             )  # trace(A.T @ A) has range [0,8] for A being difference of rotation matrices
-            tcp_pose_wrt_obj = obj_pose.inv() * self.tcp.pose
+            tcp_pose_wrt_obj = obj_pose.inv() * self.agent.tcp.pose
             tcp_rot_wrt_obj = tcp_pose_wrt_obj.to_transformation_matrix()[:3, :3]
             gt_rot_x_diff_1 = (
                 np.array([[0, 1, 0], [1, 0, 0], [0, 0, -1]]) - tcp_rot_wrt_obj
@@ -323,7 +341,7 @@ class PickSingleEnv(StationaryManipulationEnv):
 
             if rotated_properly:
                 # reaching reward
-                tcp_wrt_obj_pose = obj_pose.inv() * self.tcp.pose
+                tcp_wrt_obj_pose = obj_pose.inv() * self.agent.tcp.pose
                 tcp_to_obj_dist = tcp_wrt_obj_pose.p
                 grasp_from_above_height_offset = (
                     self.model_bbox_size[2] / 2 - finger_length
@@ -356,7 +374,7 @@ class PickSingleEnv(StationaryManipulationEnv):
                 else:
                     reward = reward + 1
                     # grasp reward
-                    is_grasped = self.agent.check_grasp(self.obj, max_angle=30)
+                    is_grasped = self.agent.is_grasping(self.obj, max_angle=30)
                     reward += 2.0 if is_grasped else 0.0
 
                     # reaching-goal reward
@@ -370,11 +388,11 @@ class PickSingleEnv(StationaryManipulationEnv):
                     obj_pose.p[2]
                     + self.model_bbox_size[2] / 2
                     + 0.02
-                    - self.tcp.pose.p[2],
+                    - self.agent.tcp.pose.p[2],
                     0.0,
                 )
                 reward = reward - 15 * np.linalg.norm(
-                    obj_pose.p[:2] - self.tcp.pose.p[:2]
+                    obj_pose.p[:2] - self.agent.tcp.pose.p[:2]
                 )
                 reward = reward - 15 * np.sum(
                     gripper_width / 2 - self.agent.robot.get_qpos()[-2:]
@@ -384,9 +402,9 @@ class PickSingleEnv(StationaryManipulationEnv):
 
     def render(self):
         if self.render_mode in ["human", "rgb_array"]:
-            set_actor_visibility(self.goal_site, 0.5)
+            show_entity(self.goal_site)
             ret = super().render()
-            set_actor_visibility(self.goal_site, 0.0)
+            hide_entity(self.goal_site)
         else:
             ret = super().render()
         return ret
@@ -407,7 +425,7 @@ def build_actor_ycb(
     model_id: str,
     scene: sapien.Scene,
     scale: float = 1.0,
-    physical_material: sapien.PhysicalMaterial = None,
+    physical_material: physx.PhysxMaterial = None,
     density=1000,
     root_dir=ASSET_DIR / "mani_skill2_ycb",
 ):
@@ -415,11 +433,12 @@ def build_actor_ycb(
     model_dir = Path(root_dir) / "models" / model_id
 
     collision_file = str(model_dir / "collision.obj")
-    builder.add_multiple_collisions_from_file(
+    builder.add_multiple_convex_collisions_from_file(
         filename=collision_file,
         scale=[scale] * 3,
         material=physical_material,
         density=density,
+        decomposition="coacd",
     )
 
     visual_file = str(model_dir / "textured.obj")
@@ -481,9 +500,9 @@ def build_actor_egad(
     model_id: str,
     scene: sapien.Scene,
     scale: float = 1.0,
-    physical_material: sapien.PhysicalMaterial = None,
+    physical_material: physx.PhysxMaterial = None,
     density=100,
-    render_material: sapien.RenderMaterial = None,
+    render_material: sapien.render.RenderMaterial = None,
     root_dir=ASSET_DIR / "mani_skill2_egad",
 ):
     builder = scene.create_actor_builder()
@@ -491,10 +510,11 @@ def build_actor_egad(
     split = "train" if "_" in model_id else "eval"
 
     collision_file = Path(root_dir) / f"egad_{split}_set_coacd" / f"{model_id}.obj"
-    builder.add_multiple_collisions_from_file(
+    builder.add_multiple_convex_collisions_from_file(
         filename=str(collision_file),
         scale=[scale] * 3,
         material=physical_material,
+        decomposition="coacd",
         density=density,
     )
 
@@ -554,7 +574,8 @@ class PickSingleEGADEnv(PickSingleEnv):
         super()._initialize_actors()
 
         # Some objects need longer time to settle
-        lin_vel = np.linalg.norm(self.obj.velocity)
-        ang_vel = np.linalg.norm(self.obj.angular_velocity)
+        obj_comp = self.obj.find_component_by_type(physx.PhysxRigidDynamicComponent)
+        lin_vel = np.linalg.norm(obj_comp.linear_velocity)
+        ang_vel = np.linalg.norm(obj_comp.angular_velocity)
         if lin_vel > 1e-3 or ang_vel > 1e-2:
             self._settle(0.5)

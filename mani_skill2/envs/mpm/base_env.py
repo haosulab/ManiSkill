@@ -22,7 +22,7 @@ import hashlib
 from collections import OrderedDict
 
 import numpy as np
-import sapien.core as sapien
+import sapien
 import trimesh
 import warp as wp
 from transforms3d.euler import euler2quat
@@ -103,7 +103,7 @@ class MPMBaseEnv(BaseEnv):
         self._load_agent()
         self._load_actors()
         self._load_articulations()
-        self._setup_cameras()
+        self._setup_sensors()
         self._setup_lighting()
 
         self._setup_mpm()
@@ -115,8 +115,6 @@ class MPMBaseEnv(BaseEnv):
         # Cache actors and articulations
         self._actors = self.get_actors()
         self._articulations = self.get_articulations()
-
-        self._load_background()
 
     def _load_actors(self):
         self._scene.add_ground(altitude=0.0, render=False)
@@ -634,7 +632,7 @@ class MPMBaseEnv(BaseEnv):
         )
 
     def _add_draw_box(self, bbox):
-        from sapien.core import renderer as R
+        from sapien import renderer as R
 
         context: R.Context = self._renderer._internal_context
         # fmt:off

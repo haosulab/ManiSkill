@@ -14,7 +14,7 @@ from typing import Callable, Dict, List, Optional, Sequence, Type, Union
 
 import gymnasium as gym
 import numpy as np
-import sapien.core as sapien
+import sapien
 from gymnasium import spaces
 from gymnasium.vector.utils.spaces import batch_space
 from gymnasium.vector.vector_env import VectorEnv
@@ -293,8 +293,8 @@ class VecEnv(VectorEnv):
         options: Optional[dict] = None,
         indices=None,
     ):
-        # TODO(stao): May be a good idea to adopt the code from Gymnasium directly for functions like this which include some nice assertions
-        # TODO(stao): MS2 doesn't return any infos per environment at the moment. So for now this info data is not handled the same as Gymnasium. It should be in the future
+        # TODO (stao): May be a good idea to adopt the code from Gymnasium directly for functions like this which include some nice assertions
+        # TODO (stao): MS2 doesn't return any infos per environment at the moment. So for now this info data is not handled the same as Gymnasium. It should be in the future
         remotes = self._get_target_remotes(indices)
         results = [remote.recv() for remote in remotes]
         self.waiting = False

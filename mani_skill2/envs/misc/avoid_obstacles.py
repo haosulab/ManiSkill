@@ -2,21 +2,25 @@ from collections import OrderedDict
 from pathlib import Path
 
 import numpy as np
-import sapien.core as sapien
-from sapien.core import Pose
+import sapien
+import sapien.physx as physx
+from sapien import Pose
 
 from mani_skill2 import format_path
-from mani_skill2.agents.configs.panda.defaults import PandaRealSensed435Config
-from mani_skill2.agents.robots.panda import Panda
+from mani_skill2.agents.robots.panda import PandaRealSensed435
+from mani_skill2.agents.robots.panda.panda import Panda
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
+from mani_skill2.utils.building.ground import build_tesselated_square_floor
 from mani_skill2.utils.io_utils import load_json
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import (
     get_articulation_max_impulse_norm,
-    get_entity_by_name,
+    get_obj_by_name,
+    hide_entity,
     look_at,
     set_articulation_render_material,
+    show_entity,
     vectorize_pose,
 )
 
@@ -25,7 +29,7 @@ class AvoidObstaclesBaseEnv(BaseEnv):
     DEFAULT_EPISODE_JSON: str
     ASSET_UID: str
 
-    tcp: sapien.Link  # Tool Center Point of the robot
+    tcp: physx.PhysxArticulationLinkComponent  # Tool Center Point of the robot
 
     def __init__(self, episode_json=None, **kwargs):
         if episode_json is None:
@@ -52,7 +56,7 @@ class AvoidObstaclesBaseEnv(BaseEnv):
     def reset(self, *args, seed=None, options=None):
         if options is None:
             options = dict()
-        self.set_episode_rng(seed)
+        self._set_episode_rng(seed)
         episode_idx = options.pop("episode_idx", None)
         reconfigure = options.pop("reconfigure", False)
         if episode_idx is None:
@@ -70,7 +74,7 @@ class AvoidObstaclesBaseEnv(BaseEnv):
         color=(1, 0, 0),
         name="cube",
         static=True,
-        render_material: sapien.RenderMaterial = None,
+        render_material: sapien.render.RenderMaterial = None,
     ):
         if render_material is None:
             render_material = self._renderer.create_material()
@@ -92,30 +96,30 @@ class AvoidObstaclesBaseEnv(BaseEnv):
             sapien.Pose(p=[scale * 0.5, 0, 0], q=[1, 0, 0, 0]),
             radius=radius,
             half_length=half_length,
-            color=[1, 0, 0],
+            material=sapien.render.RenderMaterial(base_color=[1, 0, 0, 1]),
             name="x",
         )
         builder.add_capsule_visual(
             sapien.Pose(p=[0, scale * 0.5, 0], q=[0.707, 0, 0, 0.707]),
             radius=radius,
             half_length=half_length,
-            color=[0, 1, 0],
+            material=sapien.render.RenderMaterial(base_color=[0, 1, 0, 1]),
             name="y",
         )
         builder.add_capsule_visual(
             sapien.Pose(p=[0, 0, scale * 0.5], q=[0.707, 0, -0.707, 0]),
             radius=radius,
             half_length=half_length,
-            color=[0, 0, 1],
+            material=sapien.render.RenderMaterial(base_color=[0, 0, 1, 1]),
             name="z",
         )
         actor = builder.build_static(name)
         # NOTE(jigu): Must hide upon creation to avoid pollute observations!
-        actor.hide_visual()
+        hide_entity(actor)
         return actor
 
     def _load_actors(self):
-        self._add_ground(render=self.bg_name is None)
+        build_tesselated_square_floor(self._scene)
 
         # Add a wall
         if "wall" in self.episode_config:
@@ -214,7 +218,7 @@ class AvoidObstaclesBaseEnv(BaseEnv):
     def compute_normalized_dense_reward(self, **kwargs):
         return self.compute_dense_reward(**kwargs) / 10.0
 
-    def _register_cameras(self):
+    def _register_sensors(self):
         pose = look_at([-0.25, 0, 1.2], [0.6, 0, 0.6])
         return CameraConfig(
             "base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10
@@ -230,15 +234,15 @@ class AvoidObstaclesBaseEnv(BaseEnv):
         self._viewer.set_camera_rpy(0, -0.6, 3.14)
 
     def render_human(self):
-        self.goal_site.unhide_visual()
+        show_entity(self.goal_site)
         ret = super().render_human()
-        self.goal_site.hide_visual()
+        hide_entity(self.goal_site)
         return ret
 
     def render_rgb_array(self):
-        self.goal_site.unhide_visual()
+        show_entity(self.goal_site)
         ret = super().render_rgb_array()
-        self.goal_site.hide_visual()
+        hide_entity(self.goal_site)
         return ret
 
 
@@ -247,15 +251,14 @@ class PandaAvoidObstaclesEnv(AvoidObstaclesBaseEnv):
     DEFAULT_EPISODE_JSON = "{ASSET_DIR}/avoid_obstacles/panda_train_2k.json.gz"
     ASSET_UID = "panda_avoid_obstacles"
 
-    def _configure_agent(self):
-        self._agent_cfg = PandaRealSensed435Config()
-
     def _load_agent(self):
-        self.robot_uid = "panda"
-        self.agent = Panda(
-            self._scene, self._control_freq, self._control_mode, config=self._agent_cfg
+        self.robot_uid = "panda_realsensed435"  # TODO (stao): This old code here is not good practice to override user argument like this
+        self.agent = PandaRealSensed435(
+            self._scene,
+            self._control_freq,
+            self._control_mode,
         )
-        self.tcp: sapien.Link = get_entity_by_name(
-            self.agent.robot.get_links(), self.agent.config.ee_link_name
-        )
+        self.tcp: sapien.Entity = get_obj_by_name(
+            self.agent.robot.get_links(), self.agent.ee_link_name
+        ).entity
         set_articulation_render_material(self.agent.robot, specular=0.9, roughness=0.3)

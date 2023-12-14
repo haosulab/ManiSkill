@@ -1,64 +1,88 @@
+import os.path as osp
 from collections import OrderedDict
 from pathlib import Path
 from typing import Dict, List, Union
 
 import numpy as np
-import sapien.core as sapien
+import sapien
+import sapien.physx as physx
+import sapien.render
 import trimesh
 import trimesh.sample
-from sapien.core import Pose
+from sapien import Pose
 from scipy.spatial.distance import cdist
 from transforms3d.euler import euler2quat
 
 from mani_skill2 import format_path
-from mani_skill2.agents.robots.panda import Panda
+from mani_skill2.agents.robots.panda.panda import Panda
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
+from mani_skill2.utils.building.ground import build_tesselated_square_floor
 from mani_skill2.utils.common import np_random, random_choice
 from mani_skill2.utils.geometry import transform_points
+from mani_skill2.utils.geometry.trimesh_utils import get_component_mesh
 from mani_skill2.utils.io_utils import load_json
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import (
-    get_entity_by_name,
+    get_obj_by_name,
     hex2rgba,
     look_at,
     set_articulation_render_material,
     vectorize_pose,
 )
-from mani_skill2.utils.trimesh_utils import get_actor_mesh
 
 
 class TurnFaucetBaseEnv(BaseEnv):
-    SUPPORTED_ROBOTS = {"panda": Panda}
     agent: Panda
 
     def __init__(
         self,
         *args,
-        robot="panda",
+        robot_uid="panda",
         robot_init_qpos_noise=0.02,
         **kwargs,
     ):
-        self.robot_uid = robot
         self.robot_init_qpos_noise = robot_init_qpos_noise
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, robot_uid=robot_uid, **kwargs)
 
     def _load_actors(self):
-        self._add_ground(render=self.bg_name is None)
+        # builder = self._scene.create_actor_builder()
+        # model_dir = Path(osp.dirname(__file__)) / "assets"
+        # scale = 1
+        # collision_file = str(model_dir / "Sink_19.glb")  # a metal table
+        # sink_pose = sapien.Pose(q=euler2quat(np.pi / 2, 0, 0))
+        # builder.add_nonconvex_collision_from_file(
+        #     filename=collision_file, scale=[scale] * 3, material=None, pose=sink_pose
+        # )
+        # visual_file = str(model_dir / "Sink_19.glb")
+        # builder.add_visual_from_file(
+        #     filename=visual_file, scale=[scale] * 3, pose=sink_pose
+        # )
+        # self.sink = builder.build_static(name="sink")
+        # aabb = self.sink.find_component_by_type(
+        #     sapien.render.RenderBodyComponent
+        # ).compute_global_aabb_tight()
+        # sink_height = aabb[1, 2] - aabb[0, 2]
 
-    def _configure_agent(self):
-        agent_cls = self.SUPPORTED_ROBOTS[self.robot_uid]
-        self._agent_cfg = agent_cls.get_default_config()
+        # self.sink.set_pose(
+        #     Pose(p=[-0.24, 0, -sink_height], q=euler2quat(0, 0, -np.pi / 2))
+        # )
 
-    def _load_agent(self):
-        agent_cls = self.SUPPORTED_ROBOTS[self.robot_uid]
-        self.agent = agent_cls(
-            self._scene, self._control_freq, self._control_mode, config=self._agent_cfg
-        )
-        self.tcp: sapien.Link = get_entity_by_name(
-            self.agent.robot.get_links(), self.agent.config.ee_link_name
-        )
-        set_articulation_render_material(self.agent.robot, specular=0.9, roughness=0.3)
+        build_tesselated_square_floor(self._scene)
+
+        # # add wall
+        # wall_mtl = sapien.render.RenderMaterial(
+        #     base_color=[32 / 255, 67 / 255, 80 / 255, 1],
+        #     metallic=0,
+        #     roughness=0.9,
+        #     specular=0.8,
+        # )
+        # wall = self._scene.create_actor_builder()
+        # half_size = (0.02, 6, 2.1)
+        # wall.add_box_collision(half_size=half_size)
+        # wall.add_box_visual(half_size=half_size, material=wall_mtl)
+        # self.wall = wall.build_static("wall")
+        # self.wall.set_pose(Pose(p=[0.25, 0, 1]))
 
     def _initialize_agent(self):
         if self.robot_uid == "panda":
@@ -78,26 +102,25 @@ class TurnFaucetBaseEnv(BaseEnv):
         obs["base_pose"] = vectorize_pose(self.agent.robot.pose)
         return obs
 
-    def _register_cameras(self):
+    def _register_sensors(self):
         pose = look_at([-0.4, 0, 0.3], [0, 0, 0.1])
         return CameraConfig(
             "base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10
         )
 
     def _register_render_cameras(self):
-        pose = look_at([0.5, 0.5, 1.0], [0.0, 0.0, 0.5])
+        pose = look_at([-1.3, 0.6, 0.6], [0.0, 0.0, 0.4])
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
 
     def _setup_viewer(self):
         super()._setup_viewer()
-        self._viewer.set_camera_xyz(1.0, 0.0, 1.2)
-        self._viewer.set_camera_rpy(0, -0.5, 3.14)
+        self._viewer.set_camera_pose(look_at([-1.3, 0.6, 0.6], [0.0, 0.0, 0.4]))
 
 
 @register_env("TurnFaucet-v0", max_episode_steps=200)
 class TurnFaucetEnv(TurnFaucetBaseEnv):
-    target_link: sapien.Link
-    target_joint: sapien.Joint
+    target_link: physx.PhysxArticulationLinkComponent
+    target_joint: physx.PhysxJointComponent
 
     def __init__(
         self,
@@ -147,7 +170,7 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
     def reset(self, seed=None, options=None):
         if options is None:
             options = dict()
-        self.set_episode_rng(seed)
+        self._set_episode_rng(seed)
         model_id = options.pop("model_id", None)
         model_scale = options.pop("model_scale", None)
         reconfigure = options.pop("reconfigure", False)
@@ -190,7 +213,7 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
         return reconfigure
 
     def _load_articulations(self):
-        self.faucet = self._load_faucet()
+        self.faucet: physx.PhysxArticulation = self._load_faucet()
         # Cache qpos to restore
         self._faucet_init_qpos = self.faucet.get_qpos()
 
@@ -208,12 +231,13 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
 
         model_dir = self.asset_root / str(self.model_id)
         urdf_path = model_dir / "mobility_cvx.urdf"
-        loader.load_multiple_collisions_from_file = True
 
         density = self.model_info.get("density", 8e3)
-        articulation = loader.load(str(urdf_path), config={"density": density})
+        articulation: physx.PhysxArticulation = loader.load(str(urdf_path))
+        loader.set_density(density)
         articulation.set_name("faucet")
 
+        # TODO (stao): find out why we did this before
         set_articulation_render_material(
             articulation, color=hex2rgba("#AAAAAA"), metallic=1, roughness=0.4
         )
@@ -234,12 +258,13 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
         self.switch_joints = []
         all_links = self.faucet.get_links()
         all_joints = self.faucet.get_joints()
+
         for name in self.switch_link_names:
-            link = get_entity_by_name(all_links, name)
+            link = get_obj_by_name(all_links, name)
             self.switch_links.append(link)
 
             # cache mesh
-            link_mesh = get_actor_mesh(link, False)
+            link_mesh = get_component_mesh(link, False)
             self.switch_links_mesh.append(link_mesh)
 
             # hardcode
@@ -252,10 +277,10 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
         super()._load_agent()
 
         links = self.agent.robot.get_links()
-        self.lfinger = get_entity_by_name(links, "panda_leftfinger")
-        self.rfinger = get_entity_by_name(links, "panda_rightfinger")
-        self.lfinger_mesh = get_actor_mesh(self.lfinger, False)
-        self.rfinger_mesh = get_actor_mesh(self.rfinger, False)
+        self.lfinger = get_obj_by_name(links, "panda_leftfinger")
+        self.rfinger = get_obj_by_name(links, "panda_rightfinger")
+        self.lfinger_mesh = get_component_mesh(self.lfinger, False)
+        self.rfinger_mesh = get_component_mesh(self.rfinger, False)
 
     def _initialize_articulations(self):
         p = np.zeros(3)
@@ -264,6 +289,8 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
         ori = self._episode_rng.uniform(-np.pi / 12, np.pi / 12)
         q = euler2quat(0, 0, ori)
         self.faucet.set_pose(Pose(p, q))
+        # self.sink.set_pose(self.sink.pose * Pose(p=[p[0], p[1], 0.011], q=q))
+        # self.wall.set_pose(self.wall.pose * Pose(p=[p[0], p[1], 0], q=q))
 
     def _initialize_task(self):
         self._set_target_link()
@@ -291,12 +318,16 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
         idx = random_choice(np.arange(n_switch_links), self._episode_rng)
 
         self.target_link_name = self.switch_link_names[idx]
-        self.target_link: sapien.Link = self.switch_links[idx]
-        self.target_joint: sapien.Joint = self.switch_joints[idx]
+        self.target_link: physx.PhysxArticulationLinkComponent = self.switch_links[idx]
+        self.target_joint: physx.PhysxArticulationJoint = self.switch_joints[idx]
         self.target_joint_idx = self.faucet.get_active_joints().index(self.target_joint)
 
         # x-axis is the revolute joint direction
-        assert self.target_joint.type == "revolute", self.target_joint.type
+
+        assert (
+            self.target_joint.type == "revolute_unwrapped"
+            or self.target_joint.type == "revolute"
+        ), self.target_joint.type
         joint_pose = self.target_joint.get_global_pose().to_transformation_matrix()
         self.target_joint_axis = joint_pose[:3, 0]
 
@@ -313,7 +344,7 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
         self.target_link_pos = cmass_pose.p
 
     def _set_init_and_target_angle(self):
-        qmin, qmax = self.target_joint.get_limits()[0]
+        qmin, qmax = self.target_joint.get_limit()[0]
         if np.isinf(qmin):
             self.init_angle = 0
         else:
@@ -329,7 +360,7 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
 
     def _get_obs_extra(self) -> OrderedDict:
         obs = OrderedDict(
-            tcp_pose=vectorize_pose(self.tcp.pose),
+            tcp_pose=vectorize_pose(self.agent.tcp.pose),
             target_angle_diff=np.array(self.target_angle_diff),
             target_joint_axis=self.target_joint_axis,
             target_link_pos=self.target_link_pos,
@@ -369,10 +400,6 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
 
         distance = self._compute_distance()
         reward += 1 - np.tanh(distance * 5.0)
-
-        # is_contacted = any(self.agent.check_contact_fingers(self.target_link))
-        # if is_contacted:
-        #     reward += 0.25
 
         angle_diff = self.target_angle - self.current_angle
         turn_reward_1 = 3 * (1 - np.tanh(max(angle_diff, 0) * 2.0))

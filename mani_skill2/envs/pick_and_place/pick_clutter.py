@@ -3,14 +3,20 @@ from pathlib import Path
 from typing import Dict, List
 
 import numpy as np
-import sapien.core as sapien
-from sapien.core import Pose
+import sapien
+import sapien.physx as physx
+from sapien import Pose
 
 from mani_skill2 import format_path
 from mani_skill2.utils.common import random_choice
 from mani_skill2.utils.io_utils import load_json
 from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import look_at, set_actor_visibility, vectorize_pose
+from mani_skill2.utils.sapien_utils import (
+    look_at,
+    set_entity_visibility,
+    vectorize_pose,
+)
+from mani_skill2.utils.scene_builder import TableSceneBuilder
 
 from .base_env import StationaryManipulationEnv
 from .pick_single import PickSingleYCBEnv, build_actor_ycb
@@ -21,7 +27,7 @@ class PickClutterEnv(StationaryManipulationEnv):
     DEFAULT_ASSET_ROOT: str
     DEFAULT_MODEL_JSON: str
 
-    obj: sapien.Actor  # target object
+    obj: sapien.Entity  # target object
 
     def __init__(
         self,
@@ -60,9 +66,9 @@ class PickClutterEnv(StationaryManipulationEnv):
         super().__init__(**kwargs)
 
     def _load_actors(self):
-        self._add_ground(render=self.bg_name is None)
+        TableSceneBuilder().build(self._scene)
 
-        self.objs: List[sapien.Actor] = []
+        self.objs: List[sapien.Entity] = []
         self.bbox_sizes = []
         for actor_cfg in self.episode["actors"]:
             model_id = actor_cfg["model_id"]
@@ -81,13 +87,13 @@ class PickClutterEnv(StationaryManipulationEnv):
             0.01, color=(0, 1, 0), name="_goal_site"
         )
 
-    def _load_model(self, model_id, model_scale=1.0) -> sapien.Actor:
+    def _load_model(self, model_id, model_scale=1.0) -> sapien.Entity:
         raise NotImplementedError
 
     def reset(self, seed=None, options=None):
         if options is None:
             options = dict()
-        self.set_episode_rng(seed)
+        self._set_episode_rng(seed)
         episode_idx = options.pop("episode_idx", None)
         reconfigure = options.pop("reconfigure", False)
         _reconfigure = self._set_episode(episode_idx)
@@ -140,7 +146,12 @@ class PickClutterEnv(StationaryManipulationEnv):
     @property
     def obj_pose(self):
         """Get the center of mass (COM) pose."""
-        return self.obj.pose.transform(self.obj.cmass_local_pose)
+        return (
+            self.obj.pose
+            * self.obj.find_component_by_type(
+                physx.PhysxRigidDynamicComponent
+            ).cmass_local_pose
+        )
 
     def _initialize_task(self):
         self._set_target()
@@ -168,15 +179,15 @@ class PickClutterEnv(StationaryManipulationEnv):
 
     def _get_obs_extra(self) -> OrderedDict:
         obs = OrderedDict(
-            tcp_pose=vectorize_pose(self.tcp.pose),
+            tcp_pose=vectorize_pose(self.agent.tcp.pose),
             goal_pos=self.goal_pos,
             obj_start_pos=self.obj_start_pos,
         )
         if self._obs_mode in ["state", "state_dict"]:
             obs.update(
-                tcp_to_goal_pos=self.goal_pos - self.tcp.pose.p,
+                tcp_to_goal_pos=self.goal_pos - self.agent.tcp.pose.p,
                 obj_pose=vectorize_pose(self.obj_pose),
-                tcp_to_obj_pos=self.obj_pose.p - self.tcp.pose.p,
+                tcp_to_obj_pos=self.obj_pose.p - self.agent.tcp.pose.p,
                 obj_to_goal_pos=self.goal_pos - self.obj_pose.p,
             )
         return obs
@@ -206,7 +217,7 @@ class PickClutterEnv(StationaryManipulationEnv):
             obj_pose = self.obj_pose
 
             # reaching reward
-            tcp_wrt_obj_pose = obj_pose.inv() * self.tcp.pose
+            tcp_wrt_obj_pose = obj_pose.inv() * self.agent.tcp.pose
             tcp_to_obj_dist = np.linalg.norm(tcp_wrt_obj_pose.p)
             reaching_reward = 1 - np.tanh(
                 3.0 * np.maximum(tcp_to_obj_dist - np.linalg.norm(self.bbox_size), 0.0)
@@ -214,7 +225,7 @@ class PickClutterEnv(StationaryManipulationEnv):
             reward = reward + reaching_reward
 
             # grasp reward
-            is_grasped = self.agent.check_grasp(self.obj, max_angle=60)
+            is_grasped = self.agent.is_grasping(self.obj, max_angle=60)
             reward += 3.0 if is_grasped else 0.0
 
             # reaching-goal reward
@@ -235,19 +246,19 @@ class PickClutterEnv(StationaryManipulationEnv):
         return cam_cfg
 
     def render_human(self):
-        set_actor_visibility(self.target_site, 0.8)
-        set_actor_visibility(self.goal_site, 0.5)
+        set_entity_visibility(self.target_site, 0.8)
+        set_entity_visibility(self.goal_site, 0.5)
         ret = super().render_human()
-        set_actor_visibility(self.target_site, 0)
-        set_actor_visibility(self.goal_site, 0)
+        set_entity_visibility(self.target_site, 0)
+        set_entity_visibility(self.goal_site, 0)
         return ret
 
     def render_rgb_array(self):
-        set_actor_visibility(self.target_site, 0.8)
-        set_actor_visibility(self.goal_site, 0.5)
+        set_entity_visibility(self.target_site, 0.8)
+        set_entity_visibility(self.goal_site, 0.5)
         ret = super().render_rgb_array()
-        set_actor_visibility(self.target_site, 0)
-        set_actor_visibility(self.goal_site, 0)
+        set_entity_visibility(self.target_site, 0)
+        set_entity_visibility(self.goal_site, 0)
         return ret
 
     def get_state(self) -> np.ndarray:
@@ -276,5 +287,7 @@ class PickClutterYCBEnv(PickClutterEnv):
             root_dir=self.asset_root,
         )
         obj.name = model_id
-        obj.set_damping(0.1, 0.1)
+        obj_comp = obj.find_component_by_type(physx.PhysxRigidDynamicComponent)
+        obj_comp.set_linear_damping(0.1)
+        obj_comp.set_angular_damping(0.1)
         return obj

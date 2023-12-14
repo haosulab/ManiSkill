@@ -4,14 +4,14 @@ from typing import Sequence, Union
 import numpy as np
 from gymnasium import spaces
 
-from ..base_controller import BaseController, ControllerConfig
+from .base_controller import BaseController, ControllerConfig
 
 
 class PDJointPosController(BaseController):
     config: "PDJointPosControllerConfig"
 
     def _get_joint_limits(self):
-        qlimits = self.articulation.get_qlimits()[self.joint_indices]
+        qlimits = self.articulation.get_qlimit()[self.joint_indices]
         # Override if specified
         if self.config.lower is not None:
             qlimits[:, 0] = self.config.lower

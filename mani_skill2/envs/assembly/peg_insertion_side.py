@@ -1,12 +1,13 @@
 from collections import OrderedDict
 
 import numpy as np
-import sapien.core as sapien
-from sapien.core import Pose
+import sapien
+from sapien import Pose
 from transforms3d.euler import euler2quat
 
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import hex2rgba, look_at, vectorize_pose
+from mani_skill2.utils.scene_builder import TableSceneBuilder
 
 from .base_env import StationaryManipulationEnv
 
@@ -52,10 +53,11 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
         for half_size, pose in zip(half_sizes, poses):
             builder.add_box_collision(pose, half_size)
             builder.add_box_visual(pose, half_size, material=mat)
+
         return builder.build_static(name)
 
     def _load_actors(self):
-        self._add_ground(render=self.bg_name is None)
+        TableSceneBuilder().build(self._scene)
 
         # peg
         # length, radius = 0.1, 0.02
@@ -115,7 +117,7 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
         self.box.set_pose(Pose(pos, quat))
 
     def _initialize_agent(self):
-        if self.robot_uid == "panda":
+        if self.robot_uid == "panda_realsensed435":
             # fmt: off
             qpos = np.array(
                 [0.0, np.pi / 8, 0, -np.pi * 5 / 8, 0, np.pi * 3 / 4, -np.pi / 4, 0.04, 0.04]
@@ -131,15 +133,15 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
 
     @property
     def peg_head_pos(self):
-        return self.peg.pose.transform(self.peg_head_offset).p
+        return self.peg.pose.p + self.peg_head_offset.p
 
     @property
     def peg_head_pose(self):
-        return self.peg.pose.transform(self.peg_head_offset)
+        return self.peg.pose * self.peg_head_offset
 
     @property
     def box_hole_pose(self):
-        return self.box.pose.transform(self.box_hole_offset)
+        return self.box.pose * self.box_hole_offset
 
     def _initialize_task(self):
         self.goal_pos = self.box_hole_pose.p  # goal of peg head inside the hole
@@ -148,10 +150,9 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
         self.goal_pose = (
             self.box.pose * self.box_hole_offset * self.peg_head_offset.inv()
         )
-        # self.peg.set_pose(self.goal_pose)
 
     def _get_obs_extra(self) -> OrderedDict:
-        obs = OrderedDict(tcp_pose=vectorize_pose(self.tcp.pose))
+        obs = OrderedDict(tcp_pose=vectorize_pose(self.agent.tcp.pose))
         if self._obs_mode in ["state", "state_dict"]:
             obs.update(
                 peg_pose=vectorize_pose(self.peg.pose),
@@ -163,9 +164,7 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
 
     def has_peg_inserted(self):
         # Only head position is used in fact
-        peg_head_pose = self.peg.pose.transform(self.peg_head_offset)
-        box_hole_pose = self.box_hole_pose
-        peg_head_pos_at_hole = (box_hole_pose.inv() * peg_head_pose).p
+        peg_head_pos_at_hole = (self.box_hole_pose.inv() * self.peg_head_pose).p
         # x-axis is hole direction
         x_flag = -0.015 <= peg_head_pos_at_hole[0]
         y_flag = (
@@ -187,7 +186,7 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
             return 25.0
 
         # grasp pose rotation reward
-        tcp_pose_wrt_peg = self.peg.pose.inv() * self.tcp.pose
+        tcp_pose_wrt_peg = self.peg.pose.inv() * self.agent.tcp.pose
         tcp_rot_wrt_peg = tcp_pose_wrt_peg.to_transformation_matrix()[:3, :3]
         gt_rot_1 = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
         gt_rot_2 = np.array([[-1, 0, 0], [0, 1, 0], [0, 0, -1]])
@@ -201,12 +200,12 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
         rotated_properly = grasp_rot_loss < 0.2
         reward += 1 - grasp_rot_loss
 
-        gripper_pos = self.tcp.pose.p
+        gripper_pos = self.agent.tcp.pose.p
         tgt_gripper_pose = self.peg.pose
         offset = sapien.Pose(
             [-0.06, 0, 0]
         )  # account for panda gripper width with a bit more leeway
-        tgt_gripper_pose = tgt_gripper_pose.transform(offset)
+        tgt_gripper_pose = tgt_gripper_pose * (offset)
         if rotated_properly:
             # reaching reward
             gripper_to_peg_dist = np.linalg.norm(gripper_pos - tgt_gripper_pose.p)
@@ -217,7 +216,7 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
             reward += reaching_reward
 
             # grasp reward
-            is_grasped = self.agent.check_grasp(
+            is_grasped = self.agent.is_grasping(
                 self.peg, max_angle=20
             )  # max_angle ensures that the gripper grasps the peg appropriately, not in a strange pose
             if is_grasped:
@@ -254,11 +253,14 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
                 reward += insertion_reward
         else:
             reward = reward - 10 * np.maximum(
-                self.peg.pose.p[2] + self.peg_half_size[2] + 0.01 - self.tcp.pose.p[2],
+                self.peg.pose.p[2]
+                + self.peg_half_size[2]
+                + 0.01
+                - self.agent.tcp.pose.p[2],
                 0.0,
             )
             reward = reward - 10 * np.linalg.norm(
-                tgt_gripper_pose.p[:2] - self.tcp.pose.p[:2]
+                tgt_gripper_pose.p[:2] - self.agent.tcp.pose.p[:2]
             )
 
         return reward
@@ -266,8 +268,8 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
     def compute_normalized_dense_reward(self, **kwargs):
         return self.compute_dense_reward(**kwargs) / 25.0
 
-    def _register_cameras(self):
-        cam_cfg = super()._register_cameras()
+    def _register_sensors(self):
+        cam_cfg = super()._register_sensors()
         cam_cfg.pose = look_at([0, -0.3, 0.2], [0, 0, 0.1])
         return cam_cfg
 
@@ -280,4 +282,5 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
         super().set_state(state)
         # NOTE(xuanlin): This way is specific to how we compute goals.
         # The general way is to handle variables explicitly
+        # TODO (stao): can we refactor this out
         self._initialize_task()

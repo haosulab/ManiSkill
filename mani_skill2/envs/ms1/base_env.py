@@ -3,16 +3,19 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 
 import numpy as np
-import sapien.core as sapien
-from sapien.core import Pose
+import sapien
+import sapien.physx as physx
+from sapien import Pose
 
 from mani_skill2 import format_path
 from mani_skill2.agents.robots.mobile_panda import DummyMobileAgent
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
+from mani_skill2.utils.building.ground import build_tesselated_square_floor
 from mani_skill2.utils.common import random_choice
 from mani_skill2.utils.io_utils import load_json
 from mani_skill2.utils.sapien_utils import (
+    apply_urdf_config,
     get_actor_state,
     get_articulation_padded_state,
     parse_urdf_config,
@@ -76,15 +79,15 @@ class MS1BaseEnv(BaseEnv):
     def _get_default_scene_config(self):
         scene_config = super()._get_default_scene_config()
         # Legacy setting
-        scene_config.default_dynamic_friction = 0.5
-        scene_config.default_static_friction = 0.5
+        # scene_config.default_dynamic_friction = 0.5
+        # scene_config.default_static_friction = 0.5
         return scene_config
 
     def reset(self, seed=None, options=None):
         if options is None:
             options = dict()
         self._prev_actor_pose = None
-        self.set_episode_rng(seed)
+        self._set_episode_rng(seed)
         model_id = options.pop("model_id", None)
         reconfigure = options.pop("reconfigure", False)
         _reconfigure = self._set_model(model_id)
@@ -108,25 +111,15 @@ class MS1BaseEnv(BaseEnv):
 
     def _load_actors(self):
         # Create a collision ground plane
-        ground = self._add_ground(render=False)
+        ground = build_tesselated_square_floor(self._scene)
+        # TODO (stao): This is quite hacky. Future we expect the robot to be an actual well defined robot without needing to intersect the ground. We should probably deprecate the old ms1 envs eventually
         # Specify a collision (ignore) group to avoid collision with robot torso
-        cs = ground.get_collision_shapes()[0]
+        cs = ground.find_component_by_type(
+            physx.PhysxRigidStaticComponent
+        ).get_collision_shapes()[0]
         cg = cs.get_collision_groups()
         cg[2] = cg[2] | 1 << 30
-        cs.set_collision_groups(*cg)
-
-        if self.bg_name is None:
-            # Create a visual ground box
-            rend_mtl = self._renderer.create_material()
-            rend_mtl.base_color = [0.06, 0.08, 0.12, 1]
-            rend_mtl.metallic = 0.0
-            rend_mtl.roughness = 0.9
-            rend_mtl.specular = 0.8
-            builder = self._scene.create_actor_builder()
-            builder.add_box_visual(
-                pose=Pose([0, 0, -1]), half_size=[50, 50, 1], material=rend_mtl
-            )
-            visual_ground = builder.build_static(name="visual_ground")
+        cs.set_collision_groups(cg)
 
     def _load_partnet_mobility(
         self, fix_root_link=True, scale=1.0, urdf_config: dict = None
@@ -138,8 +131,8 @@ class MS1BaseEnv(BaseEnv):
 
         urdf_path = self.model_urdf_paths[self.model_id]
         urdf_config = parse_urdf_config(urdf_config or {}, self._scene)
-
-        articulation = loader.load(str(urdf_path), config=urdf_config)
+        apply_urdf_config(loader, urdf_config)
+        articulation: physx.PhysxArticulation = loader.load(str(urdf_path))
         return articulation
 
     def _register_render_cameras(self):
@@ -155,18 +148,22 @@ class MS1BaseEnv(BaseEnv):
     # -------------------------------------------------------------------------- #
     # Success
     # -------------------------------------------------------------------------- #
-    def check_actor_static(self, actor: sapien.Actor, max_v=None, max_ang_v=None):
-        """Check whether the actor is static by finite difference.
+    def check_link_static(
+        self, link: physx.PhysxArticulationLinkComponent, max_v=None, max_ang_v=None
+    ):
+        """Check whether the link is static by finite difference.
         Note that the angular velocity is normalized by pi due to legacy issues.
         """
         from mani_skill2.utils.geometry import angle_distance
 
-        pose = actor.get_pose()
+        pose = link.get_pose()
 
         if self._elapsed_steps <= 1:
-            flag_v = (max_v is None) or (np.linalg.norm(actor.get_velocity()) <= max_v)
+            flag_v = (max_v is None) or (
+                np.linalg.norm(link.get_linear_velocity()) <= max_v
+            )
             flag_ang_v = (max_ang_v is None) or (
-                np.linalg.norm(actor.get_angular_velocity()) <= max_ang_v
+                np.linalg.norm(link.get_angular_velocity()) <= max_ang_v
             )
         else:
             dt = 1.0 / self._control_freq
@@ -215,11 +212,11 @@ class MS1BaseEnv(BaseEnv):
         obs.update(self.agent.get_fingers_info())
         return obs
 
-    def _get_task_actors(self) -> List[sapien.Actor]:
+    def _get_task_actors(self) -> List[sapien.Entity]:
         """Get task-relevant actors (for privileged states)."""
         return []
 
-    def _get_task_articulations(self) -> List[Tuple[sapien.Articulation, int]]:
+    def _get_task_articulations(self) -> List[Tuple[physx.PhysxArticulation, int]]:
         """Get task-relevant articulations (for privileged states).
         Each element is (art_obj, max_dof).
         """

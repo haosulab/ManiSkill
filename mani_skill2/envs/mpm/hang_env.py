@@ -4,17 +4,17 @@ import sys
 from collections import OrderedDict
 
 import numpy as np
-import sapien.core as sapien
+import sapien
+import sapien.physx as physx
 import warp as wp
 from transforms3d.euler import euler2quat
 from transforms3d.quaternions import axangle2quat
 
-from mani_skill2.agents.configs.panda.defaults import PandaDefaultConfig
 from mani_skill2.agents.robots.panda import Panda
 from mani_skill2.envs.mpm.base_env import MPMBaseEnv, MPMModelBuilder
 from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import get_entity_by_name, vectorize_pose
+from mani_skill2.utils.sapien_utils import get_obj_by_name, vectorize_pose
 from warp_maniskill.mpm.mpm_simulator import Simulator as MPMSimulator
 
 
@@ -144,24 +144,18 @@ class HangEnv(MPMBaseEnv):
 
         self.selected_indices = [index1, index2, index3, index4, index5]
 
-    def _configure_agent(self):
-        self._agent_cfg = PandaDefaultConfig()
-
     def _load_agent(self):
         self.agent = Panda(
             self._scene,
             self._control_freq,
             control_mode=self._control_mode,
-            config=self._agent_cfg,
         )
-        self.grasp_site: sapien.Link = get_entity_by_name(
+        self.grasp_site: physx.PhysxArticulationLinkComponent = get_obj_by_name(
             self.agent.robot.get_links(), "panda_hand"
         )
 
-        self.lfinger = get_entity_by_name(
-            self.agent.robot.get_links(), "panda_leftfinger"
-        )
-        self.rfinger = get_entity_by_name(
+        self.lfinger = get_obj_by_name(self.agent.robot.get_links(), "panda_leftfinger")
+        self.rfinger = get_obj_by_name(
             self.agent.robot.get_links(), "panda_rightfinger"
         )
 
@@ -172,7 +166,7 @@ class HangEnv(MPMBaseEnv):
         builder.add_box_visual(half_size=[0.3, 0.01, 0.01], color=[1, 0, 0, 1])
         self.rod = builder.build_kinematic("rod")
 
-    def _register_cameras(self):
+    def _register_sensors(self):
         p, q = [0.45, -0.0, 0.5], euler2quat(0, np.pi / 5, np.pi)
         return CameraConfig("base_camera", p, q, 128, 128, np.pi / 2, 0.001, 10)
 
