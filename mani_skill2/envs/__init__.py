@@ -1,5 +1,4 @@
 from .assembly import *
-from .composer.tasks import *
 from .misc import *
 from .mpm import *
 from .ms1 import *
