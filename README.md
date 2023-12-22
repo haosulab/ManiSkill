@@ -31,7 +31,7 @@ From pip:
 
 ```bash
 # NOTE: This is a beta build at the moment. To install the beta build run
-pip install mani-skill2==0.6.0.dev1
+pip install mani-skill2==0.6.0.dev2
 ```
 
 From github:
