@@ -20,7 +20,8 @@ from mani_skill2 import ASSET_DIR
 from mani_skill2.utils.scene_builder import SceneBuilder
 
 from .constants import (
-    MOVABLE_OBJECT_IDS,
+    load_ai2thor_metadata,
+    MOVEABLE_OBJECT_IDS,
     SCENE_SOURCE_TO_DATASET,
     SEMANTIC_ID_OBJECT_MAPPING,
     SceneConfig,
@@ -41,6 +42,7 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
     scene_dataset: str
 
     def __init__(self):
+        load_ai2thor_metadata()
         self._scene_configs: List[SceneConfig] = []
         if self.scene_dataset not in ALL_SCENE_CONFIGS:
             dataset_path = SCENE_SOURCE_TO_DATASET[self.scene_dataset].metadata_path
@@ -66,7 +68,7 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
             object_config_json = json.load(f)
         semantic_id = object_config_json["semantic_id"]
         object_category = SEMANTIC_ID_OBJECT_MAPPING[semantic_id]
-        return object_category not in MOVABLE_OBJECT_IDS
+        return object_category not in MOVEABLE_OBJECT_IDS
 
     def build(
         self, scene: sapien.Scene, scene_id=0, convex_decomposition="none", **kwargs
