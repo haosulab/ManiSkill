@@ -21,9 +21,7 @@ from mani_skill2.utils.scene_builder import SceneBuilder
 
 from .constants import (
     load_ai2thor_metadata,
-    MOVEABLE_OBJECT_IDS,
     SCENE_SOURCE_TO_DATASET,
-    SEMANTIC_ID_OBJECT_MAPPING,
     SceneConfig,
 )
 
@@ -33,7 +31,7 @@ ALL_SCENE_CONFIGS = (
     dict()
 )  # cached results mapping scene dataset ID to a list of scene configurations
 
-
+OBJECT_SEMANTIC_ID_MAPPING, SEMANTIC_ID_OBJECT_MAPPING, MOVEABLE_OBJECT_IDS = None, None, None
 class AI2THORBaseSceneBuilder(SceneBuilder):
     """
     The Base AI2THOR scene builder class. Subclasses
@@ -42,7 +40,8 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
     scene_dataset: str
 
     def __init__(self):
-        load_ai2thor_metadata()
+        global OBJECT_SEMANTIC_ID_MAPPING, SEMANTIC_ID_OBJECT_MAPPING, MOVEABLE_OBJECT_IDS
+        OBJECT_SEMANTIC_ID_MAPPING, SEMANTIC_ID_OBJECT_MAPPING, MOVEABLE_OBJECT_IDS = load_ai2thor_metadata()
         self._scene_configs: List[SceneConfig] = []
         if self.scene_dataset not in ALL_SCENE_CONFIGS:
             dataset_path = SCENE_SOURCE_TO_DATASET[self.scene_dataset].metadata_path
