@@ -360,6 +360,7 @@ class RecordEpisode(gym.Wrapper):
                     self.flush_trajectory(ignore_empty_transition=True)
             if self.clean_on_close:
                 clean_trajectories(self._h5_file, self._json_data)
+                dump_json(self._json_path, self._json_data, indent=2)
             self._h5_file.close()
         if self.save_video:
             if self.save_on_reset:

@@ -6,7 +6,7 @@ Please refer our [documentation](https://haosulab.github.io/ManiSkill2) to learn
 
 setup(
     name="mani_skill2",
-    version="0.6.0.dev2",
+    version="0.6.0.dev3",
     description="ManiSkill2: A Unified Benchmark for Generalizable Manipulation Skills",
     long_description=long_description,
     long_description_content_type="text/markdown",

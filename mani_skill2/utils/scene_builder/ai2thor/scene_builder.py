@@ -19,11 +19,7 @@ from tqdm import tqdm
 from mani_skill2 import ASSET_DIR
 from mani_skill2.utils.scene_builder import SceneBuilder
 
-from .constants import (
-    load_ai2thor_metadata,
-    SCENE_SOURCE_TO_DATASET,
-    SceneConfig,
-)
+from .constants import SCENE_SOURCE_TO_DATASET, SceneConfig, load_ai2thor_metadata
 
 DATASET_CONFIG_DIR = osp.join(osp.dirname(__file__), "metadata")
 
@@ -31,7 +27,13 @@ ALL_SCENE_CONFIGS = (
     dict()
 )  # cached results mapping scene dataset ID to a list of scene configurations
 
-OBJECT_SEMANTIC_ID_MAPPING, SEMANTIC_ID_OBJECT_MAPPING, MOVEABLE_OBJECT_IDS = None, None, None
+OBJECT_SEMANTIC_ID_MAPPING, SEMANTIC_ID_OBJECT_MAPPING, MOVEABLE_OBJECT_IDS = (
+    None,
+    None,
+    None,
+)
+
+
 class AI2THORBaseSceneBuilder(SceneBuilder):
     """
     The Base AI2THOR scene builder class. Subclasses
@@ -41,7 +43,11 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
 
     def __init__(self):
         global OBJECT_SEMANTIC_ID_MAPPING, SEMANTIC_ID_OBJECT_MAPPING, MOVEABLE_OBJECT_IDS
-        OBJECT_SEMANTIC_ID_MAPPING, SEMANTIC_ID_OBJECT_MAPPING, MOVEABLE_OBJECT_IDS = load_ai2thor_metadata()
+        (
+            OBJECT_SEMANTIC_ID_MAPPING,
+            SEMANTIC_ID_OBJECT_MAPPING,
+            MOVEABLE_OBJECT_IDS,
+        ) = load_ai2thor_metadata()
         self._scene_configs: List[SceneConfig] = []
         if self.scene_dataset not in ALL_SCENE_CONFIGS:
             dataset_path = SCENE_SOURCE_TO_DATASET[self.scene_dataset].metadata_path

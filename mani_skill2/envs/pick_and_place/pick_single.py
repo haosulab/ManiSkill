@@ -432,13 +432,12 @@ def build_actor_ycb(
     builder = scene.create_actor_builder()
     model_dir = Path(root_dir) / "models" / model_id
 
-    collision_file = str(model_dir / "collision.obj")
+    collision_file = str(model_dir / "collision.ply")
     builder.add_multiple_convex_collisions_from_file(
         filename=collision_file,
         scale=[scale] * 3,
         material=physical_material,
         density=density,
-        decomposition="coacd",
     )
 
     visual_file = str(model_dir / "textured.obj")
@@ -464,10 +463,10 @@ class PickSingleYCBEnv(PickSingleEnv):
                     "`python -m mani_skill2.utils.download_asset ycb`."
                 )
 
-            collision_file = model_dir / "collision.obj"
+            collision_file = model_dir / "collision.ply"
             if not collision_file.exists():
                 raise FileNotFoundError(
-                    "convex.obj has been renamed to collision.obj. "
+                    "convex.obj and collision.obj has been renamed to collision.ply. "
                     "Please re-download YCB models."
                 )
 
@@ -491,91 +490,3 @@ class PickSingleYCBEnv(PickSingleEnv):
             return super()._initialize_agent_v1()
         else:
             return super()._initialize_agent()
-
-
-# ---------------------------------------------------------------------------- #
-# EGAD
-# ---------------------------------------------------------------------------- #
-def build_actor_egad(
-    model_id: str,
-    scene: sapien.Scene,
-    scale: float = 1.0,
-    physical_material: physx.PhysxMaterial = None,
-    density=100,
-    render_material: sapien.render.RenderMaterial = None,
-    root_dir=ASSET_DIR / "mani_skill2_egad",
-):
-    builder = scene.create_actor_builder()
-    # A heuristic way to infer split
-    split = "train" if "_" in model_id else "eval"
-
-    collision_file = Path(root_dir) / f"egad_{split}_set_coacd" / f"{model_id}.obj"
-    builder.add_multiple_convex_collisions_from_file(
-        filename=str(collision_file),
-        scale=[scale] * 3,
-        material=physical_material,
-        decomposition="coacd",
-        density=density,
-    )
-
-    visual_file = Path(root_dir) / f"egad_{split}_set" / f"{model_id}.obj"
-    builder.add_visual_from_file(
-        filename=str(visual_file), scale=[scale] * 3, material=render_material
-    )
-
-    actor = builder.build()
-    return actor
-
-
-@register_env("PickSingleEGAD-v0", max_episode_steps=200, obj_init_rot=0.2)
-class PickSingleEGADEnv(PickSingleEnv):
-    DEFAULT_ASSET_ROOT = "{ASSET_DIR}/mani_skill2_egad"
-    DEFAULT_MODEL_JSON = "info_pick_train_v0.json"
-
-    def _check_assets(self):
-        splits = set()
-        for model_id in self.model_ids:
-            split = "train" if "_" in model_id else "eval"
-            splits.add(split)
-
-        for split in splits:
-            collision_dir = self.asset_root / f"egad_{split}_set_coacd"
-            visual_dir = self.asset_root / f"egad_{split}_set"
-            if not (collision_dir.exists() and visual_dir.exists()):
-                raise FileNotFoundError(
-                    f"{collision_dir} or {visual_dir} is not found. "
-                    "Please download (ManiSkill2) EGAD models:"
-                    "`python -m mani_skill2.utils.download_asset egad`."
-                )
-
-    def _load_model(self):
-        mat = self._renderer.create_material()
-        color = self._episode_rng.uniform(0.2, 0.8, 3)
-        color = np.hstack([color, 1.0])
-        mat.set_base_color(color)
-        mat.metallic = 0.0
-        mat.roughness = 0.1
-
-        self.obj = build_actor_egad(
-            self.model_id,
-            self._scene,
-            scale=self.model_scale,
-            render_material=mat,
-            density=100,
-            root_dir=self.asset_root,
-        )
-        self.obj.name = self.model_id
-
-    def _get_init_z(self):
-        bbox_min = self.model_db[self.model_id]["bbox"]["min"]
-        return -bbox_min[2] * self.model_scale + 0.05
-
-    def _initialize_actors(self):
-        super()._initialize_actors()
-
-        # Some objects need longer time to settle
-        obj_comp = self.obj.find_component_by_type(physx.PhysxRigidDynamicComponent)
-        lin_vel = np.linalg.norm(obj_comp.linear_velocity)
-        ang_vel = np.linalg.norm(obj_comp.angular_velocity)
-        if lin_vel > 1e-3 or ang_vel > 1e-2:
-            self._settle(0.5)

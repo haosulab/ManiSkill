@@ -1,8 +1,8 @@
 import mplib
 import numpy as np
 import sapien
+import trimesh
 
-from mani_skill2 import PACKAGE_ASSET_DIR
 from mani_skill2.agents.base_agent import BaseAgent
 from mani_skill2.envs.sapien_env import BaseEnv
 
@@ -23,13 +23,16 @@ class PandaArmMotionPlanningSolver:
         joint_acc_limits=0.9,
     ):
         self.env = env
-        self.env_agent: BaseAgent = self.env.unwrapped
-        self.robot = self.env.agent.robot
+        self.env_agent: BaseAgent = self.env.unwrapped.agent
+        self.robot = self.env_agent.robot
         self.joint_vel_limits = joint_vel_limits
         self.joint_acc_limits = joint_acc_limits
+
+        self.base_pose = base_pose
+
         self.planner = self.setup_planner()
         self.control_mode = self.env.unwrapped.control_mode
-        self.base_pose = base_pose
+
         self.debug = debug
         self.vis = vis
         self.print_env_info = print_env_info
@@ -42,6 +45,10 @@ class PandaArmMotionPlanningSolver:
             )
             self.grasp_pose_visual.set_pose(env.unwrapped.agent.tcp.entity_pose)
         self.elapsed_steps = 0
+
+        self.use_point_cloud = False
+        self.collision_pts_changed = False
+        self.all_collision_pts = None
 
     def render_wait(self):
         if not self.vis or not self.debug:
@@ -57,21 +64,23 @@ class PandaArmMotionPlanningSolver:
         link_names = [link.get_name() for link in self.robot.get_links()]
         joint_names = [joint.get_name() for joint in self.robot.get_active_joints()]
         planner = mplib.Planner(
-            urdf=self.env.agent.urdf_path,
+            urdf=self.env_agent.urdf_path,
+            srdf=self.env_agent.urdf_path.replace(".urdf", ".srdf"),
             user_link_names=link_names,
             user_joint_names=joint_names,
             move_group="panda_hand_tcp",
             joint_vel_limits=np.ones(7) * self.joint_acc_limits,
             joint_acc_limits=np.ones(7) * self.joint_vel_limits,
         )
+        planner.set_base_pose(np.hstack([self.base_pose.p, self.base_pose.q]))
         return planner
 
-    def follow_path(self, result):
+    def follow_path(self, result, refine_steps: int = 0):
         n_step = result["position"].shape[0]
-        for i in range(n_step):
-            qpos = result["position"][i]
+        for i in range(n_step + refine_steps):
+            qpos = result["position"][min(i, n_step - 1)]
             if self.control_mode == "pd_joint_pos_vel":
-                qvel = result["velocity"][i]
+                qvel = result["velocity"][(i, n_step - 1)]
                 action = np.hstack([qpos, qvel, self.gripper_state])
             else:
                 action = np.hstack([qpos, self.gripper_state])
@@ -85,23 +94,31 @@ class PandaArmMotionPlanningSolver:
                 self.env.unwrapped.render_human()
         return obs, reward, terminated, truncated, info
 
-    def move_to_pose_with_RRTConnect(self, pose):
+    def move_to_pose_with_RRTConnect(
+        self, pose: sapien.Pose, dry_run: bool = False, refine_steps: int = 0
+    ):
         if self.grasp_pose_visual is not None:
             self.grasp_pose_visual.set_pose(pose)
-        pose = sapien.Pose(p=pose.p - self.base_pose.p, q=pose.q)
-        result = self.planner.plan(
+        pose = sapien.Pose(p=pose.p, q=pose.q)
+        result = self.planner.plan_qpos_to_pose(
             np.concatenate([pose.p, pose.q]),
             self.robot.get_qpos(),
             time_step=self.env.unwrapped.control_timestep,
+            use_point_cloud=self.use_point_cloud,
+            wrt_world=True,
         )
         if result["status"] != "Success":
             print(result["status"])
             self.render_wait()
             return -1
         self.render_wait()
-        return self.follow_path(result)
+        if dry_run:
+            return result
+        return self.follow_path(result, refine_steps=refine_steps)
 
-    def move_to_pose_with_screw(self, pose: sapien.Pose):
+    def move_to_pose_with_screw(
+        self, pose: sapien.Pose, dry_run: bool = False, refine_steps: int = 0
+    ):
         # try screw two times before giving up
         if self.grasp_pose_visual is not None:
             self.grasp_pose_visual.set_pose(pose)
@@ -110,19 +127,23 @@ class PandaArmMotionPlanningSolver:
             np.concatenate([pose.p, pose.q]),
             self.robot.get_qpos(),
             time_step=self.env.unwrapped.control_timestep,
+            use_point_cloud=self.use_point_cloud,
         )
         if result["status"] != "Success":
-            result = self.planner.plan(
-                np.concatenate([pose.p, pose.q]),
+            result = self.planner.plan_screw(
+                np.concatenate([pose.p - self.base_pose.p, pose.q]),
                 self.robot.get_qpos(),
                 time_step=self.env.unwrapped.control_timestep,
+                use_point_cloud=self.use_point_cloud,
             )
             if result["status"] != "Success":
                 print(result["status"])
                 self.render_wait()
                 return -1
         self.render_wait()
-        return self.follow_path(result)
+        if dry_run:
+            return result
+        return self.follow_path(result, refine_steps=refine_steps)
 
     def open_gripper(self):
         self.gripper_state = OPEN
@@ -159,6 +180,27 @@ class PandaArmMotionPlanningSolver:
             if self.vis:
                 self.env.unwrapped.render_human()
         return obs, reward, terminated, truncated, info
+
+    def add_box_collision(self, extents: np.ndarray, pose: sapien.Pose):
+        self.use_point_cloud = True
+        box = trimesh.creation.box(extents, transform=pose.to_transformation_matrix())
+        pts, _ = trimesh.sample.sample_surface(box, 256)
+        if self.all_collision_pts is None:
+            self.all_collision_pts = pts
+        else:
+            self.all_collision_pts = np.vstack([self.all_collision_pts, pts])
+        self.planner.update_point_cloud(self.all_collision_pts)
+
+    def add_collision_pts(self, pts: np.ndarray):
+        if self.all_collision_pts is None:
+            self.all_collision_pts = pts
+        else:
+            self.all_collision_pts = np.vstack([self.all_collision_pts, pts])
+        self.planner.update_point_cloud(self.all_collision_pts)
+
+    def clear_collisions(self):
+        self.all_collision_pts = None
+        self.use_point_cloud = False
 
     def close(self):
         if self.grasp_pose_visual is not None:
