@@ -96,7 +96,7 @@ For `obs_mode="pointcloud"`:
 An "actor" is a fundamental object that represents a physical entity (rigid body) that can be simulated in SAPIEN (the backend of ManiSkill2). An articulated object is a collection of links interconnected by joints, and each link is also an actor. In SAPIEN, `scene.get_all_actors()` will return all the actors that are not links of articulated objects. The examples are the ground, the cube in [PickCube](./environments.md#pickcube-v0), and the YCB objects in [PickSingleYCB](./environments.md#picksingleycb-v0). `scene.get_all_articulations()` will return all the articulations. The examples are the robots, the cabinets in [OpenCabinetDoor](./environments.md#opencabinetdoor-v1), and the chairs in [PushChair](./environments.md#pushchair-v1). Below is an example of how to get actors and articulations in SAPIEN.
 
 ```python
-import sapien.core as sapien
+import sapien
 
 scene: sapien.Scene = ...
 actors = scene.get_all_actors()  # actors excluding links

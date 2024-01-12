@@ -6,6 +6,7 @@ from typing import Dict, List, Type, Union
 
 from mani_skill2 import ASSET_DIR
 
+
 @dataclass
 class SceneConfig:
     config_file: str
@@ -16,6 +17,8 @@ class SceneConfig:
 class SceneDataset:
     metadata_path: str
     dataset_path: str
+
+
 def load_ai2thor_metadata():
     with open(
         str(
@@ -136,6 +139,7 @@ def load_ai2thor_metadata():
         "TargetCircle",
     ]
     return OBJECT_SEMANTIC_ID_MAPPING, SEMANTIC_ID_OBJECT_MAPPING, MOVEABLE_OBJECT_IDS
+
 
 # This maps a scene set e.g. ProcTHOR to an adapter, metadata, and where the scenes are saved to. The adapter is a class that can load the scene set
 SCENE_SOURCE_TO_DATASET: Dict[str, SceneDataset] = {

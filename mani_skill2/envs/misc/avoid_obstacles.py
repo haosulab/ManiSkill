@@ -8,7 +8,6 @@ from sapien import Pose
 
 from mani_skill2 import format_path
 from mani_skill2.agents.robots.panda import PandaRealSensed435
-from mani_skill2.agents.robots.panda.panda import Panda
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.building.ground import build_tesselated_square_floor
@@ -171,7 +170,7 @@ class AvoidObstaclesBaseEnv(BaseEnv):
     def evaluate(self, **kwargs) -> dict:
         tcp_pose_at_goal = self.goal_pose.inv() * self.tcp.pose
         pos_dist = np.linalg.norm(tcp_pose_at_goal.p)
-        ang_dist = np.arccos(tcp_pose_at_goal.q[0]) * 2
+        ang_dist = np.arccos(np.clip(tcp_pose_at_goal.q[0], -1, 1)) * 2
         if ang_dist > np.pi:  # [0, 2 * pi] -> [-pi, pi]
             ang_dist = ang_dist - 2 * np.pi
         ang_dist = np.abs(ang_dist)

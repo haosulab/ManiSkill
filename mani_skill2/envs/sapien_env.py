@@ -558,6 +558,7 @@ class BaseEnv(gym.Env):
             component.set_linear_velocity([0, 0, 0])
             component.set_angular_velocity([0, 0, 0])
         for articulation in self._scene.get_all_articulations():
+            articulation: physx.PhysxArticulation
             articulation.set_qvel(np.zeros(articulation.dof))
             articulation.set_root_velocity([0, 0, 0])
             articulation.set_root_angular_velocity([0, 0, 0])
