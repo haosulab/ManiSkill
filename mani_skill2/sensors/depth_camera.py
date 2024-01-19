@@ -43,7 +43,7 @@ class StereoDepthCamera(Camera):
         assert renderer_type == "sapien", renderer_type
         self.renderer_type = renderer_type
 
-        actor_uid = camera_cfg.actor_uid
+        actor_uid = camera_cfg.entity_uid
         if actor_uid is None:
             self.actor = None
         else:

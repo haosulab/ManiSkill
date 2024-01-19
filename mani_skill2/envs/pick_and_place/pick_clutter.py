@@ -11,12 +11,9 @@ from mani_skill2 import format_path
 from mani_skill2.utils.common import random_choice
 from mani_skill2.utils.io_utils import load_json
 from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import (
-    look_at,
-    set_entity_visibility,
-    vectorize_pose,
-)
+from mani_skill2.utils.sapien_utils import look_at, set_entity_visibility
 from mani_skill2.utils.scene_builder import TableSceneBuilder
+from mani_skill2.utils.structs.pose import vectorize_pose
 
 from .base_env import StationaryManipulationEnv
 from .pick_single import PickSingleYCBEnv, build_actor_ycb

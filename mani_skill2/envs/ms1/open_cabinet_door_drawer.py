@@ -19,7 +19,8 @@ from mani_skill2.utils.geometry.trimesh_utils import (
     merge_meshes,
 )
 from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import get_obj_by_name, vectorize_pose
+from mani_skill2.utils.sapien_utils import get_obj_by_name
+from mani_skill2.utils.structs.pose import vectorize_pose
 
 from .base_env import MS1BaseEnv
 

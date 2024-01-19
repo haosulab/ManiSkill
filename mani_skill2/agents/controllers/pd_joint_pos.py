@@ -2,7 +2,11 @@ from dataclasses import dataclass
 from typing import Sequence, Union
 
 import numpy as np
+import torch
 from gymnasium import spaces
+
+from mani_skill2.utils.sapien_utils import to_tensor
+from mani_skill2.utils.structs.types import Array
 
 from .base_controller import BaseController, ControllerConfig
 
@@ -20,7 +24,7 @@ class PDJointPosController(BaseController):
         return qlimits
 
     def _initialize_action_space(self):
-        joint_limits = self._get_joint_limits()
+        joint_limits = self._get_joint_limits().cpu().numpy()
         low, high = joint_limits[:, 0], joint_limits[:, 1]
         self.action_space = spaces.Box(low, high, dtype=np.float32)
 
@@ -40,28 +44,28 @@ class PDJointPosController(BaseController):
     def reset(self):
         super().reset()
         self._step = 0  # counter of simulation steps after action is set
+        # TODO (stao): support gpu based actions later
         self._start_qpos = self.qpos
         self._target_qpos = self.qpos
 
     def set_drive_targets(self, targets):
-        for i, joint in enumerate(self.joints):
-            joint.set_drive_target(targets[i])
+        self.articulation.set_joint_drive_targets(
+            targets, self.joints, self.joint_indices
+        )
 
-    def set_action(self, action: np.ndarray):
+    def set_action(self, action: Array):
         action = self._preprocess_action(action)
-
+        action = to_tensor(action)
         self._step = 0
         self._start_qpos = self.qpos
-
         if self.config.use_delta:
             if self.config.use_target:
                 self._target_qpos = self._target_qpos + action
             else:
                 self._target_qpos = self._start_qpos + action
         else:
-            # Compatible with mimic
-            self._target_qpos = np.broadcast_to(action, self._start_qpos.shape)
-
+            # Compatible with mimic controllers
+            self._target_qpos = torch.broadcast_to(action, self._start_qpos.shape)
         if self.config.interpolate:
             self._step_size = (self._target_qpos - self._start_qpos) / self._sim_steps
         else:

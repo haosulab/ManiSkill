@@ -1,9 +1,14 @@
 from collections import OrderedDict, defaultdict
+from re import I
 from typing import Dict, Sequence
 
 import gymnasium as gym
 import numpy as np
+import sapien.physx as physx
+import torch
 from gymnasium import spaces
+
+from mani_skill2.utils.sapien_utils import to_tensor
 
 from .logging_utils import logger
 
@@ -26,23 +31,38 @@ def merge_dicts(ds: Sequence[Dict], asarray=False):
     return ret
 
 
+def normalize_vector(x, eps=1e-6):
+    norm = torch.linalg.norm(x, axis=1)
+    norm[norm < eps] = 1
+    norm = 1 / norm
+    return torch.multiply(x, norm[:, None])
+
+
+def compute_angle_between(x1, x2):
+    """Compute angle (radian) between two vectors."""
+    x1, x2 = normalize_vector(x1), normalize_vector(x2)
+    dot_prod = torch.clip(torch.einsum("ij,ij->i", x1, x2), -1, 1)
+    return torch.arccos(dot_prod)
+
+
 # -------------------------------------------------------------------------- #
 # Numpy
 # -------------------------------------------------------------------------- #
-def normalize_vector(x, eps=1e-6):
+def np_normalize_vector(x, eps=1e-6):
     x = np.asarray(x)
     assert x.ndim == 1, x.ndim
     norm = np.linalg.norm(x)
     return np.zeros_like(x) if norm < eps else (x / norm)
 
 
-def compute_angle_between(x1, x2):
+def np_compute_angle_between(x1, x2):
     """Compute angle (radian) between two vectors."""
-    x1, x2 = normalize_vector(x1), normalize_vector(x2)
+    x1, x2 = np_normalize_vector(x1), np_normalize_vector(x2)
     dot_prod = np.clip(np.dot(x1, x2), -1, 1)
     return np.arccos(dot_prod).item()
 
 
+# TODO (stao): deprecate this
 class np_random:
     """Context manager for numpy random state"""
 
@@ -59,6 +79,7 @@ class np_random:
         np.random.set_state(self.state)
 
 
+# TODO (stao): why do we need this? isn't this built in?
 def random_choice(x: Sequence, rng: np.random.RandomState = np.random):
     assert len(x) > 0
     if len(x) == 1:
@@ -83,7 +104,7 @@ def get_dtype_bounds(dtype: np.dtype):
 # ---------------------------------------------------------------------------- #
 # OpenAI gym
 # ---------------------------------------------------------------------------- #
-def convert_observation_to_space(observation, prefix=""):
+def convert_observation_to_space(observation, prefix="", unbatched=False):
     """Convert observation to OpenAI gym observation space (recursively).
     Modified from `gym.envs.mujoco_env`
     """
@@ -92,12 +113,20 @@ def convert_observation_to_space(observation, prefix=""):
         # Otherwise, spaces.Dict will sort keys if a dict is provided
         space = spaces.Dict(
             [
-                (k, convert_observation_to_space(v, prefix + "/" + k))
+                (
+                    k,
+                    convert_observation_to_space(
+                        v, prefix + "/" + k, unbatched=unbatched
+                    ),
+                )
                 for k, v in observation.items()
             ]
         )
     elif isinstance(observation, np.ndarray):
-        shape = observation.shape
+        if unbatched:
+            shape = observation.shape[1:]
+        else:
+            shape = observation.shape
         dtype = observation.dtype
         low, high = get_dtype_bounds(dtype)
         if np.issubdtype(dtype, np.floating):
@@ -125,8 +154,7 @@ def normalize_action_space(action_space: spaces.Box):
 
 def clip_and_scale_action(action, low, high):
     """Clip action to [-1, 1] and scale according to a range [low, high]."""
-    low, high = np.asarray(low), np.asarray(high)
-    action = np.clip(action, -1, 1)
+    action = torch.clip(action, -1, 1)
     return 0.5 * (high + low) + 0.5 * (high - low) * action
 
 
@@ -143,11 +171,13 @@ def inv_scale_action(action, low, high):
     return (action - 0.5 * (high + low)) / (0.5 * (high - low))
 
 
-def flatten_state_dict(state_dict: dict) -> np.ndarray:
+# TODO (stao): Clean up this code
+def flatten_state_dict(state_dict: dict, squeeze_dims: bool = False) -> np.ndarray:
     """Flatten a dictionary containing states recursively.
 
     Args:
         state_dict: a dictionary containing scalars or 1-dim vectors.
+        squeeze_dims: when True,
 
     Raises:
         AssertionError: If a value of @state_dict is an ndarray with ndim > 2.
@@ -162,30 +192,54 @@ def flatten_state_dict(state_dict: dict) -> np.ndarray:
     states = []
     for key, value in state_dict.items():
         if isinstance(value, dict):
-            state = flatten_state_dict(value)
+            state = flatten_state_dict(value, squeeze_dims=squeeze_dims)
             if state.size == 0:
                 state = None
         elif isinstance(value, (tuple, list)):
             state = None if len(value) == 0 else value
+            state = to_tensor(state)
         elif isinstance(value, (bool, np.bool_, int, np.int32, np.int64)):
             # x = np.array(1) > 0 is np.bool_ instead of ndarray
             state = int(value)
+            state = to_tensor(state)
         elif isinstance(value, (float, np.float32, np.float64)):
             state = np.float32(value)
+            state = to_tensor(state)
         elif isinstance(value, np.ndarray):
             if value.ndim > 2:
                 raise AssertionError(
                     "The dimension of {} should not be more than 2.".format(key)
                 )
             state = value if value.size > 0 else None
+            state = to_tensor(state)
         else:
-            raise TypeError("Unsupported type: {}".format(type(value)))
+            is_torch_tensor = False
+            try:
+                if isinstance(value, torch.Tensor):
+                    state = value
+                    if len(state.shape) == 1:
+                        state = state[:, None]
+                    is_torch_tensor = True
+            except:
+                pass
+            if not is_torch_tensor:
+                raise TypeError("Unsupported type: {}".format(type(value)))
         if state is not None:
             states.append(state)
-    if len(states) == 0:
-        return np.empty(0)
+
+    if physx.is_gpu_enabled():
+        if len(states) == 0:
+            return torch.empty(0)
+        else:
+            return torch.hstack(states)
     else:
-        return np.hstack(states)
+        if len(states) == 0:
+            return np.empty(0)
+        else:
+            if squeeze_dims:
+                return np.hstack([np.squeeze(s) for s in states])
+            else:
+                return np.hstack(states)
 
 
 def flatten_dict_keys(d: dict, prefix=""):

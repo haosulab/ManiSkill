@@ -6,7 +6,7 @@ import numpy as np
 import sapien
 import sapien.physx as physx
 import sapien.render
-from sapien import Pose
+import torch
 from transforms3d.euler import euler2quat
 from transforms3d.quaternions import axangle2quat, qmult
 
@@ -14,13 +14,10 @@ from mani_skill2 import ASSET_DIR, format_path
 from mani_skill2.utils.common import random_choice
 from mani_skill2.utils.io_utils import load_json
 from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import (
-    hide_entity,
-    set_entity_visibility,
-    show_entity,
-    vectorize_pose,
-)
+from mani_skill2.utils.sapien_utils import to_tensor
 from mani_skill2.utils.scene_builder import TableSceneBuilder
+from mani_skill2.utils.structs.actor import Actor
+from mani_skill2.utils.structs.pose import Pose, vectorize_pose
 
 from .base_env import StationaryManipulationEnv
 
@@ -29,7 +26,7 @@ class PickSingleEnv(StationaryManipulationEnv):
     DEFAULT_ASSET_ROOT: str
     DEFAULT_MODEL_JSON: str
 
-    obj: sapien.Entity  # target object
+    obj: Actor  # target object
 
     def __init__(
         self,
@@ -74,6 +71,7 @@ class PickSingleEnv(StationaryManipulationEnv):
         self.goal_thresh = goal_thresh
 
         self._check_assets()
+        self.models_loaded = False
         super().__init__(**kwargs)
 
     def _check_assets(self):
@@ -81,13 +79,12 @@ class PickSingleEnv(StationaryManipulationEnv):
         pass
 
     def _load_actors(self):
-        TableSceneBuilder().build(self._scene)
+        self.table_scene = TableSceneBuilder(env=self, robot_init_qpos_noise=self.robot_init_qpos_noise)
+        self.table_scene.build()
         self._load_model()
-        obj_comp = self.obj.find_component_by_type(physx.PhysxRigidDynamicComponent)
-        obj_comp.set_linear_damping(0.1)
-        obj_comp.set_angular_damping(0.1)
+        self.obj.set_linear_damping(0.1)
+        self.obj.set_angular_damping(0.1)
         self.goal_site = self._build_sphere_site(self.goal_thresh)
-        set_entity_visibility(self.goal_site, 0.5)
 
     def _load_model(self):
         """Load the target object."""
@@ -100,9 +97,12 @@ class PickSingleEnv(StationaryManipulationEnv):
         model_scale = options.pop("model_scale", None)
         model_id = options.pop("model_id", None)
         reconfigure = options.pop("reconfigure", False)
-        _reconfigure = self._set_model(model_id, model_scale)
-        reconfigure = _reconfigure or reconfigure
-        options["reconfigure"] = reconfigure
+        if not self.models_loaded or not physx.is_gpu_enabled():
+            # we can only reconfigure once with GPU enabled.
+            _reconfigure = self._set_model(model_id, model_scale)
+            reconfigure = _reconfigure or reconfigure
+            options["reconfigure"] = reconfigure
+            self.models_loaded = True
         return super().reset(seed=self._episode_seed, options=options)
 
     def _set_model(self, model_id, model_scale):
@@ -129,7 +129,7 @@ class PickSingleEnv(StationaryManipulationEnv):
         if "bbox" in model_info:
             bbox = model_info["bbox"]
             bbox_size = np.array(bbox["max"]) - np.array(bbox["min"])
-            self.model_bbox_size = bbox_size * self.model_scale
+            self.model_bbox_size = to_tensor(bbox_size * self.model_scale)
         else:
             self.model_bbox_size = None
 
@@ -144,6 +144,7 @@ class PickSingleEnv(StationaryManipulationEnv):
             self._scene.step()
 
     def _initialize_actors(self):
+        self.table_scene.initialize()
         # The object will fall from a certain height
         xy = self._episode_rng.uniform(-0.1, 0.1, [2])
         z = self._get_init_z()
@@ -162,39 +163,38 @@ class PickSingleEnv(StationaryManipulationEnv):
             ori = self._episode_rng.uniform(0, self.obj_init_rot)
             q = qmult(q, axangle2quat(axis, ori, True))
 
-        obj_comp = self.obj.find_component_by_type(physx.PhysxRigidDynamicComponent)
-        obj_comp.set_pose(Pose(p, q))
+        self.obj.set_pose(Pose.create_from_pq(p, q))
 
         # Move the robot far away to avoid collision
         # The robot should be initialized later
-        self.agent.robot.set_pose(Pose([-10, 0, 0]))
+        # # self.agent.robot.set_pose(Pose([-10, 0, 0]))
 
-        # Lock rotation around x and y
-        obj_comp.set_locked_motion_axes([0, 0, 0, 1, 1, 0])
-        self._settle(0.5)
+        # # Lock rotation around x and y
+        # obj_comp.set_locked_motion_axes([0, 0, 0, 1, 1, 0])
+        # self._settle(0.5)
 
-        # Unlock motion
-        obj_comp.set_locked_motion_axes([0, 0, 0, 0, 0, 0])
-        # NOTE(jigu): Explicit set pose to ensure the entity does not sleep
-        obj_comp.set_pose(obj_comp.pose)
-        obj_comp.set_linear_velocity(np.zeros(3))
-        obj_comp.set_angular_velocity(np.zeros(3))
-        self._settle(0.5)
+        # # Unlock motion
+        # obj_comp.set_locked_motion_axes([0, 0, 0, 0, 0, 0])
+        # # NOTE(jigu): Explicit set pose to ensure the entity does not sleep
+        # obj_comp.set_pose(obj_comp.pose)
+        # obj_comp.set_linear_velocity(np.zeros(3))
+        # obj_comp.set_angular_velocity(np.zeros(3))
+        # # self._settle(0.5)
 
-        # Some objects need longer time to settle
-        lin_vel = np.linalg.norm(obj_comp.linear_velocity)
-        ang_vel = np.linalg.norm(obj_comp.angular_velocity)
-        if lin_vel > 1e-3 or ang_vel > 1e-2:
-            self._settle(0.5)
+        # # Some objects need longer time to settle
+        # lin_vel = np.linalg.norm(obj_comp.linear_velocity)
+        # ang_vel = np.linalg.norm(obj_comp.angular_velocity)
+        # if lin_vel > 1e-3 or ang_vel > 1e-2:
+        #     self._settle(0.5)
 
     @property
     def obj_pose(self):
         """Get the center of mass (COM) pose."""
         return (
             self.obj.pose
-            * self.obj.find_component_by_type(
-                physx.PhysxRigidDynamicComponent
-            ).cmass_local_pose
+            # * self.obj.find_component_by_type(
+            #     physx.PhysxRigidDynamicComponent
+            # ).cmass_local_pose
         )
 
     def _initialize_task(self, max_trials=100):
@@ -206,16 +206,18 @@ class PickSingleEnv(StationaryManipulationEnv):
         obj_pos = self.obj_pose.p
 
         # Sample a goal position far enough from the object
-        for _ in range(max_trials):
-            goal_xy = self._episode_rng.uniform(*REGION)
-            goal_z = self._episode_rng.uniform(0, MAX_HEIGHT) + obj_pos[2]
-            goal_z = min(goal_z, MAX_HEIGHT)
-            goal_pos = np.hstack([goal_xy, goal_z])
-            if np.linalg.norm(goal_pos - obj_pos) > MIN_DIST:
-                break
-
-        self.goal_pos = goal_pos
-        self.goal_site.set_pose(Pose(self.goal_pos))
+        goal_poss = []
+        for i in range(len(obj_pos)):
+            for _ in range(max_trials):
+                goal_xy = to_tensor(self._episode_rng.uniform(*REGION))
+                goal_z = self._episode_rng.uniform(0, MAX_HEIGHT) + obj_pos[i, 2]
+                goal_z = min(goal_z, MAX_HEIGHT)
+                goal_pos = torch.hstack([goal_xy, goal_z])
+                if torch.linalg.norm(goal_pos - obj_pos) > MIN_DIST:
+                    goal_poss.append(goal_pos)
+                    break
+        self.goal_pos = torch.vstack(goal_poss)
+        self.goal_site.set_pose(Pose.create_from_pq(p=self.goal_pos))
 
     def _get_obs_extra(self) -> OrderedDict:
         obs = OrderedDict(
@@ -233,185 +235,59 @@ class PickSingleEnv(StationaryManipulationEnv):
 
     def check_robot_static(self, thresh=0.2):
         # Assume that the last two DoF is gripper
-        qvel = self.agent.robot.get_qvel()[:-2]
-        return np.max(np.abs(qvel)) <= thresh
+        qvel = self.agent.robot.get_qvel()[..., :-2]
+        return torch.max(torch.abs(qvel), 1)[0] <= thresh
 
-    def evaluate(self, **kwargs):
+    def evaluate(self, obs):
         obj_to_goal_pos = self.goal_pos - self.obj_pose.p
-        is_obj_placed = np.linalg.norm(obj_to_goal_pos) <= self.goal_thresh
+        is_obj_placed = torch.linalg.norm(obj_to_goal_pos, axis=1) <= self.goal_thresh
         is_robot_static = self.check_robot_static()
         return dict(
             obj_to_goal_pos=obj_to_goal_pos,
             is_obj_placed=is_obj_placed,
             is_robot_static=is_robot_static,
-            success=is_obj_placed and is_robot_static,
+            success=torch.logical_and(is_obj_placed, is_robot_static)
         )
 
-    def compute_dense_reward(self, info, **kwargs):
+    def compute_dense_reward(self, obs, action, info):
         # Sep. 14, 2022:
         # We changed the original complex reward to simple reward,
         # since the original reward can be unfriendly for RL,
         # even though MPC can solve many objects through the original reward.
 
-        reward = 0.0
 
-        if info["success"]:
-            reward = 10.0
-        else:
-            obj_pose = self.obj_pose
+        obj_pose = self.obj_pose
 
-            # reaching reward
-            tcp_wrt_obj_pose = obj_pose.inv() * self.agent.tcp.pose
-            tcp_to_obj_dist = np.linalg.norm(tcp_wrt_obj_pose.p)
-            reaching_reward = 1 - np.tanh(
-                3.0
-                * np.maximum(
-                    tcp_to_obj_dist - np.linalg.norm(self.model_bbox_size), 0.0
-                )
+        # reaching reward
+        tcp_wrt_obj_pose: Pose = obj_pose.inv() * self.agent.tcp.pose
+        tcp_to_obj_dist = torch.linalg.norm(tcp_wrt_obj_pose.p, axis=1)
+        reaching_reward = 1 - torch.tanh(
+            3.0
+            * torch.maximum(
+                tcp_to_obj_dist - torch.linalg.norm(self.model_bbox_size), torch.tensor(0.0)
             )
-            reward = reward + reaching_reward
+        )
+        reward = reaching_reward
 
-            # grasp reward
-            is_grasped = self.agent.is_grasping(self.obj, max_angle=30)
-            reward += 3.0 if is_grasped else 0.0
+        # grasp reward
+        is_grasped = self.agent.is_grasping(self.obj, max_angle=30)
+        reward += 3 * is_grasped
 
-            # reaching-goal reward
-            if is_grasped:
-                obj_to_goal_pos = self.goal_pos - obj_pose.p
-                obj_to_goal_dist = np.linalg.norm(obj_to_goal_pos)
-                reaching_goal_reward = 3 * (1 - np.tanh(3.0 * obj_to_goal_dist))
-                reward += reaching_goal_reward
+        # reaching-goal reward
+        obj_to_goal_pos = self.goal_pos - obj_pose.p
+        obj_to_goal_dist = torch.linalg.norm(obj_to_goal_pos, axis=1)
+        reaching_goal_reward = 3 * (1 - torch.tanh(3.0 * obj_to_goal_dist))
+        reward += reaching_goal_reward * is_grasped
 
+        reward[info["success"]] = 10.0
         return reward
 
-    def compute_normalized_dense_reward(self, **kwargs):
-        return self.compute_dense_reward(**kwargs) / 10.0
+    def compute_normalized_dense_reward(self, obs, action, info):
+        return self.compute_dense_reward(obs, action, info) / 10.0
 
-    def compute_dense_reward_legacy(self, info, **kwargs):
-        # original complex reward that is geometry-independent,
-        # which ensures that MPC can successfully pick up most objects,
-        # but can be unfriendly for RL.
-
-        reward = 0.0
-        # hard code gripper info
-        finger_length = 0.025
-        gripper_width = (
-            self.agent.robot.get_qlimits()[-1, 1] * 2
-        )  # NOTE: hard-coded with panda
-
-        if info["success"]:
-            reward = 10.0
-        else:
-            obj_pose = self.obj_pose
-            # grasp pose rotation reward
-            grasp_rot_loss_fxn = lambda A: np.tanh(
-                1 / 8 * np.trace(A.T @ A)
-            )  # trace(A.T @ A) has range [0,8] for A being difference of rotation matrices
-            tcp_pose_wrt_obj = obj_pose.inv() * self.agent.tcp.pose
-            tcp_rot_wrt_obj = tcp_pose_wrt_obj.to_transformation_matrix()[:3, :3]
-            gt_rot_x_diff_1 = (
-                np.array([[0, 1, 0], [1, 0, 0], [0, 0, -1]]) - tcp_rot_wrt_obj
-            )
-            gt_rot_x_diff_2 = (
-                np.array([[0, -1, 0], [-1, 0, 0], [0, 0, -1]]) - tcp_rot_wrt_obj
-            )
-            gt_rot_y_diff_1 = (
-                np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]) - tcp_rot_wrt_obj
-            )
-            gt_rot_y_diff_2 = (
-                np.array([[-1, 0, 0], [0, 1, 0], [0, 0, -1]]) - tcp_rot_wrt_obj
-            )
-
-            bbox_x_loss = np.minimum(
-                grasp_rot_loss_fxn(gt_rot_x_diff_1), grasp_rot_loss_fxn(gt_rot_x_diff_2)
-            )
-            bbox_y_loss = np.minimum(
-                grasp_rot_loss_fxn(gt_rot_y_diff_1), grasp_rot_loss_fxn(gt_rot_y_diff_2)
-            )
-            grasp_rot_loss = 1.0
-            should_rotate = False
-            if self.model_bbox_size[0] < gripper_width:
-                should_rotate = True
-                grasp_rot_loss = np.minimum(grasp_rot_loss, bbox_x_loss)
-            if self.model_bbox_size[1] < gripper_width:
-                should_rotate = True
-                grasp_rot_loss = np.minimum(grasp_rot_loss, bbox_y_loss)
-            rotated_properly = not should_rotate or grasp_rot_loss < 0.1
-            reward = reward + (1 - grasp_rot_loss)
-
-            if rotated_properly:
-                # reaching reward
-                tcp_wrt_obj_pose = obj_pose.inv() * self.agent.tcp.pose
-                tcp_to_obj_dist = tcp_wrt_obj_pose.p
-                grasp_from_above_height_offset = (
-                    self.model_bbox_size[2] / 2 - finger_length
-                )  # account for finger length
-                if grasp_from_above_height_offset > 0.01:
-                    # for objects that are tall, gripper should try to grasp the top of the object
-                    tcp_to_obj_dist[2] -= grasp_from_above_height_offset
-                else:
-                    # for objects that are flat, gripper should try to reach deeper in the object
-                    tcp_to_obj_dist[2] += min(self.model_bbox_size[2] / 2, 0.005)
-                tcp_to_obj_dist = np.linalg.norm(tcp_to_obj_dist)
-                reaching_reward = 1 - np.tanh(4.0 * tcp_to_obj_dist)
-                if self.model_bbox_size[2] / 2 > finger_length:
-                    reached = tcp_to_obj_dist < 0.01
-                else:
-                    reached = tcp_to_obj_dist < finger_length + 0.005
-                reward += reaching_reward
-                if not reached and should_rotate:
-                    # encourage grippers to open
-                    reward = (
-                        reward
-                        + (
-                            gripper_width
-                            - np.sum(
-                                gripper_width / 2 - self.agent.robot.get_qpos()[-2:]
-                            )
-                        )
-                        / gripper_width
-                    )
-                else:
-                    reward = reward + 1
-                    # grasp reward
-                    is_grasped = self.agent.is_grasping(self.obj, max_angle=30)
-                    reward += 2.0 if is_grasped else 0.0
-
-                    # reaching-goal reward
-                    if is_grasped:
-                        obj_to_goal_pos = self.goal_pos - obj_pose.p
-                        obj_to_goal_dist = np.linalg.norm(obj_to_goal_pos)
-                        reaching_reward2 = 2 * (1 - np.tanh(3 * obj_to_goal_dist))
-                        reward += reaching_reward2
-            else:
-                reward = reward - 15 * np.maximum(
-                    obj_pose.p[2]
-                    + self.model_bbox_size[2] / 2
-                    + 0.02
-                    - self.agent.tcp.pose.p[2],
-                    0.0,
-                )
-                reward = reward - 15 * np.linalg.norm(
-                    obj_pose.p[:2] - self.agent.tcp.pose.p[:2]
-                )
-                reward = reward - 15 * np.sum(
-                    gripper_width / 2 - self.agent.robot.get_qpos()[-2:]
-                )  # ensures that gripper is open
-
-        return reward
-
-    def render(self):
-        if self.render_mode in ["human", "rgb_array"]:
-            show_entity(self.goal_site)
-            ret = super().render()
-            hide_entity(self.goal_site)
-        else:
-            ret = super().render()
-        return ret
-
-    def get_state(self) -> np.ndarray:
+    def get_state(self):
         state = super().get_state()
-        return np.hstack([state, self.goal_pos])
+        return torch.hstack([state, self.goal_pos])
 
     def set_state(self, state):
         self.goal_pos = state[-3:]
@@ -424,6 +300,7 @@ class PickSingleEnv(StationaryManipulationEnv):
 def build_actor_ycb(
     model_id: str,
     scene: sapien.Scene,
+    name: str,
     scale: float = 1.0,
     physical_material: physx.PhysxMaterial = None,
     density=1000,
@@ -443,7 +320,7 @@ def build_actor_ycb(
     visual_file = str(model_dir / "textured.obj")
     builder.add_visual_from_file(filename=visual_file, scale=[scale] * 3)
 
-    actor = builder.build()
+    actor = builder.build(name=name)
     return actor
 
 
@@ -475,6 +352,7 @@ class PickSingleYCBEnv(PickSingleEnv):
         self.obj = build_actor_ycb(
             self.model_id,
             self._scene,
+            name=self.model_id,
             scale=self.model_scale,
             density=density,
             root_dir=self.asset_root,

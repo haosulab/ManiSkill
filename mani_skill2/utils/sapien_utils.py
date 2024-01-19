@@ -1,14 +1,68 @@
-from contextlib import contextmanager
+from __future__ import annotations
+
 from copy import deepcopy
-from typing import Any, Dict, List, Optional, Tuple, TypeVar, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple, TypeVar, Union
 
 import numpy as np
 import sapien
 import sapien.physx as physx
 import sapien.render
 import sapien.wrapper.urdf_loader
-from sapien import Pose
 from transforms3d.quaternions import mat2quat
+
+if TYPE_CHECKING:
+    from mani_skill2.utils.structs.actor import Actor
+
+import torch
+
+from mani_skill2.utils.structs.types import Array, get_backend_name
+
+
+def to_tensor(array: Union[torch.Tensor, np.array, Sequence]):
+    """
+    Maps any given sequence to the appropriate tensor for the appropriate backend
+
+    Note that all torch tensors are always moved to the GPU. There is generally no reason for them to ever be on the CPU as
+    GPU simulation is the only time torch is used in ManiSkill and thus all tensors from the simulation are on cuda devices
+    """
+    if get_backend_name() == "torch":
+        if isinstance(array, np.ndarray):
+            ret = torch.from_numpy(array).cuda()
+            if ret.dtype == torch.float64:
+                ret = ret.float()
+            return ret
+        elif isinstance(array, torch.Tensor):
+            return array.cuda()
+        else:
+            return torch.Tensor(array).cuda()
+    elif get_backend_name() == "numpy":
+        if isinstance(array, np.ndarray):
+            return torch.from_numpy(array)
+        else:
+            return torch.tensor(array)
+
+
+def to_numpy(array: Union[Array, Sequence]):
+    if isinstance(array, (dict)):
+        return {k: to_numpy(v) for k, v in array.items()}
+    if isinstance(array, str):
+        return array
+    if torch is not None:
+        if isinstance(array, torch.Tensor):
+            return array.cpu().numpy()
+    if isinstance(array, np.ndarray):
+        return array
+    else:
+        return np.array(array)
+
+
+def clone_tensor(array: Array):
+    if torch is not None and isinstance(array, torch.Tensor):
+        return array.clone()
+    elif isinstance(array, np.ndarray):
+        return array.copy()
+    else:
+        raise ValueError(f"{array} is not a tensor or numpy array")
 
 
 def normalize_vector(x, eps=1e-6):
@@ -21,22 +75,20 @@ def normalize_vector(x, eps=1e-6):
         return x / norm
 
 
-def vectorize_pose(pose: sapien.Pose):
-    return np.hstack([pose.p, pose.q])
-
-
 def set_entity_visibility(entity: sapien.Entity, visibility):
     component = entity.find_component_by_type(sapien.render.RenderBodyComponent)
     if component is not None:
         component.visibility = visibility
 
 
-def hide_entity(entity: sapien.Entity):
-    entity.find_component_by_type(sapien.render.RenderBodyComponent).disable()
+def hide_entity(actor: Actor):
+    for entity in actor._objs:
+        entity.find_component_by_type(sapien.render.RenderBodyComponent).visibility = 0
 
 
-def show_entity(entity: sapien.Entity):
-    entity.find_component_by_type(sapien.render.RenderBodyComponent).enable()
+def show_entity(actor: Actor):
+    for entity in actor._objs:
+        entity.find_component_by_type(sapien.render.RenderBodyComponent).visibility = 1
 
 
 T = TypeVar("T")
@@ -199,15 +251,6 @@ def get_actor_state(actor: sapien.Entity):
     return np.hstack([pose.p, pose.q, vel, ang_vel])
 
 
-def set_actor_state(actor: sapien.Entity, state: np.ndarray):
-    assert len(state) == 13, len(state)
-    actor.set_pose(Pose(state[0:3], state[3:7]))
-    component = actor.find_component_by_type(physx.PhysxRigidDynamicComponent)
-    if component is not None and not component.kinematic:
-        component.set_linear_velocity(state[7:10])
-        component.set_angular_velocity(state[10:13])
-
-
 def get_articulation_state(articulation: physx.PhysxArticulation):
     root_link = articulation.get_links()[0]
     pose = root_link.get_pose()
@@ -219,7 +262,7 @@ def get_articulation_state(articulation: physx.PhysxArticulation):
 
 
 def set_articulation_state(articulation: physx.PhysxArticulation, state: np.ndarray):
-    articulation.set_root_pose(Pose(state[0:3], state[3:7]))
+    articulation.set_root_pose(sapien.Pose(state[0:3], state[3:7]))
     articulation.set_root_velocity(state[7:10])
     articulation.set_root_angular_velocity(state[10:13])
     qpos, qvel = np.split(state[13:], 2)
@@ -442,9 +485,8 @@ def check_joint_stuck(
     )
 
 
-def check_actor_static(actor: sapien.Entity, lin_thresh=1e-3, ang_thresh=1e-2):
-    component = actor.find_component_by_type(physx.PhysxRigidDynamicComponent)
-    return (
-        np.linalg.norm(component.linear_velocity) <= lin_thresh
-        and np.linalg.norm(component.angular_velocity) <= ang_thresh
+def check_actor_static(actor: Actor, lin_thresh=1e-3, ang_thresh=1e-2):
+    return torch.logical_and(
+        torch.linalg.norm(actor.linear_velocity, axis=1) <= lin_thresh,
+        torch.linalg.norm(actor.angular_velocity, axis=1) <= ang_thresh,
     )

@@ -5,6 +5,8 @@ import trimesh
 
 from mani_skill2.agents.base_agent import BaseAgent
 from mani_skill2.envs.sapien_env import BaseEnv
+from mani_skill2.envs.scene import ManiSkillScene
+from mani_skill2.utils.structs.pose import to_sapien_pose
 
 OPEN = 1
 CLOSED = -1
@@ -28,7 +30,7 @@ class PandaArmMotionPlanningSolver:
         self.joint_vel_limits = joint_vel_limits
         self.joint_acc_limits = joint_acc_limits
 
-        self.base_pose = base_pose
+        self.base_pose = to_sapien_pose(base_pose)
 
         self.planner = self.setup_planner()
         self.control_mode = self.env.unwrapped.control_mode
@@ -43,7 +45,7 @@ class PandaArmMotionPlanningSolver:
             self.grasp_pose_visual = build_panda_gripper_grasp_pose_visual(
                 env.unwrapped._scene
             )
-            self.grasp_pose_visual.set_pose(env.unwrapped.agent.tcp.entity_pose)
+            self.grasp_pose_visual.set_pose(env.unwrapped.agent.tcp.pose)
         self.elapsed_steps = 0
 
         self.use_point_cloud = False
@@ -102,7 +104,7 @@ class PandaArmMotionPlanningSolver:
         pose = sapien.Pose(p=pose.p, q=pose.q)
         result = self.planner.plan_qpos_to_pose(
             np.concatenate([pose.p, pose.q]),
-            self.robot.get_qpos(),
+            self.robot.get_qpos().cpu().numpy()[0],
             time_step=self.env.unwrapped.control_timestep,
             use_point_cloud=self.use_point_cloud,
             wrt_world=True,
@@ -119,20 +121,21 @@ class PandaArmMotionPlanningSolver:
     def move_to_pose_with_screw(
         self, pose: sapien.Pose, dry_run: bool = False, refine_steps: int = 0
     ):
+        pose = to_sapien_pose(pose)
         # try screw two times before giving up
         if self.grasp_pose_visual is not None:
             self.grasp_pose_visual.set_pose(pose)
         pose = sapien.Pose(p=pose.p - self.base_pose.p, q=pose.q)
         result = self.planner.plan_screw(
             np.concatenate([pose.p, pose.q]),
-            self.robot.get_qpos(),
+            self.robot.get_qpos().cpu().numpy()[0],
             time_step=self.env.unwrapped.control_timestep,
             use_point_cloud=self.use_point_cloud,
         )
         if result["status"] != "Success":
             result = self.planner.plan_screw(
                 np.concatenate([pose.p - self.base_pose.p, pose.q]),
-                self.robot.get_qpos(),
+                self.robot.get_qpos().cpu().numpy()[0],
                 time_step=self.env.unwrapped.control_timestep,
                 use_point_cloud=self.use_point_cloud,
             )
@@ -147,7 +150,7 @@ class PandaArmMotionPlanningSolver:
 
     def open_gripper(self):
         self.gripper_state = OPEN
-        qpos = self.robot.get_qpos()[:-2]
+        qpos = self.robot.get_qpos()[0, :-2].cpu().numpy()
         for i in range(6):
             if self.control_mode == "pd_joint_pos":
                 action = np.hstack([qpos, self.gripper_state])
@@ -165,7 +168,7 @@ class PandaArmMotionPlanningSolver:
 
     def close_gripper(self, t=6):
         self.gripper_state = CLOSED
-        qpos = self.robot.get_qpos()[:-2]
+        qpos = self.robot.get_qpos()[0, :-2].cpu().numpy()
         for i in range(t):
             if self.control_mode == "pd_joint_pos":
                 action = np.hstack([qpos, self.gripper_state])
@@ -204,13 +207,14 @@ class PandaArmMotionPlanningSolver:
 
     def close(self):
         if self.grasp_pose_visual is not None:
-            self.grasp_pose_visual.remove_from_scene()
+            if not sapien.physx.is_gpu_enabled():
+                self.grasp_pose_visual.remove_from_scene()
 
 
 from transforms3d import quaternions
 
 
-def build_panda_gripper_grasp_pose_visual(scene: sapien.Scene):
+def build_panda_gripper_grasp_pose_visual(scene: ManiSkillScene):
     builder = scene.create_actor_builder()
     grasp_pose_visual_width = 0.01
     grasp_width = 0.05

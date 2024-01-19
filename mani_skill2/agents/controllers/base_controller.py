@@ -6,13 +6,18 @@ import numpy as np
 import sapien
 import sapien.physx as physx
 from gymnasium import spaces
+from gymnasium.vector.utils import batch_space
 
 from mani_skill2.agents.utils import (
     flatten_action_spaces,
     get_active_joint_indices,
     get_active_joints,
 )
+from mani_skill2.envs.scene import ManiSkillScene
 from mani_skill2.utils.common import clip_and_scale_action, normalize_action_space
+from mani_skill2.utils.sapien_utils import to_tensor
+from mani_skill2.utils.structs.articulation import Articulation
+from mani_skill2.utils.structs.types import Array
 
 
 class BaseController:
@@ -27,17 +32,19 @@ class BaseController:
     def __init__(
         self,
         config: "ControllerConfig",
-        articulation: physx.PhysxArticulation,
+        articulation: Articulation,
         control_freq: int,
         sim_freq: int = None,
+        scene: ManiSkillScene = None,
     ):
         self.config = config
         self.articulation = articulation
         self._control_freq = control_freq
+        self.scene = scene
 
         # For action interpolation
         if sim_freq is None:  # infer from scene
-            sim_timestep = self.articulation.root.entity.get_scene().timestep
+            sim_timestep = self.articulation.px.timestep
             sim_freq = round(1.0 / sim_timestep)
         # Number of simulation steps per control step
         self._sim_steps = sim_freq // control_freq
@@ -65,8 +72,10 @@ class BaseController:
             raise err
 
     def _initialize_action_space(self):
-        # self.action_space = spaces.Box(...)
         raise NotImplementedError
+
+    def _batch_action_space(self):
+        self.action_space = batch_space(self.action_space, n=self.scene.num_envs)
 
     @property
     def control_freq(self):
@@ -75,12 +84,12 @@ class BaseController:
     @property
     def qpos(self):
         """Get current joint positions."""
-        return self.articulation.get_qpos()[self.joint_indices]
+        return self.articulation.get_qpos()[..., self.joint_indices]
 
     @property
     def qvel(self):
         """Get current joint velocities."""
-        return self.articulation.get_qvel()[self.joint_indices]
+        return self.articulation.get_qvel()[..., self.joint_indices]
 
     # -------------------------------------------------------------------------- #
     # Interfaces (implemented in subclasses)
@@ -93,15 +102,23 @@ class BaseController:
         """Called after switching the controller."""
         self.set_drive_property()
 
-    def _preprocess_action(self, action: np.ndarray):
+    def _preprocess_action(self, action: Array):
         # TODO(jigu): support discrete action
-        action_dim = self.action_space.shape[0]
-        assert action.shape == (action_dim,), (action.shape, action_dim)
+        if self.scene.num_envs > 1:
+            action_dim = self.action_space.shape[1]
+            assert action.shape == (self.scene.num_envs, action_dim), (
+                action.shape,
+                action_dim,
+            )
+        else:
+            action_dim = self.action_space.shape[0]
+            assert action.shape == (action_dim,), (action.shape, action_dim)
+
         if self._normalize_action:
             action = self._clip_and_scale_action(action)
         return action
 
-    def set_action(self, action: np.ndarray):
+    def set_action(self, action: Array):
         """Set the action to execute.
         The action can be low-level control signals or high-level abstract commands.
         """
@@ -124,10 +141,13 @@ class BaseController:
     def _clip_and_scale_action_space(self):
         self._action_space = self.action_space
         self.action_space = normalize_action_space(self._action_space)
+        low, high = self._action_space.low, self._action_space.high
+        self.action_space_low = to_tensor(low)
+        self.action_space_high = to_tensor(high)
 
     def _clip_and_scale_action(self, action):
         return clip_and_scale_action(
-            action, self._action_space.low, self._action_space.high
+            action, self.action_space_low, self.action_space_high
         )
 
 
@@ -146,11 +166,13 @@ class DictController(BaseController):
     def __init__(
         self,
         configs: Dict[str, ControllerConfig],
-        articulation: physx.PhysxArticulation,
+        articulation: Articulation,
         control_freq: int,
         sim_freq: int = None,
         balance_passive_force=True,
+        scene: ManiSkillScene = None,
     ):
+        self.scene = scene
         self.configs = configs
         self.articulation = articulation
         self._control_freq = control_freq
@@ -159,7 +181,7 @@ class DictController(BaseController):
         self.controllers: Dict[str, BaseController] = OrderedDict()
         for uid, config in configs.items():
             self.controllers[uid] = config.controller_cls(
-                config, articulation, control_freq, sim_freq=sim_freq
+                config, articulation, control_freq, sim_freq=sim_freq, scene=scene
             )
 
         self._initialize_action_space()
@@ -184,8 +206,11 @@ class DictController(BaseController):
 
     def _assert_fully_actuated(self):
         active_joints = self.articulation.get_active_joints()
-        if len(active_joints) != len(self.joints) or set(active_joints) != set(
-            self.joints
+        if len(active_joints) != len(self.joints) or not np.all(
+            [
+                active_joint == joint
+                for active_joint, joint in zip(active_joints, self.joints)
+            ]
         ):
             print("active_joints:", [x.name for x in active_joints])
             print("controlled_joints:", [x.name for x in self.joints])
@@ -202,20 +227,23 @@ class DictController(BaseController):
 
     def set_action(self, action: Dict[str, np.ndarray]):
         for uid, controller in self.controllers.items():
-            controller.set_action(action[uid])
+            controller.set_action(to_tensor(action[uid]))
 
     def before_simulation_step(self):
-        if self.balance_passive_force:
-            qf = self.articulation.compute_passive_force(
-                gravity=True, coriolis_and_centrifugal=True
-            )
+        if physx.is_gpu_enabled():
+            return
         else:
-            qf = np.zeros(self.articulation.dof)
-        for controller in self.controllers.values():
-            ret = controller.before_simulation_step()
-            if ret is not None and "qf" in ret:
-                qf = qf + ret["qf"]
-        self.articulation.set_qf(qf)
+            if self.balance_passive_force:
+                qf = self.articulation.compute_passive_force(
+                    gravity=True, coriolis_and_centrifugal=True
+                )
+            else:
+                qf = np.zeros(self.articulation.dof)
+            for controller in self.controllers.values():
+                ret = controller.before_simulation_step()
+                if ret is not None and "qf" in ret:
+                    qf = qf + ret["qf"]
+            self.articulation.set_qf(qf)
 
     def get_state(self) -> dict:
         states = {}
@@ -239,14 +267,27 @@ class CombinedController(DictController):
             self.action_space.spaces
         )
 
+    def _batch_action_space(self):
+        for controller in self.controllers.values():
+            controller._batch_action_space()
+        super()._batch_action_space()
+
     def set_action(self, action: np.ndarray):
         # Sanity check
-        action_dim = self.action_space.shape[0]
-        assert action.shape == (action_dim,), (action.shape, action_dim)
+        # TODO (stao): optimization, do we really need this sanity check? Does gymnasium already do this for us
+        if self.scene.num_envs > 1:
+            action_dim = self.action_space.shape[1]
+            assert action.shape == (self.scene.num_envs, action_dim), (
+                action.shape,
+                action_dim,
+            )
+        else:
+            action_dim = self.action_space.shape[0]
+            assert action.shape == (action_dim,), (action.shape, action_dim)
 
         for uid, controller in self.controllers.items():
             start, end = self.action_mapping[uid]
-            controller.set_action(action[start:end])
+            controller.set_action(to_tensor(action[..., start:end]))
 
     def to_action_dict(self, action: np.ndarray):
         """Convert a flat action to a dict of actions."""

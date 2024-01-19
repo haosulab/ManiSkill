@@ -238,6 +238,18 @@
     <parent link="panda_hand"/>
     <child link="panda_hand_tcp"/>
   </joint>
+  <link name="panda_leftfinger_pad"/>
+  <joint name="panda_leftfinger_pad_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="0 0 0.0455"/>
+    <parent link="panda_leftfinger"/>
+    <child link="panda_leftfinger_pad"/>
+  </joint>
+  <link name="panda_rightfinger_pad"/>
+  <joint name="panda_rightfinger_pad_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="0 0 0.0455"/>
+    <parent link="panda_rightfinger"/>
+    <child link="panda_rightfinger_pad"/>
+  </joint>
   <link name="panda_leftfinger">
     <visual>
       <geometry>

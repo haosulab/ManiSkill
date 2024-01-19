@@ -9,7 +9,8 @@ from mani_skill2.agents.robots.panda import Panda, PandaRealSensed435
 from mani_skill2.agents.robots.xmate3 import Xmate3Robotiq
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
-from mani_skill2.utils.sapien_utils import look_at, vectorize_pose
+from mani_skill2.utils.sapien_utils import look_at
+from mani_skill2.utils.structs.pose import vectorize_pose
 
 
 class StationaryManipulationEnv(BaseEnv):
@@ -20,11 +21,6 @@ class StationaryManipulationEnv(BaseEnv):
     ):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         super().__init__(*args, robot_uid=robot_uid, **kwargs)
-
-    def _get_default_scene_config(self):
-        scene_config = super()._get_default_scene_config()
-        scene_config.enable_pcm = True
-        return scene_config
 
     def _initialize_agent(self):
         if self.robot_uid == "panda" or self.robot_uid == "panda_realsensed435":

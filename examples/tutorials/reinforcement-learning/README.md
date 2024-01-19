@@ -17,3 +17,9 @@ python sb3_ppo_liftcube_rgbd.py --eval --model-path=path/to/model
 ````
 
 Pass in `--help` for more options (e.g. logging, number of parallel environments, whether to use ManiSkill2 Vectorized Environments or not etc.). Models and videos are saved to the folder specified by `--log-dir` which defaults to `logs/`. 
+
+
+
+python cleanrl_ppo_liftcube_state_gpu.py --gamma=0.8 --gae_lambda=0.95 --total_timesteps=10000000
+
+python cleanrl_ppo_liftcube_state_gpu.py --gamma=0.8 --gae_lambda=0.95 --total_timesteps=10000000

@@ -45,10 +45,10 @@ def solve(env: LiftCubeEnv, seed=None, debug=False, vis=False):
 
     FINGER_LENGTH = 0.025
     env = env.unwrapped
-    obb = get_actor_obb(env.obj)
+    obb = get_actor_obb(env.obj._objs[0])
 
     approaching = np.array([0, 0, -1])
-    target_closing = env.agent.tcp.entity_pose.to_transformation_matrix()[:3, 1]
+    target_closing = env.agent.tcp.pose.to_transformation_matrix()[0, :3, 1]
     grasp_info = compute_grasp_info_by_obb(
         obb,
         approaching=approaching,
@@ -73,7 +73,7 @@ def solve(env: LiftCubeEnv, seed=None, debug=False, vis=False):
     # -------------------------------------------------------------------------- #
     # Move to goal pose
     # -------------------------------------------------------------------------- #
-    goal_pose = sapien.Pose(env.goal_pos + [0, 0, 0.01], grasp_pose.q)
+    goal_pose = sapien.Pose(env.goal_pos.cpu().numpy()[0] + [0, 0, 0.01], grasp_pose.q)
     res = planner.move_to_pose_with_screw(goal_pose)
 
     planner.close()

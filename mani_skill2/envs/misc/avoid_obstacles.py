@@ -20,8 +20,8 @@ from mani_skill2.utils.sapien_utils import (
     look_at,
     set_articulation_render_material,
     show_entity,
-    vectorize_pose,
 )
+from mani_skill2.utils.structs.pose import vectorize_pose
 
 
 class AvoidObstaclesBaseEnv(BaseEnv):
@@ -47,10 +47,11 @@ class AvoidObstaclesBaseEnv(BaseEnv):
         self.episode_config = None
         super().__init__(**kwargs)
 
-    def _get_default_scene_config(self):
-        scene_config = super()._get_default_scene_config()
-        scene_config.contact_offset = 0.01
-        return scene_config
+    def _set_scene_config(self):
+        super()._set_scene_config()
+        cfg = physx.get_scene_config()
+        cfg.contact_offset = 0.01
+        physx.set_scene_config(cfg)
 
     def reset(self, *args, seed=None, options=None):
         if options is None:

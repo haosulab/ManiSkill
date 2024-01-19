@@ -15,14 +15,10 @@ from typing import Callable, Dict, List, Optional, Sequence, Type, Union
 import gymnasium as gym
 import numpy as np
 import sapien
+import torch
 from gymnasium import spaces
 from gymnasium.vector.utils.spaces import batch_space
 from gymnasium.vector.vector_env import VectorEnv
-
-try:
-    import torch
-except ImportError:
-    raise ImportError("To use ManiSkill2 VecEnv, please install PyTorch first.")
 
 from mani_skill2 import logger
 from mani_skill2.envs.sapien_env import BaseEnv

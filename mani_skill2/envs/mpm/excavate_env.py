@@ -10,7 +10,8 @@ from mani_skill2.envs.mpm.base_env import MPMBaseEnv
 from mani_skill2.envs.mpm.utils import actor2meshes
 from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import get_obj_by_name, vectorize_pose
+from mani_skill2.utils.sapien_utils import get_obj_by_name
+from mani_skill2.utils.structs.pose import vectorize_pose
 
 
 @register_env("Excavate-v0", max_episode_steps=250)

@@ -4,13 +4,17 @@ import numpy as np
 import sapien
 import sapien.physx as physx
 
+from mani_skill2.utils.structs.types import Array
+
 # from sapien import Actor, Articulation, Link, Pose
 # TODO: Temporary. We may not need these bbox functions anyway once added to sapien.
 Actor = Any
 Articulation = Any
 Link = Any
 Pose = Any
+import torch
 from scipy.spatial.transform import Rotation
+from transforms3d.quaternions import qmult
 
 from mani_skill2.utils.geometry.bounding_cylinder import aabc
 
@@ -193,3 +197,12 @@ def get_oriented_bounding_box_for_2d_points(
     center = np.dot(center, tvect)
 
     return {"center": center, "half_size": half_size, "axes": vect, "corners": corners}
+
+
+# -------------------------------------------------------------------------- #
+# Functions pulled out from SAPIEN
+# -------------------------------------------------------------------------- #
+def rotate_vector(v, q):
+    w = q[0]
+    u = q[1:]
+    return 2.0 * u.dot(v) * u + (w * w - u.dot(u)) * v + 2.0 * w * np.cross(u, v)

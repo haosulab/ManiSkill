@@ -1,0 +1,5 @@
+<robot name="fetch">
+  <disable_collisions link1="torso_fixed_link" link2="torso_lift_link" reason="Default"/>
+  <disable_collisions link1="bellows_link2" link2="torso_fixed_link" reason="Default"/>
+  <disable_collisions link1="bellows_link2" link2="base_link" reason="Default"/>
+</robot>

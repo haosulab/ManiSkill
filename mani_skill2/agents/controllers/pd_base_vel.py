@@ -4,6 +4,8 @@ from mani_skill2.utils.geometry import rotate_2d_vec_by_angle
 
 from .pd_joint_vel import PDJointVelController, PDJointVelControllerConfig
 
+# TODO (stao): add GPU support here
+
 
 class PDBaseVelController(PDJointVelController):
     """PDJointVelController for ego-centric base movement."""

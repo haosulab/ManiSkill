@@ -31,7 +31,7 @@ from transforms3d.quaternions import quat2mat
 from mani_skill2.envs.mpm.utils import actor2meshes, trimesh2sdf
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.utils.logging_utils import logger
-from mani_skill2.utils.sapien_utils import vectorize_pose
+from mani_skill2.utils.structs.pose import vectorize_pose
 from warp_maniskill.mpm.mpm_model import MPMModelBuilder
 from warp_maniskill.mpm.mpm_simulator import DenseVolume as MPMVolume
 from warp_maniskill.mpm.mpm_simulator import Mesh as MPMMesh
