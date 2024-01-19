@@ -2,17 +2,18 @@ from collections import OrderedDict
 
 import numpy as np
 import sapien
-from sapien import Pose
+import torch
 from transforms3d.euler import euler2quat
 
 from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import hide_entity, show_entity, vectorize_pose
+from mani_skill2.utils.sapien_utils import to_tensor
 from mani_skill2.utils.scene_builder import TableSceneBuilder
+from mani_skill2.utils.structs.pose import Pose, vectorize_pose
 
 from .base_env import StationaryManipulationEnv
 
 
-@register_env("PickCube-v0", max_episode_steps=200)
+@register_env("PickCube-v0", max_episode_steps=100)
 class PickCubeEnv(StationaryManipulationEnv):
     goal_thresh = 0.025
     min_goal_dist = 0.05
@@ -23,34 +24,48 @@ class PickCubeEnv(StationaryManipulationEnv):
         super().__init__(*args, **kwargs)
 
     def _load_actors(self):
-        TableSceneBuilder().build(self._scene)
+        self.table_scene = TableSceneBuilder(
+            env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
+        )
+        self.table_scene.build()
         self.obj = self._build_cube(self.cube_half_size)
         self.goal_site = self._build_sphere_site(self.goal_thresh)
 
     def _initialize_actors(self):
-        xy = self._episode_rng.uniform(-0.1, 0.1, [2])
-        xyz = np.hstack([xy, self.cube_half_size[2]])
+        self.table_scene.initialize()
+        xyz = np.zeros((self.num_envs, 3))
+        xyz[..., :2] = self._episode_rng.uniform(-0.1, 0.1, [self.num_envs, 2])
+        xyz[..., 2] = self.cube_half_size[2]
         q = [1, 0, 0, 0]
         if self.obj_init_rot_z:
             ori = self._episode_rng.uniform(0, 2 * np.pi)
             q = euler2quat(0, 0, ori)
-        self.obj.set_pose(Pose(xyz, q))
+
+        # to set a batch of poses, use the Pose object or provide a raw tensor
+        obj_pose = Pose.create_from_pq(
+            p=xyz, q=np.array(q)[None, :].repeat(self.num_envs, axis=0)
+        )
+
+        self.obj.set_pose(obj_pose)
 
     def _initialize_task(self, max_trials=100, verbose=False):
         obj_pos = self.obj.pose.p
-
         # Sample a goal position far enough from the object
-        for i in range(max_trials):
-            goal_xy = self._episode_rng.uniform(-0.1, 0.1, [2])
-            goal_z = self._episode_rng.uniform(0, 0.5) + obj_pos[2]
-            goal_pos = np.hstack([goal_xy, goal_z])
-            if np.linalg.norm(goal_pos - obj_pos) > self.min_goal_dist:
-                if verbose:
-                    print(f"Found a valid goal at {i}-th trial")
-                break
 
-        self.goal_pos = goal_pos
-        self.goal_site.set_pose(Pose(self.goal_pos))
+        # TODO (stao): Make this code batched.
+        goal_poss = []
+        for j in range(len(obj_pos)):
+            for i in range(max_trials):
+                goal_xy = self._episode_rng.uniform(-0.1, 0.1, [2])
+                goal_z = self._episode_rng.uniform(0, 0.5) + obj_pos[j, 2]
+                goal_pos = torch.hstack([to_tensor(goal_xy), goal_z])
+                if torch.linalg.norm(goal_pos - obj_pos) > self.min_goal_dist:
+                    if verbose:
+                        print(f"Found a valid goal at {i}-th trial")
+                    goal_poss.append(goal_pos)
+                    break
+        self.goal_pos = torch.vstack(goal_poss)
+        self.goal_site.set_pose(Pose.create_from_pq(self.goal_pos))
 
     def _get_obs_extra(self) -> OrderedDict:
         obs = OrderedDict(
@@ -67,62 +82,84 @@ class PickCubeEnv(StationaryManipulationEnv):
         return obs
 
     def check_obj_placed(self):
-        return np.linalg.norm(self.goal_pos - self.obj.pose.p) <= self.goal_thresh
+        return (
+            torch.linalg.norm(self.goal_pos - self.obj.pose.p, axis=1)
+            <= self.goal_thresh
+        )
 
     def check_robot_static(self, thresh=0.2):
         # Assume that the last two DoF is gripper
-        qvel = self.agent.robot.get_qvel()[:-2]
-        return np.max(np.abs(qvel)) <= thresh
+        qvel = self.agent.robot.get_qvel()[..., :-2]
+        return torch.max(torch.abs(qvel), 1)[0] <= thresh
 
     def evaluate(self, **kwargs):
         is_obj_placed = self.check_obj_placed()
         is_robot_static = self.check_robot_static()
+        tcp_to_obj_pos = self.obj.pose.p - self.agent.tcp.pose.p
+        tcp_to_obj_dist = torch.linalg.norm(tcp_to_obj_pos, axis=1)
+        is_grasped = self.agent.is_grasping(self.obj)
+        obj_to_goal_dist = torch.linalg.norm(self.goal_pos - self.obj.pose.p, axis=1)
+        place_reward = 1 - torch.tanh(5 * obj_to_goal_dist)
         return dict(
             is_obj_placed=is_obj_placed,
             is_robot_static=is_robot_static,
-            success=is_obj_placed and is_robot_static,
+            tcp_to_obj_dist=tcp_to_obj_dist,
+            is_grasped=is_grasped,
+            place_reward=is_grasped * place_reward,
+            success=torch.logical_and(is_obj_placed, is_robot_static),
         )
 
-    def compute_dense_reward(self, info, **kwargs):
-        reward = 0.0
+    def compute_dense_reward(self, obs, action, info):
+        tcp_to_obj_dist = info["tcp_to_obj_dist"]
+        reaching_reward = 1 - torch.tanh(5 * tcp_to_obj_dist)
+        reward = reaching_reward
 
-        if info["success"]:
-            reward += 5
-            return reward
+        is_grasped = info["is_grasped"]
+        reward += is_grasped
 
-        tcp_to_obj_pos = self.obj.pose.p - self.agent.tcp.pose.p
-        tcp_to_obj_dist = np.linalg.norm(tcp_to_obj_pos)
-        reaching_reward = 1 - np.tanh(5 * tcp_to_obj_dist)
-        reward += reaching_reward
+        obj_to_goal_dist = torch.linalg.norm(self.goal_pos - self.obj.pose.p, axis=1)
+        place_reward = 1 - torch.tanh(5 * obj_to_goal_dist)
+        reward += place_reward * is_grasped  # add place reward only if we are grasping
 
-        is_grasped = self.agent.is_grasping(self.obj, max_angle=30)
-        reward += 1 if is_grasped else 0.0
+        static_reward = 1 - torch.tanh(
+            5 * torch.linalg.norm(self.agent.robot.get_qvel()[..., :-2], axis=1)
+        )
+        reward += static_reward * info["is_robot_static"] * info["is_grasped"]
 
-        if is_grasped:
-            obj_to_goal_dist = np.linalg.norm(self.goal_pos - self.obj.pose.p)
-            place_reward = 1 - np.tanh(5 * obj_to_goal_dist)
-            reward += place_reward
+        reward[info["success"]] = 5
 
         return reward
 
-    def compute_normalized_dense_reward(self, **kwargs):
-        return self.compute_dense_reward(**kwargs) / 5.0
+    def compute_normalized_dense_reward(self, obs, action, info):
+        return self.compute_dense_reward(obs, action, info) / 5.0
 
     def render_human(self):
-        show_entity(self.goal_site)
+        self.goal_site.show_visual()
         ret = super().render_human()
-        hide_entity(self.goal_site)
+        self.goal_site.hide_visual()
         return ret
 
-    def render_rgb_array(self):
-        show_entity(self.goal_site)
-        ret = super().render_rgb_array()
-        hide_entity(self.goal_site)
+    def render_rgb_array(self, *args, **kwargs):
+        # self.goal_site.show_visual()
+        ret = super().render_rgb_array(*args, **kwargs)
+        # self.goal_site.hide_visual()
         return ret
 
-    def get_state(self) -> np.ndarray:
+    def render_cameras(self):
+        self.goal_site.hide_visual()
+        ret = super().render_cameras()
+        self.goal_site.show_visual()
+        return ret
+
+    def _get_obs_images(self):
+        self.goal_site.hide_visual()
+        ret = super()._get_obs_images()
+        self.goal_site.show_visual()
+        return ret
+
+    def get_state(self):
         state = super().get_state()
-        return np.hstack([state, self.goal_pos])
+        return torch.hstack([state, self.goal_pos])
 
     def set_state(self, state):
         self.goal_pos = state[-3:]
@@ -136,8 +173,10 @@ class LiftCubeEnv(PickCubeEnv):
     goal_height = 0.2
 
     def _initialize_task(self):
-        self.goal_pos = self.obj.pose.p + [0, 0, self.goal_height]
-        self.goal_site.set_pose(Pose(self.goal_pos))
+        self.goal_pos = self.obj.pose.p + torch.tensor(
+            [0, 0, self.goal_height], device=self.device
+        )
+        self.goal_site.set_pose(Pose.create_from_pq(self.goal_pos))
 
     def _get_obs_extra(self) -> OrderedDict:
         obs = OrderedDict(
@@ -151,33 +190,31 @@ class LiftCubeEnv(PickCubeEnv):
         return obs
 
     def check_obj_placed(self):
-        return self.obj.pose.p[2] >= self.goal_height + self.cube_half_size[2]
+        return self.obj.pose.p[..., 2] >= self.goal_height + self.cube_half_size[2]
 
     def compute_dense_reward(self, info, **kwargs):
         reward = 0.0
 
-        if info["success"]:
-            reward += 2.25
-            return reward
-
         # reaching reward
-        gripper_pos = self.agent.tcp.get_pose().p
-        obj_pos = self.obj.get_pose().p
-        dist = np.linalg.norm(gripper_pos - obj_pos)
-        reaching_reward = 1 - np.tanh(5 * dist)
+        gripper_pos = self.agent.tcp.pose.p
+        obj_pos = self.obj.pose.p
+        dist = torch.linalg.norm(gripper_pos - obj_pos, axis=1)
+        reaching_reward = 1 - torch.tanh(5 * dist)
         reward += reaching_reward
 
-        is_grasped = self.agent.is_grasping(self.obj, max_angle=30)
+        # is_grasped = self.agent.is_grasping(self.obj, max_angle=30)
 
-        # grasp reward
-        if is_grasped:
-            reward += 0.25
+        # # grasp reward
+        # if is_grasped:
+        #     reward += 0.25
 
         # lifting reward
-        if is_grasped:
-            lifting_reward = self.obj.pose.p[2] - self.cube_half_size[2]
-            lifting_reward = min(lifting_reward / self.goal_height, 1.0)
-            reward += lifting_reward
+        # if is_grasped:
+        lifting_reward = self.obj.pose.p[..., 2] - self.cube_half_size[2]
+        lifting_reward = torch.min(lifting_reward / self.goal_height, torch.tensor(1.0))
+        reward += lifting_reward
+
+        reward[info["success"]] = 2.25
 
         return reward
 

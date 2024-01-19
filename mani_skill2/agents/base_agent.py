@@ -1,6 +1,4 @@
 from collections import OrderedDict
-from dataclasses import dataclass
-from pathlib import Path
 from typing import Dict, Union
 
 import numpy as np
@@ -9,17 +7,20 @@ import sapien.physx as physx
 from gymnasium import spaces
 
 from mani_skill2 import format_path
+from mani_skill2.envs.scene import ManiSkillScene
 from mani_skill2.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill2.utils.sapien_utils import (
     apply_urdf_config,
     check_urdf_config,
     parse_urdf_config,
 )
+from mani_skill2.utils.structs.articulation import Articulation
 
 from .controllers.base_controller import (
     BaseController,
     CombinedController,
     ControllerConfig,
+    DictController,
 )
 
 
@@ -37,7 +38,7 @@ class BaseAgent:
     """
 
     uid: str
-    robot: physx.PhysxArticulation
+    robot: Articulation
 
     urdf_path: str
     urdf_config: dict
@@ -50,7 +51,7 @@ class BaseAgent:
 
     def __init__(
         self,
-        scene: sapien.Scene,
+        scene: ManiSkillScene,
         control_freq: int,
         control_mode: str = None,
         fix_root_link=True,
@@ -67,18 +68,23 @@ class BaseAgent:
             control_mode = self.supported_control_modes[0]
         # The control mode after reset for consistency
         self._default_control_mode = control_mode
-
+        self.controllers = OrderedDict()
         self._load_articulation()
         self._after_loading_articulation()
-        self._setup_controllers()
-        self.set_control_mode(control_mode)
+
+    def initialize(self):
+        """
+        Initialize the agent, which includes running _after_init() and initializing/restting the controller
+        """
         self._after_init()
+        self.controller.reset()
 
     def _load_articulation(self):
         """
         Load the robot articulation
         """
         loader = self.scene.create_urdf_loader()
+        loader.name = self.uid
         loader.fix_root_link = self.fix_root_link
 
         urdf_path = format_path(str(self.urdf_path))
@@ -89,9 +95,8 @@ class BaseAgent:
         # TODO(jigu): support loading multiple convex collision shapes
 
         apply_urdf_config(loader, urdf_config)
-        self.robot: physx.PhysxArticulation = loader.load(urdf_path)
+        self.robot: Articulation = loader.load(urdf_path)
         assert self.robot is not None, f"Fail to load URDF from {urdf_path}"
-        self.robot.set_name(Path(urdf_path).stem)
 
         # Cache robot link ids
         self.robot_link_ids = [link.name for link in self.robot.get_links()]
@@ -123,22 +128,26 @@ class BaseAgent:
             control_mode, self.supported_control_modes
         )
         self._control_mode = control_mode
-        self.controller.reset()
-
-    def _setup_controllers(self):
-        """
-        Create and setup the controllers
-        """
-        self.controllers = OrderedDict()
-        for uid, config in self.controller_configs.items():
+        # create controller on the fly here
+        if control_mode not in self.controllers:
+            config = self.controller_configs[self._control_mode]
             if isinstance(config, dict):
-                self.controllers[uid] = CombinedController(
-                    config, self.robot, self._control_freq
+                self.controllers[control_mode] = CombinedController(
+                    config, self.robot, self._control_freq, scene=self.scene
                 )
             else:
-                self.controllers[uid] = config.controller_cls(
-                    config, self.robot, self._control_freq
+                self.controllers[control_mode] = config.controller_cls(
+                    config, self.robot, self._control_freq, scene=self.scene
                 )
+            if (
+                isinstance(self.controllers[control_mode], DictController)
+                and self.controllers[control_mode].balance_passive_force
+                and physx.is_gpu_enabled()
+            ):
+                # TODO (stao): how come only dict controller has balance_passive_force?
+                # NOTE (stao): Balancing passive force is currently not supported in PhysX, so we work around by disabling gravity
+                for link in self.robot.links:
+                    link.disable_gravity = True
 
     @property
     def controller(self):
@@ -164,8 +173,9 @@ class BaseAgent:
         """
         Set the agent's action which is to be executed in the next environment timestep
         """
-        if np.isnan(action).any():
-            raise ValueError("Action cannot be NaN. Environment received:", action)
+        if not physx.is_gpu_enabled():
+            if np.isnan(action).any():
+                raise ValueError("Action cannot be NaN. Environment received:", action)
         self.controller.set_action(action)
 
     def before_simulation_step(self):
@@ -195,7 +205,6 @@ class BaseAgent:
         state["robot_root_qvel"] = root_link.get_angular_velocity()
         state["robot_qpos"] = self.robot.get_qpos()
         state["robot_qvel"] = self.robot.get_qvel()
-        state["robot_qacc"] = self.robot.get_qacc()
 
         # controller state
         state["controller"] = self.controller.get_state()
@@ -209,7 +218,6 @@ class BaseAgent:
         self.robot.set_root_angular_velocity(state["robot_root_qvel"])
         self.robot.set_qpos(state["robot_qpos"])
         self.robot.set_qvel(state["robot_qvel"])
-        self.robot.set_qacc(state["robot_qacc"])
 
         if not ignore_controller and "controller" in state:
             self.controller.set_state(state["controller"])
@@ -224,7 +232,6 @@ class BaseAgent:
         if init_qpos is not None:
             self.robot.set_qpos(init_qpos)
         self.robot.set_qvel(np.zeros(self.robot.dof))
-        self.robot.set_qacc(np.zeros(self.robot.dof))
         self.robot.set_qf(np.zeros(self.robot.dof))
         self.set_control_mode(self._default_control_mode)
 

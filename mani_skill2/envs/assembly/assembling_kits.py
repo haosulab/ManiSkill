@@ -8,8 +8,9 @@ from transforms3d.euler import euler2quat, quat2euler
 from mani_skill2 import format_path
 from mani_skill2.utils.io_utils import load_json
 from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import look_at, vectorize_pose
+from mani_skill2.utils.sapien_utils import look_at
 from mani_skill2.utils.scene_builder import TableSceneBuilder
+from mani_skill2.utils.structs.pose import vectorize_pose
 
 from .base_env import StationaryManipulationEnv
 

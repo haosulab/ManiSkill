@@ -4,11 +4,13 @@ from typing import List, Tuple
 import numpy as np
 import sapien
 import sapien.physx as physx
+import torch
 from transforms3d.euler import euler2quat
 
 from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import check_actor_static, vectorize_pose
+from mani_skill2.utils.sapien_utils import check_actor_static
 from mani_skill2.utils.scene_builder import TableSceneBuilder
+from mani_skill2.utils.structs.pose import vectorize_pose
 
 from .base_env import StationaryManipulationEnv
 
@@ -63,18 +65,13 @@ class UniformSampler:
 
 @register_env("StackCube-v0", max_episode_steps=200)
 class StackCubeEnv(StationaryManipulationEnv):
-    def _get_default_scene_config(self):
-        scene_config = super()._get_default_scene_config()
-        scene_config.enable_pcm = True
-        return scene_config
-
     def _load_actors(self):
         TableSceneBuilder().build(self._scene)
 
         self.box_half_size = np.float32([0.02] * 3)
         self.cubeA = self._build_cube(self.box_half_size, color=(1, 0, 0), name="cubeA")
         self.cubeB = self._build_cube(
-            self.box_half_size, color=(0, 1, 0), name="cubeB", static=False
+            self.box_half_size, color=(0, 1, 0), name="cubeB", kinematic=False
         )
 
     def _initialize_actors(self):
@@ -113,15 +110,17 @@ class StackCubeEnv(StationaryManipulationEnv):
         pos_B = self.cubeB.pose.p
         offset = pos_A - pos_B
         xy_flag = (
-            np.linalg.norm(offset[:2]) <= np.linalg.norm(self.box_half_size[:2]) + 0.005
+            torch.linalg.norm(offset[..., :2], axis=1)
+            <= torch.linalg.norm(self.box_half_size[:2]) + 0.005
         )
-        z_flag = np.abs(offset[2] - self.box_half_size[2] * 2) <= 0.005
-        return bool(xy_flag and z_flag)
+        z_flag = torch.abs(offset[..., 2] - self.box_half_size[..., 2] * 2) <= 0.005
+        return torch.logical_and(xy_flag, z_flag)
 
     def evaluate(self, **kwargs):
         is_cubeA_on_cubeB = self._check_cubeA_on_cubeB()
         is_cubeA_static = check_actor_static(self.cubeA)
         is_cubeA_grasped = self.agent.is_grasping(self.cubeA)
+
         success = is_cubeA_on_cubeB and is_cubeA_static and (not is_cubeA_grasped)
 
         return {

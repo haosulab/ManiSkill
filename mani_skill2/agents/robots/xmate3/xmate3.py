@@ -6,7 +6,7 @@ from mani_skill2 import ASSET_DIR
 from mani_skill2.agents.base_agent import BaseAgent
 from mani_skill2.agents.controllers import *
 from mani_skill2.sensors.camera import CameraConfig
-from mani_skill2.utils.common import compute_angle_between
+from mani_skill2.utils.common import np_compute_angle_between
 from mani_skill2.utils.sapien_utils import (
     compute_total_impulse,
     get_actor_contacts,
@@ -64,15 +64,13 @@ class Xmate3Robotiq(BaseAgent):
         super().__init__(scene, control_freq, control_mode, fix_root_link)
 
     def _after_init(self):
-        self.finger1_link: sapien.Entity = get_obj_by_name(
+        self.finger1_link = get_obj_by_name(
             self.robot.get_links(), "left_inner_finger_pad"
-        ).entity
-        self.finger2_link: sapien.Entity = get_obj_by_name(
-            self.robot.get_links(), "right_inner_finger_pad"
-        ).entity
-        self.tcp: physx.PhysxArticulationLinkComponent = get_obj_by_name(
-            self.robot.get_links(), self.ee_link_name
         )
+        self.finger2_link = get_obj_by_name(
+            self.robot.get_links(), "right_inner_finger_pad"
+        )
+        self.tcp = get_obj_by_name(self.robot.get_links(), self.ee_link_name)
 
     @property
     def controller_configs(self):
@@ -193,8 +191,8 @@ class Xmate3Robotiq(BaseAgent):
             rdirection = -self.finger2_link.pose.to_transformation_matrix()[:3, 1]
 
             # angle between impulse and open direction
-            langle = compute_angle_between(ldirection, limpulse)
-            rangle = compute_angle_between(rdirection, rimpulse)
+            langle = np_compute_angle_between(ldirection, limpulse)
+            rangle = np_compute_angle_between(rdirection, rimpulse)
 
             lflag = (
                 np.linalg.norm(limpulse) >= min_impulse

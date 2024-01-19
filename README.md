@@ -30,8 +30,8 @@ Please refer to our [documentation](https://haosulab.github.io/ManiSkill2) to le
 From pip:
 
 ```bash
-# NOTE: This is a beta build at the moment. To install the beta build run
-pip install mani-skill2==0.6.0.dev3
+# This is temporary in order to install a in-dev version of sapien 3
+pip install manual_test/sapien-3.0.0.dev20240119+24d9146b-cp39-cp39-manylinux2014_x86_64.whl
 ```
 
 From github:

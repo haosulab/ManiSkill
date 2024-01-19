@@ -7,15 +7,17 @@ import sapien.render
 from sapien import Pose
 
 from mani_skill2.agents.base_agent import BaseAgent
+from mani_skill2.agents.robots.fetch import Fetch
 from mani_skill2.agents.robots.panda import Panda
 from mani_skill2.agents.robots.xmate3 import Xmate3Robotiq
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
-from mani_skill2.utils.sapien_utils import hide_entity, look_at, vectorize_pose
+from mani_skill2.utils.sapien_utils import hide_entity, look_at
+from mani_skill2.utils.structs.pose import vectorize_pose
 
 
 class StationaryManipulationEnv(BaseEnv):
-    agent: Union[Panda, Xmate3Robotiq]
+    agent: Union[Panda, Xmate3Robotiq, Fetch]
 
     def __init__(self, *args, robot_uid="panda", robot_init_qpos_noise=0.02, **kwargs):
         self.robot_init_qpos_noise = robot_init_qpos_noise
@@ -26,7 +28,7 @@ class StationaryManipulationEnv(BaseEnv):
         half_size,
         color=(1, 0, 0),
         name="cube",
-        static=False,
+        kinematic=False,
         render_material: sapien.render.RenderMaterial = None,
     ):
         if render_material is None:
@@ -36,8 +38,8 @@ class StationaryManipulationEnv(BaseEnv):
         builder = self._scene.create_actor_builder()
         builder.add_box_collision(half_size=half_size)
         builder.add_box_visual(half_size=half_size, material=render_material)
-        if static:
-            return builder.build_static(name)
+        if kinematic:
+            return builder.build_kinematic(name)
         return builder.build(name)
 
     def _build_sphere_site(self, radius, color=(0, 1, 0), name="goal_site"):
@@ -46,8 +48,7 @@ class StationaryManipulationEnv(BaseEnv):
         visual_mat = self._renderer.create_material()
         visual_mat.set_base_color([*color, 1])
         builder.add_sphere_visual(radius=radius, material=visual_mat)
-        sphere = builder.build_static(name)
-        hide_entity(sphere)
+        sphere = builder.build_kinematic(name)
         return sphere
 
     def _initialize_agent(self):
@@ -63,7 +64,7 @@ class StationaryManipulationEnv(BaseEnv):
                 0, self.robot_init_qpos_noise, len(qpos) - 2
             )
             self.agent.reset(qpos)
-            self.agent.robot.set_pose(Pose([-0.615, 0, 0]))
+            self.agent.robot.set_root_pose(sapien.Pose([-0.615, 0, 0]))
         elif self.robot_uid == "xmate3_robotiq":
             qpos = np.array(
                 [0, np.pi / 6, 0, np.pi / 3, 0, np.pi / 2, -np.pi / 2, 0, 0]
@@ -73,6 +74,26 @@ class StationaryManipulationEnv(BaseEnv):
             )
             self.agent.reset(qpos)
             self.agent.robot.set_pose(Pose([-0.562, 0, 0]))
+        elif self.robot_uid == "fetch":
+            # TODO (arth): Better fetch init
+            qpos = np.array(
+                [
+                    0.386,
+                    0,
+                    0,
+                    0,
+                    -np.pi / 4,
+                    0,
+                    np.pi / 4,
+                    0,
+                    np.pi / 3,
+                    0,
+                    0.015,
+                    0.015,
+                ]
+            )
+            self.agent.reset(qpos)
+            self.agent.robot.set_pose(Pose([-0.82, 0, -0.920]))
         else:
             raise NotImplementedError(self.robot_uid)
 
@@ -88,14 +109,14 @@ class StationaryManipulationEnv(BaseEnv):
                 0, self.robot_init_qpos_noise, len(qpos) - 2
             )
             self.agent.reset(qpos)
-            self.agent.robot.set_pose(Pose([-0.615, 0, 0]))
+            self.agent.robot.set_root_pose(sapien.Pose([-0.615, 0, 0]))
         elif self.robot_uid == "xmate3_robotiq":
             qpos = np.array([0, 0.6, 0, 1.3, 0, 1.3, -1.57, 0, 0])
             qpos[:-2] += self._episode_rng.normal(
                 0, self.robot_init_qpos_noise, len(qpos) - 2
             )
             self.agent.reset(qpos)
-            self.agent.robot.set_pose(Pose([-0.562, 0, 0]))
+            self.agent.robot.set_root_pose(sapien.Pose([-0.562, 0, 0]))
         else:
             raise NotImplementedError(self.robot_uid)
 
@@ -116,5 +137,5 @@ class StationaryManipulationEnv(BaseEnv):
 
     def _get_obs_agent(self):
         obs = self.agent.get_proprioception()
-        obs["base_pose"] = vectorize_pose(self.agent.robot.pose)
+        obs["base_pose"] = vectorize_pose(self.agent.robot.root_pose)
         return obs

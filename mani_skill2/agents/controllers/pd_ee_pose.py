@@ -3,11 +3,13 @@ from typing import Sequence, Union
 
 import numpy as np
 import sapien
+import sapien.physx as physx
 from gymnasium import spaces
 from scipy.spatial.transform import Rotation
 
 from mani_skill2.utils.common import clip_and_scale_action
-from mani_skill2.utils.sapien_utils import get_obj_by_name, vectorize_pose
+from mani_skill2.utils.sapien_utils import get_obj_by_name
+from mani_skill2.utils.structs.pose import vectorize_pose
 
 from .base_controller import BaseController, ControllerConfig
 from .pd_joint_pos import PDJointPosController
@@ -21,7 +23,11 @@ class PDEEPosController(PDJointPosController):
         super()._initialize_joints()
 
         # Pinocchio model to compute IK
-        self.pmodel = self.articulation.create_pinocchio_model()
+        # TODO (stao): Batched IK? https://curobo.org/source/getting_started/2a_python_examples.html#inverse-kinematics
+        if physx.is_gpu_enabled():
+            pass
+        else:
+            self.pmodel = self.articulation.create_pinocchio_model()
         self.qmask = np.zeros(self.articulation.dof, dtype=bool)
         self.qmask[self.joint_indices] = 1
 

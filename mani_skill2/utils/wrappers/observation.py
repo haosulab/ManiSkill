@@ -4,6 +4,7 @@ from typing import Sequence
 
 import gymnasium as gym
 import numpy as np
+import torch
 from gymnasium import spaces
 
 from mani_skill2.utils.common import (
@@ -65,9 +66,12 @@ class RGBDObservationWrapper(BaseGymObservationWrapper):
             for key in ori_images:
                 if key == "Color":
                     rgb = ori_images[key][..., :3]  # [H, W, 4]
-                    rgb = np.clip(rgb * 255, 0, 255).astype(np.uint8)
+                    if isinstance(rgb, np.ndarray):
+                        rgb = np.clip(rgb * 255, 0, 255).astype(np.uint8)
+                    else:
+                        rgb = rgb.clone()
                     new_images["rgb"] = rgb  # [H, W, 4]
-                elif key == "Position":
+                elif key == "PositionSegmentation":
                     depth = -ori_images[key][..., [2]]  # [H, W, 1]
                     new_images["depth"] = depth
                 else:

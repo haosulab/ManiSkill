@@ -6,7 +6,7 @@ from sapien import Pose
 from mani_skill2.agents.robots import Panda
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
-from mani_skill2.utils.sapien_utils import look_at, vectorize_pose
+from mani_skill2.utils.sapien_utils import look_at
 from mani_skill2.utils.scene_builder import SceneBuilder
 from mani_skill2.utils.scene_builder.ai2thor import (
     ArchitecTHORSceneBuilder,
@@ -14,6 +14,7 @@ from mani_skill2.utils.scene_builder.ai2thor import (
     RoboTHORSceneBuilder,
     iTHORSceneBuilder,
 )
+from mani_skill2.utils.structs.pose import vectorize_pose
 
 
 class SceneManipulationEnv(BaseEnv):

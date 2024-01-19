@@ -5,13 +5,15 @@ from pathlib import Path
 import gymnasium as gym
 import h5py
 import numpy as np
+import sapien.physx as physx
 from gymnasium import spaces
 
 from mani_skill2 import get_commit_info, logger
+from mani_skill2.utils.sapien_utils import to_numpy
 
 from ..common import extract_scalars_from_info, flatten_dict_keys
 from ..io_utils import dump_json
-from ..visualization.misc import images_to_video, put_info_on_image
+from ..visualization.misc import images_to_video, put_info_on_image, tile_images
 
 
 def parse_env_info(env: gym.Env):
@@ -72,6 +74,19 @@ def clean_trajectories(h5_file: h5py.File, json_dict: dict, prune_empty_action=T
         new_ep_id += 1
 
     json_dict["episodes"] = new_json_episodes
+
+
+def pack_step_data(state, obs, action, rew, terminated, truncated, info):
+    data = dict(
+        s=to_numpy(state) if state is not None else None,
+        o=copy.deepcopy(to_numpy(obs)) if obs is not None else None,
+        a=to_numpy(action) if action is not None else None,
+        r=to_numpy(rew) if rew is not None else None,
+        terminated=to_numpy(terminated) if terminated is not None else None,
+        truncated=to_numpy(truncated) if truncated is not None else None,
+        info=to_numpy(info),
+    )
+    return data
 
 
 class RecordEpisode(gym.Wrapper):
@@ -136,6 +151,11 @@ class RecordEpisode(gym.Wrapper):
         self.save_video = save_video
         self.info_on_video = info_on_video
         self._render_images = []
+        if info_on_video and physx.is_gpu_enabled():
+            raise ValueError(
+                "Cannot turn info_on_video=True when using GPU simulation as the text would be too small"
+            )
+        self.video_nrows = int(np.sqrt(self.unwrapped.num_envs))
 
         # Avoid circular import
         from mani_skill2.envs.mpm.base_env import MPMBaseEnv
@@ -145,6 +165,13 @@ class RecordEpisode(gym.Wrapper):
             logger.info("Soft-body (MPM) environment detected, record init_state only")
         else:
             self.init_state_only = False
+
+    def capture_image(self):
+        img = self.env.render()
+        img = to_numpy(img)
+        if len(img.shape) > 3:
+            img = tile_images(img, nrows=self.video_nrows)
+        return img
 
     def reset(self, **kwargs):
         if self.save_on_reset and self._episode_id >= 0:
@@ -165,15 +192,7 @@ class RecordEpisode(gym.Wrapper):
 
         if self.save_trajectory:
             state = self.env.unwrapped.get_state()
-            data = dict(
-                s=state,
-                o=copy.deepcopy(obs),
-                a=None,
-                r=None,
-                terminated=None,
-                truncated=None,
-                info=None,
-            )
+            data = pack_step_data(state, obs, None, None, None, None, None)
             self._episode_data.append(data)
             self._episode_info.update(
                 episode_id=self._episode_id,
@@ -184,7 +203,7 @@ class RecordEpisode(gym.Wrapper):
             )
 
         if self.save_video:
-            self._render_images.append(self.env.render())
+            self._render_images.append(self.capture_image())
 
         return obs, info
 
@@ -194,21 +213,13 @@ class RecordEpisode(gym.Wrapper):
 
         if self.save_trajectory:
             state = self.env.unwrapped.get_state()
-            data = dict(
-                s=state,
-                o=copy.deepcopy(obs),
-                a=action,
-                r=rew,
-                terminated=terminated,
-                truncated=truncated,
-                info=info,
-            )
+            data = pack_step_data(state, obs, action, rew, terminated, truncated, info)
             self._episode_data.append(data)
             self._episode_info["elapsed_steps"] += 1
-            self._episode_info["info"] = info
+            self._episode_info["info"] = to_numpy(info)
 
         if self.save_video:
-            image = self.env.render()
+            image = self.capture_image()
 
             if self.info_on_video:
                 scalar_info = extract_scalars_from_info(info)

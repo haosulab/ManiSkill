@@ -28,8 +28,8 @@ from mani_skill2.utils.sapien_utils import (
     hex2rgba,
     look_at,
     set_articulation_render_material,
-    vectorize_pose,
 )
+from mani_skill2.utils.structs.pose import vectorize_pose
 
 
 class TurnFaucetBaseEnv(BaseEnv):

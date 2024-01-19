@@ -19,8 +19,8 @@ from mani_skill2.utils.sapien_utils import (
     get_actor_state,
     get_articulation_padded_state,
     parse_urdf_config,
-    vectorize_pose,
 )
+from mani_skill2.utils.structs.pose import vectorize_pose
 
 
 class MS1BaseEnv(BaseEnv):
@@ -76,13 +76,6 @@ class MS1BaseEnv(BaseEnv):
     # -------------------------------------------------------------------------- #
     # Reset
     # -------------------------------------------------------------------------- #
-    def _get_default_scene_config(self):
-        scene_config = super()._get_default_scene_config()
-        # Legacy setting
-        # scene_config.default_dynamic_friction = 0.5
-        # scene_config.default_static_friction = 0.5
-        return scene_config
-
     def reset(self, seed=None, options=None):
         if options is None:
             options = dict()

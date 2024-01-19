@@ -5,7 +5,7 @@ import sapien
 import sapien.physx as physx
 
 from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import vectorize_pose
+from mani_skill2.utils.structs.pose import vectorize_pose
 
 from .base_env import SceneManipulationEnv
 

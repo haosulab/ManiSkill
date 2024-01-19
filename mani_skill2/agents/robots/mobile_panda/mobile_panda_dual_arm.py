@@ -290,6 +290,9 @@ class MobilePandaDualArm(DummyMobileAgent):
         # Make a deepcopy in case users modify any config
         return deepcopy_dict(controller_configs)
 
+    # TODO (stao): Remove this @property and make sensor configs completely statically defined.
+    # The expectation is that a robot should not physically ever be changed usually. If you do
+    # want to adapt the robot, you should inherit a robot class and make appropriate changes
     @property
     def sensor_configs(self):
         sensors = []

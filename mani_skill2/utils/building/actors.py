@@ -13,19 +13,33 @@ import sapien.render
 import transforms3d
 
 from mani_skill2 import ASSET_DIR
+from mani_skill2.envs.scene import ManiSkillScene
+from mani_skill2.utils.building.actor_builder import ActorBuilder
 from mani_skill2.utils.io_utils import load_json
 
 # map model dataset to a database of models
 model_dbs: Dict[str, Dict[str, Dict]] = {}
 
 
+def _build_by_type(builder: ActorBuilder, name, body_type):
+    if body_type == "dynamic":
+        actor = builder.build(name=name)
+    elif body_type == "static":
+        actor = builder.build_static(name=name)
+    elif body_type == "kinematic":
+        actor = builder.build_kinematic(name=name)
+    else:
+        raise ValueError(f"Unknown body type {body_type}")
+    return actor
+
+
 # Primitive Shapes
 def build_cube(
-    scene: sapien.Scene,
+    scene: ManiSkillScene,
     half_size: float,
     color,
     name: str,
-    dynamic: bool = True,
+    body_type: str = "dynamic",
     add_collision: bool = True,
 ):
     builder = scene.create_actor_builder()
@@ -39,19 +53,15 @@ def build_cube(
             base_color=color,
         ),
     )
-    if dynamic:
-        actor = builder.build(name=name)
-    else:
-        actor = builder.build_static(name=name)
-    return actor
+    return _build_by_type(builder, name, body_type)
 
 
 def build_box(
-    scene: sapien.Scene,
+    scene: ManiSkillScene,
     half_sizes,
     color,
     name: str,
-    dynamic: bool = True,
+    body_type: str = "dynamic",
     add_collision: bool = True,
 ):
     builder = scene.create_actor_builder()
@@ -65,19 +75,15 @@ def build_box(
             base_color=color,
         ),
     )
-    if dynamic:
-        actor = builder.build(name=name)
-    else:
-        actor = builder.build_static(name=name)
-    return actor
+    return _build_by_type(builder, name, body_type)
 
 
 def build_sphere(
-    scene: sapien.Scene,
+    scene: ManiSkillScene,
     radius: float,
     color,
     name: str,
-    dynamic: bool = True,
+    body_type: str = "dynamic",
     add_collision: bool = True,
 ):
     builder = scene.create_actor_builder()
@@ -91,21 +97,76 @@ def build_sphere(
             base_color=color,
         ),
     )
-    if dynamic:
-        actor = builder.build(name=name)
-    else:
-        actor = builder.build_static(name=name)
-    return actor
+    return _build_by_type(builder, name, body_type)
+
+
+def build_red_white_target(
+    scene: ManiSkillScene,
+    radius: float,
+    thickness: float,
+    name: str,
+    body_type: str = "dynamic",
+    add_collision: bool = True,
+):
+    TARGET_RED = np.array([194, 19, 22, 255]) / 255
+    builder = scene.create_actor_builder()
+    builder.add_cylinder_visual(
+        radius=radius,
+        half_length=thickness / 2,
+        material=sapien.render.RenderMaterial(base_color=TARGET_RED),
+    )
+    builder.add_cylinder_visual(
+        radius=radius * 4 / 5,
+        half_length=thickness / 2 + 1e-5,
+        material=sapien.render.RenderMaterial(base_color=[1, 1, 1, 1]),
+    )
+    builder.add_cylinder_visual(
+        radius=radius * 3 / 5,
+        half_length=thickness / 2 + 2e-5,
+        material=sapien.render.RenderMaterial(base_color=TARGET_RED),
+    )
+    builder.add_cylinder_visual(
+        radius=radius * 2 / 5,
+        half_length=thickness / 2 + 3e-5,
+        material=sapien.render.RenderMaterial(base_color=[1, 1, 1, 1]),
+    )
+    builder.add_cylinder_visual(
+        radius=radius * 1 / 5,
+        half_length=thickness / 2 + 4e-5,
+        material=sapien.render.RenderMaterial(base_color=TARGET_RED),
+    )
+    if add_collision:
+        builder.add_cylinder_collision(
+            radius=radius,
+            half_length=thickness / 2,
+        )
+        builder.add_cylinder_collision(
+            radius=radius * 4 / 5,
+            half_length=thickness / 2 + 1e-5,
+        )
+        builder.add_cylinder_collision(
+            radius=radius * 3 / 5,
+            half_length=thickness / 2 + 2e-5,
+        )
+        builder.add_cylinder_collision(
+            radius=radius * 2 / 5,
+            half_length=thickness / 2 + 3e-5,
+        )
+        builder.add_cylinder_collision(
+            radius=radius * 1 / 5,
+            half_length=thickness / 2 + 4e-5,
+        )
+    return _build_by_type(builder, name, body_type)
 
 
 def build_twocolor_peg(
-    scene: sapien.Scene,
+    scene: ManiSkillScene,
     length,
     width,
     color_1,
     color_2,
     name: str,
-    dynamic: bool = True,
+    body_type="dynamic",
     add_collision: bool = True,
 ):
     builder = scene.create_actor_builder()
@@ -127,11 +188,7 @@ def build_twocolor_peg(
             base_color=color_2,
         ),
     )
-    if dynamic:
-        actor = builder.build(name=name)
-    else:
-        actor = builder.build_static(name=name)
-    return actor
+    return _build_by_type(builder, name, body_type)
 
 
 RED_COLOR = [220 / 255, 12 / 255, 12 / 255, 1]
@@ -140,7 +197,7 @@ GREEN_COLOR = [17 / 255, 190 / 255, 70 / 255, 1]
 
 
 def build_fourcolor_peg(
-    scene: sapien.Scene,
+    scene: ManiSkillScene,
     length,
     width,
     name: str,
@@ -148,7 +205,7 @@ def build_fourcolor_peg(
     color_2=BLUE_COLOR,
     color_3=GREEN_COLOR,
     color_4=[1, 1, 1, 1],
-    dynamic: bool = True,
+    body_type="dynamic",
     add_collision: bool = True,
 ):
     """
@@ -187,17 +244,13 @@ def build_fourcolor_peg(
             base_color=color_4,
         ),
     )
-    if dynamic:
-        actor = builder.build(name=name)
-    else:
-        actor = builder.build_static(name=name)
-    return actor
+    return _build_by_type(builder, name, body_type)
 
 
 ### Load individual assets ###
 
 
-def build_actor(model_id: str, scene: sapien.Scene, name: str):
+def build_actor(model_id: str, scene: ManiSkillScene, name: str):
     # TODO (stao): parse model id and determine from which dataset to pull asset from
     # e.g. YCB or our own sapien asset database in the future
     pass
@@ -208,9 +261,11 @@ def build_actor(model_id: str, scene: sapien.Scene, name: str):
 
 def build_actor_ycb(
     model_id: str,
-    scene: sapien.Scene,
+    scene: ManiSkillScene,
     name: str,
     root_dir=ASSET_DIR / "mani_skill2_ycb",
+    body_type: str = "dynamic",
+    add_collision: bool = True
 ):
     if "YCB" not in model_dbs:
         _load_ycb_dataset()
@@ -218,25 +273,26 @@ def build_actor_ycb(
 
     builder = scene.create_actor_builder()
 
-    density = model_db[model_id].get("density", 1000)
-    model_scales = model_db[model_id].get("scales", [1.0])
+    metadata = model_db[model_id]
+    density = metadata.get("density", 1000)
+    model_scales = metadata.get("scales", [1.0])
     scale = model_scales[0]
     physical_material = None
-
+    height = (metadata["bbox"]["max"][2] - metadata["bbox"]["min"][2]) * scale
     model_dir = Path(root_dir) / "models" / model_id
-    collision_file = str(model_dir / "collision.obj")
-    builder.add_multiple_convex_collisions_from_file(
-        filename=collision_file,
-        scale=[scale] * 3,
-        material=physical_material,
-        density=density,
-        decomposition="coacd",
+    if add_collision:
+        collision_file = str(model_dir / "collision.ply")
+        builder.add_multiple_convex_collisions_from_file(
+            filename=collision_file,
+            scale=[scale] * 3,
+            material=physical_material,
+            density=density,
+            decomposition="coacd",
     )
 
     visual_file = str(model_dir / "textured.obj")
     builder.add_visual_from_file(filename=visual_file, scale=[scale] * 3)
-    actor = builder.build(name=name)
-    return actor
+    return _build_by_type(builder, name, body_type), height
 
 
 def _load_ycb_dataset():
@@ -252,7 +308,7 @@ def _load_ycb_dataset():
 
 def build_actor_ai2(
     model_id: str,
-    scene: sapien.Scene,
+    scene: ManiSkillScene,
     name: str,
     kinematic: bool = False,
     set_object_on_ground=True,

@@ -24,6 +24,7 @@ def get_active_joint_indices(
     return joint_indices
 
 
+# TODO (stao): this is not used i believe, should we remove?
 def get_joints(articulation: physx.PhysxArticulation, joint_names: Sequence[str]):
     joints = articulation.get_joints()
     joint_indices = get_joint_indices(articulation, joint_names)
