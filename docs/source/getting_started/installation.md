@@ -1,5 +1,7 @@
 # Installation
 
+ManiSkill is a GPU-accelerated robotics benchmark built on top of [SAPIEN](https://github.com/haosulab/sapien) designed to support a wide array of applications from robot learning, learning from demonstrations, sim2real/real2sim, and more. Follow the instructions below to get started using ManiSkill.
+
 From pip (stable version):
 
 ```bash
@@ -21,7 +23,7 @@ cd ManiSkill2 && pip install -e .
 ```
 
 :::{note}
-A GPU with the Vulkan driver installed is required to enable rendering in ManiSkill2. See [here](vulkan) for how to install and configure Vulkan on Ubuntu.
+While state-based simulation does not require any additional dependencies, a GPU with the Vulkan driver installed is required to enable rendering in ManiSkill. See [here](#vulkan) for how to install and configure Vulkan on Ubuntu.
 :::
 
 The rigid-body environments, powered by SAPIEN, are ready to use after installation. Test your installation:
@@ -32,9 +34,9 @@ The rigid-body environments, powered by SAPIEN, are ready to use after installat
 python -m mani_skill2.examples.demo_random_action
 ```
 
-Besides, we provide a docker image (`haosulab/mani-skill2`) on [Docker Hub](https://hub.docker.com/repository/docker/haosulab/mani-skill2/general), and its corresponding [Dockerfile](https://github.com/haosulab/ManiSkill2/blob/main/docker/Dockerfile).
+A docker image is also provided on [Docker Hub](https://hub.docker.com/repository/docker/haosulab/mani-skill2/general) called  `haosulab/mani-skill2` and its corresponding [Dockerfile](https://github.com/haosulab/ManiSkill2/blob/main/docker/Dockerfile).
 
-## Warp (ManiSkill2-version)
+## Soft-body environments / Warp (ManiSkill2-version)
 
 :::{note}
 The following section is to install [NVIDIA Warp](https://github.com/NVIDIA/warp) for soft-body environments. You can skip it if you do not need soft-body environments yet.
