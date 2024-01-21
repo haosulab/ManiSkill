@@ -180,8 +180,8 @@ class Fetch(BaseAgent):
         # -------------------------------------------------------------------------- #
         body_pd_joint_pos = PDJointPosControllerConfig(
             self.body_joint_names,
-            # None,
-            # None,
+            None,
+            None,
             self.body_stiffness,
             self.body_damping,
             self.body_force_limit,
