@@ -1,9 +1,14 @@
+import os
+
 import numpy as np
 import torch
 import torch.nn as nn
-from eval import evaluate
-from model import ConditionalUnet1D
 from tqdm import tqdm
+
+from mani_skill2.utils.wrappers import RecordEpisode
+
+from .evaluate import evaluate
+from .model import ConditionalUnet1D
 
 
 def train(
@@ -24,6 +29,7 @@ def train(
             wandb.log(output)
 
     log = {}
+    noise_pred_net.train()
     for epoch in tqdm(range(config["n_epochs"])):
         epoch_loss = []
         for batch in dataloader:
@@ -62,17 +68,34 @@ def train(
             epoch_loss.append(loss_cpu)
 
         if epoch % config["eval_interval"] == 0 and epoch > 0:
+            ema_noise_pred_net = noise_pred_net
+            ema.copy_to(ema_noise_pred_net.parameters())
             log["training/epoch_loss_mean"] = np.mean(np.array(epoch_loss))
             log["training/epoch_loss_std"] = np.std(np.array(epoch_loss))
             s, r = evaluate(
-                noise_pred_net,
-                env,
-                config["num_eval_eps"],
-                config["eval_ep_len"],
-                config["pred_horizon"],
+                ema_noise_pred_net, env, noise_scheduler, config, config["device"]
             )
             log["eval/success_rate"] = sum(np.array(s)) / len(s)
             log["eval/reward_avg"] = np.mean(np.array(r))
             log["eval/reward_std"] = np.std(np.array(r))
             if config["wandb"]:
                 log_fn(log)
+    ema_noise_pred_net = noise_pred_net
+    ema.copy_to(ema_noise_pred_net.parameters())
+
+    if config["video"]:
+        video_env = RecordEpisode(env, "./videos", info_on_video=True)
+        evaluate(
+            ema_noise_pred_net, video_env, noise_scheduler, config, config["device"]
+        )
+        video_env.flush_video()
+        if config["wandb"]:
+            wandb.log({f"video_{config['env']}": wandb.Video("./videos/0.mp4")})
+
+    if config["save_weights"]:
+        torch.save(
+            ema_noise_pred_net.state_dict(),
+            os.path.join(wandb.run.dir, f"weights_{config['env']}.pt"),
+        )
+        if config["wandb"]:
+            wandb.save(f"weights_{config['env']}.pt")

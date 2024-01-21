@@ -1,5 +1,6 @@
 import h5py
 import numpy as np
+import torch
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
@@ -62,12 +63,12 @@ def sample_sequence(
 
 
 class ManiSkill2Dataset(Dataset):
-    def __init__(self, dataset_file: str, pred_horizon, config, load_count=-1) -> None:
-        self.dataset_file = dataset_file
+    def __init__(self, config, load_count=-1) -> None:
+        self.dataset_file = config["dataset"]
         # for details on how the code below works, see the
         # quick start tutorial
-        self.data = h5py.File(dataset_file, "r")
-        json_path = dataset_file.replace(".h5", ".json")
+        self.data = h5py.File(config["dataset"], "r")
+        json_path = config["dataset"].replace(".h5", ".json")
         self.json_data = load_json(json_path)
         self.episodes = self.json_data["episodes"]
 
@@ -92,7 +93,6 @@ class ManiSkill2Dataset(Dataset):
             self.observations.append(trajectory["obs"][:-1])
             self.actions.append(trajectory["actions"])
             # print(trajectory.keys())
-        end = 0
         ends = [action.shape[0] for action in self.actions]
         self.action_space = self.actions[0].shape[-1]
         self.obs_space = self.observations[0].shape[-1]
@@ -100,11 +100,11 @@ class ManiSkill2Dataset(Dataset):
         self.episode_ends = np.array(ends)
         self.inds = create_sample_indices(
             self.episode_ends,
-            pred_horizon,
+            config["pred_horizon"],
             config["obs_horizon"] - 1,
             config["action_horizon"] - 1,
         )
-        self.pred_horizon = pred_horizon
+        self.pred_horizon = config["pred_horizon"]
         self.obs_horizon = config["obs_horizon"]
 
         # self.rewards = np.vstack(self.rewards)
@@ -121,4 +121,6 @@ class ManiSkill2Dataset(Dataset):
         action = sample_sequence(self.actions, self.pred_horizon, *self.inds[idx])
         obs = sample_sequence(self.observations, self.pred_horizon, *self.inds[idx])
 
-        return action, obs[: self.obs_horizon, :]
+        return torch.from_numpy(action).to(torch.float32), torch.from_numpy(
+            obs[: self.obs_horizon, :]
+        ).to(torch.float32)

@@ -2,12 +2,14 @@ import collections
 
 import numpy as np
 import torch
-from model import ConditionalUnet1D
+
+from .model import ConditionalUnet1D
 
 
 def evaluate(model: ConditionalUnet1D, env, noise_scheduler, config, device):
     r = []
     s = []
+    model.eval()
 
     for _ in range(config["num_eval_eps"]):
         obs, info = env.reset()
@@ -21,12 +23,11 @@ def evaluate(model: ConditionalUnet1D, env, noise_scheduler, config, device):
             obs_seq = np.stack(obs_deque)
 
             with torch.no_grad():
-                model.eval()
                 noisy_action = torch.randn(
                     (1, config["pred_horizon"], config["action_dim"]),
                     device=config["device"],
                 )
-                obs = torch.from_numpy(obs_seq).to(device=device)
+                obs = torch.from_numpy(obs_seq).to(device=device, dtype=torch.float32)
                 obs = obs.unsqueeze(0).flatten(1)
                 noise_scheduler.set_timesteps(config["num_diffusion_iters"])
                 for k in noise_scheduler.timesteps:
@@ -49,4 +50,5 @@ def evaluate(model: ConditionalUnet1D, env, noise_scheduler, config, device):
                     steps += 1
         s.append(info["success"])
         r.append(sum(rewards) / len(rewards))
+    model.train()
     return s, r
