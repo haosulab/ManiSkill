@@ -34,6 +34,10 @@ class Joint(BaseStruct[physx.PhysxJointComponent]):
     _data_index: slice = None
     name: str = None
 
+    # TODO (arth): might need better hash in future but this is fine for now
+    def __hash__(self):
+        return hash(self.name)
+
     @classmethod
     def create(
         cls,
@@ -210,7 +214,9 @@ class Joint(BaseStruct[physx.PhysxJointComponent]):
 
     @drive_velocity_target.setter
     def drive_velocity_target(self, arg1: Array) -> None:
+        print('before totensor', arg1)
         arg1 = to_tensor(arg1)
+        print('after totensor', arg1)
         if physx.is_gpu_enabled():
             raise NotImplementedError(
                 "Cannot set drive velocity targets at the moment in GPU simulation"
