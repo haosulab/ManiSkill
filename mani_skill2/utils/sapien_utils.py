@@ -20,10 +20,7 @@ from mani_skill2.utils.structs.types import Array, get_backend_name
 
 def to_tensor(array: Union[torch.Tensor, np.array, Sequence]):
     """
-    Maps any given sequence to the appropriate tensor for the appropriate backend
-
-    Note that all torch tensors are always moved to the GPU. There is generally no reason for them to ever be on the CPU as
-    GPU simulation is the only time torch is used in ManiSkill and thus all tensors from the simulation are on cuda devices
+    Maps any given sequence to a torch tensor on the CPU/GPU. If physx gpu is not enabled then we use CPU, otherwise GPU.
     """
     if get_backend_name() == "torch":
         if isinstance(array, np.ndarray):
