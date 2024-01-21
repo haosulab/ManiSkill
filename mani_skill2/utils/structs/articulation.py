@@ -271,8 +271,8 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     @qf.setter
     def qf(self, arg1):
-        arg1 = to_tensor(arg1)
         if physx.is_gpu_enabled():
+            arg1 = to_tensor(arg1)
             self.px.cuda_articulation_qf[self._data_index, : self.dof] = arg1
         else:
             self._objs[0].qf = arg1
@@ -294,8 +294,8 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     @qpos.setter
     def qpos(self, arg1):
-        arg1 = to_tensor(arg1)
         if physx.is_gpu_enabled():
+            arg1 = to_tensor(arg1)
             self.px.cuda_articulation_qpos[self._data_index, : self.dof] = arg1
         else:
             self._objs[0].qpos = arg1
@@ -309,8 +309,8 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     @qvel.setter
     def qvel(self, arg1):
-        arg1 = to_tensor(arg1)
         if physx.is_gpu_enabled():
+            arg1 = to_tensor(arg1)
             self.px.cuda_articulation_qvel[self._data_index, : self.dof] = arg1
         else:
             self._objs[0].qvel = arg1
