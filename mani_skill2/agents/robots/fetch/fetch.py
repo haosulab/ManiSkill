@@ -34,6 +34,7 @@ class Fetch(BaseAgent):
             ),
         ),
     )
+    sensor_configs = []
 
     def __init__(self, *args, **kwargs):
         self.arm_joint_names = [
@@ -312,22 +313,6 @@ class Fetch(BaseAgent):
         T[:3, :3] = np.stack([ortho, closing, approaching], axis=1)
         T[:3, 3] = center
         return sapien.Pose(T)
-
-    @property
-    def sensor_configs(self):
-        return [
-            CameraConfig(
-                uid="fetch_head",
-                p=[0, 0, 0],
-                q=[0.9238795, 0, 0.3826834, 0],
-                width=128,
-                height=128,
-                fov=1.57,
-                near=0.01,
-                far=10,
-                entity_uid="head_camera_link",
-            )
-        ]
     
     @property
     def tcp_pose(self) -> sapien.Pose:
