@@ -252,13 +252,11 @@ if __name__ == "__main__":
 
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
-    # wrappers = [gym.wrappers.RecordEpisodeStatistics, gym.wrappers.ClipAction,]
+    wrappers = [gym.wrappers.RecordEpisodeStatistics, gym.wrappers.ClipAction,]
     envs = mani_skill2.vector.make(
-            args.env_id, args.num_envs, obs_mode='rgbd', reward_mode='dense', control_mode=args.control_mode, #wrappers=wrappers, # camera_cfgs=cam_cfg,
+            args.env_id, args.num_envs, obs_mode='rgbd', reward_mode='dense', control_mode=args.control_mode, wrappers=wrappers, # camera_cfgs=cam_cfg,
     )
     envs.is_vector_env = True
-    envs = gym.wrappers.ClipAction(envs)
-    envs = gym.wrappers.RecordEpisodeStatistics(envs)
     envs = VisualEncoder(envs, encoder='r3m')
     envs = AutoResetVecEnvWrapper(envs)
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
