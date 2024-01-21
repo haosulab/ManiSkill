@@ -191,8 +191,8 @@ class Joint(BaseStruct[physx.PhysxJointComponent]):
 
     @drive_target.setter
     def drive_target(self, arg1: Array) -> None:
-        arg1 = to_tensor(arg1)
         if physx.is_gpu_enabled():
+            arg1 = to_tensor(arg1)
             raise NotImplementedError(
                 "Setting drive targets of individual joints is not implemented yet."
             )
@@ -214,10 +214,8 @@ class Joint(BaseStruct[physx.PhysxJointComponent]):
 
     @drive_velocity_target.setter
     def drive_velocity_target(self, arg1: Array) -> None:
-        print('before totensor', arg1)
-        arg1 = to_tensor(arg1)
-        print('after totensor', arg1)
         if physx.is_gpu_enabled():
+            arg1 = to_tensor(arg1)
             raise NotImplementedError(
                 "Cannot set drive velocity targets at the moment in GPU simulation"
             )
@@ -254,7 +252,6 @@ class Joint(BaseStruct[physx.PhysxJointComponent]):
 
     @limits.setter
     def limits(self, arg1: Array) -> None:
-        arg1 = to_tensor(arg1)
         for joint in self._objs:
             joint.limits = arg1
 
