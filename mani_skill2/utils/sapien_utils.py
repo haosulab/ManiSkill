@@ -37,9 +37,11 @@ def to_tensor(array: Union[torch.Tensor, np.array, Sequence]):
             return torch.Tensor(array).cuda()
     elif get_backend_name() == "numpy":
         if isinstance(array, np.ndarray):
-            return torch.from_numpy(array)
+            return array
+        elif isinstance(array, torch.Tensor):
+            return array.cpu().numpy()
         else:
-            return torch.tensor(array)
+            return np.array(array)
 
 
 def to_numpy(array: Union[Array, Sequence]):
