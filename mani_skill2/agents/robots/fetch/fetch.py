@@ -8,7 +8,7 @@ from mani_skill2 import PACKAGE_ASSET_DIR
 from mani_skill2.agents.base_agent import BaseAgent
 from mani_skill2.agents.controllers import *
 from mani_skill2.sensors.camera import CameraConfig
-from mani_skill2.utils.common import np_compute_angle_between
+from mani_skill2.utils.common import compute_angle_between
 from mani_skill2.utils.sapien_utils import (
     compute_total_impulse,
     get_actor_contacts,
@@ -16,6 +16,7 @@ from mani_skill2.utils.sapien_utils import (
     get_pairwise_contact_impulse,
 )
 
+FETCH_UNIQUE_COLLISION_BIT = 1 << 30
 
 class Fetch(BaseAgent):
     uid = "fetch"
@@ -66,6 +67,12 @@ class Fetch(BaseAgent):
         self.body_stiffness = 1e3
         self.body_damping = 1e2
         self.body_force_limit = 100
+
+        self.base_joint_names = [
+            "root_x_axis_joint",
+            "root_y_axis_joint",
+            "root_z_rotation_joint",
+        ]
 
         super().__init__(*args, **kwargs)
 
@@ -173,71 +180,61 @@ class Fetch(BaseAgent):
         # -------------------------------------------------------------------------- #
         body_pd_joint_pos = PDJointPosControllerConfig(
             self.body_joint_names,
-            None,
-            None,
+            # None,
+            # None,
             self.body_stiffness,
             self.body_damping,
             self.body_force_limit,
             normalize_action=False,
         )
 
+        # -------------------------------------------------------------------------- #
+        # Base
+        # -------------------------------------------------------------------------- #
+        base_pd_joint_vel = PDBaseVelControllerConfig(
+            self.base_joint_names,
+            lower=[-0.5, -0.5, -3.14],
+            upper=[0.5, 0.5, 3.14],
+            damping=1000,
+            force_limit=500,
+        )
+
+
         controller_configs = dict(
             pd_joint_delta_pos=dict(
-                arm=arm_pd_joint_delta_pos,
-                gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                arm=arm_pd_joint_delta_pos, gripper=gripper_pd_joint_pos, body=body_pd_joint_pos, base=base_pd_joint_vel,
             ),
             pd_joint_pos=dict(
-                arm=arm_pd_joint_pos,
-                gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                arm=arm_pd_joint_pos, gripper=gripper_pd_joint_pos, body=body_pd_joint_pos, base=base_pd_joint_vel,
             ),
             pd_ee_delta_pos=dict(
-                arm=arm_pd_ee_delta_pos,
-                gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                arm=arm_pd_ee_delta_pos, gripper=gripper_pd_joint_pos, body=body_pd_joint_pos, base=base_pd_joint_vel,
             ),
             pd_ee_delta_pose=dict(
-                arm=arm_pd_ee_delta_pose,
-                gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                arm=arm_pd_ee_delta_pose, gripper=gripper_pd_joint_pos, body=body_pd_joint_pos, base=base_pd_joint_vel,
             ),
             pd_ee_delta_pose_align=dict(
-                arm=arm_pd_ee_delta_pose_align,
-                gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                arm=arm_pd_ee_delta_pose_align, gripper=gripper_pd_joint_pos, body=body_pd_joint_pos, base=base_pd_joint_vel,
             ),
             # TODO(jigu): how to add boundaries for the following controllers
             pd_joint_target_delta_pos=dict(
-                arm=arm_pd_joint_target_delta_pos,
-                gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                arm=arm_pd_joint_target_delta_pos, gripper=gripper_pd_joint_pos, body=body_pd_joint_pos, base=base_pd_joint_vel,
             ),
             pd_ee_target_delta_pos=dict(
-                arm=arm_pd_ee_target_delta_pos,
-                gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                arm=arm_pd_ee_target_delta_pos, gripper=gripper_pd_joint_pos, body=body_pd_joint_pos, base=base_pd_joint_vel,
             ),
             pd_ee_target_delta_pose=dict(
-                arm=arm_pd_ee_target_delta_pose,
-                gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                arm=arm_pd_ee_target_delta_pose, gripper=gripper_pd_joint_pos, body=body_pd_joint_pos, base=base_pd_joint_vel,
             ),
             # Caution to use the following controllers
             pd_joint_vel=dict(
-                arm=arm_pd_joint_vel,
-                gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                arm=arm_pd_joint_vel, gripper=gripper_pd_joint_pos, body=body_pd_joint_pos, base=base_pd_joint_vel,
             ),
             pd_joint_pos_vel=dict(
-                arm=arm_pd_joint_pos_vel,
-                gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                arm=arm_pd_joint_pos_vel, gripper=gripper_pd_joint_pos, body=body_pd_joint_pos, base=base_pd_joint_vel,
             ),
             pd_joint_delta_pos_vel=dict(
-                arm=arm_pd_joint_delta_pos_vel,
-                gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                arm=arm_pd_joint_delta_pos_vel, gripper=gripper_pd_joint_pos, body=body_pd_joint_pos, base=base_pd_joint_vel,
             ),
         )
 
@@ -245,13 +242,31 @@ class Fetch(BaseAgent):
         return deepcopy_dict(controller_configs)
 
     def _after_init(self):
-        self.finger1_link = get_obj_by_name(
+        self.finger1_link: sapien.Entity = get_obj_by_name(
             self.robot.get_links(), "l_gripper_finger_link"
-        )
-        self.finger2_link = get_obj_by_name(
+        ).entity
+        self.finger2_link: sapien.Entity = get_obj_by_name(
             self.robot.get_links(), "r_gripper_finger_link"
+        ).entity
+        self.tcp: physx.PhysxArticulationLinkComponent = get_obj_by_name(
+            self.robot.get_links(), self.ee_link_name
         )
-        self.tcp = get_obj_by_name(self.robot.get_links(), self.ee_link_name)
+
+        self.base_link: physx.PhysxArticulationLinkComponent = get_obj_by_name(
+            self.robot.get_links(), "base_link"
+        )
+        self.l_wheel_link: physx.PhysxArticulationLinkComponent = get_obj_by_name(
+            self.robot.get_links(), "l_wheel_link"
+        )
+        self.r_wheel_link: physx.PhysxArticulationLinkComponent = get_obj_by_name(
+            self.robot.get_links(), "r_wheel_link"
+        )
+
+        for link in [self.base_link, self.l_wheel_link, self.r_wheel_link]:
+            cs = link.get_collision_shapes()[0]
+            cg = cs.get_collision_groups()
+            cg[2] = FETCH_UNIQUE_COLLISION_BIT
+            cs.set_collision_groups(cg)
 
     def is_grasping(self, object: sapien.Entity = None, min_impulse=1e-6, max_angle=85):
         contacts = self.scene.get_contacts()
@@ -272,8 +287,8 @@ class Fetch(BaseAgent):
             rdirection = self.finger2_link.pose.to_transformation_matrix()[:3, 1]
 
             # angle between impulse and open direction
-            langle = np_compute_angle_between(ldirection, limpulse)
-            rangle = np_compute_angle_between(rdirection, rimpulse)
+            langle = compute_angle_between(ldirection, limpulse)
+            rangle = compute_angle_between(rdirection, rimpulse)
 
             lflag = (
                 np.linalg.norm(limpulse) >= min_impulse
@@ -313,7 +328,9 @@ class Fetch(BaseAgent):
                 entity_uid="head_camera_link",
             )
         ]
-
+    
     @property
-    def tcp_pose_p(self):
-        return (self.finger1_link.pose.p + self.finger2_link.pose.p) / 2
+    def tcp_pose(self) -> sapien.Pose:
+        p = (self.finger1_link.pose.p + self.finger2_link.pose.p) / 2
+        q = (self.finger1_link.pose.q + self.finger2_link.pose.q) / 2
+        return sapien.Pose(p=p, q=q)
