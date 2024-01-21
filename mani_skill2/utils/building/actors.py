@@ -265,7 +265,7 @@ def build_actor_ycb(
     name: str,
     root_dir=ASSET_DIR / "mani_skill2_ycb",
     body_type: str = "dynamic",
-    add_collision: bool = True
+    add_collision: bool = True,
 ):
     if "YCB" not in model_dbs:
         _load_ycb_dataset()
@@ -288,7 +288,7 @@ def build_actor_ycb(
             material=physical_material,
             density=density,
             decomposition="coacd",
-    )
+        )
 
     visual_file = str(model_dir / "textured.obj")
     builder.add_visual_from_file(filename=visual_file, scale=[scale] * 3)
