@@ -36,14 +36,17 @@ class PickCubeEnv(StationaryManipulationEnv):
         xyz = np.zeros((self.num_envs, 3))
         xyz[..., :2] = self._episode_rng.uniform(-0.1, 0.1, [self.num_envs, 2])
         xyz[..., 2] = self.cube_half_size[2]
-        q = [1, 0, 0, 0]
+        qs = [1, 0, 0, 0]
         if self.obj_init_rot_z:
-            ori = self._episode_rng.uniform(0, 2 * np.pi)
-            q = euler2quat(0, 0, ori)
-
+            qs = []
+            for i in range(self.num_envs):
+                ori = self._episode_rng.uniform(0, 2 * np.pi)
+                q = euler2quat(0, 0, ori)
+                qs.append(q)
+            qs = to_tensor(qs)
         # to set a batch of poses, use the Pose object or provide a raw tensor
         obj_pose = Pose.create_from_pq(
-            p=xyz, q=np.array(q)[None, :].repeat(self.num_envs, axis=0)
+            p=xyz, q=qs
         )
 
         self.obj.set_pose(obj_pose)
@@ -124,7 +127,7 @@ class PickCubeEnv(StationaryManipulationEnv):
         static_reward = 1 - torch.tanh(
             5 * torch.linalg.norm(self.agent.robot.get_qvel()[..., :-2], axis=1)
         )
-        reward += static_reward * info["is_robot_static"] * info["is_grasped"]
+        reward += static_reward * info["is_obj_placed"] * info["is_grasped"]
 
         reward[info["success"]] = 5
 
