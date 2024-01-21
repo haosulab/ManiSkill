@@ -79,7 +79,9 @@ class PickSingleEnv(StationaryManipulationEnv):
         pass
 
     def _load_actors(self):
-        self.table_scene = TableSceneBuilder(env=self, robot_init_qpos_noise=self.robot_init_qpos_noise)
+        self.table_scene = TableSceneBuilder(
+            env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
+        )
         self.table_scene.build()
         self._load_model()
         self.obj.set_linear_damping(0.1)
@@ -246,7 +248,7 @@ class PickSingleEnv(StationaryManipulationEnv):
             obj_to_goal_pos=obj_to_goal_pos,
             is_obj_placed=is_obj_placed,
             is_robot_static=is_robot_static,
-            success=torch.logical_and(is_obj_placed, is_robot_static)
+            success=torch.logical_and(is_obj_placed, is_robot_static),
         )
 
     def compute_dense_reward(self, obs, action, info):
@@ -254,7 +256,6 @@ class PickSingleEnv(StationaryManipulationEnv):
         # We changed the original complex reward to simple reward,
         # since the original reward can be unfriendly for RL,
         # even though MPC can solve many objects through the original reward.
-
 
         obj_pose = self.obj_pose
 
@@ -264,7 +265,8 @@ class PickSingleEnv(StationaryManipulationEnv):
         reaching_reward = 1 - torch.tanh(
             3.0
             * torch.maximum(
-                tcp_to_obj_dist - torch.linalg.norm(self.model_bbox_size), torch.tensor(0.0)
+                tcp_to_obj_dist - torch.linalg.norm(self.model_bbox_size),
+                torch.tensor(0.0),
             )
         )
         reward = reaching_reward

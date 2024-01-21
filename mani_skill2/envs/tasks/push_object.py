@@ -9,7 +9,13 @@ from mani_skill2.agents.robots.panda.panda import Panda
 from mani_skill2.agents.robots.xmate3.xmate3 import Xmate3Robotiq
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
-from mani_skill2.utils.building.actors import build_actor_ycb, build_cube, build_red_white_target, model_dbs, _load_ycb_dataset
+from mani_skill2.utils.building.actors import (
+    _load_ycb_dataset,
+    build_actor_ycb,
+    build_cube,
+    build_red_white_target,
+    model_dbs,
+)
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import (  # import various useful utilities for working with sapien
     look_at,
@@ -53,9 +59,14 @@ class PushObjectEnv(BaseEnv):
         )
         self.table_scene.build()
 
-        
-        self.obj, height = build_actor_ycb(self.model_id, self._scene, name=self.model_id, body_type="dynamic", add_collision=True)
-        self.obj_z = height/2
+        self.obj, height = build_actor_ycb(
+            self.model_id,
+            self._scene,
+            name=self.model_id,
+            body_type="dynamic",
+            add_collision=True,
+        )
+        self.obj_z = height / 2
 
         self.goal_region = build_red_white_target(
             self._scene,
@@ -83,7 +94,9 @@ class PushObjectEnv(BaseEnv):
 
         # here we write some randomization code that randomizes the x, y position of the cube we are pushing in the range [-0.1, -0.1] to [0.1, 0.1]
         xyz = torch.zeros((self.num_envs, 3), device=self.device)
-        xyz[..., :2] = torch.from_numpy(self._episode_rng.uniform(-0.1, 0.1, [self.num_envs, 2])).cuda()
+        xyz[..., :2] = torch.from_numpy(
+            self._episode_rng.uniform(-0.1, 0.1, [self.num_envs, 2])
+        ).cuda()
         xyz[..., 2] = self.obj_z
         q = [1, 0, 0, 0]
         # we can then create a pose object using Pose.create_from_pq to then set the cube pose with. Note that even though our quaternion
@@ -94,8 +107,12 @@ class PushObjectEnv(BaseEnv):
         # here we set the location of that red/white target (the goal region). In particular here, we set the position to be in front of the cube
         # and we further rotate 90 degrees on the y-axis to make the target object face up
         xyz = torch.zeros((self.num_envs, 3), device=self.device)
-        target_region_xyz = xyz + torch.tensor([0.1 + self.goal_radius, 0, 0], device=self.device)
-        target_region_xyz[..., 2] = 1e-3 # set a little bit above 0 so the target is sitting on the table
+        target_region_xyz = xyz + torch.tensor(
+            [0.1 + self.goal_radius, 0, 0], device=self.device
+        )
+        target_region_xyz[
+            ..., 2
+        ] = 1e-3  # set a little bit above 0 so the target is sitting on the table
         self.goal_region.set_pose(
             Pose.create_from_pq(
                 p=target_region_xyz,
@@ -104,7 +121,7 @@ class PushObjectEnv(BaseEnv):
         )
 
     def _get_obs_extra(self):
-        # some useful observation info for solving the task includes the pose of the tcp (tool center point) which is the point between the 
+        # some useful observation info for solving the task includes the pose of the tcp (tool center point) which is the point between the
         # grippers of the robot
         obs = OrderedDict(
             tcp_pose=vectorize_pose(self.agent.tcp.pose),
@@ -119,7 +136,7 @@ class PushObjectEnv(BaseEnv):
         return obs
 
     def evaluate(self, obs: Any):
-        # success is achieved when the cube's xy position on the table is within the 
+        # success is achieved when the cube's xy position on the table is within the
         # goal region's area (a circle centered at the goal region's xy position)
         # is_obj_placed = (
         #     torch.linalg.norm(
@@ -127,7 +144,7 @@ class PushObjectEnv(BaseEnv):
         #     )
         #     < self.goal_radius
         # )
-        
+
         return {
             "success": torch.zeros(self.num_envs, device=self.device),
         }
@@ -136,13 +153,14 @@ class PushObjectEnv(BaseEnv):
         return torch.zeros(self.num_envs, device=self.device)
         # We also create a pose marking where the robot should push the cube from that is easiest (pushing from behind the cube)
         tcp_push_pose = Pose.create_from_pq(
-            p=self.obj.pose.p + torch.tensor([-self.cube_half_size - 0.005, 0, 0], device=self.device)
+            p=self.obj.pose.p
+            + torch.tensor([-self.cube_half_size - 0.005, 0, 0], device=self.device)
         )
         tcp_to_push_pose = tcp_push_pose.p - self.agent.tcp.pose.p
         tcp_to_push_pose_dist = torch.linalg.norm(tcp_to_push_pose, axis=1)
         reaching_reward = 1 - torch.tanh(5 * tcp_to_push_pose_dist)
         reward = reaching_reward
-        
+
         # compute a placement reward to encourage robot to move the cube to the center of the goal region
         # we further multiply the place_reward by a mask reached so we only add the place reward if the robot has reached the desired push pose
         # This reward design helps train RL agents faster by staging the reward out.
