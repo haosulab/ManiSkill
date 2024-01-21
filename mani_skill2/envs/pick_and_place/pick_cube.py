@@ -45,9 +45,7 @@ class PickCubeEnv(StationaryManipulationEnv):
                 qs.append(q)
             qs = to_tensor(qs)
         # to set a batch of poses, use the Pose object or provide a raw tensor
-        obj_pose = Pose.create_from_pq(
-            p=xyz, q=qs
-        )
+        obj_pose = Pose.create_from_pq(p=xyz, q=qs)
 
         self.obj.set_pose(obj_pose)
 
