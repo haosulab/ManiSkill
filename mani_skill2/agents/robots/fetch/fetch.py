@@ -329,8 +329,8 @@ class Fetch(BaseAgent):
             contacts = self.scene.get_contacts()
 
             if object is None:
-                finger1_contacts = get_actor_contacts(contacts, self.finger1_link)
-                finger2_contacts = get_actor_contacts(contacts, self.finger2_link)
+                finger1_contacts = get_actor_contacts(contacts, self.finger1_link._bodies[0].entity)
+                finger2_contacts = get_actor_contacts(contacts, self.finger2_link._bodies[0].entity)
                 return (
                     np.linalg.norm(compute_total_impulse(finger1_contacts))
                     >= min_impulse
@@ -339,10 +339,10 @@ class Fetch(BaseAgent):
                 )
             else:
                 limpulse = get_pairwise_contact_impulse(
-                    contacts, self.finger1_link, object
+                    contacts, self.finger1_link._bodies[0].entity, object._bodies[0].entity
                 )
                 rimpulse = get_pairwise_contact_impulse(
-                    contacts, self.finger2_link, object
+                    contacts, self.finger2_link._bodies[0].entity, object._bodies[0].entity
                 )
 
                 # direction to open the gripper
