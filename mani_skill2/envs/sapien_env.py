@@ -641,7 +641,7 @@ class BaseEnv(gym.Env):
                 self.agent.set_control_mode(action["control_mode"])
             self.agent.set_action(action["action"])
             set_action = True
-        elif torch is not None and isinstance(action, torch.Tensor):
+        elif isinstance(action, torch.Tensor):
             self.agent.set_action(action)
             set_action = True
         else:
