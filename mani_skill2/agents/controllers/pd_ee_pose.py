@@ -8,7 +8,7 @@ from gymnasium import spaces
 from scipy.spatial.transform import Rotation
 
 from mani_skill2.utils.common import clip_and_scale_action
-from mani_skill2.utils.sapien_utils import get_obj_by_name
+from mani_skill2.utils.sapien_utils import get_obj_by_name, to_numpy, to_tensor
 from mani_skill2.utils.structs.pose import vectorize_pose
 
 from .base_controller import BaseController, ControllerConfig
@@ -64,15 +64,17 @@ class PDEEPosController(PDJointPosController):
 
     def compute_ik(self, target_pose, max_iterations=100):
         # Assume the target pose is defined in the base frame
+        # TODO (arth): currently ik only supports cpu, so input/output is managed as such
+        #       in future, need to change input/output processing per gpu implementation
         result, success, error = self.pmodel.compute_inverse_kinematics(
             self.ee_link_idx,
-            target_pose,
-            initial_qpos=self.articulation.get_qpos(),
+            target_pose.sp,
+            initial_qpos=to_numpy(self.articulation.get_qpos()).squeeze(0),
             active_qmask=self.qmask,
             max_iterations=max_iterations,
         )
         if success:
-            return result[self.joint_indices]
+            return to_tensor([result[self.joint_indices]])
         else:
             return None
 

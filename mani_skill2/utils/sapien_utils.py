@@ -35,13 +35,17 @@ def to_tensor(array: Union[torch.Tensor, np.array, Sequence]):
     elif get_backend_name() == "numpy":
         if isinstance(array, np.ndarray):
             return torch.from_numpy(array)
+        # TODO (arth): better way to address torch "UserWarning: Creating a tensor from a list of numpy.ndarrays is extremely slow" ?
+        elif isinstance(array, list) and isinstance(array[0], np.ndarray):
+            return torch.from_numpy(np.array(array))
+        elif np.iterable(array):
+            return torch.Tensor(array)
         else:
             return torch.tensor(array)
 
-
-def to_numpy(array: Union[Array, Sequence]):
+def _to_numpy(array: Union[Array, Sequence]) -> np.ndarray:
     if isinstance(array, (dict)):
-        return {k: to_numpy(v) for k, v in array.items()}
+        return {k: _to_numpy(v) for k, v in array.items()}
     if isinstance(array, str):
         return array
     if torch is not None:
@@ -52,6 +56,30 @@ def to_numpy(array: Union[Array, Sequence]):
     else:
         return np.array(array)
 
+def to_numpy(array: Union[Array, Sequence], dtype=None) -> np.ndarray:
+    array = _to_numpy(array)
+    if dtype is not None:
+        return array.astype(dtype)
+    return array
+
+def _unbatch(array: Union[Array, Sequence]):
+    if isinstance(array, (dict)):
+        return {k: _unbatch(v) for k, v in array.items()}
+    if isinstance(array, str):
+        return array
+    if torch is not None:
+        if isinstance(array, torch.Tensor):
+            return array.squeeze(0)
+    if isinstance(array, np.ndarray):
+        if np.iterable(array) and array.shape[0] == 1:
+            return array.squeeze(0)
+    if isinstance(array, list):
+        if len(array) == 1:
+            return array[0]
+    return array
+
+def unbatch(*args: Tuple[Union[Array, Sequence]]):
+    return tuple([_unbatch(x) for x in args])
 
 def clone_tensor(array: Array):
     if torch is not None and isinstance(array, torch.Tensor):

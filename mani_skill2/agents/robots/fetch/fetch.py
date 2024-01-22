@@ -385,4 +385,4 @@ class Fetch(BaseAgent):
     def tcp_pose(self) -> Pose:
         p = (self.finger1_link.pose.p + self.finger2_link.pose.p) / 2
         q = (self.finger1_link.pose.q + self.finger2_link.pose.q) / 2
-        return sapien.Pose(p=p, q=q)
+        return Pose.create_from_pq(p=p, q=q)
