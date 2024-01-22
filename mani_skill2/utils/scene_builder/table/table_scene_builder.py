@@ -78,6 +78,20 @@ class TableSceneBuilder(SceneBuilder):
             )
             self.env.agent.reset(qpos)
             self.env.agent.robot.set_pose(sapien.Pose([-0.562, 0, 0]))
+        elif self.env.robot_uid == "fetch":
+            qpos = np.array(
+                [0, 0, 0, 0.386, 0, 0, 0, -np.pi / 4, 0, np.pi / 4, 0, np.pi / 3, 0, 0.015, 0.015]
+            )
+            self.env.agent.reset(qpos)
+            self.env.agent.robot.set_pose(sapien.Pose([-0.82, 0, -self.table_height]))
+
+            from mani_skill2.agents.robots.fetch import FETCH_UNIQUE_COLLISION_BIT
+            cs = self.ground._objs[0].find_component_by_type(
+                sapien.physx.PhysxRigidStaticComponent
+            ).get_collision_shapes()[0]
+            cg = cs.get_collision_groups()
+            cg[2] = FETCH_UNIQUE_COLLISION_BIT
+            cs.set_collision_groups(cg)
         else:
             raise NotImplementedError(self.env.robot_uid)
 

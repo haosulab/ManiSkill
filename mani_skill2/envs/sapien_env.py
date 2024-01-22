@@ -32,7 +32,7 @@ from mani_skill2.utils.geometry.trimesh_utils import (
     get_component_meshes,
     merge_meshes,
 )
-from mani_skill2.utils.sapien_utils import get_obj_by_type, to_numpy, to_tensor
+from mani_skill2.utils.sapien_utils import get_obj_by_type, to_numpy, to_tensor, unbatch
 from mani_skill2.utils.structs.types import Array
 from mani_skill2.utils.visualization.misc import observations_to_images, tile_images
 
@@ -627,7 +627,11 @@ class BaseEnv(gym.Env):
         if self.num_envs == 1:
             terminated = terminated[0]
             reward = reward[0]
-        return obs, reward, terminated, False, info
+        
+        if physx.is_gpu_enabled():
+            return obs, reward, terminated, torch.Tensor(False), info
+        else:
+            return unbatch(obs, reward, terminated.item(), False, to_numpy(info))
 
     def step_action(self, action):
         set_action = False

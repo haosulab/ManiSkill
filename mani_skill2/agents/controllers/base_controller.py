@@ -206,12 +206,7 @@ class DictController(BaseController):
 
     def _assert_fully_actuated(self):
         active_joints = self.articulation.get_active_joints()
-        if len(active_joints) != len(self.joints) or not np.all(
-            [
-                active_joint == joint
-                for active_joint, joint in zip(active_joints, self.joints)
-            ]
-        ):
+        if len(active_joints) != len(self.joints) or set(active_joints) != set(self.joints):
             print("active_joints:", [x.name for x in active_joints])
             print("controlled_joints:", [x.name for x in self.joints])
             raise AssertionError("{} is not fully actuated".format(self.articulation))
