@@ -294,13 +294,13 @@ def get_pairwise_contacts(
     pairwise_contacts = []
     for contact in contacts:
         if (
-            contact.components[0].entity == actor0
-            and contact.components[1].entity == actor1
+            contact.bodies[0].entity == actor0
+            and contact.bodies[1].entity == actor1
         ):
             pairwise_contacts.append((contact, True))
         elif (
-            contact.components[0].entity == actor1
-            and contact.components[1].entity == actor0
+            contact.bodies[0].entity == actor1
+            and contact.bodies[1].entity == actor0
         ):
             pairwise_contacts.append((contact, False))
     return pairwise_contacts
@@ -328,9 +328,9 @@ def get_actor_contacts(
 ) -> List[Tuple[physx.PhysxContact, bool]]:
     entity_contacts = []
     for contact in contacts:
-        if contact.components[0].entity == actor:
+        if contact.bodies[0].entity == actor:
             entity_contacts.append((contact, True))
-        elif contact.components[1].entity == actor:
+        elif contact.bodies[1].entity == actor:
             entity_contacts.append((contact, False))
     return entity_contacts
 
@@ -348,16 +348,16 @@ def get_articulation_contacts(
     if included_links is None:
         included_links = links
     for contact in contacts:
-        if contact.components[0] in included_links:
-            if contact.components[1] in links:
+        if contact.bodies[0] in included_links:
+            if contact.bodies[1] in links:
                 continue
-            if contact.components[1].entity in excluded_entities:
+            if contact.bodies[1].entity in excluded_entities:
                 continue
             articulation_contacts.append((contact, True))
-        elif contact.components[1] in included_links:
-            if contact.components[0] in links:
+        elif contact.bodies[1] in included_links:
+            if contact.bodies[0] in links:
                 continue
-            if contact.components[0].entity in excluded_entities:
+            if contact.bodies[0].entity in excluded_entities:
                 continue
             articulation_contacts.append((contact, False))
     return articulation_contacts

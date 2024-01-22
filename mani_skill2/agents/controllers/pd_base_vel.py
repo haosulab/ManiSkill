@@ -33,7 +33,7 @@ class PDBaseVelController(PDJointVelController):
         new_action = np.hstack([vel, action[2:]])
 
         for i, joint in enumerate(self.joints):
-            joint.set_drive_velocity_target(new_action[i])
+            joint.set_drive_velocity_target(np.array([new_action[i]]))
 
 
 class PDBaseVelControllerConfig(PDJointVelControllerConfig):
