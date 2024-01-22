@@ -43,7 +43,19 @@ class Fetch(BaseAgent):
             ),
         ),
     )
-    sensor_configs = []
+    sensor_configs = [
+        CameraConfig(
+            uid="fetch_head",
+            p=[0, 0, 0],
+            q=[1, 0, 0, 0],
+            width=128,
+            height=128,
+            fov=1.57,
+            near=0.01,
+            far=10,
+            entity_uid="head_camera_link",
+        )
+    ]
 
     def __init__(self, *args, **kwargs):
         self.arm_joint_names = [
