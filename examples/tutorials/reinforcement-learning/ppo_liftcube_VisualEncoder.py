@@ -19,16 +19,12 @@ import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 from torch.distributions.normal import Normal
 
-# import datetime
 from collections import defaultdict
-# from functools import partial
 
 import mani_skill2.envs
 from mani_skill2.utils.common import flatten_state_dict, flatten_dict_space_keys
-# from mani_skill2.utils.wrappers import RecordEpisode
 from mani_skill2.vector.vec_env import VecEnvObservationWrapper
-from mani_skill2.vector.VisualEncoder import VisualEncoder
-# from dataclasses import dataclass
+from mani_skill2.vector.visual_encoders import VisualEncoder
 from mani_skill2.vector.wrappers.sb3 import select_index_from_dict
 
 
@@ -247,9 +243,6 @@ if __name__ == "__main__":
     envs = VisualEncoder(envs, encoder='r3m')
     envs = AutoResetVecEnvWrapper(envs)
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
-    print("Envs type:", type(envs))
-    print("Single Action Space:", envs.single_action_space)
-    print("Single Observation Space:", envs.single_observation_space)
 
     assert args.observation_mode in ['both', 'state', 'image']
     if args.observation_mode == "both":
