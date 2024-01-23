@@ -1,6 +1,5 @@
 import os
 import pickle
-import sys
 from collections import OrderedDict
 
 import numpy as np
@@ -11,7 +10,7 @@ from transforms3d.euler import euler2quat
 from transforms3d.quaternions import axangle2quat
 
 from mani_skill2.agents.robots.panda import Panda
-from mani_skill2.envs.mpm.base_env import MPMBaseEnv, MPMModelBuilder
+from mani_skill2.envs.ms2.mpm.base_env import MPMBaseEnv, MPMModelBuilder
 from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import get_obj_by_name

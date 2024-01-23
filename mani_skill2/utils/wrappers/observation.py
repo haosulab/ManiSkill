@@ -50,7 +50,7 @@ class RGBDObservationWrapper(BaseGymObservationWrapper):
                     new_cam_space["rgb"] = spaces.Box(
                         low=0, high=255, shape=(height, width, 3), dtype=np.uint8
                     )
-                elif key == "Position":
+                elif key == "PositionSegmentation":
                     height, width = ori_cam_space[key].shape[:2]
                     new_cam_space["depth"] = spaces.Box(
                         low=0, high=np.inf, shape=(height, width, 1), dtype=np.float32
@@ -66,9 +66,7 @@ class RGBDObservationWrapper(BaseGymObservationWrapper):
             for key in ori_images:
                 if key == "Color":
                     rgb = ori_images[key][..., :3]  # [H, W, 4]
-                    if isinstance(rgb, np.ndarray):
-                        rgb = np.clip(rgb * 255, 0, 255).astype(np.uint8)
-                    else:
+                    if isinstance(rgb, torch.Tensor):
                         rgb = rgb.clone()
                     new_images["rgb"] = rgb  # [H, W, 4]
                 elif key == "PositionSegmentation":
@@ -95,6 +93,7 @@ def merge_dict_spaces(dict_spaces: Sequence[spaces.Dict]):
     return spaces.Dict(OrderedDict(reverse_spaces))
 
 
+# TODO (stao): fix this wrapper
 class PointCloudObservationWrapper(BaseGymObservationWrapper):
     """Convert Position textures to world-space point cloud."""
 
@@ -115,21 +114,15 @@ class PointCloudObservationWrapper(BaseGymObservationWrapper):
             cam_image_space = image_space[cam_uid]
             cam_pcd_space = OrderedDict()
 
-            h, w = cam_image_space["Position"].shape[:2]
+            h, w = cam_image_space["PositionSegmentation"].shape[:2]
             cam_pcd_space["xyzw"] = spaces.Box(
                 low=-np.inf, high=np.inf, shape=(h * w, 4), dtype=np.float32
             )
-
             # Extra keys
             if "Color" in cam_image_space.spaces:
                 cam_pcd_space["rgb"] = spaces.Box(
                     low=0, high=255, shape=(h * w, 3), dtype=np.uint8
                 )
-            if "Segmentation" in cam_image_space.spaces:
-                cam_pcd_space["Segmentation"] = spaces.Box(
-                    low=0, high=(2**32 - 1), shape=(h * w, 4), dtype=np.uint32
-                )
-
             pcd_space[cam_uid] = spaces.Dict(cam_pcd_space)
 
         pcd_space = merge_dict_spaces(pcd_space.values())
@@ -143,10 +136,10 @@ class PointCloudObservationWrapper(BaseGymObservationWrapper):
         for cam_uid, images in image_obs.items():
             cam_pcd = {}
 
-            # Each pixel is (x, y, z, z_buffer_depth) in OpenGL camera space
-            position = images["Position"]
-            # position[..., 3] = position[..., 3] < 1
-            position[..., 3] = position[..., 2] < 0
+            # Each pixel is (x, y, z, actor_id) in OpenGL camera space
+            # actor_id = 0 for the background
+            position = images["PositionSegmentation"]
+            position[..., 3] = position[..., 2] == 0
 
             # Convert to world space
             cam2world = camera_params[cam_uid]["cam2world_gl"]

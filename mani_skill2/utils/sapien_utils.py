@@ -47,12 +47,15 @@ def to_tensor(array: Union[torch.Tensor, np.array, Sequence]):
 def _to_numpy(array: Union[Array, Sequence]) -> np.ndarray:
     if isinstance(array, (dict)):
         return {k: _to_numpy(v) for k, v in array.items()}
-    if isinstance(array, str):
-        return array
-    if torch is not None:
-        if isinstance(array, torch.Tensor):
-            return array.cpu().numpy()
-    if isinstance(array, np.ndarray):
+    if isinstance(array, torch.Tensor):
+        return array.cpu().numpy()
+    if (
+        isinstance(array, np.ndarray)
+        or isinstance(array, bool)
+        or isinstance(array, str)
+        or isinstance(array, float)
+        or isinstance(array, int)
+    ):
         return array
     else:
         return np.array(array)
@@ -70,9 +73,8 @@ def _unbatch(array: Union[Array, Sequence]):
         return {k: _unbatch(v) for k, v in array.items()}
     if isinstance(array, str):
         return array
-    if torch is not None:
-        if isinstance(array, torch.Tensor):
-            return array.squeeze(0)
+    if isinstance(array, torch.Tensor):
+        return array.squeeze(0)
     if isinstance(array, np.ndarray):
         if np.iterable(array) and array.shape[0] == 1:
             return array.squeeze(0)
@@ -83,7 +85,10 @@ def _unbatch(array: Union[Array, Sequence]):
 
 
 def unbatch(*args: Tuple[Union[Array, Sequence]]):
-    return tuple([_unbatch(x) for x in args])
+    x = [_unbatch(x) for x in args]
+    if len(args) == 1:
+        return x[0]
+    return tuple(x)
 
 
 def clone_tensor(array: Array):
@@ -289,15 +294,6 @@ def get_articulation_state(articulation: physx.PhysxArticulation):
     qpos = articulation.get_qpos()
     qvel = articulation.get_qvel()
     return np.hstack([pose.p, pose.q, vel, ang_vel, qpos, qvel])
-
-
-def set_articulation_state(articulation: physx.PhysxArticulation, state: np.ndarray):
-    articulation.set_root_pose(sapien.Pose(state[0:3], state[3:7]))
-    articulation.set_root_velocity(state[7:10])
-    articulation.set_root_angular_velocity(state[10:13])
-    qpos, qvel = np.split(state[13:], 2)
-    articulation.set_qpos(qpos)
-    articulation.set_qvel(qvel)
 
 
 def get_articulation_padded_state(articulation: physx.PhysxArticulation, max_dof: int):

@@ -185,7 +185,7 @@ def noise_cd(
     kernel_seed: int,
     query_positions: wp.array(dtype=wp.vec2),
     gradients: wp.array(dtype=wp.vec2)):
-    
+
     tid = wp.tid()
     state = wp.rand_init(kernel_seed)
     p = query_positions[tid]

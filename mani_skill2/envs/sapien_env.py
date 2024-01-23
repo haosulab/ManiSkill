@@ -124,7 +124,11 @@ class BaseEnv(gym.Env):
                 sapien.physx.enable_gpu()
                 sapien.set_cuda_tensor_backend("torch")
             self.gpu_sim_cfgs = gpu_sim_cfgs
-
+            self.device = torch.device(
+                "cuda"
+            )  # TODO (stao): fix this for multi gpu support?
+        else:
+            self.device = torch.device("cpu")
         # TODO(jigu): Change to `warning` after lighting in VecEnv is fixed.
         # TODO Ms2 set log level. What to do now?
         # self._engine.set_log_level(os.getenv("MS2_SIM_LOG_LEVEL", "error"))
@@ -324,13 +328,14 @@ class BaseEnv(gym.Env):
             return OrderedDict()
         elif self._obs_mode == "state":
             state_dict = self._get_obs_state_dict()
-            return flatten_state_dict(state_dict, squeeze_dims=squeeze_dims)
+            obs = flatten_state_dict(state_dict, squeeze_dims=squeeze_dims)
         elif self._obs_mode == "state_dict":
-            return self._get_obs_state_dict()
+            obs = self._get_obs_state_dict()
         elif self._obs_mode == "image":
-            return self._get_obs_images()
+            obs = self._get_obs_images()
         else:
             raise NotImplementedError(self._obs_mode)
+        return obs
 
     def _get_obs_state_dict(self):
         """Get (ground-truth) state-based observations."""
@@ -383,15 +388,8 @@ class BaseEnv(gym.Env):
         return params
 
     def _get_obs_images(self) -> OrderedDict:
-        # TODO (stao): do we still need this part?
-        if self._renderer_type == "client":
-            # NOTE: not compatible with StereoDepthCamera
-            cameras = [x.camera for x in self._sensors.values()]
-            # TODO: upgrade
-            self._scene._update_render_and_take_pictures(cameras)
-        else:
-            self.update_render()
-            self.capture_sensor_data()
+        self.update_render()
+        self.capture_sensor_data()
         return OrderedDict(
             agent=self._get_obs_agent(),
             extra=self._get_obs_extra(),
@@ -413,13 +411,16 @@ class BaseEnv(gym.Env):
 
     def get_reward(self, obs: Any, action: Array, info: Dict):
         if self._reward_mode == "sparse":
-            return to_tensor(info["success"])
+            reward = info["success"]
         elif self._reward_mode == "dense":
-            return self.compute_dense_reward(obs, action, info)
+            reward = self.compute_dense_reward(obs=obs, action=action, info=info)
         elif self._reward_mode == "normalized_dense":
-            return self.compute_normalized_dense_reward(obs, action, info)
+            reward = self.compute_normalized_dense_reward(
+                obs=obs, action=action, info=info
+            )
         else:
             raise NotImplementedError(self._reward_mode)
+        return reward
 
     def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
         raise NotImplementedError
@@ -454,7 +455,6 @@ class BaseEnv(gym.Env):
         # Cache entites and articulations
         self._actors = self.get_actors()
         self._articulations = self.get_articulations()
-        self.device = torch.device("cpu")
         if sapien.physx.is_gpu_enabled():
             self._scene._setup_gpu()
             self.device = self.physx_system.cuda_rigid_body_data.device
@@ -467,11 +467,9 @@ class BaseEnv(gym.Env):
 
     def _load_actors(self):
         """Loads all actors into the scene. Called by `self.reconfigure`"""
-        pass
 
     def _load_articulations(self):
         """Loads all articulations into the scene. Called by `self.reconfigure`"""
-        pass
 
     # TODO (stao): refactor this into sensor API
     def _setup_sensors(self):
@@ -543,12 +541,15 @@ class BaseEnv(gym.Env):
         self._set_episode_rng(self._episode_seed)
 
         self.initialize_episode()
+        obs = self.get_obs()
         if physx.is_gpu_enabled():
             # ensure all updates to object poses and configurations are applied on GPU after task initialization
             self._scene._gpu_apply_all()
             self._scene.px.gpu_update_articulation_kinematics()
             self._scene._gpu_fetch_all()
-        return self.get_obs(), {}
+        else:
+            obs = to_numpy(unbatch(obs))
+        return obs, {}
 
     def _set_main_rng(self, seed):
         """Set the main random generator (e.g., to generate the seed for each episode)."""
@@ -579,19 +580,15 @@ class BaseEnv(gym.Env):
 
     def _initialize_actors(self):
         """Initialize the poses of actors. Called by `self.initialize_episode`"""
-        pass
 
     def _initialize_articulations(self):
         """Initialize the (joint) poses of articulations. Called by `self.initialize_episode`"""
-        pass
 
     def _initialize_agent(self):
         """Initialize the (joint) poses of agent(robot). Called by `self.initialize_episode`"""
-        pass
 
     def _initialize_task(self):
         """Initialize task-relevant information, like goals. Called by `self.initialize_episode`"""
-        pass
 
     def _clear_sim_state(self):
         """Clear simulation state (velocities)"""
@@ -614,38 +611,37 @@ class BaseEnv(gym.Env):
     # -------------------------------------------------------------------------- #
 
     def step(self, action: Union[None, np.ndarray, Dict]):
-        with sapien.profile("step_action"):
-            self.step_action(action)
+        self.step_action(action)
         self._elapsed_steps += 1
-        # TODO (stao): I think evaluation should always occur first before generating observations
-        # as evaluation is more likely to use privileged information whereas observations only sometimes should include privileged information
-        with sapien.profile("get_obs"):
-            obs = self.get_obs()
+        obs = self.get_obs()
         info = self.get_info(obs=obs)
         reward = self.get_reward(obs=obs, action=action, info=info)
         terminated = info["success"]
-        if self.num_envs == 1:
-            terminated = terminated[0]
-            reward = reward[0]
-
         if physx.is_gpu_enabled():
             return obs, reward, terminated, torch.Tensor(False), info
         else:
-            return unbatch(obs, reward, terminated.item(), False, to_numpy(info))
+            # On CPU sim mode, we always return numpy / python primitives without any batching.
+            return unbatch(
+                to_numpy(obs),
+                to_numpy(reward),
+                to_numpy(terminated),
+                False,
+                to_numpy(info),
+            )
 
     def step_action(self, action):
         set_action = False
         if action is None:  # simulation without action
             pass
         elif isinstance(action, np.ndarray):
-            self.agent.set_action(action)
+            self.agent.set_action(to_tensor(action))
             set_action = True
         elif isinstance(action, dict):
             if action["control_mode"] != self.agent.control_mode:
                 self.agent.set_control_mode(action["control_mode"])
-            self.agent.set_action(action["action"])
+            self.agent.set_action(to_tensor(action["action"]))
             set_action = True
-        elif torch is not None and isinstance(action, torch.Tensor):
+        elif isinstance(action, torch.Tensor):
             self.agent.set_action(action)
             set_action = True
         else:

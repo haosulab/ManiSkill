@@ -16,14 +16,14 @@ import os
 import xml.etree.ElementTree as ET
 
 import warp as wp
-import warp.sim 
+import warp.sim
 
 def parse_mjcf(
-    filename, 
-    builder, 
-    density=1000.0, 
-    stiffness=0.0, 
-    damping=0.0, 
+    filename,
+    builder,
+    density=1000.0,
+    stiffness=0.0,
+    damping=0.0,
     contact_ke=1000.0,
     contact_kd=100.0,
     contact_kf=100.0,
@@ -40,12 +40,12 @@ def parse_mjcf(
     node_map = {}
     xform_map = {}
     mesh_map = {}
-    
-    type_map = { 
-        "ball": wp.sim.JOINT_BALL, 
-        "hinge": wp.sim.JOINT_REVOLUTE, 
-        "slide": wp.sim.JOINT_PRISMATIC, 
-        "free": wp.sim.JOINT_FREE, 
+
+    type_map = {
+        "ball": wp.sim.JOINT_BALL,
+        "hinge": wp.sim.JOINT_REVOLUTE,
+        "slide": wp.sim.JOINT_PRISMATIC,
+        "free": wp.sim.JOINT_FREE,
         "fixed": wp.sim.JOINT_FIXED
     }
 
@@ -97,8 +97,8 @@ def parse_mjcf(
             link = builder.add_body(
                 parent=parent,
                 origin=wp.transform_identity(),  # will be evaluated in fk()
-                joint_xform=wp.transform(body_pos, wp.quat_identity()), 
-                joint_axis=joint_axis, 
+                joint_xform=wp.transform(body_pos, wp.quat_identity()),
+                joint_axis=joint_axis,
                 joint_type=joint_type,
                 joint_limit_lower=np.deg2rad(joint_range[0]),
                 joint_limit_upper=np.deg2rad(joint_range[1]),
@@ -111,7 +111,7 @@ def parse_mjcf(
             #print(f"{joint_name} coord: {start_coord} dof: {start_dof} body index: {link}")
 
         else:
-            
+
             if (len(joints) == 2):
                 type = JOINT_UNIVERSAL
             elif (len(joints) == 3):
@@ -132,7 +132,7 @@ def parse_mjcf(
                 # default to hinge if not specified
                 if ("type" not in joint.attrib):
                     joint.attrib["type"] = "hinge"
-                
+
                 if (joint.attrib["type"] != "hinge"):
                     print("Compound joints must all be hinges")
 
@@ -153,8 +153,8 @@ def parse_mjcf(
 
             elif len(joints) == 3:
                 M = np.array([joint_axis[0], joint_axis[1], joint_axis[2]]).T
-            
-            q = wp.quat_from_matrix(M)            
+
+            q = wp.quat_from_matrix(M)
 
             link = builder.add_body(
                 parent=parent,
@@ -169,24 +169,24 @@ def parse_mjcf(
                 joint_target_ke=joint_stiffness,
                 joint_target_kd=joint_damping,
                 joint_armature=joint_armature[0])
-            
+
         #-----------------
         # add shapes
 
         for geom in body.findall("geom"):
-            
+
             geom_name = geom.attrib["name"]
             geom_type = geom.attrib["type"]
 
-            geom_size = parse_vec(geom, "size", [1.0])                
-            geom_pos = parse_vec(geom, "pos", (0.0, 0.0, 0.0)) 
+            geom_size = parse_vec(geom, "size", [1.0])
+            geom_pos = parse_vec(geom, "pos", (0.0, 0.0, 0.0))
             geom_rot = parse_vec(geom, "quat", (0.0, 0.0, 0.0, 1.0))
 
             if (geom_type == "sphere"):
 
                 builder.add_shape_sphere(
-                    link, 
-                    pos=geom_pos, 
+                    link,
+                    pos=geom_pos,
                     rot=geom_rot,
                     radius=geom_size[0],
                     density=density,
@@ -203,7 +203,7 @@ def parse_mjcf(
                     start = geom_fromto[0:3]
                     end = geom_fromto[3:6]
 
-                    # compute rotation to align the Warp capsule (along x-axis), with mjcf fromto direction                        
+                    # compute rotation to align the Warp capsule (along x-axis), with mjcf fromto direction
                     axis = wp.normalize(end-start)
                     angle = math.acos(np.dot(axis, (1.0, 0.0, 0.0)))
                     axis = wp.normalize(np.cross(axis, (1.0, 0.0, 0.0)))
@@ -232,10 +232,10 @@ def parse_mjcf(
                     kd=contact_kd,
                     kf=contact_kf,
                     mu=contact_mu)
-                
+
             else:
                 print("Type: " + geom_type + " unsupported")
-            
+
 
         #-----------------
         # recurse

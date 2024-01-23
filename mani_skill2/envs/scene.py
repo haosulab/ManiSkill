@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import sapien
 import sapien.physx as physx
@@ -457,6 +457,8 @@ class ManiSkillScene:
     def get_sim_state(self) -> torch.Tensor:
         """Get simulation state. Returns a tensor of shape (N, D) for N parallel environments and D dimensions of padded state per environment"""
         state = []
+        # TODO (stao): Should we store state as a dictionary? What shape to store for parallel settings to make
+        # it loadable between parallel and non parallel settings?
         for actor in self.actors.values():
             # TODO (stao) (in parallelized environment situation we may need to pad as some of these actors do not exist in other parallel envs)
             state.append(actor.get_state())
@@ -465,16 +467,14 @@ class ManiSkillScene:
         return torch.hstack(state)
 
     def set_sim_state(self, state: Array):
-        return
-        """Set simulation state."""
-        KINEMANTIC_DIM = 13  # [pos, quat, lin_vel, ang_vel]
+        KINEMATIC_DIM = 13  # [pos, quat, lin_vel, ang_vel]
         start = 0
-        for actor in self._actors:
-            set_actor_state(actor, state[start : start + KINEMANTIC_DIM])
-            start += KINEMANTIC_DIM
-        for articulation in self._articulations:
-            ndim = KINEMANTIC_DIM + 2 * articulation.dof
-            set_articulation_state(articulation, state[start : start + ndim])
+        for actor in self.actors.values():
+            actor.set_state(state[:, start : start + KINEMATIC_DIM])
+            start += KINEMATIC_DIM
+        for articulation in self.articulations.values():
+            ndim = KINEMATIC_DIM + 2 * articulation.dof
+            articulation.set_state(state[:, start : start + ndim])
             start += ndim
 
     # ---------------------------------------------------------------------------- #

@@ -21,7 +21,6 @@ class BaseSensor:
 
         Some sensors like rgbd cameras need to take a picture just once after each call to scene.update_render
         """
-        pass
 
     def get_obs(self):
         raise NotImplementedError()

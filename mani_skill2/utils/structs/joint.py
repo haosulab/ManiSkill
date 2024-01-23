@@ -220,6 +220,10 @@ class Joint(BaseStruct[physx.PhysxJointComponent]):
                 "Cannot set drive velocity targets at the moment in GPU simulation"
             )
         else:
+            if arg1.shape == ():
+                arg1 = arg1.reshape(
+                    1,
+                )
             self._objs[0].drive_velocity_target = arg1
 
     @property

@@ -4,6 +4,7 @@ from typing import Sequence, Union
 import numpy as np
 import sapien
 import sapien.physx as physx
+import torch
 from gymnasium import spaces
 from scipy.spatial.transform import Rotation
 
@@ -167,12 +168,13 @@ class PDEEPoseController(PDEEPosController):
         self.action_space = spaces.Box(low, high, dtype=np.float32)
 
     def _clip_and_scale_action(self, action):
+        # TODO (stao): support batched actions
         # NOTE(xiqiang): rotation should be clipped by norm.
         pos_action = clip_and_scale_action(
-            action[:3], self._action_space.low[:3], self._action_space.high[:3]
+            action[:3], self.action_space_low[:3], self.action_space_high[:3]
         )
         rot_action = action[3:]
-        rot_norm = np.linalg.norm(rot_action)
+        rot_norm = torch.linalg.norm(rot_action)
         if rot_norm > 1:
             rot_action = rot_action / rot_norm
         rot_action = rot_action * self.config.rot_bound

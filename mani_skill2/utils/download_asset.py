@@ -7,6 +7,7 @@ See also:
 
 import argparse
 import hashlib
+import os.path as osp
 import shutil
 import urllib.request
 import zipfile
@@ -167,6 +168,7 @@ def download(
     if target_path is None:
         target_path = url.split("/")[-1]
     output_path = output_dir / target_path
+    output_dir = osp.dirname(output_path)
 
     # Clean up existing files
     if output_path.exists():

@@ -2,7 +2,6 @@
 Useful utilities for adding any object and geometry into a scene
 """
 
-import os.path as osp
 from pathlib import Path
 from typing import Dict
 
@@ -343,7 +342,7 @@ def build_actor_ai2(
     aabb = actor.find_component_by_type(
         sapien.render.RenderBodyComponent
     ).compute_global_aabb_tight()
-    height = aabb[1, 2] - aabb[0, 2]
+    aabb[1, 2] - aabb[0, 2]
     if set_object_on_ground:
         actor.set_pose(sapien.Pose(p=[0, 0, 0]))
     return actor

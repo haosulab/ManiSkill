@@ -2,10 +2,8 @@
 Useful utilities for adding any object and geometry into a scene
 """
 
-import os.path as osp
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Dict, List, Union
+from typing import Dict, List
 
 import numpy as np
 import sapien
@@ -27,7 +25,6 @@ class JointMetadata:
     type: str
     # semantic name of this joint
     name: str
-    pass
 
 
 @dataclass
@@ -36,7 +33,6 @@ class LinkMetadata:
     name: str
     link: physx.PhysxArticulationLinkComponent
     render_shapes: List[sapien.render.RenderShape]
-    pass
 
 
 @dataclass

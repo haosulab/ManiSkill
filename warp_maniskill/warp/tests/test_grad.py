@@ -31,12 +31,12 @@ def test_scalar_grad(test, device):
     tape.backward(y)
 
     assert_np_equal(tape.gradients[x].numpy(), np.array(6.0))
-   
+
 
 
 
 @wp.kernel
-def for_loop_grad(n: int, 
+def for_loop_grad(n: int,
                   x: wp.array(dtype=float),
                   s: wp.array(dtype=float)):
 
@@ -59,12 +59,12 @@ def test_for_loop_grad(test, device):
     tape = wp.Tape()
     with tape:
         wp.launch(for_loop_grad, dim=1, inputs=[n, x, sum], device=device)
-   
+
     # ensure forward pass outputs correct
     assert_np_equal(sum.numpy(), 2.0*np.sum(x.numpy()))
 
     tape.backward(loss=sum)
-    
+
     # ensure forward pass outputs persist
     assert_np_equal(sum.numpy(), 2.0*np.sum(x.numpy()))
     # ensure gradients correct
@@ -84,24 +84,24 @@ def test_for_loop_graph_grad(test, device):
     tape = wp.Tape()
     with tape:
         wp.launch(for_loop_grad, dim=1, inputs=[n, x, sum], device=device)
-   
+
     tape.backward(loss=sum)
 
     graph = wp.capture_end()
 
     wp.capture_launch(graph)
     wp.synchronize()
-    
+
     # ensure forward pass outputs persist
     assert_np_equal(sum.numpy(), 2.0*np.sum(x.numpy()))
     # ensure gradients correct
     assert_np_equal(x.grad.numpy(), 2.0*val)
 
     wp.capture_launch(graph)
-    wp.synchronize()    
+    wp.synchronize()
 
 @wp.kernel
-def for_loop_nested_if_grad(n: int, 
+def for_loop_nested_if_grad(n: int,
                             x: wp.array(dtype=float),
                             s: wp.array(dtype=float)):
 
@@ -138,18 +138,18 @@ def test_for_loop_nested_if_grad(test, device):
     tape = wp.Tape()
     with tape:
         wp.launch(for_loop_nested_if_grad, dim=1, inputs=[n, x, sum], device=device)
-   
+
     assert_np_equal(sum.numpy(), np.sum(expected_val))
 
     tape.backward(loss=sum)
-    
+
     assert_np_equal(sum.numpy(), np.sum(expected_val))
     assert_np_equal(tape.gradients[x].numpy(), np.array(expected_grad))
 
 
 
 @wp.kernel
-def for_loop_grad_nested(n: int, 
+def for_loop_grad_nested(n: int,
                          x: wp.array(dtype=float),
                          s: wp.array(dtype=float)):
 
@@ -163,7 +163,7 @@ def for_loop_grad_nested(n: int,
 
 
 def test_for_loop_nested_for_grad(test, device):
-    
+
     x = wp.zeros(9, dtype=float, device=device, requires_grad=True)
     s = wp.zeros(1, dtype=float, device=device, requires_grad=True)
 
@@ -181,7 +181,7 @@ def test_for_loop_nested_for_grad(test, device):
 # since doing things like i = i + 1 breaks adjointing
 
 # @wp.kernel
-# def while_loop_grad(n: int, 
+# def while_loop_grad(n: int,
 #                     x: wp.array(dtype=float),
 #                     c: wp.array(dtype=int),
 #                     s: wp.array(dtype=float)):
@@ -192,7 +192,7 @@ def test_for_loop_nested_for_grad(test, device):
 #         s[0] = s[0] + x[i]*2.0
 #         i = i + 1
 
-        
+
 
 # def test_while_loop_grad(test, device):
 
@@ -204,7 +204,7 @@ def test_for_loop_nested_for_grad(test, device):
 #     tape = wp.Tape()
 #     with tape:
 #         wp.launch(while_loop_grad, dim=1, inputs=[n, x, c, sum], device=device)
-   
+
 #     tape.backward(loss=sum)
 
 #     assert_np_equal(sum.numpy(), 2.0*np.sum(x.numpy()))
@@ -213,7 +213,7 @@ def test_for_loop_nested_for_grad(test, device):
 
 
 @wp.kernel
-def preserve_outputs(n: int, 
+def preserve_outputs(n: int,
                      x: wp.array(dtype=float),
                      c: wp.array(dtype=float),
                      s1: wp.array(dtype=float),
@@ -240,7 +240,7 @@ def test_preserve_outputs_grad(test, device):
 
     x = wp.array(val, device=device, requires_grad=True)
     c = wp.zeros_like(x)
-    
+
     s1 = wp.zeros(1, dtype=wp.float32, device=device, requires_grad=True)
     s2 = wp.zeros(1, dtype=wp.float32, device=device, requires_grad=True)
 
@@ -253,7 +253,7 @@ def test_preserve_outputs_grad(test, device):
     assert_np_equal(c.numpy(), val*2.0)
     assert_np_equal(s1.numpy(), np.array(3.0*n))
     assert_np_equal(s2.numpy(), np.array(-2.0*n))
-    
+
     # run backward on first loss
     tape.backward(loss=s1)
 

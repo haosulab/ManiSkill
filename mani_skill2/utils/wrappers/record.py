@@ -158,7 +158,7 @@ class RecordEpisode(gym.Wrapper):
         self.video_nrows = int(np.sqrt(self.unwrapped.num_envs))
 
         # Avoid circular import
-        from mani_skill2.envs.mpm.base_env import MPMBaseEnv
+        from mani_skill2.envs.ms2.mpm.base_env import MPMBaseEnv
 
         if isinstance(env.unwrapped, MPMBaseEnv):
             self.init_state_only = True

@@ -40,7 +40,7 @@ def run():
 
     tests = unittest.TestSuite()
     result = unittest.TestResult()
-   
+
     tests.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(warp.tests.test_codegen.register(unittest.TestCase)))
     tests.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(warp.tests.test_mesh_query_aabb.register(unittest.TestCase)))
     tests.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(warp.tests.test_mesh_query_point.register(unittest.TestCase)))
@@ -83,4 +83,3 @@ if __name__ == '__main__':
 
     import sys
     sys.exit(ret)
-

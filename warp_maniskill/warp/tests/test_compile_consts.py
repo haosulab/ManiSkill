@@ -49,7 +49,7 @@ def register(parent):
         pass
 
     a = 0
-    x = 0.0        
+    x = 0.0
 
     add_kernel_test(TestConstants, test_constants_int, dim=1, inputs=[a], devices=wp.get_devices())
     add_kernel_test(TestConstants, test_constants_float, dim=1, inputs=[x], devices=wp.get_devices())
