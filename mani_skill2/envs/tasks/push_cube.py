@@ -30,12 +30,28 @@ from mani_skill2.utils.building.actors import build_cube, build_red_white_target
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import look_at
 from mani_skill2.utils.scene_builder.table.table_scene_builder import TableSceneBuilder
-from mani_skill2.utils.structs.pose import Pose, vectorize_pose
+from mani_skill2.utils.structs.pose import Pose
 from mani_skill2.utils.structs.types import Array
 
 
 @register_env("PushCube-v0", max_episode_steps=50)
 class PushCubeEnv(BaseEnv):
+    """
+    A simple task where the objective is to push and move a cube to a goal region in front of it
+
+    Randomizations
+    --------------
+    - the cube's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat on the table
+    - the target goal region is marked by a red/white circular target. The position of the target is fixed to be the cube xy position + [0.1 + goal_radius, 0]
+
+
+    Success Conditions
+    ------------------
+    - the cube's xy position is within goal_radius (default 0.1) of the target's xy position by euclidean distance.
+
+    Visualization: TODO: ADD LINK HERE
+    """
+
     # Specify some supported robot types
     agent: Union[Panda, Xmate3Robotiq]
 
@@ -124,14 +140,14 @@ class PushCubeEnv(BaseEnv):
         # some useful observation info for solving the task includes the pose of the tcp (tool center point) which is the point between the
         # grippers of the robot
         obs = OrderedDict(
-            tcp_pose=vectorize_pose(self.agent.tcp.pose),
+            tcp_pose=self.agent.tcp.pose.raw_pose,
             goal_pos=self.goal_region.pose.p,
         )
         if self._obs_mode in ["state", "state_dict"]:
             # if the observation mode is state/state_dict, we provide ground truth information about where the cube is.
             # for visual observation modes one should rely on the sensed visual data to determine where the cube is
             obs.update(
-                obj_pose=vectorize_pose(self.obj.pose),
+                obj_pose=self.obj.pose.raw_pose,
             )
         return obs
 

@@ -76,6 +76,8 @@ def _unbatch(array: Union[Array, Sequence]):
     if isinstance(array, torch.Tensor):
         return array.squeeze(0)
     if isinstance(array, np.ndarray):
+        if array.shape == (1,):
+            return array.item()
         if np.iterable(array) and array.shape[0] == 1:
             return array.squeeze(0)
     if isinstance(array, list):

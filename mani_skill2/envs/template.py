@@ -28,12 +28,12 @@ import torch
 
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
-from mani_skill2.utils.registration import register
+from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import look_at
 
 
 # register the environment by a unique ID and specify a max time limit. Now once this file is imported you can do gym.make("CustomEnv-v0")
-@register(name="CustomEnv-v0", max_episode_steps=200)
+@register_env(name="CustomEnv-v0", max_episode_steps=200)
 class CustomEnv(BaseEnv):
     # in the __init__ function you can pick a default robot your task should use e.g. the panda robot
     def __init__(self, *args, robot_uid="panda", robot_init_qpos_noise=0.02, **kwargs):
@@ -130,3 +130,17 @@ class CustomEnv(BaseEnv):
         # this should be equal to compute_dense_reward / max possible reward
         max_reward = 1.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
+
+    def get_state(self):
+        # this function is important in order to allow accurate replaying of trajectories. Make sure to specify any
+        # non simulation state related data such as a random 3D goal position you generated
+        # alternatively you can skip this part if the environment's rewards, observations, success etc. are dependent on simulation data
+        # e.g. self.your_custom_actor.pose.p will always give you your actor's 3D position
+        state = super().get_state()
+        return torch.hstack([state, self.goal_pos])
+
+    def set_state(self, state):
+        # this function complements get_state and sets any non simulation state related data correctly so the environment behaves
+        # the exact same in terms of output rewards, observations, success etc. should you reset state to a given state and take the same actions
+        self.goal_pos = state[:, -3:]
+        super().set_state(state[:, :-3])

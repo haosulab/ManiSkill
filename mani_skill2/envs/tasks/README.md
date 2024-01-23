@@ -13,3 +13,4 @@ optimal solution horizon: average time to solve the task when uniformally perfor
 
 env_id, task code, max_episode_steps, optimal solution_horizon, difficulty
 PushCube-v0, push_cube.py, 50, ~12, 1
+PickCube-v0, pick_cube.py, 100, ~20, 3?

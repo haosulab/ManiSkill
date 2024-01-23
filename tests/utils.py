@@ -6,7 +6,7 @@ from mani_skill2.utils.common import flatten_dict_keys
 # TODO (stao): reactivate old tasks once fixed
 ENV_IDS = [
     "LiftCube-v0",
-    "PickCube-v0",
+    "PickCube-v1",
     "StackCube-v0",
     "PickSingleYCB-v0",
     # "PickClutterYCB-v0",

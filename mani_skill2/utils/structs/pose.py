@@ -5,9 +5,7 @@ import numpy as np
 import sapien
 import sapien.physx as physx
 import torch
-from transforms3d.quaternions import qmult, quat2mat
 
-from mani_skill2.utils.geometry.geometry import rotate_vector
 from mani_skill2.utils.geometry.rotation_conversions import (
     quaternion_apply,
     quaternion_multiply,
