@@ -14,7 +14,7 @@
 - Success metric: The cube is within 2.5 cm of the goal position, and the robot is static.
 - Goal specification: 3D goal position.
 - Demonstration: 1000 successful trajectories.
-- Evaluaion protocol: 100 episodes with different initial joint positions of the robot and initial cube pose.
+- Evaluation protocol: 100 episodes with different initial joint positions of the robot and initial cube pose.
 
 ```{image} thumbnails/PickCube-v0.gif
 ---
@@ -28,7 +28,7 @@ alt: PickCube-v0
 - Objective: Pick up a red cube and place it onto a green one.
 - Success metric: The red cube is placed on top of the green one stably and it is not grasped.
 - Demonstration: 1000 successful trajectories.
-- Evaluaion protocol: 100 episodes with different initial joint positions of the robot and initial poses of both cubes.
+- Evaluation protocol: 100 episodes with different initial joint positions of the robot and initial poses of both cubes.
 
 ```{image} thumbnails/StackCube-v0.gif
 ---
