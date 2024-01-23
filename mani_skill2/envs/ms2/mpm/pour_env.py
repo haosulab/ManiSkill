@@ -8,7 +8,7 @@ from transforms3d.euler import euler2quat
 
 from mani_skill2 import PACKAGE_ASSET_DIR
 from mani_skill2.agents.robots.panda.variants import PandaPour
-from mani_skill2.envs.mpm.base_env import MPMBaseEnv, MPMModelBuilder, MPMSimulator
+from mani_skill2.envs.ms2.mpm.base_env import MPMBaseEnv, MPMModelBuilder, MPMSimulator
 from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.geometry import (
     get_local_aabc_for_actor,

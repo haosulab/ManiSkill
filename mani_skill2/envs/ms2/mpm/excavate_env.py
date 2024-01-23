@@ -5,9 +5,9 @@ import sapien
 from transforms3d.euler import euler2quat
 
 from mani_skill2.agents.robots.panda.variants import PandaBucket
-from mani_skill2.envs.mpm import perlin
-from mani_skill2.envs.mpm.base_env import MPMBaseEnv
-from mani_skill2.envs.mpm.utils import actor2meshes
+from mani_skill2.envs.ms2.mpm import perlin
+from mani_skill2.envs.ms2.mpm.base_env import MPMBaseEnv
+from mani_skill2.envs.ms2.mpm.utils import actor2meshes
 from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import get_obj_by_name

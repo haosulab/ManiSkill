@@ -28,7 +28,7 @@ import warp as wp
 from transforms3d.euler import euler2quat
 from transforms3d.quaternions import quat2mat
 
-from mani_skill2.envs.mpm.utils import actor2meshes, trimesh2sdf
+from mani_skill2.envs.ms2.mpm.utils import actor2meshes, trimesh2sdf
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.utils.logging_utils import logger
 from mani_skill2.utils.structs.pose import vectorize_pose
