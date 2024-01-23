@@ -424,6 +424,7 @@ class BaseEnv(gym.Env):
         else:
             raise NotImplementedError(self._reward_mode)
         return reward
+
     def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
         raise NotImplementedError
 
@@ -629,7 +630,13 @@ class BaseEnv(gym.Env):
             return obs, reward, terminated, torch.Tensor(False), info
         else:
             # On CPU sim mode, we always return numpy / python primitives without any batching.
-            return unbatch(to_numpy(obs), to_numpy(reward), to_numpy(terminated), False, to_numpy(info))
+            return unbatch(
+                to_numpy(obs),
+                to_numpy(reward),
+                to_numpy(terminated),
+                False,
+                to_numpy(info),
+            )
 
     def step_action(self, action):
         set_action = False
@@ -674,7 +681,7 @@ class BaseEnv(gym.Env):
             return info
         else:
             return unbatch(info)
-        
+
     def _before_control_step(self):
         pass
 
