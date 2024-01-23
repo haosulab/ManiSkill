@@ -266,7 +266,7 @@ for value_type, path in volume_paths.items():
 
         volumes[value_type][device] = volume
 
-        
+
 def register(parent):
 
     class TestVolumes(parent):
@@ -338,7 +338,7 @@ def register(parent):
                     with tape:
                         wp.launch(test_volume_index_to_world, dim=1, inputs=[volumes["torus"][device].id, points, values, grad_values], device=device)
                     tape.backward(values)
-               
+
                     grad_computed = tape.gradients[points].numpy()
                     grad_expected = grad_values.numpy()
                     np.testing.assert_allclose(grad_computed, grad_expected, rtol=1e-4)

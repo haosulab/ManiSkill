@@ -57,7 +57,7 @@ def test_overload_func():
 
 def test_func_export(test, device):
     # tests calling native functions from Python
-    
+
     q = wp.quat_identity()
     assert_np_equal(np.array([*q]), np.array([0.0, 0.0, 0.0, 1.0]))
 
@@ -105,9 +105,7 @@ if __name__ == '__main__':
     #unittest.main(verbosity=2)
 
     wp.force_load()
-    
+
     loader = unittest.defaultTestLoader
     testSuite = loader.loadTestsFromTestCase(c)
     testSuite.debug()
-
-

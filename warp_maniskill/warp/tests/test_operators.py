@@ -32,7 +32,7 @@ def test_operators_scalar_float():
     expect_eq(f, -1.0)
     expect_eq(g, 256.0)
     expect_eq(h, 3.0)
-    
+
 @wp.kernel
 def test_operators_scalar_int():
 
@@ -73,12 +73,12 @@ def test_operators_matrix_index():
     expect_eq(m22[0,1], 2.0)
     expect_eq(m22[1,0], 3.0)
     expect_eq(m22[1,1], 4.0)
-    
+
 
 
 @wp.kernel
 def test_operators_vec3():
-    
+
     v = vec3(1.0, 2.0, 3.0)
 
     r0 = v*3.0
@@ -102,7 +102,7 @@ def test_operators_vec3():
 
 @wp.kernel
 def test_operators_vec4():
-    
+
     v = vec4(1.0, 2.0, 3.0, 4.0)
 
     r0 = v*3.0
@@ -125,12 +125,12 @@ def test_operators_vec4():
 
     two = vec4(1.0)*2.0
     expect_eq(two, vec4(2.0, 2.0, 2.0, 2.0))
-       
+
 
 
 @wp.kernel
 def test_operators_mat22():
-    
+
     m = mat22(1.0, 2.0, 3.0, 4.0)
     r = mat22(3.0, 6.0, 9.0, 12.0)
 
@@ -150,14 +150,14 @@ def test_operators_mat22():
 
 @wp.kernel
 def test_operators_mat33():
-    
+
     m = mat33(1.0, 2.0, 3.0,
               4.0, 5.0, 6.0,
               7.0, 8.0, 9.0)
 
     r = mat33(3.0, 6.0, 9.0,
               12.0, 15.0, 18.0,
-              21.0, 24.0, 27.0)              
+              21.0, 24.0, 27.0)
 
     r0 = m*3.0
     r1 = 3.0*m
@@ -185,7 +185,7 @@ def test_operators_mat33():
 
 @wp.kernel
 def test_operators_mat44():
-    
+
     m = mat44(1.0, 2.0, 3.0, 4.0,
               5.0, 6.0, 7.0, 8.0,
               9.0, 10.0, 11.0, 12.0,

@@ -27,20 +27,20 @@ def test_rename():
 
     a = 0
     b = 1
-    
+
     a = b
     a = 2
 
     wp.expect_eq(a, 2)
     wp.expect_eq(b, 1)
-    
+
 
 @wp.kernel
 def test_inplace():
 
     a = 1.0
     a += 2.0
-    
+
     wp.expect_eq(a, 3.0)
 
 
@@ -59,9 +59,9 @@ def test_dynamic_for_rename(n: int):
     f1 = int(1.0)
 
     for i in range(0, n):
-        
+
         f = f0 + f1
-        
+
         f0 = f1
         f1 = f
 
@@ -156,7 +156,7 @@ def test_range_dynamic(start: int, end: int, step: int, result: wp.array(dtype=i
 
 @wp.kernel
 def test_range_dynamic_nested(n: int):
-    
+
     sum1 = float(0.0)
     sum2 = float(0.0)
     sum3 = float(0.0)
@@ -168,7 +168,7 @@ def test_range_dynamic_nested(n: int):
         for j in range(n):
             sum2 = sum2 + 1.0
             sum3 = sum3 + 1.0
-        
+
         sum3 = sum3 + 1.0
 
 
@@ -224,5 +224,3 @@ def register(parent):
 if __name__ == '__main__':
     c = register(unittest.TestCase)
     unittest.main(verbosity=2)
-
-

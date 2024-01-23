@@ -159,7 +159,7 @@ if __name__ == "__main__":
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
     args.num_iterations = args.total_timesteps // args.batch_size
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
-    
+
     if args.track:
         import wandb
 
@@ -191,12 +191,12 @@ if __name__ == "__main__":
     envs = gym.vector.AsyncVectorEnv(
         [make_env(args.env_id, i, args.capture_video, run_name, args.gamma) for i in range(args.num_envs)]
     )
-    
+
     # sapien.physx.set_gpu_memory_config(found_lost_pairs_capacity=2**26, max_rigid_patch_count=200000)
     # sim_freq, control_freq = 100, 20
     # envs = gym.make(args.env_id, num_envs=args.num_envs, render_mode="rgb_array", obs_mode="state", control_mode="pd_joint_delta_pos", sim_freq=sim_freq, control_freq=control_freq)
     # eval_envs = gym.make(args.env_id, num_envs=8, render_mode="rgb_array", obs_mode="state", control_mode="pd_joint_delta_pos", sim_freq=sim_freq, control_freq=control_freq)
-    
+
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
     agent = Agent(envs).to(device)

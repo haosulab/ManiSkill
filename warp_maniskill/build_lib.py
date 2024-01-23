@@ -1,5 +1,5 @@
 # This script is an 'offline' build of the core warp runtime libraries
-# designed to be executed as part of CI / developer workflows, not 
+# designed to be executed as part of CI / developer workflows, not
 # as part of the user runtime (since it requires CUDA toolkit, etc)
 
 import sys
@@ -62,7 +62,7 @@ def build(args):
             dll_path = os.path.join(build_path, "bin/warp.dylib")
         else:
             dll_path = os.path.join(build_path, "bin/warp.so")
-        
+
         # If installed from pip, "bin" needs to exist
         if not os.path.exists(os.path.join(build_path, "bin")):
             os.mkdir(os.path.join(build_path, "bin"))

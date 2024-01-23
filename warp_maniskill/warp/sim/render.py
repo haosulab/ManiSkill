@@ -13,7 +13,7 @@ import warp as wp
 import warp.sim
 
 class SimRenderer(warp.render.UsdRenderer):
-    
+
     def __init__(self, model: warp.sim.Model, path):
 
         # create USD stage
@@ -39,7 +39,7 @@ class SimRenderer(warp.render.UsdRenderer):
             shape_transform = model.shape_transform.numpy()
 
             for s in range(model.shape_count):
-            
+
                 parent_path = self.root.GetPath()
                 if shape_body[s] >= 0:
                     parent_path = parent_path.AppendChild("body_" + str(shape_body[s].item()))
@@ -108,7 +108,7 @@ class SimRenderer(warp.render.UsdRenderer):
 
                 elif (geo_type == warp.sim.GEO_SDF):
                     pass
-        
+
 
 
     def render(self, state: warp.sim.State):
@@ -131,7 +131,7 @@ class SimRenderer(warp.render.UsdRenderer):
 
         # render muscles
         if (self.model.muscle_count):
-            
+
             body_q = state.body_q.numpy()
 
             muscle_start = self.model.muscle_start.numpy()
@@ -140,9 +140,9 @@ class SimRenderer(warp.render.UsdRenderer):
             muscle_activation = self.model.muscle_activation.numpy()
 
             # for s in self.skeletons:
-                
+
             #     # for mesh, link in s.mesh_map.items():
-                    
+
             #     #     if link != -1:
             #     #         X_sc = wp.transform_expand(self.state.body_X_sc[link].tolist())
 
@@ -157,17 +157,17 @@ class SimRenderer(warp.render.UsdRenderer):
                 points = []
 
                 for w in range(start, end):
-                    
+
                     link = muscle_links[w]
                     point = muscle_points[w]
 
                     X_sc = wp.transform_expand(body_q[link][0])
 
                     points.append(Gf.Vec3f(wp.transform_point(X_sc, point).tolist()))
-                
+
                 self.render_line_strip(name=f"muscle_{m}", vertices=points, radius=0.0075, color=(muscle_activation[m], 0.2, 0.5))
-        
-        
+
+
         with Sdf.ChangeBlock():
 
             # update  bodies
@@ -183,5 +183,3 @@ class SimRenderer(warp.render.UsdRenderer):
                     X_sb = warp.transform_expand(body_q[b])
 
                     wp.render._usd_set_xform(node, X_sb.p, X_sb.q, (1.0, 1.0, 1.0), self.time)
-
-

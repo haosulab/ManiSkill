@@ -20,20 +20,24 @@ scene1 = create_scene([10, 0, 0])
 
 import torch
 import torch.nn as nn
+
+
 class MLP(nn.Module):
     def __init__(self):
         super().__init__()
-        self.mlp = nn.Sequential(*[
-            nn.Linear(3, 3),
-            nn.Tanh(),
-            nn.Linear(3, 1)
-        ])
+        self.mlp = nn.Sequential(*[nn.Linear(3, 3), nn.Tanh(), nn.Linear(3, 1)])
+
     def forward(self, x):
         return self.mlp(x)
 
+
 device = torch.device("cuda:0")
+
+
 def loss(x):
-    return x ** 2
+    return x**2
+
+
 model = MLP().to(device)
 x = torch.rand(3).to(device)
 output = model(x)

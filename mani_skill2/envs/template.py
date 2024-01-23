@@ -1,7 +1,7 @@
 """
 Code for a minimal environment/task with just a robot being loaded. We recommend copying this template and modifying as you need.
 
-At a high-level, ManiSkill tasks can minimally be defined by what agents/actors are 
+At a high-level, ManiSkill tasks can minimally be defined by what agents/actors are
 loaded, how agents/actors are randomly initialized during env resets, how goals are randomized and parameterized in observations, and success conditions
 
 Environment reset is comprised of running two functions, `self.reconfigure` and `self.initialize_episode`, which is auto
@@ -12,8 +12,8 @@ Reconfiguration will reset the entire environment scene and allow you to load/sw
 Episode initialization will reset the poses of all actors, articulations, and agents,
 in addition to initializing any task relevant data like a goal
 
-See comments for how to make your own environment and what each required function should do. If followed correctly you can easily build a 
-task that can simulate on the CPU and be parallelized on the GPU without having to manage GPU memory and parallelization apart from some 
+See comments for how to make your own environment and what each required function should do. If followed correctly you can easily build a
+task that can simulate on the CPU and be parallelized on the GPU without having to manage GPU memory and parallelization apart from some
 code that need to be written in batched mode (e.g. reward, success conditions)
 
 For a minimal implementation of a simple task, check out

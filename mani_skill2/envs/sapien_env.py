@@ -335,10 +335,7 @@ class BaseEnv(gym.Env):
             obs = self._get_obs_images()
         else:
             raise NotImplementedError(self._obs_mode)
-        if physx.is_gpu_enabled():
-            return obs
-        else:
-            return unbatch(obs)
+        return obs
 
     def _get_obs_state_dict(self):
         """Get (ground-truth) state-based observations."""
@@ -553,7 +550,7 @@ class BaseEnv(gym.Env):
             self._scene.px.gpu_update_articulation_kinematics()
             self._scene._gpu_fetch_all()
         else:
-            obs = to_numpy(obs)
+            obs = to_numpy(unbatch(obs))
         return obs, {}
 
     def _set_main_rng(self, seed):
@@ -677,10 +674,7 @@ class BaseEnv(gym.Env):
         """
         info = dict(elapsed_steps=self._elapsed_steps)
         info.update(self.evaluate(**kwargs))
-        if physx.is_gpu_enabled():
-            return info
-        else:
-            return unbatch(info)
+        return info
 
     def _before_control_step(self):
         pass

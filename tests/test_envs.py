@@ -51,6 +51,7 @@ def test_env_seeded_reset():
     env.close()
     del env
 
+
 def test_env_seeded_sequence_reset():
     N = 17
     env = gym.make(ENV_IDS[0], max_episode_steps=5)
@@ -68,6 +69,7 @@ def test_env_seeded_sequence_reset():
     env.close()
     assert_obs_equal(obs, first_obs)
     del env
+
 
 def test_env_raise_value_error_for_nan_actions():
     env = gym.make(ENV_IDS[0])

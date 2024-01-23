@@ -2,6 +2,7 @@ import numpy as np
 import torch
 
 from mani_skill2.utils.common import flatten_dict_keys
+
 # TODO (stao): reactivate old tasks once fixed
 ENV_IDS = [
     "LiftCube-v0",

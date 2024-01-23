@@ -19,14 +19,14 @@ import unittest
 wp.init()
 
 def test_reload(test, device):
-        
+
 
     #--------------------------------------------
     # first pass
 
     @wp.kernel
     def basic(x: wp.array(dtype=float)):
-        
+
         tid = wp.tid()
 
         x[tid] = float(tid)*1.0
@@ -36,9 +36,9 @@ def test_reload(test, device):
     x = wp.zeros(n, dtype=float, device=device)
 
     wp.launch(
-        kernel=basic, 
-        dim=n, 
-        inputs=[x], 
+        kernel=basic,
+        dim=n,
+        inputs=[x],
         device=device)
 
     #--------------------------------------------
@@ -46,24 +46,24 @@ def test_reload(test, device):
 
     @wp.kernel
     def basic(x: wp.array(dtype=float)):
-        
+
         tid = wp.tid()
 
         x[tid] = float(tid)*2.0
-        
+
     y = wp.zeros(n, dtype=float, device=device)
 
     wp.launch(
-        kernel=basic, 
-        dim=n, 
-        inputs=[y], 
+        kernel=basic,
+        dim=n,
+        inputs=[y],
         device=device)
 
 
     assert_np_equal(np.arange(0, n, 1), x.numpy())
     assert_np_equal(np.arange(0, n, 1)*2.0, y.numpy())
 
-    
+
 
 
 def register(parent):
@@ -72,9 +72,9 @@ def register(parent):
 
     class TestReload(parent):
         pass
-    
+
     add_function_test(TestReload, "test_reload", test_reload, devices=devices)
-    
+
     return TestReload
 
 if __name__ == '__main__':
