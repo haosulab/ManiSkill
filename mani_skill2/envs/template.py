@@ -28,11 +28,12 @@ import torch
 
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
-from mani_skill2.utils.sapien_utils import (  # import various useful utilities for working with sapien
-    look_at,
-)
+from mani_skill2.utils.registration import register
+from mani_skill2.utils.sapien_utils import look_at
 
 
+# register the environment by a unique ID and specify a max time limit. Now once this file is imported you can do gym.make("CustomEnv-v0")
+@register(name="CustomEnv-v0", max_episode_steps=200)
 class CustomEnv(BaseEnv):
     # in the __init__ function you can pick a default robot your task should use e.g. the panda robot
     def __init__(self, *args, robot_uid="panda", robot_init_qpos_noise=0.02, **kwargs):

@@ -28,9 +28,7 @@ from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.building.actors import build_cube, build_red_white_target
 from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import (  # import various useful utilities for working with sapien
-    look_at,
-)
+from mani_skill2.utils.sapien_utils import look_at
 from mani_skill2.utils.scene_builder.table.table_scene_builder import TableSceneBuilder
 from mani_skill2.utils.structs.pose import Pose, vectorize_pose
 from mani_skill2.utils.structs.types import Array
