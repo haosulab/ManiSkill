@@ -35,13 +35,18 @@ def to_tensor(array: Union[torch.Tensor, np.array, Sequence]):
     elif get_backend_name() == "numpy":
         if isinstance(array, np.ndarray):
             return torch.from_numpy(array)
+        # TODO (arth): better way to address torch "UserWarning: Creating a tensor from a list of numpy.ndarrays is extremely slow" ?
+        elif isinstance(array, list) and isinstance(array[0], np.ndarray):
+            return torch.from_numpy(np.array(array))
+        elif np.iterable(array):
+            return torch.Tensor(array)
         else:
             return torch.tensor(array)
 
 
-def to_numpy(array: Union[Array, Sequence]):
+def _to_numpy(array: Union[Array, Sequence]) -> np.ndarray:
     if isinstance(array, (dict)):
-        return {k: to_numpy(v) for k, v in array.items()}
+        return {k: _to_numpy(v) for k, v in array.items()}
     if isinstance(array, str):
         return array
     if torch is not None:
@@ -51,6 +56,34 @@ def to_numpy(array: Union[Array, Sequence]):
         return array
     else:
         return np.array(array)
+
+
+def to_numpy(array: Union[Array, Sequence], dtype=None) -> np.ndarray:
+    array = _to_numpy(array)
+    if dtype is not None:
+        return array.astype(dtype)
+    return array
+
+
+def _unbatch(array: Union[Array, Sequence]):
+    if isinstance(array, (dict)):
+        return {k: _unbatch(v) for k, v in array.items()}
+    if isinstance(array, str):
+        return array
+    if torch is not None:
+        if isinstance(array, torch.Tensor):
+            return array.squeeze(0)
+    if isinstance(array, np.ndarray):
+        if np.iterable(array) and array.shape[0] == 1:
+            return array.squeeze(0)
+    if isinstance(array, list):
+        if len(array) == 1:
+            return array[0]
+    return array
+
+
+def unbatch(*args: Tuple[Union[Array, Sequence]]):
+    return tuple([_unbatch(x) for x in args])
 
 
 def clone_tensor(array: Array):
@@ -293,15 +326,9 @@ def get_pairwise_contacts(
     """
     pairwise_contacts = []
     for contact in contacts:
-        if (
-            contact.components[0].entity == actor0
-            and contact.components[1].entity == actor1
-        ):
+        if contact.bodies[0].entity == actor0 and contact.bodies[1].entity == actor1:
             pairwise_contacts.append((contact, True))
-        elif (
-            contact.components[0].entity == actor1
-            and contact.components[1].entity == actor0
-        ):
+        elif contact.bodies[0].entity == actor1 and contact.bodies[1].entity == actor0:
             pairwise_contacts.append((contact, False))
     return pairwise_contacts
 
@@ -328,9 +355,9 @@ def get_actor_contacts(
 ) -> List[Tuple[physx.PhysxContact, bool]]:
     entity_contacts = []
     for contact in contacts:
-        if contact.components[0].entity == actor:
+        if contact.bodies[0].entity == actor:
             entity_contacts.append((contact, True))
-        elif contact.components[1].entity == actor:
+        elif contact.bodies[1].entity == actor:
             entity_contacts.append((contact, False))
     return entity_contacts
 
@@ -348,16 +375,16 @@ def get_articulation_contacts(
     if included_links is None:
         included_links = links
     for contact in contacts:
-        if contact.components[0] in included_links:
-            if contact.components[1] in links:
+        if contact.bodies[0] in included_links:
+            if contact.bodies[1] in links:
                 continue
-            if contact.components[1].entity in excluded_entities:
+            if contact.bodies[1].entity in excluded_entities:
                 continue
             articulation_contacts.append((contact, True))
-        elif contact.components[1] in included_links:
-            if contact.components[0] in links:
+        elif contact.bodies[1] in included_links:
+            if contact.bodies[0] in links:
                 continue
-            if contact.components[0].entity in excluded_entities:
+            if contact.bodies[0].entity in excluded_entities:
                 continue
             articulation_contacts.append((contact, False))
     return articulation_contacts

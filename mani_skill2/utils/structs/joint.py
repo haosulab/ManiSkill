@@ -34,6 +34,10 @@ class Joint(BaseStruct[physx.PhysxJointComponent]):
     _data_index: slice = None
     name: str = None
 
+    # TODO (arth): might need better hash in future but this is fine for now
+    def __hash__(self):
+        return hash(self.name)
+
     @classmethod
     def create(
         cls,
