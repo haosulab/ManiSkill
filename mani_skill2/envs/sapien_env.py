@@ -338,7 +338,7 @@ class BaseEnv(gym.Env):
         if physx.is_gpu_enabled():
             return obs
         else:
-            return unbatch(to_numpy(obs))
+            return unbatch(obs)
 
     def _get_obs_state_dict(self):
         """Get (ground-truth) state-based observations."""
@@ -414,16 +414,16 @@ class BaseEnv(gym.Env):
 
     def get_reward(self, obs: Any, action: Array, info: Dict):
         if self._reward_mode == "sparse":
-            return to_tensor(info["success"])
+            reward = info["success"]
         elif self._reward_mode == "dense":
-            return self.compute_dense_reward(obs=obs, action=action, info=info)
+            reward = self.compute_dense_reward(obs=obs, action=action, info=info)
         elif self._reward_mode == "normalized_dense":
-            return self.compute_normalized_dense_reward(
+            reward = self.compute_normalized_dense_reward(
                 obs=obs, action=action, info=info
             )
         else:
             raise NotImplementedError(self._reward_mode)
-
+        return reward
     def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
         raise NotImplementedError
 
@@ -545,12 +545,15 @@ class BaseEnv(gym.Env):
         self._set_episode_rng(self._episode_seed)
 
         self.initialize_episode()
+        obs = self.get_obs()
         if physx.is_gpu_enabled():
             # ensure all updates to object poses and configurations are applied on GPU after task initialization
             self._scene._gpu_apply_all()
             self._scene.px.gpu_update_articulation_kinematics()
             self._scene._gpu_fetch_all()
-        return self.get_obs(), {}
+        else:
+            obs = to_numpy(obs)
+        return obs, {}
 
     def _set_main_rng(self, seed):
         """Set the main random generator (e.g., to generate the seed for each episode)."""
@@ -616,24 +619,17 @@ class BaseEnv(gym.Env):
     # -------------------------------------------------------------------------- #
 
     def step(self, action: Union[None, np.ndarray, Dict]):
-        with sapien.profile("step_action"):
-            self.step_action(action)
+        self.step_action(action)
         self._elapsed_steps += 1
-        # TODO (stao): I think evaluation should always occur first before generating observations
-        # as evaluation is more likely to use privileged information whereas observations only sometimes should include privileged information
-        with sapien.profile("get_obs"):
-            obs = self.get_obs()
+        obs = self.get_obs()
         info = self.get_info(obs=obs)
         reward = self.get_reward(obs=obs, action=action, info=info)
         terminated = info["success"]
-        if self.num_envs == 1:
-            terminated = terminated[0]
-            reward = reward[0]
-
         if physx.is_gpu_enabled():
             return obs, reward, terminated, torch.Tensor(False), info
         else:
-            return unbatch(obs, reward, terminated.item(), False, to_numpy(info))
+            # On CPU sim mode, we always return numpy / python primitives without any batching.
+            return unbatch(to_numpy(obs), to_numpy(reward), to_numpy(terminated), False, to_numpy(info))
 
     def step_action(self, action):
         set_action = False
@@ -674,8 +670,11 @@ class BaseEnv(gym.Env):
         """
         info = dict(elapsed_steps=self._elapsed_steps)
         info.update(self.evaluate(**kwargs))
-        return info
-
+        if physx.is_gpu_enabled():
+            return info
+        else:
+            return unbatch(info)
+        
     def _before_control_step(self):
         pass
 

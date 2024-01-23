@@ -47,12 +47,9 @@ def to_tensor(array: Union[torch.Tensor, np.array, Sequence]):
 def _to_numpy(array: Union[Array, Sequence]) -> np.ndarray:
     if isinstance(array, (dict)):
         return {k: _to_numpy(v) for k, v in array.items()}
-    if isinstance(array, str):
-        return array
-    if torch is not None:
-        if isinstance(array, torch.Tensor):
-            return array.cpu().numpy()
-    if isinstance(array, np.ndarray):
+    if isinstance(array, torch.Tensor):
+        return array.cpu().numpy()
+    if isinstance(array, np.ndarray) or isinstance(array, bool) or isinstance(array, str) or isinstance(array, float) or isinstance(array, int):
         return array
     else:
         return np.array(array)

@@ -38,6 +38,7 @@ from mani_skill2.utils.structs.types import Array
 
 @register_env("PushCube-v0", max_episode_steps=50)
 class PushCubeEnv(BaseEnv):
+    # Specify some supported robot types
     agent: Union[Panda, Xmate3Robotiq]
 
     # set some commonly used values
