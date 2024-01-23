@@ -7,25 +7,25 @@ from mani_skill2.utils.wrappers import RecordEpisode
 
 if __name__ == "__main__":
     # , "StackCube-v0", "LiftCube-v0"
-    num_envs = 8
+    num_envs = 2
     for env_id in ["PushObject-v0"]:  # , "StackCube-v0", "LiftCube-v0"]:
         env = gym.make(
             env_id,
             num_envs=num_envs,
             enable_shadow=True,
             render_mode="rgb_array",
-            control_mode="pd_joint_delta_pos",
+            control_mode="pd_ee_delta_pose",
             sim_freq=500,
             control_freq=100,
         )
-        env = RecordEpisode(
-            env,
-            output_dir="videos/manual_test",
-            trajectory_name=f"{env_id}",
-            info_on_video=False,
-            video_fps=30,
-            save_trajectory=False,
-        )
+        # env = RecordEpisode(
+        #     env,
+        #     output_dir="videos/manual_test",
+        #     trajectory_name=f"{env_id}",
+        #     info_on_video=False,
+        #     video_fps=30,
+        #     save_trajectory=False,
+        # )
         env.reset(seed=0)
         done = False
         i = 0

@@ -26,7 +26,36 @@ class PDEEPosController(PDJointPosController):
         # Pinocchio model to compute IK
         # TODO (stao): Batched IK? https://curobo.org/source/getting_started/2a_python_examples.html#inverse-kinematics
         if physx.is_gpu_enabled():
-            pass
+            from curobo.types.base import TensorDeviceType
+            from curobo.types.math import Pose
+            from curobo.types.robot import RobotConfig
+            from curobo.util_file import get_robot_configs_path, join_path, load_yaml
+            from curobo.wrap.reacher.ik_solver import IKSolver, IKSolverConfig
+
+            tensor_args = TensorDeviceType()
+
+            config_file = load_yaml(
+                "/home/stao/work/research/maniskill/ManiSkill2/mani_skill2/assets/robots/panda/panda_v2.yml"
+            )
+            urdf_file = config_file["robot_cfg"]["kinematics"]["urdf_path"]
+            base_link = "panda_link0"
+            ee_link = config_file["robot_cfg"]["kinematics"]["ee_link"]
+            robot_cfg = RobotConfig.from_basic(
+                urdf_file, base_link, ee_link, tensor_args
+            )
+
+            ik_config = IKSolverConfig.load_from_robot_config(
+                robot_cfg,
+                None,
+                rotation_threshold=0.05,
+                position_threshold=0.005,
+                num_seeds=20,
+                self_collision_check=False,
+                self_collision_opt=False,
+                tensor_args=tensor_args,
+                use_cuda_graph=True,
+            )
+            self.ik_solver = IKSolver(ik_config)
         else:
             self.pmodel = self.articulation.create_pinocchio_model()
         self.qmask = np.zeros(self.articulation.dof, dtype=bool)
@@ -98,7 +127,6 @@ class PDEEPosController(PDJointPosController):
 
     def set_action(self, action: np.ndarray):
         action = self._preprocess_action(action)
-
         self._step = 0
         self._start_qpos = self.qpos
 
@@ -170,15 +198,20 @@ class PDEEPoseController(PDEEPosController):
     def _clip_and_scale_action(self, action):
         # TODO (stao): support batched actions
         # NOTE(xiqiang): rotation should be clipped by norm.
+
         pos_action = clip_and_scale_action(
-            action[:3], self.action_space_low[:3], self.action_space_high[:3]
+            action[:, :3], self.action_space_low[:3], self.action_space_high[:3]
         )
-        rot_action = action[3:]
-        rot_norm = torch.linalg.norm(rot_action)
-        if rot_norm > 1:
-            rot_action = rot_action / rot_norm
+        rot_action = action[:, 3:]
+
+        rot_norm = torch.linalg.norm(rot_action, axis=1)
+        import ipdb
+
+        ipdb.set_trace()
+        rot_action = rot_action / rot_norm
+        rot_action[rot_norm > 1] = rot_action[rot_norm > 1] * rot_norm[rot_norm > 1]
         rot_action = rot_action * self.config.rot_bound
-        return np.hstack([pos_action, rot_action])
+        return torch.hstack([pos_action, rot_action])
 
     def compute_target_pose(self, prev_ee_pose_at_base, action):
         if self.config.use_delta:
