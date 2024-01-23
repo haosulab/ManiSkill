@@ -17,6 +17,8 @@ from mani_skill2.utils.structs.pose import Pose
 @register_env("PickCube-v1", max_episode_steps=100)
 class PickCubeEnv(BaseEnv):
     """
+    Task Description
+    ----------------
     A simple task where the objective is to grasp a cube and move it to a target goal position.
 
     Randomizations

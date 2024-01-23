@@ -37,6 +37,8 @@ from mani_skill2.utils.structs.types import Array
 @register_env("PushCube-v0", max_episode_steps=50)
 class PushCubeEnv(BaseEnv):
     """
+    Task Description
+    ----------------
     A simple task where the objective is to push and move a cube to a goal region in front of it
 
     Randomizations

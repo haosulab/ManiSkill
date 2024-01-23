@@ -35,6 +35,23 @@ from mani_skill2.utils.sapien_utils import look_at
 # register the environment by a unique ID and specify a max time limit. Now once this file is imported you can do gym.make("CustomEnv-v0")
 @register_env(name="CustomEnv-v0", max_episode_steps=200)
 class CustomEnv(BaseEnv):
+    """
+    Task Description
+    ----------------
+    Add a task description here
+
+    Randomizations
+    --------------
+    - how is it randomized?
+    - how is that randomized?
+
+    Success Conditions
+    ------------------
+    - what is done to check if this task is solved?
+
+    Visualization: link to a video/gif of the task being solved
+    """
+
     # in the __init__ function you can pick a default robot your task should use e.g. the panda robot
     def __init__(self, *args, robot_uid="panda", robot_init_qpos_noise=0.02, **kwargs):
         self.robot_init_qpos_noise = robot_init_qpos_noise
