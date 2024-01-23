@@ -39,11 +39,11 @@ class PickCubeEnv(StationaryManipulationEnv):
         xyz[..., 2] = self.cube_half_size[2]
         qs = [1, 0, 0, 0]
         if self.obj_init_rot_z:
-            qs = []
+            qs = np.zeros((self.num_envs, 4))
             for i in range(self.num_envs):
                 ori = self._episode_rng.uniform(0, 2 * np.pi)
                 q = euler2quat(0, 0, ori)
-                qs.append(q)
+                qs[i] = q
             qs = to_tensor(qs)
         # to set a batch of poses, use the Pose object or provide a raw tensor
         obj_pose = Pose.create_from_pq(p=xyz, q=qs)

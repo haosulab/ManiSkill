@@ -58,11 +58,8 @@ class BaseEnv(gym.Env):
             "*" represents all registered controllers, and the action space will be a dict.
 
         render_mode: render mode registered in @SUPPORTED_RENDER_MODES.
-
-        sim_freq (int): simulation frequency (Hz)
-
-        control_freq (int): control frequency (Hz)
-
+        sim_freq (int): simulation frequency (Hz). Default is 500 for CPU simulation, 100 for GPU simulation
+        control_freq (int): control frequency (Hz). Default is 20 for CPU simulation, 20 for GPU simulation
         renderer (str): type of renderer. "sapien" or "client".
 
         renderer_kwargs (dict): kwargs to initialize the renderer.
@@ -132,8 +129,8 @@ class BaseEnv(gym.Env):
         reward_mode: str = None,
         control_mode: str = None,
         render_mode: str = None,
-        sim_freq: int = 500,
-        control_freq: int = 20,
+        sim_freq: int = None,
+        control_freq: int = None,
         renderer: str = "sapien",
         renderer_kwargs: dict = None,
         shader_dir: str = "default",
@@ -164,6 +161,17 @@ class BaseEnv(gym.Env):
         # TODO(jigu): Change to `warning` after lighting in VecEnv is fixed.
         # TODO Ms2 set log level. What to do now?
         # self._engine.set_log_level(os.getenv("MS2_SIM_LOG_LEVEL", "error"))
+
+        if sim_freq is None:
+            if physx.is_gpu_enabled():
+                sim_freq = 100
+            else:
+                sim_freq = 500
+        if control_freq is None:
+            if physx.is_gpu_enabled():
+                control_freq = 20
+            else:
+                control_freq = 20
 
         # Create SAPIEN renderer
         self._renderer_type = renderer
