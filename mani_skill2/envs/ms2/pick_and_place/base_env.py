@@ -1,4 +1,4 @@
-from typing import Type, Union
+from typing import Union
 
 import numpy as np
 import sapien
@@ -12,7 +12,7 @@ from mani_skill2.agents.robots.panda import Panda
 from mani_skill2.agents.robots.xmate3 import Xmate3Robotiq
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
-from mani_skill2.utils.sapien_utils import hide_entity, look_at
+from mani_skill2.utils.sapien_utils import hide_entity, look_at, to_numpy
 from mani_skill2.utils.structs.pose import vectorize_pose
 
 
@@ -34,7 +34,7 @@ class StationaryManipulationEnv(BaseEnv):
         if render_material is None:
             render_material = self._renderer.create_material()
             render_material.base_color = (*color, 1.0)
-
+        half_size = to_numpy(half_size)
         builder = self._scene.create_actor_builder()
         builder.add_box_collision(half_size=half_size)
         builder.add_box_visual(half_size=half_size, material=render_material)
@@ -123,7 +123,7 @@ class StationaryManipulationEnv(BaseEnv):
             raise NotImplementedError(self.robot_uid)
 
     def _register_sensors(self):
-        pose = look_at([0.3, 0, 0.6], [-0.1, 0, 0.1])
+        pose = look_at([0.3, 0, 0.6], [-0.1, 0, 0.9])
         return CameraConfig(
             "base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10
         )

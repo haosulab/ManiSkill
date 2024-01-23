@@ -46,7 +46,7 @@ def get_commit_info(show_modified_files=False, show_untracked_files=False):
             commit_info["modified"] = modified_files
 
         if show_untracked_files:
-            untracked_files = repo.untracked_files
+            repo.untracked_files
             commit_info["untracked"] = modified_files
 
         # https://github.com/gitpython-developers/GitPython/issues/718#issuecomment-360267779

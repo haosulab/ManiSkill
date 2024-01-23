@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import List
 
 ## TODO clean up the code here, too many functions that are plurals of one or the other and confusing naming
 import numpy as np

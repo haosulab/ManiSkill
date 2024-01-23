@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 import numpy as np
 import sapien
+import torch
 from sapien import Pose
 from transforms3d.euler import euler2quat
 
@@ -58,7 +59,8 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
         return builder.build_static(name)
 
     def _load_actors(self):
-        TableSceneBuilder().build(self._scene)
+        self.table_scene = TableSceneBuilder(env=self)
+        self.table_scene.build()
 
         # peg
         # length, radius = 0.1, 0.02
@@ -105,6 +107,7 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
         self.box_hole_radius = inner_radius
 
     def _initialize_actors(self):
+        self.table_scene.initialize()
         xy = self._episode_rng.uniform([-0.1, -0.3], [0.1, 0])
         pos = np.hstack([xy, self.peg_half_size[2]])
         ori = np.pi / 2 + self._episode_rng.uniform(-np.pi / 3, np.pi / 3)
@@ -167,14 +170,17 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
         # Only head position is used in fact
         peg_head_pos_at_hole = (self.box_hole_pose.inv() * self.peg_head_pose).p
         # x-axis is hole direction
-        x_flag = -0.015 <= peg_head_pos_at_hole[0]
+        x_flag = -0.015 <= peg_head_pos_at_hole[:, 0]
         y_flag = (
-            -self.box_hole_radius <= peg_head_pos_at_hole[1] <= self.box_hole_radius
+            -self.box_hole_radius <= peg_head_pos_at_hole[:, 1] <= self.box_hole_radius
         )
         z_flag = (
-            -self.box_hole_radius <= peg_head_pos_at_hole[2] <= self.box_hole_radius
+            -self.box_hole_radius <= peg_head_pos_at_hole[:, 2] <= self.box_hole_radius
         )
-        return (x_flag and y_flag and z_flag), peg_head_pos_at_hole
+        return (
+            torch.logical_and(torch.logical_and(x_flag, y_flag), z_flag),
+            peg_head_pos_at_hole,
+        )
 
     def evaluate(self, **kwargs) -> dict:
         success, peg_head_pos_at_hole = self.has_peg_inserted()

@@ -11,6 +11,7 @@ from transforms3d.euler import euler2quat
 from transforms3d.quaternions import axangle2quat, qmult
 
 from mani_skill2 import ASSET_DIR, format_path
+from mani_skill2.envs.scene import ManiSkillScene
 from mani_skill2.utils.common import random_choice
 from mani_skill2.utils.io_utils import load_json
 from mani_skill2.utils.registration import register_env
@@ -76,7 +77,6 @@ class PickSingleEnv(StationaryManipulationEnv):
 
     def _check_assets(self):
         """Check whether the assets exist."""
-        pass
 
     def _load_actors(self):
         self.table_scene = TableSceneBuilder(
@@ -292,8 +292,8 @@ class PickSingleEnv(StationaryManipulationEnv):
         return torch.hstack([state, self.goal_pos])
 
     def set_state(self, state):
-        self.goal_pos = state[-3:]
-        super().set_state(state[:-3])
+        self.goal_pos = state[:, -3:]
+        super().set_state(state[:, :-3])
 
 
 # ---------------------------------------------------------------------------- #
@@ -301,7 +301,7 @@ class PickSingleEnv(StationaryManipulationEnv):
 # ---------------------------------------------------------------------------- #
 def build_actor_ycb(
     model_id: str,
-    scene: sapien.Scene,
+    scene: ManiSkillScene,
     name: str,
     scale: float = 1.0,
     physical_material: physx.PhysxMaterial = None,

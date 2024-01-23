@@ -67,8 +67,8 @@ def eval_articulation_fk(
         axis = joint_axis[i]
 
         X_pj = joint_X_p[i]
-        X_cj = joint_X_c[i]  
-        
+        X_cj = joint_X_c[i]
+
         q_start = joint_q_start[i]
         qd_start = joint_qd_start[i]
 
@@ -100,12 +100,12 @@ def eval_articulation_fk(
                         joint_qd[qd_start+2])
 
             # print(r)
-            
+
             X_jc = wp.transform(wp.vec3(), r)
             v_jc = wp.spatial_vector(w, wp.vec3())
 
         if type == wp.sim.JOINT_FIXED:
-            
+
             X_jc = wp.transform_identity()
             v_jc = wp.spatial_vector(wp.vec3(), wp.vec3())
 
@@ -143,8 +143,8 @@ def eval_articulation_fk(
 
             t = wp.transform(wp.vec3(), q_2*q_1*q_0)
 
-            v = wp.spatial_vector(axis_0*joint_qd[qd_start+0] + 
-                                  axis_1*joint_qd[qd_start+1] + 
+            v = wp.spatial_vector(axis_0*joint_qd[qd_start+0] +
+                                  axis_1*joint_qd[qd_start+1] +
                                   axis_2*joint_qd[qd_start+2], wp.vec3())
 
             X_jc = t
@@ -167,7 +167,7 @@ def eval_articulation_fk(
 
             t = wp.transform(wp.vec3(), q_1*q_0)
 
-            v = wp.spatial_vector(axis_0*joint_qd[qd_start+0] + 
+            v = wp.spatial_vector(axis_0*joint_qd[qd_start+0] +
                                   axis_1*joint_qd[qd_start+1], wp.vec3())
 
             X_jc = t
@@ -185,14 +185,14 @@ def eval_articulation_fk(
 
         body_q[i] = X_wc
         body_qd[i] = v_wc
-        
+
 
 # updates state body information based on joint coordinates
 def eval_fk(model, joint_q, joint_qd, mask, state):
 
     wp.launch(kernel=eval_articulation_fk,
                 dim=model.articulation_count,
-                inputs=[    
+                inputs=[
                 model.articulation_start,
                 mask,
                 joint_q,
@@ -215,7 +215,7 @@ def eval_fk(model, joint_q, joint_qd, mask, state):
 # returns the twist around an axis
 @wp.func
 def quat_twist(axis: wp.vec3, q: wp.quat):
-    
+
     # project imaginary part onto axis
     a = wp.vec3(q[0], q[1], q[2])
     a = wp.dot(a, axis)*axis
@@ -254,7 +254,7 @@ def eval_articulation_ik(body_q: wp.array(dtype=wp.transform),
     if (c_parent >= 0):
         X_wp = body_q[c_parent]*X_wp
         r_wp = wp.transform_get_translation(X_wp) - wp.transform_point(body_q[c_parent], body_com[c_parent])
-        
+
         twist_p = body_qd[c_parent]
 
         w_p = wp.spatial_top(twist_p)
@@ -263,7 +263,7 @@ def eval_articulation_ik(body_q: wp.array(dtype=wp.transform),
     # child transform and moment arm
     X_wc = body_q[c_child]#*joint_X_c[tid]
     r_c = wp.transform_get_translation(X_wc) - wp.transform_point(body_q[c_child], body_com[c_child])
-    
+
     twist_c = body_qd[c_child]
 
     w_c = wp.spatial_top(twist_c)
@@ -272,7 +272,7 @@ def eval_articulation_ik(body_q: wp.array(dtype=wp.transform),
     # joint properties
     type = joint_type[tid]
     axis = joint_axis[tid]
-  
+
     x_p = wp.transform_get_translation(X_wp)
     x_c = wp.transform_get_translation(X_wc)
 
@@ -288,7 +288,7 @@ def eval_articulation_ik(body_q: wp.array(dtype=wp.transform),
     qd_start = joint_qd_start[tid]
 
     if type == wp.sim.JOINT_PRISMATIC:
-        
+
         # world space joint axis
         axis_p = wp.transform_vector(X_wp, axis)
 
@@ -298,11 +298,11 @@ def eval_articulation_ik(body_q: wp.array(dtype=wp.transform),
 
         joint_q[q_start] = q
         joint_qd[qd_start] = qd
-        
+
         return
-   
+
     if type == wp.sim.JOINT_REVOLUTE:
-        
+
         axis_p = wp.transform_vector(X_wp, axis)
         axis_c = wp.transform_vector(X_wc, axis)
 
@@ -317,11 +317,11 @@ def eval_articulation_ik(body_q: wp.array(dtype=wp.transform),
         joint_qd[qd_start] = qd
 
         return
-    
+
     if type == wp.sim.JOINT_BALL:
-        
+
         q_pc = wp.quat_inverse(q_p)*q_c
-    
+
         joint_q[q_start + 0] = q_pc[0]
         joint_q[q_start + 1] = q_pc[1]
         joint_q[q_start + 2] = q_pc[2]
@@ -337,7 +337,7 @@ def eval_articulation_ik(body_q: wp.array(dtype=wp.transform),
         return
 
     if type == wp.sim.JOINT_FREE:
-        
+
         q_pc = wp.quat_inverse(q_p)*q_c
 
         joint_q[q_start + 0] = x_err[0]
@@ -348,7 +348,7 @@ def eval_articulation_ik(body_q: wp.array(dtype=wp.transform),
         joint_q[q_start + 4] = q_pc[1]
         joint_q[q_start + 5] = q_pc[2]
         joint_q[q_start + 6] = q_pc[3]
-        
+
         joint_qd[qd_start + 0] = w_err[0]
         joint_qd[qd_start + 1] = w_err[1]
         joint_qd[qd_start + 2] = w_err[2]
@@ -362,7 +362,7 @@ def eval_articulation_ik(body_q: wp.array(dtype=wp.transform),
         q_off = wp.transform_get_rotation(X_cj)
         q_pc = wp.quat_inverse(q_off)*wp.quat_inverse(q_p)*q_c*q_off
 
-        # decompose to a compound rotation each axis 
+        # decompose to a compound rotation each axis
         angles = quat_decompose(q_pc)
 
         # reconstruct rotation axes
@@ -392,7 +392,7 @@ def eval_articulation_ik(body_q: wp.array(dtype=wp.transform),
         q_off = wp.transform_get_rotation(X_cj)
         q_pc = wp.quat_inverse(q_off)*wp.quat_inverse(q_p)*q_c*q_off
 
-        # decompose to a compound rotation each axis 
+        # decompose to a compound rotation each axis
         angles = quat_decompose(q_pc)
 
         # reconstruct rotation axes
@@ -419,7 +419,7 @@ def eval_ik(model, state, joint_q, joint_qd):
 
     wp.launch(kernel=eval_articulation_ik,
         dim=model.body_count,
-        inputs=[    
+        inputs=[
             state.body_q,
             state.body_qd,
             model.body_com,
@@ -435,4 +435,3 @@ def eval_ik(model, state, joint_q, joint_qd):
             joint_qd
         ],
         device=model.device)
-

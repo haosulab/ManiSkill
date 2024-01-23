@@ -13,7 +13,6 @@ class BasePolicy:
 
     def reset(self, observations):
         """Called at the beginning of an episode."""
-        pass
 
     def act(self, observations) -> np.ndarray:
         """Act based on the observations."""

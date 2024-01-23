@@ -24,14 +24,14 @@ def mlp_kernel(weights: wp.array2d(dtype=float),
 
 
     wp.mlp(weights, bias, mlp_activation, wp.tid(), x, y)
-    
+
 
 @wp.kernel
 def loss_kernel(x: wp.array2d(dtype=float),
                 loss: wp.array(dtype=float)):
 
     i, j = wp.tid()
-        
+
     wp.atomic_add(loss, 0, x[i,j]*x[i,j])
 
 
@@ -43,7 +43,7 @@ def test_mlp(test, device):
     n = 200
 
     batches = 20000
-    
+
     weights = wp.array(np.random.rand(m, n)*0.5 - 0.5, dtype=float, device=device)
     bias = wp.array(np.random.rand(m)*0.5 - 0.5, dtype=float, device=device)
 
@@ -77,7 +77,7 @@ def create_mlp(m, n):
             self.hidden_size  = hidden_size
             self.fc1 = torch.nn.Linear(self.input_size, self.hidden_size)
             self.act = torch.nn.Tanh()
-        
+
         def forward(self, x):
             out = self.fc1(x)
             out = self.act(out)
@@ -117,9 +117,9 @@ def create_golden():
     results["loss"] = loss.cpu().detach().numpy()
 
     np.save(os.path.join(os.path.dirname(__file__), "assets/mlp_golden.npy"), results, allow_pickle=True)
-    
+
 def load_golden():
-    
+
     return np.load(os.path.join(os.path.dirname(__file__), "assets/mlp_golden.npy"), allow_pickle=True).item()
 
 
@@ -170,7 +170,7 @@ def test_mlp_grad(test, device):
     assert_np_equal(tape.gradients[x].numpy().reshape(n, b), torch_x_grad, tol=1.e-1)
     assert_np_equal(tape.gradients[y].numpy().reshape(m, b), torch_y_grad, tol=1.e-1)
 
-    
+
 
 
 def profile_mlp_torch(device):
@@ -182,12 +182,12 @@ def profile_mlp_torch(device):
 
     steps = 20
 
-    for i in range(steps):       
+    for i in range(steps):
 
         b = 2**i
 
         network = create_mlp(m, n)
-          
+
         x = torch.Tensor(np.random.rand(b, m))
 
         with wp.ScopedTimer("torch_forward" + str(b)):
@@ -195,19 +195,19 @@ def profile_mlp_torch(device):
             torch.cuda.synchronize()
 
 
-    for i in range(steps):       
+    for i in range(steps):
 
         b = 2**i
 
         network = create_mlp(m, n)
-          
+
         x = torch.Tensor(np.random.rand(b, m))
         y = network.forward(x)
 
         loss = torch.norm(y)
 
         # run once to alloc all gradients
-        loss.backward(retain_graph=True)        
+        loss.backward(retain_graph=True)
 
         with wp.ScopedTimer("torch-backward" + str(b)):
             loss.backward()
@@ -224,7 +224,7 @@ def profile_mlp_warp(device):
     for i in range(steps):
 
         b = 2**i
-        
+
         weights = wp.array(np.random.rand(m, n)*0.5 - 0.5, dtype=float, device=device)
         bias = wp.array(np.random.rand(m)*0.5 - 0.5, dtype=float, device=device)
 
@@ -271,10 +271,10 @@ def register(parent):
 
     class TestMLP(parent):
         pass
-    
+
     add_function_test(TestMLP, "test_mlp", test_mlp, devices=devices)
     add_function_test(TestMLP, "test_mlp_grad", test_mlp_grad, devices=devices)
-    
+
     return TestMLP
 
 if __name__ == '__main__':

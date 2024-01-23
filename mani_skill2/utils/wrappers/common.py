@@ -1,30 +1,4 @@
 import gymnasium as gym
-from gymnasium import spaces
-
-from ..common import (
-    clip_and_scale_action,
-    inv_clip_and_scale_action,
-    normalize_action_space,
-)
-
-
-class NormalizeBoxActionWrapper(gym.ActionWrapper):
-    """Normalize box action space to [-1, 1]."""
-
-    def __init__(self, env):
-        super().__init__(env)
-        assert isinstance(self.env.action_space, spaces.Box), self.env.action_space
-        self.action_space = normalize_action_space(self.env.action_space)
-
-    def action(self, action):
-        return clip_and_scale_action(
-            action, self.env.action_space.low, self.env.action_space.high
-        )
-
-    def reverse_action(self, action):
-        return inv_clip_and_scale_action(
-            action, self.env.action_space.low, self.env.action_space.high
-        )
 
 
 class ResetSeedWrapper(gym.Wrapper):

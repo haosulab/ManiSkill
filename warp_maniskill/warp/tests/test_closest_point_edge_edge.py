@@ -159,11 +159,11 @@ def test_edge_edge_perpendicular_s0_t1(test, device):
     res = run_closest_point_edge_edge(p1_h, q1_h, p2_h, q2_h, device)
     st0 = res[0]
     test.assertAlmostEqual(st0[0], 0.0)  # s value
-    test.assertAlmostEqual(st0[1], 1.0)  # t value    
+    test.assertAlmostEqual(st0[1], 1.0)  # t value
 
 
 def register(parent):
-        
+
     devices = wp.get_devices()
 
     class TestClosestPointEdgeEdgeMethods(parent):
@@ -181,6 +181,6 @@ def register(parent):
 
     return TestClosestPointEdgeEdgeMethods
 
-if __name__ == '__main__':    
+if __name__ == '__main__':
     c = register(unittest.TestCase)
     unittest.main(verbosity=2)

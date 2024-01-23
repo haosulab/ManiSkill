@@ -22,7 +22,7 @@ def from_torch(t, dtype=warp.types.float32):
     # then check if trailing dimensions match
     # the target type and update the shape
     if hasattr(dtype, "_shape_"):
-        
+
         try:
             num_dims = len(dtype._shape_)
             type_dims = dtype._shape_
@@ -36,7 +36,7 @@ def from_torch(t, dtype=warp.types.float32):
 
         except:
             raise RuntimeError(f"Could not convert source Torch tensor with shape {t.shape}, to Warp array with dtype={dtype}, ensure that trailing dimensions match ({source_dims} != {type_dims}")
-    
+
     else:
         shape = t.shape
 
@@ -56,7 +56,7 @@ def from_torch(t, dtype=warp.types.float32):
 
 def to_torch(a):
     if a.device == "cpu":
-        # Torch has an issue wrapping CPU objects 
+        # Torch has an issue wrapping CPU objects
         # that support the __array_interface__ protocol
         # in this case we need to workaround by going
         # to an ndarray first, see https://pearu.github.io/array_interface_pytorch.html
@@ -67,9 +67,6 @@ def to_torch(a):
         # correctly, but we must be sure to maintain a reference
         # to the owning object to prevent memory allocs going out of scope
         return torch.as_tensor(a, device="cuda")
-    
+
     else:
         raise RuntimeError("Unsupported device")
-
-
-

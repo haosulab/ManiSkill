@@ -10,7 +10,7 @@ from collections import defaultdict
 from copy import deepcopy
 from functools import partial
 from multiprocessing.connection import Connection
-from typing import Callable, Dict, List, Optional, Sequence, Type, Union
+from typing import Callable, List, Optional, Sequence, Type, Union
 
 import gymnasium as gym
 import numpy as np

@@ -1,13 +1,13 @@
 """
-The code at the moment supports scenes created by [AI2-THOR](https://ai2thor.allenai.org/) stored in this 
+The code at the moment supports scenes created by [AI2-THOR](https://ai2thor.allenai.org/) stored in this
 Hugging Face Dataset: https://huggingface.co/datasets/hssd/ai2thor-hab/tree/main
 
-To download the dataset, run `python -m mani_skill2.utils.scene_builder.ai2thor.download <HUGGING_FACE_TOKEN>` 
-and make sure to pass in your hugging face API token. Note that you must create a hugging face account 
+To download the dataset, run `python -m mani_skill2.utils.scene_builder.ai2thor.download <HUGGING_FACE_TOKEN>`
+and make sure to pass in your hugging face API token. Note that you must create a hugging face account
 and accept the terms of use for the dataset. Alternatively, if you can download the data through other means, simply
 save it to `data/scene_datasets/ai2thor` and the code should run.
 
-To learn how scenes are imported and built in ManiSkill, check out mani_skill2/utils/scene_builder module, there are some prebuilt scenes, 
+To learn how scenes are imported and built in ManiSkill, check out mani_skill2/utils/scene_builder module, there are some prebuilt scenes,
 including code that imports scenes in the AI2THOR set of scenes and format, as well as code to build simple table-top scenes commonly used in
 ManiSkill.
 
@@ -16,7 +16,7 @@ instantiates a robot randomly and selects a random object for the robot to find 
 render_mode="human" opens up a viewer, convex_decomposition="none" makes scene loading fast (but not well simulated)
 set convex_decomposition="coacd" to use CoACD to get better collision meshes
 
-Code is setup so that if you press the "r" key, a new scene is loaded and shown. You can run this file by running 
+Code is setup so that if you press the "r" key, a new scene is loaded and shown. You can run this file by running
 `python -m mani_skill2.examples.demo_scenes` and explore around.
 """
 import gymnasium as gym

@@ -1,13 +1,13 @@
-import torch
+import numpy as np
 import sapien
 import sapien.physx
+import torch
 from sapien.utils import Viewer
-import numpy as np
+
 if __name__ == "__main__":
     torch.set_printoptions(precision=3, sci_mode=False)
     sapien.physx.enable_gpu()
     sapien.set_cuda_tensor_backend("torch")
-
 
     def create_scene(offset):
         scene = sapien.Scene()
@@ -15,30 +15,29 @@ if __name__ == "__main__":
         scene.set_ambient_light([0.5, 0.5, 0.5])
         return scene
 
-
     scene0 = create_scene([0, 0, 0])
     scene1 = create_scene([10, 0, 0])
 
     assert scene0.physx_system == scene1.physx_system
     physx_system: sapien.physx.PhysxGpuSystem = scene0.physx_system
 
-    
     from mani_skill2.envs.scene import ManiSkillScene
+
     scene = ManiSkillScene([scene0, scene1], debug_mode=True)
     # scene.sub_scenes = [scene0, scene1]
 
     builder = scene.create_actor_builder()
-    builder.add_box_visual(half_size=(0.25, 0.25, 0.25), material=[1, 0,0, 1])
+    builder.add_box_visual(half_size=(0.25, 0.25, 0.25), material=[1, 0, 0, 1])
     builder.add_box_collision(half_size=(0.25, 0.25, 0.25))
-    builder.initial_pose = sapien.Pose(p=[2,0,1])
+    builder.initial_pose = sapien.Pose(p=[2, 0, 1])
     actor1 = builder.build(name="cube-0")
 
     builder = scene.create_actor_builder()
-    builder.add_box_visual(half_size=(0.25, 0.25, 0.25), material=[1, 0,0, 1])
+    builder.add_box_visual(half_size=(0.25, 0.25, 0.25), material=[1, 0, 0, 1])
     builder.add_box_collision(half_size=(0.25, 0.25, 0.25))
     builder.initial_pose = sapien.Pose(p=[5, 5, 5])
     actor2 = builder.build(name="cube-1")
-    
+
     # physx_system.gpu_init()
     # scene._setup_gpu()
     # # loader = scene.create_urdf_loader()
@@ -73,7 +72,7 @@ if __name__ == "__main__":
     # cube = scene.actors["cube-0"]
     print("cube0", scene.actors["cube-0"].pose.p)
     print("cube1", scene.actors["cube-1"].pose.p)
-    
+
     # pose = cube.pose
     # # pose.p = [5, 5, 23]
     # cube.set_pose(sapien.Pose(p=[5,5,23]))
@@ -87,8 +86,10 @@ if __name__ == "__main__":
     # scene._update_gpu_buffers() # after a physx_system.step, must always call this to query all gpu data
     # print("cube0", scene.actors["cube-0"].pose.p)
     # print("cube1", scene.actors["cube-1"].pose.p)
-    
-    import ipdb;ipdb.set_trace()
+
+    import ipdb
+
+    ipdb.set_trace()
 
     # root_pose_buffer[0] = torch.tensor([0.1, 0, 0, 0, 1, 0, 0])
     # root_pose_buffer[1] = torch.tensor([0, 0.1, 0, 0, 0, 1, 0])
@@ -97,7 +98,7 @@ if __name__ == "__main__":
     # root_pose_buffer[0] = torch.tensor([0, 0, 0, 0, 0, 0, 0])
     # root_pose_buffer[1] = torch.tensor([0, 0, 0, 0, 0, 0, 0])
 
-    # # physx_system.gpu_update_articulation_kinematics()                                                                                                                                                                                                                         
+    # # physx_system.gpu_update_articulation_kinematics()
 
     # physx_system.gpu_query_articulation_root_pose(root_pose_buffer, ai, offset_buffer)
     # print("sapien pose", root_pose_buffer)

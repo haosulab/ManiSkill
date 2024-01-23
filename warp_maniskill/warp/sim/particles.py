@@ -7,7 +7,7 @@
 
 import warp as wp
 
-@wp.func 
+@wp.func
 def particle_force(n: wp.vec3,
                        v: wp.vec3,
                        c: float,
@@ -25,7 +25,7 @@ def particle_force(n: wp.vec3,
     # friction force
     vt = v - n*vn
     vs = wp.length(vt)
-    
+
     if (vs > 0.0):
         vt = vt/vs
 
@@ -67,7 +67,7 @@ def eval_particle_forces_kernel(grid : wp.uint64,
     while(wp.hash_grid_query_next(query, index)):
 
         if index != i:
-            
+
             # compute distance to point
             n = x - particle_x[index]
             d = wp.length(n)
@@ -88,7 +88,7 @@ def eval_particle_forces_kernel(grid : wp.uint64,
 def eval_particle_forces(model, state, forces):
 
     if (model.particle_radius > 0.0):
-                        
+
         wp.launch(
             kernel=eval_particle_forces_kernel,
             dim=model.particle_count,

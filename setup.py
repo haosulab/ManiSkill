@@ -33,7 +33,7 @@ setup(
         "rtree",
         "opencv-python",
         "imageio",
-        "imageio[ffmpeg]"
+        "imageio[ffmpeg]",
     ],
     # Glob patterns do not automatically match dotfiles
     package_data={

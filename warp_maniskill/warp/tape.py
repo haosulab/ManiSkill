@@ -19,7 +19,7 @@ class Tape:
         self.loss = None
 
 
-    def __enter__(self):      
+    def __enter__(self):
         if (wp.context.runtime.tape != None):
             raise RuntimeError("Warp: Error, entering a tape while one is already active")
 
@@ -27,7 +27,7 @@ class Tape:
 
     def __exit__(self, exc_type, exc_value, traceback):
         if (wp.context.runtime.tape == None):
-            raise RuntimeError("Warp: Error, ended tape capture, but tape not present")            
+            raise RuntimeError("Warp: Error, ended tape capture, but tape not present")
 
         wp.context.runtime.tape = None
 
@@ -41,7 +41,7 @@ class Tape:
         # if scalar loss is specified then initialize
         # a 'seed' array for it, with gradient of one
         if loss:
-            
+
             if loss.size > 1 or wp.types.type_length(loss.dtype) > 1:
                 raise RuntimeError("Can only return gradients for scalar loss functions.")
 
@@ -50,7 +50,7 @@ class Tape:
 
             # set the seed grad to 1.0
             loss.grad.fill_(1.0)
-            
+
         # simply apply dict grads to objects
         # this is just for backward compat. with
         # existing code before we added wp.array.grad attribute
@@ -80,9 +80,9 @@ class Tape:
                 adj_outputs.append(self.get_adjoint(a))
 
             wp.launch(
-                kernel=kernel, 
-                dim=dim, 
-                inputs=inputs, 
+                kernel=kernel,
+                dim=dim,
+                inputs=inputs,
                 outputs=outputs,
                 adj_inputs=adj_inputs,
                 adj_outputs=adj_outputs,
@@ -131,7 +131,7 @@ class Tape:
         return None
 
     def reset(self):
-        
+
         self.launches = []
         self.zero()
 
@@ -140,4 +140,3 @@ class Tape:
         for a, g in self.gradients.items():
             if a not in self.const_gradients:
                 g.zero_()
-

@@ -1,6 +1,6 @@
-import torch
 import sapien
 import sapien.physx
+import torch
 
 from mani_skill2.utils.structs.pose import vectorize_pose
 
@@ -22,9 +22,9 @@ assert scene0.physx_system == scene1.physx_system
 physx_system: sapien.physx.PhysxGpuSystem = scene0.physx_system
 
 builder = scene0.create_actor_builder()
-builder.add_box_visual(half_size=(0.1, 0.1, 0.1), material=[1, 0,0, 1])
+builder.add_box_visual(half_size=(0.1, 0.1, 0.1), material=[1, 0, 0, 1])
 builder.add_box_collision(half_size=(0.1, 0.1, 0.1))
-builder.initial_pose = sapien.Pose(p=[0,0,1])
+builder.initial_pose = sapien.Pose(p=[0, 0, 1])
 
 builder.set_scene(scene0)
 cube00 = builder.build()
@@ -32,7 +32,7 @@ builder.set_scene(scene1)
 cube01 = builder.build()
 
 builder = scene0.create_actor_builder()
-builder.add_box_visual(half_size=(0.25, 0.25, 0.25), material=[1, 0,0, 1])
+builder.add_box_visual(half_size=(0.25, 0.25, 0.25), material=[1, 0, 0, 1])
 builder.add_box_collision(half_size=(0.25, 0.25, 0.25))
 builder.initial_pose = sapien.Pose(p=[5, 5, 2])
 builder.set_scene(scene0)
@@ -44,7 +44,9 @@ physx_system.gpu_init()
 
 torch.set_printoptions(precision=3, sci_mode=False)
 actors = [cube00, cube01, cube10, cube11]
-rigid_body_components = [a.find_component_by_type(sapien.physx.PhysxRigidDynamicComponent) for a in actors]
+rigid_body_components = [
+    a.find_component_by_type(sapien.physx.PhysxRigidDynamicComponent) for a in actors
+]
 
 data_buffer_raw = physx_system.gpu_create_body_data_buffer(len(rigid_body_components))
 
@@ -115,7 +117,7 @@ print("cube1-raw", "pos", data_buffer_raw[2:4, 4:7], "vel", data_buffer[2:4, 8:1
 # root_pose_buffer[0] = torch.tensor([0, 0, 0, 0, 0, 0, 0])
 # root_pose_buffer[1] = torch.tensor([0, 0, 0, 0, 0, 0, 0])
 
-# # physx_system.gpu_update_articulation_kinematics()                                                                                                                                                                                                                         
+# # physx_system.gpu_update_articulation_kinematics()
 
 # physx_system.gpu_query_articulation_root_pose(root_pose_buffer, ai, offset_buffer)
 # print("sapien pose", root_pose_buffer)

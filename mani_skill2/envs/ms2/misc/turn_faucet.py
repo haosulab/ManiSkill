@@ -1,7 +1,6 @@
-import os.path as osp
 from collections import OrderedDict
 from pathlib import Path
-from typing import Dict, List, Union
+from typing import Dict, List
 
 import numpy as np
 import sapien

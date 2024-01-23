@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Sequence, Tuple, Type, Union
+from typing import Any, List, Optional, Type, Union
 
 import gymnasium as gym
 import numpy as np

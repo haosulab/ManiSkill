@@ -53,32 +53,32 @@ def kernel4d(a: wp.array(dtype=int, ndim=4)):
 
 
 def test1d(test, device):
-    
+
     a = np.arange(0, dim_x.val).reshape(dim_x.val)
 
     wp.launch(kernel1d, dim=a.shape, inputs=[wp.array(a, dtype=int, device=device)], device=device)
 
 
 def test2d(test, device):
-    
+
     a = np.arange(0, dim_x.val*dim_y.val).reshape(dim_x.val,dim_y.val)
 
     wp.launch(kernel2d, dim=a.shape, inputs=[wp.array(a, dtype=int, device=device)], device=device)
 
 
 def test3d(test, device):
-    
+
     a = np.arange(0, dim_x.val*dim_y.val*dim_z.val).reshape(dim_x.val,dim_y.val,dim_z.val)
 
     wp.launch(kernel3d, dim=a.shape, inputs=[wp.array(a, dtype=int, device=device)], device=device)
 
 
 def test4d(test, device):
-    
+
     a = np.arange(0, dim_x.val*dim_y.val*dim_z.val*dim_w.val).reshape(dim_x.val,dim_y.val,dim_z.val,dim_w.val)
 
     wp.launch(kernel4d, dim=a.shape, inputs=[wp.array(a, dtype=int, device=device)], device=device)
-    
+
 
 def register(parent):
 

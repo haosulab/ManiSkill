@@ -59,13 +59,13 @@ class Mesh:
     def __init__(self, vertices: List[Vec3], indices: List[int], compute_inertia=True):
         """Construct a Mesh object from a triangle mesh
 
-        The mesh center of mass and inertia tensor will automatically be 
+        The mesh center of mass and inertia tensor will automatically be
         calculated using a density of 1.0. This computation is only valid
         if the mesh is closed (two-manifold).
 
         Args:
             vertices: List of vertices in the mesh
-            indices: List of triangle indices, 3 per-element       
+            indices: List of triangle indices, 3 per-element
         """
 
         self.vertices = vertices
@@ -120,7 +120,7 @@ class Mesh:
             self.com = com
 
         else:
-            
+
             self.I = np.eye(3, dtype=np.float32)
             self.mass = 1.0
             self.com = np.array((0.0, 0.0, 0.0))
@@ -181,10 +181,10 @@ class DenseVolume:
 
 class State:
     """The State object holds all *time-varying* data for a model.
-    
+
     Time-varying data includes particle positions, velocities, rigid body states, and
-    anything that is output from the integrator as derived data, e.g.: forces. 
-    
+    anything that is output from the integrator as derived data, e.g.: forces.
+
     The exact attributes depend on the contents of the model. State objects should
     generally be created using the :func:`Model.state()` function.
 
@@ -199,7 +199,7 @@ class State:
     """
 
     def __init__(self):
-        
+
         self.particle_count = 0
         self.body_count = 0
 
@@ -264,7 +264,7 @@ class Model:
         tet_poses (wp.array): Tetrahedral rest poses, shape [tet_count, 3, 3], float
         tet_activations (wp.array): Tetrahedral volumetric activations, shape [tet_count], float
         tet_materials (wp.array): Tetrahedral elastic parameters in form :math:`k_{mu}, k_{lambda}, k_{damp}`, shape [tet_count, 3]
-        
+
         body_com (wp.array): Rigid body center of mass (in local frame), shape [body_count, 7], float
         body_inertia (wp.array): Rigid body inertia tensor (relative to COM), shape [body_count, 3, 3], float
 
@@ -286,10 +286,10 @@ class Model:
         edge_count (int): Total number of edges in the system
         spring_count (int): Total number of springs in the system
         contact_count (int): Total number of contacts in the system
-        
+
     Note:
         It is strongly recommended to use the ModelBuilder to construct a simulation rather
-        than creating your own Model object directly, however it is possible to do so if 
+        than creating your own Model object directly, however it is possible to do so if
         desired.
     """
 
@@ -326,7 +326,7 @@ class Model:
         self.tet_poses = None
         self.tet_activations = None
         self.tet_materials = None
-        
+
         self.body_com = None
         self.body_inertia = None
 
@@ -418,7 +418,7 @@ class Model:
             s.body_q.requires_grad = requires_grad
             s.body_qd.requires_grad = requires_grad
             s.body_f.requires_grad = requires_grad
-        
+
         return s
 
     def flatten(self):
@@ -444,7 +444,7 @@ class Model:
         This method performs collision detection between rigid body vertices in the scene and updates
         the model's set of contacts stored as the following attributes:
 
-            * **contact_body0**: Tensor of ints with first rigid body index 
+            * **contact_body0**: Tensor of ints with first rigid body index
             * **contact_body1**: Tensor of ints with second rigid body index (currently always -1 to indicate ground)
             * **contact_point0**: Tensor of Vec3 representing contact point in local frame of body0
             * **contact_dist**: Tensor of float values representing the distance to maintain
@@ -477,7 +477,7 @@ class Model:
             dist.append(d)
             mat.append(m)
 
-        # pull shape data back to CPU 
+        # pull shape data back to CPU
         shape_transform = self.shape_transform.to("cpu").numpy()
         shape_body = self.shape_body.to("cpu").numpy()
         shape_geo_type = self.shape_geo_type.to("cpu").numpy()
@@ -509,7 +509,7 @@ class Model:
 
                 edges = shape_geo_scale[i].tolist()
 
-                add_contact(shape_body[i], -1, X_bs, (-edges[0], -edges[1], -edges[2]), 0.0, i)        
+                add_contact(shape_body[i], -1, X_bs, (-edges[0], -edges[1], -edges[2]), 0.0, i)
                 add_contact(shape_body[i], -1, X_bs, ( edges[0], -edges[1], -edges[2]), 0.0, i)
                 add_contact(shape_body[i], -1, X_bs, (-edges[0],  edges[1], -edges[2]), 0.0, i)
                 add_contact(shape_body[i], -1, X_bs, (edges[0], edges[1], -edges[2]), 0.0, i)
@@ -543,9 +543,9 @@ class ModelBuilder:
     """A helper class for building simulation models at runtime.
 
     Use the ModelBuilder to construct a simulation scene. The ModelBuilder
-    and builds the scene representation using standard Python data structures (lists), 
-    this means it is not differentiable. Once :func:`finalize()` 
-    has been called the ModelBuilder transfers all data to Warp tensors and returns 
+    and builds the scene representation using standard Python data structures (lists),
+    this means it is not differentiable. Once :func:`finalize()`
+    has been called the ModelBuilder transfers all data to Warp tensors and returns
     an object that may be used for simulation.
 
     Example:
@@ -567,7 +567,7 @@ class ModelBuilder:
 
     Note:
         It is strongly recommended to use the ModelBuilder to construct a simulation rather
-        than creating your own Model object directly, however it is possible to do so if 
+        than creating your own Model object directly, however it is possible to do so if
         desired.
     """
 
@@ -581,7 +581,7 @@ class ModelBuilder:
     default_edge_ke = 100.0
     default_edge_kd = 0.0
 
-    
+
     def __init__(self):
 
         # particles
@@ -666,7 +666,7 @@ class ModelBuilder:
         self.joint_count = 0
         self.joint_dof_count = 0
         self.joint_coord_count = 0
-        
+
 
     # an articulation is a set of contiguous bodies bodies from articulation_start[i] to articulation_start[i+1]
     # these are used for computing forward kinematics e.g.:
@@ -674,15 +674,15 @@ class ModelBuilder:
     # model.eval_articulation_fk()
     # model.eval_articulation_j()
     # model.eval_articulation_m()
-    # 
+    #
     # articulations are automatically 'closed' when calling finalize
-    
+
     def add_articulation(self):
         self.articulation_start.append(self.joint_count)
-    
+
     def add_rigid_articulation(self, articulation, xform=None):
         """Copies a rigid articulation from `articulation`, another `ModelBuilder`.
-        
+
         Args:
             articulation: a model builder to add rigid articulation from.
             xform: root position of this body (overrides that in the articulation_builder)
@@ -703,7 +703,7 @@ class ModelBuilder:
             else:
                 articulation.joint_X_p[0] = xform
 
-        self.add_articulation() 
+        self.add_articulation()
 
         start_body_idx = len(self.body_mass)
 
@@ -746,7 +746,7 @@ class ModelBuilder:
 
         for attr in rigid_articulation_attrs:
             getattr(self, attr).extend(getattr(articulation, attr))
-        
+
         self.joint_count += articulation.joint_count
         self.joint_dof_count += articulation.joint_dof_count
         self.joint_coord_count += articulation.joint_coord_count
@@ -754,8 +754,8 @@ class ModelBuilder:
 
     # register a rigid body and return its index.
     def add_body(
-        self, 
-        origin : Transform, 
+        self,
+        origin : Transform,
         parent : int=-1,
         joint_xform : Transform=wp.transform(),    # transform of joint in parent space
         joint_xform_child: Transform=wp.transform(),
@@ -769,7 +769,7 @@ class ModelBuilder:
         joint_limit_upper: float=1.e+3,
         joint_armature: float=0.0,
         com: Vec3=np.zeros(3),
-        I_m: Mat33=np.zeros((3, 3)), 
+        I_m: Mat33=np.zeros((3, 3)),
         m: float=0.0) -> int:
 
         """Adds a rigid body to the model.
@@ -800,7 +800,7 @@ class ModelBuilder:
         self.body_inertia.append(I_m + np.eye(3)*joint_armature)
         self.body_mass.append(m)
         self.body_com.append(com)
-        
+
         self.body_q.append(origin)
         self.body_qd.append(wp.spatial_vector())
 
@@ -836,7 +836,7 @@ class ModelBuilder:
             dof_count = 2
             coord_count = 2
 
-        # convert coefficients to np.arrays() so we can index into them for 
+        # convert coefficients to np.arrays() so we can index into them for
         # compound joints, this just allows user to pass scalars or arrays
         # coefficients will be automatically padded to number of dofs
         joint_target_ke = np.resize(np.atleast_1d(joint_target_ke), dof_count)
@@ -845,7 +845,7 @@ class ModelBuilder:
         joint_limit_kd = np.resize(np.atleast_1d(joint_limit_kd), dof_count)
         joint_limit_lower = np.resize(np.atleast_1d(joint_limit_lower), dof_count)
         joint_limit_upper = np.resize(np.atleast_1d(joint_limit_upper), dof_count)
-       
+
         for i in range(coord_count):
             self.joint_q.append(0.0)
 
@@ -1106,7 +1106,7 @@ class ModelBuilder:
             The spring is created with a rest-length based on the distance
             between the particles in their initial configuration.
 
-        """        
+        """
         self.spring_indices.append(i)
         self.spring_indices.append(j)
         self.spring_stiffness.append(ke)
@@ -1124,7 +1124,7 @@ class ModelBuilder:
 
     def add_triangle(self, i : int, j : int, k : int, tri_ke : float=default_tri_ke, tri_ka : float=default_tri_ka, tri_kd :float=default_tri_kd, tri_drag : float=default_tri_drag, tri_lift : float = default_tri_lift) -> float:
 
-        """Adds a trianglular FEM element between three particles in the system. 
+        """Adds a trianglular FEM element between three particles in the system.
 
         Triangles are modeled as viscoelastic elements with elastic stiffness and damping
         Parameters specfied on the model. See model.tri_ke, model.tri_kd.
@@ -1144,7 +1144,7 @@ class ModelBuilder:
         Todo:
             * Expose elastic paramters on a per-element basis
 
-        """      
+        """
         # compute basis for 2D rest pose
         p = np.array(self.particle_q[i])
         q = np.array(self.particle_q[j])
@@ -1170,7 +1170,7 @@ class ModelBuilder:
             print("inverted or degenerate triangle element")
             return 0.0
         else:
-    
+
             inv_D = np.linalg.inv(D)
 
             self.tri_indices.append((i, j, k))
@@ -1180,7 +1180,7 @@ class ModelBuilder:
             return area
 
     def add_tetrahedron(self, i: int, j: int, k: int, l: int, k_mu: float=1.e+3, k_lambda: float=1.e+3, k_damp: float=0.0) -> float:
-        """Adds a tetrahedral FEM element between four particles in the system. 
+        """Adds a tetrahedral FEM element between four particles in the system.
 
         Tetrahdera are modeled as viscoelastic elements with a NeoHookean energy
         density based on [Smith et al. 2018].
@@ -1200,7 +1200,7 @@ class ModelBuilder:
         Note:
             The tetrahedron is created with a rest-pose based on the particle's initial configruation
 
-        """      
+        """
         # compute basis for 2D rest pose
         p = np.array(self.particle_q[i])
         q = np.array(self.particle_q[j])
@@ -1228,7 +1228,7 @@ class ModelBuilder:
         return volume
 
     def add_edge(self, i: int, j: int, k: int, l: int, rest: float=None, edge_ke: float=default_edge_ke, edge_kd: float=default_edge_kd):
-        """Adds a bending edge element between four particles in the system. 
+        """Adds a bending edge element between four particles in the system.
 
         Bending elements are designed to be between two connected triangles. Then
         bending energy is based of [Bridson et al. 2002]. Bending stiffness is controlled
@@ -1246,7 +1246,7 @@ class ModelBuilder:
             vertices indexed by 'i' and 'j'. This defines two connected triangles with counter clockwise
             winding: (i, k, l), (j, l, k).
 
-        """      
+        """
         # compute rest angle
         if (rest == None):
 
@@ -1288,7 +1288,7 @@ class ModelBuilder:
                        tri_ka: float=default_tri_ka,
                        tri_kd: float=default_tri_kd,
                        tri_drag: float=default_tri_drag,
-                       tri_lift: float=default_tri_lift, 
+                       tri_lift: float=default_tri_lift,
                        edge_ke: float=default_edge_ke,
                        edge_kd: float=default_edge_kd):
 
@@ -1308,11 +1308,11 @@ class ModelBuilder:
             mass: The mass of each particle
             reverse_winding: Flip the winding of the mesh
             fix_left: Make the left-most edge of particles kinematic (fixed in place)
-            fix_right: Make the right-most edge of particles kinematic 
+            fix_right: Make the right-most edge of particles kinematic
             fix_top: Make the top-most edge of particles kinematic
             fix_bottom: Make the bottom-most edge of particles kinematic
 
-        """ 
+        """
 
         def grid_index(x, y, dim_x):
             return y * dim_x + x
@@ -1507,7 +1507,7 @@ class ModelBuilder:
         """Helper to create a rectangular tetrahedral FEM grid
 
         Creates a regular grid of FEM tetrhedra and surface triangles. Useful for example
-        to create beams and sheets. Each hexahedral cell is decomposed into 5 
+        to create beams and sheets. Each hexahedral cell is decomposed into 5
         tetrahedral elements.
 
         Args:
@@ -1525,7 +1525,7 @@ class ModelBuilder:
             k_lambda: The second elastic Lame parameter
             k_damp: The damping stiffness
             fix_left: Make the left-most edge of particles kinematic (fixed in place)
-            fix_right: Make the right-most edge of particles kinematic 
+            fix_right: Make the right-most edge of particles kinematic
             fix_top: Make the top-most edge of particles kinematic
             fix_bottom: Make the bottom-most edge of particles kinematic
         """
@@ -1759,7 +1759,7 @@ class ModelBuilder:
         return (m, I)
 
     def _compute_shape_mass(self, type, scale, src, density):
-      
+
         if density == 0:     # zero density means fixed
             return 0, np.zeros((3, 3))
 
@@ -1785,13 +1785,13 @@ class ModelBuilder:
         # Steiner's theorem
         return R @ I @ R.T + m * (np.dot(p, p) * np.eye(3) - np.outer(p, p))
 
-    
+
     # incrementally updates rigid body mass with additional mass and inertia expressed at a local to the body
     def _update_body_mass(self, i, m, I, p, q):
-        
+
         if (i == -1):
             return
-            
+
         # find new COM
         new_mass = self.body_mass[i] + m
 
@@ -1835,7 +1835,7 @@ class ModelBuilder:
 
         # construct particle inv masses
         particle_inv_mass = []
-        
+
         for m in self.particle_mass:
             if (m > 0.0):
                 particle_inv_mass.append(1.0 / m)
@@ -1846,14 +1846,14 @@ class ModelBuilder:
         # construct rigid inv masses
         body_inv_mass = []
         body_inv_inertia = []
-        
+
         for m in self.body_mass:
             if (m > 0.0):
                 body_inv_mass.append(1.0/m)
             else:
                 body_inv_mass.append(0.0)
 
-        
+
         for i in self.body_inertia:
             if i.any():
                 body_inv_inertia.append(np.linalg.inv(i))
@@ -1865,7 +1865,7 @@ class ModelBuilder:
 
         m = Model(device)
 
-        #---------------------        
+        #---------------------
         # particles
 
         # state (initial)
@@ -1940,7 +1940,7 @@ class ModelBuilder:
 
         #--------------------------------------
         # rigid bodies
-        
+
         m.body_q = wp.array(self.body_q, dtype=wp.transform, device=device)
         m.body_qd = wp.array(self.body_qd, dtype=wp.spatial_vector, device=device)
         m.body_inertia = wp.array(self.body_inertia, dtype=wp.mat33, device=device)
@@ -1976,7 +1976,7 @@ class ModelBuilder:
         self.joint_qd_start.append(self.joint_dof_count)
         self.articulation_start.append(self.joint_count)
 
-        m.joint_q_start = wp.array(self.joint_q_start, dtype=int, device=device) 
+        m.joint_q_start = wp.array(self.joint_q_start, dtype=int, device=device)
         m.joint_qd_start = wp.array(self.joint_qd_start, dtype=int, device=device)
         m.articulation_start = wp.array(self.articulation_start, dtype=int, device=device)
 
@@ -2000,12 +2000,12 @@ class ModelBuilder:
         m.spring_count = len(self.spring_rest_length)
         m.muscle_count = len(self.muscle_start)-1               # -1 due to sentinel value
         m.articulation_count = len(self.articulation_start)-1   # -1 due to sentinel value
-        
+
         m.joint_dof_count = self.joint_dof_count
         m.joint_coord_count = self.joint_coord_count
 
         m.contact_count = 0
-        
+
         # hash-grid for particle interactions
         # m.particle_grid = wp.HashGrid(128, 128, 128, device)
 
@@ -2020,5 +2020,3 @@ class ModelBuilder:
         m.enable_tri_collisions = False
 
         return m
-
-

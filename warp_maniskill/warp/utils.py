@@ -22,7 +22,7 @@ def length_sq(a):
 
 
 def cross(a, b):
-    return np.array((a[1]*b[2] - a[2]*b[1], 
+    return np.array((a[1]*b[2] - a[2]*b[1],
                      a[2]*b[0] - a[0]*b[2],
                      a[0]*b[1] - a[1]*b[0]), dtype=np.float32)
 
@@ -120,7 +120,7 @@ def quat_from_matrix(m):
 
     tr = m[0, 0] + m[1, 1] + m[2, 2]
     h = 0.0
-    
+
     if(tr >= 0.0):
 
         h = math.sqrt(tr + 1.0)
@@ -138,7 +138,7 @@ def quat_from_matrix(m):
             i = 1
         if(m[2, 2] > m[i, i]):
             i = 2
-        
+
         if (i == 0):
 
             h = math.sqrt((m[0, 0] - (m[1, 1] + m[2, 2])) + 1.0)
@@ -148,7 +148,7 @@ def quat_from_matrix(m):
             y = (m[0, 1] + m[1, 0]) * h
             z = (m[2, 0] + m[0, 2]) * h
             w = (m[2, 1] - m[1, 2]) * h
-            
+
         elif (i == 1):
 
             h = math.sqrt((m[1, 1] - (m[2, 2] + m[0, 0])) + 1.0)
@@ -158,7 +158,7 @@ def quat_from_matrix(m):
             z = (m[1, 2] + m[2, 1]) * h
             x = (m[0, 1] + m[1, 0]) * h
             w = (m[0, 2] - m[2, 0]) * h
-        
+
         elif (i == 2):
 
             h = math.sqrt((m[2, 2] - (m[0, 0] + m[1, 1])) + 1.0)
@@ -231,7 +231,7 @@ def transform_expand(t):
 def transform_flatten_list(xforms):
     exp = lambda t: transform_flatten(t)
     return list(map(exp, xforms))
- 
+
 
 def transform_expand_list(xforms):
     exp = lambda t: transform_expand(t)
@@ -441,7 +441,7 @@ class MeshAdjacency:
 
 
 def mem_report():
-  
+
     def _mem_report(tensors, mem_type):
         '''Print the selected tensors of type
         There are two major storage types in our major concern:
@@ -574,4 +574,3 @@ class ScopedTimer:
                 print("{}{} took {:.2f} ms".format(indent, self.name, self.elapsed))
 
             ScopedTimer.indent -= 1
-

@@ -3,22 +3,22 @@ import torch
 
 from mani_skill2.utils.common import flatten_dict_keys
 
+# TODO (stao): reactivate old tasks once fixed
 ENV_IDS = [
     "LiftCube-v0",
     "PickCube-v0",
     "StackCube-v0",
     "PickSingleYCB-v0",
-    "PickSingleEGAD-v0",
-    "PickClutterYCB-v0",
-    "AssemblingKits-v0",
-    "PegInsertionSide-v0",
-    "PlugCharger-v0",
-    "PandaAvoidObstacles-v0",
-    "TurnFaucet-v0",
-    "OpenCabinetDoor-v1",
-    "OpenCabinetDrawer-v1",
-    "PushChair-v1",
-    "MoveBucket-v1",
+    # "PickClutterYCB-v0",
+    # "AssemblingKits-v0",
+    # "PegInsertionSide-v0",
+    # "PlugCharger-v0",
+    # "PandaAvoidObstacles-v0",
+    # "TurnFaucet-v0",
+    # "OpenCabinetDoor-v1",
+    # "OpenCabinetDrawer-v1",
+    # "PushChair-v1",
+    # "MoveBucket-v1",
 ]
 
 STATIONARY_ENV_IDS = [
@@ -26,13 +26,12 @@ STATIONARY_ENV_IDS = [
     "PickCube-v0",
     "StackCube-v0",
     "PickSingleYCB-v0",
-    "PickSingleEGAD-v0",
-    "PickClutterYCB-v0",
-    "AssemblingKits-v0",
-    "PegInsertionSide-v0",
-    "PlugCharger-v0",
-    "PandaAvoidObstacles-v0",
-    "TurnFaucet-v0",
+    # "PickClutterYCB-v0",
+    # "AssemblingKits-v0",
+    # "PegInsertionSide-v0",
+    # "PlugCharger-v0",
+    # "PandaAvoidObstacles-v0",
+    # "TurnFaucet-v0",
 ]
 
 REWARD_MODES = ["dense", "normalized_dense", "sparse"]
@@ -49,8 +48,8 @@ OBS_MODES = [
     "state",
     "rgbd",
     "pointcloud",
-    "rgbd_robot_seg",
-    "pointcloud_robot_seg",
+    # "rgbd_robot_seg",
+    # "pointcloud_robot_seg",
 ]
 VENV_OBS_MODES = [
     "image",

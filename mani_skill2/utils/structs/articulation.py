@@ -7,7 +7,7 @@ import sapien
 import sapien.physx as physx
 import torch
 
-from mani_skill2.utils.sapien_utils import to_tensor
+from mani_skill2.utils.sapien_utils import to_numpy, to_tensor
 from mani_skill2.utils.structs.base import BaseStruct
 from mani_skill2.utils.structs.joint import Joint
 from mani_skill2.utils.structs.link import Link
@@ -118,6 +118,20 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         qpos = self.get_qpos()
         qvel = self.get_qvel()
         return torch.hstack([pose.p, pose.q, vel, ang_vel, qpos, qvel])
+
+    def set_state(self, state: Array):
+        if physx.is_gpu_enabled():
+            raise NotImplementedError(
+                "You should not set state on a GPU enabled actor."
+            )
+        else:
+            state = to_numpy(state[0])
+            self.set_root_pose(sapien.Pose(state[0:3], state[3:7]))
+            # self.set_root_linear_velocity(state[7:10])
+            # self.set_root_angular_velocity(state[10:13])
+            qpos, qvel = np.split(state[13:], 2)
+            self.set_qpos(qpos)
+            self.set_qvel(qvel)
 
     # -------------------------------------------------------------------------- #
     # Functions from physx.PhysxArticulation
@@ -371,3 +385,17 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         else:
             for i, joint in enumerate(joints):
                 joint.set_drive_target(targets[0, i])
+
+    def set_joint_drive_velocity_targets(
+        self,
+        targets: Array,
+        joints: List[Joint] = None,
+    ):
+        if physx.is_gpu_enabled():
+            targets = to_tensor(targets)
+            raise NotImplementedError(
+                "Setting joint velocity targets is currently not supported on the GPU"
+            )
+        else:
+            for i, joint in enumerate(joints):
+                joint.set_drive_velocity_target(targets[i])

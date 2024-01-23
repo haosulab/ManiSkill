@@ -8,7 +8,7 @@ from transforms3d.euler import euler2quat
 
 from mani_skill2 import PACKAGE_ASSET_DIR
 from mani_skill2.agents.robots.panda.variants import PandaPour
-from mani_skill2.envs.mpm.base_env import MPMBaseEnv, MPMModelBuilder, MPMSimulator
+from mani_skill2.envs.ms2.mpm.base_env import MPMBaseEnv, MPMModelBuilder, MPMSimulator
 from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.geometry import (
     get_local_aabc_for_actor,
@@ -347,7 +347,7 @@ class PourEnv(MPMBaseEnv):
         return above_start, above_end
 
     def evaluate(self, **kwargs):
-        particles_v = self.get_mpm_state()["v"]
+        self.get_mpm_state()["v"]
         self._success_helper.zero_()
         wp.launch(
             success_kernel,
@@ -456,7 +456,6 @@ class PourEnv(MPMBaseEnv):
         stage = 0
         z = source_mat[:3, 2]
         edist = 0
-        bot_hdist = 0
         if not is_grasping:
             # not grasping the bottle
             reward_orientation = 0
