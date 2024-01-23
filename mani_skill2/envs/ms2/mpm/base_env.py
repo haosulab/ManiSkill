@@ -1,9 +1,7 @@
-import copy
 import ctypes
 import os
 import sys
-import typing
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, Union
 
 import mani_skill2
 from mani_skill2 import PACKAGE_ASSET_DIR

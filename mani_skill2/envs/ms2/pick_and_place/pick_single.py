@@ -77,7 +77,6 @@ class PickSingleEnv(StationaryManipulationEnv):
 
     def _check_assets(self):
         """Check whether the assets exist."""
-        pass
 
     def _load_actors(self):
         self.table_scene = TableSceneBuilder(

@@ -126,7 +126,6 @@ class BaseController:
 
     def before_simulation_step(self):
         """Called before each simulation step in one control step."""
-        pass
 
     def get_state(self) -> dict:
         """Get the controller state."""

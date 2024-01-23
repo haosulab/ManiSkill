@@ -170,7 +170,6 @@ class FMBEnv(BaseEnv):
         place_order = [self.purple_u, self.blue_u, self.purple_u, self.peg, self.bridge]
         for i, obj in enumerate(place_order):
             obj.set_pose(obj.pose * sapien.Pose([0, 0, 0.03 * i]))
-        pass
 
     def _initialize_task(self):
         # we highly recommend to generate some kind of "goal" information to then later include in observations
@@ -182,7 +181,6 @@ class FMBEnv(BaseEnv):
         )
         self.bridge_grasp_offset = sapien.Pose(p=[0, 0, 0.03])
         self.bridge_grasp.set_pose(self.bridge.pose * self.bridge_grasp_offset)
-        pass
 
     """
     Modifying observations, goal parameterization, and success conditions for your task

@@ -1,5 +1,4 @@
 from collections import OrderedDict
-from typing import Dict, List, Sequence
 
 import numpy as np
 import sapien

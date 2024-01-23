@@ -25,3 +25,13 @@ repos:
         exclude: 'warp_maniskill/.*|docs/.*|examples/.*'
         args:
           - --profile=black
+  - repo: https://github.com/myint/autoflake
+    rev: v1.4
+    hooks:
+      - id: autoflake
+        exclude: 'warp_maniskill/.*|docs/.*|examples/.*'
+        args:
+          - -r
+          - --in-place
+          - --remove-unused-variables
+          # - --remove-all-unused-imports

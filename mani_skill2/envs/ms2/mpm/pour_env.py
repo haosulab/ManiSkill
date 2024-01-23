@@ -347,7 +347,7 @@ class PourEnv(MPMBaseEnv):
         return above_start, above_end
 
     def evaluate(self, **kwargs):
-        particles_v = self.get_mpm_state()["v"]
+        self.get_mpm_state()["v"]
         self._success_helper.zero_()
         wp.launch(
             success_kernel,
@@ -456,7 +456,6 @@ class PourEnv(MPMBaseEnv):
         stage = 0
         z = source_mat[:3, 2]
         edist = 0
-        bot_hdist = 0
         if not is_grasping:
             # not grasping the bottle
             reward_orientation = 0

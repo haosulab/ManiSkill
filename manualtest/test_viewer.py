@@ -1,5 +1,3 @@
-import time
-
 import gymnasium as gym
 import matplotlib.pyplot as plt
 import sapien

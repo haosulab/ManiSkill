@@ -1,6 +1,5 @@
 import os
 import pickle
-import sys
 from collections import OrderedDict
 
 import numpy as np

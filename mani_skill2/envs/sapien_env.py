@@ -467,11 +467,9 @@ class BaseEnv(gym.Env):
 
     def _load_actors(self):
         """Loads all actors into the scene. Called by `self.reconfigure`"""
-        pass
 
     def _load_articulations(self):
         """Loads all articulations into the scene. Called by `self.reconfigure`"""
-        pass
 
     # TODO (stao): refactor this into sensor API
     def _setup_sensors(self):
@@ -582,19 +580,15 @@ class BaseEnv(gym.Env):
 
     def _initialize_actors(self):
         """Initialize the poses of actors. Called by `self.initialize_episode`"""
-        pass
 
     def _initialize_articulations(self):
         """Initialize the (joint) poses of articulations. Called by `self.initialize_episode`"""
-        pass
 
     def _initialize_agent(self):
         """Initialize the (joint) poses of agent(robot). Called by `self.initialize_episode`"""
-        pass
 
     def _initialize_task(self):
         """Initialize task-relevant information, like goals. Called by `self.initialize_episode`"""
-        pass
 
     def _clear_sim_state(self):
         """Clear simulation state (velocities)"""

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Generic, List, TypeVar, Union
+from typing import Generic, List, TypeVar, Union
 
 import sapien.physx as physx
 import torch
