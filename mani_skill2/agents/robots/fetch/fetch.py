@@ -16,9 +16,9 @@ from mani_skill2.utils.sapien_utils import (
     get_actor_contacts,
     get_obj_by_name,
     get_pairwise_contact_impulse,
+    to_tensor,
 )
 from mani_skill2.utils.structs.actor import Actor
-from mani_skill2.utils.sapien_utils import to_tensor
 from mani_skill2.utils.structs.base import BaseStruct
 from mani_skill2.utils.structs.joint import Joint
 from mani_skill2.utils.structs.link import Link
@@ -26,6 +26,7 @@ from mani_skill2.utils.structs.pose import Pose
 from mani_skill2.utils.structs.types import Array
 
 FETCH_UNIQUE_COLLISION_BIT = 1 << 30
+
 
 class Fetch(BaseAgent):
     uid = "fetch"
@@ -221,42 +222,74 @@ class Fetch(BaseAgent):
             force_limit=500,
         )
 
-
         controller_configs = dict(
             pd_joint_delta_pos=dict(
-                arm=arm_pd_joint_delta_pos, gripper=gripper_pd_joint_pos, body=body_pd_joint_pos, base=base_pd_joint_vel,
+                arm=arm_pd_joint_delta_pos,
+                gripper=gripper_pd_joint_pos,
+                body=body_pd_joint_pos,
+                base=base_pd_joint_vel,
             ),
             pd_joint_pos=dict(
-                arm=arm_pd_joint_pos, gripper=gripper_pd_joint_pos, body=body_pd_joint_pos, base=base_pd_joint_vel,
+                arm=arm_pd_joint_pos,
+                gripper=gripper_pd_joint_pos,
+                body=body_pd_joint_pos,
+                base=base_pd_joint_vel,
             ),
             pd_ee_delta_pos=dict(
-                arm=arm_pd_ee_delta_pos, gripper=gripper_pd_joint_pos, body=body_pd_joint_pos, base=base_pd_joint_vel,
+                arm=arm_pd_ee_delta_pos,
+                gripper=gripper_pd_joint_pos,
+                body=body_pd_joint_pos,
+                base=base_pd_joint_vel,
             ),
             pd_ee_delta_pose=dict(
-                arm=arm_pd_ee_delta_pose, gripper=gripper_pd_joint_pos, body=body_pd_joint_pos, base=base_pd_joint_vel,
+                arm=arm_pd_ee_delta_pose,
+                gripper=gripper_pd_joint_pos,
+                body=body_pd_joint_pos,
+                base=base_pd_joint_vel,
             ),
             pd_ee_delta_pose_align=dict(
-                arm=arm_pd_ee_delta_pose_align, gripper=gripper_pd_joint_pos, body=body_pd_joint_pos, base=base_pd_joint_vel,
+                arm=arm_pd_ee_delta_pose_align,
+                gripper=gripper_pd_joint_pos,
+                body=body_pd_joint_pos,
+                base=base_pd_joint_vel,
             ),
             # TODO(jigu): how to add boundaries for the following controllers
             pd_joint_target_delta_pos=dict(
-                arm=arm_pd_joint_target_delta_pos, gripper=gripper_pd_joint_pos, body=body_pd_joint_pos, base=base_pd_joint_vel,
+                arm=arm_pd_joint_target_delta_pos,
+                gripper=gripper_pd_joint_pos,
+                body=body_pd_joint_pos,
+                base=base_pd_joint_vel,
             ),
             pd_ee_target_delta_pos=dict(
-                arm=arm_pd_ee_target_delta_pos, gripper=gripper_pd_joint_pos, body=body_pd_joint_pos, base=base_pd_joint_vel,
+                arm=arm_pd_ee_target_delta_pos,
+                gripper=gripper_pd_joint_pos,
+                body=body_pd_joint_pos,
+                base=base_pd_joint_vel,
             ),
             pd_ee_target_delta_pose=dict(
-                arm=arm_pd_ee_target_delta_pose, gripper=gripper_pd_joint_pos, body=body_pd_joint_pos, base=base_pd_joint_vel,
+                arm=arm_pd_ee_target_delta_pose,
+                gripper=gripper_pd_joint_pos,
+                body=body_pd_joint_pos,
+                base=base_pd_joint_vel,
             ),
             # Caution to use the following controllers
             pd_joint_vel=dict(
-                arm=arm_pd_joint_vel, gripper=gripper_pd_joint_pos, body=body_pd_joint_pos, base=base_pd_joint_vel,
+                arm=arm_pd_joint_vel,
+                gripper=gripper_pd_joint_pos,
+                body=body_pd_joint_pos,
+                base=base_pd_joint_vel,
             ),
             pd_joint_pos_vel=dict(
-                arm=arm_pd_joint_pos_vel, gripper=gripper_pd_joint_pos, body=body_pd_joint_pos, base=base_pd_joint_vel,
+                arm=arm_pd_joint_pos_vel,
+                gripper=gripper_pd_joint_pos,
+                body=body_pd_joint_pos,
+                base=base_pd_joint_vel,
             ),
             pd_joint_delta_pos_vel=dict(
-                arm=arm_pd_joint_delta_pos_vel, gripper=gripper_pd_joint_pos, body=body_pd_joint_pos, base=base_pd_joint_vel,
+                arm=arm_pd_joint_delta_pos_vel,
+                gripper=gripper_pd_joint_pos,
+                body=body_pd_joint_pos,
+                base=base_pd_joint_vel,
             ),
         )
 
@@ -270,13 +303,9 @@ class Fetch(BaseAgent):
         self.finger2_link: Link = get_obj_by_name(
             self.robot.get_links(), "r_gripper_finger_link"
         )
-        self.tcp: Link = get_obj_by_name(
-            self.robot.get_links(), self.ee_link_name
-        )
+        self.tcp: Link = get_obj_by_name(self.robot.get_links(), self.ee_link_name)
 
-        self.base_link: Link = get_obj_by_name(
-            self.robot.get_links(), "base_link"
-        )
+        self.base_link: Link = get_obj_by_name(self.robot.get_links(), "base_link")
         self.l_wheel_link: Link = get_obj_by_name(
             self.robot.get_links(), "l_wheel_link"
         )
@@ -329,8 +358,12 @@ class Fetch(BaseAgent):
             contacts = self.scene.get_contacts()
 
             if object is None:
-                finger1_contacts = get_actor_contacts(contacts, self.finger1_link._bodies[0].entity)
-                finger2_contacts = get_actor_contacts(contacts, self.finger2_link._bodies[0].entity)
+                finger1_contacts = get_actor_contacts(
+                    contacts, self.finger1_link._bodies[0].entity
+                )
+                finger2_contacts = get_actor_contacts(
+                    contacts, self.finger2_link._bodies[0].entity
+                )
                 return (
                     np.linalg.norm(compute_total_impulse(finger1_contacts))
                     >= min_impulse
@@ -339,10 +372,14 @@ class Fetch(BaseAgent):
                 )
             else:
                 limpulse = get_pairwise_contact_impulse(
-                    contacts, self.finger1_link._bodies[0].entity, object._bodies[0].entity
+                    contacts,
+                    self.finger1_link._bodies[0].entity,
+                    object._bodies[0].entity,
                 )
                 rimpulse = get_pairwise_contact_impulse(
-                    contacts, self.finger2_link._bodies[0].entity, object._bodies[0].entity
+                    contacts,
+                    self.finger2_link._bodies[0].entity,
+                    object._bodies[0].entity,
                 )
 
                 # direction to open the gripper
@@ -380,7 +417,7 @@ class Fetch(BaseAgent):
         T[:3, :3] = np.stack([ortho, closing, approaching], axis=1)
         T[:3, 3] = center
         return sapien.Pose(T)
-    
+
     @property
     def tcp_pose(self) -> Pose:
         p = (self.finger1_link.pose.p + self.finger2_link.pose.p) / 2

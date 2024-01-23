@@ -43,6 +43,7 @@ def to_tensor(array: Union[torch.Tensor, np.array, Sequence]):
         else:
             return torch.tensor(array)
 
+
 def _to_numpy(array: Union[Array, Sequence]) -> np.ndarray:
     if isinstance(array, (dict)):
         return {k: _to_numpy(v) for k, v in array.items()}
@@ -56,11 +57,13 @@ def _to_numpy(array: Union[Array, Sequence]) -> np.ndarray:
     else:
         return np.array(array)
 
+
 def to_numpy(array: Union[Array, Sequence], dtype=None) -> np.ndarray:
     array = _to_numpy(array)
     if dtype is not None:
         return array.astype(dtype)
     return array
+
 
 def _unbatch(array: Union[Array, Sequence]):
     if isinstance(array, (dict)):
@@ -78,8 +81,10 @@ def _unbatch(array: Union[Array, Sequence]):
             return array[0]
     return array
 
+
 def unbatch(*args: Tuple[Union[Array, Sequence]]):
     return tuple([_unbatch(x) for x in args])
+
 
 def clone_tensor(array: Array):
     if torch is not None and isinstance(array, torch.Tensor):
@@ -321,15 +326,9 @@ def get_pairwise_contacts(
     """
     pairwise_contacts = []
     for contact in contacts:
-        if (
-            contact.bodies[0].entity == actor0
-            and contact.bodies[1].entity == actor1
-        ):
+        if contact.bodies[0].entity == actor0 and contact.bodies[1].entity == actor1:
             pairwise_contacts.append((contact, True))
-        elif (
-            contact.bodies[0].entity == actor1
-            and contact.bodies[1].entity == actor0
-        ):
+        elif contact.bodies[0].entity == actor1 and contact.bodies[1].entity == actor0:
             pairwise_contacts.append((contact, False))
     return pairwise_contacts
 

@@ -627,7 +627,7 @@ class BaseEnv(gym.Env):
         if self.num_envs == 1:
             terminated = terminated[0]
             reward = reward[0]
-        
+
         if physx.is_gpu_enabled():
             return obs, reward, terminated, torch.Tensor(False), info
         else:

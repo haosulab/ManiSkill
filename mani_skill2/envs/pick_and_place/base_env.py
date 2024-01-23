@@ -76,7 +76,23 @@ class StationaryManipulationEnv(BaseEnv):
             self.agent.robot.set_pose(Pose([-0.562, 0, 0]))
         elif self.robot_uid == "fetch":
             qpos = np.array(
-                [0, 0, 0, 0.386, 0, 0, 0, -np.pi / 4, 0, np.pi / 4, 0, np.pi / 3, 0, 0.015, 0.015]
+                [
+                    0,
+                    0,
+                    0,
+                    0.386,
+                    0,
+                    0,
+                    0,
+                    -np.pi / 4,
+                    0,
+                    np.pi / 4,
+                    0,
+                    np.pi / 3,
+                    0,
+                    0.015,
+                    0.015,
+                ]
             )
             self.agent.reset(qpos)
             self.agent.robot.set_pose(sapien.Pose([-0.82, 0, -0.920]))
