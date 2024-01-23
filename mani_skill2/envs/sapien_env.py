@@ -32,7 +32,7 @@ from mani_skill2.utils.geometry.trimesh_utils import (
     get_component_meshes,
     merge_meshes,
 )
-from mani_skill2.utils.sapien_utils import get_obj_by_type, to_numpy, to_tensor, unbatch
+from mani_skill2.utils.sapien_utils import batch, get_obj_by_type, to_numpy, to_tensor, unbatch
 from mani_skill2.utils.structs.types import Array
 from mani_skill2.utils.visualization.misc import observations_to_images, tile_images
 
@@ -633,22 +633,21 @@ class BaseEnv(gym.Env):
         set_action = False
         if action is None:  # simulation without action
             pass
-        elif isinstance(action, np.ndarray):
-            self.agent.set_action(to_tensor(action))
+        elif isinstance(action, np.ndarray) or isinstance(action, torch.Tensor):
+            action = batch(to_tensor(action))
             set_action = True
         elif isinstance(action, dict):
             if action["control_mode"] != self.agent.control_mode:
                 self.agent.set_control_mode(action["control_mode"])
-            self.agent.set_action(to_tensor(action["action"]))
-            set_action = True
-        elif isinstance(action, torch.Tensor):
-            self.agent.set_action(action)
+            action = batch(to_tensor(action["action"]))
             set_action = True
         else:
             raise TypeError(type(action))
 
-        if set_action and physx.is_gpu_enabled():
-            self._scene.px.gpu_apply_articulation_target_position()
+        if set_action:
+            self.agent.set_action(to_tensor(action))
+            if physx.is_gpu_enabled():
+                self._scene.px.gpu_apply_articulation_target_position()
         self._before_control_step()
         for _ in range(self._sim_steps_per_control):
             self.agent.before_simulation_step()

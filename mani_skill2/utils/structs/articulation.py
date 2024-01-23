@@ -398,4 +398,4 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             )
         else:
             for i, joint in enumerate(joints):
-                joint.set_drive_velocity_target(targets[i])
+                joint.set_drive_velocity_target(targets[0, i])

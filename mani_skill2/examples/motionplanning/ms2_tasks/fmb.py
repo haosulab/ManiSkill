@@ -81,7 +81,6 @@ def solve(env: FMBEnv, seed=None, debug=False, vis=False):
     ) * sapien.Pose([0, 0, -0.12])
     res = planner.move_to_pose_with_screw(reach_pose)
 
-    # import ipdb;ipdb.set_trace()
     reach_pose = sapien.Pose(
         env.reorienting_fixture.pose.sp.p, q=grasp_pose.q
     ) * sapien.Pose([0, 0, -0.12], q=euler2quat(0, -np.pi / 4, 0))
@@ -120,9 +119,7 @@ def solve(env: FMBEnv, seed=None, debug=False, vis=False):
         [0, 0, -0.3]
     )
     res = planner.move_to_pose_with_screw(reach_pose)
-    # import ipdb;ipdb.set_trace()
     rot_diff = qmult(env.bridge.pose.sp.q, qconjugate(euler2quat(0, 0, np.pi / 2)))
-    # import ipdb;ipdb.set_trace()
     reach_pose = sapien.Pose(
         env.board.pose.sp.p, q=qmult(grasp_pose.q, euler2quat(0, -np.pi / 30, 0))
     ) * sapien.Pose(

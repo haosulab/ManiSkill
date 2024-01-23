@@ -10,12 +10,18 @@ from scipy.spatial.transform import Rotation
 
 from mani_skill2.utils.common import clip_and_scale_action
 from mani_skill2.utils.sapien_utils import get_obj_by_name, to_numpy, to_tensor
-from mani_skill2.utils.structs.pose import vectorize_pose
+from mani_skill2.utils.structs.pose import Pose, vectorize_pose
 
 from .base_controller import BaseController, ControllerConfig
 from .pd_joint_pos import PDJointPosController
 
-
+from mani_skill2.utils.geometry.rotation_conversions import (
+    quaternion_apply,
+    quaternion_multiply,
+    quaternion_to_matrix,
+    euler_angles_to_matrix,
+    matrix_to_quaternion,
+)
 # NOTE(jigu): not necessary to inherit, just for convenience
 class PDEEPosController(PDJointPosController):
     config: "PDEEPosControllerConfig"
@@ -111,7 +117,7 @@ class PDEEPosController(PDJointPosController):
     def compute_target_pose(self, prev_ee_pose_at_base, action):
         # Keep the current rotation and change the position
         if self.config.use_delta:
-            delta_pose = sapien.Pose(action)
+            delta_pose = Pose.create(action)
 
             if self.config.frame == "base":
                 target_pose = delta_pose * prev_ee_pose_at_base
@@ -121,7 +127,7 @@ class PDEEPosController(PDJointPosController):
                 raise NotImplementedError(self.config.frame)
         else:
             assert self.config.frame == "base", self.config.frame
-            target_pose = sapien.Pose(action)
+            target_pose = Pose.create(action)
 
         return target_pose
 
@@ -205,19 +211,18 @@ class PDEEPoseController(PDEEPosController):
         rot_action = action[:, 3:]
 
         rot_norm = torch.linalg.norm(rot_action, axis=1)
-        import ipdb
-
-        ipdb.set_trace()
-        rot_action = rot_action / rot_norm
-        rot_action[rot_norm > 1] = rot_action[rot_norm > 1] * rot_norm[rot_norm > 1]
+        # rot_action = rot_action / rot_norm
+        # rot_action[rot_norm > 1] = rot_action[rot_norm > 1] * rot_norm[rot_norm > 1]
         rot_action = rot_action * self.config.rot_bound
         return torch.hstack([pos_action, rot_action])
 
-    def compute_target_pose(self, prev_ee_pose_at_base, action):
+    def compute_target_pose(self, prev_ee_pose_at_base: Pose, action):
         if self.config.use_delta:
-            delta_pos, delta_rot = action[0:3], action[3:6]
-            delta_quat = Rotation.from_rotvec(delta_rot).as_quat()[[3, 0, 1, 2]]
-            delta_pose = sapien.Pose(delta_pos, delta_quat)
+            delta_pos, delta_rot = action[:, 0:3], action[:, 3:6]
+            delta_quat = matrix_to_quaternion(euler_angles_to_matrix(delta_rot, "XYZ"))
+            # TODO (stao): verify correctness, the results of these two delta_rot to quaternion are a little different
+            # delta_quat = Rotation.from_rotvec(delta_rot).as_quat()[[3, 0, 1, 2]]
+            delta_pose = Pose.create_from_pq(delta_pos, delta_quat)
 
             if self.config.frame == "base":
                 target_pose = delta_pose * prev_ee_pose_at_base
@@ -231,9 +236,10 @@ class PDEEPoseController(PDEEPosController):
                 raise NotImplementedError(self.config.frame)
         else:
             assert self.config.frame == "base", self.config.frame
-            target_pos, target_rot = action[0:3], action[3:6]
-            target_quat = Rotation.from_rotvec(target_rot).as_quat()[[3, 0, 1, 2]]
-            target_pose = sapien.Pose(target_pos, target_quat)
+            target_pos, target_rot = action[:, 0:3], action[:, 3:6]
+            target_quat = matrix_to_quaternion(euler_angles_to_matrix(target_rot, "XYZ"))
+            # target_quat = Rotation.from_rotvec(target_rot).as_quat()[[3, 0, 1, 2]]
+            target_pose = Pose.create_from_pq(target_pos, target_quat)
 
         return target_pose
 
