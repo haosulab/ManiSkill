@@ -22,6 +22,14 @@ from mani_skill2.utils.geometry.rotation_conversions import (
     euler_angles_to_matrix,
     matrix_to_quaternion,
 )
+try:
+    from curobo.types.base import TensorDeviceType
+    from curobo.types.math import Pose as Curobo_Pose
+    from curobo.types.robot import RobotConfig
+    from curobo.util_file import get_robot_configs_path, join_path, load_yaml
+    from curobo.wrap.reacher.ik_solver import IKSolver, IKSolverConfig
+except:
+    pass
 # NOTE(jigu): not necessary to inherit, just for convenience
 class PDEEPosController(PDJointPosController):
     config: "PDEEPosControllerConfig"
@@ -32,12 +40,7 @@ class PDEEPosController(PDJointPosController):
         # Pinocchio model to compute IK
         # TODO (stao): Batched IK? https://curobo.org/source/getting_started/2a_python_examples.html#inverse-kinematics
         if physx.is_gpu_enabled():
-            from curobo.types.base import TensorDeviceType
-            from curobo.types.math import Pose
-            from curobo.types.robot import RobotConfig
-            from curobo.util_file import get_robot_configs_path, join_path, load_yaml
-            from curobo.wrap.reacher.ik_solver import IKSolver, IKSolverConfig
-
+            
             tensor_args = TensorDeviceType()
 
             config_file = load_yaml(
@@ -61,7 +64,7 @@ class PDEEPosController(PDJointPosController):
                 tensor_args=tensor_args,
                 use_cuda_graph=True,
             )
-            self.ik_solver = IKSolver(ik_config)
+            self.curobo_ik_solver = IKSolver(ik_config)
         else:
             self.pmodel = self.articulation.create_pinocchio_model()
         self.qmask = np.zeros(self.articulation.dof, dtype=bool)
@@ -98,17 +101,31 @@ class PDEEPosController(PDJointPosController):
         super().reset()
         self._target_pose = self.ee_pose_at_base
 
-    def compute_ik(self, target_pose, max_iterations=100):
+    def compute_ik(self, target_pose: Pose, max_iterations=100):
         # Assume the target pose is defined in the base frame
         # TODO (arth): currently ik only supports cpu, so input/output is managed as such
         #       in future, need to change input/output processing per gpu implementation
-        result, success, error = self.pmodel.compute_inverse_kinematics(
-            self.ee_link_idx,
-            target_pose.sp,
-            initial_qpos=to_numpy(self.articulation.get_qpos()).squeeze(0),
-            active_qmask=self.qmask,
-            max_iterations=max_iterations,
-        )
+        
+        if physx.is_gpu_enabled():
+            initial_qpos = self.curobo_ik_solver.sample_configs(self.scene.num_envs)
+            initial_qpos = self.articulation.get_qpos()[:, self.qmask]
+            kin_state = self.curobo_ik_solver.fk(initial_qpos)
+            # goal = Curobo_Pose(kin_state.ee_position, kin_state.ee_quaternion)
+            goal = Curobo_Pose(target_pose.p, target_pose.q)
+            # import ipdb;ipdb.set_trace()
+            result = self.curobo_ik_solver.solve_batch(goal)
+            q_solution = result.solution[result.success] # (N, 1, dof)
+            if torch.all(result.success):
+                return q_solution
+            return None
+        else:
+            result, success, error = self.pmodel.compute_inverse_kinematics(
+                self.ee_link_idx,
+                target_pose.sp,
+                initial_qpos=to_numpy(self.articulation.get_qpos()).squeeze(0),
+                active_qmask=self.qmask,
+                max_iterations=max_iterations,
+            )
         if success:
             return to_tensor([result[self.joint_indices]])
         else:
@@ -145,7 +162,6 @@ class PDEEPosController(PDJointPosController):
         self._target_qpos = self.compute_ik(self._target_pose)
         if self._target_qpos is None:
             self._target_qpos = self._start_qpos
-
         if self.config.interpolate:
             self._step_size = (self._target_qpos - self._start_qpos) / self._sim_steps
         else:
@@ -202,17 +218,14 @@ class PDEEPoseController(PDEEPosController):
         self.action_space = spaces.Box(low, high, dtype=np.float32)
 
     def _clip_and_scale_action(self, action):
-        # TODO (stao): support batched actions
         # NOTE(xiqiang): rotation should be clipped by norm.
-
         pos_action = clip_and_scale_action(
             action[:, :3], self.action_space_low[:3], self.action_space_high[:3]
         )
         rot_action = action[:, 3:]
 
         rot_norm = torch.linalg.norm(rot_action, axis=1)
-        # rot_action = rot_action / rot_norm
-        # rot_action[rot_norm > 1] = rot_action[rot_norm > 1] * rot_norm[rot_norm > 1]
+        rot_action[rot_norm > 1] = torch.mul(rot_action, 1 / rot_norm[:, None])[rot_norm > 1]
         rot_action = rot_action * self.config.rot_bound
         return torch.hstack([pos_action, rot_action])
 

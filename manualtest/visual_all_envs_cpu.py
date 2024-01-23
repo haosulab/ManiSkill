@@ -18,14 +18,14 @@ if __name__ == "__main__":
             sim_freq=500,
             control_freq=100,
         )
-        # env = RecordEpisode(
-        #     env,
-        #     output_dir="videos/manual_test",
-        #     trajectory_name=f"{env_id}",
-        #     info_on_video=False,
-        #     video_fps=30,
-        #     save_trajectory=False,
-        # )
+        env = RecordEpisode(
+            env,
+            output_dir="videos/manual_test",
+            trajectory_name=f"{env_id}",
+            info_on_video=False,
+            video_fps=30,
+            save_trajectory=False,
+        )
         env.reset(seed=0)
         done = False
         i = 0

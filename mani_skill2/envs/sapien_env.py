@@ -119,7 +119,7 @@ class BaseEnv(gym.Env):
 
         self._scene: ManiSkillScene = None
         self.num_envs = num_envs
-        if num_envs > 1:
+        if num_envs >= 1:
             if not sapien.physx.is_gpu_enabled():
                 sapien.physx.enable_gpu()
                 sapien.set_cuda_tensor_backend("torch")
@@ -618,7 +618,7 @@ class BaseEnv(gym.Env):
         reward = self.get_reward(obs=obs, action=action, info=info)
         terminated = info["success"]
         if physx.is_gpu_enabled():
-            return obs, reward, terminated, torch.Tensor(False), info
+            return obs, reward, terminated, torch.Tensor([False]), info
         else:
             # On CPU sim mode, we always return numpy / python primitives without any batching.
             return unbatch(
@@ -634,18 +634,20 @@ class BaseEnv(gym.Env):
         if action is None:  # simulation without action
             pass
         elif isinstance(action, np.ndarray) or isinstance(action, torch.Tensor):
-            action = batch(to_tensor(action))
+            action = to_tensor(action)
             set_action = True
         elif isinstance(action, dict):
             if action["control_mode"] != self.agent.control_mode:
                 self.agent.set_control_mode(action["control_mode"])
-            action = batch(to_tensor(action["action"]))
+            action = to_tensor(action["action"])
             set_action = True
         else:
             raise TypeError(type(action))
 
         if set_action:
-            self.agent.set_action(to_tensor(action))
+            if self.num_envs == 1 and action.shape == self.single_action_space.shape:
+                action = batch(action)
+            self.agent.set_action(action)
             if physx.is_gpu_enabled():
                 self._scene.px.gpu_apply_articulation_target_position()
         self._before_control_step()
