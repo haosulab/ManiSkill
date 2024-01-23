@@ -284,7 +284,7 @@ class CombinedController(DictController):
 
         for uid, controller in self.controllers.items():
             start, end = self.action_mapping[uid]
-            controller.set_action(to_tensor(action[..., start:end]))
+            controller.set_action(action[..., start:end])
 
     def to_action_dict(self, action: np.ndarray):
         """Convert a flat action to a dict of actions."""

@@ -163,8 +163,8 @@ class PickCubeEnv(StationaryManipulationEnv):
         return torch.hstack([state, self.goal_pos])
 
     def set_state(self, state):
-        self.goal_pos = state[-3:]
-        super().set_state(state[:-3])
+        self.goal_pos = state[:, -3:]
+        super().set_state(state[:, :-3])
 
 
 @register_env("LiftCube-v0", max_episode_steps=200)

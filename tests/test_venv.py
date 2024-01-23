@@ -21,7 +21,7 @@ def make_env(env_id, obs_mode):
 
 @pytest.mark.parametrize("env_id", ["PickCube-v0", "TurnFaucet-v0"])
 @pytest.mark.parametrize("obs_mode", VENV_OBS_MODES)
-def test_vecenv_obs_mode(env_id, obs_mode):
+def test_cpu_vecenv_obs_mode(env_id, obs_mode):
     n_envs = 2
 
     env_fns = [partial(make_env, env_id, obs_mode=obs_mode) for _ in range(n_envs)]
@@ -63,7 +63,7 @@ def test_vecenv_obs_mode(env_id, obs_mode):
 
 @pytest.mark.parametrize("env_id", ["PickCube-v0", "TurnFaucet-v0"])
 @pytest.mark.parametrize("obs_mode", VENV_OBS_MODES)
-def test_gymnasium_vecenv(env_id, obs_mode):
+def test_gymnasium_cpu_vecenv(env_id, obs_mode):
     n_envs = 2
 
     gym_env = gym.make_vec(
