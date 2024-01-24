@@ -119,7 +119,7 @@ class BaseEnv(gym.Env):
 
         self._scene: ManiSkillScene = None
         self.num_envs = num_envs
-        if num_envs >= 1:
+        if num_envs > 1:
             if not sapien.physx.is_gpu_enabled():
                 sapien.physx.enable_gpu()
                 sapien.set_cuda_tensor_backend("torch")
