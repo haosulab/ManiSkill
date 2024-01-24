@@ -2,8 +2,8 @@ from dataclasses import dataclass
 from typing import Sequence, Union
 
 import numpy as np
-from gymnasium import spaces
 import torch
+from gymnasium import spaces
 
 from .base_controller import BaseController, ControllerConfig
 from .pd_joint_pos import PDJointPosController, PDJointPosControllerConfig
@@ -42,7 +42,9 @@ class PDJointPosVelController(PDJointPosController):
                 self._target_qpos = self._start_qpos + action[:, :nq]
         else:
             # Compatible with mimic
-            self._target_qpos = torch.broadcast_to(action[:, :nq], self._start_qpos.shape)
+            self._target_qpos = torch.broadcast_to(
+                action[:, :nq], self._start_qpos.shape
+            )
 
         if self.config.interpolate:
             self._step_size = (self._target_qpos - self._start_qpos) / self._sim_steps

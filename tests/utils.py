@@ -1,4 +1,5 @@
 from typing import List
+
 import numpy as np
 import torch
 
@@ -61,6 +62,7 @@ VENV_OBS_MODES = [
 ]
 ROBOTS = ["panda", "xmate3_robotiq"]
 
+
 def assert_isinstance(obs1, types: List):
     if not isinstance(types, list):
         types = [types]
@@ -68,6 +70,7 @@ def assert_isinstance(obs1, types: List):
         [assert_isinstance(x, types) for x in obs1.values()]
     else:
         assert np.any([isinstance(obs1, x) for x in types])
+
 
 def assert_obs_equal(obs1, obs2, ignore_col_vector_shape_mismatch=False):
     """Check if two observations are equal

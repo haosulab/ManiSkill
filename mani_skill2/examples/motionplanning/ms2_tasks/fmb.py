@@ -6,13 +6,10 @@ from transforms3d.euler import euler2quat, quat2euler
 from transforms3d.quaternions import qconjugate, qmult
 
 from mani_skill2.envs.tasks import FMBEnv
-from mani_skill2.examples.motionplanning.motionplanner import (
-    PandaArmMotionPlanningSolver,
-)
+from mani_skill2.examples.motionplanning.motionplanner import \
+    PandaArmMotionPlanningSolver
 from mani_skill2.examples.motionplanning.utils import (
-    compute_grasp_info_by_obb,
-    get_actor_obb,
-)
+    compute_grasp_info_by_obb, get_actor_obb)
 from mani_skill2.utils.wrappers.record import RecordEpisode
 
 

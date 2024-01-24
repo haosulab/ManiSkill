@@ -14,27 +14,20 @@ import os.path as osp
 import gymnasium as gym
 from tqdm import tqdm
 
-from mani_skill2.examples.motionplanning.ms2_tasks.lift_cube import (
-    solve as lift_cube_solve,
-)
-from mani_skill2.examples.motionplanning.ms2_tasks.panda_avoid_obstacles import (
-    solve as panda_avoid_obstacles_solve,
-)
-from mani_skill2.examples.motionplanning.ms2_tasks.peg_insertion_side import (
-    solve as peg_insertion_side_solve,
-)
-from mani_skill2.examples.motionplanning.ms2_tasks.pick_clutter import (
-    solve as pick_clutter_solve,
-)
-from mani_skill2.examples.motionplanning.ms2_tasks.pick_cube import (
-    solve as pick_cube_solve,
-)
-from mani_skill2.examples.motionplanning.ms2_tasks.plug_charger import (
-    solve as plug_charger_solve,
-)
-from mani_skill2.examples.motionplanning.ms2_tasks.stack_cube import (
-    solve as stack_cube_solve,
-)
+from mani_skill2.examples.motionplanning.ms2_tasks.lift_cube import \
+    solve as lift_cube_solve
+from mani_skill2.examples.motionplanning.ms2_tasks.panda_avoid_obstacles import \
+    solve as panda_avoid_obstacles_solve
+from mani_skill2.examples.motionplanning.ms2_tasks.peg_insertion_side import \
+    solve as peg_insertion_side_solve
+from mani_skill2.examples.motionplanning.ms2_tasks.pick_clutter import \
+    solve as pick_clutter_solve
+from mani_skill2.examples.motionplanning.ms2_tasks.pick_cube import \
+    solve as pick_cube_solve
+from mani_skill2.examples.motionplanning.ms2_tasks.plug_charger import \
+    solve as plug_charger_solve
+from mani_skill2.examples.motionplanning.ms2_tasks.stack_cube import \
+    solve as stack_cube_solve
 from mani_skill2.utils.wrappers.record import RecordEpisode
 
 

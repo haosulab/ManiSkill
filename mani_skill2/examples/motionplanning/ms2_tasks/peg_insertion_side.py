@@ -3,13 +3,10 @@ import numpy as np
 import sapien.core as sapien
 
 from mani_skill2.envs.assembly.peg_insertion_side import PegInsertionSideEnv
-from mani_skill2.examples.motionplanning.motionplanner import (
-    PandaArmMotionPlanningSolver,
-)
+from mani_skill2.examples.motionplanning.motionplanner import \
+    PandaArmMotionPlanningSolver
 from mani_skill2.examples.motionplanning.utils import (
-    compute_grasp_info_by_obb,
-    get_actor_obb,
-)
+    compute_grasp_info_by_obb, get_actor_obb)
 
 
 def main():

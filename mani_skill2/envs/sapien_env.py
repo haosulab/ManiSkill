@@ -32,7 +32,13 @@ from mani_skill2.utils.geometry.trimesh_utils import (
     get_component_meshes,
     merge_meshes,
 )
-from mani_skill2.utils.sapien_utils import batch, get_obj_by_type, to_numpy, to_tensor, unbatch
+from mani_skill2.utils.sapien_utils import (
+    batch,
+    get_obj_by_type,
+    to_numpy,
+    to_tensor,
+    unbatch,
+)
 from mani_skill2.utils.structs.types import Array
 from mani_skill2.utils.visualization.misc import observations_to_images, tile_images
 

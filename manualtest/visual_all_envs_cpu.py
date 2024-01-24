@@ -35,7 +35,9 @@ if __name__ == "__main__":
             viewer.paused = True
             env.render_human()
         while i < 50:
-            obs, rew, terminated, truncated, info = env.step(env.action_space.sample()*0)
+            obs, rew, terminated, truncated, info = env.step(
+                env.action_space.sample() * 0
+            )
             done = np.logical_or(to_numpy(terminated), to_numpy(truncated))
             print(rew)
             if num_envs == 1:

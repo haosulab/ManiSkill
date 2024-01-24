@@ -9,8 +9,8 @@ from tests.utils import (
     OBS_MODES,
     ROBOTS,
     STATIONARY_ENV_IDS,
+    assert_isinstance,
     assert_obs_equal,
-    assert_isinstance
 )
 
 
