@@ -8,11 +8,12 @@ from mani_skill2.utils.wrappers import RecordEpisode
 if __name__ == "__main__":
     # , "StackCube-v0", "LiftCube-v0"
     num_envs = 2
-    for env_id in ["PushObject-v0"]:  # , "StackCube-v0", "LiftCube-v0"]:
+    for env_id in ["PushCube-v0"]:  # , "StackCube-v0", "LiftCube-v0"]:
         env = gym.make(
             env_id,
             num_envs=num_envs,
             enable_shadow=True,
+            reward_mode="normalized_dense",
             render_mode="rgb_array",
             control_mode="pd_ee_delta_pos",
             sim_freq=500,
