@@ -202,9 +202,7 @@ def main():
                 from itertools import chain
 
                 from mani_skill2.utils.visualization.misc import (
-                    observations_to_images,
-                    tile_images,
-                )
+                    observations_to_images, tile_images)
 
                 images = list(
                     chain(*[observations_to_images(x) for x in obs["image"].values()])

@@ -8,13 +8,10 @@ from transforms3d.euler import euler2quat
 
 from mani_skill2 import ASSET_DIR
 from mani_skill2.envs.pick_and_place.pick_clutter import PickClutterEnv
-from mani_skill2.examples.motionplanning.motionplanner import (
-    PandaArmMotionPlanningSolver,
-)
+from mani_skill2.examples.motionplanning.motionplanner import \
+    PandaArmMotionPlanningSolver
 from mani_skill2.examples.motionplanning.utils import (
-    compute_grasp_info_by_obb,
-    get_actor_obb,
-)
+    compute_grasp_info_by_obb, get_actor_obb)
 
 
 def main():

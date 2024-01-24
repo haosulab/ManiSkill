@@ -7,13 +7,9 @@ from tqdm import tqdm
 
 from mani_skill2.envs.misc.avoid_obstacles import PandaAvoidObstaclesEnv
 from mani_skill2.examples.motionplanning.motionplanner import (
-    CLOSED,
-    PandaArmMotionPlanningSolver,
-)
+    CLOSED, PandaArmMotionPlanningSolver)
 from mani_skill2.examples.motionplanning.utils import (
-    compute_grasp_info_by_obb,
-    get_actor_obb,
-)
+    compute_grasp_info_by_obb, get_actor_obb)
 
 
 def main():
