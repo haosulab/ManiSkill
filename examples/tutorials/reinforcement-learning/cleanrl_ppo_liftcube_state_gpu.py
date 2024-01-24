@@ -1,6 +1,6 @@
 # docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/ppo/#ppo_continuous_actionpy
 # python cleanrl_ppo_liftcube_state_gpu.py --num_envs=512 --gamma=0.8 --gae_lambda=0.9 --update_epochs=1 --num_minibatches=128  --env_id="PickCube-v0" --total_timesteps=100000000
-# python cleanrl_ppo_liftcube_state_gpu.py --num_envs=2048 --gamma=0.8 --gae_lambda=0.9 --update_epochs=1 --num_minibatches=32  --env_id="PushCube-v0" --total_timesteps=100000000 --num-steps=12
+# python cleanrl_ppo_liftcube_state_gpu.py --num_envs=512 --gamma=0.8 --gae_lambda=0.9 --update_epochs=8 --target_kl=0.1 --num_minibatches=16  --env_id="PickCube-v0" --total_timesteps=100000000 --num_steps=100
 # TODO: train shorter horizon to leverage parallelization more.
 import os
 import random
@@ -234,6 +234,7 @@ if __name__ == "__main__":
     def clip_action(action: torch.Tensor):
         return torch.clamp(action.detach(), action_space_low, action_space_high)
     for iteration in range(1, args.num_iterations + 1):
+        timeout_bonus = torch.zeros((args.num_steps, args.num_envs), device=device)
         with torch.inference_mode():
             if iteration % 25 == 1:
                 # evaluate
@@ -301,6 +302,9 @@ if __name__ == "__main__":
             # next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_done).to(device)
             if truncations.any():
                 # TODO make truncations a tensor, which should all be the same value really...
+                final_obs = next_obs
+                final_value = agent.get_value(final_obs)
+                timeout_bonus[step] = final_value.flatten()
                 next_obs, _ = envs.reset()
                 # writer.add_scalar("charts/episodic_is_grasped", is_grasped.mean().cpu().numpy(), global_step)
                 # writer.add_scalar("charts/episodic_place_rew", place_rew.mean().cpu().numpy(), global_step)
@@ -316,11 +320,11 @@ if __name__ == "__main__":
                         print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
                         writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
                         writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
-
         # bootstrap value if not done
         with torch.no_grad():
             next_value = agent.get_value(next_obs).reshape(1, -1)
             advantages = torch.zeros_like(rewards).to(device)
+            rewards_ = rewards + timeout_bonus
             lastgaelam = 0
             for t in reversed(range(args.num_steps)):
                 if t == args.num_steps - 1:
@@ -329,7 +333,7 @@ if __name__ == "__main__":
                 else:
                     nextnonterminal = 1.0 - dones[t + 1]
                     nextvalues = values[t + 1]
-                delta = rewards[t] + args.gamma * nextvalues * nextnonterminal - values[t]
+                delta = rewards_[t] + args.gamma * nextvalues * nextnonterminal - values[t]
                 advantages[t] = lastgaelam = delta + args.gamma * args.gae_lambda * nextnonterminal * lastgaelam
             returns = advantages + values
 
