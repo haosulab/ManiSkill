@@ -1,6 +1,6 @@
 # docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/ppo/#ppo_continuous_actionpy
-# python cleanrl_ppo_liftcube_state_gpu.py --num_envs=512 --gamma=0.8 --gae_lambda=0.9 --update_epochs=1 --num_minibatches=128  --env_id="PickCube-v0" --total_timesteps=100000000
-# python cleanrl_ppo_liftcube_state_gpu.py --num_envs=512 --gamma=0.8 --gae_lambda=0.9 --update_epochs=8 --target_kl=0.1 --num_minibatches=16  --env_id="PickCube-v0" --total_timesteps=100000000 --num_steps=100
+# python cleanrl_ppo_liftcube_state_gpu.py --num_envs=512 --gamma=0.8 --gae_lambda=0.9 --update_epochs=4 --num_minibatches=16  --env_id="PickCube-v0" --total_timesteps=100000000
+# python cleanrl_ppo_liftcube_state_gpu.py --num_envs=2048 --gamma=0.8 --gae_lambda=0.9 --update_epochs=1 --num_minibatches=32  --env_id="PushCube-v0" --total_timesteps=100000000 --num-steps=12
 # TODO: train shorter horizon to leverage parallelization more.
 import os
 import random
@@ -47,7 +47,7 @@ class Args:
     """the user or org name of the model repository from the Hugging Face Hub"""
 
     # Algorithm specific arguments
-    env_id: str = "HalfCheetah-v4"
+    env_id: str = "PickCube-v1"
     """the id of the environment"""
     total_timesteps: int = 10000000
     """total timesteps of the experiments"""
@@ -60,9 +60,9 @@ class Args:
     """the number of steps to run in each environment per policy rollout"""
     anneal_lr: bool = False
     """Toggle learning rate annealing for policy and value networks"""
-    gamma: float = 0.99
+    gamma: float = 0.8
     """the discount factor gamma"""
-    gae_lambda: float = 0.95
+    gae_lambda: float = 0.9
     """the lambda for the general advantage estimation"""
     num_minibatches: int = 32
     """the number of mini-batches"""
@@ -194,9 +194,6 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # env setup
-    # envs = gym.vector.SyncVectorEnv(
-    #     [make_env(args.env_id, i, args.capture_video, run_name, args.gamma) for i in range(args.num_envs)]
-    # )
     import mani_skill2.envs
     sapien.physx.set_gpu_memory_config(found_lost_pairs_capacity=2**26, max_rigid_patch_count=200000)
     sim_freq, control_freq = 100, 20
@@ -224,7 +221,6 @@ if __name__ == "__main__":
     next_done = torch.zeros(args.num_envs, device=device)
     eps_returns = torch.zeros(args.num_envs, dtype=torch.float, device=device)
     eps_lens = np.zeros(args.num_envs)
-    is_grasped = torch.zeros(args.num_envs, device=device)
     place_rew = torch.zeros(args.num_envs, device=device)
     print(f"####")
     print(f"args.num_iterations={args.num_iterations} args.num_envs={args.num_envs} args.num_eval_envs={args.num_eval_envs}")
@@ -255,11 +251,9 @@ if __name__ == "__main__":
                     eval_returns += reward
                     eval_eps_lens += 1
                     truncations = torch.ones_like(terminations) * truncations
-                    # eval_is_grasped += infos["is_grasped"]
                     if truncations.any():
                         # TODO make truncations a tensor, which should all be the same value really...
                         next_eval_obs, _ = eval_envs.reset()
-                        # writer.add_scalar("charts/eval_is_grasped", eval_is_grasped.mean().cpu().numpy(), global_step)
                         writer.add_scalar("charts/eval_success_rate", infos["success"].float().mean().cpu().numpy(), global_step)
                         writer.add_scalar("charts/eval_episodic_return", eval_returns.mean().cpu().numpy(), global_step)
                         writer.add_scalar("charts/eval_episodic_length", eval_eps_lens.mean(), global_step)
@@ -306,14 +300,10 @@ if __name__ == "__main__":
                 final_value = agent.get_value(final_obs)
                 timeout_bonus[step] = final_value.flatten()
                 next_obs, _ = envs.reset()
-                # writer.add_scalar("charts/episodic_is_grasped", is_grasped.mean().cpu().numpy(), global_step)
-                # writer.add_scalar("charts/episodic_place_rew", place_rew.mean().cpu().numpy(), global_step)
                 writer.add_scalar("charts/episodic_return", eps_returns.mean().cpu().numpy(), global_step)
                 writer.add_scalar("charts/episodic_length", eps_lens.mean(), global_step)
                 eps_returns = eps_returns * 0
                 eps_lens = eps_lens * 0
-                place_rew = place_rew * 0
-                is_grasped = is_grasped * 0
             if "final_info" in infos:
                 for info in infos["final_info"]:
                     if info and "episode" in info:
