@@ -1,7 +1,4 @@
 # docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/ppo/#ppo_continuous_actionpy
-# python cleanrl_ppo_liftcube_state_gpu.py --num_envs=512 --gamma=0.8 --gae_lambda=0.9 --update_epochs=4 --num_minibatches=16  --env_id="PickCube-v0" --total_timesteps=100000000
-# python cleanrl_ppo_liftcube_state_gpu.py --num_envs=2048 --gamma=0.8 --gae_lambda=0.9 --update_epochs=1 --num_minibatches=32  --env_id="PushCube-v0" --total_timesteps=100000000 --num-steps=12
-# TODO: train shorter horizon to leverage parallelization more.
 import os
 import random
 import time
@@ -19,7 +16,9 @@ from torch.distributions.normal import Normal
 from torch.utils.tensorboard import SummaryWriter
 
 from mani_skill2.utils.visualization.misc import images_to_video, tile_images
-
+import mani_skill2.envs
+from mani_skill2.utils.wrappers.record import RecordEpisode
+from mani_skill2.vector.wrappers.gymnasium import ManiSkillVectorEnv
 
 @dataclass
 class Args:
@@ -37,7 +36,7 @@ class Args:
     """the wandb's project name"""
     wandb_entity: str = None
     """the entity (team) of wandb's project"""
-    capture_video: bool = False
+    capture_video: bool = True
     """whether to capture videos of the agent performances (check out `videos` folder)"""
     save_model: bool = False
     """whether to save model into the `runs/{run_name}` folder"""
@@ -53,10 +52,11 @@ class Args:
     """total timesteps of the experiments"""
     learning_rate: float = 3e-4
     """the learning rate of the optimizer"""
-    num_envs: int = 1024
-    """the number of parallel game environments"""
+    num_envs: int = 512
+    """the number of parallel environments"""
     num_eval_envs: int = 8
-    num_steps: int = 200
+    """the number of parallel evaluation environments"""
+    num_steps: int = 100
     """the number of steps to run in each environment per policy rollout"""
     anneal_lr: bool = False
     """Toggle learning rate annealing for policy and value networks"""
@@ -66,7 +66,7 @@ class Args:
     """the lambda for the general advantage estimation"""
     num_minibatches: int = 32
     """the number of mini-batches"""
-    update_epochs: int = 10
+    update_epochs: int = 4
     """the K epochs to update the policy"""
     norm_adv: bool = True
     """Toggles advantages normalization"""
@@ -82,6 +82,8 @@ class Args:
     """the maximum norm for the gradient clipping"""
     target_kl: float = 0.1
     """the target KL divergence threshold"""
+    eval_freq: int = 25
+    """evaluation frequency in terms of iterations"""
 
     # to be filled in runtime
     batch_size: int = 0
@@ -194,12 +196,13 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # env setup
-    import mani_skill2.envs
     sapien.physx.set_gpu_memory_config(found_lost_pairs_capacity=2**26, max_rigid_patch_count=200000)
-    sim_freq, control_freq = 100, 20
-    envs = gym.make(args.env_id, num_envs=args.num_envs, render_mode="rgb_array", obs_mode="state", control_mode="pd_joint_delta_pos", sim_freq=sim_freq, control_freq=control_freq)
-    eval_envs = gym.make(args.env_id, num_envs=8, render_mode="rgb_array", obs_mode="state", control_mode="pd_joint_delta_pos", sim_freq=sim_freq, control_freq=control_freq)
-
+    env_kwargs = dict(obs_mode="state", control_mode="pd_joint_delta_pos", render_mode="rgb_array", sim_freq=100, control_freq=20)
+    envs = ManiSkillVectorEnv(args.env_id, args.num_envs, env_kwargs)
+    eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, **env_kwargs)
+    if args.capture_video:
+        eval_envs = RecordEpisode(eval_envs, output_dir=f"runs/{run_name}/videos", save_trajectory=False, video_fps=30)
+    eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, env_kwargs)
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
     agent = Agent(envs).to(device)
@@ -217,7 +220,7 @@ if __name__ == "__main__":
     global_step = 0
     start_time = time.time()
     next_obs, _ = envs.reset(seed=args.seed)
-    # next_obs = torch.Tensor(next_obs).to(device)
+    eval_obs, _ = eval_envs.reset(seed=args.seed)
     next_done = torch.zeros(args.num_envs, device=device)
     eps_returns = torch.zeros(args.num_envs, dtype=torch.float, device=device)
     eps_lens = np.zeros(args.num_envs)
@@ -231,37 +234,21 @@ if __name__ == "__main__":
         return torch.clamp(action.detach(), action_space_low, action_space_high)
     for iteration in range(1, args.num_iterations + 1):
         timeout_bonus = torch.zeros((args.num_steps, args.num_envs), device=device)
-        with torch.inference_mode():
-            if iteration % 25 == 1:
-                # evaluate
-                print("Evaluating...")
-                eval_returns = torch.zeros(args.num_eval_envs, dtype=torch.float, device=device)
-                # eval_is_grasped = torch.zeros(args.num_eval_envs, device=device)
-                eval_eps_lens = np.zeros(args.num_eval_envs)
-                video_nrows=int(np.sqrt(args.num_eval_envs))
-                images = []
-                next_eval_obs, _ = eval_envs.reset()
-                rgbs = eval_envs.render()
-                images.append(rgbs)
-                obj_height = torch.zeros(args.num_eval_envs, device=device)
-                for step in tqdm.tqdm(range(eval_envs._max_episode_steps)):
-                    next_eval_obs, reward, terminations, truncations, infos = eval_envs.step(clip_action(agent.get_action(next_eval_obs, deterministic=True)))
-                    rgbs = eval_envs.render()
-                    images.append(rgbs)
-                    eval_returns += reward
-                    eval_eps_lens += 1
-                    truncations = torch.ones_like(terminations) * truncations
-                    if truncations.any():
-                        # TODO make truncations a tensor, which should all be the same value really...
-                        next_eval_obs, _ = eval_envs.reset()
-                        writer.add_scalar("charts/eval_success_rate", infos["success"].float().mean().cpu().numpy(), global_step)
-                        writer.add_scalar("charts/eval_episodic_return", eval_returns.mean().cpu().numpy(), global_step)
-                        writer.add_scalar("charts/eval_episodic_length", eval_eps_lens.mean(), global_step)
-                        eval_returns = eval_returns * 0
-                        eval_eps_lens = eval_eps_lens * 0
-                images = [tile_images(rgbs, nrows=video_nrows).cpu().numpy() for rgbs in images]
-                images_to_video(images, output_dir=f"runs/{run_name}/videos", video_name=f"{iteration}-eval", fps=30)
-                del images
+        if iteration % args.eval_freq == 1:
+            # evaluate
+            print("Evaluating")
+            eval_done = False
+            while not eval_done:
+                with torch.no_grad():
+                    eval_obs, _, eval_terminations, eval_truncations, eval_infos = eval_envs.step(agent.get_action(eval_obs, deterministic=True))
+                if eval_truncations.any():
+                    eval_done = True
+            info = eval_infos["final_info"]
+            episodic_return = info['episode']['r'].mean().cpu().numpy()
+            print(f"eval_episodic_return={episodic_return}")
+            writer.add_scalar("charts/eval_success_rate", info["success"].float().mean().cpu().numpy(), global_step)
+            writer.add_scalar("charts/eval_episodic_return", episodic_return, global_step)
+            writer.add_scalar("charts/eval_episodic_length", info["elapsed_steps"], global_step)
 
         # Annealing the rate if instructed to do so.
         if args.anneal_lr:
@@ -285,31 +272,21 @@ if __name__ == "__main__":
 
             # TRY NOT TO MODIFY: execute the game and log data.
             next_obs, reward, terminations, truncations, infos = envs.step(clip_action(action))
-            eps_returns += reward
-            eps_lens += 1
-            # is_grasped += infos["is_grasped"]
-            # place_rew += infos["place_reward"]
-            terminations = torch.zeros_like(terminations) # infinite horizon modelling
-            truncations = torch.ones_like(terminations) * truncations
             next_done = torch.logical_or(terminations, truncations).to(torch.float32)
             rewards[step] = reward.view(-1)
-            # next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_done).to(device)
             if truncations.any():
                 # TODO make truncations a tensor, which should all be the same value really...
                 final_obs = next_obs
                 final_value = agent.get_value(final_obs)
                 timeout_bonus[step] = final_value.flatten()
                 next_obs, _ = envs.reset()
-                writer.add_scalar("charts/episodic_return", eps_returns.mean().cpu().numpy(), global_step)
-                writer.add_scalar("charts/episodic_length", eps_lens.mean(), global_step)
-                eps_returns = eps_returns * 0
-                eps_lens = eps_lens * 0
             if "final_info" in infos:
-                for info in infos["final_info"]:
-                    if info and "episode" in info:
-                        print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
-                        writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
-                        writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
+                info = infos["final_info"]
+                episodic_return = info['episode']['r'].mean().cpu().numpy()
+                print(f"global_step={global_step}, episodic_return={episodic_return}")
+                writer.add_scalar("charts/success_rate", info["success"].float().mean().cpu().numpy(), global_step)
+                writer.add_scalar("charts/episodic_return", episodic_return, global_step)
+                writer.add_scalar("charts/episodic_length", info["elapsed_steps"], global_step)
         # bootstrap value if not done
         with torch.no_grad():
             next_value = agent.get_value(next_obs).reshape(1, -1)

@@ -92,7 +92,11 @@ class PickCubeEnv(BaseEnv):
             tcp_pose=self.agent.tcp.pose.raw_pose, goal_pos=self.goal_site.pose.p
         )
         if "state" in self.obs_mode:
-            obs.update(obs_pose=self.cube.pose.raw_pose)
+            obs.update(
+                obs_pose=self.cube.pose.raw_pose,
+                tcp_to_obj_pos=self.cube.pose.p - self.agent.tcp.pose.p,
+                obj_to_goal_pos=self.goal_site.pose.p - self.cube.pose.p,
+            )
         return obs
 
     def evaluate(self, obs: Any):
@@ -100,7 +104,13 @@ class PickCubeEnv(BaseEnv):
             torch.linalg.norm(self.goal_site.pose.p - self.cube.pose.p, axis=1)
             <= self.goal_thresh
         )
-        return {"success": is_obj_placed, "is_obj_placed": is_obj_placed}
+        qvel = self.agent.robot.get_qvel()[..., :-2]
+        is_robot_static = torch.max(torch.abs(qvel), 1)[0] <= 0.2
+        return {
+            "success": torch.logical_and(is_obj_placed, is_robot_static),
+            "is_obj_placed": is_obj_placed,
+            "is_robot_static": is_robot_static,
+        }
 
     def compute_dense_reward(self, obs: Any, action: np.ndarray, info: Dict):
         tcp_to_obj_dist = torch.linalg.norm(
@@ -118,8 +128,13 @@ class PickCubeEnv(BaseEnv):
         place_reward = 1 - torch.tanh(5 * obj_to_goal_dist)
         reward += place_reward * is_grasped
 
-        reward[info["success"]] = 4
+        static_reward = 1 - torch.tanh(
+            5 * torch.linalg.norm(self.agent.robot.get_qvel()[..., :-2], axis=1)
+        )
+        reward += static_reward * info["is_robot_static"] * info["is_obj_placed"]
+
+        reward[info["success"]] = 5
         return reward
 
     def compute_normalized_dense_reward(self, obs: Any, action: np.ndarray, info: Dict):
-        return self.compute_dense_reward(obs=obs, action=action, info=info) / 4
+        return self.compute_dense_reward(obs=obs, action=action, info=info) / 5
