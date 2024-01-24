@@ -1,7 +1,7 @@
 """
 Code for a minimal environment/task with just a robot being loaded. We recommend copying this template and modifying as you need.
 
-At a high-level, ManiSkill2 tasks can minimally be defined by how the environment resets, what agents/objects are 
+At a high-level, ManiSkill2 tasks can minimally be defined by how the environment resets, what agents/objects are
 loaded, goal parameterization, and success conditions
 
 Environment reset is comprised of running two functions, `self.reconfigure` and `self.initialize_episode`, which is auto
@@ -28,16 +28,33 @@ from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.building.actors import build_cube, build_red_white_target
 from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import (  # import various useful utilities for working with sapien
-    look_at,
-)
+from mani_skill2.utils.sapien_utils import look_at
 from mani_skill2.utils.scene_builder.table.table_scene_builder import TableSceneBuilder
-from mani_skill2.utils.structs.pose import Pose, vectorize_pose
+from mani_skill2.utils.structs.pose import Pose
 from mani_skill2.utils.structs.types import Array
 
 
 @register_env("PushCube-v0", max_episode_steps=50)
 class PushCubeEnv(BaseEnv):
+    """
+    Task Description
+    ----------------
+    A simple task where the objective is to push and move a cube to a goal region in front of it
+
+    Randomizations
+    --------------
+    - the cube's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat on the table
+    - the target goal region is marked by a red/white circular target. The position of the target is fixed to be the cube xy position + [0.1 + goal_radius, 0]
+
+
+    Success Conditions
+    ------------------
+    - the cube's xy position is within goal_radius (default 0.1) of the target's xy position by euclidean distance.
+
+    Visualization: TODO: ADD LINK HERE
+    """
+
+    # Specify some supported robot types
     agent: Union[Panda, Xmate3Robotiq]
 
     # set some commonly used values
@@ -96,7 +113,9 @@ class PushCubeEnv(BaseEnv):
 
         # here we write some randomization code that randomizes the x, y position of the cube we are pushing in the range [-0.1, -0.1] to [0.1, 0.1]
         xyz = torch.zeros((self.num_envs, 3), device=self.device)
-        xyz[..., :2] = torch.from_numpy(self._episode_rng.uniform(-0.1, 0.1, [self.num_envs, 2])).cuda()
+        xyz[..., :2] = torch.from_numpy(
+            self._episode_rng.uniform(-0.1, 0.1, [self.num_envs, 2])
+        ).cuda()
         xyz[..., 2] = self.cube_half_size
         q = [1, 0, 0, 0]
         # we can then create a pose object using Pose.create_from_pq to then set the cube pose with. Note that even though our quaternion
@@ -106,8 +125,12 @@ class PushCubeEnv(BaseEnv):
 
         # here we set the location of that red/white target (the goal region). In particular here, we set the position to be in front of the cube
         # and we further rotate 90 degrees on the y-axis to make the target object face up
-        target_region_xyz = xyz + torch.tensor([0.1 + self.goal_radius, 0, 0], device=self.device)
-        target_region_xyz[..., 2] = 1e-3 # set a little bit above 0 so the target is sitting on the table
+        target_region_xyz = xyz + torch.tensor(
+            [0.1 + self.goal_radius, 0, 0], device=self.device
+        )
+        target_region_xyz[
+            ..., 2
+        ] = 1e-3  # set a little bit above 0 so the target is sitting on the table
         self.goal_region.set_pose(
             Pose.create_from_pq(
                 p=target_region_xyz,
@@ -116,22 +139,22 @@ class PushCubeEnv(BaseEnv):
         )
 
     def _get_obs_extra(self):
-        # some useful observation info for solving the task includes the pose of the tcp (tool center point) which is the point between the 
+        # some useful observation info for solving the task includes the pose of the tcp (tool center point) which is the point between the
         # grippers of the robot
         obs = OrderedDict(
-            tcp_pose=vectorize_pose(self.agent.tcp.pose),
+            tcp_pose=self.agent.tcp.pose.raw_pose,
             goal_pos=self.goal_region.pose.p,
         )
         if self._obs_mode in ["state", "state_dict"]:
             # if the observation mode is state/state_dict, we provide ground truth information about where the cube is.
             # for visual observation modes one should rely on the sensed visual data to determine where the cube is
             obs.update(
-                obj_pose=vectorize_pose(self.obj.pose),
+                obj_pose=self.obj.pose.raw_pose,
             )
         return obs
 
     def evaluate(self, obs: Any):
-        # success is achieved when the cube's xy position on the table is within the 
+        # success is achieved when the cube's xy position on the table is within the
         # goal region's area (a circle centered at the goal region's xy position)
         is_obj_placed = (
             torch.linalg.norm(
@@ -139,7 +162,7 @@ class PushCubeEnv(BaseEnv):
             )
             < self.goal_radius
         )
-        
+
         return {
             "success": is_obj_placed,
         }
@@ -147,13 +170,14 @@ class PushCubeEnv(BaseEnv):
     def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
         # We also create a pose marking where the robot should push the cube from that is easiest (pushing from behind the cube)
         tcp_push_pose = Pose.create_from_pq(
-            p=self.obj.pose.p + torch.tensor([-self.cube_half_size - 0.005, 0, 0], device=self.device)
+            p=self.obj.pose.p
+            + torch.tensor([-self.cube_half_size - 0.005, 0, 0], device=self.device)
         )
         tcp_to_push_pose = tcp_push_pose.p - self.agent.tcp.pose.p
         tcp_to_push_pose_dist = torch.linalg.norm(tcp_to_push_pose, axis=1)
         reaching_reward = 1 - torch.tanh(5 * tcp_to_push_pose_dist)
         reward = reaching_reward
-        
+
         # compute a placement reward to encourage robot to move the cube to the center of the goal region
         # we further multiply the place_reward by a mask reached so we only add the place reward if the robot has reached the desired push pose
         # This reward design helps train RL agents faster by staging the reward out.

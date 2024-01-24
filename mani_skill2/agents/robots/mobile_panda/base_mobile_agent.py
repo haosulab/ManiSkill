@@ -2,7 +2,6 @@
 NOTE (stao): note that the existence of a dummy mobile agent file here suggests likely there is a lot of code for mobile agents we can abstract away / share
 and avoid using a base_class.py kind of file
 """
-from typing import Sequence, TypeVar, Union
 
 import numpy as np
 from sapien import Pose

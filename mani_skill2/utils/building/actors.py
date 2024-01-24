@@ -2,7 +2,6 @@
 Useful utilities for adding any object and geometry into a scene
 """
 
-import os.path as osp
 from pathlib import Path
 from typing import Dict
 
@@ -265,7 +264,7 @@ def build_actor_ycb(
     name: str,
     root_dir=ASSET_DIR / "mani_skill2_ycb",
     body_type: str = "dynamic",
-    add_collision: bool = True
+    add_collision: bool = True,
 ):
     if "YCB" not in model_dbs:
         _load_ycb_dataset()
@@ -288,7 +287,7 @@ def build_actor_ycb(
             material=physical_material,
             density=density,
             decomposition="coacd",
-    )
+        )
 
     visual_file = str(model_dir / "textured.obj")
     builder.add_visual_from_file(filename=visual_file, scale=[scale] * 3)
@@ -343,7 +342,7 @@ def build_actor_ai2(
     aabb = actor.find_component_by_type(
         sapien.render.RenderBodyComponent
     ).compute_global_aabb_tight()
-    height = aabb[1, 2] - aabb[0, 2]
+    aabb[1, 2] - aabb[0, 2]
     if set_object_on_ground:
         actor.set_pose(sapien.Pose(p=[0, 0, 0]))
     return actor

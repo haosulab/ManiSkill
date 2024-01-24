@@ -11,6 +11,7 @@ from transforms3d.euler import euler2quat
 from transforms3d.quaternions import axangle2quat, qmult
 
 from mani_skill2 import ASSET_DIR, format_path
+from mani_skill2.envs.scene import ManiSkillScene
 from mani_skill2.utils.common import random_choice
 from mani_skill2.utils.io_utils import load_json
 from mani_skill2.utils.registration import register_env
@@ -76,10 +77,11 @@ class PickSingleEnv(StationaryManipulationEnv):
 
     def _check_assets(self):
         """Check whether the assets exist."""
-        pass
 
     def _load_actors(self):
-        self.table_scene = TableSceneBuilder(env=self, robot_init_qpos_noise=self.robot_init_qpos_noise)
+        self.table_scene = TableSceneBuilder(
+            env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
+        )
         self.table_scene.build()
         self._load_model()
         self.obj.set_linear_damping(0.1)
@@ -246,7 +248,7 @@ class PickSingleEnv(StationaryManipulationEnv):
             obj_to_goal_pos=obj_to_goal_pos,
             is_obj_placed=is_obj_placed,
             is_robot_static=is_robot_static,
-            success=torch.logical_and(is_obj_placed, is_robot_static)
+            success=torch.logical_and(is_obj_placed, is_robot_static),
         )
 
     def compute_dense_reward(self, obs, action, info):
@@ -254,7 +256,6 @@ class PickSingleEnv(StationaryManipulationEnv):
         # We changed the original complex reward to simple reward,
         # since the original reward can be unfriendly for RL,
         # even though MPC can solve many objects through the original reward.
-
 
         obj_pose = self.obj_pose
 
@@ -264,7 +265,8 @@ class PickSingleEnv(StationaryManipulationEnv):
         reaching_reward = 1 - torch.tanh(
             3.0
             * torch.maximum(
-                tcp_to_obj_dist - torch.linalg.norm(self.model_bbox_size), torch.tensor(0.0)
+                tcp_to_obj_dist - torch.linalg.norm(self.model_bbox_size),
+                torch.tensor(0.0),
             )
         )
         reward = reaching_reward
@@ -290,8 +292,8 @@ class PickSingleEnv(StationaryManipulationEnv):
         return torch.hstack([state, self.goal_pos])
 
     def set_state(self, state):
-        self.goal_pos = state[-3:]
-        super().set_state(state[:-3])
+        self.goal_pos = state[:, -3:]
+        super().set_state(state[:, :-3])
 
 
 # ---------------------------------------------------------------------------- #
@@ -299,7 +301,7 @@ class PickSingleEnv(StationaryManipulationEnv):
 # ---------------------------------------------------------------------------- #
 def build_actor_ycb(
     model_id: str,
-    scene: sapien.Scene,
+    scene: ManiSkillScene,
     name: str,
     scale: float = 1.0,
     physical_material: physx.PhysxMaterial = None,

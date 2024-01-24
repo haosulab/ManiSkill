@@ -32,7 +32,7 @@ def test_conditional_if_else():
         c = -1.0
 
     wp.expect_eq(c, -1.0)
-    
+
 
 @wp.kernel
 def test_conditional_if_else_nested():
@@ -85,7 +85,7 @@ def test_boolean_or():
         c = -1.0
 
     wp.expect_eq(c, -1.0)
-    
+
 
 @wp.kernel
 def test_boolean_compound():
@@ -93,7 +93,7 @@ def test_boolean_compound():
     a = 1.0
     b = 2.0
     c = 3.0
-    
+
     d = 1.0
 
     if a > 0.0 and b > 0.0 or c > a:
@@ -106,7 +106,7 @@ def test_boolean_literal():
 
     t = True
     f = False
-    
+
     r = 1.0
 
     if t == (not f):

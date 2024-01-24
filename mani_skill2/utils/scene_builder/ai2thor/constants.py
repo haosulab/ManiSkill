@@ -2,7 +2,7 @@ import json
 import os.path as osp
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Type, Union
+from typing import Dict
 
 from mani_skill2 import ASSET_DIR
 

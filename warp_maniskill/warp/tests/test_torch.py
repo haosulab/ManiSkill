@@ -42,28 +42,28 @@ class TestFunc(torch.autograd.Function):
         ctx.y = y
 
         wp.launch(
-            kernel=test_kernel, 
-            dim=len(x), 
-            inputs=[wp.torch.from_torch(x)], 
-            outputs=[wp.torch.from_torch(y)], 
+            kernel=test_kernel,
+            dim=len(x),
+            inputs=[wp.torch.from_torch(x)],
+            outputs=[wp.torch.from_torch(y)],
             device=device)
 
         return y
 
     @staticmethod
     def backward(ctx, adj_y):
-        
+
         # adjoints should be allocated as zero initialized
         adj_x = torch.zeros_like(ctx.x).contiguous()
         adj_y = adj_y.contiguous()
 
         wp.launch(
-            kernel=test_kernel, 
-            dim=len(ctx.x), 
+            kernel=test_kernel,
+            dim=len(ctx.x),
 
             # fwd inputs
             inputs=[wp.torch.from_torch(ctx.x)],
-            outputs=[None], 
+            outputs=[None],
 
             # adj inputs
             adj_inputs=[wp.torch.from_torch(adj_x)],

@@ -166,7 +166,7 @@ if __name__ == "__main__":
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
     args.num_iterations = args.total_timesteps // args.batch_size
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
-    
+
     if args.track:
         import wandb
 
@@ -202,7 +202,7 @@ if __name__ == "__main__":
     sim_freq, control_freq = 100, 20
     envs = gym.make(args.env_id, num_envs=args.num_envs, render_mode="rgb_array", obs_mode="state", control_mode="pd_joint_delta_pos", sim_freq=sim_freq, control_freq=control_freq)
     eval_envs = gym.make(args.env_id, num_envs=8, render_mode="rgb_array", obs_mode="state", control_mode="pd_joint_delta_pos", sim_freq=sim_freq, control_freq=control_freq)
-    
+
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
     agent = Agent(envs).to(device)
@@ -273,9 +273,9 @@ if __name__ == "__main__":
             frac = 1.0 - (iteration - 1.0) / args.num_iterations
             lrnow = frac * args.learning_rate
             optimizer.param_groups[0]["lr"] = lrnow
-        
+
         # next_obs, _ = envs.reset() # TODO: remove and make an auto reset function later
-        
+
         for step in range(0, args.num_steps):
             global_step += args.num_envs
             obs[step] = next_obs

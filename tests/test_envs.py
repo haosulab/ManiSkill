@@ -9,6 +9,7 @@ from tests.utils import (
     OBS_MODES,
     ROBOTS,
     STATIONARY_ENV_IDS,
+    assert_isinstance,
     assert_obs_equal,
 )
 
@@ -17,10 +18,16 @@ from tests.utils import (
 @pytest.mark.parametrize("obs_mode", OBS_MODES)
 def test_envs_obs_modes(env_id, obs_mode):
     env = gym.make(env_id, obs_mode=obs_mode)
-    env.reset()
+    obs, _ = env.reset()
+    assert_isinstance(obs, np.ndarray)
     action_space = env.action_space
     for _ in range(5):
-        env.step(action_space.sample())
+        obs, rew, terminated, truncated, info = env.step(action_space.sample())
+    assert_isinstance(obs, np.ndarray)
+    assert_isinstance(rew, float)
+    assert_isinstance(terminated, bool)
+    assert_isinstance(truncated, bool)
+    assert_isinstance(info, [np.ndarray, bool, float, int])
     env.close()
     del env
 
@@ -51,6 +58,7 @@ def test_env_seeded_reset():
     env.close()
     del env
 
+
 def test_env_seeded_sequence_reset():
     N = 17
     env = gym.make(ENV_IDS[0], max_episode_steps=5)
@@ -68,6 +76,7 @@ def test_env_seeded_sequence_reset():
     env.close()
     assert_obs_equal(obs, first_obs)
     del env
+
 
 def test_env_raise_value_error_for_nan_actions():
     env = gym.make(ENV_IDS[0])
@@ -97,8 +106,8 @@ def test_states(env_id):
 
 
 @pytest.mark.parametrize("env_id", ENV_IDS)
-@pytest.mark.parametrize("robot", ROBOTS)
-def test_robots(env_id, robot):
+@pytest.mark.parametrize("robot_uid", ROBOTS)
+def test_robots(env_id, robot_uid):
     if env_id in [
         "PandaAvoidObstacles-v0",
         "PegInsertionSide-v0",
@@ -110,7 +119,7 @@ def test_robots(env_id, robot):
         "MoveBucket-v1",
     ]:
         pytest.skip(reason=f"Env {env_id} does not support robots other than panda")
-    env = gym.make(env_id, robot=robot)
+    env = gym.make(env_id, robot_uid=robot_uid)
     env.reset()
     action_space = env.action_space
     for _ in range(5):

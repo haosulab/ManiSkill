@@ -20,10 +20,7 @@ from mani_skill2.utils.structs.types import Array, get_backend_name
 
 def to_tensor(array: Union[torch.Tensor, np.array, Sequence]):
     """
-    Maps any given sequence to the appropriate tensor for the appropriate backend
-
-    Note that all torch tensors are always moved to the GPU. There is generally no reason for them to ever be on the CPU as
-    GPU simulation is the only time torch is used in ManiSkill and thus all tensors from the simulation are on cuda devices
+    Maps any given sequence to a torch tensor on the CPU/GPU. If physx gpu is not enabled then we use CPU, otherwise GPU.
     """
     if get_backend_name() == "torch":
         if isinstance(array, np.ndarray):
@@ -38,22 +35,84 @@ def to_tensor(array: Union[torch.Tensor, np.array, Sequence]):
     elif get_backend_name() == "numpy":
         if isinstance(array, np.ndarray):
             return torch.from_numpy(array)
+        # TODO (arth): better way to address torch "UserWarning: Creating a tensor from a list of numpy.ndarrays is extremely slow" ?
+        elif isinstance(array, list) and isinstance(array[0], np.ndarray):
+            return torch.from_numpy(np.array(array))
+        elif np.iterable(array):
+            return torch.Tensor(array)
         else:
             return torch.tensor(array)
 
 
-def to_numpy(array: Union[Array, Sequence]):
+def _to_numpy(array: Union[Array, Sequence]) -> np.ndarray:
     if isinstance(array, (dict)):
-        return {k: to_numpy(v) for k, v in array.items()}
-    if isinstance(array, str):
-        return array
-    if torch is not None:
-        if isinstance(array, torch.Tensor):
-            return array.cpu().numpy()
-    if isinstance(array, np.ndarray):
+        return {k: _to_numpy(v) for k, v in array.items()}
+    if isinstance(array, torch.Tensor):
+        return array.cpu().numpy()
+    if (
+        isinstance(array, np.ndarray)
+        or isinstance(array, bool)
+        or isinstance(array, str)
+        or isinstance(array, float)
+        or isinstance(array, int)
+    ):
         return array
     else:
         return np.array(array)
+
+
+def to_numpy(array: Union[Array, Sequence], dtype=None) -> np.ndarray:
+    array = _to_numpy(array)
+    if dtype is not None:
+        return array.astype(dtype)
+    return array
+
+
+def _unbatch(array: Union[Array, Sequence]):
+    if isinstance(array, (dict)):
+        return {k: _unbatch(v) for k, v in array.items()}
+    if isinstance(array, str):
+        return array
+    if isinstance(array, torch.Tensor):
+        return array.squeeze(0)
+    if isinstance(array, np.ndarray):
+        if array.shape == (1,):
+            return array.item()
+        if np.iterable(array) and array.shape[0] == 1:
+            return array.squeeze(0)
+    if isinstance(array, list):
+        if len(array) == 1:
+            return array[0]
+    return array
+
+
+def unbatch(*args: Tuple[Union[Array, Sequence]]):
+    x = [_unbatch(x) for x in args]
+    if len(args) == 1:
+        return x[0]
+    return tuple(x)
+
+
+def _batch(array: Union[Array, Sequence]):
+    if isinstance(array, (dict)):
+        return {k: _batch(v) for k, v in array.items()}
+    if isinstance(array, str):
+        return array
+    if isinstance(array, torch.Tensor):
+        return array[None, :]
+    if isinstance(array, np.ndarray):
+        return array[None, :]
+    if isinstance(array, list):
+        if len(array) == 1:
+            return [array]
+    return array
+
+
+def batch(*args: Tuple[Union[Array, Sequence]]):
+    x = [_batch(x) for x in args]
+    if len(args) == 1:
+        return x[0]
+    return tuple(x)
 
 
 def clone_tensor(array: Array):
@@ -261,15 +320,6 @@ def get_articulation_state(articulation: physx.PhysxArticulation):
     return np.hstack([pose.p, pose.q, vel, ang_vel, qpos, qvel])
 
 
-def set_articulation_state(articulation: physx.PhysxArticulation, state: np.ndarray):
-    articulation.set_root_pose(sapien.Pose(state[0:3], state[3:7]))
-    articulation.set_root_velocity(state[7:10])
-    articulation.set_root_angular_velocity(state[10:13])
-    qpos, qvel = np.split(state[13:], 2)
-    articulation.set_qpos(qpos)
-    articulation.set_qvel(qvel)
-
-
 def get_articulation_padded_state(articulation: physx.PhysxArticulation, max_dof: int):
     state = get_articulation_state(articulation)
     qpos, qvel = np.split(state[13:], 2)
@@ -296,15 +346,9 @@ def get_pairwise_contacts(
     """
     pairwise_contacts = []
     for contact in contacts:
-        if (
-            contact.components[0].entity == actor0
-            and contact.components[1].entity == actor1
-        ):
+        if contact.bodies[0].entity == actor0 and contact.bodies[1].entity == actor1:
             pairwise_contacts.append((contact, True))
-        elif (
-            contact.components[0].entity == actor1
-            and contact.components[1].entity == actor0
-        ):
+        elif contact.bodies[0].entity == actor1 and contact.bodies[1].entity == actor0:
             pairwise_contacts.append((contact, False))
     return pairwise_contacts
 
@@ -331,9 +375,9 @@ def get_actor_contacts(
 ) -> List[Tuple[physx.PhysxContact, bool]]:
     entity_contacts = []
     for contact in contacts:
-        if contact.components[0].entity == actor:
+        if contact.bodies[0].entity == actor:
             entity_contacts.append((contact, True))
-        elif contact.components[1].entity == actor:
+        elif contact.bodies[1].entity == actor:
             entity_contacts.append((contact, False))
     return entity_contacts
 
@@ -351,16 +395,16 @@ def get_articulation_contacts(
     if included_links is None:
         included_links = links
     for contact in contacts:
-        if contact.components[0] in included_links:
-            if contact.components[1] in links:
+        if contact.bodies[0] in included_links:
+            if contact.bodies[1] in links:
                 continue
-            if contact.components[1].entity in excluded_entities:
+            if contact.bodies[1].entity in excluded_entities:
                 continue
             articulation_contacts.append((contact, True))
-        elif contact.components[1] in included_links:
-            if contact.components[0] in links:
+        elif contact.bodies[1] in included_links:
+            if contact.bodies[0] in links:
                 continue
-            if contact.components[0].entity in excluded_entities:
+            if contact.bodies[0].entity in excluded_entities:
                 continue
             articulation_contacts.append((contact, False))
     return articulation_contacts

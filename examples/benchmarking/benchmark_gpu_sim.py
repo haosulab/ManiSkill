@@ -20,7 +20,7 @@ def main(args):
     env = gym.make(args.env_id, num_envs=num_envs, obs_mode=args.obs_mode, enable_shadow=True, render_mode=args.render_mode, control_mode="pd_joint_delta_pos", sim_freq=100, control_freq=50)
     print(f"[INFO]: Gym observation space: {env.observation_space}")
     print(f"[INFO]: Gym action space: {env.action_space}")
-    
+
     images = []
     video_nrows=int(np.sqrt(num_envs))
     with torch.inference_mode():
@@ -59,7 +59,7 @@ def main(args):
     env.close()
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-e", "--env-id", type=str, default="PickCube-v0")
+    parser.add_argument("-e", "--env-id", type=str, default="PickCube-v1")
     parser.add_argument("-o", "--obs-mode", type=str, default="none")
     parser.add_argument("-n", "--num-envs", type=int, default=256)
     parser.add_argument(

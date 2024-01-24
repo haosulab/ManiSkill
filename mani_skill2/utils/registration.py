@@ -83,6 +83,7 @@ def make(env_id, as_gym=True, enable_segmentation=False, **kwargs):
         kwargs["obs_mode"] = "image"
 
     # Add segmentation texture
+    # TODO (stao): we need to rework how segementation is done now
     if "robot_seg" in obs_mode:
         enable_segmentation = True
     if enable_segmentation:

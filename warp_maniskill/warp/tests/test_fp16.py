@@ -18,7 +18,7 @@ def load_store_half(f32: wp.array(dtype=wp.float32),
     # check conversion from f32->f16
     a = wp.float16(f32[tid])
     b = f16[tid]
-    
+
     wp.expect_eq(a, b)
 
     # check stores
@@ -26,7 +26,7 @@ def load_store_half(f32: wp.array(dtype=wp.float32),
 
 
 def test_fp16_conversion(test, device):
-        
+
     s = [1.0, 2.0, 3.0, -3.14159]
 
     np_f32 = np.array(s, dtype=np.float32)
@@ -74,7 +74,7 @@ def test_fp16_grad(test, device):
     ones = wp.array(np.ones(len(output)), dtype=wp.float16, device=device)
 
     tape.backward(grads={output: ones})
-    
+
     assert_np_equal(input.grad.numpy(), np.ones(len(s))*2.0)
 
 
@@ -82,7 +82,7 @@ def register(parent):
 
     class TestFp16(parent):
         pass
-    
+
     devices = []
     if wp.is_cpu_available():
         devices.append("cpu")
@@ -98,5 +98,3 @@ def register(parent):
 if __name__ == '__main__':
     c = register(unittest.TestCase)
     unittest.main(verbosity=2)
-
-

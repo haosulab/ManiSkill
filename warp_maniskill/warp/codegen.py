@@ -34,7 +34,7 @@ import warp.config
 # map operator to function name
 builtin_operators = {}
 
-# see https://www.ics.uci.edu/~pattis/ICS-31/lectures/opexp.pdf for a 
+# see https://www.ics.uci.edu/~pattis/ICS-31/lectures/opexp.pdf for a
 # nice overview of python operators
 
 builtin_operators[ast.Add] = "add"
@@ -170,7 +170,7 @@ class Var:
 class Block:
 
     def __init__(self):
-        
+
         # list of statements inside this block
         self.body_forward = []
         self.body_replay = []
@@ -178,7 +178,7 @@ class Block:
 
         # list of vars declared in this block
         self.vars = []
-       
+
 
 
 class Adjoint:
@@ -187,7 +187,7 @@ class Adjoint:
     def __init__(adj, func):
 
         adj.func = func
-        
+
         # build AST from function object
         adj.source = inspect.getsource(func)
 
@@ -196,15 +196,15 @@ class Adjoint:
 
         # keep track of line number in function code
         adj.lineno = None
-        
+
         # ensures that indented class methods can be parsed as kernels
         adj.source = textwrap.dedent(adj.source)
-        
+
         # extract name of source file
         adj.filename = inspect.getsourcefile(func) or "unknown source file"
 
         # build AST
-        adj.tree = ast.parse(adj.source)                
+        adj.tree = ast.parse(adj.source)
 
         # parse argument types
         adj.arg_types = typing.get_type_hints(func)
@@ -215,7 +215,7 @@ class Adjoint:
             # skip return hint
             if name == "return":
                 continue
-            
+
             # add variable for argument
             arg = Var(name, type, False)
             adj.args.append(arg)
@@ -269,7 +269,7 @@ class Adjoint:
 
         for a in args:
             if type(a) == warp.context.Function:
-                
+
                 # functions don't have a var_ prefix so strip it off here
                 if (prefix == "var_"):
                     s += sep + a.key
@@ -287,12 +287,12 @@ class Adjoint:
         adj.prefix = adj.prefix + "\t"
 
     def dedent(adj):
-        adj.prefix = adj.prefix[0:-1]  
+        adj.prefix = adj.prefix[0:-1]
 
 
     def begin_block(adj):
         b = Block()
-        
+
         # give block a unique id
         b.label = adj.label_count
         adj.label_count += 1
@@ -310,7 +310,7 @@ class Adjoint:
         v = Var(str(index), type=type, constant=constant)
 
         adj.variables.append(v)
-        
+
         adj.blocks[-1].vars.append(v)
 
         return v
@@ -388,8 +388,8 @@ class Adjoint:
 
                 # check argument types equal
                 for i, a in enumerate(f.input_types.values()):
-                    
-                    # if arg type registered as Any, treat as 
+
+                    # if arg type registered as Any, treat as
                     # template allowing any type to match
                     if a == Any:
                         continue
@@ -412,8 +412,8 @@ class Adjoint:
                         match = False
                         continue
                 except Exception as e:
-                    
-                    # value func may fail if the user has given 
+
+                    # value func may fail if the user has given
                     # incorrect args, so we need to catch this
                     match = False
                     continue
@@ -424,13 +424,13 @@ class Adjoint:
                 break
 
         if resolved_func == None:
-            
+
             arg_types = ""
 
             for x in inputs:
                 if isinstance(x, Var):
                     arg_types += str(x.type) + ", "
-                
+
                 if isinstance(x, warp.context.Function):
                     arg_types += "function" + ", "
 
@@ -451,7 +451,7 @@ class Adjoint:
         if (value_type == None):
 
             forward_call = func.namespace + "{}({});".format(func.key, adj.format_args("var_", inputs))
-            
+
             if func.skip_replay:
                 adj.add_forward(forward_call, replay="//" + forward_call)
             else:
@@ -491,7 +491,7 @@ class Adjoint:
                 adj.add_forward(forward_call, replay="//" + forward_call)
             else:
                 adj.add_forward(forward_call)
-            
+
             if (len(inputs)):
                 reverse_call = func.namespace + "{}({}, {}, {});".format(
                     "adj_" + func.key, adj.format_args("var_", inputs), adj.format_args("adj_", inputs), adj.format_args("adj_", [output]))
@@ -566,10 +566,10 @@ class Adjoint:
 
 
     def end_for(adj, iter):
-       
+
         body_block = adj.end_block()
         cond_block = adj.end_block()
-                
+
         ####################
         # forward pass
 
@@ -580,15 +580,15 @@ class Adjoint:
             adj.blocks[-1].body_forward.append(i)
 
         adj.add_forward(f"goto for_start_{cond_block.label};", skip_replay=True)
-        
+
         adj.dedent()
         adj.add_forward(f"for_end_{cond_block.label}:;", skip_replay=True)
 
         ####################
         # reverse pass
-        
+
         reverse = []
-        
+
         # reverse iterator
         reverse.append(adj.prefix + f"var_{iter} = wp::iter_reverse(var_{iter});")
 
@@ -605,10 +605,10 @@ class Adjoint:
 
         # reverse
         for i in reversed(body_block.body_reverse):
-            reverse.append(i)            
+            reverse.append(i)
 
         reverse.append(adj.prefix + f"\tgoto for_start_{cond_block.label};")
-        reverse.append(adj.prefix + f"for_end_{cond_block.label}:;")    
+        reverse.append(adj.prefix + f"for_end_{cond_block.label}:;")
 
         adj.blocks[-1].body_reverse.extend(reversed(reverse))
 
@@ -621,17 +621,17 @@ class Adjoint:
         cond_block.body_forward.append(f"while_start_{cond_block.label}:;")
 
         c = adj.eval(cond)
-        
+
         cond_block.body_forward.append(f"if ((var_{c}) == false) goto while_end_{cond_block.label};")
 
         # being block around loop
-        adj.begin_block()        
+        adj.begin_block()
         adj.indent()
-        
+
 
     def end_while(adj):
 
-        adj.dedent()     
+        adj.dedent()
         body_block = adj.end_block()
         cond_block = adj.end_block()
 
@@ -643,7 +643,7 @@ class Adjoint:
 
         for i in body_block.body_forward:
             adj.blocks[-1].body_forward.append(i)
-        
+
         adj.blocks[-1].body_forward.append(f"goto while_start_{cond_block.label};")
         adj.blocks[-1].body_forward.append(f"while_end_{cond_block.label}:;")
 
@@ -651,7 +651,7 @@ class Adjoint:
         ####################
         # reverse pass
         reverse = []
-        
+
         # cond
         for i in cond_block.body_forward:
             reverse.append(i)
@@ -666,7 +666,7 @@ class Adjoint:
 
         # reverse
         for i in reversed(body_block.body_reverse):
-            reverse.append(i)            
+            reverse.append(i)
 
         reverse.append(f"goto while_start_{cond_block.label};")
         reverse.append(f"while_end_{cond_block.label}:;")
@@ -679,7 +679,7 @@ class Adjoint:
 
         try:
             if hasattr(node, "lineno"):
-                adj.set_lineno(node.lineno-1)                
+                adj.set_lineno(node.lineno-1)
 
             # top level entry point for a function
             if (isinstance(node, ast.FunctionDef)):
@@ -692,11 +692,11 @@ class Adjoint:
                     out = adj.symbols['return']
                 else:
                     out = None
-                    
+
                 return out
 
             # if statement
-            elif (isinstance(node, ast.If)):         
+            elif (isinstance(node, ast.If)):
 
                 if len(node.body) == 0:
                     return None
@@ -735,10 +735,10 @@ class Adjoint:
                 if (len(node.orelse) > 0):
 
                     adj.begin_else(cond)
-                
+
                     for stmt in node.orelse:
                         adj.eval(stmt)
-                    
+
                     adj.end_else(cond)
 
                 # detect existing symbols with conflicting definitions (variables assigned inside the else)
@@ -792,7 +792,7 @@ class Adjoint:
                 # try and resolve the name using the functions globals context (used to lookup constants + functions)
                 elif node.id in adj.func.__globals__:
                     obj = adj.func.__globals__[node.id]
-                    
+
                     if isinstance(obj, warp.constant):
                         # evaluate constant
                         out = adj.add_constant(obj.val)
@@ -805,7 +805,7 @@ class Adjoint:
 
                     else:
                         raise TypeError(f"'{node.id}' is not a local variable, function, or warp.constant")
-                   
+
                 else:
                     raise KeyError("Referencing undefined symbol: " + str(node.id))
 
@@ -840,7 +840,7 @@ class Adjoint:
                     # try and resolve to either a wp.constant
                     # or a wp.func object
                     obj = attribute_to_val(node, adj.func.__globals__)
-                    
+
                     if isinstance(obj, warp.constant):
                         out = adj.add_constant(obj.val)
                         adj.symbols[key] = out          # if referencing a constant
@@ -912,14 +912,14 @@ class Adjoint:
 
                         if (var1.constant is not None):
                             raise Exception("Error mutating a constant {} inside a dynamic loop, use the following syntax: pi = float(3.141) to declare a dynamic variable".format(sym))
-                        
+
                         # overwrite the old variable value (violates SSA)
                         adj.add_call(warp.context.builtin_functions["copy"], [var1, var2])
 
                         # reset the symbol to point to the original variable
                         adj.symbols[sym] = var1
 
-                
+
                 adj.end_while()
 
 
@@ -942,7 +942,7 @@ class Adjoint:
                 unrolled = False
 
                 if isinstance(node.iter, ast.Call) and node.iter.func.id == "range":
-                    
+
                     is_constant = True
                     for a in node.iter.args:
 
@@ -994,8 +994,8 @@ class Adjoint:
                                     adj.eval(s)
 
                             unrolled = True
-              
-                
+
+
                 # couldn't unroll so generate a dynamic loop
                 if not unrolled:
 
@@ -1025,7 +1025,7 @@ class Adjoint:
 
                             if (var1.constant is not None):
                                 raise Exception("Error mutating a constant {} inside a dynamic loop, use the following syntax: pi = float(3.141) to declare a dynamic variable".format(sym))
-                            
+
                             # overwrite the old variable value (violates SSA)
                             adj.add_call(warp.context.builtin_functions["copy"], [var1, var2])
 
@@ -1040,20 +1040,20 @@ class Adjoint:
             elif (isinstance(node, ast.Call)):
 
                 name = None
-                
+
                 # resolve path (e.g.: module.submodule.attr) expression to a list of module names
                 path = adj.resolve_path(node.func)
-                
+
                 try:
                     # try and look up path in function globals
                     func = eval(".".join(path), adj.func.__globals__)
 
                     if isinstance(func, warp.context.Function) == False:
                         raise RuntimeError()
-                        
+
                 except Exception as e:
 
-                    # try and lookup in builtins, this allows users to avoid 
+                    # try and lookup in builtins, this allows users to avoid
                     # using "wp." prefix, and also handles type constructors
                     # e.g.: wp.vec3 which aren't explicitly a function object
                     attr = path[-1]
@@ -1079,7 +1079,7 @@ class Adjoint:
                 return out
 
             elif (isinstance(node, ast.Index)):
-                # the ast.Index node appears in 3.7 versions 
+                # the ast.Index node appears in 3.7 versions
                 # when performing array slices, e.g.: x = arr[i]
                 # but in version 3.8 and higher it does not appear
                 return adj.eval(node.value)
@@ -1107,7 +1107,7 @@ class Adjoint:
                     indices.append(var)
 
                 if isinstance(target.type, array):
-                    
+
                     if len(indices) == target.type.ndim:
                         # handles array loads (where each dimension has an index specified)
                         out = adj.add_call(warp.context.builtin_functions["load"], [target, *indices])
@@ -1127,7 +1127,7 @@ class Adjoint:
                 if (isinstance(node.targets[0], ast.Tuple)):
 
                     # record the expected number of outputs on the node
-                    # we do this so we can decide which function to 
+                    # we do this so we can decide which function to
                     # call based on the number of expected outputs
                     if isinstance(node.value, ast.Call):
                         node.value.expects = len(node.targets[0].elts)
@@ -1144,7 +1144,7 @@ class Adjoint:
 
                     if len(names) != len(out):
                         raise RuntimeError("Multiple return functions need to receive all their output values, incorrect number of values to unpack (expected {}, got {})".format(len(out), len(names)))
-                    
+
                     for name, rhs in zip(names, out):
                         if (name in adj.symbols):
                             if not types_equal(rhs.type, adj.symbols[name].type):
@@ -1156,7 +1156,7 @@ class Adjoint:
 
                 # handles the case where we are assigning to an array index (e.g.: arr[i] = 2.0)
                 elif (isinstance(node.targets[0], ast.Subscript)):
-                    
+
                     target = adj.eval(node.targets[0].value)
                     value = adj.eval(node.value)
 
@@ -1177,7 +1177,7 @@ class Adjoint:
                     else:
                         # simple expression, e.g.: x[i]
                         var = adj.eval(slice)
-                        indices.append(var)                    
+                        indices.append(var)
 
                     if (isinstance(target.type, array)):
                         adj.add_call(warp.context.builtin_functions["store"], [target, *indices, value])
@@ -1189,14 +1189,14 @@ class Adjoint:
                 elif (isinstance(node.targets[0], ast.Name)):
 
                     # symbol name
-                    name = node.targets[0].id 
+                    name = node.targets[0].id
 
                     # evaluate rhs
                     rhs = adj.eval(node.value)
 
                     # check type matches if symbol already defined
                     if (name in adj.symbols):
-                    
+
                         if (rhs.type != adj.symbols[name].type):
                             raise TypeError("Error, assigning to existing symbol {} ({}) with different type ({})".format(name, adj.symbols[name].type, rhs.type))
 
@@ -1233,12 +1233,12 @@ class Adjoint:
                 return out
 
             elif (isinstance(node, ast.AugAssign)):
-                
+
                 # convert inplace operations (+=, -=, etc) to ssa form, e.g.: c = a + b
                 left = adj.eval(node.target)
                 right = adj.eval(node.value)
 
-                # lookup 
+                # lookup
                 name = builtin_operators[type(node.op)]
                 func = warp.context.builtin_functions[name]
 
@@ -1294,7 +1294,7 @@ class Adjoint:
             adj.add_forward(f'// {source}       <L {line}>')
             adj.add_reverse(f'// adj: {source}  <L {line}>')
         adj.lineno = lineno
-        
+
 
 #----------------
 # code generation
@@ -1371,7 +1371,7 @@ cuda_kernel_template = '''
 extern "C" __global__ void {name}_cuda_kernel_forward({forward_args})
 {{
     int _idx = blockDim.x * blockIdx.x + threadIdx.x;
-    if (_idx >= dim.size) 
+    if (_idx >= dim.size)
         return;
 
     set_launch_bounds(dim);
@@ -1383,7 +1383,7 @@ extern "C" __global__ void {name}_cuda_kernel_forward({forward_args})
 extern "C" __global__ void {name}_cuda_kernel_backward({reverse_args})
 {{
     int _idx = blockDim.x * blockIdx.x + threadIdx.x;
-    if (_idx >= dim.size) 
+    if (_idx >= dim.size)
         return;
 
     set_launch_bounds(dim);
@@ -1485,7 +1485,7 @@ WP_API void {name}_cpu_backward({reverse_args});
 
 # converts a constant Python value to equivalent C-repr
 def constant_str(value):
-    
+
     if type(value) == bool:
         if value:
             return "true"
@@ -1546,7 +1546,7 @@ def codegen_func_forward(adj, func_type='kernel', device='cpu'):
     s += "    //---------\n"
     s += "    // primal vars\n"
 
-    for var in adj.variables:    
+    for var in adj.variables:
         if var.constant == None:
             s += "    " + var.ctype() + " var_" + str(var.label) + ";\n"
         else:
@@ -1751,6 +1751,3 @@ def codegen_module(kernel, device='cpu'):
                         forward_params=indent(forward_params, 3),
                         reverse_params=indent(reverse_params, 3))
     return s
-
-
-

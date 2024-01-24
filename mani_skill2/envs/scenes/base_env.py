@@ -26,7 +26,7 @@ class SceneManipulationEnv(BaseEnv):
         fixed_scene: whether to sample a single scene and never reconfigure the scene during episode resets
         Default to True as reconfiguration/reloading scenes is expensive. When true, call env.reset(seed=seed, options=dict(reconfigure=True))
 
-        scene_builder_cls: Scene builder class to build a scene with. Default is the ArchitecTHORSceneBuilder which builds a scene from AI2THOR. 
+        scene_builder_cls: Scene builder class to build a scene with. Default is the ArchitecTHORSceneBuilder which builds a scene from AI2THOR.
             Any of the AI2THOR SceneBuilders are supported in this environment
 
         convex_decomposition: Choice of convex decomposition algorithm to generate collision meshes for objects. Default is `coacd` which uses https://github.com/SarahWeiii/CoACD

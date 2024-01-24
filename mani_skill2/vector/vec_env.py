@@ -4,13 +4,15 @@ See also:
     https://github.com/DLR-RM/stable-baselines3/blob/master/stable_baselines3/common/vec_env/subproc_vec_env.py
 """
 
+# TODO (stao): This code is deprecated. Maybe we can reuse for a multi-gpu node setup
+
 import multiprocessing as mp
 import os
 from collections import defaultdict
 from copy import deepcopy
 from functools import partial
 from multiprocessing.connection import Connection
-from typing import Callable, Dict, List, Optional, Sequence, Type, Union
+from typing import Callable, List, Optional, Sequence, Type, Union
 
 import gymnasium as gym
 import numpy as np

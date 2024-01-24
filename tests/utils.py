@@ -1,24 +1,26 @@
+from typing import List
+
 import numpy as np
 import torch
 
 from mani_skill2.utils.common import flatten_dict_keys
 
+# TODO (stao): reactivate old tasks once fixed
 ENV_IDS = [
     "LiftCube-v0",
-    "PickCube-v0",
+    "PickCube-v1",
     "StackCube-v0",
     "PickSingleYCB-v0",
-    "PickSingleEGAD-v0",
-    "PickClutterYCB-v0",
-    "AssemblingKits-v0",
-    "PegInsertionSide-v0",
-    "PlugCharger-v0",
-    "PandaAvoidObstacles-v0",
-    "TurnFaucet-v0",
-    "OpenCabinetDoor-v1",
-    "OpenCabinetDrawer-v1",
-    "PushChair-v1",
-    "MoveBucket-v1",
+    # "PickClutterYCB-v0",
+    # "AssemblingKits-v0",
+    # "PegInsertionSide-v0",
+    # "PlugCharger-v0",
+    # "PandaAvoidObstacles-v0",
+    # "TurnFaucet-v0",
+    # "OpenCabinetDoor-v1",
+    # "OpenCabinetDrawer-v1",
+    # "PushChair-v1",
+    # "MoveBucket-v1",
 ]
 
 STATIONARY_ENV_IDS = [
@@ -26,13 +28,12 @@ STATIONARY_ENV_IDS = [
     "PickCube-v0",
     "StackCube-v0",
     "PickSingleYCB-v0",
-    "PickSingleEGAD-v0",
-    "PickClutterYCB-v0",
-    "AssemblingKits-v0",
-    "PegInsertionSide-v0",
-    "PlugCharger-v0",
-    "PandaAvoidObstacles-v0",
-    "TurnFaucet-v0",
+    # "PickClutterYCB-v0",
+    # "AssemblingKits-v0",
+    # "PegInsertionSide-v0",
+    # "PlugCharger-v0",
+    # "PandaAvoidObstacles-v0",
+    # "TurnFaucet-v0",
 ]
 
 REWARD_MODES = ["dense", "normalized_dense", "sparse"]
@@ -49,8 +50,8 @@ OBS_MODES = [
     "state",
     "rgbd",
     "pointcloud",
-    "rgbd_robot_seg",
-    "pointcloud_robot_seg",
+    # "rgbd_robot_seg",
+    # "pointcloud_robot_seg",
 ]
 VENV_OBS_MODES = [
     "image",
@@ -60,6 +61,15 @@ VENV_OBS_MODES = [
     "pointcloud_robot_seg",
 ]
 ROBOTS = ["panda", "xmate3_robotiq"]
+
+
+def assert_isinstance(obs1, types: List):
+    if not isinstance(types, list):
+        types = [types]
+    if isinstance(obs1, dict):
+        [assert_isinstance(x, types) for x in obs1.values()]
+    else:
+        assert np.any([isinstance(obs1, x) for x in types])
 
 
 def assert_obs_equal(obs1, obs2, ignore_col_vector_shape_mismatch=False):

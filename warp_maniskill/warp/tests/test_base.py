@@ -16,11 +16,11 @@ import warp as wp
 class StdOutCapture:
 
     def begin(self):
-        
+
         # save original
         self.saved = sys.stdout
         self.target = os.dup(self.saved.fileno())
-        
+
         # create temporary capture stream
         import io, tempfile
         self.tempfile = io.TextIOWrapper(
@@ -31,14 +31,14 @@ class StdOutCapture:
                             write_through=True)
 
         os.dup2(self.tempfile.fileno(), self.saved.fileno())
-        
+
         sys.stdout = self.tempfile
 
     def end(self):
 
         os.dup2(self.target, self.saved.fileno())
         os.close(self.target)
-        
+
         self.tempfile.seek(0)
         res = self.tempfile.buffer.read()
         self.tempfile.close()
@@ -61,14 +61,14 @@ class CheckOutput:
 
 
     def __exit__(self, exc_type, exc_value, traceback):
-        
+
         # ensure any stdout output is flushed
         wp.synchronize()
 
         s = self.capture.end()
         if (s != ""):
             print(s)
-            
+
         # fail if kernel produces any stdout (e.g.: from wp.expect_eq() builtins)
         self.test.assertEqual(s, "")
 
@@ -109,13 +109,13 @@ def create_test_func(func, device, **kwargs):
 
 
 def add_function_test(cls, name, func, devices=["cpu"], **kwargs):
-    
+
     for device in devices:
         setattr(cls, name + "_" + device, create_test_func(func, device, **kwargs))
 
 
 def add_kernel_test(cls, kernel, dim, name=None, expect=None, inputs=None, devices=["cpu"]):
-    
+
     for device in devices:
 
         def test_func(self):
@@ -139,7 +139,7 @@ def add_kernel_test(cls, kernel, dim, name=None, expect=None, inputs=None, devic
 
             with CheckOutput(self):
                 wp.launch(kernel, dim=dim, inputs=args, device=device)
-            
+
             s = capture.end()
 
             # fail if kernel produces any stdout (e.g.: from wp.expect_eq() builtins)

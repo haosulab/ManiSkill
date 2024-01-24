@@ -1,7 +1,7 @@
 """
 Code for a minimal environment/task with just a robot being loaded. We recommend copying this template and modifying as you need.
 
-At a high-level, ManiSkill tasks can minimally be defined by what agents/actors are 
+At a high-level, ManiSkill tasks can minimally be defined by what agents/actors are
 loaded, how agents/actors are randomly initialized during env resets, how goals are randomized and parameterized in observations, and success conditions
 
 Environment reset is comprised of running two functions, `self.reconfigure` and `self.initialize_episode`, which is auto
@@ -12,8 +12,8 @@ Reconfiguration will reset the entire environment scene and allow you to load/sw
 Episode initialization will reset the poses of all actors, articulations, and agents,
 in addition to initializing any task relevant data like a goal
 
-See comments for how to make your own environment and what each required function should do. If followed correctly you can easily build a 
-task that can simulate on the CPU and be parallelized on the GPU without having to manage GPU memory and parallelization apart from some 
+See comments for how to make your own environment and what each required function should do. If followed correctly you can easily build a
+task that can simulate on the CPU and be parallelized on the GPU without having to manage GPU memory and parallelization apart from some
 code that need to be written in batched mode (e.g. reward, success conditions)
 
 For a minimal implementation of a simple task, check out
@@ -28,12 +28,30 @@ import torch
 
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
-from mani_skill2.utils.sapien_utils import (  # import various useful utilities for working with sapien
-    look_at,
-)
+from mani_skill2.utils.registration import register_env
+from mani_skill2.utils.sapien_utils import look_at
 
 
+# register the environment by a unique ID and specify a max time limit. Now once this file is imported you can do gym.make("CustomEnv-v0")
+@register_env(name="CustomEnv-v0", max_episode_steps=200)
 class CustomEnv(BaseEnv):
+    """
+    Task Description
+    ----------------
+    Add a task description here
+
+    Randomizations
+    --------------
+    - how is it randomized?
+    - how is that randomized?
+
+    Success Conditions
+    ------------------
+    - what is done to check if this task is solved?
+
+    Visualization: link to a video/gif of the task being solved
+    """
+
     # in the __init__ function you can pick a default robot your task should use e.g. the panda robot
     def __init__(self, *args, robot_uid="panda", robot_init_qpos_noise=0.02, **kwargs):
         self.robot_init_qpos_noise = robot_init_qpos_noise
@@ -129,3 +147,17 @@ class CustomEnv(BaseEnv):
         # this should be equal to compute_dense_reward / max possible reward
         max_reward = 1.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
+
+    def get_state(self):
+        # this function is important in order to allow accurate replaying of trajectories. Make sure to specify any
+        # non simulation state related data such as a random 3D goal position you generated
+        # alternatively you can skip this part if the environment's rewards, observations, success etc. are dependent on simulation data
+        # e.g. self.your_custom_actor.pose.p will always give you your actor's 3D position
+        state = super().get_state()
+        return torch.hstack([state, self.goal_pos])
+
+    def set_state(self, state):
+        # this function complements get_state and sets any non simulation state related data correctly so the environment behaves
+        # the exact same in terms of output rewards, observations, success etc. should you reset state to a given state and take the same actions
+        self.goal_pos = state[:, -3:]
+        super().set_state(state[:, :-3])

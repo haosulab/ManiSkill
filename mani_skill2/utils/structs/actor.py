@@ -7,6 +7,7 @@ import sapien.physx as physx
 import sapien.render
 import torch
 
+from mani_skill2.utils.sapien_utils import to_numpy
 from mani_skill2.utils.structs.base import BaseStruct, PhysxRigidDynamicComponentStruct
 from mani_skill2.utils.structs.pose import Pose, to_sapien_pose, vectorize_pose
 from mani_skill2.utils.structs.types import Array
@@ -80,6 +81,7 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
                 "You should not set state on a GPU enabled actor."
             )
         else:
+            state = to_numpy(state[0])
             self.set_pose(sapien.Pose(state[0:3], state[3:7]))
             if self.px_body_type == "dynamic":
                 self.set_linear_velocity(state[7:10])

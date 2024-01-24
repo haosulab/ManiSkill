@@ -1,5 +1,5 @@
 """
-Utilities for generating randomized values like poses as well as useful samplers to sample e.g. object positions without collision 
+Utilities for generating randomized values like poses as well as useful samplers to sample e.g. object positions without collision
 """
 
 import numpy as np

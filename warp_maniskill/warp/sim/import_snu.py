@@ -19,7 +19,7 @@ import warp as wp
 class MuscleUnit:
 
     def __init__(self):
-        
+
         self.name = ""
         self.bones = []
         self.points = []
@@ -34,19 +34,19 @@ class Skeleton:
     def parse_skeleton(self, filename, builder, filter, root_xform, armature):
         file = ET.parse(filename)
         root = file.getroot()
-        
+
         self.node_map = {}       # map node names to link indices
         self.xform_map = {}      # map node names to parent transforms
         self.mesh_map = {}       # map mesh names to link indices objects
 
         self.coord_start = builder.joint_coord_count
         self.dof_start = builder.joint_dof_count
-    
-        type_map = { 
-            "Ball": wp.sim.JOINT_BALL, 
-            "Revolute": wp.sim.JOINT_REVOLUTE, 
-            "Prismatic": wp.sim.JOINT_PRISMATIC, 
-            "Free": wp.sim.JOINT_FREE, 
+
+        type_map = {
+            "Ball": wp.sim.JOINT_BALL,
+            "Revolute": wp.sim.JOINT_REVOLUTE,
+            "Prismatic": wp.sim.JOINT_PRISMATIC,
+            "Free": wp.sim.JOINT_FREE,
             "Fixed": wp.sim.JOINT_FIXED
         }
 
@@ -82,9 +82,9 @@ class Skeleton:
 
                 joint_R_s = np.fromstring(joint_xform.attrib["linear"], sep=" ").reshape((3,3))
                 joint_t_s = np.fromstring(joint_xform.attrib["translation"], sep=" ")
-            
+
                 joint_type = type_map[joint.attrib["type"]]
-                
+
                 joint_lower = np.array([-1.e+3])
                 joint_upper = np.array([1.e+3])
 
@@ -119,14 +119,14 @@ class Skeleton:
 
                 #     p = wp.transform_point(joint_X_bs, points[i]*0.01)
                 #     points[i] = Gf.Vec3f(p.tolist())  # cm -> meters
-                
+
 
                 # geom.GetPointsAttr().Set(points)
 
                 # extent = UsdGeom.Boundable.ComputeExtentFromPlugins(geom, 0.0)
                 # geom.GetExtentAttr().Set(extent)
                 # stage.Save()
-                
+
                 #--------------------------------------
                 link = -1
 
@@ -140,7 +140,7 @@ class Skeleton:
 
                     # add link
                     link = builder.add_body(
-                        parent=parent_link, 
+                        parent=parent_link,
                         origin=wp.transform_multiply(root_xform, joint_X_s),
                         joint_xform=joint_X_p,
                         joint_axis=joint_axis,
@@ -155,7 +155,7 @@ class Skeleton:
 
                     # add shape
                     shape = builder.add_shape_box(
-                        body=link, 
+                        body=link,
                         pos=body_X_c.p,
                         rot=body_X_c.q,
                         hx=body_size[0]*0.5,
@@ -199,7 +199,7 @@ class Skeleton:
                     incomplete = False
 
                     for waypoint in child.iter("Waypoint"):
-                    
+
                         way_bone = waypoint.attrib["body"]
                         way_link = self.node_map[way_bone]
                         way_loc = np.fromstring(waypoint.attrib["p"], sep=" ", dtype=np.float32)
@@ -228,4 +228,3 @@ class Skeleton:
 
 def parse_snu(root_xform, skeleton_file, muscle_file, builder, filter, armature=0.0):
     return Skeleton(root_xform, skeleton_file, muscle_file, builder, filter, armature=0.0)
-

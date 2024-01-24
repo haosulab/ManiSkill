@@ -28,7 +28,7 @@ def make_field(field: wp.array3d(dtype=float),
     d = wp.length(p - center) - radius
 
     field[i,j,k] = d
-    
+
 
 def test_marching_cubes(test, device):
 
@@ -37,7 +37,7 @@ def test_marching_cubes(test, device):
     max_tris = 10**6
 
     field = wp.zeros(shape=(dim, dim, dim), dtype=float, device=device)
-    
+
     iso = wp.MarchingCubes(nx=dim,
                            ny=dim,
                            nz=dim,

@@ -2,7 +2,6 @@
 # Licensed under ISC
 # adapted from https://gist.github.com/eevee/26f547457522755cb1fb8739d0ea89a1
 import math
-import random
 from itertools import product
 
 import numpy as np

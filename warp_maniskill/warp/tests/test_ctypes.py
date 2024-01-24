@@ -63,7 +63,7 @@ def transform_multiply(xforms: wp.array(dtype=wp.transform),
 
 
 def test_vec2_arg(test, device, n):
-    
+
     dest = wp.zeros(n=n, dtype=wp.vec2, device=device)
     c = np.array((1.0, 2.0))
 
@@ -83,7 +83,7 @@ def test_vec2_transform(test, device, n):
     test.assertTrue(np.array_equal(dest.numpy(), np.tile(m@c, (n, 1))))
 
 def test_vec3_arg(test, device, n):
-        
+
     dest = wp.zeros(n=n, dtype=wp.vec3, device=device)
     c = np.array((1.0, 2.0, 3.0))
 
@@ -115,10 +115,10 @@ def test_transform_multiply(test, device, n):
 
 # construct kernel + test harness for given matrix / vector types
 def make_matrix_test(dim, matrix, vector):
-   
+
     def test_matrix_kernel(a: wp.array(dtype=matrix),
                            b: wp.array(dtype=matrix),
-                           c: wp.array(dtype=matrix),               
+                           c: wp.array(dtype=matrix),
                            x: wp.array(dtype=vector),
                            result_m: wp.array(dtype=matrix),
                            result_i: wp.array(dtype=matrix),
@@ -128,7 +128,7 @@ def make_matrix_test(dim, matrix, vector):
         tid = wp.tid()
 
         m = a[tid]*b[tid] + c[tid]*2.0
-        
+
         result_m[tid] = m
         result_x[tid] = m*x[tid]
 
@@ -143,7 +143,7 @@ def make_matrix_test(dim, matrix, vector):
     # against multiple symbols, with different arg types
     module = wp.get_module(test_matrix_kernel.__module__)
     kernel = wp.Kernel(func=test_matrix_kernel, key=f"test_mat{dim}{dim}_kernel", module=module)
-        
+
     def test_matrix(test, device):
 
         rng = np.random.default_rng(42)
@@ -165,7 +165,7 @@ def make_matrix_test(dim, matrix, vector):
         result_i_array = wp.zeros_like(a_array)
         result_x_array = wp.zeros_like(x_array)
         result_d_array = wp.zeros(n, dtype=float, device=device)
-        
+
         wp.launch(kernel, n, inputs=[a_array, b_array, c_array, x_array, result_m_array, result_i_array, result_d_array, result_x_array], device=device)
 
         # numpy reference result
@@ -205,7 +205,7 @@ def test_vector_array(test, device):
     vector_array = wp.array(vector_list, dtype=wp.vec3, device=device)
 
     assert_np_equal(np.array(vector_list), vector_array.numpy())
-    
+
 
 
 @wp.kernel
@@ -219,10 +219,10 @@ def test_vector_arg_types(v2: wp.vec2,
     wp.expect_eq(v2, wp.vec2(1.0, 2.0))
     wp.expect_eq(v3, wp.vec3(1.0, 2.0, 3.0))
     wp.expect_eq(v4, wp.vec4(1.0, 2.0, 3.0, 4.0))
-    
-    wp.expect_eq(m22, wp.mat22(1.0, 2.0, 
+
+    wp.expect_eq(m22, wp.mat22(1.0, 2.0,
                                3.0, 4.0))
-    
+
     wp.expect_eq(m33, wp.mat33(1.0, 2.0, 3.0,
                                4.0, 5.0, 6.0,
                                7.0, 8.0, 9.0))
@@ -238,13 +238,13 @@ def test_scalar_arg_types(i8: wp.int8,
                           u8: wp.uint8,
                           i16: wp.int16,
                           u16: wp.uint16,
-                          i32: wp.int32,                  
+                          i32: wp.int32,
                           u32: wp.uint32,
                           i64: wp.int64,
                           u64: wp.uint64,
                           f32: wp.float32,
                           f64: wp.float64):
-                  
+
     wp.expect_eq(int(i8), -64)
     wp.expect_eq(int(u8),  255)
     wp.expect_eq(int(i16), -64)
@@ -270,7 +270,7 @@ def test_scalar_array_types_load(i8: wp.array(dtype=wp.int8),
                                  u64: wp.array(dtype=wp.uint64),
                                  f32: wp.array(dtype=wp.float32),
                                  f64: wp.array(dtype=wp.float64)):
-                  
+
     tid = wp.tid()
 
     wp.expect_eq(int(i8[tid]), tid)
@@ -283,19 +283,19 @@ def test_scalar_array_types_load(i8: wp.array(dtype=wp.int8),
     wp.expect_eq(int(u64[tid]), tid)
     wp.expect_eq(float(f32[tid]), float(tid))
     wp.expect_eq(float(f64[tid]), float(tid))
-    
+
 @wp.kernel
 def test_scalar_array_types_store(i8: wp.array(dtype=wp.int8),
                                   u8: wp.array(dtype=wp.uint8),
                                   i16: wp.array(dtype=wp.int16),
-                                  u16: wp.array(dtype=wp.uint16),                                  
+                                  u16: wp.array(dtype=wp.uint16),
                                   i32: wp.array(dtype=wp.int32),
                                   u32: wp.array(dtype=wp.uint32),
                                   i64: wp.array(dtype=wp.int64),
                                   u64: wp.array(dtype=wp.uint64),
                                   f32: wp.array(dtype=wp.float32),
                                   f64: wp.array(dtype=wp.float64)):
-                  
+
     tid = wp.tid()
 
     i8[tid] = wp.int8(tid)
