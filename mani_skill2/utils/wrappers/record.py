@@ -157,15 +157,6 @@ class RecordEpisode(gym.Wrapper):
             )
         self.video_nrows = int(np.sqrt(self.unwrapped.num_envs))
 
-        # Avoid circular import
-        from mani_skill2.envs.ms2.mpm.base_env import MPMBaseEnv
-
-        if isinstance(env.unwrapped, MPMBaseEnv):
-            self.init_state_only = True
-            logger.info("Soft-body (MPM) environment detected, record init_state only")
-        else:
-            self.init_state_only = False
-
     def capture_image(self):
         img = self.env.render()
         img = to_numpy(img)

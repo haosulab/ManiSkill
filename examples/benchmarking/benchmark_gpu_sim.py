@@ -59,7 +59,7 @@ def main(args):
     env.close()
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-e", "--env-id", type=str, default="PickCube-v0")
+    parser.add_argument("-e", "--env-id", type=str, default="PickCube-v1")
     parser.add_argument("-o", "--obs-mode", type=str, default="none")
     parser.add_argument("-n", "--num-envs", type=int, default=256)
     parser.add_argument(

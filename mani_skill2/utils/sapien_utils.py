@@ -76,6 +76,8 @@ def _unbatch(array: Union[Array, Sequence]):
     if isinstance(array, torch.Tensor):
         return array.squeeze(0)
     if isinstance(array, np.ndarray):
+        if array.shape == (1,):
+            return array.item()
         if np.iterable(array) and array.shape[0] == 1:
             return array.squeeze(0)
     if isinstance(array, list):
@@ -86,6 +88,28 @@ def _unbatch(array: Union[Array, Sequence]):
 
 def unbatch(*args: Tuple[Union[Array, Sequence]]):
     x = [_unbatch(x) for x in args]
+    if len(args) == 1:
+        return x[0]
+    return tuple(x)
+
+
+def _batch(array: Union[Array, Sequence]):
+    if isinstance(array, (dict)):
+        return {k: _batch(v) for k, v in array.items()}
+    if isinstance(array, str):
+        return array
+    if isinstance(array, torch.Tensor):
+        return array[None, :]
+    if isinstance(array, np.ndarray):
+        return array[None, :]
+    if isinstance(array, list):
+        if len(array) == 1:
+            return [array]
+    return array
+
+
+def batch(*args: Tuple[Union[Array, Sequence]]):
+    x = [_batch(x) for x in args]
     if len(args) == 1:
         return x[0]
     return tuple(x)

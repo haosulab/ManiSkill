@@ -106,13 +106,12 @@ class BaseController:
         # TODO(jigu): support discrete action
         if self.scene.num_envs > 1:
             action_dim = self.action_space.shape[1]
-            assert action.shape == (self.scene.num_envs, action_dim), (
-                action.shape,
-                action_dim,
-            )
         else:
             action_dim = self.action_space.shape[0]
-            assert action.shape == (action_dim,), (action.shape, action_dim)
+        assert action.shape == (self.scene.num_envs, action_dim), (
+            action.shape,
+            action_dim,
+        )
 
         if self._normalize_action:
             action = self._clip_and_scale_action(action)
@@ -273,17 +272,15 @@ class CombinedController(DictController):
         # TODO (stao): optimization, do we really need this sanity check? Does gymnasium already do this for us
         if self.scene.num_envs > 1:
             action_dim = self.action_space.shape[1]
-            assert action.shape == (self.scene.num_envs, action_dim), (
-                action.shape,
-                action_dim,
-            )
         else:
             action_dim = self.action_space.shape[0]
-            assert action.shape == (action_dim,), (action.shape, action_dim)
-
+        assert action.shape == (self.scene.num_envs, action_dim), (
+            action.shape,
+            action_dim,
+        )
         for uid, controller in self.controllers.items():
             start, end = self.action_mapping[uid]
-            controller.set_action(action[..., start:end])
+            controller.set_action(action[:, start:end])
 
     def to_action_dict(self, action: np.ndarray):
         """Convert a flat action to a dict of actions."""

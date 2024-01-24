@@ -24,8 +24,8 @@ import sapien
 import torch
 from transforms3d.euler import euler2quat
 
-from mani_skill2.agents.robots import (
-    ROBOTS,  # a dictionary mapping robot name to robot class that inherits BaseAgent
+from mani_skill2.agents.robots import (  # a dictionary mapping robot name to robot class that inherits BaseAgent
+    ROBOTS,
 )
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
