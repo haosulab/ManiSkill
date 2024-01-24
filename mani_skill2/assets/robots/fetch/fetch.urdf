@@ -22,14 +22,14 @@
     <parent link="root"/>
     <child link="root_arm_1_link_1"/>
     <axis xyz="1 0 0"/>
-    <limit lower="-10" upper="10" velocity="0.50"/>
+    <limit effort="100" lower="-10" upper="10" velocity="0.50"/>
     <dynamics damping="10.0" friction="10"/>
   </joint>
   <joint name="root_y_axis_joint" type="prismatic">
     <parent link="root_arm_1_link_1"/>
     <child link="root_arm_1_link_2"/>
     <axis xyz="0 1 0"/>
-    <limit lower="-10" upper="10" velocity="0.50"/>
+    <limit effort="100" lower="-10" upper="10" velocity="0.50"/>
     <dynamics damping="10.0" friction="10"/>
   </joint>
   <joint name="root_z_rotation_joint" type="continuous">
