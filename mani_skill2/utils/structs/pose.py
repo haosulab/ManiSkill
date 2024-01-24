@@ -101,6 +101,9 @@ class Pose:
             return pose
         else:
             assert len(pose.shape) <= 2 and len(pose.shape) > 0
+            pose = to_tensor(pose)
+            if pose.shape[-1] == 3:
+                return cls.create_from_pq(p=pose, device=pose.device)
             return cls(raw_pose=add_batch_dim(pose))
 
     # -------------------------------------------------------------------------- #

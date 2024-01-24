@@ -24,12 +24,10 @@ import numpy as np
 import sapien.render
 
 import mani_skill2.envs
-from mani_skill2.utils.scene_builder.ai2thor import (
-    ArchitecTHORSceneBuilder,
-    ProcTHORSceneBuilder,
-    RoboTHORSceneBuilder,
-    iTHORSceneBuilder,
-)
+from mani_skill2.utils.scene_builder.ai2thor import (ArchitecTHORSceneBuilder,
+                                                     ProcTHORSceneBuilder,
+                                                     RoboTHORSceneBuilder,
+                                                     iTHORSceneBuilder)
 
 if __name__ == "__main__":
     # specify we want to sample from the ArchitecTHOR set of scenes. Other SceneBuilders are imported above and can be used

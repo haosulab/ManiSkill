@@ -27,13 +27,16 @@ def test_pose_create_with_p():
 def test_pose_create_with_q():
     w, x, y, z = euler2quat(0.3, 0.4, -0.2)
     pose = Pose.create_from_pq(q=[w, x, y, z])
-    assert torch.isclose(pose.raw_pose, torch.tensor([[0, 0, 0, w, x, y, z]])).all()
+    assert torch.isclose(
+        pose.raw_pose, torch.tensor([[0, 0, 0, w, x, y, z]]).float()
+    ).all()
 
     w, x, y, z = euler2quat(0.3, 0.4, -0.2)
     w2, x2, y2, z2 = euler2quat(0.3, 0.4, -0.2)
     pose = Pose.create_from_pq(p=[1, 2, 3], q=[[w, x, y, z], [w2, x2, y2, z2]])
     assert torch.isclose(
-        pose.raw_pose, torch.tensor([[1, 2, 3, w, x, y, z], [1, 2, 3, w2, x2, y2, z2]])
+        pose.raw_pose,
+        torch.tensor([[1, 2, 3, w, x, y, z], [1, 2, 3, w2, x2, y2, z2]]).float(),
     ).all()
 
 

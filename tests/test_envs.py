@@ -9,6 +9,7 @@ from tests.utils import (
     OBS_MODES,
     ROBOTS,
     STATIONARY_ENV_IDS,
+    assert_isinstance,
     assert_obs_equal,
 )
 
@@ -17,10 +18,16 @@ from tests.utils import (
 @pytest.mark.parametrize("obs_mode", OBS_MODES)
 def test_envs_obs_modes(env_id, obs_mode):
     env = gym.make(env_id, obs_mode=obs_mode)
-    env.reset()
+    obs, _ = env.reset()
+    assert_isinstance(obs, np.ndarray)
     action_space = env.action_space
     for _ in range(5):
-        env.step(action_space.sample())
+        obs, rew, terminated, truncated, info = env.step(action_space.sample())
+    assert_isinstance(obs, np.ndarray)
+    assert_isinstance(rew, float)
+    assert_isinstance(terminated, bool)
+    assert_isinstance(truncated, bool)
+    assert_isinstance(info, [np.ndarray, bool, float, int])
     env.close()
     del env
 

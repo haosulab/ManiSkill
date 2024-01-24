@@ -93,6 +93,28 @@ def unbatch(*args: Tuple[Union[Array, Sequence]]):
     return tuple(x)
 
 
+def _batch(array: Union[Array, Sequence]):
+    if isinstance(array, (dict)):
+        return {k: _batch(v) for k, v in array.items()}
+    if isinstance(array, str):
+        return array
+    if isinstance(array, torch.Tensor):
+        return array[None, :]
+    if isinstance(array, np.ndarray):
+        return array[None, :]
+    if isinstance(array, list):
+        if len(array) == 1:
+            return [array]
+    return array
+
+
+def batch(*args: Tuple[Union[Array, Sequence]]):
+    x = [_batch(x) for x in args]
+    if len(args) == 1:
+        return x[0]
+    return tuple(x)
+
+
 def clone_tensor(array: Array):
     if torch is not None and isinstance(array, torch.Tensor):
         return array.clone()

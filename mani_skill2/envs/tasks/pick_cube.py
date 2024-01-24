@@ -88,9 +88,12 @@ class PickCubeEnv(BaseEnv):
         self.goal_site.set_pose(Pose.create_from_pq(goal_xyz, device=self.device))
 
     def _get_obs_extra(self):
-        obs = OrderedDict(tcp_pose=self.agent.tcp.pose, goal_pos=self.goal_site)
+        obs = OrderedDict(
+            tcp_pose=self.agent.tcp.pose.raw_pose, goal_pos=self.goal_site.pose.p
+        )
         if "state" in self.obs_mode:
             obs.update(obs_pose=self.cube.pose.raw_pose)
+        return obs
 
     def evaluate(self, obs: Any):
         is_obj_placed = (
