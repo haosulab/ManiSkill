@@ -14,7 +14,7 @@ if __name__ == "__main__":
             num_envs=num_envs,
             enable_shadow=True,
             render_mode="rgb_array",
-            control_mode="pd_ee_delta_pose",
+            control_mode="pd_ee_delta_pos",
             sim_freq=500,
             control_freq=100,
         )
@@ -36,6 +36,7 @@ if __name__ == "__main__":
         while i < 50:
             obs, rew, terminated, truncated, info = env.step(env.action_space.sample())
             done = np.logical_or(to_numpy(terminated), to_numpy(truncated))
+            print(rew)
             if num_envs == 1:
                 env.render_human()
             done = done.any()
