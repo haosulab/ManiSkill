@@ -73,19 +73,20 @@ class PickCubeEnv(BaseEnv):
         )
 
     def _initialize_actors(self):
-        self.table_scene.initialize()
-        xyz = np.zeros((self.num_envs, 3))
-        xyz[:, :2] = self._episode_rng.uniform(-0.1, 0.1, [self.num_envs, 2])
-        xyz[:, 2] = self.cube_half_size
-        qs = randomization.random_quaternions(
-            self._episode_rng, lock_x=True, lock_y=True, n=self.num_envs
-        )
-        self.cube.set_pose(Pose.create_from_pq(xyz, qs, device=self.device))
+        with torch.device(self.device):
+            self.table_scene.initialize()
+            xyz = torch.zeros((self.num_envs, 3))
+            xyz[:, :2] = torch.rand((self.num_envs, 2)) * 0.2 - 0.1
+            xyz[:, 2] = self.cube_half_size
+            qs = randomization.random_quaternions(
+                self.num_envs, lock_x=True, lock_y=True
+            )
+            self.cube.set_pose(Pose.create_from_pq(xyz, qs))
 
-        goal_xyz = np.zeros((self.num_envs, 3))
-        goal_xyz[:, :2] = self._episode_rng.uniform(-0.1, 0.1, [self.num_envs, 2])
-        goal_xyz[:, 2] = self._episode_rng.uniform(0, 0.3, [self.num_envs]) + xyz[:, 2]
-        self.goal_site.set_pose(Pose.create_from_pq(goal_xyz, device=self.device))
+            goal_xyz = torch.zeros((self.num_envs, 3))
+            goal_xyz[:, :2] = torch.rand((self.num_envs, 2)) * 0.2 - 0.1
+            goal_xyz[:, 2] = torch.rand((self.num_envs, 2)) * 0.3 + xyz[:, 2]
+            self.goal_site.set_pose(Pose.create_from_pq(goal_xyz))
 
     def _get_obs_extra(self):
         obs = OrderedDict(
