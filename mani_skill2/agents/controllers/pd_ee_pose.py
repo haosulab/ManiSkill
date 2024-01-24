@@ -88,10 +88,8 @@ class PDEEPosController(PDJointPosController):
                 jacobian = jacobian[:, 0:3]
 
             # NOTE (stao): this method of IK is from https://mathweb.ucsd.edu/~sbuss/ResearchWeb/ikmethods/iksurvey.pdf by Samuel R. Buss
-            jacobian_pinv = torch.linalg.pinv(jacobian)
-            delta_joint_pos = 1.0 * jacobian_pinv @ action.unsqueeze(-1)
-            delta_joint_pos = delta_joint_pos.squeeze(-1)
-            return self.articulation.get_qpos()[:, self.qmask] + delta_joint_pos
+            delta_joint_pos = torch.linalg.pinv(jacobian) @ action.unsqueeze(-1)
+            return self.articulation.get_qpos()[:, self.qmask] + delta_joint_pos.squeeze(-1)
 
         else:
             result, success, error = self.pmodel.compute_inverse_kinematics(
