@@ -12,6 +12,19 @@ from mani_skill2.utils.sapien_utils import look_at
 
 @register_env(name="CustomEnv-v0", max_episode_steps=200)
 class CustomEnv(BaseEnv):
+    """
+    Task Description
+    ----------------
+    Add a task description here
+
+    Randomizations
+    --------------
+
+    Success Conditions
+    ------------------
+    
+    Visualization: link to a video/gif of the task being solved
+    """
     def __init__(self, *args, robot_uid="panda", robot_init_qpos_noise=0.02, **kwargs):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         super().__init__(*args, robot_uid=robot_uid, **kwargs)
@@ -36,7 +49,7 @@ class CustomEnv(BaseEnv):
         return OrderedDict()
 
     def evaluate(self, obs: Any):
-        return {"success": torch.zeros(self.num_envs, device=self.device)}
+        return {"success": torch.zeros(self.num_envs, device=self.device, dtype=bool)}
 
     def compute_dense_reward(self, obs: Any, action: np.ndarray, info: Dict):
         return torch.zeros(self.num_envs, device=self.device)
