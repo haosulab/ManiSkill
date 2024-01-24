@@ -30,5 +30,7 @@ class PDBaseVelController(PDJointVelController):
         vel = (rot_mat @ action[:, :2].unsqueeze(-1)).squeeze(-1)
         new_action = torch.hstack([vel, action[:, 2:]])
         self.articulation.set_joint_drive_velocity_targets(new_action, self.joints)
+
+
 class PDBaseVelControllerConfig(PDJointVelControllerConfig):
     controller_cls = PDBaseVelController
