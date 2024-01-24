@@ -34,6 +34,7 @@ setup(
         "opencv-python",
         "imageio",
         "imageio[ffmpeg]",
+        "pytorch_kinematics",
     ],
     # Glob patterns do not automatically match dotfiles
     package_data={
