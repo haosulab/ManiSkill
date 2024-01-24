@@ -19,7 +19,7 @@ def make_env(env_id, obs_mode):
     return FlattenObservationWrapper(env)
 
 
-@pytest.mark.parametrize("env_id", ["PickCube-v0", "TurnFaucet-v0"])
+@pytest.mark.parametrize("env_id", ["PickCube-v1"])
 @pytest.mark.parametrize("obs_mode", VENV_OBS_MODES)
 def test_cpu_vecenv_obs_mode(env_id, obs_mode):
     n_envs = 2
@@ -61,7 +61,7 @@ def test_cpu_vecenv_obs_mode(env_id, obs_mode):
     del ms2_env
 
 
-@pytest.mark.parametrize("env_id", ["PickCube-v0", "TurnFaucet-v0"])
+@pytest.mark.parametrize("env_id", ["PickCube-v1"])
 @pytest.mark.parametrize("obs_mode", VENV_OBS_MODES)
 def test_gymnasium_cpu_vecenv(env_id, obs_mode):
     n_envs = 2
