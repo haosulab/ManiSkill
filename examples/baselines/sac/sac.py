@@ -161,11 +161,11 @@ class Actor(nn.Module):
         log_prob = log_prob.sum(1, keepdim=True)
         mean = torch.tanh(mean) * self.action_scale + self.action_bias
         return action, log_prob, mean
-    
+
     def get_eval_action(self, x):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        mean = self.fc_mean(x) 
+        mean = self.fc_mean(x)
         return torch.tanh(mean) * self.action_scale + self.action_bias
 
 

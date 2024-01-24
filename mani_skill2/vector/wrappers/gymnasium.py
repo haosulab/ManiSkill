@@ -63,7 +63,8 @@ class ManiSkillVectorEnv(VectorEnv):
             new_infos["final_info"] = infos
             new_infos["final_observation"] = final_obs
             infos = new_infos
-        truncations = torch.ones_like(terminations) * truncations # gym timelimit wrapper returns a bool, for consistency we convert to a tensor here
+        # gym timelimit wrapper returns a bool, for consistency we convert to a tensor here
+        truncations = torch.ones_like(terminations) * truncations
         return obs, rew, terminations, truncations, infos
 
     def close(self):

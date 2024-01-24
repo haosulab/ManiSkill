@@ -448,28 +448,30 @@ class BaseEnv(gym.Env):
         Tasks like PegInsertionSide and TurnFaucet will call this each time as the peg
         shape changes each time and the faucet model changes each time respectively.
         """
-        self._clear()
+        with torch.random.fork_rng():
+            torch.manual_seed(seed=self._episode_seed)
+            self._clear()
 
-        # load everything into the scene first before initializing anything
-        self._setup_scene()
-        self._load_agent()
-        self._load_actors()
-        self._load_articulations()
+            # load everything into the scene first before initializing anything
+            self._setup_scene()
+            self._load_agent()
+            self._load_actors()
+            self._load_articulations()
 
-        self._setup_lighting()
+            self._setup_lighting()
 
-        # Cache entites and articulations
-        self._actors = self.get_actors()
-        self._articulations = self.get_articulations()
-        if sapien.physx.is_gpu_enabled():
-            self._scene._setup_gpu()
-            self.device = self.physx_system.cuda_rigid_body_data.device
-            self._scene._gpu_fetch_all()
-            # TODO (stao): unknown what happens when we do reconfigure more than once when GPU is one. figure this out
-        self.agent.initialize()
-        self._setup_sensors()  # for GPU sim, we have to setup sensors after we call setup gpu in order to enable loading mounted sensors
-        if self._viewer is not None:
-            self._setup_viewer()
+            # Cache entites and articulations
+            self._actors = self.get_actors()
+            self._articulations = self.get_articulations()
+            if sapien.physx.is_gpu_enabled():
+                self._scene._setup_gpu()
+                self.device = self.physx_system.cuda_rigid_body_data.device
+                self._scene._gpu_fetch_all()
+                # TODO (stao): unknown what happens when we do reconfigure more than once when GPU is one. figure this out
+            self.agent.initialize()
+            self._setup_sensors()  # for GPU sim, we have to setup sensors after we call setup gpu in order to enable loading mounted sensors
+            if self._viewer is not None:
+                self._setup_viewer()
 
     def _load_actors(self):
         """Loads all actors into the scene. Called by `self.reconfigure`"""
@@ -525,17 +527,30 @@ class BaseEnv(gym.Env):
     # Reset
     # -------------------------------------------------------------------------- #
     def reset(self, seed=None, options=None):
+        """
+        Reset the ManiSkill environment
+
+        Note that ManiSkill always holds two RNG states, a main RNG, and an episode RNG. The main RNG is used purely to sample an episode seed which
+        helps with reproducibility of episodes. The episode RNG is used by the environment/task itself to e.g. randomize object positions, randomize assets etc.
+
+        Upon environment creation via gym.make, the main RNG is set with a fixed seed of 2022.
+        During each reset call, if seed is None, main RNG is unchanged and an episode seed is sampled from the main RNG to create the episode RNG.
+        If seed is not None, main RNG is set to that seed and the episode seed is also set to that seed.
+
+
+        Note that when giving a specific seed via `reset(seed=...)`, we always set the main RNG based on that seed. This then deterministically changes the **sequence** of RNG
+        used for each episode after each call to reset with `seed=None`. By default this sequence of rng starts with the default main seed used which is 2022,
+        which means that when creating an environment and resetting without a seed, it will always have the same sequence of RNG for each episode.
+
+        """
+        self._elapsed_steps = 0
         if options is None:
             options = dict()
 
-        # when giving a specific seed, we always set the main RNG based on that seed. This then deterministically changes the **sequence** of RNG
-        # used for each episode after each call to reset with seed=none. By default this sequence of rng starts with the default main seed used which is 2022,
-        # which means that when creating an environment and resetting without a seed, it will always have the same sequence of RNG for each episode.
         self._set_main_rng(seed)
-        self._set_episode_rng(
-            seed
-        )  # we first set the first episode seed to allow environments to use it to reconfigure the environment with a seed
-        self._elapsed_steps = 0
+        # we first set the first episode seed to allow environments to use it to reconfigure the environment with a seed
+        self._set_episode_rng(seed)
+
         reconfigure = options.get("reconfigure", False)
         if reconfigure:
             # Reconfigure the scene if assets change
@@ -558,7 +573,7 @@ class BaseEnv(gym.Env):
         return obs, {}
 
     def _set_main_rng(self, seed):
-        """Set the main random generator (e.g., to generate the seed for each episode)."""
+        """Set the main random generator which is only used to set the seed of the episode RNG to improve reproducibility"""
         if seed is None:
             if self._main_seed is not None:
                 return
@@ -579,10 +594,12 @@ class BaseEnv(gym.Env):
         """Initialize the episode, e.g., poses of entities and articulations, and robot configuration.
         No new assets are created. Task-relevant information can be initialized here, like goals.
         """
-        self._initialize_actors()
-        self._initialize_articulations()
-        self._initialize_agent()
-        self._initialize_task()
+        with torch.random.fork_rng():
+            torch.manual_seed(self._episode_seed)
+            self._initialize_actors()
+            self._initialize_articulations()
+            self._initialize_agent()
+            self._initialize_task()
 
     def _initialize_actors(self):
         """Initialize the poses of actors. Called by `self.initialize_episode`"""

@@ -20,6 +20,7 @@ from typing import Any, Dict, Union
 
 import numpy as np
 import torch
+import torch.random
 from transforms3d.euler import euler2quat
 
 from mani_skill2.agents.robots.panda.panda import Panda
@@ -34,7 +35,7 @@ from mani_skill2.utils.structs.pose import Pose
 from mani_skill2.utils.structs.types import Array
 
 
-@register_env("PushCube-v0", max_episode_steps=50)
+@register_env("PushCube-v1", max_episode_steps=50)
 class PushCubeEnv(BaseEnv):
     """
     Task Description
@@ -113,9 +114,7 @@ class PushCubeEnv(BaseEnv):
 
         # here we write some randomization code that randomizes the x, y position of the cube we are pushing in the range [-0.1, -0.1] to [0.1, 0.1]
         xyz = torch.zeros((self.num_envs, 3), device=self.device)
-        xyz[..., :2] = torch.from_numpy(
-            self._episode_rng.uniform(-0.1, 0.1, [self.num_envs, 2])
-        ).cuda()
+        xyz[..., :2] = torch.rand((self.num_envs, 2), device=self.device) * 0.2 - 0.1
         xyz[..., 2] = self.cube_half_size
         q = [1, 0, 0, 0]
         # we can then create a pose object using Pose.create_from_pq to then set the cube pose with. Note that even though our quaternion
@@ -128,9 +127,8 @@ class PushCubeEnv(BaseEnv):
         target_region_xyz = xyz + torch.tensor(
             [0.1 + self.goal_radius, 0, 0], device=self.device
         )
-        target_region_xyz[
-            ..., 2
-        ] = 1e-3  # set a little bit above 0 so the target is sitting on the table
+        # set a little bit above 0 so the target is sitting on the table
+        target_region_xyz[..., 2] = 1e-3
         self.goal_region.set_pose(
             Pose.create_from_pq(
                 p=target_region_xyz,
