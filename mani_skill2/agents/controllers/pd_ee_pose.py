@@ -85,8 +85,10 @@ class PDEEPosController(PDJointPosController):
             jacobian = self.pk_chain.jacobian(self.articulation.get_qpos()[:, self.qmask])
             # NOTE (stao): a bit of a hacky way to check if we want to do IK on position or pose here
             if action.shape[1] == 3:
-                jacobian_pos = jacobian[:, 0:3]
-            jacobian_pinv = torch.linalg.pinv(jacobian_pos)
+                jacobian = jacobian[:, 0:3]
+
+            # NOTE (stao): this method of IK is from https://mathweb.ucsd.edu/~sbuss/ResearchWeb/ikmethods/iksurvey.pdf by Samuel R. Buss
+            jacobian_pinv = torch.linalg.pinv(jacobian)
             delta_joint_pos = 1.0 * jacobian_pinv @ action.unsqueeze(-1)
             delta_joint_pos = delta_joint_pos.squeeze(-1)
             return self.articulation.get_qpos()[:, self.qmask] + delta_joint_pos
