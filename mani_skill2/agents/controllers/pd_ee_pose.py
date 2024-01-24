@@ -90,14 +90,14 @@ class PDEEPosController(PDJointPosController):
     def compute_ik(self, target_pose: Pose, action: Array, max_iterations=100):
         # Assume the target pose is defined in the base frame
         if physx.is_gpu_enabled():
-            jacobian = self.pk_chain.jacobian(self.articulation.get_qpos())
+            jacobian = self.pk_chain.jacobian(self.qpos)
             # NOTE (stao): a bit of a hacky way to check if we want to do IK on position or pose here
             if action.shape[1] == 3:
                 jacobian = jacobian[:, 0:3]
 
             # NOTE (stao): this method of IK is from https://mathweb.ucsd.edu/~sbuss/ResearchWeb/ikmethods/iksurvey.pdf by Samuel R. Buss
             delta_joint_pos = torch.linalg.pinv(jacobian) @ action.unsqueeze(-1)
-            return self.articulation.get_qpos() + delta_joint_pos.squeeze(-1)
+            return self.qpos + delta_joint_pos.squeeze(-1)
 
         else:
             result, success, error = self.pmodel.compute_inverse_kinematics(
