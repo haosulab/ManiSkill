@@ -37,6 +37,8 @@ class PickSingleYCBEnv(BaseEnv):
 
     Success Conditions
     ------------------
+    - the object position is within goal_thresh (default 0.025) euclidean distance of the goal position
+    - the robot is static (q velocity < 0.2)
 
     Visualization: link to a video/gif of the task being solved
     """
@@ -159,7 +161,7 @@ class PickSingleYCBEnv(BaseEnv):
     def evaluate(self, obs: Any):
         obj_to_goal_pos = self.goal_site.pose.p - self.obj.pose.p
         is_obj_placed = torch.linalg.norm(obj_to_goal_pos, axis=1) <= self.goal_thresh
-        is_robot_static = self.agent.is_static()
+        is_robot_static = self.agent.is_static(0.2)
         return dict(
             obj_to_goal_pos=obj_to_goal_pos,
             is_obj_placed=is_obj_placed,
