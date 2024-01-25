@@ -56,7 +56,6 @@ class ArticulationBuilder(SapienArticulationBuilder):
             # if scene mask is none, set it here
             self.scene_mask = to_tensor(torch.ones((self.scene.num_envs), dtype=bool))
 
-        parallelized = len(self.scene.sub_scenes) > 1
         articulations = []
 
         for scene_idx, scene in enumerate(self.scene.sub_scenes):
@@ -69,14 +68,10 @@ class ArticulationBuilder(SapienArticulationBuilder):
                 )
             links[0].pose = self.initial_pose
             for l in links:
-                if parallelized:
-                    l.name = f"scene-{scene_idx}_{l.name}"
+                l.name = f"scene-{scene_idx}_{l.name}"
                 scene.add_entity(l)
             articulation: physx.PhysxArticulation = l.components[0].articulation
-            if parallelized:
-                articulation.name = f"scene-{scene_idx}_{self.name}"
-            else:
-                articulation.name = f"{self.name}"
+            articulation.name = f"scene-{scene_idx}_{self.name}"
             articulations.append(articulation)
 
         articulation = Articulation._create_from_physx_articulations(

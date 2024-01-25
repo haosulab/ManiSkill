@@ -148,7 +148,8 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
         Hides this actor from view. In CPU simulation the visual body is simply set to visibility 0
 
         For GPU simulation, currently this is implemented by moving the actor very far away as visiblity cannot be changed on the fly.
-        As a result we do not permit hiding and showing visuals of objects with collision shapes as this affects the actual simulation
+        As a result we do not permit hiding and showing visuals of objects with collision shapes as this affects the actual simulation.
+        Note that this operation can also be fairly slow as we need to run px.gpu_apply_rigid_dynamic_data and px.gpu_fetch_rigid_dynamic_data.
         """
         assert not self.has_collision_shapes()
         if self.hidden:
@@ -161,6 +162,7 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
             temp_pose[..., :3] += 99999
             self.pose = temp_pose
             self.px.gpu_apply_rigid_dynamic_data()
+            self.px.gpu_fetch_rigid_dynamic_data()
         else:
             self._objs[0].find_component_by_type(
                 sapien.render.RenderBodyComponent
@@ -175,6 +177,7 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
             if hasattr(self, "last_pose"):
                 self.pose = self.last_pose
                 self.px.gpu_apply_rigid_dynamic_data()
+                self.px.gpu_fetch_rigid_dynamic_data()
         else:
             self._objs[0].find_component_by_type(
                 sapien.render.RenderBodyComponent

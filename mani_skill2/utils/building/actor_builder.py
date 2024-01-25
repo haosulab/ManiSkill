@@ -72,17 +72,13 @@ class ActorBuilder(SAPIENActorBuilder):
         initial_pose_np = to_numpy(initial_pose.raw_pose)
 
         entities = []
-        parallelized = len(self.scene.sub_scenes) > 1
 
         for scene_idx, sub_scene in enumerate(self.scene.sub_scenes):
             if self.scene_mask is not None and self.scene_mask[scene_idx] == False:
                 continue
             entity = self.build_entity()
             # prepend scene idx to entity name if there is more than one scene
-            if parallelized:
-                entity.name = f"scene-{scene_idx}_{self.name}"
-            else:
-                entity.name = self.name
+            entity.name = f"scene-{scene_idx}_{self.name}"
             # set pose before adding to scene
             if initial_pose_b == 1:
                 entity.pose = to_sapien_pose(initial_pose_np)

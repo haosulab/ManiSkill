@@ -67,7 +67,8 @@ class PushCubeEnv(BaseEnv):
         super().__init__(*args, robot_uid=robot_uid, **kwargs)
 
     def _register_sensors(self):
-        # registers one camera looking at the robot, cube, and target
+        # registers one 128x128 camera looking at the robot, cube, and target
+        # a smaller sized camera will be lower quality, but render faster
         pose = look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
         return [
             CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10)
@@ -106,6 +107,12 @@ class PushCubeEnv(BaseEnv):
             add_collision=False,
             body_type="kinematic",
         )
+
+        # optionally you can automatically hide some Actors from view by appending to the self._hidden_objects list. When visual observations
+        # are generated or env.render_cameras() is called or env.render() is called with render_mode="cameras", the actor will not show up.
+        # This is useful if you intend to add some visual goal sites as e.g. done in PickCube that aren't actually part of the task
+        # and are there just for generating evaluation videos.
+        # self._hidden_objects.append(self.goal_region)
 
     def _initialize_actors(self):
         # use the torch.device context manager to automatically create tensors on CPU or CUDA depending on self.device, the device the environment runs on

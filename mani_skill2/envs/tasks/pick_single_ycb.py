@@ -103,6 +103,7 @@ class PickSingleYCBEnv(BaseEnv):
             body_type="kinematic",
             add_collision=False,
         )
+        self._hidden_objects.append(self.goal_site)
 
     def _initialize_actors(self):
         with torch.device(self.device):

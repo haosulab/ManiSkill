@@ -39,6 +39,8 @@ from mani_skill2.utils.sapien_utils import (
     to_tensor,
     unbatch,
 )
+from mani_skill2.utils.structs.actor import Actor
+from mani_skill2.utils.structs.articulation import Articulation
 from mani_skill2.utils.structs.types import Array
 from mani_skill2.utils.visualization.misc import observations_to_images, tile_images
 
@@ -89,18 +91,24 @@ class BaseEnv(gym.Env):
 
     physx_system: Union[sapien.physx.PhysxCpuSystem, sapien.physx.PhysxGpuSystem] = None
 
-    # the main scene, which manages all sub scenes. In CPU simulation there is only one sub-scene
     _scene: ManiSkillScene = None
+    """the main scene, which manages all sub scenes. In CPU simulation there is only one sub-scene"""
 
     _agent_cls: Type[BaseAgent]
     agent: BaseAgent
+
     _sensors: Dict[str, BaseSensor]
+    """all sensors configured in this environment"""
     _sensor_cfgs: Dict[str, BaseSensorConfig]
+    """all sensor configurations"""
     _agent_camera_cfgs: Dict[str, CameraConfig]
 
     # render cameras are sensors that are not part of any observations
     _render_cameras: Dict[str, Camera]
     _render_camera_cfgs: Dict[str, CameraConfig]
+
+    _hidden_objects: List[Union[Actor, Articulation]] = []
+    """list of objects that are hidden during rendering when generating visual observations / running render_cameras()"""
 
     def __init__(
         self,
@@ -377,14 +385,13 @@ class BaseEnv(gym.Env):
                     "Other modalities of sensor data not implemented yet"
                 )
 
-    def get_images(self) -> Dict[str, Dict[str, np.ndarray]]:
-        # TODO (stao): support general sensors later.
-        """Get (raw) images from all cameras (blocking)."""
-        images = OrderedDict()
-        for name, cam in self._sensors.items():
-            if isinstance(cam, Camera):
-                images[name] = cam.get_images()
-        return images
+    def get_sensor_data(self) -> Dict[str, Dict[str, np.ndarray]]:
+        """Get raw sensor data such as images"""
+        sensor_data = OrderedDict()
+        for name, sensor in self._sensors.items():
+            if isinstance(sensor, Camera):
+                sensor_data[name] = sensor.get_images()
+        return sensor_data
 
     def get_camera_params(self) -> Dict[str, Dict[str, np.ndarray]]:
         """Get camera parameters from all cameras."""
@@ -394,13 +401,15 @@ class BaseEnv(gym.Env):
         return params
 
     def _get_obs_images(self) -> OrderedDict:
+        for obj in self._hidden_objects:
+            obj.hide_visual()
         self.update_render()
         self.capture_sensor_data()
         return OrderedDict(
             agent=self._get_obs_agent(),
             extra=self._get_obs_extra(),
             camera_param=self.get_camera_params(),
-            image=self.get_images(),
+            image=self.get_sensor_data(),
         )
 
     @property
@@ -775,6 +784,7 @@ class BaseEnv(gym.Env):
         self._sensors = OrderedDict()
         self._render_cameras = OrderedDict()
         self._scene = None
+        self._hidden_objects = []
 
     def close(self):
         self._clear()
@@ -840,7 +850,9 @@ class BaseEnv(gym.Env):
             self._viewer.set_camera_pose(
                 self._render_cameras["render_camera"].camera.global_pose
             )
-        self._scene.update_render()
+        for obj in self._hidden_objects:
+            obj.show_visual()
+        self.update_render()
 
         # TODO (stao): currently in GPU mode we cannot render all sub-scenes together in the GUI yet. So we have this
         # naive solution which shows whatever scene is selected by self._viewer_scene_idx
@@ -870,6 +882,8 @@ class BaseEnv(gym.Env):
 
     def render_rgb_array(self, camera_name: str = None):
         """Render an RGB image from the specified camera."""
+        for obj in self._hidden_objects:
+            obj.show_visual()
         self.update_render()
         images = []
         # TODO (stao): refactor this code either into ManiSkillScene class and/or merge the code, it's pretty similar?
@@ -899,16 +913,22 @@ class BaseEnv(gym.Env):
         Renders all sensors that the agent can use and see and displays them
         """
         images = []
+        for obj in self._hidden_objects:
+            obj.hide_visual()
         self.update_render()
         self.capture_sensor_data()
-        cameras_images = self.get_images()
+        cameras_images = self.get_sensor_data()
         for camera_images in cameras_images.values():
             images.extend(observations_to_images(camera_images))
         return tile_images(images)
 
     def render(self):
         """
-        Either opens a viewer if render_mode is "human", or returns an array that you can use to save videos
+        Either opens a viewer if render_mode is "human", or returns an array that you can use to save videos.
+
+        render_mode is "rgb_array", usually a higher quality image is rendered for the purpose of viewing only.
+
+        if render_mode is "cameras", all visual observations the agent can see is provided
         """
         if self.render_mode is None:
             raise RuntimeError("render_mode is not set.")
