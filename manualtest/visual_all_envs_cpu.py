@@ -6,17 +6,18 @@ from mani_skill2.utils.sapien_utils import to_numpy
 from mani_skill2.utils.wrappers import RecordEpisode
 
 if __name__ == "__main__":
-    # , "StackCube-v0", "LiftCube-v0"
-    num_envs = 200
-    for env_id in ["PickSingleYCB-v1"]:  # , "StackCube-v0", "LiftCube-v0"]:
+    # , "StackCube-v1", "PickCube-v1", "PushCube-v1", "PickSingleYCB-v1"
+    num_envs = 4
+    for env_id in ["OpenCabinet-v1"]:  # , "StackCube-v0", "LiftCube-v0"]:
         env = gym.make(
             env_id,
             num_envs=num_envs,
             enable_shadow=True,
             robot_uid="panda",
             reward_mode="normalized_dense",
-            render_mode="cameras",
-            control_mode="pd_ee_delta_pos",
+            render_mode="rgb_array",
+            # control_mode="base_pd_joint_vel_arm_pd_joint_delta_pos",
+            control_mode="pd_joint_delta_pos",
             sim_freq=500,
             control_freq=100,
         )
@@ -38,8 +39,8 @@ if __name__ == "__main__":
             env.render_human()
         while i < 50 or (i < 50000 and num_envs == 1):
             action = env.action_space.sample()
-            action[:] * 0
-            action[:, 2] = -1
+            # action[:] * 0
+            # action[:, 2] = -1
             obs, rew, terminated, truncated, info = env.step(action)
             done = np.logical_or(to_numpy(terminated), to_numpy(truncated))
             if num_envs == 1:
