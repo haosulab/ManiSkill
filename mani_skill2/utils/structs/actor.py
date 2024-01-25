@@ -135,6 +135,15 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
             ).visibility = 1
         self.hidden = False
 
+    def is_static(self, lin_thresh=1e-3, ang_thresh=1e-2):
+        """
+        Checks if this actor is static within the given linear velocity threshold `lin_thresh` and angular velocity threshold `ang_thresh`
+        """
+        return torch.logical_and(
+            torch.linalg.norm(self.linear_velocity, axis=1) <= lin_thresh,
+            torch.linalg.norm(self.angular_velocity, axis=1) <= ang_thresh,
+        )
+
     # -------------------------------------------------------------------------- #
     # Exposed actor properties, getters/setters that automatically handle
     # CPU and GPU based actors

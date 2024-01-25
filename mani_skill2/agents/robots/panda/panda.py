@@ -292,6 +292,10 @@ class Panda(BaseAgent):
 
                 return all([lflag, rflag])
 
+    def is_static(self, threshold: float = 0.2):
+        qvel = self.robot.get_qvel()[..., :-2]
+        return torch.max(torch.abs(qvel), 1)[0] <= threshold
+
     @staticmethod
     def build_grasp_pose(approaching, closing, center):
         """Build a grasp pose (panda_hand_tcp)."""

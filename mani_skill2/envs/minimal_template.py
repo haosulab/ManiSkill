@@ -10,7 +10,7 @@ from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import look_at
 
 
-@register_env(name="CustomEnv-v0", max_episode_steps=200)
+@register_env("CustomEnv-v0", max_episode_steps=200)
 class CustomEnv(BaseEnv):
     """
     Task Description
@@ -52,9 +52,11 @@ class CustomEnv(BaseEnv):
     def evaluate(self, obs: Any):
         return {"success": torch.zeros(self.num_envs, device=self.device, dtype=bool)}
 
-    def compute_dense_reward(self, obs: Any, action: np.ndarray, info: Dict):
+    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         return torch.zeros(self.num_envs, device=self.device)
 
-    def compute_normalized_dense_reward(self, obs: Any, action: np.ndarray, info: Dict):
+    def compute_normalized_dense_reward(
+        self, obs: Any, action: torch.Tensor, info: Dict
+    ):
         max_reward = 1.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward

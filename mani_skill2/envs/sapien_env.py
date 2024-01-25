@@ -415,7 +415,7 @@ class BaseEnv(gym.Env):
     def reward_mode(self):
         return self._reward_mode
 
-    def get_reward(self, obs: Any, action: Array, info: Dict):
+    def get_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         if self._reward_mode == "sparse":
             reward = info["success"]
         elif self._reward_mode == "dense":
@@ -428,10 +428,12 @@ class BaseEnv(gym.Env):
             raise NotImplementedError(self._reward_mode)
         return reward
 
-    def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
+    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         raise NotImplementedError
 
-    def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
+    def compute_normalized_dense_reward(
+        self, obs: Any, action: torch.Tensor, info: Dict
+    ):
         raise NotImplementedError
 
     # -------------------------------------------------------------------------- #
@@ -634,7 +636,7 @@ class BaseEnv(gym.Env):
     # -------------------------------------------------------------------------- #
 
     def step(self, action: Union[None, np.ndarray, Dict]):
-        self.step_action(action)
+        action = self.step_action(action)
         self._elapsed_steps += 1
         obs = self.get_obs()
         info = self.get_info(obs=obs)
@@ -652,7 +654,7 @@ class BaseEnv(gym.Env):
                 to_numpy(info),
             )
 
-    def step_action(self, action):
+    def step_action(self, action) -> Union[None, torch.Tensor]:
         set_action = False
         if action is None:  # simulation without action
             pass
@@ -681,6 +683,7 @@ class BaseEnv(gym.Env):
             self._after_simulation_step()
         if physx.is_gpu_enabled():
             self._scene._gpu_fetch_all()
+        return action
 
     def evaluate(self, **kwargs) -> dict:
         """Evaluate whether the environment is currently in a success state."""

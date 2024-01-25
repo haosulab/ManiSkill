@@ -7,8 +7,8 @@ from mani_skill2.utils.wrappers import RecordEpisode
 
 if __name__ == "__main__":
     # , "StackCube-v0", "LiftCube-v0"
-    num_envs = 2
-    for env_id in ["PushCube-v0"]:  # , "StackCube-v0", "LiftCube-v0"]:
+    num_envs = 4
+    for env_id in ["StackCube-v1"]:  # , "StackCube-v0", "LiftCube-v0"]:
         env = gym.make(
             env_id,
             num_envs=num_envs,
@@ -20,15 +20,17 @@ if __name__ == "__main__":
             sim_freq=500,
             control_freq=100,
         )
-        env = RecordEpisode(
-            env,
-            output_dir="videos/manual_test",
-            trajectory_name=f"{env_id}",
-            info_on_video=False,
-            video_fps=30,
-            save_trajectory=False,
-        )
+        # env = RecordEpisode(
+        #     env,
+        #     output_dir="videos/manual_test",
+        #     trajectory_name=f"{env_id}",
+        #     info_on_video=False,
+        #     video_fps=30,
+        #     save_trajectory=False,
+        # )
         env.reset(seed=0)
+        env.reset(seed=1)
+        env.reset(seed=2)
         done = False
         i = 0
         if num_envs == 1:
