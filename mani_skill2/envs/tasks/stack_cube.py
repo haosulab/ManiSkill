@@ -51,7 +51,7 @@ class StackCubeEnv(BaseEnv):
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
 
     def _load_actors(self):
-        self.cube_half_size = to_tensor([0.2] * 3)
+        self.cube_half_size = to_tensor([0.02] * 3)
         self.table_scene = TableSceneBuilder(
             env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
         )
@@ -120,9 +120,7 @@ class StackCubeEnv(BaseEnv):
         is_cubeA_on_cubeB = torch.logical_and(xy_flag, z_flag)
         is_cubeA_static = self.cubeA.is_static()
         is_cubeA_grasped = self.agent.is_grasping(self.cubeA)
-
         success = is_cubeA_on_cubeB * is_cubeA_static * ~is_cubeA_grasped
-
         return {
             "is_cubeA_grasped": is_cubeA_grasped,
             "is_cubeA_on_cubeB": is_cubeA_on_cubeB,
