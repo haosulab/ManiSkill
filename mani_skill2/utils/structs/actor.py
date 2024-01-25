@@ -100,6 +100,7 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
         # TODO (stao): Can we support e.g. each Actor having len(actor._objs) > 1? It would mean fetching pose data or any kind of data is highly uintuitive
         # we definitely cannot permit some actors to have more objs than others, otherwise the data is ragged.
         merged_actor = Actor._create_from_entities(objs, scene, merged_scene_mask)
+        merged_actor.name = name
         merged_actor._builder_initial_pose = Pose.create(
             torch.vstack(_builder_initial_poses)
         )

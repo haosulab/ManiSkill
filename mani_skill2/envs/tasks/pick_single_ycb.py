@@ -118,7 +118,7 @@ class PickSingleYCBEnv(BaseEnv):
 
             goal_xyz = torch.zeros((self.num_envs, 3))
             goal_xyz[:, :2] = torch.rand((self.num_envs, 2)) * 0.2 - 0.1
-            goal_xyz[:, 2] = torch.rand((self.num_envs, 2)) * 0.3 + xyz[:, 2]
+            goal_xyz[:, 2] = torch.rand((self.num_envs)) * 0.3 + xyz[:, 2]
             self.goal_site.set_pose(Pose.create_from_pq(goal_xyz))
 
             # Initialize robot arm to a higher position above the table than the default typically used for other table top tasks
@@ -151,7 +151,7 @@ class PickSingleYCBEnv(BaseEnv):
         if "state" in self.obs_mode:
             # TODO (stao): previously we used some cmass pose. Why was that?
             obs.update(
-                tcp_to_goal_pos=self.goal_site.p - self.agent.tcp.pose.p,
+                tcp_to_goal_pos=self.goal_site.pose.p - self.agent.tcp.pose.p,
                 obj_pose=self.obj.pose.raw_pose,
                 tcp_to_obj_pos=self.obj.pose.p - self.agent.tcp.pose.p,
                 obj_to_goal_pos=self.goal_site.pose.p - self.obj.pose.p,
@@ -176,7 +176,7 @@ class PickSingleYCBEnv(BaseEnv):
         reaching_reward = 1 - torch.tanh(5 * tcp_to_obj_dist)
         reward = reaching_reward
 
-        is_grasped = self.agent.is_grasping(self.cube)
+        is_grasped = self.agent.is_grasping(self.obj)
         reward += is_grasped
 
         obj_to_goal_dist = torch.linalg.norm(

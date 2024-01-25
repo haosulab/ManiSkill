@@ -84,7 +84,7 @@ class PickCubeEnv(BaseEnv):
 
             goal_xyz = torch.zeros((self.num_envs, 3))
             goal_xyz[:, :2] = torch.rand((self.num_envs, 2)) * 0.2 - 0.1
-            goal_xyz[:, 2] = torch.rand((self.num_envs, 2)) * 0.3 + xyz[:, 2]
+            goal_xyz[:, 2] = torch.rand((self.num_envs)) * 0.3 + xyz[:, 2]
             self.goal_site.set_pose(Pose.create_from_pq(goal_xyz))
 
     def _get_obs_extra(self):
