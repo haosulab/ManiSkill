@@ -230,8 +230,8 @@ class BaseAgent:
         """
         if init_qpos is not None:
             self.robot.set_qpos(init_qpos)
-        self.robot.set_qvel(np.zeros(self.robot.dof))
-        self.robot.set_qf(np.zeros(self.robot.dof))
+        self.robot.set_qvel(np.zeros(self.robot.max_dof))
+        self.robot.set_qf(np.zeros(self.robot.max_dof))
         self.set_control_mode(self._default_control_mode)
 
     # -------------------------------------------------------------------------- #

@@ -233,7 +233,7 @@ class DictController(BaseController):
                     gravity=True, coriolis_and_centrifugal=True
                 )
             else:
-                qf = np.zeros(self.articulation.dof)
+                qf = np.zeros(self.articulation.max_dof)
             for controller in self.controllers.values():
                 ret = controller.before_simulation_step()
                 if ret is not None and "qf" in ret:

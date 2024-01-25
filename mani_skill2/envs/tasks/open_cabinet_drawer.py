@@ -59,7 +59,11 @@ class OpenCabinetEnv(BaseEnv):
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
 
     def _load_actors(self):
-        model_ids = self.all_model_ids[: self.num_envs]
+        rand_idx = torch.randperm(len(self.all_model_ids))
+        model_ids = self.all_model_ids[rand_idx]
+        model_ids = np.concatenate(
+            [model_ids] * np.ceil(self.num_envs / len(self.all_model_ids)).astype(int)
+        )[: self.num_envs]
         self.ground = build_tesselated_square_floor(self._scene)
 
         cabinets = []
@@ -68,7 +72,7 @@ class OpenCabinetEnv(BaseEnv):
             scene_mask = np.zeros(self.num_envs, dtype=bool)
             scene_mask[i] = True
             cabinet, metadata = build_preprocessed_partnet_mobility_articulation(
-                self._scene, model_id, name=f"{model_id}-i", scene_mask=scene_mask
+                self._scene, model_id, name=f"{model_id}-{i}", scene_mask=scene_mask
             )
             self.cabinet_heights.append(
                 metadata.bbox.bounds[1, 2] - metadata.bbox.bounds[0, 2]

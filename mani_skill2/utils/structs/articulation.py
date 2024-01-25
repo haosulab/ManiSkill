@@ -37,12 +37,18 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     _data_index: slice = None
     name: str = None
 
+    _merged: bool = False
+    """
+    whether or not this articulation object is a merged articulation where it is managing many articulations with different dofs
+    """
+
     @classmethod
     def _create_from_physx_articulations(
         cls,
         physx_articulations: List[physx.PhysxArticulation],
         scene: ManiSkillScene,
         scene_mask: torch.Tensor,
+        _merged: bool = False,
     ):
         shared_name = "_".join(physx_articulations[0].name.split("_")[1:])
 
@@ -60,6 +66,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             joint_map=OrderedDict(),
             active_joints=[],
             name=shared_name,
+            _merged=_merged,
         )
         # create link and joint structs
         # num_links = len(physx_articulations[0].links)
@@ -105,9 +112,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         joint_map = OrderedDict()
         wrapped_joints: List[Joint] = []
         for joints in all_joint_objs:
-            wrapped_joint = Joint.create(
-                joints, all_joint_names.index(joints[0].name), self
-            )
+            wrapped_joint = Joint.create(joints, self)
             joint_map[wrapped_joint.name] = wrapped_joint
             wrapped_joints.append(wrapped_joint)
         self.joints = wrapped_joints
@@ -130,7 +135,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
                 articulation._num_objs == num_objs_per_actor
             ), "Each given articulation must have the same number of managed objects"
         merged_articulation = Articulation._create_from_physx_articulations(
-            objs, scene, merged_scene_mask
+            objs, scene, merged_scene_mask, _merged=True
         )
         merged_articulation.name = name
         scene.articulations[merged_articulation.name] = merged_articulation
@@ -184,9 +189,17 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     # def create_fixed_tendon(self, link_chain: list[PhysxArticulationLinkComponent], coefficients: list[float], recip_coefficients: list[float], rest_length: float = 0, offset: float = 0, stiffness: float = 0, damping: float = 0, low: float = -3.4028234663852886e+38, high: float = 3.4028234663852886e+38, limit_stiffness: float = 0) -> None: ...
     def find_joint_by_name(self, arg0: str) -> Joint:
+        if self._merged:
+            raise RuntimeError(
+                "Cannot call find_joint_by_name when the articulation object is managing articulations of different dofs"
+            )
         return self.joint_map[arg0]
 
     def find_link_by_name(self, arg0: str) -> Link:
+        if self._merged:
+            raise RuntimeError(
+                "Cannot call find_link_by_name when the articulation object is managing articulations of different dofs"
+            )
         return self.link_map[arg0]
 
     def get_active_joints(self):

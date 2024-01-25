@@ -7,14 +7,14 @@ from mani_skill2.utils.sapien_utils import to_numpy
 from mani_skill2.utils.wrappers import RecordEpisode
 
 if __name__ == "__main__":
-    # , "StackCube-v1", "PickCube-v1", "PushCube-v1", "PickSingleYCB-v1"
-    num_envs = 8
+    # , "StackCube-v1", "PickCube-v1", "PushCube-v1", "PickSingleYCB-v1", "OpenCabinet-v1"
+    num_envs = 64
     sapien.physx.set_gpu_memory_config(
         found_lost_pairs_capacity=2**26,
         max_rigid_patch_count=2**19,
         max_rigid_contact_count=2**21,
     )
-    for env_id in ["OpenCabinet-v1"]:  # , "StackCube-v0", "LiftCube-v0"]:
+    for env_id in ["OpenCabinet-v1"]:
         env = gym.make(
             env_id,
             num_envs=num_envs,
@@ -23,7 +23,7 @@ if __name__ == "__main__":
             reward_mode="normalized_dense",
             render_mode="rgb_array",
             # control_mode="base_pd_joint_vel_arm_pd_joint_delta_pos",
-            control_mode="pd_joint_delta_pos",
+            control_mode="pd_ee_delta_pos",
             sim_freq=500,
             control_freq=100,
         )
@@ -44,10 +44,12 @@ if __name__ == "__main__":
             viewer.paused = True
             env.render_human()
         while i < 50 or (i < 50000 and num_envs == 1):
-            print(i)
             action = env.action_space.sample()
-            # action[:] * 0
-            # action[:, 2] = -1
+            if len(action.shape) == 1:
+                action = action.reshape(1, -1)
+            action[:] * 0
+            # TODO (stao): on cpu sim, -1 here goes up, gpu sim -1 goes down?
+            action[:, 2] = -1
             obs, rew, terminated, truncated, info = env.step(action)
             done = np.logical_or(to_numpy(terminated), to_numpy(truncated))
             if num_envs == 1:

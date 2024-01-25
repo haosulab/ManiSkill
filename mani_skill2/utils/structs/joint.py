@@ -26,7 +26,7 @@ class Joint(BaseStruct[physx.PhysxJointComponent]):
 
     articulation: Articulation
 
-    joint_index: int
+    # joint_index: int
 
     child_link: Link = None
     parent_link: Link = None
@@ -41,21 +41,21 @@ class Joint(BaseStruct[physx.PhysxJointComponent]):
     def create(
         cls,
         physx_joints: List[physx.PhysxArticulationJoint],
-        joint_index: int,
+        # joint_index: int,
         articulation: Articulation,
     ):
-        px: physx.PhysxSystem = articulation.px
         shared_name = "_".join(physx_joints[0].name.split("_")[1:])
         child_link = None
         parent_link = None
-        if physx_joints[0].child_link is not None:
-            child_link = articulation.link_map[
-                "_".join(physx_joints[0].child_link.name.split("_")[1:])
-            ]
-        if physx_joints[0].parent_link is not None:
-            parent_link = articulation.link_map[
-                "_".join(physx_joints[0].parent_link.name.split("_")[1:])
-            ]
+        if not articulation._merged:
+            if physx_joints[0].child_link is not None:
+                child_link = articulation.link_map[
+                    "_".join(physx_joints[0].child_link.name.split("_")[1:])
+                ]
+            if physx_joints[0].parent_link is not None:
+                parent_link = articulation.link_map[
+                    "_".join(physx_joints[0].parent_link.name.split("_")[1:])
+                ]
         return cls(
             articulation=articulation,
             _objs=physx_joints,
@@ -63,7 +63,7 @@ class Joint(BaseStruct[physx.PhysxJointComponent]):
             _scene_mask=articulation._scene_mask,
             child_link=child_link,
             parent_link=parent_link,
-            joint_index=joint_index,
+            # joint_index=joint_index,
             name=shared_name,
         )
 
