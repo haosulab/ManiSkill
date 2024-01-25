@@ -9,11 +9,9 @@ import numpy as np
 import sapien
 import sapien.physx as physx
 import sapien.render
-import trimesh
 from sapien import Pose
 
 from mani_skill2 import ASSET_DIR, PACKAGE_ASSET_DIR
-from mani_skill2.envs.scene import ManiSkillScene
 from mani_skill2.utils.geometry.trimesh_utils import (
     get_articulation_meshes,
     merge_meshes,
@@ -43,7 +41,6 @@ class ArticulationMetadata:
     links: Dict[str, LinkMetadata]
     # a list of all movable links
     movable_links: List[str]
-    bbox: trimesh.primitives.Box
 
 
 def build_articulation_from_file(
@@ -68,17 +65,16 @@ def build_articulation_from_file(
 
 
 # cache model metadata here if needed
-MODEL_DBS: Dict[str, Dict[str, Dict]] = {}
+model_dbs: Dict[str, Dict[str, Dict]] = {}
 
 
 ### Build articulations ###
 def build_preprocessed_partnet_mobility_articulation(
-    scene: ManiSkillScene,
+    scene: sapien.Scene,
     model_id: str,
-    name: str,
     fix_root_link=True,
     urdf_config: dict = None,
-    scene_mask=None,
+    set_object_on_ground=True,
 ):
     """
     Builds a physx.PhysxArticulation object into the scene and returns metadata containing annotations of the object's links and joints.
@@ -92,38 +88,34 @@ def build_preprocessed_partnet_mobility_articulation(
 
         set_object_on_ground: whether to change the pose of the built articulation such that the object is settled on the ground (at z = 0)
     """
-    if "PartnetMobility" not in MODEL_DBS:
+    if "PartnetMobility" not in model_dbs:
         _load_partnet_mobility_dataset()
 
-    metadata = MODEL_DBS["PartnetMobility"]["model_data"][model_id]
+    metadata = model_dbs["PartnetMobility"]["model_data"][model_id]
 
     loader = scene.create_urdf_loader()
     loader.fix_root_link = fix_root_link
     loader.scale = metadata["scale"]
     loader.load_multiple_collisions_from_file = True
 
-    urdf_path = MODEL_DBS["PartnetMobility"]["model_urdf_paths"][model_id]
+    urdf_path = model_dbs["PartnetMobility"]["model_urdf_paths"][model_id]
     urdf_config = parse_urdf_config(urdf_config or {}, scene)
     apply_urdf_config(loader, urdf_config)
-    articulation = loader.load(str(urdf_path), name=name, scene_mask=scene_mask)
+    articulation: physx.PhysxArticulation = loader.load(str(urdf_path))
 
-    metadata = ArticulationMetadata(
-        joints=dict(), links=dict(), movable_links=[], bbox=None
-    )
+    metadata = ArticulationMetadata(joints=dict(), links=dict(), movable_links=[])
 
     # NOTE(jigu): links and their parent joints.
     for link, joint in zip(articulation.get_links(), articulation.get_joints()):
         metadata.joints[joint.name] = JointMetadata(type=joint.type, name="")
-        # render_body = link.entity.find_component_by_type(
-        #     sapien.render.RenderBodyComponent
-        # )
-        # render_shapes = []
-        # if render_body is not None:
-        #     render_shapes = render_body.render_shapes
+        render_body = link.entity.find_component_by_type(
+            sapien.render.RenderBodyComponent
+        )
+        render_shapes = []
+        if render_body is not None:
+            render_shapes = render_body.render_shapes
         metadata.links[link.name] = LinkMetadata(
-            name=None,
-            link=link,
-            render_shapes=[],  # render_shapes=render_shapes
+            name=None, link=link, render_shapes=render_shapes
         )
         if joint.type != "fixed":
             metadata.movable_links.append(link.name)
@@ -137,14 +129,21 @@ def build_preprocessed_partnet_mobility_articulation(
             metadata.links[link_id].name = link_name
             metadata.joints[f"joint_{link_id.split('_')[1]}"].name = joint_type
 
-    bbox = merge_meshes(get_articulation_meshes(articulation._objs[0])).bounding_box
-    metadata.bbox = bbox
+    if set_object_on_ground:
+        qlimits = articulation.get_qlimits()  # [N, 2]
+        assert not np.isinf(qlimits).any(), qlimits
+        qpos = np.ascontiguousarray(qlimits[:, 0])
+        articulation.set_qpos(qpos)
+        articulation.set_pose(Pose())
+        bounds = merge_meshes(get_articulation_meshes(articulation)).bounds
+        articulation.set_pose(Pose([0, 0, -bounds[0, 2]]))
+
     return articulation, metadata
 
 
 def _load_partnet_mobility_dataset():
     """loads preprocssed partnet mobility metadata"""
-    MODEL_DBS["PartnetMobility"] = {
+    model_dbs["PartnetMobility"] = {
         "model_data": load_json(
             PACKAGE_ASSET_DIR / "partnet_mobility/meta/info_cabinet_drawer_train.json"
         ),
@@ -158,6 +157,6 @@ def _load_partnet_mobility_dataset():
             if urdf_path.exists():
                 return urdf_path
 
-    MODEL_DBS["PartnetMobility"]["model_urdf_paths"] = {
-        k: find_urdf_path(k) for k in MODEL_DBS["PartnetMobility"]["model_data"].keys()
+    model_dbs["PartnetMobility"]["model_urdf_paths"] = {
+        k: find_urdf_path(k) for k in model_dbs["PartnetMobility"]["model_data"].keys()
     }

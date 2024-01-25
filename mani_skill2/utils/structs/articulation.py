@@ -61,8 +61,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             name=shared_name,
         )
         # create link and joint structs
-        # num_links = len(physx_articulations[0].links)
-        num_links = max([len(x.links) for x in physx_articulations])
+        num_links = len(physx_articulations[0].links)
         all_links_objs: List[List[physx.PhysxArticulationLinkComponent]] = [
             [] for _ in range(num_links)
         ]
@@ -72,9 +71,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         ]
 
         link_map = OrderedDict()
-        import ipdb
 
-        ipdb.set_trace()
         for articulation in physx_articulations:
             assert num_links == len(articulation.links) and num_joints == len(
                 articulation.joints
@@ -116,26 +113,6 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         self.active_joints = [wrapped_joints[i] for i in active_joint_indices]
 
         return self
-
-    @classmethod
-    def merge_articulations(cls, articulations: List["Articulation"], name: str = None):
-        objs = []
-        scene = articulations[0]._scene
-        merged_scene_mask = articulations[0]._scene_mask.clone()
-        num_objs_per_actor = articulations[0]._num_objs
-        for articulation in articulations:
-            objs += articulation._objs
-            merged_scene_mask[articulation._scene_mask] = True
-            del scene.articulations[articulation.name]
-            assert (
-                articulation._num_objs == num_objs_per_actor
-            ), "Each given articulation must have the same number of managed objects"
-        merged_articulation = Articulation._create_from_physx_articulations(
-            objs, scene, merged_scene_mask
-        )
-        merged_articulation.name = name
-        scene.articulations[merged_articulation.name] = merged_articulation
-        return merged_articulation
 
     # -------------------------------------------------------------------------- #
     # Additional useful functions not in SAPIEN original API

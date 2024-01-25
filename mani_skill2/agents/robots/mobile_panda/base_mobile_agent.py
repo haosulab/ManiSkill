@@ -36,18 +36,18 @@ class DummyMobileAgent(BaseAgent):
         self.base_link = self.robot.get_links()[3]
 
         # Ignore collision between the adjustable body and ground
-        bodies = get_obj_by_name(self.robot.get_links(), "adjustable_body")
-        for body in bodies._objs:
-            s = body.get_collision_shapes()[0]
-            gs = s.get_collision_groups()
-            gs[2] = gs[2] | 1 << 30
-            s.set_collision_groups(gs)
+        body = get_obj_by_name(self.robot.get_links(), "adjustable_body")
+
+        s = body.get_collision_shapes()[0]
+        gs = s.get_collision_groups()
+        gs[2] = gs[2] | 1 << 30
+        s.set_collision_groups(gs)
 
     def get_proprioception(self):
         state_dict = super().get_proprioception()
         qpos, qvel = state_dict["qpos"], state_dict["qvel"]
-        base_pos, base_orientation, arm_qpos = qpos[:, :2], qpos[:, 2], qpos[:, 3:]
-        base_vel, base_ang_vel, arm_qvel = qvel[:, :2], qvel[:, 2], qvel[:, 3:]
+        base_pos, base_orientation, arm_qpos = qpos[:2], qpos[2], qpos[3:]
+        base_vel, base_ang_vel, arm_qvel = qvel[:2], qvel[2], qvel[3:]
 
         state_dict["qpos"] = arm_qpos
         state_dict["qvel"] = arm_qvel
