@@ -264,7 +264,6 @@ if __name__ == "__main__":
                 info = infos["final_info"]
                 episodic_return = info['episode']['r'].mean().cpu().numpy()
                 print(f"global_step={global_step}, episodic_return={episodic_return}")
-                writer.add_scalar("charts/is_cubeA_on_cubeB", info["is_cubeA_on_cubeB"].float().mean().cpu().numpy(), global_step)
                 writer.add_scalar("charts/success_rate", info["success"].float().mean().cpu().numpy(), global_step)
                 writer.add_scalar("charts/episodic_return", episodic_return, global_step)
                 writer.add_scalar("charts/episodic_length", info["elapsed_steps"], global_step)

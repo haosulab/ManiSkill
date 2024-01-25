@@ -116,7 +116,6 @@ class ArticulationBuilder(SapienArticulationBuilder):
                 )
             links[0].pose = self.initial_pose
             for l in links:
-                # l.name = f"scene-{scene_idx}_{l.name}"
                 scene.add_entity(l)
             articulation: physx.PhysxArticulation = l.components[0].articulation
             articulation.name = f"scene-{scene_idx}_{self.name}"
