@@ -8,7 +8,7 @@ from mani_skill2.utils.wrappers import RecordEpisode
 
 if __name__ == "__main__":
     # , "StackCube-v1", "PickCube-v1", "PushCube-v1", "PickSingleYCB-v1"
-    num_envs = 4
+    num_envs = 8
     sapien.physx.set_gpu_memory_config(
         found_lost_pairs_capacity=2**26,
         max_rigid_patch_count=2**19,

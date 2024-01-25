@@ -63,11 +63,15 @@ class OpenCabinetEnv(BaseEnv):
         self.ground = build_tesselated_square_floor(self._scene)
 
         cabinets = []
+        self.cabinet_heights = []
         for i, model_id in enumerate(model_ids):
             scene_mask = np.zeros(self.num_envs, dtype=bool)
             scene_mask[i] = True
             cabinet, metadata = build_preprocessed_partnet_mobility_articulation(
                 self._scene, model_id, name=f"{model_id}-i", scene_mask=scene_mask
+            )
+            self.cabinet_heights.append(
+                metadata.bbox.bounds[1, 2] - metadata.bbox.bounds[0, 2]
             )
             # self.cabinet = cabinet
             # self.cabinet_metadata = metadata
@@ -76,37 +80,35 @@ class OpenCabinetEnv(BaseEnv):
         self.cabinet_metadata = metadata
 
     def _initialize_actors(self):
-        height = (
-            self.cabinet_metadata.bbox.bounds[0, 2]
-            - self.cabinet_metadata.bbox.bounds[1, 2]
-        )
-        self.cabinet.set_pose(Pose.create_from_pq(p=[0, 0, -height / 2]))
-        qlimits = self.cabinet.get_qlimits()  # [N, self.cabinet.max_dof, 2]
-        qpos = qlimits[:, :, 0]
-        self.cabinet.set_qpos(
-            qpos
-        )  # close all the cabinets. We know beforehand that lower qlimit means "closed" for these assets.
+        with torch.device(self.device):
+            xyz = torch.zeros((self.num_envs, 3))
+            xyz[:, 2] = torch.tensor(self.cabinet_heights) / 2
+            self.cabinet.set_pose(Pose.create_from_pq(p=xyz))
+            qlimits = self.cabinet.get_qlimits()  # [N, self.cabinet.max_dof, 2]
+            qpos = qlimits[:, :, 0]
+            self.cabinet.set_qpos(
+                qpos
+            )  # close all the cabinets. We know beforehand that lower qlimit means "closed" for these assets.
+            # initialize robot
+            if self.robot_uid == "panda":
+                self.agent.robot.set_qpos(self.agent.robot.qpos * 0)
+                self.agent.robot.set_pose(Pose.create_from_pq(p=[-1, 0, 0]))
+            elif self.robot_uid == "mobile_panda_single_arm":
+                center = np.array([0, 0.8])
+                dist = self._episode_rng.uniform(1.6, 1.8)
+                theta = self._episode_rng.uniform(0.9 * np.pi, 1.1 * np.pi)
+                direction = np.array([np.cos(theta), np.sin(theta)])
+                xy = center + direction * dist
 
-        # initialize robot
-        if self.robot_uid == "panda":
-            self.agent.robot.set_qpos(self.agent.robot.qpos * 0)
-            self.agent.robot.set_pose(Pose.create_from_pq(p=[-1, 0, 0]))
-        elif self.robot_uid == "mobile_panda_single_arm":
-            center = np.array([0, 0.8])
-            dist = self._episode_rng.uniform(1.6, 1.8)
-            theta = self._episode_rng.uniform(0.9 * np.pi, 1.1 * np.pi)
-            direction = np.array([np.cos(theta), np.sin(theta)])
-            xy = center + direction * dist
+                # Base orientation
+                noise_ori = self._episode_rng.uniform(-0.05 * np.pi, 0.05 * np.pi)
+                ori = (theta - np.pi) + noise_ori
 
-            # Base orientation
-            noise_ori = self._episode_rng.uniform(-0.05 * np.pi, 0.05 * np.pi)
-            ori = (theta - np.pi) + noise_ori
+                h = 1e-4
+                arm_qpos = np.array([0, 0, 0, -1.5, 0, 3, 0.78, 0.02, 0.02])
 
-            h = 1e-4
-            arm_qpos = np.array([0, 0, 0, -1.5, 0, 3, 0.78, 0.02, 0.02])
-
-            qpos = np.hstack([xy, ori, h, arm_qpos])
-            self.agent.reset(qpos)
+                qpos = np.hstack([xy, ori, h, arm_qpos])
+                self.agent.reset(qpos)
 
     def _get_obs_extra(self):
         return OrderedDict()

@@ -165,11 +165,11 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     def max_dof(self) -> int:
         return max([obj.dof for obj in self._objs])
 
-    def bbox(self):
-        import ipdb
-
-        ipdb.set_trace()
-        self._objs[0]
+    # def bbox(self):
+    # you should avoid calling this too often
+    # the bounding box can change easily if the qpos changes.
+    # in theory this can be implemented by precomputing the meshes for each link, then transforming the meshes by the link poses
+    # however there will have to be some for loops if this articulation is managing different articulations with different links
 
     # -------------------------------------------------------------------------- #
     # Functions from physx.PhysxArticulation
@@ -323,12 +323,14 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             return torch.from_numpy(self._objs[0].qf[None, :])
 
     @qf.setter
-    def qf(self, arg1):
+    def qf(self, arg1: torch.Tensor):
         if physx.is_gpu_enabled():
             arg1 = to_tensor(arg1)
             self.px.cuda_articulation_qf[self._data_index, : self.max_dof] = arg1
         else:
-            self._objs[0].qf = arg1
+            if len(arg1.shape) == 2:
+                arg1 = arg1[0]
+            self._objs[0].qf = to_numpy(arg1)
 
     @cached_property
     def qlimits(self):
@@ -354,12 +356,14 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             return torch.from_numpy(self._objs[0].qpos[None, :])
 
     @qpos.setter
-    def qpos(self, arg1):
+    def qpos(self, arg1: torch.Tensor):
         if physx.is_gpu_enabled():
             arg1 = to_tensor(arg1)
             self.px.cuda_articulation_qpos[self._data_index, : self.max_dof] = arg1
         else:
-            self._objs[0].qpos = arg1
+            if len(arg1.shape) == 2:
+                arg1 = arg1[0]
+            self._objs[0].qpos = to_numpy(arg1)
 
     @property
     def qvel(self):
@@ -369,12 +373,14 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             return torch.from_numpy(self._objs[0].qvel[None, :])
 
     @qvel.setter
-    def qvel(self, arg1):
+    def qvel(self, arg1: torch.Tensor):
         if physx.is_gpu_enabled():
             arg1 = to_tensor(arg1)
             self.px.cuda_articulation_qvel[self._data_index, : self.max_dof] = arg1
         else:
-            self._objs[0].qvel = arg1
+            if len(arg1.shape) == 2:
+                arg1 = arg1[0]
+            self._objs[0].qvel = to_numpy(arg1)
 
     @property
     def root_angular_velocity(self) -> torch.Tensor:

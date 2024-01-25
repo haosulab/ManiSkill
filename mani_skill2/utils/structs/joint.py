@@ -45,13 +45,17 @@ class Joint(BaseStruct[physx.PhysxJointComponent]):
         articulation: Articulation,
     ):
         px: physx.PhysxSystem = articulation.px
-        shared_name = physx_joints[0].name
+        shared_name = "_".join(physx_joints[0].name.split("_")[1:])
         child_link = None
         parent_link = None
         if physx_joints[0].child_link is not None:
-            child_link = articulation.link_map[physx_joints[0].child_link.name]
+            child_link = articulation.link_map[
+                "_".join(physx_joints[0].child_link.name.split("_")[1:])
+            ]
         if physx_joints[0].parent_link is not None:
-            parent_link = articulation.link_map[physx_joints[0].parent_link.name]
+            parent_link = articulation.link_map[
+                "_".join(physx_joints[0].parent_link.name.split("_")[1:])
+            ]
         return cls(
             articulation=articulation,
             _objs=physx_joints,

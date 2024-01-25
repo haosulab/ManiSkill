@@ -7,6 +7,8 @@ import sapien
 import sapien.physx as physx
 from gymnasium import spaces
 
+from mani_skill2.utils.structs.articulation import Articulation
+
 
 def get_joint_indices(
     articulation: physx.PhysxArticulation, joint_names: Sequence[str]
@@ -31,9 +33,7 @@ def get_joints(articulation: physx.PhysxArticulation, joint_names: Sequence[str]
     return [joints[idx] for idx in joint_indices]
 
 
-def get_active_joints(
-    articulation: physx.PhysxArticulation, joint_names: Sequence[str]
-):
+def get_active_joints(articulation: Articulation, joint_names: Sequence[str]):
     joints = articulation.get_active_joints()
     joint_indices = get_active_joint_indices(articulation, joint_names)
     return [joints[idx] for idx in joint_indices]

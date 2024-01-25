@@ -33,7 +33,7 @@ class Link(
         physx_links: List[physx.PhysxArticulationLinkComponent],
         articulation: Articulation,
     ):
-        shared_name = physx_links[0].name
+        shared_name = "_".join(physx_links[0].name.split("_")[1:])
         return cls(
             articulation=articulation,
             _objs=physx_links,
