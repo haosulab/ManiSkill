@@ -31,11 +31,10 @@ class PickCubeEnv(BaseEnv):
     Success Conditions
     ------------------
     - the cube position is within goal_thresh (default 0.025) euclidean distance of the goal position
+    - the robot is static (q velocity < 0.2)
 
     Visualization: TODO: ADD LINK HERE
 
-    Changelog:
-    Different to v0, v1 does not require the robot to be static at the end which makes this task similar to other benchmarks and also easier
     """
 
     cube_half_size = 0.02
@@ -71,28 +70,34 @@ class PickCubeEnv(BaseEnv):
             body_type="kinematic",
             add_collision=False,
         )
+        self._hidden_objects.append(self.goal_site)
 
     def _initialize_actors(self):
-        self.table_scene.initialize()
-        xyz = np.zeros((self.num_envs, 3))
-        xyz[:, :2] = self._episode_rng.uniform(-0.1, 0.1, [self.num_envs, 2])
-        xyz[:, 2] = self.cube_half_size
-        qs = randomization.random_quaternions(
-            self._episode_rng, lock_x=True, lock_y=True, n=self.num_envs
-        )
-        self.cube.set_pose(Pose.create_from_pq(xyz, qs, device=self.device))
+        with torch.device(self.device):
+            self.table_scene.initialize()
+            xyz = torch.zeros((self.num_envs, 3))
+            xyz[:, :2] = torch.rand((self.num_envs, 2)) * 0.2 - 0.1
+            xyz[:, 2] = self.cube_half_size
+            qs = randomization.random_quaternions(
+                self.num_envs, lock_x=True, lock_y=True
+            )
+            self.cube.set_pose(Pose.create_from_pq(xyz, qs))
 
-        goal_xyz = np.zeros((self.num_envs, 3))
-        goal_xyz[:, :2] = self._episode_rng.uniform(-0.1, 0.1, [self.num_envs, 2])
-        goal_xyz[:, 2] = self._episode_rng.uniform(0, 0.3, [self.num_envs]) + xyz[:, 2]
-        self.goal_site.set_pose(Pose.create_from_pq(goal_xyz, device=self.device))
+            goal_xyz = torch.zeros((self.num_envs, 3))
+            goal_xyz[:, :2] = torch.rand((self.num_envs, 2)) * 0.2 - 0.1
+            goal_xyz[:, 2] = torch.rand((self.num_envs)) * 0.3 + xyz[:, 2]
+            self.goal_site.set_pose(Pose.create_from_pq(goal_xyz))
 
     def _get_obs_extra(self):
         obs = OrderedDict(
             tcp_pose=self.agent.tcp.pose.raw_pose, goal_pos=self.goal_site.pose.p
         )
         if "state" in self.obs_mode:
-            obs.update(obs_pose=self.cube.pose.raw_pose)
+            obs.update(
+                obs_pose=self.cube.pose.raw_pose,
+                tcp_to_obj_pos=self.cube.pose.p - self.agent.tcp.pose.p,
+                obj_to_goal_pos=self.goal_site.pose.p - self.cube.pose.p,
+            )
         return obs
 
     def evaluate(self, obs: Any):
@@ -100,9 +105,14 @@ class PickCubeEnv(BaseEnv):
             torch.linalg.norm(self.goal_site.pose.p - self.cube.pose.p, axis=1)
             <= self.goal_thresh
         )
-        return {"success": is_obj_placed, "is_obj_placed": is_obj_placed}
+        is_robot_static = self.agent.is_static(0.2)
+        return {
+            "success": torch.logical_and(is_obj_placed, is_robot_static),
+            "is_obj_placed": is_obj_placed,
+            "is_robot_static": is_robot_static,
+        }
 
-    def compute_dense_reward(self, obs: Any, action: np.ndarray, info: Dict):
+    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         tcp_to_obj_dist = torch.linalg.norm(
             self.cube.pose.p - self.agent.tcp.pose.p, axis=1
         )
@@ -118,8 +128,15 @@ class PickCubeEnv(BaseEnv):
         place_reward = 1 - torch.tanh(5 * obj_to_goal_dist)
         reward += place_reward * is_grasped
 
-        reward[info["success"]] = 4
+        static_reward = 1 - torch.tanh(
+            5 * torch.linalg.norm(self.agent.robot.get_qvel()[..., :-2], axis=1)
+        )
+        reward += static_reward * info["is_robot_static"] * info["is_obj_placed"]
+
+        reward[info["success"]] = 5
         return reward
 
-    def compute_normalized_dense_reward(self, obs: Any, action: np.ndarray, info: Dict):
-        return self.compute_dense_reward(obs=obs, action=action, info=info) / 4
+    def compute_normalized_dense_reward(
+        self, obs: Any, action: torch.Tensor, info: Dict
+    ):
+        return self.compute_dense_reward(obs=obs, action=action, info=info) / 5

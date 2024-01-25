@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import Generic, List, TypeVar, Union
+from typing import TYPE_CHECKING, Generic, List, TypeVar
 
 import sapien.physx as physx
 import torch
@@ -7,6 +9,8 @@ import torch
 from mani_skill2.utils.sapien_utils import to_tensor
 from mani_skill2.utils.structs.types import Array
 
+if TYPE_CHECKING:
+    from mani_skill2.envs.scene import ManiSkillScene
 T = TypeVar("T")
 
 
@@ -16,8 +20,15 @@ class BaseStruct(Generic[T]):
     Base class of all structs that manage sapien objects on CPU/GPU
     """
 
-    px: Union[physx.PhysxSystem, physx.PhysxGpuSystem]
     _objs: List[T]
+    """list of objects of type T managed by this dataclass"""
+    _scene_mask: torch.Tensor
+    """a mask over all sub scenes indicating where the objects are located.
+    Note that torch.sum(_scene_mask) == len(_objs) and both _scene_mask and _objs are
+    both sequentially ordered the same:
+    e.g. the nth True of _scene_mask corresponds with the nth element of _objs"""
+    _scene: ManiSkillScene
+    """The ManiSkillScene object that manages the sub-scenes this dataclasses's objects are in"""
 
     @property
     def device(self):
@@ -30,11 +41,15 @@ class BaseStruct(Generic[T]):
     def _num_objs(self):
         return len(self._objs)
 
+    @property
+    def px(self):
+        """The physx system objects managed by this dataclass are working on"""
+        return self._scene.px
+
 
 @dataclass
 class PhysxRigidBodyComponentStruct:
     # Reference to the data for this rigid body on the GPU
-    px: Union[physx.PhysxCpuSystem, physx.PhysxGpuSystem]
     _body_data_name: str
     _bodies: List[physx.PhysxRigidBodyComponent]
     _body_data_index: slice

@@ -33,15 +33,15 @@ class Link(
         physx_links: List[physx.PhysxArticulationLinkComponent],
         articulation: Articulation,
     ):
-        px: physx.PhysxSystem = physx_links[0].entity.scene.physx_system
         shared_name = physx_links[0].name
         return cls(
             articulation=articulation,
             _objs=physx_links,
-            px=px,
+            _scene=articulation._scene,
+            _scene_mask=articulation._scene_mask,
             name=shared_name,
             _body_data_name="cuda_rigid_body_data"
-            if isinstance(px, physx.PhysxGpuSystem)
+            if isinstance(articulation.px, physx.PhysxGpuSystem)
             else None,
             _bodies=physx_links,
             _body_data_index=None,

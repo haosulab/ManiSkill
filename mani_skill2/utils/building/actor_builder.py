@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List, Optional, Sequence, Union
 
 import numpy as np
 import sapien.physx as physx
+import torch
 from sapien import ActorBuilder as SAPIENActorBuilder
 
-from mani_skill2.utils.sapien_utils import to_numpy
+from mani_skill2.utils.sapien_utils import to_numpy, to_tensor
 from mani_skill2.utils.structs.actor import Actor
 from mani_skill2.utils.structs.pose import Pose, to_sapien_pose
 
@@ -27,7 +28,12 @@ class ActorBuilder(SAPIENActorBuilder):
         self.initial_pose = Pose.create(self.initial_pose)
         self.scene_mask = None
 
-    def set_scene_mask(self, scene_mask: Optional[List[bool]] = None):
+    def set_scene_mask(
+        self,
+        scene_mask: Optional[
+            Union[List[bool], Sequence[bool], torch.Tensor, np.ndarray]
+        ] = None,
+    ):
         """
         Set a scene mask so that the actor builder builds the actor only in a subset of the environments
         """
@@ -55,6 +61,10 @@ class ActorBuilder(SAPIENActorBuilder):
                 len(self.scene_mask) == self.scene.num_envs
             ), "Scene mask size is not correct. Must be the same as the number of sub scenes"
             num_actors = np.sum(num_actors)
+            self.scene_mask = to_tensor(self.scene_mask)
+        else:
+            # if scene mask is none, set it here
+            self.scene_mask = to_tensor(torch.ones((self.scene.num_envs), dtype=bool))
 
         initial_pose = Pose.create(self.initial_pose)
         initial_pose_b = initial_pose.raw_pose.shape[0]
@@ -62,18 +72,13 @@ class ActorBuilder(SAPIENActorBuilder):
         initial_pose_np = to_numpy(initial_pose.raw_pose)
 
         entities = []
-        parallelized = len(self.scene.sub_scenes) > 1
 
-        i = 0
         for scene_idx, sub_scene in enumerate(self.scene.sub_scenes):
-            if self.scene_mask is not None and self.scene_mask[i] == False:
+            if self.scene_mask is not None and self.scene_mask[scene_idx] == False:
                 continue
             entity = self.build_entity()
             # prepend scene idx to entity name if there is more than one scene
-            if parallelized:
-                entity.name = f"scene-{scene_idx}_{self.name}"
-            else:
-                entity.name = self.name
+            entity.name = f"scene-{scene_idx}_{self.name}"
             # set pose before adding to scene
             if initial_pose_b == 1:
                 entity.pose = to_sapien_pose(initial_pose_np)
@@ -81,8 +86,8 @@ class ActorBuilder(SAPIENActorBuilder):
                 entity.pose = to_sapien_pose(initial_pose_np[i])
             sub_scene.add_entity(entity)
             entities.append(entity)
-            i += 1
-        actor = Actor.create_from_entities(entities)
+
+        actor = Actor._create_from_entities(entities, self.scene, self.scene_mask)
 
         # if it is a static body type and this is a GPU sim but we are given a single initial pose, we repeat it for the purposes of observations
         if (
