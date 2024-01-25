@@ -137,7 +137,7 @@ class StackCubeEnv(StationaryManipulationEnv):
 
     def compute_dense_reward(self, info, **kwargs):
         gripper_width = (
-            self.agent.robot.get_qlimit()[-1, 1] * 2
+            self.agent.robot.get_qlimits()[-1, 1] * 2
         )  # NOTE: hard-coded with panda
         # TODO (stao): rewrite dense reward for this task. TBH it should just be nearly the same as pick cube.
         # # grasp pose rotation reward

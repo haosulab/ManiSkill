@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from dataclasses import dataclass
+from functools import cached_property
 from typing import TYPE_CHECKING, List, Sequence, Union
 
 import numpy as np
@@ -66,19 +67,17 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         all_links_objs: List[List[physx.PhysxArticulationLinkComponent]] = [
             [] for _ in range(num_links)
         ]
-        num_joints = len(physx_articulations[0].joints)
+        # num_joints = len(physx_articulations[0].joints)
+        num_joints = max([len(x.joints) for x in physx_articulations])
         all_joint_objs: List[List[physx.PhysxArticulationJoint]] = [
             [] for _ in range(num_joints)
         ]
 
         link_map = OrderedDict()
-        import ipdb
-
-        ipdb.set_trace()
         for articulation in physx_articulations:
-            assert num_links == len(articulation.links) and num_joints == len(
-                articulation.joints
-            ), "Gave different physx articulations. Each Articulation object can only manage the same articulations, not different ones"
+            # assert num_links == len(articulation.links) and num_joints == len(
+            #     articulation.joints
+            # ), "Gave different physx articulations. Each Articulation object can only manage the same articulations, not different ones"
             for i, link in enumerate(articulation.links):
                 all_links_objs[i].append(link)
             for i, joint in enumerate(articulation.joints):
@@ -162,6 +161,16 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             self.set_qpos(qpos)
             self.set_qvel(qvel)
 
+    @cached_property
+    def max_dof(self) -> int:
+        return max([obj.dof for obj in self._objs])
+
+    def bbox(self):
+        import ipdb
+
+        ipdb.set_trace()
+        self._objs[0]
+
     # -------------------------------------------------------------------------- #
     # Functions from physx.PhysxArticulation
     # -------------------------------------------------------------------------- #
@@ -203,11 +212,12 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     def get_qf(self):
         return self.qf
 
-    def get_qlimit(self):
-        """
-        same as get_qlimits
-        """
-        return self.qlimits
+    # def get_qlimit(self):
+    # removed this function from ManiSkill Articulation wrapper API as it is redundant
+    #     """
+    #     same as get_qlimits
+    #     """
+    #     return self.qlimits
 
     def get_qlimits(self):
         return self.qlimits
@@ -257,12 +267,12 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     # def active_joints(self):
     #     return self._articulations[0].active_joints
 
-    @property
+    @cached_property
     def dof(self) -> int:
         """
         :type: int
         """
-        return self._objs[0].dof
+        return torch.tensor([obj.dof for obj in self._objs])
 
     # @property
     # def gpu_index(self) -> int:
@@ -308,7 +318,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     @property
     def qf(self):
         if physx.is_gpu_enabled():
-            return self.px.cuda_articulation_qf[self._data_index, : self.dof]
+            return self.px.cuda_articulation_qf[self._data_index, : self.max_dof]
         else:
             return torch.from_numpy(self._objs[0].qf[None, :])
 
@@ -316,22 +326,30 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     def qf(self, arg1):
         if physx.is_gpu_enabled():
             arg1 = to_tensor(arg1)
-            self.px.cuda_articulation_qf[self._data_index, : self.dof] = arg1
+            self.px.cuda_articulation_qf[self._data_index, : self.max_dof] = arg1
         else:
             self._objs[0].qf = arg1
 
-    @property
-    def qlimit(self):
-        return torch.from_numpy(self._objs[0].qlimit)
-
-    @property
+    @cached_property
     def qlimits(self):
-        return torch.from_numpy(self._objs[0].qlimits)
+        padded_qlimits = np.array(
+            [
+                np.concatenate([obj.qlimits, np.zeros((self.max_dof - obj.dof, 2))])
+                for obj in self._objs
+            ]
+        )
+        padded_qlimits = torch.from_numpy(padded_qlimits).float()
+        if physx.is_gpu_enabled():
+            return padded_qlimits.cuda()
+        else:
+            return padded_qlimits
 
     @property
     def qpos(self):
         if physx.is_gpu_enabled():
-            return self.px.cuda_articulation_qpos[self._data_index, : self.dof]
+            # NOTE (stao): cuda_articulation_qpos is of shape (M, N) where M is the total number of articulations in the physx scene,
+            # N is the max dof of all those articulations.
+            return self.px.cuda_articulation_qpos[self._data_index, : self.max_dof]
         else:
             return torch.from_numpy(self._objs[0].qpos[None, :])
 
@@ -339,14 +357,14 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     def qpos(self, arg1):
         if physx.is_gpu_enabled():
             arg1 = to_tensor(arg1)
-            self.px.cuda_articulation_qpos[self._data_index, : self.dof] = arg1
+            self.px.cuda_articulation_qpos[self._data_index, : self.max_dof] = arg1
         else:
             self._objs[0].qpos = arg1
 
     @property
     def qvel(self):
         if physx.is_gpu_enabled():
-            return self.px.cuda_articulation_qvel[self._data_index, : self.dof]
+            return self.px.cuda_articulation_qvel[self._data_index, : self.max_dof]
         else:
             return torch.from_numpy(self._objs[0].qvel[None, :])
 
@@ -354,7 +372,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     def qvel(self, arg1):
         if physx.is_gpu_enabled():
             arg1 = to_tensor(arg1)
-            self.px.cuda_articulation_qvel[self._data_index, : self.dof] = arg1
+            self.px.cuda_articulation_qvel[self._data_index, : self.max_dof] = arg1
         else:
             self._objs[0].qvel = arg1
 

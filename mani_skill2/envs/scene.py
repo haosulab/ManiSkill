@@ -473,7 +473,9 @@ class ManiSkillScene:
             actor.set_state(state[:, start : start + KINEMATIC_DIM])
             start += KINEMATIC_DIM
         for articulation in self.articulations.values():
-            ndim = KINEMATIC_DIM + 2 * articulation.dof
+            # TODO (stao): when multiple articulations are managed by the same object we have to take the max DOF
+            # but then restoring state is rather non trivial, need to store dof as part of state somewhere?
+            ndim = KINEMATIC_DIM + 2 * articulation.max_dof
             articulation.set_state(state[:, start : start + ndim])
             start += ndim
 

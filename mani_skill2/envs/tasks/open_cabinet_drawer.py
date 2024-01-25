@@ -69,6 +69,8 @@ class OpenCabinetEnv(BaseEnv):
             cabinet, metadata = build_preprocessed_partnet_mobility_articulation(
                 self._scene, model_id, name=f"{model_id}-i", scene_mask=scene_mask
             )
+            # self.cabinet = cabinet
+            # self.cabinet_metadata = metadata
             cabinets.append(cabinet)
         self.cabinet = Articulation.merge_articulations(cabinets, name="cabinet")
         self.cabinet_metadata = metadata
@@ -79,14 +81,15 @@ class OpenCabinetEnv(BaseEnv):
             - self.cabinet_metadata.bbox.bounds[1, 2]
         )
         self.cabinet.set_pose(Pose.create_from_pq(p=[0, 0, -height / 2]))
-        qlimits = self.cabinet.get_qlimits()  # [N, 2]
-        assert not np.isinf(qlimits).any(), qlimits
-        qpos = np.ascontiguousarray(qlimits[:, 0])
-        # NOTE(jigu): must use a contiguous array for `set_qpos`
-        self.cabinet.set_qpos(qpos)
+        qlimits = self.cabinet.get_qlimits()  # [N, self.cabinet.max_dof, 2]
+        qpos = qlimits[:, :, 0]
+        self.cabinet.set_qpos(
+            qpos
+        )  # close all the cabinets. We know beforehand that lower qlimit means "closed" for these assets.
 
         # initialize robot
         if self.robot_uid == "panda":
+            self.agent.robot.set_qpos(self.agent.robot.qpos * 0)
             self.agent.robot.set_pose(Pose.create_from_pq(p=[-1, 0, 0]))
         elif self.robot_uid == "mobile_panda_single_arm":
             center = np.array([0, 0.8])

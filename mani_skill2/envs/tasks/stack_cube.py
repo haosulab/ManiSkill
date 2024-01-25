@@ -147,7 +147,7 @@ class StackCubeEnv(BaseEnv):
         reward[info["is_cubeA_grasped"]] = (4 + place_reward)[info["is_cubeA_grasped"]]
 
         # ungrasp and static reward
-        gripper_width = (self.agent.robot.get_qlimits()[-1, 1] * 2).to(
+        gripper_width = (self.agent.robot.get_qlimits()[0, -1, 1] * 2).to(
             self.device
         )  # NOTE: hard-coded with panda
         is_cubeA_grasped = info["is_cubeA_grasped"]

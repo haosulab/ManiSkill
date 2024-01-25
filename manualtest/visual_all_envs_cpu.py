@@ -1,5 +1,6 @@
 import gymnasium as gym
 import numpy as np
+import sapien
 
 import mani_skill2.envs
 from mani_skill2.utils.sapien_utils import to_numpy
@@ -8,6 +9,11 @@ from mani_skill2.utils.wrappers import RecordEpisode
 if __name__ == "__main__":
     # , "StackCube-v1", "PickCube-v1", "PushCube-v1", "PickSingleYCB-v1"
     num_envs = 4
+    sapien.physx.set_gpu_memory_config(
+        found_lost_pairs_capacity=2**26,
+        max_rigid_patch_count=2**19,
+        max_rigid_contact_count=2**21,
+    )
     for env_id in ["OpenCabinet-v1"]:  # , "StackCube-v0", "LiftCube-v0"]:
         env = gym.make(
             env_id,
@@ -38,6 +44,7 @@ if __name__ == "__main__":
             viewer.paused = True
             env.render_human()
         while i < 50 or (i < 50000 and num_envs == 1):
+            print(i)
             action = env.action_space.sample()
             # action[:] * 0
             # action[:, 2] = -1

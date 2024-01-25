@@ -15,7 +15,7 @@ class PDJointPosController(BaseController):
     config: "PDJointPosControllerConfig"
 
     def _get_joint_limits(self):
-        qlimits = self.articulation.get_qlimit()[self.joint_indices]
+        qlimits = self.articulation.get_qlimits()[0, self.joint_indices].cpu().numpy()
         # Override if specified
         if self.config.lower is not None:
             qlimits[:, 0] = self.config.lower
@@ -24,7 +24,7 @@ class PDJointPosController(BaseController):
         return qlimits
 
     def _initialize_action_space(self):
-        joint_limits = self._get_joint_limits().cpu().numpy()
+        joint_limits = self._get_joint_limits()
         low, high = joint_limits[:, 0], joint_limits[:, 1]
         self.action_space = spaces.Box(low, high, dtype=np.float32)
 
