@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from collections import OrderedDict
 from dataclasses import dataclass
-from typing import List, Sequence, Union
+from typing import TYPE_CHECKING, List, Sequence, Union
 
 import numpy as np
 import sapien
@@ -14,14 +16,15 @@ from mani_skill2.utils.structs.link import Link
 from mani_skill2.utils.structs.pose import Pose
 from mani_skill2.utils.structs.types import Array
 
+if TYPE_CHECKING:
+    from mani_skill2.envs.scene import ManiSkillScene
+
 
 @dataclass
 class Articulation(BaseStruct[physx.PhysxArticulation]):
     """
     Wrapper around physx.PhysxArticulation objects
     """
-
-    px: Union[physx.PhysxSystem, physx.PhysxGpuSystem]
 
     links: List[Link]
     link_map: OrderedDict[str, Link]
@@ -34,10 +37,12 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     name: str = None
 
     @classmethod
-    def create_from_physx_articulations(
-        cls, physx_articulations: List[physx.PhysxArticulation]
+    def _create_from_physx_articulations(
+        cls,
+        physx_articulations: List[physx.PhysxArticulation],
+        scene: ManiSkillScene,
+        scene_mask: torch.Tensor,
     ):
-        px: physx.PhysxSystem = physx_articulations[0].root.entity.scene.physx_system
         shared_name = "_".join(physx_articulations[0].name.split("_")[1:])
 
         # NOTE (stao): This is a little bit of a non-standard way to use @classmethod style creation functions for dataclasses
@@ -45,13 +50,14 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         # convenience
         self = cls(
             _objs=physx_articulations,
+            _scene=scene,
+            _scene_mask=scene_mask,
             links=[],
             link_map=OrderedDict(),
             root=None,
             joints=[],
             joint_map=OrderedDict(),
             active_joints=[],
-            px=px,
             name=shared_name,
         )
         # create link and joint structs

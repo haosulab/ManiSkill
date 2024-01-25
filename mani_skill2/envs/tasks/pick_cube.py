@@ -31,11 +31,10 @@ class PickCubeEnv(BaseEnv):
     Success Conditions
     ------------------
     - the cube position is within goal_thresh (default 0.025) euclidean distance of the goal position
+    - the robot is static (q velocity < 0.2)
 
     Visualization: TODO: ADD LINK HERE
 
-    Changelog:
-    Different to v0, v1 does not require the robot to be static at the end which makes this task similar to other benchmarks and also easier
     """
 
     cube_half_size = 0.02

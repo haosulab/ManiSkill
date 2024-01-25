@@ -5,7 +5,7 @@ import torch
 from mani_skill2.utils.sapien_utils import to_tensor
 
 
-class UniformSampler:
+class UniformPlacementSampler:
     """Uniform placement sampler that supports sampling in batch
 
     Args:

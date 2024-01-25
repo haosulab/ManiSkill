@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import List, Literal, Union
+from typing import TYPE_CHECKING, List, Literal, Union
 
 import numpy as np
 import sapien
@@ -11,6 +13,9 @@ from mani_skill2.utils.sapien_utils import to_numpy
 from mani_skill2.utils.structs.base import BaseStruct, PhysxRigidDynamicComponentStruct
 from mani_skill2.utils.structs.pose import Pose, to_sapien_pose, vectorize_pose
 from mani_skill2.utils.structs.types import Array
+
+if TYPE_CHECKING:
+    from mani_skill2.envs.scene import ManiSkillScene
 
 
 @dataclass
@@ -33,15 +38,19 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
     name: str = None
 
     @classmethod
-    def create_from_entities(cls, entities: List[sapien.Entity]):
-        px: Union[physx.PhysxSystem, physx.PhysxGpuSystem] = entities[
-            0
-        ].scene.physx_system
+    def _create_from_entities(
+        cls,
+        entities: List[sapien.Entity],
+        scene: ManiSkillScene,
+        scene_mask: torch.Tensor,
+    ):
+
         shared_name = "_".join(entities[0].name.split("_")[1:])
         bodies = [
             ent.find_component_by_type(physx.PhysxRigidDynamicComponent)
             for ent in entities
         ]
+
         # Objects with collision shapes have either PhysxRigidDynamicComponent (Kinematic, Dynamic) or PhysxRigidStaticComponent (Static)
         px_body_type = "static"
         if bodies[0] is not None:
@@ -51,15 +60,51 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
                 px_body_type = "dynamic"
         return cls(
             _objs=entities,
-            px=px,
+            _scene=scene,
+            _scene_mask=scene_mask,
             px_body_type=px_body_type,
             _bodies=bodies,
             _body_data_index=None,
             _body_data_name="cuda_rigid_body_data"
-            if isinstance(px, physx.PhysxGpuSystem)
+            if isinstance(scene.px, physx.PhysxGpuSystem)
             else None,
             name=shared_name,
         )
+
+    @classmethod
+    def merge_actors(cls, actors: List["Actor"], name: str = None):
+        """
+        Merge actors together so that they can all be managed by one python dataclass object.
+        This can be useful for e.g. randomizing the asset loaded into a task and being able to do object.pose to fetch the pose of all randomized assets
+        or object.set_pose to change the pose of each of the different assets, despite the assets not being uniform across all sub-scenes.
+
+        For example usage of this method, see mani_skill2/envs/tasks/pick_single_ycb.py
+
+        Args:
+            actors (List[Actor]): The actors to merge into one actor object to manage
+            name (str): A new name to give the merged actors. If none, the name will default to the first actor's name
+        """
+        objs = []
+        scene = actors[0]._scene
+        _builder_initial_poses = []
+        merged_scene_mask = actors[0]._scene_mask.clone()
+        num_objs_per_actor = actors[0]._num_objs
+        for actor in actors:
+            objs += actor._objs
+            merged_scene_mask[actor._scene_mask] = True
+            _builder_initial_poses.append(actor._builder_initial_pose.raw_pose)
+            del scene.actors[actor.name]
+            assert (
+                actor._num_objs == num_objs_per_actor
+            ), "Each given actor must have the same number of managed objects"
+        # TODO (stao): Can we support e.g. each Actor having len(actor._objs) > 1? It would mean fetching pose data or any kind of data is highly uintuitive
+        # we definitely cannot permit some actors to have more objs than others, otherwise the data is ragged.
+        merged_actor = Actor._create_from_entities(objs, scene, merged_scene_mask)
+        merged_actor._builder_initial_pose = Pose.create(
+            torch.vstack(_builder_initial_poses)
+        )
+        scene.actors[actor.name] = merged_actor
+        return merged_actor
 
     # -------------------------------------------------------------------------- #
     # Additional useful functions not in SAPIEN original API

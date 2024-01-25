@@ -6,7 +6,7 @@ import torch
 
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.envs.utils.randomization.pose import random_quaternions
-from mani_skill2.envs.utils.randomization.samplers import UniformSampler
+from mani_skill2.envs.utils.randomization.samplers import UniformPlacementSampler
 from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.building.actors import build_cube
 from mani_skill2.utils.registration import register_env
@@ -17,6 +17,25 @@ from mani_skill2.utils.structs.pose import Pose
 
 @register_env("StackCube-v1", max_episode_steps=100)
 class StackCubeEnv(BaseEnv):
+    """
+    Task Description
+    ----------------
+    The goal is to pick up a red cube and stack it on top of a green cube and let go of the cube without it falling
+
+    Randomizations
+    --------------
+    - both cubes have their z-axis rotation randomized
+    - both cubes have their xy positions on top of the table scene randomized. The positions are sampled such that the cubes do not collide with each other
+
+    Success Conditions
+    ------------------
+    - the red cube is on top of the green cube (to within half of the cube size)
+    - the red cube is static
+    - the red cube is not being grasped by the robot (robot must let go of the cube)
+
+    Visualization: TODO
+    """
+
     def __init__(self, *args, robot_uid="panda", robot_init_qpos_noise=0.02, **kwargs):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         super().__init__(*args, robot_uid=robot_uid, **kwargs)
@@ -52,7 +71,7 @@ class StackCubeEnv(BaseEnv):
             xyz[:, 2] = 0.02
             xy = torch.rand((self.num_envs, 2)) * 0.2 - 0.1
             region = [[-0.1, -0.2], [0.1, 0.2]]
-            sampler = UniformSampler(bounds=region, batch_size=self.num_envs)
+            sampler = UniformPlacementSampler(bounds=region, batch_size=self.num_envs)
             radius = (torch.linalg.norm(torch.Tensor([0.02, 0.02])) + 0.001).to(
                 self.device
             )
