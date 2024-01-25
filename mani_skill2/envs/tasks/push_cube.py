@@ -20,6 +20,7 @@ from typing import Any, Dict, Union
 
 import numpy as np
 import torch
+import torch.random
 from transforms3d.euler import euler2quat
 
 from mani_skill2.agents.robots.panda.panda import Panda
@@ -34,7 +35,7 @@ from mani_skill2.utils.structs.pose import Pose
 from mani_skill2.utils.structs.types import Array
 
 
-@register_env("PushCube-v0", max_episode_steps=50)
+@register_env("PushCube-v1", max_episode_steps=50)
 class PushCubeEnv(BaseEnv):
     """
     Task Description
@@ -66,7 +67,8 @@ class PushCubeEnv(BaseEnv):
         super().__init__(*args, robot_uid=robot_uid, **kwargs)
 
     def _register_sensors(self):
-        # registers one camera looking at the robot, cube, and target
+        # registers one 128x128 camera looking at the robot, cube, and target
+        # a smaller sized camera will be lower quality, but render faster
         pose = look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
         return [
             CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10)
@@ -106,37 +108,40 @@ class PushCubeEnv(BaseEnv):
             body_type="kinematic",
         )
 
+        # optionally you can automatically hide some Actors from view by appending to the self._hidden_objects list. When visual observations
+        # are generated or env.render_cameras() is called or env.render() is called with render_mode="cameras", the actor will not show up.
+        # This is useful if you intend to add some visual goal sites as e.g. done in PickCube that aren't actually part of the task
+        # and are there just for generating evaluation videos.
+        # self._hidden_objects.append(self.goal_region)
+
     def _initialize_actors(self):
-        # when using scene builders, you must always call .initialize on them so they can set the correct poses of objects in the prebuilt scene
-        # note that the table scene is built such that z=0 is the surface of the table.
-        self.table_scene.initialize()
+        # use the torch.device context manager to automatically create tensors on CPU or CUDA depending on self.device, the device the environment runs on
+        with torch.device(self.device):
+            # when using scene builders, you must always call .initialize on them so they can set the correct poses of objects in the prebuilt scene
+            # note that the table scene is built such that z=0 is the surface of the table.
+            self.table_scene.initialize()
 
-        # here we write some randomization code that randomizes the x, y position of the cube we are pushing in the range [-0.1, -0.1] to [0.1, 0.1]
-        xyz = torch.zeros((self.num_envs, 3), device=self.device)
-        xyz[..., :2] = torch.from_numpy(
-            self._episode_rng.uniform(-0.1, 0.1, [self.num_envs, 2])
-        ).cuda()
-        xyz[..., 2] = self.cube_half_size
-        q = [1, 0, 0, 0]
-        # we can then create a pose object using Pose.create_from_pq to then set the cube pose with. Note that even though our quaternion
-        # is not batched, Pose.create_from_pq will automatically batch p or q accordingly
-        obj_pose = Pose.create_from_pq(p=xyz, q=q)
-        self.obj.set_pose(obj_pose)
+            # here we write some randomization code that randomizes the x, y position of the cube we are pushing in the range [-0.1, -0.1] to [0.1, 0.1]
+            xyz = torch.zeros((self.num_envs, 3))
+            xyz[..., :2] = torch.rand((self.num_envs, 2)) * 0.2 - 0.1
+            xyz[..., 2] = self.cube_half_size
+            q = [1, 0, 0, 0]
+            # we can then create a pose object using Pose.create_from_pq to then set the cube pose with. Note that even though our quaternion
+            # is not batched, Pose.create_from_pq will automatically batch p or q accordingly
+            obj_pose = Pose.create_from_pq(p=xyz, q=q)
+            self.obj.set_pose(obj_pose)
 
-        # here we set the location of that red/white target (the goal region). In particular here, we set the position to be in front of the cube
-        # and we further rotate 90 degrees on the y-axis to make the target object face up
-        target_region_xyz = xyz + torch.tensor(
-            [0.1 + self.goal_radius, 0, 0], device=self.device
-        )
-        target_region_xyz[
-            ..., 2
-        ] = 1e-3  # set a little bit above 0 so the target is sitting on the table
-        self.goal_region.set_pose(
-            Pose.create_from_pq(
-                p=target_region_xyz,
-                q=euler2quat(0, np.pi / 2, 0),
+            # here we set the location of that red/white target (the goal region). In particular here, we set the position to be in front of the cube
+            # and we further rotate 90 degrees on the y-axis to make the target object face up
+            target_region_xyz = xyz + torch.tensor([0.1 + self.goal_radius, 0, 0])
+            # set a little bit above 0 so the target is sitting on the table
+            target_region_xyz[..., 2] = 1e-3
+            self.goal_region.set_pose(
+                Pose.create_from_pq(
+                    p=target_region_xyz,
+                    q=euler2quat(0, np.pi / 2, 0),
+                )
             )
-        )
 
     def _get_obs_extra(self):
         # some useful observation info for solving the task includes the pose of the tcp (tool center point) which is the point between the

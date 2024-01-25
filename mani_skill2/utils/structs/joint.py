@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import typing
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, List, Union
+from typing import TYPE_CHECKING, List
 
 import sapien.physx as physx
 import torch
@@ -28,7 +28,6 @@ class Joint(BaseStruct[physx.PhysxJointComponent]):
 
     joint_index: int
 
-    px: Union[physx.PhysxSystem, physx.PhysxGpuSystem]
     child_link: Link = None
     parent_link: Link = None
     _data_index: slice = None
@@ -56,10 +55,11 @@ class Joint(BaseStruct[physx.PhysxJointComponent]):
         return cls(
             articulation=articulation,
             _objs=physx_joints,
+            _scene=articulation._scene,
+            _scene_mask=articulation._scene_mask,
             child_link=child_link,
             parent_link=parent_link,
             joint_index=joint_index,
-            px=px,
             name=shared_name,
         )
 

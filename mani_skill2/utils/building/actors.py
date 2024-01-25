@@ -17,7 +17,7 @@ from mani_skill2.utils.building.actor_builder import ActorBuilder
 from mani_skill2.utils.io_utils import load_json
 
 # map model dataset to a database of models
-model_dbs: Dict[str, Dict[str, Dict]] = {}
+MODEL_DBS: Dict[str, Dict[str, Dict]] = {}
 
 
 def _build_by_type(builder: ActorBuilder, name, body_type):
@@ -265,10 +265,11 @@ def build_actor_ycb(
     root_dir=ASSET_DIR / "mani_skill2_ycb",
     body_type: str = "dynamic",
     add_collision: bool = True,
+    return_builder: bool = False,
 ):
-    if "YCB" not in model_dbs:
+    if "YCB" not in MODEL_DBS:
         _load_ycb_dataset()
-    model_db = model_dbs["YCB"]["model_data"]  # TODO (stao): remove hardcode
+    model_db = MODEL_DBS["YCB"]["model_data"]  # TODO (stao): remove hardcode
 
     builder = scene.create_actor_builder()
 
@@ -286,17 +287,18 @@ def build_actor_ycb(
             scale=[scale] * 3,
             material=physical_material,
             density=density,
-            decomposition="coacd",
         )
 
     visual_file = str(model_dir / "textured.obj")
     builder.add_visual_from_file(filename=visual_file, scale=[scale] * 3)
+    if return_builder:
+        return builder, height
     return _build_by_type(builder, name, body_type), height
 
 
 def _load_ycb_dataset():
     # load YCB if used
-    model_dbs["YCB"] = {
+    MODEL_DBS["YCB"] = {
         "model_data": load_json(ASSET_DIR / "mani_skill2_ycb/info_pick_v0.json"),
         "builder": build_actor_ycb,
     }

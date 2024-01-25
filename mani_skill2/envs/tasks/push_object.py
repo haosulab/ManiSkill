@@ -10,11 +10,11 @@ from mani_skill2.agents.robots.xmate3.xmate3 import Xmate3Robotiq
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.building.actors import (
+    MODEL_DBS,
     _load_ycb_dataset,
     build_actor_ycb,
     build_cube,
     build_red_white_target,
-    model_dbs,
 )
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import (  # import various useful utilities for working with sapien
@@ -37,7 +37,7 @@ class PushObjectEnv(BaseEnv):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         self.model_id = None
         _load_ycb_dataset()
-        self.all_model_ids = model_dbs["YCB"]["model_data"]
+        self.all_model_ids = MODEL_DBS["YCB"]["model_data"]
         super().__init__(*args, robot_uid=robot_uid, **kwargs)
 
     def _register_sensors(self):

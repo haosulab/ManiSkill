@@ -16,6 +16,12 @@ pip install -e . # install MS2 locally
 pip install pytest coverage stable-baselines3 # add development dependencies for testing purposes
 ```
 
+Then to setup pre-commit, run
+
+```
+pre-commit install
+```
+
 ## Testing
 
 Testing is currently semi-automated and a WIP. We currently rely on coverage.py and pytest to test ManiSkill2.

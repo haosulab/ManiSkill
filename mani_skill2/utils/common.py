@@ -8,6 +8,7 @@ import torch
 from gymnasium import spaces
 
 from mani_skill2.utils.sapien_utils import to_tensor
+from mani_skill2.utils.structs.types import Array
 
 from .logging_utils import logger
 
@@ -171,7 +172,7 @@ def inv_scale_action(action, low, high):
 
 
 # TODO (stao): Clean up this code
-def flatten_state_dict(state_dict: dict, squeeze_dims: bool = False) -> np.ndarray:
+def flatten_state_dict(state_dict: dict, squeeze_dims: bool = False) -> Array:
     """Flatten a dictionary containing states recursively.
 
     Args:
@@ -228,7 +229,7 @@ def flatten_state_dict(state_dict: dict, squeeze_dims: bool = False) -> np.ndarr
 
     if physx.is_gpu_enabled():
         if len(states) == 0:
-            return torch.empty(0)
+            return torch.empty(0, device="cuda")
         else:
             return torch.hstack(states)
     else:

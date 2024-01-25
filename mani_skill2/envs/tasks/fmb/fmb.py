@@ -203,12 +203,14 @@ class FMBEnv(BaseEnv):
         # for the task. You may also include additional keys which will populate the info object returned by self.step
         return {"success": [False]}
 
-    def compute_dense_reward(self, obs: Any, action: np.ndarray, info: Dict):
+    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         # you can optionally provide a dense reward function by returning a scalar value here. This is used when reward_mode="dense"
         reward = torch.zeros(self.num_envs, device=self.device)
         return reward
 
-    def compute_normalized_dense_reward(self, obs: Any, action: np.ndarray, info: Dict):
+    def compute_normalized_dense_reward(
+        self, obs: Any, action: torch.Tensor, info: Dict
+    ):
         # this should be equal to compute_dense_reward / max possible reward
         max_reward = 1.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward

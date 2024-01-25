@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 import transforms3d
 
 from mani_skill2.utils.geometry.rotation_conversions import (
@@ -6,22 +7,21 @@ from mani_skill2.utils.geometry.rotation_conversions import (
     matrix_to_quaternion,
 )
 from mani_skill2.utils.sapien_utils import to_tensor
+from mani_skill2.utils.structs.types import Device
 
 
 def random_quaternions(
-    rng: np.random.RandomState,
+    n: int,
+    device: Device = None,
     lock_x: bool = False,
     lock_y: bool = False,
     lock_z: bool = False,
-    n=1,
 ):
-    xyz_angles = rng.uniform(0, np.pi * 2, (n, 3))
+    xyz_angles = torch.rand((n, 3), device=device) * torch.pi * 2
     if lock_x:
         xyz_angles[:, 0] *= 0
     if lock_y:
         xyz_angles[:, 1] *= 0
     if lock_z:
         xyz_angles[:, 2] *= 0
-    return matrix_to_quaternion(
-        euler_angles_to_matrix(to_tensor(xyz_angles), convention="XYZ")
-    )
+    return matrix_to_quaternion(euler_angles_to_matrix(xyz_angles, convention="XYZ"))

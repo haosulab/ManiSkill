@@ -33,7 +33,7 @@ from mani_skill2.utils.sapien_utils import look_at
 
 
 # register the environment by a unique ID and specify a max time limit. Now once this file is imported you can do gym.make("CustomEnv-v0")
-@register_env(name="CustomEnv-v0", max_episode_steps=200)
+@register_env("CustomEnv-v0", max_episode_steps=200)
 class CustomEnv(BaseEnv):
     """
     Task Description
@@ -136,14 +136,16 @@ class CustomEnv(BaseEnv):
         # should return a dictionary containing "success": bool indicating if the environment is in success state or not. The value here is also what the sparse reward is
         # for the task. You may also include additional keys which will populate the info object returned by self.step.
         # note that as everything is batched, you must return a batched array of self.num_envs booleans (or 0/1 values) as done in the example below
-        return {"success": torch.zeros(self.num_envs, device=self.device)}
+        return {"success": torch.zeros(self.num_envs, device=self.device, dtype=bool)}
 
-    def compute_dense_reward(self, obs: Any, action: np.ndarray, info: Dict):
+    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         # you can optionally provide a dense reward function by returning a scalar value here. This is used when reward_mode="dense"
         # note that as everything is batched, you must return a batch of of self.num_envs rewards as done in the example below
         return torch.zeros(self.num_envs, device=self.device)
 
-    def compute_normalized_dense_reward(self, obs: Any, action: np.ndarray, info: Dict):
+    def compute_normalized_dense_reward(
+        self, obs: Any, action: torch.Tensor, info: Dict
+    ):
         # this should be equal to compute_dense_reward / max possible reward
         max_reward = 1.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
