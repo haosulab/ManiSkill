@@ -14,6 +14,7 @@ from mani_skill2.utils.sapien_utils import (
     check_urdf_config,
     parse_urdf_config,
 )
+from mani_skill2.utils.structs.actor import Actor
 from mani_skill2.utils.structs.articulation import Articulation
 
 from .controllers.base_controller import (
@@ -236,16 +237,28 @@ class BaseAgent:
     # -------------------------------------------------------------------------- #
     # Optional per-agent APIs, implemented depending on agent affordances
     # -------------------------------------------------------------------------- #
-    def is_grasping(self, object: Union[sapien.Entity, None] = None):
+    def is_grasping(self, object: Union[Actor, None] = None):
         """
         Check if this agent is grasping an object or grasping anything at all
 
         Args:
-            object (sapien.Entity | None):
-                If object is a sapien.Entity, this function checks grasping against that. If it is none, the function checks if the
+            object (Actor | None):
+                If object is a Actor, this function checks grasping against that. If it is none, the function checks if the
                 agent is grasping anything at all.
 
         Returns:
             True if agent is grasping object. False otherwise. If object is None, returns True if agent is grasping something, False if agent is grasping nothing.
+        """
+        raise NotImplementedError()
+
+    def is_static(self, threshold: float):
+        """
+        Check if this robot is static (within the given threshold) in terms of the q velocity
+
+        Args:
+            threshold (float): The threshold before this agent is considered static
+
+        Returns:
+            True if agent is static within the threshold. False otherwise
         """
         raise NotImplementedError()

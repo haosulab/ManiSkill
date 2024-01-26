@@ -1,14 +1,16 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List, Optional, Sequence, Union
 
 import numpy as np
 import sapien
 import sapien.physx as physx
+import torch
 from sapien.wrapper.articulation_builder import (
     ArticulationBuilder as SapienArticulationBuilder,
 )
 
+from mani_skill2.utils.sapien_utils import to_tensor
 from mani_skill2.utils.structs.articulation import Articulation
 
 if TYPE_CHECKING:
@@ -26,9 +28,14 @@ class ArticulationBuilder(SapienArticulationBuilder):
         self.name = name
         return self
 
-    def set_scene_mask(self, scene_mask: Optional[List[bool]] = None):
+    def set_scene_mask(
+        self,
+        scene_mask: Optional[
+            Union[List[bool], Sequence[bool], torch.Tensor, np.ndarray]
+        ] = None,
+    ):
         """
-        Set a scene mask so that the actor builder builds the actor only in a subset of the environments
+        Set a scene mask so that the articulation builder builds the articulation only in a subset of the environments
         """
         self.scene_mask = scene_mask
 
@@ -44,13 +51,15 @@ class ArticulationBuilder(SapienArticulationBuilder):
                 len(self.scene_mask) == self.scene.num_envs
             ), "Scene mask size is not correct. Must be the same as the number of sub scenes"
             num_arts = np.sum(num_arts)
+            self.scene_mask = to_tensor(self.scene_mask)
+        else:
+            # if scene mask is none, set it here
+            self.scene_mask = to_tensor(torch.ones((self.scene.num_envs), dtype=bool))
 
-        parallelized = len(self.scene.sub_scenes) > 1
         articulations = []
 
-        i = 0
         for scene_idx, scene in enumerate(self.scene.sub_scenes):
-            if self.scene_mask is not None and self.scene_mask[i] == False:
+            if self.scene_mask is not None and self.scene_mask[scene_idx] == False:
                 continue
             links: List[sapien.Entity] = self.build_entities()
             if fix_root_link is not None:
@@ -59,17 +68,14 @@ class ArticulationBuilder(SapienArticulationBuilder):
                 )
             links[0].pose = self.initial_pose
             for l in links:
-                if parallelized:
-                    l.name = f"scene-{scene_idx}_{l.name}"
+                l.name = f"scene-{scene_idx}_{l.name}"
                 scene.add_entity(l)
             articulation: physx.PhysxArticulation = l.components[0].articulation
-            if parallelized:
-                articulation.name = f"scene-{scene_idx}_{self.name}"
-            else:
-                articulation.name = f"{self.name}"
+            articulation.name = f"scene-{scene_idx}_{self.name}"
             articulations.append(articulation)
 
-            i += 1
-        articulation = Articulation.create_from_physx_articulations(articulations)
+        articulation = Articulation._create_from_physx_articulations(
+            articulations, self.scene, self.scene_mask
+        )
         self.scene.articulations[self.name] = articulation
         return articulation

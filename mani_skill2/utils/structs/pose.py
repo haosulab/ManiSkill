@@ -102,9 +102,11 @@ class Pose:
         else:
             assert len(pose.shape) <= 2 and len(pose.shape) > 0
             pose = to_tensor(pose)
+            pose = add_batch_dim(pose)
             if pose.shape[-1] == 3:
                 return cls.create_from_pq(p=pose, device=pose.device)
-            return cls(raw_pose=add_batch_dim(pose))
+            assert pose.shape[-1] == 7
+            return cls(raw_pose=pose)
 
     # -------------------------------------------------------------------------- #
     # Functions from sapien.Pose
