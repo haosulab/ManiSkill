@@ -143,10 +143,12 @@ def get_local_aabc_for_actor(actor: sapien.Entity):
     return aabc(vertices)
 
 
-def transform_points(H: np.ndarray, pts: np.ndarray) -> np.ndarray:
-    assert H.shape == (4, 4), H.shape
+def transform_points(H: torch.Tensor, pts: torch.Tensor) -> torch.Tensor:
+    assert H.shape[1:] == (4, 4), H.shape
     assert pts.ndim == 2 and pts.shape[1] == 3, pts.shape
-    return pts @ H[:3, :3].T + H[:3, 3]
+    return (
+        torch.bmm(pts[:, None, :], H[:, :3, :3].transpose(2, 1))[:, 0, :] + H[:, :3, 3]
+    )
 
 
 def invert_transform(H: np.ndarray):

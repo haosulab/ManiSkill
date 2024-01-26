@@ -174,11 +174,13 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     def max_dof(self) -> int:
         return max([obj.dof for obj in self._objs])
 
-    # def bbox(self):
-    # you should avoid calling this too often
-    # the bounding box can change easily if the qpos changes.
-    # in theory this can be implemented by precomputing the meshes for each link, then transforming the meshes by the link poses
-    # however there will have to be some for loops if this articulation is managing different articulations with different links
+    def bbox(self):
+        # you should avoid calling this too often
+        # the bounding box can change easily if the qpos changes.
+        # in theory this can be implemented by precomputing the meshes for each link, then transforming the meshes by the link poses
+        # however there will have to be some for loops if this articulation is managing different articulations with different links
+        # [obj for obj in self._objs[0]]
+        pass
 
     # -------------------------------------------------------------------------- #
     # Functions from physx.PhysxArticulation

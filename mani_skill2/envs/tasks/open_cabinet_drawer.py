@@ -93,17 +93,11 @@ class OpenCabinetEnv(BaseEnv):
             handle_links_meshes.append([])
             # NOTE (stao): interesting future project similar to some kind of quality diversity is accelerating policy learning by dynamically shifting distribution of handles/cabinets being trained on.
             for link, joint in zip(cabinet.links, cabinet.joints):
-                if joint.type in joint_types:
-                    # we can use ._objs[0] as there is only one link object managed due to our scene mask
+                if joint.type[0] in joint_types:
                     handle_links[-1].append(link)
-                    meshes = []
-                    for rs in link.render_shapes[0]:
-                        if "handle" not in rs.name:
-                            continue
-                        meshes.extend(get_render_shape_meshes(rs))
-                    handle_link_mesh = merge_meshes(meshes)
-                    # TODO (stao): it seems some do not have any handles?
-                    handle_links_meshes[-1].append(handle_link_mesh)
+                    handle_links_meshes[-1].append(
+                        link.generate_mesh(lambda _, x: "handle" in x.name, "handle")[0]
+                    )
             cabinets.append(cabinet)
         self.cabinet = Articulation.merge_articulations(cabinets, name="cabinet")
         # now self.cabinet.links makes very little sense. It will be a list of Link objects ordered by link index, but each Link object manages one physx link from each merged articulation
@@ -129,29 +123,27 @@ class OpenCabinetEnv(BaseEnv):
         with torch.device(self.device):
             # import ipdb;ipdb.set_trace()
             # TODO (stao): sample random link objects to create a Link object
-            # import ipdb
 
-            # ipdb.set_trace()
             xyz = torch.zeros((self.num_envs, 3))
             xyz[:, 2] = torch.tensor(self.cabinet_heights) / 2
-            # self.cabinet.set_pose(Pose.create_from_pq(p=xyz))
-            # self._scene._gpu_apply_all()
-            # self._scene._gpu_fetch_all()
-            mesh = self.handle_links_meshes[0][0]
-            mesh.bounding_box.centroid
-            handle_pcd = transform_points(
-                self.handle_link.pose.sp.to_transformation_matrix(), mesh.sample(100)
+            self.cabinet.set_pose(Pose.create_from_pq(p=xyz))
+            # TODO (stao): surely there is a better way to transform points here?
+            handle_link_positions = to_tensor(
+                np.array(
+                    [x[0].bounding_box.center_mass for x in self.handle_links_meshes]
+                )
+            )  # (N, 3)
+            handle_link_positions = transform_points(
+                self.handle_link.pose.to_transformation_matrix(), handle_link_positions
             )
-            # can i avoid sampling?
-            # import ipdb;ipdb.set_trace()
+
             self.handle_link_goal_marker.set_pose(
-                Pose.create_from_pq(p=handle_pcd.mean(0))
+                Pose.create_from_pq(p=handle_link_positions)
             )
+            # close all the cabinets. We know beforehand that lower qlimit means "closed" for these assets.
             qlimits = self.cabinet.get_qlimits()  # [N, self.cabinet.max_dof, 2])
             qpos = qlimits[:, :, 0]
-            self.cabinet.set_qpos(
-                qpos
-            )  # close all the cabinets. We know beforehand that lower qlimit means "closed" for these assets.
+            self.cabinet.set_qpos(qpos)
             # initialize robot
             if self.robot_uid == "panda":
                 self.agent.robot.set_qpos(self.agent.robot.qpos * 0)

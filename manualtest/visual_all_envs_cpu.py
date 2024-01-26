@@ -14,7 +14,7 @@ if __name__ == "__main__":
         max_rigid_patch_count=2**19,
         max_rigid_contact_count=2**21,
     )
-    for env_id in ["StackCube-v1"]:
+    for env_id in ["OpenCabinet-v1"]:
         env = gym.make(
             env_id,
             num_envs=num_envs,
