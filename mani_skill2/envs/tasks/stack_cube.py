@@ -118,7 +118,8 @@ class StackCubeEnv(BaseEnv):
         )
         z_flag = torch.abs(offset[..., 2] - self.cube_half_size[..., 2] * 2) <= 0.005
         is_cubeA_on_cubeB = torch.logical_and(xy_flag, z_flag)
-        is_cubeA_static = self.cubeA.is_static()
+        # TODO (stao): GPU sim can be fast but unstable. Angular velocity is rather high despite it not really rotating
+        is_cubeA_static = self.cubeA.is_static(lin_thresh=1e-2, ang_thresh=0.5)
         is_cubeA_grasped = self.agent.is_grasping(self.cubeA)
         success = is_cubeA_on_cubeB * is_cubeA_static * ~is_cubeA_grasped
         return {

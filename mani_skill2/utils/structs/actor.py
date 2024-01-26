@@ -182,7 +182,7 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
             ).visibility = 1
         self.hidden = False
 
-    def is_static(self, lin_thresh=1e-3, ang_thresh=1e-1):
+    def is_static(self, lin_thresh=1e-2, ang_thresh=1e-1):
         """
         Checks if this actor is static within the given linear velocity threshold `lin_thresh` and angular velocity threshold `ang_thresh`
         """

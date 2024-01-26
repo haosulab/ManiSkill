@@ -211,6 +211,9 @@ if __name__ == "__main__":
     action_space_low, action_space_high = torch.from_numpy(envs.single_action_space.low).to(device), torch.from_numpy(envs.single_action_space.high).to(device)
     def clip_action(action: torch.Tensor):
         return torch.clamp(action.detach(), action_space_low, action_space_high)
+
+    # model_path = "/home/stao/work/research/maniskill/ManiSkill2/examples/baselines/ppo/runs/StackCube-v1__ppo__1__1706294550/ppo_3076.cleanrl_model"
+    # agent.load_state_dict(torch.load(model_path))
     for iteration in range(1, args.num_iterations + 1):
         timeout_bonus = torch.zeros((args.num_steps, args.num_envs), device=device)
         if iteration % args.eval_freq == 1:
@@ -223,11 +226,13 @@ if __name__ == "__main__":
                 if eval_truncations.any():
                     eval_done = True
             info = eval_infos["final_info"]
+            # print(info)
             episodic_return = info['episode']['r'].mean().cpu().numpy()
             print(f"eval_episodic_return={episodic_return}")
             writer.add_scalar("charts/eval_success_rate", info["success"].float().mean().cpu().numpy(), global_step)
             writer.add_scalar("charts/eval_episodic_return", episodic_return, global_step)
             writer.add_scalar("charts/eval_episodic_length", info["elapsed_steps"], global_step)
+        # exit()
         if args.save_model and iteration % args.eval_freq == 1:
             model_path = f"runs/{run_name}/{args.exp_name}_{iteration}.cleanrl_model"
             torch.save(agent.state_dict(), model_path)
