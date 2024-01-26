@@ -114,7 +114,7 @@ class Joint(BaseStruct[physx.PhysxArticulationJoint]):
         return self.type
 
     # def set_armature(self, armature: numpy.ndarray[numpy.float32, _Shape[m, 1]]) -> None: ...
-    @before_gpu_init
+    # @before_gpu_init
     def set_drive_properties(
         self,
         stiffness: float,
@@ -124,19 +124,6 @@ class Joint(BaseStruct[physx.PhysxArticulationJoint]):
     ):
         for joint in self._objs:
             joint.set_drive_properties(stiffness, damping, force_limit, mode)
-
-    @before_gpu_init
-    def set_drive_property(
-        self,
-        stiffness: float,
-        damping: float,
-        force_limit: float = 3.4028234663852886e38,
-        mode: typing.Literal["force", "acceleration"] = "force",
-    ) -> None:
-        """
-        same as set_drive_properties
-        """
-        return self.set_drive_properties(stiffness, damping, force_limit, mode)
 
     def set_drive_target(self, target: Array) -> None:
         self.drive_target = target
@@ -237,7 +224,7 @@ class Joint(BaseStruct[physx.PhysxArticulationJoint]):
         return torch.tensor([obj.friction for obj in self._objs])
 
     @friction.setter
-    @before_gpu_init
+    # @before_gpu_init
     def friction(self, arg1: float) -> None:
         for joint in self._objs:
             joint.friction = arg1

@@ -117,11 +117,13 @@ class RecordEpisode(gym.Wrapper):
         save_on_reset=True,
         clean_on_close=True,
         record_reward=False,
+        init_state_only=False,
         video_fps=20,
     ):
         super().__init__(env)
 
         self.output_dir = Path(output_dir)
+        self.init_state_only = init_state_only
         if save_trajectory or save_video:
             self.output_dir.mkdir(parents=True, exist_ok=True)
         self.save_on_reset = save_on_reset

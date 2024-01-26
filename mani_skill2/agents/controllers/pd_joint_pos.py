@@ -36,12 +36,13 @@ class PDJointPosController(BaseController):
         friction = np.broadcast_to(self.config.friction, n)
 
         for i, joint in enumerate(self.joints):
-            joint.set_drive_property(
+            joint.set_drive_properties(
                 stiffness[i], damping[i], force_limit=force_limit[i]
             )
             joint.set_friction(friction[i])
 
     def reset(self):
+        # TODO (stao): Fix this. We should reset controller after each env.reset, and set drive properties only when control mode is changed.
         super().reset()
         self._step = 0  # counter of simulation steps after action is set
         # TODO (stao): support gpu based actions later
