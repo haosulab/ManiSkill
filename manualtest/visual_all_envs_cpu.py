@@ -33,7 +33,7 @@ if __name__ == "__main__":
             trajectory_name=f"{env_id}",
             info_on_video=False,
             video_fps=30,
-            save_trajectory=False,
+            save_trajectory=True,
         )
         env.reset(seed=2)
         # env.reset(seed=1)

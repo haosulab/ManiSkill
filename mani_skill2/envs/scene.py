@@ -41,7 +41,7 @@ class ManiSkillScene:
     def __init__(self, sub_scenes: List[sapien.Scene], debug_mode: bool = True):
         self.sub_scenes = sub_scenes
         self.px = self.sub_scenes[0].physx_system
-        self._buffers_ready = False
+        self._gpu_sim_initialized = False
         self.debug_mode = debug_mode
         super().__init__()
 
@@ -513,7 +513,7 @@ class ManiSkillScene:
         )  # zero out all q velocities
         self.px.gpu_apply_articulation_qvel()
 
-        self._buffers_ready = True
+        self._gpu_sim_initialized = True
         self._gpu_fetch_all()
 
     def _gpu_apply_all(self):

@@ -856,7 +856,7 @@ class BaseEnv(gym.Env):
 
         # TODO (stao): currently in GPU mode we cannot render all sub-scenes together in the GUI yet. So we have this
         # naive solution which shows whatever scene is selected by self._viewer_scene_idx
-        if physx.is_gpu_enabled() and self._scene._buffers_ready:
+        if physx.is_gpu_enabled() and self._scene._gpu_sim_initialized:
             # TODO (stao): This is the slow method, update objects via cpu
             for actor in self._scene.actors.values():
                 if actor.px_body_type == "static":

@@ -8,6 +8,7 @@ import sapien.physx as physx
 import torch
 
 from mani_skill2.utils.sapien_utils import to_numpy, to_tensor
+from mani_skill2.utils.structs.decorators import before_gpu_init
 from mani_skill2.utils.structs.types import Array
 
 if TYPE_CHECKING:
@@ -51,6 +52,8 @@ class BaseStruct(Generic[T]):
 @dataclass
 class PhysxRigidBodyComponentStruct:
     # Reference to the data for this rigid body on the GPU
+    _scene: ManiSkillScene
+    """The ManiSkillScene object that manages the sub-scenes this dataclasses's objects are in"""
     _body_data_name: str
     _bodies: List[physx.PhysxRigidBodyComponent]
     _body_data_index_internal: slice = None
@@ -115,10 +118,11 @@ class PhysxRigidBodyComponentStruct:
     # def set_max_contact_impulse(self, impulse: float) -> None: ... # TODO (Stao)
     # def set_max_depenetraion_velocity(self, velocity: float) -> None: ... # TODO (Stao)
     @property
-    def angular_damping(self) -> float:
-        return self._bodies[0].angular_damping
+    def angular_damping(self) -> torch.Tensor:
+        return torch.tensor([body.angular_damping for body in self._bodies])
 
     @angular_damping.setter
+    @before_gpu_init
     def angular_damping(self, arg1: float) -> None:
         for rb in self._bodies:
             rb.angular_damping = arg1
@@ -131,8 +135,8 @@ class PhysxRigidBodyComponentStruct:
             return torch.from_numpy(self._bodies[0].angular_velocity[None, :])
 
     @property
-    def auto_compute_mass(self) -> bool:
-        return self._bodies[0].auto_compute_mass
+    def auto_compute_mass(self) -> torch.Tensor:
+        return torch.tensor([body.auto_compute_mass for body in self._bodies])
 
     # @property
     # def cmass_local_pose(self) -> sapien.pysapien.Pose:
@@ -143,10 +147,11 @@ class PhysxRigidBodyComponentStruct:
     # def cmass_local_pose(self, arg1: sapien.pysapien.Pose) -> None:
     #     pass
     @property
-    def disable_gravity(self) -> bool:
-        return self._bodies[0].disable_gravity
+    def disable_gravity(self) -> torch.Tensor:
+        return torch.tensor([body.disable_gravity for body in self._bodies])
 
     @disable_gravity.setter
+    @before_gpu_init
     def disable_gravity(self, arg1: bool) -> None:
         for rb in self._bodies:
             rb.disable_gravity = arg1
@@ -160,10 +165,11 @@ class PhysxRigidBodyComponentStruct:
     # def inertia(self, arg1: numpy.ndarray[numpy.float32, _Shape, _Shape[3]]) -> None:
     #     pass
     @property
-    def linear_damping(self) -> float:
-        return self._bodies[0].linear_damping
+    def linear_damping(self) -> torch.Tensor:
+        return torch.tensor([body.linear_damping for body in self._bodies])
 
     @linear_damping.setter
+    @before_gpu_init
     def linear_damping(self, arg1: float) -> None:
         for rb in self._bodies:
             rb.linear_damping = arg1
@@ -176,17 +182,18 @@ class PhysxRigidBodyComponentStruct:
             return torch.from_numpy(self._bodies[0].linear_velocity[None, :])
 
     @property
-    def mass(self) -> float:
-        return self._bodies[0].mass
+    def mass(self) -> torch.Tensor:
+        return torch.tensor([body.mass for body in self._bodies])
 
     @mass.setter
+    @before_gpu_init
     def mass(self, arg1: float) -> None:
         if physx.is_gpu_enabled():
             raise NotImplementedError(
                 "Setting mass is not supported on GPU sim at the moment."
             )
         else:
-            return self._bodies[0].mass
+            self._bodies[0].mass = arg1
 
     # @property
     # def max_contact_impulse(self) -> float:
@@ -285,6 +292,7 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct):
             )
 
     @property
+    @before_gpu_init
     def is_sleeping(self):
         if physx.is_gpu_enabled():
             return [b.is_sleeping for b in self._bodies]

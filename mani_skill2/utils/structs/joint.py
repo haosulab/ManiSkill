@@ -4,11 +4,13 @@ import typing
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, List
 
+import numpy as np
 import sapien.physx as physx
 import torch
 
 from mani_skill2.utils.sapien_utils import to_tensor
 from mani_skill2.utils.structs.base import BaseStruct
+from mani_skill2.utils.structs.decorators import before_gpu_init
 from mani_skill2.utils.structs.link import Link
 from mani_skill2.utils.structs.types import Array
 
@@ -17,7 +19,7 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class Joint(BaseStruct[physx.PhysxJointComponent]):
+class Joint(BaseStruct[physx.PhysxArticulationJoint]):
     """
     Wrapper around physx.PhysxArticulationJoint objects
 
@@ -112,6 +114,7 @@ class Joint(BaseStruct[physx.PhysxJointComponent]):
         return self.type
 
     # def set_armature(self, armature: numpy.ndarray[numpy.float32, _Shape[m, 1]]) -> None: ...
+    @before_gpu_init
     def set_drive_properties(
         self,
         stiffness: float,
@@ -122,6 +125,7 @@ class Joint(BaseStruct[physx.PhysxJointComponent]):
         for joint in self._objs:
             joint.set_drive_properties(stiffness, damping, force_limit, mode)
 
+    @before_gpu_init
     def set_drive_property(
         self,
         stiffness: float,
@@ -164,25 +168,19 @@ class Joint(BaseStruct[physx.PhysxJointComponent]):
     #     :type: PhysxArticulationLinkComponent
     #     """
     @property
-    def damping(self) -> float:
-        """
-        :type: float
-        """
-        return self._objs[0].damping
+    def damping(self) -> torch.Tensor:
+        return torch.tensor([obj.damping for obj in self._objs])
 
     @property
-    def dof(self) -> int:
-        """
-        :type: int
-        """
-        return self._objs[0].dof
+    def dof(self) -> torch.Tensor:
+        return torch.tensor([obj.dof for obj in self._objs])
 
     @property
-    def drive_mode(self) -> typing.Literal["force", "acceleration"]:
+    def drive_mode(self) -> List[typing.Literal["force", "acceleration"]]:
         """
         :type: typing.Literal['force', 'acceleration']
         """
-        return self._objs[0].drive_mode
+        return [obj.drive_mode for obj in self._objs]
 
     @property
     def drive_target(self) -> torch.Tensor:
@@ -231,20 +229,15 @@ class Joint(BaseStruct[physx.PhysxJointComponent]):
             self._objs[0].drive_velocity_target = arg1
 
     @property
-    def force_limit(self) -> float:
-        """
-        :type: float
-        """
-        return self._objs[0].force_limit
+    def force_limit(self) -> torch.Tensor:
+        return torch.tensor([obj.force_limit for obj in self._objs])
 
     @property
-    def friction(self) -> float:
-        """
-        :type: float
-        """
-        return self._objs[0].friction
+    def friction(self) -> torch.Tensor:
+        return torch.tensor([obj.friction for obj in self._objs])
 
     @friction.setter
+    @before_gpu_init
     def friction(self, arg1: float) -> None:
         for joint in self._objs:
             joint.friction = arg1
@@ -256,9 +249,11 @@ class Joint(BaseStruct[physx.PhysxJointComponent]):
     #     """
     @property
     def limits(self) -> torch.Tensor:
-        return torch.from_numpy(self._objs[0].limits)
+        # TODO (stao): create a decorator that caches results once gpu sim is initialized for performance
+        return torch.from_numpy(np.array([obj.limits for obj in self._objs]))
 
     @limits.setter
+    @before_gpu_init
     def limits(self, arg1: Array) -> None:
         for joint in self._objs:
             joint.limits = arg1
@@ -293,22 +288,19 @@ class Joint(BaseStruct[physx.PhysxJointComponent]):
     # def pose_in_parent(self, arg1: sapien.pysapien.Pose) -> None:
     #     pass
     @property
-    def stiffness(self) -> float:
-        """
-        :type: float
-        """
-        return self._objs[0].stiffness
+    def stiffness(self) -> torch.Tensor:
+        return torch.tensor([obj.stiffness for obj in self._objs])
 
     @property
     def type(
         self,
-    ) -> typing.Literal["fixed", "revolute", "revolute_unwrapped", "prismatic", "free"]:
-        """
-        :type: typing.Literal['fixed', 'revolute', 'revolute_unwrapped', 'prismatic', 'free']
-        """
-        return self._objs[0].type
+    ) -> List[
+        typing.Literal["fixed", "revolute", "revolute_unwrapped", "prismatic", "free"]
+    ]:
+        return [obj.type for obj in self._objs]
 
     @type.setter
+    @before_gpu_init
     def type(
         self,
         arg1: typing.Literal[

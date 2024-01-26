@@ -72,7 +72,7 @@ class StackCubeEnv(BaseEnv):
             xy = torch.rand((self.num_envs, 2)) * 0.2 - 0.1
             region = [[-0.1, -0.2], [0.1, 0.2]]
             sampler = UniformPlacementSampler(bounds=region, batch_size=self.num_envs)
-            radius = (torch.linalg.norm(torch.Tensor([0.02, 0.02])) + 0.001).to(
+            radius = (torch.linalg.norm(torch.tensor([0.02, 0.02])) + 0.001).to(
                 self.device
             )
             cubeA_xy = xy + sampler.sample(radius, 100)
