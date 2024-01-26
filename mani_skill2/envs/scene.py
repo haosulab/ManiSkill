@@ -493,20 +493,12 @@ class ManiSkillScene:
             if actor.px_body_type == "static":
                 continue
             self.non_static_actors.append(actor)
-            rigid_body_components = [
-                entity.find_component_by_type(physx.PhysxRigidDynamicComponent)
-                for entity in actor._objs
-            ]
-            actor._body_data_index = [rb.gpu_pose_index for rb in rigid_body_components]
+            actor._body_data_index  # only need to access this attribute to populate it
 
         for articulation in self.articulations.values():
-            articulation._data_index = [
-                px_articulation.gpu_index for px_articulation in articulation._objs
-            ]
+            articulation._data_index
             for link in articulation.links:
-                link._body_data_index = [
-                    px_link.gpu_pose_index for px_link in link._objs
-                ]
+                link._body_data_index
 
         # As physx_system.gpu_init() was called a single physx step was also taken. So we need to reset
         # all the actors and articulations to their original poses as they likely have collided

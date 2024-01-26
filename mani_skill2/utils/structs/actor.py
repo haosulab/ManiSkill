@@ -28,8 +28,7 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
     On CPU, more properties are available
     """
 
-    px_body_type: Literal["kinematic", "static", "dynamic"]
-    _data_index: slice = None
+    px_body_type: Literal["kinematic", "static", "dynamic"] = None
     hidden: bool = False
 
     # track the initial pose of the actor builder for this actor. Necessary to ensure the actor is reset correctly once
@@ -64,7 +63,6 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
             _scene_mask=scene_mask,
             px_body_type=px_body_type,
             _bodies=bodies,
-            _body_data_index=None,
             _body_data_name="cuda_rigid_body_data"
             if isinstance(scene.px, physx.PhysxGpuSystem)
             else None,

@@ -23,7 +23,7 @@ class Link(
     Wrapper around physx.PhysxArticulationLinkComponent objects
     """
 
-    articulation: Articulation
+    articulation: Articulation = None
 
     name: str = None
 
@@ -44,7 +44,6 @@ class Link(
             if isinstance(articulation.px, physx.PhysxGpuSystem)
             else None,
             _bodies=physx_links,
-            _body_data_index=None,
         )
 
     # -------------------------------------------------------------------------- #

@@ -34,7 +34,6 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     joint_map: OrderedDict[str, Joint]
     active_joints: List[Joint]
 
-    _data_index: slice = None
     name: str = None
 
     _merged: bool = False
@@ -144,6 +143,11 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     # -------------------------------------------------------------------------- #
     # Additional useful functions not in SAPIEN original API
     # -------------------------------------------------------------------------- #
+
+    @cached_property
+    def _data_index(self):
+        return [px_articulation.gpu_index for px_articulation in self._objs]
+
     def get_state(self):
         pose = self.root.pose
         vel = self.root.get_linear_velocity()  # [N, 3]

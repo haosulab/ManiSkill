@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import cached_property
 from typing import TYPE_CHECKING, Generic, List, TypeVar
 
 import sapien.physx as physx
@@ -52,11 +53,23 @@ class PhysxRigidBodyComponentStruct:
     # Reference to the data for this rigid body on the GPU
     _body_data_name: str
     _bodies: List[physx.PhysxRigidBodyComponent]
-    _body_data_index: slice
+    _body_data_index_internal: slice = None
+
+    @cached_property
+    def _body_data_index(self):
+        if self._body_data_index_internal is None:
+            self._body_data_index_internal = [
+                body.gpu_pose_index for body in self._bodies
+            ]
+        return self._body_data_index_internal
 
     @property
     def _body_data(self):
         return getattr(self.px, self._body_data_name)
+
+    # ---------------------------------------------------------------------------- #
+    # API from physx.PhysxRigidBodyComponent
+    # ---------------------------------------------------------------------------- #
 
     # def add_force_at_point(self, force: numpy.ndarray[numpy.float32, _Shape, _Shape[3]], point: numpy.ndarray[numpy.float32, _Shape, _Shape[3]], mode: typing.Literal['force', 'acceleration', 'velocity_change', 'impulse'] = 'force') -> None: ...
     # def add_force_torque(self, force: numpy.ndarray[numpy.float32, _Shape, _Shape[3]], torque: numpy.ndarray[numpy.float32, _Shape, _Shape[3]], mode: typing.Literal['force', 'acceleration', 'velocity_change', 'impulse'] = 'force') -> None: ...
