@@ -83,8 +83,8 @@ class PhysxRigidBodyComponentStruct:
     def get_mass(self) -> float:
         return self.mass
 
-    # def get_max_contact_impulse(self) -> float: ...
-    # def get_max_depenetraion_velocity(self) -> float: ...
+    # def get_max_contact_impulse(self) -> float: ... # TODO (Stao)
+    # def get_max_depenetraion_velocity(self) -> float: ... # TODO (Stao)
     def set_angular_damping(self, damping: float) -> None:
         self.angular_damping = damping
 
@@ -99,8 +99,8 @@ class PhysxRigidBodyComponentStruct:
     def set_mass(self, arg0: float) -> None:
         self.mass = arg0
 
-    # def set_max_contact_impulse(self, impulse: float) -> None: ...
-    # def set_max_depenetraion_velocity(self, velocity: float) -> None: ...
+    # def set_max_contact_impulse(self, impulse: float) -> None: ... # TODO (Stao)
+    # def set_max_depenetraion_velocity(self, velocity: float) -> None: ... # TODO (Stao)
     @property
     def angular_damping(self) -> float:
         return self._bodies[0].angular_damping
@@ -213,7 +213,9 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct):
     def get_linear_velocity(self) -> torch.Tensor:
         return self.linear_velocity
 
+    # NOTE (fxiang): Cannot lock after gpu setup
     # def get_locked_motion_axes(self) -> list[bool]: ...
+
     # def put_to_sleep(self) -> None: ...
     def set_angular_velocity(self, arg0: Array):
         self.angular_velocity = arg0

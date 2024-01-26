@@ -108,7 +108,7 @@ class ArticulationBuilder(SapienArticulationBuilder):
             if self.scene_mask is not None and self.scene_mask[scene_idx] == False:
                 continue
             links: List[sapien.Entity] = self.build_entities(
-                name_prefix=f"scene-{scene_idx}_"
+                name_prefix=f"scene-{scene_idx}-{self.name}_"
             )
             if fix_root_link is not None:
                 links[0].components[0].joint.type = (
