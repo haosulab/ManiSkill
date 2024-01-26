@@ -8,13 +8,13 @@ from mani_skill2.utils.wrappers import RecordEpisode
 
 if __name__ == "__main__":
     # , "StackCube-v1", "PickCube-v1", "PushCube-v1", "PickSingleYCB-v1", "OpenCabinet-v1"
-    num_envs = 64
+    num_envs = 4
     sapien.physx.set_gpu_memory_config(
         found_lost_pairs_capacity=2**26,
         max_rigid_patch_count=2**19,
         max_rigid_contact_count=2**21,
     )
-    for env_id in ["OpenCabinet-v1"]:
+    for env_id in ["StackCube-v1"]:
         env = gym.make(
             env_id,
             num_envs=num_envs,
@@ -24,8 +24,8 @@ if __name__ == "__main__":
             render_mode="rgb_array",
             # control_mode="base_pd_joint_vel_arm_pd_joint_delta_pos",
             control_mode="pd_ee_delta_pos",
-            sim_freq=500,
-            control_freq=100,
+            sim_freq=100,
+            control_freq=20,
         )
         env = RecordEpisode(
             env,
@@ -37,6 +37,7 @@ if __name__ == "__main__":
         )
         env.reset(seed=2)
         # env.reset(seed=1)
+
         done = False
         i = 0
         if num_envs == 1:

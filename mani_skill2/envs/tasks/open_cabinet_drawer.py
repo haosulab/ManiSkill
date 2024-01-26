@@ -14,12 +14,13 @@ from mani_skill2.utils.building.articulations import (
     build_preprocessed_partnet_mobility_articulation,
 )
 from mani_skill2.utils.building.ground import build_tesselated_square_floor
+from mani_skill2.utils.geometry.geometry import transform_points
 from mani_skill2.utils.geometry.trimesh_utils import (
     get_render_shape_meshes,
     merge_meshes,
 )
 from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import look_at
+from mani_skill2.utils.sapien_utils import look_at, to_tensor
 from mani_skill2.utils.structs.articulation import Articulation
 from mani_skill2.utils.structs.link import Link
 from mani_skill2.utils.structs.pose import Pose
@@ -116,7 +117,7 @@ class OpenCabinetEnv(BaseEnv):
         self.handle_links_meshes = handle_links_meshes
         self.handle_link_goal_marker = build_sphere(
             self._scene,
-            radius=0.2,
+            radius=0.05,
             color=[0, 1, 0, 1],
             name="handle_goal_marker",
             body_type="kinematic",
@@ -128,16 +129,25 @@ class OpenCabinetEnv(BaseEnv):
         with torch.device(self.device):
             # import ipdb;ipdb.set_trace()
             # TODO (stao): sample random link objects to create a Link object
-            import ipdb
+            # import ipdb
 
-            ipdb.set_trace()
+            # ipdb.set_trace()
             xyz = torch.zeros((self.num_envs, 3))
             xyz[:, 2] = torch.tensor(self.cabinet_heights) / 2
-            self.cabinet.set_pose(Pose.create_from_pq(p=xyz))
+            # self.cabinet.set_pose(Pose.create_from_pq(p=xyz))
             # self._scene._gpu_apply_all()
             # self._scene._gpu_fetch_all()
-            self.handle_link_goal_marker.set_pose(self.handle_link.pose)
-            qlimits = self.cabinet.get_qlimits()  # [N, self.cabinet.max_dof, 2]
+            mesh = self.handle_links_meshes[0][0]
+            mesh.bounding_box.centroid
+            handle_pcd = transform_points(
+                self.handle_link.pose.sp.to_transformation_matrix(), mesh.sample(100)
+            )
+            # can i avoid sampling?
+            # import ipdb;ipdb.set_trace()
+            self.handle_link_goal_marker.set_pose(
+                Pose.create_from_pq(p=handle_pcd.mean(0))
+            )
+            qlimits = self.cabinet.get_qlimits()  # [N, self.cabinet.max_dof, 2])
             qpos = qlimits[:, :, 0]
             self.cabinet.set_qpos(
                 qpos
