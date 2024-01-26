@@ -117,9 +117,6 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
         else:
             vel = self.get_linear_velocity()  # [N, 3]
             ang_vel = self.get_angular_velocity()  # [N, 3]
-        import ipdb
-
-        ipdb.set_trace()
         return torch.hstack([pose.p, pose.q, vel, ang_vel])
 
     def set_state(self, state: Array):
