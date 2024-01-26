@@ -37,11 +37,9 @@ class TableSceneBuilder(SceneBuilder):
             .find_component_by_type(sapien.render.RenderBodyComponent)
             .compute_global_aabb_tight()
         )
-        self.table_width = aabb[1, 0] - aabb[0, 0]
-        self.table_length = aabb[1, 1] - aabb[0, 1]
+        self.table_length = aabb[1, 0] - aabb[0, 0]
+        self.table_width = aabb[1, 1] - aabb[0, 1]
         self.table_height = aabb[1, 2] - aabb[0, 2]
-
-        print(self.table_width, self.table_length, self.table_height)
 
         self.ground = build_tesselated_square_floor(
             self.scene, altitude=-self.table_height
