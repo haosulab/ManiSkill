@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Generic, List, TypeVar
 import sapien.physx as physx
 import torch
 
-from mani_skill2.utils.sapien_utils import to_tensor
+from mani_skill2.utils.sapien_utils import to_numpy, to_tensor
 from mani_skill2.utils.structs.types import Array
 
 if TYPE_CHECKING:
@@ -248,7 +248,9 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct):
             arg1 = to_tensor(arg1)
             self._body_data[self._body_data_index, 10:13] = arg1
         else:
-            self._bodies[0].angular_velocity = arg1
+            if len(arg1.shape) == 2:
+                arg1 = arg1[0]
+            self._bodies[0].angular_velocity = to_numpy(arg1)
 
     @property
     def gpu_index(self):
@@ -311,7 +313,9 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct):
             arg1 = to_tensor(arg1)
             self._body_data[self._body_data_index, 7:10] = arg1
         else:
-            self._bodies[0].linear_velocity = arg1
+            if len(arg1.shape) == 2:
+                arg1 = arg1[0]
+            self._bodies[0].linear_velocity = to_numpy(arg1)
 
     # @property
     # def locked_motion_axes(self) -> list[bool]:
