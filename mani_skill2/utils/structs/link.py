@@ -47,6 +47,23 @@ class Link(
         )
 
     # -------------------------------------------------------------------------- #
+    # Additional useful functions not in SAPIEN original API
+    # -------------------------------------------------------------------------- #
+    @property
+    def render_shapes(self):
+        """
+        Returns each managed link objects render shape list (a list of lists)
+        """
+        all_render_shapes = []
+        for obj in self._objs:
+            all_render_shapes.append(
+                obj.entity.find_component_by_type(
+                    sapien.render.RenderBodyComponent
+                ).render_shapes
+            )
+        return all_render_shapes
+
+    # -------------------------------------------------------------------------- #
     # Functions from sapien.Component
     # -------------------------------------------------------------------------- #
     @property
@@ -81,8 +98,8 @@ class Link(
     def get_index(self) -> int:
         return self.index
 
-    def get_joint(self) -> physx.PhysxArticulationJoint:
-        return self.joint
+    # def get_joint(self) -> physx.PhysxArticulationJoint:
+    #     return self.joint
 
     # def get_parent(self) -> PhysxArticulationLinkComponent: ...
     # def put_to_sleep(self) -> None: ...
@@ -113,13 +130,12 @@ class Link(
         """
         return self._objs[0].is_root
 
-    @property
-    def joint(self) -> physx.PhysxArticulationJoint:
-        """
-        :type: PhysxArticulationJoint
-        """
-        # TODO (stao): make joint struct?
-        return self.joint
+    # @property
+    # def joint(self) -> physx.PhysxArticulationJoint:
+    #     """
+    #     :type: PhysxArticulationJoint
+    #     """
+    #     return self.joint
 
     # @property
     # def parent(self) -> PhysxArticulationLinkComponent:

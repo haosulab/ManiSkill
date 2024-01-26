@@ -345,9 +345,10 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             arg1 = to_tensor(arg1)
             self.px.cuda_articulation_qf[self._data_index, : self.max_dof] = arg1
         else:
+            arg1 = to_numpy(arg1)
             if len(arg1.shape) == 2:
                 arg1 = arg1[0]
-            self._objs[0].qf = to_numpy(arg1)
+            self._objs[0].qf = arg1
 
     @cached_property
     def qlimits(self):
@@ -378,9 +379,10 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             arg1 = to_tensor(arg1)
             self.px.cuda_articulation_qpos[self._data_index, : self.max_dof] = arg1
         else:
+            arg1 = to_numpy(arg1)
             if len(arg1.shape) == 2:
                 arg1 = arg1[0]
-            self._objs[0].qpos = to_numpy(arg1)
+            self._objs[0].qpos = arg1
 
     @property
     def qvel(self):
@@ -395,9 +397,10 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             arg1 = to_tensor(arg1)
             self.px.cuda_articulation_qvel[self._data_index, : self.max_dof] = arg1
         else:
+            arg1 = to_numpy(arg1)
             if len(arg1.shape) == 2:
                 arg1 = arg1[0]
-            self._objs[0].qvel = to_numpy(arg1)
+            self._objs[0].qvel = arg1
 
     @property
     def root_angular_velocity(self) -> torch.Tensor:

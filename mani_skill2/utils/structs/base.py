@@ -263,9 +263,10 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct):
             arg1 = to_tensor(arg1)
             self._body_data[self._body_data_index, 10:13] = arg1
         else:
+            arg1 = to_numpy(arg1)
             if len(arg1.shape) == 2:
                 arg1 = arg1[0]
-            self._bodies[0].angular_velocity = to_numpy(arg1)
+            self._bodies[0].angular_velocity = arg1
 
     @property
     def gpu_index(self):
@@ -328,9 +329,10 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct):
             arg1 = to_tensor(arg1)
             self._body_data[self._body_data_index, 7:10] = arg1
         else:
+            arg1 = to_numpy(arg1)
             if len(arg1.shape) == 2:
                 arg1 = arg1[0]
-            self._bodies[0].linear_velocity = to_numpy(arg1)
+            self._bodies[0].linear_velocity = arg1
 
     # @property
     # def locked_motion_axes(self) -> list[bool]:

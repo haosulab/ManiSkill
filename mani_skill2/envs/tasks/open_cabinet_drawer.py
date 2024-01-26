@@ -1,20 +1,27 @@
 from collections import OrderedDict
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import numpy as np
+import sapien
 import torch
 
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
+from mani_skill2.utils.building.actors import build_sphere
 from mani_skill2.utils.building.articulations import (
     MODEL_DBS,
     _load_partnet_mobility_dataset,
     build_preprocessed_partnet_mobility_articulation,
 )
 from mani_skill2.utils.building.ground import build_tesselated_square_floor
+from mani_skill2.utils.geometry.trimesh_utils import (
+    get_render_shape_meshes,
+    merge_meshes,
+)
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import look_at
 from mani_skill2.utils.structs.articulation import Articulation
+from mani_skill2.utils.structs.link import Link
 from mani_skill2.utils.structs.pose import Pose
 
 
@@ -59,15 +66,19 @@ class OpenCabinetEnv(BaseEnv):
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
 
     def _load_actors(self):
+        self.ground = build_tesselated_square_floor(self._scene)
+        self._load_cabinets(["prismatic"])
+
+    def _load_cabinets(self, joint_types: List[str]):
         rand_idx = torch.randperm(len(self.all_model_ids))
         model_ids = self.all_model_ids[rand_idx]
         model_ids = np.concatenate(
             [model_ids] * np.ceil(self.num_envs / len(self.all_model_ids)).astype(int)
         )[: self.num_envs]
-        self.ground = build_tesselated_square_floor(self._scene)
-
         cabinets = []
         self.cabinet_heights = []
+        handle_links: List[List[Link]] = []
+        handle_links_meshes: List[List[Any]] = []
         for i, model_id in enumerate(model_ids):
             scene_mask = np.zeros(self.num_envs, dtype=bool)
             scene_mask[i] = True
@@ -77,17 +88,55 @@ class OpenCabinetEnv(BaseEnv):
             self.cabinet_heights.append(
                 metadata.bbox.bounds[1, 2] - metadata.bbox.bounds[0, 2]
             )
-            # self.cabinet = cabinet
-            # self.cabinet_metadata = metadata
+            handle_links.append([])
+            handle_links_meshes.append([])
+            # NOTE (stao): interesting future project similar to some kind of quality diversity is accelerating policy learning by dynamically shifting distribution of handles/cabinets being trained on.
+            for link, joint in zip(cabinet.links, cabinet.joints):
+                if joint.type in joint_types:
+                    # we can use ._objs[0] as there is only one link object managed due to our scene mask
+                    handle_links[-1].append(link)
+                    meshes = []
+                    for rs in link.render_shapes[0]:
+                        if "handle" not in rs.name:
+                            continue
+                        meshes.extend(get_render_shape_meshes(rs))
+                    handle_link_mesh = merge_meshes(meshes)
+                    # TODO (stao): it seems some do not have any handles?
+                    handle_links_meshes[-1].append(handle_link_mesh)
             cabinets.append(cabinet)
         self.cabinet = Articulation.merge_articulations(cabinets, name="cabinet")
+        # now self.cabinet.links makes very little sense. It will be a list of Link objects ordered by link index, but each Link object manages one physx link from each merged articulation
+        # User should extract merged links themselves across cabinets if they want to use link data
+
         self.cabinet_metadata = metadata
+        self.handle_links = handle_links
+        self.handle_link = Link.create(
+            [x[0]._objs[0] for x in handle_links], self.cabinet
+        )
+        self.handle_links_meshes = handle_links_meshes
+        self.handle_link_goal_marker = build_sphere(
+            self._scene,
+            radius=0.2,
+            color=[0, 1, 0, 1],
+            name="handle_goal_marker",
+            body_type="kinematic",
+            add_collision=False,
+        )
+        self._hidden_objects.append(self.handle_link_goal_marker)
 
     def _initialize_actors(self):
         with torch.device(self.device):
+            # import ipdb;ipdb.set_trace()
+            # TODO (stao): sample random link objects to create a Link object
+            import ipdb
+
+            ipdb.set_trace()
             xyz = torch.zeros((self.num_envs, 3))
             xyz[:, 2] = torch.tensor(self.cabinet_heights) / 2
             self.cabinet.set_pose(Pose.create_from_pq(p=xyz))
+            # self._scene._gpu_apply_all()
+            # self._scene._gpu_fetch_all()
+            self.handle_link_goal_marker.set_pose(self.handle_link.pose)
             qlimits = self.cabinet.get_qlimits()  # [N, self.cabinet.max_dof, 2]
             qpos = qlimits[:, :, 0]
             self.cabinet.set_qpos(
