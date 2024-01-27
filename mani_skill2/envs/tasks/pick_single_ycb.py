@@ -144,7 +144,18 @@ class PickSingleYCBEnv(BaseEnv):
             else:
                 raise NotImplementedError(self.robot_uid)
 
-    def _get_obs_extra(self):
+    def evaluate(self):
+        obj_to_goal_pos = self.goal_site.pose.p - self.obj.pose.p
+        is_obj_placed = torch.linalg.norm(obj_to_goal_pos, axis=1) <= self.goal_thresh
+        is_robot_static = self.agent.is_static(0.2)
+        return dict(
+            obj_to_goal_pos=obj_to_goal_pos,
+            is_obj_placed=is_obj_placed,
+            is_robot_static=is_robot_static,
+            success=torch.logical_and(is_obj_placed, is_robot_static),
+        )
+
+    def _get_obs_extra(self, obs: Dict):
         obs = OrderedDict(
             tcp_pose=self.agent.tcp.pose.raw_pose,
             goal_pos=self.goal_site.pose.p,
@@ -158,17 +169,6 @@ class PickSingleYCBEnv(BaseEnv):
                 obj_to_goal_pos=self.goal_site.pose.p - self.obj.pose.p,
             )
         return obs
-
-    def evaluate(self, obs: Any):
-        obj_to_goal_pos = self.goal_site.pose.p - self.obj.pose.p
-        is_obj_placed = torch.linalg.norm(obj_to_goal_pos, axis=1) <= self.goal_thresh
-        is_robot_static = self.agent.is_static(0.2)
-        return dict(
-            obj_to_goal_pos=obj_to_goal_pos,
-            is_obj_placed=is_obj_placed,
-            is_robot_static=is_robot_static,
-            success=torch.logical_and(is_obj_placed, is_robot_static),
-        )
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         tcp_to_obj_dist = torch.linalg.norm(
