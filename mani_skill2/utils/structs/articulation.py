@@ -446,7 +446,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         if physx.is_gpu_enabled():
             targets = to_tensor(targets)
             # Cache this indexing with meshgrid? and make it on the gpu to be faster
-            gx, gy = torch.meshgrid(
+            gx, gy = np.meshgrid(
                 self._data_index, joint_indices, indexing="ij"
             )  # TODO (stao): is there overhead to this?
             self.px.cuda_articulation_target_qpos[gx, gy] = targets
