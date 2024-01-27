@@ -707,7 +707,11 @@ class BaseEnv(gym.Env):
         return action
 
     def evaluate(self) -> dict:
-        """Evaluate whether the environment is currently in a success state."""
+        """
+        Evaluate whether the environment is currently in a success state by returning a dictionary with a "success" key.
+        This function may also return additional data that has been computed (e.g. is the robot grasping some object) so that they may be
+        reused when generating observations and rewards.
+        """
         raise NotImplementedError
 
     def get_info(self):

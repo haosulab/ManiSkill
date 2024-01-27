@@ -155,7 +155,7 @@ class PickSingleYCBEnv(BaseEnv):
             success=torch.logical_and(is_obj_placed, is_robot_static),
         )
 
-    def _get_obs_extra(self, obs: Dict):
+    def _get_obs_extra(self, info: Dict):
         obs = OrderedDict(
             tcp_pose=self.agent.tcp.pose.raw_pose,
             goal_pos=self.goal_site.pose.p,
