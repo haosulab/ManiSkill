@@ -96,19 +96,7 @@ class StackCubeEnv(BaseEnv):
             )
             self.cubeB.set_pose(Pose.create_from_pq(p=xyz, q=qs))
 
-    def _get_obs_extra(self):
-        obs = OrderedDict(tcp_pose=self.agent.tcp.pose.raw_pose)
-        if "state" in self.obs_mode:
-            obs.update(
-                cubeA_pose=self.cubeA.pose.raw_pose,
-                cubeB_pose=self.cubeB.pose.raw_pose,
-                tcp_to_cubeA_pos=self.cubeA.pose.p - self.agent.tcp.pose.p,
-                tcp_to_cubeB_pos=self.cubeB.pose.p - self.agent.tcp.pose.p,
-                cubeA_to_cubeB_pos=self.cubeB.pose.p - self.cubeA.pose.p,
-            )
-        return obs
-
-    def evaluate(self, obs: Any):
+    def evaluate(self):
         pos_A = self.cubeA.pose.p
         pos_B = self.cubeB.pose.p
         offset = pos_A - pos_B
@@ -128,6 +116,18 @@ class StackCubeEnv(BaseEnv):
             "is_cubeA_static": is_cubeA_static,
             "success": success,
         }
+
+    def _get_obs_extra(self, info: Dict):
+        obs = OrderedDict(tcp_pose=self.agent.tcp.pose.raw_pose)
+        if "state" in self.obs_mode:
+            obs.update(
+                cubeA_pose=self.cubeA.pose.raw_pose,
+                cubeB_pose=self.cubeB.pose.raw_pose,
+                tcp_to_cubeA_pos=self.cubeA.pose.p - self.agent.tcp.pose.p,
+                tcp_to_cubeB_pos=self.cubeB.pose.p - self.agent.tcp.pose.p,
+                cubeA_to_cubeB_pos=self.cubeB.pose.p - self.cubeA.pose.p,
+            )
+        return obs
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         # reaching reward

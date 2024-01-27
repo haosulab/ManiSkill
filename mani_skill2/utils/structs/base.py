@@ -61,9 +61,9 @@ class PhysxRigidBodyComponentStruct:
     @cached_property
     def _body_data_index(self):
         if self._body_data_index_internal is None:
-            self._body_data_index_internal = [
-                body.gpu_pose_index for body in self._bodies
-            ]
+            self._body_data_index_internal = torch.tensor(
+                [body.gpu_pose_index for body in self._bodies], device="cuda"
+            )
         return self._body_data_index_internal
 
     @property

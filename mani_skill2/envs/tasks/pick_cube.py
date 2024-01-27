@@ -88,7 +88,7 @@ class PickCubeEnv(BaseEnv):
             goal_xyz[:, 2] = torch.rand((self.num_envs)) * 0.3 + xyz[:, 2]
             self.goal_site.set_pose(Pose.create_from_pq(goal_xyz))
 
-    def _get_obs_extra(self):
+    def _get_obs_extra(self, info: Dict):
         obs = OrderedDict(
             tcp_pose=self.agent.tcp.pose.raw_pose, goal_pos=self.goal_site.pose.p
         )
@@ -100,7 +100,7 @@ class PickCubeEnv(BaseEnv):
             )
         return obs
 
-    def evaluate(self, obs: Any):
+    def evaluate(self):
         is_obj_placed = (
             torch.linalg.norm(self.goal_site.pose.p - self.cube.pose.p, axis=1)
             <= self.goal_thresh

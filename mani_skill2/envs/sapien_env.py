@@ -332,37 +332,49 @@ class BaseEnv(gym.Env):
     def obs_mode(self):
         return self._obs_mode
 
-    def get_obs(self):
+    def get_obs(self, info: Dict = None):
         """
-        Return the current observation of the environment
+        Return the current observation of the environment. User may call this directly to get the current observation
+        as opposed to taking a step with actions in the environment.
+
+        Note that some tasks use info of the current environment state to populate the observations to avoid having to
+        compute slow operations twice. For example a state based observation may wish to include a boolean indicating
+        if a robot is grasping an object. Computing this boolean correctly is slow, so it is preferable to generate that
+        data in the info object by overriding the `self.evaluate` function.
+
+        Args:
+            info (Dict): The info object of the environment. Generally should always be the result of `self.get_info()`.
+                If this is None (the default), this function will call `self.get_info()` itself
         """
         squeeze_dims = self.num_envs == 1
+        if info is None:
+            info = self.get_info()
         if self._obs_mode == "none":
             # Some cases do not need observations, e.g., MPC
             return OrderedDict()
         elif self._obs_mode == "state":
-            state_dict = self._get_obs_state_dict()
+            state_dict = self._get_obs_state_dict(info)
             obs = flatten_state_dict(state_dict, squeeze_dims=squeeze_dims)
         elif self._obs_mode == "state_dict":
-            obs = self._get_obs_state_dict()
+            obs = self._get_obs_state_dict(info)
         elif self._obs_mode == "image":
-            obs = self._get_obs_images()
+            obs = self._get_obs_images(info)
         else:
             raise NotImplementedError(self._obs_mode)
         return obs
 
-    def _get_obs_state_dict(self):
+    def _get_obs_state_dict(self, info: Dict):
         """Get (ground-truth) state-based observations."""
         return OrderedDict(
             agent=self._get_obs_agent(),
-            extra=self._get_obs_extra(),
+            extra=self._get_obs_extra(info),
         )
 
     def _get_obs_agent(self):
         """Get observations from the agent's sensors, e.g., proprioceptive sensors."""
         return self.agent.get_proprioception()
 
-    def _get_obs_extra(self):
+    def _get_obs_extra(self, info: Dict):
         """Get task-relevant extra observations."""
         return OrderedDict()
 
@@ -400,14 +412,14 @@ class BaseEnv(gym.Env):
             params[name] = cam.get_params()
         return params
 
-    def _get_obs_images(self) -> OrderedDict:
+    def _get_obs_images(self, info: Dict) -> OrderedDict:
         for obj in self._hidden_objects:
             obj.hide_visual()
         self.update_render()
         self.capture_sensor_data()
         return OrderedDict(
             agent=self._get_obs_agent(),
-            extra=self._get_obs_extra(),
+            extra=self._get_obs_extra(info),
             camera_param=self.get_camera_params(),
             image=self.get_sensor_data(),
         )
@@ -647,8 +659,8 @@ class BaseEnv(gym.Env):
     def step(self, action: Union[None, np.ndarray, Dict]):
         action = self.step_action(action)
         self._elapsed_steps += 1
-        obs = self.get_obs()
-        info = self.get_info(obs=obs)
+        info = self.get_info()
+        obs = self.get_obs(info)
         reward = self.get_reward(obs=obs, action=action, info=info)
         terminated = info["success"]
         if physx.is_gpu_enabled():
@@ -694,16 +706,16 @@ class BaseEnv(gym.Env):
             self._scene._gpu_fetch_all()
         return action
 
-    def evaluate(self, **kwargs) -> dict:
+    def evaluate(self) -> dict:
         """Evaluate whether the environment is currently in a success state."""
         raise NotImplementedError
 
-    def get_info(self, **kwargs):
+    def get_info(self):
         """
         Get info about the current environment state, include elapsed steps and evaluation information
         """
         info = dict(elapsed_steps=self._elapsed_steps)
-        info.update(self.evaluate(**kwargs))
+        info.update(self.evaluate())
         return info
 
     def _before_control_step(self):
