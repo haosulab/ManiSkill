@@ -15,7 +15,7 @@ from mani_skill2.utils.scene_builder.table.table_scene_builder import TableScene
 from mani_skill2.utils.structs.pose import Pose
 
 
-@register_env("StackCube-v1", max_episode_steps=100)
+@register_env("StackCube-v1", max_episode_steps=50)
 class StackCubeEnv(BaseEnv):
     """
     Task Description
