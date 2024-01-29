@@ -58,16 +58,16 @@ class BaseController:
 
         self._initialize_joints()
         self._initialize_action_space()
+        # NOTE(jigu): It is intended not to be a required field in config.
+        self._normalize_action = getattr(self.config, "normalize_action", False)
+        if self._normalize_action:
+            self._clip_and_scale_action_space()
 
         self.action_space = self.single_action_space
         if self.scene.num_envs > 1:
             self.action_space = batch_space(
                 self.single_action_space, n=self.scene.num_envs
             )
-        # NOTE(jigu): It is intended not to be a required field in config.
-        self._normalize_action = getattr(self.config, "normalize_action", False)
-        if self._normalize_action:
-            self._clip_and_scale_action_space()
 
     def _initialize_joints(self):
         joint_names = self.config.joint_names
