@@ -2,7 +2,6 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import gymnasium as gym
 import torch
-from gymnasium import Space
 from gymnasium.vector import VectorEnv
 
 from mani_skill2.envs.sapien_env import BaseEnv
@@ -29,14 +28,15 @@ class ManiSkillVectorEnv(VectorEnv):
             self._env = env
         self.auto_reset = auto_reset
         super().__init__(
-            num_envs, self.env.single_observation_space, self.env.single_action_space
+            num_envs, self._env.single_observation_space, self._env.single_action_space
         )
 
-        self.returns = torch.zeros(self.num_envs, device=self.env.device)
+        self.returns = torch.zeros(self.num_envs, device=self.base_env.device)
+        self.max_episode_steps = self._env.spec.max_episode_steps
 
     @property
-    def env(self) -> BaseEnv:
-        return self._env
+    def base_env(self) -> BaseEnv:
+        return self._env.unwrapped
 
     def reset(
         self,
@@ -44,20 +44,22 @@ class ManiSkillVectorEnv(VectorEnv):
         seed: Optional[Union[int, List[int]]] = None,
         options: Optional[dict] = None,
     ):
-        obs, info = self.env.reset(seed=seed, options=options)
+        obs, info = self._env.reset(seed=seed, options=options)
         self.returns *= 0
         return obs, info
 
     def step(
         self, actions: Union[Array, Dict]
     ) -> Tuple[Array, Array, Array, Array, Dict]:
-        obs, rew, terminations, truncations, infos = self.env.step(actions)
+        obs, rew, _, _, infos = self._env.step(actions)
         self.returns += rew
         infos["episode"] = dict(r=self.returns)
-        terminations = torch.zeros(self.num_envs, device=self.env.device)
-        if (isinstance(truncations, torch.Tensor) and truncations.any()) or (
-            not isinstance(truncations, torch.Tensor) and truncations
-        ):
+        truncations: torch.Tensor = (
+            self.base_env.elapsed_steps >= self.max_episode_steps
+        )
+        terminations = torch.zeros(self.num_envs, device=self.base_env.device)
+        if truncations.any():
+            # TODO (stao): permit reset by indicies later
             infos["episode"]["r"] = self.returns.clone()
             final_obs = obs
             obs, _ = self.reset()
@@ -65,8 +67,6 @@ class ManiSkillVectorEnv(VectorEnv):
             new_infos["final_info"] = infos
             new_infos["final_observation"] = final_obs
             infos = new_infos
-        # gym timelimit wrapper returns a bool, for consistency we convert to a tensor here
-        truncations = torch.ones_like(terminations) * truncations
         return obs, rew, terminations, truncations, infos
 
     def close(self):
