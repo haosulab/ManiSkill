@@ -71,6 +71,8 @@ class RGBDObservationWrapper(BaseGymObservationWrapper):
                     new_images["rgb"] = rgb  # [H, W, 4]
                 elif key == "PositionSegmentation":
                     depth = -ori_images[key][..., [2]]  # [H, W, 1]
+                    if isinstance(depth, np.ndarray):
+                        depth = depth.astype(np.uint16)
                     new_images["depth"] = depth
                 else:
                     new_images[key] = ori_images[key]
