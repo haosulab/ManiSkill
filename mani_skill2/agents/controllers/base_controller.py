@@ -17,6 +17,7 @@ from mani_skill2.envs.scene import ManiSkillScene
 from mani_skill2.utils.common import clip_and_scale_action, normalize_action_space
 from mani_skill2.utils.sapien_utils import to_tensor
 from mani_skill2.utils.structs.articulation import Articulation
+from mani_skill2.utils.structs.joint import Joint
 from mani_skill2.utils.structs.types import Array
 
 
@@ -25,7 +26,7 @@ class BaseController:
     The controller is an interface for the robot to interact with the environment.
     """
 
-    joints: List[physx.PhysxArticulationJoint]  # active joints controlled
+    joints: List[Joint]  # active joints controlled
     joint_indices: List[int]  # indices of active joints controlled
     action_space: spaces.Space
     """the action space. If the number of parallel environments is > 1, this action space is also batched"""
@@ -57,6 +58,7 @@ class BaseController:
         self._initialize_joints()
         self._initialize_action_space()
 
+        self.action_space = self.single_action_space
         if self.scene.num_envs > 1:
             self.action_space = batch_space(
                 self.single_action_space, n=self.scene.num_envs
@@ -69,6 +71,7 @@ class BaseController:
     def _initialize_joints(self):
         joint_names = self.config.joint_names
         try:
+            # We only track the joints we can control, the active ones.
             self.joints = get_active_joints(self.articulation, joint_names)
             self.joint_indices = get_active_joint_indices(
                 self.articulation, joint_names
@@ -195,6 +198,8 @@ class DictController(BaseController):
         self._initialize_action_space()
         self._initialize_joints()
         self._assert_fully_actuated()
+
+        self.action_space = self.single_action_space
         if self.scene.num_envs > 1:
             self.action_space = batch_space(
                 self.single_action_space, n=self.scene.num_envs

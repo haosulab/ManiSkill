@@ -10,17 +10,13 @@ from gymnasium import spaces
 from mani_skill2.utils.structs.articulation import Articulation
 
 
-def get_joint_indices(
-    articulation: physx.PhysxArticulation, joint_names: Sequence[str]
-):
+def get_joint_indices(articulation: Articulation, joint_names: Sequence[str]):
     all_joint_names = [x.name for x in articulation.get_joints()]
     joint_indices = [all_joint_names.index(x) for x in joint_names]
     return joint_indices
 
 
-def get_active_joint_indices(
-    articulation: physx.PhysxArticulation, joint_names: Sequence[str]
-):
+def get_active_joint_indices(articulation: Articulation, joint_names: Sequence[str]):
     all_joint_names = [x.name for x in articulation.get_active_joints()]
     joint_indices = [all_joint_names.index(x) for x in joint_names]
     return joint_indices

@@ -46,17 +46,28 @@ class Joint(BaseStruct[physx.PhysxArticulationJoint]):
         # joint_index: int,
         articulation: Articulation,
     ):
-        shared_name = "_".join(physx_joints[0].name.split("_")[1:])
+        # naming convention of the original physx joints is "scene-<id>-<articulation_name>_<original_joint_name>"
+        shared_name = "_".join(
+            physx_joints[0].name.replace(articulation.name, "").split("_")[1:]
+        )
         child_link = None
         parent_link = None
         if not articulation._merged:
             if physx_joints[0].child_link is not None:
                 child_link = articulation.link_map[
-                    "_".join(physx_joints[0].child_link.name.split("_")[1:])
+                    "_".join(
+                        physx_joints[0]
+                        .child_link.name.replace(articulation.name, "")
+                        .split("_")[1:]
+                    )
                 ]
             if physx_joints[0].parent_link is not None:
                 parent_link = articulation.link_map[
-                    "_".join(physx_joints[0].parent_link.name.split("_")[1:])
+                    "_".join(
+                        physx_joints[0]
+                        .parent_link.name.replace(articulation.name, "")
+                        .split("_")[1:]
+                    )
                 ]
         return cls(
             articulation=articulation,

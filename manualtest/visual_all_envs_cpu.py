@@ -9,7 +9,7 @@ from mani_skill2.utils.wrappers import RecordEpisode
 if __name__ == "__main__":
     # sapien.set_log_level("info")
     # , "StackCube-v1", "PickCube-v1", "PushCube-v1", "PickSingleYCB-v1", "OpenCabinet-v1"
-    num_envs = 4
+    num_envs = 1
     sapien.physx.set_gpu_memory_config(
         found_lost_pairs_capacity=2**26,
         max_rigid_patch_count=2**19,
@@ -36,7 +36,7 @@ if __name__ == "__main__":
             video_fps=30,
             save_trajectory=True,
         )
-        env.reset(seed=2, options=dict(reconfigure=True))
+        env.reset(seed=2)
         # env.reset(seed=1)
 
         done = False
@@ -45,17 +45,20 @@ if __name__ == "__main__":
             viewer = env.render_human()
             viewer.paused = True
             env.render_human()
-        while i < 50 or (i < 50000 and num_envs == 1):
-            action = env.action_space.sample()
-            if len(action.shape) == 1:
-                action = action.reshape(1, -1)
-            action[:] * 0
-            # TODO (stao): on cpu sim, -1 here goes up, gpu sim -1 goes down?
-            action[:, 2] = -1
-            obs, rew, terminated, truncated, info = env.step(action)
-            done = np.logical_or(to_numpy(terminated), to_numpy(truncated))
-            if num_envs == 1:
-                env.render_human()
-            done = done.any()
-            i += 1
+        for i in range(2):
+            print("START")
+            while i < 50 or (i < 50000 and num_envs == 1):
+                action = env.action_space.sample()
+                if len(action.shape) == 1:
+                    action = action.reshape(1, -1)
+                action[:] * 0
+                # TODO (stao): on cpu sim, -1 here goes up, gpu sim -1 goes down?
+                action[:, 2] = -1
+                obs, rew, terminated, truncated, info = env.step(action)
+                done = np.logical_or(to_numpy(terminated), to_numpy(truncated))
+                if num_envs == 1:
+                    env.render_human()
+                done = done.any()
+                i += 1
+            env.reset(options=dict(reconfigure=True))
         env.close()

@@ -252,6 +252,10 @@ class Xmate3Robotiq(BaseAgent):
 
                 return all([lflag, rflag])
 
+    def is_static(self, threshold: float = 0.2):
+        qvel = self.robot.get_qvel()[..., :-2]
+        return torch.max(torch.abs(qvel), 1)[0] <= threshold
+
     @staticmethod
     def build_grasp_pose(approaching, closing, center):
         assert np.abs(1 - np.linalg.norm(approaching)) < 1e-3

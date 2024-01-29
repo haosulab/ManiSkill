@@ -19,7 +19,7 @@ class PDJointPosVelController(PDJointPosController):
         vel_high = np.broadcast_to(self.config.vel_upper, pos_high.shape)
         low = np.float32(np.hstack([pos_low, vel_low]))
         high = np.float32(np.hstack([pos_high, vel_high]))
-        self.action_space = spaces.Box(low, high, dtype=np.float32)
+        self.single_action_space = spaces.Box(low, high, dtype=np.float32)
 
     def reset(self):
         super().reset()
