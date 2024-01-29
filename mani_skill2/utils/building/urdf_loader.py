@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 class URDFLoader(SapienURDFLoader):
     scene: ManiSkillScene
     name: str
+    disable_self_collisions: bool = False
 
     def parse(
         self, urdf_file, srdf_file=None, package_dir=None
@@ -26,6 +27,11 @@ class URDFLoader(SapienURDFLoader):
         )
         for i, a in enumerate(articulation_builders):
             a.set_name(f"{self.name}-articulation-{i}")
+            if self.disable_self_collisions:
+                for l in a.link_builders:
+                    print(self.name, l.name)
+                    # NOTE (stao): Currently in SAPIEN you can't set collision groups after building the links due to some bug when doing GPU sim.
+                    l.collision_groups[2] |= 1 << 29
         for i, b in enumerate(actor_builders):
             b.set_name(f"{self.name}-actor-{i}")
         return articulation_builders, actor_builders, cameras
@@ -68,6 +74,7 @@ class URDFLoader(SapienURDFLoader):
         articulations: List[Articulation] = []
         for b in articulation_builders:
             b.set_scene_mask(scene_mask)
+            b.disable_self_collisions = self.disable_self_collisions
             articulations.append(b.build())
 
         actors: List[Actor] = []

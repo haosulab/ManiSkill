@@ -102,22 +102,15 @@ def build_preprocessed_partnet_mobility_articulation(
     loader.scale = metadata["scale"]
     loader.load_multiple_collisions_from_file = True
     # loader.multiple_collisions_decomposition="coacd"
+    loader.disable_self_collisions = True
     urdf_path = MODEL_DBS["PartnetMobility"]["model_urdf_paths"][model_id]
     urdf_config = parse_urdf_config(urdf_config or {}, scene)
     apply_urdf_config(loader, urdf_config)
     articulation = loader.load(str(urdf_path), name=name, scene_mask=scene_mask)
-
     metadata = ArticulationMetadata(
         joints=dict(), links=dict(), movable_links=[], bbox=None
     )
-    # for link in articulation._objs[0].links:
-    #     # rb = link.
-    #     print(link.name)
-    #     tc = 0
-    #     for rs in link.collision_shapes:
-    #         count = rs.get_vertices().shape[0]
-    #         print(count)
-    # NOTE(jigu): links and their parent joints.
+
     for link, joint in zip(articulation.get_links(), articulation.get_joints()):
         metadata.joints[joint.name] = JointMetadata(type=joint.type, name="")
         # render_body = link.entity.find_component_by_type(

@@ -9,6 +9,7 @@ import torch
 from sapien.wrapper.articulation_builder import (
     ArticulationBuilder as SapienArticulationBuilder,
 )
+from sapien.wrapper.articulation_builder import LinkBuilder
 
 from mani_skill2.utils.sapien_utils import to_tensor
 from mani_skill2.utils.structs.articulation import Articulation
@@ -19,10 +20,12 @@ if TYPE_CHECKING:
 
 class ArticulationBuilder(SapienArticulationBuilder):
     scene: ManiSkillScene
+    disable_self_collisions: bool = False
 
     def __init__(self):
         super().__init__()
         self.scene_mask = None
+        self.name = None
 
     def set_name(self, name: str):
         self.name = name
@@ -38,6 +41,18 @@ class ArticulationBuilder(SapienArticulationBuilder):
         Set a scene mask so that the articulation builder builds the articulation only in a subset of the environments
         """
         self.scene_mask = scene_mask
+
+    def create_link_builder(self, parent: LinkBuilder = None):
+        if self.link_builders:
+            assert parent and parent in self.link_builders
+
+        builder = LinkBuilder(len(self.link_builders), parent)
+        self.link_builders.append(builder)
+        if self.disable_self_collisions:
+            # NOTE (stao): Currently in SAPIEN you can't set collision groups after building the links due to some bug when doing GPU sim.
+            builder.collision_groups[2] |= 1 << 29
+
+        return builder
 
     def build_entities(self, fix_root_link=None, name_prefix=""):
         entities = []

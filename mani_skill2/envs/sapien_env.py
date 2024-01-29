@@ -145,7 +145,7 @@ class BaseEnv(gym.Env):
         sensor_cfgs: dict = None,
         render_camera_cfgs: dict = None,
         robot_uid: Union[str, BaseAgent] = None,
-        gpu_sim_cfgs: dict = dict(spacing=10),
+        gpu_sim_cfgs: dict = dict(spacing=20),
         reconfiguration_freq: int = -1,
     ):
         # Create SAPIEN engine

@@ -110,9 +110,11 @@ class OpenCabinetEnv(BaseEnv):
                         link.generate_mesh(lambda _, x: "handle" in x.name, "handle")[0]
                     )
             cabinets.append(cabinet)
+
+        # we can merge different articulations with different degrees of freedoms as done below
+        # allowing you to manage all of them under one object and retrieve data like qpos, pose, etc. all together
+        # and with high performance. Note that some properties such as qpos and qlimits are now padded.
         self.cabinet = Articulation.merge_articulations(cabinets, name="cabinet")
-        # now self.cabinet.links makes very little sense. It will be a list of Link objects ordered by link index, but each Link object manages one physx link from each merged articulation
-        # User should extract merged links themselves across cabinets if they want to use link data
 
         self.cabinet_metadata = metadata
         self.handle_links = handle_links

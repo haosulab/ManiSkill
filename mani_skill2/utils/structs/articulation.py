@@ -183,6 +183,15 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     def max_dof(self) -> int:
         return max([obj.dof for obj in self._objs])
 
+    # currently does not work in SAPIEN. Must set collision groups prior to building Link
+    # def disable_self_collisions(self):
+    #     """Disable all self collisions between links. Note that 1 << 31 is reserved in the entirety of ManiSkill for link self collisions"""
+    #     for link in self.links:
+    #         for obj in link._objs:
+    #             for s in obj.get_collision_shapes():
+    #                 g0, g1, g2, g3 = s.get_collision_groups()
+    #                 s.set_collision_groups([g0, g1, g2 | (1 << 29), g3])
+
     # -------------------------------------------------------------------------- #
     # Functions from physx.PhysxArticulation
     # -------------------------------------------------------------------------- #
