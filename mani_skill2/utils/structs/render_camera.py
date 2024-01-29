@@ -1,9 +1,13 @@
 from dataclasses import dataclass
+from functools import cache
 from typing import List
 
 import sapien
 import sapien.physx as physx
 import sapien.render
+import torch
+
+from mani_skill2.utils.sapien_utils import to_tensor
 
 # NOTE (stao): commented out functions are functions that are not confirmed to be working in the wrapped class but the original class has
 
@@ -35,11 +39,16 @@ class RenderCamera:
     def get_name(self) -> str:
         return self.name
 
+    def __hash__(self):
+        return self._render_cameras[0].__hash__()
+
     # -------------------------------------------------------------------------- #
     # Functions from RenderCameraComponent
     # -------------------------------------------------------------------------- #
+    # TODO (stao): support extrinsic matrix changing
+    @cache
     def get_extrinsic_matrix(self):
-        return self._render_cameras[0].get_extrinsic_matrix()
+        return to_tensor(self._render_cameras[0].get_extrinsic_matrix())[None, :]
 
     def get_far(self) -> float:
         return self._render_cameras[0].get_far()
@@ -50,14 +59,16 @@ class RenderCamera:
     def get_height(self) -> int:
         return self._render_cameras[0].get_height()
 
+    @cache
     def get_intrinsic_matrix(self):
-        return self._render_cameras[0].get_intrinsic_matrix()
+        return to_tensor(self._render_cameras[0].get_intrinsic_matrix())[None, :]
 
     def get_local_pose(self) -> sapien.Pose:
         return self._render_cameras[0].get_local_pose()
 
+    @cache
     def get_model_matrix(self):
-        return self._render_cameras[0].get_model_matrix()
+        return to_tensor(self._render_cameras[0].get_model_matrix())[None, :]
 
     def get_near(self) -> float:
         return self._render_cameras[0].get_near()

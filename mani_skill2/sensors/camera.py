@@ -207,6 +207,8 @@ class Camera(BaseSensor):
         images = {}
         for name in self.texture_names:
             image = self.camera.get_picture(name)
+            if not isinstance(image, np.ndarray):
+                image = image.torch()
             images[name] = image
         return images
 

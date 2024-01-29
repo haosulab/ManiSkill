@@ -109,12 +109,12 @@ class StackCubeEnv(BaseEnv):
         # TODO (stao): GPU sim can be fast but unstable. Angular velocity is rather high despite it not really rotating
         is_cubeA_static = self.cubeA.is_static(lin_thresh=1e-2, ang_thresh=0.5)
         is_cubeA_grasped = self.agent.is_grasping(self.cubeA)
-        success = is_cubeA_on_cubeB * is_cubeA_static * (not is_cubeA_grasped)
+        success = is_cubeA_on_cubeB * is_cubeA_static * (~is_cubeA_grasped)
         return {
             "is_cubeA_grasped": is_cubeA_grasped,
             "is_cubeA_on_cubeB": is_cubeA_on_cubeB,
             "is_cubeA_static": is_cubeA_static,
-            "success": success,
+            "success": success.bool(),
         }
 
     def _get_obs_extra(self, info: Dict):

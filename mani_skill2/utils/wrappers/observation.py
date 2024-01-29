@@ -103,7 +103,6 @@ class PointCloudObservationWrapper(BaseGymObservationWrapper):
         super().__init__(env)
         self.observation_space = deepcopy(env.observation_space)
         self.update_observation_space(self.observation_space)
-        self._buffer = {}
 
     @staticmethod
     def update_observation_space(space: spaces.Dict):
@@ -141,28 +140,33 @@ class PointCloudObservationWrapper(BaseGymObservationWrapper):
             # Each pixel is (x, y, z, actor_id) in OpenGL camera space
             # actor_id = 0 for the background
             position = images["PositionSegmentation"]
+            segmentation = position[..., 3].clone()
             position[..., 3] = position[..., 2] == 0
+            position = position / 1000.0
 
             # Convert to world space
             cam2world = camera_params[cam_uid]["cam2world_gl"]
-            xyzw = position.reshape(-1, 4) @ cam2world.T
+            xyzw = position.reshape(position.shape[0], -1, 4) @ cam2world.transpose(
+                1, 2
+            )
             cam_pcd["xyzw"] = xyzw
 
             # Extra keys
             if "Color" in images:
                 rgb = images["Color"][..., :3]
-                rgb = np.clip(rgb * 255, 0, 255).astype(np.uint8)
-                cam_pcd["rgb"] = rgb.reshape(-1, 3)
-            if "Segmentation" in images:
-                cam_pcd["Segmentation"] = images["Segmentation"].reshape(-1, 4)
+                if isinstance(rgb, torch.Tensor):
+                    rgb = rgb.clone()
+                cam_pcd["rgb"] = rgb.reshape(rgb.shape[0], -1, 3)
+            if "PositionSegmentation" in images:
+                cam_pcd["Segmentation"] = segmentation.reshape(
+                    segmentation.shape[0], -1
+                )
 
             pointcloud_obs[cam_uid] = cam_pcd
 
         pointcloud_obs = merge_dicts(pointcloud_obs.values())
         for key, value in pointcloud_obs.items():
-            buffer = self._buffer.get(key, None)
-            pointcloud_obs[key] = np.concatenate(value, out=buffer)
-            self._buffer[key] = pointcloud_obs[key]
+            pointcloud_obs[key] = torch.concat(value)
 
         observation["pointcloud"] = pointcloud_obs
         return observation

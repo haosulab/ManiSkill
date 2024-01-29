@@ -336,7 +336,9 @@ class Fetch(BaseAgent):
             query, contacts_shape = self.queries[object.name]
             self.scene.px.gpu_query_contacts(query)
             # query.cuda_contacts # (num_unique_pairs * num_envs, 3)
-            contacts = query.cuda_contacts.clone().reshape((-1, *contacts_shape))
+            contacts = (
+                query.cuda_contacts.torch().clone().reshape((-1, *contacts_shape))
+            )
             lforce = torch.linalg.norm(contacts[0], axis=1)
             rforce = torch.linalg.norm(contacts[1], axis=1)
 

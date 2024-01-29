@@ -688,7 +688,13 @@ class BaseEnv(gym.Env):
         reward = self.get_reward(obs=obs, action=action, info=info)
         terminated = info["success"]
         if physx.is_gpu_enabled():
-            return obs, reward, terminated, False, info
+            return (
+                obs,
+                reward,
+                terminated,
+                torch.zeros(self.num_envs, device=self.device),
+                info,
+            )
         else:
             # On CPU sim mode, we always return numpy / python primitives without any batching.
             return unbatch(

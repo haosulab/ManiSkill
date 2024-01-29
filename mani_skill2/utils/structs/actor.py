@@ -153,7 +153,7 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
         if self.hidden:
             return
         if physx.is_gpu_enabled():
-            self.last_pose = self.px.cuda_rigid_body_data[
+            self.last_pose = self.px.cuda_rigid_body_data.torch()[
                 self._body_data_index, :7
             ].clone()
             temp_pose = self.pose.raw_pose
