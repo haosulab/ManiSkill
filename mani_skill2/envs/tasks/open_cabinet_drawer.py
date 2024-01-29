@@ -79,6 +79,7 @@ class OpenCabinetEnv(BaseEnv):
             ).get_collision_shapes()[0]
             cg = cs.get_collision_groups()
             cg[2] |= FETCH_UNIQUE_COLLISION_BIT
+            cg[2] |= 1 << 29  # make ground ignore collisions with kinematic objects?
             cs.set_collision_groups(cg)
 
     def _load_cabinets(self, joint_types: List[str]):
@@ -97,9 +98,7 @@ class OpenCabinetEnv(BaseEnv):
             cabinet, metadata = build_preprocessed_partnet_mobility_articulation(
                 self._scene, model_id, name=f"{model_id}-{i}", scene_mask=scene_mask
             )
-            self.cabinet_heights.append(
-                metadata.bbox.bounds[1, 2] - metadata.bbox.bounds[0, 2]
-            )
+            self.cabinet_heights.append(-2 * metadata.bbox.bounds[0, 2])
             handle_links.append([])
             handle_links_meshes.append([])
             # NOTE (stao): interesting future project similar to some kind of quality diversity is accelerating policy learning by dynamically shifting distribution of handles/cabinets being trained on.
@@ -150,7 +149,7 @@ class OpenCabinetEnv(BaseEnv):
             )
 
             self.handle_link_goal_marker.set_pose(
-                Pose.create_from_pq(p=handle_link_positions)
+                Pose.create_from_pq(p=handle_link_positions) * self.cabinet.pose
             )
             # close all the cabinets. We know beforehand that lower qlimit means "closed" for these assets.
             qlimits = self.cabinet.get_qlimits()  # [N, self.cabinet.max_dof, 2])
