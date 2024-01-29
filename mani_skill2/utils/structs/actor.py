@@ -70,7 +70,7 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
         )
 
     @classmethod
-    def merge_actors(cls, actors: List["Actor"], name: str = None):
+    def merge(cls, actors: List["Actor"], name: str = None):
         """
         Merge actors together so that they can all be managed by one python dataclass object.
         This can be useful for e.g. randomizing the asset loaded into a task and being able to do object.pose to fetch the pose of all randomized assets

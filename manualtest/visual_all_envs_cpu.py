@@ -9,7 +9,7 @@ from mani_skill2.utils.wrappers import RecordEpisode
 if __name__ == "__main__":
     # sapien.set_log_level("info")
     # , "StackCube-v1", "PickCube-v1", "PushCube-v1", "PickSingleYCB-v1", "OpenCabinet-v1"
-    num_envs = 4
+    num_envs = 8
     sapien.physx.set_gpu_memory_config(
         found_lost_pairs_capacity=2**26,
         max_rigid_patch_count=2**19,
@@ -47,7 +47,7 @@ if __name__ == "__main__":
             viewer = env.render_human()
             viewer.paused = True
             env.render_human()
-        for i in range(1):
+        for i in range(2):
             print("START")
             while i < 50 or (i < 50000 and num_envs == 1):
                 action = env.action_space.sample()
@@ -65,5 +65,5 @@ if __name__ == "__main__":
                     env.render_human()
                 done = done.any()
                 i += 1
-            env.reset(options=dict(reconfigure=True))
+            env.reset()
         env.close()

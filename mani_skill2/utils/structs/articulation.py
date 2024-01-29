@@ -126,7 +126,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         return self
 
     @classmethod
-    def merge_articulations(cls, articulations: List["Articulation"], name: str = None):
+    def merge(cls, articulations: List["Articulation"], name: str = None):
         objs = []
         scene = articulations[0]._scene
         merged_scene_mask = articulations[0]._scene_mask.clone()

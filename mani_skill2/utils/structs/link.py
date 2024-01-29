@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Callable, Dict, List, Union
 
 import sapien
 import sapien.physx as physx
+import torch
 import trimesh
 
 from mani_skill2.utils.geometry.trimesh_utils import (
@@ -41,22 +42,43 @@ class Link(
     def create(
         cls,
         physx_links: List[physx.PhysxArticulationLinkComponent],
-        articulation: Articulation,
+        articulation: Articulation = None,
+        scene_mask: torch.Tensor = None,
     ):
         shared_name = "_".join(
             physx_links[0].name.replace(articulation.name, "").split("_")[1:]
         )
+        if scene_mask is None and articulation is not None:
+            scene_mask = articulation._scene_mask
         return cls(
             articulation=articulation,
             _objs=physx_links,
             _scene=articulation._scene,
-            _scene_mask=articulation._scene_mask,
+            _scene_mask=scene_mask,
             name=shared_name,
             _body_data_name="cuda_rigid_body_data"
             if isinstance(articulation.px, physx.PhysxGpuSystem)
             else None,
             _bodies=physx_links,
         )
+
+    @classmethod
+    def merge(cls, links: List["Link"], name: str = None):
+        objs = []
+        merged_scene_mask = links[0]._scene_mask.clone()
+        num_objs_per_actor = links[0]._num_objs
+        for link in links:
+            objs += link._objs
+            merged_scene_mask[link._scene_mask] = True
+            assert (
+                link._num_objs == num_objs_per_actor
+            ), "Each given link must have the same number of managed objects"
+        merged_link = Link.create(
+            objs, articulation=links[0].articulation, scene_mask=merged_scene_mask
+        )
+        merged_link.articulation = None  # remove articulation reference as it does not make sense and is only used to instantiate some properties like the physx system
+        merged_link.name = name
+        return merged_link
 
     # -------------------------------------------------------------------------- #
     # Additional useful functions not in SAPIEN original API

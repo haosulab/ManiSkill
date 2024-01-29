@@ -44,6 +44,7 @@ class ArticulationMetadata:
     # a list of all movable links
     movable_links: List[str]
     bbox: trimesh.primitives.Box
+    scale: float
 
 
 def build_articulation_from_file(
@@ -108,7 +109,7 @@ def build_preprocessed_partnet_mobility_articulation(
     apply_urdf_config(loader, urdf_config)
     articulation = loader.load(str(urdf_path), name=name, scene_mask=scene_mask)
     metadata = ArticulationMetadata(
-        joints=dict(), links=dict(), movable_links=[], bbox=None
+        joints=dict(), links=dict(), movable_links=[], bbox=None, scale=loader.scale
     )
 
     for link, joint in zip(articulation.get_links(), articulation.get_joints()):

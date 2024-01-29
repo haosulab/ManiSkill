@@ -1,3 +1,4 @@
+import time
 from collections import OrderedDict
 from typing import Any, Dict, List
 
@@ -15,10 +16,6 @@ from mani_skill2.utils.building.articulations import (
 )
 from mani_skill2.utils.building.ground import build_tesselated_square_floor
 from mani_skill2.utils.geometry.geometry import transform_points
-from mani_skill2.utils.geometry.trimesh_utils import (
-    get_render_shape_meshes,
-    merge_meshes,
-)
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import look_at, to_tensor
 from mani_skill2.utils.structs.articulation import Articulation
@@ -98,7 +95,10 @@ class OpenCabinetEnv(BaseEnv):
             cabinet, metadata = build_preprocessed_partnet_mobility_articulation(
                 self._scene, model_id, name=f"{model_id}-{i}", scene_mask=scene_mask
             )
-            self.cabinet_heights.append(-2 * metadata.bbox.bounds[0, 2])
+            # TODO (stao): since we processed the assets we know that the bounds[0, 1] is the actual height to set the object at
+            # but in future we will store a visual origin offset so we can place them by using the actual bbox height / 2
+            # TODO (stao): ask fanbo, it seems loading links does not load the pose correclty on the cpu object?
+            self.cabinet_heights.append((-metadata.bbox.bounds[0, 1]))
             handle_links.append([])
             handle_links_meshes.append([])
             # NOTE (stao): interesting future project similar to some kind of quality diversity is accelerating policy learning by dynamically shifting distribution of handles/cabinets being trained on.
@@ -113,14 +113,13 @@ class OpenCabinetEnv(BaseEnv):
         # we can merge different articulations with different degrees of freedoms as done below
         # allowing you to manage all of them under one object and retrieve data like qpos, pose, etc. all together
         # and with high performance. Note that some properties such as qpos and qlimits are now padded.
-        self.cabinet = Articulation.merge_articulations(cabinets, name="cabinet")
+        self.cabinet = Articulation.merge(cabinets, name="cabinet")
 
         self.cabinet_metadata = metadata
+        # list of list of links and meshes. handle_links[i][j] is the jth handle of the ith cabinet
         self.handle_links = handle_links
-        self.handle_link = Link.create(
-            [x[0]._objs[0] for x in handle_links], self.cabinet
-        )
         self.handle_links_meshes = handle_links_meshes
+
         self.handle_link_goal_marker = build_sphere(
             self._scene,
             radius=0.05,
@@ -136,17 +135,33 @@ class OpenCabinetEnv(BaseEnv):
             # TODO (stao): sample random link objects to create a Link object
 
             xyz = torch.zeros((self.num_envs, 3))
-            xyz[:, 2] = torch.tensor(self.cabinet_heights) / 2
+            xyz[:, 2] = torch.tensor(self.cabinet_heights)
             self.cabinet.set_pose(Pose.create_from_pq(p=xyz))
-            # TODO (stao): surely there is a better way to transform points here?
+
+            stime = time.time()
+            # this is not pure uniform but for faster initialization to deal with different cabinet DOFs we just sample 0 to 10000 and take the modulo which is close enough
+            link_indices = torch.randint(0, 10000, size=(len(self.handle_links),)) * 0
+            self.handle_link = Link.merge(
+                [x[link_indices[i] % len(x)] for i, x in enumerate(self.handle_links)],
+                self.cabinet,
+            )
+            print([link_indices[i] % len(x) for i, x in enumerate(self.handle_links)])
             handle_link_positions = to_tensor(
                 np.array(
-                    [x[0].bounding_box.center_mass for x in self.handle_links_meshes]
+                    [
+                        x[link_indices[i] % len(x)].bounding_box.center_mass
+                        for i, x in enumerate(self.handle_links_meshes)
+                    ]
                 )
             ).float()  # (N, 3)
+            print(handle_link_positions[0], self.handle_link.pose.p[0])
+            print(f"Create handle link obj took {time.time() - stime}")
+
             handle_link_positions = transform_points(
-                self.handle_link.pose.to_transformation_matrix(), handle_link_positions
+                self.handle_link.pose.to_transformation_matrix().clone(),
+                handle_link_positions,
             )
+            print(handle_link_positions[0], self.handle_link.pose.p[0])
 
             self.handle_link_goal_marker.set_pose(
                 Pose.create_from_pq(p=handle_link_positions) * self.cabinet.pose

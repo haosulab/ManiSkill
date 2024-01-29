@@ -93,7 +93,7 @@ class PickSingleYCBEnv(BaseEnv):
             builder.set_scene_mask(scene_mask)
             actors.append(builder.build(name=f"{model_id}-{i}"))
             self.obj_heights.append(obj_height)
-        self.obj = Actor.merge_actors(actors, name="ycb_object")
+        self.obj = Actor.merge(actors, name="ycb_object")
 
         self.goal_site = build_sphere(
             self._scene,
