@@ -138,12 +138,11 @@ class OpenCabinetEnv(BaseEnv):
 
             stime = time.time()
             # this is not pure uniform but for faster initialization to deal with different cabinet DOFs we just sample 0 to 10000 and take the modulo which is close enough
-            link_indices = torch.randint(0, 10000, size=(len(self.handle_links),)) * 0
+            link_indices = torch.randint(0, 10000, size=(len(self.handle_links),))
             self.handle_link = Link.merge(
                 [x[link_indices[i] % len(x)] for i, x in enumerate(self.handle_links)],
                 self.cabinet,
             )
-            print([link_indices[i] % len(x) for i, x in enumerate(self.handle_links)])
             handle_link_positions = to_tensor(
                 np.array(
                     [

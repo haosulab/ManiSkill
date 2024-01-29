@@ -9,7 +9,9 @@ import numpy as np
 import sapien
 import sapien.physx as physx
 import torch
+import trimesh
 
+from mani_skill2.utils.geometry.trimesh_utils import get_component_meshes, merge_meshes
 from mani_skill2.utils.sapien_utils import to_numpy, to_tensor
 from mani_skill2.utils.structs.base import BaseStruct
 from mani_skill2.utils.structs.joint import Joint
@@ -192,6 +194,28 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     #                 g0, g1, g2, g3 = s.get_collision_groups()
     #                 s.set_collision_groups([g0, g1, g2 | (1 << 29), g3])
 
+    def get_collision_mesh(
+        self, to_world_frame: bool = True, first_only: bool = True
+    ) -> trimesh.Trimesh:
+        """
+        Returns the collision mesh of each managed articulation object. Results of this are cached
+
+        TODO (stao): Can we have a batched version of trimesh?
+        """
+        meshes = []
+        mat = self.pose.to_transformation_matrix()
+        for i, art in enumerate(self._objs):
+            art_meshes = []
+            for link in art.links:
+                art_meshes += get_component_meshes(link)
+            mesh = merge_meshes(art_meshes)
+            if to_world_frame:
+                mesh.apply_transform(mat[i])
+            meshes.append(mesh)
+            if first_only:
+                break
+        return meshes
+
     # -------------------------------------------------------------------------- #
     # Functions from physx.PhysxArticulation
     # -------------------------------------------------------------------------- #
@@ -326,14 +350,11 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     # def name(self, arg1: str) -> None:
     #     pass
     @property
-    def pose(self) -> sapien.Pose:
-        """
-        :type: sapien.pysapien.Pose
-        """
+    def pose(self) -> Pose:
         return self.root_pose
 
     @pose.setter
-    def pose(self, arg1: sapien.Pose) -> None:
+    def pose(self, arg1: Union[Pose, sapien.Pose]) -> None:
         self.root_pose = arg1
 
     # @property

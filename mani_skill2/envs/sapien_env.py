@@ -987,29 +987,30 @@ class BaseEnv(gym.Env):
         else:
             raise NotImplementedError(f"Unsupported render mode {self.render_mode}.")
 
-    # ---------------------------------------------------------------------------- #
-    # Advanced
-    # ---------------------------------------------------------------------------- #
-    def gen_scene_pcd(self, num_points: int = int(1e5)) -> np.ndarray:
-        """Generate scene point cloud for motion planning, excluding the robot"""
-        meshes = []
-        articulations = self._scene.get_all_articulations()
-        if self.agent is not None:
-            articulations.pop(articulations.index(self.agent.robot))
-        for articulation in articulations:
-            articulation_mesh = merge_meshes(get_articulation_meshes(articulation))
-            if articulation_mesh:
-                meshes.append(articulation_mesh)
+    # TODO (stao): re implement later
+    # # ---------------------------------------------------------------------------- #
+    # # Advanced
+    # # ---------------------------------------------------------------------------- #
+    # def gen_scene_pcd(self, num_points: int = int(1e5)) -> np.ndarray:
+    #     """Generate scene point cloud for motion planning, excluding the robot"""
+    #     meshes = []
+    #     articulations = self._scene.get_all_articulations()
+    #     if self.agent is not None:
+    #         articulations.pop(articulations.index(self.agent.robot))
+    #     for articulation in articulations:
+    #         articulation_mesh = merge_meshes(get_articulation_meshes(articulation))
+    #         if articulation_mesh:
+    #             meshes.append(articulation_mesh)
 
-        for actor in self._scene.get_all_actors():
-            actor_mesh = merge_meshes(get_component_meshes(actor))
-            if actor_mesh:
-                meshes.append(
-                    actor_mesh.apply_transform(
-                        actor.get_pose().to_transformation_matrix()
-                    )
-                )
+    #     for actor in self._scene.get_all_actors():
+    #         actor_mesh = merge_meshes(get_component_meshes(actor))
+    #         if actor_mesh:
+    #             meshes.append(
+    #                 actor_mesh.apply_transform(
+    #                     actor.get_pose().to_transformation_matrix()
+    #                 )
+    #             )
 
-        scene_mesh = merge_meshes(meshes)
-        scene_pcd = scene_mesh.sample(num_points)
-        return scene_pcd
+    #     scene_mesh = merge_meshes(meshes)
+    #     scene_pcd = scene_mesh.sample(num_points)
+    #     return scene_pcd
