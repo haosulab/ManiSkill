@@ -55,7 +55,9 @@ class ManiSkillVectorEnv(VectorEnv):
         self.returns += rew
         infos["episode"] = dict(r=self.returns)
         terminations = torch.zeros(self.num_envs, device=self.env.device)
-        if truncations:
+        if (isinstance(truncations, torch.Tensor) and truncations.any()) or (
+            not isinstance(truncations, torch.Tensor) and truncations
+        ):
             infos["episode"]["r"] = self.returns.clone()
             final_obs = obs
             obs, _ = self.reset()

@@ -231,7 +231,7 @@ if __name__ == "__main__":
             print(f"eval_episodic_return={episodic_return}")
             writer.add_scalar("charts/eval_success_rate", info["success"].float().mean().cpu().numpy(), global_step)
             writer.add_scalar("charts/eval_episodic_return", episodic_return, global_step)
-            writer.add_scalar("charts/eval_episodic_length", info["elapsed_steps"], global_step)
+            writer.add_scalar("charts/eval_episodic_length", info["elapsed_steps"].float().mean().cpu().numpy(), global_step)
         # exit()
         if args.save_model and iteration % args.eval_freq == 1:
             model_path = f"runs/{run_name}/{args.exp_name}_{iteration}.cleanrl_model"
@@ -273,7 +273,7 @@ if __name__ == "__main__":
                 print(f"global_step={global_step}, episodic_return={episodic_return}")
                 writer.add_scalar("charts/success_rate", info["success"].float().mean().cpu().numpy(), global_step)
                 writer.add_scalar("charts/episodic_return", episodic_return, global_step)
-                writer.add_scalar("charts/episodic_length", info["elapsed_steps"], global_step)
+                writer.add_scalar("charts/episodic_length", info["elapsed_steps"].float().mean().cpu().numpy(), global_step)
         # bootstrap value if not done
         with torch.no_grad():
             next_value = agent.get_value(next_obs).reshape(1, -1)
