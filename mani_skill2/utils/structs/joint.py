@@ -27,24 +27,21 @@ class Joint(BaseStruct[physx.PhysxArticulationJoint]):
     """
 
     articulation: Articulation
-
-    # joint_index: int
+    index: int
 
     child_link: Link = None
     parent_link: Link = None
-    _data_index: slice = None
     name: str = None
 
-    # TODO (arth): might need better hash in future but this is fine for now
     def __hash__(self):
-        return hash(self.name)
+        return self._objs[0].__hash__()
 
     @classmethod
     def create(
         cls,
         physx_joints: List[physx.PhysxArticulationJoint],
-        # joint_index: int,
         articulation: Articulation,
+        joint_index: int,
     ):
         # naming convention of the original physx joints is "scene-<id>-<articulation_name>_<original_joint_name>"
         shared_name = "_".join(
@@ -71,12 +68,12 @@ class Joint(BaseStruct[physx.PhysxArticulationJoint]):
                 ]
         return cls(
             articulation=articulation,
+            index=joint_index,
             _objs=physx_joints,
             _scene=articulation._scene,
             _scene_mask=articulation._scene_mask,
             child_link=child_link,
             parent_link=parent_link,
-            # joint_index=joint_index,
             name=shared_name,
         )
 

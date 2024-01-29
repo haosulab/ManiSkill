@@ -5,13 +5,14 @@ from typing import Dict, List
 import numpy as np
 import sapien
 import sapien.physx as physx
+import torch
 from gymnasium import spaces
 from gymnasium.vector.utils import batch_space
 
 from mani_skill2.agents.utils import (
     flatten_action_spaces,
     get_active_joint_indices,
-    get_active_joints,
+    get_joints_by_names,
 )
 from mani_skill2.envs.scene import ManiSkillScene
 from mani_skill2.utils.common import clip_and_scale_action, normalize_action_space
@@ -27,7 +28,7 @@ class BaseController:
     """
 
     joints: List[Joint]  # active joints controlled
-    joint_indices: List[int]  # indices of active joints controlled
+    joint_indices: torch.Tensor  # indices of active joints controlled
     action_space: spaces.Space
     """the action space. If the number of parallel environments is > 1, this action space is also batched"""
     single_action_space: spaces.Space
@@ -72,7 +73,7 @@ class BaseController:
         joint_names = self.config.joint_names
         try:
             # We only track the joints we can control, the active ones.
-            self.joints = get_active_joints(self.articulation, joint_names)
+            self.joints = get_joints_by_names(self.articulation, joint_names)
             self.joint_indices = get_active_joint_indices(
                 self.articulation, joint_names
             )

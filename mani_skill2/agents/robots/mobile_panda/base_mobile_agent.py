@@ -40,7 +40,7 @@ class DummyMobileAgent(BaseAgent):
         for body in bodies._objs:
             s = body.get_collision_shapes()[0]
             gs = s.get_collision_groups()
-            gs[2] = gs[2] | 1 << 30
+            gs[2] = 1 << 30
             s.set_collision_groups(gs)
 
     def get_proprioception(self):

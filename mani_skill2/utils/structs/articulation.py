@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from collections import OrderedDict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import cached_property
-from typing import TYPE_CHECKING, List, Sequence, Union
+from typing import TYPE_CHECKING, List, Union
 
 import numpy as np
 import sapien
@@ -40,6 +40,11 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     """
     whether or not this articulation object is a merged articulation where it is managing many articulations with different dofs
     """
+
+    _cached_joint_target_indices: OrderedDict[int, torch.Tensor] = field(
+        default_factory=OrderedDict
+    )
+    """Map from a set of joints of this articulation and the indexing torch tensor to use for setting drive targets"""
 
     @classmethod
     def _create_from_physx_articulations(
@@ -110,8 +115,8 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
         joint_map = OrderedDict()
         wrapped_joints: List[Joint] = []
-        for joints in all_joint_objs:
-            wrapped_joint = Joint.create(joints, self)
+        for joint_index, joints in enumerate(all_joint_objs):
+            wrapped_joint = Joint.create(joints, self, joint_index)
             joint_map[wrapped_joint.name] = wrapped_joint
             wrapped_joints.append(wrapped_joint)
         self.joints = wrapped_joints
@@ -146,7 +151,11 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     @cached_property
     def _data_index(self):
-        return [px_articulation.gpu_index for px_articulation in self._objs]
+        return torch.tensor(
+            [px_articulation.gpu_index for px_articulation in self._objs],
+            device=self.device,
+            dtype=torch.int32,
+        )
 
     def get_state(self):
         pose = self.root.pose
@@ -444,11 +453,14 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         else:
             return self._objs[0].create_pinocchio_model()
 
+    # def _get_joint_indices(self, joints: List[Joint]):
+    #     if
+
     def set_joint_drive_targets(
         self,
         targets: Array,
         joints: List[Joint] = None,
-        joint_indices: Sequence[int] = None,
+        joint_indices: torch.Tensor = None,
     ):
         """
         Set drive targets on active joints. Joint indices are required to be given for GPU sim, and joint objects are required for the CPU sim
@@ -457,10 +469,11 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         """
         if physx.is_gpu_enabled():
             targets = to_tensor(targets)
-            # Cache this indexing with meshgrid? and make it on the gpu to be faster
-            gx, gy = np.meshgrid(
-                self._data_index, joint_indices, indexing="ij"
-            )  # TODO (stao): is there overhead to this?
+            if joint_indices not in self._cached_joint_target_indices:
+                self._cached_joint_target_indices[joint_indices] = torch.meshgrid(
+                    self._data_index, joint_indices, indexing="ij"
+                )
+            gx, gy = self._cached_joint_target_indices[joint_indices]
             self.px.cuda_articulation_target_qpos.torch()[gx, gy] = targets
         else:
             for i, joint in enumerate(joints):
@@ -470,12 +483,21 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         self,
         targets: Array,
         joints: List[Joint] = None,
+        joint_indices: torch.Tensor = None,
     ):
+        """
+        Set drive velocity targets on active joints. Joint indices are required to be given for GPU sim, and joint objects are required for the CPU sim
+
+        TODO (stao): can we use joint indices for the CPU sim as well? Some global joint indices?
+        """
         if physx.is_gpu_enabled():
             targets = to_tensor(targets)
-            raise NotImplementedError(
-                "Setting joint velocity targets is currently not supported on the GPU"
-            )
+            if joint_indices not in self._cached_joint_target_indices:
+                self._cached_joint_target_indices[joint_indices] = torch.meshgrid(
+                    self._data_index, joint_indices, indexing="ij"
+                )
+            gx, gy = self._cached_joint_target_indices[joint_indices]
+            self.px.cuda_articulation_target_qvel.torch()[gx, gy] = targets
         else:
             for i, joint in enumerate(joints):
                 joint.set_drive_velocity_target(targets[0, i])

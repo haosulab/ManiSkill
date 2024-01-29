@@ -132,7 +132,7 @@ class OpenCabinetEnv(BaseEnv):
                 np.array(
                     [x[0].bounding_box.center_mass for x in self.handle_links_meshes]
                 )
-            )  # (N, 3)
+            ).float()  # (N, 3)
             handle_link_positions = transform_points(
                 self.handle_link.pose.to_transformation_matrix(), handle_link_positions
             )
@@ -148,22 +148,39 @@ class OpenCabinetEnv(BaseEnv):
             if self.robot_uid == "panda":
                 self.agent.robot.set_qpos(self.agent.robot.qpos * 0)
                 self.agent.robot.set_pose(Pose.create_from_pq(p=[-1, 0, 0]))
-            elif self.robot_uid == "mobile_panda_single_arm":
-                center = np.array([0, 0.8])
-                dist = self._episode_rng.uniform(1.6, 1.8)
-                theta = self._episode_rng.uniform(0.9 * np.pi, 1.1 * np.pi)
-                direction = np.array([np.cos(theta), np.sin(theta)])
-                xy = center + direction * dist
-
-                # Base orientation
-                noise_ori = self._episode_rng.uniform(-0.05 * np.pi, 0.05 * np.pi)
-                ori = (theta - np.pi) + noise_ori
-
-                h = 1e-4
-                arm_qpos = np.array([0, 0, 0, -1.5, 0, 3, 0.78, 0.02, 0.02])
-
-                qpos = np.hstack([xy, ori, h, arm_qpos])
+            elif self.robot_uid == "fetch":
+                qpos = np.array(
+                    [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        -np.pi / 4,
+                        0,
+                        np.pi / 4,
+                        0,
+                        np.pi / 3,
+                        0,
+                        0.015,
+                        0.015,
+                    ]
+                )
                 self.agent.reset(qpos)
+                self.agent.robot.set_pose(sapien.Pose([-1.5, 0, 0]))
+
+                from mani_skill2.agents.robots.fetch import FETCH_UNIQUE_COLLISION_BIT
+
+                # TODO (stao) (arth): is there a better way to model robots in sim. This feels very unintuitive.
+                for obj in self.ground._objs:
+                    cs = obj.find_component_by_type(
+                        sapien.physx.PhysxRigidStaticComponent
+                    ).get_collision_shapes()[0]
+                    cg = cs.get_collision_groups()
+                    cg[2] = FETCH_UNIQUE_COLLISION_BIT
+                    cs.set_collision_groups(cg)
 
     def evaluate(self):
         return {"success": torch.zeros(self.num_envs, device=self.device, dtype=bool)}
