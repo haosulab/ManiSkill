@@ -28,6 +28,11 @@ class BaseController:
     joints: List[physx.PhysxArticulationJoint]  # active joints controlled
     joint_indices: List[int]  # indices of active joints controlled
     action_space: spaces.Space
+    """the action space. If the number of parallel environments is > 1, this action space is also batched"""
+    single_action_space: spaces.Space
+    """The unbatched version of the action space which is also typically already normalized by this class"""
+    _original_single_action_space: spaces.Space
+    """The unbatched, original action space without any additional processing like normalization"""
 
     def __init__(
         self,
@@ -52,6 +57,10 @@ class BaseController:
         self._initialize_joints()
         self._initialize_action_space()
 
+        if self.scene.num_envs > 1:
+            self.action_space = batch_space(
+                self.single_action_space, n=self.scene.num_envs
+            )
         # NOTE(jigu): It is intended not to be a required field in config.
         self._normalize_action = getattr(self.config, "normalize_action", False)
         if self._normalize_action:
@@ -73,9 +82,6 @@ class BaseController:
 
     def _initialize_action_space(self):
         raise NotImplementedError
-
-    def _batch_action_space(self):
-        self.action_space = batch_space(self.action_space, n=self.scene.num_envs)
 
     @property
     def control_freq(self):
@@ -99,7 +105,7 @@ class BaseController:
         raise NotImplementedError
 
     def reset(self):
-        """Called after switching the controller."""
+        """Resets the controller by setting drive properties if needed"""
         self.set_drive_property()
 
     def _preprocess_action(self, action: Array):
@@ -137,9 +143,14 @@ class BaseController:
     # Normalize action
     # -------------------------------------------------------------------------- #
     def _clip_and_scale_action_space(self):
-        self._action_space = self.action_space
-        self.action_space = normalize_action_space(self._action_space)
-        low, high = self._action_space.low, self._action_space.high
+        self._original_single_action_space = self.single_action_space
+        self.single_action_space = normalize_action_space(
+            self._original_single_action_space
+        )
+        low, high = (
+            self._original_single_action_space.low,
+            self._original_single_action_space.high,
+        )
         self.action_space_low = to_tensor(low)
         self.action_space_high = to_tensor(high)
 
@@ -181,19 +192,22 @@ class DictController(BaseController):
             self.controllers[uid] = config.controller_cls(
                 config, articulation, control_freq, sim_freq=sim_freq, scene=scene
             )
-
         self._initialize_action_space()
         self._initialize_joints()
         self._assert_fully_actuated()
+        if self.scene.num_envs > 1:
+            self.action_space = batch_space(
+                self.single_action_space, n=self.scene.num_envs
+            )
 
     def _initialize_action_space(self):
         # Explicitly create a list of key-value tuples
         # Otherwise, spaces.Dict will sort keys if a dict is provided
         named_spaces = [
-            (uid, controller.action_space)
+            (uid, controller.single_action_space)
             for uid, controller in self.controllers.items()
         ]
-        self.action_space = spaces.Dict(named_spaces)
+        self.single_action_space = spaces.Dict(named_spaces)
 
     def _initialize_joints(self):
         self.joints = []
@@ -258,14 +272,9 @@ class CombinedController(DictController):
 
     def _initialize_action_space(self):
         super()._initialize_action_space()
-        self.action_space, self.action_mapping = flatten_action_spaces(
-            self.action_space.spaces
+        self.single_action_space, self.action_mapping = flatten_action_spaces(
+            self.single_action_space.spaces
         )
-
-    def _batch_action_space(self):
-        for controller in self.controllers.values():
-            controller._batch_action_space()
-        super()._batch_action_space()
 
     def set_action(self, action: np.ndarray):
         # Sanity check

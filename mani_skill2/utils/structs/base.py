@@ -68,7 +68,7 @@ class PhysxRigidBodyComponentStruct:
 
     @property
     def _body_data(self):
-        return getattr(self.px, self._body_data_name)
+        return getattr(self.px, self._body_data_name).torch()
 
     # ---------------------------------------------------------------------------- #
     # API from physx.PhysxRigidBodyComponent

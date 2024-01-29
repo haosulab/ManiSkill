@@ -212,7 +212,7 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
                 return self._builder_initial_pose
             else:
                 return Pose.create(
-                    self.px.cuda_rigid_body_data[self._body_data_index, :7]
+                    self.px.cuda_rigid_body_data.torch()[self._body_data_index, :7]
                 )
         else:
             assert len(self._objs) == 1
@@ -223,7 +223,7 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
         if physx.is_gpu_enabled():
             if not isinstance(arg1, torch.Tensor):
                 arg1 = vectorize_pose(arg1)
-            self.px.cuda_rigid_body_data[self._body_data_index, :7] = arg1
+            self.px.cuda_rigid_body_data.torch()[self._body_data_index, :7] = arg1
         else:
             self._objs[0].pose = to_sapien_pose(arg1)
 

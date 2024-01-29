@@ -121,7 +121,9 @@ class Link(
     def pose(self) -> Pose:
         if physx.is_gpu_enabled():
             # TODO (handle static objects)
-            return Pose.create(self.px.cuda_rigid_body_data[self._body_data_index, :7])
+            return Pose.create(
+                self.px.cuda_rigid_body_data.torch()[self._body_data_index, :7]
+            )
         else:
             assert len(self._objs) == 1
             return Pose.create(self._objs[0].pose)
@@ -129,9 +131,9 @@ class Link(
     @pose.setter
     def pose(self, arg1: Union[Pose, sapien.Pose]) -> None:
         if physx.is_gpu_enabled():
-            self.px.cuda_rigid_body_data[self._body_data_index, :7] = vectorize_pose(
-                arg1
-            )
+            self.px.cuda_rigid_body_data.torch()[
+                self._body_data_index, :7
+            ] = vectorize_pose(arg1)
         else:
             self._objs[0].pose = to_sapien_pose(arg1)
 

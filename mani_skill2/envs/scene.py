@@ -504,12 +504,12 @@ class ManiSkillScene:
         # all the actors and articulations to their original poses as they likely have collided
         for actor in self.non_static_actors:
             actor.set_pose(actor._builder_initial_pose)
-        self.px.cuda_rigid_body_data[:, 7:] = (
-            self.px.cuda_rigid_body_data[:, 7:] * 0
+        self.px.cuda_rigid_body_data.torch()[:, 7:] = (
+            self.px.cuda_rigid_body_data.torch()[:, 7:] * 0
         )  # zero out all velocities
         self.px.gpu_apply_rigid_dynamic_data()
-        self.px.cuda_articulation_qvel[:, :] = (
-            self.px.cuda_articulation_qvel * 0
+        self.px.cuda_articulation_qvel.torch()[:, :] = (
+            self.px.cuda_articulation_qvel.torch() * 0
         )  # zero out all q velocities
         self.px.gpu_apply_articulation_qvel()
 

@@ -1,4 +1,3 @@
-import copy
 import os
 from collections import OrderedDict
 from typing import Any, Dict, List, Sequence, Type, Union
@@ -52,28 +51,47 @@ class BaseEnv(gym.Env):
         num_envs: number of parallel environments to run. By default this is 1, which means a CPU simulation is used. If greater than 1,
             then we initialize the GPU simulation setup. Note that not all environments are faster when simulated on the GPU due to limitations of
             GPU simulations. For example, environments with many moving objects are better simulated by parallelizing across CPUs.
+
         gpu_sim_backend: The GPU simulation backend to use (only used if the given num_envs argument is > 1). This affects the type of tensor
             returned by the environment for e.g. observations and rewards. Can be "torch" or "jax". Default is "torch"
+
         obs_mode: observation mode registered in @SUPPORTED_OBS_MODES.
+
         reward_mode: reward mode registered in @SUPPORTED_REWARD_MODES.
+
         control_mode: control mode of the agent.
             "*" represents all registered controllers, and the action space will be a dict.
+
         render_mode: render mode registered in @SUPPORTED_RENDER_MODES.
+
         sim_freq (int): simulation frequency (Hz)
+
         control_freq (int): control frequency (Hz)
+
         renderer (str): type of renderer. "sapien" or "client".
+
         renderer_kwargs (dict): kwargs to initialize the renderer.
             Example kwargs for `SapienRenderer` (renderer_type=='sapien'):
             - offscreen_only: tell the renderer the user does not need to present onto a screen.
             - device (str): GPU device for renderer, e.g., 'cuda:x'.
+
         shader_dir (str): shader directory. Defaults to "default".
             "default" and "rt" are built-in options with SAPIEN. Other options are user-defined.
+
         render_config (dict): kwargs to configure the renderer. Only for `SapienRenderer`.
             See `sapien.RenderConfig` for more details.
+
         enable_shadow (bool): whether to enable shadow for lights. Defaults to False.
+
         sensor_cfgs (dict): configurations of sensors. See notes for more details.
+
         render_camera_cfgs (dict): configurations of rendering cameras. Similar usage as @camera_cfgs.
-        gpu_sim_cfgs (dict): Configurations for GPU simulation if used.
+
+        gpu_sim_cfgs (dict): Configurations for GPU simulation if used. # TODO (stao): flesh this explanation out
+
+        reconfiguration_freq (int): How frequently to call reconfigure when environment is reset via `self.reset(...)`
+            Generally for most users who are not building tasks this does not need to be changed. The default is -1, which means
+            the environment reconfigures upon creation, and never again.
 
     Note:
         `sensor_cfgs` is used to update environement-specific sensor configurations.
@@ -128,6 +146,7 @@ class BaseEnv(gym.Env):
         render_camera_cfgs: dict = None,
         robot_uid: Union[str, BaseAgent] = None,
         gpu_sim_cfgs: dict = dict(spacing=10),
+        reconfiguration_freq: int = -1,
     ):
         # Create SAPIEN engine
 
@@ -136,7 +155,6 @@ class BaseEnv(gym.Env):
         if num_envs > 1:
             if not sapien.physx.is_gpu_enabled():
                 sapien.physx.enable_gpu()
-                sapien.set_cuda_tensor_backend("torch")
             self.gpu_sim_cfgs = gpu_sim_cfgs
             self.device = torch.device(
                 "cuda"
@@ -260,10 +278,7 @@ class BaseEnv(gym.Env):
                 image_obs_space.spaces[uid] = camera.observation_space
 
         self.action_space = self.agent.action_space
-        self.single_action_space = copy.deepcopy(self.action_space)
-        if num_envs > 1:
-            self.agent.controller._batch_action_space()
-            self.action_space = self.agent.action_space
+        self.single_action_space = self.agent.single_action_space
 
     def _load_agent(self):
         agent_cls: Type[BaseAgent] = self._agent_cls
@@ -471,10 +486,10 @@ class BaseEnv(gym.Env):
         Tasks like PegInsertionSide and TurnFaucet will call this each time as the peg
         shape changes each time and the faucet model changes each time respectively.
         """
+        print("===RECONFIGURE===")
         with torch.random.fork_rng():
             torch.manual_seed(seed=self._episode_seed)
             self._clear()
-
             # load everything into the scene first before initializing anything
             self._setup_scene()
             self._load_agent()
@@ -484,11 +499,8 @@ class BaseEnv(gym.Env):
             self._setup_lighting()
 
             # Cache entites and articulations
-            self._actors = self.get_actors()
-            self._articulations = self.get_articulations()
             if sapien.physx.is_gpu_enabled():
                 self._scene._setup_gpu()
-                self.device = self.physx_system.cuda_rigid_body_data.device
                 self._scene._gpu_fetch_all()
                 # TODO (stao): unknown what happens when we do reconfigure more than once when GPU is one. figure this out
             self.agent.initialize()
@@ -566,9 +578,14 @@ class BaseEnv(gym.Env):
         which means that when creating an environment and resetting without a seed, it will always have the same sequence of RNG for each episode.
 
         """
-        self._elapsed_steps = 0
         if options is None:
             options = dict()
+
+        self._elapsed_steps = (
+            torch.zeros(self.num_envs, device=self.device, dtype=torch.int32)
+            if physx.is_gpu_enabled()
+            else 0
+        )
 
         self._set_main_rng(seed)
         # we first set the first episode seed to allow environments to use it to reconfigure the environment with a seed
@@ -591,12 +608,19 @@ class BaseEnv(gym.Env):
             self._scene._gpu_apply_all()
             self._scene.px.gpu_update_articulation_kinematics()
             self._scene._gpu_fetch_all()
+
         else:
             obs = to_numpy(unbatch(obs))
+            self._elapsed_steps = 0
         return obs, {}
 
     def _set_main_rng(self, seed):
-        """Set the main random generator which is only used to set the seed of the episode RNG to improve reproducibility"""
+        """Set the main random generator which is only used to set the seed of the episode RNG to improve reproducibility.
+
+        Note that while _set_main_rng and _set_episode_rng are setting a seed and numpy random state, when using GPU sim
+        parallelization it is highly recommended to use torch random functions as they will make things run faster. The use
+        of torch random functions when building tasks in ManiSkill are automatically seeded via `torch.random.fork`
+        """
         if seed is None:
             if self._main_seed is not None:
                 return
@@ -756,10 +780,10 @@ class BaseEnv(gym.Env):
         The function should be called in reset(). Called by `self.reconfigure`"""
         self._set_scene_config()
         if sapien.physx.is_gpu_enabled():
-            if self.physx_system is not None:
-                raise RuntimeError(
-                    "In GPU simulation, you cannot create an environment or reconfigure more than once. You must initialize a new process"
-                )
+            # if self.physx_system is not None:
+            #     raise RuntimeError(
+            #         "In GPU simulation, you cannot create an environment or reconfigure more than once. You must initialize a new process"
+            #     )
             self.physx_system = sapien.physx.PhysxGpuSystem()
             # Create the scenes in a square grid
             sub_scenes = []
@@ -909,7 +933,7 @@ class BaseEnv(gym.Env):
                 if camera_name is not None and name != camera_name:
                     continue
                 camera_group.take_picture()
-                rgb = camera_group.get_picture_cuda("Color")[..., :3].clone()
+                rgb = camera_group.get_picture_cuda("Color").torch()[..., :3].clone()
                 images.append(rgb)
         else:
             for name, camera in self._scene.render_cameras.items():

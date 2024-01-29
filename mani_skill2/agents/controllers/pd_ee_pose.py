@@ -68,7 +68,7 @@ class PDEEPosController(PDJointPosController):
     def _initialize_action_space(self):
         low = np.float32(np.broadcast_to(self.config.lower, 3))
         high = np.float32(np.broadcast_to(self.config.upper, 3))
-        self.action_space = spaces.Box(low, high, dtype=np.float32)
+        self.single_action_space = spaces.Box(low, high, dtype=np.float32)
 
     @property
     def ee_pos(self):
@@ -197,7 +197,7 @@ class PDEEPoseController(PDEEPosController):
                 ]
             )
         )
-        self.action_space = spaces.Box(low, high, dtype=np.float32)
+        self.single_action_space = spaces.Box(low, high, dtype=np.float32)
 
     def _clip_and_scale_action(self, action):
         # NOTE(xiqiang): rotation should be clipped by norm.

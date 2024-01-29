@@ -329,7 +329,9 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     @property
     def qf(self):
         if physx.is_gpu_enabled():
-            return self.px.cuda_articulation_qf[self._data_index, : self.max_dof]
+            return self.px.cuda_articulation_qf.torch()[
+                self._data_index, : self.max_dof
+            ]
         else:
             return torch.from_numpy(self._objs[0].qf[None, :])
 
@@ -337,7 +339,9 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     def qf(self, arg1: torch.Tensor):
         if physx.is_gpu_enabled():
             arg1 = to_tensor(arg1)
-            self.px.cuda_articulation_qf[self._data_index, : self.max_dof] = arg1
+            self.px.cuda_articulation_qf.torch()[
+                self._data_index, : self.max_dof
+            ] = arg1
         else:
             arg1 = to_numpy(arg1)
             if len(arg1.shape) == 2:
@@ -363,7 +367,9 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         if physx.is_gpu_enabled():
             # NOTE (stao): cuda_articulation_qpos is of shape (M, N) where M is the total number of articulations in the physx scene,
             # N is the max dof of all those articulations.
-            return self.px.cuda_articulation_qpos[self._data_index, : self.max_dof]
+            return self.px.cuda_articulation_qpos.torch()[
+                self._data_index, : self.max_dof
+            ]
         else:
             return torch.from_numpy(self._objs[0].qpos[None, :])
 
@@ -371,7 +377,9 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     def qpos(self, arg1: torch.Tensor):
         if physx.is_gpu_enabled():
             arg1 = to_tensor(arg1)
-            self.px.cuda_articulation_qpos[self._data_index, : self.max_dof] = arg1
+            self.px.cuda_articulation_qpos.torch()[
+                self._data_index, : self.max_dof
+            ] = arg1
         else:
             arg1 = to_numpy(arg1)
             if len(arg1.shape) == 2:
@@ -381,7 +389,9 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     @property
     def qvel(self):
         if physx.is_gpu_enabled():
-            return self.px.cuda_articulation_qvel[self._data_index, : self.max_dof]
+            return self.px.cuda_articulation_qvel.torch()[
+                self._data_index, : self.max_dof
+            ]
         else:
             return torch.from_numpy(self._objs[0].qvel[None, :])
 
@@ -389,7 +399,9 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     def qvel(self, arg1: torch.Tensor):
         if physx.is_gpu_enabled():
             arg1 = to_tensor(arg1)
-            self.px.cuda_articulation_qvel[self._data_index, : self.max_dof] = arg1
+            self.px.cuda_articulation_qvel.torch()[
+                self._data_index, : self.max_dof
+            ] = arg1
         else:
             arg1 = to_numpy(arg1)
             if len(arg1.shape) == 2:
@@ -449,7 +461,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             gx, gy = np.meshgrid(
                 self._data_index, joint_indices, indexing="ij"
             )  # TODO (stao): is there overhead to this?
-            self.px.cuda_articulation_target_qpos[gx, gy] = targets
+            self.px.cuda_articulation_target_qpos.torch()[gx, gy] = targets
         else:
             for i, joint in enumerate(joints):
                 joint.set_drive_target(targets[0, i])

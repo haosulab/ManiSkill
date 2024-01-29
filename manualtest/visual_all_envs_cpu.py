@@ -7,6 +7,7 @@ from mani_skill2.utils.sapien_utils import to_numpy
 from mani_skill2.utils.wrappers import RecordEpisode
 
 if __name__ == "__main__":
+    # sapien.set_log_level("info")
     # , "StackCube-v1", "PickCube-v1", "PushCube-v1", "PickSingleYCB-v1", "OpenCabinet-v1"
     num_envs = 4
     sapien.physx.set_gpu_memory_config(
@@ -14,7 +15,7 @@ if __name__ == "__main__":
         max_rigid_patch_count=2**19,
         max_rigid_contact_count=2**21,
     )
-    for env_id in ["OpenCabinet-v1"]:
+    for env_id in ["StackCube-v1"]:
         env = gym.make(
             env_id,
             num_envs=num_envs,
@@ -35,7 +36,7 @@ if __name__ == "__main__":
             video_fps=30,
             save_trajectory=True,
         )
-        env.reset(seed=2)
+        env.reset(seed=2, options=dict(reconfigure=True))
         # env.reset(seed=1)
 
         done = False
