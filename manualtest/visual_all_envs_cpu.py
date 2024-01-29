@@ -38,7 +38,7 @@ if __name__ == "__main__":
             save_trajectory=True,
         )
         # env.reset(seed=4, options=dict(reconfigure=True)) # wierd qvel speeds
-        env.reset(seed=5, options=dict(reconfigure=True))
+        env.reset(seed=52, options=dict(reconfigure=True))
         # env.reset(seed=1)
 
         done = False
@@ -47,7 +47,7 @@ if __name__ == "__main__":
             viewer = env.render_human()
             viewer.paused = True
             env.render_human()
-        for i in range(2):
+        for i in range(3):
             print("START")
             while i < 50 or (i < 50000 and num_envs == 1):
                 action = env.action_space.sample()
@@ -66,4 +66,5 @@ if __name__ == "__main__":
                 done = done.any()
                 i += 1
             env.reset()
+            # env.reset(options=dict(reconfigure=True))
         env.close()

@@ -132,8 +132,6 @@ class OpenCabinetEnv(BaseEnv):
 
     def _initialize_actors(self):
         with torch.device(self.device):
-            # TODO (stao): sample random link objects to create a Link object
-
             xyz = torch.zeros((self.num_envs, 3))
             xyz[:, 2] = torch.tensor(self.cabinet_heights)
             self.cabinet.set_pose(Pose.create_from_pq(p=xyz))
@@ -154,17 +152,20 @@ class OpenCabinetEnv(BaseEnv):
                     ]
                 )
             ).float()  # (N, 3)
-            print(handle_link_positions[0], self.handle_link.pose.p[0])
             print(f"Create handle link obj took {time.time() - stime}")
+
+            # the three lines here are necessary to update all link poses whenever qpos and root pose of articulation change
+            # that way you can use the correct link poses as done below for your task.
+            self._scene._gpu_apply_all()
+            self._scene.px.gpu_update_articulation_kinematics()
+            self._scene._gpu_fetch_all()
 
             handle_link_positions = transform_points(
                 self.handle_link.pose.to_transformation_matrix().clone(),
                 handle_link_positions,
             )
-            print(handle_link_positions[0], self.handle_link.pose.p[0])
-
             self.handle_link_goal_marker.set_pose(
-                Pose.create_from_pq(p=handle_link_positions) * self.cabinet.pose
+                Pose.create_from_pq(p=handle_link_positions)
             )
             # close all the cabinets. We know beforehand that lower qlimit means "closed" for these assets.
             qlimits = self.cabinet.get_qlimits()  # [N, self.cabinet.max_dof, 2])
