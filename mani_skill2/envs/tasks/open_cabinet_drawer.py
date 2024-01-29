@@ -1,4 +1,3 @@
-import time
 from collections import OrderedDict
 from typing import Any, Dict, List
 
@@ -23,12 +22,12 @@ from mani_skill2.utils.structs.link import Link
 from mani_skill2.utils.structs.pose import Pose
 
 
-@register_env("OpenCabinet-v1", max_episode_steps=200)
-class OpenCabinetEnv(BaseEnv):
+@register_env("OpenCabinetDrawer-v1", max_episode_steps=200)
+class OpenCabinetDrawerEnv(BaseEnv):
     """
     Task Description
     ----------------
-    Add a task description here
+    Control a robot to open a randomly selected cabinet drawer
 
     Randomizations
     --------------
@@ -38,6 +37,8 @@ class OpenCabinetEnv(BaseEnv):
 
     Visualization: link to a video/gif of the task being solved
     """
+
+    handle_types = ["prismatic"]
 
     def __init__(
         self,
@@ -54,18 +55,19 @@ class OpenCabinetEnv(BaseEnv):
         super().__init__(*args, robot_uid=robot_uid, **kwargs)
 
     def _register_sensors(self):
-        pose = look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
+        pose = look_at(eye=[-2.5, -1.5, 1.8], target=[-0.3, 0.5, 0.1])
         return [
-            CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10)
+            CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 100)
         ]
 
     def _register_render_cameras(self):
-        pose = look_at(eye=[-2.5, -2.5, 2.5], target=[-0.1, 0, 0.1])
-        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
+        pose = look_at(eye=[-2.3, -1.5, 1.8], target=[-0.3, 0.5, 0])
+        # TODO (stao): how much does far affect rendering speed?
+        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)
 
     def _load_actors(self):
         self.ground = build_tesselated_square_floor(self._scene)
-        self._load_cabinets(["prismatic"])
+        self._load_cabinets(self.handle_types)
 
         from mani_skill2.agents.robots.fetch import FETCH_UNIQUE_COLLISION_BIT
 
@@ -76,7 +78,7 @@ class OpenCabinetEnv(BaseEnv):
             ).get_collision_shapes()[0]
             cg = cs.get_collision_groups()
             cg[2] |= FETCH_UNIQUE_COLLISION_BIT
-            cg[2] |= 1 << 29  # make ground ignore collisions with kinematic objects?
+            cg[2] |= 1 << 29  # make ground ignore collisions with the cabinets
             cs.set_collision_groups(cg)
 
     def _load_cabinets(self, joint_types: List[str]):
@@ -136,13 +138,14 @@ class OpenCabinetEnv(BaseEnv):
             xyz[:, 2] = torch.tensor(self.cabinet_heights)
             self.cabinet.set_pose(Pose.create_from_pq(p=xyz))
 
-            stime = time.time()
             # this is not pure uniform but for faster initialization to deal with different cabinet DOFs we just sample 0 to 10000 and take the modulo which is close enough
             link_indices = torch.randint(0, 10000, size=(len(self.handle_links),))
             self.handle_link = Link.merge(
                 [x[link_indices[i] % len(x)] for i, x in enumerate(self.handle_links)],
                 self.cabinet,
             )
+
+            # TODO (stao): For performance improvement, one can save relative position of link handles ahead of time.
             handle_link_positions = to_tensor(
                 np.array(
                     [
@@ -151,7 +154,6 @@ class OpenCabinetEnv(BaseEnv):
                     ]
                 )
             ).float()  # (N, 3)
-            print(f"Create handle link obj took {time.time() - stime}")
 
             # the three lines here are necessary to update all link poses whenever qpos and root pose of articulation change
             # that way you can use the correct link poses as done below for your task.
@@ -215,3 +217,8 @@ class OpenCabinetEnv(BaseEnv):
     ):
         max_reward = 1.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
+
+
+@register_env("OpenCabinetDoor-v1", max_episode_steps=200)
+class OpenCabinetDoorEnv(OpenCabinetDrawerEnv):
+    handle_types = ["revolute"]

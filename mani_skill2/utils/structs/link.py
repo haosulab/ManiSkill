@@ -106,7 +106,6 @@ class Link(
     ):
         """
         Generates mesh objects (trimesh.Trimesh) for each managed physx link and saves them to self.meshes[mesh_name] in addition to returning them here.
-        This does this by
         """
         # TODO (stao): should we create a Mesh wrapper? that is basically trimesh.Trimesh but all batched.
         if mesh_name in self.meshes:
@@ -120,6 +119,9 @@ class Link(
             merged_meshes.append(merge_meshes(meshes))
         self.meshes[mesh_name] = merged_meshes
         return merged_meshes
+
+    # TODO (stao): In future can we have some shared nice functions like getting center of mass of desired meshes (e.g. handle mesh?)
+    # def get_mesh_center_of_masses(self, mesh_name: str):
 
     def bbox(
         self,

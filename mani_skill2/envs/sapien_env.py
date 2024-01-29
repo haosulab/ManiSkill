@@ -90,7 +90,7 @@ class BaseEnv(gym.Env):
         gpu_sim_cfgs (dict): Configurations for GPU simulation if used. # TODO (stao): flesh this explanation out
 
         reconfiguration_freq (int): How frequently to call reconfigure when environment is reset via `self.reset(...)`
-            Generally for most users who are not building tasks this does not need to be changed. The default is -1, which means
+            Generally for most users who are not building tasks this does not need to be changed. The default is 0, which means
             the environment reconfigures upon creation, and never again.
 
         force_use_gpu_sim (bool): By default this is False. If the num_envs == 1, we use GPU sim if force_use_gpu_sim is True, otherwise we use CPU sim.
@@ -148,13 +148,15 @@ class BaseEnv(gym.Env):
         render_camera_cfgs: dict = None,
         robot_uid: Union[str, BaseAgent] = None,
         gpu_sim_cfgs: dict = dict(spacing=20),
-        reconfiguration_freq: int = -1,
+        reconfiguration_freq: int = 0,
         force_use_gpu_sim: bool = False,
     ):
         # Create SAPIEN engine
 
         self._scene: ManiSkillScene = None
         self.num_envs = num_envs
+        self.reconfiguration_freq = reconfiguration_freq
+        self._reconfig_counter = 0
         if num_envs > 1 or force_use_gpu_sim:
             if not sapien.physx.is_gpu_enabled():
                 sapien.physx.enable_gpu()
@@ -489,7 +491,7 @@ class BaseEnv(gym.Env):
         Tasks like PegInsertionSide and TurnFaucet will call this each time as the peg
         shape changes each time and the faucet model changes each time respectively.
         """
-        print("===RECONFIGURE===")
+
         with torch.random.fork_rng():
             torch.manual_seed(seed=self._episode_seed)
             self._clear()
@@ -510,6 +512,7 @@ class BaseEnv(gym.Env):
             self._setup_sensors()  # for GPU sim, we have to setup sensors after we call setup gpu in order to enable loading mounted sensors
             if self._viewer is not None:
                 self._setup_viewer()
+        self._reconfig_counter = self.reconfiguration_freq
 
     def _load_actors(self):
         """Loads all actors into the scene. Called by `self.reconfigure`"""
@@ -595,12 +598,16 @@ class BaseEnv(gym.Env):
         self._set_episode_rng(seed)
 
         reconfigure = options.get("reconfigure", False)
+        reconfigure = reconfigure or (
+            self._reconfig_counter == 0 and self.reconfiguration_freq != 0
+        )
         if reconfigure:
             # Reconfigure the scene if assets change
             self.reconfigure()
         else:
             self._clear_sim_state()
-
+        if self.reconfiguration_freq != 0:
+            self._reconfig_counter -= 1
         # Set the episode rng again after reconfiguration to guarantee seed reproducibility
         self._set_episode_rng(self._episode_seed)
 

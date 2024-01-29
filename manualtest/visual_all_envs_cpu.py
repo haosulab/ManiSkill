@@ -15,7 +15,7 @@ if __name__ == "__main__":
         max_rigid_patch_count=2**19,
         max_rigid_contact_count=2**21,
     )
-    for env_id in ["OpenCabinet-v1"]:
+    for env_id in ["StackCube-v1"]:
         env = gym.make(
             env_id,
             num_envs=num_envs,
@@ -28,6 +28,7 @@ if __name__ == "__main__":
             sim_freq=100,
             control_freq=20,
             force_use_gpu_sim=True,
+            reconfiguration_freq=1,
         )
         env = RecordEpisode(
             env,
@@ -53,8 +54,9 @@ if __name__ == "__main__":
                 action = env.action_space.sample()
                 if len(action.shape) == 1:
                     action = action.reshape(1, -1)
-                # action[:] *= 0
-                action[:, -2:] *= 0
+                action[:] *= 0
+                # action[:, -2:] *= 0
+                # action[:, 6] = 1 # on fetch this controls gripper rotation
                 action[:, -3] = 1
                 #
                 # TODO (stao): on cpu sim, -1 here goes up, gpu sim -1 goes down?
