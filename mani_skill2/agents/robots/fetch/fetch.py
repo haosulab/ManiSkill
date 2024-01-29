@@ -315,10 +315,11 @@ class Fetch(BaseAgent):
             self.robot.get_links(), "r_wheel_link"
         )
         for link in [self.base_link, self.l_wheel_link, self.r_wheel_link]:
-            cs = link._bodies[0].get_collision_shapes()[0]
-            cg = cs.get_collision_groups()
-            cg[2] = FETCH_UNIQUE_COLLISION_BIT
-            cs.set_collision_groups(cg)
+            for body in link._bodies:
+                cs = body.get_collision_shapes()[0]
+                cg = cs.get_collision_groups()
+                cg[2] |= FETCH_UNIQUE_COLLISION_BIT
+                cs.set_collision_groups(cg)
 
         self.queries: Dict[str, Tuple[physx.PhysxGpuContactQuery, Tuple[int]]] = dict()
 

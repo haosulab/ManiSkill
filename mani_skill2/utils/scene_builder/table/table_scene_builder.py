@@ -120,7 +120,7 @@ class TableSceneBuilder(SceneBuilder):
                 .get_collision_shapes()[0]
             )
             cg = cs.get_collision_groups()
-            cg[2] = FETCH_UNIQUE_COLLISION_BIT
+            cg[2] |= FETCH_UNIQUE_COLLISION_BIT
             cs.set_collision_groups(cg)
         else:
             raise NotImplementedError(self.env.robot_uid)

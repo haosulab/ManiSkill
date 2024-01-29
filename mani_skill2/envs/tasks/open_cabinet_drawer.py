@@ -63,12 +63,23 @@ class OpenCabinetEnv(BaseEnv):
         ]
 
     def _register_render_cameras(self):
-        pose = look_at(eye=[-1.5, -1.5, 1.5], target=[-0.1, 0, 0.1])
+        pose = look_at(eye=[-2.5, -2.5, 2.5], target=[-0.1, 0, 0.1])
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
 
     def _load_actors(self):
         self.ground = build_tesselated_square_floor(self._scene)
         self._load_cabinets(["prismatic"])
+
+        from mani_skill2.agents.robots.fetch import FETCH_UNIQUE_COLLISION_BIT
+
+        # TODO (stao) (arth): is there a better way to model robots in sim. This feels very unintuitive.
+        for obj in self.ground._objs:
+            cs = obj.find_component_by_type(
+                sapien.physx.PhysxRigidStaticComponent
+            ).get_collision_shapes()[0]
+            cg = cs.get_collision_groups()
+            cg[2] |= FETCH_UNIQUE_COLLISION_BIT
+            cs.set_collision_groups(cg)
 
     def _load_cabinets(self, joint_types: List[str]):
         rand_idx = torch.randperm(len(self.all_model_ids))
@@ -170,17 +181,6 @@ class OpenCabinetEnv(BaseEnv):
                 )
                 self.agent.reset(qpos)
                 self.agent.robot.set_pose(sapien.Pose([-1.5, 0, 0]))
-
-                from mani_skill2.agents.robots.fetch import FETCH_UNIQUE_COLLISION_BIT
-
-                # TODO (stao) (arth): is there a better way to model robots in sim. This feels very unintuitive.
-                for obj in self.ground._objs:
-                    cs = obj.find_component_by_type(
-                        sapien.physx.PhysxRigidStaticComponent
-                    ).get_collision_shapes()[0]
-                    cg = cs.get_collision_groups()
-                    cg[2] = FETCH_UNIQUE_COLLISION_BIT
-                    cs.set_collision_groups(cg)
 
     def evaluate(self):
         return {"success": torch.zeros(self.num_envs, device=self.device, dtype=bool)}
