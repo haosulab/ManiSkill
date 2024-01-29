@@ -36,7 +36,8 @@ if __name__ == "__main__":
             video_fps=30,
             save_trajectory=True,
         )
-        env.reset(seed=2)
+        # env.reset(seed=4, options=dict(reconfigure=True)) # wierd qvel speeds
+        env.reset(seed=5, options=dict(reconfigure=True))
         # env.reset(seed=1)
 
         done = False
@@ -45,14 +46,15 @@ if __name__ == "__main__":
             viewer = env.render_human()
             viewer.paused = True
             env.render_human()
-        for i in range(2):
+        for i in range(1):
             print("START")
             while i < 50 or (i < 50000 and num_envs == 1):
                 action = env.action_space.sample()
                 if len(action.shape) == 1:
                     action = action.reshape(1, -1)
-                action[:, 0] = 1
-                # action[:] * 0
+                action[:] *= 0
+                action[:, -3] = 1
+                #
                 # TODO (stao): on cpu sim, -1 here goes up, gpu sim -1 goes down?
                 # action[:, 2] = -1
                 obs, rew, terminated, truncated, info = env.step(action)
