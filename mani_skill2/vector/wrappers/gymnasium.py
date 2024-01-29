@@ -70,7 +70,7 @@ class ManiSkillVectorEnv(VectorEnv):
         return obs, rew, terminations, truncations, infos
 
     def close(self):
-        return self.env.close()
+        return self._env.close()
 
     def call(self, name: str, *args, **kwargs):
         function = getattr(self.env, name)

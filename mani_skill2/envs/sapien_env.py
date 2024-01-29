@@ -93,6 +93,8 @@ class BaseEnv(gym.Env):
             Generally for most users who are not building tasks this does not need to be changed. The default is -1, which means
             the environment reconfigures upon creation, and never again.
 
+        force_use_gpu_sim (bool): By default this is False. If the num_envs == 1, we use GPU sim if force_use_gpu_sim is True, otherwise we use CPU sim.
+
     Note:
         `sensor_cfgs` is used to update environement-specific sensor configurations.
         If the key is one of sensor names (e.g. a camera), the value will be applied to the corresponding sensor.
@@ -147,12 +149,13 @@ class BaseEnv(gym.Env):
         robot_uid: Union[str, BaseAgent] = None,
         gpu_sim_cfgs: dict = dict(spacing=20),
         reconfiguration_freq: int = -1,
+        force_use_gpu_sim: bool = False,
     ):
         # Create SAPIEN engine
 
         self._scene: ManiSkillScene = None
         self.num_envs = num_envs
-        if num_envs > 1:
+        if num_envs > 1 or force_use_gpu_sim:
             if not sapien.physx.is_gpu_enabled():
                 sapien.physx.enable_gpu()
             self.gpu_sim_cfgs = gpu_sim_cfgs

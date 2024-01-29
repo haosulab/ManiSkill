@@ -45,7 +45,7 @@ class OpenCabinetEnv(BaseEnv):
     def __init__(
         self,
         *args,
-        robot_uid="mobile_panda_single_arm",
+        robot_uid="fetch",
         robot_init_qpos_noise=0.02,
         **kwargs,
     ):
@@ -134,7 +134,6 @@ class OpenCabinetEnv(BaseEnv):
 
     def _initialize_actors(self):
         with torch.device(self.device):
-            # import ipdb;ipdb.set_trace()
             # TODO (stao): sample random link objects to create a Link object
 
             xyz = torch.zeros((self.num_envs, 3))
@@ -155,8 +154,7 @@ class OpenCabinetEnv(BaseEnv):
             )
             # close all the cabinets. We know beforehand that lower qlimit means "closed" for these assets.
             qlimits = self.cabinet.get_qlimits()  # [N, self.cabinet.max_dof, 2])
-            qpos = qlimits[:, :, 0]
-            self.cabinet.set_qpos(qpos)
+            self.cabinet.set_qpos(qlimits[:, :, 0])
             # initialize robot
             if self.robot_uid == "panda":
                 self.agent.robot.set_qpos(self.agent.robot.qpos * 0)
@@ -183,6 +181,11 @@ class OpenCabinetEnv(BaseEnv):
                 )
                 self.agent.reset(qpos)
                 self.agent.robot.set_pose(sapien.Pose([-1.5, 0, 0]))
+
+            # NOTE (stao): This is a temporary work around for the issue where the cabinet drawers/doors might open themselves on the first step. It's unclear why this happens on GPU sim only atm.
+            self._scene._gpu_apply_all()
+            self._scene.px.step()
+            self.cabinet.set_qpos(qlimits[:, :, 0])
 
     def evaluate(self):
         return {"success": torch.zeros(self.num_envs, device=self.device, dtype=bool)}

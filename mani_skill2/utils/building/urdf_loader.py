@@ -29,8 +29,7 @@ class URDFLoader(SapienURDFLoader):
             a.set_name(f"{self.name}-articulation-{i}")
             if self.disable_self_collisions:
                 for l in a.link_builders:
-                    print(self.name, l.name)
-                    # NOTE (stao): Currently in SAPIEN you can't set collision groups after building the links due to some bug when doing GPU sim.
+                    # NOTE (stao): Currently this may not be working as intended
                     l.collision_groups[2] |= 1 << 29
         for i, b in enumerate(actor_builders):
             b.set_name(f"{self.name}-actor-{i}")

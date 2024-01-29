@@ -9,7 +9,7 @@ from mani_skill2.utils.wrappers import RecordEpisode
 if __name__ == "__main__":
     # sapien.set_log_level("info")
     # , "StackCube-v1", "PickCube-v1", "PushCube-v1", "PickSingleYCB-v1", "OpenCabinet-v1"
-    num_envs = 2
+    num_envs = 4
     sapien.physx.set_gpu_memory_config(
         found_lost_pairs_capacity=2**26,
         max_rigid_patch_count=2**19,
@@ -27,6 +27,7 @@ if __name__ == "__main__":
             # control_mode="pd_ee_delta_pos",
             sim_freq=100,
             control_freq=20,
+            force_use_gpu_sim=True,
         )
         env = RecordEpisode(
             env,
@@ -52,7 +53,8 @@ if __name__ == "__main__":
                 action = env.action_space.sample()
                 if len(action.shape) == 1:
                     action = action.reshape(1, -1)
-                action[:] *= 0
+                # action[:] *= 0
+                action[:, -2:] *= 0
                 action[:, -3] = 1
                 #
                 # TODO (stao): on cpu sim, -1 here goes up, gpu sim -1 goes down?
