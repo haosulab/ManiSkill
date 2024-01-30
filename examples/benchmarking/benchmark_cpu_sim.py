@@ -1,12 +1,14 @@
 import time
+
 import gymnasium as gym
-import sapien
-import mani_skill2.envs
-import sapien.physx
-import tqdm
 import numpy as np
-import sapien.render
+import sapien
 import sapien.physx
+import sapien.render
+import tqdm
+
+import mani_skill2.envs
+
 if __name__ == "__main__":
     num_envs = 12
     env_id = "PickCube-v0"
@@ -36,5 +38,7 @@ if __name__ == "__main__":
             print("RESET")
     dtime = time.time() - stime
     FPS = num_envs * N / dtime
-    print(f"{FPS=:0.3f}. {N=} frames in {dtime:0.3f}s with {num_envs} parallel envs with step+reset")
+    print(
+        f"{FPS=:0.3f}. {N=} frames in {dtime:0.3f}s with {num_envs} parallel envs with step+reset"
+    )
     env.close()

@@ -43,12 +43,7 @@ class ManiSkillScene:
         self.px = self.sub_scenes[0].physx_system
         self._gpu_sim_initialized = False
         self.debug_mode = debug_mode
-        super().__init__()
 
-    # ---------------------------------------------------------------------------- #
-    # Overidden functions: Functions that can't be handled by a catch all method
-    # or are not meant to be run as batched
-    # ---------------------------------------------------------------------------- #
     @property
     def timestep(self):
         return self.px.timestep

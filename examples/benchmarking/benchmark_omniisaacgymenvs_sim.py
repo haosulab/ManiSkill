@@ -27,26 +27,25 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-import gym
-import hydra
-from omegaconf import DictConfig
 import os
 import time
 
+import gym
+import hydra
 import numpy as np
-import torch
-
 import omniisaacgymenvs
+import torch
+from omegaconf import DictConfig
 from omniisaacgymenvs.envs.vec_env_rlgames import VecEnvRLGames
 from omniisaacgymenvs.utils.config_utils.path_utils import get_experience
 from omniisaacgymenvs.utils.hydra_cfg.hydra_utils import *
 from omniisaacgymenvs.utils.hydra_cfg.reformat import omegaconf_to_dict, print_dict
 from omniisaacgymenvs.utils.task_util import initialize_task
-
+from profiling import Profiler
 
 @hydra.main(version_base=None, config_name="config", config_path="../cfg")
 def parse_hydra_configs(cfg: DictConfig):
-
+    profiler = Profiler(output_format="stdout")
     cfg_dict = omegaconf_to_dict(cfg)
     print_dict(cfg_dict)
 
@@ -55,22 +54,30 @@ def parse_hydra_configs(cfg: DictConfig):
     enable_viewport = "enable_cameras" in cfg.task.sim and cfg.task.sim.enable_cameras
 
     # select kit app file
-    experience = get_experience(headless, cfg.enable_livestream, enable_viewport, cfg.enable_recording, cfg.kit_app)
+    experience = get_experience(
+        headless,
+        cfg.enable_livestream,
+        enable_viewport,
+        cfg.enable_recording,
+        cfg.kit_app,
+    )
 
     env = VecEnvRLGames(
         headless=headless,
         sim_device=cfg.device_id,
         enable_livestream=cfg.enable_livestream,
         enable_viewport=enable_viewport or cfg.enable_recording,
-        experience=experience
+        experience=experience,
     )
     # parse experiment directory
-    module_path = os.path.abspath(os.path.join(os.path.dirname(omniisaacgymenvs.__file__)))
+    module_path = os.path.abspath(
+        os.path.join(os.path.dirname(omniisaacgymenvs.__file__))
+    )
     experiment_dir = os.path.join(module_path, "runs", cfg.train.params.config.name)
 
     # use gym RecordVideo wrapper for viewport recording
     if cfg.enable_recording:
-        if cfg.recording_dir == '':
+        if cfg.recording_dir == "":
             videos_dir = os.path.join(experiment_dir, "videos")
         else:
             videos_dir = cfg.recording_dir
@@ -78,12 +85,18 @@ def parse_hydra_configs(cfg: DictConfig):
         video_length = cfg.recording_length
         env.is_vector_env = True
         if env.metadata is None:
-            env.metadata = {"render_modes": ["rgb_array"], "render_fps": cfg.recording_fps}
+            env.metadata = {
+                "render_modes": ["rgb_array"],
+                "render_fps": cfg.recording_fps,
+            }
         else:
             env.metadata["render_modes"] = ["rgb_array"]
             env.metadata["render_fps"] = cfg.recording_fps
         env = gym.wrappers.RecordVideo(
-            env, video_folder=videos_dir, step_trigger=video_interval, video_length=video_length
+            env,
+            video_folder=videos_dir,
+            step_trigger=video_interval,
+            video_length=video_length,
         )
 
     # sets seed. if seed is -1 will pick a random one
@@ -99,34 +112,35 @@ def parse_hydra_configs(cfg: DictConfig):
 
     num_envs = env.num_envs
     import tqdm
+
     with torch.inference_mode():
         # reset environment
         env.reset(seed=2022)
         torch.manual_seed(0)
 
         N = 100
-        stime = time.time()
-        for i in tqdm.tqdm(range(N)):
-            actions = 2 * torch.rand(env.action_space.shape, device=task.rl_device) - 1
-            obs, rew, done, info = env.step(actions)
-        dtime = time.time() - stime
-        FPS = num_envs * N / dtime
-        print(f"{FPS=:0.3f}. {N=} frames in {dtime:0.3f}s with {num_envs} parallel envs")
+        with profiler.profile("env.step", total_steps=N, num_envs=num_envs):
+            for i in range(N):
+                actions = (
+                    2 * torch.rand(env.action_space.shape, device=task.rl_device) - 1
+                )
+                obs, rew, terminated, info = env.step(actions)
+                obs=obs['obs'].clone()
+        profiler.log_stats("env.step")
 
         env.reset(seed=2022)
         torch.manual_seed(0)
-
         N = 1000
-        stime = time.time()
-        for i in tqdm.tqdm(range(N)):
-            actions = 2 * torch.rand(env.action_space.shape, device=task.rl_device) - 1
-            obs, rew, done, info = env.step(actions)
-            if i % 200 == 0 and i != 0:
-                env.reset()
-                print("RESET")
-        dtime = time.time() - stime
-        FPS = num_envs * N / dtime
-        print(f"{FPS=:0.3f}. {N=} frames in {dtime:0.3f}s with {num_envs} parallel envs with step+reset")
+        with profiler.profile("env.step+env.reset", total_steps=N, num_envs=num_envs):
+            for i in range(N):
+                actions = (
+                    2 * torch.rand(env.action_space.shape, device=task.rl_device) - 1
+                )
+                obs, rew, terminated, info = env.step(actions)
+                obs=obs['obs'].clone()
+                if i % 200 == 0 and i != 0:
+                    env.reset()
+        profiler.log_stats("env.step+env.reset")
 
     env.simulation_app.close()
 
