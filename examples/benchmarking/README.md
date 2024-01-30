@@ -57,7 +57,7 @@ To benchmark [OmniIsaacGymEnvs](https://github.com/NVIDIA-Omniverse/OmniIsaacGym
 alias PYTHON_PATH=~/.local/share/ov/pkg/isaac_sim-*/python.sh
 PYTHON_PATH scripts/benchmark_omniisaac_sim.py headless=True num_envs=4096 task="FrankaCabinet"
 ```
-
+<!-- Notes: FrankaCabinet uses solver iterations 12 and 120:60 sim to control freq, which makes it run faster than other sims -->
 <!-- 
 ## RoboSuite
 
