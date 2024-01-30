@@ -197,7 +197,7 @@ class Camera(BaseSensor):
         self.camera.take_picture()
 
     def get_images(self, take_picture=False):
-        """Get (raw) images from the camera."""
+        """Get (raw) images from the camera. Note that these are always batched"""
         if take_picture:
             self.take_picture()
 

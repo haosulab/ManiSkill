@@ -190,7 +190,7 @@ class AssemblingKitsEnv(StationaryManipulationEnv):
 
         reward = 0.0
         gripper_width = (
-            self.agent.robot.get_qlimit()[-1, 1] * 2
+            self.agent.robot.get_qlimits()[-1, 1] * 2
         )  # NOTE: hard-coded with panda
 
         # reaching reward

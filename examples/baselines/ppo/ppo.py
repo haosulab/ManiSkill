@@ -10,12 +10,11 @@ import sapien
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import tqdm
 import tyro
 from torch.distributions.normal import Normal
 from torch.utils.tensorboard import SummaryWriter
 
-from mani_skill2.utils.visualization.misc import images_to_video, tile_images
+# ManiSkill specific imports
 import mani_skill2.envs
 from mani_skill2.utils.wrappers.record import RecordEpisode
 from mani_skill2.vector.wrappers.gymnasium import ManiSkillVectorEnv
@@ -38,7 +37,7 @@ class Args:
     """the entity (team) of wandb's project"""
     capture_video: bool = True
     """whether to capture videos of the agent performances (check out `videos` folder)"""
-    save_model: bool = False
+    save_model: bool = True
     """whether to save model into the `runs/{run_name}` folder"""
     upload_model: bool = False
     """whether to upload the saved model to huggingface"""
@@ -56,7 +55,7 @@ class Args:
     """the number of parallel environments"""
     num_eval_envs: int = 8
     """the number of parallel evaluation environments"""
-    num_steps: int = 100
+    num_steps: int = 50
     """the number of steps to run in each environment per policy rollout"""
     anneal_lr: bool = False
     """Toggle learning rate annealing for policy and value networks"""
@@ -212,6 +211,9 @@ if __name__ == "__main__":
     action_space_low, action_space_high = torch.from_numpy(envs.single_action_space.low).to(device), torch.from_numpy(envs.single_action_space.high).to(device)
     def clip_action(action: torch.Tensor):
         return torch.clamp(action.detach(), action_space_low, action_space_high)
+
+    # model_path = "/home/stao/work/research/maniskill/ManiSkill2/examples/baselines/ppo/runs/StackCube-v1__ppo__1__1706294550/ppo_3076.cleanrl_model"
+    # agent.load_state_dict(torch.load(model_path))
     for iteration in range(1, args.num_iterations + 1):
         timeout_bonus = torch.zeros((args.num_steps, args.num_envs), device=device)
         if iteration % args.eval_freq == 1:
@@ -224,12 +226,17 @@ if __name__ == "__main__":
                 if eval_truncations.any():
                     eval_done = True
             info = eval_infos["final_info"]
+            # print(info)
             episodic_return = info['episode']['r'].mean().cpu().numpy()
             print(f"eval_episodic_return={episodic_return}")
             writer.add_scalar("charts/eval_success_rate", info["success"].float().mean().cpu().numpy(), global_step)
             writer.add_scalar("charts/eval_episodic_return", episodic_return, global_step)
-            writer.add_scalar("charts/eval_episodic_length", info["elapsed_steps"], global_step)
-
+            writer.add_scalar("charts/eval_episodic_length", info["elapsed_steps"].float().mean().cpu().numpy(), global_step)
+        # exit()
+        if args.save_model and iteration % args.eval_freq == 1:
+            model_path = f"runs/{run_name}/{args.exp_name}_{iteration}.cleanrl_model"
+            torch.save(agent.state_dict(), model_path)
+            print(f"model saved to {model_path}")
         # Annealing the rate if instructed to do so.
         if args.anneal_lr:
             frac = 1.0 - (iteration - 1.0) / args.num_iterations
@@ -266,7 +273,7 @@ if __name__ == "__main__":
                 print(f"global_step={global_step}, episodic_return={episodic_return}")
                 writer.add_scalar("charts/success_rate", info["success"].float().mean().cpu().numpy(), global_step)
                 writer.add_scalar("charts/episodic_return", episodic_return, global_step)
-                writer.add_scalar("charts/episodic_length", info["elapsed_steps"], global_step)
+                writer.add_scalar("charts/episodic_length", info["elapsed_steps"].float().mean().cpu().numpy(), global_step)
         # bootstrap value if not done
         with torch.no_grad():
             next_value = agent.get_value(next_obs).reshape(1, -1)
@@ -361,32 +368,10 @@ if __name__ == "__main__":
         writer.add_scalar("losses/explained_variance", explained_var, global_step)
         print("SPS:", int(global_step / (time.time() - start_time)))
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
-
-    # if args.save_model:
-    #     model_path = f"runs/{run_name}/{args.exp_name}.cleanrl_model"
-    #     torch.save(agent.state_dict(), model_path)
-    #     print(f"model saved to {model_path}")
-    #     from cleanrl_utils.evals.ppo_eval import evaluate
-
-    #     episodic_returns = evaluate(
-    #         model_path,
-    #         make_env,
-    #         args.env_id,
-    #         eval_episodes=10,
-    #         run_name=f"{run_name}-eval",
-    #         Model=Agent,
-    #         device=device,
-    #         gamma=args.gamma,
-    #     )
-    #     for idx, episodic_return in enumerate(episodic_returns):
-    #         writer.add_scalar("eval/episodic_return", episodic_return, idx)
-
-    #     if args.upload_model:
-    #         from cleanrl_utils.huggingface import push_to_hub
-
-    #         repo_name = f"{args.env_id}-{args.exp_name}-seed{args.seed}"
-    #         repo_id = f"{args.hf_entity}/{repo_name}" if args.hf_entity else repo_name
-    #         push_to_hub(args, episodic_returns, repo_id, "PPO", f"runs/{run_name}", f"videos/{run_name}-eval")
+    if args.save_model:
+        model_path = f"runs/{run_name}/{args.exp_name}_final.cleanrl_model"
+        torch.save(agent.state_dict(), model_path)
+        print(f"model saved to {model_path}")
 
     envs.close()
     writer.close()

@@ -54,3 +54,5 @@ all _initialize functions however are NOT "single-thread".
 
 
 Parallel IK?
+
+cannot set collision groups in gpu sim after links are built...

@@ -87,7 +87,7 @@ class TableSceneBuilder(SceneBuilder):
                 [0, np.pi / 6, 0, np.pi / 3, 0, np.pi / 2, -np.pi / 2, 0, 0]
             )
             qpos[:-2] += self.env._episode_rng.normal(
-                0, self.env.robot_init_qpos_noise, len(qpos) - 2
+                0, self.robot_init_qpos_noise, len(qpos) - 2
             )
             self.env.agent.reset(qpos)
             self.env.agent.robot.set_pose(sapien.Pose([-0.562, 0, 0]))
@@ -122,7 +122,7 @@ class TableSceneBuilder(SceneBuilder):
                 .get_collision_shapes()[0]
             )
             cg = cs.get_collision_groups()
-            cg[2] = FETCH_UNIQUE_COLLISION_BIT
+            cg[2] |= FETCH_UNIQUE_COLLISION_BIT
             cs.set_collision_groups(cg)
         else:
             raise NotImplementedError(self.env.robot_uid)

@@ -15,7 +15,7 @@ from mani_skill2.utils.scene_builder.table.table_scene_builder import TableScene
 from mani_skill2.utils.structs.pose import Pose
 
 
-@register_env("StackCube-v1", max_episode_steps=100)
+@register_env("StackCube-v1", max_episode_steps=50)
 class StackCubeEnv(BaseEnv):
     """
     Task Description
@@ -72,7 +72,7 @@ class StackCubeEnv(BaseEnv):
             xy = torch.rand((self.num_envs, 2)) * 0.2 - 0.1
             region = [[-0.1, -0.2], [0.1, 0.2]]
             sampler = UniformPlacementSampler(bounds=region, batch_size=self.num_envs)
-            radius = (torch.linalg.norm(torch.Tensor([0.02, 0.02])) + 0.001).to(
+            radius = (torch.linalg.norm(torch.tensor([0.02, 0.02])) + 0.001).to(
                 self.device
             )
             cubeA_xy = xy + sampler.sample(radius, 100)
@@ -96,7 +96,28 @@ class StackCubeEnv(BaseEnv):
             )
             self.cubeB.set_pose(Pose.create_from_pq(p=xyz, q=qs))
 
-    def _get_obs_extra(self):
+    def evaluate(self):
+        pos_A = self.cubeA.pose.p
+        pos_B = self.cubeB.pose.p
+        offset = pos_A - pos_B
+        xy_flag = (
+            torch.linalg.norm(offset[..., :2], axis=1)
+            <= torch.linalg.norm(self.cube_half_size[:2]) + 0.005
+        )
+        z_flag = torch.abs(offset[..., 2] - self.cube_half_size[..., 2] * 2) <= 0.005
+        is_cubeA_on_cubeB = torch.logical_and(xy_flag, z_flag)
+        # TODO (stao): GPU sim can be fast but unstable. Angular velocity is rather high despite it not really rotating
+        is_cubeA_static = self.cubeA.is_static(lin_thresh=1e-2, ang_thresh=0.5)
+        is_cubeA_grasped = self.agent.is_grasping(self.cubeA)
+        success = is_cubeA_on_cubeB * is_cubeA_static * (~is_cubeA_grasped)
+        return {
+            "is_cubeA_grasped": is_cubeA_grasped,
+            "is_cubeA_on_cubeB": is_cubeA_on_cubeB,
+            "is_cubeA_static": is_cubeA_static,
+            "success": success.bool(),
+        }
+
+    def _get_obs_extra(self, info: Dict):
         obs = OrderedDict(tcp_pose=self.agent.tcp.pose.raw_pose)
         if "state" in self.obs_mode:
             obs.update(
@@ -107,26 +128,6 @@ class StackCubeEnv(BaseEnv):
                 cubeA_to_cubeB_pos=self.cubeB.pose.p - self.cubeA.pose.p,
             )
         return obs
-
-    def evaluate(self, obs: Any):
-        pos_A = self.cubeA.pose.p
-        pos_B = self.cubeB.pose.p
-        offset = pos_A - pos_B
-        xy_flag = (
-            torch.linalg.norm(offset[..., :2], axis=1)
-            <= torch.linalg.norm(self.cube_half_size[:2]) + 0.005
-        )
-        z_flag = torch.abs(offset[..., 2] - self.cube_half_size[..., 2] * 2) <= 0.005
-        is_cubeA_on_cubeB = torch.logical_and(xy_flag, z_flag)
-        is_cubeA_static = self.cubeA.is_static()
-        is_cubeA_grasped = self.agent.is_grasping(self.cubeA)
-        success = is_cubeA_on_cubeB * is_cubeA_static * ~is_cubeA_grasped
-        return {
-            "is_cubeA_grasped": is_cubeA_grasped,
-            "is_cubeA_on_cubeB": is_cubeA_on_cubeB,
-            "is_cubeA_static": is_cubeA_static,
-            "success": success,
-        }
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         # reaching reward
@@ -147,7 +148,7 @@ class StackCubeEnv(BaseEnv):
         reward[info["is_cubeA_grasped"]] = (4 + place_reward)[info["is_cubeA_grasped"]]
 
         # ungrasp and static reward
-        gripper_width = (self.agent.robot.get_qlimits()[-1, 1] * 2).to(
+        gripper_width = (self.agent.robot.get_qlimits()[0, -1, 1] * 2).to(
             self.device
         )  # NOTE: hard-coded with panda
         is_cubeA_grasped = info["is_cubeA_grasped"]

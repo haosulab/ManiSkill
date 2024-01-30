@@ -315,10 +315,11 @@ class Fetch(BaseAgent):
             self.robot.get_links(), "r_wheel_link"
         )
         for link in [self.base_link, self.l_wheel_link, self.r_wheel_link]:
-            cs = link._bodies[0].get_collision_shapes()[0]
-            cg = cs.get_collision_groups()
-            cg[2] = FETCH_UNIQUE_COLLISION_BIT
-            cs.set_collision_groups(cg)
+            for body in link._bodies:
+                cs = body.get_collision_shapes()[0]
+                cg = cs.get_collision_groups()
+                cg[2] |= FETCH_UNIQUE_COLLISION_BIT
+                cs.set_collision_groups(cg)
 
         self.queries: Dict[str, Tuple[physx.PhysxGpuContactQuery, Tuple[int]]] = dict()
 
@@ -332,11 +333,12 @@ class Fetch(BaseAgent):
                     self.scene.px.gpu_create_contact_query(body_pairs),
                     (len(object._bodies), 3),
                 )
-                print(f"Create query for Fetch grasp({object.name})")
             query, contacts_shape = self.queries[object.name]
             self.scene.px.gpu_query_contacts(query)
             # query.cuda_contacts # (num_unique_pairs * num_envs, 3)
-            contacts = query.cuda_contacts.clone().reshape((-1, *contacts_shape))
+            contacts = (
+                query.cuda_contacts.torch().clone().reshape((-1, *contacts_shape))
+            )
             lforce = torch.linalg.norm(contacts[0], axis=1)
             rforce = torch.linalg.norm(contacts[1], axis=1)
 

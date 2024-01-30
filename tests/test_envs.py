@@ -28,6 +28,11 @@ def test_envs_obs_modes(env_id, obs_mode):
     assert_isinstance(terminated, bool)
     assert_isinstance(truncated, bool)
     assert_isinstance(info, [np.ndarray, bool, float, int])
+    if obs_mode == "rgbd":
+        for cam in obs["image"].keys():
+            assert obs["image"][cam]["rgb"].shape == (128, 128, 3)
+            assert obs["image"][cam]["depth"].shape == (128, 128, 1)
+            assert obs["image"][cam]["depth"].dtype == np.uint16
     env.close()
     del env
 

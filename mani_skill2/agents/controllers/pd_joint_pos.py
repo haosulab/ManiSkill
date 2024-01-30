@@ -15,7 +15,7 @@ class PDJointPosController(BaseController):
     config: "PDJointPosControllerConfig"
 
     def _get_joint_limits(self):
-        qlimits = self.articulation.get_qlimit()[self.joint_indices]
+        qlimits = self.articulation.get_qlimits()[0, self.joint_indices].cpu().numpy()
         # Override if specified
         if self.config.lower is not None:
             qlimits[:, 0] = self.config.lower
@@ -24,9 +24,9 @@ class PDJointPosController(BaseController):
         return qlimits
 
     def _initialize_action_space(self):
-        joint_limits = self._get_joint_limits().cpu().numpy()
+        joint_limits = self._get_joint_limits()
         low, high = joint_limits[:, 0], joint_limits[:, 1]
-        self.action_space = spaces.Box(low, high, dtype=np.float32)
+        self.single_action_space = spaces.Box(low, high, dtype=np.float32)
 
     def set_drive_property(self):
         n = len(self.joints)
@@ -36,12 +36,13 @@ class PDJointPosController(BaseController):
         friction = np.broadcast_to(self.config.friction, n)
 
         for i, joint in enumerate(self.joints):
-            joint.set_drive_property(
+            joint.set_drive_properties(
                 stiffness[i], damping[i], force_limit=force_limit[i]
             )
             joint.set_friction(friction[i])
 
     def reset(self):
+        # TODO (stao): Fix this. We should reset controller after each env.reset, and set drive properties only when control mode is changed.
         super().reset()
         self._step = 0  # counter of simulation steps after action is set
         # TODO (stao): support gpu based actions later

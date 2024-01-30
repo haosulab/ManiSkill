@@ -7,11 +7,6 @@ from gymnasium.envs.registration import EnvSpec as GymEnvSpec
 
 from mani_skill2 import logger
 from mani_skill2.envs.sapien_env import BaseEnv
-from mani_skill2.utils.wrappers.observation import (
-    PointCloudObservationWrapper,
-    RGBDObservationWrapper,
-    RobotSegmentationObservationWrapper,
-)
 
 
 class EnvSpec:
@@ -75,37 +70,7 @@ def make(env_id, as_gym=True, enable_segmentation=False, **kwargs):
         raise KeyError("Env {} not found in registry".format(env_id))
     env_spec = REGISTERED_ENVS[env_id]
 
-    # Dispatch observation mode
-    obs_mode = kwargs.get("obs_mode")
-    if obs_mode is None:
-        obs_mode = env_spec.cls.SUPPORTED_OBS_MODES[0]
-    if obs_mode not in ["state", "state_dict", "none", "particles"]:
-        kwargs["obs_mode"] = "image"
-
-    # Add segmentation texture
-    # TODO (stao): we need to rework how segementation is done now
-    if "robot_seg" in obs_mode:
-        enable_segmentation = True
-    if enable_segmentation:
-        camera_cfgs = kwargs.get("camera_cfgs", {})
-        camera_cfgs["add_segmentation"] = True
-        kwargs["camera_cfgs"] = camera_cfgs
-
     env = env_spec.make(**kwargs)
-
-    # Dispatch observation wrapper
-    if "rgbd" in obs_mode:
-        env = RGBDObservationWrapper(env)
-    elif "pointcloud" in obs_mode:
-        env = PointCloudObservationWrapper(env)
-
-    # Add robot segmentation wrapper
-    if "robot_seg" in obs_mode:
-        env = RobotSegmentationObservationWrapper(env)
-
-    # Set observation mode on the wrapper
-    if isinstance(env, gym.Wrapper):
-        env.obs_mode = obs_mode
 
     # Compatible with gym.make
     if as_gym:

@@ -41,7 +41,7 @@ class ManiSkillScene:
     def __init__(self, sub_scenes: List[sapien.Scene], debug_mode: bool = True):
         self.sub_scenes = sub_scenes
         self.px = self.sub_scenes[0].physx_system
-        self._buffers_ready = False
+        self._gpu_sim_initialized = False
         self.debug_mode = debug_mode
         super().__init__()
 
@@ -473,7 +473,9 @@ class ManiSkillScene:
             actor.set_state(state[:, start : start + KINEMATIC_DIM])
             start += KINEMATIC_DIM
         for articulation in self.articulations.values():
-            ndim = KINEMATIC_DIM + 2 * articulation.dof
+            # TODO (stao): when multiple articulations are managed by the same object we have to take the max DOF
+            # but then restoring state is rather non trivial, need to store dof as part of state somewhere?
+            ndim = KINEMATIC_DIM + 2 * articulation.max_dof
             articulation.set_state(state[:, start : start + ndim])
             start += ndim
 
@@ -491,35 +493,27 @@ class ManiSkillScene:
             if actor.px_body_type == "static":
                 continue
             self.non_static_actors.append(actor)
-            rigid_body_components = [
-                entity.find_component_by_type(physx.PhysxRigidDynamicComponent)
-                for entity in actor._objs
-            ]
-            actor._body_data_index = [rb.gpu_pose_index for rb in rigid_body_components]
+            actor._body_data_index  # only need to access this attribute to populate it
 
         for articulation in self.articulations.values():
-            articulation._data_index = [
-                px_articulation.gpu_index for px_articulation in articulation._objs
-            ]
+            articulation._data_index
             for link in articulation.links:
-                link._body_data_index = [
-                    px_link.gpu_pose_index for px_link in link._objs
-                ]
+                link._body_data_index
 
         # As physx_system.gpu_init() was called a single physx step was also taken. So we need to reset
         # all the actors and articulations to their original poses as they likely have collided
         for actor in self.non_static_actors:
             actor.set_pose(actor._builder_initial_pose)
-        self.px.cuda_rigid_body_data[:, 7:] = (
-            self.px.cuda_rigid_body_data[:, 7:] * 0
+        self.px.cuda_rigid_body_data.torch()[:, 7:] = (
+            self.px.cuda_rigid_body_data.torch()[:, 7:] * 0
         )  # zero out all velocities
         self.px.gpu_apply_rigid_dynamic_data()
-        self.px.cuda_articulation_qvel[:, :] = (
-            self.px.cuda_articulation_qvel * 0
+        self.px.cuda_articulation_qvel.torch()[:, :] = (
+            self.px.cuda_articulation_qvel.torch() * 0
         )  # zero out all q velocities
         self.px.gpu_apply_articulation_qvel()
 
-        self._buffers_ready = True
+        self._gpu_sim_initialized = True
         self._gpu_fetch_all()
 
     def _gpu_apply_all(self):

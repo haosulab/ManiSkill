@@ -16,11 +16,10 @@ from mani_skill2.utils.visualization.misc import images_to_video, tile_images
 def main(args):
     num_envs = args.num_envs
 
-    sapien.physx.set_gpu_memory_config(found_lost_pairs_capacity=2**26, max_rigid_patch_count=120000)
+    sapien.physx.set_gpu_memory_config(found_lost_pairs_capacity=2**26, max_rigid_patch_count=2**19, max_rigid_contact_count=2**20)
     env = gym.make(args.env_id, num_envs=num_envs, obs_mode=args.obs_mode, enable_shadow=True, render_mode=args.render_mode, control_mode="pd_joint_delta_pos", sim_freq=100, control_freq=50)
     print(f"[INFO]: Gym observation space: {env.observation_space}")
-    print(f"[INFO]: Gym action space: {env.action_space}")
-
+    print(f"[INFO]: Gym action space: {env.unwrapped.single_action_space}")
     images = []
     video_nrows=int(np.sqrt(num_envs))
     with torch.inference_mode():

@@ -143,7 +143,21 @@ class PushCubeEnv(BaseEnv):
                 )
             )
 
-    def _get_obs_extra(self):
+    def evaluate(self):
+        # success is achieved when the cube's xy position on the table is within the
+        # goal region's area (a circle centered at the goal region's xy position)
+        is_obj_placed = (
+            torch.linalg.norm(
+                self.obj.pose.p[..., :2] - self.goal_region.pose.p[..., :2], axis=1
+            )
+            < self.goal_radius
+        )
+
+        return {
+            "success": is_obj_placed,
+        }
+
+    def _get_obs_extra(self, info: Dict):
         # some useful observation info for solving the task includes the pose of the tcp (tool center point) which is the point between the
         # grippers of the robot
         obs = OrderedDict(
@@ -157,20 +171,6 @@ class PushCubeEnv(BaseEnv):
                 obj_pose=self.obj.pose.raw_pose,
             )
         return obs
-
-    def evaluate(self, obs: Any):
-        # success is achieved when the cube's xy position on the table is within the
-        # goal region's area (a circle centered at the goal region's xy position)
-        is_obj_placed = (
-            torch.linalg.norm(
-                self.obj.pose.p[..., :2] - self.goal_region.pose.p[..., :2], axis=1
-            )
-            < self.goal_radius
-        )
-
-        return {
-            "success": is_obj_placed,
-        }
 
     def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
         # We also create a pose marking where the robot should push the cube from that is easiest (pushing from behind the cube)
