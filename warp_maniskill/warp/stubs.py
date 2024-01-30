@@ -489,7 +489,7 @@ def cw_div(x: vec4, y: vec4) -> vec4:
 @overload
 def svd3(A: mat33, U: mat33, sigma: vec3, V: mat33):
    """
-   Compute the SVD of a 3x3 matrix. The singular values are returned in sigma, 
+   Compute the SVD of a 3x3 matrix. The singular values are returned in sigma,
       while the left and right basis vectors are returned in U and V.
    """
    ...
@@ -669,7 +669,7 @@ def spatial_mass(I_s: array[spatial_matrix], joint_start: int32, joint_count: in
 @overload
 def mlp(weights: array[float32], bias: array[float32], activation: Callable, index: int32, x: array[float32], out: array[float32]):
    """
-   Evaluate a multi-layer perceptron (MLP) layer in the form: ``out = act(weights*x + bias)``. 
+   Evaluate a multi-layer perceptron (MLP) layer in the form: ``out = act(weights*x + bias)``.
 
       :param weights: A layer's network weights with dimensions ``(m, n)``.
       :param bias: An array with dimensions ``(n)``.
@@ -720,7 +720,7 @@ def mesh_query_aabb(id: uint64, lower: vec3, upper: vec3) -> mesh_query_aabb_t:
    """
    Construct an axis-aligned bounding box query against a mesh object. This query can be used to iterate over all triangles
       inside a volume. Returns an object that is used to track state during mesh traversal.
-    
+
       :param id: The mesh identifier
       :param lower: The lower bound of the bounding box in mesh space
       :param upper: The upper bound of the bounding box in mesh space
@@ -752,7 +752,7 @@ def mesh_eval_velocity(id: uint64, face: int32, bary_u: float32, bary_v: float32
 @overload
 def hash_grid_query(id: uint64, point: vec3, max_dist: float32) -> hash_grid_query_t:
    """
-   Construct a point query against a hash grid. This query can be used to iterate over all neighboring points withing a 
+   Construct a point query against a hash grid. This query can be used to iterate over all neighboring points withing a
       fixed radius from the query point. Returns an object that is used to track state during neighbor traversal.
    """
    ...
@@ -768,7 +768,7 @@ def hash_grid_query_next(query: hash_grid_query_t, index: int32) -> bool:
 @overload
 def hash_grid_point_id(id: uint64, index: int32) -> int:
    """
-   Return the index of a point in the grid, this can be used to re-order threads such that grid 
+   Return the index of a point in the grid, this can be used to re-order threads such that grid
       traversal occurs in a spatially coherent order.
    """
    ...
@@ -853,7 +853,7 @@ def volume_lookup_v(id: uint64, i: int32, j: int32, k: int32) -> vec3:
 @overload
 def volume_sample_i(id: uint64, uvw: vec3) -> int:
    """
-   Sample the int32 volume given by ``id`` at the volume local-space point ``uvw``. 
+   Sample the int32 volume given by ``id`` at the volume local-space point ``uvw``.
    """
    ...
 
@@ -902,7 +902,7 @@ def rand_init(seed: int32) -> uint32:
 @overload
 def rand_init(seed: int32, offset: int32) -> uint32:
    """
-   Initialize a new random number generator given a user-defined seed and an offset. 
+   Initialize a new random number generator given a user-defined seed and an offset.
       This alternative constructor can be useful in parallel programs, where a kernel as a whole should share a seed,
       but each thread should generate uncorrelated values. In this case usage should be ``r = rand_init(seed, tid)``
    """
@@ -1030,7 +1030,7 @@ def printf():
 @overload
 def tid() -> int:
    """
-   Return the current thread index. Note that this is the *global* index of the thread in the range [0, dim) 
+   Return the current thread index. Note that this is the *global* index of the thread in the range [0, dim)
       where dim is the parameter passed to kernel launch.
    """
    ...
@@ -1902,4 +1902,3 @@ def unot(b: bool) -> bool:
 
    """
    ...
-

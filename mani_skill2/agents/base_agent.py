@@ -1,40 +1,34 @@
 from collections import OrderedDict
-from dataclasses import dataclass
-from pathlib import Path
 from typing import Dict, Union
 
 import numpy as np
-import sapien.core as sapien
+import sapien
+import sapien.physx as physx
 from gymnasium import spaces
 
 from mani_skill2 import format_path
-from mani_skill2.sensors.camera import CameraConfig
-from mani_skill2.utils.sapien_utils import check_urdf_config, parse_urdf_config
+from mani_skill2.envs.scene import ManiSkillScene
+from mani_skill2.sensors.base_sensor import BaseSensor, BaseSensorConfig
+from mani_skill2.utils.sapien_utils import (
+    apply_urdf_config,
+    check_urdf_config,
+    parse_urdf_config,
+)
+from mani_skill2.utils.structs.actor import Actor
+from mani_skill2.utils.structs.articulation import Articulation
 
-from .base_controller import BaseController, CombinedController, ControllerConfig
-
-
-@dataclass
-class AgentConfig:
-    """Agent configuration.
-
-    Args:
-        urdf_path: path to URDF file. Support placeholders like {PACKAGE_ASSET_DIR}.
-        urdf_config: a dict to specify materials and simulation parameters when loading URDF from SAPIEN.
-        controllers: a dict of controller configurations
-        cameras: a dict of onboard camera configurations
-    """
-
-    urdf_path: str
-    urdf_config: dict
-    controllers: Dict[str, Union[ControllerConfig, Dict[str, ControllerConfig]]]
-    cameras: Dict[str, CameraConfig]
+from .controllers.base_controller import (
+    BaseController,
+    CombinedController,
+    ControllerConfig,
+    DictController,
+)
 
 
 class BaseAgent:
     """Base class for agents.
 
-    Agent is an interface of the robot (sapien.Articulation).
+    Agent is an interface of an articulated robot (physx.PhysxArticulation).
 
     Args:
         scene (sapien.Scene): simulation scene instance.
@@ -44,46 +38,54 @@ class BaseAgent:
         config: agent configuration
     """
 
-    robot: sapien.Articulation
+    uid: str
+    robot: Articulation
+
+    urdf_path: str
+    urdf_config: dict
+
+    controller_configs: Dict[str, Union[ControllerConfig, Dict[str, ControllerConfig]]]
     controllers: Dict[str, BaseController]
+
+    sensor_configs: Dict[str, BaseSensorConfig]
+    sensors: Dict[str, BaseSensor]
 
     def __init__(
         self,
-        scene: sapien.Scene,
+        scene: ManiSkillScene,
         control_freq: int,
         control_mode: str = None,
         fix_root_link=True,
-        config: AgentConfig = None,
     ):
         self.scene = scene
         self._control_freq = control_freq
 
-        self.config = config or self.get_default_config()
-
         # URDF
-        self.urdf_path = self.config.urdf_path
         self.fix_root_link = fix_root_link
-        self.urdf_config = self.config.urdf_config
 
         # Controller
-        self.controller_configs = self.config.controllers
         self.supported_control_modes = list(self.controller_configs.keys())
         if control_mode is None:
             control_mode = self.supported_control_modes[0]
         # The control mode after reset for consistency
         self._default_control_mode = control_mode
-
+        self.controllers = OrderedDict()
         self._load_articulation()
-        self._setup_controllers()
-        self.set_control_mode(control_mode)
-        self._after_init()
+        self._after_loading_articulation()
 
-    @classmethod
-    def get_default_config(cls) -> AgentConfig:
-        raise NotImplementedError
+    def initialize(self):
+        """
+        Initialize the agent, which includes running _after_init() and initializing/resetting the controller
+        """
+        self._after_init()
+        self.controller.reset()
 
     def _load_articulation(self):
+        """
+        Load the robot articulation
+        """
         loader = self.scene.create_urdf_loader()
+        loader.name = self.uid
         loader.fix_root_link = self.fix_root_link
 
         urdf_path = format_path(str(self.urdf_path))
@@ -92,28 +94,25 @@ class BaseAgent:
         check_urdf_config(urdf_config)
 
         # TODO(jigu): support loading multiple convex collision shapes
-        self.robot = loader.load(urdf_path, urdf_config)
+
+        apply_urdf_config(loader, urdf_config)
+        self.robot: Articulation = loader.load(urdf_path)
         assert self.robot is not None, f"Fail to load URDF from {urdf_path}"
-        self.robot.set_name(Path(urdf_path).stem)
 
         # Cache robot link ids
-        self.robot_link_ids = [link.get_id() for link in self.robot.get_links()]
+        self.robot_link_ids = [link.name for link in self.robot.get_links()]
 
-    def _setup_controllers(self):
-        self.controllers = OrderedDict()
-        for uid, config in self.controller_configs.items():
-            if isinstance(config, dict):
-                self.controllers[uid] = CombinedController(
-                    config, self.robot, self._control_freq
-                )
-            else:
-                self.controllers[uid] = config.controller_cls(
-                    config, self.robot, self._control_freq
-                )
+    def _after_loading_articulation(self):
+        """After loading articulation and before setting up controller. Not recommended, but is useful for when creating
+        robot classes that inherit controllers from another and only change which joints are controlled
+        """
 
     def _after_init(self):
         """After initialization. E.g., caching the end-effector link."""
-        pass
+
+    # -------------------------------------------------------------------------- #
+    # Controllers
+    # -------------------------------------------------------------------------- #
 
     @property
     def control_mode(self):
@@ -128,7 +127,26 @@ class BaseAgent:
             control_mode, self.supported_control_modes
         )
         self._control_mode = control_mode
-        self.controller.reset()
+        # create controller on the fly here
+        if control_mode not in self.controllers:
+            config = self.controller_configs[self._control_mode]
+            if isinstance(config, dict):
+                self.controllers[control_mode] = CombinedController(
+                    config, self.robot, self._control_freq, scene=self.scene
+                )
+            else:
+                self.controllers[control_mode] = config.controller_cls(
+                    config, self.robot, self._control_freq, scene=self.scene
+                )
+            if (
+                isinstance(self.controllers[control_mode], DictController)
+                and self.controllers[control_mode].balance_passive_force
+                and physx.is_gpu_enabled()
+            ):
+                # TODO (stao): how come only dict controller has balance_passive_force?
+                # NOTE (stao): Balancing passive force is currently not supported in PhysX, so we work around by disabling gravity
+                for link in self.robot.links:
+                    link.disable_gravity = True
 
     @property
     def controller(self):
@@ -150,25 +168,37 @@ class BaseAgent:
         else:
             return self.controller.action_space
 
-    def reset(self, init_qpos=None):
-        if init_qpos is not None:
-            self.robot.set_qpos(init_qpos)
-        self.robot.set_qvel(np.zeros(self.robot.dof))
-        self.robot.set_qacc(np.zeros(self.robot.dof))
-        self.robot.set_qf(np.zeros(self.robot.dof))
-        self.set_control_mode(self._default_control_mode)
+    @property
+    def single_action_space(self):
+        if self._control_mode is None:
+            return spaces.Dict(
+                {
+                    uid: controller.single_action_space
+                    for uid, controller in self.controllers.items()
+                }
+            )
+        else:
+            return self.controller.single_action_space
 
     def set_action(self, action):
-        if np.isnan(action).any(): raise ValueError("Action cannot be NaN. Environment received:", action)
+        """
+        Set the agent's action which is to be executed in the next environment timestep
+        """
+        if not physx.is_gpu_enabled():
+            if np.isnan(action).any():
+                raise ValueError("Action cannot be NaN. Environment received:", action)
         self.controller.set_action(action)
 
     def before_simulation_step(self):
         self.controller.before_simulation_step()
 
     # -------------------------------------------------------------------------- #
-    # Observations
+    # Observations and State
     # -------------------------------------------------------------------------- #
     def get_proprioception(self):
+        """
+        Get the proprioceptive state of the agent.
+        """
         obs = OrderedDict(qpos=self.robot.get_qpos(), qvel=self.robot.get_qvel())
         controller_state = self.controller.get_state()
         if len(controller_state) > 0:
@@ -176,17 +206,16 @@ class BaseAgent:
         return obs
 
     def get_state(self) -> Dict:
-        """Get current state for MPC, including robot state and controller state"""
+        """Get current state, including robot state and controller state"""
         state = OrderedDict()
 
         # robot state
         root_link = self.robot.get_links()[0]
         state["robot_root_pose"] = root_link.get_pose()
-        state["robot_root_vel"] = root_link.get_velocity()
+        state["robot_root_vel"] = root_link.get_linear_velocity()
         state["robot_root_qvel"] = root_link.get_angular_velocity()
         state["robot_qpos"] = self.robot.get_qpos()
         state["robot_qvel"] = self.robot.get_qvel()
-        state["robot_qacc"] = self.robot.get_qacc()
 
         # controller state
         state["controller"] = self.controller.get_state()
@@ -200,7 +229,48 @@ class BaseAgent:
         self.robot.set_root_angular_velocity(state["robot_root_qvel"])
         self.robot.set_qpos(state["robot_qpos"])
         self.robot.set_qvel(state["robot_qvel"])
-        self.robot.set_qacc(state["robot_qacc"])
 
         if not ignore_controller and "controller" in state:
             self.controller.set_state(state["controller"])
+
+    # -------------------------------------------------------------------------- #
+    # Other
+    # -------------------------------------------------------------------------- #
+    def reset(self, init_qpos=None):
+        """
+        Reset the robot to a rest position or a given q-position
+        """
+        if init_qpos is not None:
+            self.robot.set_qpos(init_qpos)
+        self.robot.set_qvel(np.zeros(self.robot.max_dof))
+        self.robot.set_qf(np.zeros(self.robot.max_dof))
+        self.set_control_mode(self._default_control_mode)
+
+    # -------------------------------------------------------------------------- #
+    # Optional per-agent APIs, implemented depending on agent affordances
+    # -------------------------------------------------------------------------- #
+    def is_grasping(self, object: Union[Actor, None] = None):
+        """
+        Check if this agent is grasping an object or grasping anything at all
+
+        Args:
+            object (Actor | None):
+                If object is a Actor, this function checks grasping against that. If it is none, the function checks if the
+                agent is grasping anything at all.
+
+        Returns:
+            True if agent is grasping object. False otherwise. If object is None, returns True if agent is grasping something, False if agent is grasping nothing.
+        """
+        raise NotImplementedError()
+
+    def is_static(self, threshold: float):
+        """
+        Check if this robot is static (within the given threshold) in terms of the q velocity
+
+        Args:
+            threshold (float): The threshold before this agent is considered static
+
+        Returns:
+            True if agent is static within the threshold. False otherwise
+        """
+        raise NotImplementedError()

@@ -20,7 +20,7 @@ from warp.utils import ScopedTimer
 from warp.thirdparty import appdirs
 
 def run_cmd(cmd, capture=False):
-    
+
     if (warp.config.verbose):
         print(cmd)
 
@@ -51,7 +51,7 @@ def set_msvc_compiler(msvc_path, sdk_path):
     os.environ["LIB"] += os.pathsep + os.path.join(sdk_path, "lib/um/x64")
 
     os.environ["PATH"] += os.pathsep + os.path.join(msvc_path, "bin/HostX64/x64")
-    
+
 
 
 def find_host_compiler():
@@ -72,12 +72,12 @@ def find_host_compiler():
             vsvars_path = os.path.join(vs_path, "VC\\Auxiliary\\Build\\vcvars64.bat")
 
             output = run_cmd('"{}" && set'.format(vsvars_path)).decode()
-            
+
             for line in output.splitlines():
                 pair = line.split("=", 1)
                 if (len(pair) >= 2):
                     os.environ[pair[0]] = pair[1]
-                
+
             cl_path = run_cmd("where cl.exe")
             cl_version = os.environ["VCToolsVersion"].split(".")
 
@@ -87,18 +87,18 @@ def find_host_compiler():
 
             if ((int(cl_version[0]) < cl_required_major) or
                 (int(cl_version[0]) == cl_required_major) and int(cl_version[1]) < cl_required_minor):
-                
+
                 print(f"Warp: MSVC found but compiler version too old, found {cl_version[0]}.{cl_version[1]}, but must be {cl_required_major}.{cl_required_minor} or higher, kernel host compilation will be disabled.")
                 return ""
-                
+
             return cl_path
-        
+
         except Exception as e:
 
             # couldn't find host compiler
             return ""
     else:
-        
+
         # try and find g++
         try:
             return run_cmd("which g++").decode()
@@ -111,7 +111,7 @@ def find_host_compiler():
 
 # See PyTorch for reference on how to find nvcc.exe more robustly, https://pytorch.org/docs/stable/_modules/torch/utils/cpp_extension.html#CppExtension
 def find_cuda():
-    
+
     # Guess #1
     cuda_home = os.environ.get('CUDA_HOME') or os.environ.get('CUDA_PATH')
     if cuda_home is not None and os.path.isfile(os.path.join(cuda_home, "bin", "nvcc")):
@@ -136,11 +136,11 @@ def build_cuda(cu_path, arch, ptx_path, config="release", force=False, verify_fp
     inc_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "native").encode('utf-8')
     ptx_path = ptx_path.encode('utf-8')
 
-    err = warp.context.runtime.core.cuda_compile_program(src, arch, inc_path, False, warp.config.verbose, verify_fp, ptx_path)    
+    err = warp.context.runtime.core.cuda_compile_program(src, arch, inc_path, False, warp.config.verbose, verify_fp, ptx_path)
     if (err):
         raise Exception("CUDA build failed")
 
-# load ptx to a CUDA runtime module    
+# load ptx to a CUDA runtime module
 def load_cuda(ptx_path):
 
     module = warp.context.runtime.core.cuda_load_module(ptx_path.encode('utf-8'))
@@ -162,7 +162,7 @@ def build_dll(cpp_path, cu_path, dll_path, config="release", verify_fp=False, fo
 
     if (cu_path != None and cuda_home == None):
         print("CUDA toolchain not found, skipping CUDA build")
-    
+
     if(force == False):
 
         if (os.path.exists(dll_path) == True):
@@ -171,10 +171,10 @@ def build_dll(cpp_path, cu_path, dll_path, config="release", verify_fp=False, fo
             cache_valid = True
 
             # check if output exists and is newer than source
-            if (cu_path):                   
+            if (cu_path):
                 cu_time = os.path.getmtime(cu_path)
                 if (cu_time > dll_time):
-                    
+
                     if (warp.config.verbose):
                         print(f"cu_time: {cu_time} > dll_time: {dll_time} invaliding cache for {cu_path}")
 
@@ -183,17 +183,17 @@ def build_dll(cpp_path, cu_path, dll_path, config="release", verify_fp=False, fo
             if (cpp_path):
                 cpp_time = os.path.getmtime(cpp_path)
                 if (cpp_time > dll_time):
-                    
+
                     if (warp.config.verbose):
                         print(f"cpp_time: {cpp_time} > dll_time: {dll_time} invaliding cache for {cpp_path}")
 
                     cache_valid = False
-                
+
             if (cache_valid):
-                
+
                 if (warp.config.verbose):
                     print("Skipping build of {} since outputs newer than inputs".format(dll_path))
-                
+
                 return True
 
     # ensure that dll is not loaded in the process
@@ -258,7 +258,7 @@ def build_dll(cpp_path, cu_path, dll_path, config="release", verify_fp=False, fo
         with ScopedTimer("link", active=warp.config.verbose):
             link_cmd = 'link.exe {inputs} {flags} /out:"{dll_path}"'.format(inputs=' '.join(ld_inputs), flags=ld_flags, dll_path=dll_path)
             run_cmd(link_cmd)
-        
+
     else:
 
         cpp_out = cpp_path + ".o"
@@ -304,11 +304,11 @@ def build_dll(cpp_path, cu_path, dll_path, config="release", verify_fp=False, fo
                     ld_inputs.append('-L"{cuda_home}/lib" -lcudart_static -lnvrtc'.format(cuda_home=cuda_home))
 
         with ScopedTimer("link", active=warp.config.verbose):
-            link_cmd = "g++ -shared -Wl,-rpath,'$ORIGIN' -o '{dll_path}' {inputs}".format(cuda_home=cuda_home, inputs=' '.join(ld_inputs), dll_path=dll_path)            
+            link_cmd = "g++ -shared -Wl,-rpath,'$ORIGIN' -o '{dll_path}' {inputs}".format(cuda_home=cuda_home, inputs=' '.join(ld_inputs), dll_path=dll_path)
             run_cmd(link_cmd)
 
-    
-def load_dll(dll_path):    
+
+def load_dll(dll_path):
     if (sys.version_info[0] > 3 or
         sys.version_info[0] == 3 and sys.version_info[1] >= 8):
         dll = ctypes.CDLL(dll_path, winmode=0)
@@ -341,7 +341,7 @@ def unload_dll(dll):
 def force_unload_dll(dll_path):
 
     try:
-        # force load/unload of the dll from the process 
+        # force load/unload of the dll from the process
         dll = load_dll(dll_path)
         unload_dll(dll)
 
@@ -386,7 +386,7 @@ def init_kernel_cache(path=None):
         os.makedirs(cache_bin_dir, exist_ok=True)
 
     warp.config.kernel_cache_dir = cache_root_dir
-    
+
     global kernel_bin_dir, kernel_gen_dir
     kernel_bin_dir = cache_bin_dir
     kernel_gen_dir = cache_gen_dir

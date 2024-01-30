@@ -39,7 +39,7 @@ def count_neighbors(grid : wp.uint64,
     # order threads by cell
     i = wp.hash_grid_point_id(grid, tid)
 
-    # query point    
+    # query point
     p = points[i]
     count = int(0)
 
@@ -67,7 +67,7 @@ def count_neighbors_reference(
 
     i = tid%num_points
     j = tid//num_points
-    
+
     # query point
     p = points[i]
     q = points[j]
@@ -80,7 +80,7 @@ def count_neighbors_reference(
 
 
 def test_hashgrid_query(test, device):
-        
+
     grid = wp.HashGrid(dim_x, dim_y, dim_z, device)
 
     for i in range(num_runs):
@@ -96,7 +96,7 @@ def test_hashgrid_query(test, device):
             points = np.meshgrid(np.linspace(0, dim_x, dim_x), np.linspace(0, dim_y, dim_y), np.linspace(0, dim_z, dim_z))
             points_t = np.array((points[0], points[1], points[2])).T*radius*2.0 + np.array(lower)
             points_t = points_t + np.random.rand(*points_t.shape)*radius*jitter
-            
+
             return points_t.reshape((-1, 3))
 
         points = particle_grid(16, 32, 16, (0.0, 0.3, 0.0), cell_radius*0.25, 0.1)
@@ -128,7 +128,7 @@ def test_hashgrid_query(test, device):
 
 
         test.assertTrue(np.array_equal(counts, counts_ref))
-        
+
 def register(parent):
 
     devices = wp.get_devices()

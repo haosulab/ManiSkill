@@ -91,7 +91,7 @@ def test_mesh_query_ray_grad(test, device):
 
     # create mesh
     mesh = wp.Mesh(
-        points=mesh_points, 
+        points=mesh_points,
         velocities=None,
         indices=mesh_indices)
 
@@ -168,7 +168,7 @@ def test_mesh_query_ray_grad(test, device):
         l_1 = loss_values_D[i*2+1]
         gradient = (l_1 - l_0) / (2.0*eps)
         numeric_D[i] = gradient
-    
+
     error_p = ((analytic_p - numeric_p) * (analytic_p - numeric_p)).sum(axis=0)
     error_D = ((analytic_D - numeric_D) * (analytic_D - numeric_D)).sum(axis=0)
 
@@ -229,16 +229,16 @@ def test_mesh_query_ray_edge(test, device):
 
     mesh = wp.Mesh(points=wp.array(vertices, dtype=wp.vec3, device=device),
                 indices=wp.array(triangles.flatten(), dtype=int, device=device))
-    
+
 
     counts = wp.zeros(1, dtype=int, device=device)
 
     n = len(ray_starts)
-    
+
     ray_starts = wp.array(ray_starts, shape=(n,), dtype=wp.vec3, device=device)
     ray_dirs = wp.array(ray_dirs, shape=(n,), dtype=wp.vec3, device=device)
     ray_hits = wp.zeros((n, ), dtype=wp.vec3, device=device)
-    
+
     wp.launch(kernel=raycast_kernel,
             dim=n,
             inputs=[mesh.id, ray_starts, ray_dirs, ray_hits, counts],
@@ -257,7 +257,7 @@ def register(parent):
 
     add_function_test(TestMeshQueryRay, "test_mesh_query_ray_edge", test_mesh_query_ray_edge, devices=devices)
     add_function_test(TestMeshQueryRay, "test_mesh_query_ray_grad", test_mesh_query_ray_grad, devices=devices)
-    
+
     return TestMeshQueryRay
 
 if __name__ == '__main__':

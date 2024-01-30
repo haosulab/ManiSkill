@@ -22,7 +22,7 @@ def sample_mesh_query(mesh: wp.uint64,
                 query_faces: wp.array(dtype=int),
                 query_signs: wp.array(dtype=float),
                 query_dist: wp.array(dtype=float)):
-    
+
     tid = wp.tid()
 
     face_index = int(0)
@@ -33,9 +33,9 @@ def sample_mesh_query(mesh: wp.uint64,
     max_dist = 10012.0
 
     p = query_points[tid]
-    
+
     wp.mesh_query_point(mesh, p, max_dist, sign, face_index, face_u, face_v)
-        
+
     cp = wp.mesh_eval_position(mesh, face_index, face_u, face_v)
 
     query_signs[tid] = sign
@@ -118,7 +118,7 @@ def sample_mesh_brute(
                 query_faces: wp.array(dtype=int),
                 query_signs: wp.array(dtype=float),
                 query_dist: wp.array(dtype=float)):
-    
+
     tid = wp.tid()
 
     min_face = int(0)
@@ -129,7 +129,7 @@ def sample_mesh_brute(
     p = query_points[tid]
 
     for i in range(0, tri_count):
-        
+
         a = tri_points[tri_indices[i*3+0]]
         b = tri_points[tri_indices[i*3+1]]
         c = tri_points[tri_indices[i*3+2]]
@@ -146,9 +146,9 @@ def sample_mesh_brute(
         if (cp_dist < min_dist):
             min_dist = cp_dist
             min_face = i
-            
+
     query_faces[tid] = min_face
-    query_signs[tid] = winding_angle 
+    query_signs[tid] = winding_angle
     query_dist[tid] = min_dist
 
 
@@ -196,7 +196,7 @@ def test_mesh_query_point(test, device):
 
     # create mesh
     mesh = wp.Mesh(
-        points=mesh_points, 
+        points=mesh_points,
         velocities=None,
         indices=mesh_indices)
 
@@ -233,7 +233,7 @@ def test_mesh_query_point(test, device):
 
         if (signs_query[i] < 0.0):
             inside_query.append(query_points[i].tolist())
-        
+
         if (signs_brute[i] > 6.0):
             inside_brute.append(query_points[i].tolist())
 
@@ -267,7 +267,7 @@ def mesh_query_point_loss(mesh: wp.uint64,
                 query_points: wp.array(dtype=wp.vec3),
                 projected_points: wp.array(dtype=wp.vec3),
                 loss: wp.array(dtype=float)):
-    
+
     tid = wp.tid()
 
     face_index = int(0)
@@ -278,7 +278,7 @@ def mesh_query_point_loss(mesh: wp.uint64,
     max_dist = 10012.0
 
     p = query_points[tid]
-    
+
     wp.mesh_query_point(mesh, p, max_dist, sign, face_index, face_u, face_v)
     q = wp.mesh_eval_position(mesh, face_index, face_u, face_v)
 
@@ -310,7 +310,7 @@ def test_adj_mesh_query_point(test, device):
 
     # create mesh
     mesh = wp.Mesh(
-        points=mesh_points, 
+        points=mesh_points,
         velocities=None,
         indices=mesh_indices)
 

@@ -5,13 +5,15 @@ from pathlib import Path
 import gymnasium as gym
 import h5py
 import numpy as np
+import sapien.physx as physx
 from gymnasium import spaces
 
 from mani_skill2 import get_commit_info, logger
+from mani_skill2.utils.sapien_utils import to_numpy
 
 from ..common import extract_scalars_from_info, flatten_dict_keys
 from ..io_utils import dump_json
-from ..visualization.misc import images_to_video, put_info_on_image
+from ..visualization.misc import images_to_video, put_info_on_image, tile_images
 
 
 def parse_env_info(env: gym.Env):
@@ -74,6 +76,19 @@ def clean_trajectories(h5_file: h5py.File, json_dict: dict, prune_empty_action=T
     json_dict["episodes"] = new_json_episodes
 
 
+def pack_step_data(state, obs, action, rew, terminated, truncated, info):
+    data = dict(
+        s=to_numpy(state) if state is not None else None,
+        o=copy.deepcopy(to_numpy(obs)) if obs is not None else None,
+        a=to_numpy(action) if action is not None else None,
+        r=to_numpy(rew) if rew is not None else None,
+        terminated=to_numpy(terminated) if terminated is not None else None,
+        truncated=to_numpy(truncated) if truncated is not None else None,
+        info=to_numpy(info),
+    )
+    return data
+
+
 class RecordEpisode(gym.Wrapper):
     """Record trajectories or videos for episodes.
     The trajectories are stored in HDF5.
@@ -101,14 +116,18 @@ class RecordEpisode(gym.Wrapper):
         info_on_video=False,
         save_on_reset=True,
         clean_on_close=True,
+        record_reward=False,
+        init_state_only=False,
+        video_fps=20,
     ):
         super().__init__(env)
 
         self.output_dir = Path(output_dir)
+        self.init_state_only = init_state_only
         if save_trajectory or save_video:
             self.output_dir.mkdir(parents=True, exist_ok=True)
         self.save_on_reset = save_on_reset
-
+        self.video_fps = video_fps
         self._elapsed_steps = 0
         self._episode_id = -1
         self._episode_data = []
@@ -116,6 +135,7 @@ class RecordEpisode(gym.Wrapper):
 
         self.save_trajectory = save_trajectory
         self.clean_on_close = clean_on_close
+        self.record_reward = record_reward
         if self.save_trajectory:
             if not trajectory_name:
                 trajectory_name = time.strftime("%Y%m%d_%H%M%S")
@@ -133,15 +153,18 @@ class RecordEpisode(gym.Wrapper):
         self.save_video = save_video
         self.info_on_video = info_on_video
         self._render_images = []
+        if info_on_video and physx.is_gpu_enabled():
+            raise ValueError(
+                "Cannot turn info_on_video=True when using GPU simulation as the text would be too small"
+            )
+        self.video_nrows = int(np.sqrt(self.unwrapped.num_envs))
 
-        # Avoid circular import
-        from mani_skill2.envs.mpm.base_env import MPMBaseEnv
-
-        if isinstance(env.unwrapped, MPMBaseEnv):
-            self.init_state_only = True
-            logger.info("Soft-body (MPM) environment detected, record init_state only")
-        else:
-            self.init_state_only = False
+    def capture_image(self):
+        img = self.env.render()
+        img = to_numpy(img)
+        if len(img.shape) > 3:
+            img = tile_images(img, nrows=self.video_nrows)
+        return img
 
     def reset(self, **kwargs):
         if self.save_on_reset and self._episode_id >= 0:
@@ -161,16 +184,8 @@ class RecordEpisode(gym.Wrapper):
         obs, info = super().reset(**kwargs)
 
         if self.save_trajectory:
-            state = self.env.get_state()
-            data = dict(
-                s=state,
-                o=copy.deepcopy(obs),
-                a=None,
-                r=None,
-                terminated=None,
-                truncated=None,
-                info=None,
-            )
+            state = self.env.unwrapped.get_state()
+            data = pack_step_data(state, obs, None, None, None, None, None)
             self._episode_data.append(data)
             self._episode_info.update(
                 episode_id=self._episode_id,
@@ -181,7 +196,7 @@ class RecordEpisode(gym.Wrapper):
             )
 
         if self.save_video:
-            self._render_images.append(self.env.render())
+            self._render_images.append(self.capture_image())
 
         return obs, info
 
@@ -190,22 +205,14 @@ class RecordEpisode(gym.Wrapper):
         self._elapsed_steps += 1
 
         if self.save_trajectory:
-            state = self.env.get_state()
-            data = dict(
-                s=state,
-                o=copy.deepcopy(obs),
-                a=action,
-                r=rew,
-                terminated=terminated,
-                truncated=truncated,
-                info=info,
-            )
+            state = self.env.unwrapped.get_state()
+            data = pack_step_data(state, obs, action, rew, terminated, truncated, info)
             self._episode_data.append(data)
             self._episode_info["elapsed_steps"] += 1
-            self._episode_info["info"] = info
+            self._episode_info["info"] = to_numpy(info)
 
         if self.save_video:
-            image = self.env.render()
+            image = self.capture_image()
 
             if self.info_on_video:
                 scalar_info = extract_scalars_from_info(info)
@@ -256,14 +263,7 @@ class RecordEpisode(gym.Wrapper):
                         compression_opts=5,
                     )
                 elif "depth" in k and v.ndim in (3, 4):
-                    # NOTE(jigu): uint16 is more efficient to store at cost of precision
-                    if not np.all(np.logical_and(v >= 0, v < 2**6)):
-                        raise RuntimeError(
-                            "The depth map({}) is invalid with min({}) and max({}).".format(
-                                k, v.min(), v.max()
-                            )
-                        )
-                    v = (v * (2**10)).astype(np.uint16)
+                    # NOTE (stao): By default now cameras in ManiSkill return depth values of type uint16 for numpy
                     group.create_dataset(
                         "obs/" + k,
                         data=v,
@@ -312,6 +312,11 @@ class RecordEpisode(gym.Wrapper):
         # Dump
         group.create_dataset("actions", data=actions, dtype=np.float32)
         group.create_dataset("success", data=dones, dtype=bool)
+
+        if self.record_reward:
+            rewards = np.stack([x["r"] for x in self._episode_data]).astype(np.float32)
+            group.create_dataset("rewards", data=rewards, dtype=np.float32)
+
         if self.init_state_only:
             group.create_dataset("env_init_state", data=env_states[0], dtype=np.float32)
         else:
@@ -337,7 +342,7 @@ class RecordEpisode(gym.Wrapper):
             self._render_images,
             str(self.output_dir),
             video_name=video_name,
-            fps=20,
+            fps=self.video_fps,
             verbose=verbose,
         )
 
@@ -352,6 +357,7 @@ class RecordEpisode(gym.Wrapper):
                     self.flush_trajectory(ignore_empty_transition=True)
             if self.clean_on_close:
                 clean_trajectories(self._h5_file, self._json_data)
+                dump_json(self._json_path, self._json_data, indent=2)
             self._h5_file.close()
         if self.save_video:
             if self.save_on_reset:
