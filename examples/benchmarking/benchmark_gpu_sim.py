@@ -29,6 +29,8 @@ def main(args):
         enable_shadow=True,
         render_mode=args.render_mode,
         control_mode=args.control_mode,
+        sim_freq=100,
+        control_freq=50,
     )
     print(
         "# -------------------------------------------------------------------------- #"
@@ -42,7 +44,7 @@ def main(args):
     print(f"render_mode={args.render_mode}, save_video={args.save_video}")
     print(f"sim_freq={env.unwrapped.sim_freq}, control_freq={env.unwrapped.control_freq}")
     print(f"observation space: {env.observation_space}")
-    print(f"action space: {env.single_action_space}")
+    print(f"action space: {env.unwrapped.single_action_space}")
     print(
         "# -------------------------------------------------------------------------- #"
     )
