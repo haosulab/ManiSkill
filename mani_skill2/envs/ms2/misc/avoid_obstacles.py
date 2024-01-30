@@ -10,7 +10,7 @@ from mani_skill2 import format_path
 from mani_skill2.agents.robots.panda import PandaRealSensed435
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
-from mani_skill2.utils.building.ground import build_tesselated_square_floor
+from mani_skill2.utils.building.ground import build_ground
 from mani_skill2.utils.io_utils import load_json
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import (
@@ -119,7 +119,7 @@ class AvoidObstaclesBaseEnv(BaseEnv):
         return actor
 
     def _load_actors(self):
-        build_tesselated_square_floor(self._scene)
+        build_ground(self._scene)
 
         # Add a wall
         if "wall" in self.episode_config:

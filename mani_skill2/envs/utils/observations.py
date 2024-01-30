@@ -1,3 +1,7 @@
+"""
+Functions that map a observation to a particular format, e.g. mapping the raw images to rgbd or pointcloud formats
+"""
+
 from collections import OrderedDict
 from typing import Dict
 

@@ -11,7 +11,6 @@ from tests.utils import (
     ROBOTS,
     STATIONARY_ENV_IDS,
     assert_isinstance,
-    assert_obs_equal,
     tree_map,
 )
 
@@ -58,6 +57,19 @@ def test_env_control_modes(env_id, control_mode):
     assert action_space.shape[0] == 16
     for _ in range(5):
         env.step(action_space.sample())
+    env.close()
+    del env
+
+
+@pytest.mark.parametrize("env_id", ["PickSingleYCB-v1"])
+def test_env_reconfiguration(env_id):
+    env = gym.make(env_id, num_envs=16)
+    env.reset(options=dict(reconfigure=True))
+    for _ in range(5):
+        env.step(env.action_space.sample())
+    env.reset(options=dict(reconfigure=True))
+    for _ in range(5):
+        env.step(env.action_space.sample())
     env.close()
     del env
 

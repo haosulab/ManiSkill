@@ -11,7 +11,7 @@ from mani_skill2 import format_path
 from mani_skill2.agents.robots.mobile_panda import DummyMobileAgent
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
-from mani_skill2.utils.building.ground import build_tesselated_square_floor
+from mani_skill2.utils.building.ground import build_ground
 from mani_skill2.utils.common import random_choice
 from mani_skill2.utils.io_utils import load_json
 from mani_skill2.utils.sapien_utils import (
@@ -104,7 +104,7 @@ class MS1BaseEnv(BaseEnv):
 
     def _load_actors(self):
         # Create a collision ground plane
-        ground = build_tesselated_square_floor(self._scene)
+        ground = build_ground(self._scene)
         # TODO (stao): This is quite hacky. Future we expect the robot to be an actual well defined robot without needing to intersect the ground. We should probably deprecate the old ms1 envs eventually
         # Specify a collision (ignore) group to avoid collision with robot torso
         cs = ground.find_component_by_type(

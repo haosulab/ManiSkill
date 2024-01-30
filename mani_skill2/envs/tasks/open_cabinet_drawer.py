@@ -13,7 +13,7 @@ from mani_skill2.utils.building.articulations import (
     _load_partnet_mobility_dataset,
     build_preprocessed_partnet_mobility_articulation,
 )
-from mani_skill2.utils.building.ground import build_tesselated_square_floor
+from mani_skill2.utils.building.ground import build_ground
 from mani_skill2.utils.geometry.geometry import transform_points
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import look_at, to_tensor
@@ -66,7 +66,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)
 
     def _load_actors(self):
-        self.ground = build_tesselated_square_floor(self._scene)
+        self.ground = build_ground(self._scene)
         self._load_cabinets(self.handle_types)
 
         from mani_skill2.agents.robots.fetch import FETCH_UNIQUE_COLLISION_BIT
