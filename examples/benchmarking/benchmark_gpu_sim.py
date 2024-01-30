@@ -12,15 +12,16 @@ import torch
 import tqdm
 
 import mani_skill2.envs
+from mani_skill2.utils.profiling import Profiler
 from mani_skill2.utils.visualization.misc import images_to_video, tile_images
 
 
 def main(args):
+    profiler = Profiler(output_format=args.format)
     num_envs = args.num_envs
-
     # TODO (stao): we need to auto set this gpu memory config somehow
     sapien.physx.set_gpu_memory_config(
-        found_lost_pairs_capacity=2**26, max_rigid_patch_count=120000
+        found_lost_pairs_capacity=2**26, max_rigid_patch_count=2**19, max_rigid_contact_count=2**20
     )
     env = gym.make(
         args.env_id,
@@ -57,17 +58,15 @@ def main(args):
         if args.save_video:
             images.append(env.render())
         N = 100
-        stime = time.time()
-        for i in tqdm.tqdm(range(N)):
-            actions = (
-                2 * torch.rand(env.action_space.shape, device=env.unwrapped.device) - 1
-            )
-            obs, rew, terminated, truncated, info = env.step(actions)
-            if args.save_video:
-                images.append(env.render())
-        dtime = time.time() - stime
-        FPS = num_envs * N / dtime
-        print(f"{FPS=:0.3f}. {N=} steps in {dtime:0.3f}s with {num_envs} parallel envs")
+        with profiler.profile("env.step", total_steps=N, num_envs=num_envs):
+            for i in range(N):
+                actions = (
+                    2 * torch.rand(env.action_space.shape, device=env.unwrapped.device) - 1
+                )
+                obs, rew, terminated, truncated, info = env.step(actions)
+                if args.save_video:
+                    images.append(env.render())
+        profiler.log_stats("env.step")
 
         if args.save_video:
             images = [
@@ -82,19 +81,15 @@ def main(args):
             del images
         env.reset(seed=2022)
         N = 1000
-        stime = time.time()
-        for i in tqdm.tqdm(range(N)):
-            actions = (
-                2 * torch.rand(env.action_space.shape, device=env.unwrapped.device) - 1
-            )
-            obs, rew, terminated, truncated, info = env.step(actions)
-            if i % 200 == 0 and i != 0:
-                env.reset()
-        dtime = time.time() - stime
-        FPS = num_envs * N / dtime
-        print(
-            f"{FPS=:0.3f}. {N=} steps in {dtime:0.3f}s with {num_envs} parallel envs with step+reset"
-        )
+        with profiler.profile("env.step+env.reset", total_steps=N, num_envs=num_envs):
+            for i in range(N):
+                actions = (
+                    2 * torch.rand(env.action_space.shape, device=env.unwrapped.device) - 1
+                )
+                obs, rew, terminated, truncated, info = env.step(actions)
+                if i % 200 == 0 and i != 0:
+                    env.reset()
+        profiler.log_stats("env.step+env.reset")
     env.close()
 
 
@@ -112,6 +107,9 @@ def parse_args():
     ),
     parser.add_argument(
         "--save-video", action="store_true", help="whether to save videos"
+    )
+    parser.add_argument(
+        "-f", "--format", type=str, default="stdout", help="format of results. Can be stdout or json."
     )
     args = parser.parse_args()
     return args
