@@ -16,7 +16,7 @@ from mani_skill2 import format_path
 from mani_skill2.agents.robots.panda.panda import Panda
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
-from mani_skill2.utils.building.ground import build_tesselated_square_floor
+from mani_skill2.utils.building.ground import build_ground
 from mani_skill2.utils.common import np_random, random_choice
 from mani_skill2.utils.geometry import transform_points
 from mani_skill2.utils.geometry.trimesh_utils import get_component_mesh
@@ -67,7 +67,7 @@ class TurnFaucetBaseEnv(BaseEnv):
         #     Pose(p=[-0.24, 0, -sink_height], q=euler2quat(0, 0, -np.pi / 2))
         # )
 
-        build_tesselated_square_floor(self._scene)
+        build_ground(self._scene)
 
         # # add wall
         # wall_mtl = sapien.render.RenderMaterial(
