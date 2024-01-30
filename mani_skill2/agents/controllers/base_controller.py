@@ -69,6 +69,10 @@ class BaseController:
                 self.single_action_space, n=self.scene.num_envs
             )
 
+    @property
+    def device(self):
+        return self.articulation.device
+
     def _initialize_joints(self):
         joint_names = self.config.joint_names
         try:

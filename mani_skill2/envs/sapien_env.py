@@ -953,7 +953,7 @@ class BaseEnv(gym.Env):
                 if camera_name is not None and name != camera_name:
                     continue
                 camera.take_picture()
-                rgb = camera.get_picture("Color")[..., :3]
+                rgb = camera.get_picture("Color")[0, ..., :3]
                 images.append(rgb)
         if len(images) == 0:
             return None

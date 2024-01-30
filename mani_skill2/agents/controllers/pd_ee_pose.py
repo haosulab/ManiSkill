@@ -53,7 +53,9 @@ class PDEEPosController(PDJointPosController):
         else:
             # TODO should we just use jacobian inverse * delta method from pk?
             self.pmodel = self.articulation._objs[0].create_pinocchio_model()
-        self.qmask = np.zeros(self.articulation.max_dof, dtype=bool)
+        self.qmask = torch.zeros(
+            self.articulation.max_dof, dtype=bool, device=self.device
+        )
         self.qmask[self.joint_indices] = 1
 
         if self.config.ee_link:

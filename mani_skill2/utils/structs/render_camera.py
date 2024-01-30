@@ -75,9 +75,9 @@ class RenderCamera:
 
     def get_picture(self, name: str):
         if physx.is_gpu_enabled():
-            return self.camera_group.get_picture_cuda(name)
+            return self.camera_group.get_picture_cuda(name).torch()
         else:
-            return self._render_cameras[0].get_picture(name)
+            return to_tensor(self._render_cameras[0].get_picture(name))[None, ...]
 
     def get_picture_cuda(self, name: str):
         return self._render_cameras[0].get_picture_cuda(name)

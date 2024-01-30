@@ -95,7 +95,9 @@ def merge_dict_spaces(dict_spaces: Sequence[spaces.Dict]):
     return spaces.Dict(OrderedDict(reverse_spaces))
 
 
-# TODO (stao): fix this wrapper
+# TODO (stao): fix this wrapper. note that we may want another way to convert observations easily instead of using a wrapper
+# it breaks gymnasium convention to override gym register to add our wrappers as well, and this will be working with the return value of step and reset which on cpu sim
+# is numpy and unbatched now.
 class PointCloudObservationWrapper(BaseGymObservationWrapper):
     """Convert Position textures to world-space point cloud."""
 
