@@ -22,6 +22,8 @@ def to_tensor(array: Union[torch.Tensor, np.array, Sequence]):
     """
     Maps any given sequence to a torch tensor on the CPU/GPU. If physx gpu is not enabled then we use CPU, otherwise GPU.
     """
+    if isinstance(array, (dict)):
+        return {k: to_tensor(v) for k, v in array.items()}
     if get_backend_name() == "torch":
         if isinstance(array, np.ndarray):
             ret = torch.from_numpy(array).cuda()
