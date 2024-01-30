@@ -187,7 +187,6 @@ class Xmate3Robotiq(BaseAgent):
                     self.scene.px.gpu_create_contact_query(body_pairs),
                     (len(object._bodies), 3),
                 )
-                print(f"Create query for Panda grasp({object.name})")
             query, contacts_shape = self.queries[object.name]
             self.scene.px.gpu_query_contacts(query)
             # query.cuda_contacts # (num_unique_pairs * num_envs, 3)

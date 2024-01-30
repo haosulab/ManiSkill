@@ -18,7 +18,7 @@ class ManiSkillVectorEnv(VectorEnv):
     def __init__(
         self,
         env: Union[BaseEnv, str],
-        num_envs: int,
+        num_envs: int = None,
         env_kwargs: Dict = dict(),
         auto_reset: bool = True,
     ):
@@ -26,6 +26,7 @@ class ManiSkillVectorEnv(VectorEnv):
             self._env = gym.make(env, num_envs=num_envs, **env_kwargs)
         else:
             self._env = env
+            num_envs = self._env.num_envs
         self.auto_reset = auto_reset
         super().__init__(
             num_envs, self._env.single_observation_space, self._env.single_action_space

@@ -44,7 +44,7 @@ def test_envs_obs_modes(env_id, obs_mode):
         for cam in obs["image"].keys():
             assert obs["image"][cam]["rgb"].shape == (16, 128, 128, 3)
             assert obs["image"][cam]["depth"].shape == (16, 128, 128, 1)
-
+            assert obs["image"][cam]["depth"].dtype == torch.int16
     env.close()
     del env
 

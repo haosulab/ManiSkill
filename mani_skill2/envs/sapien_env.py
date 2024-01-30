@@ -17,6 +17,7 @@ from mani_skill2 import logger
 from mani_skill2.agents.base_agent import BaseAgent
 from mani_skill2.agents.robots import ROBOTS
 from mani_skill2.envs.scene import ManiSkillScene
+from mani_skill2.envs.utils.observations import image_to_pointcloud, image_to_rgbd
 from mani_skill2.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill2.sensors.camera import (
     Camera,
@@ -26,11 +27,6 @@ from mani_skill2.sensors.camera import (
 )
 from mani_skill2.sensors.depth_camera import StereoDepthCamera, StereoDepthCameraConfig
 from mani_skill2.utils.common import convert_observation_to_space, flatten_state_dict
-from mani_skill2.utils.geometry.trimesh_utils import (
-    get_articulation_meshes,
-    get_component_meshes,
-    merge_meshes,
-)
 from mani_skill2.utils.sapien_utils import (
     batch,
     get_obj_by_type,
@@ -40,7 +36,6 @@ from mani_skill2.utils.sapien_utils import (
 )
 from mani_skill2.utils.structs.actor import Actor
 from mani_skill2.utils.structs.articulation import Articulation
-from mani_skill2.utils.structs.types import Array
 from mani_skill2.utils.visualization.misc import observations_to_images, tile_images
 
 
@@ -102,7 +97,7 @@ class BaseEnv(gym.Env):
     """
 
     # fmt: off
-    SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "image")
+    SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "image", "rgbd", "pointcloud")
     SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "sparse")
     SUPPORTED_RENDER_MODES = ("human", "rgb_array", "cameras")
     # fmt: on
@@ -377,8 +372,12 @@ class BaseEnv(gym.Env):
             obs = flatten_state_dict(state_dict, squeeze_dims=squeeze_dims)
         elif self._obs_mode == "state_dict":
             obs = self._get_obs_state_dict(info)
-        elif self._obs_mode == "image":
+        elif self._obs_mode in ["image", "rgbd", "pointcloud"]:
             obs = self._get_obs_images(info)
+            if self._obs_mode == "rgbd":
+                obs = image_to_rgbd(obs)
+            elif self.obs_mode == "pointcloud":
+                obs = image_to_pointcloud(obs)
         else:
             raise NotImplementedError(self._obs_mode)
         return obs
