@@ -139,16 +139,15 @@ class BaseEnv(gym.Env):
         sensor_cfgs: dict = None,
         render_camera_cfgs: dict = None,
         robot_uid: Union[str, BaseAgent] = None,
+        scene_cfgs: dict = dict(),
         gpu_sim_cfgs: dict = dict(spacing=20),
         reconfiguration_freq: int = 0,
         force_use_gpu_sim: bool = False,
     ):
-        # Create SAPIEN engine
-
-        self._scene: ManiSkillScene = None
         self.num_envs = num_envs
         self.reconfiguration_freq = reconfiguration_freq
         self._reconfig_counter = 0
+        self.scene_cfgs = scene_cfgs
         if num_envs > 1 or force_use_gpu_sim:
             if not sapien.physx.is_gpu_enabled():
                 sapien.physx.enable_gpu()
@@ -158,7 +157,6 @@ class BaseEnv(gym.Env):
             )  # TODO (stao): fix this for multi gpu support?
         else:
             self.device = torch.device("cpu")
-        # TODO(jigu): Change to `warning` after lighting in VecEnv is fixed.
         # TODO Ms2 set log level. What to do now?
         # self._engine.set_log_level(os.getenv("MS2_SIM_LOG_LEVEL", "error"))
 
@@ -786,7 +784,7 @@ class BaseEnv(gym.Env):
         # NOTE (fxiang): solver iterations 15 is recommended to balance speed and accuracy. If stable grasps are necessary >= 20 is preferred.
         # NOTE (fxiang): can try using more cpu_workers as it may also make it faster if there are a lot of collisions, collision filtering is on CPU
         # NOTE (fxiang): enable_enhanced_determinism is for CPU probably. If there are 10 far apart sub scenes, this being True makes it so they do not impact each other at all
-        physx.set_scene_config(
+        DEFAULT_SCENE_CONFIG = dict(
             cpu_workers=0,
             enable_pcm=True,
             solver_iterations=15,
@@ -794,6 +792,8 @@ class BaseEnv(gym.Env):
             solver_velocity_iterations=1,
             enable_tgs=True,
         )
+        scene_config = dict(**DEFAULT_SCENE_CONFIG, **self.scene_cfgs)
+        physx.set_scene_config(**scene_config)
         # note these frictions are same as unity
         physx.set_default_material(
             dynamic_friction=0.3, static_friction=0.3, restitution=0

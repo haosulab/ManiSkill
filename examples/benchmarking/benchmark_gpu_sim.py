@@ -87,7 +87,7 @@ def main(args):
                     2 * torch.rand(env.action_space.shape, device=env.unwrapped.device) - 1
                 )
                 obs, rew, terminated, truncated, info = env.step(actions)
-                if i % 50 == 0 and i != 0:
+                if i % 200 == 0 and i != 0:
                     env.reset()
         profiler.log_stats("env.step+env.reset")
     env.close()

@@ -41,10 +41,11 @@ from omniisaacgymenvs.utils.config_utils.path_utils import get_experience
 from omniisaacgymenvs.utils.hydra_cfg.hydra_utils import *
 from omniisaacgymenvs.utils.hydra_cfg.reformat import omegaconf_to_dict, print_dict
 from omniisaacgymenvs.utils.task_util import initialize_task
-
+from profiling import Profiler
 
 @hydra.main(version_base=None, config_name="config", config_path="../cfg")
 def parse_hydra_configs(cfg: DictConfig):
+    profiler = Profiler(output_format="stdout")
     cfg_dict = omegaconf_to_dict(cfg)
     print_dict(cfg_dict)
 
@@ -118,33 +119,28 @@ def parse_hydra_configs(cfg: DictConfig):
         torch.manual_seed(0)
 
         N = 100
-        stime = time.time()
-        for i in tqdm.tqdm(range(N)):
-            actions = 2 * torch.rand(env.action_space.shape, device=task.rl_device) - 1
-            obs, rew, done, info = env.step(actions)
-        dtime = time.time() - stime
-        FPS = num_envs * N / dtime
-        print(FPS)
-        # print(
-        #     f"{FPS=:0.3f}. {N=} frames in {dtime:0.3f}s with {num_envs} parallel envs"
-        # )
+        with profiler.profile("env.step", total_steps=N, num_envs=num_envs):
+            for i in range(N):
+                actions = (
+                    2 * torch.rand(env.action_space.shape, device=task.rl_device) - 1
+                )
+                obs, rew, terminated, info = env.step(actions)
+                obs=obs['obs'].clone()
+        profiler.log_stats("env.step")
 
         env.reset(seed=2022)
         torch.manual_seed(0)
-
         N = 1000
-        stime = time.time()
-        for i in tqdm.tqdm(range(N)):
-            actions = 2 * torch.rand(env.action_space.shape, device=task.rl_device) - 1
-            obs, rew, done, info = env.step(actions)
-            if i % 200 == 0 and i != 0:
-                env.reset()
-                print("RESET")
-        dtime = time.time() - stime
-        FPS = num_envs * N / dtime
-        # print(
-        #     f"{FPS=:0.3f}. {N=} frames in {dtime:0.3f}s with {num_envs} parallel envs with step+reset"
-        # )
+        with profiler.profile("env.step+env.reset", total_steps=N, num_envs=num_envs):
+            for i in range(N):
+                actions = (
+                    2 * torch.rand(env.action_space.shape, device=task.rl_device) - 1
+                )
+                obs, rew, terminated, info = env.step(actions)
+                obs=obs['obs'].clone()
+                if i % 200 == 0 and i != 0:
+                    env.reset()
+        profiler.log_stats("env.step+env.reset")
 
     env.simulation_app.close()
 
