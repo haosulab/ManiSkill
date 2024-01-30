@@ -9,7 +9,7 @@ from stable_baselines3.common.vec_env.base_vec_env import (
     VecEnvStepReturn,
 )
 
-from mani_skill2.vector.vec_env import VecEnv
+from mani_skill2.envs.sapien_env import BaseEnv
 
 
 def select_index_from_dict(data: dict, i: int):
@@ -22,26 +22,27 @@ def select_index_from_dict(data: dict, i: int):
     return out
 
 
-class SB3VecEnvWrapper(SB3VecEnv):
-    """A wrapper for ManiSkill2 VecEnv to make it compatible with SB3 VecEnv"""
+# TODO
+class ManiSkillSB3VectorEnv(SB3VecEnv):
+    """A wrapper for to make ManiSkill parallel simulation compatible with SB3 VecEnv"""
 
-    def __init__(self, venv: VecEnv):
+    def __init__(self, env: BaseEnv):
         super().__init__(
-            venv.num_envs, venv.single_observation_space, venv.single_action_space
+            env.num_envs, env.single_observation_space, env.single_action_space
         )
-        self.venv = venv
+        self._env = env
         self._last_seed = None
 
     def seed(self, seed: Optional[int] = None) -> List[Union[None, int]]:
         self._last_seed = seed
 
     def reset(self) -> VecEnvObs:
-        obs = self.venv.reset(seed=self._last_seed)[0]
+        obs = self._env.reset(seed=self._last_seed)[0]
         self._last_seed = None  # use seed from call to seed() once
         return obs
 
     def step_async(self, actions: np.ndarray) -> None:
-        return self.venv.step_async(actions)
+        pass
 
     def step_wait(self) -> VecEnvStepReturn:
         vec_obs, rews, terminations, truncations, infos = self.venv.step_wait()
