@@ -9,7 +9,7 @@ import sapien.render
 from mani_skill2.envs.scene import ManiSkillScene
 
 
-def build_tesselated_square_floor(scene: ManiSkillScene, floor_width=20, altitude=0):
+def build_ground(scene: ManiSkillScene, floor_width=20, altitude=0):
     ground = scene.create_actor_builder()
     ground.add_visual_from_file(
         osp.join(osp.dirname(__file__), "assets/floor_tiles_06_2k.glb"),

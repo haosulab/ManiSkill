@@ -12,16 +12,6 @@ ENV_IDS = [
     "PickCube-v1",
     "StackCube-v1",
     "PickSingleYCB-v1",
-    # "PickClutterYCB-v0",
-    # "AssemblingKits-v0",
-    # "PegInsertionSide-v0",
-    # "PlugCharger-v0",
-    # "PandaAvoidObstacles-v0",
-    # "TurnFaucet-v0",
-    # "OpenCabinetDoor-v1",
-    # "OpenCabinetDrawer-v1",
-    # "PushChair-v1",
-    # "MoveBucket-v1",
 ]
 
 STATIONARY_ENV_IDS = [
@@ -54,11 +44,11 @@ OBS_MODES = [
     # "pointcloud_robot_seg",
 ]
 VENV_OBS_MODES = [
-    "image",
+    "state",
     "rgbd",
-    "pointcloud",
-    "rgbd_robot_seg",
-    "pointcloud_robot_seg",
+    # "pointcloud",
+    # "rgbd_robot_seg",
+    # "pointcloud_robot_seg",
 ]
 ROBOTS = ["panda", "xmate3_robotiq"]
 

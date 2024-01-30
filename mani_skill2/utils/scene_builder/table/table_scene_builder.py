@@ -8,7 +8,7 @@ import sapien
 import sapien.render
 from transforms3d.euler import euler2quat
 
-from mani_skill2.utils.building.ground import build_tesselated_square_floor
+from mani_skill2.utils.building.ground import build_ground
 from mani_skill2.utils.scene_builder import SceneBuilder
 
 
@@ -41,9 +41,7 @@ class TableSceneBuilder(SceneBuilder):
         self.table_width = aabb[1, 1] - aabb[0, 1]
         self.table_height = aabb[1, 2] - aabb[0, 2]
 
-        self.ground = build_tesselated_square_floor(
-            self.scene, altitude=-self.table_height
-        )
+        self.ground = build_ground(self.scene, altitude=-self.table_height)
         self.table = table
         self._scene_objects: List[sapien.Entity] = [self.table, self.ground]
 

@@ -1,3 +1,7 @@
+"""
+Various sampling functions/classes for fast, vectorized sampling of e.g. object poses
+"""
+
 from typing import List, Tuple
 
 import torch
