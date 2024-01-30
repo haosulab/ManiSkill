@@ -124,9 +124,10 @@ def parse_hydra_configs(cfg: DictConfig):
             obs, rew, done, info = env.step(actions)
         dtime = time.time() - stime
         FPS = num_envs * N / dtime
-        print(
-            f"{FPS=:0.3f}. {N=} frames in {dtime:0.3f}s with {num_envs} parallel envs"
-        )
+        print(FPS)
+        # print(
+        #     f"{FPS=:0.3f}. {N=} frames in {dtime:0.3f}s with {num_envs} parallel envs"
+        # )
 
         env.reset(seed=2022)
         torch.manual_seed(0)
@@ -141,9 +142,9 @@ def parse_hydra_configs(cfg: DictConfig):
                 print("RESET")
         dtime = time.time() - stime
         FPS = num_envs * N / dtime
-        print(
-            f"{FPS=:0.3f}. {N=} frames in {dtime:0.3f}s with {num_envs} parallel envs with step+reset"
-        )
+        # print(
+        #     f"{FPS=:0.3f}. {N=} frames in {dtime:0.3f}s with {num_envs} parallel envs with step+reset"
+        # )
 
     env.simulation_app.close()
 

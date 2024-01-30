@@ -12,7 +12,7 @@ import torch
 import tqdm
 
 import mani_skill2.envs
-from mani_skill2.utils.profiling import Profiler
+from profiling import Profiler
 from mani_skill2.utils.visualization.misc import images_to_video, tile_images
 
 
@@ -87,7 +87,7 @@ def main(args):
                     2 * torch.rand(env.action_space.shape, device=env.unwrapped.device) - 1
                 )
                 obs, rew, terminated, truncated, info = env.step(actions)
-                if i % 200 == 0 and i != 0:
+                if i % 50 == 0 and i != 0:
                     env.reset()
         profiler.log_stats("env.step+env.reset")
     env.close()
