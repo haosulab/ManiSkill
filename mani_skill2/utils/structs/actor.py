@@ -28,8 +28,7 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
     On CPU, more properties are available
     """
 
-    px_body_type: Literal["kinematic", "static", "dynamic"]
-    _data_index: slice = None
+    px_body_type: Literal["kinematic", "static", "dynamic"] = None
     hidden: bool = False
 
     # track the initial pose of the actor builder for this actor. Necessary to ensure the actor is reset correctly once
@@ -64,7 +63,6 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
             _scene_mask=scene_mask,
             px_body_type=px_body_type,
             _bodies=bodies,
-            _body_data_index=None,
             _body_data_name="cuda_rigid_body_data"
             if isinstance(scene.px, physx.PhysxGpuSystem)
             else None,
@@ -72,7 +70,7 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
         )
 
     @classmethod
-    def merge_actors(cls, actors: List["Actor"], name: str = None):
+    def merge(cls, actors: List["Actor"], name: str = None):
         """
         Merge actors together so that they can all be managed by one python dataclass object.
         This can be useful for e.g. randomizing the asset loaded into a task and being able to do object.pose to fetch the pose of all randomized assets
@@ -155,7 +153,7 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
         if self.hidden:
             return
         if physx.is_gpu_enabled():
-            self.last_pose = self.px.cuda_rigid_body_data[
+            self.last_pose = self.px.cuda_rigid_body_data.torch()[
                 self._body_data_index, :7
             ].clone()
             temp_pose = self.pose.raw_pose
@@ -184,7 +182,7 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
             ).visibility = 1
         self.hidden = False
 
-    def is_static(self, lin_thresh=1e-3, ang_thresh=1e-2):
+    def is_static(self, lin_thresh=1e-2, ang_thresh=1e-1):
         """
         Checks if this actor is static within the given linear velocity threshold `lin_thresh` and angular velocity threshold `ang_thresh`
         """
@@ -213,9 +211,12 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
                 # as part of observations if needed
                 return self._builder_initial_pose
             else:
-                return Pose.create(
-                    self.px.cuda_rigid_body_data[self._body_data_index, :7]
-                )
+                raw_pose = self.px.cuda_rigid_body_data.torch()[
+                    self._body_data_index, :7
+                ]
+                if self.hidden:
+                    raw_pose[..., :3] -= 99999
+                return Pose.create(raw_pose)
         else:
             assert len(self._objs) == 1
             return Pose.create(self._objs[0].pose)
@@ -225,7 +226,7 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
         if physx.is_gpu_enabled():
             if not isinstance(arg1, torch.Tensor):
                 arg1 = vectorize_pose(arg1)
-            self.px.cuda_rigid_body_data[self._body_data_index, :7] = arg1
+            self.px.cuda_rigid_body_data.torch()[self._body_data_index, :7] = arg1
         else:
             self._objs[0].pose = to_sapien_pose(arg1)
 

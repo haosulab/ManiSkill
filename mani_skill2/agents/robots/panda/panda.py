@@ -224,11 +224,12 @@ class Panda(BaseAgent):
                     self.scene.px.gpu_create_contact_query(body_pairs),
                     (len(object._bodies), 3),
                 )
-                print(f"Create query for Panda grasp({object.name})")
             query, contacts_shape = self.queries[object.name]
             self.scene.px.gpu_query_contacts(query)
             # query.cuda_contacts # (num_unique_pairs * num_envs, 3)
-            contacts = query.cuda_contacts.clone().reshape((-1, *contacts_shape))
+            contacts = (
+                query.cuda_contacts.torch().clone().reshape((-1, *contacts_shape))
+            )
             lforce = torch.linalg.norm(contacts[0], axis=1)
             rforce = torch.linalg.norm(contacts[1], axis=1)
 
@@ -308,16 +309,16 @@ class Panda(BaseAgent):
         T[:3, 3] = center
         return sapien.Pose(T)
 
-    sensor_configs = [
-        CameraConfig(
-            uid="hand_camera",
-            p=[0.0464982, -0.0200011, 0.0360011],
-            q=[0, 0.70710678, 0, 0.70710678],
-            width=128,
-            height=128,
-            fov=1.57,
-            near=0.01,
-            far=10,
-            entity_uid="panda_hand",
-        )
-    ]
+    # sensor_configs = [
+    #     CameraConfig(
+    #         uid="hand_camera",
+    #         p=[0.0464982, -0.0200011, 0.0360011],
+    #         q=[0, 0.70710678, 0, 0.70710678],
+    #         width=128,
+    #         height=128,
+    #         fov=1.57,
+    #         near=0.01,
+    #         far=10,
+    #         entity_uid="panda_hand",
+    #     )
+    # ]

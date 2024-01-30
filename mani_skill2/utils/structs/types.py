@@ -12,5 +12,5 @@ def get_backend_name():
         return "numpy"
 
 
-Array = Union[torch.Tensor, np.array, Sequence]
+Array = Union[torch.Tensor, np.ndarray, Sequence]
 Device = Union[str, torch.device]

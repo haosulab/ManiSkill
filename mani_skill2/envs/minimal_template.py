@@ -46,11 +46,11 @@ class CustomEnv(BaseEnv):
     def _initialize_actors(self):
         pass
 
-    def _get_obs_extra(self):
-        return OrderedDict()
-
-    def evaluate(self, obs: Any):
+    def evaluate(self):
         return {"success": torch.zeros(self.num_envs, device=self.device, dtype=bool)}
+
+    def _get_obs_extra(self, info: Dict):
+        return OrderedDict()
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         return torch.zeros(self.num_envs, device=self.device)

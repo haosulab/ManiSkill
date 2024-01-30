@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 class URDFLoader(SapienURDFLoader):
     scene: ManiSkillScene
     name: str
+    disable_self_collisions: bool = False
 
     def parse(
         self, urdf_file, srdf_file=None, package_dir=None
@@ -26,6 +27,10 @@ class URDFLoader(SapienURDFLoader):
         )
         for i, a in enumerate(articulation_builders):
             a.set_name(f"{self.name}-articulation-{i}")
+            if self.disable_self_collisions:
+                for l in a.link_builders:
+                    # NOTE (stao): Currently this may not be working as intended
+                    l.collision_groups[2] |= 1 << 29
         for i, b in enumerate(actor_builders):
             b.set_name(f"{self.name}-actor-{i}")
         return articulation_builders, actor_builders, cameras
@@ -37,16 +42,25 @@ class URDFLoader(SapienURDFLoader):
             urdf_file, srdf_file, package_dir
         )
 
-    def load(self, urdf_file: str, srdf_file=None, package_dir=None) -> Articulation:
+    def load(
+        self,
+        urdf_file: str,
+        srdf_file=None,
+        package_dir=None,
+        name=None,
+        scene_mask=None,
+    ) -> Articulation:
         """
         Args:
             urdf_file: filename for URDL file
             srdf_file: SRDF for urdf_file. If srdf_file is None, it defaults to the ".srdf" file with the same as the urdf file
             package_dir: base directory used to resolve asset files in the URDF file. If an asset path starts with "package://", "package://" is simply removed from the file name
+            name (str): name of the created articulation
         Returns:
             returns a single Articulation loaded from the URDF file. It throws an error if multiple objects exists
         """
-
+        if name is not None:
+            self.name = name
         articulation_builders, actor_builders, cameras = self.parse(
             urdf_file, srdf_file, package_dir
         )
@@ -58,6 +72,8 @@ class URDFLoader(SapienURDFLoader):
 
         articulations: List[Articulation] = []
         for b in articulation_builders:
+            b.set_scene_mask(scene_mask)
+            b.disable_self_collisions = self.disable_self_collisions
             articulations.append(b.build())
 
         actors: List[Actor] = []

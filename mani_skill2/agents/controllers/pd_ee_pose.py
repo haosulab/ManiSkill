@@ -53,7 +53,9 @@ class PDEEPosController(PDJointPosController):
         else:
             # TODO should we just use jacobian inverse * delta method from pk?
             self.pmodel = self.articulation._objs[0].create_pinocchio_model()
-        self.qmask = np.zeros(self.articulation.dof, dtype=bool)
+        self.qmask = torch.zeros(
+            self.articulation.max_dof, dtype=bool, device=self.device
+        )
         self.qmask[self.joint_indices] = 1
 
         if self.config.ee_link:
@@ -68,7 +70,7 @@ class PDEEPosController(PDJointPosController):
     def _initialize_action_space(self):
         low = np.float32(np.broadcast_to(self.config.lower, 3))
         high = np.float32(np.broadcast_to(self.config.upper, 3))
-        self.action_space = spaces.Box(low, high, dtype=np.float32)
+        self.single_action_space = spaces.Box(low, high, dtype=np.float32)
 
     @property
     def ee_pos(self):
@@ -197,7 +199,7 @@ class PDEEPoseController(PDEEPosController):
                 ]
             )
         )
-        self.action_space = spaces.Box(low, high, dtype=np.float32)
+        self.single_action_space = spaces.Box(low, high, dtype=np.float32)
 
     def _clip_and_scale_action(self, action):
         # NOTE(xiqiang): rotation should be clipped by norm.

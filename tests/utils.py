@@ -1,16 +1,17 @@
-from typing import List
+from typing import Callable, List
 
 import numpy as np
 import torch
 
 from mani_skill2.utils.common import flatten_dict_keys
+from mani_skill2.utils.sapien_utils import to_numpy
 
 # TODO (stao): reactivate old tasks once fixed
 ENV_IDS = [
-    "LiftCube-v0",
+    # "LiftCube-v0",
     "PickCube-v1",
-    "StackCube-v0",
-    "PickSingleYCB-v0",
+    "StackCube-v1",
+    "PickSingleYCB-v1",
     # "PickClutterYCB-v0",
     # "AssemblingKits-v0",
     # "PegInsertionSide-v0",
@@ -24,10 +25,9 @@ ENV_IDS = [
 ]
 
 STATIONARY_ENV_IDS = [
-    "LiftCube-v0",
-    "PickCube-v0",
-    "StackCube-v0",
-    "PickSingleYCB-v0",
+    "PickCube-v1",
+    "StackCube-v1",
+    "PickSingleYCB-v1",
     # "PickClutterYCB-v0",
     # "AssemblingKits-v0",
     # "PegInsertionSide-v0",
@@ -40,8 +40,8 @@ REWARD_MODES = ["dense", "normalized_dense", "sparse"]
 CONTROL_MODES_STATIONARY_SINGLE_ARM = [
     "pd_joint_delta_pos",
     "pd_joint_pos",
-    "pd_joint_vel",
-    "pd_joint_pos_vel",
+    # "pd_joint_vel",
+    # "pd_joint_pos_vel",
     "pd_ee_delta_pose",
     "pd_ee_delta_pos",
 ]
@@ -63,6 +63,13 @@ VENV_OBS_MODES = [
 ROBOTS = ["panda", "xmate3_robotiq"]
 
 
+def tree_map(x, func: Callable):
+    if isinstance(x, dict):
+        [tree_map(y, func) for y in x.values()]
+    else:
+        func(x)
+
+
 def assert_isinstance(obs1, types: List):
     if not isinstance(types, list):
         types = [types]
@@ -78,6 +85,7 @@ def assert_obs_equal(obs1, obs2, ignore_col_vector_shape_mismatch=False):
     ignore_col_vector_shape_mismatch - If true, will ignore shape mismatch if one shape is (n, 1) but another is (n, ). this is added since
         SB3 outputs scalars as (n, ) whereas Gymnasium and ManiSkill2 use (n, 1)
     """
+    obs1, obs2 = to_numpy(obs1), to_numpy(obs2)
     if isinstance(obs1, dict):
         obs2 = flatten_dict_keys(obs2)
         for k, v in obs1.items():

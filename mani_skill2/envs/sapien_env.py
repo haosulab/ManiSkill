@@ -1,4 +1,3 @@
-import copy
 import os
 from collections import OrderedDict
 from typing import Any, Dict, List, Sequence, Type, Union
@@ -18,6 +17,7 @@ from mani_skill2 import logger
 from mani_skill2.agents.base_agent import BaseAgent
 from mani_skill2.agents.robots import ROBOTS
 from mani_skill2.envs.scene import ManiSkillScene
+from mani_skill2.envs.utils.observations import image_to_pointcloud, image_to_rgbd
 from mani_skill2.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill2.sensors.camera import (
     Camera,
@@ -27,11 +27,6 @@ from mani_skill2.sensors.camera import (
 )
 from mani_skill2.sensors.depth_camera import StereoDepthCamera, StereoDepthCameraConfig
 from mani_skill2.utils.common import convert_observation_to_space, flatten_state_dict
-from mani_skill2.utils.geometry.trimesh_utils import (
-    get_articulation_meshes,
-    get_component_meshes,
-    merge_meshes,
-)
 from mani_skill2.utils.sapien_utils import (
     batch,
     get_obj_by_type,
@@ -41,7 +36,6 @@ from mani_skill2.utils.sapien_utils import (
 )
 from mani_skill2.utils.structs.actor import Actor
 from mani_skill2.utils.structs.articulation import Articulation
-from mani_skill2.utils.structs.types import Array
 from mani_skill2.utils.visualization.misc import observations_to_images, tile_images
 
 
@@ -52,28 +46,49 @@ class BaseEnv(gym.Env):
         num_envs: number of parallel environments to run. By default this is 1, which means a CPU simulation is used. If greater than 1,
             then we initialize the GPU simulation setup. Note that not all environments are faster when simulated on the GPU due to limitations of
             GPU simulations. For example, environments with many moving objects are better simulated by parallelizing across CPUs.
+
         gpu_sim_backend: The GPU simulation backend to use (only used if the given num_envs argument is > 1). This affects the type of tensor
             returned by the environment for e.g. observations and rewards. Can be "torch" or "jax". Default is "torch"
+
         obs_mode: observation mode registered in @SUPPORTED_OBS_MODES.
+
         reward_mode: reward mode registered in @SUPPORTED_REWARD_MODES.
+
         control_mode: control mode of the agent.
             "*" represents all registered controllers, and the action space will be a dict.
+
         render_mode: render mode registered in @SUPPORTED_RENDER_MODES.
+
         sim_freq (int): simulation frequency (Hz)
+
         control_freq (int): control frequency (Hz)
+
         renderer (str): type of renderer. "sapien" or "client".
+
         renderer_kwargs (dict): kwargs to initialize the renderer.
             Example kwargs for `SapienRenderer` (renderer_type=='sapien'):
             - offscreen_only: tell the renderer the user does not need to present onto a screen.
             - device (str): GPU device for renderer, e.g., 'cuda:x'.
+
         shader_dir (str): shader directory. Defaults to "default".
             "default" and "rt" are built-in options with SAPIEN. Other options are user-defined.
+
         render_config (dict): kwargs to configure the renderer. Only for `SapienRenderer`.
             See `sapien.RenderConfig` for more details.
+
         enable_shadow (bool): whether to enable shadow for lights. Defaults to False.
+
         sensor_cfgs (dict): configurations of sensors. See notes for more details.
+
         render_camera_cfgs (dict): configurations of rendering cameras. Similar usage as @camera_cfgs.
-        gpu_sim_cfgs (dict): Configurations for GPU simulation if used.
+
+        gpu_sim_cfgs (dict): Configurations for GPU simulation if used. # TODO (stao): flesh this explanation out
+
+        reconfiguration_freq (int): How frequently to call reconfigure when environment is reset via `self.reset(...)`
+            Generally for most users who are not building tasks this does not need to be changed. The default is 0, which means
+            the environment reconfigures upon creation, and never again.
+
+        force_use_gpu_sim (bool): By default this is False. If the num_envs == 1, we use GPU sim if force_use_gpu_sim is True, otherwise we use CPU sim.
 
     Note:
         `sensor_cfgs` is used to update environement-specific sensor configurations.
@@ -82,7 +97,7 @@ class BaseEnv(gym.Env):
     """
 
     # fmt: off
-    SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "image")
+    SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "image", "rgbd", "pointcloud")
     SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "sparse")
     SUPPORTED_RENDER_MODES = ("human", "rgb_array", "cameras")
     # fmt: on
@@ -127,16 +142,19 @@ class BaseEnv(gym.Env):
         sensor_cfgs: dict = None,
         render_camera_cfgs: dict = None,
         robot_uid: Union[str, BaseAgent] = None,
-        gpu_sim_cfgs: dict = dict(spacing=10),
+        gpu_sim_cfgs: dict = dict(spacing=20),
+        reconfiguration_freq: int = 0,
+        force_use_gpu_sim: bool = False,
     ):
         # Create SAPIEN engine
 
         self._scene: ManiSkillScene = None
         self.num_envs = num_envs
-        if num_envs > 1:
+        self.reconfiguration_freq = reconfiguration_freq
+        self._reconfig_counter = 0
+        if num_envs > 1 or force_use_gpu_sim:
             if not sapien.physx.is_gpu_enabled():
                 sapien.physx.enable_gpu()
-                sapien.set_cuda_tensor_backend("torch")
             self.gpu_sim_cfgs = gpu_sim_cfgs
             self.device = torch.device(
                 "cuda"
@@ -260,10 +278,7 @@ class BaseEnv(gym.Env):
                 image_obs_space.spaces[uid] = camera.observation_space
 
         self.action_space = self.agent.action_space
-        self.single_action_space = copy.deepcopy(self.action_space)
-        if num_envs > 1:
-            self.agent.controller._batch_action_space()
-            self.action_space = self.agent.action_space
+        self.single_action_space = self.agent.single_action_space
 
     def _load_agent(self):
         agent_cls: Type[BaseAgent] = self._agent_cls
@@ -332,37 +347,53 @@ class BaseEnv(gym.Env):
     def obs_mode(self):
         return self._obs_mode
 
-    def get_obs(self):
+    def get_obs(self, info: Dict = None):
         """
-        Return the current observation of the environment
+        Return the current observation of the environment. User may call this directly to get the current observation
+        as opposed to taking a step with actions in the environment.
+
+        Note that some tasks use info of the current environment state to populate the observations to avoid having to
+        compute slow operations twice. For example a state based observation may wish to include a boolean indicating
+        if a robot is grasping an object. Computing this boolean correctly is slow, so it is preferable to generate that
+        data in the info object by overriding the `self.evaluate` function.
+
+        Args:
+            info (Dict): The info object of the environment. Generally should always be the result of `self.get_info()`.
+                If this is None (the default), this function will call `self.get_info()` itself
         """
         squeeze_dims = self.num_envs == 1
+        if info is None:
+            info = self.get_info()
         if self._obs_mode == "none":
             # Some cases do not need observations, e.g., MPC
             return OrderedDict()
         elif self._obs_mode == "state":
-            state_dict = self._get_obs_state_dict()
+            state_dict = self._get_obs_state_dict(info)
             obs = flatten_state_dict(state_dict, squeeze_dims=squeeze_dims)
         elif self._obs_mode == "state_dict":
-            obs = self._get_obs_state_dict()
-        elif self._obs_mode == "image":
-            obs = self._get_obs_images()
+            obs = self._get_obs_state_dict(info)
+        elif self._obs_mode in ["image", "rgbd", "pointcloud"]:
+            obs = self._get_obs_images(info)
+            if self._obs_mode == "rgbd":
+                obs = image_to_rgbd(obs)
+            elif self.obs_mode == "pointcloud":
+                obs = image_to_pointcloud(obs)
         else:
             raise NotImplementedError(self._obs_mode)
         return obs
 
-    def _get_obs_state_dict(self):
+    def _get_obs_state_dict(self, info: Dict):
         """Get (ground-truth) state-based observations."""
         return OrderedDict(
             agent=self._get_obs_agent(),
-            extra=self._get_obs_extra(),
+            extra=self._get_obs_extra(info),
         )
 
     def _get_obs_agent(self):
         """Get observations from the agent's sensors, e.g., proprioceptive sensors."""
         return self.agent.get_proprioception()
 
-    def _get_obs_extra(self):
+    def _get_obs_extra(self, info: Dict):
         """Get task-relevant extra observations."""
         return OrderedDict()
 
@@ -400,14 +431,14 @@ class BaseEnv(gym.Env):
             params[name] = cam.get_params()
         return params
 
-    def _get_obs_images(self) -> OrderedDict:
+    def _get_obs_images(self, info: Dict) -> OrderedDict:
         for obj in self._hidden_objects:
             obj.hide_visual()
         self.update_render()
         self.capture_sensor_data()
         return OrderedDict(
             agent=self._get_obs_agent(),
-            extra=self._get_obs_extra(),
+            extra=self._get_obs_extra(info),
             camera_param=self.get_camera_params(),
             image=self.get_sensor_data(),
         )
@@ -459,10 +490,10 @@ class BaseEnv(gym.Env):
         Tasks like PegInsertionSide and TurnFaucet will call this each time as the peg
         shape changes each time and the faucet model changes each time respectively.
         """
+
         with torch.random.fork_rng():
             torch.manual_seed(seed=self._episode_seed)
             self._clear()
-
             # load everything into the scene first before initializing anything
             self._setup_scene()
             self._load_agent()
@@ -472,17 +503,15 @@ class BaseEnv(gym.Env):
             self._setup_lighting()
 
             # Cache entites and articulations
-            self._actors = self.get_actors()
-            self._articulations = self.get_articulations()
             if sapien.physx.is_gpu_enabled():
                 self._scene._setup_gpu()
-                self.device = self.physx_system.cuda_rigid_body_data.device
                 self._scene._gpu_fetch_all()
                 # TODO (stao): unknown what happens when we do reconfigure more than once when GPU is one. figure this out
             self.agent.initialize()
             self._setup_sensors()  # for GPU sim, we have to setup sensors after we call setup gpu in order to enable loading mounted sensors
             if self._viewer is not None:
                 self._setup_viewer()
+        self._reconfig_counter = self.reconfiguration_freq
 
     def _load_actors(self):
         """Loads all actors into the scene. Called by `self.reconfigure`"""
@@ -554,21 +583,30 @@ class BaseEnv(gym.Env):
         which means that when creating an environment and resetting without a seed, it will always have the same sequence of RNG for each episode.
 
         """
-        self._elapsed_steps = 0
         if options is None:
             options = dict()
+
+        self._elapsed_steps = (
+            torch.zeros(self.num_envs, device=self.device, dtype=torch.int32)
+            if physx.is_gpu_enabled()
+            else 0
+        )
 
         self._set_main_rng(seed)
         # we first set the first episode seed to allow environments to use it to reconfigure the environment with a seed
         self._set_episode_rng(seed)
 
         reconfigure = options.get("reconfigure", False)
+        reconfigure = reconfigure or (
+            self._reconfig_counter == 0 and self.reconfiguration_freq != 0
+        )
         if reconfigure:
             # Reconfigure the scene if assets change
             self.reconfigure()
         else:
             self._clear_sim_state()
-
+        if self.reconfiguration_freq != 0:
+            self._reconfig_counter -= 1
         # Set the episode rng again after reconfiguration to guarantee seed reproducibility
         self._set_episode_rng(self._episode_seed)
 
@@ -579,12 +617,19 @@ class BaseEnv(gym.Env):
             self._scene._gpu_apply_all()
             self._scene.px.gpu_update_articulation_kinematics()
             self._scene._gpu_fetch_all()
+
         else:
             obs = to_numpy(unbatch(obs))
+            self._elapsed_steps = 0
         return obs, {}
 
     def _set_main_rng(self, seed):
-        """Set the main random generator which is only used to set the seed of the episode RNG to improve reproducibility"""
+        """Set the main random generator which is only used to set the seed of the episode RNG to improve reproducibility.
+
+        Note that while _set_main_rng and _set_episode_rng are setting a seed and numpy random state, when using GPU sim
+        parallelization it is highly recommended to use torch random functions as they will make things run faster. The use
+        of torch random functions when building tasks in ManiSkill are automatically seeded via `torch.random.fork`
+        """
         if seed is None:
             if self._main_seed is not None:
                 return
@@ -632,7 +677,7 @@ class BaseEnv(gym.Env):
             actor.set_linear_velocity([0, 0, 0])
             actor.set_angular_velocity([0, 0, 0])
         for articulation in self._scene.articulations.values():
-            articulation.set_qvel(np.zeros(articulation.dof))
+            articulation.set_qvel(np.zeros(articulation.max_dof))
             # articulation.set_root_velocity([0, 0, 0])
             # articulation.set_root_angular_velocity([0, 0, 0])
         if physx.is_gpu_enabled():
@@ -647,12 +692,18 @@ class BaseEnv(gym.Env):
     def step(self, action: Union[None, np.ndarray, Dict]):
         action = self.step_action(action)
         self._elapsed_steps += 1
-        obs = self.get_obs()
-        info = self.get_info(obs=obs)
+        info = self.get_info()
+        obs = self.get_obs(info)
         reward = self.get_reward(obs=obs, action=action, info=info)
         terminated = info["success"]
         if physx.is_gpu_enabled():
-            return obs, reward, terminated, False, info
+            return (
+                obs,
+                reward,
+                terminated,
+                torch.zeros(self.num_envs, device=self.device),
+                info,
+            )
         else:
             # On CPU sim mode, we always return numpy / python primitives without any batching.
             return unbatch(
@@ -684,6 +735,7 @@ class BaseEnv(gym.Env):
             self.agent.set_action(action)
             if physx.is_gpu_enabled():
                 self._scene.px.gpu_apply_articulation_target_position()
+                self._scene.px.gpu_apply_articulation_target_velocity()
         self._before_control_step()
         for _ in range(self._sim_steps_per_control):
             self.agent.before_simulation_step()
@@ -694,16 +746,20 @@ class BaseEnv(gym.Env):
             self._scene._gpu_fetch_all()
         return action
 
-    def evaluate(self, **kwargs) -> dict:
-        """Evaluate whether the environment is currently in a success state."""
+    def evaluate(self) -> dict:
+        """
+        Evaluate whether the environment is currently in a success state by returning a dictionary with a "success" key.
+        This function may also return additional data that has been computed (e.g. is the robot grasping some object) so that they may be
+        reused when generating observations and rewards.
+        """
         raise NotImplementedError
 
-    def get_info(self, **kwargs):
+    def get_info(self):
         """
         Get info about the current environment state, include elapsed steps and evaluation information
         """
         info = dict(elapsed_steps=self._elapsed_steps)
-        info.update(self.evaluate(**kwargs))
+        info.update(self.evaluate())
         return info
 
     def _before_control_step(self):
@@ -740,10 +796,6 @@ class BaseEnv(gym.Env):
         The function should be called in reset(). Called by `self.reconfigure`"""
         self._set_scene_config()
         if sapien.physx.is_gpu_enabled():
-            if self.physx_system is not None:
-                raise RuntimeError(
-                    "In GPU simulation, you cannot create an environment or reconfigure more than once. You must initialize a new process"
-                )
             self.physx_system = sapien.physx.PhysxGpuSystem()
             # Create the scenes in a square grid
             sub_scenes = []
@@ -856,7 +908,7 @@ class BaseEnv(gym.Env):
 
         # TODO (stao): currently in GPU mode we cannot render all sub-scenes together in the GUI yet. So we have this
         # naive solution which shows whatever scene is selected by self._viewer_scene_idx
-        if physx.is_gpu_enabled() and self._scene._buffers_ready:
+        if physx.is_gpu_enabled() and self._scene._gpu_sim_initialized:
             # TODO (stao): This is the slow method, update objects via cpu
             for actor in self._scene.actors.values():
                 if actor.px_body_type == "static":
@@ -893,14 +945,14 @@ class BaseEnv(gym.Env):
                 if camera_name is not None and name != camera_name:
                     continue
                 camera_group.take_picture()
-                rgb = camera_group.get_picture_cuda("Color")[..., :3].clone()
+                rgb = camera_group.get_picture_cuda("Color").torch()[..., :3].clone()
                 images.append(rgb)
         else:
             for name, camera in self._scene.render_cameras.items():
                 if camera_name is not None and name != camera_name:
                     continue
                 camera.take_picture()
-                rgb = camera.get_picture("Color")[..., :3]
+                rgb = camera.get_picture("Color")[0, ..., :3]
                 images.append(rgb)
         if len(images) == 0:
             return None
@@ -941,29 +993,30 @@ class BaseEnv(gym.Env):
         else:
             raise NotImplementedError(f"Unsupported render mode {self.render_mode}.")
 
-    # ---------------------------------------------------------------------------- #
-    # Advanced
-    # ---------------------------------------------------------------------------- #
-    def gen_scene_pcd(self, num_points: int = int(1e5)) -> np.ndarray:
-        """Generate scene point cloud for motion planning, excluding the robot"""
-        meshes = []
-        articulations = self._scene.get_all_articulations()
-        if self.agent is not None:
-            articulations.pop(articulations.index(self.agent.robot))
-        for articulation in articulations:
-            articulation_mesh = merge_meshes(get_articulation_meshes(articulation))
-            if articulation_mesh:
-                meshes.append(articulation_mesh)
+    # TODO (stao): re implement later
+    # # ---------------------------------------------------------------------------- #
+    # # Advanced
+    # # ---------------------------------------------------------------------------- #
+    # def gen_scene_pcd(self, num_points: int = int(1e5)) -> np.ndarray:
+    #     """Generate scene point cloud for motion planning, excluding the robot"""
+    #     meshes = []
+    #     articulations = self._scene.get_all_articulations()
+    #     if self.agent is not None:
+    #         articulations.pop(articulations.index(self.agent.robot))
+    #     for articulation in articulations:
+    #         articulation_mesh = merge_meshes(get_articulation_meshes(articulation))
+    #         if articulation_mesh:
+    #             meshes.append(articulation_mesh)
 
-        for actor in self._scene.get_all_actors():
-            actor_mesh = merge_meshes(get_component_meshes(actor))
-            if actor_mesh:
-                meshes.append(
-                    actor_mesh.apply_transform(
-                        actor.get_pose().to_transformation_matrix()
-                    )
-                )
+    #     for actor in self._scene.get_all_actors():
+    #         actor_mesh = merge_meshes(get_component_meshes(actor))
+    #         if actor_mesh:
+    #             meshes.append(
+    #                 actor_mesh.apply_transform(
+    #                     actor.get_pose().to_transformation_matrix()
+    #                 )
+    #             )
 
-        scene_mesh = merge_meshes(meshes)
-        scene_pcd = scene_mesh.sample(num_points)
-        return scene_pcd
+    #     scene_mesh = merge_meshes(meshes)
+    #     scene_pcd = scene_mesh.sample(num_points)
+    #     return scene_pcd

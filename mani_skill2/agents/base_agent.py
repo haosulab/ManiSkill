@@ -75,7 +75,7 @@ class BaseAgent:
 
     def initialize(self):
         """
-        Initialize the agent, which includes running _after_init() and initializing/restting the controller
+        Initialize the agent, which includes running _after_init() and initializing/resetting the controller
         """
         self._after_init()
         self.controller.reset()
@@ -168,6 +168,18 @@ class BaseAgent:
         else:
             return self.controller.action_space
 
+    @property
+    def single_action_space(self):
+        if self._control_mode is None:
+            return spaces.Dict(
+                {
+                    uid: controller.single_action_space
+                    for uid, controller in self.controllers.items()
+                }
+            )
+        else:
+            return self.controller.single_action_space
+
     def set_action(self, action):
         """
         Set the agent's action which is to be executed in the next environment timestep
@@ -230,8 +242,8 @@ class BaseAgent:
         """
         if init_qpos is not None:
             self.robot.set_qpos(init_qpos)
-        self.robot.set_qvel(np.zeros(self.robot.dof))
-        self.robot.set_qf(np.zeros(self.robot.dof))
+        self.robot.set_qvel(np.zeros(self.robot.max_dof))
+        self.robot.set_qf(np.zeros(self.robot.max_dof))
         self.set_control_mode(self._default_control_mode)
 
     # -------------------------------------------------------------------------- #

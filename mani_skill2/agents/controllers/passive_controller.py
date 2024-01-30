@@ -25,8 +25,9 @@ class PassiveController(BaseController):
             joint.set_friction(friction[i])
 
     def _initialize_action_space(self):
-        # Can not be printed
-        self.action_space = spaces.Box(np.empty(0), np.empty(0), dtype=np.float32)
+        self.single_action_space = spaces.Box(
+            np.empty(0), np.empty(0), dtype=np.float32
+        )
 
     def set_action(self, action: np.ndarray):
         pass

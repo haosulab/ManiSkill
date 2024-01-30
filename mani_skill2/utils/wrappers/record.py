@@ -117,11 +117,13 @@ class RecordEpisode(gym.Wrapper):
         save_on_reset=True,
         clean_on_close=True,
         record_reward=False,
+        init_state_only=False,
         video_fps=20,
     ):
         super().__init__(env)
 
         self.output_dir = Path(output_dir)
+        self.init_state_only = init_state_only
         if save_trajectory or save_video:
             self.output_dir.mkdir(parents=True, exist_ok=True)
         self.save_on_reset = save_on_reset
@@ -261,14 +263,7 @@ class RecordEpisode(gym.Wrapper):
                         compression_opts=5,
                     )
                 elif "depth" in k and v.ndim in (3, 4):
-                    # NOTE(jigu): uint16 is more efficient to store at cost of precision
-                    if not np.all(np.logical_and(v >= 0, v < 2**6)):
-                        raise RuntimeError(
-                            "The depth map({}) is invalid with min({}) and max({}).".format(
-                                k, v.min(), v.max()
-                            )
-                        )
-                    v = (v * (2**10)).astype(np.uint16)
+                    # NOTE (stao): By default now cameras in ManiSkill return depth values of type uint16 for numpy
                     group.create_dataset(
                         "obs/" + k,
                         data=v,
