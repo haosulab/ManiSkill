@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from typing import Dict
 
 import numpy as np
 import sapien
@@ -68,7 +69,7 @@ class PickCubeEnv(StationaryManipulationEnv):
         self.goal_pos = torch.vstack(goal_poss)
         self.goal_site.set_pose(Pose.create_from_pq(self.goal_pos))
 
-    def _get_obs_extra(self) -> OrderedDict:
+    def _get_obs_extra(self, info: Dict) -> OrderedDict:
         obs = OrderedDict(
             tcp_pose=vectorize_pose(self.agent.tcp.pose),
             goal_pos=self.goal_pos,
@@ -179,7 +180,7 @@ class LiftCubeEnv(PickCubeEnv):
         )
         self.goal_site.set_pose(Pose.create_from_pq(self.goal_pos))
 
-    def _get_obs_extra(self) -> OrderedDict:
+    def _get_obs_extra(self, info: Dict) -> OrderedDict:
         obs = OrderedDict(
             tcp_pose=vectorize_pose(self.agent.tcp.pose),
         )
