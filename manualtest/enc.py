@@ -14,7 +14,7 @@ if __name__ == "__main__":
         max_rigid_patch_count=2**19,
         max_rigid_contact_count=2**21,
     )
-    for env_id in ["StackCube-v1"]:
+    for env_id in ["PickCube-v1"]:
         env = gym.make(
             env_id,
             num_envs=num_envs,
@@ -30,6 +30,9 @@ if __name__ == "__main__":
             force_use_gpu_sim=True,
             # reconfiguration_freq=1,
         )
+        import ipdb
+
+        ipdb.set_trace()
         env = VisualEncoderWrapper(env, encoder="r3m")
         # env = RecordEpisode(
         #     env,

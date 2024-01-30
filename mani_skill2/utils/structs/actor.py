@@ -153,14 +153,17 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
         if self.hidden:
             return
         if physx.is_gpu_enabled():
-            self.last_pose = self.px.cuda_rigid_body_data.torch()[
-                self._body_data_index, :7
-            ].clone()
-            temp_pose = self.pose.raw_pose
-            temp_pose[..., :3] += 99999
-            self.pose = temp_pose
-            self.px.gpu_apply_rigid_dynamic_data()
-            self.px.gpu_fetch_rigid_dynamic_data()
+            # TODO (stao): fix hiding visuals
+            pass
+            # self.last_pose = self.px.cuda_rigid_body_data.torch()[
+            #     self._body_data_index, :7
+            # ].clone()
+            # temp_pose = self.pose.raw_pose
+            # temp_pose[..., :3] += 99999
+            # self.pose = temp_pose
+            # self.px.gpu_apply_rigid_dynamic_data()
+            # self.px.gpu_fetch_rigid_dynamic_data()
+            # print("HIDE", self.pose.raw_pose[0, :3])
         else:
             self._objs[0].find_component_by_type(
                 sapien.render.RenderBodyComponent
@@ -214,8 +217,9 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
                 raw_pose = self.px.cuda_rigid_body_data.torch()[
                     self._body_data_index, :7
                 ]
-                if self.hidden:
-                    raw_pose[..., :3] -= 99999
+                # if self.hidden:
+                # print(self.name, "hidden", raw_pose[0, :3])
+                # raw_pose[..., :3] = raw_pose[..., :3] - 99999
                 return Pose.create(raw_pose)
         else:
             assert len(self._objs) == 1

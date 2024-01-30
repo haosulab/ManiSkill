@@ -47,7 +47,6 @@ def test_visualencoders_gpu(env_id):
         max_episode_steps=10,
         num_envs=16,
     )
-    # import ipdb;ipdb.set_trace()
     assert (
         "embedding" not in env.observation_space.keys()
         and "image" in env.observation_space.keys()
