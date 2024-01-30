@@ -42,4 +42,3 @@ if __name__ == "__main__":
         f"{FPS=:0.3f}. {N=} frames in {dtime:0.3f}s with {num_envs} parallel envs with step+reset"
     )
     env.close()
-
