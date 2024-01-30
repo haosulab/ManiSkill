@@ -100,7 +100,8 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             wrapped_link = Link.create(links, self)
             link_map[wrapped_link.name] = wrapped_link
             wrapped_links.append(wrapped_link)
-            if wrapped_link.is_root:
+            assert wrapped_link.is_root.any() == wrapped_link.is_root.all()
+            if wrapped_link.is_root.any():
                 root = wrapped_link
         self.links = wrapped_links
         self.link_map = link_map

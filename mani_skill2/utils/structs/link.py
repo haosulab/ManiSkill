@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import cached_property
 from typing import TYPE_CHECKING, Callable, Dict, List, Union
 
 import sapien
@@ -140,6 +141,11 @@ class Link(
             bboxes.append(merged_mesh.bounding_box)
         return bboxes
 
+    # TODO (stao): is there a easy way to implement this
+    # @cached_property
+    # def index_q(self) -> torch.Tensor:
+    #     """The indexes of the managed link objects in their respective articulations. These correspond with position in the qpos and qvel of articulations"""
+
     # -------------------------------------------------------------------------- #
     # Functions from sapien.Component
     # -------------------------------------------------------------------------- #
@@ -169,12 +175,12 @@ class Link(
     # -------------------------------------------------------------------------- #
     # Functions from physx.PhysxArticulationLinkComponent
     # -------------------------------------------------------------------------- #
-    def get_articulation(self) -> physx.PhysxArticulation:
+    def get_articulation(self):
         return self.articulation
 
     # def get_children(self) -> list[PhysxArticulationLinkComponent]: ...
     # def get_gpu_pose_index(self) -> int: ...
-    def get_index(self) -> int:
+    def get_index(self):
         return self.index
 
     # def get_joint(self) -> physx.PhysxArticulationJoint:
@@ -195,19 +201,18 @@ class Link(
     #     """
     #     :type: int
     #     """
-    @property
-    def index(self) -> int:
-        """
-        :type: int
-        """
-        return self._objs[0].get_index()
+    @cached_property
+    def index(self) -> torch.Tensor:
+        """The indexes of the managed link objects in their respective articulations. NOTE that these do not correspond with position in the qpos and qvel of articulations. For that index use index_q"""
+        return torch.tensor(
+            [obj.index for obj in self._objs], dtype=torch.int, device=self.device
+        )
 
-    @property
-    def is_root(self) -> bool:
-        """
-        :type: bool
-        """
-        return self._objs[0].is_root
+    @cached_property
+    def is_root(self) -> torch.Tensor:
+        return torch.tensor(
+            [obj.is_root for obj in self._objs], dtype=torch.bool, device=self.device
+        )
 
     # @property
     # def joint(self) -> physx.PhysxArticulationJoint:

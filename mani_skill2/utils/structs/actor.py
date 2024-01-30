@@ -211,9 +211,12 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
                 # as part of observations if needed
                 return self._builder_initial_pose
             else:
-                return Pose.create(
-                    self.px.cuda_rigid_body_data.torch()[self._body_data_index, :7]
-                )
+                raw_pose = self.px.cuda_rigid_body_data.torch()[
+                    self._body_data_index, :7
+                ]
+                if self.hidden:
+                    raw_pose[..., :3] -= 99999
+                return Pose.create(raw_pose)
         else:
             assert len(self._objs) == 1
             return Pose.create(self._objs[0].pose)

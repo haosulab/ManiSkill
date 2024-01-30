@@ -22,7 +22,7 @@ from mani_skill2.utils.structs.link import Link
 from mani_skill2.utils.structs.pose import Pose
 
 
-@register_env("OpenCabinetDrawer-v1", max_episode_steps=200)
+@register_env("OpenCabinetDrawer-v1", max_episode_steps=100)
 class OpenCabinetDrawerEnv(BaseEnv):
     """
     Task Description
@@ -122,15 +122,15 @@ class OpenCabinetDrawerEnv(BaseEnv):
         self.handle_links = handle_links
         self.handle_links_meshes = handle_links_meshes
 
-        self.handle_link_goal_marker = build_sphere(
+        self.handle_link_goal = build_sphere(
             self._scene,
             radius=0.05,
             color=[0, 1, 0, 1],
-            name="handle_goal_marker",
+            name="handle_link_goal",
             body_type="kinematic",
             add_collision=False,
         )
-        self._hidden_objects.append(self.handle_link_goal_marker)
+        self._hidden_objects.append(self.handle_link_goal)
 
     def _initialize_actors(self):
         with torch.device(self.device):
@@ -139,17 +139,25 @@ class OpenCabinetDrawerEnv(BaseEnv):
             self.cabinet.set_pose(Pose.create_from_pq(p=xyz))
 
             # this is not pure uniform but for faster initialization to deal with different cabinet DOFs we just sample 0 to 10000 and take the modulo which is close enough
-            link_indices = torch.randint(0, 10000, size=(len(self.handle_links),))
+            self.link_indices = torch.randint(
+                0, 10000, size=(len(self.handle_links),)
+            ) % torch.tensor([len(x) for x in self.handle_links], dtype=int)
+
             self.handle_link = Link.merge(
-                [x[link_indices[i] % len(x)] for i, x in enumerate(self.handle_links)],
+                [x[self.link_indices[i]] for i, x in enumerate(self.handle_links)],
                 self.cabinet,
             )
-
+            # cache/save the slice to reference the qpos and qvel of the link/joint we want to open
+            index_q = []
+            for art, link in zip(self.cabinet._objs, self.handle_link._objs):
+                index_q.append(art.active_joints.index(link.joint))
+            index_q = torch.tensor(index_q, dtype=int)
+            self.target_qpos_idx = (torch.arange(0, self.num_envs), index_q)
             # TODO (stao): For performance improvement, one can save relative position of link handles ahead of time.
             handle_link_positions = to_tensor(
                 np.array(
                     [
-                        x[link_indices[i] % len(x)].bounding_box.center_mass
+                        x[self.link_indices[i]].bounding_box.center_mass
                         for i, x in enumerate(self.handle_links_meshes)
                     ]
                 )
@@ -165,12 +173,16 @@ class OpenCabinetDrawerEnv(BaseEnv):
                 self.handle_link.pose.to_transformation_matrix().clone(),
                 handle_link_positions,
             )
-            self.handle_link_goal_marker.set_pose(
-                Pose.create_from_pq(p=handle_link_positions)
-            )
+            self.handle_link_goal.set_pose(Pose.create_from_pq(p=handle_link_positions))
             # close all the cabinets. We know beforehand that lower qlimit means "closed" for these assets.
             qlimits = self.cabinet.get_qlimits()  # [N, self.cabinet.max_dof, 2])
             self.cabinet.set_qpos(qlimits[:, :, 0])
+
+            # get the qmin qmax values of the joint corresponding to the selected links
+            target_qlimits = qlimits[self.target_qpos_idx]
+            qmin, qmax = target_qlimits[:, 0], target_qlimits[:, 1]
+            self.target_qpos = qmin + (qmax - qmin) * 0.9
+
             # initialize robot
             if self.robot_uid == "panda":
                 self.agent.robot.set_qpos(self.agent.robot.qpos * 0)
@@ -203,14 +215,38 @@ class OpenCabinetDrawerEnv(BaseEnv):
             self._scene.px.step()
             self.cabinet.set_qpos(qlimits[:, :, 0])
 
+    ### Useful properties ###
+
     def evaluate(self):
-        return {"success": torch.zeros(self.num_envs, device=self.device, dtype=bool)}
+        link_qpos = self.cabinet.qpos[self.target_qpos_idx]
+        self.cabinet.qvel[self.target_qpos_idx]
+        open_enough = link_qpos >= self.target_qpos
+        return {"success": open_enough, "link_qpos": link_qpos}
 
     def _get_obs_extra(self, info: Dict):
-        return OrderedDict()
+        # TODO (stao): fix the observation to be correct when in state or not mode
+        # moreover also check if hiding goal visual affects the observation data as well
+        obs = OrderedDict(
+            tcp_pose=self.agent.tcp.pose.raw_pose,
+            target_handle_pos=self.handle_link_goal.pose.p,
+        )
+        if "state" in self.obs_mode:
+            obs.update(
+                tcp_to_handle_pos=self.handle_link_goal.pose.p - self.agent.tcp.pose.p,
+                target_link_qpos=self.cabinet.qpos[self.target_qpos_idx],
+                # obs_pose=self.cube.pose.raw_pose,
+                # tcp_to_obj_pos=self.cube.pose.p - self.agent.tcp.pose.p,
+                # obj_to_goal_pos=self.goal_site.pose.p - self.cube.pose.p,
+            )
+        return obs
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        return torch.zeros(self.num_envs, device=self.device)
+        tcp_to_handle_dist = torch.linalg.norm(
+            self.agent.tcp.pose.p - self.handle_link.pose.p, axis=1
+        )
+        reaching_reward = 1 - torch.tanh(5 * tcp_to_handle_dist)
+        reward = reaching_reward
+        return reward
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
