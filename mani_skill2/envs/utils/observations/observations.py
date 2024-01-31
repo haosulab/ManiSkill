@@ -8,10 +8,11 @@ from typing import Dict
 import numpy as np
 import torch
 
+from mani_skill2.sensors.base_sensor import BaseSensorConfig
 from mani_skill2.utils.common import merge_dicts
 
 
-def image_to_rgbd(observation: Dict):
+def image_to_rgbd(observation: Dict, sensor_cfgs: Dict[str, BaseSensorConfig]):
     image_obs = observation["sensor_data"]
     for cam_uid, ori_images in image_obs.items():
         new_images = OrderedDict()
@@ -32,7 +33,7 @@ def image_to_rgbd(observation: Dict):
     return observation
 
 
-def image_to_pointcloud(observation: Dict):
+def image_to_pointcloud(observation: Dict, sensor_cfgs: Dict[str, BaseSensorConfig]):
     image_obs = observation.pop("sensor_data")
     camera_params = observation.pop("sensor_param")
     pointcloud_obs = OrderedDict()

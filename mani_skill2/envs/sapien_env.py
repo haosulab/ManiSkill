@@ -54,9 +54,9 @@ class BaseEnv(gym.Env):
         gpu_sim_backend: The GPU simulation backend to use (only used if the given num_envs argument is > 1). This affects the type of tensor
             returned by the environment for e.g. observations and rewards. Can be "torch" or "jax". Default is "torch"
 
-        obs_mode: observation mode registered in @SUPPORTED_OBS_MODES.
+        obs_mode: observation mode registered in @SUPPORTED_OBS_MODES. See TODO (stao): add doc link here about how they work.
 
-        reward_mode: reward mode registered in @SUPPORTED_REWARD_MODES.
+        reward_mode: reward mode registered in @SUPPORTED_REWARD_MODES. See TODO (stao): add doc link here about how they work.
 
         control_mode: control mode of the agent.
             "*" represents all registered controllers, and the action space will be a dict.
@@ -73,6 +73,8 @@ class BaseEnv(gym.Env):
         sensor_cfgs (dict): configurations of sensors. See notes for more details.
 
         render_camera_cfgs (dict): configurations of rendering cameras. Similar usage as @camera_cfgs.
+
+        scene_cfgs (dict): configurations to modify the physics simulation. These are passed to the sapien.physx.set_scene_config function.
 
         gpu_sim_cfgs (dict): Configurations for GPU simulation if used. # TODO (stao): flesh this explanation out
 
