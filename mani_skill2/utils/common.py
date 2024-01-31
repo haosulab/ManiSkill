@@ -172,7 +172,9 @@ def inv_scale_action(action, low, high):
 
 
 # TODO (stao): Clean up this code
-def flatten_state_dict(state_dict: dict, squeeze_dims: bool = False) -> Array:
+def flatten_state_dict(
+    state_dict: dict, squeeze_dims: bool = False, use_torch=False
+) -> Array:
     """Flatten a dictionary containing states recursively. Expects all data to be either torch or numpy
 
     Args:
@@ -190,25 +192,38 @@ def flatten_state_dict(state_dict: dict, squeeze_dims: bool = False) -> Array:
         However, since python 3.7, dictionary order is guaranteed to be insertion order.
     """
     states = []
-    use_torch = False
+
     for key, value in state_dict.items():
         if isinstance(value, dict):
-            state = flatten_state_dict(value, squeeze_dims=squeeze_dims)
+            state = flatten_state_dict(
+                value, squeeze_dims=squeeze_dims, use_torch=use_torch
+            )
             if state.size == 0:
                 state = None
+            if use_torch:
+                state = to_tensor(state)
         elif isinstance(value, (tuple, list)):
             state = None if len(value) == 0 else value
+            if use_torch:
+                state = to_tensor(state)
         elif isinstance(value, (bool, np.bool_, int, np.int32, np.int64)):
             # x = np.array(1) > 0 is np.bool_ instead of ndarray
             state = int(value)
+            if use_torch:
+                state = to_tensor(state)
         elif isinstance(value, (float, np.float32, np.float64)):
             state = np.float32(value)
+            if use_torch:
+                state = to_tensor(state)
         elif isinstance(value, np.ndarray):
             if value.ndim > 2:
                 raise AssertionError(
                     "The dimension of {} should not be more than 2.".format(key)
                 )
             state = value if value.size > 0 else None
+            if use_torch:
+                state = to_tensor(state)
+
         else:
             is_torch_tensor = False
             if isinstance(value, torch.Tensor):
@@ -218,8 +233,6 @@ def flatten_state_dict(state_dict: dict, squeeze_dims: bool = False) -> Array:
                 is_torch_tensor = True
             if not is_torch_tensor:
                 raise TypeError("Unsupported type: {}".format(type(value)))
-            else:
-                use_torch = True
         if state is not None:
             states.append(state)
 

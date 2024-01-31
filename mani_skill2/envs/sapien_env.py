@@ -392,7 +392,9 @@ class BaseEnv(gym.Env):
             return OrderedDict()
         elif self._obs_mode == "state":
             state_dict = self._get_obs_state_dict(info)
-            obs = flatten_state_dict(state_dict, squeeze_dims=squeeze_dims)
+            obs = flatten_state_dict(
+                state_dict, squeeze_dims=squeeze_dims, use_torch=True
+            )
         elif self._obs_mode == "state_dict":
             obs = self._get_obs_state_dict(info)
         elif self._obs_mode in ["image", "rgbd", "pointcloud"]:
