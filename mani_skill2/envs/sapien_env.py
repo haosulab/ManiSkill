@@ -98,9 +98,9 @@ class BaseEnv(gym.Env):
     """
 
     # fmt: off
-    SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "image", "rgbd", "pointcloud")
+    SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "sensor", "rgbd", "pointcloud")
     SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "sparse")
-    SUPPORTED_RENDER_MODES = ("human", "rgb_array", "cameras")
+    SUPPORTED_RENDER_MODES = ("human", "rgb_array", "sensors")
     # fmt: on
 
     metadata = {"render_modes": SUPPORTED_RENDER_MODES}
@@ -402,8 +402,8 @@ class BaseEnv(gym.Env):
             )
         elif self._obs_mode == "state_dict":
             obs = self._get_obs_state_dict(info)
-        elif self._obs_mode in ["image", "rgbd", "pointcloud"]:
-            obs = self._get_obs_images(info)
+        elif self._obs_mode in ["sensor_data", "rgbd", "pointcloud"]:
+            obs = self._get_obs_with_sensor_data(info)
             if self._obs_mode == "rgbd":
                 obs = image_to_rgbd(obs)
             elif self.obs_mode == "pointcloud":
@@ -437,31 +437,32 @@ class BaseEnv(gym.Env):
         self._scene.update_render()
 
     def capture_sensor_data(self):
-        """Take pictures from all cameras and sensors (non-blocking)"""
-        for cam in self._sensors.values():
-            if isinstance(cam, Camera):
-                cam.take_picture()
-            else:
-                raise NotImplementedError(
-                    "Other modalities of sensor data not implemented yet"
-                )
+        """Capture data from all sensors (non-blocking)"""
+        for sensor in self._sensors.values():
+            sensor.capture()
 
-    def get_sensor_data(self) -> Dict[str, Dict[str, np.ndarray]]:
-        """Get raw sensor data such as images"""
+    def get_sensor_obs(self) -> Dict[str, Dict[str, torch.Tensor]]:
+        """Get raw sensor data for use as observations."""
         sensor_data = OrderedDict()
         for name, sensor in self._sensors.items():
-            if isinstance(sensor, Camera):
-                sensor_data[name] = sensor.get_images()
+            sensor_data[name] = sensor.get_obs()
         return sensor_data
 
-    def get_camera_params(self) -> Dict[str, Dict[str, np.ndarray]]:
-        """Get camera parameters from all cameras."""
+    def get_sensor_images(self) -> Dict[str, Dict[str, torch.Tensor]]:
+        """Get raw sensor data as images for visualization purposes."""
+        sensor_data = OrderedDict()
+        for name, sensor in self._sensors.items():
+            sensor_data[name] = sensor.get_images()
+        return sensor_data
+
+    def get_sensor_params(self) -> Dict[str, Dict[str, torch.Tensor]]:
+        """Get all sensor parameters."""
         params = OrderedDict()
-        for name, cam in self._sensors.items():
-            params[name] = cam.get_params()
+        for name, sensor in self._sensors.items():
+            params[name] = sensor.get_params()
         return params
 
-    def _get_obs_images(self, info: Dict) -> OrderedDict:
+    def _get_obs_with_sensor_data(self, info: Dict) -> OrderedDict:
         for obj in self._hidden_objects:
             obj.hide_visual()
         self.update_render()
@@ -469,8 +470,8 @@ class BaseEnv(gym.Env):
         return OrderedDict(
             agent=self._get_obs_agent(),
             extra=self._get_obs_extra(info),
-            camera_param=self.get_camera_params(),
-            image=self.get_sensor_data(),
+            sensor_param=self.get_sensor_params(),
+            sensor_data=self.get_sensor_obs(),
         )
 
     @property
@@ -551,32 +552,30 @@ class BaseEnv(gym.Env):
 
     # TODO (stao): refactor this into sensor API
     def _setup_sensors(self):
-        """Setup cameras in the scene. Called by `self.reconfigure`"""
+        """Setup sensors in the scene. Called by `self.reconfigure`"""
         self._sensors = OrderedDict()
 
-        for uid, camera_cfg in self._sensor_cfgs.items():
+        for uid, sensor_cfg in self._sensor_cfgs.items():
             if uid in self._agent_camera_cfgs:
                 articulation = self.agent.robot
             else:
                 articulation = None
-            if isinstance(camera_cfg, StereoDepthCameraConfig):
-                cam_cls = StereoDepthCamera
+            if isinstance(sensor_cfg, StereoDepthCameraConfig):
+                sensor_cls = StereoDepthCamera
             else:
-                cam_cls = Camera
-            self._sensors[uid] = cam_cls(
-                camera_cfg,
+                sensor_cls = Camera
+            self._sensors[uid] = sensor_cls(
+                sensor_cfg,
                 self._scene,
-                self._renderer_type,
                 articulation=articulation,
             )
 
         # Cameras for rendering only
         self._human_render_cameras = OrderedDict()
-        if self._renderer_type != "client":
-            for uid, camera_cfg in self._human_render_camera_cfgs.items():
-                self._human_render_cameras[uid] = Camera(
-                    camera_cfg, self._scene, self._renderer_type
-                )
+        for uid, camera_cfg in self._human_render_camera_cfgs.items():
+            self._human_render_cameras[uid] = Camera(
+                camera_cfg, self._scene, self._renderer_type
+            )
 
         self._scene.sensors = self._sensors
         self._scene.human_render_cameras = self._human_render_cameras
@@ -965,7 +964,9 @@ class BaseEnv(gym.Env):
         return self._viewer
 
     def render_rgb_array(self, camera_name: str = None):
-        """Returns an RGB array / image of the current state of the environment. This is captured by any of the registered human render cameras"""
+        """Returns an RGB array / image of size (num_envs, H, W, 3) of the current state of the environment.
+        This is captured by any of the registered human render cameras. If a camera_name is given, only data from that camera is returned.
+        Otherwise all camera data is captured and returned as a single batched image"""
         for obj in self._hidden_objects:
             obj.show_visual()
         self.update_render()
@@ -983,7 +984,7 @@ class BaseEnv(gym.Env):
             for name, camera in self._scene.human_render_cameras.items():
                 if camera_name is not None and name != camera_name:
                     continue
-                camera.take_picture()
+                camera.capture()
                 rgb = camera.get_picture("Color")[0, ..., :3]
                 images.append(rgb)
         if len(images) == 0:
@@ -1001,7 +1002,7 @@ class BaseEnv(gym.Env):
             obj.hide_visual()
         self.update_render()
         self.capture_sensor_data()
-        sensor_images = self.get_sensor_data()
+        sensor_images = self.get_sensor_obs()
         for sensor_images in sensor_images.values():
             images.extend(observations_to_images(sensor_images))
         return tile_images(images)
@@ -1012,7 +1013,7 @@ class BaseEnv(gym.Env):
 
         render_mode is "rgb_array", usually a higher quality image is rendered for the purpose of viewing only.
 
-        if render_mode is "cameras", all visual observations the agent can see is provided
+        if render_mode is "sensors", all visual observations the agent can see is provided
         """
         if self.render_mode is None:
             raise RuntimeError("render_mode is not set.")
@@ -1020,7 +1021,7 @@ class BaseEnv(gym.Env):
             return self.render_human()
         elif self.render_mode == "rgb_array":
             return self.render_rgb_array()
-        elif self.render_mode == "cameras":
+        elif self.render_mode == "sensors":
             return self.render_sensors()
         else:
             raise NotImplementedError(f"Unsupported render mode {self.render_mode}.")

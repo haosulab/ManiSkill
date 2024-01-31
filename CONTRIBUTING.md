@@ -29,15 +29,21 @@ Testing is currently semi-automated and a WIP. We currently rely on coverage.py 
 After you make changes, be sure to add any necessary tests to cover any new code in the `tests/` folder and run all the tests with the following command
 
 ```
-coverage run --source=mani_skill2/ -a -m pytest tests # run tests
-coverage html --include=mani_skill2/**/*.py # see the test coverage results
+pytest tests/ -m "not slow and gpu_sim"
+pytest tests/ -m "not slow and not gpu_sim"
 ```
 
+Note that we add a "not slow" argument which is to prevent testing on slow tests like download utility testing. There is also the "gpu_sim" pytest mark, which marks some tests as having to use the GPU simulation. These tests are separated as CPU simulation cannot run once GPU simulation has started and vice versa. With that in mind, any test that uses GPU simulation must add the `@pytest.mark.gpu_sim` decorator.
+
+<!-- ```
+coverage run --source=mani_skill2/ -a -m pytest tests -m "not slow" # run tests
+coverage html --include=mani_skill2/**/*.py # see the test coverage results
+``` -->
+<!-- 
 To skip generating a coverage report and also for easy debugging you can just run
 ```
-pytest tests/ --pdb --pdbcls=IPython.terminal.debugger:Pdb
-```
-
+pytest tests/ --pdb --pdbcls=IPython.terminal.debugger:Pdb -m "not slow"
+``` -->
 
 ## Building
 

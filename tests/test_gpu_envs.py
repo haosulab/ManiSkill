@@ -15,6 +15,7 @@ from tests.utils import (
 )
 
 
+@pytest.mark.gpu_sim
 @pytest.mark.parametrize("env_id", ENV_IDS)
 @pytest.mark.parametrize("obs_mode", OBS_MODES)
 def test_envs_obs_modes(env_id, obs_mode):
@@ -40,14 +41,15 @@ def test_envs_obs_modes(env_id, obs_mode):
     tree_map(info, lambda x: assert_device(x))
 
     if obs_mode == "rgbd":
-        for cam in obs["image"].keys():
-            assert obs["image"][cam]["rgb"].shape == (16, 128, 128, 3)
-            assert obs["image"][cam]["depth"].shape == (16, 128, 128, 1)
-            assert obs["image"][cam]["depth"].dtype == torch.int16
+        for cam in obs["sensor_data"].keys():
+            assert obs["sensor_data"][cam]["rgb"].shape == (16, 128, 128, 3)
+            assert obs["sensor_data"][cam]["depth"].shape == (16, 128, 128, 1)
+            assert obs["sensor_data"][cam]["depth"].dtype == torch.int16
     env.close()
     del env
 
 
+@pytest.mark.gpu_sim
 @pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS)
 @pytest.mark.parametrize("control_mode", CONTROL_MODES_STATIONARY_SINGLE_ARM)
 def test_env_control_modes(env_id, control_mode):
@@ -61,6 +63,7 @@ def test_env_control_modes(env_id, control_mode):
     del env
 
 
+@pytest.mark.gpu_sim
 @pytest.mark.parametrize("env_id", ["PickSingleYCB-v1"])
 def test_env_reconfiguration(env_id):
     env = gym.make(env_id, num_envs=16)
@@ -136,6 +139,7 @@ def test_env_reconfiguration(env_id):
 #     del env
 
 
+@pytest.mark.gpu_sim
 @pytest.mark.parametrize("env_id", ENV_IDS)
 @pytest.mark.parametrize("robot_uid", ROBOTS)
 def test_robots(env_id, robot_uid):

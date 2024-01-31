@@ -12,7 +12,7 @@ from mani_skill2.utils.common import merge_dicts
 
 
 def image_to_rgbd(observation: Dict):
-    image_obs = observation["image"]
+    image_obs = observation["sensor_data"]
     for cam_uid, ori_images in image_obs.items():
         new_images = OrderedDict()
         for key in ori_images:
@@ -33,8 +33,8 @@ def image_to_rgbd(observation: Dict):
 
 
 def image_to_pointcloud(observation: Dict):
-    image_obs = observation.pop("image")
-    camera_params = observation.pop("camera_param")
+    image_obs = observation.pop("sensor_data")
+    camera_params = observation.pop("sensor_param")
     pointcloud_obs = OrderedDict()
 
     for cam_uid, images in image_obs.items():
