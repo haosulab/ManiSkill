@@ -42,7 +42,7 @@ def test_recordepisode_wrapper_gpu(env_id, obs_mode):
 @pytest.mark.gpu_sim
 @pytest.mark.parametrize("env_id", ENV_IDS[:1])
 @pytest.mark.parametrize("obs_mode", OBS_MODES[:1])
-def test_recordepisode_wrapper_sensor_data_gpu(env_id, obs_mode):
+def test_recordepisode_wrapper_gpu_render_sensor(env_id, obs_mode):
     env = gym.make(
         env_id,
         obs_mode=obs_mode,
