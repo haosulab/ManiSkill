@@ -60,7 +60,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
             CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 100)
         ]
 
-    def _register_render_cameras(self):
+    def _register_human_render_cameras(self):
         pose = look_at(eye=[-2.3, -1.5, 1.8], target=[-0.3, 0.5, 0])
         # TODO (stao): how much does far affect rendering speed?
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)

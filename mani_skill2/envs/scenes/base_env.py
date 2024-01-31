@@ -98,7 +98,7 @@ class SceneManipulationEnv(BaseEnv):
             "base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10
         )
 
-    def _register_render_cameras(self):
+    def _register_human_render_cameras(self):
         if self.robot_uid == "panda":
             pose = look_at([0.4, 0.4, 0.8], [0.0, 0.0, 0.4])
         else:

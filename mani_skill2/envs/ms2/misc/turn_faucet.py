@@ -107,7 +107,7 @@ class TurnFaucetBaseEnv(BaseEnv):
             "base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10
         )
 
-    def _register_render_cameras(self):
+    def _register_human_render_cameras(self):
         pose = look_at([-1.3, 0.6, 0.6], [0.0, 0.0, 0.4])
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
 

@@ -45,7 +45,7 @@ class FMBAssembly1Env(BaseEnv):
             CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10)
         ]
 
-    def _register_render_cameras(self):
+    def _register_human_render_cameras(self):
         pose = look_at([1.0, 0.8, 0.8], [0.0, 0.0, 0.35])
         return CameraConfig("render_camera", pose.p, pose.q, 1024, 1024, 1, 0.01, 10)
 

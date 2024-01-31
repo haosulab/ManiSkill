@@ -36,7 +36,7 @@ class ManiSkillScene:
     articulations: Dict[str, Articulation] = OrderedDict()
 
     sensors: Dict[str, BaseSensor] = OrderedDict()
-    render_cameras: Dict[str, Camera] = OrderedDict()
+    human_render_cameras: Dict[str, Camera] = OrderedDict()
 
     def __init__(self, sub_scenes: List[sapien.Scene], debug_mode: bool = True):
         self.sub_scenes = sub_scenes
@@ -151,7 +151,7 @@ class ManiSkillScene:
             if self.render_system_group is None:
                 self._setup_gpu_rendering()
                 self._gpu_setup_sensors(self.sensors)
-                self._gpu_setup_sensors(self.render_cameras)
+                self._gpu_setup_sensors(self.human_render_cameras)
             self.render_system_group.update_render()
         else:
             self.sub_scenes[0].update_render()

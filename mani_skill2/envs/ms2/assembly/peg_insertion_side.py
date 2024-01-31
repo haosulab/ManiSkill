@@ -280,7 +280,7 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
         cam_cfg.pose = look_at([0, -0.3, 0.2], [0, 0, 0.1])
         return cam_cfg
 
-    def _register_render_cameras(self):
+    def _register_human_render_cameras(self):
         cam_cfg = super()._register_render_cameras()
         cam_cfg.pose = look_at([0.5, -0.5, 0.8], [0.05, -0.1, 0.4])
         return cam_cfg

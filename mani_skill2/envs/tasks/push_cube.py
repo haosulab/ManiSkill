@@ -74,7 +74,7 @@ class PushCubeEnv(BaseEnv):
             CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10)
         ]
 
-    def _register_render_cameras(self):
+    def _register_human_render_cameras(self):
         # registers a more high-definition (512x512) camera used just for rendering when render_mode="rgb_array" or calling env.render_rgb_array()
         pose = look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
@@ -109,7 +109,7 @@ class PushCubeEnv(BaseEnv):
         )
 
         # optionally you can automatically hide some Actors from view by appending to the self._hidden_objects list. When visual observations
-        # are generated or env.render_cameras() is called or env.render() is called with render_mode="cameras", the actor will not show up.
+        # are generated or env.render_sensors() is called or env.render() is called with render_mode="cameras", the actor will not show up.
         # This is useful if you intend to add some visual goal sites as e.g. done in PickCube that aren't actually part of the task
         # and are there just for generating evaluation videos.
         # self._hidden_objects.append(self.goal_region)

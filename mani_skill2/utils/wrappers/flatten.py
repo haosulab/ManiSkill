@@ -12,7 +12,7 @@ class FlattenObservationWrapper(gym.ObservationWrapper):
     def __init__(self, env) -> None:
         self.base_env: BaseEnv = env.unwrapped
         super().__init__(env)
-        self.base_env._update_obs_space(self.observation(self.base_env._init_raw_obs))
+        self.base_env._update_obs_space(flatten_state_dict(self.base_env._init_raw_obs))
 
     def observation(self, observation):
-        return flatten_state_dict(observation)
+        return flatten_state_dict(observation, use_torch=True)

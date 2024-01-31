@@ -119,9 +119,10 @@ class BaseEnv(gym.Env):
     """all sensor configurations"""
     _agent_camera_cfgs: Dict[str, CameraConfig]
 
-    # render cameras are sensors that are not part of any observations
-    _render_cameras: Dict[str, Camera]
-    _render_camera_cfgs: Dict[str, CameraConfig]
+    _human_render_cameras: Dict[str, Camera]
+    """cameras used for rendering the current environment retrievable via `env.render_rgb_array()`. These are not used to generate observations"""
+    _human_render_camera_cfgs: Dict[str, CameraConfig]
+    """all camera configurations for cameras used for human render"""
 
     _hidden_objects: List[Union[Actor, Articulation]] = []
     """list of objects that are hidden during rendering when generating visual observations / running render_cameras()"""
@@ -255,12 +256,14 @@ class BaseEnv(gym.Env):
 
         # NOTE(jigu): Agent and camera configurations should not change after initialization.
         self._configure_sensors()
-        self._configure_render_cameras()
+        self._configure_human_render_cameras()
         # Override camera configurations
         if sensor_cfgs is not None:
             update_camera_cfgs_from_dict(self._sensor_cfgs, sensor_cfgs)
         if render_camera_cfgs is not None:
-            update_camera_cfgs_from_dict(self._render_camera_cfgs, render_camera_cfgs)
+            update_camera_cfgs_from_dict(
+                self._human_render_camera_cfgs, render_camera_cfgs
+            )
 
         # Lighting
         self.enable_shadow = enable_shadow
@@ -328,10 +331,12 @@ class BaseEnv(gym.Env):
         """Register (non-agent) sensors for the environment."""
         return []
 
-    def _configure_render_cameras(self):
-        self._render_camera_cfgs = parse_camera_cfgs(self._register_render_cameras())
+    def _configure_human_render_cameras(self):
+        self._human_render_camera_cfgs = parse_camera_cfgs(
+            self._register_human_render_cameras()
+        )
 
-    def _register_render_cameras(
+    def _register_human_render_cameras(
         self,
     ) -> Union[
         BaseSensorConfig, Sequence[BaseSensorConfig], Dict[str, BaseSensorConfig]
@@ -566,15 +571,15 @@ class BaseEnv(gym.Env):
             )
 
         # Cameras for rendering only
-        self._render_cameras = OrderedDict()
+        self._human_render_cameras = OrderedDict()
         if self._renderer_type != "client":
-            for uid, camera_cfg in self._render_camera_cfgs.items():
-                self._render_cameras[uid] = Camera(
+            for uid, camera_cfg in self._human_render_camera_cfgs.items():
+                self._human_render_cameras[uid] = Camera(
                     camera_cfg, self._scene, self._renderer_type
                 )
 
         self._scene.sensors = self._sensors
-        self._scene.render_cameras = self._render_cameras
+        self._scene.human_render_cameras = self._human_render_cameras
 
     def _setup_lighting(self):
         # TODO (stao): remove this code out. refactor it to be inside scene builders
@@ -861,7 +866,7 @@ class BaseEnv(gym.Env):
         self._close_viewer()
         self.agent = None
         self._sensors = OrderedDict()
-        self._render_cameras = OrderedDict()
+        self._human_render_cameras = OrderedDict()
         self._scene = None
         self._hidden_objects = []
 
@@ -927,7 +932,7 @@ class BaseEnv(gym.Env):
             self._viewer = Viewer(self._renderer)
             self._setup_viewer()
             self._viewer.set_camera_pose(
-                self._render_cameras["render_camera"].camera.global_pose
+                self._human_render_cameras["render_camera"].camera.global_pose
             )
         for obj in self._hidden_objects:
             obj.show_visual()
@@ -960,14 +965,14 @@ class BaseEnv(gym.Env):
         return self._viewer
 
     def render_rgb_array(self, camera_name: str = None):
-        """Render an RGB image from the specified camera."""
+        """Returns an RGB array / image of the current state of the environment. This is captured by any of the registered human render cameras"""
         for obj in self._hidden_objects:
             obj.show_visual()
         self.update_render()
         images = []
         # TODO (stao): refactor this code either into ManiSkillScene class and/or merge the code, it's pretty similar?
         if physx.is_gpu_enabled():
-            for name in self._scene.render_cameras.keys():
+            for name in self._scene.human_render_cameras.keys():
                 camera_group = self._scene.camera_groups[name]
                 if camera_name is not None and name != camera_name:
                     continue
@@ -975,7 +980,7 @@ class BaseEnv(gym.Env):
                 rgb = camera_group.get_picture_cuda("Color").torch()[..., :3].clone()
                 images.append(rgb)
         else:
-            for name, camera in self._scene.render_cameras.items():
+            for name, camera in self._scene.human_render_cameras.items():
                 if camera_name is not None and name != camera_name:
                     continue
                 camera.take_picture()
@@ -987,7 +992,7 @@ class BaseEnv(gym.Env):
             return images[0]
         return tile_images(images)
 
-    def render_cameras(self):
+    def render_sensors(self):
         """
         Renders all sensors that the agent can use and see and displays them
         """
@@ -996,9 +1001,9 @@ class BaseEnv(gym.Env):
             obj.hide_visual()
         self.update_render()
         self.capture_sensor_data()
-        cameras_images = self.get_sensor_data()
-        for camera_images in cameras_images.values():
-            images.extend(observations_to_images(camera_images))
+        sensor_images = self.get_sensor_data()
+        for sensor_images in sensor_images.values():
+            images.extend(observations_to_images(sensor_images))
         return tile_images(images)
 
     def render(self):
@@ -1016,7 +1021,7 @@ class BaseEnv(gym.Env):
         elif self.render_mode == "rgb_array":
             return self.render_rgb_array()
         elif self.render_mode == "cameras":
-            return self.render_cameras()
+            return self.render_sensors()
         else:
             raise NotImplementedError(f"Unsupported render mode {self.render_mode}.")
 
