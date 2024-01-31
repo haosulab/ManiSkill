@@ -1,3 +1,11 @@
 [build-system]
 requires = ["setuptools>=62.3.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "serial",
+    "gpu_sim: marks tests as using the GPU simulation (deselect with '-m \"not gpu_sim\"')",
+    "serial",
+]

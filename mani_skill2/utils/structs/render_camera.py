@@ -204,6 +204,7 @@ class RenderCamera:
     def global_pose(self) -> sapien.Pose:
         return self._render_cameras[0].global_pose
 
+    # TODO (stao): These properties should be torch tensors in the future
     @property
     def height(self) -> int:
         return self._render_cameras[0].height

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import OrderedDict
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Sequence
 
 import numpy as np
@@ -19,49 +20,31 @@ from mani_skill2.utils.sapien_utils import get_obj_by_name, hide_entity
 from .base_sensor import BaseSensor, BaseSensorConfig
 
 
-# TODO (stao): change this to a dataclass
-class CameraConfig:
-    def __init__(
-        self,
-        uid: str,
-        p: List[float],
-        q: List[float],
-        width: int,
-        height: int,
-        fov: float,
-        near: float,
-        far: float,
-        entity_uid: str = None,
-        hide_link: bool = False,
-        texture_names: Sequence[str] = ("Color", "PositionSegmentation"),
-    ):
-        """Camera configuration.
+@dataclass
+class CameraConfig(BaseSensorConfig):
 
-        Args:
-            uid (str): unique id of the camera
-            p (List[float]): position of the camera
-            q (List[float]): quaternion of the camera
-            width (int): width of the camera
-            height (int): height of the camera
-            fov (float): field of view of the camera
-            near (float): near plane of the camera
-            far (float): far plane of the camera
-            entity_uid (str, optional): unique id of the entity to mount the camera. Defaults to None.
-            hide_link (bool, optional): whether to hide the link to mount the camera. Defaults to False.
-            texture_names (Sequence[str], optional): texture names to render. Defaults to ("Color", "Position").
-        """
-        self.uid = uid
-        self.p = p
-        self.q = q
-        self.width = width
-        self.height = height
-        self.fov = fov
-        self.near = near
-        self.far = far
-
-        self.entity_uid = entity_uid
-        self.hide_link = hide_link
-        self.texture_names = tuple(texture_names)
+    uid: str
+    """uid (str): unique id of the camera"""
+    p: List[float]
+    """p (List[float]): position of the camera"""
+    q: List[float]
+    """q (List[float]): quaternion of the camera"""
+    width: int
+    """width (int): width of the camera"""
+    height: int
+    """height (int): height of the camera"""
+    fov: float
+    """fov (float): field of view of the camera"""
+    near: float
+    """near (float): near plane of the camera"""
+    far: float
+    """far (float): far plane of the camera"""
+    entity_uid: str = None
+    """entity_uid (str, optional): unique id of the entity to mount the camera. Defaults to None."""
+    hide_link: bool = False
+    """hide_link (bool, optional): whether to hide the link to mount the camera. Defaults to False."""
+    texture_names: Sequence[str] = ("Color", "PositionSegmentation")
+    """texture_names (Sequence[str], optional): texture names to render. Defaults to ("Color", "PositionSegmentation"). Note that the renderign speed will not really change if you remove PositionSegmentation"""
 
     def __repr__(self) -> str:
         return self.__class__.__name__ + "(" + str(self.__dict__) + ")"
@@ -125,21 +108,17 @@ def parse_camera_cfgs(camera_cfgs):
 
 
 class Camera(BaseSensor):
-    """Wrapper for sapien camera."""
-
-    TEXTURE_DTYPE = {"Color": "float", "Position": "float", "Segmentation": "uint32"}
+    """Implementation of the Camera sensor which uses the sapien Camera."""
 
     def __init__(
         self,
         camera_cfg: CameraConfig,
         scene: ManiSkillScene,
-        renderer_type: str,
         articulation: Articulation = None,
     ):
-        super().__init__(sensor_type="camera")
+        super().__init__(cfg=camera_cfg)
 
         self.camera_cfg = camera_cfg
-        self.renderer_type = renderer_type
 
         entity_uid = camera_cfg.entity_uid
         if entity_uid is None:
@@ -168,7 +147,6 @@ class Camera(BaseSensor):
             )
             self.camera.local_pose = camera_cfg.pose
         else:
-            # TODO (stao): Handle parallel mounted cameras
             self.camera = scene.add_mounted_camera(
                 camera_cfg.uid,
                 self.entity,
@@ -181,32 +159,19 @@ class Camera(BaseSensor):
             )
 
         if camera_cfg.hide_link:
+            # TODO (stao): this will not work on gpu sim probably
             hide_entity(self.entity)
 
         # Filter texture names according to renderer type if necessary (legacy for Kuafu)
         self.texture_names = camera_cfg.texture_names
 
-    @property
-    def uid(self):
-        return self.camera_cfg.uid
-
-    def take_picture(self):
-        """
-        Takes a picture with the camera (non-blocking)
-        """
+    def capture(self):
         self.camera.take_picture()
 
-    def get_images(self, take_picture=False):
-        """Get (raw) images from the camera. Note that these are always batched"""
-        if take_picture:
-            self.take_picture()
-
-        if self.renderer_type == "client":
-            return {}
-
+    def get_obs(self):
         images = {}
         for name in self.texture_names:
-            image = self.camera.get_picture(name)
+            image = self.get_picture(name)
             images[name] = image
         return images
 
@@ -214,39 +179,8 @@ class Camera(BaseSensor):
         return self.camera.get_picture(name)
 
     def get_params(self):
-        """Get camera parameters."""
         return dict(
             extrinsic_cv=self.camera.get_extrinsic_matrix(),
             cam2world_gl=self.camera.get_model_matrix(),
             intrinsic_cv=self.camera.get_intrinsic_matrix(),
         )
-
-    def get_obs(self):
-        return self.get_images()
-
-    @property
-    def observation_space(self) -> spaces.Dict:
-        obs_spaces = OrderedDict()
-        height, width = self.camera.height, self.camera.width
-        for name in self.texture_names:
-            if name == "Color":
-                obs_spaces[name] = spaces.Box(
-                    low=0, high=1, shape=(height, width, 4), dtype=np.float32
-                )
-            elif name == "PositionSegmentation":
-                obs_spaces[name] = spaces.Box(
-                    low=-np.inf,
-                    high=np.inf,
-                    shape=(height, width, 4),
-                    dtype=np.float32,
-                )
-            elif name == "Segmentation":
-                obs_spaces[name] = spaces.Box(
-                    low=np.iinfo(np.uint32).min,
-                    high=np.iinfo(np.uint32).max,
-                    shape=(height, width, 4),
-                    dtype=np.uint32,
-                )
-            else:
-                raise NotImplementedError(name)
-        return spaces.Dict(obs_spaces)
