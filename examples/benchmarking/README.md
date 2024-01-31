@@ -17,7 +17,7 @@ python benchmark_gpu_sim.py -e "PickCube-v1" --num-envs=128 --save-video # save 
 To get the best reported results, we run two commands on a machine with a RTX 4090:
 ```
 python benchmark_gpu_sim.py -e "PickCube-v1" --num-envs=4096 --obs-mode=state
-python benchmark_gpu_sim.py -e "PickCube-v1" --num-envs=400 --obs-mode=rgbd
+python benchmark_gpu_sim.py -e "PickCube-v1" --num-envs=1536 --obs-mode=rgbd
 ```
 
 These are the expected state-based only results:
@@ -28,8 +28,8 @@ env.step+env.reset: 252232.109 steps/s, 61.580 parallel steps/s, 1000 steps in 1
 
 These are the expected visual observations/rendering results:
 ```
-env.step: 12276.080 steps/s, 30.690 parallel steps/s, 100 steps in 3.258s
-env.step+env.reset: 11878.565 steps/s, 29.696 parallel steps/s, 1000 steps in 33.674s
+env.step: 18549.002 steps/s, 12.076 parallel steps/s, 100 steps in 8.281s
+env.step+env.reset: 17953.079 steps/s, 11.688 parallel steps/s, 1000 steps in 85.556s
 ```
 
 
