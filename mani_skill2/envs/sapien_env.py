@@ -98,7 +98,7 @@ class BaseEnv(gym.Env):
     """
 
     # fmt: off
-    SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "sensor", "rgbd", "pointcloud")
+    SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "sensor_data", "rgbd", "pointcloud")
     SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "sparse")
     SUPPORTED_RENDER_MODES = ("human", "rgb_array", "sensors")
     # fmt: on

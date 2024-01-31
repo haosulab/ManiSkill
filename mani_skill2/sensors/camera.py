@@ -169,8 +169,6 @@ class Camera(BaseSensor):
         self.camera.take_picture()
 
     def get_obs(self):
-        """Get (raw) images from the camera. Note that these are always batched"""
-
         images = {}
         for name in self.texture_names:
             image = self.get_picture(name)
