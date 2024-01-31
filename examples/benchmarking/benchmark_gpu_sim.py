@@ -27,7 +27,7 @@ def main(args):
         args.env_id,
         num_envs=num_envs,
         obs_mode=args.obs_mode,
-        enable_shadow=True,
+        # enable_shadow=True,
         render_mode=args.render_mode,
         control_mode=args.control_mode,
         sim_freq=100,

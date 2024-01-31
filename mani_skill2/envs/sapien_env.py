@@ -1,5 +1,6 @@
 import os
 from collections import OrderedDict
+from functools import cached_property
 from typing import Any, Dict, List, Sequence, Type, Union
 
 import gymnasium as gym
@@ -17,7 +18,10 @@ from mani_skill2 import logger
 from mani_skill2.agents.base_agent import BaseAgent
 from mani_skill2.agents.robots import ROBOTS
 from mani_skill2.envs.scene import ManiSkillScene
-from mani_skill2.envs.utils.observations import image_to_pointcloud, image_to_rgbd
+from mani_skill2.envs.utils.observations.observations import (
+    image_to_pointcloud,
+    image_to_rgbd,
+)
 from mani_skill2.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill2.sensors.camera import (
     Camera,
@@ -267,24 +271,37 @@ class BaseEnv(gym.Env):
         obs, _ = self.reset(seed=2022, options=dict(reconfigure=True))
         if physx.is_gpu_enabled():
             obs = to_numpy(obs)
+            self._init_raw_obs = obs.copy()
+            """the raw observation returned by the env.reset. Useful for future observation wrappers to use to auto generate observation spaces"""
         # TODO handle constructing single obs space from a batched result.
-
-        if num_envs > 1:
-            self.single_observation_space = convert_observation_to_space(
-                obs, unbatched=True
-            )
-            self.observation_space = batch_space(
-                self.single_observation_space, n=self.num_envs
-            )
-        else:
-            self.observation_space = convert_observation_to_space(obs)
-        if self._obs_mode == "image":
-            image_obs_space = self.observation_space.spaces["image"]
-            for uid, camera in self._sensors.items():
-                image_obs_space.spaces[uid] = camera.observation_space
 
         self.action_space = self.agent.action_space
         self.single_action_space = self.agent.single_action_space
+        # initialize the cached properties
+        self.single_observation_space
+        self.observation_space
+
+    def _update_obs_space(self, obs: Any):
+        """call this function if you modify the observations returned by env.step and env.reset via an observation wrapper. The given observation must be a numpy array"""
+        self._init_raw_obs = obs
+        del self.single_observation_space
+        del self.observation_space
+        self.single_observation_space
+        self.observation_space
+
+    @cached_property
+    def single_observation_space(self):
+        if self.num_envs > 1:
+            return convert_observation_to_space(self._init_raw_obs, unbatched=True)
+        else:
+            return convert_observation_to_space(self._init_raw_obs)
+
+    @cached_property
+    def observation_space(self):
+        if self.num_envs > 1:
+            return batch_space(self.single_observation_space, n=self.num_envs)
+        else:
+            return self.single_observation_space
 
     def _load_agent(self):
         agent_cls: Type[BaseAgent] = self._agent_cls
@@ -375,7 +392,9 @@ class BaseEnv(gym.Env):
             return OrderedDict()
         elif self._obs_mode == "state":
             state_dict = self._get_obs_state_dict(info)
-            obs = flatten_state_dict(state_dict, squeeze_dims=squeeze_dims)
+            obs = flatten_state_dict(
+                state_dict, squeeze_dims=squeeze_dims, use_torch=True
+            )
         elif self._obs_mode == "state_dict":
             obs = self._get_obs_state_dict(info)
         elif self._obs_mode in ["image", "rgbd", "pointcloud"]:
