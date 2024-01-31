@@ -72,7 +72,7 @@ class BaseEnv(gym.Env):
 
         sensor_cfgs (dict): configurations of sensors. See notes for more details.
 
-        render_camera_cfgs (dict): configurations of rendering cameras. Similar usage as @camera_cfgs.
+        human_render_camera_cfgs (dict): configurations of human rendering cameras. Similar usage as @sensor_cfgs.
 
         scene_cfgs (dict): configurations to modify the physics simulation. These are passed to the sapien.physx.set_scene_config function.
 
@@ -88,6 +88,7 @@ class BaseEnv(gym.Env):
         `sensor_cfgs` is used to update environement-specific sensor configurations.
         If the key is one of sensor names (e.g. a camera), the value will be applied to the corresponding sensor.
         Otherwise, the value will be applied to all sensors (but overridden by sensor-specific values).
+        # TODO (stao): add docs about sensor_cfgs, they are not as simply as dict overriding
     """
 
     # fmt: off
@@ -132,7 +133,7 @@ class BaseEnv(gym.Env):
         shader_dir: str = "default",
         enable_shadow: bool = False,
         sensor_cfgs: dict = None,
-        render_camera_cfgs: dict = None,
+        human_render_camera_cfgs: dict = None,
         robot_uid: Union[str, BaseAgent] = None,
         scene_cfgs: dict = dict(),
         gpu_sim_cfgs: dict = dict(spacing=20),
@@ -143,6 +144,8 @@ class BaseEnv(gym.Env):
         self.reconfiguration_freq = reconfiguration_freq
         self._reconfig_counter = 0
         self.scene_cfgs = scene_cfgs
+        self._custom_sensor_cfgs = sensor_cfgs
+        self._custom_human_render_camera_cfgs = human_render_camera_cfgs
         if num_envs > 1 or force_use_gpu_sim:
             if not sapien.physx.is_gpu_enabled():
                 sapien.physx.enable_gpu()
@@ -502,12 +505,15 @@ class BaseEnv(gym.Env):
 
             # TODO (stao): permit camera changes on env creation here
             # # Override camera configurations
-            # if sensor_cfgs is not None:
-            #     update_camera_cfgs_from_dict(self._sensor_cfgs, sensor_cfgs)
-            # if render_camera_cfgs is not None:
-            #     update_camera_cfgs_from_dict(
-            #         self._human_render_camera_cfgs, render_camera_cfgs
-            #     )
+            if self._custom_sensor_cfgs is not None:
+                update_camera_cfgs_from_dict(
+                    self._sensor_cfgs, self._custom_sensor_cfgs
+                )
+            if self._custom_human_render_camera_cfgs is not None:
+                update_camera_cfgs_from_dict(
+                    self._human_render_camera_cfgs,
+                    self._custom_human_render_camera_cfgs,
+                )
 
             # Cache entites and articulations
             if sapien.physx.is_gpu_enabled():
