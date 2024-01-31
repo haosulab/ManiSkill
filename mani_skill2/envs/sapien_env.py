@@ -64,18 +64,9 @@ class BaseEnv(gym.Env):
         render_mode: render mode registered in @SUPPORTED_RENDER_MODES.
         sim_freq (int): simulation frequency (Hz). Default is 500 for CPU simulation, 100 for GPU simulation
         control_freq (int): control frequency (Hz). Default is 20 for CPU simulation, 20 for GPU simulation
-        renderer (str): type of renderer. "sapien" or "client".
-
-        renderer_kwargs (dict): kwargs to initialize the renderer.
-            Example kwargs for `SapienRenderer` (renderer_type=='sapien'):
-            - offscreen_only: tell the renderer the user does not need to present onto a screen.
-            - device (str): GPU device for renderer, e.g., 'cuda:x'.
 
         shader_dir (str): shader directory. Defaults to "default".
             "default" and "rt" are built-in options with SAPIEN. Other options are user-defined.
-
-        render_config (dict): kwargs to configure the renderer. Only for `SapienRenderer`.
-            See `sapien.RenderConfig` for more details.
 
         enable_shadow (bool): whether to enable shadow for lights. Defaults to False.
 
@@ -136,10 +127,7 @@ class BaseEnv(gym.Env):
         render_mode: str = None,
         sim_freq: int = None,
         control_freq: int = None,
-        renderer: str = "sapien",
-        renderer_kwargs: dict = None,
         shader_dir: str = "default",
-        render_config: dict = None,
         enable_shadow: bool = False,
         sensor_cfgs: dict = None,
         render_camera_cfgs: dict = None,
@@ -176,42 +164,26 @@ class BaseEnv(gym.Env):
             else:
                 control_freq = 20
 
-        # Create SAPIEN renderer
-        self._renderer_type = renderer
-        if renderer_kwargs is None:
-            renderer_kwargs = {}
-        if self._renderer_type == "sapien":
-            # TODO (stao): we need to deprecate use to the self._renderer
-            self._renderer = sapien.SapienRenderer(**renderer_kwargs)
-            if shader_dir == "default":
-                sapien.render.set_camera_shader_dir("minimal")
-                sapien.render.set_picture_format("Color", "r8g8b8a8unorm")
-                sapien.render.set_picture_format("ColorRaw", "r8g8b8a8unorm")
-                sapien.render.set_picture_format(
-                    "PositionSegmentation", "r16g16b16a16sint"
-                )
-            elif shader_dir == "rt":
-                sapien.render.set_camera_shader_dir("rt")
-                sapien.render.set_viewer_shader_dir("rt")
-                sapien.render.set_ray_tracing_samples_per_pixel(32)
-                sapien.render.set_ray_tracing_path_depth(16)
-                sapien.render.set_ray_tracing_denoiser(
-                    "optix"
-                )  # TODO "optix or oidn?" previous value was just True
-            elif shader_dir == "rt-fast":
-                sapien.render.set_camera_shader_dir("rt")
-                sapien.render.set_viewer_shader_dir("rt")
-                sapien.render.set_ray_tracing_samples_per_pixel(2)
-                sapien.render.set_ray_tracing_path_depth(1)
-                sapien.render.set_ray_tracing_denoiser("optix")
-            sapien.render.set_log_level(os.getenv("MS2_RENDERER_LOG_LEVEL", "warn"))
-
-        # TODO (stao): what here?
-        # elif self._renderer_type == "client":
-        #     self._renderer = sapien.RenderClient(**renderer_kwargs)
-        #     # TODO(jigu): add `set_log_level` for RenderClient?
-        # else:
-        #     raise NotImplementedError(self._renderer_type)
+        if shader_dir == "default":
+            sapien.render.set_camera_shader_dir("minimal")
+            sapien.render.set_picture_format("Color", "r8g8b8a8unorm")
+            sapien.render.set_picture_format("ColorRaw", "r8g8b8a8unorm")
+            sapien.render.set_picture_format("PositionSegmentation", "r16g16b16a16sint")
+        elif shader_dir == "rt":
+            sapien.render.set_camera_shader_dir("rt")
+            sapien.render.set_viewer_shader_dir("rt")
+            sapien.render.set_ray_tracing_samples_per_pixel(32)
+            sapien.render.set_ray_tracing_path_depth(16)
+            sapien.render.set_ray_tracing_denoiser(
+                "optix"
+            )  # TODO "optix or oidn?" previous value was just True
+        elif shader_dir == "rt-fast":
+            sapien.render.set_camera_shader_dir("rt")
+            sapien.render.set_viewer_shader_dir("rt")
+            sapien.render.set_ray_tracing_samples_per_pixel(2)
+            sapien.render.set_ray_tracing_path_depth(1)
+            sapien.render.set_ray_tracing_denoiser("optix")
+        sapien.render.set_log_level(os.getenv("MS2_RENDERER_LOG_LEVEL", "warn"))
 
         # Set simulation and control frequency
         self._sim_freq = sim_freq
@@ -253,17 +225,6 @@ class BaseEnv(gym.Env):
             else:
                 self._agent_cls = ROBOTS[robot_uid]
             self.robot_uid = robot_uid
-
-        # NOTE(jigu): Agent and camera configurations should not change after initialization.
-        self._configure_sensors()
-        self._configure_human_render_cameras()
-        # Override camera configurations
-        if sensor_cfgs is not None:
-            update_camera_cfgs_from_dict(self._sensor_cfgs, sensor_cfgs)
-        if render_camera_cfgs is not None:
-            update_camera_cfgs_from_dict(
-                self._human_render_camera_cfgs, render_camera_cfgs
-            )
 
         # Lighting
         self.enable_shadow = enable_shadow
@@ -533,6 +494,19 @@ class BaseEnv(gym.Env):
 
             self._setup_lighting()
 
+            # NOTE(jigu): Agent and camera configurations should not change after initialization.
+            self._configure_sensors()
+            self._configure_human_render_cameras()
+
+            # TODO (stao): permit camera changes on env creation here
+            # # Override camera configurations
+            # if sensor_cfgs is not None:
+            #     update_camera_cfgs_from_dict(self._sensor_cfgs, sensor_cfgs)
+            # if render_camera_cfgs is not None:
+            #     update_camera_cfgs_from_dict(
+            #         self._human_render_camera_cfgs, render_camera_cfgs
+            #     )
+
             # Cache entites and articulations
             if sapien.physx.is_gpu_enabled():
                 self._scene._setup_gpu()
@@ -574,7 +548,8 @@ class BaseEnv(gym.Env):
         self._human_render_cameras = OrderedDict()
         for uid, camera_cfg in self._human_render_camera_cfgs.items():
             self._human_render_cameras[uid] = Camera(
-                camera_cfg, self._scene, self._renderer_type
+                camera_cfg,
+                self._scene,
             )
 
         self._scene.sensors = self._sensors
