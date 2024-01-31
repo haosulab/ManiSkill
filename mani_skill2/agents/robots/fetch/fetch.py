@@ -174,7 +174,7 @@ class Fetch(BaseAgent):
             self.arm_stiffness,
             self.arm_damping,
             self.arm_force_limit,
-            normalize_action=False,
+            normalize_action=True,
         )
         arm_pd_joint_delta_pos_vel = PDJointPosVelControllerConfig(
             self.arm_joint_names,
@@ -205,12 +205,12 @@ class Fetch(BaseAgent):
         # -------------------------------------------------------------------------- #
         body_pd_joint_pos = PDJointPosControllerConfig(
             self.body_joint_names,
-            None,
-            None,
+            [-1.57, -1.6056, 0],
+            [1.57, 1.6056, 0.38615],
             self.body_stiffness,
             self.body_damping,
             self.body_force_limit,
-            normalize_action=False,
+            normalize_action=True,
         )
 
         # -------------------------------------------------------------------------- #
