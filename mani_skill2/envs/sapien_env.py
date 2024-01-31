@@ -911,7 +911,7 @@ class BaseEnv(gym.Env):
 
     def render_human(self):
         if self._viewer is None:
-            self._viewer = Viewer(self._renderer)
+            self._viewer = Viewer()
             self._setup_viewer()
             self._viewer.set_camera_pose(
                 self._human_render_cameras["render_camera"].camera.global_pose
