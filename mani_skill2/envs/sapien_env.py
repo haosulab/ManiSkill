@@ -19,8 +19,8 @@ from mani_skill2.agents.base_agent import BaseAgent
 from mani_skill2.agents.robots import ROBOTS
 from mani_skill2.envs.scene import ManiSkillScene
 from mani_skill2.envs.utils.observations.observations import (
-    image_to_pointcloud,
-    image_to_rgbd,
+    sensor_data_to_pointcloud,
+    sensor_data_to_rgbd,
 )
 from mani_skill2.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill2.sensors.camera import (
@@ -371,9 +371,9 @@ class BaseEnv(gym.Env):
         elif self._obs_mode in ["sensor_data", "rgbd", "pointcloud"]:
             obs = self._get_obs_with_sensor_data(info)
             if self._obs_mode == "rgbd":
-                obs = image_to_rgbd(obs)
+                obs = sensor_data_to_rgbd(obs, self._sensors)
             elif self.obs_mode == "pointcloud":
-                obs = image_to_pointcloud(obs)
+                obs = sensor_data_to_pointcloud(obs, self._sensors)
         else:
             raise NotImplementedError(self._obs_mode)
         return obs
