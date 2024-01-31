@@ -110,7 +110,7 @@ class TableSceneBuilder(SceneBuilder):
                 ]
             )
             self.env.agent.reset(qpos)
-            self.env.agent.robot.set_pose(sapien.Pose([-0.82, 0, -self.table_height]))
+            self.env.agent.robot.set_pose(sapien.Pose([-1.05, 0, -self.table_height]))
 
             from mani_skill2.agents.robots.fetch import FETCH_UNIQUE_COLLISION_BIT
 
