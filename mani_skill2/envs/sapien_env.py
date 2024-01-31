@@ -271,8 +271,8 @@ class BaseEnv(gym.Env):
         obs, _ = self.reset(seed=2022, options=dict(reconfigure=True))
         if physx.is_gpu_enabled():
             obs = to_numpy(obs)
-            self._init_raw_obs = obs.copy()
-            """the raw observation returned by the env.reset. Useful for future observation wrappers to use to auto generate observation spaces"""
+        self._init_raw_obs = obs.copy()
+        """the raw observation returned by the env.reset. Useful for future observation wrappers to use to auto generate observation spaces"""
         # TODO handle constructing single obs space from a batched result.
 
         self.action_space = self.agent.action_space
