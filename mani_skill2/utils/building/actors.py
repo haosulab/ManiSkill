@@ -341,10 +341,6 @@ def build_actor_ai2(
         )
         actor = builder.build(name=actor_id)
 
-    aabb = actor.find_component_by_type(
-        sapien.render.RenderBodyComponent
-    ).compute_global_aabb_tight()
-    aabb[1, 2] - aabb[0, 2]
     if set_object_on_ground:
         actor.set_pose(sapien.Pose(p=[0, 0, 0]))
     return actor
