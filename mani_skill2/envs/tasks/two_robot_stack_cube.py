@@ -9,7 +9,6 @@ from mani_skill2.agents.multi_agent import MultiAgent
 from mani_skill2.agents.robots.panda import Panda
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.envs.utils.randomization.pose import random_quaternions
-from mani_skill2.envs.utils.randomization.samplers import UniformPlacementSampler
 from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.building import actors
 from mani_skill2.utils.registration import register_env
@@ -25,20 +24,19 @@ class TwoRobotStackCube(BaseEnv):
     ----------------
     The goal is to have one robot pick up the green cube and the other robot pick up the blue cube. Then the green cube has to be placed down at
     the target region and the blue cube has to be stacked on top. Note that each robot can only reach one of the cubes to begin with so they must work together
-    to solve the task efficiently.
+    to solve the task efficiently. In particular, the green cube is close to the right robot, and the blue cube is close to the left robot.
 
     Randomizations
     --------------
     - both cubes have their z-axis rotation randomized
     - both cubes have their xy positions on top of the table scene randomized. The positions are sampled such that the cubes do not collide with each other and
-    so that the green cube is close to the robot on the left and the blue cube is close to the robot on the right.
+    so that the green cube is close to the robot on the right and the blue cube is close to the robot on the left.
     - the goal region is initialized in the middle between the two robots (so its y = 0). The only randomization is that it can shift along the mid-line between the two robots
 
     Success Conditions
     ------------------
-    - the red cube is on top of the green cube (to within half of the cube size)
-    - the red cube is static
-    - the red cube is not being grasped by the robot (robot must let go of the cube)
+    - the blue cube is on top of the green cube (to within half of the cube size)
+    - the blue and green cube are both not being grasped by the robots (robots must let go of the cubes)
 
     Visualization: TODO
     """
@@ -60,7 +58,7 @@ class TwoRobotStackCube(BaseEnv):
         ]
 
     def _register_human_render_cameras(self):
-        pose = look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
+        pose = look_at([1.0, 0, 0.75], [0.0, 0.0, 0.25])
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
 
     def _load_actors(self):
@@ -95,10 +93,10 @@ class TwoRobotStackCube(BaseEnv):
             torch.zeros((self.num_envs, 3))
             torch.rand((self.num_envs, 2)) * 0.2 - 0.1
             cubeA_xyz = torch.zeros((self.num_envs, 3))
-            cubeA_xyz[:, 0] = torch.rand((self.num_envs,)) * 0.2 - 0.1
+            cubeA_xyz[:, 0] = torch.rand((self.num_envs,)) * 0.1 - 0.05
             cubeA_xyz[:, 1] = -0.1 - torch.rand((self.num_envs,)) * 0.1 - 0.05
             cubeB_xyz = torch.zeros((self.num_envs, 3))
-            cubeB_xyz[:, 0] = torch.rand((self.num_envs,)) * 0.2 - 0.1
+            cubeB_xyz[:, 0] = torch.rand((self.num_envs,)) * 0.1 - 0.05
             cubeB_xyz[:, 1] = 0.1 + torch.rand((self.num_envs,)) * 0.1 - 0.05
             cubeA_xyz[:, 2] = 0.02
             cubeB_xyz[:, 2] = 0.02
@@ -120,7 +118,7 @@ class TwoRobotStackCube(BaseEnv):
             self.cubeB.set_pose(Pose.create_from_pq(p=cubeB_xyz, q=qs))
 
             target_region_xyz = torch.zeros((self.num_envs, 3))
-            target_region_xyz[:, 0] = torch.rand((self.num_envs,)) * 0.2 - 0.1
+            target_region_xyz[:, 0] = torch.rand((self.num_envs,)) * 0.1 - 0.05
             # set a little bit above 0 so the target is sitting on the table
             target_region_xyz[..., 2] = 1e-3
             self.goal_region.set_pose(
@@ -198,17 +196,15 @@ class TwoRobotStackCube(BaseEnv):
             - torch.tanh(5 * cubeA_to_left_arm_tcp_dist)
             + 1
             - torch.tanh(5 * cubeB_to_right_arm_tcp_dist)
-        )
-        reward = reach_reward / 2
+        ) / 2
 
-        # grasp reward for both robots
+        # grasp reward for left robot which needs to lift cubeA up eventually
         cubeA_pos = self.cubeA.pose.p
         cubeB_pos = self.cubeB.pose.p
-        reward[info["is_cubeA_grasped"]] += 0.5
-        reward[info["is_cubeB_grasped"]] += 0.5
+        reward = (reach_reward + info["is_cubeA_grasped"]) / 2
 
         # pass condition for stage 1
-        place_stage_reached = info["is_cubeA_grasped"] * info["is_cubeB_grasped"]
+        place_stage_reached = info["is_cubeA_grasped"]
 
         # Stage 2: Place bottom cube and still hold to cube A
         # place reward for bottom cube (cube B)
@@ -216,32 +212,33 @@ class TwoRobotStackCube(BaseEnv):
             cubeB_pos[:, :2] - self.goal_region.pose.p[..., :2], axis=1
         )
         place_reward = 1 - torch.tanh(5 * cubeB_to_goal_dist)
-        reward[place_stage_reached] = (
-            2 + (place_reward + info["is_cubeA_grasped"])[place_stage_reached] / 2
-        )
+        stage_2_reward = place_reward + info["is_cubeA_grasped"]
+        reward[place_stage_reached] = 2 + stage_2_reward[place_stage_reached] / 2
 
         # pass condition for stage 2
         cubeB_placed_and_cubeA_grasped = info["cubeB_placed"] * info["is_cubeA_grasped"]
 
-        # Stage 3: Place top cube
+        # Stage 3: Place top cube while moving right arm away to give left arm space
         # place reward for top cube (cube A)
         goal_xyz = torch.hstack(
-            [cubeB_pos[:, 0:2], (cubeB_pos[:, 2] + self.cube_half_size[2] * 2)[:, None]]
+            [cubeB_pos[:, :2], (cubeB_pos[:, 2] + self.cube_half_size[2] * 2)[:, None]]
         )
         cubeA_to_goal_dist = torch.linalg.norm(goal_xyz - cubeA_pos, axis=1)
         place_reward = 1 - torch.tanh(5 * cubeA_to_goal_dist)
+
+        # move right arm as close as possible to the y=0.1 line
+        right_arm_leave_reward = 1 - torch.tanh(
+            5 * self.right_agent.tcp.pose.p[:, 1] - 0.1
+        )
+        stage_3_reward = place_reward + right_arm_leave_reward
         reward[cubeB_placed_and_cubeA_grasped] = (
-            4 + place_reward[cubeB_placed_and_cubeA_grasped]
+            4 + stage_3_reward[cubeB_placed_and_cubeA_grasped] / 2
         )
 
         # pass condition for stage 3
         cubes_placed = info["is_cubeA_on_cubeB"] * info["cubeB_placed"]
 
-        # ungrasp reward for both robots
-
-        # reward[info["is_cubeA_grasped"]] = (4 + place_reward)[info["is_cubeA_grasped"]]
-
-        # # ungrasp and static reward
+        # Stage 4: get both robots to stop grasping
         gripper_width = (self.left_agent.robot.get_qlimits()[0, -1, 1] * 2).to(
             self.device
         )  # NOTE: hard-coded with panda
@@ -255,7 +252,7 @@ class TwoRobotStackCube(BaseEnv):
         ungrasp_reward_right[~info["is_cubeB_grasped"]] = 1.0
 
         reward[cubes_placed] = (
-            6 + ((ungrasp_reward_left + ungrasp_reward_right) / 2)[cubes_placed]
+            6 + (ungrasp_reward_left + ungrasp_reward_right)[cubes_placed] / 2
         )
 
         reward[info["success"]] = 8
