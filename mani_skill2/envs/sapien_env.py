@@ -280,7 +280,7 @@ class BaseEnv(gym.Env):
         agents = []
         robot_uids = self.robot_uids
         if robot_uids is not None:
-            if not isinstance(robot_uids, list):
+            if not isinstance(robot_uids, tuple):
                 robot_uids = [robot_uids]
             for i, robot_uids in enumerate(robot_uids):
                 if isinstance(robot_uids, type(BaseAgent)):

@@ -59,7 +59,8 @@ class TwoRobotStackCube(BaseEnv):
         ]
 
     def _register_human_render_cameras(self):
-        pose = look_at([1.4, 0.8, 0.75], [0.0, 0.1, 0.1])
+        # pose = look_at([1.4, 0.8, 0.75], [0.0, 0.1, 0.1]) # this perspective is good for demos
+        pose = look_at(eye=[0.6, 0.2, 0.4], target=[-0.1, 0, 0.1])
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)
 
     def _load_actors(self):
@@ -120,6 +121,7 @@ class TwoRobotStackCube(BaseEnv):
 
             target_region_xyz = torch.zeros((self.num_envs, 3))
             target_region_xyz[:, 0] = torch.rand((self.num_envs,)) * 0.1 - 0.05
+            target_region_xyz[:, 1] = -0.1
             # set a little bit above 0 so the target is sitting on the table
             target_region_xyz[..., 2] = 1e-3
             self.goal_region.set_pose(

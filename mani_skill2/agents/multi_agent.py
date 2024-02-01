@@ -5,10 +5,8 @@ import torch
 from gymnasium import spaces
 
 from mani_skill2.agents.base_agent import BaseAgent
-from mani_skill2.envs.scene import ManiSkillScene
-from mani_skill2.utils.common import flatten_dict_keys
 
-T = TypeVar("T", List)
+T = TypeVar("T")
 
 
 class MultiAgent(BaseAgent, Generic[T]):

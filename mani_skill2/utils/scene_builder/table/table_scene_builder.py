@@ -123,7 +123,7 @@ class TableSceneBuilder(SceneBuilder):
             cg = cs.get_collision_groups()
             cg[2] |= FETCH_UNIQUE_COLLISION_BIT
             cs.set_collision_groups(cg)
-        elif self.env.robot_uids == ["panda", "panda"]:
+        elif self.env.robot_uids == ("panda", "panda"):
             agent: MultiAgent = self.env.agent
             qpos = np.array(
                 [
