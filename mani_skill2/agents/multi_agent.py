@@ -28,6 +28,7 @@ class MultiAgent(BaseAgent):
         proprioception = OrderedDict()
         for i, agent in enumerate(self.agents):
             proprioception[f"{agent.uid}-{i}"] = agent.get_proprioception()
+        return proprioception
 
     def initialize(self):
         for agent in self.agents:

@@ -715,7 +715,7 @@ class BaseEnv(gym.Env):
     # Step
     # -------------------------------------------------------------------------- #
 
-    def step(self, action: Union[None, np.ndarray, Dict]):
+    def step(self, action: Union[None, np.ndarray, torch.Tensor, Dict]):
         action = self.step_action(action)
         self._elapsed_steps += 1
         info = self.get_info()
@@ -740,23 +740,39 @@ class BaseEnv(gym.Env):
                 to_numpy(info),
             )
 
-    def step_action(self, action) -> Union[None, torch.Tensor]:
+    def step_action(
+        self, action: Union[None, np.ndarray, torch.Tensor, Dict]
+    ) -> Union[None, torch.Tensor]:
         set_action = False
+        action_is_unbatched = False
         if action is None:  # simulation without action
             pass
         elif isinstance(action, np.ndarray) or isinstance(action, torch.Tensor):
             action = to_tensor(action)
+            if action.shape == self.single_action_space.shape:
+                action_is_unbatched = True
             set_action = True
         elif isinstance(action, dict):
-            if action["control_mode"] != self.agent.control_mode:
-                self.agent.set_control_mode(action["control_mode"])
-            action = to_tensor(action["action"])
+            if "control_mode" in action:
+                if action["control_mode"] != self.agent.control_mode:
+                    self.agent.set_control_mode(action["control_mode"])
+                action = to_tensor(action["action"])
+            else:
+                assert isinstance(
+                    self.agent, MultiAgent
+                ), "Received a dictionary for an action but there are not multiple robots in the environment"
+                # assume this is a multi-agent action
+                action = to_tensor(action)
+                for k, a in action.items():
+                    if a.shape == self.single_action_space[k].shape:
+                        action_is_unbatched = True
+                        break
             set_action = True
         else:
             raise TypeError(type(action))
 
         if set_action:
-            if self.num_envs == 1 and action.shape == self.single_action_space.shape:
+            if self.num_envs == 1 and action_is_unbatched:
                 action = batch(action)
             self.agent.set_action(action)
             if physx.is_gpu_enabled():

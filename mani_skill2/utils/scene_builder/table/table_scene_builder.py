@@ -138,12 +138,17 @@ class TableSceneBuilder(SceneBuilder):
                     0.04,
                 ]
             )
-            # qpos[:-2] += self.env._episode_rng.normal(
-            #     0, self.robot_init_qpos_noise, len(qpos) - 2
-            # )
-            agent.reset(qpos)
-            agent.agents[0].robot.set_pose(sapien.Pose([-0.615, 0.5, 0]))
-            agent.agents[1].robot.set_pose(sapien.Pose([-0.615, -0.5, 0]))
+            qpos[:-2] += self.env._episode_rng.normal(
+                0, self.robot_init_qpos_noise, len(qpos) - 2
+            )
+            agent.agents[1].reset(qpos)
+            agent.agents[1].robot.set_pose(
+                sapien.Pose([0, 0.75, 0], q=euler2quat(0, 0, -np.pi / 2))
+            )
+            agent.agents[0].reset(qpos)
+            agent.agents[0].robot.set_pose(
+                sapien.Pose([0, -0.75, 0], q=euler2quat(0, 0, np.pi / 2))
+            )
         else:
             raise NotImplementedError(self.env.robot_uids)
 

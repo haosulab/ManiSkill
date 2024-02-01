@@ -5,6 +5,7 @@ import sapien
 import mani_skill2.envs
 from mani_skill2.utils.sapien_utils import to_numpy
 from mani_skill2.utils.wrappers import RecordEpisode
+from mani_skill2.utils.wrappers.flatten import FlattenActionSpaceWrapper
 
 if __name__ == "__main__":
     # sapien.set_log_level("info")
@@ -15,7 +16,7 @@ if __name__ == "__main__":
         max_rigid_patch_count=2**19,
         max_rigid_contact_count=2**21,
     )
-    for env_id in ["StackCube-v1"]:
+    for env_id in ["TwoRobotStackCube-v1"]:
         env = gym.make(
             env_id,
             num_envs=num_envs,
@@ -28,10 +29,11 @@ if __name__ == "__main__":
             control_freq=20,
             force_use_gpu_sim=False,
         )
+        env = FlattenActionSpaceWrapper(env)
         # env.reset(seed=4, options=dict(reconfigure=True)) # wierd qvel speeds
         # env.reset(seed=52, options=dict(reconfigure=True))
         env.reset(seed=1)
-
+        # import ipdb;ipdb.set_trace()
         done = False
         i = 0
         if num_envs == 1:
@@ -42,12 +44,13 @@ if __name__ == "__main__":
             print("START")
             while i < 50 or (i < 50000 and num_envs == 1):
                 action = env.action_space.sample()
+                # import ipdb;ipdb.set_trace()
                 if len(action.shape) == 1:
                     action = action.reshape(1, -1)
-                action[:] *= 0
+                # action[:] *= 0
                 # action[:, -2:] *= 0
                 # action[:, 6] = 1 # on fetch this controls gripper rotation
-                action[:, -3] = 1
+                # action[:, -3] = 1
                 #
                 # TODO (stao): on cpu sim, -1 here goes up, gpu sim -1 goes down?
                 # action[:, 2] = -1

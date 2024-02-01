@@ -1,7 +1,9 @@
 import gymnasium as gym
+import gymnasium.spaces.utils
 
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.utils.common import flatten_state_dict
+from mani_skill2.utils.sapien_utils import batch
 
 
 class FlattenObservationWrapper(gym.ObservationWrapper):
@@ -16,3 +18,33 @@ class FlattenObservationWrapper(gym.ObservationWrapper):
 
     def observation(self, observation):
         return flatten_state_dict(observation, use_torch=True)
+
+
+class FlattenActionSpaceWrapper(gym.ActionWrapper):
+    """
+    Flattens the action space. The original action space must be spaces.Dict
+    """
+
+    def __init__(self, env) -> None:
+        self.base_env: BaseEnv = env.unwrapped
+        super().__init__(env)
+
+        self.action_space = gymnasium.spaces.utils.flatten_space(self.action_space)
+        # self.base_env.single_action_space = gymnasium.spaces.utils.flatten_space(self.base_env.single_action_space)
+        # self.base_env._update_obs_space(flatten_state_dict(self.base_env._init_raw_obs))
+
+    def action(self, action):
+        if (
+            self.base_env.num_envs == 1
+            and action.shape == self.base_env.single_action_space.shape
+        ):
+            action = batch(action)
+
+        # TODO (stao): This code only supports flat dictionary at the moment
+        unflattened_action = dict()
+        start, end = 0, 0
+        for k, space in self.base_env.agent.single_action_space.items():
+            end += space.shape[0]
+            unflattened_action[k] = action[:, start:end]
+            start += space.shape[0]
+        return unflattened_action
