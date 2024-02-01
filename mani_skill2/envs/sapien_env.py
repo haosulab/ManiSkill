@@ -1003,7 +1003,8 @@ class BaseEnv(gym.Env):
                 if camera_name is not None and name != camera_name:
                     continue
                 camera.capture()
-                rgb = camera.get_picture("Color")[0, ..., :3]
+                # TODO (stao): the output of this is not the same as gpu setting, its float here
+                rgb = (camera.get_picture("Color")[0, ..., :3] * 255).to(torch.uint8)
                 images.append(rgb)
         if len(images) == 0:
             return None
