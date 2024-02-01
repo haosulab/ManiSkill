@@ -321,6 +321,10 @@ class Fetch(BaseAgent):
                 cg[2] |= FETCH_UNIQUE_COLLISION_BIT
                 cs.set_collision_groups(cg)
 
+        self.torso_lift_link: Link = get_obj_by_name(
+            self.robot.get_links(), "torso_lift_link"
+        )
+
         self.queries: Dict[str, Tuple[physx.PhysxGpuContactQuery, Tuple[int]]] = dict()
 
     def is_grasping(self, object: Actor = None, min_impulse=1e-6, max_angle=85):
