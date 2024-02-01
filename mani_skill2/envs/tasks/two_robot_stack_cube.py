@@ -3,6 +3,7 @@ from typing import Any, Dict
 
 import numpy as np
 import torch
+from transforms3d.euler import euler2quat
 
 from mani_skill2.agents.multi_agent import MultiAgent
 from mani_skill2.agents.robots.panda import Panda
@@ -44,7 +45,7 @@ class TwoRobotStackCube(BaseEnv):
 
     SUPPORTED_ROBOTS = [["panda", "panda"]]
     agent: MultiAgent
-    goal_radius = 0.1
+    goal_radius = 0.06
 
     def __init__(
         self, *args, robot_uids=["panda", "panda"], robot_init_qpos_noise=0.02, **kwargs
@@ -91,34 +92,43 @@ class TwoRobotStackCube(BaseEnv):
             self.table_scene.initialize()
             # the table scene initializes two robots. the first one self.agents[0] is on the left and the second one is on the right
 
-            xyz = torch.zeros((self.num_envs, 3))
-            xyz[:, 2] = 0.02
-            xy = torch.rand((self.num_envs, 2)) * 0.2 - 0.1
-            region = [[-0.1, -0.2], [0.1, 0.2]]
-            sampler = UniformPlacementSampler(bounds=region, batch_size=self.num_envs)
-            radius = (torch.linalg.norm(torch.tensor([0.02, 0.02])) + 0.001).to(
-                self.device
-            )
-            cubeA_xy = xy + sampler.sample(radius, 100)
-            cubeB_xy = xy + sampler.sample(radius, 100, verbose=False)
+            torch.zeros((self.num_envs, 3))
+            torch.rand((self.num_envs, 2)) * 0.2 - 0.1
+            cubeA_xyz = torch.zeros((self.num_envs, 3))
+            cubeA_xyz[:, 0] = torch.rand((self.num_envs, 1)) * 0.2 - 0.1
+            cubeA_xyz[:, 1] = 0.1 + torch.rand((self.num_envs, 1)) * 0.05 - 0.025
+            cubeB_xyz = torch.zeros((self.num_envs, 3))
+            cubeB_xyz[:, 0] = torch.rand((self.num_envs, 1)) * 0.2 - 0.1
+            cubeB_xyz[:, 1] = -0.1 - torch.rand((self.num_envs, 1)) * 0.05 - 0.025
+            cubeA_xyz[:, 2] = 0.02
+            cubeB_xyz[:, 2] = 0.02
 
-            xyz[:, :2] = cubeA_xy
             qs = random_quaternions(
                 self.num_envs,
                 lock_x=True,
                 lock_y=True,
                 lock_z=False,
             )
-            self.cubeA.set_pose(Pose.create_from_pq(p=xyz.clone(), q=qs))
+            self.cubeA.set_pose(Pose.create_from_pq(p=cubeA_xyz, q=qs))
 
-            xyz[:, :2] = cubeB_xy
             qs = random_quaternions(
                 self.num_envs,
                 lock_x=True,
                 lock_y=True,
                 lock_z=False,
             )
-            self.cubeB.set_pose(Pose.create_from_pq(p=xyz, q=qs))
+            self.cubeB.set_pose(Pose.create_from_pq(p=cubeB_xyz, q=qs))
+
+            target_region_xyz = torch.zeros((self.num_envs, 3))
+            target_region_xyz[:, 0] = torch.rand((self.num_envs, 1)) * 0.2 - 0.1
+            # set a little bit above 0 so the target is sitting on the table
+            target_region_xyz[..., 2] = 1e-3
+            self.goal_region.set_pose(
+                Pose.create_from_pq(
+                    p=target_region_xyz,
+                    q=euler2quat(0, np.pi / 2, 0),
+                )
+            )
 
     @property
     def left_agent(self) -> Panda:
