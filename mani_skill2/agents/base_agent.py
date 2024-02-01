@@ -57,9 +57,11 @@ class BaseAgent:
         control_freq: int,
         control_mode: str = None,
         fix_root_link=True,
+        agent_idx: int = None,
     ):
         self.scene = scene
         self._control_freq = control_freq
+        self._agent_idx = agent_idx
 
         # URDF
         self.fix_root_link = fix_root_link
@@ -91,6 +93,8 @@ class BaseAgent:
         """
         loader = self.scene.create_urdf_loader()
         loader.name = self.uid
+        if self._agent_idx is not None:
+            loader.name = f"{self.uid}-agent-{self._agent_idx}"
         loader.fix_root_link = self.fix_root_link
 
         urdf_path = format_path(str(self.urdf_path))
@@ -99,7 +103,6 @@ class BaseAgent:
         check_urdf_config(urdf_config)
 
         # TODO(jigu): support loading multiple convex collision shapes
-
         apply_urdf_config(loader, urdf_config)
         self.robot: Articulation = loader.load(urdf_path)
         assert self.robot is not None, f"Fail to load URDF from {urdf_path}"

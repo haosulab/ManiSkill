@@ -275,14 +275,17 @@ class BaseEnv(gym.Env):
         if robot_uids is not None:
             if not isinstance(robot_uids, list):
                 robot_uids = [robot_uids]
-            for robot_uids in robot_uids:
+            for i, robot_uids in enumerate(robot_uids):
                 if isinstance(robot_uids, type(BaseAgent)):
                     agent_cls = robot_uids
                     # robot_uids = self._agent_cls.uid
                 else:
                     agent_cls = ROBOTS[robot_uids]
                 agent: BaseAgent = agent_cls(
-                    self._scene, self._control_freq, self._control_mode
+                    self._scene,
+                    self._control_freq,
+                    self._control_mode,
+                    agent_idx=i if len(robot_uids) > 0 else None,
                 )
                 agent.set_control_mode(agent._default_control_mode)
                 agents.append(agent)

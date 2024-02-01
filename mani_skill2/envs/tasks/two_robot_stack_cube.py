@@ -96,10 +96,10 @@ class TwoRobotStackCube(BaseEnv):
             torch.rand((self.num_envs, 2)) * 0.2 - 0.1
             cubeA_xyz = torch.zeros((self.num_envs, 3))
             cubeA_xyz[:, 0] = torch.rand((self.num_envs, 1)) * 0.2 - 0.1
-            cubeA_xyz[:, 1] = 0.1 + torch.rand((self.num_envs, 1)) * 0.05 - 0.025
+            cubeA_xyz[:, 1] = -0.1 - torch.rand((self.num_envs, 1)) * 0.1 - 0.05
             cubeB_xyz = torch.zeros((self.num_envs, 3))
             cubeB_xyz[:, 0] = torch.rand((self.num_envs, 1)) * 0.2 - 0.1
-            cubeB_xyz[:, 1] = -0.1 - torch.rand((self.num_envs, 1)) * 0.05 - 0.025
+            cubeB_xyz[:, 1] = 0.1 + torch.rand((self.num_envs, 1)) * 0.1 - 0.05
             cubeA_xyz[:, 2] = 0.02
             cubeB_xyz[:, 2] = 0.02
 
@@ -151,32 +151,48 @@ class TwoRobotStackCube(BaseEnv):
         # TODO (stao): GPU sim can be fast but unstable. Angular velocity is rather high despite it not really rotating
         is_cubeA_static = self.cubeA.is_static(lin_thresh=1e-2, ang_thresh=0.5)
         is_cubeA_grasped = self.left_agent.is_grasping(self.cubeA)
-        success = is_cubeA_on_cubeB * is_cubeA_static * (~is_cubeA_grasped)
+        is_cubeB_grasped = self.right_agent.is_grasping(self.cubeB)
+        success = (
+            is_cubeA_on_cubeB
+            * is_cubeA_static
+            * (~is_cubeA_grasped)
+            * (~is_cubeB_grasped)
+        )
         return {
             "is_cubeA_grasped": is_cubeA_grasped,
+            "is_cubeB_grasped": is_cubeB_grasped,
             "is_cubeA_on_cubeB": is_cubeA_on_cubeB,
             "is_cubeA_static": is_cubeA_static,
             "success": success.bool(),
         }
 
     def _get_obs_extra(self, info: Dict):
-        obs = OrderedDict(tcp_pose=self.left_agent.tcp.pose.raw_pose)
+        obs = OrderedDict(
+            left_arm_tcp=self.left_agent.tcp.pose.raw_pose,
+            right_arm_tcp=self.right_agent.tcp.pose.raw_pose,
+        )
         if "state" in self.obs_mode:
             obs.update(
-                # cubeA_pose=self.cubeA.pose.raw_pose,
-                # cubeB_pose=self.cubeB.pose.raw_pose,
-                tcp_to_cubeA_pos=self.cubeA.pose.p - self.left_agent.tcp.pose.p,
-                # tcp_to_cubeB_pos=self.cubeB.pose.p - self.agent.tcp.pose.p,
+                cubeA_pose=self.cubeA.pose.raw_pose,
+                cubeB_pose=self.cubeB.pose.raw_pose,
+                left_arm_tcp_to_cubeA_pos=self.cubeA.pose.p
+                - self.left_agent.tcp.pose.p,
+                right_arm_tcp_to_cubeB_pos=self.cubeB.pose.p
+                - self.right_agent.tcp.pose.p,
                 cubeA_to_cubeB_pos=self.cubeB.pose.p - self.cubeA.pose.p,
             )
         return obs
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         # reaching reward
-        tcp_pose = self.left_agent.tcp.pose.p
-        cubeA_pos = self.cubeA.pose.p
-        cubeA_to_tcp_dist = torch.linalg.norm(tcp_pose - cubeA_pos, axis=1)
-        reward = 2 * (1 - torch.tanh(5 * cubeA_to_tcp_dist))
+        cubeA_to_left_arm_tcp_dist = torch.linalg.norm(
+            self.left_agent.tcp.pose.p - self.cubeA.pose.p, axis=1
+        )
+        cubeB_to_right_arm_tcp_dist = torch.linalg.norm(
+            self.right_agent.tcp.pose.p - self.cubeB.pose.p, axis=1
+        )
+        reward = 1 - torch.tanh(5 * cubeA_to_left_arm_tcp_dist)
+        reward += 1 - torch.tanh(5 * cubeB_to_right_arm_tcp_dist)
 
         # grasp and place reward
         cubeA_pos = self.cubeA.pose.p
