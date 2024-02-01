@@ -36,6 +36,7 @@ class TwoRobotStackCube(BaseEnv):
     Success Conditions
     ------------------
     - the blue cube is on top of the green cube (to within half of the cube size)
+    - the green cube is on the red white target on the table
     - the blue and green cube are both not being grasped by the robots (robots must let go of the cubes)
 
     Visualization: TODO
