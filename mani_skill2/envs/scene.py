@@ -13,7 +13,7 @@ from mani_skill2.utils.structs.actor import Actor
 from mani_skill2.utils.structs.articulation import Articulation
 from mani_skill2.utils.structs.link import Link
 from mani_skill2.utils.structs.render_camera import RenderCamera
-from mani_skill2.utils.structs.types import Array
+from mani_skill2.utils.structs.types import Array, Device
 
 
 class ManiSkillScene:
@@ -38,11 +38,17 @@ class ManiSkillScene:
     sensors: Dict[str, BaseSensor] = OrderedDict()
     human_render_cameras: Dict[str, Camera] = OrderedDict()
 
-    def __init__(self, sub_scenes: List[sapien.Scene], debug_mode: bool = True):
+    def __init__(
+        self,
+        sub_scenes: List[sapien.Scene],
+        debug_mode: bool = True,
+        device: Device = None,
+    ):
         self.sub_scenes = sub_scenes
         self.px = self.sub_scenes[0].physx_system
         self._gpu_sim_initialized = False
         self.debug_mode = debug_mode
+        self.device = device
 
     @property
     def timestep(self):

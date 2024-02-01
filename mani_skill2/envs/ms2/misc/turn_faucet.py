@@ -37,12 +37,12 @@ class TurnFaucetBaseEnv(BaseEnv):
     def __init__(
         self,
         *args,
-        robot_uid="panda",
+        robot_uids="panda",
         robot_init_qpos_noise=0.02,
         **kwargs,
     ):
         self.robot_init_qpos_noise = robot_init_qpos_noise
-        super().__init__(*args, robot_uid=robot_uid, **kwargs)
+        super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     def _load_actors(self):
         # builder = self._scene.create_actor_builder()
@@ -84,7 +84,7 @@ class TurnFaucetBaseEnv(BaseEnv):
         # self.wall.set_pose(Pose(p=[0.25, 0, 1]))
 
     def _initialize_agent(self):
-        if self.robot_uid == "panda":
+        if self.robot_uids == "panda":
             # fmt: off
             qpos = np.array([0, -0.785, 0, -2.356, 0, 1.57, 0.785, 0, 0])
             # fmt: on
@@ -94,7 +94,7 @@ class TurnFaucetBaseEnv(BaseEnv):
             self.agent.reset(qpos)
             self.agent.robot.set_pose(Pose([-0.56, 0, 0]))
         else:
-            raise NotImplementedError(self.robot_uid)
+            raise NotImplementedError(self.robot_uids)
 
     def _get_obs_agent(self):
         obs = self.agent.get_proprioception()

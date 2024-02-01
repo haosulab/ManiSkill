@@ -21,7 +21,7 @@ class SceneManipulationEnv(BaseEnv):
     agent: Panda
     """
     Args:
-        robot_uid: Which robot to place into the scene. Default is "panda"
+        robot_uids: Which robot to place into the scene. Default is "panda"
 
         fixed_scene: whether to sample a single scene and never reconfigure the scene during episode resets
         Default to True as reconfiguration/reloading scenes is expensive. When true, call env.reset(seed=seed, options=dict(reconfigure=True))
@@ -35,7 +35,7 @@ class SceneManipulationEnv(BaseEnv):
     def __init__(
         self,
         *args,
-        robot_uid="panda",
+        robot_uids="panda",
         robot_init_qpos_noise=0.02,
         fixed_scene=True,
         scene_builder_cls: SceneBuilder = ArchitecTHORSceneBuilder,
@@ -48,7 +48,7 @@ class SceneManipulationEnv(BaseEnv):
         self.scene_builder = scene_builder_cls()
         self.scene_ids = np.arange(0, len(self.scene_builder.scene_configs))
         self.convex_decomposition = convex_decomposition
-        super().__init__(*args, robot_uid=robot_uid, **kwargs)
+        super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     def reset(self, seed=None, options=None):
         self._set_episode_rng(seed)
@@ -68,7 +68,7 @@ class SceneManipulationEnv(BaseEnv):
         )
 
     def _initialize_agent(self):
-        if self.robot_uid == "panda":
+        if self.robot_uids == "panda":
             # fmt: off
             # EE at [0.615, 0, 0.17]
             qpos = np.array(
@@ -80,7 +80,7 @@ class SceneManipulationEnv(BaseEnv):
             )
             self.agent.reset(qpos)
             self.agent.robot.set_pose(Pose([-0.615, 0, 0]))
-        elif self.robot_uid == "xmate3_robotiq":
+        elif self.robot_uids == "xmate3_robotiq":
             qpos = np.array(
                 [0, np.pi / 6, 0, np.pi / 3, 0, np.pi / 2, -np.pi / 2, 0, 0]
             )
@@ -90,7 +90,7 @@ class SceneManipulationEnv(BaseEnv):
             self.agent.reset(qpos)
             self.agent.robot.set_pose(Pose([-0.562, 0, 0]))
         else:
-            raise NotImplementedError(self.robot_uid)
+            raise NotImplementedError(self.robot_uids)
 
     def _register_sensors(self):
         pose = look_at([0.3, 0, 0.6], [-0.1, 0, 0.1])
@@ -99,7 +99,7 @@ class SceneManipulationEnv(BaseEnv):
         )
 
     def _register_human_render_cameras(self):
-        if self.robot_uid == "panda":
+        if self.robot_uids == "panda":
             pose = look_at([0.4, 0.4, 0.8], [0.0, 0.0, 0.4])
         else:
             pose = look_at([0.5, 0.5, 1.0], [0.0, 0.0, 0.5])

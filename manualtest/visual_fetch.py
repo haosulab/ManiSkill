@@ -13,7 +13,7 @@ if __name__ == "__main__":
             env_id,
             num_envs=num_envs,
             enable_shadow=True,
-            robot_uid="fetch",
+            robot_uids="fetch",
             reward_mode="normalized_dense",
             render_mode="rgb_array",
             control_mode="pd_ee_delta_pos",

@@ -4,6 +4,7 @@ from typing import Dict, Union
 import numpy as np
 import sapien
 import sapien.physx as physx
+import torch
 from gymnasium import spaces
 
 from mani_skill2 import format_path
@@ -72,6 +73,10 @@ class BaseAgent:
         self.controllers = OrderedDict()
         self._load_articulation()
         self._after_loading_articulation()
+
+    @property
+    def device(self):
+        return self.scene.device
 
     def initialize(self):
         """
@@ -242,8 +247,8 @@ class BaseAgent:
         """
         if init_qpos is not None:
             self.robot.set_qpos(init_qpos)
-        self.robot.set_qvel(np.zeros(self.robot.max_dof))
-        self.robot.set_qf(np.zeros(self.robot.max_dof))
+        self.robot.set_qvel(torch.zeros(self.robot.max_dof, device=self.device))
+        self.robot.set_qf(torch.zeros(self.robot.max_dof, device=self.device))
         self.set_control_mode(self._default_control_mode)
 
     # -------------------------------------------------------------------------- #

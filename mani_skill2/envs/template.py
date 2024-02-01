@@ -53,9 +53,9 @@ class CustomEnv(BaseEnv):
     """
 
     # in the __init__ function you can pick a default robot your task should use e.g. the panda robot
-    def __init__(self, *args, robot_uid="panda", robot_init_qpos_noise=0.02, **kwargs):
+    def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
         self.robot_init_qpos_noise = robot_init_qpos_noise
-        super().__init__(*args, robot_uid=robot_uid, **kwargs)
+        super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     """
     Reconfiguration Code

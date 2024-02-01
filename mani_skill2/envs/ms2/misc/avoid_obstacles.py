@@ -252,7 +252,7 @@ class PandaAvoidObstaclesEnv(AvoidObstaclesBaseEnv):
     ASSET_UID = "panda_avoid_obstacles"
 
     def _load_agent(self):
-        self.robot_uid = "panda_realsensed435"  # TODO (stao): This old code here is not good practice to override user argument like this
+        self.robot_uids = "panda_realsensed435"  # TODO (stao): This old code here is not good practice to override user argument like this
         self.agent = PandaRealSensed435(
             self._scene,
             self._control_freq,

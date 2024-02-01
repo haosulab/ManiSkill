@@ -1,7 +1,7 @@
 import os
 from collections import OrderedDict
 from functools import cached_property
-from typing import Any, Dict, List, Sequence, Type, Union
+from typing import Any, Dict, List, Sequence, Union
 
 import gymnasium as gym
 import numpy as np
@@ -16,6 +16,7 @@ from sapien.utils import Viewer
 
 from mani_skill2 import logger
 from mani_skill2.agents.base_agent import BaseAgent
+from mani_skill2.agents.multi_agent import MultiAgent
 from mani_skill2.agents.robots import ROBOTS
 from mani_skill2.envs.scene import ManiSkillScene
 from mani_skill2.envs.utils.observations.observations import (
@@ -74,6 +75,8 @@ class BaseEnv(gym.Env):
 
         human_render_camera_cfgs (dict): configurations of human rendering cameras. Similar usage as @sensor_cfgs.
 
+        robot_uids (Union[str, BaseAgent, List[Union[str, BaseAgent]]]): List of robots to instantiate and control in the environment.
+
         scene_cfgs (dict): configurations to modify the physics simulation. These are passed to the sapien.physx.set_scene_config function.
 
         gpu_sim_cfgs (dict): Configurations for GPU simulation if used. # TODO (stao): flesh this explanation out
@@ -104,7 +107,7 @@ class BaseEnv(gym.Env):
     _scene: ManiSkillScene = None
     """the main scene, which manages all sub scenes. In CPU simulation there is only one sub-scene"""
 
-    _agent_cls: Type[BaseAgent]
+    # _agent_cls: Type[BaseAgent]
     agent: BaseAgent
 
     _sensors: Dict[str, BaseSensor]
@@ -134,7 +137,7 @@ class BaseEnv(gym.Env):
         enable_shadow: bool = False,
         sensor_cfgs: dict = None,
         human_render_camera_cfgs: dict = None,
-        robot_uid: Union[str, BaseAgent] = None,
+        robot_uids: Union[str, BaseAgent, List[Union[str, BaseAgent]]] = None,
         scene_cfgs: dict = dict(),
         gpu_sim_cfgs: dict = dict(spacing=20),
         reconfiguration_freq: int = 0,
@@ -146,6 +149,7 @@ class BaseEnv(gym.Env):
         self.scene_cfgs = scene_cfgs
         self._custom_sensor_cfgs = sensor_cfgs
         self._custom_human_render_camera_cfgs = human_render_camera_cfgs
+        self.robot_uids = robot_uids
         if num_envs > 1 or force_use_gpu_sim:
             if not sapien.physx.is_gpu_enabled():
                 sapien.physx.enable_gpu()
@@ -223,14 +227,6 @@ class BaseEnv(gym.Env):
         self.render_mode = render_mode
         self._viewer = None
 
-        if robot_uid is not None:
-            if isinstance(robot_uid, type(BaseAgent)):
-                self._agent_cls = robot_uid
-                robot_uid = self._agent_cls.uid
-            else:
-                self._agent_cls = ROBOTS[robot_uid]
-            self.robot_uid = robot_uid
-
         # Lighting
         self.enable_shadow = enable_shadow
 
@@ -273,10 +269,28 @@ class BaseEnv(gym.Env):
             return self.single_observation_space
 
     def _load_agent(self):
-        agent_cls: Type[BaseAgent] = self._agent_cls
-        self.agent = agent_cls(self._scene, self._control_freq, self._control_mode)
+        # agent_cls: Type[BaseAgent] = self._agent_cls
+        agents = []
+        robot_uids = self.robot_uids
+        if robot_uids is not None:
+            if not isinstance(robot_uids, list):
+                robot_uids = [robot_uids]
+            for robot_uids in robot_uids:
+                if isinstance(robot_uids, type(BaseAgent)):
+                    agent_cls = robot_uids
+                    # robot_uids = self._agent_cls.uid
+                else:
+                    agent_cls = ROBOTS[robot_uids]
+                agent: BaseAgent = agent_cls(
+                    self._scene, self._control_freq, self._control_mode
+                )
+                agent.set_control_mode(agent._default_control_mode)
+                agents.append(agent)
+        if len(agents) == 1:
+            self.agent = agents[0]
+        else:
+            self.agent = MultiAgent(agents)
         # set_articulation_render_material(self.agent.robot, specular=0.9, roughness=0.3)
-        self.agent.set_control_mode(self.agent._default_control_mode)
 
     def _configure_sensors(self):
         self._sensor_cfgs = OrderedDict()
@@ -286,7 +300,7 @@ class BaseEnv(gym.Env):
 
         # Add agent sensors
         self._agent_camera_cfgs = OrderedDict()
-        self._agent_camera_cfgs = parse_camera_cfgs(self._agent_cls.sensor_configs)
+        self._agent_camera_cfgs = parse_camera_cfgs(self.agent.sensor_configs)
         self._sensor_cfgs.update(self._agent_camera_cfgs)
 
     def _register_sensors(
@@ -837,7 +851,7 @@ class BaseEnv(gym.Env):
                 sapien.Scene([self.physx_system, sapien.render.RenderSystem()])
             ]
         # create a "global" scene object that users can work with that is linked with all other scenes created
-        self._scene = ManiSkillScene(sub_scenes)
+        self._scene = ManiSkillScene(sub_scenes, device=self.device)
         self.physx_system.timestep = 1.0 / self._sim_freq
 
     def _clear(self):
