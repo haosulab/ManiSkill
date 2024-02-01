@@ -131,14 +131,14 @@ class TwoRobotPickCube(BaseEnv):
                 left_arm_tcp_to_cube_pos=self.cube.pose.p - self.left_agent.tcp.pose.p,
                 right_arm_tcp_to_cube_pos=self.cube.pose.p
                 - self.right_agent.tcp.pose.p,
-                obj_to_goal_pos=self.goal_site.pose.p - self.cube.pose.p,
+                cube_to_goal_pos=self.goal_site.pose.p - self.cube.pose.p,
             )
         return obs
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         # Stage 1: Reach and push cube to be near other robot
         tcp_to_obj_dist = torch.linalg.norm(
-            self.cube.pose.p - self.right_agent.tcp.pose.p, axis=1
+            self.cube.pose.p - self.left_agent.tcp.pose.p, axis=1
         )
         reaching_reward = 1 - torch.tanh(5 * tcp_to_obj_dist)
 
@@ -154,12 +154,12 @@ class TwoRobotPickCube(BaseEnv):
         )
         reward = (reaching_reward + cube_to_other_side_reward) / 2
 
-        # stage 1 passes if cube is at other side
-        cube_at_other_side = self.cube.pose.p[:, 1] >= 0.05
+        # stage 1 passes if cube is near a sub-goal
+        cube_at_other_side = self.cube.pose.p[:, 1] >= 0.0
 
-        # Stage 2: reach and grasp cube with right robot
+        # Stage 2: reach and grasp cube with right robot and make left robot leave space
         tcp_to_obj_dist = torch.linalg.norm(
-            self.cube.pose.p - self.left_agent.tcp.pose.p, axis=1
+            self.cube.pose.p - self.right_agent.tcp.pose.p, axis=1
         )
         reaching_reward = 1 - torch.tanh(5 * tcp_to_obj_dist)
         stage_2_reward = reaching_reward
@@ -167,7 +167,13 @@ class TwoRobotPickCube(BaseEnv):
         is_grasped = self.right_agent.is_grasping(self.cube)
         stage_2_reward += is_grasped
 
-        reward[cube_at_other_side] = 2 + stage_2_reward[cube_at_other_side] / 2
+        # make left arm move as close as possible to the y=-0.2 line
+        left_arm_leave_reward = 1 - torch.tanh(
+            5 * (self.left_agent.tcp.pose.p[:, 1] + 0.2).abs()
+        )
+        stage_2_reward += left_arm_leave_reward
+
+        reward[cube_at_other_side] = 2 + stage_2_reward[cube_at_other_side]
 
         # stage 2 passes if cube is grasped
         # is_grasped
@@ -177,7 +183,7 @@ class TwoRobotPickCube(BaseEnv):
             self.goal_site.pose.p - self.cube.pose.p, axis=1
         )
         place_reward = 1 - torch.tanh(5 * obj_to_goal_dist)
-        reward[is_grasped] = 4 + place_reward[is_grasped]
+        reward[is_grasped] = 6 + place_reward[is_grasped]
 
         # stage 3 passes if object is placed
         is_obj_placed = info["is_obj_placed"]
@@ -186,12 +192,12 @@ class TwoRobotPickCube(BaseEnv):
         static_reward = 1 - torch.tanh(
             5 * torch.linalg.norm(self.right_agent.robot.get_qvel()[..., :-2], axis=1)
         )
-        reward[is_obj_placed] = 6 + static_reward[is_obj_placed]
+        reward[is_obj_placed] = 8 + static_reward[is_obj_placed]
 
-        reward[info["success"]] = 8
+        reward[info["success"]] = 10
         return reward
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        return self.compute_dense_reward(obs=obs, action=action, info=info) / 8
+        return self.compute_dense_reward(obs=obs, action=action, info=info) / 10
