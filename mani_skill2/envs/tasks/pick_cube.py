@@ -131,7 +131,7 @@ class PickCubeEnv(BaseEnv):
         static_reward = 1 - torch.tanh(
             5 * torch.linalg.norm(self.agent.robot.get_qvel()[..., :-2], axis=1)
         )
-        reward += static_reward * info["is_robot_static"] * info["is_obj_placed"]
+        reward += static_reward * info["is_obj_placed"]
 
         reward[info["success"]] = 5
         return reward
