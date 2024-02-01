@@ -253,7 +253,7 @@ class TwoRobotStackCube(BaseEnv):
         )
         ungrasp_reward_left[~info["is_cubeA_grasped"]] = 1.0
         ungrasp_reward_right = (
-            torch.sum(self.left_agent.robot.get_qpos()[:, -2:], axis=1) / gripper_width
+            torch.sum(self.right_agent.robot.get_qpos()[:, -2:], axis=1) / gripper_width
         )
         ungrasp_reward_right[~info["is_cubeB_grasped"]] = 1.0
 
