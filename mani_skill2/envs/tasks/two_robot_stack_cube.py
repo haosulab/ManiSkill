@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
 
 import numpy as np
 import torch
@@ -42,12 +42,12 @@ class TwoRobotStackCube(BaseEnv):
     Visualization: TODO
     """
 
-    SUPPORTED_ROBOTS = [["panda", "panda"]]
-    agent: MultiAgent
+    SUPPORTED_ROBOTS = [("panda", "panda")]
+    agent: MultiAgent[Tuple[Panda, Panda]]
     goal_radius = 0.06
 
     def __init__(
-        self, *args, robot_uids=["panda", "panda"], robot_init_qpos_noise=0.02, **kwargs
+        self, *args, robot_uids=("panda", "panda"), robot_init_qpos_noise=0.02, **kwargs
     ):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
@@ -236,14 +236,12 @@ class TwoRobotStackCube(BaseEnv):
         right_arm_leave_reward = 1 - torch.tanh(
             5 * (self.right_agent.tcp.pose.p[:, 1] - 0.2).abs()
         )
-        stage_3_reward = place_reward + right_arm_leave_reward
+        stage_3_reward = place_reward * 2 + right_arm_leave_reward
         reward[cubeB_placed_and_cubeA_grasped] = (
-            4 + stage_3_reward[cubeB_placed_and_cubeA_grasped] / 2
+            4 + stage_3_reward[cubeB_placed_and_cubeA_grasped]
         )
-
         # pass condition for stage 3
         cubes_placed = info["is_cubeA_on_cubeB"] * info["cubeB_placed"]
-
         # Stage 4: get both robots to stop grasping
         gripper_width = (self.left_agent.robot.get_qlimits()[0, -1, 1] * 2).to(
             self.device
@@ -258,14 +256,14 @@ class TwoRobotStackCube(BaseEnv):
         ungrasp_reward_right[~info["is_cubeB_grasped"]] = 1.0
 
         reward[cubes_placed] = (
-            6 + (ungrasp_reward_left + ungrasp_reward_right)[cubes_placed] / 2
+            8 + (ungrasp_reward_left + ungrasp_reward_right)[cubes_placed] / 2
         )
 
-        reward[info["success"]] = 8
+        reward[info["success"]] = 10
 
         return reward
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        return self.compute_dense_reward(obs=obs, action=action, info=info) / 8
+        return self.compute_dense_reward(obs=obs, action=action, info=info) / 10

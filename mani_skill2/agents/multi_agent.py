@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import Dict, List
+from typing import Dict, Generic, List, TypeVar
 
 import torch
 from gymnasium import spaces
@@ -8,10 +8,14 @@ from mani_skill2.agents.base_agent import BaseAgent
 from mani_skill2.envs.scene import ManiSkillScene
 from mani_skill2.utils.common import flatten_dict_keys
 
+T = TypeVar("T", List)
 
-class MultiAgent(BaseAgent):
+
+class MultiAgent(BaseAgent, Generic[T]):
     # def __init__(self, scene: ManiSkillScene, control_freq: int, control_mode: str = None, fix_root_link=True):
     #     super().__init__(scene, control_freq, control_mode, fix_root_link)
+    agents: T
+
     def __init__(self, agents: List[BaseAgent]):
         self.agents = agents
         self.agents_dict: Dict[str, BaseAgent] = OrderedDict()

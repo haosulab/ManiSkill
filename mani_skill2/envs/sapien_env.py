@@ -2,7 +2,7 @@ import copy
 import os
 from collections import OrderedDict
 from functools import cached_property
-from typing import Any, Dict, List, Sequence, Union
+from typing import Any, Dict, List, Sequence, Tuple, Union
 
 import gymnasium as gym
 import numpy as np
@@ -96,6 +96,9 @@ class BaseEnv(gym.Env):
     """
 
     # fmt: off
+    SUPPORTED_ROBOTS: List[Union[str, Tuple[str]]]
+    """Override this to enforce which robots or tuples of robots together are supported in the task. During env creation,
+    setting robot_uids auto loads all desired robots into the scene, but not all tasks are designed to support some robot setups"""
     SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "sensor_data", "rgbd", "pointcloud")
     SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "sparse")
     SUPPORTED_RENDER_MODES = ("human", "rgb_array", "sensors")
@@ -151,6 +154,8 @@ class BaseEnv(gym.Env):
         self._custom_sensor_cfgs = sensor_cfgs
         self._custom_human_render_camera_cfgs = human_render_camera_cfgs
         self.robot_uids = robot_uids
+        if self.SUPPORTED_ROBOTS is not None:
+            assert robot_uids in self.SUPPORTED_ROBOTS
         if num_envs > 1 or force_use_gpu_sim:
             if not sapien.physx.is_gpu_enabled():
                 sapien.physx.enable_gpu()

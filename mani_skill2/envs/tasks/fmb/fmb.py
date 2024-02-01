@@ -10,6 +10,7 @@ from transforms3d.euler import euler2quat
 from mani_skill2.agents.robots import (  # a dictionary mapping robot name to robot class that inherits BaseAgent
     ROBOTS,
 )
+from mani_skill2.agents.robots.panda.panda import Panda
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.building.actor_builder import ActorBuilder
@@ -38,6 +39,9 @@ class FMBAssembly1Env(BaseEnv):
 
     Visualization: TODO: ADD LINK HERE
     """
+
+    SUPPORTED_ROBOTS = ["panda"]
+    agent: Panda
 
     def _register_sensors(self):
         pose = look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])

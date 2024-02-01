@@ -1,10 +1,13 @@
 from collections import OrderedDict
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 import numpy as np
 import sapien
 import torch
 
+from mani_skill2.agents.robots.fetch.fetch import Fetch
+from mani_skill2.agents.robots.panda.panda import Panda
+from mani_skill2.agents.robots.xmate3.xmate3 import Xmate3Robotiq
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.envs.utils.randomization.pose import random_quaternions
 from mani_skill2.sensors.camera import CameraConfig
@@ -42,6 +45,9 @@ class PickSingleYCBEnv(BaseEnv):
 
     Visualization: link to a video/gif of the task being solved
     """
+
+    SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
+    agent: Union[Panda, Xmate3Robotiq, Fetch]
 
     goal_thresh = 0.025
 

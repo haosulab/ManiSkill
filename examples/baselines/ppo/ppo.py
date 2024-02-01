@@ -216,8 +216,8 @@ if __name__ == "__main__":
     def clip_action(action: torch.Tensor):
         return torch.clamp(action.detach(), action_space_low, action_space_high)
 
-    # model_path = "/home/stao/work/research/maniskill/ManiSkill2/examples/baselines/ppo/runs/StackCube-v1__ppo__1__1706294550/ppo_3076.cleanrl_model"
-    # agent.load_state_dict(torch.load(model_path))
+    model_path = "/home/stao/work/research/maniskill/ManiSkill2/examples/baselines/ppo/runs/TwoRobotStackCube-v1__ppo__1__1706777637/ppo_751.cleanrl_model"
+    agent.load_state_dict(torch.load(model_path))
     for iteration in range(1, args.num_iterations + 1):
         timeout_bonus = torch.zeros((args.num_steps, args.num_envs), device=device)
         if iteration % args.eval_freq == 1:
