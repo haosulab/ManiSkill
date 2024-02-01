@@ -210,16 +210,18 @@ class TwoRobotStackCube(BaseEnv):
         # pass condition for stage 1
         place_stage_reached = info["is_cubeA_grasped"] * info["is_cubeB_grasped"]
 
-        # Stage 2: Place bottom cube
+        # Stage 2: Place bottom cube and still hold to cube A
         # place reward for bottom cube (cube B)
         cubeB_to_goal_dist = torch.linalg.norm(
             cubeB_pos[:, :2] - self.goal_region.pose.p[..., :2], axis=1
         )
         place_reward = 1 - torch.tanh(5 * cubeB_to_goal_dist)
-        reward[place_stage_reached] = 2 + place_reward[place_stage_reached]
+        reward[place_stage_reached] = (
+            2 + (place_reward + info["is_cubeA_grasped"])[place_stage_reached] / 2
+        )
 
         # pass condition for stage 2
-        cubeB_placed = info["cubeB_placed"]
+        cubeB_placed_and_cubeA_grasped = info["cubeB_placed"] * info["is_cubeA_grasped"]
 
         # Stage 3: Place top cube
         # place reward for top cube (cube A)
@@ -228,10 +230,12 @@ class TwoRobotStackCube(BaseEnv):
         )
         cubeA_to_goal_dist = torch.linalg.norm(goal_xyz - cubeA_pos, axis=1)
         place_reward = 1 - torch.tanh(5 * cubeA_to_goal_dist)
-        reward[cubeB_placed] = 3 + place_reward[cubeB_placed]
+        reward[cubeB_placed_and_cubeA_grasped] = (
+            4 + place_reward[cubeB_placed_and_cubeA_grasped]
+        )
 
         # pass condition for stage 3
-        cubes_placed = info["is_cubeA_on_cubeB"] * cubeB_placed
+        cubes_placed = info["is_cubeA_on_cubeB"] * info["cubeB_placed"]
 
         # ungrasp reward for both robots
 
@@ -250,20 +254,15 @@ class TwoRobotStackCube(BaseEnv):
         )
         ungrasp_reward_right[~info["is_cubeB_grasped"]] = 1.0
 
-        reward[cubes_placed] = 4 + (ungrasp_reward_left + ungrasp_reward_right) / 2
+        reward[cubes_placed] = (
+            6 + ((ungrasp_reward_left + ungrasp_reward_right) / 2)[cubes_placed]
+        )
 
-        # v = torch.linalg.norm(self.cubeA.linear_velocity, axis=1)
-        # av = torch.linalg.norm(self.cubeA.angular_velocity, axis=1)
-        # static_reward = 1 - torch.tanh(v * 10 + av)
-        # reward[info["is_cubeA_on_cubeB"]] = (
-        #     6 + (ungrasp_reward + static_reward) / 2.0
-        # )[info["is_cubeA_on_cubeB"]]
-
-        reward[info["success"]] = 5
+        reward[info["success"]] = 8
 
         return reward
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        return self.compute_dense_reward(obs=obs, action=action, info=info) / 5
+        return self.compute_dense_reward(obs=obs, action=action, info=info) / 8

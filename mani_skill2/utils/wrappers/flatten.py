@@ -1,3 +1,5 @@
+import copy
+
 import gymnasium as gym
 import gymnasium.spaces.utils
 
@@ -30,6 +32,9 @@ class FlattenActionSpaceWrapper(gym.ActionWrapper):
         super().__init__(env)
 
         self.action_space = gymnasium.spaces.utils.flatten_space(self.action_space)
+        self._orig_single_action_space = copy.deepcopy(
+            self.base_env.single_action_space
+        )
         self.single_action_space = gymnasium.spaces.utils.flatten_space(
             self.base_env.single_action_space
         )
@@ -46,7 +51,7 @@ class FlattenActionSpaceWrapper(gym.ActionWrapper):
         # TODO (stao): This code only supports flat dictionary at the moment
         unflattened_action = dict()
         start, end = 0, 0
-        for k, space in self.base_env.agent.single_action_space.items():
+        for k, space in self._orig_single_action_space.items():
             end += space.shape[0]
             unflattened_action[k] = action[:, start:end]
             start += space.shape[0]
