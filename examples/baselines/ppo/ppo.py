@@ -16,6 +16,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 # ManiSkill specific imports
 import mani_skill2.envs
+from mani_skill2.utils.wrappers.flatten import FlattenActionSpaceWrapper
 from mani_skill2.utils.wrappers.record import RecordEpisode
 from mani_skill2.vector.wrappers.gymnasium import ManiSkillVectorEnv
 
@@ -177,7 +178,9 @@ if __name__ == "__main__":
     # env setup
     sapien.physx.set_gpu_memory_config(found_lost_pairs_capacity=2**26, max_rigid_patch_count=200000)
     env_kwargs = dict(obs_mode="state", control_mode="pd_joint_delta_pos", render_mode="rgb_array", sim_freq=100, control_freq=20)
-    envs = ManiSkillVectorEnv(args.env_id, args.num_envs, env_kwargs)
+    envs = gym.make(args.env_id, num_envs=args.num_eval_envs, **env_kwargs)
+    envs = FlattenActionSpaceWrapper(envs)
+    envs = ManiSkillVectorEnv(envs, args.num_envs, env_kwargs)
     eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, **env_kwargs)
     if args.capture_video:
         eval_envs = RecordEpisode(eval_envs, output_dir=f"runs/{run_name}/videos", save_trajectory=False, video_fps=30)

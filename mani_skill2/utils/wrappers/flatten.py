@@ -30,6 +30,9 @@ class FlattenActionSpaceWrapper(gym.ActionWrapper):
         super().__init__(env)
 
         self.action_space = gymnasium.spaces.utils.flatten_space(self.action_space)
+        self.single_action_space = gymnasium.spaces.utils.flatten_space(
+            self.base_env.single_action_space
+        )
         # self.base_env.single_action_space = gymnasium.spaces.utils.flatten_space(self.base_env.single_action_space)
         # self.base_env._update_obs_space(flatten_state_dict(self.base_env._init_raw_obs))
 

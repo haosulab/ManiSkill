@@ -1,3 +1,4 @@
+import copy
 import os
 from collections import OrderedDict
 from functools import cached_property
@@ -242,6 +243,7 @@ class BaseEnv(gym.Env):
 
         self.action_space = self.agent.action_space
         self.single_action_space = self.agent.single_action_space
+        self._orig_single_action_space = copy.deepcopy(self.single_action_space)
         # initialize the cached properties
         self.single_observation_space
         self.observation_space
@@ -752,7 +754,7 @@ class BaseEnv(gym.Env):
             pass
         elif isinstance(action, np.ndarray) or isinstance(action, torch.Tensor):
             action = to_tensor(action)
-            if action.shape == self.single_action_space.shape:
+            if action.shape == self._orig_single_action_space.shape:
                 action_is_unbatched = True
             set_action = True
         elif isinstance(action, dict):
@@ -767,7 +769,7 @@ class BaseEnv(gym.Env):
                 # assume this is a multi-agent action
                 action = to_tensor(action)
                 for k, a in action.items():
-                    if a.shape == self.single_action_space[k].shape:
+                    if a.shape == self._orig_single_action_space[k].shape:
                         action_is_unbatched = True
                         break
             set_action = True

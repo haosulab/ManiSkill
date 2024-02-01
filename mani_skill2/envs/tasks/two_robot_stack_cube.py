@@ -18,7 +18,7 @@ from mani_skill2.utils.scene_builder.table.table_scene_builder import TableScene
 from mani_skill2.utils.structs.pose import Pose
 
 
-@register_env("TwoRobotStackCube-v1", max_episode_steps=50)
+@register_env("TwoRobotStackCube-v1", max_episode_steps=100)
 class TwoRobotStackCube(BaseEnv):
     """
     Task Description
@@ -95,11 +95,11 @@ class TwoRobotStackCube(BaseEnv):
             torch.zeros((self.num_envs, 3))
             torch.rand((self.num_envs, 2)) * 0.2 - 0.1
             cubeA_xyz = torch.zeros((self.num_envs, 3))
-            cubeA_xyz[:, 0] = torch.rand((self.num_envs, 1)) * 0.2 - 0.1
-            cubeA_xyz[:, 1] = -0.1 - torch.rand((self.num_envs, 1)) * 0.1 - 0.05
+            cubeA_xyz[:, 0] = torch.rand((self.num_envs,)) * 0.2 - 0.1
+            cubeA_xyz[:, 1] = -0.1 - torch.rand((self.num_envs,)) * 0.1 - 0.05
             cubeB_xyz = torch.zeros((self.num_envs, 3))
-            cubeB_xyz[:, 0] = torch.rand((self.num_envs, 1)) * 0.2 - 0.1
-            cubeB_xyz[:, 1] = 0.1 + torch.rand((self.num_envs, 1)) * 0.1 - 0.05
+            cubeB_xyz[:, 0] = torch.rand((self.num_envs,)) * 0.2 - 0.1
+            cubeB_xyz[:, 1] = 0.1 + torch.rand((self.num_envs,)) * 0.1 - 0.05
             cubeA_xyz[:, 2] = 0.02
             cubeB_xyz[:, 2] = 0.02
 
@@ -120,7 +120,7 @@ class TwoRobotStackCube(BaseEnv):
             self.cubeB.set_pose(Pose.create_from_pq(p=cubeB_xyz, q=qs))
 
             target_region_xyz = torch.zeros((self.num_envs, 3))
-            target_region_xyz[:, 0] = torch.rand((self.num_envs, 1)) * 0.2 - 0.1
+            target_region_xyz[:, 0] = torch.rand((self.num_envs,)) * 0.2 - 0.1
             # set a little bit above 0 so the target is sitting on the table
             target_region_xyz[..., 2] = 1e-3
             self.goal_region.set_pose(
@@ -148,21 +148,22 @@ class TwoRobotStackCube(BaseEnv):
         )
         z_flag = torch.abs(offset[..., 2] - self.cube_half_size[..., 2] * 2) <= 0.005
         is_cubeA_on_cubeB = torch.logical_and(xy_flag, z_flag)
+        cubeB_to_goal_dist = torch.linalg.norm(
+            self.cubeB.pose.p[:, :2] - self.goal_region.pose.p[..., :2], axis=1
+        )
+        cubeB_placed = cubeB_to_goal_dist < self.goal_radius
         # TODO (stao): GPU sim can be fast but unstable. Angular velocity is rather high despite it not really rotating
-        is_cubeA_static = self.cubeA.is_static(lin_thresh=1e-2, ang_thresh=0.5)
+        # is_cubeA_static = self.cubeA.is_static(lin_thresh=1e-2, ang_thresh=0.5)
         is_cubeA_grasped = self.left_agent.is_grasping(self.cubeA)
         is_cubeB_grasped = self.right_agent.is_grasping(self.cubeB)
         success = (
-            is_cubeA_on_cubeB
-            * is_cubeA_static
-            * (~is_cubeA_grasped)
-            * (~is_cubeB_grasped)
+            is_cubeA_on_cubeB * cubeB_placed * (~is_cubeA_grasped) * (~is_cubeB_grasped)
         )
         return {
             "is_cubeA_grasped": is_cubeA_grasped,
             "is_cubeB_grasped": is_cubeB_grasped,
             "is_cubeA_on_cubeB": is_cubeA_on_cubeB,
-            "is_cubeA_static": is_cubeA_static,
+            "cubeB_placed": cubeB_placed,
             "success": success.bool(),
         }
 
@@ -184,48 +185,85 @@ class TwoRobotStackCube(BaseEnv):
         return obs
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        # reaching reward
+        # Stage 1: Reach and grasp
+        # reaching reward for both robots to their respective cubes
         cubeA_to_left_arm_tcp_dist = torch.linalg.norm(
             self.left_agent.tcp.pose.p - self.cubeA.pose.p, axis=1
         )
         cubeB_to_right_arm_tcp_dist = torch.linalg.norm(
             self.right_agent.tcp.pose.p - self.cubeB.pose.p, axis=1
         )
-        reward = 1 - torch.tanh(5 * cubeA_to_left_arm_tcp_dist)
-        reward += 1 - torch.tanh(5 * cubeB_to_right_arm_tcp_dist)
+        reach_reward = (
+            1
+            - torch.tanh(5 * cubeA_to_left_arm_tcp_dist)
+            + 1
+            - torch.tanh(5 * cubeB_to_right_arm_tcp_dist)
+        )
+        reward = reach_reward / 2
 
-        # grasp and place reward
+        # grasp reward for both robots
         cubeA_pos = self.cubeA.pose.p
         cubeB_pos = self.cubeB.pose.p
+        reward[info["is_cubeA_grasped"]] += 0.5
+        reward[info["is_cubeB_grasped"]] += 0.5
+
+        # pass condition for stage 1
+        place_stage_reached = info["is_cubeA_grasped"] * info["is_cubeB_grasped"]
+
+        # Stage 2: Place bottom cube
+        # place reward for bottom cube (cube B)
+        cubeB_to_goal_dist = torch.linalg.norm(
+            cubeB_pos[:, :2] - self.goal_region.pose.p[..., :2], axis=1
+        )
+        place_reward = 1 - torch.tanh(5 * cubeB_to_goal_dist)
+        reward[place_stage_reached] = 2 + place_reward[place_stage_reached]
+
+        # pass condition for stage 2
+        cubeB_placed = info["cubeB_placed"]
+
+        # Stage 3: Place top cube
+        # place reward for top cube (cube A)
         goal_xyz = torch.hstack(
             [cubeB_pos[:, 0:2], (cubeB_pos[:, 2] + self.cube_half_size[2] * 2)[:, None]]
         )
         cubeA_to_goal_dist = torch.linalg.norm(goal_xyz - cubeA_pos, axis=1)
-        place_reward = 1 - torch.tanh(5.0 * cubeA_to_goal_dist)
+        place_reward = 1 - torch.tanh(5 * cubeA_to_goal_dist)
+        reward[cubeB_placed] = 3 + place_reward[cubeB_placed]
 
-        reward[info["is_cubeA_grasped"]] = (4 + place_reward)[info["is_cubeA_grasped"]]
+        # pass condition for stage 3
+        cubes_placed = info["is_cubeA_on_cubeB"] * cubeB_placed
 
-        # ungrasp and static reward
+        # ungrasp reward for both robots
+
+        # reward[info["is_cubeA_grasped"]] = (4 + place_reward)[info["is_cubeA_grasped"]]
+
+        # # ungrasp and static reward
         gripper_width = (self.left_agent.robot.get_qlimits()[0, -1, 1] * 2).to(
             self.device
         )  # NOTE: hard-coded with panda
-        is_cubeA_grasped = info["is_cubeA_grasped"]
-        ungrasp_reward = (
+        ungrasp_reward_left = (
             torch.sum(self.left_agent.robot.get_qpos()[:, -2:], axis=1) / gripper_width
         )
-        ungrasp_reward[~is_cubeA_grasped] = 1.0
-        v = torch.linalg.norm(self.cubeA.linear_velocity, axis=1)
-        av = torch.linalg.norm(self.cubeA.angular_velocity, axis=1)
-        static_reward = 1 - torch.tanh(v * 10 + av)
-        reward[info["is_cubeA_on_cubeB"]] = (
-            6 + (ungrasp_reward + static_reward) / 2.0
-        )[info["is_cubeA_on_cubeB"]]
+        ungrasp_reward_left[~info["is_cubeA_grasped"]] = 1.0
+        ungrasp_reward_right = (
+            torch.sum(self.left_agent.robot.get_qpos()[:, -2:], axis=1) / gripper_width
+        )
+        ungrasp_reward_right[~info["is_cubeB_grasped"]] = 1.0
 
-        reward[info["success"]] = 8
+        reward[cubes_placed] = 4 + (ungrasp_reward_left + ungrasp_reward_right) / 2
+
+        # v = torch.linalg.norm(self.cubeA.linear_velocity, axis=1)
+        # av = torch.linalg.norm(self.cubeA.angular_velocity, axis=1)
+        # static_reward = 1 - torch.tanh(v * 10 + av)
+        # reward[info["is_cubeA_on_cubeB"]] = (
+        #     6 + (ungrasp_reward + static_reward) / 2.0
+        # )[info["is_cubeA_on_cubeB"]]
+
+        reward[info["success"]] = 5
 
         return reward
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        return self.compute_dense_reward(obs=obs, action=action, info=info) / 8
+        return self.compute_dense_reward(obs=obs, action=action, info=info) / 5
