@@ -94,10 +94,10 @@ class TwoRobotStackCube(BaseEnv):
             torch.rand((self.num_envs, 2)) * 0.2 - 0.1
             cubeA_xyz = torch.zeros((self.num_envs, 3))
             cubeA_xyz[:, 0] = torch.rand((self.num_envs,)) * 0.1 - 0.05
-            cubeA_xyz[:, 1] = -0.1 - torch.rand((self.num_envs,)) * 0.1 - 0.05
+            cubeA_xyz[:, 1] = -0.15 - torch.rand((self.num_envs,)) * 0.1 + 0.05
             cubeB_xyz = torch.zeros((self.num_envs, 3))
             cubeB_xyz[:, 0] = torch.rand((self.num_envs,)) * 0.1 - 0.05
-            cubeB_xyz[:, 1] = 0.1 + torch.rand((self.num_envs,)) * 0.1 - 0.05
+            cubeB_xyz[:, 1] = 0.15 + torch.rand((self.num_envs,)) * 0.1 - 0.05
             cubeA_xyz[:, 2] = 0.02
             cubeB_xyz[:, 2] = 0.02
 
@@ -172,6 +172,7 @@ class TwoRobotStackCube(BaseEnv):
         )
         if "state" in self.obs_mode:
             obs.update(
+                goal_region_pos=self.goal_region.pose.p,
                 cubeA_pose=self.cubeA.pose.raw_pose,
                 cubeB_pose=self.cubeB.pose.raw_pose,
                 left_arm_tcp_to_cubeA_pos=self.cubeA.pose.p
@@ -188,14 +189,18 @@ class TwoRobotStackCube(BaseEnv):
         cubeA_to_left_arm_tcp_dist = torch.linalg.norm(
             self.left_agent.tcp.pose.p - self.cubeA.pose.p, axis=1
         )
-        cubeB_to_right_arm_tcp_dist = torch.linalg.norm(
-            self.right_agent.tcp.pose.p - self.cubeB.pose.p, axis=1
+        right_arm_push_pose = Pose.create_from_pq(
+            p=self.cubeB.pose.p
+            + torch.tensor([0, self.cube_half_size[0] + 0.005, 0], device=self.device)
+        )
+        right_arm_to_push_pose_dist = torch.linalg.norm(
+            right_arm_push_pose.p - self.right_agent.tcp.pose.p, axis=1
         )
         reach_reward = (
             1
             - torch.tanh(5 * cubeA_to_left_arm_tcp_dist)
             + 1
-            - torch.tanh(5 * cubeB_to_right_arm_tcp_dist)
+            - torch.tanh(5 * right_arm_to_push_pose_dist)
         ) / 2
 
         # grasp reward for left robot which needs to lift cubeA up eventually
@@ -226,9 +231,9 @@ class TwoRobotStackCube(BaseEnv):
         cubeA_to_goal_dist = torch.linalg.norm(goal_xyz - cubeA_pos, axis=1)
         place_reward = 1 - torch.tanh(5 * cubeA_to_goal_dist)
 
-        # move right arm as close as possible to the y=0.1 line
+        # move right arm as close as possible to the y=0.2 line
         right_arm_leave_reward = 1 - torch.tanh(
-            5 * self.right_agent.tcp.pose.p[:, 1] - 0.1
+            5 * (self.right_agent.tcp.pose.p[:, 1] - 0.2).abs()
         )
         stage_3_reward = place_reward + right_arm_leave_reward
         reward[cubeB_placed_and_cubeA_grasped] = (

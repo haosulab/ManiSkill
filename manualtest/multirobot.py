@@ -12,7 +12,7 @@ if __name__ == "__main__":
     # , "StackCube-v1", "PickCube-v1", "PushCube-v1", "PickSingleYCB-v1", "OpenCabinet-v1"
     num_envs = 1
     HQ_RENDER = True
-    VIS = False
+    VIS = True
     sapien.physx.set_gpu_memory_config(
         found_lost_pairs_capacity=2**26,
         max_rigid_patch_count=2**19,
@@ -27,7 +27,7 @@ if __name__ == "__main__":
             reward_mode="normalized_dense",
             render_mode="rgb_array",
             control_mode="pd_joint_delta_pos",
-            human_render_camera_cfgs=dict(render_camera=dict(width=2048, height=2048)),
+            human_render_camera_cfgs=dict(render_camera=dict(width=1024, height=1024)),
             sim_freq=100,
             control_freq=20,
             force_use_gpu_sim=False,
