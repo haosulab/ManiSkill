@@ -19,6 +19,10 @@ Difficulty rankings (training on 4090 GPU):
 
 optimal solution horizon: average time to solve the task when uniformally performing environment resets with a close to optimal policy 
 
+Verified tasks that PPO can solve
+
 env_id, task code, max_episode_steps, optimal solution_horizon, difficulty
-PushCube-v0, push_cube.py, 50, ~12, 1
-PickCube-v0, pick_cube.py, 100, ~20, 3?
+PushCube-v1, push_cube.py, 50, ~12, 1
+PickCube-v1, pick_cube.py, 50, ~15, 3?
+StackCube-v1, stack_cube.py, 50, ~15, 4?
+TwoRobotStackCube-v1, two_robot_stack_cube.py, 100, ~20
