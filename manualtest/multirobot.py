@@ -10,7 +10,7 @@ from mani_skill2.utils.wrappers.flatten import FlattenActionSpaceWrapper
 if __name__ == "__main__":
     # sapien.set_log_level("info")
     # , "StackCube-v1", "PickCube-v1", "PushCube-v1", "PickSingleYCB-v1", "OpenCabinet-v1"
-    num_envs = 1
+    num_envs = 2
     sapien.physx.set_gpu_memory_config(
         found_lost_pairs_capacity=2**26,
         max_rigid_patch_count=2**19,
@@ -30,6 +30,7 @@ if __name__ == "__main__":
             force_use_gpu_sim=False,
         )
         env = FlattenActionSpaceWrapper(env)
+        env = RecordEpisode(env, output_dir="videos/manual_test")
         # env.reset(seed=4, options=dict(reconfigure=True)) # wierd qvel speeds
         # env.reset(seed=52, options=dict(reconfigure=True))
         env.reset(seed=1)

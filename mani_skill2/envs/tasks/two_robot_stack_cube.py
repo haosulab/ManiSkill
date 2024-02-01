@@ -58,8 +58,8 @@ class TwoRobotStackCube(BaseEnv):
         ]
 
     def _register_human_render_cameras(self):
-        pose = look_at([1.0, 0, 0.75], [0.0, 0.0, 0.25])
-        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
+        pose = look_at([1.4, 0.8, 0.75], [0.0, 0.1, 0.1])
+        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)
 
     def _load_actors(self):
         self.cube_half_size = to_tensor([0.02] * 3)
