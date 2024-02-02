@@ -35,7 +35,11 @@ parser.add_argument(
 )
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument(
-    "-f", "--format", type=str, default="stdout", help="format of results. Can be stdout or json."
+    "-f",
+    "--format",
+    type=str,
+    default="stdout",
+    help="format of results. Can be stdout or json.",
 )
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
@@ -61,6 +65,7 @@ import torch
 from omni.isaac.orbit_tasks.utils import parse_env_cfg
 from profiling import Profiler
 
+
 def main():
     """Zero actions agent with Orbit environment."""
     profiler = Profiler(args_cli.format)
@@ -75,10 +80,10 @@ def main():
     print(
         f"Benchmarking Isaac Orbit GPU Simulation with {num_envs} parallel environments"
     )
+    print(f"env_id={args_cli.task}")
     print(
-        f"env_id={args_cli.task}"
+        f"sim_freq={1 / env.unwrapped.physics_dt}, control_freq={1 / env.unwrapped.step_dt}"
     )
-    print(f"sim_freq={1 / env.unwrapped.physics_dt}, control_freq={1 / env.unwrapped.step_dt}")
     print(f"observation space: {env.observation_space}")
     print(f"action space: {env.unwrapped.single_action_space}")
     print(
@@ -95,7 +100,8 @@ def main():
         with profiler.profile("env.step", total_steps=N, num_envs=num_envs):
             for i in range(N):
                 actions = (
-                    2 * torch.rand(env.action_space.shape, device=env.unwrapped.device) - 1
+                    2 * torch.rand(env.action_space.shape, device=env.unwrapped.device)
+                    - 1
                 )
                 obs, rew, terminated, truncated, info = env.step(actions)
         profiler.log_stats("env.step")
@@ -106,7 +112,8 @@ def main():
         with profiler.profile("env.step+env.reset", total_steps=N, num_envs=num_envs):
             for i in range(N):
                 actions = (
-                    2 * torch.rand(env.action_space.shape, device=env.unwrapped.device) - 1
+                    2 * torch.rand(env.action_space.shape, device=env.unwrapped.device)
+                    - 1
                 )
                 obs, rew, terminated, truncated, info = env.step(actions)
                 if i % 200 == 0 and i != 0:
