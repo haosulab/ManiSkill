@@ -20,7 +20,7 @@ if __name__ == "__main__":
             num_envs=num_envs,
             enable_shadow=True,
             obs_mode="rgbd",
-            robot_uid="fetch",
+            robot_uids="fetch",
             reward_mode="normalized_dense",
             render_mode="rgb_array",
             control_mode="pd_joint_delta_pos",

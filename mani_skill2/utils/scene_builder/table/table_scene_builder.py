@@ -8,6 +8,7 @@ import sapien
 import sapien.render
 from transforms3d.euler import euler2quat
 
+from mani_skill2.agents.multi_agent import MultiAgent
 from mani_skill2.utils.building.ground import build_ground
 from mani_skill2.utils.scene_builder import SceneBuilder
 
@@ -50,7 +51,7 @@ class TableSceneBuilder(SceneBuilder):
         self.table.set_pose(
             sapien.Pose(p=[-0.12, 0, -self.table_height], q=euler2quat(0, 0, np.pi / 2))
         )
-        if self.env.robot_uid == "panda":
+        if self.env.robot_uids == "panda":
             qpos = np.array(
                 [
                     0.0,
@@ -69,7 +70,7 @@ class TableSceneBuilder(SceneBuilder):
             )
             self.env.agent.reset(qpos)
             self.env.agent.robot.set_pose(sapien.Pose([-0.615, 0, 0]))
-        elif self.env.robot_uid == "panda_realsensed435":
+        elif self.env.robot_uids == "panda_realsensed435":
             # fmt: off
             qpos = np.array(
                 [0.0, np.pi / 8, 0, -np.pi * 5 / 8, 0, np.pi * 3 / 4, -np.pi / 4, 0.04, 0.04]
@@ -80,7 +81,7 @@ class TableSceneBuilder(SceneBuilder):
             )
             self.env.agent.reset(qpos)
             self.env.agent.robot.set_pose(sapien.Pose([-0.615, 0, 0]))
-        elif self.env.robot_uid == "xmate3_robotiq":
+        elif self.env.robot_uids == "xmate3_robotiq":
             qpos = np.array(
                 [0, np.pi / 6, 0, np.pi / 3, 0, np.pi / 2, -np.pi / 2, 0, 0]
             )
@@ -89,7 +90,7 @@ class TableSceneBuilder(SceneBuilder):
             )
             self.env.agent.reset(qpos)
             self.env.agent.robot.set_pose(sapien.Pose([-0.562, 0, 0]))
-        elif self.env.robot_uid == "fetch":
+        elif self.env.robot_uids == "fetch":
             qpos = np.array(
                 [
                     0,
@@ -122,8 +123,34 @@ class TableSceneBuilder(SceneBuilder):
             cg = cs.get_collision_groups()
             cg[2] |= FETCH_UNIQUE_COLLISION_BIT
             cs.set_collision_groups(cg)
+        elif self.env.robot_uids == ("panda", "panda"):
+            agent: MultiAgent = self.env.agent
+            qpos = np.array(
+                [
+                    0.0,
+                    np.pi / 8,
+                    0,
+                    -np.pi * 5 / 8,
+                    0,
+                    np.pi * 3 / 4,
+                    np.pi / 4,
+                    0.04,
+                    0.04,
+                ]
+            )
+            qpos[:-2] += self.env._episode_rng.normal(
+                0, self.robot_init_qpos_noise, len(qpos) - 2
+            )
+            agent.agents[1].reset(qpos)
+            agent.agents[1].robot.set_pose(
+                sapien.Pose([0, 0.75, 0], q=euler2quat(0, 0, -np.pi / 2))
+            )
+            agent.agents[0].reset(qpos)
+            agent.agents[0].robot.set_pose(
+                sapien.Pose([0, -0.75, 0], q=euler2quat(0, 0, np.pi / 2))
+            )
         else:
-            raise NotImplementedError(self.env.robot_uid)
+            raise NotImplementedError(self.env.robot_uids)
 
     @property
     def scene_objects(self):

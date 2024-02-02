@@ -3,10 +3,12 @@ import numpy as np
 import pytest
 import torch
 
+from mani_skill2.agents.multi_agent import MultiAgent
 from mani_skill2.envs.sapien_env import BaseEnv
 from tests.utils import (
     CONTROL_MODES_STATIONARY_SINGLE_ARM,
     ENV_IDS,
+    MULTI_AGENT_ENV_IDS,
     OBS_MODES,
     ROBOTS,
     STATIONARY_ENV_IDS,
@@ -141,8 +143,8 @@ def test_env_reconfiguration(env_id):
 
 @pytest.mark.gpu_sim
 @pytest.mark.parametrize("env_id", ENV_IDS)
-@pytest.mark.parametrize("robot_uid", ROBOTS)
-def test_robots(env_id, robot_uid):
+@pytest.mark.parametrize("robot_uids", ROBOTS)
+def test_robots(env_id, robot_uids):
     if env_id in [
         "PandaAvoidObstacles-v0",
         "PegInsertionSide-v0",
@@ -154,9 +156,24 @@ def test_robots(env_id, robot_uid):
         "MoveBucket-v1",
     ]:
         pytest.skip(reason=f"Env {env_id} does not support robots other than panda")
-    env = gym.make(env_id, num_envs=16, robot_uid=robot_uid)
+    env = gym.make(env_id, num_envs=16, robot_uids=robot_uids)
     env.reset()
     action_space = env.action_space
+    for _ in range(5):
+        env.step(action_space.sample())
+    env.close()
+    del env
+
+
+@pytest.mark.gpu_sim
+@pytest.mark.parametrize("env_id", MULTI_AGENT_ENV_IDS)
+def test_multi_agent(env_id):
+    env = gym.make(env_id, num_envs=16)
+    env.reset()
+    action_space = env.action_space
+    assert isinstance(action_space, gym.spaces.Dict)
+    assert isinstance(env.unwrapped.single_action_space, gym.spaces.Dict)
+    assert isinstance(env.unwrapped.agent, MultiAgent)
     for _ in range(5):
         env.step(action_space.sample())
     env.close()

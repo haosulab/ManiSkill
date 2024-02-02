@@ -23,6 +23,7 @@ import torch
 import torch.random
 from transforms3d.euler import euler2quat
 
+from mani_skill2.agents.robots.fetch.fetch import Fetch
 from mani_skill2.agents.robots.panda.panda import Panda
 from mani_skill2.agents.robots.xmate3.xmate3 import Xmate3Robotiq
 from mani_skill2.envs.sapien_env import BaseEnv
@@ -55,16 +56,18 @@ class PushCubeEnv(BaseEnv):
     Visualization: TODO: ADD LINK HERE
     """
 
+    SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
+
     # Specify some supported robot types
-    agent: Union[Panda, Xmate3Robotiq]
+    agent: Union[Panda, Xmate3Robotiq, Fetch]
 
     # set some commonly used values
     goal_radius = 0.1
     cube_half_size = 0.02
 
-    def __init__(self, *args, robot_uid="panda", robot_init_qpos_noise=0.02, **kwargs):
+    def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
         self.robot_init_qpos_noise = robot_init_qpos_noise
-        super().__init__(*args, robot_uid=robot_uid, **kwargs)
+        super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     def _register_sensors(self):
         # registers one 128x128 camera looking at the robot, cube, and target

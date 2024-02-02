@@ -13,7 +13,9 @@ from mani_skill2.utils.sapien_utils import get_obj_by_name
 
 
 class DummyMobileAgent(BaseAgent):
-    def __init__(self, scene, control_freq, control_mode=None, fix_root_link=True):
+    def __init__(
+        self, scene, control_freq, control_mode=None, fix_root_link=True, agent_idx=None
+    ):
         if control_mode is None:  # if user did not specify a control_mode
             control_mode = "base_pd_joint_vel_arm_pd_joint_vel"
         super().__init__(
@@ -21,6 +23,7 @@ class DummyMobileAgent(BaseAgent):
             control_freq,
             control_mode=control_mode,
             fix_root_link=fix_root_link,
+            agent_idx=agent_idx,
         )
 
     def _after_init(self):

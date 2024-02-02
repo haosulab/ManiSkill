@@ -42,6 +42,7 @@ class Xmate3Robotiq(BaseAgent):
         control_freq: int,
         control_mode: str = None,
         fix_root_link=True,
+        agent_idx=None,
     ):
         self.arm_joint_names = [
             "joint1",
@@ -65,7 +66,7 @@ class Xmate3Robotiq(BaseAgent):
         self.gripper_force_limit = 100
 
         self.ee_link_name = "grasp_convenient_link"
-        super().__init__(scene, control_freq, control_mode, fix_root_link)
+        super().__init__(scene, control_freq, control_mode, fix_root_link, agent_idx)
 
     def _after_init(self):
         self.finger1_link = get_obj_by_name(

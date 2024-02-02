@@ -1,13 +1,15 @@
+from __future__ import annotations
+
 from collections import OrderedDict
-from typing import Dict, Union
+from typing import TYPE_CHECKING, Dict, Union
 
 import numpy as np
 import sapien
 import sapien.physx as physx
+import torch
 from gymnasium import spaces
 
 from mani_skill2 import format_path
-from mani_skill2.envs.scene import ManiSkillScene
 from mani_skill2.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill2.utils.sapien_utils import (
     apply_urdf_config,
@@ -24,6 +26,9 @@ from .controllers.base_controller import (
     DictController,
 )
 
+if TYPE_CHECKING:
+    from mani_skill2.envs.scene import ManiSkillScene
+
 
 class BaseAgent:
     """Base class for agents.
@@ -36,6 +41,7 @@ class BaseAgent:
         control_mode: uid of controller to use
         fix_root_link: whether to fix the robot root link
         config: agent configuration
+        agent_idx: an index for this agent in a multi-agent task setup If None, the task should be single-agent
     """
 
     uid: str
@@ -56,9 +62,11 @@ class BaseAgent:
         control_freq: int,
         control_mode: str = None,
         fix_root_link=True,
+        agent_idx: int = None,
     ):
         self.scene = scene
         self._control_freq = control_freq
+        self._agent_idx = agent_idx
 
         # URDF
         self.fix_root_link = fix_root_link
@@ -73,6 +81,10 @@ class BaseAgent:
         self._load_articulation()
         self._after_loading_articulation()
 
+    @property
+    def device(self):
+        return self.scene.device
+
     def initialize(self):
         """
         Initialize the agent, which includes running _after_init() and initializing/resetting the controller
@@ -86,6 +98,8 @@ class BaseAgent:
         """
         loader = self.scene.create_urdf_loader()
         loader.name = self.uid
+        if self._agent_idx is not None:
+            loader.name = f"{self.uid}-agent-{self._agent_idx}"
         loader.fix_root_link = self.fix_root_link
 
         urdf_path = format_path(str(self.urdf_path))
@@ -94,7 +108,6 @@ class BaseAgent:
         check_urdf_config(urdf_config)
 
         # TODO(jigu): support loading multiple convex collision shapes
-
         apply_urdf_config(loader, urdf_config)
         self.robot: Articulation = loader.load(urdf_path)
         assert self.robot is not None, f"Fail to load URDF from {urdf_path}"
@@ -242,8 +255,8 @@ class BaseAgent:
         """
         if init_qpos is not None:
             self.robot.set_qpos(init_qpos)
-        self.robot.set_qvel(np.zeros(self.robot.max_dof))
-        self.robot.set_qf(np.zeros(self.robot.max_dof))
+        self.robot.set_qvel(torch.zeros(self.robot.max_dof, device=self.device))
+        self.robot.set_qf(torch.zeros(self.robot.max_dof, device=self.device))
         self.set_control_mode(self._default_control_mode)
 
     # -------------------------------------------------------------------------- #

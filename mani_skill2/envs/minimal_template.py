@@ -1,9 +1,11 @@
 from collections import OrderedDict
-from typing import Any, Dict
+from typing import Any, Dict, Union
 
 import numpy as np
 import torch
 
+from mani_skill2.agents.robots.fetch.fetch import Fetch
+from mani_skill2.agents.robots.panda.panda import Panda
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.registration import register_env
@@ -26,9 +28,12 @@ class CustomEnv(BaseEnv):
     Visualization: link to a video/gif of the task being solved
     """
 
-    def __init__(self, *args, robot_uid="panda", robot_init_qpos_noise=0.02, **kwargs):
+    SUPPORTED_ROBOTS = ["panda", "fetch"]
+    agent: Union[Panda, Fetch]
+
+    def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
         self.robot_init_qpos_noise = robot_init_qpos_noise
-        super().__init__(*args, robot_uid=robot_uid, **kwargs)
+        super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     def _register_sensors(self):
         pose = look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])

@@ -43,7 +43,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
     def __init__(
         self,
         *args,
-        robot_uid="fetch",
+        robot_uids="fetch",
         robot_init_qpos_noise=0.02,
         **kwargs,
     ):
@@ -52,7 +52,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
         self.all_model_ids = np.array(
             list(MODEL_DBS["PartnetMobility"]["model_data"].keys())
         )
-        super().__init__(*args, robot_uid=robot_uid, **kwargs)
+        super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     def _register_sensors(self):
         pose = look_at(eye=[-2.5, -1.5, 1.8], target=[-0.3, 0.5, 0.1])
@@ -184,10 +184,10 @@ class OpenCabinetDrawerEnv(BaseEnv):
             self.target_qpos = qmin + (qmax - qmin) * 0.9
 
             # initialize robot
-            if self.robot_uid == "panda":
+            if self.robot_uids == "panda":
                 self.agent.robot.set_qpos(self.agent.robot.qpos * 0)
                 self.agent.robot.set_pose(Pose.create_from_pq(p=[-1, 0, 0]))
-            elif self.robot_uid == "fetch":
+            elif self.robot_uids == "fetch":
                 qpos = np.array(
                     [
                         0,

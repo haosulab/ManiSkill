@@ -17,13 +17,13 @@ class StationaryManipulationEnv(BaseEnv):
     agent: Union[Panda, Xmate3Robotiq]
 
     def __init__(
-        self, *args, robot_uid=PandaRealSensed435, robot_init_qpos_noise=0.02, **kwargs
+        self, *args, robot_uids=PandaRealSensed435, robot_init_qpos_noise=0.02, **kwargs
     ):
         self.robot_init_qpos_noise = robot_init_qpos_noise
-        super().__init__(*args, robot_uid=robot_uid, **kwargs)
+        super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     def _initialize_agent(self):
-        if self.robot_uid == "panda" or self.robot_uid == "panda_realsensed435":
+        if self.robot_uids == "panda" or self.robot_uids == "panda_realsensed435":
             # fmt: off
             # EE at [0.615, 0, 0.17]
             qpos = np.array(
@@ -35,7 +35,7 @@ class StationaryManipulationEnv(BaseEnv):
             )
             self.agent.reset(qpos)
             self.agent.robot.set_pose(Pose([-0.615, 0, 0]))
-        elif self.robot_uid == "xmate3_robotiq":
+        elif self.robot_uids == "xmate3_robotiq":
             qpos = np.array(
                 [0, np.pi / 6, 0, np.pi / 3, 0, np.pi / 2, -np.pi / 2, 0.04, 0.04]
             )
@@ -45,7 +45,7 @@ class StationaryManipulationEnv(BaseEnv):
             self.agent.reset(qpos)
             self.agent.robot.set_pose(Pose([-0.562, 0, 0]))
         else:
-            raise NotImplementedError(self.robot_uid)
+            raise NotImplementedError(self.robot_uids)
 
     def _register_sensors(self):
         pose = look_at([0.2, 0, 0.4], [0, 0, 0])

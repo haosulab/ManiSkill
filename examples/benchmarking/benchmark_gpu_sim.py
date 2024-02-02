@@ -102,7 +102,7 @@ def parse_args():
     parser.add_argument(
         "--render-mode",
         type=str,
-        default="cameras",
+        default="sensors",
         help="which set of cameras/sensors to render for video saving. 'cameras' value will save a video showing all sensor/camera data in the observation, e.g. rgb and depth. 'rgb_array' value will show a higher quality render of the environment running.",
     ),
     parser.add_argument(

@@ -1,7 +1,8 @@
+import copy
 import os
 from collections import OrderedDict
 from functools import cached_property
-from typing import Any, Dict, List, Sequence, Type, Union
+from typing import Any, Dict, List, Sequence, Tuple, Union
 
 import gymnasium as gym
 import numpy as np
@@ -16,6 +17,7 @@ from sapien.utils import Viewer
 
 from mani_skill2 import logger
 from mani_skill2.agents.base_agent import BaseAgent
+from mani_skill2.agents.multi_agent import MultiAgent
 from mani_skill2.agents.robots import ROBOTS
 from mani_skill2.envs.scene import ManiSkillScene
 from mani_skill2.envs.utils.observations.observations import (
@@ -74,6 +76,8 @@ class BaseEnv(gym.Env):
 
         human_render_camera_cfgs (dict): configurations of human rendering cameras. Similar usage as @sensor_cfgs.
 
+        robot_uids (Union[str, BaseAgent, List[Union[str, BaseAgent]]]): List of robots to instantiate and control in the environment.
+
         scene_cfgs (dict): configurations to modify the physics simulation. These are passed to the sapien.physx.set_scene_config function.
 
         gpu_sim_cfgs (dict): Configurations for GPU simulation if used. # TODO (stao): flesh this explanation out
@@ -92,6 +96,9 @@ class BaseEnv(gym.Env):
     """
 
     # fmt: off
+    SUPPORTED_ROBOTS: List[Union[str, Tuple[str]]]
+    """Override this to enforce which robots or tuples of robots together are supported in the task. During env creation,
+    setting robot_uids auto loads all desired robots into the scene, but not all tasks are designed to support some robot setups"""
     SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "sensor_data", "rgbd", "pointcloud")
     SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "sparse")
     SUPPORTED_RENDER_MODES = ("human", "rgb_array", "sensors")
@@ -104,7 +111,7 @@ class BaseEnv(gym.Env):
     _scene: ManiSkillScene = None
     """the main scene, which manages all sub scenes. In CPU simulation there is only one sub-scene"""
 
-    _agent_cls: Type[BaseAgent]
+    # _agent_cls: Type[BaseAgent]
     agent: BaseAgent
 
     _sensors: Dict[str, BaseSensor]
@@ -134,7 +141,7 @@ class BaseEnv(gym.Env):
         enable_shadow: bool = False,
         sensor_cfgs: dict = None,
         human_render_camera_cfgs: dict = None,
-        robot_uid: Union[str, BaseAgent] = None,
+        robot_uids: Union[str, BaseAgent, List[Union[str, BaseAgent]]] = None,
         scene_cfgs: dict = dict(),
         gpu_sim_cfgs: dict = dict(spacing=20),
         reconfiguration_freq: int = 0,
@@ -146,6 +153,9 @@ class BaseEnv(gym.Env):
         self.scene_cfgs = scene_cfgs
         self._custom_sensor_cfgs = sensor_cfgs
         self._custom_human_render_camera_cfgs = human_render_camera_cfgs
+        self.robot_uids = robot_uids
+        if self.SUPPORTED_ROBOTS is not None:
+            assert robot_uids in self.SUPPORTED_ROBOTS
         if num_envs > 1 or force_use_gpu_sim:
             if not sapien.physx.is_gpu_enabled():
                 sapien.physx.enable_gpu()
@@ -223,14 +233,6 @@ class BaseEnv(gym.Env):
         self.render_mode = render_mode
         self._viewer = None
 
-        if robot_uid is not None:
-            if isinstance(robot_uid, type(BaseAgent)):
-                self._agent_cls = robot_uid
-                robot_uid = self._agent_cls.uid
-            else:
-                self._agent_cls = ROBOTS[robot_uid]
-            self.robot_uid = robot_uid
-
         # Lighting
         self.enable_shadow = enable_shadow
 
@@ -246,6 +248,7 @@ class BaseEnv(gym.Env):
 
         self.action_space = self.agent.action_space
         self.single_action_space = self.agent.single_action_space
+        self._orig_single_action_space = copy.deepcopy(self.single_action_space)
         # initialize the cached properties
         self.single_observation_space
         self.observation_space
@@ -273,10 +276,31 @@ class BaseEnv(gym.Env):
             return self.single_observation_space
 
     def _load_agent(self):
-        agent_cls: Type[BaseAgent] = self._agent_cls
-        self.agent = agent_cls(self._scene, self._control_freq, self._control_mode)
+        # agent_cls: Type[BaseAgent] = self._agent_cls
+        agents = []
+        robot_uids = self.robot_uids
+        if robot_uids is not None:
+            if not isinstance(robot_uids, tuple):
+                robot_uids = [robot_uids]
+            for i, robot_uids in enumerate(robot_uids):
+                if isinstance(robot_uids, type(BaseAgent)):
+                    agent_cls = robot_uids
+                    # robot_uids = self._agent_cls.uid
+                else:
+                    agent_cls = ROBOTS[robot_uids]
+                agent: BaseAgent = agent_cls(
+                    self._scene,
+                    self._control_freq,
+                    self._control_mode,
+                    agent_idx=i if len(robot_uids) > 0 else None,
+                )
+                agent.set_control_mode(agent._default_control_mode)
+                agents.append(agent)
+        if len(agents) == 1:
+            self.agent = agents[0]
+        else:
+            self.agent = MultiAgent(agents)
         # set_articulation_render_material(self.agent.robot, specular=0.9, roughness=0.3)
-        self.agent.set_control_mode(self.agent._default_control_mode)
 
     def _configure_sensors(self):
         self._sensor_cfgs = OrderedDict()
@@ -286,7 +310,7 @@ class BaseEnv(gym.Env):
 
         # Add agent sensors
         self._agent_camera_cfgs = OrderedDict()
-        self._agent_camera_cfgs = parse_camera_cfgs(self._agent_cls.sensor_configs)
+        self._agent_camera_cfgs = parse_camera_cfgs(self.agent.sensor_configs)
         self._sensor_cfgs.update(self._agent_camera_cfgs)
 
     def _register_sensors(
@@ -701,7 +725,7 @@ class BaseEnv(gym.Env):
     # Step
     # -------------------------------------------------------------------------- #
 
-    def step(self, action: Union[None, np.ndarray, Dict]):
+    def step(self, action: Union[None, np.ndarray, torch.Tensor, Dict]):
         action = self.step_action(action)
         self._elapsed_steps += 1
         info = self.get_info()
@@ -726,23 +750,39 @@ class BaseEnv(gym.Env):
                 to_numpy(info),
             )
 
-    def step_action(self, action) -> Union[None, torch.Tensor]:
+    def step_action(
+        self, action: Union[None, np.ndarray, torch.Tensor, Dict]
+    ) -> Union[None, torch.Tensor]:
         set_action = False
+        action_is_unbatched = False
         if action is None:  # simulation without action
             pass
         elif isinstance(action, np.ndarray) or isinstance(action, torch.Tensor):
             action = to_tensor(action)
+            if action.shape == self._orig_single_action_space.shape:
+                action_is_unbatched = True
             set_action = True
         elif isinstance(action, dict):
-            if action["control_mode"] != self.agent.control_mode:
-                self.agent.set_control_mode(action["control_mode"])
-            action = to_tensor(action["action"])
+            if "control_mode" in action:
+                if action["control_mode"] != self.agent.control_mode:
+                    self.agent.set_control_mode(action["control_mode"])
+                action = to_tensor(action["action"])
+            else:
+                assert isinstance(
+                    self.agent, MultiAgent
+                ), "Received a dictionary for an action but there are not multiple robots in the environment"
+                # assume this is a multi-agent action
+                action = to_tensor(action)
+                for k, a in action.items():
+                    if a.shape == self._orig_single_action_space[k].shape:
+                        action_is_unbatched = True
+                        break
             set_action = True
         else:
             raise TypeError(type(action))
 
         if set_action:
-            if self.num_envs == 1 and action.shape == self.single_action_space.shape:
+            if self.num_envs == 1 and action_is_unbatched:
                 action = batch(action)
             self.agent.set_action(action)
             if physx.is_gpu_enabled():
@@ -837,7 +877,7 @@ class BaseEnv(gym.Env):
                 sapien.Scene([self.physx_system, sapien.render.RenderSystem()])
             ]
         # create a "global" scene object that users can work with that is linked with all other scenes created
-        self._scene = ManiSkillScene(sub_scenes)
+        self._scene = ManiSkillScene(sub_scenes, device=self.device)
         self.physx_system.timestep = 1.0 / self._sim_freq
 
     def _clear(self):
@@ -968,7 +1008,8 @@ class BaseEnv(gym.Env):
                 if camera_name is not None and name != camera_name:
                     continue
                 camera.capture()
-                rgb = camera.get_picture("Color")[0, ..., :3]
+                # TODO (stao): the output of this is not the same as gpu setting, its float here
+                rgb = (camera.get_picture("Color")[0, ..., :3] * 255).to(torch.uint8)
                 images.append(rgb)
         if len(images) == 0:
             return None

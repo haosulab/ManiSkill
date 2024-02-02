@@ -21,11 +21,14 @@ mani_skill2/envs/tasks/push_cube.py which is annotated with comments to explain 
 """
 
 from collections import OrderedDict
-from typing import Any, Dict
+from typing import Any, Dict, Union
 
 import numpy as np
 import torch
 
+from mani_skill2.agents.multi_agent import MultiAgent
+from mani_skill2.agents.robots.fetch.fetch import Fetch
+from mani_skill2.agents.robots.panda.panda import Panda
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.registration import register_env
@@ -52,10 +55,23 @@ class CustomEnv(BaseEnv):
     Visualization: link to a video/gif of the task being solved
     """
 
-    # in the __init__ function you can pick a default robot your task should use e.g. the panda robot
-    def __init__(self, *args, robot_uid="panda", robot_init_qpos_noise=0.02, **kwargs):
+    # here you can define a list of robots that this task is built to support and be solved by. This is so that
+    # users won't be permitted to use robots not predefined here. If SUPPORTED_ROBOTS is not defined then users can do anything
+    SUPPORTED_ROBOTS = ["panda", "fetch"]
+    # if you want to say you support multiple robots you can use SUPPORTED_ROBOTS = [["panda", "panda"], ["panda", "fetch"]] etc.
+
+    # to help with programming, you can assert what type of agents are supported like below, and any shared properties of self.agent
+    # become available to typecheckers and auto-completion. E.g. Panda and Fetch both share a property called .tcp (tool center point).
+    agent: Union[Panda, Fetch]
+    # if you want to do typing for multi-agent setups, use this below and specify what possible tuples of robots are permitted by typing
+    # this will then populate agent.agents (list of the instantiated agents) with the right typing
+    # agent: MultiAgent[Union[Tuple[Panda, Panda], Tuple[Panda, Panda, Panda]]]
+
+    # in the __init__ function you can pick a default robot your task should use e.g. the panda robot by setting a default for robot_uids argument
+    # note that if robot_uids is a list of robot uids, then we treat it as a multi-agent setup and load each robot separately.
+    def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
         self.robot_init_qpos_noise = robot_init_qpos_noise
-        super().__init__(*args, robot_uid=robot_uid, **kwargs)
+        super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     """
     Reconfiguration Code

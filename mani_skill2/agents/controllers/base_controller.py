@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from collections import OrderedDict
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import TYPE_CHECKING, Dict, List
 
 import numpy as np
 import sapien
@@ -14,12 +16,14 @@ from mani_skill2.agents.utils import (
     get_active_joint_indices,
     get_joints_by_names,
 )
-from mani_skill2.envs.scene import ManiSkillScene
 from mani_skill2.utils.common import clip_and_scale_action, normalize_action_space
 from mani_skill2.utils.sapien_utils import to_tensor
 from mani_skill2.utils.structs.articulation import Articulation
 from mani_skill2.utils.structs.joint import Joint
 from mani_skill2.utils.structs.types import Array
+
+if TYPE_CHECKING:
+    from mani_skill2.envs.scene import ManiSkillScene
 
 
 class BaseController:

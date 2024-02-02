@@ -1,10 +1,13 @@
 from collections import OrderedDict
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 import numpy as np
 import sapien
 import torch
 
+from mani_skill2.agents.robots.fetch.fetch import Fetch
+from mani_skill2.agents.robots.panda.panda import Panda
+from mani_skill2.agents.robots.xmate3.xmate3 import Xmate3Robotiq
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.envs.utils.randomization.pose import random_quaternions
 from mani_skill2.sensors.camera import CameraConfig
@@ -43,14 +46,17 @@ class PickSingleYCBEnv(BaseEnv):
     Visualization: link to a video/gif of the task being solved
     """
 
+    SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
+    agent: Union[Panda, Xmate3Robotiq, Fetch]
+
     goal_thresh = 0.025
 
-    def __init__(self, *args, robot_uid="panda", robot_init_qpos_noise=0.02, **kwargs):
+    def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         self.model_id = None
         _load_ycb_dataset()
         self.all_model_ids = np.array(list(MODEL_DBS["YCB"]["model_data"].keys()))
-        super().__init__(*args, robot_uid=robot_uid, **kwargs)
+        super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     def _register_sensors(self):
         pose = look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
@@ -123,7 +129,7 @@ class PickSingleYCBEnv(BaseEnv):
             self.goal_site.set_pose(Pose.create_from_pq(goal_xyz))
 
             # Initialize robot arm to a higher position above the table than the default typically used for other table top tasks
-            if self.robot_uid == "panda":
+            if self.robot_uids == "panda":
                 # fmt: off
                 qpos = np.array(
                     [0.0, 0, 0, -np.pi * 2 / 3, 0, np.pi * 2 / 3, np.pi / 4, 0.04, 0.04]
@@ -134,7 +140,7 @@ class PickSingleYCBEnv(BaseEnv):
                 )
                 self.agent.reset(qpos)
                 self.agent.robot.set_root_pose(sapien.Pose([-0.615, 0, 0]))
-            elif self.robot_uid == "xmate3_robotiq":
+            elif self.robot_uids == "xmate3_robotiq":
                 qpos = np.array([0, 0.6, 0, 1.3, 0, 1.3, -1.57, 0, 0])
                 qpos[:-2] += self._episode_rng.normal(
                     0, self.robot_init_qpos_noise, len(qpos) - 2
@@ -142,7 +148,7 @@ class PickSingleYCBEnv(BaseEnv):
                 self.agent.reset(qpos)
                 self.agent.robot.set_root_pose(sapien.Pose([-0.562, 0, 0]))
             else:
-                raise NotImplementedError(self.robot_uid)
+                raise NotImplementedError(self.robot_uids)
 
     def evaluate(self):
         obj_to_goal_pos = self.goal_site.pose.p - self.obj.pose.p
