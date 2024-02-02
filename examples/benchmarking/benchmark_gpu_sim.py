@@ -75,7 +75,7 @@ def main(args):
             images_to_video(
                 images,
                 output_dir="./videos/benchmark",
-                video_name=f"mani_skill_gpu_sim-num_envs={num_envs}-obs_mode={args.obs_mode}-render_mode={args.render_mode}",
+                video_name=f"mani_skill_gpu_sim-{args.env_id}-num_envs={num_envs}-obs_mode={args.obs_mode}-render_mode={args.render_mode}",
                 fps=30,
             )
             del images

@@ -96,7 +96,7 @@ class BaseEnv(gym.Env):
     """
 
     # fmt: off
-    SUPPORTED_ROBOTS: List[Union[str, Tuple[str]]]
+    SUPPORTED_ROBOTS: List[Union[str, Tuple[str]]] = None
     """Override this to enforce which robots or tuples of robots together are supported in the task. During env creation,
     setting robot_uids auto loads all desired robots into the scene, but not all tasks are designed to support some robot setups"""
     SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "sensor_data", "rgbd", "pointcloud")
@@ -143,7 +143,7 @@ class BaseEnv(gym.Env):
         human_render_camera_cfgs: dict = None,
         robot_uids: Union[str, BaseAgent, List[Union[str, BaseAgent]]] = None,
         scene_cfgs: dict = dict(),
-        gpu_sim_cfgs: dict = dict(spacing=20),
+        gpu_sim_cfgs: dict = dict(spacing=2000),
         reconfiguration_freq: int = 0,
         force_use_gpu_sim: bool = False,
     ):
