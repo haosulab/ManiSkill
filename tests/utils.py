@@ -13,6 +13,7 @@ ENV_IDS = [
     "StackCube-v1",
     "PickSingleYCB-v1",
 ]
+MULTI_AGENT_ENV_IDS = ["TwoRobotStackCube-v1", "TwoRobotPickCube-v1"]
 
 STATIONARY_ENV_IDS = [
     "PickCube-v1",

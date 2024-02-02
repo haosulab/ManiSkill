@@ -47,7 +47,7 @@ class FlattenActionSpaceWrapper(gym.ActionWrapper):
     def action(self, action):
         if (
             self.base_env.num_envs == 1
-            and action.shape == self.base_env.single_action_space.shape
+            and action.shape == self.single_action_space.shape
         ):
             action = batch(action)
 

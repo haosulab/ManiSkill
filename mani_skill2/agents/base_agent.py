@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from collections import OrderedDict
-from typing import Dict, Union
+from typing import TYPE_CHECKING, Dict, Union
 
 import numpy as np
 import sapien
@@ -8,7 +10,6 @@ import torch
 from gymnasium import spaces
 
 from mani_skill2 import format_path
-from mani_skill2.envs.scene import ManiSkillScene
 from mani_skill2.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill2.utils.sapien_utils import (
     apply_urdf_config,
@@ -25,6 +26,9 @@ from .controllers.base_controller import (
     DictController,
 )
 
+if TYPE_CHECKING:
+    from mani_skill2.envs.scene import ManiSkillScene
+
 
 class BaseAgent:
     """Base class for agents.
@@ -37,6 +41,7 @@ class BaseAgent:
         control_mode: uid of controller to use
         fix_root_link: whether to fix the robot root link
         config: agent configuration
+        agent_idx: an index for this agent in a multi-agent task setup If None, the task should be single-agent
     """
 
     uid: str

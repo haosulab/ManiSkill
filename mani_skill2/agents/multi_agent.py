@@ -10,8 +10,6 @@ T = TypeVar("T")
 
 
 class MultiAgent(BaseAgent, Generic[T]):
-    # def __init__(self, scene: ManiSkillScene, control_freq: int, control_mode: str = None, fix_root_link=True):
-    #     super().__init__(scene, control_freq, control_mode, fix_root_link)
     agents: T
 
     def __init__(self, agents: List[BaseAgent]):
@@ -21,10 +19,7 @@ class MultiAgent(BaseAgent, Generic[T]):
         self.sensor_configs = []
         for i, agent in enumerate(self.agents):
             self.sensor_configs += agent.sensor_configs
-            # self.sensor_configs[f"{agent.uid}-{i}"] = agent.sensor_configs
             self.agents_dict[f"{agent.uid}-{i}"] = agent
-        # self.sensor_configs = flatten_dict_keys(self.sensor_configs)
-        # self.sensor_configs = []
 
     def get_proprioception(self):
         proprioception = OrderedDict()
