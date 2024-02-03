@@ -24,7 +24,7 @@ def main(args):
     sapien.physx.set_gpu_memory_config(
         found_lost_pairs_capacity=2**26,
         max_rigid_patch_count=2**19,
-        max_rigid_contact_count=2**20,
+        max_rigid_contact_count=2**21,
     )
     env = gym.make(
         args.env_id,
