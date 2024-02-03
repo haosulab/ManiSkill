@@ -43,6 +43,7 @@ from omniisaacgymenvs.utils.hydra_cfg.reformat import omegaconf_to_dict, print_d
 from omniisaacgymenvs.utils.task_util import initialize_task
 from profiling import Profiler
 
+
 @hydra.main(version_base=None, config_name="config", config_path="../cfg")
 def parse_hydra_configs(cfg: DictConfig):
     profiler = Profiler(output_format="stdout")
@@ -125,7 +126,7 @@ def parse_hydra_configs(cfg: DictConfig):
                     2 * torch.rand(env.action_space.shape, device=task.rl_device) - 1
                 )
                 obs, rew, terminated, info = env.step(actions)
-                obs=obs['obs'].clone()
+                obs = obs["obs"].clone()
         profiler.log_stats("env.step")
 
         env.reset(seed=2022)
@@ -137,7 +138,7 @@ def parse_hydra_configs(cfg: DictConfig):
                     2 * torch.rand(env.action_space.shape, device=task.rl_device) - 1
                 )
                 obs, rew, terminated, info = env.step(actions)
-                obs=obs['obs'].clone()
+                obs = obs["obs"].clone()
                 if i % 200 == 0 and i != 0:
                     env.reset()
         profiler.log_stats("env.step+env.reset")

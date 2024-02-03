@@ -14,6 +14,7 @@ import tqdm
 import mani_skill2.envs
 from profiling import Profiler
 from mani_skill2.utils.visualization.misc import images_to_video, tile_images
+from mani_skill2.utils.wrappers.flatten import FlattenActionSpaceWrapper
 
 
 def main(args):
@@ -21,7 +22,9 @@ def main(args):
     num_envs = args.num_envs
     # TODO (stao): we need to auto set this gpu memory config somehow
     sapien.physx.set_gpu_memory_config(
-        found_lost_pairs_capacity=2**26, max_rigid_patch_count=2**19, max_rigid_contact_count=2**20
+        found_lost_pairs_capacity=2**26,
+        max_rigid_patch_count=2**19,
+        max_rigid_contact_count=2**21,
     )
     env = gym.make(
         args.env_id,
@@ -33,6 +36,14 @@ def main(args):
         sim_freq=100,
         control_freq=50,
     )
+    if isinstance(env.action_space, gym.spaces.Dict):
+        env = FlattenActionSpaceWrapper(env)
+    base_env = env.unwrapped
+    sensor_settings_str = []
+    for uid, cam in base_env._sensors.items():
+        cfg = cam.cfg
+        sensor_settings_str.append(f"{cfg.width}x{cfg.height}")
+    sensor_settings_str = "_".join(sensor_settings_str)
     print(
         "# -------------------------------------------------------------------------- #"
     )
@@ -42,8 +53,12 @@ def main(args):
     print(
         f"env_id={args.env_id}, obs_mode={args.obs_mode}, control_mode={args.control_mode}"
     )
-    print(f"render_mode={args.render_mode}, save_video={args.save_video}")
-    print(f"sim_freq={env.unwrapped.sim_freq}, control_freq={env.unwrapped.control_freq}")
+    print(
+        f"render_mode={args.render_mode}, sensor_details={sensor_settings_str}, save_video={args.save_video}"
+    )
+    print(
+        f"sim_freq={env.unwrapped.sim_freq}, control_freq={env.unwrapped.control_freq}"
+    )
     print(f"observation space: {env.observation_space}")
     print(f"action space: {env.unwrapped.single_action_space}")
     print(
@@ -56,22 +71,21 @@ def main(args):
         env.step(env.action_space.sample())  # warmup step
         env.reset(seed=2022)
         if args.save_video:
-            images.append(env.render())
+            images.append(env.render().cpu().numpy())
         N = 100
         with profiler.profile("env.step", total_steps=N, num_envs=num_envs):
             for i in range(N):
                 actions = (
-                    2 * torch.rand(env.action_space.shape, device=env.unwrapped.device) - 1
+                    2 * torch.rand(env.action_space.shape, device=env.unwrapped.device)
+                    - 1
                 )
                 obs, rew, terminated, truncated, info = env.step(actions)
                 if args.save_video:
-                    images.append(env.render())
+                    images.append(env.render().cpu().numpy())
         profiler.log_stats("env.step")
 
         if args.save_video:
-            images = [
-                tile_images(rgbs, nrows=video_nrows).cpu().numpy() for rgbs in images
-            ]
+            images = [tile_images(rgbs, nrows=video_nrows) for rgbs in images]
             images_to_video(
                 images,
                 output_dir="./videos/benchmark",
@@ -80,17 +94,36 @@ def main(args):
             )
             del images
         env.reset(seed=2022)
-        N = 1000
-        with profiler.profile("env.step+env.reset", total_steps=N, num_envs=num_envs):
-            for i in range(N):
-                actions = (
-                    2 * torch.rand(env.action_space.shape, device=env.unwrapped.device) - 1
-                )
-                obs, rew, terminated, truncated, info = env.step(actions)
-                if i % 200 == 0 and i != 0:
-                    env.reset()
-        profiler.log_stats("env.step+env.reset")
+        # N = 1000
+        # with profiler.profile("env.step+env.reset", total_steps=N, num_envs=num_envs):
+        #     for i in range(N):
+        #         actions = (
+        #             2 * torch.rand(env.action_space.shape, device=env.unwrapped.device) - 1
+        #         )
+        #         obs, rew, terminated, truncated, info = env.step(actions)
+        #         if i % 200 == 0 and i != 0:
+        #             env.reset()
+        # profiler.log_stats("env.step+env.reset")
     env.close()
+    # append results to csv
+    try:
+        assert (
+            args.save_video == False
+        ), "Saving video slows down speed a lot and it will distort results"
+
+        profiler.update_csv(
+            "videos/benchmark_results_ms3.csv",
+            dict(
+                env_id=args.env_id,
+                obs_mode=args.obs_mode,
+                num_envs=args.num_envs,
+                control_mode=args.control_mode,
+                sensor_settings=sensor_settings_str,
+                gpu_type=torch.cuda.get_device_name()
+            ),
+        )
+    except:
+        pass
 
 
 def parse_args():
@@ -109,7 +142,11 @@ def parse_args():
         "--save-video", action="store_true", help="whether to save videos"
     )
     parser.add_argument(
-        "-f", "--format", type=str, default="stdout", help="format of results. Can be stdout or json."
+        "-f",
+        "--format",
+        type=str,
+        default="stdout",
+        help="format of results. Can be stdout or json.",
     )
     args = parser.parse_args()
     return args

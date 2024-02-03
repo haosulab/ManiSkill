@@ -14,7 +14,7 @@ def main(args):
 
     # create environment instance
     env = suite.make(
-        env_name="Lift", # try with other tasks like "Stack" and "Door"
+        env_name="Lift",  # try with other tasks like "Stack" and "Door"
         robots="Panda",  # try with other robots like "Sawyer" and "Jaco"
         has_renderer=True,
         has_offscreen_renderer=False,
@@ -30,7 +30,9 @@ def main(args):
         f"env_id={args.env_id}, obs_mode={args.obs_mode}, control_mode={args.control_mode}"
     )
     print(f"render_mode={args.render_mode}, save_video={args.save_video}")
-    print(f"sim_freq={env.unwrapped.sim_freq}, control_freq={env.unwrapped.control_freq}")
+    print(
+        f"sim_freq={env.unwrapped.sim_freq}, control_freq={env.unwrapped.control_freq}"
+    )
     print(f"observation space: {env.observation_space}")
     print(f"action space: {env.action_space}")
     print(
@@ -54,9 +56,7 @@ def main(args):
     print(f"{FPS=:0.3f}. {N=} steps in {dtime:0.3f}s with {num_envs} parallel envs")
 
     if args.save_video:
-        images = [
-            tile_images(rgbs, nrows=video_nrows).cpu().numpy() for rgbs in images
-        ]
+        images = [tile_images(rgbs, nrows=video_nrows).cpu().numpy() for rgbs in images]
         images_to_video(
             images,
             output_dir="./videos/benchmark",

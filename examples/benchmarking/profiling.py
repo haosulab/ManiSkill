@@ -4,6 +4,8 @@ from typing import Literal
 
 import torch
 
+from mani_skill2.utils.common import flatten_dict_keys
+
 
 class Profiler:
     """
@@ -21,6 +23,33 @@ class Profiler:
         """log a message to stdout"""
         if self.output_format == "stdout":
             print(msg)
+
+    def update_csv(self, csv_path: str, ids: dict):
+        import pandas as pd
+        import os
+
+        if os.path.exists(csv_path):
+            df = pd.read_csv(csv_path)
+        else:
+            df = pd.DataFrame()
+        stats_flat = flatten_dict_keys(self.stats)
+        cond = None
+        for k in stats_flat:
+            if k not in df:
+                df[k] = None
+        for k in ids:
+            if k not in df:
+                df[k] = None
+            if cond is None:
+                cond = df[k] == ids[k]
+            else:
+                cond = cond & (df[k] == ids[k])
+        data_dict = {**ids, **stats_flat}
+        if not cond.any():
+            df.loc[len(df)] = data_dict
+        else:
+            df.loc[df.loc[cond].index[0]] = data_dict
+        df.to_csv(csv_path, index=False)
 
     @contextmanager
     def profile(self, name: str, total_steps: int, num_envs: int):
