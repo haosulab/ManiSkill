@@ -714,8 +714,8 @@ class BaseEnv(gym.Env):
             actor.set_angular_velocity([0, 0, 0])
         for articulation in self._scene.articulations.values():
             articulation.set_qvel(np.zeros(articulation.max_dof))
-            # articulation.set_root_velocity([0, 0, 0])
-            # articulation.set_root_angular_velocity([0, 0, 0])
+            articulation.set_root_linear_velocity([0, 0, 0])
+            articulation.set_root_angular_velocity([0, 0, 0])
         if physx.is_gpu_enabled():
             self._scene._gpu_apply_all()
             self._scene._gpu_fetch_all()

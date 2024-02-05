@@ -458,7 +458,14 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     @root_angular_velocity.setter
     def root_angular_velocity(self, arg1: Array) -> None:
-        self.root.angular_velocity = arg1
+        if physx.is_gpu_enabled():
+            arg1 = to_tensor(arg1)
+            self.px.cuda_rigid_body_data[self.root._body_data_index, 10:13] = arg1
+        else:
+            arg1 = to_numpy(arg1)
+            if len(arg1.shape) == 2:
+                arg1 = arg1[0]
+            self._objs[0].set_root_angular_velocity(arg1)
 
     @property
     def root_linear_velocity(self) -> torch.Tensor:
@@ -466,7 +473,14 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     @root_linear_velocity.setter
     def root_linear_velocity(self, arg1: Array) -> None:
-        self.root.linear_velocity = arg1
+        if physx.is_gpu_enabled():
+            arg1 = to_tensor(arg1)
+            self.px.cuda_rigid_body_data[self.root._body_data_index, 7:10] = arg1
+        else:
+            arg1 = to_numpy(arg1)
+            if len(arg1.shape) == 2:
+                arg1 = arg1[0]
+            self._objs[0].set_root_linear_velocity(arg1)
 
     @property
     def root_pose(self):

@@ -47,23 +47,32 @@ class QuadrupedStandEnv(BaseEnv):
 
     def _register_human_render_cameras(self):
         pose = look_at([2.6, 2.7, 1.4], [0.0, 0.0, 0.5])
-        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)
+        return CameraConfig(
+            "render_camera",
+            pose.p,
+            pose.q,
+            512,
+            512,
+            1,
+            0.01,
+            100,
+        )
 
     def _load_actors(self):
         self.ground = build_ground(self._scene, floor_width=20)
         # TODO (stao): why is this collision mesh so wacky?
         # mesh = self.agent.robot.get_collision_mesh(first_only=True)
         # self.height = -mesh[0].bounding_box.bounds[0, 2]
-        self.cube = actors.build_cube(
-            self._scene, half_size=0.05, color=[1, 0, 0, 1], name="cube"
-        )
-        self.height = 0.626
+        # self.cube = actors.build_cube(
+        #     self._scene, half_size=0.05, color=[1, 0, 0, 1], name="cube"
+        # )
+        self.height = 1.626
 
     def _initialize_actors(self):
         with torch.device(self.device):
             self.agent.robot.set_pose(Pose.create_from_pq(p=[0, 0, self.height]))
             self.agent.reset(init_qpos=torch.zeros(self.agent.robot.max_dof))
-            self.cube.set_pose(Pose.create_from_pq(p=[0, 0, 1]))
+            # self.cube.set_pose(Pose.create_from_pq(p=[0, 0, 1]))
 
     def evaluate(self):
         return {"success": self.agent.is_standing()}

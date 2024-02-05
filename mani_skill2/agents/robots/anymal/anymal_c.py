@@ -25,7 +25,7 @@ class ANYmalC(BaseAgent):
             "LH_KFE",
             "RH_KFE",
         ]
-        super().__init__(*args, fix_root_link=True, **kwargs)
+        super().__init__(*args, fix_root_link=False, **kwargs)
 
     @property
     def controller_configs(self):
