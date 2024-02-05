@@ -3,18 +3,22 @@ from typing import Any, Dict
 
 import numpy as np
 import torch
+from transforms3d.euler import euler2quat
 
 from mani_skill2.agents.robots.anymal.anymal_c import ANYmalC
 from mani_skill2.agents.robots.fetch.fetch import Fetch
 from mani_skill2.agents.robots.panda.panda import Panda
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
+from mani_skill2.utils.building import actors
+from mani_skill2.utils.building.ground import build_ground
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import look_at
+from mani_skill2.utils.structs.pose import Pose
 
 
-@register_env("LocomotionReach-v1", max_episode_steps=200)
-class LocomotionReachEnv(BaseEnv):
+@register_env("QuadrupedStandEnv-v1", max_episode_steps=200)
+class QuadrupedStandEnv(BaseEnv):
     """
     Task Description
     ----------------
@@ -42,23 +46,34 @@ class LocomotionReachEnv(BaseEnv):
         ]
 
     def _register_human_render_cameras(self):
-        pose = look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
-        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
+        pose = look_at([2.6, 2.7, 1.4], [0.0, 0.0, 0.5])
+        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)
 
     def _load_actors(self):
-        pass
+        self.ground = build_ground(self._scene, floor_width=20)
+        # TODO (stao): why is this collision mesh so wacky?
+        # mesh = self.agent.robot.get_collision_mesh(first_only=True)
+        # self.height = -mesh[0].bounding_box.bounds[0, 2]
+        self.cube = actors.build_cube(
+            self._scene, half_size=0.05, color=[1, 0, 0, 1], name="cube"
+        )
+        self.height = 0.626
 
     def _initialize_actors(self):
-        pass
+        with torch.device(self.device):
+            self.agent.robot.set_pose(Pose.create_from_pq(p=[0, 0, self.height]))
+            self.agent.reset(init_qpos=torch.zeros(self.agent.robot.max_dof))
+            self.cube.set_pose(Pose.create_from_pq(p=[0, 0, 1]))
 
     def evaluate(self):
-        return {"success": torch.zeros(self.num_envs, device=self.device, dtype=bool)}
+        return {"success": self.agent.is_standing()}
 
     def _get_obs_extra(self, info: Dict):
-        return OrderedDict()
+        return OrderedDict(robot_pose=self.agent.robot.pose.raw_pose)
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        return torch.zeros(self.num_envs, device=self.device)
+        reward = info["success"]
+        return reward
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict

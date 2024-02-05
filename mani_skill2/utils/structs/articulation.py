@@ -208,7 +208,11 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         for i, art in enumerate(self._objs):
             art_meshes = []
             for link in art.links:
-                art_meshes += get_component_meshes(link)
+                link_mesh = merge_meshes(get_component_meshes(link))
+                if link_mesh is not None:
+                    if to_world_frame:
+                        link_mesh.apply_transform(link.pose.to_transformation_matrix())
+                    art_meshes.append(link_mesh)
             mesh = merge_meshes(art_meshes)
             if to_world_frame:
                 mesh.apply_transform(mat[i])
