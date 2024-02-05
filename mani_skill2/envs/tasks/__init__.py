@@ -1,4 +1,5 @@
 from .fmb.fmb import FMBAssembly1Env
+from .locmotion_reach import LocomotionReachEnv
 from .open_cabinet_drawer import OpenCabinetDoorEnv, OpenCabinetDrawerEnv
 from .pick_cube import PickCubeEnv
 from .pick_single_ycb import PickSingleYCBEnv
