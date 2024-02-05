@@ -2,6 +2,7 @@ from collections import OrderedDict
 from typing import Any, Dict
 
 import numpy as np
+import sapien
 import torch
 from transforms3d.euler import euler2quat
 
@@ -11,7 +12,7 @@ from mani_skill2.agents.robots.panda.panda import Panda
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.building import actors
-from mani_skill2.utils.building.ground import build_ground
+from mani_skill2.utils.building.ground import build_ground, build_meter_ground
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import look_at
 from mani_skill2.utils.structs.pose import Pose
@@ -42,11 +43,21 @@ class QuadrupedStandEnv(BaseEnv):
     def _register_sensors(self):
         pose = look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
         return [
-            CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10)
+            CameraConfig(
+                "base_camera",
+                pose.p,
+                pose.q,
+                128,
+                128,
+                np.pi / 2,
+                0.01,
+                100,
+                link=self.agent.robot.links[0],
+            )
         ]
 
     def _register_human_render_cameras(self):
-        pose = look_at([2.6, 2.7, 1.4], [0.0, 0.0, 0.5])
+        pose = look_at([2.5, 2.5, 1], [0.0, 0.0, 0])
         return CameraConfig(
             "render_camera",
             pose.p,
@@ -56,23 +67,26 @@ class QuadrupedStandEnv(BaseEnv):
             1,
             0.01,
             100,
+            link=self.agent.robot.links[0],
         )
 
     def _load_actors(self):
-        self.ground = build_ground(self._scene, floor_width=20)
+        # for i in range(10):
+        #     ground = build_ground(self._scene, return_builder=True)
+        #     ground.initial_pose = sapien.Pose(p=[i * 40, 0, 0])
+        #     ground.build_static(name="ground")
+        # self.ground = self._scene.create_actor_builder()
+        self.ground = build_meter_ground(self._scene, floor_width=1000)
+
         # TODO (stao): why is this collision mesh so wacky?
         # mesh = self.agent.robot.get_collision_mesh(first_only=True)
         # self.height = -mesh[0].bounding_box.bounds[0, 2]
-        # self.cube = actors.build_cube(
-        #     self._scene, half_size=0.05, color=[1, 0, 0, 1], name="cube"
-        # )
         self.height = 1.626
 
     def _initialize_actors(self):
         with torch.device(self.device):
             self.agent.robot.set_pose(Pose.create_from_pq(p=[0, 0, self.height]))
             self.agent.reset(init_qpos=torch.zeros(self.agent.robot.max_dof))
-            # self.cube.set_pose(Pose.create_from_pq(p=[0, 0, 1]))
 
     def evaluate(self):
         return {"success": self.agent.is_standing()}

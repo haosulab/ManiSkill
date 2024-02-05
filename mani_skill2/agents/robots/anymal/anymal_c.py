@@ -61,16 +61,17 @@ class ANYmalC(BaseAgent):
     def _after_init(self):
         pass
 
-    def is_standing(self, q_thresh=10):
-        """This quadruped is considered standing if it is face up and body is at least 0.3m off the ground"""
+    def is_standing(self):
+        """This quadruped is considered standing if it is face up and body is at least 0.5m off the ground"""
         target_q = torch.tensor([1, 0, 0, 0], device=self.device)
         inner_prod = (self.robot.pose.q * target_q).sum(axis=1)
         # angle_diff = 1 - (inner_prod ** 2) # computes a distance from 0 to 1 between 2 quaternions
         angle_diff = torch.arccos(
             2 * (inner_prod**2) - 1
         )  # computes an angle between 2 quaternions
-        # < 10 degree
-        aligned = angle_diff < 0.17453292519943295
-        return aligned
+        # about 20 degrees
+        aligned = angle_diff < 0.349
+        high_enough = self.robot.pose.p[:, 2] > 0.5
+        return torch.logical_and(aligned, high_enough)
 
     sensor_configs = []

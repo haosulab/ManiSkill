@@ -158,7 +158,7 @@ class ManiSkillScene:
                 self._setup_gpu_rendering()
                 self._gpu_setup_sensors(self.sensors)
                 self._gpu_setup_sensors(self.human_render_cameras)
-            # self.render_system_group.update_render()
+            self.render_system_group.update_render()
         else:
             self.sub_scenes[0].update_render()
 
