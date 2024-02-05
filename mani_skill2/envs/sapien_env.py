@@ -1009,7 +1009,7 @@ class BaseEnv(gym.Env):
                     continue
                 camera.capture()
                 # TODO (stao): the output of this is not the same as gpu setting, its float here
-                rgb = (camera.get_picture("Color")[0, ..., :3] * 255).to(torch.uint8)
+                rgb = (camera.get_picture("Color")[..., :3]).to(torch.uint8)
                 images.append(rgb)
         if len(images) == 0:
             return None
