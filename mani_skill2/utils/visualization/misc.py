@@ -7,9 +7,10 @@ import numpy as np
 import torch
 import tqdm
 
+from mani_skill2.utils.structs.types import Array
 
 def images_to_video(
-    images: List[np.ndarray],
+    images: List[Array],
     output_dir: str,
     video_name: str,
     fps: int = 10,
@@ -59,7 +60,7 @@ def normalize_depth(depth, min_depth=0, max_depth=None):
     return depth
 
 
-def observations_to_images(observations, max_depth=None) -> List[np.ndarray]:
+def observations_to_images(observations, max_depth=None) -> List[Array]:
     """Parse images from camera observations."""
     images = []
     # is_torch = False
@@ -88,13 +89,13 @@ def observations_to_images(observations, max_depth=None) -> List[np.ndarray]:
                 depth = torch.repeat_interleave(depth, 3, dim=-1)
             images.append(depth)
         elif "seg" in key:
-            seg: np.ndarray = observations[key]  # [H, W, 1]
+            seg: Array = observations[key]  # [H, W, 1]
             assert seg.ndim == 3 and seg.shape[-1] == 1, seg.shape
             # A heuristic way to colorize labels
             seg = np.uint8(seg * [11, 61, 127])  # [H, W, 3]
             images.append(seg)
         elif "Segmentation" in key:
-            seg: np.ndarray = observations[key]  # [H, W, 4]
+            seg: Array = observations[key]  # [H, W, 4]
             assert seg.ndim == 3 and seg.shape[-1] == 4, seg.shape
             # A heuristic way to colorize labels
             visual_seg = np.uint8(seg[..., 0:1] * [11, 61, 127])  # [H, W, 3]
@@ -104,7 +105,7 @@ def observations_to_images(observations, max_depth=None) -> List[np.ndarray]:
     return images
 
 
-def tile_images(images: List[np.ndarray], nrows=1) -> np.ndarray:
+def tile_images(images: List[Array], nrows=1) -> Array:
     """
     Tile multiple images to a single image comprised of nrows and an appropriate number of columns to fit all the images.
     The images can also be batched (e.g. of shape (B, H, W, C)), but give images must all have the same batch size.
@@ -168,7 +169,7 @@ def tile_images(images: List[np.ndarray], nrows=1) -> np.ndarray:
     return output_image
 
 
-def put_text_on_image(image: np.ndarray, lines: List[str]):
+def put_text_on_image(image: Array, lines: List[str]):
     assert image.dtype == np.uint8, image.dtype
     image = image.copy()
 
@@ -194,7 +195,7 @@ def put_text_on_image(image: np.ndarray, lines: List[str]):
     return image
 
 
-def append_text_to_image(image: np.ndarray, lines: List[str]):
+def append_text_to_image(image: Array, lines: List[str]):
     r"""Appends text left to an image of size (height, width, channels).
     The returned image has white text on a black background.
     Args:

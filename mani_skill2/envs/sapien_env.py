@@ -1009,7 +1009,7 @@ class BaseEnv(gym.Env):
                     continue
                 camera.capture()
                 # TODO (stao): the output of this is not the same as gpu setting, its float here
-                rgb = (camera.get_picture("Color")[0, ..., :3] * 255).to(torch.uint8)
+                rgb = (camera.get_picture("Color")[..., :3] * 255).to(torch.uint8)
                 images.append(rgb)
         if len(images) == 0:
             return None
@@ -1030,6 +1030,20 @@ class BaseEnv(gym.Env):
         for sensor_images in sensor_images.values():
             images.extend(observations_to_images(sensor_images))
         return tile_images(images)
+    
+    def render_cameras(self):
+        """
+        Renders all cameras, including human render cameras and agent sensors.
+        """
+        images = []
+        for obj in self._hidden_objects:
+            obj.hide_visual()
+        self.update_render()
+        self.capture_sensor_data()
+        sensor_images = self.get_sensor_obs()
+        for sensor_images in sensor_images.values():
+            images.extend(observations_to_images(sensor_images))
+        return tile_images([self.render_rgb_array()] + images)
 
     def render(self):
         """
@@ -1047,6 +1061,8 @@ class BaseEnv(gym.Env):
             return self.render_rgb_array()
         elif self.render_mode == "sensors":
             return self.render_sensors()
+        elif self.render_mode == "cameras":
+            return self.render_cameras()
         else:
             raise NotImplementedError(f"Unsupported render mode {self.render_mode}.")
 
