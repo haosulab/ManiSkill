@@ -21,12 +21,6 @@ from mani_skill2.utils.wrappers.flatten import FlattenActionSpaceWrapper
 def main(args):
     profiler = Profiler(output_format=args.format)
     num_envs = args.num_envs
-    # TODO (stao): we need to auto set this gpu memory config somehow
-    sapien.physx.set_gpu_memory_config(
-        found_lost_pairs_capacity=2**26,
-        max_rigid_patch_count=2**19,
-        max_rigid_contact_count=2**21,
-    )
     env = gym.make(
         args.env_id,
         num_envs=num_envs,
@@ -34,8 +28,6 @@ def main(args):
         # enable_shadow=True,
         render_mode=args.render_mode,
         control_mode=args.control_mode,
-        sim_freq=100,
-        control_freq=50,
     )
     if isinstance(env.action_space, gym.spaces.Dict):
         env = FlattenActionSpaceWrapper(env)

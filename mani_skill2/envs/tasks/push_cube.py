@@ -28,12 +28,12 @@ from mani_skill2.agents.robots.panda.panda import Panda
 from mani_skill2.agents.robots.xmate3.xmate3 import Xmate3Robotiq
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
-from mani_skill2.utils.building.actors import build_cube, build_red_white_target
+from mani_skill2.utils.building import actors
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import look_at
 from mani_skill2.utils.scene_builder.table.table_scene_builder import TableSceneBuilder
 from mani_skill2.utils.structs.pose import Pose
-from mani_skill2.utils.structs.types import Array
+from mani_skill2.utils.structs.types import Array, GPUMemoryConfig, SimConfig
 
 
 @register_env("PushCube-v1", max_episode_steps=50)
@@ -60,6 +60,13 @@ class PushCubeEnv(BaseEnv):
 
     # Specify some supported robot types
     agent: Union[Panda, Xmate3Robotiq, Fetch]
+
+    # Specify default simulation/gpu memory configurations.
+    sim_cfg = SimConfig(
+        gpu_memory_cfg=GPUMemoryConfig(
+            found_lost_pairs_capacity=2**25, max_rigid_patch_count=2**18
+        )
+    )
 
     # set some commonly used values
     goal_radius = 0.1
@@ -91,7 +98,7 @@ class PushCubeEnv(BaseEnv):
 
         # we then add the cube that we want to push and give it a color and size using a convenience build_cube function
         # we specify the body_type to be "dynamic" as it should be able to move when touched by other objects / the robot
-        self.obj = build_cube(
+        self.obj = actors.build_cube(
             self._scene,
             half_size=self.cube_half_size,
             color=np.array([12, 42, 160, 255]) / 255,
@@ -102,7 +109,7 @@ class PushCubeEnv(BaseEnv):
         # we also add in red/white target to visualize where we want the cube to be pushed to
         # we specify add_collisions=False as we only use this as a visual for videos and do not want it to affect the actual physics
         # we finally specify the body_type to be "kinematic" so that the object stays in place
-        self.goal_region = build_red_white_target(
+        self.goal_region = actors.build_red_white_target(
             self._scene,
             radius=self.goal_radius,
             thickness=1e-5,
@@ -112,7 +119,7 @@ class PushCubeEnv(BaseEnv):
         )
 
         # optionally you can automatically hide some Actors from view by appending to the self._hidden_objects list. When visual observations
-        # are generated or env.render_sensors() is called or env.render() is called with render_mode="cameras", the actor will not show up.
+        # are generated or env.render_sensors() is called or env.render() is called with render_mode="sensors", the actor will not show up.
         # This is useful if you intend to add some visual goal sites as e.g. done in PickCube that aren't actually part of the task
         # and are there just for generating evaluation videos.
         # self._hidden_objects.append(self.goal_region)

@@ -10,6 +10,7 @@ from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import look_at
+from mani_skill2.utils.structs.types import GPUMemoryConfig, SimConfig
 
 
 @register_env("CustomEnv-v0", max_episode_steps=200)
@@ -30,6 +31,11 @@ class CustomEnv(BaseEnv):
 
     SUPPORTED_ROBOTS = ["panda", "fetch"]
     agent: Union[Panda, Fetch]
+    sim_cfg = SimConfig(
+        gpu_memory_cfg=GPUMemoryConfig(
+            found_lost_pairs_capacity=2**25, max_rigid_patch_count=2**18
+        )
+    )
 
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
         self.robot_init_qpos_noise = robot_init_qpos_noise

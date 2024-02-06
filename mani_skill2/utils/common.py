@@ -16,6 +16,17 @@ from .logging_utils import logger
 # -------------------------------------------------------------------------- #
 # Basic
 # -------------------------------------------------------------------------- #
+def dict_merge(dct: dict, merge_dct: dict):
+    """In place recursive merge of `merge_dct` into `dct`"""
+    for k, v in merge_dct.items():
+        if (
+            k in dct and isinstance(dct[k], dict) and isinstance(merge_dct[k], dict)
+        ):  # noqa
+            dict_merge(dct[k], merge_dct[k])
+        else:
+            dct[k] = merge_dct[k]
+
+
 def merge_dicts(ds: Sequence[Dict], asarray=False):
     """Merge multiple dicts with the same keys to a single one."""
     # NOTE(jigu): To be compatible with generator, we only iterate once.
