@@ -40,9 +40,8 @@ def main(args):
     if isinstance(env.action_space, gym.spaces.Dict):
         env = FlattenActionSpaceWrapper(env)
     env = ManiSkillVectorEnv(env)
-    base_env = env.base_env
     sensor_settings_str = []
-    for uid, cam in base_env._sensors.items():
+    for uid, cam in env.base_env._sensors.items():
         cfg = cam.cfg
         sensor_settings_str.append(f"{cfg.width}x{cfg.height}")
     sensor_settings_str = "_".join(sensor_settings_str)

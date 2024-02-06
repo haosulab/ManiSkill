@@ -8,7 +8,7 @@ import torch
 from gymnasium import spaces
 
 from mani_skill2.utils.sapien_utils import to_tensor
-from mani_skill2.utils.structs.types import Array
+from mani_skill2.utils.structs.types import Array, Device
 
 from .logging_utils import logger
 
@@ -173,13 +173,12 @@ def inv_scale_action(action, low, high):
 
 # TODO (stao): Clean up this code
 def flatten_state_dict(
-    state_dict: dict, squeeze_dims: bool = False, use_torch=False
+    state_dict: dict, use_torch=False, device: Device = None
 ) -> Array:
     """Flatten a dictionary containing states recursively. Expects all data to be either torch or numpy
 
     Args:
         state_dict: a dictionary containing scalars or 1-dim vectors.
-        squeeze_dims: when True,
 
     Raises:
         AssertionError: If a value of @state_dict is an ndarray with ndim > 2.
@@ -195,9 +194,7 @@ def flatten_state_dict(
 
     for key, value in state_dict.items():
         if isinstance(value, dict):
-            state = flatten_state_dict(
-                value, squeeze_dims=squeeze_dims, use_torch=use_torch
-            )
+            state = flatten_state_dict(value, use_torch=use_torch)
             if state.size == 0:
                 state = None
             if use_torch:
@@ -238,17 +235,14 @@ def flatten_state_dict(
 
     if use_torch:
         if len(states) == 0:
-            return torch.empty(0, device="cuda")
+            return torch.empty(0, device=device)
         else:
             return torch.hstack(states)
     else:
         if len(states) == 0:
             return np.empty(0)
         else:
-            if squeeze_dims:
-                return np.hstack([np.squeeze(s) for s in states])
-            else:
-                return np.hstack(states)
+            return np.hstack(states)
 
 
 def flatten_dict_keys(d: dict, prefix=""):

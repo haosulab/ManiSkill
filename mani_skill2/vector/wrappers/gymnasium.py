@@ -77,6 +77,9 @@ class ManiSkillVectorEnv(VectorEnv):
         truncations: torch.Tensor = (
             self.base_env.elapsed_steps >= self.max_episode_steps
         )
+        if self.num_envs == 1:
+            truncations = torch.tensor([truncations])
+            terminations = torch.tensor([terminations])
         if self.ignore_terminations:
             terminations *= 0
         dones = torch.logical_or(terminations, truncations)

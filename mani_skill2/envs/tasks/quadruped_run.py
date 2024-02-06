@@ -74,8 +74,9 @@ class QuadrupedRunEnv(BaseEnv):
         self.ground = build_meter_ground(self._scene, floor_width=20)
         self.height = 0.63
 
-    def _initialize_actors(self):
+    def _initialize_actors(self, env_idx: torch.Tensor):
         with torch.device(self.device):
+            len(env_idx)
             self.agent.robot.set_pose(Pose.create_from_pq(p=[0, 0, self.height]))
             self.agent.reset(init_qpos=torch.zeros(self.agent.robot.max_dof))
 
