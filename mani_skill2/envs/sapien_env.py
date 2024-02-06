@@ -143,7 +143,7 @@ class BaseEnv(gym.Env):
         human_render_camera_cfgs: dict = None,
         robot_uids: Union[str, BaseAgent, List[Union[str, BaseAgent]]] = None,
         scene_cfgs: dict = dict(),
-        gpu_sim_cfgs: dict = dict(spacing=2000),
+        gpu_sim_cfgs: dict = dict(spacing=20),
         reconfiguration_freq: int = 0,
         force_use_gpu_sim: bool = False,
     ):

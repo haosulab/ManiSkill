@@ -460,7 +460,9 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     def root_angular_velocity(self, arg1: Array) -> None:
         if physx.is_gpu_enabled():
             arg1 = to_tensor(arg1)
-            self.px.cuda_rigid_body_data[self.root._body_data_index, 10:13] = arg1
+            self.px.cuda_rigid_body_data.torch()[
+                self.root._body_data_index, 10:13
+            ] = arg1
         else:
             arg1 = to_numpy(arg1)
             if len(arg1.shape) == 2:
@@ -475,7 +477,9 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     def root_linear_velocity(self, arg1: Array) -> None:
         if physx.is_gpu_enabled():
             arg1 = to_tensor(arg1)
-            self.px.cuda_rigid_body_data[self.root._body_data_index, 7:10] = arg1
+            self.px.cuda_rigid_body_data.torch()[
+                self.root._body_data_index, 7:10
+            ] = arg1
         else:
             arg1 = to_numpy(arg1)
             if len(arg1.shape) == 2:

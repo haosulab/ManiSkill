@@ -29,8 +29,8 @@ class ANYmalC(BaseAgent):
 
     @property
     def controller_configs(self):
-        self.arm_stiffness = 1e3
-        self.arm_damping = 1e2
+        self.arm_stiffness = 85.0
+        self.arm_damping = 2.0
         self.arm_force_limit = 100
         # import ipdb;ipdb.set_trace()
         pd_joint_delta_pos = PDJointPosControllerConfig(
