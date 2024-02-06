@@ -637,7 +637,6 @@ class BaseEnv(gym.Env):
             self._reconfig_counter == 0 and self.reconfiguration_freq != 0
         )
         if reconfigure:
-            # Reconfigure the scene if assets change
             self.reconfigure()
 
         if "env_idx" in options:
@@ -744,7 +743,7 @@ class BaseEnv(gym.Env):
         info = self.get_info()
         obs = self.get_obs(info)
         reward = self.get_reward(obs=obs, action=action, info=info)
-        terminated = info["success"]
+        terminated = info["success"]  # TODO permit terminated by failures
         if physx.is_gpu_enabled():
             return (
                 obs,

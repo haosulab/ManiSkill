@@ -43,37 +43,45 @@ class ManiSkillVectorEnv(VectorEnv):
         self,
         *,
         seed: Optional[Union[int, List[int]]] = None,
-        options: Optional[dict] = None,
+        options: Optional[dict] = dict(),
     ):
         obs, info = self._env.reset(seed=seed, options=options)
-        self.returns *= 0
+        if "env_idx" in options:
+            env_idx = options["env_idx"]
+            mask = torch.zeros(self.num_envs, dtype=bool, device=self.base_env.device)
+            mask[env_idx] = True
+            self.returns[mask] = 0
+        else:
+            self.returns *= 0
         return obs, info
 
     def step(
         self, actions: Union[Array, Dict]
     ) -> Tuple[Array, Array, Array, Array, Dict]:
-        obs, rew, _, _, infos = self._env.step(actions)
+        obs, rew, terminations, _, infos = self._env.step(actions)
         self.returns += rew
         infos["episode"] = dict(r=self.returns)
         truncations: torch.Tensor = (
             self.base_env.elapsed_steps >= self.max_episode_steps
         )
-        terminations = torch.zeros(self.num_envs, device=self.base_env.device)
-
+        # terminations = torch.zeros(self.num_envs, device=self.base_env.device)
+        dones = torch.logical_or(terminations, truncations)
         truncations[:2] = True
 
-        if truncations.any():
+        if dones.any():
             # TODO (stao): permit reset by indicies later
             infos["episode"]["r"] = self.returns.clone()
             final_obs = obs
-            env_idx = torch.arange(0, self.num_envs, device=self.base_env.device)[
-                truncations
-            ]
+            env_idx = torch.arange(0, self.num_envs, device=self.base_env.device)[dones]
             obs, _ = self.reset(options=dict(env_idx=env_idx))
-            new_infos = dict()
-            new_infos["final_info"] = infos
-            new_infos["final_observation"] = final_obs
-            infos = new_infos
+            infos["final_info"] = infos
+            # gymnasium calls it final observation but it really is just o_{t+1} or the true next observation
+            infos["final_observation"] = final_obs
+            infos["_final_info"] = dones
+            infos["_final_observation"] = dones
+            infos["episode"]["_r"] = dones
+            infos["_elapsed_steps"] = dones
+            # NOTE (stao): Unlike gymnasium, the code here does not add masks for every key in the info object.
         return obs, rew, terminations, truncations, infos
 
     def close(self):
