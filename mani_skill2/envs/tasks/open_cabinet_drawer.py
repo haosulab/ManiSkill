@@ -132,9 +132,12 @@ class OpenCabinetDrawerEnv(BaseEnv):
         )
         self._hidden_objects.append(self.handle_link_goal)
 
-    def _initialize_actors(self):
+    def _initialize_actors(self, env_idx: torch.Tensor):
+        # TODO (stao): Clean up this code and try to batch / cache more if possible.
+        # And support partial resets
         with torch.device(self.device):
-            xyz = torch.zeros((self.num_envs, 3))
+            b = len(env_idx)
+            xyz = torch.zeros((b, 3))
             xyz[:, 2] = torch.tensor(self.cabinet_heights)
             self.cabinet.set_pose(Pose.create_from_pq(p=xyz))
 
@@ -152,7 +155,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
             for art, link in zip(self.cabinet._objs, self.handle_link._objs):
                 index_q.append(art.active_joints.index(link.joint))
             index_q = torch.tensor(index_q, dtype=int)
-            self.target_qpos_idx = (torch.arange(0, self.num_envs), index_q)
+            self.target_qpos_idx = (torch.arange(0, b), index_q)
             # TODO (stao): For performance improvement, one can save relative position of link handles ahead of time.
             handle_link_positions = to_tensor(
                 np.array(

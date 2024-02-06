@@ -164,7 +164,7 @@ class Link(
     def pose(self, arg1: Union[Pose, sapien.Pose]) -> None:
         if physx.is_gpu_enabled():
             self.px.cuda_rigid_body_data.torch()[
-                self._body_data_index, :7
+                self._body_data_index[self._scene._reset_mask], :7
             ] = vectorize_pose(arg1)
         else:
             self._objs[0].pose = to_sapien_pose(arg1)

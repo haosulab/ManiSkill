@@ -637,16 +637,28 @@ class BaseEnv(gym.Env):
             self._reconfig_counter == 0 and self.reconfiguration_freq != 0
         )
         if reconfigure:
-            # Reconfigure the scene if assets change
             self.reconfigure()
+
+        if "env_idx" in options:
+            env_idx = options["env_idx"]
+            self._scene._reset_mask = torch.zeros(
+                self.num_envs, dtype=bool, device=self.device
+            )
+            self._scene._reset_mask[env_idx] = True
         else:
+            env_idx = torch.arange(0, self.num_envs, device=self.device)
+            self._scene._reset_mask = torch.ones(
+                self.num_envs, dtype=bool, device=self.device
+            )
+
+        if not reconfigure:
             self._clear_sim_state()
         if self.reconfiguration_freq != 0:
             self._reconfig_counter -= 1
         # Set the episode rng again after reconfiguration to guarantee seed reproducibility
         self._set_episode_rng(self._episode_seed)
 
-        self.initialize_episode()
+        self.initialize_episode(env_idx)
         obs = self.get_obs()
         if physx.is_gpu_enabled():
             # ensure all updates to object poses and configurations are applied on GPU after task initialization
@@ -681,28 +693,28 @@ class BaseEnv(gym.Env):
             self._episode_seed = seed
         self._episode_rng = np.random.RandomState(self._episode_seed)
 
-    def initialize_episode(self):
+    def initialize_episode(self, env_idx: torch.Tensor):
         # TODO (stao): should we even split these into 4 separate functions?
         """Initialize the episode, e.g., poses of entities and articulations, and robot configuration.
         No new assets are created. Task-relevant information can be initialized here, like goals.
         """
         with torch.random.fork_rng():
             torch.manual_seed(self._episode_seed)
-            self._initialize_actors()
-            self._initialize_articulations()
-            self._initialize_agent()
-            self._initialize_task()
+            self._initialize_actors(env_idx)
+            self._initialize_articulations(env_idx)
+            self._initialize_agent(env_idx)
+            self._initialize_task(env_idx)
 
-    def _initialize_actors(self):
+    def _initialize_actors(self, env_idx: torch.Tensor):
         """Initialize the poses of actors. Called by `self.initialize_episode`"""
 
-    def _initialize_articulations(self):
+    def _initialize_articulations(self, env_idx: torch.Tensor):
         """Initialize the (joint) poses of articulations. Called by `self.initialize_episode`"""
 
-    def _initialize_agent(self):
+    def _initialize_agent(self, env_idx: torch.Tensor):
         """Initialize the (joint) poses of agent(robot). Called by `self.initialize_episode`"""
 
-    def _initialize_task(self):
+    def _initialize_task(self, env_idx: torch.Tensor):
         """Initialize task-relevant information, like goals. Called by `self.initialize_episode`"""
 
     def _clear_sim_state(self):
@@ -731,7 +743,17 @@ class BaseEnv(gym.Env):
         info = self.get_info()
         obs = self.get_obs(info)
         reward = self.get_reward(obs=obs, action=action, info=info)
-        terminated = info["success"]
+        if "success" in info:
+            if "fail" in info:
+                terminated = torch.logical_or(info["success"], info["fail"])
+            else:
+                terminated = info["success"]
+        else:
+            if "fail" in info:
+                terminated = info["success"]
+            else:
+                terminated = torch.zeros(self.num_envs, dtype=bool, device=self.device)
+
         if physx.is_gpu_enabled():
             return (
                 obs,

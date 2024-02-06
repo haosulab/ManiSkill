@@ -87,24 +87,25 @@ class TwoRobotStackCube(BaseEnv):
             body_type="kinematic",
         )
 
-    def _initialize_actors(self):
+    def _initialize_actors(self, env_idx: torch.Tensor):
         with torch.device(self.device):
+            b = len(env_idx)
             self.table_scene.initialize()
             # the table scene initializes two robots. the first one self.agents[0] is on the left and the second one is on the right
 
-            torch.zeros((self.num_envs, 3))
-            torch.rand((self.num_envs, 2)) * 0.2 - 0.1
-            cubeA_xyz = torch.zeros((self.num_envs, 3))
-            cubeA_xyz[:, 0] = torch.rand((self.num_envs,)) * 0.1 - 0.05
-            cubeA_xyz[:, 1] = -0.15 - torch.rand((self.num_envs,)) * 0.1 + 0.05
-            cubeB_xyz = torch.zeros((self.num_envs, 3))
-            cubeB_xyz[:, 0] = torch.rand((self.num_envs,)) * 0.1 - 0.05
-            cubeB_xyz[:, 1] = 0.15 + torch.rand((self.num_envs,)) * 0.1 - 0.05
+            torch.zeros((b, 3))
+            torch.rand((b, 2)) * 0.2 - 0.1
+            cubeA_xyz = torch.zeros((b, 3))
+            cubeA_xyz[:, 0] = torch.rand((b,)) * 0.1 - 0.05
+            cubeA_xyz[:, 1] = -0.15 - torch.rand((b,)) * 0.1 + 0.05
+            cubeB_xyz = torch.zeros((b, 3))
+            cubeB_xyz[:, 0] = torch.rand((b,)) * 0.1 - 0.05
+            cubeB_xyz[:, 1] = 0.15 + torch.rand((b,)) * 0.1 - 0.05
             cubeA_xyz[:, 2] = 0.02
             cubeB_xyz[:, 2] = 0.02
 
             qs = random_quaternions(
-                self.num_envs,
+                b,
                 lock_x=True,
                 lock_y=True,
                 lock_z=False,
@@ -112,15 +113,15 @@ class TwoRobotStackCube(BaseEnv):
             self.cubeA.set_pose(Pose.create_from_pq(p=cubeA_xyz, q=qs))
 
             qs = random_quaternions(
-                self.num_envs,
+                b,
                 lock_x=True,
                 lock_y=True,
                 lock_z=False,
             )
             self.cubeB.set_pose(Pose.create_from_pq(p=cubeB_xyz, q=qs))
 
-            target_region_xyz = torch.zeros((self.num_envs, 3))
-            target_region_xyz[:, 0] = torch.rand((self.num_envs,)) * 0.1 - 0.05
+            target_region_xyz = torch.zeros((b, 3))
+            target_region_xyz[:, 0] = torch.rand((b,)) * 0.1 - 0.05
             target_region_xyz[:, 1] = -0.1
             # set a little bit above 0 so the target is sitting on the table
             target_region_xyz[..., 2] = 1e-3

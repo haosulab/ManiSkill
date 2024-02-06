@@ -178,3 +178,27 @@ def test_multi_agent(env_id):
         env.step(action_space.sample())
     env.close()
     del env
+
+
+@pytest.mark.gpu_sim
+@pytest.mark.parametrize("env_id", ENV_IDS[:1])
+def test_partial_resets(env_id):
+    env = gym.make(env_id, num_envs=16)
+    obs, _ = env.reset()
+    action_space = env.action_space
+    for _ in range(5):
+        obs, _, _, _, _ = env.step(action_space.sample())
+    env_idx = torch.arange(0, 16, device=env.unwrapped.device)
+    reset_mask = torch.zeros(16, dtype=bool, device=env.unwrapped.device)
+    for i in [1, 3, 4, 13]:
+        reset_mask[i] = True
+    reset_obs, _ = env.reset(options=dict(env_idx=env_idx[reset_mask]))
+    assert torch.isclose(obs[~reset_mask], reset_obs[~reset_mask]).all()
+    assert not torch.isclose(
+        obs[reset_mask][:, :10], reset_obs[reset_mask][:, :10]
+    ).any()
+    env.close()
+    del env
+
+
+# TODO (stao): Add test for tasks where there is no success/success and failure/no success or failure
