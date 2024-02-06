@@ -117,20 +117,27 @@ class PushCubeEnv(BaseEnv):
         # and are there just for generating evaluation videos.
         # self._hidden_objects.append(self.goal_region)
 
-    def _initialize_actors(self):
+    def _initialize_actors(self, env_idx: torch.Tensor):
         # use the torch.device context manager to automatically create tensors on CPU or CUDA depending on self.device, the device the environment runs on
         with torch.device(self.device):
+            # the initialization functions where you as a user place all the objects and initialize their properties
+            # are designed to support partial resets, where you generate initial state for a subset of the environments.
+            # this is done by using the env_idx variable, which also tells you the batch size
+            b = len(env_idx)
             # when using scene builders, you must always call .initialize on them so they can set the correct poses of objects in the prebuilt scene
             # note that the table scene is built such that z=0 is the surface of the table.
             self.table_scene.initialize()
 
             # here we write some randomization code that randomizes the x, y position of the cube we are pushing in the range [-0.1, -0.1] to [0.1, 0.1]
-            xyz = torch.zeros((self.num_envs, 3))
-            xyz[..., :2] = torch.rand((self.num_envs, 2)) * 0.2 - 0.1
+            xyz = torch.zeros((b, 3))
+            xyz[..., :2] = torch.rand((b, 2)) * 0.2 - 0.1
             xyz[..., 2] = self.cube_half_size
             q = [1, 0, 0, 0]
             # we can then create a pose object using Pose.create_from_pq to then set the cube pose with. Note that even though our quaternion
             # is not batched, Pose.create_from_pq will automatically batch p or q accordingly
+            # furthermore, notice how here we do not even using env_idx as a variable to say set the pose for objects in desired
+            # environments. This is because internally any calls to set data on the GPU buffer (e.g. set_pose, set_linear_velocity etc.)
+            # automatically are masked so that you can only set data on objects in environments that are meant to be initialized
             obj_pose = Pose.create_from_pq(p=xyz, q=q)
             self.obj.set_pose(obj_pose)
 

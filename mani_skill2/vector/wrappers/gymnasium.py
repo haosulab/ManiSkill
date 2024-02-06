@@ -13,6 +13,17 @@ class ManiSkillVectorEnv(VectorEnv):
     Gymnasium Vector Env implementation for ManiSkill environments running on the GPU for parallel simulation and optionally parallel rendering
 
     Note that currently this also assumes modeling tasks as infinite horizon (e.g. terminations is always False, only reset when timelimit is reached)
+
+    Args:
+        env: The environment created via gym.make / after wrappers are applied. If a string is given, we use gym.make(env) to create an environment
+        num_envs: The number of parallel environments. This is only used if the env argument is a string
+        env_kwargs: Environment kwargs to pass to gym.make. This is only used if the env argument is a string
+        auto_reset (bool): Whether this wrapper will auto reset the environment (following the same API/conventions as Gymnasium).
+            Default is True (recommended as most ML/RL libraries use auto reset)
+        ignore_terminations (bool): Whether this wrapper ignores terminations when deciding when to auto reset. Terminations can be caused by
+            the task reaching a success or fail state as defined in a task's evaluation function. Default is False, meaning there is early stop in
+            episode rollouts. If set to True, this would generally for situations where you may want to model a task as infinite horizon where a task
+            stops only due to the timelimit.
     """
 
     def __init__(
@@ -21,6 +32,7 @@ class ManiSkillVectorEnv(VectorEnv):
         num_envs: int = None,
         env_kwargs: Dict = dict(),
         auto_reset: bool = True,
+        ignore_terminations: bool = False,
     ):
         if isinstance(env, str):
             self._env = gym.make(env, num_envs=num_envs, **env_kwargs)
@@ -28,6 +40,7 @@ class ManiSkillVectorEnv(VectorEnv):
             self._env = env
             num_envs = self.base_env.num_envs
         self.auto_reset = auto_reset
+        self.ignore_terminations = ignore_terminations
         super().__init__(
             num_envs, self._env.single_observation_space, self._env.single_action_space
         )
@@ -64,9 +77,9 @@ class ManiSkillVectorEnv(VectorEnv):
         truncations: torch.Tensor = (
             self.base_env.elapsed_steps >= self.max_episode_steps
         )
-        # terminations = torch.zeros(self.num_envs, device=self.base_env.device)
+        if self.ignore_terminations:
+            terminations *= 0
         dones = torch.logical_or(terminations, truncations)
-        truncations[:2] = True
 
         if dones.any():
             # TODO (stao): permit reset by indicies later

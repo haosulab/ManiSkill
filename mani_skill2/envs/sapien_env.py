@@ -701,20 +701,20 @@ class BaseEnv(gym.Env):
         with torch.random.fork_rng():
             torch.manual_seed(self._episode_seed)
             self._initialize_actors(env_idx)
-            self._initialize_articulations()
-            self._initialize_agent()
-            self._initialize_task()
+            self._initialize_articulations(env_idx)
+            self._initialize_agent(env_idx)
+            self._initialize_task(env_idx)
 
     def _initialize_actors(self, env_idx: torch.Tensor):
         """Initialize the poses of actors. Called by `self.initialize_episode`"""
 
-    def _initialize_articulations(self):
+    def _initialize_articulations(self, env_idx: torch.Tensor):
         """Initialize the (joint) poses of articulations. Called by `self.initialize_episode`"""
 
-    def _initialize_agent(self):
+    def _initialize_agent(self, env_idx: torch.Tensor):
         """Initialize the (joint) poses of agent(robot). Called by `self.initialize_episode`"""
 
-    def _initialize_task(self):
+    def _initialize_task(self, env_idx: torch.Tensor):
         """Initialize task-relevant information, like goals. Called by `self.initialize_episode`"""
 
     def _clear_sim_state(self):

@@ -125,10 +125,15 @@ class CustomEnv(BaseEnv):
     Episode Initialization Code
 
     below are all functions involved in episode initialization during environment reset called in the same order. As a user
-    you can change these however you want for your desired task.
+    you can change these however you want for your desired task. Note that these functions are given a env_idx variable.
+
+    `env_idx` is a torch Tensor representing the indices of the parallel environments that are being initialized/reset. This is used
+    to support partial resets where some parallel envs might be reset while others are still running (useful for faster RL and evaluation).
+    Generally you only need to really use it to determine batch sizes via len(env_idx). ManiSkill helps handle internally a lot of masking
+    you might normally need to do when working with GPU simulation. For specific details check out the push_cube.py code
     """
 
-    def _initialize_actors(self):
+    def _initialize_actors(self, env_idx: torch.Tensor):
         pass
 
     """
