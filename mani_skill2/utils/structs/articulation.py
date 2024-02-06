@@ -461,7 +461,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         if physx.is_gpu_enabled():
             arg1 = to_tensor(arg1)
             self.px.cuda_rigid_body_data.torch()[
-                self.root._body_data_index, 10:13
+                self.root._body_data_index[self._scene._reset_mask], 10:13
             ] = arg1
         else:
             arg1 = to_numpy(arg1)
@@ -478,7 +478,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         if physx.is_gpu_enabled():
             arg1 = to_tensor(arg1)
             self.px.cuda_rigid_body_data.torch()[
-                self.root._body_data_index, 7:10
+                self.root._body_data_index[self._scene._reset_mask], 7:10
             ] = arg1
         else:
             arg1 = to_numpy(arg1)
