@@ -59,11 +59,17 @@ class ManiSkillVectorEnv(VectorEnv):
             self.base_env.elapsed_steps >= self.max_episode_steps
         )
         terminations = torch.zeros(self.num_envs, device=self.base_env.device)
+
+        truncations[:2] = True
+
         if truncations.any():
             # TODO (stao): permit reset by indicies later
             infos["episode"]["r"] = self.returns.clone()
             final_obs = obs
-            obs, _ = self.reset()
+            env_idx = torch.arange(0, self.num_envs, device=self.base_env.device)[
+                truncations
+            ]
+            obs, _ = self.reset(options=dict(env_idx=env_idx))
             new_infos = dict()
             new_infos["final_info"] = infos
             new_infos["final_observation"] = final_obs
@@ -81,3 +87,6 @@ class ManiSkillVectorEnv(VectorEnv):
         raise RuntimeError(
             "To get an attribute get it from the .env property of this object"
         )
+
+    def render(self):
+        return self.base_env.render()

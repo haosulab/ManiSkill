@@ -12,6 +12,7 @@ import torch
 import tqdm
 
 import mani_skill2.envs
+from mani_skill2.vector.wrappers.gymnasium import ManiSkillVectorEnv
 from profiling import Profiler
 from mani_skill2.utils.visualization.misc import images_to_video, tile_images
 from mani_skill2.utils.wrappers.flatten import FlattenActionSpaceWrapper
@@ -38,7 +39,8 @@ def main(args):
     )
     if isinstance(env.action_space, gym.spaces.Dict):
         env = FlattenActionSpaceWrapper(env)
-    base_env = env.unwrapped
+    env = ManiSkillVectorEnv(env)
+    base_env = env.base_env
     sensor_settings_str = []
     for uid, cam in base_env._sensors.items():
         cfg = cam.cfg
@@ -57,10 +59,10 @@ def main(args):
         f"render_mode={args.render_mode}, sensor_details={sensor_settings_str}, save_video={args.save_video}"
     )
     print(
-        f"sim_freq={env.unwrapped.sim_freq}, control_freq={env.unwrapped.control_freq}"
+        f"sim_freq={env.base_env.sim_freq}, control_freq={env.base_env.control_freq}"
     )
     print(f"observation space: {env.observation_space}")
-    print(f"action space: {env.unwrapped.single_action_space}")
+    print(f"action space: {env.base_env.single_action_space}")
     print(
         "# -------------------------------------------------------------------------- #"
     )
@@ -76,7 +78,7 @@ def main(args):
         with profiler.profile("env.step", total_steps=N, num_envs=num_envs):
             for i in range(N):
                 actions = (
-                    2 * torch.rand(env.action_space.shape, device=env.unwrapped.device)
+                    2 * torch.rand(env.action_space.shape, device=env.base_env.device)
                     - 1
                 )
                 obs, rew, terminated, truncated, info = env.step(actions)

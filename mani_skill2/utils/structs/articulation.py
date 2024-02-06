@@ -380,7 +380,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         if physx.is_gpu_enabled():
             arg1 = to_tensor(arg1)
             self.px.cuda_articulation_qf.torch()[
-                self._data_index, : self.max_dof
+                self._data_index[self._scene._reset_mask], : self.max_dof
             ] = arg1
         else:
             arg1 = to_numpy(arg1)
@@ -418,7 +418,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         if physx.is_gpu_enabled():
             arg1 = to_tensor(arg1)
             self.px.cuda_articulation_qpos.torch()[
-                self._data_index, : self.max_dof
+                self._data_index[self._scene._reset_mask], : self.max_dof
             ] = arg1
         else:
             arg1 = to_numpy(arg1)
@@ -440,7 +440,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         if physx.is_gpu_enabled():
             arg1 = to_tensor(arg1)
             self.px.cuda_articulation_qvel.torch()[
-                self._data_index, : self.max_dof
+                self._data_index[self._scene._reset_mask], : self.max_dof
             ] = arg1
         else:
             arg1 = to_numpy(arg1)
