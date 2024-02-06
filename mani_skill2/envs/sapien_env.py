@@ -743,7 +743,17 @@ class BaseEnv(gym.Env):
         info = self.get_info()
         obs = self.get_obs(info)
         reward = self.get_reward(obs=obs, action=action, info=info)
-        terminated = info["success"]  # TODO permit terminated by failures
+        if "success" in info:
+            if "fail" in info:
+                terminated = torch.logical_or(info["success"], info["fail"])
+            else:
+                terminated = info["success"]
+        else:
+            if "fail" in info:
+                terminated = info["success"]
+            else:
+                terminated = torch.zeros(self.num_envs, dtype=bool, device=self.device)
+
         if physx.is_gpu_enabled():
             return (
                 obs,

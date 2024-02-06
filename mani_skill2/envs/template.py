@@ -131,11 +131,6 @@ class CustomEnv(BaseEnv):
     def _initialize_actors(self):
         pass
 
-    def _initialize_task(self):
-        # we highly recommend to generate some kind of "goal" information to then later include in observations
-        # goal can be parameterized as a state (e.g. target pose of a object)
-        pass
-
     """
     Modifying observations, goal parameterization, and success conditions for your task
 
@@ -143,10 +138,18 @@ class CustomEnv(BaseEnv):
     """
 
     def evaluate(self, obs: Any):
-        # should return a dictionary containing "success": bool array indicating if the environment is in success state or not. The value here is also what the sparse reward is
-        # for the task. You may also include additional keys which will populate the info object returned by self.step and will be fed into `_get_obs_extra` and `_compute_dense_reward``
-        # note that as everything is batched, you must return a batched array of self.num_envs booleans (or 0/1 values) as done in the example below
-        return {"success": torch.zeros(self.num_envs, device=self.device, dtype=bool)}
+        # this function is used primarily to determine success and failure of a task, both of which are optional. If a dictionary is returned
+        # containing "success": bool array indicating if the env is in success state or not, that is used as the terminated variable returned by
+        # self.step. Likewise if it contains "fail": bool array indicating the opposite (failure state or not) the same occurs. If both are given
+        # then a logical OR is taken so terminated = success | fail. If neither are given, terminated is always all False.
+        #
+        # You may also include additional keys which will populate the info object returned by self.step and that will be given to
+        # `_get_obs_extra` and `_compute_dense_reward`. Note that as everything is batched, you must return a batched array of
+        # `self.num_envs` booleans (or 0/1 values) for success an dfail as done in the example below
+        return {
+            "success": torch.zeros(self.num_envs, device=self.device, dtype=bool),
+            "fail": torch.zeros(self.num_envs, device=self.device, dtype=bool),
+        }
 
     def _get_obs_extra(self, info: Dict):
         # should return an OrderedDict of additional observation data for your tasks
