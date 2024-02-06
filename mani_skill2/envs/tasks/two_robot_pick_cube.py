@@ -15,6 +15,7 @@ from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import look_at, to_tensor
 from mani_skill2.utils.scene_builder.table.table_scene_builder import TableSceneBuilder
 from mani_skill2.utils.structs.pose import Pose
+from mani_skill2.utils.structs.types import GPUMemoryConfig, SimConfig
 
 
 @register_env("TwoRobotPickCube-v1", max_episode_steps=100)
@@ -41,6 +42,13 @@ class TwoRobotPickCube(BaseEnv):
 
     SUPPORTED_ROBOTS = [("panda", "panda")]
     agent: MultiAgent[Tuple[Panda, Panda]]
+    sim_cfg = SimConfig(
+        gpu_memory_cfg=GPUMemoryConfig(
+            found_lost_pairs_capacity=2**25,
+            max_rigid_patch_count=2**19,
+            max_rigid_contact_count=2**21,
+        )
+    )
     cube_half_size = 0.02
     goal_thresh = 0.025
 

@@ -28,6 +28,7 @@ def main(args):
         # enable_shadow=True,
         render_mode=args.render_mode,
         control_mode=args.control_mode,
+        sim_cfg=dict(control_freq=50)
     )
     if isinstance(env.action_space, gym.spaces.Dict):
         env = FlattenActionSpaceWrapper(env)
