@@ -268,7 +268,9 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct):
     def angular_velocity(self, arg1: Array):
         if physx.is_gpu_enabled():
             arg1 = to_tensor(arg1)
-            self._body_data[self._body_data_index, 10:13] = arg1
+            self._body_data[
+                self._body_data_index[self._scene._reset_mask], 10:13
+            ] = arg1
         else:
             arg1 = to_numpy(arg1)
             if len(arg1.shape) == 2:
@@ -335,7 +337,7 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct):
     def linear_velocity(self, arg1: Array):
         if physx.is_gpu_enabled():
             arg1 = to_tensor(arg1)
-            self._body_data[self._body_data_index, 7:10] = arg1
+            self._body_data[self._body_data_index[self._scene._reset_mask], 7:10] = arg1
         else:
             arg1 = to_numpy(arg1)
             if len(arg1.shape) == 2:

@@ -38,6 +38,9 @@ class ManiSkillScene:
     sensors: Dict[str, BaseSensor] = OrderedDict()
     human_render_cameras: Dict[str, Camera] = OrderedDict()
 
+    _reset_mask: torch.Tensor = None
+    """Used internally by various wrapped objects like Actor and Link to auto mask out sub-scenes so they do not get modified during partial env resets"""
+
     def __init__(
         self,
         sub_scenes: List[sapien.Scene],
@@ -49,6 +52,8 @@ class ManiSkillScene:
         self._gpu_sim_initialized = False
         self.debug_mode = debug_mode
         self.device = device
+
+        self._reset_mask = torch.ones(len(sub_scenes), dtype=bool, device=self.device)
 
     @property
     def timestep(self):

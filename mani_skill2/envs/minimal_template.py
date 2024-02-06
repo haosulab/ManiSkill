@@ -52,7 +52,10 @@ class CustomEnv(BaseEnv):
         pass
 
     def evaluate(self):
-        return {"success": torch.zeros(self.num_envs, device=self.device, dtype=bool)}
+        return {
+            "success": torch.zeros(self.num_envs, device=self.device, dtype=bool),
+            "fail": torch.zeros(self.num_envs, device=self.device, dtype=bool),
+        }
 
     def _get_obs_extra(self, info: Dict):
         return OrderedDict()

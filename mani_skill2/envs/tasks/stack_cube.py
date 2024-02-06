@@ -69,15 +69,16 @@ class StackCubeEnv(BaseEnv):
             self._scene, half_size=0.02, color=[0, 1, 0, 1], name="cubeB"
         )
 
-    def _initialize_actors(self):
+    def _initialize_actors(self, env_idx: torch.Tensor):
         with torch.device(self.device):
+            b = len(env_idx)
             self.table_scene.initialize()
 
-            xyz = torch.zeros((self.num_envs, 3))
+            xyz = torch.zeros((b, 3))
             xyz[:, 2] = 0.02
-            xy = torch.rand((self.num_envs, 2)) * 0.2 - 0.1
+            xy = torch.rand((b, 2)) * 0.2 - 0.1
             region = [[-0.1, -0.2], [0.1, 0.2]]
-            sampler = UniformPlacementSampler(bounds=region, batch_size=self.num_envs)
+            sampler = UniformPlacementSampler(bounds=region, batch_size=b)
             radius = (torch.linalg.norm(torch.tensor([0.02, 0.02])) + 0.001).to(
                 self.device
             )
@@ -86,7 +87,7 @@ class StackCubeEnv(BaseEnv):
 
             xyz[:, :2] = cubeA_xy
             qs = random_quaternions(
-                self.num_envs,
+                b,
                 lock_x=True,
                 lock_y=True,
                 lock_z=False,
@@ -95,7 +96,7 @@ class StackCubeEnv(BaseEnv):
 
             xyz[:, :2] = cubeB_xy
             qs = random_quaternions(
-                self.num_envs,
+                b,
                 lock_x=True,
                 lock_y=True,
                 lock_z=False,

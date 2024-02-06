@@ -111,21 +111,22 @@ class PickSingleYCBEnv(BaseEnv):
         )
         self._hidden_objects.append(self.goal_site)
 
-    def _initialize_actors(self):
+    def _initialize_actors(self, env_idx: torch.Tensor):
         with torch.device(self.device):
+            b = len(env_idx)
             self.table_scene.initialize()
-            xyz = torch.zeros((self.num_envs, 3))
-            xyz[:, :2] = torch.rand((self.num_envs, 2)) * 0.2 - 0.1
-            for i in range(self.num_envs):
+            xyz = torch.zeros((b, 3))
+            xyz[:, :2] = torch.rand((b, 2)) * 0.2 - 0.1
+            for i in range(b):
                 # use ycb object bounding box heights to set it properly on the table
                 xyz[i, 2] = self.obj_heights[i] / 2
 
-            qs = random_quaternions(self.num_envs, lock_x=True, lock_y=True)
+            qs = random_quaternions(b, lock_x=True, lock_y=True)
             self.obj.set_pose(Pose.create_from_pq(p=xyz, q=qs))
 
-            goal_xyz = torch.zeros((self.num_envs, 3))
-            goal_xyz[:, :2] = torch.rand((self.num_envs, 2)) * 0.2 - 0.1
-            goal_xyz[:, 2] = torch.rand((self.num_envs)) * 0.3 + xyz[:, 2]
+            goal_xyz = torch.zeros((b, 3))
+            goal_xyz[:, :2] = torch.rand((b, 2)) * 0.2 - 0.1
+            goal_xyz[:, 2] = torch.rand((b)) * 0.3 + xyz[:, 2]
             self.goal_site.set_pose(Pose.create_from_pq(goal_xyz))
 
             # Initialize robot arm to a higher position above the table than the default typically used for other table top tasks
