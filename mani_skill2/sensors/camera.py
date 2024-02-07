@@ -11,6 +11,7 @@ import sapien.render
 from gymnasium import spaces
 
 from mani_skill2.utils.structs.articulation import Articulation
+from mani_skill2.utils.structs.link import Link
 
 if TYPE_CHECKING:
     from mani_skill2.envs.scene import ManiSkillScene
@@ -41,6 +42,7 @@ class CameraConfig(BaseSensorConfig):
     """far (float): far plane of the camera"""
     entity_uid: str = None
     """entity_uid (str, optional): unique id of the entity to mount the camera. Defaults to None."""
+    link: Link = None
     hide_link: bool = False
     """hide_link (bool, optional): whether to hide the link to mount the camera. Defaults to False."""
     texture_names: Sequence[str] = ("Color", "PositionSegmentation")
@@ -121,7 +123,9 @@ class Camera(BaseSensor):
         self.camera_cfg = camera_cfg
 
         entity_uid = camera_cfg.entity_uid
-        if entity_uid is None:
+        if camera_cfg.link is not None:
+            self.entity = camera_cfg.link
+        elif entity_uid is None:
             self.entity = None
         else:
             if articulation is None:

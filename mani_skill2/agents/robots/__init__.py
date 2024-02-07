@@ -1,3 +1,5 @@
+from mani_skill2.agents.robots.anymal.anymal_c import ANYmalC
+
 from .fetch import Fetch
 from .mobile_panda import MobilePandaDualArm, MobilePandaSingleArm
 from .panda import Panda
@@ -9,4 +11,5 @@ ROBOTS = {
     "mobile_panda_single_arm": MobilePandaSingleArm,
     "xmate3_robotiq": Xmate3Robotiq,
     "fetch": Fetch,
+    "anymal-c": ANYmalC,
 }

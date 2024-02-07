@@ -208,7 +208,11 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         for i, art in enumerate(self._objs):
             art_meshes = []
             for link in art.links:
-                art_meshes += get_component_meshes(link)
+                link_mesh = merge_meshes(get_component_meshes(link))
+                if link_mesh is not None:
+                    if to_world_frame:
+                        link_mesh.apply_transform(link.pose.to_transformation_matrix())
+                    art_meshes.append(link_mesh)
             mesh = merge_meshes(art_meshes)
             if to_world_frame:
                 mesh.apply_transform(mat[i])
@@ -454,7 +458,16 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     @root_angular_velocity.setter
     def root_angular_velocity(self, arg1: Array) -> None:
-        self.root.angular_velocity = arg1
+        if physx.is_gpu_enabled():
+            arg1 = to_tensor(arg1)
+            self.px.cuda_rigid_body_data.torch()[
+                self.root._body_data_index[self._scene._reset_mask], 10:13
+            ] = arg1
+        else:
+            arg1 = to_numpy(arg1)
+            if len(arg1.shape) == 2:
+                arg1 = arg1[0]
+            self._objs[0].set_root_angular_velocity(arg1)
 
     @property
     def root_linear_velocity(self) -> torch.Tensor:
@@ -462,7 +475,16 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     @root_linear_velocity.setter
     def root_linear_velocity(self, arg1: Array) -> None:
-        self.root.linear_velocity = arg1
+        if physx.is_gpu_enabled():
+            arg1 = to_tensor(arg1)
+            self.px.cuda_rigid_body_data.torch()[
+                self.root._body_data_index[self._scene._reset_mask], 7:10
+            ] = arg1
+        else:
+            arg1 = to_numpy(arg1)
+            if len(arg1.shape) == 2:
+                arg1 = arg1[0]
+            self._objs[0].set_root_linear_velocity(arg1)
 
     @property
     def root_pose(self):

@@ -22,6 +22,7 @@ from mani_skill2.utils.sapien_utils import look_at
 from mani_skill2.utils.scene_builder.table.table_scene_builder import TableSceneBuilder
 from mani_skill2.utils.structs.actor import Actor
 from mani_skill2.utils.structs.pose import Pose
+from mani_skill2.utils.structs.types import GPUMemoryConfig, SimConfig
 
 
 @register_env("PickSingleYCB-v1", max_episode_steps=100)
@@ -48,7 +49,11 @@ class PickSingleYCBEnv(BaseEnv):
 
     SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
     agent: Union[Panda, Xmate3Robotiq, Fetch]
-
+    sim_cfg = SimConfig(
+        gpu_memory_cfg=GPUMemoryConfig(
+            found_lost_pairs_capacity=2**25, max_rigid_patch_count=2**18
+        )
+    )
     goal_thresh = 0.025
 
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):

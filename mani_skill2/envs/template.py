@@ -31,8 +31,10 @@ from mani_skill2.agents.robots.fetch.fetch import Fetch
 from mani_skill2.agents.robots.panda.panda import Panda
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
+from mani_skill2.utils.building import actors
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import look_at
+from mani_skill2.utils.structs.types import GPUMemoryConfig, SimConfig
 
 
 # register the environment by a unique ID and specify a max time limit. Now once this file is imported you can do gym.make("CustomEnv-v0")
@@ -66,6 +68,15 @@ class CustomEnv(BaseEnv):
     # if you want to do typing for multi-agent setups, use this below and specify what possible tuples of robots are permitted by typing
     # this will then populate agent.agents (list of the instantiated agents) with the right typing
     # agent: MultiAgent[Union[Tuple[Panda, Panda], Tuple[Panda, Panda, Panda]]]
+
+    # Specify default simulation/gpu memory configurations. Note that tasks need to tune their GPU memory configurations accordingly
+    # in order to save memory while also running with no errors. In general you can start with low values and increase them
+    # depending on the messages that show up when you try to run more environments in parallel
+    sim_cfg = SimConfig(
+        gpu_memory_cfg=GPUMemoryConfig(
+            found_lost_pairs_capacity=2**25, max_rigid_patch_count=2**18
+        )
+    )
 
     # in the __init__ function you can pick a default robot your task should use e.g. the panda robot by setting a default for robot_uids argument
     # note that if robot_uids is a list of robot uids, then we treat it as a multi-agent setup and load each robot separately.

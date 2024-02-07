@@ -1,0 +1,11 @@
+<?xml version="1.0" ?>
+<robot name="anymal">
+    <disable_collisions link1="base" link2="LF_HFE" reason="Default"/>
+    <disable_collisions link1="base" link2="LH_HFE" reason="Default"/>
+    <disable_collisions link1="base" link2="LF_thigh_fixed" reason="Default"/>
+    <disable_collisions link1="base" link2="LH_thigh_fixed" reason="Default"/>
+    <disable_collisions link1="base" link2="RF_HFE" reason="Default"/>
+    <disable_collisions link1="base" link2="RH_HFE" reason="Default"/>
+    <disable_collisions link1="base" link2="RF_thigh_fixed" reason="Default"/>
+    <disable_collisions link1="base" link2="RH_thigh_fixed" reason="Default"/>
+</robot>

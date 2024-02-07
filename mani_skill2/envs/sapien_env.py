@@ -32,7 +32,11 @@ from mani_skill2.sensors.camera import (
     update_camera_cfgs_from_dict,
 )
 from mani_skill2.sensors.depth_camera import StereoDepthCamera, StereoDepthCameraConfig
-from mani_skill2.utils.common import convert_observation_to_space, flatten_state_dict
+from mani_skill2.utils.common import (
+    convert_observation_to_space,
+    dict_merge,
+    flatten_state_dict,
+)
 from mani_skill2.utils.sapien_utils import (
     batch,
     get_obj_by_type,
@@ -42,6 +46,7 @@ from mani_skill2.utils.sapien_utils import (
 )
 from mani_skill2.utils.structs.actor import Actor
 from mani_skill2.utils.structs.articulation import Articulation
+from mani_skill2.utils.structs.types import SimConfig
 from mani_skill2.utils.visualization.misc import observations_to_images, tile_images
 
 
@@ -64,8 +69,6 @@ class BaseEnv(gym.Env):
             "*" represents all registered controllers, and the action space will be a dict.
 
         render_mode: render mode registered in @SUPPORTED_RENDER_MODES.
-        sim_freq (int): simulation frequency (Hz). Default is 500 for CPU simulation, 100 for GPU simulation
-        control_freq (int): control frequency (Hz). Default is 20 for CPU simulation, 20 for GPU simulation
 
         shader_dir (str): shader directory. Defaults to "default".
             "default" and "rt" are built-in options with SAPIEN. Other options are user-defined.
@@ -78,9 +81,7 @@ class BaseEnv(gym.Env):
 
         robot_uids (Union[str, BaseAgent, List[Union[str, BaseAgent]]]): List of robots to instantiate and control in the environment.
 
-        scene_cfgs (dict): configurations to modify the physics simulation. These are passed to the sapien.physx.set_scene_config function.
-
-        gpu_sim_cfgs (dict): Configurations for GPU simulation if used. # TODO (stao): flesh this explanation out
+        sim_cfg (dict): Configurations for simulation if used that override the environment defaults. # TODO (stao): flesh this explanation out
 
         reconfiguration_freq (int): How frequently to call reconfigure when environment is reset via `self.reset(...)`
             Generally for most users who are not building tasks this does not need to be changed. The default is 0, which means
@@ -102,6 +103,9 @@ class BaseEnv(gym.Env):
     SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "sensor_data", "rgbd", "pointcloud")
     SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "sparse")
     SUPPORTED_RENDER_MODES = ("human", "rgb_array", "sensors")
+    """The supported render modes. Human opens up a GUI viewer. rgb_array returns an rgb array showing the current environment state.
+    sensors returns an rgb array but only showing all data collected by sensors as images put together"""
+    sim_cfg: SimConfig = SimConfig()
     # fmt: on
 
     metadata = {"render_modes": SUPPORTED_RENDER_MODES}
@@ -135,22 +139,18 @@ class BaseEnv(gym.Env):
         reward_mode: str = None,
         control_mode: str = None,
         render_mode: str = None,
-        sim_freq: int = None,
-        control_freq: int = None,
         shader_dir: str = "default",
         enable_shadow: bool = False,
         sensor_cfgs: dict = None,
         human_render_camera_cfgs: dict = None,
         robot_uids: Union[str, BaseAgent, List[Union[str, BaseAgent]]] = None,
-        scene_cfgs: dict = dict(),
-        gpu_sim_cfgs: dict = dict(spacing=2000),
+        sim_cfg: SimConfig = dict(),
         reconfiguration_freq: int = 0,
         force_use_gpu_sim: bool = False,
     ):
         self.num_envs = num_envs
         self.reconfiguration_freq = reconfiguration_freq
         self._reconfig_counter = 0
-        self.scene_cfgs = scene_cfgs
         self._custom_sensor_cfgs = sensor_cfgs
         self._custom_human_render_camera_cfgs = human_render_camera_cfgs
         self.robot_uids = robot_uids
@@ -159,25 +159,17 @@ class BaseEnv(gym.Env):
         if num_envs > 1 or force_use_gpu_sim:
             if not sapien.physx.is_gpu_enabled():
                 sapien.physx.enable_gpu()
-            self.gpu_sim_cfgs = gpu_sim_cfgs
             self.device = torch.device(
                 "cuda"
             )  # TODO (stao): fix this for multi gpu support?
         else:
             self.device = torch.device("cpu")
-        # TODO Ms2 set log level. What to do now?
-        # self._engine.set_log_level(os.getenv("MS2_SIM_LOG_LEVEL", "error"))
 
-        if sim_freq is None:
-            if physx.is_gpu_enabled():
-                sim_freq = 100
-            else:
-                sim_freq = 500
-        if control_freq is None:
-            if physx.is_gpu_enabled():
-                control_freq = 20
-            else:
-                control_freq = 20
+        merged_gpu_sim_cfg = self.sim_cfg.dict()
+        dict_merge(merged_gpu_sim_cfg, sim_cfg)
+        self.sim_cfg = SimConfig(**merged_gpu_sim_cfg)
+
+        sapien.physx.set_gpu_memory_config(**self.sim_cfg.gpu_memory_cfg)
 
         if shader_dir == "default":
             sapien.render.set_camera_shader_dir("minimal")
@@ -201,13 +193,13 @@ class BaseEnv(gym.Env):
         sapien.render.set_log_level(os.getenv("MS2_RENDERER_LOG_LEVEL", "warn"))
 
         # Set simulation and control frequency
-        self._sim_freq = sim_freq
-        self._control_freq = control_freq
-        if sim_freq % control_freq != 0:
+        self._sim_freq = self.sim_cfg.sim_freq
+        self._control_freq = self.sim_cfg.control_freq
+        if self._sim_freq % self._control_freq != 0:
             logger.warning(
-                f"sim_freq({sim_freq}) is not divisible by control_freq({control_freq}).",
+                f"sim_freq({self._sim_freq}) is not divisible by control_freq({self._control_freq}).",
             )
-        self._sim_steps_per_control = sim_freq // control_freq
+        self._sim_steps_per_control = self._sim_freq // self._control_freq
 
         # Observation mode
         if obs_mode is None:
@@ -387,9 +379,7 @@ class BaseEnv(gym.Env):
             return OrderedDict()
         elif self._obs_mode == "state":
             state_dict = self._get_obs_state_dict(info)
-            obs = flatten_state_dict(
-                state_dict, squeeze_dims=squeeze_dims, use_torch=True
-            )
+            obs = flatten_state_dict(state_dict, use_torch=True, device=self.device)
         elif self._obs_mode == "state_dict":
             obs = self._get_obs_state_dict(info)
         elif self._obs_mode in ["sensor_data", "rgbd", "pointcloud"]:
@@ -726,8 +716,8 @@ class BaseEnv(gym.Env):
             actor.set_angular_velocity([0, 0, 0])
         for articulation in self._scene.articulations.values():
             articulation.set_qvel(np.zeros(articulation.max_dof))
-            # articulation.set_root_velocity([0, 0, 0])
-            # articulation.set_root_angular_velocity([0, 0, 0])
+            articulation.set_root_linear_velocity([0, 0, 0])
+            articulation.set_root_angular_velocity([0, 0, 0])
         if physx.is_gpu_enabled():
             self._scene._gpu_apply_all()
             self._scene._gpu_fetch_all()
@@ -822,8 +812,10 @@ class BaseEnv(gym.Env):
 
     def evaluate(self) -> dict:
         """
-        Evaluate whether the environment is currently in a success state by returning a dictionary with a "success" key.
-        This function may also return additional data that has been computed (e.g. is the robot grasping some object) so that they may be
+        Evaluate whether the environment is currently in a success state by returning a dictionary with a "success" key or
+        a failure state via a "fail" key
+
+        This function may also return additional data that has been computed (e.g. is the robot grasping some object) that may be
         reused when generating observations and rewards.
         """
         raise NotImplementedError
@@ -846,26 +838,9 @@ class BaseEnv(gym.Env):
     # Simulation and other gym interfaces
     # -------------------------------------------------------------------------- #
     def _set_scene_config(self):
-        # cpu_workers=min(os.cpu_count(), 4) # NOTE (stao): use this if we use step_start and step_finish to enable CPU workloads between physx steps.
-        # NOTE (fxiang): PCM is enabled for GPU sim regardless.
-        # NOTE (fxiang): smaller contact_offset is faster as less contacts are considered, but some contacts may be missed if distance changes too fast
-        # NOTE (fxiang): solver iterations 15 is recommended to balance speed and accuracy. If stable grasps are necessary >= 20 is preferred.
-        # NOTE (fxiang): can try using more cpu_workers as it may also make it faster if there are a lot of collisions, collision filtering is on CPU
-        # NOTE (fxiang): enable_enhanced_determinism is for CPU probably. If there are 10 far apart sub scenes, this being True makes it so they do not impact each other at all
-        DEFAULT_SCENE_CONFIG = dict(
-            cpu_workers=0,
-            enable_pcm=True,
-            solver_iterations=15,
-            contact_offset=0.02,
-            solver_velocity_iterations=1,
-            enable_tgs=True,
-        )
-        scene_config = dict(**DEFAULT_SCENE_CONFIG, **self.scene_cfgs)
-        physx.set_scene_config(**scene_config)
-        # note these frictions are same as unity
-        physx.set_default_material(
-            dynamic_friction=0.3, static_friction=0.3, restitution=0
-        )
+        # TODO (stao): Do these have any effect after calling gpu_init?
+        physx.set_scene_config(**self.sim_cfg.scene_cfg)
+        physx.set_default_material(**self.sim_cfg.default_materials_cfg)
 
     def _setup_scene(self):
         """Setup the simulation scene instance.
@@ -887,8 +862,8 @@ class BaseEnv(gym.Env):
                 scene.physx_system.set_scene_offset(
                     scene,
                     [
-                        scene_x * self.gpu_sim_cfgs["spacing"],
-                        scene_y * self.gpu_sim_cfgs["spacing"],
+                        scene_x * self.sim_cfg.spacing,
+                        scene_y * self.sim_cfg.spacing,
                         0,
                     ],
                 )
