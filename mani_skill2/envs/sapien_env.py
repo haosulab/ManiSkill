@@ -956,31 +956,8 @@ class BaseEnv(gym.Env):
             )
         for obj in self._hidden_objects:
             obj.show_visual()
-        self.update_render()
-
-        # TODO (stao): currently in GPU mode we cannot render all sub-scenes together in the GUI yet. So we have this
-        # naive solution which shows whatever scene is selected by self._viewer_scene_idx
         if physx.is_gpu_enabled() and self._scene._gpu_sim_initialized:
-            # TODO (stao): This is the slow method, update objects via cpu
-            for actor in self._scene.actors.values():
-                if actor.px_body_type == "static":
-                    continue
-                i = self._viewer_scene_idx
-
-                actor_pose = to_numpy(actor.pose.raw_pose[i])
-                entity = actor._objs[self._viewer_scene_idx]
-                entity.set_pose(sapien.Pose(actor_pose[:3], actor_pose[3:]))
-            for articulation in self._scene.articulations.values():
-                i = self._viewer_scene_idx
-                wrapped_links = articulation.links
-                art = articulation._objs[self._viewer_scene_idx]
-                for j, link in enumerate(art.links):
-                    link_pose = to_numpy(wrapped_links[j].pose.raw_pose[i])
-                    comp = link.entity.find_component_by_type(
-                        sapien.render.RenderBodyComponent
-                    )
-                    if comp is not None:
-                        comp.set_pose(sapien.Pose(link_pose[:3], link_pose[3:]))
+            self.physx_system.sync_poses_gpu_to_cpu()
         self._viewer.render()
         return self._viewer
 

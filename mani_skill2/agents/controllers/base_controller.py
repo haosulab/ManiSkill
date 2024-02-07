@@ -239,9 +239,11 @@ class DictController(BaseController):
             raise AssertionError("{} is not fully actuated".format(self.articulation))
 
     def set_drive_property(self):
-        raise RuntimeError(
-            "Undefined behaviors to set drive property for multiple controllers"
-        )
+        for controller in self.controllers.values():
+            controller.set_drive_property()
+        # raise RuntimeError(
+        #     "Undefined behaviors to set drive property for multiple controllers"
+        # )
 
     def reset(self):
         for controller in self.controllers.values():
