@@ -74,8 +74,6 @@ def main(args):
                     - 1
                 )
                 obs, rew, terminated, truncated, info = env.step(actions)
-                if torch.isnan(obs).any():
-                    import ipdb;ipdb.set_trace()
                 if args.save_video:
                     images.append(env.render().cpu().numpy())
         profiler.log_stats("env.step")
