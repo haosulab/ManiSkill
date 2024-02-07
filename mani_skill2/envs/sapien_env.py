@@ -144,7 +144,6 @@ class BaseEnv(gym.Env):
         sensor_cfgs: dict = None,
         human_render_camera_cfgs: dict = None,
         robot_uids: Union[str, BaseAgent, List[Union[str, BaseAgent]]] = None,
-        scene_cfg: dict = dict(),
         sim_cfg: SimConfig = dict(),
         reconfiguration_freq: int = 0,
         force_use_gpu_sim: bool = False,
@@ -152,7 +151,6 @@ class BaseEnv(gym.Env):
         self.num_envs = num_envs
         self.reconfiguration_freq = reconfiguration_freq
         self._reconfig_counter = 0
-        self.scene_cfg = scene_cfg
         self._custom_sensor_cfgs = sensor_cfgs
         self._custom_human_render_camera_cfgs = human_render_camera_cfgs
         self.robot_uids = robot_uids
