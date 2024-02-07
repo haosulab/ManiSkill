@@ -649,6 +649,7 @@ class BaseEnv(gym.Env):
         self._set_episode_rng(self._episode_seed)
 
         self.initialize_episode(env_idx)
+        self.agent.controller.reset()
         obs = self.get_obs()
         if physx.is_gpu_enabled():
             # ensure all updates to object poses and configurations are applied on GPU after task initialization

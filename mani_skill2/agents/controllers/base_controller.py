@@ -117,8 +117,7 @@ class BaseController:
         raise NotImplementedError
 
     def reset(self):
-        """Resets the controller by setting drive properties if needed"""
-        self.set_drive_property()
+        """Resets the controller to an initial state"""
 
     def _preprocess_action(self, action: Array):
         # TODO(jigu): support discrete action

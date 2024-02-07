@@ -90,7 +90,7 @@ class BaseAgent:
         Initialize the agent, which includes running _after_init() and initializing/resetting the controller
         """
         self._after_init()
-        self.controller.reset()
+        self.controller.set_drive_property()
 
     def _load_articulation(self):
         """
