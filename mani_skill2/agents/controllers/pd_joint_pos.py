@@ -44,7 +44,6 @@ class PDJointPosController(BaseController):
     def reset(self):
         super().reset()
         self._step = 0  # counter of simulation steps after action is set
-        # TODO (stao): support gpu based actions later
         self._start_qpos = self.qpos
         self._target_qpos = self.qpos
 
