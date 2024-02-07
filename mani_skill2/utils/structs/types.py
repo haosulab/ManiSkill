@@ -21,17 +21,18 @@ Device = Union[str, torch.device]
 class GPUMemoryConfig:
     """A gpu memory configuration dataclass that neatly holds all parameters that configure physx GPU memory for simulation"""
 
-    temp_buffer_capacity: int = 16777216
+    temp_buffer_capacity: int = 2**24
+    """Increase this if you get 'PxgPinnedHostLinearMemoryAllocator: overflowing initial allocation size, increase capacity to at least %.' """
     max_rigid_contact_count: int = 524288
     max_rigid_patch_count: int = (
         2**18
     )  # 81920 is SAPIEN default but most tasks work with 2**18
-    heap_capacity: int = 67108864
+    heap_capacity: int = 2**26
     found_lost_pairs_capacity: int = (
         2**25
     )  # 262144 is SAPIEN default but most tasks work with 2**25
-    found_lost_aggregate_pairs_capacity: int = 1024
-    total_aggregate_pairs_capacity: int = 1024
+    found_lost_aggregate_pairs_capacity: int = 2**10
+    total_aggregate_pairs_capacity: int = 2**10
 
     def dict(self):
         return {k: v for k, v in asdict(self).items()}
