@@ -27,29 +27,26 @@ class MultiAgent(BaseAgent, Generic[T]):
             proprioception[f"{agent.uid}-{i}"] = agent.get_proprioception()
         return proprioception
 
-    def initialize(self):
-        for agent in self.agents:
-            agent.initialize()
-
     @property
     def control_mode(self):
         """Get the currently activated controller uid of each robot"""
         return {uid: agent.control_mode for uid, agent in self.agents_dict.items()}
 
-    def set_control_mode(self, control_mode: List[str]):
-        assert len(control_mode) == len(
-            self.agents
-        ), "For task with multiple agents, setting control mode on the MultiAgent object requires a control mode for each agent"
-        for cm, agent in zip(control_mode, self.agents):
-            agent.set_control_mode(cm)
+    def set_control_mode(self, control_mode: List[str] = None):
+        """Set the controller, drive properties, and reset for each agent. If given control mode is None, will set defaults"""
+        if control_mode is None:
+            for agent in self.agents:
+                agent.set_control_mode()
+        else:
+            assert len(control_mode) == len(
+                self.agents
+            ), "For task with multiple agents, setting control mode on the MultiAgent object requires a control mode for each agent"
+            for cm, agent in zip(control_mode, self.agents):
+                agent.set_control_mode(cm)
 
     @property
     def controller(self):
-        """Get currently activated controller."""
-        if self._control_mode is None:
-            raise RuntimeError("Please specify a control mode first")
-        else:
-            return self.controllers[self._control_mode]
+        return {uid: agent.controller for uid, agent in self.agents_dict.items()}
 
     @property
     def action_space(self):
@@ -82,9 +79,7 @@ class MultiAgent(BaseAgent, Generic[T]):
         Reset the robot to a rest position or a given q-position
         """
         for uid, agent in self.agents_dict.items():
-            robot = agent.robot
             if init_qpos is not None and uid in init_qpos:
-                robot.set_qpos(init_qpos[uid])
-            robot.set_qvel(torch.zeros(robot.max_dof, device=self.device))
-            robot.set_qf(torch.zeros(robot.max_dof, device=self.device))
-            agent.set_control_mode(agent._default_control_mode)
+                agent.reset(init_qpos=[uid])
+            else:
+                agent.reset()

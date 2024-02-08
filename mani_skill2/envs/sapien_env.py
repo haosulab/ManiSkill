@@ -286,7 +286,7 @@ class BaseEnv(gym.Env):
                     self._control_mode,
                     agent_idx=i if len(robot_uids) > 0 else None,
                 )
-                agent.set_control_mode(agent._default_control_mode)
+                agent.set_control_mode()
                 agents.append(agent)
         if len(agents) == 1:
             self.agent = agents[0]
@@ -533,8 +533,6 @@ class BaseEnv(gym.Env):
             if sapien.physx.is_gpu_enabled():
                 self._scene._setup_gpu()
                 self._scene._gpu_fetch_all()
-                # TODO (stao): unknown what happens when we do reconfigure more than once when GPU is one. figure this out
-            self.agent.initialize()
             self._setup_sensors()  # for GPU sim, we have to setup sensors after we call setup gpu in order to enable loading mounted sensors
             if self._viewer is not None:
                 self._setup_viewer()
@@ -649,14 +647,13 @@ class BaseEnv(gym.Env):
         self._set_episode_rng(self._episode_seed)
 
         self.initialize_episode(env_idx)
-        self.agent.controller.reset()
+        self.agent.reset()
         obs = self.get_obs()
         if physx.is_gpu_enabled():
             # ensure all updates to object poses and configurations are applied on GPU after task initialization
             self._scene._gpu_apply_all()
             self._scene.px.gpu_update_articulation_kinematics()
             self._scene._gpu_fetch_all()
-
         else:
             obs = to_numpy(unbatch(obs))
             self._elapsed_steps = 0
@@ -779,6 +776,7 @@ class BaseEnv(gym.Env):
             if "control_mode" in action:
                 if action["control_mode"] != self.agent.control_mode:
                     self.agent.set_control_mode(action["control_mode"])
+                    self.agent.controller.reset()
                 action = to_tensor(action["action"])
             else:
                 assert isinstance(

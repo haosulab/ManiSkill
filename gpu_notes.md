@@ -56,3 +56,24 @@ all _initialize functions however are NOT "single-thread".
 Parallel IK?
 
 cannot set collision groups in gpu sim after links are built...
+
+
+## Legged Task Simulation
+
+OmniIsaacGymEnvs:
+
+They have anymal.py which tasks the anymal robot to move in a given direction and anymal_terrain.py is the same but on random complicated terrain
+
+Some differences of note:
+- anymal.py uses a joint delta position controller
+- anymal_terrain.py sets torque efforts via
+```
+torques = torch.clip(
+    self.Kp * (self.action_scale * self.actions + self.default_dof_pos - self.dof_pos)
+    - self.Kd * self.dof_vel,
+    -80.0,
+    80.0,
+)
+```
+
+They interestingly add a self.default_dof_pos - self.dof_pos which naturally pushes the robot to a resting position

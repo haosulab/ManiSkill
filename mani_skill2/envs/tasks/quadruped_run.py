@@ -56,8 +56,8 @@ class QuadrupedRunEnv(BaseEnv):
             found_lost_pairs_capacity=2**22,
             found_lost_aggregate_pairs_capacity=2**25,
             total_aggregate_pairs_capacity=2**22,
-            max_rigid_patch_count=2**22,
-            max_rigid_contact_count=2**24,
+            max_rigid_patch_count=2**18,
+            max_rigid_contact_count=2**20,
         ),
         scene_cfg=SceneConfig(
             solver_iterations=4,
