@@ -1,4 +1,5 @@
 import copy
+import gc
 import os
 from collections import OrderedDict
 from functools import cached_property
@@ -168,7 +169,8 @@ class BaseEnv(gym.Env):
         merged_gpu_sim_cfg = self.sim_cfg.dict()
         dict_merge(merged_gpu_sim_cfg, sim_cfg)
         self.sim_cfg = SimConfig(**merged_gpu_sim_cfg)
-
+        # TODO (stao): there may be a memory leak or some issue with memory not being released when repeatedly creating and closing environments with high memory requirements
+        # test withg pytest tests/ -m "not slow and gpu_sim" --pdb
         sapien.physx.set_gpu_memory_config(**self.sim_cfg.gpu_memory_cfg)
 
         if shader_dir == "default":
@@ -286,7 +288,7 @@ class BaseEnv(gym.Env):
                     self._control_mode,
                     agent_idx=i if len(robot_uids) > 0 else None,
                 )
-                agent.set_control_mode(agent._default_control_mode)
+                agent.set_control_mode()
                 agents.append(agent)
         if len(agents) == 1:
             self.agent = agents[0]
@@ -533,8 +535,6 @@ class BaseEnv(gym.Env):
             if sapien.physx.is_gpu_enabled():
                 self._scene._setup_gpu()
                 self._scene._gpu_fetch_all()
-                # TODO (stao): unknown what happens when we do reconfigure more than once when GPU is one. figure this out
-            self.agent.initialize()
             self._setup_sensors()  # for GPU sim, we have to setup sensors after we call setup gpu in order to enable loading mounted sensors
             if self._viewer is not None:
                 self._setup_viewer()
@@ -649,13 +649,13 @@ class BaseEnv(gym.Env):
         self._set_episode_rng(self._episode_seed)
 
         self.initialize_episode(env_idx)
+        self.agent.reset()
         obs = self.get_obs()
         if physx.is_gpu_enabled():
             # ensure all updates to object poses and configurations are applied on GPU after task initialization
             self._scene._gpu_apply_all()
             self._scene.px.gpu_update_articulation_kinematics()
             self._scene._gpu_fetch_all()
-
         else:
             obs = to_numpy(unbatch(obs))
             self._elapsed_steps = 0
@@ -778,6 +778,7 @@ class BaseEnv(gym.Env):
             if "control_mode" in action:
                 if action["control_mode"] != self.agent.control_mode:
                     self.agent.set_control_mode(action["control_mode"])
+                    self.agent.controller.reset()
                 action = to_tensor(action["action"])
             else:
                 assert isinstance(
@@ -891,6 +892,7 @@ class BaseEnv(gym.Env):
 
     def close(self):
         self._clear()
+        gc.collect()  # force gc to collect which releases most GPU memory
 
     def _close_viewer(self):
         if self._viewer is None:
@@ -955,31 +957,8 @@ class BaseEnv(gym.Env):
             )
         for obj in self._hidden_objects:
             obj.show_visual()
-        self.update_render()
-
-        # TODO (stao): currently in GPU mode we cannot render all sub-scenes together in the GUI yet. So we have this
-        # naive solution which shows whatever scene is selected by self._viewer_scene_idx
         if physx.is_gpu_enabled() and self._scene._gpu_sim_initialized:
-            # TODO (stao): This is the slow method, update objects via cpu
-            for actor in self._scene.actors.values():
-                if actor.px_body_type == "static":
-                    continue
-                i = self._viewer_scene_idx
-
-                actor_pose = to_numpy(actor.pose.raw_pose[i])
-                entity = actor._objs[self._viewer_scene_idx]
-                entity.set_pose(sapien.Pose(actor_pose[:3], actor_pose[3:]))
-            for articulation in self._scene.articulations.values():
-                i = self._viewer_scene_idx
-                wrapped_links = articulation.links
-                art = articulation._objs[self._viewer_scene_idx]
-                for j, link in enumerate(art.links):
-                    link_pose = to_numpy(wrapped_links[j].pose.raw_pose[i])
-                    comp = link.entity.find_component_by_type(
-                        sapien.render.RenderBodyComponent
-                    )
-                    if comp is not None:
-                        comp.set_pose(sapien.Pose(link_pose[:3], link_pose[3:]))
+            self.physx_system.sync_poses_gpu_to_cpu()
         self._viewer.render()
         return self._viewer
 

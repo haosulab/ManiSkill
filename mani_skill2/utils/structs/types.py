@@ -77,7 +77,7 @@ class DefaultMaterialsConfig:
 
 @dataclass
 class SimConfig:
-    spacing: int = 20
+    spacing: int = 5
     """Controls the spacing between parallel environments when simulating on GPU in meters. Increase this value
     if you expect objects in one parallel environment to impact objects within this spacing distance"""
     sim_freq: int = 100

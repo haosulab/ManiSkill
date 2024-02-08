@@ -35,18 +35,15 @@ class ANYmalC(BaseAgent):
 
     @property
     def controller_configs(self):
-        # isaac parameters
-        # self.arm_stiffness = 85.0
-        # self.arm_damping = 2.0
-        # self.arm_force_limit = 100
-        self.arm_stiffness = 1000.0
-        self.arm_damping = 100
+        self.arm_stiffness = 85.0
+        self.arm_damping = 2.0
         self.arm_force_limit = 100
-        # import ipdb;ipdb.set_trace()
+
+        # delta action scale for Omni Isaac Gym Envs is self.dt * self.action_scale = 1/60 * 13.5. NOTE that their self.dt value is not the same as the actual DT used in sim...., they use default of 1/100
         pd_joint_delta_pos = PDJointPosControllerConfig(
             self.joint_names,
-            None,
-            None,
+            -0.225,
+            0.225,
             self.arm_stiffness,
             self.arm_damping,
             self.arm_force_limit,

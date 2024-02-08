@@ -42,10 +42,8 @@ class PDJointPosController(BaseController):
             joint.set_friction(friction[i])
 
     def reset(self):
-        # TODO (stao): Fix this. We should reset controller after each env.reset, and set drive properties only when control mode is changed.
         super().reset()
         self._step = 0  # counter of simulation steps after action is set
-        # TODO (stao): support gpu based actions later
         self._start_qpos = self.qpos
         self._target_qpos = self.qpos
 

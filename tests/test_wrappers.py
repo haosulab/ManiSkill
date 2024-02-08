@@ -9,7 +9,7 @@ from mani_skill2.utils.wrappers.flatten import (
 )
 from mani_skill2.utils.wrappers.visual_encoders import VisualEncoderWrapper
 from mani_skill2.vector.wrappers.gymnasium import ManiSkillVectorEnv
-from tests.utils import ENV_IDS, MULTI_AGENT_ENV_IDS, OBS_MODES
+from tests.utils import ENV_IDS, LOW_MEM_SIM_CFG, MULTI_AGENT_ENV_IDS, OBS_MODES
 
 
 @pytest.mark.gpu_sim
@@ -22,6 +22,7 @@ def test_recordepisode_wrapper_gpu(env_id, obs_mode):
         render_mode="rgb_array",
         max_episode_steps=10,
         num_envs=16,
+        sim_cfg=LOW_MEM_SIM_CFG,
     )
     env = RecordEpisode(
         env,
@@ -74,6 +75,7 @@ def test_recordepisode_wrapper_gpu_render_sensor(env_id, obs_mode):
         render_mode="sensors",
         max_episode_steps=10,
         num_envs=16,
+        sim_cfg=LOW_MEM_SIM_CFG,
     )
     env = RecordEpisode(
         env,
@@ -125,6 +127,7 @@ def test_visualencoders_gpu(env_id):
         render_mode="rgb_array",
         max_episode_steps=10,
         num_envs=16,
+        sim_cfg=LOW_MEM_SIM_CFG,
     )
     assert (
         "embedding" not in env.observation_space.keys()
@@ -160,6 +163,7 @@ def test_visualencoder_flatten_gpu(env_id):
         render_mode="rgb_array",
         max_episode_steps=10,
         num_envs=16,
+        sim_cfg=LOW_MEM_SIM_CFG,
     )
     env = VisualEncoderWrapper(env, encoder="r3m")
     env = FlattenObservationWrapper(env)
@@ -185,7 +189,7 @@ def test_visualencoder_flatten_gpu(env_id):
 @pytest.mark.gpu_sim
 @pytest.mark.parametrize("env_id", MULTI_AGENT_ENV_IDS[:1])
 def test_multi_agent_flatten_action_space_gpu(env_id):
-    env = gym.make(env_id, num_envs=16)
+    env = gym.make(env_id, num_envs=16, sim_cfg=LOW_MEM_SIM_CFG)
     env = FlattenActionSpaceWrapper(env)
     env.reset()
     action_space = env.action_space

@@ -80,17 +80,11 @@ class BaseAgent:
         self.controllers = OrderedDict()
         self._load_articulation()
         self._after_loading_articulation()
+        self._after_init()
 
     @property
     def device(self):
         return self.scene.device
-
-    def initialize(self):
-        """
-        Initialize the agent, which includes running _after_init() and initializing/resetting the controller
-        """
-        self._after_init()
-        self.controller.reset()
 
     def _load_articulation(self):
         """
@@ -132,8 +126,10 @@ class BaseAgent:
         """Get the currently activated controller uid."""
         return self._control_mode
 
-    def set_control_mode(self, control_mode):
-        """Set the controller and reset."""
+    def set_control_mode(self, control_mode=None):
+        """Set the controller and drive properties. This does not reset the controller. If given control mode is None, will set defaults"""
+        if control_mode is None:
+            control_mode = self._default_control_mode
         assert (
             control_mode in self.supported_control_modes
         ), "{} not in supported modes: {}".format(
@@ -151,6 +147,7 @@ class BaseAgent:
                 self.controllers[control_mode] = config.controller_cls(
                     config, self.robot, self._control_freq, scene=self.scene
                 )
+            self.controllers[control_mode].set_drive_property()
             if (
                 isinstance(self.controllers[control_mode], DictController)
                 and self.controllers[control_mode].balance_passive_force
@@ -257,7 +254,7 @@ class BaseAgent:
             self.robot.set_qpos(init_qpos)
         self.robot.set_qvel(torch.zeros(self.robot.max_dof, device=self.device))
         self.robot.set_qf(torch.zeros(self.robot.max_dof, device=self.device))
-        self.set_control_mode(self._default_control_mode)
+        self.controller.reset()
 
     # -------------------------------------------------------------------------- #
     # Optional per-agent APIs, implemented depending on agent affordances

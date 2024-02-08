@@ -117,8 +117,7 @@ class BaseController:
         raise NotImplementedError
 
     def reset(self):
-        """Resets the controller by setting drive properties if needed"""
-        self.set_drive_property()
+        """Resets the controller to an initial state"""
 
     def _preprocess_action(self, action: Array):
         # TODO(jigu): support discrete action
@@ -240,9 +239,11 @@ class DictController(BaseController):
             raise AssertionError("{} is not fully actuated".format(self.articulation))
 
     def set_drive_property(self):
-        raise RuntimeError(
-            "Undefined behaviors to set drive property for multiple controllers"
-        )
+        for controller in self.controllers.values():
+            controller.set_drive_property()
+        # raise RuntimeError(
+        #     "Undefined behaviors to set drive property for multiple controllers"
+        # )
 
     def reset(self):
         for controller in self.controllers.values():
