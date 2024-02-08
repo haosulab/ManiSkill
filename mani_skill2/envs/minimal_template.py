@@ -54,7 +54,7 @@ class CustomEnv(BaseEnv):
     def _load_actors(self):
         pass
 
-    def _initialize_actors(self):
+    def _initialize_actors(self, env_idx: torch.Tensor):
         pass
 
     def evaluate(self):
