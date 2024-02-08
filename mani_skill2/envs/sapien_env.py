@@ -1,4 +1,5 @@
 import copy
+import gc
 import os
 from collections import OrderedDict
 from functools import cached_property
@@ -168,7 +169,8 @@ class BaseEnv(gym.Env):
         merged_gpu_sim_cfg = self.sim_cfg.dict()
         dict_merge(merged_gpu_sim_cfg, sim_cfg)
         self.sim_cfg = SimConfig(**merged_gpu_sim_cfg)
-
+        # TODO (stao): there may be a memory leak or some issue with memory not being released when repeatedly creating and closing environments with high memory requirements
+        # test withg pytest tests/ -m "not slow and gpu_sim" --pdb
         sapien.physx.set_gpu_memory_config(**self.sim_cfg.gpu_memory_cfg)
 
         if shader_dir == "default":
@@ -890,6 +892,7 @@ class BaseEnv(gym.Env):
 
     def close(self):
         self._clear()
+        gc.collect()  # force gc to collect which releases most GPU memory
 
     def _close_viewer(self):
         if self._viewer is None:

@@ -5,9 +5,11 @@ import torch
 
 from mani_skill2.agents.multi_agent import MultiAgent
 from mani_skill2.envs.sapien_env import BaseEnv
+from mani_skill2.utils.structs.types import SimConfig
 from tests.utils import (
     CONTROL_MODES_STATIONARY_SINGLE_ARM,
     ENV_IDS,
+    LOW_MEM_SIM_CFG,
     MULTI_AGENT_ENV_IDS,
     OBS_MODES,
     ROBOTS,
@@ -24,7 +26,7 @@ def test_envs_obs_modes(env_id, obs_mode):
     def assert_device(x):
         assert x.device == torch.device("cuda:0")
 
-    env = gym.make(env_id, num_envs=16, obs_mode=obs_mode)
+    env = gym.make(env_id, num_envs=16, obs_mode=obs_mode, sim_cfg=LOW_MEM_SIM_CFG)
     obs, _ = env.reset()
     assert_isinstance(obs, torch.Tensor)
     tree_map(obs, lambda x: assert_device(x))
@@ -55,7 +57,9 @@ def test_envs_obs_modes(env_id, obs_mode):
 @pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS)
 @pytest.mark.parametrize("control_mode", CONTROL_MODES_STATIONARY_SINGLE_ARM)
 def test_env_control_modes(env_id, control_mode):
-    env = gym.make(env_id, num_envs=16, control_mode=control_mode)
+    env = gym.make(
+        env_id, num_envs=16, control_mode=control_mode, sim_cfg=LOW_MEM_SIM_CFG
+    )
     env.reset()
     action_space = env.action_space
     assert action_space.shape[0] == 16
@@ -156,7 +160,7 @@ def test_robots(env_id, robot_uids):
         "MoveBucket-v1",
     ]:
         pytest.skip(reason=f"Env {env_id} does not support robots other than panda")
-    env = gym.make(env_id, num_envs=16, robot_uids=robot_uids)
+    env = gym.make(env_id, num_envs=16, robot_uids=robot_uids, sim_cfg=LOW_MEM_SIM_CFG)
     env.reset()
     action_space = env.action_space
     for _ in range(5):
@@ -168,7 +172,7 @@ def test_robots(env_id, robot_uids):
 @pytest.mark.gpu_sim
 @pytest.mark.parametrize("env_id", MULTI_AGENT_ENV_IDS)
 def test_multi_agent(env_id):
-    env = gym.make(env_id, num_envs=16)
+    env = gym.make(env_id, num_envs=16, sim_cfg=LOW_MEM_SIM_CFG)
     env.reset()
     action_space = env.action_space
     assert isinstance(action_space, gym.spaces.Dict)
@@ -183,7 +187,7 @@ def test_multi_agent(env_id):
 @pytest.mark.gpu_sim
 @pytest.mark.parametrize("env_id", ENV_IDS[:1])
 def test_partial_resets(env_id):
-    env = gym.make(env_id, num_envs=16)
+    env = gym.make(env_id, num_envs=16, sim_cfg=LOW_MEM_SIM_CFG)
     obs, _ = env.reset()
     action_space = env.action_space
     for _ in range(5):
