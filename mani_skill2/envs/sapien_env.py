@@ -647,9 +647,8 @@ class BaseEnv(gym.Env):
             self._reconfig_counter -= 1
         # Set the episode rng again after reconfiguration to guarantee seed reproducibility
         self._set_episode_rng(self._episode_seed)
-
-        self.initialize_episode(env_idx)
         self.agent.reset()
+        self.initialize_episode(env_idx)
         obs = self.get_obs()
         if physx.is_gpu_enabled():
             # ensure all updates to object poses and configurations are applied on GPU after task initialization
