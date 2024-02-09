@@ -104,6 +104,8 @@ class RecordEpisode(gym.Wrapper):
             If True, the trajectory with empty transition will be ignored automatically.
         clean_on_close: whether to rename and prune trajectories when closed.
             See `clean_trajectories` for details.
+        video_fps (int): The FPS of the video to generate if save_video is True
+        split_gpu_trajectories (bool): Whether to split trajectory data into individual trajectories when recording simulation on the GPU
     """
 
     def __init__(
@@ -118,8 +120,10 @@ class RecordEpisode(gym.Wrapper):
         clean_on_close=True,
         record_reward=False,
         init_state_only=False,
+        split_gpu_trajectories=True,
         video_fps=20,
     ):
+        # NOTE (stao): don't worry about replay by action, not needed really, only replay by state for visual, otherwise just train directly.
         super().__init__(env)
 
         self.output_dir = Path(output_dir)
