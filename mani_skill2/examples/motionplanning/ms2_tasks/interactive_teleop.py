@@ -20,6 +20,7 @@ def main(args):
         reward_mode="sparse",
         # shader_dir="rt-fast",
     )
+    # TODO (don't record episode directly, its slow. Just save trajectory. Then use the actions/states and then re-run them to generate videos if asked)
     env = RecordEpisode(
         env,
         output_dir=f"videos/teleop-{args.env_id}",
