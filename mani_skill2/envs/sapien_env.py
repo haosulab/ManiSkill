@@ -707,6 +707,7 @@ class BaseEnv(gym.Env):
         """Initialize task-relevant information, like goals. Called by `self.initialize_episode`"""
 
     def _clear_sim_state(self):
+        # TODO (stao): we should rename this. This could mean setting pose to 0 as if we just reconfigured everything...
         """Clear simulation state (velocities)"""
         for actor in self._scene.actors.values():
             if actor.px_body_type == "static":
@@ -917,7 +918,10 @@ class BaseEnv(gym.Env):
 
     def set_state(self, state: np.ndarray):
         """Set environment state. Override to include task information (e.g., goal)"""
-        return self._scene.set_sim_state(state)
+        self._scene.set_sim_state(state)
+        self._scene._gpu_apply_all()
+        self._scene.px.gpu_update_articulation_kinematics()
+        self._scene._gpu_fetch_all()
 
     # -------------------------------------------------------------------------- #
     # Visualization

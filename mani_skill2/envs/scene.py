@@ -461,11 +461,17 @@ class ManiSkillScene:
     # Simulation state (required for MPC)
     # -------------------------------------------------------------------------- #
     def get_sim_state(self) -> torch.Tensor:
-        """Get simulation state. Returns a tensor of shape (N, D) for N parallel environments and D dimensions of padded state per environment"""
+        """Get simulation state. Returns a tensor of shape (N, D) for N parallel environments and D dimensions of padded state per environment.
+
+        Note that static actor data are not included. It is expected that an environment reconstructs itself in a deterministic manner such that
+        the same actors and articulations (merged or not) create the same sim state shape.
+        (and if it is different, we expect the environment version number to be changed)"""
         state = []
         # TODO (stao): Should we store state as a dictionary? What shape to store for parallel settings to make
         # it loadable between parallel and non parallel settings?
         for actor in self.actors.values():
+            if actor.px_body_type == "static":
+                continue
             # TODO (stao) (in parallelized environment situation we may need to pad as some of these actors do not exist in other parallel envs)
             state.append(actor.get_state())
         for articulation in self.articulations.values():
@@ -476,6 +482,8 @@ class ManiSkillScene:
         KINEMATIC_DIM = 13  # [pos, quat, lin_vel, ang_vel]
         start = 0
         for actor in self.actors.values():
+            if actor.px_body_type == "static":
+                continue
             actor.set_state(state[:, start : start + KINEMATIC_DIM])
             start += KINEMATIC_DIM
         for articulation in self.articulations.values():
