@@ -173,12 +173,13 @@ class BaseEnv(gym.Env):
         # test withg pytest tests/ -m "not slow and gpu_sim" --pdb
         sapien.physx.set_gpu_memory_config(**self.sim_cfg.gpu_memory_cfg)
 
-        if shader_dir == "default":
+        self.shader_dir = shader_dir
+        if self.shader_dir == "default":
             sapien.render.set_camera_shader_dir("minimal")
             sapien.render.set_picture_format("Color", "r8g8b8a8unorm")
             sapien.render.set_picture_format("ColorRaw", "r8g8b8a8unorm")
             sapien.render.set_picture_format("PositionSegmentation", "r16g16b16a16sint")
-        elif shader_dir == "rt":
+        elif self.shader_dir == "rt":
             sapien.render.set_camera_shader_dir("rt")
             sapien.render.set_viewer_shader_dir("rt")
             sapien.render.set_ray_tracing_samples_per_pixel(32)
@@ -186,7 +187,7 @@ class BaseEnv(gym.Env):
             sapien.render.set_ray_tracing_denoiser(
                 "optix"
             )  # TODO "optix or oidn?" previous value was just True
-        elif shader_dir == "rt-fast":
+        elif self.shader_dir == "rt-fast":
             sapien.render.set_camera_shader_dir("rt")
             sapien.render.set_viewer_shader_dir("rt")
             sapien.render.set_ray_tracing_samples_per_pixel(2)
@@ -984,7 +985,10 @@ class BaseEnv(gym.Env):
                     continue
                 camera.capture()
                 # TODO (stao): the output of this is not the same as gpu setting, its float here
-                rgb = (camera.get_picture("Color")[..., :3]).to(torch.uint8)
+                if self.shader_dir == "default":
+                    rgb = (camera.get_picture("Color")[..., :3]).to(torch.uint8)
+                else:
+                    rgb = (camera.get_picture("Color")[..., :3] * 255).to(torch.uint8)
                 images.append(rgb)
         if len(images) == 0:
             return None
