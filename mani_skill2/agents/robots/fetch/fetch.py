@@ -57,6 +57,7 @@ class Fetch(BaseAgent):
             entity_uid="head_camera_link",
         )
     ]
+    REACHABLE_DIST = 1.5
 
     def __init__(self, *args, **kwargs):
         self.arm_joint_names = [
@@ -320,6 +321,10 @@ class Fetch(BaseAgent):
                 cg = cs.get_collision_groups()
                 cg[2] |= FETCH_UNIQUE_COLLISION_BIT
                 cs.set_collision_groups(cg)
+
+        self.torso_lift_link: Link = get_obj_by_name(
+            self.robot.get_links(), "torso_lift_link"
+        )
 
         self.torso_lift_link: Link = get_obj_by_name(
             self.robot.get_links(), "torso_lift_link"
