@@ -1,10 +1,12 @@
 import gymnasium as gym
 import numpy as np
 import sapien
+import torch
 
 import mani_skill2.envs
 from mani_skill2.utils.sapien_utils import to_numpy
 from mani_skill2.utils.wrappers import RecordEpisode
+from mani_skill2.vector.wrappers.gymnasium import ManiSkillVectorEnv
 
 if __name__ == "__main__":
     # sapien.set_log_level("info")
@@ -25,6 +27,7 @@ if __name__ == "__main__":
             force_use_gpu_sim=True,
             # reconfiguration_freq=1,
         )
+        # env = ManiSkillVectorEnv(env)
         env = RecordEpisode(
             env,
             output_dir="videos/manual_test",
@@ -62,6 +65,6 @@ if __name__ == "__main__":
                     env.render_human()
                 done = done.any()
                 i += 1
-            env.reset()
+            env.reset(options=dict(env_idx=torch.tensor([0])))
             # env.reset(options=dict(reconfigure=True))
         env.close()

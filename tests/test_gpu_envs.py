@@ -205,4 +205,17 @@ def test_partial_resets(env_id):
     del env
 
 
+@pytest.mark.gpu_sim
+@pytest.mark.parametrize("env_id", ENV_IDS[:1])
+def test_timelimits(env_id):
+    """Test that the default timelimit wrapper applied does not use Gym's timelimit wrapper but our own which batches it correctly"""
+    env = gym.make(env_id, num_envs=16, sim_cfg=LOW_MEM_SIM_CFG)
+    obs, _ = env.reset()
+    for _ in range(50):
+        obs, _, terminated, truncated, _ = env.step(None)
+    assert (truncated == torch.ones(16, dtype=bool, device=env.unwrapped.device)).all()
+    env.close()
+    del env
+
+
 # TODO (stao): Add test for tasks where there is no success/success and failure/no success or failure

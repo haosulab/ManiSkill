@@ -74,9 +74,6 @@ class ManiSkillVectorEnv(VectorEnv):
         obs, rew, terminations, _, infos = self._env.step(actions)
         self.returns += rew
         infos["episode"] = dict(r=self.returns)
-        truncations: torch.Tensor = (
-            self.base_env.elapsed_steps >= self.max_episode_steps
-        )
         if self.num_envs == 1:
             truncations = torch.tensor([truncations])
             terminations = torch.tensor([terminations])
