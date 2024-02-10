@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 import sapien as sapien
 import sapien.physx as physx
 from sapien import Pose
@@ -45,7 +46,7 @@ class SceneManipulationEnv(BaseEnv):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         self.fixed_scene = fixed_scene
         self.sampled_scene_idx: int = None
-        self.scene_builder = scene_builder_cls()
+        self.scene_builder: SceneBuilder = scene_builder_cls(self, robot_init_qpos_noise=robot_init_qpos_noise)
         self.scene_ids = np.arange(0, len(self.scene_builder.scene_configs))
         self.convex_decomposition = convex_decomposition
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
@@ -67,30 +68,9 @@ class SceneManipulationEnv(BaseEnv):
             convex_decomposition=self.convex_decomposition,
         )
 
-    def _initialize_agent(self):
-        if self.robot_uids == "panda":
-            # fmt: off
-            # EE at [0.615, 0, 0.17]
-            qpos = np.array(
-                [0.0, np.pi / 8, 0, -np.pi * 5 / 8, 0, np.pi * 3 / 4, np.pi / 4, 0.04, 0.04]
-            )
-            # fmt: on
-            qpos[:-2] += self._episode_rng.normal(
-                0, self.robot_init_qpos_noise, len(qpos) - 2
-            )
-            self.agent.reset(qpos)
-            self.agent.robot.set_pose(Pose([-0.615, 0, 0]))
-        elif self.robot_uids == "xmate3_robotiq":
-            qpos = np.array(
-                [0, np.pi / 6, 0, np.pi / 3, 0, np.pi / 2, -np.pi / 2, 0, 0]
-            )
-            qpos[:-2] += self._episode_rng.normal(
-                0, self.robot_init_qpos_noise, len(qpos) - 2
-            )
-            self.agent.reset(qpos)
-            self.agent.robot.set_pose(Pose([-0.562, 0, 0]))
-        else:
-            raise NotImplementedError(self.robot_uids)
+    def _initialize_agent(self, env_idx: torch.Tensor):
+        with torch.device(self.device):
+            self.scene_builder.initialize(env_idx)
 
     def _register_sensors(self):
         pose = look_at([0.3, 0, 0.6], [-0.1, 0, 0.1])
@@ -102,7 +82,7 @@ class SceneManipulationEnv(BaseEnv):
         if self.robot_uids == "panda":
             pose = look_at([0.4, 0.4, 0.8], [0.0, 0.0, 0.4])
         else:
-            pose = look_at([0.5, 0.5, 1.0], [0.0, 0.0, 0.5])
+            pose = look_at([-6, 2, 2], [-2.5, 2, 0])
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
 
     def _setup_viewer(self):

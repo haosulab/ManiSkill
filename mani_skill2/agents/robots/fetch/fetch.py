@@ -51,7 +51,7 @@ class Fetch(BaseAgent):
             q=[1, 0, 0, 0],
             width=128,
             height=128,
-            fov=1.57,
+            fov=2,
             near=0.01,
             far=10,
             entity_uid="head_camera_link",
@@ -315,12 +315,12 @@ class Fetch(BaseAgent):
         self.r_wheel_link: Link = get_obj_by_name(
             self.robot.get_links(), "r_wheel_link"
         )
-        for link in [self.base_link, self.l_wheel_link, self.r_wheel_link]:
-            for body in link._bodies:
-                cs = body.get_collision_shapes()[0]
-                cg = cs.get_collision_groups()
-                cg[2] |= FETCH_UNIQUE_COLLISION_BIT
-                cs.set_collision_groups(cg)
+        # for link in [self.base_link, self.l_wheel_link, self.r_wheel_link]:
+        #     for body in link._bodies:
+        #         cs = body.get_collision_shapes()[0]
+        #         cg = cs.get_collision_groups()
+        #         cg[2] |= FETCH_UNIQUE_COLLISION_BIT
+        #         cs.set_collision_groups(cg)
 
         self.torso_lift_link: Link = get_obj_by_name(
             self.robot.get_links(), "torso_lift_link"

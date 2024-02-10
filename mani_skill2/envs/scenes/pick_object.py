@@ -1,6 +1,8 @@
 from collections import OrderedDict
+from typing import Dict
 
 import numpy as np
+import torch
 import sapien
 import sapien.physx as physx
 
@@ -28,7 +30,7 @@ class PickObjectSceneEnv(SceneManipulationEnv):
         super().reconfigure()
         self.init_state = self.get_state()
 
-    def _get_obs_extra(self) -> OrderedDict:
+    def _get_obs_extra(self, info: Dict) -> OrderedDict:
         obs = OrderedDict(
             tcp_pose=vectorize_pose(self.agent.tcp.pose),
             obj_pose=vectorize_pose(self.goal_obj.pose),
@@ -44,10 +46,10 @@ class PickObjectSceneEnv(SceneManipulationEnv):
     def compute_normalized_dense_reward(self, **kwargs):
         return self.compute_dense_reward(**kwargs) / 1
 
-    def _initialize_actors(self):
+    def _initialize_actors(self, env_idx: torch.Tensor):
         self.set_state(self.init_state)
 
-    def _initialize_task(self):
+    def _initialize_task(self, env_idx: torch.Tensor):
         # pick a random goal object to pick up
         self.goal_obj: sapien.Entity = self._episode_rng.choice(
             self.scene_builder.movable_objects
