@@ -73,16 +73,31 @@ class SceneManipulationEnv(BaseEnv):
             self.scene_builder.initialize(env_idx)
 
     def _register_sensors(self):
+        if self.robot_uids == "fetch":
+            return ()
+
         pose = look_at([0.3, 0, 0.6], [-0.1, 0, 0.1])
         return CameraConfig(
             "base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10
         )
 
     def _register_human_render_cameras(self):
+        if self.robot_uids == "fetch":
+            room_camera_pose = look_at([-6, 2, 2], [-2.5, 2, 0])
+            room_camera_config = CameraConfig(
+                "render_camera", room_camera_pose.p, room_camera_pose.q, 512, 512, 1, 0.01, 10
+            )
+            robot_camera_pose = look_at([2, 0, 1], [0, 0, -1])
+            robot_camera_config = CameraConfig(
+                "robot_render_camera", robot_camera_pose.p, robot_camera_pose.q, 512, 512, 1.5, 0.01, 10,
+                link=self.agent.torso_lift_link
+            )
+            return room_camera_config, robot_camera_config
+
         if self.robot_uids == "panda":
             pose = look_at([0.4, 0.4, 0.8], [0.0, 0.0, 0.4])
         else:
-            pose = look_at([-6, 2, 2], [-2.5, 2, 0])
+            pose = look_at([0, 10, -3], [0, 0, 0])
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
 
     def _setup_viewer(self):
