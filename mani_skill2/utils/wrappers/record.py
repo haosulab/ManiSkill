@@ -1,14 +1,17 @@
 import copy
 import time
 from pathlib import Path
+from typing import List, Optional, Union
 
 import gymnasium as gym
 import h5py
 import numpy as np
 import sapien.physx as physx
+import torch
 from gymnasium import spaces
 
 from mani_skill2 import get_commit_info, logger
+from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.utils.sapien_utils import to_numpy
 
 from ..common import extract_scalars_from_info, flatten_dict_keys
@@ -91,7 +94,43 @@ def pack_step_data(state, obs, action, rew, terminated, truncated, info):
 
 class RecordEpisode(gym.Wrapper):
     """Record trajectories or videos for episodes.
-    The trajectories are stored in HDF5.
+
+    Trajectory data is saved with two files, the actual data in a .h5 file via H5py and metadata in a JSON file of the same basename.
+
+    Each JSON file contains:
+
+    - `env_info` (Dict): environment information, which can be used to initialize the environment
+    - `env_id` (str): environment id
+    - `max_episode_steps` (int)
+    - `env_kwargs` (Dict): keyword arguments to initialize the environment. **Essential to recreate the environment.**
+    - `episodes` (List[Dict]): episode information
+
+    The episode information (the element of `episodes`) includes:
+
+    - `episode_id` (int): a unique id to index the episode
+    - `reset_kwargs` (Dict): keyword arguments to reset the environment. **Essential to reproduce the trajectory.**
+    - `control_mode` (str): control mode used for the episode.
+    - `elapsed_steps` (int): trajectory length
+    - `info` (Dict): information at the end of the episode.
+
+    With just the meta data, you can reproduce the environment the same way it was created when the trajectories were collected as so:
+
+    ```python
+    env = gym.make(env_info["env_id"], **env_info["env_kwargs"])
+    episode = env_info["episodes"][0] # picks the first
+    env.reset(**episode["reset_kwargs"])
+    ```
+
+    Each HDF5 demonstration dataset consists of multiple trajectories. The key of each trajectory is `traj_{episode_id}`, e.g., `traj_0`.
+
+    Each trajectory is an `h5py.Group`, which contains:
+
+    - actions: [T, A], `np.float32`. `T` is the number of transitions.
+    - success: [T], `np.bool_`. It indicates whether the task is successful at each time step.
+    - env_states: [T+1, D], `np.float32`. Environment states. It can be used to set the environment to a certain state, e.g., `env.set_state(env_states[i])`. However, it may not be enough to reproduce the trajectory.
+    - env_init_state: [D], `np.float32`. The initial environment state. It is used for soft-body environments, since their states (particle positions) can use too much space.
+    - obs (optional): observations. If the observation is a `dict`, the value will be stored in `obs/{key}`. The convention is applied recursively for nested dict.
+
 
     Args:
         env: gym.Env
@@ -105,7 +144,6 @@ class RecordEpisode(gym.Wrapper):
         clean_on_close: whether to rename and prune trajectories when closed.
             See `clean_trajectories` for details.
         video_fps (int): The FPS of the video to generate if save_video is True
-        split_gpu_trajectories (bool): Whether to split trajectory data into individual trajectories when recording simulation on the GPU
     """
 
     def __init__(
@@ -120,7 +158,6 @@ class RecordEpisode(gym.Wrapper):
         clean_on_close=True,
         record_reward=False,
         init_state_only=False,
-        split_gpu_trajectories=True,
         video_fps=20,
     ):
         # NOTE (stao): don't worry about replay by action, not needed really, only replay by state for visual, otherwise just train directly.
@@ -132,7 +169,6 @@ class RecordEpisode(gym.Wrapper):
             self.output_dir.mkdir(parents=True, exist_ok=True)
         self.save_on_reset = save_on_reset
         self.video_fps = video_fps
-        self._elapsed_steps = 0
         self._episode_id = -1
         self._episode_data = []
         self._episode_info = {}
@@ -163,6 +199,10 @@ class RecordEpisode(gym.Wrapper):
             )
         self.video_nrows = int(np.sqrt(self.unwrapped.num_envs))
 
+    @property
+    def _base_env(self) -> BaseEnv:
+        return self.env.unwrapped
+
     def capture_image(self):
         img = self.env.render()
         img = to_numpy(img)
@@ -170,22 +210,28 @@ class RecordEpisode(gym.Wrapper):
             img = tile_images(img, nrows=self.video_nrows)
         return img
 
-    def reset(self, **kwargs):
+    def reset(
+        self,
+        *,
+        seed: Optional[Union[int, List[int]]] = None,
+        options: Optional[dict] = dict(),
+        **kwargs,
+    ):
+        import ipdb
+
+        ipdb.set_trace()
         if self.save_on_reset and self._episode_id >= 0:
-            if self._elapsed_steps == 0:
-                self._episode_id -= 1
             self.flush_trajectory(ignore_empty_transition=True)
+            # when to flush video? Use last parallel env done?
             self.flush_video(ignore_empty_transition=True)
 
         # Clear cache
-        self._elapsed_steps = 0
-        self._episode_id += 1
         self._episode_data = []
         self._episode_info = {}
         self._render_images = []
 
-        reset_kwargs = copy.deepcopy(kwargs)
-        obs, info = super().reset(**kwargs)
+        reset_kwargs = copy.deepcopy(dict(seed=seed, options=options, **kwargs))
+        obs, info = super().reset(seed=seed, options=options, **kwargs)
 
         if self.save_trajectory:
             state = self.env.unwrapped.get_state()
@@ -206,11 +252,14 @@ class RecordEpisode(gym.Wrapper):
 
     def step(self, action):
         obs, rew, terminated, truncated, info = super().step(action)
-        self._elapsed_steps += 1
 
         if self.save_trajectory:
             state = self.env.unwrapped.get_state()
             data = pack_step_data(state, obs, action, rew, terminated, truncated, info)
+            if self._base_env.num_envs > 1:
+                data["done"] = torch.logical_or(terminated, truncated)
+            else:
+                data["done"] = terminated or truncated
             self._episode_data.append(data)
             self._episode_info["elapsed_steps"] += 1
             self._episode_info["info"] = to_numpy(info)
@@ -231,11 +280,15 @@ class RecordEpisode(gym.Wrapper):
         return obs, rew, terminated, truncated, info
 
     def flush_trajectory(self, verbose=False, ignore_empty_transition=False):
-        if not self.save_trajectory or len(self._episode_data) == 0:
+        if (
+            not self.save_trajectory or len(self._episode_data) == 0
+        ):  # TODO (stao): remove this, this is not intuitive as it depends on data in self.
             return
         if ignore_empty_transition and len(self._episode_data) == 1:
             return
 
+        # find which trajectories completed
+        self._episode_id += 1
         traj_id = "traj_{}".format(self._episode_id)
         group = self._h5_file.create_group(traj_id, track_order=True)
 
