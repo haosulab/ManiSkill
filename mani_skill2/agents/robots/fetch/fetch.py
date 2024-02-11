@@ -417,7 +417,7 @@ class Fetch(BaseAgent):
                     and np.rad2deg(rangle) <= max_angle
                 )
 
-                return all([lflag, rflag])
+                return torch.Tensor([all([lflag, rflag])])
 
     def is_static(self, threshold: float = 0.2):
         qvel = self.robot.get_qvel()[..., :-2]
