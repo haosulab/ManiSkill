@@ -36,6 +36,9 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
     _builder_initial_pose: sapien.Pose = None
     name: str = None
 
+    def __hash__(self):
+        return self._objs[0].__hash__()
+
     @classmethod
     def _create_from_entities(
         cls,

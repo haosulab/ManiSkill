@@ -1,10 +1,12 @@
+from typing import Union
+
 import numpy as np
 import torch
 import sapien as sapien
 import sapien.physx as physx
 from sapien import Pose
 
-from mani_skill2.agents.robots import Panda
+from mani_skill2.agents.robots import Panda, Fetch
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.sapien_utils import look_at
@@ -19,7 +21,7 @@ from mani_skill2.utils.structs.pose import vectorize_pose
 
 
 class SceneManipulationEnv(BaseEnv):
-    agent: Panda
+    agent: Union[Panda, Fetch]
     """
     Args:
         robot_uids: Which robot to place into the scene. Default is "panda"
@@ -107,5 +109,4 @@ class SceneManipulationEnv(BaseEnv):
 
     def _get_obs_agent(self):
         obs = self.agent.get_proprioception()
-        obs["base_pose"] = vectorize_pose(self.agent.robot.pose)
         return obs

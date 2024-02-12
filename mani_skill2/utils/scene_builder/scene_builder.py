@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Dict
 
 import sapien
 
@@ -31,9 +31,17 @@ class SceneBuilder:
         return self.env._scene
 
     @property
-    def scene_objects(self):
+    def scene_objects(self) -> List[Actor]:
         raise NotImplementedError()
 
     @property
-    def movable_objects(self):
+    def movable_objects(self) -> List[Actor]:
+        raise NotImplementedError()
+    
+    @property
+    def scene_objects_by_id(self) -> Dict[str, Actor]:
+        raise NotImplementedError()
+
+    @property
+    def movable_objects_by_id(self) -> Dict[str, Actor]:
         raise NotImplementedError()
