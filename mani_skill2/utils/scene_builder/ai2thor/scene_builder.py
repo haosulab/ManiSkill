@@ -7,13 +7,12 @@ SceneBuilder for the AI2Thor scenes, using configurations and assets stored in h
 import json
 import os.path as osp
 from pathlib import Path
-from typing import List
+from typing import Dict, List, Tuple
 
 import numpy as np
 import sapien
 import sapien.core as sapien
 import sapien.physx as physx
-from sapien import Pose
 import transforms3d
 from tqdm import tqdm
 
@@ -67,6 +66,8 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
         else:
             self._scene_configs = ALL_SCENE_CONFIGS[self.scene_dataset]
 
+        self.actor_to_pose: List[Tuple[Actor, sapien.Pose]] = []
+
     def _should_be_kinematic(self, template_name: str):
         object_config_json = (
             Path(ASSET_DIR)
@@ -112,7 +113,8 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
                     np.array([0, -1, 0]), theta=np.deg2rad(90)
                 ),
             )
-        bg.set_pose(sapien.Pose(q=q))
+        self.actor_to_pose.append((bg, sapien.Pose(q=q)))
+
 
         global_id = 0
         for object in tqdm(scene_json["object_instances"][:]):
@@ -156,7 +158,7 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
             ]
             q = transforms3d.quaternions.qmult(q, rot_q)
             pose = sapien.Pose(p=position, q=q)
-            actor.set_pose(pose)
+            self.actor_to_pose.append((actor, pose))
 
         # get movable objects
         self._movable_objects = [
@@ -168,6 +170,10 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
         ]
 
     def initialize(self, env_idx):
+
+        for actor, pose in self.actor_to_pose:
+            actor.set_pose(pose)
+
         if self.env.robot_uids == "panda":
             # fmt: off
             # EE at [0.615, 0, 0.17]
@@ -179,7 +185,7 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
                 0, self.robot_init_qpos_noise, len(qpos) - 2
             )
             self.env.agent.reset(qpos)
-            self.env.agent.robot.set_pose(Pose([-0.615, 0, 0]))
+            self.env.agent.robot.set_pose(sapien.Pose([-0.615, 0, 0]))
         elif self.env.robot_uids == "xmate3_robotiq":
             qpos = np.array(
                 [0, np.pi / 6, 0, np.pi / 3, 0, np.pi / 2, -np.pi / 2, 0, 0]
@@ -188,7 +194,7 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
                 0, self.robot_init_qpos_noise, len(qpos) - 2
             )
             self.env.agent.reset(qpos)
-            self.env.agent.robot.set_pose(Pose([-0.562, 0, 0]))
+            self.env.agent.robot.set_pose(sapien.Pose([-0.562, 0, 0]))
         elif self.env.robot_uids == "fetch":
             qpos = np.array(
                 [-5.138, 1, np.pi / 2, 0.386, 0, -np.pi / 8, 0.562, -1.221, 0.232, 0.955, 0, 2.16, 0, 0.015, 0.015]
