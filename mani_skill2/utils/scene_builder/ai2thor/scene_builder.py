@@ -101,7 +101,7 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
         builder = scene.create_actor_builder()
         builder.add_visual_from_file(bg_path)
         builder.add_nonconvex_collision_from_file(bg_path)
-        bg = builder.build_kinematic(name="scene_background")
+        self.bg = builder.build_kinematic(name="scene_background")
         q = transforms3d.quaternions.axangle2quat(
             np.array([1, 0, 0]), theta=np.deg2rad(90)
         )
@@ -113,7 +113,7 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
                     np.array([0, -1, 0]), theta=np.deg2rad(90)
                 ),
             )
-        self.actor_to_pose.append((bg, sapien.Pose(q=q)))
+        self.actor_to_pose.append((self.bg, sapien.Pose(q=q)))
 
 
         global_id = 0
@@ -196,19 +196,18 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
             self.env.agent.reset(qpos)
             self.env.agent.robot.set_pose(sapien.Pose([-0.562, 0, 0]))
         elif self.env.robot_uids == "fetch":
+            # TODO (arth): figure out how to init x, y, z rot for fetch
             qpos = np.array(
-                [-5.138, 1, np.pi / 2, 0.386, 0, -np.pi / 8, 0.562, -1.221, 0.232, 0.955, 0, 2.16, 0, 0.015, 0.015]
+                [0, 0, 0, 0.386, 0, -0.370, 0.562, -1.032, 0.695, 0.955, -0.1, 2.077, 0, 0.015, 0.015]
             )
             self.env.agent.reset(qpos)
 
-            # # TODO (stao) (arth): is there a better way to model robots in sim. This feels very unintuitive.
-            # for obj in self.ground._objs:
-            #     cs = obj.find_component_by_type(
-            #         sapien.physx.PhysxRigidStaticComponent
-            #     ).get_collision_shapes()[0]
-            #     cg = cs.get_collision_groups()
-            #     cg[2] |= FETCH_UNIQUE_COLLISION_BIT
-            #     cs.set_collision_groups(cg)
+            # TODO (stao) (arth): is there a better way to model robots in sim. This feels very unintuitive.
+            for obj in self.bg._bodies:
+                cs = obj.get_collision_shapes()[0]
+                cg = cs.get_collision_groups()
+                cg[2] |= FETCH_UNIQUE_COLLISION_BIT
+                cs.set_collision_groups(cg)
         else:
             raise NotImplementedError(self.robot_uids)
 
