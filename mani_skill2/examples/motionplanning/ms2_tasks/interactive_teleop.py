@@ -1,4 +1,5 @@
 import argparse
+from ast import parse
 import gymnasium as gym
 import numpy as np
 import sapien.core as sapien
@@ -14,7 +15,7 @@ from mani_skill2.utils.wrappers.record import RecordEpisode
 def main(args):
     env = gym.make(
         args.env_id,
-        obs_mode="none",
+        obs_mode=args.obs_mode,
         control_mode="pd_joint_pos",
         render_mode="rgb_array",
         reward_mode="sparse",
@@ -76,6 +77,8 @@ def solve(env: BaseEnv, seed=None, debug=False, vis=False):
                 env.set_state(last_checkpoint_state)
             else:
                 print("Could not find previous checkpoint")
+        elif viewer.window.key_press("q"):
+            break
         elif viewer.window.key_press("b"):
             env.reset()
         if viewer.window.key_press("n"):
@@ -101,9 +104,12 @@ def solve(env: BaseEnv, seed=None, debug=False, vis=False):
             result = planner.move_to_pose_with_screw(planner.grasp_pose_visual.pose.sp)
             execute_current_pose = False
             print(f"Reward: {result[1]}, Info: {result[-1]}")
+    env.close()
+    del env
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--env-id", type=str, default="PickCube-v1")
+    parser.add_argument("-o", "--obs-mode", type=str, default="none")
     # parser.add_argument("-c", "--control-mode", type=str, default="pd_ee_delta_pose")
     # parser.add_argument("--render-mode", type=str, default="cameras")
     # parser.add_argument("--enable-sapien-viewer", action="store_true")

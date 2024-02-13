@@ -174,6 +174,9 @@ class RecordEpisode(gym.Wrapper):
         self._episode_info = {}
 
         self.save_trajectory = save_trajectory
+        if self._base_env.num_envs > 1:
+            # TODO (stao): fix trajectory saving on gpu simulation.
+            assert self.save_trajectory == False
         self.clean_on_close = clean_on_close
         self.record_reward = record_reward
         if self.save_trajectory:
@@ -217,9 +220,6 @@ class RecordEpisode(gym.Wrapper):
         options: Optional[dict] = dict(),
         **kwargs,
     ):
-        import ipdb
-
-        ipdb.set_trace()
         if self.save_on_reset and self._episode_id >= 0:
             self.flush_trajectory(ignore_empty_transition=True)
             # when to flush video? Use last parallel env done?
@@ -256,10 +256,6 @@ class RecordEpisode(gym.Wrapper):
         if self.save_trajectory:
             state = self.env.unwrapped.get_state()
             data = pack_step_data(state, obs, action, rew, terminated, truncated, info)
-            if self._base_env.num_envs > 1:
-                data["done"] = torch.logical_or(terminated, truncated)
-            else:
-                data["done"] = terminated or truncated
             self._episode_data.append(data)
             self._episode_info["elapsed_steps"] += 1
             self._episode_info["info"] = to_numpy(info)
@@ -295,52 +291,55 @@ class RecordEpisode(gym.Wrapper):
         # Observations need special processing
         obs = [x["o"] for x in self._episode_data]
         if isinstance(obs[0], dict):
-            obs_group = group.create_group("obs", track_order=True)
-            # NOTE(jigu): If each obs is empty, then nothing will be stored.
-            obs = [flatten_dict_keys(x) for x in obs]
-            obs = {k: [x[k] for x in obs] for k in obs[0].keys()}
-            obs = {k: np.stack(v) for k, v in obs.items()}
-            for k, v in obs.items():
-                # create subgroups if they don't exist yet. Can be removed once https://github.com/h5py/h5py/issues/1471 is fixed
-                subgroups = k.split("/")[:-1]
-                curr_group = obs_group
-                for subgroup in subgroups:
-                    if subgroup in curr_group:
-                        curr_group = curr_group[subgroup]
-                    else:
-                        curr_group = curr_group.create_group(subgroup, track_order=True)
+            if len(obs[0]) > 0:
+                obs_group = group.create_group("obs", track_order=True)
+                # NOTE(jigu): If each obs is empty, then nothing will be stored.
+                obs = [flatten_dict_keys(x) for x in obs]
+                obs = {k: [x[k] for x in obs] for k in obs[0].keys()}
+                obs = {k: np.stack(v) for k, v in obs.items()}
+                for k, v in obs.items():
+                    # create subgroups if they don't exist yet. Can be removed once https://github.com/h5py/h5py/issues/1471 is fixed
+                    subgroups = k.split("/")[:-1]
+                    curr_group = obs_group
+                    for subgroup in subgroups:
+                        if subgroup in curr_group:
+                            curr_group = curr_group[subgroup]
+                        else:
+                            curr_group = curr_group.create_group(
+                                subgroup, track_order=True
+                            )
 
-                if "rgb" in k and v.ndim == 4:
-                    # NOTE(jigu): It is more efficient to use gzip than png for a sequence of images.
-                    group.create_dataset(
-                        "obs/" + k,
-                        data=v,
-                        dtype=v.dtype,
-                        compression="gzip",
-                        compression_opts=5,
-                    )
-                elif "depth" in k and v.ndim in (3, 4):
-                    # NOTE (stao): By default now cameras in ManiSkill return depth values of type uint16 for numpy
-                    group.create_dataset(
-                        "obs/" + k,
-                        data=v,
-                        dtype=v.dtype,
-                        compression="gzip",
-                        compression_opts=5,
-                    )
-                elif "seg" in k and v.ndim in (3, 4):
-                    assert (
-                        np.issubdtype(v.dtype, np.integer) or v.dtype == np.bool_
-                    ), v.dtype
-                    group.create_dataset(
-                        "obs/" + k,
-                        data=v,
-                        dtype=v.dtype,
-                        compression="gzip",
-                        compression_opts=5,
-                    )
-                else:
-                    group.create_dataset("obs/" + k, data=v, dtype=v.dtype)
+                    if "rgb" in k and v.ndim == 4:
+                        # NOTE(jigu): It is more efficient to use gzip than png for a sequence of images.
+                        group.create_dataset(
+                            "obs/" + k,
+                            data=v,
+                            dtype=v.dtype,
+                            compression="gzip",
+                            compression_opts=5,
+                        )
+                    elif "depth" in k and v.ndim in (3, 4):
+                        # NOTE (stao): By default now cameras in ManiSkill return depth values of type uint16 for numpy
+                        group.create_dataset(
+                            "obs/" + k,
+                            data=v,
+                            dtype=v.dtype,
+                            compression="gzip",
+                            compression_opts=5,
+                        )
+                    elif "seg" in k and v.ndim in (3, 4):
+                        assert (
+                            np.issubdtype(v.dtype, np.integer) or v.dtype == np.bool_
+                        ), v.dtype
+                        group.create_dataset(
+                            "obs/" + k,
+                            data=v,
+                            dtype=v.dtype,
+                            compression="gzip",
+                            compression_opts=5,
+                        )
+                    else:
+                        group.create_dataset("obs/" + k, data=v, dtype=v.dtype)
         elif isinstance(obs[0], np.ndarray):
             obs = np.stack(obs)
             group.create_dataset("obs", data=obs, dtype=obs.dtype)
@@ -355,20 +354,32 @@ class RecordEpisode(gym.Wrapper):
                 shape=(0,) + action_space.shape,
                 dtype=action_space.dtype,
             )
-            dones = np.empty(shape=(0,), dtype=bool)
+            terminated = np.empty(shape=(0,), dtype=bool)
+            truncated = np.empty(shape=(0,), dtype=bool)
         else:
             # NOTE(jigu): The format is designed to be compatible with ManiSkill-Learn (pyrl).
             # Record transitions (ignore the first padded values during reset)
             actions = np.stack([x["a"] for x in self._episode_data[1:]])
             # NOTE(jigu): "dones" need to stand for task success excluding time limit.
-            dones = np.stack([x["info"]["success"] for x in self._episode_data[1:]])
+            terminated = np.stack([x["terminated"] for x in self._episode_data[1:]])
+            truncated = np.stack([x["truncated"] for x in self._episode_data[1:]])
+            if "success" in self._episode_data[1]["info"]:
+                success = np.stack(
+                    [x["info"]["success"] for x in self._episode_data[1:]]
+                )
+                group.create_dataset("success", data=success, dtype=bool)
+            if "fail" in self._episode_data[1]["info"]:
+                fail = np.stack([x["info"]["fail"] for x in self._episode_data[1:]])
+                group.create_dataset("fail", data=fail, dtype=bool)
 
-        # Only support array like states now
+        # TODO (stao): Only support array like states at the moment
+        # bug here: first state of some task is not same shape?
         env_states = np.stack([x["s"] for x in self._episode_data])
 
         # Dump
         group.create_dataset("actions", data=actions, dtype=np.float32)
-        group.create_dataset("success", data=dones, dtype=bool)
+        group.create_dataset("terminated", data=terminated, dtype=bool)
+        group.create_dataset("truncated", data=truncated, dtype=bool)
 
         if self.record_reward:
             rewards = np.stack([x["r"] for x in self._episode_data]).astype(np.float32)
