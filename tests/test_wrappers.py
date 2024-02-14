@@ -29,6 +29,7 @@ def test_recordepisode_wrapper_gpu(env_id, obs_mode):
         output_dir=f"videos/pytest/{env_id}-gpu",
         trajectory_name=f"test_traj_{obs_mode}",
         info_on_video=False,
+        save_trajectory=False,
     )
     env = ManiSkillVectorEnv(
         env

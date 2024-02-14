@@ -24,6 +24,8 @@ from mani_skill2.utils.structs.actor import Actor
 from mani_skill2.utils.structs.pose import Pose
 from mani_skill2.utils.structs.types import GPUMemoryConfig, SimConfig
 
+WARNED_ONCE = False
+
 
 @register_env("PickSingleYCB-v1", max_episode_steps=100)
 class PickSingleYCBEnv(BaseEnv):
@@ -90,6 +92,7 @@ class PickSingleYCBEnv(BaseEnv):
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
 
     def _load_actors(self):
+        global WARNED_ONCE
         self.table_scene = TableSceneBuilder(
             env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
         )
@@ -106,7 +109,9 @@ class PickSingleYCBEnv(BaseEnv):
             self.num_envs > 1
             and self.num_envs < len(self.all_model_ids)
             and self.reconfiguration_freq <= 0
+            and not WARNED_ONCE
         ):
+            WARNED_ONCE = True
             print(
                 """There are less parallel environments than total available models to sample.
                 Not all models will be used during interaction even after resets unless you call env.reset(options=dict(reconfigure=True))
