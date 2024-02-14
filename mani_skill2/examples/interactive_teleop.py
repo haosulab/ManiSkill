@@ -12,6 +12,7 @@ from mani_skill2.examples.motionplanning.motionplanner import \
 import sapien.utils.viewer
 import h5py
 import json
+from mani_skill2.utils.sapien_utils import get_obj_by_name
 from mani_skill2.utils.wrappers.record import RecordEpisode
 def main(args):
     output_dir = f"{args.record_dir}/teleop/{args.env_id}"
@@ -22,7 +23,9 @@ def main(args):
         render_mode="rgb_array",
         reward_mode="sparse",
         shader_dir="rt-fast",
+        # force_use_gpu_sim=True
     )
+    # TODO (stao): Allow directly testing gpu sim
     # TODO (don't record episode directly, its slow. Just save trajectory. Then use the actions/states and then re-run them to generate videos if asked)
     env = RecordEpisode(
         env,
@@ -106,9 +109,8 @@ def solve(env: BaseEnv, debug=False, vis=False):
 
     last_checkpoint_state = None
     gripper_open = True
-
+    viewer.select_entity(get_obj_by_name(env.agent.robot.links, "panda_hand")._objs[0].entity)
     while True:
-        # viewer.select_entity(planner.grasp_pose_visual._objs[0])
         transform_window = viewer.plugins[0]
 
         transform_window: sapien.utils.viewer.viewer.TransformWindow
@@ -133,8 +135,12 @@ def solve(env: BaseEnv, debug=False, vis=False):
         elif viewer.window.key_press("c"):
             return "continue"
         elif viewer.window.key_press("r"):
+            viewer.select_entity(None)
             return "restart"
-        if viewer.window.key_press("n"):
+        elif viewer.window.key_press("t"):
+            # TODO (stao): change from position transform to rotation transform
+            pass
+        elif viewer.window.key_press("n"):
             execute_current_pose = True
         elif viewer.window.key_press("g"):
             if gripper_open:
