@@ -1,0 +1,33 @@
+{
+  "env_info": {
+    "env_id": "FMBAssembly1-v0",
+    "max_episode_steps": null,
+    "env_kwargs": {
+      "obs_mode": "none",
+      "control_mode": "pd_joint_pos",
+      "render_mode": "rgb_array",
+      "reward_mode": "sparse",
+      "shader_dir": "rt-fast"
+    }
+  },
+  "commit_info": {
+    "commit_id": "abcb8ecee28f07be2fb34d4b511f23c753338b96",
+    "branch": "state-set-replay"
+  },
+  "episodes": [
+    {
+      "episode_id": 0,
+      "episode_seed": 0,
+      "reset_kwargs": {
+        "seed": 0,
+        "options": {}
+      },
+      "control_mode": "pd_joint_pos",
+      "elapsed_steps": 812,
+      "info": {
+        "elapsed_steps": 812,
+        "success": false
+      }
+    }
+  ]
+}
