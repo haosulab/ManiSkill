@@ -7,7 +7,7 @@ from gymnasium.envs.registration import EnvSpec as GymEnvSpec
 
 from mani_skill2 import logger
 from mani_skill2.envs.sapien_env import BaseEnv
-from mani_skill2.utils.wrappers.time_limit import TimeLimit
+from mani_skill2.vector.wrappers.gymnasium import ManiSkillVectorEnv
 
 
 class EnvSpec:
@@ -72,14 +72,13 @@ def make(env_id, enable_segmentation=False, **kwargs):
     env_spec = REGISTERED_ENVS[env_id]
 
     env = env_spec.make(**kwargs)
-    added_gpu_timelimit_wrapper = False
-    if "num_envs" in kwargs:
-        if kwargs["num_envs"] > 1:
-            if env_spec.max_episode_steps is not None:
-                added_gpu_timelimit_wrapper = True
-                env = TimeLimit(env, max_episode_steps=env_spec.max_episode_steps)
-    if env_spec.max_episode_steps is not None and not added_gpu_timelimit_wrapper:
-        env = gym.wrappers.TimeLimit(env, max_episode_steps=env_spec.max_episode_steps)
+    return env
+
+
+def make_vec(env_id, **kwargs):
+    max_episode_steps = kwargs.pop("max_episode_steps", None)
+    env = make(env_id, **kwargs)
+    env = ManiSkillVectorEnv(env, max_episode_steps=max_episode_steps)
     return env
 
 
@@ -121,6 +120,8 @@ def register_env(uid: str, max_episode_steps=None, override=False, **kwargs):
         gym.register(
             uid,
             entry_point=partial(make, env_id=uid),
+            vector_entry_point=partial(make_vec, env_id=uid),
+            max_episode_steps=max_episode_steps,
             disable_env_checker=True,  # Temporary solution as we allow empty observation spaces
             kwargs=deepcopy(kwargs),
         )

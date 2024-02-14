@@ -26,7 +26,12 @@ def test_envs_obs_modes(env_id, obs_mode):
     def assert_device(x):
         assert x.device == torch.device("cuda:0")
 
-    env = gym.make(env_id, num_envs=16, obs_mode=obs_mode, sim_cfg=LOW_MEM_SIM_CFG)
+    env = gym.make_vec(
+        env_id,
+        num_envs=16,
+        vectorization_mode="custom",
+        vector_kwargs=dict(obs_mode=obs_mode, sim_cfg=LOW_MEM_SIM_CFG),
+    )
     obs, _ = env.reset()
     assert_isinstance(obs, torch.Tensor)
     tree_map(obs, lambda x: assert_device(x))
@@ -57,8 +62,11 @@ def test_envs_obs_modes(env_id, obs_mode):
 @pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS)
 @pytest.mark.parametrize("control_mode", CONTROL_MODES_STATIONARY_SINGLE_ARM)
 def test_env_control_modes(env_id, control_mode):
-    env = gym.make(
-        env_id, num_envs=16, control_mode=control_mode, sim_cfg=LOW_MEM_SIM_CFG
+    env = gym.make_vec(
+        env_id,
+        num_envs=16,
+        vectorization_mode="custom",
+        vector_kwargs=dict(obs_mode=control_mode, sim_cfg=LOW_MEM_SIM_CFG),
     )
     env.reset()
     action_space = env.action_space
@@ -72,7 +80,7 @@ def test_env_control_modes(env_id, control_mode):
 @pytest.mark.gpu_sim
 @pytest.mark.parametrize("env_id", ["PickSingleYCB-v1"])
 def test_env_reconfiguration(env_id):
-    env = gym.make(env_id, num_envs=16)
+    env = gym.make_vec(env_id, num_envs=16, vectorization_mode="custom")
     env.reset(options=dict(reconfigure=True))
     for _ in range(5):
         env.step(env.action_space.sample())
@@ -160,7 +168,12 @@ def test_robots(env_id, robot_uids):
         "MoveBucket-v1",
     ]:
         pytest.skip(reason=f"Env {env_id} does not support robots other than panda")
-    env = gym.make(env_id, num_envs=16, robot_uids=robot_uids, sim_cfg=LOW_MEM_SIM_CFG)
+    env = gym.make_vec(
+        env_id,
+        num_envs=16,
+        vectorization_mode="custom",
+        vector_kwargs=dict(robot_uids=robot_uids, sim_cfg=LOW_MEM_SIM_CFG),
+    )
     env.reset()
     action_space = env.action_space
     for _ in range(5):
@@ -172,7 +185,12 @@ def test_robots(env_id, robot_uids):
 @pytest.mark.gpu_sim
 @pytest.mark.parametrize("env_id", MULTI_AGENT_ENV_IDS)
 def test_multi_agent(env_id):
-    env = gym.make(env_id, num_envs=16, sim_cfg=LOW_MEM_SIM_CFG)
+    env = gym.make_vec(
+        env_id,
+        num_envs=16,
+        vectorization_mode="custom",
+        vector_kwargs=dict(sim_cfg=LOW_MEM_SIM_CFG),
+    )
     env.reset()
     action_space = env.action_space
     assert isinstance(action_space, gym.spaces.Dict)
@@ -187,7 +205,12 @@ def test_multi_agent(env_id):
 @pytest.mark.gpu_sim
 @pytest.mark.parametrize("env_id", ENV_IDS[:1])
 def test_partial_resets(env_id):
-    env = gym.make(env_id, num_envs=16, sim_cfg=LOW_MEM_SIM_CFG)
+    env = gym.make_vec(
+        env_id,
+        num_envs=16,
+        vectorization_mode="custom",
+        vector_kwargs=dict(sim_cfg=LOW_MEM_SIM_CFG),
+    )
     obs, _ = env.reset()
     action_space = env.action_space
     for _ in range(5):
@@ -209,7 +232,12 @@ def test_partial_resets(env_id):
 @pytest.mark.parametrize("env_id", ENV_IDS[:1])
 def test_timelimits(env_id):
     """Test that the default timelimit wrapper applied does not use Gym's timelimit wrapper but our own which batches it correctly"""
-    env = gym.make(env_id, num_envs=16, sim_cfg=LOW_MEM_SIM_CFG)
+    env = gym.make_vec(
+        env_id,
+        num_envs=16,
+        vectorization_mode="custom",
+        vector_kwargs=dict(sim_cfg=LOW_MEM_SIM_CFG),
+    )
     obs, _ = env.reset()
     for _ in range(50):
         obs, _, terminated, truncated, _ = env.step(None)

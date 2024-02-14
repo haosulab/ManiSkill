@@ -24,6 +24,17 @@ def test_recordepisode_wrapper_gpu(env_id, obs_mode):
         num_envs=16,
         sim_cfg=LOW_MEM_SIM_CFG,
     )
+    env = gym.make_vec(
+        env_id,
+        num_envs=16,
+        vectorization_mode="custom",
+        vector_kwargs=dict(
+            obs_mode=obs_mode,
+            render_mode="rgb_array",
+            max_episode_steps=10,
+            sim_cfg=LOW_MEM_SIM_CFG,
+        ),
+    )
     env = RecordEpisode(
         env,
         output_dir=f"videos/pytest/{env_id}-gpu",

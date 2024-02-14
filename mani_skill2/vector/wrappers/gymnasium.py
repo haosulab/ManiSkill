@@ -30,12 +30,13 @@ class ManiSkillVectorEnv(VectorEnv):
         self,
         env: Union[BaseEnv, str],
         num_envs: int = None,
-        env_kwargs: Dict = dict(),
         auto_reset: bool = True,
+        max_episode_steps: int = None,
         ignore_terminations: bool = False,
+        **kwargs,
     ):
         if isinstance(env, str):
-            self._env = gym.make(env, num_envs=num_envs, **env_kwargs)
+            self._env = gym.make(env, num_envs=num_envs, **kwargs)
         else:
             self._env = env
             num_envs = self.base_env.num_envs
@@ -46,7 +47,7 @@ class ManiSkillVectorEnv(VectorEnv):
         )
 
         self.returns = torch.zeros(self.num_envs, device=self.base_env.device)
-        self.max_episode_steps = self._env.spec.max_episode_steps
+        self.max_episode_steps = max_episode_steps
 
     @property
     def base_env(self) -> BaseEnv:
@@ -71,13 +72,13 @@ class ManiSkillVectorEnv(VectorEnv):
     def step(
         self, actions: Union[Array, Dict]
     ) -> Tuple[Array, Array, Array, Array, Dict]:
-        obs, rew, terminations, _, infos = self._env.step(actions)
+        obs, rew, terminations, truncations, infos = self._env.step(actions)
         self.returns += rew
         infos["episode"] = dict(r=self.returns)
-        # NOTE: if you create a gym env with gym.make and pass max_episode_steps gym will auto attach a timelimit wrapper which does not work for gpu so we re-compute truncations here
-        truncations: torch.Tensor = (
-            self.base_env.elapsed_steps >= self.max_episode_steps
-        )
+        if self.max_episode_steps is not None:
+            truncations: torch.Tensor = (
+                self.base_env.elapsed_steps >= self.max_episode_steps
+            )
         if self.num_envs == 1:
             truncations = torch.tensor([truncations])
             terminations = torch.tensor([terminations])
