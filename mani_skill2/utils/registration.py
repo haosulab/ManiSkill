@@ -72,11 +72,14 @@ def make(env_id, enable_segmentation=False, **kwargs):
     env_spec = REGISTERED_ENVS[env_id]
 
     env = env_spec.make(**kwargs)
-
+    added_gpu_timelimit_wrapper = False
     if "num_envs" in kwargs:
         if kwargs["num_envs"] > 1:
             if env_spec.max_episode_steps is not None:
+                added_gpu_timelimit_wrapper = True
                 env = TimeLimit(env, max_episode_steps=env_spec.max_episode_steps)
+    if env_spec.max_episode_steps is not None and not added_gpu_timelimit_wrapper:
+        env = gym.wrappers.TimeLimit(env, max_episode_steps=env_spec.max_episode_steps)
     return env
 
 
