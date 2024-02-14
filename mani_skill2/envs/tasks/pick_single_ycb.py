@@ -75,6 +75,7 @@ class PickSingleYCBEnv(BaseEnv):
             *args,
             robot_uids=robot_uids,
             reconfiguration_freq=reconfiguration_freq,
+            num_envs=num_envs,
             **kwargs,
         )
 
