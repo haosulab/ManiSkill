@@ -7,7 +7,6 @@ import gymnasium as gym
 import h5py
 import numpy as np
 import sapien.physx as physx
-import torch
 from gymnasium import spaces
 
 from mani_skill2 import get_commit_info, logger
@@ -229,12 +228,13 @@ class RecordEpisode(gym.Wrapper):
         self._episode_data = []
         self._episode_info = {}
         self._render_images = []
+        self._episode_id += 1
 
         reset_kwargs = copy.deepcopy(dict(seed=seed, options=options, **kwargs))
         obs, info = super().reset(seed=seed, options=options, **kwargs)
 
         if self.save_trajectory:
-            state = self.env.unwrapped.get_state()
+            state = self._base_env.get_state()
             data = pack_step_data(state, obs, None, None, None, None, None)
             self._episode_data.append(data)
             self._episode_info.update(
@@ -284,7 +284,6 @@ class RecordEpisode(gym.Wrapper):
             return
 
         # find which trajectories completed
-        self._episode_id += 1
         traj_id = "traj_{}".format(self._episode_id)
         group = self._h5_file.create_group(traj_id, track_order=True)
 
@@ -357,10 +356,7 @@ class RecordEpisode(gym.Wrapper):
             terminated = np.empty(shape=(0,), dtype=bool)
             truncated = np.empty(shape=(0,), dtype=bool)
         else:
-            # NOTE(jigu): The format is designed to be compatible with ManiSkill-Learn (pyrl).
-            # Record transitions (ignore the first padded values during reset)
             actions = np.stack([x["a"] for x in self._episode_data[1:]])
-            # NOTE(jigu): "dones" need to stand for task success excluding time limit.
             terminated = np.stack([x["terminated"] for x in self._episode_data[1:]])
             truncated = np.stack([x["truncated"] for x in self._episode_data[1:]])
             if "success" in self._episode_data[1]["info"]:
@@ -373,7 +369,6 @@ class RecordEpisode(gym.Wrapper):
                 group.create_dataset("fail", data=fail, dtype=bool)
 
         # TODO (stao): Only support array like states at the moment
-        # bug here: first state of some task is not same shape?
         env_states = np.stack([x["s"] for x in self._episode_data])
 
         # Dump

@@ -915,14 +915,20 @@ class BaseEnv(gym.Env):
 
     def get_state(self):
         """Get environment state. Override to include task information (e.g., goal)"""
-        return self._scene.get_sim_state()
+        state = self._scene.get_sim_state()
+        if physx.is_gpu_enabled():
+            return state
+        return state[0]
 
     def set_state(self, state: np.ndarray):
         """Set environment state. Override to include task information (e.g., goal)"""
+        if len(state.shape) == 1:
+            state = batch(state)
         self._scene.set_sim_state(state)
-        self._scene._gpu_apply_all()
-        self._scene.px.gpu_update_articulation_kinematics()
-        self._scene._gpu_fetch_all()
+        if physx.is_gpu_enabled():
+            self._scene._gpu_apply_all()
+            self._scene.px.gpu_update_articulation_kinematics()
+            self._scene._gpu_fetch_all()
 
     # -------------------------------------------------------------------------- #
     # Visualization
