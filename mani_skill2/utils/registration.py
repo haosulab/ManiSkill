@@ -73,9 +73,10 @@ def make(env_id, enable_segmentation=False, **kwargs):
 
     env = env_spec.make(**kwargs)
 
-    # Compatible with gym.make
-    if env_spec.max_episode_steps is not None:
-        env = TimeLimit(env, max_episode_steps=env_spec.max_episode_steps)
+    if "num_envs" in kwargs:
+        if kwargs["num_envs"] > 1:
+            if env_spec.max_episode_steps is not None:
+                env = TimeLimit(env, max_episode_steps=env_spec.max_episode_steps)
     return env
 
 

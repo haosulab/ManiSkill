@@ -74,6 +74,10 @@ class ManiSkillVectorEnv(VectorEnv):
         obs, rew, terminations, _, infos = self._env.step(actions)
         self.returns += rew
         infos["episode"] = dict(r=self.returns)
+        # NOTE: if you create a gym env with gym.make and pass max_episode_steps gym will auto attach a timelimit wrapper which does not work for gpu so we re-compute truncations here
+        truncations: torch.Tensor = (
+            self.base_env.elapsed_steps >= self.max_episode_steps
+        )
         if self.num_envs == 1:
             truncations = torch.tensor([truncations])
             terminations = torch.tensor([terminations])

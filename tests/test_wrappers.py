@@ -82,6 +82,7 @@ def test_recordepisode_wrapper_gpu_render_sensor(env_id, obs_mode):
         env,
         output_dir=f"videos/pytest/{env_id}-gpu-render-sensor",
         trajectory_name=f"test_traj_{obs_mode}",
+        save_trajectory=False,
         info_on_video=False,
     )
     env = ManiSkillVectorEnv(
