@@ -219,7 +219,10 @@ class RecordEpisode(gym.Wrapper):
         options: Optional[dict] = dict(),
         **kwargs,
     ):
-        if self.save_on_reset and self._episode_id >= 0:
+        skip_trajectory = False
+        options.pop("save_trajectory", False)
+
+        if self.save_on_reset and self._episode_id >= 0 and not skip_trajectory:
             self.flush_trajectory(ignore_empty_transition=True)
             # when to flush video? Use last parallel env done?
             self.flush_video(ignore_empty_transition=True)
@@ -228,7 +231,8 @@ class RecordEpisode(gym.Wrapper):
         self._episode_data = []
         self._episode_info = {}
         self._render_images = []
-        self._episode_id += 1
+        if not skip_trajectory:
+            self._episode_id += 1
 
         reset_kwargs = copy.deepcopy(dict(seed=seed, options=options, **kwargs))
         obs, info = super().reset(seed=seed, options=options, **kwargs)

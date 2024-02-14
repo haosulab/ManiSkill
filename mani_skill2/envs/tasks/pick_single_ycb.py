@@ -101,12 +101,16 @@ class PickSingleYCBEnv(BaseEnv):
         model_ids = np.concatenate(
             [model_ids] * np.ceil(self.num_envs / len(self.all_model_ids)).astype(int)
         )[: self.num_envs]
-        if self.num_envs < len(self.all_model_ids):
+        if (
+            self.num_envs > 1
+            and self.num_envs < len(self.all_model_ids)
+            and self.reconfiguration_freq <= 0
+        ):
             print(
-                "There are less parallel environments than total available models to sample. The environment will run considerably slower"
+                """There are less parallel environments than total available models to sample.
+                Not all models will be used during interaction even after resets unless you call env.reset(options=dict(reconfigure=True))
+                or set reconfiguration_freq to be > 1."""
             )
-            # TODO (stao): with less envs than models, we should be reconfiguring more often, which is unfortunately also very slow on gpu sim
-            # alternatively provide option for user to specify reconfiguration frequency in terms of # of resets?
 
         actors: List[Actor] = []
         self.obj_heights = []

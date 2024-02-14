@@ -14,33 +14,44 @@ import h5py
 import json
 from mani_skill2.utils.wrappers.record import RecordEpisode
 def main(args):
+    output_dir = f"{args.record_dir}/teleop/{args.env_id}"
     env = gym.make(
         args.env_id,
         obs_mode=args.obs_mode,
         control_mode="pd_joint_pos",
         render_mode="rgb_array",
         reward_mode="sparse",
-        # shader_dir="rt-fast",
+        shader_dir="rt-fast",
     )
     # TODO (don't record episode directly, its slow. Just save trajectory. Then use the actions/states and then re-run them to generate videos if asked)
     env = RecordEpisode(
         env,
-        output_dir=f"videos/teleop-{args.env_id}",
+        output_dir=output_dir,
         trajectory_name="trajectory",
         save_video=False,
         info_on_video=False,
     )
     num_trajs = 0
-    for seed in range(100):
-        num_trajs += 1
-        code = solve(env, seed=seed, debug=False, vis=True)
-        if code == "quit": break
-        elif code == "continue": continue
+    seed = 0
+    env.reset(seed=seed)
+    while True:
+        print(f"Collecting trajectory {num_trajs+1}, seed={seed}")
+        code = solve(env, debug=False, vis=True)
+        if code == "quit":
+            num_trajs += 1
+            break
+        elif code == "continue":
+            seed += 1
+            num_trajs += 1
+            env.reset(seed=seed)
+            continue
+        elif code == "restart":
+            env.reset(seed=seed, options=dict(save_trajectory=False))
     h5_file_path = env._h5_file.filename
     json_file_path = env._json_path
     env.close()
     del env
-    print("saving videos")
+    print(f"saving videos to {output_dir}")
 
     trajectory_data = h5py.File(h5_file_path)
     with open(json_file_path, "r") as f:
@@ -51,11 +62,11 @@ def main(args):
         control_mode="pd_joint_pos",
         render_mode="rgb_array",
         reward_mode="sparse",
-        # shader_dir="rt-fast",
+        shader_dir="rt-fast",
     )
     env = RecordEpisode(
         env,
-        output_dir=f"videos/teleop-{args.env_id}",
+        output_dir=output_dir,
         trajectory_name="trajectory",
         save_video=True,
         info_on_video=False,
@@ -76,8 +87,7 @@ def main(args):
 
 
 
-def solve(env: BaseEnv, seed=None, debug=False, vis=False):
-    env.reset(seed=seed)
+def solve(env: BaseEnv, debug=False, vis=False):
     assert env.unwrapped.control_mode in [
         "pd_joint_pos",
         "pd_joint_pos_vel",
@@ -122,15 +132,18 @@ def solve(env: BaseEnv, seed=None, debug=False, vis=False):
             return "quit"
         elif viewer.window.key_press("c"):
             return "continue"
+        elif viewer.window.key_press("r"):
+            return "restart"
         if viewer.window.key_press("n"):
             execute_current_pose = True
         elif viewer.window.key_press("g"):
             if gripper_open:
                 gripper_open = False
-                planner.close_gripper()
+                _, reward, _ ,_, info = planner.close_gripper()
             else:
                 gripper_open = True
-                planner.open_gripper()
+                _, reward, _ ,_, info = planner.open_gripper()
+            print(f"Reward: {reward}, Info: {info}")
         # # TODO left, right depend on orientation really.
         # elif viewer.window.key_press("down"):
         #     pose = planner.grasp_pose_visual.pose
@@ -146,25 +159,22 @@ def solve(env: BaseEnv, seed=None, debug=False, vis=False):
         #     planner.grasp_pose_visual.set_pose(pose * sapien.Pose(p=[0, +0.01, 0]))
         if execute_current_pose:
             # z-offset of end-effector gizmo to TCP position is hardcoded for the panda robot here
-            result = planner.move_to_pose_with_screw(transform_window._gizmo_pose * sapien.Pose([0, 0, 0.102]))
+            result = planner.move_to_pose_with_screw(transform_window._gizmo_pose * sapien.Pose([0, 0, 0.102]), dry_run=True)
+            if result != -1 and len(result["position"]) < 100:
+                _, reward, _ ,_, info = planner.follow_path(result)
+                print(f"Reward: {reward}, Info: {info}")
+            else:
+                if result == -1: print("Plan failed")
+                else: print("Generated motion plan was too long. Try a closer sub-goal")
             execute_current_pose = False
-            print(f"Reward: {result[1]}, Info: {result[-1]}")
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--env-id", type=str, default="PickCube-v1")
     parser.add_argument("-o", "--obs-mode", type=str, default="none")
-    # parser.add_argument("-c", "--control-mode", type=str, default="pd_ee_delta_pose")
-    # parser.add_argument("--render-mode", type=str, default="cameras")
-    # parser.add_argument("--enable-sapien-viewer", action="store_true")
-    # parser.add_argument("--record-dir", type=str)
+    parser.add_argument("-r", "--robot-uid", type=str, default="panda", help="Robot setups supported are ['panda']")
+    parser.add_argument("--record-dir", type=str, default="demos")
     args, opts = parser.parse_known_args()
-
-    # # Parse env kwargs
-    # print("opts:", opts)
-    # eval_str = lambda x: eval(x[1:]) if x.startswith("@") else x
-    # env_kwargs = dict((x, eval_str(y)) for x, y in zip(opts[0::2], opts[1::2]))
-    # print("env_kwargs:", env_kwargs)
-    # args.env_kwargs = env_kwargs
 
     return args
 if __name__ == "__main__":

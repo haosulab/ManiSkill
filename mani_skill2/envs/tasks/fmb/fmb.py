@@ -21,7 +21,7 @@ from mani_skill2.utils.sapien_utils import (  # import various useful utilities 
 from mani_skill2.utils.scene_builder.table.table_scene_builder import TableSceneBuilder
 
 
-@register_env("FMBAssembly1Env-v0", max_episode_steps=200)
+@register_env("FMBAssembly1-v0", max_episode_steps=200)
 class FMBAssembly1Env(BaseEnv):
     """
     Task Description
