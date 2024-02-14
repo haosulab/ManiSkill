@@ -25,22 +25,6 @@ class ManiSkillScene:
     This wrapper also helps manage GPU states if GPU simulation is used
     """
 
-    # a list of all sub scenes that work in parallel. In CPU sim, this list should only contain one element
-    # users can still access individual scenes and customize them if they wish (e.g. change lighting)
-    sub_scenes: List[sapien.Scene] = []
-    px: Union[physx.PhysxCpuSystem, physx.PhysxGpuSystem] = None
-    render_system_group: sapien.render.RenderSystemGroup = None
-    camera_groups: Dict[str, sapien.render.RenderCameraGroup] = OrderedDict()
-
-    actors: Dict[str, Actor] = OrderedDict()
-    articulations: Dict[str, Articulation] = OrderedDict()
-
-    sensors: Dict[str, BaseSensor] = OrderedDict()
-    human_render_cameras: Dict[str, Camera] = OrderedDict()
-
-    _reset_mask: torch.Tensor = None
-    """Used internally by various wrapped objects like Actor and Link to auto mask out sub-scenes so they do not get modified during partial env resets"""
-
     def __init__(
         self,
         sub_scenes: List[sapien.Scene],
@@ -48,12 +32,24 @@ class ManiSkillScene:
         device: Device = None,
     ):
         self.sub_scenes = sub_scenes
-        self.px = self.sub_scenes[0].physx_system
+        self.px: Union[physx.PhysxCpuSystem, physx.PhysxGpuSystem] = self.sub_scenes[
+            0
+        ].physx_system
         self._gpu_sim_initialized = False
         self.debug_mode = debug_mode
         self.device = device
 
+        self.render_system_group: sapien.render.RenderSystemGroup = None
+        self.camera_groups: Dict[str, sapien.render.RenderCameraGroup] = OrderedDict()
+
+        self.actors: Dict[str, Actor] = OrderedDict()
+        self.articulations: Dict[str, Articulation] = OrderedDict()
+
+        self.sensors: Dict[str, BaseSensor] = OrderedDict()
+        self.human_render_cameras: Dict[str, Camera] = OrderedDict()
+
         self._reset_mask = torch.ones(len(sub_scenes), dtype=bool, device=self.device)
+        """Used internally by various wrapped objects like Actor and Link to auto mask out sub-scenes so they do not get modified during partial env resets"""
 
     @property
     def timestep(self):

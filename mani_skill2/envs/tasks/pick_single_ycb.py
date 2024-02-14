@@ -56,12 +56,27 @@ class PickSingleYCBEnv(BaseEnv):
     )
     goal_thresh = 0.025
 
-    def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
+    def __init__(
+        self,
+        *args,
+        robot_uids="panda",
+        robot_init_qpos_noise=0.02,
+        num_envs=1,
+        **kwargs,
+    ):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         self.model_id = None
         _load_ycb_dataset()
         self.all_model_ids = np.array(list(MODEL_DBS["YCB"]["model_data"].keys()))
-        super().__init__(*args, robot_uids=robot_uids, **kwargs)
+        reconfiguration_freq = 0
+        if num_envs == 1:
+            reconfiguration_freq = 1
+        super().__init__(
+            *args,
+            robot_uids=robot_uids,
+            reconfiguration_freq=reconfiguration_freq,
+            **kwargs,
+        )
 
     def _register_sensors(self):
         pose = look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
