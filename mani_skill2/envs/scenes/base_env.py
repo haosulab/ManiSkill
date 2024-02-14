@@ -56,7 +56,7 @@ class SceneManipulationEnv(BaseEnv):
     def reset(self, seed=None, options=None):
         self._set_episode_rng(seed)
         if options is None:
-            options = dict(reconfigure=True)
+            options = dict(reconfigure=False)
         if not self.fixed_scene:
             options["reconfigure"] = True
         if options["reconfigure"]:
