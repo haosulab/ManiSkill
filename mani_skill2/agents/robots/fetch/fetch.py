@@ -58,6 +58,7 @@ class Fetch(BaseAgent):
         )
     ]
     REACHABLE_DIST = 1.5
+    RESTING_QPOS = np.array([0, 0, 0, 0.386, 0, -0.370, 0.562, -1.032, 0.695, 0.955, -0.1, 2.077, 0, 0.015, 0.015])
 
     def __init__(self, *args, **kwargs):
         self.arm_joint_names = [
