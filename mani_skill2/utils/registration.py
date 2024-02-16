@@ -7,6 +7,7 @@ from gymnasium.envs.registration import EnvSpec as GymEnvSpec
 
 from mani_skill2 import logger
 from mani_skill2.envs.sapien_env import BaseEnv
+from mani_skill2.vector.wrappers.gymnasium import ManiSkillVectorEnv
 
 
 class EnvSpec:
@@ -57,7 +58,7 @@ def register(
 
 
 # TODO (stao): Can we refactor out this whole extra wrapper thing to make the base env have the correct observation setup?
-def make(env_id, as_gym=True, enable_segmentation=False, **kwargs):
+def make(env_id, enable_segmentation=False, **kwargs):
     """Instantiate a ManiSkill2 environment.
 
     Args:
@@ -71,15 +72,13 @@ def make(env_id, as_gym=True, enable_segmentation=False, **kwargs):
     env_spec = REGISTERED_ENVS[env_id]
 
     env = env_spec.make(**kwargs)
+    return env
 
-    # Compatible with gym.make
-    if as_gym:
-        env.unwrapped.spec = env_spec.gym_spec
-        if env_spec.max_episode_steps is not None:
-            env = gym.wrappers.TimeLimit(
-                env, max_episode_steps=env_spec.max_episode_steps
-            )
 
+def make_vec(env_id, **kwargs):
+    max_episode_steps = kwargs.pop("max_episode_steps", None)
+    env = make(env_id, **kwargs)
+    env = ManiSkillVectorEnv(env, max_episode_steps=max_episode_steps)
     return env
 
 
@@ -120,7 +119,8 @@ def register_env(uid: str, max_episode_steps=None, override=False, **kwargs):
         # Register for gym
         gym.register(
             uid,
-            entry_point=partial(make, env_id=uid, as_gym=False),
+            entry_point=partial(make, env_id=uid),
+            vector_entry_point=partial(make_vec, env_id=uid),
             max_episode_steps=max_episode_steps,
             disable_env_checker=True,  # Temporary solution as we allow empty observation spaces
             kwargs=deepcopy(kwargs),

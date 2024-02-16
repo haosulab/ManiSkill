@@ -170,14 +170,18 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     def set_state(self, state: Array):
         if physx.is_gpu_enabled():
-            raise NotImplementedError(
-                "You should not set state on a GPU enabled actor."
-            )
+            state = to_tensor(state)
+            self.set_root_pose(Pose.create(state[:, :7]))
+            self.set_root_linear_velocity(state[:, 7:10])
+            self.set_root_angular_velocity(state[:, 10:13])
+            # TODO (stao): Handle get/set state for envs with different DOFs. Perhaps need to let user set a padding ahead of time to ensure state is the same?
+            self.set_qpos(state[:, 13 : 13 + self.max_dof])
+            self.set_qvel(state[:, 13 + self.max_dof :])
         else:
             state = to_numpy(state[0])
             self.set_root_pose(sapien.Pose(state[0:3], state[3:7]))
-            # self.set_root_linear_velocity(state[7:10])
-            # self.set_root_angular_velocity(state[10:13])
+            self.set_root_linear_velocity(state[7:10])
+            self.set_root_angular_velocity(state[10:13])
             qpos, qvel = np.split(state[13:], 2)
             self.set_qpos(qpos)
             self.set_qvel(qvel)
@@ -326,10 +330,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     #     return self._articulations[0].active_joints
 
     @cached_property
-    def dof(self) -> int:
-        """
-        :type: int
-        """
+    def dof(self) -> torch.tensor:
         return torch.tensor([obj.dof for obj in self._objs])
 
     # @property
