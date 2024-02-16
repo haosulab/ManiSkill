@@ -48,6 +48,11 @@ class ManiSkillVectorEnv(VectorEnv):
 
         self.returns = torch.zeros(self.num_envs, device=self.base_env.device)
         self.max_episode_steps = max_episode_steps
+        if (
+            self.max_episode_steps is None
+            and self.base_env.spec.max_episode_steps is not None
+        ):
+            self.max_episode_steps = self.base_env.spec.max_episode_steps
 
     @property
     def device(self):
@@ -56,6 +61,10 @@ class ManiSkillVectorEnv(VectorEnv):
     @property
     def base_env(self) -> BaseEnv:
         return self._env.unwrapped
+
+    @property
+    def unwrapped(self):
+        return self.base_env
 
     def reset(
         self,
@@ -83,18 +92,19 @@ class ManiSkillVectorEnv(VectorEnv):
             truncations: torch.Tensor = (
                 self.base_env.elapsed_steps >= self.max_episode_steps
             )
-        if self.num_envs == 1:
-            truncations = torch.tensor([truncations])
-            terminations = torch.tensor([terminations])
+        if isinstance(truncations, bool):
+            truncations = torch.tensor([truncations], device=self.device)
+        if isinstance(terminations, bool):
+            terminations = torch.tensor([terminations], device=self.device)
         if self.ignore_terminations:
-            terminations *= 0
+            terminations[:] = False
         dones = torch.logical_or(terminations, truncations)
 
         if dones.any():
             # TODO (stao): permit reset by indicies later
             infos["episode"]["r"] = self.returns.clone()
             final_obs = obs
-            env_idx = torch.arange(0, self.num_envs, device=self.base_env.device)[dones]
+            env_idx = torch.arange(0, self.num_envs, device=self.device)[dones]
             obs, _ = self.reset(options=dict(env_idx=env_idx))
             infos["final_info"] = infos
             # gymnasium calls it final observation but it really is just o_{t+1} or the true next observation
