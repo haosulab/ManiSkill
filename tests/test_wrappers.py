@@ -81,13 +81,16 @@ def test_recordepisode_wrapper(env_id, obs_mode):
 @pytest.mark.parametrize("env_id", ENV_IDS[:1])
 @pytest.mark.parametrize("obs_mode", OBS_MODES[:1])
 def test_recordepisode_wrapper_gpu_render_sensor(env_id, obs_mode):
-    env = gym.make(
+    env = gym.make_vec(
         env_id,
-        obs_mode=obs_mode,
-        render_mode="sensors",
-        max_episode_steps=10,
         num_envs=16,
-        sim_cfg=LOW_MEM_SIM_CFG,
+        vectorization_mode="custom",
+        vector_kwargs=dict(
+            obs_mode=obs_mode,
+            render_mode="sensors",
+            sim_cfg=LOW_MEM_SIM_CFG,
+            max_episode_steps=10,
+        ),
     )
     env = RecordEpisode(
         env,
@@ -96,9 +99,6 @@ def test_recordepisode_wrapper_gpu_render_sensor(env_id, obs_mode):
         save_trajectory=False,
         info_on_video=False,
     )
-    env = ManiSkillVectorEnv(
-        env
-    )  # this is used purely to just fix the timelimit wrapper problems
     env.reset()
     action_space = env.action_space
     for _ in range(20):

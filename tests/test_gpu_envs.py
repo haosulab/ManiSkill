@@ -195,8 +195,8 @@ def test_multi_agent(env_id):
     env.reset()
     action_space = env.action_space
     assert isinstance(action_space, gym.spaces.Dict)
-    assert isinstance(env.unwrapped.single_action_space, gym.spaces.Dict)
-    assert isinstance(env.unwrapped.agent, MultiAgent)
+    assert isinstance(env.base_env.single_action_space, gym.spaces.Dict)
+    assert isinstance(env.base_env.agent, MultiAgent)
     for _ in range(5):
         env.step(action_space.sample())
     env.close()
