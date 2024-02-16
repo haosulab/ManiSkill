@@ -234,6 +234,11 @@ class BaseEnv(gym.Env):
         # Use a fixed (main) seed to enhance determinism
         self._main_seed = None
         self._set_main_rng(2022)
+        self._elapsed_steps = (
+                torch.zeros(self.num_envs, device=self.device, dtype=torch.int32)
+                if physx.is_gpu_enabled()
+                else 0
+        )
         obs, _ = self.reset(seed=2022, options=dict(reconfigure=True))
         if physx.is_gpu_enabled():
             obs = to_numpy(obs)
@@ -613,12 +618,6 @@ class BaseEnv(gym.Env):
         if options is None:
             options = dict()
 
-        self._elapsed_steps = (
-            torch.zeros(self.num_envs, device=self.device, dtype=torch.int32)
-            if physx.is_gpu_enabled()
-            else 0
-        )
-
         self._set_main_rng(seed)
         # we first set the first episode seed to allow environments to use it to reconfigure the environment with a seed
         self._set_episode_rng(seed)
@@ -641,7 +640,11 @@ class BaseEnv(gym.Env):
             self._scene._reset_mask = torch.ones(
                 self.num_envs, dtype=bool, device=self.device
             )
-
+        if physx.is_gpu_enabled():
+            self._elapsed_steps[env_idx] = 0
+        else:
+            self._elapsed_steps = 0
+        
         if not reconfigure:
             self._clear_sim_state()
         if self.reconfiguration_freq != 0:
