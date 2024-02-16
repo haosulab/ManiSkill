@@ -235,9 +235,9 @@ class BaseEnv(gym.Env):
         self._main_seed = None
         self._set_main_rng(2022)
         self._elapsed_steps = (
-                torch.zeros(self.num_envs, device=self.device, dtype=torch.int32)
-                if physx.is_gpu_enabled()
-                else 0
+            torch.zeros(self.num_envs, device=self.device, dtype=torch.int32)
+            if physx.is_gpu_enabled()
+            else 0
         )
         obs, _ = self.reset(seed=2022, options=dict(reconfigure=True))
         if physx.is_gpu_enabled():
@@ -644,7 +644,7 @@ class BaseEnv(gym.Env):
             self._elapsed_steps[env_idx] = 0
         else:
             self._elapsed_steps = 0
-        
+
         if not reconfigure:
             self._clear_sim_state()
         if self.reconfiguration_freq != 0:
@@ -829,7 +829,7 @@ class BaseEnv(gym.Env):
         """
         Get info about the current environment state, include elapsed steps and evaluation information
         """
-        info = dict(elapsed_steps=self._elapsed_steps)
+        info = dict(elapsed_steps=self._elapsed_steps.clone())
         info.update(self.evaluate())
         return info
 

@@ -87,6 +87,7 @@ class ManiSkillVectorEnv(VectorEnv):
     ) -> Tuple[Array, Array, Array, Array, Dict]:
         obs, rew, terminations, truncations, infos = self._env.step(actions)
         self.returns += rew
+
         infos["episode"] = dict(r=self.returns)
         if self.max_episode_steps is not None:
             truncations: torch.Tensor = (

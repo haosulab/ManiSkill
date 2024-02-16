@@ -246,8 +246,6 @@ if __name__ == "__main__":
             lrnow = frac * args.learning_rate
             optimizer.param_groups[0]["lr"] = lrnow
 
-        # next_obs, _ = envs.reset() # TODO: remove and make an auto reset function later
-
         for step in range(0, args.num_steps):
             global_step += args.num_envs
             obs[step] = next_obs
@@ -266,10 +264,9 @@ if __name__ == "__main__":
             rewards[step] = reward.view(-1)
             if truncations.any():
                 # TODO make truncations a tensor, which should all be the same value really...
-                final_obs = next_obs
+                final_obs = infos["final_observation"]
                 final_value = agent.get_value(final_obs)
                 timeout_bonus[step] = final_value.flatten()
-                next_obs, _ = envs.reset()
             if "final_info" in infos:
                 info = infos["final_info"]
                 episodic_return = info['episode']['r'].mean().cpu().numpy()
