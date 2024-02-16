@@ -6,6 +6,7 @@ import torch
 from mani_skill2.agents.multi_agent import MultiAgent
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.utils.structs.types import SimConfig
+from mani_skill2.vector.wrappers.gymnasium import ManiSkillVectorEnv
 from tests.utils import (
     CONTROL_MODES_STATIONARY_SINGLE_ARM,
     ENV_IDS,
@@ -66,7 +67,7 @@ def test_env_control_modes(env_id, control_mode):
         env_id,
         num_envs=16,
         vectorization_mode="custom",
-        vector_kwargs=dict(obs_mode=control_mode, sim_cfg=LOW_MEM_SIM_CFG),
+        vector_kwargs=dict(control_mode=control_mode, sim_cfg=LOW_MEM_SIM_CFG),
     )
     env.reset()
     action_space = env.action_space
@@ -205,7 +206,7 @@ def test_multi_agent(env_id):
 @pytest.mark.gpu_sim
 @pytest.mark.parametrize("env_id", ENV_IDS[:1])
 def test_partial_resets(env_id):
-    env = gym.make_vec(
+    env: ManiSkillVectorEnv = gym.make_vec(
         env_id,
         num_envs=16,
         vectorization_mode="custom",
@@ -215,8 +216,8 @@ def test_partial_resets(env_id):
     action_space = env.action_space
     for _ in range(5):
         obs, _, _, _, _ = env.step(action_space.sample())
-    env_idx = torch.arange(0, 16, device=env.unwrapped.device)
-    reset_mask = torch.zeros(16, dtype=bool, device=env.unwrapped.device)
+    env_idx = torch.arange(0, 16, device=env.device)
+    reset_mask = torch.zeros(16, dtype=bool, device=env.device)
     for i in [1, 3, 4, 13]:
         reset_mask[i] = True
     reset_obs, _ = env.reset(options=dict(env_idx=env_idx[reset_mask]))
@@ -241,7 +242,7 @@ def test_timelimits(env_id):
     obs, _ = env.reset()
     for _ in range(50):
         obs, _, terminated, truncated, _ = env.step(None)
-    assert (truncated == torch.ones(16, dtype=bool, device=env.unwrapped.device)).all()
+    assert (truncated == torch.ones(16, dtype=bool, device=env.device)).all()
     env.close()
     del env
 

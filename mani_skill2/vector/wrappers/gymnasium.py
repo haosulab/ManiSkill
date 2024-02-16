@@ -50,6 +50,10 @@ class ManiSkillVectorEnv(VectorEnv):
         self.max_episode_steps = max_episode_steps
 
     @property
+    def device(self):
+        return self.base_env.device
+
+    @property
     def base_env(self) -> BaseEnv:
         return self._env.unwrapped
 
