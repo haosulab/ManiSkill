@@ -262,11 +262,7 @@ if __name__ == "__main__":
             next_obs, reward, terminations, truncations, infos = envs.step(clip_action(action))
             next_done = torch.logical_or(terminations, truncations).to(torch.float32)
             rewards[step] = reward.view(-1)
-            if truncations.any():
-                # TODO make truncations a tensor, which should all be the same value really...
-                final_obs = infos["final_observation"]
-                final_value = agent.get_value(final_obs)
-                timeout_bonus[step] = final_value.flatten()
+
             if "final_info" in infos:
                 info = infos["final_info"]
                 episodic_return = info['episode']['r'].mean().cpu().numpy()

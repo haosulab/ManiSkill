@@ -53,6 +53,17 @@ class ManiSkillVectorEnv(VectorEnv):
             and self.base_env.spec.max_episode_steps is not None
         ):
             self.max_episode_steps = self.base_env.spec.max_episode_steps
+        if self.max_episode_steps is None:
+            # search wrappers to see if there is a time limit wrapper
+            cur = env
+            while cur is not None:
+                if cur.spec.max_episode_steps is not None:
+                    self.max_episode_steps = cur.spec.max_episode_steps
+                    break
+                if hasattr(cur, "env"):
+                    cur = env.env
+                else:
+                    cur = None
 
     @property
     def device(self):

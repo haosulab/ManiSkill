@@ -738,13 +738,14 @@ class BaseEnv(gym.Env):
         obs = self.get_obs(info)
         reward = self.get_reward(obs=obs, action=action, info=info)
         if "success" in info:
+
             if "fail" in info:
                 terminated = torch.logical_or(info["success"], info["fail"])
             else:
-                terminated = info["success"]
+                terminated = info["success"].clone()
         else:
             if "fail" in info:
-                terminated = info["success"]
+                terminated = info["success"].clone()
             else:
                 terminated = torch.zeros(self.num_envs, dtype=bool, device=self.device)
 
@@ -753,7 +754,7 @@ class BaseEnv(gym.Env):
                 obs,
                 reward,
                 terminated,
-                torch.zeros(self.num_envs, device=self.device),
+                torch.zeros(self.num_envs, dtype=bool, device=self.device),
                 info,
             )
         else:
