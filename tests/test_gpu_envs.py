@@ -225,6 +225,8 @@ def test_partial_resets(env_id):
     assert not torch.isclose(
         obs[reset_mask][:, :10], reset_obs[reset_mask][:, :10]
     ).any()
+    assert (env.base_env.elapsed_steps[reset_mask] == 0).all()
+    assert (env.base_env.elapsed_steps[~reset_mask] == 5).all()
     env.close()
     del env
 
@@ -232,7 +234,7 @@ def test_partial_resets(env_id):
 @pytest.mark.gpu_sim
 @pytest.mark.parametrize("env_id", ENV_IDS[:1])
 def test_timelimits(env_id):
-    """Test that the default timelimit wrapper applied does not use Gym's timelimit wrapper but our own which batches it correctly"""
+    """Test that the vec env batches the truncated variable correctly"""
     env = gym.make_vec(
         env_id,
         num_envs=16,
