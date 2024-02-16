@@ -184,8 +184,8 @@ if __name__ == "__main__":
         eval_envs = FlattenActionSpaceWrapper(eval_envs)
     if args.capture_video:
         eval_envs = RecordEpisode(eval_envs, output_dir=f"runs/{run_name}/videos", save_trajectory=False, video_fps=30)
-    envs = ManiSkillVectorEnv(envs, args.num_envs, env_kwargs)
-    eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, env_kwargs)
+    envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=True, **env_kwargs)
+    eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=True, **env_kwargs)
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
     agent = Agent(envs).to(device)
