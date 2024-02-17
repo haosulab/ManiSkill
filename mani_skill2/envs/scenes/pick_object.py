@@ -6,7 +6,9 @@ import torch
 import sapien
 import sapien.physx as physx
 
+from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.registration import register_env
+from mani_skill2.utils.sapien_utils import look_at
 from mani_skill2.utils.structs.pose import vectorize_pose
 
 from .base_env import SceneManipulationEnv
@@ -28,7 +30,6 @@ class PickObjectSceneEnv(SceneManipulationEnv):
 
     def reconfigure(self):
         super().reconfigure()
-        self.init_state = self.get_state()
 
     def _get_obs_extra(self, info: Dict) -> OrderedDict:
         obs = OrderedDict(
@@ -45,9 +46,6 @@ class PickObjectSceneEnv(SceneManipulationEnv):
 
     def compute_normalized_dense_reward(self, **kwargs):
         return self.compute_dense_reward(**kwargs) / 1
-
-    def _initialize_actors(self, env_idx: torch.Tensor):
-        self.set_state(self.init_state)
 
     def _initialize_task(self, env_idx: torch.Tensor):
         # pick a random goal object to pick up
