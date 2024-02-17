@@ -25,22 +25,6 @@ class ManiSkillScene:
     This wrapper also helps manage GPU states if GPU simulation is used
     """
 
-    # a list of all sub scenes that work in parallel. In CPU sim, this list should only contain one element
-    # users can still access individual scenes and customize them if they wish (e.g. change lighting)
-    sub_scenes: List[sapien.Scene] = []
-    px: Union[physx.PhysxCpuSystem, physx.PhysxGpuSystem] = None
-    render_system_group: sapien.render.RenderSystemGroup = None
-    camera_groups: Dict[str, sapien.render.RenderCameraGroup] = OrderedDict()
-
-    actors: Dict[str, Actor] = OrderedDict()
-    articulations: Dict[str, Articulation] = OrderedDict()
-
-    sensors: Dict[str, BaseSensor] = OrderedDict()
-    human_render_cameras: Dict[str, Camera] = OrderedDict()
-
-    _reset_mask: torch.Tensor = None
-    """Used internally by various wrapped objects like Actor and Link to auto mask out sub-scenes so they do not get modified during partial env resets"""
-
     def __init__(
         self,
         sub_scenes: List[sapien.Scene],
@@ -48,12 +32,24 @@ class ManiSkillScene:
         device: Device = None,
     ):
         self.sub_scenes = sub_scenes
-        self.px = self.sub_scenes[0].physx_system
+        self.px: Union[physx.PhysxCpuSystem, physx.PhysxGpuSystem] = self.sub_scenes[
+            0
+        ].physx_system
         self._gpu_sim_initialized = False
         self.debug_mode = debug_mode
         self.device = device
 
+        self.render_system_group: sapien.render.RenderSystemGroup = None
+        self.camera_groups: Dict[str, sapien.render.RenderCameraGroup] = OrderedDict()
+
+        self.actors: Dict[str, Actor] = OrderedDict()
+        self.articulations: Dict[str, Articulation] = OrderedDict()
+
+        self.sensors: Dict[str, BaseSensor] = OrderedDict()
+        self.human_render_cameras: Dict[str, Camera] = OrderedDict()
+
         self._reset_mask = torch.ones(len(sub_scenes), dtype=bool, device=self.device)
+        """Used internally by various wrapped objects like Actor and Link to auto mask out sub-scenes so they do not get modified during partial env resets"""
 
     @property
     def timestep(self):
@@ -461,11 +457,17 @@ class ManiSkillScene:
     # Simulation state (required for MPC)
     # -------------------------------------------------------------------------- #
     def get_sim_state(self) -> torch.Tensor:
-        """Get simulation state. Returns a tensor of shape (N, D) for N parallel environments and D dimensions of padded state per environment"""
+        """Get simulation state. Returns a tensor of shape (N, D) for N parallel environments and D dimensions of padded state per environment.
+
+        Note that static actor data are not included. It is expected that an environment reconstructs itself in a deterministic manner such that
+        the same actors and articulations (merged or not) create the same sim state shape.
+        (and if it is different, we expect the environment version number to be changed)"""
         state = []
         # TODO (stao): Should we store state as a dictionary? What shape to store for parallel settings to make
         # it loadable between parallel and non parallel settings?
         for actor in self.actors.values():
+            if actor.px_body_type == "static":
+                continue
             # TODO (stao) (in parallelized environment situation we may need to pad as some of these actors do not exist in other parallel envs)
             state.append(actor.get_state())
         for articulation in self.articulations.values():
@@ -476,6 +478,8 @@ class ManiSkillScene:
         KINEMATIC_DIM = 13  # [pos, quat, lin_vel, ang_vel]
         start = 0
         for actor in self.actors.values():
+            if actor.px_body_type == "static":
+                continue
             actor.set_state(state[:, start : start + KINEMATIC_DIM])
             start += KINEMATIC_DIM
         for articulation in self.articulations.values():

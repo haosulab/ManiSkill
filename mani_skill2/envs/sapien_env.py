@@ -234,6 +234,11 @@ class BaseEnv(gym.Env):
         # Use a fixed (main) seed to enhance determinism
         self._main_seed = None
         self._set_main_rng(2022)
+        self._elapsed_steps = (
+            torch.zeros(self.num_envs, device=self.device, dtype=torch.int32)
+            if physx.is_gpu_enabled()
+            else 0
+        )
         obs, _ = self.reset(seed=2022, options=dict(reconfigure=True))
         if physx.is_gpu_enabled():
             obs = to_numpy(obs)
@@ -613,12 +618,6 @@ class BaseEnv(gym.Env):
         if options is None:
             options = dict()
 
-        self._elapsed_steps = (
-            torch.zeros(self.num_envs, device=self.device, dtype=torch.int32)
-            if physx.is_gpu_enabled()
-            else 0
-        )
-
         self._set_main_rng(seed)
         # we first set the first episode seed to allow environments to use it to reconfigure the environment with a seed
         self._set_episode_rng(seed)
@@ -641,6 +640,10 @@ class BaseEnv(gym.Env):
             self._scene._reset_mask = torch.ones(
                 self.num_envs, dtype=bool, device=self.device
             )
+        if physx.is_gpu_enabled():
+            self._elapsed_steps[env_idx] = 0
+        else:
+            self._elapsed_steps = 0
 
         if not reconfigure:
             self._clear_sim_state()
@@ -708,6 +711,7 @@ class BaseEnv(gym.Env):
         """Initialize task-relevant information, like goals. Called by `self.initialize_episode`"""
 
     def _clear_sim_state(self):
+        # TODO (stao): we should rename this. This could mean setting pose to 0 as if we just reconfigured everything...
         """Clear simulation state (velocities)"""
         for actor in self._scene.actors.values():
             if actor.px_body_type == "static":
@@ -734,13 +738,14 @@ class BaseEnv(gym.Env):
         obs = self.get_obs(info)
         reward = self.get_reward(obs=obs, action=action, info=info)
         if "success" in info:
+
             if "fail" in info:
                 terminated = torch.logical_or(info["success"], info["fail"])
             else:
-                terminated = info["success"]
+                terminated = info["success"].clone()
         else:
             if "fail" in info:
-                terminated = info["success"]
+                terminated = info["success"].clone()
             else:
                 terminated = torch.zeros(self.num_envs, dtype=bool, device=self.device)
 
@@ -749,7 +754,7 @@ class BaseEnv(gym.Env):
                 obs,
                 reward,
                 terminated,
-                torch.zeros(self.num_envs, device=self.device),
+                torch.zeros(self.num_envs, dtype=bool, device=self.device),
                 info,
             )
         else:
@@ -825,7 +830,7 @@ class BaseEnv(gym.Env):
         """
         Get info about the current environment state, include elapsed steps and evaluation information
         """
-        info = dict(elapsed_steps=self._elapsed_steps)
+        info = dict(elapsed_steps=self._elapsed_steps.clone())
         info.update(self.evaluate())
         return info
 
@@ -914,11 +919,20 @@ class BaseEnv(gym.Env):
 
     def get_state(self):
         """Get environment state. Override to include task information (e.g., goal)"""
-        return self._scene.get_sim_state()
+        state = self._scene.get_sim_state()
+        if physx.is_gpu_enabled():
+            return state
+        return state[0]
 
     def set_state(self, state: np.ndarray):
         """Set environment state. Override to include task information (e.g., goal)"""
-        return self._scene.set_sim_state(state)
+        if len(state.shape) == 1:
+            state = batch(state)
+        self._scene.set_sim_state(state)
+        if physx.is_gpu_enabled():
+            self._scene._gpu_apply_all()
+            self._scene.px.gpu_update_articulation_kinematics()
+            self._scene._gpu_fetch_all()
 
     # -------------------------------------------------------------------------- #
     # Visualization

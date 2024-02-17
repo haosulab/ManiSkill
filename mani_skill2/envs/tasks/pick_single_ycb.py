@@ -24,6 +24,8 @@ from mani_skill2.utils.structs.actor import Actor
 from mani_skill2.utils.structs.pose import Pose
 from mani_skill2.utils.structs.types import GPUMemoryConfig, SimConfig
 
+WARNED_ONCE = False
+
 
 @register_env("PickSingleYCB-v1", max_episode_steps=100)
 class PickSingleYCBEnv(BaseEnv):
@@ -56,12 +58,28 @@ class PickSingleYCBEnv(BaseEnv):
     )
     goal_thresh = 0.025
 
-    def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
+    def __init__(
+        self,
+        *args,
+        robot_uids="panda",
+        robot_init_qpos_noise=0.02,
+        num_envs=1,
+        **kwargs,
+    ):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         self.model_id = None
         _load_ycb_dataset()
         self.all_model_ids = np.array(list(MODEL_DBS["YCB"]["model_data"].keys()))
-        super().__init__(*args, robot_uids=robot_uids, **kwargs)
+        reconfiguration_freq = 0
+        if num_envs == 1:
+            reconfiguration_freq = 1
+        super().__init__(
+            *args,
+            robot_uids=robot_uids,
+            reconfiguration_freq=reconfiguration_freq,
+            num_envs=num_envs,
+            **kwargs,
+        )
 
     def _register_sensors(self):
         pose = look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
@@ -74,6 +92,7 @@ class PickSingleYCBEnv(BaseEnv):
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
 
     def _load_actors(self):
+        global WARNED_ONCE
         self.table_scene = TableSceneBuilder(
             env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
         )
@@ -86,12 +105,18 @@ class PickSingleYCBEnv(BaseEnv):
         model_ids = np.concatenate(
             [model_ids] * np.ceil(self.num_envs / len(self.all_model_ids)).astype(int)
         )[: self.num_envs]
-        if self.num_envs < len(self.all_model_ids):
+        if (
+            self.num_envs > 1
+            and self.num_envs < len(self.all_model_ids)
+            and self.reconfiguration_freq <= 0
+            and not WARNED_ONCE
+        ):
+            WARNED_ONCE = True
             print(
-                "There are less parallel environments than total available models to sample. The environment will run considerably slower"
+                """There are less parallel environments than total available models to sample.
+                Not all models will be used during interaction even after resets unless you call env.reset(options=dict(reconfigure=True))
+                or set reconfiguration_freq to be > 1."""
             )
-            # TODO (stao): with less envs than models, we should be reconfiguring more often, which is unfortunately also very slow on gpu sim
-            # alternatively provide option for user to specify reconfiguration frequency in terms of # of resets?
 
         actors: List[Actor] = []
         self.obj_heights = []
