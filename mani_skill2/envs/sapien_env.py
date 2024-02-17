@@ -830,7 +830,7 @@ class BaseEnv(gym.Env):
         """
         Get info about the current environment state, include elapsed steps and evaluation information
         """
-        info = dict(elapsed_steps=self._elapsed_steps.clone())
+        info = dict(elapsed_steps=self.elapsed_steps if not physx.is_gpu_enabled() else self._elapsed_steps.clone())
         info.update(self.evaluate())
         return info
 
