@@ -205,14 +205,14 @@ class Fetch(BaseAgent):
         # -------------------------------------------------------------------------- #
         # Body
         # -------------------------------------------------------------------------- #
-        body_pd_joint_pos = PDJointPosControllerConfig(
+        body_pd_joint_delta_pos = PDJointPosControllerConfig(
             self.body_joint_names,
-            [-1.57, -1.6056, 0],
-            [1.57, 1.6056, 0.38615],
+            -0.1,
+            0.1,
             self.body_stiffness,
             self.body_damping,
             self.body_force_limit,
-            normalize_action=True,
+            use_delta=True,
         )
 
         # -------------------------------------------------------------------------- #
@@ -230,69 +230,69 @@ class Fetch(BaseAgent):
             pd_joint_delta_pos=dict(
                 arm=arm_pd_joint_delta_pos,
                 gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                body=body_pd_joint_delta_pos,
                 base=base_pd_joint_vel,
             ),
             pd_joint_pos=dict(
                 arm=arm_pd_joint_pos,
                 gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                body=body_pd_joint_delta_pos,
                 base=base_pd_joint_vel,
             ),
             pd_ee_delta_pos=dict(
                 arm=arm_pd_ee_delta_pos,
                 gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                body=body_pd_joint_delta_pos,
                 base=base_pd_joint_vel,
             ),
             pd_ee_delta_pose=dict(
                 arm=arm_pd_ee_delta_pose,
                 gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                body=body_pd_joint_delta_pos,
                 base=base_pd_joint_vel,
             ),
             pd_ee_delta_pose_align=dict(
                 arm=arm_pd_ee_delta_pose_align,
                 gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                body=body_pd_joint_delta_pos,
                 base=base_pd_joint_vel,
             ),
             # TODO(jigu): how to add boundaries for the following controllers
             pd_joint_target_delta_pos=dict(
                 arm=arm_pd_joint_target_delta_pos,
                 gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                body=body_pd_joint_delta_pos,
                 base=base_pd_joint_vel,
             ),
             pd_ee_target_delta_pos=dict(
                 arm=arm_pd_ee_target_delta_pos,
                 gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                body=body_pd_joint_delta_pos,
                 base=base_pd_joint_vel,
             ),
             pd_ee_target_delta_pose=dict(
                 arm=arm_pd_ee_target_delta_pose,
                 gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                body=body_pd_joint_delta_pos,
                 base=base_pd_joint_vel,
             ),
             # Caution to use the following controllers
             pd_joint_vel=dict(
                 arm=arm_pd_joint_vel,
                 gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                body=body_pd_joint_delta_pos,
                 base=base_pd_joint_vel,
             ),
             pd_joint_pos_vel=dict(
                 arm=arm_pd_joint_pos_vel,
                 gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                body=body_pd_joint_delta_pos,
                 base=base_pd_joint_vel,
             ),
             pd_joint_delta_pos_vel=dict(
                 arm=arm_pd_joint_delta_pos_vel,
                 gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                body=body_pd_joint_delta_pos,
                 base=base_pd_joint_vel,
             ),
         )
