@@ -220,7 +220,8 @@ class RecordEpisode(gym.Wrapper):
         **kwargs,
     ):
         skip_trajectory = False
-        options.pop("save_trajectory", False)
+        if options is not None:
+            options.pop("save_trajectory", False)
 
         if self.save_on_reset and self._episode_id >= 0 and not skip_trajectory:
             self.flush_trajectory(ignore_empty_transition=True)
