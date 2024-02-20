@@ -18,7 +18,7 @@ from mani_skill2.utils.sapien_utils import look_at
 from mani_skill2.utils.structs.pose import Pose
 
 
-@register_env("QuadrupedStandEnv-v1", max_episode_steps=200)
+@register_env("QuadrupedStand-v1", max_episode_steps=200)
 class QuadrupedStandEnv(BaseEnv):
     """
     Task Description
@@ -83,12 +83,14 @@ class QuadrupedStandEnv(BaseEnv):
         # self.height = -mesh[0].bounding_box.bounds[0, 2]
         self.height = 1.626
 
-    def _initialize_actors(self):
+    def _initialize_actors(self, env_idx: torch.Tensor):
         with torch.device(self.device):
             self.agent.robot.set_pose(Pose.create_from_pq(p=[0, 0, self.height]))
             self.agent.reset(init_qpos=torch.zeros(self.agent.robot.max_dof))
 
     def evaluate(self):
+        forces = self.agent.robot.links[0].get_net_contact_forces()
+        print(forces.shape, forces.norm(dim=1))
         return {"success": self.agent.is_standing()}
 
     def _get_obs_extra(self, info: Dict):

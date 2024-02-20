@@ -7,7 +7,12 @@ from typing import TYPE_CHECKING, Generic, List, TypeVar
 import sapien.physx as physx
 import torch
 
-from mani_skill2.utils.sapien_utils import to_numpy, to_tensor
+from mani_skill2.utils.sapien_utils import (
+    compute_total_impulse,
+    get_actor_contacts,
+    to_numpy,
+    to_tensor,
+)
 from mani_skill2.utils.structs.decorators import before_gpu_init
 from mani_skill2.utils.structs.types import Array
 
@@ -58,6 +63,11 @@ class PhysxRigidBodyComponentStruct:
     _bodies: List[physx.PhysxRigidBodyComponent]
     _body_data_index_internal: slice = None
 
+    @property
+    def px(self):
+        """The physx system objects managed by this dataclass are working on"""
+        return self._scene.px
+
     @cached_property
     def _body_data_index(self):
         if self._body_data_index_internal is None:
@@ -67,8 +77,25 @@ class PhysxRigidBodyComponentStruct:
         return self._body_data_index_internal
 
     @property
-    def _body_data(self):
+    def _body_data(self) -> torch.Tensor:
         return getattr(self.px, self._body_data_name).torch()
+
+    @cached_property
+    def _body_force_query(self):
+        return self.px.gpu_create_contact_body_force_query(self._bodies)
+
+    def get_net_contact_forces(self):
+        if physx.is_gpu_enabled():
+            self.px.gpu_query_contact_body_forces(self._body_force_query)
+            return self._body_force_query.cuda_forces.torch()
+        else:
+            body_contacts = get_actor_contacts(
+                self.px.get_contacts(), self._bodies[0].entity
+            )
+            net_force = (
+                to_tensor(compute_total_impulse(body_contacts)) / self._scene.timestep
+            )
+            return net_force[None, :]
 
     # ---------------------------------------------------------------------------- #
     # API from physx.PhysxRigidBodyComponent
