@@ -43,13 +43,19 @@ class SceneManipulationEnv(BaseEnv):
         fixed_scene=True,
         scene_builder_cls: SceneBuilder = ArchitecTHORSceneBuilder,
         convex_decomposition="coacd",
+        scene_idxs=None,
         **kwargs
     ):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         self.fixed_scene = fixed_scene
         self.sampled_scene_idx: int = None
         self.scene_builder: SceneBuilder = scene_builder_cls(self, robot_init_qpos_noise=robot_init_qpos_noise)
-        self.scene_ids = np.arange(0, len(self.scene_builder.scene_configs))
+        if isinstance(scene_idxs, int):
+            self.scene_idxs = [scene_idxs]
+        elif isinstance(scene_idxs, list):
+            self.scene_idxs = scene_idxs
+        else:
+            self.scene_idxs = np.arange(0, len(self.scene_builder.scene_configs))
         self.convex_decomposition = convex_decomposition
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
@@ -60,13 +66,15 @@ class SceneManipulationEnv(BaseEnv):
         if not self.fixed_scene:
             options["reconfigure"] = True
         if options["reconfigure"]:
-            self.sampled_scene_idx = self._episode_rng.randint(0, len(self.scene_ids))
+            self.sampled_scene_idx = self.scene_idxs[
+                self._episode_rng.randint(0, len(self.scene_idxs))
+            ]
         return super().reset(seed, options)
 
     def _load_actors(self):
         self.scene_builder.build(
             self._scene,
-            scene_id=self.sampled_scene_idx,
+            scene_idx=self.sampled_scene_idx,
             convex_decomposition=self.convex_decomposition,
         )
 
