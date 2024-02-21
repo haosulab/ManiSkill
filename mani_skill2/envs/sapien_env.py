@@ -415,15 +415,6 @@ class BaseEnv(gym.Env):
         """Get task-relevant extra observations."""
         return OrderedDict()
 
-    def update_render(self):
-        """Update renderer(s). This function should be called before any rendering,
-        to sync simulator and renderer."""
-        # TODO (stao): note that update_render has some overhead. Currently when using image observation mode + using render() for recording videos
-        # this is called twice
-
-        # TODO (stao): We might want to factor out some of this code below
-        self._scene.update_render()
-
     def capture_sensor_data(self):
         """Capture data from all sensors (non-blocking)"""
         for sensor in self._sensors.values():
@@ -453,7 +444,7 @@ class BaseEnv(gym.Env):
     def _get_obs_with_sensor_data(self, info: Dict) -> OrderedDict:
         for obj in self._hidden_objects:
             obj.hide_visual()
-        self.update_render()
+        self._scene.update_render()
         self.capture_sensor_data()
         return OrderedDict(
             agent=self._get_obs_agent(),
@@ -830,7 +821,11 @@ class BaseEnv(gym.Env):
         """
         Get info about the current environment state, include elapsed steps and evaluation information
         """
-        info = dict(elapsed_steps=self.elapsed_steps if not physx.is_gpu_enabled() else self._elapsed_steps.clone())
+        info = dict(
+            elapsed_steps=self.elapsed_steps
+            if not physx.is_gpu_enabled()
+            else self._elapsed_steps.clone()
+        )
         info.update(self.evaluate())
         return info
 
@@ -982,7 +977,7 @@ class BaseEnv(gym.Env):
         Otherwise all camera data is captured and returned as a single batched image"""
         for obj in self._hidden_objects:
             obj.show_visual()
-        self.update_render()
+        self._scene.update_render()
         images = []
         # TODO (stao): refactor this code either into ManiSkillScene class and/or merge the code, it's pretty similar?
         if physx.is_gpu_enabled():
@@ -1017,7 +1012,7 @@ class BaseEnv(gym.Env):
         images = []
         for obj in self._hidden_objects:
             obj.hide_visual()
-        self.update_render()
+        self._scene.update_render()
         self.capture_sensor_data()
         sensor_images = self.get_sensor_obs()
         for sensor_images in sensor_images.values():

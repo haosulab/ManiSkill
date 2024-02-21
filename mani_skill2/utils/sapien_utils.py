@@ -117,15 +117,6 @@ def batch(*args: Tuple[Union[Array, Sequence]]):
     return tuple(x)
 
 
-def clone_tensor(array: Array):
-    if torch is not None and isinstance(array, torch.Tensor):
-        return array.clone()
-    elif isinstance(array, np.ndarray):
-        return array.copy()
-    else:
-        raise ValueError(f"{array} is not a tensor or numpy array")
-
-
 def normalize_vector(x, eps=1e-6):
     x = np.asarray(x)
     assert x.ndim == 1, x.ndim
@@ -137,17 +128,20 @@ def normalize_vector(x, eps=1e-6):
 
 
 def set_entity_visibility(entity: sapien.Entity, visibility):
+    """TODO (stao): This will not work on GPU"""
     component = entity.find_component_by_type(sapien.render.RenderBodyComponent)
     if component is not None:
         component.visibility = visibility
 
 
 def hide_entity(actor: Actor):
+    """TODO (stao): This will not work on GPU"""
     for entity in actor._objs:
         entity.find_component_by_type(sapien.render.RenderBodyComponent).visibility = 0
 
 
 def show_entity(actor: Actor):
+    """TODO (stao): This will not work on GPU"""
     for entity in actor._objs:
         entity.find_component_by_type(sapien.render.RenderBodyComponent).visibility = 1
 
