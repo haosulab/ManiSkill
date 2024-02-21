@@ -5,6 +5,7 @@ SceneBuilder for the AI2Thor scenes, using configurations and assets stored in h
 
 
 import json
+from tqdm import tqdm
 import os.path as osp
 from pathlib import Path
 from typing import Dict, List, Tuple
@@ -19,7 +20,7 @@ from tqdm import tqdm
 from mani_skill2 import ASSET_DIR
 from mani_skill2.utils.scene_builder import SceneBuilder
 from mani_skill2.utils.structs.actor import Actor
-from mani_skill2.agents.robots.fetch import FETCH_UNIQUE_COLLISION_BIT
+from mani_skill2.agents.robots.fetch import FETCH_UNIQUE_COLLISION_BIT, Fetch
 
 from .constants import SCENE_SOURCE_TO_DATASET, SceneConfig, load_ai2thor_metadata
 
@@ -35,6 +36,8 @@ OBJECT_SEMANTIC_ID_MAPPING, SEMANTIC_ID_OBJECT_MAPPING, MOVEABLE_OBJECT_IDS = (
     None,
 )
 
+# TODO (arth): fix coacd so this isn't necessary
+WORKING_OBJS = ["apple"]
 
 class AI2THORBaseSceneBuilder(SceneBuilder):
     """
@@ -66,7 +69,10 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
         else:
             self._scene_configs = ALL_SCENE_CONFIGS[self.scene_dataset]
 
-        self.actor_to_pose: List[Tuple[Actor, sapien.Pose]] = []
+        self._scene_navigable_positions = [None] * len(self._scene_configs)
+        self.actor_default_poses: List[Tuple[Actor, sapien.Pose]] = []
+
+        self.scene_idx = None
 
     def _should_be_kinematic(self, template_name: str):
         object_config_json = (
@@ -80,14 +86,16 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
         object_category = SEMANTIC_ID_OBJECT_MAPPING[semantic_id]
         return object_category not in MOVEABLE_OBJECT_IDS
 
+    # TODO (arth): figure out coacd building issues (currenlty fails on > 80% objs)
     def build(
-        self, scene: sapien.Scene, scene_id=0, convex_decomposition="none", **kwargs
+        self, scene: sapien.Scene, scene_idx=0, convex_decomposition="none", **kwargs
     ):
         # save scene and movable objects when building scene
-        self._scene_objects: List[Actor] = []
-        self._movable_objects: List[Actor] = []
+        self._scene_objects: Dict[str, Actor] = dict()
+        self._movable_objects: Dict[str, Actor] = dict()
+        self.scene_idx = scene_idx
 
-        scene_cfg = self._scene_configs[scene_id]
+        scene_cfg = self._scene_configs[scene_idx]
 
         dataset = SCENE_SOURCE_TO_DATASET[scene_cfg.source]
         with open(osp.join(dataset.dataset_path, scene_cfg.config_file), "rb") as f:
@@ -113,8 +121,7 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
                     np.array([0, -1, 0]), theta=np.deg2rad(90)
                 ),
             )
-        self.actor_to_pose.append((self.bg, sapien.Pose(q=q)))
-
+        self.actor_default_poses.append((self.bg, sapien.Pose(q=q)))
 
         global_id = 0
         for object in tqdm(scene_json["object_instances"][:]):
@@ -127,7 +134,11 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
             global_id += 1
             builder = scene.create_actor_builder()
             builder.add_visual_from_file(str(model_path))
-            if self._should_be_kinematic(object["template_name"]):
+
+            if (
+                self._should_be_kinematic(object["template_name"]) \
+                or not np.any([name in actor_id.lower() for name in WORKING_OBJS])
+            ):
                 position = [
                     object["translation"][0],
                     -object["translation"][2],
@@ -145,7 +156,7 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
                     str(model_path), decomposition=convex_decomposition
                 )
                 actor = builder.build(name=actor_id)
-            self._scene_objects.append(actor)
+            self._scene_objects[actor_id] = actor
 
             q = transforms3d.quaternions.axangle2quat(
                 np.array([1, 0, 0]), theta=np.deg2rad(90)
@@ -158,21 +169,42 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
             ]
             q = transforms3d.quaternions.qmult(q, rot_q)
             pose = sapien.Pose(p=position, q=q)
-            self.actor_to_pose.append((actor, pose))
+            self.actor_default_poses.append((actor, pose))
 
         # get movable objects
-        self._movable_objects = [
-            obj
-            for obj in self.scene_objects
+        for obj in self.scene_objects:
             if np.any([
                 not component.kinematic for component in obj._bodies
-            ])
-        ]
+            ]):
+                self._movable_objects[obj.name] = obj
+
+        if self._scene_navigable_positions[scene_idx] is None:
+            self._scene_navigable_positions[scene_idx] = np.load(
+                Path(dataset.dataset_path) / 
+                (
+                    Path(scene_cfg.config_file).stem.split('.')[0]
+                    + f".{self.env.robot_uids}.navigable_positions.npy"
+                )
+            )
+
+
+    def disable_fetch_ground_collisions(self):
+        # TODO (stao) (arth): is there a better way to model robots in sim. This feels very unintuitive.
+        for obj in self.bg._bodies:
+            cs = obj.get_collision_shapes()[0]
+            cg = cs.get_collision_groups()
+            cg[2] |= FETCH_UNIQUE_COLLISION_BIT
+            cs.set_collision_groups(cg)
+
+    def set_actor_default_poses_vels(self):
+        for actor, pose in self.actor_default_poses:
+            actor.set_pose(pose)
+            actor.set_linear_velocity([0, 0, 0])
+            actor.set_angular_velocity([0, 0, 0])
 
     def initialize(self, env_idx):
 
-        for actor, pose in self.actor_to_pose:
-            actor.set_pose(pose)
+        self.set_actor_default_poses_vels()
 
         if self.env.robot_uids == "panda":
             # fmt: off
@@ -196,29 +228,30 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
             self.env.agent.reset(qpos)
             self.env.agent.robot.set_pose(sapien.Pose([-0.562, 0, 0]))
         elif self.env.robot_uids == "fetch":
-            # TODO (arth): figure out how to init x, y, z rot for fetch
-            qpos = np.array(
-                [0, 0, 0, 0.386, 0, -0.370, 0.562, -1.032, 0.695, 0.955, -0.1, 2.077, 0, 0.015, 0.015]
-            )
-            self.env.agent.reset(qpos)
-
-            # TODO (stao) (arth): is there a better way to model robots in sim. This feels very unintuitive.
-            for obj in self.bg._bodies:
-                cs = obj.get_collision_shapes()[0]
-                cg = cs.get_collision_groups()
-                cg[2] |= FETCH_UNIQUE_COLLISION_BIT
-                cs.set_collision_groups(cg)
+            agent: Fetch = self.env.agent
+            agent.reset(agent.RESTING_QPOS)
+            agent.robot.set_pose(sapien.Pose([*self.navigable_positions[0], 0.001]))
+            self.disable_fetch_ground_collisions()
         else:
-            raise NotImplementedError(self.robot_uids)
+            raise NotImplementedError(self.env.robot_uids)
 
     @property
-    def scene_configs(self):
+    def scene_configs(self) -> List[SceneConfig]:
         return self._scene_configs
+    
+    @property
+    def navigable_positions(self) -> np.ndarray:
+        assert isinstance(self.scene_idx, int), "Must build scene before getting navigable positions"
+        return self._scene_navigable_positions[self.scene_idx]
 
     @property
-    def scene_objects(self):
-        return self._scene_objects
+    def scene_objects(self) -> List[Actor]:
+        return list(self._scene_objects.values())
 
     @property
-    def movable_objects(self):
+    def movable_objects(self) -> List[Actor]:
+        return list(self._movable_objects.values())
+    
+    @property
+    def movable_objects_by_id(self) -> Dict[str, Actor]:
         return self._movable_objects
