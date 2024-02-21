@@ -82,16 +82,15 @@ class PhysxRigidBodyComponentStruct:
 
     @cached_property
     def _body_force_query(self):
-        return self.px.gpu_create_contact_body_force_query(self._bodies)
+        return self.px.gpu_create_contact_body_impulse_query(self._bodies)
 
     def get_net_contact_forces(self):
         if physx.is_gpu_enabled():
-            self.px.gpu_query_contact_body_forces(self._body_force_query)
+            self.px.gpu_query_contact_body_impulses(self._body_force_query)
             # NOTE (stao): physx5 calls the output forces but they are actually impulses
-            # NOTE (fxiang): The solvers almost never work with physical forces, always impulses
             # TODO (stao): do we need to clone the tensor? Probably
             return (
-                self._body_force_query.cuda_forces.torch().clone()
+                self._body_force_query.cuda_impulses.torch().clone()
                 / self._scene.timestep
             )
         else:

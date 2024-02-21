@@ -19,10 +19,11 @@ if __name__ == "__main__":
             reward_mode="normalized_dense",
             render_mode="rgb_array",
             control_mode="pd_joint_delta_pos",
+            sim_cfg=dict(sim_freq=100),
             # control_mode="pd_ee_delta_pos",
             # sim_freq=100,
             # control_freq=20,
-            # force_use_gpu_sim=True,
+            force_use_gpu_sim=True,
             # reconfiguration_freq=1,
         )
         # env = RecordEpisode(

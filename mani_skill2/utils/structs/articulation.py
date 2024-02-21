@@ -66,7 +66,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     """Map from a set of joints of this articulation and the indexing torch tensor to use for setting drive targets"""
 
     _net_contact_force_queries: OrderedDict[
-        Tuple, physx.PhysxGpuContactBodyForceQuery
+        Tuple, physx.PhysxGpuContactBodyImpulseQuery
     ] = field(default_factory=OrderedDict)
     """Maps a tuple of link names to pre-saved net contact force queries"""
 
@@ -262,10 +262,13 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
                     bodies += self.link_map[k]._bodies
                 self._net_contact_force_queries[
                     tuple(link_names)
-                ] = self.px.gpu_create_contact_body_force_query(bodies)
+                ] = self.px.gpu_create_contact_body_impulse_query(bodies)
             query = self._net_contact_force_queries[tuple(link_names)]
-            self.px.gpu_query_contact_body_forces(query)
-            return query.cuda_forces.torch().clone().reshape(-1, len(link_names), 3)
+            self.px.gpu_query_contact_body_impulses(query)
+            return (
+                query.cuda_impulses.torch().clone().reshape(-1, len(link_names), 3)
+                / self._scene.timestep
+            )
         else:
 
             body_contacts = get_articulation_contacts(

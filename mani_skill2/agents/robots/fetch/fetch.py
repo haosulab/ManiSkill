@@ -330,7 +330,9 @@ class Fetch(BaseAgent):
             self.robot.get_links(), "torso_lift_link"
         )
 
-        self.queries: Dict[str, Tuple[physx.PhysxGpuContactQuery, Tuple[int]]] = dict()
+        self.queries: Dict[
+            str, Tuple[physx.PhysxGpuContactPairImpulseQuery, Tuple[int]]
+        ] = dict()
 
     def is_grasping(self, object: Actor = None, min_impulse=1e-6, max_angle=85):
         # TODO (stao): is_grasping code needs to be updated for new GPU sim
@@ -339,14 +341,14 @@ class Fetch(BaseAgent):
                 body_pairs = list(zip(self.finger1_link._bodies, object._bodies))
                 body_pairs += list(zip(self.finger2_link._bodies, object._bodies))
                 self.queries[object.name] = (
-                    self.scene.px.gpu_create_contact_query(body_pairs),
+                    self.scene.px.gpu_create_contact_pair_impulse_query(body_pairs),
                     (len(object._bodies), 3),
                 )
             query, contacts_shape = self.queries[object.name]
-            self.scene.px.gpu_query_contacts(query)
+            self.scene.px.gpu_query_contact_pair_impulses(query)
             # query.cuda_contacts # (num_unique_pairs * num_envs, 3)
             contacts = (
-                query.cuda_contacts.torch().clone().reshape((-1, *contacts_shape))
+                query.cuda_impulses.torch().clone().reshape((-1, *contacts_shape))
             )
             lforce = torch.linalg.norm(contacts[0], axis=1)
             rforce = torch.linalg.norm(contacts[1], axis=1)
