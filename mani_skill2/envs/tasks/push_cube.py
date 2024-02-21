@@ -48,7 +48,6 @@ class PushCubeEnv(BaseEnv):
     - the cube's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat on the table
     - the target goal region is marked by a red/white circular target. The position of the target is fixed to be the cube xy position + [0.1 + goal_radius, 0]
 
-
     Success Conditions
     ------------------
     - the cube's xy position is within goal_radius (default 0.1) of the target's xy position by euclidean distance.

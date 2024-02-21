@@ -77,7 +77,9 @@ class QuadrupedStandEnv(BaseEnv):
         #     ground.build_static(name="ground")
         # self.ground = self._scene.create_actor_builder()
         self.ground = build_meter_ground(self._scene, floor_width=1000)
-
+        self.cube = actors.build_cube(
+            self._scene, 0.05, color=[1, 0, 0, 1], name="cube"
+        )
         # TODO (stao): why is this collision mesh so wacky?
         # mesh = self.agent.robot.get_collision_mesh(first_only=True)
         # self.height = -mesh[0].bounding_box.bounds[0, 2]
@@ -87,10 +89,12 @@ class QuadrupedStandEnv(BaseEnv):
         with torch.device(self.device):
             self.agent.robot.set_pose(Pose.create_from_pq(p=[0, 0, self.height]))
             self.agent.reset(init_qpos=torch.zeros(self.agent.robot.max_dof))
+            self.cube.set_pose(Pose.create_from_pq(p=[0, 0, 0.05]))
 
     def evaluate(self):
-        forces = self.agent.robot.links[0].get_net_contact_forces()
-        print(forces.shape, forces.norm(dim=1))
+        forces = self.agent.robot.get_net_contact_forces(["RH_KFE", "LH_KFE"]).norm(
+            dim=(1, 2)
+        )
         return {"success": self.agent.is_standing()}
 
     def _get_obs_extra(self, info: Dict):
