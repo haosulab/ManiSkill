@@ -6,7 +6,6 @@ from dataclasses import dataclass
 
 import gymnasium as gym
 import numpy as np
-import sapien
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -229,7 +228,7 @@ if __name__ == "__main__":
             eval_done = False
             while not eval_done:
                 with torch.no_grad():
-                    eval_obs, _, eval_terminations, eval_truncations, eval_infos = eval_envs.step(agent.get_action(eval_obs, deterministic=False))
+                    eval_obs, _, eval_terminations, eval_truncations, eval_infos = eval_envs.step(agent.get_action(eval_obs, deterministic=True))
                 if eval_truncations.any():
                     eval_done = True
             info = eval_infos["final_info"]
@@ -238,7 +237,7 @@ if __name__ == "__main__":
             writer.add_scalar("charts/eval_success_rate", info["success"].float().mean().cpu().numpy(), global_step)
             writer.add_scalar("charts/eval_episodic_return", episodic_return, global_step)
             writer.add_scalar("charts/eval_episodic_length", info["elapsed_steps"].float().mean().cpu().numpy(), global_step)
-        # exit()
+
         if args.save_model and iteration % args.eval_freq == 1:
             model_path = f"runs/{run_name}/{args.exp_name}_{iteration}.cleanrl_model"
             torch.save(agent.state_dict(), model_path)
