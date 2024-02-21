@@ -125,7 +125,6 @@ class RotateValveEnv(BaseEnv):
         with torch.device(self.device):
             self.table_scene.initialize()
 
-        # TODO: add randomization for rotating direction
         # Initialize task related information
         with torch.device(self.device):
             if self.difficulty_level <= 3:
