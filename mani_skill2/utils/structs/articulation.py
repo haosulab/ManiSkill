@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import TYPE_CHECKING, List, Union
+from typing import TYPE_CHECKING, List, Tuple, Union
 
 import numpy as np
 import sapien
@@ -12,7 +12,12 @@ import torch
 import trimesh
 
 from mani_skill2.utils.geometry.trimesh_utils import get_component_meshes, merge_meshes
-from mani_skill2.utils.sapien_utils import to_numpy, to_tensor
+from mani_skill2.utils.sapien_utils import (
+    compute_total_impulse,
+    get_articulation_contacts,
+    to_numpy,
+    to_tensor,
+)
 from mani_skill2.utils.structs.base import BaseStruct
 from mani_skill2.utils.structs.joint import Joint
 from mani_skill2.utils.structs.link import Link
@@ -30,23 +35,40 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     """
 
     links: List[Link]
+    """List of Link objects"""
     link_map: OrderedDict[str, Link]
+    """Maps link name to the Link object"""
     root: Link
+    """The root Link object"""
     joints: List[Joint]
+    """List of Joint objects"""
     joint_map: OrderedDict[str, Joint]
+    """Maps joint name to the Joint object"""
     active_joints: List[Joint]
+    """List of active Joint objects, referencing elements in self.joints"""
 
     name: str = None
+    """Name of this articulation"""
 
     _merged: bool = False
     """
-    whether or not this articulation object is a merged articulation where it is managing many articulations with different dofs
+    whether or not this articulation object is a merged articulation where it is managing many articulations with different dofs.
+
+    There are a number of caveats when it comes to merged articulations. While merging articulations means you can easily fetch padded
+    qpos, qvel, etc. type data, a number of attributes and functions will make little sense and you should avoid using them unless you
+    are an advanced user. In particular, the list of Links, Joints, their corresponding maps, net contact forces of multiple links, no
+    longer make "sense"
     """
 
     _cached_joint_target_indices: OrderedDict[int, torch.Tensor] = field(
         default_factory=OrderedDict
     )
     """Map from a set of joints of this articulation and the indexing torch tensor to use for setting drive targets"""
+
+    _net_contact_force_queries: OrderedDict[
+        Tuple, physx.PhysxGpuContactBodyImpulseQuery
+    ] = field(default_factory=OrderedDict)
+    """Maps a tuple of link names to pre-saved net contact force queries"""
 
     @classmethod
     def _create_from_physx_articulations(
@@ -224,6 +246,40 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             if first_only:
                 break
         return meshes
+
+    def get_net_contact_forces(self, link_names: Union[List[str], Tuple[str]]):
+        """Get net contact forces for several links together. This should be faster compared to using
+        link.get_net_contact_forces on each link.
+
+
+        Returns torch.Tensor of shape (num_envs, len(link_names), 3)
+        """
+
+        if physx.is_gpu_enabled():
+            if tuple(link_names) not in self._net_contact_force_queries:
+                bodies = []
+                for k in link_names:
+                    bodies += self.link_map[k]._bodies
+                self._net_contact_force_queries[
+                    tuple(link_names)
+                ] = self.px.gpu_create_contact_body_impulse_query(bodies)
+            query = self._net_contact_force_queries[tuple(link_names)]
+            self.px.gpu_query_contact_body_impulses(query)
+            return (
+                query.cuda_impulses.torch().clone().reshape(-1, len(link_names), 3)
+                / self._scene.timestep
+            )
+        else:
+
+            body_contacts = get_articulation_contacts(
+                self.px.get_contacts(),
+                self._objs[0],
+                included_links=[self.link_map[k]._objs[0] for k in link_names],
+            )
+            net_force = (
+                to_tensor(compute_total_impulse(body_contacts)) / self._scene.timestep
+            )
+            return net_force[None, :]
 
     # -------------------------------------------------------------------------- #
     # Functions from physx.PhysxArticulation

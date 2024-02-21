@@ -18,7 +18,7 @@ from mani_skill2.utils.sapien_utils import look_at
 from mani_skill2.utils.structs.pose import Pose
 
 
-@register_env("QuadrupedStandEnv-v1", max_episode_steps=200)
+@register_env("QuadrupedStand-v1", max_episode_steps=200)
 class QuadrupedStandEnv(BaseEnv):
     """
     Task Description
@@ -77,18 +77,24 @@ class QuadrupedStandEnv(BaseEnv):
         #     ground.build_static(name="ground")
         # self.ground = self._scene.create_actor_builder()
         self.ground = build_meter_ground(self._scene, floor_width=1000)
-
+        self.cube = actors.build_cube(
+            self._scene, 0.05, color=[1, 0, 0, 1], name="cube"
+        )
         # TODO (stao): why is this collision mesh so wacky?
         # mesh = self.agent.robot.get_collision_mesh(first_only=True)
         # self.height = -mesh[0].bounding_box.bounds[0, 2]
         self.height = 1.626
 
-    def _initialize_actors(self):
+    def _initialize_actors(self, env_idx: torch.Tensor):
         with torch.device(self.device):
             self.agent.robot.set_pose(Pose.create_from_pq(p=[0, 0, self.height]))
             self.agent.reset(init_qpos=torch.zeros(self.agent.robot.max_dof))
+            self.cube.set_pose(Pose.create_from_pq(p=[0, 0, 0.05]))
 
     def evaluate(self):
+        forces = self.agent.robot.get_net_contact_forces(["RH_KFE", "LH_KFE"]).norm(
+            dim=(1, 2)
+        )
         return {"success": self.agent.is_standing()}
 
     def _get_obs_extra(self, info: Dict):
