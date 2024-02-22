@@ -31,7 +31,7 @@ From pip:
 
 ```bash
 # This is temporary in order to install a in-dev version of sapien 3
-pip install manualtest/sapien-3.0.0.dev20240221+340ad1c-cp39-cp39-manylinux2014_x86_64.whl
+pip install manualtest/sapien-3.0.0.dev20240221+fa245b5-cp39-cp39-manylinux2014_x86_64.whl
 ```
 
 From github:
