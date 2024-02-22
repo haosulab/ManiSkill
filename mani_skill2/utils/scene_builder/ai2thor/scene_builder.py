@@ -37,7 +37,7 @@ OBJECT_SEMANTIC_ID_MAPPING, SEMANTIC_ID_OBJECT_MAPPING, MOVEABLE_OBJECT_IDS = (
 )
 
 # TODO (arth): fix coacd so this isn't necessary
-WORKING_OBJS = ["apple"]
+WORKING_OBJS = ["apple", "potato", "tomato"]
 
 class AI2THORBaseSceneBuilder(SceneBuilder):
     """

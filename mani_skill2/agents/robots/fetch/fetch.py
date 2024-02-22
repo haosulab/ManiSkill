@@ -55,6 +55,17 @@ class Fetch(BaseAgent):
             near=0.01,
             far=10,
             entity_uid="head_camera_link",
+        ),
+        CameraConfig(
+            uid="fetch_hand",
+            p=[-0.1, 0, 0.1],
+            q=[1, 0, 0, 0],
+            width=128,
+            height=128,
+            fov=2,
+            near=0.01,
+            far=10,
+            entity_uid="gripper_link",
         )
     ]
     REACHABLE_DIST = 1.5
@@ -327,8 +338,8 @@ class Fetch(BaseAgent):
             self.robot.get_links(), "torso_lift_link"
         )
 
-        self.torso_lift_link: Link = get_obj_by_name(
-            self.robot.get_links(), "torso_lift_link"
+        self.head_camera_link: Link = get_obj_by_name(
+            self.robot.get_links(), "head_camera_link"
         )
 
         self.queries: Dict[
