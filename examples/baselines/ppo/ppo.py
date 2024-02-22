@@ -6,7 +6,6 @@ from dataclasses import dataclass
 
 import gymnasium as gym
 import numpy as np
-import sapien
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -84,6 +83,7 @@ class Args:
     """the target KL divergence threshold"""
     eval_freq: int = 25
     """evaluation frequency in terms of iterations"""
+    finite_horizon_gae: bool = True
 
     # to be filled in runtime
     batch_size: int = 0
@@ -184,7 +184,7 @@ if __name__ == "__main__":
         eval_envs = FlattenActionSpaceWrapper(eval_envs)
     if args.capture_video:
         eval_envs = RecordEpisode(eval_envs, output_dir=f"runs/{run_name}/videos", save_trajectory=False, video_fps=30)
-    envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=True, **env_kwargs)
+    envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=False, **env_kwargs)
     eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=True, **env_kwargs)
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
@@ -219,7 +219,9 @@ if __name__ == "__main__":
     # model_path = "/home/stao/work/research/maniskill/ManiSkill2/examples/baselines/ppo/runs/TwoRobotStackCube-v1__ppo__1__1706777637/ppo_751.cleanrl_model"
     # agent.load_state_dict(torch.load(model_path))
     for iteration in range(1, args.num_iterations + 1):
-        timeout_bonus = torch.zeros((args.num_steps, args.num_envs), device=device)
+        print(f"Epoch: {iteration}, global_step={global_step}")
+        final_values = torch.zeros((args.num_steps, args.num_envs), device=device)
+        agent.eval()
         if iteration % args.eval_freq == 1:
             # evaluate
             print("Evaluating")
@@ -235,7 +237,7 @@ if __name__ == "__main__":
             writer.add_scalar("charts/eval_success_rate", info["success"].float().mean().cpu().numpy(), global_step)
             writer.add_scalar("charts/eval_episodic_return", episodic_return, global_step)
             writer.add_scalar("charts/eval_episodic_length", info["elapsed_steps"].float().mean().cpu().numpy(), global_step)
-        # exit()
+
         if args.save_model and iteration % args.eval_freq == 1:
             model_path = f"runs/{run_name}/{args.exp_name}_{iteration}.cleanrl_model"
             torch.save(agent.state_dict(), model_path)
@@ -265,26 +267,56 @@ if __name__ == "__main__":
 
             if "final_info" in infos:
                 info = infos["final_info"]
-                episodic_return = info['episode']['r'].mean().cpu().numpy()
-                print(f"global_step={global_step}, episodic_return={episodic_return}")
-                writer.add_scalar("charts/success_rate", info["success"].float().mean().cpu().numpy(), global_step)
+                done_mask = info["_final_info"]
+                episodic_return = info['episode']['r'][done_mask].mean().cpu().numpy()
+                # print(f"global_step={global_step}, episodic_return={episodic_return}")
+                writer.add_scalar("charts/success_rate", info["success"][done_mask].float().mean().cpu().numpy(), global_step)
                 writer.add_scalar("charts/episodic_return", episodic_return, global_step)
-                writer.add_scalar("charts/episodic_length", info["elapsed_steps"].float().mean().cpu().numpy(), global_step)
-        # bootstrap value if not done
+                writer.add_scalar("charts/episodic_length", info["elapsed_steps"][done_mask].float().mean().cpu().numpy(), global_step)
+
+                final_values[step, torch.arange(args.num_envs, device=device)[done_mask]] = agent.get_value(info["final_observation"][done_mask]).view(-1)
+
+        # bootstrap value according to termination and truncation
         with torch.no_grad():
             next_value = agent.get_value(next_obs).reshape(1, -1)
             advantages = torch.zeros_like(rewards).to(device)
-            rewards_ = rewards + timeout_bonus
             lastgaelam = 0
             for t in reversed(range(args.num_steps)):
                 if t == args.num_steps - 1:
-                    nextnonterminal = 1.0 - next_done
+                    next_not_done = 1.0 - next_done
                     nextvalues = next_value
                 else:
-                    nextnonterminal = 1.0 - dones[t + 1]
+                    next_not_done = 1.0 - dones[t + 1]
                     nextvalues = values[t + 1]
-                delta = rewards_[t] + args.gamma * nextvalues * nextnonterminal - values[t]
-                advantages[t] = lastgaelam = delta + args.gamma * args.gae_lambda * nextnonterminal * lastgaelam
+                real_next_values = next_not_done * nextvalues + final_values[t] # t instead of t+1
+                # next_not_done means nextvalues is computed from the correct next_obs
+                # if next_not_done is 1, final_values is always 0
+                # if next_not_done is 0, then use final_values, which is computed according to bootstrap_at_done
+                if args.finite_horizon_gae:
+                    """
+                    See GAE paper equation(16) line 1, we will compute the GAE based on this line only
+                    1             *(  -V(s_t)  + r_t                                                               + gamma * V(s_{t+1})   )
+                    lambda        *(  -V(s_t)  + r_t + gamma * r_{t+1}                                             + gamma^2 * V(s_{t+2}) )
+                    lambda^2      *(  -V(s_t)  + r_t + gamma * r_{t+1} + gamma^2 * r_{t+2}                         + ...                  )
+                    lambda^3      *(  -V(s_t)  + r_t + gamma * r_{t+1} + gamma^2 * r_{t+2} + gamma^3 * r_{t+3}
+                    We then normalize it by the sum of the lambda^i (instead of 1-lambda)
+                    """
+                    if t == args.num_steps - 1: # initialize
+                        lam_coef_sum = 0.
+                        reward_term_sum = 0. # the sum of the second term
+                        value_term_sum = 0. # the sum of the third term
+                    lam_coef_sum = lam_coef_sum * next_not_done
+                    reward_term_sum = reward_term_sum * next_not_done
+                    value_term_sum = value_term_sum * next_not_done
+
+                    lam_coef_sum = 1 + args.gae_lambda * lam_coef_sum
+                    reward_term_sum = args.gae_lambda * args.gamma * reward_term_sum + lam_coef_sum * rewards[t]
+                    value_term_sum = args.gae_lambda * args.gamma * value_term_sum + args.gamma * real_next_values
+
+                    advantages[t] = (reward_term_sum + value_term_sum) / lam_coef_sum - values[t]
+                else:
+                    delta = rewards[t] + args.gamma * real_next_values - values[t]
+                    advantages[t] = lastgaelam = delta + args.gamma * args.gae_lambda * next_not_done * lastgaelam # Here actually we should use next_not_terminated, but we don't have lastgamlam if terminated
             returns = advantages + values
 
         # flatten the batch
@@ -296,6 +328,7 @@ if __name__ == "__main__":
         b_values = values.reshape(-1)
 
         # Optimizing the policy and value network
+        agent.train()
         b_inds = np.arange(args.batch_size)
         clipfracs = []
         for epoch in range(args.update_epochs):
