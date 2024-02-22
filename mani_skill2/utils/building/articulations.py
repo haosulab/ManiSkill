@@ -166,7 +166,7 @@ def _load_partnet_mobility_dataset():
 def build_robel_valve(
     scene: ManiSkillScene,
     valve_angles: Sequence[float],
-    name,
+    name: str,
     radius_scale: float = 1.0,
     capsule_radius_scale: float = 1.0,
     scene_mask=None,
@@ -251,8 +251,8 @@ def build_robel_valve(
             [0, 0, capsule_height + bottom_height], [0.707, 0, 0.707, 0]
         ),
         pose_in_child=sapien.Pose(q=[0.707, 0, 0.707, 0]),
-        friction=0.05,
-        damping=5,
+        friction=0.02,
+        damping=2,
     )
 
     valve = builder.build(name, fix_root_link=True)

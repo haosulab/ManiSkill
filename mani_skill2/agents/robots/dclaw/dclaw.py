@@ -51,7 +51,6 @@ class DClaw(BaseAgent):
         self.root_joint_names = ["joint_f1_0", "joint_f2_0", "joint_f3_0"]
 
         super().__init__(*args, **kwargs)
-        self.tip_poses = torch.zeros(1).to(self.device)
 
     def _after_init(self):
         self.tip_links: List[sapien.Entity] = get_objs_by_names(
@@ -137,8 +136,14 @@ class DClaw(BaseAgent):
         Get the proprioceptive state of the agent.
         """
         obs = super().get_proprioception()
-        tip_poses = [vectorize_pose(link.pose) for link in self.tip_links]
-        self.tip_poses = torch.stack(tip_poses, dim=1)
         obs.update({"tip_poses": self.tip_poses.view(-1, 21)})
 
         return obs
+
+    @property
+    def tip_poses(self):
+        """
+        Get the tip pose for each of the finger, three fingers in total
+        """
+        tip_poses = [vectorize_pose(link.pose) for link in self.tip_links]
+        return torch.stack(tip_poses, dim=-1)

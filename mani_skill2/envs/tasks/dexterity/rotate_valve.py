@@ -43,6 +43,20 @@ class RotateValveEnv(BaseEnv):
                 f"Difficulty level must be a int within 0-4, but get {difficulty_level}"
             )
         self.difficulty_level = difficulty_level
+
+        # Task information
+        # For the simplest level 0, only quarter round will make it a success
+        # For the hardest level 4, rotate one rounds will make it a success
+        # For other intermediate level 1-3, the success threshold should be half round
+        if self.difficulty_level == 0:
+            self.success_threshold = torch.pi / 2
+        elif self.difficulty_level == 4:
+            self.success_threshold = torch.pi * 2
+        else:
+            self.success_threshold = torch.pi * 1
+
+        self.capsule_offset = 0.01
+
         super().__init__(*args, robot_uids="dclaw", **kwargs)
 
     def _register_sensors(self):
@@ -119,49 +133,48 @@ class RotateValveEnv(BaseEnv):
             capsule_lens.append(capsule_len)
         self.valve = Articulation.merge(valves, "valve_station")
         self.capsule_lens = torch.from_numpy(np.array(capsule_lens)).to(self.device)
-        self.valve_head_links = get_obj_by_name(self.valve.get_links(), "valve")
+        self.valve_link = get_obj_by_name(self.valve.get_links(), "valve")
 
     def _initialize_actors(self, env_idx: torch.Tensor):
         with torch.device(self.device):
+            b = len(env_idx)
             self.table_scene.initialize()
 
-        # Initialize task related information
-        with torch.device(self.device):
+            # Initialize task related information
             if self.difficulty_level <= 3:
-                self.rotate_direction = torch.ones(self.num_envs)
+                self.rotate_direction = torch.ones(b)
             else:
-                self.rotate_direction = 1 - torch.randint(0, 2, (self.num_envs,)) * 2
+                self.rotate_direction = 1 - torch.randint(0, 2, (b,)) * 2
 
-            self.success_threshold = torch.pi * 4
-
-        # Initialize the valve
-        with torch.device(self.device):
-            xyz = torch.zeros((self.num_envs, 3))
+            # Initialize the valve
+            xyz = torch.zeros((b, 3))
             xyz[:, :2].uniform_(-0.02, 0.02)
-            axis_angle = torch.zeros((self.num_envs, 3))
+            axis_angle = torch.zeros((b, 3))
             axis_angle[:, 2].uniform_(torch.pi / 6, torch.pi * 5 / 6)
             pose = Pose.create_from_pq(xyz, axis_angle_to_quaternion(axis_angle))
             self.valve.set_pose(pose)
 
-            qpos = torch.rand((self.num_envs, 1)) * torch.pi * 2 - torch.pi
+            qpos = torch.rand((b, 1)) * torch.pi * 2 - torch.pi
             self.valve.set_qpos(qpos)
             self.rest_qpos = qpos
 
     def _initialize_agent(self, env_idx: torch.Tensor):
         with torch.device(self.device):
+            b = len(env_idx)
             dof = self.agent.robot.dof
             if isinstance(dof, torch.Tensor):
                 dof = dof[0]
-            init_qpos = torch.zeros((self.num_envs, dof))
+
+            init_qpos = torch.zeros((b, dof))
             # set root joint qpos to avoid robot-object collision after reset
             init_qpos[:, self.agent.root_joint_indices] = torch.tensor(
                 [0.7, -0.7, -0.7]
             )
-            init_qpos += torch.randn((self.num_envs, dof)) * self.robot_init_qpos_noise
+            init_qpos += torch.randn((b, dof)) * self.robot_init_qpos_noise
             self.agent.reset(init_qpos)
             self.agent.robot.set_pose(
                 Pose.create_from_pq(
-                    torch.tensor([0.0, 0, 0.25]), torch.tensor([0, 0, -1, 0])
+                    torch.tensor([0.0, 0, 0.28]), torch.tensor([0, 0, -1, 0])
                 )
             )
 
@@ -194,23 +207,23 @@ class RotateValveEnv(BaseEnv):
         # Distance between fingertips and the circle grouned by valve tips
         tip_poses = self.agent.tip_poses  # (b, 3, 7)
         tip_pos = tip_poses[:, :, :2]  # (b, 3, 2)
-        valve_pos = self.valve_head_links.pose.p[:, :2]  # (b, 2)
+        valve_pos = self.valve_link.pose.p[:, :2]  # (b, 2)
         valve_tip_dist = torch.linalg.norm(tip_pos - valve_pos[:, None, :], dim=-1)
-        desired_valve_tip_dist = self.capsule_lens[:, None]
-        error = torch.abs(valve_tip_dist - desired_valve_tip_dist).mean(dim=-1)
+        desired_valve_tip_dist = self.capsule_lens[:, None] - self.capsule_offset
+        error = torch.norm(valve_tip_dist - desired_valve_tip_dist, dim=-1)
         reward = 1 - torch.tanh(error * 10)
 
         directed_velocity = qvel[:, 0] * self.rotate_direction
-        reward += torch.tanh(5 * directed_velocity) * 2
+        reward += torch.tanh(5 * directed_velocity) * 4
 
-        motion_reward = torch.clip(rotation / torch.pi / 6, -1, 1)
+        motion_reward = torch.clip(rotation / torch.pi / 2, -1, 1)
         reward += motion_reward
 
         return reward
 
     def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
         # this should be equal to compute_dense_reward / max possible reward
-        return self.compute_dense_reward(obs=obs, action=action, info=info) / 4.0
+        return self.compute_dense_reward(obs=obs, action=action, info=info) / 6.0
 
 
 def sample_valve_angles(
@@ -234,7 +247,7 @@ def sample_valve_angles(
     return np.arange(0, np.pi * 2, np.pi * 2 / num_head)
 
 
-@register_env("RotateValveLevel0-v1", max_episode_steps=300)
+@register_env("RotateValveLevel0-v1", max_episode_steps=80)
 class RotateValveEnvLevel0(RotateValveEnv):
     def __init__(self, *args, **kwargs):
         super().__init__(
@@ -246,7 +259,7 @@ class RotateValveEnvLevel0(RotateValveEnv):
         )
 
 
-@register_env("RotateValveLevel1-v1", max_episode_steps=300)
+@register_env("RotateValveLevel1-v1", max_episode_steps=150)
 class RotateValveEnvLevel1(RotateValveEnv):
     def __init__(self, *args, **kwargs):
         super().__init__(
@@ -258,7 +271,7 @@ class RotateValveEnvLevel1(RotateValveEnv):
         )
 
 
-@register_env("RotateValveLevel2-v1", max_episode_steps=300)
+@register_env("RotateValveLevel2-v1", max_episode_steps=150)
 class RotateValveEnvLevel2(RotateValveEnv):
     def __init__(self, *args, **kwargs):
         super().__init__(
@@ -270,7 +283,7 @@ class RotateValveEnvLevel2(RotateValveEnv):
         )
 
 
-@register_env("RotateValveLevel3-v1", max_episode_steps=300)
+@register_env("RotateValveLevel3-v1", max_episode_steps=150)
 class RotateValveEnvLevel3(RotateValveEnv):
     def __init__(self, *args, **kwargs):
         super().__init__(
