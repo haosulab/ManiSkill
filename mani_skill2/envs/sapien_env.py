@@ -961,9 +961,10 @@ class BaseEnv(gym.Env):
         if self._viewer is None:
             self._viewer = Viewer()
             self._setup_viewer()
-            self._viewer.set_camera_pose(
-                self._human_render_cameras["render_camera"].camera.global_pose
-            )
+            if "render_camera" in self._human_render_cameras:
+                self._viewer.set_camera_pose(
+                    self._human_render_cameras["render_camera"].camera.global_pose
+                )
         for obj in self._hidden_objects:
             obj.show_visual()
         if physx.is_gpu_enabled() and self._scene._gpu_sim_initialized:
