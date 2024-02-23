@@ -3,7 +3,7 @@ import numpy as np
 import sapien.core as sapien
 from tqdm import tqdm
 
-from mani_skill2.envs.pick_and_place.pick_cube import PickCubeEnv
+from mani_skill2.envs.tasks.pick_cube import PickCubeEnv
 from mani_skill2.examples.motionplanning.motionplanner import \
     PandaArmMotionPlanningSolver
 from mani_skill2.examples.motionplanning.utils import (
@@ -12,12 +12,12 @@ from mani_skill2.examples.motionplanning.utils import (
 
 def main():
     env: PickCubeEnv = gym.make(
-        "PickCube-v0",
+        "PickCube-v1",
         obs_mode="none",
         control_mode="pd_joint_pos",
         render_mode="rgb_array",
         reward_mode="sparse",
-        # shader_dir="rt-fast",
+        shader_dir="rt-fast",
     )
     for seed in tqdm(range(100)):
         res = solve(env, seed=seed, debug=False, vis=True)
@@ -42,10 +42,10 @@ def solve(env: PickCubeEnv, seed=None, debug=False, vis=False):
 
     FINGER_LENGTH = 0.025
     env = env.unwrapped
-    obb = get_actor_obb(env.obj)
+    obb = get_actor_obb(env.cube._objs[0])
 
     approaching = np.array([0, 0, -1])
-    target_closing = env.agent.tcp.entity_pose.to_transformation_matrix()[:3, 1]
+    target_closing = env.agent.tcp._objs[0].entity_pose.to_transformation_matrix()[:3, 1]
     grasp_info = compute_grasp_info_by_obb(
         obb,
         approaching=approaching,
@@ -70,7 +70,7 @@ def solve(env: PickCubeEnv, seed=None, debug=False, vis=False):
     # -------------------------------------------------------------------------- #
     # Move to goal pose
     # -------------------------------------------------------------------------- #
-    goal_pose = sapien.Pose(env.goal_pos, grasp_pose.q)
+    goal_pose = sapien.Pose(env.goal_site.pose.p[0], grasp_pose.q)
     res = planner.move_to_pose_with_screw(goal_pose)
 
     planner.close()

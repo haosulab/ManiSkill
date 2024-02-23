@@ -6,6 +6,7 @@ import torch
 from mani_skill2.agents.multi_agent import MultiAgent
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.utils.structs.types import SimConfig
+from mani_skill2.vector.wrappers.gymnasium import ManiSkillVectorEnv
 from tests.utils import (
     CONTROL_MODES_STATIONARY_SINGLE_ARM,
     ENV_IDS,
@@ -26,7 +27,12 @@ def test_envs_obs_modes(env_id, obs_mode):
     def assert_device(x):
         assert x.device == torch.device("cuda:0")
 
-    env = gym.make(env_id, num_envs=16, obs_mode=obs_mode, sim_cfg=LOW_MEM_SIM_CFG)
+    env = gym.make_vec(
+        env_id,
+        num_envs=16,
+        vectorization_mode="custom",
+        vector_kwargs=dict(obs_mode=obs_mode, sim_cfg=LOW_MEM_SIM_CFG),
+    )
     obs, _ = env.reset()
     assert_isinstance(obs, torch.Tensor)
     tree_map(obs, lambda x: assert_device(x))
@@ -57,8 +63,11 @@ def test_envs_obs_modes(env_id, obs_mode):
 @pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS)
 @pytest.mark.parametrize("control_mode", CONTROL_MODES_STATIONARY_SINGLE_ARM)
 def test_env_control_modes(env_id, control_mode):
-    env = gym.make(
-        env_id, num_envs=16, control_mode=control_mode, sim_cfg=LOW_MEM_SIM_CFG
+    env = gym.make_vec(
+        env_id,
+        num_envs=16,
+        vectorization_mode="custom",
+        vector_kwargs=dict(control_mode=control_mode, sim_cfg=LOW_MEM_SIM_CFG),
     )
     env.reset()
     action_space = env.action_space
@@ -72,7 +81,7 @@ def test_env_control_modes(env_id, control_mode):
 @pytest.mark.gpu_sim
 @pytest.mark.parametrize("env_id", ["PickSingleYCB-v1"])
 def test_env_reconfiguration(env_id):
-    env = gym.make(env_id, num_envs=16)
+    env = gym.make_vec(env_id, num_envs=16, vectorization_mode="custom")
     env.reset(options=dict(reconfigure=True))
     for _ in range(5):
         env.step(env.action_space.sample())
@@ -160,7 +169,12 @@ def test_robots(env_id, robot_uids):
         "MoveBucket-v1",
     ]:
         pytest.skip(reason=f"Env {env_id} does not support robots other than panda")
-    env = gym.make(env_id, num_envs=16, robot_uids=robot_uids, sim_cfg=LOW_MEM_SIM_CFG)
+    env = gym.make_vec(
+        env_id,
+        num_envs=16,
+        vectorization_mode="custom",
+        vector_kwargs=dict(robot_uids=robot_uids, sim_cfg=LOW_MEM_SIM_CFG),
+    )
     env.reset()
     action_space = env.action_space
     for _ in range(5):
@@ -172,12 +186,17 @@ def test_robots(env_id, robot_uids):
 @pytest.mark.gpu_sim
 @pytest.mark.parametrize("env_id", MULTI_AGENT_ENV_IDS)
 def test_multi_agent(env_id):
-    env = gym.make(env_id, num_envs=16, sim_cfg=LOW_MEM_SIM_CFG)
+    env = gym.make_vec(
+        env_id,
+        num_envs=16,
+        vectorization_mode="custom",
+        vector_kwargs=dict(sim_cfg=LOW_MEM_SIM_CFG),
+    )
     env.reset()
     action_space = env.action_space
     assert isinstance(action_space, gym.spaces.Dict)
-    assert isinstance(env.unwrapped.single_action_space, gym.spaces.Dict)
-    assert isinstance(env.unwrapped.agent, MultiAgent)
+    assert isinstance(env.base_env.single_action_space, gym.spaces.Dict)
+    assert isinstance(env.base_env.agent, MultiAgent)
     for _ in range(5):
         env.step(action_space.sample())
     env.close()
@@ -187,13 +206,18 @@ def test_multi_agent(env_id):
 @pytest.mark.gpu_sim
 @pytest.mark.parametrize("env_id", ENV_IDS[:1])
 def test_partial_resets(env_id):
-    env = gym.make(env_id, num_envs=16, sim_cfg=LOW_MEM_SIM_CFG)
+    env: ManiSkillVectorEnv = gym.make_vec(
+        env_id,
+        num_envs=16,
+        vectorization_mode="custom",
+        vector_kwargs=dict(sim_cfg=LOW_MEM_SIM_CFG),
+    )
     obs, _ = env.reset()
     action_space = env.action_space
     for _ in range(5):
         obs, _, _, _, _ = env.step(action_space.sample())
-    env_idx = torch.arange(0, 16, device=env.unwrapped.device)
-    reset_mask = torch.zeros(16, dtype=bool, device=env.unwrapped.device)
+    env_idx = torch.arange(0, 16, device=env.device)
+    reset_mask = torch.zeros(16, dtype=bool, device=env.device)
     for i in [1, 3, 4, 13]:
         reset_mask[i] = True
     reset_obs, _ = env.reset(options=dict(env_idx=env_idx[reset_mask]))
@@ -201,6 +225,26 @@ def test_partial_resets(env_id):
     assert not torch.isclose(
         obs[reset_mask][:, :10], reset_obs[reset_mask][:, :10]
     ).any()
+    assert (env.base_env.elapsed_steps[reset_mask] == 0).all()
+    assert (env.base_env.elapsed_steps[~reset_mask] == 5).all()
+    env.close()
+    del env
+
+
+@pytest.mark.gpu_sim
+@pytest.mark.parametrize("env_id", ENV_IDS[:1])
+def test_timelimits(env_id):
+    """Test that the vec env batches the truncated variable correctly"""
+    env = gym.make_vec(
+        env_id,
+        num_envs=16,
+        vectorization_mode="custom",
+        vector_kwargs=dict(sim_cfg=LOW_MEM_SIM_CFG),
+    )
+    obs, _ = env.reset()
+    for _ in range(50):
+        obs, _, terminated, truncated, _ = env.step(None)
+    assert (truncated == torch.ones(16, dtype=bool, device=env.device)).all()
     env.close()
     del env
 

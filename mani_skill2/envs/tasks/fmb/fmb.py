@@ -21,7 +21,7 @@ from mani_skill2.utils.sapien_utils import (  # import various useful utilities 
 from mani_skill2.utils.scene_builder.table.table_scene_builder import TableSceneBuilder
 
 
-@register_env("FMBAssembly1Env-v0", max_episode_steps=200)
+@register_env("FMBAssembly1-v0", max_episode_steps=200)
 class FMBAssembly1Env(BaseEnv):
     """
     Task Description
@@ -42,6 +42,10 @@ class FMBAssembly1Env(BaseEnv):
 
     SUPPORTED_ROBOTS = ["panda"]
     agent: Panda
+
+    def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
+        self.robot_init_qpos_noise = robot_init_qpos_noise
+        super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     def _register_sensors(self):
         pose = look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
@@ -125,7 +129,7 @@ class FMBAssembly1Env(BaseEnv):
 
     def _initialize_actors(self, env_idx: torch.Tensor):
         self.table_scene.initialize()
-        offset_pose = sapien.Pose(p=[0.05, -0.115, 0], q=euler2quat(0, 0, np.pi / 2))
+        offset_pose = sapien.Pose(p=[0.02, -0.115, 0], q=euler2quat(0, 0, np.pi / 2))
         self.board.set_pose(
             sapien.Pose(p=np.array([0.115, 0.115, 0.034444])) * offset_pose
         )

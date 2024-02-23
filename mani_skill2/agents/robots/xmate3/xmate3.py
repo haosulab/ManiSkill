@@ -76,7 +76,9 @@ class Xmate3Robotiq(BaseAgent):
             self.robot.get_links(), "right_inner_finger_pad"
         )
         self.tcp = get_obj_by_name(self.robot.get_links(), self.ee_link_name)
-        self.queries: Dict[str, Tuple[physx.PhysxGpuContactQuery, Tuple[int]]] = dict()
+        self.queries: Dict[
+            str, Tuple[physx.PhysxGpuContactPairImpulseQuery, Tuple[int]]
+        ] = dict()
 
     @property
     def controller_configs(self):
@@ -185,14 +187,14 @@ class Xmate3Robotiq(BaseAgent):
                 body_pairs = list(zip(self.finger1_link._bodies, object._bodies))
                 body_pairs += list(zip(self.finger2_link._bodies, object._bodies))
                 self.queries[object.name] = (
-                    self.scene.px.gpu_create_contact_query(body_pairs),
+                    self.scene.px.gpu_create_contact_pair_impulse_query(body_pairs),
                     (len(object._bodies), 3),
                 )
             query, contacts_shape = self.queries[object.name]
-            self.scene.px.gpu_query_contacts(query)
+            self.scene.px.gpu_query_contact_pair_impulses(query)
             # query.cuda_contacts # (num_unique_pairs * num_envs, 3)
             contacts = (
-                query.cuda_contacts.torch().clone().reshape((-1, *contacts_shape))
+                query.cuda_impulses.torch().clone().reshape((-1, *contacts_shape))
             )
             lforce = torch.linalg.norm(contacts[0], axis=1)
             rforce = torch.linalg.norm(contacts[1], axis=1)

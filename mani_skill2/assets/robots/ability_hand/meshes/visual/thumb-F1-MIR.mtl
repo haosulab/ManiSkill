@@ -1,0 +1,12 @@
+# Blender MTL File: 'color.blend'
+# Material Count: 1
+
+newmtl rubber_black
+Ns 39.999995
+Ka 0.600000 0.600000 0.600000
+Kd 0.013702 0.015996 0.022174
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3

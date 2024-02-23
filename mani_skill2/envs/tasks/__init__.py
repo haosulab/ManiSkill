@@ -1,3 +1,4 @@
+from .dexterity import RotateValveEnv
 from .empty_env import EmptyEnv
 from .fmb.fmb import FMBAssembly1Env
 from .open_cabinet_drawer import OpenCabinetDoorEnv, OpenCabinetDrawerEnv

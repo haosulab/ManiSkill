@@ -1,0 +1,475 @@
+<robot name="ability_hand">
+  <link name="base_link"/>
+  <joint name="base_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="base"/>
+    <origin xyz="0 0 0" rpy="0 0 -1.57079"/>
+  </joint>
+  <link name="base">
+    <visual name="wrist_mesh">
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/visual/wristmesh.obj"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/collision/wristmesh_C.obj"/>
+      </geometry>
+    </collision>
+    <inertial>  <!-- the mass and inertia here are NOT correct -->
+      <mass value="0.200"/>
+      <inertia ixx="978.26e-6" ixy="87.34e-6" ixz="322.99e-6" iyy="1244.78e-6" iyz="244.74e-6" izz="456.22e-6"/>
+      <origin xyz="22.41911e-3 -0.15798201e-3 -0.01319866e-3" rpy="0 0 0"/>
+    </inertial>
+  </link>
+  <joint name="wrist2thumb" type="fixed">
+    <parent link="base"/>
+    <child link="thumb_base"/>
+    <origin xyz="24.0476665e-3 3.78124745e-3 32.32964923e-3" rpy="3.14148426 0.08848813 3.14036612"/>
+  </joint>
+  <link name="thumb_base">
+    <inertial>
+      <mass value="0.400"/>
+      <inertia ixx="978.26e-6" ixy="87.34e-6" ixz="322.99e-6" iyy="1244.78e-6" iyz="244.74e-6" izz="456.22e-6"/>
+      <origin xyz="22.41911e-3 -0.15798201e-3 -0.01319866e-3" rpy="0 0 0"/>
+    </inertial>
+    <visual name="palm_mesh">
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/visual/FB_palm_ref.obj"/>
+      </geometry>
+    </visual>
+    <collision>                                  <!-- thumb_base -->
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/collision/FB_palm_ref.obj"/>
+      </geometry>
+    </collision>
+  </link>
+  <link name="thumb_L1">
+    <inertial>
+      <mass value="0.00268342"/>
+      <inertia ixx="0.16931e-4" ixy="-0.076214e-4" ixz="-0.16959148e-4" iyy="0.77769934e-4" iyz="0.0156622e-4" izz="0.7249122e-4"/>
+      <origin rpy="0 0 0" xyz="14.606e-3 -1.890854e-3 -3.1155356e-3"/>
+    </inertial>
+    <visual name="thumb_mesh_1">
+      <origin xyz="27.8283501e-3 0 -14.7507000e-3" rpy="4.450589592585541 0 0"/>
+      <geometry>
+        <mesh filename="meshes/visual/thumb-F1.obj"/>
+      </geometry>
+    </visual>
+    <collision>                            <!-- thumb_L1 -->
+      <origin xyz="27.8283501e-3 0 -14.7507000e-3" rpy="4.450589592585541 0 0"/>
+      <geometry>
+        <mesh filename="meshes/collision/thumb-F1_C.obj"/>
+      </geometry>
+    </collision>
+  </link>
+  <link name="thumb_L2">
+    <inertial>
+      <mass value="0.0055"/>
+      <inertia ixx="4.4789082e-4" ixy="4.4789082e-4" ixz="-0.62144934e-4" iyy="15.600996e-4" iyz="-0.07466143e-4" izz="17.908554e-4"/>
+      <origin rpy="0 0 0" xyz="30.020522e-3 5.59476e-3 -4.1504356e-3"/>
+    </inertial>
+    <visual name="thumb_mesh_2">
+      <origin xyz="65.18669e-3 23.34021e-3 -3.93483e-3" rpy="3.141592 0 0.343830"/>
+      <geometry>
+        <mesh filename="meshes/visual/thumb-F2.obj"/>
+      </geometry>
+    </visual>
+    <collision>                            <!-- thumb_L2 -->
+      <origin xyz="65.18669e-3 23.34021e-3 -3.93483e-3" rpy="3.141592 0 0.343830"/>
+      <geometry>
+        <mesh filename="meshes/collision/thumb-F2_C.obj"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="thumb_q1" type="revolute">
+    <parent link="thumb_base"/>
+    <child link="thumb_L1"/>
+    <origin xyz="0 0 0" rpy="0 0 3.330437"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-2.0943951" upper="0" effort="1.2" velocity="40.338888721"/>    <!-- angles in rad, efforts in N-m, velocity in rad/s -->
+    <dynamics damping="0.001" friction="0.001"/>  <!-- Friction coefficient is not from quantitative measurement -->
+  </joint>
+  <joint name="thumb_q2" type="revolute">
+    <parent link="thumb_L1"/>
+    <child link="thumb_L2"/>
+    <origin xyz="27.8283501e-3 0 -14.7507000e-3" rpy="4.450589592585541 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="0" upper="2.0943951" effort="6.0" velocity="8.0677777442"/>    <!-- angles in rad, efforts in N-m, velocity in rad/s -->
+    <dynamics damping="0.001" friction="0.001"/>  <!-- Friction coefficient is not from quantitative measurement -->
+  </joint>
+  <link name="thumb_tip"/>
+  <joint name="thumb_tip_joint" type="fixed">
+    <parent link="thumb_L2"/>
+    <child link="thumb_tip"/>
+    <origin rpy="0 0 0" xyz="0.065 0.016 0"/>
+  </joint>
+  <link name="index_L1">
+    <inertial>
+      <mass value="0.00635888"/>
+      <inertia ixx="0.29766e-4" ixy="-0.06447133e-4" ixz="-0.00423315e-4" iyy="3.6947967e-4" iyz="0.00083028e-4" izz="3.8176336e-4"/>
+      <origin xyz="22.41911e-3 -0.15798201e-3 -0.01319866e-3" rpy="0 0 0"/>
+    </inertial>
+    <visual name="index_mesh_1">
+      <origin xyz="38.472723e-3 3.257695e-3 0.000000" rpy="0 0 0.084474"/>
+      <geometry>
+        <mesh filename="meshes/visual/idx-F1.obj"/>
+      </geometry>
+    </visual>
+    <collision>                                  <!-- index_L1 -->
+      <origin xyz="0.036 -0.00175 0" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.0085"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.019 -0.0045 0" rpy="0 0 0.0845"/>
+      <geometry>
+        <box size="0.028 0.012 0.016"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.018 0.006 0" rpy="0 0 0.0845"/>
+      <geometry>
+        <box size="0.02 0.01 0.016"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="-0.001 0 0.007" rpy="0 0 0.0845"/>
+      <geometry>
+        <box size="0.012 0.012 0.002"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="-0.001 0 -0.007" rpy="0 0 0.0845"/>
+      <geometry>
+        <box size="0.012 0.012 0.002"/>
+      </geometry>
+    </collision>
+  </link>
+  <link name="index_L2">
+    <inertial>
+      <mass value="0.00645"/>
+      <inertia ixx="0.82671e-4" ixy="-1.08876e-4" ixz="-0.00037e-4" iyy="1.98028e-4" iyz="0.00081e-4" izz="2.64638e-4"/>
+      <origin rpy="0 0 0" xyz="13.36818e-3 -8.75392e-3 -0.02886e-3"/>
+    </inertial>
+    <visual name="index_mesh_2">
+      <origin rpy="0 0 0" xyz="9.1241e-3 0 0"/>
+      <geometry>
+        <mesh filename="meshes/visual/idx-F2.obj"/>
+      </geometry>
+    </visual>
+    <collision>                            <!-- index_L2 -->
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/collision/idx-F2_C.obj"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.03 -0.016 0" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.007"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="index_q1" type="revolute">
+    <parent link="thumb_base"/>
+    <child link="index_L1"/>
+    <origin xyz="-9.49e-3 -13.04e-3 -62.95e-3" rpy="-1.982050 1.284473 -2.090591"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="0" upper="2.0943951" effort="6.0" velocity="8.0677777442"/>    <!-- angles in rad, efforts in N-m, velocity in rad/s -->
+    <dynamics damping="0.001" friction="0.001"/>  <!-- Friction coefficient is not from quantitative measurement -->
+  </joint>
+  <joint name="index_q2" type="revolute">
+    <parent link="index_L1"/>
+    <child link="index_L2"/>
+    <origin xyz="38.472723e-3 3.257695e-3 0.000000e-3" rpy="0 0 0.084474"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="0.0" upper="2.6586" effort="6.0" velocity="8.0677777442"/>    <!-- angles in rad, efforts in N-m, velocity in rad/s -->
+    <dynamics damping="0.001" friction="0.001"/>  <!-- Friction coefficient is not from quantitative measurement -->
+    <mimic joint="index_q1" multiplier="1.05851325" offset="0.72349796"/>
+  </joint>
+  <link name="index_tip"/>
+  <joint name="index_tip_joint" type="fixed">
+    <parent link="index_L2"/>
+    <child link="index_tip"/>
+    <origin rpy="0 0 0" xyz="0.035  -0.018 0"/>
+  </joint>
+  <link name="middle_L1">
+    <inertial>
+      <mass value="0.00635888"/>
+      <inertia ixx="0.29766e-4" ixy="-0.06447133e-4" ixz="-0.00423315e-4" iyy="3.6947967e-4" iyz="0.00083028e-4" izz="3.8176336e-4"/>
+      <origin xyz="22.41911e-3 -0.15798201e-3 -0.01319866e-3" rpy="0 0 0"/>
+    </inertial>
+    <visual name="middle_mesh_1">
+      <origin xyz="38.472723e-3 3.257695e-3 0.000000" rpy="0 0 0.084474"/>
+      <geometry>
+        <mesh filename="meshes/visual/idx-F1.obj"/>
+      </geometry>
+    </visual>
+    <collision>                                  <!-- middle_L1 -->
+      <origin xyz="0.036 -0.00175 0" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.0085"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.019 -0.0045 0" rpy="0 0 0.0845"/>
+      <geometry>
+        <box size="0.028 0.012 0.016"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.018 0.006 0" rpy="0 0 0.0845"/>
+      <geometry>
+        <box size="0.02 0.01 0.016"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="-0.001 0 0.007" rpy="0 0 0.0845"/>
+      <geometry>
+        <box size="0.012 0.012 0.002"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="-0.001 0 -0.007" rpy="0 0 0.0845"/>
+      <geometry>
+        <box size="0.012 0.012 0.002"/>
+      </geometry>
+    </collision>
+  </link>
+  <link name="middle_L2">
+    <inertial>
+      <mass value="0.00645"/>
+      <inertia ixx="0.82671e-4" ixy="-1.08876e-4" ixz="-0.00037e-4" iyy="1.98028e-4" iyz="0.00081e-4" izz="2.64638e-4"/>
+      <origin rpy="0 0 0" xyz="13.36818e-3 -8.75392e-3 -0.02886e-3"/>
+    </inertial>
+    <visual name="middle_mesh_2">
+      <origin rpy="0 0 0" xyz="9.1241e-3 0 0"/>
+      <geometry>
+        <mesh filename="meshes/visual/idx-F2.obj"/>
+      </geometry>
+    </visual>
+    <collision>                            <!-- middle_L2 -->
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/collision/idx-F2_C.obj"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.03 -0.016 0" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.007"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="middle_q1" type="revolute">
+    <parent link="thumb_base"/>
+    <child link="middle_L1"/>
+    <origin xyz="9.653191e-3 -15.310271e-3 -67.853949e-3" rpy="-1.860531 1.308458 -1.896217"/>
+    <limit lower="0" upper="2.0943951" effort="6.0" velocity="8.0677777442"/>    <!-- angles in rad, efforts in N-m, velocity in rad/s -->
+    <dynamics damping="0.001" friction="0.001"/>  <!-- Friction coefficient is not from quantitative measurement -->
+    <axis xyz="0 0 1"/>
+  </joint>
+  <joint name="middle_q2" type="revolute">
+    <parent link="middle_L1"/>
+    <child link="middle_L2"/>
+    <origin xyz="38.472723e-3 3.257695e-3 0.000000" rpy="0 0 0.084474"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="0.0" upper="2.6586" effort="6.0" velocity="8.0677777442"/>    <!-- angles in rad, efforts in N-m, velocity in rad/s -->
+    <dynamics damping="0.001" friction="0.001"/>  <!-- Friction coefficient is not from quantitative measurement -->
+    <mimic joint="middle_q1" multiplier="1.05851325" offset="0.72349796"/>
+  </joint>
+  <link name="middle_tip"/>
+  <joint name="middle_tip_joint" type="fixed">
+    <parent link="middle_L2"/>
+    <child link="middle_tip"/>
+    <origin rpy="0 0 0" xyz="0.035  -0.018 0"/>
+  </joint>
+  <link name="ring_L1">
+    <inertial>
+      <mass value="0.00635888"/>
+      <inertia ixx="0.29766e-4" ixy="-0.06447133e-4" ixz="-0.00423315e-4" iyy="3.6947967e-4" iyz="0.00083028e-4" izz="3.8176336e-4"/>
+      <origin xyz="22.41911e-3 -0.15798201e-3 -0.01319866e-3" rpy="0 0 0"/>
+    </inertial>
+    <visual name="ring_mesh_1">
+      <origin xyz="38.472723e-3 3.257695e-3 0.000000" rpy="0 0 0.084474"/>
+      <geometry>
+        <mesh filename="meshes/visual/idx-F1.obj"/>
+      </geometry>
+    </visual>
+    <collision>                                  <!-- ring_L1 -->
+      <origin xyz="0.036 -0.00175 0" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.0085"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.019 -0.0045 0" rpy="0 0 0.0845"/>
+      <geometry>
+        <box size="0.028 0.012 0.016"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.018 0.006 0" rpy="0 0 0.0845"/>
+      <geometry>
+        <box size="0.02 0.01 0.016"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="-0.001 0 0.007" rpy="0 0 0.0845"/>
+      <geometry>
+        <box size="0.012 0.012 0.002"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="-0.001 0 -0.007" rpy="0 0 0.0845"/>
+      <geometry>
+        <box size="0.012 0.012 0.002"/>
+      </geometry>
+    </collision>
+  </link>
+  <link name="ring_L2">
+    <inertial>
+      <mass value="0.00645"/>
+      <inertia ixx="0.82671e-4" ixy="-1.08876e-4" ixz="-0.00037e-4" iyy="1.98028e-4" iyz="0.00081e-4" izz="2.64638e-4"/>
+      <origin rpy="0 0 0" xyz="13.36818e-3 -8.75392e-3 -0.02886e-3"/>
+    </inertial>
+    <visual name="ring_mesh_2">
+      <origin rpy="0 0 0" xyz="9.1241e-3 0 0"/>
+      <geometry>
+        <mesh filename="meshes/visual/idx-F2.obj"/>
+      </geometry>
+    </visual>
+    <collision>                            <!-- ring_L2 -->
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/collision/idx-F2_C.obj"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.03 -0.016 0" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.007"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="ring_q1" type="revolute">
+    <parent link="thumb_base"/>
+    <child link="ring_L1"/>
+    <origin xyz="29.954260e-3 -14.212492e-3 -67.286105e-3" rpy="-1.716598 1.321452 -1.675862"/>
+    <limit lower="0" upper="2.0943951" effort="6.0" velocity="8.0677777442"/>    <!-- angles in rad, efforts in N-m, velocity in rad/s -->
+    <dynamics damping="0.001" friction="0.001"/>  <!-- Friction coefficient is not from quantitative measurement -->
+    <axis xyz="0 0 1"/>
+  </joint>
+  <joint name="ring_q2" type="revolute">
+    <parent link="ring_L1"/>
+    <child link="ring_L2"/>
+    <origin xyz="38.472723e-3 3.257695e-3 0.000000" rpy="0 0 0.084474"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="0.0" upper="2.6586" effort="6.0" velocity="8.0677777442"/>    <!-- angles in rad, efforts in N-m, velocity in rad/s -->
+    <dynamics damping="0.001" friction="0.001"/>  <!-- Friction coefficient is not from quantitative measurement -->
+    <mimic joint="ring_q1" multiplier="1.05851325" offset="0.72349796"/>
+  </joint>
+  <link name="ring_tip"/>
+  <joint name="ring_tip_joint" type="fixed">
+    <parent link="ring_L2"/>
+    <child link="ring_tip"/>
+    <origin rpy="0 0 0" xyz="0.035  -0.018 0"/>
+  </joint>
+  <link name="pinky_L1">
+    <inertial>
+      <mass value="0.00635888"/>
+      <inertia ixx="0.29766e-4" ixy="-0.06447133e-4" ixz="-0.00423315e-4" iyy="3.6947967e-4" iyz="0.00083028e-4" izz="3.8176336e-4"/>
+      <origin xyz="22.41911e-3 -0.15798201e-3 -0.01319866e-3" rpy="0 0 0"/>
+    </inertial>
+    <visual name="pinky_mesh_1">
+      <origin xyz="38.472723e-3 3.257695e-3 0.000000" rpy="0 0 0.084474"/>
+      <geometry>
+        <mesh filename="meshes/visual/idx-F1.obj"/>
+      </geometry>
+    </visual>
+    <collision>                                  <!-- pinky_L1 -->
+      <origin xyz="0.036 -0.00175 0" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.0085"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.019 -0.0045 0" rpy="0 0 0.0845"/>
+      <geometry>
+        <box size="0.028 0.012 0.016"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.018 0.006 0" rpy="0 0 0.0845"/>
+      <geometry>
+        <box size="0.02 0.01 0.016"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="-0.001 0 0.007" rpy="0 0 0.0845"/>
+      <geometry>
+        <box size="0.012 0.012 0.002"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="-0.001 0 -0.007" rpy="0 0 0.0845"/>
+      <geometry>
+        <box size="0.012 0.012 0.002"/>
+      </geometry>
+    </collision>
+  </link>
+  <link name="pinky_L2">
+    <inertial>
+      <mass value="0.00645"/>
+      <inertia ixx="0.82671e-4" ixy="-1.08876e-4" ixz="-0.00037e-4" iyy="1.98028e-4" iyz="0.00081e-4" izz="2.64638e-4"/>
+      <origin rpy="0 0 0" xyz="13.36818e-3 -8.75392e-3 -0.02886e-3"/>
+    </inertial>
+    <visual name="pinky_mesh_2">
+      <origin rpy="0 0 0" xyz="9.1241e-3 0 0"/>
+      <geometry>
+        <mesh filename="meshes/visual/idx-F2.obj"/>
+      </geometry>
+    </visual>
+    <collision>                            <!-- pinky_L2 -->
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/collision/idx-F2_C.obj"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.03 -0.016 0" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.007"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="pinky_q1" type="revolute">
+    <parent link="thumb_base"/>
+    <child link="pinky_L1"/>
+    <origin xyz="49.521293e-3 -11.004583e-3 -63.029065e-3" rpy="-1.765110 1.322220 -1.658383"/>
+    <limit lower="0" upper="2.0943951" effort="6.0" velocity="8.0677777442"/>    <!-- angles in rad, efforts in N-m, velocity in rad/s -->
+    <dynamics damping="0.001" friction="0.001"/>  <!-- Friction coefficient is not from quantitative measurement -->
+    <axis xyz="0 0 1"/>
+  </joint>
+  <joint name="pinky_q2" type="revolute">
+    <parent link="pinky_L1"/>
+    <child link="pinky_L2"/>
+    <origin xyz="38.472723e-3 3.257695e-3 0.000000" rpy="0 0 0.084474"/>
+    <limit lower="0.0" upper="2.6586" effort="6.0" velocity="8.0677777442"/>    <!-- angles in rad, efforts in N-m, velocity in rad/s -->
+    <dynamics damping="0.001" friction="0.001"/>  <!-- Friction coefficient is not from quantitative measurement -->
+    <axis xyz="0 0 1"/>
+    <mimic joint="pinky_q1" multiplier="1.05851325" offset="0.72349796"/>
+  </joint>
+  <link name="pinky_tip"/>
+  <joint name="pinky_tip_joint" type="fixed">
+    <parent link="pinky_L2"/>
+    <child link="pinky_tip"/>
+    <origin rpy="0 0 0" xyz="0.035  -0.018 0"/>
+  </joint>
+</robot>
