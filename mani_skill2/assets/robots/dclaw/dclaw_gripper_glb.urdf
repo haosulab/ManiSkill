@@ -1,0 +1,408 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot name="dclaw_gripper">
+  <link name="base"/>
+  <joint name="base_joint" type="fixed">
+    <parent link="base"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 0" rpy="0 -1.57079 0"/>
+  </joint>
+  <link name="base_link">
+    <inertial>
+      <origin xyz="0.0061371 0.00092103 0.0001376" rpy="0 0 0"/>
+      <mass value="0.23695"/>
+      <inertia ixx="0.00032097" ixy="-6.6887E-18" ixz="1.9851E-17" iyy="0.00016917" iyz="-1.3585E-07" izz="0.00016932"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/visual/base_link.glb"/>
+      </geometry>
+    </visual>
+    <collision>   <!-- base_cylinder -->
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/collision/base_link_cylinder.obj"/>
+      </geometry>
+    </collision>
+    <collision> <!-- base_motor_1 -->
+      <origin xyz="0.013 -0.059 -0.012" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.026 0.04 0.05"/>
+      </geometry>
+    </collision>
+    <collision> <!-- base_motor_2 -->
+      <origin xyz="0.013 0.02 0.058" rpy="1.0472 0 0"/>
+      <geometry>
+        <box size="0.026 0.04 0.05"/>
+      </geometry>
+    </collision>
+    <collision> <!-- base_motor_3 -->
+      <origin xyz="0.013 0.042 -0.045" rpy="-1.0472 0 0"/>
+      <geometry>
+        <box size="0.026 0.04 0.05"/>
+      </geometry>
+    </collision>
+  </link>
+  <link name="link_f1_1">
+    <inertial>
+      <origin xyz="0.052937980145625 -0.00497139258776 -0.000694027511673134" rpy="0 0 0"/>
+      <mass value="0.0500997884944125"/>
+      <inertia ixx="8.46910401400073E-06" ixy="-5.59186721204179E-09" ixz="8.65556909015113E-12" iyy="1.16900209784881E-05" iyz="1.71650076915383E-09" izz="1.27968151742208E-05"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/visual/link_1.glb"/>
+      </geometry>
+    </visual>
+    <collision>  <!-- link_finger1_1 -->
+      <origin xyz="0.05 -0.005 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.058 0.038 0.03"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.013 -0.005 -0.018" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.03 0.024 0.01"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.013 -0.005 0.018" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.03 0.024 0.01"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="joint_f1_0" type="revolute">
+    <origin xyz="0.013836 0.026467 0.054269" rpy="2.618 0 0"/>
+    <parent link="base_link"/>
+    <child link="link_f1_1"/>
+    <axis xyz="0 -0.0015509 -1"/>
+    <limit lower="-0.524" upper="1.32" effort="10" velocity="100"/>
+  </joint>
+  <link name="link_f1_2">
+    <inertial>
+      <origin xyz="0.0529346131214272 4.20660206008894E-05 -0.000658948595449904" rpy="0 0 0"/>
+      <mass value="0.0500997884943922"/>
+      <inertia ixx="8.46982892599337E-06" ixy="-7.79200381419549E-10" ixz="6.12478914527945E-08" iyy="1.10964732933152E-05" iyz="3.79402169890053E-09" izz="1.33896379473968E-05"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/visual/link_2.glb"/>
+      </geometry>
+    </visual>
+    <collision>  <!-- link_finger1_2 -->
+      <origin xyz="0.05 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.058 0.036 0.03"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.013 0.018 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.03 0.01 0.024"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.013 -0.018 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.03 0.01 0.024"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="joint_f1_1" type="revolute">
+    <origin xyz="0.068497840506843 -0.00447059066166425 -0.00069480419720909" rpy="0 0 0"/>
+    <parent link="link_f1_1"/>
+    <child link="link_f1_2"/>
+    <axis xyz="-0.00794039679013064 0.999967271990909 -0.00155082103229942"/>
+    <limit lower="-1.57" upper="1.57" effort="10" velocity="100"/>
+  </joint>
+  <link name="link_f1_3">
+    <inertial>
+      <origin xyz="0.0442887582746113 0.00035235906135242 0.000434933008497021" rpy="0 0 0"/>
+      <mass value="0.0260028968487658"/>
+      <inertia ixx="3.47806502125481E-06" ixy="-2.95890268825293E-08" ixz="-5.11685971410778E-08" iyy="7.19387269621039E-06" iyz="1.90796366800334E-09" izz="8.68619204396781E-06"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/visual/link_3.glb"/>
+      </geometry>
+    </visual>
+    <collision>   <!-- link_finger1_3 -->
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/collision/finger_tip.obj"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.013 0.018 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.03 0.01 0.024"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.013 -0.018 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.03 0.01 0.024"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="joint_f1_2" type="revolute">
+    <origin xyz="0.0684925346596223 0.000542552150630676 -0.000853424316918899" rpy="0 0 0"/>
+    <parent link="link_f1_2"/>
+    <child link="link_f1_3"/>
+    <axis xyz="0.00794039679012981 -0.999967271990909 0.00155082103230192"/>
+    <limit lower="-1.57" upper="1.57" effort="10" velocity="100"/>
+  </joint>
+  <link name="link_f2_1">
+    <inertial>
+      <origin xyz="0.0529366186747865 0.0029920957103855 -0.000173411779378921" rpy="0 0 0"/>
+      <mass value="0.0500997884947374"/>
+      <inertia ixx="8.46930770326436E-06" ixy="-2.62162459895352E-08" ixz="4.06413156611164E-11" iyy="1.16898172897379E-05" iyz="1.71681653411011E-09" izz="1.27968151737415E-05"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0.008 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/visual/link_1.glb"/>
+      </geometry>
+    </visual>
+    <collision>  <!-- link_finger2_1 -->
+      <origin xyz="0.05 0.003 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.058 0.038 0.03"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.013 0.003 -0.018" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.03 0.024 0.01"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.013 0.003 0.018" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.03 0.024 0.01"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="joint_f2_0" type="revolute">
+    <origin xyz="0.0138355526615453 0.033321641905068 -0.0509719115789127" rpy="-2.61799387799149 0 0"/>
+    <parent link="base_link"/>
+    <child link="link_f2_1"/>
+    <axis xyz="0 -0.00155086992413278 -0.999998797400516"/>
+    <limit lower="-1.32" upper="0.524" effort="10" velocity="100"/>
+  </joint>
+  <link name="link_f2_2">
+    <inertial>
+      <origin xyz="0.0529373376292636 0.000382054108649318 -3.9604226158757E-05" rpy="0 0 0"/>
+      <mass value="0.0500997884947384"/>
+      <inertia ixx="8.46918825148626E-06" ixy="-1.76972865703743E-08" ixz="3.65389057121657E-09" iyy="1.10963536600261E-05" iyz="3.59507089481827E-09" izz="1.33903982552316E-05"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/visual/link_2.glb"/>
+      </geometry>
+    </visual>
+    <collision>  <!-- link_finger2_2 -->
+      <origin xyz="0.05 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.058 0.036 0.03"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.013 0.018 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.03 0.01 0.024"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.013 -0.018 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.03 0.01 0.024"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="joint_f2_1" type="revolute">
+    <origin xyz="0.0684929530993347 0.00359252558891102 -0.000174342974942968" rpy="0 0 0"/>
+    <parent link="link_f2_1"/>
+    <child link="link_f2_2"/>
+    <axis xyz="-0.014343581886071 0.999895923061994 -0.00155071037926452"/>
+    <limit lower="-1.57" upper="1.57" effort="10" velocity="100"/>
+  </joint>
+  <link name="link_f2_3">
+    <inertial>
+      <origin xyz="0.0442877261541773 0.000635363411305337 3.24374268249883E-05" rpy="0 0 0"/>
+      <mass value="0.0260028967625064"/>
+      <inertia ixx="3.47809482432761E-06" ixy="-5.3314327919684E-08" ixz="-3.84829965834772E-09" iyy="7.19334337797395E-06" iyz="2.25982162121694E-09" izz="8.68669162883216E-06"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/visual/link_3.glb"/>
+      </geometry>
+    </visual>
+    <collision>   <!-- link_finger2_3 -->
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/collision/finger_tip.obj"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.013 0.018 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.03 0.01 0.024"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.013 -0.018 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.03 0.01 0.024"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="joint_f2_2" type="revolute">
+    <origin xyz="0.0684929345007509 0.000982455622303688 -5.20041001613319E-05" rpy="0 0 0"/>
+    <parent link="link_f2_2"/>
+    <child link="link_f2_3"/>
+    <axis xyz="0.0143435818860688 -0.999895923061994 0.0015507103792663"/>
+    <limit lower="-1.57" upper="1.57" effort="10" velocity="100"/>
+  </joint>
+  <link name="link_f3_1">
+    <inertial>
+      <origin xyz="0.052937756130489 0.000210782387668487 -0.000208618910146202" rpy="0 0 0"/>
+      <mass value="0.0500997884940019"/>
+      <inertia ixx="8.46914437459628E-06" ixy="-1.26990243942859E-08" ixz="1.96778519263691E-11" iyy="1.16899806178808E-05" iyz="1.71656331383852E-09" izz="1.27968151741214E-05"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0.005 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/visual/link_1.glb"/>
+      </geometry>
+    </visual>
+    <collision>  <!-- link_finger3_1 -->
+      <origin xyz="0.05 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.058 0.038 0.03"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.013 0 -0.018" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.03 0.024 0.01"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.013 0 0.018" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.03 0.024 0.01"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="joint_f3_0" type="revolute">
+    <origin xyz="0.0138355526615456 -0.05963321136 0.00022432666062458" rpy="1.5707963267949 0 0"/>
+    <parent link="base_link"/>
+    <child link="link_f3_1"/>
+    <axis xyz="0 -0.00155086992413289 -0.999998797400516"/>
+    <limit lower="-1.32" upper="0.524" effort="10" velocity="100"/>
+  </joint>
+  <link name="link_f3_2">
+    <inertial>
+      <origin xyz="0.0529381098100723 0.000160241314829807 0.000200253757474567" rpy="0 0 0"/>
+      <mass value="0.0500997884940274"/>
+      <inertia ixx="8.46915385113344E-06" ixy="-6.70459090239306E-09" ixz="-1.86284718319264E-08" iyy="1.10964555162285E-05" iyz="3.44406945089208E-09" izz="1.33903307992363E-05"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/visual/link_2.glb"/>
+      </geometry>
+    </visual>
+    <collision>  <!-- link_finger3_2 -->
+      <origin xyz="0.05 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.058 0.036 0.03"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.013 0.018 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.03 0.01 0.024"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.013 -0.018 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.03 0.01 0.024"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="joint_f3_1" type="revolute">
+    <origin xyz="0.0684964735450448 0.000745917286560926 -0.000209448841640203" rpy="0 0 0"/>
+    <parent link="link_f3_1"/>
+    <child link="link_f3_2"/>
+    <axis xyz="-0.0101468979551261 0.99994731636822 -0.0015507900836953"/>
+    <limit lower="-1.57" upper="1.57" effort="10" velocity="100"/>
+  </joint>
+  <link name="link_f3_3">
+    <inertial>
+      <origin xyz="0.0442682768834517 0.000447052534982395 -0.00138825632794681" rpy="0 0 0"/>
+      <mass value="0.0260028964716332"/>
+      <inertia ixx="3.48282165541386E-06" ixy="-3.7405200668484E-08" ixz="1.6316576122808E-07" iyy="7.19373134234755E-06" iyz="3.96287130820337E-09" izz="8.68157655036292E-06"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/visual/link_3.glb"/>
+      </geometry>
+    </visual>
+    <collision>   <!-- link_finger3_3 -->
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/collision/finger_tip.obj"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.013 0.018 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.03 0.01 0.024"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.013 -0.018 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.03 0.01 0.024"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="joint_f3_2" type="revolute">
+    <origin xyz="0.068496 0.00069546 0.00025837" rpy="0 0 0"/>
+    <parent link="link_f3_2"/>
+    <child link="link_f3_3"/>
+    <axis xyz="-0.010147 0.99995 -0.0015508"/>
+    <limit lower="-1.57" upper="1.57" effort="10" velocity="100"/>
+  </joint>
+
+  <!--  virtual auxiliary link-->
+  <link name="link_f1_head"/>
+  <link name="link_f2_head"/>
+  <link name="link_f3_head"/>
+  <joint name="joint_f1_head" type="fixed">
+    <parent link="link_f1_3"/>
+    <child link="link_f1_head"/>
+    <origin rpy="0 0 0" xyz="0.084 0 0"/>
+  </joint>
+  <joint name="joint_f2_head" type="fixed">
+    <parent link="link_f2_3"/>
+    <child link="link_f2_head"/>
+    <origin rpy="0 0 0" xyz="0.084 0 0"/>
+  </joint>
+  <joint name="joint_f3_head" type="fixed">
+    <parent link="link_f3_3"/>
+    <child link="link_f3_head"/>
+    <origin rpy="0 0 0" xyz="0.084 0 0"/>
+  </joint>
+</robot>

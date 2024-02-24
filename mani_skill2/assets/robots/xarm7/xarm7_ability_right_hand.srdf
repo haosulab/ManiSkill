@@ -1,0 +1,63 @@
+<?xml version="1.0" ?>
+<robot name="xarm7_ability_right_hand">
+  <group name="xarm7">
+    <joint name="joint1"/>
+    <joint name="joint2"/>
+    <joint name="joint3"/>
+    <joint name="joint4"/>
+    <joint name="joint5"/>
+    <joint name="joint6"/>
+    <joint name="joint7"/>
+  </group>
+  <group_state group="xarm7" name="home">
+    <joint name="joint1" value="0"/>
+    <joint name="joint2" value="0"/>
+    <joint name="joint3" value="0"/>
+    <joint name="joint4" value="0"/>
+    <joint name="joint5" value="0"/>
+    <joint name="joint6" value="0"/>
+    <joint name="joint7" value="0"/>
+  </group_state>
+  <group_state group="xarm7" name="hold-up">
+    <joint name="joint1" value="0"/>
+    <joint name="joint2" value="0"/>
+    <joint name="joint3" value="0"/>
+    <joint name="joint4" value="0"/>
+    <joint name="joint5" value="0"/>
+    <joint name="joint6" value="-1.5708"/>
+    <joint name="joint7" value="0"/>
+  </group_state>
+  <!--  xarm-->
+  <disable_collisions link1="link1" link2="link2" reason="Adjacent"/>
+  <disable_collisions link1="link1" link2="link3" reason="Never"/>
+  <disable_collisions link1="link1" link2="link4" reason="Never"/>
+  <disable_collisions link1="link1" link2="link_base" reason="Adjacent"/>
+  <disable_collisions link1="link2" link2="link3" reason="Adjacent"/>
+  <disable_collisions link1="link2" link2="link_base" reason="Never"/>
+  <disable_collisions link1="link3" link2="link4" reason="Adjacent"/>
+  <disable_collisions link1="link3" link2="link5" reason="Never"/>
+  <disable_collisions link1="link3" link2="link6" reason="Never"/>
+  <disable_collisions link1="link3" link2="link7" reason="Never"/>
+  <disable_collisions link1="link3" link2="link_base" reason="Never"/>
+  <disable_collisions link1="link4" link2="link5" reason="Adjacent"/>
+  <disable_collisions link1="link4" link2="link6" reason="Never"/>
+  <disable_collisions link1="link4" link2="link7" reason="Never"/>
+  <disable_collisions link1="link5" link2="link6" reason="Adjacent"/>
+  <disable_collisions link1="link5" link2="link7" reason="Never"/>
+  <disable_collisions link1="link6" link2="link7" reason="Adjacent"/>
+  <!--  Ability Only -->
+  <disable_collisions link1="base" link2="thumb_base" reason="Adjacent"/>
+  <disable_collisions link1="thumb_base" link2="index_L1" reason="Adjacent"/>
+  <disable_collisions link1="thumb_base" link2="middle_L1" reason="Adjacent"/>
+  <disable_collisions link1="thumb_base" link2="ring_L1" reason="Adjacent"/>
+  <disable_collisions link1="thumb_base" link2="pinky_L1" reason="Adjacent"/>
+  <disable_collisions link1="thumb_base" link2="thumb_L1" reason="Adjacent"/>
+  <disable_collisions link1="index_L1" link2="index_L2" reason="Adjacent"/>
+  <disable_collisions link1="middle_L1" link2="middle_L2" reason="Adjacent"/>
+  <disable_collisions link1="ring_L1" link2="ring_L2" reason="Adjacent"/>
+  <disable_collisions link1="pinky_L1" link2="pinky_L2" reason="Adjacent"/>
+  <disable_collisions link1="thumb_L1" link2="thumb_L2" reason="Adjacent"/>
+  <!--  arm and hand-->
+  <disable_collisions link1="link7" link2="base" reason="Adjacent"/>
+  <disable_collisions link1="link7" link2="thumb_base" reason="Default"/>
+</robot>

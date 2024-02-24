@@ -111,7 +111,9 @@ class ManiSkillVectorEnv(VectorEnv):
         if self.ignore_terminations:
             terminations[:] = False
         dones = torch.logical_or(terminations, truncations)
-
+        infos[
+            "real_next_obs"
+        ] = obs  # not part of standard API but makes some RL code slightly less complicated
         if dones.any():
             # TODO (stao): permit reset by indicies later
             infos["episode"]["r"] = self.returns.clone()
