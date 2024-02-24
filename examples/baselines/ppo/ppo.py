@@ -57,6 +57,8 @@ class Args:
     """the number of parallel evaluation environments"""
     num_steps: int = 50
     """the number of steps to run in each environment per policy rollout"""
+    num_eval_steps: int = 50
+    """the number of steps to run in each evaluation environment during evaluation"""
     anneal_lr: bool = False
     """Toggle learning rate annealing for policy and value networks"""
     gamma: float = 0.8
@@ -183,9 +185,9 @@ if __name__ == "__main__":
         envs = FlattenActionSpaceWrapper(envs)
         eval_envs = FlattenActionSpaceWrapper(eval_envs)
     if args.capture_video:
-        eval_envs = RecordEpisode(eval_envs, output_dir=f"runs/{run_name}/videos", save_trajectory=False, video_fps=30)
-    envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=False, **env_kwargs)
-    eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=True, **env_kwargs)
+        eval_envs = RecordEpisode(eval_envs, output_dir=f"runs/{run_name}/videos", save_trajectory=False, max_steps_per_video=args.num_eval_steps, video_fps=30)
+    envs = ManiSkillVectorEnv(envs, args.num_envs, **env_kwargs)
+    eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=False, **env_kwargs)
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
     agent = Agent(envs).to(device)
@@ -225,8 +227,9 @@ if __name__ == "__main__":
         if iteration % args.eval_freq == 1:
             # evaluate
             print("Evaluating")
+            eval_envs.reset()
             eval_done = False
-            while not eval_done:
+            for _ in range(args.num_eval_steps):
                 with torch.no_grad():
                     eval_obs, _, eval_terminations, eval_truncations, eval_infos = eval_envs.step(agent.get_action(eval_obs, deterministic=True))
                 if eval_truncations.any():

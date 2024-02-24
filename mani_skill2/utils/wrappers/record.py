@@ -138,8 +138,11 @@ class RecordEpisode(gym.Wrapper):
         trajectory_name: name of trajectory file (.h5). Use timestamp if not provided.
         save_video: whether to save video
         render_mode: rendering mode passed to `env.render`
-        save_on_reset: whether to save the previous trajectory automatically when resetting.
-            If True, the trajectory with empty transition will be ignored automatically.
+        save_on_reset: whether to save the previous trajectory automatically when resetting. Note that during partial resets on GPU simulation a video won't be saved.
+            It will only be saved if a full reset is done or user calls flush_video(). For recording videos on the GPU (to leverage fast parallel rendering) we recommend
+            setting max_steps_per_video to a fixed number so that every max_steps_per_video steps a video is saved.
+        max_steps_per_video: how many steps can be recorded into a single video before flushing the video. If None this is not used. A internal step counter is maintained to do this.
+            If the video is flushed at any point, the step counter is reset to 0.
         clean_on_close: whether to rename and prune trajectories when closed.
             See `clean_trajectories` for details.
         video_fps (int): The FPS of the video to generate if save_video is True
@@ -154,6 +157,7 @@ class RecordEpisode(gym.Wrapper):
         save_video=True,
         info_on_video=False,
         save_on_reset=True,
+        max_steps_per_video=None,
         clean_on_close=True,
         record_reward=False,
         init_state_only=False,
@@ -201,6 +205,9 @@ class RecordEpisode(gym.Wrapper):
             )
         self.video_nrows = int(np.sqrt(self.unwrapped.num_envs))
 
+        self.max_steps_per_video = max_steps_per_video
+        self._video_steps = 0
+
     @property
     def _base_env(self) -> BaseEnv:
         return self.env.unwrapped
@@ -223,14 +230,14 @@ class RecordEpisode(gym.Wrapper):
         options.pop("save_trajectory", False)
 
         if self.save_on_reset and self._episode_id >= 0 and not skip_trajectory:
-            self.flush_trajectory(ignore_empty_transition=True)
-            # when to flush video? Use last parallel env done?
-            self.flush_video(ignore_empty_transition=True)
+            # To make things easier, we only flush data when there is no partial reset.
+            if "env_idx" not in options:
+                self.flush_trajectory(ignore_empty_transition=True)
+                self.flush_video()
 
         # Clear cache
         self._episode_data = []
         self._episode_info = {}
-        self._render_images = []
         if not skip_trajectory:
             self._episode_id += 1
 
@@ -265,6 +272,7 @@ class RecordEpisode(gym.Wrapper):
             self._episode_info["info"] = to_numpy(info)
 
         if self.save_video:
+            self._video_steps += 1
             image = self.capture_image()
 
             if self.info_on_video:
@@ -276,6 +284,12 @@ class RecordEpisode(gym.Wrapper):
                 image = put_info_on_image(image, scalar_info, extras=extra_texts)
 
             self._render_images.append(image)
+            print(self._video_steps, self.max_steps_per_video)
+            if (
+                self.max_steps_per_video is not None
+                and self._video_steps >= self.max_steps_per_video
+            ):
+                self.flush_video()
 
         return obs, rew, terminated, truncated, info
 
@@ -396,7 +410,7 @@ class RecordEpisode(gym.Wrapper):
         if verbose:
             print("Record the {}-th episode".format(self._episode_id))
 
-    def flush_video(self, suffix="", verbose=False, ignore_empty_transition=False):
+    def flush_video(self, suffix="", verbose=False, ignore_empty_transition=True):
         if not self.save_video or len(self._render_images) == 0:
             return
         if ignore_empty_transition and len(self._render_images) == 1:
@@ -412,6 +426,8 @@ class RecordEpisode(gym.Wrapper):
             fps=self.video_fps,
             verbose=verbose,
         )
+        self._video_steps = 0
+        self._render_images = []
 
     def close(self) -> None:
         if self.save_trajectory:
@@ -428,5 +444,5 @@ class RecordEpisode(gym.Wrapper):
             self._h5_file.close()
         if self.save_video:
             if self.save_on_reset:
-                self.flush_video(ignore_empty_transition=True)
+                self.flush_video()
         return super().close()
