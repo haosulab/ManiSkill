@@ -431,7 +431,7 @@ class PickSequentialTaskEnv(SequentialTaskEnv):
             if torch.any(is_grasped):
                 # place reward
                 ee_to_rest_dist = torch.norm(tcp_pos[is_grasped] - goal_pos[is_grasped], dim=1)
-                place_reward = 3 * (1 - torch.tanh(3 * ee_to_rest_dist))
+                place_reward = 4 * (1 - torch.tanh(3 * ee_to_rest_dist))
                 is_grasped_reward += place_reward
 
                 # penalty for torso moving down too much
