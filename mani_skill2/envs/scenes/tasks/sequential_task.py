@@ -332,7 +332,6 @@ class SequentialTaskEnv(SceneManipulationEnv):
     def _get_obs_agent(self):
         agent_state = super()._get_obs_agent()
         agent_state["qpos"][..., :3] = 0
-        agent_state["qvel"][..., :3] = 0
         return agent_state
     
 

@@ -39,7 +39,7 @@ SCENE_IDX_TO_APPLE_PLAN = {
 SCENE_IDX = 6
 env: SequentialTaskEnv = gym.make(
     'SequentialTask-v0',
-    obs_mode='state',
+    obs_mode='rgbd',
     render_mode=render_mode,
     control_mode='pd_joint_delta_pos',
     reward_mode='dense',
@@ -47,29 +47,50 @@ env: SequentialTaskEnv = gym.make(
     scene_builder_cls=ArchitecTHORSceneBuilder,
     task_plans=[SCENE_IDX_TO_APPLE_PLAN[SCENE_IDX]],
     scene_idxs=SCENE_IDX,
-    num_envs=2,
+    # num_envs=2,
 )
 
-env = RecordEpisode(env, '.', save_trajectory=False)
-env.reset(seed=0)
+print(env.unwrapped._init_raw_obs)
 
-# print force on robot
-robot_link_names = [link.name for link in env.agent.robot.links]
-print(robot_link_names)
-print(torch.norm(env.agent.robot.get_net_contact_forces(robot_link_names), dim=-1))
+# print(env.observation_space.keys())
 
-for step_num in range(30):
-    action = np.zeros(env.action_space.shape)
+obs, info = env.reset(seed=0)
 
-    # torso up
-    action[..., -4] = 1
-    # head still
-    action[..., -5] = 0
-    # gripper open
-    action[..., -7] = 1
+# agent_obs = obs["agent"]
+# extra_obs = obs["extra"]
+# fetch_head_depth = obs["sensor_data"]["fetch_head"]["depth"]
+# fetch_hand_depth = obs["sensor_data"]["fetch_hand"]["depth"]
 
-    # move forward and left
-    action[..., -3:-1] = 1
+# # fetch_head_depth = torch.Tensor(fetch_head_depth.astype(np.int16))
+# # fetch_hand_depth = torch.Tensor(fetch_hand_depth.astype(np.int16))
 
-    obs, rew, term, trunc, info = env.step(action=action)
-env.close()
+# import matplotlib.pyplot as plt
+# plt.imsave('out.png', np.concatenate([fetch_head_depth, fetch_hand_depth], axis=-2)[..., 0])
+
+
+
+
+
+# env = RecordEpisode(env, '.', save_trajectory=False)
+# env.reset(seed=0)
+
+# # print force on robot
+# robot_link_names = [link.name for link in env.agent.robot.links]
+# print(robot_link_names)
+# print(torch.norm(env.agent.robot.get_net_contact_forces(robot_link_names), dim=-1))
+
+# for step_num in range(30):
+#     action = np.zeros(env.action_space.shape)
+
+#     # torso up
+#     action[..., -4] = 1
+#     # head still
+#     action[..., -5] = 0
+#     # gripper open
+#     action[..., -7] = 1
+
+#     # move forward and left
+#     action[..., -3:-1] = 1
+
+#     obs, rew, term, trunc, info = env.step(action=action)
+# env.close()
