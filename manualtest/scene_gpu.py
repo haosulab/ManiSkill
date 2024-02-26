@@ -43,14 +43,35 @@ if __name__ == "__main__":
         task_plans=[SCENE_IDX_TO_APPLE_PLAN[SCENE_IDX]],
         scene_idxs=SCENE_IDX,
         num_envs=2,
+        force_use_gpu_sim=True,
     )
     obs, info = env.reset(seed=0)
+    # import ipdb;ipdb.set_trace()
     viewer = env.render()
+    base_env: SequentialTaskEnv = env.unwrapped
     viewer.paused = True
-    for i in range(10000):
-        env.step(None)
-        env.render()
+    viewer = env.render()
+    print(base_env.agent.robot.qpos[0])
+    robot = base_env.agent.robot
+    print(robot.qpos[:, robot.active_joint_map["r_gripper_finger_joint"].active_index])
+    print(robot.qpos[:, robot.active_joint_map["l_gripper_finger_joint"].active_index])
+    print("START")
+    # import ipdb;ipdb.set_trace()
 
+    for i in range(10000):
+        action = np.zeros(env.action_space.shape)
+        action[..., -7] = -1
+        print("pre-step")
+        env.step(action)
+        print("post-step")
+        print(
+            robot.qpos[:, robot.active_joint_map["r_gripper_finger_joint"].active_index]
+        )
+        print(
+            robot.qpos[:, robot.active_joint_map["l_gripper_finger_joint"].active_index]
+        )
+
+        env.render()
     # agent_obs = obs["agent"]
     # extra_obs = obs["extra"]
     # fetch_head_depth = obs["sensor_data"]["fetch_head"]["depth"]
