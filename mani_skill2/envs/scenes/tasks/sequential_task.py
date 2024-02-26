@@ -4,6 +4,8 @@ from typing import Any, Dict, List, Tuple
 import numpy as np
 import sapien
 import sapien.physx as physx
+import torch
+import torch.random
 
 from mani_skill2.agents.robots import Fetch
 from mani_skill2.envs.scenes.base_env import SceneManipulationEnv
