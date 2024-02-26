@@ -1,0 +1,6 @@
+numpy
+torch==2.0.1
+tqdm
+wandb
+diffusers
+h5py
