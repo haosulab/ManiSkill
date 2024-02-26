@@ -1,12 +1,12 @@
 from typing import Union
 
 import numpy as np
-import torch
 import sapien as sapien
 import sapien.physx as physx
+import torch
 from sapien import Pose
 
-from mani_skill2.agents.robots import Panda, Fetch
+from mani_skill2.agents.robots import Fetch, Panda
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.sapien_utils import look_at
@@ -49,7 +49,9 @@ class SceneManipulationEnv(BaseEnv):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         self.fixed_scene = fixed_scene
         self.sampled_scene_idx: int = None
-        self.scene_builder: SceneBuilder = scene_builder_cls(self, robot_init_qpos_noise=robot_init_qpos_noise)
+        self.scene_builder: SceneBuilder = scene_builder_cls(
+            self, robot_init_qpos_noise=robot_init_qpos_noise
+        )
         if isinstance(scene_idxs, int):
             self.scene_idxs = [scene_idxs]
         elif isinstance(scene_idxs, list):
@@ -65,7 +67,7 @@ class SceneManipulationEnv(BaseEnv):
             options = dict(reconfigure=False)
         if not self.fixed_scene:
             options["reconfigure"] = True
-        if options["reconfigure"]:
+        if "reconfigure" in options and options["reconfigure"]:
             self.sampled_scene_idx = self.scene_idxs[
                 self._episode_rng.randint(0, len(self.scene_idxs))
             ]
@@ -95,12 +97,26 @@ class SceneManipulationEnv(BaseEnv):
         if self.robot_uids == "fetch":
             room_camera_pose = look_at([-6, 2, 2], [-2.5, 2, 0])
             room_camera_config = CameraConfig(
-                "render_camera", room_camera_pose.p, room_camera_pose.q, 512, 512, 1, 0.01, 10
+                "render_camera",
+                room_camera_pose.p,
+                room_camera_pose.q,
+                512,
+                512,
+                1,
+                0.01,
+                10,
             )
             robot_camera_pose = look_at([2, 0, 1], [0, 0, -1])
             robot_camera_config = CameraConfig(
-                "robot_render_camera", robot_camera_pose.p, robot_camera_pose.q, 512, 512, 1.5, 0.01, 10,
-                link=self.agent.torso_lift_link
+                "robot_render_camera",
+                robot_camera_pose.p,
+                robot_camera_pose.q,
+                512,
+                512,
+                1.5,
+                0.01,
+                10,
+                link=self.agent.torso_lift_link,
             )
             return room_camera_config, robot_camera_config
 

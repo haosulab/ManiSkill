@@ -12,6 +12,9 @@ import torch
 import tqdm
 
 import mani_skill2.envs
+from mani_skill2.envs.scenes.tasks.planner.planner import PickSubtask
+from mani_skill2.envs.scenes.tasks.sequential_task import SequentialTaskEnv
+from mani_skill2.utils.scene_builder.ai2thor.variants import ArchitecTHORSceneBuilder
 from mani_skill2.vector.wrappers.gymnasium import ManiSkillVectorEnv
 from profiling import Profiler
 from mani_skill2.utils.visualization.misc import images_to_video, tile_images
@@ -21,14 +24,39 @@ from mani_skill2.utils.wrappers.flatten import FlattenActionSpaceWrapper
 def main(args):
     profiler = Profiler(output_format=args.format)
     num_envs = args.num_envs
-    env = gym.make(
-        args.env_id,
-        num_envs=num_envs,
+    # env = gym.make(
+    #     args.env_id,
+    #     num_envs=num_envs,
+    #     obs_mode=args.obs_mode,
+    #     # enable_shadow=True,
+    #     render_mode=args.render_mode,
+    #     control_mode=args.control_mode,
+    #     sim_cfg=dict(control_freq=50)
+    # )
+    SCENE_IDX_TO_APPLE_PLAN = {
+        0: [PickSubtask(obj_id="objects/Apple_5_111")],
+        1: [PickSubtask(obj_id="objects/Apple_16_40")],
+        2: [PickSubtask(obj_id="objects/Apple_12_64")],
+        3: [PickSubtask(obj_id="objects/Apple_29_113")],
+        4: [PickSubtask(obj_id="objects/Apple_28_35")],
+        5: [PickSubtask(obj_id="objects/Apple_17_88")],
+        6: [PickSubtask(obj_id="objects/Apple_1_35")],
+        7: [PickSubtask(obj_id="objects/Apple_25_48")],
+        8: [PickSubtask(obj_id="objects/Apple_9_46")],
+        9: [PickSubtask(obj_id="objects/Apple_13_72")],
+    }
+
+    SCENE_IDX = 6
+    env: SequentialTaskEnv = gym.make(
+        "SequentialTask-v0",
         obs_mode=args.obs_mode,
-        # enable_shadow=True,
         render_mode=args.render_mode,
-        control_mode=args.control_mode,
-        sim_cfg=dict(control_freq=50)
+        control_mode="pd_joint_delta_pos",
+        robot_uids="fetch",
+        scene_builder_cls=ArchitecTHORSceneBuilder,
+        task_plans=[SCENE_IDX_TO_APPLE_PLAN[SCENE_IDX]],
+        scene_idxs=SCENE_IDX,
+        num_envs=args.num_envs,
     )
     if isinstance(env.action_space, gym.spaces.Dict):
         env = FlattenActionSpaceWrapper(env)
