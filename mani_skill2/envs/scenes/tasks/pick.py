@@ -407,11 +407,11 @@ class PickSequentialTaskEnv(SequentialTaskEnv):
                 close_enough_reward -= ee_jitter_pen
 
                 # pick reward
-                grasp_reward = 2 * info['is_grasped'][robot_close_enough]
+                grasp_reward = info['is_grasped'][robot_close_enough]
                 close_enough_reward += grasp_reward
 
                 # success reward
-                success_reward = 3 * info['success'][robot_close_enough]
+                success_reward = 2 * info['success'][robot_close_enough]
                 close_enough_reward += success_reward
 
 
@@ -431,24 +431,19 @@ class PickSequentialTaskEnv(SequentialTaskEnv):
             if torch.any(is_grasped):
                 # place reward
                 ee_to_rest_dist = torch.norm(tcp_pos[is_grasped] - goal_pos[is_grasped], dim=1)
-                place_reward = 4 * (1 - torch.tanh(3 * ee_to_rest_dist))
+                place_reward = 3 * (1 - torch.tanh(ee_to_rest_dist))
                 is_grasped_reward += place_reward
-
-                # penalty for torso moving down too much
-                tqvel_z = torch.clip(self.agent.robot.qvel[..., 3][is_grasped], max=0)
-                torso_move_down_pen = torch.tanh(5 * torch.abs(tqvel_z))
-                is_grasped_reward -= torso_move_down_pen
 
                 # penalty for base moving or rotating too much
                 bqvel = self.agent.robot.qvel[..., :3][is_grasped]
-                base_move_rot_pen = 1.5 * torch.tanh(torch.norm(bqvel, dim=1))
+                base_move_rot_pen = 0.5 * torch.tanh(torch.norm(bqvel, dim=1))
                 is_grasped_reward -= base_move_rot_pen
 
                 # encourage arm and torso in "resting" orientation
                 arm_to_resting_diff = torch.norm(
                     self.agent.robot.qpos[..., 3:-2][is_grasped] - self.agent.RESTING_QPOS[3:-2], dim=1
                 )
-                arm_resting_orientation_pen = torch.tanh(arm_to_resting_diff / 5)
+                arm_resting_orientation_pen = 0.5 * torch.tanh(arm_to_resting_diff / 5)
                 is_grasped_reward -= arm_resting_orientation_pen
 
 
