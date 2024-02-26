@@ -2,16 +2,20 @@ from dataclasses import dataclass
 from typing import Sequence, Union
 
 import numpy as np
+import torch
 from gymnasium import spaces
 
-from ..base_controller import BaseController, ControllerConfig
+from mani_skill2.utils.sapien_utils import to_tensor
+from mani_skill2.utils.structs.types import Array
+
+from .base_controller import BaseController, ControllerConfig
 
 
 class PDJointPosController(BaseController):
     config: "PDJointPosControllerConfig"
 
     def _get_joint_limits(self):
-        qlimits = self.articulation.get_qlimits()[self.joint_indices]
+        qlimits = self.articulation.get_qlimits()[0, self.joint_indices].cpu().numpy()
         # Override if specified
         if self.config.lower is not None:
             qlimits[:, 0] = self.config.lower
@@ -22,7 +26,7 @@ class PDJointPosController(BaseController):
     def _initialize_action_space(self):
         joint_limits = self._get_joint_limits()
         low, high = joint_limits[:, 0], joint_limits[:, 1]
-        self.action_space = spaces.Box(low, high, dtype=np.float32)
+        self.single_action_space = spaces.Box(low, high, dtype=np.float32)
 
     def set_drive_property(self):
         n = len(self.joints)
@@ -32,7 +36,7 @@ class PDJointPosController(BaseController):
         friction = np.broadcast_to(self.config.friction, n)
 
         for i, joint in enumerate(self.joints):
-            joint.set_drive_property(
+            joint.set_drive_properties(
                 stiffness[i], damping[i], force_limit=force_limit[i]
             )
             joint.set_friction(friction[i])
@@ -44,24 +48,23 @@ class PDJointPosController(BaseController):
         self._target_qpos = self.qpos
 
     def set_drive_targets(self, targets):
-        for i, joint in enumerate(self.joints):
-            joint.set_drive_target(targets[i])
+        self.articulation.set_joint_drive_targets(
+            targets, self.joints, self.joint_indices
+        )
 
-    def set_action(self, action: np.ndarray):
+    def set_action(self, action: Array):
         action = self._preprocess_action(action)
-
+        action = to_tensor(action)
         self._step = 0
         self._start_qpos = self.qpos
-
         if self.config.use_delta:
             if self.config.use_target:
                 self._target_qpos = self._target_qpos + action
             else:
                 self._target_qpos = self._start_qpos + action
         else:
-            # Compatible with mimic
-            self._target_qpos = np.broadcast_to(action, self._start_qpos.shape)
-
+            # Compatible with mimic controllers
+            self._target_qpos = torch.broadcast_to(action, self._start_qpos.shape)
         if self.config.interpolate:
             self._step_size = (self._target_qpos - self._start_qpos) / self._sim_steps
         else:

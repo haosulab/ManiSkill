@@ -4,10 +4,14 @@ from typing import Sequence, Union
 import numpy as np
 from gymnasium import spaces
 
-from ..base_controller import BaseController, ControllerConfig
+from .base_controller import BaseController, ControllerConfig
 
 
 class PassiveController(BaseController):
+    """
+    Passive controller that does not do anything
+    """
+
     config: "PassiveControllerConfig"
 
     def set_drive_property(self):
@@ -21,8 +25,9 @@ class PassiveController(BaseController):
             joint.set_friction(friction[i])
 
     def _initialize_action_space(self):
-        # Can not be printed
-        self.action_space = spaces.Box(np.empty(0), np.empty(0), dtype=np.float32)
+        self.single_action_space = spaces.Box(
+            np.empty(0), np.empty(0), dtype=np.float32
+        )
 
     def set_action(self, action: np.ndarray):
         pass

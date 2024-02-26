@@ -35,7 +35,7 @@ def test_kernel(
     x_ceil[tid] = wp.ceil(x[tid])
 
 def test_rounding(test, device):
-        
+
     nx = np.array([ 4.9,  4.5,  4.1,  3.9,  3.5,  3.1,  2.9,  2.5,  2.1,  1.9,  1.5,  1.1,  0.9,  0.5,  0.1,
                 -0.1, -0.5, -0.9, -1.1, -1.5, -1.9, -2.1, -2.5, -2.9, -3.1, -3.5, -3.9, -4.1, -4.5, -4.9],
                 dtype=np.float32)

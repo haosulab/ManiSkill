@@ -47,7 +47,7 @@ if __name__ == '__main__':
     #unittest.main(verbosity=2)
 
     wp.force_load()
-    
+
     loader = unittest.defaultTestLoader
     testSuite = loader.loadTestsFromTestCase(c)
     testSuite.debug()

@@ -1,0 +1,14 @@
+{
+  "scenes": [
+    "./ArchitecTHOR-Test-03.scene_instance.json",
+    "./ArchitecTHOR-Val-02.scene_instance.json",
+    "./ArchitecTHOR-Val-01.scene_instance.json",
+    "./ArchitecTHOR-Test-02.scene_instance.json",
+    "./ArchitecTHOR-Val-04.scene_instance.json",
+    "./ArchitecTHOR-Val-03.scene_instance.json",
+    "./ArchitecTHOR-Val-00.scene_instance.json",
+    "./ArchitecTHOR-Test-01.scene_instance.json",
+    "./ArchitecTHOR-Test-04.scene_instance.json",
+    "./ArchitecTHOR-Test-00.scene_instance.json"
+  ]    
+}

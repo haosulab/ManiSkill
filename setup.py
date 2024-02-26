@@ -4,17 +4,9 @@ long_description = """ManiSkill2 is a unified benchmark for learning generalizab
 
 Please refer our [documentation](https://haosulab.github.io/ManiSkill2) to learn more information."""
 
-
-def read_requirements():
-    with open("requirements.txt", "r") as f:
-        lines = [l.strip() for l in f.readlines()]
-    install_requires = list(filter(None, lines))
-    return install_requires
-
-
 setup(
     name="mani_skill2",
-    version="0.5.3",
+    version="0.6.0.dev3",
     description="ManiSkill2: A Unified Benchmark for Generalizable Manipulation Skills",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -26,7 +18,24 @@ setup(
     ),
     python_requires=">=3.8",
     setup_requires=["setuptools>=62.3.0"],
-    install_requires=read_requirements(),
+    install_requires=[
+        "numpy>=1.22",
+        "scipy",
+        "gymnasium>=0.28.1",
+        "sapien==3.0.0.dev0",
+        "h5py",
+        "pyyaml",
+        "tqdm",
+        "GitPython",
+        "tabulate",
+        "transforms3d",
+        "trimesh",
+        "rtree",
+        "opencv-python",
+        "imageio",
+        "imageio[ffmpeg]",
+        "pytorch_kinematics",
+    ],
     # Glob patterns do not automatically match dotfiles
     package_data={
         "mani_skill2": [

@@ -157,7 +157,7 @@ def solve_tetrahedra(x: wp.array(dtype=wp.vec3),
 
     # if (r_s == 0.0):
     #     return
-    
+
     # if (tr < 3.0):
     #     r_s = 0.0 - r_s
 
@@ -174,7 +174,7 @@ def solve_tetrahedra(x: wp.array(dtype=wp.vec3),
     # C_Spherical
     # r_s = wp.sqrt(dot(f1, f1) + dot(f2, f2) + dot(f3, f3))
     # r_s_inv = 1.0/r_s
-    # C = r_s - wp.sqrt(3.0) 
+    # C = r_s - wp.sqrt(3.0)
     # dCdx = F*wp.transpose(Dm)*r_s_inv
     # alpha = 1.0
 
@@ -265,7 +265,7 @@ class XPBDIntegrator:
     After constructing `Model` and `State` objects this time-integrator
     may be used to advance the simulation state forward in time.
 
-    Semi-implicit time integration is a variational integrator that 
+    Semi-implicit time integration is a variational integrator that
     preserves energy, however it not unconditionally stable, and requires a time-step
     small enough to support the required stiffness and damping forces.
 
@@ -282,7 +282,7 @@ class XPBDIntegrator:
     """
 
     def __init__(self, iterations, relaxation):
-        
+
         self.iterations = iterations
         self.relaxation = relaxation
 
@@ -320,7 +320,7 @@ class XPBDIntegrator:
                                 inputs=[state_in.particle_q, state_in.particle_qd, model.particle_inv_mass, model.spring_indices, model.spring_rest_length, model.spring_stiffness, model.spring_damping, dt],
                                 outputs=[state_out.particle_f],
                                 device=model.device)
-               
+
                 # tetrahedral FEM
                 if (model.tet_count):
 
@@ -346,4 +346,3 @@ class XPBDIntegrator:
             state_out.particle_qd = qd_pred
 
             return state_out
-

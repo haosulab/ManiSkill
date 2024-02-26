@@ -46,14 +46,6 @@ DATASET_SOURCES["PandaAvoidObstacles-v0"] = dict(
     ],
     latest_version=0,
 )
-DATASET_SOURCES["PickSingleEGAD-v0"] = dict(
-    env_type="rigid_body",
-    object_paths=[
-        "rigid_body/PickSingleEGAD-v0/trajectory.h5",
-        "rigid_body/PickSingleEGAD-v0/trajectory.json",
-    ],
-    latest_version=0,
-)
 DATASET_SOURCES["PickSingleYCB-v0"] = dict(
     env_type="rigid_body",
     object_paths=[

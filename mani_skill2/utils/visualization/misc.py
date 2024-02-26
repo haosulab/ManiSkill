@@ -4,11 +4,13 @@ from typing import Dict, List, Optional
 import cv2
 import imageio
 import numpy as np
+import torch
 import tqdm
 
+from mani_skill2.utils.structs.types import Array
 
 def images_to_video(
-    images: List[np.ndarray],
+    images: List[Array],
     output_dir: str,
     video_name: str,
     fps: int = 10,
@@ -50,22 +52,27 @@ def images_to_video(
 
 def normalize_depth(depth, min_depth=0, max_depth=None):
     if min_depth is None:
-        min_depth = np.min(depth)
+        min_depth = depth.min()
     if max_depth is None:
-        max_depth = np.max(depth)
+        max_depth = depth.max()
     depth = (depth - min_depth) / (max_depth - min_depth)
-    depth = np.clip(depth, 0, 1)
+    depth = depth.clip(0, 1)
     return depth
 
 
-def observations_to_images(observations, max_depth=None) -> List[np.ndarray]:
+def observations_to_images(observations, max_depth=None) -> List[Array]:
     """Parse images from camera observations."""
     images = []
+    # is_torch = False
+    # if torch is not None:
+    #     is_torch = isinstance(images[0], torch.Tensor)
     for key in observations:
         if "rgb" in key or "Color" in key:
             rgb = observations[key][..., :3]
             if rgb.dtype == np.float32:
                 rgb = np.clip(rgb * 255, 0, 255).astype(np.uint8)
+            if torch is not None and rgb.dtype == torch.float:
+                rgb = torch.clip(rgb * 255, 0, 255).to(torch.uint8)
             images.append(rgb)
         elif "depth" in key or "Position" in key:
             depth = observations[key]
@@ -73,17 +80,22 @@ def observations_to_images(observations, max_depth=None) -> List[np.ndarray]:
                 depth = -depth[..., 2:3]
             # [H, W, 1]
             depth = normalize_depth(depth, max_depth=max_depth)
-            depth = np.clip(depth * 255, 0, 255).astype(np.uint8)
-            depth = np.repeat(depth, 3, axis=-1)
+            depth = (depth * 255).clip(0, 255)
+            if isinstance(depth, np.ndarray):
+                depth = depth.astype(np.uint8)
+                depth = np.repeat(depth, 3, axis=-1)
+            else:
+                depth = depth.to(torch.uint8)
+                depth = torch.repeat_interleave(depth, 3, dim=-1)
             images.append(depth)
         elif "seg" in key:
-            seg: np.ndarray = observations[key]  # [H, W, 1]
+            seg: Array = observations[key]  # [H, W, 1]
             assert seg.ndim == 3 and seg.shape[-1] == 1, seg.shape
             # A heuristic way to colorize labels
             seg = np.uint8(seg * [11, 61, 127])  # [H, W, 3]
             images.append(seg)
         elif "Segmentation" in key:
-            seg: np.ndarray = observations[key]  # [H, W, 4]
+            seg: Array = observations[key]  # [H, W, 4]
             assert seg.ndim == 3 and seg.shape[-1] == 4, seg.shape
             # A heuristic way to colorize labels
             visual_seg = np.uint8(seg[..., 0:1] * [11, 61, 127])  # [H, W, 3]
@@ -93,43 +105,71 @@ def observations_to_images(observations, max_depth=None) -> List[np.ndarray]:
     return images
 
 
-def tile_images(images: List[np.ndarray]) -> np.ndarray:
-    """Tile multiple images to a single image. Support non-equal size."""
+def tile_images(images: List[Array], nrows=1) -> Array:
+    """
+    Tile multiple images to a single image comprised of nrows and an appropriate number of columns to fit all the images.
+    The images can also be batched (e.g. of shape (B, H, W, C)), but give images must all have the same batch size.
+
+    if nrows is 1, images can be of different sizes. If nrows > 1, they must all be the same size.
+    """
     # Sort images in descending order of vertical height
-    images = sorted(images, key=lambda x: x.shape[0], reverse=True)
+    batched = False
+    if len(images[0].shape) == 4:
+        batched = True
+    if nrows == 1:
+        images = sorted(images, key=lambda x: x.shape[0 + batched], reverse=True)
 
     columns = []
-    max_h = images[0].shape[0]
-    cur_h = 0
-    cur_w = images[0].shape[1]
+    if batched:
+        max_h = images[0].shape[1] * nrows
+        cur_h = 0
+        cur_w = images[0].shape[2]
+    else:
+        max_h = images[0].shape[0] * nrows
+        cur_h = 0
+        cur_w = images[0].shape[1]
 
     # Arrange images in columns from left to right
     column = []
     for im in images:
-        if cur_h + im.shape[0] <= max_h and cur_w == im.shape[1]:
+        if cur_h + im.shape[0 + batched] <= max_h and cur_w == im.shape[1 + batched]:
             column.append(im)
-            cur_h += im.shape[0]
+            cur_h += im.shape[0 + batched]
         else:
             columns.append(column)
             column = [im]
-            cur_h, cur_w = im.shape[0:2]
+            cur_h, cur_w = im.shape[0 + batched : 2 + batched]
     columns.append(column)
 
     # Tile columns
-    total_width = sum(x[0].shape[1] for x in columns)
-    output_image = np.zeros((max_h, total_width, 3), dtype=images[0].dtype)
+    total_width = sum(x[0].shape[1 + batched] for x in columns)
+
+    is_torch = False
+    if torch is not None:
+        is_torch = isinstance(images[0], torch.Tensor)
+
+    output_shape = (max_h, total_width, 3)
+    if batched:
+        output_shape = (images[0].shape[0], max_h, total_width, 3)
+    if is_torch:
+        output_image = torch.zeros(output_shape, dtype=images[0].dtype)
+    else:
+        output_image = np.zeros(output_shape, dtype=images[0].dtype)
     cur_x = 0
     for column in columns:
-        cur_w = column[0].shape[1]
+        cur_w = column[0].shape[1 + batched]
         next_x = cur_x + cur_w
-        column_image = np.concatenate(column, axis=0)
-        cur_h = column_image.shape[0]
-        output_image[:cur_h, cur_x:next_x] = column_image
+        if is_torch:
+            column_image = torch.concatenate(column, dim=0 + batched)
+        else:
+            column_image = np.concatenate(column, axis=0 + batched)
+        cur_h = column_image.shape[0 + batched]
+        output_image[..., :cur_h, cur_x:next_x, :] = column_image
         cur_x = next_x
     return output_image
 
 
-def put_text_on_image(image: np.ndarray, lines: List[str]):
+def put_text_on_image(image: Array, lines: List[str]):
     assert image.dtype == np.uint8, image.dtype
     image = image.copy()
 
@@ -155,7 +195,7 @@ def put_text_on_image(image: np.ndarray, lines: List[str]):
     return image
 
 
-def append_text_to_image(image: np.ndarray, lines: List[str]):
+def append_text_to_image(image: Array, lines: List[str]):
     r"""Appends text left to an image of size (height, width, channels).
     The returned image has white text on a black background.
     Args:

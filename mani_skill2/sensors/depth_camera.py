@@ -1,12 +1,13 @@
+# TODO (stao): reimplement this
 from collections import OrderedDict
-from typing import Dict, List, Sequence
 
 import numpy as np
-import sapien.core as sapien
+import sapien
+import sapien.physx as physx
 from gymnasium import spaces
 from sapien.sensor import StereoDepthSensor, StereoDepthSensorConfig
 
-from mani_skill2.utils.sapien_utils import get_entity_by_name
+from mani_skill2.utils.sapien_utils import get_obj_by_name
 
 from .camera import Camera, CameraConfig
 
@@ -36,20 +37,20 @@ class StereoDepthCamera(Camera):
         camera_cfg: StereoDepthCameraConfig,
         scene: sapien.Scene,
         renderer_type: str,
-        articulation: sapien.Articulation = None,
+        articulation: physx.PhysxArticulation = None,
     ):
         self.camera_cfg = camera_cfg
         assert renderer_type == "sapien", renderer_type
         self.renderer_type = renderer_type
 
-        actor_uid = camera_cfg.actor_uid
+        actor_uid = camera_cfg.entity_uid
         if actor_uid is None:
             self.actor = None
         else:
             if articulation is None:
-                self.actor = get_entity_by_name(scene.get_all_actors(), actor_uid)
+                self.actor = get_obj_by_name(scene.get_all_actors(), actor_uid)
             else:
-                self.actor = get_entity_by_name(articulation.get_links(), actor_uid)
+                self.actor = get_obj_by_name(articulation.get_links(), actor_uid)
             if self.actor is None:
                 raise RuntimeError(f"Mount actor ({actor_uid}) is not found")
 

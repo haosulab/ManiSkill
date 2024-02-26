@@ -1,0 +1,12 @@
+# Blender MTL File: 'color.blend'
+# Material Count: 1
+
+newmtl metal_silver
+Ns 809.999997
+Ka 0.300000 0.300000 0.300000
+Kd 0.208637 0.226966 0.246201
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3

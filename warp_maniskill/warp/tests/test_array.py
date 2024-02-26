@@ -99,7 +99,7 @@ def kernel_3d(a: wp.array(dtype=int, ndim=3), m: int, n: int, o: int):
 
 
 def test_3d(test, device):
-    
+
     dim_x = 8
     dim_y = 4
     dim_z = 2
@@ -131,7 +131,7 @@ def kernel_4d(a: wp.array(dtype=int, ndim=4), m: int, n: int, o: int, p: int):
     wp.expect_eq(a[i][j][k][l], wp.tid())
 
 def test_4d(test, device):
-    
+
     dim_x = 16
     dim_y = 8
     dim_z = 4
@@ -148,7 +148,7 @@ def test_4d(test, device):
 
     with CheckOutput(test):
         wp.launch(kernel_4d, dim=arr.size, inputs=[arr, dim_x, dim_y, dim_z, dim_w], device=device)
-        
+
 
 @wp.kernel
 def kernel_4d_transposed(a: wp.array(dtype=int, ndim=4), m: int, n: int, o: int, p: int):
@@ -163,7 +163,7 @@ def kernel_4d_transposed(a: wp.array(dtype=int, ndim=4), m: int, n: int, o: int,
 
 
 def test_4d_transposed(test, device):
-    
+
     dim_x = 16
     dim_y = 8
     dim_z = 4
@@ -171,7 +171,7 @@ def test_4d_transposed(test, device):
 
     a = np.arange(0, dim_x*dim_y*dim_z*dim_w, dtype=np.int32)
     a = a.reshape(dim_x, dim_y, dim_z, dim_w)
-    
+
     arr = wp.array(a, device=device)
 
     # Transpose the array manually, as using the wp.array() constructor with arr.T would make it contiguous first

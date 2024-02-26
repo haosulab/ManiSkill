@@ -18,7 +18,7 @@ def mul_constant(
     y : wp.array(dtype=float)):
 
     tid = wp.tid()
-    
+
     y[tid] = x[tid]*2.0
 
 @wp.kernel
@@ -44,20 +44,20 @@ def dot_product(
 
 
 def test_tape_mul_constant(test, device):
-        
+
     dim = 8
     iters = 16
     tape = wp.Tape()
 
     # record onto tape
     with tape:
-        
+
         # input data
         x0 = wp.array(np.zeros(dim), dtype=wp.float32, device=device, requires_grad=True)
         x = x0
 
         for i in range(iters):
-        
+
             y = wp.empty_like(x, requires_grad=True)
             wp.launch(kernel=mul_constant, dim=dim, inputs=[x], outputs=[y], device=device)
             x = y
@@ -73,13 +73,13 @@ def test_tape_mul_constant(test, device):
 
 
 def test_tape_mul_variable(test, device):
-        
+
     dim = 8
     tape = wp.Tape()
 
     # record onto tape
     with tape:
-        
+
         # input data
         x = wp.array(np.ones(dim)*16.0, dtype=wp.float32, device=device, requires_grad=True)
         y = wp.array(np.ones(dim)*32.0, dtype=wp.float32, device=device, requires_grad=True)
@@ -107,13 +107,13 @@ def test_tape_mul_variable(test, device):
 
 
 def test_tape_dot_product(test, device):
-        
+
     dim = 8
     tape = wp.Tape()
 
     # record onto tape
     with tape:
-        
+
         # input data
         x = wp.array(np.ones(dim)*16.0, dtype=wp.float32, device=device, requires_grad=True)
         y = wp.array(np.ones(dim)*32.0, dtype=wp.float32, device=device, requires_grad=True)

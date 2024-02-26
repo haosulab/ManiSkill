@@ -40,7 +40,7 @@ def box_sdf(upper: wp.vec3, p: wp.vec3):
     qz = abs(p[2])-upper[2]
 
     e = wp.vec3(wp.max(qx, 0.0), wp.max(qy, 0.0), wp.max(qz, 0.0))
-    
+
     return wp.length(e) + wp.min(wp.max(qx, wp.max(qy, qz)), 0.0)
 
 
@@ -53,7 +53,7 @@ def box_sdf_grad(upper: wp.vec3, p: wp.vec3):
 
     # exterior case
     if (qx > 0.0 or qy > 0.0 or qz > 0.0):
-        
+
         x = wp.clamp(p[0], 0.0-upper[0], upper[0])
         y = wp.clamp(p[1], 0.0-upper[1], upper[1])
         z = wp.clamp(p[2], 0.0-upper[2], upper[2])
@@ -67,7 +67,7 @@ def box_sdf_grad(upper: wp.vec3, p: wp.vec3):
     # x projection
     if (qx > qy and qx > qz):
         return wp.vec3(sx, 0.0, 0.0)
-    
+
     # y projection
     if (qy > qx and qy > qz):
         return wp.vec3(0.0, sy, 0.0)
@@ -95,7 +95,7 @@ def capsule_sdf_grad(radius: float, half_width: float, p: wp.vec3):
 
     if (p[0] < 0.0 - half_width):
         return normalize(wp.vec3(p[0] + half_width, p[1], p[2]))
-        
+
     return normalize(wp.vec3(0.0, p[1], p[2]))
 
 
@@ -104,11 +104,11 @@ def capsule_sdf_grad(radius: float, half_width: float, p: wp.vec3):
 @wp.kernel
 def create_soft_contacts(
     num_particles: int,
-    particle_x: wp.array(dtype=wp.vec3), 
+    particle_x: wp.array(dtype=wp.vec3),
     body_X_sc: wp.array(dtype=wp.transform),
     shape_X_co: wp.array(dtype=wp.transform),
     shape_body: wp.array(dtype=int),
-    shape_geo_type: wp.array(dtype=int), 
+    shape_geo_type: wp.array(dtype=int),
     shape_geo_id: wp.array(dtype=wp.uint64),
     shape_geo_scale: wp.array(dtype=wp.vec3),
     soft_contact_margin: float,
@@ -120,8 +120,8 @@ def create_soft_contacts(
     soft_contact_body_vel: wp.array(dtype=wp.vec3),
     soft_contact_normal: wp.array(dtype=wp.vec3),
     soft_contact_max: int):
-    
-    tid = wp.tid()           
+
+    tid = wp.tid()
 
     shape_index = tid // num_particles     # which shape
     particle_index = tid % num_particles   # which particle
@@ -132,12 +132,12 @@ def create_soft_contacts(
     X_sc = wp.transform_identity()
     if (rigid_index >= 0):
         X_sc = body_X_sc[rigid_index]
-    
+
     X_co = shape_X_co[shape_index]
 
     X_so = wp.transform_multiply(X_sc, X_co)
     X_os = wp.transform_inverse(X_so)
-    
+
     # transform particle position to shape local space
     x_local = wp.transform_point(X_os, px)
 
@@ -146,7 +146,7 @@ def create_soft_contacts(
     geo_scale = shape_geo_scale[shape_index]
 
    # evaluate shape sdf
-    d = 1.e+6 
+    d = 1.e+6
     n = wp.vec3()
     v = wp.vec3()
 
@@ -159,7 +159,7 @@ def create_soft_contacts(
     if (geo_type == 1):
         d = box_sdf(geo_scale, x_local)
         n = box_sdf_grad(geo_scale, x_local)
-        
+
     # GEO_CAPSULE (2)
     if (geo_type == 2):
         d = capsule_sdf(geo_scale[0], geo_scale[1], x_local)
@@ -170,7 +170,7 @@ def create_soft_contacts(
         mesh = shape_geo_id[shape_index]
 
         face_index = int(0)
-        face_u = float(0.0)  
+        face_u = float(0.0)
         face_v = float(0.0)
         sign = float(0.0)
 
@@ -190,7 +190,7 @@ def create_soft_contacts(
 
     if (d < soft_contact_margin):
 
-        index = wp.atomic_add(soft_contact_count, 0, 1) 
+        index = wp.atomic_add(soft_contact_count, 0, 1)
 
         if (index < soft_contact_max):
 
@@ -210,17 +210,17 @@ def collide(model, state):
 
     # clear old count
     model.soft_contact_count.zero_()
-    
+
     wp.launch(
         kernel=create_soft_contacts,
         dim=model.particle_count*model.shape_count,
         inputs=[
             model.particle_count,
-            state.particle_q, 
+            state.particle_q,
             state.body_q,
             model.shape_transform,
             model.shape_body,
-            model.shape_geo_type, 
+            model.shape_geo_type,
             model.shape_geo_id,
             model.shape_geo_scale,
             model.soft_contact_margin,

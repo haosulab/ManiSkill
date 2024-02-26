@@ -1,55 +1,52 @@
+from __future__ import annotations
+
 from collections import OrderedDict
-from typing import Dict, List, Sequence
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Dict, List, Sequence
 
 import numpy as np
-import sapien.core as sapien
+import sapien
+import sapien.physx as physx
+import sapien.render
 from gymnasium import spaces
 
-from mani_skill2.utils.sapien_utils import get_entity_by_name
+from mani_skill2.utils.structs.articulation import Articulation
+from mani_skill2.utils.structs.link import Link
+
+if TYPE_CHECKING:
+    from mani_skill2.envs.scene import ManiSkillScene
+
+from mani_skill2.utils.sapien_utils import get_obj_by_name, hide_entity
+
+from .base_sensor import BaseSensor, BaseSensorConfig
 
 
-class CameraConfig:
-    def __init__(
-        self,
-        uid: str,
-        p: List[float],
-        q: List[float],
-        width: int,
-        height: int,
-        fov: float,
-        near: float,
-        far: float,
-        actor_uid: str = None,
-        hide_link: bool = False,
-        texture_names: Sequence[str] = ("Color", "Position"),
-    ):
-        """Camera configuration.
+@dataclass
+class CameraConfig(BaseSensorConfig):
 
-        Args:
-            uid (str): unique id of the camera
-            p (List[float]): position of the camera
-            q (List[float]): quaternion of the camera
-            width (int): width of the camera
-            height (int): height of the camera
-            fov (float): field of view of the camera
-            near (float): near plane of the camera
-            far (float): far plane of the camera
-            actor_uid (str, optional): unique id of the actor to mount the camera. Defaults to None.
-            hide_link (bool, optional): whether to hide the link to mount the camera. Defaults to False.
-            texture_names (Sequence[str], optional): texture names to render. Defaults to ("Color", "Position").
-        """
-        self.uid = uid
-        self.p = p
-        self.q = q
-        self.width = width
-        self.height = height
-        self.fov = fov
-        self.near = near
-        self.far = far
-
-        self.actor_uid = actor_uid
-        self.hide_link = hide_link
-        self.texture_names = tuple(texture_names)
+    uid: str
+    """uid (str): unique id of the camera"""
+    p: List[float]
+    """p (List[float]): position of the camera"""
+    q: List[float]
+    """q (List[float]): quaternion of the camera"""
+    width: int
+    """width (int): width of the camera"""
+    height: int
+    """height (int): height of the camera"""
+    fov: float
+    """fov (float): field of view of the camera"""
+    near: float
+    """near (float): near plane of the camera"""
+    far: float
+    """far (float): far plane of the camera"""
+    entity_uid: str = None
+    """entity_uid (str, optional): unique id of the entity to mount the camera. Defaults to None."""
+    link: Link = None
+    hide_link: bool = False
+    """hide_link (bool, optional): whether to hide the link to mount the camera. Defaults to False."""
+    texture_names: Sequence[str] = ("Color", "PositionSegmentation")
+    """texture_names (Sequence[str], optional): texture names to render. Defaults to ("Color", "PositionSegmentation"). Note that the renderign speed will not really change if you remove PositionSegmentation"""
 
     def __repr__(self) -> str:
         return self.__class__.__name__ + "(" + str(self.__dict__) + ")"
@@ -112,34 +109,38 @@ def parse_camera_cfgs(camera_cfgs):
         raise TypeError(type(camera_cfgs))
 
 
-class Camera:
-    """Wrapper for sapien camera."""
-
-    TEXTURE_DTYPE = {"Color": "float", "Position": "float", "Segmentation": "uint32"}
+class Camera(BaseSensor):
+    """Implementation of the Camera sensor which uses the sapien Camera."""
 
     def __init__(
         self,
         camera_cfg: CameraConfig,
-        scene: sapien.Scene,
-        renderer_type: str,
-        articulation: sapien.Articulation = None,
+        scene: ManiSkillScene,
+        articulation: Articulation = None,
     ):
-        self.camera_cfg = camera_cfg
-        self.renderer_type = renderer_type
+        super().__init__(cfg=camera_cfg)
 
-        actor_uid = camera_cfg.actor_uid
-        if actor_uid is None:
-            self.actor = None
+        self.camera_cfg = camera_cfg
+
+        entity_uid = camera_cfg.entity_uid
+        if camera_cfg.link is not None:
+            self.entity = camera_cfg.link
+        elif entity_uid is None:
+            self.entity = None
         else:
             if articulation is None:
-                self.actor = get_entity_by_name(scene.get_all_actors(), actor_uid)
+                # TODO (stao): This line certainly should not work. Fix to support adding mounted cameras to non articulated objects (Actors here then)
+                # self.entity = get_obj_by_name(scene.get_entities(), entity_uid)
+                raise NotImplementedError(
+                    "Adding cameras mounted to non articulated objects has not been implemented yet"
+                )
             else:
-                self.actor = get_entity_by_name(articulation.get_links(), actor_uid)
-            if self.actor is None:
-                raise RuntimeError(f"Mount actor ({actor_uid}) is not found")
+                self.entity = get_obj_by_name(articulation.get_links(), entity_uid)
+            if self.entity is None:
+                raise RuntimeError(f"Mount entity ({entity_uid}) is not found")
 
-        # Add camera
-        if self.actor is None:
+        # Add camera to scene. Add mounted one if a entity is given
+        if self.entity is None:
             self.camera = scene.add_camera(
                 camera_cfg.uid,
                 camera_cfg.width,
@@ -148,11 +149,11 @@ class Camera:
                 camera_cfg.near,
                 camera_cfg.far,
             )
-            self.camera.set_local_pose(camera_cfg.pose)
+            self.camera.local_pose = camera_cfg.pose
         else:
             self.camera = scene.add_mounted_camera(
                 camera_cfg.uid,
-                self.actor,
+                self.entity,
                 camera_cfg.pose,
                 camera_cfg.width,
                 camera_cfg.height,
@@ -162,69 +163,28 @@ class Camera:
             )
 
         if camera_cfg.hide_link:
-            self.actor.hide_visual()
+            # TODO (stao): this will not work on gpu sim probably
+            hide_entity(self.entity)
 
         # Filter texture names according to renderer type if necessary (legacy for Kuafu)
         self.texture_names = camera_cfg.texture_names
 
-    @property
-    def uid(self):
-        return self.camera_cfg.uid
-
-    def take_picture(self):
+    def capture(self):
         self.camera.take_picture()
 
-    def get_images(self, take_picture=False):
-        """Get (raw) images from the camera."""
-        if take_picture:
-            self.take_picture()
-
-        if self.renderer_type == "client":
-            return {}
-
+    def get_obs(self):
         images = {}
         for name in self.texture_names:
-            dtype = self.TEXTURE_DTYPE[name]
-            if dtype == "float":
-                image = self.camera.get_float_texture(name)
-            elif dtype == "uint32":
-                image = self.camera.get_uint32_texture(name)
-            else:
-                raise NotImplementedError(dtype)
+            image = self.get_picture(name)
             images[name] = image
         return images
 
+    def get_picture(self, name: str):
+        return self.camera.get_picture(name)
+
     def get_params(self):
-        """Get camera parameters."""
         return dict(
             extrinsic_cv=self.camera.get_extrinsic_matrix(),
             cam2world_gl=self.camera.get_model_matrix(),
             intrinsic_cv=self.camera.get_intrinsic_matrix(),
         )
-
-    @property
-    def observation_space(self) -> spaces.Dict:
-        obs_spaces = OrderedDict()
-        height, width = self.camera.height, self.camera.width
-        for name in self.texture_names:
-            if name == "Color":
-                obs_spaces[name] = spaces.Box(
-                    low=0, high=1, shape=(height, width, 4), dtype=np.float32
-                )
-            elif name == "Position":
-                obs_spaces[name] = spaces.Box(
-                    low=-np.inf,
-                    high=np.inf,
-                    shape=(height, width, 4),
-                    dtype=np.float32,
-                )
-            elif name == "Segmentation":
-                obs_spaces[name] = spaces.Box(
-                    low=np.iinfo(np.uint32).min,
-                    high=np.iinfo(np.uint32).max,
-                    shape=(height, width, 4),
-                    dtype=np.uint32,
-                )
-            else:
-                raise NotImplementedError(name)
-        return spaces.Dict(obs_spaces)

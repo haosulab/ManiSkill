@@ -7,6 +7,7 @@ See also:
 
 import argparse
 import hashlib
+import os.path as osp
 import shutil
 import urllib.request
 import zipfile
@@ -24,18 +25,11 @@ DATA_GROUPS = {}
 
 def initialize_sources():
     DATA_SOURCES["ycb"] = dict(
-        url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/mani_skill2_ycb_v2.zip",
+        url="https://huggingface.co/datasets/haosulab/ManiSkill2/resolve/main/data/mani_skill2_ycb.zip",
         target_path="mani_skill2_ycb",
-        checksum="b83afbe9c38a780f5625f2c97afad712db49fcb533d4814ac0c827b0514a504b",
+        checksum="174001ba1003cc0c5adda6453f4433f55ec7e804f0f0da22d015d525d02262fb",
     )
     DATA_GROUPS["PickSingleYCB-v0"] = ["ycb"]
-
-    DATA_SOURCES["egad"] = dict(
-        url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/mani_skill2_egad_v1.zip",
-        target_path="mani_skill2_egad",
-        checksum="4b5d841256e0151c2a615a98d4e92afa12ad6d795e2565b364586e3940d3aa36",
-    )
-    DATA_GROUPS["PickSingleEGAD-v0"] = ["egad"]
 
     DATA_SOURCES["pick_clutter_ycb"] = dict(
         url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/pick_clutter/ycb_train_5k.json.gz",
@@ -107,7 +101,7 @@ def initialize_sources():
 def initialize_extra_sources():
     DATA_SOURCES["xmate3_robotiq"] = dict(
         url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/xmate3_robotiq.zip",
-        target_path="xmate3_robotiq",
+        target_path="robots/xmate3_robotiq",
         checksum="ddda102a20eb41e28a0a501702e240e5d7f4084221a44f580e729f08b7c12d1a",
     )
 
@@ -174,6 +168,7 @@ def download(
     if target_path is None:
         target_path = url.split("/")[-1]
     output_path = output_dir / target_path
+    output_dir = osp.dirname(output_path)
 
     # Clean up existing files
     if output_path.exists():
