@@ -1,5 +1,6 @@
 import copy
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Union
 
@@ -76,6 +77,18 @@ def clean_trajectories(h5_file: h5py.File, json_dict: dict, prune_empty_action=T
         new_ep_id += 1
 
     json_dict["episodes"] = new_json_episodes
+
+
+@dataclass
+class Step:
+    state: np.ndarray
+    observation: np.ndarray
+    action: np.ndarray
+    reward: np.ndarray
+    terminated: np.ndarray
+    truncated: np.ndarray
+    env_ptrs: np.ndarray
+    """track the step of each parallel env?"""
 
 
 def pack_step_data(state, obs, action, rew, terminated, truncated, info):
@@ -230,9 +243,9 @@ class RecordEpisode(gym.Wrapper):
         options.pop("save_trajectory", False)
 
         if self.save_on_reset and self._episode_id >= 0 and not skip_trajectory:
-            # To make things easier, we only flush data when there is no partial reset.
+            self.flush_trajectory(ignore_empty_transition=True)
+            # To make things easier, we only flush videos when there is no partial reset.
             if "env_idx" not in options:
-                self.flush_trajectory(ignore_empty_transition=True)
                 self.flush_video()
 
         # Clear cache
@@ -284,7 +297,6 @@ class RecordEpisode(gym.Wrapper):
                 image = put_info_on_image(image, scalar_info, extras=extra_texts)
 
             self._render_images.append(image)
-            print(self._video_steps, self.max_steps_per_video)
             if (
                 self.max_steps_per_video is not None
                 and self._video_steps >= self.max_steps_per_video
