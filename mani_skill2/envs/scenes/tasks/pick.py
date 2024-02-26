@@ -431,7 +431,7 @@ class PickSequentialTaskEnv(SequentialTaskEnv):
             if torch.any(is_grasped):
                 # place reward
                 ee_to_rest_dist = torch.norm(tcp_pos[is_grasped] - goal_pos[is_grasped], dim=1)
-                place_reward = 3 * (1 - torch.tanh(ee_to_rest_dist))
+                place_reward = 3 * (1 - torch.tanh(3 * ee_to_rest_dist))
                 is_grasped_reward += place_reward
 
                 # penalty for base moving or rotating too much
@@ -445,6 +445,10 @@ class PickSequentialTaskEnv(SequentialTaskEnv):
                 )
                 arm_resting_orientation_pen = 0.5 * torch.tanh(arm_to_resting_diff / 5)
                 is_grasped_reward -= arm_resting_orientation_pen
+
+                info['place_reward'] = place_reward
+                info['base_move_rot_pen'] = base_move_rot_pen
+                info['arm_resting_orientation_pen'] = arm_resting_orientation_pen
 
 
             if torch.any(ee_rest):
