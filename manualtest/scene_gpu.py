@@ -18,46 +18,42 @@ if __name__ == "__main__":
     render_mode = "human"
     print("RENDER_MODE", render_mode)
 
-    SCENE_IDX_TO_APPLE_PLAN = {
-        0: [PickSubtask(obj_id="objects/Apple_5_111")],
-        1: [PickSubtask(obj_id="objects/Apple_16_40")],
-        2: [PickSubtask(obj_id="objects/Apple_12_64")],
-        3: [PickSubtask(obj_id="objects/Apple_29_113")],
-        4: [PickSubtask(obj_id="objects/Apple_28_35")],
-        5: [PickSubtask(obj_id="objects/Apple_17_88")],
-        6: [PickSubtask(obj_id="objects/Apple_1_35")],
-        7: [PickSubtask(obj_id="objects/Apple_25_48")],
-        8: [PickSubtask(obj_id="objects/Apple_9_46")],
-        9: [PickSubtask(obj_id="objects/Apple_13_72")],
-    }
+    # SCENE_IDX_TO_APPLE_PLAN = {
+    #     0: [PickSubtask(obj_id="objects/Apple_5_111")],
+    #     1: [PickSubtask(obj_id="objects/Apple_16_40")],
+    #     2: [PickSubtask(obj_id="objects/Apple_12_64")],
+    #     3: [PickSubtask(obj_id="objects/Apple_29_113")],
+    #     4: [PickSubtask(obj_id="objects/Apple_28_35")],
+    #     5: [PickSubtask(obj_id="objects/Apple_17_88")],
+    #     6: [PickSubtask(obj_id="objects/Apple_1_35")],
+    #     7: [PickSubtask(obj_id="objects/Apple_25_48")],
+    #     8: [PickSubtask(obj_id="objects/Apple_9_46")],
+    #     9: [PickSubtask(obj_id="objects/Apple_13_72")],
+    # }
 
-    SCENE_IDX = 6
-    env: SequentialTaskEnv = gym.make(
-        "SequentialTask-v0",
-        obs_mode="state",
-        render_mode=render_mode,
-        control_mode="pd_joint_delta_pos",
-        reward_mode="dense",
-        robot_uids="fetch",
-        scene_builder_cls=ArchitecTHORSceneBuilder,
-        task_plans=[SCENE_IDX_TO_APPLE_PLAN[SCENE_IDX]],
-        scene_idxs=SCENE_IDX,
-        num_envs=2,
-        force_use_gpu_sim=True,
+    # SCENE_IDX = 6
+    # env: SequentialTaskEnv = gym.make(
+    #     "SequentialTask-v0",
+    #     obs_mode="state",
+    #     render_mode=render_mode,
+    #     control_mode="pd_joint_delta_pos",
+    #     reward_mode="dense",
+    #     robot_uids="fetch",
+    #     scene_builder_cls=ArchitecTHORSceneBuilder,
+    #     task_plans=[SCENE_IDX_TO_APPLE_PLAN[SCENE_IDX]],
+    #     scene_idxs=SCENE_IDX,
+    #     num_envs=2,
+    #     force_use_gpu_sim=True,
+    # )
+    env = gym.make(
+        "SceneManipulation-v1", render_mode=render_mode, robot_uids="fetch", num_envs=2
     )
     obs, info = env.reset(seed=0)
     # import ipdb;ipdb.set_trace()
     viewer = env.render()
-    base_env: SequentialTaskEnv = env.unwrapped
+    # base_env: SequentialTaskEnv = env.unwrapped
     viewer.paused = True
     viewer = env.render()
-    print(base_env.agent.robot.qpos[0])
-    robot = base_env.agent.robot
-    print(robot.qpos[:, robot.active_joint_map["r_gripper_finger_joint"].active_index])
-    print(robot.qpos[:, robot.active_joint_map["l_gripper_finger_joint"].active_index])
-    print("START")
-    # import ipdb;ipdb.set_trace()
-
     for i in range(10000):
         action = np.zeros(env.action_space.shape)
         # action[..., -7] = -1
@@ -67,12 +63,12 @@ if __name__ == "__main__":
         print("pre-step")
         env.step(action)
         print("post-step")
-        print(
-            robot.qpos[:, robot.active_joint_map["r_gripper_finger_joint"].active_index]
-        )
-        print(
-            robot.qpos[:, robot.active_joint_map["l_gripper_finger_joint"].active_index]
-        )
+        # print(
+        #     robot.qpos[:, robot.active_joint_map["r_gripper_finger_joint"].active_index]
+        # )
+        # print(
+        #     robot.qpos[:, robot.active_joint_map["l_gripper_finger_joint"].active_index]
+        # )
 
         env.render()
     # agent_obs = obs["agent"]

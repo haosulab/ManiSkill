@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Any, Dict, Union
 
 import numpy as np
 import sapien as sapien
@@ -9,6 +9,7 @@ from sapien import Pose
 from mani_skill2.agents.robots import Fetch, Panda
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
+from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import look_at
 from mani_skill2.utils.scene_builder import SceneBuilder
 from mani_skill2.utils.scene_builder.ai2thor import (
@@ -17,12 +18,14 @@ from mani_skill2.utils.scene_builder.ai2thor import (
     RoboTHORSceneBuilder,
     iTHORSceneBuilder,
 )
-from mani_skill2.utils.structs.pose import vectorize_pose
 
 
+@register_env("SceneManipulation-v1", max_episode_steps=200)
 class SceneManipulationEnv(BaseEnv):
     agent: Union[Panda, Fetch]
     """
+    A base environment for simulating manipulation tasks in more complex scenes
+
     Args:
         robot_uids: Which robot to place into the scene. Default is "panda"
 
@@ -71,6 +74,7 @@ class SceneManipulationEnv(BaseEnv):
             self.sampled_scene_idx = self.scene_idxs[
                 self._episode_rng.randint(0, len(self.scene_idxs))
             ]
+            self.sampled_scene_idx = int(self.sampled_scene_idx)
         return super().reset(seed, options)
 
     def _load_actors(self):
@@ -83,6 +87,17 @@ class SceneManipulationEnv(BaseEnv):
     def _initialize_actors(self, env_idx: torch.Tensor):
         with torch.device(self.device):
             self.scene_builder.initialize(env_idx)
+
+    def evaluate(self) -> dict:
+        return dict()
+
+    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+        return 0
+
+    def compute_normalized_dense_reward(
+        self, obs: Any, action: torch.Tensor, info: Dict
+    ):
+        return self.compute_dense_reward(obs=obs, action=action, info=info) / 1
 
     def _register_sensors(self):
         if self.robot_uids == "fetch":
@@ -118,19 +133,10 @@ class SceneManipulationEnv(BaseEnv):
                 10,
                 link=self.agent.torso_lift_link,
             )
-            return room_camera_config, robot_camera_config
+            return [room_camera_config, robot_camera_config]
 
         if self.robot_uids == "panda":
             pose = look_at([0.4, 0.4, 0.8], [0.0, 0.0, 0.4])
         else:
             pose = look_at([0, 10, -3], [0, 0, 0])
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
-
-    def _setup_viewer(self):
-        super()._setup_viewer()
-        self._viewer.set_camera_xyz(0.8, 0, 1.0)
-        self._viewer.set_camera_rpy(0, -0.5, 3.14)
-
-    def _get_obs_agent(self):
-        obs = self.agent.get_proprioception()
-        return obs

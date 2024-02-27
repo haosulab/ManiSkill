@@ -60,6 +60,11 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
                 px_body_type = "kinematic"
             else:
                 px_body_type = "dynamic"
+        else:
+            bodies = [
+                ent.find_component_by_type(physx.PhysxRigidStaticComponent)
+                for ent in entities
+            ]
         return cls(
             _objs=entities,
             _scene=scene,

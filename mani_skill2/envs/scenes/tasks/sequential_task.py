@@ -60,7 +60,7 @@ class SequentialTaskEnv(SceneManipulationEnv):
         gpu_memory_cfg=GPUMemoryConfig(
             found_lost_pairs_capacity=2**25,
             max_rigid_patch_count=2**19,
-            max_rigid_contact_count=2**20,
+            max_rigid_contact_count=2**21,
         ),
     )
 

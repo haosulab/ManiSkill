@@ -18,6 +18,7 @@ from tqdm import tqdm
 
 from mani_skill2 import ASSET_DIR
 from mani_skill2.agents.robots.fetch import FETCH_UNIQUE_COLLISION_BIT, Fetch
+from mani_skill2.envs.scene import ManiSkillScene
 from mani_skill2.utils.scene_builder import SceneBuilder
 from mani_skill2.utils.structs.actor import Actor
 
@@ -88,7 +89,7 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
 
     # TODO (arth): figure out coacd building issues (currenlty fails on > 80% objs)
     def build(
-        self, scene: sapien.Scene, scene_idx=0, convex_decomposition="none", **kwargs
+        self, scene: ManiSkillScene, scene_idx=0, convex_decomposition="none", **kwargs
     ):
         # save scene and movable objects when building scene
         self._scene_objects: Dict[str, Actor] = dict()
@@ -107,21 +108,22 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
             / f"{scene_json['stage_instance']['template_name']}.glb"
         )
         builder = scene.create_actor_builder()
-        builder.add_visual_from_file(bg_path)
-        builder.add_nonconvex_collision_from_file(bg_path)
-        self.bg = builder.build_kinematic(name="scene_background")
-        q = transforms3d.quaternions.axangle2quat(
+
+        bg_q = transforms3d.quaternions.axangle2quat(
             np.array([1, 0, 0]), theta=np.deg2rad(90)
         )
         if self.scene_dataset == "ProcTHOR":
             # for some reason the scene needs to rotate around y-axis by 90 degrees for ProcTHOR scenes from hssd dataset
-            q = transforms3d.quaternions.qmult(
+            bg_q = transforms3d.quaternions.qmult(
                 q,
                 transforms3d.quaternions.axangle2quat(
                     np.array([0, -1, 0]), theta=np.deg2rad(90)
                 ),
             )
-        self.actor_default_poses.append((self.bg, sapien.Pose(q=q)))
+        bg_pose = sapien.Pose(q=bg_q)
+        builder.add_visual_from_file(bg_path, pose=bg_pose)
+        builder.add_nonconvex_collision_from_file(bg_path, pose=bg_pose)
+        self.bg = builder.build_static(name="scene_background")
 
         global_id = 0
         for object in tqdm(scene_json["object_instances"][:]):
