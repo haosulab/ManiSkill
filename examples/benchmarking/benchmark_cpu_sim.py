@@ -11,7 +11,7 @@ import mani_skill2.envs
 
 if __name__ == "__main__":
     num_envs = 12
-    env_id = "PickCube-v0"
+    env_id = "PickCube-v1"
     env = gym.make_vec(
         env_id,
         num_envs,

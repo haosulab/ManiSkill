@@ -1,5 +1,4 @@
 import os.path as osp
-from dataclasses import dataclass
 from pathlib import Path
 from typing import List
 
@@ -9,11 +8,11 @@ import sapien.render
 from transforms3d.euler import euler2quat
 
 from mani_skill2.agents.multi_agent import MultiAgent
+from mani_skill2.agents.robots.fetch import FETCH_UNIQUE_COLLISION_BIT
 from mani_skill2.utils.building.ground import build_ground
 from mani_skill2.utils.scene_builder import SceneBuilder
-from mani_skill2.agents.robots.fetch import FETCH_UNIQUE_COLLISION_BIT
 
-@dataclass
+
 class TableSceneBuilder(SceneBuilder):
     robot_init_qpos_noise: float = 0.02
 
