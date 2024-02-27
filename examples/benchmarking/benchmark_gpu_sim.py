@@ -15,6 +15,7 @@ import mani_skill2.envs
 from mani_skill2.envs.scenes.tasks.planner.planner import PickSubtask
 from mani_skill2.envs.scenes.tasks.sequential_task import SequentialTaskEnv
 from mani_skill2.utils.scene_builder.ai2thor.variants import ArchitecTHORSceneBuilder
+from mani_skill2.utils.scene_builder.replicacad.scene_builder import ReplicaCADSceneBuilder
 from mani_skill2.vector.wrappers.gymnasium import ManiSkillVectorEnv
 from profiling import Profiler
 from mani_skill2.utils.visualization.misc import images_to_video, tile_images
@@ -47,17 +48,27 @@ def main(args):
     }
 
     SCENE_IDX = 6
-    env: SequentialTaskEnv = gym.make(
-        "SequentialTask-v0",
+    # env: SequentialTaskEnv = gym.make(
+    #     "SequentialTask-v0",
+    #     obs_mode=args.obs_mode,
+    #     render_mode=args.render_mode,
+    #     control_mode="pd_joint_delta_pos",
+    #     reward_mode="sparse",
+    #     robot_uids="fetch",
+    #     scene_builder_cls=ArchitecTHORSceneBuilder,
+    #     task_plans=[SCENE_IDX_TO_APPLE_PLAN[SCENE_IDX]],
+    #     scene_idxs=SCENE_IDX,
+    #     num_envs=args.num_envs,
+    # )
+    env = gym.make(
+        "SceneManipulation-v1",
         obs_mode=args.obs_mode,
         render_mode=args.render_mode,
-        control_mode="pd_joint_delta_pos",
-        reward_mode="sparse",
         robot_uids="fetch",
-        scene_builder_cls=ArchitecTHORSceneBuilder,
-        task_plans=[SCENE_IDX_TO_APPLE_PLAN[SCENE_IDX]],
-        scene_idxs=SCENE_IDX,
+        scene_builder_cls=ReplicaCADSceneBuilder,
         num_envs=args.num_envs,
+        # force_use_gpu_sim=True,
+        scene_idxs=0,
     )
     if isinstance(env.action_space, gym.spaces.Dict):
         env = FlattenActionSpaceWrapper(env)

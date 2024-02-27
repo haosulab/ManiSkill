@@ -6,7 +6,6 @@ This code is also heavily commented to serve as a tutorial for how to build cust
 
 import json
 import os.path as osp
-from dataclasses import dataclass
 
 import numpy as np
 import sapien
@@ -19,13 +18,6 @@ from mani_skill2.envs.scene import ManiSkillScene
 from mani_skill2.utils.scene_builder import SceneBuilder
 
 DATASET_CONFIG_DIR = osp.join(osp.dirname(__file__), "metadata")
-
-
-@dataclass
-class SceneConfig:
-    config_file: str
-    # source: str
-    # spawn_pos_file: str = None
 
 
 class ReplicaCADSceneBuilder(SceneBuilder):
@@ -48,6 +40,8 @@ class ReplicaCADSceneBuilder(SceneBuilder):
 
         scene_idx is an index corresponding to a sampled scene config in self._scene_configs. The code should...
         TODO (stao): scene_idx should probably be replaced with scene config?
+
+        TODO (stao): provide a simple way in maybe SceneBuilder to override how to decide if an object should be dynamic or not?
         """
         scene_cfg = self._scene_configs[scene_idx]
 
@@ -146,7 +140,11 @@ class ReplicaCADSceneBuilder(SceneBuilder):
         else:
             raise NotImplementedError(self.env.robot_uids)
         for actor, pose in self.default_dynamic_actor_poses:
+            # TODO (stao): It's not super clear if sleeping objects works on GPU but appears to improve FPS a little.
+            # for b in actor._bodies:
+            #     b.put_to_sleep()
             actor.set_pose(pose)
+            # print(actor.name, actor._bodies[0].is_sleeping)
 
         # TODO (stao): settle objects for a few steps then save poses again on first run?
 

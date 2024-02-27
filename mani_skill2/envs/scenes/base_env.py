@@ -43,7 +43,9 @@ class SceneManipulationEnv(BaseEnv):
     sim_cfg = SimConfig(
         spacing=50,
         gpu_memory_cfg=GPUMemoryConfig(
-            found_lost_pairs_capacity=2**25, max_rigid_patch_count=2**18
+            found_lost_pairs_capacity=2**25,
+            max_rigid_patch_count=2**19,
+            max_rigid_contact_count=2**21,
         ),
     )
     agent: Union[Panda, Fetch]
