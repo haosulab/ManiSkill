@@ -53,7 +53,8 @@ if __name__ == "__main__":
         render_mode=render_mode,
         robot_uids="fetch",
         scene_builder_cls=ReplicaCADSceneBuilder,
-        num_envs=2,
+        num_envs=16,
+        # force_use_gpu_sim=True,
         scene_idxs=0,
     )
     obs, info = env.reset(seed=0)
@@ -66,11 +67,10 @@ if __name__ == "__main__":
         action = np.zeros(env.action_space.shape)
         # action[..., -7] = -1
         action[..., -3:-1] = 1
-
+        if viewer.window.key_press("r"):
+            obs, info = env.reset()
         action = env.action_space.sample()
-        print("pre-step")
         env.step(action)
-        print("post-step")
         # print(
         #     robot.qpos[:, robot.active_joint_map["r_gripper_finger_joint"].active_index]
         # )

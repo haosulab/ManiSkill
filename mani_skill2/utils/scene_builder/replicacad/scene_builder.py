@@ -61,72 +61,94 @@ class ReplicaCADSceneBuilder(SceneBuilder):
             "rb",
         ) as f:
             scene_json = json.load(f)
-        # import ipdb;ipdb.set_trace()
+
+        # The complex part of porting over scene datasets is that each scene dataset often has it's own format and there is no
+        # one size fits all solution to read that format and use it. The best way to port a scene dataset over is to look
+        # at the configuration files, get a sense of the pattern and find how they reference .glb model files and potentially
+        # decomposed convex meshes for physical simulation
+
+        # ReplicaCAD stores the background model here
         background_template_name = osp.basename(
             scene_json["stage_instance"]["template_name"]
         )
         bg_path = f"data/scene_datasets/replica_cad_dataset/stages/{background_template_name}.glb"
         builder = scene.create_actor_builder()
+        # Note all ReplicaCAD assets are rotated by 90 degrees as they use a different xyz convention to SAPIEN/ManiSkill.
         q = transforms3d.quaternions.axangle2quat(
             np.array([1, 0, 0]), theta=np.deg2rad(90)
         )
         bg_pose = sapien.Pose(q=q)
-        builder.add_visual_from_file(bg_path, pose=bg_pose)
 
+        # When creating objects that do not need to be moved ever, you must provide the pose of the object ahead of time
+        # and use builder.build_static. Objects such as the scene background (also called a stage) fits in this category
+        builder.add_visual_from_file(bg_path, pose=bg_pose)
         builder.add_nonconvex_collision_from_file(bg_path, pose=bg_pose)
         self.bg = builder.build_static(name="scene_background")
+
+        # For the purposes of physical simulation, we disable collisions between the Fetch robot and the scene background
         self.disable_fetch_ground_collisions()
 
+        # In scenes, there will always be dynamic objects, kinematic objects, and static objects.
+        # In the case of ReplicaCAD there are only dynamic and static objects. Since dynamic objects can be moved during simulation
+        # we need to keep track of the initial poses of each dynamic actor we create.
         self.default_dynamic_actor_poses = []
+        for obj_meta in scene_json["object_instances"]:
 
-        for obj in scene_json["object_instances"]:
-            obj_path = osp.basename(obj["template_name"])
-            obj_path = f"{obj_path}.object_config.json"
+            # Again, for any dataset you will have to figure out how they reference object files
+            # Note that ASSET_DIR will always refer to the data/ folder or whatever MS_ASSET_DIR is set to
             obj_cfg_path = osp.join(
                 ASSET_DIR,
                 "scene_datasets/replica_cad_dataset/configs/objects",
-                obj_path,
+                f"{osp.basename(obj_meta['template_name'])}.object_config.json",
             )
             with open(obj_cfg_path) as f:
                 obj_cfg = json.load(f)
-            print(obj["template_name"], obj_cfg.keys())
             visual_file = osp.join(osp.dirname(obj_cfg_path), obj_cfg["render_asset"])
             if "collision_asset" in obj_cfg:
                 collision_file = osp.join(
                     osp.dirname(obj_cfg_path), obj_cfg["collision_asset"]
                 )
             builder = scene.create_actor_builder()
-            pos = obj["translation"]
-            rot = obj["rotation"]
+            pos = obj_meta["translation"]
+            rot = obj_meta["rotation"]
+            # left multiplying by the offset quaternion we used for the stage/scene background as all assets in ReplicaCAD are rotated by 90 degrees
             pose = sapien.Pose(q=q) * sapien.Pose(pos, rot)
-            if obj["motion_type"] == "DYNAMIC":
+
+            # Neatly for simulation, ReplicaCAD specifies if an object is meant to be simulated as dynamic (can be moved like pots) or static (must stay still, like kitchen counters)
+            if obj_meta["motion_type"] == "DYNAMIC":
                 builder.add_visual_from_file(visual_file)
                 if (
                     "use_bounding_box_for_collision" in obj_cfg
                     and obj_cfg["use_bounding_box_for_collision"]
                 ):
+                    # some dynamic objects do not have decomposed convex meshes and instead should use a simple bounding box for collision detection
+                    # in this case we use the add_convex_collision_from_file function of SAPIEN which just creates a convex collision based on the visual mesh
                     builder.add_convex_collision_from_file(visual_file)
                 else:
                     builder.add_multiple_convex_collisions_from_file(collision_file)
-                actor = builder.build(name=obj_path)
+                actor = builder.build(name=obj_meta["template_name"])
                 self.default_dynamic_actor_poses.append(
-                    (actor, pose * sapien.Pose(p=[0, 0, 0.005]))
+                    (actor, pose * sapien.Pose(p=[0, 0, 0.0]))
                 )
-            elif obj["motion_type"] == "STATIC":
+            elif obj_meta["motion_type"] == "STATIC":
                 builder.add_visual_from_file(visual_file, pose=pose)
+                # for static (and dynamic) objects you don't need to use pre convex decomposed meshes and instead can directly
+                # add the non convex collision mesh based on the visual mesh
                 builder.add_nonconvex_collision_from_file(visual_file, pose=pose)
-                actor = builder.build_static(obj_path)
+                actor = builder.build_static(name=obj_meta["template_name"])
 
     def initialize(self, env_idx):
         if self.env.robot_uids == "fetch":
             agent: Fetch = self.env.agent
             agent.reset(agent.RESTING_QPOS)
-            agent.robot.set_pose(sapien.Pose([-0.3, -0.5, 0.001]))
+            agent.robot.set_pose(sapien.Pose([-0.3, -0.8, 0.001]))
 
         else:
             raise NotImplementedError(self.env.robot_uids)
         for actor, pose in self.default_dynamic_actor_poses:
             actor.set_pose(pose)
+
+        # TODO (stao): settle objects for a few steps then save poses again on first run?
 
     def disable_fetch_ground_collisions(self):
         # TODO (stao) (arth): is there a better way to model robots in sim. This feels very unintuitive.
