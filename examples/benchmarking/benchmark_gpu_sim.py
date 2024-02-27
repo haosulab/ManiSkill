@@ -52,6 +52,7 @@ def main(args):
         obs_mode=args.obs_mode,
         render_mode=args.render_mode,
         control_mode="pd_joint_delta_pos",
+        reward_mode="sparse",
         robot_uids="fetch",
         scene_builder_cls=ArchitecTHORSceneBuilder,
         task_plans=[SCENE_IDX_TO_APPLE_PLAN[SCENE_IDX]],
