@@ -1,5 +1,5 @@
-from dataclasses import dataclass, field
-from typing import List, Dict
+from dataclasses import field
+from typing import Any, Dict, List
 
 import sapien
 
@@ -8,11 +8,15 @@ from mani_skill2.envs.scene import ManiSkillScene
 from mani_skill2.utils.structs.actor import Actor
 
 
-@dataclass
 class SceneBuilder:
     env: BaseEnv
     _scene_objects: List[Actor] = field(default_factory=list)
     _movable_objects: List[Actor] = field(default_factory=list)
+    _scene_configs: List[Any] = None
+
+    def __init__(self, env, robot_init_qpos_noise=0.02):
+        self.env = env
+        self.robot_init_qpos_noise = robot_init_qpos_noise
 
     def build(self, **kwargs):
         """
@@ -37,7 +41,7 @@ class SceneBuilder:
     @property
     def movable_objects(self) -> List[Actor]:
         raise NotImplementedError()
-    
+
     @property
     def scene_objects_by_id(self) -> Dict[str, Actor]:
         raise NotImplementedError()

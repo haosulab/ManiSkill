@@ -11,6 +11,9 @@ from mani_skill2.utils.scene_builder.ai2thor import (
     RoboTHORSceneBuilder,
     iTHORSceneBuilder,
 )
+from mani_skill2.utils.scene_builder.replicacad.scene_builder import (
+    ReplicaCADSceneBuilder,
+)
 from mani_skill2.utils.wrappers import RecordEpisode
 
 if __name__ == "__main__":
@@ -46,7 +49,12 @@ if __name__ == "__main__":
     #     force_use_gpu_sim=True,
     # )
     env = gym.make(
-        "SceneManipulation-v1", render_mode=render_mode, robot_uids="fetch", num_envs=2
+        "SceneManipulation-v1",
+        render_mode=render_mode,
+        robot_uids="fetch",
+        scene_builder_cls=ReplicaCADSceneBuilder,
+        num_envs=2,
+        scene_idxs=0,
     )
     obs, info = env.reset(seed=0)
     # import ipdb;ipdb.set_trace()
@@ -59,7 +67,7 @@ if __name__ == "__main__":
         # action[..., -7] = -1
         action[..., -3:-1] = 1
 
-        # action = env.action_space.sample()
+        action = env.action_space.sample()
         print("pre-step")
         env.step(action)
         print("post-step")
