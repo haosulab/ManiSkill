@@ -25,8 +25,7 @@ from mani_skill2.utils.wrappers.flatten import FlattenActionSpaceWrapper
 def main(args):
     profiler = Profiler(output_format=args.format)
     num_envs = args.num_envs
-    use_gpu_sim = False
-    if use_gpu_sim:
+    if not args.cpu_sim:
         env = gym.make(
             args.env_id,
             num_envs=num_envs,
@@ -136,6 +135,9 @@ def parse_args():
     parser.add_argument("-o", "--obs-mode", type=str, default="state")
     parser.add_argument("-c", "--control-mode", type=str, default="pd_joint_delta_pos")
     parser.add_argument("-n", "--num-envs", type=int, default=1024)
+    parser.add_argument("--cpu-sim", action="store_true", help="Whether to use the CPU or GPU simulation")
+    parser.add_argument("--control-freq", type=int, default=None, help="The control frequency to use")
+    parser.add_argument("--sim-freq", type=int, default=None, help="The simulation frequency to use")
     parser.add_argument(
         "--render-mode",
         type=str,
