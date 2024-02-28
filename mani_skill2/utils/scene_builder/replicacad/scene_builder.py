@@ -21,6 +21,8 @@ DATASET_CONFIG_DIR = osp.join(osp.dirname(__file__), "metadata")
 
 
 class ReplicaCADSceneBuilder(SceneBuilder):
+    builds_lighting = True
+
     def __init__(self, env, robot_init_qpos_noise=0.02):
         super().__init__(env, robot_init_qpos_noise)
         # Scene datasets from any source generally have several configurations, each of which may involve changing object geometries, poses etc.
@@ -129,6 +131,30 @@ class ReplicaCADSceneBuilder(SceneBuilder):
                 # add the non convex collision mesh based on the visual mesh
                 builder.add_nonconvex_collision_from_file(visual_file, pose=pose)
                 actor = builder.build_static(name=obj_meta["template_name"])
+
+        # ReplicaCAD also specifies where to put lighting
+        with open(
+            osp.join(
+                ASSET_DIR,
+                "scene_datasets/replica_cad_dataset/configs/lighting",
+                f"{osp.basename(scene_json['default_lighting'])}.lighting_config.json",
+            )
+        ) as f:
+            lighting_cfg = json.load(f)
+        for light_cfg in lighting_cfg["lights"].values():
+            if light_cfg["type"] == "point":
+                light_pos_fixed = (
+                    sapien.Pose(q=q) * sapien.Pose(p=light_cfg["position"])
+                ).p
+                scene.add_point_light(
+                    light_pos_fixed,
+                    color=np.array(light_cfg["color"]) * light_cfg["intensity"],
+                )
+        # scene.set_ambient_light([0.3, 0.3, 0.3])
+        # scene.add_directional_light()
+        scene.add_directional_light(
+            [1, 1, -1], [1, 1, 1], shadow=True, shadow_scale=5, shadow_map_size=2048
+        )
 
     def initialize(self, env_idx):
         if self.env.robot_uids == "fetch":

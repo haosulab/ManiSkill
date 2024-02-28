@@ -12,6 +12,8 @@ class SceneBuilder:
     env: BaseEnv
     _scene_objects: List[Actor] = field(default_factory=list)
     _movable_objects: List[Actor] = field(default_factory=list)
+    builds_lighting: bool = False
+    """Whether this scene builder will add it's own lighting when build is called"""
     scene_configs: List[Any] = None
     """List of scene configuration information that can be used to construct scenes. Can be simply a path to a json file or a dictionary"""
 
