@@ -25,56 +25,26 @@ from mani_skill2.utils.wrappers.flatten import FlattenActionSpaceWrapper
 def main(args):
     profiler = Profiler(output_format=args.format)
     num_envs = args.num_envs
-    # env = gym.make(
-    #     args.env_id,
-    #     num_envs=num_envs,
-    #     obs_mode=args.obs_mode,
-    #     # enable_shadow=True,
-    #     render_mode=args.render_mode,
-    #     control_mode=args.control_mode,
-    #     sim_cfg=dict(control_freq=50)
-    # )
-    SCENE_IDX_TO_APPLE_PLAN = {
-        0: [PickSubtask(obj_id="objects/Apple_5_111")],
-        1: [PickSubtask(obj_id="objects/Apple_16_40")],
-        2: [PickSubtask(obj_id="objects/Apple_12_64")],
-        3: [PickSubtask(obj_id="objects/Apple_29_113")],
-        4: [PickSubtask(obj_id="objects/Apple_28_35")],
-        5: [PickSubtask(obj_id="objects/Apple_17_88")],
-        6: [PickSubtask(obj_id="objects/Apple_1_35")],
-        7: [PickSubtask(obj_id="objects/Apple_25_48")],
-        8: [PickSubtask(obj_id="objects/Apple_9_46")],
-        9: [PickSubtask(obj_id="objects/Apple_13_72")],
-    }
-
-    SCENE_IDX = 6
-    # env: SequentialTaskEnv = gym.make(
-    #     "SequentialTask-v0",
-    #     obs_mode=args.obs_mode,
-    #     render_mode=args.render_mode,
-    #     control_mode="pd_joint_delta_pos",
-    #     reward_mode="sparse",
-    #     robot_uids="fetch",
-    #     scene_builder_cls=ArchitecTHORSceneBuilder,
-    #     task_plans=[SCENE_IDX_TO_APPLE_PLAN[SCENE_IDX]],
-    #     scene_idxs=SCENE_IDX,
-    #     num_envs=args.num_envs,
-    # )
-    env = gym.make(
-        "SceneManipulation-v1",
-        obs_mode=args.obs_mode,
-        render_mode=args.render_mode,
-        robot_uids="fetch",
-        scene_builder_cls=ReplicaCADSceneBuilder,
-        num_envs=args.num_envs,
-        # force_use_gpu_sim=True,
-        scene_idxs=0,
-    )
-    if isinstance(env.action_space, gym.spaces.Dict):
-        env = FlattenActionSpaceWrapper(env)
-    env = ManiSkillVectorEnv(env)
+    use_gpu_sim = False
+    if use_gpu_sim:
+        env = gym.make(
+            args.env_id,
+            num_envs=num_envs,
+            obs_mode=args.obs_mode,
+            # enable_shadow=True,
+            render_mode=args.render_mode,
+            control_mode=args.control_mode,
+            # sim_cfg=dict(control_freq=50)
+        )
+        if isinstance(env.action_space, gym.spaces.Dict):
+            env = FlattenActionSpaceWrapper(env)
+        env = ManiSkillVectorEnv(env)
+        base_env = env.base_env
+    else:
+        env = gym.make_vec(args.env_id, num_envs=args.num_envs, vectorization_mode="async", vector_kwargs=dict(context="spawn"), obs_mode=args.obs_mode,)
+        base_env = gym.make(args.env_id, obs_mode=args.obs_mode).unwrapped
     sensor_settings_str = []
-    for uid, cam in env.base_env._sensors.items():
+    for uid, cam in base_env._sensors.items():
         cfg = cam.cfg
         sensor_settings_str.append(f"{cfg.width}x{cfg.height}")
     sensor_settings_str = "_".join(sensor_settings_str)
@@ -91,10 +61,10 @@ def main(args):
         f"render_mode={args.render_mode}, sensor_details={sensor_settings_str}, save_video={args.save_video}"
     )
     print(
-        f"sim_freq={env.base_env.sim_freq}, control_freq={env.base_env.control_freq}"
+        f"sim_freq={base_env.sim_freq}, control_freq={base_env.control_freq}"
     )
     print(f"observation space: {env.observation_space}")
-    print(f"action space: {env.base_env.single_action_space}")
+    print(f"action space: {base_env.single_action_space}")
     print(
         "# -------------------------------------------------------------------------- #"
     )
@@ -110,7 +80,7 @@ def main(args):
         with profiler.profile("env.step", total_steps=N, num_envs=num_envs):
             for i in range(N):
                 actions = (
-                    2 * torch.rand(env.action_space.shape, device=env.base_env.device)
+                    2 * torch.rand(env.action_space.shape, device=base_env.device)
                     - 1
                 )
                 obs, rew, terminated, truncated, info = env.step(actions)

@@ -23,14 +23,13 @@ DATASET_CONFIG_DIR = osp.join(osp.dirname(__file__), "metadata")
 class ReplicaCADSceneBuilder(SceneBuilder):
     def __init__(self, env, robot_init_qpos_noise=0.02):
         super().__init__(env, robot_init_qpos_noise)
-
         # Scene datasets from any source generally have several configurations, each of which may involve changing object geometries, poses etc.
         # You should store this configuration information in the self._scene_configs list, which permits the code to sample from when
         # simulating more than one scene or performing reconfiguration
 
-        # for ReplicaCAD we have saved the list of all scene configurations from the dataset to a local json file and create SceneConfig objects out of it
-        with open(osp.join(DATASET_CONFIG_DIR, "apts.json")) as f:
-            self._scene_configs = json.load(f)["scenes"]
+        # for ReplicaCAD we have saved the list of all scene configuration files from the dataset to a local json file and create SceneConfig objects out of it
+        with open(osp.join(DATASET_CONFIG_DIR, "scene_configs.json")) as f:
+            self.scene_configs = json.load(f)["scenes"]
 
     def build(
         self, scene: ManiSkillScene, scene_idx=0, convex_decomposition="none", **kwargs
@@ -43,7 +42,7 @@ class ReplicaCADSceneBuilder(SceneBuilder):
 
         TODO (stao): provide a simple way in maybe SceneBuilder to override how to decide if an object should be dynamic or not?
         """
-        scene_cfg = self._scene_configs[scene_idx]
+        scene_cfg = self.scene_configs[scene_idx]
 
         # We read the json config file describing the scene setup for the selected ReplicaCAD scene
         with open(

@@ -53,7 +53,7 @@ class SceneManipulationEnv(BaseEnv):
     def __init__(
         self,
         *args,
-        robot_uids="panda",
+        robot_uids="fetch",
         robot_init_qpos_noise=0.02,
         fixed_scene=True,
         scene_builder_cls: SceneBuilder = ArchitecTHORSceneBuilder,

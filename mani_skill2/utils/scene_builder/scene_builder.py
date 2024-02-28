@@ -12,7 +12,8 @@ class SceneBuilder:
     env: BaseEnv
     _scene_objects: List[Actor] = field(default_factory=list)
     _movable_objects: List[Actor] = field(default_factory=list)
-    _scene_configs: List[Any] = None
+    scene_configs: List[Any] = None
+    """List of scene configuration information that can be used to construct scenes. Can be simply a path to a json file or a dictionary"""
 
     def __init__(self, env, robot_init_qpos_noise=0.02):
         self.env = env
