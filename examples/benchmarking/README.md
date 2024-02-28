@@ -14,10 +14,11 @@ python benchmark_maniskill.py -e "PickCube-v1" --num-envs=128 --save-video # sav
 ```
 
 
-To get the best reported results, we run two commands on a machine with a RTX 4090:
+To get the reported results, we run two commands on a machine with a RTX 4090:
 ```
-python benchmark_maniskill.py -e "PickCube-v1" --num-envs=4096 --obs-mode=state
-python benchmark_maniskill.py -e "PickCube-v1" --num-envs=1536 --obs-mode=rgbd
+python benchmark_maniskill.py -e "PickCube-v1" --num-envs=4096 --obs-mode=state --control-freq=50
+python benchmark_maniskill.py -e "PickCube-v1" --num-envs=1536 --obs-mode=rgbd --control-freq=50
+# note we use --control-freq=50 as this is the control frequency isaac sim based repos tend to use
 ```
 
 These are the expected state-based only results:

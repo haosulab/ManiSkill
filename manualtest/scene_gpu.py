@@ -56,8 +56,10 @@ if __name__ == "__main__":
         num_envs=2,
         # force_use_gpu_sim=True,
         scene_idxs=0,
+        # obs_mode="rgbd"
     )
     obs, info = env.reset(seed=0)
+    # import matplotlib.pyplot as plt
     # import ipdb;ipdb.set_trace()
     viewer = env.render()
     # base_env: SequentialTaskEnv = env.unwrapped

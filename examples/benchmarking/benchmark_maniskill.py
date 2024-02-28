@@ -25,6 +25,11 @@ from mani_skill2.utils.wrappers.flatten import FlattenActionSpaceWrapper
 def main(args):
     profiler = Profiler(output_format=args.format)
     num_envs = args.num_envs
+    sim_cfg = dict()
+    if args.control_freq:
+        sim_cfg["control_freq"] = args.control_freq
+    if args.sim_freq:
+        sim_cfg["sim_freq"] = args.sim_freq
     if not args.cpu_sim:
         env = gym.make(
             args.env_id,
@@ -33,7 +38,7 @@ def main(args):
             # enable_shadow=True,
             render_mode=args.render_mode,
             control_mode=args.control_mode,
-            # sim_cfg=dict(control_freq=50)
+            sim_cfg=sim_cfg
         )
         if isinstance(env.action_space, gym.spaces.Dict):
             env = FlattenActionSpaceWrapper(env)
