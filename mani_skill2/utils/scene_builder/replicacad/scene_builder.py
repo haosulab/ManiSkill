@@ -16,6 +16,7 @@ from mani_skill2 import ASSET_DIR
 from mani_skill2.agents.robots.fetch.fetch import FETCH_UNIQUE_COLLISION_BIT, Fetch
 from mani_skill2.envs.scene import ManiSkillScene
 from mani_skill2.utils.scene_builder import SceneBuilder
+from mani_skill2.utils.structs.articulation import Articulation
 
 DATASET_CONFIG_DIR = osp.join(osp.dirname(__file__), "metadata")
 
@@ -44,14 +45,14 @@ class ReplicaCADSceneBuilder(SceneBuilder):
 
         TODO (stao): provide a simple way in maybe SceneBuilder to override how to decide if an object should be dynamic or not?
         """
-        scene_cfg = self.scene_configs[scene_idx]
+        scene_cfg_path = self.scene_configs[scene_idx]
 
         # We read the json config file describing the scene setup for the selected ReplicaCAD scene
         with open(
             osp.join(
                 ASSET_DIR,
                 "scene_datasets/replica_cad_dataset/configs/scenes",
-                scene_cfg,
+                scene_cfg_path,
             ),
             "rb",
         ) as f:
@@ -86,7 +87,7 @@ class ReplicaCADSceneBuilder(SceneBuilder):
         # In scenes, there will always be dynamic objects, kinematic objects, and static objects.
         # In the case of ReplicaCAD there are only dynamic and static objects. Since dynamic objects can be moved during simulation
         # we need to keep track of the initial poses of each dynamic actor we create.
-        self.default_dynamic_actor_poses = []
+        self.default_object_poses = []
         for obj_meta in scene_json["object_instances"]:
 
             # Again, for any dataset you will have to figure out how they reference object files
@@ -122,7 +123,7 @@ class ReplicaCADSceneBuilder(SceneBuilder):
                 else:
                     builder.add_multiple_convex_collisions_from_file(collision_file)
                 actor = builder.build(name=obj_meta["template_name"])
-                self.default_dynamic_actor_poses.append(
+                self.default_object_poses.append(
                     (actor, pose * sapien.Pose(p=[0, 0, 0.0]))
                 )
             elif obj_meta["motion_type"] == "STATIC":
@@ -131,6 +132,31 @@ class ReplicaCADSceneBuilder(SceneBuilder):
                 # add the non convex collision mesh based on the visual mesh
                 builder.add_nonconvex_collision_from_file(visual_file, pose=pose)
                 actor = builder.build_static(name=obj_meta["template_name"])
+
+        # ReplicaCAD also provides articulated objects
+        for articulated_meta in scene_json["articulated_object_instances"]:
+
+            template_name = articulated_meta["template_name"]
+            pos = articulated_meta["translation"]
+            rot = articulated_meta["rotation"]
+            # articulated_cfg_path = osp.join(
+            #     ASSET_DIR,
+            #     "scene_datasets/replica_cad_dataset/urdf/objects",
+            #     f"{osp.basename(obj_meta['template_name'])}.object_config.json",
+            # )
+            urdf_path = osp.join(
+                ASSET_DIR,
+                f"scene_datasets/replica_cad_dataset/urdf/{template_name}/{template_name}.urdf",
+            )
+            urdf_loader = scene.create_urdf_loader()
+            urdf_loader.name = template_name
+            urdf_loader.fix_root_link = articulated_meta["fixed_base"]
+            urdf_loader.disable_self_collisions = True
+            # if "uniform_scale" in articulated_meta:
+            #     urdf_loader.scale = articulated_meta["uniform_scale"]
+            articulation = urdf_loader.load(urdf_path)
+            pose = sapien.Pose(q=q) * sapien.Pose(pos, rot)
+            self.default_object_poses.append((articulation, pose))
 
         # ReplicaCAD also specifies where to put lighting
         with open(
@@ -142,19 +168,22 @@ class ReplicaCADSceneBuilder(SceneBuilder):
         ) as f:
             lighting_cfg = json.load(f)
         for light_cfg in lighting_cfg["lights"].values():
+            # It appears ReplicaCAD only specifies point light sources so we only use those here
             if light_cfg["type"] == "point":
                 light_pos_fixed = (
                     sapien.Pose(q=q) * sapien.Pose(p=light_cfg["position"])
                 ).p
+                # In SAPIEN, one can set color to unbounded values, higher just means more intense. ReplicaCAD provides color and intensity separately so
+                # we multiply it together here
                 scene.add_point_light(
                     light_pos_fixed,
                     color=np.array(light_cfg["color"]) * light_cfg["intensity"],
                 )
-        # scene.set_ambient_light([0.3, 0.3, 0.3])
+        scene.set_ambient_light([0.3, 0.3, 0.3])
         # scene.add_directional_light()
-        scene.add_directional_light(
-            [1, 1, -1], [1, 1, 1], shadow=True, shadow_scale=5, shadow_map_size=2048
-        )
+        # scene.add_directional_light(
+        #     [1, 1, -1], [1, 1, 1], shadow=True, shadow_scale=5, shadow_map_size=2048
+        # )
 
     def initialize(self, env_idx):
         if self.env.robot_uids == "fetch":
@@ -164,13 +193,11 @@ class ReplicaCADSceneBuilder(SceneBuilder):
 
         else:
             raise NotImplementedError(self.env.robot_uids)
-        for actor, pose in self.default_dynamic_actor_poses:
+        for obj, pose in self.default_object_poses:
             # TODO (stao): It's not super clear if sleeping objects works on GPU but appears to improve FPS a little.
-            # for b in actor._bodies:
-            #     b.put_to_sleep()
-            actor.set_pose(pose)
-            # print(actor.name, actor._bodies[0].is_sleeping)
-
+            obj.set_pose(pose)
+            if isinstance(obj, Articulation):
+                obj.set_qpos(obj.qpos * 0)
         # TODO (stao): settle objects for a few steps then save poses again on first run?
 
     def disable_fetch_ground_collisions(self):

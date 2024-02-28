@@ -53,7 +53,7 @@ if __name__ == "__main__":
         render_mode=render_mode,
         robot_uids="fetch",
         scene_builder_cls=ReplicaCADSceneBuilder,
-        num_envs=2,
+        num_envs=1,
         # force_use_gpu_sim=True,
         scene_idxs=0,
         # obs_mode="rgbd"
