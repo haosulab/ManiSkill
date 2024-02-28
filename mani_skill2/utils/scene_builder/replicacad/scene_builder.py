@@ -152,8 +152,8 @@ class ReplicaCADSceneBuilder(SceneBuilder):
             urdf_loader.name = template_name
             urdf_loader.fix_root_link = articulated_meta["fixed_base"]
             urdf_loader.disable_self_collisions = True
-            # if "uniform_scale" in articulated_meta:
-            #     urdf_loader.scale = articulated_meta["uniform_scale"]
+            if "uniform_scale" in articulated_meta:
+                urdf_loader.scale = articulated_meta["uniform_scale"]
             articulation = urdf_loader.load(urdf_path)
             pose = sapien.Pose(q=q) * sapien.Pose(pos, rot)
             self.default_object_poses.append((articulation, pose))
@@ -174,10 +174,10 @@ class ReplicaCADSceneBuilder(SceneBuilder):
                     sapien.Pose(q=q) * sapien.Pose(p=light_cfg["position"])
                 ).p
                 # In SAPIEN, one can set color to unbounded values, higher just means more intense. ReplicaCAD provides color and intensity separately so
-                # we multiply it together here
+                # we multiply it together here. We also take absolute value of intensity since some scene configs write negative intensities (which result in black holes)
                 scene.add_point_light(
                     light_pos_fixed,
-                    color=np.array(light_cfg["color"]) * light_cfg["intensity"],
+                    color=np.array(light_cfg["color"]) * np.abs(light_cfg["intensity"]),
                 )
         scene.set_ambient_light([0.3, 0.3, 0.3])
         # scene.add_directional_light()
@@ -189,7 +189,10 @@ class ReplicaCADSceneBuilder(SceneBuilder):
         if self.env.robot_uids == "fetch":
             agent: Fetch = self.env.agent
             agent.reset(agent.RESTING_QPOS)
-            agent.robot.set_pose(sapien.Pose([-0.3, -0.8, 0.001]))
+            agent.robot.set_pose(sapien.Pose([0.8, 1.9, 0.001]))
+            qpos = agent.robot.qpos
+            qpos[:, 2] = 2.9
+            agent.robot.set_qpos(qpos)
 
         else:
             raise NotImplementedError(self.env.robot_uids)

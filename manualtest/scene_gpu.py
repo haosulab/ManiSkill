@@ -21,33 +21,6 @@ if __name__ == "__main__":
     render_mode = "human"
     print("RENDER_MODE", render_mode)
 
-    # SCENE_IDX_TO_APPLE_PLAN = {
-    #     0: [PickSubtask(obj_id="objects/Apple_5_111")],
-    #     1: [PickSubtask(obj_id="objects/Apple_16_40")],
-    #     2: [PickSubtask(obj_id="objects/Apple_12_64")],
-    #     3: [PickSubtask(obj_id="objects/Apple_29_113")],
-    #     4: [PickSubtask(obj_id="objects/Apple_28_35")],
-    #     5: [PickSubtask(obj_id="objects/Apple_17_88")],
-    #     6: [PickSubtask(obj_id="objects/Apple_1_35")],
-    #     7: [PickSubtask(obj_id="objects/Apple_25_48")],
-    #     8: [PickSubtask(obj_id="objects/Apple_9_46")],
-    #     9: [PickSubtask(obj_id="objects/Apple_13_72")],
-    # }
-
-    # SCENE_IDX = 6
-    # env: SequentialTaskEnv = gym.make(
-    #     "SequentialTask-v0",
-    #     obs_mode="state",
-    #     render_mode=render_mode,
-    #     control_mode="pd_joint_delta_pos",
-    #     reward_mode="dense",
-    #     robot_uids="fetch",
-    #     scene_builder_cls=ArchitecTHORSceneBuilder,
-    #     task_plans=[SCENE_IDX_TO_APPLE_PLAN[SCENE_IDX]],
-    #     scene_idxs=SCENE_IDX,
-    #     num_envs=2,
-    #     force_use_gpu_sim=True,
-    # )
     env = gym.make(
         "SceneManipulation-v1",
         render_mode=render_mode,
@@ -68,10 +41,19 @@ if __name__ == "__main__":
     for i in range(10000):
         action = np.zeros(env.action_space.shape)
         # action[..., -7] = -1
-        action[..., -3:-1] = 1
+        if i < 60:
+            action[..., -3] = 1
+        elif i < 100:
+            action[..., -3] = 1
+            action[..., -1] = 0.3
+        elif i < 200:
+            action[..., -3] = 1
+            # action[..., -1] = .22
+        else:
+            action = env.action_space.sample()
         if viewer.window.key_press("r"):
             obs, info = env.reset()
-        action = env.action_space.sample()
+        #
         env.step(action)
         # print(
         #     robot.qpos[:, robot.active_joint_map["r_gripper_finger_joint"].active_index]
