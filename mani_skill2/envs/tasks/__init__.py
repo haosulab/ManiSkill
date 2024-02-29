@@ -10,3 +10,4 @@ from .quadruped_stand import QuadrupedStandEnv
 from .stack_cube import StackCubeEnv
 from .two_robot_pick_cube import TwoRobotPickCube
 from .two_robot_stack_cube import TwoRobotStackCube
+from .dexterity import RotateValveEnv, RotateSingleObjectInHand

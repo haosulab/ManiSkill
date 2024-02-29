@@ -349,6 +349,30 @@ def get_pairwise_contacts(
     return pairwise_contacts
 
 
+def get_multiple_pairwise_contacts(
+    contacts: List[physx.PhysxContact],
+    actor0: sapien.Entity,
+    actor1_list: List[sapien.Entity],
+) -> Dict[sapien.Entity, List[Tuple[physx.PhysxContact, bool]]]:
+    """
+    Given a list of contacts, return the dict of contacts involving the one actor and actors
+    This function is used to avoid double for-loop when using `get_pairwise_contacts` with multiple actors
+    """
+    pairwise_contacts = {actor: [] for actor in actor1_list}
+    for contact in contacts:
+        if (
+            contact.bodies[0].entity == actor0
+            and contact.bodies[1].entity in actor1_list
+        ):
+            pairwise_contacts[contact.bodies[1].entity].append((contact, True))
+        elif (
+            contact.bodies[0].entity in actor1_list
+            and contact.bodies[1].entity == actor0
+        ):
+            pairwise_contacts[contact.bodies[0].entity].append((contact, False))
+    return pairwise_contacts
+
+
 def compute_total_impulse(contact_infos: List[Tuple[physx.PhysxContact, bool]]):
     total_impulse = np.zeros(3)
     for contact, flag in contact_infos:
@@ -375,6 +399,21 @@ def get_actor_contacts(
             entity_contacts.append((contact, True))
         elif contact.bodies[1].entity == actor:
             entity_contacts.append((contact, False))
+    return entity_contacts
+
+
+def get_actors_contacts(
+    contacts: List[physx.PhysxContact], actors: List[sapien.Entity]
+) -> Dict[sapien.Entity, List[Tuple[physx.PhysxContact, bool]]]:
+    """
+    This function is used to avoid double for-loop when using `get_actor_contacts` with multiple actors
+    """
+    entity_contacts = {actor: [] for actor in actors}
+    for contact in contacts:
+        if contact.bodies[0].entity in actors:
+            entity_contacts[contact.bodies[0].entity].append((contact, True))
+        elif contact.bodies[1].entity in actors:
+            entity_contacts[contact.bodies[1].entity].append((contact, False))
     return entity_contacts
 
 
