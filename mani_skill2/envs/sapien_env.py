@@ -736,7 +736,7 @@ class BaseEnv(gym.Env):
                 terminated = info["success"].clone()
         else:
             if "fail" in info:
-                terminated = info["success"].clone()
+                terminated = info["fail"].clone()
             else:
                 terminated = torch.zeros(self.num_envs, dtype=bool, device=self.device)
 
