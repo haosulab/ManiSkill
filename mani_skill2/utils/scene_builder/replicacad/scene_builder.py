@@ -180,10 +180,6 @@ class ReplicaCADSceneBuilder(SceneBuilder):
                     color=np.array(light_cfg["color"]) * np.abs(light_cfg["intensity"]),
                 )
         scene.set_ambient_light([0.3, 0.3, 0.3])
-        # scene.add_directional_light()
-        # scene.add_directional_light(
-        #     [1, 1, -1], [1, 1, 1], shadow=True, shadow_scale=5, shadow_map_size=2048
-        # )
 
     def initialize(self, env_idx):
         if self.env.robot_uids == "fetch":
