@@ -12,11 +12,8 @@ from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import look_at
 from mani_skill2.utils.scene_builder import SceneBuilder
-from mani_skill2.utils.scene_builder.ai2thor import (
-    ArchitecTHORSceneBuilder,
-    ProcTHORSceneBuilder,
-    RoboTHORSceneBuilder,
-    iTHORSceneBuilder,
+from mani_skill2.utils.scene_builder.replicacad.scene_builder import (
+    ReplicaCADSceneBuilder,
 )
 from mani_skill2.utils.structs.types import GPUMemoryConfig, SimConfig
 
@@ -56,7 +53,7 @@ class SceneManipulationEnv(BaseEnv):
         robot_uids="fetch",
         robot_init_qpos_noise=0.02,
         fixed_scene=True,
-        scene_builder_cls: SceneBuilder = ArchitecTHORSceneBuilder,
+        scene_builder_cls: SceneBuilder = ReplicaCADSceneBuilder,
         convex_decomposition="coacd",
         scene_idxs=None,
         **kwargs
