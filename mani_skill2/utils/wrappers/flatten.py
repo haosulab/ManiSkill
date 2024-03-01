@@ -21,9 +21,6 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
         self.base_env: BaseEnv = env.unwrapped
         super().__init__(env)
         new_obs = self.observation(self.base_env._init_raw_obs)
-        import ipdb
-
-        ipdb.set_trace()
         self.base_env._update_obs_space(new_obs)
 
     def observation(self, observation: Dict):
