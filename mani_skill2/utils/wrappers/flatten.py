@@ -1,12 +1,42 @@
 import copy
+from typing import Dict
 
 import gymnasium as gym
 import gymnasium.spaces.utils
+import numpy as np
+import torch
 from gymnasium.vector.utils import batch_space
 
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.utils.common import flatten_state_dict
 from mani_skill2.utils.sapien_utils import batch
+
+
+class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
+    """
+    Flattens the rgbd mode observations into a dictionary with two keys, "rgbd" and "state"
+    """
+
+    def __init__(self, env) -> None:
+        self.base_env: BaseEnv = env.unwrapped
+        super().__init__(env)
+        new_obs = self.observation(self.base_env._init_raw_obs)
+        import ipdb
+
+        ipdb.set_trace()
+        self.base_env._update_obs_space(new_obs)
+
+    def observation(self, observation: Dict):
+        sensor_data = observation.pop("sensor_data")
+        del observation["sensor_param"]
+        images = []
+        for cam_data in sensor_data.values():
+            images.append(cam_data["rgb"])
+            images.append(cam_data["depth"])
+        images = torch.concat(images, axis=-1)
+        # flatten the rest of the data which should just be state data
+        observation = flatten_state_dict(observation, use_torch=True)
+        return dict(state=observation, rgbd=images)
 
 
 class FlattenObservationWrapper(gym.ObservationWrapper):

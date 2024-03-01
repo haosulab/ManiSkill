@@ -46,6 +46,23 @@ def to_tensor(array: Union[torch.Tensor, np.array, Sequence]):
             return torch.tensor(array)
 
 
+def to_cpu_tensor(array: Union[torch.Tensor, np.array, Sequence]):
+    """
+    Maps any given sequence to a torch tensor on the CPU.
+    """
+    if isinstance(array, (dict)):
+        return {k: to_tensor(v) for k, v in array.items()}
+    if isinstance(array, np.ndarray):
+        ret = torch.from_numpy(array)
+        if ret.dtype == torch.float64:
+            ret = ret.float()
+        return ret
+    elif isinstance(array, torch.Tensor):
+        return array.cpu()
+    else:
+        return torch.Tensor(array).cpu()
+
+
 def _to_numpy(array: Union[Array, Sequence]) -> np.ndarray:
     if isinstance(array, (dict)):
         return {k: _to_numpy(v) for k, v in array.items()}

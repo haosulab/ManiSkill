@@ -190,6 +190,7 @@ def flatten_state_dict(
 
     Args:
         state_dict: a dictionary containing scalars or 1-dim vectors.
+        use_torch (bool): Whether to convert the data to torch tensors.
 
     Raises:
         AssertionError: If a value of @state_dict is an ndarray with ndim > 2.

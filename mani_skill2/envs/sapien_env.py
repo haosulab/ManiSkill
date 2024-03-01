@@ -41,6 +41,7 @@ from mani_skill2.utils.common import (
 from mani_skill2.utils.sapien_utils import (
     batch,
     get_obj_by_type,
+    to_cpu_tensor,
     to_numpy,
     to_tensor,
     unbatch,
@@ -240,11 +241,10 @@ class BaseEnv(gym.Env):
             else 0
         )
         obs, _ = self.reset(seed=2022, options=dict(reconfigure=True))
+        self._init_raw_obs = to_cpu_tensor(obs)
+        """the raw observation returned by the env.reset (a cpu torch tensor/dict of tensors). Useful for future observation wrappers to use to auto generate observation spaces"""
         if physx.is_gpu_enabled():
             obs = to_numpy(obs)
-        self._init_raw_obs = obs.copy()
-        """the raw observation returned by the env.reset. Useful for future observation wrappers to use to auto generate observation spaces"""
-        # TODO handle constructing single obs space from a batched result.
 
         self.action_space = self.agent.action_space
         self.single_action_space = self.agent.single_action_space
@@ -264,9 +264,11 @@ class BaseEnv(gym.Env):
     @cached_property
     def single_observation_space(self):
         if self.num_envs > 1:
-            return convert_observation_to_space(self._init_raw_obs, unbatched=True)
+            return convert_observation_to_space(
+                to_numpy(self._init_raw_obs), unbatched=True
+            )
         else:
-            return convert_observation_to_space(self._init_raw_obs)
+            return convert_observation_to_space(to_numpy(self._init_raw_obs))
 
     @cached_property
     def observation_space(self):
