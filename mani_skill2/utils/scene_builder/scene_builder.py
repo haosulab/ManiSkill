@@ -1,19 +1,17 @@
-from dataclasses import field
 from typing import Any, Dict, List
 
 import sapien
 
 from mani_skill2.envs.sapien_env import BaseEnv
-from mani_skill2.envs.scene import ManiSkillScene
 from mani_skill2.utils.structs.actor import Actor
 
 
 class SceneBuilder:
     env: BaseEnv
-    _scene_objects: List[Actor] = field(default_factory=list)
-    _movable_objects: List[Actor] = field(default_factory=list)
+    _scene_objects: List[Actor] = []
+    _movable_objects: List[Actor] = []
     builds_lighting: bool = False
-    """Whether this scene builder will add it's own lighting when build is called"""
+    """Whether this scene builder will add it's own lighting when build is called. If False, ManiSkill will add some default lighting"""
     scene_configs: List[Any] = None
     """List of scene configuration information that can be used to construct scenes. Can be simply a path to a json file or a dictionary"""
 

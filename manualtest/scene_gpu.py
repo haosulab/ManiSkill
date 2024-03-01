@@ -3,8 +3,6 @@ import numpy as np
 import torch
 
 from mani_skill2.envs.scenes.base_env import SceneManipulationEnv
-from mani_skill2.envs.scenes.tasks import PickSequentialTaskEnv, SequentialTaskEnv
-from mani_skill2.envs.scenes.tasks.planner import PickSubtask, plan_data_from_file
 from mani_skill2.utils.scene_builder.ai2thor import (
     ArchitecTHORSceneBuilder,
     ProcTHORSceneBuilder,
@@ -28,7 +26,7 @@ if __name__ == "__main__":
         scene_builder_cls=ReplicaCADSceneBuilder,
         num_envs=1,
         # force_use_gpu_sim=True,
-        scene_idxs=0,
+        scene_idxs=3,
         # obs_mode="rgbd"
     )
     obs, info = env.reset(seed=0)
