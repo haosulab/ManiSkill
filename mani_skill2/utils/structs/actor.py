@@ -36,6 +36,9 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
     _builder_initial_pose: sapien.Pose = None
     name: str = None
 
+    def __hash__(self):
+        return self._objs[0].__hash__()
+
     @classmethod
     def _create_from_entities(
         cls,
@@ -57,6 +60,11 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
                 px_body_type = "kinematic"
             else:
                 px_body_type = "dynamic"
+        else:
+            bodies = [
+                ent.find_component_by_type(physx.PhysxRigidStaticComponent)
+                for ent in entities
+            ]
         return cls(
             _objs=entities,
             _scene=scene,

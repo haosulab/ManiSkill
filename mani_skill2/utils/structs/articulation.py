@@ -46,6 +46,8 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     """Maps joint name to the Joint object"""
     active_joints: List[Joint]
     """List of active Joint objects, referencing elements in self.joints"""
+    active_joint_map: OrderedDict[str, Joint]
+    """Maps active joint name to the Joint object, referencing elements in self.joints"""
 
     name: str = None
     """Name of this articulation"""
@@ -93,6 +95,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             joints=[],
             joint_map=OrderedDict(),
             active_joints=[],
+            active_joint_map=OrderedDict(),
             name=shared_name,
             _merged=_merged,
         )
@@ -141,13 +144,19 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         joint_map = OrderedDict()
         wrapped_joints: List[Joint] = []
         for joint_index, joints in enumerate(all_joint_objs):
-            wrapped_joint = Joint.create(joints, self, joint_index)
+            try:
+                active_joint_index = all_active_joint_names.index(
+                    all_joint_names[joint_index]
+                )
+            except:
+                active_joint_index = None
+            wrapped_joint = Joint.create(joints, self, joint_index, active_joint_index)
             joint_map[wrapped_joint.name] = wrapped_joint
             wrapped_joints.append(wrapped_joint)
         self.joints = wrapped_joints
         self.joint_map = joint_map
         self.active_joints = [wrapped_joints[i] for i in active_joint_indices]
-
+        self.active_joint_map = {joint.name: joint for joint in self.active_joints}
         return self
 
     @classmethod

@@ -12,6 +12,10 @@ import torch
 import tqdm
 
 import mani_skill2.envs
+from mani_skill2.envs.scenes.tasks.planner.planner import PickSubtask
+from mani_skill2.envs.scenes.tasks.sequential_task import SequentialTaskEnv
+from mani_skill2.utils.scene_builder.ai2thor.variants import ArchitecTHORSceneBuilder
+from mani_skill2.utils.scene_builder.replicacad.scene_builder import ReplicaCADSceneBuilder
 from mani_skill2.vector.wrappers.gymnasium import ManiSkillVectorEnv
 from profiling import Profiler
 from mani_skill2.utils.visualization.misc import images_to_video, tile_images
@@ -21,20 +25,30 @@ from mani_skill2.utils.wrappers.flatten import FlattenActionSpaceWrapper
 def main(args):
     profiler = Profiler(output_format=args.format)
     num_envs = args.num_envs
-    env = gym.make(
-        args.env_id,
-        num_envs=num_envs,
-        obs_mode=args.obs_mode,
-        # enable_shadow=True,
-        render_mode=args.render_mode,
-        control_mode=args.control_mode,
-        sim_cfg=dict(control_freq=50)
-    )
-    if isinstance(env.action_space, gym.spaces.Dict):
-        env = FlattenActionSpaceWrapper(env)
-    env = ManiSkillVectorEnv(env)
+    sim_cfg = dict()
+    if args.control_freq:
+        sim_cfg["control_freq"] = args.control_freq
+    if args.sim_freq:
+        sim_cfg["sim_freq"] = args.sim_freq
+    if not args.cpu_sim:
+        env = gym.make(
+            args.env_id,
+            num_envs=num_envs,
+            obs_mode=args.obs_mode,
+            # enable_shadow=True,
+            render_mode=args.render_mode,
+            control_mode=args.control_mode,
+            sim_cfg=sim_cfg
+        )
+        if isinstance(env.action_space, gym.spaces.Dict):
+            env = FlattenActionSpaceWrapper(env)
+        env = ManiSkillVectorEnv(env)
+        base_env = env.base_env
+    else:
+        env = gym.make_vec(args.env_id, num_envs=args.num_envs, vectorization_mode="async", vector_kwargs=dict(context="spawn"), obs_mode=args.obs_mode,)
+        base_env = gym.make(args.env_id, obs_mode=args.obs_mode).unwrapped
     sensor_settings_str = []
-    for uid, cam in env.base_env._sensors.items():
+    for uid, cam in base_env._sensors.items():
         cfg = cam.cfg
         sensor_settings_str.append(f"{cfg.width}x{cfg.height}")
     sensor_settings_str = "_".join(sensor_settings_str)
@@ -51,10 +65,10 @@ def main(args):
         f"render_mode={args.render_mode}, sensor_details={sensor_settings_str}, save_video={args.save_video}"
     )
     print(
-        f"sim_freq={env.base_env.sim_freq}, control_freq={env.base_env.control_freq}"
+        f"sim_freq={base_env.sim_freq}, control_freq={base_env.control_freq}"
     )
     print(f"observation space: {env.observation_space}")
-    print(f"action space: {env.base_env.single_action_space}")
+    print(f"action space: {base_env.single_action_space}")
     print(
         "# -------------------------------------------------------------------------- #"
     )
@@ -70,7 +84,7 @@ def main(args):
         with profiler.profile("env.step", total_steps=N, num_envs=num_envs):
             for i in range(N):
                 actions = (
-                    2 * torch.rand(env.action_space.shape, device=env.base_env.device)
+                    2 * torch.rand(env.action_space.shape, device=base_env.device)
                     - 1
                 )
                 obs, rew, terminated, truncated, info = env.step(actions)
@@ -126,6 +140,9 @@ def parse_args():
     parser.add_argument("-o", "--obs-mode", type=str, default="state")
     parser.add_argument("-c", "--control-mode", type=str, default="pd_joint_delta_pos")
     parser.add_argument("-n", "--num-envs", type=int, default=1024)
+    parser.add_argument("--cpu-sim", action="store_true", help="Whether to use the CPU or GPU simulation")
+    parser.add_argument("--control-freq", type=int, default=None, help="The control frequency to use")
+    parser.add_argument("--sim-freq", type=int, default=None, help="The simulation frequency to use")
     parser.add_argument(
         "--render-mode",
         type=str,

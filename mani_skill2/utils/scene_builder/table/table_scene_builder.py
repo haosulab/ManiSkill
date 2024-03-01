@@ -1,5 +1,4 @@
 import os.path as osp
-from dataclasses import dataclass
 from pathlib import Path
 from typing import List
 
@@ -9,11 +8,11 @@ import sapien.render
 from transforms3d.euler import euler2quat
 
 from mani_skill2.agents.multi_agent import MultiAgent
+from mani_skill2.agents.robots.fetch import FETCH_UNIQUE_COLLISION_BIT
 from mani_skill2.utils.building.ground import build_ground
 from mani_skill2.utils.scene_builder import SceneBuilder
 
 
-@dataclass
 class TableSceneBuilder(SceneBuilder):
     robot_init_qpos_noise: float = 0.02
 
@@ -113,16 +112,14 @@ class TableSceneBuilder(SceneBuilder):
             self.env.agent.reset(qpos)
             self.env.agent.robot.set_pose(sapien.Pose([-1.05, 0, -self.table_height]))
 
-            from mani_skill2.agents.robots.fetch import FETCH_UNIQUE_COLLISION_BIT
-
-            cs = (
-                self.ground._objs[0]
-                .find_component_by_type(sapien.physx.PhysxRigidStaticComponent)
-                .get_collision_shapes()[0]
-            )
-            cg = cs.get_collision_groups()
-            cg[2] |= FETCH_UNIQUE_COLLISION_BIT
-            cs.set_collision_groups(cg)
+            # TODO (stao) (arth): is there a better way to model robots in sim. This feels very unintuitive.
+            for obj in self.ground._objs:
+                cs = obj.find_component_by_type(
+                    sapien.physx.PhysxRigidStaticComponent
+                ).get_collision_shapes()[0]
+                cg = cs.get_collision_groups()
+                cg[2] |= FETCH_UNIQUE_COLLISION_BIT
+                cs.set_collision_groups(cg)
         elif self.env.robot_uids == ("panda", "panda"):
             agent: MultiAgent = self.env.agent
             qpos = np.array(

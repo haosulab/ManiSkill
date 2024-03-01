@@ -1,0 +1,10 @@
+{
+  "scenes": [
+    "apt_0.scene_instance.json",
+    "apt_1.scene_instance.json",
+    "apt_2.scene_instance.json",
+    "apt_3.scene_instance.json",
+    "apt_4.scene_instance.json",
+    "apt_5.scene_instance.json"
+  ]
+}

@@ -23,7 +23,7 @@ class GPUMemoryConfig:
 
     temp_buffer_capacity: int = 2**24
     """Increase this if you get 'PxgPinnedHostLinearMemoryAllocator: overflowing initial allocation size, increase capacity to at least %.' """
-    max_rigid_contact_count: int = 524288
+    max_rigid_contact_count: int = 2**19
     max_rigid_patch_count: int = (
         2**18
     )  # 81920 is SAPIEN default but most tasks work with 2**18

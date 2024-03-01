@@ -214,13 +214,14 @@ class RecordEpisode(gym.Wrapper):
 
     def reset(
         self,
-        *,
+        *args,
         seed: Optional[Union[int, List[int]]] = None,
-        options: Optional[dict] = dict(),
+        options: Optional[dict] = None,
         **kwargs,
     ):
         skip_trajectory = False
-        options.pop("save_trajectory", False)
+        if options is not None:
+            options.pop("save_trajectory", False)
 
         if self.save_on_reset and self._episode_id >= 0 and not skip_trajectory:
             self.flush_trajectory(ignore_empty_transition=True)
@@ -235,7 +236,7 @@ class RecordEpisode(gym.Wrapper):
             self._episode_id += 1
 
         reset_kwargs = copy.deepcopy(dict(seed=seed, options=options, **kwargs))
-        obs, info = super().reset(seed=seed, options=options, **kwargs)
+        obs, info = super().reset(*args, seed=seed, options=options, **kwargs)
 
         if self.save_trajectory:
             state = self._base_env.get_state()

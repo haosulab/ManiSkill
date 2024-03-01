@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 class URDFLoader(SapienURDFLoader):
     scene: ManiSkillScene
-    name: str
+    name: str = None
     disable_self_collisions: bool = False
 
     def parse(

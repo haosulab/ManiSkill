@@ -11,6 +11,7 @@ from mani_skill2 import ASSET_DIR
 class SceneConfig:
     config_file: str
     source: str
+    spawn_pos_file: str = None
 
 
 @dataclass

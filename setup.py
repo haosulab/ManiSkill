@@ -35,6 +35,7 @@ setup(
         "imageio",
         "imageio[ffmpeg]",
         "pytorch_kinematics",
+        "huggingface_hub",  # we use HF to version control some assets/datasets more easily
     ],
     # Glob patterns do not automatically match dotfiles
     package_data={
