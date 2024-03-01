@@ -11,57 +11,86 @@ import os.path as osp
 import shutil
 import urllib.request
 import zipfile
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Dict
 from urllib.error import URLError
 
+from huggingface_hub import login, snapshot_download
 from tqdm.auto import tqdm
 
 from mani_skill2 import ASSET_DIR, PACKAGE_ASSET_DIR
 from mani_skill2.utils.io_utils import load_json
 
-DATA_SOURCES = {}
+
+@dataclass
+class DataSource:
+    url: str = None
+    hf_repo_id: str = None
+    target_path: str = None
+    checksum: str = None
+    output_dir: str = ASSET_DIR
+
+
+DATA_SOURCES: Dict[str, DataSource] = {}
 DATA_GROUPS = {}
 
 
 def initialize_sources():
-    DATA_SOURCES["ycb"] = dict(
+    """
+    Initialize the metadata for assets
+
+    Note that the current organization works as follows
+
+    - assets/* contain files for individual objects (.obj, .glb etc.) and articulations (.urdf etc.) that are generally reused.
+        E.g. Partnet Mobility and the YCB dataset.
+    - tasks/* contain files that are otherwise too big to upload to GitHub and are relevant for just that one task and will generally not be reused
+    - scene_datasets/* is a bit messier but contains a self-contained folder for each scene dataset each of which is likely organized differently.
+        These datasets often put their unique object and articulation files together with scene configuration data. In the future we will re-organize these
+        datasets so that all objects are put into assets and leave scene_datasets for scene configuration information.
+    - robots/* contains files for additional robots that are not included by default.
+
+    """
+
+    # TODO add google scanned objects
+    DATA_SOURCES["ycb"] = DataSource(
         url="https://huggingface.co/datasets/haosulab/ManiSkill2/resolve/main/data/mani_skill2_ycb.zip",
-        target_path="mani_skill2_ycb",
+        target_path="assets/mani_skill2_ycb",
         checksum="174001ba1003cc0c5adda6453f4433f55ec7e804f0f0da22d015d525d02262fb",
     )
     DATA_GROUPS["PickSingleYCB-v0"] = ["ycb"]
 
-    DATA_SOURCES["pick_clutter_ycb"] = dict(
+    DATA_SOURCES["pick_clutter_ycb"] = DataSource(
         url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/pick_clutter/ycb_train_5k.json.gz",
-        output_dir=ASSET_DIR / "pick_clutter",
+        target_path="tasks/pick_clutter",
         checksum="70ec176c7036f326ea7813b77f8c03bea9db5960198498957a49b2895a9ec338",
     )
     DATA_GROUPS["PickClutterYCB-v0"] = ["ycb", "pick_clutter_ycb"]
 
-    DATA_SOURCES["assembling_kits"] = dict(
+    DATA_SOURCES["assembling_kits"] = DataSource(
         url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/assembling_kits_v1.zip",
-        target_path="assembling_kits",
+        target_path="tasks/assembling_kits",
         checksum="e3371f17a07a012edaa3a0b3604fb1577f3fb921876c3d5ed59733dd75a6b4a0",
     )
     DATA_GROUPS["AssemblingKits-v0"] = ["assembling_kits"]
 
-    DATA_SOURCES["panda_avoid_obstacles"] = dict(
+    DATA_SOURCES["panda_avoid_obstacles"] = DataSource(
         url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/avoid_obstacles/panda_train_2k.json.gz",
-        output_dir=ASSET_DIR / "avoid_obstacles",
+        target_path="tasks/avoid_obstacles",
         checksum="44dae9a0804172515c290c1f49a1e7e72d76e40201a2c5c7d4a3ccd43b4d5be4",
     )
     DATA_GROUPS["PandaAvoidObstacles-v0"] = ["panda_avoid_obstacles"]
 
-    DATA_SOURCES["pinch"] = dict(
+    DATA_SOURCES["pinch"] = DataSource(
         url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/pinch.zip",
-        target_path="pinch",
+        target_path="tasks/pinch",
         checksum="3281d2d777fad42e6d37371b2d3ee16fb1c39984907176718ca2e4f447326fe7",
     )
     DATA_GROUPS["Pinch-v0"] = ["pinch"]
 
-    DATA_SOURCES["write"] = dict(
+    DATA_SOURCES["write"] = DataSource(
         url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/write.zip",
-        target_path="write",
+        target_path="tasks/write",
         checksum="c5b49e581bfed9cfb2107a607faf52795f840e93f5a7ad389290314513b4b634",
     )
     DATA_GROUPS["Write-v0"] = ["write"]
@@ -78,7 +107,7 @@ def initialize_sources():
         category_uids[category] = []
         for model_id in model_ids:
             uid = f"partnet_mobility/{model_id}"
-            DATA_SOURCES[uid] = dict(
+            DATA_SOURCES[uid] = DataSource(
                 url=f"https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/partnet_mobility/dataset/{model_id}.zip",
                 output_dir=ASSET_DIR / "partnet_mobility" / "dataset",
             )
@@ -97,9 +126,17 @@ def initialize_sources():
     DATA_GROUPS["MoveBucket-v1"] = category_uids["bucket"]
     DATA_GROUPS["TurnFaucet-v0"] = category_uids["faucet"]
 
+    # ---------------------------------------------------------------------------- #
+    # Interactable Scene Datasets
+    # ---------------------------------------------------------------------------- #
+    DATA_SOURCES["ReplicaCAD"] = DataSource(
+        hf_repo_id="haosulab/ReplicaCAD",
+        target_path="scene_datasets/replica_cad_dataset",
+    )
+
 
 def initialize_extra_sources():
-    DATA_SOURCES["xmate3_robotiq"] = dict(
+    DATA_SOURCES["xmate3_robotiq"] = DataSource(
         url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/xmate3_robotiq.zip",
         target_path="robots/xmate3_robotiq",
         checksum="ddda102a20eb41e28a0a501702e240e5d7f4084221a44f580e729f08b7c12d1a",
@@ -108,16 +145,11 @@ def initialize_extra_sources():
     # ---------------------------------------------------------------------------- #
     # Visual backgrounds
     # ---------------------------------------------------------------------------- #
-    DATA_SOURCES["minimalistic_modern_bedroom"] = dict(
-        url="https://storage1.ucsd.edu/datasets/ManiSkill-background/minimalistic_modern_bedroom.glb",
-        output_dir=ASSET_DIR / "background",
-        checksum="9d9ea14c8cdfab1ebafe3e8ff5a071b77b361c1abd24e9c59b0f08e1d1a3421a",
-    )
-    # Alias
-    DATA_GROUPS["minimal_bedroom"] = ["minimalistic_modern_bedroom"]
 
     # All backgrounds
     DATA_GROUPS["backgrounds"] = ["minimalistic_modern_bedroom"]
+
+    # TODO add Replica, MatterPort 3D?
 
 
 def prompt_yes_no(message):
@@ -148,15 +180,26 @@ def sha256sum(filename, chunk_size=4096):
     return sha256_hash.hexdigest()
 
 
+def download_from_hf_datasets(
+    data_source: DataSource,
+):
+    output_dir = Path(data_source.output_dir)
+    output_path = output_dir / data_source.target_path
+    snapshot_download(
+        repo_id=data_source.hf_repo_id,
+        repo_type="dataset",
+        local_dir=output_path,
+        local_dir_use_symlinks=False,
+        resume_download=True,
+    )
+
+
 def download(
-    url,
-    output_dir=ASSET_DIR,
-    target_path: str = None,
-    checksum=None,
+    data_source: DataSource,
     verbose=True,
     non_interactive=True,
 ):
-    output_dir = Path(output_dir)
+    output_dir = Path(data_source.output_dir)
 
     # Create output directory
     if not output_dir.exists():
@@ -164,9 +207,9 @@ def download(
             output_dir.mkdir(parents=True)
         else:
             return
-
+    target_path = data_source.target_path
     if target_path is None:
-        target_path = url.split("/")[-1]
+        target_path = data_source.url.split("/")[-1]
     output_path = output_dir / target_path
     output_dir = osp.dirname(output_path)
 
@@ -184,10 +227,14 @@ def download(
                 print(f"Skip existing: {output_path}")
                 return output_path
 
+    if data_source.hf_repo_id is not None:
+        download_from_hf_datasets(data_source)
+        return
+
     # Download files to temporary location
     try:
         if verbose:
-            print(f"Downloading {url}")
+            print(f"Downloading {data_source.url}")
             pbar = tqdm(unit="iB", unit_scale=True, unit_divisor=1024)
 
         def show_progress(blocknum, bs, size):
@@ -196,19 +243,22 @@ def download(
                     pbar.total = size
                 pbar.update(bs)
 
-        filename, _ = urllib.request.urlretrieve(url, reporthook=show_progress)
+        filename, _ = urllib.request.urlretrieve(
+            data_source.url, reporthook=show_progress
+        )
         if verbose:
             pbar.close()
     except URLError as err:
-        print(f"Failed to download {url}")
+        print(f"Failed to download {data_source.url}")
         raise err
 
     # Verify checksum
-    if checksum is not None and checksum != sha256sum(filename):
-        raise IOError(f"Downloaded file's SHA-256 hash does not match record: {url}")
-
+    if data_source.checksum is not None and data_source.checksum != sha256sum(filename):
+        raise IOError(
+            f"Downloaded file's SHA-256 hash does not match record: {data_source.url}"
+        )
     # Extract or move to output path
-    if url.endswith(".zip"):
+    if data_source.url.endswith(".zip"):
         with zipfile.ZipFile(filename, "r") as zip_ref:
             if verbose:
                 for file in tqdm(zip_ref.infolist()):
@@ -271,12 +321,12 @@ def main(args):
         if show_progress and verbose:
             print("Downloading assets for {}: {}/{}".format(args.uid, i + 1, len(uids)))
 
-        kwargs = DATA_SOURCES[uid].copy()
+        kwargs = dict()
         kwargs["verbose"] = verbose
         kwargs["non_interactive"] = args.non_interactive
         if args.output_dir is not None:
             kwargs["output_dir"] = args.output_dir
-        output_path = download(**kwargs)
+        output_path = download(DATA_SOURCES[uid], **kwargs)
 
         if output_path is not None and verbose:
             print("=" * 80)
