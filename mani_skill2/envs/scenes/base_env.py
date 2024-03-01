@@ -124,7 +124,7 @@ class SceneManipulationEnv(BaseEnv):
 
     def _register_human_render_cameras(self):
         if self.robot_uids == "fetch":
-            room_camera_pose = look_at([-6, 2, 2], [-2.5, 2, 0])
+            room_camera_pose = look_at([2.5, -2.5, 3], [0.0, 0.0, 0])
             room_camera_config = CameraConfig(
                 "render_camera",
                 room_camera_pose.p,

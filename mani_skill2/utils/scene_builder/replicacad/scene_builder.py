@@ -188,10 +188,14 @@ class ReplicaCADSceneBuilder(SceneBuilder):
         if self.env.robot_uids == "fetch":
             agent: Fetch = self.env.agent
             agent.reset(agent.RESTING_QPOS)
-            agent.robot.set_pose(sapien.Pose([0.8, 1.9, 0.001]))
-            qpos = agent.robot.qpos
-            qpos[:, 2] = 2.9
-            agent.robot.set_qpos(qpos)
+
+            # set robot to be inside the small room in the middle
+            # agent.robot.set_pose(sapien.Pose([0.8, 1.9, 0.001]))
+            # qpos = agent.robot.qpos
+            # qpos[:, 2] = 2.9
+            # agent.robot.set_qpos(qpos)
+
+            agent.robot.set_pose(sapien.Pose([-0.8, -1, 0.001]))
 
         else:
             raise NotImplementedError(self.env.robot_uids)
