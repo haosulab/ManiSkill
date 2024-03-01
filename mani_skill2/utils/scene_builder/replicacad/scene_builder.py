@@ -67,7 +67,10 @@ class ReplicaCADSceneBuilder(SceneBuilder):
         background_template_name = osp.basename(
             scene_json["stage_instance"]["template_name"]
         )
-        bg_path = f"data/scene_datasets/replica_cad_dataset/stages/{background_template_name}.glb"
+        bg_path = str(
+            ASSET_DIR
+            / f"scene_datasets/replica_cad_dataset/stages/{background_template_name}.glb"
+        )
         builder = scene.create_actor_builder()
         # Note all ReplicaCAD assets are rotated by 90 degrees as they use a different xyz convention to SAPIEN/ManiSkill.
         q = transforms3d.quaternions.axangle2quat(
@@ -91,7 +94,7 @@ class ReplicaCADSceneBuilder(SceneBuilder):
         for obj_meta in scene_json["object_instances"]:
 
             # Again, for any dataset you will have to figure out how they reference object files
-            # Note that ASSET_DIR will always refer to the data/ folder or whatever MS_ASSET_DIR is set to
+            # Note that ASSET_DIR will always refer to the ~/.ms_data folder or whatever MS_ASSET_DIR is set to
             obj_cfg_path = osp.join(
                 ASSET_DIR,
                 "scene_datasets/replica_cad_dataset/configs/objects",
