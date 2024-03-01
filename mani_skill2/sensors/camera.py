@@ -129,12 +129,10 @@ class Camera(BaseSensor):
             self.entity = None
         else:
             if articulation is None:
-                # TODO (stao): This line certainly should not work. Fix to support adding mounted cameras to non articulated objects (Actors here then)
-                # self.entity = get_obj_by_name(scene.get_entities(), entity_uid)
-                raise NotImplementedError(
-                    "Adding cameras mounted to non articulated objects has not been implemented yet"
-                )
+                pass
             else:
+                # if given an articulation and entity_uid (as a string), find the correct link to mount on
+                # this is just for convenience so robot configurations can pick link to mount to by string/id
                 self.entity = get_obj_by_name(articulation.get_links(), entity_uid)
             if self.entity is None:
                 raise RuntimeError(f"Mount entity ({entity_uid}) is not found")
