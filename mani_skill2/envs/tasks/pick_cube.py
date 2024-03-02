@@ -56,14 +56,12 @@ class PickCubeEnv(BaseEnv):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     def _register_sensors(self):
-        pose = look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
-        return [
-            CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10)
-        ]
+        pose = look_at(eye=[0.4, 0.4, 0.6], target=[0, 0, 0.2])
+        return [CameraConfig("base_camera", pose.p, pose.q, 128, 128, 1, 0.01, 100)]
 
     def _register_human_render_cameras(self):
         pose = look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
-        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
+        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)
 
     def _load_actors(self):
         self.table_scene = TableSceneBuilder(
