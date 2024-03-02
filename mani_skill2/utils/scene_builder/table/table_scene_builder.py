@@ -1,5 +1,4 @@
 import os.path as osp
-from dataclasses import dataclass
 from pathlib import Path
 from typing import List
 
@@ -8,11 +7,12 @@ import sapien
 import sapien.render
 from transforms3d.euler import euler2quat
 
-from mani_skill2.utils.building.ground import build_tesselated_square_floor
+from mani_skill2.agents.multi_agent import MultiAgent
+from mani_skill2.agents.robots.fetch import FETCH_UNIQUE_COLLISION_BIT
+from mani_skill2.utils.building.ground import build_ground
 from mani_skill2.utils.scene_builder import SceneBuilder
 
 
-@dataclass
 class TableSceneBuilder(SceneBuilder):
     robot_init_qpos_noise: float = 0.02
 
@@ -37,11 +37,11 @@ class TableSceneBuilder(SceneBuilder):
             .find_component_by_type(sapien.render.RenderBodyComponent)
             .compute_global_aabb_tight()
         )
+        self.table_length = aabb[1, 0] - aabb[0, 0]
+        self.table_width = aabb[1, 1] - aabb[0, 1]
         self.table_height = aabb[1, 2] - aabb[0, 2]
 
-        self.ground = build_tesselated_square_floor(
-            self.scene, altitude=-self.table_height
-        )
+        self.ground = build_ground(self.scene, altitude=-self.table_height)
         self.table = table
         self._scene_objects: List[sapien.Entity] = [self.table, self.ground]
 
@@ -50,7 +50,7 @@ class TableSceneBuilder(SceneBuilder):
         self.table.set_pose(
             sapien.Pose(p=[-0.12, 0, -self.table_height], q=euler2quat(0, 0, np.pi / 2))
         )
-        if self.env.robot_uid == "panda":
+        if self.env.robot_uids == "panda":
             qpos = np.array(
                 [
                     0.0,
@@ -69,7 +69,7 @@ class TableSceneBuilder(SceneBuilder):
             )
             self.env.agent.reset(qpos)
             self.env.agent.robot.set_pose(sapien.Pose([-0.615, 0, 0]))
-        elif self.env.robot_uid == "panda_realsensed435":
+        elif self.env.robot_uids == "panda_realsensed435":
             # fmt: off
             qpos = np.array(
                 [0.0, np.pi / 8, 0, -np.pi * 5 / 8, 0, np.pi * 3 / 4, -np.pi / 4, 0.04, 0.04]
@@ -80,16 +80,16 @@ class TableSceneBuilder(SceneBuilder):
             )
             self.env.agent.reset(qpos)
             self.env.agent.robot.set_pose(sapien.Pose([-0.615, 0, 0]))
-        elif self.env.robot_uid == "xmate3_robotiq":
+        elif self.env.robot_uids == "xmate3_robotiq":
             qpos = np.array(
                 [0, np.pi / 6, 0, np.pi / 3, 0, np.pi / 2, -np.pi / 2, 0, 0]
             )
             qpos[:-2] += self.env._episode_rng.normal(
-                0, self.env.robot_init_qpos_noise, len(qpos) - 2
+                0, self.robot_init_qpos_noise, len(qpos) - 2
             )
             self.env.agent.reset(qpos)
             self.env.agent.robot.set_pose(sapien.Pose([-0.562, 0, 0]))
-        elif self.env.robot_uid == "fetch":
+        elif self.env.robot_uids == "fetch":
             qpos = np.array(
                 [
                     0,
@@ -110,20 +110,47 @@ class TableSceneBuilder(SceneBuilder):
                 ]
             )
             self.env.agent.reset(qpos)
-            self.env.agent.robot.set_pose(sapien.Pose([-0.82, 0, -self.table_height]))
+            self.env.agent.robot.set_pose(sapien.Pose([-1.05, 0, -self.table_height]))
 
-            from mani_skill2.agents.robots.fetch import FETCH_UNIQUE_COLLISION_BIT
-
-            cs = (
-                self.ground._objs[0]
-                .find_component_by_type(sapien.physx.PhysxRigidStaticComponent)
-                .get_collision_shapes()[0]
+            # TODO (stao) (arth): is there a better way to model robots in sim. This feels very unintuitive.
+            for obj in self.ground._objs:
+                cs = obj.find_component_by_type(
+                    sapien.physx.PhysxRigidStaticComponent
+                ).get_collision_shapes()[0]
+                cg = cs.get_collision_groups()
+                cg[2] |= FETCH_UNIQUE_COLLISION_BIT
+                cs.set_collision_groups(cg)
+        elif self.env.robot_uids == ("panda", "panda"):
+            agent: MultiAgent = self.env.agent
+            qpos = np.array(
+                [
+                    0.0,
+                    np.pi / 8,
+                    0,
+                    -np.pi * 5 / 8,
+                    0,
+                    np.pi * 3 / 4,
+                    np.pi / 4,
+                    0.04,
+                    0.04,
+                ]
             )
-            cg = cs.get_collision_groups()
-            cg[2] = FETCH_UNIQUE_COLLISION_BIT
-            cs.set_collision_groups(cg)
+            qpos[:-2] += self.env._episode_rng.normal(
+                0, self.robot_init_qpos_noise, len(qpos) - 2
+            )
+            agent.agents[1].reset(qpos)
+            agent.agents[1].robot.set_pose(
+                sapien.Pose([0, 0.75, 0], q=euler2quat(0, 0, -np.pi / 2))
+            )
+            agent.agents[0].reset(qpos)
+            agent.agents[0].robot.set_pose(
+                sapien.Pose([0, -0.75, 0], q=euler2quat(0, 0, np.pi / 2))
+            )
+        elif "dclaw" in self.env.robot_uids or "allegro" in self.env.robot_uids:
+            # Need to specify the robot qpos for each sub-scenes using tensor api
+            pass
         else:
-            raise NotImplementedError(self.env.robot_uid)
+            raise NotImplementedError(self.env.robot_uids)
 
     @property
     def scene_objects(self):

@@ -2,10 +2,12 @@ import gymnasium as gym
 import numpy as np
 import pytest
 
+from mani_skill2.agents.multi_agent import MultiAgent
 from mani_skill2.envs.sapien_env import BaseEnv
 from tests.utils import (
     CONTROL_MODES_STATIONARY_SINGLE_ARM,
     ENV_IDS,
+    MULTI_AGENT_ENV_IDS,
     OBS_MODES,
     ROBOTS,
     STATIONARY_ENV_IDS,
@@ -28,6 +30,11 @@ def test_envs_obs_modes(env_id, obs_mode):
     assert_isinstance(terminated, bool)
     assert_isinstance(truncated, bool)
     assert_isinstance(info, [np.ndarray, bool, float, int])
+    if obs_mode == "rgbd":
+        for cam in obs["sensor_data"].keys():
+            assert obs["sensor_data"][cam]["rgb"].shape == (128, 128, 3)
+            assert obs["sensor_data"][cam]["depth"].shape == (128, 128, 1)
+            assert obs["sensor_data"][cam]["depth"].dtype == np.uint16
     env.close()
     del env
 
@@ -106,8 +113,8 @@ def test_states(env_id):
 
 
 @pytest.mark.parametrize("env_id", ENV_IDS)
-@pytest.mark.parametrize("robot_uid", ROBOTS)
-def test_robots(env_id, robot_uid):
+@pytest.mark.parametrize("robot_uids", ROBOTS)
+def test_robots(env_id, robot_uids):
     if env_id in [
         "PandaAvoidObstacles-v0",
         "PegInsertionSide-v0",
@@ -119,9 +126,23 @@ def test_robots(env_id, robot_uid):
         "MoveBucket-v1",
     ]:
         pytest.skip(reason=f"Env {env_id} does not support robots other than panda")
-    env = gym.make(env_id, robot_uid=robot_uid)
+    env = gym.make(env_id, robot_uids=robot_uids)
     env.reset()
     action_space = env.action_space
+    for _ in range(5):
+        env.step(action_space.sample())
+    env.close()
+    del env
+
+
+@pytest.mark.parametrize("env_id", MULTI_AGENT_ENV_IDS)
+def test_multi_agent(env_id):
+    env = gym.make(env_id, num_envs=1)
+    env.reset()
+    action_space = env.action_space
+    assert isinstance(action_space, gym.spaces.Dict)
+    assert isinstance(env.unwrapped.single_action_space, gym.spaces.Dict)
+    assert isinstance(env.unwrapped.agent, MultiAgent)
     for _ in range(5):
         env.step(action_space.sample())
     env.close()

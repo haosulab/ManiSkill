@@ -16,7 +16,7 @@ from mani_skill2 import format_path
 from mani_skill2.agents.robots.panda.panda import Panda
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
-from mani_skill2.utils.building.ground import build_tesselated_square_floor
+from mani_skill2.utils.building.ground import build_ground
 from mani_skill2.utils.common import np_random, random_choice
 from mani_skill2.utils.geometry import transform_points
 from mani_skill2.utils.geometry.trimesh_utils import get_component_mesh
@@ -37,12 +37,12 @@ class TurnFaucetBaseEnv(BaseEnv):
     def __init__(
         self,
         *args,
-        robot_uid="panda",
+        robot_uids="panda",
         robot_init_qpos_noise=0.02,
         **kwargs,
     ):
         self.robot_init_qpos_noise = robot_init_qpos_noise
-        super().__init__(*args, robot_uid=robot_uid, **kwargs)
+        super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     def _load_actors(self):
         # builder = self._scene.create_actor_builder()
@@ -67,7 +67,7 @@ class TurnFaucetBaseEnv(BaseEnv):
         #     Pose(p=[-0.24, 0, -sink_height], q=euler2quat(0, 0, -np.pi / 2))
         # )
 
-        build_tesselated_square_floor(self._scene)
+        build_ground(self._scene)
 
         # # add wall
         # wall_mtl = sapien.render.RenderMaterial(
@@ -84,7 +84,7 @@ class TurnFaucetBaseEnv(BaseEnv):
         # self.wall.set_pose(Pose(p=[0.25, 0, 1]))
 
     def _initialize_agent(self):
-        if self.robot_uid == "panda":
+        if self.robot_uids == "panda":
             # fmt: off
             qpos = np.array([0, -0.785, 0, -2.356, 0, 1.57, 0.785, 0, 0])
             # fmt: on
@@ -94,7 +94,7 @@ class TurnFaucetBaseEnv(BaseEnv):
             self.agent.reset(qpos)
             self.agent.robot.set_pose(Pose([-0.56, 0, 0]))
         else:
-            raise NotImplementedError(self.robot_uid)
+            raise NotImplementedError(self.robot_uids)
 
     def _get_obs_agent(self):
         obs = self.agent.get_proprioception()
@@ -107,7 +107,7 @@ class TurnFaucetBaseEnv(BaseEnv):
             "base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10
         )
 
-    def _register_render_cameras(self):
+    def _register_human_render_cameras(self):
         pose = look_at([-1.3, 0.6, 0.6], [0.0, 0.0, 0.4])
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
 

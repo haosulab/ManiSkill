@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+
+<package format="2">
+
+  <name>anymal_c_simple_description</name>
+  <version>1.0.13</version>
+  <description>ANYmal C Description Package</description>
+
+  <license>BSD-3</license>
+
+  <author email="lisler@anybotics.com">Linus Isler</author>
+  <maintainer email="lisler@anybotics.com">Linus Isler</maintainer>
+  <maintainer email="rdiethelm@anybotics.com">Remo Diethelm</maintainer>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <test_depend>roslaunch</test_depend>
+
+</package>

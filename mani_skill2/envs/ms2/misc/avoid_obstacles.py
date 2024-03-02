@@ -10,7 +10,7 @@ from mani_skill2 import format_path
 from mani_skill2.agents.robots.panda import PandaRealSensed435
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
-from mani_skill2.utils.building.ground import build_tesselated_square_floor
+from mani_skill2.utils.building.ground import build_ground
 from mani_skill2.utils.io_utils import load_json
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import (
@@ -119,7 +119,7 @@ class AvoidObstaclesBaseEnv(BaseEnv):
         return actor
 
     def _load_actors(self):
-        build_tesselated_square_floor(self._scene)
+        build_ground(self._scene)
 
         # Add a wall
         if "wall" in self.episode_config:
@@ -224,7 +224,7 @@ class AvoidObstaclesBaseEnv(BaseEnv):
             "base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10
         )
 
-    def _register_render_cameras(self):
+    def _register_human_render_cameras(self):
         pose = look_at([1.5, 0, 1.5], [0.0, 0.0, 0.5])
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
 
@@ -252,7 +252,7 @@ class PandaAvoidObstaclesEnv(AvoidObstaclesBaseEnv):
     ASSET_UID = "panda_avoid_obstacles"
 
     def _load_agent(self):
-        self.robot_uid = "panda_realsensed435"  # TODO (stao): This old code here is not good practice to override user argument like this
+        self.robot_uids = "panda_realsensed435"  # TODO (stao): This old code here is not good practice to override user argument like this
         self.agent = PandaRealSensed435(
             self._scene,
             self._control_freq,

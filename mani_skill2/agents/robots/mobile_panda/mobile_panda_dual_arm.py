@@ -290,29 +290,31 @@ class MobilePandaDualArm(DummyMobileAgent):
         # Make a deepcopy in case users modify any config
         return deepcopy_dict(controller_configs)
 
+    sensor_configs = []
+
     # TODO (stao): Remove this @property and make sensor configs completely statically defined.
     # The expectation is that a robot should not physically ever be changed usually. If you do
     # want to adapt the robot, you should inherit a robot class and make appropriate changes
-    @property
-    def sensor_configs(self):
-        sensors = []
-        qs = [
-            [0.9238795, 0, 0.3826834, 0],
-            [0.46193977, 0.33141357, 0.19134172, -0.80010315],
-            [-0.46193977, 0.33141357, -0.19134172, -0.80010315],
-        ]
-        for i in range(3):
-            q = qs[i]
-            camera = CameraConfig(
-                f"overhead_camera_{i}",
-                p=[0, 0, self.camera_h],
-                q=q,
-                width=400,
-                height=160,
-                near=0.1,
-                far=10,
-                fov=np.pi / 3,
-                entity_uid="mobile_base",
-            )
-            sensors.append(camera)
-        return sensors
+    # @property
+    # def sensor_configs(self):
+    #     sensors = []
+    #     qs = [
+    #         [0.9238795, 0, 0.3826834, 0],
+    #         [0.46193977, 0.33141357, 0.19134172, -0.80010315],
+    #         [-0.46193977, 0.33141357, -0.19134172, -0.80010315],
+    #     ]
+    #     for i in range(3):
+    #         q = qs[i]
+    #         camera = CameraConfig(
+    #             f"overhead_camera_{i}",
+    #             p=[0, 0, self.camera_h],
+    #             q=q,
+    #             width=400,
+    #             height=160,
+    #             near=0.1,
+    #             far=10,
+    #             fov=np.pi / 3,
+    #             entity_uid="mobile_base",
+    #         )
+    #         sensors.append(camera)
+    #     return sensors

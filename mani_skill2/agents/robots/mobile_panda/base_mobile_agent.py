@@ -13,7 +13,9 @@ from mani_skill2.utils.sapien_utils import get_obj_by_name
 
 
 class DummyMobileAgent(BaseAgent):
-    def __init__(self, scene, control_freq, control_mode=None, fix_root_link=True):
+    def __init__(
+        self, scene, control_freq, control_mode=None, fix_root_link=True, agent_idx=None
+    ):
         if control_mode is None:  # if user did not specify a control_mode
             control_mode = "base_pd_joint_vel_arm_pd_joint_vel"
         super().__init__(
@@ -21,6 +23,7 @@ class DummyMobileAgent(BaseAgent):
             control_freq,
             control_mode=control_mode,
             fix_root_link=fix_root_link,
+            agent_idx=agent_idx,
         )
 
     def _after_init(self):
@@ -36,18 +39,18 @@ class DummyMobileAgent(BaseAgent):
         self.base_link = self.robot.get_links()[3]
 
         # Ignore collision between the adjustable body and ground
-        body = get_obj_by_name(self.robot.get_links(), "adjustable_body")
-
-        s = body.get_collision_shapes()[0]
-        gs = s.get_collision_groups()
-        gs[2] = gs[2] | 1 << 30
-        s.set_collision_groups(gs)
+        bodies = get_obj_by_name(self.robot.get_links(), "adjustable_body")
+        for body in bodies._objs:
+            s = body.get_collision_shapes()[0]
+            gs = s.get_collision_groups()
+            gs[2] = 1 << 30
+            s.set_collision_groups(gs)
 
     def get_proprioception(self):
         state_dict = super().get_proprioception()
         qpos, qvel = state_dict["qpos"], state_dict["qvel"]
-        base_pos, base_orientation, arm_qpos = qpos[:2], qpos[2], qpos[3:]
-        base_vel, base_ang_vel, arm_qvel = qvel[:2], qvel[2], qvel[3:]
+        base_pos, base_orientation, arm_qpos = qpos[:, :2], qpos[:, 2], qpos[:, 3:]
+        base_vel, base_ang_vel, arm_qvel = qvel[:, :2], qvel[:, 2], qvel[:, 3:]
 
         state_dict["qpos"] = arm_qpos
         state_dict["qvel"] = arm_qvel

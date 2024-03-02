@@ -218,6 +218,13 @@ def build_panda_gripper_grasp_pose_visual(scene: ManiSkillScene):
     builder = scene.create_actor_builder()
     grasp_pose_visual_width = 0.01
     grasp_width = 0.05
+
+    builder.add_sphere_visual(
+        pose=sapien.Pose(p=[0, 0, 0.0]),
+        radius=grasp_pose_visual_width,
+        material=sapien.render.RenderMaterial(base_color=[0.3, 0.4, 0.8, 0.7])
+    )
+
     builder.add_box_visual(
         pose=sapien.Pose(p=[0, 0, -0.08]),
         half_size=[grasp_pose_visual_width, grasp_pose_visual_width, 0.02],

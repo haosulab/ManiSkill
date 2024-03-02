@@ -136,8 +136,8 @@ class PlugChargerEnv(StationaryManipulationEnv):
         self.receptacle.set_pose(Pose(pos, quat))
 
         # Adjust render camera
-        if "render_camera" in self._render_cameras:
-            self._render_cameras[
+        if "render_camera" in self._human_render_cameras:
+            self._human_render_cameras[
                 "render_camera"
             ].camera.local_pose = self.receptacle.pose * look_at(
                 [0.3, 0.4, 0.1], [0, 0, 0]
@@ -300,7 +300,7 @@ class PlugChargerEnv(StationaryManipulationEnv):
         cam_cfg.pose = look_at([-0.3, 0, 0.1], [0, 0, 0.1])
         return cam_cfg
 
-    def _register_render_cameras(self):
+    def _register_human_render_cameras(self):
         cam_cfg = super()._register_render_cameras()
         cam_cfg.pose = look_at([-0.3, -0.4, 0.2], [0, 0, 0.1])
         return cam_cfg

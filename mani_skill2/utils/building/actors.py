@@ -17,7 +17,7 @@ from mani_skill2.utils.building.actor_builder import ActorBuilder
 from mani_skill2.utils.io_utils import load_json
 
 # map model dataset to a database of models
-model_dbs: Dict[str, Dict[str, Dict]] = {}
+MODEL_DBS: Dict[str, Dict[str, Dict]] = {}
 
 
 def _build_by_type(builder: ActorBuilder, name, body_type):
@@ -262,13 +262,14 @@ def build_actor_ycb(
     model_id: str,
     scene: ManiSkillScene,
     name: str,
-    root_dir=ASSET_DIR / "mani_skill2_ycb",
+    root_dir=ASSET_DIR / "assets/mani_skill2_ycb",
     body_type: str = "dynamic",
     add_collision: bool = True,
+    return_builder: bool = False,
 ):
-    if "YCB" not in model_dbs:
+    if "YCB" not in MODEL_DBS:
         _load_ycb_dataset()
-    model_db = model_dbs["YCB"]["model_data"]  # TODO (stao): remove hardcode
+    model_db = MODEL_DBS["YCB"]["model_data"]  # TODO (stao): remove hardcode
 
     builder = scene.create_actor_builder()
 
@@ -286,18 +287,19 @@ def build_actor_ycb(
             scale=[scale] * 3,
             material=physical_material,
             density=density,
-            decomposition="coacd",
         )
 
     visual_file = str(model_dir / "textured.obj")
     builder.add_visual_from_file(filename=visual_file, scale=[scale] * 3)
+    if return_builder:
+        return builder, height
     return _build_by_type(builder, name, body_type), height
 
 
 def _load_ycb_dataset():
     # load YCB if used
-    model_dbs["YCB"] = {
-        "model_data": load_json(ASSET_DIR / "mani_skill2_ycb/info_pick_v0.json"),
+    MODEL_DBS["YCB"] = {
+        "model_data": load_json(ASSET_DIR / "assets/mani_skill2_ycb/info_pick_v0.json"),
         "builder": build_actor_ycb,
     }
 
@@ -339,10 +341,6 @@ def build_actor_ai2(
         )
         actor = builder.build(name=actor_id)
 
-    aabb = actor.find_component_by_type(
-        sapien.render.RenderBodyComponent
-    ).compute_global_aabb_tight()
-    aabb[1, 2] - aabb[0, 2]
     if set_object_on_ground:
         actor.set_pose(sapien.Pose(p=[0, 0, 0]))
     return actor

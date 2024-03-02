@@ -1,19 +1,22 @@
+from __future__ import annotations
+
 from collections import OrderedDict
-from typing import Dict, Union
+from typing import TYPE_CHECKING, Dict, Union
 
 import numpy as np
 import sapien
 import sapien.physx as physx
+import torch
 from gymnasium import spaces
 
 from mani_skill2 import format_path
-from mani_skill2.envs.scene import ManiSkillScene
 from mani_skill2.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill2.utils.sapien_utils import (
     apply_urdf_config,
     check_urdf_config,
     parse_urdf_config,
 )
+from mani_skill2.utils.structs.actor import Actor
 from mani_skill2.utils.structs.articulation import Articulation
 
 from .controllers.base_controller import (
@@ -22,6 +25,9 @@ from .controllers.base_controller import (
     ControllerConfig,
     DictController,
 )
+
+if TYPE_CHECKING:
+    from mani_skill2.envs.scene import ManiSkillScene
 
 
 class BaseAgent:
@@ -35,6 +41,7 @@ class BaseAgent:
         control_mode: uid of controller to use
         fix_root_link: whether to fix the robot root link
         config: agent configuration
+        agent_idx: an index for this agent in a multi-agent task setup If None, the task should be single-agent
     """
 
     uid: str
@@ -55,9 +62,11 @@ class BaseAgent:
         control_freq: int,
         control_mode: str = None,
         fix_root_link=True,
+        agent_idx: int = None,
     ):
         self.scene = scene
         self._control_freq = control_freq
+        self._agent_idx = agent_idx
 
         # URDF
         self.fix_root_link = fix_root_link
@@ -71,13 +80,11 @@ class BaseAgent:
         self.controllers = OrderedDict()
         self._load_articulation()
         self._after_loading_articulation()
-
-    def initialize(self):
-        """
-        Initialize the agent, which includes running _after_init() and initializing/restting the controller
-        """
         self._after_init()
-        self.controller.reset()
+
+    @property
+    def device(self):
+        return self.scene.device
 
     def _load_articulation(self):
         """
@@ -85,6 +92,8 @@ class BaseAgent:
         """
         loader = self.scene.create_urdf_loader()
         loader.name = self.uid
+        if self._agent_idx is not None:
+            loader.name = f"{self.uid}-agent-{self._agent_idx}"
         loader.fix_root_link = self.fix_root_link
 
         urdf_path = format_path(str(self.urdf_path))
@@ -93,7 +102,6 @@ class BaseAgent:
         check_urdf_config(urdf_config)
 
         # TODO(jigu): support loading multiple convex collision shapes
-
         apply_urdf_config(loader, urdf_config)
         self.robot: Articulation = loader.load(urdf_path)
         assert self.robot is not None, f"Fail to load URDF from {urdf_path}"
@@ -118,8 +126,10 @@ class BaseAgent:
         """Get the currently activated controller uid."""
         return self._control_mode
 
-    def set_control_mode(self, control_mode):
-        """Set the controller and reset."""
+    def set_control_mode(self, control_mode=None):
+        """Set the controller and drive properties. This does not reset the controller. If given control mode is None, will set defaults"""
+        if control_mode is None:
+            control_mode = self._default_control_mode
         assert (
             control_mode in self.supported_control_modes
         ), "{} not in supported modes: {}".format(
@@ -137,6 +147,7 @@ class BaseAgent:
                 self.controllers[control_mode] = config.controller_cls(
                     config, self.robot, self._control_freq, scene=self.scene
                 )
+            self.controllers[control_mode].set_drive_property()
             if (
                 isinstance(self.controllers[control_mode], DictController)
                 and self.controllers[control_mode].balance_passive_force
@@ -166,6 +177,18 @@ class BaseAgent:
             )
         else:
             return self.controller.action_space
+
+    @property
+    def single_action_space(self):
+        if self._control_mode is None:
+            return spaces.Dict(
+                {
+                    uid: controller.single_action_space
+                    for uid, controller in self.controllers.items()
+                }
+            )
+        else:
+            return self.controller.single_action_space
 
     def set_action(self, action):
         """
@@ -229,23 +252,35 @@ class BaseAgent:
         """
         if init_qpos is not None:
             self.robot.set_qpos(init_qpos)
-        self.robot.set_qvel(np.zeros(self.robot.dof))
-        self.robot.set_qf(np.zeros(self.robot.dof))
-        self.set_control_mode(self._default_control_mode)
+        self.robot.set_qvel(torch.zeros(self.robot.max_dof, device=self.device))
+        self.robot.set_qf(torch.zeros(self.robot.max_dof, device=self.device))
+        self.controller.reset()
 
     # -------------------------------------------------------------------------- #
     # Optional per-agent APIs, implemented depending on agent affordances
     # -------------------------------------------------------------------------- #
-    def is_grasping(self, object: Union[sapien.Entity, None] = None):
+    def is_grasping(self, object: Union[Actor, None] = None):
         """
         Check if this agent is grasping an object or grasping anything at all
 
         Args:
-            object (sapien.Entity | None):
-                If object is a sapien.Entity, this function checks grasping against that. If it is none, the function checks if the
+            object (Actor | None):
+                If object is a Actor, this function checks grasping against that. If it is none, the function checks if the
                 agent is grasping anything at all.
 
         Returns:
             True if agent is grasping object. False otherwise. If object is None, returns True if agent is grasping something, False if agent is grasping nothing.
+        """
+        raise NotImplementedError()
+
+    def is_static(self, threshold: float):
+        """
+        Check if this robot is static (within the given threshold) in terms of the q velocity
+
+        Args:
+            threshold (float): The threshold before this agent is considered static
+
+        Returns:
+            True if agent is static within the threshold. False otherwise
         """
         raise NotImplementedError()

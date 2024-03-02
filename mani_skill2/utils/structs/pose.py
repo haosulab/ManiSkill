@@ -11,7 +11,7 @@ from mani_skill2.utils.geometry.rotation_conversions import (
     quaternion_multiply,
     quaternion_to_matrix,
 )
-from mani_skill2.utils.sapien_utils import clone_tensor, to_numpy, to_tensor
+from mani_skill2.utils.sapien_utils import to_numpy, to_tensor
 from mani_skill2.utils.structs.types import Array, Device
 
 
@@ -102,9 +102,11 @@ class Pose:
         else:
             assert len(pose.shape) <= 2 and len(pose.shape) > 0
             pose = to_tensor(pose)
+            pose = add_batch_dim(pose)
             if pose.shape[-1] == 3:
                 return cls.create_from_pq(p=pose, device=pose.device)
-            return cls(raw_pose=add_batch_dim(pose))
+            assert pose.shape[-1] == 7
+            return cls(raw_pose=pose)
 
     # -------------------------------------------------------------------------- #
     # Functions from sapien.Pose
@@ -131,7 +133,7 @@ class Pose:
 
     # def get_rpy(self) -> numpy.ndarray[numpy.float32, _Shape, _Shape[3]]: ...
     def inv(self) -> "Pose":
-        inverted_raw_pose = clone_tensor(self.raw_pose)
+        inverted_raw_pose = self.raw_pose.clone()
         inverted_raw_pose[..., 4:] = -inverted_raw_pose[..., 4:]
         new_p = quaternion_apply(inverted_raw_pose[..., 3:], -self.p)
         inverted_raw_pose[..., :3] = new_p

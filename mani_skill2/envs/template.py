@@ -21,19 +21,24 @@ mani_skill2/envs/tasks/push_cube.py which is annotated with comments to explain 
 """
 
 from collections import OrderedDict
-from typing import Any, Dict
+from typing import Any, Dict, Union
 
 import numpy as np
 import torch
 
+from mani_skill2.agents.multi_agent import MultiAgent
+from mani_skill2.agents.robots.fetch.fetch import Fetch
+from mani_skill2.agents.robots.panda.panda import Panda
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
+from mani_skill2.utils.building import actors
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import look_at
+from mani_skill2.utils.structs.types import GPUMemoryConfig, SimConfig
 
 
 # register the environment by a unique ID and specify a max time limit. Now once this file is imported you can do gym.make("CustomEnv-v0")
-@register_env(name="CustomEnv-v0", max_episode_steps=200)
+@register_env("CustomEnv-v0", max_episode_steps=200)
 class CustomEnv(BaseEnv):
     """
     Task Description
@@ -52,10 +57,32 @@ class CustomEnv(BaseEnv):
     Visualization: link to a video/gif of the task being solved
     """
 
-    # in the __init__ function you can pick a default robot your task should use e.g. the panda robot
-    def __init__(self, *args, robot_uid="panda", robot_init_qpos_noise=0.02, **kwargs):
+    # here you can define a list of robots that this task is built to support and be solved by. This is so that
+    # users won't be permitted to use robots not predefined here. If SUPPORTED_ROBOTS is not defined then users can do anything
+    SUPPORTED_ROBOTS = ["panda", "fetch"]
+    # if you want to say you support multiple robots you can use SUPPORTED_ROBOTS = [["panda", "panda"], ["panda", "fetch"]] etc.
+
+    # to help with programming, you can assert what type of agents are supported like below, and any shared properties of self.agent
+    # become available to typecheckers and auto-completion. E.g. Panda and Fetch both share a property called .tcp (tool center point).
+    agent: Union[Panda, Fetch]
+    # if you want to do typing for multi-agent setups, use this below and specify what possible tuples of robots are permitted by typing
+    # this will then populate agent.agents (list of the instantiated agents) with the right typing
+    # agent: MultiAgent[Union[Tuple[Panda, Panda], Tuple[Panda, Panda, Panda]]]
+
+    # Specify default simulation/gpu memory configurations. Note that tasks need to tune their GPU memory configurations accordingly
+    # in order to save memory while also running with no errors. In general you can start with low values and increase them
+    # depending on the messages that show up when you try to run more environments in parallel
+    sim_cfg = SimConfig(
+        gpu_memory_cfg=GPUMemoryConfig(
+            found_lost_pairs_capacity=2**25, max_rigid_patch_count=2**18
+        )
+    )
+
+    # in the __init__ function you can pick a default robot your task should use e.g. the panda robot by setting a default for robot_uids argument
+    # note that if robot_uids is a list of robot uids, then we treat it as a multi-agent setup and load each robot separately.
+    def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
         self.robot_init_qpos_noise = robot_init_qpos_noise
-        super().__init__(*args, robot_uid=robot_uid, **kwargs)
+        super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     """
     Reconfiguration Code
@@ -72,12 +99,12 @@ class CustomEnv(BaseEnv):
             eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1]
         )  # look_at is a utility to get the pose of a camera that looks at a target
 
-        # to see what all the sensors capture in the environment for observations, run env.render_cameras() which returns an rgb array you can visualize
+        # to see what all the sensors capture in the environment for observations, run env.render_sensors() which returns an rgb array you can visualize
         return [
             CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10)
         ]
 
-    def _register_render_cameras(self):
+    def _register_human_render_cameras(self):
         # this is just like _register_sensors, but for adding cameras used for rendering when you call env.render() when render_mode="rgb_array" or env.render_rgb_array()
         pose = look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
@@ -109,15 +136,15 @@ class CustomEnv(BaseEnv):
     Episode Initialization Code
 
     below are all functions involved in episode initialization during environment reset called in the same order. As a user
-    you can change these however you want for your desired task.
+    you can change these however you want for your desired task. Note that these functions are given a env_idx variable.
+
+    `env_idx` is a torch Tensor representing the indices of the parallel environments that are being initialized/reset. This is used
+    to support partial resets where some parallel envs might be reset while others are still running (useful for faster RL and evaluation).
+    Generally you only need to really use it to determine batch sizes via len(env_idx). ManiSkill helps handle internally a lot of masking
+    you might normally need to do when working with GPU simulation. For specific details check out the push_cube.py code
     """
 
-    def _initialize_actors(self):
-        pass
-
-    def _initialize_task(self):
-        # we highly recommend to generate some kind of "goal" information to then later include in observations
-        # goal can be parameterized as a state (e.g. target pose of a object)
+    def _initialize_actors(self, env_idx: torch.Tensor):
         pass
 
     """
@@ -126,24 +153,36 @@ class CustomEnv(BaseEnv):
     the code below all impact some part of `self.step` function
     """
 
-    def _get_obs_extra(self):
+    def evaluate(self, obs: Any):
+        # this function is used primarily to determine success and failure of a task, both of which are optional. If a dictionary is returned
+        # containing "success": bool array indicating if the env is in success state or not, that is used as the terminated variable returned by
+        # self.step. Likewise if it contains "fail": bool array indicating the opposite (failure state or not) the same occurs. If both are given
+        # then a logical OR is taken so terminated = success | fail. If neither are given, terminated is always all False.
+        #
+        # You may also include additional keys which will populate the info object returned by self.step and that will be given to
+        # `_get_obs_extra` and `_compute_dense_reward`. Note that as everything is batched, you must return a batched array of
+        # `self.num_envs` booleans (or 0/1 values) for success an dfail as done in the example below
+        return {
+            "success": torch.zeros(self.num_envs, device=self.device, dtype=bool),
+            "fail": torch.zeros(self.num_envs, device=self.device, dtype=bool),
+        }
+
+    def _get_obs_extra(self, info: Dict):
         # should return an OrderedDict of additional observation data for your tasks
         # this will be included as part of the observation in the "extra" key when obs_mode="state_dict" or any of the visual obs_modes
-        # and included as part of a flattened observation when obs_mode="state"
+        # and included as part of a flattened observation when obs_mode="state". Moreover, you have access to the info object
+        # which is generated by the `evaluate` function above
         return OrderedDict()
 
-    def evaluate(self, obs: Any):
-        # should return a dictionary containing "success": bool indicating if the environment is in success state or not. The value here is also what the sparse reward is
-        # for the task. You may also include additional keys which will populate the info object returned by self.step.
-        # note that as everything is batched, you must return a batched array of self.num_envs booleans (or 0/1 values) as done in the example below
-        return {"success": torch.zeros(self.num_envs, device=self.device)}
-
-    def compute_dense_reward(self, obs: Any, action: np.ndarray, info: Dict):
+    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         # you can optionally provide a dense reward function by returning a scalar value here. This is used when reward_mode="dense"
-        # note that as everything is batched, you must return a batch of of self.num_envs rewards as done in the example below
+        # note that as everything is batched, you must return a batch of of self.num_envs rewards as done in the example below.
+        # Moreover, you have access to the info object which is generated by the `evaluate` function above
         return torch.zeros(self.num_envs, device=self.device)
 
-    def compute_normalized_dense_reward(self, obs: Any, action: np.ndarray, info: Dict):
+    def compute_normalized_dense_reward(
+        self, obs: Any, action: torch.Tensor, info: Dict
+    ):
         # this should be equal to compute_dense_reward / max possible reward
         max_reward = 1.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward

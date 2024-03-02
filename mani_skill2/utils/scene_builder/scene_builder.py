@@ -1,18 +1,23 @@
-from dataclasses import dataclass, field
-from typing import List
+from typing import Any, Dict, List
 
 import sapien
 
 from mani_skill2.envs.sapien_env import BaseEnv
-from mani_skill2.envs.scene import ManiSkillScene
 from mani_skill2.utils.structs.actor import Actor
 
 
-@dataclass
 class SceneBuilder:
     env: BaseEnv
-    _scene_objects: List[Actor] = field(default_factory=list)
-    _movable_objects: List[Actor] = field(default_factory=list)
+    _scene_objects: List[Actor] = []
+    _movable_objects: List[Actor] = []
+    builds_lighting: bool = False
+    """Whether this scene builder will add it's own lighting when build is called. If False, ManiSkill will add some default lighting"""
+    scene_configs: List[Any] = None
+    """List of scene configuration information that can be used to construct scenes. Can be simply a path to a json file or a dictionary"""
+
+    def __init__(self, env, robot_init_qpos_noise=0.02):
+        self.env = env
+        self.robot_init_qpos_noise = robot_init_qpos_noise
 
     def build(self, **kwargs):
         """
@@ -31,9 +36,17 @@ class SceneBuilder:
         return self.env._scene
 
     @property
-    def scene_objects(self):
+    def scene_objects(self) -> List[Actor]:
         raise NotImplementedError()
 
     @property
-    def movable_objects(self):
+    def movable_objects(self) -> List[Actor]:
+        raise NotImplementedError()
+
+    @property
+    def scene_objects_by_id(self) -> Dict[str, Actor]:
+        raise NotImplementedError()
+
+    @property
+    def movable_objects_by_id(self) -> Dict[str, Actor]:
         raise NotImplementedError()

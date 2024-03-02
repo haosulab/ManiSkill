@@ -121,7 +121,7 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
         self.box.set_pose(Pose(pos, quat))
 
     def _initialize_agent(self):
-        if self.robot_uid == "panda_realsensed435":
+        if self.robot_uids == "panda_realsensed435":
             # fmt: off
             qpos = np.array(
                 [0.0, np.pi / 8, 0, -np.pi * 5 / 8, 0, np.pi * 3 / 4, -np.pi / 4, 0.04, 0.04]
@@ -133,7 +133,7 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
             self.agent.reset(qpos)
             self.agent.robot.set_pose(Pose([-0.615, 0, 0]))
         else:
-            raise NotImplementedError(self.robot_uid)
+            raise NotImplementedError(self.robot_uids)
 
     @property
     def peg_head_pos(self):
@@ -280,7 +280,7 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
         cam_cfg.pose = look_at([0, -0.3, 0.2], [0, 0, 0.1])
         return cam_cfg
 
-    def _register_render_cameras(self):
+    def _register_human_render_cameras(self):
         cam_cfg = super()._register_render_cameras()
         cam_cfg.pose = look_at([0.5, -0.5, 0.8], [0.05, -0.1, 0.4])
         return cam_cfg

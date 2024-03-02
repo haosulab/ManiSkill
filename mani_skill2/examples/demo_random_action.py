@@ -9,7 +9,7 @@ from mani_skill2.utils.wrappers import RecordEpisode
 
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-e", "--env-id", type=str, default="PickCube-v0")
+    parser.add_argument("-e", "--env-id", type=str, default="PushCube-v1")
     parser.add_argument("-o", "--obs-mode", type=str, default="none")
     parser.add_argument("--reward-mode", type=str)
     parser.add_argument("-c", "--control-mode", type=str)
@@ -78,8 +78,9 @@ def main(args):
         if args.render_mode is not None:
             env.render()
 
-        if terminated or truncated:
-            break
+        if args.render_mode is None or args.render_mode != "human":
+            if terminated or truncated:
+                break
     env.close()
 
 

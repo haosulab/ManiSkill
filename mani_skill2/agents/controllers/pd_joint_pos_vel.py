@@ -19,14 +19,16 @@ class PDJointPosVelController(PDJointPosController):
         vel_high = np.broadcast_to(self.config.vel_upper, pos_high.shape)
         low = np.float32(np.hstack([pos_low, vel_low]))
         high = np.float32(np.hstack([pos_high, vel_high]))
-        self.action_space = spaces.Box(low, high, dtype=np.float32)
+        self.single_action_space = spaces.Box(low, high, dtype=np.float32)
 
     def reset(self):
         super().reset()
         self._target_qvel = np.zeros_like(self._target_qpos)
 
     def set_drive_velocity_targets(self, targets):
-        self.articulation.set_joint_drive_velocity_targets(targets, self.joints)
+        self.articulation.set_joint_drive_velocity_targets(
+            targets, self.joints, self.joint_indices
+        )
 
     def set_action(self, action: np.ndarray):
         action = self._preprocess_action(action)

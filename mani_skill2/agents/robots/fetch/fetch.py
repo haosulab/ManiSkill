@@ -51,12 +51,25 @@ class Fetch(BaseAgent):
             q=[1, 0, 0, 0],
             width=128,
             height=128,
-            fov=1.57,
+            fov=2,
             near=0.01,
             far=10,
             entity_uid="head_camera_link",
+        ),
+        CameraConfig(
+            uid="fetch_hand",
+            p=[-0.1, 0, 0.1],
+            q=[1, 0, 0, 0],
+            width=128,
+            height=128,
+            fov=2,
+            near=0.01,
+            far=10,
+            entity_uid="gripper_link",
         )
     ]
+    REACHABLE_DIST = 1.5
+    RESTING_QPOS = np.array([0, 0, 0, 0.386, 0, -0.370, 0.562, -1.032, 0.695, 0.955, -0.1, 2.077, 0, 0.015, 0.015])
 
     def __init__(self, *args, **kwargs):
         self.arm_joint_names = [
@@ -134,7 +147,7 @@ class Fetch(BaseAgent):
             self.arm_damping,
             self.arm_force_limit,
             ee_link=self.ee_link_name,
-            urdf_path=self.urdf_path
+            urdf_path=self.urdf_path,
         )
         arm_pd_ee_delta_pose = PDEEPoseControllerConfig(
             self.arm_joint_names,
@@ -145,7 +158,7 @@ class Fetch(BaseAgent):
             self.arm_damping,
             self.arm_force_limit,
             ee_link=self.ee_link_name,
-            urdf_path=self.urdf_path
+            urdf_path=self.urdf_path,
         )
 
         arm_pd_ee_target_delta_pos = deepcopy(arm_pd_ee_delta_pos)
@@ -174,7 +187,7 @@ class Fetch(BaseAgent):
             self.arm_stiffness,
             self.arm_damping,
             self.arm_force_limit,
-            normalize_action=False,
+            normalize_action=True,
         )
         arm_pd_joint_delta_pos_vel = PDJointPosVelControllerConfig(
             self.arm_joint_names,
@@ -203,14 +216,14 @@ class Fetch(BaseAgent):
         # -------------------------------------------------------------------------- #
         # Body
         # -------------------------------------------------------------------------- #
-        body_pd_joint_pos = PDJointPosControllerConfig(
+        body_pd_joint_delta_pos = PDJointPosControllerConfig(
             self.body_joint_names,
-            None,
-            None,
+            -0.1,
+            0.1,
             self.body_stiffness,
             self.body_damping,
             self.body_force_limit,
-            normalize_action=False,
+            use_delta=True,
         )
 
         # -------------------------------------------------------------------------- #
@@ -228,69 +241,69 @@ class Fetch(BaseAgent):
             pd_joint_delta_pos=dict(
                 arm=arm_pd_joint_delta_pos,
                 gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                body=body_pd_joint_delta_pos,
                 base=base_pd_joint_vel,
             ),
             pd_joint_pos=dict(
                 arm=arm_pd_joint_pos,
                 gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                body=body_pd_joint_delta_pos,
                 base=base_pd_joint_vel,
             ),
             pd_ee_delta_pos=dict(
                 arm=arm_pd_ee_delta_pos,
                 gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                body=body_pd_joint_delta_pos,
                 base=base_pd_joint_vel,
             ),
             pd_ee_delta_pose=dict(
                 arm=arm_pd_ee_delta_pose,
                 gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                body=body_pd_joint_delta_pos,
                 base=base_pd_joint_vel,
             ),
             pd_ee_delta_pose_align=dict(
                 arm=arm_pd_ee_delta_pose_align,
                 gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                body=body_pd_joint_delta_pos,
                 base=base_pd_joint_vel,
             ),
             # TODO(jigu): how to add boundaries for the following controllers
             pd_joint_target_delta_pos=dict(
                 arm=arm_pd_joint_target_delta_pos,
                 gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                body=body_pd_joint_delta_pos,
                 base=base_pd_joint_vel,
             ),
             pd_ee_target_delta_pos=dict(
                 arm=arm_pd_ee_target_delta_pos,
                 gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                body=body_pd_joint_delta_pos,
                 base=base_pd_joint_vel,
             ),
             pd_ee_target_delta_pose=dict(
                 arm=arm_pd_ee_target_delta_pose,
                 gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                body=body_pd_joint_delta_pos,
                 base=base_pd_joint_vel,
             ),
             # Caution to use the following controllers
             pd_joint_vel=dict(
                 arm=arm_pd_joint_vel,
                 gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                body=body_pd_joint_delta_pos,
                 base=base_pd_joint_vel,
             ),
             pd_joint_pos_vel=dict(
                 arm=arm_pd_joint_pos_vel,
                 gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                body=body_pd_joint_delta_pos,
                 base=base_pd_joint_vel,
             ),
             pd_joint_delta_pos_vel=dict(
                 arm=arm_pd_joint_delta_pos_vel,
                 gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                body=body_pd_joint_delta_pos,
                 base=base_pd_joint_vel,
             ),
         )
@@ -314,13 +327,24 @@ class Fetch(BaseAgent):
         self.r_wheel_link: Link = get_obj_by_name(
             self.robot.get_links(), "r_wheel_link"
         )
-        for link in [self.base_link, self.l_wheel_link, self.r_wheel_link]:
-            cs = link._bodies[0].get_collision_shapes()[0]
-            cg = cs.get_collision_groups()
-            cg[2] = FETCH_UNIQUE_COLLISION_BIT
-            cs.set_collision_groups(cg)
+        for link in [self.l_wheel_link, self.r_wheel_link]:
+            for body in link._bodies:
+                cs = body.get_collision_shapes()[0]
+                cg = cs.get_collision_groups()
+                cg[2] |= FETCH_UNIQUE_COLLISION_BIT
+                cs.set_collision_groups(cg)
 
-        self.queries: Dict[str, Tuple[physx.PhysxGpuContactQuery, Tuple[int]]] = dict()
+        self.torso_lift_link: Link = get_obj_by_name(
+            self.robot.get_links(), "torso_lift_link"
+        )
+
+        self.head_camera_link: Link = get_obj_by_name(
+            self.robot.get_links(), "head_camera_link"
+        )
+
+        self.queries: Dict[
+            str, Tuple[physx.PhysxGpuContactPairImpulseQuery, Tuple[int]]
+        ] = dict()
 
     def is_grasping(self, object: Actor = None, min_impulse=1e-6, max_angle=85):
         # TODO (stao): is_grasping code needs to be updated for new GPU sim
@@ -329,14 +353,15 @@ class Fetch(BaseAgent):
                 body_pairs = list(zip(self.finger1_link._bodies, object._bodies))
                 body_pairs += list(zip(self.finger2_link._bodies, object._bodies))
                 self.queries[object.name] = (
-                    self.scene.px.gpu_create_contact_query(body_pairs),
+                    self.scene.px.gpu_create_contact_pair_impulse_query(body_pairs),
                     (len(object._bodies), 3),
                 )
-                print(f"Create query for Fetch grasp({object.name})")
             query, contacts_shape = self.queries[object.name]
-            self.scene.px.gpu_query_contacts(query)
+            self.scene.px.gpu_query_contact_pair_impulses(query)
             # query.cuda_contacts # (num_unique_pairs * num_envs, 3)
-            contacts = query.cuda_contacts.clone().reshape((-1, *contacts_shape))
+            contacts = (
+                query.cuda_impulses.torch().clone().reshape((-1, *contacts_shape))
+            )
             lforce = torch.linalg.norm(contacts[0], axis=1)
             rforce = torch.linalg.norm(contacts[1], axis=1)
 
@@ -406,7 +431,11 @@ class Fetch(BaseAgent):
                     and np.rad2deg(rangle) <= max_angle
                 )
 
-                return all([lflag, rflag])
+                return torch.tensor([all([lflag, rflag])], dtype=bool)
+
+    def is_static(self, threshold: float = 0.2):
+        qvel = self.robot.get_qvel()[..., :-2]
+        return torch.max(torch.abs(qvel), 1)[0] <= threshold
 
     @staticmethod
     def build_grasp_pose(approaching, closing, center):

@@ -1,3 +1,5 @@
+from typing import Dict, Tuple
+
 import numpy as np
 import sapien
 import sapien.physx as physx
@@ -40,6 +42,7 @@ class Xmate3Robotiq(BaseAgent):
         control_freq: int,
         control_mode: str = None,
         fix_root_link=True,
+        agent_idx=None,
     ):
         self.arm_joint_names = [
             "joint1",
@@ -63,7 +66,7 @@ class Xmate3Robotiq(BaseAgent):
         self.gripper_force_limit = 100
 
         self.ee_link_name = "grasp_convenient_link"
-        super().__init__(scene, control_freq, control_mode, fix_root_link)
+        super().__init__(scene, control_freq, control_mode, fix_root_link, agent_idx)
 
     def _after_init(self):
         self.finger1_link = get_obj_by_name(
@@ -73,6 +76,9 @@ class Xmate3Robotiq(BaseAgent):
             self.robot.get_links(), "right_inner_finger_pad"
         )
         self.tcp = get_obj_by_name(self.robot.get_links(), self.ee_link_name)
+        self.queries: Dict[
+            str, Tuple[physx.PhysxGpuContactPairImpulseQuery, Tuple[int]]
+        ] = dict()
 
     @property
     def controller_configs(self):
@@ -181,14 +187,15 @@ class Xmate3Robotiq(BaseAgent):
                 body_pairs = list(zip(self.finger1_link._bodies, object._bodies))
                 body_pairs += list(zip(self.finger2_link._bodies, object._bodies))
                 self.queries[object.name] = (
-                    self.scene.px.gpu_create_contact_query(body_pairs),
+                    self.scene.px.gpu_create_contact_pair_impulse_query(body_pairs),
                     (len(object._bodies), 3),
                 )
-                print(f"Create query for Panda grasp({object.name})")
             query, contacts_shape = self.queries[object.name]
-            self.scene.px.gpu_query_contacts(query)
+            self.scene.px.gpu_query_contact_pair_impulses(query)
             # query.cuda_contacts # (num_unique_pairs * num_envs, 3)
-            contacts = query.cuda_contacts.clone().reshape((-1, *contacts_shape))
+            contacts = (
+                query.cuda_impulses.torch().clone().reshape((-1, *contacts_shape))
+            )
             lforce = torch.linalg.norm(contacts[0], axis=1)
             rforce = torch.linalg.norm(contacts[1], axis=1)
 
@@ -251,6 +258,10 @@ class Xmate3Robotiq(BaseAgent):
                 )
 
                 return all([lflag, rflag])
+
+    def is_static(self, threshold: float = 0.2):
+        qvel = self.robot.get_qvel()[..., :-2]
+        return torch.max(torch.abs(qvel), 1)[0] <= threshold
 
     @staticmethod
     def build_grasp_pose(approaching, closing, center):
