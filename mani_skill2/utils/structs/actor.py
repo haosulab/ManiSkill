@@ -220,13 +220,16 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
                 # as part of observations if needed
                 return self._builder_initial_pose
             else:
-                raw_pose = self.px.cuda_rigid_body_data.torch()[
-                    self._body_data_index, :7
-                ]
-                # if self.hidden:
-                # print(self.name, "hidden", raw_pose[0, :3])
-                # raw_pose[..., :3] = raw_pose[..., :3] - 99999
-                return Pose.create(raw_pose)
+                if self.hidden:
+                    return Pose.create(self.before_hide_pose)
+                else:
+                    raw_pose = self.px.cuda_rigid_body_data.torch()[
+                        self._body_data_index, :7
+                    ]
+                    # if self.hidden:
+                    # print(self.name, "hidden", raw_pose[0, :3])
+                    # raw_pose[..., :3] = raw_pose[..., :3] - 99999
+                    return Pose.create(raw_pose)
         else:
             assert len(self._objs) == 1
             return Pose.create(self._objs[0].pose)
@@ -236,14 +239,14 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
         if physx.is_gpu_enabled():
             if not isinstance(arg1, torch.Tensor):
                 arg1 = vectorize_pose(arg1)
-            self.px.cuda_rigid_body_data.torch()[
-                self._body_data_index[self._scene._reset_mask], :7
-            ] = arg1
+            if self.hidden:
+                self.before_hide_pose = arg1
+            else:
+                self.px.cuda_rigid_body_data.torch()[
+                    self._body_data_index[self._scene._reset_mask], :7
+                ] = arg1
         else:
             self._objs[0].pose = to_sapien_pose(arg1)
 
     def set_pose(self, arg1: Union[Pose, sapien.Pose]) -> None:
-        if physx.is_gpu_enabled() and self.hidden:
-            self.before_hide_pose = vectorize_pose(arg1)
-        else:
-            self.pose = arg1
+        self.pose = arg1

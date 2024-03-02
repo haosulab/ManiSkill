@@ -978,6 +978,8 @@ class BaseEnv(gym.Env):
         if physx.is_gpu_enabled() and self._scene._gpu_sim_initialized:
             self.physx_system.sync_poses_gpu_to_cpu()
         self._viewer.render()
+        for obj in self._hidden_objects:
+            obj.hide_visual()
         return self._viewer
 
     def render_rgb_array(self, camera_name: str = None):
