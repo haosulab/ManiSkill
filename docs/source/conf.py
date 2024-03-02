@@ -16,7 +16,6 @@ version = "3.0.0"
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-    "sphinx_rtd_theme",
     "sphinx.ext.autodoc",
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
@@ -38,13 +37,11 @@ exclude_patterns = []
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = "sphinx_book_theme"
-# html_static_path = ["_static"]
 
-# replace "view page source" with "edit on github" in Read The Docs theme
-#  * https://github.com/readthedocs/sphinx_rtd_theme/issues/529
 html_context = {
     "display_github": True,
     "github_user": "haosulab",
     "github_repo": "ManiSkill2",
-    "github_version": "main/docs/source/",
+    "github_version": "main",
+    "conf_py_path": "/source/"
 }
