@@ -174,12 +174,15 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
             self._objs[0].find_component_by_type(
                 sapien.render.RenderBodyComponent
             ).visibility = 0
+        # set hidden *after* setting/getting so not applied to self.before_hide_pose erroenously
         self.hidden = True
 
     def show_visual(self):
         assert not self.has_collision_shapes()
         if not self.hidden:
             return
+        # set hidden *before* setting/getting so not applied to self.before_hide_pose erroenously
+        self.hidden = False
         if physx.is_gpu_enabled():
             if hasattr(self, "before_hide_pose"):
                 self.pose = self.before_hide_pose
@@ -189,7 +192,6 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
             self._objs[0].find_component_by_type(
                 sapien.render.RenderBodyComponent
             ).visibility = 1
-        self.hidden = False
 
     def is_static(self, lin_thresh=1e-2, ang_thresh=1e-1):
         """
