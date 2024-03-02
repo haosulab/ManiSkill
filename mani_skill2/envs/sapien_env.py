@@ -446,12 +446,15 @@ class BaseEnv(gym.Env):
             obj.hide_visual()
         self._scene.update_render()
         self.capture_sensor_data()
-        return OrderedDict(
+        obs = OrderedDict(
             agent=self._get_obs_agent(),
             extra=self._get_obs_extra(info),
             sensor_param=self.get_sensor_params(),
             sensor_data=self.get_sensor_obs(),
         )
+        for obj in self._hidden_objects:
+            obj.show_visual()
+        return obs
 
     @property
     def robot_link_ids(self):
@@ -969,9 +972,6 @@ class BaseEnv(gym.Env):
                 self._viewer.set_camera_pose(
                     self._human_render_cameras["render_camera"].camera.global_pose
                 )
-
-        for obj in self._hidden_objects:
-            obj.show_visual()
         if physx.is_gpu_enabled() and self._scene._gpu_sim_initialized:
             self.physx_system.sync_poses_gpu_to_cpu()
         self._viewer.render()
@@ -981,8 +981,6 @@ class BaseEnv(gym.Env):
         """Returns an RGB array / image of size (num_envs, H, W, 3) of the current state of the environment.
         This is captured by any of the registered human render cameras. If a camera_name is given, only data from that camera is returned.
         Otherwise all camera data is captured and returned as a single batched image"""
-        for obj in self._hidden_objects:
-            obj.show_visual()
         self._scene.update_render()
         images = []
         # TODO (stao): refactor this code either into ManiSkillScene class and/or merge the code, it's pretty similar?
@@ -1015,14 +1013,16 @@ class BaseEnv(gym.Env):
         """
         Renders all sensors that the agent can use and see and displays them
         """
-        images = []
         for obj in self._hidden_objects:
             obj.hide_visual()
+        images = []
         self._scene.update_render()
         self.capture_sensor_data()
         sensor_images = self.get_sensor_obs()
         for sensor_images in sensor_images.values():
             images.extend(observations_to_images(sensor_images))
+        for obj in self._hidden_objects:
+            obj.show_visual()
         return tile_images(images)
 
     def render(self):

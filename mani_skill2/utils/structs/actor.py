@@ -150,6 +150,9 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
             > 0
         )
 
+    # NOTE (arth): when using hide/show_visual on gpu sim, should call
+    #       hide_visual, then soon after show_visual, such that
+    #       poses are not incorrectly updated in between
     def hide_visual(self):
         """
         Hides this actor from view. In CPU simulation the visual body is simply set to visibility 0
@@ -162,17 +165,14 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
         if self.hidden:
             return
         if physx.is_gpu_enabled():
-            # TODO (stao): fix hiding visuals
-            pass
-            # self.last_pose = self.px.cuda_rigid_body_data.torch()[
-            #     self._body_data_index, :7
-            # ].clone()
-            # temp_pose = self.pose.raw_pose
-            # temp_pose[..., :3] += 99999
-            # self.pose = temp_pose
-            # self.px.gpu_apply_rigid_dynamic_data()
-            # self.px.gpu_fetch_rigid_dynamic_data()
-            # print("HIDE", self.pose.raw_pose[0, :3])
+            self.before_hide_pose = self.px.cuda_rigid_body_data.torch()[
+                self._body_data_index, :7
+            ].clone()
+            temp_pose = self.pose.raw_pose
+            temp_pose[..., :3] += 99999
+            self.pose = temp_pose
+            self.px.gpu_apply_rigid_dynamic_data()
+            self.px.gpu_fetch_rigid_dynamic_data()
         else:
             self._objs[0].find_component_by_type(
                 sapien.render.RenderBodyComponent
@@ -184,8 +184,8 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
         if not self.hidden:
             return
         if physx.is_gpu_enabled():
-            if hasattr(self, "last_pose"):
-                self.pose = self.last_pose
+            if hasattr(self, "before_hide_pose"):
+                self.pose = self.before_hide_pose
                 self.px.gpu_apply_rigid_dynamic_data()
                 self.px.gpu_fetch_rigid_dynamic_data()
         else:
