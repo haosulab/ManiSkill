@@ -30,7 +30,8 @@ Features:
    datasets/index
    algorithms_and_models/index
    workflows/index
-   benchmark/online_leaderboard
+   .. benchmark/online_leaderboard
+   # TODO (stao): upgrade online leaderboard to new maniskill
 
 .. toctree::
    :maxdepth: 2

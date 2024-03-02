@@ -74,10 +74,10 @@ To replay the demonstrations (without changing the observation mode and control 
 
 ```bash
 # Replay and view trajectories through sapien viewer
-python -m mani_skill2.trajectory.replay_trajectory --traj-path demos/rigid_body/PickCube-v0/trajectory.h5 --vis
+python -m mani_skill2.trajectory.replay_trajectory --traj-path demos/rigid_body/PickCube-v1/trajectory.h5 --vis
 
 # Save videos of trajectories (to the same directory of trajectory)
-python -m mani_skill2.trajectory.replay_trajectory --traj-path demos/rigid_body/PickCube-v0/trajectory.h5 --save-video
+python -m mani_skill2.trajectory.replay_trajectory --traj-path demos/rigid_body/PickCube-v1/trajectory.h5 --save-video
 ```
 
 :::{note}
@@ -89,7 +89,7 @@ The raw demonstration files contain all the necessary information (e.g. initial 
 ```bash
 # Replay demonstrations with control_mode=pd_joint_delta_pos
 python -m mani_skill2.trajectory.replay_trajectory \
-  --traj-path demos/rigid_body/PickCube-v0/trajectory.h5 \
+  --traj-path demos/rigid_body/PickCube-v1/trajectory.h5 \
   --save-traj --target-control-mode pd_joint_delta_pos --obs-mode none --num-procs 10
 ```
 

@@ -25,7 +25,7 @@ export PYTHONPATH=${PATH_TO_YOUR_CODES_IN_HOST}:$PYTHONPATH
 # python -c "from user_solution import UserPolicy"
 
 # Run evaluation. The result will be saved to ${OUTPUT_DIR}.
-ENV_ID="PickCube-v0" OUTPUT_DIR="tmp" NUM_EPISODES=1
+ENV_ID="PickCube-v1" OUTPUT_DIR="tmp" NUM_EPISODES=1
 python -m mani_skill2.evaluation.run_evaluation -e ${ENV_ID} -o ${OUTPUT_DIR} -n ${NUM_EPISODES}
 ```
 
@@ -85,7 +85,7 @@ docker run -d --rm --gpus all --name ${CONTAINER_NAME} \
 # Interactive debug
 docker exec -it ${CONTAINER_NAME} /bin/bash
 # Or run evaluation
-docker exec -it ${CONTAINER_NAME} /bin/bash -c "export MS2_ASSET_DIR=/data; python -m mani_skill2.evaluation.run_evaluation -e PickCube-v0 -o /eval_results/PickCube-v0 -n 1"
+docker exec -it ${CONTAINER_NAME} /bin/bash -c "export MS2_ASSET_DIR=/data; python -m mani_skill2.evaluation.run_evaluation -e PickCube-v1 -o /eval_results/PickCube-v1 -n 1"
 # Finally, you can delete the container
 docker kill ${CONTAINER_NAME}
 ```

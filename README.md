@@ -52,7 +52,7 @@ cd ManiSkill2 && pip install -e .
 A GPU with the Vulkan driver installed is required to enable rendering in ManiSkill2. The rigid-body environments, powered by SAPIEN, are ready to use after installation. Test your installation:
 
 ```bash
-# Run an episode (at most 200 steps) of "PickCube-v0" (a rigid-body environment) with random actions
+# Run an episode (at most 200 steps) of "PickCube-v1" (a rigid-body environment) with random actions
 # Or specify an environment by "-e ${ENV_ID}"
 python -m mani_skill2.examples.demo_random_action
 ```
@@ -79,7 +79,7 @@ Here is a basic example of how to make an [Gym/Gymnasium](https://github.com/far
 import gymnasium as gym
 import mani_skill2.envs
 
-env = gym.make("PickCube-v0", obs_mode="rgbd", control_mode="pd_joint_delta_pos", render_mode="human")
+env = gym.make("PickCube-v1", obs_mode="rgbd", control_mode="pd_joint_delta_pos", render_mode="human")
 print("Observation space", env.observation_space)
 print("Action space", env.action_space)
 

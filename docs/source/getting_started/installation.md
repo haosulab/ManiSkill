@@ -29,7 +29,7 @@ While state-based simulation does not require any additional dependencies, a GPU
 The rigid-body environments, powered by SAPIEN, are ready to use after installation. Test your installation:
 
 ```bash
-# Run an episode (at most 200 steps) of "PickCube-v0" (a rigid-body environment) with random actions
+# Run an episode (at most 200 steps) of "PickCube-v1" (a rigid-body environment) with random actions
 # Or specify an environment by "-e ${ENV_ID}"
 python -m mani_skill2.examples.demo_random_action
 ```

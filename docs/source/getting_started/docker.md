@@ -19,7 +19,7 @@ We provide a docker image (`haosulab/mani-skill2`) and its corresponding [Docker
 docker pull haosulab/mani-skill2
 docker run --rm -it --gpus all haosulab/mani-skill2 python -m mani_skill2.examples.demo_random_action
 ```
-
+<!-- 
 ## Run GUI Applications
 
 To run GUI applications from the docker container (the host is attached with a display), you need to add extra options to the `docker run` command:
@@ -43,7 +43,7 @@ docker run --rm --gpus all -p 5900:5900 \
     apt update && bash -c "apt install -yqq x11vnc fluxbox && x11vnc -create -env FD_PROG=/usr/bin/fluxbox  -env X11VNC_FINDDISPLAY_ALWAYS_FAILS=1 -env X11VNC_CREATE_GEOM=${1:-1920x1080x16} -gone 'pkill Xvfb' -nopw"
 ```
 
-Then, forward the port of VNC (5900 by default) to the local host. On your local machine, install a [VNC viewer](https://www.realvnc.com/en/connect/download/viewer/) and connect to the localhost port(e.g. localhost:5900).
+Then, forward the port of VNC (5900 by default) to the local host. On your local machine, install a [VNC viewer](https://www.realvnc.com/en/connect/download/viewer/) and connect to the localhost port(e.g. localhost:5900). -->
 
 ---
 

@@ -23,6 +23,7 @@ extensions = [
     "sphinx_copybutton",
     "myst_parser",
     "sphinx_subfigure",
+    "sphinxcontrib.video",
 ]
 
 # https://myst-parser.readthedocs.io/en/latest/syntax/optional.html
@@ -46,3 +47,5 @@ html_context = {
     "github_version": "main",
     "conf_py_path": "/source/"
 }
+
+html_static_path = ['_static']
