@@ -35,7 +35,7 @@ python -m mani_skill2.examples.demo_random_action
 ```
 
 A docker image is also provided on [Docker Hub](https://hub.docker.com/repository/docker/haosulab/mani-skill2/general) called  `haosulab/mani-skill2` and its corresponding [Dockerfile](https://github.com/haosulab/ManiSkill2/blob/main/docker/Dockerfile).
-
+<!-- 
 ## Soft-body environments / Warp (ManiSkill2-version)
 
 :::{note}
@@ -82,7 +82,7 @@ the GPU connected to your display (e.g., monitor screen).
 
 :::{warning}
 All soft-body environments require runtime compilation and cache generation. The cache is generated in parallel. Thus, to avoid race conditions, before you create soft-body environments in parallel, please make sure the cache is already generated. You can generate cache in advance by `python -m mani_skill2.utils.precompile_mpm -e {ENV_ID}` (or without an option for all soft-body environments).
-:::
+::: -->
 
 ## Troubleshooting
 
@@ -167,7 +167,7 @@ The following errors can happen if the Vulkan driver is broken. Try to reinstall
 - `RuntimeError: vk::Instance::enumeratePhysicalDevices: ErrorInitializationFailed`
 - `Some required Vulkan extension is not present. You may not use the renderer to render, however, CPU resources will be still available.`
 - `Segmentation fault (core dumped)`
-
+<!-- 
 ### Warp
 
 If the soft-body environment throws a **memory error**, you can try compiling Warp in the debug mode.
@@ -176,7 +176,7 @@ If the soft-body environment throws a **memory error**, you can try compiling Wa
 PYTHONPATH="$PWD"/warp_maniskill:$PYTHONPATH python -m warp_maniskill.build_lib --mode debug
 ```
 
-Remember to compile again in the release mode after you finish debugging. In the debug mode, if the error becomes `unsupported toolchain`, it means you have a conflicting CUDA version.
+Remember to compile again in the release mode after you finish debugging. In the debug mode, if the error becomes `unsupported toolchain`, it means you have a conflicting CUDA version. -->
 
 ### Uninstallation
 
