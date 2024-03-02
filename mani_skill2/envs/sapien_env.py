@@ -446,15 +446,12 @@ class BaseEnv(gym.Env):
             obj.hide_visual()
         self._scene.update_render()
         self.capture_sensor_data()
-        obs = OrderedDict(
+        return OrderedDict(
             agent=self._get_obs_agent(),
             extra=self._get_obs_extra(info),
             sensor_param=self.get_sensor_params(),
             sensor_data=self.get_sensor_obs(),
         )
-        for obj in self._hidden_objects:
-            obj.show_visual()
-        return obs
 
     @property
     def robot_link_ids(self):
@@ -965,6 +962,8 @@ class BaseEnv(gym.Env):
             )
 
     def render_human(self):
+        for obj in self._hidden_objects:
+            obj.show_visual()
         if self._viewer is None:
             self._viewer = Viewer()
             self._setup_viewer()
@@ -981,6 +980,8 @@ class BaseEnv(gym.Env):
         """Returns an RGB array / image of size (num_envs, H, W, 3) of the current state of the environment.
         This is captured by any of the registered human render cameras. If a camera_name is given, only data from that camera is returned.
         Otherwise all camera data is captured and returned as a single batched image"""
+        for obj in self._hidden_objects:
+            obj.show_visual()
         self._scene.update_render()
         images = []
         # TODO (stao): refactor this code either into ManiSkillScene class and/or merge the code, it's pretty similar?
@@ -1007,6 +1008,8 @@ class BaseEnv(gym.Env):
             return None
         if len(images) == 1:
             return images[0]
+        for obj in self._hidden_objects:
+            obj.hide_visual()
         return tile_images(images)
 
     def render_sensors(self):
@@ -1021,8 +1024,6 @@ class BaseEnv(gym.Env):
         sensor_images = self.get_sensor_obs()
         for sensor_images in sensor_images.values():
             images.extend(observations_to_images(sensor_images))
-        for obj in self._hidden_objects:
-            obj.show_visual()
         return tile_images(images)
 
     def render(self):

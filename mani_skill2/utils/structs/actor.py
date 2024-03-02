@@ -150,9 +150,6 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
             > 0
         )
 
-    # NOTE (arth): when using hide/show_visual on gpu sim, should call
-    #       hide_visual, then soon after show_visual, such that
-    #       poses are not incorrectly updated in between
     def hide_visual(self):
         """
         Hides this actor from view. In CPU simulation the visual body is simply set to visibility 0
@@ -246,4 +243,7 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
             self._objs[0].pose = to_sapien_pose(arg1)
 
     def set_pose(self, arg1: Union[Pose, sapien.Pose]) -> None:
-        self.pose = arg1
+        if physx.is_gpu_enabled() and self.hidden:
+            self.before_hide_pose = vectorize_pose(arg1)
+        else:
+            self.pose = arg1
