@@ -1,3 +1,4 @@
+from mani_skill2 import __version__
 # Configuration file for the Sphinx documentation builder.
 #
 # For the full list of built-in configuration values, see the documentation:
@@ -9,8 +10,8 @@
 project = "ManiSkill3"
 copyright = "2024, ManiSkill3 Contributors"
 author = "ManiSkill3 Contributors"
-release = "3.0.0"
-version = "3.0.0"
+release = __version__
+version = __version__
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
