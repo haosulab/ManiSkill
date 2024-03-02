@@ -12,8 +12,6 @@ import torch
 import tqdm
 
 import mani_skill2.envs
-from mani_skill2.envs.scenes.tasks.planner.planner import PickSubtask
-from mani_skill2.envs.scenes.tasks.sequential_task import SequentialTaskEnv
 from mani_skill2.utils.scene_builder.ai2thor.variants import ArchitecTHORSceneBuilder
 from mani_skill2.utils.scene_builder.replicacad.scene_builder import ReplicaCADSceneBuilder
 from mani_skill2.vector.wrappers.gymnasium import ManiSkillVectorEnv

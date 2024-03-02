@@ -162,37 +162,36 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
         if self.hidden:
             return
         if physx.is_gpu_enabled():
-            # TODO (stao): fix hiding visuals
-            pass
-            # self.last_pose = self.px.cuda_rigid_body_data.torch()[
-            #     self._body_data_index, :7
-            # ].clone()
-            # temp_pose = self.pose.raw_pose
-            # temp_pose[..., :3] += 99999
-            # self.pose = temp_pose
-            # self.px.gpu_apply_rigid_dynamic_data()
-            # self.px.gpu_fetch_rigid_dynamic_data()
-            # print("HIDE", self.pose.raw_pose[0, :3])
+            self.before_hide_pose = self.px.cuda_rigid_body_data.torch()[
+                self._body_data_index, :7
+            ].clone()
+            temp_pose = self.pose.raw_pose
+            temp_pose[..., :3] += 99999
+            self.pose = temp_pose
+            self.px.gpu_apply_rigid_dynamic_data()
+            self.px.gpu_fetch_rigid_dynamic_data()
         else:
             self._objs[0].find_component_by_type(
                 sapien.render.RenderBodyComponent
             ).visibility = 0
+        # set hidden *after* setting/getting so not applied to self.before_hide_pose erroenously
         self.hidden = True
 
     def show_visual(self):
         assert not self.has_collision_shapes()
         if not self.hidden:
             return
+        # set hidden *before* setting/getting so not applied to self.before_hide_pose erroenously
+        self.hidden = False
         if physx.is_gpu_enabled():
-            if hasattr(self, "last_pose"):
-                self.pose = self.last_pose
+            if hasattr(self, "before_hide_pose"):
+                self.pose = self.before_hide_pose
                 self.px.gpu_apply_rigid_dynamic_data()
                 self.px.gpu_fetch_rigid_dynamic_data()
         else:
             self._objs[0].find_component_by_type(
                 sapien.render.RenderBodyComponent
             ).visibility = 1
-        self.hidden = False
 
     def is_static(self, lin_thresh=1e-2, ang_thresh=1e-1):
         """
@@ -223,13 +222,16 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
                 # as part of observations if needed
                 return self._builder_initial_pose
             else:
-                raw_pose = self.px.cuda_rigid_body_data.torch()[
-                    self._body_data_index, :7
-                ]
-                # if self.hidden:
-                # print(self.name, "hidden", raw_pose[0, :3])
-                # raw_pose[..., :3] = raw_pose[..., :3] - 99999
-                return Pose.create(raw_pose)
+                if self.hidden:
+                    return Pose.create(self.before_hide_pose)
+                else:
+                    raw_pose = self.px.cuda_rigid_body_data.torch()[
+                        self._body_data_index, :7
+                    ]
+                    # if self.hidden:
+                    # print(self.name, "hidden", raw_pose[0, :3])
+                    # raw_pose[..., :3] = raw_pose[..., :3] - 99999
+                    return Pose.create(raw_pose)
         else:
             assert len(self._objs) == 1
             return Pose.create(self._objs[0].pose)
@@ -239,9 +241,12 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
         if physx.is_gpu_enabled():
             if not isinstance(arg1, torch.Tensor):
                 arg1 = vectorize_pose(arg1)
-            self.px.cuda_rigid_body_data.torch()[
-                self._body_data_index[self._scene._reset_mask], :7
-            ] = arg1
+            if self.hidden:
+                self.before_hide_pose = arg1
+            else:
+                self.px.cuda_rigid_body_data.torch()[
+                    self._body_data_index[self._scene._reset_mask], :7
+                ] = arg1
         else:
             self._objs[0].pose = to_sapien_pose(arg1)
 

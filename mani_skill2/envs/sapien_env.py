@@ -644,6 +644,10 @@ class BaseEnv(gym.Env):
         self._set_episode_rng(self._episode_seed)
         self.agent.reset()
         self.initialize_episode(env_idx)
+        # reset the reset mask back to all ones so any internal code in maniskill can continue to manipulate all scenes at once as usual
+        self._scene._reset_mask = torch.ones(
+            self.num_envs, dtype=bool, device=self.device
+        )
         obs = self.get_obs()
         if physx.is_gpu_enabled():
             # ensure all updates to object poses and configurations are applied on GPU after task initialization
@@ -962,6 +966,8 @@ class BaseEnv(gym.Env):
             )
 
     def render_human(self):
+        for obj in self._hidden_objects:
+            obj.show_visual()
         if self._viewer is None:
             self._viewer = Viewer()
             self._setup_viewer()
@@ -969,12 +975,11 @@ class BaseEnv(gym.Env):
                 self._viewer.set_camera_pose(
                     self._human_render_cameras["render_camera"].camera.global_pose
                 )
-
-        for obj in self._hidden_objects:
-            obj.show_visual()
         if physx.is_gpu_enabled() and self._scene._gpu_sim_initialized:
             self.physx_system.sync_poses_gpu_to_cpu()
         self._viewer.render()
+        for obj in self._hidden_objects:
+            obj.hide_visual()
         return self._viewer
 
     def render_rgb_array(self, camera_name: str = None):
@@ -1009,15 +1014,17 @@ class BaseEnv(gym.Env):
             return None
         if len(images) == 1:
             return images[0]
+        for obj in self._hidden_objects:
+            obj.hide_visual()
         return tile_images(images)
 
     def render_sensors(self):
         """
         Renders all sensors that the agent can use and see and displays them
         """
-        images = []
         for obj in self._hidden_objects:
             obj.hide_visual()
+        images = []
         self._scene.update_render()
         self.capture_sensor_data()
         sensor_images = self.get_sensor_obs()
