@@ -6,18 +6,19 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = "ManiSkill2"
-copyright = "2023, ManiSkill2 Contributors"
-author = "ManiSkill2 Contributors"
-release = "0.5.0"
+project = "ManiSkill3"
+copyright = "2024, ManiSkill3 Contributors"
+author = "ManiSkill3 Contributors"
+release = "3.0.0"
+version = "3.0.0"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-    "sphinx_rtd_theme",
     "sphinx.ext.autodoc",
     "sphinx.ext.mathjax",
+    "sphinx.ext.viewcode",
     "sphinx_copybutton",
     "myst_parser",
     "sphinx_subfigure",
@@ -35,14 +36,12 @@ exclude_patterns = []
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = "sphinx_rtd_theme"
-# html_static_path = ["_static"]
+html_theme = "sphinx_book_theme"
 
-# replace "view page source" with "edit on github" in Read The Docs theme
-#  * https://github.com/readthedocs/sphinx_rtd_theme/issues/529
 html_context = {
     "display_github": True,
     "github_user": "haosulab",
     "github_repo": "ManiSkill2",
-    "github_version": "main/docs/source/",
+    "github_version": "main",
+    "conf_py_path": "/source/"
 }

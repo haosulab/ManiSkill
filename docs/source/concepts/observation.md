@@ -38,7 +38,7 @@ In addition to `agent` and `extra`, `image` and `camera_param` are introduced.
   - `extrinsic_cv`: [4, 4], camera extrinsic (OpenCV convention)
   - `intrinsic_cv`: [3, 3], camera intrinsic (OpenCV convention)
 
-Unless specified otherwise, there are two cameras: *base_camera* (fixed relative to the robot base) and *hand_camera* (mounted on the robot hand). Environments migrated from ManiSkill1 use 3 cameras mounted above the robot: *overhead_camera_{i}*.
+Unless specified otherwise, there is usually at least one camera called the *base_camera* (fixed relative to the robot base). Some robots have additional sensor configurations that add more cameras such as a *hand_camera* mounted on the robot hand. Environments migrated from ManiSkill1 use 3 cameras mounted above the robot: *overhead_camera_{i}*.
 
 ### rgbd
 
