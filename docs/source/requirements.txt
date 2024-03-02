@@ -1,0 +1,12 @@
+sphinx==6.2.1
+sphinx-autobuild
+sphinx-book-theme
+# For spelling
+sphinxcontrib.spelling
+# Type hints support
+sphinx-autodoc-typehints
+# Copy button for code snippets
+sphinx_copybutton
+# Markdown parser
+myst-parser
+sphinx-subfigure
