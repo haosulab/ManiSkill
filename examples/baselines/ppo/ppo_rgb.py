@@ -79,7 +79,7 @@ class Args:
     """coefficient of the value function"""
     max_grad_norm: float = 0.5
     """the maximum norm for the gradient clipping"""
-    target_kl: float = 0.1
+    target_kl: float = 0.2
     """the target KL divergence threshold"""
     eval_freq: int = 25
     """evaluation frequency in terms of iterations"""
@@ -276,7 +276,7 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # env setup
-    env_kwargs = dict(obs_mode="rgbd", control_mode="pd_joint_delta_pos", render_mode="rgb_array")
+    env_kwargs = dict(obs_mode="rgbd", control_mode="pd_joint_delta_pos", render_mode="sensors")
     envs = gym.make(args.env_id, num_envs=args.num_envs, **env_kwargs)
     eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, **env_kwargs)
 
