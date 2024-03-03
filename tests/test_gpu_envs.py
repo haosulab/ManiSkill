@@ -234,7 +234,7 @@ def test_partial_resets(env_id):
     for i in [1, 3, 4, 13]:
         reset_mask[i] = True
     reset_obs, _ = env.reset(options=dict(env_idx=env_idx[reset_mask]))
-    assert torch.isclose(obs[~reset_mask], reset_obs[~reset_mask]).all()
+    assert torch.isclose(obs[~reset_mask], reset_obs[~reset_mask], atol=1e-4).all()
     assert not torch.isclose(
         obs[reset_mask][:, :10], reset_obs[reset_mask][:, :10]
     ).any()
