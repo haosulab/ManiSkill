@@ -372,8 +372,8 @@ class PushChairEnv(MS1BaseEnv):
         # The maximum DoF is 20 in our data.
         return [(self.chair, 25)]
 
-    def set_state(self, state: np.ndarray):
-        super().set_state(state)
+    def set_state_dict(self, state: np.ndarray):
+        super().set_state_dict(state)
         self._prev_actor_pose = self.root_link.pose
 
     def _get_obs_extra(self):

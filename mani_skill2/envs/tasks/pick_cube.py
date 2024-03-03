@@ -117,8 +117,7 @@ class PickCubeEnv(BaseEnv):
         )
         is_robot_static = self.agent.is_static(0.2)
         return {
-            "success": torch.logical_and(is_obj_placed, is_robot_static)
-            + torch.round(torch.rand(len(is_obj_placed))).to(bool),
+            "success": is_obj_placed & is_robot_static,
             "is_obj_placed": is_obj_placed,
             "is_robot_static": is_robot_static,
         }

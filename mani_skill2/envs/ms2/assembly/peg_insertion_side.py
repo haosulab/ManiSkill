@@ -285,8 +285,8 @@ class PegInsertionSideEnv(StationaryManipulationEnv):
         cam_cfg.pose = look_at([0.5, -0.5, 0.8], [0.05, -0.1, 0.4])
         return cam_cfg
 
-    def set_state(self, state):
-        super().set_state(state)
+    def set_state_dict(self, state):
+        super().set_state_dict(state)
         # NOTE(xuanlin): This way is specific to how we compute goals.
         # The general way is to handle variables explicitly
         # TODO (stao): can we refactor this out

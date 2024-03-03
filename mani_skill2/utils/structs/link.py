@@ -47,7 +47,7 @@ class Link(
         scene_mask: torch.Tensor = None,
     ):
         shared_name = "_".join(
-            physx_links[0].name.replace(articulation.name, "").split("_")[1:]
+            physx_links[0].name.replace(articulation.name, "", 1).split("_")[1:]
         )
         if scene_mask is None and articulation is not None:
             scene_mask = articulation._scene_mask

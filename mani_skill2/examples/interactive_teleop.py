@@ -80,7 +80,7 @@ def main(args):
         traj_id = f"traj_{episode['episode_id']}"
         data = trajectory_data[traj_id]
         env.reset(**episode["reset_kwargs"])
-        env._base_env.set_state(data["env_states"][0])
+        env._base_env.set_state_dict(data["env_states"][0])
         for action in np.array(data["actions"]):
             env.step(action)
 
@@ -123,11 +123,11 @@ def solve(env: BaseEnv, debug=False, vis=False):
         execute_current_pose = False
         if viewer.window.key_press("k"):
             print("Saving checkpoint")
-            last_checkpoint_state = env.get_state()
+            last_checkpoint_state = env.get_state_dict()
         elif viewer.window.key_press("l"):
             if last_checkpoint_state is not None:
                 print("Loading previous checkpoint")
-                env.set_state(last_checkpoint_state)
+                env.set_state_dict(last_checkpoint_state)
             else:
                 print("Could not find previous checkpoint")
         elif viewer.window.key_press("q"):

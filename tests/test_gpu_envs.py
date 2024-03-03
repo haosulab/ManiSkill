@@ -16,6 +16,7 @@ from tests.utils import (
     ROBOTS,
     STATIONARY_ENV_IDS,
     assert_isinstance,
+    assert_obs_equal,
     tree_map,
 )
 
@@ -136,22 +137,34 @@ def test_env_reconfiguration(env_id):
 #     del env
 
 
-# @pytest.mark.parametrize("env_id", ENV_IDS)
-# def test_states(env_id):
-#     env: BaseEnv = gym.make(env_id, num_envs=16)
-#     obs, _ = env.reset(seed=1000)
-#     for _ in range(5):
-#         env.step(env.action_space.sample())
-#     state = env.get_state()
-#     obs = env.get_obs()
-
-#     for _ in range(50):
-#         env.step(env.action_space.sample())
-#     env.set_state(state)
-#     new_obs = env.get_obs()
-#     assert_obs_equal(obs, new_obs)
-#     env.close()
-#     del env
+@pytest.mark.gpu_sim
+def test_raw_sim_states():
+    # Test sim state get and set works for environment without overriden get_state_dict functions
+    env = gym.make(
+        "PickCube-v1", num_envs=16, obs_mode="state_dict", sim_cfg=LOW_MEM_SIM_CFG
+    )
+    base_env: BaseEnv = env.unwrapped
+    obs1, _ = env.reset()
+    state_dict = base_env.get_state_dict()
+    assert isinstance(state_dict, dict)
+    assert state_dict["actors"]["cube"].shape == (16, 13)
+    assert state_dict["actors"]["goal_site"].shape == (16, 13)
+    assert state_dict["articulations"]["panda"].shape == (16, 13 + 9 * 2)
+    for i in range(5):
+        env.step(env.action_space.sample())
+    base_env.set_state_dict(state_dict)
+    set_obs = base_env.get_obs()
+    assert_obs_equal(obs1, set_obs)
+    for i in range(5):
+        env.step(env.action_space.sample())
+    state = base_env.get_state()
+    obs1 = base_env.get_obs()
+    assert state.shape == (16, 13 * 3 + 13 + 9 * 2)
+    for i in range(5):
+        env.step(env.action_space.sample())
+    base_env.set_state(state)
+    set_obs = base_env.get_obs()
+    assert_obs_equal(obs1, set_obs)
 
 
 @pytest.mark.gpu_sim
@@ -252,9 +265,11 @@ def test_timelimits(env_id):
 @pytest.mark.gpu_sim
 @pytest.mark.parametrize("env_id", ["PickCube-v1"])
 def test_hidden_objs(env_id):
-    env: ManiSkillVectorEnv = gym.make_vec(env_id, num_envs=16, vectorization_mode="custom")
+    env: ManiSkillVectorEnv = gym.make_vec(
+        env_id, num_envs=16, vectorization_mode="custom"
+    )
     obs, _ = env.reset()
-    
+
     # for PickCube, this is env.goal_site
     hide_obj = env.unwrapped._hidden_objects[0]
 
@@ -273,14 +288,16 @@ def test_hidden_objs(env_id):
 
     # 2. check state data for new pos is not too low or high
     assert (
-        hide_obj.px.cuda_rigid_body_data.torch()[
-            hide_obj._body_data_index, :7
-        ].clone()[..., :3] > 1e3
+        hide_obj.px.cuda_rigid_body_data.torch()[hide_obj._body_data_index, :7].clone()[
+            ..., :3
+        ]
+        > 1e3
     ).all()
     assert (
-        hide_obj.px.cuda_rigid_body_data.torch()[
-            hide_obj._body_data_index, :7
-        ].clone()[..., :3] < 1e6
+        hide_obj.px.cuda_rigid_body_data.torch()[hide_obj._body_data_index, :7].clone()[
+            ..., :3
+        ]
+        < 1e6
     ).all()
 
     # 3. check that linvel and angvel same as before
@@ -289,14 +306,16 @@ def test_hidden_objs(env_id):
 
     # 4. Check data stored in buffer has same q but different p
     assert (
-        hide_obj.px.cuda_rigid_body_data.torch()[
-            hide_obj._body_data_index, :7
-        ].clone()[..., :3] != p
+        hide_obj.px.cuda_rigid_body_data.torch()[hide_obj._body_data_index, :7].clone()[
+            ..., :3
+        ]
+        != p
     ).all()
     assert (
-        hide_obj.px.cuda_rigid_body_data.torch()[
-            hide_obj._body_data_index, :7
-        ].clone()[..., 3:] == q
+        hide_obj.px.cuda_rigid_body_data.torch()[hide_obj._body_data_index, :7].clone()[
+            ..., 3:
+        ]
+        == q
     ).all()
 
     # 5. Check data stored in before_hide_pose has same q and p
@@ -315,27 +334,29 @@ def test_hidden_objs(env_id):
 
     # 1. check relevant hidden properties are active
     assert not hide_obj.hidden
-    
+
     # 2. check that qvel, linvel, angvel same as before
     assert (hide_obj.linear_velocity == linvel).all()
     assert (hide_obj.angular_velocity == angvel).all()
 
     # 3. check gpu buffer goes back to normal
     print(
-        hide_obj.px.cuda_rigid_body_data.torch()[
-            hide_obj._body_data_index, :7
-        ].clone()[..., :3]
+        hide_obj.px.cuda_rigid_body_data.torch()[hide_obj._body_data_index, :7].clone()[
+            ..., :3
+        ]
     )
     print(p)
     assert (
-        hide_obj.px.cuda_rigid_body_data.torch()[
-            hide_obj._body_data_index, :7
-        ].clone()[..., :3] == p
+        hide_obj.px.cuda_rigid_body_data.torch()[hide_obj._body_data_index, :7].clone()[
+            ..., :3
+        ]
+        == p
     ).all()
     assert (
-        hide_obj.px.cuda_rigid_body_data.torch()[
-            hide_obj._body_data_index, :7
-        ].clone()[..., 3:] == q
+        hide_obj.px.cuda_rigid_body_data.torch()[hide_obj._body_data_index, :7].clone()[
+            ..., 3:
+        ]
+        == q
     ).all()
 
     # 4. check that direct calls to raw_pose, pos, and rot same as before
@@ -345,5 +366,6 @@ def test_hidden_objs(env_id):
 
     env.close()
     del env
+
 
 # TODO (stao): Add test for tasks where there is no success/success and failure/no success or failure

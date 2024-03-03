@@ -82,6 +82,8 @@ def assert_obs_equal(obs1, obs2, ignore_col_vector_shape_mismatch=False):
     """
     obs1, obs2 = to_numpy(obs1), to_numpy(obs2)
     if isinstance(obs1, dict):
+        assert isinstance(obs2, dict)
+        obs1 = flatten_dict_keys(obs1)
         obs2 = flatten_dict_keys(obs2)
         for k, v in obs1.items():
             v2 = obs2[k]

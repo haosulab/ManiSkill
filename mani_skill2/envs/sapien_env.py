@@ -47,7 +47,7 @@ from mani_skill2.utils.sapien_utils import (
 )
 from mani_skill2.utils.structs.actor import Actor
 from mani_skill2.utils.structs.articulation import Articulation
-from mani_skill2.utils.structs.types import SimConfig
+from mani_skill2.utils.structs.types import Array, SimConfig
 from mani_skill2.utils.visualization.misc import observations_to_images, tile_images
 
 
@@ -244,7 +244,8 @@ class BaseEnv(gym.Env):
             obs = to_numpy(obs)
         self._init_raw_obs = obs.copy()
         """the raw observation returned by the env.reset. Useful for future observation wrappers to use to auto generate observation spaces"""
-        # TODO handle constructing single obs space from a batched result.
+        self._init_raw_state = to_numpy(self.get_state_dict())
+        """the initial raw state returned by env.get_state. Useful for reconstructing state dictionaries from flattened state vectors"""
 
         self.action_space = self.agent.action_space
         self.single_action_space = self.agent.single_action_space
@@ -282,17 +283,17 @@ class BaseEnv(gym.Env):
         if robot_uids is not None:
             if not isinstance(robot_uids, tuple):
                 robot_uids = [robot_uids]
-            for i, robot_uids in enumerate(robot_uids):
-                if isinstance(robot_uids, type(BaseAgent)):
-                    agent_cls = robot_uids
+            for i, robot_uid in enumerate(robot_uids):
+                if isinstance(robot_uid, type(BaseAgent)):
+                    agent_cls = robot_uid
                     # robot_uids = self._agent_cls.uid
                 else:
-                    agent_cls = ROBOTS[robot_uids]
+                    agent_cls = ROBOTS[robot_uid]
                 agent: BaseAgent = agent_cls(
                     self._scene,
                     self._control_freq,
                     self._control_mode,
-                    agent_idx=i if len(robot_uids) > 0 else None,
+                    agent_idx=i if len(robot_uids) > 1 else None,
                 )
                 agent.set_control_mode()
                 agents.append(agent)
@@ -648,13 +649,13 @@ class BaseEnv(gym.Env):
         self._scene._reset_mask = torch.ones(
             self.num_envs, dtype=bool, device=self.device
         )
-        obs = self.get_obs()
         if physx.is_gpu_enabled():
             # ensure all updates to object poses and configurations are applied on GPU after task initialization
             self._scene._gpu_apply_all()
             self._scene.px.gpu_update_articulation_kinematics()
             self._scene._gpu_fetch_all()
-        else:
+        obs = self.get_obs()
+        if not physx.is_gpu_enabled():
             obs = to_numpy(unbatch(obs))
             self._elapsed_steps = 0
         return obs, {}
@@ -916,22 +917,53 @@ class BaseEnv(gym.Env):
         # TODO(jigu): Remove dummy articulations if exist.
         return articulations
 
-    def get_state(self):
-        """Get environment state. Override to include task information (e.g., goal)"""
-        state = self._scene.get_sim_state()
-        if physx.is_gpu_enabled():
-            return state
-        return state[0]
+    def get_state_dict(self):
+        """
+        Get environment state dictionary. Override to include task information (e.g., goal)
+        """
+        return self._scene.get_sim_state()
 
-    def set_state(self, state: np.ndarray):
-        """Set environment state. Override to include task information (e.g., goal)"""
-        if len(state.shape) == 1:
-            state = batch(state)
+    def get_state(self):
+        """
+        Get environment state as a flat vector, which is just a ordered flattened version of the state_dict.
+
+        Users should not override this function
+        """
+        return flatten_state_dict(self.get_state_dict(), use_torch=True)
+
+    def set_state_dict(self, state: Dict):
+        """
+        Set environment state with a state dictionary. Override to include task information (e.g., goal)
+
+        Note that it is recommended to keep around state dictionaries as opposed to state vectors. With state vectors we assume
+        the order of data in the vector is the same exact order that would be returned by flattening the state dictionary you get from
+        `env.get_state_dict()` or the result of `env.get_state()`
+        """
         self._scene.set_sim_state(state)
         if physx.is_gpu_enabled():
             self._scene._gpu_apply_all()
             self._scene.px.gpu_update_articulation_kinematics()
             self._scene._gpu_fetch_all()
+
+    def set_state(self, state: Array):
+        """
+        Set environment state with a flat state vector. Internally this reconstructs the state dictionary and calls `env.set_state_dict`
+
+        Users should not override this function
+        """
+        state_dict = dict()
+        state_dict["actors"] = dict()
+        state_dict["articulations"] = dict()
+        KINEMATIC_DIM = 13  # [pos, quat, lin_vel, ang_vel]
+        start = 0
+        for actor_id in self._init_raw_state["actors"].keys():
+            state_dict["actors"][actor_id] = state[:, start : start + KINEMATIC_DIM]
+            start += KINEMATIC_DIM
+        for art_id, art_state in self._init_raw_state["articulations"].items():
+            size = art_state.shape[-1]
+            state_dict["articulations"][art_id] = state[:, start : start + size]
+            start += size
+        self.set_state_dict(state_dict)
 
     # -------------------------------------------------------------------------- #
     # Visualization

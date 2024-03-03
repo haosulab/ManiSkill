@@ -311,22 +311,22 @@ class FillEnv(MPMBaseEnv):
             self._remove_draw_box(box)
         return img
 
-    def get_state(self) -> np.ndarray:
-        state = super().get_state()
+    def get_state_dict(self) -> np.ndarray:
+        state = super().get_state_dict()
         return np.hstack([state, self.beaker_x, self.beaker_y])
 
-    def set_state(self, state):
+    def set_state_dict(self, state):
         self.beaker_x = state[-2]
         self.beaker_y = state[-1]
-        super().set_state(state[:-2])
+        super().set_state_dict(state[:-2])
 
 
 if __name__ == "__main__":
     env = FillEnv()
     env.reset()
 
-    a = env.get_state()
-    env.set_state(a)
+    a = env.get_state_dict()
+    env.set_state_dict(a)
 
     for _ in range(100):
         env.step(None)

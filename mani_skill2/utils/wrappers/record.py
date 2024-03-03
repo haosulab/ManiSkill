@@ -259,7 +259,7 @@ class RecordEpisode(gym.Wrapper):
         obs, info = super().reset(*args, seed=seed, options=options, **kwargs)
 
         if self.save_trajectory:
-            state = self._base_env.get_state()
+            state = self._base_env.get_state_dict()
             data = pack_step_data(state, obs, None, None, None, None, None)
             self._episode_data.append(data)
             self._episode_info.update(
