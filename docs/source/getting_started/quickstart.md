@@ -30,7 +30,6 @@ env.close()
   <source src="/_static/videos/demo.mp4" type="video/mp4">
 </video>
 
-<!-- .. video:: videos/demo.mp4 -->
 
 
 Each ManiSkill2 environment supports different **observation modes** and **control modes**, which determine its **observation space** and **action space**. They can be specified by `gym.make(env_id, obs_mode=..., control_mode=...)`.
