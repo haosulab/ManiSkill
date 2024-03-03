@@ -6,6 +6,8 @@ import zipfile
 
 from tqdm import tqdm
 
+from mani_skill2 import DEMO_DIR
+
 DATASET_SOURCES = {}
 
 # Rigid body envs
@@ -208,8 +210,7 @@ def parse_args(args=None):
         "-o",
         "--output_dir",
         type=str,
-        default="demos",
-        help="The directory to save demonstrations to. The files will then be saved to <output_dir>/<env_type>/<env_id>",
+        help="The directory to save demonstrations to. The files will then be saved to <output_dir>/<env_type>/<env_id>. By default it is saved to ~/.maniskill/demos or what MS_ASSET_DIR is set to.",
     )
     return parser.parse_args(args)
 
@@ -244,23 +245,23 @@ def main(args):
             raise ValueError(
                 f"Version v{download_version} of demonstrations for {uid} do not exist. Latest version is v{meta['latest_version']}. If you think this is a bug please raise an issue on GitHub: https://github.com/haosulab/ManiSkill2/issues"
             )
-        if verbose:
-            print(
-                f"Downloading v{download_version} demonstrations: {i+1}/{len(uids)}, {uid}"
-            )
 
         object_paths = meta["object_paths"]
+        output_dir = str(DEMO_DIR)
+        if args.output_dir:
+            output_dir = args.output_dir
+        final_path = osp.join(output_dir, f"v{download_version}", meta["env_type"])
+        if verbose:
+            print(
+                f"Downloading v{download_version} demonstrations to {final_path} - {i+1}/{len(uids)}, {uid}"
+            )
         for object_path in object_paths:
             local_path = download_file(
-                osp.join(args.output_dir), object_path, version=download_version
+                output_dir, object_path, version=download_version
             )
             if osp.splitext(local_path)[1] == ".zip":
                 with zipfile.ZipFile(local_path, "r") as zip_ref:
-                    zip_ref.extractall(
-                        osp.join(
-                            args.output_dir, f"v{download_version}", meta["env_type"]
-                        )
-                    )
+                    zip_ref.extractall(final_path)
                 os.remove(local_path)
 
 

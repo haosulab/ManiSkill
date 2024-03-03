@@ -262,7 +262,7 @@ def build_actor_ycb(
     model_id: str,
     scene: ManiSkillScene,
     name: str,
-    root_dir=ASSET_DIR / "mani_skill2_ycb",
+    root_dir=ASSET_DIR / "assets/mani_skill2_ycb",
     body_type: str = "dynamic",
     add_collision: bool = True,
     return_builder: bool = False,
@@ -299,7 +299,7 @@ def build_actor_ycb(
 def _load_ycb_dataset():
     # load YCB if used
     MODEL_DBS["YCB"] = {
-        "model_data": load_json(ASSET_DIR / "mani_skill2_ycb/info_pick_v0.json"),
+        "model_data": load_json(ASSET_DIR / "assets/mani_skill2_ycb/info_pick_v0.json"),
         "builder": build_actor_ycb,
     }
 

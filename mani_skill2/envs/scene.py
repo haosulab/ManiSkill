@@ -133,9 +133,12 @@ class ManiSkillScene:
             camera.set_fovy(fovy, compute_x=True)
             camera.near = near
             camera.far = far
-            camera.set_gpu_pose_batch_index(mount._objs[i].gpu_pose_index)
+            if physx.is_gpu_enabled():
+                camera.set_gpu_pose_batch_index(mount._objs[i].gpu_pose_index)
             if isinstance(mount, Link):
                 mount._objs[i].entity.add_component(camera)
+            else:
+                mount._objs[i].add_component(camera)
             camera.local_pose = pose
             camera.name = f"scene-{i}_{name}"
             cameras.append(camera)

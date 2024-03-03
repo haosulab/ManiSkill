@@ -28,6 +28,9 @@ class Joint(BaseStruct[physx.PhysxArticulationJoint]):
 
     articulation: Articulation
     index: int
+    """index of this joint among all joints"""
+    active_index: int
+    """index of this joint amongst the active joints"""
 
     child_link: Link = None
     parent_link: Link = None
@@ -42,6 +45,7 @@ class Joint(BaseStruct[physx.PhysxArticulationJoint]):
         physx_joints: List[physx.PhysxArticulationJoint],
         articulation: Articulation,
         joint_index: int,
+        active_joint_index: int,
     ):
         # naming convention of the original physx joints is "scene-<id>-<articulation_name>_<original_joint_name>"
         shared_name = "_".join(
@@ -69,6 +73,7 @@ class Joint(BaseStruct[physx.PhysxArticulationJoint]):
         return cls(
             articulation=articulation,
             index=joint_index,
+            active_index=active_joint_index,
             _objs=physx_joints,
             _scene=articulation._scene,
             _scene_mask=articulation._scene_mask,

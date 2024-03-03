@@ -35,6 +35,7 @@ setup(
         "imageio",
         "imageio[ffmpeg]",
         "pytorch_kinematics",
+        "huggingface_hub",  # we use HF to version control some assets/datasets more easily
     ],
     # Glob patterns do not automatically match dotfiles
     package_data={
@@ -52,7 +53,7 @@ setup(
             # Note that currently sphinx 7 does not work, so we must use v6.2.1. See https://github.com/kivy/kivy/issues/8230 which tracks this issue. Once fixed we can use a later version
             "sphinx==6.2.1",
             "sphinx-autobuild",
-            "sphinx-rtd-theme",
+            "sphinx-book-theme",
             # For spelling
             "sphinxcontrib.spelling",
             # Type hints support

@@ -49,7 +49,6 @@ class ArticulationBuilder(SapienArticulationBuilder):
         builder = LinkBuilder(len(self.link_builders), parent)
         self.link_builders.append(builder)
         if self.disable_self_collisions:
-            # NOTE (stao): Currently in SAPIEN you can't set collision groups after building the links due to some bug when doing GPU sim.
             builder.collision_groups[2] |= 1 << 29
 
         return builder

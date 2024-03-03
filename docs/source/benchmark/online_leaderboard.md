@@ -1,8 +1,8 @@
-# Submission
+# Online Leaderboard
 
-To participate in the ManiSkill2 challenge, please register on the [challenge website](https://sapien.ucsd.edu/challenges/maniskill/). After registering an account, [create/join a team](https://sapien.ucsd.edu/challenges/maniskill/challenges/ms2/team). After creating/joining a team, you will be allowed to create submissions.
+We currently run an online leaderboard where anyone can submit their models/algorithms and have it be evaluated publically. First register on the [challenge website](https://sapien.ucsd.edu/challenges/maniskill/). After registering an account, [create/join a team](https://sapien.ucsd.edu/challenges/maniskill/challenges/ms2/team). After creating/joining a team, you will be allowed to create submissions.
 
-To submit to the challenge, you need to submit a URL to your docker image which contains your codes and dependencies (e.g., model weights). Before submitting, you should test the submission docker locally. Instructions for local evaluation and online submission are provided below.
+To submit to the challenge, you need to submit a URL to your docker image which contains your code and dependencies (e.g., python packages, model weights). Before submitting, you should test the submission docker locally. Instructions for local evaluation and online submission are provided below.
 
 In brief, you need to:
 
@@ -92,7 +92,7 @@ docker kill ${CONTAINER_NAME}
 
 ## Online Submission
 
-Once you have built and pushed a docker image, you are ready to submit to the competition. Go to the competition [submissions page](https://sapien.ucsd.edu/challenges/maniskill/challenges/ms2/submit) and give your submission a name and enter the docker image name+tag (format: `registry.hub.docker.com/USERNAME/IMG_NAME:TAG`; Do not use the `latest` tag). Then select which track you are submitting to. Lastly, tick/untick which tasks you would like to evaluate your submission on.
+Once you have built and pushed a docker image, you are ready to submit to the competition. Go to the competition [submissions page](https://sapien.ucsd.edu/challenges/maniskill/challenges/ms2-ongoing/submit) and give your submission a name and enter the docker image name+tag (format: `registry.hub.docker.com/USERNAME/IMG_NAME:TAG`; Do not use the `latest` tag). Then select which track you are submitting to. Lastly, tick/untick which tasks you would like to evaluate your submission on.
 
 To ensure reproducibility, we do not allow you to submit the same docker image and tag twice, we require you to give a new tag to your image before submitting. You can create a new tag as so `docker tag <image_name> <image_name>:<tag_name>`
 

@@ -78,8 +78,9 @@ def main(args):
         if args.render_mode is not None:
             env.render()
 
-        if terminated or truncated:
-            break
+        if args.render_mode is None or args.render_mode != "human":
+            if terminated or truncated:
+                break
     env.close()
 
 
