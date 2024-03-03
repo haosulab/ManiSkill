@@ -7,9 +7,9 @@ from mani_skill2 import __version__
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = "ManiSkill3"
-copyright = "2024, ManiSkill3 Contributors"
-author = "ManiSkill3 Contributors"
+project = "ManiSkill"
+copyright = "2024, ManiSkill Contributors"
+author = "ManiSkill Contributors"
 release = __version__
 version = __version__
 

@@ -1,4 +1,4 @@
-ManiSkill2
+ManiSkill
 =======================================
 
 ManiSkill is a feature-rich GPU-accelerated robotics benchmark built on top of SAPIEN_ designed to provide accessible support for a wide array of applications from robot learning, learning from demonstrations, sim2real/real2sim, and more. 
@@ -28,6 +28,7 @@ Features:
    tutorials/index
    concepts/index
    datasets/index
+   data_collection/index
    algorithms_and_models/index
    workflows/index
    .. benchmark/online_leaderboard
