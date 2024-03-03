@@ -340,12 +340,6 @@ def test_hidden_objs(env_id):
     assert (hide_obj.angular_velocity == angvel).all()
 
     # 3. check gpu buffer goes back to normal
-    print(
-        hide_obj.px.cuda_rigid_body_data.torch()[hide_obj._body_data_index, :7].clone()[
-            ..., :3
-        ]
-    )
-    print(p)
     assert (
         hide_obj.px.cuda_rigid_body_data.torch()[hide_obj._body_data_index, :7].clone()[
             ..., :3
