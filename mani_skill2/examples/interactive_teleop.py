@@ -121,7 +121,10 @@ def solve(env: BaseEnv, debug=False, vis=False):
 
         env.render_human()
         execute_current_pose = False
-        if viewer.window.key_press("k"):
+        if viewer.window.key_press("h"):
+            # TODO (stao): print help menu
+            pass
+        elif viewer.window.key_press("k"):
             print("Saving checkpoint")
             last_checkpoint_state = env.get_state()
         elif viewer.window.key_press("l"):
