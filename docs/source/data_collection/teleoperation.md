@@ -12,7 +12,7 @@ Usability: Extremely easy to generate fine-grained demonstrations
 
 Limitations: Limited to only solving less dynamical tasks with two-finger grippers like picking up a cube. Tasks like throwing a cube would not be possible.
 
-To start the system run
+To start the system you can specify an environment id with `-e` and run
 ```bash
 python -m mani_skill2.examples.interactive_teleop.py -e "PickCube-v1"
 ```
