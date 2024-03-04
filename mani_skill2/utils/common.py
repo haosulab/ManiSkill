@@ -1,5 +1,5 @@
 from collections import OrderedDict, defaultdict
-from typing import Dict, Sequence
+from typing import Dict, Sequence, Union
 
 import gymnasium as gym
 import numpy as np
@@ -25,6 +25,21 @@ def dict_merge(dct: dict, merge_dct: dict):
             dict_merge(dct[k], merge_dct[k])
         else:
             dct[k] = merge_dct[k]
+
+
+def append_data(x1: Union[dict, Sequence, Array], x2: Union[dict, Sequence, Array]):
+    """Append `x2` in front of `x1` and returns the result. Tries to do this in place if possible.
+    Assumes both `x1, x2` have the same dictionary structure if they are dictionaries.
+    They may also both be lists/sequences in which case this is just appending like normal"""
+    if isinstance(x1, np.ndarray):
+        return np.concatenate([x1, x2])
+    elif isinstance(x1, list):
+        return x1 + x2
+    elif isinstance(x1, dict):
+        for k in x1.keys():
+            assert k in x2, "dct and append_dct need to have the same dictionary layout"
+            x1[k] = append_data(x1[k], x2[k])
+    return x1
 
 
 def merge_dicts(ds: Sequence[Dict], asarray=False):
@@ -308,3 +323,17 @@ def flatten_dict_space_keys(space: spaces.Dict, prefix="") -> spaces.Dict:
         else:
             out[prefix + k] = v
     return spaces.Dict(out)
+
+
+def find_max_episode_steps_value(env):
+    cur = env
+    while cur is not None:
+        if hasattr(cur, "max_episode_steps"):
+            return cur.max_episode_steps
+        if cur.spec is not None and cur.spec.max_episode_steps is not None:
+            return cur.spec.max_episode_steps
+        if hasattr(cur, "env"):
+            cur = env.env
+        else:
+            cur = None
+    return None

@@ -111,6 +111,8 @@ def _batch(array: Union[Array, Sequence]):
 
 
 def batch(*args: Tuple[Union[Array, Sequence]]):
+    """Adds one dimension in front of everything. If given a dictionary, every leaf in the dictionary
+    has a new dimension. If given a tuple, returns the same tuple with each element batched"""
     x = [_batch(x) for x in args]
     if len(args) == 1:
         return x[0]
