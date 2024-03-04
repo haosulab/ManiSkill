@@ -269,95 +269,105 @@ def test_hidden_objs(env_id):
         env_id, num_envs=16, vectorization_mode="custom"
     )
     obs, _ = env.reset()
-
-    # for PickCube, this is env.goal_site
     hide_obj = env.unwrapped._hidden_objects[0]
 
-    raw_pose = hide_obj.pose.raw_pose.clone()
-    p = hide_obj.pose.p.clone()
-    q = hide_obj.pose.q.clone()
-    linvel = hide_obj.linear_velocity.clone()
-    angvel = hide_obj.angular_velocity.clone()
+    def test_fn():
+        # note that we use torch.is_close instead of checking exact match as data can change a tiny amount (1e-7 range ish)
+        # when applying then fetching new poses
 
-    # hide_visual tests
+        # for PickCube, this is env.goal_site
+        raw_pose = hide_obj.pose.raw_pose.clone()
+        p = hide_obj.pose.p.clone()
+        q = hide_obj.pose.q.clone()
+        linvel = hide_obj.linear_velocity.clone()
+        angvel = hide_obj.angular_velocity.clone()
+        # 1. check relevant hidden properties are active
+        assert hide_obj.hidden
+        assert hasattr(hide_obj, "before_hide_pose")
+
+        # 2. check state data for new pos is not too low or high
+        assert (
+            hide_obj.px.cuda_rigid_body_data.torch()[
+                hide_obj._body_data_index, :7
+            ].clone()[..., :3]
+            > 1e3
+        ).all()
+        assert (
+            hide_obj.px.cuda_rigid_body_data.torch()[
+                hide_obj._body_data_index, :7
+            ].clone()[..., :3]
+            < 1e6
+        ).all()
+
+        # 3. check that linvel and angvel same as before
+        assert (hide_obj.linear_velocity == linvel).all()
+        assert (hide_obj.angular_velocity == angvel).all()
+
+        # 4. Check data stored in buffer has same q but different p
+        assert (
+            hide_obj.px.cuda_rigid_body_data.torch()[
+                hide_obj._body_data_index, :7
+            ].clone()[..., :3]
+            != p
+        ).all()
+        assert (
+            hide_obj.px.cuda_rigid_body_data.torch()[
+                hide_obj._body_data_index, :7
+            ].clone()[..., 3:]
+            == q
+        ).all()
+
+        # 5. Check data stored in before_hide_pose has same q and p
+        assert (hide_obj.before_hide_pose[..., :3] == p).all()
+        assert (hide_obj.before_hide_pose[..., 3:] == q).all()
+
+        # 6. check that direct calls to raw_pose, pos, and rot same as before
+        #       (should return `before_hide_pose`)
+        assert (hide_obj.pose.raw_pose == raw_pose).all()
+        assert (hide_obj.pose.p == p).all()
+        assert (hide_obj.pose.q == q).all()
+        assert (hide_obj.pose.raw_pose == hide_obj.before_hide_pose).all()
+
+        # show_visual tests
+        hide_obj.show_visual()
+
+        # 1. check relevant hidden properties are active
+        assert not hide_obj.hidden
+
+        # 2. check that qvel, linvel, angvel same as before
+        assert (hide_obj.linear_velocity == linvel).all()
+        assert (hide_obj.angular_velocity == angvel).all()
+
+        # 3. check gpu buffer goes back to normal
+        assert torch.isclose(
+            hide_obj.px.cuda_rigid_body_data.torch()[
+                hide_obj._body_data_index, :7
+            ].clone()[..., :3],
+            p,
+        ).all()
+        assert torch.isclose(
+            hide_obj.px.cuda_rigid_body_data.torch()[
+                hide_obj._body_data_index, :7
+            ].clone()[..., 3:],
+            q,
+        ).all()
+
+        # 4. check that direct calls to raw_pose, pos, and rot same as before
+        assert torch.isclose(hide_obj.pose.raw_pose, raw_pose).all()
+        assert torch.isclose(hide_obj.pose.p, p).all()
+        assert torch.isclose(hide_obj.pose.q, q).all()
+
+    # Test after reset
     hide_obj.hide_visual()
-
-    # 1. check relevant hidden properties are active
-    assert hide_obj.hidden
-    assert hasattr(hide_obj, "before_hide_pose")
-
-    # 2. check state data for new pos is not too low or high
-    assert (
-        hide_obj.px.cuda_rigid_body_data.torch()[hide_obj._body_data_index, :7].clone()[
-            ..., :3
-        ]
-        > 1e3
-    ).all()
-    assert (
-        hide_obj.px.cuda_rigid_body_data.torch()[hide_obj._body_data_index, :7].clone()[
-            ..., :3
-        ]
-        < 1e6
-    ).all()
-
-    # 3. check that linvel and angvel same as before
-    assert (hide_obj.linear_velocity == linvel).all()
-    assert (hide_obj.angular_velocity == angvel).all()
-
-    # 4. Check data stored in buffer has same q but different p
-    assert (
-        hide_obj.px.cuda_rigid_body_data.torch()[hide_obj._body_data_index, :7].clone()[
-            ..., :3
-        ]
-        != p
-    ).all()
-    assert (
-        hide_obj.px.cuda_rigid_body_data.torch()[hide_obj._body_data_index, :7].clone()[
-            ..., 3:
-        ]
-        == q
-    ).all()
-
-    # 5. Check data stored in before_hide_pose has same q and p
-    assert (hide_obj.before_hide_pose[..., :3] == p).all()
-    assert (hide_obj.before_hide_pose[..., 3:] == q).all()
-
-    # 6. check that direct calls to raw_pose, pos, and rot same as before
-    #       (should return `before_hide_pose`)
-    assert (hide_obj.pose.raw_pose == raw_pose).all()
-    assert (hide_obj.pose.p == p).all()
-    assert (hide_obj.pose.q == q).all()
-    assert (hide_obj.pose.raw_pose == hide_obj.before_hide_pose).all()
-
-    # show_visual tests
-    hide_obj.show_visual()
-
-    # 1. check relevant hidden properties are active
-    assert not hide_obj.hidden
-
-    # 2. check that qvel, linvel, angvel same as before
-    assert (hide_obj.linear_velocity == linvel).all()
-    assert (hide_obj.angular_velocity == angvel).all()
-
-    # 3. check gpu buffer goes back to normal
-    assert (
-        hide_obj.px.cuda_rigid_body_data.torch()[hide_obj._body_data_index, :7].clone()[
-            ..., :3
-        ]
-        == p
-    ).all()
-    assert (
-        hide_obj.px.cuda_rigid_body_data.torch()[hide_obj._body_data_index, :7].clone()[
-            ..., 3:
-        ]
-        == q
-    ).all()
-
-    # 4. check that direct calls to raw_pose, pos, and rot same as before
-    assert (hide_obj.pose.raw_pose == raw_pose).all()
-    assert (hide_obj.pose.p == p).all()
-    assert (hide_obj.pose.q == q).all()
-
+    test_fn()
+    # Test after partial resets
+    hide_obj.hide_visual()
+    env_idx = torch.arange(16, dtype=int, device=env.device)
+    reset_mask = torch.zeros(16, dtype=bool, device=env.device)
+    for i in [1, 3, 7, 11]:
+        reset_mask[i] = True
+    env.reset(options=dict(env_idx=env_idx[reset_mask]))
+    test_fn()
     env.close()
     del env
 
