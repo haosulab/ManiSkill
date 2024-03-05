@@ -107,6 +107,8 @@ def _batch(array: Union[Array, Sequence]):
     if isinstance(array, list):
         if len(array) == 1:
             return [array]
+    if isinstance(array, float) or isinstance(array, int) or isinstance(array, bool):
+        return np.array([[array]])
     return array
 
 

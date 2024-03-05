@@ -1,5 +1,5 @@
 from collections import OrderedDict, defaultdict
-from typing import Dict, Sequence, Union
+from typing import Dict, Sequence
 
 import gymnasium as gym
 import numpy as np
@@ -25,33 +25,6 @@ def dict_merge(dct: dict, merge_dct: dict):
             dict_merge(dct[k], merge_dct[k])
         else:
             dct[k] = merge_dct[k]
-
-
-def append_dict_array(
-    x1: Union[dict, Sequence, Array], x2: Union[dict, Sequence, Array]
-):
-    """Append `x2` in front of `x1` and returns the result. Tries to do this in place if possible.
-    Assumes both `x1, x2` have the same dictionary structure if they are dictionaries.
-    They may also both be lists/sequences in which case this is just appending like normal"""
-    if isinstance(x1, np.ndarray):
-        return np.concatenate([x1, x2])
-    elif isinstance(x1, list):
-        return x1 + x2
-    elif isinstance(x1, dict):
-        for k in x1.keys():
-            assert k in x2, "dct and append_dct need to have the same dictionary layout"
-            x1[k] = append_dict_array(x1[k], x2[k])
-    return x1
-
-
-def slice_dict_array(x1: Union[dict, Sequence, Array], slice: slice):
-    """Slices every array in x1 with slice and returns result. Tries to do this in place if possible"""
-    if isinstance(x1, np.ndarray) or isinstance(x1, list):
-        return x1[slice]
-    elif isinstance(x1, dict):
-        for k in x1.keys():
-            x1[k] = slice_dict_array(x1[k], slice)
-    return x1
 
 
 def merge_dicts(ds: Sequence[Dict], asarray=False):

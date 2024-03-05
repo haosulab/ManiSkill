@@ -10,7 +10,7 @@ from mani_skill2.vector.wrappers.gymnasium import ManiSkillVectorEnv
 if __name__ == "__main__":
     # sapien.set_log_level("info")
     # , "StackCube-v1", "PickCube-v1", "PushCube-v1", "PickSingleYCB-v1", "OpenCabinet-v1"
-    num_envs = 2
+    num_envs = 1
     for env_id in ["PickCube-v1"]:
         env = gym.make(
             env_id,
@@ -25,7 +25,7 @@ if __name__ == "__main__":
             # control_mode="pd_ee_delta_pos",
             # sim_freq=100,
             # control_freq=20,
-            force_use_gpu_sim=True,
+            # force_use_gpu_sim=True,
             # reconfiguration_freq=1,
         )
         env = RecordEpisode(
@@ -35,21 +35,21 @@ if __name__ == "__main__":
             info_on_video=False,
             video_fps=30,
             save_trajectory=True,
-            max_steps_per_video=200,
+            max_steps_per_video=50,
         )
-        env = ManiSkillVectorEnv(env)
+        # env = ManiSkillVectorEnv(env)
 
         env.reset(seed=52, options=dict(reconfigure=True))
         # for i in range(180):
         #     env.step(env.action_space.sample())
-        env.step(env.action_space.sample())
-        env.step(env.action_space.sample())
-        print("partial reset")
-        env.reset(options=dict(env_idx=[0]))
-        # for i in range(50):
-        #     env.step(env.action_space.sample())
-        for i in range(60):
+        # env.step(env.action_space.sample())
+        # env.step(env.action_space.sample())
+        # print("partial reset")
+        # env.reset(options=dict(env_idx=[0]))
+        for i in range(50):
             env.step(env.action_space.sample())
+        # for i in range(60):
+        #     env.step(env.action_space.sample())
         print("prep close")
         env.close()
         # import h5py

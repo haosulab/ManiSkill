@@ -2,28 +2,47 @@ import copy
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Optional, Sequence, Union
 
 import gymnasium as gym
 import h5py
 import numpy as np
 import sapien.physx as physx
-from gymnasium import spaces
 
-from mani_skill2 import get_commit_info, logger
+from mani_skill2 import get_commit_info
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.utils.common import (
-    append_dict_array,
     extract_scalars_from_info,
     find_max_episode_steps_value,
 )
 from mani_skill2.utils.io_utils import dump_json
 from mani_skill2.utils.sapien_utils import batch, to_numpy
+from mani_skill2.utils.structs.types import Array
 from mani_skill2.utils.visualization.misc import (
     images_to_video,
     put_info_on_image,
     tile_images,
 )
+
+# NOTE (stao): The code for record.py is quite messy and perhaps confusing as it is trying to support both recording on CPU and GPU seamlessly
+# and handle partial resets. It works but can be claned up a lot.
+
+
+def append_dict_array(
+    x1: Union[dict, Sequence, Array], x2: Union[dict, Sequence, Array]
+):
+    """Append `x2` in front of `x1` and returns the result. Tries to do this in place if possible.
+    Assumes both `x1, x2` have the same dictionary structure if they are dictionaries.
+    They may also both be lists/sequences in which case this is just appending like normal"""
+    if isinstance(x1, np.ndarray):
+        return np.concatenate([x1, x2])
+    elif isinstance(x1, list):
+        return x1 + x2
+    elif isinstance(x1, dict):
+        for k in x1.keys():
+            assert k in x2, "dct and append_dct need to have the same dictionary layout"
+            x1[k] = append_dict_array(x1[k], x2[k])
+    return x1
 
 
 def slice_dict_array(x1, slice: slice):
