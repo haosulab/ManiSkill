@@ -35,6 +35,10 @@ def append_dict_array(
     Assumes both `x1, x2` have the same dictionary structure if they are dictionaries.
     They may also both be lists/sequences in which case this is just appending like normal"""
     if isinstance(x1, np.ndarray):
+        if len(x1.shape) > len(x2.shape):
+            # if different dims, check if extra dim is just a 1 due to single env in batch mode and if so, add it to x2.
+            if x1.shape[1] == 1:
+                x2 = x2[:, None, :]
         return np.concatenate([x1, x2])
     elif isinstance(x1, list):
         return x1 + x2
@@ -141,7 +145,8 @@ class Step:
 
 class RecordEpisode(gym.Wrapper):
     """Record trajectories or videos for episodes. You generally should always apply this wrapper last, particularly if you include
-    observation wrappers which modify the returned observations.
+    observation wrappers which modify the returned observations. The only wrappers that may go after this one is any of the vector env
+    interface wrappers that map the maniskill env to a e.g. gym vector env interface.
 
     Trajectory data is saved with two files, the actual data in a .h5 file via H5py and metadata in a JSON file of the same basename.
 
@@ -329,11 +334,12 @@ class RecordEpisode(gym.Wrapper):
             #     control_mode=getattr(self.unwrapped, "control_mode", None),
             #     elapsed_steps=0,
             # )
+            action = batch(self.action_space.sample())
             first_step = Step(
                 state=to_numpy(batch(state_dict)),
                 observation=to_numpy(batch(obs)),
                 # note first reward/action etc. are ignored when saving trajectories to disk
-                action=batch(self.action_space.sample()),
+                action=action,
                 reward=np.zeros(
                     (
                         1,
@@ -350,6 +356,9 @@ class RecordEpisode(gym.Wrapper):
                 fail=np.zeros((1, self.num_envs), dtype=bool),
                 env_episode_ptr=np.zeros((self.num_envs,), dtype=int),
             )
+            if self.num_envs == 1:
+                first_step.observation = batch(first_step.observation)
+                first_step.action = batch(first_step.action)
             env_idx = np.arange(self.num_envs)
             if "env_idx" in options:
                 env_idx = to_numpy(options["env_idx"])
@@ -367,7 +376,6 @@ class RecordEpisode(gym.Wrapper):
                         for k in x.keys():
                             recursive_replace(x[k], y[k])
 
-                # import ipdb;ipdb.set_trace()
                 recursive_replace(self._trajectory_buffer.state, first_step.state)
                 recursive_replace(
                     self._trajectory_buffer.observation, first_step.observation
@@ -412,6 +420,7 @@ class RecordEpisode(gym.Wrapper):
             self._trajectory_buffer.observation = append_dict_array(
                 self._trajectory_buffer.observation, to_numpy(batch(obs))
             )
+
             self._trajectory_buffer.action = append_dict_array(
                 self._trajectory_buffer.action, to_numpy(batch(action))
             )

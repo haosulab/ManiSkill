@@ -163,11 +163,12 @@ def test_recordepisode_wrapper_partial_reset(env_id, obs_mode):
         env_id,
         obs_mode=obs_mode,
         num_envs=1,
+        render_mode="rgb_array",
         sim_cfg=LOW_MEM_SIM_CFG,
     )
     env = RecordEpisode(
         env,
-        output_dir=f"videos/pytest/{env_id}-gpu-partial-resets",
+        output_dir=f"videos/pytest/{env_id}-partial-resets",
         trajectory_name=f"test_traj_{obs_mode}",
         save_trajectory=True,
         max_steps_per_video=50,
