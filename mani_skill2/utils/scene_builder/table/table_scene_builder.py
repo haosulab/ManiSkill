@@ -12,7 +12,6 @@ from mani_skill2.agents.robots.fetch import FETCH_UNIQUE_COLLISION_BIT
 from mani_skill2.utils.building.ground import build_ground
 from mani_skill2.utils.scene_builder import SceneBuilder
 
-
 class TableSceneBuilder(SceneBuilder):
     robot_init_qpos_noise: float = 0.02
 
@@ -113,13 +112,11 @@ class TableSceneBuilder(SceneBuilder):
             self.env.agent.robot.set_pose(sapien.Pose([-1.05, 0, -self.table_height]))
 
             # TODO (stao) (arth): is there a better way to model robots in sim. This feels very unintuitive.
-            for obj in self.ground._objs:
-                cs = obj.find_component_by_type(
-                    sapien.physx.PhysxRigidStaticComponent
-                ).get_collision_shapes()[0]
-                cg = cs.get_collision_groups()
-                cg[2] |= FETCH_UNIQUE_COLLISION_BIT
-                cs.set_collision_groups(cg)
+            for body in self.ground._bodies:
+                for cs in body.get_collision_shapes():
+                    cg = cs.get_collision_groups()
+                    cg[2] |= FETCH_UNIQUE_COLLISION_BIT
+                    cs.set_collision_groups(cg)
         elif self.env.robot_uids == ("panda", "panda"):
             agent: MultiAgent = self.env.agent
             qpos = np.array(
