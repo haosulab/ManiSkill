@@ -35,18 +35,26 @@ if __name__ == "__main__":
             info_on_video=False,
             video_fps=30,
             save_trajectory=True,
-            max_steps_per_video=50,
+            max_steps_per_video=200,
         )
         env = ManiSkillVectorEnv(env)
 
         env.reset(seed=52, options=dict(reconfigure=True))
-        for i in range(200):
+        # for i in range(180):
+        #     env.step(env.action_space.sample())
+        env.step(env.action_space.sample())
+        env.step(env.action_space.sample())
+        print("partial reset")
+        env.reset(options=dict(env_idx=[0]))
+        # for i in range(50):
+        #     env.step(env.action_space.sample())
+        for i in range(60):
             env.step(env.action_space.sample())
+        print("prep close")
         env.close()
+        # import h5py
 
-        import h5py
+        # data = h5py.File("videos/manual_test/PickCube-v1.h5")
+        # import ipdb
 
-        data = h5py.File("videos/manual_test/PickCube-v1.h5")
-        import ipdb
-
-        ipdb.set_trace()
+        # ipdb.set_trace()
