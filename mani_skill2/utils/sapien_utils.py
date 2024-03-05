@@ -36,10 +36,15 @@ def to_tensor(array: Union[torch.Tensor, np.array, Sequence]):
             return torch.Tensor(array).cuda()
     elif get_backend_name() == "numpy":
         if isinstance(array, np.ndarray):
-            return torch.from_numpy(array)
-        # TODO (arth): better way to address torch "UserWarning: Creating a tensor from a list of numpy.ndarrays is extremely slow" ?
+            ret = torch.from_numpy(array)
+            if ret.dtype == torch.float64:
+                ret = ret.float()
+            return ret
         elif isinstance(array, list) and isinstance(array[0], np.ndarray):
-            return torch.from_numpy(np.array(array))
+            ret = torch.from_numpy(np.array(array))
+            if ret.dtype == torch.float64:
+                ret = ret.float()
+            return ret
         elif np.iterable(array):
             return torch.Tensor(array)
         else:
