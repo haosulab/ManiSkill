@@ -111,7 +111,7 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
         merged_actor._builder_initial_pose = Pose.create(
             torch.vstack(_builder_initial_poses)
         )
-        scene.actors[actor.name] = merged_actor
+        scene.actors[merged_actor.name] = merged_actor
         return merged_actor
 
     # -------------------------------------------------------------------------- #

@@ -88,9 +88,13 @@ class PDEEPosController(PDJointPosController):
 
     def reset(self):
         super().reset()
-        self._target_pose[self.scene._reset_mask] = self.ee_pose_at_base[
-            self.scene._reset_mask
-        ]
+        if self._target_pose is None:
+            self._target_pose = self.ee_pose_at_base
+        else:
+            # TODO (stao): this is a strange way to mask setting individual batched pose parts
+            self._target_pose.raw_pose[
+                self.scene._reset_mask
+            ] = self.ee_pose_at_base.raw_pose[self.scene._reset_mask]
 
     def compute_ik(self, target_pose: Pose, action: Array, max_iterations=100):
         # Assume the target pose is defined in the base frame
@@ -155,13 +159,14 @@ class PDEEPosController(PDJointPosController):
 
     def get_state(self) -> dict:
         if self.config.use_target:
-            return {"target_pose": vectorize_pose(self._target_pose)}
+            return {"target_pose": self._target_pose.raw_pose}
         return {}
 
     def set_state(self, state: dict):
-        if self.config.use_target:
-            target_pose = state["target_pose"]
-            self._target_pose = sapien.Pose(target_pose[:3], target_pose[3:])
+        # if self.config.use_target:
+        #     target_pose = state["target_pose"]
+        #     self._target_pose = sapien.Pose(target_pose[:3], target_pose[3:])
+        raise NotImplementedError()
 
 
 @dataclass
