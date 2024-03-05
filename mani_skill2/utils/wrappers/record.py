@@ -185,7 +185,9 @@ class RecordEpisode(gym.Wrapper):
         save_trajectory: whether to save trajectory
         trajectory_name: name of trajectory file (.h5). Use timestamp if not provided.
         save_video: whether to save video
-        info_on_video: whether to write data about reward and data in the info object to the video
+        info_on_video: whether to write data about reward, action, and data in the info object to the video. The first video frame is generally the result
+            of the first env.reset() (visualizing the first observation). Text is written on frames after that, showing the action taken to get to that
+            environment state and reward.
         save_on_reset: whether to save the previous trajectory (and video of it if `save_video` is True) automatically when resetting.
             Not that for environments simulated on the GPU (to leverage fast parallel rendering) you must
             set `max_steps_per_video` to a fixed number so that every `max_steps_per_video` steps a video is saved. This is
@@ -385,12 +387,14 @@ class RecordEpisode(gym.Wrapper):
                     )
                 if self._trajectory_buffer.fail is not None:
                     recursive_replace(self._trajectory_buffer.fail, first_step.fail)
-        if self.save_video:
-            self._render_images.append(self.capture_image())
 
         return obs, info
 
     def step(self, action):
+        if self.save_video and self._video_steps == 0:
+            # save the first frame of the video here (s_0) instead of inside reset as user
+            # may call env.reset(...) multiple times but we want to ignore empty trajectories
+            self._render_images.append(self.capture_image())
         obs, rew, terminated, truncated, info = super().step(action)
 
         if self.save_trajectory:

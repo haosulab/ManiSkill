@@ -10,7 +10,7 @@ from mani_skill2.vector.wrappers.gymnasium import ManiSkillVectorEnv
 if __name__ == "__main__":
     # sapien.set_log_level("info")
     # , "StackCube-v1", "PickCube-v1", "PushCube-v1", "PickSingleYCB-v1", "OpenCabinet-v1"
-    num_envs = 1
+    num_envs = 2
     for env_id in ["PickCube-v1"]:
         env = gym.make(
             env_id,
@@ -39,7 +39,11 @@ if __name__ == "__main__":
         )
         # env = ManiSkillVectorEnv(env)
 
-        env.reset(seed=52, options=dict(reconfigure=True))
+        # env.reset(seed=52, options=dict(reconfigure=True))
+        env.reset()
+        env.reset()
+        env.reset()
+        env.reset()
         # for i in range(180):
         #     env.step(env.action_space.sample())
         # env.step(env.action_space.sample())
