@@ -3,6 +3,7 @@ import torch
 from mani_skill2 import PACKAGE_ASSET_DIR, format_path
 from mani_skill2.agents.base_agent import BaseAgent
 from mani_skill2.agents.controllers import *
+from mani_skill2.agents.registration import register_agent
 from mani_skill2.utils.sapien_utils import (
     apply_urdf_config,
     check_urdf_config,
@@ -11,6 +12,7 @@ from mani_skill2.utils.sapien_utils import (
 from mani_skill2.utils.structs.articulation import Articulation
 
 
+@register_agent()
 class ANYmalC(BaseAgent):
     uid = "anymal-c"
     urdf_path = f"{PACKAGE_ASSET_DIR}/robots/anymal-c/urdf/anymal.urdf"

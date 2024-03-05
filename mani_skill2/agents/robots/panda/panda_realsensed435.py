@@ -1,9 +1,11 @@
 from mani_skill2 import PACKAGE_ASSET_DIR
+from mani_skill2.agents.registration import register_agent
 from mani_skill2.sensors.camera import CameraConfig
 
 from .panda import Panda
 
 
+@register_agent()
 class PandaRealSensed435(Panda):
     uid = "panda_realsensed435"
     urdf_path = f"{PACKAGE_ASSET_DIR}/robots/panda/panda_v3.urdf"

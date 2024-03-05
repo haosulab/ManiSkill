@@ -6,12 +6,11 @@ import sapien.physx as physx
 from mani_skill2 import PACKAGE_ASSET_DIR
 from mani_skill2.agents.base_agent import BaseAgent
 from mani_skill2.agents.controllers import *
-from mani_skill2.utils.sapien_utils import (
-    get_obj_by_name,
-    get_objs_by_names,
-)
+from mani_skill2.agents.registration import register_agent
+from mani_skill2.utils.sapien_utils import get_obj_by_name, get_objs_by_names
 
 
+@register_agent()
 class XArm7Ability(BaseAgent):
     uid = "xarm7_ability"
     urdf_path = f"{PACKAGE_ASSET_DIR}/robots/xarm7/xarm7_ability_right_hand.urdf"

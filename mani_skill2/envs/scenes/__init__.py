@@ -13,10 +13,11 @@ from .base_env import SceneManipulationEnv
 
 scene_builders = {
     "ReplicaCAD": ReplicaCADSceneBuilder,
-    "ArchitecTHOR": ArchitecTHORSceneBuilder,
-    "ProcTHOR": ProcTHORSceneBuilder,
-    "RoboTHOR": RoboTHORSceneBuilder,
-    "iTHOR": iTHORSceneBuilder,
+    # TODO these will be added in final release later once articulations are fixed
+    # "ArchitecTHOR": ArchitecTHORSceneBuilder,
+    # "ProcTHOR": ProcTHORSceneBuilder,
+    # "RoboTHOR": RoboTHORSceneBuilder,
+    # "iTHOR": iTHORSceneBuilder,
 }
 
 # Register environments just for benchmarking/exploration and to be creatable by just ID, these don't have any specific tasks designed in them.

@@ -9,6 +9,7 @@ import torch
 from mani_skill2 import PACKAGE_ASSET_DIR
 from mani_skill2.agents.base_agent import BaseAgent
 from mani_skill2.agents.controllers import *
+from mani_skill2.agents.registration import register_agent
 from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.common import compute_angle_between, np_compute_angle_between
 from mani_skill2.utils.sapien_utils import (
@@ -28,6 +29,7 @@ from mani_skill2.utils.structs.types import Array
 FETCH_UNIQUE_COLLISION_BIT = 1 << 30
 
 
+@register_agent()
 class Fetch(BaseAgent):
     uid = "fetch"
     urdf_path = f"{PACKAGE_ASSET_DIR}/robots/fetch/fetch.urdf"
@@ -66,10 +68,28 @@ class Fetch(BaseAgent):
             near=0.01,
             far=10,
             entity_uid="gripper_link",
-        )
+        ),
     ]
     REACHABLE_DIST = 1.5
-    RESTING_QPOS = np.array([0, 0, 0, 0.386, 0, -0.370, 0.562, -1.032, 0.695, 0.955, -0.1, 2.077, 0, 0.015, 0.015])
+    RESTING_QPOS = np.array(
+        [
+            0,
+            0,
+            0,
+            0.386,
+            0,
+            -0.370,
+            0.562,
+            -1.032,
+            0.695,
+            0.955,
+            -0.1,
+            2.077,
+            0,
+            0.015,
+            0.015,
+        ]
+    )
 
     def __init__(self, *args, **kwargs):
         self.arm_joint_names = [

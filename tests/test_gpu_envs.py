@@ -23,6 +23,23 @@ from tests.utils import (
 
 @pytest.mark.gpu_sim
 @pytest.mark.parametrize("env_id", ENV_IDS)
+def test_all_envs(env_id):
+    env = gym.make_vec(
+        env_id,
+        num_envs=16,
+        vectorization_mode="custom",
+        vector_kwargs=dict(obs_mode="state", sim_cfg=LOW_MEM_SIM_CFG),
+    )
+    obs, _ = env.reset()
+    action_space = env.action_space
+    for _ in range(5):
+        obs, rew, terminated, truncated, info = env.step(action_space.sample())
+    env.close()
+    del env
+
+
+@pytest.mark.gpu_sim
+@pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS)
 @pytest.mark.parametrize("obs_mode", OBS_MODES)
 def test_envs_obs_modes(env_id, obs_mode):
     def assert_device(x):
@@ -169,7 +186,7 @@ def test_raw_sim_states():
 
 @pytest.mark.gpu_sim
 @pytest.mark.parametrize("env_id", ENV_IDS)
-@pytest.mark.parametrize("robot_uids", ROBOTS)
+@pytest.mark.parametrize("robot_uids", STATIONARY_ENV_IDS)
 def test_robots(env_id, robot_uids):
     if env_id in [
         "PandaAvoidObstacles-v0",

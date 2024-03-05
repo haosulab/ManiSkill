@@ -8,6 +8,7 @@ import torch
 from mani_skill2 import ASSET_DIR
 from mani_skill2.agents.base_agent import BaseAgent
 from mani_skill2.agents.controllers import *
+from mani_skill2.agents.registration import register_agent
 from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.common import compute_angle_between, np_compute_angle_between
 from mani_skill2.utils.sapien_utils import (
@@ -19,6 +20,7 @@ from mani_skill2.utils.sapien_utils import (
 from mani_skill2.utils.structs.actor import Actor
 
 
+@register_agent()
 class Xmate3Robotiq(BaseAgent):
     uid = "xmate3_robotiq"
     urdf_path = f"{ASSET_DIR}/robots/xmate3_robotiq/xmate3_robotiq.urdf"

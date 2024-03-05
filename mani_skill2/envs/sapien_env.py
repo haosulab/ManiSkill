@@ -17,9 +17,9 @@ from gymnasium.vector.utils import batch_space
 from sapien.utils import Viewer
 
 from mani_skill2 import logger
+from mani_skill2.agents import REGISTERED_AGENTS
 from mani_skill2.agents.base_agent import BaseAgent
 from mani_skill2.agents.multi_agent import MultiAgent
-from mani_skill2.agents.robots import ROBOTS
 from mani_skill2.envs.scene import ManiSkillScene
 from mani_skill2.envs.utils.observations.observations import (
     sensor_data_to_pointcloud,
@@ -288,7 +288,11 @@ class BaseEnv(gym.Env):
                     agent_cls = robot_uid
                     # robot_uids = self._agent_cls.uid
                 else:
-                    agent_cls = ROBOTS[robot_uid]
+                    if robot_uid not in REGISTERED_AGENTS:
+                        raise RuntimeError(
+                            f"Agent {robot_uid} not found in the dict of registered agents. If the id is not a typo then make sure to apply the @register_agent() decorator."
+                        )
+                    agent_cls = REGISTERED_AGENTS[robot_uid].agent_cls
                 agent: BaseAgent = agent_cls(
                     self._scene,
                     self._control_freq,
