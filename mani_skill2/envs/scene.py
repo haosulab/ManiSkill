@@ -49,7 +49,8 @@ class ManiSkillScene:
         self.human_render_cameras: Dict[str, Camera] = OrderedDict()
 
         self._reset_mask = torch.ones(len(sub_scenes), dtype=bool, device=self.device)
-        """Used internally by various wrapped objects like Actor and Link to auto mask out sub-scenes so they do not get modified during partial env resets"""
+        """Used internally by various objects like Actor, Link, and Controllers to auto mask out sub-scenes so they do not get modified during
+        partial env resets"""
 
     @property
     def timestep(self):

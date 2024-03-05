@@ -44,8 +44,8 @@ class PDJointPosController(BaseController):
     def reset(self):
         super().reset()
         self._step = 0  # counter of simulation steps after action is set
-        self._start_qpos = self.qpos
-        self._target_qpos = self.qpos
+        self._start_qpos[self.scene._reset_mask] = self.qpos[self.scene._reset_mask]
+        self._target_qpos[self.scene._reset_mask] = self.qpos[self.scene._reset_mask]
 
     def set_drive_targets(self, targets):
         self.articulation.set_joint_drive_targets(

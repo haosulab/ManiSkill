@@ -87,7 +87,9 @@ class PDEEPosController(PDJointPosController):
 
     def reset(self):
         super().reset()
-        self._target_pose = self.ee_pose_at_base
+        self._target_pose[self.scene._reset_mask] = self.ee_pose_at_base[
+            self.scene._reset_mask
+        ]
 
     def compute_ik(self, target_pose: Pose, action: Array, max_iterations=100):
         # Assume the target pose is defined in the base frame
