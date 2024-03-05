@@ -72,7 +72,6 @@ def parse_env_info(env: gym.Env):
         env_kwargs = env.spec.kwargs
     return dict(
         env_id=env.spec.id,
-        max_episode_steps=env.spec.max_episode_steps,
         env_kwargs=env_kwargs,
     )
 
@@ -226,10 +225,13 @@ class RecordEpisode(gym.Wrapper):
         self.video_fps = video_fps
         self._episode_id = -1
         self._video_id = -1
+        self._video_steps = 0
         self._closed = False
 
         self._trajectory_buffer: Step = None
-        self._episode_info = {}
+
+        self.max_steps_per_video = max_steps_per_video
+        self.max_episode_steps = find_max_episode_steps_value(env)
 
         self.save_on_reset = save_on_reset
         self.save_trajectory = save_trajectory
@@ -255,6 +257,7 @@ class RecordEpisode(gym.Wrapper):
                 commit_info=get_commit_info(),
                 episodes=[],
             )
+            self._json_data["env_info"]["max_episode_steps"] = self.max_episode_steps
 
         self.save_video = save_video
         self.info_on_video = info_on_video
@@ -264,11 +267,6 @@ class RecordEpisode(gym.Wrapper):
                 "Cannot turn info_on_video=True when using GPU simulation as the text would be too small"
             )
         self.video_nrows = int(np.sqrt(self.unwrapped.num_envs))
-
-        self.max_steps_per_video = max_steps_per_video
-        self._video_steps = 0
-
-        self.max_episode_steps = find_max_episode_steps_value(env)
 
     @property
     def num_envs(self):
@@ -319,8 +317,6 @@ class RecordEpisode(gym.Wrapper):
                     self.flush_trajectory(
                         env_idxs_to_flush=to_numpy(options["env_idx"])
                     )
-
-        self._episode_info = {}
 
         reset_kwargs = copy.deepcopy(dict(seed=seed, options=options, **kwargs))
         obs, info = super().reset(*args, seed=seed, options=options, **kwargs)
@@ -543,16 +539,13 @@ class RecordEpisode(gym.Wrapper):
                     f"RecordEpisode wrapper does not know how to handle observation data of type {type(self._trajectory_buffer.observation)}"
                 )
 
-            # if len(self._episode_data) == 1:
-            #     action_space = self.env.action_space
-            #     assert isinstance(action_space, spaces.Box), action_space
-            #     actions = np.empty(
-            #         shape=(0,) + action_space.shape,
-            #         dtype=action_space.dtype,
-            #     )
-            #     terminated = np.empty(shape=(0,), dtype=bool)
-            #     truncated = np.empty(shape=(0,), dtype=bool)
-            # else:
+            episode_info = dict(
+                episode_id=self._episode_id,
+                episode_seed=self._base_env._episode_seed,
+                control_mode=self._base_env.control_mode,
+                elapsed_steps=end_ptr - start_ptr - 1,
+            )
+
             actions = self._trajectory_buffer.action[start_ptr + 1 : end_ptr, env_idx]
             terminated = self._trajectory_buffer.terminated[
                 start_ptr + 1 : end_ptr, env_idx
@@ -572,11 +565,17 @@ class RecordEpisode(gym.Wrapper):
                     ],
                     dtype=bool,
                 )
+                episode_info.update(
+                    success=self._trajectory_buffer.success[end_ptr - 1, env_idx]
+                )
             if self._trajectory_buffer.fail is not None:
                 group.create_dataset(
                     "fail",
                     data=self._trajectory_buffer.fail[start_ptr + 1 : end_ptr, env_idx],
                     dtype=bool,
+                )
+                episode_info.update(
+                    fail=self._trajectory_buffer.success[end_ptr - 1, env_idx]
                 )
             recursive_add_to_h5py(group, self._trajectory_buffer.state, "env_states")
 
@@ -589,21 +588,6 @@ class RecordEpisode(gym.Wrapper):
                     dtype=np.float32,
                 )
 
-            # Handle JSON
-            # import ipdb;ipdb.set_trace()
-            # self._episode_info.update(
-            #     episode_id=self._episode_id,
-            #     episode_seed=getattr(self.unwrapped, "_episode_seed", None),
-            #     reset_kwargs=reset_kwargs,
-            #     control_mode=getattr(self.unwrapped, "control_mode", None),
-            #     elapsed_steps=0,
-            # )
-            episode_info = dict(
-                episode_id=self._episode_id,
-                episode_seed=self._base_env._episode_seed,
-                control_mode=self._base_env.control_mode,
-                elapsed_steps=end_ptr - start_ptr - 1,
-            )
             self._json_data["episodes"].append(episode_info)
             dump_json(self._json_path, self._json_data, indent=2)
             flush_count += 1
