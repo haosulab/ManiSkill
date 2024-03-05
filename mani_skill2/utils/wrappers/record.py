@@ -299,7 +299,9 @@ class RecordEpisode(gym.Wrapper):
             else:
                 self.flush_trajectory(env_idxs_to_flush=to_numpy(options["env_idx"]))
 
-        reset_kwargs = copy.deepcopy(dict(seed=seed, options=options, **kwargs))
+        self.last_reset_kwargs = copy.deepcopy(
+            dict(seed=seed, options=options, **kwargs)
+        )
         obs, info = super().reset(*args, seed=seed, options=options, **kwargs)
 
         if self.save_trajectory:
@@ -517,6 +519,9 @@ class RecordEpisode(gym.Wrapper):
                 control_mode=self._base_env.control_mode,
                 elapsed_steps=end_ptr - start_ptr - 1,
             )
+            if self.num_envs == 1:
+                # TODO (stao): handle reset kwargs/determinism for multiple envs somehow...
+                episode_info.update(reset_kwargs=self.last_reset_kwargs)
 
             actions = self._trajectory_buffer.action[start_ptr + 1 : end_ptr, env_idx]
             terminated = self._trajectory_buffer.terminated[
