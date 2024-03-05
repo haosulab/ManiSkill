@@ -43,3 +43,10 @@ if __name__ == "__main__":
         for i in range(200):
             env.step(env.action_space.sample())
         env.close()
+
+        import h5py
+
+        data = h5py.File("videos/manual_test/PickCube-v1.h5")
+        import ipdb
+
+        ipdb.set_trace()
