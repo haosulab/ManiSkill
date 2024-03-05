@@ -103,19 +103,9 @@ class Step:
     reward: np.ndarray
     terminated: np.ndarray
     truncated: np.ndarray
-
-
-def pack_step_data(state, obs, action, rew, terminated, truncated, info):
-    data = dict(
-        s=to_numpy(state) if state is not None else None,
-        o=copy.deepcopy(to_numpy(obs)) if obs is not None else None,
-        a=to_numpy(action) if action is not None else None,
-        r=to_numpy(rew) if rew is not None else None,
-        terminated=to_numpy(terminated) if terminated is not None else None,
-        truncated=to_numpy(truncated) if truncated is not None else None,
-        info=to_numpy(info),
-    )
-    return data
+    done: np.ndarray
+    success: np.ndarray = None
+    fail: np.ndarray = None
 
 
 class RecordEpisode(gym.Wrapper):
@@ -187,14 +177,12 @@ class RecordEpisode(gym.Wrapper):
         save_on_reset=True,
         max_steps_per_video=None,
         clean_on_close=True,
-        record_reward=False,
-        init_state_only=False,
+        record_reward=True,
         video_fps=20,
     ):
         super().__init__(env)
 
         self.output_dir = Path(output_dir)
-        self.init_state_only = init_state_only
         if save_trajectory or save_video:
             self.output_dir.mkdir(parents=True, exist_ok=True)
         self.video_fps = video_fps
@@ -317,6 +305,9 @@ class RecordEpisode(gym.Wrapper):
                     # an episode is done when one of these is True otherwise the trajectory is incomplete / a partial episode
                     terminated=np.ones((1, self.num_envs), dtype=bool),
                     truncated=np.ones((1, self.num_envs), dtype=bool),
+                    done=np.ones((1, self.num_envs), dtype=bool),
+                    success=np.zeros((1, self.num_envs), dtype=bool),
+                    fail=np.zeros((1, self.num_envs), dtype=bool),
                 )
             else:
                 self._trajectory_buffer.observation
@@ -353,6 +344,23 @@ class RecordEpisode(gym.Wrapper):
                 self._trajectory_buffer.truncated, to_numpy(batch(truncated))
             )
             done = terminated | truncated
+            self._trajectory_buffer.done = append_data(
+                self._trajectory_buffer.done, to_numpy(batch(done))
+            )
+            if "success" in info:
+                self._trajectory_buffer.success = append_data(
+                    self._trajectory_buffer.success, to_numpy(batch(info["success"]))
+                )
+            else:
+                self._trajectory_buffer.success = None
+            if "fail" in info:
+                self._trajectory_buffer.fail = append_data(
+                    self._trajectory_buffer.success, to_numpy(batch(info["fail"]))
+                )
+            else:
+                self._trajectory_buffer.fail = None
+
+            self._last_info = to_numpy(self._last_info)
             if done.any():
                 self.flush_trajectory()
 
@@ -386,118 +394,182 @@ class RecordEpisode(gym.Wrapper):
         # if ignore_empty_transition and len(self.t) == 1:
         #     return
 
+        # truncate the trajectory buffer
+
         # find which trajectories completed
-        import ipdb
 
-        ipdb.set_trace()
-        self._episode_id += 1
-        traj_id = "traj_{}".format(self._episode_id)
-        group = self._h5_file.create_group(traj_id, track_order=True)
+        completed_env_idxs = np.argwhere(
+            self._trajectory_buffer.done.sum(0) == 2
+        ).flatten()
+        for env_idx in completed_env_idxs:
+            self._episode_id += 1
+            traj_id = "traj_{}".format(self._episode_id)
+            group = self._h5_file.create_group(traj_id, track_order=True)
+            start_ptr, end_ptr = np.argwhere(
+                self._trajectory_buffer.done[:, env_idx] == True
+            ).flatten()
 
-        # Observations need special processing
-        obs = [x["o"] for x in self._episode_data]
-        if isinstance(obs[0], dict):
-            if len(obs[0]) > 0:
-                obs_group = group.create_group("obs", track_order=True)
-                # NOTE(jigu): If each obs is empty, then nothing will be stored.
-                obs = [flatten_dict_keys(x) for x in obs]
-                obs = {k: [x[k] for x in obs] for k in obs[0].keys()}
-                obs = {k: np.stack(v) for k, v in obs.items()}
-                for k, v in obs.items():
-                    # create subgroups if they don't exist yet. Can be removed once https://github.com/h5py/h5py/issues/1471 is fixed
-                    subgroups = k.split("/")[:-1]
-                    curr_group = obs_group
-                    for subgroup in subgroups:
-                        if subgroup in curr_group:
-                            curr_group = curr_group[subgroup]
-                        else:
-                            curr_group = curr_group.create_group(
-                                subgroup, track_order=True
-                            )
-
-                    if "rgb" in k and v.ndim == 4:
+            def recursive_add_to_h5py(group: h5py.Group, data: np.ndarray, key):
+                """simple recursive data insertion for nested data structures into h5py, optimizing for visual data as well"""
+                if isinstance(data, dict):
+                    for k in data.keys():
+                        subgrp = group.create_group(k, track_order=True)
+                        recursive_add_to_h5py(subgrp, data[k], k)
+                else:
+                    if "rgb" in key:
                         # NOTE(jigu): It is more efficient to use gzip than png for a sequence of images.
                         group.create_dataset(
-                            "obs/" + k,
-                            data=v,
-                            dtype=v.dtype,
+                            "rgb",
+                            data=data[start_ptr:end_ptr, env_idx],
+                            dtype=data.dtype,
                             compression="gzip",
                             compression_opts=5,
                         )
-                    elif "depth" in k and v.ndim in (3, 4):
+                    elif "depth" in k:
                         # NOTE (stao): By default now cameras in ManiSkill return depth values of type uint16 for numpy
                         group.create_dataset(
-                            "obs/" + k,
-                            data=v,
-                            dtype=v.dtype,
+                            key,
+                            data=data[start_ptr:end_ptr, env_idx],
+                            dtype=data.dtype,
                             compression="gzip",
                             compression_opts=5,
                         )
-                    elif "seg" in k and v.ndim in (3, 4):
-                        assert (
-                            np.issubdtype(v.dtype, np.integer) or v.dtype == np.bool_
-                        ), v.dtype
+                    elif "seg" in k:
                         group.create_dataset(
-                            "obs/" + k,
-                            data=v,
-                            dtype=v.dtype,
+                            key,
+                            data=data[start_ptr:end_ptr, env_idx],
+                            dtype=data.dtype,
                             compression="gzip",
                             compression_opts=5,
                         )
                     else:
-                        group.create_dataset("obs/" + k, data=v, dtype=v.dtype)
-        elif isinstance(obs[0], np.ndarray):
-            obs = np.stack(obs)
-            group.create_dataset("obs", data=obs, dtype=obs.dtype)
-        else:
-            print(obs[0])
-            raise NotImplementedError(type(obs[0]))
+                        group.create_dataset(
+                            key, data=data[start_ptr:end_ptr, env_idx], dtype=data.dtype
+                        )
 
-        if len(self._episode_data) == 1:
-            action_space = self.env.action_space
-            assert isinstance(action_space, spaces.Box), action_space
-            actions = np.empty(
-                shape=(0,) + action_space.shape,
-                dtype=action_space.dtype,
-            )
-            terminated = np.empty(shape=(0,), dtype=bool)
-            truncated = np.empty(shape=(0,), dtype=bool)
-        else:
-            actions = np.stack([x["a"] for x in self._episode_data[1:]])
-            terminated = np.stack([x["terminated"] for x in self._episode_data[1:]])
-            truncated = np.stack([x["truncated"] for x in self._episode_data[1:]])
-            if "success" in self._episode_data[1]["info"]:
-                success = np.stack(
-                    [x["info"]["success"] for x in self._episode_data[1:]]
+            # Observations need special processing
+            if isinstance(self._trajectory_buffer.observation, dict):
+                obs_group = group.create_group("obs", track_order=True)
+
+                recursive_add_to_h5py(
+                    obs_group, self._trajectory_buffer.observation, ""
                 )
-                group.create_dataset("success", data=success, dtype=bool)
-            if "fail" in self._episode_data[1]["info"]:
-                fail = np.stack([x["info"]["fail"] for x in self._episode_data[1:]])
-                group.create_dataset("fail", data=fail, dtype=bool)
+                # if len(obs[0]) > 0:
 
-        # TODO (stao): Only support array like states at the moment
-        env_states = np.stack([x["s"] for x in self._episode_data])
+                #     # NOTE(jigu): If each obs is empty, then nothing will be stored.
+                #     obs = [flatten_dict_keys(x) for x in obs]
+                #     obs = {k: [x[k] for x in obs] for k in obs[0].keys()}
+                #     obs = {k: np.stack(v) for k, v in obs.items()}
+                #     for k, v in obs.items():
+                #         # create subgroups if they don't exist yet. Can be removed once https://github.com/h5py/h5py/issues/1471 is fixed
+                #         subgroups = k.split("/")[:-1]
+                #         curr_group = obs_group
+                #         for subgroup in subgroups:
+                #             if subgroup in curr_group:
+                #                 curr_group = curr_group[subgroup]
+                #             else:
+                #                 curr_group = curr_group.create_group(
+                #                     subgroup, track_order=True
+                #                 )
 
-        # Dump
-        group.create_dataset("actions", data=actions, dtype=np.float32)
-        group.create_dataset("terminated", data=terminated, dtype=bool)
-        group.create_dataset("truncated", data=truncated, dtype=bool)
+                #         if "rgb" in k and v.ndim == 4:
 
-        if self.record_reward:
-            rewards = np.stack([x["r"] for x in self._episode_data]).astype(np.float32)
-            group.create_dataset("rewards", data=rewards, dtype=np.float32)
+                #             group.create_dataset(
+                #                 "obs/" + k,
+                #                 data=v,
+                #                 dtype=v.dtype,
+                #                 compression="gzip",
+                #                 compression_opts=5,
+                #             )
+                #         elif "depth" in k and v.ndim in (3, 4):
+                #             # NOTE (stao): By default now cameras in ManiSkill return depth values of type uint16 for numpy
+                #             group.create_dataset(
+                #                 "obs/" + k,
+                #                 data=v,
+                #                 dtype=v.dtype,
+                #                 compression="gzip",
+                #                 compression_opts=5,
+                #             )
+                #         elif "seg" in k and v.ndim in (3, 4):
+                #             assert (
+                #                 np.issubdtype(v.dtype, np.integer) or v.dtype == np.bool_
+                #             ), v.dtype
+                #             group.create_dataset(
+                #                 "obs/" + k,
+                #                 data=v,
+                #                 dtype=v.dtype,
+                #                 compression="gzip",
+                #                 compression_opts=5,
+                #             )
+                #         else:
+                #             group.create_dataset("obs/" + k, data=v, dtype=v.dtype)
+            elif isinstance(self._trajectory_buffer.observation, np.ndarray):
+                group.create_dataset(
+                    "obs",
+                    data=self._trajectory_buffer.observation[
+                        start_ptr:end_ptr, env_idx
+                    ],
+                    dtype=self._trajectory_buffer.observation.dtype,
+                )
+            else:
+                raise NotImplementedError(
+                    f"RecordEpisode wrapper does not know how to handle observation data of type {type(self._trajectory_buffer.observation)}"
+                )
 
-        if self.init_state_only:
-            group.create_dataset("env_init_state", data=env_states[0], dtype=np.float32)
-        else:
-            group.create_dataset("env_states", data=env_states, dtype=np.float32)
+            # if len(self._episode_data) == 1:
+            #     action_space = self.env.action_space
+            #     assert isinstance(action_space, spaces.Box), action_space
+            #     actions = np.empty(
+            #         shape=(0,) + action_space.shape,
+            #         dtype=action_space.dtype,
+            #     )
+            #     terminated = np.empty(shape=(0,), dtype=bool)
+            #     truncated = np.empty(shape=(0,), dtype=bool)
+            # else:
+            actions = self._trajectory_buffer.action[
+                start_ptr:end_ptr, env_idx
+            ]  # np.stack([x["a"] for x in self._episode_data[1:]])
+            terminated = self._trajectory_buffer.terminated[
+                start_ptr:end_ptr, env_idx
+            ]  # np.stack([x["terminated"] for x in self._episode_data[1:]])
+            truncated = self._trajectory_buffer.truncated[
+                start_ptr:end_ptr, env_idx
+            ]  # np.stack([x["truncated"] for x in self._episode_data[1:]])
+            group.create_dataset("actions", data=actions, dtype=np.float32)
+            group.create_dataset("terminated", data=terminated, dtype=bool)
+            group.create_dataset("truncated", data=truncated, dtype=bool)
 
-        # Handle JSON
-        self._json_data["episodes"].append(self._episode_info)
-        dump_json(self._json_path, self._json_data, indent=2)
+            if self._trajectory_buffer.success is not None:
+                group.create_dataset(
+                    "success", data=self._trajectory_buffer.success, dtype=bool
+                )
+            if self._trajectory_buffer.fail is not None:
+                group.create_dataset(
+                    "fail", data=self._trajectory_buffer.fail, dtype=bool
+                )
+
+            # env_states = np.stack([x["s"] for x in self._episode_data])
+
+            env_states_group = group.create_group("env_states")
+            recursive_add_to_h5py(env_states_group, self._trajectory_buffer.state, "")
+
+            if self.record_reward:
+                rewards = np.stack([x["r"] for x in self._episode_data]).astype(
+                    np.float32
+                )
+                group.create_dataset("rewards", data=rewards, dtype=np.float32)
+
+            # Handle JSON
+            self._json_data["episodes"].append(self._episode_info)
+            dump_json(self._json_path, self._json_data, indent=2)
 
         if verbose:
-            print("Record the {}-th episode".format(self._episode_id))
+            if len(completed_env_idxs) == 1:
+                print(f"Recorded episode {self._episode_id}")
+            else:
+                print(
+                    f"Recorded episodes {self._episode_id - len(completed_env_idxs + 1)} to {self._episode_id}"
+                )
 
     def flush_video(self, suffix="", verbose=False, ignore_empty_transition=True):
         if not self.save_video or len(self._render_images) == 0:
