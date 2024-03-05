@@ -275,7 +275,10 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             query = self._net_contact_force_queries[tuple(link_names)]
             self.px.gpu_query_contact_body_impulses(query)
             return (
-                query.cuda_impulses.torch().clone().reshape(-1, len(link_names), 3)
+                query.cuda_impulses.torch()
+                .clone()
+                .reshape(len(link_names), -1, 3)
+                .transpose(1, 0)
                 / self._scene.timestep
             )
         else:
