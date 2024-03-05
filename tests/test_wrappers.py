@@ -150,6 +150,7 @@ def test_recordepisode_wrapper_partial_reset_gpu(env_id, obs_mode):
     for i in range(20):
         obs, rew, terminated, truncated, info = env.step(action_space.sample())
         if i == 13:
+            # should observe in videos (which are organized column by column order) 0, 1, 14, 15 get reset in the middle
             env.reset(options=dict(env_idx=[0, 1, 14, 15]))
     env.close()
     del env

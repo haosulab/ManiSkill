@@ -28,6 +28,7 @@ from .pd_joint_pos import PDJointPosController
 # NOTE(jigu): not necessary to inherit, just for convenience
 class PDEEPosController(PDJointPosController):
     config: "PDEEPosControllerConfig"
+    _target_pose = None
 
     def _initialize_joints(self):
         self.initial_qpos = None

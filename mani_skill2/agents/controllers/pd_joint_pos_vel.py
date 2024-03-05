@@ -10,6 +10,7 @@ from .pd_joint_pos import PDJointPosController, PDJointPosControllerConfig
 
 class PDJointPosVelController(PDJointPosController):
     config: "PDJointPosVelControllerConfig"
+    _target_qvel = None
 
     def _initialize_action_space(self):
         joint_limits = self._get_joint_limits()
