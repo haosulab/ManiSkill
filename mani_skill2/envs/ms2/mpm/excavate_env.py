@@ -427,13 +427,13 @@ class ExcavateEnv(MPMBaseEnv):
             self._remove_draw_box(box)
         return img
 
-    def get_state(self) -> np.ndarray:
-        state = super().get_state()
+    def get_state_dict(self) -> np.ndarray:
+        state = super().get_state_dict()
         return np.hstack([state, self.target_num])
 
-    def set_state(self, state):
+    def set_state_dict(self, state):
         self.target_num = state[-1]
-        super().set_state(state[:-1])
+        super().set_state_dict(state[:-1])
 
 
 if __name__ == "__main__":
@@ -441,8 +441,8 @@ if __name__ == "__main__":
     env.reset()
     env.agent.set_control_mode("pd_ee_delta_pose")
 
-    a = env.get_state()
-    env.set_state(a)
+    a = env.get_state_dict()
+    env.set_state_dict(a)
 
     for i in range(100):
         env.step(None)

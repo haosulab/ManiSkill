@@ -13,6 +13,8 @@ from .base_controller import BaseController, ControllerConfig
 
 class PDJointPosController(BaseController):
     config: "PDJointPosControllerConfig"
+    _start_qpos = None
+    _target_qpos = None
 
     def _get_joint_limits(self):
         qlimits = self.articulation.get_qlimits()[0, self.joint_indices].cpu().numpy()
@@ -44,8 +46,19 @@ class PDJointPosController(BaseController):
     def reset(self):
         super().reset()
         self._step = 0  # counter of simulation steps after action is set
-        self._start_qpos = self.qpos
-        self._target_qpos = self.qpos
+        if self._start_qpos is None:
+            self._start_qpos = self.qpos.clone()
+        else:
+
+            self._start_qpos[self.scene._reset_mask] = self.qpos[
+                self.scene._reset_mask
+            ].clone()
+        if self._target_qpos is None:
+            self._target_qpos = self.qpos.clone()
+        else:
+            self._target_qpos[self.scene._reset_mask] = self.qpos[
+                self.scene._reset_mask
+            ].clone()
 
     def set_drive_targets(self, targets):
         self.articulation.set_joint_drive_targets(
@@ -63,8 +76,10 @@ class PDJointPosController(BaseController):
             else:
                 self._target_qpos = self._start_qpos + action
         else:
-            # Compatible with mimic controllers
-            self._target_qpos = torch.broadcast_to(action, self._start_qpos.shape)
+            # Compatible with mimic controllers. Need to clone here otherwise cannot do in-place replacements in the reset function
+            self._target_qpos = torch.broadcast_to(
+                action, self._start_qpos.shape
+            ).clone()
         if self.config.interpolate:
             self._step_size = (self._target_qpos - self._start_qpos) / self._sim_steps
         else:

@@ -5,6 +5,7 @@ import torch
 from gymnasium.vector import VectorEnv
 
 from mani_skill2.envs.sapien_env import BaseEnv
+from mani_skill2.utils.common import find_max_episode_steps_value
 from mani_skill2.utils.structs.types import Array
 
 
@@ -54,16 +55,8 @@ class ManiSkillVectorEnv(VectorEnv):
         ):
             self.max_episode_steps = self.base_env.spec.max_episode_steps
         if self.max_episode_steps is None:
-            # search wrappers to see if there is a time limit wrapper
-            cur = env
-            while cur is not None:
-                if cur.spec.max_episode_steps is not None:
-                    self.max_episode_steps = cur.spec.max_episode_steps
-                    break
-                if hasattr(cur, "env"):
-                    cur = env.env
-                else:
-                    cur = None
+            # search wrappers to find where max episode steps may have been defined
+            self.max_episode_steps = find_max_episode_steps_value(env)
 
     @property
     def device(self):

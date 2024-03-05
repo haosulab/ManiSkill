@@ -351,14 +351,14 @@ class HangEnv(MPMBaseEnv):
     def compute_normalized_dense_reward(self, **kwargs):
         return self.compute_dense_reward(**kwargs) / 6.0
 
-    def get_state(self) -> np.ndarray:
-        state = super().get_state()
+    def get_state_dict(self) -> np.ndarray:
+        state = super().get_state_dict()
         return np.hstack([state, self.rod.get_pose().p, self.rod.get_pose().q])
 
-    def set_state(self, state):
+    def set_state_dict(self, state):
         pose = sapien.Pose(state[-7:-4], state[-4:])
         self.rod.set_pose(pose)
-        super().set_state(state[:-7])
+        super().set_state_dict(state[:-7])
 
 
 if __name__ == "__main__":
@@ -366,8 +366,8 @@ if __name__ == "__main__":
     agent_states = []
     soft_states = []
 
-    a = env.get_state()
-    env.set_state(a)
+    a = env.get_state_dict()
+    env.set_state_dict(a)
 
     for X in np.linspace(-0.081, -0.021, 10):
         print(X)

@@ -453,7 +453,7 @@ class MPMBaseEnv(BaseEnv):
         super().set_sim_state(state["sapien"])
         self.set_mpm_state(state["mpm"])
 
-    def get_state(self):
+    def get_state_dict(self):
         """Get environment state. Override to include task information (e.g., goal)"""
         # with sapien.ProfilerBlock("get_state"):
         ret_state = []
@@ -472,7 +472,7 @@ class MPMBaseEnv(BaseEnv):
     def n_particles(self):
         return self.mpm_model.struct.n_particles
 
-    def set_state(self, state: np.ndarray):
+    def set_state_dict(self, state: np.ndarray):
         """Set environment state. Override to include task information (e.g., goal)"""
         sim_state = OrderedDict()
         mpm_state = OrderedDict()

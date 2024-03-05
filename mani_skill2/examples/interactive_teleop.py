@@ -3,15 +3,14 @@ from ast import parse
 import gymnasium as gym
 import numpy as np
 import sapien.core as sapien
-from tqdm import tqdm
 from mani_skill2.envs.sapien_env import BaseEnv
 
-from mani_skill2.envs.tasks.pick_cube import PickCubeEnv
 from mani_skill2.examples.motionplanning.motionplanner import \
     PandaArmMotionPlanningSolver
 import sapien.utils.viewer
 import h5py
 import json
+from mani_skill2.trajectory.dataset import dict_to_list_of_dicts
 from mani_skill2.utils.sapien_utils import get_obj_by_name
 from mani_skill2.utils.wrappers.record import RecordEpisode
 def main(args):
@@ -80,7 +79,9 @@ def main(args):
         traj_id = f"traj_{episode['episode_id']}"
         data = trajectory_data[traj_id]
         env.reset(**episode["reset_kwargs"])
-        env._base_env.set_state(data["env_states"][0])
+        env_states_list = dict_to_list_of_dicts(data["env_states"])
+
+        env._base_env.set_state_dict(env_states_list[0])
         for action in np.array(data["actions"]):
             env.step(action)
 
@@ -123,11 +124,11 @@ def solve(env: BaseEnv, debug=False, vis=False):
         execute_current_pose = False
         if viewer.window.key_press("k"):
             print("Saving checkpoint")
-            last_checkpoint_state = env.get_state()
+            last_checkpoint_state = env.get_state_dict()
         elif viewer.window.key_press("l"):
             if last_checkpoint_state is not None:
                 print("Loading previous checkpoint")
-                env.set_state(last_checkpoint_state)
+                env.set_state_dict(last_checkpoint_state)
             else:
                 print("Could not find previous checkpoint")
         elif viewer.window.key_press("q"):

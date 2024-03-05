@@ -312,6 +312,6 @@ class PlugChargerEnv(StationaryManipulationEnv):
                 [-0.2, -0.5, 1], [2, 2, 2], shadow=self.enable_shadow
             )
 
-    def set_state(self, state):
-        super().set_state(state)
+    def set_state_dict(self, state):
+        super().set_state_dict(state)
         self.goal_pose = self.receptacle.pose * Pose(q=euler2quat(0, 0, np.pi))

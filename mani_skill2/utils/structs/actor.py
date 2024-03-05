@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import cache
 from typing import TYPE_CHECKING, List, Literal, Union
 
 import numpy as np
@@ -110,7 +111,7 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
         merged_actor._builder_initial_pose = Pose.create(
             torch.vstack(_builder_initial_poses)
         )
-        scene.actors[actor.name] = merged_actor
+        scene.actors[merged_actor.name] = merged_actor
         return merged_actor
 
     # -------------------------------------------------------------------------- #
@@ -140,6 +141,7 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
                 self.set_linear_velocity(state[7:10])
                 self.set_angular_velocity(state[10:13])
 
+    @cache
     def has_collision_shapes(self):
         return (
             len(
@@ -165,6 +167,7 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
             self.before_hide_pose = self.px.cuda_rigid_body_data.torch()[
                 self._body_data_index, :7
             ].clone()
+
             temp_pose = self.pose.raw_pose
             temp_pose[..., :3] += 99999
             self.pose = temp_pose
@@ -228,9 +231,6 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
                     raw_pose = self.px.cuda_rigid_body_data.torch()[
                         self._body_data_index, :7
                     ]
-                    # if self.hidden:
-                    # print(self.name, "hidden", raw_pose[0, :3])
-                    # raw_pose[..., :3] = raw_pose[..., :3] - 99999
                     return Pose.create(raw_pose)
         else:
             assert len(self._objs) == 1
@@ -242,7 +242,7 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
             if not isinstance(arg1, torch.Tensor):
                 arg1 = vectorize_pose(arg1)
             if self.hidden:
-                self.before_hide_pose = arg1
+                self.before_hide_pose[self._scene._reset_mask] = arg1
             else:
                 self.px.cuda_rigid_body_data.torch()[
                     self._body_data_index[self._scene._reset_mask], :7

@@ -104,7 +104,7 @@ class PickCubeEnv(BaseEnv):
         )
         if "state" in self.obs_mode:
             obs.update(
-                obs_pose=self.cube.pose.raw_pose,
+                obj_pose=self.cube.pose.raw_pose,
                 tcp_to_obj_pos=self.cube.pose.p - self.agent.tcp.pose.p,
                 obj_to_goal_pos=self.goal_site.pose.p - self.cube.pose.p,
             )
@@ -117,7 +117,7 @@ class PickCubeEnv(BaseEnv):
         )
         is_robot_static = self.agent.is_static(0.2)
         return {
-            "success": torch.logical_and(is_obj_placed, is_robot_static),
+            "success": is_obj_placed & is_robot_static,
             "is_obj_placed": is_obj_placed,
             "is_robot_static": is_robot_static,
         }

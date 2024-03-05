@@ -417,8 +417,8 @@ class MoveBucketEnv(MS1BaseEnv):
         # bucket max dof is 1 in our data
         return [(self.bucket, 2)]
 
-    def set_state(self, state: np.ndarray):
-        super().set_state(state)
+    def set_state_dict(self, state: np.ndarray):
+        super().set_state_dict(state)
         self._prev_actor_pose = self.bucket.pose
 
     def _get_obs_extra(self):

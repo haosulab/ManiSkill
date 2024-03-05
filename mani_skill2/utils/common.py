@@ -308,3 +308,17 @@ def flatten_dict_space_keys(space: spaces.Dict, prefix="") -> spaces.Dict:
         else:
             out[prefix + k] = v
     return spaces.Dict(out)
+
+
+def find_max_episode_steps_value(env):
+    cur = env
+    while cur is not None:
+        if hasattr(cur, "max_episode_steps"):
+            return cur.max_episode_steps
+        if cur.spec is not None and cur.spec.max_episode_steps is not None:
+            return cur.spec.max_episode_steps
+        if hasattr(cur, "env"):
+            cur = env.env
+        else:
+            cur = None
+    return None

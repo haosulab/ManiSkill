@@ -100,12 +100,12 @@ def test_states(env_id):
     obs, _ = env.reset(seed=1000)
     for _ in range(5):
         env.step(env.action_space.sample())
-    state = env.get_state()
+    state = env.get_state_dict()
     obs = env.get_obs()
 
     for _ in range(50):
         env.step(env.action_space.sample())
-    env.set_state(state)
+    env.set_state_dict(state)
     new_obs = env.get_obs()
     assert_obs_equal(obs, new_obs)
     env.close()

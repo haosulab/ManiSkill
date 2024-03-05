@@ -36,10 +36,15 @@ def to_tensor(array: Union[torch.Tensor, np.array, Sequence]):
             return torch.Tensor(array).cuda()
     elif get_backend_name() == "numpy":
         if isinstance(array, np.ndarray):
-            return torch.from_numpy(array)
-        # TODO (arth): better way to address torch "UserWarning: Creating a tensor from a list of numpy.ndarrays is extremely slow" ?
+            ret = torch.from_numpy(array)
+            if ret.dtype == torch.float64:
+                ret = ret.float()
+            return ret
         elif isinstance(array, list) and isinstance(array[0], np.ndarray):
-            return torch.from_numpy(np.array(array))
+            ret = torch.from_numpy(np.array(array))
+            if ret.dtype == torch.float64:
+                ret = ret.float()
+            return ret
         elif np.iterable(array):
             return torch.Tensor(array)
         else:
@@ -107,10 +112,14 @@ def _batch(array: Union[Array, Sequence]):
     if isinstance(array, list):
         if len(array) == 1:
             return [array]
+    if isinstance(array, float) or isinstance(array, int) or isinstance(array, bool):
+        return np.array([[array]])
     return array
 
 
 def batch(*args: Tuple[Union[Array, Sequence]]):
+    """Adds one dimension in front of everything. If given a dictionary, every leaf in the dictionary
+    has a new dimension. If given a tuple, returns the same tuple with each element batched"""
     x = [_batch(x) for x in args]
     if len(args) == 1:
         return x[0]

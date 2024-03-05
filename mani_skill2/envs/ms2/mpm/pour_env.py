@@ -550,8 +550,8 @@ class PourEnv(MPMBaseEnv):
         self.mpm_states[0].struct.particle_C.assign(state["C"])
         self.mpm_states[0].struct.particle_vol.assign(state["vol"])
 
-    def get_state(self) -> np.ndarray:
-        state = super().get_state()
+    def get_state_dict(self) -> np.ndarray:
+        state = super().get_state_dict()
         return np.hstack(
             [
                 state,
@@ -563,7 +563,7 @@ class PourEnv(MPMBaseEnv):
             ]
         )
 
-    def set_state(self, state):
+    def set_state_dict(self, state):
         source_pos = sapien.Pose(state[-7:-4], state[-4:])
         target_pos = sapien.Pose(state[-14:-11], state[-11:-7])
         self.source_container.set_pose(source_pos)
@@ -591,8 +591,8 @@ if __name__ == "__main__":
     env.reset()
     env.agent.set_control_mode("pd_ee_delta_pose")
 
-    a = env.get_state()
-    env.set_state(a)
+    a = env.get_state_dict()
+    env.set_state_dict(a)
 
     for i in range(100):
         env.step(None)

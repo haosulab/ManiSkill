@@ -49,7 +49,8 @@ class ManiSkillScene:
         self.human_render_cameras: Dict[str, Camera] = OrderedDict()
 
         self._reset_mask = torch.ones(len(sub_scenes), dtype=bool, device=self.device)
-        """Used internally by various wrapped objects like Actor and Link to auto mask out sub-scenes so they do not get modified during partial env resets"""
+        """Used internally by various objects like Actor, Link, and Controllers to auto mask out sub-scenes so they do not get modified during
+        partial env resets"""
 
     @property
     def timestep(self):
@@ -460,37 +461,34 @@ class ManiSkillScene:
     # Simulation state (required for MPC)
     # -------------------------------------------------------------------------- #
     def get_sim_state(self) -> torch.Tensor:
-        """Get simulation state. Returns a tensor of shape (N, D) for N parallel environments and D dimensions of padded state per environment.
+        """Get simulation state. Returns a dictionary with two nested dictionaries "actors" and "articulations".
+        In the nested dictionaries they map the actor/articulation name to a vector of shape (N, D) for N parallel
+        environments and D dimensions of padded state per environment.
 
         Note that static actor data are not included. It is expected that an environment reconstructs itself in a deterministic manner such that
-        the same actors and articulations (merged or not) create the same sim state shape.
-        (and if it is different, we expect the environment version number to be changed)"""
-        state = []
-        # TODO (stao): Should we store state as a dictionary? What shape to store for parallel settings to make
-        # it loadable between parallel and non parallel settings?
+        the same static actors always have the same states"""
+        state_dict = dict()
+        state_dict["actors"] = dict()
+        state_dict["articulations"] = dict()
         for actor in self.actors.values():
             if actor.px_body_type == "static":
                 continue
-            # TODO (stao) (in parallelized environment situation we may need to pad as some of these actors do not exist in other parallel envs)
-            state.append(actor.get_state())
+            state_dict["actors"][actor.name] = actor.get_state().clone()
         for articulation in self.articulations.values():
-            state.append(articulation.get_state())
-        return torch.hstack(state)
+            state_dict["articulations"][
+                articulation.name
+            ] = articulation.get_state().clone()
+        return state_dict
 
-    def set_sim_state(self, state: Array):
-        KINEMATIC_DIM = 13  # [pos, quat, lin_vel, ang_vel]
-        start = 0
-        for actor in self.actors.values():
-            if actor.px_body_type == "static":
-                continue
-            actor.set_state(state[:, start : start + KINEMATIC_DIM])
-            start += KINEMATIC_DIM
-        for articulation in self.articulations.values():
-            # TODO (stao): when multiple articulations are managed by the same object we have to take the max DOF
-            # but then restoring state is rather non trivial, need to store dof as part of state somewhere?
-            ndim = KINEMATIC_DIM + 2 * articulation.max_dof
-            articulation.set_state(state[:, start : start + ndim])
-            start += ndim
+    def set_sim_state(self, state: Dict):
+        for actor_id, actor_state in state["actors"].items():
+            if len(actor_state.shape) == 1:
+                actor_state = actor_state[None, :]
+            self.actors[actor_id].set_state(actor_state)
+        for art_id, art_state in state["articulations"].items():
+            if len(art_state.shape) == 1:
+                art_state = art_state[None, :]
+            self.articulations[art_id].set_state(art_state)
 
     # ---------------------------------------------------------------------------- #
     # GPU Simulation Management

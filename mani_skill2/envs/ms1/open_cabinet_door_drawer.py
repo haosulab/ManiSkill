@@ -423,8 +423,8 @@ class OpenCabinetEnv(MS1BaseEnv):
         # The maximum DoF is 6 in our data.
         return [(self.cabinet, 8)]
 
-    def set_state(self, state: np.ndarray):
-        super().set_state(state)
+    def set_state_dict(self, state: np.ndarray):
+        super().set_state_dict(state)
         self._prev_actor_pose = self.target_link.pose
 
 

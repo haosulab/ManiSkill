@@ -187,16 +187,17 @@ class CustomEnv(BaseEnv):
         max_reward = 1.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
 
-    def get_state(self):
+    def get_state_dict(self):
         # this function is important in order to allow accurate replaying of trajectories. Make sure to specify any
         # non simulation state related data such as a random 3D goal position you generated
-        # alternatively you can skip this part if the environment's rewards, observations, success etc. are dependent on simulation data
+        # alternatively you can skip this part if the environment's rewards, observations, eval etc. are dependent on simulation data only
         # e.g. self.your_custom_actor.pose.p will always give you your actor's 3D position
-        state = super().get_state()
-        return torch.hstack([state, self.goal_pos])
+        state = super().get_state_dict()
+        # state["goal_pos"] = add_your_non_sim_state_data_here
+        return state
 
-    def set_state(self, state):
+    def set_state_dict(self, state):
         # this function complements get_state and sets any non simulation state related data correctly so the environment behaves
         # the exact same in terms of output rewards, observations, success etc. should you reset state to a given state and take the same actions
-        self.goal_pos = state[:, -3:]
-        super().set_state(state[:, :-3])
+        self.goal_pos = state["goal_pos"]
+        super().set_state_dict(state)
