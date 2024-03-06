@@ -1,21 +1,19 @@
 from collections import OrderedDict
-from typing import Union, Dict, Any, List
+from typing import Any, Dict, List, Union
 
 import numpy as np
 import sapien
 import torch
 import torch.nn.functional as F
 
-from mani_skill2.agents.robots import (
-    AllegroHandRightTouch,
-)
+from mani_skill2.agents.robots import AllegroHandRightTouch
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.building.actors import (
-    build_cube,
-    build_actor_ycb,
     MODEL_DBS,
     _load_ycb_dataset,
+    build_actor_ycb,
+    build_cube,
 )
 from mani_skill2.utils.geometry.rotation_conversions import quaternion_apply
 from mani_skill2.utils.registration import register_env
@@ -26,7 +24,6 @@ from mani_skill2.utils.structs.pose import Pose, vectorize_pose
 from mani_skill2.utils.structs.types import Array
 
 
-@register_env("RotateSingleObjectInHand-v1", max_episode_steps=300)
 class RotateSingleObjectInHand(BaseEnv):
     agent: Union[AllegroHandRightTouch]
     _clearance = 0.003

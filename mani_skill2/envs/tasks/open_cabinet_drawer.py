@@ -259,6 +259,6 @@ class OpenCabinetDrawerEnv(BaseEnv):
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
 
 
-@register_env("OpenCabinetDoor-v1", max_episode_steps=200)
+# @register_env("OpenCabinetDoor-v1", max_episode_steps=200)
 class OpenCabinetDoorEnv(OpenCabinetDrawerEnv):
     handle_types = ["revolute"]
