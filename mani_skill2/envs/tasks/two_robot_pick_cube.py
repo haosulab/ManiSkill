@@ -10,9 +10,9 @@ from mani_skill2.agents.robots.panda import Panda
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.envs.utils import randomization
 from mani_skill2.sensors.camera import CameraConfig
+from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.building import actors
 from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import look_at, to_tensor
 from mani_skill2.utils.scene_builder.table.table_scene_builder import TableSceneBuilder
 from mani_skill2.utils.structs.pose import Pose
 from mani_skill2.utils.structs.types import GPUMemoryConfig, SimConfig
@@ -59,13 +59,13 @@ class TwoRobotPickCube(BaseEnv):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     def _register_sensors(self):
-        pose = look_at([1.0, 0, 0.75], [0.0, 0.0, 0.25])
+        pose = sapien_utils.look_at([1.0, 0, 0.75], [0.0, 0.0, 0.25])
         return [
             CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10)
         ]
 
     def _register_human_render_cameras(self):
-        pose = look_at([1.4, 0.8, 0.75], [0.0, 0.1, 0.1])
+        pose = sapien_utils.look_at([1.4, 0.8, 0.75], [0.0, 0.1, 0.1])
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)
 
     def _load_actors(self):

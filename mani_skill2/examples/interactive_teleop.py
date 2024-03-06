@@ -11,7 +11,7 @@ import sapien.utils.viewer
 import h5py
 import json
 from mani_skill2.trajectory.dataset import dict_to_list_of_dicts
-from mani_skill2.utils.sapien_utils import get_obj_by_name
+from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.wrappers.record import RecordEpisode
 def main(args):
     output_dir = f"{args.record_dir}/teleop/{args.env_id}"
@@ -110,7 +110,7 @@ def solve(env: BaseEnv, debug=False, vis=False):
 
     last_checkpoint_state = None
     gripper_open = True
-    viewer.select_entity(get_obj_by_name(env.agent.robot.links, "panda_hand")._objs[0].entity)
+    viewer.select_entity(sapien_utils.get_obj_by_name(env.agent.robot.links, "panda_hand")._objs[0].entity)
     while True:
         transform_window = viewer.plugins[0]
 

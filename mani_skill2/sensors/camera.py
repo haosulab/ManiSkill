@@ -16,7 +16,7 @@ from mani_skill2.utils.structs.link import Link
 if TYPE_CHECKING:
     from mani_skill2.envs.scene import ManiSkillScene
 
-from mani_skill2.utils.sapien_utils import get_obj_by_name, hide_entity
+from mani_skill2.utils import sapien_utils
 
 from .base_sensor import BaseSensor, BaseSensorConfig
 
@@ -133,7 +133,9 @@ class Camera(BaseSensor):
             else:
                 # if given an articulation and entity_uid (as a string), find the correct link to mount on
                 # this is just for convenience so robot configurations can pick link to mount to by string/id
-                self.entity = get_obj_by_name(articulation.get_links(), entity_uid)
+                self.entity = sapien_utils.get_obj_by_name(
+                    articulation.get_links(), entity_uid
+                )
             if self.entity is None:
                 raise RuntimeError(f"Mount entity ({entity_uid}) is not found")
 
@@ -162,7 +164,7 @@ class Camera(BaseSensor):
 
         if camera_cfg.hide_link:
             # TODO (stao): this will not work on gpu sim probably
-            hide_entity(self.entity)
+            sapien_utils.hide_entity(self.entity)
 
         # Filter texture names according to renderer type if necessary (legacy for Kuafu)
         self.texture_names = camera_cfg.texture_names
