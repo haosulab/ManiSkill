@@ -21,7 +21,7 @@ from mani_skill2.agents import REGISTERED_AGENTS
 from mani_skill2.agents.base_agent import BaseAgent
 from mani_skill2.agents.multi_agent import MultiAgent
 from mani_skill2.envs.scene import ManiSkillScene
-from mani_skill2.envs.utils.observations.observations import (
+from mani_skill2.envs.utils.observations import (
     sensor_data_to_pointcloud,
     sensor_data_to_rgbd,
 )

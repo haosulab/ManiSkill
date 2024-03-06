@@ -41,6 +41,7 @@ setup(
     package_data={
         "mani_skill2": [
             "assets/**",
+            "envs/**/*/assets/**",
             "envs/mpm/shader/**",
             "envs/mpm/RopeInit.pkl",
         ],

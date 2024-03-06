@@ -2,6 +2,7 @@ import gymnasium as gym
 import numpy as np
 import sapien
 
+# cd ManiSkill2 && pip uninstall -y mani_skill2 && pip install . && cd ..
 import mani_skill2.envs
 from mani_skill2.utils.sapien_utils import to_numpy
 from mani_skill2.utils.wrappers import RecordEpisode
