@@ -9,7 +9,7 @@ import gymnasium as gym
 import mani_skill2.envs
 
 env = gym.make(
-    "PickCube-v1", # there are more tasks e.g. "PushCube-v0", "PegInsertionSide-v0, ...
+    "PickCube-v1", # there are more tasks e.g. "PushCube-v1", "PegInsertionSide-v1", ...
     obs_mode="state", # there is also "state_dict", "rgbd", ...
     control_mode="pd_ee_delta_pose", # there is also "pd_joint_delta_pos", ...
     render_mode="human"
@@ -26,11 +26,20 @@ while not done:
     env.render()  # a display is required to render
 env.close()
 ```
-<video width="100%" controls autoplay>
-  <source src="/_static/videos/demo.mp4" type="video/mp4">
-</video>
 
+You can also run the same code from the command line to demo random actions
 
+```bash
+python -m mani_skill2.examples.demo_random_action -e PickCube-v1 # run headless
+python -m mani_skill2.examples.demo_random_action -e PickCube-v1 --render-mode="human" # run with A GUI
+```
+
+```{figure} images/demo_random_action_gui.png
+---
+margin-bottom: 20px
+alt: SAPIEN GUI showing the PickCube task
+---
+```
 
 Each ManiSkill2 environment supports different **observation modes** and **control modes**, which determine its **observation space** and **action space**. They can be specified by `gym.make(env_id, obs_mode=..., control_mode=...)`.
 
@@ -42,10 +51,6 @@ Some environments require **downloading assets**. You can download all the asset
 
 
 
-```bash
-python -m mani_skill2.examples.demo_random_action -e PickCube-v0 # run headless
-python -m mani_skill2.examples.demo_random_action -e PickCube-v0 --render-mode="human" # run with A GUI
-```
 
 We also have demos for simulations of scenes like ReplicaCAD, which can be run by doing
 
@@ -62,6 +67,9 @@ python -m mani_skill2.examples.demo_random_action.py -e "ReplicaCAD_SceneManipul
 python -m mani_skill2.examples.demo_random_action.py -e "ReplicaCAD_SceneManipulation-v1" --render-mode="human" --shader="rt-fast" # faster ray-tracing option but lower quality
 ```
 
+<video preload="auto" controls="True" width="100%">
+<source src="/_static/videos/fetch_random_action_replica_cad_rt.mp4" type="video/mp4">
+</video>
 For more details on rendering see TODO (stao)
 
 ## Interactive Play
@@ -85,14 +93,14 @@ Keyboard controls:
 
 To enable an interactive viewer supported by SAPIEN, you can add `--enable-sapien-viewer`. The interactive SAPIEN viewer is more powerful for debugging (e.g., checking collision shapes, getting current poses). There will be two windows: an OpenCV window and a SAPIEN (GL) window. Pressing `0` on the focused window can switch the control to the other one.
 
-```{image} images/OpenCV-viewer.png
+```{figure} images/OpenCV-viewer.png
 ---
 height: 256px
 alt: OpenCV viewer
 ---
 ```
 
-```{image} images/SAPIEN-viewer.png
+```{figure} images/SAPIEN-viewer.png
 ---
 height: 256px
 alt: SAPIEN viewer
