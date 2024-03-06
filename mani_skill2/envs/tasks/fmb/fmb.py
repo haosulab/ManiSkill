@@ -125,7 +125,7 @@ class FMBAssembly1Env(BaseEnv):
         self.bridge_grasp = builder.build_kinematic(name="bridge_grasp")
 
     def _initialize_actors(self, env_idx: torch.Tensor):
-        self.table_scene.initialize()
+        self.table_scene.initialize(env_idx)
         offset_pose = sapien.Pose(p=[0.02, -0.115, 0], q=euler2quat(0, 0, np.pi / 2))
         self.board.set_pose(
             sapien.Pose(p=np.array([0.115, 0.115, 0.034444])) * offset_pose

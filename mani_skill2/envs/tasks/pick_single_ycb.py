@@ -144,7 +144,7 @@ class PickSingleYCBEnv(BaseEnv):
     def _initialize_actors(self, env_idx: torch.Tensor):
         with torch.device(self.device):
             b = len(env_idx)
-            self.table_scene.initialize()
+            self.table_scene.initialize(env_idx)
             xyz = torch.zeros((b, 3))
             xyz[:, :2] = torch.rand((b, 2)) * 0.2 - 0.1
             for i in range(b):

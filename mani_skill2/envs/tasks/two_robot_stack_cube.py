@@ -98,7 +98,7 @@ class TwoRobotStackCube(BaseEnv):
     def _initialize_actors(self, env_idx: torch.Tensor):
         with torch.device(self.device):
             b = len(env_idx)
-            self.table_scene.initialize()
+            self.table_scene.initialize(env_idx)
             # the table scene initializes two robots. the first one self.agents[0] is on the left and the second one is on the right
 
             torch.zeros((b, 3))

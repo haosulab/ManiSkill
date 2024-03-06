@@ -143,7 +143,7 @@ class RotateSingleObjectInHand(BaseEnv):
         with torch.device(self.device):
             b = len(env_idx)
             # Initialize object pose
-            self.table_scene.initialize()
+            self.table_scene.initialize(env_idx)
             pose = self.obj.pose
             new_pos = torch.randn((b, 3)) * self.obj_init_pos_noise
             # hand_init_height is robot hand position while the 0.03 is a margin to ensure
