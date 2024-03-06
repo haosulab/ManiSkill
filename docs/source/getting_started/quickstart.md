@@ -2,7 +2,7 @@
 
 ## Gym Interface
 
-Here is a basic example of how to make a ManiSkill2 environment following the interface of [Gymnasium](https://gymnasium.farama.org/) and run a random policy.
+Here is a basic example of how to make a ManiSkill environment following the interface of [Gymnasium](https://gymnasium.farama.org/) and run a random policy.
 
 ```python
 import gymnasium as gym
@@ -41,16 +41,13 @@ alt: SAPIEN GUI showing the PickCube task
 ---
 ```
 
-Each ManiSkill2 environment supports different **observation modes** and **control modes**, which determine its **observation space** and **action space**. They can be specified by `gym.make(env_id, obs_mode=..., control_mode=...)`.
+Each ManiSkill environment supports different **observation modes** and **control modes**, which determine its **observation space** and **action space**. They can be specified by `gym.make(env_id, obs_mode=..., control_mode=...)`.
 
 The common observation modes are `state`, `rgbd`, `pointcloud`. We also support `state_dict` (states organized as a hierarchical dictionary) and `image` (raw visual observations without postprocessing). Please refer to [Observation](../concepts/observation.md) for more details.
 
 We support a wide range of controllers. Different controllers can have different effects on your algorithms. Thus, it is recommended to understand the action space you are going to use. Please refer to [Controllers](../concepts/controllers.md) for more details.
 
-Some environments require **downloading assets**. You can download all the assets by `python -m mani_skill2.utils.download_asset all` or download task-specific assets by `python -m mani_skill2.utils.download_asset ${ENV_ID}`. The assets will be downloaded to `./data/` by default, and you can also use the environment variable `MS2_ASSET_DIR` to specify this destination. Please refer to [Environments](../concepts/environments.md) for all supported environments, and which environments require downloading assets.
-
-
-
+Some environments require **downloading assets** that are not stored in the python package itself. You can download task-specific assets by `python -m mani_skill2.utils.download_asset ${ENV_ID}`. The assets will be downloaded to `~/maniskill/data` by default, but you can also use the environment variable `MS_ASSET_DIR` to change this destination. Please refer to [Environments](../concepts/environments.md) for all environments built in out of the box, and which environments require downloading assets.
 
 We also have demos for simulations of scenes like ReplicaCAD, which can be run by doing
 
@@ -60,17 +57,12 @@ python -m mani_skill2.examples.demo_random_action.py -e "ReplicaCAD_SceneManipul
 python -m mani_skill2.examples.demo_random_action.py -e "ReplicaCAD_SceneManipulation-v1" --render-mode="human" # run with GUI (recommended!)
 ```
 
-To turn ray-tracing on for more photo-realistic rendering, you can do `gym.make(env_id, shader_dir="rt")`, or run
 
-```bash
-python -m mani_skill2.examples.demo_random_action.py -e "ReplicaCAD_SceneManipulation-v1" --render-mode="rgb_array" --record-dir="videos" --shader="rt" # will be slow due to ray tracing
-python -m mani_skill2.examples.demo_random_action.py -e "ReplicaCAD_SceneManipulation-v1" --render-mode="human" --shader="rt-fast" # faster ray-tracing option but lower quality
-```
 
 <video preload="auto" controls="True" width="100%">
 <source src="/_static/videos/fetch_random_action_replica_cad_rt.mp4" type="video/mp4">
 </video>
-For more details on rendering see TODO (stao)
+For more details on rendering see TODO (stao). For a compilation of demos you can run without having to write any extra code check out the [demos page]()
 
 ## Interactive Play
 
@@ -93,14 +85,14 @@ Keyboard controls:
 
 To enable an interactive viewer supported by SAPIEN, you can add `--enable-sapien-viewer`. The interactive SAPIEN viewer is more powerful for debugging (e.g., checking collision shapes, getting current poses). There will be two windows: an OpenCV window and a SAPIEN (GL) window. Pressing `0` on the focused window can switch the control to the other one.
 
-```{figure} images/OpenCV-viewer.png
+```{image} images/OpenCV-viewer.png
 ---
 height: 256px
 alt: OpenCV viewer
 ---
 ```
 
-```{figure} images/SAPIEN-viewer.png
+```{image} images/SAPIEN-viewer.png
 ---
 height: 256px
 alt: SAPIEN viewer

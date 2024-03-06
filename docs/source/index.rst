@@ -25,6 +25,7 @@ Features:
    :maxdepth: 1
    :caption: Resources
 
+   demos/index
    tutorials/index
    concepts/index
    datasets/index

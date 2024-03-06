@@ -9,7 +9,7 @@ import tqdm
 
 import mani_skill2.envs
 from mani_skill2.vector.wrappers.gymnasium import ManiSkillVectorEnv
-from profiling import Profiler
+from mani_skill2.examples.benchmarking.profiling import Profiler
 from mani_skill2.utils.visualization.misc import images_to_video, tile_images
 from mani_skill2.utils.wrappers.flatten import FlattenActionSpaceWrapper
 

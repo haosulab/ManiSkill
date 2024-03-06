@@ -9,7 +9,7 @@ from mani_skill2.utils.wrappers import RecordEpisode
 
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-e", "--env-id", type=str, default="PushCube-v1")
+    parser.add_argument("-e", "--env-id", type=str, default="PushCube-v1", help="The environment ID of the task you want to simulate")
     parser.add_argument("-o", "--obs-mode", type=str, default="none")
     parser.add_argument("--reward-mode", type=str)
     parser.add_argument("-c", "--control-mode", type=str)
@@ -84,6 +84,9 @@ def main(args):
             if terminated or truncated:
                 break
     env.close()
+
+    if record_dir:
+        print(f"Saving video to {record_dir}")
 
 
 if __name__ == "__main__":
