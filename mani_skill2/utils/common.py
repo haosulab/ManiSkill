@@ -7,7 +7,7 @@ import sapien.physx as physx
 import torch
 from gymnasium import spaces
 
-from mani_skill2.utils.sapien_utils import to_tensor
+from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.structs.types import Array, Device
 
 from .logging_utils import logger
@@ -209,20 +209,20 @@ def flatten_state_dict(
             if state.size == 0:
                 state = None
             if use_torch:
-                state = to_tensor(state)
+                state = sapien_utils.to_tensor(state)
         elif isinstance(value, (tuple, list)):
             state = None if len(value) == 0 else value
             if use_torch:
-                state = to_tensor(state)
+                state = sapien_utils.to_tensor(state)
         elif isinstance(value, (bool, np.bool_, int, np.int32, np.int64)):
             # x = np.array(1) > 0 is np.bool_ instead of ndarray
             state = int(value)
             if use_torch:
-                state = to_tensor(state)
+                state = sapien_utils.to_tensor(state)
         elif isinstance(value, (float, np.float32, np.float64)):
             state = np.float32(value)
             if use_torch:
-                state = to_tensor(state)
+                state = sapien_utils.to_tensor(state)
         elif isinstance(value, np.ndarray):
             if value.ndim > 2:
                 raise AssertionError(
@@ -230,7 +230,7 @@ def flatten_state_dict(
                 )
             state = value if value.size > 0 else None
             if use_torch:
-                state = to_tensor(state)
+                state = sapien_utils.to_tensor(state)
 
         else:
             is_torch_tensor = False

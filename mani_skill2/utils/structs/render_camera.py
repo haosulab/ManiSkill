@@ -7,7 +7,7 @@ import sapien.physx as physx
 import sapien.render
 import torch
 
-from mani_skill2.utils.sapien_utils import to_tensor
+from mani_skill2.utils import sapien_utils
 
 # NOTE (stao): commented out functions are functions that are not confirmed to be working in the wrapped class but the original class has
 
@@ -48,7 +48,9 @@ class RenderCamera:
     # TODO (stao): support extrinsic matrix changing
     @cache
     def get_extrinsic_matrix(self):
-        return to_tensor(self._render_cameras[0].get_extrinsic_matrix())[None, :]
+        return sapien_utils.to_tensor(self._render_cameras[0].get_extrinsic_matrix())[
+            None, :
+        ]
 
     def get_far(self) -> float:
         return self._render_cameras[0].get_far()
@@ -61,14 +63,18 @@ class RenderCamera:
 
     @cache
     def get_intrinsic_matrix(self):
-        return to_tensor(self._render_cameras[0].get_intrinsic_matrix())[None, :]
+        return sapien_utils.to_tensor(self._render_cameras[0].get_intrinsic_matrix())[
+            None, :
+        ]
 
     def get_local_pose(self) -> sapien.Pose:
         return self._render_cameras[0].get_local_pose()
 
     @cache
     def get_model_matrix(self):
-        return to_tensor(self._render_cameras[0].get_model_matrix())[None, :]
+        return sapien_utils.to_tensor(self._render_cameras[0].get_model_matrix())[
+            None, :
+        ]
 
     def get_near(self) -> float:
         return self._render_cameras[0].get_near()
@@ -77,7 +83,9 @@ class RenderCamera:
         if physx.is_gpu_enabled():
             return self.camera_group.get_picture_cuda(name).torch()
         else:
-            return to_tensor(self._render_cameras[0].get_picture(name))[None, ...]
+            return sapien_utils.to_tensor(self._render_cameras[0].get_picture(name))[
+                None, ...
+            ]
 
     def get_picture_cuda(self, name: str):
         return self._render_cameras[0].get_picture_cuda(name)
