@@ -16,8 +16,8 @@ from mani_skill2.agents.utils import (
     get_active_joint_indices,
     get_joints_by_names,
 )
+from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.common import clip_and_scale_action, normalize_action_space
-from mani_skill2.utils.sapien_utils import to_tensor
 from mani_skill2.utils.structs.articulation import Articulation
 from mani_skill2.utils.structs.joint import Joint
 from mani_skill2.utils.structs.types import Array
@@ -37,8 +37,10 @@ class BaseController:
     """the action space. If the number of parallel environments is > 1, this action space is also batched"""
     single_action_space: spaces.Space
     """The unbatched version of the action space which is also typically already normalized by this class"""
+    """The batched version of the action space which is also typically already normalized by this class"""
     _original_single_action_space: spaces.Space
     """The unbatched, original action space without any additional processing like normalization"""
+    """The batched, original action space without any additional processing like normalization"""
 
     def __init__(
         self,
@@ -162,8 +164,8 @@ class BaseController:
             self._original_single_action_space.low,
             self._original_single_action_space.high,
         )
-        self.action_space_low = to_tensor(low)
-        self.action_space_high = to_tensor(high)
+        self.action_space_low = sapien_utils.to_tensor(low)
+        self.action_space_high = sapien_utils.to_tensor(high)
 
     def _clip_and_scale_action(self, action):
         return clip_and_scale_action(
@@ -205,7 +207,6 @@ class DictController(BaseController):
             )
         self._initialize_action_space()
         self._initialize_joints()
-        self._assert_fully_actuated()
 
         self.action_space = self.single_action_space
         if self.scene.num_envs > 1:
@@ -229,15 +230,6 @@ class DictController(BaseController):
             self.joints.extend(controller.joints)
             self.joint_indices.extend(controller.joint_indices)
 
-    def _assert_fully_actuated(self):
-        active_joints = self.articulation.get_active_joints()
-        if len(active_joints) != len(self.joints) or set(active_joints) != set(
-            self.joints
-        ):
-            print("active_joints:", [x.name for x in active_joints])
-            print("controlled_joints:", [x.name for x in self.joints])
-            raise AssertionError("{} is not fully actuated".format(self.articulation))
-
     def set_drive_property(self):
         for controller in self.controllers.values():
             controller.set_drive_property()
@@ -251,7 +243,7 @@ class DictController(BaseController):
 
     def set_action(self, action: Dict[str, np.ndarray]):
         for uid, controller in self.controllers.items():
-            controller.set_action(to_tensor(action[uid]))
+            controller.set_action(sapien_utils.to_tensor(action[uid]))
 
     def before_simulation_step(self):
         if physx.is_gpu_enabled():

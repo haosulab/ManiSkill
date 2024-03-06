@@ -7,21 +7,17 @@ import sapien
 import torch
 from transforms3d.euler import euler2quat
 
-from mani_skill2.agents.robots import (  # a dictionary mapping robot name to robot class that inherits BaseAgent
-    ROBOTS,
-)
 from mani_skill2.agents.robots.panda.panda import Panda
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
+from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.building.actor_builder import ActorBuilder
 from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import (  # import various useful utilities for working with sapien
-    look_at,
-)
 from mani_skill2.utils.scene_builder.table.table_scene_builder import TableSceneBuilder
 
 
-@register_env("FMBAssembly1-v0", max_episode_steps=200)
+# TODO (stao): Complete this task example
+# @register_env("FMBAssembly1-v0", max_episode_steps=200)
 class FMBAssembly1Env(BaseEnv):
     """
     Task Description
@@ -48,13 +44,13 @@ class FMBAssembly1Env(BaseEnv):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     def _register_sensors(self):
-        pose = look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
+        pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
         return [
             CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10)
         ]
 
     def _register_human_render_cameras(self):
-        pose = look_at([1.0, 0.8, 0.8], [0.0, 0.0, 0.35])
+        pose = sapien_utils.look_at([1.0, 0.8, 0.8], [0.0, 0.0, 0.35])
         return CameraConfig("render_camera", pose.p, pose.q, 1024, 1024, 1, 0.01, 10)
 
     def _load_actors(self):
@@ -128,7 +124,7 @@ class FMBAssembly1Env(BaseEnv):
         self.bridge_grasp = builder.build_kinematic(name="bridge_grasp")
 
     def _initialize_actors(self, env_idx: torch.Tensor):
-        self.table_scene.initialize()
+        self.table_scene.initialize(env_idx)
         offset_pose = sapien.Pose(p=[0.02, -0.115, 0], q=euler2quat(0, 0, np.pi / 2))
         self.board.set_pose(
             sapien.Pose(p=np.array([0.115, 0.115, 0.034444])) * offset_pose

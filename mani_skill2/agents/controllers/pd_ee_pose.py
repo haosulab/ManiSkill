@@ -12,12 +12,13 @@ import sapien.physx as physx
 import torch
 from gymnasium import spaces
 
+from mani_skill2 import logger
+from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.common import clip_and_scale_action
 from mani_skill2.utils.geometry.rotation_conversions import (
     euler_angles_to_matrix,
     matrix_to_quaternion,
 )
-from mani_skill2.utils.sapien_utils import get_obj_by_name, to_numpy, to_tensor
 from mani_skill2.utils.structs.pose import Pose, vectorize_pose
 from mani_skill2.utils.structs.types import Array
 
@@ -28,6 +29,7 @@ from .pd_joint_pos import PDJointPosController
 # NOTE(jigu): not necessary to inherit, just for convenience
 class PDEEPosController(PDJointPosController):
     config: "PDEEPosControllerConfig"
+    _target_pose = None
 
     def _initialize_joints(self):
         self.initial_qpos = None
@@ -59,12 +61,15 @@ class PDEEPosController(PDJointPosController):
         self.qmask[self.joint_indices] = 1
 
         if self.config.ee_link:
-            self.ee_link = get_obj_by_name(
+            self.ee_link = sapien_utils.get_obj_by_name(
                 self.articulation.get_links(), self.config.ee_link
             )
         else:
             # The child link of last joint is assumed to be the end-effector.
             self.ee_link = self.joints[-1].get_child_link()
+            logger.warn(
+                "Configuration did not define a ee_link name, using the child link of the last joint"
+            )
         self.ee_link_idx = self.articulation.get_links().index(self.ee_link)
 
     def _initialize_action_space(self):
@@ -87,7 +92,13 @@ class PDEEPosController(PDJointPosController):
 
     def reset(self):
         super().reset()
-        self._target_pose = self.ee_pose_at_base
+        if self._target_pose is None:
+            self._target_pose = self.ee_pose_at_base
+        else:
+            # TODO (stao): this is a strange way to mask setting individual batched pose parts
+            self._target_pose.raw_pose[
+                self.scene._reset_mask
+            ] = self.ee_pose_at_base.raw_pose[self.scene._reset_mask]
 
     def compute_ik(self, target_pose: Pose, action: Array, max_iterations=100):
         # Assume the target pose is defined in the base frame
@@ -105,12 +116,14 @@ class PDEEPosController(PDJointPosController):
             result, success, error = self.pmodel.compute_inverse_kinematics(
                 self.ee_link_idx,
                 target_pose.sp,
-                initial_qpos=to_numpy(self.articulation.get_qpos()).squeeze(0),
+                initial_qpos=sapien_utils.to_numpy(
+                    self.articulation.get_qpos()
+                ).squeeze(0),
                 active_qmask=self.qmask,
                 max_iterations=max_iterations,
             )
         if success:
-            return to_tensor([result[self.joint_indices]])
+            return sapien_utils.to_tensor([result[self.joint_indices]])
         else:
             return None
 
@@ -152,13 +165,14 @@ class PDEEPosController(PDJointPosController):
 
     def get_state(self) -> dict:
         if self.config.use_target:
-            return {"target_pose": vectorize_pose(self._target_pose)}
+            return {"target_pose": self._target_pose.raw_pose}
         return {}
 
     def set_state(self, state: dict):
-        if self.config.use_target:
-            target_pose = state["target_pose"]
-            self._target_pose = sapien.Pose(target_pose[:3], target_pose[3:])
+        # if self.config.use_target:
+        #     target_pose = state["target_pose"]
+        #     self._target_pose = sapien.Pose(target_pose[:3], target_pose[3:])
+        raise NotImplementedError()
 
 
 @dataclass

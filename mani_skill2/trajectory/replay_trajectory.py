@@ -24,7 +24,6 @@ from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.trajectory.merge_trajectory import merge_h5
 from mani_skill2.utils.common import clip_and_scale_action, inv_scale_action
 from mani_skill2.utils.io_utils import load_json
-from mani_skill2.utils.sapien_utils import get_obj_by_name
 from mani_skill2.utils.wrappers import RecordEpisode
 
 
@@ -498,7 +497,7 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
 
             if success or args.allow_failure:
                 env.flush_trajectory()
-                env.flush_video()
+                env.flush_video(ignore_empty_transition=False)
                 break
             else:
                 # Rollback episode id for failed attempts

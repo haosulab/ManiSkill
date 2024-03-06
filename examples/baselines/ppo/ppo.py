@@ -57,6 +57,8 @@ class Args:
     """the number of parallel evaluation environments"""
     num_steps: int = 50
     """the number of steps to run in each environment per policy rollout"""
+    num_eval_steps: int = 50
+    """the number of steps to run in each evaluation environment during evaluation"""
     anneal_lr: bool = False
     """Toggle learning rate annealing for policy and value networks"""
     gamma: float = 0.8
@@ -183,9 +185,9 @@ if __name__ == "__main__":
         envs = FlattenActionSpaceWrapper(envs)
         eval_envs = FlattenActionSpaceWrapper(eval_envs)
     if args.capture_video:
-        eval_envs = RecordEpisode(eval_envs, output_dir=f"runs/{run_name}/videos", save_trajectory=False, video_fps=30)
-    envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=False, **env_kwargs)
-    eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=True, **env_kwargs)
+        eval_envs = RecordEpisode(eval_envs, output_dir=f"runs/{run_name}/videos", save_trajectory=False, max_steps_per_video=args.num_eval_steps, video_fps=30)
+    envs = ManiSkillVectorEnv(envs, args.num_envs, **env_kwargs)
+    eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=False, **env_kwargs)
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
     agent = Agent(envs).to(device)
@@ -225,18 +227,37 @@ if __name__ == "__main__":
         if iteration % args.eval_freq == 1:
             # evaluate
             print("Evaluating")
-            eval_done = False
-            while not eval_done:
+            eval_envs.reset()
+            returns = []
+            eps_lens = []
+            successes = []
+            failures = []
+            for _ in range(args.num_eval_steps):
                 with torch.no_grad():
                     eval_obs, _, eval_terminations, eval_truncations, eval_infos = eval_envs.step(agent.get_action(eval_obs, deterministic=True))
-                if eval_truncations.any():
-                    eval_done = True
-            info = eval_infos["final_info"]
-            episodic_return = info['episode']['r'].mean().cpu().numpy()
-            print(f"eval_episodic_return={episodic_return}")
-            writer.add_scalar("charts/eval_success_rate", info["success"].float().mean().cpu().numpy(), global_step)
-            writer.add_scalar("charts/eval_episodic_return", episodic_return, global_step)
-            writer.add_scalar("charts/eval_episodic_length", info["elapsed_steps"].float().mean().cpu().numpy(), global_step)
+                    if "final_info" in eval_infos:
+                        mask = eval_infos["_final_info"]
+                        eps_lens.append(eval_infos["final_info"]["elapsed_steps"][mask].cpu().numpy())
+                        returns.append(eval_infos["final_info"]["episode"]["r"][mask].cpu().numpy())
+                        if "success" in eval_infos:
+                            successes.append(eval_infos["final_info"]["success"][mask].cpu().numpy())
+                        if "fail" in eval_infos:
+                            failures.append(eval_infos["final_info"]["fail"][mask].cpu().numpy())
+            returns = np.concatenate(returns)
+            eps_lens = np.concatenate(eps_lens)
+            print(f"Evaluated {args.num_eval_steps * args.num_envs} steps resulting in {len(eps_lens)} episodes")
+            if len(successes) > 0:
+                successes = np.concatenate(successes)
+                writer.add_scalar("charts/eval_success_rate", successes.mean(), global_step)
+                print(f"eval_success_rate={successes.mean()}")
+            if len(failures) > 0:
+                failures = np.concatenate(failures)
+                writer.add_scalar("charts/eval_fail_rate", failures.mean(), global_step)
+                print(f"eval_fail_rate={failures.mean()}")
+
+            print(f"eval_episodic_return={returns.mean()}")
+            writer.add_scalar("charts/eval_episodic_return", returns.mean(), global_step)
+            writer.add_scalar("charts/eval_episodic_length", eps_lens.mean(), global_step)
 
         if args.save_model and iteration % args.eval_freq == 1:
             model_path = f"runs/{run_name}/{args.exp_name}_{iteration}.cleanrl_model"
@@ -266,15 +287,17 @@ if __name__ == "__main__":
             rewards[step] = reward.view(-1)
 
             if "final_info" in infos:
-                info = infos["final_info"]
-                done_mask = info["_final_info"]
-                episodic_return = info['episode']['r'][done_mask].mean().cpu().numpy()
-                # print(f"global_step={global_step}, episodic_return={episodic_return}")
-                writer.add_scalar("charts/success_rate", info["success"][done_mask].float().mean().cpu().numpy(), global_step)
+                final_info = infos["final_info"]
+                done_mask = final_info["_final_info"]
+                episodic_return = final_info['episode']['r'][done_mask].cpu().numpy().mean()
+                if "success" in final_info:
+                    writer.add_scalar("charts/success_rate", final_info["success"][done_mask].cpu().numpy().mean(), global_step)
+                if "fail" in final_info:
+                    writer.add_scalar("charts/fail_rate", final_info["fail"][done_mask].cpu().numpy().mean(), global_step)
                 writer.add_scalar("charts/episodic_return", episodic_return, global_step)
-                writer.add_scalar("charts/episodic_length", info["elapsed_steps"][done_mask].float().mean().cpu().numpy(), global_step)
+                writer.add_scalar("charts/episodic_length", final_info["elapsed_steps"][done_mask].cpu().numpy().mean(), global_step)
 
-                final_values[step, torch.arange(args.num_envs, device=device)[done_mask]] = agent.get_value(info["final_observation"][done_mask]).view(-1)
+                final_values[step, torch.arange(args.num_envs, device=device)[done_mask]] = agent.get_value(final_info["final_observation"][done_mask]).view(-1)
 
         # bootstrap value according to termination and truncation
         with torch.no_grad():

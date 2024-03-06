@@ -1,12 +1,16 @@
 """
 Useful utilities for creating the ground of a scene
 """
+from __future__ import annotations
+
 import os.path as osp
+from typing import TYPE_CHECKING
 
 import sapien
 import sapien.render
 
-from mani_skill2.envs.scene import ManiSkillScene
+if TYPE_CHECKING:
+    from mani_skill2.envs.scene import ManiSkillScene
 
 
 def build_ground(

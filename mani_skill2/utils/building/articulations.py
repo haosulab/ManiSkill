@@ -14,12 +14,12 @@ from sapien import Pose
 
 from mani_skill2 import ASSET_DIR, PACKAGE_ASSET_DIR
 from mani_skill2.envs.scene import ManiSkillScene
+from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.geometry.trimesh_utils import (
     get_articulation_meshes,
     merge_meshes,
 )
 from mani_skill2.utils.io_utils import load_json
-from mani_skill2.utils.sapien_utils import apply_urdf_config, parse_urdf_config
 
 
 @dataclass
@@ -105,8 +105,8 @@ def build_preprocessed_partnet_mobility_articulation(
     # loader.multiple_collisions_decomposition="coacd"
     loader.disable_self_collisions = True
     urdf_path = MODEL_DBS["PartnetMobility"]["model_urdf_paths"][model_id]
-    urdf_config = parse_urdf_config(urdf_config or {}, scene)
-    apply_urdf_config(loader, urdf_config)
+    urdf_config = sapien_utils.parse_urdf_config(urdf_config or {}, scene)
+    sapien_utils.apply_urdf_config(loader, urdf_config)
     articulation = loader.load(str(urdf_path), name=name, scene_mask=scene_mask)
     metadata = ArticulationMetadata(
         joints=dict(), links=dict(), movable_links=[], bbox=None, scale=loader.scale

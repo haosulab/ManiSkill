@@ -7,12 +7,7 @@ from typing import TYPE_CHECKING, Generic, List, TypeVar
 import sapien.physx as physx
 import torch
 
-from mani_skill2.utils.sapien_utils import (
-    compute_total_impulse,
-    get_actor_contacts,
-    to_numpy,
-    to_tensor,
-)
+from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.structs.decorators import before_gpu_init
 from mani_skill2.utils.structs.types import Array
 
@@ -94,11 +89,14 @@ class PhysxRigidBodyComponentStruct:
                 / self._scene.timestep
             )
         else:
-            body_contacts = get_actor_contacts(
+            body_contacts = sapien_utils.get_actor_contacts(
                 self.px.get_contacts(), self._bodies[0].entity
             )
             net_force = (
-                to_tensor(compute_total_impulse(body_contacts)) / self._scene.timestep
+                sapien_utils.to_tensor(
+                    sapien_utils.compute_total_impulse(body_contacts)
+                )
+                / self._scene.timestep
             )
             return net_force[None, :]
 
@@ -299,12 +297,12 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct):
     @angular_velocity.setter
     def angular_velocity(self, arg1: Array):
         if physx.is_gpu_enabled():
-            arg1 = to_tensor(arg1)
+            arg1 = sapien_utils.to_tensor(arg1)
             self._body_data[
                 self._body_data_index[self._scene._reset_mask], 10:13
             ] = arg1
         else:
-            arg1 = to_numpy(arg1)
+            arg1 = sapien_utils.to_numpy(arg1)
             if len(arg1.shape) == 2:
                 arg1 = arg1[0]
             self._bodies[0].angular_velocity = arg1
@@ -368,10 +366,10 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct):
     @linear_velocity.setter
     def linear_velocity(self, arg1: Array):
         if physx.is_gpu_enabled():
-            arg1 = to_tensor(arg1)
+            arg1 = sapien_utils.to_tensor(arg1)
             self._body_data[self._body_data_index[self._scene._reset_mask], 7:10] = arg1
         else:
-            arg1 = to_numpy(arg1)
+            arg1 = sapien_utils.to_numpy(arg1)
             if len(arg1.shape) == 2:
                 arg1 = arg1[0]
             self._bodies[0].linear_velocity = arg1

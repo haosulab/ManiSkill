@@ -9,7 +9,7 @@ import torch
 from sapien import ActorBuilder as SAPIENActorBuilder
 from sapien.wrapper.coacd import do_coacd
 
-from mani_skill2.utils.sapien_utils import to_numpy, to_tensor
+from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.structs.actor import Actor
 from mani_skill2.utils.structs.pose import Pose, to_sapien_pose
 
@@ -177,15 +177,17 @@ class ActorBuilder(SAPIENActorBuilder):
                 len(self.scene_mask) == self.scene.num_envs
             ), "Scene mask size is not correct. Must be the same as the number of sub scenes"
             num_actors = np.sum(num_actors)
-            self.scene_mask = to_tensor(self.scene_mask)
+            self.scene_mask = sapien_utils.to_tensor(self.scene_mask)
         else:
             # if scene mask is none, set it here
-            self.scene_mask = to_tensor(torch.ones((self.scene.num_envs), dtype=bool))
+            self.scene_mask = sapien_utils.to_tensor(
+                torch.ones((self.scene.num_envs), dtype=bool)
+            )
 
         initial_pose = Pose.create(self.initial_pose)
         initial_pose_b = initial_pose.raw_pose.shape[0]
         assert initial_pose_b == 1 or initial_pose_b == num_actors
-        initial_pose_np = to_numpy(initial_pose.raw_pose)
+        initial_pose_np = sapien_utils.to_numpy(initial_pose.raw_pose)
 
         entities = []
         i = 0

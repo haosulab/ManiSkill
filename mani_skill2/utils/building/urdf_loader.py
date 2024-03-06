@@ -26,7 +26,10 @@ class URDFLoader(SapienURDFLoader):
             urdf_file, srdf_file, package_dir
         )
         for i, a in enumerate(articulation_builders):
-            a.set_name(f"{self.name}-articulation-{i}")
+            if len(articulation_builders) > 1:
+                a.set_name(f"{self.name}-articulation-{i}")
+            else:
+                a.set_name(f"{self.name}")
             if self.disable_self_collisions:
                 for l in a.link_builders:
                     # NOTE (stao): Currently this may not be working as intended

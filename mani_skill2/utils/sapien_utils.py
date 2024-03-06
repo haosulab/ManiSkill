@@ -36,10 +36,15 @@ def to_tensor(array: Union[torch.Tensor, np.array, Sequence]):
             return torch.Tensor(array).cuda()
     elif get_backend_name() == "numpy":
         if isinstance(array, np.ndarray):
-            return torch.from_numpy(array)
-        # TODO (arth): better way to address torch "UserWarning: Creating a tensor from a list of numpy.ndarrays is extremely slow" ?
+            ret = torch.from_numpy(array)
+            if ret.dtype == torch.float64:
+                ret = ret.float()
+            return ret
         elif isinstance(array, list) and isinstance(array[0], np.ndarray):
-            return torch.from_numpy(np.array(array))
+            ret = torch.from_numpy(np.array(array))
+            if ret.dtype == torch.float64:
+                ret = ret.float()
+            return ret
         elif np.iterable(array):
             return torch.Tensor(array)
         else:
@@ -103,14 +108,20 @@ def _batch(array: Union[Array, Sequence]):
     if isinstance(array, torch.Tensor):
         return array[None, :]
     if isinstance(array, np.ndarray):
+        if array.shape == ():
+            return array.reshape(1, 1)
         return array[None, :]
     if isinstance(array, list):
         if len(array) == 1:
             return [array]
+    if isinstance(array, float) or isinstance(array, int) or isinstance(array, bool):
+        return np.array([[array]])
     return array
 
 
 def batch(*args: Tuple[Union[Array, Sequence]]):
+    """Adds one dimension in front of everything. If given a dictionary, every leaf in the dictionary
+    has a new dimension. If given a tuple, returns the same tuple with each element batched"""
     x = [_batch(x) for x in args]
     if len(args) == 1:
         return x[0]
@@ -349,6 +360,30 @@ def get_pairwise_contacts(
     return pairwise_contacts
 
 
+def get_multiple_pairwise_contacts(
+    contacts: List[physx.PhysxContact],
+    actor0: sapien.Entity,
+    actor1_list: List[sapien.Entity],
+) -> Dict[sapien.Entity, List[Tuple[physx.PhysxContact, bool]]]:
+    """
+    Given a list of contacts, return the dict of contacts involving the one actor and actors
+    This function is used to avoid double for-loop when using `get_pairwise_contacts` with multiple actors
+    """
+    pairwise_contacts = {actor: [] for actor in actor1_list}
+    for contact in contacts:
+        if (
+            contact.bodies[0].entity == actor0
+            and contact.bodies[1].entity in actor1_list
+        ):
+            pairwise_contacts[contact.bodies[1].entity].append((contact, True))
+        elif (
+            contact.bodies[0].entity in actor1_list
+            and contact.bodies[1].entity == actor0
+        ):
+            pairwise_contacts[contact.bodies[0].entity].append((contact, False))
+    return pairwise_contacts
+
+
 def compute_total_impulse(contact_infos: List[Tuple[physx.PhysxContact, bool]]):
     total_impulse = np.zeros(3)
     for contact, flag in contact_infos:
@@ -375,6 +410,21 @@ def get_actor_contacts(
             entity_contacts.append((contact, True))
         elif contact.bodies[1].entity == actor:
             entity_contacts.append((contact, False))
+    return entity_contacts
+
+
+def get_actors_contacts(
+    contacts: List[physx.PhysxContact], actors: List[sapien.Entity]
+) -> Dict[sapien.Entity, List[Tuple[physx.PhysxContact, bool]]]:
+    """
+    This function is used to avoid double for-loop when using `get_actor_contacts` with multiple actors
+    """
+    entity_contacts = {actor: [] for actor in actors}
+    for contact in contacts:
+        if contact.bodies[0].entity in actors:
+            entity_contacts[contact.bodies[0].entity].append((contact, True))
+        elif contact.bodies[1].entity in actors:
+            entity_contacts[contact.bodies[1].entity].append((contact, False))
     return entity_contacts
 
 

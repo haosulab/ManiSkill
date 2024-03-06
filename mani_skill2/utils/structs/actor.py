@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import cache
 from typing import TYPE_CHECKING, List, Literal, Union
 
 import numpy as np
@@ -9,7 +10,7 @@ import sapien.physx as physx
 import sapien.render
 import torch
 
-from mani_skill2.utils.sapien_utils import to_numpy, to_tensor
+from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.structs.base import BaseStruct, PhysxRigidDynamicComponentStruct
 from mani_skill2.utils.structs.pose import Pose, to_sapien_pose, vectorize_pose
 from mani_skill2.utils.structs.types import Array
@@ -110,7 +111,7 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
         merged_actor._builder_initial_pose = Pose.create(
             torch.vstack(_builder_initial_poses)
         )
-        scene.actors[actor.name] = merged_actor
+        scene.actors[merged_actor.name] = merged_actor
         return merged_actor
 
     # -------------------------------------------------------------------------- #
@@ -129,17 +130,18 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
 
     def set_state(self, state: Array):
         if physx.is_gpu_enabled():
-            state = to_tensor(state)
+            state = sapien_utils.to_tensor(state)
             self.set_pose(Pose.create(state[:, :7]))
             self.set_linear_velocity(state[:, 7:10])
             self.set_angular_velocity(state[:, 10:13])
         else:
-            state = to_numpy(state[0])
+            state = sapien_utils.to_numpy(state[0])
             self.set_pose(sapien.Pose(state[0:3], state[3:7]))
             if self.px_body_type == "dynamic":
                 self.set_linear_velocity(state[7:10])
                 self.set_angular_velocity(state[10:13])
 
+    @cache
     def has_collision_shapes(self):
         return (
             len(
@@ -162,37 +164,37 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
         if self.hidden:
             return
         if physx.is_gpu_enabled():
-            # TODO (stao): fix hiding visuals
-            pass
-            # self.last_pose = self.px.cuda_rigid_body_data.torch()[
-            #     self._body_data_index, :7
-            # ].clone()
-            # temp_pose = self.pose.raw_pose
-            # temp_pose[..., :3] += 99999
-            # self.pose = temp_pose
-            # self.px.gpu_apply_rigid_dynamic_data()
-            # self.px.gpu_fetch_rigid_dynamic_data()
-            # print("HIDE", self.pose.raw_pose[0, :3])
+            self.before_hide_pose = self.px.cuda_rigid_body_data.torch()[
+                self._body_data_index, :7
+            ].clone()
+
+            temp_pose = self.pose.raw_pose
+            temp_pose[..., :3] += 99999
+            self.pose = temp_pose
+            self.px.gpu_apply_rigid_dynamic_data()
+            self.px.gpu_fetch_rigid_dynamic_data()
         else:
             self._objs[0].find_component_by_type(
                 sapien.render.RenderBodyComponent
             ).visibility = 0
+        # set hidden *after* setting/getting so not applied to self.before_hide_pose erroenously
         self.hidden = True
 
     def show_visual(self):
         assert not self.has_collision_shapes()
         if not self.hidden:
             return
+        # set hidden *before* setting/getting so not applied to self.before_hide_pose erroenously
+        self.hidden = False
         if physx.is_gpu_enabled():
-            if hasattr(self, "last_pose"):
-                self.pose = self.last_pose
+            if hasattr(self, "before_hide_pose"):
+                self.pose = self.before_hide_pose
                 self.px.gpu_apply_rigid_dynamic_data()
                 self.px.gpu_fetch_rigid_dynamic_data()
         else:
             self._objs[0].find_component_by_type(
                 sapien.render.RenderBodyComponent
             ).visibility = 1
-        self.hidden = False
 
     def is_static(self, lin_thresh=1e-2, ang_thresh=1e-1):
         """
@@ -223,13 +225,13 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
                 # as part of observations if needed
                 return self._builder_initial_pose
             else:
-                raw_pose = self.px.cuda_rigid_body_data.torch()[
-                    self._body_data_index, :7
-                ]
-                # if self.hidden:
-                # print(self.name, "hidden", raw_pose[0, :3])
-                # raw_pose[..., :3] = raw_pose[..., :3] - 99999
-                return Pose.create(raw_pose)
+                if self.hidden:
+                    return Pose.create(self.before_hide_pose)
+                else:
+                    raw_pose = self.px.cuda_rigid_body_data.torch()[
+                        self._body_data_index, :7
+                    ]
+                    return Pose.create(raw_pose)
         else:
             assert len(self._objs) == 1
             return Pose.create(self._objs[0].pose)
@@ -239,9 +241,12 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
         if physx.is_gpu_enabled():
             if not isinstance(arg1, torch.Tensor):
                 arg1 = vectorize_pose(arg1)
-            self.px.cuda_rigid_body_data.torch()[
-                self._body_data_index[self._scene._reset_mask], :7
-            ] = arg1
+            if self.hidden:
+                self.before_hide_pose[self._scene._reset_mask] = arg1
+            else:
+                self.px.cuda_rigid_body_data.torch()[
+                    self._body_data_index[self._scene._reset_mask], :7
+                ] = arg1
         else:
             self._objs[0].pose = to_sapien_pose(arg1)
 

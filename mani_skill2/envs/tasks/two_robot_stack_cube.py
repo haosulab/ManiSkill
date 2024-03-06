@@ -10,9 +10,9 @@ from mani_skill2.agents.robots.panda import Panda
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.envs.utils.randomization.pose import random_quaternions
 from mani_skill2.sensors.camera import CameraConfig
+from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.building import actors
 from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import look_at, to_tensor
 from mani_skill2.utils.scene_builder.table.table_scene_builder import TableSceneBuilder
 from mani_skill2.utils.structs.pose import Pose
 from mani_skill2.utils.structs.types import GPUMemoryConfig, SimConfig
@@ -45,7 +45,7 @@ class TwoRobotStackCube(BaseEnv):
 
     SUPPORTED_ROBOTS = [("panda", "panda")]
     agent: MultiAgent[Tuple[Panda, Panda]]
-    sim_cfg = SimConfig(
+    default_sim_cfg = SimConfig(
         gpu_memory_cfg=GPUMemoryConfig(
             found_lost_pairs_capacity=2**25,
             max_rigid_patch_count=2**19,
@@ -61,18 +61,18 @@ class TwoRobotStackCube(BaseEnv):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     def _register_sensors(self):
-        pose = look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
+        pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
         return [
             CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10)
         ]
 
     def _register_human_render_cameras(self):
-        # pose = look_at([1.4, 0.8, 0.75], [0.0, 0.1, 0.1]) # this perspective is good for demos
-        pose = look_at(eye=[0.6, 0.2, 0.4], target=[-0.1, 0, 0.1])
+        # pose = sapien_utils.look_at([1.4, 0.8, 0.75], [0.0, 0.1, 0.1]) # this perspective is good for demos
+        pose = sapien_utils.look_at(eye=[0.6, 0.2, 0.4], target=[-0.1, 0, 0.1])
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)
 
     def _load_actors(self):
-        self.cube_half_size = to_tensor([0.02] * 3)
+        self.cube_half_size = sapien_utils.to_tensor([0.02] * 3)
         self.table_scene = TableSceneBuilder(
             env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
         )
@@ -98,7 +98,7 @@ class TwoRobotStackCube(BaseEnv):
     def _initialize_actors(self, env_idx: torch.Tensor):
         with torch.device(self.device):
             b = len(env_idx)
-            self.table_scene.initialize()
+            self.table_scene.initialize(env_idx)
             # the table scene initializes two robots. the first one self.agents[0] is on the left and the second one is on the right
 
             torch.zeros((b, 3))

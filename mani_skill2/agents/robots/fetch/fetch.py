@@ -9,15 +9,10 @@ import torch
 from mani_skill2 import PACKAGE_ASSET_DIR
 from mani_skill2.agents.base_agent import BaseAgent
 from mani_skill2.agents.controllers import *
+from mani_skill2.agents.registration import register_agent
 from mani_skill2.sensors.camera import CameraConfig
+from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.common import compute_angle_between, np_compute_angle_between
-from mani_skill2.utils.sapien_utils import (
-    compute_total_impulse,
-    get_actor_contacts,
-    get_obj_by_name,
-    get_pairwise_contact_impulse,
-    to_tensor,
-)
 from mani_skill2.utils.structs.actor import Actor
 from mani_skill2.utils.structs.base import BaseStruct
 from mani_skill2.utils.structs.joint import Joint
@@ -28,6 +23,7 @@ from mani_skill2.utils.structs.types import Array
 FETCH_UNIQUE_COLLISION_BIT = 1 << 30
 
 
+@register_agent()
 class Fetch(BaseAgent):
     uid = "fetch"
     urdf_path = f"{PACKAGE_ASSET_DIR}/robots/fetch/fetch.urdf"
@@ -66,10 +62,28 @@ class Fetch(BaseAgent):
             near=0.01,
             far=10,
             entity_uid="gripper_link",
-        )
+        ),
     ]
     REACHABLE_DIST = 1.5
-    RESTING_QPOS = np.array([0, 0, 0, 0.386, 0, -0.370, 0.562, -1.032, 0.695, 0.955, -0.1, 2.077, 0, 0.015, 0.015])
+    RESTING_QPOS = np.array(
+        [
+            0,
+            0,
+            0,
+            0.386,
+            0,
+            -0.370,
+            0.562,
+            -1.032,
+            0.695,
+            0.955,
+            -0.1,
+            2.077,
+            0,
+            0.015,
+            0.015,
+        ]
+    )
 
     def __init__(self, *args, **kwargs):
         self.arm_joint_names = [
@@ -312,19 +326,23 @@ class Fetch(BaseAgent):
         return deepcopy_dict(controller_configs)
 
     def _after_init(self):
-        self.finger1_link: Link = get_obj_by_name(
+        self.finger1_link: Link = sapien_utils.get_obj_by_name(
             self.robot.get_links(), "l_gripper_finger_link"
         )
-        self.finger2_link: Link = get_obj_by_name(
+        self.finger2_link: Link = sapien_utils.get_obj_by_name(
             self.robot.get_links(), "r_gripper_finger_link"
         )
-        self.tcp: Link = get_obj_by_name(self.robot.get_links(), self.ee_link_name)
+        self.tcp: Link = sapien_utils.get_obj_by_name(
+            self.robot.get_links(), self.ee_link_name
+        )
 
-        self.base_link: Link = get_obj_by_name(self.robot.get_links(), "base_link")
-        self.l_wheel_link: Link = get_obj_by_name(
+        self.base_link: Link = sapien_utils.get_obj_by_name(
+            self.robot.get_links(), "base_link"
+        )
+        self.l_wheel_link: Link = sapien_utils.get_obj_by_name(
             self.robot.get_links(), "l_wheel_link"
         )
-        self.r_wheel_link: Link = get_obj_by_name(
+        self.r_wheel_link: Link = sapien_utils.get_obj_by_name(
             self.robot.get_links(), "r_wheel_link"
         )
         for link in [self.l_wheel_link, self.r_wheel_link]:
@@ -334,11 +352,11 @@ class Fetch(BaseAgent):
                 cg[2] |= FETCH_UNIQUE_COLLISION_BIT
                 cs.set_collision_groups(cg)
 
-        self.torso_lift_link: Link = get_obj_by_name(
+        self.torso_lift_link: Link = sapien_utils.get_obj_by_name(
             self.robot.get_links(), "torso_lift_link"
         )
 
-        self.head_camera_link: Link = get_obj_by_name(
+        self.head_camera_link: Link = sapien_utils.get_obj_by_name(
             self.robot.get_links(), "head_camera_link"
         )
 
@@ -385,25 +403,27 @@ class Fetch(BaseAgent):
             contacts = self.scene.get_contacts()
 
             if object is None:
-                finger1_contacts = get_actor_contacts(
+                finger1_contacts = sapien_utils.get_actor_contacts(
                     contacts, self.finger1_link._bodies[0].entity
                 )
-                finger2_contacts = get_actor_contacts(
+                finger2_contacts = sapien_utils.get_actor_contacts(
                     contacts, self.finger2_link._bodies[0].entity
                 )
                 return (
-                    np.linalg.norm(compute_total_impulse(finger1_contacts))
+                    np.linalg.norm(sapien_utils.compute_total_impulse(finger1_contacts))
                     >= min_impulse
-                    and np.linalg.norm(compute_total_impulse(finger2_contacts))
+                    and np.linalg.norm(
+                        sapien_utils.compute_total_impulse(finger2_contacts)
+                    )
                     >= min_impulse
                 )
             else:
-                limpulse = get_pairwise_contact_impulse(
+                limpulse = sapien_utils.get_pairwise_contact_impulse(
                     contacts,
                     self.finger1_link._bodies[0].entity,
                     object._bodies[0].entity,
                 )
-                rimpulse = get_pairwise_contact_impulse(
+                rimpulse = sapien_utils.get_pairwise_contact_impulse(
                     contacts,
                     self.finger2_link._bodies[0].entity,
                     object._bodies[0].entity,

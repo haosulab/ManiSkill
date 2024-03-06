@@ -21,8 +21,9 @@ setup(
     install_requires=[
         "numpy>=1.22",
         "scipy",
+        "dacite",
         "gymnasium>=0.28.1",
-        "sapien==3.0.0.dev0",
+        # "sapien==3.0.0.dev0",
         "h5py",
         "pyyaml",
         "tqdm",
@@ -41,6 +42,8 @@ setup(
     package_data={
         "mani_skill2": [
             "assets/**",
+            "envs/**/*",
+            "utils/**/*",
             "envs/mpm/shader/**",
             "envs/mpm/RopeInit.pkl",
         ],
