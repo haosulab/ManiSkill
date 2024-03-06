@@ -9,11 +9,16 @@ from mani_skill2.utils.wrappers.flatten import (
 )
 from mani_skill2.utils.wrappers.visual_encoders import VisualEncoderWrapper
 from mani_skill2.vector.wrappers.gymnasium import ManiSkillVectorEnv
-from tests.utils import ENV_IDS, LOW_MEM_SIM_CFG, MULTI_AGENT_ENV_IDS, OBS_MODES
+from tests.utils import (
+    LOW_MEM_SIM_CFG,
+    MULTI_AGENT_ENV_IDS,
+    OBS_MODES,
+    STATIONARY_ENV_IDS,
+)
 
 
 @pytest.mark.gpu_sim
-@pytest.mark.parametrize("env_id", ENV_IDS)
+@pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS)
 @pytest.mark.parametrize("obs_mode", OBS_MODES)
 def test_recordepisode_wrapper_gpu(env_id, obs_mode):
     env = gym.make(
@@ -45,7 +50,7 @@ def test_recordepisode_wrapper_gpu(env_id, obs_mode):
     del env
 
 
-@pytest.mark.parametrize("env_id", ENV_IDS)
+@pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS)
 @pytest.mark.parametrize("obs_mode", OBS_MODES)
 def test_recordepisode_wrapper(env_id, obs_mode):
     env = gym.make(
@@ -68,7 +73,7 @@ def test_recordepisode_wrapper(env_id, obs_mode):
 
 
 @pytest.mark.gpu_sim
-@pytest.mark.parametrize("env_id", ENV_IDS[:1])
+@pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS[:1])
 @pytest.mark.parametrize("obs_mode", OBS_MODES[:1])
 def test_recordepisode_wrapper_gpu_render_sensor(env_id, obs_mode):
     env = gym.make(
@@ -100,7 +105,7 @@ def test_recordepisode_wrapper_gpu_render_sensor(env_id, obs_mode):
     del env
 
 
-@pytest.mark.parametrize("env_id", ENV_IDS)
+@pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS)
 @pytest.mark.parametrize("obs_mode", OBS_MODES)
 def test_recordepisode_wrapper_render_sensor(env_id, obs_mode):
     env = gym.make(
@@ -123,7 +128,7 @@ def test_recordepisode_wrapper_render_sensor(env_id, obs_mode):
 
 
 @pytest.mark.gpu_sim
-@pytest.mark.parametrize("env_id", ENV_IDS[:1])
+@pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS[:1])
 @pytest.mark.parametrize("obs_mode", OBS_MODES[:1])
 def test_recordepisode_wrapper_partial_reset_gpu(env_id, obs_mode):
     env = gym.make(
@@ -156,7 +161,7 @@ def test_recordepisode_wrapper_partial_reset_gpu(env_id, obs_mode):
     del env
 
 
-@pytest.mark.parametrize("env_id", ENV_IDS[:1])
+@pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS[:1])
 @pytest.mark.parametrize("obs_mode", OBS_MODES[:1])
 def test_recordepisode_wrapper_partial_reset(env_id, obs_mode):
     env = gym.make(
@@ -189,7 +194,7 @@ def test_recordepisode_wrapper_partial_reset(env_id, obs_mode):
 
 
 @pytest.mark.gpu_sim
-@pytest.mark.parametrize("env_id", [ENV_IDS[0]])
+@pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS[:1])
 def test_visualencoders_gpu(env_id):
     env = gym.make(
         env_id,
@@ -225,7 +230,7 @@ def test_visualencoders_gpu(env_id):
 
 
 @pytest.mark.gpu_sim
-@pytest.mark.parametrize("env_id", [ENV_IDS[0]])
+@pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS[:1])
 def test_visualencoder_flatten_gpu(env_id):
     env = gym.make(
         env_id,

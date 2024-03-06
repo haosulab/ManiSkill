@@ -1,21 +1,19 @@
 from collections import OrderedDict
-from typing import Union, Dict, Any, List
+from typing import Any, Dict, List, Union
 
 import numpy as np
 import sapien
 import torch
 import torch.nn.functional as F
 
-from mani_skill2.agents.robots import (
-    AllegroHandRightTouch,
-)
+from mani_skill2.agents.robots import AllegroHandRightTouch
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.building.actors import (
-    build_cube,
-    build_actor_ycb,
     MODEL_DBS,
     _load_ycb_dataset,
+    build_actor_ycb,
+    build_cube,
 )
 from mani_skill2.utils.geometry.rotation_conversions import quaternion_apply
 from mani_skill2.utils.registration import register_env
@@ -23,10 +21,9 @@ from mani_skill2.utils.sapien_utils import look_at
 from mani_skill2.utils.scene_builder.table.table_scene_builder import TableSceneBuilder
 from mani_skill2.utils.structs.actor import Actor
 from mani_skill2.utils.structs.pose import Pose, vectorize_pose
-from mani_skill2.utils.structs.types import Array
+from mani_skill2.utils.structs.types import Array, GPUMemoryConfig, SimConfig
 
 
-@register_env("RotateSingleObjectInHand-v1", max_episode_steps=300)
 class RotateSingleObjectInHand(BaseEnv):
     agent: Union[AllegroHandRightTouch]
     _clearance = 0.003
@@ -55,19 +52,21 @@ class RotateSingleObjectInHand(BaseEnv):
             )
         self.difficulty_level = difficulty_level
 
-        num_envs = kwargs.get("num_envs")
-        if num_envs > 1:
-            sapien.physx.set_gpu_memory_config(
-                max_rigid_contact_count=num_envs * max(1024, num_envs) * 8,
-                max_rigid_patch_count=num_envs * max(1024, num_envs) * 2,
-                found_lost_pairs_capacity=2**26,
-            )
-
         super().__init__(*args, robot_uids="allegro_hand_right_touch", **kwargs)
 
         with torch.device(self.device):
             self.prev_unit_vector = torch.zeros((self.num_envs, 3))
             self.cum_rotation_angle = torch.zeros((self.num_envs,))
+
+    @property
+    def sim_cfg(self):
+        return SimConfig(
+            gpu_memory_cfg=GPUMemoryConfig(
+                max_rigid_contact_count=self.num_envs * max(1024, self.num_envs) * 8,
+                max_rigid_patch_count=self.num_envs * max(1024, self.num_envs) * 2,
+                found_lost_pairs_capacity=2**26,
+            )
+        )
 
     def _register_sensors(self):
         pose = look_at(eye=[0.15, 0, 0.45], target=[-0.1, 0, self.hand_init_height])
@@ -144,7 +143,7 @@ class RotateSingleObjectInHand(BaseEnv):
         with torch.device(self.device):
             b = len(env_idx)
             # Initialize object pose
-            self.table_scene.initialize()
+            self.table_scene.initialize(env_idx)
             pose = self.obj.pose
             new_pos = torch.randn((b, 3)) * self.obj_init_pos_noise
             # hand_init_height is robot hand position while the 0.03 is a margin to ensure

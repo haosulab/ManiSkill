@@ -9,6 +9,7 @@ import torch
 from mani_skill2 import PACKAGE_ASSET_DIR
 from mani_skill2.agents.base_agent import BaseAgent
 from mani_skill2.agents.controllers import *
+from mani_skill2.agents.registration import register_agent
 from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.common import compute_angle_between, np_compute_angle_between
 from mani_skill2.utils.sapien_utils import (
@@ -20,6 +21,7 @@ from mani_skill2.utils.sapien_utils import (
 from mani_skill2.utils.structs.actor import Actor
 
 
+@register_agent()
 class Panda(BaseAgent):
     uid = "panda"
     urdf_path = f"{PACKAGE_ASSET_DIR}/robots/panda/panda_v2.urdf"

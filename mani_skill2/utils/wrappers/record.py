@@ -299,9 +299,6 @@ class RecordEpisode(gym.Wrapper):
             else:
                 self.flush_trajectory(env_idxs_to_flush=to_numpy(options["env_idx"]))
 
-        self.last_reset_kwargs = copy.deepcopy(
-            dict(seed=seed, options=options, **kwargs)
-        )
         obs, info = super().reset(*args, seed=seed, options=options, **kwargs)
 
         if self.save_trajectory:
@@ -365,7 +362,11 @@ class RecordEpisode(gym.Wrapper):
                     )
                 if self._trajectory_buffer.fail is not None:
                     recursive_replace(self._trajectory_buffer.fail, first_step.fail)
-
+        if "env_idx" in options:
+            options["env_idx"] = to_numpy(options["env_idx"])
+        self.last_reset_kwargs = copy.deepcopy(
+            dict(seed=seed, options=options, **kwargs)
+        )
         return obs, info
 
     def step(self, action):

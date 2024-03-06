@@ -12,6 +12,7 @@ from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.sapien_utils import look_at
 from mani_skill2.utils.scene_builder import SceneBuilder
+from mani_skill2.utils.scene_builder.registration import REGISTERED_SCENE_BUILDERS
 from mani_skill2.utils.scene_builder.replicacad.scene_builder import (
     ReplicaCADSceneBuilder,
 )
@@ -53,7 +54,7 @@ class SceneManipulationEnv(BaseEnv):
         robot_uids="fetch",
         robot_init_qpos_noise=0.02,
         fixed_scene=True,
-        scene_builder_cls: SceneBuilder = ReplicaCADSceneBuilder,
+        scene_builder_cls: Union[str, SceneBuilder] = "ReplicaCAD",
         convex_decomposition="coacd",
         scene_idxs=None,
         **kwargs
@@ -61,9 +62,11 @@ class SceneManipulationEnv(BaseEnv):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         self.fixed_scene = fixed_scene
         self.sampled_scene_idx: int = None
-        self.scene_builder: SceneBuilder = scene_builder_cls(
-            self, robot_init_qpos_noise=robot_init_qpos_noise
-        )
+        if isinstance(scene_builder_cls, str):
+            scene_builder_cls = REGISTERED_SCENE_BUILDERS[
+                scene_builder_cls
+            ].scene_builder_cls
+        self.scene_builder: SceneBuilder = scene_builder_cls(self)
         if isinstance(scene_idxs, int):
             self.scene_idxs = [scene_idxs]
         elif isinstance(scene_idxs, list):

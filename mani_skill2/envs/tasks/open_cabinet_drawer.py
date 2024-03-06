@@ -22,7 +22,8 @@ from mani_skill2.utils.structs.link import Link
 from mani_skill2.utils.structs.pose import Pose
 
 
-@register_env("OpenCabinetDrawer-v1", max_episode_steps=100)
+# TODO (stao): we need to cut the meshes of all the cabinets in this dataset for gpu sim, not registering task for now
+# @register_env("OpenCabinetDrawer-v1", max_episode_steps=100)
 class OpenCabinetDrawerEnv(BaseEnv):
     """
     Task Description
@@ -258,6 +259,6 @@ class OpenCabinetDrawerEnv(BaseEnv):
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
 
 
-@register_env("OpenCabinetDoor-v1", max_episode_steps=200)
+# @register_env("OpenCabinetDoor-v1", max_episode_steps=200)
 class OpenCabinetDoorEnv(OpenCabinetDrawerEnv):
     handle_types = ["revolute"]

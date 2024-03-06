@@ -115,7 +115,7 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
         if self.scene_dataset == "ProcTHOR":
             # for some reason the scene needs to rotate around y-axis by 90 degrees for ProcTHOR scenes from hssd dataset
             bg_q = transforms3d.quaternions.qmult(
-                q,
+                bg_q,
                 transforms3d.quaternions.axangle2quat(
                     np.array([0, -1, 0]), theta=np.deg2rad(90)
                 ),

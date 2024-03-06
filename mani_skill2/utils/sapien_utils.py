@@ -108,6 +108,8 @@ def _batch(array: Union[Array, Sequence]):
     if isinstance(array, torch.Tensor):
         return array[None, :]
     if isinstance(array, np.ndarray):
+        if array.shape == ():
+            return array.reshape(1, 1)
         return array[None, :]
     if isinstance(array, list):
         if len(array) == 1:

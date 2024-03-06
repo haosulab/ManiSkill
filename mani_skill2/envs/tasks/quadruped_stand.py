@@ -18,7 +18,7 @@ from mani_skill2.utils.sapien_utils import look_at
 from mani_skill2.utils.structs.pose import Pose
 
 
-@register_env("QuadrupedStand-v1", max_episode_steps=200)
+# @register_env("QuadrupedStand-v1", max_episode_steps=200)
 class QuadrupedStandEnv(BaseEnv):
     """
     Task Description

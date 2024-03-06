@@ -9,7 +9,7 @@ from tests.utils import (
     ENV_IDS,
     MULTI_AGENT_ENV_IDS,
     OBS_MODES,
-    ROBOTS,
+    SINGLE_ARM_STATIONARY_ROBOTS,
     STATIONARY_ENV_IDS,
     assert_isinstance,
     assert_obs_equal,
@@ -17,6 +17,17 @@ from tests.utils import (
 
 
 @pytest.mark.parametrize("env_id", ENV_IDS)
+def test_all_envs(env_id):
+    env = gym.make(env_id, obs_mode="state")
+    obs, _ = env.reset()
+    action_space = env.action_space
+    for _ in range(5):
+        obs, rew, terminated, truncated, info = env.step(action_space.sample())
+    env.close()
+    del env
+
+
+@pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS)
 @pytest.mark.parametrize("obs_mode", OBS_MODES)
 def test_envs_obs_modes(env_id, obs_mode):
     env = gym.make(env_id, obs_mode=obs_mode)
@@ -68,7 +79,7 @@ def test_env_seeded_reset():
 
 def test_env_seeded_sequence_reset():
     N = 17
-    env = gym.make(ENV_IDS[0], max_episode_steps=5)
+    env = gym.make(STATIONARY_ENV_IDS[0], max_episode_steps=5)
     obs, _ = env.reset(seed=2000)
     actions = [env.action_space.sample() for _ in range(N)]
     for i in range(N):
@@ -86,7 +97,7 @@ def test_env_seeded_sequence_reset():
 
 
 def test_env_raise_value_error_for_nan_actions():
-    env = gym.make(ENV_IDS[0])
+    env = gym.make(STATIONARY_ENV_IDS[0])
     obs, _ = env.reset(seed=2000)
     with pytest.raises(ValueError):
         env.step(env.action_space.sample() * np.nan)
@@ -94,7 +105,7 @@ def test_env_raise_value_error_for_nan_actions():
     del env
 
 
-@pytest.mark.parametrize("env_id", ENV_IDS)
+@pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS)
 def test_states(env_id):
     env: BaseEnv = gym.make(env_id)
     obs, _ = env.reset(seed=1000)
@@ -112,8 +123,8 @@ def test_states(env_id):
     del env
 
 
-@pytest.mark.parametrize("env_id", ENV_IDS)
-@pytest.mark.parametrize("robot_uids", ROBOTS)
+@pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS)
+@pytest.mark.parametrize("robot_uids", SINGLE_ARM_STATIONARY_ROBOTS)
 def test_robots(env_id, robot_uids):
     if env_id in [
         "PandaAvoidObstacles-v0",

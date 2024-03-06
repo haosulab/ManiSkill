@@ -4,15 +4,11 @@ import numpy as np
 import torch
 
 from mani_skill2.utils.common import flatten_dict_keys
+from mani_skill2.utils.registration import REGISTERED_ENVS
 from mani_skill2.utils.sapien_utils import to_numpy
 
 # TODO (stao): reactivate old tasks once fixed
-ENV_IDS = [
-    # "LiftCube-v0",
-    "PickCube-v1",
-    "StackCube-v1",
-    "PickSingleYCB-v1",
-]
+ENV_IDS = list(REGISTERED_ENVS.keys())
 MULTI_AGENT_ENV_IDS = ["TwoRobotStackCube-v1", "TwoRobotPickCube-v1"]
 
 STATIONARY_ENV_IDS = [
@@ -51,7 +47,7 @@ VENV_OBS_MODES = [
     # "rgbd_robot_seg",
     # "pointcloud_robot_seg",
 ]
-ROBOTS = ["panda", "xmate3_robotiq"]
+SINGLE_ARM_STATIONARY_ROBOTS = ["panda", "xmate3_robotiq"]
 
 LOW_MEM_SIM_CFG = dict(
     gpu_memory_cfg=dict(max_rigid_patch_count=81920, found_lost_pairs_capacity=262144)

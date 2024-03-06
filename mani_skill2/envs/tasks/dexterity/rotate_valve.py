@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import Union, Dict, Any, List
+from typing import Any, Dict, List, Union
 
 import numpy as np
 import torch
@@ -11,8 +11,7 @@ from mani_skill2.sensors.camera import CameraConfig
 from mani_skill2.utils.building.articulations import build_robel_valve
 from mani_skill2.utils.geometry.rotation_conversions import axis_angle_to_quaternion
 from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import get_obj_by_name
-from mani_skill2.utils.sapien_utils import look_at
+from mani_skill2.utils.sapien_utils import get_obj_by_name, look_at
 from mani_skill2.utils.scene_builder.table.table_scene_builder import TableSceneBuilder
 from mani_skill2.utils.structs.articulation import Articulation
 from mani_skill2.utils.structs.pose import Pose, vectorize_pose
@@ -138,7 +137,7 @@ class RotateValveEnv(BaseEnv):
     def _initialize_actors(self, env_idx: torch.Tensor):
         with torch.device(self.device):
             b = len(env_idx)
-            self.table_scene.initialize()
+            self.table_scene.initialize(env_idx)
 
             # Initialize task related information
             if self.difficulty_level <= 3:

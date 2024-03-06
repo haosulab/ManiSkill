@@ -16,13 +16,15 @@ from mani_skill2 import ASSET_DIR
 from mani_skill2.agents.robots.fetch.fetch import FETCH_UNIQUE_COLLISION_BIT, Fetch
 from mani_skill2.envs.scene import ManiSkillScene
 from mani_skill2.utils.scene_builder import SceneBuilder
+from mani_skill2.utils.scene_builder.registration import register_scene_builder
 from mani_skill2.utils.structs.articulation import Articulation
 
 DATASET_CONFIG_DIR = osp.join(osp.dirname(__file__), "metadata")
 
 
+@register_scene_builder("ReplicaCAD")
 class ReplicaCADSceneBuilder(SceneBuilder):
-    builds_lighting = True
+    builds_lighting = True  # we set this true because the ReplicaCAD dataset defines some lighting for us so we don't need the default option from ManiSkill
 
     def __init__(self, env, robot_init_qpos_noise=0.02):
         super().__init__(env, robot_init_qpos_noise)
@@ -142,11 +144,6 @@ class ReplicaCADSceneBuilder(SceneBuilder):
             template_name = articulated_meta["template_name"]
             pos = articulated_meta["translation"]
             rot = articulated_meta["rotation"]
-            # articulated_cfg_path = osp.join(
-            #     ASSET_DIR,
-            #     "scene_datasets/replica_cad_dataset/urdf/objects",
-            #     f"{osp.basename(obj_meta['template_name'])}.object_config.json",
-            # )
             urdf_path = osp.join(
                 ASSET_DIR,
                 f"scene_datasets/replica_cad_dataset/urdf/{template_name}/{template_name}.urdf",
@@ -184,7 +181,7 @@ class ReplicaCADSceneBuilder(SceneBuilder):
                 )
         scene.set_ambient_light([0.3, 0.3, 0.3])
 
-    def initialize(self, env_idx):
+    def initialize(self, env_idx: torch.Tensor):
         if self.env.robot_uids == "fetch":
             agent: Fetch = self.env.agent
             agent.reset(agent.RESTING_QPOS)
@@ -200,14 +197,13 @@ class ReplicaCADSceneBuilder(SceneBuilder):
         else:
             raise NotImplementedError(self.env.robot_uids)
         for obj, pose in self.default_object_poses:
-            # TODO (stao): It's not super clear if sleeping objects works on GPU but appears to improve FPS a little.
             obj.set_pose(pose)
             if isinstance(obj, Articulation):
-                obj.set_qpos(obj.qpos * 0)
+                # note that during initialization you may only ever change poses/qpos of objects in scenes being reset
+                obj.set_qpos(obj.qpos[0] * 0)
         # TODO (stao): settle objects for a few steps then save poses again on first run?
 
     def disable_fetch_ground_collisions(self):
-        # TODO (stao) (arth): is there a better way to model robots in sim. This feels very unintuitive.
         for body in self.bg._bodies:
             cs = body.get_collision_shapes()[0]
             cg = cs.get_collision_groups()

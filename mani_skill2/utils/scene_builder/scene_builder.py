@@ -7,6 +7,8 @@ from mani_skill2.utils.structs.actor import Actor
 
 
 class SceneBuilder:
+    """Base class for defining scene builders that can be reused across tasks"""
+
     env: BaseEnv
     _scene_objects: List[Actor] = []
     _movable_objects: List[Actor] = []

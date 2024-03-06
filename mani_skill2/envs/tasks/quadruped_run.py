@@ -19,7 +19,7 @@ from mani_skill2.utils.structs.pose import Pose
 from mani_skill2.utils.structs.types import GPUMemoryConfig, SceneConfig, SimConfig
 
 
-@register_env("QuadrupedRun-v1", max_episode_steps=200)
+# @register_env("QuadrupedRun-v1", max_episode_steps=200)
 class QuadrupedRunEnv(BaseEnv):
     """
     Task Description

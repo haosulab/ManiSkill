@@ -6,17 +6,15 @@ import torch
 from mani_skill2 import PACKAGE_ASSET_DIR
 from mani_skill2.agents.base_agent import BaseAgent
 from mani_skill2.agents.controllers import *
-from mani_skill2.agents.utils import (
-    get_active_joint_indices,
-)
-from mani_skill2.utils.sapien_utils import (
-    get_objs_by_names,
-)
+from mani_skill2.agents.registration import register_agent
+from mani_skill2.agents.utils import get_active_joint_indices
+from mani_skill2.utils.sapien_utils import get_objs_by_names
 from mani_skill2.utils.structs.joint import Joint
 from mani_skill2.utils.structs.link import Link
 from mani_skill2.utils.structs.pose import vectorize_pose
 
 
+@register_agent()
 class DClaw(BaseAgent):
     uid = "dclaw"
     urdf_path = f"{PACKAGE_ASSET_DIR}/robots/dclaw/dclaw_gripper_glb.urdf"

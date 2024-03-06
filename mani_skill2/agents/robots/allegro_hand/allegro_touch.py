@@ -1,5 +1,5 @@
 import itertools
-from typing import List, Dict, Tuple, Optional
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import sapien
@@ -7,16 +7,18 @@ import torch
 from sapien import physx
 
 from mani_skill2 import PACKAGE_ASSET_DIR
+from mani_skill2.agents.registration import register_agent
 from mani_skill2.agents.robots.allegro_hand.allegro import AllegroHandRight
 from mani_skill2.utils.sapien_utils import (
     compute_total_impulse,
-    get_multiple_pairwise_contacts,
     get_actors_contacts,
+    get_multiple_pairwise_contacts,
+    get_objs_by_names,
 )
-from mani_skill2.utils.sapien_utils import get_objs_by_names
 from mani_skill2.utils.structs.actor import Actor
 
 
+@register_agent()
 class AllegroHandRightTouch(AllegroHandRight):
     uid = "allegro_hand_right_touch"
     urdf_path = f"{PACKAGE_ASSET_DIR}/robots/allegro/variation/allegro_hand_right_fsr_simple.urdf"

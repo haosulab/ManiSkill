@@ -7,9 +7,6 @@ import sapien
 import torch
 from transforms3d.euler import euler2quat
 
-from mani_skill2.agents.robots import (  # a dictionary mapping robot name to robot class that inherits BaseAgent
-    ROBOTS,
-)
 from mani_skill2.agents.robots.panda.panda import Panda
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
@@ -128,7 +125,7 @@ class FMBAssembly1Env(BaseEnv):
         self.bridge_grasp = builder.build_kinematic(name="bridge_grasp")
 
     def _initialize_actors(self, env_idx: torch.Tensor):
-        self.table_scene.initialize()
+        self.table_scene.initialize(env_idx)
         offset_pose = sapien.Pose(p=[0.02, -0.115, 0], q=euler2quat(0, 0, np.pi / 2))
         self.board.set_pose(
             sapien.Pose(p=np.array([0.115, 0.115, 0.034444])) * offset_pose

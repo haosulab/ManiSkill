@@ -132,7 +132,7 @@ class PushCubeEnv(BaseEnv):
             b = len(env_idx)
             # when using scene builders, you must always call .initialize on them so they can set the correct poses of objects in the prebuilt scene
             # note that the table scene is built such that z=0 is the surface of the table.
-            self.table_scene.initialize()
+            self.table_scene.initialize(env_idx)
 
             # here we write some randomization code that randomizes the x, y position of the cube we are pushing in the range [-0.1, -0.1] to [0.1, 0.1]
             xyz = torch.zeros((b, 3))

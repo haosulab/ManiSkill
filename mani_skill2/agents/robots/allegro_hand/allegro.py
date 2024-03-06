@@ -7,13 +7,12 @@ import torch
 from mani_skill2 import PACKAGE_ASSET_DIR
 from mani_skill2.agents.base_agent import BaseAgent
 from mani_skill2.agents.controllers import *
-from mani_skill2.utils.sapien_utils import (
-    get_obj_by_name,
-)
-from mani_skill2.utils.sapien_utils import get_objs_by_names
+from mani_skill2.agents.registration import register_agent
+from mani_skill2.utils.sapien_utils import get_obj_by_name, get_objs_by_names
 from mani_skill2.utils.structs.pose import vectorize_pose
 
 
+@register_agent()
 class AllegroHandRight(BaseAgent):
     uid = "allegro_hand_right"
     urdf_path = f"{PACKAGE_ASSET_DIR}/robots/allegro/allegro_hand_right_glb.urdf"
@@ -146,6 +145,7 @@ class AllegroHandRight(BaseAgent):
         return vectorize_pose(self.palm_link.pose)
 
 
+@register_agent()
 class AllegroHandLeft(AllegroHandRight):
     uid = "allegro_hand_left"
     urdf_path = f"{PACKAGE_ASSET_DIR}/robots/allegro/allegro_hand_left.urdf"

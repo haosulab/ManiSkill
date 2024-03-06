@@ -22,7 +22,7 @@ setup(
         "numpy>=1.22",
         "scipy",
         "gymnasium>=0.28.1",
-        "sapien==3.0.0.dev0",
+        # "sapien==3.0.0.dev0",
         "h5py",
         "pyyaml",
         "tqdm",

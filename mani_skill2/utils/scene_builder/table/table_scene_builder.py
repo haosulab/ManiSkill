@@ -5,13 +5,17 @@ from typing import List
 import numpy as np
 import sapien
 import sapien.render
+import torch
 from transforms3d.euler import euler2quat
 
 from mani_skill2.agents.multi_agent import MultiAgent
 from mani_skill2.agents.robots.fetch import FETCH_UNIQUE_COLLISION_BIT
 from mani_skill2.utils.building.ground import build_ground
 from mani_skill2.utils.scene_builder import SceneBuilder
+from mani_skill2.utils.scene_builder.registration import register_scene_builder
 
+
+@register_scene_builder("table-top-scene")
 class TableSceneBuilder(SceneBuilder):
     robot_init_qpos_noise: float = 0.02
 
@@ -44,7 +48,7 @@ class TableSceneBuilder(SceneBuilder):
         self.table = table
         self._scene_objects: List[sapien.Entity] = [self.table, self.ground]
 
-    def initialize(self):
+    def initialize(self, env_idx: torch.Tensor):
         # table_height = 0.9196429
         self.table.set_pose(
             sapien.Pose(p=[-0.12, 0, -self.table_height], q=euler2quat(0, 0, np.pi / 2))
