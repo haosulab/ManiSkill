@@ -8,7 +8,7 @@ import numpy as np
 import sapien.physx as physx
 import torch
 
-from mani_skill2.utils.sapien_utils import to_tensor
+from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.structs.base import BaseStruct
 from mani_skill2.utils.structs.decorators import before_gpu_init
 from mani_skill2.utils.structs.link import Link
@@ -49,7 +49,7 @@ class Joint(BaseStruct[physx.PhysxArticulationJoint]):
     ):
         # naming convention of the original physx joints is "scene-<id>-<articulation_name>_<original_joint_name>"
         shared_name = "_".join(
-            physx_joints[0].name.replace(articulation.name, "").split("_")[1:]
+            physx_joints[0].name.replace(articulation.name, "", 1).split("_")[1:]
         )
         child_link = None
         parent_link = None
@@ -58,7 +58,7 @@ class Joint(BaseStruct[physx.PhysxArticulationJoint]):
                 child_link = articulation.link_map[
                     "_".join(
                         physx_joints[0]
-                        .child_link.name.replace(articulation.name, "")
+                        .child_link.name.replace(articulation.name, "", 1)
                         .split("_")[1:]
                     )
                 ]
@@ -66,7 +66,7 @@ class Joint(BaseStruct[physx.PhysxArticulationJoint]):
                 parent_link = articulation.link_map[
                     "_".join(
                         physx_joints[0]
-                        .parent_link.name.replace(articulation.name, "")
+                        .parent_link.name.replace(articulation.name, "", 1)
                         .split("_")[1:]
                     )
                 ]
@@ -194,7 +194,7 @@ class Joint(BaseStruct[physx.PhysxArticulationJoint]):
     @drive_target.setter
     def drive_target(self, arg1: Array) -> None:
         if physx.is_gpu_enabled():
-            arg1 = to_tensor(arg1)
+            arg1 = sapien_utils.to_tensor(arg1)
             raise NotImplementedError(
                 "Setting drive targets of individual joints is not implemented yet."
             )
@@ -217,7 +217,7 @@ class Joint(BaseStruct[physx.PhysxArticulationJoint]):
     @drive_velocity_target.setter
     def drive_velocity_target(self, arg1: Array) -> None:
         if physx.is_gpu_enabled():
-            arg1 = to_tensor(arg1)
+            arg1 = sapien_utils.to_tensor(arg1)
             raise NotImplementedError(
                 "Cannot set drive velocity targets at the moment in GPU simulation"
             )

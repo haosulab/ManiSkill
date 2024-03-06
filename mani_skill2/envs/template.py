@@ -31,9 +31,9 @@ from mani_skill2.agents.robots.fetch.fetch import Fetch
 from mani_skill2.agents.robots.panda.panda import Panda
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
+from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.building import actors
 from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import look_at
 from mani_skill2.utils.structs.types import GPUMemoryConfig, SimConfig
 
 
@@ -72,7 +72,7 @@ class CustomEnv(BaseEnv):
     # Specify default simulation/gpu memory configurations. Note that tasks need to tune their GPU memory configurations accordingly
     # in order to save memory while also running with no errors. In general you can start with low values and increase them
     # depending on the messages that show up when you try to run more environments in parallel
-    sim_cfg = SimConfig(
+    default_sim_cfg = SimConfig(
         gpu_memory_cfg=GPUMemoryConfig(
             found_lost_pairs_capacity=2**25, max_rigid_patch_count=2**18
         )
@@ -95,9 +95,9 @@ class CustomEnv(BaseEnv):
     def _register_sensors(self):
         # To customize the sensors that capture images/pointclouds for the environment observations,
         # simply define a CameraConfig as done below for Camera sensors. You can add multiple sensors by returning a list
-        pose = look_at(
+        pose = sapien_utils.look_at(
             eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1]
-        )  # look_at is a utility to get the pose of a camera that looks at a target
+        )  # sapien_utils.look_at is a utility to get the pose of a camera that looks at a target
 
         # to see what all the sensors capture in the environment for observations, run env.render_sensors() which returns an rgb array you can visualize
         return [
@@ -106,7 +106,7 @@ class CustomEnv(BaseEnv):
 
     def _register_human_render_cameras(self):
         # this is just like _register_sensors, but for adding cameras used for rendering when you call env.render() when render_mode="rgb_array" or env.render_rgb_array()
-        pose = look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
+        pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
 
     def _setup_sensors(self):
@@ -187,16 +187,17 @@ class CustomEnv(BaseEnv):
         max_reward = 1.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
 
-    def get_state(self):
+    def get_state_dict(self):
         # this function is important in order to allow accurate replaying of trajectories. Make sure to specify any
         # non simulation state related data such as a random 3D goal position you generated
-        # alternatively you can skip this part if the environment's rewards, observations, success etc. are dependent on simulation data
+        # alternatively you can skip this part if the environment's rewards, observations, eval etc. are dependent on simulation data only
         # e.g. self.your_custom_actor.pose.p will always give you your actor's 3D position
-        state = super().get_state()
-        return torch.hstack([state, self.goal_pos])
+        state = super().get_state_dict()
+        # state["goal_pos"] = add_your_non_sim_state_data_here
+        return state
 
-    def set_state(self, state):
+    def set_state_dict(self, state):
         # this function complements get_state and sets any non simulation state related data correctly so the environment behaves
         # the exact same in terms of output rewards, observations, success etc. should you reset state to a given state and take the same actions
-        self.goal_pos = state[:, -3:]
-        super().set_state(state[:, :-3])
+        self.goal_pos = state["goal_pos"]
+        super().set_state_dict(state)

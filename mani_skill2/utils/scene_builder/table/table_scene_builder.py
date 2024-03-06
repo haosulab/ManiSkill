@@ -5,6 +5,7 @@ from typing import List
 import numpy as np
 import sapien
 import sapien.render
+import torch
 from transforms3d.euler import euler2quat
 
 from mani_skill2.agents.multi_agent import MultiAgent
@@ -13,6 +14,7 @@ from mani_skill2.utils.building.ground import build_ground
 from mani_skill2.utils.scene_builder import SceneBuilder
 
 
+# TODO (stao): make the build and initialize api consistent with other scenes
 class TableSceneBuilder(SceneBuilder):
     robot_init_qpos_noise: float = 0.02
 
@@ -45,7 +47,7 @@ class TableSceneBuilder(SceneBuilder):
         self.table = table
         self._scene_objects: List[sapien.Entity] = [self.table, self.ground]
 
-    def initialize(self):
+    def initialize(self, env_idx: torch.Tensor):
         # table_height = 0.9196429
         self.table.set_pose(
             sapien.Pose(p=[-0.12, 0, -self.table_height], q=euler2quat(0, 0, np.pi / 2))
@@ -113,13 +115,11 @@ class TableSceneBuilder(SceneBuilder):
             self.env.agent.robot.set_pose(sapien.Pose([-1.05, 0, -self.table_height]))
 
             # TODO (stao) (arth): is there a better way to model robots in sim. This feels very unintuitive.
-            for obj in self.ground._objs:
-                cs = obj.find_component_by_type(
-                    sapien.physx.PhysxRigidStaticComponent
-                ).get_collision_shapes()[0]
-                cg = cs.get_collision_groups()
-                cg[2] |= FETCH_UNIQUE_COLLISION_BIT
-                cs.set_collision_groups(cg)
+            for body in self.ground._bodies:
+                for cs in body.get_collision_shapes():
+                    cg = cs.get_collision_groups()
+                    cg[2] |= FETCH_UNIQUE_COLLISION_BIT
+                    cs.set_collision_groups(cg)
         elif self.env.robot_uids == ("panda", "panda"):
             agent: MultiAgent = self.env.agent
             qpos = np.array(

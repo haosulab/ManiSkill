@@ -11,9 +11,9 @@ from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.envs.utils.randomization.pose import random_quaternions
 from mani_skill2.envs.utils.randomization.samplers import UniformPlacementSampler
 from mani_skill2.sensors.camera import CameraConfig
+from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.building.actors import build_cube
 from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import look_at, to_tensor
 from mani_skill2.utils.scene_builder.table.table_scene_builder import TableSceneBuilder
 from mani_skill2.utils.structs.pose import Pose
 from mani_skill2.utils.structs.types import GPUMemoryConfig, SimConfig
@@ -42,28 +42,23 @@ class StackCubeEnv(BaseEnv):
 
     SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
     agent: Union[Panda, Xmate3Robotiq, Fetch]
-    sim_cfg = SimConfig(
-        gpu_memory_cfg=GPUMemoryConfig(
-            found_lost_pairs_capacity=2**25, max_rigid_patch_count=2**18
-        )
-    )
 
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     def _register_sensors(self):
-        pose = look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
+        pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
         return [
             CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10)
         ]
 
     def _register_human_render_cameras(self):
-        pose = look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
+        pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
 
     def _load_actors(self):
-        self.cube_half_size = to_tensor([0.02] * 3)
+        self.cube_half_size = sapien_utils.to_tensor([0.02] * 3)
         self.table_scene = TableSceneBuilder(
             env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
         )
@@ -78,7 +73,7 @@ class StackCubeEnv(BaseEnv):
     def _initialize_actors(self, env_idx: torch.Tensor):
         with torch.device(self.device):
             b = len(env_idx)
-            self.table_scene.initialize()
+            self.table_scene.initialize(env_idx)
 
             xyz = torch.zeros((b, 3))
             xyz[:, 2] = 0.02

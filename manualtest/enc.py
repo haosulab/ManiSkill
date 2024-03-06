@@ -3,7 +3,7 @@ import numpy as np
 import sapien
 
 import mani_skill2.envs
-from mani_skill2.utils.sapien_utils import to_numpy
+from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.wrappers import RecordEpisode
 from mani_skill2.utils.wrappers.visual_encoders import VisualEncoderWrapper
 
@@ -66,7 +66,9 @@ if __name__ == "__main__":
                 # TODO (stao): on cpu sim, -1 here goes up, gpu sim -1 goes down?
                 # action[:, 2] = -1
                 obs, rew, terminated, truncated, info = env.step(action)
-                done = np.logical_or(to_numpy(terminated), to_numpy(truncated))
+                done = np.logical_or(
+                    sapien_utils.to_numpy(terminated), sapien_utils.to_numpy(truncated)
+                )
                 if num_envs == 1:
                     env.render_human()
                 done = done.any()

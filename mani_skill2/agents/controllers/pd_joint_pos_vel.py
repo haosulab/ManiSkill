@@ -5,12 +5,12 @@ import numpy as np
 import torch
 from gymnasium import spaces
 
-from .base_controller import BaseController, ControllerConfig
 from .pd_joint_pos import PDJointPosController, PDJointPosControllerConfig
 
 
 class PDJointPosVelController(PDJointPosController):
     config: "PDJointPosVelControllerConfig"
+    _target_qvel = None
 
     def _initialize_action_space(self):
         joint_limits = self._get_joint_limits()
@@ -23,7 +23,9 @@ class PDJointPosVelController(PDJointPosController):
 
     def reset(self):
         super().reset()
-        self._target_qvel = np.zeros_like(self._target_qpos)
+        self._target_qvel[self.scene._reset_mask] = torch.zeros_like(
+            self._target_qpos[self.scene._reset_mask], device=self.device
+        )
 
     def set_drive_velocity_targets(self, targets):
         self.articulation.set_joint_drive_velocity_targets(

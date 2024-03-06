@@ -1,19 +1,13 @@
-# py-spy record -f speedscope -r 1000 -o profile -- python manualtest/benchmark_gpu_sim.py
-# python manualtest/benchmark_orbit_sim.py --task "Isaac-Lift-Cube-Franka-v0" --num_envs 512 --headless
 import argparse
-import time
 
 import gymnasium as gym
 import numpy as np
-import sapien
 import sapien.physx
 import sapien.render
 import torch
 import tqdm
 
 import mani_skill2.envs
-from mani_skill2.utils.scene_builder.ai2thor.variants import ArchitecTHORSceneBuilder
-from mani_skill2.utils.scene_builder.replicacad.scene_builder import ReplicaCADSceneBuilder
 from mani_skill2.vector.wrappers.gymnasium import ManiSkillVectorEnv
 from profiling import Profiler
 from mani_skill2.utils.visualization.misc import images_to_video, tile_images

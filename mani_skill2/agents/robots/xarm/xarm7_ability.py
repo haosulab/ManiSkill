@@ -6,12 +6,11 @@ import sapien.physx as physx
 from mani_skill2 import PACKAGE_ASSET_DIR
 from mani_skill2.agents.base_agent import BaseAgent
 from mani_skill2.agents.controllers import *
-from mani_skill2.utils.sapien_utils import (
-    get_obj_by_name,
-    get_objs_by_names,
-)
+from mani_skill2.agents.registration import register_agent
+from mani_skill2.utils import sapien_utils
 
 
+@register_agent()
 class XArm7Ability(BaseAgent):
     uid = "xarm7_ability"
     urdf_path = f"{PACKAGE_ASSET_DIR}/robots/xarm7/xarm7_ability_right_hand.urdf"
@@ -156,7 +155,7 @@ class XArm7Ability(BaseAgent):
             "ring_L2",
             "pinky_L2",
         ]
-        self.hand_front_links = get_objs_by_names(
+        self.hand_front_links = sapien_utils.get_objs_by_names(
             self.robot.get_links(), hand_front_link_names
         )
 
@@ -167,10 +166,12 @@ class XArm7Ability(BaseAgent):
             "ring_tip",
             "pinky_tip",
         ]
-        self.finger_tip_links = get_objs_by_names(
+        self.finger_tip_links = sapien_utils.get_objs_by_names(
             self.robot.get_links(), finger_tip_link_names
         )
 
-        self.tcp = get_obj_by_name(self.robot.get_links(), self.ee_link_name)
+        self.tcp = sapien_utils.get_obj_by_name(
+            self.robot.get_links(), self.ee_link_name
+        )
 
         self.queries: Dict[str, Tuple[physx.PhysxGpuContactQuery, Tuple[int]]] = dict()

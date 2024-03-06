@@ -1,21 +1,20 @@
 from copy import deepcopy
 from typing import List
 
-import sapien
 import torch
 
 from mani_skill2 import PACKAGE_ASSET_DIR
 from mani_skill2.agents.base_agent import BaseAgent
 from mani_skill2.agents.controllers import *
-from mani_skill2.agents.utils import (
-    get_active_joint_indices,
-)
-from mani_skill2.utils.sapien_utils import (
-    get_objs_by_names,
-)
+from mani_skill2.agents.registration import register_agent
+from mani_skill2.agents.utils import get_active_joint_indices
+from mani_skill2.utils import sapien_utils
+from mani_skill2.utils.structs.joint import Joint
+from mani_skill2.utils.structs.link import Link
 from mani_skill2.utils.structs.pose import vectorize_pose
 
 
+@register_agent()
 class DClaw(BaseAgent):
     uid = "dclaw"
     urdf_path = f"{PACKAGE_ASSET_DIR}/robots/dclaw/dclaw_gripper_glb.urdf"
@@ -53,10 +52,10 @@ class DClaw(BaseAgent):
         super().__init__(*args, **kwargs)
 
     def _after_init(self):
-        self.tip_links: List[sapien.Entity] = get_objs_by_names(
+        self.tip_links: List[Link] = sapien_utils.get_objs_by_names(
             self.robot.get_links(), self.tip_link_names
         )
-        self.root_joints = [
+        self.root_joints: List[Joint] = [
             self.robot.find_joint_by_name(n) for n in self.root_joint_names
         ]
         self.root_joint_indices = get_active_joint_indices(
@@ -89,43 +88,10 @@ class DClaw(BaseAgent):
         joint_target_delta_pos = deepcopy(joint_delta_pos)
         joint_target_delta_pos.use_target = True
 
-        # PD joint velocity
-        pd_joint_vel = PDJointVelControllerConfig(
-            self.joint_names,
-            -1.0,
-            1.0,
-            self.joint_damping,  # this might need to be tuned separately
-            self.joint_force_limit,
-        )
-
-        # PD joint position and velocity
-        joint_pos_vel = PDJointPosVelControllerConfig(
-            self.joint_names,
-            None,
-            None,
-            self.joint_stiffness,
-            self.joint_damping,
-            self.joint_force_limit,
-            normalize_action=False,
-        )
-        joint_delta_pos_vel = PDJointPosVelControllerConfig(
-            self.joint_names,
-            -0.1,
-            0.1,
-            self.joint_stiffness,
-            self.joint_damping,
-            self.joint_force_limit,
-            use_delta=True,
-        )
-
         controller_configs = dict(
             pd_joint_delta_pos=dict(joint=joint_delta_pos),
             pd_joint_pos=dict(joint=joint_pos),
             pd_joint_target_delta_pos=dict(joint=joint_target_delta_pos),
-            # Caution to use the following controllers
-            pd_joint_vel=dict(joint=pd_joint_vel),
-            pd_joint_pos_vel=dict(joint=joint_pos_vel),
-            pd_joint_delta_pos_vel=dict(joint=joint_delta_pos_vel),
         )
 
         # Make a deepcopy in case users modify any config
@@ -136,7 +102,7 @@ class DClaw(BaseAgent):
         Get the proprioceptive state of the agent.
         """
         obs = super().get_proprioception()
-        obs.update({"tip_poses": self.tip_poses.view(-1, 21)})
+        obs.update({"tip_poses": self.tip_poses.view(-1, len(self.tip_links) * 7)})
 
         return obs
 
@@ -146,4 +112,4 @@ class DClaw(BaseAgent):
         Get the tip pose for each of the finger, three fingers in total
         """
         tip_poses = [vectorize_pose(link.pose) for link in self.tip_links]
-        return torch.stack(tip_poses, dim=-1)
+        return torch.stack(tip_poses, dim=-2)

@@ -10,9 +10,9 @@ from mani_skill2.agents.robots.panda.panda import Panda
 from mani_skill2.agents.robots.xmate3.xmate3 import Xmate3Robotiq
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
+from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.building.actors import build_cube, build_sphere
 from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import look_at
 from mani_skill2.utils.scene_builder.table.table_scene_builder import TableSceneBuilder
 from mani_skill2.utils.structs.pose import Pose
 from mani_skill2.utils.structs.types import GPUMemoryConfig, SimConfig
@@ -42,11 +42,6 @@ class PickCubeEnv(BaseEnv):
     """
 
     SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
-    sim_cfg = SimConfig(
-        gpu_memory_cfg=GPUMemoryConfig(
-            found_lost_pairs_capacity=2**25, max_rigid_patch_count=2**18
-        )
-    )
     agent: Union[Panda, Xmate3Robotiq, Fetch]
     cube_half_size = 0.02
     goal_thresh = 0.025
@@ -56,13 +51,13 @@ class PickCubeEnv(BaseEnv):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     def _register_sensors(self):
-        pose = look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
+        pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
         return [
             CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10)
         ]
 
     def _register_human_render_cameras(self):
-        pose = look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
+        pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
 
     def _load_actors(self):
@@ -86,7 +81,7 @@ class PickCubeEnv(BaseEnv):
     def _initialize_actors(self, env_idx: torch.Tensor):
         with torch.device(self.device):
             b = len(env_idx)
-            self.table_scene.initialize()
+            self.table_scene.initialize(env_idx)
             xyz = torch.zeros((b, 3))
             xyz[:, :2] = torch.rand((b, 2)) * 0.2 - 0.1
             xyz[:, 2] = self.cube_half_size
@@ -104,7 +99,7 @@ class PickCubeEnv(BaseEnv):
         )
         if "state" in self.obs_mode:
             obs.update(
-                obs_pose=self.cube.pose.raw_pose,
+                obj_pose=self.cube.pose.raw_pose,
                 tcp_to_obj_pos=self.cube.pose.p - self.agent.tcp.pose.p,
                 obj_to_goal_pos=self.goal_site.pose.p - self.cube.pose.p,
             )
@@ -117,7 +112,7 @@ class PickCubeEnv(BaseEnv):
         )
         is_robot_static = self.agent.is_static(0.2)
         return {
-            "success": torch.logical_and(is_obj_placed, is_robot_static),
+            "success": is_obj_placed & is_robot_static,
             "is_obj_placed": is_obj_placed,
             "is_robot_static": is_robot_static,
         }
