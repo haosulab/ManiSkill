@@ -5,6 +5,7 @@ from collections import OrderedDict
 from functools import cached_property
 from typing import Any, Dict, List, Sequence, Tuple, Union
 
+import dacite
 import gymnasium as gym
 import numpy as np
 import sapien
@@ -158,16 +159,13 @@ class BaseEnv(gym.Env):
             self.device = torch.device("cpu")
         if isinstance(sim_cfg, SimConfig):
             sim_cfg = sim_cfg.dict()
-        else:
-            # TODO (stao): type check dictionary with dacite
-            pass
-
         merged_gpu_sim_cfg = self.default_sim_cfg.dict()
         dict_merge(merged_gpu_sim_cfg, sim_cfg)
-        self.sim_cfg = SimConfig(**merged_gpu_sim_cfg)
+        self.sim_cfg = dacite.from_dict(data_class=SimConfig, data=merged_gpu_sim_cfg, config=dacite.Config(strict=True))
+        """the final sim config after merging user overrides with the environment default"""
         # TODO (stao): there may be a memory leak or some issue with memory not being released when repeatedly creating and closing environments with high memory requirements
         # test withg pytest tests/ -m "not slow and gpu_sim" --pdb
-        sapien.physx.set_gpu_memory_config(**self.sim_cfg.gpu_memory_cfg)
+        sapien.physx.set_gpu_memory_config(**self.sim_cfg.gpu_memory_cfg.dict())
         self.shader_dir = shader_dir
         if self.shader_dir == "default":
             sapien.render.set_camera_shader_dir("minimal")

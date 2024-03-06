@@ -60,8 +60,8 @@ class PushCubeEnv(BaseEnv):
     # Specify some supported robot types
     agent: Union[Panda, Xmate3Robotiq, Fetch]
 
-    # Specify default simulation/gpu memory configurations.
-    sim_cfg = SimConfig(
+    # Specify default simulation/gpu memory configurations to override any default values
+    default_sim_cfg = SimConfig(
         gpu_memory_cfg=GPUMemoryConfig(
             found_lost_pairs_capacity=2**25, max_rigid_patch_count=2**18
         )

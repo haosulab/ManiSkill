@@ -24,7 +24,10 @@ from tests.utils import (
 @pytest.mark.gpu_sim
 @pytest.mark.parametrize("env_id", ENV_IDS)
 def test_all_envs(env_id):
-    env = gym.make(env_id, num_envs=16, obs_mode="state", sim_cfg=LOW_MEM_SIM_CFG)
+    sim_cfg = dict()
+    if "Scene" not in env_id:
+        sim_cfg = LOW_MEM_SIM_CFG
+    env = gym.make(env_id, num_envs=16, obs_mode="state", sim_cfg=sim_cfg)
     obs, _ = env.reset()
     action_space = env.action_space
     for _ in range(5):

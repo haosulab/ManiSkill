@@ -47,7 +47,7 @@ class QuadrupedRunEnv(BaseEnv):
     gpu_found_lost_aggregate_pairs_capacity: 33554432
     gpu_total_aggregate_pairs_capacity: 4194304
     """
-    sim_cfg = SimConfig(
+    default_sim_cfg = SimConfig(
         sim_freq=100,
         control_freq=50,
         gpu_memory_cfg=GPUMemoryConfig(

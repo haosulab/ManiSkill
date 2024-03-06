@@ -21,6 +21,7 @@ setup(
     install_requires=[
         "numpy>=1.22",
         "scipy",
+        "dacite",
         "gymnasium>=0.28.1",
         # "sapien==3.0.0.dev0",
         "h5py",

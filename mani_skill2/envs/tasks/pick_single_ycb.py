@@ -51,11 +51,6 @@ class PickSingleYCBEnv(BaseEnv):
 
     SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
     agent: Union[Panda, Xmate3Robotiq, Fetch]
-    sim_cfg = SimConfig(
-        gpu_memory_cfg=GPUMemoryConfig(
-            found_lost_pairs_capacity=2**25, max_rigid_patch_count=2**18
-        )
-    )
     goal_thresh = 0.025
 
     def __init__(

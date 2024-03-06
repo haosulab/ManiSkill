@@ -19,8 +19,8 @@ from mani_skill2.utils.structs.types import GPUMemoryConfig, SimConfig
 @register_env("SceneManipulation-v1", max_episode_steps=200)
 class SceneManipulationEnv(BaseEnv):
     """
-    A base environment for simulating manipulation tasks in more complex scenes. Creating this environment is only useful for explorations/visualization, there are no success/failure
-    metrics or rewards
+    A base environment for simulating manipulation tasks in more complex scenes. Creating this base environment is only useful for explorations/visualization, there are no success/failure
+    metrics or rewards.
 
     Args:
         robot_uids: Which robot to place into the scene. Default is "panda"
@@ -35,7 +35,7 @@ class SceneManipulationEnv(BaseEnv):
     """
 
     SUPPORTED_ROBOTS = ["panda", "fetch"]
-    sim_cfg = SimConfig(
+    default_sim_cfg = SimConfig(
         spacing=50,
         gpu_memory_cfg=GPUMemoryConfig(
             found_lost_pairs_capacity=2**25,

@@ -42,7 +42,7 @@ class TwoRobotPickCube(BaseEnv):
 
     SUPPORTED_ROBOTS = [("panda", "panda")]
     agent: MultiAgent[Tuple[Panda, Panda]]
-    sim_cfg = SimConfig(
+    default_sim_cfg = SimConfig(
         gpu_memory_cfg=GPUMemoryConfig(
             found_lost_pairs_capacity=2**25,
             max_rigid_patch_count=2**19,
