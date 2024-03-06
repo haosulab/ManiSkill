@@ -13,9 +13,6 @@ from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.registration import register_env
 from mani_skill2.utils.scene_builder import SceneBuilder
 from mani_skill2.utils.scene_builder.registration import REGISTERED_SCENE_BUILDERS
-from mani_skill2.utils.scene_builder.replicacad.scene_builder import (
-    ReplicaCADSceneBuilder,
-)
 from mani_skill2.utils.structs.types import GPUMemoryConfig, SimConfig
 
 

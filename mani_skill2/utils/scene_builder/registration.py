@@ -3,14 +3,14 @@ from typing import Dict
 
 from mani_skill2 import logger
 from mani_skill2.agents.base_agent import BaseAgent
-from mani_skill2.utils.scene_builder.scene_builder import SceneBuilder
+from mani_skill2.utils.scene_builder import scene_builder
 
 
 @dataclass
 class SceneBuilderSpec:
     """Scene builder specifications. At the moment it is a simple wrapper around the scene_builder_cls but the dataclass is used in case we may need additional metadata"""
 
-    scene_builder_cls: type[SceneBuilder]
+    scene_builder_cls: type[scene_builder.SceneBuilder]
 
 
 REGISTERED_SCENE_BUILDERS: Dict[str, SceneBuilderSpec] = {}
@@ -24,7 +24,7 @@ def register_scene_builder(uid: str, override=False):
         override (bool): whether to override the scene builder if it is already registered.
     """
 
-    def _register_scene_builder(scene_builder_cls: type[SceneBuilder]):
+    def _register_scene_builder(scene_builder_cls: type[scene_builder.SceneBuilder]):
         if uid in REGISTERED_SCENE_BUILDERS:
             if override:
                 logger.warn(f"Overriding registered scene builder {uid}")

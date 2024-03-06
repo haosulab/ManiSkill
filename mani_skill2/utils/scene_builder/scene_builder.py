@@ -1,8 +1,12 @@
-from typing import Any, Dict, List
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Dict, List
 
 import sapien
 
-from mani_skill2.envs.sapien_env import BaseEnv
+if TYPE_CHECKING:
+    from mani_skill2.envs.sapien_env import BaseEnv
+
 from mani_skill2.utils.structs.actor import Actor
 
 
