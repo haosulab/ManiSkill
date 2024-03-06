@@ -66,9 +66,7 @@ class SceneManipulationEnv(BaseEnv):
             scene_builder_cls = REGISTERED_SCENE_BUILDERS[
                 scene_builder_cls
             ].scene_builder_cls
-        self.scene_builder: SceneBuilder = scene_builder_cls(
-            self, robot_init_qpos_noise=robot_init_qpos_noise
-        )
+        self.scene_builder: SceneBuilder = scene_builder_cls(self)
         if isinstance(scene_idxs, int):
             self.scene_idxs = [scene_idxs]
         elif isinstance(scene_idxs, list):

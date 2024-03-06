@@ -9,6 +9,7 @@ import os.path as osp
 
 import numpy as np
 import sapien
+import torch
 import transforms3d
 
 from mani_skill2 import ASSET_DIR
@@ -180,7 +181,7 @@ class ReplicaCADSceneBuilder(SceneBuilder):
                 )
         scene.set_ambient_light([0.3, 0.3, 0.3])
 
-    def initialize(self, env_idx):
+    def initialize(self, env_idx: torch.Tensor):
         if self.env.robot_uids == "fetch":
             agent: Fetch = self.env.agent
             agent.reset(agent.RESTING_QPOS)
