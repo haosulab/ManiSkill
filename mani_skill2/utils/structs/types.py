@@ -1,4 +1,4 @@
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from typing import Sequence, Union
 
 import numpy as np
@@ -40,7 +40,7 @@ class GPUMemoryConfig:
 
 @dataclass
 class SceneConfig:
-    gravity: np.ndarray = np.array([0, 0, -9.81])
+    gravity: np.ndarray = field(default_factory=lambda: np.array([0, 0, -9.81]))
     bounce_threshold: float = 2.0
     sleep_threshold: float = 0.005
     contact_offset: float = 0.02
