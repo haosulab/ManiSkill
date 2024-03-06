@@ -23,6 +23,6 @@ scene_builders = {
 for k, scene_builder in scene_builders.items():
     register_env(
         f"{k}_SceneManipulation-v1",
-        max_episode_steps=None,
-        scene_builder_cls=scene_builder,
+        max_episode_steps=200,
+        scene_builder_cls=k,
     )(SceneManipulationEnv)
