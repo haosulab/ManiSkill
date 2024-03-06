@@ -7,6 +7,7 @@ import torch
 
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
+from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.building.actors import build_sphere
 from mani_skill2.utils.building.articulations import (
     MODEL_DBS,
@@ -16,10 +17,9 @@ from mani_skill2.utils.building.articulations import (
 from mani_skill2.utils.building.ground import build_ground
 from mani_skill2.utils.geometry.geometry import transform_points
 from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import look_at, to_tensor
+from mani_skill2.utils.structs import Pose
 from mani_skill2.utils.structs.articulation import Articulation
 from mani_skill2.utils.structs.link import Link
-from mani_skill2.utils.structs.pose import Pose
 
 
 # TODO (stao): we need to cut the meshes of all the cabinets in this dataset for gpu sim, not registering task for now
@@ -56,13 +56,13 @@ class OpenCabinetDrawerEnv(BaseEnv):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     def _register_sensors(self):
-        pose = look_at(eye=[-2.5, -1.5, 1.8], target=[-0.3, 0.5, 0.1])
+        pose = sapien_utils.look_at(eye=[-2.5, -1.5, 1.8], target=[-0.3, 0.5, 0.1])
         return [
             CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 100)
         ]
 
     def _register_human_render_cameras(self):
-        pose = look_at(eye=[-2.3, -1.5, 1.8], target=[-0.3, 0.5, 0])
+        pose = sapien_utils.look_at(eye=[-2.3, -1.5, 1.8], target=[-0.3, 0.5, 0])
         # TODO (stao): how much does far affect rendering speed?
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)
 
@@ -158,7 +158,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
             index_q = torch.tensor(index_q, dtype=int)
             self.target_qpos_idx = (torch.arange(0, b), index_q)
             # TODO (stao): For performance improvement, one can save relative position of link handles ahead of time.
-            handle_link_positions = to_tensor(
+            handle_link_positions = sapien_utils.to_tensor(
                 np.array(
                     [
                         x[self.link_indices[i]].bounding_box.center_mass

@@ -8,10 +8,10 @@ from mani_skill2 import logger
 from mani_skill2.agents.robots import DClaw
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
+from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.building.articulations import build_robel_valve
 from mani_skill2.utils.geometry.rotation_conversions import axis_angle_to_quaternion
 from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import get_obj_by_name, look_at
 from mani_skill2.utils.scene_builder.table.table_scene_builder import TableSceneBuilder
 from mani_skill2.utils.structs.articulation import Articulation
 from mani_skill2.utils.structs.pose import Pose, vectorize_pose
@@ -59,13 +59,13 @@ class RotateValveEnv(BaseEnv):
         super().__init__(*args, robot_uids="dclaw", **kwargs)
 
     def _register_sensors(self):
-        pose = look_at(eye=[0.3, 0, 0.3], target=[-0.1, 0, 0.05])
+        pose = sapien_utils.look_at(eye=[0.3, 0, 0.3], target=[-0.1, 0, 0.05])
         return [
             CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10)
         ]
 
     def _register_human_render_cameras(self):
-        pose = look_at([0.2, 0.4, 0.4], [0.0, 0.0, 0.1])
+        pose = sapien_utils.look_at([0.2, 0.4, 0.4], [0.0, 0.0, 0.1])
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
 
     def _load_actors(self):
@@ -132,7 +132,7 @@ class RotateValveEnv(BaseEnv):
             capsule_lens.append(capsule_len)
         self.valve = Articulation.merge(valves, "valve_station")
         self.capsule_lens = torch.from_numpy(np.array(capsule_lens)).to(self.device)
-        self.valve_link = get_obj_by_name(self.valve.get_links(), "valve")
+        self.valve_link = sapien_utils.get_obj_by_name(self.valve.get_links(), "valve")
 
     def _initialize_actors(self, env_idx: torch.Tensor):
         with torch.device(self.device):

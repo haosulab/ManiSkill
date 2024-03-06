@@ -2,12 +2,6 @@ from mani_skill2 import PACKAGE_ASSET_DIR
 from mani_skill2.agents.base_agent import BaseAgent
 from mani_skill2.agents.controllers import *
 from mani_skill2.sensors.camera import CameraConfig
-from mani_skill2.utils.sapien_utils import (
-    compute_total_impulse,
-    get_actor_contacts,
-    get_obj_by_name,
-    get_pairwise_contact_impulse,
-)
 
 
 class TemplateRobot(BaseAgent):

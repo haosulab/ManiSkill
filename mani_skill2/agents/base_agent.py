@@ -11,13 +11,8 @@ from gymnasium import spaces
 
 from mani_skill2 import format_path
 from mani_skill2.sensors.base_sensor import BaseSensor, BaseSensorConfig
-from mani_skill2.utils.sapien_utils import (
-    apply_urdf_config,
-    check_urdf_config,
-    parse_urdf_config,
-)
-from mani_skill2.utils.structs.actor import Actor
-from mani_skill2.utils.structs.articulation import Articulation
+from mani_skill2.utils import sapien_utils
+from mani_skill2.utils.structs import Actor, Articulation
 
 from .controllers.base_controller import (
     BaseController,
@@ -98,11 +93,11 @@ class BaseAgent:
 
         urdf_path = format_path(str(self.urdf_path))
 
-        urdf_config = parse_urdf_config(self.urdf_config, self.scene)
-        check_urdf_config(urdf_config)
+        urdf_config = sapien_utils.parse_urdf_config(self.urdf_config, self.scene)
+        sapien_utils.check_urdf_config(urdf_config)
 
         # TODO(jigu): support loading multiple convex collision shapes
-        apply_urdf_config(loader, urdf_config)
+        sapien_utils.apply_urdf_config(loader, urdf_config)
         self.robot: Articulation = loader.load(urdf_path)
         assert self.robot is not None, f"Fail to load URDF from {urdf_path}"
 

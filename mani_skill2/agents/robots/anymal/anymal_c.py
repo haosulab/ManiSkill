@@ -1,14 +1,11 @@
+# TODO (stao): Anymal may not be modelled correctly or efficiently at the moment
 import torch
 
 from mani_skill2 import PACKAGE_ASSET_DIR, format_path
 from mani_skill2.agents.base_agent import BaseAgent
 from mani_skill2.agents.controllers import *
 from mani_skill2.agents.registration import register_agent
-from mani_skill2.utils.sapien_utils import (
-    apply_urdf_config,
-    check_urdf_config,
-    parse_urdf_config,
-)
+from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.structs.articulation import Articulation
 
 
@@ -82,11 +79,11 @@ class ANYmalC(BaseAgent):
 
         urdf_path = format_path(str(self.urdf_path))
 
-        urdf_config = parse_urdf_config(self.urdf_config, self.scene)
-        check_urdf_config(urdf_config)
+        urdf_config = sapien_utils.parse_urdf_config(self.urdf_config, self.scene)
+        sapien_utils.check_urdf_config(urdf_config)
 
         # TODO(jigu): support loading multiple convex collision shapes
-        apply_urdf_config(loader, urdf_config)
+        sapien_utils.apply_urdf_config(loader, urdf_config)
         loader.disable_self_collisions = True
         self.robot: Articulation = loader.load(urdf_path)
         assert self.robot is not None, f"Fail to load URDF from {urdf_path}"

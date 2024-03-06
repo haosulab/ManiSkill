@@ -9,12 +9,7 @@ from sapien import physx
 from mani_skill2 import PACKAGE_ASSET_DIR
 from mani_skill2.agents.registration import register_agent
 from mani_skill2.agents.robots.allegro_hand.allegro import AllegroHandRight
-from mani_skill2.utils.sapien_utils import (
-    compute_total_impulse,
-    get_actors_contacts,
-    get_multiple_pairwise_contacts,
-    get_objs_by_names,
-)
+from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.structs.actor import Actor
 
 
@@ -59,7 +54,7 @@ class AllegroHandRightTouch(AllegroHandRight):
 
     def _after_init(self):
         super()._after_init()
-        self.fsr_links: List[Actor] = get_objs_by_names(
+        self.fsr_links: List[Actor] = sapien_utils.get_objs_by_names(
             self.robot.get_links(),
             self.palm_fsr_link_names + self.finger_fsr_link_names,
         )
@@ -100,7 +95,8 @@ class AllegroHandRightTouch(AllegroHandRight):
             )
             sorted_contacts = [obj_contacts[link] for link in internal_fsr_links]
             contact_forces = [
-                compute_total_impulse(contact) for contact in sorted_contacts
+                sapien_utils.compute_total_impulse(contact)
+                for contact in sorted_contacts
             ]
 
             return np.stack(contact_forces)
@@ -133,10 +129,11 @@ class AllegroHandRightTouch(AllegroHandRight):
         else:
             internal_fsr_links = [link._bodies[0].entity for link in self.fsr_links]
             contacts = self.scene.get_contacts()
-            contact_map = get_actors_contacts(contacts, internal_fsr_links)
+            contact_map = sapien_utils.get_actors_contacts(contacts, internal_fsr_links)
             sorted_contacts = [contact_map[link] for link in internal_fsr_links]
             contact_forces = [
-                compute_total_impulse(contact) for contact in sorted_contacts
+                sapien_utils.compute_total_impulse(contact)
+                for contact in sorted_contacts
             ]
 
             contact_impulse = torch.from_numpy(

@@ -31,9 +31,9 @@ from mani_skill2.agents.robots.fetch.fetch import Fetch
 from mani_skill2.agents.robots.panda.panda import Panda
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.sensors.camera import CameraConfig
+from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.building import actors
 from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import look_at
 from mani_skill2.utils.structs.types import GPUMemoryConfig, SimConfig
 
 
@@ -95,9 +95,9 @@ class CustomEnv(BaseEnv):
     def _register_sensors(self):
         # To customize the sensors that capture images/pointclouds for the environment observations,
         # simply define a CameraConfig as done below for Camera sensors. You can add multiple sensors by returning a list
-        pose = look_at(
+        pose = sapien_utils.look_at(
             eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1]
-        )  # look_at is a utility to get the pose of a camera that looks at a target
+        )  # sapien_utils.look_at is a utility to get the pose of a camera that looks at a target
 
         # to see what all the sensors capture in the environment for observations, run env.render_sensors() which returns an rgb array you can visualize
         return [
@@ -106,7 +106,7 @@ class CustomEnv(BaseEnv):
 
     def _register_human_render_cameras(self):
         # this is just like _register_sensors, but for adding cameras used for rendering when you call env.render() when render_mode="rgb_array" or env.render_rgb_array()
-        pose = look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
+        pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
 
     def _setup_sensors(self):

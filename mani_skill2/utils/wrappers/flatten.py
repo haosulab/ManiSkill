@@ -5,8 +5,8 @@ import gymnasium.spaces.utils
 from gymnasium.vector.utils import batch_space
 
 from mani_skill2.envs.sapien_env import BaseEnv
+from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.common import flatten_state_dict
-from mani_skill2.utils.sapien_utils import batch
 
 
 class FlattenObservationWrapper(gym.ObservationWrapper):
@@ -49,7 +49,7 @@ class FlattenActionSpaceWrapper(gym.ActionWrapper):
             self.base_env.num_envs == 1
             and action.shape == self.single_action_space.shape
         ):
-            action = batch(action)
+            action = sapien_utils.batch(action)
 
         # TODO (stao): This code only supports flat dictionary at the moment
         unflattened_action = dict()

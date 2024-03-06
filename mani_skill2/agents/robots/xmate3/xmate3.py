@@ -10,13 +10,8 @@ from mani_skill2.agents.base_agent import BaseAgent
 from mani_skill2.agents.controllers import *
 from mani_skill2.agents.registration import register_agent
 from mani_skill2.sensors.camera import CameraConfig
+from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.common import compute_angle_between, np_compute_angle_between
-from mani_skill2.utils.sapien_utils import (
-    compute_total_impulse,
-    get_actor_contacts,
-    get_obj_by_name,
-    get_pairwise_contact_impulse,
-)
 from mani_skill2.utils.structs.actor import Actor
 
 
@@ -71,13 +66,15 @@ class Xmate3Robotiq(BaseAgent):
         super().__init__(scene, control_freq, control_mode, fix_root_link, agent_idx)
 
     def _after_init(self):
-        self.finger1_link = get_obj_by_name(
+        self.finger1_link = sapien_utils.get_obj_by_name(
             self.robot.get_links(), "left_inner_finger_pad"
         )
-        self.finger2_link = get_obj_by_name(
+        self.finger2_link = sapien_utils.get_obj_by_name(
             self.robot.get_links(), "right_inner_finger_pad"
         )
-        self.tcp = get_obj_by_name(self.robot.get_links(), self.ee_link_name)
+        self.tcp = sapien_utils.get_obj_by_name(
+            self.robot.get_links(), self.ee_link_name
+        )
         self.queries: Dict[
             str, Tuple[physx.PhysxGpuContactPairImpulseQuery, Tuple[int]]
         ] = dict()
@@ -221,19 +218,25 @@ class Xmate3Robotiq(BaseAgent):
             contacts = self.scene.get_contacts()
 
             if object is None:
-                finger1_contacts = get_actor_contacts(contacts, self.finger1_link)
-                finger2_contacts = get_actor_contacts(contacts, self.finger2_link)
+                finger1_contacts = sapien_utils.get_actor_contacts(
+                    contacts, self.finger1_link
+                )
+                finger2_contacts = sapien_utils.get_actor_contacts(
+                    contacts, self.finger2_link
+                )
                 return (
-                    np.linalg.norm(compute_total_impulse(finger1_contacts))
+                    np.linalg.norm(sapien_utils.compute_total_impulse(finger1_contacts))
                     >= min_impulse
-                    and np.linalg.norm(compute_total_impulse(finger2_contacts))
+                    and np.linalg.norm(
+                        sapien_utils.compute_total_impulse(finger2_contacts)
+                    )
                     >= min_impulse
                 )
             else:
-                limpulse = get_pairwise_contact_impulse(
+                limpulse = sapien_utils.get_pairwise_contact_impulse(
                     contacts, self.finger1_link, object
                 )
-                rimpulse = get_pairwise_contact_impulse(
+                rimpulse = sapien_utils.get_pairwise_contact_impulse(
                     contacts, self.finger2_link, object
                 )
 

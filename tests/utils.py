@@ -3,9 +3,9 @@ from typing import Callable, List
 import numpy as np
 import torch
 
+from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.common import flatten_dict_keys
 from mani_skill2.utils.registration import REGISTERED_ENVS
-from mani_skill2.utils.sapien_utils import to_numpy
 
 # TODO (stao): reactivate old tasks once fixed
 ENV_IDS = list(REGISTERED_ENVS.keys())
@@ -76,7 +76,7 @@ def assert_obs_equal(obs1, obs2, ignore_col_vector_shape_mismatch=False):
     ignore_col_vector_shape_mismatch - If true, will ignore shape mismatch if one shape is (n, 1) but another is (n, ). this is added since
         SB3 outputs scalars as (n, ) whereas Gymnasium and ManiSkill2 use (n, 1)
     """
-    obs1, obs2 = to_numpy(obs1), to_numpy(obs2)
+    obs1, obs2 = sapien_utils.to_numpy(obs1), sapien_utils.to_numpy(obs2)
     if isinstance(obs1, dict):
         assert isinstance(obs2, dict)
         obs1 = flatten_dict_keys(obs1)

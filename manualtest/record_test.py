@@ -3,7 +3,7 @@ import numpy as np
 import sapien
 
 import mani_skill2.envs
-from mani_skill2.utils.sapien_utils import to_numpy
+from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.wrappers import RecordEpisode
 from mani_skill2.vector.wrappers.gymnasium import ManiSkillVectorEnv
 

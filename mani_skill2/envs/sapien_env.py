@@ -21,7 +21,7 @@ from mani_skill2.agents import REGISTERED_AGENTS
 from mani_skill2.agents.base_agent import BaseAgent
 from mani_skill2.agents.multi_agent import MultiAgent
 from mani_skill2.envs.scene import ManiSkillScene
-from mani_skill2.envs.utils.observations.observations import (
+from mani_skill2.envs.utils.observations import (
     sensor_data_to_pointcloud,
     sensor_data_to_rgbd,
 )
@@ -33,17 +33,11 @@ from mani_skill2.sensors.camera import (
     update_camera_cfgs_from_dict,
 )
 from mani_skill2.sensors.depth_camera import StereoDepthCamera, StereoDepthCameraConfig
+from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.common import (
     convert_observation_to_space,
     dict_merge,
     flatten_state_dict,
-)
-from mani_skill2.utils.sapien_utils import (
-    batch,
-    get_obj_by_type,
-    to_numpy,
-    to_tensor,
-    unbatch,
 )
 from mani_skill2.utils.structs.actor import Actor
 from mani_skill2.utils.structs.articulation import Articulation
@@ -238,10 +232,10 @@ class BaseEnv(gym.Env):
         )
         obs, _ = self.reset(seed=2022, options=dict(reconfigure=True))
         if physx.is_gpu_enabled():
-            obs = to_numpy(obs)
+            obs = sapien_utils.to_numpy(obs)
         self._init_raw_obs = obs.copy()
         """the raw observation returned by the env.reset. Useful for future observation wrappers to use to auto generate observation spaces"""
-        self._init_raw_state = to_numpy(self.get_state_dict())
+        self._init_raw_state = sapien_utils.to_numpy(self.get_state_dict())
         """the initial raw state returned by env.get_state. Useful for reconstructing state dictionaries from flattened state vectors"""
 
         self.action_space = self.agent.action_space
@@ -660,7 +654,7 @@ class BaseEnv(gym.Env):
             self._scene._gpu_fetch_all()
         obs = self.get_obs()
         if not physx.is_gpu_enabled():
-            obs = to_numpy(unbatch(obs))
+            obs = sapien_utils.to_numpy(sapien_utils.unbatch(obs))
             self._elapsed_steps = 0
         return obs, {}
 
@@ -759,12 +753,12 @@ class BaseEnv(gym.Env):
             )
         else:
             # On CPU sim mode, we always return numpy / python primitives without any batching.
-            return unbatch(
-                to_numpy(obs),
-                to_numpy(reward),
-                to_numpy(terminated),
+            return sapien_utils.unbatch(
+                sapien_utils.to_numpy(obs),
+                sapien_utils.to_numpy(reward),
+                sapien_utils.to_numpy(terminated),
                 False,
-                to_numpy(info),
+                sapien_utils.to_numpy(info),
             )
 
     def step_action(
@@ -775,7 +769,7 @@ class BaseEnv(gym.Env):
         if action is None:  # simulation without action
             pass
         elif isinstance(action, np.ndarray) or isinstance(action, torch.Tensor):
-            action = to_tensor(action)
+            action = sapien_utils.to_tensor(action)
             if action.shape == self._orig_single_action_space.shape:
                 action_is_unbatched = True
             set_action = True
@@ -784,13 +778,13 @@ class BaseEnv(gym.Env):
                 if action["control_mode"] != self.agent.control_mode:
                     self.agent.set_control_mode(action["control_mode"])
                     self.agent.controller.reset()
-                action = to_tensor(action["action"])
+                action = sapien_utils.to_tensor(action["action"])
             else:
                 assert isinstance(
                     self.agent, MultiAgent
                 ), "Received a dictionary for an action but there are not multiple robots in the environment"
                 # assume this is a multi-agent action
-                action = to_tensor(action)
+                action = sapien_utils.to_tensor(action)
                 for k, a in action.items():
                     if a.shape == self._orig_single_action_space[k].shape:
                         action_is_unbatched = True
@@ -801,7 +795,7 @@ class BaseEnv(gym.Env):
 
         if set_action:
             if self.num_envs == 1 and action_is_unbatched:
-                action = batch(action)
+                action = sapien_utils.batch(action)
             self.agent.set_action(action)
             if physx.is_gpu_enabled():
                 self._scene.px.gpu_apply_articulation_target_position()
@@ -990,7 +984,7 @@ class BaseEnv(gym.Env):
         # CAUTION: `set_scene` should be called after assets are loaded.
         self._viewer.set_scene(self._scene.sub_scenes[0])
         control_window: sapien.utils.viewer.control_window.ControlWindow = (
-            get_obj_by_type(
+            sapien_utils.get_obj_by_type(
                 self._viewer.plugins, sapien.utils.viewer.control_window.ControlWindow
             )
         )

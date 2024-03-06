@@ -11,7 +11,7 @@ from sapien.wrapper.articulation_builder import (
 )
 from sapien.wrapper.articulation_builder import LinkBuilder
 
-from mani_skill2.utils.sapien_utils import to_tensor
+from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.structs.articulation import Articulation
 
 if TYPE_CHECKING:
@@ -111,10 +111,12 @@ class ArticulationBuilder(SapienArticulationBuilder):
                 len(self.scene_mask) == self.scene.num_envs
             ), "Scene mask size is not correct. Must be the same as the number of sub scenes"
             num_arts = np.sum(num_arts)
-            self.scene_mask = to_tensor(self.scene_mask)
+            self.scene_mask = sapien_utils.to_tensor(self.scene_mask)
         else:
             # if scene mask is none, set it here
-            self.scene_mask = to_tensor(torch.ones((self.scene.num_envs), dtype=bool))
+            self.scene_mask = sapien_utils.to_tensor(
+                torch.ones((self.scene.num_envs), dtype=bool)
+            )
 
         articulations = []
 

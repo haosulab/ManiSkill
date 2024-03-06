@@ -6,7 +6,7 @@ from typing import List, Tuple
 
 import torch
 
-from mani_skill2.utils.sapien_utils import to_tensor
+from mani_skill2.utils import sapien_utils
 
 
 class UniformPlacementSampler:
@@ -21,7 +21,7 @@ class UniformPlacementSampler:
         self, bounds: Tuple[List[float], List[float]], batch_size: int
     ) -> None:
         assert len(bounds) == 2 and len(bounds[0]) == len(bounds[1])
-        self._bounds = to_tensor(bounds)
+        self._bounds = sapien_utils.to_tensor(bounds)
         self._ranges = self._bounds[1] - self._bounds[0]
         self.fixtures_radii = None
         self.fixture_positions = None
@@ -76,14 +76,14 @@ class UniformPlacementSampler:
                     [self.fixture_positions, sampled_pos[None, ...]]
                 )
             if self.fixtures_radii is None:
-                self.fixtures_radii = to_tensor(radius).reshape(
+                self.fixtures_radii = sapien_utils.to_tensor(radius).reshape(
                     1,
                 )
             else:
                 self.fixtures_radii = torch.concat(
                     [
                         self.fixtures_radii,
-                        to_tensor(radius).reshape(
+                        sapien_utils.to_tensor(radius).reshape(
                             1,
                         ),
                     ]

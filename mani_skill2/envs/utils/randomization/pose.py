@@ -2,11 +2,11 @@ import numpy as np
 import torch
 import transforms3d
 
+from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.geometry.rotation_conversions import (
     euler_angles_to_matrix,
     matrix_to_quaternion,
 )
-from mani_skill2.utils.sapien_utils import to_tensor
 from mani_skill2.utils.structs.types import Device
 
 
