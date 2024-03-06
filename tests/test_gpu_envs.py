@@ -13,7 +13,7 @@ from tests.utils import (
     LOW_MEM_SIM_CFG,
     MULTI_AGENT_ENV_IDS,
     OBS_MODES,
-    ROBOTS,
+    SINGLE_ARM_STATIONARY_ROBOTS,
     STATIONARY_ENV_IDS,
     assert_isinstance,
     assert_obs_equal,
@@ -180,8 +180,8 @@ def test_raw_sim_states():
 
 
 @pytest.mark.gpu_sim
-@pytest.mark.parametrize("env_id", ENV_IDS)
-@pytest.mark.parametrize("robot_uids", STATIONARY_ENV_IDS)
+@pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS)
+@pytest.mark.parametrize("robot_uids", SINGLE_ARM_STATIONARY_ROBOTS)
 def test_robots(env_id, robot_uids):
     if env_id in [
         "PandaAvoidObstacles-v0",
@@ -257,7 +257,7 @@ def test_partial_resets(env_id):
 
 
 @pytest.mark.gpu_sim
-@pytest.mark.parametrize("env_id", ENV_IDS[:1])
+@pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS[:1])
 def test_timelimits(env_id):
     """Test that the vec env batches the truncated variable correctly"""
     env = gym.make_vec(

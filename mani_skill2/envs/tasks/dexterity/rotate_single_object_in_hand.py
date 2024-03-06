@@ -21,7 +21,7 @@ from mani_skill2.utils.sapien_utils import look_at
 from mani_skill2.utils.scene_builder.table.table_scene_builder import TableSceneBuilder
 from mani_skill2.utils.structs.actor import Actor
 from mani_skill2.utils.structs.pose import Pose, vectorize_pose
-from mani_skill2.utils.structs.types import Array
+from mani_skill2.utils.structs.types import Array, GPUMemoryConfig, SimConfig
 
 
 class RotateSingleObjectInHand(BaseEnv):
@@ -52,19 +52,21 @@ class RotateSingleObjectInHand(BaseEnv):
             )
         self.difficulty_level = difficulty_level
 
-        num_envs = kwargs.get("num_envs")
-        if num_envs > 1:
-            sapien.physx.set_gpu_memory_config(
-                max_rigid_contact_count=num_envs * max(1024, num_envs) * 8,
-                max_rigid_patch_count=num_envs * max(1024, num_envs) * 2,
-                found_lost_pairs_capacity=2**26,
-            )
-
         super().__init__(*args, robot_uids="allegro_hand_right_touch", **kwargs)
 
         with torch.device(self.device):
             self.prev_unit_vector = torch.zeros((self.num_envs, 3))
             self.cum_rotation_angle = torch.zeros((self.num_envs,))
+
+    @property
+    def sim_cfg(self):
+        return SimConfig(
+            gpu_memory_cfg=GPUMemoryConfig(
+                max_rigid_contact_count=self.num_envs * max(1024, self.num_envs) * 8,
+                max_rigid_patch_count=self.num_envs * max(1024, self.num_envs) * 2,
+                found_lost_pairs_capacity=2**26,
+            )
+        )
 
     def _register_sensors(self):
         pose = look_at(eye=[0.15, 0, 0.45], target=[-0.1, 0, self.hand_init_height])

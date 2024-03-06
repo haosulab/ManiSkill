@@ -106,8 +106,6 @@ class BaseEnv(gym.Env):
     SUPPORTED_RENDER_MODES = ("human", "rgb_array", "sensors")
     """The supported render modes. Human opens up a GUI viewer. rgb_array returns an rgb array showing the current environment state.
     sensors returns an rgb array but only showing all data collected by sensors as images put together"""
-    sim_cfg: SimConfig = SimConfig()
-    # fmt: on
 
     metadata = {"render_modes": SUPPORTED_RENDER_MODES}
 
@@ -116,7 +114,6 @@ class BaseEnv(gym.Env):
     _scene: ManiSkillScene = None
     """the main scene, which manages all sub scenes. In CPU simulation there is only one sub-scene"""
 
-    # _agent_cls: Type[BaseAgent]
     agent: BaseAgent
 
     _sensors: Dict[str, BaseSensor]
@@ -168,10 +165,10 @@ class BaseEnv(gym.Env):
 
         merged_gpu_sim_cfg = self.sim_cfg.dict()
         dict_merge(merged_gpu_sim_cfg, sim_cfg)
-        self.sim_cfg = SimConfig(**merged_gpu_sim_cfg)
+        sim_cfg = SimConfig(**merged_gpu_sim_cfg)
         # TODO (stao): there may be a memory leak or some issue with memory not being released when repeatedly creating and closing environments with high memory requirements
         # test withg pytest tests/ -m "not slow and gpu_sim" --pdb
-        sapien.physx.set_gpu_memory_config(**self.sim_cfg.gpu_memory_cfg)
+        sapien.physx.set_gpu_memory_config(**sim_cfg.gpu_memory_cfg)
 
         self.shader_dir = shader_dir
         if self.shader_dir == "default":
@@ -276,6 +273,9 @@ class BaseEnv(gym.Env):
         else:
             return self.single_observation_space
 
+    @property
+    def sim_cfg(self):
+        return SimConfig()
     def _load_agent(self):
         # agent_cls: Type[BaseAgent] = self._agent_cls
         agents = []
@@ -849,8 +849,8 @@ class BaseEnv(gym.Env):
     # -------------------------------------------------------------------------- #
     def _set_scene_config(self):
         # TODO (stao): Do these have any effect after calling gpu_init?
-        physx.set_scene_config(**self.sim_cfg.scene_cfg)
-        physx.set_default_material(**self.sim_cfg.default_materials_cfg)
+        physx.set_scene_config(**self.sim_cfg.scene_cfg.dict())
+        physx.set_default_material(**self.sim_cfg.default_materials_cfg.dict())
 
     def _setup_scene(self):
         """Setup the simulation scene instance.
