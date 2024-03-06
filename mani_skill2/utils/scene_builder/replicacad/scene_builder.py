@@ -9,7 +9,6 @@ import os.path as osp
 
 import numpy as np
 import sapien
-import torch
 import transforms3d
 
 from mani_skill2 import ASSET_DIR
