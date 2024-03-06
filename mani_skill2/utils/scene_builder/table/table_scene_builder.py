@@ -12,10 +12,9 @@ from mani_skill2.agents.multi_agent import MultiAgent
 from mani_skill2.agents.robots.fetch import FETCH_UNIQUE_COLLISION_BIT
 from mani_skill2.utils.building.ground import build_ground
 from mani_skill2.utils.scene_builder import SceneBuilder
-from mani_skill2.utils.scene_builder.registration import register_scene_builder
 
 
-@register_scene_builder("table-top-scene")
+# TODO (stao): make the build and initialize api consistent with other scenes
 class TableSceneBuilder(SceneBuilder):
     robot_init_qpos_noise: float = 0.02
 
