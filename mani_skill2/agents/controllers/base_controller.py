@@ -207,7 +207,6 @@ class DictController(BaseController):
             )
         self._initialize_action_space()
         self._initialize_joints()
-        self._assert_fully_actuated()
 
         self.action_space = self.single_action_space
         if self.scene.num_envs > 1:
@@ -230,15 +229,6 @@ class DictController(BaseController):
         for controller in self.controllers.values():
             self.joints.extend(controller.joints)
             self.joint_indices.extend(controller.joint_indices)
-
-    def _assert_fully_actuated(self):
-        active_joints = self.articulation.get_active_joints()
-        if len(active_joints) != len(self.joints) or set(active_joints) != set(
-            self.joints
-        ):
-            print("active_joints:", [x.name for x in active_joints])
-            print("controlled_joints:", [x.name for x in self.joints])
-            raise AssertionError("{} is not fully actuated".format(self.articulation))
 
     def set_drive_property(self):
         for controller in self.controllers.values():

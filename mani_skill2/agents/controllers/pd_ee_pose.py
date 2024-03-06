@@ -12,6 +12,7 @@ import sapien.physx as physx
 import torch
 from gymnasium import spaces
 
+from mani_skill2 import logger
 from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.common import clip_and_scale_action
 from mani_skill2.utils.geometry.rotation_conversions import (
@@ -66,6 +67,9 @@ class PDEEPosController(PDJointPosController):
         else:
             # The child link of last joint is assumed to be the end-effector.
             self.ee_link = self.joints[-1].get_child_link()
+            logger.warn(
+                "Configuration did not define a ee_link name, using the child link of the last joint"
+            )
         self.ee_link_idx = self.articulation.get_links().index(self.ee_link)
 
     def _initialize_action_space(self):

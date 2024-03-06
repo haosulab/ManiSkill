@@ -59,7 +59,7 @@ class RotateSingleObjectInHand(BaseEnv):
             self.cum_rotation_angle = torch.zeros((self.num_envs,))
 
     @property
-    def sim_cfg(self):
+    def default_sim_cfg(self):
         return SimConfig(
             gpu_memory_cfg=GPUMemoryConfig(
                 max_rigid_contact_count=self.num_envs * max(1024, self.num_envs) * 8,
