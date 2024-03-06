@@ -77,7 +77,12 @@ class BaseEnv(gym.Env):
 
         robot_uids (Union[str, BaseAgent, List[Union[str, BaseAgent]]]): List of robots to instantiate and control in the environment.
 
-        sim_cfg (dict): Configurations for simulation if used that override the environment defaults. # TODO (stao): flesh this explanation out
+        sim_cfg (Union[SimConfig, dict]): Configurations for simulation if used that override the environment defaults. If given
+            a dictionary, it can just override specific attributes e.g. `sim_cfg=dict(scene_cfg=dict(solver_iterations=25))`. If
+            passing in a SimConfig object, while typed, will override every attribute including the task defaults. Some environments
+            define their own recommended default sim configurations via the `self.default_sim_cfg` attribute that generally should not be
+            completely overriden. For a full detail/explanation of what is in the sim config see the type hints / go to the source
+            https://github.com/haosulab/ManiSkill2/blob/main/mani_skill2/utils/structs/types.py
 
         reconfiguration_freq (int): How frequently to call reconfigure when environment is reset via `self.reset(...)`
             Generally for most users who are not building tasks this does not need to be changed. The default is 0, which means
@@ -137,7 +142,7 @@ class BaseEnv(gym.Env):
         sensor_cfgs: dict = None,
         human_render_camera_cfgs: dict = None,
         robot_uids: Union[str, BaseAgent, List[Union[str, BaseAgent]]] = None,
-        sim_cfg: SimConfig = dict(),
+        sim_cfg: Union[SimConfig, dict] = dict(),
         reconfiguration_freq: int = 0,
         force_use_gpu_sim: bool = False,
     ):
