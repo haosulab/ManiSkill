@@ -79,7 +79,7 @@ def test_env_seeded_reset():
 
 def test_env_seeded_sequence_reset():
     N = 17
-    env = gym.make(ENV_IDS[0], max_episode_steps=5)
+    env = gym.make(STATIONARY_ENV_IDS[0], max_episode_steps=5)
     obs, _ = env.reset(seed=2000)
     actions = [env.action_space.sample() for _ in range(N)]
     for i in range(N):
@@ -97,7 +97,7 @@ def test_env_seeded_sequence_reset():
 
 
 def test_env_raise_value_error_for_nan_actions():
-    env = gym.make(ENV_IDS[0])
+    env = gym.make(STATIONARY_ENV_IDS[0])
     obs, _ = env.reset(seed=2000)
     with pytest.raises(ValueError):
         env.step(env.action_space.sample() * np.nan)

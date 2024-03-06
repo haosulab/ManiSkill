@@ -10,7 +10,6 @@ from mani_skill2.utils.wrappers.flatten import (
 from mani_skill2.utils.wrappers.visual_encoders import VisualEncoderWrapper
 from mani_skill2.vector.wrappers.gymnasium import ManiSkillVectorEnv
 from tests.utils import (
-    ENV_IDS,
     LOW_MEM_SIM_CFG,
     MULTI_AGENT_ENV_IDS,
     OBS_MODES,
@@ -51,7 +50,7 @@ def test_recordepisode_wrapper_gpu(env_id, obs_mode):
     del env
 
 
-@pytest.mark.parametrize("env_id", ENV_IDS)
+@pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS)
 @pytest.mark.parametrize("obs_mode", OBS_MODES)
 def test_recordepisode_wrapper(env_id, obs_mode):
     env = gym.make(
