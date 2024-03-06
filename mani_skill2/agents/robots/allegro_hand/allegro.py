@@ -8,7 +8,7 @@ from mani_skill2 import PACKAGE_ASSET_DIR
 from mani_skill2.agents.base_agent import BaseAgent
 from mani_skill2.agents.controllers import *
 from mani_skill2.agents.registration import register_agent
-from mani_skill2.utils.sapien_utils import get_obj_by_name, get_objs_by_names
+from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.structs.pose import vectorize_pose
 
 
@@ -73,10 +73,10 @@ class AllegroHandRight(BaseAgent):
         super().__init__(*args, **kwargs)
 
     def _after_init(self):
-        self.tip_links: List[sapien.Entity] = get_objs_by_names(
+        self.tip_links: List[sapien.Entity] = sapien_utils.get_objs_by_names(
             self.robot.get_links(), self.tip_link_names
         )
-        self.palm_link: sapien.Entity = get_obj_by_name(
+        self.palm_link: sapien.Entity = sapien_utils.get_obj_by_name(
             self.robot.get_links(), self.palm_link_name
         )
 

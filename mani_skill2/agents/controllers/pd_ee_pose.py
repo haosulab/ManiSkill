@@ -12,12 +12,12 @@ import sapien.physx as physx
 import torch
 from gymnasium import spaces
 
+from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.common import clip_and_scale_action
 from mani_skill2.utils.geometry.rotation_conversions import (
     euler_angles_to_matrix,
     matrix_to_quaternion,
 )
-from mani_skill2.utils.sapien_utils import get_obj_by_name, to_numpy, to_tensor
 from mani_skill2.utils.structs.pose import Pose, vectorize_pose
 from mani_skill2.utils.structs.types import Array
 
@@ -60,7 +60,7 @@ class PDEEPosController(PDJointPosController):
         self.qmask[self.joint_indices] = 1
 
         if self.config.ee_link:
-            self.ee_link = get_obj_by_name(
+            self.ee_link = sapien_utils.get_obj_by_name(
                 self.articulation.get_links(), self.config.ee_link
             )
         else:
@@ -112,12 +112,14 @@ class PDEEPosController(PDJointPosController):
             result, success, error = self.pmodel.compute_inverse_kinematics(
                 self.ee_link_idx,
                 target_pose.sp,
-                initial_qpos=to_numpy(self.articulation.get_qpos()).squeeze(0),
+                initial_qpos=sapien_utils.to_numpy(
+                    self.articulation.get_qpos()
+                ).squeeze(0),
                 active_qmask=self.qmask,
                 max_iterations=max_iterations,
             )
         if success:
-            return to_tensor([result[self.joint_indices]])
+            return sapien_utils.to_tensor([result[self.joint_indices]])
         else:
             return None
 

@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from gymnasium import spaces
 
-from mani_skill2.utils.sapien_utils import to_tensor
+from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.structs.types import Array
 
 from .base_controller import BaseController, ControllerConfig
@@ -67,7 +67,7 @@ class PDJointPosController(BaseController):
 
     def set_action(self, action: Array):
         action = self._preprocess_action(action)
-        action = to_tensor(action)
+        action = sapien_utils.to_tensor(action)
         self._step = 0
         self._start_qpos = self.qpos
         if self.config.use_delta:
