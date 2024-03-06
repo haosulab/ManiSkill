@@ -8,7 +8,7 @@ from mani_skill2.agents.base_agent import BaseAgent
 from mani_skill2.agents.controllers import *
 from mani_skill2.agents.registration import register_agent
 from mani_skill2.agents.utils import get_active_joint_indices
-from mani_skill2.utils.sapien_utils import get_objs_by_names
+from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.structs.joint import Joint
 from mani_skill2.utils.structs.link import Link
 from mani_skill2.utils.structs.pose import vectorize_pose
@@ -52,7 +52,7 @@ class DClaw(BaseAgent):
         super().__init__(*args, **kwargs)
 
     def _after_init(self):
-        self.tip_links: List[Link] = get_objs_by_names(
+        self.tip_links: List[Link] = sapien_utils.get_objs_by_names(
             self.robot.get_links(), self.tip_link_names
         )
         self.root_joints: List[Joint] = [
