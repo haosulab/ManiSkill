@@ -34,8 +34,7 @@ def main(args):
         )
         if isinstance(env.action_space, gym.spaces.Dict):
             env = FlattenActionSpaceWrapper(env)
-        env = ManiSkillVectorEnv(env)
-        base_env = env.base_env
+        base_env = env.unwrapped
     else:
         env = gym.make_vec(args.env_id, num_envs=args.num_envs, vectorization_mode="async", vector_kwargs=dict(context="spawn"), obs_mode=args.obs_mode,)
         base_env = gym.make(args.env_id, obs_mode=args.obs_mode).unwrapped
@@ -94,16 +93,16 @@ def main(args):
             )
             del images
         env.reset(seed=2022)
-        # N = 1000
-        # with profiler.profile("env.step+env.reset", total_steps=N, num_envs=num_envs):
-        #     for i in range(N):
-        #         actions = (
-        #             2 * torch.rand(env.action_space.shape, device=env.unwrapped.device) - 1
-        #         )
-        #         obs, rew, terminated, truncated, info = env.step(actions)
-        #         if i % 200 == 0 and i != 0:
-        #             env.reset()
-        # profiler.log_stats("env.step+env.reset")
+        N = 1000
+        with profiler.profile("env.step+env.reset", total_steps=N, num_envs=num_envs):
+            for i in range(N):
+                actions = (
+                    2 * torch.rand(env.action_space.shape, device=env.unwrapped.device) - 1
+                )
+                obs, rew, terminated, truncated, info = env.step(actions)
+                if i % 200 == 0 and i != 0:
+                    env.reset()
+        profiler.log_stats("env.step+env.reset")
     env.close()
     # append results to csv
     try:
