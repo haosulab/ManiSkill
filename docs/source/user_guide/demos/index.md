@@ -38,10 +38,23 @@ python -m mani_skill.examples.demo_random_action -e "TwoRobotStackCube-v1" \
   --render-mode="human"
 ```
 
+```{figure} images/tworobotstackcube.png
+---
+alt: SAPIEN GUI two robot stack cube task
+---
+```
+
+
 Tasks with dextrous hand
 ```bash
 python -m mani_skill.examples.demo_random_action -e "RotateValveLevel2-v1" \
   --render-mode="human"
+```
+
+```{figure} images/rotatevalvelevel2.png
+---
+alt: SAPIEN GUI showing the rotate valve level 2 task
+---
 ```
 
 
@@ -50,6 +63,13 @@ Tasks with simulated tactile sensing
 python -m mani_skill.examples.demo_random_action -e "RotateSingleObjectInHandLevel3-v1" \
   --render-mode="human"
 ```
+
+```{figure} images/rotatesingleobjectinhand.png
+---
+alt: SAPIEN GUI showing the rotate single object in hand task
+---
+```
+
 This task also uses a feature unique to ManiSkill/SAPIEN where you can retrieve object-pair contact impulses/forces, in addition to object net contact forces. 
 
 To quickly demo tasks that support simulating different objects and articulations (with different dofs) across parallel environments see the [GPU Simulation section](#gpu-simulation)
@@ -73,14 +93,24 @@ To save videos of the visual observations the agent would get (in this case it i
 ```bash
 python -m mani_skill.examples.benchmarking.gpu_sim -e "PickCube-v1" -n 64 --save-video --render-mode="sensors"
 ```
-it should run quite fast! (3000+ fps on a 4090, you can increase the number envs for higher FPS)
+it should run quite fast! (3000+ fps on a 4090, you can increase the number envs for higher FPS). You can change `--render-mode="rgb_array"` to render from higher quality cameras.
+
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill2/raw/dev/docs/source/_static/videos/mani_skill_gpu_sim-PickCube-v1-num_envs=64-obs_mode=state-render_mode=sensors.mp4" type="video/mp4">
+</video>
+
 
 To try out the heterogenous object simulation features you can run
 ```bash
 python -m mani_skill.examples.benchmarking.gpu_sim -e "PickSingleYCB-v1" -n 64 --save-video --render-mode="sensors"
 python -m mani_skill.examples.benchmarking.gpu_sim -e "RotateValveLevel2-v1" -n 64 --save-video --render-mode="sensors"
 ```
-which shows two tasks that have different objects and articulations in every parallel environment.
+which shows two tasks that have different objects and articulations in every parallel environment. Below is an example for the PickSingleYCB task.
+
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill2/raw/dev/docs/source/_static/videos/mani_skill_gpu_sim-PickSingleYCB-v1-num_envs=64-obs_mode=state-render_mode=sensors.mp4" type="video/mp4">
+</video>
+
 
 <!-- TODO show mobile manipulation scene gpu sim stuff -->
 

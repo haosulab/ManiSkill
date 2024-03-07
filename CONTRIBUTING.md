@@ -56,7 +56,7 @@ python -m twine upload --repository testpypi dist/*
 
 To install the test package
 ```
-python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple mani_skill
+python -m pip install --upgrade --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple mani_skill
 ```
 
 To upload to the actual pypi repository

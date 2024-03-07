@@ -61,12 +61,12 @@ class RotateValveEnv(BaseEnv):
     def _register_sensors(self):
         pose = sapien_utils.look_at(eye=[0.3, 0, 0.3], target=[-0.1, 0, 0.05])
         return [
-            CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10)
+            CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 100)
         ]
 
     def _register_human_render_cameras(self):
         pose = sapien_utils.look_at([0.2, 0.4, 0.4], [0.0, 0.0, 0.1])
-        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
+        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)
 
     def _load_actors(self):
         self.table_scene = TableSceneBuilder(

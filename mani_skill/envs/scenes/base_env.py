@@ -119,7 +119,7 @@ class SceneManipulationEnv(BaseEnv):
 
         pose = sapien_utils.look_at([0.3, 0, 0.6], [-0.1, 0, 0.1])
         return CameraConfig(
-            "base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10
+            "base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 100
         )
 
     def _register_human_render_cameras(self):
@@ -133,7 +133,7 @@ class SceneManipulationEnv(BaseEnv):
                 512,
                 1,
                 0.01,
-                10,
+                100,
             )
             robot_camera_pose = sapien_utils.look_at([2, 0, 1], [0, 0, -1])
             robot_camera_config = CameraConfig(
@@ -144,7 +144,7 @@ class SceneManipulationEnv(BaseEnv):
                 512,
                 1.5,
                 0.01,
-                10,
+                100,
                 link=self.agent.torso_lift_link,
             )
             return [room_camera_config, robot_camera_config]
@@ -153,4 +153,4 @@ class SceneManipulationEnv(BaseEnv):
             pose = sapien_utils.look_at([0.4, 0.4, 0.8], [0.0, 0.0, 0.4])
         else:
             pose = sapien_utils.look_at([0, 10, -3], [0, 0, 0])
-        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
+        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)

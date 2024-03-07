@@ -53,6 +53,7 @@ class Profiler:
 
     @contextmanager
     def profile(self, name: str, total_steps: int, num_envs: int):
+        print(f"start recording {name} metrics")
         torch.cuda.synchronize()
         stime = time.time()
         yield
