@@ -7,6 +7,7 @@ import torch
 from mani_skill2 import PACKAGE_ASSET_DIR
 from mani_skill2.agents.base_agent import BaseAgent
 from mani_skill2.agents.controllers import *
+from mani_skill2.agents.registration import register_agent
 from mani_skill2.agents.utils import (
     get_active_joint_indices,
 )
@@ -15,7 +16,7 @@ from mani_skill2.utils.sapien_utils import (
 )
 from mani_skill2.utils.structs.pose import vectorize_pose
 
-
+@register_agent()
 class TriFingerPro(BaseAgent):
     """
     Modified from https://github.com/NVIDIA-Omniverse/IsaacGymEnvs/blob/main/isaacgymenvs/tasks/trifinger.py
