@@ -4,7 +4,7 @@ Building custom tasks in ManiSkill is straightforward and flexible. ManiSkill pr
 
 To build a custom task in ManiSkill, it is comprised of the following core components
 
-1. Loading Robot(s) and Assets
+1. Loading (Robots, Assets, Sensors, etc.)
 2. Initialization / Randomization
 3. Success/Failure Condition
 4. (Optional) Dense/shaped reward function
@@ -12,11 +12,27 @@ To build a custom task in ManiSkill, it is comprised of the following core compo
 
 This tutorial will first cover each of the core components, and then showcase 3 different tutorial tasks ([PushCube](#example-task-1-push-cube), [PickSingleYCB](#example-task-2-pick-single-ycb), [OpenCabinetDrawer](#example-task-3-open-cabinet-drawer)) that showcase how to use most of the features in ManiSkill.
 
-## Loading Robot(s) and Assets
+## Loading
 
-At the start
+At the start of any task, you must load in all objects (robots, assets, articulations, lighting etc.) into the scene. Loading these objects is done in the `_load_actors` function of your custom task class.
 
-Loading these objects is done in the `_load_actors` function.
+To build objects 
+
+### Reconfiguring and Optimization
+
+In general loading is always quite slow, especially on the GPU so by default, ManiSkill reconfigures just once, any call to `env.reset()` will not trigger a reconfiguration unless you call `env.reset(seed=seed, options=dict(reconfigure=True))` (seed is not needed but recommended if you are reconfiguring for reproducibility).
+
+If you want calls to `env.reset()` to by default reconfigure, you can set a default value for `reconfigure_freq` in your task's `__init__` function
+
+```python
+def __init__(self, *args, robot_uids="panda", reconfigure_freq=1, **kwargs):
+    super().__init__(*args, robot_uids=robot_uids, reconfiguration_freq=reconfiguration_freq, **kwargs)
+```
+
+A `reconfiguration_freq` value of 1 means every during every reset we reconfigure. A `reconfiguration_freq` of `k` means every `k` resets we reconfigure. A `reconfiguration_freq` of 0 (the default) means we never reconfigure again.
+
+In general the 
+
 
 ## Initialization / Randomization
 

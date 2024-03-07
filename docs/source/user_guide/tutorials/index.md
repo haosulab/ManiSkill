@@ -12,7 +12,7 @@ These are tutorials written by the maintainers of ManiSkill and the community, s
 
 ```{toctree}
 :titlesonly:
-:glob:
-
-*
+custom_tasks
+custom_reusable_scenes
+domain_randomization
 ```
