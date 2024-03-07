@@ -7,17 +7,14 @@ long_description = """ManiSkill2 is a unified benchmark for learning generalizab
 Please refer our [documentation](https://haosulab.github.io/ManiSkill2) to learn more information."""
 
 setup(
-    name="mani_skill2",
+    name="mani_skill",
     version=__version__,
-    description="ManiSkill2: A Unified Benchmark for Generalizable Manipulation Skills",
+    description="ManiSkill3: A Unified Benchmark for Generalizable Manipulation Skills",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    author="ManiSkill2 contributors",
+    author="ManiSkill contributors",
     url="https://github.com/haosulab/ManiSkill2",
-    packages=find_packages(
-        include=["mani_skill2*", "warp_maniskill*"],
-        exclude=["warp_maniskill.warp.tests"],
-    ),
+    packages=find_packages(include=["mani_skill*"]),
     python_requires=">=3.9",
     setup_requires=["setuptools>=62.3.0"],
     install_requires=[
@@ -25,7 +22,7 @@ setup(
         "scipy",
         "dacite",
         "gymnasium>=0.28.1",
-        # "sapien==3.0.0.dev0",
+        "sapien==3.0.0.dev1",
         "h5py",
         "pyyaml",
         "tqdm",
@@ -42,13 +39,7 @@ setup(
     ],
     # Glob patterns do not automatically match dotfiles
     package_data={
-        "mani_skill2": [
-            "assets/**",
-            "envs/**/*",
-            "utils/**/*",
-            "envs/mpm/shader/**",
-            "envs/mpm/RopeInit.pkl",
-        ],
+        "mani_skill": ["assets/**", "envs/**/*", "utils/**/*"],
         "warp_maniskill.warp": ["native/*", "native/nanovdb/*"],
     },
     exclude_package_data={"": ["*.convex.stl"]},
