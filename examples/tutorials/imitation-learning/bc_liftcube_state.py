@@ -12,8 +12,8 @@ from torch.utils.data import DataLoader, Dataset
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
-import mani_skill2.envs
-from mani_skill2.utils.wrappers import RecordEpisode
+import mani_skill.envs
+from mani_skill.utils.wrappers import RecordEpisode
 
 
 # loads h5 data into memory for faster access
@@ -34,7 +34,7 @@ class ManiSkill2Dataset(Dataset):
         # quick start tutorial
         import h5py
 
-        from mani_skill2.utils.io_utils import load_json
+        from mani_skill.utils.io_utils import load_json
 
         self.data = h5py.File(dataset_file, "r")
         json_path = dataset_file.replace(".h5", ".json")

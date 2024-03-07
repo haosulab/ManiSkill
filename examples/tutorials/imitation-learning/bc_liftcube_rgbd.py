@@ -12,8 +12,8 @@ from torch.utils.data import DataLoader, Dataset
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
-import mani_skill2.envs
-from mani_skill2.utils.wrappers import RecordEpisode
+import mani_skill.envs
+from mani_skill.utils.wrappers import RecordEpisode
 
 
 def tensor_to_numpy(x):
@@ -35,7 +35,7 @@ def convert_observation(observation):
     depth2 = image_obs["hand_camera"]["depth"]
 
     # we provide a simple tool to flatten dictionaries with state data
-    from mani_skill2.utils.common import flatten_state_dict
+    from mani_skill.utils.common import flatten_state_dict
 
     state = np.hstack(
         [
@@ -80,7 +80,7 @@ class ManiSkill2Dataset(Dataset):
         # quick start tutorial
         import h5py
 
-        from mani_skill2.utils.io_utils import load_json
+        from mani_skill.utils.io_utils import load_json
 
         self.data = h5py.File(dataset_file, "r")
         json_path = dataset_file.replace(".h5", ".json")

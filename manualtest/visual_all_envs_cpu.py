@@ -2,10 +2,10 @@ import gymnasium as gym
 import numpy as np
 import sapien
 
-# cd ManiSkill2 && pip uninstall -y mani_skill2 && pip install . && cd ..
-import mani_skill2.envs
-from mani_skill2.utils import sapien_utils
-from mani_skill2.utils.wrappers import RecordEpisode
+# cd ManiSkill2 && pip uninstall -y mani_skill  && pip install . && cd ..
+import mani_skill.envs
+from mani_skill.utils import sapien_utils
+from mani_skill.utils.wrappers import RecordEpisode
 
 if __name__ == "__main__":
     # sapien.set_log_level("info")

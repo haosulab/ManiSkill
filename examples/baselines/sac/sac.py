@@ -17,10 +17,10 @@ import torch.optim as optim
 import tyro
 from stable_baselines3.common.buffers import ReplayBuffer
 from torch.utils.tensorboard import SummaryWriter
-from mani_skill2.utils.sapien_utils import to_numpy
-from mani_skill2.utils.wrappers.record import RecordEpisode
+from mani_skill.utils.sapien_utils import to_numpy
+from mani_skill.utils.wrappers.record import RecordEpisode
 
-from mani_skill2.vector.wrappers.gymnasium import ManiSkillVectorEnv
+from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 
 
 @dataclass

@@ -1,9 +1,9 @@
 import gymnasium as gym
 import numpy as np
 
-import mani_skill2.envs
-from mani_skill2.utils import sapien_utils
-from mani_skill2.utils.wrappers import RecordEpisode
+import mani_skill.envs
+from mani_skill.utils import sapien_utils
+from mani_skill.utils.wrappers import RecordEpisode
 
 if __name__ == "__main__":
     # , "StackCube-v0", "LiftCube-v0"
