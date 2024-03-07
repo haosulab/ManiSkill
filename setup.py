@@ -18,7 +18,7 @@ setup(
         include=["mani_skill2*", "warp_maniskill*"],
         exclude=["warp_maniskill.warp.tests"],
     ),
-    python_requires=">=3.8",
+    python_requires=">=3.9",
     setup_requires=["setuptools>=62.3.0"],
     install_requires=[
         "numpy>=1.22",

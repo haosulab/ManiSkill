@@ -1,4 +1,4 @@
-from mani_skill2 import __version__
+__version__ = "3.0.0.dev0"
 # Configuration file for the Sphinx documentation builder.
 #
 # For the full list of built-in configuration values, see the documentation:
