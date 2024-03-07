@@ -16,6 +16,7 @@ from mani_skill2.utils.sapien_utils import (
 )
 from mani_skill2.utils.structs.pose import vectorize_pose
 
+
 @register_agent()
 class TriFingerPro(BaseAgent):
     """
