@@ -36,7 +36,6 @@ python -m mani_skill2.examples.demo_random_action -e PickCube-v1 --render-mode="
 
 ```{figure} images/demo_random_action_gui.png
 ---
-margin-bottom: 20px
 alt: SAPIEN GUI showing the PickCube task
 ---
 ```

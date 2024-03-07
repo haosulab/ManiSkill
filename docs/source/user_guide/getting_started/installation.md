@@ -9,17 +9,18 @@ From pip (stable version):
 pip install mani-skill2==3.0.0.dev0
 ```
 
+<!-- add the other install options one released -->
 From github (latest commit):
 
 ```bash
-pip install --upgrade git+https://github.com/haosulab/ManiSkill2.git
+pip install --upgrade git+https://github.com/haosulab/ManiSkill2.git@dev
 ```
 
 From source:
 
 ```bash
 git clone https://github.com/haosulab/ManiSkill2.git
-cd ManiSkill2 && pip install -e .
+cd ManiSkill2 && git checkout -b dev --track origin/dev && pip install -e .
 ```
 
 :::{note}
