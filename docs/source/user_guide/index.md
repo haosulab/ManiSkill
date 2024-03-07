@@ -37,8 +37,8 @@ tutorials/index
 concepts/index
 datasets/index
 data_collection/index
-algorithms_and_models/index
-workflows/index
+<!-- algorithms_and_models/index
+workflows/index -->
 ```
 
 ```{toctree}
@@ -46,5 +46,5 @@ workflows/index
 :caption: Additional Resources
 
 additional_resources/performance_benchmarking
-additional_resources/education
+<!-- additional_resources/education -->
 ```
