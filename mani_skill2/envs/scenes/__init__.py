@@ -16,6 +16,6 @@ from .base_env import SceneManipulationEnv
 for k, scene_builder_spec in REGISTERED_SCENE_BUILDERS.items():
     register_env(
         f"{k}_SceneManipulation-v1",
-        max_episode_steps=None,
+        max_episode_steps=200,
         scene_builder_cls=k,
     )(SceneManipulationEnv)

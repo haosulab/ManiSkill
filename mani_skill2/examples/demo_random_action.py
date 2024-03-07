@@ -9,11 +9,12 @@ from mani_skill2.utils.wrappers import RecordEpisode
 
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-e", "--env-id", type=str, default="PushCube-v1")
+    parser.add_argument("-e", "--env-id", type=str, default="PushCube-v1", help="The environment ID of the task you want to simulate")
     parser.add_argument("-o", "--obs-mode", type=str, default="none")
     parser.add_argument("--reward-mode", type=str)
     parser.add_argument("-c", "--control-mode", type=str)
     parser.add_argument("--render-mode", type=str)
+    parser.add_argument("--shader", default="default", type=str, help="Change shader used for rendering. Default is 'default' which is very fast. Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer")
     parser.add_argument("--record-dir", type=str)
     parser.add_argument("--quiet", action="store_true", help="Disable verbose output.")
     parser.add_argument(
@@ -47,6 +48,7 @@ def main(args):
         reward_mode=args.reward_mode,
         control_mode=args.control_mode,
         render_mode=args.render_mode,
+        shader_dir=args.shader,
         **args.env_kwargs
     )
 
@@ -82,6 +84,9 @@ def main(args):
             if terminated or truncated:
                 break
     env.close()
+
+    if record_dir:
+        print(f"Saving video to {record_dir}")
 
 
 if __name__ == "__main__":

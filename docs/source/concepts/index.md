@@ -1,7 +1,0 @@
-# Concepts
-```{toctree}
-:titlesonly:
-:glob:
-
-*
-```

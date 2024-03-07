@@ -31,10 +31,11 @@ imgui.ini
 
 # directories that should be ignored in general
 # but can be excluded explicitly
-tmp/
-data/
-demos/
-videos/
+/tmp
+/data
+/demos
+/videos
+/examples/benchmarking/videos
 
 # testing
 .coverage*

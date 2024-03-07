@@ -20,3 +20,6 @@ Start a server to watch changes
 # In docs/
 sphinx-autobuild ./source ./build/html
 ```
+
+
+For github links for the time being must double check they link the right branch/commit

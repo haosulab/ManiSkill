@@ -1,6 +1,6 @@
 sphinx==6.2.1
 sphinx-autobuild
-sphinx-book-theme
+pydata_sphinx_theme
 # For spelling
 sphinxcontrib.spelling
 # Type hints support
@@ -10,3 +10,4 @@ sphinx_copybutton
 # Markdown parser
 myst-parser
 sphinx-subfigure
+sphinxcontrib-video
