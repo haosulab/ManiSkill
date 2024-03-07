@@ -38,14 +38,18 @@ exclude_patterns = []
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = "sphinx_book_theme"
+html_theme = "pydata_sphinx_theme"
+html_theme_options = {
+    "use_edit_page_button": True,
 
+}
 html_context = {
     "display_github": True,
     "github_user": "haosulab",
     "github_repo": "ManiSkill2",
-    "github_version": "main",
-    "conf_py_path": "/source/"
+    "github_version": "dev",
+    "conf_py_path": "/source/",
+    "doc_path": "docs/source"
 }
 
 html_static_path = ['_static']

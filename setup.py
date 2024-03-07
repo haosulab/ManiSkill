@@ -58,7 +58,7 @@ setup(
             # Note that currently sphinx 7 does not work, so we must use v6.2.1. See https://github.com/kivy/kivy/issues/8230 which tracks this issue. Once fixed we can use a later version
             "sphinx==6.2.1",
             "sphinx-autobuild",
-            "sphinx-book-theme",
+            "pydata_sphinx_theme",
             # For spelling
             "sphinxcontrib.spelling",
             # Type hints support
