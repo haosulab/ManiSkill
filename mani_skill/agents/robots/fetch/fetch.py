@@ -49,7 +49,7 @@ class Fetch(BaseAgent):
             height=128,
             fov=2,
             near=0.01,
-            far=10,
+            far=100,
             entity_uid="head_camera_link",
         ),
         CameraConfig(
@@ -60,7 +60,7 @@ class Fetch(BaseAgent):
             height=128,
             fov=2,
             near=0.01,
-            far=10,
+            far=100,
             entity_uid="gripper_link",
         ),
     ]

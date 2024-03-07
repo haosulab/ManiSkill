@@ -50,12 +50,12 @@ class StackCubeEnv(BaseEnv):
     def _register_sensors(self):
         pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
         return [
-            CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10)
+            CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 100)
         ]
 
     def _register_human_render_cameras(self):
         pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
-        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
+        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)
 
     def _load_actors(self):
         self.cube_half_size = sapien_utils.to_tensor([0.02] * 3)

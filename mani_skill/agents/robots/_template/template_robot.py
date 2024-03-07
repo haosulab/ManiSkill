@@ -51,7 +51,7 @@ class TemplateRobot(BaseAgent):
                 height=128,
                 fov=1.57,
                 near=0.01,
-                far=10,
+                far=100,
                 entity_uid="your_mounted_camera",
             )
         ]

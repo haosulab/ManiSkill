@@ -18,7 +18,7 @@ class PandaRealSensed435(Panda):
             height=128,
             fov=1.57,
             near=0.01,
-            far=10,
+            far=100,
             entity_uid="camera_link",
         )
     ]

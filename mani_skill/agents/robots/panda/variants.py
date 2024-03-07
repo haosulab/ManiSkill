@@ -66,7 +66,7 @@ class PandaBucket(Panda):
             width=128,
             height=128,
             near=0.01,
-            far=10,
+            far=100,
             fov=np.pi / 2,
             entity_uid="bucket",
         )
