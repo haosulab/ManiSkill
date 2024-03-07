@@ -10,7 +10,7 @@ from mani_skill2.examples.motionplanning.motionplanner import \
 import sapien.utils.viewer
 import h5py
 import json
-from mani_skill2.trajectory.dataset import dict_to_list_of_dicts
+import mani_skill2.trajectory.utils as trajectory_utils
 from mani_skill2.utils import sapien_utils
 from mani_skill2.utils.wrappers.record import RecordEpisode
 def main(args):
@@ -79,7 +79,7 @@ def main(args):
         traj_id = f"traj_{episode['episode_id']}"
         data = trajectory_data[traj_id]
         env.reset(**episode["reset_kwargs"])
-        env_states_list = dict_to_list_of_dicts(data["env_states"])
+        env_states_list = trajectory_utils.dict_to_list_of_dicts(data["env_states"])
 
         env._base_env.set_state_dict(env_states_list[0])
         for action in np.array(data["actions"]):

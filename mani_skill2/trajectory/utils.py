@@ -1,5 +1,5 @@
 """
-Code for reading ManiSkill generated trajectory files
+Utils for working with ManiSkill trajectory files
 """
 
 import h5py

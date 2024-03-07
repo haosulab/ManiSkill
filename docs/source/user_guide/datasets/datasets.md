@@ -16,8 +16,6 @@ python -m mani_skill2.utils.download_demo all
 python -m mani_skill2.utils.download_demo ${ENV_ID}
 # Download the demonstration datasets for all rigid-body tasks to "./demos"
 python -m mani_skill2.utils.download_demo rigid_body -o ./demos
-# Download the demonstration datasets for all soft-body tasks
-python -m mani_skill2.utils.download_demo soft_body
 ```
 
 ## Format
@@ -39,6 +37,8 @@ Each JSON file contains:
   - `max_episode_steps` (int)
   - `env_kwargs` (Dict): keyword arguments to initialize the task. **Essential to recreate the environment.**
 - `episodes` (List[Dict]): episode information
+- `source_type` (Optional[str]): a simple category string describing what process generated the trajectory data. ManiSkill official datasets will usually write one of "human", "motionplanning", or "rl" at the moment.
+- `source_desc` (Optional[str]): a longer explanation of how the data was generated.
 
 The episode information (the element of `episodes`) includes:
 
@@ -63,12 +63,55 @@ Each HDF5 demonstration dataset consists of multiple trajectories. The key of ea
 Each trajectory is an `h5py.Group`, which contains:
 
 - actions: [T, A], `np.float32`. `T` is the number of transitions.
-- success: [T], `np.bool_`. It indicates whether the task is successful at each time step.
-- env_states: [T+1, D], `np.float32`. Environment states. It can be used to set the environment to a certain state, e.g., `env.set_state(env_states[i])`. However, it may not be enough to reproduce the trajectory.
-- env_init_state: [D], `np.float32`. The initial environment state. It is used for soft-body tasks, since their states (particle positions) can use too much space.
-- obs (optional): observations. If the observation is a `dict`, the value will be stored in `obs/{key}`. The convention is applied recursively for nested dict.
+- terminated: [T], `np.bool_`. It indicates whether the task is terminated or not at each time step.
+- truncated: [T], `np.bool_`. It indicates whether the task is truncated or not at each time step.
+- env_states: [T+1, D], `np.float32`. Environment states. It can be used to set the environment to a certain state via `env.set_state_dict`. However, it may not be enough to reproduce the trajectory.
+- success (optional): [T], `np.bool_`. It indicates whether the task is successful at each time step. Included if task defines success.
+- fail (optional): [T], `np.bool_`. It indicates whether the task is in a failure state at each time step. Included if task defines failure.
+- obs (optional): [T+1, D] observations.
 
-## Replaying/Converting Demonstration data
+Note that env_states is in a dictionary form (and observations may be as well depending on obs_mode), where it is formatted as a dictionary of lists. For example, a typical environment state looks like this:
+
+```python
+env_state = env.get_state_dict()
+"""
+env_state = {
+  "actors": {
+    "actor_id": [...numpy_actor_state...],
+    ...
+  },
+  "articulations": {
+    "articulation_id": [...numpy_articulation_state...],
+    ...
+  }
+}
+"""
+```
+In the trajectory file env_states will be the same structure but each value/leaf in the dictionary will be a sequence of states representing the state of that particular entity in the simulation over time.
+
+In practice it is may be more useful to use slices of the env_states data (or the observations data), which can be done with
+```python
+import mani_skill2.trajectory.utils as trajectory_utils
+env_states = trajectory_utils.dict_to_list_of_dicts(env_states)
+# now env_states[i] is the same as the data env.get_state_dict() returned at timestep i
+i = 10
+env_state_i = trajectory_utils.index_dict(env_states, i)
+# now env_state_i is the same as the data env.get_state_dict() returned at timestep i
+```
+
+These tools are also used in the PyTorch Dataset implementation we provide which is explained the nect section
+
+## Loading Trajectory Datasets
+
+#### PyTorch
+
+
+#### Other
+
+## Loading Demonstration Data
+
+<!-- # TODO (stao): add back replay functionality and maybe conversion -->
+<!-- ## Replaying/Converting Demonstration data
 
 To replay the demonstrations (without changing the observation mode and control mode):
 
@@ -124,4 +167,4 @@ Since some demonstrations are collected in a non-quasi-static way (objects are n
 
 We recommend using our script only for converting actions into different control modes without recording any observation information (i.e. passing `--obs-mode=none`). The reason is that (1) some observation modes, e.g. point cloud, can take much space without any post-processing, e.g., point cloud downsampling; in addition, the `state` mode for soft-body tasks also has a similar issue, since the states of those tasks are particles. (2) Some algorithms  (e.g. GAIL) require custom keys stored in the demonstration files, e.g. next-observation.
 
-Thus we recommend that, after you convert actions into different control modes, implement your custom environment wrappers for observation processing. After this, use another script to render and save the corresponding post-processed visual demonstrations. [ManiSkill2-Learn](https://github.com/haosulab/ManiSkill2-Learn) has included such observation processing wrappers and demonstration conversion script (with multi-processing), so we recommend referring to the repo for more details.
+Thus we recommend that, after you convert actions into different control modes, implement your custom environment wrappers for observation processing. After this, use another script to render and save the corresponding post-processed visual demonstrations. [ManiSkill2-Learn](https://github.com/haosulab/ManiSkill2-Learn) has included such observation processing wrappers and demonstration conversion script (with multi-processing), so we recommend referring to the repo for more details. -->

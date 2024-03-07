@@ -1,7 +1,7 @@
 # Concepts
 ```{toctree}
 :titlesonly:
-:glob:
 
-*
+controllers/
+observation/
 ```
