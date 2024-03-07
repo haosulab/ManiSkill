@@ -41,6 +41,16 @@ exclude_patterns = []
 html_theme = "pydata_sphinx_theme"
 html_theme_options = {
     "use_edit_page_button": True,
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/haosulab/maniskill2",
+            "icon": "fa-brands fa-github",
+        }
+    ],
+    "external_links": [
+        {"name": "Changelog", "url": "https://github.com/haosulab/maniskill2/releases"},
+    ]
 
 }
 html_context = {

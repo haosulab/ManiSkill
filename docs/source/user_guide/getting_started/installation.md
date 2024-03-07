@@ -5,8 +5,8 @@ ManiSkill is a GPU-accelerated robotics benchmark built on top of [SAPIEN](https
 From pip (stable version):
 
 ```bash
-# `mani-skill2` or `mani_skill2` is equivalent for pip
-pip install mani-skill2
+# this is currently a beta version of mani_skill with GPU simulation
+pip install mani-skill2==3.0.0.dev0
 ```
 
 From github (latest commit):
