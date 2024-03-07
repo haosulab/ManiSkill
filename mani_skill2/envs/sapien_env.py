@@ -57,9 +57,9 @@ class BaseEnv(gym.Env):
         gpu_sim_backend: The GPU simulation backend to use (only used if the given num_envs argument is > 1). This affects the type of tensor
             returned by the environment for e.g. observations and rewards. Can be "torch" or "jax". Default is "torch"
 
-        obs_mode: observation mode registered in @SUPPORTED_OBS_MODES. See TODO (stao): add doc link here about how they work.
+        obs_mode: observation mode to be used. Must be one of ("state", "state_dict", "none", "sensor_data", "rgbd", "pointcloud")
 
-        reward_mode: reward mode registered in @SUPPORTED_REWARD_MODES. See TODO (stao): add doc link here about how they work.
+        reward_mode: reward mode to use. Must be one of ("normalized_dense", "dense", "sparse").
 
         control_mode: control mode of the agent.
             "*" represents all registered controllers, and the action space will be a dict.
@@ -67,7 +67,8 @@ class BaseEnv(gym.Env):
         render_mode: render mode registered in @SUPPORTED_RENDER_MODES.
 
         shader_dir (str): shader directory. Defaults to "default".
-            "default" and "rt" are built-in options with SAPIEN. Other options are user-defined.
+            "default", "rt", "rt-fast" are built-in options with SAPIEN. Other options are user-defined. "rt" means ray-tracing which results
+            in more photorealistic renders but is slow, "rt-fast" is a lower quality but faster version of "rt".
 
         enable_shadow (bool): whether to enable shadow for lights. Defaults to False.
 
