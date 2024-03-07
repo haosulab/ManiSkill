@@ -4,6 +4,8 @@ Controllers are interfaces between policies and robots. The policy outputs actio
 
 **The controller defines the action space of an task.** The robot can have separate controllers for its arm, gripper, and other components. The action space is a concatenation of the action spaces of all controllers.
 
+Note that while `pd_ee_delta_pose` type controllers that use IK may be more sample efficient to train / learn from for RL workflows, in GPU simulation running these controllers is not that fast and may slow down RL training.
+
 ## Terminology
 
 - fixed joint: a joint that can not be controlled. The degree of freedom (DoF) is 0.
@@ -46,10 +48,10 @@ For simplicity, we use the name of the arm controller to represent each combinat
 
 - gripper_pd_joint_pos (1-dim): Note that we force two gripper fingers to have the same target position. Thus, it is like a "mimic" joint.
 
-## Mobile Manipulator
+<!-- ## Mobile Manipulator
 
 The mobile manipulator is a combination of sciurus17 connector and one or two Panda arms. The controller is named `base_{}_arm_{}`. Except for the base controller, the arm and gripper controllers are the same as in the stationary manipulator.
 
 ### Base controllers
 
-- base_pd_joint_vel (4-dim): only control target velocities. The first 2 dimensions stand for egocentric xy-plane linear velocity and the 3rd dimension stands for egocentric z-axis angular velocity. The 4th dimension stands for velocity to adjust torso.
+- base_pd_joint_vel (4-dim): only control target velocities. The first 2 dimensions stand for egocentric xy-plane linear velocity and the 3rd dimension stands for egocentric z-axis angular velocity. The 4th dimension stands for velocity to adjust torso. -->

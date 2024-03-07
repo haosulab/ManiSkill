@@ -1,6 +1,6 @@
 # Installation
 
-ManiSkill is a GPU-accelerated robotics benchmark built on top of [SAPIEN](https://github.com/haosulab/sapien) designed to support a wide array of applications from robot learning, learning from demonstrations, sim2real/real2sim, and more. Follow the instructions below to get started using ManiSkill.
+Installing ManiSkill is quite simple with a single pip install and potentially installing vulkan if you don't have it already.
 
 From pip (stable version):
 
