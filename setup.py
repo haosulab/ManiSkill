@@ -21,7 +21,7 @@ setup(
         "numpy>=1.22",
         "scipy",
         "dacite",
-        "gymnasium>=0.28.1",
+        "gymnasium==0.29.1",
         "sapien==3.0.0.dev1",
         "h5py",
         "pyyaml",
