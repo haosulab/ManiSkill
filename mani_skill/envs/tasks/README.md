@@ -1,6 +1,6 @@
 # All new ManiSkill tasks
 
-To add a new task, create either a standalone python file your_task_name.py or folder (useful if you use some custom assets). We recommend using the mani_skill2/envs/template.py file to get started and filling out the code in there and following the comments.
+To add a new task, create either a standalone python file your_task_name.py or folder (useful if you use some custom assets). We recommend using the mani_skill/envs/template.py file to get started and filling out the code in there and following the comments.
 
 Moreover, each task is required to come along with a "Task Sheet" which quickly describes some core components of the task, namely
 - Randomization: how is the task randomized upon each environment reset?

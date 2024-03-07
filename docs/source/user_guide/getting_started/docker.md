@@ -11,13 +11,13 @@ To verify the installation:
 docker run hello-world
 ```
 
-## Run ManiSkill2 in Docker
+## Run ManiSkill in Docker
 
-We provide a docker image (`haosulab/mani-skill2`) and its corresponding [Dockerfile](https://github.com/haosulab/ManiSkill2/blob/main/docker/Dockerfile).
+We provide a docker image (`haosulab/mani-skill`) and its corresponding [Dockerfile](https://github.com/haosulab/ManiSkill2/blob/main/docker/Dockerfile).
 
 ```bash
-docker pull haosulab/mani-skill2
-docker run --rm -it --gpus all haosulab/mani-skill2 python -m mani_skill2.examples.demo_random_action
+docker pull haosulab/mani-skill
+docker run --rm -it --gpus all haosulab/mani-skill python -m mani_skill.examples.demo_random_action
 ```
 <!-- 
 ## Run GUI Applications
@@ -30,8 +30,8 @@ xhost +local:root
 # Run ManiSkill2 docker image with the NVIDIA GPU
 docker run --rm -it --gpus all \
     -v /tmp/.X11-unix:/tmp/.X11-unix -e DISPLAY \
-    haosulab/mani-skill2 \
-    python -m mani_skill2.examples.demo_manual_control -e PickCube-v0 --enable-sapien-viewer
+    haosulab/mani-skill \
+    python -m mani_skill.examples.demo_manual_control -e PickCube-v0 --enable-sapien-viewer
 ```
 
 To run GUI applications on a headless server, we present a solution based on `x11vnc` and `fluxbox`.
@@ -39,7 +39,7 @@ To run GUI applications on a headless server, we present a solution based on `x1
 ```bash
 # https://www.richud.com/wiki/Ubuntu_Fluxbox_GUI_with_x11vnc_and_Xvfb
 docker run --rm --gpus all -p 5900:5900 \
-    haosulab/mani-skill2 \
+    haosulab/mani-skill \
     apt update && bash -c "apt install -yqq x11vnc fluxbox && x11vnc -create -env FD_PROG=/usr/bin/fluxbox  -env X11VNC_FINDDISPLAY_ALWAYS_FAILS=1 -env X11VNC_CREATE_GEOM=${1:-1920x1080x16} -gone 'pkill Xvfb' -nopw"
 ```
 

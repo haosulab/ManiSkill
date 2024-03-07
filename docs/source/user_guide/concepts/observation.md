@@ -93,7 +93,7 @@ For `obs_mode="pointcloud"`:
 
 ### More Details on Mesh and Actor-Level segmentations
 
-An "actor" is a fundamental object that represents a physical entity (rigid body) that can be simulated in SAPIEN (the backend of ManiSkill2). An articulated object is a collection of links interconnected by joints, and each link is also an actor. In SAPIEN, `scene.get_all_actors()` will return all the actors that are not links of articulated objects. The examples are the ground, the cube in [PickCube](./environments.md#PickCube-v1), and the YCB objects in [PickSingleYCB](./environments.md#picksingleycb-v0). `scene.get_all_articulations()` will return all the articulations. The examples are the robots, the cabinets in [OpenCabinetDoor](./environments.md#opencabinetdoor-v1), and the chairs in [PushChair](./environments.md#pushchair-v1). Below is an example of how to get actors and articulations in SAPIEN.
+An "actor" is a fundamental object that represents a physical entity (rigid body) that can be simulated in SAPIEN (the backend of ManiSkill). An articulated object is a collection of links interconnected by joints, and each link is also an actor. In SAPIEN, `scene.get_all_actors()` will return all the actors that are not links of articulated objects. The examples are the ground, the cube in [PickCube](./environments.md#PickCube-v1), and the YCB objects in [PickSingleYCB](./environments.md#picksingleycb-v0). `scene.get_all_articulations()` will return all the articulations. The examples are the robots, the cabinets in [OpenCabinetDoor](./environments.md#opencabinetdoor-v1), and the chairs in [PushChair](./environments.md#pushchair-v1). Below is an example of how to get actors and articulations in SAPIEN.
 
 ```python
 import sapien
@@ -105,7 +105,7 @@ for articulation in articulations:
   links = articulation.get_links()  # links of an articulation
 ```
 
-In ManiSkill2, our environments provide interfaces to wrap the above SAPIEN functions:
+In ManiSkill, our environments provide interfaces to wrap the above SAPIEN functions:
 
 - `env.get_actors()`: return all task-relevant actors excluding links. Note that some actors might be excluded from `env._scene.get_all_actors()`.
 - `env.get_articulations()`: return all task-relevant articulations. Note that some articulations might be excluded from `env._scene.get_all_articulations()`.
@@ -129,7 +129,7 @@ The segmentation image is a `[H, W, 4]` array. The second channel corresponds to
 Thus, given the actors, you can use the ids of these actors (`actor.id`) to query the actor segmentation to segment out a particular object. For example,
 
 ```python
-import mani_skill2.envs, gymnasium as gym
+import mani_skill.envs, gymnasium as gym
 import numpy as np
 
 env = gym.make('PickSingleYCB-v0', obs_mode='rgbd', camera_cfgs={'add_segmentation': True})
@@ -160,7 +160,7 @@ for camera_name in obs['image'].keys():
 However, the actor segmentations do not contain finegrained information on object parts, such as handles and door surfaces of cabinets. In this case, you need to leverage the mesh-level segmentations and the fine-grained visual bodies of actors to obtain the segmentations to e.g., handles and door surfaces. For example,
 
 ```python
-import mani_skill2.envs, gymnasium as gym
+import mani_skill.envs, gymnasium as gym
 import numpy as np
 
 env = gym.make('OpenCabinetDoor-v1', obs_mode='rgbd', camera_cfgs={'add_segmentation': True})

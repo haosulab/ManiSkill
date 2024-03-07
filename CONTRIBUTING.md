@@ -1,12 +1,12 @@
 # Contributing
 
-Thank you for your interest in contributing to ManiSkill2! To get started, follow the setup and installation instructions below.
+Thank you for your interest in contributing to ManiSkill! To get started, follow the setup and installation instructions below.
 
 To start contributing, raise an issue at https://github.com/haosulab/ManiSkill2/issues describing what your proposed changes/contributions or comment on an existing issue. Once one of the maintainers gives a thumbs up, you can make a pull request, and our team will review it.
 
 ## Setup and Installation
 
-We recommend using Python 3.9 to build and develop on ManiSkill2 (MS2), although we currently aim to support versions 3.8 and above. To get started you must set up a conda/mamba environment which can be done as follows
+We recommend using Python 3.9 to build and develop on ManiSkill, although we currently aim to support versions 3.8 and above. To get started you must set up a conda/mamba environment which can be done as follows
 
 ```
 conda create -n "ms3_dev" "python==3.9"
@@ -24,7 +24,7 @@ pre-commit install
 
 ## Testing
 
-Testing is currently semi-automated and a WIP. We currently rely on coverage.py and pytest to test ManiSkill2.
+Testing is currently semi-automated and a WIP. We currently rely on coverage.py and pytest to test ManiSkill.
 
 After you make changes, be sure to add any necessary tests to cover any new code in the `tests/` folder and run all the tests with the following command
 
@@ -36,8 +36,8 @@ pytest tests/ -m "not slow and not gpu_sim"
 Note that we add a "not slow" argument which is to prevent testing on slow tests like download utility testing. There is also the "gpu_sim" pytest mark, which marks some tests as having to use the GPU simulation. These tests are separated as CPU simulation cannot run once GPU simulation has started and vice versa. With that in mind, any test that uses GPU simulation must add the `@pytest.mark.gpu_sim` decorator.
 
 <!-- ```
-coverage run --source=mani_skill2/ -a -m pytest tests -m "not slow" # run tests
-coverage html --include=mani_skill2/**/*.py # see the test coverage results
+coverage run --source=mani_skill/ -a -m pytest tests -m "not slow" # run tests
+coverage html --include=mani_skill/**/*.py # see the test coverage results
 ``` -->
 <!-- 
 To skip generating a coverage report and also for easy debugging you can just run
@@ -54,4 +54,12 @@ python -m build -s -w
 python -m twine upload --repository testpypi dist/*
 ```
 
+To install the test package
+```
+python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple mani_skill
+```
+
 To upload to the actual pypi repository
+```
+python -m twine upload dist/*
+```

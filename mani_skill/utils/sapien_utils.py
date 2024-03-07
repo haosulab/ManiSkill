@@ -11,10 +11,11 @@ import sapien.wrapper.urdf_loader
 from transforms3d.quaternions import mat2quat
 
 if TYPE_CHECKING:
-    from mani_skill2.utils.structs.actor import Actor
+    from mani_skill.utils.structs.actor import Actor
 
 import torch
-from mani_skill2.utils.structs.types import Array, get_backend_name
+
+from mani_skill.utils.structs.types import Array, get_backend_name
 
 
 def to_tensor(array: Union[torch.Tensor, np.array, Sequence]):

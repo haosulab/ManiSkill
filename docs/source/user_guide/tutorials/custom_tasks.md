@@ -11,9 +11,9 @@ To build a custom task in ManiSkill, it is comprised of the following core compo
 5. [(Optional) Dense Reward Function](#optional-dense-reward-function) (done every env.step)
 6. [(Optional) Setting up cameras/sensors for observations and rendering/recording](#optional-setting-up-camerassensors-for-observations-and-recording) (done once)
 
-To follow this tutorial easily, we recommend reading this along side reading the [annotated code for the PushCube task](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill2/envs/tasks/push_cube.py) which describe the purpose of nearly every line of code. The first few sections will cover the bare minimum details necessary to start building your own tasks and show snippets of code from the PushCube task. The advanced sections cover additional topics to do more advanced simulation and optimization such as heterogenous object simulation. 
+To follow this tutorial easily, we recommend reading this along side reading the [annotated code for the PushCube task](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill/envs/tasks/push_cube.py) which describe the purpose of nearly every line of code. The first few sections will cover the bare minimum details necessary to start building your own tasks and show snippets of code from the PushCube task. The advanced sections cover additional topics to do more advanced simulation and optimization such as heterogenous object simulation. 
 
-If you want to skip the tutorial and start from a template you can use the [PushCube task](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill2/envs/tasks/push_cube.py) as a template, the [annotated template](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill2/envs/template.py), or the [bare minimum template](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill2/envs/minimal_template.py).
+If you want to skip the tutorial and start from a template you can use the [PushCube task](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill/envs/tasks/push_cube.py) as a template, the [annotated template](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill/envs/template.py), or the [bare minimum template](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill/envs/minimal_template.py).
 
 <!-- This tutorial will first cover each of the core components, and then showcase 3 different tutorial tasks ([PushCube](#example-task-1-push-cube), [PickSingleYCB](#example-task-2-pick-single-ycb), [OpenCabinetDrawer](#example-task-3-open-cabinet-drawer)) that showcase how to use most of the features in ManiSkill. -->
 
@@ -25,9 +25,9 @@ All tasks are defined by their own class and must inherit `BaseEnv`, similar to 
 
 ```python
 import sapien
-from mani_skill2.utils import sapien_utils
-from mani_skill2.envs.sapien_env import BaseEnv
-from mani_skill2.utils.registration import register_env
+from mani_skill.utils import sapien_utils
+from mani_skill.envs.sapien_env import BaseEnv
+from mani_skill.utils.registration import register_env
 
 @register_env("PushCube-v1", max_episode_steps=50)
 class PushCubeEnv(BaseEnv):
@@ -45,7 +45,7 @@ Building objects in ManiSkill is nearly the exact same as it is in SAPIEN. You c
 This is the simplest part and requires almost no additional work here. Robots are added in for you automatically and have their base initialized at 0. You can specify the default robot(s) added in via the init function. It is also strongly recommended to use proper typing to indicate which robots are supported and could be available. In PushCube this is done as so by adding class attributes / typing.
 
 ```python
-from mani_skill2.agents.robots import Fetch, Panda, Xmate3Robotiq
+from mani_skill.agents.robots import Fetch, Panda, Xmate3Robotiq
 
 class PushCubeEnv(BaseEnv):
 
@@ -91,7 +91,7 @@ You can build a **kinematic** actor with `builder.build_kinematic` and a **stati
 
 We also provide some functions that build some more complex shapes that you can use by importing the following:
 ```
-from mani_skill2.utils.building import actors
+from mani_skill.utils.building import actors
 ```
 
 Once built, the return value of `builder.build...` is an `Actor` object, which manages every parallel instance of the built object in each sub-scene. Now the following occurs which makes it easy to build task rewards, success evaluations etc.
@@ -140,7 +140,7 @@ Task initialization and randomization is handled in the `_initalize_actors` func
 An example from part of the PushCube task
 
 ```python
-from mani_skill2.utils.structs.pose import Pose
+from mani_skill.utils.structs.pose import Pose
 import torch
 def _initialize_actors(self, env_idx: torch.Tensor):
     # use the torch.device context manager to automatically create tensors on CPU or CUDA depending on self.device, the device the environment runs on
@@ -236,7 +236,7 @@ If you want your task to be able to return information from sensors like cameras
 Below shows how to use `CameraConfig` to define sensors, you define its position, quaternion, width, height, fov, near, and far attributes. 
 
 ```python
-from mani_skill2.sensors.camera import CameraConfig
+from mani_skill.sensors.camera import CameraConfig
 def _register_sensors(self):
     # registers one 128x128 camera looking at the robot, cube, and target
     # a smaller sized camera will be lower quality, but render faster
@@ -298,7 +298,7 @@ Not shared
 
 ## Example Task 2: Pick Single YCB
 
-The goal of this example task is to demonstrate how to make task building with heterogenous object geometries easy via the actor merging API. Building tasks with heteroenous objects allows for easier diverse data collection and generaliable policy training. The complete task code is at [mani_skill2/envs/tasks/pick_single_ycb.py](https://github.com/haosulab/ManiSkill2/tree/main/mani_skill2/envs/tasks/pick_single_ycb.py)
+The goal of this example task is to demonstrate how to make task building with heterogenous object geometries easy via the actor merging API. Building tasks with heteroenous objects allows for easier diverse data collection and generaliable policy training. The complete task code is at [mani_skill/envs/tasks/pick_single_ycb.py](https://github.com/haosulab/ManiSkill2/tree/main/mani_skill/envs/tasks/pick_single_ycb.py)
 
 Previously in PushCube, we showed how one can simply create a single object like a cube, and ManiSkill will automatically spawn that cube in every sub-scene. To create a different object in each sub-scene, in this case a random object sampled from the YCB object Dataset, you must do this part yourself. As a user you simply write code to decide which sub-scene will have which object. This is done by creating an actor builder as usual, but now setting a scene mask to decide which sub-scenes have this object and which do not.
 

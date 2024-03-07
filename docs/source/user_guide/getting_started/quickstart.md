@@ -6,7 +6,7 @@ Here is a basic example of how to make a ManiSkill task following the interface 
 
 ```python
 import gymnasium as gym
-import mani_skill2.envs
+import mani_skill.envs
 
 env = gym.make(
     "PickCube-v1", # there are more tasks e.g. "PushCube-v1", "PegInsertionSide-v1", ...
@@ -30,8 +30,8 @@ env.close()
 You can also run the same code from the command line to demo random actions
 
 ```bash
-python -m mani_skill2.examples.demo_random_action -e PickCube-v1 # run headless
-python -m mani_skill2.examples.demo_random_action -e PickCube-v1 --render-mode="human" # run with A GUI
+python -m mani_skill.examples.demo_random_action -e PickCube-v1 # run headless
+python -m mani_skill.examples.demo_random_action -e PickCube-v1 --render-mode="human" # run with A GUI
 ```
 
 ```{figure} images/demo_random_action_gui.png
@@ -46,14 +46,14 @@ The common observation modes are `state`, `rgbd`, `pointcloud`. We also support 
 
 We support a wide range of controllers. Different controllers can have different effects on your algorithms. Thus, it is recommended to understand the action space you are going to use. Please refer to [Controllers](../concepts/controllers.md) for more details.
 
-Some tasks require **downloading assets** that are not stored in the python package itself. You can download task-specific assets by `python -m mani_skill2.utils.download_asset ${ENV_ID}`. The assets will be downloaded to `~/maniskill/data` by default, but you can also use the environment variable `MS_ASSET_DIR` to change this destination. Please refer to [Tasks](../concepts/tasks.md) for all tasks built in out of the box, and which tasks require downloading assets.
+Some tasks require **downloading assets** that are not stored in the python package itself. You can download task-specific assets by `python -m mani_skill.utils.download_asset ${ENV_ID}`. The assets will be downloaded to `~/maniskill/data` by default, but you can also use the environment variable `MS_ASSET_DIR` to change this destination. Please refer to [Tasks](../concepts/tasks.md) for all tasks built in out of the box, and which tasks require downloading assets.
 
 We also have demos for simulations of scenes like ReplicaCAD, which can be run by doing
 
 ```bash
-python -m mani_skill2.utils.download_asset "ReplicaCAD"
-python -m mani_skill2.examples.demo_random_action.py -e "ReplicaCAD_SceneManipulation-v1" --render-mode="rgb_array" --record-dir="videos" # run headless and save video
-python -m mani_skill2.examples.demo_random_action.py -e "ReplicaCAD_SceneManipulation-v1" --render-mode="human" # run with GUI (recommended!)
+python -m mani_skill.utils.download_asset "ReplicaCAD"
+python -m mani_skill.examples.demo_random_action.py -e "ReplicaCAD_SceneManipulation-v1" --render-mode="rgb_array" --record-dir="videos" # run headless and save video
+python -m mani_skill.examples.demo_random_action.py -e "ReplicaCAD_SceneManipulation-v1" --render-mode="human" # run with GUI (recommended!)
 ```
 
 
@@ -72,7 +72,7 @@ In order to run massively parallelized tasks on a GPU, it is as simple as adding
 
 ```python
 import gymnasium as gym
-import mani_skill2.envs
+import mani_skill.envs
 
 env = gym.make("PickCube-v1", num_envs=1024)
 print(env.observation_space) # will now have shape (1024, ...)
@@ -82,14 +82,14 @@ print(env.action_space) # will now have shape (1024, ...)
 To benchmark the parallelized simulation, you can run 
 
 ```bash
-python -m mani_skill2.examples.benchmarking.gpu_sim --num-envs=1024
+python -m mani_skill.examples.benchmarking.gpu_sim --num-envs=1024
 ```
 
 To try out the parallelized rendering, you can run
 
 ```bash
 # rendering RGB + Depth data from all cameras
-python -m mani_skill2.examples.benchmarking.gpu_sim --num-envs=64 --obs-mode="rgbd"
+python -m mani_skill.examples.benchmarking.gpu_sim --num-envs=64 --obs-mode="rgbd"
 # directly save 64 videos of the visual observations put into one video
-python -m mani_skill2.examples.benchmarking.gpu_sim --num-envs=64 --save-video
+python -m mani_skill.examples.benchmarking.gpu_sim --num-envs=64 --save-video
 ```
