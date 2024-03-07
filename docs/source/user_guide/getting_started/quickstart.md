@@ -59,7 +59,7 @@ python -m mani_skill2.examples.demo_random_action.py -e "ReplicaCAD_SceneManipul
 
 
 <video preload="auto" controls="True" width="100%">
-<source src="/_static/videos/fetch_random_action_replica_cad_rt.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill2/raw/dev/docs/source/_static/videos/teleop-stackcube-demo.mp4" type="video/mp4">
 </video>
 
 For more details on rendering see TODO (stao). For a compilation of demos you can run without having to write any extra code check out the [demos page](../demos/index)

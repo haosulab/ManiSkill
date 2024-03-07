@@ -29,7 +29,7 @@ python -m mani_skill2.examples.demo_random_action -e "ReplicaCAD_SceneManipulati
 ```
 
 <video preload="auto" controls="True" width="100%">
-<source src="/_static/videos/fetch_random_action_replica_cad_rt.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill2/raw/dev/docs/source/_static/videos/fetch_random_action_replica_cad_rt.mp4" type="video/mp4">
 </video>
 
 Tasks with multiple robots
@@ -99,7 +99,7 @@ python -m mani_skill2.examples.teleoperation.interactive_panda -e "StackCube-v1"
 See [main page](../data_collection/teleoperation.md#clickdrag-system) for more details about how to use this tool (for demo and data collection). The video below shows the system running.
 
 <video preload="auto" controls="True" width="100%">
-<source src="/_static/videos/teleop-stackcube-demo.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill2/raw/dev/docs/source/_static/videos/teleop-stackcube-demo.mp4" type="video/mp4">
 </video>
 
 ## Motion Planning Solutions

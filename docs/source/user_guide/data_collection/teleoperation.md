@@ -18,7 +18,7 @@ python -m mani_skill2.examples.teleoperation.interactive_panda -e "StackCube-v1"
 ```
 
 <video preload="auto" controls="True" width="100%">
-<source src="/_static/videos/teleop-stackcube-demo.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill2/raw/dev/docs/source/_static/videos/teleop-stackcube-demo.mp4" type="video/mp4">
 </video>
 
 You can then drag the end-effector of the robot arm around to any position and rotation and press "n" on the keyboard to generate a trajectory to that place (done via motion planning). Each time the system will also print the current info about whether the task is solved or not.
