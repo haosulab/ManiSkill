@@ -2,8 +2,8 @@ import sys
 
 import gymnasium as gym
 
-import mani_skill2.envs
-from mani_skill2.envs.sapien_env import BaseEnv
+import mani_skill.envs
+from mani_skill.envs.sapien_env import BaseEnv
 
 if __name__ == "__main__":
     robot = sys.argv[1]

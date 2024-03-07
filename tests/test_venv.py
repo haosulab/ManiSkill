@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 from stable_baselines3.common.vec_env import SubprocVecEnv
 
-import mani_skill2.envs
+import mani_skill.envs
 from tests.utils import VENV_OBS_MODES
 
 

@@ -1,4 +1,4 @@
-# Reinforcement Learning with ManiSkill2
+# Reinforcement Learning with ManiSkill
 
 This contains single-file implementations that solve with LiftCube environment with rgbd or state observations. You need to install Stable Baselines 3 as so to run it. 
 
@@ -16,7 +16,7 @@ python sb3_ppo_liftcube_rgbd.py
 python sb3_ppo_liftcube_rgbd.py --eval --model-path=path/to/model
 ````
 
-Pass in `--help` for more options (e.g. logging, number of parallel environments, whether to use ManiSkill2 Vectorized Environments or not etc.). Models and videos are saved to the folder specified by `--log-dir` which defaults to `logs/`. 
+Pass in `--help` for more options (e.g. logging, number of parallel environments, whether to use ManiSkill Vectorized Environments or not etc.). Models and videos are saved to the folder specified by `--log-dir` which defaults to `logs/`. 
 
 
 

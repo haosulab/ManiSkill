@@ -6,8 +6,8 @@
 To benchmark ManiSkill + SAPIEN, after following the setup instructions on this repository's README.md, run
 
 ```
-python -m mani_skill2.examples.benchmarking.gpu_sim -e "PickCube-v1" -n=4096 -o=state --control-freq=50
-python -m mani_skill2.examples.benchmarking.gpu_sim -e "PickCube-v1" -n=1536 -o=rgbd --control-freq=50
+python -m mani_skill.examples.benchmarking.gpu_sim -e "PickCube-v1" -n=4096 -o=state --control-freq=50
+python -m mani_skill.examples.benchmarking.gpu_sim -e "PickCube-v1" -n=1536 -o=rgbd --control-freq=50
 # note we use --control-freq=50 as this is the control frequency isaac sim based repos tend to use
 ```
 

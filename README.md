@@ -1,8 +1,8 @@
-# ManiSkill2
+# ManiSkill 3
 
 ![teaser](figures/teaser_v2.jpg)
 
-[![PyPI version](https://badge.fury.io/py/mani-skill2.svg)](https://badge.fury.io/py/mani-skill2)
+[![PyPI version](https://badge.fury.io/py/mani-skill.svg)](https://badge.fury.io/py/mani-skill)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/haosulab/ManiSkill2/blob/main/examples/tutorials/1_quickstart.ipynb)
 [![Docs status](https://img.shields.io/badge/docs-passing-brightgreen.svg)](https://haosulab.github.io/ManiSkill2)
 [![Discord](https://img.shields.io/discord/996566046414753822?logo=discord)](https://discord.gg/x8yUZe5AdN)
@@ -31,7 +31,7 @@ From pip:
 
 ```bash
 # This is temporary in order to install a in-dev version of sapien 3
-pip install manualtest/sapien-3.0.0.dev20240305+5d84989-cp310-cp310-manylinux2014_x86_64.whl
+pip install mani_skill
 ```
 
 From github:
@@ -54,10 +54,10 @@ A GPU with the Vulkan driver installed is required to enable rendering in ManiSk
 ```bash
 # Run an episode (at most 200 steps) of "PickCube-v1" (a rigid-body environment) with random actions
 # Or specify an environment by "-e ${ENV_ID}"
-python -m mani_skill2.examples.demo_random_action
+python -m mani_skill.examples.demo_random_action
 ```
 
-Some environments require **downloading assets**. You can download all the assets by `python -m mani_skill2.utils.download_asset all` or download task-specific assets by `python -m mani_skill2.utils.download_asset ${ENV_ID}`. The assets will be downloaded to `./data/` by default, and you can also use the environment variable `MS2_ASSET_DIR` to specify this destination.
+Some environments require **downloading assets**. You can download all the assets by `python -m mani_skill.utils.download_asset all` or download task-specific assets by `python -m mani_skill.utils.download_asset ${ENV_ID}`. The assets will be downloaded to `./data/` by default, and you can also use the environment variable `MS2_ASSET_DIR` to specify this destination.
 
 Please refer to our [documentation](https://haosulab.github.io/ManiSkill2/concepts/environments.html) for details on all supported environments. The documentation also indicates which environments require downloading assets.
 
@@ -67,7 +67,7 @@ The soft-body environments are based on SAPIEN and customized [NVIDIA Warp](http
 
 ---
 
-We further provide a docker image (`haosulab/mani-skill2`) on [Docker Hub](https://hub.docker.com/repository/docker/haosulab/mani-skill2/general) and its corresponding [Dockerfile](./docker/Dockerfile).
+We further provide a docker image (`haosulab/mani-skill`) on [Docker Hub](https://hub.docker.com/repository/docker/haosulab/mani-skill/general) and its corresponding [Dockerfile](./docker/Dockerfile).
 
 If you encounter any issues with installation, please see the [troubleshooting](https://haosulab.github.io/ManiSkill2/getting_started/installation.html#troubleshooting) section for common fixes or submit an [issue](https://github.com/haosulab/ManiSkill2/issues).
 
@@ -77,7 +77,7 @@ Here is a basic example of how to make an [Gym/Gymnasium](https://github.com/far
 
 ```python
 import gymnasium as gym
-import mani_skill2.envs
+import mani_skill.envs
 
 env = gym.make("PickCube-v1", obs_mode="rgbd", control_mode="pd_joint_delta_pos", render_mode="human")
 print("Observation space", env.observation_space)
@@ -92,7 +92,7 @@ while not terminated and not truncated:
 env.close()
 ```
 
-Each `mani_skill2` environment supports different **observation modes** and **control modes**, which determine the **observation space** and **action space**. They can be specified by `gym.make(env_id, obs_mode=..., control_mode=...)`.
+Each `mani_skill` environment supports different **observation modes** and **control modes**, which determine the **observation space** and **action space**. They can be specified by `gym.make(env_id, obs_mode=..., control_mode=...)`.
 
 The basic observation modes supported are `pointcloud`, `rgbd`, `state_dict` and `state`.
 Please refer to our documentation for information on the [observation](https://haosulab.github.io/ManiSkill2/concepts/observation.html) and [control](https://haosulab.github.io/ManiSkill2/concepts/controllers.html) modes available and their details.
@@ -118,18 +118,6 @@ We provide [ManiSkill2-Learn](https://github.com/haosulab/ManiSkill2-Learn), an 
 ## Demonstrations
 
 Please see our [documentation](https://haosulab.github.io/ManiSkill2/concepts/demonstrations.html) for more details.
-
-<!-- ## ManiSkill2 Challenge
-
-The ManiSkill2 challenge is an ongoing competition using the ManiSkill2 benchmark. See our [website](https://sapien.ucsd.edu/challenges/maniskill/) for additional competition details and follow the [getting started](https://sapien.ucsd.edu/challenges/maniskill#getting-started) section to learn how to compete.
-
-To create a submission for the competition, follow [the instructions on our wiki](https://github.com/haosulab/ManiSkill2/wiki/Participation-Guidelines) on how to create a submission and submit it to the leaderboard.
-
-Previous results of the ManiSkill 2021 challenge can be found [here](https://sapien.ucsd.edu/challenges/maniskill#maniskill2021). Winning solutions and their codes can be found in the previous challenge.
-
-## Leaderboard
-
-You can find the leaderboard on the challenge website: <https://sapien.ucsd.edu/challenges/maniskill/challenges/ms2>. -->
 
 ## License
 

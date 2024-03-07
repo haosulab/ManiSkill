@@ -3,9 +3,9 @@ from typing import Callable, List
 import numpy as np
 import torch
 
-from mani_skill2.utils import sapien_utils
-from mani_skill2.utils.common import flatten_dict_keys
-from mani_skill2.utils.registration import REGISTERED_ENVS
+from mani_skill.utils import sapien_utils
+from mani_skill.utils.common import flatten_dict_keys
+from mani_skill.utils.registration import REGISTERED_ENVS
 
 # TODO (stao): reactivate old tasks once fixed
 ENV_IDS = list(REGISTERED_ENVS.keys())

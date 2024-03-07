@@ -1,4 +1,4 @@
-# ManiSkill2 Tutorials
+# ManiSkill Tutorials
 
 This folder contains some simple tutorials (notebooks and single-file implementations) for how to use and customize ManiSkill2, leverage fast vectorized environments, as well as train agents with Reinforcement Learning and Imitation Learning. These notebooks all designed to run both on Google Colab as well as locally. We have made the Colab examples fast enough to run under ~30 minutes even with visual observations and Colab resources. We recommend running the notebooks/tutorials locally if you have a more powerful GPU and CPU as Colab can be quite slow (they provide a low-end GPU and only 2 CPU cores).
 

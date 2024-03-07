@@ -2,8 +2,8 @@ import gymnasium as gym
 import numpy as np
 import pytest
 
-from mani_skill2.agents.multi_agent import MultiAgent
-from mani_skill2.envs.sapien_env import BaseEnv
+from mani_skill.agents.multi_agent import MultiAgent
+from mani_skill.envs.sapien_env import BaseEnv
 from tests.utils import (
     CONTROL_MODES_STATIONARY_SINGLE_ARM,
     ENV_IDS,

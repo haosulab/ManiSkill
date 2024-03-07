@@ -11,11 +11,11 @@ We provide a command line tool to download demonstrations directly from our [Hug
 
 ```bash
 # Download the full datasets
-python -m mani_skill2.utils.download_demo all
+python -m mani_skill.utils.download_demo all
 # Download the demonstration dataset for certain task
-python -m mani_skill2.utils.download_demo ${ENV_ID}
+python -m mani_skill.utils.download_demo ${ENV_ID}
 # Download the demonstration datasets for all rigid-body tasks to "./demos"
-python -m mani_skill2.utils.download_demo rigid_body -o ./demos
+python -m mani_skill.utils.download_demo rigid_body -o ./demos
 ```
 
 ## Format
@@ -91,7 +91,7 @@ In the trajectory file env_states will be the same structure but each value/leaf
 
 In practice it is may be more useful to use slices of the env_states data (or the observations data), which can be done with
 ```python
-import mani_skill2.trajectory.utils as trajectory_utils
+import mani_skill.trajectory.utils as trajectory_utils
 env_states = trajectory_utils.dict_to_list_of_dicts(env_states)
 # now env_states[i] is the same as the data env.get_state_dict() returned at timestep i
 i = 10
@@ -117,10 +117,10 @@ To replay the demonstrations (without changing the observation mode and control 
 
 ```bash
 # Replay and view trajectories through sapien viewer
-python -m mani_skill2.trajectory.replay_trajectory --traj-path demos/rigid_body/PickCube-v1/trajectory.h5 --vis
+python -m mani_skill.trajectory.replay_trajectory --traj-path demos/rigid_body/PickCube-v1/trajectory.h5 --vis
 
 # Save videos of trajectories (to the same directory of trajectory)
-python -m mani_skill2.trajectory.replay_trajectory --traj-path demos/rigid_body/PickCube-v1/trajectory.h5 --save-video
+python -m mani_skill.trajectory.replay_trajectory --traj-path demos/rigid_body/PickCube-v1/trajectory.h5 --save-video
 ```
 
 :::{note}
@@ -131,7 +131,7 @@ The raw demonstration files contain all the necessary information (e.g. initial 
 
 ```bash
 # Replay demonstrations with control_mode=pd_joint_delta_pos
-python -m mani_skill2.trajectory.replay_trajectory \
+python -m mani_skill.trajectory.replay_trajectory \
   --traj-path demos/rigid_body/PickCube-v1/trajectory.h5 \
   --save-traj --target-control-mode pd_joint_delta_pos --obs-mode none --num-procs 10
 ```
@@ -152,7 +152,7 @@ python -m mani_skill2.trajectory.replay_trajectory \
 <br>
 
 :::{note}
-For soft-body tasks, please compile and generate caches (`python -m mani_skill2.utils.precompile_mpm`) before running the script with multiple processes (with `--num-procs`).
+For soft-body tasks, please compile and generate caches (`python -m mani_skill.utils.precompile_mpm`) before running the script with multiple processes (with `--num-procs`).
 :::
 
 :::{caution}

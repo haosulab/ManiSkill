@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 from tqdm import tqdm
 
-from mani_skill2.utils.wrappers import RecordEpisode
+from mani_skill.utils.wrappers import RecordEpisode
 
 from .evaluate import evaluate
 from .model import ConditionalUnet1D

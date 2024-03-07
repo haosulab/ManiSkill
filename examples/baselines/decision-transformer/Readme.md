@@ -23,7 +23,7 @@ Results can also be logged to [Wandb](https://wandb.ai/) using the follow argume
 ### Without Docker
 1. Install dependencies
 ```
-pip install mani_skill2
+pip install mani_skill
 pip install -r requirements.txt
 ```
 2. Run the training script

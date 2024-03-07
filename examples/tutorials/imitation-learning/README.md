@@ -1,18 +1,18 @@
-# Imitation Learning with ManiSkill2
+# Imitation Learning with ManiSkill
 
 This contains single-file implementations that solve with LiftCube environment with rgbd or state observations.
 
 To download the dataset and preprocess it for training, run the following commands
 
 ```
-python -m mani_skill2.utils.download_demo "LiftCube-v0" # download base dataset
+python -m mani_skill.utils.download_demo "LiftCube-v0" # download base dataset
 
 # preprocess dataset into one that contains rgbd observations and pd_ee_delta_pose control actions
-python -m mani_skill2.trajectory.replay_trajectory --traj-path demos/rigid_body/LiftCube-v0/trajectory.h5 \
+python -m mani_skill.trajectory.replay_trajectory --traj-path demos/rigid_body/LiftCube-v0/trajectory.h5 \
     --save-traj -o rgbd -c pd_ee_delta_pose --num-procs 8
 
 # preprocess dataset into one that contains state observations and pd_ee_delta_pose control actions
-python -m mani_skill2.trajectory.replay_trajectory --traj-path demos/rigid_body/LiftCube-v0/trajectory.h5 \
+python -m mani_skill.trajectory.replay_trajectory --traj-path demos/rigid_body/LiftCube-v0/trajectory.h5 \
     --save-traj -o state -c pd_ee_delta_pose --num-procs 8
 ```
 
