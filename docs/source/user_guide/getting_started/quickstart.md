@@ -2,7 +2,7 @@
 
 ## Gym Interface
 
-Here is a basic example of how to make a ManiSkill environment following the interface of [Gymnasium](https://gymnasium.farama.org/) and run a random policy.
+Here is a basic example of how to make a ManiSkill task following the interface of [Gymnasium](https://gymnasium.farama.org/) and run a random policy.
 
 ```python
 import gymnasium as gym
@@ -41,13 +41,13 @@ alt: SAPIEN GUI showing the PickCube task
 ---
 ```
 
-Each ManiSkill environment supports different **observation modes** and **control modes**, which determine its **observation space** and **action space**. They can be specified by `gym.make(env_id, obs_mode=..., control_mode=...)`.
+Each ManiSkill task supports different **observation modes** and **control modes**, which determine its **observation space** and **action space**. They can be specified by `gym.make(env_id, obs_mode=..., control_mode=...)`.
 
 The common observation modes are `state`, `rgbd`, `pointcloud`. We also support `state_dict` (states organized as a hierarchical dictionary) and `image` (raw visual observations without postprocessing). Please refer to [Observation](../concepts/observation.md) for more details.
 
 We support a wide range of controllers. Different controllers can have different effects on your algorithms. Thus, it is recommended to understand the action space you are going to use. Please refer to [Controllers](../concepts/controllers.md) for more details.
 
-Some environments require **downloading assets** that are not stored in the python package itself. You can download task-specific assets by `python -m mani_skill2.utils.download_asset ${ENV_ID}`. The assets will be downloaded to `~/maniskill/data` by default, but you can also use the environment variable `MS_ASSET_DIR` to change this destination. Please refer to [Environments](../concepts/environments.md) for all environments built in out of the box, and which environments require downloading assets.
+Some tasks require **downloading assets** that are not stored in the python package itself. You can download task-specific assets by `python -m mani_skill2.utils.download_asset ${ENV_ID}`. The assets will be downloaded to `~/maniskill/data` by default, but you can also use the environment variable `MS_ASSET_DIR` to change this destination. Please refer to [Tasks](../concepts/tasks.md) for all tasks built in out of the box, and which tasks require downloading assets.
 
 We also have demos for simulations of scenes like ReplicaCAD, which can be run by doing
 
@@ -65,11 +65,11 @@ python -m mani_skill2.examples.demo_random_action.py -e "ReplicaCAD_SceneManipul
 
 For more details on rendering see TODO (stao). For a compilation of demos you can run without having to write any extra code check out the [demos page](../demos/index)
 
-## GPU Parallelized/Vectorized Environments
+## GPU Parallelized/Vectorized Tasks
 
 ManiSkill is powered by SAPIEN which supports GPU parallelized physics simulation and GPU parallelized rendering. This enables achieving 200,000+ state-based simulation FPS and 10,000+ FPS with rendering on a single 4090 GPU. For full benchmarking results see [this page](../additional_resources/performance_benchmarking)
 
-In order to run massively parallelized environments on a GPU, it is as simple as adding the `num_envs` argument to `gym.make` as so
+In order to run massively parallelized tasks on a GPU, it is as simple as adding the `num_envs` argument to `gym.make` as so
 
 ```python
 import gymnasium as gym

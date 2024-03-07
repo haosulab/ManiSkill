@@ -26,23 +26,23 @@ cd ManiSkill2 && pip install -e .
 While state-based simulation does not require any additional dependencies, a GPU with the Vulkan driver installed is required to enable rendering in ManiSkill. See [here](#vulkan) for how to install and configure Vulkan on Ubuntu.
 :::
 
-The rigid-body environments, powered by SAPIEN, are ready to use after installation. Test your installation:
+The rigid-body tasks, powered by SAPIEN, are ready to use after installation. Test your installation:
 
 ```bash
-# Run an episode (at most 50 steps) of "PickCube-v1" (a rigid-body environment) with random actions
-# Or specify an environment by "-e ${ENV_ID}"
+# Run an episode (at most 50 steps) of "PickCube-v1" (a rigid-body task) with random actions
+# Or specify an task by "-e ${ENV_ID}"
 python -m mani_skill2.examples.demo_random_action
 ```
 
 A docker image is also provided on [Docker Hub](https://hub.docker.com/repository/docker/haosulab/mani-skill2/general) called  `haosulab/mani-skill2` and its corresponding [Dockerfile](https://github.com/haosulab/ManiSkill2/blob/main/docker/Dockerfile).
 <!-- 
-## Soft-body environments / Warp (ManiSkill2-version)
+## Soft-body tasks / Warp (ManiSkill2-version)
 
 :::{note}
-The following section is to install [NVIDIA Warp](https://github.com/NVIDIA/warp) for soft-body environments. You can skip it if you do not need soft-body environments yet.
+The following section is to install [NVIDIA Warp](https://github.com/NVIDIA/warp) for soft-body tasks. You can skip it if you do not need soft-body tasks yet.
 :::
 
-The soft-body environments in ManiSkill2 are supported by SAPIEN and customized NVIDIA Warp. **CUDA toolkit >= 11.3 and gcc** are required. You can download and install the CUDA toolkit from the [offical website](https://developer.nvidia.com/cuda-downloads?target_os=Linux).
+The soft-body tasks in ManiSkill2 are supported by SAPIEN and customized NVIDIA Warp. **CUDA toolkit >= 11.3 and gcc** are required. You can download and install the CUDA toolkit from the [offical website](https://developer.nvidia.com/cuda-downloads?target_os=Linux).
 
 Assuming the CUDA toolkit is installed at `/usr/local/cuda`, you need to ensure `CUDA_PATH` or `CUDA_HOME` is set properly:
 
@@ -69,19 +69,19 @@ export PYTHONPATH=/path/to/ManiSkill2/warp_maniskill:$PYTHONPATH
 python -m warp_maniskill.build_lib
 ```
 
-For soft-body environments, you need to make sure only 1 CUDA device is visible:
+For soft-body tasks, you need to make sure only 1 CUDA device is visible:
 
 ``` bash
 # Select the first CUDA device. Change 0 to other integer for other device.
 export CUDA_VISIBLE_DEVICES=0
 ```
 
-If multiple CUDA devices are visible, the environment will give an error. If you
-want to interactively visualize the environment, you need to assign the id of
+If multiple CUDA devices are visible, the task will give an error. If you
+want to interactively visualize the task, you need to assign the id of
 the GPU connected to your display (e.g., monitor screen).
 
 :::{warning}
-All soft-body environments require runtime compilation and cache generation. The cache is generated in parallel. Thus, to avoid race conditions, before you create soft-body environments in parallel, please make sure the cache is already generated. You can generate cache in advance by `python -m mani_skill2.utils.precompile_mpm -e {ENV_ID}` (or without an option for all soft-body environments).
+All soft-body tasks require runtime compilation and cache generation. The cache is generated in parallel. Thus, to avoid race conditions, before you create soft-body tasks in parallel, please make sure the cache is already generated. You can generate cache in advance by `python -m mani_skill2.utils.precompile_mpm -e {ENV_ID}` (or without an option for all soft-body tasks).
 ::: -->
 
 ## Troubleshooting
@@ -170,7 +170,7 @@ The following errors can happen if the Vulkan driver is broken. Try to reinstall
 <!-- 
 ### Warp
 
-If the soft-body environment throws a **memory error**, you can try compiling Warp in the debug mode.
+If the soft-body task throws a **memory error**, you can try compiling Warp in the debug mode.
 
 ```bash
 PYTHONPATH="$PWD"/warp_maniskill:$PYTHONPATH python -m warp_maniskill.build_lib --mode debug

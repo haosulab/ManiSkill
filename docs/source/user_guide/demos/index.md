@@ -43,7 +43,7 @@ python -m mani_skill2.examples.demo_random_action -e "ArchitecTHOR_SceneManipula
 
 ## GPU Simulation
 
-To benchmark the GPU simulation on the PickCube-v1 environment with 4096 parallel environments you can run
+To benchmark the GPU simulation on the PickCube-v1 task with 4096 parallel tasks you can run
 ```bash
 python -m mani_skill2.examples.benchmarking.gpu_sim -e "PickCube-v1" -n 4096
 ```

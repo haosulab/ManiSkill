@@ -18,5 +18,5 @@ A user guide on how to use ManiSkill with GPU parallelized simulation for your r
 :maxdepth: 2
 
 user_guide/index
-environments/index
+tasks/index
 ```

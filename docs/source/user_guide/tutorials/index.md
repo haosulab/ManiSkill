@@ -1,6 +1,6 @@
 # Tutorials
 
-These are tutorials written by the maintainers of ManiSkill and the community, spanning topics from how to build your own environment/task, to domain randomization, to reinforcement learning. The markdown tutorials are linked below with all tutorial code saved in the [examples/tutorials folder ](https://github.com/haosulab/ManiSkill2/blob/main/examples/tutorials). Some tutorials will also have jupyter notebooks / google colab links that let you run the tutorials without needing your own GPU.
+These are tutorials written by the maintainers of ManiSkill and the community, spanning topics from how to build your own task, to domain randomization, to reinforcement learning. The markdown tutorials are linked below with all tutorial code saved in the [examples/tutorials folder ](https://github.com/haosulab/ManiSkill2/blob/main/examples/tutorials). Some tutorials will also have jupyter notebooks / google colab links that let you run the tutorials without needing your own GPU.
 <!-- 
 - Getting Started: [Jupyter Notebook](https://github.com/haosulab/ManiSkill2/blob/main/examples/tutorials/1_quickstart.ipynb), [Colab](https://colab.research.google.com/github/haosulab/ManiSkill2/blob/main/examples/tutorials/1_quickstart.ipynb)
 - Reinforcement Learning: [Jupyter Notebook](https://github.com/haosulab/ManiSkill2/blob/main/examples/tutorials/2_reinforcement_learning.ipynb), [Colab](https://colab.research.google.com/github/haosulab/ManiSkill2/blob/main/examples/tutorials/2_reinforcement_learning.ipynb)

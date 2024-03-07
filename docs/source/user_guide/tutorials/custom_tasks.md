@@ -1,22 +1,24 @@
-# Custom Environments/Tasks
+# Custom Tasks
 
 Building custom tasks in ManiSkill is straightforward and flexible. ManiSkill provides a number of features to help abstract away most of the GPU memory management required for parallel simulation and rendering.
 
-To build a custom environment/task in ManiSkill, it is comprised of the following core components
+To build a custom task in ManiSkill, it is comprised of the following core components
 
-1. Robot(s) and Assets
-2. Randomization
+1. Loading Robot(s) and Assets
+2. Initialization / Randomization
 3. Success/Failure Condition
 4. (Optional) Dense/shaped reward function
 5. (Optional) Setting up cameras/sensors for observations and rendering/recording
 
 This tutorial will first cover each of the core components, and then showcase 3 different tutorial tasks ([PushCube](#example-task-1-push-cube), [PickSingleYCB](#example-task-2-pick-single-ycb), [OpenCabinetDrawer](#example-task-3-open-cabinet-drawer)) that showcase how to use most of the features in ManiSkill.
 
-## Adding Robot(s) and Assets
+## Loading Robot(s) and Assets
 
-Loading these objects is done in the [`_load_actors`]() function.
+At the start
 
-## Randomization
+Loading these objects is done in the `_load_actors` function.
+
+## Initialization / Randomization
 
 Task initialization and randomization is handled in the [`_initalize_actors`]() function.
 

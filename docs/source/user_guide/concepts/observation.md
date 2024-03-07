@@ -5,14 +5,14 @@ See our [colab tutorial](https://colab.research.google.com/github/haosulab/ManiS
 ## Observation mode
 
 **The observation mode defines the observation space.**
-All ManiSkill2 environments take the observation mode (`obs_mode`) as one of the input arguments of `__init__`.
+All ManiSkill2 tasks take the observation mode (`obs_mode`) as one of the input arguments of `__init__`.
 In general, the observation is organized as a dictionary (with an observation space of `gym.spaces.Dict`).
 
 There are two raw observations modes: `state_dict` (privileged states) and `image` (raw visual observations without postprocessing). `state` is a flat version of `state_dict`. `rgbd` and `pointcloud` apply post-processing on `image`.
 
 ### state_dict
 
-The observation is a dictionary of states. It usually contains privileged information such as object poses. It is not supported for soft-body environments.
+The observation is a dictionary of states. It usually contains privileged information such as object poses. It is not supported for soft-body tasks.
 
 - `agent`: robot proprioception
   - `qpos`: [nq], current joint positions. *nq* is the degree of freedom.
@@ -38,7 +38,7 @@ In addition to `agent` and `extra`, `image` and `camera_param` are introduced.
   - `extrinsic_cv`: [4, 4], camera extrinsic (OpenCV convention)
   - `intrinsic_cv`: [3, 3], camera intrinsic (OpenCV convention)
 
-Unless specified otherwise, there is usually at least one camera called the *base_camera* (fixed relative to the robot base). Some robots have additional sensor configurations that add more cameras such as a *hand_camera* mounted on the robot hand. Environments migrated from ManiSkill1 use 3 cameras mounted above the robot: *overhead_camera_{i}*.
+Unless specified otherwise, there is usually at least one camera called the *base_camera* (fixed relative to the robot base). Some robots have additional sensor configurations that add more cameras such as a *hand_camera* mounted on the robot hand. Tasks migrated from ManiSkill1 use 3 cameras mounted above the robot: *overhead_camera_{i}*.
 
 ### rgbd
 

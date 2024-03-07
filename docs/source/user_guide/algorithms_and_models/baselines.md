@@ -7,7 +7,7 @@ ManiSkill has a number of baseline Reinforcement Learning (RL), Learning from De
 <!-- Acknowledgement: This neat categorization of algorithms is taken from https://github.com/tinkoff-ai/CORL -->
 
 ## Offline Only Methods
-These are algorithms that do not use online interaction with the environment to be trained and only learn from demonstration data. 
+These are algorithms that do not use online interaction with the task to be trained and only learn from demonstration data. 
 <!-- Note that some of these algorithms can be trained offline and online and are marked with a \* and discussed in a [following section](#offline--online-methods) -->
 
 | Baseline                                                   | Source                                                                                             | Results               |
@@ -18,7 +18,7 @@ These are algorithms that do not use online interaction with the environment to 
 
 
 ## Online Only Methods
-These are online only algorithms that do not learn from demonstrations and optimize based on feedback from interacting with the environment. These methods also benefit from GPU simulation which can massively accelerate training time
+These are online only algorithms that do not learn from demonstrations and optimize based on feedback from interacting with the task. These methods also benefit from GPU simulation which can massively accelerate training time
 
 | Baseline                                                               | Source                                                                             | Results               |
 | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | --------------------- |
@@ -28,7 +28,7 @@ These are online only algorithms that do not learn from demonstrations and optim
 
 
 ## Offline + Online Methods
-These are baselines that can train on offline demonstration data as well as use online data collected from interacting with an environment.
+These are baselines that can train on offline demonstration data as well as use online data collected from interacting with an task.
 
 | Baseline                                                                                  | Source                                                                              | Results               |
 | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | --------------------- |

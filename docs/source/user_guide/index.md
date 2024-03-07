@@ -3,7 +3,7 @@
 
 ```{figure} env_sample.png
 ---
-alt: 4x4 grid of various usable environments in ManiSkill
+alt: 4x4 grid of various usable tasks in ManiSkill
 ---
 ```
 

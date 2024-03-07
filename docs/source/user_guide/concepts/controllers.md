@@ -2,7 +2,7 @@
 
 Controllers are interfaces between policies and robots. The policy outputs actions to the controller, and the controller converts actions to control signals to the robot. For example, the `arm_pd_ee_delta_pose` controller takes the relative movement of the end-effector as input, and uses [inverse kinematics](https://en.wikipedia.org/wiki/Inverse_kinematics) to convert input actions to target positions of robot joints. The robot uses a [PD controller](https://en.wikipedia.org/wiki/PID_controller) to drive motors to achieve target joint positions.
 
-**The controller defines the action space of an environment.** The robot can have separate controllers for its arm, gripper, and other components. The action space is a concatenation of the action spaces of all controllers.
+**The controller defines the action space of an task.** The robot can have separate controllers for its arm, gripper, and other components. The action space is a concatenation of the action spaces of all controllers.
 
 ## Terminology
 
