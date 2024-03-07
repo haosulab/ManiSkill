@@ -62,42 +62,8 @@ python -m mani_skill2.examples.demo_random_action.py -e "ReplicaCAD_SceneManipul
 <video preload="auto" controls="True" width="100%">
 <source src="/_static/videos/fetch_random_action_replica_cad_rt.mp4" type="video/mp4">
 </video>
-For more details on rendering see TODO (stao). For a compilation of demos you can run without having to write any extra code check out the [demos page]()
 
-## Interactive Play
-
-TODO (stao): Add demo of teleoperation from camera
-
-We provide an example script to interactively play with our environments. A display is required to show the GUI
-
-```bash
-# PickCube-v0 can be replaced with other environment id.
-python -m mani_skill2.examples.demo_manual_control -e PickCube-v0 # runs in headless mode
-```
-
-Keyboard controls:
-
-- Press `i` (or `j`, `k`, `l`, `u`, `o`) to move the end-effector.
-- Press any key between `1` to `6` to rotate the end-effector.
-- Press `f` or `g` to open or close the gripper.
-- Press `w` (or `a`, `s`, `d`) to translate the base if the robot is mobile. Press `q` or `e` to rotate the base. Press `z` or `x` to lift the torso.
-- Press `esc` to close the viewer and exit the program.
-
-To enable an interactive viewer supported by SAPIEN, you can add `--enable-sapien-viewer`. The interactive SAPIEN viewer is more powerful for debugging (e.g., checking collision shapes, getting current poses). There will be two windows: an OpenCV window and a SAPIEN (GL) window. Pressing `0` on the focused window can switch the control to the other one.
-
-```{image} images/OpenCV-viewer.png
----
-height: 256px
-alt: OpenCV viewer
----
-```
-
-```{image} images/SAPIEN-viewer.png
----
-height: 256px
-alt: SAPIEN viewer
----
-```
+For more details on rendering see TODO (stao). For a compilation of demos you can run without having to write any extra code check out the [demos page](../demos/index)
 
 ## GPU Parallelized/Vectorized Environments
 
@@ -124,56 +90,7 @@ To try out the parallelized rendering, you can run
 
 ```bash
 # rendering RGB + Depth data from all cameras
-python -m mani_skill2.examples.benchmarking.gpu_sim --num-envs=128 --obs-mode="rgbd"
-# directly save 128 videos of the visual observations put into one video
-python -m mani_skill2.examples.benchmarking.gpu_sim --num-envs=128 --save-video
-```
-
-
-<!-- 
-We provide examples to use our `VecEnv` with [Stable-baselines3](https://stable-baselines3.readthedocs.io/en/master/). Please refer to our [notebook](https://github.com/haosulab/ManiSkill2/blob/main/examples/tutorials/2_reinforcement_learning.ipynb) or [example scripts](https://github.com/haosulab/ManiSkill2/tree/main/examples/tutorials/reinforcement-learning). -->
-
-<!-- ---
-
-**Implementation details**: The vectorized environment is optimized for visual observations. In short, the vectorized environment creates multiple python processes (workers) to run the physical simulation for each environment. For each timestep, each worker will compute non-visual observations and rewards in parallel with rendering visual observations. Specifically, the worker (client) sends information needed for rendering to the main process (server), and the actual work of rendering is done by the server. Thus, non-visual and visual observations are obtained in parallel, and the amount of information to communicate between processes is minimized.
-
-:::{note}
-- The vectorized environment only supports observation modes including visual observations (`rgbd`, `pointcloud`, `image`). If only state observations are needed, most RL libraries (like Stable-baselines3) provide their implementations of multi-process vectorized environments.
-- The visual observations (rendered from cameras) are `torch.Tensor` while non-visual observations are `numpy.ndarray`. It is critical to keep tensors on the GPU for overall efficiency.
-- `env.render()` is not supported in the vectorized environment. We suggest that you only use our implementation of vectorized environments for training.
-::: -->
-
-## Interactive Play
-
-TODO (stao): Add demo of teleoperation from camera
-
-We provide an example script to interactively play with our environments. A display is required.
-
-```bash
-# PickCube-v1 can be replaced with other environment id.
-python -m mani_skill2.examples.demo_manual_control -e PickCube-v1
-```
-
-Keyboard controls:
-
-- Press `i` (or `j`, `k`, `l`, `u`, `o`) to move the end-effector.
-- Press any key between `1` to `6` to rotate the end-effector.
-- Press `f` or `g` to open or close the gripper.
-- Press `w` (or `a`, `s`, `d`) to translate the base if the robot is mobile. Press `q` or `e` to rotate the base. Press `z` or `x` to lift the torso.
-- Press `esc` to close the viewer and exit the program.
-
-To enable an interactive viewer supported by SAPIEN, you can add `--enable-sapien-viewer`. The interactive SAPIEN viewer is more powerful for debugging (e.g., checking collision shapes, getting current poses). There will be two windows: an OpenCV window and a SAPIEN (GL) window. Pressing `0` on the focused window can switch the control to the other one.
-
-```{image} images/OpenCV-viewer.png
----
-height: 256px
-alt: OpenCV viewer
----
-```
-
-```{image} images/SAPIEN-viewer.png
----
-height: 256px
-alt: SAPIEN viewer
----
+python -m mani_skill2.examples.benchmarking.gpu_sim --num-envs=64 --obs-mode="rgbd"
+# directly save 64 videos of the visual observations put into one video
+python -m mani_skill2.examples.benchmarking.gpu_sim --num-envs=64 --save-video
 ```
