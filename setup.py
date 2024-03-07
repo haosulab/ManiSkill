@@ -44,7 +44,7 @@ setup(
     },
     exclude_package_data={"": ["*.convex.stl"]},
     extras_require={
-        "tests": ["pytest", "black", "isort"],
+        "dev": ["pytest", "black", "isort", "pre-commit", "build", "twine"],
         "docs": [
             # Note that currently sphinx 7 does not work, so we must use v6.2.1. See https://github.com/kivy/kivy/issues/8230 which tracks this issue. Once fixed we can use a later version
             "sphinx==6.2.1",
