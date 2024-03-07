@@ -4,14 +4,14 @@ import sapien.physx as physx
 import sapien.render
 import trimesh
 from transforms3d import quaternions
-
+from mani_skill.utils.structs import Actor
 from mani_skill.utils.common import np_normalize_vector
 from mani_skill.utils.geometry.trimesh_utils import get_component_mesh
 
 
-def get_actor_obb(actor: sapien.Entity, to_world_frame=True, vis=False):
+def get_actor_obb(actor: Actor, to_world_frame=True, vis=False):
     mesh = get_component_mesh(
-        actor.find_component_by_type(physx.PhysxRigidDynamicComponent),
+        actor._objs[0].find_component_by_type(physx.PhysxRigidDynamicComponent),
         to_world_frame=to_world_frame,
     )
     assert mesh is not None, "can not get actor mesh for {}".format(actor)

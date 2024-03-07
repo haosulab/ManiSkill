@@ -75,7 +75,7 @@ Some ManiSkill tasks also support swapping robot embodiments such as the `PickCu
 gym.make("PickCube-v1", robot_uids="fetch")
 ```
 
-You may also notice the argument is `robot_uids` plural, this is because we also support tasks with multiple robots.
+You may also notice the argument is `robot_uids` plural, this is because we also support tasks with multiple robots which can be done by passing in tuple like `robot_uids=("fetch", "fetch", "panda")`.
 
 ## GPU Parallelized/Vectorized Tasks
 
