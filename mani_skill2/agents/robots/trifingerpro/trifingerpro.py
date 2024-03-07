@@ -22,7 +22,7 @@ class TriFingerPro(BaseAgent):
     Modified from https://github.com/NVIDIA-Omniverse/IsaacGymEnvs/blob/main/isaacgymenvs/tasks/trifinger.py
 
     """
-    uid = "trifinger"
+    uid = "trifingerpro"
     urdf_path = f"{PACKAGE_ASSET_DIR}/trifinger/trifingerpro.urdf"
     urdf_config = dict(
         _materials=dict(
