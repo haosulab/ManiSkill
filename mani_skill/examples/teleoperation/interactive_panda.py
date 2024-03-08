@@ -21,7 +21,7 @@ def main(args):
         control_mode="pd_joint_pos",
         render_mode="rgb_array",
         reward_mode="sparse",
-        shader_dir="rt-fast",
+        # shader_dir="rt-fast",
         # force_use_gpu_sim=True
     )
     # TODO (stao): Allow directly testing gpu sim
@@ -32,6 +32,8 @@ def main(args):
         trajectory_name="trajectory",
         save_video=False,
         info_on_video=False,
+        source_type="teleoperation",
+        source_desc="teleoperation via the click+drag system"
     )
     num_trajs = 0
     seed = 0
@@ -64,7 +66,7 @@ def main(args):
         control_mode="pd_joint_pos",
         render_mode="rgb_array",
         reward_mode="sparse",
-        shader_dir="rt-fast",
+        shader_dir="rt",
     )
     env = RecordEpisode(
         env,
@@ -111,10 +113,11 @@ def solve(env: BaseEnv, debug=False, vis=False):
     last_checkpoint_state = None
     gripper_open = True
     viewer.select_entity(sapien_utils.get_obj_by_name(env.agent.robot.links, "panda_hand")._objs[0].entity)
+    for plugin in viewer.plugins:
+        if isinstance(plugin, sapien.utils.viewer.viewer.TransformWindow):
+            transform_window = plugin
     while True:
-        transform_window = viewer.plugins[0]
 
-        transform_window: sapien.utils.viewer.viewer.TransformWindow
         transform_window.enabled = True
         # transform_window.update_ghost_objects
         # print(transform_window.ghost_objects, transform_window._gizmo_pose)
@@ -124,26 +127,33 @@ def solve(env: BaseEnv, debug=False, vis=False):
         execute_current_pose = False
         if viewer.window.key_press("h"):
             # TODO (stao): print help menu
+            print("""Available commands:
+            h: print this help menu
+            g: toggle gripper to close/open
+            n: execute command via motion planning to make the robot move to the target pose indicated by the ghost panda arm
+            c: stop this episode and record the trajectory and move on to a new episode
+            q: quit the script and stop collecting data and save videos
+            """)
             pass
-        elif viewer.window.key_press("k"):
-            print("Saving checkpoint")
-            last_checkpoint_state = env.get_state_dict()
-        elif viewer.window.key_press("l"):
-            if last_checkpoint_state is not None:
-                print("Loading previous checkpoint")
-                env.set_state_dict(last_checkpoint_state)
-            else:
-                print("Could not find previous checkpoint")
+        # elif viewer.window.key_press("k"):
+        #     print("Saving checkpoint")
+        #     last_checkpoint_state = env.get_state_dict()
+        # elif viewer.window.key_press("l"):
+        #     if last_checkpoint_state is not None:
+        #         print("Loading previous checkpoint")
+        #         env.set_state_dict(last_checkpoint_state)
+        #     else:
+        #         print("Could not find previous checkpoint")
         elif viewer.window.key_press("q"):
             return "quit"
         elif viewer.window.key_press("c"):
             return "continue"
-        elif viewer.window.key_press("r"):
-            viewer.select_entity(None)
-            return "restart"
-        elif viewer.window.key_press("t"):
-            # TODO (stao): change from position transform to rotation transform
-            pass
+        # elif viewer.window.key_press("r"):
+        #     viewer.select_entity(None)
+        #     return "restart"
+        # elif viewer.window.key_press("t"):
+        #     # TODO (stao): change from position transform to rotation transform
+        #     pass
         elif viewer.window.key_press("n"):
             execute_current_pose = True
         elif viewer.window.key_press("g"):

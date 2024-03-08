@@ -52,11 +52,18 @@ python -m mani_skill.examples.demo_random_action -e "ReplicaCAD_SceneManipulatio
 python -m mani_skill.examples.demo_random_action -e "ReplicaCAD_SceneManipulation-v1" --render-mode="human" # run with GUI (recommended!)
 ```
 
+To try out ray-tracing for more photorealistic rendering as shown below you can do
+
+```bash
+python -m mani_skill.utils.download_asset "ReplicaCAD"
+python -m mani_skill.examples.demo_random_action -e "ReplicaCAD_SceneManipulation-v1" --render-mode="human" --shader="rt-fast"
+```
+
 <video preload="auto" controls="True" width="100%">
 <source src="https://github.com/haosulab/ManiSkill2/raw/dev/docs/source/_static/videos/fetch_random_action_replica_cad_rt.mp4" type="video/mp4">
 </video>
 
-For more details on rendering see TODO (stao). For a compilation of demos you can run without having to write any extra code check out the [demos page](../demos/index)
+For a compilation of demos you can run without having to write any extra code check out the [demos page](../demos/index)
 
 ## Task Instantiation Options
 

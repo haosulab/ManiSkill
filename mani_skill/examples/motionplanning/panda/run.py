@@ -33,7 +33,7 @@ def main(args):
     )
     if env_id not in MP_SOLUTIONS:
         raise RuntimeError(f"No already written motion planning solutions for {env_id}. Available options are {list(MP_SOLUTIONS.keys())}")
-    env = RecordEpisode(env, output_dir=osp.join(args.record_dir, env_id), save_video=True, source_type="motionplanning", source_desc="official motion planning solution from ManiSkill contributors")
+    env = RecordEpisode(env, output_dir=osp.join(args.record_dir, env_id), save_video=True, source_type="motionplanning", source_desc="official motion planning solution from ManiSkill contributors", video_fps=30)
     solve = MP_SOLUTIONS[env_id]
     print(f"Motion Planning Running on {env_id}")
 
