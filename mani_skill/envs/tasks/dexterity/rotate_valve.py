@@ -12,7 +12,7 @@ from mani_skill.utils import sapien_utils
 from mani_skill.utils.building.articulations import build_robel_valve
 from mani_skill.utils.geometry.rotation_conversions import axis_angle_to_quaternion
 from mani_skill.utils.registration import register_env
-from mani_skill.utils.scene_builder.table.table_scene_builder import TableSceneBuilder
+from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs.articulation import Articulation
 from mani_skill.utils.structs.pose import Pose, vectorize_pose
 from mani_skill.utils.structs.types import Array
