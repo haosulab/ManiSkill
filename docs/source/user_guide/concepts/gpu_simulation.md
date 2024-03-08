@@ -43,7 +43,7 @@ ManiSkill aims to support both CPU and GPU parallelization schemes for paralleli
 
 ### Managed Objects and Views
 
-ManiSkill can be seen as a pythonic interface over SAPIEN, the underlying system. SAPIEN seeks to be minimal, flexible, and fast. ManiSkill is more managed and provides tools to use SAPIEN easily. A common example of this is that many objects in SAPIEN have equivalents in ManiSkill that simply wrap around the SAPIEN objects, most of which can be found the `mani_skill.utils.structs` module
+ManiSkill can be seen as a pythonic interface over SAPIEN, the underlying system. SAPIEN seeks to be minimal, flexible, and fast. ManiSkill is more managed and provides tools to use SAPIEN easily. A common example of this is that many objects in SAPIEN have equivalents in ManiSkill that simply wrap around the SAPIEN objects, most of which can be found in the `mani_skill.utils.structs` module
 
 The `Actor` class for example wraps around `sapien.Entity` objects that correspond to actual objects spawned in the simulator in each sub-scene, and allows easy access to otherwise highly compact/optimized GPU buffers that SAPIEN exposes to then fetch batched data like pose, velocities, pairwise contact forces etc.
 
@@ -51,4 +51,4 @@ Similarly, the `Pose` class itself is a wrapper around the common `sapien.Pose` 
 
 Another way to view these wrappers is to see that these wrappers are alternative **views** of otherwise the same data the raw GPU buffers expose. By understanding this perspective, it becomes easier to think about building tasks where you are simulating very different sub-scenes with different articulations that have different degrees of freedoms and different numbers of objects.
 
-The functions `Actor.merge` and `Articulation.merge` enable reshaping the view you have over the GPU buffers so that you can e.g. get the poses of a different objects in different parallel sub-scenes. longer restricted to fetching data of just the same geometries over and being forced to write complicated for loops to figure out what indicies on the GPU buffer correspond with what you want. 
+The functions `Actor.merge` and `Articulation.merge` enable reshaping the view you have over the GPU buffers so that you can e.g. get the poses of a different objects in different parallel sub-scenes. You are no longer restricted to fetching data of just the same geometries and being forced to write complicated for loops to figure out what indices on the GPU buffer correspond with what you want. 
