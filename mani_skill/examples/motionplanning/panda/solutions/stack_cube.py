@@ -1,7 +1,7 @@
 import argparse
 import gymnasium as gym
 import numpy as np
-import sapien.core as sapien
+import sapien
 from tqdm import tqdm
 import os.path as osp
 from transforms3d.euler import euler2quat
@@ -12,28 +12,6 @@ from mani_skill.examples.motionplanning.panda.motionplanner import \
 from mani_skill.examples.motionplanning.panda.utils import (
     compute_grasp_info_by_obb, get_actor_obb)
 from mani_skill.utils.wrappers.record import RecordEpisode
-
-def main():
-    env: StackCubeEnv = gym.make(
-        "StackCube-v1",
-        obs_mode="none",
-        control_mode="pd_joint_pos",
-        render_mode="rgb_array",
-        reward_mode="sparse",
-        shader_dir="rt-fast",
-    )
-    env = RecordEpisode(
-        env,
-        output_dir=f"videos/StackCube-v0",
-        trajectory_name="trajectory",
-        save_video=False,
-        info_on_video=True,
-    )
-    for seed in tqdm(range(100)):
-        res = solve(env, seed=seed, debug=False, vis=True)
-        print(res[-1])
-    env.close()
-
 
 def solve(env: StackCubeEnv, seed=None, debug=False, vis=False):
     env.reset(seed=seed)
@@ -49,13 +27,12 @@ def solve(env: StackCubeEnv, seed=None, debug=False, vis=False):
         visualize_target_grasp_pose=vis,
         print_env_info=False,
     )
-
     FINGER_LENGTH = 0.025
     env = env.unwrapped
     obb = get_actor_obb(env.cubeA)
 
     approaching = np.array([0, 0, -1])
-    target_closing = env.agent.tcp.pose.to_transformation_matrix()[0, :3, 1]
+    target_closing = env.agent.tcp.pose.to_transformation_matrix()[0, :3, 1].numpy()
     grasp_info = compute_grasp_info_by_obb(
         obb,
         approaching=approaching,
@@ -109,7 +86,3 @@ def solve(env: StackCubeEnv, seed=None, debug=False, vis=False):
     res = planner.open_gripper()
     planner.close()
     return res
-
-
-if __name__ == "__main__":
-    main()
