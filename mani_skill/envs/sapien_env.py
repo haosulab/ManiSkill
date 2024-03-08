@@ -486,12 +486,12 @@ class BaseEnv(gym.Env):
         return reward
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        raise NotImplementedError
+        raise NotImplementedError("This task has not implemented a dense reward function")
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        raise NotImplementedError
+        raise NotImplementedError("This task has not implemented a normalized dense reward function")
 
     # -------------------------------------------------------------------------- #
     # Reconfigure

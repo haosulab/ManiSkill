@@ -309,7 +309,7 @@ def parse_args(args=None):
     parser.add_argument(
         "--discard-timeout",
         action="store_true",
-        help="whether to discard timeout episodes",
+        help="whether to discard episodes that timeout and are truncated (depends on max_episode_steps parameter of task)",
     )
     parser.add_argument(
         "--allow-failure", action="store_true", help="whether to allow failure episodes"
@@ -319,12 +319,6 @@ def parse_args(args=None):
         "--use-env-states",
         action="store_true",
         help="whether to replay by env states instead of actions",
-    )
-    parser.add_argument(
-        "--bg-name",
-        type=str,
-        default=None,
-        help="background scene to use",
     )
     parser.add_argument(
         "--count",
