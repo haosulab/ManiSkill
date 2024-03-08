@@ -5,7 +5,7 @@ ManiSkill features a number of built-in rigid-body tasks, all GPU parallelized a
 Soft-body tasks will be added back in as they are still in development as part of a new soft-body simulator we are working on.
 
 
-For each task documented here we provide a "Task Card" which briefly describes all the important aspects of the task, including task description, randomizations, success/fail conditions, and goal specification in observations.
+For each task documented here we provide a "Task Card" which briefly describes all the important aspects of the task, including task description, supported robots, randomizations, success/fail conditions, and goal specification in observations.
 
 Note that some tasks do not have goal specifications. This generally means part of the observation (e.g. cube pose) indicates the goal for you.
 
@@ -20,6 +20,8 @@ This is still a WIP as we add in more tasks and document more things.
 
 **Task Description:**
 A simple task where the objective is to grasp a red cube and move it to a target goal position.
+
+**Supported Robots: Panda, Fetch**
 
 **Randomizations:**
 - the cube's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat on the table
@@ -43,6 +45,8 @@ A simple task where the objective is to grasp a red cube and move it to a target
 **Task Description:**
 The goal is to pick up a red cube and stack it on top of a green cube and let go of the cube without it falling
 
+**Supported Robots: Panda, Fetch, xArm**
+
 **Randomizations:**
 - both cubes have their z-axis rotation randomized
 - both cubes have their xy positions on top of the table scene randomized. The positions are sampled such that the cubes do not collide with each other
@@ -59,9 +63,10 @@ The goal is to pick up a red cube and stack it on top of a green cube and let go
 
 #### PushCube-v1
 
-
 **Task Description:**
 A simple task where the objective is to push and move a cube to a goal region in front of it
+
+**Supported Robots: Panda, Fetch, xArm**
 
 **Randomizations:**
 - the cube's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat on the table
@@ -80,6 +85,8 @@ A simple task where the objective is to push and move a cube to a goal region in
 
 **Task Description:**
 Pick up a random object sampled from the [YCB dataset](https://www.ycbbenchmarks.com/) and move it to a random goal position
+
+**Supported Robots: Panda, Fetch, xArm**
 
 **Randomizations:**
 - the object's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat on the table
