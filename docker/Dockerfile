@@ -1,6 +1,6 @@
 FROM nvidia/cudagl:11.3.1-devel-ubuntu20.04
 ENV NVIDIA_DRIVER_CAPABILITIES all
-ARG PYTHON_VERSION=3.8
+ARG PYTHON_VERSION=3.9
 
 # Install os-level packages
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -41,4 +41,4 @@ SHELL ["/bin/bash", "-c"]
 COPY nvidia_icd.json /usr/share/vulkan/icd.d/nvidia_icd.json
 COPY nvidia_layers.json /etc/vulkan/implicit_layer.d/nvidia_layers.json
 
-RUN pip install mani-skill2==0.5.0 && pip cache purge
+RUN pip install mani-skill==3.0.0.dev0 && pip cache purge

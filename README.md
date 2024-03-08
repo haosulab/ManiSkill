@@ -79,9 +79,6 @@ To quickly get started check out the quick start page on the docs: https://manis
 
 All rigid body environments in ManiSkill are licensed under fully permissive licenses (e.g., Apache-2.0).
 
-However, the soft body environments will follow Warp's license. Currently, they are licensed under
-[NVIDIA Source Code License for Warp](https://github.com/NVIDIA/warp/blob/main/LICENSE.md).
-
 The assets are licensed under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/legalcode).
 
 ## Citation

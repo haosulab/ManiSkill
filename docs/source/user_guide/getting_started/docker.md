@@ -13,7 +13,7 @@ docker run hello-world
 
 ## Run ManiSkill in Docker
 
-We provide a docker image (`haosulab/mani-skill`) and its corresponding [Dockerfile](https://github.com/haosulab/ManiSkill2/blob/main/docker/Dockerfile).
+We provide a docker image (`haosulab/mani-skill`) and its corresponding [Dockerfile](https://github.com/haosulab/ManiSkill2/blob/dev/docker/Dockerfile).
 
 ```bash
 docker pull haosulab/mani-skill

@@ -83,7 +83,7 @@ class BaseEnv(gym.Env):
             passing in a SimConfig object, while typed, will override every attribute including the task defaults. Some environments
             define their own recommended default sim configurations via the `self.default_sim_cfg` attribute that generally should not be
             completely overriden. For a full detail/explanation of what is in the sim config see the type hints / go to the source
-            https://github.com/haosulab/ManiSkill2/blob/main/mani_skill /utils/structs/types.py
+            https://github.com/haosulab/ManiSkill2/blob/main/mani_skill/utils/structs/types.py
 
         reconfiguration_freq (int): How frequently to call reconfigure when environment is reset via `self.reset(...)`
             Generally for most users who are not building tasks this does not need to be changed. The default is 0, which means
