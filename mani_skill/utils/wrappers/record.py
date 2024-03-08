@@ -273,7 +273,7 @@ class RecordEpisode(gym.Wrapper):
 
         self.save_on_reset = save_on_reset
         self.save_trajectory = save_trajectory
-        if self._base_env.num_envs > 1 and save_video:
+        if self.base_env.num_envs > 1 and save_video:
             assert (
                 max_steps_per_video is not None
             ), "On GPU parallelized environments, \
@@ -311,10 +311,10 @@ class RecordEpisode(gym.Wrapper):
 
     @property
     def num_envs(self):
-        return self._base_env.num_envs
+        return self.base_env.num_envs
 
     @property
-    def _base_env(self) -> BaseEnv:
+    def base_env(self) -> BaseEnv:
         return self.env.unwrapped
 
     def capture_image(self):
@@ -345,7 +345,7 @@ class RecordEpisode(gym.Wrapper):
         obs, info = super().reset(*args, seed=seed, options=options, **kwargs)
 
         if self.save_trajectory:
-            state_dict = self._base_env.get_state_dict()
+            state_dict = self.base_env.get_state_dict()
             action = sapien_utils.batch(self.action_space.sample())
             first_step = Step(
                 state=sapien_utils.to_numpy(sapien_utils.batch(state_dict)),
@@ -426,8 +426,8 @@ class RecordEpisode(gym.Wrapper):
                 and self.max_episode_steps is not None
             ):
                 # this fixes the issue where gymnasium applies a non-batched timelimit wrapper
-                truncated = self._base_env.elapsed_steps >= self.max_episode_steps
-            state_dict = self._base_env.get_state_dict()
+                truncated = self.base_env.elapsed_steps >= self.max_episode_steps
+            state_dict = self.base_env.get_state_dict()
             self._trajectory_buffer.state = append_dict_array(
                 self._trajectory_buffer.state,
                 sapien_utils.to_numpy(sapien_utils.batch(state_dict)),
@@ -499,9 +499,11 @@ class RecordEpisode(gym.Wrapper):
         self,
         verbose=False,
         ignore_empty_transition=False,
-        env_idxs_to_flush=[],
+        env_idxs_to_flush=None,
     ):
         flush_count = 0
+        if env_idxs_to_flush is None:
+            env_idxs_to_flush = np.arange(0, self.num_envs)
         for env_idx in env_idxs_to_flush:
             start_ptr = self._trajectory_buffer.env_episode_ptr[env_idx]
             end_ptr = len(self._trajectory_buffer.done)
@@ -568,8 +570,8 @@ class RecordEpisode(gym.Wrapper):
 
             episode_info = dict(
                 episode_id=self._episode_id,
-                episode_seed=self._base_env._episode_seed,
-                control_mode=self._base_env.control_mode,
+                episode_seed=self.base_env._episode_seed,
+                control_mode=self.base_env.control_mode,
                 elapsed_steps=end_ptr - start_ptr - 1,
             )
             if self.num_envs == 1:

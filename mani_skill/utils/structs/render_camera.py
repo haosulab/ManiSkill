@@ -1,13 +1,25 @@
 from dataclasses import dataclass
 from functools import cache
-from typing import List
+from typing import TYPE_CHECKING, Any, List, Union
 
+from mani_skill.utils.geometry.rotation_conversions import (
+    quaternion_apply,
+    quaternion_to_matrix,
+)
+
+if TYPE_CHECKING:
+    from mani_skill.envs.scene import ManiSkillScene
+
+import numpy as np
 import sapien
 import sapien.physx as physx
 import sapien.render
 import torch
 
 from mani_skill.utils import sapien_utils
+from mani_skill.utils.structs.actor import Actor
+from mani_skill.utils.structs.link import Link
+from mani_skill.utils.structs.pose import Pose
 
 # NOTE (stao): commented out functions are functions that are not confirmed to be working in the wrapped class but the original class has
 
@@ -20,10 +32,22 @@ class RenderCamera:
 
     _render_cameras: List[sapien.render.RenderCameraComponent]
     name: str
+    # NOTE (stao): I cannot seem to use ManiSkillScene as a type here, it complains it is undefined despite using TYPE_CHECKING variable. Without typchecking there is a ciruclar import error
+    scene: Any
     camera_group: sapien.render.RenderCameraGroup = None
+    mount: Union[Actor, Link] = None
+
+    # we cache model and extrinsic matrices since the code here supports computing these when the camera is mounted and these are always changing
+    _cached_model_matrix: torch.Tensor = None
+    _cached_extrinsic_matrix: torch.Tensor = None
 
     @classmethod
-    def create(cls, render_cameras: List[sapien.render.RenderCameraComponent]):
+    def create(
+        cls,
+        render_cameras: List[sapien.render.RenderCameraComponent],
+        scene: Any,
+        mount: Union[Actor, Link] = None,
+    ):
         w, h = (
             render_cameras[0].width,
             render_cameras[0].height,
@@ -34,7 +58,9 @@ class RenderCamera:
                 w,
                 h,
             ), "all passed in render cameras must have the same width and height"
-        return cls(_render_cameras=render_cameras, name=shared_name)
+        return cls(
+            _render_cameras=render_cameras, scene=scene, name=shared_name, mount=mount
+        )
 
     def get_name(self) -> str:
         return self.name
@@ -45,36 +71,88 @@ class RenderCamera:
     # -------------------------------------------------------------------------- #
     # Functions from RenderCameraComponent
     # -------------------------------------------------------------------------- #
-    # TODO (stao): support extrinsic matrix changing
-    @cache
     def get_extrinsic_matrix(self):
-        return sapien_utils.to_tensor(self._render_cameras[0].get_extrinsic_matrix())[
-            None, :
-        ]
+        if physx.is_gpu_enabled():
+            if self._cached_extrinsic_matrix is not None:
+                return self._cached_extrinsic_matrix
+            ros2opencv = torch.tensor(
+                [[0, 0, 1, 0], [-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 0, 1]],
+                device=self.scene.device,
+                dtype=torch.float32,
+            ).T
+            res = ros2opencv @ self.get_global_pose().inv().to_transformation_matrix()
+            if self.mount is not None:
+                return self._cached_extrinsic_matrix
+            return res
+        else:
+            return sapien_utils.to_tensor(
+                self._render_cameras[0].get_extrinsic_matrix()
+            )[None, :]
 
     def get_far(self) -> float:
         return self._render_cameras[0].get_far()
 
-    def get_global_pose(self) -> sapien.Pose:
-        return self._render_cameras[0].get_global_pose()
+    def get_global_pose(self) -> Pose:
+        if physx.is_gpu_enabled():
+            if self.mount is not None:
+                return self.mount.pose * self.get_local_pose()
+            return self.get_local_pose()
+        else:
+            return Pose.create_from_pq(
+                self._render_cameras[0].get_global_pose().p,
+                self._render_cameras[0].get_global_pose().q,
+            )
 
     def get_height(self) -> int:
         return self._render_cameras[0].get_height()
 
     @cache
     def get_intrinsic_matrix(self):
-        return sapien_utils.to_tensor(self._render_cameras[0].get_intrinsic_matrix())[
-            None, :
-        ]
-
-    def get_local_pose(self) -> sapien.Pose:
-        return self._render_cameras[0].get_local_pose()
+        return sapien_utils.to_tensor(
+            np.array([cam.get_intrinsic_matrix() for cam in self._render_cameras])
+        )
 
     @cache
+    def get_local_pose(self) -> Pose:
+        if physx.is_gpu_enabled():
+            ps = np.array(
+                [
+                    np.concatenate([cam.get_local_pose().p, cam.get_local_pose().q])
+                    for cam in self._render_cameras
+                ]
+            )
+            return Pose.create(sapien_utils.to_tensor(ps))
+        else:
+            return Pose.create_from_pq(
+                self._render_cameras[0].get_local_pose().p,
+                self._render_cameras[0].get_local_pose().q,
+            )
+
     def get_model_matrix(self):
-        return sapien_utils.to_tensor(self._render_cameras[0].get_model_matrix())[
-            None, :
-        ]
+
+        if physx.is_gpu_enabled():
+            if self._cached_model_matrix is not None:
+                return self._cached_model_matrix
+            # NOTE (stao): This code is based on SAPIEN. It cannot expose GPU buffers of this data of all cameras directly so
+            # we have to compute it here based on how SAPIEN does it:
+            POSE_GL_TO_ROS = Pose.create_from_pq(p=[0, 0, 0], q=[-0.5, -0.5, 0.5, 0.5])
+            pose = self.get_global_pose() * POSE_GL_TO_ROS
+            b = len(pose.raw_pose)
+            qmat = torch.zeros((b, 4, 4), device=self.scene.device)
+            qmat[:, :3, :3] = quaternion_to_matrix(pose.q)
+            qmat[:, -1, -1] = 1
+            pmat = torch.eye(4, device=self.scene.device)[None, ...].repeat(
+                len(qmat), 1, 1
+            )
+            pmat[:, :3, 3] = pose.p
+            res = pmat @ qmat
+            if self.mount is None:
+                self._cached_model_matrix = res
+            return res
+        else:
+            return sapien_utils.to_tensor(self._render_cameras[0].get_model_matrix())[
+                None, :
+            ]
 
     def get_near(self) -> float:
         return self._render_cameras[0].get_near()

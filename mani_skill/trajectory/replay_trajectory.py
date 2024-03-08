@@ -21,6 +21,7 @@ import mani_skill.envs
 from mani_skill.agents.controllers import *
 from mani_skill.agents.controllers.base_controller import CombinedController
 from mani_skill.envs.sapien_env import BaseEnv
+from mani_skill.trajectory import utils as trajectory_utils
 from mani_skill.trajectory.merge_trajectory import merge_h5
 from mani_skill.utils.common import clip_and_scale_action, inv_scale_action
 from mani_skill.utils.io_utils import load_json
@@ -31,7 +32,7 @@ def qpos_to_pd_joint_delta_pos(controller: PDJointPosController, qpos):
     assert type(controller) == PDJointPosController
     assert controller.config.use_delta
     assert controller.config.normalize_action
-    delta_qpos = qpos - controller.qpos
+    delta_qpos = qpos - controller.qpos.numpy()[0]
     low, high = controller.config.lower, controller.config.upper
     return inv_scale_action(delta_qpos, low, high)
 
@@ -41,7 +42,7 @@ def qpos_to_pd_joint_target_delta_pos(controller: PDJointPosController, qpos):
     assert controller.config.use_delta
     assert controller.config.use_target
     assert controller.config.normalize_action
-    delta_qpos = qpos - controller._target_qpos
+    delta_qpos = qpos - controller._target_qpos.numpy()[0]
     low, high = controller.config.lower, controller.config.upper
     return inv_scale_action(delta_qpos, low, high)
 
@@ -49,7 +50,7 @@ def qpos_to_pd_joint_target_delta_pos(controller: PDJointPosController, qpos):
 def qpos_to_pd_joint_vel(controller: PDJointVelController, qpos):
     assert type(controller) == PDJointVelController
     assert controller.config.normalize_action
-    delta_qpos = qpos - controller.qpos
+    delta_qpos = qpos - controller.qpos.numpy()[0]
     qvel = delta_qpos * controller._control_freq
     low, high = controller.config.lower, controller.config.upper
     return inv_scale_action(qvel, low, high)
@@ -71,7 +72,7 @@ def delta_pose_to_pd_ee_delta(
     assert isinstance(controller, PDEEPosController)
     assert controller.config.use_delta
     assert controller.config.normalize_action
-    low, high = controller._action_space.low, controller._action_space.high
+    low, high = controller.action_space.low, controller.action_space.high
     if pos_only:
         return inv_scale_action(delta_pose.p, low, high)
     delta_pose = np.r_[
@@ -120,12 +121,14 @@ def from_pd_joint_pos_to_ee(
         output_action_dict = ori_action_dict.copy()  # do not in-place modify
 
         # Keep the joint positions with all DoF
-        full_qpos = ori_controller.articulation.get_qpos()
+        full_qpos = ori_controller.articulation.get_qpos().numpy()[0]
 
         ori_env.step(ori_action)
 
         # Use target joint positions for arm only
-        full_qpos[ori_arm_controller.joint_indices] = ori_arm_controller._target_qpos
+        full_qpos[
+            ori_arm_controller.joint_indices
+        ] = ori_arm_controller._target_qpos.numpy()[0]
         pin_model.compute_forward_kinematics(full_qpos)
         target_ee_pose = pin_model.get_link_pose(arm_controller.ee_link_idx)
 
@@ -135,8 +138,8 @@ def from_pd_joint_pos_to_ee(
             if target_mode:
                 prev_ee_pose_at_base = arm_controller._target_pose
             else:
-                base_pose = arm_controller.articulation.pose
-                prev_ee_pose_at_base = base_pose.inv() * ee_link.entity_pose
+                base_pose = arm_controller.articulation.pose.sp
+                prev_ee_pose_at_base = base_pose.inv() * ee_link.pose.sp
 
             ee_pose_at_ee = prev_ee_pose_at_base.inv() * target_ee_pose
             arm_action = delta_pose_to_pd_ee_delta(
@@ -178,6 +181,9 @@ def from_pd_joint_pos(
     verbose=False,
 ):
     if "ee" in output_mode:
+        raise NotImplementedError(
+            "At the moment converting pd joint pos to ee control has a bug and will be fixed later."
+        )
         return from_pd_joint_pos_to_ee(**locals())
 
     n = len(ori_actions)
@@ -303,7 +309,7 @@ def parse_args(args=None):
     parser.add_argument(
         "--discard-timeout",
         action="store_true",
-        help="whether to discard timeout episodes",
+        help="whether to discard episodes that timeout and are truncated (depends on max_episode_steps parameter of task)",
     )
     parser.add_argument(
         "--allow-failure", action="store_true", help="whether to allow failure episodes"
@@ -313,12 +319,6 @@ def parse_args(args=None):
         "--use-env-states",
         action="store_true",
         help="whether to replay by env states instead of actions",
-    )
-    parser.add_argument(
-        "--bg-name",
-        type=str,
-        default=None,
-        help="background scene to use",
     )
     parser.add_argument(
         "--count",
@@ -339,6 +339,12 @@ def parse_args(args=None):
         type=bool,
         help="whether the replayed trajectory should include rewards",
         default=False,
+    )
+    parser.add_argument(
+        "--shader",
+        default="default",
+        type=str,
+        help="Change shader used for rendering. Default is 'default' which is very fast. Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer",
     )
 
     return parser.parse_args(args)
@@ -373,6 +379,7 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
         env_kwargs["obs_mode"] = target_obs_mode
     if target_control_mode is not None:
         env_kwargs["control_mode"] = target_control_mode
+    env_kwargs["shader_dir"] = args.shader
     env_kwargs["reward_mode"] = args.reward_mode
     env_kwargs[
         "render_mode"
@@ -393,7 +400,7 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
     new_traj_name = ori_traj_name + "." + suffix
     if num_procs > 1:
         new_traj_name = new_traj_name + "." + str(proc_id)
-    env = RecordEpisode(
+    env: RecordEpisode = RecordEpisode(
         env,
         output_dir,
         save_on_reset=False,
@@ -436,19 +443,21 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
         ori_control_mode = ep["control_mode"]
 
         for _ in range(args.max_retry + 1):
-            env.reset(seed=seed, options=reset_kwargs)
+            env.reset(seed=seed, **reset_kwargs)
             if ori_env is not None:
-                ori_env.reset(seed=seed, options=reset_kwargs)
+                ori_env.reset(seed=seed, **reset_kwargs)
 
             if args.vis:
-                env.render_human()
+                env.base_env.render_human()
 
             # Original actions to replay
             ori_actions = ori_h5_file[traj_id]["actions"][:]
 
             # Original env states to replay
             if args.use_env_states:
-                ori_env_states = ori_h5_file[traj_id]["env_states"][1:]
+                ori_env_states = trajectory_utils.dict_to_list_of_dicts(
+                    ori_h5_file[traj_id]["env_states"]
+                )[1:]
 
             info = {}
 
@@ -460,11 +469,11 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
                 for t, a in enumerate(ori_actions):
                     if pbar is not None:
                         pbar.update()
-                    _, _, _, _, info = env.step(a)
+                    _, _, _, truncated, info = env.step(a)
                     if args.vis:
-                        env.render_human()
+                        env.base_env.render_human()
                     if args.use_env_states:
-                        env.set_state(ori_env_states[t])
+                        env.base_env.set_state_dict(ori_env_states[t])
 
             # From joint position to others
             elif ori_control_mode == "pd_joint_pos":
@@ -492,12 +501,13 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
 
             success = info.get("success", False)
             if args.discard_timeout:
-                timeout = "TimeLimit.truncated" in info
-                success = success and (not timeout)
+                success = success and (not truncated)
 
             if success or args.allow_failure:
-                env.flush_trajectory()
-                env.flush_video(ignore_empty_transition=False)
+                if args.save_traj:
+                    env.flush_trajectory()
+                if args.save_video:
+                    env.flush_video(ignore_empty_transition=False)
                 break
             else:
                 # Rollback episode id for failed attempts

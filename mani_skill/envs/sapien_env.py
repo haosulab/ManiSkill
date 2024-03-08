@@ -57,7 +57,7 @@ class BaseEnv(gym.Env):
         gpu_sim_backend: The GPU simulation backend to use (only used if the given num_envs argument is > 1). This affects the type of tensor
             returned by the environment for e.g. observations and rewards. Can be "torch" or "jax". Default is "torch"
 
-        obs_mode: observation mode to be used. Must be one of ("state", "state_dict", "none", "sensor_data", "rgbd", "pointcloud")
+        obs_mode: observation mode to be used. Must be one of ("state", "state_dict", "none", "sensor_data", "rgb", "rgbd", "pointcloud")
 
         reward_mode: reward mode to use. Must be one of ("normalized_dense", "dense", "sparse").
 
@@ -101,7 +101,7 @@ class BaseEnv(gym.Env):
     SUPPORTED_ROBOTS: List[Union[str, Tuple[str]]] = None
     """Override this to enforce which robots or tuples of robots together are supported in the task. During env creation,
     setting robot_uids auto loads all desired robots into the scene, but not all tasks are designed to support some robot setups"""
-    SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "sensor_data", "rgbd", "pointcloud")
+    SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "sensor_data", "rgb", "rgbd", "pointcloud")
     SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "sparse")
     SUPPORTED_RENDER_MODES = ("human", "rgb_array", "sensors")
     """The supported render modes. Human opens up a GUI viewer. rgb_array returns an rgb array showing the current environment state.
@@ -397,10 +397,13 @@ class BaseEnv(gym.Env):
             obs = flatten_state_dict(state_dict, use_torch=True, device=self.device)
         elif self._obs_mode == "state_dict":
             obs = self._get_obs_state_dict(info)
-        elif self._obs_mode in ["sensor_data", "rgbd", "pointcloud"]:
+        elif self._obs_mode in ["sensor_data", "rgbd", "rgb", "pointcloud"]:
             obs = self._get_obs_with_sensor_data(info)
             if self._obs_mode == "rgbd":
-                obs = sensor_data_to_rgbd(obs, self._sensors)
+                obs = sensor_data_to_rgbd(obs, self._sensors, rgb=True, depth=True)
+            elif self._obs_mode == "rgb":
+                # TODO (stao): we can optmize this by not taking the PositionSegmentation texture at all.
+                obs = sensor_data_to_rgbd(obs, self._sensors, rgb=True, depth=False)
             elif self.obs_mode == "pointcloud":
                 obs = sensor_data_to_pointcloud(obs, self._sensors)
         else:
@@ -486,12 +489,12 @@ class BaseEnv(gym.Env):
         return reward
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        raise NotImplementedError
+        raise NotImplementedError("This task has not implemented a dense reward function")
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        raise NotImplementedError
+        raise NotImplementedError("This task has not implemented a normalized dense reward function")
 
     # -------------------------------------------------------------------------- #
     # Reconfigure

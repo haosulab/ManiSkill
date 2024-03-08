@@ -123,7 +123,7 @@ class ManiSkillScene:
             camera_mount.name = f"scene-{i}_{name}"
             camera.name = f"scene-{i}_{name}"
             cameras.append(camera)
-        return RenderCamera.create(cameras)
+        return RenderCamera.create(cameras, self)
 
     def add_mounted_camera(
         self, name, mount: Union[Actor, Link], pose, width, height, fovy, near, far
@@ -143,7 +143,7 @@ class ManiSkillScene:
             camera.local_pose = pose
             camera.name = f"scene-{i}_{name}"
             cameras.append(camera)
-        return RenderCamera.create(cameras)
+        return RenderCamera.create(cameras, self, mount=mount)
 
     # def remove_camera(self, camera):
     #     self.remove_entity(camera.entity)

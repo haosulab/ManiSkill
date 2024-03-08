@@ -8,7 +8,9 @@ See our [colab tutorial](https://colab.research.google.com/github/haosulab/ManiS
 All ManiSkill2 tasks take the observation mode (`obs_mode`) as one of the input arguments of `__init__`.
 In general, the observation is organized as a dictionary (with an observation space of `gym.spaces.Dict`).
 
-There are two raw observations modes: `state_dict` (privileged states) and `image` (raw visual observations without postprocessing). `state` is a flat version of `state_dict`. `rgbd` and `pointcloud` apply post-processing on `image`.
+There are two raw observations modes: `state_dict` (privileged states) and `image` (raw visual observations without postprocessing). `state` is a flat version of `state_dict`. `rgbd` and `pointcloud` apply post-processing on `image` to give convenient representations of visual data.
+
+The details here show the unbatched shapes. In general there is always a batch dimension unless you are using CPU simulation. Moreover, we annotate what dtype some values are, where some have both a torch and numpy dtype depending on whether you are using GPU or CPU simulation repspectively.
 
 ### state_dict
 
@@ -31,14 +33,13 @@ In addition to `agent` and `extra`, `image` and `camera_param` are introduced.
 
 - image: RGB, depth, and other images taken by cameras
   - `{camera_uid}`:
-    - `Color`: [H, W, 4], `np.float32`. RGBA.
-    - `Position`: [H, W, 4], `np.float32`. The first 3 dimensions stand for (x, y, z) coordinates in the OpenGL/Blender convension. The unit is meter.
+    - `Color`: [H, W, 4], `torch.uint8`. RGB+Alpha values..
+    - `PositionSegmentation`: [H, W, 4], `torch.int16`. The first 3 dimensions stand for (x, y, z) coordinates in the OpenGL/Blender convension. The unit is millimeters. The last dimension represents segmentation ID. 
 - `camera_param`: camera parameters
   - `cam2world_gl`: [4, 4], transformation from the camera frame to the world frame (OpenGL/Blender convention)
   - `extrinsic_cv`: [4, 4], camera extrinsic (OpenCV convention)
   - `intrinsic_cv`: [3, 3], camera intrinsic (OpenCV convention)
 
-Unless specified otherwise, there is usually at least one camera called the *base_camera* (fixed relative to the robot base). Some robots have additional sensor configurations that add more cameras such as a *hand_camera* mounted on the robot hand. Tasks migrated from ManiSkill1 use 3 cameras mounted above the robot: *overhead_camera_{i}*.
 
 ### rgbd
 
@@ -46,19 +47,34 @@ We postprocess the raw image observation to obtain RGB-D images.
 
 - `image`: RGB, depth, and other images taken by cameras
   - `{camera_uid}`:
-    - `rgb`: [H, W, 3], `np.uint8`. RGB.
-    - `depth`: [H, W, 1], `np.float32`. 0 stands for an invalid pixel (beyond the camera far).
+    - `rgb`: [H, W, 3], `torch.uint8, np.uint8`. RGB.
+    - `depth`: [H, W, 1], `torch.int16, np.uint16`. 0 stands for an invalid pixel (beyond the camera far).
+
+The RGB and depth data visualized can look like below:
+```{image} images/replica_cad_rgbd.png
+---
+alt: RGBD from two cameras of Fetch robot inside the ReplicaCAD dataset scene
+---
+```
 
 ### pointcloud
 
 We postprocess the raw image observation to obtain a point cloud in the world frame. `image` is replaced by `pointcloud`.
 
 - `pointcloud`:
-  - `xyzw`: [N, 4], point cloud fused from all cameras in the world frame. "xyzw" is a homogeneous representation. `w=0` for infinite points (beyond the camera far), and `w=1` for the rest.
-  - `rgb`: [N, 3], corresponding colors of the fused point cloud
+  - `xyzw`: [N, 4], `torch.float32, np.float32`. Point cloud fused from all cameras in the world frame. "xyzw" is a homogeneous representation. `w=0` for infinite points (beyond the camera far), and `w=1` for the rest.
+  - `rgb`: [N, 3], `torch.uint8, np.uint8` corresponding colors of the fused point cloud
 
 Note that the point cloud does not contain more information than RGB-D images unless specified otherwise.
 
+The pointcloud visualized can look like below. Below is the fused pointcloud of two cameras in the ReplicaCAD scene
+
+```{image} images/replica_cad_pcd.png
+---
+alt: Point cloud of Fetch robot inside the ReplicaCAD dataset scene
+---
+```
+<!-- 
 ### +robot_seg
 
 `rgbd+robot_seg` or `pointcloud+robot_seg`  can be used to acquire the segmentation mask of robot links. `robot_seg` is appended.
@@ -218,4 +234,4 @@ for camera_name in obs['image'].keys():
     
     obs['image'][camera_name]['semantic_grouped_seg'] = semantic_grouped_seg
     print(f"Summary of # points in the processed segmentaion map for camera {camera_name}:", [(semantic_grouped_seg == x).sum() for x in range(6)])
-```
+``` -->
