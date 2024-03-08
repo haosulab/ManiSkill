@@ -10,7 +10,8 @@ from mani_skill.utils import sapien_utils
 
 
 class UniformPlacementSampler:
-    """Uniform placement sampler that supports sampling in batch
+    """Uniform placement sampler that lets you sequentially sample data such that the data is within given bounds and
+    not too close to previously sampled data. This sampler is also batched so you can use this easily for GPU simulated tasks
 
     Args:
         bounds: ((low1, low2, ...), (high1, high2, ...))

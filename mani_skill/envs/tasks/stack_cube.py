@@ -4,19 +4,15 @@ from typing import Any, Dict, Union
 import numpy as np
 import torch
 
-from mani_skill.agents.robots.fetch.fetch import Fetch
-from mani_skill.agents.robots.panda.panda import Panda
-from mani_skill.agents.robots.xmate3.xmate3 import Xmate3Robotiq
+from mani_skill.agents.robots import Fetch, Panda, Xmate3Robotiq
 from mani_skill.envs.sapien_env import BaseEnv
-from mani_skill.envs.utils.randomization.pose import random_quaternions
-from mani_skill.envs.utils.randomization.samplers import UniformPlacementSampler
+from mani_skill.envs.utils import randomization
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
-from mani_skill.utils.building.actors import build_cube
+from mani_skill.utils.building import actors
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs.pose import Pose
-from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 
 
 @register_env("StackCube-v1", max_episode_steps=50)
@@ -63,10 +59,10 @@ class StackCubeEnv(BaseEnv):
             env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
         )
         self.table_scene.build()
-        self.cubeA = build_cube(
+        self.cubeA = actors.build_cube(
             self._scene, half_size=0.02, color=[1, 0, 0, 1], name="cubeA"
         )
-        self.cubeB = build_cube(
+        self.cubeB = actors.build_cube(
             self._scene, half_size=0.02, color=[0, 1, 0, 1], name="cubeB"
         )
 
@@ -79,13 +75,13 @@ class StackCubeEnv(BaseEnv):
             xyz[:, 2] = 0.02
             xy = torch.rand((b, 2)) * 0.2 - 0.1
             region = [[-0.1, -0.2], [0.1, 0.2]]
-            sampler = UniformPlacementSampler(bounds=region, batch_size=b)
+            sampler = randomization.UniformPlacementSampler(bounds=region, batch_size=b)
             radius = torch.linalg.norm(torch.tensor([0.02, 0.02])) + 0.001
             cubeA_xy = xy + sampler.sample(radius, 100)
             cubeB_xy = xy + sampler.sample(radius, 100, verbose=False)
 
             xyz[:, :2] = cubeA_xy
-            qs = random_quaternions(
+            qs = randomization.random_quaternions(
                 b,
                 lock_x=True,
                 lock_y=True,
@@ -94,7 +90,7 @@ class StackCubeEnv(BaseEnv):
             self.cubeA.set_pose(Pose.create_from_pq(p=xyz.clone(), q=qs))
 
             xyz[:, :2] = cubeB_xy
-            qs = random_quaternions(
+            qs = randomization.random_quaternions(
                 b,
                 lock_x=True,
                 lock_y=True,

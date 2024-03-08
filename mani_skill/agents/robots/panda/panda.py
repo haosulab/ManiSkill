@@ -257,10 +257,10 @@ class Panda(BaseAgent):
 
             if object is None:
                 finger1_contacts = sapien_utils.get_actor_contacts(
-                    contacts, self.finger1_link
+                    contacts, self.finger1_link._bodies[0].entity
                 )
                 finger2_contacts = sapien_utils.get_actor_contacts(
-                    contacts, self.finger2_link
+                    contacts, self.finger2_link._bodies[0].entity
                 )
                 return (
                     np.linalg.norm(sapien_utils.compute_total_impulse(finger1_contacts))
@@ -271,11 +271,18 @@ class Panda(BaseAgent):
                     >= min_impulse
                 )
             else:
+                import ipdb
+
+                ipdb.set_trace()
                 limpulse = sapien_utils.get_pairwise_contact_impulse(
-                    contacts, self.finger1_link, object
+                    contacts,
+                    self.finger1_link._bodies[0].entity,
+                    object._bodies[0].entity,
                 )
                 rimpulse = sapien_utils.get_pairwise_contact_impulse(
-                    contacts, self.finger2_link, object
+                    contacts,
+                    self.finger2_link._bodies[0].entity,
+                    object._bodies[0].entity,
                 )
 
                 # direction to open the gripper

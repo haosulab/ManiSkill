@@ -5,13 +5,11 @@ import numpy as np
 import torch
 
 import mani_skill.envs.utils.randomization as randomization
-from mani_skill.agents.robots.fetch.fetch import Fetch
-from mani_skill.agents.robots.panda.panda import Panda
-from mani_skill.agents.robots.xmate3.xmate3 import Xmate3Robotiq
+from mani_skill.agents.robots import Fetch, Panda, Xmate3Robotiq
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
-from mani_skill.utils.building.actors import build_cube, build_sphere
+from mani_skill.utils.building import actors
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs.pose import Pose
@@ -65,10 +63,10 @@ class PickCubeEnv(BaseEnv):
             self, robot_init_qpos_noise=self.robot_init_qpos_noise
         )
         self.table_scene.build()
-        self.cube = build_cube(
+        self.cube = actors.build_cube(
             self._scene, half_size=self.cube_half_size, color=[1, 0, 0, 1], name="cube"
         )
-        self.goal_site = build_sphere(
+        self.goal_site = actors.build_sphere(
             self._scene,
             radius=self.goal_thresh,
             color=[0, 1, 0, 1],

@@ -106,7 +106,7 @@ These tools are also used in the PyTorch Dataset implementation we provide which
 #### PyTorch
 
 
-We provide an example way to build a PyTorch Dataset and easily load the trajectory .h5 data at https://github.com/haosulab/ManiSkill2/tree/dev/mani_skill/trajectory/datasets.py.
+We provide an example way to build a PyTorch Dataset and easily load the trajectory .h5 data at [https://github.com/haosulab/ManiSkill2/tree/dev/mani_skill/trajectory/datasets.py](https://github.com/haosulab/ManiSkill2/tree/dev/mani_skill/trajectory/datasets.py). It is by no means super optimized but shows how to work with our data format flexibly. A copy of the code is pasted in the dropdown below.
 
 :::{dropdown} dataset.py
 :color: primary

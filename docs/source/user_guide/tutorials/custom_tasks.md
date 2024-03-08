@@ -1,6 +1,6 @@
 # Custom Tasks
 
-Building custom tasks in ManiSkill is straightforward and flexible. ManiSkill provides a number of features to help abstract away most of the GPU memory management required for parallel simulation and rendering.
+Building custom tasks in ManiSkill is straightforward and flexible. ManiSkill provides a number of features to help abstract away most of the GPU memory management required for parallel simulation and rendering. By the end of this tutorial you will learn how to create simple rigid-body tasks that simulate both on GPU and CPU.
 
 To build a custom task in ManiSkill, it is comprised of the following core components
 
@@ -11,7 +11,7 @@ To build a custom task in ManiSkill, it is comprised of the following core compo
 5. [(Optional) Dense Reward Function](#optional-dense-reward-function) (done every env.step)
 6. [(Optional) Setting up cameras/sensors for observations and rendering/recording](#optional-setting-up-camerassensors-for-observations-and-recording) (done once)
 
-To follow this tutorial easily, we recommend reading this along side reading the [annotated code for the PushCube task](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill/envs/tasks/push_cube.py) which describe the purpose of nearly every line of code. The first few sections will cover the bare minimum details necessary to start building your own tasks and show snippets of code from the PushCube task. The advanced sections cover additional topics to do more advanced simulation and optimization such as heterogenous object simulation. 
+To follow this tutorial easily, we recommend reading this along side reading the [annotated code for the PushCube task](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill/envs/tasks/push_cube.py) which describe the purpose of nearly every line of code. This page will cover the bare minimum details necessary to start building your own tasks and show snippets of code from the PushCube task. The advanced sections covers additional topics to do more advanced simulation and optimization such as dynamic GPU memory configuration, heterogenous object simulation, and more. 
 
 If you want to skip the tutorial and start from a template you can use the [PushCube task](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill/envs/tasks/push_cube.py) as a template, the [annotated template](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill/envs/template.py), or the [bare minimum template](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill/envs/minimal_template.py).
 
@@ -36,9 +36,9 @@ class PushCubeEnv(BaseEnv):
 ```
 ## Loading
 
-At the start of any task, you must load in all objects (robots, assets, articulations, lighting etc.) into the scene. This is also known as **reconfiguration** and generally only ever occurs once. Loading these objects is done in the `_load_actors` function of your custom task class. The objective is to simply load objects in, and nothing else. For GPU simulation at this stage you cannot change object states (like pose, qpos), only initial poses can be modified. Changing/randomizing states is done in the section on [episode initialization / randomization](#episode-initialization-randomization).
+At the start of any task, you must load in all objects (robots, assets, articulations, lighting etc.) into each parallel environment, also known as a sub-scene. This is also known as **reconfiguration** and generally only ever occurs once. Loading these objects is done in the `_load_actors` function of your custom task class. The objective is to simply load objects in, and nothing else. For GPU simulation at this stage you cannot change object states (like pose, qpos), only initial poses can be modified. Changing/randomizing states is done in the section on [episode initialization / randomization](#episode-initialization-randomization).
 
-Building objects in ManiSkill is nearly the exact same as it is in SAPIEN. You create an `ActorBuilder` via `self.scene.create_actor_builder` and via the actor builder add visual and collision shapes. Visual shapes only affect visual rendering processes while collision shapes affect the physical simulation.
+Building objects in ManiSkill is nearly the exact same as it is in SAPIEN. You create an `ActorBuilder` via `self.scene.create_actor_builder` and via the actor builder add visual and collision shapes. Visual shapes only affect visual rendering processes while collision shapes affect the physical simulation. ManiSkill further will create the actor for you in every sub-scene (unless you use [scene-masks](./custom_tasks_advanced.md#scene-masks), a more advanced feature).
 
 #### Building Robots
 
@@ -59,6 +59,9 @@ class PushCubeEnv(BaseEnv):
 ```
 
 Initializing these robots occurs in the initialization / randomization section covered later. With this setup you can later access agent data via `self.agent` and the specific articulation data of the robot via `self.agent.robot`. For multi-robot setups you can access each agent via `self.agent.agents`.
+
+To create your own custom robots/agents, we will provide a tutorial on the basics of modelling a robot for simulation and use in ManiSkill in the near future. For now you can look at the code for Panda at [mani_skill/agents/robots/panda/panda.py](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill/agents/robots/panda/panda.py)
+<!-- TODO (stao): link custom robots docs later -->
 
 #### Building Actors
 
@@ -84,7 +87,7 @@ def _load_actors(self):
 ```
 
 You can build a **kinematic** actor with `builder.build_kinematic` and a **static** actor with `builder.build_static`. A few sharp bits to keep in mind
-- Dynamic actors can be moved around by forces/other objects (e.g. a robot) and fully physically simulated
+- Dynamic actors can be moved around by forces/other objects (e.g. a robot) and are fully physically simulated
 - Kinematic and static actors are fixed in place but can block objects from moving through them (e.g. a wall, a kitchen counter).
 - Kinematic actors can have their pose changed at any time. Static actors must have an initial pose set before calling `build_static` via `builder.initial_pose = ...`
 - Use static instead of kinematic whenever possible as it saves a lot of GPU memory
@@ -102,7 +105,7 @@ self.obj.linear_velocity # batched velocities of shape (N, 3)
 # and more ...
 ```
 
-For object building, you can also use pre-built scene builders (tutorial on how to customize/make your own [here](./custom_reusable_scenes.md)). In Push Cube it is done as so
+For object building, you can also use reusable pre-built scene builders (tutorial on how to customize/make your own [here](./custom_reusable_scenes.md)). In Push Cube it is done as so
 ```python
 def _load_actors(self):
     self.table_scene = TableSceneBuilder(
@@ -119,7 +122,7 @@ WIP
 
 #### Reconfiguring and Optimization
 
-In general loading is always quite slow, especially on the GPU so by default, ManiSkill reconfigures just once, any call to `env.reset()` will not trigger a reconfiguration unless you call `env.reset(seed=seed, options=dict(reconfigure=True))` (seed is not needed but recommended if you are reconfiguring for reproducibility).
+In general loading is always quite slow, especially on the GPU so by default, ManiSkill reconfigures just once. Any call to `env.reset()` will not trigger a reconfiguration unless you call `env.reset(seed=seed, options=dict(reconfigure=True))` (seed is not needed but recommended if you are reconfiguring for reproducibility).
 
 If you want calls to `env.reset()` to by default reconfigure, you can set a default value for `reconfigure_freq` in your task's `__init__` function
 
@@ -130,7 +133,7 @@ def __init__(self, *args, robot_uids="panda", reconfigure_freq=1, **kwargs):
 
 A `reconfiguration_freq` value of 1 means every during every reset we reconfigure. A `reconfiguration_freq` of `k` means every `k` resets we reconfigure. A `reconfiguration_freq` of 0 (the default) means we never reconfigure again.
 
-In general one use case of setting a positive `reconfiguration_freq` value is for when you want to simulate a task in parallel where each parallel environment is working with a different object/articulation and there are way more object variants than number of parallel environments. For machine learning / RL workflows, setting `reconfiguration_freq` to e.g. 10 ensures every 10 resets the objects being simulated on are randomized which can diversify the data collected for online training.
+In general one use case of setting a positive `reconfiguration_freq` value is for when you want to simulate a task in parallel where each parallel environment is working with a different object/articulation and there are way more object variants than number of parallel environments. For machine learning / RL workflows, setting `reconfiguration_freq` to e.g. 10 ensures every 10 resets the objects being simulated on are randomized which can diversify the data collected for online training while keeping simulation fast by reconfiguring infrequently.
 
 
 ## Episode Initialization / Randomization
@@ -158,15 +161,15 @@ def _initialize_actors(self, env_idx: torch.Tensor):
         self.obj.set_pose(obj_pose)
 ```
 
-An `env_idx` is one of the arguments to this function, and is a list of environment IDs that need initialization. This is given as ManiSkill supports partial resets, where at each timestep potentially only a subset of parallel environments will undergo a reset, which calls `_initialize_actors` here. 
+An `env_idx` is one of the arguments to this function, and is a list of environment IDs that need initialization. This is given as ManiSkill supports **partial resets**, where at each timestep potentially only a subset of parallel environments will undergo a reset, which calls `_initialize_actors` here. 
 
-Since a scene builder is used, to initialize objects to their original states, we simply call `self.table_scene.initialize(env_idx)`
+Since a scene builder is used, to initialize objects to their original states, we simply call `self.table_scene.initialize(env_idx)`, a function all scene builders implement.
 
-In the PushCube task, we randomize the pose of the cube by generating a random xy position on the surface of the table (the surface of the table is at z = 0). Notice that we only generate `b = len(env_idx)` random positions as we only need to change `b` objects in `b` parallel environments that are undergoing resetting. 
+In the PushCube task, we randomize the pose of the cube by generating a random xy position on the surface of the table (the surface of the table is at z = 0). Notice that we only generate `b = len(env_idx)` random positions as we only need to change `b` objects in `b` parallel environments that are undergoing resetting. Note that we use `torch.rand` for randomization. The random number generator (RNG) state of torch is already seeded for you in this part of the code so you can freely use torch.rand without reproducibility concerns.
 
-ManiSkill further provides a feature that any modification to object states are restricted to only the objects in parallel environments that are to be initialized. Thus `self.obj.set_pose` will only accept a batched pose with `b` elements, and will only ever change those `b` objects undergoing reset and initialization. The same applies to modifying articulation qpos via e.g. `self.my_articulation.qpos = ...` or setting velocities etc.
+ManiSkill further provides a safe-guard feature that changes to object states are restricted to only the objects in parallel environments that are to be initialized. Thus `self.obj.set_pose` will only accept a batched pose with `b` elements, and will only ever change those `b` objects undergoing reset and initialization. The same applies to modifying articulation qpos via e.g. `self.my_articulation.qpos = ...` or setting velocities etc. This restriction helps avoid potential bugs around messing up the wrong sub-scene's objects.
 
-#### Working with Poses
+### Working with Poses
 
 In robot simulation, every object has a pose, which represents the object's position and orientation as 3D positon vector and a 4D [quaternion](https://en.wikipedia.org/wiki/Quaternion). During 
 
@@ -208,6 +211,10 @@ def evaluate(self):
 
 PushCube task here does not define a fail condition, but you could define one yourself to check if the cube falls off the table (in which case then the task is impossible to solve).
 
+The end result should yield the following
+:::{figure} images/push_cube_evaluate.png 
+:::
+
 
 Note that some tasks like locomotion/control tasks in [dm-control](https://github.com/google-deepmind/dm_control/) would be tasks where there is no success or failure evaluation. This kind of task is supported and in those cases the evaluation function can just return an empty dictionary.
 
@@ -227,7 +234,7 @@ def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
 
 `compute_normalized_dense_reward` is the default reward function used and retuurned from `env.step`. We recommend defining normalized reward function as these tend to be easier to learn from, especially in algorithms that learn Q functions in RL. The result of `compute_dense_reward` is returned when an environment created as `gym.make(env_id=..., reward_mode="dense")`
 
-Dense reward functions are not required and can be skipped. Sparse reward functions are available if the evaluation function returns a dictonary with the success key.
+Dense reward functions are not required and can be skipped. If not implemented they just return 0. Sparse reward functions are available if the evaluation function returns a dictonary with the success key.
 
 ## (Optional) Setting up Cameras/Sensors for Observations and Recording
 
@@ -251,7 +258,7 @@ def _register_human_render_cameras(self):
     return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
 ```
 
-To debug the registered cameras for sensors, you can visualize them by running
+In the code above we use a useful tool `sapien_utils.look_at(eye, target)` which generates a pose object to configure a camera to be at position `eye` looking at position `target`. To debug the registered cameras for sensors, you can visualize them by running
 
 ```python
 import matplotlib.pyplot as plt
@@ -259,10 +266,20 @@ env = gym.make(env_id=your_env_id, render_mode="sensors")
 env.reset()
 img = env.render()
 plt.imshow(img)
+plt.show()
 ```
 
 To visualize the human render you can change `render_mode` to "rgb_array".
 
+Alternatively via the GUI which can be opened by doing a while loop while running `env.render_human()`, under the control tab you can select any of the registered cameras and look at the exact RGB data it returns.
+
+
+:::{figure} images/gui-side-camera.png 
+:::
+
+:::{tip}
+It's recommended to setup the sensor cameras via `_register_sensors` in such a way so that it looks at the important objects and avoids looking at anything too far away. The reason is the blank background has infinite depth and in visual observations it's marked as a 0. Objects too far away (like the far away floor tiles) will yield very high depth values which may be problematic for machine learning workflows
+:::
 <!-- 
 ## Advanced - Diverse objects/articulations
 
