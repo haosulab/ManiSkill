@@ -84,9 +84,11 @@ class SimConfig:
     """simulation frequency (Hz)"""
     control_freq: int = 20
     """control frequency (Hz). Every control step (e.g. env.step) contains sim_freq / control_freq physx simulation steps"""
-    gpu_memory_cfg: GPUMemoryConfig = GPUMemoryConfig()
-    scene_cfg: SceneConfig = SceneConfig()
-    default_materials_cfg: DefaultMaterialsConfig = DefaultMaterialsConfig()
+    gpu_memory_cfg: GPUMemoryConfig = field(default_factory=GPUMemoryConfig)
+    scene_cfg: SceneConfig = field(default_factory=SceneConfig)
+    default_materials_cfg: DefaultMaterialsConfig = field(
+        default_factory=DefaultMaterialsConfig
+    )
 
     def dict(self):
         return {k: v for k, v in asdict(self).items()}
