@@ -66,7 +66,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
         # TODO (stao): how much does far affect rendering speed?
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)
 
-    def _load_actors(self):
+    def _load_scene(self):
         self.ground = build_ground(self._scene)
         self._load_cabinets(self.handle_types)
 

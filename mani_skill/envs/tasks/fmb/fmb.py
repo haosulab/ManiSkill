@@ -53,7 +53,7 @@ class FMBAssembly1Env(BaseEnv):
         pose = sapien_utils.look_at([1.0, 0.8, 0.8], [0.0, 0.0, 0.35])
         return CameraConfig("render_camera", pose.p, pose.q, 1024, 1024, 1, 0.01, 100)
 
-    def _load_actors(self):
+    def _load_scene(self):
         self.table_scene = TableSceneBuilder(
             env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
         )

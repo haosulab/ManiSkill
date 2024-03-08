@@ -4,7 +4,7 @@ Code for a minimal environment/task with just a robot being loaded. We recommend
 At a high-level, ManiSkill2 tasks can minimally be defined by how the environment resets, what agents/objects are
 loaded, goal parameterization, and success conditions
 
-Environment reset is comprised of running two functions, `self.reconfigure` and `self.initialize_episode`, which is auto
+Environment reset is comprised of running two functions, `self._reconfigure` and `self.initialize_episode`, which is auto
 run by ManiSkill2. As a user, you can override a number of functions that affect reconfiguration and episode initialization.
 
 Reconfiguration will reset the entire environment scene and allow you to load/swap assets and agents.
@@ -86,7 +86,7 @@ class PushCubeEnv(BaseEnv):
         pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)
 
-    def _load_actors(self):
+    def _load_scene(self):
         # we use a prebuilt scene builder class that automatically loads in a floor and table.
         self.table_scene = TableSceneBuilder(
             env=self, robot_init_qpos_noise=self.robot_init_qpos_noise

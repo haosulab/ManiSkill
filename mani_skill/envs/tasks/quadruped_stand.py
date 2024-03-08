@@ -70,7 +70,7 @@ class QuadrupedStandEnv(BaseEnv):
             mount=self.agent.robot.links[0],
         )
 
-    def _load_actors(self):
+    def _load_scene(self):
         # for i in range(10):
         #     ground = build_ground(self._scene, return_builder=True)
         #     ground.initial_pose = sapien.Pose(p=[i * 40, 0, 0])

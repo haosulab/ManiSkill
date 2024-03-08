@@ -130,6 +130,12 @@ class BaseEnv(gym.Env):
     _hidden_objects: List[Union[Actor, Articulation]] = []
     """list of objects that are hidden during rendering when generating visual observations / running render_cameras()"""
 
+    _main_rng: np.random.RandomState = None
+    """main rng generator that generates episode seed sequences. For internal use only"""
+
+    _episode_rng: np.random.RandomState = None
+    """the numpy RNG that you can use to generate random numpy data"""
+
     def __init__(
         self,
         num_envs: int = 1,
@@ -279,7 +285,6 @@ class BaseEnv(gym.Env):
     def default_sim_cfg(self):
         return SimConfig()
     def _load_agent(self):
-        # agent_cls: Type[BaseAgent] = self._agent_cls
         agents = []
         robot_uids = self.robot_uids
         if robot_uids is not None:
@@ -288,7 +293,6 @@ class BaseEnv(gym.Env):
             for i, robot_uid in enumerate(robot_uids):
                 if isinstance(robot_uid, type(BaseAgent)):
                     agent_cls = robot_uid
-                    # robot_uids = self._agent_cls.uid
                 else:
                     if robot_uid not in REGISTERED_AGENTS:
                         raise RuntimeError(
@@ -307,6 +311,7 @@ class BaseEnv(gym.Env):
             self.agent = agents[0]
         else:
             self.agent = MultiAgent(agents)
+        # TODO (stao): do we stil need this?
         # set_articulation_render_material(self.agent.robot, specular=0.9, roughness=0.3)
 
     def _configure_sensors(self):
@@ -386,7 +391,6 @@ class BaseEnv(gym.Env):
             info (Dict): The info object of the environment. Generally should always be the result of `self.get_info()`.
                 If this is None (the default), this function will call `self.get_info()` itself
         """
-        squeeze_dims = self.num_envs == 1
         if info is None:
             info = self.get_info()
         if self._obs_mode == "none":
@@ -499,7 +503,7 @@ class BaseEnv(gym.Env):
     # -------------------------------------------------------------------------- #
     # Reconfigure
     # -------------------------------------------------------------------------- #
-    def reconfigure(self):
+    def _reconfigure(self):
         """Reconfigure the simulation scene instance.
         This function clears the previous scene and creates a new one.
 
@@ -511,50 +515,49 @@ class BaseEnv(gym.Env):
         shape changes each time and the faucet model changes each time respectively.
         """
 
-        with torch.random.fork_rng():
-            torch.manual_seed(seed=self._episode_seed)
-            self._clear()
-            # load everything into the scene first before initializing anything
-            self._setup_scene()
-            self._load_agent()
-            self._load_actors()
-            self._load_articulations()
+        self._clear()
+        # load everything into the scene first before initializing anything
+        self._setup_scene()
+        self._load_agent()
+        self._load_scene()
 
-            self._setup_lighting()
+        self._load_lighting()
 
-            # NOTE(jigu): Agent and camera configurations should not change after initialization.
-            self._configure_sensors()
-            self._configure_human_render_cameras()
+        # NOTE(jigu): Agent and camera configurations should not change after initialization.
+        self._configure_sensors()
+        self._configure_human_render_cameras()
 
-            # Override camera configurations
-            if self._custom_sensor_cfgs is not None:
-                update_camera_cfgs_from_dict(
-                    self._sensor_cfgs, self._custom_sensor_cfgs
-                )
-            if self._custom_human_render_camera_cfgs is not None:
-                update_camera_cfgs_from_dict(
-                    self._human_render_camera_cfgs,
-                    self._custom_human_render_camera_cfgs,
-                )
+        # Override camera configurations
+        if self._custom_sensor_cfgs is not None:
+            update_camera_cfgs_from_dict(
+                self._sensor_cfgs, self._custom_sensor_cfgs
+            )
+        if self._custom_human_render_camera_cfgs is not None:
+            update_camera_cfgs_from_dict(
+                self._human_render_camera_cfgs,
+                self._custom_human_render_camera_cfgs,
+            )
 
-            # Cache entites and articulations
-            if sapien.physx.is_gpu_enabled():
-                self._scene._setup_gpu()
-                self._scene._gpu_fetch_all()
-            self._setup_sensors()  # for GPU sim, we have to setup sensors after we call setup gpu in order to enable loading mounted sensors
-            if self._viewer is not None:
-                self._setup_viewer()
+        if sapien.physx.is_gpu_enabled():
+            self._scene._setup_gpu()
+            self._scene._gpu_fetch_all()
+        # for GPU sim, we have to setup sensors after we call setup gpu in order to enable loading mounted sensors as they depend on GPU buffer data
+        self._setup_sensors()
+        if self._viewer is not None:
+            self._setup_viewer()
         self._reconfig_counter = self.reconfiguration_freq
 
-    def _load_actors(self):
-        """Loads all actors into the scene. Called by `self.reconfigure`"""
+    def _after_reconfigure(self):
+        """Add code here that should run immediately after self._reconfigure() is called. The torch RNG context is still active so RNG is still
+        seeded here by self._episode_seed. This is useful if you need to run something that only happens after reconfiguration but need the
+        GPU initialized so that you can check e.g. collisons, poses etc."""
 
-    def _load_articulations(self):
-        """Loads all articulations into the scene. Called by `self.reconfigure`"""
+    def _load_scene(self):
+        """Loads all objects like actors and articulations into the scene. Called by `self._reconfigure`"""
 
     # TODO (stao): refactor this into sensor API
     def _setup_sensors(self):
-        """Setup sensors in the scene. Called by `self.reconfigure`"""
+        """Setup sensors in the scene. Called by `self._reconfigure`"""
         self._sensors = OrderedDict()
 
         for uid, sensor_cfg in self._sensor_cfgs.items():
@@ -583,8 +586,8 @@ class BaseEnv(gym.Env):
         self._scene.sensors = self._sensors
         self._scene.human_render_cameras = self._human_render_cameras
 
-    def _setup_lighting(self):
-        """Setup lighting in the scene. Called by `self.reconfigure`. If not overriden will set some simple default lighting"""
+    def _load_lighting(self):
+        """Loads lighting into the scene. Called by `self._reconfigure`. If not overriden will set some simple default lighting"""
 
         shadow = self.enable_shadow
         self._scene.set_ambient_light([0.3, 0.3, 0.3])
@@ -599,19 +602,19 @@ class BaseEnv(gym.Env):
     # -------------------------------------------------------------------------- #
     def reset(self, seed=None, options=None):
         """
-        Reset the ManiSkill environment
+        Reset the ManiSkill environment. If options["env_idx"] is given, will only reset the selected parallel environments. If
+        options["reconfigure"] is True, will call self._reconfigure() which deletes the entire physx scene and reconstructs everything.
+        Users building custom tasks generally do not need to override this function.
 
         Note that ManiSkill always holds two RNG states, a main RNG, and an episode RNG. The main RNG is used purely to sample an episode seed which
-        helps with reproducibility of episodes. The episode RNG is used by the environment/task itself to e.g. randomize object positions, randomize assets etc.
+        helps with reproducibility of episodes and is for internal use only. The episode RNG is used by the environment/task itself to
+        e.g. randomize object positions, randomize assets etc. Episode RNG is accessible by using torch.rand (recommended) which is seeded with a
+        RNG context or the numpy alternative via `self._episode_rng`
 
         Upon environment creation via gym.make, the main RNG is set with a fixed seed of 2022.
         During each reset call, if seed is None, main RNG is unchanged and an episode seed is sampled from the main RNG to create the episode RNG.
-        If seed is not None, main RNG is set to that seed and the episode seed is also set to that seed.
-
-
-        Note that when giving a specific seed via `reset(seed=...)`, we always set the main RNG based on that seed. This then deterministically changes the **sequence** of RNG
-        used for each episode after each call to reset with `seed=None`. By default this sequence of rng starts with the default main seed used which is 2022,
-        which means that when creating an environment and resetting without a seed, it will always have the same sequence of RNG for each episode.
+        If seed is not None, main RNG is set to that seed and the episode seed is also set to that seed. This design means the main RNG determines
+        the episode RNG deterministically.
 
         """
         if options is None:
@@ -626,8 +629,10 @@ class BaseEnv(gym.Env):
             self._reconfig_counter == 0 and self.reconfiguration_freq != 0
         )
         if reconfigure:
-            self.reconfigure()
-
+            with torch.random.fork_rng():
+                torch.manual_seed(seed=self._episode_seed)
+                self._reconfigure()
+                self._after_reconfigure()
         if "env_idx" in options:
             env_idx = options["env_idx"]
             self._scene._reset_mask = torch.zeros(
@@ -854,7 +859,7 @@ class BaseEnv(gym.Env):
 
     def _setup_scene(self):
         """Setup the simulation scene instance.
-        The function should be called in reset(). Called by `self.reconfigure`"""
+        The function should be called in reset(). Called by `self._reconfigure`"""
         self._set_scene_config()
         if sapien.physx.is_gpu_enabled():
             self.physx_system = sapien.physx.PhysxGpuSystem()
@@ -890,7 +895,7 @@ class BaseEnv(gym.Env):
     def _clear(self):
         """Clear the simulation scene instance and other buffers.
         The function can be called in reset() before a new scene is created.
-        Called by `self.reconfigure` and when the environment is closed/deleted
+        Called by `self._reconfigure` and when the environment is closed/deleted
         """
         self._close_viewer()
         self.agent = None
@@ -982,7 +987,7 @@ class BaseEnv(gym.Env):
         The function should be called after a new scene is configured.
         In subclasses, this function can be overridden to set viewer cameras.
 
-        Called by `self.reconfigure`
+        Called by `self._reconfigure`
         """
         # TODO (stao): handle GPU parallel sim rendering code:
         if physx.is_gpu_enabled():

@@ -86,12 +86,12 @@ class SceneManipulationEnv(BaseEnv):
             self.sampled_scene_idx = int(self.sampled_scene_idx)
         return super().reset(seed, options)
 
-    def _setup_lighting(self):
+    def _load_lighting(self):
         if self.scene_builder.builds_lighting:
             return
-        return super()._setup_lighting()
+        return super()._load_lighting()
 
-    def _load_actors(self):
+    def _load_scene(self):
         self.scene_builder.build(
             self._scene,
             scene_idx=self.sampled_scene_idx,

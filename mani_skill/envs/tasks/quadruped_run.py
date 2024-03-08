@@ -98,7 +98,7 @@ class QuadrupedRunEnv(BaseEnv):
             # link=self.agent.robot.links[0],
         )
 
-    def _load_actors(self):
+    def _load_scene(self):
         self.ground = build_meter_ground(self._scene, floor_width=20)
         self.height = 0.63
 
