@@ -68,11 +68,12 @@ class RotateValveEnv(BaseEnv):
         pose = sapien_utils.look_at([0.2, 0.4, 0.4], [0.0, 0.0, 0.1])
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)
 
-    def _load_actors(self):
+    def _load_scene(self):
         self.table_scene = TableSceneBuilder(
             env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
         )
         self.table_scene.build()
+        self._load_articulations()
 
     def _load_articulations(self):
         # Robel valve

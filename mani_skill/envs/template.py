@@ -92,6 +92,15 @@ class CustomEnv(BaseEnv):
     for some tasks these may need to be called multiple times if you need to swap out object assets. In GPU simulation these will only ever be called once.
     """
 
+    def _load_agent(self):
+        # this code loads the agent into the current scene. You can usually ignore this function by deleting it or calling the inherited
+        # BaseEnv._load_agent function
+        super()._load_agent()
+
+    def _load_scene(self):
+        # here you add various objects like actors and articulations. If your task was to push a ball, you may add a dynamic sphere object on the ground
+        pass
+
     def _register_sensors(self):
         # To customize the sensors that capture images/pointclouds for the environment observations,
         # simply define a CameraConfig as done below for Camera sensors. You can add multiple sensors by returning a list
@@ -105,9 +114,11 @@ class CustomEnv(BaseEnv):
         ]
 
     def _register_human_render_cameras(self):
-        # this is just like _register_sensors, but for adding cameras used for rendering when you call env.render() when render_mode="rgb_array" or env.render_rgb_array()
+        # this is just like _register_sensors, but for adding cameras used for rendering when you call env.render()
+        # when render_mode="rgb_array" or env.render_rgb_array()
+        # Another feature here is that if there is a camera called render_camera, this is the default view shown initially when a GUI is opened
         pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
-        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)
+        return [CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)]
 
     def _setup_sensors(self):
         # default code here will setup all sensors. You can add additional code to change the sensors e.g.
@@ -118,19 +129,6 @@ class CustomEnv(BaseEnv):
         # default code here will setup all lighting. You can add additional code to change the lighting e.g.
         # if you want to randomize lighting in the scene
         return super()._setup_lighting()
-
-    def _load_agent(self):
-        # this code loads the agent into the current scene. You can usually ignore this function by deleting it or calling the inherited
-        # BaseEnv._load_agent function
-        super()._load_agent()
-
-    def _load_actors(self):
-        # here you add various objects (called actors). If your task was to push a ball, you may add a dynamic sphere object on the ground
-        pass
-
-    def _load_articulations(self):
-        # here you add various articulations. If your task was to open a drawer, you may add a drawer articulation into the scene
-        pass
 
     """
     Episode Initialization Code

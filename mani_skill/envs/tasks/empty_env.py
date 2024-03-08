@@ -49,7 +49,7 @@ class EmptyEnv(BaseEnv):
         pose = sapien_utils.look_at([0.75, -0.75, 0.5], [0.0, 0.0, 0.2])
         return CameraConfig("render_camera", pose.p, pose.q, 2048, 2048, 1, 0.01, 100)
 
-    def _load_actors(self):
+    def _load_scene(self):
         build_ground(self._scene)
 
     def _initialize_actors(self, env_idx: torch.Tensor):

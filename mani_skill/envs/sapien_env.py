@@ -285,7 +285,6 @@ class BaseEnv(gym.Env):
     def default_sim_cfg(self):
         return SimConfig()
     def _load_agent(self):
-        # agent_cls: Type[BaseAgent] = self._agent_cls
         agents = []
         robot_uids = self.robot_uids
         if robot_uids is not None:
@@ -294,7 +293,6 @@ class BaseEnv(gym.Env):
             for i, robot_uid in enumerate(robot_uids):
                 if isinstance(robot_uid, type(BaseAgent)):
                     agent_cls = robot_uid
-                    # robot_uids = self._agent_cls.uid
                 else:
                     if robot_uid not in REGISTERED_AGENTS:
                         raise RuntimeError(
@@ -313,6 +311,7 @@ class BaseEnv(gym.Env):
             self.agent = agents[0]
         else:
             self.agent = MultiAgent(agents)
+        # TODO (stao): do we stil need this?
         # set_articulation_render_material(self.agent.robot, specular=0.9, roughness=0.3)
 
     def _configure_sensors(self):
@@ -520,7 +519,7 @@ class BaseEnv(gym.Env):
         # load everything into the scene first before initializing anything
         self._setup_scene()
         self._load_agent()
-        self._load_actors()
+        self._load_scene()
         self._load_articulations()
 
         self._setup_lighting()
@@ -554,12 +553,8 @@ class BaseEnv(gym.Env):
         seeded here by self._episode_seed. This is useful if you need to run something that only happens after reconfiguration but need the
         GPU initialized so that you can check e.g. collisons, poses etc."""
 
-    def _load_actors(self):
-        """Loads all actors into the scene. Called by `self.reconfigure`"""
-
-    def _load_articulations(self):
-        """Loads all articulations into the scene. Called by `self.reconfigure`"""
-
+    def _load_scene(self):
+        """Loads all objects like actors and articulations into the scene. Called by `self._reconfigure`"""
     # TODO (stao): refactor this into sensor API
     def _setup_sensors(self):
         """Setup sensors in the scene. Called by `self.reconfigure`"""
