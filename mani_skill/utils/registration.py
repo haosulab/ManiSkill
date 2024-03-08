@@ -1,3 +1,4 @@
+import json
 from copy import deepcopy
 from functools import partial
 from typing import Dict, Type
@@ -94,6 +95,12 @@ def register_env(uid: str, max_episode_steps=None, override=False, **kwargs):
           `gym.make` wraps the env with `gym.wrappers.TimeLimit` to limit the maximum number of steps.
         - `gym.EnvSpec` uses kwargs instead of **kwargs!
     """
+    try:
+        json.dumps(kwargs)
+    except TypeError:
+        raise RuntimeError(
+            f"You cannot register_env with non json dumpable kwargs, e.g. classes or types. If you really need to do this, it is recommended to create a mapping of string to the unjsonable data and to pass the string in the kwarg and during env creation find the data you need"
+        )
 
     def _register_env(cls):
         if uid in REGISTERED_ENVS:
