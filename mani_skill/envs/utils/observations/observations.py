@@ -54,9 +54,10 @@ def sensor_data_to_pointcloud(observation: Dict, sensors: Dict[str, BaseSensor])
 
             # Each pixel is (x, y, z, actor_id) in OpenGL camera space
             # actor_id = 0 for the background
+            images: dict[str, torch.Tensor]
             position = images["PositionSegmentation"]
             segmentation = position[..., 3].clone()
-            position[..., 3] = position[..., 2] == 0
+            position[..., 3] = position[..., 3] == 0
             position = position / 1000.0
 
             # Convert to world space
