@@ -36,16 +36,16 @@ def sensor_data_to_rgbd(
             for key in ori_images:
                 if key == "Color":
                     if rgb:
-                        rgb = ori_images[key][..., :3].clone()  # [H, W, 4]
-                        new_images["rgb"] = rgb  # [H, W, 4]
+                        rgb_data = ori_images[key][..., :3].clone()  # [H, W, 4]
+                        new_images["rgb"] = rgb_data  # [H, W, 4]
                 elif key == "PositionSegmentation":
                     if depth:
-                        depth = -ori_images[key][..., [2]]  # [H, W, 1]
+                        depth_data = -ori_images[key][..., [2]]  # [H, W, 1]
                         # NOTE (stao): This is a bit of a hack since normally we have generic to_numpy call to convert internal torch tensors to numpy if we do not use GPU simulation
                         # but torch does not have a uint16 type so we convert that here earlier
-                        if depth.shape[0] == 1:
-                            depth = depth.numpy().astype(np.uint16)
-                        new_images["depth"] = depth
+                        if depth_data.shape[0] == 1:
+                            depth_data = depth_data.numpy().astype(np.uint16)
+                        new_images["depth"] = depth_data
                 else:
                     new_images[key] = ori_images[key]
             sensor_data[cam_uid] = new_images
