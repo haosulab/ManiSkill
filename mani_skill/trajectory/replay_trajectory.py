@@ -340,6 +340,12 @@ def parse_args(args=None):
         help="whether the replayed trajectory should include rewards",
         default=False,
     )
+    parser.add_argument(
+        "--shader",
+        default="default",
+        type=str,
+        help="Change shader used for rendering. Default is 'default' which is very fast. Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer",
+    )
 
     return parser.parse_args(args)
 
@@ -373,6 +379,7 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
         env_kwargs["obs_mode"] = target_obs_mode
     if target_control_mode is not None:
         env_kwargs["control_mode"] = target_control_mode
+    env_kwargs["shader_dir"] = args.shader
     env_kwargs["reward_mode"] = args.reward_mode
     env_kwargs[
         "render_mode"
