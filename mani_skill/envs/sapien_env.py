@@ -130,6 +130,12 @@ class BaseEnv(gym.Env):
     _hidden_objects: List[Union[Actor, Articulation]] = []
     """list of objects that are hidden during rendering when generating visual observations / running render_cameras()"""
 
+    _main_rng: np.random.RandomState = None
+    """main rng generator that generates episode seed sequences. For internal use only"""
+
+    _episode_rng: np.random.RandomState = None
+    """the numpy RNG that you can use to generate random numpy data"""
+
     def __init__(
         self,
         num_envs: int = 1,
@@ -386,7 +392,6 @@ class BaseEnv(gym.Env):
             info (Dict): The info object of the environment. Generally should always be the result of `self.get_info()`.
                 If this is None (the default), this function will call `self.get_info()` itself
         """
-        squeeze_dims = self.num_envs == 1
         if info is None:
             info = self.get_info()
         if self._obs_mode == "none":
@@ -499,7 +504,7 @@ class BaseEnv(gym.Env):
     # -------------------------------------------------------------------------- #
     # Reconfigure
     # -------------------------------------------------------------------------- #
-    def reconfigure(self):
+    def _reconfigure(self):
         """Reconfigure the simulation scene instance.
         This function clears the previous scene and creates a new one.
 
@@ -511,40 +516,43 @@ class BaseEnv(gym.Env):
         shape changes each time and the faucet model changes each time respectively.
         """
 
-        with torch.random.fork_rng():
-            torch.manual_seed(seed=self._episode_seed)
-            self._clear()
-            # load everything into the scene first before initializing anything
-            self._setup_scene()
-            self._load_agent()
-            self._load_actors()
-            self._load_articulations()
+        self._clear()
+        # load everything into the scene first before initializing anything
+        self._setup_scene()
+        self._load_agent()
+        self._load_actors()
+        self._load_articulations()
 
-            self._setup_lighting()
+        self._setup_lighting()
 
-            # NOTE(jigu): Agent and camera configurations should not change after initialization.
-            self._configure_sensors()
-            self._configure_human_render_cameras()
+        # NOTE(jigu): Agent and camera configurations should not change after initialization.
+        self._configure_sensors()
+        self._configure_human_render_cameras()
 
-            # Override camera configurations
-            if self._custom_sensor_cfgs is not None:
-                update_camera_cfgs_from_dict(
-                    self._sensor_cfgs, self._custom_sensor_cfgs
-                )
-            if self._custom_human_render_camera_cfgs is not None:
-                update_camera_cfgs_from_dict(
-                    self._human_render_camera_cfgs,
-                    self._custom_human_render_camera_cfgs,
-                )
+        # Override camera configurations
+        if self._custom_sensor_cfgs is not None:
+            update_camera_cfgs_from_dict(
+                self._sensor_cfgs, self._custom_sensor_cfgs
+            )
+        if self._custom_human_render_camera_cfgs is not None:
+            update_camera_cfgs_from_dict(
+                self._human_render_camera_cfgs,
+                self._custom_human_render_camera_cfgs,
+            )
 
-            # Cache entites and articulations
-            if sapien.physx.is_gpu_enabled():
-                self._scene._setup_gpu()
-                self._scene._gpu_fetch_all()
-            self._setup_sensors()  # for GPU sim, we have to setup sensors after we call setup gpu in order to enable loading mounted sensors
-            if self._viewer is not None:
-                self._setup_viewer()
+        # Cache entites and articulations
+        if sapien.physx.is_gpu_enabled():
+            self._scene._setup_gpu()
+            self._scene._gpu_fetch_all()
+        self._setup_sensors()  # for GPU sim, we have to setup sensors after we call setup gpu in order to enable loading mounted sensors
+        if self._viewer is not None:
+            self._setup_viewer()
         self._reconfig_counter = self.reconfiguration_freq
+
+    def _after_reconfigure(self):
+        """Add code here that should run immediately after self._reconfigure() is called. The torch RNG context is still active so RNG is still
+        seeded here by self._episode_seed. This is useful if you need to run something that only happens after reconfiguration but need the
+        GPU initialized so that you can check e.g. collisons, poses etc."""
 
     def _load_actors(self):
         """Loads all actors into the scene. Called by `self.reconfigure`"""
@@ -626,8 +634,10 @@ class BaseEnv(gym.Env):
             self._reconfig_counter == 0 and self.reconfiguration_freq != 0
         )
         if reconfigure:
-            self.reconfigure()
-
+            with torch.random.fork_rng():
+                torch.manual_seed(seed=self._episode_seed)
+                self._reconfigure()
+                self._after_reconfigure()
         if "env_idx" in options:
             env_idx = options["env_idx"]
             self._scene._reset_mask = torch.zeros(
