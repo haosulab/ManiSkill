@@ -96,7 +96,7 @@ python -m mani_skill.examples.benchmarking.gpu_sim -e "PickCube-v1" -n 64 --save
 it should run quite fast! (3000+ fps on a 4090, you can increase the number envs for higher FPS). You can change `--render-mode="rgb_array"` to render from higher quality cameras.
 
 <video preload="auto" controls="True" width="100%">
-<source src="https://github.com/haosulab/ManiSkill2/raw/dev/docs/source/_static/videos/mani_skill_gpu_sim-PickCube-v1-num_envs=64-obs_mode=state-render_mode=sensors.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill2/raw/dev/docs/source/_static/videos/mani_skill_gpu_sim-PickCube-v1-num_envs=16-obs_mode=state-render_mode=sensors.mp4" type="video/mp4">
 </video>
 
 
@@ -108,7 +108,7 @@ python -m mani_skill.examples.benchmarking.gpu_sim -e "RotateValveLevel2-v1" -n 
 which shows two tasks that have different objects and articulations in every parallel environment. Below is an example for the PickSingleYCB task.
 
 <video preload="auto" controls="True" width="100%">
-<source src="https://github.com/haosulab/ManiSkill2/raw/dev/docs/source/_static/videos/mani_skill_gpu_sim-PickSingleYCB-v1-num_envs=64-obs_mode=state-render_mode=sensors.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill2/raw/dev/docs/source/_static/videos/mani_skill_gpu_sim-PickSingleYCB-v1-num_envs=16-obs_mode=state-render_mode=sensors.mp4" type="video/mp4">
 </video>
 
 
@@ -133,3 +133,19 @@ See [main page](../data_collection/teleoperation.md#clickdrag-system) for more d
 </video>
 
 ## Motion Planning Solutions
+
+We provide some motion planning solutions/demos for the panda arm on some tasks, you can try it now and record demonstrations with the following:
+
+```bash
+python -m mani_skill.examples.motionplanning.panda.run -e "PickCube-v1" # runs headless and only saves video
+python -m mani_skill.examples.motionplanning.panda.run -e "StackCube-v1" --visualize # opens up the GUI
+python -m mani_skill.examples.motionplanning.panda.run -h # open up a help menu and also show what tasks have solutions
+```
+
+Example below shows what it looks like with the GUI:
+
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill2/raw/dev/docs/source/_static/videos/motionplanning-stackcube.mp4" type="video/mp4">
+</video>
+
+For more details check out the [motion planning page](../data_collection/motionplanning.md)

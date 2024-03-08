@@ -19,3 +19,13 @@ Example below shows what it looks like with the GUI:
 <video preload="auto" controls="True" width="100%">
 <source src="https://github.com/haosulab/ManiSkill2/raw/dev/docs/source/_static/videos/motionplanning-stackcube.mp4" type="video/mp4">
 </video>
+
+The solutions to these tasks usually involve decomposing the task down to a sequence of simple pick, place, and movements. The example code provided controls the panda arm's end-effector to move to any pose in its workspace as well as grab/release.
+
+For example, the PickCube-v1 task is composed of
+1. move gripper just over the red cube and orient the gripper so it faces the same direction as the cube
+2. move gripper down so the fingers surround the cube
+3. close the gripper
+4. move the gripper to above the goal location so the tool center point (tcp) of the gripper is at the goal
+
+Note that while motion planning can generate and solve a wide variety of tasks, it's main limitations is that it often requires an human/engineer to tune and write, as well as being unable to generate solutions for more dynamical tasks.

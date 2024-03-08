@@ -125,5 +125,5 @@ python -m mani_skill.examples.benchmarking.gpu_sim --num-envs=64 --save-video
 ```
 which will look something like this
 <video preload="auto" controls="True" width="100%">
-<source src="https://github.com/haosulab/ManiSkill2/raw/dev/docs/source/_static/videos/mani_skill_gpu_sim-PickCube-v1-num_envs=64-obs_mode=state-render_mode=sensors.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill2/raw/dev/docs/source/_static/videos/mani_skill_gpu_sim-PickCube-v1-num_envs=16-obs_mode=state-render_mode=sensors.mp4" type="video/mp4">
 </video>
