@@ -57,7 +57,7 @@ A GPU with the Vulkan driver installed is required to enable rendering in ManiSk
 python -m mani_skill.examples.demo_random_action
 ```
 
-Some environments require **downloading assets**. You can download all the assets by `python -m mani_skill.utils.download_asset all` or download task-specific assets by `python -m mani_skill.utils.download_asset ${ENV_ID}`. The assets will be downloaded to `./data/` by default, and you can also use the environment variable `MS2_ASSET_DIR` to specify this destination.
+Some environments require **downloading assets**. You can download download task-specific assets by `python -m mani_skill.utils.download_asset ${ENV_ID}`. The assets will be downloaded to `~/maniskill/data` by default, and you can also use the environment variable `MS_ASSET_DIR` to specify this destination.
 
 Please refer to our [documentation](https://haosulab.github.io/ManiSkill2/concepts/environments.html) for details on all supported environments. The documentation also indicates which environments require downloading assets.
 
