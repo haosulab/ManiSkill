@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, List, Sequence
+from typing import TYPE_CHECKING, Dict, List, Sequence, Union
 
 import numpy as np
 import sapien
@@ -10,6 +10,7 @@ import sapien.physx as physx
 import sapien.render
 from gymnasium import spaces
 
+from mani_skill.utils.geometry.geometry import Actor
 from mani_skill.utils.structs.articulation import Articulation
 from mani_skill.utils.structs.link import Link
 
@@ -42,7 +43,8 @@ class CameraConfig(BaseSensorConfig):
     """far (float): far plane of the camera"""
     entity_uid: str = None
     """entity_uid (str, optional): unique id of the entity to mount the camera. Defaults to None."""
-    link: Link = None
+    mount: Union[Actor, Link] = None
+    """the Actor or Link to mount the camera on top of. This means the global pose of the mounted camera is now mount.pose * local_pose"""
     hide_link: bool = False
     """hide_link (bool, optional): whether to hide the link to mount the camera. Defaults to False."""
     texture_names: Sequence[str] = ("Color", "PositionSegmentation")
@@ -124,8 +126,8 @@ class Camera(BaseSensor):
         self.camera_cfg = camera_cfg
 
         entity_uid = camera_cfg.entity_uid
-        if camera_cfg.link is not None:
-            self.entity = camera_cfg.link
+        if camera_cfg.mount is not None:
+            self.entity = camera_cfg.mount
         elif entity_uid is None:
             self.entity = None
         else:

@@ -1,6 +1,27 @@
 # Custom Tasks (Advanced Features)
 
-This page covers nearly every feature useful for task building in ManiSkill.
+This page covers nearly every feature useful for task building in ManiSkill. If you haven't already it is recommended to get a better understanding of how GPU simulation generally works described on [this page](../concepts/gpu_simulation.md). It can provide some good context for various terminology and ideas presented in this advanced features tutorial.
+
+## Custom/Extra State
+
+Reproducibility is generally important in task building. A common example is when trying to replay a trajectory that someone else generated, if that trajectory file is missing important state variables necessary for reconstructing the exact same initial task state, the trajectory likely would not replay correctly.
+
+By default, `env.get_state_dict()` returns a state dictionary containing the entirety of simulation state, which consists of the poses and velocities of each actor and additionally qpos/qvel values of articulations.
+
+In your own task you can define additional state data such as a eg `height` for a task like LiftCube which indicates how high the cube must be lifted for success. This would your own variable and not included in `env.get_state_dict()` so to include it you can add the following two functions to your task class
+
+```python
+class MyCustomTask(BaseEnv):
+    # ...
+    def get_state_dict(self):
+        state_dict = super().get_state_dict()
+        state_dict["height"] = self.height
+    def set_state_dict(self, state_dict):
+        super().set_state_dict(state_dict)
+        self.height = state_dict["height"]
+```
+
+Now recorded trajectories of your task will include the height as part of the environment state and so you can replay the trajectory with just environment states perfectly in the sense that the robot path is the same and the evaluation/reward metrics output the same at each time step.
 
 ## Contact Forces on the GPU/CPU
 
@@ -46,7 +67,7 @@ There are plans to make a simpler managed version of the SAPIEN pair-wise contac
 
 ### Net Contact forces
 
-Net contact forces are nearly the same as the pair-wise contact forces in terms of SAPIEN API but ManiSkill provides a convenient way to fetch this data for Actors and Articulations as so
+Net contact forces are nearly the same as the pair-wise contact forces in terms of SAPIEN API but ManiSkill provides a convenient way to fetch this data for Actors and Articulations that works on CPU and GPU as so
 
 ```python
 actor.get_net_contact_forces() # shape (N, 3)
@@ -54,3 +75,62 @@ articulation.get_net_contact_forces(link_names) # shape (N, len(link_names), 3)
 ```
 
 ## Scene Masks
+
+ManiSkill defaults to actors/articulations when built to be built in every parallel sub-scene in the physx scene. This is not necessary behavior and you can control this via scene masks, which dictate where sub-scenes get the actor/articulation loaded into it and which do not. A good example of this done is in the PickSingleYCB task which loads a different geometry/object entirely in each sub-scene. This is done by effectively not creating one actor to pick up across all sub-scenes as you might do in PickCube, but a different actor per scene (which will be merged into one actor later).
+
+```python
+for i, model_id in enumerate(model_ids):
+    builder, obj_height = build_actor_ycb(
+        model_id, self._scene, name=model_id, return_builder=True
+    )
+    scene_mask = np.zeros(self.num_envs, dtype=bool)
+    scene_mask[i] = True
+    builder.set_scene_mask(scene_mask)
+    actors.append(builder.build(name=f"{model_id}-{i}"))
+```
+Here we have a list of YCB object ids in `model_ids`. For the ith `model_id` we create the ActorBuilder `builder` and set a scene mask so that only the ith sub-scene is True, the rest are False. Now when we call `builder.build` only the ith sub-scene has this particular object.
+
+## Merging
+
+### Merging Actors
+
+In the [scene masks](#scene-masks) section we saw how we can restrict actors being built to specific scenes. However now we have a list of Actor objects and fetching the pose of each actor would need a for loop. The easy solution here is to create a new Actor that represents/views that entire list of actors via `Actor.merge` as done below (taken from the PickSingleYCB code).
+
+```python
+obj = Actor.merge(actors, name="ycb_object")
+```
+
+Now we have the following useful behaviors which can make writing evaluation and reward functions a breeze
+
+```python
+obj.pose.p # shape (N, 3)
+obj.pose.q # shape (N, 4)
+# etc.
+```
+effectively properties that exist regardless of geometry like object pose can be easily fetched after merging actors.
+
+### Merging Articulations
+
+WIP
+
+## Mounted/Dynamically Moving Cameras
+
+The custom tasks tutorial demonstrated adding fixed cameras to the PushCube task. ManiSkill+SAPIEN also supports mounting cameras to Actors and Links, which can be useful to e.g. have a camera follow a object as it moves around.
+
+For example if you had a task with a baseketball in it and it's actor object is stored at `self.basketball`, in the `_register_sensors` or `_register_human_render_cameras` functions you can do
+
+```python
+
+def _register_sensors(self)
+    # look towards the center of the baskeball from a positon that is offset
+    # (0.3, 0.3, 0.5) away from the basketball
+    pose = sapien_utils.look_at(eye=[0.3, 0.3, 0.5], target=[0, 0, 0])
+    return [
+        CameraConfig(
+            uid="ball_cam", p=pose.p, q=pose.q, width=128,
+            height=128, fov=np.pi / 2, near=0.01,
+            far=100, mount=self.basketball
+        )]
+```
+
+<!-- TODO show video of example -->

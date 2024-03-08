@@ -52,7 +52,7 @@ class QuadrupedStandEnv(BaseEnv):
                 np.pi / 2,
                 0.01,
                 100,
-                link=self.agent.robot.links[0],
+                mount=self.agent.robot.links[0],
             )
         ]
 
@@ -67,7 +67,7 @@ class QuadrupedStandEnv(BaseEnv):
             1,
             0.01,
             100,
-            link=self.agent.robot.links[0],
+            mount=self.agent.robot.links[0],
         )
 
     def _load_actors(self):

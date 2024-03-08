@@ -145,7 +145,7 @@ class SceneManipulationEnv(BaseEnv):
                 1.5,
                 0.01,
                 100,
-                link=self.agent.torso_lift_link,
+                mount=self.agent.torso_lift_link,
             )
             return [room_camera_config, robot_camera_config]
 
