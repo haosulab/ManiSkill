@@ -520,7 +520,6 @@ class BaseEnv(gym.Env):
         self._setup_scene()
         self._load_agent()
         self._load_scene()
-        self._load_articulations()
 
         self._load_lighting()
 
