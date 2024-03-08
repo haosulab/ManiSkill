@@ -538,11 +538,11 @@ class BaseEnv(gym.Env):
                 self._custom_human_render_camera_cfgs,
             )
 
-        # Cache entites and articulations
         if sapien.physx.is_gpu_enabled():
             self._scene._setup_gpu()
             self._scene._gpu_fetch_all()
-        self._setup_sensors()  # for GPU sim, we have to setup sensors after we call setup gpu in order to enable loading mounted sensors
+        # for GPU sim, we have to setup sensors after we call setup gpu in order to enable loading mounted sensors as they depend on GPU buffer data
+        self._setup_sensors()
         if self._viewer is not None:
             self._setup_viewer()
         self._reconfig_counter = self.reconfiguration_freq
@@ -557,7 +557,7 @@ class BaseEnv(gym.Env):
 
     # TODO (stao): refactor this into sensor API
     def _setup_sensors(self):
-        """Setup sensors in the scene. Called by `self.reconfigure`"""
+        """Setup sensors in the scene. Called by `self._reconfigure`"""
         self._sensors = OrderedDict()
 
         for uid, sensor_cfg in self._sensor_cfgs.items():
@@ -859,7 +859,7 @@ class BaseEnv(gym.Env):
 
     def _setup_scene(self):
         """Setup the simulation scene instance.
-        The function should be called in reset(). Called by `self.reconfigure`"""
+        The function should be called in reset(). Called by `self._reconfigure`"""
         self._set_scene_config()
         if sapien.physx.is_gpu_enabled():
             self.physx_system = sapien.physx.PhysxGpuSystem()
@@ -895,7 +895,7 @@ class BaseEnv(gym.Env):
     def _clear(self):
         """Clear the simulation scene instance and other buffers.
         The function can be called in reset() before a new scene is created.
-        Called by `self.reconfigure` and when the environment is closed/deleted
+        Called by `self._reconfigure` and when the environment is closed/deleted
         """
         self._close_viewer()
         self.agent = None
@@ -987,7 +987,7 @@ class BaseEnv(gym.Env):
         The function should be called after a new scene is configured.
         In subclasses, this function can be overridden to set viewer cameras.
 
-        Called by `self.reconfigure`
+        Called by `self._reconfigure`
         """
         # TODO (stao): handle GPU parallel sim rendering code:
         if physx.is_gpu_enabled():
