@@ -125,10 +125,10 @@ class CustomEnv(BaseEnv):
         # if you want to randomize camera positions
         return super()._setup_sensors()
 
-    def _setup_lighting(self):
+    def _load_lighting(self):
         # default code here will setup all lighting. You can add additional code to change the lighting e.g.
         # if you want to randomize lighting in the scene
-        return super()._setup_lighting()
+        return super()._load_lighting()
 
     """
     Episode Initialization Code

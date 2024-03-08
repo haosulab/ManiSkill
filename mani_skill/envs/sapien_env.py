@@ -522,7 +522,7 @@ class BaseEnv(gym.Env):
         self._load_scene()
         self._load_articulations()
 
-        self._setup_lighting()
+        self._load_lighting()
 
         # NOTE(jigu): Agent and camera configurations should not change after initialization.
         self._configure_sensors()
@@ -555,6 +555,7 @@ class BaseEnv(gym.Env):
 
     def _load_scene(self):
         """Loads all objects like actors and articulations into the scene. Called by `self._reconfigure`"""
+
     # TODO (stao): refactor this into sensor API
     def _setup_sensors(self):
         """Setup sensors in the scene. Called by `self.reconfigure`"""
@@ -586,8 +587,8 @@ class BaseEnv(gym.Env):
         self._scene.sensors = self._sensors
         self._scene.human_render_cameras = self._human_render_cameras
 
-    def _setup_lighting(self):
-        """Setup lighting in the scene. Called by `self.reconfigure`. If not overriden will set some simple default lighting"""
+    def _load_lighting(self):
+        """Loads lighting into the scene. Called by `self._reconfigure`. If not overriden will set some simple default lighting"""
 
         shadow = self.enable_shadow
         self._scene.set_ambient_light([0.3, 0.3, 0.3])
@@ -602,19 +603,19 @@ class BaseEnv(gym.Env):
     # -------------------------------------------------------------------------- #
     def reset(self, seed=None, options=None):
         """
-        Reset the ManiSkill environment
+        Reset the ManiSkill environment. If options["env_idx"] is given, will only reset the selected parallel environments. If
+        options["reconfigure"] is True, will call self._reconfigure() which deletes the entire physx scene and reconstructs everything.
+        Users building custom tasks generally do not need to override this function.
 
         Note that ManiSkill always holds two RNG states, a main RNG, and an episode RNG. The main RNG is used purely to sample an episode seed which
-        helps with reproducibility of episodes. The episode RNG is used by the environment/task itself to e.g. randomize object positions, randomize assets etc.
+        helps with reproducibility of episodes and is for internal use only. The episode RNG is used by the environment/task itself to
+        e.g. randomize object positions, randomize assets etc. Episode RNG is accessible by using torch.rand (recommended) which is seeded with a
+        RNG context or the numpy alternative via `self._episode_rng`
 
         Upon environment creation via gym.make, the main RNG is set with a fixed seed of 2022.
         During each reset call, if seed is None, main RNG is unchanged and an episode seed is sampled from the main RNG to create the episode RNG.
-        If seed is not None, main RNG is set to that seed and the episode seed is also set to that seed.
-
-
-        Note that when giving a specific seed via `reset(seed=...)`, we always set the main RNG based on that seed. This then deterministically changes the **sequence** of RNG
-        used for each episode after each call to reset with `seed=None`. By default this sequence of rng starts with the default main seed used which is 2022,
-        which means that when creating an environment and resetting without a seed, it will always have the same sequence of RNG for each episode.
+        If seed is not None, main RNG is set to that seed and the episode seed is also set to that seed. This design means the main RNG determines
+        the episode RNG deterministically.
 
         """
         if options is None:
