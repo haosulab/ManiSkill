@@ -148,7 +148,6 @@ class BaseAgent:
                 and self.controllers[control_mode].balance_passive_force
                 and physx.is_gpu_enabled()
             ):
-                # TODO (stao): how come only dict controller has balance_passive_force?
                 # NOTE (stao): Balancing passive force is currently not supported in PhysX, so we work around by disabling gravity
                 for link in self.robot.links:
                     link.disable_gravity = True

@@ -22,10 +22,7 @@ def main(args):
         render_mode="rgb_array",
         reward_mode="sparse",
         # shader_dir="rt-fast",
-        # force_use_gpu_sim=True
     )
-    # TODO (stao): Allow directly testing gpu sim
-    # TODO (don't record episode directly, its slow. Just save trajectory. Then use the actions/states and then re-run them to generate videos if asked)
     env = RecordEpisode(
         env,
         output_dir=output_dir,

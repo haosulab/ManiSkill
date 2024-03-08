@@ -6,8 +6,6 @@ from mani_skill.utils.structs.types import Array
 
 from .pd_joint_vel import PDJointVelController, PDJointVelControllerConfig
 
-# TODO (stao): add GPU support here
-
 
 class PDBaseVelController(PDJointVelController):
     """PDJointVelController for ego-centric base movement."""

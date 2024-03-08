@@ -119,7 +119,7 @@ class Pose:
     # @typing.overload
     # def __init__(self, arg0: numpy.ndarray[numpy.float32, _Shape[4, 4]]) -> None: ...
     def __mul__(self, arg0: "Pose") -> "Pose":
-        # TODO (stao): this code is probably a lot slower than SAPIEN's pose multiplication.
+        # NOTE (stao): this code is probably slower than SAPIEN's pose multiplication but it is batched
         arg0 = Pose.create(arg0)
         new_q = quaternion_multiply(self.q, arg0.q)
         new_p = self.p + quaternion_apply(self.q, arg0.p)

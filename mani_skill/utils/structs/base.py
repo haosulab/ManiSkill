@@ -83,7 +83,6 @@ class PhysxRigidBodyComponentStruct:
         if physx.is_gpu_enabled():
             self.px.gpu_query_contact_body_impulses(self._body_force_query)
             # NOTE (stao): physx5 calls the output forces but they are actually impulses
-            # TODO (stao): do we need to clone the tensor? Probably
             return (
                 self._body_force_query.cuda_impulses.torch().clone()
                 / self._scene.timestep
@@ -331,7 +330,6 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct):
         else:
             return [self._bodies[0].is_sleeping]
 
-    # TODO (stao): @fxiang why do we have this property?
     # @property
     # def kinematic(self) -> bool:
     #     """

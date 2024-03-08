@@ -190,7 +190,6 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
             )
 
     def disable_fetch_ground_collisions(self):
-        # TODO (stao) (arth): is there a better way to model robots in sim. This feels very unintuitive.
         for body in self.bg._bodies:
             cs = body.get_collision_shapes()[0]
             cg = cs.get_collision_groups()

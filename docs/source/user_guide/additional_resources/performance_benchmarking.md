@@ -24,5 +24,3 @@ env.step+env.reset: 18146.848 steps/s, 11.814 parallel steps/s, 1000 steps in 84
 ```
 
 On 4090's generally the bottle neck is the memory available to spawn more cameras in parallel scenes. Results on high memory GPUs will be published later.
-
-<!-- TODO (stao): multi gpu setup speeds, A100 tests etc. -->

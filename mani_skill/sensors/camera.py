@@ -163,8 +163,12 @@ class Camera(BaseSensor):
             )
 
         if camera_cfg.hide_link:
-            # TODO (stao): this will not work on gpu sim probably
-            sapien_utils.hide_entity(self.entity)
+            # TODO (stao): re-implement this
+            from mani_skill import logger
+
+            logger.warn(
+                "camera hide_link option is not implemented yet so this won't be hidden"
+            )
 
         # Filter texture names according to renderer type if necessary (legacy for Kuafu)
         self.texture_names = camera_cfg.texture_names

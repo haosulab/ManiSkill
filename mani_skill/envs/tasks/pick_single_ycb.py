@@ -193,7 +193,6 @@ class PickSingleYCBEnv(BaseEnv):
             goal_pos=self.goal_site.pose.p,
         )
         if "state" in self.obs_mode:
-            # TODO (stao): previously we used some cmass pose. Why was that?
             obs.update(
                 tcp_to_goal_pos=self.goal_site.pose.p - self.agent.tcp.pose.p,
                 obj_pose=self.obj.pose.raw_pose,

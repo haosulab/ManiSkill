@@ -95,7 +95,6 @@ class BaseEnv(gym.Env):
         `sensor_cfgs` is used to update environement-specific sensor configurations.
         If the key is one of sensor names (e.g. a camera), the value will be applied to the corresponding sensor.
         Otherwise, the value will be applied to all sensors (but overridden by sensor-specific values).
-        # TODO (stao): add docs about sensor_cfgs, they are not as simply as dict overriding
     """
 
     # fmt: off
@@ -160,17 +159,18 @@ class BaseEnv(gym.Env):
                 sapien.physx.enable_gpu()
             self.device = torch.device(
                 "cuda"
-            )  # TODO (stao): fix this for multi gpu support?
+            )  # TODO (stao): fix this for multi process support
         else:
             self.device = torch.device("cpu")
+
+        # TODO (stao): move the merge code / handling union typed arguments outside here so classes inheriting BaseEnv only get
+        # the already parsed sim config argument
         if isinstance(sim_cfg, SimConfig):
             sim_cfg = sim_cfg.dict()
         merged_gpu_sim_cfg = self.default_sim_cfg.dict()
         dict_merge(merged_gpu_sim_cfg, sim_cfg)
         self.sim_cfg = dacite.from_dict(data_class=SimConfig, data=merged_gpu_sim_cfg, config=dacite.Config(strict=True))
         """the final sim config after merging user overrides with the environment default"""
-        # TODO (stao): there may be a memory leak or some issue with memory not being released when repeatedly creating and closing environments with high memory requirements
-        # test withg pytest tests/ -m "not slow and gpu_sim" --pdb
         sapien.physx.set_gpu_memory_config(**self.sim_cfg.gpu_memory_cfg.dict())
         self.shader_dir = shader_dir
         if self.shader_dir == "default":
@@ -523,8 +523,7 @@ class BaseEnv(gym.Env):
             self._configure_sensors()
             self._configure_human_render_cameras()
 
-            # TODO (stao): permit camera changes on env creation here
-            # # Override camera configurations
+            # Override camera configurations
             if self._custom_sensor_cfgs is not None:
                 update_camera_cfgs_from_dict(
                     self._sensor_cfgs, self._custom_sensor_cfgs
@@ -582,8 +581,7 @@ class BaseEnv(gym.Env):
         self._scene.human_render_cameras = self._human_render_cameras
 
     def _setup_lighting(self):
-        # TODO (stao): remove this code out. refactor it to be inside scene builders
-        """Setup lighting in the scene. Called by `self.reconfigure`"""
+        """Setup lighting in the scene. Called by `self.reconfigure`. If not overriden will set some simple default lighting"""
 
         shadow = self.enable_shadow
         self._scene.set_ambient_light([0.3, 0.3, 0.3])
@@ -689,7 +687,6 @@ class BaseEnv(gym.Env):
         self._episode_rng = np.random.RandomState(self._episode_seed)
 
     def initialize_episode(self, env_idx: torch.Tensor):
-        # TODO (stao): should we even split these into 4 separate functions?
         """Initialize the episode, e.g., poses of entities and articulations, and robot configuration.
         No new assets are created. Task-relevant information can be initialized here, like goals.
         """
@@ -713,7 +710,6 @@ class BaseEnv(gym.Env):
         """Initialize task-relevant information, like goals. Called by `self.initialize_episode`"""
 
     def _clear_sim_state(self):
-        # TODO (stao): we should rename this. This could mean setting pose to 0 as if we just reconfigured everything...
         """Clear simulation state (velocities)"""
         for actor in self._scene.actors.values():
             if actor.px_body_type == "static":
@@ -727,7 +723,7 @@ class BaseEnv(gym.Env):
         if physx.is_gpu_enabled():
             self._scene._gpu_apply_all()
             self._scene._gpu_fetch_all()
-            # TODO (stao): This may be an unnecessary fetch and apply. ALSO do not fetch right after apply, no guarantee the data is updated correctly
+            # TODO (stao): This may be an unnecessary fetch and apply.
 
     # -------------------------------------------------------------------------- #
     # Step
@@ -850,7 +846,6 @@ class BaseEnv(gym.Env):
     # Simulation and other gym interfaces
     # -------------------------------------------------------------------------- #
     def _set_scene_config(self):
-        # TODO (stao): Do these have any effect after calling gpu_init?
         physx.set_scene_config(**self.sim_cfg.scene_cfg.dict())
         physx.set_default_material(**self.sim_cfg.default_materials_cfg.dict())
 
@@ -1028,7 +1023,6 @@ class BaseEnv(gym.Env):
             obj.show_visual()
         self._scene.update_render()
         images = []
-        # TODO (stao): refactor this code either into ManiSkillScene class and/or merge the code, it's pretty similar?
         if physx.is_gpu_enabled():
             for name in self._scene.human_render_cameras.keys():
                 camera_group = self._scene.camera_groups[name]
@@ -1042,7 +1036,6 @@ class BaseEnv(gym.Env):
                 if camera_name is not None and name != camera_name:
                     continue
                 camera.capture()
-                # TODO (stao): the output of this is not the same as gpu setting, its float here
                 if self.shader_dir == "default":
                     rgb = (camera.get_picture("Color")[..., :3]).to(torch.uint8)
                 else:

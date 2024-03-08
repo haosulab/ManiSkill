@@ -167,35 +167,6 @@ class ManiSkillScene:
         else:
             self.sub_scenes[0].update_render()
 
-    # TODO (stao): remove this?
-    # def add_ground(
-    #     self,
-    #     altitude,
-    #     render=True,
-    #     material=None,
-    #     render_material=None,
-    #     render_half_size=[10, 10],
-    # ):
-    #     from .actor_builder import ActorBuilder
-
-    #     builder = self.create_actor_builder()
-    #     if render:
-    #         builder.add_plane_visual(
-    #             sapien.Pose(p=[0, 0, altitude], q=[0.7071068, 0, -0.7071068, 0]),
-    #             [10, *render_half_size],
-    #             render_material,
-    #             "",
-    #         )
-
-    #     builder.add_plane_collision(
-    #         sapien.Pose(p=[0, 0, altitude], q=[0.7071068, 0, -0.7071068, 0]),
-    #         material,
-    #     )
-    #     builder.set_physx_body_type("static")
-    #     ground = builder.build()
-    #     ground.name = "ground"
-    #     return ground
-
     def get_contacts(self):
         return self.px.get_contacts()
 

@@ -7,7 +7,6 @@ from mani_skill.utils import sapien_utils
 from mani_skill.utils.common import flatten_dict_keys
 from mani_skill.utils.registration import REGISTERED_ENVS
 
-# TODO (stao): reactivate old tasks once fixed
 ENV_IDS = list(REGISTERED_ENVS.keys())
 MULTI_AGENT_ENV_IDS = ["TwoRobotStackCube-v1", "TwoRobotPickCube-v1"]
 
@@ -15,12 +14,6 @@ STATIONARY_ENV_IDS = [
     "PickCube-v1",
     "StackCube-v1",
     "PickSingleYCB-v1",
-    # "PickClutterYCB-v0",
-    # "AssemblingKits-v0",
-    # "PegInsertionSide-v0",
-    # "PlugCharger-v0",
-    # "PandaAvoidObstacles-v0",
-    # "TurnFaucet-v0",
 ]
 
 REWARD_MODES = ["dense", "normalized_dense", "sparse"]

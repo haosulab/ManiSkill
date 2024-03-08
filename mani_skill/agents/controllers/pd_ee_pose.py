@@ -233,8 +233,6 @@ class PDEEPoseController(PDEEPosController):
         if self.config.use_delta:
             delta_pos, delta_rot = action[:, 0:3], action[:, 3:6]
             delta_quat = matrix_to_quaternion(euler_angles_to_matrix(delta_rot, "XYZ"))
-            # TODO (stao): verify correctness, the results of these two delta_rot to quaternion are a little different
-            # delta_quat = Rotation.from_rotvec(delta_rot).as_quat()[[3, 0, 1, 2]]
             delta_pose = Pose.create_from_pq(delta_pos, delta_quat)
 
             if self.config.frame == "base":

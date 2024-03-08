@@ -31,7 +31,6 @@ To stop data collection press "q" to quit. This will then save the trajectory da
 
 You can always press "h" to bring up a help menu describing the keyboard commands.
 
-<!-- TODO (stao): discuss checkpointing method, help button -->
 
 <!-- ## Space Mouse -->
 <!-- 

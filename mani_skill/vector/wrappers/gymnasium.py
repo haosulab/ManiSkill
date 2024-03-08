@@ -108,7 +108,6 @@ class ManiSkillVectorEnv(VectorEnv):
             "real_next_obs"
         ] = obs  # not part of standard API but makes some RL code slightly less complicated
         if dones.any():
-            # TODO (stao): permit reset by indicies later
             infos["episode"]["r"] = self.returns.clone()
             final_obs = obs
             env_idx = torch.arange(0, self.num_envs, device=self.device)[dones]

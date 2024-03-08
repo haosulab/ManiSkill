@@ -139,25 +139,6 @@ def normalize_vector(x, eps=1e-6):
         return x / norm
 
 
-def set_entity_visibility(entity: sapien.Entity, visibility):
-    """TODO (stao): This will not work on GPU"""
-    component = entity.find_component_by_type(sapien.render.RenderBodyComponent)
-    if component is not None:
-        component.visibility = visibility
-
-
-def hide_entity(actor: Actor):
-    """TODO (stao): This will not work on GPU"""
-    for entity in actor._objs:
-        entity.find_component_by_type(sapien.render.RenderBodyComponent).visibility = 0
-
-
-def show_entity(actor: Actor):
-    """TODO (stao): This will not work on GPU"""
-    for entity in actor._objs:
-        entity.find_component_by_type(sapien.render.RenderBodyComponent).visibility = 1
-
-
 T = TypeVar("T")
 
 
@@ -277,7 +258,6 @@ def parse_urdf_config(config_dict: dict, scene: sapien.Scene) -> Dict:
 
 
 def apply_urdf_config(loader: sapien.wrapper.urdf_loader.URDFLoader, urdf_config: dict):
-    # TODO (stao): @fxiang is this complete?
     if "link" in urdf_config:
         for name, link_cfg in urdf_config["link"].items():
             if "material" in link_cfg:
@@ -291,7 +271,6 @@ def apply_urdf_config(loader: sapien.wrapper.urdf_loader.URDFLoader, urdf_config
                 loader.set_link_min_patch_radius(name, link_cfg["min_patch_radius"])
             if "density" in link_cfg:
                 loader.set_link_density(name, link_cfg["density"])
-            # TODO (stao): throw error if there is a config not used?
     if "material" in urdf_config:
         mat: physx.PhysxMaterial = urdf_config["material"]
         loader.set_material(mat.static_friction, mat.dynamic_friction, mat.restitution)

@@ -73,32 +73,6 @@ def np_compute_angle_between(x1, x2):
     return np.arccos(dot_prod).item()
 
 
-# TODO (stao): deprecate this
-class np_random:
-    """Context manager for numpy random state"""
-
-    def __init__(self, seed):
-        self.seed = seed
-        self.state = None
-
-    def __enter__(self):
-        self.state = np.random.get_state()
-        np.random.seed(self.seed)
-        return self.state
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        np.random.set_state(self.state)
-
-
-# TODO (stao): why do we need this? isn't this built in?
-def random_choice(x: Sequence, rng: np.random.RandomState = np.random):
-    assert len(x) > 0
-    if len(x) == 1:
-        return x[0]
-    else:
-        return x[rng.randint(len(x))]
-
-
 def get_dtype_bounds(dtype: np.dtype):
     if np.issubdtype(dtype, np.floating):
         info = np.finfo(dtype)

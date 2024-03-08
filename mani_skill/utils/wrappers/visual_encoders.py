@@ -40,9 +40,7 @@ class VisualEncoderWrapper(gym.ObservationWrapper):
     def observation(self, obs: Dict):
         vec_img_embeddings_list = []
         image_obs = obs.pop("sensor_data")
-        del obs[
-            "sensor_param"
-        ]  # TODO (stao): can we specify an option in the wrapper to prevent the BaseEnv from generating un-used data?
+        del obs["sensor_param"]
         for image in image_obs.values():
             vec_image = image["rgb"]  # (N, H, W, 3), [0, 255] torch.int16
             vec_image = self.transforms(

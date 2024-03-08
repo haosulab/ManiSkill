@@ -162,8 +162,6 @@ class TwoRobotStackCube(BaseEnv):
             self.cubeB.pose.p[:, :2] - self.goal_region.pose.p[..., :2], axis=1
         )
         cubeB_placed = cubeB_to_goal_dist < self.goal_radius
-        # TODO (stao): GPU sim can be fast but unstable. Angular velocity is rather high despite it not really rotating
-        # is_cubeA_static = self.cubeA.is_static(lin_thresh=1e-2, ang_thresh=0.5)
         is_cubeA_grasped = self.left_agent.is_grasping(self.cubeA)
         is_cubeB_grasped = self.right_agent.is_grasping(self.cubeB)
         success = (

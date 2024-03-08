@@ -114,7 +114,6 @@ class TableSceneBuilder(SceneBuilder):
             self.env.agent.reset(qpos)
             self.env.agent.robot.set_pose(sapien.Pose([-1.05, 0, -self.table_height]))
 
-            # TODO (stao) (arth): is there a better way to model robots in sim. This feels very unintuitive.
             for body in self.ground._bodies:
                 for cs in body.get_collision_shapes():
                     cg = cs.get_collision_groups()

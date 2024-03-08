@@ -365,7 +365,6 @@ class Fetch(BaseAgent):
         ] = dict()
 
     def is_grasping(self, object: Actor = None, min_impulse=1e-6, max_angle=85):
-        # TODO (stao): is_grasping code needs to be updated for new GPU sim
         if physx.is_gpu_enabled():
             if object.name not in self.queries:
                 body_pairs = list(zip(self.finger1_link._bodies, object._bodies))
