@@ -45,8 +45,6 @@ class RenderCamera:
     # -------------------------------------------------------------------------- #
     # Functions from RenderCameraComponent
     # -------------------------------------------------------------------------- #
-    # TODO (stao): support extrinsic matrix changing
-    @cache
     def get_extrinsic_matrix(self):
         return sapien_utils.to_tensor(self._render_cameras[0].get_extrinsic_matrix())[
             None, :
@@ -70,7 +68,6 @@ class RenderCamera:
     def get_local_pose(self) -> sapien.Pose:
         return self._render_cameras[0].get_local_pose()
 
-    @cache
     def get_model_matrix(self):
         return sapien_utils.to_tensor(self._render_cameras[0].get_model_matrix())[
             None, :
