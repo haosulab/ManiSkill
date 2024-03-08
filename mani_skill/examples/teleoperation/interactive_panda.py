@@ -66,7 +66,7 @@ def main(args):
         control_mode="pd_joint_pos",
         render_mode="rgb_array",
         reward_mode="sparse",
-        shader_dir="rt",
+        # shader_dir="rt",
     )
     env = RecordEpisode(
         env,
