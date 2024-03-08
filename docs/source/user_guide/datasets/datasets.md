@@ -108,10 +108,9 @@ These tools are also used in the PyTorch Dataset implementation we provide which
 
 #### Other
 
-## Loading Demonstration Data
 
 <!-- # TODO (stao): add back replay functionality and maybe conversion -->
-<!-- ## Replaying/Converting Demonstration data
+## Replaying/Converting Demonstration data
 
 To replay the demonstrations (without changing the observation mode and control mode):
 
@@ -167,4 +166,4 @@ Since some demonstrations are collected in a non-quasi-static way (objects are n
 
 We recommend using our script only for converting actions into different control modes without recording any observation information (i.e. passing `--obs-mode=none`). The reason is that (1) some observation modes, e.g. point cloud, can take much space without any post-processing, e.g., point cloud downsampling; in addition, the `state` mode for soft-body tasks also has a similar issue, since the states of those tasks are particles. (2) Some algorithms  (e.g. GAIL) require custom keys stored in the demonstration files, e.g. next-observation.
 
-Thus we recommend that, after you convert actions into different control modes, implement your custom environment wrappers for observation processing. After this, use another script to render and save the corresponding post-processed visual demonstrations. [ManiSkill2-Learn](https://github.com/haosulab/ManiSkill2-Learn) has included such observation processing wrappers and demonstration conversion script (with multi-processing), so we recommend referring to the repo for more details. -->
+Thus we recommend that, after you convert actions into different control modes, implement your custom environment wrappers for observation processing. After this, use another script to render and save the corresponding post-processed visual demonstrations. [ManiSkill2-Learn](https://github.com/haosulab/ManiSkill2-Learn) has included such observation processing wrappers and demonstration conversion script (with multi-processing), so we recommend referring to the repo for more details.

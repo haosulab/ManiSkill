@@ -80,7 +80,7 @@ def main(args):
         env.reset(**episode["reset_kwargs"])
         env_states_list = trajectory_utils.dict_to_list_of_dicts(data["env_states"])
 
-        env._base_env.set_state_dict(env_states_list[0])
+        env.base_env.set_state_dict(env_states_list[0])
         for action in np.array(data["actions"]):
             env.step(action)
 
