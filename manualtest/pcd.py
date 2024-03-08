@@ -53,10 +53,10 @@ import trimesh
 import mani_skill.envs
 
 env = gym.make(
-    "ReplicaCAD_SceneManipulation-v1",
+    "RotateValveLevel0-v1",
     obs_mode="rgbd",
     control_mode="pd_joint_delta_pos",
-    num_envs=2,
+    num_envs=1,
 )
 print("Observation space", env.observation_space)
 print("Action space", env.action_space)
@@ -66,7 +66,7 @@ for i in range(1000):
     # action = env.action_space.sample()  # this is batched now
     # obs, reward, terminated, truncated, info = env.step(action)
     # done = terminated | truncated
-    for i, uid in enumerate(["fetch_hand", "fetch_head"]):
+    for i, uid in enumerate(["base_camera"]):
         img = obs["sensor_data"][uid]["rgb"][0].cpu().numpy()
         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
         cv2.imwrite(f"rgb{i}.png", img)

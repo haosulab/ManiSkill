@@ -187,6 +187,7 @@ class Camera(BaseSensor):
     def get_picture(self, name: str):
         return self.camera.get_picture(name)
 
+    # TODO (stao): Computing camera parameters on GPU sim is not that fast, especially with mounted cameras and for model_matrix computation.
     def get_params(self):
         return dict(
             extrinsic_cv=self.camera.get_extrinsic_matrix(),

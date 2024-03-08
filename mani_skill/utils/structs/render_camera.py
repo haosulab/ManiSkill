@@ -37,6 +37,10 @@ class RenderCamera:
     camera_group: sapien.render.RenderCameraGroup = None
     mount: Union[Actor, Link] = None
 
+    # we cache model and extrinsic matrices since the code here supports computing these when the camera is mounted and these are always changing
+    _cached_model_matrix: torch.Tensor = None
+    _cached_extrinsic_matrix: torch.Tensor = None
+
     @classmethod
     def create(
         cls,
@@ -69,12 +73,17 @@ class RenderCamera:
     # -------------------------------------------------------------------------- #
     def get_extrinsic_matrix(self):
         if physx.is_gpu_enabled():
+            if self._cached_extrinsic_matrix is not None:
+                return self._cached_extrinsic_matrix
             ros2opencv = torch.tensor(
                 [[0, 0, 1, 0], [-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 0, 1]],
                 device=self.scene.device,
                 dtype=torch.float32,
             ).T
-            return ros2opencv @ self.get_global_pose().inv().to_transformation_matrix()
+            res = ros2opencv @ self.get_global_pose().inv().to_transformation_matrix()
+            if self.mount is not None:
+                return self._cached_extrinsic_matrix
+            return res
         else:
             return sapien_utils.to_tensor(
                 self._render_cameras[0].get_extrinsic_matrix()
@@ -122,6 +131,8 @@ class RenderCamera:
     def get_model_matrix(self):
 
         if physx.is_gpu_enabled():
+            if self._cached_model_matrix is not None:
+                return self._cached_model_matrix
             # NOTE (stao): This code is based on SAPIEN. It cannot expose GPU buffers of this data of all cameras directly so
             # we have to compute it here based on how SAPIEN does it:
             POSE_GL_TO_ROS = Pose.create_from_pq(p=[0, 0, 0], q=[-0.5, -0.5, 0.5, 0.5])
@@ -135,6 +146,8 @@ class RenderCamera:
             )
             pmat[:, :3, 3] = pose.p
             res = pmat @ qmat
+            if self.mount is None:
+                self._cached_model_matrix = res
             return res
         else:
             return sapien_utils.to_tensor(self._render_cameras[0].get_model_matrix())[
