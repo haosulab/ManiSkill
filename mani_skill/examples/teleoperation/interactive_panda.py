@@ -5,7 +5,7 @@ import numpy as np
 import sapien.core as sapien
 from mani_skill.envs.sapien_env import BaseEnv
 
-from mani_skill.examples.motionplanning.motionplanner import \
+from mani_skill.examples.motionplanning.panda.motionplanner import \
     PandaArmMotionPlanningSolver
 import sapien.utils.viewer
 import h5py

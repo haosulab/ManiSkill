@@ -125,7 +125,7 @@ class PandaArmMotionPlanningSolver:
         # try screw two times before giving up
         if self.grasp_pose_visual is not None:
             self.grasp_pose_visual.set_pose(pose)
-        pose = sapien.Pose(p=pose.p - self.base_pose.p, q=pose.q)
+        pose = sapien.Pose(p=pose.p , q=pose.q)
         result = self.planner.plan_screw(
             np.concatenate([pose.p, pose.q]),
             self.robot.get_qpos().cpu().numpy()[0],
@@ -134,7 +134,7 @@ class PandaArmMotionPlanningSolver:
         )
         if result["status"] != "Success":
             result = self.planner.plan_screw(
-                np.concatenate([pose.p - self.base_pose.p, pose.q]),
+                np.concatenate([pose.p, pose.q]),
                 self.robot.get_qpos().cpu().numpy()[0],
                 time_step=self.env.unwrapped.control_timestep,
                 use_point_cloud=self.use_point_cloud,

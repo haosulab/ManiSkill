@@ -1,36 +1,14 @@
-import gymnasium as gym
 import numpy as np
-import sapien.core as sapien
-from tqdm import tqdm
+import sapien
 
 from mani_skill.envs.tasks.pick_cube import PickCubeEnv
-from mani_skill.examples.motionplanning.motionplanner import \
+from mani_skill.examples.motionplanning.panda.motionplanner import \
     PandaArmMotionPlanningSolver
-from mani_skill.examples.motionplanning.utils import (
+from mani_skill.examples.motionplanning.panda.utils import (
     compute_grasp_info_by_obb, get_actor_obb)
-
-
-def main():
-    env: PickCubeEnv = gym.make(
-        "PickCube-v1",
-        obs_mode="none",
-        control_mode="pd_joint_pos",
-        render_mode="rgb_array",
-        reward_mode="sparse",
-        shader_dir="rt-fast",
-    )
-    for seed in tqdm(range(100)):
-        res = solve(env, seed=seed, debug=False, vis=True)
-        print(res[-1])
-    env.close()
-
 
 def solve(env: PickCubeEnv, seed=None, debug=False, vis=False):
     env.reset(seed=seed)
-    assert env.unwrapped.control_mode in [
-        "pd_joint_pos",
-        "pd_joint_pos_vel",
-    ], env.unwrapped.control_mode
     planner = PandaArmMotionPlanningSolver(
         env,
         debug=debug,
@@ -42,10 +20,14 @@ def solve(env: PickCubeEnv, seed=None, debug=False, vis=False):
 
     FINGER_LENGTH = 0.025
     env = env.unwrapped
-    obb = get_actor_obb(env.cube._objs[0])
+    
+    # retrieves the object oriented bounding box (trimesh box object)
+    obb = get_actor_obb(env.cube)
 
     approaching = np.array([0, 0, -1])
-    target_closing = env.agent.tcp._objs[0].entity_pose.to_transformation_matrix()[:3, 1]
+    # get transformation matrix of the tcp pose, is default batched and on torch
+    target_closing = env.agent.tcp.pose.to_transformation_matrix()[0, :3, 1].numpy()
+    # we can build a simple grasp pose using this information for Panda
     grasp_info = compute_grasp_info_by_obb(
         obb,
         approaching=approaching,
@@ -75,7 +57,3 @@ def solve(env: PickCubeEnv, seed=None, debug=False, vis=False):
 
     planner.close()
     return res
-
-
-if __name__ == "__main__":
-    main()

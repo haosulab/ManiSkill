@@ -75,7 +75,7 @@ Some ManiSkill tasks also support swapping robot embodiments such as the `PickCu
 gym.make("PickCube-v1", robot_uids="fetch")
 ```
 
-You may also notice the argument is `robot_uids` plural, this is because we also support tasks with multiple robots.
+You may also notice the argument is `robot_uids` plural, this is because we also support tasks with multiple robots which can be done by passing in tuple like `robot_uids=("fetch", "fetch", "panda")`.
 
 ## GPU Parallelized/Vectorized Tasks
 
@@ -125,5 +125,5 @@ python -m mani_skill.examples.benchmarking.gpu_sim --num-envs=64 --save-video
 ```
 which will look something like this
 <video preload="auto" controls="True" width="100%">
-<source src="https://github.com/haosulab/ManiSkill2/raw/dev/docs/source/_static/videos/mani_skill_gpu_sim-PickCube-v1-num_envs=64-obs_mode=state-render_mode=sensors.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill2/raw/dev/docs/source/_static/videos/mani_skill_gpu_sim-PickCube-v1-num_envs=16-obs_mode=state-render_mode=sensors.mp4" type="video/mp4">
 </video>

@@ -1,38 +1,17 @@
+import argparse
 import gymnasium as gym
 import numpy as np
-import sapien.core as sapien
+import sapien
 from tqdm import tqdm
+import os.path as osp
 from transforms3d.euler import euler2quat
 
-from mani_skill.envs.pick_and_place.stack_cube import StackCubeEnv
-from mani_skill.examples.motionplanning.motionplanner import \
+from mani_skill.envs import StackCubeEnv
+from mani_skill.examples.motionplanning.panda.motionplanner import \
     PandaArmMotionPlanningSolver
-from mani_skill.examples.motionplanning.utils import (
+from mani_skill.examples.motionplanning.panda.utils import (
     compute_grasp_info_by_obb, get_actor_obb)
-from mani_skill.utils.wrappers import RecordEpisode
-
-
-def main():
-    env: StackCubeEnv = gym.make(
-        "StackCube-v0",
-        obs_mode="none",
-        control_mode="pd_joint_pos",
-        render_mode="rgb_array",
-        reward_mode="sparse",
-        # shader_dir="rt-fast",
-    )
-    env = RecordEpisode(
-        env,
-        output_dir=f"videos/StackCube-v0",
-        trajectory_name="trajectory",
-        save_video=False,
-        info_on_video=True,
-    )
-    for seed in tqdm(range(100)):
-        res = solve(env, seed=seed, debug=False, vis=True)
-        print(res[-1])
-    env.close()
-
+from mani_skill.utils.wrappers.record import RecordEpisode
 
 def solve(env: StackCubeEnv, seed=None, debug=False, vis=False):
     env.reset(seed=seed)
@@ -48,13 +27,12 @@ def solve(env: StackCubeEnv, seed=None, debug=False, vis=False):
         visualize_target_grasp_pose=vis,
         print_env_info=False,
     )
-
     FINGER_LENGTH = 0.025
     env = env.unwrapped
     obb = get_actor_obb(env.cubeA)
 
     approaching = np.array([0, 0, -1])
-    target_closing = env.agent.tcp.entity_pose.to_transformation_matrix()[:3, 1]
+    target_closing = env.agent.tcp.pose.to_transformation_matrix()[0, :3, 1].numpy()
     grasp_info = compute_grasp_info_by_obb(
         obb,
         approaching=approaching,
@@ -100,15 +78,11 @@ def solve(env: StackCubeEnv, seed=None, debug=False, vis=False):
     # -------------------------------------------------------------------------- #
     # Stack
     # -------------------------------------------------------------------------- #
-    goal_pos = env.cubeB.pose.p + [0, 0, env.box_half_size[2] * 2]
-    offset = goal_pos - env.cubeA.pose.p
+    goal_pose = env.cubeB.pose * sapien.Pose([0, 0, env.cube_half_size[2] * 2])
+    offset = (goal_pose.p - env.cubeA.pose.p).numpy()[0] # remember that all data in ManiSkill is batched and a torch tensor
     align_pose = sapien.Pose(lift_pose.p + offset, lift_pose.q)
     planner.move_to_pose_with_screw(align_pose)
 
     res = planner.open_gripper()
     planner.close()
     return res
-
-
-if __name__ == "__main__":
-    main()

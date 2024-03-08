@@ -18,6 +18,7 @@ import torch
 from mani_skill.utils.structs.types import Array, get_backend_name
 
 
+# TODO (stao): this code can be simplified
 def to_tensor(array: Union[torch.Tensor, np.array, Sequence]):
     """
     Maps any given sequence to a torch tensor on the CPU/GPU. If physx gpu is not enabled then we use CPU, otherwise GPU.
@@ -48,7 +49,7 @@ def to_tensor(array: Union[torch.Tensor, np.array, Sequence]):
         elif np.iterable(array):
             return torch.Tensor(array)
         else:
-            return torch.tensor(array)
+            return torch.Tensor(array)
 
 
 def _to_numpy(array: Union[Array, Sequence]) -> np.ndarray:

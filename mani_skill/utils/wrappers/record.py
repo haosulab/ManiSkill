@@ -151,21 +151,23 @@ class RecordEpisode(gym.Wrapper):
 
     Each JSON file contains:
 
-    - `env_info` (Dict): environment information, which can be used to initialize the environment
-    - `env_id` (str): environment id
+    - `env_info` (Dict): task (also known as environment) information, which can be used to initialize the task
+    - `env_id` (str): task id
     - `max_episode_steps` (int)
-    - `env_kwargs` (Dict): keyword arguments to initialize the environment. **Essential to recreate the environment.**
+    - `env_kwargs` (Dict): keyword arguments to initialize the task. **Essential to recreate the environment.**
     - `episodes` (List[Dict]): episode information
+    - `source_type` (Optional[str]): a simple category string describing what process generated the trajectory data. ManiSkill official datasets will usually write one of "human", "motionplanning", or "rl" at the moment.
+    - `source_desc` (Optional[str]): a longer explanation of how the data was generated.
 
     The episode information (the element of `episodes`) includes:
 
     - `episode_id` (int): a unique id to index the episode
-    - `reset_kwargs` (Dict): keyword arguments to reset the environment. **Essential to reproduce the trajectory.**
+    - `reset_kwargs` (Dict): keyword arguments to reset the task. **Essential to reproduce the trajectory.**
     - `control_mode` (str): control mode used for the episode.
     - `elapsed_steps` (int): trajectory length
     - `info` (Dict): information at the end of the episode.
 
-    With just the meta data, you can reproduce the environment the same way it was created when the trajectories were collected as so:
+    With just the meta data, you can reproduce the task the same way it was created when the trajectories were collected as so:
 
     ```python
     env = gym.make(env_info["env_id"], **env_info["env_kwargs"])
@@ -178,10 +180,41 @@ class RecordEpisode(gym.Wrapper):
     Each trajectory is an `h5py.Group`, which contains:
 
     - actions: [T, A], `np.float32`. `T` is the number of transitions.
-    - success: [T], `np.bool_`. It indicates whether the task is successful at each time step.
-    - env_states: [T+1, D], `np.float32`. Environment states. It can be used to set the environment to a certain state, e.g., `env.set_state(env_states[i])`. However, it may not be enough to reproduce the trajectory.
-    - obs (optional): observations. If the observation is a `dict`, the value will be stored in `obs/{key}`. The convention is applied recursively for nested dict.
+    - terminated: [T], `np.bool_`. It indicates whether the task is terminated or not at each time step.
+    - truncated: [T], `np.bool_`. It indicates whether the task is truncated or not at each time step.
+    - env_states: [T+1, D], `np.float32`. Environment states. It can be used to set the environment to a certain state via `env.set_state_dict`. However, it may not be enough to reproduce the trajectory.
+    - success (optional): [T], `np.bool_`. It indicates whether the task is successful at each time step. Included if task defines success.
+    - fail (optional): [T], `np.bool_`. It indicates whether the task is in a failure state at each time step. Included if task defines failure.
+    - obs (optional): [T+1, D] observations.
 
+    Note that env_states is in a dictionary form (and observations may be as well depending on obs_mode), where it is formatted as a dictionary of lists. For example, a typical environment state looks like this:
+
+    ```python
+    env_state = env.get_state_dict()
+    \"\"\"
+    env_state = {
+    "actors": {
+        "actor_id": [...numpy_actor_state...],
+        ...
+    },
+    "articulations": {
+        "articulation_id": [...numpy_articulation_state...],
+        ...
+    }
+    }
+    \"\"\"
+    ```
+    In the trajectory file env_states will be the same structure but each value/leaf in the dictionary will be a sequence of states representing the state of that particular entity in the simulation over time.
+
+    In practice it is may be more useful to use slices of the env_states data (or the observations data), which can be done with
+    ```python
+    import mani_skill.trajectory.utils as trajectory_utils
+    env_states = trajectory_utils.dict_to_list_of_dicts(env_states)
+    # now env_states[i] is the same as the data env.get_state_dict() returned at timestep i
+    i = 10
+    env_state_i = trajectory_utils.index_dict(env_states, i)
+    # now env_state_i is the same as the data env.get_state_dict() returned at timestep i
+    ```
 
     Args:
         env: gym.Env
@@ -201,6 +234,9 @@ class RecordEpisode(gym.Wrapper):
         clean_on_close: whether to rename and prune trajectories when closed.
             See `clean_trajectories` for details.
         video_fps (int): The FPS of the video to generate if save_video is True
+
+        source_type (Optional[str]): a word to describe the source of the actions used to record episodes (e.g. RL, motionplanning, teleoperation)
+        source_desc (Optional[str]): A longer description describing how the demonstrations are collected
     """
 
     def __init__(
@@ -216,6 +252,8 @@ class RecordEpisode(gym.Wrapper):
         clean_on_close=True,
         record_reward=True,
         video_fps=20,
+        source_type=None,
+        source_desc=None,
     ):
         super().__init__(env)
 
@@ -258,7 +296,10 @@ class RecordEpisode(gym.Wrapper):
                 episodes=[],
             )
             self._json_data["env_info"]["max_episode_steps"] = self.max_episode_steps
-
+            if source_type is not None:
+                self._json_data["source_type"] = source_type
+            if source_desc is not None:
+                self._json_data["source_desc"] = source_desc
         self.save_video = save_video
         self.info_on_video = info_on_video
         self._render_images = []
