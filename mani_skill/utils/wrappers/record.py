@@ -2,7 +2,7 @@ import copy
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Sequence, Union
+from typing import List, Optional, Union
 
 import gymnasium as gym
 import h5py
@@ -11,11 +11,7 @@ import sapien.physx as physx
 
 from mani_skill import get_commit_info
 from mani_skill.envs.sapien_env import BaseEnv
-from mani_skill.utils import sapien_utils
-from mani_skill.utils.common import (
-    extract_scalars_from_info,
-    find_max_episode_steps_value,
-)
+from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.io_utils import dump_json
 from mani_skill.utils.structs.types import Array
 from mani_skill.utils.visualization.misc import (
@@ -26,37 +22,6 @@ from mani_skill.utils.visualization.misc import (
 
 # NOTE (stao): The code for record.py is quite messy and perhaps confusing as it is trying to support both recording on CPU and GPU seamlessly
 # and handle partial resets. It works but can be claned up a lot.
-
-
-def append_dict_array(
-    x1: Union[dict, Sequence, Array], x2: Union[dict, Sequence, Array]
-):
-    """Append `x2` in front of `x1` and returns the result. Tries to do this in place if possible.
-    Assumes both `x1, x2` have the same dictionary structure if they are dictionaries.
-    They may also both be lists/sequences in which case this is just appending like normal"""
-    if isinstance(x1, np.ndarray):
-        if len(x1.shape) > len(x2.shape):
-            # if different dims, check if extra dim is just a 1 due to single env in batch mode and if so, add it to x2.
-            if x1.shape[1] == 1:
-                x2 = x2[:, None, :]
-        return np.concatenate([x1, x2])
-    elif isinstance(x1, list):
-        return x1 + x2
-    elif isinstance(x1, dict):
-        for k in x1.keys():
-            assert k in x2, "dct and append_dct need to have the same dictionary layout"
-            x1[k] = append_dict_array(x1[k], x2[k])
-    return x1
-
-
-def slice_dict_array(x1, slice: slice):
-    """Slices every array in x1 with slice and returns result. Tries to do this in place if possible"""
-    if isinstance(x1, np.ndarray) or isinstance(x1, list):
-        return x1[slice]
-    elif isinstance(x1, dict):
-        for k in x1.keys():
-            x1[k] = slice_dict_array(x1[k], slice)
-    return x1
 
 
 def parse_env_info(env: gym.Env):
@@ -269,7 +234,7 @@ class RecordEpisode(gym.Wrapper):
         self._trajectory_buffer: Step = None
 
         self.max_steps_per_video = max_steps_per_video
-        self.max_episode_steps = find_max_episode_steps_value(env)
+        self.max_episode_steps = common.find_max_episode_steps_value(env)
 
         self.save_on_reset = save_on_reset
         self.save_trajectory = save_trajectory
@@ -428,45 +393,45 @@ class RecordEpisode(gym.Wrapper):
                 # this fixes the issue where gymnasium applies a non-batched timelimit wrapper
                 truncated = self.base_env.elapsed_steps >= self.max_episode_steps
             state_dict = self.base_env.get_state_dict()
-            self._trajectory_buffer.state = append_dict_array(
+            self._trajectory_buffer.state = common.append_dict_array(
                 self._trajectory_buffer.state,
                 sapien_utils.to_numpy(sapien_utils.batch(state_dict)),
             )
-            self._trajectory_buffer.observation = append_dict_array(
+            self._trajectory_buffer.observation = common.append_dict_array(
                 self._trajectory_buffer.observation,
                 sapien_utils.to_numpy(sapien_utils.batch(obs)),
             )
 
-            self._trajectory_buffer.action = append_dict_array(
+            self._trajectory_buffer.action = common.append_dict_array(
                 self._trajectory_buffer.action,
                 sapien_utils.to_numpy(sapien_utils.batch(action)),
             )
-            self._trajectory_buffer.reward = append_dict_array(
+            self._trajectory_buffer.reward = common.append_dict_array(
                 self._trajectory_buffer.reward,
                 sapien_utils.to_numpy(sapien_utils.batch(rew)),
             )
-            self._trajectory_buffer.terminated = append_dict_array(
+            self._trajectory_buffer.terminated = common.append_dict_array(
                 self._trajectory_buffer.terminated,
                 sapien_utils.to_numpy(sapien_utils.batch(terminated)),
             )
-            self._trajectory_buffer.truncated = append_dict_array(
+            self._trajectory_buffer.truncated = common.append_dict_array(
                 self._trajectory_buffer.truncated,
                 sapien_utils.to_numpy(sapien_utils.batch(truncated)),
             )
             done = terminated | truncated
-            self._trajectory_buffer.done = append_dict_array(
+            self._trajectory_buffer.done = common.append_dict_array(
                 self._trajectory_buffer.done,
                 sapien_utils.to_numpy(sapien_utils.batch(done)),
             )
             if "success" in info:
-                self._trajectory_buffer.success = append_dict_array(
+                self._trajectory_buffer.success = common.append_dict_array(
                     self._trajectory_buffer.success,
                     sapien_utils.to_numpy(sapien_utils.batch(info["success"])),
                 )
             else:
                 self._trajectory_buffer.success = None
             if "fail" in info:
-                self._trajectory_buffer.fail = append_dict_array(
+                self._trajectory_buffer.fail = common.append_dict_array(
                     self._trajectory_buffer.fail,
                     sapien_utils.to_numpy(sapien_utils.batch(info["fail"])),
                 )
@@ -479,7 +444,7 @@ class RecordEpisode(gym.Wrapper):
             image = self.capture_image()
 
             if self.info_on_video:
-                scalar_info = extract_scalars_from_info(info)
+                scalar_info = common.extract_scalars_from_info(info)
                 extra_texts = [
                     f"reward: {rew:.3f}",
                     "action: {}".format(",".join([f"{x:.2f}" for x in action])),
@@ -639,33 +604,33 @@ class RecordEpisode(gym.Wrapper):
             )
             min_env_ptr = self._trajectory_buffer.env_episode_ptr.min()
             N = len(self._trajectory_buffer.done)
-            self._trajectory_buffer.state = slice_dict_array(
+            self._trajectory_buffer.state = common.index_dict_array(
                 self._trajectory_buffer.state, slice(min_env_ptr, N)
             )
-            self._trajectory_buffer.observation = slice_dict_array(
+            self._trajectory_buffer.observation = common.index_dict_array(
                 self._trajectory_buffer.observation, slice(min_env_ptr, N)
             )
-            self._trajectory_buffer.action = slice_dict_array(
+            self._trajectory_buffer.action = common.index_dict_array(
                 self._trajectory_buffer.action, slice(min_env_ptr, N)
             )
-            self._trajectory_buffer.reward = slice_dict_array(
+            self._trajectory_buffer.reward = common.index_dict_array(
                 self._trajectory_buffer.reward, slice(min_env_ptr, N)
             )
-            self._trajectory_buffer.terminated = slice_dict_array(
+            self._trajectory_buffer.terminated = common.index_dict_array(
                 self._trajectory_buffer.terminated, slice(min_env_ptr, N)
             )
-            self._trajectory_buffer.truncated = slice_dict_array(
+            self._trajectory_buffer.truncated = common.index_dict_array(
                 self._trajectory_buffer.truncated, slice(min_env_ptr, N)
             )
-            self._trajectory_buffer.done = slice_dict_array(
+            self._trajectory_buffer.done = common.index_dict_array(
                 self._trajectory_buffer.done, slice(min_env_ptr, N)
             )
             if self._trajectory_buffer.success is not None:
-                self._trajectory_buffer.success = slice_dict_array(
+                self._trajectory_buffer.success = common.index_dict_array(
                     self._trajectory_buffer.success, slice(min_env_ptr, N)
                 )
             if self._trajectory_buffer.fail is not None:
-                self._trajectory_buffer.fail = slice_dict_array(
+                self._trajectory_buffer.fail = common.index_dict_array(
                     self._trajectory_buffer.fail, slice(min_env_ptr, N)
                 )
             self._trajectory_buffer.env_episode_ptr -= min_env_ptr

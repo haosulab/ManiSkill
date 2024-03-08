@@ -34,6 +34,7 @@ setup(
         "opencv-python",
         "imageio",
         "imageio[ffmpeg]",
+        "mplib>=0.1.1",
         "pytorch_kinematics",
         "huggingface_hub",  # we use HF to version control some assets/datasets more easily
     ],
@@ -68,6 +69,8 @@ setup(
             "myst-parser",
             "sphinx-subfigure",
             "sphinxcontrib-video",
+            "sphinx-togglebutton",
+            "sphinx_design",
         ],
     },
 )

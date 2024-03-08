@@ -1,5 +1,5 @@
 from collections import OrderedDict, defaultdict
-from typing import Dict, Sequence
+from typing import Dict, Sequence, Union
 
 import gymnasium as gym
 import numpy as np
@@ -40,6 +40,45 @@ def merge_dicts(ds: Sequence[Dict], asarray=False):
     if asarray:
         ret = {k: np.concatenate(v) for k, v in ret.items()}
     return ret
+
+
+def append_dict_array(
+    x1: Union[dict, Sequence, Array], x2: Union[dict, Sequence, Array]
+):
+    """Append `x2` in front of `x1` and returns the result. Tries to do this in place if possible.
+    Assumes both `x1, x2` have the same dictionary structure if they are dictionaries.
+    They may also both be lists/sequences in which case this is just appending like normal"""
+    if isinstance(x1, np.ndarray):
+        if len(x1.shape) > len(x2.shape):
+            # if different dims, check if extra dim is just a 1 due to single env in batch mode and if so, add it to x2.
+            if x1.shape[1] == 1:
+                x2 = x2[:, None, :]
+            elif x1.shape[0] == 1:
+                x2 = x2[None, ...]
+        return np.concatenate([x1, x2])
+    elif isinstance(x1, list):
+        return x1 + x2
+    elif isinstance(x1, dict):
+        for k in x1.keys():
+            assert k in x2, "dct and append_dct need to have the same dictionary layout"
+            x1[k] = append_dict_array(x1[k], x2[k])
+    return x1
+
+
+def index_dict_array(x1, idx: Union[int, slice], inplace=True):
+    """Indexes every array in x1 with slice and returns result."""
+    if isinstance(x1, np.ndarray) or isinstance(x1, list):
+        return x1[idx]
+    elif isinstance(x1, dict):
+        if inplace:
+            for k in x1.keys():
+                x1[k] = index_dict_array(x1[k], idx, inplace=inplace)
+            return x1
+        else:
+            out = dict()
+            for k in x1.keys():
+                out[k] = index_dict_array(x1[k], idx, inplace=inplace)
+            return out
 
 
 def normalize_vector(x, eps=1e-6):
