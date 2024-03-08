@@ -4,6 +4,7 @@ import torch
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
+from mani_skill.trajectory.utils import dict_to_list_of_dicts
 from mani_skill.utils.io_utils import load_json
 
 
@@ -50,13 +51,11 @@ class ManiSkillTrajectoryDataset(Dataset):
             eps = self.episodes[eps_id]
             trajectory = self.data[f"traj_{eps['episode_id']}"]
             trajectory = load_h5_data(trajectory)
-
-            # convert the original raw observation with our batch-aware function
-            obs = convert_observation(trajectory["obs"])
+            self.obs = trajectory["obs"]
             # we use :-1 to ignore the last obs as terminal observations are included
             # and they don't have actions
-            self.obs_rgbd.append(obs["rgbd"][:-1])
-            self.obs_state.append(obs["state"][:-1])
+            # self.obs_rgbd.append(obs["rgbd"][:-1])
+            # self.obs_state.append(obs["state"][:-1])
             self.actions.append(trajectory["actions"])
         self.obs_rgbd = np.vstack(self.obs_rgbd)
         self.obs_state = np.vstack(self.obs_state)
