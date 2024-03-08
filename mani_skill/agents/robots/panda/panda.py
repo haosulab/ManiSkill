@@ -271,9 +271,6 @@ class Panda(BaseAgent):
                     >= min_impulse
                 )
             else:
-                import ipdb
-
-                ipdb.set_trace()
                 limpulse = sapien_utils.get_pairwise_contact_impulse(
                     contacts,
                     self.finger1_link._bodies[0].entity,
