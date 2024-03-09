@@ -45,9 +45,9 @@ class Args:
     """the user or org name of the model repository from the Hugging Face Hub"""
 
     # Algorithm specific arguments
-    env_id: str = "PickCube-v1"
+    env_id: str = "RotateCubeEnv-v1"
     """the id of the environment"""
-    total_timesteps: int = 10000000
+    total_timesteps: int = 1000000000
     """total timesteps of the experiments"""
     learning_rate: float = 3e-4
     """the learning rate of the optimizer"""
