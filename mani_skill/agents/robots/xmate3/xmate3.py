@@ -267,7 +267,7 @@ class Xmate3Robotiq(BaseAgent):
                     and np.rad2deg(rangle) <= max_angle
                 )
 
-                return all([lflag, rflag])
+                return torch.tensor([all([lflag, rflag])], dtype=bool)
 
     def is_static(self, threshold: float = 0.2):
         qvel = self.robot.get_qvel()[..., :-2]
