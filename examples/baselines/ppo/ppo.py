@@ -45,7 +45,7 @@ class Args:
     """the user or org name of the model repository from the Hugging Face Hub"""
 
     # Algorithm specific arguments
-    env_id: str = "PushCube-v1"
+    env_id: str = "RotateCube-v1"
     """the id of the environment"""
     total_timesteps: int = 1000000000
     """total timesteps of the experiments"""
@@ -419,6 +419,17 @@ if __name__ == "__main__":
         writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
         writer.add_scalar("losses/explained_variance", explained_var, global_step)
         print("SPS:", int(global_step / (time.time() - start_time)))
+
+        device = torch.device("cuda")
+
+        # 输出GPU的最大内存使用量(以字节为单位)
+        max_memory_allocated = torch.cuda.max_memory_allocated(device)
+        print(f"GPU max memory allocated: {max_memory_allocated} bytes")
+
+        # 输出GPU的最大内存使用量(以兆字节为单位)
+        max_memory_allocated_mb = max_memory_allocated / (1024 * 1024)
+        print(f"GPU max memory allocated: {max_memory_allocated_mb:.2f} MB")
+
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
     if args.save_model:
         model_path = f"runs/{run_name}/{args.exp_name}_final.cleanrl_model"
