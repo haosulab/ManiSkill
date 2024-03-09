@@ -54,7 +54,7 @@ class EmptyEnv(BaseEnv):
     def _load_scene(self):
         build_ground(self._scene)
 
-    def _initialize_actors(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor):
         if self.robot_uids == "panda":
             qpos = np.array(
                 [

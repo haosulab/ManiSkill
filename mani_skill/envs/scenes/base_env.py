@@ -101,7 +101,7 @@ class SceneManipulationEnv(BaseEnv):
             convex_decomposition=self.convex_decomposition,
         )
 
-    def _initialize_actors(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor):
         with torch.device(self.device):
             self.scene_builder.initialize(env_idx)
 

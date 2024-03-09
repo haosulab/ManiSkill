@@ -101,7 +101,7 @@ class TwoRobotStackCube(BaseEnv):
             body_type="kinematic",
         )
 
-    def _initialize_actors(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor):
         with torch.device(self.device):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)

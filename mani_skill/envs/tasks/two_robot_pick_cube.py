@@ -94,7 +94,7 @@ class TwoRobotPickCube(BaseEnv):
         )
         self._hidden_objects.append(self.goal_site)
 
-    def _initialize_actors(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor):
         with torch.device(self.device):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)

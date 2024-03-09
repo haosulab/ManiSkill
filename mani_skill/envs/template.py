@@ -147,7 +147,7 @@ class CustomEnv(BaseEnv):
     you might normally need to do when working with GPU simulation. For specific details check out the push_cube.py code
     """
 
-    def _initialize_actors(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor):
         pass
 
     """
