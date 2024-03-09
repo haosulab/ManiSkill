@@ -5,6 +5,8 @@ from .open_cabinet_drawer import OpenCabinetDoorEnv, OpenCabinetDrawerEnv
 from .pick_cube import PickCubeEnv
 from .pick_single_ycb import PickSingleYCBEnv
 from .push_cube import PushCubeEnv
+from .pull_cube import PullCubeEnv
+from .lift_peg_upright import LiftPegUprightEnv
 from .quadruped_run import QuadrupedRunEnv
 from .quadruped_stand import QuadrupedStandEnv
 from .stack_cube import StackCubeEnv
