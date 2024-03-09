@@ -126,7 +126,7 @@ class PushCubeEnv(BaseEnv):
         # and are there just for generating evaluation videos.
         # self._hidden_objects.append(self.goal_region)
 
-    def _initialize_actors(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor):
         # use the torch.device context manager to automatically create tensors on CPU or CUDA depending on self.device, the device the environment runs on
         with torch.device(self.device):
             # the initialization functions where you as a user place all the objects and initialize their properties

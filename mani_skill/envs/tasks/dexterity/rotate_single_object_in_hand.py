@@ -143,6 +143,10 @@ class RotateSingleObjectInHand(BaseEnv):
 
         self.obj_heights = torch.from_numpy(np.array(obj_heights)).to(self.device)
 
+    def _initialize_episode(self, env_idx: torch.Tensor):
+        self._initialize_actors(env_idx)
+        self._initialize_agent(env_idx)
+
     def _initialize_actors(self, env_idx: torch.Tensor):
         with torch.device(self.device):
             b = len(env_idx)

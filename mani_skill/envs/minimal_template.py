@@ -4,16 +4,15 @@ from typing import Any, Dict, Union
 import numpy as np
 import torch
 
-from mani_skill.agents.robots.fetch.fetch import Fetch
-from mani_skill.agents.robots.panda.panda import Panda
+from mani_skill.agents.robots import Fetch, Panda
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.registration import register_env
-from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
+from mani_skill.utils.structs.types import SimConfig
 
 
-@register_env("CustomEnv-v0", max_episode_steps=200)
+@register_env("CustomEnv-v1", max_episode_steps=200)
 class CustomEnv(BaseEnv):
     """
     Task Description
@@ -55,7 +54,7 @@ class CustomEnv(BaseEnv):
     def _load_scene(self):
         pass
 
-    def _initialize_actors(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor):
         pass
 
     def evaluate(self):

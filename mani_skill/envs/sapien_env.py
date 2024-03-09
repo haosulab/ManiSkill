@@ -198,6 +198,12 @@ class BaseEnv(gym.Env):
             sapien.render.set_ray_tracing_samples_per_pixel(2)
             sapien.render.set_ray_tracing_path_depth(1)
             sapien.render.set_ray_tracing_denoiser("optix")
+        elif self.shader_dir == "rt-med":
+            sapien.render.set_camera_shader_dir("rt")
+            sapien.render.set_viewer_shader_dir("rt")
+            sapien.render.set_ray_tracing_samples_per_pixel(4)
+            sapien.render.set_ray_tracing_path_depth(3)
+            sapien.render.set_ray_tracing_denoiser("optix")
         sapien.render.set_log_level(os.getenv("MS2_RENDERER_LOG_LEVEL", "warn"))
 
         # Set simulation and control frequency
@@ -653,7 +659,9 @@ class BaseEnv(gym.Env):
         # Set the episode rng again after reconfiguration to guarantee seed reproducibility
         self._set_episode_rng(self._episode_seed)
         self.agent.reset()
-        self.initialize_episode(env_idx)
+        with torch.random.fork_rng():
+            torch.manual_seed(self._episode_seed)
+            self._initialize_episode(env_idx)
         # reset the reset mask back to all ones so any internal code in maniskill can continue to manipulate all scenes at once as usual
         self._scene._reset_mask = torch.ones(
             self.num_envs, dtype=bool, device=self.device
@@ -691,28 +699,10 @@ class BaseEnv(gym.Env):
             self._episode_seed = seed
         self._episode_rng = np.random.RandomState(self._episode_seed)
 
-    def initialize_episode(self, env_idx: torch.Tensor):
-        """Initialize the episode, e.g., poses of entities and articulations, and robot configuration.
-        No new assets are created. Task-relevant information can be initialized here, like goals.
+    def _initialize_episode(self, env_idx: torch.Tensor):
+        """Initialize the episode, e.g., poses of actors and articulations, as well as task relevant data like randomizing
+        goal positions
         """
-        with torch.random.fork_rng():
-            torch.manual_seed(self._episode_seed)
-            self._initialize_actors(env_idx)
-            self._initialize_articulations(env_idx)
-            self._initialize_agent(env_idx)
-            self._initialize_task(env_idx)
-
-    def _initialize_actors(self, env_idx: torch.Tensor):
-        """Initialize the poses of actors. Called by `self.initialize_episode`"""
-
-    def _initialize_articulations(self, env_idx: torch.Tensor):
-        """Initialize the (joint) poses of articulations. Called by `self.initialize_episode`"""
-
-    def _initialize_agent(self, env_idx: torch.Tensor):
-        """Initialize the (joint) poses of agent(robot). Called by `self.initialize_episode`"""
-
-    def _initialize_task(self, env_idx: torch.Tensor):
-        """Initialize task-relevant information, like goals. Called by `self.initialize_episode`"""
 
     def _clear_sim_state(self):
         """Clear simulation state (velocities)"""

@@ -135,7 +135,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
         )
         self._hidden_objects.append(self.handle_link_goal)
 
-    def _initialize_actors(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor):
         # TODO (stao): Clean up this code and try to batch / cache more if possible.
         # And support partial resets
         with torch.device(self.device):

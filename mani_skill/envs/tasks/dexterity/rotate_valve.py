@@ -137,6 +137,10 @@ class RotateValveEnv(BaseEnv):
         self.capsule_lens = torch.from_numpy(np.array(capsule_lens)).to(self.device)
         self.valve_link = sapien_utils.get_obj_by_name(self.valve.get_links(), "valve")
 
+    def _initialize_episode(self, env_idx: torch.Tensor):
+        self._initialize_actors(env_idx)
+        self._initialize_agent(env_idx)
+
     def _initialize_actors(self, env_idx: torch.Tensor):
         with torch.device(self.device):
             b = len(env_idx)

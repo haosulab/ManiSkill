@@ -87,7 +87,7 @@ class QuadrupedStandEnv(BaseEnv):
         # self.height = -mesh[0].bounding_box.bounds[0, 2]
         self.height = 1.626
 
-    def _initialize_actors(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor):
         with torch.device(self.device):
             self.agent.robot.set_pose(Pose.create_from_pq(p=[0, 0, self.height]))
             self.agent.reset(init_qpos=torch.zeros(self.agent.robot.max_dof))
