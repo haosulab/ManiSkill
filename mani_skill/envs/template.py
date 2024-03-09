@@ -69,20 +69,23 @@ class CustomEnv(BaseEnv):
     # this will then populate agent.agents (list of the instantiated agents) with the right typing
     # agent: MultiAgent[Union[Tuple[Panda, Panda], Tuple[Panda, Panda, Panda]]]
 
-    # Specify default simulation/gpu memory configurations. Note that tasks need to tune their GPU memory configurations accordingly
-    # in order to save memory while also running with no errors. In general you can start with low values and increase them
-    # depending on the messages that show up when you try to run more environments in parallel
-    default_sim_cfg = SimConfig(
-        gpu_memory_cfg=GPUMemoryConfig(
-            found_lost_pairs_capacity=2**25, max_rigid_patch_count=2**18
-        )
-    )
-
     # in the __init__ function you can pick a default robot your task should use e.g. the panda robot by setting a default for robot_uids argument
     # note that if robot_uids is a list of robot uids, then we treat it as a multi-agent setup and load each robot separately.
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
+
+    # Specify default simulation/gpu memory configurations. Note that tasks need to tune their GPU memory configurations accordingly
+    # in order to save memory while also running with no errors. In general you can start with low values and increase them
+    # depending on the messages that show up when you try to run more environments in parallel. Since this is a python property
+    # you can also check self.num_envs to dynamically set configurations as well
+    @property
+    def _default_sim_cfg(self):
+        return SimConfig(
+            gpu_memory_cfg=GPUMemoryConfig(
+                found_lost_pairs_capacity=2**25, max_rigid_patch_count=2**18
+            )
+        )
 
     """
     Reconfiguration Code

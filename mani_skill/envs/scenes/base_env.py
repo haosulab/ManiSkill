@@ -35,14 +35,6 @@ class SceneManipulationEnv(BaseEnv):
     """
 
     SUPPORTED_ROBOTS = ["panda", "fetch"]
-    default_sim_cfg = SimConfig(
-        spacing=50,
-        gpu_memory_cfg=GPUMemoryConfig(
-            found_lost_pairs_capacity=2**25,
-            max_rigid_patch_count=2**19,
-            max_rigid_contact_count=2**21,
-        ),
-    )
     agent: Union[Panda, Fetch]
 
     def __init__(
@@ -72,6 +64,17 @@ class SceneManipulationEnv(BaseEnv):
             self.scene_idxs = np.arange(0, len(self.scene_builder.scene_configs))
         self.convex_decomposition = convex_decomposition
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
+
+    @property
+    def _default_sim_cfg(self):
+        return SimConfig(
+            spacing=50,
+            gpu_memory_cfg=GPUMemoryConfig(
+                found_lost_pairs_capacity=2**25,
+                max_rigid_patch_count=2**19,
+                max_rigid_contact_count=2**21,
+            ),
+        )
 
     def reset(self, seed=None, options=None):
         self._set_episode_rng(seed)

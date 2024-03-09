@@ -45,13 +45,7 @@ class TwoRobotStackCube(BaseEnv):
 
     SUPPORTED_ROBOTS = [("panda", "panda")]
     agent: MultiAgent[Tuple[Panda, Panda]]
-    default_sim_cfg = SimConfig(
-        gpu_memory_cfg=GPUMemoryConfig(
-            found_lost_pairs_capacity=2**25,
-            max_rigid_patch_count=2**19,
-            max_rigid_contact_count=2**21,
-        )
-    )
+
     goal_radius = 0.06
 
     def __init__(
@@ -59,6 +53,16 @@ class TwoRobotStackCube(BaseEnv):
     ):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
+
+    @property
+    def _default_sim_cfg(self):
+        return SimConfig(
+            gpu_memory_cfg=GPUMemoryConfig(
+                found_lost_pairs_capacity=2**25,
+                max_rigid_patch_count=2**19,
+                max_rigid_contact_count=2**21,
+            )
+        )
 
     @property
     def _sensor_configs(self):

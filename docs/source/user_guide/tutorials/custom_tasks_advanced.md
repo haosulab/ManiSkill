@@ -201,14 +201,14 @@ class SimConfig:
 ```
 :::
 
-To define a different set of default sim configurations, you can define a `default_sim_cfg` property in your task class with the SimConfig etc. dataclasses as so
+To define a different set of default sim configurations, you can define a `_default_sim_cfg` property in your task class with the SimConfig etc. dataclasses as so
 
 ```python
 from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 class MyCustomTask(BaseEnv)
     # ...
     @property
-    def default_sim_cfg(self):
+    def _default_sim_cfg(self):
         return SimConfig(
             gpu_memory_cfg=GPUMemoryConfig(
                 max_rigid_contact_count=self.num_envs * max(1024, self.num_envs) * 8,
@@ -218,7 +218,7 @@ class MyCustomTask(BaseEnv)
         )
 ```
 
-ManiSkill will fetch `default_sim_cfg` after `self.num_envs` is set so you can also dynamically change configurations at runtime depending on the number of environments like it was done above. You usually need to change the default configurations when you try to run more parallel environments but SAPIEN will print critical errors about needing to increase one of the GPU memory configuration options.
+ManiSkill will fetch `_default_sim_cfg` after `self.num_envs` is set so you can also dynamically change configurations at runtime depending on the number of environments like it was done above. You usually need to change the default configurations when you try to run more parallel environments but SAPIEN will print critical errors about needing to increase one of the GPU memory configuration options.
 
 Some of the other important configuration options and their defaults that are part of SimConfig are `spacing=5`, `sim_freq=100`, `control_freq=20`, and `'solver_iterations=15`. The physx timestep of the simulation is computed as `1 / sim_freq`, and the `control_freq` says that every `sim_freq/control_freq` physx steps we apply the environment action once and then fetch observation data to return to the user. 
 

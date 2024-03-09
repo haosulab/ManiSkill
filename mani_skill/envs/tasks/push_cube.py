@@ -58,20 +58,23 @@ class PushCubeEnv(BaseEnv):
     # Specify some supported robot types
     agent: Union[Panda, Xmate3Robotiq, Fetch]
 
-    # Specify default simulation/gpu memory configurations to override any default values
-    default_sim_cfg = SimConfig(
-        gpu_memory_cfg=GPUMemoryConfig(
-            found_lost_pairs_capacity=2**25, max_rigid_patch_count=2**18
-        )
-    )
-
     # set some commonly used values
     goal_radius = 0.1
     cube_half_size = 0.02
 
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
+        # specifying robot_uids="panda" as the default means gym.make("PushCube-v1") will default to using the panda arm.
         self.robot_init_qpos_noise = robot_init_qpos_noise
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
+
+    # Specify default simulation/gpu memory configurations to override any default values
+    @property
+    def _default_sim_cfg(self):
+        return SimConfig(
+            gpu_memory_cfg=GPUMemoryConfig(
+                found_lost_pairs_capacity=2**25, max_rigid_patch_count=2**18
+            )
+        )
 
     @property
     def _sensor_configs(self):
