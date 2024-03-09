@@ -74,7 +74,7 @@ class XArm7Ability(BaseAgent):
         super().__init__(*args, **kwargs)
 
     @property
-    def controller_configs(self):
+    def _controller_configs(self):
         # -------------------------------------------------------------------------- #
         # Arm
         # -------------------------------------------------------------------------- #
@@ -144,8 +144,6 @@ class XArm7Ability(BaseAgent):
 
         # Make a deepcopy in case users modify any config
         return deepcopy_dict(controller_configs)
-
-    sensor_configs = []
 
     def _after_init(self):
         hand_front_link_names = [

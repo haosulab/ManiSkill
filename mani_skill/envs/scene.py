@@ -13,8 +13,7 @@ from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.articulation import Articulation
 from mani_skill.utils.structs.link import Link
 from mani_skill.utils.structs.render_camera import RenderCamera
-from mani_skill.utils.structs.types import Array, Device
-
+from mani_skill.utils.structs.types import Array, Device, SimConfig
 
 class ManiSkillScene:
     """
@@ -28,6 +27,7 @@ class ManiSkillScene:
     def __init__(
         self,
         sub_scenes: List[sapien.Scene],
+        sim_cfg: SimConfig,
         debug_mode: bool = True,
         device: Device = None,
     ):
