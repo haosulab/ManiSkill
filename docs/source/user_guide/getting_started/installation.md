@@ -6,7 +6,7 @@ From pip (stable version):
 
 ```bash
 # this is currently a beta version of mani_skill with GPU simulation
-pip install mani-skill==3.0.0.dev0
+pip install mani-skill==3.0.0.dev1
 ```
 
 <!-- add the other install options one released -->
