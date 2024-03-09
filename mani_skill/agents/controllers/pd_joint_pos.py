@@ -17,9 +17,9 @@ class PDJointPosController(BaseController):
     _target_qpos = None
 
     def _get_joint_limits(self):
-        print("self.articulation.get_qlimits()", self.articulation.get_qlimits())
-        print("self.joint_indices", self.joint_indices)
-        qlimits = self.articulation.get_qlimits()[0, self.joint_indices].cpu().numpy()
+        # print("self.articulation.get_qlimits()", self.articulation.get_qlimits())
+        # print("self.joint_indices", self.joint_indices)
+        qlimits = self.articulation.get_qlimits()[0, self.joint_indices.to(torch.long)].cpu().numpy()
         # Override if specified
         if self.config.lower is not None:
             qlimits[:, 0] = self.config.lower
