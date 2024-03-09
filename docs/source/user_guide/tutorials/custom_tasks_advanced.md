@@ -241,11 +241,12 @@ Note the default `sim_freq, control_freq` values are tuned for GPU simulation an
 
 The custom tasks tutorial demonstrated adding fixed cameras to the PushCube task. ManiSkill+SAPIEN also supports mounting cameras to Actors and Links, which can be useful to e.g. have a camera follow a object as it moves around.
 
-For example if you had a task with a baseketball in it and it's actor object is stored at `self.basketball`, in the `_register_sensors` or `_register_human_render_cameras` functions you can do
+For example if you had a task with a baseketball in it and it's actor object is stored at `self.basketball`, in the `_sensor_configs` or `_register_human_render_cameras` properties you can do
 
 ```python
 
-def _register_sensors(self)
+@property
+def _sensor_configs(self)
     # look towards the center of the baskeball from a positon that is offset
     # (0.3, 0.3, 0.5) away from the basketball
     pose = sapien_utils.look_at(eye=[0.3, 0.3, 0.5], target=[0, 0, 0])

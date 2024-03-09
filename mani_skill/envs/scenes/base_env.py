@@ -113,7 +113,8 @@ class SceneManipulationEnv(BaseEnv):
     ):
         return self.compute_dense_reward(obs=obs, action=action, info=info) / 1
 
-    def _register_sensors(self):
+    @property
+    def _sensor_configs(self):
         if self.robot_uids == "fetch":
             return ()
 
@@ -122,7 +123,8 @@ class SceneManipulationEnv(BaseEnv):
             "base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 100
         )
 
-    def _register_human_render_cameras(self):
+    @property
+    def _human_render_camera_configs(self):
         if self.robot_uids == "fetch":
             room_camera_pose = sapien_utils.look_at([2.5, -2.5, 3], [0.0, 0.0, 0])
             room_camera_config = CameraConfig(

@@ -101,7 +101,8 @@ class CustomEnv(BaseEnv):
         # here you add various objects like actors and articulations. If your task was to push a ball, you may add a dynamic sphere object on the ground
         pass
 
-    def _register_sensors(self):
+    @property
+    def _sensor_configs(self):
         # To customize the sensors that capture images/pointclouds for the environment observations,
         # simply define a CameraConfig as done below for Camera sensors. You can add multiple sensors by returning a list
         pose = sapien_utils.look_at(
@@ -113,8 +114,9 @@ class CustomEnv(BaseEnv):
             CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 100)
         ]
 
-    def _register_human_render_cameras(self):
-        # this is just like _register_sensors, but for adding cameras used for rendering when you call env.render()
+    @property
+    def _human_render_camera_configs(self):
+        # this is just like _sensor_configs, but for adding cameras used for rendering when you call env.render()
         # when render_mode="rgb_array" or env.render_rgb_array()
         # Another feature here is that if there is a camera called render_camera, this is the default view shown initially when a GUI is opened
         pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])

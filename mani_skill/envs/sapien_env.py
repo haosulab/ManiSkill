@@ -312,16 +312,16 @@ class BaseEnv(gym.Env):
             self.agent = MultiAgent(agents)
         # TODO (stao): do we stil need this?
         # set_articulation_render_material(self.agent.robot, specular=0.9, roughness=0.3)
-
-    def _register_sensors(
+    @property
+    def _sensor_configs(
         self,
     ) -> Union[
         BaseSensorConfig, Sequence[BaseSensorConfig], Dict[str, BaseSensorConfig]
     ]:
         """Register (non-agent) sensors for the environment."""
         return []
-
-    def _register_human_render_cameras(
+    @property
+    def _human_render_camera_configs(
         self,
     ) -> Union[
         BaseSensorConfig, Sequence[BaseSensorConfig], Dict[str, BaseSensorConfig]
@@ -531,7 +531,7 @@ class BaseEnv(gym.Env):
         self._sensor_cfgs = OrderedDict()
 
         # Add task/external sensors
-        self._sensor_cfgs.update(parse_camera_cfgs(self._register_sensors()))
+        self._sensor_cfgs.update(parse_camera_cfgs(self._sensor_configs))
 
         # Add agent sensors
         self._agent_camera_cfgs = OrderedDict()
@@ -540,7 +540,7 @@ class BaseEnv(gym.Env):
 
         # Add human render camera configs
         self._human_render_camera_cfgs = parse_camera_cfgs(
-            self._register_human_render_cameras()
+            self._human_render_camera_configs
         )
 
         # Override camera configurations with user supplied configurations
