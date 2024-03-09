@@ -4,17 +4,17 @@ from typing import List
 import sapien
 import torch
 
-from mani_skill2 import PACKAGE_ASSET_DIR
-from mani_skill2.agents.base_agent import BaseAgent
-from mani_skill2.agents.controllers import *
-from mani_skill2.agents.registration import register_agent
-from mani_skill2.agents.utils import (
+from mani_skill import PACKAGE_ASSET_DIR
+from mani_skill.agents.base_agent import BaseAgent
+from mani_skill.agents.controllers import *
+from mani_skill.agents.registration import register_agent
+from mani_skill.agents.utils import (
     get_active_joint_indices,
 )
-from mani_skill2.utils.sapien_utils import (
+from mani_skill.utils.sapien_utils import (
     get_objs_by_names,
 )
-from mani_skill2.utils.structs.pose import vectorize_pose
+from mani_skill.utils.structs.pose import vectorize_pose
 
 
 @register_agent()
@@ -83,7 +83,7 @@ class TriFingerPro(BaseAgent):
         )
 
     @property
-    def controller_configs(self):
+    def _controller_configs(self):
         # -------------------------------------------------------------------------- #
         # Arm
         # -------------------------------------------------------------------------- #

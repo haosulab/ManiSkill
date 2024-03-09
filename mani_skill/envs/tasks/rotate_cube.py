@@ -24,21 +24,21 @@ import torch
 import torch.random
 from transforms3d.euler import euler2quat
 
-from mani_skill2 import PACKAGE_ASSET_DIR
-from mani_skill2.agents.robots.fetch.fetch import Fetch
-from mani_skill2.agents.robots.panda.panda import Panda
-from mani_skill2.agents.robots.xmate3.xmate3 import Xmate3Robotiq
-from mani_skill2.agents.robots.trifingerpro.trifingerpro import TriFingerPro
-from mani_skill2.envs.sapien_env import BaseEnv
-from mani_skill2.sensors.camera import CameraConfig
-from mani_skill2.utils.building import actors, ActorBuilder
-from mani_skill2.utils.registration import register_env
-from mani_skill2.utils.sapien_utils import look_at
-from mani_skill2.utils.scene_builder.table.table_scene_builder import TableSceneBuilder
-from mani_skill2.utils.structs.actor import Actor
-from mani_skill2.utils.structs.articulation import Articulation
-from mani_skill2.utils.structs.pose import Pose
-from mani_skill2.utils.structs.types import Array, GPUMemoryConfig, SimConfig
+from mani_skill import PACKAGE_ASSET_DIR
+from mani_skill.agents.robots.fetch.fetch import Fetch
+from mani_skill.agents.robots.panda.panda import Panda
+from mani_skill.agents.robots.xmate3.xmate3 import Xmate3Robotiq
+from mani_skill.agents.robots.trifingerpro.trifingerpro import TriFingerPro
+from mani_skill.envs.sapien_env import BaseEnv
+from mani_skill.sensors.camera import CameraConfig
+from mani_skill.utils.building import actors, ActorBuilder
+from mani_skill.utils.registration import register_env
+from mani_skill.utils.sapien_utils import look_at
+from mani_skill.utils.scene_builder.table.table_scene_builder import TableSceneBuilder
+from mani_skill.utils.structs.actor import Actor
+from mani_skill.utils.structs.articulation import Articulation
+from mani_skill.utils.structs.pose import Pose
+from mani_skill.utils.structs.types import Array, GPUMemoryConfig, SimConfig
 
 
 @register_env("RotateCubeEnv-v1", max_episode_steps=250)
@@ -98,7 +98,8 @@ class RotateCubeEnv(BaseEnv):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
         self.prev_norms = None
 
-    def _register_sensors(self):
+    @property
+    def _sensor_configs(self):
         # registers one 128x128 camera looking at the robot, cube, and target
         # a smaller sized camera will be lower quality, but render faster
         pose = look_at(eye=(0.7, 0.0, 0.7), target=(0.0, 0.0, 0.0))
@@ -106,12 +107,13 @@ class RotateCubeEnv(BaseEnv):
             CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10)
         ]
 
-    def _register_human_render_cameras(self):
+    @property
+    def _human_render_camera_configs(self):
         # registers a more high-definition (512x512) camera used just for rendering when render_mode="rgb_array" or calling env.render_rgb_array()
         pose = look_at((0.7, 0.0, 0.7), (0.0, 0.0, 0.0))
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
 
-    def _load_actors(self):
+    def _load_scene(self):
         # we use a prebuilt scene builder class that automatically loads in a floor and table.
 
         loader1 = self._scene.create_urdf_loader()
@@ -133,7 +135,7 @@ class RotateCubeEnv(BaseEnv):
         # self.obj_goal = builder.build_kinematic("cube_goal")
 
         builder: ActorBuilder = self._scene.create_actor_builder()
-        high_table_boundary_file_name = "/home/chenbao/Desktop/projects/ManiSkill3/mani_skill2/assets/trifinger/robot_properties_fingers/meshes/high_table_boundary.stl"
+        high_table_boundary_file_name = f"{PACKAGE_ASSET_DIR}/trifinger/robot_properties_fingers/meshes/high_table_boundary.stl"
         builder.add_nonconvex_collision_from_file(filename=high_table_boundary_file_name, scale=[1, 1, 1], material=None)
         builder.add_visual_from_file(filename=high_table_boundary_file_name)
         table_boundary: Actor = builder.build_static("table2")
@@ -212,6 +214,9 @@ class RotateCubeEnv(BaseEnv):
             )
             self.prev_norms = None
 
+    def _initialize_episode(self, env_idx: torch.Tensor):
+        self._initialize_actors(env_idx)
+        self._initialize_agent(env_idx)
 
     def _sample_object_goal_poses(self, env_idx: torch.Tensor, difficulty: int):
         """Sample goal poses for the cube and sets them into the desired goal pose buffer.
