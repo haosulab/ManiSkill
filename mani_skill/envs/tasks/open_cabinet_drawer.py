@@ -25,19 +25,6 @@ from mani_skill.utils.structs.link import Link
 # TODO (stao): we need to cut the meshes of all the cabinets in this dataset for gpu sim, not registering task for now
 # @register_env("OpenCabinetDrawer-v1", max_episode_steps=100)
 class OpenCabinetDrawerEnv(BaseEnv):
-    """
-    Task Description
-    ----------------
-    Control a robot to open a randomly selected cabinet drawer
-
-    Randomizations
-    --------------
-
-    Success Conditions
-    ------------------
-
-    Visualization: link to a video/gif of the task being solved
-    """
 
     handle_types = ["prismatic"]
 

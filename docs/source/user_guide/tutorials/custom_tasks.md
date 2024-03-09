@@ -8,10 +8,23 @@ To build a custom task in ManiSkill, it is comprised of the following core compo
 2. [Loading (Robots, Assets, Sensors, etc.)](#loading) (done once)
 3. [Episode initialization / Randomization](#episode-initialization-randomization) (done every env.reset)
 4. [Success/Failure Condition](#successfailure-conditions) (done every env.step)
-5. [(Optional) Dense Reward Function](#optional-dense-reward-function) (done every env.step)
-6. [(Optional) Setting up cameras/sensors for observations and rendering/recording](#optional-setting-up-camerassensors-for-observations-and-recording) (done once)
+5. [Extra Observations](#extra-observations) (done every env.step)
+6. [(Optional) Dense Reward Function](#optional-dense-reward-function) (done every env.step)
+7. [(Optional) Setting up cameras/sensors for observations and rendering/recording](#optional-setting-up-camerassensors-for-observations-and-recording) (done once)
 
-To follow this tutorial easily, we recommend reading this along side reading the [annotated code for the PushCube task](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill/envs/tasks/push_cube.py) which describe the purpose of nearly every line of code. This page will cover the bare minimum details necessary to start building your own tasks and show snippets of code from the PushCube task. The advanced sections covers additional topics to do more advanced simulation and optimization such as dynamic GPU memory configuration, heterogenous object simulation, and more. 
+Visually the flow of environment creation under the gym API via `gym.make` and `env.reset` looks as so:
+
+:::{figure} images/env_create_env_reset_flow.png 
+:::
+
+and `env.step` follows below:
+
+:::{figure} images/env_step_flow.png 
+:::
+
+This tutorial will take you through most of the important yellow modules in the figures above that should be implemented in order to build a task.
+
+To follow this tutorial easily, we recommend reading this along side reading the [annotated code for the PushCube task](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill/envs/tasks/push_cube.py) which describe the purpose of nearly every line of code. The [advanced features page](./custom_tasks_advanced.md) covers additional topics to do more advanced simulation and optimization such as dynamic GPU memory configuration, heterogenous object simulation, and more. 
 
 If you want to skip the tutorial and start from a template you can use the [PushCube task](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill/envs/tasks/push_cube.py) as a template, the [annotated template](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill/envs/template.py), or the [bare minimum template](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill/envs/minimal_template.py).
 
@@ -42,7 +55,7 @@ Building objects in ManiSkill is nearly the exact same as it is in SAPIEN. You c
 
 #### Building Robots
 
-This is the simplest part and requires almost no additional work here. Robots are added in for you automatically and have their base initialized at 0. You can specify the default robot(s) added in via the init function. It is also strongly recommended to use proper typing to indicate which robots are supported and could be available. In PushCube this is done as so by adding class attributes / typing.
+This is the simplest part and requires almost no additional work here. Robots are added in for you automatically and have their base initialized at 0. You can specify the default robot(s) added in via the init function. In PushCube this is done as so by adding `SUPPORTED_ROBOTS` to ensure users can only run your task with the selected robots. You can further add typing if you wish to the `agent` class attribute. 
 
 ```python
 from mani_skill.agents.robots import Fetch, Panda, Xmate3Robotiq
@@ -211,12 +224,37 @@ def evaluate(self):
 
 PushCube task here does not define a fail condition, but you could define one yourself to check if the cube falls off the table (in which case then the task is impossible to solve).
 
+:::{attention}
+When writing evaluate ensure the data returned in the dictionary is all batched or else it can cause bugs. ManiSkill tries to keep all data inside ManiSkill batched whenever possible.
+:::
+
 The end result should yield the following
 :::{figure} images/push_cube_evaluate.png 
 :::
 
 
 Note that some tasks like locomotion/control tasks in [dm-control](https://github.com/google-deepmind/dm_control/) would be tasks where there is no success or failure evaluation. This kind of task is supported and in those cases the evaluation function can just return an empty dictionary.
+
+## Extra Observations
+
+In order to augment the observations given to users after calling `env.reset` or `env.step`, you should implement the `_get_obs_extra` function. This function takes just the `info` object generated via the earlier defined `evaluate` function, allowing you to re-use computations in this function to improve efficiency. Generally you want to ensure you do not provide any ground-truth information that should not be available unless the observation mode is "state" or "state_dict", such as the pose of the cube you are pushing. There are some data like tcp_pose which are always available for robots and given all the time, and also critical information like the goal position to direct the agent where to push the cube.
+
+```python
+def _get_obs_extra(self, info: Dict):
+    # some useful observation info for solving the task includes the pose of the tcp (tool center point) which is the point between the
+    # grippers of the robot
+    obs = OrderedDict(
+        tcp_pose=self.agent.tcp.pose.raw_pose,
+        goal_pos=self.goal_region.pose.p,
+    )
+    if self._obs_mode in ["state", "state_dict"]:
+        # if the observation mode is state/state_dict, we provide ground truth information about where the cube is.
+        # for visual observation modes one should rely on the sensed visual data to determine where the cube is
+        obs.update(
+            obj_pose=self.obj.pose.raw_pose,
+        )
+    return obs
+```
 
 ## (Optional) Dense Reward Function
 
@@ -234,7 +272,7 @@ def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
 
 `compute_normalized_dense_reward` is the default reward function used and retuurned from `env.step`. We recommend defining normalized reward function as these tend to be easier to learn from, especially in algorithms that learn Q functions in RL. The result of `compute_dense_reward` is returned when an environment created as `gym.make(env_id=..., reward_mode="dense")`
 
-Dense reward functions are not required and can be skipped. If not implemented they just return 0. Sparse reward functions are available if the evaluation function returns a dictonary with the success key.
+Dense reward functions are not required and can be skipped. If not implemented then those reward modes are not supported and will raise an error if you try to use dense reward modes. Sparse reward functions are available if the evaluation function returns a dictonary with the success/fail key. If the task is in a success state, +1 reward is given. If the task is in a fail state, -1 reward is given. Otherwise 0 is given.
 
 ## (Optional) Setting up Cameras/Sensors for Observations and Recording
 

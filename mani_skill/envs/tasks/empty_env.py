@@ -18,19 +18,7 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 @register_env("Empty-v1", max_episode_steps=200000)
 class EmptyEnv(BaseEnv):
     """
-    Task Description
-    ----------------
     This is just a dummy environment for showcasing robots in a empty scene
-
-    Randomizations
-    --------------
-    None
-
-    Success Conditions
-    ------------------
-    None
-
-    Visualization: link to a video/gif of the task being solved
     """
 
     SUPPORTED_ROBOTS = ["panda", "fetch", "xmate3_robotiq", "anymal"]

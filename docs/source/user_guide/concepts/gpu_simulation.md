@@ -16,13 +16,31 @@ SAPIEN permits sub-scenes to be located at any location you want, ManiSkill just
 
 ## GPU Simulation Lifecycle
 
-In general, simulation on the GPU has 3 core parts
+In ManiSkill, the gym API is adopted to create, reset, and step through environments.
 
-1. Loading objects (comrpised of actors/articulations/lights) into the scene (basically spawning them in with an initial pose and not doing anything else)
+The reset part consists of one time reconfiguration followed by initialization:
+
+1. Reconfiguration: Loading objects (comrpised of actors/articulations/lights) into the scene (basically spawning them in with an initial pose and not doing anything else)
 2. A call to `physx_system.gpu_init()` to initialize all GPU memory buffers and setting up all the rendering groups for parallelized rendering
-3. Initializing all actors and articulations (set poses, qpos values etc.)
-4. Repeatedly run `physx_system.step()` and `gpu_apply_*` functions to step through the simulation and set target positions for any controlled articulations/actors
-5. Run `physx_system.gpu_fetch_*` to update relevant GPU buffers
+3. Initializing all actors and articulations (set poses, qpos values etc.).
+4. Running `gpu_apply_*` to then save all the initialized data in step 3 to the GPU buffers to prepare for simulation
+5. Run `physx_system.gpu_fetch_*` to update relevant GPU buffers and generate observation data out of that
+
+:::{figure} ../tutorials/images/env_create_env_reset_flow.png 
+:::
+
+The step part consists of a repeated flow of taking in actions and generating output for env.step 
+
+1. Get user's action and clip it
+2. Process the action and turn it into target joint position/velocity control signals to control agents
+3. Run `physx_system.gpu_apply_articulation_target_position` and `physx_syste.gpu_apply_articulation_target_velocity` to apply the targets from step 2.
+4. Run `physx_system.step()` multiple times to step through the simulation
+5. Run `physx_system.gpu_fetch_*` to update relevant GPU buffers and generate observation data
+6. Return step data: observation, reward, terminated, truncated, and info.
+
+:::{figure} ../tutorials/images/env_step_flow.png 
+:::
+
 
 ### Data Organization on the GPU
 

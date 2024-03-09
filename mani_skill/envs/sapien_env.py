@@ -470,7 +470,16 @@ class BaseEnv(gym.Env):
 
     def get_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         if self._reward_mode == "sparse":
-            reward = info["success"]
+            if "success" in info:
+                if "fail" in info:
+                    reward = info["success"] - info["fail"]
+                else:
+                    reward = info["success"]
+            else:
+                if "fail" in info:
+                    reward = -info["fail"]
+                else:
+                    reward = torch.zeros(self.num_envs, dtype=float, device=self.device)
         elif self._reward_mode == "dense":
             reward = self.compute_dense_reward(obs=obs, action=action, info=info)
         elif self._reward_mode == "normalized_dense":
@@ -482,12 +491,12 @@ class BaseEnv(gym.Env):
         return reward
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        return torch.zeros((self.num_envs), device=self.device, dtype=torch.float32)
+        raise NotImplementedError()
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        return torch.zeros((self.num_envs), device=self.device, dtype=torch.float32)
+        raise NotImplementedError()
 
     # -------------------------------------------------------------------------- #
     # Reconfigure

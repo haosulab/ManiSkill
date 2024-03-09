@@ -19,22 +19,7 @@ from mani_skill.utils.structs.types import Array
 
 @register_env("PullCube-v1", max_episode_steps=50)
 class PullCubeEnv(BaseEnv):
-    """
-    Task Description
-    ----------------
-    A simple task where the objective is to pull a cube onto a target.
-
-    Randomizations
-    --------------
-    - the cube's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1].
-    - the target goal region is marked by a red and white target. The position of the target is fixed to be the cube's xy position + [0.1 + goal_radius, 0]
-
-    Success Conditions
-    ------------------
-    - the cube's xy position is within goal_radius (default 0.1) of the target's xy position by euclidean distance.
-
-    Visualization: TODO: ADD LINK HERE
-    """
+    SUPPORTED_REWARD_MODES = ["sparse"]
 
     SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
     agent: Union[Panda, Xmate3Robotiq, Fetch]

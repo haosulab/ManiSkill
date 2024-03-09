@@ -21,19 +21,6 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SceneConfig, SimConf
 
 # @register_env("QuadrupedRun-v1", max_episode_steps=200)
 class QuadrupedRunEnv(BaseEnv):
-    """
-    Task Description
-    ----------------
-    Control a quadruped from a standing position to run as fast forward as possible
-
-    Randomizations
-    --------------
-
-    Success Conditions
-    ------------------
-
-    Visualization: link to a video/gif of the task being solved
-    """
 
     SUPPORTED_ROBOTS = ["anymal-c"]
     agent: ANYmalC
