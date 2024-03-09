@@ -238,7 +238,7 @@ Dense reward functions are not required and can be skipped. If not implemented t
 
 ## (Optional) Setting up Cameras/Sensors for Observations and Recording
 
-If you want your task to be able to return information from sensors like cameras as part of observations, you need to implement a `_sensor_configs` property which should return a list of `BaseSensorConfig` objects. At the moment the only sensor implemented are Cameras. In the future other forms of sensors will be added. Adding a `_register_human_render_cameras` property will add cameras to be used to take pictures for the `"rgb_array"` render mode, which is usually used just for saving videos to look at, but are never used as part of the actual environment observations.
+If you want your task to be able to return information from sensors like cameras as part of observations, you need to implement a `_sensor_configs` property which should return a list of `BaseSensorConfig` objects. At the moment the only sensor implemented are Cameras. In the future other forms of sensors will be added. Adding a `_human_render_camera_configs` property will add cameras to be used to take pictures for the `"rgb_array"` render mode, which is usually used just for saving videos to look at, but are never used as part of the actual environment observations.
 
 Below shows how to use `CameraConfig` to define sensors, you define its position, quaternion, width, height, fov, near, and far attributes. 
 
@@ -253,7 +253,7 @@ def _sensor_configs(self):
         CameraConfig("base_camera", pose.p, pose.q, 128, 128, 1, 0.01, 10)
     ]
 @property
-def _register_human_render_cameras(self):
+def _human_render_camera_configs(self):
     # registers a more high-definition (512x512) camera used just for rendering when render_mode="rgb_array" or calling env.render_rgb_array()
     pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
     return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
