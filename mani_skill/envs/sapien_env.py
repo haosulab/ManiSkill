@@ -812,6 +812,7 @@ class BaseEnv(gym.Env):
         self._before_control_step()
         for _ in range(self._sim_steps_per_control):
             self.agent.before_simulation_step()
+            self._before_simulation_step()
             with sapien.profile("step_i"):
                 self._scene.step()
             self._after_simulation_step()
@@ -844,8 +845,10 @@ class BaseEnv(gym.Env):
     def _before_control_step(self):
         pass
 
+    def _before_simulation_step(self):
+        """Code to run right before physx_system.step is called"""
     def _after_simulation_step(self):
-        pass
+        """Code to run right after physx_system.step is called"""
 
     # -------------------------------------------------------------------------- #
     # Simulation and other gym interfaces
