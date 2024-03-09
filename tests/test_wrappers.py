@@ -1,14 +1,14 @@
 import gymnasium as gym
 import pytest
 
-import mani_skill2.envs
-from mani_skill2.utils.wrappers import RecordEpisode
-from mani_skill2.utils.wrappers.flatten import (
+import mani_skill.envs
+from mani_skill.utils.wrappers import RecordEpisode
+from mani_skill.utils.wrappers.flatten import (
     FlattenActionSpaceWrapper,
     FlattenObservationWrapper,
 )
-from mani_skill2.utils.wrappers.visual_encoders import VisualEncoderWrapper
-from mani_skill2.vector.wrappers.gymnasium import ManiSkillVectorEnv
+from mani_skill.utils.wrappers.visual_encoders import VisualEncoderWrapper
+from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 from tests.utils import (
     LOW_MEM_SIM_CFG,
     MULTI_AGENT_ENV_IDS,

@@ -29,7 +29,7 @@ getting_started/docker
 ```
 
 ```{toctree}
-:maxdepth: 1
+:maxdepth: 3
 :caption: Resources
 
 demos/index
@@ -37,9 +37,11 @@ tutorials/index
 concepts/index
 datasets/index
 data_collection/index
+
+```
 <!-- algorithms_and_models/index
 workflows/index -->
-```
+
 
 ```{toctree}
 :maxdepth: 2

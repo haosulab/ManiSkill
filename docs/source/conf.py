@@ -24,6 +24,8 @@ extensions = [
     "myst_parser",
     "sphinx_subfigure",
     "sphinxcontrib.video",
+    "sphinx_togglebutton",
+    "sphinx_design"
 ]
 
 # https://myst-parser.readthedocs.io/en/latest/syntax/optional.html

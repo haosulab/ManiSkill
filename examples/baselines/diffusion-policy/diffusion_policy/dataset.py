@@ -4,7 +4,7 @@ import torch
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-from mani_skill2.utils.io_utils import load_json
+from mani_skill.utils.io_utils import load_json
 
 
 def load_h5_data(data):

@@ -11,3 +11,5 @@ sphinx_copybutton
 myst-parser
 sphinx-subfigure
 sphinxcontrib-video
+sphinx-togglebutton
+sphinx_design

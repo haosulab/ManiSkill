@@ -2,10 +2,10 @@ import gymnasium as gym
 import numpy as np
 import sapien
 
-import mani_skill2.envs
-from mani_skill2.utils import sapien_utils
-from mani_skill2.utils.wrappers import RecordEpisode
-from mani_skill2.utils.wrappers.visual_encoders import VisualEncoderWrapper
+import mani_skill.envs
+from mani_skill.utils import sapien_utils
+from mani_skill.utils.wrappers import RecordEpisode
+from mani_skill.utils.wrappers.visual_encoders import VisualEncoderWrapper
 
 if __name__ == "__main__":
     num_envs = 8

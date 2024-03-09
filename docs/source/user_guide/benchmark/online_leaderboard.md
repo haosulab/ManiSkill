@@ -10,7 +10,7 @@ In brief, you need to:
 - Build a docker image that includes "user_solution.py" and other codes and dependencies (e.g., model weights).
 - Test the docker image locally, give it a unique tag, and push it to a public docker registry.
 
-Please see the [evaluation script](https://github.com/haosulab/ManiSkill2/tree/main/mani_skill2/evaluation/run_evaluation.py) for how your submission will be evaluated. You can locally test your submission by `python -m mani_skill2.evaluation.run_evaluation ...`. We will use the same script (with a different subclass of `BaseEvaluator` and held-out configuration files) to evaluate your online submission.
+Please see the [evaluation script](https://github.com/haosulab/ManiSkill2/tree/main/mani_skill/evaluation/run_evaluation.py) for how your submission will be evaluated. You can locally test your submission by `python -m mani_skill.evaluation.run_evaluation ...`. We will use the same script (with a different subclass of `BaseEvaluator` and held-out configuration files) to evaluate your online submission.
 
 ## Create and locally verify a solution
 
@@ -26,19 +26,19 @@ export PYTHONPATH=${PATH_TO_YOUR_CODES_IN_HOST}:$PYTHONPATH
 
 # Run evaluation. The result will be saved to ${OUTPUT_DIR}.
 ENV_ID="PickCube-v1" OUTPUT_DIR="tmp" NUM_EPISODES=1
-python -m mani_skill2.evaluation.run_evaluation -e ${ENV_ID} -o ${OUTPUT_DIR} -n ${NUM_EPISODES}
+python -m mani_skill.evaluation.run_evaluation -e ${ENV_ID} -o ${OUTPUT_DIR} -n ${NUM_EPISODES}
 ```
 
 ## Build a docker image
 
 Install [nvidia-docker v2](https://github.com/NVIDIA/nvidia-docker) following instructions here: <https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#docker>. Note: only supports Linux; no Windows or MacOS.
 
-We provide a base image at Dockerhub: `haosulab/mani-skill2:latest`. It is based on `nvidia/cudagl:11.3.1-devel-ubuntu20.04`. The corresponding Dockerfile is [here](https://github.com/haosulab/ManiSkill2/blob/main/docker/Dockerfile).
+We provide a base image at Dockerhub: `haosulab/mani-skill:latest`. It is based on `nvidia/cudagl:11.3.1-devel-ubuntu20.04`. The corresponding Dockerfile is [here](https://github.com/haosulab/ManiSkill2/blob/main/docker/Dockerfile).
 
 Here is an example of how to customize the base docker image.
 
 ```Dockerfile
-FROM haosulab/mani-skill2:latest
+FROM haosulab/mani-skill:latest
 
 # Install additional python packages you need
 RUN pip install torch==1.12.1
@@ -54,15 +54,15 @@ Given a Dockerfile, you can build your submission docker image.
 # It is suggested to run this command under the directory containing Dockerfile
 # See https://docs.docker.com/engine/reference/commandline/build/ for more details
 # Here PATH_TO_BUILD_CONTEXT is the local path context under which the docker building instructions like COPY should reference the files.
-docker build -f ${PATH_TO_YOUR_DOCKERFILE} ${PATH_TO_BUILD_CONTEXT} -t mani-skill2-submission
+docker build -f ${PATH_TO_YOUR_DOCKERFILE} ${PATH_TO_BUILD_CONTEXT} -t mani-skill-submission
 ```
 
 Finally, you can tag your image and push it to a public docker registry (e.g., [Dockerhub](https://hub.docker.com/)).
 
 ```bash
 # Tag your local image before uploading it to Dockerhub
-docker tag mani-skill2-submission ${DOCKERHUB_USER_NAME}/mani-skill2-submission:${UNIQUE_TAG}
-docker push ${DOCKERHUB_USER_NAME}/mani-skill2-submission:${UNIQUE_TAG}
+docker tag mani-skill-submission ${DOCKERHUB_USER_NAME}/mani-skill-submission:${UNIQUE_TAG}
+docker push ${DOCKERHUB_USER_NAME}/mani-skill-submission:${UNIQUE_TAG}
 ```
 
 As Dockerhub's registry is public, we recommend you create a new anonymous docker account to prevent people from finding it.
@@ -76,8 +76,8 @@ We only accept the docker image the size of which is smaller than 24GB. Please r
 Run the following script to test your docker image locally. If this works, it is ready for submission to the challenge.
 
 ```bash
-export DOCKER_IMAGE=mani-skill2-submission:${UNIQUE_TAG}
-export CONTAINER_NAME=mani-skill2-evaluation
+export DOCKER_IMAGE=mani-skill-submission:${UNIQUE_TAG}
+export CONTAINER_NAME=mani-skill-evaluation
 # Initialize a detached container. If you are evaluating tasks with extra assets, you need to mount the directory containing downloaded assets to the container.
 docker run -d --rm --gpus all --name ${CONTAINER_NAME} \
     -v ${PATH_TO_MS2_ASSET_DIR}:/data \
@@ -85,7 +85,7 @@ docker run -d --rm --gpus all --name ${CONTAINER_NAME} \
 # Interactive debug
 docker exec -it ${CONTAINER_NAME} /bin/bash
 # Or run evaluation
-docker exec -it ${CONTAINER_NAME} /bin/bash -c "export MS2_ASSET_DIR=/data; python -m mani_skill2.evaluation.run_evaluation -e PickCube-v1 -o /eval_results/PickCube-v1 -n 1"
+docker exec -it ${CONTAINER_NAME} /bin/bash -c "export MS2_ASSET_DIR=/data; python -m mani_skill.evaluation.run_evaluation -e PickCube-v1 -o /eval_results/PickCube-v1 -n 1"
 # Finally, you can delete the container
 docker kill ${CONTAINER_NAME}
 ```

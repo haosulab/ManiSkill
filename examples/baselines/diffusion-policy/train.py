@@ -9,8 +9,7 @@ from diffusion_policy.dataset import ManiSkill2Dataset
 from diffusion_policy.model import ConditionalUnet1D
 from diffusion_policy.training import train
 
-import mani_skill2
-import mani_skill2.envs
+import mani_skill.envs
 
 parser = argparse.ArgumentParser()
 parser.add_argument(

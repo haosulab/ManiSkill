@@ -28,7 +28,7 @@ def main():
 
     urdf_loader = scenes[0].create_urdf_loader()
     builder = urdf_loader.load_file_as_articulation_builder(
-        "./mani_skill2/assets/robots/panda/panda_v2.urdf"
+        "./mani_skill /assets/robots/panda/panda_v2.urdf"
     )
     robots = []
     for scene in scenes:

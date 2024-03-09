@@ -27,7 +27,7 @@ Additional arguments can be seen in train.py.
 1. Install dependencies
 
 ```
-pip install mani_skill2
+pip install mani_skill
 pip install -r requirements.txt
 ```
 

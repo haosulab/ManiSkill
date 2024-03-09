@@ -9,8 +9,7 @@ from decision_transformer.eval import eval_episodes
 from decision_transformer.model import DecisionTransformer
 from decision_transformer.trainer import SequenceTrainer
 
-import mani_skill2
-import mani_skill2.envs
+import mani_skill.envs
 
 parser = argparse.ArgumentParser()
 parser.add_argument(

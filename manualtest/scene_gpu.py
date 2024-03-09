@@ -2,17 +2,17 @@ import gymnasium as gym
 import numpy as np
 import torch
 
-from mani_skill2.envs.scenes.base_env import SceneManipulationEnv
-from mani_skill2.utils.scene_builder.ai2thor import (
+from mani_skill.envs.scenes.base_env import SceneManipulationEnv
+from mani_skill.utils.scene_builder.ai2thor import (
     ArchitecTHORSceneBuilder,
     ProcTHORSceneBuilder,
     RoboTHORSceneBuilder,
     iTHORSceneBuilder,
 )
-from mani_skill2.utils.scene_builder.replicacad.scene_builder import (
+from mani_skill.utils.scene_builder.replicacad.scene_builder import (
     ReplicaCADSceneBuilder,
 )
-from mani_skill2.utils.wrappers import RecordEpisode
+from mani_skill.utils.wrappers import RecordEpisode
 
 if __name__ == "__main__":
 

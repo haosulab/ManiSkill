@@ -12,6 +12,8 @@ These are tutorials written by the maintainers of ManiSkill and the community, s
 
 ```{toctree}
 :titlesonly:
+
 custom_tasks
 custom_reusable_scenes
+custom_tasks_advanced
 ```

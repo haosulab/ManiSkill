@@ -12,9 +12,9 @@ import pytest
 )
 def test_replay_trajectory(control_mode):
     env_id = "PickCube-v0"
-    # from mani_skill2.utils.download_demo import main as download_demo, parse_args as download_demo_parse_args
+    # from mani_skill.utils.download_demo import main as download_demo, parse_args as download_demo_parse_args
     # download_demo(download_demo_parse_args(args=[env_id]))
-    from mani_skill2.trajectory.replay_trajectory import main, parse_args
+    from mani_skill.trajectory.replay_trajectory import main, parse_args
 
     main(
         parse_args(

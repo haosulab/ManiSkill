@@ -76,7 +76,7 @@ Use multiple models:
 env = gym.make("PickSingleYCB-v0", model_ids=["002_master_chef_can", "003_cracker_box"])
 ```
 
-Model ids can be found in `mani_skill2/assets/mani_skill2_ycb/info_pick_v0.json`.
+Model ids can be found in `mani_skill/assets/mani_skill_ycb/info_pick_v0.json`.
 
 #### PickSingleEGAD-v0
 
@@ -98,7 +98,7 @@ alt: PickSingleEGAD-v0
 ---
 ```
 
-You can use a similar way as `PickSingleYCB` to select models. Model ids can be found in `mani_skill2/assets/mani_skill2_egad/info_pick_train_v0.json`.
+You can use a similar way as `PickSingleYCB` to select models. Model ids can be found in `mani_skill/assets/mani_skill_egad/info_pick_train_v0.json`.
 
 #### PickClutterYCB-v0
 
@@ -224,7 +224,7 @@ Use multiple models:
 env = gym.make("TurnFaucet-v0", model_ids=["5001", "5002"])
 ```
 
-Model ids can be found in `mani_skill2/assets/partnet_mobility/meta/info_faucet_train.json`.
+Model ids can be found in `mani_skill/assets/partnet_mobility/meta/info_faucet_train.json`.
 
 ### Mobile Manipulation from ManiSkill1
 

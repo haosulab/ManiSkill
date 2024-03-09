@@ -3,10 +3,10 @@ import numpy as np
 import pytest
 import torch
 
-from mani_skill2.agents.multi_agent import MultiAgent
-from mani_skill2.envs.sapien_env import BaseEnv
-from mani_skill2.utils.structs.types import SimConfig
-from mani_skill2.vector.wrappers.gymnasium import ManiSkillVectorEnv
+from mani_skill.agents.multi_agent import MultiAgent
+from mani_skill.envs.sapien_env import BaseEnv
+from mani_skill.utils.structs.types import SimConfig
+from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 from tests.utils import (
     CONTROL_MODES_STATIONARY_SINGLE_ARM,
     ENV_IDS,

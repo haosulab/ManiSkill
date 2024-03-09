@@ -14,10 +14,10 @@ from torch.distributions.normal import Normal
 from torch.utils.tensorboard import SummaryWriter
 
 # ManiSkill specific imports
-import mani_skill2.envs
-from mani_skill2.utils.wrappers.flatten import FlattenActionSpaceWrapper
-from mani_skill2.utils.wrappers.record import RecordEpisode
-from mani_skill2.vector.wrappers.gymnasium import ManiSkillVectorEnv
+import mani_skill.envs
+from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper
+from mani_skill.utils.wrappers.record import RecordEpisode
+from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 
 @dataclass
 class Args:
@@ -55,9 +55,9 @@ class Args:
     """the number of parallel environments"""
     num_eval_envs: int = 8
     """the number of parallel evaluation environments"""
-    num_steps: int = 50
+    num_steps: int = 250
     """the number of steps to run in each environment per policy rollout"""
-    num_eval_steps: int = 50
+    num_eval_steps: int = 250
     """the number of steps to run in each evaluation environment during evaluation"""
     anneal_lr: bool = False
     """Toggle learning rate annealing for policy and value networks"""

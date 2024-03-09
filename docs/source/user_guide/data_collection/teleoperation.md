@@ -14,7 +14,7 @@ Limitations: Limited to only solving less dynamical tasks with two-finger grippe
 
 To start the system you can specify an task id with `-e` and run
 ```bash
-python -m mani_skill2.examples.teleoperation.interactive_panda -e "StackCube-v1" 
+python -m mani_skill.examples.teleoperation.interactive_panda -e "StackCube-v1" 
 ```
 
 <video preload="auto" controls="True" width="100%">
@@ -31,7 +31,6 @@ To stop data collection press "q" to quit. This will then save the trajectory da
 
 You can always press "h" to bring up a help menu describing the keyboard commands.
 
-<!-- TODO (stao): discuss checkpointing method, help button -->
 
 <!-- ## Space Mouse -->
 <!-- 
