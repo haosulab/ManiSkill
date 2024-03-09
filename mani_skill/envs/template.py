@@ -38,7 +38,7 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 
 
 # register the environment by a unique ID and specify a max time limit. Now once this file is imported you can do gym.make("CustomEnv-v0")
-@register_env("CustomEnv-v0", max_episode_steps=200)
+@register_env("CustomEnv-v1", max_episode_steps=200)
 class CustomEnv(BaseEnv):
     """
     Task Description
