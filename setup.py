@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-__version__ = "0.0.4"
+__version__ = "0.0.7"
 
 long_description = """ManiSkill2 is a unified benchmark for learning generalizable robotic manipulation skills powered by [SAPIEN](https://sapien.ucsd.edu/). **It features 20 out-of-box task families with 2000+ diverse object models and 4M+ demonstration frames**. Moreover, it empowers fast visual input learning algorithms so that **a CNN-based policy can collect samples at about 2000 FPS with 1 GPU and 16 processes on a workstation**. The benchmark can be used to study a wide range of algorithms: 2D & 3D vision-based reinforcement learning, imitation learning, sense-plan-act, etc.
 
@@ -15,7 +15,7 @@ setup(
     author="ManiSkill contributors",
     url="https://github.com/haosulab/ManiSkill2",
     packages=find_packages(include=["mani_skill*"]),
-    python_requires=">=3.9",
+    python_requires=">=3.8",
     setup_requires=["setuptools>=62.3.0"],
     install_requires=[
         "numpy>=1.22",
@@ -43,7 +43,6 @@ setup(
         "mani_skill": ["assets/**", "envs/**/*", "utils/**/*"],
         "warp_maniskill.warp": ["native/*", "native/nanovdb/*"],
     },
-    exclude_package_data={"": ["*.convex.stl"]},
     extras_require={
         "dev": [
             "pytest",
