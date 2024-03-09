@@ -15,6 +15,7 @@ from mani_skill.utils.structs.link import Link
 from mani_skill.utils.structs.render_camera import RenderCamera
 from mani_skill.utils.structs.types import Array, Device, SimConfig
 
+
 class ManiSkillScene:
     """
     Class that manages a list of sub-scenes (sapien.Scene). In CPU simulation there should only be one sub-scene.
@@ -35,6 +36,7 @@ class ManiSkillScene:
         self.px: Union[physx.PhysxCpuSystem, physx.PhysxGpuSystem] = self.sub_scenes[
             0
         ].physx_system
+        self.sim_cfg = sim_cfg
         self._gpu_sim_initialized = False
         self.debug_mode = debug_mode
         self.device = device

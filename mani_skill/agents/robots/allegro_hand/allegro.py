@@ -81,7 +81,7 @@ class AllegroHandRight(BaseAgent):
         )
 
     @property
-    def controller_configs(self):
+    def _controller_configs(self):
         # -------------------------------------------------------------------------- #
         # Arm
         # -------------------------------------------------------------------------- #

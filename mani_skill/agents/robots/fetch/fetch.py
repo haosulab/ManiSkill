@@ -127,7 +127,7 @@ class Fetch(BaseAgent):
         super().__init__(*args, **kwargs)
 
     @property
-    def controller_configs(self):
+    def _controller_configs(self):
         # -------------------------------------------------------------------------- #
         # Arm
         # -------------------------------------------------------------------------- #

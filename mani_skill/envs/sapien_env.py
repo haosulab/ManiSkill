@@ -320,7 +320,7 @@ class BaseEnv(gym.Env):
     ]:
         """Register (non-agent) sensors for the environment."""
         return []
-    
+
     def _register_human_render_cameras(
         self,
     ) -> Union[
@@ -526,7 +526,7 @@ class BaseEnv(gym.Env):
     # TODO (stao): refactor this into sensor API
     def _setup_sensors(self):
         """Setup sensor configurations and the sensor objects in the scene. Called by `self._reconfigure`"""
-        
+
         # First create all the configurations
         self._sensor_cfgs = OrderedDict()
 
@@ -535,14 +535,14 @@ class BaseEnv(gym.Env):
 
         # Add agent sensors
         self._agent_camera_cfgs = OrderedDict()
-        self._agent_camera_cfgs = parse_camera_cfgs(self.agent.sensor_configs)
+        self._agent_camera_cfgs = parse_camera_cfgs(self.agent._sensor_configs)
         self._sensor_cfgs.update(self._agent_camera_cfgs)
-        
+
         # Add human render camera configs
         self._human_render_camera_cfgs = parse_camera_cfgs(
             self._register_human_render_cameras()
         )
-        
+
         # Override camera configurations with user supplied configurations
         if self._custom_sensor_cfgs is not None:
             update_camera_cfgs_from_dict(
@@ -886,7 +886,7 @@ class BaseEnv(gym.Env):
                 sapien.Scene([self.physx_system, sapien.render.RenderSystem()])
             ]
         # create a "global" scene object that users can work with that is linked with all other scenes created
-        self._scene = ManiSkillScene(sub_scenes, device=self.device)
+        self._scene = ManiSkillScene(sub_scenes, sim_cfg=self.sim_cfg, device=self.device)
         self.physx_system.timestep = 1.0 / self._sim_freq
 
     def _clear(self):
