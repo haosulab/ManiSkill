@@ -35,14 +35,6 @@ class SceneManipulationEnv(BaseEnv):
     """
 
     SUPPORTED_ROBOTS = ["panda", "fetch"]
-    default_sim_cfg = SimConfig(
-        spacing=50,
-        gpu_memory_cfg=GPUMemoryConfig(
-            found_lost_pairs_capacity=2**25,
-            max_rigid_patch_count=2**19,
-            max_rigid_contact_count=2**21,
-        ),
-    )
     agent: Union[Panda, Fetch]
 
     def __init__(
@@ -72,6 +64,17 @@ class SceneManipulationEnv(BaseEnv):
             self.scene_idxs = np.arange(0, len(self.scene_builder.scene_configs))
         self.convex_decomposition = convex_decomposition
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
+
+    @property
+    def _default_sim_cfg(self):
+        return SimConfig(
+            spacing=50,
+            gpu_memory_cfg=GPUMemoryConfig(
+                found_lost_pairs_capacity=2**25,
+                max_rigid_patch_count=2**19,
+                max_rigid_contact_count=2**21,
+            ),
+        )
 
     def reset(self, seed=None, options=None):
         self._set_episode_rng(seed)
@@ -113,7 +116,8 @@ class SceneManipulationEnv(BaseEnv):
     ):
         return self.compute_dense_reward(obs=obs, action=action, info=info) / 1
 
-    def _register_sensors(self):
+    @property
+    def _sensor_configs(self):
         if self.robot_uids == "fetch":
             return ()
 
@@ -122,7 +126,8 @@ class SceneManipulationEnv(BaseEnv):
             "base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 100
         )
 
-    def _register_human_render_cameras(self):
+    @property
+    def _human_render_camera_configs(self):
         if self.robot_uids == "fetch":
             room_camera_pose = sapien_utils.look_at([2.5, -2.5, 3], [0.0, 0.0, 0])
             room_camera_config = CameraConfig(

@@ -238,21 +238,22 @@ Dense reward functions are not required and can be skipped. If not implemented t
 
 ## (Optional) Setting up Cameras/Sensors for Observations and Recording
 
-If you want your task to be able to return information from sensors like cameras as part of observations, you need to implement a `_register_sensors` function which should return a list of `SensorConfig` objects. At the moment the only sensor implemented are Cameras. In the future other forms of sensors will be added. Adding a `_register_human_render_cameras` function will add cameras to be used to take pictures for the `"rgb_array"` render mode, which is usually used just for saving videos to look at, but are never used as part of the actual environment observations.
+If you want your task to be able to return information from sensors like cameras as part of observations, you need to implement a `_sensor_configs` property which should return a list of `BaseSensorConfig` objects. At the moment the only sensor implemented are Cameras. In the future other forms of sensors will be added. Adding a `_human_render_camera_configs` property will add cameras to be used to take pictures for the `"rgb_array"` render mode, which is usually used just for saving videos to look at, but are never used as part of the actual environment observations.
 
 Below shows how to use `CameraConfig` to define sensors, you define its position, quaternion, width, height, fov, near, and far attributes. 
 
 ```python
 from mani_skill.sensors.camera import CameraConfig
-def _register_sensors(self):
+@property
+def _sensor_configs(self):
     # registers one 128x128 camera looking at the robot, cube, and target
     # a smaller sized camera will be lower quality, but render faster
     pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
     return [
         CameraConfig("base_camera", pose.p, pose.q, 128, 128, 1, 0.01, 10)
     ]
-
-def _register_human_render_cameras(self):
+@property
+def _human_render_camera_configs(self):
     # registers a more high-definition (512x512) camera used just for rendering when render_mode="rgb_array" or calling env.render_rgb_array()
     pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
     return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
@@ -278,5 +279,5 @@ Alternatively via the GUI which can be opened by doing a while loop while runnin
 :::
 
 :::{tip}
-It's recommended to setup the sensor cameras via `_register_sensors` in such a way so that it looks at the important objects and avoids looking at anything too far away. The reason is the blank background has infinite depth and in visual observations it's marked as a 0. Objects too far away (like the far away floor tiles) will yield very high depth values which may be problematic for machine learning workflows
+It's recommended to setup the sensor cameras via `_sensor_configs` in such a way so that it looks at the important objects and avoids looking at anything too far away. The reason is the blank background has infinite depth and in visual observations it's marked as a 0. Objects too far away (like the far away floor tiles) will yield very high depth values which may be problematic for machine learning workflows
 :::

@@ -69,20 +69,23 @@ class CustomEnv(BaseEnv):
     # this will then populate agent.agents (list of the instantiated agents) with the right typing
     # agent: MultiAgent[Union[Tuple[Panda, Panda], Tuple[Panda, Panda, Panda]]]
 
-    # Specify default simulation/gpu memory configurations. Note that tasks need to tune their GPU memory configurations accordingly
-    # in order to save memory while also running with no errors. In general you can start with low values and increase them
-    # depending on the messages that show up when you try to run more environments in parallel
-    default_sim_cfg = SimConfig(
-        gpu_memory_cfg=GPUMemoryConfig(
-            found_lost_pairs_capacity=2**25, max_rigid_patch_count=2**18
-        )
-    )
-
     # in the __init__ function you can pick a default robot your task should use e.g. the panda robot by setting a default for robot_uids argument
     # note that if robot_uids is a list of robot uids, then we treat it as a multi-agent setup and load each robot separately.
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
+
+    # Specify default simulation/gpu memory configurations. Note that tasks need to tune their GPU memory configurations accordingly
+    # in order to save memory while also running with no errors. In general you can start with low values and increase them
+    # depending on the messages that show up when you try to run more environments in parallel. Since this is a python property
+    # you can also check self.num_envs to dynamically set configurations as well
+    @property
+    def _default_sim_cfg(self):
+        return SimConfig(
+            gpu_memory_cfg=GPUMemoryConfig(
+                found_lost_pairs_capacity=2**25, max_rigid_patch_count=2**18
+            )
+        )
 
     """
     Reconfiguration Code
@@ -101,7 +104,8 @@ class CustomEnv(BaseEnv):
         # here you add various objects like actors and articulations. If your task was to push a ball, you may add a dynamic sphere object on the ground
         pass
 
-    def _register_sensors(self):
+    @property
+    def _sensor_configs(self):
         # To customize the sensors that capture images/pointclouds for the environment observations,
         # simply define a CameraConfig as done below for Camera sensors. You can add multiple sensors by returning a list
         pose = sapien_utils.look_at(
@@ -113,8 +117,9 @@ class CustomEnv(BaseEnv):
             CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 100)
         ]
 
-    def _register_human_render_cameras(self):
-        # this is just like _register_sensors, but for adding cameras used for rendering when you call env.render()
+    @property
+    def _human_render_camera_configs(self):
+        # this is just like _sensor_configs, but for adding cameras used for rendering when you call env.render()
         # when render_mode="rgb_array" or env.render_rgb_array()
         # Another feature here is that if there is a camera called render_camera, this is the default view shown initially when a GUI is opened
         pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])

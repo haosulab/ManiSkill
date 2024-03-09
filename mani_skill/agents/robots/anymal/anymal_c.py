@@ -33,7 +33,7 @@ class ANYmalC(BaseAgent):
         super().__init__(*args, fix_root_link=False, **kwargs)
 
     @property
-    def controller_configs(self):
+    def _controller_configs(self):
         self.arm_stiffness = 85.0
         self.arm_damping = 2.0
         self.arm_force_limit = 100

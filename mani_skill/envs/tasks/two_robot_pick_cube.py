@@ -42,13 +42,6 @@ class TwoRobotPickCube(BaseEnv):
 
     SUPPORTED_ROBOTS = [("panda", "panda")]
     agent: MultiAgent[Tuple[Panda, Panda]]
-    default_sim_cfg = SimConfig(
-        gpu_memory_cfg=GPUMemoryConfig(
-            found_lost_pairs_capacity=2**25,
-            max_rigid_patch_count=2**19,
-            max_rigid_contact_count=2**21,
-        )
-    )
     cube_half_size = 0.02
     goal_thresh = 0.025
 
@@ -58,13 +51,25 @@ class TwoRobotPickCube(BaseEnv):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
-    def _register_sensors(self):
+    @property
+    def _default_sim_cfg(self):
+        return SimConfig(
+            gpu_memory_cfg=GPUMemoryConfig(
+                found_lost_pairs_capacity=2**25,
+                max_rigid_patch_count=2**19,
+                max_rigid_contact_count=2**21,
+            )
+        )
+
+    @property
+    def _sensor_configs(self):
         pose = sapien_utils.look_at([1.0, 0, 0.75], [0.0, 0.0, 0.25])
         return [
             CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 100)
         ]
 
-    def _register_human_render_cameras(self):
+    @property
+    def _human_render_camera_configs(self):
         pose = sapien_utils.look_at([1.4, 0.8, 0.75], [0.0, 0.1, 0.1])
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)
 

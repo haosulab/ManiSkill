@@ -60,7 +60,7 @@ class Panda(BaseAgent):
         super().__init__(*args, **kwargs)
 
     @property
-    def controller_configs(self):
+    def _controller_configs(self):
         # -------------------------------------------------------------------------- #
         # Arm
         # -------------------------------------------------------------------------- #
@@ -194,8 +194,6 @@ class Panda(BaseAgent):
 
         # Make a deepcopy in case users modify any config
         return deepcopy_dict(controller_configs)
-
-    sensor_configs = []
 
     def _after_init(self):
         self.finger1_link = sapien_utils.get_obj_by_name(

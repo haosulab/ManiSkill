@@ -81,7 +81,7 @@ class BaseEnv(gym.Env):
         sim_cfg (Union[SimConfig, dict]): Configurations for simulation if used that override the environment defaults. If given
             a dictionary, it can just override specific attributes e.g. `sim_cfg=dict(scene_cfg=dict(solver_iterations=25))`. If
             passing in a SimConfig object, while typed, will override every attribute including the task defaults. Some environments
-            define their own recommended default sim configurations via the `self.default_sim_cfg` attribute that generally should not be
+            define their own recommended default sim configurations via the `self._default_sim_cfg` attribute that generally should not be
             completely overriden. For a full detail/explanation of what is in the sim config see the type hints / go to the source
             https://github.com/haosulab/ManiSkill2/blob/main/mani_skill/utils/structs/types.py
 
@@ -173,7 +173,7 @@ class BaseEnv(gym.Env):
         # the already parsed sim config argument
         if isinstance(sim_cfg, SimConfig):
             sim_cfg = sim_cfg.dict()
-        merged_gpu_sim_cfg = self.default_sim_cfg.dict()
+        merged_gpu_sim_cfg = self._default_sim_cfg.dict()
         dict_merge(merged_gpu_sim_cfg, sim_cfg)
         self.sim_cfg = dacite.from_dict(data_class=SimConfig, data=merged_gpu_sim_cfg, config=dacite.Config(strict=True))
         """the final sim config after merging user overrides with the environment default"""
@@ -282,7 +282,7 @@ class BaseEnv(gym.Env):
             return self.single_observation_space
 
     @property
-    def default_sim_cfg(self):
+    def _default_sim_cfg(self):
         return SimConfig()
     def _load_agent(self):
         agents = []
@@ -305,7 +305,6 @@ class BaseEnv(gym.Env):
                     self._control_mode,
                     agent_idx=i if len(robot_uids) > 1 else None,
                 )
-                agent.set_control_mode()
                 agents.append(agent)
         if len(agents) == 1:
             self.agent = agents[0]
@@ -313,32 +312,16 @@ class BaseEnv(gym.Env):
             self.agent = MultiAgent(agents)
         # TODO (stao): do we stil need this?
         # set_articulation_render_material(self.agent.robot, specular=0.9, roughness=0.3)
-
-    def _configure_sensors(self):
-        self._sensor_cfgs = OrderedDict()
-
-        # Add task/external sensors
-        self._sensor_cfgs.update(parse_camera_cfgs(self._register_sensors()))
-
-        # Add agent sensors
-        self._agent_camera_cfgs = OrderedDict()
-        self._agent_camera_cfgs = parse_camera_cfgs(self.agent.sensor_configs)
-        self._sensor_cfgs.update(self._agent_camera_cfgs)
-
-    def _register_sensors(
+    @property
+    def _sensor_configs(
         self,
     ) -> Union[
         BaseSensorConfig, Sequence[BaseSensorConfig], Dict[str, BaseSensorConfig]
     ]:
         """Register (non-agent) sensors for the environment."""
         return []
-
-    def _configure_human_render_cameras(self):
-        self._human_render_camera_cfgs = parse_camera_cfgs(
-            self._register_human_render_cameras()
-        )
-
-    def _register_human_render_cameras(
+    @property
+    def _human_render_camera_configs(
         self,
     ) -> Union[
         BaseSensorConfig, Sequence[BaseSensorConfig], Dict[str, BaseSensorConfig]
@@ -523,21 +506,6 @@ class BaseEnv(gym.Env):
 
         self._load_lighting()
 
-        # NOTE(jigu): Agent and camera configurations should not change after initialization.
-        self._configure_sensors()
-        self._configure_human_render_cameras()
-
-        # Override camera configurations
-        if self._custom_sensor_cfgs is not None:
-            update_camera_cfgs_from_dict(
-                self._sensor_cfgs, self._custom_sensor_cfgs
-            )
-        if self._custom_human_render_camera_cfgs is not None:
-            update_camera_cfgs_from_dict(
-                self._human_render_camera_cfgs,
-                self._custom_human_render_camera_cfgs,
-            )
-
         if sapien.physx.is_gpu_enabled():
             self._scene._setup_gpu()
             self._scene._gpu_fetch_all()
@@ -557,7 +525,36 @@ class BaseEnv(gym.Env):
 
     # TODO (stao): refactor this into sensor API
     def _setup_sensors(self):
-        """Setup sensors in the scene. Called by `self._reconfigure`"""
+        """Setup sensor configurations and the sensor objects in the scene. Called by `self._reconfigure`"""
+
+        # First create all the configurations
+        self._sensor_cfgs = OrderedDict()
+
+        # Add task/external sensors
+        self._sensor_cfgs.update(parse_camera_cfgs(self._sensor_configs))
+
+        # Add agent sensors
+        self._agent_camera_cfgs = OrderedDict()
+        self._agent_camera_cfgs = parse_camera_cfgs(self.agent._sensor_configs)
+        self._sensor_cfgs.update(self._agent_camera_cfgs)
+
+        # Add human render camera configs
+        self._human_render_camera_cfgs = parse_camera_cfgs(
+            self._human_render_camera_configs
+        )
+
+        # Override camera configurations with user supplied configurations
+        if self._custom_sensor_cfgs is not None:
+            update_camera_cfgs_from_dict(
+                self._sensor_cfgs, self._custom_sensor_cfgs
+            )
+        if self._custom_human_render_camera_cfgs is not None:
+            update_camera_cfgs_from_dict(
+                self._human_render_camera_cfgs,
+                self._custom_human_render_camera_cfgs,
+            )
+
+        # Now we instantiate the actual sensor objects
         self._sensors = OrderedDict()
 
         for uid, sensor_cfg in self._sensor_cfgs.items():
@@ -815,6 +812,7 @@ class BaseEnv(gym.Env):
         self._before_control_step()
         for _ in range(self._sim_steps_per_control):
             self.agent.before_simulation_step()
+            self._before_simulation_step()
             with sapien.profile("step_i"):
                 self._scene.step()
             self._after_simulation_step()
@@ -847,8 +845,10 @@ class BaseEnv(gym.Env):
     def _before_control_step(self):
         pass
 
+    def _before_simulation_step(self):
+        """Code to run right before physx_system.step is called"""
     def _after_simulation_step(self):
-        pass
+        """Code to run right after physx_system.step is called"""
 
     # -------------------------------------------------------------------------- #
     # Simulation and other gym interfaces
@@ -889,7 +889,7 @@ class BaseEnv(gym.Env):
                 sapien.Scene([self.physx_system, sapien.render.RenderSystem()])
             ]
         # create a "global" scene object that users can work with that is linked with all other scenes created
-        self._scene = ManiSkillScene(sub_scenes, device=self.device)
+        self._scene = ManiSkillScene(sub_scenes, sim_cfg=self.sim_cfg, device=self.device)
         self.physx_system.timestep = 1.0 / self._sim_freq
 
     def _clear(self):

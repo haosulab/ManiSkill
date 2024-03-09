@@ -38,6 +38,9 @@ class QuadrupedRunEnv(BaseEnv):
     SUPPORTED_ROBOTS = ["anymal-c"]
     agent: ANYmalC
 
+    def __init__(self, *args, robot_uids="anymal-c", **kwargs):
+        super().__init__(*args, robot_uids=robot_uids, **kwargs)
+
     """
     NOTE that Isaac Anymal has these settings
     why is their patch/contact count so low compared to ours?
@@ -47,28 +50,29 @@ class QuadrupedRunEnv(BaseEnv):
     gpu_found_lost_aggregate_pairs_capacity: 33554432
     gpu_total_aggregate_pairs_capacity: 4194304
     """
-    default_sim_cfg = SimConfig(
-        sim_freq=100,
-        control_freq=50,
-        gpu_memory_cfg=GPUMemoryConfig(
-            heap_capacity=2**27,
-            temp_buffer_capacity=2**25,
-            found_lost_pairs_capacity=2**22,
-            found_lost_aggregate_pairs_capacity=2**25,
-            total_aggregate_pairs_capacity=2**22,
-            max_rigid_patch_count=2**18,
-            max_rigid_contact_count=2**20,
-        ),
-        scene_cfg=SceneConfig(
-            solver_iterations=4,
-            bounce_threshold=0.2,
-        ),
-    )
 
-    def __init__(self, *args, robot_uids="anymal-c", **kwargs):
-        super().__init__(*args, robot_uids=robot_uids, **kwargs)
+    @property
+    def _default_sim_cfg(self):
+        return SimConfig(
+            sim_freq=100,
+            control_freq=50,
+            gpu_memory_cfg=GPUMemoryConfig(
+                heap_capacity=2**27,
+                temp_buffer_capacity=2**25,
+                found_lost_pairs_capacity=2**22,
+                found_lost_aggregate_pairs_capacity=2**25,
+                total_aggregate_pairs_capacity=2**22,
+                max_rigid_patch_count=2**18,
+                max_rigid_contact_count=2**20,
+            ),
+            scene_cfg=SceneConfig(
+                solver_iterations=4,
+                bounce_threshold=0.2,
+            ),
+        )
 
-    def _register_sensors(self):
+    @property
+    def _sensor_configs(self):
         pose = sapien_utils.look_at([1.5, 1.5, 1], [0.0, 0.0, 0])
         return [
             CameraConfig(
@@ -84,7 +88,8 @@ class QuadrupedRunEnv(BaseEnv):
             )
         ]
 
-    def _register_human_render_cameras(self):
+    @property
+    def _human_render_camera_configs(self):
         pose = sapien_utils.look_at([2.5, 2.5, 1], [0.0, 0.0, 0])
         return CameraConfig(
             "render_camera",

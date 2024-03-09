@@ -80,7 +80,7 @@ class Xmate3Robotiq(BaseAgent):
         ] = dict()
 
     @property
-    def controller_configs(self):
+    def _controller_configs(self):
         # -------------------------------------------------------------------------- #
         # Arm
         # -------------------------------------------------------------------------- #
@@ -152,32 +152,34 @@ class Xmate3Robotiq(BaseAgent):
         # Make a deepcopy in case users modify any config
         return deepcopy_dict(controller_configs)
 
-    sensor_configs = [
-        CameraConfig(
-            uid="base_camera",
-            p=[0.0, 0.0, 0.0],
-            q=[1, 0, 0, 0],
-            width=128,
-            height=128,
-            fov=1.5707,
-            near=0.01,
-            far=100,
-            entity_uid="camera_base_link",
-            hide_link=False,
-        ),
-        CameraConfig(
-            uid="hand_camera",
-            p=[0.0, 0.0, 0.0],
-            q=[1, 0, 0, 0],
-            width=128,
-            height=128,
-            fov=1.5707,
-            near=0.01,
-            far=100,
-            entity_uid="camera_hand_link",
-            hide_link=False,
-        ),
-    ]
+    @property
+    def _sensor_configs(self):
+        return [
+            CameraConfig(
+                uid="base_camera",
+                p=[0.0, 0.0, 0.0],
+                q=[1, 0, 0, 0],
+                width=128,
+                height=128,
+                fov=1.5707,
+                near=0.01,
+                far=100,
+                entity_uid="camera_base_link",
+                hide_link=False,
+            ),
+            CameraConfig(
+                uid="hand_camera",
+                p=[0.0, 0.0, 0.0],
+                q=[1, 0, 0, 0],
+                width=128,
+                height=128,
+                fov=1.5707,
+                near=0.01,
+                far=100,
+                entity_uid="camera_hand_link",
+                hide_link=False,
+            ),
+        ]
 
     def is_grasping(self, object: Actor = None, min_impulse=1e-6, max_angle=85):
         if physx.is_gpu_enabled():

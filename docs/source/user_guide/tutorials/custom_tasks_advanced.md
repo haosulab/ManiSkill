@@ -201,14 +201,14 @@ class SimConfig:
 ```
 :::
 
-To define a different set of default sim configurations, you can define a `default_sim_cfg` property in your task class with the SimConfig etc. dataclasses as so
+To define a different set of default sim configurations, you can define a `_default_sim_cfg` property in your task class with the SimConfig etc. dataclasses as so
 
 ```python
 from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 class MyCustomTask(BaseEnv)
     # ...
     @property
-    def default_sim_cfg(self):
+    def _default_sim_cfg(self):
         return SimConfig(
             gpu_memory_cfg=GPUMemoryConfig(
                 max_rigid_contact_count=self.num_envs * max(1024, self.num_envs) * 8,
@@ -218,7 +218,7 @@ class MyCustomTask(BaseEnv)
         )
 ```
 
-ManiSkill will fetch `default_sim_cfg` after `self.num_envs` is set so you can also dynamically change configurations at runtime depending on the number of environments like it was done above. You usually need to change the default configurations when you try to run more parallel environments but SAPIEN will print critical errors about needing to increase one of the GPU memory configuration options.
+ManiSkill will fetch `_default_sim_cfg` after `self.num_envs` is set so you can also dynamically change configurations at runtime depending on the number of environments like it was done above. You usually need to change the default configurations when you try to run more parallel environments but SAPIEN will print critical errors about needing to increase one of the GPU memory configuration options.
 
 Some of the other important configuration options and their defaults that are part of SimConfig are `spacing=5`, `sim_freq=100`, `control_freq=20`, and `'solver_iterations=15`. The physx timestep of the simulation is computed as `1 / sim_freq`, and the `control_freq` says that every `sim_freq/control_freq` physx steps we apply the environment action once and then fetch observation data to return to the user. 
 
@@ -241,11 +241,12 @@ Note the default `sim_freq, control_freq` values are tuned for GPU simulation an
 
 The custom tasks tutorial demonstrated adding fixed cameras to the PushCube task. ManiSkill+SAPIEN also supports mounting cameras to Actors and Links, which can be useful to e.g. have a camera follow a object as it moves around.
 
-For example if you had a task with a baseketball in it and it's actor object is stored at `self.basketball`, in the `_register_sensors` or `_register_human_render_cameras` functions you can do
+For example if you had a task with a baseketball in it and it's actor object is stored at `self.basketball`, in the `_sensor_configs` or `_human_render_camera_configs` properties you can do
 
 ```python
 
-def _register_sensors(self)
+@property
+def _sensor_configs(self)
     # look towards the center of the baskeball from a positon that is offset
     # (0.3, 0.3, 0.5) away from the basketball
     pose = sapien_utils.look_at(eye=[0.3, 0.3, 0.5], target=[0, 0, 0])
