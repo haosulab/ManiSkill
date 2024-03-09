@@ -131,7 +131,12 @@ def _batch(array: Union[Array, Sequence]):
     if isinstance(array, list):
         if len(array) == 1:
             return [array]
-    if isinstance(array, float) or isinstance(array, int) or isinstance(array, bool):
+    if (
+        isinstance(array, float)
+        or isinstance(array, int)
+        or isinstance(array, bool)
+        or isinstance(array, np.bool_)
+    ):
         return np.array([[array]])
     return array
 

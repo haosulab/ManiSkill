@@ -198,6 +198,12 @@ class BaseEnv(gym.Env):
             sapien.render.set_ray_tracing_samples_per_pixel(2)
             sapien.render.set_ray_tracing_path_depth(1)
             sapien.render.set_ray_tracing_denoiser("optix")
+        elif self.shader_dir == "rt-med":
+            sapien.render.set_camera_shader_dir("rt")
+            sapien.render.set_viewer_shader_dir("rt")
+            sapien.render.set_ray_tracing_samples_per_pixel(4)
+            sapien.render.set_ray_tracing_path_depth(3)
+            sapien.render.set_ray_tracing_denoiser("optix")
         sapien.render.set_log_level(os.getenv("MS2_RENDERER_LOG_LEVEL", "warn"))
 
         # Set simulation and control frequency

@@ -5,18 +5,23 @@ ManiSkill features a number of built-in rigid-body tasks, all GPU parallelized a
 Soft-body tasks will be added back in as they are still in development as part of a new soft-body simulator we are working on.
 
 
-For each task documented here we provide a "Task Card" which briefly describes all the important aspects of the task, including task description, supported robots, randomizations, success/fail conditions, and goal specification in observations.
+For each task documented here we provide a "Task Card" which briefly describes all the important aspects of the task, including task description, supported robots, randomizations, success/fail conditions, and goal specification in observations. We further show tags describing whether there are dense rewards provided, and if assets need to be downloaded via `python -m mani_skill.utils.download_asset <env_id>`
 
 Note that some tasks do not have goal specifications. This generally means part of the observation (e.g. cube pose) indicates the goal for you.
 
 This is still a WIP as we add in more tasks and document more things.
 
 [asset-badge]: https://img.shields.io/badge/download%20asset-yes-blue.svg
+[reward-badge]: https://img.shields.io/badge/dense%20reward-yes-green.svg
 
-## Rigid-body
+## Table-Top Rigid-body Tasks
 
-#### PickCube-v1
+### PickCube-v1
+![dense-reward][reward-badge]
 
+:::{dropdown} Task Card
+:icon: note
+:color: primary
 
 **Task Description:**
 A simple task where the objective is to grasp a red cube and move it to a target goal position.
@@ -34,13 +39,17 @@ A simple task where the objective is to grasp a red cube and move it to a target
 
 **Goal Specification:**
 - 3D goal position (also visualized in human renders)
-
+:::
 
 <video preload="auto" controls="True" width="100%">
 <source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/pick_cube_rt.mp4" type="video/mp4">
 </video>
 
-#### StackCube-v1
+### StackCube-v1
+![dense-reward][reward-badge]
+:::{dropdown} Task Card
+:icon: note
+:color: primary
 
 **Task Description:**
 The goal is to pick up a red cube and stack it on top of a green cube and let go of the cube without it falling
@@ -55,13 +64,38 @@ The goal is to pick up a red cube and stack it on top of a green cube and let go
 - the red cube is on top of the green cube (to within half of the cube size)
 - the red cube is static
 - the red cube is not being grasped by the robot (robot must let go of the cube)
+:::
 
 <video preload="auto" controls="True" width="100%">
 <source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/stack_cube_rt.mp4" type="video/mp4">
 </video>
 
+### LiftPegUpright-v1
+:::{dropdown} Task Card
+:icon: note
+:color: primary
 
-#### PushCube-v1
+**Task Description:**
+A simple task where the objective is to move a peg laying on the table to any upright position on the table
+
+**Supported Robots: Panda, Fetch, xArm**
+
+**Randomizations:**
+- the peg's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat along it's length on the table
+
+**Success Conditions:**
+- the absolute value of the peg's z euler angle is within 0.08 of $\pi$/2 and the z position of the peg is within 0.005 of its half-length (0.12).
+:::
+
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/lift_peg_upright_rt.mp4" type="video/mp4">
+</video>
+
+### PushCube-v1
+![dense-reward][reward-badge]
+:::{dropdown} Task Card
+:icon: note
+:color: primary
 
 **Task Description:**
 A simple task where the objective is to push and move a cube to a goal region in front of it
@@ -74,14 +108,40 @@ A simple task where the objective is to push and move a cube to a goal region in
 
 **Success Conditions:**
 - the cube's xy position is within goal_radius (default 0.1) of the target's xy position by euclidean distance.
-
+:::
 
 <video preload="auto" controls="True" width="100%">
 <source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/push_cube_rt.mp4" type="video/mp4">
 </video>
 
-#### PickSingleYCB-v1
-![download-asset][asset-badge]
+### PullCube-v1
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+A simple task where the objective is to pull a cube onto a target.
+
+**Supported Robots: Panda, Fetch, xArm**
+
+**Randomizations:**
+- the cube's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1].
+- the target goal region is marked by a red and white target. The position of the target is fixed to be the cube's xy position - [0.1 + goal_radius, 0]
+
+**Success Conditions:**
+- the cube's xy position is within goal_radius (default 0.1) of the target's xy position by euclidean distance.
+:::
+
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/pull_cube_rt.mp4" type="video/mp4">
+</video>
+
+### PickSingleYCB-v1
+![download-asset][asset-badge] ![dense-reward][reward-badge]
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
 
 **Task Description:**
 Pick up a random object sampled from the [YCB dataset](https://www.ycbbenchmarks.com/) and move it to a random goal position
@@ -102,8 +162,43 @@ Pick up a random object sampled from the [YCB dataset](https://www.ycbbenchmarks
 
 **Additional Notes**
 - On GPU simulation, in order to collect data from every possible object in the YCB database we recommend using at least 128 parallel environments or more, otherwise you will need to reconfigure in order to sample new objects.
+:::
 
 
 <video preload="auto" controls="True" width="100%">
 <source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/pick_single_ycb_rt.mp4" type="video/mp4">
 </video>
+<!-- 
+## Table-top Dexterous Hand Tasks
+
+### RotateValveLevel1-v1
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+Pick up a random object sampled from the [YCB dataset](https://www.ycbbenchmarks.com/) and move it to a random goal position
+
+**Supported Robots: Panda, Fetch, xArm**
+
+**Randomizations:**
+- the object's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat on the table
+- the object's z-axis rotation is randomized
+- the object geometry is randomized by randomly sampling any YCB object
+
+**Success Conditions:**
+- the object position is within goal_thresh (default 0.025) euclidean distance of the goal position
+- the robot is static (q velocity < 0.2)
+
+**Goal Specification:**
+- 3D goal position (also visualized in human renders)
+
+**Additional Notes**
+- On GPU simulation, in order to collect data from every possible object in the YCB database we recommend using at least 128 parallel environments or more, otherwise you will need to reconfigure in order to sample new objects.
+:::
+
+
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/RotateValveLevel1.png" type="video/mp4">
+</video> -->
