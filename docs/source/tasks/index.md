@@ -5,9 +5,11 @@ ManiSkill features a number of built-in rigid-body tasks, all GPU parallelized a
 Soft-body tasks will be added back in as they are still in development as part of a new soft-body simulator we are working on.
 
 
-For each task documented here we provide a "Task Card" which briefly describes all the important aspects of the task, including task description, supported robots, randomizations, success/fail conditions, and goal specification in observations. We further show tags describing whether there are dense rewards provided, and if assets need to be downloaded via `python -m mani_skill.utils.download_asset <env_id>`
+For each task documented here we provide a "Task Card" which briefly describes all the important aspects of the task, including task description, supported robots, randomizations, success/fail conditions, and goal specification in observations. We further show tags describing whether there are dense rewards provided, and if assets need to be downloaded via 
 
-Note that some tasks do not have goal specifications. This generally means part of the observation (e.g. cube pose) indicates the goal for you.
+```python -m mani_skill.utils.download_asset <env_id>```
+
+Note that some tasks do not have goal specifications. This generally means part of the observation (e.g. cube pose or the visual observation) indicates the goal for you.
 
 This is still a WIP as we add in more tasks and document more things.
 
