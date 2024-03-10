@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Dict
 from urllib.error import URLError
 
-from huggingface_hub import login, snapshot_download
+from huggingface_hub import snapshot_download
 from tqdm.auto import tqdm
 
 from mani_skill import ASSET_DIR, PACKAGE_ASSET_DIR
@@ -58,42 +58,42 @@ def initialize_sources():
         target_path="assets/mani_skill2_ycb",
         checksum="174001ba1003cc0c5adda6453f4433f55ec7e804f0f0da22d015d525d02262fb",
     )
-    DATA_GROUPS["PickSingleYCB-v0"] = ["ycb"]
+    DATA_GROUPS["PickSingleYCB-v1"] = ["ycb"]
 
     DATA_SOURCES["pick_clutter_ycb"] = DataSource(
         url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/pick_clutter/ycb_train_5k.json.gz",
         target_path="tasks/pick_clutter",
         checksum="70ec176c7036f326ea7813b77f8c03bea9db5960198498957a49b2895a9ec338",
     )
-    DATA_GROUPS["PickClutterYCB-v0"] = ["ycb", "pick_clutter_ycb"]
+    DATA_GROUPS["PickClutterYCB-v1"] = ["ycb", "pick_clutter_ycb"]
 
     DATA_SOURCES["assembling_kits"] = DataSource(
         url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/assembling_kits_v1.zip",
         target_path="tasks/assembling_kits",
         checksum="e3371f17a07a012edaa3a0b3604fb1577f3fb921876c3d5ed59733dd75a6b4a0",
     )
-    DATA_GROUPS["AssemblingKits-v0"] = ["assembling_kits"]
+    DATA_GROUPS["AssemblingKits-v1"] = ["assembling_kits"]
 
     DATA_SOURCES["panda_avoid_obstacles"] = DataSource(
         url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/avoid_obstacles/panda_train_2k.json.gz",
         target_path="tasks/avoid_obstacles",
         checksum="44dae9a0804172515c290c1f49a1e7e72d76e40201a2c5c7d4a3ccd43b4d5be4",
     )
-    DATA_GROUPS["PandaAvoidObstacles-v0"] = ["panda_avoid_obstacles"]
+    DATA_GROUPS["PandaAvoidObstacles-v1"] = ["panda_avoid_obstacles"]
 
     DATA_SOURCES["pinch"] = DataSource(
         url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/pinch.zip",
         target_path="tasks/pinch",
         checksum="3281d2d777fad42e6d37371b2d3ee16fb1c39984907176718ca2e4f447326fe7",
     )
-    DATA_GROUPS["Pinch-v0"] = ["pinch"]
+    DATA_GROUPS["Pinch-v1"] = ["pinch"]
 
     DATA_SOURCES["write"] = DataSource(
         url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/write.zip",
         target_path="tasks/write",
         checksum="c5b49e581bfed9cfb2107a607faf52795f840e93f5a7ad389290314513b4b634",
     )
-    DATA_GROUPS["Write-v0"] = ["write"]
+    DATA_GROUPS["Write-v1"] = ["write"]
 
     # ---------------------------------------------------------------------------- #
     # PartNet-mobility
@@ -124,7 +124,7 @@ def initialize_sources():
     DATA_GROUPS["OpenCabinetDoor-v1"] = category_uids["cabinet_door"]
     DATA_GROUPS["PushChair-v1"] = category_uids["chair"]
     DATA_GROUPS["MoveBucket-v1"] = category_uids["bucket"]
-    DATA_GROUPS["TurnFaucet-v0"] = category_uids["faucet"]
+    DATA_GROUPS["TurnFaucet-v1"] = category_uids["faucet"]
 
     # ---------------------------------------------------------------------------- #
     # Interactable Scene Datasets
