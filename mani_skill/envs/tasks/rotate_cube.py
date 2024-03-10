@@ -359,8 +359,10 @@ class RotateCubeEnv(BaseEnv):
         goal_pos = self.obj_goal.pose.p
         goal_q = self.obj_goal.pose.q
 
-        finger_move_penalty_weight = -0.1
-        finger_reach_object_weight = -50
+        finger_move_penalty_weight = -0.5
+        finger_reach_object_weight = -250
+        object_dist_weight = 2000
+        object_rot_weight = 2000
         dt = self.physx_system.timestep
 
         # Reward penalising finger movement
@@ -391,20 +393,20 @@ class RotateCubeEnv(BaseEnv):
 
         # Reward for object distance
         object_dist = torch.norm(obj_pos - goal_pos, p=2, dim=-1)
-        # object_dist_reward = object_dist_weight * dt * lgsk_kernel(object_dist, scale=50., eps=2.)
+        object_dist_reward = object_dist_weight * dt * lgsk_kernel(object_dist, scale=50., eps=2.)
 
-        object_dist_reward = (1 - torch.tanh(5 * object_dist))
+        # object_dist_reward = (1 - torch.tanh(5 * object_dist))
 
         # Reward for object rotation
 
         # extract quaternion orientation
         angles = quat_diff_rad(obj_q, goal_q)
-        object_rot_reward = dt / (3. * torch.abs(angles) + 0.01)
+        object_rot_reward = object_rot_weight * dt / (3. * torch.abs(angles) + 0.01)
 
         pose_reward = object_dist_reward + object_rot_reward
 
-        # total_reward = finger_movement_penalty + finger_reach_object_reward + pose_reward
-        total_reward = pose_reward
+        total_reward = finger_movement_penalty + finger_reach_object_reward + pose_reward
+        # total_reward = pose_reward
         # total_reward = torch.clamp(total_reward, min=-50)
         return total_reward
 
