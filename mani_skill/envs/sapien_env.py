@@ -472,7 +472,10 @@ class BaseEnv(gym.Env):
         if self._reward_mode == "sparse":
             if "success" in info:
                 if "fail" in info:
-                    reward = info["success"] - info["fail"]
+                    if isinstance(info["success"], torch.Tensor):
+                        reward = info["success"].to(torch.int8) - info["fail"].to(torch.int8)
+                    else:
+                        reward = info["success"] - info["fail"]
                 else:
                     reward = info["success"]
             else:
