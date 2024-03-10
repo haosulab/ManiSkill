@@ -361,7 +361,7 @@
       <material name="aluminum"/>
     </visual>
     <collision>
-      <origin rpy="0 0 0" xyz="0 -0.02 0"/>
+      <origin rpy="0 0 0" xyz="-0.0125 -0.02 0"/>
       <geometry>
         <box size="0.02005 0.099 0.023"/>
       </geometry>

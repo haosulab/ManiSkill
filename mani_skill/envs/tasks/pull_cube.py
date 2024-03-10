@@ -19,7 +19,7 @@ from mani_skill.utils.structs.types import Array
 
 @register_env("PullCube-v1", max_episode_steps=50)
 class PullCubeEnv(BaseEnv):
-    SUPPORTED_REWARD_MODES = ["sparse"]
+    SUPPORTED_REWARD_MODES = ["sparse", "none"]
 
     SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
     agent: Union[Panda, Xmate3Robotiq, Fetch]

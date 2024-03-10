@@ -50,6 +50,7 @@ def _build_box_with_hole(
 
 @register_env("PegInsertionSide-v1", max_episode_steps=200)
 class PegInsertionSideEnv(BaseEnv):
+    SUPPORTED_REWARD_MODES = ["sparse", "none"]
     SUPPORTED_ROBOTS = ["panda_realsensed435"]
     agent: Union[PandaRealSensed435]
     _clearance = 0.003
@@ -87,7 +88,7 @@ class PegInsertionSideEnv(BaseEnv):
             self.table_scene = TableSceneBuilder(self)
             self.table_scene.build()
 
-            lengths = self._episode_rng.uniform(0.075, 0.125, size=(self.num_envs,))
+            lengths = self._episode_rng.uniform(0.085, 0.125, size=(self.num_envs,))
             radii = self._episode_rng.uniform(0.015, 0.025, size=(self.num_envs,))
             centers = (
                 0.5
@@ -168,7 +169,7 @@ class PegInsertionSideEnv(BaseEnv):
             self.table_scene.initialize(env_idx)
 
             # initialize the box and peg
-            xy = torch.rand((b, 2)) * torch.tensor([0.2, 0.3]) + torch.tensor(
+            xy = torch.rand((b, 2)) * torch.tensor([0.175, 0.3]) + torch.tensor(
                 [0, -0.15]
             )
             pos = torch.zeros((b, 3))
@@ -179,7 +180,7 @@ class PegInsertionSideEnv(BaseEnv):
                 self.device,
                 lock_x=True,
                 lock_y=True,
-                bounds=(-np.pi / 3, np.pi / 3),
+                bounds=(np.pi / 2 - np.pi / 3, np.pi / 2 - np.pi / 3),
             )
             self.peg.set_pose(Pose.create_from_pq(pos, quat))
 

@@ -70,6 +70,67 @@ The goal is to pick up a red cube and stack it on top of a green cube and let go
 <source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/stack_cube_rt.mp4" type="video/mp4">
 </video>
 
+### PickSingleYCB-v1
+![download-asset][asset-badge] ![dense-reward][reward-badge]
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+Pick up a random object sampled from the [YCB dataset](https://www.ycbbenchmarks.com/) and move it to a random goal position
+
+**Supported Robots: Panda, Fetch, xArm**
+
+**Randomizations:**
+- the object's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat on the table
+- the object's z-axis rotation is randomized
+- the object geometry is randomized by randomly sampling any YCB object
+
+**Success Conditions:**
+- the object position is within goal_thresh (default 0.025) euclidean distance of the goal position
+- the robot is static (q velocity < 0.2)
+
+**Goal Specification:**
+- 3D goal position (also visualized in human renders)
+
+**Additional Notes**
+- On GPU simulation, in order to collect data from every possible object in the YCB database we recommend using at least 128 parallel environments or more, otherwise you will need to reconfigure in order to sample new objects.
+:::
+
+
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/pick_single_ycb_rt.mp4" type="video/mp4">
+</video>
+
+### PegInsertionSide-v1
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+Pick up a orange-white peg and insert the orange end into the box with a hole in it.
+
+**Supported Robots: Panda, Fetch, xArm**
+
+**Randomizations:**
+- Peg half length is randomized between 0.085 and 0.125 meters. Box half length is the same value. (during reconfiguration)
+- Peg radius/half-width is randomized between 0.015 and 0.025 meters. Box hole's radius is same value + 0.003m of clearance. (during reconfiguration)
+- Peg is laid flat on table and has it's xy position and z-axis rotation randomized
+- Box is laid flat on table and has it's xy position and z-axis rotation randomized
+
+**Success Conditions:**
+- The white end of the peg is within 0.015m of the center of the box (inserted mid way).
+
+
+:::
+
+
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/peg_insertion_side_rt.mp4" type="video/mp4">
+</video>
+
 ### LiftPegUpright-v1
 :::{dropdown} Task Card
 :icon: note
@@ -134,39 +195,6 @@ A simple task where the objective is to pull a cube onto a target.
 
 <video preload="auto" controls="True" width="100%">
 <source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/pull_cube_rt.mp4" type="video/mp4">
-</video>
-
-### PickSingleYCB-v1
-![download-asset][asset-badge] ![dense-reward][reward-badge]
-
-:::{dropdown} Task Card
-:icon: note
-:color: primary
-
-**Task Description:**
-Pick up a random object sampled from the [YCB dataset](https://www.ycbbenchmarks.com/) and move it to a random goal position
-
-**Supported Robots: Panda, Fetch, xArm**
-
-**Randomizations:**
-- the object's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat on the table
-- the object's z-axis rotation is randomized
-- the object geometry is randomized by randomly sampling any YCB object
-
-**Success Conditions:**
-- the object position is within goal_thresh (default 0.025) euclidean distance of the goal position
-- the robot is static (q velocity < 0.2)
-
-**Goal Specification:**
-- 3D goal position (also visualized in human renders)
-
-**Additional Notes**
-- On GPU simulation, in order to collect data from every possible object in the YCB database we recommend using at least 128 parallel environments or more, otherwise you will need to reconfigure in order to sample new objects.
-:::
-
-
-<video preload="auto" controls="True" width="100%">
-<source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/pick_single_ycb_rt.mp4" type="video/mp4">
 </video>
 
 ## Table-Top Dexterous Hand Tasks

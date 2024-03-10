@@ -20,7 +20,10 @@ from mani_skill.utils.structs.types import Array
 
 @register_env("LiftPegUpright-v1", max_episode_steps=50)
 class LiftPegUprightEnv(BaseEnv):
-    SUPPORTED_REWARD_MODES = ["sparse"]  # TODO add a denser reward for this later
+    SUPPORTED_REWARD_MODES = [
+        "sparse",
+        "none",
+    ]  # TODO add a denser reward for this later
     SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
     agent: Union[Panda, Xmate3Robotiq, Fetch]
 
