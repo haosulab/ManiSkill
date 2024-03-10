@@ -330,8 +330,7 @@ def parse_args(args=None):
     parser.add_argument(
         "--reward-mode",
         type=str,
-        help="specifies the reward type that the env should use",
-        default="normalized_dense",
+        help="specifies the reward type that the env should use. By default it will pick the first supported reward mode",
     )
 
     parser.add_argument(

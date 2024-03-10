@@ -59,7 +59,7 @@ class BaseEnv(gym.Env):
 
         obs_mode: observation mode to be used. Must be one of ("state", "state_dict", "none", "sensor_data", "rgb", "rgbd", "pointcloud")
 
-        reward_mode: reward mode to use. Must be one of ("normalized_dense", "dense", "sparse").
+        reward_mode: reward mode to use. Must be one of ("normalized_dense", "dense", "sparse", "none"). With "none" the reward returned is always 0
 
         control_mode: control mode of the agent.
             "*" represents all registered controllers, and the action space will be a dict.
@@ -472,20 +472,27 @@ class BaseEnv(gym.Env):
         if self._reward_mode == "sparse":
             if "success" in info:
                 if "fail" in info:
-                    reward = info["success"] - info["fail"]
+                    if isinstance(info["success"], torch.Tensor):
+                        reward = info["success"].to(torch.float) - info["fail"].to(torch.float)
+                    else:
+                        reward = info["success"] - info["fail"]
                 else:
                     reward = info["success"]
             else:
                 if "fail" in info:
                     reward = -info["fail"]
                 else:
-                    reward = torch.zeros(self.num_envs, dtype=float, device=self.device)
+                    reward = torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
         elif self._reward_mode == "dense":
             reward = self.compute_dense_reward(obs=obs, action=action, info=info)
         elif self._reward_mode == "normalized_dense":
             reward = self.compute_normalized_dense_reward(
                 obs=obs, action=action, info=info
             )
+        elif self._reward_mode == "none":
+            reward = 0
+            if self.num_envs > 1:
+                reward = torch.zeros((self.num_envs, ), dtype=torch.float, device=self.device)
         else:
             raise NotImplementedError(self._reward_mode)
         return reward
