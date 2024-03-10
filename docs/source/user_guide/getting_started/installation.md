@@ -181,6 +181,15 @@ PYTHONPATH="$PWD"/warp_maniskill:$PYTHONPATH python -m warp_maniskill.build_lib 
 
 Remember to compile again in the release mode after you finish debugging. In the debug mode, if the error becomes `unsupported toolchain`, it means you have a conflicting CUDA version. -->
 
+
+If you still have some issues, you can check the NVIDIA drivers. First run
+
+```bash
+ldconfig -p | grep libGLX_nvidia
+```
+
+If `libGLX_nvidia.so` is not found, they it is likely that you have installed an incorrect driver. To get the right driver on linux, it is recommended to install `nvidia-driver-xxx` (do not use the ones with server in the package name) and to avoid using any other method of installation like a runfile
+
 ### Uninstallation
 
 If `mani_skill` is installed through pip, run `pip uninstall mani-skill`.
