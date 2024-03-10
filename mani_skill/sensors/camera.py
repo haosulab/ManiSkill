@@ -4,15 +4,10 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Sequence, Union
 
-import numpy as np
 import sapien
-import sapien.physx as physx
 import sapien.render
-from gymnasium import spaces
 
-from mani_skill.utils.geometry.geometry import Actor
-from mani_skill.utils.structs.articulation import Articulation
-from mani_skill.utils.structs.link import Link
+from mani_skill.utils.structs import Actor, Articulation, Link
 
 if TYPE_CHECKING:
     from mani_skill.envs.scene import ManiSkillScene

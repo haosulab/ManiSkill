@@ -41,4 +41,4 @@ SHELL ["/bin/bash", "-c"]
 COPY nvidia_icd.json /usr/share/vulkan/icd.d/nvidia_icd.json
 COPY nvidia_layers.json /etc/vulkan/implicit_layer.d/nvidia_layers.json
 
-RUN pip install mani-skill==3.0.0.dev2 && pip cache purge
+RUN pip install mani-skill==3.0.0.dev3 && pip cache purge

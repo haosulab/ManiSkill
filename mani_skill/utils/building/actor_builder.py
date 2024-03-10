@@ -42,11 +42,13 @@ class ActorBuilder(SAPIENActorBuilder):
         Set a scene mask so that the actor builder builds the actor only in a subset of the environments
         """
         self.scene_mask = scene_mask
+        return self
 
     def set_allow_overlapping_plane_collisions(self, v: bool):
         """Set whether or not to permit allowing overlapping plane collisions. In general if you are creating an Actor with a plane collision that is parallelized across multiple
         sub-scenes, you only need one of those collision shapes. If you add multiple, it will cause the simulation to slow down significantly. By default this is set to False"""
         self._allow_overlapping_plane_collisions = v
+        return self
 
     def build_physx_component(self, link_parent=None):
         for r in self.collision_records:
