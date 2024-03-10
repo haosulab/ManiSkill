@@ -394,7 +394,8 @@ class RotateCubeEnv(BaseEnv):
 
         pose_reward = object_dist_reward + object_rot_reward
 
-        total_reward = finger_movement_penalty + finger_reach_object_reward + pose_reward
+        # total_reward = finger_movement_penalty + finger_reach_object_reward + pose_reward
+        total_reward = pose_reward
         # total_reward = torch.clamp(total_reward, min=-50)
         return total_reward
 
