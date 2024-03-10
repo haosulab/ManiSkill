@@ -14,19 +14,6 @@ from mani_skill.utils.structs.types import SimConfig
 
 @register_env("CustomEnv-v1", max_episode_steps=200)
 class CustomEnv(BaseEnv):
-    """
-    Task Description
-    ----------------
-    Add a task description here
-
-    Randomizations
-    --------------
-
-    Success Conditions
-    ------------------
-
-    Visualization: link to a video/gif of the task being solved
-    """
 
     SUPPORTED_ROBOTS = ["panda", "fetch"]
     agent: Union[Panda, Fetch]
