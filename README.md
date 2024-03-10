@@ -31,7 +31,7 @@ Please refer to our [documentation](https://maniskill.readthedocs.io/en/dev/) to
 From pip:
 
 ```bash
-pip install mani_skill==3.0.0.dev1
+pip install mani_skill==3.0.0.dev2
 ```
 
 From github:
