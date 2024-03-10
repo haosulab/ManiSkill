@@ -1,3 +1,4 @@
+from .assembling_kits import AssemblingKitsEnv
 from .dexterity import RotateSingleObjectInHand, RotateValveEnv
 from .empty_env import EmptyEnv
 from .fmb import FMBAssembly1Env

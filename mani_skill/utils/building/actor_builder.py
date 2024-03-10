@@ -29,6 +29,7 @@ class ActorBuilder(SAPIENActorBuilder):
         super().__init__()
         self.initial_pose = Pose.create(self.initial_pose)
         self.scene_mask = None
+        self.scene_idxs = None
         self._allow_overlapping_plane_collisions = False
         self._plane_collision_poses = set()
 
@@ -42,11 +43,25 @@ class ActorBuilder(SAPIENActorBuilder):
         Set a scene mask so that the actor builder builds the actor only in a subset of the environments
         """
         self.scene_mask = scene_mask
+        return self
+
+    def set_scene_idxs(
+        self,
+        scene_idxs: Optional[
+            Union[List[int], Sequence[int], torch.Tensor, np.ndarray]
+        ] = None,
+    ):
+        """
+        Set a list of scene indices to build this object in. Cannot be used in conjunction with scene mask
+        """
+        self.scene_idxs = scene_idxs
+        return self
 
     def set_allow_overlapping_plane_collisions(self, v: bool):
         """Set whether or not to permit allowing overlapping plane collisions. In general if you are creating an Actor with a plane collision that is parallelized across multiple
         sub-scenes, you only need one of those collision shapes. If you add multiple, it will cause the simulation to slow down significantly. By default this is set to False"""
         self._allow_overlapping_plane_collisions = v
+        return self
 
     def build_physx_component(self, link_parent=None):
         for r in self.collision_records:
@@ -173,17 +188,15 @@ class ActorBuilder(SAPIENActorBuilder):
 
         num_actors = self.scene.num_envs
         if self.scene_mask is not None:
-            assert (
-                len(self.scene_mask) == self.scene.num_envs
-            ), "Scene mask size is not correct. Must be the same as the number of sub scenes"
             num_actors = np.sum(num_actors)
-            self.scene_mask = sapien_utils.to_tensor(self.scene_mask)
+            self.scene_mask = sapien_utils.to_tensor(self.scene_mask).to(int)
+            self.scene_idxs = self.scene_mask.argwhere()
+        elif self.scene_idxs is not None:
+            self.scene_mask = torch.zeros((self.scene.num_envs), dtype=bool)
+            self.scene_mask[self.scene_idxs] = True
         else:
-            # if scene mask is none, set it here
-            self.scene_mask = sapien_utils.to_tensor(
-                torch.ones((self.scene.num_envs), dtype=bool)
-            )
-
+            self.scene_mask = torch.ones((self.scene.num_envs), dtype=bool)
+            self.scene_idxs = torch.arange((self.scene.num_envs), dtype=int)
         initial_pose = Pose.create(self.initial_pose)
         initial_pose_b = initial_pose.raw_pose.shape[0]
         assert initial_pose_b == 1 or initial_pose_b == num_actors
@@ -191,11 +204,10 @@ class ActorBuilder(SAPIENActorBuilder):
 
         entities = []
         i = 0
-        for scene_idx, sub_scene in enumerate(self.scene.sub_scenes):
-            if self.scene_mask is not None and self.scene_mask[scene_idx] == False:
-                continue
+        for scene_idx in self.scene_idxs:
+            sub_scene = self.scene.sub_scenes[scene_idx]
             entity = self.build_entity()
-            # prepend scene idx to entity name if there is more than one scene
+            # prepend scene idx to entity name to indicate which sub-scene it is in
             entity.name = f"scene-{scene_idx}_{self.name}"
             # set pose before adding to scene
             if initial_pose_b == 1:

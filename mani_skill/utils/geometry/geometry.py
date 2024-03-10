@@ -1,20 +1,10 @@
-from typing import Any, Dict
+from typing import Dict
 
 import numpy as np
 import sapien
 import sapien.physx as physx
-
-from mani_skill.utils.structs.types import Array
-
-# from sapien import Actor, Articulation, Link, Pose
-# TODO: Temporary. We may not need these bbox functions anyway once added to sapien.
-Actor = Any
-Articulation = Any
-Link = Any
-Pose = Any
 import torch
 from scipy.spatial.transform import Rotation
-from transforms3d.quaternions import qmult
 
 from mani_skill.utils.geometry.bounding_cylinder import aabc
 

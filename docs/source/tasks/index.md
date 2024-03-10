@@ -44,7 +44,7 @@ A simple task where the objective is to grasp a red cube and move it to a target
 :::
 
 <video preload="auto" controls="True" width="100%">
-<source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/pick_cube_rt.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/PickCube-v1_rt.mp4" type="video/mp4">
 </video>
 
 ### StackCube-v1
@@ -69,7 +69,7 @@ The goal is to pick up a red cube and stack it on top of a green cube and let go
 :::
 
 <video preload="auto" controls="True" width="100%">
-<source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/stack_cube_rt.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/StackCube-v1_rt.mp4" type="video/mp4">
 </video>
 
 ### PickSingleYCB-v1
@@ -87,7 +87,7 @@ Pick up a random object sampled from the [YCB dataset](https://www.ycbbenchmarks
 **Randomizations:**
 - the object's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat on the table
 - the object's z-axis rotation is randomized
-- the object geometry is randomized by randomly sampling any YCB object
+- the object geometry is randomized by randomly sampling any YCB object. (during reconfiguration)
 
 **Success Conditions:**
 - the object position is within goal_thresh (default 0.025) euclidean distance of the goal position
@@ -102,7 +102,7 @@ Pick up a random object sampled from the [YCB dataset](https://www.ycbbenchmarks
 
 
 <video preload="auto" controls="True" width="100%">
-<source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/pick_single_ycb_rt.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/PickSingleYCB-v1_rt.mp4" type="video/mp4">
 </video>
 
 ### PegInsertionSide-v1
@@ -125,12 +125,10 @@ Pick up a orange-white peg and insert the orange end into the box with a hole in
 **Success Conditions:**
 - The white end of the peg is within 0.015m of the center of the box (inserted mid way).
 
-
 :::
 
-
 <video preload="auto" controls="True" width="100%">
-<source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/peg_insertion_side_rt.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/PegInsertionSide-v1_rt.mp4" type="video/mp4">
 </video>
 
 ### LiftPegUpright-v1
@@ -151,7 +149,7 @@ A simple task where the objective is to move a peg laying on the table to any up
 :::
 
 <video preload="auto" controls="True" width="100%">
-<source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/lift_peg_upright_rt.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/LiftPegUpright-v1_rt.mp4" type="video/mp4">
 </video>
 
 ### PushCube-v1
@@ -174,7 +172,7 @@ A simple task where the objective is to push and move a cube to a goal region in
 :::
 
 <video preload="auto" controls="True" width="100%">
-<source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/push_cube_rt.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/PushCube-v1_rt.mp4" type="video/mp4">
 </video>
 
 ### PullCube-v1
@@ -196,7 +194,32 @@ A simple task where the objective is to pull a cube onto a target.
 :::
 
 <video preload="auto" controls="True" width="100%">
-<source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/pull_cube_rt.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/PullCube-v1_rt.mp4" type="video/mp4">
+</video>
+
+### AssemblingKits-v1
+![download-asset][asset-badge]
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+The robot must pick up one of the misplaced shapes on the board/kit and insert it into the correct empty slot.
+
+**Supported Robots: Panda with RealSense wrist camera**
+
+**Randomizations:**
+- the kit geometry is randomized, with different already inserted shapes and different holes affording insertion of specific shapes. (during reconfiguration)
+- the misplaced shape's geometry is sampled from one of 20 different shapes. (during reconfiguration)
+- the misplaced shape is randomly spawned anywhere on top of the board with a random z-axis rotation
+
+**Success Conditions:**
+- the cube's xy position is within goal_radius (default 0.1) of the target's xy position by euclidean distance.
+:::
+
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/AssemblingKits-v1_rt.mp4" type="video/mp4">
 </video>
 
 ## Table-Top Dexterous Hand Tasks
@@ -215,10 +238,11 @@ Using the D'Claw robot, rotate a [ROBEL valve](https://sites.google.com/view/rob
 **Supported Robots: DClaw**
 
 **Randomizations:**
-- Rotation direction $r$. Level 0: $r=1$, Level 4: $r \in \{1, -1\}$
-- Number of valves on the ROBEL valve $v$. Level 0-1: $v=3$, Level 2-4: $v \in [3, 6]$
-- Valve angles $\phi$. Level 0: Equally spaced $\phi = (0, 2\pi/3, 4\pi/3)$, Level 1-4: Each angle is randomized
-- Level 4 only: valve radii are randomized a little
+- Rotation direction $r$. Level 0: $r=1$, Level 4: $r \in \{1, -1\}$. (during reconfiguration)
+- Number of valves on the ROBEL valve $v$. Level 0-1: $v=3$, Level 2-4: $v \in [3, 6]$. (during reconfiguration)
+- Valve angles $\phi$. Level 0: Equally spaced $\phi = (0, 2\pi/3, 4\pi/3)$, Level 1-4: Each angle is randomized. (during reconfiguration)
+- Level 4 only: valve radii are randomized a little. (during reconfiguration)
+- Initial valve rotation is randomized
 
 **Success Conditions:**
 - The valve rotated more than $\theta$ radians from its initial position. Level 0: $\theta = \pi/2$, Level 1-3: $\theta = \pi$, Level 4: $\theta=2\pi$
@@ -230,6 +254,6 @@ Using the D'Claw robot, rotate a [ROBEL valve](https://sites.google.com/view/rob
 - On GPU simulation, in order to collect data from every possible object in the YCB database we recommend using at least 128 parallel environments or more, otherwise you will need to reconfigure in order to sample new objects.
 :::
 
-:::{figure} https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/rotat_valve_rt.png
+:::{figure} https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/RotateValve-v1_rt.png
 :alt: rotate valve task
 :::
