@@ -1,20 +1,20 @@
 from pathlib import Path
-from typing import Union
+from typing import Dict, Union
 
 import numpy as np
 import sapien.core as sapien
 import torch
-from transforms3d.euler import euler2quat, quat2euler
+from transforms3d.euler import euler2quat
 
-from mani_skill import ASSET_DIR, format_path
+from mani_skill import ASSET_DIR
 from mani_skill.agents.robots import PandaRealSensed435
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.utils import randomization
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
+from mani_skill.utils.geometry import rotation_conversions
 from mani_skill.utils.io_utils import load_json
 from mani_skill.utils.registration import register_env
-from mani_skill.utils.sapien_utils import look_at
 from mani_skill.utils.scene_builder.table.table_scene_builder import TableSceneBuilder
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.pose import Pose
@@ -60,45 +60,41 @@ class AssemblingKitsEnv(BaseEnv):
             **kwargs,
         )
 
-    # def reset(self, seed=None, options=None):
-    #     if options is None:
-    #         options = dict()
-    #     self.set_episode_rng(seed)
-    #     episode_idx = options.pop("episode_idx", None)
-    #     reconfigure = options.pop("reconfigure", False)
-    #     if episode_idx is None:
-    #         episode_idx = self._episode_rng.randint(len(self._episodes))
-    #     if self.episode_idx != episode_idx:
-    #         reconfigure = True
-    #     self.episode_idx = episode_idx
-    #     options["reconfigure"] = reconfigure
+    @property
+    def _sensor_configs(self):
+        pose = sapien_utils.look_at([0.2, 0, 0.4], [0, 0, 0])
+        return [
+            CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 100)
+        ]
 
-    #     episode = self._episodes[episode_idx]
-    #     self.kit_id: int = episode["kit"]
-    #     self.spawn_pos = np.float32(episode["spawn_pos"])
-    #     self.object_id: int = episode["obj_to_place"]
-    #     self._other_objects_id: List[int] = episode["obj_in_place"]
-
-    #     return super().reset(seed=self._episode_seed, options=options)
+    @property
+    def _human_render_camera_configs(self):
+        pose = sapien_utils.look_at([0.3, 0.3, 0.8], [0.0, 0.0, 0.1])
+        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)
 
     def _load_scene(self):
         with torch.device(self.device):
             self.table_scene = TableSceneBuilder(self)
             self.table_scene.build()
 
+            self.symmetry = sapien_utils.to_tensor(self.symmetry)
+
             # sample some kits
             eps_idxs = np.arange(0, len(self._episodes))
             self._episode_rng.shuffle(eps_idxs)
             eps_idxs = eps_idxs[: self.num_envs]
-            print(eps_idxs)
             kits = []
             objs_to_place = []
             all_other_objs = []
-            self.goal_pos = torch.zeros((self.num_envs, 3))
-            self.goal_rot = torch.zeros((self.num_envs,))
+            self.object_ids = []
+            self.goal_pos = np.zeros((self.num_envs, 3))
+            self.goal_rot = np.zeros((self.num_envs,))
+            import tqdm
+
+            pbar = tqdm.tqdm(total=self.num_envs)
             for i, eps_idx in enumerate(eps_idxs):
-                scene_mask = np.zeros((self.num_envs,), dtype=bool)
-                scene_mask[i] = True
+                pbar.update(n=1)
+                scene_mask = [i]
                 episode = self._episodes[eps_idx]
 
                 # get the kit builder and the goal positions/rotations of all other objects
@@ -108,7 +104,7 @@ class AssemblingKitsEnv(BaseEnv):
                     object_goal_rot,
                 ) = self._get_kit_builder_and_goals(episode["kit"])
                 kit = (
-                    kit_builder.set_scene_mask(scene_mask)
+                    kit_builder.set_scene_idxs(scene_mask)
                     .set_initial_pose(sapien.Pose([0, 0, 0.01]))
                     .build_static(f"kit_{i}")
                 )
@@ -117,15 +113,16 @@ class AssemblingKitsEnv(BaseEnv):
                 # create the object to place and make it dynamic
                 obj_to_place = (
                     self._get_object_builder(episode["obj_to_place"])
-                    .set_scene_mask(scene_mask)
+                    .set_scene_idxs(scene_mask)
                     .build(f"obj_{i}")
                 )
+                self.object_ids.append(episode["obj_to_place"])
                 objs_to_place.append(obj_to_place)
 
-                # create all othre objects and leave them as static as they do not need to be manipulated
+                # create all other objects and leave them as static as they do not need to be manipulated
                 other_objs = [
                     self._get_object_builder(obj_id, static=True)
-                    .set_scene_mask(scene_mask)
+                    .set_scene_idxs(scene_mask)
                     .set_initial_pose(
                         sapien.Pose(
                             object_goal_pos[obj_id],
@@ -138,19 +135,19 @@ class AssemblingKitsEnv(BaseEnv):
                 all_other_objs.append(other_objs)
 
                 # save the goal position and z-axis rotation of the object to place
-                self.goal_pos[i] = object_goal_pos[i]
-                self.goal_rot[i] = object_goal_rot[i]
+                self.goal_pos[i] = object_goal_pos[episode["obj_to_place"]]
+                self.goal_rot[i] = object_goal_rot[episode["obj_to_place"]]
             self.obj = Actor.merge(objs_to_place)
+            self.object_ids = torch.tensor(self.object_ids, dtype=int)
+            self.goal_pos = sapien_utils.to_tensor(self.goal_pos)
+            self.goal_rot = sapien_utils.to_tensor(self.goal_rot)
 
     def _parse_json(self, path):
         """Parse kit JSON information and return the goal positions and rotations"""
         kit_json = load_json(path)
         # the final 3D goal position of the objects
         object_goal_pos = {
-            o["object_id"]: torch.tensor(
-                o["pos"], dtype=torch.float, device=self.device
-            )
-            for o in kit_json["objects"]
+            o["object_id"]: sapien_utils.to_numpy(o["pos"]) for o in kit_json["objects"]
         }
         # the final goal z-axis rotation of the objects
         objects_goal_rot = {o["object_id"]: o["rot"] for o in kit_json["objects"]}
@@ -160,7 +157,6 @@ class AssemblingKitsEnv(BaseEnv):
         object_goal_pos, objects_goal_rot = self._parse_json(
             self._kit_dir / f"{kit_id}.json"
         )
-
         builder = self._scene.create_actor_builder()
         kit_path = str(self._kit_dir / f"{kit_id}.obj")
         builder.add_nonconvex_collision_from_file(kit_path)
@@ -215,42 +211,32 @@ class AssemblingKitsEnv(BaseEnv):
         self._obj_init_pos = np.float32(self.spawn_pos)
         self._obj_goal_pos = np.float32(self.objects_pos[self.object_id])
 
-    def _get_obs_extra(self):
-        obs = dict(
-            tcp_pose=vectorize_pose(self.tcp.pose),
-            obj_init_pos=self._obj_init_pos,
-            obj_goal_pos=self._obj_goal_pos,
-        )
-        if self._obs_mode in ["state", "state_dict"]:
-            obs.update(
-                obj_pose=vectorize_pose(self.obj.pose),
-                tcp_to_obj_pos=self.obj.pose.p - self.tcp.pose.p,
-                obj_to_goal_pos=self.objects_pos[self.object_id] - self.obj.pose.p,
-            )
-        return obs
-
     def _check_pos_diff(self, pos_eps=2e-2):
-        pos_diff = self.objects_pos[self.object_id][:2] - self.obj.get_pose().p[:2]
-        pos_diff_norm = np.linalg.norm(pos_diff)
+        pos_diff = self.goal_pos[:, :2] - self.obj.pose.p[:, :2]
+        pos_diff_norm = torch.linalg.norm(pos_diff, axis=1)
         return pos_diff, pos_diff_norm, pos_diff_norm < pos_eps
 
     def _check_rot_diff(self, rot_eps=np.deg2rad(4)):
-        rot = quat2euler(self.obj.get_pose().q)[-1]  # Check z-axis rotation
-        rot_diff = 0
-        if self.symmetry[self.object_id] > 0:
-            rot_diff = (
-                np.abs(rot - self.objects_rot[self.object_id])
-                % self.symmetry[self.object_id]
-            )
-            if rot_diff > (self.symmetry[self.object_id] / 2):
-                rot_diff = self.symmetry[self.object_id] - rot_diff
+        rot = rotation_conversions.matrix_to_euler_angles(
+            rotation_conversions.quaternion_to_matrix(self.obj.pose.q), "XYZ"
+        )[:, -1]
+        rot_diff = torch.zeros((self.num_envs), dtype=torch.float, device=self.device)
+
+        has_symmetries = self.symmetry[self.object_ids] > 0
+        rot_diff_sym = torch.abs(rot - self.goal_rot) % self.symmetry[self.object_ids]
+        has_half_symmetries = rot_diff_sym > self.symmetry[self.object_ids] / 2
+
+        rot_diff[has_symmetries] = rot_diff_sym[has_symmetries]
+        rot_diff[has_half_symmetries] = (
+            self.symmetry[self.object_ids][has_half_symmetries]
+            - rot_diff_sym[has_half_symmetries]
+        )
         return rot_diff, rot_diff < rot_eps
 
-    # def _check_in_slot(self, obj: sapien.Actor, height_eps=3e-3):
-    #     return obj.pose.p[2] < height_eps
+    def _check_in_slot(self, obj: Actor, height_eps=3e-3):
+        return obj.pose.p[:, 2] < height_eps
 
-    def evaluate(self, **kwargs) -> dict:
-        return {}
+    def evaluate(self) -> dict:
         pos_diff, pos_diff_norm, pos_correct = self._check_pos_diff()
         rot_diff, rot_correct = self._check_rot_diff()
         in_slot = self._check_in_slot(self.obj)
@@ -261,17 +247,19 @@ class AssemblingKitsEnv(BaseEnv):
             "rot_diff": rot_diff,
             "rot_correct": rot_correct,
             "in_slot": in_slot,
-            "success": pos_correct and rot_correct and in_slot,
+            "success": pos_correct & rot_correct & in_slot,
         }
 
-    @property
-    def _sensor_configs(self):
-        pose = sapien_utils.look_at([0.2, 0, 0.4], [0, 0, 0])
-        return [
-            CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 100)
-        ]
-
-    @property
-    def _human_render_camera_configs(self):
-        pose = sapien_utils.look_at([0.3, 0.3, 0.8], [0.0, 0.0, 0.1])
-        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)
+    def _get_obs_extra(self, info: Dict):
+        obs = dict(
+            tcp_pose=self.agent.tcp.pose.raw_pose,
+        )
+        if self._obs_mode in ["state", "state_dict"]:
+            obs.update(
+                obj_pose=self.obj.pose.raw_pose,
+                tcp_to_obj_pos=self.obj.pose.p - self.agent.tcp.pose.p,
+                goal_pos=self.goal_pos,
+                goal_rot=self.goal_rot,
+                obj_to_goal_pos=self.goal_pos - self.obj.pose.p,
+            )
+        return obs
