@@ -280,26 +280,35 @@ class RotateCubeEnv(BaseEnv):
     def evaluate(self):
         # success is achieved when the cube's xy position on the table is within the
         # goal region's area (a circle centered at the goal region's xy position)
+        is_obj_placed = (
+            torch.linalg.norm(
+                self.obj.pose.p[..., :2] - self.obj_goal.pose.p[..., :2], axis=1
+            )
+            < self.goal_radius / 10
+        )
 
+        return {
+            "success": is_obj_placed,
+        }
         obj_p = self.obj.pose.p
         goal_p = self.obj_goal.pose.p
         obj_q = self.obj.pose.q
         goal_q = self.obj_goal.pose.q
+        obj_lin_vel = self.obj.linear_velocity
+        obj_ang_vel = self.obj.angular_velocity
 
         is_obj_pos_close_to_goal = (
-                torch.linalg.norm(obj_p - goal_p, axis=1) < -0.1  # self.goal_radius
+                torch.linalg.norm(obj_p - goal_p, axis=1) < 0.0005
         )
+
+        is_obj_state_stable = torch.linalg.norm(obj_lin_vel, axis=1) < 0.01
+        is_obj_state_stable &= torch.linalg.norm(obj_ang_vel, axis=1) < 0.01
         # print("is_obj_pos_close_to_goal", is_obj_pos_close_to_goal)
         is_obj_q_close_to_goal = (
                 quat_diff_rad(obj_q, goal_q) < 0.1
         )
 
-        is_success = is_obj_pos_close_to_goal & is_obj_q_close_to_goal
-
-        if is_success.all():
-            print("Success!")
-            print("obj_p", obj_p)
-            print("goal_p", goal_p)
+        is_success = is_obj_pos_close_to_goal & is_obj_state_stable & is_obj_q_close_to_goal
 
         return {
             "success": is_success,
