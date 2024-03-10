@@ -89,11 +89,8 @@ class AssemblingKitsEnv(BaseEnv):
             self.object_ids = []
             self.goal_pos = np.zeros((self.num_envs, 3))
             self.goal_rot = np.zeros((self.num_envs,))
-            import tqdm
 
-            pbar = tqdm.tqdm(total=self.num_envs)
             for i, eps_idx in enumerate(eps_idxs):
-                pbar.update(n=1)
                 scene_mask = [i]
                 episode = self._episodes[eps_idx]
 
