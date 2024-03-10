@@ -44,7 +44,7 @@ def sensor_data_to_rgbd(
                         depth_data = -ori_images[key][..., [2]]  # [H, W, 1]
                         # NOTE (stao): This is a bit of a hack since normally we have generic to_numpy call to convert internal torch tensors to numpy if we do not use GPU simulation
                         # but torch does not have a uint16 type so we convert that here earlier
-                        if physx.is_gpu_enabled():
+                        if not physx.is_gpu_enabled():
                             depth_data = depth_data.numpy().astype(np.uint16)
                         new_images["depth"] = depth_data
                 else:
