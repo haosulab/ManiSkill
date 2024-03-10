@@ -168,37 +168,38 @@ Pick up a random object sampled from the [YCB dataset](https://www.ycbbenchmarks
 <video preload="auto" controls="True" width="100%">
 <source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/pick_single_ycb_rt.mp4" type="video/mp4">
 </video>
-<!-- 
-## Table-top Dexterous Hand Tasks
 
-### RotateValveLevel1-v1
+## Table-Top Dexterous Hand Tasks
+
+### RotateValveLevel0-v1
+
+(Note there is Level0, Level1, ... to Level4)
 
 :::{dropdown} Task Card
 :icon: note
 :color: primary
 
 **Task Description:**
-Pick up a random object sampled from the [YCB dataset](https://www.ycbbenchmarks.com/) and move it to a random goal position
+Using the D'Claw robot, rotate a [ROBEL valve](https://sites.google.com/view/roboticsbenchmarks/platforms/dclaw)
 
-**Supported Robots: Panda, Fetch, xArm**
+**Supported Robots: DClaw**
 
 **Randomizations:**
-- the object's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat on the table
-- the object's z-axis rotation is randomized
-- the object geometry is randomized by randomly sampling any YCB object
+- Rotation direction $r$. Level 0: $r=1$, Level 4: $r \in \{1, -1\}$
+- Number of valves on the ROBEL valve $v$. Level 0-1: $v=3$, Level 2-4: $v \in [3, 6]$
+- Valve angles $\phi$. Level 0: Equally spaced $\phi = (0, 2\pi/3, 4\pi/3)$, Level 1-4: Each angle is randomized
+- Level 4 only: valve radii are randomized a little
 
 **Success Conditions:**
-- the object position is within goal_thresh (default 0.025) euclidean distance of the goal position
-- the robot is static (q velocity < 0.2)
+- The valve rotated more than $\theta$ radians from its initial position. Level 0: $\theta = \pi/2$, Level 1-3: $\theta = \pi$, Level 4: $\theta=2\pi$
 
 **Goal Specification:**
-- 3D goal position (also visualized in human renders)
+- Rotation direction $r$ which can be 1 or -1. Note that the amount to rotate is implicit and depends of level
 
 **Additional Notes**
 - On GPU simulation, in order to collect data from every possible object in the YCB database we recommend using at least 128 parallel environments or more, otherwise you will need to reconfigure in order to sample new objects.
 :::
 
-
-<video preload="auto" controls="True" width="100%">
-<source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/RotateValveLevel1.png" type="video/mp4">
-</video> -->
+:::{figure} https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/rotat_valve_rt.png
+:alt: rotate valve task
+:::
