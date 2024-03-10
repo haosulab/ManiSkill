@@ -284,7 +284,7 @@ class RotateCubeEnv(BaseEnv):
             torch.linalg.norm(
                 self.obj.pose.p[..., :2] - self.obj_goal.pose.p[..., :2], axis=1
             )
-            < self.goal_radius / 10
+            < -self.goal_radius / 10
         )
 
         return {
@@ -363,6 +363,9 @@ class RotateCubeEnv(BaseEnv):
         finger_reach_object_weight = -250
         object_dist_weight = 2000
         object_rot_weight = 2000
+
+        object_dist_weight = 5
+        object_rot_weight = 5
         dt = self.physx_system.timestep
 
         # Reward penalising finger movement
@@ -385,25 +388,36 @@ class RotateCubeEnv(BaseEnv):
         # distance from each finger to the centroid of the object in the last timestep, shape (N, 3).
 
         ft_sched_val = 1.0  # if ft_sched_start <= env_steps_count <= ft_sched_end else 0.0
-        if self.prev_norms is not None:
-            finger_reach_object_reward = finger_reach_object_weight * ft_sched_val * (curr_norms - self.prev_norms).sum(dim=-1)
-        else:
-            finger_reach_object_reward = torch.zeros_like(curr_norms.sum(dim=-1))
-        self.prev_norms = curr_norms
+        # if self.prev_norms is not None:
+        #     finger_reach_object_reward = finger_reach_object_weight * ft_sched_val * (curr_norms - self.prev_norms).sum(dim=-1)
+        # else:
+        #     finger_reach_object_reward = torch.zeros_like(curr_norms.sum(dim=-1))
+        # self.prev_norms = curr_norms
+
+        finger_reach_object_dist_1 = torch.norm(tip_poses[:, :3, 0] - obj_pos, p=2, dim=-1)
+        finger_reach_object_dist_2 = torch.norm(tip_poses[:, :3, 1] - obj_pos, p=2, dim=-1)
+        finger_reach_object_dist_3 = torch.norm(tip_poses[:, :3, 2] - obj_pos, p=2, dim=-1)
+        finger_reach_object_reward1 = object_dist_weight * (1 - torch.tanh(5 * finger_reach_object_dist_1))
+        finger_reach_object_reward2 = object_dist_weight * (1 - torch.tanh(5 * finger_reach_object_dist_2))
+        finger_reach_object_reward3 = object_dist_weight * (1 - torch.tanh(5 * finger_reach_object_dist_3))
+        finger_reach_object_reward = (finger_reach_object_reward1 + finger_reach_object_reward2 + finger_reach_object_reward3) / 3
 
         # Reward for object distance
         object_dist = torch.norm(obj_pos - goal_pos, p=2, dim=-1)
-        object_dist_reward = object_dist_weight * dt * lgsk_kernel(object_dist, scale=50., eps=2.)
+        # object_dist_reward = object_dist_weight * dt * lgsk_kernel(object_dist, scale=50., eps=2.)
 
-        # object_dist_reward = (1 - torch.tanh(5 * object_dist))
+        object_dist_reward = object_dist_weight * (1 - torch.tanh(5 * object_dist))
 
         # Reward for object rotation
 
         # extract quaternion orientation
         angles = quat_diff_rad(obj_q, goal_q)
         object_rot_reward = object_rot_weight * dt / (3. * torch.abs(angles) + 0.01)
+        object_rot_reward = -1 * object_rot_weight * torch.abs(angles)
 
         pose_reward = object_dist_reward + object_rot_reward
+        # print("object_dist_reward", object_dist_reward, "object_rot_reward", object_rot_reward)
+        # print("finger_movement_penalty", finger_movement_penalty, "finger_reach_object_reward", finger_reach_object_reward, "pose_reward", pose_reward)
 
         total_reward = finger_movement_penalty + finger_reach_object_reward + pose_reward
         # total_reward = pose_reward
