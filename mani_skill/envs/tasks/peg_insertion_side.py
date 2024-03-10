@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import Any, Dict, Union
+from typing import Dict, Union
 
 import numpy as np
 import sapien
@@ -83,94 +83,106 @@ class PegInsertionSideEnv(BaseEnv):
         return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)
 
     def _load_scene(self):
-        self.table_scene = TableSceneBuilder(self)
-        self.table_scene.build()
+        with torch.device(self.device):
+            self.table_scene = TableSceneBuilder(self)
+            self.table_scene.build()
 
-        lengths = self._episode_rng.uniform(0.075, 0.125, size=(self.num_envs,))
-        radii = self._episode_rng.uniform(0.015, 0.025, size=(self.num_envs,))
-        centers = (
-            0.5
-            * (lengths - radii)[:, None]
-            * self._episode_rng.uniform(-1, 1, size=(self.num_envs, 2))
-        )
+            lengths = self._episode_rng.uniform(0.075, 0.125, size=(self.num_envs,))
+            radii = self._episode_rng.uniform(0.015, 0.025, size=(self.num_envs,))
+            centers = (
+                0.5
+                * (lengths - radii)[:, None]
+                * self._episode_rng.uniform(-1, 1, size=(self.num_envs, 2))
+            )
 
-        # in each parallel env we build a slightly different box with a hole and peg
-        pegs = []
-        boxes = []
-        self.peg_half_sizes = sapien_utils.to_tensor(
-            np.vstack([lengths, radii, radii])
-        ).T
-        for i in range(self.num_envs):
-            scene_mask = np.zeros((self.num_envs), dtype=bool)
-            scene_mask[i] = True
-            length = lengths[i]
-            radius = radii[i]
-            builder = self._scene.create_actor_builder()
-            builder.add_box_collision(half_size=[length, radius, radius])
-            # peg head
-            mat = sapien.render.RenderMaterial(
-                base_color=sapien_utils.hex2rgba("#EC7357"), roughness=0.5, specular=0.5
-            )
-            builder.add_box_visual(
-                sapien.Pose([length / 2, 0, 0]),
-                half_size=[length / 2, radius, radius],
-                material=mat,
-            )
-            # peg tail
-            mat = sapien.render.RenderMaterial(
-                base_color=sapien_utils.hex2rgba("#EDF6F9"), roughness=0.5, specular=0.5
-            )
-            builder.add_box_visual(
-                sapien.Pose([-length / 2, 0, 0]),
-                half_size=[length / 2, radius, radius],
-                material=mat,
-            )
-            builder.set_scene_mask(scene_mask)
-            peg = builder.build(f"peg_{i}")
-            self.peg_head_offset = sapien.Pose([length, 0, 0])
+            # save some useful values for use later
+            self.peg_half_sizes = sapien_utils.to_tensor(
+                np.vstack([lengths, radii, radii])
+            ).T
+            peg_head_offsets = torch.zeros((self.num_envs, 3))
+            peg_head_offsets[:, 0] = self.peg_half_sizes[:, 0]
+            self.peg_head_offsets = Pose.create_from_pq(p=peg_head_offsets)
 
-            # box with hole
+            box_hole_offsets = torch.zeros((self.num_envs, 3))
+            box_hole_offsets[:, 1:] = sapien_utils.to_tensor(centers)
+            self.box_hole_offsets = Pose.create_from_pq(p=box_hole_offsets)
+            self.box_hole_radii = sapien_utils.to_tensor(radii + self._clearance)
 
-            inner_radius, outer_radius, depth = radius + self._clearance, length, length
-            builder = _build_box_with_hole(
-                self._scene, inner_radius, outer_radius, depth, center=centers[i]
-            )
-            builder.set_scene_mask(scene_mask)
-            box = builder.build_kinematic(f"box_with_hole_{i}")
-            self.box_hole_offset = sapien.Pose(np.hstack([0, centers[i]]))
-            self.box_hole_radius = inner_radius
+            # in each parallel env we build a different box with a hole and peg (the task is meant to be quite difficult)
+            pegs = []
+            boxes = []
 
-            pegs.append(peg)
-            boxes.append(box)
-        self.peg = Actor.merge(pegs, "peg")
-        self.box = Actor.merge(boxes, "box_with_hole")
+            for i in range(self.num_envs):
+                scene_mask = np.zeros((self.num_envs), dtype=bool)
+                scene_mask[i] = True
+                length = lengths[i]
+                radius = radii[i]
+                builder = self._scene.create_actor_builder()
+                builder.add_box_collision(half_size=[length, radius, radius])
+                # peg head
+                mat = sapien.render.RenderMaterial(
+                    base_color=sapien_utils.hex2rgba("#EC7357"),
+                    roughness=0.5,
+                    specular=0.5,
+                )
+                builder.add_box_visual(
+                    sapien.Pose([length / 2, 0, 0]),
+                    half_size=[length / 2, radius, radius],
+                    material=mat,
+                )
+                # peg tail
+                mat = sapien.render.RenderMaterial(
+                    base_color=sapien_utils.hex2rgba("#EDF6F9"),
+                    roughness=0.5,
+                    specular=0.5,
+                )
+                builder.add_box_visual(
+                    sapien.Pose([-length / 2, 0, 0]),
+                    half_size=[length / 2, radius, radius],
+                    material=mat,
+                )
+                builder.set_scene_mask(scene_mask)
+                peg = builder.build(f"peg_{i}")
+
+                # box with hole
+
+                inner_radius, outer_radius, depth = (
+                    radius + self._clearance,
+                    length,
+                    length,
+                )
+                builder = _build_box_with_hole(
+                    self._scene, inner_radius, outer_radius, depth, center=centers[i]
+                )
+                builder.set_scene_mask(scene_mask)
+                box = builder.build_kinematic(f"box_with_hole_{i}")
+
+                pegs.append(peg)
+                boxes.append(box)
+            self.peg = Actor.merge(pegs, "peg")
+            self.box = Actor.merge(boxes, "box_with_hole")
 
     def _initialize_episode(self, env_idx: torch.Tensor):
         with torch.device(self.device):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)
-            # xy = self._episode_rng.uniform([-0.1, -0.3], [0.1, 0])
+
+            # initialize the box and peg
             xy = torch.rand((b, 2)) * torch.tensor([0.2, 0.3]) + torch.tensor(
                 [0, -0.15]
             )
             pos = torch.zeros((b, 3))
             pos[:, :2] = xy
             pos[:, 2] = self.peg_half_sizes[:, 2]
-
-            # pos = np.hstack([xy, self.peg_half_size[2]])
-            # ori = np.pi / 2 + self._episode_rng.uniform(-np.pi / 3, np.pi / 3)
-            # quat = euler2quat(0, 0, ori)
             quat = randomization.random_quaternions(
                 b,
                 self.device,
                 lock_x=True,
                 lock_y=True,
-                lock_z=False,
                 bounds=(-np.pi / 3, np.pi / 3),
             )
             self.peg.set_pose(Pose.create_from_pq(pos, quat))
 
-            # xy = self._episode_rng.uniform([-0.05, 0.2], [0.05, 0.4])
             xy = torch.rand((b, 2)) * torch.tensor([0.1, 0.2]) + torch.tensor(
                 [-0.05, 0.2]
             )
@@ -182,10 +194,11 @@ class PegInsertionSideEnv(BaseEnv):
                 self.device,
                 lock_x=True,
                 lock_y=True,
-                lock_z=False,
                 bounds=(np.pi / 2 - np.pi / 8, np.pi / 2 + np.pi / 8),
             )
             self.box.set_pose(Pose.create_from_pq(pos, quat))
+
+            # Initialize the robot
             qpos = np.array(
                 [
                     0.0,
@@ -204,20 +217,55 @@ class PegInsertionSideEnv(BaseEnv):
             self.agent.robot.set_qpos(qpos)
             self.agent.robot.set_pose(sapien.Pose([-0.615, 0, 0]))
 
+    # save some commonly used attributes
+    @property
+    def peg_head_pos(self):
+        return self.peg.pose.p + self.peg_head_offsets.p
+
+    @property
+    def peg_head_pose(self):
+        return self.peg.pose * self.peg_head_offsets
+
+    @property
+    def box_hole_pose(self):
+        return self.box.pose * self.box_hole_offsets
+
+    @property
+    def goal_pose(self):
+        # NOTE (stao): this is fixed after each _initialize_episode call. You can cache this value
+        # and simply store it after _initialize_episode or set_state_dict calls.
+        return self.box.pose * self.box_hole_offsets * self.peg_head_offsets.inv()
+
+    def has_peg_inserted(self):
+        # Only head position is used in fact
+        peg_head_pos_at_hole = (self.box_hole_pose.inv() * self.peg_head_pose).p
+        # x-axis is hole direction
+        x_flag = -0.015 <= peg_head_pos_at_hole[:, 0]
+        y_flag = (-self.box_hole_radii <= peg_head_pos_at_hole[:, 1]) & (
+            peg_head_pos_at_hole[:, 1] <= self.box_hole_radii
+        )
+        z_flag = (-self.box_hole_radii <= peg_head_pos_at_hole[:, 2]) & (
+            peg_head_pos_at_hole[:, 2] <= self.box_hole_radii
+        )
+        return (
+            x_flag & y_flag & z_flag,
+            peg_head_pos_at_hole,
+        )
+
     def evaluate(self):
-        return {
-            "success": torch.zeros(self.num_envs, device=self.device, dtype=bool),
-            "fail": torch.zeros(self.num_envs, device=self.device, dtype=bool),
-        }
+        success, peg_head_pos_at_hole = self.has_peg_inserted()
+        return dict(success=success, peg_head_pos_at_hole=peg_head_pos_at_hole)
 
     def _get_obs_extra(self, info: Dict):
-        return OrderedDict()
+        obs = OrderedDict(tcp_pose=self.agent.tcp.pose.raw_pose)
+        if self._obs_mode in ["state", "state_dict"]:
+            obs.update(
+                peg_pose=self.peg.pose.raw_pose,
+                peg_half_size=self.peg_half_sizes,
+                box_hole_pose=self.box_hole_pose.raw_pose,
+                box_hole_radius=self.box_hole_radii,
+            )
+        return obs
 
-    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        return torch.zeros(self.num_envs, device=self.device)
-
-    def compute_normalized_dense_reward(
-        self, obs: Any, action: torch.Tensor, info: Dict
-    ):
-        max_reward = 1.0
-        return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
+    # TODO (stao): Write batched version of dense reward function
+    # Code here: https://github.com/haosulab/ManiSkill2/blob/4067abce40dc8b7d7c926eabc9c48e802489014c/mani_skill2/envs/ms2/assembly/peg_insertion_side.py#L154
