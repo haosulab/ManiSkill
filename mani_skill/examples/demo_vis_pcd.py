@@ -11,7 +11,6 @@ def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--env-id", type=str, default="PushCube-v1", help="The environment ID of the task you want to simulate")
     parser.add_argument("-o", "--obs-mode", type=str, default="none")
-    parser.add_argument("--quiet", action="store_true", help="Disable verbose output.")
     parser.add_argument(
         "-s",
         "--seed",
