@@ -198,12 +198,12 @@ class RotateCubeEnv(BaseEnv):
             # furthermore, notice how here we do not even using env_idx as a variable to say set the pose for objects in desired
             # environments. This is because internally any calls to set data on the GPU buffer (e.g. set_pose, set_linear_velocity etc.)
             # automatically are masked so that you can only set data on objects in environments that are meant to be initialized
-            obj_pose = Pose.create_from_pq(p=xyz, q=[0, 0, 0, 1])
+            obj_pose = Pose.create_from_pq(p=xyz, q=[1, 0, 0, 0])
             self.obj.set_pose(obj_pose)
 
             # here we set the location of that red/white target (the goal region). In particular here, we set the position to be in front of the cube
             # and we further rotate 90 degrees on the y-axis to make the target object face up
-            pos, orn = self._sample_object_goal_poses(env_idx, difficulty=-1)
+            pos, orn = self._sample_object_goal_poses(env_idx, difficulty=1)
             # set a little bit above 0 so the target is sitting on the table
             # target_region_xyz[..., 2] = 1e-3
             self.obj_goal.set_pose(
@@ -287,13 +287,19 @@ class RotateCubeEnv(BaseEnv):
         goal_q = self.obj_goal.pose.q
 
         is_obj_pos_close_to_goal = (
-                torch.linalg.norm(obj_p - goal_p, axis=1) < self.goal_radius
+                torch.linalg.norm(obj_p - goal_p, axis=1) < -0.1  # self.goal_radius
         )
+        # print("is_obj_pos_close_to_goal", is_obj_pos_close_to_goal)
         is_obj_q_close_to_goal = (
                 quat_diff_rad(obj_q, goal_q) < 0.1
         )
 
         is_success = is_obj_pos_close_to_goal & is_obj_q_close_to_goal
+
+        if is_success.all():
+            print("Success!")
+            print("obj_p", obj_p)
+            print("goal_p", goal_p)
 
         return {
             "success": is_success,
@@ -344,10 +350,8 @@ class RotateCubeEnv(BaseEnv):
         goal_pos = self.obj_goal.pose.p
         goal_q = self.obj_goal.pose.q
 
-        finger_move_penalty_weight = -0.5
-        finger_reach_object_weight = -250
-        object_dist_weight = 2000
-        object_rot_weight = 2000
+        finger_move_penalty_weight = -0.1
+        finger_reach_object_weight = -50
         dt = self.physx_system.timestep
 
         # Reward penalising finger movement
@@ -378,14 +382,15 @@ class RotateCubeEnv(BaseEnv):
 
         # Reward for object distance
         object_dist = torch.norm(obj_pos - goal_pos, p=2, dim=-1)
-        object_dist_reward = object_dist_weight * dt * lgsk_kernel(object_dist, scale=50., eps=2.)
+        # object_dist_reward = object_dist_weight * dt * lgsk_kernel(object_dist, scale=50., eps=2.)
+
+        object_dist_reward = (1 - torch.tanh(5 * object_dist))
 
         # Reward for object rotation
 
         # extract quaternion orientation
-
         angles = quat_diff_rad(obj_q, goal_q)
-        object_rot_reward = object_rot_weight * dt / (3. * torch.abs(angles) + 0.01)
+        object_rot_reward = dt / (3. * torch.abs(angles) + 0.01)
 
         pose_reward = object_dist_reward + object_rot_reward
 
@@ -578,10 +583,20 @@ def quat_diff_rad(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     Returns:
         Difference in radians, shape (N,)
     """
-    b_conj = quat_conjugate(b)
-    mul = quat_mul(a, b_conj)
-    # 2 * torch.acos(torch.abs(mul[:, -1]))
-    return 2.0 * torch.asin(torch.clamp(torch.norm(mul[:, 1:4], p=2, dim=-1), max=1.0))
+    # Normalize the quaternions
+    a = a / torch.norm(a, dim=1, keepdim=True)
+    b = b / torch.norm(b, dim=1, keepdim=True)
+
+    # Compute the dot product between the quaternions
+    dot_product = torch.sum(a * b, dim=1)
+
+    # Clamp the dot product to the range [-1, 1] to avoid numerical instability
+    dot_product = torch.clamp(dot_product, -1.0, 1.0)
+
+    # Compute the angle difference in radians
+    angle_diff = 2 * torch.acos(torch.abs(dot_product))
+
+    return angle_diff
 
 
 @torch.jit.script

@@ -4,9 +4,9 @@ import gymnasium as gym
 import numpy as np
 import sapien
 
-import mani_skill2.envs
-from mani_skill2.utils.sapien_utils import to_numpy
-from mani_skill2.utils.wrappers import RecordEpisode
+import mani_skill.envs
+from mani_skill.utils.sapien_utils import to_numpy
+from mani_skill.utils.wrappers import RecordEpisode
 os.environ["MS2_ASSET_DIR"] = "/home/chenbao/Desktop/projects/ManiSkill3/data"
 
 if __name__ == "__main__":
