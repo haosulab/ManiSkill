@@ -81,8 +81,11 @@ class AssemblingKitsEnv(BaseEnv):
 
             # sample some kits
             eps_idxs = np.arange(0, len(self._episodes))
-            self._episode_rng.shuffle(eps_idxs)
-            eps_idxs = eps_idxs[: self.num_envs]
+            rand_idx = torch.randperm(len(eps_idxs), device=torch.device("cpu"))
+            eps_idxs = eps_idxs[rand_idx]
+            eps_idxs = np.concatenate(
+                [eps_idxs] * np.ceil(self.num_envs / len(eps_idxs)).astype(int)
+            )[: self.num_envs]
             kits = []
             objs_to_place = []
             all_other_objs = []
@@ -106,7 +109,6 @@ class AssemblingKitsEnv(BaseEnv):
                     .build_static(f"kit_{i}")
                 )
                 kits.append(kit)
-
                 # create the object to place and make it dynamic
                 obj_to_place = (
                     self._get_object_builder(episode["obj_to_place"])
@@ -126,8 +128,8 @@ class AssemblingKitsEnv(BaseEnv):
                             q=euler2quat(0, 0, object_goal_rot[obj_id]),
                         )
                     )
-                    .build_static(f"in_place_obj_{i}")
-                    for i, obj_id in enumerate(episode["obj_in_place"])
+                    .build_static(f"in_place_obj_{i}_{j}")
+                    for j, obj_id in enumerate(episode["obj_in_place"])
                 ]
                 all_other_objs.append(other_objs)
 
