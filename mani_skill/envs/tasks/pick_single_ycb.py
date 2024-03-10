@@ -121,9 +121,7 @@ class PickSingleYCBEnv(BaseEnv):
             builder, obj_height = build_actor_ycb(
                 model_id, self._scene, name=model_id, return_builder=True
             )
-            scene_mask = np.zeros(self.num_envs, dtype=bool)
-            scene_mask[i] = True
-            builder.set_scene_mask(scene_mask)
+            builder.set_scene_idxs([i])
             actors.append(builder.build(name=f"{model_id}-{i}"))
             self.obj_heights.append(obj_height)
         self.obj = Actor.merge(actors, name="ycb_object")

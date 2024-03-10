@@ -76,16 +76,14 @@ articulation.get_net_contact_forces(link_names) # shape (N, len(link_names), 3)
 
 ## Scene Masks
 
-ManiSkill defaults to actors/articulations when built to be built in every parallel sub-scene in the physx scene. This is not necessary behavior and you can control this via scene masks, which dictate where sub-scenes get the actor/articulation loaded into it and which do not. A good example of this done is in the PickSingleYCB task which loads a different geometry/object entirely in each sub-scene. This is done by effectively not creating one actor to pick up across all sub-scenes as you might do in PickCube, but a different actor per scene (which will be merged into one actor later).
+ManiSkill defaults to actors/articulations when built to be built in every parallel sub-scene in the physx scene. This is not necessary behavior and you can control this by setting `scene_idxs`, which dictate where sub-scenes get the actor/articulation loaded into it and which do not. A good example of this done is in the PickSingleYCB task which loads a different geometry/object entirely in each sub-scene. This is done by effectively not creating one actor to pick up across all sub-scenes as you might do in PickCube, but a different actor per scene (which will be merged into one actor later).
 
 ```python
 for i, model_id in enumerate(model_ids):
     builder, obj_height = build_actor_ycb(
         model_id, self._scene, name=model_id, return_builder=True
     )
-    scene_mask = np.zeros(self.num_envs, dtype=bool)
-    scene_mask[i] = True
-    builder.set_scene_mask(scene_mask)
+    builder.set_scene_idxs([i]) # spawn only in sub-scene i
     actors.append(builder.build(name=f"{model_id}-{i}"))
 ```
 Here we have a list of YCB object ids in `model_ids`. For the ith `model_id` we create the ActorBuilder `builder` and set a scene mask so that only the ith sub-scene is True, the rest are False. Now when we call `builder.build` only the ith sub-scene has this particular object.
