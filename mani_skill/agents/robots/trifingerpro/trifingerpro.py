@@ -30,9 +30,9 @@ class TriFingerPro(BaseAgent):
             tip=dict(static_friction=2.0, dynamic_friction=1.0, restitution=0.0)
         ),
         link=dict(
-            link_f1_3=dict(material="tip", patch_radius=0.1, min_patch_radius=0.1),
-            link_f2_3=dict(material="tip", patch_radius=0.1, min_patch_radius=0.1),
-            link_f3_3=dict(material="tip", patch_radius=0.1, min_patch_radius=0.1),
+            finger_tip_link_0=dict(material="tip"),
+            finger_tip_link_120=dict(material="tip"),
+            finger_tip_link_240=dict(material="tip"),
         ),
     )
     sensor_configs = {}

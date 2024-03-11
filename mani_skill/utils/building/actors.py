@@ -42,9 +42,13 @@ def build_cube(
     add_collision: bool = True,
 ):
     builder = scene.create_actor_builder()
+
     if add_collision:
+        builder._mass = 0.1
+        cube_material = sapien.pysapien.physx.PhysxMaterial(static_friction=5, dynamic_friction=3, restitution=0)
         builder.add_box_collision(
             half_size=[half_size] * 3,
+            material=cube_material,
         )
     builder.add_box_visual(
         half_size=[half_size] * 3,

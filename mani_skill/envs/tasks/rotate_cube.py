@@ -203,7 +203,7 @@ class RotateCubeEnv(BaseEnv):
 
             # here we set the location of that red/white target (the goal region). In particular here, we set the position to be in front of the cube
             # and we further rotate 90 degrees on the y-axis to make the target object face up
-            pos, orn = self._sample_object_goal_poses(env_idx, difficulty=1)
+            pos, orn = self._sample_object_goal_poses(env_idx, difficulty=4)
             # set a little bit above 0 so the target is sitting on the table
             # target_region_xyz[..., 2] = 1e-3
             self.obj_goal.set_pose(
@@ -404,22 +404,38 @@ class RotateCubeEnv(BaseEnv):
 
         # Reward for object distance
         object_dist = torch.norm(obj_pos - goal_pos, p=2, dim=-1)
+
+        init_xyz_tensor = torch.tensor([0, 0, 0.032], dtype=torch.float, device=self.device).reshape(1, 3)
+        init_z_dist = torch.norm(init_xyz_tensor - goal_pos[..., ], p=2, dim=-1)
+
         # object_dist_reward = object_dist_weight * dt * lgsk_kernel(object_dist, scale=50., eps=2.)
 
         object_dist_reward = object_dist_weight * (1 - torch.tanh(5 * object_dist))
+        object_init_dist_reward = object_dist_weight * (1 - torch.tanh(5 * init_z_dist))
+        object_dist_reward -= object_init_dist_reward
 
+        init_z_tensor = torch.tensor([0.032], dtype=torch.float, device=self.device).reshape(1, 1)
+        object_z_dist = torch.norm(obj_pos[..., 2:3] - goal_pos[..., 2:3], p=2, dim=-1)
+        init_z_dist = torch.norm(init_z_tensor - goal_pos[..., 2:3], p=2, dim=-1)
+        object_lift_reward = 5 * object_dist_weight * ((1 - torch.tanh(5 * object_z_dist)))
+        object_init_z_reward = 5 * object_dist_weight * ((1 - torch.tanh(5 * init_z_dist)))
+
+        object_lift_reward -= object_init_z_reward
+
+        # print("object_lift_reward", object_lift_reward)
+        # print("object_init_z_reward", object_init_z_reward)
         # Reward for object rotation
 
         # extract quaternion orientation
         angles = quat_diff_rad(obj_q, goal_q)
-        object_rot_reward = object_rot_weight * dt / (3. * torch.abs(angles) + 0.01)
+        # object_rot_reward = object_rot_weight * dt / (3. * torch.abs(angles) + 0.01)
         object_rot_reward = -1 * object_rot_weight * torch.abs(angles)
 
-        pose_reward = object_dist_reward + object_rot_reward
+        pose_reward = object_dist_reward + object_rot_reward + object_lift_reward
         # print("object_dist_reward", object_dist_reward, "object_rot_reward", object_rot_reward)
         # print("finger_movement_penalty", finger_movement_penalty, "finger_reach_object_reward", finger_reach_object_reward, "pose_reward", pose_reward)
 
-        total_reward = finger_movement_penalty + finger_reach_object_reward + pose_reward
+        total_reward = finger_reach_object_reward + pose_reward #+ finger_movement_penalty
         # total_reward = pose_reward
         # total_reward = torch.clamp(total_reward, min=-50)
         return total_reward
