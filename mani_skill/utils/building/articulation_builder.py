@@ -11,6 +11,7 @@ from sapien.wrapper.articulation_builder import (
 )
 from sapien.wrapper.articulation_builder import LinkBuilder
 
+from mani_skill import logger
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.structs.articulation import Articulation
 
@@ -135,15 +136,21 @@ class ArticulationBuilder(SapienArticulationBuilder):
             articulation = links[0].components[0].articulation
             if build_mimic_joints:
                 for mimic in self.mimic_joint_records:
-                    joint = articulation.find_joint_by_name(f"scene-{scene_idx}-{self.name}_{mimic.joint}")
-                    mimic_joint = articulation.find_joint_by_name(f"scene-{scene_idx}-{self.name}_{mimic.mimic}")
+                    joint = articulation.find_joint_by_name(
+                        f"scene-{scene_idx}-{self.name}_{mimic.joint}"
+                    )
+                    mimic_joint = articulation.find_joint_by_name(
+                        f"scene-{scene_idx}-{self.name}_{mimic.mimic}"
+                    )
                     multiplier = mimic.multiplier
                     offset = mimic.offset
 
                     # joint mimics parent
                     if joint.parent_link == mimic_joint.child_link:
                         if joint.parent_link.parent is None:
-                            # TODO warn
+                            logger.warn(
+                                f"Skipping adding fixed tendon for {joint.name}"
+                            )
                             # tendon must be attached to grandparent
                             continue
                         root = joint.parent_link.parent
