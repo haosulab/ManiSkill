@@ -33,6 +33,7 @@ from mani_skill.sensors.camera import (
     parse_camera_cfgs,
     update_camera_cfgs_from_dict,
 )
+from mani_skill.sensors.depth_camera import StereoDepthCamera, StereoDepthCameraConfig
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.common import (
     convert_observation_to_space,
@@ -585,7 +586,9 @@ class BaseEnv(gym.Env):
                 articulation = self.agent.robot
             else:
                 articulation = None
-            if isinstance(sensor_cfg, CameraConfig):
+            if isinstance(sensor_cfg, StereoDepthCameraConfig):
+                sensor_cls = StereoDepthCamera
+            elif isinstance(sensor_cfg, CameraConfig):
                 sensor_cls = Camera
             self._sensors[uid] = sensor_cls(
                 sensor_cfg,
