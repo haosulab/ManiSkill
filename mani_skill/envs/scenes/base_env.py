@@ -89,19 +89,19 @@ class SceneManipulationEnv(BaseEnv):
             self.sampled_scene_idx = int(self.sampled_scene_idx)
         return super().reset(seed, options)
 
-    def _load_lighting(self):
+    def _load_lighting(self, options: dict):
         if self.scene_builder.builds_lighting:
             return
         return super()._load_lighting()
 
-    def _load_scene(self):
+    def _load_scene(self, options: dict):
         self.scene_builder.build(
             self._scene,
             scene_idx=self.sampled_scene_idx,
             convex_decomposition=self.convex_decomposition,
         )
 
-    def _initialize_episode(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
             self.scene_builder.initialize(env_idx)
 

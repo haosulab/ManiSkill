@@ -68,7 +68,7 @@ class RotateValveEnv(BaseEnv):
         pose = sapien_utils.look_at([0.2, 0.4, 0.4], [0.0, 0.0, 0.1])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
-    def _load_scene(self):
+    def _load_scene(self, options: dict):
         self.table_scene = TableSceneBuilder(
             env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
         )
@@ -134,7 +134,7 @@ class RotateValveEnv(BaseEnv):
         self.capsule_lens = torch.from_numpy(np.array(capsule_lens)).to(self.device)
         self.valve_link = sapien_utils.get_obj_by_name(self.valve.get_links(), "valve")
 
-    def _initialize_episode(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         self._initialize_actors(env_idx)
         self._initialize_agent(env_idx)
 

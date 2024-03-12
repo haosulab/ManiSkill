@@ -80,7 +80,7 @@ class RotateSingleObjectInHand(BaseEnv):
         pose = sapien_utils.look_at([0.2, 0.4, 0.4], [0.0, 0.0, 0.1])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
-    def _load_scene(self):
+    def _load_scene(self, options: dict):
         self.table_scene = TableSceneBuilder(
             env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
         )
@@ -139,7 +139,7 @@ class RotateSingleObjectInHand(BaseEnv):
 
         self.obj_heights = torch.from_numpy(np.array(obj_heights)).to(self.device)
 
-    def _initialize_episode(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         self._initialize_actors(env_idx)
         self._initialize_agent(env_idx)
 

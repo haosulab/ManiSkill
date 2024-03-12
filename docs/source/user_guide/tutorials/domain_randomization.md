@@ -41,7 +41,7 @@ Note that this method of randomization only randomizes during task reconfigurati
 Cameras when created cannot have their configurations modified after reconfiguration. Thus it is not possible to randomize the camera's fov, near, and far configurations outside of reconfiguration. You can however still randomize the camera pose during resets via mounted cameras (albeit this is a little slower than doing just during reconfiguration). To get started, first in your `_load_scene` function you have to create an actor to represent the camera (which does not need any visual or collision shapes):
 
 ```python
-def _load_scene(self):
+def _load_scene(self, options: dict):
     # ... your loading code
     self.cam_mount = self._scene.create_actor_builder().build_kinematic("camera_mount")
 ```
@@ -70,7 +70,7 @@ import torch
 from mani_skill.envs.utils import randomization
 from mani_skill.utils import sapien_utils
 
-def _initialize_episode(self, env_idx: torch.Tensor):
+def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
     # ...
     pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
     pose = Pose.create(pose)

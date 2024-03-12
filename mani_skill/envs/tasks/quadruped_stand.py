@@ -59,7 +59,7 @@ class QuadrupedStandEnv(BaseEnv):
             mount=self.agent.robot.links[0],
         )
 
-    def _load_scene(self):
+    def _load_scene(self, options: dict):
         # for i in range(10):
         #     ground = build_ground(self._scene, return_builder=True)
         #     ground.initial_pose = sapien.Pose(p=[i * 40, 0, 0])
@@ -74,7 +74,7 @@ class QuadrupedStandEnv(BaseEnv):
         # self.height = -mesh[0].bounding_box.bounds[0, 2]
         self.height = 1.626
 
-    def _initialize_episode(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
             self.agent.robot.set_pose(Pose.create_from_pq(p=[0, 0, self.height]))
             self.agent.reset(init_qpos=torch.zeros(self.agent.robot.max_dof))
