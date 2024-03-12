@@ -21,3 +21,5 @@ python ppo.py --env_id="TwoRobotStackCube-v1" \
    --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
    --total_timesteps=40_000_000 --num-steps=100 --num-eval-steps=100
 ```
+
+<!-- TODO (stao, arnav) clean up the baseline code to be slightly nicer (track FPS, and update time separately), and put results onto wandb. Also merge code with CleanRL Repo (stao can ask costa to help do that) -->
