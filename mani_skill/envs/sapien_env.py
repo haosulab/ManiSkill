@@ -210,7 +210,7 @@ class BaseEnv(gym.Env):
         self._sim_freq = self.sim_cfg.sim_freq
         self._control_freq = self.sim_cfg.control_freq
         if self._sim_freq % self._control_freq != 0:
-            logger.warning(
+            logger.warn(
                 f"sim_freq({self._sim_freq}) is not divisible by control_freq({self._control_freq}).",
             )
         self._sim_steps_per_control = self._sim_freq // self._control_freq
