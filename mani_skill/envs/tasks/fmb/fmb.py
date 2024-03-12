@@ -46,14 +46,12 @@ class FMBAssembly1Env(BaseEnv):
     @property
     def _sensor_configs(self):
         pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
-        return [
-            CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 100)
-        ]
+        return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
     def _human_render_camera_configs(self):
         pose = sapien_utils.look_at([1.0, 0.8, 0.8], [0.0, 0.0, 0.35])
-        return CameraConfig("render_camera", pose.p, pose.q, 1024, 1024, 1, 0.01, 100)
+        return CameraConfig("render_camera", pose, 1024, 1024, 1, 0.01, 100)
 
     def _load_scene(self):
         self.table_scene = TableSceneBuilder(

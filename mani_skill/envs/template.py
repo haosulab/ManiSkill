@@ -113,9 +113,7 @@ class CustomEnv(BaseEnv):
         )  # sapien_utils.look_at is a utility to get the pose of a camera that looks at a target
 
         # to see what all the sensors capture in the environment for observations, run env.render_sensors() which returns an rgb array you can visualize
-        return [
-            CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 100)
-        ]
+        return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
     def _human_render_camera_configs(self):
@@ -123,7 +121,7 @@ class CustomEnv(BaseEnv):
         # when render_mode="rgb_array" or env.render_rgb_array()
         # Another feature here is that if there is a camera called render_camera, this is the default view shown initially when a GUI is opened
         pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
-        return [CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)]
+        return [CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)]
 
     def _setup_sensors(self):
         # default code here will setup all sensors. You can add additional code to change the sensors e.g.

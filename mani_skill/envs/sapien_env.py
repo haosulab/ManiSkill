@@ -118,14 +118,16 @@ class BaseEnv(gym.Env):
 
     _sensors: Dict[str, BaseSensor]
     """all sensors configured in this environment"""
-    _sensor_cfgs: Dict[str, BaseSensorConfig]
-    """all sensor configurations"""
-    _agent_camera_cfgs: Dict[str, CameraConfig]
-
+    _all_sensor_configs_parsed: Dict[str, BaseSensorConfig]
+    """all sensor configurations parsed from self._sensor_configs and agent._sensor_configs"""
+    _agent_sensor_configs_parsed: Dict[str, BaseSensorConfig]
+    """all agent sensor configs parsed from agent._sensor_configs"""
     _human_render_cameras: Dict[str, Camera]
     """cameras used for rendering the current environment retrievable via `env.render_rgb_array()`. These are not used to generate observations"""
-    _human_render_camera_cfgs: Dict[str, CameraConfig]
+    _human_render_camera_configs: Dict[str, CameraConfig]
     """all camera configurations for cameras used for human render"""
+    _human_render_camera_configs_parsed: Dict[str, CameraConfig]
+    """all camera configurations parsed from self._human_render_camera_configs"""
 
     _hidden_objects: List[Union[Actor, Articulation]] = []
     """list of objects that are hidden during rendering when generating visual observations / running render_cameras()"""
@@ -155,8 +157,8 @@ class BaseEnv(gym.Env):
         self.num_envs = num_envs
         self.reconfiguration_freq = reconfiguration_freq
         self._reconfig_counter = 0
-        self._custom_sensor_cfgs = sensor_cfgs
-        self._custom_human_render_camera_cfgs = human_render_camera_cfgs
+        self._custom_sensor_configs = sensor_cfgs
+        self._custom_human_render_camera_configs = human_render_camera_cfgs
         self.robot_uids = robot_uids
         if self.SUPPORTED_ROBOTS is not None:
             assert robot_uids in self.SUPPORTED_ROBOTS
@@ -324,7 +326,7 @@ class BaseEnv(gym.Env):
     ) -> Union[
         BaseSensorConfig, Sequence[BaseSensorConfig], Dict[str, BaseSensorConfig]
     ]:
-        """Register (non-agent) sensors for the environment."""
+        """Add (non-agent) sensors to the environment by returning sensor configurations"""
         return []
     @property
     def _human_render_camera_configs(
@@ -332,7 +334,7 @@ class BaseEnv(gym.Env):
     ) -> Union[
         BaseSensorConfig, Sequence[BaseSensorConfig], Dict[str, BaseSensorConfig]
     ]:
-        """Register cameras for rendering."""
+        """Add cameras for rendering when using render_mode='rgb_array' """
         return []
 
     @property
@@ -550,43 +552,43 @@ class BaseEnv(gym.Env):
         """Setup sensor configurations and the sensor objects in the scene. Called by `self._reconfigure`"""
 
         # First create all the configurations
-        self._sensor_cfgs = OrderedDict()
+        self._all_sensor_configs_parsed = OrderedDict()
 
         # Add task/external sensors
-        self._sensor_cfgs.update(parse_camera_cfgs(self._sensor_configs))
+        self._all_sensor_configs_parsed.update(parse_camera_cfgs(self._sensor_configs))
 
         # Add agent sensors
-        self._agent_camera_cfgs = OrderedDict()
-        self._agent_camera_cfgs = parse_camera_cfgs(self.agent._sensor_configs)
-        self._sensor_cfgs.update(self._agent_camera_cfgs)
+        self._agent_sensor_configs_parsed = OrderedDict()
+        self._agent_sensor_configs_parsed = parse_camera_cfgs(self.agent._sensor_configs)
+        self._all_sensor_configs_parsed.update(self._agent_sensor_configs_parsed)
 
         # Add human render camera configs
-        self._human_render_camera_cfgs = parse_camera_cfgs(
+        self._human_render_camera_configs_parsed = parse_camera_cfgs(
             self._human_render_camera_configs
         )
 
         # Override camera configurations with user supplied configurations
-        if self._custom_sensor_cfgs is not None:
+        if self._custom_sensor_configs is not None:
             update_camera_cfgs_from_dict(
-                self._sensor_cfgs, self._custom_sensor_cfgs
+                self._all_sensor_configs_parsed, self._custom_sensor_configs
             )
-        if self._custom_human_render_camera_cfgs is not None:
+        if self._custom_human_render_camera_configs is not None:
             update_camera_cfgs_from_dict(
-                self._human_render_camera_cfgs,
-                self._custom_human_render_camera_cfgs,
+                self._human_render_camera_configs_parsed,
+                self._custom_human_render_camera_configs,
             )
 
         # Now we instantiate the actual sensor objects
         self._sensors = OrderedDict()
 
-        for uid, sensor_cfg in self._sensor_cfgs.items():
-            if uid in self._agent_camera_cfgs:
+        for uid, sensor_cfg in self._all_sensor_configs_parsed.items():
+            if uid in self._agent_sensor_configs_parsed:
                 articulation = self.agent.robot
             else:
                 articulation = None
             if isinstance(sensor_cfg, StereoDepthCameraConfig):
                 sensor_cls = StereoDepthCamera
-            else:
+            elif isinstance(sensor_cfg, CameraConfig):
                 sensor_cls = Camera
             self._sensors[uid] = sensor_cls(
                 sensor_cfg,
@@ -596,7 +598,7 @@ class BaseEnv(gym.Env):
 
         # Cameras for rendering only
         self._human_render_cameras = OrderedDict()
-        for uid, camera_cfg in self._human_render_camera_cfgs.items():
+        for uid, camera_cfg in self._human_render_camera_configs_parsed.items():
             self._human_render_cameras[uid] = Camera(
                 camera_cfg,
                 self._scene,

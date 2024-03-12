@@ -288,13 +288,13 @@ def _sensor_configs(self):
     # a smaller sized camera will be lower quality, but render faster
     pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
     return [
-        CameraConfig("base_camera", pose.p, pose.q, 128, 128, 1, 0.01, 10)
+        CameraConfig("base_camera", pose, 128, 128, 1, 0.01, 100)
     ]
 @property
 def _human_render_camera_configs(self):
     # registers a more high-definition (512x512) camera used just for rendering when render_mode="rgb_array" or calling env.render_rgb_array()
     pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
-    return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
+    return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 ```
 
 In the code above we use a useful tool `sapien_utils.look_at(eye, target)` which generates a pose object to configure a camera to be at position `eye` looking at position `target`. To debug the registered cameras for sensors, you can visualize them by running

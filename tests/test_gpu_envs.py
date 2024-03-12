@@ -232,7 +232,7 @@ def test_multi_agent(env_id):
 
 
 @pytest.mark.gpu_sim
-@pytest.mark.parametrize("env_id", ENV_IDS[:1])
+@pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS[:1])
 def test_partial_resets(env_id):
     env: ManiSkillVectorEnv = gym.make_vec(
         env_id,

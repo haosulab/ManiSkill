@@ -12,6 +12,7 @@ from mani_skill.sensors.camera import Camera
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.articulation import Articulation
 from mani_skill.utils.structs.link import Link
+from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.render_camera import RenderCamera
 from mani_skill.utils.structs.types import Array, Device, SimConfig
 
@@ -111,16 +112,38 @@ class ManiSkillScene:
                 self.sub_scenes[0].remove_entity(e)
 
     def add_camera(
-        self, name, width: int, height: int, fovy: float, near: float, far: float
+        self,
+        name,
+        pose: Pose,
+        width: int,
+        height: int,
+        fovy: float,
+        near: float,
+        far: float,
     ) -> RenderCamera:
         cameras = []
+        pose = Pose.create(pose)
         for i, scene in enumerate(self.sub_scenes):
             camera_mount = sapien.Entity()
             camera = RenderCameraComponent(width, height)
-            camera.set_fovy(fovy, compute_x=True)
-            camera.near = near
-            camera.far = far
+            if isinstance(fovy, float) or isinstance(fovy, int):
+                camera.set_fovy(fovy, compute_x=True)
+            else:
+                camera.set_fovy(fovy[i], compute_x=True)
+            if isinstance(near, float) or isinstance(near, int):
+                camera.near = near
+            else:
+                camera.near = near[i]
+            if isinstance(far, float) or isinstance(far, int):
+                camera.far = far
+            else:
+                camera.far = far[i]
             camera_mount.add_component(camera)
+            if len(pose) == 1:
+                camera.local_pose = pose.sp
+            else:
+                camera.local_pose = pose[i].sp
+
             scene.add_entity(camera_mount)
             camera_mount.name = f"scene-{i}_{name}"
             camera.name = f"scene-{i}_{name}"
@@ -128,21 +151,42 @@ class ManiSkillScene:
         return RenderCamera.create(cameras, self)
 
     def add_mounted_camera(
-        self, name, mount: Union[Actor, Link], pose, width, height, fovy, near, far
+        self,
+        name,
+        mount: Union[Actor, Link],
+        pose: Pose,
+        width,
+        height,
+        fovy,
+        near,
+        far,
     ) -> RenderCamera:
         cameras = []
+        pose = Pose.create(pose)
         for i, scene in enumerate(self.sub_scenes):
             camera = RenderCameraComponent(width, height)
-            camera.set_fovy(fovy, compute_x=True)
-            camera.near = near
-            camera.far = far
+            if isinstance(fovy, float) or isinstance(fovy, int):
+                camera.set_fovy(fovy, compute_x=True)
+            else:
+                camera.set_fovy(fovy[i], compute_x=True)
+            if isinstance(near, float) or isinstance(near, int):
+                camera.near = near
+            else:
+                camera.near = near[i]
+            if isinstance(far, float) or isinstance(far, int):
+                camera.far = far
+            else:
+                camera.far = far[i]
             if physx.is_gpu_enabled():
                 camera.set_gpu_pose_batch_index(mount._objs[i].gpu_pose_index)
             if isinstance(mount, Link):
                 mount._objs[i].entity.add_component(camera)
             else:
                 mount._objs[i].add_component(camera)
-            camera.local_pose = pose
+            if len(pose) == 1:
+                camera.local_pose = pose.sp
+            else:
+                camera.local_pose = pose[i].sp
             camera.name = f"scene-{i}_{name}"
             cameras.append(camera)
         return RenderCamera.create(cameras, self, mount=mount)

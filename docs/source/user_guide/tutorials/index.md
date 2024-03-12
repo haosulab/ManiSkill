@@ -14,6 +14,7 @@ These are tutorials written by the maintainers of ManiSkill and the community, s
 :titlesonly:
 
 custom_tasks
-custom_reusable_scenes
 custom_tasks_advanced
+custom_reusable_scenes
+domain_randomization
 ```
