@@ -46,9 +46,6 @@ class CameraConfig(BaseSensorConfig):
 
     def __post_init__(self):
         self.pose = Pose.create(self.pose)
-        import ipdb
-
-        ipdb.set_trace()
 
     def __repr__(self) -> str:
         return self.__class__.__name__ + "(" + str(self.__dict__) + ")"

@@ -4,6 +4,7 @@ from mani_skill import PACKAGE_ASSET_DIR
 from mani_skill.agents.registration import register_agent
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
+from mani_skill.utils.structs import Pose
 
 from .panda import Panda
 
@@ -20,8 +21,7 @@ class PandaRealSensed435(Panda):
         return [
             CameraConfig(
                 uid="hand_camera",
-                p=[0, 0, 0],
-                q=[1, 0, 0, 0],
+                pose=Pose.create_from_pq([0, 0, 0], [1, 0, 0, 0]),
                 width=128,
                 height=128,
                 fov=np.pi / 2,

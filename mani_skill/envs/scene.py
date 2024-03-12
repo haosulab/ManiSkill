@@ -163,24 +163,30 @@ class ManiSkillScene:
     ) -> RenderCamera:
         cameras = []
         pose = Pose.create(pose)
-        if isinstance(fovy, float) or isinstance(fovy, int):
-            fovy = [fovy]
-        if isinstance(near, float) or isinstance(near, int):
-            near = [near]
-        if isinstance(far, float) or isinstance(far, int):
-            far = [far]
         for i, scene in enumerate(self.sub_scenes):
             camera = RenderCameraComponent(width, height)
-            camera.set_fovy(fovy, compute_x=True)
-            camera.near = near[i]
-            camera.far = far[i]
+            if isinstance(fovy, float) or isinstance(fovy, int):
+                camera.set_fovy(fovy, compute_x=True)
+            else:
+                camera.set_fovy(fovy[i], compute_x=True)
+            if isinstance(near, float) or isinstance(near, int):
+                camera.near = near
+            else:
+                camera.near = near[i]
+            if isinstance(far, float) or isinstance(far, int):
+                camera.far = far
+            else:
+                camera.far = far[i]
             if physx.is_gpu_enabled():
                 camera.set_gpu_pose_batch_index(mount._objs[i].gpu_pose_index)
             if isinstance(mount, Link):
                 mount._objs[i].entity.add_component(camera)
             else:
                 mount._objs[i].add_component(camera)
-            camera.local_pose = pose[i].sp
+            if len(pose) == 1:
+                camera.local_pose = pose.sp
+            else:
+                camera.local_pose = pose[i].sp
             camera.name = f"scene-{i}_{name}"
             cameras.append(camera)
         return RenderCamera.create(cameras, self, mount=mount)

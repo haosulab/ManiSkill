@@ -12,6 +12,7 @@ from mani_skill.agents.registration import register_agent
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.common import compute_angle_between, np_compute_angle_between
+from mani_skill.utils.structs import Pose
 from mani_skill.utils.structs.actor import Actor
 
 
@@ -157,8 +158,7 @@ class Xmate3Robotiq(BaseAgent):
         return [
             CameraConfig(
                 uid="base_camera",
-                p=[0.0, 0.0, 0.0],
-                q=[1, 0, 0, 0],
+                pose=Pose.create_from_pq([0, 0, 0], [1, 0, 0, 0]),
                 width=128,
                 height=128,
                 fov=1.5707,
@@ -169,8 +169,7 @@ class Xmate3Robotiq(BaseAgent):
             ),
             CameraConfig(
                 uid="hand_camera",
-                p=[0.0, 0.0, 0.0],
-                q=[1, 0, 0, 0],
+                pose=Pose.create_from_pq([0, 0, 0], [1, 0, 0, 0]),
                 width=128,
                 height=128,
                 fov=1.5707,

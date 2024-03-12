@@ -13,11 +13,9 @@ from mani_skill.agents.registration import register_agent
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.common import compute_angle_between, np_compute_angle_between
+from mani_skill.utils.structs import Pose
 from mani_skill.utils.structs.actor import Actor
-from mani_skill.utils.structs.base import BaseStruct
-from mani_skill.utils.structs.joint import Joint
 from mani_skill.utils.structs.link import Link
-from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import Array
 
 FETCH_UNIQUE_COLLISION_BIT = 1 << 30
@@ -46,8 +44,7 @@ class Fetch(BaseAgent):
         return [
             CameraConfig(
                 uid="fetch_head",
-                p=[0, 0, 0],
-                q=[1, 0, 0, 0],
+                pose=Pose.create_from_pq([0, 0, 0], [1, 0, 0, 0]),
                 width=128,
                 height=128,
                 fov=2,
@@ -57,8 +54,7 @@ class Fetch(BaseAgent):
             ),
             CameraConfig(
                 uid="fetch_hand",
-                p=[-0.1, 0, 0.1],
-                q=[1, 0, 0, 0],
+                pose=Pose.create_from_pq([-0.1, 0, 0.1], [1, 0, 0, 0]),
                 width=128,
                 height=128,
                 fov=2,

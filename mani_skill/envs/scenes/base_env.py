@@ -130,8 +130,7 @@ class SceneManipulationEnv(BaseEnv):
             room_camera_pose = sapien_utils.look_at([2.5, -2.5, 3], [0.0, 0.0, 0])
             room_camera_config = CameraConfig(
                 "render_camera",
-                room_camera_pose.p,
-                room_camera_pose.q,
+                room_camera_pose,
                 512,
                 512,
                 1,
@@ -141,8 +140,7 @@ class SceneManipulationEnv(BaseEnv):
             robot_camera_pose = sapien_utils.look_at([2, 0, 1], [0, 0, -1])
             robot_camera_config = CameraConfig(
                 "robot_render_camera",
-                robot_camera_pose.p,
-                robot_camera_pose.q,
+                robot_camera_pose,
                 512,
                 512,
                 1.5,
