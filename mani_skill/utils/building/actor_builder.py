@@ -28,22 +28,9 @@ class ActorBuilder(SAPIENActorBuilder):
     def __init__(self):
         super().__init__()
         self.initial_pose = Pose.create(self.initial_pose)
-        self.scene_mask = None
         self.scene_idxs = None
         self._allow_overlapping_plane_collisions = False
         self._plane_collision_poses = set()
-
-    def set_scene_mask(
-        self,
-        scene_mask: Optional[
-            Union[List[bool], Sequence[bool], torch.Tensor, np.ndarray]
-        ] = None,
-    ):
-        """
-        Set a scene mask so that the actor builder builds the actor only in a subset of the environments
-        """
-        self.scene_mask = scene_mask
-        return self
 
     def set_scene_idxs(
         self,
@@ -187,16 +174,11 @@ class ActorBuilder(SAPIENActorBuilder):
         self.set_name(name)
 
         num_actors = self.scene.num_envs
-        if self.scene_mask is not None:
-            num_actors = np.sum(num_actors)
-            self.scene_mask = sapien_utils.to_tensor(self.scene_mask).to(bool)
-            self.scene_idxs = self.scene_mask.argwhere()
-        elif self.scene_idxs is not None:
-            self.scene_mask = torch.zeros((self.scene.num_envs), dtype=bool)
-            self.scene_mask[self.scene_idxs] = True
+        if self.scene_idxs is not None:
+            pass
         else:
-            self.scene_mask = torch.ones((self.scene.num_envs), dtype=bool)
             self.scene_idxs = torch.arange((self.scene.num_envs), dtype=int)
+        num_actors = len(self.scene_idxs)
         initial_pose = Pose.create(self.initial_pose)
         initial_pose_b = initial_pose.raw_pose.shape[0]
         assert initial_pose_b == 1 or initial_pose_b == num_actors
@@ -217,7 +199,7 @@ class ActorBuilder(SAPIENActorBuilder):
             sub_scene.add_entity(entity)
             entities.append(entity)
             i += 1
-        actor = Actor._create_from_entities(entities, self.scene, self.scene_mask)
+        actor = Actor.create_from_entities(entities, self.scene, self.scene_idxs)
 
         # if it is a static body type and this is a GPU sim but we are given a single initial pose, we repeat it for the purposes of observations
         if (

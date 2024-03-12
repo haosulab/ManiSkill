@@ -83,7 +83,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
             scene_mask = np.zeros(self.num_envs, dtype=bool)
             scene_mask[i] = True
             cabinet, metadata = build_preprocessed_partnet_mobility_articulation(
-                self._scene, model_id, name=f"{model_id}-{i}", scene_mask=scene_mask
+                self._scene, model_id, name=f"{model_id}-{i}", scene_idxs=scene_mask
             )
             # TODO (stao): since we processed the assets we know that the bounds[0, 1] is the actual height to set the object at
             # but in future we will store a visual origin offset so we can place them by using the actual bbox height / 2

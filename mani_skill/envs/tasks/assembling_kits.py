@@ -92,7 +92,7 @@ class AssemblingKitsEnv(BaseEnv):
             self.goal_rot = np.zeros((self.num_envs,))
 
             for i, eps_idx in enumerate(eps_idxs):
-                scene_mask = [i]
+                scene_idxs = [i]
                 episode = self._episodes[eps_idx]
 
                 # get the kit builder and the goal positions/rotations of all other objects
@@ -102,7 +102,7 @@ class AssemblingKitsEnv(BaseEnv):
                     object_goal_rot,
                 ) = self._get_kit_builder_and_goals(episode["kit"])
                 kit = (
-                    kit_builder.set_scene_idxs(scene_mask)
+                    kit_builder.set_scene_idxs(scene_idxs)
                     .set_initial_pose(sapien.Pose([0, 0, 0.01]))
                     .build_static(f"kit_{i}")
                 )
@@ -110,7 +110,7 @@ class AssemblingKitsEnv(BaseEnv):
                 # create the object to place and make it dynamic
                 obj_to_place = (
                     self._get_object_builder(episode["obj_to_place"])
-                    .set_scene_idxs(scene_mask)
+                    .set_scene_idxs(scene_idxs)
                     .build(f"obj_{i}")
                 )
                 self.object_ids.append(episode["obj_to_place"])
@@ -119,7 +119,7 @@ class AssemblingKitsEnv(BaseEnv):
                 # create all other objects and leave them as static as they do not need to be manipulated
                 other_objs = [
                     self._get_object_builder(obj_id, static=True)
-                    .set_scene_idxs(scene_mask)
+                    .set_scene_idxs(scene_idxs)
                     .set_initial_pose(
                         sapien.Pose(
                             object_goal_pos[obj_id],

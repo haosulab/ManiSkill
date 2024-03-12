@@ -112,8 +112,7 @@ class PegInsertionSideEnv(BaseEnv):
             boxes = []
 
             for i in range(self.num_envs):
-                scene_mask = np.zeros((self.num_envs), dtype=bool)
-                scene_mask[i] = True
+                scene_idxs = [i]
                 length = lengths[i]
                 radius = radii[i]
                 builder = self._scene.create_actor_builder()
@@ -140,7 +139,7 @@ class PegInsertionSideEnv(BaseEnv):
                     half_size=[length / 2, radius, radius],
                     material=mat,
                 )
-                builder.set_scene_mask(scene_mask)
+                builder.set_scene_idxs(scene_idxs)
                 peg = builder.build(f"peg_{i}")
 
                 # box with hole
@@ -153,7 +152,7 @@ class PegInsertionSideEnv(BaseEnv):
                 builder = _build_box_with_hole(
                     self._scene, inner_radius, outer_radius, depth, center=centers[i]
                 )
-                builder.set_scene_mask(scene_mask)
+                builder.set_scene_idxs(scene_idxs)
                 box = builder.build_kinematic(f"box_with_hole_{i}")
 
                 pegs.append(peg)
