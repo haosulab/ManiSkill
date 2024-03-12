@@ -16,7 +16,7 @@ class GraspBerry(BaseEnv):
     def __init__(self, *args, robot_uids="panda", **kwargs):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
-    def _load_scene(self):
+    def _load_scene(self, options: dict):
         self.table_scene = TableSceneBuilder(self)
         self.table_scene.build()
         self.obj: Actor = build_actor_ycb("012_strawberry", self._scene, name="obj")[0]

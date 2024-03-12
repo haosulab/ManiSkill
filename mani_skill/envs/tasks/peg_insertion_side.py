@@ -81,7 +81,7 @@ class PegInsertionSideEnv(BaseEnv):
         pose = sapien_utils.look_at([0.5, -0.5, 0.8], [0.05, -0.1, 0.4])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
-    def _load_scene(self):
+    def _load_scene(self, options: dict):
         with torch.device(self.device):
             self.table_scene = TableSceneBuilder(self)
             self.table_scene.build()
@@ -160,7 +160,7 @@ class PegInsertionSideEnv(BaseEnv):
             self.peg = Actor.merge(pegs, "peg")
             self.box = Actor.merge(boxes, "box_with_hole")
 
-    def _initialize_episode(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)

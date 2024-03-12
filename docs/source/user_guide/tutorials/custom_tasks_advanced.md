@@ -79,7 +79,7 @@ articulation.get_net_contact_forces(link_names) # shape (N, len(link_names), 3)
 ManiSkill defaults to actors/articulations when built to be built in every parallel sub-scene in the physx scene. This is not necessary behavior and you can control this by setting `scene_idxs`, which dictate which sub-scenes get the actor/articulation loaded into it. A good example of this done is in the PickSingleYCB task which loads a different geometry/object entirely in each sub-scene. This is done by effectively not creating one actor to pick up across all sub-scenes as you might do in PickCube, but a different actor per scene (which will be merged into one actor later).
 
 ```python
-def _load_scene(self):
+def _load_scene(self, options: dict):
     # ...
     for i, model_id in enumerate(model_ids):
         builder, obj_height = build_actor_ycb(
@@ -100,7 +100,7 @@ In the [scene masks](#scene-masks) section we saw how we can restrict actors bei
 
 ```python
 from mani_skill.utils.structs import Pose
-def _load_scene(self):
+def _load_scene(self, options: dict):
     # ... code to create list of actors as shown in last code snippet
     obj = Actor.merge(actors, name="ycb_object")
     obj.pose.p # shape (N, 3)
@@ -266,7 +266,7 @@ Mounted cameras will generally be a little slower than static cameras unless you
 Mounted cameras also allow for some easy camera pose domain randomization [detailed further here](./domain_randomization.md#during-episode-initialization--resets). Cameras do not necessarily need to be mounted on standard objects, they can also be mounted onto "empty" actors that have no visual or collision shapes that you can create like so
 
 ```python
-def _load_scene(self):
+def _load_scene(self, options: dict):
     # ... your loading code
     self.cam_mount = self._scene.create_actor_builder().build_kinematic("camera_mount")
 ```

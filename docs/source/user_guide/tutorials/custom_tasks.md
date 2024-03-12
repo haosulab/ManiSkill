@@ -49,7 +49,7 @@ class PushCubeEnv(BaseEnv):
 ```
 ## Loading
 
-At the start of any task, you must load in all objects (robots, assets, articulations, lighting etc.) into each parallel environment, also known as a sub-scene. This is also known as **reconfiguration** and generally only ever occurs once. Loading these objects is done in the `_load_actors` function of your custom task class. The objective is to simply load objects in, and nothing else. For GPU simulation at this stage you cannot change object states (like pose, qpos), only initial poses can be modified. Changing/randomizing states is done in the section on [episode initialization / randomization](#episode-initialization-randomization).
+At the start of any task, you must load in all objects (robots, assets, articulations, lighting etc.) into each parallel environment, also known as a sub-scene. This is also known as **reconfiguration** and generally only ever occurs once. Loading these objects is done in the `_load_scene` function of your custom task class. The objective is to simply load objects in, and nothing else. For GPU simulation at this stage you cannot change object states (like pose, qpos), only initial poses can be modified. Changing/randomizing states is done in the section on [episode initialization / randomization](#episode-initialization-randomization).
 
 Building objects in ManiSkill is nearly the exact same as it is in SAPIEN. You create an `ActorBuilder` via `self.scene.create_actor_builder` and via the actor builder add visual and collision shapes. Visual shapes only affect visual rendering processes while collision shapes affect the physical simulation. ManiSkill further will create the actor for you in every sub-scene (unless you use [scene-masks/scene-idxs](./custom_tasks_advanced.md#scene-masks), a more advanced feature).
 
@@ -78,9 +78,11 @@ To create your own custom robots/agents, we will provide a tutorial on the basic
 
 #### Building Actors
 
+the `_load_scene` function must be implemented to build objects besides agents. It is also given an `options` dictionary which is the same options dictionary passed to `env.reset` and defaults to an empty dictionary (which may be useful for controlling how to load a scene with just reset arguments).
+
 Building a **dynamic** actor like a cube in PushCube is done as so
 ```python
-def _load_actors(self):
+def _load_scene(self, options: dict):
     # ...
     builder = scene.create_actor_builder()
     builder.add_box_collision(
@@ -120,7 +122,7 @@ self.obj.linear_velocity # batched velocities of shape (N, 3)
 
 For object building, you can also use reusable pre-built scene builders (tutorial on how to customize/make your own [here](./custom_reusable_scenes.md)). In Push Cube it is done as so
 ```python
-def _load_actors(self):
+def _load_scene(self, options: dict):
     self.table_scene = TableSceneBuilder(
         env=self,
     )
@@ -151,14 +153,14 @@ In general one use case of setting a positive `reconfiguration_freq` value is fo
 
 ## Episode Initialization / Randomization
 
-Task initialization and randomization is handled in the `_initalize_actors` function and is called whenever `env.reset` is called. The objective here is to set the initial states of objects, including the robot. As the task ideally should be simulatable on the GPU, batched code is unavoidable. Note that furthermore, by default everything in ManiSkill tries to stay batched, even if there is only one element.
+Task initialization and randomization is handled in the `_initalize_actors` function and is called whenever `env.reset` is called. The objective here is to set the initial states of objects, including the robot. As the task ideally should be simulatable on the GPU, batched code is unavoidable. Note that furthermore, by default everything in ManiSkill tries to stay batched, even if there is only one element. Finally, like `_load_scene` the options argument is also passed down here if needed.
 
 An example from part of the PushCube task
 
 ```python
 from mani_skill.utils.structs.pose import Pose
 import torch
-def _initialize_actors(self, env_idx: torch.Tensor):
+def _initialize_actors(self, env_idx: torch.Tensor, options: dict):
     # use the torch.device context manager to automatically create tensors on CPU or CUDA depending on self.device, the device the environment runs on
     with torch.device(self.device):
         b = len(env_idx)
@@ -255,6 +257,8 @@ def _get_obs_extra(self, info: Dict):
         )
     return obs
 ```
+
+In order to understand exactly what data is returned in observations, check out the [section on observations here](../concepts/observation.md)
 
 ## (Optional) Dense Reward Function
 
