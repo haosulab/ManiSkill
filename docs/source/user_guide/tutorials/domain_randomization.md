@@ -34,7 +34,7 @@ It will generate the following result (for 16 parallel environments) on e.g. the
 :::
 
 
-Note that this method of randomization only randomizes during task reconfiguration, not during each episode reset (which calls `_initialize_episode`). In GPU simulation with enough parallel environments it shouldn't matter too much if you never reconfigure again, but if you wish you can set a `reconfigure_freq` value documented [here](./custom_tasks.md#reconfiguring-and-optimization)
+Note that this method of randomization only randomizes during task reconfiguration, not during each episode reset (which calls `_initialize_episode`). In GPU simulation with enough parallel environments it shouldn't matter too much if you never reconfigure again, but if you wish you can set a `reconfiguration_freq` value documented [here](./custom_tasks.md#reconfiguring-and-optimization)
 
 ### During Episode Initialization / Resets
 

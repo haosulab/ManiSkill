@@ -137,10 +137,10 @@ WIP
 
 In general loading is always quite slow, especially on the GPU so by default, ManiSkill reconfigures just once. Any call to `env.reset()` will not trigger a reconfiguration unless you call `env.reset(seed=seed, options=dict(reconfigure=True))` (seed is not needed but recommended if you are reconfiguring for reproducibility).
 
-If you want calls to `env.reset()` to by default reconfigure, you can set a default value for `reconfigure_freq` in your task's `__init__` function
+If you want calls to `env.reset()` to by default reconfigure, you can set a default value for `reconfiguration_freq` in your task's `__init__` function
 
 ```python
-def __init__(self, *args, robot_uids="panda", reconfigure_freq=1, **kwargs):
+def __init__(self, *args, robot_uids="panda", reconfiguration_freq=1, **kwargs):
     super().__init__(*args, robot_uids=robot_uids, reconfiguration_freq=reconfiguration_freq, **kwargs)
 ```
 
