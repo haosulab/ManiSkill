@@ -160,7 +160,7 @@ class Link(
             )
         else:
             assert len(self._objs) == 1
-            return Pose.create(self._objs[0].pose)
+            return Pose.create(self._objs[0].entity_pose)
 
     @pose.setter
     def pose(self, arg1: Union[Pose, sapien.Pose]) -> None:
