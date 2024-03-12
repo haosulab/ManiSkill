@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from typing import Dict
 
 import torch
-from gymnasium import spaces
 
 
 @dataclass

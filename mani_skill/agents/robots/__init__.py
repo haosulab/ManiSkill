@@ -3,7 +3,7 @@ from mani_skill.agents.robots.anymal.anymal_c import ANYmalC
 from .allegro_hand import AllegroHandLeft, AllegroHandRight, AllegroHandRightTouch
 from .dclaw import DClaw
 from .fetch import Fetch
-from .panda import Panda
+from .panda import Panda, PandaRealSensed435
 from .xarm import XArm7Ability
 from .xmate3 import Xmate3Robotiq
 

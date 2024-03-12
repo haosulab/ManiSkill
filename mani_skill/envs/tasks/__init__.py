@@ -1,9 +1,13 @@
+from .assembling_kits import AssemblingKitsEnv
 from .dexterity import RotateSingleObjectInHand, RotateValveEnv
 from .empty_env import EmptyEnv
 from .fmb import FMBAssembly1Env
+from .lift_peg_upright import LiftPegUprightEnv
 from .open_cabinet_drawer import OpenCabinetDoorEnv, OpenCabinetDrawerEnv
+from .peg_insertion_side import PegInsertionSideEnv
 from .pick_cube import PickCubeEnv
 from .pick_single_ycb import PickSingleYCBEnv
+from .pull_cube import PullCubeEnv
 from .push_cube import PushCubeEnv
 from .pull_cube import PullCubeEnv
 from .lift_peg_upright import LiftPegUprightEnv

@@ -18,27 +18,6 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 
 @register_env("PickCube-v1", max_episode_steps=50)
 class PickCubeEnv(BaseEnv):
-    """
-    Task Description
-    ----------------
-    A simple task where the objective is to grasp a cube and move it to a target goal position.
-
-    Randomizations
-    --------------
-    - the cube's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat on the table
-    - the cube's z-axis rotation is randomized to a random angle
-    - the target goal position (marked by a green sphere) of the cube has its xy position randomized in the region [0.1, 0.1] x [-0.1, -0.1] and z randomized in [0, 0.3]
-
-
-    Success Conditions
-    ------------------
-    - the cube position is within goal_thresh (default 0.025) euclidean distance of the goal position
-    - the robot is static (q velocity < 0.2)
-
-    Visualization: TODO: ADD LINK HERE
-
-    """
-
     SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
     agent: Union[Panda, Xmate3Robotiq, Fetch]
     cube_half_size = 0.02
@@ -51,14 +30,12 @@ class PickCubeEnv(BaseEnv):
     @property
     def _sensor_configs(self):
         pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
-        return [
-            CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 100)
-        ]
+        return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
     def _human_render_camera_configs(self):
         pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
-        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)
+        return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
     def _load_scene(self):
         self.table_scene = TableSceneBuilder(
@@ -78,7 +55,7 @@ class PickCubeEnv(BaseEnv):
         )
         self._hidden_objects.append(self.goal_site)
 
-    def _initialize_actors(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor):
         with torch.device(self.device):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)

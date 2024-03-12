@@ -2,17 +2,13 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, List, Sequence, Union
+from typing import TYPE_CHECKING, Dict, Sequence, Union
 
-import numpy as np
 import sapien
-import sapien.physx as physx
 import sapien.render
-from gymnasium import spaces
 
-from mani_skill.utils.geometry.geometry import Actor
-from mani_skill.utils.structs.articulation import Articulation
-from mani_skill.utils.structs.link import Link
+from mani_skill.utils.structs import Actor, Articulation, Link
+from mani_skill.utils.structs.pose import Pose
 
 if TYPE_CHECKING:
     from mani_skill.envs.scene import ManiSkillScene
@@ -27,10 +23,8 @@ class CameraConfig(BaseSensorConfig):
 
     uid: str
     """uid (str): unique id of the camera"""
-    p: List[float]
-    """p (List[float]): position of the camera"""
-    q: List[float]
-    """q (List[float]): quaternion of the camera"""
+    pose: Pose
+    """Pose of the camera"""
     width: int
     """width (int): width of the camera"""
     height: int
@@ -50,17 +44,11 @@ class CameraConfig(BaseSensorConfig):
     texture_names: Sequence[str] = ("Color", "PositionSegmentation")
     """texture_names (Sequence[str], optional): texture names to render. Defaults to ("Color", "PositionSegmentation"). Note that the renderign speed will not really change if you remove PositionSegmentation"""
 
+    def __post_init__(self):
+        self.pose = Pose.create(self.pose)
+
     def __repr__(self) -> str:
         return self.__class__.__name__ + "(" + str(self.__dict__) + ")"
-
-    @property
-    def pose(self):
-        return sapien.Pose(self.p, self.q)
-
-    @pose.setter
-    def pose(self, pose: sapien.Pose):
-        self.p = pose.p
-        self.q = pose.q
 
 
 def update_camera_cfgs_from_dict(
@@ -146,13 +134,13 @@ class Camera(BaseSensor):
         if self.entity is None:
             self.camera = scene.add_camera(
                 camera_cfg.uid,
+                camera_cfg.pose,
                 camera_cfg.width,
                 camera_cfg.height,
                 camera_cfg.fov,
                 camera_cfg.near,
                 camera_cfg.far,
             )
-            self.camera.local_pose = camera_cfg.pose
         else:
             self.camera = scene.add_mounted_camera(
                 camera_cfg.uid,

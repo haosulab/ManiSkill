@@ -18,19 +18,7 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 @register_env("Empty-v1", max_episode_steps=200000)
 class EmptyEnv(BaseEnv):
     """
-    Task Description
-    ----------------
     This is just a dummy environment for showcasing robots in a empty scene
-
-    Randomizations
-    --------------
-    None
-
-    Success Conditions
-    ------------------
-    None
-
-    Visualization: link to a video/gif of the task being solved
     """
 
     SUPPORTED_ROBOTS = ["panda", "fetch", "xmate3_robotiq", "anymal"]
@@ -42,19 +30,17 @@ class EmptyEnv(BaseEnv):
     @property
     def _sensor_configs(self):
         pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
-        return [
-            CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 100)
-        ]
+        return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
     def _human_render_camera_configs(self):
         pose = sapien_utils.look_at([0.75, -0.75, 0.5], [0.0, 0.0, 0.2])
-        return CameraConfig("render_camera", pose.p, pose.q, 2048, 2048, 1, 0.01, 100)
+        return CameraConfig("render_camera", pose, 2048, 2048, 1, 0.01, 100)
 
     def _load_scene(self):
         build_ground(self._scene)
 
-    def _initialize_actors(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor):
         if self.robot_uids == "panda":
             qpos = np.array(
                 [

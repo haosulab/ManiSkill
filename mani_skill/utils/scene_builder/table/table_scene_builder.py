@@ -49,6 +49,7 @@ class TableSceneBuilder(SceneBuilder):
 
     def initialize(self, env_idx: torch.Tensor):
         # table_height = 0.9196429
+        b = len(env_idx)
         self.table.set_pose(
             sapien.Pose(p=[-0.12, 0, -self.table_height], q=euler2quat(0, 0, np.pi / 2))
         )
@@ -66,9 +67,13 @@ class TableSceneBuilder(SceneBuilder):
                     0.04,
                 ]
             )
-            qpos[:-2] += self.env._episode_rng.normal(
-                0, self.robot_init_qpos_noise, len(qpos) - 2
+            qpos = (
+                self.env._episode_rng.normal(
+                    0, self.robot_init_qpos_noise, (b, len(qpos))
+                )
+                + qpos
             )
+            qpos[:, -2:] = 0.04
             self.env.agent.reset(qpos)
             self.env.agent.robot.set_pose(sapien.Pose([-0.615, 0, 0]))
         elif self.env.robot_uids == "panda_realsensed435":
@@ -77,18 +82,26 @@ class TableSceneBuilder(SceneBuilder):
                 [0.0, np.pi / 8, 0, -np.pi * 5 / 8, 0, np.pi * 3 / 4, -np.pi / 4, 0.04, 0.04]
             )
             # fmt: on
-            qpos[:-2] += self.env._episode_rng.normal(
-                0, self.robot_init_qpos_noise, len(qpos) - 2
+            qpos = (
+                self.env._episode_rng.normal(
+                    0, self.robot_init_qpos_noise, (b, len(qpos))
+                )
+                + qpos
             )
+            qpos[:, -2:] = 0.04
             self.env.agent.reset(qpos)
             self.env.agent.robot.set_pose(sapien.Pose([-0.615, 0, 0]))
         elif self.env.robot_uids == "xmate3_robotiq":
             qpos = np.array(
                 [0, np.pi / 6, 0, np.pi / 3, 0, np.pi / 2, -np.pi / 2, 0, 0]
             )
-            qpos[:-2] += self.env._episode_rng.normal(
-                0, self.robot_init_qpos_noise, len(qpos) - 2
+            qpos = (
+                self.env._episode_rng.normal(
+                    0, self.robot_init_qpos_noise, (b, len(qpos))
+                )
+                + qpos
             )
+            qpos[:, -2:] = 0
             self.env.agent.reset(qpos)
             self.env.agent.robot.set_pose(sapien.Pose([-0.562, 0, 0]))
         elif self.env.robot_uids == "fetch":
@@ -134,9 +147,13 @@ class TableSceneBuilder(SceneBuilder):
                     0.04,
                 ]
             )
-            qpos[:-2] += self.env._episode_rng.normal(
-                0, self.robot_init_qpos_noise, len(qpos) - 2
+            qpos = (
+                self.env._episode_rng.normal(
+                    0, self.robot_init_qpos_noise, (b, len(qpos))
+                )
+                + qpos
             )
+            qpos[:, -2:] = 0.04
             agent.agents[1].reset(qpos)
             agent.agents[1].robot.set_pose(
                 sapien.Pose([0, 0.75, 0], q=euler2quat(0, 0, -np.pi / 2))
@@ -148,8 +165,6 @@ class TableSceneBuilder(SceneBuilder):
         elif "dclaw" in self.env.robot_uids or "allegro" in self.env.robot_uids:
             # Need to specify the robot qpos for each sub-scenes using tensor api
             pass
-        else:
-            raise NotImplementedError(self.env.robot_uids)
 
     @property
     def scene_objects(self):

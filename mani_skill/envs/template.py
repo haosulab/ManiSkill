@@ -38,7 +38,7 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 
 
 # register the environment by a unique ID and specify a max time limit. Now once this file is imported you can do gym.make("CustomEnv-v0")
-@register_env("CustomEnv-v0", max_episode_steps=200)
+@register_env("CustomEnv-v1", max_episode_steps=200)
 class CustomEnv(BaseEnv):
     """
     Task Description
@@ -113,9 +113,7 @@ class CustomEnv(BaseEnv):
         )  # sapien_utils.look_at is a utility to get the pose of a camera that looks at a target
 
         # to see what all the sensors capture in the environment for observations, run env.render_sensors() which returns an rgb array you can visualize
-        return [
-            CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 100)
-        ]
+        return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
     def _human_render_camera_configs(self):
@@ -123,7 +121,7 @@ class CustomEnv(BaseEnv):
         # when render_mode="rgb_array" or env.render_rgb_array()
         # Another feature here is that if there is a camera called render_camera, this is the default view shown initially when a GUI is opened
         pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
-        return [CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)]
+        return [CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)]
 
     def _setup_sensors(self):
         # default code here will setup all sensors. You can add additional code to change the sensors e.g.
@@ -147,7 +145,7 @@ class CustomEnv(BaseEnv):
     you might normally need to do when working with GPU simulation. For specific details check out the push_cube.py code
     """
 
-    def _initialize_actors(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor):
         pass
 
     """

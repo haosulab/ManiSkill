@@ -20,19 +20,6 @@ from mani_skill.utils.structs.pose import Pose
 
 # @register_env("QuadrupedStand-v1", max_episode_steps=200)
 class QuadrupedStandEnv(BaseEnv):
-    """
-    Task Description
-    ----------------
-    Add a task description here
-
-    Randomizations
-    --------------
-
-    Success Conditions
-    ------------------
-
-    Visualization: link to a video/gif of the task being solved
-    """
 
     SUPPORTED_ROBOTS = ["anymal-c"]
     agent: ANYmalC
@@ -87,7 +74,7 @@ class QuadrupedStandEnv(BaseEnv):
         # self.height = -mesh[0].bounding_box.bounds[0, 2]
         self.height = 1.626
 
-    def _initialize_actors(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor):
         with torch.device(self.device):
             self.agent.robot.set_pose(Pose.create_from_pq(p=[0, 0, self.height]))
             self.agent.reset(init_qpos=torch.zeros(self.agent.robot.max_dof))

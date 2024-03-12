@@ -21,19 +21,6 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SceneConfig, SimConf
 
 # @register_env("QuadrupedRun-v1", max_episode_steps=200)
 class QuadrupedRunEnv(BaseEnv):
-    """
-    Task Description
-    ----------------
-    Control a quadruped from a standing position to run as fast forward as possible
-
-    Randomizations
-    --------------
-
-    Success Conditions
-    ------------------
-
-    Visualization: link to a video/gif of the task being solved
-    """
 
     SUPPORTED_ROBOTS = ["anymal-c"]
     agent: ANYmalC
@@ -107,7 +94,7 @@ class QuadrupedRunEnv(BaseEnv):
         self.ground = build_meter_ground(self._scene, floor_width=20)
         self.height = 0.63
 
-    def _initialize_actors(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor):
         with torch.device(self.device):
             self.agent.robot.set_pose(Pose.create_from_pq(p=[0, 0, self.height]))
             self.agent.reset(init_qpos=torch.zeros(self.agent.robot.max_dof))

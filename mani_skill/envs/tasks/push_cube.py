@@ -50,7 +50,7 @@ class PushCubeEnv(BaseEnv):
     ------------------
     - the cube's xy position is within goal_radius (default 0.1) of the target's xy position by euclidean distance.
 
-    Visualization: TODO: ADD LINK HERE
+    Visualization: https://maniskill.readthedocs.io/en/dev/tasks/index.html#pushcube-v1
     """
 
     SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
@@ -81,15 +81,13 @@ class PushCubeEnv(BaseEnv):
         # registers one 128x128 camera looking at the robot, cube, and target
         # a smaller sized camera will be lower quality, but render faster
         pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
-        return [
-            CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 100)
-        ]
+        return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
     def _human_render_camera_configs(self):
         # registers a more high-definition (512x512) camera used just for rendering when render_mode="rgb_array" or calling env.render_rgb_array()
         pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
-        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)
+        return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
     def _load_scene(self):
         # we use a prebuilt scene builder class that automatically loads in a floor and table.
@@ -126,7 +124,7 @@ class PushCubeEnv(BaseEnv):
         # and are there just for generating evaluation videos.
         # self._hidden_objects.append(self.goal_region)
 
-    def _initialize_actors(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor):
         # use the torch.device context manager to automatically create tensors on CPU or CUDA depending on self.device, the device the environment runs on
         with torch.device(self.device):
             # the initialization functions where you as a user place all the objects and initialize their properties

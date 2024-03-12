@@ -138,7 +138,7 @@ We provide some motion planning solutions/demos for the panda arm on some tasks,
 
 ```bash
 python -m mani_skill.examples.motionplanning.panda.run -e "PickCube-v1" # runs headless and only saves video
-python -m mani_skill.examples.motionplanning.panda.run -e "StackCube-v1" --visualize # opens up the GUI
+python -m mani_skill.examples.motionplanning.panda.run -e "StackCube-v1" --vis # opens up the GUI
 python -m mani_skill.examples.motionplanning.panda.run -h # open up a help menu and also show what tasks have solutions
 ```
 
@@ -149,3 +149,11 @@ Example below shows what it looks like with the GUI:
 </video>
 
 For more details check out the [motion planning page](../data_collection/motionplanning.md)
+
+## Visualize Pointcloud Data
+
+You can run the following to visualize the pointcloud observations (require's a dispplay to work)
+
+```bash
+python -m mani_skill.examples.demo_vis_pcd -e "StackCube-v1"
+```

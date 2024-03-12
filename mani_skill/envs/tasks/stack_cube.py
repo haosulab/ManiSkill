@@ -17,24 +17,6 @@ from mani_skill.utils.structs.pose import Pose
 
 @register_env("StackCube-v1", max_episode_steps=50)
 class StackCubeEnv(BaseEnv):
-    """
-    Task Description
-    ----------------
-    The goal is to pick up a red cube and stack it on top of a green cube and let go of the cube without it falling
-
-    Randomizations
-    --------------
-    - both cubes have their z-axis rotation randomized
-    - both cubes have their xy positions on top of the table scene randomized. The positions are sampled such that the cubes do not collide with each other
-
-    Success Conditions
-    ------------------
-    - the red cube is on top of the green cube (to within half of the cube size)
-    - the red cube is static
-    - the red cube is not being grasped by the robot (robot must let go of the cube)
-
-    Visualization: TODO
-    """
 
     SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
     agent: Union[Panda, Xmate3Robotiq, Fetch]
@@ -46,14 +28,12 @@ class StackCubeEnv(BaseEnv):
     @property
     def _sensor_configs(self):
         pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
-        return [
-            CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 100)
-        ]
+        return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
     def _human_render_camera_configs(self):
         pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
-        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)
+        return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
     def _load_scene(self):
         self.cube_half_size = sapien_utils.to_tensor([0.02] * 3)
@@ -68,7 +48,7 @@ class StackCubeEnv(BaseEnv):
             self._scene, half_size=0.02, color=[0, 1, 0, 1], name="cubeB"
         )
 
-    def _initialize_actors(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor):
         with torch.device(self.device):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)

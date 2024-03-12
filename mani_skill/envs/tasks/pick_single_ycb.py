@@ -79,14 +79,12 @@ class PickSingleYCBEnv(BaseEnv):
     @property
     def _sensor_configs(self):
         pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
-        return [
-            CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 100)
-        ]
+        return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
     def _human_render_camera_configs(self):
         pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
-        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)
+        return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
     def _load_scene(self):
         global WARNED_ONCE
@@ -121,9 +119,7 @@ class PickSingleYCBEnv(BaseEnv):
             builder, obj_height = build_actor_ycb(
                 model_id, self._scene, name=model_id, return_builder=True
             )
-            scene_mask = np.zeros(self.num_envs, dtype=bool)
-            scene_mask[i] = True
-            builder.set_scene_mask(scene_mask)
+            builder.set_scene_idxs([i])
             actors.append(builder.build(name=f"{model_id}-{i}"))
             self.obj_heights.append(obj_height)
         self.obj = Actor.merge(actors, name="ycb_object")
@@ -138,7 +134,7 @@ class PickSingleYCBEnv(BaseEnv):
         )
         self._hidden_objects.append(self.goal_site)
 
-    def _initialize_actors(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor):
         with torch.device(self.device):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)

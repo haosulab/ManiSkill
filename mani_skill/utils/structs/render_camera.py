@@ -82,7 +82,7 @@ class RenderCamera:
             ).T
             res = ros2opencv @ self.get_global_pose().inv().to_transformation_matrix()
             if self.mount is not None:
-                return self._cached_extrinsic_matrix
+                self._cached_extrinsic_matrix = res
             return res
         else:
             return sapien_utils.to_tensor(
