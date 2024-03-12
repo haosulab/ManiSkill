@@ -25,23 +25,24 @@ class ArticulationBuilder(SapienArticulationBuilder):
 
     def __init__(self):
         super().__init__()
-        self.scene_mask = None
         self.name = None
+        self.scene_idxs = None
 
     def set_name(self, name: str):
         self.name = name
         return self
 
-    def set_scene_mask(
+    def set_scene_idxs(
         self,
-        scene_mask: Optional[
-            Union[List[bool], Sequence[bool], torch.Tensor, np.ndarray]
+        scene_idxs: Optional[
+            Union[List[int], Sequence[int], torch.Tensor, np.ndarray]
         ] = None,
     ):
         """
-        Set a scene mask so that the articulation builder builds the articulation only in a subset of the environments
+        Set a list of scene indices to build this object in. Cannot be used in conjunction with scene mask
         """
-        self.scene_mask = scene_mask
+        self.scene_idxs = scene_idxs
+        return self
 
     def create_link_builder(self, parent: LinkBuilder = None):
         if self.link_builders:
@@ -105,25 +106,15 @@ class ArticulationBuilder(SapienArticulationBuilder):
         if name is not None:
             self.set_name(name)
         assert self.name is not None
-
-        num_arts = self.scene.num_envs
-        if self.scene_mask is not None:
-            assert (
-                len(self.scene_mask) == self.scene.num_envs
-            ), "Scene mask size is not correct. Must be the same as the number of sub scenes"
-            num_arts = np.sum(num_arts)
-            self.scene_mask = sapien_utils.to_tensor(self.scene_mask)
+        if self.scene_idxs is not None:
+            pass
         else:
-            # if scene mask is none, set it here
-            self.scene_mask = sapien_utils.to_tensor(
-                torch.ones((self.scene.num_envs), dtype=bool)
-            )
+            self.scene_idxs = torch.arange((self.scene.num_envs), dtype=int)
 
         articulations = []
 
-        for scene_idx, scene in enumerate(self.scene.sub_scenes):
-            if self.scene_mask is not None and self.scene_mask[scene_idx] == False:
-                continue
+        for scene_idx in self.scene_idxs:
+            sub_scene = self.scene.sub_scenes[scene_idx]
             links: List[sapien.Entity] = self.build_entities(
                 name_prefix=f"scene-{scene_idx}-{self.name}_"
             )
@@ -176,13 +167,13 @@ class ArticulationBuilder(SapienArticulationBuilder):
                         )
 
             for l in links:
-                scene.add_entity(l)
+                sub_scene.add_entity(l)
             articulation: physx.PhysxArticulation = l.components[0].articulation
             articulation.name = f"scene-{scene_idx}_{self.name}"
             articulations.append(articulation)
 
-        articulation = Articulation._create_from_physx_articulations(
-            articulations, self.scene, self.scene_mask
+        articulation = Articulation.create_from_physx_articulations(
+            articulations, self.scene, self.scene_idxs
         )
         self.scene.articulations[self.name] = articulation
         return articulation

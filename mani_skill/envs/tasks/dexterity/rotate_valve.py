@@ -110,13 +110,12 @@ class RotateValveEnv(BaseEnv):
         valves: List[Articulation] = []
         capsule_lens = []
         for i, valve_angles in enumerate(valve_angles_list):
-            scene_mask = np.zeros(self.num_envs, dtype=bool)
-            scene_mask[i] = True
+            scene_idxs = [i]
             if self.difficulty_level < 3:
                 valve, capsule_len = build_robel_valve(
                     self._scene,
                     valve_angles=valve_angles,
-                    scene_mask=scene_mask,
+                    scene_idxs=scene_idxs,
                     name=f"valve_station_{i}",
                 )
             else:
@@ -124,7 +123,7 @@ class RotateValveEnv(BaseEnv):
                 valve, capsule_len = build_robel_valve(
                     self._scene,
                     valve_angles=valve_angles,
-                    scene_mask=scene_mask,
+                    scene_idxs=scene_idxs,
                     name=f"valve_station_{i}",
                     radius_scale=scales[0],
                     capsule_radius_scale=scales[1],

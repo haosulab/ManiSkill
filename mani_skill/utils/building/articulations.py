@@ -79,7 +79,7 @@ def build_preprocessed_partnet_mobility_articulation(
     name: str,
     fix_root_link=True,
     urdf_config: dict = None,
-    scene_mask=None,
+    scene_idxs=None,
 ):
     """
     Builds a physx.PhysxArticulation object into the scene and returns metadata containing annotations of the object's links and joints.
@@ -107,7 +107,7 @@ def build_preprocessed_partnet_mobility_articulation(
     urdf_path = MODEL_DBS["PartnetMobility"]["model_urdf_paths"][model_id]
     urdf_config = sapien_utils.parse_urdf_config(urdf_config or {}, scene)
     sapien_utils.apply_urdf_config(loader, urdf_config)
-    articulation = loader.load(str(urdf_path), name=name, scene_mask=scene_mask)
+    articulation = loader.load(str(urdf_path), name=name, scene_idxs=scene_idxs)
     metadata = ArticulationMetadata(
         joints=dict(), links=dict(), movable_links=[], bbox=None, scale=loader.scale
     )
@@ -169,7 +169,7 @@ def build_robel_valve(
     name: str,
     radius_scale: float = 1.0,
     capsule_radius_scale: float = 1.0,
-    scene_mask=None,
+    scene_idxs=None,
 ):
     # Size and geometry of valve are based on the original setting of Robel benchmark, unit: m
     # Ref: https://github.com/google-research/robel
@@ -182,7 +182,7 @@ def build_robel_valve(
     bearing_height = 0.032
 
     builder = scene.create_articulation_builder()
-    builder.set_scene_mask(scene_mask)
+    builder.set_scene_idxs(scene_idxs)
 
     # Mount link
     mount_builder = builder.create_link_builder(parent=None)

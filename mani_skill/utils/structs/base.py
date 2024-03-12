@@ -24,13 +24,14 @@ class BaseStruct(Generic[T]):
 
     _objs: List[T]
     """list of objects of type T managed by this dataclass"""
-    _scene_mask: torch.Tensor
-    """a mask over all sub scenes indicating where the objects are located.
-    Note that torch.sum(_scene_mask) == len(_objs) and both _scene_mask and _objs are
-    both sequentially ordered the same:
-    e.g. the nth True of _scene_mask corresponds with the nth element of _objs"""
+    _scene_idxs: torch.Tensor
+    """parallel list with _objs indicating which sub-scene each of those objects are actually in by index"""
     _scene: ManiSkillScene
     """The ManiSkillScene object that manages the sub-scenes this dataclasses's objects are in"""
+
+    def __post_init__(self):
+        if not isinstance(self._scene_idxs, torch.Tensor):
+            self._scene_idxs = sapien_utils.to_tensor(self._scene_idxs)
 
     @property
     def device(self):
