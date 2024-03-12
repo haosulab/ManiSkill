@@ -178,7 +178,19 @@ class ManiSkillScene:
             else:
                 camera.far = far[i]
             if physx.is_gpu_enabled():
-                camera.set_gpu_pose_batch_index(mount._objs[i].gpu_pose_index)
+                if isinstance(mount, Actor):
+                    camera.set_gpu_pose_batch_index(
+                        mount._objs[i]
+                        .find_component_by_type(physx.PhysxRigidBodyComponent)
+                        .gpu_pose_index
+                    )
+                elif isinstance(mount, Link):
+                    camera.set_gpu_pose_batch_index(mount._objs[i].gpu_pose_index)
+                else:
+                    raise ValueError(
+                        f"Tried to mount camera on object of type {mount.__class__}"
+                    )
+
             if isinstance(mount, Link):
                 mount._objs[i].entity.add_component(camera)
             else:

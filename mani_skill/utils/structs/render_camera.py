@@ -93,15 +93,7 @@ class RenderCamera:
         return self._render_cameras[0].get_far()
 
     def get_global_pose(self) -> Pose:
-        if physx.is_gpu_enabled():
-            if self.mount is not None:
-                return self.mount.pose * self.get_local_pose()
-            return self.get_local_pose()
-        else:
-            return Pose.create_from_pq(
-                self._render_cameras[0].get_global_pose().p,
-                self._render_cameras[0].get_global_pose().q,
-            )
+        return self.global_pose
 
     def get_height(self) -> int:
         return self._render_cameras[0].get_height()
@@ -288,7 +280,15 @@ class RenderCamera:
 
     @property
     def global_pose(self) -> sapien.Pose:
-        return self._render_cameras[0].global_pose
+        if physx.is_gpu_enabled():
+            if self.mount is not None:
+                return self.mount.pose * self.get_local_pose()
+            return self.get_local_pose()
+        else:
+            return Pose.create_from_pq(
+                self._render_cameras[0].get_global_pose().p,
+                self._render_cameras[0].get_global_pose().q,
+            )
 
     # TODO (stao): These properties should be torch tensors in the future
     @property

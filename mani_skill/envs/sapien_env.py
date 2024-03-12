@@ -824,6 +824,7 @@ class BaseEnv(gym.Env):
             with sapien.profile("step_i"):
                 self._scene.step()
             self._after_simulation_step()
+        self._after_control_step()
         if physx.is_gpu_enabled():
             self._scene._gpu_fetch_all()
         return action
@@ -851,12 +852,16 @@ class BaseEnv(gym.Env):
         return info
 
     def _before_control_step(self):
-        pass
+        """Code that runs before each action has been taken.
+        On GPU simulation this is called before observations are fetched from the GPU buffers."""
+    def _after_control_step(self):
+        """Code that runs after each action has been taken.
+        On GPU simulation this is called right before observations are fetched from the GPU buffers."""
 
     def _before_simulation_step(self):
-        """Code to run right before physx_system.step is called"""
+        """Code to run right before each physx_system.step is called"""
     def _after_simulation_step(self):
-        """Code to run right after physx_system.step is called"""
+        """Code to run right after each physx_system.step is called"""
 
     # -------------------------------------------------------------------------- #
     # Simulation and other gym interfaces
