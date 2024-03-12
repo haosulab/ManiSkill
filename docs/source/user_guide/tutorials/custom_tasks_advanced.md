@@ -76,15 +76,17 @@ articulation.get_net_contact_forces(link_names) # shape (N, len(link_names), 3)
 
 ## Scene Masks
 
-ManiSkill defaults to actors/articulations when built to be built in every parallel sub-scene in the physx scene. This is not necessary behavior and you can control this by setting `scene_idxs`, which dictate where sub-scenes get the actor/articulation loaded into it and which do not. A good example of this done is in the PickSingleYCB task which loads a different geometry/object entirely in each sub-scene. This is done by effectively not creating one actor to pick up across all sub-scenes as you might do in PickCube, but a different actor per scene (which will be merged into one actor later).
+ManiSkill defaults to actors/articulations when built to be built in every parallel sub-scene in the physx scene. This is not necessary behavior and you can control this by setting `scene_idxs`, which dictate which sub-scenes get the actor/articulation loaded into it. A good example of this done is in the PickSingleYCB task which loads a different geometry/object entirely in each sub-scene. This is done by effectively not creating one actor to pick up across all sub-scenes as you might do in PickCube, but a different actor per scene (which will be merged into one actor later).
 
 ```python
-for i, model_id in enumerate(model_ids):
-    builder, obj_height = build_actor_ycb(
-        model_id, self._scene, name=model_id, return_builder=True
-    )
-    builder.set_scene_idxs([i]) # spawn only in sub-scene i
-    actors.append(builder.build(name=f"{model_id}-{i}"))
+def _load_scene(self):
+    # ...
+    for i, model_id in enumerate(model_ids):
+        builder, obj_height = build_actor_ycb(
+            model_id, self._scene, name=model_id, return_builder=True
+        )
+        builder.set_scene_idxs([i]) # spawn only in sub-scene i
+        actors.append(builder.build(name=f"{model_id}-{i}"))
 ```
 Here we have a list of YCB object ids in `model_ids`. For the ith `model_id` we create the ActorBuilder `builder` and set a scene mask so that only the ith sub-scene is True, the rest are False. Now when we call `builder.build` only the ith sub-scene has this particular object.
 
@@ -92,20 +94,21 @@ Here we have a list of YCB object ids in `model_ids`. For the ith `model_id` we 
 
 ### Merging Actors
 
-In the [scene masks](#scene-masks) section we saw how we can restrict actors being built to specific scenes. However now we have a list of Actor objects and fetching the pose of each actor would need a for loop. The solution here is to create a new Actor that represents/views that entire list of actors via `Actor.merge` as done below (taken from the PickSingleYCB code).
+In the [scene masks](#scene-masks) section we saw how we can restrict actors being built to specific scenes. However now we have a list of Actor objects and fetching the pose of each actor would need a for loop. The solution here is to create a new Actor that represents/views that entire list of actors via `Actor.merge` as done below (taken from the PickSingleYCB code). Once done, writing evaluation and reward functions become much easier as you can fetch the pose and other data of all the different actors with one batched attribute.
+
+
 
 ```python
-obj = Actor.merge(actors, name="ycb_object")
+from mani_skill.utils.structs import Pose
+def _load_scene(self):
+    # ... code to create list of actors as shown in last code snippet
+    obj = Actor.merge(actors, name="ycb_object")
+    obj.pose.p # shape (N, 3)
+    obj.pose.q # shape (N, 4)
+    # etc.
 ```
 
-Now we have the following useful behaviors which can make writing evaluation and reward functions a breeze
-
-```python
-obj.pose.p # shape (N, 3)
-obj.pose.q # shape (N, 4)
-# etc.
-```
-effectively properties that exist regardless of geometry like object pose can be easily fetched after merging actors. This enables simple heterogenous simulation of diverse objects/geometries.
+Properties that exist regardless of geometry like object pose can be easily fetched after merging actors. This enables simple heterogenous simulation of diverse objects/geometries.
 
 ### Merging Articulations
 
