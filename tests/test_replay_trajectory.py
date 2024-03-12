@@ -11,7 +11,7 @@ import pytest
     ],
 )
 def test_replay_trajectory(control_mode):
-    env_id = "PickCube-v0"
+    env_id = "PickCube-v1"
     # from mani_skill.utils.download_demo import main as download_demo, parse_args as download_demo_parse_args
     # download_demo(download_demo_parse_args(args=[env_id]))
     from mani_skill.trajectory.replay_trajectory import main, parse_args
@@ -20,7 +20,7 @@ def test_replay_trajectory(control_mode):
         parse_args(
             args=[
                 "--traj-path",
-                f"demos/rigid_body/{env_id}/trajectory.h5",
+                f"demos/teleop/{env_id}/trajectory.h5",
                 "--save-traj",
                 "--target-control-mode",
                 control_mode,

@@ -189,7 +189,7 @@ class ActorBuilder(SAPIENActorBuilder):
         num_actors = self.scene.num_envs
         if self.scene_mask is not None:
             num_actors = np.sum(num_actors)
-            self.scene_mask = sapien_utils.to_tensor(self.scene_mask).to(int)
+            self.scene_mask = sapien_utils.to_tensor(self.scene_mask).to(bool)
             self.scene_idxs = self.scene_mask.argwhere()
         elif self.scene_idxs is not None:
             self.scene_mask = torch.zeros((self.scene.num_envs), dtype=bool)
