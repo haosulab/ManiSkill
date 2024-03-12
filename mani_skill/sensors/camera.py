@@ -54,12 +54,6 @@ class CameraConfig(BaseSensorConfig):
 def update_camera_cfgs_from_dict(
     camera_cfgs: Dict[str, CameraConfig], cfg_dict: Dict[str, dict]
 ):
-    # Update CameraConfig to StereoDepthCameraConfig
-    if cfg_dict.pop("use_stereo_depth", False):
-        from .depth_camera import StereoDepthCameraConfig  # fmt: skip
-        for name, cfg in camera_cfgs.items():
-            camera_cfgs[name] = StereoDepthCameraConfig.fromCameraConfig(cfg)
-
     # First, apply global configuration
     for k, v in cfg_dict.items():
         if k in camera_cfgs:
