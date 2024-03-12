@@ -93,7 +93,7 @@ class Pose:
         return cls(raw_pose=raw_pose)
 
     @classmethod
-    def create(cls, pose: Union[torch.Tensor, sapien.Pose, "Pose"]):
+    def create(cls, pose: Union[torch.Tensor, sapien.Pose, "Pose"]) -> "Pose":
         if isinstance(pose, sapien.Pose):
             raw_pose = torch.hstack(
                 [sapien_utils.to_tensor(pose.p), sapien_utils.to_tensor(pose.q)]
@@ -109,6 +109,20 @@ class Pose:
                 return cls.create_from_pq(p=pose, device=pose.device)
             assert pose.shape[-1] == 7
             return cls(raw_pose=pose)
+
+    def __getitem__(self, i):
+        if i >= len(self.raw_pose):
+            raise IndexError(
+                f"IndexError: index {i} is out of bounds for pose with batch size {len(self.raw_pose)}"
+            )
+        return Pose.create(self.raw_pose[i : i + 1, :])
+
+    def __len__(self):
+        return len(self.raw_pose)
+
+    @property
+    def shape(self):
+        return self.raw_pose.shape
 
     # -------------------------------------------------------------------------- #
     # Functions from sapien.Pose

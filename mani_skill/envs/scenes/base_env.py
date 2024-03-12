@@ -122,9 +122,7 @@ class SceneManipulationEnv(BaseEnv):
             return ()
 
         pose = sapien_utils.look_at([0.3, 0, 0.6], [-0.1, 0, 0.1])
-        return CameraConfig(
-            "base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 100
-        )
+        return CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)
 
     @property
     def _human_render_camera_configs(self):
@@ -158,4 +156,4 @@ class SceneManipulationEnv(BaseEnv):
             pose = sapien_utils.look_at([0.4, 0.4, 0.8], [0.0, 0.0, 0.4])
         else:
             pose = sapien_utils.look_at([0, 10, -3], [0, 0, 0])
-        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)
+        return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
