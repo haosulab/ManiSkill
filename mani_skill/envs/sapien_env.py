@@ -292,7 +292,7 @@ class BaseEnv(gym.Env):
     @property
     def _default_sim_cfg(self):
         return SimConfig()
-    def _load_agent(self):
+    def _load_agent(self, options: dict):
         agents = []
         robot_uids = self.robot_uids
         if robot_uids is not None:
@@ -510,7 +510,7 @@ class BaseEnv(gym.Env):
     # -------------------------------------------------------------------------- #
     # Reconfigure
     # -------------------------------------------------------------------------- #
-    def _reconfigure(self):
+    def _reconfigure(self, options = dict()):
         """Reconfigure the simulation scene instance.
         This function clears the previous scene and creates a new one.
 
@@ -525,30 +525,31 @@ class BaseEnv(gym.Env):
         self._clear()
         # load everything into the scene first before initializing anything
         self._setup_scene()
-        self._load_agent()
-        self._load_scene()
+        self._load_agent(options)
+        self._load_scene(options)
 
-        self._load_lighting()
+        self._load_lighting(options)
 
         if sapien.physx.is_gpu_enabled():
             self._scene._setup_gpu()
             self._scene._gpu_fetch_all()
         # for GPU sim, we have to setup sensors after we call setup gpu in order to enable loading mounted sensors as they depend on GPU buffer data
-        self._setup_sensors()
+        self._setup_sensors(options)
         if self._viewer is not None:
             self._setup_viewer()
         self._reconfig_counter = self.reconfiguration_freq
 
-    def _after_reconfigure(self):
-        """Add code here that should run immediately after self._reconfigure() is called. The torch RNG context is still active so RNG is still
+    def _after_reconfigure(self, options):
+        """Add code here that should run immediately after self._reconfigure is called. The torch RNG context is still active so RNG is still
         seeded here by self._episode_seed. This is useful if you need to run something that only happens after reconfiguration but need the
         GPU initialized so that you can check e.g. collisons, poses etc."""
 
-    def _load_scene(self):
-        """Loads all objects like actors and articulations into the scene. Called by `self._reconfigure`"""
+    def _load_scene(self, options: dict):
+        """Loads all objects like actors and articulations into the scene. Called by `self._reconfigure`. Given options argument
+        is the same options dictionary passed to the self.reset function"""
 
     # TODO (stao): refactor this into sensor API
-    def _setup_sensors(self):
+    def _setup_sensors(self, options: dict):
         """Setup sensor configurations and the sensor objects in the scene. Called by `self._reconfigure`"""
 
         # First create all the configurations
@@ -607,7 +608,7 @@ class BaseEnv(gym.Env):
         self._scene.sensors = self._sensors
         self._scene.human_render_cameras = self._human_render_cameras
 
-    def _load_lighting(self):
+    def _load_lighting(self, options: dict):
         """Loads lighting into the scene. Called by `self._reconfigure`. If not overriden will set some simple default lighting"""
 
         shadow = self.enable_shadow
@@ -652,8 +653,8 @@ class BaseEnv(gym.Env):
         if reconfigure:
             with torch.random.fork_rng():
                 torch.manual_seed(seed=self._episode_seed)
-                self._reconfigure()
-                self._after_reconfigure()
+                self._reconfigure(options)
+                self._after_reconfigure(options)
         if "env_idx" in options:
             env_idx = options["env_idx"]
             self._scene._reset_mask = torch.zeros(
@@ -679,7 +680,7 @@ class BaseEnv(gym.Env):
         self.agent.reset()
         with torch.random.fork_rng():
             torch.manual_seed(self._episode_seed)
-            self._initialize_episode(env_idx)
+            self._initialize_episode(env_idx, options)
         # reset the reset mask back to all ones so any internal code in maniskill can continue to manipulate all scenes at once as usual
         self._scene._reset_mask = torch.ones(
             self.num_envs, dtype=bool, device=self.device
@@ -717,7 +718,7 @@ class BaseEnv(gym.Env):
             self._episode_seed = seed
         self._episode_rng = np.random.RandomState(self._episode_seed)
 
-    def _initialize_episode(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         """Initialize the episode, e.g., poses of actors and articulations, as well as task relevant data like randomizing
         goal positions
         """

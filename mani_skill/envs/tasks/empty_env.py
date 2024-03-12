@@ -37,10 +37,10 @@ class EmptyEnv(BaseEnv):
         pose = sapien_utils.look_at([0.75, -0.75, 0.5], [0.0, 0.0, 0.2])
         return CameraConfig("render_camera", pose, 2048, 2048, 1, 0.01, 100)
 
-    def _load_scene(self):
+    def _load_scene(self, options: dict):
         build_ground(self._scene)
 
-    def _initialize_episode(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         if self.robot_uids == "panda":
             qpos = np.array(
                 [

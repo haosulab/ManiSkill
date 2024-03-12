@@ -70,7 +70,7 @@ class AssemblingKitsEnv(BaseEnv):
         pose = sapien_utils.look_at([0.3, 0.3, 0.8], [0.0, 0.0, 0.1])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
-    def _load_scene(self):
+    def _load_scene(self, options: dict):
         with torch.device(self.device):
             self.table_scene = TableSceneBuilder(self)
             self.table_scene.build()
@@ -191,7 +191,7 @@ class AssemblingKitsEnv(BaseEnv):
         )
         return builder
 
-    def _initialize_episode(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)

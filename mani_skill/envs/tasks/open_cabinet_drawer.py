@@ -53,7 +53,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
         # TODO (stao): how much does far affect rendering speed?
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
-    def _load_scene(self):
+    def _load_scene(self, options: dict):
         self.ground = build_ground(self._scene)
         self._load_cabinets(self.handle_types)
 
@@ -120,7 +120,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
         )
         self._hidden_objects.append(self.handle_link_goal)
 
-    def _initialize_episode(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         # TODO (stao): Clean up this code and try to batch / cache more if possible.
         # And support partial resets
         with torch.device(self.device):
