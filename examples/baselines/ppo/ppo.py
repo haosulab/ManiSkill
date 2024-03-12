@@ -105,7 +105,7 @@ class Agent(nn.Module):
     def __init__(self, envs):
         super().__init__()
         self.critic = nn.Sequential(
-            layer_init(nn.Linear(np.array(envs.unwrapped.single_observation_space.shape).prod(), 256)),
+            layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 256)),
             nn.Tanh(),
             layer_init(nn.Linear(256, 256)),
             nn.Tanh(),
@@ -114,15 +114,15 @@ class Agent(nn.Module):
             layer_init(nn.Linear(256, 1)),
         )
         self.actor_mean = nn.Sequential(
-            layer_init(nn.Linear(np.array(envs.unwrapped.single_observation_space.shape).prod(), 256)),
+            layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 256)),
             nn.Tanh(),
             layer_init(nn.Linear(256, 256)),
             nn.Tanh(),
             layer_init(nn.Linear(256, 256)),
             nn.Tanh(),
-            layer_init(nn.Linear(256, np.prod(envs.unwrapped.single_action_space.shape)), std=0.01*np.sqrt(2)),
+            layer_init(nn.Linear(256, np.prod(envs.single_action_space.shape)), std=0.01*np.sqrt(2)),
         )
-        self.actor_logstd = nn.Parameter(torch.ones(1, np.prod(envs.unwrapped.single_action_space.shape)) * -0.5)
+        self.actor_logstd = nn.Parameter(torch.ones(1, np.prod(envs.single_action_space.shape)) * -0.5)
 
     def get_value(self, x):
         return self.critic(x)
@@ -179,8 +179,8 @@ if __name__ == "__main__":
 
     # env setup
     env_kwargs = dict(obs_mode="state", control_mode="pd_joint_delta_pos", render_mode="rgb_array")
-    envs = gym.make(args.env_id, num_envs=args.num_envs, **env_kwargs)
-    eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, **env_kwargs)
+    envs = gym.make(args.env_id, num_envs=args.num_envs, max_episode_steps=args.num_steps, **env_kwargs)
+    eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, max_episode_steps=args.num_steps, **env_kwargs)
     if isinstance(envs.action_space, gym.spaces.Dict):
         envs = FlattenActionSpaceWrapper(envs)
         eval_envs = FlattenActionSpaceWrapper(eval_envs)

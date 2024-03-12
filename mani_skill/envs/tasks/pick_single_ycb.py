@@ -27,27 +27,8 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 WARNED_ONCE = False
 
 
-@register_env("PickSingleYCB-v1", max_episode_steps=100)
+@register_env("PickSingleYCB-v1", max_episode_steps=50)
 class PickSingleYCBEnv(BaseEnv):
-    """
-    Task Description
-    ----------------
-    Pick up a random object sampled from the [YCB dataset](https://www.ycbbenchmarks.com/) and move it to a random goal position
-
-    Randomizations
-    --------------
-    - the object's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat on the table
-    - the object's z-axis rotation is randomized
-    - the object geometry is randomized by randomly sampling any YCB object
-
-
-    Success Conditions
-    ------------------
-    - the object position is within goal_thresh (default 0.025) euclidean distance of the goal position
-    - the robot is static (q velocity < 0.2)
-
-    Visualization: link to a video/gif of the task being solved
-    """
 
     SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
     agent: Union[Panda, Xmate3Robotiq, Fetch]
