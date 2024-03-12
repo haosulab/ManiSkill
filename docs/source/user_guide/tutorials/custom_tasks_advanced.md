@@ -8,7 +8,7 @@ Reproducibility is generally important in task building. A common example is whe
 
 By default, `env.get_state_dict()` returns a state dictionary containing the entirety of simulation state, which consists of the poses and velocities of each actor and additionally qpos/qvel values of articulations.
 
-In your own task you can define additional state data such as a eg `height` for a task like LiftCube which indicates how high the cube must be lifted for success. This would your own variable and not included in `env.get_state_dict()` so to include it you can add the following two functions to your task class
+In your own task you can define additional state data such as a eg `height` for a task like LiftCube which indicates how high the cube must be lifted for success. This would be your own variable and not included in `env.get_state_dict()` so to include it you can add the following two functions to your task class
 
 ```python
 class MyCustomTask(BaseEnv):
