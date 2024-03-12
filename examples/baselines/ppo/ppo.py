@@ -55,6 +55,8 @@ class Args:
     """the number of parallel environments"""
     num_eval_envs: int = 8
     """the number of parallel evaluation environments"""
+    partial_reset: bool = True
+    """toggle if the environments should perform partial resets"""
     num_steps: int = 50
     """the number of steps to run in each environment per policy rollout"""
     num_eval_steps: int = 50
@@ -179,7 +181,7 @@ if __name__ == "__main__":
 
     # env setup
     env_kwargs = dict(obs_mode="state", control_mode="pd_joint_delta_pos", render_mode="rgb_array")
-    envs = gym.make(args.env_id, num_envs=args.num_envs, **env_kwargs)
+    envs = gym.make(args.env_id, num_envs=args.num_envs,ignore_terminations=not args.partial_reset, **env_kwargs)
     eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, **env_kwargs)
     if isinstance(envs.action_space, gym.spaces.Dict):
         envs = FlattenActionSpaceWrapper(envs)
