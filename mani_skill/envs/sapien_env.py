@@ -1016,7 +1016,7 @@ class BaseEnv(gym.Env):
         control_window.show_camera_linesets = False
         if "render_camera" in self._human_render_cameras:
             self._viewer.set_camera_pose(
-                self._human_render_cameras["render_camera"].camera.global_pose
+                self._human_render_cameras["render_camera"].camera.global_pose[0].sp
             )
 
     def render_human(self):
@@ -1025,10 +1025,6 @@ class BaseEnv(gym.Env):
         if self._viewer is None:
             self._viewer = Viewer()
             self._setup_viewer()
-            if "render_camera" in self._human_render_cameras:
-                self._viewer.set_camera_pose(
-                    self._human_render_cameras["render_camera"].camera.global_pose
-                )
         if physx.is_gpu_enabled() and self._scene._gpu_sim_initialized:
             self.physx_system.sync_poses_gpu_to_cpu()
         self._viewer.render()
