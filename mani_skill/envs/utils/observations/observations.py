@@ -19,7 +19,6 @@ def sensor_data_to_rgbd(
     sensors: Dict[str, BaseSensor],
     rgb=True,
     depth=True,
-    segmentation: str = "",
 ):
     """
     Converts all camera data to a easily usable rgb+depth format

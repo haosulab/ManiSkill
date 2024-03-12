@@ -78,6 +78,8 @@ To create your own custom robots/agents, we will provide a tutorial on the basic
 
 #### Building Actors
 
+the `_load_scene` function must be implemented to build objects besides agents. It is also given an `options` dictionary which is the same options dictionary passed to `env.reset` and defaults to an empty dictionary (which may be useful for controlling how to load a scene with just reset arguments).
+
 Building a **dynamic** actor like a cube in PushCube is done as so
 ```python
 def _load_scene(self, options: dict):
@@ -151,14 +153,14 @@ In general one use case of setting a positive `reconfiguration_freq` value is fo
 
 ## Episode Initialization / Randomization
 
-Task initialization and randomization is handled in the `_initalize_actors` function and is called whenever `env.reset` is called. The objective here is to set the initial states of objects, including the robot. As the task ideally should be simulatable on the GPU, batched code is unavoidable. Note that furthermore, by default everything in ManiSkill tries to stay batched, even if there is only one element.
+Task initialization and randomization is handled in the `_initalize_actors` function and is called whenever `env.reset` is called. The objective here is to set the initial states of objects, including the robot. As the task ideally should be simulatable on the GPU, batched code is unavoidable. Note that furthermore, by default everything in ManiSkill tries to stay batched, even if there is only one element. Finally, like `_load_scene` the options argument is also passed down here if needed.
 
 An example from part of the PushCube task
 
 ```python
 from mani_skill.utils.structs.pose import Pose
 import torch
-def _initialize_actors(self, env_idx: torch.Tensor):
+def _initialize_actors(self, env_idx: torch.Tensor, options: dict):
     # use the torch.device context manager to automatically create tensors on CPU or CUDA depending on self.device, the device the environment runs on
     with torch.device(self.device):
         b = len(env_idx)
@@ -255,6 +257,8 @@ def _get_obs_extra(self, info: Dict):
         )
     return obs
 ```
+
+In order to understand exactly what data is returned in observations, check out the [section on observations here](../concepts/observation.md)
 
 ## (Optional) Dense Reward Function
 

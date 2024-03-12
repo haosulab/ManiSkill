@@ -822,8 +822,7 @@ class BaseEnv(gym.Env):
         for _ in range(self._sim_steps_per_control):
             self.agent.before_simulation_step()
             self._before_simulation_step()
-            with sapien.profile("step_i"):
-                self._scene.step()
+            self._scene.step()
             self._after_simulation_step()
         self._after_control_step()
         if physx.is_gpu_enabled():
@@ -837,8 +836,10 @@ class BaseEnv(gym.Env):
 
         This function may also return additional data that has been computed (e.g. is the robot grasping some object) that may be
         reused when generating observations and rewards.
+
+        By default if not overriden this function returns an empty dictionary
         """
-        raise NotImplementedError
+        return dict()
 
     def get_info(self):
         """
