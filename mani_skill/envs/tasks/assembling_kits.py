@@ -18,6 +18,7 @@ from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table.table_scene_builder import TableSceneBuilder
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.pose import Pose
+from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 
 
 @register_env("AssemblingKits-v1", max_episode_steps=200)
@@ -58,6 +59,12 @@ class AssemblingKitsEnv(BaseEnv):
             num_envs=num_envs,
             reconfiguration_freq=reconfiguration_freq,
             **kwargs,
+        )
+
+    @property
+    def _default_sim_cfg(self):
+        return SimConfig(
+            gpu_memory_cfg=GPUMemoryConfig(max_rigid_contact_count=2**20)
         )
 
     @property
@@ -203,10 +210,6 @@ class AssemblingKitsEnv(BaseEnv):
                 b, device=self.device, lock_x=True, lock_y=True
             )
             self.obj.set_pose(Pose.create_from_pq(p=xyz, q=q))
-
-    def _initialize_task(self):
-        self._obj_init_pos = np.float32(self.spawn_pos)
-        self._obj_goal_pos = np.float32(self.objects_pos[self.object_id])
 
     def _check_pos_diff(self, pos_eps=2e-2):
         pos_diff = self.goal_pos[:, :2] - self.obj.pose.p[:, :2]
