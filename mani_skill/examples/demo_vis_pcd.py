@@ -41,7 +41,7 @@ def main(args):
 
 
         # view from first camera
-        for uid, cfg in env.unwrapped._sensor_cfgs.items():
+        for uid, cfg in env.unwrapped._all_sensor_configs_parsed.items():
             if isinstance(cfg, CameraConfig):
                 cam2world = obs["sensor_param"][uid]["cam2world_gl"]
                 camera = trimesh.scene.Camera(uid, (1024, 1024), fov=(np.rad2deg(cfg.fov), np.rad2deg(cfg.fov)))
