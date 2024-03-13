@@ -93,7 +93,7 @@ class ReplicaCADSceneBuilder(SceneBuilder):
         # In the case of ReplicaCAD there are only dynamic and static objects. Since dynamic objects can be moved during simulation
         # we need to keep track of the initial poses of each dynamic actor we create.
         self.default_object_poses = []
-        for obj_meta in scene_json["object_instances"]:
+        for i, obj_meta in enumerate(scene_json["object_instances"]):
 
             # Again, for any dataset you will have to figure out how they reference object files
             # Note that ASSET_DIR will always refer to the ~/.ms_data folder or whatever MS_ASSET_DIR is set to
@@ -127,7 +127,7 @@ class ReplicaCADSceneBuilder(SceneBuilder):
                     builder.add_convex_collision_from_file(visual_file)
                 else:
                     builder.add_multiple_convex_collisions_from_file(collision_file)
-                actor = builder.build(name=obj_meta["template_name"])
+                actor = builder.build(name=f"{obj_meta['template_name']}-{i}")
                 self.default_object_poses.append(
                     (actor, pose * sapien.Pose(p=[0, 0, 0.0]))
                 )
@@ -136,10 +136,12 @@ class ReplicaCADSceneBuilder(SceneBuilder):
                 # for static (and dynamic) objects you don't need to use pre convex decomposed meshes and instead can directly
                 # add the non convex collision mesh based on the visual mesh
                 builder.add_nonconvex_collision_from_file(visual_file, pose=pose)
-                actor = builder.build_static(name=obj_meta["template_name"])
+                actor = builder.build_static(name=f"{obj_meta['template_name']}-{i}")
 
         # ReplicaCAD also provides articulated objects
-        for articulated_meta in scene_json["articulated_object_instances"]:
+        for i, articulated_meta in enumerate(
+            scene_json["articulated_object_instances"]
+        ):
 
             template_name = articulated_meta["template_name"]
             pos = articulated_meta["translation"]
@@ -149,7 +151,7 @@ class ReplicaCADSceneBuilder(SceneBuilder):
                 f"scene_datasets/replica_cad_dataset/urdf/{template_name}/{template_name}.urdf",
             )
             urdf_loader = scene.create_urdf_loader()
-            urdf_loader.name = template_name
+            urdf_loader.name = f"{template_name}-{i}"
             urdf_loader.fix_root_link = articulated_meta["fixed_base"]
             urdf_loader.disable_self_collisions = True
             if "uniform_scale" in articulated_meta:

@@ -173,6 +173,12 @@ class ActorBuilder(SAPIENActorBuilder):
         """
         self.set_name(name)
 
+        assert (
+            self.name is not None
+            and self.name != ""
+            and self.name not in self.scene.actors
+        ), "built actors in ManiSkill must have unique names and cannot be None or empty strings"
+
         num_actors = self.scene.num_envs
         if self.scene_idxs is not None:
             pass
