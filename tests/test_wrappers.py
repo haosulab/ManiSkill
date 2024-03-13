@@ -1,19 +1,24 @@
 import gymnasium as gym
 import pytest
 
-import mani_skill2.envs
-from mani_skill2.utils.wrappers import RecordEpisode
-from mani_skill2.utils.wrappers.flatten import (
+import mani_skill.envs
+from mani_skill.utils.wrappers import RecordEpisode
+from mani_skill.utils.wrappers.flatten import (
     FlattenActionSpaceWrapper,
     FlattenObservationWrapper,
 )
-from mani_skill2.utils.wrappers.visual_encoders import VisualEncoderWrapper
-from mani_skill2.vector.wrappers.gymnasium import ManiSkillVectorEnv
-from tests.utils import ENV_IDS, LOW_MEM_SIM_CFG, MULTI_AGENT_ENV_IDS, OBS_MODES
+from mani_skill.utils.wrappers.visual_encoders import VisualEncoderWrapper
+from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
+from tests.utils import (
+    LOW_MEM_SIM_CFG,
+    MULTI_AGENT_ENV_IDS,
+    OBS_MODES,
+    STATIONARY_ENV_IDS,
+)
 
 
 @pytest.mark.gpu_sim
-@pytest.mark.parametrize("env_id", ENV_IDS)
+@pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS)
 @pytest.mark.parametrize("obs_mode", OBS_MODES)
 def test_recordepisode_wrapper_gpu(env_id, obs_mode):
     env = gym.make(
@@ -24,22 +29,12 @@ def test_recordepisode_wrapper_gpu(env_id, obs_mode):
         num_envs=16,
         sim_cfg=LOW_MEM_SIM_CFG,
     )
-    env = gym.make_vec(
-        env_id,
-        num_envs=16,
-        vectorization_mode="custom",
-        vector_kwargs=dict(
-            obs_mode=obs_mode,
-            render_mode="rgb_array",
-            max_episode_steps=10,
-            sim_cfg=LOW_MEM_SIM_CFG,
-        ),
-    )
     env = RecordEpisode(
         env,
         output_dir=f"videos/pytest/{env_id}-gpu",
         trajectory_name=f"test_traj_{obs_mode}",
         info_on_video=False,
+        max_steps_per_video=50,
         save_trajectory=False,
     )
     env = ManiSkillVectorEnv(
@@ -55,7 +50,7 @@ def test_recordepisode_wrapper_gpu(env_id, obs_mode):
     del env
 
 
-@pytest.mark.parametrize("env_id", ENV_IDS)
+@pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS)
 @pytest.mark.parametrize("obs_mode", OBS_MODES)
 def test_recordepisode_wrapper(env_id, obs_mode):
     env = gym.make(
@@ -78,7 +73,7 @@ def test_recordepisode_wrapper(env_id, obs_mode):
 
 
 @pytest.mark.gpu_sim
-@pytest.mark.parametrize("env_id", ENV_IDS[:1])
+@pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS[:1])
 @pytest.mark.parametrize("obs_mode", OBS_MODES[:1])
 def test_recordepisode_wrapper_gpu_render_sensor(env_id, obs_mode):
     env = gym.make(
@@ -92,7 +87,8 @@ def test_recordepisode_wrapper_gpu_render_sensor(env_id, obs_mode):
         env,
         output_dir=f"videos/pytest/{env_id}-gpu-render-sensor",
         trajectory_name=f"test_traj_{obs_mode}",
-        save_trajectory=False,
+        save_trajectory=True,
+        max_steps_per_video=50,
         info_on_video=False,
     )
     env = ManiSkillVectorEnv(
@@ -109,7 +105,7 @@ def test_recordepisode_wrapper_gpu_render_sensor(env_id, obs_mode):
     del env
 
 
-@pytest.mark.parametrize("env_id", ENV_IDS)
+@pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS)
 @pytest.mark.parametrize("obs_mode", OBS_MODES)
 def test_recordepisode_wrapper_render_sensor(env_id, obs_mode):
     env = gym.make(
@@ -132,7 +128,73 @@ def test_recordepisode_wrapper_render_sensor(env_id, obs_mode):
 
 
 @pytest.mark.gpu_sim
-@pytest.mark.parametrize("env_id", [ENV_IDS[0]])
+@pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS[:1])
+@pytest.mark.parametrize("obs_mode", OBS_MODES[:1])
+def test_recordepisode_wrapper_partial_reset_gpu(env_id, obs_mode):
+    env = gym.make(
+        env_id,
+        obs_mode=obs_mode,
+        render_mode="rgb_array",
+        num_envs=16,
+        sim_cfg=LOW_MEM_SIM_CFG,
+    )
+    env = RecordEpisode(
+        env,
+        output_dir=f"videos/pytest/{env_id}-gpu-partial-resets",
+        trajectory_name=f"test_traj_{obs_mode}",
+        save_trajectory=True,
+        max_steps_per_video=50,
+        info_on_video=False,
+    )
+    env = ManiSkillVectorEnv(
+        env,
+        max_episode_steps=10,
+    )  # this is used purely to just fix the timelimit wrapper problems
+    env.reset()
+    action_space = env.action_space
+    for i in range(20):
+        obs, rew, terminated, truncated, info = env.step(action_space.sample())
+        if i == 13:
+            # should observe in videos (which are organized column by column order) 0, 1, 14, 15 get reset in the middle
+            env.reset(options=dict(env_idx=[0, 1, 14, 15]))
+    env.close()
+    del env
+
+
+@pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS[:1])
+@pytest.mark.parametrize("obs_mode", OBS_MODES[:1])
+def test_recordepisode_wrapper_partial_reset(env_id, obs_mode):
+    env = gym.make(
+        env_id,
+        obs_mode=obs_mode,
+        num_envs=1,
+        render_mode="rgb_array",
+        sim_cfg=LOW_MEM_SIM_CFG,
+    )
+    env = RecordEpisode(
+        env,
+        output_dir=f"videos/pytest/{env_id}-partial-resets",
+        trajectory_name=f"test_traj_{obs_mode}",
+        save_trajectory=True,
+        max_steps_per_video=50,
+        info_on_video=False,
+    )
+    env = ManiSkillVectorEnv(
+        env,
+        max_episode_steps=10,
+    )  # this is used purely to just fix the timelimit wrapper problems
+    env.reset()
+    action_space = env.action_space
+    for i in range(20):
+        obs, rew, terminated, truncated, info = env.step(action_space.sample())
+        if i == 13:
+            env.reset()
+    env.close()
+    del env
+
+
+@pytest.mark.gpu_sim
+@pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS[:1])
 def test_visualencoders_gpu(env_id):
     env = gym.make(
         env_id,
@@ -168,7 +230,7 @@ def test_visualencoders_gpu(env_id):
 
 
 @pytest.mark.gpu_sim
-@pytest.mark.parametrize("env_id", [ENV_IDS[0]])
+@pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS[:1])
 def test_visualencoder_flatten_gpu(env_id):
     env = gym.make(
         env_id,

@@ -1,24 +1,24 @@
-from mani_skill2.envs.scenes.tasks import SequentialTaskEnv, PickSequentialTaskEnv
-from mani_skill2.envs.scenes.tasks.planner import PickSubtask, plan_data_from_file
-from mani_skill2.utils.scene_builder.ai2thor import (
-    ProcTHORSceneBuilder, ArchitecTHORSceneBuilder,
-    iTHORSceneBuilder, RoboTHORSceneBuilder,
-)
-from mani_skill2.envs.scenes.base_env import SceneManipulationEnv
-from mani_skill2.utils.wrappers import RecordEpisode
-
+import os
 
 import gymnasium as gym
 import numpy as np
 import torch
 
-import os
+from mani_skill.envs.scenes.base_env import SceneManipulationEnv
+from mani_skill.envs.scenes.tasks import PickSequentialTaskEnv, SequentialTaskEnv
+from mani_skill.envs.scenes.tasks.planner import PickSubtask, plan_data_from_file
+from mani_skill.utils.scene_builder.ai2thor import (
+    ArchitecTHORSceneBuilder,
+    ProcTHORSceneBuilder,
+    RoboTHORSceneBuilder,
+    iTHORSceneBuilder,
+)
+from mani_skill.utils.wrappers import RecordEpisode
 
 render_mode = (
-    "rgb_array" if (
-        "SAPIEN_NO_DISPLAY" in os.environ
-        and int(os.environ["SAPIEN_NO_DISPLAY"]) == 1
-    ) else "human"
+    "rgb_array"
+    if ("SAPIEN_NO_DISPLAY" in os.environ and int(os.environ["SAPIEN_NO_DISPLAY"]) == 1)
+    else "human"
 )
 render_mode = "rgb_array"
 print("RENDER_MODE", render_mode)
@@ -38,12 +38,12 @@ SCENE_IDX_TO_APPLE_PLAN = {
 
 SCENE_IDX = 6
 env: SequentialTaskEnv = gym.make(
-    'SequentialTask-v0',
-    obs_mode='rgbd',
+    "SequentialTask-v0",
+    obs_mode="rgbd",
     render_mode=render_mode,
-    control_mode='pd_joint_delta_pos',
-    reward_mode='dense',
-    robot_uids='fetch',
+    control_mode="pd_joint_delta_pos",
+    reward_mode="dense",
+    robot_uids="fetch",
     scene_builder_cls=ArchitecTHORSceneBuilder,
     task_plans=[SCENE_IDX_TO_APPLE_PLAN[SCENE_IDX]],
     scene_idxs=SCENE_IDX,
@@ -66,9 +66,6 @@ obs, info = env.reset(seed=0)
 
 # import matplotlib.pyplot as plt
 # plt.imsave('out.png', np.concatenate([fetch_head_depth, fetch_hand_depth], axis=-2)[..., 0])
-
-
-
 
 
 # env = RecordEpisode(env, '.', save_trajectory=False)

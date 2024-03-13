@@ -4,7 +4,7 @@ import sapien
 import torch
 from transforms3d.euler import euler2quat
 
-from mani_skill2.utils.structs.pose import Pose
+from mani_skill.utils.structs.pose import Pose
 
 
 def test_pose_creation():
