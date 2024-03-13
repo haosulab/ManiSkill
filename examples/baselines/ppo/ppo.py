@@ -181,8 +181,8 @@ if __name__ == "__main__":
 
     # env setup
     env_kwargs = dict(obs_mode="state", control_mode="pd_joint_delta_pos", render_mode="rgb_array")
-    envs = gym.make(args.env_id, num_envs=args.num_envs, max_episode_steps=args.num_steps, **env_kwargs)
-    eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, max_episode_steps=args.num_steps, **env_kwargs)
+    envs = gym.make(args.env_id, num_envs=args.num_envs, **env_kwargs)
+    eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, **env_kwargs)
     if isinstance(envs.action_space, gym.spaces.Dict):
         envs = FlattenActionSpaceWrapper(envs)
         eval_envs = FlattenActionSpaceWrapper(eval_envs)
