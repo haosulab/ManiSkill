@@ -115,6 +115,8 @@ class ManiSkillVectorEnv(VectorEnv):
             infos["final_info"] = infos
             # gymnasium calls it final observation but it really is just o_{t+1} or the true next observation
             infos["final_observation"] = final_obs
+            # NOTE (stao): that adding masks like below is a bit redundant and not necessary
+            # but this is to follow the standard gymnasium API
             infos["_final_info"] = dones
             infos["_final_observation"] = dones
             infos["episode"]["_r"] = dones
