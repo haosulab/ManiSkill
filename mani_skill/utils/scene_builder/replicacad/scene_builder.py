@@ -82,8 +82,9 @@ class ReplicaCADSceneBuilder(SceneBuilder):
 
         # When creating objects that do not need to be moved ever, you must provide the pose of the object ahead of time
         # and use builder.build_static. Objects such as the scene background (also called a stage) fits in this category
-        builder.add_visual_from_file(bg_path, pose=bg_pose)
-        builder.add_nonconvex_collision_from_file(bg_path, pose=bg_pose)
+        builder.add_visual_from_file(bg_path)
+        builder.add_nonconvex_collision_from_file(bg_path)
+        builder.initial_pose = bg_pose
         self.bg = builder.build_static(name="scene_background")
 
         # For the purposes of physical simulation, we disable collisions between the Fetch robot and the scene background
@@ -132,10 +133,10 @@ class ReplicaCADSceneBuilder(SceneBuilder):
                     (actor, pose * sapien.Pose(p=[0, 0, 0.0]))
                 )
             elif obj_meta["motion_type"] == "STATIC":
-                builder.add_visual_from_file(visual_file, pose=pose)
+                builder.add_visual_from_file(visual_file)
                 # for static (and dynamic) objects you don't need to use pre convex decomposed meshes and instead can directly
                 # add the non convex collision mesh based on the visual mesh
-                builder.add_nonconvex_collision_from_file(visual_file, pose=pose)
+                builder.add_nonconvex_collision_from_file(visual_file)
                 builder.initial_pose = pose
                 actor = builder.build_static(name=f"{obj_meta['template_name']}-{i}")
 
