@@ -35,7 +35,7 @@ setup(
         "imageio",
         "imageio[ffmpeg]",
         "mplib>=0.1.1",
-        "pytorch_kinematics",
+        "fast_kinematics",
         "huggingface_hub",  # we use HF to version control some assets/datasets more easily
     ],
     # Glob patterns do not automatically match dotfiles
