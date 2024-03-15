@@ -344,3 +344,29 @@ def build_actor_ai2(
     if set_object_on_ground:
         actor.set_pose(sapien.Pose(p=[0, 0, 0]))
     return actor
+
+def build_actor_ai2_helper(
+    model_id: str,
+    scene: ManiSkillScene,
+    name: str,
+    kinematic: bool = False,
+    set_object_on_ground=True,
+):
+    model_path = Path("mani_skill/envs/tasks/assets/" + f"{model_id}.glb")
+    actor_id = name
+    builder = scene.create_actor_builder()
+    q = transforms3d.quaternions.axangle2quat(np.array([1, 0, 0]), theta=np.deg2rad(90))
+    pose = sapien.Pose(q=q)
+    builder.add_visual_from_file(str(model_path), pose=pose)
+    if kinematic:
+        builder.add_nonconvex_collision_from_file(str(model_path), pose=pose)
+        actor = builder.build_kinematic(name=actor_id)
+    else:
+        builder.add_multiple_convex_collisions_from_file(
+            str(model_path), decomposition="coacd", pose=pose
+        )
+        actor = builder.build(name=actor_id)
+
+    if set_object_on_ground:
+        actor.set_pose(sapien.Pose(p=[0, 0, 0]))
+    return actor
