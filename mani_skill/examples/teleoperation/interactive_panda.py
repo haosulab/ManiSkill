@@ -14,7 +14,7 @@ import mani_skill.trajectory.utils as trajectory_utils
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.wrappers.record import RecordEpisode
 def main(args):
-    output_dir = f"{args.record_dir}/teleop/{args.env_id}"
+    output_dir = f"{args.record_dir}/{args.env_id}/teleop/"
     env = gym.make(
         args.env_id,
         obs_mode=args.obs_mode,
