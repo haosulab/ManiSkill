@@ -1095,9 +1095,15 @@ class BaseEnv(gym.Env):
         if self.render_mode == "human":
             return self.render_human()
         elif self.render_mode == "rgb_array":
-            return self.render_rgb_array()
+            res = self.render_rgb_array()
+            if self.num_envs == 1:
+                res = sapien_utils.to_numpy(sapien_utils.unbatch(res))
+            return res
         elif self.render_mode == "sensors":
-            return self.render_sensors()
+            res = self.render_sensors()
+            if self.num_envs == 1:
+                res = sapien_utils.to_numpy(sapien_utils.unbatch(res))
+            return res
         else:
             raise NotImplementedError(f"Unsupported render mode {self.render_mode}.")
 
