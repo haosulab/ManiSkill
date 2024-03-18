@@ -115,7 +115,7 @@ from mani_skill.utils.building import actors
 Once built, the return value of `builder.build...` is an `Actor` object, which manages every parallel instance of the built object in each sub-scene. Now the following occurs which makes it easy to build task rewards, success evaluations etc.
 ```python
 self.obj.pose.p # batched positions of shape (N, 3)
-self.obj.pose.q # batched quaternions of shape (N, 3)
+self.obj.pose.q # batched quaternions of shape (N, 4)
 self.obj.linear_velocity # batched velocities of shape (N, 3)
 # and more ...
 ```

@@ -39,7 +39,6 @@ def main():
         reward_mode=args.reward_mode,
         control_mode=args.control_mode,
         render_mode=args.render_mode,
-        force_use_gpu_sim=True,
         **args.env_kwargs
     )
 
