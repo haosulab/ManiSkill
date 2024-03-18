@@ -4,11 +4,13 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, Sequence, Union
 
+import numpy as np
 import sapien
 import sapien.render
 
 from mani_skill.utils.structs import Actor, Articulation, Link
 from mani_skill.utils.structs.pose import Pose
+from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:
     from mani_skill.envs.scene import ManiSkillScene
@@ -29,12 +31,14 @@ class CameraConfig(BaseSensorConfig):
     """width (int): width of the camera"""
     height: int
     """height (int): height of the camera"""
-    fov: float
-    """fov (float): field of view of the camera"""
-    near: float
+    fov: float = None
+    """The field of view of the camera. Either fov or intrinsic must be given"""
+    near: float = 0.01
     """near (float): near plane of the camera"""
-    far: float
+    far: float = 100
     """far (float): far plane of the camera"""
+    intrinsic: Array = None
+    """intrinsics matrix of the camera. Either fov or intrinsic must be given"""
     entity_uid: str = None
     """entity_uid (str, optional): unique id of the entity to mount the camera. Defaults to None."""
     mount: Union[Actor, Link] = None
@@ -130,27 +134,34 @@ class Camera(BaseSensor):
             if self.entity is None:
                 raise RuntimeError(f"Mount entity ({entity_uid}) is not found")
 
+        intrinsic = camera_cfg.intrinsic
+        assert (camera_cfg.fov is None and intrinsic is not None) or (
+            camera_cfg.fov is not None and intrinsic is None
+        )
+
         # Add camera to scene. Add mounted one if a entity is given
         if self.entity is None:
             self.camera = scene.add_camera(
-                camera_cfg.uid,
-                camera_cfg.pose,
-                camera_cfg.width,
-                camera_cfg.height,
-                camera_cfg.fov,
-                camera_cfg.near,
-                camera_cfg.far,
+                name=camera_cfg.uid,
+                pose=camera_cfg.pose,
+                width=camera_cfg.width,
+                height=camera_cfg.height,
+                fovy=camera_cfg.fov,
+                intrinsic=intrinsic,
+                near=camera_cfg.near,
+                far=camera_cfg.far,
             )
         else:
             self.camera = scene.add_mounted_camera(
-                camera_cfg.uid,
-                self.entity,
-                camera_cfg.pose,
-                camera_cfg.width,
-                camera_cfg.height,
-                camera_cfg.fov,
-                camera_cfg.near,
-                camera_cfg.far,
+                name=camera_cfg.uid,
+                mount=self.entity,
+                pose=camera_cfg.pose,
+                width=camera_cfg.width,
+                height=camera_cfg.height,
+                fovy=camera_cfg.fov,
+                intrinsic=intrinsic,
+                near=camera_cfg.near,
+                far=camera_cfg.far,
             )
 
         if camera_cfg.hide_link:

@@ -118,6 +118,7 @@ class ManiSkillScene:
         width: int,
         height: int,
         fovy: float,
+        intrinsic: Array,
         near: float,
         far: float,
     ) -> RenderCamera:
@@ -130,6 +131,9 @@ class ManiSkillScene:
                 camera.set_fovy(fovy, compute_x=True)
             else:
                 camera.set_fovy(fovy[i], compute_x=True)
+            if intrinsic is not None:
+                camera.set_focal_lengths(intrinsic[i, 0, 0], intrinsic[i, 1, 1])
+                camera.set_principal_point(intrinsic[i, 0, 2], intrinsic[i, 1, 2])
             if isinstance(near, float) or isinstance(near, int):
                 camera.near = near
             else:
@@ -157,7 +161,8 @@ class ManiSkillScene:
         pose: Pose,
         width,
         height,
-        fovy,
+        fovy: float,
+        intrinsic: Array,
         near,
         far,
     ) -> RenderCamera:
@@ -169,6 +174,9 @@ class ManiSkillScene:
                 camera.set_fovy(fovy, compute_x=True)
             else:
                 camera.set_fovy(fovy[i], compute_x=True)
+            if intrinsic is not None:
+                camera.set_focal_lengths(intrinsic[i, 0, 0], intrinsic[i, 1, 1])
+                camera.set_principal_point(intrinsic[i, 0, 2], intrinsic[i, 1, 2])
             if isinstance(near, float) or isinstance(near, int):
                 camera.near = near
             else:
