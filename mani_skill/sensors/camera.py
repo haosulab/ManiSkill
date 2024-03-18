@@ -31,14 +31,14 @@ class CameraConfig(BaseSensorConfig):
     """width (int): width of the camera"""
     height: int
     """height (int): height of the camera"""
+    fov: float
+    """The field of view of the camera."""
     near: float
     """near (float): near plane of the camera"""
     far: float
     """far (float): far plane of the camera"""
-    fov: float = None
-    """The field of view of the camera. Either fov or intrinsic must be given"""
     intrinsic: Array = None
-    """intrinsics matrix of the camera. Either fov or intrinsic must be given"""
+    """intrinsics matrix of the camera. Overrides fov value"""
     entity_uid: str = None
     """entity_uid (str, optional): unique id of the entity to mount the camera. Defaults to None."""
     mount: Union[Actor, Link] = None
