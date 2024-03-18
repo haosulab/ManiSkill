@@ -117,6 +117,7 @@ class ManiSkillScene:
         pose: Pose,
         width: int,
         height: int,
+        fovy: float,
         intrinsic: Array,
         near: float,
         far: float,
@@ -126,9 +127,13 @@ class ManiSkillScene:
         for i, scene in enumerate(self.sub_scenes):
             camera_mount = sapien.Entity()
             camera = RenderCameraComponent(width, height)
-            camera.set_fovx(intrinsic[i, 0, 0])
-            camera.set_fovy(intrinsic[i, 1, 1])
-            camera.set_principal_point(intrinsic[i, 0, 2], intrinsic[i, 1, 2])
+            if isinstance(fovy, float) or isinstance(fovy, int):
+                camera.set_fovy(fovy, compute_x=True)
+            else:
+                camera.set_fovy(fovy[i], compute_x=True)
+            if intrinsic is not None:
+                camera.set_focal_lengths(intrinsic[i, 0, 0], intrinsic[i, 1, 1])
+                camera.set_principal_point(intrinsic[i, 0, 2], intrinsic[i, 1, 2])
             if isinstance(near, float) or isinstance(near, int):
                 camera.near = near
             else:
@@ -156,6 +161,7 @@ class ManiSkillScene:
         pose: Pose,
         width,
         height,
+        fovy: float,
         intrinsic: Array,
         near,
         far,
@@ -164,9 +170,13 @@ class ManiSkillScene:
         pose = Pose.create(pose)
         for i, scene in enumerate(self.sub_scenes):
             camera = RenderCameraComponent(width, height)
-            camera.set_fovx(intrinsic[i, 0, 0])
-            camera.set_fovy(intrinsic[i, 1, 1])
-            camera.set_principal_point(intrinsic[i, 0, 2], intrinsic[i, 1, 2])
+            if isinstance(fovy, float) or isinstance(fovy, int):
+                camera.set_fovy(fovy, compute_x=True)
+            else:
+                camera.set_fovy(fovy[i], compute_x=True)
+            if intrinsic is not None:
+                camera.set_focal_lengths(intrinsic[i, 0, 0], intrinsic[i, 1, 1])
+                camera.set_principal_point(intrinsic[i, 0, 2], intrinsic[i, 1, 2])
             if isinstance(near, float) or isinstance(near, int):
                 camera.near = near
             else:

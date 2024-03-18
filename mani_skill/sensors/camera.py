@@ -31,14 +31,14 @@ class CameraConfig(BaseSensorConfig):
     """width (int): width of the camera"""
     height: int
     """height (int): height of the camera"""
-    fov: float
-    """The field of view of the camera."""
-    near: float
+    fov: float = None
+    """The field of view of the camera. Either fov or intrinsic must be given"""
+    near: float = 0.01
     """near (float): near plane of the camera"""
-    far: float
+    far: float = 100
     """far (float): far plane of the camera"""
     intrinsic: Array = None
-    """intrinsics matrix of the camera. Overrides fov value"""
+    """intrinsics matrix of the camera. Either fov or intrinsic must be given"""
     entity_uid: str = None
     """entity_uid (str, optional): unique id of the entity to mount the camera. Defaults to None."""
     mount: Union[Actor, Link] = None
@@ -135,12 +135,9 @@ class Camera(BaseSensor):
                 raise RuntimeError(f"Mount entity ({entity_uid}) is not found")
 
         intrinsic = camera_cfg.intrinsic
-        if intrinsic is None:
-            intrinsic = np.zeros((scene.num_envs, 3, 3))
-            intrinsic[:, 0, 0] = camera_cfg.fov
-            intrinsic[:, 1, 1] = camera_cfg.fov
-            intrinsic[:, 0, 2] = 64.0
-            intrinsic[:, 1, 2] = 64.0
+        assert (camera_cfg.fov is None and intrinsic is not None) or (
+            camera_cfg.fov is not None and intrinsic is None
+        )
 
         # Add camera to scene. Add mounted one if a entity is given
         if self.entity is None:
@@ -149,6 +146,7 @@ class Camera(BaseSensor):
                 pose=camera_cfg.pose,
                 width=camera_cfg.width,
                 height=camera_cfg.height,
+                fovy=camera_cfg.fov,
                 intrinsic=intrinsic,
                 near=camera_cfg.near,
                 far=camera_cfg.far,
@@ -160,6 +158,7 @@ class Camera(BaseSensor):
                 pose=camera_cfg.pose,
                 width=camera_cfg.width,
                 height=camera_cfg.height,
+                fovy=camera_cfg.fov,
                 intrinsic=intrinsic,
                 near=camera_cfg.near,
                 far=camera_cfg.far,
