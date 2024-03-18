@@ -47,6 +47,13 @@ git clone https://github.com/haosulab/ManiSkill2.git
 cd ManiSkill2 && pip install -e .
 ```
 
+Note that installing mani_skill will not automatically install torch. You can install torch as so
+```
+pip install torch torchvision torchaudio
+```
+
+just make sure you are installing the version of torch that your computer can work with.
+
 ---
 
 A GPU with the Vulkan driver installed is required to enable rendering in ManiSkill2. The rigid-body environments, powered by SAPIEN, are ready to use after installation. Test your installation:
