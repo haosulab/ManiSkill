@@ -15,7 +15,7 @@ from mani_skill.utils.geometry.rotation_conversions import (
     matrix_to_quaternion,
 )
 from mani_skill.utils.structs.pose import Pose
-from mani_skill.utils.structs.types import Array
+from mani_skill.utils.structs.types import Array, DriveMode
 
 from .base_controller import ControllerConfig
 from .pd_joint_pos import PDJointPosController
@@ -176,6 +176,7 @@ class PDEEPosControllerConfig(ControllerConfig):
     use_target: bool = False
     interpolate: bool = False
     normalize_action: bool = True
+    drive_mode: Union[Sequence[DriveMode], DriveMode] = "force"
     controller_cls = PDEEPosController
 
 
@@ -259,4 +260,5 @@ class PDEEPoseControllerConfig(ControllerConfig):
     use_target: bool = False
     interpolate: bool = False
     normalize_action: bool = True
+    drive_mode: Union[Sequence[DriveMode], DriveMode] = "force"
     controller_cls = PDEEPoseController

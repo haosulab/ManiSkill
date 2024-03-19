@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Tuple, Union
 
 import sapien
 import sapien.physx as physx
@@ -11,6 +11,7 @@ from mani_skill.sensors.base_sensor import BaseSensor
 from mani_skill.sensors.camera import Camera
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.articulation import Articulation
+from mani_skill.utils.structs.drive import Drive
 from mani_skill.utils.structs.link import Link
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.render_camera import RenderCamera
@@ -255,115 +256,90 @@ class ManiSkillScene:
 
     def create_drive(
         self,
-        body0: Optional[Union[sapien.Entity, sapien.physx.PhysxRigidBaseComponent]],
-        pose0: sapien.Pose,
-        body1: Union[sapien.Entity, sapien.physx.PhysxRigidBaseComponent],
-        pose1: sapien.Pose,
+        body0: Union[Actor, Link],
+        pose0: Union[sapien.Pose, Pose],
+        body1: Union[Actor, Link],
+        pose1: Union[sapien.Pose, Pose],
     ):
-        if body0 is None:
-            c0 = None
-        elif isinstance(body0, sapien.Entity):
-            c0 = next(
-                c
-                for c in body0.components
-                if isinstance(c, sapien.physx.PhysxRigidBaseComponent)
-            )
-        else:
-            c0 = body0
+        # body0 and body1 should be in parallel.
+        return Drive.create_from_actors_or_links(
+            self, body0, pose0, body1, pose1, body0._scene_idxs
+        )
 
-        assert body1 is not None
-        if isinstance(body1, sapien.Entity):
-            e1 = body1
-            c1 = next(
-                c
-                for c in body1.components
-                if isinstance(c, sapien.physx.PhysxRigidBaseComponent)
-            )
-        else:
-            e1 = body1.entity
-            c1 = body1
+    # def create_connection(
+    #     self,
+    #     body0: Optional[Union[sapien.Entity, sapien.physx.PhysxRigidBaseComponent]],
+    #     pose0: sapien.Pose,
+    #     body1: Union[sapien.Entity, sapien.physx.PhysxRigidBaseComponent],
+    #     pose1: sapien.Pose,
+    # ):
+    #     if body0 is None:
+    #         c0 = None
+    #     elif isinstance(body0, sapien.Entity):
+    #         c0 = next(
+    #             c
+    #             for c in body0.components
+    #             if isinstance(c, sapien.physx.PhysxRigidBaseComponent)
+    #         )
+    #     else:
+    #         c0 = body0
 
-        drive = sapien.physx.PhysxDriveComponent(c1)
-        drive.parent = c0
-        drive.pose_in_child = pose1
-        drive.pose_in_parent = pose0
-        e1.add_component(drive)
-        return drive
+    #     assert body1 is not None
+    #     if isinstance(body1, sapien.Entity):
+    #         e1 = body1
+    #         c1 = next(
+    #             c
+    #             for c in body1.components
+    #             if isinstance(c, sapien.physx.PhysxRigidBaseComponent)
+    #         )
+    #     else:
+    #         e1 = body1.entity
+    #         c1 = body1
 
-    def create_connection(
-        self,
-        body0: Optional[Union[sapien.Entity, sapien.physx.PhysxRigidBaseComponent]],
-        pose0: sapien.Pose,
-        body1: Union[sapien.Entity, sapien.physx.PhysxRigidBaseComponent],
-        pose1: sapien.Pose,
-    ):
-        if body0 is None:
-            c0 = None
-        elif isinstance(body0, sapien.Entity):
-            c0 = next(
-                c
-                for c in body0.components
-                if isinstance(c, sapien.physx.PhysxRigidBaseComponent)
-            )
-        else:
-            c0 = body0
+    #     connection = sapien.physx.PhysxDistanceJointComponent(c1)
+    #     connection.parent = c0
+    #     connection.pose_in_child = pose1
+    #     connection.pose_in_parent = pose0
+    #     e1.add_component(connection)
+    #     connection.set_limit(0, 0)
+    #     return connection
 
-        assert body1 is not None
-        if isinstance(body1, sapien.Entity):
-            e1 = body1
-            c1 = next(
-                c
-                for c in body1.components
-                if isinstance(c, sapien.physx.PhysxRigidBaseComponent)
-            )
-        else:
-            e1 = body1.entity
-            c1 = body1
+    # def create_gear(
+    #     self,
+    #     body0: Optional[Union[sapien.Entity, sapien.physx.PhysxRigidBaseComponent]],
+    #     pose0: sapien.Pose,
+    #     body1: Union[sapien.Entity, sapien.physx.PhysxRigidBaseComponent],
+    #     pose1: sapien.Pose,
+    # ):
+    #     if body0 is None:
+    #         c0 = None
+    #     elif isinstance(body0, sapien.Entity):
+    #         c0 = next(
+    #             c
+    #             for c in body0.components
+    #             if isinstance(c, sapien.physx.PhysxRigidBaseComponent)
+    #         )
+    #     else:
+    #         c0 = body0
 
-        connection = sapien.physx.PhysxDistanceJointComponent(c1)
-        connection.parent = c0
-        connection.pose_in_child = pose1
-        connection.pose_in_parent = pose0
-        e1.add_component(connection)
-        connection.set_limit(0, 0)
-        return connection
+    #     assert body1 is not None
+    #     if isinstance(body1, sapien.Entity):
+    #         e1 = body1
+    #         c1 = next(
+    #             c
+    #             for c in body1.components
+    #             if isinstance(c, sapien.physx.PhysxRigidBaseComponent)
+    #         )
+    #     else:
+    #         e1 = body1.entity
+    #         c1 = body1
 
-    def create_gear(
-        self,
-        body0: Optional[Union[sapien.Entity, sapien.physx.PhysxRigidBaseComponent]],
-        pose0: sapien.Pose,
-        body1: Union[sapien.Entity, sapien.physx.PhysxRigidBaseComponent],
-        pose1: sapien.Pose,
-    ):
-        if body0 is None:
-            c0 = None
-        elif isinstance(body0, sapien.Entity):
-            c0 = next(
-                c
-                for c in body0.components
-                if isinstance(c, sapien.physx.PhysxRigidBaseComponent)
-            )
-        else:
-            c0 = body0
-
-        assert body1 is not None
-        if isinstance(body1, sapien.Entity):
-            e1 = body1
-            c1 = next(
-                c
-                for c in body1.components
-                if isinstance(c, sapien.physx.PhysxRigidBaseComponent)
-            )
-        else:
-            e1 = body1.entity
-            c1 = body1
-
-        gear = sapien.physx.PhysxGearComponent(c1)
-        gear.parent = c0
-        gear.pose_in_child = pose1
-        gear.pose_in_parent = pose0
-        e1.add_component(gear)
-        return gear
+    #     gear = sapien.physx.PhysxGearComponent(c1)
+    #     gear.parent = c0
+    #     gear.pose_in_child = pose1
+    #     gear.pose_in_parent = pose0
+    #     e1.add_component(gear)
+    #     return gear
 
     # @property
     # def render_id_to_visual_name(self):

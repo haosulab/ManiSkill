@@ -13,8 +13,8 @@ import trimesh
 
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.geometry.trimesh_utils import get_component_meshes, merge_meshes
+from mani_skill.utils.structs.articulation_joint import ArticulationJoint
 from mani_skill.utils.structs.base import BaseStruct
-from mani_skill.utils.structs.joint import Joint
 from mani_skill.utils.structs.link import Link
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import Array
@@ -35,13 +35,13 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     """Maps link name to the Link object"""
     root: Link
     """The root Link object"""
-    joints: List[Joint]
+    joints: List[ArticulationJoint]
     """List of Joint objects"""
-    joint_map: OrderedDict[str, Joint]
+    joint_map: OrderedDict[str, ArticulationJoint]
     """Maps joint name to the Joint object"""
-    active_joints: List[Joint]
+    active_joints: List[ArticulationJoint]
     """List of active Joint objects, referencing elements in self.joints"""
-    active_joint_map: OrderedDict[str, Joint]
+    active_joint_map: OrderedDict[str, ArticulationJoint]
     """Maps active joint name to the Joint object, referencing elements in self.joints"""
 
     name: str = None
@@ -137,7 +137,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         ]
 
         joint_map = OrderedDict()
-        wrapped_joints: List[Joint] = []
+        wrapped_joints: List[ArticulationJoint] = []
         for joint_index, joints in enumerate(all_joint_objs):
             try:
                 active_joint_index = all_active_joint_names.index(
@@ -145,7 +145,9 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
                 )
             except:
                 active_joint_index = None
-            wrapped_joint = Joint.create(joints, self, joint_index, active_joint_index)
+            wrapped_joint = ArticulationJoint.create(
+                joints, self, joint_index, active_joint_index
+            )
             joint_map[wrapped_joint.name] = wrapped_joint
             wrapped_joints.append(wrapped_joint)
         self.joints = wrapped_joints
@@ -304,7 +306,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             return self._objs[0].compute_passive_force(*args, **kwargs)
 
     # def create_fixed_tendon(self, link_chain: list[PhysxArticulationLinkComponent], coefficients: list[float], recip_coefficients: list[float], rest_length: float = 0, offset: float = 0, stiffness: float = 0, damping: float = 0, low: float = -3.4028234663852886e+38, high: float = 3.4028234663852886e+38, limit_stiffness: float = 0) -> None: ...
-    def find_joint_by_name(self, arg0: str) -> Joint:
+    def find_joint_by_name(self, arg0: str) -> ArticulationJoint:
         if self._merged:
             raise RuntimeError(
                 "Cannot call find_joint_by_name when the articulation object is managing articulations of different dofs"
@@ -580,7 +582,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     def set_joint_drive_targets(
         self,
         targets: Array,
-        joints: List[Joint] = None,
+        joints: List[ArticulationJoint] = None,
         joint_indices: torch.Tensor = None,
     ):
         """
@@ -603,7 +605,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     def set_joint_drive_velocity_targets(
         self,
         targets: Array,
-        joints: List[Joint] = None,
+        joints: List[ArticulationJoint] = None,
         joint_indices: torch.Tensor = None,
     ):
         """

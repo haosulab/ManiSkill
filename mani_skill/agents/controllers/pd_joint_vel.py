@@ -4,6 +4,8 @@ from typing import Sequence, Union
 import numpy as np
 from gymnasium import spaces
 
+from mani_skill.utils.structs.types import DriveMode
+
 from .base_controller import BaseController, ControllerConfig
 
 
@@ -24,7 +26,12 @@ class PDJointVelController(BaseController):
         friction = np.broadcast_to(self.config.friction, n)
 
         for i, joint in enumerate(self.joints):
-            joint.set_drive_properties(0, damping[i], force_limit=force_limit[i])
+            drive_mode = self.config.drive_mode
+            if not isinstance(drive_mode, str):
+                drive_mode = drive_mode[i]
+            joint.set_drive_properties(
+                0, damping[i], force_limit=force_limit[i], mode=drive_mode
+            )
             joint.set_friction(friction[i])
 
     def set_action(self, action: np.ndarray):
@@ -42,4 +49,5 @@ class PDJointVelControllerConfig(ControllerConfig):
     force_limit: Union[float, Sequence[float]] = 1e10
     friction: Union[float, Sequence[float]] = 0.0
     normalize_action: bool = True
+    drive_mode: Union[Sequence[DriveMode], DriveMode] = "force"
     controller_cls = PDJointVelController

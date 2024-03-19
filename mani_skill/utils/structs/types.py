@@ -1,5 +1,5 @@
 from dataclasses import asdict, dataclass, field
-from typing import Sequence, Union
+from typing import Literal, Sequence, Union
 
 import numpy as np
 import sapien.physx as physx
@@ -92,3 +92,6 @@ class SimConfig:
 
     def dict(self):
         return {k: v for k, v in asdict(self).items()}
+
+
+DriveMode = Literal["force", "acceleration"]

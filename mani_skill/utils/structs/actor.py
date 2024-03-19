@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
+class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
     """
     Wrapper around sapien.Entity objects mixed in with useful properties from the RigidBodyDynamicComponent components
 
