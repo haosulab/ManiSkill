@@ -23,9 +23,7 @@ from mani_skill.utils.structs.types import Array
 
 
 @dataclass
-class Link(
-    PhysxRigidBodyComponentStruct, BaseStruct[physx.PhysxArticulationLinkComponent]
-):
+class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
     """
     Wrapper around physx.PhysxArticulationLinkComponent objects
     """

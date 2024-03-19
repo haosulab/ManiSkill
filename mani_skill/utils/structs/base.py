@@ -51,7 +51,7 @@ class BaseStruct(Generic[T]):
 
 
 @dataclass
-class PhysxRigidBaseComponentStruct(BaseStruct):
+class PhysxRigidBaseComponentStruct(BaseStruct[T], Generic[T]):
     _bodies: List[physx.PhysxRigidBaseComponent]
 
     # ---------------------------------------------------------------------------- #
@@ -75,7 +75,7 @@ class PhysxRigidBaseComponentStruct(BaseStruct):
 
 
 @dataclass
-class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct):
+class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]):
     _body_data_name: str
     _body_data_index_internal: slice = None
 
@@ -266,7 +266,7 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct):
 
 
 @dataclass
-class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct):
+class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic[T]):
     _bodies: List[physx.PhysxRigidDynamicComponent]
 
     def get_angular_velocity(self) -> torch.Tensor:

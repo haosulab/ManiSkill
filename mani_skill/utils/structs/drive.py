@@ -19,7 +19,7 @@ from mani_skill.utils.structs.decorators import before_gpu_init
 
 @dataclass
 class PhysxDriveComponentStruct(
-    PhysxRigidBaseComponentStruct, BaseStruct[physx.PhysxDriveComponent]
+    PhysxRigidBaseComponentStruct[physx.PhysxDriveComponent]
 ):
     # drive_target: Pose # TODO (stao): what is this?
 

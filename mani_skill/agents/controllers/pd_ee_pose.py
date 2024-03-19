@@ -260,4 +260,5 @@ class PDEEPoseControllerConfig(ControllerConfig):
     use_target: bool = False
     interpolate: bool = False
     normalize_action: bool = True
+    drive_mode: Union[Sequence[DriveMode], DriveMode] = "force"
     controller_cls = PDEEPoseController
