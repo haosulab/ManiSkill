@@ -51,10 +51,7 @@ class BaseStruct(Generic[T]):
 
 
 @dataclass
-class PhysxRigidBaseComponentStruct:
-    # Reference to the data for this rigid base on the GPU
-    _scene: ManiSkillScene
-    """The ManiSkillScene object that manages the sub-scenes this dataclasses's objects are in"""
+class PhysxRigidBaseComponentStruct(BaseStruct):
     _bodies: List[physx.PhysxRigidBaseComponent]
 
     # ---------------------------------------------------------------------------- #

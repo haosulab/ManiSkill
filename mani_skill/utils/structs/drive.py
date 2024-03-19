@@ -18,8 +18,10 @@ from mani_skill.utils.structs.decorators import before_gpu_init
 
 
 @dataclass
-class PhysxDriveComponentStruct(BaseStruct[physx.PhysxDriveComponent]):
-    drive_target: Pose
+class PhysxDriveComponentStruct(
+    PhysxRigidBaseComponentStruct, BaseStruct[physx.PhysxDriveComponent]
+):
+    # drive_target: Pose # TODO (stao): what is this?
 
     def create_from_entities(
         cls,
