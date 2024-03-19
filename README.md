@@ -47,7 +47,7 @@ git clone https://github.com/haosulab/ManiSkill2.git
 cd ManiSkill2 && pip install -e .
 ```
 
-Note that installing mani_skill will not automatically install torch. You can install torch as so
+Note that installing mani_skill will not automatically install torch which is necessary. You can install torch as so
 ```
 pip install torch torchvision torchaudio
 ```
