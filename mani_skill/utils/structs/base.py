@@ -51,12 +51,35 @@ class BaseStruct(Generic[T]):
 
 
 @dataclass
-class PhysxRigidBodyComponentStruct:
-    # Reference to the data for this rigid body on the GPU
+class PhysxRigidBaseComponentStruct:
+    # Reference to the data for this rigid base on the GPU
     _scene: ManiSkillScene
     """The ManiSkillScene object that manages the sub-scenes this dataclasses's objects are in"""
+    _bodies: List[physx.PhysxRigidBaseComponent]
+
+    # ---------------------------------------------------------------------------- #
+    # API from physx.PhysxRigidBaseComponent
+    # ---------------------------------------------------------------------------- #
+    # TODO (stao): To be added
+    # def attach(self, collision_shape: PhysxCollisionShape) -> PhysxRigidBaseComponent:
+    #     ...
+    # def compute_global_aabb_tight(self) -> numpy.ndarray[tuple[typing.Literal[2], typing.Literal[3]], numpy.dtype[numpy.float32]]:
+    #     ...
+    # def get_collision_shapes(self) -> list[PhysxCollisionShape]:
+    #     ...
+    # def get_global_aabb_fast(self) -> numpy.ndarray[tuple[typing.Literal[2], typing.Literal[3]], numpy.dtype[numpy.float32]]:
+    #     ...
+    # @property
+    # def _physx_pointer(self) -> int:
+    #     ...
+    # @property
+    # def collision_shapes(self) -> list[PhysxCollisionShape]:
+    #     ...
+
+
+@dataclass
+class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct):
     _body_data_name: str
-    _bodies: List[physx.PhysxRigidBodyComponent]
     _body_data_index_internal: slice = None
 
     @property
@@ -104,6 +127,7 @@ class PhysxRigidBodyComponentStruct:
     # API from physx.PhysxRigidBodyComponent
     # ---------------------------------------------------------------------------- #
 
+    # TODO: To be added
     # def add_force_at_point(self, force: numpy.ndarray[numpy.float32, _Shape, _Shape[3]], point: numpy.ndarray[numpy.float32, _Shape, _Shape[3]], mode: typing.Literal['force', 'acceleration', 'velocity_change', 'impulse'] = 'force') -> None: ...
     # def add_force_torque(self, force: numpy.ndarray[numpy.float32, _Shape, _Shape[3]], torque: numpy.ndarray[numpy.float32, _Shape, _Shape[3]], mode: typing.Literal['force', 'acceleration', 'velocity_change', 'impulse'] = 'force') -> None: ...
     def get_angular_damping(self) -> float:
