@@ -403,7 +403,7 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
 
 
 @dataclass
-class PhysxJointComponentStruct(BaseStruct[physx.PhysxJointComponent]):
+class PhysxJointComponentStruct(BaseStruct[T], Generic[T]):
     # def create(cls, bodies: Sequence[PhysxRigidBodyComponentStruct], parent_bodies: Sequence[PhysxRigidBodyComponentStruct]):
     # TODO
     # parent: PhysxRigidBaseComponentStruct # TODO what is this for?

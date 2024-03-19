@@ -260,7 +260,10 @@ class RecordEpisode(gym.Wrapper):
                 commit_info=get_commit_info(),
                 episodes=[],
             )
-            self._json_data["env_info"]["max_episode_steps"] = self.max_episode_steps
+            if self._json_data["env_info"] is not None:
+                self._json_data["env_info"][
+                    "max_episode_steps"
+                ] = self.max_episode_steps
             if source_type is not None:
                 self._json_data["source_type"] = source_type
             if source_desc is not None:
