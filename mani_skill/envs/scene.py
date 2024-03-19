@@ -288,7 +288,7 @@ class ManiSkillScene:
         drive.pose_in_child = pose1
         drive.pose_in_parent = pose0
         e1.add_component(drive)
-        from mani_skill.utils.structs import Joint
+        from mani_skill.utils.structs import ArticulationJoint
 
         return drive
 

@@ -9,8 +9,7 @@ from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
 from mani_skill.agents.utils import get_active_joint_indices
 from mani_skill.utils import sapien_utils
-from mani_skill.utils.structs.joint import Joint
-from mani_skill.utils.structs.link import Link
+from mani_skill.utils.structs import ArticulationJoint, Link
 from mani_skill.utils.structs.pose import vectorize_pose
 
 
@@ -55,7 +54,7 @@ class DClaw(BaseAgent):
         self.tip_links: List[Link] = sapien_utils.get_objs_by_names(
             self.robot.get_links(), self.tip_link_names
         )
-        self.root_joints: List[Joint] = [
+        self.root_joints: List[ArticulationJoint] = [
             self.robot.find_joint_by_name(n) for n in self.root_joint_names
         ]
         self.root_joint_indices = get_active_joint_indices(

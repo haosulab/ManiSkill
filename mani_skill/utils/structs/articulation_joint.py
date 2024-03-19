@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class Joint(BaseStruct[physx.PhysxArticulationJoint]):
+class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
     """
     Wrapper around physx.PhysxArticulationJoint objects
 
