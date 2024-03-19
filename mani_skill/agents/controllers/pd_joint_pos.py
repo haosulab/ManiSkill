@@ -6,7 +6,7 @@ import torch
 from gymnasium import spaces
 
 from mani_skill.utils import sapien_utils
-from mani_skill.utils.structs.types import Array
+from mani_skill.utils.structs.types import Array, DriveMode
 
 from .base_controller import BaseController, ControllerConfig
 
@@ -38,8 +38,11 @@ class PDJointPosController(BaseController):
         friction = np.broadcast_to(self.config.friction, n)
 
         for i, joint in enumerate(self.joints):
+            drive_mode = self.config.drive_mode
+            if not isinstance(drive_mode, str):
+                drive_mode = drive_mode[i]
             joint.set_drive_properties(
-                stiffness[i], damping[i], force_limit=force_limit[i]
+                stiffness[i], damping[i], force_limit=force_limit[i], mode=drive_mode
             )
             joint.set_friction(friction[i])
 
@@ -115,6 +118,7 @@ class PDJointPosControllerConfig(ControllerConfig):
     use_target: bool = False
     interpolate: bool = False
     normalize_action: bool = True
+    drive_mode: Union[Sequence[DriveMode], DriveMode] = "force"
     controller_cls = PDJointPosController
 
 
