@@ -11,6 +11,7 @@ from mani_skill.sensors.base_sensor import BaseSensor
 from mani_skill.sensors.camera import Camera
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.articulation import Articulation
+from mani_skill.utils.structs.drive import Drive
 from mani_skill.utils.structs.link import Link
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.render_camera import RenderCamera
@@ -255,39 +256,17 @@ class ManiSkillScene:
 
     def create_drive(
         self,
-        body0: Optional[Union[sapien.Entity, sapien.physx.PhysxRigidBaseComponent]],
-        pose0: sapien.Pose,
-        body1: Union[sapien.Entity, sapien.physx.PhysxRigidBaseComponent],
-        pose1: sapien.Pose,
+        body0: Union[Actor, Link],
+        pose0: Union[sapien.Pose, Pose],
+        body1: Union[Actor, Link],
+        pose1: Union[sapien.Pose, Pose],
     ):
-        if body0 is None:
-            c0 = None
-        elif isinstance(body0, sapien.Entity):
-            c0 = next(
-                c
-                for c in body0.components
-                if isinstance(c, sapien.physx.PhysxRigidBaseComponent)
-            )
-        else:
-            c0 = body0
-
-        assert body1 is not None
-        if isinstance(body1, sapien.Entity):
-            e1 = body1
-            c1 = next(
-                c
-                for c in body1.components
-                if isinstance(c, sapien.physx.PhysxRigidBaseComponent)
-            )
-        else:
-            e1 = body1.entity
-            c1 = body1
-
-        drive = sapien.physx.PhysxDriveComponent(c1)
-        drive.parent = c0
+        pose1 = Pose.create(pose1)
+        pose0 = Pose.create(pose0)
+        # body0 and body1 should be in parallel.
+        drive = Drive.create_from_actors_or_links(self, body0, body1, body0._scene_idxs)
         drive.pose_in_child = pose1
         drive.pose_in_parent = pose0
-        e1.add_component(drive)
         return drive
 
     def create_connection(

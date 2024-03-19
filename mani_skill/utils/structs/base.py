@@ -13,6 +13,7 @@ from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:
     from mani_skill.envs.scene import ManiSkillScene
+    from mani_skill.utils.structs.pose import Pose
 T = TypeVar("T")
 
 
@@ -399,3 +400,37 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
     #     """
     #     :type: list[bool]
     #     """
+
+
+@dataclass
+class PhysxJointComponentStruct(BaseStruct[physx.PhysxJointComponent]):
+    # def create(cls, bodies: Sequence[PhysxRigidBodyComponentStruct], parent_bodies: Sequence[PhysxRigidBodyComponentStruct]):
+    # TODO
+    # parent: PhysxRigidBaseComponentStruct # TODO what is this for?
+    pose_in_child: Pose
+    pose_in_parent: Pose
+
+    # ---------------------------------------------------------------------------- #
+    # API from physx.PhysxJointComponent
+    # ---------------------------------------------------------------------------- #
+
+    # def get_parent(self) -> PhysxRigidBaseComponent:
+    #     ...
+    # def get_pose_in_child(self) -> sapien.pysapien.Pose:
+    #     ...
+    # def get_pose_in_parent(self) -> sapien.pysapien.Pose:
+    #     ...
+    # def get_relative_pose(self) -> sapien.pysapien.Pose:
+    #     ...
+    # def set_inv_inertia_scales(self, scale0: float, scale1: float) -> None:
+    #     ...
+    # def set_inv_mass_scales(self, scale0: float, scale1: float) -> None:
+    #     ...
+    # def set_parent(self, parent: PhysxRigidBaseComponent) -> None:
+    #     ...
+    # def set_pose_in_child(self, pose: sapien.pysapien.Pose) -> None:
+    #     ...
+    # def set_pose_in_parent(self, pose: sapien.pysapien.Pose) -> None:
+    #     ...
+    # @property
+    # def relative_pose(self) -> sapien.pysapien.Pose:

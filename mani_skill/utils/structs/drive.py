@@ -1,28 +1,32 @@
+from __future__ import annotations
+
 import typing
 from dataclasses import dataclass
-from typing import Sequence, Union
+from typing import TYPE_CHECKING, Sequence, Union
 
 import sapien
 import sapien.physx as physx
 import torch
 
-from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.utils.structs import (
     Actor,
     BaseStruct,
     Link,
+    PhysxJointComponentStruct,
     PhysxRigidBaseComponentStruct,
-    Pose,
 )
 from mani_skill.utils.structs.decorators import before_gpu_init
 
+if TYPE_CHECKING:
+    from mani_skill.envs.scene import ManiSkillScene
+
 
 @dataclass
-class PhysxDriveComponentStruct(
-    PhysxRigidBaseComponentStruct[physx.PhysxDriveComponent]
+class Drive(
+    PhysxRigidBaseComponentStruct[physx.PhysxDriveComponent], PhysxJointComponentStruct
 ):
     # drive_target: Pose # TODO (stao): what is this?
-
+    @classmethod
     def create_from_entities(
         cls,
         scene: ManiSkillScene,
@@ -46,13 +50,13 @@ class PhysxDriveComponentStruct(
             physx_drives.append(sub_scene.create_drive(bodies0[i], bodies1[i]))
         return cls(_objs=physx_drives, _scene_idxs=scene_idxs, _scene=scene)
 
+    @staticmethod
     def create_from_actors_or_links(
-        cls,
         scene: ManiSkillScene,
         entities0: Union[Actor, Link] = None,
         entities1: Union[Actor, Link] = None,
         scene_idxs: torch.Tensor = None,
-    ):
+    ) -> "Drive":
         """create a batched drive between two Actors/Links"""
         objs0 = entities0._objs
         objs1 = entities1._objs
@@ -61,9 +65,7 @@ class PhysxDriveComponentStruct(
         if isinstance(entities1, Link):
             objs1 = [x.entity for x in objs1]
 
-        return PhysxDriveComponentStruct.create_from_entities(
-            entities0, scene, objs0, objs1, scene_idxs
-        )
+        return Drive.create_from_entities(entities0, scene, objs0, objs1, scene_idxs)
 
     # def __init__(self, body: PhysxRigidBodyComponent) -> None:
     #     ...

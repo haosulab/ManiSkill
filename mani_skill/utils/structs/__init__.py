@@ -3,6 +3,7 @@ from .articulation import Articulation
 from .articulation_joint import ArticulationJoint
 from .base import (
     BaseStruct,
+    PhysxJointComponentStruct,
     PhysxRigidBaseComponentStruct,
     PhysxRigidBodyComponentStruct,
     PhysxRigidDynamicComponentStruct,
