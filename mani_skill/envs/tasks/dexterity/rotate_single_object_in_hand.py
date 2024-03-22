@@ -73,16 +73,14 @@ class RotateSingleObjectInHand(BaseEnv):
         pose = sapien_utils.look_at(
             eye=[0.15, 0, 0.45], target=[-0.1, 0, self.hand_init_height]
         )
-        return [
-            CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 100)
-        ]
+        return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
     def _human_render_camera_configs(self):
         pose = sapien_utils.look_at([0.2, 0.4, 0.4], [0.0, 0.0, 0.1])
-        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)
+        return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
-    def _load_scene(self):
+    def _load_scene(self, options: dict):
         self.table_scene = TableSceneBuilder(
             env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
         )
@@ -112,9 +110,8 @@ class RotateSingleObjectInHand(BaseEnv):
                         base_color=np.array([255, 255, 255, 255]) / 255,
                     ),
                 )
-                scene_mask = np.zeros(self.num_envs, dtype=bool)
-                scene_mask[i] = True
-                builder.set_scene_mask(scene_mask)
+                scene_idxs = [i]
+                builder.set_scene_idxs(scene_idxs)
                 actors.append(builder.build(name=f"cube-{i}"))
                 obj_heights.append(half_size)
             self.obj = Actor.merge(actors, name="cube")
@@ -130,9 +127,8 @@ class RotateSingleObjectInHand(BaseEnv):
                 builder, obj_height = build_actor_ycb(
                     model_id, self._scene, name=model_id, return_builder=True
                 )
-                scene_mask = np.zeros(self.num_envs, dtype=bool)
-                scene_mask[i] = True
-                builder.set_scene_mask(scene_mask)
+                scene_idxs = [i]
+                builder.set_scene_idxs(scene_idxs)
                 actors.append(builder.build(name=f"{model_id}-{i}"))
                 obj_heights.append(obj_height)
             self.obj = Actor.merge(actors, name="ycb_object")
@@ -143,7 +139,7 @@ class RotateSingleObjectInHand(BaseEnv):
 
         self.obj_heights = torch.from_numpy(np.array(obj_heights)).to(self.device)
 
-    def _initialize_episode(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         self._initialize_actors(env_idx)
         self._initialize_agent(env_idx)
 

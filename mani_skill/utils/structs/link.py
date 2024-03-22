@@ -23,9 +23,7 @@ from mani_skill.utils.structs.types import Array
 
 
 @dataclass
-class Link(
-    PhysxRigidBodyComponentStruct, BaseStruct[physx.PhysxArticulationLinkComponent]
-):
+class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
     """
     Wrapper around physx.PhysxArticulationLinkComponent objects
     """
@@ -44,18 +42,18 @@ class Link(
         cls,
         physx_links: List[physx.PhysxArticulationLinkComponent],
         articulation: Articulation = None,
-        scene_mask: torch.Tensor = None,
+        scene_idxs: torch.Tensor = None,
     ):
         shared_name = "_".join(
             physx_links[0].name.replace(articulation.name, "", 1).split("_")[1:]
         )
-        if scene_mask is None and articulation is not None:
-            scene_mask = articulation._scene_mask
+        if scene_idxs is None and articulation is not None:
+            scene_idxs = articulation._scene_idxs
         return cls(
             articulation=articulation,
             _objs=physx_links,
             _scene=articulation._scene,
-            _scene_mask=scene_mask,
+            _scene_idxs=scene_idxs,
             name=shared_name,
             _body_data_name="cuda_rigid_body_data"
             if isinstance(articulation.px, physx.PhysxGpuSystem)
@@ -66,18 +64,20 @@ class Link(
     @classmethod
     def merge(cls, links: List["Link"], name: str = None):
         objs = []
-        merged_scene_mask = links[0]._scene_mask.clone()
+        merged_scene_idxs = []
         num_objs_per_actor = links[0]._num_objs
         for link in links:
             objs += link._objs
-            merged_scene_mask[link._scene_mask] = True
+            merged_scene_idxs.append(link._scene_idxs)
             assert (
                 link._num_objs == num_objs_per_actor
             ), "Each given link must have the same number of managed objects"
+        merged_scene_idxs = torch.concat(merged_scene_idxs)
         merged_link = Link.create(
-            objs, articulation=links[0].articulation, scene_mask=merged_scene_mask
+            objs, articulation=links[0].articulation, scene_idxs=merged_scene_idxs
         )
-        merged_link.articulation = None  # remove articulation reference as it does not make sense and is only used to instantiate some properties like the physx system
+        # remove articulation reference as it does not make sense and is only used to instantiate some properties like the physx system
+        merged_link.articulation = None
         merged_link.name = name
         return merged_link
 
@@ -158,7 +158,7 @@ class Link(
             )
         else:
             assert len(self._objs) == 1
-            return Pose.create(self._objs[0].pose)
+            return Pose.create(self._objs[0].entity_pose)
 
     @pose.setter
     def pose(self, arg1: Union[Pose, sapien.Pose]) -> None:

@@ -18,8 +18,7 @@ from mani_skill.agents.utils import (
 )
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.common import clip_and_scale_action, normalize_action_space
-from mani_skill.utils.structs.articulation import Articulation
-from mani_skill.utils.structs.joint import Joint
+from mani_skill.utils.structs import Articulation, ArticulationJoint
 from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:
@@ -31,7 +30,7 @@ class BaseController:
     The controller is an interface for the robot to interact with the environment.
     """
 
-    joints: List[Joint]  # active joints controlled
+    joints: List[ArticulationJoint]  # active joints controlled
     joint_indices: torch.Tensor  # indices of active joints controlled
     action_space: spaces.Space
     """the action space. If the number of parallel environments is > 1, this action space is also batched"""
@@ -233,9 +232,6 @@ class DictController(BaseController):
     def set_drive_property(self):
         for controller in self.controllers.values():
             controller.set_drive_property()
-        # raise RuntimeError(
-        #     "Undefined behaviors to set drive property for multiple controllers"
-        # )
 
     def reset(self):
         for controller in self.controllers.values():

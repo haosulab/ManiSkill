@@ -51,7 +51,7 @@ class URDFLoader(SapienURDFLoader):
         srdf_file=None,
         package_dir=None,
         name=None,
-        scene_mask=None,
+        scene_idxs=None,
     ) -> Articulation:
         """
         Args:
@@ -59,6 +59,7 @@ class URDFLoader(SapienURDFLoader):
             srdf_file: SRDF for urdf_file. If srdf_file is None, it defaults to the ".srdf" file with the same as the urdf file
             package_dir: base directory used to resolve asset files in the URDF file. If an asset path starts with "package://", "package://" is simply removed from the file name
             name (str): name of the created articulation
+            scene_idxs (list[int]): the ids of the scenes to build the objects in
         Returns:
             returns a single Articulation loaded from the URDF file. It throws an error if multiple objects exists
         """
@@ -75,7 +76,7 @@ class URDFLoader(SapienURDFLoader):
 
         articulations: List[Articulation] = []
         for b in articulation_builders:
-            b.set_scene_mask(scene_mask)
+            b.set_scene_idxs(scene_idxs)
             b.disable_self_collisions = self.disable_self_collisions
             articulations.append(b.build())
 

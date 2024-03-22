@@ -13,6 +13,7 @@ from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:
     from mani_skill.envs.scene import ManiSkillScene
+    from mani_skill.utils.structs.pose import Pose
 T = TypeVar("T")
 
 
@@ -24,13 +25,14 @@ class BaseStruct(Generic[T]):
 
     _objs: List[T]
     """list of objects of type T managed by this dataclass"""
-    _scene_mask: torch.Tensor
-    """a mask over all sub scenes indicating where the objects are located.
-    Note that torch.sum(_scene_mask) == len(_objs) and both _scene_mask and _objs are
-    both sequentially ordered the same:
-    e.g. the nth True of _scene_mask corresponds with the nth element of _objs"""
+    _scene_idxs: torch.Tensor
+    """parallel list with _objs indicating which sub-scene each of those objects are actually in by index"""
     _scene: ManiSkillScene
     """The ManiSkillScene object that manages the sub-scenes this dataclasses's objects are in"""
+
+    def __post_init__(self):
+        if not isinstance(self._scene_idxs, torch.Tensor):
+            self._scene_idxs = sapien_utils.to_tensor(self._scene_idxs)
 
     @property
     def device(self):
@@ -50,12 +52,32 @@ class BaseStruct(Generic[T]):
 
 
 @dataclass
-class PhysxRigidBodyComponentStruct:
-    # Reference to the data for this rigid body on the GPU
-    _scene: ManiSkillScene
-    """The ManiSkillScene object that manages the sub-scenes this dataclasses's objects are in"""
+class PhysxRigidBaseComponentStruct(BaseStruct[T], Generic[T]):
+    _bodies: List[physx.PhysxRigidBaseComponent]
+
+    # ---------------------------------------------------------------------------- #
+    # API from physx.PhysxRigidBaseComponent
+    # ---------------------------------------------------------------------------- #
+    # TODO (stao): To be added
+    # def attach(self, collision_shape: PhysxCollisionShape) -> PhysxRigidBaseComponent:
+    #     ...
+    # def compute_global_aabb_tight(self) -> numpy.ndarray[tuple[typing.Literal[2], typing.Literal[3]], numpy.dtype[numpy.float32]]:
+    #     ...
+    # def get_collision_shapes(self) -> list[PhysxCollisionShape]:
+    #     ...
+    # def get_global_aabb_fast(self) -> numpy.ndarray[tuple[typing.Literal[2], typing.Literal[3]], numpy.dtype[numpy.float32]]:
+    #     ...
+    # @property
+    # def _physx_pointer(self) -> int:
+    #     ...
+    # @property
+    # def collision_shapes(self) -> list[PhysxCollisionShape]:
+    #     ...
+
+
+@dataclass
+class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]):
     _body_data_name: str
-    _bodies: List[physx.PhysxRigidBodyComponent]
     _body_data_index_internal: slice = None
 
     @property
@@ -103,6 +125,7 @@ class PhysxRigidBodyComponentStruct:
     # API from physx.PhysxRigidBodyComponent
     # ---------------------------------------------------------------------------- #
 
+    # TODO: To be added
     # def add_force_at_point(self, force: numpy.ndarray[numpy.float32, _Shape, _Shape[3]], point: numpy.ndarray[numpy.float32, _Shape, _Shape[3]], mode: typing.Literal['force', 'acceleration', 'velocity_change', 'impulse'] = 'force') -> None: ...
     # def add_force_torque(self, force: numpy.ndarray[numpy.float32, _Shape, _Shape[3]], torque: numpy.ndarray[numpy.float32, _Shape, _Shape[3]], mode: typing.Literal['force', 'acceleration', 'velocity_change', 'impulse'] = 'force') -> None: ...
     def get_angular_damping(self) -> float:
@@ -244,7 +267,7 @@ class PhysxRigidBodyComponentStruct:
 
 
 @dataclass
-class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct):
+class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic[T]):
     _bodies: List[physx.PhysxRigidDynamicComponent]
 
     def get_angular_velocity(self) -> torch.Tensor:
@@ -377,3 +400,37 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct):
     #     """
     #     :type: list[bool]
     #     """
+
+
+@dataclass
+class PhysxJointComponentStruct(BaseStruct[T], Generic[T]):
+    # def create(cls, bodies: Sequence[PhysxRigidBodyComponentStruct], parent_bodies: Sequence[PhysxRigidBodyComponentStruct]):
+    # TODO
+    # parent: PhysxRigidBaseComponentStruct # TODO what is this for?
+    pose_in_child: Pose
+    pose_in_parent: Pose
+
+    # ---------------------------------------------------------------------------- #
+    # API from physx.PhysxJointComponent
+    # ---------------------------------------------------------------------------- #
+
+    # def get_parent(self) -> PhysxRigidBaseComponent:
+    #     ...
+    # def get_pose_in_child(self) -> sapien.pysapien.Pose:
+    #     ...
+    # def get_pose_in_parent(self) -> sapien.pysapien.Pose:
+    #     ...
+    # def get_relative_pose(self) -> sapien.pysapien.Pose:
+    #     ...
+    # def set_inv_inertia_scales(self, scale0: float, scale1: float) -> None:
+    #     ...
+    # def set_inv_mass_scales(self, scale0: float, scale1: float) -> None:
+    #     ...
+    # def set_parent(self, parent: PhysxRigidBaseComponent) -> None:
+    #     ...
+    # def set_pose_in_child(self, pose: sapien.pysapien.Pose) -> None:
+    #     ...
+    # def set_pose_in_parent(self, pose: sapien.pysapien.Pose) -> None:
+    #     ...
+    # @property
+    # def relative_pose(self) -> sapien.pysapien.Pose:

@@ -31,7 +31,7 @@ Please refer to our [documentation](https://maniskill.readthedocs.io/en/dev/) to
 From pip:
 
 ```bash
-pip install mani_skill==3.0.0.dev1
+pip install --upgrade mani_skill
 ```
 
 From github:
@@ -46,6 +46,13 @@ From source:
 git clone https://github.com/haosulab/ManiSkill2.git
 cd ManiSkill2 && pip install -e .
 ```
+
+Note that installing mani_skill will not automatically install torch which is necessary. You can install torch as so
+```
+pip install torch torchvision torchaudio
+```
+
+just make sure you are installing the version of torch that your computer can work with.
 
 ---
 

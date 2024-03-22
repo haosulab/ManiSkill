@@ -27,27 +27,8 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 WARNED_ONCE = False
 
 
-@register_env("PickSingleYCB-v1", max_episode_steps=100)
+@register_env("PickSingleYCB-v1", max_episode_steps=50)
 class PickSingleYCBEnv(BaseEnv):
-    """
-    Task Description
-    ----------------
-    Pick up a random object sampled from the [YCB dataset](https://www.ycbbenchmarks.com/) and move it to a random goal position
-
-    Randomizations
-    --------------
-    - the object's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat on the table
-    - the object's z-axis rotation is randomized
-    - the object geometry is randomized by randomly sampling any YCB object
-
-
-    Success Conditions
-    ------------------
-    - the object position is within goal_thresh (default 0.025) euclidean distance of the goal position
-    - the robot is static (q velocity < 0.2)
-
-    Visualization: link to a video/gif of the task being solved
-    """
 
     SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
     agent: Union[Panda, Xmate3Robotiq, Fetch]
@@ -79,16 +60,14 @@ class PickSingleYCBEnv(BaseEnv):
     @property
     def _sensor_configs(self):
         pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
-        return [
-            CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 100)
-        ]
+        return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
     def _human_render_camera_configs(self):
         pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
-        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)
+        return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
-    def _load_scene(self):
+    def _load_scene(self, options: dict):
         global WARNED_ONCE
         self.table_scene = TableSceneBuilder(
             env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
@@ -121,9 +100,7 @@ class PickSingleYCBEnv(BaseEnv):
             builder, obj_height = build_actor_ycb(
                 model_id, self._scene, name=model_id, return_builder=True
             )
-            scene_mask = np.zeros(self.num_envs, dtype=bool)
-            scene_mask[i] = True
-            builder.set_scene_mask(scene_mask)
+            builder.set_scene_idxs([i])
             actors.append(builder.build(name=f"{model_id}-{i}"))
             self.obj_heights.append(obj_height)
         self.obj = Actor.merge(actors, name="ycb_object")
@@ -138,7 +115,7 @@ class PickSingleYCBEnv(BaseEnv):
         )
         self._hidden_objects.append(self.goal_site)
 
-    def _initialize_episode(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)

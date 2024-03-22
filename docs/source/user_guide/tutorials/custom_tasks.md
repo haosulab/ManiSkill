@@ -49,9 +49,9 @@ class PushCubeEnv(BaseEnv):
 ```
 ## Loading
 
-At the start of any task, you must load in all objects (robots, assets, articulations, lighting etc.) into each parallel environment, also known as a sub-scene. This is also known as **reconfiguration** and generally only ever occurs once. Loading these objects is done in the `_load_actors` function of your custom task class. The objective is to simply load objects in, and nothing else. For GPU simulation at this stage you cannot change object states (like pose, qpos), only initial poses can be modified. Changing/randomizing states is done in the section on [episode initialization / randomization](#episode-initialization-randomization).
+At the start of any task, you must load in all objects (robots, assets, articulations, lighting etc.) into each parallel environment, also known as a sub-scene. This is also known as **reconfiguration** and generally only ever occurs once. Loading these objects is done in the `_load_scene` function of your custom task class. The objective is to simply load objects in, and nothing else. For GPU simulation at this stage you cannot change object states (like pose, qpos), only initial poses can be modified. Changing/randomizing states is done in the section on [episode initialization / randomization](#episode-initialization-randomization).
 
-Building objects in ManiSkill is nearly the exact same as it is in SAPIEN. You create an `ActorBuilder` via `self.scene.create_actor_builder` and via the actor builder add visual and collision shapes. Visual shapes only affect visual rendering processes while collision shapes affect the physical simulation. ManiSkill further will create the actor for you in every sub-scene (unless you use [scene-masks](./custom_tasks_advanced.md#scene-masks), a more advanced feature).
+Building objects in ManiSkill is nearly the exact same as it is in SAPIEN. You create an `ActorBuilder` via `self.scene.create_actor_builder` and via the actor builder add visual and collision shapes. Visual shapes only affect visual rendering processes while collision shapes affect the physical simulation. ManiSkill further will create the actor for you in every sub-scene (unless you use [scene-masks/scene-idxs](./custom_tasks_advanced.md#scene-masks), a more advanced feature).
 
 #### Building Robots
 
@@ -78,9 +78,11 @@ To create your own custom robots/agents, we will provide a tutorial on the basic
 
 #### Building Actors
 
+the `_load_scene` function must be implemented to build objects besides agents. It is also given an `options` dictionary which is the same options dictionary passed to `env.reset` and defaults to an empty dictionary (which may be useful for controlling how to load a scene with just reset arguments).
+
 Building a **dynamic** actor like a cube in PushCube is done as so
 ```python
-def _load_actors(self):
+def _load_scene(self, options: dict):
     # ...
     builder = scene.create_actor_builder()
     builder.add_box_collision(
@@ -113,14 +115,14 @@ from mani_skill.utils.building import actors
 Once built, the return value of `builder.build...` is an `Actor` object, which manages every parallel instance of the built object in each sub-scene. Now the following occurs which makes it easy to build task rewards, success evaluations etc.
 ```python
 self.obj.pose.p # batched positions of shape (N, 3)
-self.obj.pose.q # batched quaternions of shape (N, 3)
+self.obj.pose.q # batched quaternions of shape (N, 4)
 self.obj.linear_velocity # batched velocities of shape (N, 3)
 # and more ...
 ```
 
 For object building, you can also use reusable pre-built scene builders (tutorial on how to customize/make your own [here](./custom_reusable_scenes.md)). In Push Cube it is done as so
 ```python
-def _load_actors(self):
+def _load_scene(self, options: dict):
     self.table_scene = TableSceneBuilder(
         env=self,
     )
@@ -137,10 +139,10 @@ WIP
 
 In general loading is always quite slow, especially on the GPU so by default, ManiSkill reconfigures just once. Any call to `env.reset()` will not trigger a reconfiguration unless you call `env.reset(seed=seed, options=dict(reconfigure=True))` (seed is not needed but recommended if you are reconfiguring for reproducibility).
 
-If you want calls to `env.reset()` to by default reconfigure, you can set a default value for `reconfigure_freq` in your task's `__init__` function
+If you want calls to `env.reset()` to by default reconfigure, you can set a default value for `reconfiguration_freq` in your task's `__init__` function
 
 ```python
-def __init__(self, *args, robot_uids="panda", reconfigure_freq=1, **kwargs):
+def __init__(self, *args, robot_uids="panda", reconfiguration_freq=1, **kwargs):
     super().__init__(*args, robot_uids=robot_uids, reconfiguration_freq=reconfiguration_freq, **kwargs)
 ```
 
@@ -151,14 +153,14 @@ In general one use case of setting a positive `reconfiguration_freq` value is fo
 
 ## Episode Initialization / Randomization
 
-Task initialization and randomization is handled in the `_initalize_actors` function and is called whenever `env.reset` is called. The objective here is to set the initial states of objects, including the robot. As the task ideally should be simulatable on the GPU, batched code is unavoidable. Note that furthermore, by default everything in ManiSkill tries to stay batched, even if there is only one element.
+Task initialization and randomization is handled in the `_initalize_actors` function and is called whenever `env.reset` is called. The objective here is to set the initial states of objects, including the robot. As the task ideally should be simulatable on the GPU, batched code is unavoidable. Note that furthermore, by default everything in ManiSkill tries to stay batched, even if there is only one element. Finally, like `_load_scene` the options argument is also passed down here if needed.
 
 An example from part of the PushCube task
 
 ```python
 from mani_skill.utils.structs.pose import Pose
 import torch
-def _initialize_actors(self, env_idx: torch.Tensor):
+def _initialize_actors(self, env_idx: torch.Tensor, options: dict):
     # use the torch.device context manager to automatically create tensors on CPU or CUDA depending on self.device, the device the environment runs on
     with torch.device(self.device):
         b = len(env_idx)
@@ -184,7 +186,7 @@ ManiSkill further provides a safe-guard feature that changes to object states ar
 
 ### Working with Poses
 
-In robot simulation, every object has a pose, which represents the object's position and orientation as 3D positon vector and a 4D [quaternion](https://en.wikipedia.org/wiki/Quaternion). During 
+In robot simulation, every object has a pose, which represents the object's position and orientation as 3D positon vector and a 4D [quaternion](https://en.wikipedia.org/wiki/Quaternion).
 
 Another feature shown here is the `Pose` object, which is a simple wrapper around the original `sapien.Pose` object that allows you to manage a batch of poses on the GPU and do transformations with poses. To create the `Pose` object you can do one of the two options
 
@@ -256,6 +258,8 @@ def _get_obs_extra(self, info: Dict):
     return obs
 ```
 
+In order to understand exactly what data is returned in observations, check out the [section on observations here](../concepts/observation.md)
+
 ## (Optional) Dense Reward Function
 
 You can define a dense reward function and then a normalized version of it
@@ -288,13 +292,13 @@ def _sensor_configs(self):
     # a smaller sized camera will be lower quality, but render faster
     pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
     return [
-        CameraConfig("base_camera", pose.p, pose.q, 128, 128, 1, 0.01, 10)
+        CameraConfig("base_camera", pose, 128, 128, 1, 0.01, 100)
     ]
 @property
 def _human_render_camera_configs(self):
     # registers a more high-definition (512x512) camera used just for rendering when render_mode="rgb_array" or calling env.render_rgb_array()
     pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
-    return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
+    return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 ```
 
 In the code above we use a useful tool `sapien_utils.look_at(eye, target)` which generates a pose object to configure a camera to be at position `eye` looking at position `target`. To debug the registered cameras for sensors, you can visualize them by running

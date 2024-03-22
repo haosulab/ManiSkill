@@ -1,13 +1,8 @@
-from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from dataclasses import dataclass
-from os import devnull
 from typing import Sequence, Union
 
+import fast_kinematics
 import numpy as np
-
-# TODO (stao): https://github.com/UM-ARM-Lab/pytorch_kinematics/issues/35 pk requires mujoco as it is always imported despite not being used for the code we need
-import pytorch_kinematics as pk
-import sapien
 import sapien.physx as physx
 import torch
 from gymnasium import spaces
@@ -19,8 +14,8 @@ from mani_skill.utils.geometry.rotation_conversions import (
     euler_angles_to_matrix,
     matrix_to_quaternion,
 )
-from mani_skill.utils.structs.pose import Pose, vectorize_pose
-from mani_skill.utils.structs.types import Array
+from mani_skill.utils.structs.pose import Pose
+from mani_skill.utils.structs.types import Array, DriveMode
 
 from .base_controller import ControllerConfig
 from .pd_joint_pos import PDJointPosController
@@ -36,22 +31,9 @@ class PDEEPosController(PDJointPosController):
         super()._initialize_joints()
 
         if physx.is_gpu_enabled():
-            with open(self.config.urdf_path, "r") as f:
-                urdf_str = f.read()
-
-            # NOTE (stao): it seems that the pk library currently always outputs some complaints if there are unknown attributes in a URDF. Hide it with this contextmanager here
-            @contextmanager
-            def suppress_stdout_stderr():
-                """A context manager that redirects stdout and stderr to devnull"""
-                with open(devnull, "w") as fnull:
-                    with redirect_stderr(fnull) as err, redirect_stdout(fnull) as out:
-                        yield (err, out)
-
-            with suppress_stdout_stderr():
-                self.pk_chain = pk.build_serial_chain_from_urdf(
-                    urdf_str,
-                    end_link_name=self.config.ee_link,
-                ).to(device="cuda")
+            self.fast_kinematics_model = fast_kinematics.FastKinematics(
+                self.config.urdf_path, self.scene.num_envs, self.config.ee_link
+            )
         else:
             # TODO should we just use jacobian inverse * delta method from pk?
             self.pmodel = self.articulation._objs[0].create_pinocchio_model()
@@ -103,7 +85,11 @@ class PDEEPosController(PDJointPosController):
     def compute_ik(self, target_pose: Pose, action: Array, max_iterations=100):
         # Assume the target pose is defined in the base frame
         if physx.is_gpu_enabled():
-            jacobian = self.pk_chain.jacobian(self.qpos)
+            jacobian = (
+                self.fast_kinematics_model.jacobian_mixed_frame_pytorch(self.qpos)
+                .view(-1, 7, 6)
+                .permute(0, 2, 1)
+            )
             # NOTE (stao): a bit of a hacky way to check if we want to do IK on position or pose here
             if action.shape[1] == 3:
                 jacobian = jacobian[:, 0:3]
@@ -190,6 +176,7 @@ class PDEEPosControllerConfig(ControllerConfig):
     use_target: bool = False
     interpolate: bool = False
     normalize_action: bool = True
+    drive_mode: Union[Sequence[DriveMode], DriveMode] = "force"
     controller_cls = PDEEPosController
 
 
@@ -273,4 +260,5 @@ class PDEEPoseControllerConfig(ControllerConfig):
     use_target: bool = False
     interpolate: bool = False
     normalize_action: bool = True
+    drive_mode: Union[Sequence[DriveMode], DriveMode] = "force"
     controller_cls = PDEEPoseController

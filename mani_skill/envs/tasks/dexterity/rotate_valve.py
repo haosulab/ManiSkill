@@ -61,16 +61,14 @@ class RotateValveEnv(BaseEnv):
     @property
     def _sensor_configs(self):
         pose = sapien_utils.look_at(eye=[0.3, 0, 0.3], target=[-0.1, 0, 0.05])
-        return [
-            CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 100)
-        ]
+        return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
     def _human_render_camera_configs(self):
         pose = sapien_utils.look_at([0.2, 0.4, 0.4], [0.0, 0.0, 0.1])
-        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)
+        return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
-    def _load_scene(self):
+    def _load_scene(self, options: dict):
         self.table_scene = TableSceneBuilder(
             env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
         )
@@ -112,13 +110,12 @@ class RotateValveEnv(BaseEnv):
         valves: List[Articulation] = []
         capsule_lens = []
         for i, valve_angles in enumerate(valve_angles_list):
-            scene_mask = np.zeros(self.num_envs, dtype=bool)
-            scene_mask[i] = True
+            scene_idxs = [i]
             if self.difficulty_level < 3:
                 valve, capsule_len = build_robel_valve(
                     self._scene,
                     valve_angles=valve_angles,
-                    scene_mask=scene_mask,
+                    scene_idxs=scene_idxs,
                     name=f"valve_station_{i}",
                 )
             else:
@@ -126,7 +123,7 @@ class RotateValveEnv(BaseEnv):
                 valve, capsule_len = build_robel_valve(
                     self._scene,
                     valve_angles=valve_angles,
-                    scene_mask=scene_mask,
+                    scene_idxs=scene_idxs,
                     name=f"valve_station_{i}",
                     radius_scale=scales[0],
                     capsule_radius_scale=scales[1],
@@ -137,7 +134,7 @@ class RotateValveEnv(BaseEnv):
         self.capsule_lens = torch.from_numpy(np.array(capsule_lens)).to(self.device)
         self.valve_link = sapien_utils.get_obj_by_name(self.valve.get_links(), "valve")
 
-    def _initialize_episode(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         self._initialize_actors(env_idx)
         self._initialize_agent(env_idx)
 

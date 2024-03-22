@@ -38,7 +38,7 @@ def get_commit_info(show_modified_files=False, show_untracked_files=False):
     try:
         repo = git.Repo(PACKAGE_DIR.parent)
     except git.InvalidGitRepositoryError as err:
-        logger.warning("mani_skill is not installed with git.")
+        logger.warn("mani_skill is not installed with git.")
         return None
     else:
         commit_info = {}

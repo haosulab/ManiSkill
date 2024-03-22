@@ -149,3 +149,11 @@ Example below shows what it looks like with the GUI:
 </video>
 
 For more details check out the [motion planning page](../data_collection/motionplanning.md)
+
+## Visualize Pointcloud Data
+
+You can run the following to visualize the pointcloud observations (require's a dispplay to work)
+
+```bash
+python -m mani_skill.examples.demo_vis_pcd -e "StackCube-v1"
+```

@@ -8,7 +8,7 @@ Reproducibility is generally important in task building. A common example is whe
 
 By default, `env.get_state_dict()` returns a state dictionary containing the entirety of simulation state, which consists of the poses and velocities of each actor and additionally qpos/qvel values of articulations.
 
-In your own task you can define additional state data such as a eg `height` for a task like LiftCube which indicates how high the cube must be lifted for success. This would your own variable and not included in `env.get_state_dict()` so to include it you can add the following two functions to your task class
+In your own task you can define additional state data such as a eg `height` for a task like LiftCube which indicates how high the cube must be lifted for success. This would be your own variable and not included in `env.get_state_dict()` so to include it you can add the following two functions to your task class
 
 ```python
 class MyCustomTask(BaseEnv):
@@ -76,17 +76,17 @@ articulation.get_net_contact_forces(link_names) # shape (N, len(link_names), 3)
 
 ## Scene Masks
 
-ManiSkill defaults to actors/articulations when built to be built in every parallel sub-scene in the physx scene. This is not necessary behavior and you can control this via scene masks, which dictate where sub-scenes get the actor/articulation loaded into it and which do not. A good example of this done is in the PickSingleYCB task which loads a different geometry/object entirely in each sub-scene. This is done by effectively not creating one actor to pick up across all sub-scenes as you might do in PickCube, but a different actor per scene (which will be merged into one actor later).
+ManiSkill defaults to actors/articulations when built to be built in every parallel sub-scene in the physx scene. This is not necessary behavior and you can control this by setting `scene_idxs`, which dictate which sub-scenes get the actor/articulation loaded into it. A good example of this done is in the PickSingleYCB task which loads a different geometry/object entirely in each sub-scene. This is done by effectively not creating one actor to pick up across all sub-scenes as you might do in PickCube, but a different actor per scene (which will be merged into one actor later).
 
 ```python
-for i, model_id in enumerate(model_ids):
-    builder, obj_height = build_actor_ycb(
-        model_id, self._scene, name=model_id, return_builder=True
-    )
-    scene_mask = np.zeros(self.num_envs, dtype=bool)
-    scene_mask[i] = True
-    builder.set_scene_mask(scene_mask)
-    actors.append(builder.build(name=f"{model_id}-{i}"))
+def _load_scene(self, options: dict):
+    # ...
+    for i, model_id in enumerate(model_ids):
+        builder, obj_height = build_actor_ycb(
+            model_id, self._scene, name=model_id, return_builder=True
+        )
+        builder.set_scene_idxs([i]) # spawn only in sub-scene i
+        actors.append(builder.build(name=f"{model_id}-{i}"))
 ```
 Here we have a list of YCB object ids in `model_ids`. For the ith `model_id` we create the ActorBuilder `builder` and set a scene mask so that only the ith sub-scene is True, the rest are False. Now when we call `builder.build` only the ith sub-scene has this particular object.
 
@@ -94,20 +94,21 @@ Here we have a list of YCB object ids in `model_ids`. For the ith `model_id` we 
 
 ### Merging Actors
 
-In the [scene masks](#scene-masks) section we saw how we can restrict actors being built to specific scenes. However now we have a list of Actor objects and fetching the pose of each actor would need a for loop. The solution here is to create a new Actor that represents/views that entire list of actors via `Actor.merge` as done below (taken from the PickSingleYCB code).
+In the [scene masks](#scene-masks) section we saw how we can restrict actors being built to specific scenes. However now we have a list of Actor objects and fetching the pose of each actor would need a for loop. The solution here is to create a new Actor that represents/views that entire list of actors via `Actor.merge` as done below (taken from the PickSingleYCB code). Once done, writing evaluation and reward functions become much easier as you can fetch the pose and other data of all the different actors with one batched attribute.
+
+
 
 ```python
-obj = Actor.merge(actors, name="ycb_object")
+from mani_skill.utils.structs import Pose
+def _load_scene(self, options: dict):
+    # ... code to create list of actors as shown in last code snippet
+    obj = Actor.merge(actors, name="ycb_object")
+    obj.pose.p # shape (N, 3)
+    obj.pose.q # shape (N, 4)
+    # etc.
 ```
 
-Now we have the following useful behaviors which can make writing evaluation and reward functions a breeze
-
-```python
-obj.pose.p # shape (N, 3)
-obj.pose.q # shape (N, 4)
-# etc.
-```
-effectively properties that exist regardless of geometry like object pose can be easily fetched after merging actors. This enables simple heterogenous simulation of diverse objects/geometries.
+Properties that exist regardless of geometry like object pose can be easily fetched after merging actors. This enables simple heterogenous simulation of diverse objects/geometries.
 
 ### Merging Articulations
 
@@ -236,7 +237,6 @@ Note the default `sim_freq, control_freq` values are tuned for GPU simulation an
 <!-- ## Defining Supported Robots and Robot Typing
  -->
 
-
 ## Mounted/Dynamically Moving Cameras
 
 The custom tasks tutorial demonstrated adding fixed cameras to the PushCube task. ManiSkill+SAPIEN also supports mounting cameras to Actors and Links, which can be useful to e.g. have a camera follow a object as it moves around.
@@ -244,7 +244,8 @@ The custom tasks tutorial demonstrated adding fixed cameras to the PushCube task
 For example if you had a task with a baseketball in it and it's actor object is stored at `self.basketball`, in the `_sensor_configs` or `_human_render_camera_configs` properties you can do
 
 ```python
-
+from mani_skill.utils import sapien_utils
+from mani_skill.sensors.camera import CameraConfig
 @property
 def _sensor_configs(self)
     # look towards the center of the baskeball from a positon that is offset
@@ -262,10 +263,47 @@ def _sensor_configs(self)
 Mounted cameras will generally be a little slower than static cameras unless you disable computing camera parameters. Camera parameters cannot be cached as e.g. the extrinsics constantly can change
 :::
 
-<!-- TODO show video of example -->
+Mounted cameras also allow for some easy camera pose domain randomization [detailed further here](./domain_randomization.md#during-episode-initialization--resets). Cameras do not necessarily need to be mounted on standard objects, they can also be mounted onto "empty" actors that have no visual or collision shapes that you can create like so
+
+```python
+def _load_scene(self, options: dict):
+    # ... your loading code
+    self.cam_mount = self._scene.create_actor_builder().build_kinematic("camera_mount")
+```
+
+`self.cam_mount` has it's own pose data and if changed the camera will move with it.
+
+
+
+## Before and After Control Step Hooks
+
+You can run code before and after an action has been taken, both of which occur before observations are fetched. This can be useful for e.g. modifying some simulation states before observations are returned to the user. 
+
+```python
+def _before_control_step(self):
+    # override this in your task class to run code before actions have been taken
+    pass
+def _after_control_step(self):
+    # override this in your task class to run code after actions have been taken
+```
+
+
+## Modifying Simulation State outside of Reconfigure and Episode Initialization
+
+In general it is not recommended to modify simulation state (e.g. setting an object pose) outside of the `_load_scene` function (called by reconfigure) or episode initialization in `_initialize_episode`. The reason is this can lead to sub-optimal task code that may make your task run slower than expected as in GPU simulation generally setting (and fetching) states takes some time. If you are only doing CPU simulation then this is generally fine and not slow at all.
+
+Regardless there are some use cases to do so (e.g. change mounted camera pose every single timestep to a desired location). In such case, you must make sure you call `self._scene.gpu_apply_all()` after all of your state setting code runs in GPU simulation. This is to apply the changes you make to sim state and have it persist to the next environment time step.
+
+Moreover, if you need to read up to data in GPU simulation, you should call `self._scene.gpu_fetch_all()` before reading any data like object pose. If you need up to date link pose data, you need to call `self._scene.px.gpu_update_articulation_kinematics()` before calling `self._scene.gpu_fetch_all()`.
+
+:::{note} As we are constantly working to improve simulation speed and quality
+it is possible the behavior of `self._scene.gpu_fetch_all()` may change in the future. If you want to call functions without worrying about 
+changes you should use the original SAPIEN API for GPU data which is exposed via `self._scene.px` and gives more fine grained control about
+what GPU data to fetch (which is more efficient than fetching all of it)
+:::
 
 ## Plane Collisions
 
-As all objects added to a sub-scene are also in the one physx scene containing all sub-scenes, plane collisions work differently since they extend to infinity. As a result, a plane collision spawned in two or more sub-scenes with the same poses will create a lot of collision issues and increase GPU memory requirements for accurate simulation.
+As all objects added to a sub-scene are also in the one physx scene containing all sub-scenes, plane collisions work differently since they extend to infinity. As a result, a plane collision spawned in two or more sub-scenes with the same poses will create a lot of collision issues and increase GPU memory requirements.
 
 However as a user you don't need to worry about adding a plane collision in each sub-scene as ManiSkill automatically only adds one plane collision per given pose.

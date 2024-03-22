@@ -95,12 +95,12 @@ class CustomEnv(BaseEnv):
     for some tasks these may need to be called multiple times if you need to swap out object assets. In GPU simulation these will only ever be called once.
     """
 
-    def _load_agent(self):
+    def _load_agent(self, options: dict):
         # this code loads the agent into the current scene. You can usually ignore this function by deleting it or calling the inherited
         # BaseEnv._load_agent function
         super()._load_agent()
 
-    def _load_scene(self):
+    def _load_scene(self, options: dict):
         # here you add various objects like actors and articulations. If your task was to push a ball, you may add a dynamic sphere object on the ground
         pass
 
@@ -113,9 +113,7 @@ class CustomEnv(BaseEnv):
         )  # sapien_utils.look_at is a utility to get the pose of a camera that looks at a target
 
         # to see what all the sensors capture in the environment for observations, run env.render_sensors() which returns an rgb array you can visualize
-        return [
-            CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 100)
-        ]
+        return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
     def _human_render_camera_configs(self):
@@ -123,14 +121,14 @@ class CustomEnv(BaseEnv):
         # when render_mode="rgb_array" or env.render_rgb_array()
         # Another feature here is that if there is a camera called render_camera, this is the default view shown initially when a GUI is opened
         pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
-        return [CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)]
+        return [CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)]
 
-    def _setup_sensors(self):
+    def _setup_sensors(self, options: dict):
         # default code here will setup all sensors. You can add additional code to change the sensors e.g.
         # if you want to randomize camera positions
         return super()._setup_sensors()
 
-    def _load_lighting(self):
+    def _load_lighting(self, options: dict):
         # default code here will setup all lighting. You can add additional code to change the lighting e.g.
         # if you want to randomize lighting in the scene
         return super()._load_lighting()
@@ -147,7 +145,7 @@ class CustomEnv(BaseEnv):
     you might normally need to do when working with GPU simulation. For specific details check out the push_cube.py code
     """
 
-    def _initialize_episode(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         pass
 
     """

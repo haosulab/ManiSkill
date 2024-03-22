@@ -11,6 +11,7 @@ from sapien.wrapper.articulation_builder import (
 )
 from sapien.wrapper.articulation_builder import LinkBuilder
 
+from mani_skill import logger
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.structs.articulation import Articulation
 
@@ -24,23 +25,24 @@ class ArticulationBuilder(SapienArticulationBuilder):
 
     def __init__(self):
         super().__init__()
-        self.scene_mask = None
         self.name = None
+        self.scene_idxs = None
 
     def set_name(self, name: str):
         self.name = name
         return self
 
-    def set_scene_mask(
+    def set_scene_idxs(
         self,
-        scene_mask: Optional[
-            Union[List[bool], Sequence[bool], torch.Tensor, np.ndarray]
+        scene_idxs: Optional[
+            Union[List[int], Sequence[int], torch.Tensor, np.ndarray]
         ] = None,
     ):
         """
-        Set a scene mask so that the articulation builder builds the articulation only in a subset of the environments
+        Set a list of scene indices to build this object in. Cannot be used in conjunction with scene mask
         """
-        self.scene_mask = scene_mask
+        self.scene_idxs = scene_idxs
+        return self
 
     def create_link_builder(self, parent: LinkBuilder = None):
         if self.link_builders:
@@ -99,30 +101,25 @@ class ArticulationBuilder(SapienArticulationBuilder):
         entities[0].pose = self.initial_pose
         return entities
 
-    def build(self, name=None, fix_root_link=None):
+    def build(self, name=None, fix_root_link=None, build_mimic_joints=True):
         assert self.scene is not None
         if name is not None:
             self.set_name(name)
-        assert self.name is not None
+        assert (
+            self.name is not None
+            and self.name != ""
+            and self.name not in self.scene.articulations
+        ), "built actors in ManiSkill must have unique names and cannot be None or empty strings"
 
-        num_arts = self.scene.num_envs
-        if self.scene_mask is not None:
-            assert (
-                len(self.scene_mask) == self.scene.num_envs
-            ), "Scene mask size is not correct. Must be the same as the number of sub scenes"
-            num_arts = np.sum(num_arts)
-            self.scene_mask = sapien_utils.to_tensor(self.scene_mask)
+        if self.scene_idxs is not None:
+            pass
         else:
-            # if scene mask is none, set it here
-            self.scene_mask = sapien_utils.to_tensor(
-                torch.ones((self.scene.num_envs), dtype=bool)
-            )
+            self.scene_idxs = torch.arange((self.scene.num_envs), dtype=int)
 
         articulations = []
 
-        for scene_idx, scene in enumerate(self.scene.sub_scenes):
-            if self.scene_mask is not None and self.scene_mask[scene_idx] == False:
-                continue
+        for scene_idx in self.scene_idxs:
+            sub_scene = self.scene.sub_scenes[scene_idx]
             links: List[sapien.Entity] = self.build_entities(
                 name_prefix=f"scene-{scene_idx}-{self.name}_"
             )
@@ -131,14 +128,57 @@ class ArticulationBuilder(SapienArticulationBuilder):
                     "fixed" if fix_root_link else "undefined"
                 )
             links[0].pose = self.initial_pose
+
+            articulation = links[0].components[0].articulation
+            if build_mimic_joints:
+                for mimic in self.mimic_joint_records:
+                    joint = articulation.find_joint_by_name(
+                        f"scene-{scene_idx}-{self.name}_{mimic.joint}"
+                    )
+                    mimic_joint = articulation.find_joint_by_name(
+                        f"scene-{scene_idx}-{self.name}_{mimic.mimic}"
+                    )
+                    multiplier = mimic.multiplier
+                    offset = mimic.offset
+
+                    # joint mimics parent
+                    if joint.parent_link == mimic_joint.child_link:
+                        if joint.parent_link.parent is None:
+                            logger.warn(
+                                f"Skipping adding fixed tendon for {joint.name}"
+                            )
+                            # tendon must be attached to grandparent
+                            continue
+                        root = joint.parent_link.parent
+                        parent = joint.parent_link
+                        child = joint.child_link
+                        articulation.create_fixed_tendon(
+                            [root, parent, child],
+                            [0, -multiplier, 1],
+                            [0, -1 / multiplier, 1],
+                            rest_length=offset,
+                            stiffness=1e5,
+                        )
+                    # 2 children mimic each other
+                    if joint.parent_link == mimic_joint.parent_link:
+                        assert joint.parent_link is not None
+                        root = joint.parent_link
+                        articulation.create_fixed_tendon(
+                            [root, joint.child_link, mimic_joint.child_link],
+                            [0, -multiplier, 1],
+                            [0, -1 / multiplier, 1],
+                            rest_length=offset,
+                            stiffness=1e5,
+                        )
+
             for l in links:
-                scene.add_entity(l)
+                sub_scene.add_entity(l)
             articulation: physx.PhysxArticulation = l.components[0].articulation
             articulation.name = f"scene-{scene_idx}_{self.name}"
             articulations.append(articulation)
 
-        articulation = Articulation._create_from_physx_articulations(
-            articulations, self.scene, self.scene_mask
+        articulation = Articulation.create_from_physx_articulations(
+            articulations, self.scene, self.scene_idxs
         )
         self.scene.articulations[self.name] = articulation
         return articulation

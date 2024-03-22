@@ -29,9 +29,9 @@ class Args:
     """if toggled, `torch.backends.cudnn.deterministic=False`"""
     cuda: bool = True
     """if toggled, cuda will be enabled by default"""
-    track: bool = True
+    track: bool = False
     """if toggled, this experiment will be tracked with Weights and Biases"""
-    wandb_project_name: str = "cleanRL02"
+    wandb_project_name: str = "cleanRL"
     """the wandb's project name"""
     wandb_entity: str = None
     """the entity (team) of wandb's project"""
@@ -45,19 +45,21 @@ class Args:
     """the user or org name of the model repository from the Hugging Face Hub"""
 
     # Algorithm specific arguments
-    env_id: str = "RotateCubeEnv-v1"
+    env_id: str = "PickCube-v1"
     """the id of the environment"""
-    total_timesteps: int = 1000000000
+    total_timesteps: int = 10000000
     """total timesteps of the experiments"""
     learning_rate: float = 3e-4
     """the learning rate of the optimizer"""
-    num_envs: int = 5120
+    num_envs: int = 512
     """the number of parallel environments"""
     num_eval_envs: int = 8
     """the number of parallel evaluation environments"""
-    num_steps: int = 250
+    partial_reset: bool = True
+    """toggle if the environments should perform partial resets"""
+    num_steps: int = 50
     """the number of steps to run in each environment per policy rollout"""
-    num_eval_steps: int = 250
+    num_eval_steps: int = 50
     """the number of steps to run in each evaluation environment during evaluation"""
     anneal_lr: bool = False
     """Toggle learning rate annealing for policy and value networks"""
@@ -105,7 +107,7 @@ class Agent(nn.Module):
     def __init__(self, envs):
         super().__init__()
         self.critic = nn.Sequential(
-            layer_init(nn.Linear(np.array(envs.unwrapped.single_observation_space.shape).prod(), 256)),
+            layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 256)),
             nn.Tanh(),
             layer_init(nn.Linear(256, 256)),
             nn.Tanh(),
@@ -114,15 +116,15 @@ class Agent(nn.Module):
             layer_init(nn.Linear(256, 1)),
         )
         self.actor_mean = nn.Sequential(
-            layer_init(nn.Linear(np.array(envs.unwrapped.single_observation_space.shape).prod(), 256)),
+            layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 256)),
             nn.Tanh(),
             layer_init(nn.Linear(256, 256)),
             nn.Tanh(),
             layer_init(nn.Linear(256, 256)),
             nn.Tanh(),
-            layer_init(nn.Linear(256, np.prod(envs.unwrapped.single_action_space.shape)), std=0.01*np.sqrt(2)),
+            layer_init(nn.Linear(256, np.prod(envs.single_action_space.shape)), std=0.01*np.sqrt(2)),
         )
-        self.actor_logstd = nn.Parameter(torch.ones(1, np.prod(envs.unwrapped.single_action_space.shape)) * -0.5)
+        self.actor_logstd = nn.Parameter(torch.ones(1, np.prod(envs.single_action_space.shape)) * -0.5)
 
     def get_value(self, x):
         return self.critic(x)
@@ -186,8 +188,8 @@ if __name__ == "__main__":
         eval_envs = FlattenActionSpaceWrapper(eval_envs)
     if args.capture_video:
         eval_envs = RecordEpisode(eval_envs, output_dir=f"runs/{run_name}/videos", save_trajectory=False, max_steps_per_video=args.num_eval_steps, video_fps=30)
-    envs = ManiSkillVectorEnv(envs, args.num_envs, **env_kwargs)
-    eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=False, **env_kwargs)
+    envs = ManiSkillVectorEnv(envs, args.num_envs,ignore_terminations=not args.partial_reset, **env_kwargs)
+    eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=not args.partial_reset, **env_kwargs)
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
     agent = Agent(envs).to(device)
@@ -292,7 +294,6 @@ if __name__ == "__main__":
                 episodic_return = final_info['episode']['r'][done_mask].cpu().numpy().mean()
                 if "success" in final_info:
                     writer.add_scalar("charts/success_rate", final_info["success"][done_mask].cpu().numpy().mean(), global_step)
-                    print("success_rate", final_info["success"][done_mask].cpu().numpy().mean())
                 if "fail" in final_info:
                     writer.add_scalar("charts/fail_rate", final_info["fail"][done_mask].cpu().numpy().mean(), global_step)
                 writer.add_scalar("charts/episodic_return", episodic_return, global_step)
@@ -420,17 +421,6 @@ if __name__ == "__main__":
         writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
         writer.add_scalar("losses/explained_variance", explained_var, global_step)
         print("SPS:", int(global_step / (time.time() - start_time)))
-
-        device = torch.device("cuda")
-
-        # 输出GPU的最大内存使用量(以字节为单位)
-        max_memory_allocated = torch.cuda.max_memory_allocated(device)
-        print(f"GPU max memory allocated: {max_memory_allocated} bytes")
-
-        # 输出GPU的最大内存使用量(以兆字节为单位)
-        max_memory_allocated_mb = max_memory_allocated / (1024 * 1024)
-        print(f"GPU max memory allocated: {max_memory_allocated_mb:.2f} MB")
-
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
     if args.save_model:
         model_path = f"runs/{run_name}/{args.exp_name}_final.cleanrl_model"

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from copy import deepcopy
 from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple, TypeVar, Union
 
 import numpy as np
@@ -12,6 +11,7 @@ from transforms3d.quaternions import mat2quat
 
 if TYPE_CHECKING:
     from mani_skill.utils.structs.actor import Actor
+    from mani_skill.envs.scene import ManiSkillScene
 
 import torch
 
@@ -248,33 +248,38 @@ def check_urdf_config(urdf_config: dict):
                 )
 
 
-def parse_urdf_config(config_dict: dict, scene: sapien.Scene) -> Dict:
+def parse_urdf_config(config_dict: dict, scene: ManiSkillScene) -> Dict:
     """Parse config from dict for SAPIEN URDF loader.
 
     Args:
         config_dict (dict): a dict containing link physical properties.
-        scene (sapien.Scene): simualtion scene
+        scene (ManiSkillScene): the simulation scene
 
     Returns:
         Dict: urdf config passed to `sapien.URDFLoader.load`.
     """
-    urdf_config = deepcopy(config_dict)
+    # urdf_config = deepcopy(config_dict)
+    urdf_config = dict()
 
     # Create the global physical material for all links
-    mtl_cfg = urdf_config.pop("material", None)
-    if mtl_cfg is not None:
-        urdf_config["material"] = scene.create_physical_material(**mtl_cfg)
+    if "material" in config_dict:
+        urdf_config["material"] = scene.create_physical_material(
+            **config_dict["material"]
+        )
 
     # Create link-specific physical materials
     materials = {}
-    for k, v in urdf_config.pop("_materials", {}).items():
-        materials[k] = scene.create_physical_material(**v)
+    if "_materials" in config_dict:
+        for k, v in config_dict["_materials"].items():
+            materials[k] = scene.create_physical_material(**v)
 
     # Specify properties for links
-    for link_config in urdf_config.get("link", {}).values():
-        # Substitute with actual material
-        link_config["material"] = materials[link_config["material"]]
-
+    if "link" in config_dict:
+        urdf_config["link"] = dict()
+        for k, link_config in config_dict["link"].items():
+            urdf_config["link"][k] = link_config.copy()
+            # substitute with actual material
+            urdf_config["link"][k]["material"] = materials[link_config["material"]]
     return urdf_config
 
 

@@ -1,12 +1,12 @@
 # Installation
 
-Installing ManiSkill is quite simple with a single pip install and potentially installing vulkan if you don't have it already.
+Installing ManiSkill is quite simple with a single pip install and potentially installing torch and vulkan if you don't have it already.
 
 From pip (stable version):
 
 ```bash
 # this is currently a beta version of mani_skill with GPU simulation
-pip install mani-skill==3.0.0.dev1
+pip install --upgrade mani-skill
 ```
 
 <!-- add the other install options one released -->
@@ -22,6 +22,13 @@ From source:
 git clone https://github.com/haosulab/ManiSkill2.git
 cd ManiSkill2 && git checkout -b dev --track origin/dev && pip install -e .
 ```
+
+Note that installing mani_skill will not automatically install torch which is necessary. You can install torch as so
+```
+pip install torch torchvision torchaudio
+```
+
+just make sure you are installing the version of torch that your computer can work with.
 
 :::{note}
 While state-based simulation does not require any additional dependencies, a GPU with the Vulkan driver installed is required to enable rendering in ManiSkill. See [here](#vulkan) for how to install and configure Vulkan on Ubuntu.
@@ -180,6 +187,15 @@ PYTHONPATH="$PWD"/warp_maniskill:$PYTHONPATH python -m warp_maniskill.build_lib 
 ```
 
 Remember to compile again in the release mode after you finish debugging. In the debug mode, if the error becomes `unsupported toolchain`, it means you have a conflicting CUDA version. -->
+
+
+If you still have some issues, you can check the NVIDIA drivers. First run
+
+```bash
+ldconfig -p | grep libGLX_nvidia
+```
+
+If `libGLX_nvidia.so` is not found, they it is likely that you have installed an incorrect driver. To get the right driver on linux, it is recommended to install `nvidia-driver-xxx` (do not use the ones with server in the package name) and to avoid using any other method of installation like a runfile
 
 ### Uninstallation
 

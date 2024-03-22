@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
+class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
     """
     Wrapper around sapien.Entity objects mixed in with useful properties from the RigidBodyDynamicComponent components
 
@@ -34,18 +34,18 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
 
     # track the initial pose of the actor builder for this actor. Necessary to ensure the actor is reset correctly once
     # gpu system is initialized
-    _builder_initial_pose: sapien.Pose = None
+    _builder_initial_pose: Pose = None
     name: str = None
 
     def __hash__(self):
         return self._objs[0].__hash__()
 
     @classmethod
-    def _create_from_entities(
+    def create_from_entities(
         cls,
         entities: List[sapien.Entity],
         scene: ManiSkillScene,
-        scene_mask: torch.Tensor,
+        scene_idxs: torch.Tensor,
     ):
 
         shared_name = "_".join(entities[0].name.split("_")[1:])
@@ -69,7 +69,7 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
         return cls(
             _objs=entities,
             _scene=scene,
-            _scene_mask=scene_mask,
+            _scene_idxs=scene_idxs,
             px_body_type=px_body_type,
             _bodies=bodies,
             _body_data_name="cuda_rigid_body_data"
@@ -94,11 +94,11 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
         objs = []
         scene = actors[0]._scene
         _builder_initial_poses = []
-        merged_scene_mask = actors[0]._scene_mask.clone()
+        merged_scene_idxs = []
         num_objs_per_actor = actors[0]._num_objs
         for actor in actors:
             objs += actor._objs
-            merged_scene_mask[actor._scene_mask] = True
+            merged_scene_idxs.append(actor._scene_idxs)
             _builder_initial_poses.append(actor._builder_initial_pose.raw_pose)
             del scene.actors[actor.name]
             assert (
@@ -106,7 +106,8 @@ class Actor(PhysxRigidDynamicComponentStruct, BaseStruct[sapien.Entity]):
             ), "Each given actor must have the same number of managed objects"
         # TODO (stao): Can we support e.g. each Actor having len(actor._objs) > 1? It would mean fetching pose data or any kind of data is highly uintuitive
         # we definitely cannot permit some actors to have more objs than others, otherwise the data is ragged.
-        merged_actor = Actor._create_from_entities(objs, scene, merged_scene_mask)
+        merged_scene_idxs = torch.concat(merged_scene_idxs)
+        merged_actor = Actor.create_from_entities(objs, scene, merged_scene_idxs)
         merged_actor.name = name
         merged_actor._builder_initial_pose = Pose.create(
             torch.vstack(_builder_initial_poses)

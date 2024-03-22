@@ -28,25 +28,27 @@ class ActorBuilder(SAPIENActorBuilder):
     def __init__(self):
         super().__init__()
         self.initial_pose = Pose.create(self.initial_pose)
-        self.scene_mask = None
+        self.scene_idxs = None
         self._allow_overlapping_plane_collisions = False
         self._plane_collision_poses = set()
 
-    def set_scene_mask(
+    def set_scene_idxs(
         self,
-        scene_mask: Optional[
-            Union[List[bool], Sequence[bool], torch.Tensor, np.ndarray]
+        scene_idxs: Optional[
+            Union[List[int], Sequence[int], torch.Tensor, np.ndarray]
         ] = None,
     ):
         """
-        Set a scene mask so that the actor builder builds the actor only in a subset of the environments
+        Set a list of scene indices to build this object in. Cannot be used in conjunction with scene mask
         """
-        self.scene_mask = scene_mask
+        self.scene_idxs = scene_idxs
+        return self
 
     def set_allow_overlapping_plane_collisions(self, v: bool):
         """Set whether or not to permit allowing overlapping plane collisions. In general if you are creating an Actor with a plane collision that is parallelized across multiple
         sub-scenes, you only need one of those collision shapes. If you add multiple, it will cause the simulation to slow down significantly. By default this is set to False"""
         self._allow_overlapping_plane_collisions = v
+        return self
 
     def build_physx_component(self, link_parent=None):
         for r in self.collision_records:
@@ -171,19 +173,18 @@ class ActorBuilder(SAPIENActorBuilder):
         """
         self.set_name(name)
 
-        num_actors = self.scene.num_envs
-        if self.scene_mask is not None:
-            assert (
-                len(self.scene_mask) == self.scene.num_envs
-            ), "Scene mask size is not correct. Must be the same as the number of sub scenes"
-            num_actors = np.sum(num_actors)
-            self.scene_mask = sapien_utils.to_tensor(self.scene_mask)
-        else:
-            # if scene mask is none, set it here
-            self.scene_mask = sapien_utils.to_tensor(
-                torch.ones((self.scene.num_envs), dtype=bool)
-            )
+        assert (
+            self.name is not None
+            and self.name != ""
+            and self.name not in self.scene.actors
+        ), "built actors in ManiSkill must have unique names and cannot be None or empty strings"
 
+        num_actors = self.scene.num_envs
+        if self.scene_idxs is not None:
+            pass
+        else:
+            self.scene_idxs = torch.arange((self.scene.num_envs), dtype=int)
+        num_actors = len(self.scene_idxs)
         initial_pose = Pose.create(self.initial_pose)
         initial_pose_b = initial_pose.raw_pose.shape[0]
         assert initial_pose_b == 1 or initial_pose_b == num_actors
@@ -191,11 +192,10 @@ class ActorBuilder(SAPIENActorBuilder):
 
         entities = []
         i = 0
-        for scene_idx, sub_scene in enumerate(self.scene.sub_scenes):
-            if self.scene_mask is not None and self.scene_mask[scene_idx] == False:
-                continue
+        for scene_idx in self.scene_idxs:
+            sub_scene = self.scene.sub_scenes[scene_idx]
             entity = self.build_entity()
-            # prepend scene idx to entity name if there is more than one scene
+            # prepend scene idx to entity name to indicate which sub-scene it is in
             entity.name = f"scene-{scene_idx}_{self.name}"
             # set pose before adding to scene
             if initial_pose_b == 1:
@@ -205,7 +205,7 @@ class ActorBuilder(SAPIENActorBuilder):
             sub_scene.add_entity(entity)
             entities.append(entity)
             i += 1
-        actor = Actor._create_from_entities(entities, self.scene, self.scene_mask)
+        actor = Actor.create_from_entities(entities, self.scene, self.scene_idxs)
 
         # if it is a static body type and this is a GPU sim but we are given a single initial pose, we repeat it for the purposes of observations
         if (

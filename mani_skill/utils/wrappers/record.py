@@ -260,7 +260,10 @@ class RecordEpisode(gym.Wrapper):
                 commit_info=get_commit_info(),
                 episodes=[],
             )
-            self._json_data["env_info"]["max_episode_steps"] = self.max_episode_steps
+            if self._json_data["env_info"] is not None:
+                self._json_data["env_info"][
+                    "max_episode_steps"
+                ] = self.max_episode_steps
             if source_type is not None:
                 self._json_data["source_type"] = source_type
             if source_desc is not None:
@@ -296,16 +299,17 @@ class RecordEpisode(gym.Wrapper):
         options: Optional[dict] = dict(),
         **kwargs,
     ):
-        if self.save_on_reset and self._trajectory_buffer is not None:
+        if self.save_on_reset:
             if self.save_video and self.num_envs == 1:
                 self.flush_video()
             # if doing a full reset then we flush all trajectories including incompleted ones
-            if "env_idx" not in options:
-                self.flush_trajectory(env_idxs_to_flush=np.arange(self.num_envs))
-            else:
-                self.flush_trajectory(
-                    env_idxs_to_flush=sapien_utils.to_numpy(options["env_idx"])
-                )
+            if self._trajectory_buffer is not None:
+                if "env_idx" not in options:
+                    self.flush_trajectory(env_idxs_to_flush=np.arange(self.num_envs))
+                else:
+                    self.flush_trajectory(
+                        env_idxs_to_flush=sapien_utils.to_numpy(options["env_idx"])
+                    )
 
         obs, info = super().reset(*args, seed=seed, options=options, **kwargs)
 

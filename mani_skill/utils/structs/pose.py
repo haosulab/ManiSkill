@@ -93,7 +93,7 @@ class Pose:
         return cls(raw_pose=raw_pose)
 
     @classmethod
-    def create(cls, pose: Union[torch.Tensor, sapien.Pose, "Pose"]):
+    def create(cls, pose: Union[torch.Tensor, sapien.Pose, "Pose"]) -> "Pose":
         if isinstance(pose, sapien.Pose):
             raw_pose = torch.hstack(
                 [sapien_utils.to_tensor(pose.p), sapien_utils.to_tensor(pose.q)]
@@ -110,6 +110,20 @@ class Pose:
             assert pose.shape[-1] == 7
             return cls(raw_pose=pose)
 
+    def __getitem__(self, i):
+        if i >= len(self.raw_pose):
+            raise IndexError(
+                f"IndexError: index {i} is out of bounds for pose with batch size {len(self.raw_pose)}"
+            )
+        return Pose.create(self.raw_pose[i : i + 1, :])
+
+    def __len__(self):
+        return len(self.raw_pose)
+
+    @property
+    def shape(self):
+        return self.raw_pose.shape
+
     # -------------------------------------------------------------------------- #
     # Functions from sapien.Pose
     # -------------------------------------------------------------------------- #
@@ -118,11 +132,20 @@ class Pose:
     # def __init__(self, p: numpy.ndarray[numpy.float32, _Shape, _Shape[3]] = array([0., 0., 0.], dtype=float32), q: numpy.ndarray[numpy.float32, _Shape, _Shape[4]] = array([1., 0., 0., 0.], dtype=float32)) -> None: ...
     # @typing.overload
     # def __init__(self, arg0: numpy.ndarray[numpy.float32, _Shape[4, 4]]) -> None: ...
-    def __mul__(self, arg0: "Pose") -> "Pose":
+    def __mul__(self, arg0: Union["Pose", sapien.Pose]) -> "Pose":
+        """
+        Multiply two poses. Supports multiplying singular poses like sapien.Pose or Pose object with batch size of 1 with Pose objects with batch size > 1.
+        """
         # NOTE (stao): this code is probably slower than SAPIEN's pose multiplication but it is batched
         arg0 = Pose.create(arg0)
-        new_q = quaternion_multiply(self.q, arg0.q)
-        new_p = self.p + quaternion_apply(self.q, arg0.p)
+        pose = self
+        if len(arg0) == 1 and len(pose) > 1:
+            # repeat arg0 to match shape of self
+            arg0 = Pose.create(arg0.raw_pose.repeat(len(pose), 1))
+        elif len(pose) == 1 and len(arg0) > 1:
+            pose = Pose.create(pose.raw_pose.repeat(len(arg0), 1))
+        new_q = quaternion_multiply(pose.q, arg0.q)
+        new_p = pose.p + quaternion_apply(pose.q, arg0.p)
         return Pose.create_from_pq(new_p, new_q)
 
     # def __repr__(self) -> str: ...

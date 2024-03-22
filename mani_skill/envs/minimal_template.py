@@ -14,19 +14,6 @@ from mani_skill.utils.structs.types import SimConfig
 
 @register_env("CustomEnv-v1", max_episode_steps=200)
 class CustomEnv(BaseEnv):
-    """
-    Task Description
-    ----------------
-    Add a task description here
-
-    Randomizations
-    --------------
-
-    Success Conditions
-    ------------------
-
-    Visualization: link to a video/gif of the task being solved
-    """
 
     SUPPORTED_ROBOTS = ["panda", "fetch"]
     agent: Union[Panda, Fetch]
@@ -42,19 +29,17 @@ class CustomEnv(BaseEnv):
     @property
     def _sensor_configs(self):
         pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
-        return [
-            CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 100)
-        ]
+        return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
     def _human_render_camera_configs(self):
         pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
-        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)
+        return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
-    def _load_scene(self):
+    def _load_scene(self, options: dict):
         pass
 
-    def _initialize_episode(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         pass
 
     def evaluate(self):

@@ -19,7 +19,7 @@ from mani_skill.utils.structs.types import Array
 
 @register_env("PullCube-v1", max_episode_steps=50)
 class PullCubeEnv(BaseEnv):
-    SUPPORTED_REWARD_MODES = ["sparse"]
+    SUPPORTED_REWARD_MODES = ["sparse", "none"]
 
     SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
     agent: Union[Panda, Xmate3Robotiq, Fetch]
@@ -33,16 +33,14 @@ class PullCubeEnv(BaseEnv):
     @property
     def _sensor_configs(self):
         pose = look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
-        return [
-            CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 100)
-        ]
+        return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
     def _human_render_camera_configs(self):
         pose = look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
-        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 100)
+        return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
-    def _load_scene(self):
+    def _load_scene(self, options: dict):
         self.table_scene = TableSceneBuilder(
             env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
         )
@@ -67,7 +65,7 @@ class PullCubeEnv(BaseEnv):
             body_type="kinematic",
         )
 
-    def _initialize_episode(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)

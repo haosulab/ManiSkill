@@ -7,13 +7,6 @@ from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.utils.visualization.cv2_utils import OpenCVViewer
 from mani_skill.utils.wrappers import RecordEpisode
 
-MS1_ENV_IDS = [
-    "OpenCabinetDoor-v1",
-    "OpenCabinetDrawer-v1",
-    "PushChair-v1",
-    "MoveBucket-v1",
-]
-
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -21,7 +14,7 @@ def parse_args():
     parser.add_argument("-o", "--obs-mode", type=str)
     parser.add_argument("--reward-mode", type=str)
     parser.add_argument("-c", "--control-mode", type=str, default="pd_ee_delta_pose")
-    parser.add_argument("--render-mode", type=str, default="cameras")
+    parser.add_argument("--render-mode", type=str, default="sensors")
     parser.add_argument("--enable-sapien-viewer", action="store_true")
     parser.add_argument("--record-dir", type=str)
     args, opts = parser.parse_known_args()
@@ -39,10 +32,6 @@ def parse_args():
 def main():
     np.set_printoptions(suppress=True, precision=3)
     args = parse_args()
-
-    if args.env_id in MS1_ENV_IDS:
-        if args.control_mode is not None and not args.control_mode.startswith("base"):
-            args.control_mode = "base_pd_joint_vel_arm_" + args.control_mode
 
     env: BaseEnv = gym.make(
         args.env_id,
@@ -109,11 +98,8 @@ def main():
         # Input
         key = opencv_viewer.imshow(render_frame)
 
-        if has_base:
-            assert args.control_mode in ["base_pd_joint_vel_arm_pd_ee_delta_pose"]
-            base_action = np.zeros([4])  # hardcoded
-        else:
-            base_action = np.zeros([0])
+        body_action = np.zeros([3])
+        base_action = np.zeros([3])  # hardcoded for fetch robot
 
         # Parse end-effector action
         if (
@@ -129,7 +115,7 @@ def main():
         else:
             raise NotImplementedError(args.control_mode)
 
-        # Base
+        # Base. Hardcoded for Fetch robot at the moment. In the future write interface to do this
         if has_base:
             if key == "w":  # forward
                 base_action[0] = 1
@@ -144,9 +130,17 @@ def main():
             elif key == "e":  # rotate clockwise
                 base_action[2] = -1
             elif key == "z":  # lift
-                base_action[3] = 1
+                body_action[2] = 1
             elif key == "x":  # lower
-                base_action[3] = -1
+                body_action[2] = -1
+            elif key == "v":  # rotate head left
+                body_action[0] = 1
+            elif key == "b":  # rotate head right
+                body_action[0] = -1
+            elif key == "n":  # tilt head down
+                body_action[1] = 1
+            elif key == "m":  # rotate head up
+                body_action[1] = -1
 
         # End-effector
         if num_arms > 0:
@@ -223,18 +217,8 @@ def main():
         # -------------------------------------------------------------------------- #
         # Post-process action
         # -------------------------------------------------------------------------- #
-        if args.env_id in MS1_ENV_IDS:
-            action_dict = dict(
-                base=base_action,
-                right_arm=ee_action,
-                right_gripper=gripper_action,
-                left_arm=np.zeros_like(ee_action),
-                left_gripper=np.zeros_like(gripper_action),
-            )
-            action = env.agent.controller.from_action_dict(action_dict)
-        else:
-            action_dict = dict(base=base_action, arm=ee_action, gripper=gripper_action)
-            action = env.agent.controller.from_action_dict(action_dict)
+        action_dict = dict(base=base_action, arm=ee_action, body=body_action, gripper=gripper_action)
+        action = env.agent.controller.from_action_dict(action_dict)
 
         obs, reward, terminated, truncated, info = env.step(action)
         print("reward", reward)

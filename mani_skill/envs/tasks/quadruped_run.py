@@ -90,11 +90,11 @@ class QuadrupedRunEnv(BaseEnv):
             # link=self.agent.robot.links[0],
         )
 
-    def _load_scene(self):
+    def _load_scene(self, options: dict):
         self.ground = build_meter_ground(self._scene, floor_width=20)
         self.height = 0.63
 
-    def _initialize_episode(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
             self.agent.robot.set_pose(Pose.create_from_pq(p=[0, 0, self.height]))
             self.agent.reset(init_qpos=torch.zeros(self.agent.robot.max_dof))
