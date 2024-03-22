@@ -36,7 +36,6 @@ from mani_skill.utils.structs.types import Array, GPUMemoryConfig, SimConfig
 from mani_skill.utils.geometry.rotation_conversions import random_quaternions, euler_angles_to_matrix
 
 
-@register_env("RotateCubeEnv-v1", max_episode_steps=250)
 class RotateCubeEnv(BaseEnv):
     """
     Modified from https://github.com/NVIDIA-Omniverse/IsaacGymEnvs/blob/main/isaacgymenvs/tasks/trifinger.py
@@ -82,43 +81,38 @@ class RotateCubeEnv(BaseEnv):
         self.robot_init_qpos_noise = robot_init_qpos_noise
 
         if (
-            not isinstance(difficulty_level, int)
-            or difficulty_level >= 5
-            or difficulty_level < 0
+                not isinstance(difficulty_level, int)
+                or difficulty_level >= 5
+                or difficulty_level < 0
         ):
             raise ValueError(
                 f"Difficulty level must be a int within 0-4, but get {difficulty_level}"
             )
-
 
         self.difficulty_level = difficulty_level
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     @property
     def _sensor_configs(self):
-        # registers one 128x128 camera looking at the robot, cube, and target
-        # a smaller sized camera will be lower quality, but render faster
         pose = look_at(eye=(0.7, 0.0, 0.7), target=(0.0, 0.0, 0.0))
         return [
-            CameraConfig("base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10)
+            CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)
         ]
 
     @property
     def _human_render_camera_configs(self):
-        # registers a more high-definition (512x512) camera used just for rendering when render_mode="rgb_array" or calling env.render_rgb_array()
         pose = look_at((0.7, 0.0, 0.7), (0.0, 0.0, 0.0))
-        return CameraConfig("render_camera", pose.p, pose.q, 512, 512, 1, 0.01, 10)
+        return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
-    def _load_scene(self):
-        # we use a prebuilt scene builder class that automatically loads in a floor and table.
+    def _load_scene(self, options: dict):
         loader1 = self._scene.create_urdf_loader()
         loader1.fix_root_link = True
         loader1.name = "table"
-        urdf_path = f"{PACKAGE_ASSET_DIR}/trifinger/table_without_border.urdf"
+        urdf_path = f"{PACKAGE_ASSET_DIR}/robots/trifinger/table_without_border.urdf"
         table: Articulation = loader1.load(urdf_path)
 
         builder: ActorBuilder = self._scene.create_actor_builder()
-        high_table_boundary_file_name = f"{PACKAGE_ASSET_DIR}/trifinger/robot_properties_fingers/meshes/high_table_boundary.stl"
+        high_table_boundary_file_name = f"{PACKAGE_ASSET_DIR}/robots/trifinger/robot_properties_fingers/meshes/high_table_boundary.stl"
         builder.add_nonconvex_collision_from_file(filename=high_table_boundary_file_name, scale=[1, 1, 1], material=None)
         builder.add_visual_from_file(filename=high_table_boundary_file_name)
         table_boundary: Actor = builder.build_static("table2")
@@ -152,7 +146,7 @@ class RotateCubeEnv(BaseEnv):
             self.obj_goal.set_pose(Pose.create_from_pq(p=pos, q=orn))
             self.prev_norms = None
 
-    def _initialize_episode(self, env_idx: torch.Tensor):
+    def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         self._initialize_actors(env_idx)
         self._initialize_agent(env_idx)
 
@@ -233,32 +227,15 @@ class RotateCubeEnv(BaseEnv):
         return pos_tensor, orientation
 
     def evaluate(self):
-        # success is achieved when the cube's xy position on the table is within the
-        # goal region's area (a circle centered at the goal region's xy position)
-        # is_obj_placed = (
-        #     torch.linalg.norm(
-        #         self.obj.pose.p[..., :2] - self.obj_goal.pose.p[..., :2], axis=1
-        #     )
-        #     < self.goal_radius
-        # )
-        #
-        # return {
-        #     "success": is_obj_placed,
-        # }
         obj_p = self.obj.pose.p
         goal_p = self.obj_goal.pose.p
         obj_q = self.obj.pose.q
         goal_q = self.obj_goal.pose.q
-        obj_lin_vel = self.obj.linear_velocity
-        obj_ang_vel = self.obj.angular_velocity
 
         is_obj_pos_close_to_goal = (
                 torch.linalg.norm(obj_p - goal_p, axis=1) < self.goal_radius
         )
 
-        # is_obj_state_stable = torch.linalg.norm(obj_lin_vel, axis=1) < 0.01
-        # is_obj_state_stable &= torch.linalg.norm(obj_ang_vel, axis=1) < 0.01
-        # print("is_obj_pos_close_to_goal", is_obj_pos_close_to_goal)
         is_obj_q_close_to_goal = (
                 quat_diff_rad(obj_q, goal_q) < 0.1
         )
@@ -277,10 +254,6 @@ class RotateCubeEnv(BaseEnv):
                 dof = dof[0]
 
             init_qpos = torch.zeros((b, dof))
-            # # set root joint qpos to avoid robot-object collision after reset
-            # init_qpos[:, self.agent.root_joint_indices] = torch.tensor(
-            #     [0.7, -0.7, -0.7]
-            # )
             init_qpos += torch.randn((b, dof)) * self.robot_init_qpos_noise
             self.agent.reset(init_qpos)
             self.agent.robot.set_pose(
@@ -290,15 +263,11 @@ class RotateCubeEnv(BaseEnv):
             )
 
     def _get_obs_extra(self, info: Dict):
-        # some useful observation info for solving the task includes the pose of the tcp (tool center point) which is the point between the
-        # grippers of the robot
         obs = OrderedDict(
             goal_pos=self.obj_goal.pose.p,
             goal_q=self.obj_goal.pose.q,
         )
         if self._obs_mode in ["state", "state_dict"]:
-            # if the observation mode is state/state_dict, we provide ground truth information about where the cube is.
-            # for visual observation modes one should rely on the sensed visual data to determine where the cube is
             obs.update(
                 obj_p=self.obj.pose.p,
                 obj_q=self.obj.pose.q,
@@ -307,8 +276,6 @@ class RotateCubeEnv(BaseEnv):
         return obs
 
     def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
-        # We also create a pose marking where the robot should push the cube from that is easiest (pushing from behind the cube)
-
         obj_pos = self.obj.pose.p
         obj_q = self.obj.pose.q
         goal_pos = self.obj_goal.pose.p
@@ -322,7 +289,6 @@ class RotateCubeEnv(BaseEnv):
         tip_poses = self.agent.tip_poses()
         # shape (N, 3 + 4, 3 fingers)
 
-
         finger_reach_object_dist_1 = torch.norm(tip_poses[:, :3, 0] - obj_pos, p=2, dim=-1)
         finger_reach_object_dist_2 = torch.norm(tip_poses[:, :3, 1] - obj_pos, p=2, dim=-1)
         finger_reach_object_dist_3 = torch.norm(tip_poses[:, :3, 2] - obj_pos, p=2, dim=-1)
@@ -331,15 +297,11 @@ class RotateCubeEnv(BaseEnv):
         finger_reach_object_reward3 = 1 - torch.tanh(5 * finger_reach_object_dist_3)
         finger_reach_object_reward = object_dist_weight * (finger_reach_object_reward1 + finger_reach_object_reward2 + finger_reach_object_reward3) / 3
 
-        # finger_reach_object_dists = torch.norm(tip_poses[:, :3, :] - obj_pos.unsqueeze(2), p=2, dim=1)
-        # finger_reach_object_rewards = object_dist_weight * (1 - torch.tanh(5 * finger_reach_object_dists))
-        # finger_reach_object_reward = torch.mean(finger_reach_object_rewards)
-
         # Reward for object distance
         object_dist = torch.norm(obj_pos - goal_pos, p=2, dim=-1)
 
         init_xyz_tensor = torch.tensor([0, 0, 0.032], dtype=torch.float, device=self.device).reshape(1, 3)
-        init_z_dist = torch.norm(init_xyz_tensor - goal_pos[..., ], p=2, dim=-1)
+        init_z_dist = torch.norm(init_xyz_tensor - goal_pos[...,], p=2, dim=-1)
 
         # object_dist_reward = object_dist_weight * dt * lgsk_kernel(object_dist, scale=50., eps=2.)
 
@@ -360,12 +322,11 @@ class RotateCubeEnv(BaseEnv):
         object_rot_reward = -1 * torch.abs(angles)
         pose_reward = object_dist_weight * (object_dist_reward + object_lift_reward) + object_rot_weight * object_rot_reward
         total_reward = finger_reach_object_reward + pose_reward
+        total_reward[info["success"]] = 3
         return total_reward
 
     def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
-        # this should be equal to compute_dense_reward / max possible reward
         return self.compute_dense_reward(obs=obs, action=action, info=info) / 1
-
 
 
 @torch.jit.script
@@ -394,8 +355,6 @@ def random_roll_orientation(num: int, device: torch.device) -> torch.Tensor:
     return quat_from_euler_xyz(roll, pitch, yaw)
 
 
-
-
 @torch.jit.script
 def quat_diff_rad(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     """
@@ -421,3 +380,59 @@ def quat_diff_rad(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     angle_diff = 2 * torch.acos(torch.abs(dot_product))
 
     return angle_diff
+
+
+
+@register_env("RotateCubeLevel0-v1", max_episode_steps=250)
+class RotateCubeEnvLevel0(RotateCubeEnv):
+    def __init__(self, *args, **kwargs):
+        super().__init__(
+            *args,
+            robot_init_qpos_noise=0.02,
+            difficulty_level=0,
+            **kwargs,
+        )
+
+
+@register_env("RotateCubeLevel1-v1", max_episode_steps=250)
+class RotateCubeEnvLevel1(RotateCubeEnv):
+    def __init__(self, *args, **kwargs):
+        super().__init__(
+            *args,
+            robot_init_qpos_noise=0.02,
+            difficulty_level=1,
+            **kwargs,
+        )
+
+
+@register_env("RotateCubeLevel2-v1", max_episode_steps=250)
+class RotateCubeEnvLevel2(RotateCubeEnv):
+    def __init__(self, *args, **kwargs):
+        super().__init__(
+            *args,
+            robot_init_qpos_noise=0.02,
+            difficulty_level=2,
+            **kwargs,
+        )
+
+
+@register_env("RotateCubeLevel3-v1", max_episode_steps=250)
+class RotateCubeEnvLevel3(RotateCubeEnv):
+    def __init__(self, *args, **kwargs):
+        super().__init__(
+            *args,
+            robot_init_qpos_noise=0.02,
+            difficulty_level=3,
+            **kwargs,
+        )
+
+
+@register_env("RotateCubeLevel4-v1", max_episode_steps=250)
+class RotateCubeEnvLevel4(RotateCubeEnv):
+    def __init__(self, *args, **kwargs):
+        super().__init__(
+            *args,
+            robot_init_qpos_noise=0.02,
+            difficulty_level=4,
+            **kwargs,
+        )

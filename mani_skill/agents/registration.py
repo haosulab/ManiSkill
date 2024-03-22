@@ -24,7 +24,6 @@ def register_agent(override=False):
     """
 
     def _register_agent(agent_cls: type[BaseAgent]):
-        print("registering agent", agent_cls.uid)
         if agent_cls.uid in REGISTERED_AGENTS:
             if override:
                 logger.warn(f"Overriding registered agent {agent_cls.uid}")

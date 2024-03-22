@@ -63,13 +63,11 @@ class OpenCabinetDrawerEnv(BaseEnv):
         for obj in self.ground._objs:
             cs = obj.find_component_by_type(
                 sapien.physx.PhysxRigidStaticComponent
-            ).get_collision_shapes()
-            if len(cs) > 0: # 0223 add by chenbao
-                cs = cs[0]
-                cg = cs.get_collision_groups()
-                cg[2] |= FETCH_UNIQUE_COLLISION_BIT
-                cg[2] |= 1 << 29  # make ground ignore collisions with the cabinets
-                cs.set_collision_groups(cg)
+            ).get_collision_shapes()[0]
+            cg = cs.get_collision_groups()
+            cg[2] |= FETCH_UNIQUE_COLLISION_BIT
+            cg[2] |= 1 << 29  # make ground ignore collisions with the cabinets
+            cs.set_collision_groups(cg)
 
     def _load_cabinets(self, joint_types: List[str]):
         rand_idx = torch.randperm(len(self.all_model_ids))
