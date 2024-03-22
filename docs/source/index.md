@@ -19,5 +19,6 @@ A user guide on how to use ManiSkill with GPU parallelized simulation for your r
 
 user_guide/index
 tasks/index
+contributing/index
 roadmap/index
 ```
