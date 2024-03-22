@@ -42,7 +42,6 @@ def build_cube(
     add_collision: bool = True,
 ):
     builder = scene.create_actor_builder()
-
     if add_collision:
         builder.add_box_collision(
             half_size=[half_size] * 3,
