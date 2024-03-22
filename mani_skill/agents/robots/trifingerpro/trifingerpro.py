@@ -24,7 +24,7 @@ class TriFingerPro(BaseAgent):
 
     """
     uid = "trifingerpro"
-    urdf_path = f"{PACKAGE_ASSET_DIR}/trifinger/trifingerpro.urdf"
+    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/trifinger/trifingerpro.urdf"
     urdf_config = dict(
         _materials=dict(
             tip=dict(static_friction=2.0, dynamic_friction=1.0, restitution=0.0)
