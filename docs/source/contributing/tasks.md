@@ -100,19 +100,30 @@ python -m mani_skill.examples.benchmarking.gpu_sim -e "YourEnv-v1" -n=4096 -o=st
 
 Speed is also generally important and you can tune various sim configurations like solver iterations down up until the simulation is still stable. This part usually does not need to change but for certain tasks it may be required.
 
-
+<!-- TODO
 ## Task Writing Semantics
 
-While not strictly necessary, there are a few programming semantics/patterns to be aware of in order to make task code easier to write as well as being more readable.
-
-
+While not strictly necessary, there are a few programming semantics/patterns to be aware of in order to make task code easier to write as well as being more readable. -->
 
 ## Task Card
 
 Similar to how datasets and tasks can have associated cards describing them in detail, tasks also have "cards" that describe in sufficient detail for users to then use without having to dive into the code, wait for RL to work etc.
 
-These task 
+The task card must contain the following
+- Tags/badges describing whether this task supports dense rewards and/or requires additional asset downloading
+- Task description: Short few sentence description describing what the task is
+- Supported robots: list of all robot uids supported (can copy from the code file)
+- Randomizations: All randomizations performed during `_load_scene` and `_initialize_episode`, which can include e.g. geometry randomization or pose randomization of goals
+- Success/Fail conditions: Details on what needs to occur for the task to succeed/fail. This is optional if a task does not have these conditions in the code
+- Additional notes: Any additional comments that are not captured by the points above.
+- Video of a successful demonstration of the task.
+
+Examples of task cards are found throughout the [task documentation](../tasks/index.md)
 
 ## (Optional) Contributing the Task to ManiSkill Officially
 
-The task code itself should have a reasonable unique name and be placed in `mani_skill/envs/tasks`.
+When contributing the task, make sure you do the following:
+
+- The task code itself should have a reasonable unique name and be placed in `mani_skill/envs/tasks`.
+- Added a demo video of the task being solved successfully (for each variation if there are several) to `figures/environment_demos`. The video should have ray-tracing on so it looks nicer!
+- Added a task card to `docs/source/tasks/index.md`.
