@@ -154,6 +154,11 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         self.joint_map = joint_map
         self.active_joints = [wrapped_joints[i] for i in active_joint_indices]
         self.active_joint_map = {joint.name: joint for joint in self.active_joints}
+
+        # add references to the right joint in all links
+        for joint in self.joints:
+            if joint.child_link is not None:
+                joint.child_link.joint = joint
         return self
 
     @classmethod
