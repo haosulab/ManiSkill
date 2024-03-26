@@ -1,4 +1,4 @@
-# ManiSkill Demos
+# {material-regular}`notes` Demos
 
 There are a number of useful/quick scripts you can run to do a quick test/demonstration of various features of ManiSkill.
 
@@ -152,8 +152,13 @@ For more details check out the [motion planning page](../data_collection/motionp
 
 ## Visualize Pointcloud Data
 
-You can run the following to visualize the pointcloud observations (require's a dispplay to work)
+You can run the following to visualize the pointcloud observations (require's a display to work)
 
 ```bash
+pip install "pyglet<2" # make sure to install this dependency
 python -m mani_skill.examples.demo_vis_pcd -e "StackCube-v1"
+```
+
+
+```{figure}  images/pcd_vis.png
 ```

@@ -1,4 +1,4 @@
-# Installation
+# {octicon}`package` Installation
 
 Installing ManiSkill is quite simple with a single pip install and potentially installing torch and vulkan if you don't have it already.
 
