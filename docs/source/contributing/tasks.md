@@ -48,14 +48,15 @@ Not all tasks permit easily definable/optimizable dense reward functions, nor is
 class YourEnv(BaseEnv):
     SUPPORTED_REWARD_MODES = ["sparse", "none"]
 
-    # note as dense is not supported, you do not need to override the compute_dense_reward or compute_normalized_dense_reward functions
+    # note as dense is not labeled above, you do not need to override 
+    # the compute_dense_reward or compute_normalized_dense_reward functions
 ```
 
 ## GPU Simulation Code/Testing
 
 Whenever possible, task code should be written in batch mode (assuming all data in and out are batched by the number of parallel environments). This generally ensures that the task is then GPU simulatalbe, which is of great benefit to workflows that leverage sim data collection at scale.
 
-GPU simulation also entails tuning the GPU simulation configurations. You can opt to do ways, dynamic or fix GPU simulation configurations.
+GPU simulation also entails tuning the GPU simulation configurations. You can opt to do two ways, dynamic or fix GPU simulation configurations.
 
 A version of fixed configurations can be seen in `mani_skill/envs/tasks/push_cube.py` which defines the default
 
@@ -107,7 +108,7 @@ While not strictly necessary, there are a few programming semantics/patterns to 
 
 ## Task Card
 
-Similar to how datasets and tasks can have associated cards describing them in detail, tasks also have "cards" that describe in sufficient detail for users to then use without having to dive into the code, wait for RL to work etc.
+Similar to how datasets and models can have associated cards describing them in detail, tasks also have "cards" that describe in sufficient detail for users to then use without having to dive into the code, wait for RL to work etc.
 
 The task card must contain the following
 - Tags/badges describing whether this task supports dense rewards and/or requires additional asset downloading
