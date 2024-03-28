@@ -162,7 +162,7 @@ class TableSceneBuilder(SceneBuilder):
             agent.agents[0].robot.set_pose(
                 sapien.Pose([0, -0.75, 0], q=euler2quat(0, 0, np.pi / 2))
             )
-        elif "dclaw" in self.env.robot_uids or "allegro" in self.env.robot_uids:
+        elif "dclaw" in self.env.robot_uids or "allegro" in self.env.robot_uids or "trifinger" in self.env.robot_uids:
             # Need to specify the robot qpos for each sub-scenes using tensor api
             pass
 

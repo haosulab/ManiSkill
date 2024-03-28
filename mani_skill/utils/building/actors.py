@@ -344,3 +344,30 @@ def build_actor_ai2(
     if set_object_on_ground:
         actor.set_pose(sapien.Pose(p=[0, 0, 0]))
     return actor
+
+
+### For trifingerpro ###
+def build_colorful_cube(
+    scene: ManiSkillScene,
+    half_size: float,
+    color,
+    name: str,
+    body_type: str = "dynamic",
+    add_collision: bool = True,
+):
+    builder = scene.create_actor_builder()
+
+    if add_collision:
+        builder._mass = 0.1
+        cube_material = sapien.pysapien.physx.PhysxMaterial(static_friction=5, dynamic_friction=3, restitution=0)
+        builder.add_box_collision(
+            half_size=[half_size] * 3,
+            material=cube_material,
+        )
+    builder.add_box_visual(
+        half_size=[half_size] * 3,
+        material=sapien.render.RenderMaterial(
+            base_color=color,
+        ),
+    )
+    return _build_by_type(builder, name, body_type)

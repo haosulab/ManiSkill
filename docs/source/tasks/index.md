@@ -257,3 +257,27 @@ Using the D'Claw robot, rotate a [ROBEL valve](https://sites.google.com/view/rob
 :::{figure} https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/RotateValve-v1_rt.png
 :alt: rotate valve task
 :::
+
+
+### RotateCubeLevel0-v1
+
+(Note there is Level0, Level1, ... to Level4)
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+Using the TriFingerPro robot, rotate a cube
+
+**Supported Robots: TriFingerPro**
+
+**Randomizations:**
+- Level 0: Random goal position on the table, no orientation.
+- Level 1:  Random goal position on the table, including yaw orientation.
+- Level 2: Fixed goal position in the air with x,y = 0.  No orientation.
+- Level 3: Random goal position in the air, no orientation.
+- Level 4: Random goal pose in the air, including orientation.
+
+**Success Conditions:**
+- The rotated cube should be within 0.02 m of the goal position and 0.1 rad of the goal orientation.
