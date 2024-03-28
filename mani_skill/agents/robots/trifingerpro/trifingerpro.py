@@ -155,11 +155,11 @@ class TriFingerPro(BaseAgent):
         Get the proprioceptive state of the agent.
         """
         obs = super().get_proprioception()
-        obs.update({"tip_poses": self.tip_poses().view(-1, 21)})
+        obs.update({"tip_poses": self.tip_poses.view(-1, 21)})
         obs.update({"tip_velocities": self.tip_velocities().view(-1, 9)})
         return obs
 
-    # @property
+    @property
     def tip_poses(self):
         """
         Get the tip pose for each of the finger, three fingers in total

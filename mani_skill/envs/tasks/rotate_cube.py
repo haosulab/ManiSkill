@@ -1,32 +1,17 @@
-"""
-Code for a minimal environment/task with just a robot being loaded. We recommend copying this template and modifying as you need.
-
-At a high-level, ManiSkill2 tasks can minimally be defined by how the environment resets, what agents/objects are
-loaded, goal parameterization, and success conditions
-
-Environment reset is comprised of running two functions, `self.reconfigure` and `self.initialize_episode`, which is auto
-run by ManiSkill2. As a user, you can override a number of functions that affect reconfiguration and episode initialization.
-
-Reconfiguration will reset the entire environment scene and allow you to load/swap assets and agents.
-
-Episode initialization will reset the positions of all objects (called actors), articulations, and agents,
-in addition to initializing any task relevant data like a goal
-
-See comments for how to make your own environment and what each required function should do
-"""
-
 from collections import OrderedDict
 from typing import Any, Dict, Union, Tuple
 
 import numpy as np
 import torch
 import torch.random
+from pytorch_kinematics import matrix_to_quaternion
 
 from mani_skill import PACKAGE_ASSET_DIR
 from mani_skill.agents.robots.trifingerpro.trifingerpro import TriFingerPro
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils.building import actors, ActorBuilder
+from mani_skill.utils.building.ground import build_ground
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.sapien_utils import look_at
 from mani_skill.utils.structs.actor import Actor
@@ -34,6 +19,7 @@ from mani_skill.utils.structs.articulation import Articulation
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import Array, GPUMemoryConfig, SimConfig
 from mani_skill.utils.geometry.rotation_conversions import random_quaternions, euler_angles_to_matrix
+
 
 
 class RotateCubeEnv(BaseEnv):
@@ -105,6 +91,7 @@ class RotateCubeEnv(BaseEnv):
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
     def _load_scene(self, options: dict):
+        self.ground = build_ground(self._scene, altitude=0)
         loader1 = self._scene.create_urdf_loader()
         loader1.fix_root_link = True
         loader1.name = "table"
@@ -129,11 +116,12 @@ class RotateCubeEnv(BaseEnv):
         self.obj_goal = actors.build_colorful_cube(
             self._scene,
             half_size=self.size / 2,
-            color=np.array([12, 42, 160, 255]) / 255,
+            color=np.array([12, 160, 42, 255]) / 255,
             name="cube_goal",
             body_type="kinematic",
             add_collision=False
         )
+        self._hidden_objects.append(self.obj_goal)
 
     def _initialize_actors(self, env_idx: torch.Tensor):
         with torch.device(self.device):
@@ -286,7 +274,7 @@ class RotateCubeEnv(BaseEnv):
 
         # Reward penalising finger movement
 
-        tip_poses = self.agent.tip_poses()
+        tip_poses = self.agent.tip_poses
         # shape (N, 3 + 4, 3 fingers)
 
         finger_reach_object_dist_1 = torch.norm(tip_poses[:, :3, 0] - obj_pos, p=2, dim=-1)
@@ -326,25 +314,8 @@ class RotateCubeEnv(BaseEnv):
         return total_reward
 
     def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
-        return self.compute_dense_reward(obs=obs, action=action, info=info) / 1
-
-
-@torch.jit.script
-def quat_from_euler_xyz(roll, pitch, yaw):
-    cy = torch.cos(yaw * 0.5)
-    sy = torch.sin(yaw * 0.5)
-    cr = torch.cos(roll * 0.5)
-    sr = torch.sin(roll * 0.5)
-    cp = torch.cos(pitch * 0.5)
-    sp = torch.sin(pitch * 0.5)
-
-    qw = cy * cr * cp + sy * sr * sp
-    qx = cy * sr * cp - sy * cr * sp
-    qy = cy * cr * sp + sy * sr * cp
-    qz = sy * cr * cp - cy * sr * sp
-
-    return torch.stack([qx, qy, qz, qw], dim=-1)
-
+        max_reward = 20
+        return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
 
 @torch.jit.script
 def random_roll_orientation(num: int, device: torch.device) -> torch.Tensor:
@@ -352,8 +323,10 @@ def random_roll_orientation(num: int, device: torch.device) -> torch.Tensor:
     roll = 2 * np.pi * torch.rand(num, dtype=torch.float, device=device)
     pitch = torch.zeros(num, dtype=torch.float, device=device)
     yaw = torch.zeros(num, dtype=torch.float, device=device)
-    return quat_from_euler_xyz(roll, pitch, yaw)
-
+    euler_angles = torch.stack([roll, pitch, yaw], dim=-1)
+    rotation_matrix = euler_angles_to_matrix(euler_angles, "XYZ")
+    quat = matrix_to_quaternion(rotation_matrix)
+    return quat
 
 @torch.jit.script
 def quat_diff_rad(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:

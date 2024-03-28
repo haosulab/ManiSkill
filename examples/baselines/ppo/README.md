@@ -20,6 +20,21 @@ python ppo.py --env_id="PickSingleYCB-v1" \
 python ppo.py --env_id="TwoRobotStackCube-v1" \
    --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
    --total_timesteps=40_000_000 --num-steps=100 --num-eval-steps=100
+python ppo.py --env_id="RotateCubeLevel0-v1" \
+   --num_envs=128 --update_epochs=8 --num_minibatches=32 \
+   --total_timesteps=50_000_000 --num-steps=250 --num-eval-steps=250
+python ppo.py --env_id="RotateCubeLevel1-v1" \
+   --num_envs=128 --update_epochs=8 --num_minibatches=32 \
+   --total_timesteps=50_000_000 --num-steps=250 --num-eval-steps=250
+python ppo.py --env_id="RotateCubeLevel2-v1" \
+   --num_envs=128 --update_epochs=8 --num_minibatches=32 \
+   --total_timesteps=50_000_000 --num-steps=250 --num-eval-steps=250
+python ppo.py --env_id="RotateCubeLevel3-v1" \
+   --num_envs=128 --update_epochs=8 --num_minibatches=32 \
+   --total_timesteps=50_000_000 --num-steps=250 --num-eval-steps=250
+python ppo.py --env_id="RotateCubeLevel4-v1" \
+   --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
+   --total_timesteps=500_000_000 --num-steps=250 --num-eval-steps=250
 ```
 
 <!-- TODO (stao, arnav) clean up the baseline code to be slightly nicer (track FPS, and update time separately), and put results onto wandb. Also merge code with CleanRL Repo (stao can ask costa to help do that) -->
