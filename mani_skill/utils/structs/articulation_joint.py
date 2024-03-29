@@ -45,7 +45,7 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
         physx_joints: List[physx.PhysxArticulationJoint],
         articulation: Articulation,
         joint_index: int,
-        active_joint_index: int,
+        active_joint_index: int = None,
     ):
         # naming convention of the original physx joints is "scene-<id>-<articulation_name>_<original_joint_name>"
         shared_name = "_".join(
