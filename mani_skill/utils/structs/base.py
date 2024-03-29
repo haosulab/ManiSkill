@@ -34,6 +34,12 @@ class BaseStruct(Generic[T]):
         if not isinstance(self._scene_idxs, torch.Tensor):
             self._scene_idxs = sapien_utils.to_tensor(self._scene_idxs)
 
+    def __str__(self):
+        return f"<struct of type {self.__class__}; managing {self._num_objs} {self._objs[0].__class__} objects>"
+
+    def __repr__(self):
+        return self.__str__()
+
     @property
     def device(self):
         if physx.is_gpu_enabled():
