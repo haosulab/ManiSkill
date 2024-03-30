@@ -16,6 +16,7 @@ from mani_skill.utils.building.actor_builder import ActorBuilder
 from mani_skill.utils.io_utils import load_json
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table.table_scene_builder import TableSceneBuilder
+from mani_skill.utils.structs import Actor, Pose
 from mani_skill.utils.structs.types import SimConfig
 
 
@@ -96,18 +97,51 @@ class PickClutterEnv(BaseEnv):
         eps_idxs = np.concatenate(
             [eps_idxs] * np.ceil(self.num_envs / len(eps_idxs)).astype(int)
         )[: self.num_envs]
-        # import ipdb;ipdb.set_trace()
+
+        self.selectable_target_objects = []
+        self.num_selectable_target_objs = []
+        target_objects = []
+        selected_obj_idxs = torch.randint(low=0, high=99999, size=(self.num_envs,))
+
         for i, eps_idx in enumerate(eps_idxs):
-            [i]
+            self.selectable_target_objects.append([])
             episode = self._episodes[eps_idx]
             for actor_cfg in episode["actors"]:
                 builder = self._load_model(actor_cfg["model_id"])
                 init_pose = actor_cfg["pose"]
                 builder.initial_pose = sapien.Pose(p=init_pose[:3], q=init_pose[3:])
-                obj = builder.build(name=actor_cfg["model_id"])
+                builder.set_scene_idxs([i])
+                obj = builder.build(name=f"set_{i}_{actor_cfg['model_id']}")
+                if actor_cfg["rep_pts"] is not None:
+                    # TODO (stao): what is rep_pts?, this is taken from ms2 code
+                    self.selectable_target_objects[-1].append(obj)
+            selected_obj_idxs[i] = selected_obj_idxs[i] % len(
+                self.selectable_target_objects
+            )
+            target_objects.append(
+                self.selectable_target_objects[-1][selected_obj_idxs[i]]
+            )
+        self.target_object = Actor.merge(target_objects, name="target_object")
+
+        self.goal_site = actors.build_sphere(
+            self._scene,
+            radius=0.01,
+            color=[0, 1, 0, 1],
+            name="goal_site",
+            body_type="kinematic",
+            add_collision=False,
+        )
+        self._hidden_objects.append(self.goal_site)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
-        self.scene_builder.initialize(env_idx)
+        with torch.device(self.device):
+            b = len(env_idx)
+            self.scene_builder.initialize(env_idx)
+            goal_pos = torch.rand(size=(b, 3)) * torch.tensor(
+                [0.3, 0.5, 0.1]
+            ) + torch.tensor([-0.15, -0.25, 0.35])
+            self.goal_pos = goal_pos
+            self.goal_site.set_pose(Pose.create_from_pq(self.goal_pos))
 
     def evaluate(self):
         return {
