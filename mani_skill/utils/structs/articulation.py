@@ -459,7 +459,8 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         if physx.is_gpu_enabled():
             arg1 = sapien_utils.to_tensor(arg1)
             self.px.cuda_articulation_qf.torch()[
-                self._data_index[self._scene._reset_mask], : self.max_dof
+                self._data_index[self._scene._reset_mask[self._scene_idxs]],
+                : self.max_dof,
             ] = arg1
         else:
             arg1 = sapien_utils.to_numpy(arg1)
@@ -497,7 +498,8 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         if physx.is_gpu_enabled():
             arg1 = sapien_utils.to_tensor(arg1)
             self.px.cuda_articulation_qpos.torch()[
-                self._data_index[self._scene._reset_mask], : self.max_dof
+                self._data_index[self._scene._reset_mask[self._scene_idxs]],
+                : self.max_dof,
             ] = arg1
         else:
             arg1 = sapien_utils.to_numpy(arg1)
@@ -519,7 +521,8 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         if physx.is_gpu_enabled():
             arg1 = sapien_utils.to_tensor(arg1)
             self.px.cuda_articulation_qvel.torch()[
-                self._data_index[self._scene._reset_mask], : self.max_dof
+                self._data_index[self._scene._reset_mask[self._scene_idxs]],
+                : self.max_dof,
             ] = arg1
         else:
             arg1 = sapien_utils.to_numpy(arg1)
@@ -536,7 +539,8 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         if physx.is_gpu_enabled():
             arg1 = sapien_utils.to_tensor(arg1)
             self.px.cuda_rigid_body_data.torch()[
-                self.root._body_data_index[self._scene._reset_mask], 10:13
+                self.root._body_data_index[self._scene._reset_mask[self._scene_idxs]],
+                10:13,
             ] = arg1
         else:
             arg1 = sapien_utils.to_numpy(arg1)
@@ -553,7 +557,8 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         if physx.is_gpu_enabled():
             arg1 = sapien_utils.to_tensor(arg1)
             self.px.cuda_rigid_body_data.torch()[
-                self.root._body_data_index[self._scene._reset_mask], 7:10
+                self.root._body_data_index[self._scene._reset_mask[self._scene_idxs]],
+                7:10,
             ] = arg1
         else:
             arg1 = sapien_utils.to_numpy(arg1)

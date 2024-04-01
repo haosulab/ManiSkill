@@ -243,10 +243,10 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
             if not isinstance(arg1, torch.Tensor):
                 arg1 = vectorize_pose(arg1)
             if self.hidden:
-                self.before_hide_pose[self._scene._reset_mask] = arg1
+                self.before_hide_pose[self._scene._reset_mask[self._scene_idxs]] = arg1
             else:
                 self.px.cuda_rigid_body_data.torch()[
-                    self._body_data_index[self._scene._reset_mask], :7
+                    self._body_data_index[self._scene._reset_mask[self._scene_idxs]], :7
                 ] = arg1
         else:
             self._objs[0].pose = to_sapien_pose(arg1)

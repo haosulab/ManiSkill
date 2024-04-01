@@ -116,7 +116,7 @@ class PickClutterEnv(BaseEnv):
                     # TODO (stao): what is rep_pts?, this is taken from ms2 code
                     self.selectable_target_objects[-1].append(obj)
             selected_obj_idxs[i] = selected_obj_idxs[i] % len(
-                self.selectable_target_objects
+                self.selectable_target_objects[-1]
             )
             target_objects.append(
                 self.selectable_target_objects[-1][selected_obj_idxs[i]]

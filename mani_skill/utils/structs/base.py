@@ -26,13 +26,13 @@ class BaseStruct(Generic[T]):
     _objs: List[T]
     """list of objects of type T managed by this dataclass"""
     _scene_idxs: torch.Tensor
-    """parallel list with _objs indicating which sub-scene each of those objects are actually in by index"""
+    """a list of indexes parallel to `self._objs` indicating which sub-scene each of those objects are actually in by index"""
     _scene: ManiSkillScene
     """The ManiSkillScene object that manages the sub-scenes this dataclasses's objects are in"""
 
     def __post_init__(self):
         if not isinstance(self._scene_idxs, torch.Tensor):
-            self._scene_idxs = sapien_utils.to_tensor(self._scene_idxs)
+            self._scene_idxs = sapien_utils.to_tensor(self._scene_idxs).to(torch.int)
 
     def __str__(self):
         return f"<struct of type {self.__class__}; managing {self._num_objs} {self._objs[0].__class__} objects>"
@@ -93,6 +93,7 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
 
     @cached_property
     def _body_data_index(self):
+        """a list of indexes of each GPU rigid body in the `px.cuda_rigid_body_data` buffer, one for each element in `self._objs`"""
         if self._body_data_index_internal is None:
             self._body_data_index_internal = torch.tensor(
                 [body.gpu_pose_index for body in self._bodies], device="cuda"
@@ -327,7 +328,7 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
         if physx.is_gpu_enabled():
             arg1 = sapien_utils.to_tensor(arg1)
             self._body_data[
-                self._body_data_index[self._scene._reset_mask], 10:13
+                self._body_data_index[self._scene._reset_mask[self._scene_idxs]], 10:13
             ] = arg1
         else:
             arg1 = sapien_utils.to_numpy(arg1)
@@ -394,7 +395,9 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
     def linear_velocity(self, arg1: Array):
         if physx.is_gpu_enabled():
             arg1 = sapien_utils.to_tensor(arg1)
-            self._body_data[self._body_data_index[self._scene._reset_mask], 7:10] = arg1
+            self._body_data[
+                self._body_data_index[self._scene._reset_mask[self._scene_idxs]], 7:10
+            ] = arg1
         else:
             arg1 = sapien_utils.to_numpy(arg1)
             if len(arg1.shape) == 2:
