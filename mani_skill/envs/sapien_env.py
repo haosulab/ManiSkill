@@ -628,6 +628,14 @@ class BaseEnv(gym.Env):
         options["reconfigure"] is True, will call self._reconfigure() which deletes the entire physx scene and reconstructs everything.
         Users building custom tasks generally do not need to override this function.
 
+        Returns the first observation and a info dictionary. The info dictionary is of type
+        ```
+        {
+            "reconfigure": bool (True if the environment reconfigured. False otherwise)
+        }
+
+
+
         Note that ManiSkill always holds two RNG states, a main RNG, and an episode RNG. The main RNG is used purely to sample an episode seed which
         helps with reproducibility of episodes and is for internal use only. The episode RNG is used by the environment/task itself to
         e.g. randomize object positions, randomize assets etc. Episode RNG is accessible by using torch.rand (recommended) which is seeded with a
@@ -655,6 +663,10 @@ class BaseEnv(gym.Env):
                 torch.manual_seed(seed=self._episode_seed)
                 self._reconfigure(options)
                 self._after_reconfigure(options)
+
+        # TODO (stao): Reconfiguration when there is partial reset might not make sense and certainly broken here now.
+        # Solution to resolve that would be to ensure tasks that do reconfigure more than once are single-env only / cpu sim only
+        # or disable partial reset features explicitly for tasks that have a reconfiguration frequency
         if "env_idx" in options:
             env_idx = options["env_idx"]
             self._scene._reset_mask = torch.zeros(
@@ -694,7 +706,7 @@ class BaseEnv(gym.Env):
         if not physx.is_gpu_enabled():
             obs = sapien_utils.to_numpy(sapien_utils.unbatch(obs))
             self._elapsed_steps = 0
-        return obs, {}
+        return obs, dict(reconfigure=reconfigure)
 
     def _set_main_rng(self, seed):
         """Set the main random generator which is only used to set the seed of the episode RNG to improve reproducibility.

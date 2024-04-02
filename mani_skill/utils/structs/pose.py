@@ -111,11 +111,7 @@ class Pose:
             return cls(raw_pose=pose)
 
     def __getitem__(self, i):
-        if i >= len(self.raw_pose):
-            raise IndexError(
-                f"IndexError: index {i} is out of bounds for pose with batch size {len(self.raw_pose)}"
-            )
-        return Pose.create(self.raw_pose[i : i + 1, :])
+        return Pose.create(self.raw_pose[i])
 
     def __len__(self):
         return len(self.raw_pose)
