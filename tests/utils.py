@@ -67,7 +67,7 @@ def assert_obs_equal(obs1, obs2, ignore_col_vector_shape_mismatch=False):
     """Check if two observations are equal
 
     ignore_col_vector_shape_mismatch - If true, will ignore shape mismatch if one shape is (n, 1) but another is (n, ). this is added since
-        SB3 outputs scalars as (n, ) whereas Gymnasium and ManiSkill2 use (n, 1)
+        SB3 outputs scalars as (n, ) whereas Gymnasium and ManiSkill use (n, 1)
     """
     obs1, obs2 = sapien_utils.to_numpy(obs1), sapien_utils.to_numpy(obs2)
     if isinstance(obs1, dict):

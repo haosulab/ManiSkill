@@ -1,4 +1,4 @@
-# ManiSkill2 Documentation
+# ManiSkill Documentation
 
 Install Sphinx and Theme
 

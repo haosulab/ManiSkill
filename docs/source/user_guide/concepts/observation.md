@@ -5,7 +5,7 @@
 ## Observation mode
 
 **The observation mode defines the observation space.**
-All ManiSkill2 tasks take the observation mode (`obs_mode`) as one of the input arguments of `__init__`.
+All ManiSkill tasks take the observation mode (`obs_mode`) as one of the input arguments of `__init__`.
 In general, the observation is organized as a dictionary (with an observation space of `gym.spaces.Dict`).
 
 There are two raw observations modes: `state_dict` (privileged states) and `sensor_data` (raw sensor data like visual data without postprocessing). `state` is a flat version of `state_dict`. `rgbd` and `pointcloud` apply post-processing on `sensor_data` to give convenient representations of visual data.
