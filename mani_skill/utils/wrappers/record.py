@@ -312,6 +312,10 @@ class RecordEpisode(gym.Wrapper):
                     )
 
         obs, info = super().reset(*args, seed=seed, options=options, **kwargs)
+        if info["reconfigure"]:
+            # if we reconfigure, there is the possibility that state dictionary looks different now
+            # so trajectory buffer must be wiped
+            self._trajectory_buffer = None
 
         if self.save_trajectory:
             state_dict = self.base_env.get_state_dict()
