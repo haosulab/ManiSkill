@@ -1,12 +1,16 @@
-from typing import Dict, List, Optional, Tuple, Union
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
 
 import gymnasium as gym
 import torch
 from gymnasium.vector import VectorEnv
 
-from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.utils.common import find_max_episode_steps_value
 from mani_skill.utils.structs.types import Array
+
+if TYPE_CHECKING:
+    from mani_skill.envs.sapien_env import BaseEnv
 
 
 class ManiSkillVectorEnv(VectorEnv):
