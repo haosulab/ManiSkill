@@ -9,7 +9,6 @@ import dacite
 import gymnasium as gym
 import numpy as np
 import sapien
-import sapien.physx
 import sapien.physx as physx
 import sapien.render
 import sapien.utils.viewer.control_window
@@ -34,14 +33,8 @@ from mani_skill.sensors.camera import (
     update_camera_cfgs_from_dict,
 )
 from mani_skill.sensors.depth_camera import StereoDepthCamera, StereoDepthCameraConfig
-from mani_skill.utils import sapien_utils
-from mani_skill.utils.common import (
-    convert_observation_to_space,
-    dict_merge,
-    flatten_state_dict,
-)
-from mani_skill.utils.structs.actor import Actor
-from mani_skill.utils.structs.articulation import Articulation
+from mani_skill.utils import common, sapien_utils
+from mani_skill.utils.structs import Actor, Articulation
 from mani_skill.utils.structs.types import Array, SimConfig
 from mani_skill.utils.visualization.misc import observations_to_images, tile_images
 
@@ -89,7 +82,9 @@ class BaseEnv(gym.Env):
             Generally for most users who are not building tasks this does not need to be changed. The default is 0, which means
             the environment reconfigures upon creation, and never again.
 
-        force_use_gpu_sim (bool): By default this is False. If the num_envs == 1, we use GPU sim if force_use_gpu_sim is True, otherwise we use CPU sim.
+        sim_backend (str): By default this is "auto". If sim_backend is "auto", then if num_envs == 1, we use the gpu sim backend, otherwise
+            we use the cpu sim backend. Can also be "cpu" or "gpu" to force usage of a particular sim backend. Note that if this is "cpu", num_envs
+            can only be equal to 1.
 
     Note:
         `sensor_cfgs` is used to update environement-specific sensor configurations.
@@ -109,7 +104,7 @@ class BaseEnv(gym.Env):
 
     metadata = {"render_modes": SUPPORTED_RENDER_MODES}
 
-    physx_system: Union[sapien.physx.PhysxCpuSystem, sapien.physx.PhysxGpuSystem] = None
+    physx_system: Union[physx.PhysxCpuSystem, physx.PhysxGpuSystem] = None
 
     _scene: ManiSkillScene = None
     """the main scene, which manages all sub scenes. In CPU simulation there is only one sub-scene"""
@@ -152,7 +147,7 @@ class BaseEnv(gym.Env):
         robot_uids: Union[str, BaseAgent, List[Union[str, BaseAgent]]] = None,
         sim_cfg: Union[SimConfig, dict] = dict(),
         reconfiguration_freq: int = 0,
-        force_use_gpu_sim: bool = False,
+        sim_backend: str = "auto",
     ):
         self.num_envs = num_envs
         self.reconfiguration_freq = reconfiguration_freq
@@ -162,24 +157,29 @@ class BaseEnv(gym.Env):
         self.robot_uids = robot_uids
         if self.SUPPORTED_ROBOTS is not None:
             assert robot_uids in self.SUPPORTED_ROBOTS
-        if num_envs > 1 or force_use_gpu_sim:
-            if not sapien.physx.is_gpu_enabled():
-                sapien.physx.enable_gpu()
+        if num_envs > 1 or sim_backend == "gpu":
+            if not physx.is_gpu_enabled():
+                physx.enable_gpu()
             self.device = torch.device(
                 "cuda"
             )  # TODO (stao): fix this for multi process support
         else:
             self.device = torch.device("cpu")
 
+        if sim_backend == "cpu" and num_envs > 1:
+            raise RuntimeError("""Cannot set the sim backend to 'cpu' and have multiple environments.
+            If you want to do CPU sim backends and have environment vectorization you must use multi-processing across CPUs.
+            This can be done via the gymnasium's AsyncVectorEnv API""")
+
         # TODO (stao): move the merge code / handling union typed arguments outside here so classes inheriting BaseEnv only get
         # the already parsed sim config argument
         if isinstance(sim_cfg, SimConfig):
             sim_cfg = sim_cfg.dict()
         merged_gpu_sim_cfg = self._default_sim_cfg.dict()
-        dict_merge(merged_gpu_sim_cfg, sim_cfg)
+        common.dict_merge(merged_gpu_sim_cfg, sim_cfg)
         self.sim_cfg = dacite.from_dict(data_class=SimConfig, data=merged_gpu_sim_cfg, config=dacite.Config(strict=True))
         """the final sim config after merging user overrides with the environment default"""
-        sapien.physx.set_gpu_memory_config(**self.sim_cfg.gpu_memory_cfg.dict())
+        physx.set_gpu_memory_config(**self.sim_cfg.gpu_memory_cfg.dict())
         self.shader_dir = shader_dir
         if self.shader_dir == "default":
             sapien.render.set_camera_shader_dir("minimal")
@@ -206,7 +206,7 @@ class BaseEnv(gym.Env):
             sapien.render.set_ray_tracing_samples_per_pixel(4)
             sapien.render.set_ray_tracing_path_depth(3)
             sapien.render.set_ray_tracing_denoiser("optix")
-        sapien.render.set_log_level(os.getenv("MS2_RENDERER_LOG_LEVEL", "warn"))
+        sapien.render.set_log_level(os.getenv("MS_RENDERER_LOG_LEVEL", "warn"))
 
         # Set simulation and control frequency
         self._sim_freq = self.sim_cfg.sim_freq
@@ -278,9 +278,9 @@ class BaseEnv(gym.Env):
     @cached_property
     def single_observation_space(self):
         if self.num_envs > 1:
-            return convert_observation_to_space(self._init_raw_obs, unbatched=True)
+            return common.convert_observation_to_space(self._init_raw_obs, unbatched=True)
         else:
-            return convert_observation_to_space(self._init_raw_obs)
+            return common.convert_observation_to_space(self._init_raw_obs)
 
     @cached_property
     def observation_space(self):
@@ -389,7 +389,7 @@ class BaseEnv(gym.Env):
             return OrderedDict()
         elif self._obs_mode == "state":
             state_dict = self._get_obs_state_dict(info)
-            obs = flatten_state_dict(state_dict, use_torch=True, device=self.device)
+            obs = common.flatten_state_dict(state_dict, use_torch=True, device=self.device)
         elif self._obs_mode == "state_dict":
             obs = self._get_obs_state_dict(info)
         elif self._obs_mode in ["sensor_data", "rgbd", "rgb", "pointcloud"]:
@@ -530,7 +530,7 @@ class BaseEnv(gym.Env):
 
         self._load_lighting(options)
 
-        if sapien.physx.is_gpu_enabled():
+        if physx.is_gpu_enabled():
             self._scene._setup_gpu()
             self._scene._gpu_fetch_all()
         # for GPU sim, we have to setup sensors after we call setup gpu in order to enable loading mounted sensors as they depend on GPU buffer data
@@ -628,6 +628,14 @@ class BaseEnv(gym.Env):
         options["reconfigure"] is True, will call self._reconfigure() which deletes the entire physx scene and reconstructs everything.
         Users building custom tasks generally do not need to override this function.
 
+        Returns the first observation and a info dictionary. The info dictionary is of type
+        ```
+        {
+            "reconfigure": bool (True if the environment reconfigured. False otherwise)
+        }
+
+
+
         Note that ManiSkill always holds two RNG states, a main RNG, and an episode RNG. The main RNG is used purely to sample an episode seed which
         helps with reproducibility of episodes and is for internal use only. The episode RNG is used by the environment/task itself to
         e.g. randomize object positions, randomize assets etc. Episode RNG is accessible by using torch.rand (recommended) which is seeded with a
@@ -655,6 +663,10 @@ class BaseEnv(gym.Env):
                 torch.manual_seed(seed=self._episode_seed)
                 self._reconfigure(options)
                 self._after_reconfigure(options)
+
+        # TODO (stao): Reconfiguration when there is partial reset might not make sense and certainly broken here now.
+        # Solution to resolve that would be to ensure tasks that do reconfigure more than once are single-env only / cpu sim only
+        # or disable partial reset features explicitly for tasks that have a reconfiguration frequency
         if "env_idx" in options:
             env_idx = options["env_idx"]
             self._scene._reset_mask = torch.zeros(
@@ -694,7 +706,7 @@ class BaseEnv(gym.Env):
         if not physx.is_gpu_enabled():
             obs = sapien_utils.to_numpy(sapien_utils.unbatch(obs))
             self._elapsed_steps = 0
-        return obs, {}
+        return obs, dict(reconfigure=reconfigure)
 
     def _set_main_rng(self, seed):
         """Set the main random generator which is only used to set the seed of the episode RNG to improve reproducibility.
@@ -876,8 +888,8 @@ class BaseEnv(gym.Env):
         """Setup the simulation scene instance.
         The function should be called in reset(). Called by `self._reconfigure`"""
         self._set_scene_config()
-        if sapien.physx.is_gpu_enabled():
-            self.physx_system = sapien.physx.PhysxGpuSystem()
+        if physx.is_gpu_enabled():
+            self.physx_system = physx.PhysxGpuSystem()
             # Create the scenes in a square grid
             sub_scenes = []
             scene_grid_length = int(np.ceil(np.sqrt(self.num_envs)))
@@ -889,7 +901,7 @@ class BaseEnv(gym.Env):
                 scene = sapien.Scene(
                     systems=[self.physx_system, sapien.render.RenderSystem()]
                 )
-                scene.physx_system.set_scene_offset(
+                self.physx_system.set_scene_offset(
                     scene,
                     [
                         scene_x * self.sim_cfg.spacing,
@@ -899,7 +911,7 @@ class BaseEnv(gym.Env):
                 )
                 sub_scenes.append(scene)
         else:
-            self.physx_system = sapien.physx.PhysxCpuSystem()
+            self.physx_system = physx.PhysxCpuSystem()
             sub_scenes = [
                 sapien.Scene([self.physx_system, sapien.render.RenderSystem()])
             ]
@@ -953,7 +965,7 @@ class BaseEnv(gym.Env):
 
         Users should not override this function
         """
-        return flatten_state_dict(self.get_state_dict(), use_torch=True)
+        return common.flatten_state_dict(self.get_state_dict(), use_torch=True)
 
     def set_state_dict(self, state: Dict):
         """

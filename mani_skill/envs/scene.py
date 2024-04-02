@@ -49,6 +49,11 @@ class ManiSkillScene:
         self.actors: Dict[str, Actor] = OrderedDict()
         self.articulations: Dict[str, Articulation] = OrderedDict()
 
+        self.actor_views: Dict[str, Actor] = OrderedDict()
+        """views of actors in any sub-scenes created by using Actor.merge and queryable as if it were a single Actor"""
+        self.articulation_views: Dict[str, Articulation] = OrderedDict()
+        """views of articulations in any sub-scenes created by using Articulation.merge and queryable as if it were a single Articulation"""
+
         self.sensors: Dict[str, BaseSensor] = OrderedDict()
         self.human_render_cameras: Dict[str, Camera] = OrderedDict()
 
@@ -90,9 +95,7 @@ class ManiSkillScene:
     def create_physical_material(
         self, static_friction: float, dynamic_friction: float, restitution: float
     ):
-        return sapien.physx.PhysxMaterial(
-            static_friction, dynamic_friction, restitution
-        )
+        return physx.PhysxMaterial(static_friction, dynamic_friction, restitution)
 
     def remove_actor(self, actor):
         if physx.is_gpu_enabled():
@@ -268,9 +271,9 @@ class ManiSkillScene:
 
     # def create_connection(
     #     self,
-    #     body0: Optional[Union[sapien.Entity, sapien.physx.PhysxRigidBaseComponent]],
+    #     body0: Optional[Union[sapien.Entity, physx.PhysxRigidBaseComponent]],
     #     pose0: sapien.Pose,
-    #     body1: Union[sapien.Entity, sapien.physx.PhysxRigidBaseComponent],
+    #     body1: Union[sapien.Entity, physx.PhysxRigidBaseComponent],
     #     pose1: sapien.Pose,
     # ):
     #     if body0 is None:
@@ -279,7 +282,7 @@ class ManiSkillScene:
     #         c0 = next(
     #             c
     #             for c in body0.components
-    #             if isinstance(c, sapien.physx.PhysxRigidBaseComponent)
+    #             if isinstance(c, physx.PhysxRigidBaseComponent)
     #         )
     #     else:
     #         c0 = body0
@@ -290,13 +293,13 @@ class ManiSkillScene:
     #         c1 = next(
     #             c
     #             for c in body1.components
-    #             if isinstance(c, sapien.physx.PhysxRigidBaseComponent)
+    #             if isinstance(c, physx.PhysxRigidBaseComponent)
     #         )
     #     else:
     #         e1 = body1.entity
     #         c1 = body1
 
-    #     connection = sapien.physx.PhysxDistanceJointComponent(c1)
+    #     connection = physx.PhysxDistanceJointComponent(c1)
     #     connection.parent = c0
     #     connection.pose_in_child = pose1
     #     connection.pose_in_parent = pose0
@@ -306,9 +309,9 @@ class ManiSkillScene:
 
     # def create_gear(
     #     self,
-    #     body0: Optional[Union[sapien.Entity, sapien.physx.PhysxRigidBaseComponent]],
+    #     body0: Optional[Union[sapien.Entity, physx.PhysxRigidBaseComponent]],
     #     pose0: sapien.Pose,
-    #     body1: Union[sapien.Entity, sapien.physx.PhysxRigidBaseComponent],
+    #     body1: Union[sapien.Entity, physx.PhysxRigidBaseComponent],
     #     pose1: sapien.Pose,
     # ):
     #     if body0 is None:
@@ -317,7 +320,7 @@ class ManiSkillScene:
     #         c0 = next(
     #             c
     #             for c in body0.components
-    #             if isinstance(c, sapien.physx.PhysxRigidBaseComponent)
+    #             if isinstance(c, physx.PhysxRigidBaseComponent)
     #         )
     #     else:
     #         c0 = body0
@@ -328,13 +331,13 @@ class ManiSkillScene:
     #         c1 = next(
     #             c
     #             for c in body1.components
-    #             if isinstance(c, sapien.physx.PhysxRigidBaseComponent)
+    #             if isinstance(c, physx.PhysxRigidBaseComponent)
     #         )
     #     else:
     #         e1 = body1.entity
     #         c1 = body1
 
-    #     gear = sapien.physx.PhysxGearComponent(c1)
+    #     gear = physx.PhysxGearComponent(c1)
     #     gear.parent = c0
     #     gear.pose_in_child = pose1
     #     gear.pose_in_parent = pose0
@@ -527,7 +530,7 @@ class ManiSkillScene:
         # As physx_system.gpu_init() was called a single physx step was also taken. So we need to reset
         # all the actors and articulations to their original poses as they likely have collided
         for actor in self.non_static_actors:
-            actor.set_pose(actor._builder_initial_pose)
+            actor.set_pose(actor.inital_pose)
         self.px.cuda_rigid_body_data.torch()[:, 7:] = (
             self.px.cuda_rigid_body_data.torch()[:, 7:] * 0
         )  # zero out all velocities

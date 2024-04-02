@@ -16,7 +16,7 @@ from mani_skill.utils.geometry.trimesh_utils import (
 from mani_skill.utils.structs.base import BaseStruct, PhysxRigidBodyComponentStruct
 
 if TYPE_CHECKING:
-    from mani_skill.utils.structs.articulation import Articulation
+    from mani_skill.utils.structs import Articulation, ArticulationJoint
 
 from mani_skill.utils.structs.pose import Pose, to_sapien_pose, vectorize_pose
 from mani_skill.utils.structs.types import Array
@@ -31,6 +31,9 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
     articulation: Articulation = None
 
     name: str = None
+
+    joint: ArticulationJoint = None
+    """the joint of which this link is a child of"""
 
     meshes: Dict[str, List[trimesh.Trimesh]] = field(default_factory=dict)
     """
@@ -164,7 +167,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
     def pose(self, arg1: Union[Pose, sapien.Pose]) -> None:
         if physx.is_gpu_enabled():
             self.px.cuda_rigid_body_data.torch()[
-                self._body_data_index[self._scene._reset_mask], :7
+                self._body_data_index[self._scene._reset_mask[self._scene_idxs]], :7
             ] = vectorize_pose(arg1)
         else:
             self._objs[0].pose = to_sapien_pose(arg1)
@@ -183,8 +186,8 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
     def get_index(self):
         return self.index
 
-    # def get_joint(self) -> physx.PhysxArticulationJoint:
-    #     return self.joint
+    def get_joint(self) -> ArticulationJoint:
+        return self.joint
 
     # def get_parent(self) -> PhysxArticulationLinkComponent: ...
     # def put_to_sleep(self) -> None: ...

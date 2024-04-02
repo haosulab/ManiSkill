@@ -1,16 +1,15 @@
 from collections import OrderedDict
-from typing import Any, Dict, Union, Tuple
+from typing import Any, Dict, Tuple, Union
 
 import numpy as np
 import torch
 import torch.random
-from pytorch_kinematics import matrix_to_quaternion
 
 from mani_skill import PACKAGE_ASSET_DIR
 from mani_skill.agents.robots.trifingerpro.trifingerpro import TriFingerPro
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
-from mani_skill.utils.building import actors, ActorBuilder
+from mani_skill.utils.building import ActorBuilder, actors
 from mani_skill.utils.building.ground import build_ground
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.sapien_utils import look_at
@@ -18,9 +17,7 @@ from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.articulation import Articulation
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import Array, GPUMemoryConfig, SimConfig
-from mani_skill.utils.geometry.rotation_conversions import random_quaternions, euler_angles_to_matrix
-
-
+from mani_skill.envs.utils.randomization.pose import random_quaternions
 
 class RotateCubeEnv(BaseEnv):
     """
@@ -36,7 +33,7 @@ class RotateCubeEnv(BaseEnv):
     # Specify default simulation/gpu memory configurations.
     sim_cfg = SimConfig(
         gpu_memory_cfg=GPUMemoryConfig(
-            found_lost_pairs_capacity=2 ** 25, max_rigid_patch_count=2 ** 18
+            found_lost_pairs_capacity=2**25, max_rigid_patch_count=2**18
         )
     )
 
@@ -57,19 +54,19 @@ class RotateCubeEnv(BaseEnv):
     max_height = 0.1
 
     def __init__(
-            self,
-            *args,
-            robot_uids="trifingerpro",
-            robot_init_qpos_noise=0.02,
-            difficulty_level: int = 4,
-            **kwargs
+        self,
+        *args,
+        robot_uids="trifingerpro",
+        robot_init_qpos_noise=0.02,
+        difficulty_level: int = 4,
+        **kwargs,
     ):
         self.robot_init_qpos_noise = robot_init_qpos_noise
 
         if (
-                not isinstance(difficulty_level, int)
-                or difficulty_level >= 5
-                or difficulty_level < 0
+            not isinstance(difficulty_level, int)
+            or difficulty_level >= 5
+            or difficulty_level < 0
         ):
             raise ValueError(
                 f"Difficulty level must be a int within 0-4, but get {difficulty_level}"
@@ -81,9 +78,7 @@ class RotateCubeEnv(BaseEnv):
     @property
     def _sensor_configs(self):
         pose = look_at(eye=(0.7, 0.0, 0.7), target=(0.0, 0.0, 0.0))
-        return [
-            CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)
-        ]
+        return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
     def _human_render_camera_configs(self):
@@ -100,7 +95,9 @@ class RotateCubeEnv(BaseEnv):
 
         builder: ActorBuilder = self._scene.create_actor_builder()
         high_table_boundary_file_name = f"{PACKAGE_ASSET_DIR}/robots/trifinger/robot_properties_fingers/meshes/high_table_boundary.stl"
-        builder.add_nonconvex_collision_from_file(filename=high_table_boundary_file_name, scale=[1, 1, 1], material=None)
+        builder.add_nonconvex_collision_from_file(
+            filename=high_table_boundary_file_name, scale=[1, 1, 1], material=None
+        )
         builder.add_visual_from_file(filename=high_table_boundary_file_name)
         table_boundary: Actor = builder.build_static("table2")
 
@@ -119,7 +116,7 @@ class RotateCubeEnv(BaseEnv):
             color=np.array([12, 160, 42, 255]) / 255,
             name="cube_goal",
             body_type="kinematic",
-            add_collision=False
+            add_collision=False,
         )
         self._hidden_objects.append(self.obj_goal)
 
@@ -130,7 +127,9 @@ class RotateCubeEnv(BaseEnv):
             xyz[..., 2] = self.size / 2 + 0.005
             obj_pose = Pose.create_from_pq(p=xyz, q=[1, 0, 0, 0])
             self.obj.set_pose(obj_pose)
-            pos, orn = self._sample_object_goal_poses(env_idx, difficulty=self.difficulty_level)
+            pos, orn = self._sample_object_goal_poses(
+                env_idx, difficulty=self.difficulty_level
+            )
             self.obj_goal.set_pose(Pose.create_from_pq(p=pos, q=orn))
             self.prev_norms = None
 
@@ -153,7 +152,9 @@ class RotateCubeEnv(BaseEnv):
             - 4: Random goal pose in the air, including orientation.
         """
         b = len(env_idx)
-        default_orn = torch.tensor([1.0, 0.0, 0.0, 0.0], dtype=torch.float, device=self.device).repeat(b, 1)
+        default_orn = torch.tensor(
+            [1.0, 0.0, 0.0, 0.0], dtype=torch.float, device=self.device
+        ).repeat(b, 1)
 
         def random_xy() -> Tuple[torch.Tensor, torch.Tensor]:
             """Returns sampled uniform positions in circle (https://stackoverflow.com/a/50746409)"""
@@ -183,7 +184,7 @@ class RotateCubeEnv(BaseEnv):
             # For initialization
             pos_x, pos_y = random_xy()
             pos_z = self.size / 2
-            orientation = random_roll_orientation(b, self.device)
+            orientation = random_quaternions(b, lock_x=True, lock_y=True, device=self.device)
         elif difficulty == 2:
             # Fixed goal position in the air with x,y = 0.  No orientation.
             pos_x, pos_y = 0.0, 0.0
@@ -203,7 +204,7 @@ class RotateCubeEnv(BaseEnv):
             # in the cirriculum
             pos_x, pos_y = random_xy()
             pos_z = random_z(min_height=self.radius_3d, max_height=self.max_height)
-            orientation = random_quaternions(b, dtype=torch.float, device=self.device)
+            orientation = random_quaternions(b, device=self.device)
         else:
             msg = f"Invalid difficulty index for task: {difficulty}."
             raise ValueError(msg)
@@ -221,12 +222,10 @@ class RotateCubeEnv(BaseEnv):
         goal_q = self.obj_goal.pose.q
 
         is_obj_pos_close_to_goal = (
-                torch.linalg.norm(obj_p - goal_p, axis=1) < self.goal_radius
+            torch.linalg.norm(obj_p - goal_p, axis=1) < self.goal_radius
         )
 
-        is_obj_q_close_to_goal = (
-                quat_diff_rad(obj_q, goal_q) < 0.1
-        )
+        is_obj_q_close_to_goal = quat_diff_rad(obj_q, goal_q) < 0.1
 
         is_success = is_obj_pos_close_to_goal & is_obj_q_close_to_goal
 
@@ -246,7 +245,8 @@ class RotateCubeEnv(BaseEnv):
             self.agent.reset(init_qpos)
             self.agent.robot.set_pose(
                 Pose.create_from_pq(
-                    torch.tensor([0.0, 0, self.size / 2 + 0.022]), torch.tensor([1, 0, 0, 0])
+                    torch.tensor([0.0, 0, self.size / 2 + 0.022]),
+                    torch.tensor([1, 0, 0, 0]),
                 )
             )
 
@@ -260,7 +260,6 @@ class RotateCubeEnv(BaseEnv):
                 obj_p=self.obj.pose.p,
                 obj_q=self.obj.pose.q,
             )
-            pass
         return obs
 
     def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
@@ -277,19 +276,42 @@ class RotateCubeEnv(BaseEnv):
         tip_poses = self.agent.tip_poses
         # shape (N, 3 + 4, 3 fingers)
 
-        finger_reach_object_dist_1 = torch.norm(tip_poses[:, :3, 0] - obj_pos, p=2, dim=-1)
-        finger_reach_object_dist_2 = torch.norm(tip_poses[:, :3, 1] - obj_pos, p=2, dim=-1)
-        finger_reach_object_dist_3 = torch.norm(tip_poses[:, :3, 2] - obj_pos, p=2, dim=-1)
+        finger_reach_object_dist_1 = torch.norm(
+            tip_poses[:, :3, 0] - obj_pos, p=2, dim=-1
+        )
+        finger_reach_object_dist_2 = torch.norm(
+            tip_poses[:, :3, 1] - obj_pos, p=2, dim=-1
+        )
+        finger_reach_object_dist_3 = torch.norm(
+            tip_poses[:, :3, 2] - obj_pos, p=2, dim=-1
+        )
         finger_reach_object_reward1 = 1 - torch.tanh(5 * finger_reach_object_dist_1)
         finger_reach_object_reward2 = 1 - torch.tanh(5 * finger_reach_object_dist_2)
         finger_reach_object_reward3 = 1 - torch.tanh(5 * finger_reach_object_dist_3)
-        finger_reach_object_reward = object_dist_weight * (finger_reach_object_reward1 + finger_reach_object_reward2 + finger_reach_object_reward3) / 3
+        finger_reach_object_reward = (
+            object_dist_weight
+            * (
+                finger_reach_object_reward1
+                + finger_reach_object_reward2
+                + finger_reach_object_reward3
+            )
+            / 3
+        )
 
         # Reward for object distance
         object_dist = torch.norm(obj_pos - goal_pos, p=2, dim=-1)
 
-        init_xyz_tensor = torch.tensor([0, 0, 0.032], dtype=torch.float, device=self.device).reshape(1, 3)
-        init_z_dist = torch.norm(init_xyz_tensor - goal_pos[...,], p=2, dim=-1)
+        init_xyz_tensor = torch.tensor(
+            [0, 0, 0.032], dtype=torch.float, device=self.device
+        ).reshape(1, 3)
+        init_z_dist = torch.norm(
+            init_xyz_tensor
+            - goal_pos[
+                ...,
+            ],
+            p=2,
+            dim=-1,
+        )
 
         # object_dist_reward = object_dist_weight * dt * lgsk_kernel(object_dist, scale=50., eps=2.)
 
@@ -297,7 +319,9 @@ class RotateCubeEnv(BaseEnv):
         object_init_dist_reward = 1 - torch.tanh(5 * init_z_dist)
         object_dist_reward -= object_init_dist_reward
 
-        init_z_tensor = torch.tensor([0.032], dtype=torch.float, device=self.device).reshape(1, 1)
+        init_z_tensor = torch.tensor(
+            [0.032], dtype=torch.float, device=self.device
+        ).reshape(1, 1)
         object_z_dist = torch.norm(obj_pos[..., 2:3] - goal_pos[..., 2:3], p=2, dim=-1)
         init_z_dist = torch.norm(init_z_tensor - goal_pos[..., 2:3], p=2, dim=-1)
         object_lift_reward = 5 * ((1 - torch.tanh(5 * object_z_dist)))
@@ -308,7 +332,10 @@ class RotateCubeEnv(BaseEnv):
         # extract quaternion orientation
         angles = quat_diff_rad(obj_q, goal_q)
         object_rot_reward = -1 * torch.abs(angles)
-        pose_reward = object_dist_weight * (object_dist_reward + object_lift_reward) + object_rot_weight * object_rot_reward
+        pose_reward = (
+            object_dist_weight * (object_dist_reward + object_lift_reward)
+            + object_rot_weight * object_rot_reward
+        )
         total_reward = finger_reach_object_reward + pose_reward
         total_reward[info["success"]] = 3
         return total_reward
@@ -317,18 +344,7 @@ class RotateCubeEnv(BaseEnv):
         max_reward = 20
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
 
-@torch.jit.script
-def random_roll_orientation(num: int, device: torch.device) -> torch.Tensor:
-    """Returns sampled rotation around z-axis."""
-    roll = 2 * np.pi * torch.rand(num, dtype=torch.float, device=device)
-    pitch = torch.zeros(num, dtype=torch.float, device=device)
-    yaw = torch.zeros(num, dtype=torch.float, device=device)
-    euler_angles = torch.stack([roll, pitch, yaw], dim=-1)
-    rotation_matrix = euler_angles_to_matrix(euler_angles, "XYZ")
-    quat = matrix_to_quaternion(rotation_matrix)
-    return quat
 
-@torch.jit.script
 def quat_diff_rad(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     """
     Get the difference in radians between two quaternions.
@@ -355,7 +371,7 @@ def quat_diff_rad(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     return angle_diff
 
 
-
+# TODO (stao): pick a better name, TrifingerRotateCube? perhaps?
 @register_env("RotateCubeLevel0-v1", max_episode_steps=250)
 class RotateCubeEnvLevel0(RotateCubeEnv):
     def __init__(self, *args, **kwargs):

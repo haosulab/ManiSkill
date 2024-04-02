@@ -28,13 +28,9 @@ class Drive(PhysxJointComponentStruct[physx.PhysxDriveComponent]):
     def create_from_entities(
         cls,
         scene: ManiSkillScene,
-        bodies0: Sequence[
-            Union[sapien.Entity, sapien.physx.PhysxRigidBaseComponent]
-        ] = None,
+        bodies0: Sequence[Union[sapien.Entity, physx.PhysxRigidBaseComponent]] = None,
         pose0: Union[sapien.Pose, Pose] = None,
-        bodies1: Sequence[
-            Union[sapien.Entity, sapien.physx.PhysxRigidBaseComponent]
-        ] = None,
+        bodies1: Sequence[Union[sapien.Entity, physx.PhysxRigidBaseComponent]] = None,
         pose1: Union[sapien.Pose, Pose] = None,
         scene_idxs: torch.Tensor = None,
     ):

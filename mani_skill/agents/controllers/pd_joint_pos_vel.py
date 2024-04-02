@@ -29,7 +29,7 @@ class PDJointPosVelController(PDJointPosController):
 
     def set_drive_velocity_targets(self, targets):
         self.articulation.set_joint_drive_velocity_targets(
-            targets, self.joints, self.joint_indices
+            targets, self.joints, self.active_joint_indices
         )
 
     def set_action(self, action: np.ndarray):

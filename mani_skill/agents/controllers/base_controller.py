@@ -30,8 +30,10 @@ class BaseController:
     The controller is an interface for the robot to interact with the environment.
     """
 
-    joints: List[ArticulationJoint]  # active joints controlled
-    joint_indices: torch.Tensor  # indices of active joints controlled
+    joints: List[ArticulationJoint]
+    """active joints controlled"""
+    active_joint_indices: torch.Tensor
+    """indices of active joints controlled. Equivalent to [x.active_index for x in self.joints]"""
     action_space: spaces.Space
     """the action space. If the number of parallel environments is > 1, this action space is also batched"""
     single_action_space: spaces.Space
@@ -83,7 +85,7 @@ class BaseController:
         try:
             # We only track the joints we can control, the active ones.
             self.joints = get_joints_by_names(self.articulation, joint_names)
-            self.joint_indices = get_active_joint_indices(
+            self.active_joint_indices = get_active_joint_indices(
                 self.articulation, joint_names
             )
         except Exception as err:
@@ -103,12 +105,12 @@ class BaseController:
     @property
     def qpos(self):
         """Get current joint positions."""
-        return self.articulation.get_qpos()[..., self.joint_indices]
+        return self.articulation.get_qpos()[..., self.active_joint_indices]
 
     @property
     def qvel(self):
         """Get current joint velocities."""
-        return self.articulation.get_qvel()[..., self.joint_indices]
+        return self.articulation.get_qvel()[..., self.active_joint_indices]
 
     # -------------------------------------------------------------------------- #
     # Interfaces (implemented in subclasses)
@@ -224,10 +226,10 @@ class DictController(BaseController):
 
     def _initialize_joints(self):
         self.joints = []
-        self.joint_indices = []
+        self.active_joint_indices = []
         for controller in self.controllers.values():
             self.joints.extend(controller.joints)
-            self.joint_indices.extend(controller.joint_indices)
+            self.active_joint_indices.extend(controller.active_joint_indices)
 
     def set_drive_property(self):
         for controller in self.controllers.values():

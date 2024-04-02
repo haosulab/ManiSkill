@@ -11,7 +11,7 @@ import sapien.render
 import torch
 
 from mani_skill.utils import sapien_utils
-from mani_skill.utils.structs.base import BaseStruct, PhysxRigidDynamicComponentStruct
+from mani_skill.utils.structs.base import PhysxRigidDynamicComponentStruct
 from mani_skill.utils.structs.pose import Pose, to_sapien_pose, vectorize_pose
 from mani_skill.utils.structs.types import Array
 
@@ -32,13 +32,19 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
     px_body_type: Literal["kinematic", "static", "dynamic"] = None
     hidden: bool = False
 
-    # track the initial pose of the actor builder for this actor. Necessary to ensure the actor is reset correctly once
-    # gpu system is initialized
-    _builder_initial_pose: Pose = None
+    inital_pose: Pose = None
+    """
+    The initial pose of this Actor, as defined when creating the actor via the ActorBuilder. It is necessary to track
+    this pose to ensure the actor is still at the correct pose once gpu system is initialized. It may also be useful
+    to help reset a environment to an initial state without having to manage initial poses yourself
+    """
     name: str = None
 
     def __hash__(self):
         return self._objs[0].__hash__()
+
+    def __str__(self):
+        return f"<{self.name}: struct of type {self.__class__}; managing {self._num_objs} {self._objs[0].__class__} objects>"
 
     @classmethod
     def create_from_entities(
@@ -81,7 +87,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
     @classmethod
     def merge(cls, actors: List["Actor"], name: str = None):
         """
-        Merge actors together so that they can all be managed by one python dataclass object.
+        Merge actors together under one view so that they can all be managed by one python dataclass object.
         This can be useful for e.g. randomizing the asset loaded into a task and being able to do object.pose to fetch the pose of all randomized assets
         or object.set_pose to change the pose of each of the different assets, despite the assets not being uniform across all sub-scenes.
 
@@ -99,8 +105,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
         for actor in actors:
             objs += actor._objs
             merged_scene_idxs.append(actor._scene_idxs)
-            _builder_initial_poses.append(actor._builder_initial_pose.raw_pose)
-            del scene.actors[actor.name]
+            _builder_initial_poses.append(actor.inital_pose.raw_pose)
             assert (
                 actor._num_objs == num_objs_per_actor
             ), "Each given actor must have the same number of managed objects"
@@ -109,10 +114,8 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
         merged_scene_idxs = torch.concat(merged_scene_idxs)
         merged_actor = Actor.create_from_entities(objs, scene, merged_scene_idxs)
         merged_actor.name = name
-        merged_actor._builder_initial_pose = Pose.create(
-            torch.vstack(_builder_initial_poses)
-        )
-        scene.actors[merged_actor.name] = merged_actor
+        merged_actor.inital_pose = Pose.create(torch.vstack(_builder_initial_poses))
+        scene.actor_views[merged_actor.name] = merged_actor
         return merged_actor
 
     # -------------------------------------------------------------------------- #
@@ -224,7 +227,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
             if self.px_body_type == "static":
                 # NOTE (stao): usually _builder_initial_pose is just one pose, but for static objects in GPU sim we repeat it if necessary so it can be used
                 # as part of observations if needed
-                return self._builder_initial_pose
+                return self.inital_pose
             else:
                 if self.hidden:
                     return Pose.create(self.before_hide_pose)
@@ -243,12 +246,14 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
             if not isinstance(arg1, torch.Tensor):
                 arg1 = vectorize_pose(arg1)
             if self.hidden:
-                self.before_hide_pose[self._scene._reset_mask] = arg1
+                self.before_hide_pose[self._scene._reset_mask[self._scene_idxs]] = arg1
             else:
                 self.px.cuda_rigid_body_data.torch()[
-                    self._body_data_index[self._scene._reset_mask], :7
+                    self._body_data_index[self._scene._reset_mask[self._scene_idxs]], :7
                 ] = arg1
         else:
+            # TODO (stao): some tasks use views over multiple objects but need to work on GPU sim so self._objs may not be across different scenes
+            # and this code won't work.
             self._objs[0].pose = to_sapien_pose(arg1)
 
     def set_pose(self, arg1: Union[Pose, sapien.Pose]) -> None:
