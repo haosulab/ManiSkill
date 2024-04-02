@@ -14,18 +14,19 @@ Simply providing batched data to the CameraConfigs of your sensors as done below
 import torch
 from mani_skill.envs.utils import randomization
 from mani_skill.utils import sapien_utils
-
-@property
-def _sensor_configs(self):
-    pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
-    pose = Pose.create(pose)
-    pose = pose * Pose.create_from_pq(
-        p=torch.rand((self.num_envs, 3)) * 0.05 - 0.025,
-        q=randomization.random_quaternions(
-            n=self.num_envs, device=self.device, bounds=(-np.pi / 24, np.pi / 24)
-        ),
-    )
-    return [CameraConfig("base_camera", pose=pose, width=128, height=128, fov=np.pi / 2, near=0.01, far=100)]
+class MyCustomTask(BaseEnv):
+    # ...
+    @property
+    def _sensor_configs(self):
+        pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
+        pose = Pose.create(pose)
+        pose = pose * Pose.create_from_pq(
+            p=torch.rand((self.num_envs, 3)) * 0.05 - 0.025,
+            q=randomization.random_quaternions(
+                n=self.num_envs, device=self.device, bounds=(-np.pi / 24, np.pi / 24)
+            ),
+        )
+        return [CameraConfig("base_camera", pose=pose, width=128, height=128, fov=np.pi / 2, near=0.01, far=100)]
 ```
 
 It will generate the following result (for 16 parallel environments) on e.g. the PickCube-v1 task:
@@ -51,16 +52,17 @@ Now we can mount our camera by modifying the camera config to specify where to m
 ```python
 import sapien
 from mani_skill.sensors.camera import CameraConfig
-
-@property
-def _sensor_configs(self):
-    return [
-        CameraConfig(
-            "base_camera", pose=sapien.Pose(), width=128, height=128, 
-            fov=np.pi / 2, near=0.01, far=100, 
-            mount=self.cam_mount
-        )
-    ]
+class MyCustomTask(BaseEnv):
+    # ...
+    @property
+    def _sensor_configs(self):
+        return [
+            CameraConfig(
+                "base_camera", pose=sapien.Pose(), width=128, height=128, 
+                fov=np.pi / 2, near=0.01, far=100, 
+                mount=self.cam_mount
+            )
+        ]
 ```
 
 Once the camera config is properly defined, we can move mount however we wish in the world and the camera will follow. For camera pose randomization you can copy the code written earlier to randomize camera pose directly into `_initialize_episode`
@@ -69,18 +71,19 @@ Once the camera config is properly defined, we can move mount however we wish in
 import torch
 from mani_skill.envs.utils import randomization
 from mani_skill.utils import sapien_utils
-
-def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
+class MyCustomTask(BaseEnv):
     # ...
-    pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
-    pose = Pose.create(pose)
-    pose = pose * Pose.create_from_pq(
-        p=torch.rand((self.num_envs, 3)) * 0.05 - 0.025,
-        q=randomization.random_quaternions(
-            n=self.num_envs, device=self.device, bounds=(-np.pi / 24, np.pi / 24)
-        ),
-    )
-    self.cam_mount.set_pose(pose)
+    def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
+        # ...
+        pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
+        pose = Pose.create(pose)
+        pose = pose * Pose.create_from_pq(
+            p=torch.rand((self.num_envs, 3)) * 0.05 - 0.025,
+            q=randomization.random_quaternions(
+                n=self.num_envs, device=self.device, bounds=(-np.pi / 24, np.pi / 24)
+            ),
+        )
+        self.cam_mount.set_pose(pose)
 ```
 
 The result is the same as during reconfiguration, but instead every episode reset the camera poses all get randomized. You can also easily add moving cameras that follow the robot itself or move on their own in this manner.

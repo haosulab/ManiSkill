@@ -250,10 +250,6 @@ Using the D'Claw robot, rotate a [ROBEL valve](https://sites.google.com/view/rob
 **Goal Specification:**
 - Rotation direction $r$ which can be 1 or -1. Note that the amount to rotate is implicit and depends of level
 
-**Additional Notes**
-- On GPU simulation, in order to collect data from every possible object in the YCB database we recommend using at least 128 parallel environments or more, otherwise you will need to reconfigure in order to sample new objects.
-:::
-
 :::{figure} https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/RotateValve-v1_rt.png
 :alt: rotate valve task
 :::
