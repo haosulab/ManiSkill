@@ -664,6 +664,9 @@ class BaseEnv(gym.Env):
                 self._reconfigure(options)
                 self._after_reconfigure(options)
 
+        # TODO (stao): Reconfiguration when there is partial reset might not make sense and certainly broken here now.
+        # Solution to resolve that would be to ensure tasks that do reconfigure more than once are single-env only / cpu sim only
+        # or disable partial reset features explicitly for tasks that have a reconfiguration frequency
         if "env_idx" in options:
             env_idx = options["env_idx"]
             self._scene._reset_mask = torch.zeros(
