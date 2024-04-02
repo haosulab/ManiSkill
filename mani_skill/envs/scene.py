@@ -49,6 +49,11 @@ class ManiSkillScene:
         self.actors: Dict[str, Actor] = OrderedDict()
         self.articulations: Dict[str, Articulation] = OrderedDict()
 
+        self.actor_views: Dict[str, Actor] = OrderedDict()
+        """views of actors in any sub-scenes created by using Actor.merge and queryable as if it were a single Actor"""
+        self.articulation_views: Dict[str, Articulation] = OrderedDict()
+        """views of articulations in any sub-scenes created by using Articulation.merge and queryable as if it were a single Articulation"""
+
         self.sensors: Dict[str, BaseSensor] = OrderedDict()
         self.human_render_cameras: Dict[str, Camera] = OrderedDict()
 
@@ -527,7 +532,7 @@ class ManiSkillScene:
         # As physx_system.gpu_init() was called a single physx step was also taken. So we need to reset
         # all the actors and articulations to their original poses as they likely have collided
         for actor in self.non_static_actors:
-            actor.set_pose(actor._builder_initial_pose)
+            actor.set_pose(actor.inital_pose)
         self.px.cuda_rigid_body_data.torch()[:, 7:] = (
             self.px.cuda_rigid_body_data.torch()[:, 7:] * 0
         )  # zero out all velocities

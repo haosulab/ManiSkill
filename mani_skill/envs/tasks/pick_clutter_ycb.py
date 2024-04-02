@@ -55,6 +55,11 @@ class PickClutterEnv(BaseEnv):
 
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
+        if self.num_envs == 1:
+            # with just one environment there isn't going to be a lot of geometrical variation
+            # so setting the freq below to 1 ensures each reset (while a little slower) changes the loaded geometries
+            self.reconfiguration_freq = 1
+
     @property
     def _default_sim_cfg(self):
         return SimConfig()
@@ -98,10 +103,9 @@ class PickClutterEnv(BaseEnv):
             [eps_idxs] * np.ceil(self.num_envs / len(eps_idxs)).astype(int)
         )[: self.num_envs]
 
-        self.selectable_target_objects = []
-        self.num_selectable_target_objs = []
-        target_objects = []
-        selected_obj_idxs = torch.randint(low=0, high=99999, size=(self.num_envs,))
+        self.selectable_target_objects: List[List[Actor]] = []
+        """for each sub-scene, a list of objects that can be selected as targets"""
+        all_objects = []
 
         for i, eps_idx in enumerate(eps_idxs):
             self.selectable_target_objects.append([])
@@ -112,16 +116,12 @@ class PickClutterEnv(BaseEnv):
                 builder.initial_pose = sapien.Pose(p=init_pose[:3], q=init_pose[3:])
                 builder.set_scene_idxs([i])
                 obj = builder.build(name=f"set_{i}_{actor_cfg['model_id']}")
+                all_objects.append(obj)
                 if actor_cfg["rep_pts"] is not None:
                     # TODO (stao): what is rep_pts?, this is taken from ms2 code
                     self.selectable_target_objects[-1].append(obj)
-            selected_obj_idxs[i] = selected_obj_idxs[i] % len(
-                self.selectable_target_objects[-1]
-            )
-            target_objects.append(
-                self.selectable_target_objects[-1][selected_obj_idxs[i]]
-            )
-        self.target_object = Actor.merge(target_objects, name="target_object")
+
+        self.all_objects = Actor.merge(all_objects, name="all_objects")
 
         self.goal_site = actors.build_sphere(
             self._scene,
@@ -133,6 +133,21 @@ class PickClutterEnv(BaseEnv):
         )
         self._hidden_objects.append(self.goal_site)
 
+        self._sample_target_objects()
+
+    def _sample_target_objects(self):
+        # note this samples new target objects for every sub-scene
+        target_objects = []
+        for i in range(self.num_envs):
+            selected_obj_idxs = torch.randint(low=0, high=99999, size=(self.num_envs,))
+            selected_obj_idxs[i] = selected_obj_idxs[i] % len(
+                self.selectable_target_objects[-1]
+            )
+            target_objects.append(
+                self.selectable_target_objects[-1][selected_obj_idxs[i]]
+            )
+        self.target_object = Actor.merge(target_objects, name="target_object")
+
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
             b = len(env_idx)
@@ -142,6 +157,15 @@ class PickClutterEnv(BaseEnv):
             ) + torch.tensor([-0.15, -0.25, 0.35])
             self.goal_pos = goal_pos
             self.goal_site.set_pose(Pose.create_from_pq(self.goal_pos))
+
+            # reset objects to original poses
+            if b == self.num_envs:
+                # if all envs reset
+                self.all_objects.pose = self.all_objects.inital_pose
+            else:
+                # if only some envs reset, we unfortunately still have to do some mask wrangling
+                mask = torch.isin(self.all_objects._scene_idxs, env_idx)
+                self.all_objects.pose = self.all_objects.inital_pose[mask]
 
     def evaluate(self):
         return {

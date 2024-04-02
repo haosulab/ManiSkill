@@ -67,6 +67,9 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     ] = field(default_factory=OrderedDict)
     """Maps a tuple of link names to pre-saved net contact force queries"""
 
+    def __str__(self):
+        return f"<{self.name}: struct of type {self.__class__}; managing {self._num_objs} {self._objs[0].__class__} objects>"
+
     @classmethod
     def create_from_physx_articulations(
         cls,
@@ -170,7 +173,6 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         for articulation in articulations:
             objs += articulation._objs
             merged_scene_idxs.append(articulation._scene_idxs)
-            del scene.articulations[articulation.name]
             assert (
                 articulation._num_objs == num_objs_per_actor
             ), "Each given articulation must have the same number of managed objects"
@@ -179,7 +181,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             objs, scene, merged_scene_idxs, _merged=True
         )
         merged_articulation.name = name
-        scene.articulations[merged_articulation.name] = merged_articulation
+        scene.articulation_views[merged_articulation.name] = merged_articulation
         return merged_articulation
 
     # -------------------------------------------------------------------------- #

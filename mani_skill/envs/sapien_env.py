@@ -655,6 +655,7 @@ class BaseEnv(gym.Env):
                 torch.manual_seed(seed=self._episode_seed)
                 self._reconfigure(options)
                 self._after_reconfigure(options)
+
         if "env_idx" in options:
             env_idx = options["env_idx"]
             self._scene._reset_mask = torch.zeros(

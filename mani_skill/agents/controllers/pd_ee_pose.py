@@ -104,7 +104,7 @@ class PDEEPosController(PDJointPosController):
             ] = self.ee_pose_at_base.raw_pose[self.scene._reset_mask]
 
     def compute_ik(
-        self, target_pose: Pose, action: Array, pos_only=False, max_iterations=100
+        self, target_pose: Pose, action: Array, pos_only=True, max_iterations=100
     ):
         # Assume the target pose is defined in the base frame
         if physx.is_gpu_enabled():
@@ -241,6 +241,11 @@ class PDEEPoseController(PDEEPosController):
         ]
         rot_action = rot_action * self.config.rot_bound
         return torch.hstack([pos_action, rot_action])
+
+    def compute_ik(self, target_pose: Pose, action: Array, max_iterations=100):
+        return super().compute_ik(
+            target_pose, action, pos_only=False, max_iterations=max_iterations
+        )
 
     def compute_target_pose(self, prev_ee_pose_at_base: Pose, action):
         if self.config.use_delta:
