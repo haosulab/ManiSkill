@@ -1,34 +1,26 @@
 # {octicon}`package` Installation
 
-Installing ManiSkill is quite simple with a single pip install and potentially installing torch and vulkan if you don't have it already.
-
-From pip (stable version):
+Installation of ManiSkill is extremely simple, you only need to run a few pip installs
 
 ```bash
-# this is currently a beta version of mani_skill with GPU simulation
-pip install --upgrade mani-skill
+# install the package
+pip install --upgrade mani_skill
+# install a version of torch that is compatible with your system
+pip install torch torchvision torchaudio
+# if you are on CUDA 11 you must also run
+pip install fast_kinematics==0.1.11
 ```
 
-<!-- add the other install options one released -->
-From github (latest commit):
+You can also install the main `mani_skill` package from github/source:
 
 ```bash
+# GitHub
 pip install --upgrade git+https://github.com/haosulab/ManiSkill2.git@dev
-```
 
-From source:
-
-```bash
+# Source
 git clone https://github.com/haosulab/ManiSkill2.git
 cd ManiSkill2 && git checkout -b dev --track origin/dev && pip install -e .
 ```
-
-Note that installing mani_skill will not automatically install torch which is necessary. You can install torch as so
-```
-pip install torch torchvision torchaudio
-```
-
-just make sure you are installing the version of torch that your computer can work with.
 
 :::{note}
 While state-based simulation does not require any additional dependencies, a GPU with the Vulkan driver installed is required to enable rendering in ManiSkill. See [here](#vulkan) for how to install and configure Vulkan on Ubuntu.
@@ -196,6 +188,22 @@ ldconfig -p | grep libGLX_nvidia
 ```
 
 If `libGLX_nvidia.so` is not found, they it is likely that you have installed an incorrect driver. To get the right driver on linux, it is recommended to install `nvidia-driver-xxx` (do not use the ones with server in the package name) and to avoid using any other method of installation like a runfile
+
+### Fast Kinematics
+
+If you get an error showing
+
+```bash
+# ...
+    import fast_kinematics
+ImportError: libcudart.so.12: cannot open shared object file: No such file or directory
+```
+
+You are likely on CUDA 11 and need to use the CUDA 11 version of fast_kinematics, installable via 
+
+```bash
+pip install fast_kinematics==0.1.11
+```
 
 ### Uninstallation
 

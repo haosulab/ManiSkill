@@ -36,47 +36,39 @@ Note previously there was previously a ManiSkill and ManiSkill2, we are rebrandi
 
 ## Installation
 
-From pip:
+Installation of ManiSkill is extremely simple, you only need to run a few pip installs
 
 ```bash
+# install the package
 pip install --upgrade mani_skill
-```
-
-From github:
-
-```bash
-pip install --upgrade git+https://github.com/haosulab/ManiSkill2.git
-```
-
-From source:
-
-```bash
-git clone https://github.com/haosulab/ManiSkill2.git
-cd ManiSkill2 && pip install -e .
-```
-
-Note that installing mani_skill will not automatically install torch and other packages that depend on CUDA. Torch can be installed following the usual instructions on the torch website:
-
-```bash
+# install a version of torch that is compatible with your system
 pip install torch torchvision torchaudio
+# if you are on CUDA 11 you must also run
+pip install fast_kinematics==0.1.11
 ```
 
-just make sure you are installing the version of torch that your computer can work with.
+You can also install the main `mani_skill` package from github/source:
 
-If you are on CUDA 11, you must also run
 ```bash
-pip install fast_kinematics==0.1.11  # if you are on CUDA 11, you must run this
+# GitHub
+pip install --upgrade git+https://github.com/haosulab/ManiSkill2.git@dev
+
+# Source
+git clone https://github.com/haosulab/ManiSkill2.git
+cd ManiSkill2 && git checkout -b dev --track origin/dev && pip install -e .
 ```
 
 ---
 
-A GPU with the Vulkan driver installed is required to enable rendering in ManiSkill. The rigid-body environments, powered by SAPIEN, are ready to use after installation. Test your installation:
+A GPU with the Vulkan driver installed is required to enable rendering in ManiSkill. See [these docs](https://maniskill.readthedocs.io/en/dev/user_guide/getting_started/installation.html#vulkan) for instructions to fix Vulkan related bugs. The rigid-body environments, powered by SAPIEN, are ready to use after installation. Test your installation:
 
 ```bash
 # Run an episode (at most 50 steps) of "PickCube-v1" (a rigid-body environment) with random actions
 # Or specify an environment by "-e ${ENV_ID}"
 python -m mani_skill.examples.demo_random_action
 ```
+
+For a full list of example scripts you can run see [the docs](https://maniskill.readthedocs.io/en/dev/user_guide/demos/index.html).
 
 Some environments require **downloading assets**. You can download download task-specific assets by `python -m mani_skill.utils.download_asset ${ENV_ID}`. The assets will be downloaded to `~/maniskill/data` by default, and you can also use the environment variable `MS_ASSET_DIR` to specify this destination.
 
