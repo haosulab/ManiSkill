@@ -11,7 +11,7 @@ import sapien.render
 import torch
 
 from mani_skill.utils import sapien_utils
-from mani_skill.utils.structs.base import BaseStruct, PhysxRigidDynamicComponentStruct
+from mani_skill.utils.structs.base import PhysxRigidDynamicComponentStruct
 from mani_skill.utils.structs.pose import Pose, to_sapien_pose, vectorize_pose
 from mani_skill.utils.structs.types import Array
 
