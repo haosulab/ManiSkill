@@ -192,8 +192,6 @@ class PickClutterEnv(BaseEnv):
 @register_env("PickClutterYCB-v1", max_episode_steps=100)
 class PickClutterYCBEnv(PickClutterEnv):
     DEFAULT_EPISODE_JSON = f"{ASSET_DIR}/tasks/pick_clutter/ycb_train_5k.json.gz"
-    # DEFAULT_ASSET_ROOT = f""
-    # DEFAULT_MODEL_JSON = PickSingleYCBEnv.DEFAULT_MODEL_JSON
 
     def _load_model(self, model_id):
         builder, _ = actors.build_actor_ycb(
