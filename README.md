@@ -4,15 +4,23 @@
 
 [![PyPI version](https://badge.fury.io/py/mani-skill.svg)](https://badge.fury.io/py/mani-skill)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/haosulab/ManiSkill2/blob/main/examples/tutorials/1_quickstart.ipynb)
-[![Docs status](https://img.shields.io/badge/docs-passing-brightgreen.svg)](https://haosulab.github.io/ManiSkill2)
+[![Docs status](https://img.shields.io/badge/docs-passing-brightgreen.svg)](https://maniskill.readthedocs.io/en/dev/)
 [![Discord](https://img.shields.io/discord/996566046414753822?logo=discord)](https://discord.gg/x8yUZe5AdN)
-<!-- [![Docs](https://github.com/haosulab/ManiSkill2/actions/workflows/gh-pages.yml/badge.svg)](https://haosulab.github.io/ManiSkill2) -->
 
-ManiSkill is a unified benchmark for learning generalizable robotic manipulation skills powered by [SAPIEN](https://sapien.ucsd.edu/). **It features 20 out-of-box task families with 2000+ diverse object models and 4M+ demonstration frames**. Moreover, it empowers fast visual input learning algorithms so that **a CNN-based policy can collect samples at about 2000 FPS with 1 GPU and 16 processes on a workstation**. The benchmark can be used to study a wide range of algorithms: 2D & 3D vision-based reinforcement learning, imitation learning, sense-plan-act, etc.
+ManiSkill is a powerful unified framework for robot simulation and training powered by [SAPIEN](https://sapien.ucsd.edu/). The entire stack is as open-source as possible. Among its features, it includes
+- GPU parallelized visual data collection system. A policy can collect RGBD + Segmentation data at about 10,000+ FPS with 1 GPU, 10-100x faster than any other simulator
+- Example tasks covering a wide range of different robot embodiments (quadruped, mobile manipulators, single-arm robots) as well as a wide range of different tasks (table-top, locomotion, scene-level manipulation)
+- GPU parallelized tasks, enabling incredibly fast synthetic data collection in simulation at the same or faster speed as other GPU sims like IsaacSim
+- GPU parallelized tasks support simulating diverse scenes where every parallel environment has a completely different scene/set of objects
+- Flexible task building API
+<!-- - Evaluate models trained on real-world data in simulation, no robot hardware needed -->
 
-Note previously there was previously a ManiSkill and ManiSkill2, we are rebranding it all to just ManiSkill and the python package versioning tells you which iteration (3.0.0 now means ManiSkill3)
+ManiSkill enables simple and importantly extremely fast workflows for studying a wide range of algorithms, including but not limited to 2D/3D vision-based reinforcement learning, imitation learning, sense-plan-act, etc.
 
 Please refer to our [documentation](https://maniskill.readthedocs.io/en/dev/) to learn more information from tutorials on building tasks to data collection. To quickly get started after installation check out https://maniskill.readthedocs.io/en/dev/user_guide/getting_started/quickstart.html.
+
+
+Note previously there was previously a ManiSkill and ManiSkill2, we are rebranding it all to just ManiSkill and the python package versioning tells you which iteration (3.0.0 now means ManiSkill3)
 
 <!-- There are also hands-on [tutorials](examples/tutorials) (e.g, [quickstart colab tutorial](https://colab.research.google.com/github/haosulab/ManiSkill2/blob/main/examples/tutorials/1_quickstart.ipynb)). -->
 
@@ -47,16 +55,22 @@ git clone https://github.com/haosulab/ManiSkill2.git
 cd ManiSkill2 && pip install -e .
 ```
 
-Note that installing mani_skill will not automatically install torch which is necessary. You can install torch as so
-```
+Note that installing mani_skill will not automatically install torch and other packages that depend on CUDA. Torch can be installed following the usual instructions on the torch website:
+
+```bash
 pip install torch torchvision torchaudio
 ```
 
 just make sure you are installing the version of torch that your computer can work with.
 
+If you are on CUDA 11, you must also run
+```bash
+pip install fast_kinematics==0.1.11  # if you are on CUDA 11, you must run this
+```
+
 ---
 
-A GPU with the Vulkan driver installed is required to enable rendering in ManiSkill2. The rigid-body environments, powered by SAPIEN, are ready to use after installation. Test your installation:
+A GPU with the Vulkan driver installed is required to enable rendering in ManiSkill. The rigid-body environments, powered by SAPIEN, are ready to use after installation. Test your installation:
 
 ```bash
 # Run an episode (at most 50 steps) of "PickCube-v1" (a rigid-body environment) with random actions
@@ -66,11 +80,7 @@ python -m mani_skill.examples.demo_random_action
 
 Some environments require **downloading assets**. You can download download task-specific assets by `python -m mani_skill.utils.download_asset ${ENV_ID}`. The assets will be downloaded to `~/maniskill/data` by default, and you can also use the environment variable `MS_ASSET_DIR` to specify this destination.
 
-Please refer to our [documentation](https://haosulab.github.io/ManiSkill2/concepts/environments.html) for details on all supported environments. The documentation also indicates which environments require downloading assets.
-
----
-
-The soft-body environments are based on SAPIEN and customized [NVIDIA Warp](https://github.com/NVIDIA/warp), which requires **CUDA toolkit >= 11.3 and gcc** to compile. Please refer to the [documentation](https://haosulab.github.io/ManiSkill2/getting_started/installation.html#warp-maniskill2-version) for more details about installing ManiSkill2 Warp.
+Please refer to our [documentation](https://maniskill.readthedocs.io/en/dev) for details on all supported environments. The documentation also indicates which environments require downloading assets.
 
 ---
 
