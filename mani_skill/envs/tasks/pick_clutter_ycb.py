@@ -17,7 +17,7 @@ from mani_skill.utils.io_utils import load_json
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table.table_scene_builder import TableSceneBuilder
 from mani_skill.utils.structs import Actor, Pose
-from mani_skill.utils.structs.types import SimConfig
+from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 
 
 #
@@ -38,8 +38,6 @@ class PickClutterEnv(BaseEnv):
         robot_uids="panda",
         robot_init_qpos_noise=0.02,
         episode_json: str = None,
-        asset_root: str = None,
-        model_json: str = None,
         **kwargs,
     ):
         self.robot_init_qpos_noise = robot_init_qpos_noise
@@ -63,7 +61,11 @@ class PickClutterEnv(BaseEnv):
 
     @property
     def _default_sim_cfg(self):
-        return SimConfig()
+        return SimConfig(
+            gpu_memory_cfg=GPUMemoryConfig(
+                max_rigid_contact_count=2**21, max_rigid_patch_count=2**19
+            )
+        )
 
     @property
     def _sensor_configs(self):
