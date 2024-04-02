@@ -9,7 +9,6 @@ import dacite
 import gymnasium as gym
 import numpy as np
 import sapien
-import sapien.physx
 import sapien.physx as physx
 import sapien.render
 import sapien.utils.viewer.control_window
@@ -34,14 +33,8 @@ from mani_skill.sensors.camera import (
     update_camera_cfgs_from_dict,
 )
 from mani_skill.sensors.depth_camera import StereoDepthCamera, StereoDepthCameraConfig
-from mani_skill.utils import sapien_utils
-from mani_skill.utils.common import (
-    convert_observation_to_space,
-    dict_merge,
-    flatten_state_dict,
-)
-from mani_skill.utils.structs.actor import Actor
-from mani_skill.utils.structs.articulation import Articulation
+from mani_skill.utils import common, sapien_utils
+from mani_skill.utils.structs import Actor, Articulation
 from mani_skill.utils.structs.types import Array, SimConfig
 from mani_skill.utils.visualization.misc import observations_to_images, tile_images
 
@@ -109,7 +102,7 @@ class BaseEnv(gym.Env):
 
     metadata = {"render_modes": SUPPORTED_RENDER_MODES}
 
-    physx_system: Union[sapien.physx.PhysxCpuSystem, sapien.physx.PhysxGpuSystem] = None
+    physx_system: Union[physx.PhysxCpuSystem, physx.PhysxGpuSystem] = None
 
     _scene: ManiSkillScene = None
     """the main scene, which manages all sub scenes. In CPU simulation there is only one sub-scene"""
@@ -163,8 +156,8 @@ class BaseEnv(gym.Env):
         if self.SUPPORTED_ROBOTS is not None:
             assert robot_uids in self.SUPPORTED_ROBOTS
         if num_envs > 1 or force_use_gpu_sim:
-            if not sapien.physx.is_gpu_enabled():
-                sapien.physx.enable_gpu()
+            if not physx.is_gpu_enabled():
+                physx.enable_gpu()
             self.device = torch.device(
                 "cuda"
             )  # TODO (stao): fix this for multi process support
@@ -176,10 +169,10 @@ class BaseEnv(gym.Env):
         if isinstance(sim_cfg, SimConfig):
             sim_cfg = sim_cfg.dict()
         merged_gpu_sim_cfg = self._default_sim_cfg.dict()
-        dict_merge(merged_gpu_sim_cfg, sim_cfg)
+        common.dict_merge(merged_gpu_sim_cfg, sim_cfg)
         self.sim_cfg = dacite.from_dict(data_class=SimConfig, data=merged_gpu_sim_cfg, config=dacite.Config(strict=True))
         """the final sim config after merging user overrides with the environment default"""
-        sapien.physx.set_gpu_memory_config(**self.sim_cfg.gpu_memory_cfg.dict())
+        physx.set_gpu_memory_config(**self.sim_cfg.gpu_memory_cfg.dict())
         self.shader_dir = shader_dir
         if self.shader_dir == "default":
             sapien.render.set_camera_shader_dir("minimal")
@@ -278,9 +271,9 @@ class BaseEnv(gym.Env):
     @cached_property
     def single_observation_space(self):
         if self.num_envs > 1:
-            return convert_observation_to_space(self._init_raw_obs, unbatched=True)
+            return common.convert_observation_to_space(self._init_raw_obs, unbatched=True)
         else:
-            return convert_observation_to_space(self._init_raw_obs)
+            return common.convert_observation_to_space(self._init_raw_obs)
 
     @cached_property
     def observation_space(self):
@@ -389,7 +382,7 @@ class BaseEnv(gym.Env):
             return OrderedDict()
         elif self._obs_mode == "state":
             state_dict = self._get_obs_state_dict(info)
-            obs = flatten_state_dict(state_dict, use_torch=True, device=self.device)
+            obs = common.flatten_state_dict(state_dict, use_torch=True, device=self.device)
         elif self._obs_mode == "state_dict":
             obs = self._get_obs_state_dict(info)
         elif self._obs_mode in ["sensor_data", "rgbd", "rgb", "pointcloud"]:
@@ -530,7 +523,7 @@ class BaseEnv(gym.Env):
 
         self._load_lighting(options)
 
-        if sapien.physx.is_gpu_enabled():
+        if physx.is_gpu_enabled():
             self._scene._setup_gpu()
             self._scene._gpu_fetch_all()
         # for GPU sim, we have to setup sensors after we call setup gpu in order to enable loading mounted sensors as they depend on GPU buffer data
@@ -888,8 +881,8 @@ class BaseEnv(gym.Env):
         """Setup the simulation scene instance.
         The function should be called in reset(). Called by `self._reconfigure`"""
         self._set_scene_config()
-        if sapien.physx.is_gpu_enabled():
-            self.physx_system = sapien.physx.PhysxGpuSystem()
+        if physx.is_gpu_enabled():
+            self.physx_system = physx.PhysxGpuSystem()
             # Create the scenes in a square grid
             sub_scenes = []
             scene_grid_length = int(np.ceil(np.sqrt(self.num_envs)))
@@ -901,7 +894,7 @@ class BaseEnv(gym.Env):
                 scene = sapien.Scene(
                     systems=[self.physx_system, sapien.render.RenderSystem()]
                 )
-                scene.physx_system.set_scene_offset(
+                self.physx_system.set_scene_offset(
                     scene,
                     [
                         scene_x * self.sim_cfg.spacing,
@@ -911,7 +904,7 @@ class BaseEnv(gym.Env):
                 )
                 sub_scenes.append(scene)
         else:
-            self.physx_system = sapien.physx.PhysxCpuSystem()
+            self.physx_system = physx.PhysxCpuSystem()
             sub_scenes = [
                 sapien.Scene([self.physx_system, sapien.render.RenderSystem()])
             ]
@@ -965,7 +958,7 @@ class BaseEnv(gym.Env):
 
         Users should not override this function
         """
-        return flatten_state_dict(self.get_state_dict(), use_torch=True)
+        return common.flatten_state_dict(self.get_state_dict(), use_torch=True)
 
     def set_state_dict(self, state: Dict):
         """

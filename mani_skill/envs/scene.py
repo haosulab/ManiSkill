@@ -95,9 +95,7 @@ class ManiSkillScene:
     def create_physical_material(
         self, static_friction: float, dynamic_friction: float, restitution: float
     ):
-        return sapien.physx.PhysxMaterial(
-            static_friction, dynamic_friction, restitution
-        )
+        return physx.PhysxMaterial(static_friction, dynamic_friction, restitution)
 
     def remove_actor(self, actor):
         if physx.is_gpu_enabled():
@@ -273,9 +271,9 @@ class ManiSkillScene:
 
     # def create_connection(
     #     self,
-    #     body0: Optional[Union[sapien.Entity, sapien.physx.PhysxRigidBaseComponent]],
+    #     body0: Optional[Union[sapien.Entity, physx.PhysxRigidBaseComponent]],
     #     pose0: sapien.Pose,
-    #     body1: Union[sapien.Entity, sapien.physx.PhysxRigidBaseComponent],
+    #     body1: Union[sapien.Entity, physx.PhysxRigidBaseComponent],
     #     pose1: sapien.Pose,
     # ):
     #     if body0 is None:
@@ -284,7 +282,7 @@ class ManiSkillScene:
     #         c0 = next(
     #             c
     #             for c in body0.components
-    #             if isinstance(c, sapien.physx.PhysxRigidBaseComponent)
+    #             if isinstance(c, physx.PhysxRigidBaseComponent)
     #         )
     #     else:
     #         c0 = body0
@@ -295,13 +293,13 @@ class ManiSkillScene:
     #         c1 = next(
     #             c
     #             for c in body1.components
-    #             if isinstance(c, sapien.physx.PhysxRigidBaseComponent)
+    #             if isinstance(c, physx.PhysxRigidBaseComponent)
     #         )
     #     else:
     #         e1 = body1.entity
     #         c1 = body1
 
-    #     connection = sapien.physx.PhysxDistanceJointComponent(c1)
+    #     connection = physx.PhysxDistanceJointComponent(c1)
     #     connection.parent = c0
     #     connection.pose_in_child = pose1
     #     connection.pose_in_parent = pose0
@@ -311,9 +309,9 @@ class ManiSkillScene:
 
     # def create_gear(
     #     self,
-    #     body0: Optional[Union[sapien.Entity, sapien.physx.PhysxRigidBaseComponent]],
+    #     body0: Optional[Union[sapien.Entity, physx.PhysxRigidBaseComponent]],
     #     pose0: sapien.Pose,
-    #     body1: Union[sapien.Entity, sapien.physx.PhysxRigidBaseComponent],
+    #     body1: Union[sapien.Entity, physx.PhysxRigidBaseComponent],
     #     pose1: sapien.Pose,
     # ):
     #     if body0 is None:
@@ -322,7 +320,7 @@ class ManiSkillScene:
     #         c0 = next(
     #             c
     #             for c in body0.components
-    #             if isinstance(c, sapien.physx.PhysxRigidBaseComponent)
+    #             if isinstance(c, physx.PhysxRigidBaseComponent)
     #         )
     #     else:
     #         c0 = body0
@@ -333,13 +331,13 @@ class ManiSkillScene:
     #         c1 = next(
     #             c
     #             for c in body1.components
-    #             if isinstance(c, sapien.physx.PhysxRigidBaseComponent)
+    #             if isinstance(c, physx.PhysxRigidBaseComponent)
     #         )
     #     else:
     #         e1 = body1.entity
     #         c1 = body1
 
-    #     gear = sapien.physx.PhysxGearComponent(c1)
+    #     gear = physx.PhysxGearComponent(c1)
     #     gear.parent = c0
     #     gear.pose_in_child = pose1
     #     gear.pose_in_parent = pose0
