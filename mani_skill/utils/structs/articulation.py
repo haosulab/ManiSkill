@@ -583,7 +583,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         # NOTE (stao): This is available but not typed in SAPIEN
         if physx.is_gpu_enabled():
             raise NotImplementedError(
-                "Cannot create a pinocchio model when GPU is enabled. If you wish to do inverse kinematics you must use pytorch_kinematics"
+                "Cannot create a pinocchio model when GPU is enabled. If you wish to do inverse kinematics you must use fast_kinematics"
             )
         else:
             return self._objs[0].create_pinocchio_model()
