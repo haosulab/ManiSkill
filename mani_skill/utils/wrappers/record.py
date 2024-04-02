@@ -380,9 +380,9 @@ class RecordEpisode(gym.Wrapper):
                     recursive_replace(self._trajectory_buffer.fail, first_step.fail)
         if "env_idx" in options:
             options["env_idx"] = sapien_utils.to_numpy(options["env_idx"])
-        self.last_reset_kwargs = copy.deepcopy(
-            dict(seed=seed, options=options, **kwargs)
-        )
+        self.last_reset_kwargs = copy.deepcopy(dict(options=options, **kwargs))
+        if seed is not None:
+            self.last_reset_kwargs.update(seed=seed)
         return obs, info
 
     def step(self, action):
@@ -548,8 +548,10 @@ class RecordEpisode(gym.Wrapper):
                 elapsed_steps=end_ptr - start_ptr - 1,
             )
             if self.num_envs == 1:
-                # TODO (stao): handle reset kwargs/determinism for multiple envs somehow...
                 episode_info.update(reset_kwargs=self.last_reset_kwargs)
+            else:
+                # NOTE (stao): With multiple envs in GPU simulation, reset_kwargs do not make much sense
+                episode_info.update(reset_kwargs=dict())
 
             actions = self._trajectory_buffer.action[start_ptr + 1 : end_ptr, env_idx]
             terminated = self._trajectory_buffer.terminated[

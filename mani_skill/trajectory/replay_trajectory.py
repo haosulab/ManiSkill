@@ -383,6 +383,20 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
     env_kwargs[
         "render_mode"
     ] = "rgb_array"  # note this only affects the videos saved as RecordEpisode wrapper calls env.render
+
+    # handle warnings/errors for replaying trajectories generated during GPU simulation
+    if "num_envs" in env_kwargs:
+        if env_kwargs["num_envs"] > 1:
+            raise RuntimeError(
+                """Cannot replay trajectories that were generated in a GPU
+            simulation with more than one environment. To replay trajectories generated during GPU simulation,
+            make sure to set num_envs=1 and sim_backend="gpu" in the env kwargs."""
+            )
+        if "sim_backend" in env_kwargs:
+            # if sim backend is "gpu", we change it to CPU if ray tracing shader is used as RT is not supported yet on GPU sim backends
+            # TODO (stao): remove this if we ever support RT on GPU sim.
+            if args.shader[:2] == "rt":
+                env_kwargs["sim_backend"] = "cpu"
     env = gym.make(env_id, **env_kwargs)
     if pbar is not None:
         pbar.set_postfix(
@@ -446,9 +460,6 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
             if ori_env is not None:
                 ori_env.reset(seed=seed, **reset_kwargs)
 
-            if args.vis:
-                env.base_env.render_human()
-
             # Original actions to replay
             ori_actions = ori_h5_file[traj_id]["actions"][:]
 
@@ -456,8 +467,13 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
             if args.use_env_states:
                 ori_env_states = trajectory_utils.dict_to_list_of_dicts(
                     ori_h5_file[traj_id]["env_states"]
-                )[1:]
+                )
+                env.base_env.set_state_dict(ori_env_states[0])
+                ori_env_states = ori_env_states[1:]
 
+            if args.vis:
+                vv = env.base_env.render_human()
+                vv.paused = True
             info = {}
 
             # Without conversion between control modes

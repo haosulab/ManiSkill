@@ -82,7 +82,9 @@ class BaseEnv(gym.Env):
             Generally for most users who are not building tasks this does not need to be changed. The default is 0, which means
             the environment reconfigures upon creation, and never again.
 
-        force_use_gpu_sim (bool): By default this is False. If the num_envs == 1, we use GPU sim if force_use_gpu_sim is True, otherwise we use CPU sim.
+        sim_backend (str): By default this is "auto". If sim_backend is "auto", then if num_envs == 1, we use the gpu sim backend, otherwise
+            we use the cpu sim backend. Can also be "cpu" or "gpu" to force usage of a particular sim backend. Note that if this is "cpu", num_envs
+            can only be equal to 1.
 
     Note:
         `sensor_cfgs` is used to update environement-specific sensor configurations.
@@ -145,7 +147,7 @@ class BaseEnv(gym.Env):
         robot_uids: Union[str, BaseAgent, List[Union[str, BaseAgent]]] = None,
         sim_cfg: Union[SimConfig, dict] = dict(),
         reconfiguration_freq: int = 0,
-        force_use_gpu_sim: bool = False,
+        sim_backend: str = "auto",
     ):
         self.num_envs = num_envs
         self.reconfiguration_freq = reconfiguration_freq
@@ -155,7 +157,7 @@ class BaseEnv(gym.Env):
         self.robot_uids = robot_uids
         if self.SUPPORTED_ROBOTS is not None:
             assert robot_uids in self.SUPPORTED_ROBOTS
-        if num_envs > 1 or force_use_gpu_sim:
+        if num_envs > 1 or sim_backend == "gpu":
             if not physx.is_gpu_enabled():
                 physx.enable_gpu()
             self.device = torch.device(
@@ -163,6 +165,11 @@ class BaseEnv(gym.Env):
             )  # TODO (stao): fix this for multi process support
         else:
             self.device = torch.device("cpu")
+
+        if sim_backend == "cpu" and num_envs > 1:
+            raise RuntimeError("""Cannot set the sim backend to 'cpu' and have multiple environments.
+            If you want to do CPU sim backends and have environment vectorization you must use multi-processing across CPUs.
+            This can be done via the gymnasium's AsyncVectorEnv API""")
 
         # TODO (stao): move the merge code / handling union typed arguments outside here so classes inheriting BaseEnv only get
         # the already parsed sim config argument
@@ -199,7 +206,7 @@ class BaseEnv(gym.Env):
             sapien.render.set_ray_tracing_samples_per_pixel(4)
             sapien.render.set_ray_tracing_path_depth(3)
             sapien.render.set_ray_tracing_denoiser("optix")
-        sapien.render.set_log_level(os.getenv("MS2_RENDERER_LOG_LEVEL", "warn"))
+        sapien.render.set_log_level(os.getenv("MS_RENDERER_LOG_LEVEL", "warn"))
 
         # Set simulation and control frequency
         self._sim_freq = self.sim_cfg.sim_freq
