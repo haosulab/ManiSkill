@@ -24,6 +24,7 @@ from mani_skill.utils.structs.types import SimConfig
 class PickClutterEnv(BaseEnv):
     """Base environment picking items out of clutter type of tasks. Flexibly supports using different configurations and object datasets"""
 
+    SUPPORTED_REWARD_MODES = ["sparse", "none"]
     SUPPORTED_ROBOTS = ["panda", "fetch"]
     agent: Union[Panda, Fetch]
 
