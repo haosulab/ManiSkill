@@ -9,7 +9,7 @@ import torch
 from sapien import ActorBuilder as SAPIENActorBuilder
 from sapien.wrapper.coacd import do_coacd
 
-from mani_skill.utils import sapien_utils
+from mani_skill.utils import common
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.pose import Pose, to_sapien_pose
 
@@ -188,7 +188,7 @@ class ActorBuilder(SAPIENActorBuilder):
         initial_pose = Pose.create(self.initial_pose)
         initial_pose_b = initial_pose.raw_pose.shape[0]
         assert initial_pose_b == 1 or initial_pose_b == num_actors
-        initial_pose_np = sapien_utils.to_numpy(initial_pose.raw_pose)
+        initial_pose_np = common.to_numpy(initial_pose.raw_pose)
 
         entities = []
         i = 0

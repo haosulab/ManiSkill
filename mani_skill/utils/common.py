@@ -3,15 +3,51 @@ Common utilities often reused for internal code and task building for users.
 """
 
 from collections import defaultdict
-from typing import Dict, Sequence, Union
+from typing import Dict, Sequence, Tuple, Union
 
 import gymnasium as gym
 import numpy as np
 import sapien.physx as physx
 import torch
 
-from mani_skill.utils import sapien_utils
-from mani_skill.utils.structs.types import Array, Device
+from mani_skill.utils.structs.types import Array, Device, get_backend_name
+
+# -------------------------------------------------------------------------- #
+# Utilities for working with tensors, numpy arrays, and batched data
+# -------------------------------------------------------------------------- #
+
+
+def _batch(array: Union[Array, Sequence]):
+    if isinstance(array, (dict)):
+        return {k: _batch(v) for k, v in array.items()}
+    if isinstance(array, str):
+        return array
+    if isinstance(array, torch.Tensor):
+        return array[None, :]
+    if isinstance(array, np.ndarray):
+        if array.shape == ():
+            return array.reshape(1, 1)
+        return array[None, :]
+    if isinstance(array, list):
+        if len(array) == 1:
+            return [array]
+    if (
+        isinstance(array, float)
+        or isinstance(array, int)
+        or isinstance(array, bool)
+        or isinstance(array, np.bool_)
+    ):
+        return np.array([[array]])
+    return array
+
+
+def batch(*args: Tuple[Union[Array, Sequence]]):
+    """Adds one dimension in front of everything. If given a dictionary, every leaf in the dictionary
+    has a new dimension. If given a tuple, returns the same tuple with each element batched"""
+    x = [_batch(x) for x in args]
+    if len(args) == 1:
+        return x[0]
+    return tuple(x)
 
 
 # -------------------------------------------------------------------------- #
@@ -87,6 +123,56 @@ def index_dict_array(x1, idx: Union[int, slice], inplace=True):
             return out
 
 
+# TODO (stao): this code can be simplified
+def to_tensor(array: Union[torch.Tensor, np.array, Sequence], device: Device = None):
+    """
+    Maps any given sequence to a torch tensor on the CPU/GPU. If physx gpu is not enabled then we use CPU, otherwise GPU, unless specified
+    by the device argument
+
+    Args:
+        array: The data to map to a tensor
+        device: The device to put the tensor on. By default this is None and to_tensor will put the device on the GPU if physx is enabled
+            and CPU otherwise
+
+    """
+    if isinstance(array, (dict)):
+        return {k: to_tensor(v) for k, v in array.items()}
+    if get_backend_name() == "torch":
+        if isinstance(array, np.ndarray):
+            if array.dtype == np.uint16:
+                array = array.astype(np.int32)
+            ret = torch.from_numpy(array)
+            if ret.dtype == torch.float64:
+                ret = ret.float()
+        elif isinstance(array, torch.Tensor):
+            ret = array
+        else:
+            ret = torch.Tensor(array)
+        if device is None:
+            return ret.cuda()
+        else:
+            return ret.to(device)
+    elif get_backend_name() == "numpy":
+        if isinstance(array, np.ndarray):
+            if array.dtype == np.uint16:
+                array = array.astype(np.int32)
+            ret = torch.from_numpy(array)
+            if ret.dtype == torch.float64:
+                ret = ret.float()
+        elif isinstance(array, list) and isinstance(array[0], np.ndarray):
+            ret = torch.from_numpy(np.array(array))
+            if ret.dtype == torch.float64:
+                ret = ret.float()
+        elif np.iterable(array):
+            ret = torch.Tensor(array)
+        else:
+            ret = torch.Tensor(array)
+        if device is None:
+            return ret
+        else:
+            return ret.to(device)
+
+
 # TODO (stao): Clean up this code
 def flatten_state_dict(
     state_dict: dict, use_torch=False, device: Device = None
@@ -114,20 +200,20 @@ def flatten_state_dict(
             if state.size == 0:
                 state = None
             if use_torch:
-                state = sapien_utils.to_tensor(state)
+                state = to_tensor(state)
         elif isinstance(value, (tuple, list)):
             state = None if len(value) == 0 else value
             if use_torch:
-                state = sapien_utils.to_tensor(state)
+                state = to_tensor(state)
         elif isinstance(value, (bool, np.bool_, int, np.int32, np.int64)):
             # x = np.array(1) > 0 is np.bool_ instead of ndarray
             state = int(value)
             if use_torch:
-                state = sapien_utils.to_tensor(state)
+                state = to_tensor(state)
         elif isinstance(value, (float, np.float32, np.float64)):
             state = np.float32(value)
             if use_torch:
-                state = sapien_utils.to_tensor(state)
+                state = to_tensor(state)
         elif isinstance(value, np.ndarray):
             if value.ndim > 2:
                 raise AssertionError(
@@ -135,7 +221,7 @@ def flatten_state_dict(
                 )
             state = value if value.size > 0 else None
             if use_torch:
-                state = sapien_utils.to_tensor(state)
+                state = to_tensor(state)
 
         else:
             is_torch_tensor = False
@@ -202,7 +288,7 @@ def compute_angle_between(x1: torch.Tensor, x2: torch.Tensor):
     return torch.arccos(dot_prod)
 
 
-@torch.jit.script
+# TODO (stao): verfy torch.jit.script provides actual speedups in inference times
 def quat_diff_rad(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     """
     Get the difference in radians between two quaternions.
@@ -227,6 +313,55 @@ def quat_diff_rad(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     angle_diff = 2 * torch.acos(torch.abs(dot_product))
 
     return angle_diff
+
+
+def _unbatch(array: Union[Array, Sequence]):
+    if isinstance(array, (dict)):
+        return {k: _unbatch(v) for k, v in array.items()}
+    if isinstance(array, str):
+        return array
+    if isinstance(array, torch.Tensor):
+        return array.squeeze(0)
+    if isinstance(array, np.ndarray):
+        if array.shape == (1,):
+            return array.item()
+        if np.iterable(array) and array.shape[0] == 1:
+            return array.squeeze(0)
+    if isinstance(array, list):
+        if len(array) == 1:
+            return array[0]
+    return array
+
+
+def unbatch(*args: Tuple[Union[Array, Sequence]]):
+    x = [_unbatch(x) for x in args]
+    if len(args) == 1:
+        return x[0]
+    return tuple(x)
+
+
+def _to_numpy(array: Union[Array, Sequence]) -> np.ndarray:
+    if isinstance(array, (dict)):
+        return {k: _to_numpy(v) for k, v in array.items()}
+    if isinstance(array, torch.Tensor):
+        return array.cpu().numpy()
+    if (
+        isinstance(array, np.ndarray)
+        or isinstance(array, bool)
+        or isinstance(array, str)
+        or isinstance(array, float)
+        or isinstance(array, int)
+    ):
+        return array
+    else:
+        return np.array(array)
+
+
+def to_numpy(array: Union[Array, Sequence], dtype=None) -> np.ndarray:
+    array = _to_numpy(array)
+    if dtype is not None:
+        return array.astype(dtype)
+    return array
 
 
 # -------------------------------------------------------------------------- #

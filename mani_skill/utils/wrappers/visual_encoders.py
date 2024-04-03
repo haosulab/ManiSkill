@@ -4,7 +4,7 @@ import gymnasium as gym
 import torch
 
 from mani_skill.envs.sapien_env import BaseEnv
-from mani_skill.utils import sapien_utils
+from mani_skill.utils import common
 
 
 class VisualEncoderWrapper(gym.ObservationWrapper):
@@ -31,8 +31,8 @@ class VisualEncoderWrapper(gym.ObservationWrapper):
             self.single_image_embedding_size = 512  # for resnet18
 
         self.base_env._update_obs_space(
-            sapien_utils.to_numpy(
-                self.observation(sapien_utils.to_tensor(self.base_env._init_raw_obs))
+            common.to_numpy(
+                self.observation(common.to_tensor(self.base_env._init_raw_obs))
             )
         )
         super().__init__(env)

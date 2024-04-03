@@ -11,13 +11,11 @@ from mani_skill.agents.robots import PandaRealSensed435
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.utils import randomization
 from mani_skill.sensors.camera import CameraConfig
-from mani_skill.utils import sapien_utils
+from mani_skill.utils import common, io_utils, sapien_utils
 from mani_skill.utils.geometry import rotation_conversions
-from mani_skill.utils.io_utils import load_json
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table.table_scene_builder import TableSceneBuilder
-from mani_skill.utils.structs.actor import Actor
-from mani_skill.utils.structs.pose import Pose
+from mani_skill.utils.structs import Actor, Pose
 from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 
 
@@ -44,7 +42,7 @@ class AssemblingKitsEnv(BaseEnv):
                 "`python -m mani_skill.utils.download_asset assembling_kits`."
             )
 
-        self._episode_json = load_json(self.asset_root / "episodes.json")
+        self._episode_json = io_utils.load_json(self.asset_root / "episodes.json")
         self._episodes = self._episode_json["episodes"]
         self.episode_idx = None
 
@@ -82,7 +80,7 @@ class AssemblingKitsEnv(BaseEnv):
             self.table_scene = TableSceneBuilder(self)
             self.table_scene.build()
 
-            self.symmetry = sapien_utils.to_tensor(self.symmetry)
+            self.symmetry = common.to_tensor(self.symmetry)
 
             # sample some kits
             eps_idxs = np.arange(0, len(self._episodes))
@@ -143,15 +141,15 @@ class AssemblingKitsEnv(BaseEnv):
                 self.goal_rot[i] = object_goal_rot[episode["obj_to_place"]]
             self.obj = Actor.merge(objs_to_place)
             self.object_ids = torch.tensor(self.object_ids, dtype=int)
-            self.goal_pos = sapien_utils.to_tensor(self.goal_pos)
-            self.goal_rot = sapien_utils.to_tensor(self.goal_rot)
+            self.goal_pos = common.to_tensor(self.goal_pos)
+            self.goal_rot = common.to_tensor(self.goal_rot)
 
     def _parse_json(self, path):
         """Parse kit JSON information and return the goal positions and rotations"""
-        kit_json = load_json(path)
+        kit_json = io_utils.load_json(path)
         # the final 3D goal position of the objects
         object_goal_pos = {
-            o["object_id"]: sapien_utils.to_numpy(o["pos"]) for o in kit_json["objects"]
+            o["object_id"]: common.to_numpy(o["pos"]) for o in kit_json["objects"]
         }
         # the final goal z-axis rotation of the objects
         objects_goal_rot = {o["object_id"]: o["rot"] for o in kit_json["objects"]}

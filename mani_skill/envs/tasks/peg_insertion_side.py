@@ -10,7 +10,7 @@ from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.envs.utils import randomization
 from mani_skill.sensors.camera import CameraConfig
-from mani_skill.utils import sapien_utils
+from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table.table_scene_builder import TableSceneBuilder
 from mani_skill.utils.structs import Actor, Pose
@@ -95,17 +95,15 @@ class PegInsertionSideEnv(BaseEnv):
             )
 
             # save some useful values for use later
-            self.peg_half_sizes = sapien_utils.to_tensor(
-                np.vstack([lengths, radii, radii])
-            ).T
+            self.peg_half_sizes = common.to_tensor(np.vstack([lengths, radii, radii])).T
             peg_head_offsets = torch.zeros((self.num_envs, 3))
             peg_head_offsets[:, 0] = self.peg_half_sizes[:, 0]
             self.peg_head_offsets = Pose.create_from_pq(p=peg_head_offsets)
 
             box_hole_offsets = torch.zeros((self.num_envs, 3))
-            box_hole_offsets[:, 1:] = sapien_utils.to_tensor(centers)
+            box_hole_offsets[:, 1:] = common.to_tensor(centers)
             self.box_hole_offsets = Pose.create_from_pq(p=box_hole_offsets)
-            self.box_hole_radii = sapien_utils.to_tensor(radii + self._clearance)
+            self.box_hole_radii = common.to_tensor(radii + self._clearance)
 
             # in each parallel env we build a different box with a hole and peg (the task is meant to be quite difficult)
             pegs = []

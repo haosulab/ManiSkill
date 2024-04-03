@@ -11,7 +11,7 @@ import torch
 
 from mani_skill.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill.sensors.camera import Camera
-from mani_skill.utils.common import merge_dicts
+from mani_skill.utils import common
 
 
 def sensor_data_to_rgbd(
@@ -95,7 +95,7 @@ def sensor_data_to_pointcloud(observation: Dict, sensors: Dict[str, BaseSensor])
             pointcloud_obs[cam_uid] = cam_pcd
     for k in pointcloud_obs.keys():
         del observation["sensor_data"][k]
-    pointcloud_obs = merge_dicts(pointcloud_obs.values())
+    pointcloud_obs = common.merge_dicts(pointcloud_obs.values())
     for key, value in pointcloud_obs.items():
         pointcloud_obs[key] = torch.concat(value, axis=1)
     observation["pointcloud"] = pointcloud_obs

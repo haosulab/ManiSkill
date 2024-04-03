@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Generic, List, TypeVar
 import sapien.physx as physx
 import torch
 
-from mani_skill.utils import sapien_utils
+from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.structs.decorators import before_gpu_init
 from mani_skill.utils.structs.types import Array
 
@@ -32,7 +32,7 @@ class BaseStruct(Generic[T]):
 
     def __post_init__(self):
         if not isinstance(self._scene_idxs, torch.Tensor):
-            self._scene_idxs = sapien_utils.to_tensor(self._scene_idxs).to(torch.int)
+            self._scene_idxs = common.to_tensor(self._scene_idxs).to(torch.int)
 
     def __str__(self):
         return f"<struct of type {self.__class__}; managing {self._num_objs} {self._objs[0].__class__} objects>"
@@ -121,9 +121,7 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
                 self.px.get_contacts(), self._bodies[0].entity
             )
             net_force = (
-                sapien_utils.to_tensor(
-                    sapien_utils.compute_total_impulse(body_contacts)
-                )
+                common.to_tensor(sapien_utils.compute_total_impulse(body_contacts))
                 / self._scene.timestep
             )
             return net_force[None, :]
@@ -326,12 +324,12 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
     @angular_velocity.setter
     def angular_velocity(self, arg1: Array):
         if physx.is_gpu_enabled():
-            arg1 = sapien_utils.to_tensor(arg1)
+            arg1 = common.to_tensor(arg1)
             self._body_data[
                 self._body_data_index[self._scene._reset_mask[self._scene_idxs]], 10:13
             ] = arg1
         else:
-            arg1 = sapien_utils.to_numpy(arg1)
+            arg1 = common.to_numpy(arg1)
             if len(arg1.shape) == 2:
                 arg1 = arg1[0]
             self._bodies[0].angular_velocity = arg1
@@ -394,12 +392,12 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
     @linear_velocity.setter
     def linear_velocity(self, arg1: Array):
         if physx.is_gpu_enabled():
-            arg1 = sapien_utils.to_tensor(arg1)
+            arg1 = common.to_tensor(arg1)
             self._body_data[
                 self._body_data_index[self._scene._reset_mask[self._scene_idxs]], 7:10
             ] = arg1
         else:
-            arg1 = sapien_utils.to_numpy(arg1)
+            arg1 = common.to_numpy(arg1)
             if len(arg1.shape) == 2:
                 arg1 = arg1[0]
             self._bodies[0].linear_velocity = arg1

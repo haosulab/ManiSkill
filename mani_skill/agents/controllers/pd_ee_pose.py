@@ -8,7 +8,7 @@ import torch
 from gymnasium import spaces
 
 from mani_skill import logger
-from mani_skill.utils import gym_utils, sapien_utils
+from mani_skill.utils import common, gym_utils, sapien_utils
 from mani_skill.utils.geometry.rotation_conversions import (
     euler_angles_to_matrix,
     matrix_to_quaternion,
@@ -127,14 +127,12 @@ class PDEEPosController(PDJointPosController):
             result, success, error = self.pmodel.compute_inverse_kinematics(
                 self.ee_link_idx,
                 target_pose.sp,
-                initial_qpos=sapien_utils.to_numpy(
-                    self.articulation.get_qpos()
-                ).squeeze(0),
+                initial_qpos=common.to_numpy(self.articulation.get_qpos()).squeeze(0),
                 active_qmask=self.qmask,
                 max_iterations=max_iterations,
             )
         if success:
-            return sapien_utils.to_tensor([result[self.active_joint_indices]])
+            return common.to_tensor([result[self.active_joint_indices]])
         else:
             return None
 
