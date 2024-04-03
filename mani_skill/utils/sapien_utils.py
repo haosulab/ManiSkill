@@ -20,17 +20,6 @@ import torch
 
 from mani_skill.utils.structs.types import Array, Device
 
-
-def normalize_vector(x, eps=1e-6):
-    x = np.asarray(x)
-    assert x.ndim == 1, x.ndim
-    norm = np.linalg.norm(x)
-    if norm < eps:
-        return np.zeros_like(x)
-    else:
-        return x / norm
-
-
 T = TypeVar("T")
 
 
@@ -391,6 +380,16 @@ def look_at(eye, target, up=(0, 0, 1)) -> sapien.Pose:
     Returns:
         sapien.Pose: camera pose
     """
+
+    def normalize_vector(x, eps=1e-6):
+        x = np.asarray(x)
+        assert x.ndim == 1, x.ndim
+        norm = np.linalg.norm(x)
+        if norm < eps:
+            return np.zeros_like(x)
+        else:
+            return x / norm
+
     forward = normalize_vector(np.array(target) - np.array(eye))
     up = normalize_vector(up)
     left = np.cross(up, forward)
