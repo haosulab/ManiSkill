@@ -1,3 +1,6 @@
+"""
+Utilities that work with the simulation / SAPIEN
+"""
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, TypeVar
@@ -213,6 +216,7 @@ def get_articulation_padded_state(articulation: physx.PhysxArticulation, max_dof
     return padded_state
 
 
+# TODO (stao): Synchronize the contacts APIs as well as getting forces/impulses
 # -------------------------------------------------------------------------- #
 # Contact
 #
