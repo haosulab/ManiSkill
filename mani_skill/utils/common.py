@@ -1,16 +1,17 @@
-from collections import OrderedDict, defaultdict
+"""
+Common utilities often reused for internal code and task building for users.
+"""
+
+from collections import defaultdict
 from typing import Dict, Sequence, Union
 
 import gymnasium as gym
 import numpy as np
 import sapien.physx as physx
 import torch
-from gymnasium import spaces
 
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.structs.types import Array, Device
-
-from .logging_utils import logger
 
 
 # -------------------------------------------------------------------------- #
@@ -27,6 +28,7 @@ def dict_merge(dct: dict, merge_dct: dict):
             dct[k] = merge_dct[k]
 
 
+# TODO (stao): Consolidate this function with the one above..
 def merge_dicts(ds: Sequence[Dict], asarray=False):
     """Merge multiple dicts with the same keys to a single one."""
     # NOTE(jigu): To be compatible with generator, we only iterate once.
@@ -67,7 +69,11 @@ def append_dict_array(
 
 def index_dict_array(x1, idx: Union[int, slice], inplace=True):
     """Indexes every array in x1 with slice and returns result."""
-    if isinstance(x1, np.ndarray) or isinstance(x1, list):
+    if (
+        isinstance(x1, np.ndarray)
+        or isinstance(x1, list)
+        or isinstance(x1, torch.tensor)
+    ):
         return x1[idx]
     elif isinstance(x1, dict):
         if inplace:
@@ -81,15 +87,16 @@ def index_dict_array(x1, idx: Union[int, slice], inplace=True):
             return out
 
 
-def normalize_vector(x, eps=1e-6):
+def normalize_vector(x: torch.Tensor, eps=1e-6):
+    """normalizes a given torch tensor x and if the norm is less than eps, set the norm to 0"""
     norm = torch.linalg.norm(x, axis=1)
     norm[norm < eps] = 1
     norm = 1 / norm
     return torch.multiply(x, norm[:, None])
 
 
-def compute_angle_between(x1, x2):
-    """Compute angle (radian) between two vectors."""
+def compute_angle_between(x1: torch.Tensor, x2: torch.Tensor):
+    """Compute angle (radian) between two torch tensors"""
     x1, x2 = normalize_vector(x1), normalize_vector(x2)
     dot_prod = torch.clip(torch.einsum("ij,ij->i", x1, x2), -1, 1)
     return torch.arccos(dot_prod)
@@ -99,102 +106,23 @@ def compute_angle_between(x1, x2):
 # Numpy
 # -------------------------------------------------------------------------- #
 def np_normalize_vector(x, eps=1e-6):
+    """normalizes a given numpy array x and if the norm is less than eps, set the norm to 0"""
     x = np.asarray(x)
     assert x.ndim == 1, x.ndim
     norm = np.linalg.norm(x)
     return np.zeros_like(x) if norm < eps else (x / norm)
 
 
-def np_compute_angle_between(x1, x2):
-    """Compute angle (radian) between two vectors."""
+def np_compute_angle_between(x1: np.ndarray, x2: np.ndarray):
+    """Compute angle (radian) between two numpy arrays"""
     x1, x2 = np_normalize_vector(x1), np_normalize_vector(x2)
     dot_prod = np.clip(np.dot(x1, x2), -1, 1)
     return np.arccos(dot_prod).item()
 
 
-def get_dtype_bounds(dtype: np.dtype):
-    if np.issubdtype(dtype, np.floating):
-        info = np.finfo(dtype)
-        return info.min, info.max
-    elif np.issubdtype(dtype, np.integer):
-        info = np.iinfo(dtype)
-        return info.min, info.max
-    elif np.issubdtype(dtype, np.bool_):
-        return 0, 1
-    else:
-        raise TypeError(dtype)
-
-
 # ---------------------------------------------------------------------------- #
 # OpenAI gym
 # ---------------------------------------------------------------------------- #
-def convert_observation_to_space(observation, prefix="", unbatched=False):
-    """Convert observation to OpenAI gym observation space (recursively).
-    Modified from `gym.envs.mujoco_env`
-    """
-    if isinstance(observation, (dict)):
-        # CATUION: Explicitly create a list of key-value tuples
-        # Otherwise, spaces.Dict will sort keys if a dict is provided
-        space = spaces.Dict(
-            [
-                (
-                    k,
-                    convert_observation_to_space(
-                        v, prefix + "/" + k, unbatched=unbatched
-                    ),
-                )
-                for k, v in observation.items()
-            ]
-        )
-    elif isinstance(observation, np.ndarray):
-        if unbatched:
-            shape = observation.shape[1:]
-        else:
-            shape = observation.shape
-        dtype = observation.dtype
-        low, high = get_dtype_bounds(dtype)
-        if np.issubdtype(dtype, np.floating):
-            low, high = -np.inf, np.inf
-        space = spaces.Box(low, high, shape=shape, dtype=dtype)
-    elif isinstance(observation, (float, np.float32, np.float64)):
-        logger.debug(f"The observation ({prefix}) is a (float) scalar")
-        space = spaces.Box(-np.inf, np.inf, shape=[1], dtype=np.float32)
-    elif isinstance(observation, (int, np.int32, np.int64)):
-        logger.debug(f"The observation ({prefix}) is a (integer) scalar")
-        space = spaces.Box(-np.inf, np.inf, shape=[1], dtype=int)
-    elif isinstance(observation, (bool, np.bool_)):
-        logger.debug(f"The observation ({prefix}) is a (bool) scalar")
-        space = spaces.Box(0, 1, shape=[1], dtype=np.bool_)
-    else:
-        raise NotImplementedError(type(observation), observation)
-
-    return space
-
-
-def normalize_action_space(action_space: spaces.Box):
-    assert isinstance(action_space, spaces.Box), type(action_space)
-    return spaces.Box(-1, 1, shape=action_space.shape, dtype=action_space.dtype)
-
-
-def clip_and_scale_action(action, low, high):
-    """Clip action to [-1, 1] and scale according to a range [low, high]."""
-    action = torch.clip(action, -1, 1)
-    return 0.5 * (high + low) + 0.5 * (high - low) * action
-
-
-def inv_clip_and_scale_action(action, low, high):
-    """Inverse of `clip_and_scale_action`."""
-    low, high = np.asarray(low), np.asarray(high)
-    action = (action - 0.5 * (high + low)) / (0.5 * (high - low))
-    return np.clip(action, -1.0, 1.0)
-
-
-def inv_scale_action(action, low, high):
-    """Inverse of `clip_and_scale_action` without clipping."""
-    low, high = np.asarray(low), np.asarray(high)
-    return (action - 0.5 * (high + low)) / (0.5 * (high - low))
-
-
 # TODO (stao): Clean up this code
 def flatten_state_dict(
     state_dict: dict, use_torch=False, device: Device = None
@@ -278,60 +206,3 @@ def flatten_dict_keys(d: dict, prefix=""):
         else:
             out[prefix + k] = v
     return out
-
-
-def extract_scalars_from_info(info: dict, blacklist=()) -> Dict[str, float]:
-    """Recursively extract scalar metrics from info dict.
-
-    Args:
-        info (dict): info dict
-        blacklist (tuple, optional): keys to exclude.
-
-    Returns:
-        Dict[str, float]: scalar metrics
-    """
-    ret = {}
-    for k, v in info.items():
-        if k in blacklist:
-            continue
-
-        # Ignore placeholder
-        if v is None:
-            continue
-
-        # Recursively extract scalars
-        elif isinstance(v, dict):
-            ret2 = extract_scalars_from_info(v, blacklist=blacklist)
-            ret2 = {f"{k}.{k2}": v2 for k2, v2 in ret2.items()}
-            ret2 = {k2: v2 for k2, v2 in ret2.items() if k2 not in blacklist}
-
-        # Things that are scalar-like will have an np.size of 1.
-        # Strings also have an np.size of 1, so explicitly ban those
-        elif np.size(v) == 1 and not isinstance(v, str):
-            ret[k] = float(v)
-    return ret
-
-
-def flatten_dict_space_keys(space: spaces.Dict, prefix="") -> spaces.Dict:
-    """Flatten a dict of spaces by expanding its keys recursively."""
-    out = OrderedDict()
-    for k, v in space.spaces.items():
-        if isinstance(v, spaces.Dict):
-            out.update(flatten_dict_space_keys(v, prefix + k + "/").spaces)
-        else:
-            out[prefix + k] = v
-    return spaces.Dict(out)
-
-
-def find_max_episode_steps_value(env):
-    cur = env
-    while cur is not None:
-        if hasattr(cur, "max_episode_steps"):
-            return cur.max_episode_steps
-        if cur.spec is not None and cur.spec.max_episode_steps is not None:
-            return cur.spec.max_episode_steps
-        if hasattr(cur, "env"):
-            cur = env.env
-        else:
-            cur = None
-    return None

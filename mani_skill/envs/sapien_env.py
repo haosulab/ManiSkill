@@ -33,7 +33,7 @@ from mani_skill.sensors.camera import (
     update_camera_cfgs_from_dict,
 )
 from mani_skill.sensors.depth_camera import StereoDepthCamera, StereoDepthCameraConfig
-from mani_skill.utils import common, sapien_utils
+from mani_skill.utils import common, gym_utils, sapien_utils
 from mani_skill.utils.structs import Actor, Articulation
 from mani_skill.utils.structs.types import Array, SimConfig
 from mani_skill.utils.visualization.misc import observations_to_images, tile_images
@@ -278,9 +278,9 @@ class BaseEnv(gym.Env):
     @cached_property
     def single_observation_space(self):
         if self.num_envs > 1:
-            return common.convert_observation_to_space(self._init_raw_obs, unbatched=True)
+            return gym_utils.convert_observation_to_space(self._init_raw_obs, unbatched=True)
         else:
-            return common.convert_observation_to_space(self._init_raw_obs)
+            return gym_utils.convert_observation_to_space(self._init_raw_obs)
 
     @cached_property
     def observation_space(self):

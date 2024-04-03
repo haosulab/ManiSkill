@@ -16,8 +16,7 @@ from mani_skill.agents.utils import (
     get_active_joint_indices,
     get_joints_by_names,
 )
-from mani_skill.utils import sapien_utils
-from mani_skill.utils.common import clip_and_scale_action, normalize_action_space
+from mani_skill.utils import gym_utils, sapien_utils
 from mani_skill.utils.structs import Articulation, ArticulationJoint
 from mani_skill.utils.structs.types import Array
 
@@ -158,7 +157,7 @@ class BaseController:
     # -------------------------------------------------------------------------- #
     def _clip_and_scale_action_space(self):
         self._original_single_action_space = self.single_action_space
-        self.single_action_space = normalize_action_space(
+        self.single_action_space = gym_utils.normalize_action_space(
             self._original_single_action_space
         )
         low, high = (
@@ -169,7 +168,7 @@ class BaseController:
         self.action_space_high = sapien_utils.to_tensor(high)
 
     def _clip_and_scale_action(self, action):
-        return clip_and_scale_action(
+        return gym_utils.clip_and_scale_action(
             action, self.action_space_low, self.action_space_high
         )
 

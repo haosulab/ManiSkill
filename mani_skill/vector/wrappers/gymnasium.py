@@ -6,7 +6,7 @@ import gymnasium as gym
 import torch
 from gymnasium.vector import VectorEnv
 
-from mani_skill.utils.common import find_max_episode_steps_value
+from mani_skill.utils import gym_utils
 from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:
@@ -60,7 +60,7 @@ class ManiSkillVectorEnv(VectorEnv):
             self.max_episode_steps = self.base_env.spec.max_episode_steps
         if self.max_episode_steps is None:
             # search wrappers to find where max episode steps may have been defined
-            self.max_episode_steps = find_max_episode_steps_value(env)
+            self.max_episode_steps = gym_utils.find_max_episode_steps_value(env)
 
     @property
     def device(self):

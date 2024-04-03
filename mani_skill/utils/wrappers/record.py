@@ -11,9 +11,8 @@ import sapien.physx as physx
 
 from mani_skill import get_commit_info
 from mani_skill.envs.sapien_env import BaseEnv
-from mani_skill.utils import common, sapien_utils
+from mani_skill.utils import common, gym_utils, sapien_utils
 from mani_skill.utils.io_utils import dump_json
-from mani_skill.utils.structs.types import Array
 from mani_skill.utils.visualization.misc import (
     images_to_video,
     put_info_on_image,
@@ -234,7 +233,7 @@ class RecordEpisode(gym.Wrapper):
         self._trajectory_buffer: Step = None
 
         self.max_steps_per_video = max_steps_per_video
-        self.max_episode_steps = common.find_max_episode_steps_value(env)
+        self.max_episode_steps = gym_utils.find_max_episode_steps_value(env)
 
         self.save_on_reset = save_on_reset
         self.save_trajectory = save_trajectory
@@ -452,7 +451,7 @@ class RecordEpisode(gym.Wrapper):
             image = self.capture_image()
 
             if self.info_on_video:
-                scalar_info = common.extract_scalars_from_info(info)
+                scalar_info = gym_utils.extract_scalars_from_info(info)
                 extra_texts = [
                     f"reward: {rew:.3f}",
                     "action: {}".format(",".join([f"{x:.2f}" for x in action])),

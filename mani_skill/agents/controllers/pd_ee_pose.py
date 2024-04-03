@@ -8,8 +8,7 @@ import torch
 from gymnasium import spaces
 
 from mani_skill import logger
-from mani_skill.utils import sapien_utils
-from mani_skill.utils.common import clip_and_scale_action
+from mani_skill.utils import gym_utils, sapien_utils
 from mani_skill.utils.geometry.rotation_conversions import (
     euler_angles_to_matrix,
     matrix_to_quaternion,
@@ -230,7 +229,7 @@ class PDEEPoseController(PDEEPosController):
 
     def _clip_and_scale_action(self, action):
         # NOTE(xiqiang): rotation should be clipped by norm.
-        pos_action = clip_and_scale_action(
+        pos_action = gym_utils.clip_and_scale_action(
             action[:, :3], self.action_space_low[:3], self.action_space_high[:3]
         )
         rot_action = action[:, 3:]

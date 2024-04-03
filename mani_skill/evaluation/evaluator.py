@@ -5,7 +5,7 @@ import gymnasium as gym
 import numpy as np
 
 from mani_skill.envs.sapien_env import BaseEnv
-from mani_skill.utils.common import extract_scalars_from_info, merge_dicts
+from mani_skill.utils import common, gym_utils
 
 from .solution import BasePolicy
 
@@ -61,7 +61,9 @@ class BaseEvaluator:
                 if render:
                     env.render()
                 assert "success" in info, sorted(info.keys())
-                metrics = extract_scalars_from_info(info, "TimeLimit.truncated")
+                metrics = gym_utils.extract_scalars_from_info(
+                    info, "TimeLimit.truncated"
+                )
                 return metrics
 
     def evaluate_episodes(self, episode_cfgs: List[dict], callback: Callable = None):
@@ -100,7 +102,7 @@ class BaseEvaluator:
         return dict(env_info=env_info, episodes=episodes)
 
     def merge_result(self):
-        merged_result = merge_dicts(self.result.values())
+        merged_result = common.merge_dicts(self.result.values())
         merged_metrics = {k: np.mean(v) for k, v in merged_result.items()}
         return merged_metrics
 
