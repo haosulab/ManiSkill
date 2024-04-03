@@ -97,7 +97,7 @@ class BaseEnv(gym.Env):
     """Override this to enforce which robots or tuples of robots together are supported in the task. During env creation,
     setting robot_uids auto loads all desired robots into the scene, but not all tasks are designed to support some robot setups"""
     SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "sensor_data", "rgb", "rgbd", "pointcloud")
-    SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "sparse")
+    SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "sparse", "none")
     SUPPORTED_RENDER_MODES = ("human", "rgb_array", "sensors")
     """The supported render modes. Human opens up a GUI viewer. rgb_array returns an rgb array showing the current environment state.
     sensors returns an rgb array but only showing all data collected by sensors as images put together"""
