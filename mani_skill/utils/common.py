@@ -15,7 +15,7 @@ from mani_skill.utils.structs.types import Array, Device
 
 
 # -------------------------------------------------------------------------- #
-# Basic
+# Utilities for working with dictionaries
 # -------------------------------------------------------------------------- #
 def dict_merge(dct: dict, merge_dct: dict):
     """In place recursive merge of `merge_dct` into `dct`"""
@@ -87,42 +87,6 @@ def index_dict_array(x1, idx: Union[int, slice], inplace=True):
             return out
 
 
-def normalize_vector(x: torch.Tensor, eps=1e-6):
-    """normalizes a given torch tensor x and if the norm is less than eps, set the norm to 0"""
-    norm = torch.linalg.norm(x, axis=1)
-    norm[norm < eps] = 1
-    norm = 1 / norm
-    return torch.multiply(x, norm[:, None])
-
-
-def compute_angle_between(x1: torch.Tensor, x2: torch.Tensor):
-    """Compute angle (radian) between two torch tensors"""
-    x1, x2 = normalize_vector(x1), normalize_vector(x2)
-    dot_prod = torch.clip(torch.einsum("ij,ij->i", x1, x2), -1, 1)
-    return torch.arccos(dot_prod)
-
-
-# -------------------------------------------------------------------------- #
-# Numpy
-# -------------------------------------------------------------------------- #
-def np_normalize_vector(x, eps=1e-6):
-    """normalizes a given numpy array x and if the norm is less than eps, set the norm to 0"""
-    x = np.asarray(x)
-    assert x.ndim == 1, x.ndim
-    norm = np.linalg.norm(x)
-    return np.zeros_like(x) if norm < eps else (x / norm)
-
-
-def np_compute_angle_between(x1: np.ndarray, x2: np.ndarray):
-    """Compute angle (radian) between two numpy arrays"""
-    x1, x2 = np_normalize_vector(x1), np_normalize_vector(x2)
-    dot_prod = np.clip(np.dot(x1, x2), -1, 1)
-    return np.arccos(dot_prod).item()
-
-
-# ---------------------------------------------------------------------------- #
-# OpenAI gym
-# ---------------------------------------------------------------------------- #
 # TODO (stao): Clean up this code
 def flatten_state_dict(
     state_dict: dict, use_torch=False, device: Device = None
@@ -206,3 +170,65 @@ def flatten_dict_keys(d: dict, prefix=""):
         else:
             out[prefix + k] = v
     return out
+
+
+def normalize_vector(x: torch.Tensor, eps=1e-6):
+    """normalizes a given torch tensor x and if the norm is less than eps, set the norm to 0"""
+    norm = torch.linalg.norm(x, axis=1)
+    norm[norm < eps] = 1
+    norm = 1 / norm
+    return torch.multiply(x, norm[:, None])
+
+
+def np_normalize_vector(x, eps=1e-6):
+    """normalizes a given numpy array x and if the norm is less than eps, set the norm to 0"""
+    x = np.asarray(x)
+    assert x.ndim == 1, x.ndim
+    norm = np.linalg.norm(x)
+    return np.zeros_like(x) if norm < eps else (x / norm)
+
+
+def np_compute_angle_between(x1: np.ndarray, x2: np.ndarray):
+    """Compute angle (radian) between two numpy arrays"""
+    x1, x2 = np_normalize_vector(x1), np_normalize_vector(x2)
+    dot_prod = np.clip(np.dot(x1, x2), -1, 1)
+    return np.arccos(dot_prod).item()
+
+
+def compute_angle_between(x1: torch.Tensor, x2: torch.Tensor):
+    """Compute angle (radian) between two torch tensors"""
+    x1, x2 = normalize_vector(x1), normalize_vector(x2)
+    dot_prod = torch.clip(torch.einsum("ij,ij->i", x1, x2), -1, 1)
+    return torch.arccos(dot_prod)
+
+
+@torch.jit.script
+def quat_diff_rad(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
+    """
+    Get the difference in radians between two quaternions.
+
+    Args:
+        a: first quaternion, shape (N, 4)
+        b: second quaternion, shape (N, 4)
+    Returns:
+        Difference in radians, shape (N,)
+    """
+    # Normalize the quaternions
+    a = a / torch.norm(a, dim=1, keepdim=True)
+    b = b / torch.norm(b, dim=1, keepdim=True)
+
+    # Compute the dot product between the quaternions
+    dot_product = torch.sum(a * b, dim=1)
+
+    # Clamp the dot product to the range [-1, 1] to avoid numerical instability
+    dot_product = torch.clamp(dot_product, -1.0, 1.0)
+
+    # Compute the angle difference in radians
+    angle_diff = 2 * torch.acos(torch.abs(dot_product))
+
+    return angle_diff
+
+
+# -------------------------------------------------------------------------- #
+# Utilities for working with quaternions
+# -------------------------------------------------------------------------- #

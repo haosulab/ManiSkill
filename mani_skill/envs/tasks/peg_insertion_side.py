@@ -171,7 +171,7 @@ class PegInsertionSideEnv(BaseEnv):
             )
             pos = torch.zeros((b, 3))
             pos[:, :2] = xy
-            pos[:, 2] = self.peg_half_sizes[:, 2]
+            pos[:, 2] = self.peg_half_sizes[env_idx, 2]
             quat = randomization.random_quaternions(
                 b,
                 self.device,
@@ -186,7 +186,7 @@ class PegInsertionSideEnv(BaseEnv):
             )
             pos = torch.zeros((b, 3))
             pos[:, :2] = xy
-            pos[:, 2] = self.peg_half_sizes[:, 0]
+            pos[:, 2] = self.peg_half_sizes[env_idx, 0]
             quat = randomization.random_quaternions(
                 b,
                 self.device,
@@ -268,7 +268,9 @@ class PegInsertionSideEnv(BaseEnv):
     # TODO (stao): Write batched version of dense reward function
     # Code here: https://github.com/haosulab/ManiSkill2/blob/4067abce40dc8b7d7c926eabc9c48e802489014c/mani_skill2/envs/ms2/assembly/peg_insertion_side.py#L154
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        # Stage 1: Encourage gripper to move close to peg tail and grasp it
+        # Stage 1: Encourage gripper to be rotated to be lined up with the peg
+
+        # Stage 2: Encourage gripper to move close to peg tail and grasp it
         gripper_pos = self.agent.tcp.pose.p
         tgt_gripper_pose = self.peg.pose
         offset = sapien.Pose(
@@ -285,7 +287,7 @@ class PegInsertionSideEnv(BaseEnv):
         is_grasped = self.agent.is_grasping(self.peg, max_angle=20)
         reward = reaching_reward + is_grasped
 
-        # Stage 2: Orient the grasped peg properly towards the hole
+        # Stage 3: Orient the grasped peg properly towards the hole
 
         # pre-insertion award, encouraging both the peg center and the peg head to match the yz coordinates of goal_pose
         peg_head_wrt_goal = self.goal_pose.inv() * self.peg_head_pose
@@ -303,12 +305,12 @@ class PegInsertionSideEnv(BaseEnv):
             )
         )
         reward += pre_insertion_reward * is_grasped
-        # stage 2 passes if peg is correctly oriented in order to insert into hole easily
+        # stage 3 passes if peg is correctly oriented in order to insert into hole easily
         pre_inserted = (peg_head_wrt_goal_yz_dist < 0.01) & (
             peg_wrt_goal_yz_dist < 0.01
         )
 
-        # Stage 3: Insert the peg into the hole once it is grasped and lined up
+        # Stage 4: Insert the peg into the hole once it is grasped and lined up
         peg_head_wrt_goal_inside_hole = self.box_hole_pose.inv() * self.peg_head_pose
         insertion_reward = 5 * (
             1
