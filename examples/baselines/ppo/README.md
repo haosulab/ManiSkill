@@ -31,6 +31,9 @@ python ppo.py --env_id="StackCube-v1" \
 python ppo.py --env_id="PickSingleYCB-v1" \
   --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
   --total_timesteps=25_000_000
+python ppo.py --env_id="PegInsertionSide-v1" \
+  --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
+  --total_timesteps=150_000_000 --num-steps=100 --num-eval-steps=100
 python ppo.py --env_id="TwoRobotStackCube-v1" \
    --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
    --total_timesteps=40_000_000 --num-steps=100 --num-eval-steps=100

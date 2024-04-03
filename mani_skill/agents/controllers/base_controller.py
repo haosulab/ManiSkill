@@ -16,8 +16,7 @@ from mani_skill.agents.utils import (
     get_active_joint_indices,
     get_joints_by_names,
 )
-from mani_skill.utils import sapien_utils
-from mani_skill.utils.common import clip_and_scale_action, normalize_action_space
+from mani_skill.utils import common, gym_utils
 from mani_skill.utils.structs import Articulation, ArticulationJoint
 from mani_skill.utils.structs.types import Array
 
@@ -158,18 +157,18 @@ class BaseController:
     # -------------------------------------------------------------------------- #
     def _clip_and_scale_action_space(self):
         self._original_single_action_space = self.single_action_space
-        self.single_action_space = normalize_action_space(
+        self.single_action_space = gym_utils.normalize_action_space(
             self._original_single_action_space
         )
         low, high = (
             self._original_single_action_space.low,
             self._original_single_action_space.high,
         )
-        self.action_space_low = sapien_utils.to_tensor(low)
-        self.action_space_high = sapien_utils.to_tensor(high)
+        self.action_space_low = common.to_tensor(low)
+        self.action_space_high = common.to_tensor(high)
 
     def _clip_and_scale_action(self, action):
-        return clip_and_scale_action(
+        return gym_utils.clip_and_scale_action(
             action, self.action_space_low, self.action_space_high
         )
 
@@ -241,7 +240,7 @@ class DictController(BaseController):
 
     def set_action(self, action: Dict[str, np.ndarray]):
         for uid, controller in self.controllers.items():
-            controller.set_action(sapien_utils.to_tensor(action[uid]))
+            controller.set_action(common.to_tensor(action[uid]))
 
     def before_simulation_step(self):
         if physx.is_gpu_enabled():

@@ -38,7 +38,7 @@ All tasks are defined by their own class and must inherit `BaseEnv`, similar to 
 
 ```python
 import sapien
-from mani_skill.utils import sapien_utils
+from mani_skill.utils import sapien_utils, common
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.utils.registration import register_env
 

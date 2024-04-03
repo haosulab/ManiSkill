@@ -7,8 +7,8 @@ import torch
 
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
-from mani_skill.utils import sapien_utils
-from mani_skill.utils.building.actors import build_sphere
+from mani_skill.utils import common, sapien_utils
+from mani_skill.utils.building import actors
 from mani_skill.utils.building.articulations import (
     MODEL_DBS,
     _load_partnet_mobility_dataset,
@@ -17,9 +17,7 @@ from mani_skill.utils.building.articulations import (
 from mani_skill.utils.building.ground import build_ground
 from mani_skill.utils.geometry.geometry import transform_points
 from mani_skill.utils.registration import register_env
-from mani_skill.utils.structs import Pose
-from mani_skill.utils.structs.articulation import Articulation
-from mani_skill.utils.structs.link import Link
+from mani_skill.utils.structs import Articulation, Link, Pose
 
 
 # TODO (stao): we need to cut the meshes of all the cabinets in this dataset for gpu sim, not registering task for now
@@ -110,7 +108,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
         self.handle_links = handle_links
         self.handle_links_meshes = handle_links_meshes
 
-        self.handle_link_goal = build_sphere(
+        self.handle_link_goal = actors.build_sphere(
             self._scene,
             radius=0.05,
             color=[0, 1, 0, 1],
@@ -145,7 +143,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
             index_q = torch.tensor(index_q, dtype=int)
             self.target_qpos_idx = (torch.arange(0, b), index_q)
             # TODO (stao): For performance improvement, one can save relative position of link handles ahead of time.
-            handle_link_positions = sapien_utils.to_tensor(
+            handle_link_positions = common.to_tensor(
                 np.array(
                     [
                         x[self.link_indices[i]].bounding_box.center_mass

@@ -6,18 +6,17 @@ import torch
 import torch.random
 
 from mani_skill import PACKAGE_ASSET_DIR
-from mani_skill.agents.robots.trifingerpro.trifingerpro import TriFingerPro
+from mani_skill.agents.robots import TriFingerPro
 from mani_skill.envs.sapien_env import BaseEnv
+from mani_skill.envs.utils.randomization.pose import random_quaternions
 from mani_skill.sensors.camera import CameraConfig
+from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.building import ActorBuilder, actors
 from mani_skill.utils.building.ground import build_ground
 from mani_skill.utils.registration import register_env
-from mani_skill.utils.sapien_utils import look_at
-from mani_skill.utils.structs.actor import Actor
-from mani_skill.utils.structs.articulation import Articulation
-from mani_skill.utils.structs.pose import Pose
+from mani_skill.utils.structs import Actor, Articulation, Pose
 from mani_skill.utils.structs.types import Array, GPUMemoryConfig, SimConfig
-from mani_skill.envs.utils.randomization.pose import random_quaternions
+
 
 class RotateCubeEnv(BaseEnv):
     """
@@ -77,12 +76,12 @@ class RotateCubeEnv(BaseEnv):
 
     @property
     def _sensor_configs(self):
-        pose = look_at(eye=(0.7, 0.0, 0.7), target=(0.0, 0.0, 0.0))
+        pose = sapien_utils.look_at(eye=(0.7, 0.0, 0.7), target=(0.0, 0.0, 0.0))
         return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
     def _human_render_camera_configs(self):
-        pose = look_at((0.7, 0.0, 0.7), (0.0, 0.0, 0.0))
+        pose = sapien_utils.look_at(eye=(0.7, 0.0, 0.7), target=(0.0, 0.0, 0.0))
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
     def _load_scene(self, options: dict):
@@ -184,7 +183,9 @@ class RotateCubeEnv(BaseEnv):
             # For initialization
             pos_x, pos_y = random_xy()
             pos_z = self.size / 2
-            orientation = random_quaternions(b, lock_x=True, lock_y=True, device=self.device)
+            orientation = random_quaternions(
+                b, lock_x=True, lock_y=True, device=self.device
+            )
         elif difficulty == 2:
             # Fixed goal position in the air with x,y = 0.  No orientation.
             pos_x, pos_y = 0.0, 0.0
@@ -225,7 +226,7 @@ class RotateCubeEnv(BaseEnv):
             torch.linalg.norm(obj_p - goal_p, axis=1) < self.goal_radius
         )
 
-        is_obj_q_close_to_goal = quat_diff_rad(obj_q, goal_q) < 0.1
+        is_obj_q_close_to_goal = common.quat_diff_rad(obj_q, goal_q) < 0.1
 
         is_success = is_obj_pos_close_to_goal & is_obj_q_close_to_goal
 
@@ -330,7 +331,7 @@ class RotateCubeEnv(BaseEnv):
         object_lift_reward -= object_init_z_reward
 
         # extract quaternion orientation
-        angles = quat_diff_rad(obj_q, goal_q)
+        angles = common.quat_diff_rad(obj_q, goal_q)
         object_rot_reward = -1 * torch.abs(angles)
         pose_reward = (
             object_dist_weight * (object_dist_reward + object_lift_reward)
@@ -343,32 +344,6 @@ class RotateCubeEnv(BaseEnv):
     def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
         max_reward = 20
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
-
-
-def quat_diff_rad(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
-    """
-    Get the difference in radians between two quaternions.
-
-    Args:
-        a: first quaternion, shape (N, 4)
-        b: second quaternion, shape (N, 4)
-    Returns:
-        Difference in radians, shape (N,)
-    """
-    # Normalize the quaternions
-    a = a / torch.norm(a, dim=1, keepdim=True)
-    b = b / torch.norm(b, dim=1, keepdim=True)
-
-    # Compute the dot product between the quaternions
-    dot_product = torch.sum(a * b, dim=1)
-
-    # Clamp the dot product to the range [-1, 1] to avoid numerical instability
-    dot_product = torch.clamp(dot_product, -1.0, 1.0)
-
-    # Compute the angle difference in radians
-    angle_diff = 2 * torch.acos(torch.abs(dot_product))
-
-    return angle_diff
 
 
 # TODO (stao): pick a better name, TrifingerRotateCube? perhaps?

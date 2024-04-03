@@ -5,7 +5,7 @@ import sapien.render
 import trimesh
 from transforms3d import quaternions
 from mani_skill.utils.structs import Actor
-from mani_skill.utils.common import np_normalize_vector
+from mani_skill.utils import common
 from mani_skill.utils.geometry.trimesh_utils import get_component_mesh
 
 
@@ -82,7 +82,7 @@ def compute_grasp_info_by_obb(
 
     if ortho:
         closing = closing - (approaching @ closing) * approaching
-        closing = np_normalize_vector(closing)
+        closing = common.np_normalize_vector(closing)
 
     grasp_info = dict(
         approaching=approaching, closing=closing, center=center, extents=extents

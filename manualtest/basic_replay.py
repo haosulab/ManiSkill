@@ -4,7 +4,7 @@ import sapien
 import torch
 
 import mani_skill.envs
-from mani_skill.utils import sapien_utils
+from mani_skill.utils import common
 from mani_skill.utils.wrappers import RecordEpisode
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 
@@ -61,7 +61,7 @@ if __name__ == "__main__":
                 action[:, 1] = -1
                 obs, rew, terminated, truncated, info = env.step(action)
                 done = np.logical_or(
-                    sapien_utils.to_numpy(terminated), sapien_utils.to_numpy(truncated)
+                    common.to_numpy(terminated), common.to_numpy(truncated)
                 )
                 if num_envs == 1:
                     env.render_human()

@@ -33,7 +33,7 @@ from mani_skill.sensors.camera import (
     update_camera_cfgs_from_dict,
 )
 from mani_skill.sensors.depth_camera import StereoDepthCamera, StereoDepthCameraConfig
-from mani_skill.utils import common, sapien_utils
+from mani_skill.utils import common, gym_utils, sapien_utils
 from mani_skill.utils.structs import Actor, Articulation
 from mani_skill.utils.structs.types import Array, SimConfig
 from mani_skill.utils.visualization.misc import observations_to_images, tile_images
@@ -97,7 +97,7 @@ class BaseEnv(gym.Env):
     """Override this to enforce which robots or tuples of robots together are supported in the task. During env creation,
     setting robot_uids auto loads all desired robots into the scene, but not all tasks are designed to support some robot setups"""
     SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "sensor_data", "rgb", "rgbd", "pointcloud")
-    SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "sparse")
+    SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "sparse", "none")
     SUPPORTED_RENDER_MODES = ("human", "rgb_array", "sensors")
     """The supported render modes. Human opens up a GUI viewer. rgb_array returns an rgb array showing the current environment state.
     sensors returns an rgb array but only showing all data collected by sensors as images put together"""
@@ -254,10 +254,10 @@ class BaseEnv(gym.Env):
         )
         obs, _ = self.reset(seed=2022, options=dict(reconfigure=True))
         if physx.is_gpu_enabled():
-            obs = sapien_utils.to_numpy(obs)
+            obs = common.to_numpy(obs)
         self._init_raw_obs = obs.copy()
         """the raw observation returned by the env.reset. Useful for future observation wrappers to use to auto generate observation spaces"""
-        self._init_raw_state = sapien_utils.to_numpy(self.get_state_dict())
+        self._init_raw_state = common.to_numpy(self.get_state_dict())
         """the initial raw state returned by env.get_state. Useful for reconstructing state dictionaries from flattened state vectors"""
 
         self.action_space = self.agent.action_space
@@ -278,9 +278,9 @@ class BaseEnv(gym.Env):
     @cached_property
     def single_observation_space(self):
         if self.num_envs > 1:
-            return common.convert_observation_to_space(self._init_raw_obs, unbatched=True)
+            return gym_utils.convert_observation_to_space(self._init_raw_obs, unbatched=True)
         else:
-            return common.convert_observation_to_space(self._init_raw_obs)
+            return gym_utils.convert_observation_to_space(self._init_raw_obs)
 
     @cached_property
     def observation_space(self):
@@ -704,7 +704,7 @@ class BaseEnv(gym.Env):
             self._scene._gpu_fetch_all()
         obs = self.get_obs()
         if not physx.is_gpu_enabled():
-            obs = sapien_utils.to_numpy(sapien_utils.unbatch(obs))
+            obs = common.to_numpy(common.unbatch(obs))
             self._elapsed_steps = 0
         return obs, dict(reconfigure=reconfigure)
 
@@ -783,12 +783,12 @@ class BaseEnv(gym.Env):
             )
         else:
             # On CPU sim mode, we always return numpy / python primitives without any batching.
-            return sapien_utils.unbatch(
-                sapien_utils.to_numpy(obs),
-                sapien_utils.to_numpy(reward),
-                sapien_utils.to_numpy(terminated),
+            return common.unbatch(
+                common.to_numpy(obs),
+                common.to_numpy(reward),
+                common.to_numpy(terminated),
                 False,
-                sapien_utils.to_numpy(info),
+                common.to_numpy(info),
             )
 
     def step_action(
@@ -799,7 +799,7 @@ class BaseEnv(gym.Env):
         if action is None:  # simulation without action
             pass
         elif isinstance(action, np.ndarray) or isinstance(action, torch.Tensor):
-            action = sapien_utils.to_tensor(action)
+            action = common.to_tensor(action)
             if action.shape == self._orig_single_action_space.shape:
                 action_is_unbatched = True
             set_action = True
@@ -808,13 +808,13 @@ class BaseEnv(gym.Env):
                 if action["control_mode"] != self.agent.control_mode:
                     self.agent.set_control_mode(action["control_mode"])
                     self.agent.controller.reset()
-                action = sapien_utils.to_tensor(action["action"])
+                action = common.to_tensor(action["action"])
             else:
                 assert isinstance(
                     self.agent, MultiAgent
                 ), "Received a dictionary for an action but there are not multiple robots in the environment"
                 # assume this is a multi-agent action
-                action = sapien_utils.to_tensor(action)
+                action = common.to_tensor(action)
                 for k, a in action.items():
                     if a.shape == self._orig_single_action_space[k].shape:
                         action_is_unbatched = True
@@ -825,7 +825,7 @@ class BaseEnv(gym.Env):
 
         if set_action:
             if self.num_envs == 1 and action_is_unbatched:
-                action = sapien_utils.batch(action)
+                action = common.batch(action)
             self.agent.set_action(action)
             if physx.is_gpu_enabled():
                 self._scene.px.gpu_apply_articulation_target_position()
@@ -1109,12 +1109,12 @@ class BaseEnv(gym.Env):
         elif self.render_mode == "rgb_array":
             res = self.render_rgb_array()
             if self.num_envs == 1:
-                res = sapien_utils.to_numpy(sapien_utils.unbatch(res))
+                res = common.to_numpy(common.unbatch(res))
             return res
         elif self.render_mode == "sensors":
             res = self.render_sensors()
             if self.num_envs == 1:
-                res = sapien_utils.to_numpy(sapien_utils.unbatch(res))
+                res = common.to_numpy(common.unbatch(res))
             return res
         else:
             raise NotImplementedError(f"Unsupported render mode {self.render_mode}.")

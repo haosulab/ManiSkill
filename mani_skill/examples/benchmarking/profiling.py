@@ -4,7 +4,7 @@ from typing import Literal
 
 import torch
 
-from mani_skill.utils.common import flatten_dict_keys
+from mani_skill.utils import common
 
 
 class Profiler:
@@ -32,7 +32,7 @@ class Profiler:
             df = pd.read_csv(csv_path)
         else:
             df = pd.DataFrame()
-        stats_flat = flatten_dict_keys(self.stats)
+        stats_flat = common.flatten_dict_keys(self.stats)
         cond = None
         for k in stats_flat:
             if k not in df:

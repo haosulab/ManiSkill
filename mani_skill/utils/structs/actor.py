@@ -10,7 +10,7 @@ import sapien.physx as physx
 import sapien.render
 import torch
 
-from mani_skill.utils import sapien_utils
+from mani_skill.utils import common
 from mani_skill.utils.structs.base import PhysxRigidDynamicComponentStruct
 from mani_skill.utils.structs.pose import Pose, to_sapien_pose, vectorize_pose
 from mani_skill.utils.structs.types import Array
@@ -134,12 +134,12 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
 
     def set_state(self, state: Array):
         if physx.is_gpu_enabled():
-            state = sapien_utils.to_tensor(state)
+            state = common.to_tensor(state)
             self.set_pose(Pose.create(state[:, :7]))
             self.set_linear_velocity(state[:, 7:10])
             self.set_angular_velocity(state[:, 10:13])
         else:
-            state = sapien_utils.to_numpy(state[0])
+            state = common.to_numpy(state[0])
             self.set_pose(sapien.Pose(state[0:3], state[3:7]))
             if self.px_body_type == "dynamic":
                 self.set_linear_velocity(state[7:10])

@@ -5,8 +5,7 @@ import gymnasium.spaces.utils
 from gymnasium.vector.utils import batch_space
 
 from mani_skill.envs.sapien_env import BaseEnv
-from mani_skill.utils import sapien_utils
-from mani_skill.utils.common import flatten_state_dict
+from mani_skill.utils import common
 
 
 class FlattenObservationWrapper(gym.ObservationWrapper):
@@ -15,12 +14,17 @@ class FlattenObservationWrapper(gym.ObservationWrapper):
     """
 
     def __init__(self, env) -> None:
-        self.base_env: BaseEnv = env.unwrapped
         super().__init__(env)
-        self.base_env._update_obs_space(flatten_state_dict(self.base_env._init_raw_obs))
+        self.base_env._update_obs_space(
+            common.flatten_state_dict(self.base_env._init_raw_obs)
+        )
+
+    @property
+    def base_env(self) -> BaseEnv:
+        return self.env.unwrapped
 
     def observation(self, observation):
-        return flatten_state_dict(observation, use_torch=True)
+        return common.flatten_state_dict(observation, use_torch=True)
 
 
 class FlattenActionSpaceWrapper(gym.ActionWrapper):
@@ -29,7 +33,6 @@ class FlattenActionSpaceWrapper(gym.ActionWrapper):
     """
 
     def __init__(self, env) -> None:
-        self.base_env: BaseEnv = env.unwrapped
         super().__init__(env)
         self._orig_single_action_space = copy.deepcopy(
             self.base_env.single_action_space
@@ -44,12 +47,16 @@ class FlattenActionSpaceWrapper(gym.ActionWrapper):
         else:
             self.action_space = self.single_action_space
 
+    @property
+    def base_env(self) -> BaseEnv:
+        return self.env.unwrapped
+
     def action(self, action):
         if (
             self.base_env.num_envs == 1
             and action.shape == self.single_action_space.shape
         ):
-            action = sapien_utils.batch(action)
+            action = common.batch(action)
 
         # TODO (stao): This code only supports flat dictionary at the moment
         unflattened_action = dict()
