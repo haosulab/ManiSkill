@@ -6,18 +6,13 @@ import torch
 import torch.random
 
 from mani_skill import PACKAGE_ASSET_DIR
-from mani_skill.agents.robots.trifingerpro.trifingerpro import TriFingerPro
+from mani_skill.agents.robots import TriFingerPro
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.utils.randomization.pose import random_quaternions
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.building import ActorBuilder, actors
 from mani_skill.utils.building.ground import build_ground
-from mani_skill.utils.geometry.rotation_conversions import (
-    euler_angles_to_matrix,
-    matrix_to_quaternion,
-    random_quaternions,
-)
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.structs import Actor, Articulation, Pose
 from mani_skill.utils.structs.types import Array, GPUMemoryConfig, SimConfig
