@@ -108,7 +108,7 @@ def index_dict_array(x1, idx: Union[int, slice], inplace=True):
     if (
         isinstance(x1, np.ndarray)
         or isinstance(x1, list)
-        or isinstance(x1, torch.tensor)
+        or isinstance(x1, torch.Tensor)
     ):
         return x1[idx]
     elif isinstance(x1, dict):
