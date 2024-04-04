@@ -19,7 +19,7 @@ from mani_skill.utils import sapien_utils
 
 from .base_sensor import BaseSensor, BaseSensorConfig
 
-DEFAULT_CAMERA_TEXTURE_NAMES = ("Color", "PositionSegmentation")
+DEFAULT_CAMERA_TEXTURE_NAMES = ["Color", "PositionSegmentation"]
 
 
 @dataclass

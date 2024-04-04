@@ -96,7 +96,7 @@ class BaseEnv(gym.Env):
     SUPPORTED_ROBOTS: List[Union[str, Tuple[str]]] = None
     """Override this to enforce which robots or tuples of robots together are supported in the task. During env creation,
     setting robot_uids auto loads all desired robots into the scene, but not all tasks are designed to support some robot setups"""
-    SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "sensor_data", "rgb", "rgbd", "pointcloud")
+    SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "sensor_data", "rgb", "depth", "rgbd", "pointcloud")
     SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "sparse", "none")
     SUPPORTED_RENDER_MODES = ("human", "rgb_array", "sensors")
     """The supported render modes. Human opens up a GUI viewer. rgb_array returns an rgb array showing the current environment state.
@@ -392,13 +392,14 @@ class BaseEnv(gym.Env):
             obs = common.flatten_state_dict(state_dict, use_torch=True, device=self.device)
         elif self._obs_mode == "state_dict":
             obs = self._get_obs_state_dict(info)
-        elif self._obs_mode in ["sensor_data", "rgbd", "rgb", "pointcloud"]:
+        elif self._obs_mode in ["sensor_data", "rgbd", "rgb", "depth", "pointcloud"]:
             obs = self._get_obs_with_sensor_data(info)
             if self._obs_mode == "rgbd":
                 obs = sensor_data_to_rgbd(obs, self._sensors, rgb=True, depth=True)
             elif self._obs_mode == "rgb":
-                # TODO (stao): we can optmize this by not taking the PositionSegmentation texture at all.
                 obs = sensor_data_to_rgbd(obs, self._sensors, rgb=True, depth=False)
+            elif self._obs_mode == "depth":
+                obs = sensor_data_to_rgbd(obs, self._sensors, rgb=False, depth=True)
             elif self.obs_mode == "pointcloud":
                 obs = sensor_data_to_pointcloud(obs, self._sensors)
         else:
@@ -563,6 +564,16 @@ class BaseEnv(gym.Env):
         self._agent_sensor_configs_parsed = parse_camera_cfgs(self.agent._sensor_configs)
         self._all_sensor_configs_parsed.update(self._agent_sensor_configs_parsed)
 
+        # populate configs with the correct textures depending on obs mode if it is None (meaning user did not define it)
+        for k in self._all_sensor_configs_parsed.keys():
+            cfg = self._all_sensor_configs_parsed[k]
+            if isinstance(cfg, CameraConfig) and cfg.texture_names is None:
+                if self._obs_mode == "rgb":
+                    cfg.texture_names = ["Color"]
+                elif self._obs_mode == "depth":
+                    cfg.texture_names = ["PositionSegmentation"]
+                elif self.obs_mode == "rgbd" or self.obs_mode == "pointcloud":
+                    cfg.texture_names = ["Color", "PositionSegmentation"]
         # Add human render camera configs
         self._human_render_camera_configs_parsed = parse_camera_cfgs(
             self._human_render_camera_configs
