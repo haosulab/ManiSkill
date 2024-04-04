@@ -338,13 +338,15 @@ class RotateCubeEnv(BaseEnv):
             + object_rot_weight * object_rot_reward
         )
         total_reward = finger_reach_object_reward + pose_reward
-        total_reward[info["success"]] = 3
+        total_reward = total_reward.clamp(-15, 15)
+        total_reward[info["success"]] = 15
         return total_reward
 
     def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
-        max_reward = 20
-        return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
-
+        self.max_reward = 15
+        dense_reward = self.compute_dense_reward(obs=obs, action=action, info=info)
+        norm_dense_reward = dense_reward / (2 * self.max_reward) + 0.5
+        return norm_dense_reward
 
 # TODO (stao): pick a better name, TrifingerRotateCube? perhaps?
 @register_env("RotateCubeLevel0-v1", max_episode_steps=250)
