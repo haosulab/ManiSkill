@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, Sequence, Union
+from typing import TYPE_CHECKING, Dict, Optional, Sequence, Union
 
 import numpy as np
 import sapien
@@ -18,6 +18,8 @@ if TYPE_CHECKING:
 from mani_skill.utils import sapien_utils
 
 from .base_sensor import BaseSensor, BaseSensorConfig
+
+DEFAULT_CAMERA_TEXTURE_NAMES = ("Color", "PositionSegmentation")
 
 
 @dataclass
@@ -45,8 +47,13 @@ class CameraConfig(BaseSensorConfig):
     """the Actor or Link to mount the camera on top of. This means the global pose of the mounted camera is now mount.pose * local_pose"""
     hide_link: bool = False
     """hide_link (bool, optional): whether to hide the link to mount the camera. Defaults to False."""
-    texture_names: Sequence[str] = ("Color", "PositionSegmentation")
-    """texture_names (Sequence[str], optional): texture names to render. Defaults to ("Color", "PositionSegmentation"). Note that the renderign speed will not really change if you remove PositionSegmentation"""
+    texture_names: Optional[Sequence[str]] = None
+    """texture_names (Optional[Sequence[str]]): texture names to render. Defaults to None, which is then populated
+    by the corresponding texture names when environments are created depending on the chosen observation modes. For more strict control
+    over which textures to render you can set this to a list of values. Currently only "Color" and "PositionSegmentation" are supported.
+    "Color" automatically generates RGB values in observations, and "PositionSegmentation" automatically generates depth and segmentation data
+    in observations.
+    """
 
     def __post_init__(self):
         self.pose = Pose.create(self.pose)
@@ -172,8 +179,9 @@ class Camera(BaseSensor):
                 "camera hide_link option is not implemented yet so this won't be hidden"
             )
 
-        # Filter texture names according to renderer type if necessary (legacy for Kuafu)
         self.texture_names = camera_cfg.texture_names
+        if self.texture_names is None:
+            self.texture_names = DEFAULT_CAMERA_TEXTURE_NAMES
 
     def capture(self):
         self.camera.take_picture()
