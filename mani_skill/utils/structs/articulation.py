@@ -11,12 +11,9 @@ import sapien.physx as physx
 import torch
 import trimesh
 
-from mani_skill.utils import sapien_utils
+from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.geometry.trimesh_utils import get_component_meshes, merge_meshes
-from mani_skill.utils.structs.articulation_joint import ArticulationJoint
-from mani_skill.utils.structs.base import BaseStruct
-from mani_skill.utils.structs.link import Link
-from mani_skill.utils.structs.pose import Pose
+from mani_skill.utils.structs import ArticulationJoint, BaseStruct, Link, Pose
 from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:
@@ -206,7 +203,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     def set_state(self, state: Array):
         if physx.is_gpu_enabled():
-            state = sapien_utils.to_tensor(state)
+            state = common.to_tensor(state)
             self.set_root_pose(Pose.create(state[:, :7]))
             self.set_root_linear_velocity(state[:, 7:10])
             self.set_root_angular_velocity(state[:, 10:13])
@@ -214,7 +211,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             self.set_qpos(state[:, 13 : 13 + self.max_dof])
             self.set_qvel(state[:, 13 + self.max_dof :])
         else:
-            state = sapien_utils.to_numpy(state[0])
+            state = common.to_numpy(state[0])
             self.set_root_pose(sapien.Pose(state[0:3], state[3:7]))
             self.set_root_linear_velocity(state[7:10])
             self.set_root_angular_velocity(state[10:13])
@@ -294,9 +291,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
                 included_links=[self.link_map[k]._objs[0] for k in link_names],
             )
             net_force = (
-                sapien_utils.to_tensor(
-                    sapien_utils.compute_total_impulse(body_contacts)
-                )
+                common.to_tensor(sapien_utils.compute_total_impulse(body_contacts))
                 / self._scene.timestep
             )
             return net_force[None, :]
@@ -459,13 +454,13 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     @qf.setter
     def qf(self, arg1: torch.Tensor):
         if physx.is_gpu_enabled():
-            arg1 = sapien_utils.to_tensor(arg1)
+            arg1 = common.to_tensor(arg1)
             self.px.cuda_articulation_qf.torch()[
                 self._data_index[self._scene._reset_mask[self._scene_idxs]],
                 : self.max_dof,
             ] = arg1
         else:
-            arg1 = sapien_utils.to_numpy(arg1)
+            arg1 = common.to_numpy(arg1)
             if len(arg1.shape) == 2:
                 arg1 = arg1[0]
             self._objs[0].qf = arg1
@@ -498,13 +493,13 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     @qpos.setter
     def qpos(self, arg1: torch.Tensor):
         if physx.is_gpu_enabled():
-            arg1 = sapien_utils.to_tensor(arg1)
+            arg1 = common.to_tensor(arg1)
             self.px.cuda_articulation_qpos.torch()[
                 self._data_index[self._scene._reset_mask[self._scene_idxs]],
                 : self.max_dof,
             ] = arg1
         else:
-            arg1 = sapien_utils.to_numpy(arg1)
+            arg1 = common.to_numpy(arg1)
             if len(arg1.shape) == 2:
                 arg1 = arg1[0]
             self._objs[0].qpos = arg1
@@ -521,13 +516,13 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     @qvel.setter
     def qvel(self, arg1: torch.Tensor):
         if physx.is_gpu_enabled():
-            arg1 = sapien_utils.to_tensor(arg1)
+            arg1 = common.to_tensor(arg1)
             self.px.cuda_articulation_qvel.torch()[
                 self._data_index[self._scene._reset_mask[self._scene_idxs]],
                 : self.max_dof,
             ] = arg1
         else:
-            arg1 = sapien_utils.to_numpy(arg1)
+            arg1 = common.to_numpy(arg1)
             if len(arg1.shape) == 2:
                 arg1 = arg1[0]
             self._objs[0].qvel = arg1
@@ -539,13 +534,13 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     @root_angular_velocity.setter
     def root_angular_velocity(self, arg1: Array) -> None:
         if physx.is_gpu_enabled():
-            arg1 = sapien_utils.to_tensor(arg1)
+            arg1 = common.to_tensor(arg1)
             self.px.cuda_rigid_body_data.torch()[
                 self.root._body_data_index[self._scene._reset_mask[self._scene_idxs]],
                 10:13,
             ] = arg1
         else:
-            arg1 = sapien_utils.to_numpy(arg1)
+            arg1 = common.to_numpy(arg1)
             if len(arg1.shape) == 2:
                 arg1 = arg1[0]
             self._objs[0].set_root_angular_velocity(arg1)
@@ -557,13 +552,13 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     @root_linear_velocity.setter
     def root_linear_velocity(self, arg1: Array) -> None:
         if physx.is_gpu_enabled():
-            arg1 = sapien_utils.to_tensor(arg1)
+            arg1 = common.to_tensor(arg1)
             self.px.cuda_rigid_body_data.torch()[
                 self.root._body_data_index[self._scene._reset_mask[self._scene_idxs]],
                 7:10,
             ] = arg1
         else:
-            arg1 = sapien_utils.to_numpy(arg1)
+            arg1 = common.to_numpy(arg1)
             if len(arg1.shape) == 2:
                 arg1 = arg1[0]
             self._objs[0].set_root_linear_velocity(arg1)
@@ -603,7 +598,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         TODO (stao): can we use joint indices for the CPU sim as well? Some global joint indices?
         """
         if physx.is_gpu_enabled():
-            targets = sapien_utils.to_tensor(targets)
+            targets = common.to_tensor(targets)
             if joint_indices not in self._cached_joint_target_indices:
                 self._cached_joint_target_indices[joint_indices] = torch.meshgrid(
                     self._data_index, joint_indices, indexing="ij"
@@ -626,7 +621,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         TODO (stao): can we use joint indices for the CPU sim as well? Some global joint indices?
         """
         if physx.is_gpu_enabled():
-            targets = sapien_utils.to_tensor(targets)
+            targets = common.to_tensor(targets)
             if joint_indices not in self._cached_joint_target_indices:
                 self._cached_joint_target_indices[joint_indices] = torch.meshgrid(
                     self._data_index, joint_indices, indexing="ij"

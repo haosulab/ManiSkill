@@ -11,9 +11,8 @@ import sapien.physx as physx
 
 from mani_skill import get_commit_info
 from mani_skill.envs.sapien_env import BaseEnv
-from mani_skill.utils import common, sapien_utils
+from mani_skill.utils import common, gym_utils
 from mani_skill.utils.io_utils import dump_json
-from mani_skill.utils.structs.types import Array
 from mani_skill.utils.visualization.misc import (
     images_to_video,
     put_info_on_image,
@@ -234,7 +233,7 @@ class RecordEpisode(gym.Wrapper):
         self._trajectory_buffer: Step = None
 
         self.max_steps_per_video = max_steps_per_video
-        self.max_episode_steps = common.find_max_episode_steps_value(env)
+        self.max_episode_steps = gym_utils.find_max_episode_steps_value(env)
 
         self.save_on_reset = save_on_reset
         self.save_trajectory = save_trajectory
@@ -287,7 +286,7 @@ class RecordEpisode(gym.Wrapper):
 
     def capture_image(self):
         img = self.env.render()
-        img = sapien_utils.to_numpy(img)
+        img = common.to_numpy(img)
         if len(img.shape) > 3:
             img = tile_images(img, nrows=self.video_nrows)
         return img
@@ -308,7 +307,7 @@ class RecordEpisode(gym.Wrapper):
                     self.flush_trajectory(env_idxs_to_flush=np.arange(self.num_envs))
                 else:
                     self.flush_trajectory(
-                        env_idxs_to_flush=sapien_utils.to_numpy(options["env_idx"])
+                        env_idxs_to_flush=common.to_numpy(options["env_idx"])
                     )
 
         obs, info = super().reset(*args, seed=seed, options=options, **kwargs)
@@ -319,10 +318,10 @@ class RecordEpisode(gym.Wrapper):
 
         if self.save_trajectory:
             state_dict = self.base_env.get_state_dict()
-            action = sapien_utils.batch(self.action_space.sample())
+            action = common.batch(self.action_space.sample())
             first_step = Step(
-                state=sapien_utils.to_numpy(sapien_utils.batch(state_dict)),
-                observation=sapien_utils.to_numpy(sapien_utils.batch(obs)),
+                state=common.to_numpy(common.batch(state_dict)),
+                observation=common.to_numpy(common.batch(obs)),
                 # note first reward/action etc. are ignored when saving trajectories to disk
                 action=action,
                 reward=np.zeros(
@@ -342,11 +341,11 @@ class RecordEpisode(gym.Wrapper):
                 env_episode_ptr=np.zeros((self.num_envs,), dtype=int),
             )
             if self.num_envs == 1:
-                first_step.observation = sapien_utils.batch(first_step.observation)
-                first_step.action = sapien_utils.batch(first_step.action)
+                first_step.observation = common.batch(first_step.observation)
+                first_step.action = common.batch(first_step.action)
             env_idx = np.arange(self.num_envs)
             if "env_idx" in options:
-                env_idx = sapien_utils.to_numpy(options["env_idx"])
+                env_idx = common.to_numpy(options["env_idx"])
             if self._trajectory_buffer is None:
                 # Initialize trajectory buffer on the first episode based on given observation (which should be generated after all wrappers)
                 self._trajectory_buffer = first_step
@@ -379,7 +378,7 @@ class RecordEpisode(gym.Wrapper):
                 if self._trajectory_buffer.fail is not None:
                     recursive_replace(self._trajectory_buffer.fail, first_step.fail)
         if "env_idx" in options:
-            options["env_idx"] = sapien_utils.to_numpy(options["env_idx"])
+            options["env_idx"] = common.to_numpy(options["env_idx"])
         self.last_reset_kwargs = copy.deepcopy(dict(options=options, **kwargs))
         if seed is not None:
             self.last_reset_kwargs.update(seed=seed)
@@ -403,56 +402,56 @@ class RecordEpisode(gym.Wrapper):
             state_dict = self.base_env.get_state_dict()
             self._trajectory_buffer.state = common.append_dict_array(
                 self._trajectory_buffer.state,
-                sapien_utils.to_numpy(sapien_utils.batch(state_dict)),
+                common.to_numpy(common.batch(state_dict)),
             )
             self._trajectory_buffer.observation = common.append_dict_array(
                 self._trajectory_buffer.observation,
-                sapien_utils.to_numpy(sapien_utils.batch(obs)),
+                common.to_numpy(common.batch(obs)),
             )
 
             self._trajectory_buffer.action = common.append_dict_array(
                 self._trajectory_buffer.action,
-                sapien_utils.to_numpy(sapien_utils.batch(action)),
+                common.to_numpy(common.batch(action)),
             )
             self._trajectory_buffer.reward = common.append_dict_array(
                 self._trajectory_buffer.reward,
-                sapien_utils.to_numpy(sapien_utils.batch(rew)),
+                common.to_numpy(common.batch(rew)),
             )
             self._trajectory_buffer.terminated = common.append_dict_array(
                 self._trajectory_buffer.terminated,
-                sapien_utils.to_numpy(sapien_utils.batch(terminated)),
+                common.to_numpy(common.batch(terminated)),
             )
             self._trajectory_buffer.truncated = common.append_dict_array(
                 self._trajectory_buffer.truncated,
-                sapien_utils.to_numpy(sapien_utils.batch(truncated)),
+                common.to_numpy(common.batch(truncated)),
             )
             done = terminated | truncated
             self._trajectory_buffer.done = common.append_dict_array(
                 self._trajectory_buffer.done,
-                sapien_utils.to_numpy(sapien_utils.batch(done)),
+                common.to_numpy(common.batch(done)),
             )
             if "success" in info:
                 self._trajectory_buffer.success = common.append_dict_array(
                     self._trajectory_buffer.success,
-                    sapien_utils.to_numpy(sapien_utils.batch(info["success"])),
+                    common.to_numpy(common.batch(info["success"])),
                 )
             else:
                 self._trajectory_buffer.success = None
             if "fail" in info:
                 self._trajectory_buffer.fail = common.append_dict_array(
                     self._trajectory_buffer.fail,
-                    sapien_utils.to_numpy(sapien_utils.batch(info["fail"])),
+                    common.to_numpy(common.batch(info["fail"])),
                 )
             else:
                 self._trajectory_buffer.fail = None
-            self._last_info = sapien_utils.to_numpy(info)
+            self._last_info = common.to_numpy(info)
 
         if self.save_video:
             self._video_steps += 1
             image = self.capture_image()
 
             if self.info_on_video:
-                scalar_info = common.extract_scalars_from_info(info)
+                scalar_info = gym_utils.extract_scalars_from_info(info)
                 extra_texts = [
                     f"reward: {rew:.3f}",
                     "action: {}".format(",".join([f"{x:.2f}" for x in action])),

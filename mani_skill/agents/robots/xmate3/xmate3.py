@@ -10,8 +10,7 @@ from mani_skill.agents.base_agent import BaseAgent
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
 from mani_skill.sensors.camera import CameraConfig
-from mani_skill.utils import sapien_utils
-from mani_skill.utils.common import compute_angle_between, np_compute_angle_between
+from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.structs import Pose
 from mani_skill.utils.structs.actor import Actor
 
@@ -204,8 +203,8 @@ class Xmate3Robotiq(BaseAgent):
             # direction to open the gripper
             ldirection = self.finger1_link.pose.to_transformation_matrix()[..., :3, 1]
             rdirection = -self.finger2_link.pose.to_transformation_matrix()[..., :3, 1]
-            langle = compute_angle_between(ldirection, contacts[0])
-            rangle = compute_angle_between(rdirection, contacts[1])
+            langle = common.compute_angle_between(ldirection, contacts[0])
+            rangle = common.compute_angle_between(rdirection, contacts[1])
             lflag = torch.logical_and(
                 lforce >= min_force, torch.rad2deg(langle) <= max_angle
             )
@@ -254,8 +253,8 @@ class Xmate3Robotiq(BaseAgent):
 
                 # TODO Convert this to batched code
                 # angle between impulse and open direction
-                langle = np_compute_angle_between(ldirection[0], limpulse)
-                rangle = np_compute_angle_between(rdirection[0], rimpulse)
+                langle = common.np_compute_angle_between(ldirection[0], limpulse)
+                rangle = common.np_compute_angle_between(rdirection[0], rimpulse)
 
                 lflag = (
                     np.linalg.norm(limpulse) >= min_impulse

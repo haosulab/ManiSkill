@@ -1,20 +1,57 @@
-from collections import OrderedDict, defaultdict
-from typing import Dict, Sequence, Union
+"""
+Common utilities often reused for internal code and task building for users.
+"""
+
+from collections import defaultdict
+from typing import Dict, Sequence, Tuple, Union
 
 import gymnasium as gym
 import numpy as np
 import sapien.physx as physx
 import torch
-from gymnasium import spaces
 
-from mani_skill.utils import sapien_utils
-from mani_skill.utils.structs.types import Array, Device
+from mani_skill.utils.structs.types import Array, Device, get_backend_name
 
-from .logging_utils import logger
+# -------------------------------------------------------------------------- #
+# Utilities for working with tensors, numpy arrays, and batched data
+# -------------------------------------------------------------------------- #
+
+
+def _batch(array: Union[Array, Sequence]):
+    if isinstance(array, (dict)):
+        return {k: _batch(v) for k, v in array.items()}
+    if isinstance(array, str):
+        return array
+    if isinstance(array, torch.Tensor):
+        return array[None, :]
+    if isinstance(array, np.ndarray):
+        if array.shape == ():
+            return array.reshape(1, 1)
+        return array[None, :]
+    if isinstance(array, list):
+        if len(array) == 1:
+            return [array]
+    if (
+        isinstance(array, float)
+        or isinstance(array, int)
+        or isinstance(array, bool)
+        or isinstance(array, np.bool_)
+    ):
+        return np.array([[array]])
+    return array
+
+
+def batch(*args: Tuple[Union[Array, Sequence]]):
+    """Adds one dimension in front of everything. If given a dictionary, every leaf in the dictionary
+    has a new dimension. If given a tuple, returns the same tuple with each element batched"""
+    x = [_batch(x) for x in args]
+    if len(args) == 1:
+        return x[0]
+    return tuple(x)
 
 
 # -------------------------------------------------------------------------- #
-# Basic
+# Utilities for working with dictionaries
 # -------------------------------------------------------------------------- #
 def dict_merge(dct: dict, merge_dct: dict):
     """In place recursive merge of `merge_dct` into `dct`"""
@@ -27,6 +64,7 @@ def dict_merge(dct: dict, merge_dct: dict):
             dct[k] = merge_dct[k]
 
 
+# TODO (stao): Consolidate this function with the one above..
 def merge_dicts(ds: Sequence[Dict], asarray=False):
     """Merge multiple dicts with the same keys to a single one."""
     # NOTE(jigu): To be compatible with generator, we only iterate once.
@@ -67,7 +105,11 @@ def append_dict_array(
 
 def index_dict_array(x1, idx: Union[int, slice], inplace=True):
     """Indexes every array in x1 with slice and returns result."""
-    if isinstance(x1, np.ndarray) or isinstance(x1, list):
+    if (
+        isinstance(x1, np.ndarray)
+        or isinstance(x1, list)
+        or isinstance(x1, torch.Tensor)
+    ):
         return x1[idx]
     elif isinstance(x1, dict):
         if inplace:
@@ -81,118 +123,54 @@ def index_dict_array(x1, idx: Union[int, slice], inplace=True):
             return out
 
 
-def normalize_vector(x, eps=1e-6):
-    norm = torch.linalg.norm(x, axis=1)
-    norm[norm < eps] = 1
-    norm = 1 / norm
-    return torch.multiply(x, norm[:, None])
-
-
-def compute_angle_between(x1, x2):
-    """Compute angle (radian) between two vectors."""
-    x1, x2 = normalize_vector(x1), normalize_vector(x2)
-    dot_prod = torch.clip(torch.einsum("ij,ij->i", x1, x2), -1, 1)
-    return torch.arccos(dot_prod)
-
-
-# -------------------------------------------------------------------------- #
-# Numpy
-# -------------------------------------------------------------------------- #
-def np_normalize_vector(x, eps=1e-6):
-    x = np.asarray(x)
-    assert x.ndim == 1, x.ndim
-    norm = np.linalg.norm(x)
-    return np.zeros_like(x) if norm < eps else (x / norm)
-
-
-def np_compute_angle_between(x1, x2):
-    """Compute angle (radian) between two vectors."""
-    x1, x2 = np_normalize_vector(x1), np_normalize_vector(x2)
-    dot_prod = np.clip(np.dot(x1, x2), -1, 1)
-    return np.arccos(dot_prod).item()
-
-
-def get_dtype_bounds(dtype: np.dtype):
-    if np.issubdtype(dtype, np.floating):
-        info = np.finfo(dtype)
-        return info.min, info.max
-    elif np.issubdtype(dtype, np.integer):
-        info = np.iinfo(dtype)
-        return info.min, info.max
-    elif np.issubdtype(dtype, np.bool_):
-        return 0, 1
-    else:
-        raise TypeError(dtype)
-
-
-# ---------------------------------------------------------------------------- #
-# OpenAI gym
-# ---------------------------------------------------------------------------- #
-def convert_observation_to_space(observation, prefix="", unbatched=False):
-    """Convert observation to OpenAI gym observation space (recursively).
-    Modified from `gym.envs.mujoco_env`
+# TODO (stao): this code can be simplified
+def to_tensor(array: Union[torch.Tensor, np.array, Sequence], device: Device = None):
     """
-    if isinstance(observation, (dict)):
-        # CATUION: Explicitly create a list of key-value tuples
-        # Otherwise, spaces.Dict will sort keys if a dict is provided
-        space = spaces.Dict(
-            [
-                (
-                    k,
-                    convert_observation_to_space(
-                        v, prefix + "/" + k, unbatched=unbatched
-                    ),
-                )
-                for k, v in observation.items()
-            ]
-        )
-    elif isinstance(observation, np.ndarray):
-        if unbatched:
-            shape = observation.shape[1:]
+    Maps any given sequence to a torch tensor on the CPU/GPU. If physx gpu is not enabled then we use CPU, otherwise GPU, unless specified
+    by the device argument
+
+    Args:
+        array: The data to map to a tensor
+        device: The device to put the tensor on. By default this is None and to_tensor will put the device on the GPU if physx is enabled
+            and CPU otherwise
+
+    """
+    if isinstance(array, (dict)):
+        return {k: to_tensor(v) for k, v in array.items()}
+    if get_backend_name() == "torch":
+        if isinstance(array, np.ndarray):
+            if array.dtype == np.uint16:
+                array = array.astype(np.int32)
+            ret = torch.from_numpy(array)
+            if ret.dtype == torch.float64:
+                ret = ret.float()
+        elif isinstance(array, torch.Tensor):
+            ret = array
         else:
-            shape = observation.shape
-        dtype = observation.dtype
-        low, high = get_dtype_bounds(dtype)
-        if np.issubdtype(dtype, np.floating):
-            low, high = -np.inf, np.inf
-        space = spaces.Box(low, high, shape=shape, dtype=dtype)
-    elif isinstance(observation, (float, np.float32, np.float64)):
-        logger.debug(f"The observation ({prefix}) is a (float) scalar")
-        space = spaces.Box(-np.inf, np.inf, shape=[1], dtype=np.float32)
-    elif isinstance(observation, (int, np.int32, np.int64)):
-        logger.debug(f"The observation ({prefix}) is a (integer) scalar")
-        space = spaces.Box(-np.inf, np.inf, shape=[1], dtype=int)
-    elif isinstance(observation, (bool, np.bool_)):
-        logger.debug(f"The observation ({prefix}) is a (bool) scalar")
-        space = spaces.Box(0, 1, shape=[1], dtype=np.bool_)
-    else:
-        raise NotImplementedError(type(observation), observation)
-
-    return space
-
-
-def normalize_action_space(action_space: spaces.Box):
-    assert isinstance(action_space, spaces.Box), type(action_space)
-    return spaces.Box(-1, 1, shape=action_space.shape, dtype=action_space.dtype)
-
-
-def clip_and_scale_action(action, low, high):
-    """Clip action to [-1, 1] and scale according to a range [low, high]."""
-    action = torch.clip(action, -1, 1)
-    return 0.5 * (high + low) + 0.5 * (high - low) * action
-
-
-def inv_clip_and_scale_action(action, low, high):
-    """Inverse of `clip_and_scale_action`."""
-    low, high = np.asarray(low), np.asarray(high)
-    action = (action - 0.5 * (high + low)) / (0.5 * (high - low))
-    return np.clip(action, -1.0, 1.0)
-
-
-def inv_scale_action(action, low, high):
-    """Inverse of `clip_and_scale_action` without clipping."""
-    low, high = np.asarray(low), np.asarray(high)
-    return (action - 0.5 * (high + low)) / (0.5 * (high - low))
+            ret = torch.Tensor(array)
+        if device is None:
+            return ret.cuda()
+        else:
+            return ret.to(device)
+    elif get_backend_name() == "numpy":
+        if isinstance(array, np.ndarray):
+            if array.dtype == np.uint16:
+                array = array.astype(np.int32)
+            ret = torch.from_numpy(array)
+            if ret.dtype == torch.float64:
+                ret = ret.float()
+        elif isinstance(array, list) and isinstance(array[0], np.ndarray):
+            ret = torch.from_numpy(np.array(array))
+            if ret.dtype == torch.float64:
+                ret = ret.float()
+        elif np.iterable(array):
+            ret = torch.Tensor(array)
+        else:
+            ret = torch.Tensor(array)
+        if device is None:
+            return ret
+        else:
+            return ret.to(device)
 
 
 # TODO (stao): Clean up this code
@@ -222,20 +200,20 @@ def flatten_state_dict(
             if state.size == 0:
                 state = None
             if use_torch:
-                state = sapien_utils.to_tensor(state)
+                state = to_tensor(state)
         elif isinstance(value, (tuple, list)):
             state = None if len(value) == 0 else value
             if use_torch:
-                state = sapien_utils.to_tensor(state)
+                state = to_tensor(state)
         elif isinstance(value, (bool, np.bool_, int, np.int32, np.int64)):
             # x = np.array(1) > 0 is np.bool_ instead of ndarray
             state = int(value)
             if use_torch:
-                state = sapien_utils.to_tensor(state)
+                state = to_tensor(state)
         elif isinstance(value, (float, np.float32, np.float64)):
             state = np.float32(value)
             if use_torch:
-                state = sapien_utils.to_tensor(state)
+                state = to_tensor(state)
         elif isinstance(value, np.ndarray):
             if value.ndim > 2:
                 raise AssertionError(
@@ -243,7 +221,7 @@ def flatten_state_dict(
                 )
             state = value if value.size > 0 else None
             if use_torch:
-                state = sapien_utils.to_tensor(state)
+                state = to_tensor(state)
 
         else:
             is_torch_tensor = False
@@ -280,58 +258,112 @@ def flatten_dict_keys(d: dict, prefix=""):
     return out
 
 
-def extract_scalars_from_info(info: dict, blacklist=()) -> Dict[str, float]:
-    """Recursively extract scalar metrics from info dict.
+def normalize_vector(x: torch.Tensor, eps=1e-6):
+    """normalizes a given torch tensor x and if the norm is less than eps, set the norm to 0"""
+    norm = torch.linalg.norm(x, axis=1)
+    norm[norm < eps] = 1
+    norm = 1 / norm
+    return torch.multiply(x, norm[:, None])
+
+
+def np_normalize_vector(x, eps=1e-6):
+    """normalizes a given numpy array x and if the norm is less than eps, set the norm to 0"""
+    x = np.asarray(x)
+    assert x.ndim == 1, x.ndim
+    norm = np.linalg.norm(x)
+    return np.zeros_like(x) if norm < eps else (x / norm)
+
+
+def np_compute_angle_between(x1: np.ndarray, x2: np.ndarray):
+    """Compute angle (radian) between two numpy arrays"""
+    x1, x2 = np_normalize_vector(x1), np_normalize_vector(x2)
+    dot_prod = np.clip(np.dot(x1, x2), -1, 1)
+    return np.arccos(dot_prod).item()
+
+
+def compute_angle_between(x1: torch.Tensor, x2: torch.Tensor):
+    """Compute angle (radian) between two torch tensors"""
+    x1, x2 = normalize_vector(x1), normalize_vector(x2)
+    dot_prod = torch.clip(torch.einsum("ij,ij->i", x1, x2), -1, 1)
+    return torch.arccos(dot_prod)
+
+
+# TODO (stao): verfy torch.jit.script provides actual speedups in inference times
+def quat_diff_rad(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
+    """
+    Get the difference in radians between two quaternions.
 
     Args:
-        info (dict): info dict
-        blacklist (tuple, optional): keys to exclude.
-
+        a: first quaternion, shape (N, 4)
+        b: second quaternion, shape (N, 4)
     Returns:
-        Dict[str, float]: scalar metrics
+        Difference in radians, shape (N,)
     """
-    ret = {}
-    for k, v in info.items():
-        if k in blacklist:
-            continue
+    # Normalize the quaternions
+    a = a / torch.norm(a, dim=1, keepdim=True)
+    b = b / torch.norm(b, dim=1, keepdim=True)
 
-        # Ignore placeholder
-        if v is None:
-            continue
+    # Compute the dot product between the quaternions
+    dot_product = torch.sum(a * b, dim=1)
 
-        # Recursively extract scalars
-        elif isinstance(v, dict):
-            ret2 = extract_scalars_from_info(v, blacklist=blacklist)
-            ret2 = {f"{k}.{k2}": v2 for k2, v2 in ret2.items()}
-            ret2 = {k2: v2 for k2, v2 in ret2.items() if k2 not in blacklist}
+    # Clamp the dot product to the range [-1, 1] to avoid numerical instability
+    dot_product = torch.clamp(dot_product, -1.0, 1.0)
 
-        # Things that are scalar-like will have an np.size of 1.
-        # Strings also have an np.size of 1, so explicitly ban those
-        elif np.size(v) == 1 and not isinstance(v, str):
-            ret[k] = float(v)
-    return ret
+    # Compute the angle difference in radians
+    angle_diff = 2 * torch.acos(torch.abs(dot_product))
+
+    return angle_diff
 
 
-def flatten_dict_space_keys(space: spaces.Dict, prefix="") -> spaces.Dict:
-    """Flatten a dict of spaces by expanding its keys recursively."""
-    out = OrderedDict()
-    for k, v in space.spaces.items():
-        if isinstance(v, spaces.Dict):
-            out.update(flatten_dict_space_keys(v, prefix + k + "/").spaces)
-        else:
-            out[prefix + k] = v
-    return spaces.Dict(out)
+def _unbatch(array: Union[Array, Sequence]):
+    if isinstance(array, (dict)):
+        return {k: _unbatch(v) for k, v in array.items()}
+    if isinstance(array, str):
+        return array
+    if isinstance(array, torch.Tensor):
+        return array.squeeze(0)
+    if isinstance(array, np.ndarray):
+        if array.shape == (1,):
+            return array.item()
+        if np.iterable(array) and array.shape[0] == 1:
+            return array.squeeze(0)
+    if isinstance(array, list):
+        if len(array) == 1:
+            return array[0]
+    return array
 
 
-def find_max_episode_steps_value(env):
-    cur = env
-    while cur is not None:
-        if hasattr(cur, "max_episode_steps"):
-            return cur.max_episode_steps
-        if cur.spec is not None and cur.spec.max_episode_steps is not None:
-            return cur.spec.max_episode_steps
-        if hasattr(cur, "env"):
-            cur = env.env
-        else:
-            cur = None
-    return None
+def unbatch(*args: Tuple[Union[Array, Sequence]]):
+    x = [_unbatch(x) for x in args]
+    if len(args) == 1:
+        return x[0]
+    return tuple(x)
+
+
+def _to_numpy(array: Union[Array, Sequence]) -> np.ndarray:
+    if isinstance(array, (dict)):
+        return {k: _to_numpy(v) for k, v in array.items()}
+    if isinstance(array, torch.Tensor):
+        return array.cpu().numpy()
+    if (
+        isinstance(array, np.ndarray)
+        or isinstance(array, bool)
+        or isinstance(array, str)
+        or isinstance(array, float)
+        or isinstance(array, int)
+    ):
+        return array
+    else:
+        return np.array(array)
+
+
+def to_numpy(array: Union[Array, Sequence], dtype=None) -> np.ndarray:
+    array = _to_numpy(array)
+    if dtype is not None:
+        return array.astype(dtype)
+    return array
+
+
+# -------------------------------------------------------------------------- #
+# Utilities for working with quaternions
+# -------------------------------------------------------------------------- #

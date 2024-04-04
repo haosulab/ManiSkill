@@ -1,6 +1,9 @@
+"""
+Utilities that work with the simulation / SAPIEN
+"""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple, TypeVar, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, TypeVar
 
 import numpy as np
 import sapien
@@ -15,150 +18,7 @@ if TYPE_CHECKING:
 
 import torch
 
-from mani_skill.utils.structs.types import Array, Device, get_backend_name
-
-
-# TODO (stao): this code can be simplified
-def to_tensor(array: Union[torch.Tensor, np.array, Sequence], device: Device = None):
-    """
-    Maps any given sequence to a torch tensor on the CPU/GPU. If physx gpu is not enabled then we use CPU, otherwise GPU, unless specified
-    by the device argument
-
-    Args:
-        array: The data to map to a tensor
-        device: The device to put the tensor on. By default this is None and to_tensor will put the device on the GPU if physx is enabled
-            and CPU otherwise
-
-    """
-    if isinstance(array, (dict)):
-        return {k: to_tensor(v) for k, v in array.items()}
-    if get_backend_name() == "torch":
-        if isinstance(array, np.ndarray):
-            if array.dtype == np.uint16:
-                array = array.astype(np.int32)
-            ret = torch.from_numpy(array)
-            if ret.dtype == torch.float64:
-                ret = ret.float()
-        elif isinstance(array, torch.Tensor):
-            ret = array
-        else:
-            ret = torch.Tensor(array)
-        if device is None:
-            return ret.cuda()
-        else:
-            return ret.to(device)
-    elif get_backend_name() == "numpy":
-        if isinstance(array, np.ndarray):
-            if array.dtype == np.uint16:
-                array = array.astype(np.int32)
-            ret = torch.from_numpy(array)
-            if ret.dtype == torch.float64:
-                ret = ret.float()
-        elif isinstance(array, list) and isinstance(array[0], np.ndarray):
-            ret = torch.from_numpy(np.array(array))
-            if ret.dtype == torch.float64:
-                ret = ret.float()
-        elif np.iterable(array):
-            ret = torch.Tensor(array)
-        else:
-            ret = torch.Tensor(array)
-        if device is None:
-            return ret
-        else:
-            return ret.to(device)
-
-
-def _to_numpy(array: Union[Array, Sequence]) -> np.ndarray:
-    if isinstance(array, (dict)):
-        return {k: _to_numpy(v) for k, v in array.items()}
-    if isinstance(array, torch.Tensor):
-        return array.cpu().numpy()
-    if (
-        isinstance(array, np.ndarray)
-        or isinstance(array, bool)
-        or isinstance(array, str)
-        or isinstance(array, float)
-        or isinstance(array, int)
-    ):
-        return array
-    else:
-        return np.array(array)
-
-
-def to_numpy(array: Union[Array, Sequence], dtype=None) -> np.ndarray:
-    array = _to_numpy(array)
-    if dtype is not None:
-        return array.astype(dtype)
-    return array
-
-
-def _unbatch(array: Union[Array, Sequence]):
-    if isinstance(array, (dict)):
-        return {k: _unbatch(v) for k, v in array.items()}
-    if isinstance(array, str):
-        return array
-    if isinstance(array, torch.Tensor):
-        return array.squeeze(0)
-    if isinstance(array, np.ndarray):
-        if array.shape == (1,):
-            return array.item()
-        if np.iterable(array) and array.shape[0] == 1:
-            return array.squeeze(0)
-    if isinstance(array, list):
-        if len(array) == 1:
-            return array[0]
-    return array
-
-
-def unbatch(*args: Tuple[Union[Array, Sequence]]):
-    x = [_unbatch(x) for x in args]
-    if len(args) == 1:
-        return x[0]
-    return tuple(x)
-
-
-def _batch(array: Union[Array, Sequence]):
-    if isinstance(array, (dict)):
-        return {k: _batch(v) for k, v in array.items()}
-    if isinstance(array, str):
-        return array
-    if isinstance(array, torch.Tensor):
-        return array[None, :]
-    if isinstance(array, np.ndarray):
-        if array.shape == ():
-            return array.reshape(1, 1)
-        return array[None, :]
-    if isinstance(array, list):
-        if len(array) == 1:
-            return [array]
-    if (
-        isinstance(array, float)
-        or isinstance(array, int)
-        or isinstance(array, bool)
-        or isinstance(array, np.bool_)
-    ):
-        return np.array([[array]])
-    return array
-
-
-def batch(*args: Tuple[Union[Array, Sequence]]):
-    """Adds one dimension in front of everything. If given a dictionary, every leaf in the dictionary
-    has a new dimension. If given a tuple, returns the same tuple with each element batched"""
-    x = [_batch(x) for x in args]
-    if len(args) == 1:
-        return x[0]
-    return tuple(x)
-
-
-def normalize_vector(x, eps=1e-6):
-    x = np.asarray(x)
-    assert x.ndim == 1, x.ndim
-    norm = np.linalg.norm(x)
-    if norm < eps:
-        return np.zeros_like(x)
-    else:
-        return x / norm
-
+from mani_skill.utils.structs.types import Array, Device
 
 T = TypeVar("T")
 
@@ -345,6 +205,7 @@ def get_articulation_padded_state(articulation: physx.PhysxArticulation, max_dof
     return padded_state
 
 
+# TODO (stao): Synchronize the contacts APIs as well as getting forces/impulses
 # -------------------------------------------------------------------------- #
 # Contact
 #
@@ -519,6 +380,16 @@ def look_at(eye, target, up=(0, 0, 1)) -> sapien.Pose:
     Returns:
         sapien.Pose: camera pose
     """
+
+    def normalize_vector(x, eps=1e-6):
+        x = np.asarray(x)
+        assert x.ndim == 1, x.ndim
+        norm = np.linalg.norm(x)
+        if norm < eps:
+            return np.zeros_like(x)
+        else:
+            return x / norm
+
     forward = normalize_vector(np.array(target) - np.array(eye))
     up = normalize_vector(up)
     left = np.cross(up, forward)
