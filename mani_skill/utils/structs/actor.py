@@ -252,8 +252,6 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
                     self._body_data_index[self._scene._reset_mask[self._scene_idxs]], :7
                 ] = arg1
         else:
-            # TODO (stao): some tasks use views over multiple objects but need to work on GPU sim so self._objs may not be across different scenes
-            # and this code won't work.
             if isinstance(arg1, sapien.Pose):
                 for obj in self._objs:
                     obj.pose = arg1
