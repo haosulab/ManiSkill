@@ -120,6 +120,10 @@ class Pose:
     def shape(self):
         return self.raw_pose.shape
 
+    @property
+    def device(self):
+        return self.raw_pose.device
+
     # -------------------------------------------------------------------------- #
     # Functions from sapien.Pose
     # -------------------------------------------------------------------------- #
