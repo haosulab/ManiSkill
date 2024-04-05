@@ -147,8 +147,15 @@ class BaseAgent:
         if control_mode not in self.controllers:
             config = self._controller_configs[self._control_mode]
             if isinstance(config, dict):
+                balance_passive_force = True
+                if "balance_passive_force" in config:
+                    balance_passive_force = config.pop("balance_passive_force")
                 self.controllers[control_mode] = CombinedController(
-                    config, self.robot, self._control_freq, scene=self.scene
+                    config,
+                    self.robot,
+                    self._control_freq,
+                    scene=self.scene,
+                    balance_passive_force=balance_passive_force,
                 )
             else:
                 self.controllers[control_mode] = config.controller_cls(
