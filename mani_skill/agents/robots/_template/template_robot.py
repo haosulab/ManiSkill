@@ -41,7 +41,7 @@ class TemplateRobot(BaseAgent):
         raise NotImplementedError()
 
     @property
-    def sensor_configs(self):
+    def _sensor_configs(self):
         return [
             CameraConfig(
                 uid="your_custom_camera_on_this_robot",
