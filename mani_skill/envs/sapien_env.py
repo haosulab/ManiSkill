@@ -927,14 +927,6 @@ class BaseEnv(gym.Env):
         self.agent = None
         self._sensors = OrderedDict()
         self._human_render_cameras = OrderedDict()
-
-        # if self._scene is not None:
-        #     for _ in range(len(self._scene.sub_scenes)):
-        #         del self._scene.sub_scenes[0]
-        #     ks = list(self._scene.actors.keys())
-        #     for k in ks:
-        #         for _ in range (len(self._scene.actors[k]._objs)):
-        #             del self._scene.actors[k]._objs[0]
         self._scene = None
         self._hidden_objects = []
 

@@ -40,9 +40,6 @@ class RenderCamera:
     _cached_intrinsic_matrix: torch.Tensor = None
     _cached_local_pose: Pose = None
 
-    def __hash__(self):
-        return id(self._render_cameras)
-
     @classmethod
     def create(
         cls,
