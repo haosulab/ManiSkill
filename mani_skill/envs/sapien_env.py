@@ -427,7 +427,7 @@ class BaseEnv(gym.Env):
 
     def get_sensor_obs(self) -> Dict[str, Dict[str, torch.Tensor]]:
         """Get raw sensor data for use as observations."""
-        sensor_data = OrderedDict()
+        sensor_data = dict()
         for name, sensor in self._sensors.items():
             sensor_data[name] = sensor.get_obs()
         return sensor_data
@@ -928,13 +928,13 @@ class BaseEnv(gym.Env):
         self._sensors = OrderedDict()
         self._human_render_cameras = OrderedDict()
 
-        if self._scene is not None:
-            for _ in range(len(self._scene.sub_scenes)):
-                del self._scene.sub_scenes[0]
-            ks = list(self._scene.actors.keys())
-            for k in ks:
-                for _ in range (len(self._scene.actors[k]._objs)):
-                    del self._scene.actors[k]._objs[0]
+        # if self._scene is not None:
+        #     for _ in range(len(self._scene.sub_scenes)):
+        #         del self._scene.sub_scenes[0]
+        #     ks = list(self._scene.actors.keys())
+        #     for k in ks:
+        #         for _ in range (len(self._scene.actors[k]._objs)):
+        #             del self._scene.actors[k]._objs[0]
         self._scene = None
         self._hidden_objects = []
 
