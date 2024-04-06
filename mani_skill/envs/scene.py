@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from typing import Dict, List, Tuple, Union
 
 import sapien
@@ -44,18 +43,18 @@ class ManiSkillScene:
         self.device = device
 
         self.render_system_group: sapien.render.RenderSystemGroup = None
-        self.camera_groups: Dict[str, sapien.render.RenderCameraGroup] = OrderedDict()
+        self.camera_groups: Dict[str, sapien.render.RenderCameraGroup] = dict()
 
-        self.actors: Dict[str, Actor] = OrderedDict()
-        self.articulations: Dict[str, Articulation] = OrderedDict()
+        self.actors: Dict[str, Actor] = dict()
+        self.articulations: Dict[str, Articulation] = dict()
 
-        self.actor_views: Dict[str, Actor] = OrderedDict()
+        self.actor_views: Dict[str, Actor] = dict()
         """views of actors in any sub-scenes created by using Actor.merge and queryable as if it were a single Actor"""
-        self.articulation_views: Dict[str, Articulation] = OrderedDict()
+        self.articulation_views: Dict[str, Articulation] = dict()
         """views of articulations in any sub-scenes created by using Articulation.merge and queryable as if it were a single Articulation"""
 
-        self.sensors: Dict[str, BaseSensor] = OrderedDict()
-        self.human_render_cameras: Dict[str, Camera] = OrderedDict()
+        self.sensors: Dict[str, BaseSensor] = dict()
+        self.human_render_cameras: Dict[str, Camera] = dict()
 
         self._reset_mask = torch.ones(len(sub_scenes), dtype=bool, device=self.device)
         """Used internally by various objects like Actor, Link, and Controllers to auto mask out sub-scenes so they do not get modified during

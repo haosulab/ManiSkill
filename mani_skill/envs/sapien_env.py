@@ -427,7 +427,7 @@ class BaseEnv(gym.Env):
 
     def get_sensor_obs(self) -> Dict[str, Dict[str, torch.Tensor]]:
         """Get raw sensor data for use as observations."""
-        sensor_data = OrderedDict()
+        sensor_data = dict()
         for name, sensor in self._sensors.items():
             sensor_data[name] = sensor.get_obs()
         return sensor_data
@@ -683,8 +683,7 @@ class BaseEnv(gym.Env):
         else:
             self._elapsed_steps = 0
 
-        if not reconfigure:
-            self._clear_sim_state()
+        self._clear_sim_state()
         if self.reconfiguration_freq != 0:
             self._reconfig_counter -= 1
         # Set the episode rng again after reconfiguration to guarantee seed reproducibility

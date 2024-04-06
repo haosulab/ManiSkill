@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from functools import cache
 from typing import TYPE_CHECKING, Any, List, Union
 
 from mani_skill.utils.geometry.rotation_conversions import quaternion_to_matrix
@@ -37,6 +36,9 @@ class RenderCamera:
     # we cache model and extrinsic matrices since the code here supports computing these when the camera is mounted and these are always changing
     _cached_model_matrix: torch.Tensor = None
     _cached_extrinsic_matrix: torch.Tensor = None
+    # NOTE (stao): default @cache from functools seems to cause CPU memory leaks in dataclasses, so we cache ourselves here
+    _cached_intrinsic_matrix: torch.Tensor = None
+    _cached_local_pose: Pose = None
 
     @classmethod
     def create(
@@ -95,27 +97,29 @@ class RenderCamera:
     def get_height(self) -> int:
         return self._render_cameras[0].get_height()
 
-    @cache
     def get_intrinsic_matrix(self):
-        return common.to_tensor(
-            np.array([cam.get_intrinsic_matrix() for cam in self._render_cameras])
-        )
+        if self._cached_intrinsic_matrix is None:
+            self._cached_intrinsic_matrix = common.to_tensor(
+                np.array([cam.get_intrinsic_matrix() for cam in self._render_cameras])
+            )
+        return self._cached_intrinsic_matrix
 
-    @cache
     def get_local_pose(self) -> Pose:
-        if physx.is_gpu_enabled():
-            ps = np.array(
-                [
-                    np.concatenate([cam.get_local_pose().p, cam.get_local_pose().q])
-                    for cam in self._render_cameras
-                ]
-            )
-            return Pose.create(common.to_tensor(ps))
-        else:
-            return Pose.create_from_pq(
-                self._render_cameras[0].get_local_pose().p,
-                self._render_cameras[0].get_local_pose().q,
-            )
+        if self._cached_local_pose is None:
+            if physx.is_gpu_enabled():
+                ps = np.array(
+                    [
+                        np.concatenate([cam.get_local_pose().p, cam.get_local_pose().q])
+                        for cam in self._render_cameras
+                    ]
+                )
+                self._cached_local_pose = Pose.create(common.to_tensor(ps))
+            else:
+                self._cached_local_pose = Pose.create_from_pq(
+                    self._render_cameras[0].get_local_pose().p,
+                    self._render_cameras[0].get_local_pose().q,
+                )
+        return self._cached_local_pose
 
     def get_model_matrix(self):
 

@@ -67,6 +67,9 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     def __str__(self):
         return f"<{self.name}: struct of type {self.__class__}; managing {self._num_objs} {self._objs[0].__class__} objects>"
 
+    def __repr__(self):
+        return self.__str__()
+
     @classmethod
     def create_from_physx_articulations(
         cls,
