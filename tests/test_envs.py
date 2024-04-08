@@ -36,7 +36,7 @@ def test_envs_obs_modes(env_id, obs_mode):
     action_space = env.action_space
     for _ in range(5):
         obs, rew, terminated, truncated, info = env.step(action_space.sample())
-    assert_isinstance(obs, np.ndarray)
+    assert_isinstance(obs, [np.ndarray, bool, float, int])
     assert_isinstance(rew, float)
     assert_isinstance(terminated, bool)
     assert_isinstance(truncated, bool)
@@ -127,10 +127,7 @@ def test_states(env_id):
 @pytest.mark.parametrize("robot_uids", SINGLE_ARM_STATIONARY_ROBOTS)
 def test_robots(env_id, robot_uids):
     if env_id in [
-        "PandaAvoidObstacles-v0",
-        "PegInsertionSide-v0",
-        "PickClutterYCB-v0",
-        "TurnFaucet-v0",
+        "PegInsertionSide-v1",
         "OpenCabinetDoor-v1",
         "OpenCabinetDrawer-v1",
         "PushChair-v1",

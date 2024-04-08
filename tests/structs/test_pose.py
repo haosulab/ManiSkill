@@ -116,6 +116,5 @@ def test_pose_transformation_matrix():
     pose = pose.to_transformation_matrix()
     sapien_pose1 = sapien_pose1.to_transformation_matrix()
     sapien_pose2 = sapien_pose2.to_transformation_matrix()
-    print(pose.shape)
     for i, sp in enumerate([sapien_pose1, sapien_pose2]):
         assert np.isclose(pose[i], sp).all()
