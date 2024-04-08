@@ -8,6 +8,7 @@ from sapien.render import RenderCameraComponent
 
 from mani_skill.sensors.base_sensor import BaseSensor
 from mani_skill.sensors.camera import Camera
+from mani_skill.utils import common
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.articulation import Articulation
 from mani_skill.utils.structs.drive import Drive
@@ -117,67 +118,39 @@ class ManiSkillScene:
     def add_camera(
         self,
         name,
-        pose: Pose,
-        width: int,
-        height: int,
-        fovy: float,
-        intrinsic: Array,
-        near: float,
-        far: float,
-    ) -> RenderCamera:
-        cameras = []
-        pose = Pose.create(pose)
-        for i, scene in enumerate(self.sub_scenes):
-            camera_mount = sapien.Entity()
-            camera = RenderCameraComponent(width, height)
-            if isinstance(fovy, float) or isinstance(fovy, int):
-                camera.set_fovy(fovy, compute_x=True)
-            else:
-                camera.set_fovy(fovy[i], compute_x=True)
-            if intrinsic is not None:
-                camera.set_focal_lengths(intrinsic[i, 0, 0], intrinsic[i, 1, 1])
-                camera.set_principal_point(intrinsic[i, 0, 2], intrinsic[i, 1, 2])
-            if isinstance(near, float) or isinstance(near, int):
-                camera.near = near
-            else:
-                camera.near = near[i]
-            if isinstance(far, float) or isinstance(far, int):
-                camera.far = far
-            else:
-                camera.far = far[i]
-            camera_mount.add_component(camera)
-            if len(pose) == 1:
-                camera.local_pose = pose.sp
-            else:
-                camera.local_pose = pose[i].sp
-
-            scene.add_entity(camera_mount)
-            camera_mount.name = f"scene-{i}_{name}"
-            camera.name = f"scene-{i}_{name}"
-            cameras.append(camera)
-        return RenderCamera.create(cameras, self)
-
-    def add_mounted_camera(
-        self,
-        name,
-        mount: Union[Actor, Link],
-        pose: Pose,
+        pose,
         width,
         height,
-        fovy: float,
-        intrinsic: Array,
         near,
         far,
+        fovy: float = None,
+        intrinsic: Array = None,
+        mount: Union[Actor, Link] = None,
     ) -> RenderCamera:
+        """internal helper function to add (mounted) cameras"""
         cameras = []
         pose = Pose.create(pose)
+        # TODO (stao): support scene idxs property for cameras in the future
+        # move intrinsic to np and batch intrinsic if it is not batched
+        if intrinsic is not None:
+            intrinsic = common.to_numpy(intrinsic)
+            if len(intrinsic.shape) == 2:
+                intrinsic = intrinsic[None, :]
+                if len(self.sub_scenes) > 1:
+                    # repeat the intrinsic along batch dim
+                    intrinsic = intrinsic.repeat(len(self.sub_scenes), 0)
+            assert len(intrinsic) == len(
+                self.sub_scenes
+            ), "intrinsic matrix batch dim not equal to the number of sub-scenes"
         for i, scene in enumerate(self.sub_scenes):
+            # Create camera component
             camera = RenderCameraComponent(width, height)
-            if isinstance(fovy, float) or isinstance(fovy, int):
-                camera.set_fovy(fovy, compute_x=True)
-            else:
-                camera.set_fovy(fovy[i], compute_x=True)
-            if intrinsic is not None:
+            if fovy is not None:
+                if isinstance(fovy, float) or isinstance(fovy, int):
+                    camera.set_fovy(fovy, compute_x=True)
+                else:
+                    camera.set_fovy(fovy[i], compute_x=True)
+            elif intrinsic is not None:
                 camera.set_focal_lengths(intrinsic[i, 0, 0], intrinsic[i, 1, 1])
                 camera.set_principal_point(intrinsic[i, 0, 2], intrinsic[i, 1, 2])
             if isinstance(near, float) or isinstance(near, int):
@@ -188,24 +161,31 @@ class ManiSkillScene:
                 camera.far = far
             else:
                 camera.far = far[i]
-            if physx.is_gpu_enabled():
-                if isinstance(mount, Actor):
-                    camera.set_gpu_pose_batch_index(
-                        mount._objs[i]
-                        .find_component_by_type(physx.PhysxRigidBodyComponent)
-                        .gpu_pose_index
-                    )
-                elif isinstance(mount, Link):
-                    camera.set_gpu_pose_batch_index(mount._objs[i].gpu_pose_index)
-                else:
-                    raise ValueError(
-                        f"Tried to mount camera on object of type {mount.__class__}"
-                    )
 
-            if isinstance(mount, Link):
-                mount._objs[i].entity.add_component(camera)
+            # mount camera to actor/link
+            if mount is not None:
+                if physx.is_gpu_enabled():
+                    if isinstance(mount, Actor):
+                        camera.set_gpu_pose_batch_index(
+                            mount._objs[i]
+                            .find_component_by_type(physx.PhysxRigidBodyComponent)
+                            .gpu_pose_index
+                        )
+                    elif isinstance(mount, Link):
+                        camera.set_gpu_pose_batch_index(mount._objs[i].gpu_pose_index)
+                    else:
+                        raise ValueError(
+                            f"Tried to mount camera on object of type {mount.__class__}"
+                        )
+                if isinstance(mount, Link):
+                    mount._objs[i].entity.add_component(camera)
+                else:
+                    mount._objs[i].add_component(camera)
             else:
-                mount._objs[i].add_component(camera)
+                camera_mount = sapien.Entity()
+                camera_mount.add_component(camera)
+                scene.add_entity(camera_mount)
+                camera_mount.name = f"scene-{i}_{name}"
             if len(pose) == 1:
                 camera.local_pose = pose.sp
             else:

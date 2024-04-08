@@ -187,10 +187,7 @@ def test_raw_sim_states():
 @pytest.mark.parametrize("robot_uids", SINGLE_ARM_STATIONARY_ROBOTS)
 def test_robots(env_id, robot_uids):
     if env_id in [
-        "PandaAvoidObstacles-v0",
-        "PegInsertionSide-v0",
-        "PickClutterYCB-v0",
-        "TurnFaucet-v0",
+        "PegInsertionSide-v1",
         "OpenCabinetDoor-v1",
         "OpenCabinetDrawer-v1",
         "PushChair-v1",
