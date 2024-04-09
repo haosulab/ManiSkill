@@ -203,9 +203,6 @@ def download(
     non_interactive=True,
 ):
     output_dir = Path(data_source.output_dir)
-    base_filename = data_source.filename
-    if base_filename is None:
-        base_filename = data_source.url.split("/")[-1]
     # Create output directory
     if not output_dir.exists():
         if non_interactive or prompt_yes_no(f"{output_dir} does not exist. Create?"):
@@ -264,7 +261,9 @@ def download(
         raise IOError(
             f"Downloaded file's SHA-256 hash does not match record: {data_source.url}"
         )
-    # import ipdb;ipdb.set_trace()
+    base_filename = data_source.filename
+    if base_filename is None:
+        base_filename = data_source.url.split("/")[-1]
     # Extract or move to output path
     if data_source.url.endswith(".zip"):
         with zipfile.ZipFile(tmp_filename, "r") as zip_ref:
