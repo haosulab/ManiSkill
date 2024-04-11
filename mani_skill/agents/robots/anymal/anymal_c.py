@@ -14,6 +14,7 @@ class ANYmalC(BaseAgent):
     uid = "anymal-c"
     urdf_path = f"{PACKAGE_ASSET_DIR}/robots/anymal-c/urdf/anymal.urdf"
     urdf_config = dict()
+    fix_root_link = False
 
     def __init__(self, *args, **kwargs):
         self.joint_names = [
@@ -30,7 +31,7 @@ class ANYmalC(BaseAgent):
             "LH_KFE",
             "RH_KFE",
         ]
-        super().__init__(*args, fix_root_link=False, **kwargs)
+        super().__init__(*args, **kwargs)
 
     @property
     def _controller_configs(self):

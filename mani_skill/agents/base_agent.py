@@ -46,21 +46,19 @@ class BaseAgent:
     """path to the .urdf file describe the agent's geometry and visuals"""
     urdf_config: dict = None
     """Optional provide a urdf_config to further modify the created articulation"""
+    fix_root_link: bool = True
+    """Whether to fix the root link of the robot"""
 
     def __init__(
         self,
         scene: ManiSkillScene,
         control_freq: int,
         control_mode: str = None,
-        fix_root_link=True,
         agent_idx: int = None,
     ):
         self.scene = scene
         self._control_freq = control_freq
         self._agent_idx = agent_idx
-
-        # URDF
-        self.fix_root_link = fix_root_link
 
         self.robot: Articulation = None
         self.controllers: Dict[str, BaseController] = dict()
