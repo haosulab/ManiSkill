@@ -21,9 +21,6 @@ class EmptyEnv(BaseEnv):
     This is just a dummy environment for showcasing robots in a empty scene
     """
 
-    SUPPORTED_ROBOTS = ["panda", "fetch", "xmate3_robotiq", "anymal"]
-    # agent: Union[Panda, Fetch]
-
     def __init__(self, *args, robot_uids="panda", **kwargs):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 

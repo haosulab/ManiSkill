@@ -66,17 +66,19 @@ class BaseAgent:
         self.controllers: Dict[str, BaseController] = dict()
         self.sensors: Dict[str, BaseSensor] = dict()
 
+        self.controllers = OrderedDict()
+        self._load_articulation()
+        self._after_loading_articulation()
+
         # Controller
         self.supported_control_modes = list(self._controller_configs.keys())
         if control_mode is None:
             control_mode = self.supported_control_modes[0]
         # The control mode after reset for consistency
         self._default_control_mode = control_mode
-        self.controllers = OrderedDict()
-        self._load_articulation()
-        self._after_loading_articulation()
-        self._after_init()
         self.set_control_mode()
+
+        self._after_init()
 
     @property
     def _sensor_configs(self) -> List[BaseSensorConfig]:
