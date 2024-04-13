@@ -137,7 +137,7 @@ def to_tensor(array: Union[torch.Tensor, np.array, Sequence], device: Device = N
     """
     if isinstance(array, (dict)):
         return {k: to_tensor(v) for k, v in array.items()}
-    if get_backend_name() == "torch":
+    if physx.is_gpu_enabled():
         if isinstance(array, np.ndarray):
             if array.dtype == np.uint16:
                 array = array.astype(np.int32)
@@ -147,12 +147,12 @@ def to_tensor(array: Union[torch.Tensor, np.array, Sequence], device: Device = N
         elif isinstance(array, torch.Tensor):
             ret = array
         else:
-            ret = torch.Tensor(array)
+            ret = torch.tensor(array)
         if device is None:
             return ret.cuda()
         else:
             return ret.to(device)
-    elif get_backend_name() == "numpy":
+    else:
         if isinstance(array, np.ndarray):
             if array.dtype == np.uint16:
                 array = array.astype(np.int32)
@@ -164,13 +164,30 @@ def to_tensor(array: Union[torch.Tensor, np.array, Sequence], device: Device = N
             if ret.dtype == torch.float64:
                 ret = ret.float()
         elif np.iterable(array):
-            ret = torch.Tensor(array)
+            ret = torch.tensor(array)
         else:
-            ret = torch.Tensor(array)
+            ret = torch.tensor(array)
         if device is None:
             return ret
         else:
             return ret.to(device)
+
+
+def to_cpu_tensor(array: Union[torch.Tensor, np.array, Sequence]):
+    """
+    Maps any given sequence to a torch tensor on the CPU.
+    """
+    if isinstance(array, (dict)):
+        return {k: to_tensor(v) for k, v in array.items()}
+    if isinstance(array, np.ndarray):
+        ret = torch.from_numpy(array)
+        if ret.dtype == torch.float64:
+            ret = ret.float()
+        return ret
+    elif isinstance(array, torch.Tensor):
+        return array.cpu()
+    else:
+        return torch.tensor(array).cpu()
 
 
 # TODO (stao): Clean up this code
