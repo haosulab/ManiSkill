@@ -46,6 +46,14 @@ def test_envs_obs_modes(env_id, obs_mode):
             assert obs["sensor_data"][cam]["rgb"].shape == (128, 128, 3)
             assert obs["sensor_data"][cam]["depth"].shape == (128, 128, 1)
             assert obs["sensor_data"][cam]["depth"].dtype == np.uint16
+            assert obs["sensor_data"][cam]["segmentation"].shape == (128, 128, 1)
+            assert obs["sensor_data"][cam]["segmentation"].dtype == np.uint16
+    elif obs_mode == "pointcloud":
+        num_pts = len(obs["pointcloud"]["xyzw"])
+        assert obs["pointcloud"]["xyzw"].shape == (num_pts, 4)
+        assert obs["pointcloud"]["rgb"].shape == (num_pts, 3)
+        assert obs["pointcloud"]["segmentation"].shape == (num_pts, 1)
+        assert obs["pointcloud"]["segmentation"].dtype == np.uint16
     env.close()
     del env
 
