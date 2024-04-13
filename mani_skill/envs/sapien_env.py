@@ -940,18 +940,6 @@ class BaseEnv(gym.Env):
         self._viewer.close()
         self._viewer = None
 
-    # -------------------------------------------------------------------------- #
-    # Simulation state (required for MPC)
-    # -------------------------------------------------------------------------- #
-    def get_actors(self) -> List[sapien.Entity]:
-        return self._scene.get_all_actors()
-
-    def get_articulations(self) -> List[physx.PhysxArticulation]:
-        articulations = self._scene.get_all_articulations()
-        # NOTE(jigu): There might be dummy articulations used by controllers.
-        # TODO(jigu): Remove dummy articulations if exist.
-        return articulations
-
     def get_state_dict(self):
         """
         Get environment state dictionary. Override to include task information (e.g., goal)
