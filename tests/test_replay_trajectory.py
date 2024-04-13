@@ -1,3 +1,5 @@
+import os
+
 import pytest
 
 from mani_skill import ASSET_DIR
@@ -22,7 +24,7 @@ def test_replay_trajectory(control_mode):
         parse_args(
             args=[
                 "--traj-path",
-                f"~/.maniskill/demos/{env_id}/teleop/trajectory.h5",
+                f"{os.path.expandvars('$HOME')}/.maniskill/demos/{env_id}/teleop/trajectory.h5",
                 "--save-traj",
                 "--target-control-mode",
                 control_mode,
