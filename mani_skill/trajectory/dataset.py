@@ -5,7 +5,7 @@ import numpy as np
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-from mani_skill.utils import common, sapien_utils
+from mani_skill.utils import common
 from mani_skill.utils.io_utils import load_json
 
 
@@ -121,22 +121,22 @@ class ManiSkillTrajectoryDataset(Dataset):
         self.obs = remove_np_uint16(self.obs)
 
         if device is not None:
-            self.actions = sapien_utils.to_tensor(self.actions, device=device)
-            self.obs = sapien_utils.to_tensor(self.obs, device=device)
-            self.terminated = sapien_utils.to_tensor(self.terminated, device=device)
-            self.truncated = sapien_utils.to_tensor(self.truncated, device=device)
+            self.actions = common.to_tensor(self.actions, device=device)
+            self.obs = common.to_tensor(self.obs, device=device)
+            self.terminated = common.to_tensor(self.terminated, device=device)
+            self.truncated = common.to_tensor(self.truncated, device=device)
             if self.rewards is not None:
-                self.rewards = sapien_utils.to_tensor(self.rewards, device=device)
+                self.rewards = common.to_tensor(self.rewards, device=device)
             if self.success is not None:
-                self.success = sapien_utils.to_tensor(self.terminated, device=device)
+                self.success = common.to_tensor(self.terminated, device=device)
             if self.fail is not None:
-                self.fail = sapien_utils.to_tensor(self.truncated, device=device)
+                self.fail = common.to_tensor(self.truncated, device=device)
 
     def __len__(self):
         return len(self.actions)
 
     def __getitem__(self, idx):
-        action = sapien_utils.to_tensor(self.actions[idx], device=self.device)
+        action = common.to_tensor(self.actions[idx], device=self.device)
         obs = common.index_dict_array(self.obs, idx, inplace=False)
 
         res = dict(

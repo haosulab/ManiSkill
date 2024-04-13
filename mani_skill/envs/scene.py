@@ -1,5 +1,4 @@
-from collections import OrderedDict
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Tuple, Union
 
 import sapien
 import sapien.physx as physx
@@ -9,8 +8,10 @@ from sapien.render import RenderCameraComponent
 
 from mani_skill.sensors.base_sensor import BaseSensor
 from mani_skill.sensors.camera import Camera
+from mani_skill.utils import common
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.articulation import Articulation
+from mani_skill.utils.structs.drive import Drive
 from mani_skill.utils.structs.link import Link
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.render_camera import RenderCamera
@@ -43,13 +44,18 @@ class ManiSkillScene:
         self.device = device
 
         self.render_system_group: sapien.render.RenderSystemGroup = None
-        self.camera_groups: Dict[str, sapien.render.RenderCameraGroup] = OrderedDict()
+        self.camera_groups: Dict[str, sapien.render.RenderCameraGroup] = dict()
 
-        self.actors: Dict[str, Actor] = OrderedDict()
-        self.articulations: Dict[str, Articulation] = OrderedDict()
+        self.actors: Dict[str, Actor] = dict()
+        self.articulations: Dict[str, Articulation] = dict()
 
-        self.sensors: Dict[str, BaseSensor] = OrderedDict()
-        self.human_render_cameras: Dict[str, Camera] = OrderedDict()
+        self.actor_views: Dict[str, Actor] = dict()
+        """views of actors in any sub-scenes created by using Actor.merge and queryable as if it were a single Actor"""
+        self.articulation_views: Dict[str, Articulation] = dict()
+        """views of articulations in any sub-scenes created by using Articulation.merge and queryable as if it were a single Articulation"""
+
+        self.sensors: Dict[str, BaseSensor] = dict()
+        self.human_render_cameras: Dict[str, Camera] = dict()
 
         self._reset_mask = torch.ones(len(sub_scenes), dtype=bool, device=self.device)
         """Used internally by various objects like Actor, Link, and Controllers to auto mask out sub-scenes so they do not get modified during
@@ -89,9 +95,7 @@ class ManiSkillScene:
     def create_physical_material(
         self, static_friction: float, dynamic_friction: float, restitution: float
     ):
-        return sapien.physx.PhysxMaterial(
-            static_friction, dynamic_friction, restitution
-        )
+        return physx.PhysxMaterial(static_friction, dynamic_friction, restitution)
 
     def remove_actor(self, actor):
         if physx.is_gpu_enabled():
@@ -114,67 +118,39 @@ class ManiSkillScene:
     def add_camera(
         self,
         name,
-        pose: Pose,
-        width: int,
-        height: int,
-        fovy: float,
-        intrinsic: Array,
-        near: float,
-        far: float,
-    ) -> RenderCamera:
-        cameras = []
-        pose = Pose.create(pose)
-        for i, scene in enumerate(self.sub_scenes):
-            camera_mount = sapien.Entity()
-            camera = RenderCameraComponent(width, height)
-            if isinstance(fovy, float) or isinstance(fovy, int):
-                camera.set_fovy(fovy, compute_x=True)
-            else:
-                camera.set_fovy(fovy[i], compute_x=True)
-            if intrinsic is not None:
-                camera.set_focal_lengths(intrinsic[i, 0, 0], intrinsic[i, 1, 1])
-                camera.set_principal_point(intrinsic[i, 0, 2], intrinsic[i, 1, 2])
-            if isinstance(near, float) or isinstance(near, int):
-                camera.near = near
-            else:
-                camera.near = near[i]
-            if isinstance(far, float) or isinstance(far, int):
-                camera.far = far
-            else:
-                camera.far = far[i]
-            camera_mount.add_component(camera)
-            if len(pose) == 1:
-                camera.local_pose = pose.sp
-            else:
-                camera.local_pose = pose[i].sp
-
-            scene.add_entity(camera_mount)
-            camera_mount.name = f"scene-{i}_{name}"
-            camera.name = f"scene-{i}_{name}"
-            cameras.append(camera)
-        return RenderCamera.create(cameras, self)
-
-    def add_mounted_camera(
-        self,
-        name,
-        mount: Union[Actor, Link],
-        pose: Pose,
+        pose,
         width,
         height,
-        fovy: float,
-        intrinsic: Array,
         near,
         far,
+        fovy: float = None,
+        intrinsic: Array = None,
+        mount: Union[Actor, Link] = None,
     ) -> RenderCamera:
+        """internal helper function to add (mounted) cameras"""
         cameras = []
         pose = Pose.create(pose)
+        # TODO (stao): support scene idxs property for cameras in the future
+        # move intrinsic to np and batch intrinsic if it is not batched
+        if intrinsic is not None:
+            intrinsic = common.to_numpy(intrinsic)
+            if len(intrinsic.shape) == 2:
+                intrinsic = intrinsic[None, :]
+                if len(self.sub_scenes) > 1:
+                    # repeat the intrinsic along batch dim
+                    intrinsic = intrinsic.repeat(len(self.sub_scenes), 0)
+            assert len(intrinsic) == len(
+                self.sub_scenes
+            ), "intrinsic matrix batch dim not equal to the number of sub-scenes"
         for i, scene in enumerate(self.sub_scenes):
+            # Create camera component
             camera = RenderCameraComponent(width, height)
-            if isinstance(fovy, float) or isinstance(fovy, int):
-                camera.set_fovy(fovy, compute_x=True)
-            else:
-                camera.set_fovy(fovy[i], compute_x=True)
-            if intrinsic is not None:
+            if fovy is not None:
+                if isinstance(fovy, float) or isinstance(fovy, int):
+                    camera.set_fovy(fovy, compute_x=True)
+                else:
+                    camera.set_fovy(fovy[i], compute_x=True)
+            elif intrinsic is not None:
                 camera.set_focal_lengths(intrinsic[i, 0, 0], intrinsic[i, 1, 1])
                 camera.set_principal_point(intrinsic[i, 0, 2], intrinsic[i, 1, 2])
             if isinstance(near, float) or isinstance(near, int):
@@ -185,24 +161,31 @@ class ManiSkillScene:
                 camera.far = far
             else:
                 camera.far = far[i]
-            if physx.is_gpu_enabled():
-                if isinstance(mount, Actor):
-                    camera.set_gpu_pose_batch_index(
-                        mount._objs[i]
-                        .find_component_by_type(physx.PhysxRigidBodyComponent)
-                        .gpu_pose_index
-                    )
-                elif isinstance(mount, Link):
-                    camera.set_gpu_pose_batch_index(mount._objs[i].gpu_pose_index)
-                else:
-                    raise ValueError(
-                        f"Tried to mount camera on object of type {mount.__class__}"
-                    )
 
-            if isinstance(mount, Link):
-                mount._objs[i].entity.add_component(camera)
+            # mount camera to actor/link
+            if mount is not None:
+                if physx.is_gpu_enabled():
+                    if isinstance(mount, Actor):
+                        camera.set_gpu_pose_batch_index(
+                            mount._objs[i]
+                            .find_component_by_type(physx.PhysxRigidBodyComponent)
+                            .gpu_pose_index
+                        )
+                    elif isinstance(mount, Link):
+                        camera.set_gpu_pose_batch_index(mount._objs[i].gpu_pose_index)
+                    else:
+                        raise ValueError(
+                            f"Tried to mount camera on object of type {mount.__class__}"
+                        )
+                if isinstance(mount, Link):
+                    mount._objs[i].entity.add_component(camera)
+                else:
+                    mount._objs[i].add_component(camera)
             else:
-                mount._objs[i].add_component(camera)
+                camera_mount = sapien.Entity()
+                camera_mount.add_component(camera)
+                scene.add_entity(camera_mount)
+                camera_mount.name = f"scene-{i}_{name}"
             if len(pose) == 1:
                 camera.local_pose = pose.sp
             else:
@@ -255,115 +238,90 @@ class ManiSkillScene:
 
     def create_drive(
         self,
-        body0: Optional[Union[sapien.Entity, sapien.physx.PhysxRigidBaseComponent]],
-        pose0: sapien.Pose,
-        body1: Union[sapien.Entity, sapien.physx.PhysxRigidBaseComponent],
-        pose1: sapien.Pose,
+        body0: Union[Actor, Link],
+        pose0: Union[sapien.Pose, Pose],
+        body1: Union[Actor, Link],
+        pose1: Union[sapien.Pose, Pose],
     ):
-        if body0 is None:
-            c0 = None
-        elif isinstance(body0, sapien.Entity):
-            c0 = next(
-                c
-                for c in body0.components
-                if isinstance(c, sapien.physx.PhysxRigidBaseComponent)
-            )
-        else:
-            c0 = body0
+        # body0 and body1 should be in parallel.
+        return Drive.create_from_actors_or_links(
+            self, body0, pose0, body1, pose1, body0._scene_idxs
+        )
 
-        assert body1 is not None
-        if isinstance(body1, sapien.Entity):
-            e1 = body1
-            c1 = next(
-                c
-                for c in body1.components
-                if isinstance(c, sapien.physx.PhysxRigidBaseComponent)
-            )
-        else:
-            e1 = body1.entity
-            c1 = body1
+    # def create_connection(
+    #     self,
+    #     body0: Optional[Union[sapien.Entity, physx.PhysxRigidBaseComponent]],
+    #     pose0: sapien.Pose,
+    #     body1: Union[sapien.Entity, physx.PhysxRigidBaseComponent],
+    #     pose1: sapien.Pose,
+    # ):
+    #     if body0 is None:
+    #         c0 = None
+    #     elif isinstance(body0, sapien.Entity):
+    #         c0 = next(
+    #             c
+    #             for c in body0.components
+    #             if isinstance(c, physx.PhysxRigidBaseComponent)
+    #         )
+    #     else:
+    #         c0 = body0
 
-        drive = sapien.physx.PhysxDriveComponent(c1)
-        drive.parent = c0
-        drive.pose_in_child = pose1
-        drive.pose_in_parent = pose0
-        e1.add_component(drive)
-        return drive
+    #     assert body1 is not None
+    #     if isinstance(body1, sapien.Entity):
+    #         e1 = body1
+    #         c1 = next(
+    #             c
+    #             for c in body1.components
+    #             if isinstance(c, physx.PhysxRigidBaseComponent)
+    #         )
+    #     else:
+    #         e1 = body1.entity
+    #         c1 = body1
 
-    def create_connection(
-        self,
-        body0: Optional[Union[sapien.Entity, sapien.physx.PhysxRigidBaseComponent]],
-        pose0: sapien.Pose,
-        body1: Union[sapien.Entity, sapien.physx.PhysxRigidBaseComponent],
-        pose1: sapien.Pose,
-    ):
-        if body0 is None:
-            c0 = None
-        elif isinstance(body0, sapien.Entity):
-            c0 = next(
-                c
-                for c in body0.components
-                if isinstance(c, sapien.physx.PhysxRigidBaseComponent)
-            )
-        else:
-            c0 = body0
+    #     connection = physx.PhysxDistanceJointComponent(c1)
+    #     connection.parent = c0
+    #     connection.pose_in_child = pose1
+    #     connection.pose_in_parent = pose0
+    #     e1.add_component(connection)
+    #     connection.set_limit(0, 0)
+    #     return connection
 
-        assert body1 is not None
-        if isinstance(body1, sapien.Entity):
-            e1 = body1
-            c1 = next(
-                c
-                for c in body1.components
-                if isinstance(c, sapien.physx.PhysxRigidBaseComponent)
-            )
-        else:
-            e1 = body1.entity
-            c1 = body1
+    # def create_gear(
+    #     self,
+    #     body0: Optional[Union[sapien.Entity, physx.PhysxRigidBaseComponent]],
+    #     pose0: sapien.Pose,
+    #     body1: Union[sapien.Entity, physx.PhysxRigidBaseComponent],
+    #     pose1: sapien.Pose,
+    # ):
+    #     if body0 is None:
+    #         c0 = None
+    #     elif isinstance(body0, sapien.Entity):
+    #         c0 = next(
+    #             c
+    #             for c in body0.components
+    #             if isinstance(c, physx.PhysxRigidBaseComponent)
+    #         )
+    #     else:
+    #         c0 = body0
 
-        connection = sapien.physx.PhysxDistanceJointComponent(c1)
-        connection.parent = c0
-        connection.pose_in_child = pose1
-        connection.pose_in_parent = pose0
-        e1.add_component(connection)
-        connection.set_limit(0, 0)
-        return connection
+    #     assert body1 is not None
+    #     if isinstance(body1, sapien.Entity):
+    #         e1 = body1
+    #         c1 = next(
+    #             c
+    #             for c in body1.components
+    #             if isinstance(c, physx.PhysxRigidBaseComponent)
+    #         )
+    #     else:
+    #         e1 = body1.entity
+    #         c1 = body1
 
-    def create_gear(
-        self,
-        body0: Optional[Union[sapien.Entity, sapien.physx.PhysxRigidBaseComponent]],
-        pose0: sapien.Pose,
-        body1: Union[sapien.Entity, sapien.physx.PhysxRigidBaseComponent],
-        pose1: sapien.Pose,
-    ):
-        if body0 is None:
-            c0 = None
-        elif isinstance(body0, sapien.Entity):
-            c0 = next(
-                c
-                for c in body0.components
-                if isinstance(c, sapien.physx.PhysxRigidBaseComponent)
-            )
-        else:
-            c0 = body0
-
-        assert body1 is not None
-        if isinstance(body1, sapien.Entity):
-            e1 = body1
-            c1 = next(
-                c
-                for c in body1.components
-                if isinstance(c, sapien.physx.PhysxRigidBaseComponent)
-            )
-        else:
-            e1 = body1.entity
-            c1 = body1
-
-        gear = sapien.physx.PhysxGearComponent(c1)
-        gear.parent = c0
-        gear.pose_in_child = pose1
-        gear.pose_in_parent = pose0
-        e1.add_component(gear)
-        return gear
+    #     gear = physx.PhysxGearComponent(c1)
+    #     gear.parent = c0
+    #     gear.pose_in_child = pose1
+    #     gear.pose_in_parent = pose0
+    #     e1.add_component(gear)
+    #     return gear
 
     # @property
     # def render_id_to_visual_name(self):
@@ -551,7 +509,7 @@ class ManiSkillScene:
         # As physx_system.gpu_init() was called a single physx step was also taken. So we need to reset
         # all the actors and articulations to their original poses as they likely have collided
         for actor in self.non_static_actors:
-            actor.set_pose(actor._builder_initial_pose)
+            actor.set_pose(actor.inital_pose)
         self.px.cuda_rigid_body_data.torch()[:, 7:] = (
             self.px.cuda_rigid_body_data.torch()[:, 7:] * 0
         )  # zero out all velocities

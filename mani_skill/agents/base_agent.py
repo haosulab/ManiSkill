@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Dict, Union, List
+from typing import TYPE_CHECKING, Dict, List, Union
 
 import numpy as np
 import sapien
@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from mani_skill.envs.scene import ManiSkillScene
 DictControllerConfig = Dict[str, ControllerConfig]
 
+
 class BaseAgent:
     """Base class for agents.
 
@@ -45,7 +46,7 @@ class BaseAgent:
     """path to the .urdf file describe the agent's geometry and visuals"""
     urdf_config: dict = None
     """Optional provide a urdf_config to further modify the created articulation"""
-    
+
     def __init__(
         self,
         scene: ManiSkillScene,
@@ -60,7 +61,7 @@ class BaseAgent:
 
         # URDF
         self.fix_root_link = fix_root_link
-        
+
         self.robot: Articulation = None
         self.controllers: Dict[str, BaseController] = dict()
         self.sensors: Dict[str, BaseSensor] = dict()
@@ -76,13 +77,15 @@ class BaseAgent:
         self._after_loading_articulation()
         self._after_init()
         self.set_control_mode()
-        
+
     @property
-    def _sensor_configs(self) -> List[str, BaseSensorConfig]:
+    def _sensor_configs(self) -> List[BaseSensorConfig]:
         return []
 
     @property
-    def _controller_configs(self) -> Dict[str, Union[ControllerConfig, DictControllerConfig]]:
+    def _controller_configs(
+        self,
+    ) -> Dict[str, Union[ControllerConfig, DictControllerConfig]]:
         raise NotImplementedError()
 
     @property
@@ -144,8 +147,15 @@ class BaseAgent:
         if control_mode not in self.controllers:
             config = self._controller_configs[self._control_mode]
             if isinstance(config, dict):
+                balance_passive_force = True
+                if "balance_passive_force" in config:
+                    balance_passive_force = config.pop("balance_passive_force")
                 self.controllers[control_mode] = CombinedController(
-                    config, self.robot, self._control_freq, scene=self.scene
+                    config,
+                    self.robot,
+                    self._control_freq,
+                    scene=self.scene,
+                    balance_passive_force=balance_passive_force,
                 )
             else:
                 self.controllers[control_mode] = config.controller_cls(

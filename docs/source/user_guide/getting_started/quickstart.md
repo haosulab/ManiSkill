@@ -1,4 +1,4 @@
-# Quickstart
+# {octicon}`rocket` Quickstart
 
 ManiSkill is a robotics simulator built on top of SAPIEN. It provides a standard Gym/Gymnasium interface for easy use with existing learning workflows like RL and imitation learning. Moreover ManiSkill supports simulation on both the GPU and CPU, as well as fast parallelized rendering.
 

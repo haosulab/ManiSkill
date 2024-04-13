@@ -207,7 +207,7 @@ class PandaArmMotionPlanningSolver:
 
     def close(self):
         if self.grasp_pose_visual is not None:
-            if not sapien.physx.is_gpu_enabled():
+            if not physx.is_gpu_enabled():
                 self.grasp_pose_visual.remove_from_scene()
 
 

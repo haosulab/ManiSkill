@@ -15,7 +15,6 @@ in addition to initializing any task relevant data like a goal
 See comments for how to make your own environment and what each required function should do
 """
 
-from collections import OrderedDict
 from typing import Any, Dict, Union
 
 import numpy as np
@@ -26,11 +25,11 @@ from transforms3d.euler import euler2quat
 from mani_skill.agents.robots import Fetch, Panda, Xmate3Robotiq
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
-from mani_skill.utils import sapien_utils
+from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.building import actors
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
-from mani_skill.utils.structs.pose import Pose
+from mani_skill.utils.structs import Pose
 from mani_skill.utils.structs.types import Array, GPUMemoryConfig, SimConfig
 
 
@@ -81,13 +80,25 @@ class PushCubeEnv(BaseEnv):
         # registers one 128x128 camera looking at the robot, cube, and target
         # a smaller sized camera will be lower quality, but render faster
         pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
-        return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
+        return [
+            CameraConfig(
+                "base_camera",
+                pose=pose,
+                width=128,
+                height=128,
+                fov=np.pi / 2,
+                near=0.01,
+                far=100,
+            )
+        ]
 
     @property
     def _human_render_camera_configs(self):
         # registers a more high-definition (512x512) camera used just for rendering when render_mode="rgb_array" or calling env.render_rgb_array()
         pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
-        return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
+        return CameraConfig(
+            "render_camera", pose=pose, width=512, height=512, fov=1, near=0.01, far=100
+        )
 
     def _load_scene(self, options: dict):
         # we use a prebuilt scene builder class that automatically loads in a floor and table.
@@ -177,7 +188,7 @@ class PushCubeEnv(BaseEnv):
     def _get_obs_extra(self, info: Dict):
         # some useful observation info for solving the task includes the pose of the tcp (tool center point) which is the point between the
         # grippers of the robot
-        obs = OrderedDict(
+        obs = dict(
             tcp_pose=self.agent.tcp.pose.raw_pose,
             goal_pos=self.goal_region.pose.p,
         )

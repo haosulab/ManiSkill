@@ -61,7 +61,7 @@ class AllegroHandRightTouch(AllegroHandRight):
 
     def get_fsr_obj_impulse(self, obj: Actor = None):
         if physx.is_gpu_enabled():
-            px: sapien.physx.PhysxGpuSystem = self.scene.px
+            px: physx.PhysxGpuSystem = self.scene.px
             # Create contact query if it is not existed
             if obj.name not in self.pair_query:
                 bodies = list(zip(*[link._bodies for link in self.fsr_links]))
@@ -103,7 +103,7 @@ class AllegroHandRightTouch(AllegroHandRight):
 
     def get_fsr_impulse(self):
         if physx.is_gpu_enabled():
-            px: sapien.physx.PhysxGpuSystem = self.scene.px
+            px: physx.PhysxGpuSystem = self.scene.px
             # Create contact query if it is not existed
             if self.body_query is None:
                 # Convert the order of links so that the link from the same sub-scene will come together

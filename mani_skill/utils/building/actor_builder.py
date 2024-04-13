@@ -9,7 +9,7 @@ import torch
 from sapien import ActorBuilder as SAPIENActorBuilder
 from sapien.wrapper.coacd import do_coacd
 
-from mani_skill.utils import sapien_utils
+from mani_skill.utils import common
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.pose import Pose, to_sapien_pose
 
@@ -52,17 +52,17 @@ class ActorBuilder(SAPIENActorBuilder):
 
     def build_physx_component(self, link_parent=None):
         for r in self.collision_records:
-            assert isinstance(r.material, sapien.physx.PhysxMaterial)
+            assert isinstance(r.material, physx.PhysxMaterial)
 
         if self.physx_body_type == "dynamic":
-            component = sapien.physx.PhysxRigidDynamicComponent()
+            component = physx.PhysxRigidDynamicComponent()
         elif self.physx_body_type == "kinematic":
-            component = sapien.physx.PhysxRigidDynamicComponent()
+            component = physx.PhysxRigidDynamicComponent()
             component.kinematic = True
         elif self.physx_body_type == "static":
-            component = sapien.physx.PhysxRigidStaticComponent()
+            component = physx.PhysxRigidStaticComponent()
         elif self.physx_body_type == "link":
-            component = sapien.physx.PhysxArticulationLinkComponent(link_parent)
+            component = physx.PhysxArticulationLinkComponent(link_parent)
         else:
             raise Exception(f"invalid physx body type [{self.physx_body_type}]")
 
@@ -75,7 +75,7 @@ class ActorBuilder(SAPIENActorBuilder):
                         self._allow_overlapping_plane_collisions
                         or pose_key not in self._plane_collision_poses
                     ):
-                        shape = sapien.physx.PhysxCollisionShapePlane(
+                        shape = physx.PhysxCollisionShapePlane(
                             material=r.material,
                         )
                         shapes = [shape]
@@ -83,39 +83,39 @@ class ActorBuilder(SAPIENActorBuilder):
                     else:
                         continue
                 elif r.type == "box":
-                    shape = sapien.physx.PhysxCollisionShapeBox(
+                    shape = physx.PhysxCollisionShapeBox(
                         half_size=r.scale, material=r.material
                     )
                     shapes = [shape]
                 elif r.type == "capsule":
-                    shape = sapien.physx.PhysxCollisionShapeCapsule(
+                    shape = physx.PhysxCollisionShapeCapsule(
                         radius=r.radius,
                         half_length=r.length,
                         material=r.material,
                     )
                     shapes = [shape]
                 elif r.type == "cylinder":
-                    shape = sapien.physx.PhysxCollisionShapeCylinder(
+                    shape = physx.PhysxCollisionShapeCylinder(
                         radius=r.radius,
                         half_length=r.length,
                         material=r.material,
                     )
                     shapes = [shape]
                 elif r.type == "sphere":
-                    shape = sapien.physx.PhysxCollisionShapeSphere(
+                    shape = physx.PhysxCollisionShapeSphere(
                         radius=r.radius,
                         material=r.material,
                     )
                     shapes = [shape]
                 elif r.type == "convex_mesh":
-                    shape = sapien.physx.PhysxCollisionShapeConvexMesh(
+                    shape = physx.PhysxCollisionShapeConvexMesh(
                         filename=r.filename,
                         scale=r.scale,
                         material=r.material,
                     )
                     shapes = [shape]
                 elif r.type == "nonconvex_mesh":
-                    shape = sapien.physx.PhysxCollisionShapeTriangleMesh(
+                    shape = physx.PhysxCollisionShapeTriangleMesh(
                         filename=r.filename,
                         scale=r.scale,
                         material=r.material,
@@ -131,7 +131,7 @@ class ActorBuilder(SAPIENActorBuilder):
                     else:
                         filename = r.filename
 
-                    shapes = sapien.physx.PhysxCollisionShapeConvexMesh.load_multiple(
+                    shapes = physx.PhysxCollisionShapeConvexMesh.load_multiple(
                         filename=filename,
                         scale=r.scale,
                         material=r.material,
@@ -188,7 +188,7 @@ class ActorBuilder(SAPIENActorBuilder):
         initial_pose = Pose.create(self.initial_pose)
         initial_pose_b = initial_pose.raw_pose.shape[0]
         assert initial_pose_b == 1 or initial_pose_b == num_actors
-        initial_pose_np = sapien_utils.to_numpy(initial_pose.raw_pose)
+        initial_pose_np = common.to_numpy(initial_pose.raw_pose)
 
         entities = []
         i = 0
@@ -213,10 +213,8 @@ class ActorBuilder(SAPIENActorBuilder):
             and initial_pose_b == 1
             and physx.is_gpu_enabled()
         ):
-            actor._builder_initial_pose = Pose.create(
-                initial_pose.raw_pose.repeat(num_actors, 1)
-            )
+            actor.inital_pose = Pose.create(initial_pose.raw_pose.repeat(num_actors, 1))
         else:
-            actor._builder_initial_pose = initial_pose
+            actor.inital_pose = initial_pose
         self.scene.actors[self.name] = actor
         return actor

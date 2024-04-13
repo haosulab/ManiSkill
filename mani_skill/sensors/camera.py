@@ -152,7 +152,7 @@ class Camera(BaseSensor):
                 far=camera_cfg.far,
             )
         else:
-            self.camera = scene.add_mounted_camera(
+            self.camera = scene.add_camera(
                 name=camera_cfg.uid,
                 mount=self.entity,
                 pose=camera_cfg.pose,

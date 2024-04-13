@@ -23,7 +23,7 @@ class SceneManipulationEnv(BaseEnv):
     metrics or rewards.
 
     Args:
-        robot_uids: Which robot to place into the scene. Default is "panda"
+        robot_uids: Which robot to place into the scene. Default is "fetch"
 
         fixed_scene: whether to sample a single scene and never reconfigure the scene during episode resets
         Default to True as reconfiguration/reloading scenes is expensive. When true, call env.reset(seed=seed, options=dict(reconfigure=True))

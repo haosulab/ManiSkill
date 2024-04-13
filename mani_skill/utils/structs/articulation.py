@@ -11,12 +11,9 @@ import sapien.physx as physx
 import torch
 import trimesh
 
-from mani_skill.utils import sapien_utils
+from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.geometry.trimesh_utils import get_component_meshes, merge_meshes
-from mani_skill.utils.structs.base import BaseStruct
-from mani_skill.utils.structs.joint import Joint
-from mani_skill.utils.structs.link import Link
-from mani_skill.utils.structs.pose import Pose
+from mani_skill.utils.structs import ArticulationJoint, BaseStruct, Link, Pose
 from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:
@@ -35,13 +32,13 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     """Maps link name to the Link object"""
     root: Link
     """The root Link object"""
-    joints: List[Joint]
+    joints: List[ArticulationJoint]
     """List of Joint objects"""
-    joint_map: OrderedDict[str, Joint]
+    joint_map: OrderedDict[str, ArticulationJoint]
     """Maps joint name to the Joint object"""
-    active_joints: List[Joint]
+    active_joints: List[ArticulationJoint]
     """List of active Joint objects, referencing elements in self.joints"""
-    active_joint_map: OrderedDict[str, Joint]
+    active_joint_map: OrderedDict[str, ArticulationJoint]
     """Maps active joint name to the Joint object, referencing elements in self.joints"""
 
     name: str = None
@@ -66,6 +63,12 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         Tuple, physx.PhysxGpuContactBodyImpulseQuery
     ] = field(default_factory=OrderedDict)
     """Maps a tuple of link names to pre-saved net contact force queries"""
+
+    def __str__(self):
+        return f"<{self.name}: struct of type {self.__class__}; managing {self._num_objs} {self._objs[0].__class__} objects>"
+
+    def __repr__(self):
+        return self.__str__()
 
     @classmethod
     def create_from_physx_articulations(
@@ -137,7 +140,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         ]
 
         joint_map = OrderedDict()
-        wrapped_joints: List[Joint] = []
+        wrapped_joints: List[ArticulationJoint] = []
         for joint_index, joints in enumerate(all_joint_objs):
             try:
                 active_joint_index = all_active_joint_names.index(
@@ -145,13 +148,20 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
                 )
             except:
                 active_joint_index = None
-            wrapped_joint = Joint.create(joints, self, joint_index, active_joint_index)
+            wrapped_joint = ArticulationJoint.create(
+                joints, self, joint_index, active_joint_index
+            )
             joint_map[wrapped_joint.name] = wrapped_joint
             wrapped_joints.append(wrapped_joint)
         self.joints = wrapped_joints
         self.joint_map = joint_map
         self.active_joints = [wrapped_joints[i] for i in active_joint_indices]
         self.active_joint_map = {joint.name: joint for joint in self.active_joints}
+
+        # add references to the right joint in all links
+        for joint in self.joints:
+            if joint.child_link is not None:
+                joint.child_link.joint = joint
         return self
 
     @classmethod
@@ -163,7 +173,6 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         for articulation in articulations:
             objs += articulation._objs
             merged_scene_idxs.append(articulation._scene_idxs)
-            del scene.articulations[articulation.name]
             assert (
                 articulation._num_objs == num_objs_per_actor
             ), "Each given articulation must have the same number of managed objects"
@@ -172,7 +181,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             objs, scene, merged_scene_idxs, _merged=True
         )
         merged_articulation.name = name
-        scene.articulations[merged_articulation.name] = merged_articulation
+        scene.articulation_views[merged_articulation.name] = merged_articulation
         return merged_articulation
 
     # -------------------------------------------------------------------------- #
@@ -197,7 +206,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     def set_state(self, state: Array):
         if physx.is_gpu_enabled():
-            state = sapien_utils.to_tensor(state)
+            state = common.to_tensor(state)
             self.set_root_pose(Pose.create(state[:, :7]))
             self.set_root_linear_velocity(state[:, 7:10])
             self.set_root_angular_velocity(state[:, 10:13])
@@ -205,7 +214,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             self.set_qpos(state[:, 13 : 13 + self.max_dof])
             self.set_qvel(state[:, 13 + self.max_dof :])
         else:
-            state = sapien_utils.to_numpy(state[0])
+            state = common.to_numpy(state[0])
             self.set_root_pose(sapien.Pose(state[0:3], state[3:7]))
             self.set_root_linear_velocity(state[7:10])
             self.set_root_angular_velocity(state[10:13])
@@ -285,9 +294,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
                 included_links=[self.link_map[k]._objs[0] for k in link_names],
             )
             net_force = (
-                sapien_utils.to_tensor(
-                    sapien_utils.compute_total_impulse(body_contacts)
-                )
+                common.to_tensor(sapien_utils.compute_total_impulse(body_contacts))
                 / self._scene.timestep
             )
             return net_force[None, :]
@@ -304,7 +311,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             return self._objs[0].compute_passive_force(*args, **kwargs)
 
     # def create_fixed_tendon(self, link_chain: list[PhysxArticulationLinkComponent], coefficients: list[float], recip_coefficients: list[float], rest_length: float = 0, offset: float = 0, stiffness: float = 0, damping: float = 0, low: float = -3.4028234663852886e+38, high: float = 3.4028234663852886e+38, limit_stiffness: float = 0) -> None: ...
-    def find_joint_by_name(self, arg0: str) -> Joint:
+    def find_joint_by_name(self, arg0: str) -> ArticulationJoint:
         if self._merged:
             raise RuntimeError(
                 "Cannot call find_joint_by_name when the articulation object is managing articulations of different dofs"
@@ -450,12 +457,13 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     @qf.setter
     def qf(self, arg1: torch.Tensor):
         if physx.is_gpu_enabled():
-            arg1 = sapien_utils.to_tensor(arg1)
+            arg1 = common.to_tensor(arg1)
             self.px.cuda_articulation_qf.torch()[
-                self._data_index[self._scene._reset_mask], : self.max_dof
+                self._data_index[self._scene._reset_mask[self._scene_idxs]],
+                : self.max_dof,
             ] = arg1
         else:
-            arg1 = sapien_utils.to_numpy(arg1)
+            arg1 = common.to_numpy(arg1)
             if len(arg1.shape) == 2:
                 arg1 = arg1[0]
             self._objs[0].qf = arg1
@@ -488,12 +496,13 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     @qpos.setter
     def qpos(self, arg1: torch.Tensor):
         if physx.is_gpu_enabled():
-            arg1 = sapien_utils.to_tensor(arg1)
+            arg1 = common.to_tensor(arg1)
             self.px.cuda_articulation_qpos.torch()[
-                self._data_index[self._scene._reset_mask], : self.max_dof
+                self._data_index[self._scene._reset_mask[self._scene_idxs]],
+                : self.max_dof,
             ] = arg1
         else:
-            arg1 = sapien_utils.to_numpy(arg1)
+            arg1 = common.to_numpy(arg1)
             if len(arg1.shape) == 2:
                 arg1 = arg1[0]
             self._objs[0].qpos = arg1
@@ -510,12 +519,13 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     @qvel.setter
     def qvel(self, arg1: torch.Tensor):
         if physx.is_gpu_enabled():
-            arg1 = sapien_utils.to_tensor(arg1)
+            arg1 = common.to_tensor(arg1)
             self.px.cuda_articulation_qvel.torch()[
-                self._data_index[self._scene._reset_mask], : self.max_dof
+                self._data_index[self._scene._reset_mask[self._scene_idxs]],
+                : self.max_dof,
             ] = arg1
         else:
-            arg1 = sapien_utils.to_numpy(arg1)
+            arg1 = common.to_numpy(arg1)
             if len(arg1.shape) == 2:
                 arg1 = arg1[0]
             self._objs[0].qvel = arg1
@@ -527,12 +537,13 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     @root_angular_velocity.setter
     def root_angular_velocity(self, arg1: Array) -> None:
         if physx.is_gpu_enabled():
-            arg1 = sapien_utils.to_tensor(arg1)
+            arg1 = common.to_tensor(arg1)
             self.px.cuda_rigid_body_data.torch()[
-                self.root._body_data_index[self._scene._reset_mask], 10:13
+                self.root._body_data_index[self._scene._reset_mask[self._scene_idxs]],
+                10:13,
             ] = arg1
         else:
-            arg1 = sapien_utils.to_numpy(arg1)
+            arg1 = common.to_numpy(arg1)
             if len(arg1.shape) == 2:
                 arg1 = arg1[0]
             self._objs[0].set_root_angular_velocity(arg1)
@@ -544,12 +555,13 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     @root_linear_velocity.setter
     def root_linear_velocity(self, arg1: Array) -> None:
         if physx.is_gpu_enabled():
-            arg1 = sapien_utils.to_tensor(arg1)
+            arg1 = common.to_tensor(arg1)
             self.px.cuda_rigid_body_data.torch()[
-                self.root._body_data_index[self._scene._reset_mask], 7:10
+                self.root._body_data_index[self._scene._reset_mask[self._scene_idxs]],
+                7:10,
             ] = arg1
         else:
-            arg1 = sapien_utils.to_numpy(arg1)
+            arg1 = common.to_numpy(arg1)
             if len(arg1.shape) == 2:
                 arg1 = arg1[0]
             self._objs[0].set_root_linear_velocity(arg1)
@@ -569,7 +581,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         # NOTE (stao): This is available but not typed in SAPIEN
         if physx.is_gpu_enabled():
             raise NotImplementedError(
-                "Cannot create a pinocchio model when GPU is enabled. If you wish to do inverse kinematics you must use pytorch_kinematics"
+                "Cannot create a pinocchio model when GPU is enabled. If you wish to do inverse kinematics you must use fast_kinematics"
             )
         else:
             return self._objs[0].create_pinocchio_model()
@@ -580,7 +592,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     def set_joint_drive_targets(
         self,
         targets: Array,
-        joints: List[Joint] = None,
+        joints: List[ArticulationJoint] = None,
         joint_indices: torch.Tensor = None,
     ):
         """
@@ -589,7 +601,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         TODO (stao): can we use joint indices for the CPU sim as well? Some global joint indices?
         """
         if physx.is_gpu_enabled():
-            targets = sapien_utils.to_tensor(targets)
+            targets = common.to_tensor(targets)
             if joint_indices not in self._cached_joint_target_indices:
                 self._cached_joint_target_indices[joint_indices] = torch.meshgrid(
                     self._data_index, joint_indices, indexing="ij"
@@ -603,7 +615,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     def set_joint_drive_velocity_targets(
         self,
         targets: Array,
-        joints: List[Joint] = None,
+        joints: List[ArticulationJoint] = None,
         joint_indices: torch.Tensor = None,
     ):
         """
@@ -612,7 +624,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         TODO (stao): can we use joint indices for the CPU sim as well? Some global joint indices?
         """
         if physx.is_gpu_enabled():
-            targets = sapien_utils.to_tensor(targets)
+            targets = common.to_tensor(targets)
             if joint_indices not in self._cached_joint_target_indices:
                 self._cached_joint_target_indices[joint_indices] = torch.meshgrid(
                     self._data_index, joint_indices, indexing="ij"

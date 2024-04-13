@@ -233,7 +233,7 @@ def build_robel_valve(
             half_length=capsule_length / 2,
             material=viz_mat,
         )
-        physx_mat = sapien.physx.PhysxMaterial(1, 0.8, 0)
+        physx_mat = physx.PhysxMaterial(1, 0.8, 0)
         valve_builder.add_capsule_collision(
             pose=capsule_pose,
             radius=capsule_radius,

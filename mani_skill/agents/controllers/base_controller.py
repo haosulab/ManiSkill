@@ -16,10 +16,8 @@ from mani_skill.agents.utils import (
     get_active_joint_indices,
     get_joints_by_names,
 )
-from mani_skill.utils import sapien_utils
-from mani_skill.utils.common import clip_and_scale_action, normalize_action_space
-from mani_skill.utils.structs.articulation import Articulation
-from mani_skill.utils.structs.joint import Joint
+from mani_skill.utils import common, gym_utils
+from mani_skill.utils.structs import Articulation, ArticulationJoint
 from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:
@@ -31,8 +29,10 @@ class BaseController:
     The controller is an interface for the robot to interact with the environment.
     """
 
-    joints: List[Joint]  # active joints controlled
-    joint_indices: torch.Tensor  # indices of active joints controlled
+    joints: List[ArticulationJoint]
+    """active joints controlled"""
+    active_joint_indices: torch.Tensor
+    """indices of active joints controlled. Equivalent to [x.active_index for x in self.joints]"""
     action_space: spaces.Space
     """the action space. If the number of parallel environments is > 1, this action space is also batched"""
     single_action_space: spaces.Space
@@ -84,7 +84,7 @@ class BaseController:
         try:
             # We only track the joints we can control, the active ones.
             self.joints = get_joints_by_names(self.articulation, joint_names)
-            self.joint_indices = get_active_joint_indices(
+            self.active_joint_indices = get_active_joint_indices(
                 self.articulation, joint_names
             )
         except Exception as err:
@@ -104,12 +104,12 @@ class BaseController:
     @property
     def qpos(self):
         """Get current joint positions."""
-        return self.articulation.get_qpos()[..., self.joint_indices]
+        return self.articulation.get_qpos()[..., self.active_joint_indices]
 
     @property
     def qvel(self):
         """Get current joint velocities."""
-        return self.articulation.get_qvel()[..., self.joint_indices]
+        return self.articulation.get_qvel()[..., self.active_joint_indices]
 
     # -------------------------------------------------------------------------- #
     # Interfaces (implemented in subclasses)
@@ -157,18 +157,18 @@ class BaseController:
     # -------------------------------------------------------------------------- #
     def _clip_and_scale_action_space(self):
         self._original_single_action_space = self.single_action_space
-        self.single_action_space = normalize_action_space(
+        self.single_action_space = gym_utils.normalize_action_space(
             self._original_single_action_space
         )
         low, high = (
             self._original_single_action_space.low,
             self._original_single_action_space.high,
         )
-        self.action_space_low = sapien_utils.to_tensor(low)
-        self.action_space_high = sapien_utils.to_tensor(high)
+        self.action_space_low = common.to_tensor(low)
+        self.action_space_high = common.to_tensor(high)
 
     def _clip_and_scale_action(self, action):
-        return clip_and_scale_action(
+        return gym_utils.clip_and_scale_action(
             action, self.action_space_low, self.action_space_high
         )
 
@@ -225,17 +225,14 @@ class DictController(BaseController):
 
     def _initialize_joints(self):
         self.joints = []
-        self.joint_indices = []
+        self.active_joint_indices = []
         for controller in self.controllers.values():
             self.joints.extend(controller.joints)
-            self.joint_indices.extend(controller.joint_indices)
+            self.active_joint_indices.extend(controller.active_joint_indices)
 
     def set_drive_property(self):
         for controller in self.controllers.values():
             controller.set_drive_property()
-        # raise RuntimeError(
-        #     "Undefined behaviors to set drive property for multiple controllers"
-        # )
 
     def reset(self):
         for controller in self.controllers.values():
@@ -243,7 +240,7 @@ class DictController(BaseController):
 
     def set_action(self, action: Dict[str, np.ndarray]):
         for uid, controller in self.controllers.items():
-            controller.set_action(sapien_utils.to_tensor(action[uid]))
+            controller.set_action(common.to_tensor(action[uid]))
 
     def before_simulation_step(self):
         if physx.is_gpu_enabled():

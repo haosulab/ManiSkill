@@ -1,14 +1,18 @@
+from __future__ import annotations
+
 import json
 from copy import deepcopy
 from functools import partial
-from typing import Dict, Type
+from typing import TYPE_CHECKING, Dict, Type
 
 import gymnasium as gym
 from gymnasium.envs.registration import EnvSpec as GymEnvSpec
 
 from mani_skill import logger
-from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
+
+if TYPE_CHECKING:
+    from mani_skill.envs.sapien_env import BaseEnv
 
 
 class EnvSpec:
@@ -19,7 +23,7 @@ class EnvSpec:
         max_episode_steps=None,
         default_kwargs: dict = None,
     ):
-        """A specification for a ManiSkill2 environment."""
+        """A specification for a ManiSkill environment."""
         self.uid = uid
         self.cls = cls
         self.max_episode_steps = max_episode_steps
@@ -48,7 +52,11 @@ REGISTERED_ENVS: Dict[str, EnvSpec] = {}
 def register(
     name: str, cls: Type[BaseEnv], max_episode_steps=None, default_kwargs: dict = None
 ):
-    """Register a ManiSkill2 environment."""
+    """Register a ManiSkill environment."""
+
+    # hacky way to avoid circular import errors when users inherit a task in ManiSkill and try to register it themselves
+    from mani_skill.envs.sapien_env import BaseEnv
+
     if name in REGISTERED_ENVS:
         logger.warn(f"Env {name} already registered")
     if not issubclass(cls, BaseEnv):
@@ -59,7 +67,7 @@ def register(
 
 
 def make(env_id, enable_segmentation=False, **kwargs):
-    """Instantiate a ManiSkill2 environment.
+    """Instantiate a ManiSkill environment.
 
     Args:
         env_id (str): Environment ID.
@@ -83,7 +91,7 @@ def make_vec(env_id, **kwargs):
 
 
 def register_env(uid: str, max_episode_steps=None, override=False, **kwargs):
-    """A decorator to register ManiSkill2 environments.
+    """A decorator to register ManiSkill environments.
 
     Args:
         uid (str): unique id of the environment.

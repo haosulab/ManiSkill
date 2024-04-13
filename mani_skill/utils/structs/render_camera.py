@@ -1,11 +1,7 @@
 from dataclasses import dataclass
-from functools import cache
 from typing import TYPE_CHECKING, Any, List, Union
 
-from mani_skill.utils.geometry.rotation_conversions import (
-    quaternion_apply,
-    quaternion_to_matrix,
-)
+from mani_skill.utils.geometry.rotation_conversions import quaternion_to_matrix
 
 if TYPE_CHECKING:
     from mani_skill.envs.scene import ManiSkillScene
@@ -16,7 +12,7 @@ import sapien.physx as physx
 import sapien.render
 import torch
 
-from mani_skill.utils import sapien_utils
+from mani_skill.utils import common
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.link import Link
 from mani_skill.utils.structs.pose import Pose
@@ -40,6 +36,9 @@ class RenderCamera:
     # we cache model and extrinsic matrices since the code here supports computing these when the camera is mounted and these are always changing
     _cached_model_matrix: torch.Tensor = None
     _cached_extrinsic_matrix: torch.Tensor = None
+    # NOTE (stao): default @cache from functools seems to cause CPU memory leaks in dataclasses, so we cache ourselves here
+    _cached_intrinsic_matrix: torch.Tensor = None
+    _cached_local_pose: Pose = None
 
     @classmethod
     def create(
@@ -85,9 +84,9 @@ class RenderCamera:
                 self._cached_extrinsic_matrix = res
             return res
         else:
-            return sapien_utils.to_tensor(
-                self._render_cameras[0].get_extrinsic_matrix()
-            )[None, :]
+            return common.to_tensor(self._render_cameras[0].get_extrinsic_matrix())[
+                None, :
+            ]
 
     def get_far(self) -> float:
         return self._render_cameras[0].get_far()
@@ -98,27 +97,29 @@ class RenderCamera:
     def get_height(self) -> int:
         return self._render_cameras[0].get_height()
 
-    @cache
     def get_intrinsic_matrix(self):
-        return sapien_utils.to_tensor(
-            np.array([cam.get_intrinsic_matrix() for cam in self._render_cameras])
-        )
+        if self._cached_intrinsic_matrix is None:
+            self._cached_intrinsic_matrix = common.to_tensor(
+                np.array([cam.get_intrinsic_matrix() for cam in self._render_cameras])
+            )
+        return self._cached_intrinsic_matrix
 
-    @cache
     def get_local_pose(self) -> Pose:
-        if physx.is_gpu_enabled():
-            ps = np.array(
-                [
-                    np.concatenate([cam.get_local_pose().p, cam.get_local_pose().q])
-                    for cam in self._render_cameras
-                ]
-            )
-            return Pose.create(sapien_utils.to_tensor(ps))
-        else:
-            return Pose.create_from_pq(
-                self._render_cameras[0].get_local_pose().p,
-                self._render_cameras[0].get_local_pose().q,
-            )
+        if self._cached_local_pose is None:
+            if physx.is_gpu_enabled():
+                ps = np.array(
+                    [
+                        np.concatenate([cam.get_local_pose().p, cam.get_local_pose().q])
+                        for cam in self._render_cameras
+                    ]
+                )
+                self._cached_local_pose = Pose.create(common.to_tensor(ps))
+            else:
+                self._cached_local_pose = Pose.create_from_pq(
+                    self._render_cameras[0].get_local_pose().p,
+                    self._render_cameras[0].get_local_pose().q,
+                )
+        return self._cached_local_pose
 
     def get_model_matrix(self):
 
@@ -142,9 +143,7 @@ class RenderCamera:
                 self._cached_model_matrix = res
             return res
         else:
-            return sapien_utils.to_tensor(self._render_cameras[0].get_model_matrix())[
-                None, :
-            ]
+            return common.to_tensor(self._render_cameras[0].get_model_matrix())[None, :]
 
     def get_near(self) -> float:
         return self._render_cameras[0].get_near()
@@ -153,7 +152,7 @@ class RenderCamera:
         if physx.is_gpu_enabled():
             return self.camera_group.get_picture_cuda(name).torch()
         else:
-            return sapien_utils.to_tensor(self._render_cameras[0].get_picture(name))[
+            return common.to_tensor(self._render_cameras[0].get_picture(name))[
                 None, ...
             ]
 

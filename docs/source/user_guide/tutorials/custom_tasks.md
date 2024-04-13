@@ -1,8 +1,8 @@
 # Custom Tasks
 
-Building custom tasks in ManiSkill is straightforward and flexible. ManiSkill provides a number of features to help abstract away most of the GPU memory management required for parallel simulation and rendering. By the end of this tutorial you will learn how to create simple rigid-body tasks that simulate both on GPU and CPU.
+Building custom tasks in ManiSkill is straightforward and flexible. ManiSkill provides a number of features to help abstract away most of the GPU memory management required for parallel simulation and rendering. By the end of this tutorial, you will learn how to create simple rigid-body tasks that simulate both on GPU and CPU.
 
-To build a custom task in ManiSkill, it is comprised of the following core components
+Building a custom task in ManiSkill is comprised of the following core components
 
 1. [Setting up the Task Class](#setting-up-the-task-class)
 2. [Loading (Robots, Assets, Sensors, etc.)](#loading) (done once)
@@ -22,9 +22,9 @@ and `env.step` follows below:
 :::{figure} images/env_step_flow.png 
 :::
 
-This tutorial will take you through most of the important yellow modules in the figures above that should be implemented in order to build a task.
+This tutorial will take you through most of the important yellow modules in the figures above that should be implemented to build a task.
 
-To follow this tutorial easily, we recommend reading this along side reading the [annotated code for the PushCube task](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill/envs/tasks/push_cube.py) which describe the purpose of nearly every line of code. The [advanced features page](./custom_tasks_advanced.md) covers additional topics to do more advanced simulation and optimization such as dynamic GPU memory configuration, heterogenous object simulation, and more. 
+To follow this tutorial easily, we recommend reading this alongside reading the [annotated code for the PushCube task](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill/envs/tasks/push_cube.py) which describes the purpose of nearly every line of code. The [advanced features page](./custom_tasks_advanced.md) covers additional topics to do more advanced simulation and optimization such as dynamic GPU memory configuration, heterogenous object simulation, and more. 
 
 If you want to skip the tutorial and start from a template you can use the [PushCube task](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill/envs/tasks/push_cube.py) as a template, the [annotated template](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill/envs/template.py), or the [bare minimum template](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill/envs/minimal_template.py).
 
@@ -38,7 +38,7 @@ All tasks are defined by their own class and must inherit `BaseEnv`, similar to 
 
 ```python
 import sapien
-from mani_skill.utils import sapien_utils
+from mani_skill.utils import sapien_utils, common
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.utils.registration import register_env
 
@@ -51,7 +51,7 @@ class PushCubeEnv(BaseEnv):
 
 At the start of any task, you must load in all objects (robots, assets, articulations, lighting etc.) into each parallel environment, also known as a sub-scene. This is also known as **reconfiguration** and generally only ever occurs once. Loading these objects is done in the `_load_scene` function of your custom task class. The objective is to simply load objects in, and nothing else. For GPU simulation at this stage you cannot change object states (like pose, qpos), only initial poses can be modified. Changing/randomizing states is done in the section on [episode initialization / randomization](#episode-initialization-randomization).
 
-Building objects in ManiSkill is nearly the exact same as it is in SAPIEN. You create an `ActorBuilder` via `self.scene.create_actor_builder` and via the actor builder add visual and collision shapes. Visual shapes only affect visual rendering processes while collision shapes affect the physical simulation. ManiSkill further will create the actor for you in every sub-scene (unless you use [scene-masks/scene-idxs](./custom_tasks_advanced.md#scene-masks), a more advanced feature).
+Building objects in ManiSkill is nearly the exact same as it is in SAPIEN. You create an `ActorBuilder` via `self._scene.create_actor_builder` and via the actor builder add visual and collision shapes. Visual shapes only affect visual rendering processes while collision shapes affect the physical simulation. ManiSkill further will create the actor for you in every sub-scene (unless you use [scene-masks/scene-idxs](./custom_tasks_advanced.md#scene-masks), a more advanced feature).
 
 #### Building Robots
 
@@ -82,23 +82,25 @@ the `_load_scene` function must be implemented to build objects besides agents. 
 
 Building a **dynamic** actor like a cube in PushCube is done as so
 ```python
-def _load_scene(self, options: dict):
+class PushCubeEnv(BaseEnv):
     # ...
-    builder = scene.create_actor_builder()
-    builder.add_box_collision(
-        # for boxes we specify half length of each side
-        half_size=[0.02] * 3,
-    )
-    builder.add_box_visual(
-        half_size=[0.02] * 3,
-        material=sapien.render.RenderMaterial(
-            # RGBA values, this is a red cube
-            base_color=[1, 0, 0, 1],
-        ),
-    )
-    self.obj = builder.build(name="cube")
-    # PushCube has some other code after this removed for brevity that 
-    # spawns a goal object (a red/white target) stored at self.goal_region
+    def _load_scene(self, options: dict):
+        # ...
+        builder = self._scene.create_actor_builder()
+        builder.add_box_collision(
+            # for boxes we specify half length of each side
+            half_size=[0.02] * 3,
+        )
+        builder.add_box_visual(
+            half_size=[0.02] * 3,
+            material=sapien.render.RenderMaterial(
+                # RGBA values, this is a red cube
+                base_color=[1, 0, 0, 1],
+            ),
+        )
+        self.obj = builder.build(name="cube")
+        # PushCube has some other code after this removed for brevity that 
+        # spawns a goal object (a red/white target) stored at self.goal_region
 ```
 
 You can build a **kinematic** actor with `builder.build_kinematic` and a **static** actor with `builder.build_static`. A few sharp bits to keep in mind
@@ -122,12 +124,14 @@ self.obj.linear_velocity # batched velocities of shape (N, 3)
 
 For object building, you can also use reusable pre-built scene builders (tutorial on how to customize/make your own [here](./custom_reusable_scenes.md)). In Push Cube it is done as so
 ```python
-def _load_scene(self, options: dict):
-    self.table_scene = TableSceneBuilder(
-        env=self,
-    )
-    self.table_scene.build()
+class PushCubeEnv(BaseEnv):
     # ...
+    def _load_scene(self, options: dict):
+        self.table_scene = TableSceneBuilder(
+            env=self,
+        )
+        self.table_scene.build()
+        # ...
 ```
 The TableSceneBuilder is perfect for easily building table-top tasks, it creates a table and floor for you, and places the fetch and panda robots in reasonable locations.
 
@@ -142,8 +146,10 @@ In general loading is always quite slow, especially on the GPU so by default, Ma
 If you want calls to `env.reset()` to by default reconfigure, you can set a default value for `reconfiguration_freq` in your task's `__init__` function
 
 ```python
-def __init__(self, *args, robot_uids="panda", reconfiguration_freq=1, **kwargs):
-    super().__init__(*args, robot_uids=robot_uids, reconfiguration_freq=reconfiguration_freq, **kwargs)
+class PushCubeEnv(BaseEnv):
+    # ...
+    def __init__(self, *args, robot_uids="panda", reconfiguration_freq=1, **kwargs):
+        super().__init__(*args, robot_uids=robot_uids, reconfiguration_freq=reconfiguration_freq, **kwargs)
 ```
 
 A `reconfiguration_freq` value of 1 means every during every reset we reconfigure. A `reconfiguration_freq` of `k` means every `k` resets we reconfigure. A `reconfiguration_freq` of 0 (the default) means we never reconfigure again.
@@ -160,20 +166,22 @@ An example from part of the PushCube task
 ```python
 from mani_skill.utils.structs.pose import Pose
 import torch
-def _initialize_actors(self, env_idx: torch.Tensor, options: dict):
-    # use the torch.device context manager to automatically create tensors on CPU or CUDA depending on self.device, the device the environment runs on
-    with torch.device(self.device):
-        b = len(env_idx)
-        # use the TableSceneBuilder to initialize all objects in that scene builder
-        self.table_scene.initialize(env_idx)
+class PushCubeEnv(BaseEnv):
+    # ...
+    def _initialize_actors(self, env_idx: torch.Tensor, options: dict):
+        # use the torch.device context manager to automatically create tensors on CPU or CUDA depending on self.device, the device the environment runs on
+        with torch.device(self.device):
+            b = len(env_idx)
+            # use the TableSceneBuilder to initialize all objects in that scene builder
+            self.table_scene.initialize(env_idx)
 
-        # here we write some randomization code that randomizes the x, y position of the cube we are pushing in the range [-0.1, -0.1] to [0.1, 0.1]
-        p = torch.zeros((b, 3))
-        p[..., :2] = torch.rand((b, 2)) * 0.2 - 0.1
-        p[..., 2] = self.cube_half_size
-        q = [1, 0, 0, 0]
-        obj_pose = Pose.create_from_pq(p=p, q=q)
-        self.obj.set_pose(obj_pose)
+            # here we write some randomization code that randomizes the x, y position of the cube we are pushing in the range [-0.1, -0.1] to [0.1, 0.1]
+            p = torch.zeros((b, 3))
+            p[..., :2] = torch.rand((b, 2)) * 0.2 - 0.1
+            p[..., 2] = self.cube_half_size
+            q = [1, 0, 0, 0]
+            obj_pose = Pose.create_from_pq(p=p, q=q)
+            self.obj.set_pose(obj_pose)
 ```
 
 An `env_idx` is one of the arguments to this function, and is a list of environment IDs that need initialization. This is given as ManiSkill supports **partial resets**, where at each timestep potentially only a subset of parallel environments will undergo a reset, which calls `_initialize_actors` here. 
@@ -198,30 +206,46 @@ Pose.create_from_pq(p=p, q=q)
 `raw_pose` is a vector with shape (b, 7), where 3D position and 4D quaternions are concatenated to form 7 dimensional vectors.
 
 `p, q` are position and quaternions. `Pose.create_from_pq` has a feature where it will accept unbatched arguments and batch+repeat `p` or `q` if the other value is batched. For example in the PushCube sample we do
-```
+```python
 # p here has shape (b, 3)
 q = [1, 0, 0, 0]
 obj_pose = Pose.create_from_pq(p=p, q=q)
 ```
 While `q` is a flat array (python list) representing a single quaternion, `p` is a batch of `b` 3D positions. Pose will create a Pose object that has batch size `b` and the ith pose in `obj_pose` will have position `p[i]` and constant quaternion `q`. The same effect occurs the other way around and provides some convenience to avoid having users write too much batching code themselves.
 
+The `Pose` object also supports flexible slicing/indexing/masking that you may expect for a typical numpy array or torch tensor. For example, you can do the below
+
+```python
+# assume pose object here if of shape (4, 7) managing 4 different poses
+pose.shape 
+# returns (4, 7)
+pose[2]
+# returns a single Pose object with shape (1, 7) managing 1 pose
+pose[0:2]
+# returns a single Pose object managing the poses at indexes 0 to 2
+pose[[True, False, False, True]]
+# returns a single Pose object managing poses at indexes 0 and 3
+```
+
 ## Success/Failure Conditions
 
 For each task, at each timestep (when `env.step` is called) we need to evaluate the current state of the task, typically to see if its in a fail or success state. In terms of the gym interface, if success or fail is True, then terminated is True and you can check the returned info object to see if it was because of success or failure. In PushCube, we regard it to be successful if the cube is pushed into the goal region, which is evaluated as so
 ```python
-def evaluate(self):
-    # success is achieved when the cube's xy position on the table is within the
-    # goal region's area (a circle centered at the goal region's xy position)
-    is_obj_placed = (
-        torch.linalg.norm(
-            self.obj.pose.p[..., :2] - self.goal_region.pose.p[..., :2], axis=1
+class PushCubeEnv(BaseEnv):
+    # ...
+    def evaluate(self):
+        # success is achieved when the cube's xy position on the table is within the
+        # goal region's area (a circle centered at the goal region's xy position)
+        is_obj_placed = (
+            torch.linalg.norm(
+                self.obj.pose.p[..., :2] - self.goal_region.pose.p[..., :2], axis=1
+            )
+            < self.goal_radius
         )
-        < self.goal_radius
-    )
 
-    return {
-        "success": is_obj_placed,
-    }
+        return {
+            "success": is_obj_placed,
+        }
 ```
 
 PushCube task here does not define a fail condition, but you could define one yourself to check if the cube falls off the table (in which case then the task is impossible to solve).
@@ -239,23 +263,29 @@ Note that some tasks like locomotion/control tasks in [dm-control](https://githu
 
 ## Extra Observations
 
-In order to augment the observations given to users after calling `env.reset` or `env.step`, you should implement the `_get_obs_extra` function. This function takes just the `info` object generated via the earlier defined `evaluate` function, allowing you to re-use computations in this function to improve efficiency. Generally you want to ensure you do not provide any ground-truth information that should not be available unless the observation mode is "state" or "state_dict", such as the pose of the cube you are pushing. There are some data like tcp_pose which are always available for robots and given all the time, and also critical information like the goal position to direct the agent where to push the cube.
+By default, the observations returned to users through calls to `env.reset` and `env.step` includes the agent propioceptive data (Like joint angles/velocities) that normally you have access to in the real world. 
+
+To better support state based observations, you need to augment the observations given to users by implementing the `_get_obs_extra` function. This function takes the `info` object generated via the earlier defined `evaluate` function as input and returns the augmented observation data as a dictionary. 
+
+Generally you want to ensure you do not provide any ground-truth information that should not be available unless the observation mode is "state" or "state_dict", such as the pose of the cube you are pushing. There are some data like `self.agent.tcp.pose` which are always available for single-arm robots and given all the time, and also critical information like the goal position to direct the agent where to push the cube.
 
 ```python
-def _get_obs_extra(self, info: Dict):
-    # some useful observation info for solving the task includes the pose of the tcp (tool center point) which is the point between the
-    # grippers of the robot
-    obs = OrderedDict(
-        tcp_pose=self.agent.tcp.pose.raw_pose,
-        goal_pos=self.goal_region.pose.p,
-    )
-    if self._obs_mode in ["state", "state_dict"]:
-        # if the observation mode is state/state_dict, we provide ground truth information about where the cube is.
-        # for visual observation modes one should rely on the sensed visual data to determine where the cube is
-        obs.update(
-            obj_pose=self.obj.pose.raw_pose,
+class PushCubeEnv(BaseEnv):
+    # ...
+    def _get_obs_extra(self, info: Dict):
+        # some useful observation info for solving the task includes the pose of the tcp (tool center point) which is the point between the
+        # grippers of the robot
+        obs = dict(
+            tcp_pose=self.agent.tcp.pose.raw_pose,
+            goal_pos=self.goal_region.pose.p,
         )
-    return obs
+        if self._obs_mode in ["state", "state_dict"]:
+            # if the observation mode is state/state_dict, we provide ground truth information about where the cube is.
+            # for visual observation modes one should rely on the sensed visual data to determine where the cube is
+            obs.update(
+                obj_pose=self.obj.pose.raw_pose,
+            )
+        return obs
 ```
 
 In order to understand exactly what data is returned in observations, check out the [section on observations here](../concepts/observation.md)
@@ -264,14 +294,18 @@ In order to understand exactly what data is returned in observations, check out 
 
 You can define a dense reward function and then a normalized version of it
 ```python
-def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
+class PushCubeEnv(BaseEnv):
     # ...
-    return reward
+    def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
+        # ...
+        return reward
 
-def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
-    # this should be equal to compute_dense_reward / max possible reward
-    max_reward = 3.0
-    return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
+class PushCubeEnv(BaseEnv):
+    # ...
+    def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
+        # this should be equal to compute_dense_reward / max possible reward
+        max_reward = 3.0
+        return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
 ```
 
 `compute_normalized_dense_reward` is the default reward function used and retuurned from `env.step`. We recommend defining normalized reward function as these tend to be easier to learn from, especially in algorithms that learn Q functions in RL. The result of `compute_dense_reward` is returned when an environment created as `gym.make(env_id=..., reward_mode="dense")`
@@ -286,19 +320,21 @@ Below shows how to use `CameraConfig` to define sensors, you define its position
 
 ```python
 from mani_skill.sensors.camera import CameraConfig
-@property
-def _sensor_configs(self):
-    # registers one 128x128 camera looking at the robot, cube, and target
-    # a smaller sized camera will be lower quality, but render faster
-    pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
-    return [
-        CameraConfig("base_camera", pose, 128, 128, 1, 0.01, 100)
-    ]
-@property
-def _human_render_camera_configs(self):
-    # registers a more high-definition (512x512) camera used just for rendering when render_mode="rgb_array" or calling env.render_rgb_array()
-    pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
-    return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
+class PushCubeEnv(BaseEnv):
+    # ...
+    @property
+    def _sensor_configs(self):
+        # registers one 128x128 camera looking at the robot, cube, and target
+        # a smaller sized camera will be lower quality, but render faster
+        pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
+        return [
+            CameraConfig("base_camera", pose=pose, width=128, height=128, fov=np.pi / 2, near=0.01, far=100)
+        ]
+    @property
+    def _human_render_camera_configs(self):
+        # registers a more high-definition (512x512) camera used just for rendering when render_mode="rgb_array" or calling env.render_rgb_array()
+        pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
+        return CameraConfig("render_camera", pose=pose, width=512, height=512, fov=1, near=0.01, far=100)
 ```
 
 In the code above we use a useful tool `sapien_utils.look_at(eye, target)` which generates a pose object to configure a camera to be at position `eye` looking at position `target`. To debug the registered cameras for sensors, you can visualize them by running

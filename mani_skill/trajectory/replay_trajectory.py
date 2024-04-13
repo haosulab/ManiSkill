@@ -23,9 +23,7 @@ from mani_skill.agents.controllers.base_controller import CombinedController
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.trajectory import utils as trajectory_utils
 from mani_skill.trajectory.merge_trajectory import merge_h5
-from mani_skill.utils.common import clip_and_scale_action, inv_scale_action
-from mani_skill.utils.io_utils import load_json
-from mani_skill.utils.wrappers import RecordEpisode
+from mani_skill.utils import gym_utils, io_utils, wrappers
 
 
 def qpos_to_pd_joint_delta_pos(controller: PDJointPosController, qpos):
@@ -34,7 +32,7 @@ def qpos_to_pd_joint_delta_pos(controller: PDJointPosController, qpos):
     assert controller.config.normalize_action
     delta_qpos = qpos - controller.qpos.numpy()[0]
     low, high = controller.config.lower, controller.config.upper
-    return inv_scale_action(delta_qpos, low, high)
+    return gym_utils.inv_scale_action(delta_qpos, low, high)
 
 
 def qpos_to_pd_joint_target_delta_pos(controller: PDJointPosController, qpos):
@@ -44,7 +42,7 @@ def qpos_to_pd_joint_target_delta_pos(controller: PDJointPosController, qpos):
     assert controller.config.normalize_action
     delta_qpos = qpos - controller._target_qpos.numpy()[0]
     low, high = controller.config.lower, controller.config.upper
-    return inv_scale_action(delta_qpos, low, high)
+    return gym_utils.inv_scale_action(delta_qpos, low, high)
 
 
 def qpos_to_pd_joint_vel(controller: PDJointVelController, qpos):
@@ -53,7 +51,7 @@ def qpos_to_pd_joint_vel(controller: PDJointVelController, qpos):
     delta_qpos = qpos - controller.qpos.numpy()[0]
     qvel = delta_qpos * controller._control_freq
     low, high = controller.config.lower, controller.config.upper
-    return inv_scale_action(qvel, low, high)
+    return gym_utils.inv_scale_action(qvel, low, high)
 
 
 def compact_axis_angle_from_quaternion(quat: np.ndarray) -> np.ndarray:
@@ -74,12 +72,12 @@ def delta_pose_to_pd_ee_delta(
     assert controller.config.normalize_action
     low, high = controller.action_space.low, controller.action_space.high
     if pos_only:
-        return inv_scale_action(delta_pose.p, low, high)
+        return gym_utils.inv_scale_action(delta_pose.p, low, high)
     delta_pose = np.r_[
         delta_pose.p,
         compact_axis_angle_from_quaternion(delta_pose.q),
     ]
-    return inv_scale_action(delta_pose, low, high)
+    return gym_utils.inv_scale_action(delta_pose, low, high)
 
 
 def from_pd_joint_pos_to_ee(
@@ -127,7 +125,7 @@ def from_pd_joint_pos_to_ee(
 
         # Use target joint positions for arm only
         full_qpos[
-            ori_arm_controller.joint_indices
+            ori_arm_controller.active_joint_indices
         ] = ori_arm_controller._target_qpos.numpy()[0]
         pin_model.compute_forward_kinematics(full_qpos)
         target_ee_pose = pin_model.get_link_pose(arm_controller.ee_link_idx)
@@ -275,7 +273,7 @@ def from_pd_joint_delta_pos(
         output_action_dict = ori_action_dict.copy()  # do not in-place modify
 
         prev_arm_qpos = ori_arm_controller.qpos
-        delta_qpos = clip_and_scale_action(ori_action_dict["arm"], low, high)
+        delta_qpos = gym_utils.clip_and_scale_action(ori_action_dict["arm"], low, high)
         arm_action = prev_arm_qpos + delta_qpos
 
         ori_env.step(ori_action)
@@ -358,7 +356,7 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
 
     # Load associated json
     json_path = traj_path.replace(".h5", ".json")
-    json_data = load_json(json_path)
+    json_data = io_utils.load_json(json_path)
 
     env_info = json_data["env_info"]
     env_id = env_info["env_id"]
@@ -383,6 +381,20 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
     env_kwargs[
         "render_mode"
     ] = "rgb_array"  # note this only affects the videos saved as RecordEpisode wrapper calls env.render
+
+    # handle warnings/errors for replaying trajectories generated during GPU simulation
+    if "num_envs" in env_kwargs:
+        if env_kwargs["num_envs"] > 1:
+            raise RuntimeError(
+                """Cannot replay trajectories that were generated in a GPU
+            simulation with more than one environment. To replay trajectories generated during GPU simulation,
+            make sure to set num_envs=1 and sim_backend="gpu" in the env kwargs."""
+            )
+        if "sim_backend" in env_kwargs:
+            # if sim backend is "gpu", we change it to CPU if ray tracing shader is used as RT is not supported yet on GPU sim backends
+            # TODO (stao): remove this if we ever support RT on GPU sim.
+            if args.shader[:2] == "rt":
+                env_kwargs["sim_backend"] = "cpu"
     env = gym.make(env_id, **env_kwargs)
     if pbar is not None:
         pbar.set_postfix(
@@ -399,7 +411,7 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
     new_traj_name = ori_traj_name + "." + suffix
     if num_procs > 1:
         new_traj_name = new_traj_name + "." + str(proc_id)
-    env: RecordEpisode = RecordEpisode(
+    env = wrappers.RecordEpisode(
         env,
         output_dir,
         save_on_reset=False,
@@ -446,9 +458,6 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
             if ori_env is not None:
                 ori_env.reset(seed=seed, **reset_kwargs)
 
-            if args.vis:
-                env.base_env.render_human()
-
             # Original actions to replay
             ori_actions = ori_h5_file[traj_id]["actions"][:]
 
@@ -456,7 +465,9 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
             if args.use_env_states:
                 ori_env_states = trajectory_utils.dict_to_list_of_dicts(
                     ori_h5_file[traj_id]["env_states"]
-                )[1:]
+                )
+                env.base_env.set_state_dict(ori_env_states[0])
+                ori_env_states = ori_env_states[1:]
 
             info = {}
 

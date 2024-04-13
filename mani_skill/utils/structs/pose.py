@@ -6,7 +6,7 @@ import sapien
 import sapien.physx as physx
 import torch
 
-from mani_skill.utils import sapien_utils
+from mani_skill.utils import common
 from mani_skill.utils.geometry.rotation_conversions import (
     quaternion_apply,
     quaternion_multiply,
@@ -24,7 +24,7 @@ def add_batch_dim(x):
 def to_batched_tensor(x: Union[List, Array]):
     if x is None:
         return None
-    return add_batch_dim(sapien_utils.to_tensor(x))
+    return add_batch_dim(common.to_tensor(x))
 
 
 @dataclass
@@ -96,14 +96,14 @@ class Pose:
     def create(cls, pose: Union[torch.Tensor, sapien.Pose, "Pose"]) -> "Pose":
         if isinstance(pose, sapien.Pose):
             raw_pose = torch.hstack(
-                [sapien_utils.to_tensor(pose.p), sapien_utils.to_tensor(pose.q)]
+                [common.to_tensor(pose.p), common.to_tensor(pose.q)]
             )
             return cls(raw_pose=add_batch_dim(raw_pose))
         elif isinstance(pose, cls):
             return pose
         else:
             assert len(pose.shape) <= 2 and len(pose.shape) > 0
-            pose = sapien_utils.to_tensor(pose)
+            pose = common.to_tensor(pose)
             pose = add_batch_dim(pose)
             if pose.shape[-1] == 3:
                 return cls.create_from_pq(p=pose, device=pose.device)
@@ -111,11 +111,7 @@ class Pose:
             return cls(raw_pose=pose)
 
     def __getitem__(self, i):
-        if i >= len(self.raw_pose):
-            raise IndexError(
-                f"IndexError: index {i} is out of bounds for pose with batch size {len(self.raw_pose)}"
-            )
-        return Pose.create(self.raw_pose[i : i + 1, :])
+        return Pose.create(self.raw_pose[i])
 
     def __len__(self):
         return len(self.raw_pose)
@@ -123,6 +119,10 @@ class Pose:
     @property
     def shape(self):
         return self.raw_pose.shape
+
+    @property
+    def device(self):
+        return self.raw_pose.device
 
     # -------------------------------------------------------------------------- #
     # Functions from sapien.Pose
@@ -192,7 +192,7 @@ class Pose:
 
     @p.setter
     def p(self, arg1: torch.Tensor):
-        self.raw_pose[..., :3] = sapien_utils.to_tensor(arg1)
+        self.raw_pose[..., :3] = common.to_tensor(arg1)
 
     @property
     def q(self):
@@ -200,7 +200,7 @@ class Pose:
 
     @q.setter
     def q(self, arg1: torch.Tensor):
-        self.raw_pose[..., 3:] = sapien_utils.to_tensor(arg1)
+        self.raw_pose[..., 3:] = common.to_tensor(arg1)
 
     # @property
     # def rpy(self) -> numpy.ndarray[numpy.float32, _Shape, _Shape[3]]:
@@ -219,7 +219,7 @@ def vectorize_pose(pose: Union[sapien.Pose, Pose]) -> torch.Tensor:
     if isinstance(pose, sapien.Pose):
         if physx.is_gpu_enabled():
             return torch.concatenate(
-                [sapien_utils.to_tensor(pose.p), sapien_utils.to_tensor(pose.q)]
+                [common.to_tensor(pose.p), common.to_tensor(pose.q)]
             )
         else:
             return np.hstack([pose.p, pose.q])
@@ -240,7 +240,7 @@ def to_sapien_pose(pose: Union[torch.Tensor, sapien.Pose, Pose]) -> sapien.Pose:
         ), "pose is batched. Note that sapien Poses are not batched. If you want to use a batched Pose object use from mani_skill.utils.structs.pose import Pose"
         if len(pose.shape) == 2:
             pose = pose[0]
-        pose = sapien_utils.to_numpy(pose)
+        pose = common.to_numpy(pose)
         return sapien.Pose(pose[:3], pose[3:])
     else:
         assert len(pose.shape) == 1 or (
@@ -248,5 +248,5 @@ def to_sapien_pose(pose: Union[torch.Tensor, sapien.Pose, Pose]) -> sapien.Pose:
         ), "pose is batched. Note that sapien Poses are not batched. If you want to use a batched Pose object use from mani_skill.utils.structs.pose import Pose"
         if len(pose.shape) == 2:
             pose = pose[0]
-        pose = sapien_utils.to_numpy(pose)
+        pose = common.to_numpy(pose)
         return sapien.Pose(pose[:3], pose[3:])

@@ -28,7 +28,10 @@ class DataSource:
     url: str = None
     hf_repo_id: str = None
     target_path: str = None
+    """the folder where the file will be downloaded to"""
     checksum: str = None
+    filename: str = None
+    """name to change the downloaded file to. If None, will not change the name"""
     output_dir: str = ASSET_DIR
 
 
@@ -200,7 +203,6 @@ def download(
     non_interactive=True,
 ):
     output_dir = Path(data_source.output_dir)
-
     # Create output directory
     if not output_dir.exists():
         if non_interactive or prompt_yes_no(f"{output_dir} does not exist. Create?"):
@@ -226,7 +228,7 @@ def download(
             else:
                 print(f"Skip existing: {output_path}")
                 return output_path
-
+    output_path.mkdir(parents=True, exist_ok=True)
     if data_source.hf_repo_id is not None:
         download_from_hf_datasets(data_source)
         return
@@ -243,7 +245,7 @@ def download(
                     pbar.total = size
                 pbar.update(bs)
 
-        filename, _ = urllib.request.urlretrieve(
+        tmp_filename, _ = urllib.request.urlretrieve(
             data_source.url, reporthook=show_progress
         )
         if verbose:
@@ -253,24 +255,29 @@ def download(
         raise err
 
     # Verify checksum
-    if data_source.checksum is not None and data_source.checksum != sha256sum(filename):
+    if data_source.checksum is not None and data_source.checksum != sha256sum(
+        tmp_filename
+    ):
         raise IOError(
             f"Downloaded file's SHA-256 hash does not match record: {data_source.url}"
         )
+    base_filename = data_source.filename
+    if base_filename is None:
+        base_filename = data_source.url.split("/")[-1]
     # Extract or move to output path
     if data_source.url.endswith(".zip"):
-        with zipfile.ZipFile(filename, "r") as zip_ref:
+        with zipfile.ZipFile(tmp_filename, "r") as zip_ref:
             if verbose:
                 for file in tqdm(zip_ref.infolist()):
                     zip_ref.extract(file, output_dir)
             else:
                 zip_ref.extractall(output_dir)
     else:
-        shutil.move(filename, output_path)
+        shutil.move(tmp_filename, output_path / base_filename)
 
     # Explicitly delete the temporary file
-    if Path(filename).exists():
-        Path(filename).unlink()
+    if Path(tmp_filename).exists():
+        Path(tmp_filename).unlink()
 
     return output_path
 

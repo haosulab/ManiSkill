@@ -1,5 +1,5 @@
 from dataclasses import asdict, dataclass, field
-from typing import Sequence, Union
+from typing import Literal, Sequence, Union
 
 import numpy as np
 import sapien.physx as physx
@@ -24,9 +24,11 @@ class GPUMemoryConfig:
     temp_buffer_capacity: int = 2**24
     """Increase this if you get 'PxgPinnedHostLinearMemoryAllocator: overflowing initial allocation size, increase capacity to at least %.' """
     max_rigid_contact_count: int = 2**19
+    """Increase this if you get 'Contact buffer overflow detected'"""
     max_rigid_patch_count: int = (
         2**18
     )  # 81920 is SAPIEN default but most tasks work with 2**18
+    """Increase this if you get 'Patch buffer overflow detected'"""
     heap_capacity: int = 2**26
     found_lost_pairs_capacity: int = (
         2**25
@@ -92,3 +94,6 @@ class SimConfig:
 
     def dict(self):
         return {k: v for k, v in asdict(self).items()}
+
+
+DriveMode = Literal["force", "acceleration"]
