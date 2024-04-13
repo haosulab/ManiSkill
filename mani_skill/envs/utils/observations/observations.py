@@ -2,7 +2,6 @@
 Functions that map a observation to a particular format, e.g. mapping the raw images to rgbd or pointcloud formats
 """
 
-from collections import OrderedDict
 from typing import Dict
 
 import numpy as np
@@ -19,6 +18,7 @@ def sensor_data_to_rgbd(
     sensors: Dict[str, BaseSensor],
     rgb=True,
     depth=True,
+    segmentation=True,
 ):
     """
     Converts all camera data to a easily usable rgb+depth format
@@ -31,8 +31,8 @@ def sensor_data_to_rgbd(
     ):
         assert cam_uid == sensor_uid
         if isinstance(sensor, Camera):
-            new_images = OrderedDict()
-            ori_images: dict[str, torch.Tensor]
+            new_images = dict()
+            ori_images: Dict[str, torch.Tensor]
             for key in ori_images:
                 if key == "Color":
                     if rgb:
@@ -41,11 +41,19 @@ def sensor_data_to_rgbd(
                 elif key == "PositionSegmentation":
                     if depth:
                         depth_data = -ori_images[key][..., [2]]  # [H, W, 1]
-                        # NOTE (stao): This is a bit of a hack since normally we have generic to_numpy call to convert internal torch tensors to numpy if we do not use GPU simulation
+                        # NOTE (stao): This is a bit of a hack since normally we have generic to_numpy call to convert
+                        # internal torch tensors to numpy if we do not use GPU simulation
                         # but torch does not have a uint16 type so we convert that here earlier
                         if not physx.is_gpu_enabled():
                             depth_data = depth_data.numpy().astype(np.uint16)
                         new_images["depth"] = depth_data
+                    if segmentation:
+                        segmentation_data = ori_images[key][..., [3]]
+                        if not physx.is_gpu_enabled():
+                            segmentation_data = segmentation_data.numpy().astype(
+                                np.uint16
+                            )
+                        new_images["segmentation"] = segmentation_data  # [H, W, 1]
                 else:
                     new_images[key] = ori_images[key]
             sensor_data[cam_uid] = new_images
@@ -56,7 +64,7 @@ def sensor_data_to_pointcloud(observation: Dict, sensors: Dict[str, BaseSensor])
     """convert all camera data in sensor to pointcloud data"""
     sensor_data = observation["sensor_data"]
     camera_params = observation["sensor_param"]
-    pointcloud_obs = OrderedDict()
+    pointcloud_obs = dict()
 
     for (cam_uid, images), (sensor_uid, sensor) in zip(
         sensor_data.items(), sensors.items()
@@ -67,7 +75,7 @@ def sensor_data_to_pointcloud(observation: Dict, sensors: Dict[str, BaseSensor])
 
             # Each pixel is (x, y, z, actor_id) in OpenGL camera space
             # actor_id = 0 for the background
-            images: dict[str, torch.Tensor]
+            images: Dict[str, torch.Tensor]
             position = images["PositionSegmentation"]
             segmentation = position[..., 3].clone()
             position = position.float()
@@ -88,8 +96,8 @@ def sensor_data_to_pointcloud(observation: Dict, sensors: Dict[str, BaseSensor])
                 rgb = images["Color"][..., :3].clone()
                 cam_pcd["rgb"] = rgb.reshape(rgb.shape[0], -1, 3)
             if "PositionSegmentation" in images:
-                cam_pcd["Segmentation"] = segmentation.reshape(
-                    segmentation.shape[0], -1
+                cam_pcd["segmentation"] = segmentation.reshape(
+                    segmentation.shape[0], -1, 1
                 )
 
             pointcloud_obs[cam_uid] = cam_pcd
@@ -99,16 +107,9 @@ def sensor_data_to_pointcloud(observation: Dict, sensors: Dict[str, BaseSensor])
     for key, value in pointcloud_obs.items():
         pointcloud_obs[key] = torch.concat(value, axis=1)
     observation["pointcloud"] = pointcloud_obs
+
+    if not physx.is_gpu_enabled():
+        observation["pointcloud"]["segmentation"] = (
+            observation["pointcloud"]["segmentation"].numpy().astype(np.uint16)
+        )
     return observation
-
-
-# TODO (stao):
-
-# def image_to_rgbd_robot_seg(observation: Dict):
-#     ...
-
-# def image_to_pointcloud_robot_seg(observation: Dict):
-#     ...
-
-
-# TODO (stao): add segmentation ids

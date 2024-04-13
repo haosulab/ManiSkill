@@ -386,7 +386,7 @@ class BaseEnv(gym.Env):
             info = self.get_info()
         if self._obs_mode == "none":
             # Some cases do not need observations, e.g., MPC
-            return OrderedDict()
+            return dict()
         elif self._obs_mode == "state":
             state_dict = self._get_obs_state_dict(info)
             obs = common.flatten_state_dict(state_dict, use_torch=True, device=self.device)
@@ -395,10 +395,10 @@ class BaseEnv(gym.Env):
         elif self._obs_mode in ["sensor_data", "rgbd", "rgb", "pointcloud"]:
             obs = self._get_obs_with_sensor_data(info)
             if self._obs_mode == "rgbd":
-                obs = sensor_data_to_rgbd(obs, self._sensors, rgb=True, depth=True)
+                obs = sensor_data_to_rgbd(obs, self._sensors, rgb=True, depth=True, segmentation=True)
             elif self._obs_mode == "rgb":
-                # TODO (stao): we can optmize this by not taking the PositionSegmentation texture at all.
-                obs = sensor_data_to_rgbd(obs, self._sensors, rgb=True, depth=False)
+                # NOTE (stao): this obs mode is merely a convenience, it does not make simulation run noticebally faster
+                obs = sensor_data_to_rgbd(obs, self._sensors, rgb=True, depth=False, segmentation=True)
             elif self.obs_mode == "pointcloud":
                 obs = sensor_data_to_pointcloud(obs, self._sensors)
         else:
