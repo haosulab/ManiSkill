@@ -39,7 +39,7 @@ setup(
         "imageio",
         "imageio[ffmpeg]",
         "mplib>=0.1.1",
-        "fast_kinematics",
+        "fast_kinematics==0.0.1",
         "huggingface_hub",  # we use HF to version control some assets/datasets more easily
     ],
     # Glob patterns do not automatically match dotfiles
