@@ -86,5 +86,31 @@ alt: Point cloud of Fetch robot inside the ReplicaCAD dataset scene
 ---
 ```
 
+For a quick demo to visualize pointclouds, you can run
+
+```bash
+python -m mani_skill.examples.demo_vis_pcd -e "PushCube-v1"
+```
+
 ## Segmentation Data
 
+Objects upon being loaded are automatically assigned a segmentation ID (the `per_scene_id` attribute of `sapien.Entity` objects). To get information about which IDs refer to which Actors / Links, you can run the code below
+
+```python
+import gymnasium as gym
+import mani_skill.envs
+from mani_skill.utils.structs import Actor, Link
+env = gym.make("PushCube-v1", obs_mode="rgbd")
+for obj_id, obj in sorted(env.unwrapped.segmentation_id_map.items()):
+    if isinstance(obj, Actor):
+        print(f"{obj_id}: Actor, name - {obj.name}")
+    elif isinstance(obj, Link):
+        print(f"{obj_id}: Link, name - {obj.name}")
+```
+
+Note that ID 0 refers to the distant background. For a quick demo of this, you can run
+
+```bash
+python -m mani_skill.examples.demo_vis_segmentation -e "PushCube-v1" # plot all segmentations
+python -m mani_skill.examples.demo_vis_segmentation -e "PushCube-v1" --id cube # mask everything but the object with name "cube" 
+```
