@@ -34,7 +34,10 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
         images = torch.concat(images, axis=-1)
         # flatten the rest of the data which should just be state data
         observation = common.flatten_state_dict(observation, use_torch=True)
-        return dict(state=observation, rgbd=images)
+        if self.rgb_only:
+            return dict(state=observation, rgb=images)
+        else:
+            return dict(state=observation, rgbd=images)
 
 
 class FlattenObservationWrapper(gym.ObservationWrapper):

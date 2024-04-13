@@ -153,8 +153,8 @@ class NatureCNN(nn.Module):
 
         self.out_features = 0
         feature_size = 256
-        in_channels=sample_obs["rgbd"].shape[-1]
-        image_size=(sample_obs["rgbd"].shape[1], sample_obs["rgbd"].shape[2])
+        in_channels=sample_obs["rgb"].shape[-1]
+        image_size=(sample_obs["rgb"].shape[1], sample_obs["rgb"].shape[2])
         state_size=sample_obs["state"].shape[-1]
 
         # here we use a NatureCNN architecture to process images, but any architecture is permissble here
@@ -180,9 +180,9 @@ class NatureCNN(nn.Module):
 
         # to easily figure out the dimensions after flattening, we pass a test tensor
         with torch.no_grad():
-            n_flatten = cnn(sample_obs["rgbd"].float().permute(0,3,1,2).cpu()).shape[1]
+            n_flatten = cnn(sample_obs["rgb"].float().permute(0,3,1,2).cpu()).shape[1]
             fc = nn.Sequential(nn.Linear(n_flatten, feature_size), nn.ReLU())
-        extractors["rgbd"] = nn.Sequential(cnn, fc)
+        extractors["rgb"] = nn.Sequential(cnn, fc)
         self.out_features += feature_size
 
         # for state data we simply pass it through a single linear layer
@@ -196,7 +196,7 @@ class NatureCNN(nn.Module):
         # self.extractors contain nn.Modules that do all the processing.
         for key, extractor in self.extractors.items():
             obs = observations[key]
-            if key == "rgbd":
+            if key == "rgb":
                 obs = obs.float().permute(0,3,1,2)
                 obs = obs / 255
             encoded_tensor_list.append(extractor(obs))
@@ -278,7 +278,7 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # env setup
-    env_kwargs = dict(obs_mode="rgbd", control_mode="pd_joint_delta_pos", render_mode="rgb_array")
+    env_kwargs = dict(obs_mode="rgbd", control_mode="pd_ee_delta_pose", render_mode="rgb_array")
     envs = gym.make(args.env_id, num_envs=args.num_envs, **env_kwargs)
     eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, **env_kwargs)
 
