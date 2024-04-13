@@ -22,7 +22,7 @@ def test_replay_trajectory(control_mode):
         parse_args(
             args=[
                 "--traj-path",
-                f"{ASSET_DIR}/demos/{env_id}/trajectory.h5",
+                f"~/.maniskill/demos/{env_id}/teleop/trajectory.h5",
                 "--save-traj",
                 "--target-control-mode",
                 control_mode,
