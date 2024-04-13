@@ -263,9 +263,11 @@ class BaseEnv(gym.Env):
         self.action_space = self.agent.action_space
         self.single_action_space = self.agent.single_action_space
         self._orig_single_action_space = copy.deepcopy(self.single_action_space)
-        # initialize the cached properties
+
+        # initialize any cached properties
         self.single_observation_space
         self.observation_space
+        self.segmentation_id_map
 
     def _update_obs_space(self, obs: Any):
         """call this function if you modify the observations returned by env.step and env.reset via an observation wrapper. The given observation must be a numpy array"""
@@ -539,8 +541,7 @@ class BaseEnv(gym.Env):
             self._setup_viewer()
         self._reconfig_counter = self.reconfiguration_freq
 
-        # delete various cached properties
-        self.segmentation_id_map
+        # delete various cached properties and reinitialize
         del self.segmentation_id_map
         self.segmentation_id_map
 
