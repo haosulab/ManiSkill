@@ -539,6 +539,11 @@ class BaseEnv(gym.Env):
             self._setup_viewer()
         self._reconfig_counter = self.reconfiguration_freq
 
+        # delete various cached properties
+        self.segmentation_id_map
+        del self.segmentation_id_map
+        self.segmentation_id_map
+
     def _after_reconfigure(self, options):
         """Add code here that should run immediately after self._reconfigure is called. The torch RNG context is still active so RNG is still
         seeded here by self._episode_seed. This is useful if you need to run something that only happens after reconfiguration but need the
@@ -940,6 +945,19 @@ class BaseEnv(gym.Env):
         self._viewer.close()
         self._viewer = None
 
+    @cached_property
+    def segmentation_id_map(self):
+        """
+        Returns a dictionary mapping every ID to the appropriate Actor or Link object
+        """
+        res = dict()
+        for actor in self._scene.actors.values():
+            res[actor._objs[0].global_id] = actor
+        for art in self._scene.articulations.values():
+            for link in art.links:
+                res[link._objs[0].entity.global_id] = link
+        return res
+
     def get_state_dict(self):
         """
         Get environment state dictionary. Override to include task information (e.g., goal)
@@ -1107,9 +1125,10 @@ class BaseEnv(gym.Env):
             raise NotImplementedError(f"Unsupported render mode {self.render_mode}.")
 
     # TODO (stao): re implement later
-    # # ---------------------------------------------------------------------------- #
-    # # Advanced
-    # # ---------------------------------------------------------------------------- #
+    # ---------------------------------------------------------------------------- #
+    # Advanced
+    # ---------------------------------------------------------------------------- #
+
     # def gen_scene_pcd(self, num_points: int = int(1e5)) -> np.ndarray:
     #     """Generate scene point cloud for motion planning, excluding the robot"""
     #     meshes = []

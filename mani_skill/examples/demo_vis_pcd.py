@@ -10,19 +10,17 @@ import trimesh.scene
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--env-id", type=str, default="PushCube-v1", help="The environment ID of the task you want to simulate")
-    parser.add_argument("-o", "--obs-mode", type=str, default="none")
     parser.add_argument(
         "-s",
         "--seed",
         type=int,
-        help="Seed the random actions and simulator. Default is no seed",
+        help="Seed the random actions and environment. Default is no seed",
     )
     args = parser.parse_args()
     return args
 
 
 def main(args):
-    np.set_printoptions(suppress=True, precision=3)
     if args.seed is not None:
         np.random.seed(args.seed)
     env: BaseEnv = gym.make(
