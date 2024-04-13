@@ -33,7 +33,7 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
                 images.append(cam_data["depth"])
         images = torch.concat(images, axis=-1)
         # flatten the rest of the data which should just be state data
-        observation = flatten_state_dict(observation, use_torch=True)
+        observation = common.flatten_state_dict(observation, use_torch=True)
         return dict(state=observation, rgbd=images)
 
 
