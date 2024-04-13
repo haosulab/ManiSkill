@@ -952,10 +952,10 @@ class BaseEnv(gym.Env):
         """
         res = dict()
         for actor in self._scene.actors.values():
-            res[actor._objs[0].global_id] = actor
+            res[actor._objs[0].per_scene_id] = actor
         for art in self._scene.articulations.values():
             for link in art.links:
-                res[link._objs[0].entity.global_id] = link
+                res[link._objs[0].entity.per_scene_id] = link
         return res
 
     def get_state_dict(self):

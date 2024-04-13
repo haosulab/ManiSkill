@@ -1,4 +1,6 @@
 import signal
+
+from mani_skill.utils import common
 signal.signal(signal.SIGINT, signal.SIG_DFL) # allow ctrl+c when using plt.show
 
 import argparse
@@ -14,6 +16,7 @@ def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--env-id", type=str, default="PushCube-v1", help="The environment ID of the task you want to simulate")
     parser.add_argument("--id", type=str, help="The ID or name of actor you want to segment and render")
+    parser.add_argument("--num-envs", type=int, default=1, help="Number of environments to run. Used for some basic testing and not visualized")
     parser.add_argument(
         "-s",
         "--seed",
@@ -30,7 +33,7 @@ def main(args):
     env: BaseEnv = gym.make(
         args.env_id,
         obs_mode="rgbd",
-        sim_backend="cpu",
+        num_envs=args.num_envs
     )
 
     obs, _ = env.reset(seed=args.seed)
@@ -67,10 +70,15 @@ def main(args):
 
         for cam in obs["sensor_data"].keys():
             if "rgb" in obs["sensor_data"][cam]:
-                rgb = obs["sensor_data"][cam]["rgb"][..., :3]
-                seg = obs["sensor_data"][cam]["segmentation"]
+
+                rgb = common.to_numpy(obs["sensor_data"][cam]["rgb"])
+                seg = common.to_numpy(obs["sensor_data"][cam]["segmentation"])
                 if selected_id is not None:
                     seg = seg == selected_id
+                if args.num_envs > 1:
+                    rgb = rgb[0]
+                    seg = seg[0]
+
                 axes[cam_num, 0].imshow(rgb)
                 axes[cam_num, 1].imshow(seg)
                 axes[cam_num, 0].axis('off')
