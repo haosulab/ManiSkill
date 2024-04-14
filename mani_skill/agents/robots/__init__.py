@@ -7,6 +7,7 @@ from .panda import Panda, PandaRealSensed435
 from .xarm import XArm7Ability
 from .xmate3 import Xmate3Robotiq
 from .trifingerpro import TriFingerPro
+from .cartpole import CartPole
 
 # = {
 #     "panda": Panda,
