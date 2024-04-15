@@ -386,7 +386,7 @@ class BaseEnv(gym.Env):
             info = self.get_info()
         if self._obs_mode == "none":
             # Some cases do not need observations, e.g., MPC
-            return OrderedDict()
+            return dict()
         elif self._obs_mode == "state":
             state_dict = self._get_obs_state_dict(info)
             obs = common.flatten_state_dict(state_dict, use_torch=True, device=self.device)
@@ -395,10 +395,10 @@ class BaseEnv(gym.Env):
         elif self._obs_mode in ["sensor_data", "rgbd", "rgb", "pointcloud"]:
             obs = self._get_obs_with_sensor_data(info)
             if self._obs_mode == "rgbd":
-                obs = sensor_data_to_rgbd(obs, self._sensors, rgb=True, depth=True)
+                obs = sensor_data_to_rgbd(obs, self._sensors, rgb=True, depth=True, segmentation=True)
             elif self._obs_mode == "rgb":
-                # TODO (stao): we can optmize this by not taking the PositionSegmentation texture at all.
-                obs = sensor_data_to_rgbd(obs, self._sensors, rgb=True, depth=False)
+                # NOTE (stao): this obs mode is merely a convenience, it does not make simulation run noticebally faster
+                obs = sensor_data_to_rgbd(obs, self._sensors, rgb=True, depth=False, segmentation=True)
             elif self.obs_mode == "pointcloud":
                 obs = sensor_data_to_pointcloud(obs, self._sensors)
         else:
@@ -538,6 +538,12 @@ class BaseEnv(gym.Env):
         if self._viewer is not None:
             self._setup_viewer()
         self._reconfig_counter = self.reconfiguration_freq
+
+        # delete various cached properties and reinitialize
+        # TODO (stao): The code is 3 lines because you have to initialize it once somewhere...
+        self.segmentation_id_map
+        del self.segmentation_id_map
+        self.segmentation_id_map
 
     def _after_reconfigure(self, options):
         """Add code here that should run immediately after self._reconfigure is called. The torch RNG context is still active so RNG is still
@@ -940,17 +946,18 @@ class BaseEnv(gym.Env):
         self._viewer.close()
         self._viewer = None
 
-    # -------------------------------------------------------------------------- #
-    # Simulation state (required for MPC)
-    # -------------------------------------------------------------------------- #
-    def get_actors(self) -> List[sapien.Entity]:
-        return self._scene.get_all_actors()
-
-    def get_articulations(self) -> List[physx.PhysxArticulation]:
-        articulations = self._scene.get_all_articulations()
-        # NOTE(jigu): There might be dummy articulations used by controllers.
-        # TODO(jigu): Remove dummy articulations if exist.
-        return articulations
+    @cached_property
+    def segmentation_id_map(self):
+        """
+        Returns a dictionary mapping every ID to the appropriate Actor or Link object
+        """
+        res = dict()
+        for actor in self._scene.actors.values():
+            res[actor._objs[0].per_scene_id] = actor
+        for art in self._scene.articulations.values():
+            for link in art.links:
+                res[link._objs[0].entity.per_scene_id] = link
+        return res
 
     def get_state_dict(self):
         """
@@ -1119,9 +1126,10 @@ class BaseEnv(gym.Env):
             raise NotImplementedError(f"Unsupported render mode {self.render_mode}.")
 
     # TODO (stao): re implement later
-    # # ---------------------------------------------------------------------------- #
-    # # Advanced
-    # # ---------------------------------------------------------------------------- #
+    # ---------------------------------------------------------------------------- #
+    # Advanced
+    # ---------------------------------------------------------------------------- #
+
     # def gen_scene_pcd(self, num_points: int = int(1e5)) -> np.ndarray:
     #     """Generate scene point cloud for motion planning, excluding the robot"""
     #     meshes = []

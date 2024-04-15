@@ -469,9 +469,6 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
                 env.base_env.set_state_dict(ori_env_states[0])
                 ori_env_states = ori_env_states[1:]
 
-            if args.vis:
-                vv = env.base_env.render_human()
-                vv.paused = True
             info = {}
 
             # Without conversion between control modes
