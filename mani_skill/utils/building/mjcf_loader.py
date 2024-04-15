@@ -9,8 +9,10 @@ import math
 import os
 import re
 import xml.etree.ElementTree as ET
+from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any, Dict, List, Literal, Tuple
+from functools import reduce
+from typing import Any, Dict, List, Literal, Tuple, Union
 from xml.etree.ElementTree import Element
 
 import numpy as np
@@ -54,9 +56,23 @@ def _str_to_float(string: str, delimiter=" "):
     return res
 
 
-def _merge_attrib(default_attrib: dict, incoming_attrib: dict):
-    attrib = default_attrib.copy()
-    attrib.update(incoming_attrib)
+def _merge_attrib(default_attrib: dict, incoming_attribs: Union[List[dict], dict]):
+    # from functools import reduce
+    def helper_merge(a: dict, b: dict, path=[]):
+        for key in b:
+            if key in a:
+                if isinstance(a[key], dict) and isinstance(b[key], dict):
+                    helper_merge(a[key], b[key], path + [str(key)])
+                else:
+                    a[key] = b[key]
+            else:
+                a[key] = b[key]
+        return a
+
+    attrib = deepcopy(default_attrib)
+    if isinstance(incoming_attribs, dict):
+        incoming_attribs = [incoming_attribs]
+    reduce(helper_merge, [attrib] + incoming_attribs)
     return attrib
 
 
@@ -100,11 +116,16 @@ def _parse_orientation(attrib, use_degrees, euler_seq):
         return quaternions.mat2quat(rot_matrix)
     if "zaxis" in attrib:
         zaxis = np.fromstring(attrib["zaxis"], sep=" ")
-        zaxis = wp.normalize(wp.vec3(*zaxis))
-        xaxis = wp.normalize(wp.cross(wp.vec3(0, 0, 1), zaxis))
-        yaxis = wp.normalize(wp.cross(zaxis, xaxis))
+        # zaxis = wp.normalize(wp.vec3(*zaxis))
+        zaxis = zaxis / np.linalg.norm(zaxis)
+        # xaxis = wp.normalize(wp.cross(wp.vec3(0, 0, 1), zaxis))
+        xaxis = np.cross(np.array([0, 0, 1]), zaxis)
+        xaxis = xaxis / np.linalg.norm(xaxis)
+        # yaxis = wp.normalize(wp.cross(zaxis, xaxis))
+        yaxis = np.cross(zaxis, xaxis)
+        yaxis = yaxis / np.linalg.norm(yaxis)
         rot_matrix = np.array([xaxis, yaxis, zaxis]).T
-        return wp.quat_from_matrix(rot_matrix)
+        return quaternions.mat2quat(rot_matrix)
     return np.array([1, 0, 0, 0])
 
 
@@ -142,8 +163,8 @@ class MJCFLoader:
         self._materials = dict()
         self._textures: Dict[str, MJCFTexture] = dict()
 
-        self._link2builder: Dict[str, LinkBuilder]
-        self._link2parent_joint: Dict[str, Any]
+        self._link2builder: Dict[str, LinkBuilder] = dict()
+        self._link2parent_joint: Dict[str, Any] = dict()
 
     def set_scene(self, scene):
         self.scene = scene
@@ -222,38 +243,58 @@ class MJCFLoader:
                 geom_attrib, self._use_degrees, self._euler_seq
             )
             _parse_float(geom_attrib, "density", self.density)
+            material = self._materials[geom_attrib["material"]]
             # t_visual2link = self._pose_from_origin(visual.origin, self.scale)
+            print(geom_name, geom_attrib)
+
             t_visual2link = Pose(geom_pos, geom_rot)
             if geom_type == "sphere":
-                pass
-            elif geom_type == "box":
-                pass
-            elif geom_type in ["capsule", "cylinder"]:
+                link_builder.add_sphere_visual(
+                    t_visual2link, radius=geom_size[0], material=material
+                )
+            elif geom_type in ["capsule", "cylinder", "box"]:
                 if "fromto" in geom_attrib:
-                    geom_fromto = parse_vec(
+                    geom_fromto = _parse_vec(
                         geom_attrib, "fromto", (0.0, 0.0, 0.0, 1.0, 0.0, 0.0)
                     )
 
-                    start = wp.vec3(geom_fromto[0:3]) * scale
-                    end = wp.vec3(geom_fromto[3:6]) * scale
+                    start = np.array(geom_fromto[0:3]) * self.scale
+                    end = np.array(geom_fromto[3:6]) * self.scale
+                    # objects follow a line from start to end.
 
-                    # compute rotation to align the Warp capsule (along x-axis), with mjcf fromto direction
-                    axis = wp.normalize(end - start)
-                    angle = math.acos(wp.dot(axis, wp.vec3(0.0, 1.0, 0.0)))
-                    axis = wp.normalize(wp.cross(axis, wp.vec3(0.0, 1.0, 0.0)))
+                    # objects are default along x-axis and we rotate accordingly via axis angle.
+                    axis = (end - start) / np.linalg.norm(end - start)
+                    angle = math.acos(np.dot(axis, np.array([1.0, 0.0, 0.0])))
+                    axis = np.cross(axis, np.array([1.0, 0.0, 0.0]))
+                    axis = axis / np.linalg.norm(axis)
 
                     geom_pos = (start + end) * 0.5
-                    geom_rot = wp.quat_from_axis_angle(axis, -angle)
+                    geom_rot = quaternions.axangle2quat(axis, -angle)
+                    t_visual2link.set_p(geom_pos)
+                    t_visual2link.set_q(geom_rot)
+                    geom_radius = geom_size[0]
+                    geom_half_length = np.linalg.norm(end - start) * 0.5
+                else:
+                    geom_radius = geom_size[0]
+                    geom_half_length = geom_size[1]
+                if geom_type == "capsule":
+                    link_builder.add_capsule_visual(
+                        t_visual2link,
+                        radius=geom_radius,
+                        half_length=geom_half_length,
+                        material=material,
+                        name=geom_name,
+                    )
+                    link_builder.add_capsule_collision(
+                        t_visual2link,
+                        radius=geom_radius,
+                        half_length=geom_half_length,
+                        # material=material,
+                        # name=geom_name,
+                    )
+                else:
+                    raise NotImplementedError()
 
-                    geom_size[0]
-                    wp.length(end - start) * 0.5
-                link_builder.add_capsule_visual(
-                    t_visual2link * Pose(q=[0.7071068, 0, 0.7071068, 0]),
-                    visual.geometry.capsule.radius * self.scale,
-                    visual.geometry.capsule.length * self.scale / 2.0,
-                    material=material,
-                    name=name,
-                )
             elif geom_type == "plane":
                 pass
             elif geom_type == "ellipsoid":
@@ -269,187 +310,183 @@ class MJCFLoader:
                     "Height fields are not supported at the moment"
                 )
 
-            import ipdb
+        # # visual shapes
+        # for visual in link.visuals:
+        #     material = None
+        #     if visual.material:
+        #         material = RenderMaterial()
+        #         if visual.material.color is not None:
+        #             material.base_color = visual.material.color
+        #         elif visual.material.texture is not None:
+        #             material.diffuse_texture = RenderTexture2D(
+        #                 _try_very_hard_to_find_file(
+        #                     visual.material.texture.filename,
+        #                     self.urdf_dir,
+        #                     self.package_dir,
+        #                 )
+        #             )
 
-            ipdb.set_trace()
+        #     t_visual2link = self._pose_from_origin(visual.origin, self.scale)
+        #     name = visual.name if visual.name else ""
+        #     if visual.geometry.box:
+        #         link_builder.add_box_visual(
+        #             t_visual2link,
+        #             visual.geometry.box.size * self.scale / 2.0,
+        #             material=material,
+        #             name=name,
+        #         )
+        #     if visual.geometry.sphere:
+        #         link_builder.add_sphere_visual(
+        #             t_visual2link,
+        #             visual.geometry.sphere.radius * self.scale,
+        #             material=material,
+        #             name=name,
+        #         )
+        #     if visual.geometry.capsule:
+        #         link_builder.add_capsule_visual(
+        #             t_visual2link * Pose(q=[0.7071068, 0, 0.7071068, 0]),
+        #             visual.geometry.capsule.radius * self.scale,
+        #             visual.geometry.capsule.length * self.scale / 2.0,
+        #             material=material,
+        #             name=name,
+        #         )
+        #     if visual.geometry.cylinder:
+        #         link_builder.add_cylinder_visual(
+        #             t_visual2link * Pose(q=[0.7071068, 0, 0.7071068, 0]),
+        #             visual.geometry.cylinder.radius * self.scale,
+        #             visual.geometry.cylinder.length * self.scale / 2.0,
+        #             material=material,
+        #             name=name,
+        #         )
+        #     if visual.geometry.mesh:
+        #         if visual.geometry.mesh.scale is not None:
+        #             scale = visual.geometry.mesh.scale
+        #         else:
+        #             scale = np.ones(3)
 
-        # visual shapes
-        for visual in link.visuals:
-            material = None
-            if visual.material:
-                material = RenderMaterial()
-                if visual.material.color is not None:
-                    material.base_color = visual.material.color
-                elif visual.material.texture is not None:
-                    material.diffuse_texture = RenderTexture2D(
-                        _try_very_hard_to_find_file(
-                            visual.material.texture.filename,
-                            self.urdf_dir,
-                            self.package_dir,
-                        )
-                    )
+        #         link_builder.add_visual_from_file(
+        #             _try_very_hard_to_find_file(
+        #                 visual.geometry.mesh.filename,
+        #                 self.urdf_dir,
+        #                 self.package_dir,
+        #             ),
+        #             t_visual2link,
+        #             scale * self.scale,
+        #             material=material,
+        #             name=name,
+        #         )
 
-            t_visual2link = self._pose_from_origin(visual.origin, self.scale)
-            name = visual.name if visual.name else ""
-            if visual.geometry.box:
-                link_builder.add_box_visual(
-                    t_visual2link,
-                    visual.geometry.box.size * self.scale / 2.0,
-                    material=material,
-                    name=name,
-                )
-            if visual.geometry.sphere:
-                link_builder.add_sphere_visual(
-                    t_visual2link,
-                    visual.geometry.sphere.radius * self.scale,
-                    material=material,
-                    name=name,
-                )
-            if visual.geometry.capsule:
-                link_builder.add_capsule_visual(
-                    t_visual2link * Pose(q=[0.7071068, 0, 0.7071068, 0]),
-                    visual.geometry.capsule.radius * self.scale,
-                    visual.geometry.capsule.length * self.scale / 2.0,
-                    material=material,
-                    name=name,
-                )
-            if visual.geometry.cylinder:
-                link_builder.add_cylinder_visual(
-                    t_visual2link * Pose(q=[0.7071068, 0, 0.7071068, 0]),
-                    visual.geometry.cylinder.radius * self.scale,
-                    visual.geometry.cylinder.length * self.scale / 2.0,
-                    material=material,
-                    name=name,
-                )
-            if visual.geometry.mesh:
-                if visual.geometry.mesh.scale is not None:
-                    scale = visual.geometry.mesh.scale
-                else:
-                    scale = np.ones(3)
+        # # collision shapes
+        # for cid, collision in enumerate(link.collisions):
+        #     t_collision2link = self._pose_from_origin(collision.origin, self.scale)
 
-                link_builder.add_visual_from_file(
-                    _try_very_hard_to_find_file(
-                        visual.geometry.mesh.filename,
-                        self.urdf_dir,
-                        self.package_dir,
-                    ),
-                    t_visual2link,
-                    scale * self.scale,
-                    material=material,
-                    name=name,
-                )
+        #     material = self._get_material(link.name, cid)
+        #     density = self._get_density(link.name, cid)
+        #     patch_radius = self._get_patch_radius(link.name, cid)
+        #     min_patch_radius = self._get_min_patch_radius(link.name, cid)
 
-        # collision shapes
-        for cid, collision in enumerate(link.collisions):
-            t_collision2link = self._pose_from_origin(collision.origin, self.scale)
+        #     if collision.geometry.box:
+        #         link_builder.add_box_collision(
+        #             t_collision2link,
+        #             collision.geometry.box.size * self.scale / 2.0,
+        #             material=material,
+        #             density=density,
+        #             patch_radius=patch_radius,
+        #             min_patch_radius=min_patch_radius,
+        #         )
+        #         if self.collision_is_visual:
+        #             link_builder.add_box_visual(
+        #                 t_collision2link,
+        #                 collision.geometry.box.size * self.scale / 2.0,
+        #             )
+        #     if collision.geometry.sphere:
+        #         link_builder.add_sphere_collision(
+        #             t_collision2link,
+        #             collision.geometry.sphere.radius * self.scale,
+        #             material=material,
+        #             density=density,
+        #             patch_radius=patch_radius,
+        #             min_patch_radius=min_patch_radius,
+        #         )
+        #         if self.collision_is_visual:
+        #             link_builder.add_sphere_visual(
+        #                 t_collision2link,
+        #                 collision.geometry.sphere.radius * self.scale,
+        #             )
+        #     if collision.geometry.capsule:
+        #         link_builder.add_capsule_collision(
+        #             t_collision2link * Pose(q=[0.7071068, 0, 0.7071068, 0]),
+        #             collision.geometry.capsule.radius * self.scale,
+        #             collision.geometry.capsule.length * self.scale / 2.0,
+        #             material=material,
+        #             density=density,
+        #             patch_radius=patch_radius,
+        #             min_patch_radius=min_patch_radius,
+        #         )
+        #         if self.collision_is_visual:
+        #             link_builder.add_capsule_visual(
+        #                 t_collision2link * Pose(q=[0.7071068, 0, 0.7071068, 0]),
+        #                 collision.geometry.capsule.radius * self.scale,
+        #                 collision.geometry.capsule.length * self.scale / 2.0,
+        #             )
+        #     if collision.geometry.cylinder:
+        #         link_builder.add_cylinder_collision(
+        #             t_collision2link * Pose(q=[0.7071068, 0, 0.7071068, 0]),
+        #             collision.geometry.cylinder.radius * self.scale,
+        #             collision.geometry.cylinder.length * self.scale / 2.0,
+        #             material=material,
+        #             density=density,
+        #             patch_radius=patch_radius,
+        #             min_patch_radius=min_patch_radius,
+        #         )
+        #         if self.collision_is_visual:
+        #             link_builder.add_cylinder_visual(
+        #                 t_collision2link * Pose(q=[0.7071068, 0, 0.7071068, 0]),
+        #                 collision.geometry.cylinder.radius * self.scale,
+        #                 collision.geometry.cylinder.length * self.scale / 2.0,
+        #             )
 
-            material = self._get_material(link.name, cid)
-            density = self._get_density(link.name, cid)
-            patch_radius = self._get_patch_radius(link.name, cid)
-            min_patch_radius = self._get_min_patch_radius(link.name, cid)
+        #     if collision.geometry.mesh:
+        #         if collision.geometry.mesh.scale is not None:
+        #             scale = collision.geometry.mesh.scale
+        #         else:
+        #             scale = np.ones(3)
 
-            if collision.geometry.box:
-                link_builder.add_box_collision(
-                    t_collision2link,
-                    collision.geometry.box.size * self.scale / 2.0,
-                    material=material,
-                    density=density,
-                    patch_radius=patch_radius,
-                    min_patch_radius=min_patch_radius,
-                )
-                if self.collision_is_visual:
-                    link_builder.add_box_visual(
-                        t_collision2link,
-                        collision.geometry.box.size * self.scale / 2.0,
-                    )
-            if collision.geometry.sphere:
-                link_builder.add_sphere_collision(
-                    t_collision2link,
-                    collision.geometry.sphere.radius * self.scale,
-                    material=material,
-                    density=density,
-                    patch_radius=patch_radius,
-                    min_patch_radius=min_patch_radius,
-                )
-                if self.collision_is_visual:
-                    link_builder.add_sphere_visual(
-                        t_collision2link,
-                        collision.geometry.sphere.radius * self.scale,
-                    )
-            if collision.geometry.capsule:
-                link_builder.add_capsule_collision(
-                    t_collision2link * Pose(q=[0.7071068, 0, 0.7071068, 0]),
-                    collision.geometry.capsule.radius * self.scale,
-                    collision.geometry.capsule.length * self.scale / 2.0,
-                    material=material,
-                    density=density,
-                    patch_radius=patch_radius,
-                    min_patch_radius=min_patch_radius,
-                )
-                if self.collision_is_visual:
-                    link_builder.add_capsule_visual(
-                        t_collision2link * Pose(q=[0.7071068, 0, 0.7071068, 0]),
-                        collision.geometry.capsule.radius * self.scale,
-                        collision.geometry.capsule.length * self.scale / 2.0,
-                    )
-            if collision.geometry.cylinder:
-                link_builder.add_cylinder_collision(
-                    t_collision2link * Pose(q=[0.7071068, 0, 0.7071068, 0]),
-                    collision.geometry.cylinder.radius * self.scale,
-                    collision.geometry.cylinder.length * self.scale / 2.0,
-                    material=material,
-                    density=density,
-                    patch_radius=patch_radius,
-                    min_patch_radius=min_patch_radius,
-                )
-                if self.collision_is_visual:
-                    link_builder.add_cylinder_visual(
-                        t_collision2link * Pose(q=[0.7071068, 0, 0.7071068, 0]),
-                        collision.geometry.cylinder.radius * self.scale,
-                        collision.geometry.cylinder.length * self.scale / 2.0,
-                    )
+        #         filename = _try_very_hard_to_find_file(
+        #             collision.geometry.mesh.filename,
+        #             self.urdf_dir,
+        #             self.package_dir,
+        #         )
 
-            if collision.geometry.mesh:
-                if collision.geometry.mesh.scale is not None:
-                    scale = collision.geometry.mesh.scale
-                else:
-                    scale = np.ones(3)
+        #         if self.load_multiple_collisions_from_file:
+        #             link_builder.add_multiple_convex_collisions_from_file(
+        #                 filename,
+        #                 t_collision2link,
+        #                 scale * self.scale,
+        #                 material=material,
+        #                 density=density,
+        #                 patch_radius=patch_radius,
+        #                 min_patch_radius=min_patch_radius,
+        #                 decomposition=self.multiple_collisions_decomposition,
+        #                 decomposition_params=self.multiple_collisions_decomposition_params,
+        #             )
+        #         else:
+        #             link_builder.add_convex_collision_from_file(
+        #                 filename,
+        #                 t_collision2link,
+        #                 scale * self.scale,
+        #                 material=material,
+        #                 density=density,
+        #                 patch_radius=patch_radius,
+        #                 min_patch_radius=min_patch_radius,
+        #             )
 
-                filename = _try_very_hard_to_find_file(
-                    collision.geometry.mesh.filename,
-                    self.urdf_dir,
-                    self.package_dir,
-                )
-
-                if self.load_multiple_collisions_from_file:
-                    link_builder.add_multiple_convex_collisions_from_file(
-                        filename,
-                        t_collision2link,
-                        scale * self.scale,
-                        material=material,
-                        density=density,
-                        patch_radius=patch_radius,
-                        min_patch_radius=min_patch_radius,
-                        decomposition=self.multiple_collisions_decomposition,
-                        decomposition_params=self.multiple_collisions_decomposition_params,
-                    )
-                else:
-                    link_builder.add_convex_collision_from_file(
-                        filename,
-                        t_collision2link,
-                        scale * self.scale,
-                        material=material,
-                        density=density,
-                        patch_radius=patch_radius,
-                        min_patch_radius=min_patch_radius,
-                    )
-
-                if self.collision_is_visual:
-                    link_builder.add_visual_from_file(
-                        filename,
-                        t_collision2link,
-                        scale * self.scale,
-                    )
+        #         if self.collision_is_visual:
+        #             link_builder.add_visual_from_file(
+        #                 filename,
+        #                 t_collision2link,
+        #                 scale * self.scale,
+        #             )
 
     def _parse_texture(self, texture: Element):
         """Parse MJCF textures to then be referenced by materials: https://mujoco.readthedocs.io/en/stable/XMLreference.html#asset-texture
@@ -494,12 +531,22 @@ class MJCFLoader:
         if node.tag == "default":
             if "class" in node.attrib:
                 class_name = node.attrib["class"]
-            self._defaults[class_name] = {}
+            if parent is not None and "class" in parent.attrib:
+                self._defaults[class_name] = deepcopy(
+                    self._defaults[parent.attrib["class"]]
+                )
+            else:
+                self._defaults[class_name] = {}
         for child in node:
             if child.tag == "default":
                 self._parse_default(child, node)
             else:
-                self._defaults[class_name][child.tag] = child.attrib
+                if child.tag in self._defaults[class_name]:
+                    self._defaults[class_name][child.tag] = _merge_attrib(
+                        self._defaults[class_name][child.tag], child.attrib
+                    )
+                else:
+                    self._defaults[class_name][child.tag] = child.attrib
 
     def _parse_body(
         self,
@@ -532,6 +579,7 @@ class MJCFLoader:
         #     body_pos = wp.transform_point(xform, body_pos)
         #     body_ori = xform.q * body_ori
         body_pos *= self.scale
+        body_pose = Pose(body_pos)
 
         joint_type = None
 
@@ -539,16 +587,28 @@ class MJCFLoader:
         link_builder.set_name(f"{body_name}")
         # TODO (stao): Support free joints? Are they just fix_root_link=False perhaps?
         freejoint_tags = body.findall("freejoint")
-        if len(freejoint_tags) > 0:
-            pass
+        fix_base = True
+        if not fix_base and len(freejoint_tags) > 0:
+            self._build_link(body, body_attrib, link_builder, defaults)
         else:
+            # if body has no joints, it is a fixed joint
             joints = body.findall("joint")
+            if len(joints) == 0:
+                joints = [ET.Element("joint", attrib=dict(type="fixed"))]
+            Pose()
             for i, joint in enumerate(joints):
                 # note there can be multiple joints here. We create some dummy links to simulate that
+
+                # order of defaults is current inherited defaults, then class, the joint.attrib
+                incoming_attributes = []
                 if "joint" in defaults:
-                    joint_attrib = _merge_attrib(defaults["joint"], joint.attrib)
-                else:
-                    joint_attrib = joint.attrib
+                    incoming_attributes.append(defaults["joint"])
+                if "class" in joint.attrib:
+                    incoming_attributes.append(
+                        self._defaults[joint.attrib["class"]]["joint"]
+                    )
+                incoming_attributes.append(joint.attrib)
+                joint_attrib = _merge_attrib(dict(), incoming_attributes)
 
                 # create a dummy link
                 if i > 0:
@@ -561,18 +621,14 @@ class MJCFLoader:
                     # if self.link2parent_joint[link_name] is not None
                     # else ""
                 )
-
+                joint_type = joint_attrib.get("type", "hinge")
+                np.array(_parse_vec(joint_attrib, "pos", [0, 0, 0]))
                 if i == 0:
                     # first link is the real one, the rest are dummy links to support multiple joints acting on a link
                     self._build_link(body, body_attrib, link_builder, defaults)
 
-                joint_type = joint_attrib.get("type", "hinge")
-                joint_origin = np.array(_parse_vec(joint_attrib, "pos", [0, 0, 0]))
-                t_joint2parent = (
-                    self._pose_from_origin(joint_origin, self.scale)
-                    if joint
-                    else Pose()
-                )
+                # import ipdb;ipdb.set_trace()
+                t_joint2parent = body_pose  # * Pose(-joint_origin)
 
                 friction = 0
                 damping = 0
@@ -584,15 +640,15 @@ class MJCFLoader:
                 axis = _parse_vec(joint_attrib, "axis", [0.0, 0.0, 0.0])
                 axis_norm = np.linalg.norm(axis)
                 if axis_norm < 1e-3:
-                    axis = np.array([1, 0, 0])
+                    axis = np.array([1.0, 0.0, 0.0])
                 else:
                     axis /= axis_norm
 
-                if abs(axis @ [1, 0, 0]) > 0.9:
-                    axis1 = np.cross(axis, [0, 0, 1])
+                if abs(axis @ [1.0, 0.0, 0.0]) > 0.9:
+                    axis1 = np.cross(axis, [0.0, 0.0, 1.0])
                     axis1 /= np.linalg.norm(axis1)
                 else:
-                    axis1 = np.cross(axis, [1, 0, 0])
+                    axis1 = np.cross(axis, [1.0, 0.0, 0.0])
                     axis1 /= np.linalg.norm(axis1)
                 axis2 = np.cross(axis, axis1)
                 t_axis2joint = np.eye(4)
@@ -601,26 +657,22 @@ class MJCFLoader:
                 t_axis2joint[:3, 2] = axis2
                 t_axis2joint = Pose(t_axis2joint)
                 t_axis2parent = t_joint2parent * t_axis2joint
-
+                if "range" not in joint_attrib:
+                    assert (
+                        joint_type == "fixed"
+                    ), "Found a joint that is not fixed and has no range"
                 if joint_type == "hinge":
+                    joint_limits = _parse_vec(joint_attrib, "range", [0, 0])
+                    if self._use_degrees:
+                        joint_limits = np.deg2rad(joint_limits)
                     link_builder.set_joint_properties(
                         "revolute",
-                        [_parse_vec(joint_attrib, "range", [0, 0])],
-                        # [[joint.limit.lower, joint.limit.upper]],
+                        [joint_limits],
                         t_axis2parent,
                         t_axis2joint,
                         friction,
                         damping,
                     )
-                # elif joint.joint_type == "hinge":
-                #     link_builder.set_joint_properties(
-                #         "revolute",
-                #         [[-np.inf, np.inf]],
-                #         t_axis2parent,
-                #         t_axis2joint,
-                #         friction,
-                #         damping,
-                #     )
                 elif joint_type == "slide":
                     link_builder.set_joint_properties(
                         "prismatic",
@@ -640,10 +692,6 @@ class MJCFLoader:
                         friction,
                         damping,
                     )
-
-                import ipdb
-
-                ipdb.set_trace()
 
         for child in body.findall("body"):
             self._parse_body(child, link_builder, defaults, builder)
@@ -696,6 +744,8 @@ class MJCFLoader:
 
         ### Parse equality constraints ###
 
+        return [builder], [], []
+
     def parse(self, mjcf_file: str, package_dir=None):
         """Parses a given MJCF file into articulation builders, actor builders, and sensors"""
         self.package_dir = package_dir
@@ -711,7 +761,7 @@ class MJCFLoader:
             mjcf_file, package_dir
         )
 
-        articulations = []
+        articulations: List[PhysxArticulation] = []
         for b in articulation_builders:
             articulations.append(b.build())
 
@@ -727,3 +777,4 @@ class MJCFLoader:
 
         # for a in actors:
         #     name2entity[a.name] = a
+        return articulations[0]

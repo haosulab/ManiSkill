@@ -11,11 +11,13 @@ scene.add_ground(0)
 
 loader = MJCFLoader()
 loader.set_scene(scene)
-loader.load("humanoid.xml")
+robot = loader.load("humanoid.xml")
 
+robot.set_pose(sapien.Pose(p=[0, 0, 2]))
 
 viewer = scene.create_viewer()
 viewer.set_scene(scene)
+viewer.paused = True
 while True:
     scene.step()
     scene.update_render()
