@@ -11,7 +11,7 @@ scene.add_ground(0)
 
 loader = MJCFLoader()
 loader.set_scene(scene)
-robot = loader.load("cheetah.xml")
+robot = loader.load("reacher.xml")
 
 # robot.set_pose(sapien.Pose(p=[0, 0, 1.28]))
 

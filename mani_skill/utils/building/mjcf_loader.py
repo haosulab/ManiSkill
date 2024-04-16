@@ -98,7 +98,7 @@ def _parse_orientation(attrib, use_degrees, euler_seq):
             euler_angles *= np.pi / 180
         # TODO (stao): support other axes?
         return np.array(
-            euler.euler2quat(euler_angles[0], euler_angles[1], euler_angles[2])
+            euler.euler2quat(euler_angles[0], -euler_angles[1], euler_angles[2])
         )
     if "axisangle" in attrib:
         axisangle = np.fromstring(attrib["axisangle"], sep=" ")
@@ -270,7 +270,10 @@ class MJCFLoader:
                     # TODO this is bugged
                     angle = math.acos(np.dot(axis, np.array([1.0, 0.0, 0.0])))
                     axis = np.cross(axis, np.array([1.0, 0.0, 0.0]))
-                    axis = axis / np.linalg.norm(axis)
+                    if np.linalg.norm(axis) < 1e-3:
+                        axis = np.array([1, 0, 0])
+                    else:
+                        axis = axis / np.linalg.norm(axis)
 
                     geom_pos = (start + end) * 0.5
                     geom_rot = quaternions.axangle2quat(axis, -angle)
@@ -483,8 +486,16 @@ class MJCFLoader:
                 t_axis2joint = Pose(t_axis2joint)
                 t_axis2parent = t_joint2parent * t_axis2joint
 
-                limited = joint_attrib.get("limited", "true")
-                limited = True if limited == "true" else False
+                limited = joint_attrib.get("limited", "auto")
+                if limited == "auto":
+                    if "range" in joint_attrib:
+                        limited = True
+                    else:
+                        limited = False
+                elif limited == "true":
+                    limited = True
+                else:
+                    limited = False
                 if joint_type == "hinge":
 
                     if limited:
