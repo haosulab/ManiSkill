@@ -7,6 +7,10 @@ Notes:
     Joint properties relating to the solver, stiffness, actuator, are all not directly imported here
     and instead must be implemented via a controller like other robots in SAPIEN
 
+    Contact tags are not supported
+
+    Tendons/equality constraints are supported but may not work the same
+
 
 """
 import math
@@ -20,14 +24,10 @@ from typing import Any, Dict, List, Literal, Tuple, Union
 from xml.etree.ElementTree import Element
 
 import numpy as np
-
-# from ..pysapien.physx import PhysxArticulation, PhysxMaterial
-# from ..pysapien.render import RenderCameraComponent, RenderMaterial, RenderTexture2D
-# from ..pysapien import Pose
 import sapien
 from sapien import ActorBuilder, Pose
 from sapien.physx import PhysxArticulation, PhysxMaterial
-from sapien.render import RenderCameraComponent, RenderMaterial, RenderTexture2D
+from sapien.render import RenderMaterial, RenderTexture2D
 from sapien.wrapper.articulation_builder import (
     ArticulationBuilder,
     LinkBuilder,
@@ -427,153 +427,135 @@ class MJCFLoader:
         body_ori = _parse_orientation(
             body_attrib, use_degrees=self._use_degrees, euler_seq=self._euler_seq
         )
-        # if parent is None:
-        #     # transform which way is up
-        #     body_pos = wp.transform_point(xform, body_pos)
-        #     body_ori = xform.q * body_ori
+
         body_pos *= self.scale
-        body_pose = Pose(body_pos)
+        body_pose = Pose(body_pos, q=body_ori)
 
-        # TODO (stao): Support free joints? Are they just fix_root_link=False perhaps?
-        freejoint_tags = body.findall("freejoint")
-        if False and len(freejoint_tags) > 0:
-            link_builder = builder.create_link_builder(parent=parent)
-            link_builder.set_name(f"{body_name}")
-            self._build_link(body, body_attrib, link_builder, defaults)
-        else:
-            link_builder = parent
-            # if body has no joints, it is a fixed joint
-            joints = body.findall("joint")
-            if len(joints) == 0:
-                joints = [ET.Element("joint", attrib=dict(type="fixed"))]
-            for i, joint in enumerate(joints):
-                # note there can be multiple joints here. We create some dummy links to simulate that
+        link_builder = parent
 
-                # order of defaults is current inherited defaults, then class, the joint.attrib
-                incoming_attributes = []
-                if "joint" in defaults:
-                    incoming_attributes.append(defaults["joint"])
-                if "class" in joint.attrib:
-                    incoming_attributes.append(
-                        self._defaults[joint.attrib["class"]]["joint"]
-                    )
-                incoming_attributes.append(joint.attrib)
-                joint_attrib = _merge_attrib(dict(), incoming_attributes)
+        joints = body.findall("joint")
+        # if body has no joints, it is a fixed joint
+        if len(joints) == 0:
+            joints = [ET.Element("joint", attrib=dict(type="fixed"))]
+        for i, joint in enumerate(joints):
+            # note there can be multiple joints here. We create some dummy links to simulate that
+            incoming_attributes = []
+            if "joint" in defaults:
+                incoming_attributes.append(defaults["joint"])
+            if "class" in joint.attrib:
+                incoming_attributes.append(
+                    self._defaults[joint.attrib["class"]]["joint"]
+                )
+            incoming_attributes.append(joint.attrib)
+            joint_attrib = _merge_attrib(dict(), incoming_attributes)
 
-                # create a dummy link
-                if i >= 0:
-                    link_builder = builder.create_link_builder(parent=link_builder)
-                    link_builder.set_name(f"{body_name}_{i}")
-                    self._link2builder[link_builder.name] = link_builder
-                link_builder.set_joint_name(joint_attrib.get("name", ""))
-                joint_type = joint_attrib.get("type", "hinge")
-                # TODO (stao): unclear how to handle joint positions, what does mujoco do with this exactly?
-                joint_pos = np.array(_parse_vec(joint_attrib, "pos", [0, 0, 0]))
-                if i == len(joints) - 1:
-                    # the last link is the "real" one, the rest are dummy links to support multiple joints acting on a link
-                    self._build_link(body, body_attrib, link_builder, defaults)
+            # build the link
+            link_builder = builder.create_link_builder(parent=link_builder)
+            link_builder.set_joint_name(joint_attrib.get("name", ""))
+            if i == len(joints) - 1:
+                link_builder.set_name(f"{body_name}")
+                # the last link is the "real" one, the rest are dummy links to support multiple joints acting on a link
+                self._build_link(body, body_attrib, link_builder, defaults)
+            else:
+                link_builder.set_name(f"{body_name}_dummy_{i}")
+            self._link2builder[link_builder.name] = link_builder
 
-                t_joint2parent = Pose()  # body_pose  # * Pose(-joint_origin)
-                if i == 0:
-                    t_joint2parent = body_pose
+            joint_type = joint_attrib.get("type", "hinge")
+            joint_pos = np.array(_parse_vec(joint_attrib, "pos", [0, 0, 0]))
+            t_joint2parent = Pose()
+            if i == 0:
+                t_joint2parent = body_pose
 
-                friction = 0
-                damping = 0
-                # TODO (stao): fix joint dynamics
-                # if joint.dynamics:
-                #     friction = joint.dynamics.friction
-                #     damping = joint.dynamics.damping
+            friction = _parse_float(joint_attrib, "frictionloss", 0)
+            damping = _parse_float(joint_attrib, "damping", 0)
 
-                # compute joint axis and relative transformations
-                axis = _parse_vec(joint_attrib, "axis", [0.0, 0.0, 0.0])
-                axis_norm = np.linalg.norm(axis)
-                if axis_norm < 1e-3:
-                    axis = np.array([1.0, 0.0, 0.0])
-                else:
-                    axis /= axis_norm
+            # compute joint axis and relative transformations
+            axis = _parse_vec(joint_attrib, "axis", [0.0, 0.0, 0.0])
+            axis_norm = np.linalg.norm(axis)
+            if axis_norm < 1e-3:
+                axis = np.array([1.0, 0.0, 0.0])
+            else:
+                axis /= axis_norm
 
-                if abs(axis @ [1.0, 0.0, 0.0]) > 0.9:
-                    axis1 = np.cross(axis, [0.0, 0.0, 1.0])
-                    axis1 /= np.linalg.norm(axis1)
-                else:
-                    axis1 = np.cross(axis, [1.0, 0.0, 0.0])
-                    axis1 /= np.linalg.norm(axis1)
-                axis2 = np.cross(axis, axis1)
-                t_axis2joint = np.eye(4)
-                t_axis2joint[:3, 3] = joint_pos
-                t_axis2joint[:3, 0] = axis
-                t_axis2joint[:3, 1] = axis1
-                t_axis2joint[:3, 2] = axis2
-                t_axis2joint = Pose(t_axis2joint)
-                t_axis2parent = t_joint2parent * t_axis2joint
+            if abs(axis @ [1.0, 0.0, 0.0]) > 0.9:
+                axis1 = np.cross(axis, [0.0, 0.0, 1.0])
+                axis1 /= np.linalg.norm(axis1)
+            else:
+                axis1 = np.cross(axis, [1.0, 0.0, 0.0])
+                axis1 /= np.linalg.norm(axis1)
+            axis2 = np.cross(axis, axis1)
+            t_axis2joint = np.eye(4)
+            t_axis2joint[:3, 3] = joint_pos
+            t_axis2joint[:3, 0] = axis
+            t_axis2joint[:3, 1] = axis1
+            t_axis2joint[:3, 2] = axis2
+            t_axis2joint = Pose(t_axis2joint)
+            t_axis2parent = t_joint2parent * t_axis2joint
 
-                limited = joint_attrib.get("limited", "auto")
-                if limited == "auto":
-                    if "range" in joint_attrib:
-                        limited = True
-                    else:
-                        limited = False
-                elif limited == "true":
+            limited = joint_attrib.get("limited", "auto")
+            if limited == "auto":
+                if "range" in joint_attrib:
                     limited = True
                 else:
                     limited = False
+            elif limited == "true":
+                limited = True
+            else:
+                limited = False
 
-                # set the joint properties to create it
-                if joint_type == "hinge":
-                    if limited:
-                        joint_limits = _parse_vec(joint_attrib, "range", [0, 0])
-                        if self._use_degrees:
-                            joint_limits = np.deg2rad(joint_limits)
-                        link_builder.set_joint_properties(
-                            "revolute_unwrapped",
-                            [joint_limits],
-                            t_axis2parent,
-                            t_axis2joint,
-                            friction,
-                            damping,
-                        )
-                    else:
-                        link_builder.set_joint_properties(
-                            "revolute",
-                            [[-np.inf, np.inf]],
-                            t_axis2parent,
-                            t_axis2joint,
-                            friction,
-                            damping,
-                        )
-                elif joint_type == "slide":
-                    if limited:
-                        limits = [
-                            _parse_vec(joint_attrib, "range", [0, 0]) * self.scale
-                        ]
-                    else:
-                        limits = [[-np.inf, np.inf]]
+            # set the joint properties to create it
+            if joint_type == "hinge":
+                if limited:
+                    joint_limits = _parse_vec(joint_attrib, "range", [0, 0])
+                    if self._use_degrees:
+                        joint_limits = np.deg2rad(joint_limits)
                     link_builder.set_joint_properties(
-                        "prismatic",
-                        limits,
+                        "revolute_unwrapped",
+                        [joint_limits],
                         t_axis2parent,
                         t_axis2joint,
                         friction,
                         damping,
                     )
-                elif joint_type == "fixed":
-                    # TODO (stao): how does mjcf do fixed joints?
+                else:
                     link_builder.set_joint_properties(
-                        "fixed",
-                        [],
+                        "revolute",
+                        [[-np.inf, np.inf]],
                         t_axis2parent,
                         t_axis2joint,
                         friction,
                         damping,
                     )
+            elif joint_type == "slide":
+                if limited:
+                    limits = [_parse_vec(joint_attrib, "range", [0, 0]) * self.scale]
+                else:
+                    limits = [[-np.inf, np.inf]]
+                link_builder.set_joint_properties(
+                    "prismatic",
+                    limits,
+                    t_axis2parent,
+                    t_axis2joint,
+                    friction,
+                    damping,
+                )
+            elif joint_type == "fixed":
+                link_builder.set_joint_properties(
+                    "fixed",
+                    [],
+                    t_axis2parent,
+                    t_axis2joint,
+                    friction,
+                    damping,
+                )
 
-            # ensure adjacent links do not collide. Normally SAPIEN does this
-            # but we often create dummy links to support multiple joints between two link functionality
-            # that mujoco has so it must be done here.
-            if parent is not None:
-                parent.collision_groups[2] |= 1 << (self._group_count)
-                link_builder.collision_groups[2] |= 1 << (self._group_count)
-                self._group_count += 1
+        # ensure adjacent links do not collide. Normally SAPIEN does this
+        # but we often create dummy links to support multiple joints between two link functionality
+        # that mujoco has so it must be done here.
+        if parent is not None:
+            parent.collision_groups[2] |= 1 << (self._group_count)
+            link_builder.collision_groups[2] |= 1 << (self._group_count)
+            self._group_count += 1
 
         for child in body.findall("body"):
             self._parse_body(child, link_builder, defaults, builder)
@@ -631,22 +613,28 @@ class MJCFLoader:
         for default in xml.findall("default"):
             self._parse_default(default, None)
 
-        ### Parse World Body ###
+        ### Parse World Body and save their builders ###
 
         # NOTE (stao): For now we assume there is only one articulation. Some setups like Aloha 2 are technically 2 articulations
         # but you can treat it as a single one anyway
         builder = self.scene.create_articulation_builder()
-        for body in xml.find("worldbody").findall("body"):
+        for i, body in enumerate(xml.find("worldbody").findall("body")):
             dummy_root_link = builder.create_link_builder(None)
-            dummy_root_link.name = "dummy_root"
-            if self.fix_root_link:
+            dummy_root_link.name = f"dummy_root_{i}"
+            self._parse_body(body, dummy_root_link, self._root_default, builder)
+
+            # handle free joints
+            fix_root_link = True
+            freejoint_tags = body.findall("freejoint")
+            if freejoint_tags > 0:
+                fix_root_link = False
+            if fix_root_link:
                 dummy_root_link.set_joint_properties(
                     type="fixed",
                     limits=None,
                     pose_in_parent=Pose(),
                     pose_in_child=Pose(),
                 )
-            self._parse_body(body, dummy_root_link, self._root_default, builder)
 
         ### Parse contact and exclusions ###
         for contact in xml.findall("contact"):
