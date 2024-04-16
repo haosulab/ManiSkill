@@ -440,6 +440,7 @@ class MJCFLoader:
                     self._link2builder[link_builder.name] = link_builder
                 link_builder.set_joint_name(joint_attrib.get("name", ""))
                 joint_type = joint_attrib.get("type", "hinge")
+                # TODO (stao): unclear how to handle joint positions, what does mujoco do with this exactly?
                 np.array(_parse_vec(joint_attrib, "pos", [0, 0, 0]))
                 if i == len(joints) - 1:
                     # the last link is the "real" one, the rest are dummy links to support multiple joints acting on a link
@@ -481,13 +482,12 @@ class MJCFLoader:
                 t_axis2joint[:3, 2] = axis2
                 t_axis2joint = Pose(t_axis2joint)
                 t_axis2parent = t_joint2parent * t_axis2joint
-                # if "range" not in joint_attrib:
-                #     assert (
-                #         joint_type == "fixed"
-                #     ) and "limited" not in joint_attrib or not joint_attrib["limited"], "Found a joint that is not fixed, limited is not False, and has no range"
+
+                limited = joint_attrib.get("limited", "true")
+                limited = True if limited == "true" else False
                 if joint_type == "hinge":
-                    limited = joint_attrib.get("limited", "true")
-                    if limited == "true":
+
+                    if limited:
                         joint_limits = _parse_vec(joint_attrib, "range", [0, 0])
                         if self._use_degrees:
                             joint_limits = np.deg2rad(joint_limits)
@@ -509,9 +509,15 @@ class MJCFLoader:
                             damping,
                         )
                 elif joint_type == "slide":
+                    if limited:
+                        limits = [
+                            _parse_vec(joint_attrib, "range", [0, 0]) * self.scale
+                        ]
+                    else:
+                        limits = [[-np.inf, np.inf]]
                     link_builder.set_joint_properties(
                         "prismatic",
-                        [_parse_vec(joint_attrib, "range", [0, 0]) * self.scale],
+                        limits,
                         t_axis2parent,
                         t_axis2joint,
                         friction,
