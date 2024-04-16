@@ -277,14 +277,14 @@ class BaseEnv(gym.Env):
 
     @cached_property
     def single_observation_space(self):
-        if self.num_envs > 1:
+        if physx.is_gpu_enabled():
             return gym_utils.convert_observation_to_space(self._init_raw_obs, unbatched=True)
         else:
             return gym_utils.convert_observation_to_space(self._init_raw_obs)
 
     @cached_property
     def observation_space(self):
-        if self.num_envs > 1:
+        if physx.is_gpu_enabled():
             return batch_space(self.single_observation_space, n=self.num_envs)
         else:
             return self.single_observation_space
@@ -493,7 +493,7 @@ class BaseEnv(gym.Env):
             )
         elif self._reward_mode == "none":
             reward = 0
-            if self.num_envs > 1:
+            if physx.is_gpu_enabled():
                 reward = torch.zeros((self.num_envs, ), dtype=torch.float, device=self.device)
         else:
             raise NotImplementedError(self._reward_mode)
