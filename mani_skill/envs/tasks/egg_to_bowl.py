@@ -9,18 +9,15 @@ from transforms3d.euler import euler2quat
 import sapien
 import sapien.physx as physx
 import sapien.render
-import transforms3d
 
 from mani_skill.agents.robots import Fetch, Panda, Xmate3Robotiq
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils.building import actors
-from mani_skill.utils.geometry import rotation_conversions
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.sapien_utils import look_at
 from mani_skill.utils.scene_builder.table.table_scene_builder import TableSceneBuilder
 from mani_skill.utils.structs.pose import Pose
-from mani_skill.utils.structs.types import Array
 
 
 @register_env("EggToBowl-v0", max_episode_steps=50)
@@ -53,7 +50,7 @@ class EggToBowlEnv(BaseEnv):
         self.table_scene.build()
 
         self.egg = actors.build_actor_ai2_helper(
-            model_id="egg_1",
+            model_id="Egg_1",
             scene=self._scene,
             name="egg",
             kinematic=False,
@@ -61,7 +58,7 @@ class EggToBowlEnv(BaseEnv):
         )
 
         self.bowl = actors.build_actor_ai2_helper(
-            model_id="bowl_3",
+            model_id="Bowl_3",
             scene=self._scene,
             name="bowl",
             kinematic=True,
@@ -81,6 +78,7 @@ class EggToBowlEnv(BaseEnv):
             obj_pose = Pose.create_from_pq(p=xyz_e, q=q)
             self.egg.set_pose(obj_pose)
             
+            xyz_b = xyz_e
             xyz_b[..., :2] = xyz_e[..., : 2] - 0.1
             xyz_b[..., 2] = 0
             obj_pose = Pose.create_from_pq(p=xyz_b, q=q)
