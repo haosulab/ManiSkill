@@ -290,10 +290,11 @@ class MJCFLoader:
                 else:
                     geom_radius = geom_size[0]
                     geom_half_length = geom_size[1]
-                    # oriented along z-axis in this condition
-                    t_visual2link = t_visual2link * Pose(
-                        q=euler.euler2quat(0, np.pi / 2, 0)
-                    )
+                    # TODO (stao): oriented along z-axis for capsules whereas boxes are not?
+                    if geom_type == "capsule":
+                        t_visual2link = t_visual2link * Pose(
+                            q=euler.euler2quat(0, np.pi / 2, 0)
+                        )
                 if geom_type == "capsule":
                     link_builder.add_capsule_visual(
                         t_visual2link,
@@ -306,6 +307,19 @@ class MJCFLoader:
                         t_visual2link,
                         radius=geom_radius,
                         half_length=geom_half_length,
+                        # material=material,
+                        # name=geom_name,
+                    )
+                elif geom_type == "box":
+                    link_builder.add_box_visual(
+                        t_visual2link,
+                        half_size=geom_size,
+                        material=material,
+                        name=geom_name,
+                    )
+                    link_builder.add_box_collision(
+                        t_visual2link,
+                        half_size=geom_size
                         # material=material,
                         # name=geom_name,
                     )
