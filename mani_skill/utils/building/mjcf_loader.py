@@ -24,7 +24,11 @@ import sapien
 from sapien import ActorBuilder, Pose
 from sapien.physx import PhysxArticulation, PhysxMaterial
 from sapien.render import RenderCameraComponent, RenderMaterial, RenderTexture2D
-from sapien.wrapper.articulation_builder import ArticulationBuilder, LinkBuilder
+from sapien.wrapper.articulation_builder import (
+    ArticulationBuilder,
+    LinkBuilder,
+    MimicJointRecord,
+)
 from transforms3d import euler, quaternions
 
 
@@ -165,6 +169,7 @@ class MJCFLoader:
 
         self._link2builder: Dict[str, LinkBuilder] = dict()
         self._link2parent_joint: Dict[str, Any] = dict()
+        self._group_count = 0
 
     def set_scene(self, scene):
         self.scene = scene
@@ -244,8 +249,6 @@ class MJCFLoader:
             )
             _parse_float(geom_attrib, "density", self.density)
             material = self._materials[geom_attrib["material"]]
-            # t_visual2link = self._pose_from_origin(visual.origin, self.scale)
-            print(geom_name, geom_attrib)
 
             t_visual2link = Pose(geom_pos, geom_rot)
             if geom_type == "sphere":
@@ -264,6 +267,7 @@ class MJCFLoader:
 
                     # objects are default along x-axis and we rotate accordingly via axis angle.
                     axis = (end - start) / np.linalg.norm(end - start)
+                    # TODO this is bugged
                     angle = math.acos(np.dot(axis, np.array([1.0, 0.0, 0.0])))
                     axis = np.cross(axis, np.array([1.0, 0.0, 0.0]))
                     axis = axis / np.linalg.norm(axis)
@@ -310,184 +314,6 @@ class MJCFLoader:
                     "Height fields are not supported at the moment"
                 )
 
-        # # visual shapes
-        # for visual in link.visuals:
-        #     material = None
-        #     if visual.material:
-        #         material = RenderMaterial()
-        #         if visual.material.color is not None:
-        #             material.base_color = visual.material.color
-        #         elif visual.material.texture is not None:
-        #             material.diffuse_texture = RenderTexture2D(
-        #                 _try_very_hard_to_find_file(
-        #                     visual.material.texture.filename,
-        #                     self.urdf_dir,
-        #                     self.package_dir,
-        #                 )
-        #             )
-
-        #     t_visual2link = self._pose_from_origin(visual.origin, self.scale)
-        #     name = visual.name if visual.name else ""
-        #     if visual.geometry.box:
-        #         link_builder.add_box_visual(
-        #             t_visual2link,
-        #             visual.geometry.box.size * self.scale / 2.0,
-        #             material=material,
-        #             name=name,
-        #         )
-        #     if visual.geometry.sphere:
-        #         link_builder.add_sphere_visual(
-        #             t_visual2link,
-        #             visual.geometry.sphere.radius * self.scale,
-        #             material=material,
-        #             name=name,
-        #         )
-        #     if visual.geometry.capsule:
-        #         link_builder.add_capsule_visual(
-        #             t_visual2link * Pose(q=[0.7071068, 0, 0.7071068, 0]),
-        #             visual.geometry.capsule.radius * self.scale,
-        #             visual.geometry.capsule.length * self.scale / 2.0,
-        #             material=material,
-        #             name=name,
-        #         )
-        #     if visual.geometry.cylinder:
-        #         link_builder.add_cylinder_visual(
-        #             t_visual2link * Pose(q=[0.7071068, 0, 0.7071068, 0]),
-        #             visual.geometry.cylinder.radius * self.scale,
-        #             visual.geometry.cylinder.length * self.scale / 2.0,
-        #             material=material,
-        #             name=name,
-        #         )
-        #     if visual.geometry.mesh:
-        #         if visual.geometry.mesh.scale is not None:
-        #             scale = visual.geometry.mesh.scale
-        #         else:
-        #             scale = np.ones(3)
-
-        #         link_builder.add_visual_from_file(
-        #             _try_very_hard_to_find_file(
-        #                 visual.geometry.mesh.filename,
-        #                 self.urdf_dir,
-        #                 self.package_dir,
-        #             ),
-        #             t_visual2link,
-        #             scale * self.scale,
-        #             material=material,
-        #             name=name,
-        #         )
-
-        # # collision shapes
-        # for cid, collision in enumerate(link.collisions):
-        #     t_collision2link = self._pose_from_origin(collision.origin, self.scale)
-
-        #     material = self._get_material(link.name, cid)
-        #     density = self._get_density(link.name, cid)
-        #     patch_radius = self._get_patch_radius(link.name, cid)
-        #     min_patch_radius = self._get_min_patch_radius(link.name, cid)
-
-        #     if collision.geometry.box:
-        #         link_builder.add_box_collision(
-        #             t_collision2link,
-        #             collision.geometry.box.size * self.scale / 2.0,
-        #             material=material,
-        #             density=density,
-        #             patch_radius=patch_radius,
-        #             min_patch_radius=min_patch_radius,
-        #         )
-        #         if self.collision_is_visual:
-        #             link_builder.add_box_visual(
-        #                 t_collision2link,
-        #                 collision.geometry.box.size * self.scale / 2.0,
-        #             )
-        #     if collision.geometry.sphere:
-        #         link_builder.add_sphere_collision(
-        #             t_collision2link,
-        #             collision.geometry.sphere.radius * self.scale,
-        #             material=material,
-        #             density=density,
-        #             patch_radius=patch_radius,
-        #             min_patch_radius=min_patch_radius,
-        #         )
-        #         if self.collision_is_visual:
-        #             link_builder.add_sphere_visual(
-        #                 t_collision2link,
-        #                 collision.geometry.sphere.radius * self.scale,
-        #             )
-        #     if collision.geometry.capsule:
-        #         link_builder.add_capsule_collision(
-        #             t_collision2link * Pose(q=[0.7071068, 0, 0.7071068, 0]),
-        #             collision.geometry.capsule.radius * self.scale,
-        #             collision.geometry.capsule.length * self.scale / 2.0,
-        #             material=material,
-        #             density=density,
-        #             patch_radius=patch_radius,
-        #             min_patch_radius=min_patch_radius,
-        #         )
-        #         if self.collision_is_visual:
-        #             link_builder.add_capsule_visual(
-        #                 t_collision2link * Pose(q=[0.7071068, 0, 0.7071068, 0]),
-        #                 collision.geometry.capsule.radius * self.scale,
-        #                 collision.geometry.capsule.length * self.scale / 2.0,
-        #             )
-        #     if collision.geometry.cylinder:
-        #         link_builder.add_cylinder_collision(
-        #             t_collision2link * Pose(q=[0.7071068, 0, 0.7071068, 0]),
-        #             collision.geometry.cylinder.radius * self.scale,
-        #             collision.geometry.cylinder.length * self.scale / 2.0,
-        #             material=material,
-        #             density=density,
-        #             patch_radius=patch_radius,
-        #             min_patch_radius=min_patch_radius,
-        #         )
-        #         if self.collision_is_visual:
-        #             link_builder.add_cylinder_visual(
-        #                 t_collision2link * Pose(q=[0.7071068, 0, 0.7071068, 0]),
-        #                 collision.geometry.cylinder.radius * self.scale,
-        #                 collision.geometry.cylinder.length * self.scale / 2.0,
-        #             )
-
-        #     if collision.geometry.mesh:
-        #         if collision.geometry.mesh.scale is not None:
-        #             scale = collision.geometry.mesh.scale
-        #         else:
-        #             scale = np.ones(3)
-
-        #         filename = _try_very_hard_to_find_file(
-        #             collision.geometry.mesh.filename,
-        #             self.urdf_dir,
-        #             self.package_dir,
-        #         )
-
-        #         if self.load_multiple_collisions_from_file:
-        #             link_builder.add_multiple_convex_collisions_from_file(
-        #                 filename,
-        #                 t_collision2link,
-        #                 scale * self.scale,
-        #                 material=material,
-        #                 density=density,
-        #                 patch_radius=patch_radius,
-        #                 min_patch_radius=min_patch_radius,
-        #                 decomposition=self.multiple_collisions_decomposition,
-        #                 decomposition_params=self.multiple_collisions_decomposition_params,
-        #             )
-        #         else:
-        #             link_builder.add_convex_collision_from_file(
-        #                 filename,
-        #                 t_collision2link,
-        #                 scale * self.scale,
-        #                 material=material,
-        #                 density=density,
-        #                 patch_radius=patch_radius,
-        #                 min_patch_radius=min_patch_radius,
-        #             )
-
-        #         if self.collision_is_visual:
-        #             link_builder.add_visual_from_file(
-        #                 filename,
-        #                 t_collision2link,
-        #                 scale * self.scale,
-        #             )
-
     def _parse_texture(self, texture: Element):
         """Parse MJCF textures to then be referenced by materials: https://mujoco.readthedocs.io/en/stable/XMLreference.html#asset-texture
 
@@ -506,7 +332,7 @@ class MJCFLoader:
     def _parse_material(self, material: Element):
         """Parse MJCF materials in asset to sapien render materials"""
         name = material.get("name")
-        self._textures[material.get("texture")]
+        # self._textures[material.get("texture")]
         # NOTE: Procedural texture generation is currently not supported.
 
         # Defaults from https://mujoco.readthedocs.io/en/stable/XMLreference.html#asset-material
@@ -551,7 +377,7 @@ class MJCFLoader:
     def _parse_body(
         self,
         body: Element,
-        parent: Element,
+        parent: LinkBuilder,
         incoming_defaults: dict,
         builder: ArticulationBuilder,
     ):
@@ -581,21 +407,18 @@ class MJCFLoader:
         body_pos *= self.scale
         body_pose = Pose(body_pos)
 
-        joint_type = None
-
-        link_builder = builder.create_link_builder(parent=parent)
-        link_builder.set_name(f"{body_name}")
         # TODO (stao): Support free joints? Are they just fix_root_link=False perhaps?
         freejoint_tags = body.findall("freejoint")
-        fix_base = True
-        if not fix_base and len(freejoint_tags) > 0:
+        if False and len(freejoint_tags) > 0:
+            link_builder = builder.create_link_builder(parent=parent)
+            link_builder.set_name(f"{body_name}")
             self._build_link(body, body_attrib, link_builder, defaults)
         else:
+            link_builder = parent
             # if body has no joints, it is a fixed joint
             joints = body.findall("joint")
             if len(joints) == 0:
                 joints = [ET.Element("joint", attrib=dict(type="fixed"))]
-            Pose()
             for i, joint in enumerate(joints):
                 # note there can be multiple joints here. We create some dummy links to simulate that
 
@@ -611,24 +434,25 @@ class MJCFLoader:
                 joint_attrib = _merge_attrib(dict(), incoming_attributes)
 
                 # create a dummy link
-                if i > 0:
-                    link_builder = builder.create_link_builder(parent=parent)
+                if i >= 0:
+                    link_builder = builder.create_link_builder(parent=link_builder)
                     link_builder.set_name(f"{body_name}_{i}")
                     self._link2builder[link_builder.name] = link_builder
-                link_builder.set_joint_name(
-                    joint_attrib.get("name", "")
-                    # self.link2parent_joint[link_name].name
-                    # if self.link2parent_joint[link_name] is not None
-                    # else ""
-                )
+                link_builder.set_joint_name(joint_attrib.get("name", ""))
                 joint_type = joint_attrib.get("type", "hinge")
                 np.array(_parse_vec(joint_attrib, "pos", [0, 0, 0]))
-                if i == 0:
-                    # first link is the real one, the rest are dummy links to support multiple joints acting on a link
+                if i == len(joints) - 1:
+                    # the last link is the "real" one, the rest are dummy links to support multiple joints acting on a link
                     self._build_link(body, body_attrib, link_builder, defaults)
+                """
+                Notes:
 
+                Joint Stifness is controlled via controller stiffness values
+                """
                 # import ipdb;ipdb.set_trace()
-                t_joint2parent = body_pose  # * Pose(-joint_origin)
+                t_joint2parent = Pose()  # body_pose  # * Pose(-joint_origin)
+                if i == 0:
+                    t_joint2parent = body_pose
 
                 friction = 0
                 damping = 0
@@ -657,22 +481,33 @@ class MJCFLoader:
                 t_axis2joint[:3, 2] = axis2
                 t_axis2joint = Pose(t_axis2joint)
                 t_axis2parent = t_joint2parent * t_axis2joint
-                if "range" not in joint_attrib:
-                    assert (
-                        joint_type == "fixed"
-                    ), "Found a joint that is not fixed and has no range"
+                # if "range" not in joint_attrib:
+                #     assert (
+                #         joint_type == "fixed"
+                #     ) and "limited" not in joint_attrib or not joint_attrib["limited"], "Found a joint that is not fixed, limited is not False, and has no range"
                 if joint_type == "hinge":
-                    joint_limits = _parse_vec(joint_attrib, "range", [0, 0])
-                    if self._use_degrees:
-                        joint_limits = np.deg2rad(joint_limits)
-                    link_builder.set_joint_properties(
-                        "revolute",
-                        [joint_limits],
-                        t_axis2parent,
-                        t_axis2joint,
-                        friction,
-                        damping,
-                    )
+                    limited = joint_attrib.get("limited", "true")
+                    if limited == "true":
+                        joint_limits = _parse_vec(joint_attrib, "range", [0, 0])
+                        if self._use_degrees:
+                            joint_limits = np.deg2rad(joint_limits)
+                        link_builder.set_joint_properties(
+                            "revolute_unwrapped",
+                            [joint_limits],
+                            t_axis2parent,
+                            t_axis2joint,
+                            friction,
+                            damping,
+                        )
+                    else:
+                        link_builder.set_joint_properties(
+                            "revolute",
+                            [[-np.inf, np.inf]],
+                            t_axis2parent,
+                            t_axis2joint,
+                            friction,
+                            damping,
+                        )
                 elif joint_type == "slide":
                     link_builder.set_joint_properties(
                         "prismatic",
@@ -693,8 +528,27 @@ class MJCFLoader:
                         damping,
                     )
 
+            # ensure adjacent links do not collide
+            if parent is not None:
+                parent.collision_groups[2] |= 1 << (self._group_count)
+                link_builder.collision_groups[2] |= 1 << (self._group_count)
+                self._group_count += 1
+
         for child in body.findall("body"):
             self._parse_body(child, link_builder, defaults, builder)
+
+    def _parse_constraint(self, constraint: Element):
+        joint_elems = []
+        for joint in constraint.findall("joint"):
+            joint_elems.append(joint)
+        return MimicJointRecord(
+            joint_elems[0].attrib["joint"],
+            joint_elems[1].attrib["joint"],
+            1,
+            0
+            # joint.mimic.multiplier,
+            # joint.mimic.offset,
+        )
 
     def _parse_mjcf(
         self, mjcf_string: str
@@ -734,15 +588,24 @@ class MJCFLoader:
         # but you can treat it as a single one anyway
         builder = self.scene.create_articulation_builder()
         for body in xml.find("worldbody").findall("body"):
-            self._parse_body(body, None, self._root_default, builder)
+            dummy_root_link = builder.create_link_builder(None)
+            dummy_root_link.name = "dummy_root"
+            dummy_root_link.set_joint_properties(
+                type="fixed", limits=None, pose_in_parent=Pose(), pose_in_child=Pose()
+            )
+            self._parse_body(body, dummy_root_link, self._root_default, builder)
 
         ### Parse contact and exclusions ###
         for contact in xml.findall("contact"):
             # self._parse_contact()
-
             pass
 
         ### Parse equality constraints ###
+        tendon = xml.find("tendon")
+        if tendon is not None:
+            for constraint in tendon.findall("fixed"):
+                record = self._parse_constraint(constraint)
+                builder.mimic_joint_records.append(record)
 
         return [builder], [], []
 
