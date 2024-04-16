@@ -1,9 +1,13 @@
 """
-Loader code to import MJCF formats.
-Currently does not support loading motors in as this is not the standard SAPIEN adopts.
-Instead Motor information can be fetched from the loader
+Loader code to import MJCF xml files into SAPIEN
 
 Code partially adapted from https://github.com/NVIDIA/warp/blob/3ed2ceab824b65486c5204d2a7381d37b79fc314/warp/sim/import_mjcf.py
+
+Notes:
+    Joint properties relating to the solver, stiffness, actuator, are all not directly imported here
+    and instead must be implemented via a controller like other robots in SAPIEN
+
+
 """
 import math
 import os
@@ -61,7 +65,6 @@ def _str_to_float(string: str, delimiter=" "):
 
 
 def _merge_attrib(default_attrib: dict, incoming_attribs: Union[List[dict], dict]):
-    # from functools import reduce
     def helper_merge(a: dict, b: dict, path=[]):
         for key in b:
             if key in a:
@@ -109,23 +112,17 @@ def _parse_orientation(attrib, use_degrees, euler_seq):
         return quaternions.axangle2quat(axis, angle)
     if "xyaxes" in attrib:
         xyaxes = np.fromstring(attrib["xyaxes"], sep=" ")
-        # xaxis = wp.normalize(wp.vec3(*xyaxes[:3]))
         xaxis = xyaxes[:3] / np.linalg.norm(xyaxes[:3])
-        # zaxis = wp.normalize(wp.vec3(*xyaxes[3:]))
         zaxis = xyaxes[3:] / np.linalg.norm(xyaxes[:3])
-        # yaxis = wp.normalize(wp.cross(zaxis, xaxis))
         yaxis = np.cross(zaxis, xaxis)
         yaxis = yaxis / np.linalg.norm(yaxis)
         rot_matrix = np.array([xaxis, yaxis, zaxis]).T
         return quaternions.mat2quat(rot_matrix)
     if "zaxis" in attrib:
         zaxis = np.fromstring(attrib["zaxis"], sep=" ")
-        # zaxis = wp.normalize(wp.vec3(*zaxis))
         zaxis = zaxis / np.linalg.norm(zaxis)
-        # xaxis = wp.normalize(wp.cross(wp.vec3(0, 0, 1), zaxis))
         xaxis = np.cross(np.array([0, 0, 1]), zaxis)
         xaxis = xaxis / np.linalg.norm(xaxis)
-        # yaxis = wp.normalize(wp.cross(zaxis, xaxis))
         yaxis = np.cross(zaxis, xaxis)
         yaxis = yaxis / np.linalg.norm(yaxis)
         rot_matrix = np.array([xaxis, yaxis, zaxis]).T
@@ -140,6 +137,10 @@ class MJCFLoader:
 
     def __init__(self, ignore_classes=["motor"]):
         self.fix_root_link = True
+        """whether to fix the root link. Note regardless of given XML, the root link is a dummy link this loader
+        creates which makes a number of operations down the line easier. In general this should be False if there is a freejoint for the root body
+        of articulations in the XML and should be true if there are no free joints. At the moment when modelling a robot from Mujoco this
+        must be handled on a case by case basis"""
 
         self.load_multiple_collisions_from_file = False
         self.multiple_collisions_decomposition = "none"
@@ -248,8 +249,13 @@ class MJCFLoader:
                 geom_attrib, self._use_degrees, self._euler_seq
             )
             _parse_float(geom_attrib, "density", self.density)
-            material = self._materials[geom_attrib["material"]]
-
+            if "material" in geom_attrib:
+                material = self._materials[geom_attrib["material"]]
+            else:
+                # use RGBA
+                material = RenderMaterial(
+                    base_color=_parse_vec(geom_attrib, "rgba", [0.5, 0.5, 0.5, 1])
+                )
             t_visual2link = Pose(geom_pos, geom_rot)
             if geom_type == "sphere":
                 link_builder.add_sphere_visual(
@@ -284,6 +290,10 @@ class MJCFLoader:
                 else:
                     geom_radius = geom_size[0]
                     geom_half_length = geom_size[1]
+                    # oriented along z-axis in this condition
+                    t_visual2link = t_visual2link * Pose(
+                        q=euler.euler2quat(0, np.pi / 2, 0)
+                    )
                 if geom_type == "capsule":
                     link_builder.add_capsule_visual(
                         t_visual2link,
@@ -339,15 +349,15 @@ class MJCFLoader:
         # NOTE: Procedural texture generation is currently not supported.
 
         # Defaults from https://mujoco.readthedocs.io/en/stable/XMLreference.html#asset-material
-        em_val = _str_to_float(material.get("emission", "0"))
-        rgba = np.array(_str_to_float(material.get("rgba", "1 1 1 1")))
+        em_val = _parse_float(material.attrib, "emission", 0)
+        rgba = np.array(_parse_vec(material.attrib, "rgba", [1, 1, 1, 1]))
         self._materials[name] = RenderMaterial(
             emission=[rgba[0] * em_val, rgba[1] * em_val, rgba[2] * em_val, 1],
             base_color=rgba,
-            specular=_str_to_float(material.get("specular", "0")),
+            specular=_parse_float(material.attrib, "specular", 0),
             # TODO (stao): double check below 2 properties are right
-            roughness=1 - _str_to_float(material.get("reflectance", "0")),
-            metallic=_str_to_float(material.get("shininess", "0.5")),
+            roughness=1 - _parse_float(material.attrib, "reflectance", 0),
+            metallic=_parse_float(material.attrib, "shininess", 0.5),
         )
 
     @property
@@ -444,16 +454,11 @@ class MJCFLoader:
                 link_builder.set_joint_name(joint_attrib.get("name", ""))
                 joint_type = joint_attrib.get("type", "hinge")
                 # TODO (stao): unclear how to handle joint positions, what does mujoco do with this exactly?
-                np.array(_parse_vec(joint_attrib, "pos", [0, 0, 0]))
+                joint_pos = np.array(_parse_vec(joint_attrib, "pos", [0, 0, 0]))
                 if i == len(joints) - 1:
                     # the last link is the "real" one, the rest are dummy links to support multiple joints acting on a link
                     self._build_link(body, body_attrib, link_builder, defaults)
-                """
-                Notes:
 
-                Joint Stifness is controlled via controller stiffness values
-                """
-                # import ipdb;ipdb.set_trace()
                 t_joint2parent = Pose()  # body_pose  # * Pose(-joint_origin)
                 if i == 0:
                     t_joint2parent = body_pose
@@ -465,6 +470,7 @@ class MJCFLoader:
                 #     friction = joint.dynamics.friction
                 #     damping = joint.dynamics.damping
 
+                # compute joint axis and relative transformations
                 axis = _parse_vec(joint_attrib, "axis", [0.0, 0.0, 0.0])
                 axis_norm = np.linalg.norm(axis)
                 if axis_norm < 1e-3:
@@ -480,6 +486,7 @@ class MJCFLoader:
                     axis1 /= np.linalg.norm(axis1)
                 axis2 = np.cross(axis, axis1)
                 t_axis2joint = np.eye(4)
+                t_axis2joint[:3, 3] = joint_pos
                 t_axis2joint[:3, 0] = axis
                 t_axis2joint[:3, 1] = axis1
                 t_axis2joint[:3, 2] = axis2
@@ -496,8 +503,9 @@ class MJCFLoader:
                     limited = True
                 else:
                     limited = False
-                if joint_type == "hinge":
 
+                # set the joint properties to create it
+                if joint_type == "hinge":
                     if limited:
                         joint_limits = _parse_vec(joint_attrib, "range", [0, 0])
                         if self._use_degrees:
@@ -545,7 +553,9 @@ class MJCFLoader:
                         damping,
                     )
 
-            # ensure adjacent links do not collide
+            # ensure adjacent links do not collide. Normally SAPIEN does this
+            # but we often create dummy links to support multiple joints between two link functionality
+            # that mujoco has so it must be done here.
             if parent is not None:
                 parent.collision_groups[2] |= 1 << (self._group_count)
                 link_builder.collision_groups[2] |= 1 << (self._group_count)
@@ -572,12 +582,19 @@ class MJCFLoader:
     ) -> Tuple[List[ArticulationBuilder], List[ActorBuilder], None]:
         """Helper function for self.parse"""
         xml: Element = ET.fromstring(mjcf_string.encode("utf-8"))
-        # import ipdb;ipdb.set_trace()
-        # robot = URDF._from_xml(xml, self.urdf_dir, lazy_load_meshes=True)
+        # handle includes
+        for include in xml.findall("include"):
+            include_file = include.attrib["file"]
+            with open(os.path.join(self.mjcf_dir, include_file), "r") as f:
+                include_file_str = f.read()
+                include_xml = ET.fromstring(include_file_str.encode("utf-8"))
+            for child in include_xml:
+                xml.append(child)
 
         self._use_degrees = True  # angles are in degrees by default
         self._euler_seq = [1, 2, 3]  # XYZ by default
 
+        # process compiler options
         compiler = xml.find("compiler")
         if compiler is not None:
             self._use_degrees = (
@@ -595,6 +612,7 @@ class MJCFLoader:
                 self._parse_texture(texture)
             for material in asset.findall("material"):
                 self._parse_material(material)
+
         ### Parse defaults ###
         for default in xml.findall("default"):
             self._parse_default(default, None)
@@ -607,19 +625,24 @@ class MJCFLoader:
         for body in xml.find("worldbody").findall("body"):
             dummy_root_link = builder.create_link_builder(None)
             dummy_root_link.name = "dummy_root"
-            dummy_root_link.set_joint_properties(
-                type="fixed", limits=None, pose_in_parent=Pose(), pose_in_child=Pose()
-            )
+            if self.fix_root_link:
+                dummy_root_link.set_joint_properties(
+                    type="fixed",
+                    limits=None,
+                    pose_in_parent=Pose(),
+                    pose_in_child=Pose(),
+                )
             self._parse_body(body, dummy_root_link, self._root_default, builder)
 
         ### Parse contact and exclusions ###
         for contact in xml.findall("contact"):
-            # self._parse_contact()
+            # TODO
             pass
 
         ### Parse equality constraints ###
         tendon = xml.find("tendon")
         if tendon is not None:
+            # TODO (stao): unclear if this actually works
             for constraint in tendon.findall("fixed"):
                 record = self._parse_constraint(constraint)
                 builder.mimic_joint_records.append(record)
@@ -658,3 +681,6 @@ class MJCFLoader:
         # for a in actors:
         #     name2entity[a.name] = a
         return articulations[0]
+
+    # TODO (stao): function to also load the scene in?
+    # TODO (stao): function to load camera configs?
