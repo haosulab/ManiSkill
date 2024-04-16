@@ -42,10 +42,13 @@ class BaseAgent:
 
     uid: str
     """unique identifier string of this"""
-    urdf_path: str
+    urdf_path: str = None
     """path to the .urdf file describe the agent's geometry and visuals"""
     urdf_config: dict = None
     """Optional provide a urdf_config to further modify the created articulation"""
+    mjcf_path: str = None
+    """path to a MJCF .xml file defining a robot. This will only load the articulation defined in the XML and nothing else"""
+
     fix_root_link: bool = True
     """Whether to fix the root link of the robot"""
 
@@ -96,13 +99,17 @@ class BaseAgent:
         """
         Load the robot articulation
         """
-        loader = self.scene.create_urdf_loader()
+        if self.urdf_path is not None:
+            loader = self.scene.create_urdf_loader()
+            asset_path = format_path(str(self.urdf_path))
+        elif self.mjcf_path is not None:
+            loader = self.scene.create_mjcf_loader()
+            asset_path = format_path(str(self.mjcf_path))
+
         loader.name = self.uid
         if self._agent_idx is not None:
             loader.name = f"{self.uid}-agent-{self._agent_idx}"
         loader.fix_root_link = self.fix_root_link
-
-        urdf_path = format_path(str(self.urdf_path))
 
         if self.urdf_config is not None:
             urdf_config = sapien_utils.parse_urdf_config(self.urdf_config, self.scene)
@@ -110,8 +117,8 @@ class BaseAgent:
 
         # TODO(jigu): support loading multiple convex collision shapes
         sapien_utils.apply_urdf_config(loader, urdf_config)
-        self.robot: Articulation = loader.load(urdf_path)
-        assert self.robot is not None, f"Fail to load URDF from {urdf_path}"
+        self.robot: Articulation = loader.load(asset_path)
+        assert self.robot is not None, f"Fail to load URDF/MJCF from {asset_path}"
 
         # Cache robot link ids
         self.robot_link_ids = [link.name for link in self.robot.get_links()]

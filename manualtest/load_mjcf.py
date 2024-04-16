@@ -1,7 +1,7 @@
 import numpy as np
 import sapien
 
-from mani_skill.utils.building.mjcf_loader import MJCFLoader
+from mani_skill.utils.building._mjcf_loader import MJCFLoader
 
 scene = sapien.Scene()
 scene.set_ambient_light([0.3, 0.3, 0.3])

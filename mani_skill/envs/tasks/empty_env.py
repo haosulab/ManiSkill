@@ -31,7 +31,7 @@ class EmptyEnv(BaseEnv):
 
     @property
     def _human_render_camera_configs(self):
-        pose = sapien_utils.look_at([0.75, -0.75, 0.5], [0.0, 0.0, 0.2])
+        pose = sapien_utils.look_at([1.75, -1.75, 1.5], [0.0, 0.0, 0.2])
         return CameraConfig("render_camera", pose, 2048, 2048, 1, 0.01, 100)
 
     def _load_scene(self, options: dict):
