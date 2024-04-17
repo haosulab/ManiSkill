@@ -114,9 +114,8 @@ class BaseAgent:
         if self.urdf_config is not None:
             urdf_config = sapien_utils.parse_urdf_config(self.urdf_config, self.scene)
             sapien_utils.check_urdf_config(urdf_config)
+            sapien_utils.apply_urdf_config(loader, urdf_config)
 
-        # TODO(jigu): support loading multiple convex collision shapes
-        sapien_utils.apply_urdf_config(loader, urdf_config)
         self.robot: Articulation = loader.load(asset_path)
         assert self.robot is not None, f"Fail to load URDF/MJCF from {asset_path}"
 
