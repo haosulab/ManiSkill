@@ -9,6 +9,7 @@ import torch
 from mani_skill.agents.base_agent import BaseAgent
 from mani_skill.agents.controllers import *
 from mani_skill.envs.sapien_env import BaseEnv
+from mani_skill.envs.utils import randomization
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.registration import register_env
@@ -85,11 +86,22 @@ class CartPoleEnv(BaseEnv):
             a.build(a.name)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
-        pass
+        with torch.device(self.device):
+            b = len(env_idx)
+            qpos = torch.zeros((b, 2))
+            qpos[:, 0] = randomization.uniform(-0.1, 0.1, size=(b,))
+            qpos[:, 1] = randomization.uniform(-0.034, 0.034, size=(b,))
+            qvel = torch.randn(size=(b, 2)) * 0.01
+            self.agent.robot.set_qpos(qpos)
+            self.agent.robot.set_qvel(qvel)
+
+    @property
+    def pole_angle_cosine(self):
+        return torch.cos(self.agent.robot.joint_map["hinge_1"].qpos)
 
     def evaluate(self):
         cart_pos = self.agent.robot.joint_map["slider"].qpos
-        pole_angle_cosine = torch.cos(self.agent.robot.joint_map["hinge_1"].qpos)
+        pole_angle_cosine = self.pole_angle_cosine
         cart_in_bounds = cart_pos < self.CART_RANGE[1]
         cart_in_bounds = cart_in_bounds & (cart_pos > self.CART_RANGE[0])
         angle_in_bounds = pole_angle_cosine < self.ANGLE_COSINE_RANGE[1]
@@ -104,13 +116,17 @@ class CartPoleEnv(BaseEnv):
     def compute_sparse_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         return info["cart_in_bounds"] * info["angle_in_bounds"]
 
-    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        # TODO
-        return torch.zeros(self.num_envs, device=self.device)
 
-    def compute_normalized_dense_reward(
-        self, obs: Any, action: torch.Tensor, info: Dict
-    ):
-        # TODO
-        max_reward = 1.0
-        return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
+@register_env("CartPoleSwingUp-v1", max_episode_steps=500, override=True)
+class CartPoleSwingUpEnv(CartPoleEnv):
+    def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
+        with torch.device(self.device):
+            b = len(env_idx)
+            qpos = torch.zeros((b, 2))
+            qpos[:, 0] = 0.01 * torch.randn(size=(b,))
+            qpos[:, 1] = torch.pi + 0.01 * torch.randn(size=(b,))
+            qvel = torch.randn(size=(b, 2)) * 0.01
+            self.agent.robot.set_qpos(qpos)
+            self.agent.robot.set_qvel(qvel)
+            # Note DM-Control sets some randomness to other qpos values but am not sure what they are
+            # as cartpole.xml seems to only load two joints

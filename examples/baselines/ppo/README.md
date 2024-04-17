@@ -24,7 +24,7 @@ Below is a full list of various commands you can run to train a policy to solve 
 ```bash
 python ppo.py --env_id="CartPole-v1" \
   --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
-  --total_timesteps=10_000_000
+  --total_timesteps=10_000_000 --num-steps=500 --num-eval-steps=500 --eval_freq=5
 python ppo.py --env_id="PickCube-v1" \
   --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
   --total_timesteps=10_000_000
