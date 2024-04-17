@@ -11,6 +11,17 @@ Notes:
 
     Tendons/equality constraints are supported but may not work the same
 
+    The default group of geoms is 0 in mujoco. From docs it appears only group 0 and 2 are rendered by default.
+    This is also by default what the visualizer shows and presumably what image renders show.
+    Any other group is treated as being invisible (e.g. in SAPIEN we do not add visual bodies). SAPIEN does not currently support
+    toggling render groups like Mujoco.
+
+    Ref: https://mujoco.readthedocs.io/en/stable/XMLreference.html#body-geom-group,
+    https://mujoco.readthedocs.io/en/latest/modeling.html#composite-objects (says group 3 is turned off)
+
+    Useful references:
+    - Collision detection: https://mujoco.readthedocs.io/en/stable/computation/index.html#collision-detection
+
 
 """
 import math
@@ -42,12 +53,20 @@ class MJCFTexture:
     type: Literal["skybox", "cube", "2d"]
     rgb1: list
     rgb2: list
+    file: str
 
 
 @dataclass
 class MJCFDefault:
     parent: Element = None
     node: Element = None
+
+
+def _parse_int(attrib, key, default):
+    if key in attrib:
+        return int(attrib[key])
+    else:
+        return default
 
 
 def _parse_float(attrib, key, default):
@@ -167,6 +186,7 @@ class MJCFLoader:
         self._assets = dict()
         self._materials = dict()
         self._textures: Dict[str, MJCFTexture] = dict()
+        self._meshes: Dict[str, Element] = dict()
 
         self._link2builder: Dict[str, LinkBuilder] = dict()
         self._link2parent_joint: Dict[str, Any] = dict()
@@ -250,17 +270,42 @@ class MJCFLoader:
             )
             _parse_float(geom_attrib, "density", self.density)
             if "material" in geom_attrib:
-                material = self._materials[geom_attrib["material"]]
+                render_material = self._materials[geom_attrib["material"]]
             else:
                 # use RGBA
-                material = RenderMaterial(
+                render_material = RenderMaterial(
                     base_color=_parse_vec(geom_attrib, "rgba", [0.5, 0.5, 0.5, 1])
                 )
+
+            geom_density = _parse_float(geom_attrib, "density", 1000.0)
+            physx_material = None
+            # TODO handle geometry material properties
+
+            geom_group = _parse_int(geom_attrib, "group", 0)
+            # See note at top of file for how we handle geom groups
+            has_visual_body = False
+            if geom_group == 0 or geom_group == 2:
+                has_visual_body = True
+
+            geom_contype = _parse_int(geom_attrib, "contype", 1)
+            # See note at top of file for how we handle contype / objects without collisions
+            has_collisions = True
+            if geom_contype == 0:
+                has_collisions = False
+
             t_visual2link = Pose(geom_pos, geom_rot)
             if geom_type == "sphere":
-                link_builder.add_sphere_visual(
-                    t_visual2link, radius=geom_size[0], material=material
-                )
+                if has_visual_body:
+                    link_builder.add_sphere_visual(
+                        t_visual2link, radius=geom_size[0], material=render_material
+                    )
+                if has_collisions:
+                    link_builder.add_sphere_collision(
+                        t_visual2link,
+                        radius=geom_size[0],
+                        material=physx_material,
+                        density=geom_density,
+                    )
             elif geom_type in ["capsule", "cylinder", "box"]:
                 if "fromto" in geom_attrib:
                     geom_fromto = _parse_vec(
@@ -291,40 +336,59 @@ class MJCFLoader:
                     geom_radius = geom_size[0]
                     geom_half_length = geom_size[1]
                     # TODO (stao): oriented along z-axis for capsules whereas boxes are not?
-                    if geom_type == "capsule":
+                    if geom_type in ["capsule", "cylinder"]:
                         t_visual2link = t_visual2link * Pose(
                             q=euler.euler2quat(0, np.pi / 2, 0)
                         )
                 if geom_type == "capsule":
-                    link_builder.add_capsule_visual(
-                        t_visual2link,
-                        radius=geom_radius,
-                        half_length=geom_half_length,
-                        material=material,
-                        name=geom_name,
-                    )
-                    link_builder.add_capsule_collision(
-                        t_visual2link,
-                        radius=geom_radius,
-                        half_length=geom_half_length,
-                        # material=material,
-                        # name=geom_name,
-                    )
+                    if has_visual_body:
+                        link_builder.add_capsule_visual(
+                            t_visual2link,
+                            radius=geom_radius,
+                            half_length=geom_half_length,
+                            material=render_material,
+                            name=geom_name,
+                        )
+                    if has_collisions:
+                        link_builder.add_capsule_collision(
+                            t_visual2link,
+                            radius=geom_radius,
+                            half_length=geom_half_length,
+                            # material=material,
+                            # name=geom_name,
+                        )
                 elif geom_type == "box":
-                    link_builder.add_box_visual(
-                        t_visual2link,
-                        half_size=geom_size,
-                        material=material,
-                        name=geom_name,
-                    )
-                    link_builder.add_box_collision(
-                        t_visual2link,
-                        half_size=geom_size
-                        # material=material,
-                        # name=geom_name,
-                    )
-                else:
-                    raise NotImplementedError()
+                    if has_visual_body:
+                        link_builder.add_box_visual(
+                            t_visual2link,
+                            half_size=geom_size,
+                            material=render_material,
+                            name=geom_name,
+                        )
+                    if has_collisions:
+                        link_builder.add_box_collision(
+                            t_visual2link,
+                            half_size=geom_size
+                            # material=material,
+                            # name=geom_name,
+                        )
+                elif geom_type == "cylinder":
+                    if has_visual_body:
+                        link_builder.add_cylinder_visual(
+                            t_visual2link,
+                            radius=geom_radius,
+                            half_length=geom_half_length,
+                            material=render_material,
+                            name=geom_name,
+                        )
+                    if has_collisions:
+                        link_builder.add_capsule_collision(
+                            t_visual2link,
+                            radius=geom_radius,
+                            half_length=geom_half_length,
+                            # material=material,
+                            # name=geom_name
+                        )
 
             elif geom_type == "plane":
                 pass
@@ -333,7 +397,15 @@ class MJCFLoader:
             elif geom_type == "cylinder":
                 pass
             elif geom_type == "mesh":
-                pass
+                if has_visual_body:
+                    mesh_name = geom_attrib.get("mesh")
+                    link_builder.add_visual_from_file(
+                        os.path.join(
+                            self._mesh_dir, self._meshes[mesh_name].get("file")
+                        ),
+                        scale=(self.scale, self.scale, self.scale),
+                        material=render_material,
+                    )
             elif geom_type == "sdf":
                 raise NotImplementedError("SDF geom type not supported at the moment")
             elif geom_type == "hfield":
@@ -349,23 +421,27 @@ class MJCFLoader:
         - Different texture types are not really supported
         """
         name = texture.get("name")
+        file = texture.get("file")
         self._textures[name] = MJCFTexture(
             name=name,
             type=texture.get("type"),
             rgb1=texture.get("rgb1"),
             rgb2=texture.get("rgb2"),
+            file=os.path.join(self._mesh_dir, file) if file else None,
         )
 
     def _parse_material(self, material: Element):
         """Parse MJCF materials in asset to sapien render materials"""
         name = material.get("name")
-        # self._textures[material.get("texture")]
-        # NOTE: Procedural texture generation is currently not supported.
+        texture = None
+        if material.get("texture") in self._textures:
+            texture = self._textures[material.get("texture")]
 
+        # NOTE: Procedural texture generation is currently not supported.
         # Defaults from https://mujoco.readthedocs.io/en/stable/XMLreference.html#asset-material
         em_val = _parse_float(material.attrib, "emission", 0)
         rgba = np.array(_parse_vec(material.attrib, "rgba", [1, 1, 1, 1]))
-        self._materials[name] = RenderMaterial(
+        render_material = RenderMaterial(
             emission=[rgba[0] * em_val, rgba[1] * em_val, rgba[2] * em_val, 1],
             base_color=rgba,
             specular=_parse_float(material.attrib, "specular", 0),
@@ -373,6 +449,19 @@ class MJCFLoader:
             roughness=1 - _parse_float(material.attrib, "reflectance", 0),
             metallic=_parse_float(material.attrib, "shininess", 0.5),
         )
+        if texture is not None and texture.file is not None:
+            render_material.diffuse_texture = RenderTexture2D(filename=texture.file)
+        self._materials[name] = render_material
+
+    def _parse_mesh(self, mesh: Element):
+        """Parse MJCF mesh data in asset"""
+        # Vertex, normal, texcoord are not supported, file is required
+        file = mesh.get("file")
+        assert (
+            file is not None
+        ), "Mesh file not provided. While Mujoco allows file to be optional, for loading into SAPIEN this is not optional"
+        name = mesh.get("name", os.path.splitext(file)[0])
+        self._meshes[name] = mesh
 
     @property
     def _root_default(self):
@@ -601,6 +690,7 @@ class MJCFLoader:
                 for c in compiler.attrib.get("eulerseq", "xyz").lower()
             ]
             self._mesh_dir = compiler.attrib.get("meshdir", ".")
+            self._mesh_dir = os.path.join(self.mjcf_dir, self._mesh_dir)
 
         ### Parse assets ###
         for asset in xml.findall("asset"):
@@ -608,6 +698,8 @@ class MJCFLoader:
                 self._parse_texture(texture)
             for material in asset.findall("material"):
                 self._parse_material(material)
+            for mesh in asset.findall("mesh"):
+                self._parse_mesh(mesh)
 
         ### Parse defaults ###
         for default in xml.findall("default"):
@@ -626,7 +718,7 @@ class MJCFLoader:
             # handle free joints
             fix_root_link = True
             freejoint_tags = body.findall("freejoint")
-            if freejoint_tags > 0:
+            if len(freejoint_tags) > 0:
                 fix_root_link = False
             if fix_root_link:
                 dummy_root_link.set_joint_properties(

@@ -12,7 +12,7 @@ scene.add_ground(0)
 loader = MJCFLoader()
 loader.set_scene(scene)
 loader.fix_root_link = True
-robot = loader.load("manualtest/assets/mujoco/humanoid.xml")
+robot = loader.load("manualtest/assets/mujoco/a1.xml")
 
 # robot.set_pose(sapien.Pose(p=[0, 0, 1.28]))
 
