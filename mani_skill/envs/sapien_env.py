@@ -472,19 +472,7 @@ class BaseEnv(gym.Env):
 
     def get_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         if self._reward_mode == "sparse":
-            if "success" in info:
-                if "fail" in info:
-                    if isinstance(info["success"], torch.Tensor):
-                        reward = info["success"].to(torch.float) - info["fail"].to(torch.float)
-                    else:
-                        reward = info["success"] - info["fail"]
-                else:
-                    reward = info["success"]
-            else:
-                if "fail" in info:
-                    reward = -info["fail"]
-                else:
-                    reward = torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
+            reward = self.compute_sparse_reward(obs=obs, action=action, info=info)
         elif self._reward_mode == "dense":
             reward = self.compute_dense_reward(obs=obs, action=action, info=info)
         elif self._reward_mode == "normalized_dense":
@@ -498,6 +486,24 @@ class BaseEnv(gym.Env):
         else:
             raise NotImplementedError(self._reward_mode)
         return reward
+
+    def compute_sparse_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+        """
+        Computes the sparse reward. By default this function tries to use the success/fail information in
+        returned by the evaluate function and gives +1 if success, -1 if fail, 0 otherwise"""
+        if "success" in info:
+            if "fail" in info:
+                if isinstance(info["success"], torch.Tensor):
+                    reward = info["success"].to(torch.float) - info["fail"].to(torch.float)
+                else:
+                    reward = info["success"] - info["fail"]
+            else:
+                reward = info["success"]
+        else:
+            if "fail" in info:
+                reward = -info["fail"]
+            else:
+                reward = torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         raise NotImplementedError()

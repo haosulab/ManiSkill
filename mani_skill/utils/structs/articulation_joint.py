@@ -83,6 +83,16 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
         )
 
     # -------------------------------------------------------------------------- #
+    # Additional useful functions not in SAPIEN original API
+    # -------------------------------------------------------------------------- #
+    @property
+    def qpos(self):
+        """
+        The qpos of this joint in the articulation
+        """
+        return self.articulation.qpos[:, self.active_index]
+
+    # -------------------------------------------------------------------------- #
     # Functions from physx.PhysxArticulationJoint
     # -------------------------------------------------------------------------- #
     # def get_armature(self) -> numpy.ndarray[numpy.float32, _Shape[m, 1]]: ...

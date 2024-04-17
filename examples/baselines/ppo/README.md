@@ -22,6 +22,9 @@ Note that with `--evaluate`, trajectories are saved from a GPU simulation. In or
 Below is a full list of various commands you can run to train a policy to solve various tasks with PPO that are lightly tuned already. The fastest one is the PushCube-v1 task which can take less than a minute to train on the GPU.
 
 ```bash
+python ppo.py --env_id="CartPole-v1" \
+  --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
+  --total_timesteps=10_000_000
 python ppo.py --env_id="PickCube-v1" \
   --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
   --total_timesteps=10_000_000

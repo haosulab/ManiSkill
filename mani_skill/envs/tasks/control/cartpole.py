@@ -1,3 +1,4 @@
+"""Adapted from https://github.com/google-deepmind/dm_control/blob/main/dm_control/suite/cartpole.py"""
 import os
 from collections import OrderedDict
 from typing import Any, Dict, Union
@@ -5,10 +6,8 @@ from typing import Any, Dict, Union
 import numpy as np
 import torch
 
-from mani_skill import PACKAGE_ASSET_DIR
 from mani_skill.agents.base_agent import BaseAgent
 from mani_skill.agents.controllers import *
-from mani_skill.agents.robots import Fetch, Panda
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import common, sapien_utils
@@ -54,9 +53,13 @@ class CartPoleRobot(BaseAgent):
 
 @register_env("CartPole-v1", max_episode_steps=500, override=True)
 class CartPoleEnv(BaseEnv):
+    SUPPORTED_REWARD_MODES = ["sparse", "none"]
 
     SUPPORTED_ROBOTS = [CartPoleRobot]
-    agent: Union[Panda, Fetch]
+    agent: Union[CartPoleRobot]
+
+    CART_RANGE = [-0.25, 0.25]
+    ANGLE_COSINE_RANGE = [0.995, 1]
 
     def __init__(self, *args, robot_uids=CartPoleRobot, **kwargs):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
@@ -67,12 +70,12 @@ class CartPoleEnv(BaseEnv):
 
     @property
     def _sensor_configs(self):
-        pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
+        pose = sapien_utils.look_at(eye=[0, -4, 1], target=[0, 0, 1])
         return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
     def _human_render_camera_configs(self):
-        pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
+        pose = sapien_utils.look_at(eye=[0, -4, 1], target=[0, 0, 1])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
     def _load_scene(self, options: dict):
@@ -85,19 +88,29 @@ class CartPoleEnv(BaseEnv):
         pass
 
     def evaluate(self):
-        return {
-            "success": torch.zeros(self.num_envs, device=self.device, dtype=bool),
-            "fail": torch.zeros(self.num_envs, device=self.device, dtype=bool),
-        }
+        cart_pos = self.agent.robot.joint_map["slider"].qpos
+        pole_angle_cosine = torch.cos(self.agent.robot.joint_map["hinge_1"].qpos)
+        cart_in_bounds = cart_pos < self.CART_RANGE[1]
+        cart_in_bounds = cart_in_bounds & (cart_pos > self.CART_RANGE[0])
+        angle_in_bounds = pole_angle_cosine < self.ANGLE_COSINE_RANGE[1]
+        angle_in_bounds = angle_in_bounds & (
+            pole_angle_cosine > self.ANGLE_COSINE_RANGE[0]
+        )
+        return {"cart_in_bounds": cart_in_bounds, "angle_in_bounds": angle_in_bounds}
 
     def _get_obs_extra(self, info: Dict):
         return OrderedDict()
 
+    def compute_sparse_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+        return info["cart_in_bounds"] * info["angle_in_bounds"]
+
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        return torch.ones(self.num_envs, device=self.device)
+        # TODO
+        return torch.zeros(self.num_envs, device=self.device)
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
+        # TODO
         max_reward = 1.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
