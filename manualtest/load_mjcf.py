@@ -7,12 +7,12 @@ scene = sapien.Scene()
 scene.set_ambient_light([0.3, 0.3, 0.3])
 scene.add_directional_light([0, -1, -1], [0.85, 0.85, 0.85], True)
 scene.add_ground(0)
-
+# scene.render_system.set_cubemap(sapien.render.RenderCubemap())
 
 loader = MJCFLoader()
 loader.set_scene(scene)
 loader.fix_root_link = True
-robot = loader.load("manualtest/assets/mujoco/a1.xml")
+robot = loader.load("manualtest/assets/mujoco/manipulator.xml")
 
 # robot.set_pose(sapien.Pose(p=[0, 0, 1.28]))
 

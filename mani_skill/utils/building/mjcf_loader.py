@@ -13,6 +13,10 @@ from ._mjcf_loader import MJCFLoader as SAPIENMJCFLoader
 
 
 class MJCFLoader(SAPIENMJCFLoader):
+    """
+    Wrapper for the SAPIEN MJCF Loader to support easy parallelization
+    """
+
     scene: ManiSkillScene
     name: str = None
     disable_self_collisions: bool = False

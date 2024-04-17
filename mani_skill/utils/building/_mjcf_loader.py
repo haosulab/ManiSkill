@@ -3,6 +3,13 @@ Loader code to import MJCF xml files into SAPIEN
 
 Code partially adapted from https://github.com/NVIDIA/warp/blob/3ed2ceab824b65486c5204d2a7381d37b79fc314/warp/sim/import_mjcf.py
 
+Articulations are known as kinematic trees (defined by <body> tags) in Mujoco. A single .xml file can have multiple articulations
+
+Any <geom> tag in <worldbody> but not a <body> tag will be built as separate static actors if possible. Actors that are not static seem to be defined
+with a free joint under a single body tag.
+
+Warnings of unloadable tags/data can be printed if verbosity is turned on (by default it is off)
+
 Notes:
     Joint properties relating to the solver, stiffness, actuator, are all not directly imported here
     and instead must be implemented via a controller like other robots in SAPIEN
@@ -20,6 +27,8 @@ Notes:
     https://mujoco.readthedocs.io/en/latest/modeling.html#composite-objects (says group 3 is turned off)
 
     If contype is 0, it means that geom can't collide with anything. We do this by not adding a collision shape at all.
+
+    geoms under worldbody but not body tags are treated as static objects at the moment.
 
     Useful references:
     - Collision detection: https://mujoco.readthedocs.io/en/stable/computation/index.html#collision-detection
@@ -58,10 +67,7 @@ class MJCFTexture:
     file: str
 
 
-@dataclass
-class MJCFDefault:
-    parent: Element = None
-    node: Element = None
+DEFAULT_MJCF_OPTIONS = dict(contact=True)
 
 
 def _parse_int(attrib, key, default):
@@ -203,6 +209,175 @@ class MJCFLoader:
         origin[:3, 3] = origin[:3, 3] * scale
         return Pose(origin)
 
+    def _build_geom(
+        self, geom: Element, builder: Union[LinkBuilder, ActorBuilder], defaults
+    ):
+        geom_defaults = defaults
+        if "class" in geom.attrib:
+            geom_class = geom.attrib["class"]
+            ignore_geom = False
+            for pattern in self.ignore_classes:
+                if re.match(pattern, geom_class):
+                    ignore_geom = True
+                    break
+            if ignore_geom:
+                return
+            if geom_class in self._defaults:
+                geom_defaults = _merge_attrib(defaults, self._defaults[geom_class])
+        if "geom" in geom_defaults:
+            geom_attrib = _merge_attrib(geom_defaults["geom"], geom.attrib)
+        else:
+            geom_attrib = geom.attrib
+
+        geom_name = geom_attrib.get("name", "")
+        geom_type = geom_attrib.get("type", "sphere")
+        if "mesh" in geom_attrib:
+            geom_type = "mesh"
+
+        geom_size = _parse_vec(geom_attrib, "size", [1.0, 1.0, 1.0]) * self.scale
+        geom_pos = _parse_vec(geom_attrib, "pos", (0.0, 0.0, 0.0)) * self.scale
+        geom_rot = _parse_orientation(geom_attrib, self._use_degrees, self._euler_seq)
+        _parse_float(geom_attrib, "density", self.density)
+        if "material" in geom_attrib:
+            render_material = self._materials[geom_attrib["material"]]
+        else:
+            # use RGBA
+            render_material = RenderMaterial(
+                base_color=_parse_vec(geom_attrib, "rgba", [0.5, 0.5, 0.5, 1])
+            )
+
+        geom_density = _parse_float(geom_attrib, "density", 1000.0)
+        physx_material = None
+        # TODO handle geometry material properties
+
+        geom_group = _parse_int(geom_attrib, "group", 0)
+        # See note at top of file for how we handle geom groups
+        has_visual_body = False
+        if geom_group == 0 or geom_group == 2:
+            has_visual_body = True
+
+        geom_contype = _parse_int(geom_attrib, "contype", 1)
+        # See note at top of file for how we handle contype / objects without collisions
+        has_collisions = True
+        if geom_contype == 0:
+            has_collisions = False
+
+        t_visual2link = Pose(geom_pos, geom_rot)
+        if geom_type == "sphere":
+            if has_visual_body:
+                builder.add_sphere_visual(
+                    t_visual2link, radius=geom_size[0], material=render_material
+                )
+            if has_collisions:
+                builder.add_sphere_collision(
+                    t_visual2link,
+                    radius=geom_size[0],
+                    material=physx_material,
+                    density=geom_density,
+                )
+        elif geom_type in ["capsule", "cylinder", "box"]:
+            if "fromto" in geom_attrib:
+                geom_fromto = _parse_vec(
+                    geom_attrib, "fromto", (0.0, 0.0, 0.0, 1.0, 0.0, 0.0)
+                )
+
+                start = np.array(geom_fromto[0:3]) * self.scale
+                end = np.array(geom_fromto[3:6]) * self.scale
+                # objects follow a line from start to end.
+
+                # objects are default along x-axis and we rotate accordingly via axis angle.
+                axis = (end - start) / np.linalg.norm(end - start)
+                # TODO this is bugged
+                angle = math.acos(np.dot(axis, np.array([1.0, 0.0, 0.0])))
+                axis = np.cross(axis, np.array([1.0, 0.0, 0.0]))
+                if np.linalg.norm(axis) < 1e-3:
+                    axis = np.array([1, 0, 0])
+                else:
+                    axis = axis / np.linalg.norm(axis)
+
+                geom_pos = (start + end) * 0.5
+                geom_rot = quaternions.axangle2quat(axis, -angle)
+                t_visual2link.set_p(geom_pos)
+                t_visual2link.set_q(geom_rot)
+                geom_radius = geom_size[0]
+                geom_half_length = np.linalg.norm(end - start) * 0.5
+            else:
+                geom_radius = geom_size[0]
+                geom_half_length = geom_size[1]
+                # TODO (stao): oriented along z-axis for capsules whereas boxes are not?
+                if geom_type in ["capsule", "cylinder"]:
+                    t_visual2link = t_visual2link * Pose(
+                        q=euler.euler2quat(0, np.pi / 2, 0)
+                    )
+            if geom_type == "capsule":
+                if has_visual_body:
+                    builder.add_capsule_visual(
+                        t_visual2link,
+                        radius=geom_radius,
+                        half_length=geom_half_length,
+                        material=render_material,
+                        name=geom_name,
+                    )
+                if has_collisions:
+                    builder.add_capsule_collision(
+                        t_visual2link,
+                        radius=geom_radius,
+                        half_length=geom_half_length,
+                        # material=material,
+                        # name=geom_name,
+                    )
+            elif geom_type == "box":
+                if has_visual_body:
+                    builder.add_box_visual(
+                        t_visual2link,
+                        half_size=geom_size,
+                        material=render_material,
+                        name=geom_name,
+                    )
+                if has_collisions:
+                    builder.add_box_collision(
+                        t_visual2link,
+                        half_size=geom_size
+                        # material=material,
+                        # name=geom_name,
+                    )
+            elif geom_type == "cylinder":
+                if has_visual_body:
+                    builder.add_cylinder_visual(
+                        t_visual2link,
+                        radius=geom_radius,
+                        half_length=geom_half_length,
+                        material=render_material,
+                        name=geom_name,
+                    )
+                if has_collisions:
+                    builder.add_capsule_collision(
+                        t_visual2link,
+                        radius=geom_radius,
+                        half_length=geom_half_length,
+                        # material=material,
+                        # name=geom_name
+                    )
+
+        elif geom_type == "plane":
+            pass
+        elif geom_type == "ellipsoid":
+            pass
+        elif geom_type == "cylinder":
+            pass
+        elif geom_type == "mesh":
+            if has_visual_body:
+                mesh_name = geom_attrib.get("mesh")
+                builder.add_visual_from_file(
+                    os.path.join(self._mesh_dir, self._meshes[mesh_name].get("file")),
+                    scale=(self.scale, self.scale, self.scale),
+                    material=render_material,
+                )
+        elif geom_type == "sdf":
+            raise NotImplementedError("SDF geom type not supported at the moment")
+        elif geom_type == "hfield":
+            raise NotImplementedError("Height fields are not supported at the moment")
+
     def _build_link(
         self, body: Element, body_attrib, link_builder: LinkBuilder, defaults
     ):
@@ -241,179 +416,7 @@ class MJCFLoader:
 
         # go through each geometry of the body
         for geo_count, geom in enumerate(body.findall("geom")):
-            geom_defaults = defaults
-            if "class" in geom.attrib:
-                geom_class = geom.attrib["class"]
-                ignore_geom = False
-                for pattern in self.ignore_classes:
-                    if re.match(pattern, geom_class):
-                        ignore_geom = True
-                        break
-                if ignore_geom:
-                    continue
-                if geom_class in self._defaults:
-                    geom_defaults = _merge_attrib(defaults, self._defaults[geom_class])
-            if "geom" in geom_defaults:
-                geom_attrib = _merge_attrib(geom_defaults["geom"], geom.attrib)
-            else:
-                geom_attrib = geom.attrib
-
-            geom_name = geom_attrib.get(
-                "name", f"{body_attrib['name']}_geom_{geo_count}"
-            )
-            geom_type = geom_attrib.get("type", "sphere")
-            if "mesh" in geom_attrib:
-                geom_type = "mesh"
-
-            geom_size = _parse_vec(geom_attrib, "size", [1.0, 1.0, 1.0]) * self.scale
-            geom_pos = _parse_vec(geom_attrib, "pos", (0.0, 0.0, 0.0)) * self.scale
-            geom_rot = _parse_orientation(
-                geom_attrib, self._use_degrees, self._euler_seq
-            )
-            _parse_float(geom_attrib, "density", self.density)
-            if "material" in geom_attrib:
-                render_material = self._materials[geom_attrib["material"]]
-            else:
-                # use RGBA
-                render_material = RenderMaterial(
-                    base_color=_parse_vec(geom_attrib, "rgba", [0.5, 0.5, 0.5, 1])
-                )
-
-            geom_density = _parse_float(geom_attrib, "density", 1000.0)
-            physx_material = None
-            # TODO handle geometry material properties
-
-            geom_group = _parse_int(geom_attrib, "group", 0)
-            # See note at top of file for how we handle geom groups
-            has_visual_body = False
-            if geom_group == 0 or geom_group == 2:
-                has_visual_body = True
-
-            geom_contype = _parse_int(geom_attrib, "contype", 1)
-            # See note at top of file for how we handle contype / objects without collisions
-            has_collisions = True
-            if geom_contype == 0:
-                has_collisions = False
-
-            t_visual2link = Pose(geom_pos, geom_rot)
-            if geom_type == "sphere":
-                if has_visual_body:
-                    link_builder.add_sphere_visual(
-                        t_visual2link, radius=geom_size[0], material=render_material
-                    )
-                if has_collisions:
-                    link_builder.add_sphere_collision(
-                        t_visual2link,
-                        radius=geom_size[0],
-                        material=physx_material,
-                        density=geom_density,
-                    )
-            elif geom_type in ["capsule", "cylinder", "box"]:
-                if "fromto" in geom_attrib:
-                    geom_fromto = _parse_vec(
-                        geom_attrib, "fromto", (0.0, 0.0, 0.0, 1.0, 0.0, 0.0)
-                    )
-
-                    start = np.array(geom_fromto[0:3]) * self.scale
-                    end = np.array(geom_fromto[3:6]) * self.scale
-                    # objects follow a line from start to end.
-
-                    # objects are default along x-axis and we rotate accordingly via axis angle.
-                    axis = (end - start) / np.linalg.norm(end - start)
-                    # TODO this is bugged
-                    angle = math.acos(np.dot(axis, np.array([1.0, 0.0, 0.0])))
-                    axis = np.cross(axis, np.array([1.0, 0.0, 0.0]))
-                    if np.linalg.norm(axis) < 1e-3:
-                        axis = np.array([1, 0, 0])
-                    else:
-                        axis = axis / np.linalg.norm(axis)
-
-                    geom_pos = (start + end) * 0.5
-                    geom_rot = quaternions.axangle2quat(axis, -angle)
-                    t_visual2link.set_p(geom_pos)
-                    t_visual2link.set_q(geom_rot)
-                    geom_radius = geom_size[0]
-                    geom_half_length = np.linalg.norm(end - start) * 0.5
-                else:
-                    geom_radius = geom_size[0]
-                    geom_half_length = geom_size[1]
-                    # TODO (stao): oriented along z-axis for capsules whereas boxes are not?
-                    if geom_type in ["capsule", "cylinder"]:
-                        t_visual2link = t_visual2link * Pose(
-                            q=euler.euler2quat(0, np.pi / 2, 0)
-                        )
-                if geom_type == "capsule":
-                    if has_visual_body:
-                        link_builder.add_capsule_visual(
-                            t_visual2link,
-                            radius=geom_radius,
-                            half_length=geom_half_length,
-                            material=render_material,
-                            name=geom_name,
-                        )
-                    if has_collisions:
-                        link_builder.add_capsule_collision(
-                            t_visual2link,
-                            radius=geom_radius,
-                            half_length=geom_half_length,
-                            # material=material,
-                            # name=geom_name,
-                        )
-                elif geom_type == "box":
-                    if has_visual_body:
-                        link_builder.add_box_visual(
-                            t_visual2link,
-                            half_size=geom_size,
-                            material=render_material,
-                            name=geom_name,
-                        )
-                    if has_collisions:
-                        link_builder.add_box_collision(
-                            t_visual2link,
-                            half_size=geom_size
-                            # material=material,
-                            # name=geom_name,
-                        )
-                elif geom_type == "cylinder":
-                    if has_visual_body:
-                        link_builder.add_cylinder_visual(
-                            t_visual2link,
-                            radius=geom_radius,
-                            half_length=geom_half_length,
-                            material=render_material,
-                            name=geom_name,
-                        )
-                    if has_collisions:
-                        link_builder.add_capsule_collision(
-                            t_visual2link,
-                            radius=geom_radius,
-                            half_length=geom_half_length,
-                            # material=material,
-                            # name=geom_name
-                        )
-
-            elif geom_type == "plane":
-                pass
-            elif geom_type == "ellipsoid":
-                pass
-            elif geom_type == "cylinder":
-                pass
-            elif geom_type == "mesh":
-                if has_visual_body:
-                    mesh_name = geom_attrib.get("mesh")
-                    link_builder.add_visual_from_file(
-                        os.path.join(
-                            self._mesh_dir, self._meshes[mesh_name].get("file")
-                        ),
-                        scale=(self.scale, self.scale, self.scale),
-                        material=render_material,
-                    )
-            elif geom_type == "sdf":
-                raise NotImplementedError("SDF geom type not supported at the moment")
-            elif geom_type == "hfield":
-                raise NotImplementedError(
-                    "Height fields are not supported at the moment"
-                )
+            self._build_geom(geom, link_builder, defaults)
 
     def _parse_texture(self, texture: Element):
         """Parse MJCF textures to then be referenced by materials: https://mujoco.readthedocs.io/en/stable/XMLreference.html#asset-texture
@@ -679,9 +682,10 @@ class MJCFLoader:
                 xml.append(child)
 
         self._use_degrees = True  # angles are in degrees by default
+        self._mjcf_options = DEFAULT_MJCF_OPTIONS
         self._euler_seq = [1, 2, 3]  # XYZ by default
 
-        # process compiler options
+        ### Parse compiler options ###
         compiler = xml.find("compiler")
         if compiler is not None:
             self._use_degrees = (
@@ -693,6 +697,15 @@ class MJCFLoader:
             ]
             self._mesh_dir = compiler.attrib.get("meshdir", ".")
             self._mesh_dir = os.path.join(self.mjcf_dir, self._mesh_dir)
+
+        ### Parse options/flags ###
+        option = xml.find("option")
+        if option is not None:
+            for flag in option.findall("flag"):
+                update_dict = dict()
+                for k, v in flag.attrib.items():
+                    update_dict[k] = True if v == "enable" else False
+                self._mjcf_options.update(update_dict)
 
         ### Parse assets ###
         for asset in xml.findall("asset"):
@@ -707,28 +720,50 @@ class MJCFLoader:
         for default in xml.findall("default"):
             self._parse_default(default, None)
 
-        ### Parse World Body and save their builders ###
+        ### Parse Kinematic Trees / Articulations in World Body ###
 
         # NOTE (stao): For now we assume there is only one articulation. Some setups like Aloha 2 are technically 2 articulations
         # but you can treat it as a single one anyway
-        builder = self.scene.create_articulation_builder()
+        articulation_builders: List[ArticulationBuilder] = []
+        actor_builders: List[ActorBuilder] = []
         for i, body in enumerate(xml.find("worldbody").findall("body")):
-            dummy_root_link = builder.create_link_builder(None)
-            dummy_root_link.name = f"dummy_root_{i}"
-            self._parse_body(body, dummy_root_link, self._root_default, builder)
+            # determine first if this body is really an articulation or a actor
+            has_joint = body.find("joint") is not None
+            has_freejoint = body.find("freejoint") is not None
+            if has_joint:
+                builder = self.scene.create_articulation_builder()
+                articulation_builders.append(builder)
+                dummy_root_link = builder.create_link_builder(None)
+                dummy_root_link.name = f"dummy_root_{i}"
+                self._parse_body(body, dummy_root_link, self._root_default, builder)
 
-            # handle free joints
-            fix_root_link = True
-            freejoint_tags = body.findall("freejoint")
-            if len(freejoint_tags) > 0:
-                fix_root_link = False
-            if fix_root_link:
-                dummy_root_link.set_joint_properties(
-                    type="fixed",
-                    limits=None,
-                    pose_in_parent=Pose(),
-                    pose_in_child=Pose(),
-                )
+                # handle free joints
+                fix_root_link = not has_freejoint
+                if fix_root_link:
+                    dummy_root_link.set_joint_properties(
+                        type="fixed",
+                        limits=None,
+                        pose_in_parent=Pose(),
+                        pose_in_child=Pose(),
+                    )
+            else:
+                builder = self.scene.create_actor_builder()
+                body_type = "dynamic" if has_freejoint else "static"
+                actor_builders.append(builder)
+                # TODO (stao): this may not be correct. Does mujoco support using multiple nested body tags to define geoms?
+                for i, geom in enumerate(body.findall("geom")):
+                    self._build_geom(geom, builder, self._root_default)
+                    builder.set_name(geom.get("name", ""))
+                builder.set_physx_body_type(body_type)
+
+        ### Parse geoms in World Body ###
+        # These can't have freejoints so they can't be dynamic
+        for i, geom in enumerate(xml.find("worldbody").findall("geom")):
+            builder = self.scene.create_actor_builder()
+            actor_builders.append(builder)
+            self._build_geom(geom, builder, self._root_default)
+            builder.set_name(geom.get("name", ""))
+            builder.set_physx_body_type("static")
 
         ### Parse contact and exclusions ###
         for contact in xml.findall("contact"):
@@ -736,17 +771,24 @@ class MJCFLoader:
             pass
 
         ### Parse equality constraints ###
-        tendon = xml.find("tendon")
-        if tendon is not None:
-            # TODO (stao): unclear if this actually works
-            for constraint in tendon.findall("fixed"):
-                record = self._parse_constraint(constraint)
-                builder.mimic_joint_records.append(record)
+        # tendon = xml.find("tendon")
+        # if tendon is not None:
+        #     # TODO (stao): unclear if this actually works
+        #     for constraint in tendon.findall("fixed"):
+        #         record = self._parse_constraint(constraint)
+        #         builder.mimic_joint_records.append(record)
 
-        return [builder], [], []
+        if not self._mjcf_options["contact"]:
+            for actor in actor_builders:
+                actor.collision_groups[2] |= 1 << 1
+            for art in articulation_builders:
+                for link in art.link_builders:
+                    link.collision_groups[2] |= 1 << 1
+
+        return articulation_builders, actor_builders, []
 
     def parse(self, mjcf_file: str, package_dir=None):
-        """Parses a given MJCF file into articulation builders, actor builders, and sensors"""
+        """Parses a given MJCF file into articulation builders and actor builders and sensor configs"""
         self.package_dir = package_dir
         self.mjcf_dir = os.path.dirname(mjcf_file)
 
@@ -756,6 +798,7 @@ class MJCFLoader:
         return self._parse_mjcf(mjcf_string)
 
     def load(self, mjcf_file: str, package_dir=None):
+        """Parses a given mjcf .xml file and builds all articulations and actors"""
         articulation_builders, actor_builders, cameras = self.parse(
             mjcf_file, package_dir
         )
