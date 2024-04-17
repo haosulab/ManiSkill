@@ -19,6 +19,8 @@ Notes:
     Ref: https://mujoco.readthedocs.io/en/stable/XMLreference.html#body-geom-group,
     https://mujoco.readthedocs.io/en/latest/modeling.html#composite-objects (says group 3 is turned off)
 
+    If contype is 0, it means that geom can't collide with anything. We do this by not adding a collision shape at all.
+
     Useful references:
     - Collision detection: https://mujoco.readthedocs.io/en/stable/computation/index.html#collision-detection
 
