@@ -280,7 +280,7 @@ Using the TriFingerPro robot, rotate a cube
 
 ## Control Tasks
 
-### CartPole-v1
+### MS-CartPole-v1
 
 
 :::{dropdown} Task Card

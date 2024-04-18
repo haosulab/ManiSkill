@@ -58,7 +58,7 @@ class CartPoleRobot(BaseAgent):
         self.robot_link_ids = [link.name for link in self.robot.get_links()]
 
 
-@register_env("CartPole-v1", max_episode_steps=500, override=True)
+@register_env("MS-CartPole-v1", max_episode_steps=500)
 class CartPoleEnv(BaseEnv):
     SUPPORTED_REWARD_MODES = ["sparse", "none"]
 

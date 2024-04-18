@@ -276,7 +276,7 @@ class BaseEnv(gym.Env):
 
     def _update_obs_space(self, obs: Any):
         """call this function if you modify the observations returned by env.step and env.reset via an observation wrapper. The given observation must be a numpy array"""
-        self._init_raw_obs = obs
+        self._init_raw_obs = common.to_numpy(obs)
         del self.single_observation_space
         del self.observation_space
         self.single_observation_space
@@ -758,12 +758,12 @@ class BaseEnv(gym.Env):
         for actor in self._scene.actors.values():
             if actor.px_body_type == "static":
                 continue
-            actor.set_linear_velocity([0, 0, 0])
-            actor.set_angular_velocity([0, 0, 0])
+            actor.set_linear_velocity([0., 0., 0.])
+            actor.set_angular_velocity([0., 0., 0.])
         for articulation in self._scene.articulations.values():
             articulation.set_qvel(np.zeros(articulation.max_dof))
-            articulation.set_root_linear_velocity([0, 0, 0])
-            articulation.set_root_angular_velocity([0, 0, 0])
+            articulation.set_root_linear_velocity([0., 0., 0.])
+            articulation.set_root_angular_velocity([0., 0., 0.])
         if physx.is_gpu_enabled():
             self._scene._gpu_apply_all()
             self._scene._gpu_fetch_all()

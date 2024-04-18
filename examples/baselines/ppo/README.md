@@ -54,9 +54,8 @@ python ppo.py --env_id="RotateCubeLevel4-v1" \
    --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
    --total_timesteps=500_000_000 --num-steps=250 --num-eval-steps=250
 
-python ppo.py --env_id="CartPole-v1" \
+python ppo.py --env_id="MS-CartPole-v1" \
    --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
    --total_timesteps=10_000_000 --num-steps=500 --num-eval-steps=500 \
    --gamma=0.99 --gae_lambda=0.95 \
-   --eval_freq=5
-```
+   --eval_freq=5```
