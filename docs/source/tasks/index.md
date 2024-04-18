@@ -301,4 +301,7 @@ Keep the CartPole stable and up right by sliding it left and right
 
 **Goal Specification:**
 - None
-:::
+
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/MS-CartPole-v1_rt.mp4" type="video/mp4">
+</video>
