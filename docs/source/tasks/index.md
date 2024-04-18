@@ -277,3 +277,28 @@ Using the TriFingerPro robot, rotate a cube
 
 **Success Conditions:**
 - The rotated cube should be within 0.02 m of the goal position and 0.1 rad of the goal orientation.
+
+## Control Tasks
+
+### CartPole-v1
+
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+Keep the CartPole stable and up right by sliding it left and right
+
+**Supported Robots: None**
+
+**Randomizations:**
+- TODO
+
+**Success Conditions:**
+- the cart is within 0.25m of the center of the rail (which is at 0)
+- the cosine of the hinge angle attaching the pole is between 0.995 and 1
+
+**Goal Specification:**
+- None
+:::

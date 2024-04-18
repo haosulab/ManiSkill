@@ -11,6 +11,7 @@ def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--env-id", type=str, default="PushCube-v1", help="The environment ID of the task you want to simulate")
     parser.add_argument("-o", "--obs-mode", type=str, default="none")
+    parser.add_argument("-b", "--sim-backend", type=str, default="auto", help="Which simulation backend to use. Can be 'auto', 'cpu', 'gpu'")
     parser.add_argument("--reward-mode", type=str)
     parser.add_argument("-c", "--control-mode", type=str)
     parser.add_argument("--render-mode", type=str)
@@ -49,6 +50,7 @@ def main(args):
         control_mode=args.control_mode,
         render_mode=args.render_mode,
         shader_dir=args.shader,
+        sim_backend=args.sim_backend,
         **args.env_kwargs
     )
 

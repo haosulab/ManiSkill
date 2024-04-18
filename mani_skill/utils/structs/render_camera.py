@@ -79,8 +79,10 @@ class RenderCamera:
                 device=self.scene.device,
                 dtype=torch.float32,
             ).T
-            res = ros2opencv @ self.get_global_pose().inv().to_transformation_matrix()
-            if self.mount is not None:
+            res = (
+                ros2opencv @ self.get_global_pose().inv().to_transformation_matrix()
+            )[:, :3, :4]
+            if self.mount is None:
                 self._cached_extrinsic_matrix = res
             return res
         else:

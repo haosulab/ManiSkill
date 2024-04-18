@@ -242,22 +242,6 @@ class DictController(BaseController):
         for uid, controller in self.controllers.items():
             controller.set_action(common.to_tensor(action[uid]))
 
-    def before_simulation_step(self):
-        if physx.is_gpu_enabled():
-            return
-        else:
-            if self.balance_passive_force:
-                qf = self.articulation.compute_passive_force(
-                    gravity=True, coriolis_and_centrifugal=True
-                )
-            else:
-                qf = np.zeros(self.articulation.max_dof)
-            for controller in self.controllers.values():
-                ret = controller.before_simulation_step()
-                if ret is not None and "qf" in ret:
-                    qf = qf + ret["qf"]
-            self.articulation.set_qf(qf)
-
     def get_state(self) -> dict:
         states = {}
         for uid, controller in self.controllers.items():

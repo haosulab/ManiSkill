@@ -166,10 +166,17 @@ class BaseEnv(gym.Env):
         else:
             self.device = torch.device("cpu")
 
+        # raise a number of nicer errors
         if sim_backend == "cpu" and num_envs > 1:
             raise RuntimeError("""Cannot set the sim backend to 'cpu' and have multiple environments.
             If you want to do CPU sim backends and have environment vectorization you must use multi-processing across CPUs.
             This can be done via the gymnasium's AsyncVectorEnv API""")
+        if "rt" == shader_dir[:2]:
+            if obs_mode in ["sensor_data", "rgb", "rgbd", "pointcloud"]:
+                raise RuntimeError("""Currently you cannot use ray-tracing while running simulation with visual observation modes. You may still use
+                env.render_rgb_array() or the RecordEpisode wrapper to save videos of ray-traced results""")
+            if num_envs > 1:
+                raise RuntimeError("""Currently you cannot run ray-tracing on more than one environment in a single process""")
 
         # TODO (stao): move the merge code / handling union typed arguments outside here so classes inheriting BaseEnv only get
         # the already parsed sim config argument
@@ -279,14 +286,14 @@ class BaseEnv(gym.Env):
 
     @cached_property
     def single_observation_space(self):
-        if self.num_envs > 1:
-            return gym_utils.convert_observation_to_space(common.to_numpy(self._init_raw_obs), unbatched=True)
+        if physx.is_gpu_enabled():
+            return gym_utils.convert_observation_to_space(self._init_raw_obs, unbatched=True)
         else:
             return gym_utils.convert_observation_to_space(common.to_numpy(self._init_raw_obs))
 
     @cached_property
     def observation_space(self):
-        if self.num_envs > 1:
+        if physx.is_gpu_enabled():
             return batch_space(self.single_observation_space, n=self.num_envs)
         else:
             return self.single_observation_space
@@ -474,19 +481,7 @@ class BaseEnv(gym.Env):
 
     def get_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         if self._reward_mode == "sparse":
-            if "success" in info:
-                if "fail" in info:
-                    if isinstance(info["success"], torch.Tensor):
-                        reward = info["success"].to(torch.float) - info["fail"].to(torch.float)
-                    else:
-                        reward = info["success"] - info["fail"]
-                else:
-                    reward = info["success"]
-            else:
-                if "fail" in info:
-                    reward = -info["fail"]
-                else:
-                    reward = torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
+            reward = self.compute_sparse_reward(obs=obs, action=action, info=info)
         elif self._reward_mode == "dense":
             reward = self.compute_dense_reward(obs=obs, action=action, info=info)
         elif self._reward_mode == "normalized_dense":
@@ -495,11 +490,29 @@ class BaseEnv(gym.Env):
             )
         elif self._reward_mode == "none":
             reward = 0
-            if self.num_envs > 1:
+            if physx.is_gpu_enabled():
                 reward = torch.zeros((self.num_envs, ), dtype=torch.float, device=self.device)
         else:
             raise NotImplementedError(self._reward_mode)
         return reward
+
+    def compute_sparse_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+        """
+        Computes the sparse reward. By default this function tries to use the success/fail information in
+        returned by the evaluate function and gives +1 if success, -1 if fail, 0 otherwise"""
+        if "success" in info:
+            if "fail" in info:
+                if isinstance(info["success"], torch.Tensor):
+                    reward = info["success"].to(torch.float) - info["fail"].to(torch.float)
+                else:
+                    reward = info["success"] - info["fail"]
+            else:
+                reward = info["success"]
+        else:
+            if "fail" in info:
+                reward = -info["fail"]
+            else:
+                reward = torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         raise NotImplementedError()

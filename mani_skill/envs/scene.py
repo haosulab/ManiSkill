@@ -92,6 +92,13 @@ class ManiSkillScene:
         loader.set_scene(self)
         return loader
 
+    def create_mjcf_loader(self):
+        from ..utils.building.mjcf_loader import MJCFLoader
+
+        loader = MJCFLoader()
+        loader.set_scene(self)
+        return loader
+
     def create_physical_material(
         self, static_friction: float, dynamic_friction: float, restitution: float
     ):

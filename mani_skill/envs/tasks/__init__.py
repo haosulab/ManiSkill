@@ -1,4 +1,5 @@
 from .assembling_kits import AssemblingKitsEnv
+from .control import *
 from .dexterity import RotateSingleObjectInHand, RotateValveEnv
 from .empty_env import EmptyEnv
 from .fmb import FMBAssembly1Env
@@ -16,4 +17,3 @@ from .rotate_cube import RotateCubeEnv
 from .stack_cube import StackCubeEnv
 from .two_robot_pick_cube import TwoRobotPickCube
 from .two_robot_stack_cube import TwoRobotStackCube
-from .rotate_cube import RotateCubeEnv

@@ -73,6 +73,9 @@ def test_envs_obs_modes(env_id, obs_mode):
             assert obs["sensor_data"][cam]["depth"].dtype == torch.int16
             assert obs["sensor_data"][cam]["segmentation"].shape == (16, 128, 128, 1)
             assert obs["sensor_data"][cam]["segmentation"].dtype == torch.int16
+            assert obs["sensor_param"][cam]["extrinsic_cv"].shape == (16, 3, 4)
+            assert obs["sensor_param"][cam]["intrinsic_cv"].shape == (16, 3, 3)
+            assert obs["sensor_param"][cam]["cam2world_gl"].shape == (16, 4, 4)
     elif obs_mode == "pointcloud":
         num_pts = len(obs["pointcloud"]["xyzw"][0])
         assert obs["pointcloud"]["xyzw"].shape == (16, num_pts, 4)
