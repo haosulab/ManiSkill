@@ -42,29 +42,34 @@ class BaseAgent:
 
     uid: str
     """unique identifier string of this"""
-    urdf_path: str
+    urdf_path: str = None
     """path to the .urdf file describe the agent's geometry and visuals"""
     urdf_config: dict = None
     """Optional provide a urdf_config to further modify the created articulation"""
+    mjcf_path: str = None
+    """path to a MJCF .xml file defining a robot. This will only load the articulation defined in the XML and nothing else"""
+
+    fix_root_link: bool = True
+    """Whether to fix the root link of the robot"""
 
     def __init__(
         self,
         scene: ManiSkillScene,
         control_freq: int,
         control_mode: str = None,
-        fix_root_link=True,
         agent_idx: int = None,
     ):
         self.scene = scene
         self._control_freq = control_freq
         self._agent_idx = agent_idx
 
-        # URDF
-        self.fix_root_link = fix_root_link
-
         self.robot: Articulation = None
         self.controllers: Dict[str, BaseController] = dict()
         self.sensors: Dict[str, BaseSensor] = dict()
+
+        self.controllers = OrderedDict()
+        self._load_articulation()
+        self._after_loading_articulation()
 
         # Controller
         self.supported_control_modes = list(self._controller_configs.keys())
@@ -72,11 +77,9 @@ class BaseAgent:
             control_mode = self.supported_control_modes[0]
         # The control mode after reset for consistency
         self._default_control_mode = control_mode
-        self.controllers = OrderedDict()
-        self._load_articulation()
-        self._after_loading_articulation()
-        self._after_init()
         self.set_control_mode()
+
+        self._after_init()
 
     @property
     def _sensor_configs(self) -> List[BaseSensorConfig]:
@@ -96,22 +99,25 @@ class BaseAgent:
         """
         Load the robot articulation
         """
-        loader = self.scene.create_urdf_loader()
+        if self.urdf_path is not None:
+            loader = self.scene.create_urdf_loader()
+            asset_path = format_path(str(self.urdf_path))
+        elif self.mjcf_path is not None:
+            loader = self.scene.create_mjcf_loader()
+            asset_path = format_path(str(self.mjcf_path))
+
         loader.name = self.uid
         if self._agent_idx is not None:
             loader.name = f"{self.uid}-agent-{self._agent_idx}"
         loader.fix_root_link = self.fix_root_link
 
-        urdf_path = format_path(str(self.urdf_path))
-
         if self.urdf_config is not None:
             urdf_config = sapien_utils.parse_urdf_config(self.urdf_config, self.scene)
             sapien_utils.check_urdf_config(urdf_config)
+            sapien_utils.apply_urdf_config(loader, urdf_config)
 
-        # TODO(jigu): support loading multiple convex collision shapes
-        sapien_utils.apply_urdf_config(loader, urdf_config)
-        self.robot: Articulation = loader.load(urdf_path)
-        assert self.robot is not None, f"Fail to load URDF from {urdf_path}"
+        self.robot: Articulation = loader.load(asset_path)
+        assert self.robot is not None, f"Fail to load URDF/MJCF from {asset_path}"
 
         # Cache robot link ids
         self.robot_link_ids = [link.name for link in self.robot.get_links()]
@@ -165,7 +171,6 @@ class BaseAgent:
             if (
                 isinstance(self.controllers[control_mode], DictController)
                 and self.controllers[control_mode].balance_passive_force
-                and physx.is_gpu_enabled()
             ):
                 # NOTE (stao): Balancing passive force is currently not supported in PhysX, so we work around by disabling gravity
                 for link in self.robot.links:
