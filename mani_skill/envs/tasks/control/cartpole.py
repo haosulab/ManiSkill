@@ -30,8 +30,8 @@ class CartPoleRobot(BaseAgent):
             ["slider"],
             -1,
             1,
-            damping=20,
-            stiffness=200,
+            damping=200,
+            stiffness=2000,
             use_delta=True,
         )
         rest = PassiveControllerConfig(["hinge_1"], damping=0, friction=0)
@@ -99,7 +99,7 @@ class CartPoleEnv(BaseEnv):
             qpos = torch.zeros((b, 2))
             qpos[:, 0] = randomization.uniform(-0.1, 0.1, size=(b,))
             qpos[:, 1] = randomization.uniform(-0.034, 0.034, size=(b,))
-            qvel = torch.randn(size=(b, 2)) * 0.5
+            qvel = torch.randn(size=(b, 2)) * 0.01
             self.agent.robot.set_qpos(qpos)
             self.agent.robot.set_qvel(qvel)
 

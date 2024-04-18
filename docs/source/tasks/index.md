@@ -293,9 +293,7 @@ Keep the CartPole stable and up right by sliding it left and right
 **Supported Robots: None**
 
 **Randomizations:**
-- the cube's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat on the table
-- the cube's z-axis rotation is randomized to a random angle
-- the target goal position (marked by a green sphere) of the cube has its xy position randomized in the region [0.1, 0.1] x [-0.1, -0.1] and z randomized in [0, 0.3]
+- TODO
 
 **Success Conditions:**
 - the cart is within 0.25m of the center of the rail (which is at 0)
