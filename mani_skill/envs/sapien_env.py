@@ -166,10 +166,14 @@ class BaseEnv(gym.Env):
         else:
             self.device = torch.device("cpu")
 
+        # raise a number of nicer errors
         if sim_backend == "cpu" and num_envs > 1:
             raise RuntimeError("""Cannot set the sim backend to 'cpu' and have multiple environments.
             If you want to do CPU sim backends and have environment vectorization you must use multi-processing across CPUs.
             This can be done via the gymnasium's AsyncVectorEnv API""")
+        if "rt" == shader_dir[:2] and obs_mode in ["sensor_data", "rgb", "rgbd", "pointcloud"]:
+            raise RuntimeError("""Currently you cannot use ray-tracing while running simulation with visual observation modes.""")
+
 
         # TODO (stao): move the merge code / handling union typed arguments outside here so classes inheriting BaseEnv only get
         # the already parsed sim config argument
