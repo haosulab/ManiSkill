@@ -15,6 +15,7 @@ These are tutorials written by the maintainers of ManiSkill and the community, s
 
 custom_tasks
 custom_tasks_advanced
+adding_robots
 custom_reusable_scenes
 domain_randomization
 ```

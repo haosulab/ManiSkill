@@ -34,11 +34,11 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     """The root Link object"""
     joints: List[ArticulationJoint]
     """List of Joint objects"""
-    joint_map: OrderedDict[str, ArticulationJoint]
+    joints_map: OrderedDict[str, ArticulationJoint]
     """Maps joint name to the Joint object"""
     active_joints: List[ArticulationJoint]
     """List of active Joint objects, referencing elements in self.joints"""
-    active_joint_map: OrderedDict[str, ArticulationJoint]
+    active_joints_map: OrderedDict[str, ArticulationJoint]
     """Maps active joint name to the Joint object, referencing elements in self.joints"""
 
     name: str = None
@@ -91,9 +91,9 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             link_map=OrderedDict(),
             root=None,
             joints=[],
-            joint_map=OrderedDict(),
+            joints_map=OrderedDict(),
             active_joints=[],
-            active_joint_map=OrderedDict(),
+            active_joints_map=OrderedDict(),
             name=shared_name,
             _merged=_merged,
         )
@@ -154,9 +154,9 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             joint_map[wrapped_joint.name] = wrapped_joint
             wrapped_joints.append(wrapped_joint)
         self.joints = wrapped_joints
-        self.joint_map = joint_map
+        self.joints_map = joint_map
         self.active_joints = [wrapped_joints[i] for i in active_joint_indices]
-        self.active_joint_map = {joint.name: joint for joint in self.active_joints}
+        self.active_joints_map = {joint.name: joint for joint in self.active_joints}
 
         # add references to the right joint in all links
         for joint in self.joints:
@@ -316,7 +316,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             raise RuntimeError(
                 "Cannot call find_joint_by_name when the articulation object is managing articulations of different dofs"
             )
-        return self.joint_map[arg0]
+        return self.joints_map[arg0]
 
     def find_link_by_name(self, arg0: str) -> Link:
         if self._merged:

@@ -31,32 +31,28 @@ class Panda(BaseAgent):
             ),
         ),
     )
+    arm_joint_names = [
+        "panda_joint1",
+        "panda_joint2",
+        "panda_joint3",
+        "panda_joint4",
+        "panda_joint5",
+        "panda_joint6",
+        "panda_joint7",
+    ]
+    gripper_joint_names = [
+        "panda_finger_joint1",
+        "panda_finger_joint2",
+    ]
+    ee_link_name = "panda_hand_tcp"
 
-    def __init__(self, *args, **kwargs):
-        self.arm_joint_names = [
-            "panda_joint1",
-            "panda_joint2",
-            "panda_joint3",
-            "panda_joint4",
-            "panda_joint5",
-            "panda_joint6",
-            "panda_joint7",
-        ]
-        self.arm_stiffness = 1e3
-        self.arm_damping = 1e2
-        self.arm_force_limit = 100
+    arm_stiffness = 1e3
+    arm_damping = 1e2
+    arm_force_limit = 100
 
-        self.gripper_joint_names = [
-            "panda_finger_joint1",
-            "panda_finger_joint2",
-        ]
-        self.gripper_stiffness = 1e3
-        self.gripper_damping = 1e2
-        self.gripper_force_limit = 100
-
-        self.ee_link_name = "panda_hand_tcp"
-
-        super().__init__(*args, **kwargs)
+    gripper_stiffness = 1e3
+    gripper_damping = 1e2
+    gripper_force_limit = 100
 
     @property
     def _controller_configs(self):
@@ -65,20 +61,20 @@ class Panda(BaseAgent):
         # -------------------------------------------------------------------------- #
         arm_pd_joint_pos = PDJointPosControllerConfig(
             self.arm_joint_names,
-            None,
-            None,
-            self.arm_stiffness,
-            self.arm_damping,
-            self.arm_force_limit,
+            lower=None,
+            upper=None,
+            stiffness=self.arm_stiffness,
+            damping=self.arm_damping,
+            force_limit=self.arm_force_limit,
             normalize_action=False,
         )
         arm_pd_joint_delta_pos = PDJointPosControllerConfig(
             self.arm_joint_names,
-            -0.1,
-            0.1,
-            self.arm_stiffness,
-            self.arm_damping,
-            self.arm_force_limit,
+            lower=-0.1,
+            upper=0.1,
+            stiffness=self.arm_stiffness,
+            damping=self.arm_damping,
+            force_limit=self.arm_force_limit,
             use_delta=True,
         )
         arm_pd_joint_target_delta_pos = deepcopy(arm_pd_joint_delta_pos)
@@ -152,11 +148,11 @@ class Panda(BaseAgent):
         # However, tune a good force limit to have a good mimic behavior
         gripper_pd_joint_pos = PDJointPosMimicControllerConfig(
             self.gripper_joint_names,
-            -0.01,  # a trick to have force when the object is thin
-            0.04,
-            self.gripper_stiffness,
-            self.gripper_damping,
-            self.gripper_force_limit,
+            lower=-0.01,  # a trick to have force when the object is thin
+            upper=0.04,
+            stiffness=self.gripper_stiffness,
+            damping=self.gripper_damping,
+            force_limit=self.gripper_force_limit,
         )
 
         controller_configs = dict(

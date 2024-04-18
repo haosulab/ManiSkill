@@ -29,11 +29,13 @@ class ManiSkillScene:
 
     def __init__(
         self,
-        sub_scenes: List[sapien.Scene],
-        sim_cfg: SimConfig,
+        sub_scenes: List[sapien.Scene] = None,
+        sim_cfg: SimConfig = SimConfig(),
         debug_mode: bool = True,
         device: Device = None,
     ):
+        if sub_scenes is None:
+            sub_scenes = [sapien.Scene()]
         self.sub_scenes = sub_scenes
         self.px: Union[physx.PhysxCpuSystem, physx.PhysxGpuSystem] = self.sub_scenes[
             0
