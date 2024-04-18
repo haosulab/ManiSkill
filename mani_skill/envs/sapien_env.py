@@ -171,9 +171,12 @@ class BaseEnv(gym.Env):
             raise RuntimeError("""Cannot set the sim backend to 'cpu' and have multiple environments.
             If you want to do CPU sim backends and have environment vectorization you must use multi-processing across CPUs.
             This can be done via the gymnasium's AsyncVectorEnv API""")
-        if "rt" == shader_dir[:2] and obs_mode in ["sensor_data", "rgb", "rgbd", "pointcloud"]:
-            raise RuntimeError("""Currently you cannot use ray-tracing while running simulation with visual observation modes.""")
-
+        if "rt" == shader_dir[:2]:
+            if obs_mode in ["sensor_data", "rgb", "rgbd", "pointcloud"]:
+                raise RuntimeError("""Currently you cannot use ray-tracing while running simulation with visual observation modes. You may still use
+                env.render_rgb_array() or the RecordEpisode wrapper to save videos of ray-traced results""")
+            if num_envs > 1:
+                raise RuntimeError("""Currently you cannot run ray-tracing on more than one environment in a single process""")
 
         # TODO (stao): move the merge code / handling union typed arguments outside here so classes inheriting BaseEnv only get
         # the already parsed sim config argument
