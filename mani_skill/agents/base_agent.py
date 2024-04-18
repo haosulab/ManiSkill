@@ -171,7 +171,6 @@ class BaseAgent:
             if (
                 isinstance(self.controllers[control_mode], DictController)
                 and self.controllers[control_mode].balance_passive_force
-                and physx.is_gpu_enabled()
             ):
                 # NOTE (stao): Balancing passive force is currently not supported in PhysX, so we work around by disabling gravity
                 for link in self.robot.links:

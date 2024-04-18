@@ -13,7 +13,7 @@ from mani_skill.envs.utils import randomization
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.registration import register_env
-from mani_skill.utils.structs.types import SimConfig
+from mani_skill.utils.structs.types import SceneConfig, SimConfig
 
 MJCF_FILE = f"{os.path.join(os.path.dirname(__file__), 'assets/cartpole.xml')}"
 
@@ -24,16 +24,22 @@ class CartPoleRobot(BaseAgent):
 
     @property
     def _controller_configs(self):
+        # NOTE it is impossible to copy joint properties from original xml files, have to tune manually until
+        # it looks approximately correct
         pd_joint_delta_pos = PDJointPosControllerConfig(
-            [j.name for j in self.robot.active_joints],
+            ["slider"],
             -1,
             1,
-            damping=5,
-            stiffness=20,
-            force_limit=100,
+            damping=20,
+            stiffness=200,
             use_delta=True,
         )
-        return dict(pd_joint_delta_pos=pd_joint_delta_pos)
+        rest = PassiveControllerConfig(["hinge_1"], damping=0, friction=0)
+        return dict(
+            pd_joint_delta_pos=dict(
+                slider=pd_joint_delta_pos, rest=rest, balance_passive_force=False
+            )
+        )
 
     def _load_articulation(self):
         """
@@ -67,7 +73,9 @@ class CartPoleEnv(BaseEnv):
 
     @property
     def _default_sim_cfg(self):
-        return SimConfig()
+        return SimConfig(
+            sim_freq=100, control_freq=100, scene_cfg=SceneConfig(solver_iterations=2)
+        )
 
     @property
     def _sensor_configs(self):
@@ -91,7 +99,7 @@ class CartPoleEnv(BaseEnv):
             qpos = torch.zeros((b, 2))
             qpos[:, 0] = randomization.uniform(-0.1, 0.1, size=(b,))
             qpos[:, 1] = randomization.uniform(-0.034, 0.034, size=(b,))
-            qvel = torch.randn(size=(b, 2)) * 0.01
+            qvel = torch.randn(size=(b, 2)) * 0.5
             self.agent.robot.set_qpos(qpos)
             self.agent.robot.set_qvel(qvel)
 

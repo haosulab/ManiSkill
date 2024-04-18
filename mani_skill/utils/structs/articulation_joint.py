@@ -203,8 +203,8 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
 
     @drive_target.setter
     def drive_target(self, arg1: Array) -> None:
+        arg1 = common.to_tensor(arg1)
         if physx.is_gpu_enabled():
-            arg1 = common.to_tensor(arg1)
             raise NotImplementedError(
                 "Setting drive targets of individual joints is not implemented yet."
             )
