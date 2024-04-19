@@ -55,7 +55,7 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
         parent_link = None
         if not articulation._merged:
             if physx_joints[0].child_link is not None:
-                child_link = articulation.link_map[
+                child_link = articulation.links_map[
                     "_".join(
                         physx_joints[0]
                         .child_link.name.replace(articulation.name, "", 1)
@@ -63,7 +63,7 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
                     )
                 ]
             if physx_joints[0].parent_link is not None:
-                parent_link = articulation.link_map[
+                parent_link = articulation.links_map[
                     "_".join(
                         physx_joints[0]
                         .parent_link.name.replace(articulation.name, "", 1)

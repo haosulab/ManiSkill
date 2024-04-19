@@ -28,7 +28,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     links: List[Link]
     """List of Link objects"""
-    link_map: OrderedDict[str, Link]
+    links_map: OrderedDict[str, Link]
     """Maps link name to the Link object"""
     root: Link
     """The root Link object"""
@@ -88,7 +88,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             _scene=scene,
             _scene_idxs=scene_idxs,
             links=[],
-            link_map=OrderedDict(),
+            links_map=OrderedDict(),
             root=None,
             joints=[],
             joints_map=OrderedDict(),
@@ -127,7 +127,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             if wrapped_link.is_root.any():
                 root = wrapped_link
         self.links = wrapped_links
-        self.link_map = link_map
+        self.links_map = link_map
         self.root = root
 
         # create Joint objects and figure out active joint references
@@ -273,7 +273,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             if tuple(link_names) not in self._net_contact_force_queries:
                 bodies = []
                 for k in link_names:
-                    bodies += self.link_map[k]._bodies
+                    bodies += self.links_map[k]._bodies
                 self._net_contact_force_queries[
                     tuple(link_names)
                 ] = self.px.gpu_create_contact_body_impulse_query(bodies)
@@ -291,7 +291,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             body_contacts = sapien_utils.get_articulation_contacts(
                 self.px.get_contacts(),
                 self._objs[0],
-                included_links=[self.link_map[k]._objs[0] for k in link_names],
+                included_links=[self.links_map[k]._objs[0] for k in link_names],
             )
             net_force = (
                 common.to_tensor(sapien_utils.compute_total_impulse(body_contacts))
@@ -323,7 +323,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             raise RuntimeError(
                 "Cannot call find_link_by_name when the articulation object is managing articulations of different dofs"
             )
-        return self.link_map[arg0]
+        return self.links_map[arg0]
 
     def get_active_joints(self):
         return self.active_joints
