@@ -207,14 +207,14 @@ class SimConfig:
 ```
 :::
 
-To define a different set of default sim configurations, you can define a `_default_sim_cfg` property in your task class with the SimConfig etc. dataclasses as so
+To define a different set of default sim configurations, you can define a `_default_sim_config` property in your task class with the SimConfig etc. dataclasses as so
 
 ```python
 from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 class MyCustomTask(BaseEnv):
     # ...
     @property
-    def _default_sim_cfg(self):
+    def _default_sim_config(self):
         return SimConfig(
             gpu_memory_cfg=GPUMemoryConfig(
                 max_rigid_contact_count=self.num_envs * max(1024, self.num_envs) * 8,
@@ -224,13 +224,13 @@ class MyCustomTask(BaseEnv):
         )
 ```
 
-ManiSkill will fetch `_default_sim_cfg` after `self.num_envs` is set so you can also dynamically change configurations at runtime depending on the number of environments like it was done above. You usually need to change the default configurations when you try to run more parallel environments but SAPIEN will print critical errors about needing to increase one of the GPU memory configuration options.
+ManiSkill will fetch `_default_sim_config` after `self.num_envs` is set so you can also dynamically change configurations at runtime depending on the number of environments like it was done above. You usually need to change the default configurations when you try to run more parallel environments, and SAPIEN will print critical errors about needing to increase one of the GPU memory configuration options.
 
 Some of the other important configuration options and their defaults that are part of SimConfig are `spacing=5`, `sim_freq=100`, `control_freq=20`, and `'solver_iterations=15`. The physx timestep of the simulation is computed as `1 / sim_freq`, and the `control_freq` says that every `sim_freq/control_freq` physx steps we apply the environment action once and then fetch observation data to return to the user. 
 
 - `spacing` is often a source of potential bugs since all sub-scenes live in the same physx scene and if objects in one sub-scene get moved too far they can hit another sub-scene if the `spacing` is too low
-- higher `sim_freq` means more accurate simulation but slower physx steps
-- higher `sim_freq/control_freq` ratio can often mean faster `env.step()` times
+- higher `sim_freq` means more accurate simulation but slower physx steps and thus slower `env.step()` times.
+- lower `sim_freq/control_freq` ratio can often mean faster `env.step()` times although some online algorithms like RL may not learn faster. The default is 100/20 = 5
 - higher `solver_iterations` increases simulation accuracy at the cost of speed. Notably environments like those with quadrupeds tend to set this value to 4 as they are much easier to simulate accurately without incurring significant sim2real issues.
 
 

@@ -72,7 +72,7 @@ class CartPoleEnv(BaseEnv):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     @property
-    def _default_sim_cfg(self):
+    def _default_sim_config(self):
         return SimConfig(
             sim_freq=100, control_freq=100, scene_cfg=SceneConfig(solver_iterations=2)
         )

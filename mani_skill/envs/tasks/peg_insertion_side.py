@@ -68,7 +68,7 @@ class PegInsertionSideEnv(BaseEnv):
         )
 
     @property
-    def _default_sim_cfg(self):
+    def _default_sim_config(self):
         return SimConfig()
 
     @property

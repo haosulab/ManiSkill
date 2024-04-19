@@ -66,7 +66,7 @@ class SceneManipulationEnv(BaseEnv):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     @property
-    def _default_sim_cfg(self):
+    def _default_sim_config(self):
         return SimConfig(
             spacing=50,
             gpu_memory_cfg=GPUMemoryConfig(

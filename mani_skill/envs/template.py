@@ -80,7 +80,7 @@ class CustomEnv(BaseEnv):
     # depending on the messages that show up when you try to run more environments in parallel. Since this is a python property
     # you can also check self.num_envs to dynamically set configurations as well
     @property
-    def _default_sim_cfg(self):
+    def _default_sim_config(self):
         return SimConfig(
             gpu_memory_cfg=GPUMemoryConfig(
                 found_lost_pairs_capacity=2**25, max_rigid_patch_count=2**18

@@ -39,7 +39,7 @@ class QuadrupedRunEnv(BaseEnv):
     """
 
     @property
-    def _default_sim_cfg(self):
+    def _default_sim_config(self):
         return SimConfig(
             sim_freq=100,
             control_freq=50,

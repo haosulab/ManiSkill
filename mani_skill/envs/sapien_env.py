@@ -182,7 +182,7 @@ class BaseEnv(gym.Env):
         # the already parsed sim config argument
         if isinstance(sim_cfg, SimConfig):
             sim_cfg = sim_cfg.dict()
-        merged_gpu_sim_cfg = self._default_sim_cfg.dict()
+        merged_gpu_sim_cfg = self._default_sim_config.dict()
         common.dict_merge(merged_gpu_sim_cfg, sim_cfg)
         self.sim_cfg = dacite.from_dict(data_class=SimConfig, data=merged_gpu_sim_cfg, config=dacite.Config(strict=True))
         """the final sim config after merging user overrides with the environment default"""
@@ -297,7 +297,7 @@ class BaseEnv(gym.Env):
             return self.single_observation_space
 
     @property
-    def _default_sim_cfg(self):
+    def _default_sim_config(self):
         return SimConfig()
     def _load_agent(self, options: dict):
         agents = []

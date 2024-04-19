@@ -23,7 +23,7 @@ class CustomEnv(BaseEnv):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     @property
-    def _default_sim_cfg(self):
+    def _default_sim_config(self):
         return SimConfig()
 
     @property
