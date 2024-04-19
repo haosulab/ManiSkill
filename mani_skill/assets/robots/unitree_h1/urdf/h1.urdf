@@ -51,7 +51,7 @@ Stephen Brawner (brawner@gmail.com)
     <collision>
       <geometry>
         <mesh
-          filename="../meshes/pelvis.glb" />
+          filename="../meshes/pelvis.glb.coacd.ply" />
       </geometry>
     </collision>
   </link>
@@ -88,7 +88,7 @@ Stephen Brawner (brawner@gmail.com)
     <collision>
       <geometry>
         <mesh
-          filename="../meshes/left_hip_yaw_link.glb" />
+          filename="../meshes/left_hip_yaw_link.glb.coacd.ply" />
       </geometry>
     </collision>
   </link>
@@ -143,7 +143,7 @@ Stephen Brawner (brawner@gmail.com)
     <collision>
       <geometry>
         <mesh
-          filename="../meshes/left_hip_roll_link.glb" />
+          filename="../meshes/left_hip_roll_link.glb.coacd.ply" />
       </geometry>
     </collision>
   </link>
@@ -198,7 +198,7 @@ Stephen Brawner (brawner@gmail.com)
     <collision>
       <geometry>
         <mesh
-          filename="../meshes/left_hip_pitch_link.glb" />
+          filename="../meshes/left_hip_pitch_link.glb.coacd.ply" />
       </geometry>
     </collision>
   </link>
@@ -253,7 +253,7 @@ Stephen Brawner (brawner@gmail.com)
     <collision>
       <geometry>
         <mesh
-          filename="../meshes/left_knee_link.glb" />
+          filename="../meshes/left_knee_link.glb.coacd.ply" />
       </geometry>
     </collision>
   </link>
@@ -308,7 +308,7 @@ Stephen Brawner (brawner@gmail.com)
     <collision>
       <geometry>
         <mesh
-          filename="../meshes/left_ankle_link.glb" />
+          filename="../meshes/left_ankle_link.glb.coacd.ply" />
       </geometry>
     </collision>
   </link>
@@ -363,7 +363,7 @@ Stephen Brawner (brawner@gmail.com)
     <collision>
       <geometry>
         <mesh
-          filename="../meshes/right_hip_yaw_link.glb" />
+          filename="../meshes/right_hip_yaw_link.glb.coacd.ply" />
       </geometry>
     </collision>
   </link>
@@ -418,7 +418,7 @@ Stephen Brawner (brawner@gmail.com)
     <collision>
       <geometry>
         <mesh
-          filename="../meshes/right_hip_roll_link.glb" />
+          filename="../meshes/right_hip_roll_link.glb.coacd.ply" />
       </geometry>
     </collision>
   </link>
@@ -473,7 +473,7 @@ Stephen Brawner (brawner@gmail.com)
     <collision>
       <geometry>
         <mesh
-          filename="../meshes/right_hip_pitch_link.glb" />
+          filename="../meshes/right_hip_pitch_link.glb.coacd.ply" />
       </geometry>
     </collision>
   </link>
@@ -528,7 +528,7 @@ Stephen Brawner (brawner@gmail.com)
     <collision>
       <geometry>
         <mesh
-          filename="../meshes/right_knee_link.glb" />
+          filename="../meshes/right_knee_link.glb.coacd.ply" />
       </geometry>
     </collision>
   </link>
@@ -583,7 +583,7 @@ Stephen Brawner (brawner@gmail.com)
     <collision>
       <geometry>
         <mesh
-          filename="../meshes/right_ankle_link.glb" />
+          filename="../meshes/right_ankle_link.glb.coacd.ply" />
       </geometry>
     </collision>
   </link>
@@ -638,7 +638,7 @@ Stephen Brawner (brawner@gmail.com)
     <collision>
       <geometry>
         <mesh
-          filename="../meshes/torso_link.glb" />
+          filename="../meshes/torso_link.glb.coacd.ply" />
       </geometry>
     </collision>
   </link>
@@ -693,7 +693,7 @@ Stephen Brawner (brawner@gmail.com)
     <collision>
       <geometry>
         <mesh
-          filename="../meshes/left_shoulder_pitch_link.glb" />
+          filename="../meshes/left_shoulder_pitch_link.glb.coacd.ply" />
       </geometry>
     </collision>
   </link>
@@ -748,7 +748,7 @@ Stephen Brawner (brawner@gmail.com)
     <collision>
       <geometry>
         <mesh
-          filename="../meshes/left_shoulder_roll_link.glb" />
+          filename="../meshes/left_shoulder_roll_link.glb.coacd.ply" />
       </geometry>
     </collision>
   </link>
@@ -803,7 +803,7 @@ Stephen Brawner (brawner@gmail.com)
     <collision>
       <geometry>
         <mesh
-          filename="../meshes/left_shoulder_yaw_link.glb" />
+          filename="../meshes/left_shoulder_yaw_link.glb.coacd.ply" />
       </geometry>
     </collision>
   </link>
@@ -858,7 +858,7 @@ Stephen Brawner (brawner@gmail.com)
     <collision>
       <geometry>
         <mesh
-          filename="../meshes/left_elbow_link.glb" />
+          filename="../meshes/left_elbow_link.glb.coacd.ply" />
       </geometry>
     </collision>
   </link>
@@ -913,7 +913,7 @@ Stephen Brawner (brawner@gmail.com)
     <collision>
       <geometry>
         <mesh
-          filename="../meshes/right_shoulder_pitch_link.glb" />
+          filename="../meshes/right_shoulder_pitch_link.glb.coacd.ply" />
       </geometry>
     </collision>
   </link>
@@ -968,7 +968,7 @@ Stephen Brawner (brawner@gmail.com)
     <collision>
       <geometry>
         <mesh
-          filename="../meshes/right_shoulder_roll_link.glb" />
+          filename="../meshes/right_shoulder_roll_link.glb.coacd.ply" />
       </geometry>
     </collision>
   </link>
@@ -1023,7 +1023,7 @@ Stephen Brawner (brawner@gmail.com)
     <collision>
       <geometry>
         <mesh
-          filename="../meshes/right_shoulder_yaw_link.glb" />
+          filename="../meshes/right_shoulder_yaw_link.glb.coacd.ply" />
       </geometry>
     </collision>
   </link>
@@ -1078,7 +1078,7 @@ Stephen Brawner (brawner@gmail.com)
     <collision>
       <geometry>
         <mesh
-          filename="../meshes/right_elbow_link.glb" />
+          filename="../meshes/right_elbow_link.glb.coacd.ply" />
       </geometry>
     </collision>
   </link>

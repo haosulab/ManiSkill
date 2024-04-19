@@ -14,35 +14,35 @@ class UnitreeH1(BaseAgent):
     urdf_path = f"{PACKAGE_ASSET_DIR}/robots/unitree_h1/urdf/h1.urdf"
     urdf_config = dict()
     fix_root_link = False
+    load_multiple_collisions = True
 
     keyframes = dict(
         standing=Keyframe(
             pose=sapien.Pose(p=[0, 0, 1.03]),
             qpos=np.array(
                 [
-                    [
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        -0.4,
-                        -0.4,
-                        0.0,
-                        0.0,
-                        0.8,
-                        0.8,
-                        0.0,
-                        0.0,
-                        -0.4,
-                        -0.4,
-                        0.0,
-                        0.0,
-                    ]
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    -0.4,
+                    -0.4,
+                    0.0,
+                    0.0,
+                    0.8,
+                    0.8,
+                    0.0,
+                    0.0,
+                    -0.4,
+                    -0.4,
+                    0.0,
+                    0.0,
                 ]
-            ),
+            )
+            * 1,
         )
     )
 
@@ -84,8 +84,8 @@ class UnitreeH1(BaseAgent):
         )
         body_pd_joint_delta_pos = PDJointPosControllerConfig(
             self.body_joints,
-            lower=-0.1,
-            upper=0.1,
+            lower=-0.2,
+            upper=0.2,
             stiffness=self.body_stiffness,
             damping=self.body_damping,
             force_limit=self.body_force_limit,
@@ -104,5 +104,17 @@ class UnitreeH1(BaseAgent):
     def _sensor_configs(self):
         return []
 
-    def _after_init(self):
-        pass
+    def is_standing(self):
+        """Checks if H1 is standing with a simple heuristic of checking if the torso is at a minimum height"""
+        # TODO add check for rotation of torso? so that robot can't fling itself off the floor and rotate everywhere?
+        return (self.robot.pose.p[:, 2] > 0.8) & (self.robot.pose.p[:, 2] < 1.2)
+
+    def is_fallen(self):
+        """Checks if H1 has fallen on the ground. Effectively checks if the torso is too low"""
+        return self.robot.pose.p[:, 2] < 0.3
+
+
+@register_agent()
+class UnitreeH1Simplified(UnitreeH1):
+    uid = "unitree_h1_simplified"
+    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/unitree_h1/urdf/h1_simplified.urdf"

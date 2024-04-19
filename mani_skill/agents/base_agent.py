@@ -59,6 +59,8 @@ class BaseAgent:
 
     fix_root_link: bool = True
     """Whether to fix the root link of the robot"""
+    load_multiple_collisions: bool = False
+    """Whether the referenced collision meshes of a robot definition should be loaded as multiple convex collisions"""
 
     keyframes: Dict[str, Keyframe] = dict()
     """a dict of predefined keyframes similar to what Mujoco does that you can use to reset the agent to that may be of interest"""
@@ -121,6 +123,7 @@ class BaseAgent:
         if self._agent_idx is not None:
             loader.name = f"{self.uid}-agent-{self._agent_idx}"
         loader.fix_root_link = self.fix_root_link
+        loader.load_multiple_collisions_from_file = self.load_multiple_collisions
 
         if self.urdf_config is not None:
             urdf_config = sapien_utils.parse_urdf_config(self.urdf_config, self.scene)
