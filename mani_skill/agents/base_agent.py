@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Dict, List, Union
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
 import numpy as np
 import sapien
@@ -12,7 +13,7 @@ from gymnasium import spaces
 from mani_skill import format_path
 from mani_skill.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill.utils import sapien_utils
-from mani_skill.utils.structs import Actor, Articulation
+from mani_skill.utils.structs import Actor, Array, Articulation, Pose
 
 from .controllers.base_controller import (
     BaseController,
@@ -24,6 +25,13 @@ from .controllers.base_controller import (
 if TYPE_CHECKING:
     from mani_skill.envs.scene import ManiSkillScene
 DictControllerConfig = Dict[str, ControllerConfig]
+
+
+@dataclass
+class Keyframe:
+    pose: sapien.Pose
+    qpos: Array
+    qvel: Optional[Array] = None
 
 
 class BaseAgent:
@@ -51,6 +59,9 @@ class BaseAgent:
 
     fix_root_link: bool = True
     """Whether to fix the root link of the robot"""
+
+    keyframes: Dict[str, Keyframe] = dict()
+    """a dict of predefined keyframes similar to what Mujoco does that you can use to reset the agent to that may be of interest"""
 
     def __init__(
         self,
@@ -253,7 +264,7 @@ class BaseAgent:
     def set_state(self, state: Dict, ignore_controller=False):
         # robot state
         self.robot.set_root_pose(state["robot_root_pose"])
-        self.robot.set_root_velocity(state["robot_root_vel"])
+        self.robot.set_root_linear_velocity(state["robot_root_vel"])
         self.robot.set_root_angular_velocity(state["robot_root_qvel"])
         self.robot.set_qpos(state["robot_qpos"])
         self.robot.set_qvel(state["robot_qvel"])
