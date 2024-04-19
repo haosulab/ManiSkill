@@ -166,7 +166,9 @@ class Panda(BaseAgent):
 
 We defined two controllers to control the arm joints and one for the gripper. Using a dictionary, you can define multiple control modes that interchangeably use different controllers of the joints. Above we defined a `pd_joint_delta_pos` and a `pd_joint_pos` controller which switch just the controller of the arm joints.
 
-Stiffness corresponds with the P and damping corresponds with the D of PD controllers, see the [controllers page](../concepts/controllers.md#terminology) for more details
+Stiffness corresponds with the P and damping corresponds with the D of PD controllers, see the [controllers page](../concepts/controllers.md#terminology) for more details.
+
+Tuning the values of stiffness, damping, and other properties affect the sim2real transfer of a simulated robot to the real world. At the moment our team is working on developing a better pipeline with documentation for system identification to pick better controllers and/or hyperparameters.
 
 ## 3. Defining Sensors
 
