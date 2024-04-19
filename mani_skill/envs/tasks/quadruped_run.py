@@ -59,7 +59,7 @@ class QuadrupedRunEnv(BaseEnv):
         )
 
     @property
-    def _sensor_configs(self):
+    def _default_sensor_configs(self):
         pose = sapien_utils.look_at([1.5, 1.5, 1], [0.0, 0.0, 0])
         return [
             CameraConfig(
@@ -76,7 +76,7 @@ class QuadrupedRunEnv(BaseEnv):
         ]
 
     @property
-    def _human_render_camera_configs(self):
+    def _default_human_render_camera_configs(self):
         pose = sapien_utils.look_at([2.5, 2.5, 1], [0.0, 0.0, 0])
         return CameraConfig(
             "render_camera",

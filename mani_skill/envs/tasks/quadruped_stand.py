@@ -28,7 +28,7 @@ class QuadrupedStandEnv(BaseEnv):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     @property
-    def _sensor_configs(self):
+    def _default_sensor_configs(self):
         pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
         return [
             CameraConfig(
@@ -45,7 +45,7 @@ class QuadrupedStandEnv(BaseEnv):
         ]
 
     @property
-    def _human_render_camera_configs(self):
+    def _default_human_render_camera_configs(self):
         pose = sapien_utils.look_at([2.5, 2.5, 1], [0.0, 0.0, 0])
         return CameraConfig(
             "render_camera",

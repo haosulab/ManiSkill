@@ -119,7 +119,7 @@ class BaseEnv(gym.Env):
     """all agent sensor configs parsed from agent._sensor_configs"""
     _human_render_cameras: Dict[str, Camera]
     """cameras used for rendering the current environment retrievable via `env.render_rgb_array()`. These are not used to generate observations"""
-    _human_render_camera_configs: Dict[str, CameraConfig]
+    _default_human_render_camera_configs: Dict[str, CameraConfig]
     """all camera configurations for cameras used for human render"""
     _human_render_camera_configs_parsed: Dict[str, CameraConfig]
     """all camera configurations parsed from self._human_render_camera_configs"""
@@ -328,20 +328,21 @@ class BaseEnv(gym.Env):
         # TODO (stao): do we stil need this?
         # set_articulation_render_material(self.agent.robot, specular=0.9, roughness=0.3)
     @property
-    def _sensor_configs(
+    def _default_sensor_configs(
         self,
     ) -> Union[
         BaseSensorConfig, Sequence[BaseSensorConfig], Dict[str, BaseSensorConfig]
     ]:
-        """Add (non-agent) sensors to the environment by returning sensor configurations"""
+        """Add default (non-agent) sensors to the environment by returning sensor configurations. These can be overriden by the user at
+        env creation time"""
         return []
     @property
-    def _human_render_camera_configs(
+    def _default_human_render_camera_configs(
         self,
     ) -> Union[
         BaseSensorConfig, Sequence[BaseSensorConfig], Dict[str, BaseSensorConfig]
     ]:
-        """Add cameras for rendering when using render_mode='rgb_array' """
+        """Add default cameras for rendering when using render_mode='rgb_array'. These can be overriden by the user at env creation time """
         return []
 
     @property
@@ -575,7 +576,7 @@ class BaseEnv(gym.Env):
         self._all_sensor_configs_parsed = OrderedDict()
 
         # Add task/external sensors
-        self._all_sensor_configs_parsed.update(parse_camera_cfgs(self._sensor_configs))
+        self._all_sensor_configs_parsed.update(parse_camera_cfgs(self._default_sensor_configs))
 
         # Add agent sensors
         self._agent_sensor_configs_parsed = OrderedDict()
@@ -584,7 +585,7 @@ class BaseEnv(gym.Env):
 
         # Add human render camera configs
         self._human_render_camera_configs_parsed = parse_camera_cfgs(
-            self._human_render_camera_configs
+            self._default_human_render_camera_configs
         )
 
         # Override camera configurations with user supplied configurations

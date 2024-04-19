@@ -28,11 +28,11 @@ class HumanoidStandEnv(BaseEnv):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     @property
-    def _sensor_configs(self):
+    def _default_sensor_configs(self):
         return []
 
     @property
-    def _human_render_camera_configs(self):
+    def _default_human_render_camera_configs(self):
         pose = sapien_utils.look_at([1.0, 1.0, 2.5], [0.0, 0.0, 0.75])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
@@ -81,7 +81,7 @@ class UnitreeH1StandEnv(HumanoidStandEnv):
         )
 
     @property
-    def _human_render_camera_configs(self):
+    def _default_human_render_camera_configs(self):
         pose = sapien_utils.look_at([1.0, 1.0, 2.5], [0.0, 0.0, 0.75])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 

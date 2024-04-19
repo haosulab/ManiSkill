@@ -66,12 +66,12 @@ class AssemblingKitsEnv(BaseEnv):
         )
 
     @property
-    def _sensor_configs(self):
+    def _default_sensor_configs(self):
         pose = sapien_utils.look_at([0.2, 0, 0.4], [0, 0, 0])
         return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
-    def _human_render_camera_configs(self):
+    def _default_human_render_camera_configs(self):
         pose = sapien_utils.look_at([0.3, 0.3, 0.8], [0.0, 0.0, 0.1])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 

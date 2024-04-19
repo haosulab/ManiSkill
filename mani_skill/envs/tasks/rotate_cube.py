@@ -75,12 +75,12 @@ class RotateCubeEnv(BaseEnv):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     @property
-    def _sensor_configs(self):
+    def _default_sensor_configs(self):
         pose = sapien_utils.look_at(eye=(0.7, 0.0, 0.7), target=(0.0, 0.0, 0.0))
         return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
-    def _human_render_camera_configs(self):
+    def _default_human_render_camera_configs(self):
         pose = sapien_utils.look_at(eye=(0.7, 0.0, 0.7), target=(0.0, 0.0, 0.0))
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
@@ -347,6 +347,7 @@ class RotateCubeEnv(BaseEnv):
         dense_reward = self.compute_dense_reward(obs=obs, action=action, info=info)
         norm_dense_reward = dense_reward / (2 * self.max_reward) + 0.5
         return norm_dense_reward
+
 
 # TODO (stao): pick a better name, TrifingerRotateCube? perhaps?
 @register_env("RotateCubeLevel0-v1", max_episode_steps=250)

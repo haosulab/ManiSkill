@@ -76,7 +76,7 @@ class PushCubeEnv(BaseEnv):
         )
 
     @property
-    def _sensor_configs(self):
+    def _default_sensor_configs(self):
         # registers one 128x128 camera looking at the robot, cube, and target
         # a smaller sized camera will be lower quality, but render faster
         pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
@@ -93,7 +93,7 @@ class PushCubeEnv(BaseEnv):
         ]
 
     @property
-    def _human_render_camera_configs(self):
+    def _default_human_render_camera_configs(self):
         # registers a more high-definition (512x512) camera used just for rendering when render_mode="rgb_array" or calling env.render_rgb_array()
         pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
         return CameraConfig(

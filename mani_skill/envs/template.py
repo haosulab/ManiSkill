@@ -105,7 +105,7 @@ class CustomEnv(BaseEnv):
         pass
 
     @property
-    def _sensor_configs(self):
+    def _default_sensor_configs(self):
         # To customize the sensors that capture images/pointclouds for the environment observations,
         # simply define a CameraConfig as done below for Camera sensors. You can add multiple sensors by returning a list
         pose = sapien_utils.look_at(
@@ -116,7 +116,7 @@ class CustomEnv(BaseEnv):
         return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
-    def _human_render_camera_configs(self):
+    def _default_human_render_camera_configs(self):
         # this is just like _sensor_configs, but for adding cameras used for rendering when you call env.render()
         # when render_mode="rgb_array" or env.render_rgb_array()
         # Another feature here is that if there is a camera called render_camera, this is the default view shown initially when a GUI is opened
