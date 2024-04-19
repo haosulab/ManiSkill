@@ -18,7 +18,7 @@ class UnitreeH1(BaseAgent):
 
     keyframes = dict(
         standing=Keyframe(
-            pose=sapien.Pose(p=[0, 0, 1.03]),
+            pose=sapien.Pose(p=[0, 0, 0.975]),
             qpos=np.array(
                 [
                     0,

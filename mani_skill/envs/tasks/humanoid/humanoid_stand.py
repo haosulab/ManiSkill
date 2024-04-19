@@ -2,6 +2,7 @@ from collections import OrderedDict
 from typing import Any, Dict, Union
 
 import numpy as np
+import sapien
 import torch
 
 from mani_skill.agents.robots import UnitreeH1, UnitreeH1Simplified
@@ -85,6 +86,12 @@ class UnitreeH1StandEnv(HumanoidStandEnv):
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
-        standing_keyframe = self.agent.keyframes["standing"]
-        self.agent.robot.set_qpos(standing_keyframe.qpos)
-        self.agent.robot.set_pose(standing_keyframe.pose)
+        with torch.device(self.device):
+            b = len(env_idx)
+            standing_keyframe = self.agent.keyframes["standing"]
+            random_qpos = (
+                torch.randn(size=(b, self.agent.robot.dof[0]), dtype=torch.float) * 0.05
+            )
+            random_qpos += common.to_tensor(standing_keyframe.qpos, device=self.device)
+            self.agent.robot.set_qpos(random_qpos)
+            self.agent.robot.set_pose(sapien.Pose(p=[0, 0, 0.975]))
