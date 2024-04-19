@@ -48,7 +48,7 @@ class PickClutterEnv(BaseEnv):
             raise FileNotFoundError(
                 f"Episode json ({episode_json}) is not found."
                 "To download default json:"
-                "`python -m mani_skill2.utils.download_asset pick_clutter_ycb`."
+                "`python -m mani_skill.utils.download_asset pick_clutter_ycb`."
             )
         self._episodes: List[Dict] = load_json(episode_json)
 
@@ -121,7 +121,8 @@ class PickClutterEnv(BaseEnv):
                 obj = builder.build(name=f"set_{i}_{actor_cfg['model_id']}")
                 all_objects.append(obj)
                 if actor_cfg["rep_pts"] is not None:
-                    # TODO (stao): what is rep_pts?, this is taken from ms2 code
+                    # rep_pts is representative points, representing visible points
+                    # we only permit selecting target objects that are visible
                     self.selectable_target_objects[-1].append(obj)
 
         self.all_objects = Actor.merge(all_objects, name="all_objects")

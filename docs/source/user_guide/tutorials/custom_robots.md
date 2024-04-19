@@ -1,4 +1,4 @@
-# Adding Robots
+# Custom Robots
 
 ManiSkill supports importing robots and assets via URDF and MJCF definitions. As ManiSkill was designed to allow one to flexibly change mounted sensors, controllers, and robot embodiments, ManiSkill at the moment does not automatically import those elements into the created robot, they must be defined by you.
 
@@ -109,7 +109,6 @@ class Panda(BaseAgent):
         "panda_finger_joint1",
         "panda_finger_joint2",
     ]
-    ee_link_name = "panda_hand_tcp"
 
     arm_stiffness = 1e3
     arm_damping = 1e2
@@ -172,6 +171,12 @@ Stiffness corresponds with the P and damping corresponds with the D of PD contro
 Robots like Fetch have a mobile base, which allows translational movement and rotational movement of the entire robot. In simulation, it is not trivial to simulate the actual physics of wheels moving along a floor and simulating this would be fairly slow. 
 
 Instead, similar to many other simulators a "fake" mobile base is made (that is realistic enough to easily do sim2real transfer in terms of the controller). This is made by modifying a URDF of a robot like Fetch, and adding joints that let the base link translate (prismatic joint) and rotate (revolute joint). 
+
+### Tactile Sensing
+
+WIP
+
+For now see the implementation of [Allegro hand with touch sensors](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill/agents/robots/allegro_hand/allegro_touch.py)
 
 ### Quadrupeds / Legged motion
 
