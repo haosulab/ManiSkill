@@ -105,10 +105,10 @@ class CartPoleEnv(BaseEnv):
 
     @property
     def pole_angle_cosine(self):
-        return torch.cos(self.agent.robot.joint_map["hinge_1"].qpos)
+        return torch.cos(self.agent.robot.joints_map["hinge_1"].qpos)
 
     def evaluate(self):
-        cart_pos = self.agent.robot.joint_map["slider"].qpos
+        cart_pos = self.agent.robot.joints_map["slider"].qpos
         pole_angle_cosine = self.pole_angle_cosine
         cart_in_bounds = cart_pos < self.CART_RANGE[1]
         cart_in_bounds = cart_in_bounds & (cart_pos > self.CART_RANGE[0])

@@ -6,7 +6,7 @@ Building a custom task in ManiSkill is comprised of the following core component
 
 1. [Setting up the Task Class](#setting-up-the-task-class)
 2. [Loading (Robots, Assets, Sensors, etc.)](#loading) (done once)
-3. [Episode initialization / Randomization](#episode-initialization-randomization) (done every env.reset)
+3. [Episode initialization / Randomization](#episode-initialization--randomization) (done every env.reset)
 4. [Success/Failure Condition](#successfailure-conditions) (done every env.step)
 5. [Extra Observations](#extra-observations) (done every env.step)
 6. [(Optional) Dense Reward Function](#optional-dense-reward-function) (done every env.step)
@@ -49,7 +49,7 @@ class PushCubeEnv(BaseEnv):
 ```
 ## Loading
 
-At the start of any task, you must load in all objects (robots, assets, articulations, lighting etc.) into each parallel environment, also known as a sub-scene. This is also known as **reconfiguration** and generally only ever occurs once. Loading these objects is done in the `_load_scene` function of your custom task class. The objective is to simply load objects in, and nothing else. For GPU simulation at this stage you cannot change object states (like pose, qpos), only initial poses can be modified. Changing/randomizing states is done in the section on [episode initialization / randomization](#episode-initialization-randomization).
+At the start of any task, you must load in all objects (robots, assets, articulations, lighting etc.) into each parallel environment, also known as a sub-scene. This is also known as **reconfiguration** and generally only ever occurs once. Loading these objects is done in the `_load_scene` function of your custom task class. The objective is to simply load objects in, and nothing else. For GPU simulation at this stage you cannot change object states (like pose, qpos), only initial poses can be modified. Changing/randomizing states is done in the section on [episode initialization / randomization](#episode-initialization--randomization).
 
 Building objects in ManiSkill is nearly the exact same as it is in SAPIEN. You create an `ActorBuilder` via `self._scene.create_actor_builder` and via the actor builder add visual and collision shapes. Visual shapes only affect visual rendering processes while collision shapes affect the physical simulation. ManiSkill further will create the actor for you in every sub-scene (unless you use [scene-masks/scene-idxs](./custom_tasks_advanced.md#scene-masks), a more advanced feature).
 
