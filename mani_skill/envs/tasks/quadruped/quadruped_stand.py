@@ -17,7 +17,6 @@ from mani_skill.utils.registration import register_env
 from mani_skill.utils.structs.pose import Pose
 
 
-# @register_env("QuadrupedStand-v1", max_episode_steps=200)
 class QuadrupedStandEnv(BaseEnv):
 
     SUPPORTED_ROBOTS = ["anymal-c"]
@@ -32,13 +31,12 @@ class QuadrupedStandEnv(BaseEnv):
         return [
             CameraConfig(
                 "base_camera",
-                pose.p,
-                pose.q,
-                128,
-                128,
-                np.pi / 2,
-                0.01,
-                100,
+                pose=pose,
+                width=128,
+                height=128,
+                fov=np.pi / 2,
+                near=0.01,
+                far=100,
                 mount=self.agent.robot.links[0],
             )
         ]
@@ -46,17 +44,18 @@ class QuadrupedStandEnv(BaseEnv):
     @property
     def _default_human_render_camera_configs(self):
         pose = sapien_utils.look_at([2.5, 2.5, 1], [0.0, 0.0, 0])
-        return CameraConfig(
-            "render_camera",
-            pose.p,
-            pose.q,
-            512,
-            512,
-            1,
-            0.01,
-            100,
-            mount=self.agent.robot.links[0],
-        )
+        return [
+            CameraConfig(
+                "render_camera",
+                pose=pose,
+                width=512,
+                height=512,
+                fov=1,
+                near=0.01,
+                far=100,
+                mount=self.agent.robot.links[0],
+            )
+        ]
 
     def _load_scene(self, options: dict):
         # for i in range(10):
@@ -80,9 +79,9 @@ class QuadrupedStandEnv(BaseEnv):
             self.cube.set_pose(Pose.create_from_pq(p=[0, 0, 0.05]))
 
     def evaluate(self):
-        forces = self.agent.robot.get_net_contact_forces(["RH_KFE", "LH_KFE"]).norm(
-            dim=(1, 2)
-        )
+        # forces = self.agent.robot.get_net_contact_forces(["RH_KFE", "LH_KFE"]).norm(
+        #     dim=(1, 2)
+        # )
         return {"success": self.agent.is_standing()}
 
     def _get_obs_extra(self, info: Dict):
@@ -97,3 +96,9 @@ class QuadrupedStandEnv(BaseEnv):
     ):
         max_reward = 1.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
+
+
+@register_env("AnymalCStand-v1", max_episode_steps=200)
+class AnymalCStandEnv(QuadrupedStandEnv):
+    def __init__(self, *args, robot_uids="anymal-c", **kwargs):
+        super().__init__(*args, robot_uids=robot_uids, **kwargs)

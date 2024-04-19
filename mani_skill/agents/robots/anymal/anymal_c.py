@@ -1,8 +1,10 @@
 # TODO (stao): Anymal may not be modelled correctly or efficiently at the moment
+import numpy as np
+import sapien
 import torch
 
 from mani_skill import PACKAGE_ASSET_DIR, format_path
-from mani_skill.agents.base_agent import BaseAgent
+from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
 from mani_skill.utils import sapien_utils
@@ -16,21 +18,31 @@ class ANYmalC(BaseAgent):
     urdf_config = dict()
     fix_root_link = False
 
+    keyframes = dict(
+        standing=Keyframe(
+            pose=sapien.Pose(p=[0, 0, 0.8]),
+            qpos=np.array(
+                [0.03, -0.03, 0.03, -0.03, 0.4, 0.4, -0.4, -0.4, -0.8, -0.8, 0.8, 0.8]
+            ),
+        )
+    )
+
+    joint_names = [
+        "LF_HAA",
+        "RF_HAA",
+        "LH_HAA",
+        "RH_HAA",
+        "LF_HFE",
+        "RF_HFE",
+        "LH_HFE",
+        "RH_HFE",
+        "LF_KFE",
+        "RF_KFE",
+        "LH_KFE",
+        "RH_KFE",
+    ]
+
     def __init__(self, *args, **kwargs):
-        self.joint_names = [
-            "LF_HAA",
-            "RF_HAA",
-            "LH_HAA",
-            "RH_HAA",
-            "LF_HFE",
-            "RF_HFE",
-            "LH_HFE",
-            "RH_HFE",
-            "LF_KFE",
-            "RF_KFE",
-            "LH_KFE",
-            "RH_KFE",
-        ]
         super().__init__(*args, **kwargs)
 
     @property
@@ -61,12 +73,11 @@ class ANYmalC(BaseAgent):
             use_delta=False,
         )
         controller_configs = dict(
-            pd_joint_delta_pos=pd_joint_delta_pos, pd_joint_pos=pd_joint_pos
+            pd_joint_delta_pos=pd_joint_delta_pos,
+            pd_joint_pos=pd_joint_pos,
+            balance_passive_force=False,
         )
         return controller_configs
-
-    def _after_init(self):
-        pass
 
     def _load_articulation(self):
         """
@@ -101,5 +112,3 @@ class ANYmalC(BaseAgent):
         aligned = angle_diff < 0.349
         high_enough = self.robot.pose.p[:, 2] > 0.5
         return torch.logical_and(aligned, high_enough)
-
-    sensor_configs = []

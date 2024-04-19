@@ -12,8 +12,7 @@ from .pick_cube import PickCubeEnv
 from .pick_single_ycb import PickSingleYCBEnv
 from .pull_cube import PullCubeEnv
 from .push_cube import PushCubeEnv
-from .quadruped_run import QuadrupedRunEnv
-from .quadruped_stand import QuadrupedStandEnv
+from .quadruped import *
 from .rotate_cube import RotateCubeEnv
 from .stack_cube import StackCubeEnv
 from .two_robot_pick_cube import TwoRobotPickCube
