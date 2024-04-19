@@ -168,7 +168,9 @@ We defined two controllers to control the arm joints and one for the gripper. Us
 
 Stiffness corresponds with the P and damping corresponds with the D of PD controllers, see the [controllers page](../concepts/controllers.md#terminology) for more details.
 
-Tuning the values of stiffness, damping, and other properties affect the sim2real transfer of a simulated robot to the real world. At the moment our team is working on developing a better pipeline with documentation for system identification to pick better controllers and/or hyperparameters.
+Tuning the values of stiffness, damping, and other properties affect the sim2real transfer of a simulated robot to the real world. At the moment our team is working on developing a better pipeline with documentation for system identification to pick better controllers and/or hyperparameters. 
+
+Note that when taking a robot implemented in another simulator like Mujoco, you usually cannot directly copy the joint hyperparameters to ManiSkill, so you almost always need some manual tuning. 
 
 ## 3. Defining Sensors
 
