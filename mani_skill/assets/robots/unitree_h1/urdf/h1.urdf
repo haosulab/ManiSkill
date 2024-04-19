@@ -638,7 +638,8 @@ Stephen Brawner (brawner@gmail.com)
     <collision>
       <origin xyz="0 0 0.15" rpy="0 0 0" />
       <geometry>
-        <box size="0.08 0.16 0.1"/>
+        <mesh
+          filename="../meshes/torso_link.glb" />
       </geometry>
     </collision>
   </link>
@@ -1123,7 +1124,7 @@ Stephen Brawner (brawner@gmail.com)
           filename="../meshes/logo_link.dae" />
       </geometry>
       <material
-        name="">
+        name="logo_link_material">
         <color
           rgba="1 1 1 1" />
       </material>
