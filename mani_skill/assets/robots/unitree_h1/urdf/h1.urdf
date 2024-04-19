@@ -40,7 +40,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://h1_description/meshes/pelvis.dae" />
+          filename="../meshes/pelvis.dae" />
       </geometry>
       <material
         name="">
@@ -77,7 +77,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://h1_description/meshes/left_hip_yaw_link.dae" />
+          filename="../meshes/left_hip_yaw_link.dae" />
       </geometry>
       <material
         name="">
@@ -132,7 +132,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://h1_description/meshes/left_hip_roll_link.dae" />
+          filename="../meshes/left_hip_roll_link.dae" />
       </geometry>
       <material
         name="">
@@ -187,7 +187,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://h1_description/meshes/left_hip_pitch_link.dae" />
+          filename="../meshes/left_hip_pitch_link.dae" />
       </geometry>
       <material
         name="">
@@ -242,7 +242,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://h1_description/meshes/left_knee_link.dae" />
+          filename="../meshes/left_knee_link.dae" />
       </geometry>
       <material
         name="">
@@ -297,7 +297,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://h1_description/meshes/left_ankle_link.dae" />
+          filename="../meshes/left_ankle_link.dae" />
       </geometry>
       <material
         name="">
@@ -352,7 +352,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://h1_description/meshes/right_hip_yaw_link.dae" />
+          filename="../meshes/right_hip_yaw_link.dae" />
       </geometry>
       <material
         name="">
@@ -407,7 +407,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://h1_description/meshes/right_hip_roll_link.dae" />
+          filename="../meshes/right_hip_roll_link.dae" />
       </geometry>
       <material
         name="">
@@ -462,7 +462,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://h1_description/meshes/right_hip_pitch_link.dae" />
+          filename="../meshes/right_hip_pitch_link.dae" />
       </geometry>
       <material
         name="">
@@ -517,7 +517,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://h1_description/meshes/right_knee_link.dae" />
+          filename="../meshes/right_knee_link.dae" />
       </geometry>
       <material
         name="">
@@ -572,7 +572,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://h1_description/meshes/right_ankle_link.dae" />
+          filename="../meshes/right_ankle_link.dae" />
       </geometry>
       <material
         name="">
@@ -627,7 +627,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://h1_description/meshes/torso_link.dae" />
+          filename="../meshes/torso_link.dae" />
       </geometry>
       <material
         name="">
@@ -682,7 +682,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://h1_description/meshes/left_shoulder_pitch_link.dae" />
+          filename="../meshes/left_shoulder_pitch_link.dae" />
       </geometry>
       <material
         name="">
@@ -737,7 +737,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://h1_description/meshes/left_shoulder_roll_link.dae" />
+          filename="../meshes/left_shoulder_roll_link.dae" />
       </geometry>
       <material
         name="">
@@ -792,7 +792,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://h1_description/meshes/left_shoulder_yaw_link.dae" />
+          filename="../meshes/left_shoulder_yaw_link.dae" />
       </geometry>
       <material
         name="">
@@ -847,7 +847,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://h1_description/meshes/left_elbow_link.dae" />
+          filename="../meshes/left_elbow_link.dae" />
       </geometry>
       <material
         name="">
@@ -902,7 +902,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://h1_description/meshes/right_shoulder_pitch_link.dae" />
+          filename="../meshes/right_shoulder_pitch_link.dae" />
       </geometry>
       <material
         name="">
@@ -957,7 +957,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://h1_description/meshes/right_shoulder_roll_link.dae" />
+          filename="../meshes/right_shoulder_roll_link.dae" />
       </geometry>
       <material
         name="">
@@ -1012,7 +1012,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://h1_description/meshes/right_shoulder_yaw_link.dae" />
+          filename="../meshes/right_shoulder_yaw_link.dae" />
       </geometry>
       <material
         name="">
@@ -1067,7 +1067,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://h1_description/meshes/right_elbow_link.dae" />
+          filename="../meshes/right_elbow_link.dae" />
       </geometry>
       <material
         name="">
@@ -1120,7 +1120,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://h1_description/meshes/logo_link.dae" />
+          filename="../meshes/logo_link.dae" />
       </geometry>
       <material
         name="">
