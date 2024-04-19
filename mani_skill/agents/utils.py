@@ -1,5 +1,5 @@
 # TODO(jigu): Move to sapien_utils.py
-from collections import OrderedDict
+
 from typing import Dict, Sequence
 
 import numpy as np
@@ -30,7 +30,7 @@ def flatten_action_spaces(action_spaces: Dict[str, spaces.Space]):
     action_dims = []
     low = []
     high = []
-    action_mapping = OrderedDict()
+    action_mapping = dict()
     offset = 0
 
     for action_name, action_space in action_spaces.items():

@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from typing import Any, Dict, Union
 
 import numpy as np
@@ -28,11 +27,11 @@ class HumanoidStandEnv(BaseEnv):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     @property
-    def _sensor_configs(self):
+    def _default_sensor_configs(self):
         return []
 
     @property
-    def _human_render_camera_configs(self):
+    def _default_human_render_camera_configs(self):
         pose = sapien_utils.look_at([1.0, 1.0, 2.5], [0.0, 0.0, 0.75])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
@@ -48,7 +47,7 @@ class HumanoidStandEnv(BaseEnv):
         return {"is_standing": is_standing, "fail": ~is_standing}
 
     def _get_obs_extra(self, info: Dict):
-        return OrderedDict()
+        return dict()
 
     def compute_sparse_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         return info["is_standing"]
@@ -73,7 +72,7 @@ class UnitreeH1StandEnv(HumanoidStandEnv):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     @property
-    def _default_sim_cfg(self):
+    def _default_sim_config(self):
         return SimConfig(
             gpu_memory_cfg=GPUMemoryConfig(
                 max_rigid_contact_count=2**22, max_rigid_patch_count=2**21
@@ -81,7 +80,7 @@ class UnitreeH1StandEnv(HumanoidStandEnv):
         )
 
     @property
-    def _human_render_camera_configs(self):
+    def _default_human_render_camera_configs(self):
         pose = sapien_utils.look_at([1.0, 1.0, 2.5], [0.0, 0.0, 0.75])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 

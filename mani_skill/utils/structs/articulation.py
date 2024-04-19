@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from collections import OrderedDict
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import TYPE_CHECKING, List, Tuple, Union
+from typing import TYPE_CHECKING, Dict, List, Tuple, Union
 
 import numpy as np
 import sapien
@@ -28,17 +27,17 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     links: List[Link]
     """List of Link objects"""
-    links_map: OrderedDict[str, Link]
+    links_map: Dict[str, Link]
     """Maps link name to the Link object"""
     root: Link
     """The root Link object"""
     joints: List[ArticulationJoint]
     """List of Joint objects"""
-    joints_map: OrderedDict[str, ArticulationJoint]
+    joints_map: Dict[str, ArticulationJoint]
     """Maps joint name to the Joint object"""
     active_joints: List[ArticulationJoint]
     """List of active Joint objects, referencing elements in self.joints"""
-    active_joints_map: OrderedDict[str, ArticulationJoint]
+    active_joints_map: Dict[str, ArticulationJoint]
     """Maps active joint name to the Joint object, referencing elements in self.joints"""
 
     name: str = None
@@ -54,14 +53,12 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     longer make "sense"
     """
 
-    _cached_joint_target_indices: OrderedDict[int, torch.Tensor] = field(
-        default_factory=OrderedDict
-    )
+    _cached_joint_target_indices: Dict[int, torch.Tensor] = field(default_factory=dict)
     """Map from a set of joints of this articulation and the indexing torch tensor to use for setting drive targets"""
 
-    _net_contact_force_queries: OrderedDict[
+    _net_contact_force_queries: Dict[
         Tuple, physx.PhysxGpuContactBodyImpulseQuery
-    ] = field(default_factory=OrderedDict)
+    ] = field(default_factory=dict)
     """Maps a tuple of link names to pre-saved net contact force queries"""
 
     def __str__(self):
@@ -88,12 +85,12 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             _scene=scene,
             _scene_idxs=scene_idxs,
             links=[],
-            links_map=OrderedDict(),
+            links_map=dict(),
             root=None,
             joints=[],
-            joints_map=OrderedDict(),
+            joints_map=dict(),
             active_joints=[],
-            active_joints_map=OrderedDict(),
+            active_joints_map=dict(),
             name=shared_name,
             _merged=_merged,
         )
@@ -109,7 +106,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             [] for _ in range(num_joints)
         ]
 
-        link_map = OrderedDict()
+        links_map = dict()
         for articulation in physx_articulations:
             # assert num_links == len(articulation.links) and num_joints == len(
             #     articulation.joints
@@ -121,13 +118,13 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         wrapped_links: List[Link] = []
         for links in all_links_objs:
             wrapped_link = Link.create(links, self)
-            link_map[wrapped_link.name] = wrapped_link
+            links_map[wrapped_link.name] = wrapped_link
             wrapped_links.append(wrapped_link)
             assert wrapped_link.is_root.any() == wrapped_link.is_root.all()
             if wrapped_link.is_root.any():
                 root = wrapped_link
         self.links = wrapped_links
-        self.links_map = link_map
+        self.links_map = links_map
         self.root = root
 
         # create Joint objects and figure out active joint references
@@ -139,7 +136,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             all_joint_names.index(x) for x in all_active_joint_names
         ]
 
-        joint_map = OrderedDict()
+        joints_map = dict()
         wrapped_joints: List[ArticulationJoint] = []
         for joint_index, joints in enumerate(all_joint_objs):
             try:
@@ -151,10 +148,10 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             wrapped_joint = ArticulationJoint.create(
                 joints, self, joint_index, active_joint_index
             )
-            joint_map[wrapped_joint.name] = wrapped_joint
+            joints_map[wrapped_joint.name] = wrapped_joint
             wrapped_joints.append(wrapped_joint)
         self.joints = wrapped_joints
-        self.joints_map = joint_map
+        self.joints_map = joints_map
         self.active_joints = [wrapped_joints[i] for i in active_joint_indices]
         self.active_joints_map = {joint.name: joint for joint in self.active_joints}
 

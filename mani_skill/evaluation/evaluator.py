@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from typing import Callable, List, Type
 
 import gymnasium as gym
@@ -40,7 +39,7 @@ class BaseEvaluator:
         self.policy = policy_cls(
             self.env_id, self.env.observation_space, self.env.action_space
         )
-        self.result = OrderedDict()
+        self.result = dict()
 
     def evaluate_episode(self, reset_kwargs, render=False):
         """Evaluate a single episode."""

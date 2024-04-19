@@ -1,6 +1,5 @@
 """Adapted from https://github.com/google-deepmind/dm_control/blob/main/dm_control/suite/cartpole.py"""
 import os
-from collections import OrderedDict
 from typing import Any, Dict, Union
 
 import numpy as np
@@ -72,18 +71,18 @@ class CartPoleEnv(BaseEnv):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     @property
-    def _default_sim_cfg(self):
+    def _default_sim_config(self):
         return SimConfig(
             sim_freq=100, control_freq=100, scene_cfg=SceneConfig(solver_iterations=2)
         )
 
     @property
-    def _sensor_configs(self):
+    def _default_sensor_configs(self):
         pose = sapien_utils.look_at(eye=[0, -4, 1], target=[0, 0, 1])
         return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
-    def _human_render_camera_configs(self):
+    def _default_human_render_camera_configs(self):
         pose = sapien_utils.look_at(eye=[0, -4, 1], target=[0, 0, 1])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
@@ -119,7 +118,7 @@ class CartPoleEnv(BaseEnv):
         return {"cart_in_bounds": cart_in_bounds, "angle_in_bounds": angle_in_bounds}
 
     def _get_obs_extra(self, info: Dict):
-        return OrderedDict()
+        return dict()
 
     def compute_sparse_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         return info["cart_in_bounds"] * info["angle_in_bounds"]

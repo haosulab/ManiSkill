@@ -4,11 +4,11 @@ One of the benefits of simulation is the ability to chop and change a number of 
 
 ## Camera Randomization
 
-For cameras, which are created by adding `CameraConfig` objects to your task's `_sensor_configs` property, you can randomize the pose and fov across all parallel sub-scenes. This can be done either during reconfiguration or episode initialization.
+For cameras, which are created by adding `CameraConfig` objects to your task's `_default_sensor_configs` property, you can randomize the pose and fov across all parallel sub-scenes. This can be done either during reconfiguration or episode initialization.
 
 ### During Reconfiguration
 
-Simply providing batched data to the CameraConfigs of your sensors as done below (pose, fov, near, and far are supported) will randomize the camera configuration across parallel scenes. The example below does it for camera poses by modifying the `_sensor_configs` property of the task class
+Simply providing batched data to the CameraConfigs of your sensors as done below (pose, fov, near, and far are supported) will randomize the camera configuration across parallel scenes. The example below does it for camera poses by modifying the `_default_sensor_configs` property of the task class
 
 ```python
 import torch
@@ -17,7 +17,7 @@ from mani_skill.utils import sapien_utils
 class MyCustomTask(BaseEnv):
     # ...
     @property
-    def _sensor_configs(self):
+    def _default_sensor_configs(self):
         pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
         pose = Pose.create(pose)
         pose = pose * Pose.create_from_pq(
@@ -55,7 +55,7 @@ from mani_skill.sensors.camera import CameraConfig
 class MyCustomTask(BaseEnv):
     # ...
     @property
-    def _sensor_configs(self):
+    def _default_sensor_configs(self):
         return [
             CameraConfig(
                 "base_camera", pose=sapien.Pose(), width=128, height=128, 

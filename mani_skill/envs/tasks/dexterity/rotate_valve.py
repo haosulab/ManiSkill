@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from typing import Any, Dict, List, Union
 
 import numpy as np
@@ -59,12 +58,12 @@ class RotateValveEnv(BaseEnv):
         super().__init__(*args, robot_uids="dclaw", **kwargs)
 
     @property
-    def _sensor_configs(self):
+    def _default_sensor_configs(self):
         pose = sapien_utils.look_at(eye=[0.3, 0, 0.3], target=[-0.1, 0, 0.05])
         return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
-    def _human_render_camera_configs(self):
+    def _default_human_render_camera_configs(self):
         pose = sapien_utils.look_at([0.2, 0.4, 0.4], [0.0, 0.0, 0.1])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
@@ -185,7 +184,7 @@ class RotateValveEnv(BaseEnv):
         with torch.device(self.device):
             valve_qpos = self.valve.qpos
             valve_qvel = self.valve.qvel
-            obs = OrderedDict(
+            obs = dict(
                 rotate_dir=self.rotate_direction.to(torch.float32),
                 valve_qpos=valve_qpos,
                 valve_qvel=valve_qvel,

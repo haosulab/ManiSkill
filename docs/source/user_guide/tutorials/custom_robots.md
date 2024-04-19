@@ -174,7 +174,7 @@ Note that when taking a robot implemented in another simulator like Mujoco, you 
 
 ## 3. Defining Sensors
 
-ManiSkill supports defining sensors mounted onto the robot and sensors positioned relative to the robot by defining the `_sensor_configs` property.
+ManiSkill supports defining sensors mounted onto the robot and sensors positioned relative to the robot by defining the `_default_sensor_configs` property.
 
 An example of this done in the Panda robot with a real sense camera attached:
 
@@ -183,7 +183,7 @@ from mani_skill.sensors.camera import CameraConfig
 class PandaRealSensed435(Panda):
     # ...
     @property
-    def _sensor_configs(self):
+    def _default_sensor_configs(self):
         return [
             CameraConfig(
                 uid="hand_camera",
