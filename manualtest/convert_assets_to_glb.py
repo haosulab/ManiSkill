@@ -1,7 +1,19 @@
+"""
+Converts assets from .stl/.obj to .glb
+
+Useful bash commands:
+
+Convert all files in a directory of given endings
+
+find /path/to/your/directory -iname "*.STL" -exec python manualtest/convert_assets_to_glb.py -f {} \;
+
+
+"""
 import argparse
 import os.path as osp
 
 import bpy
+import numpy as np
 
 
 # Some basic blender py utilities
@@ -37,7 +49,7 @@ def main(args):
         )
 
     for obj in bpy.data.objects.keys():
-        bpy.data.objects[obj].rotation_euler[0] = 0
+        bpy.data.objects[obj].rotation_euler[0] = np.pi / 2
 
     output_path = osp.join(osp.dirname(file_path), f"{base_file_name}.glb")
     bpy.ops.export_scene.gltf(filepath=output_path)
