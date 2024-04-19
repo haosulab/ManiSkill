@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from typing import Any, Dict, List
 
 import numpy as np
@@ -215,7 +214,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
     def _get_obs_extra(self, info: Dict):
         # TODO (stao): fix the observation to be correct when in state or not mode
         # moreover also check if hiding goal visual affects the observation data as well
-        obs = OrderedDict(
+        obs = dict(
             tcp_pose=self.agent.tcp.pose.raw_pose,
             target_handle_pos=self.handle_link_goal.pose.p,
         )

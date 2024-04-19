@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from typing import Any, Dict, List, Union
 
 import numpy as np
@@ -202,7 +201,7 @@ class RotateSingleObjectInHand(BaseEnv):
 
     def _get_obs_extra(self, info: Dict):
         with torch.device(self.device):
-            obs = OrderedDict(rotate_dir=self.rot_dir)
+            obs = dict(rotate_dir=self.rot_dir)
             if self._obs_mode in ["state", "state_dict"]:
                 obs.update(
                     obj_pose=vectorize_pose(self.obj.pose),

@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from typing import Any, Dict
 
 import numpy as np
@@ -85,7 +84,7 @@ class EmptyEnv(BaseEnv):
         return {}
 
     def _get_obs_extra(self, info: Dict):
-        return OrderedDict()
+        return dict()
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         return torch.zeros(self.num_envs, device=self.device)

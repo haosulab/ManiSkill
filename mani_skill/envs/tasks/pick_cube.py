@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from typing import Any, Dict, Union
 
 import numpy as np
@@ -71,7 +70,7 @@ class PickCubeEnv(BaseEnv):
             self.goal_site.set_pose(Pose.create_from_pq(goal_xyz))
 
     def _get_obs_extra(self, info: Dict):
-        obs = OrderedDict(
+        obs = dict(
             tcp_pose=self.agent.tcp.pose.raw_pose, goal_pos=self.goal_site.pose.p
         )
         if "state" in self.obs_mode:

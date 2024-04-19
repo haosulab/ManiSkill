@@ -1,6 +1,5 @@
 """Adapted from https://github.com/google-deepmind/dm_control/blob/main/dm_control/suite/cartpole.py"""
 import os
-from collections import OrderedDict
 from typing import Any, Dict, Union
 
 import numpy as np
@@ -119,7 +118,7 @@ class CartPoleEnv(BaseEnv):
         return {"cart_in_bounds": cart_in_bounds, "angle_in_bounds": angle_in_bounds}
 
     def _get_obs_extra(self, info: Dict):
-        return OrderedDict()
+        return dict()
 
     def compute_sparse_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         return info["cart_in_bounds"] * info["angle_in_bounds"]

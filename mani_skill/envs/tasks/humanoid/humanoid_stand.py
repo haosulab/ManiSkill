@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from typing import Any, Dict, Union
 
 import numpy as np
@@ -48,7 +47,7 @@ class HumanoidStandEnv(BaseEnv):
         return {"is_standing": is_standing, "fail": ~is_standing}
 
     def _get_obs_extra(self, info: Dict):
-        return OrderedDict()
+        return dict()
 
     def compute_sparse_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         return info["is_standing"]

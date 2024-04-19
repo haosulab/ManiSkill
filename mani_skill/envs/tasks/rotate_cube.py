@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from typing import Any, Dict, Tuple, Union
 
 import numpy as np
@@ -252,7 +251,7 @@ class RotateCubeEnv(BaseEnv):
             )
 
     def _get_obs_extra(self, info: Dict):
-        obs = OrderedDict(
+        obs = dict(
             goal_pos=self.obj_goal.pose.p,
             goal_q=self.obj_goal.pose.q,
         )

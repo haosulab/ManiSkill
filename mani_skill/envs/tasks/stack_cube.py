@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from typing import Any, Dict, Union
 
 import numpy as np
@@ -102,7 +101,7 @@ class StackCubeEnv(BaseEnv):
         }
 
     def _get_obs_extra(self, info: Dict):
-        obs = OrderedDict(tcp_pose=self.agent.tcp.pose.raw_pose)
+        obs = dict(tcp_pose=self.agent.tcp.pose.raw_pose)
         if "state" in self.obs_mode:
             obs.update(
                 cubeA_pose=self.cubeA.pose.raw_pose,

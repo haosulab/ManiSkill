@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections import OrderedDict
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List
 
@@ -200,7 +199,7 @@ class DictController(BaseController):
         self._control_freq = control_freq
         self.balance_passive_force = balance_passive_force
 
-        self.controllers: Dict[str, BaseController] = OrderedDict()
+        self.controllers: Dict[str, BaseController] = dict()
         for uid, config in configs.items():
             self.controllers[uid] = config.controller_cls(
                 config, articulation, control_freq, sim_freq=sim_freq, scene=scene

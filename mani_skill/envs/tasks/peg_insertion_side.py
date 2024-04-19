@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from typing import Any, Dict, Union
 
 import numpy as np
@@ -253,7 +252,7 @@ class PegInsertionSideEnv(BaseEnv):
         return dict(success=success, peg_head_pos_at_hole=peg_head_pos_at_hole)
 
     def _get_obs_extra(self, info: Dict):
-        obs = OrderedDict(tcp_pose=self.agent.tcp.pose.raw_pose)
+        obs = dict(tcp_pose=self.agent.tcp.pose.raw_pose)
         if self._obs_mode in ["state", "state_dict"]:
             obs.update(
                 peg_pose=self.peg.pose.raw_pose,

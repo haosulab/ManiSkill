@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from typing import Any, Dict
 
 import numpy as np
@@ -87,7 +86,7 @@ class QuadrupedStandEnv(BaseEnv):
         return {"success": self.agent.is_standing()}
 
     def _get_obs_extra(self, info: Dict):
-        return OrderedDict(robot_pose=self.agent.robot.pose.raw_pose)
+        return dict(robot_pose=self.agent.robot.pose.raw_pose)
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         reward = info["success"]

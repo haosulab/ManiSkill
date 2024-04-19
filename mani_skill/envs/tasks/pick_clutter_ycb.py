@@ -1,5 +1,4 @@
 import os
-from collections import OrderedDict
 from typing import Any, Dict, List, Union
 
 import numpy as np
@@ -178,7 +177,7 @@ class PickClutterEnv(BaseEnv):
         }
 
     def _get_obs_extra(self, info: Dict):
-        return OrderedDict()
+        return dict()
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         return torch.zeros(self.num_envs, device=self.device)

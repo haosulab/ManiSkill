@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from typing import Any, Dict, List, Union
 
 import numpy as np
@@ -185,7 +184,7 @@ class RotateValveEnv(BaseEnv):
         with torch.device(self.device):
             valve_qpos = self.valve.qpos
             valve_qvel = self.valve.qvel
-            obs = OrderedDict(
+            obs = dict(
                 rotate_dir=self.rotate_direction.to(torch.float32),
                 valve_qpos=valve_qpos,
                 valve_qvel=valve_qvel,

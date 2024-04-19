@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from typing import Any, Dict, List, Union
 
 import numpy as np
@@ -168,7 +167,7 @@ class PickSingleYCBEnv(BaseEnv):
         )
 
     def _get_obs_extra(self, info: Dict):
-        obs = OrderedDict(
+        obs = dict(
             tcp_pose=self.agent.tcp.pose.raw_pose,
             goal_pos=self.goal_site.pose.p,
         )

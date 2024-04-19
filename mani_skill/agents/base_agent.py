@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections import OrderedDict
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
@@ -80,7 +79,7 @@ class BaseAgent:
         self.controllers: Dict[str, BaseController] = dict()
         self.sensors: Dict[str, BaseSensor] = dict()
 
-        self.controllers = OrderedDict()
+        self.controllers = dict()
         self._load_articulation()
         self._after_loading_articulation()
 
@@ -241,7 +240,7 @@ class BaseAgent:
         """
         Get the proprioceptive state of the agent.
         """
-        obs = OrderedDict(qpos=self.robot.get_qpos(), qvel=self.robot.get_qvel())
+        obs = dict(qpos=self.robot.get_qpos(), qvel=self.robot.get_qvel())
         controller_state = self.controller.get_state()
         if len(controller_state) > 0:
             obs.update(controller=controller_state)
@@ -249,7 +248,7 @@ class BaseAgent:
 
     def get_state(self) -> Dict:
         """Get current state, including robot state and controller state"""
-        state = OrderedDict()
+        state = dict()
 
         # robot state
         root_link = self.robot.get_links()[0]

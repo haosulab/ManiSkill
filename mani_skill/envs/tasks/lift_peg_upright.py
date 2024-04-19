@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from typing import Dict, Union
 
 import numpy as np
@@ -87,7 +86,7 @@ class LiftPegUprightEnv(BaseEnv):
         }
 
     def _get_obs_extra(self, info: Dict):
-        obs = OrderedDict(
+        obs = dict(
             tcp_pose=self.agent.tcp.pose.raw_pose,
         )
         if self._obs_mode in ["state", "state_dict"]:

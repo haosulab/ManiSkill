@@ -1,5 +1,5 @@
 # TODO (stao): reimplement this
-from collections import OrderedDict
+
 
 import numpy as np
 import sapien
@@ -121,7 +121,7 @@ class StereoDepthCamera(Camera):
 
     @property
     def observation_space(self) -> spaces.Dict:
-        obs_spaces = OrderedDict()
+        obs_spaces = dict()
         width, height = self.camera._cam_rgb.width, self.camera._cam_rgb.height
         for name in self.texture_names:
             if name == "Color":

@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from typing import Any, Dict, Tuple
 
 import numpy as np
@@ -180,7 +179,7 @@ class TwoRobotStackCube(BaseEnv):
         }
 
     def _get_obs_extra(self, info: Dict):
-        obs = OrderedDict(
+        obs = dict(
             left_arm_tcp=self.left_agent.tcp.pose.raw_pose,
             right_arm_tcp=self.right_agent.tcp.pose.raw_pose,
         )
