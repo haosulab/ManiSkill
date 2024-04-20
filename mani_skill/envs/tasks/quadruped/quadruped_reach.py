@@ -16,7 +16,7 @@ from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 
 
-class QuadrupedRunEnv(BaseEnv):
+class QuadrupedReachEnv(BaseEnv):
     SUPPORTED_ROBOTS = ["anymal-c"]
     agent: ANYmalC
 
@@ -117,7 +117,7 @@ class QuadrupedRunEnv(BaseEnv):
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
 
 
-# @register_env("ANYmalC-Run-v1", max_episode_steps=200)
-class AnymalCStandEnv(QuadrupedRunEnv):
+@register_env("ANYmalC-Reach-v1", max_episode_steps=100)
+class AnymalCReachEnv(QuadrupedReachEnv):
     def __init__(self, *args, robot_uids="anymal-c", **kwargs):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)

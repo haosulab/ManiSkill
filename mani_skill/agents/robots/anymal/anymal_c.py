@@ -93,6 +93,11 @@ class ANYmalC(BaseAgent):
         )
         return controller_configs
 
+    def _after_init(self):
+        # disable gravity / compensate gravity automatically in all links but the root one
+        for link in self.robot.links[1:]:
+            link.disable_gravity = True
+
     def is_standing(self, ground_height=0):
         """This quadruped is considered standing if it is face up and body is at least 0.35m off the ground"""
         target_q = torch.tensor([1, 0, 0, 0], device=self.device)
@@ -108,4 +113,4 @@ class ANYmalC(BaseAgent):
 
     def is_fallen(self, ground_height=0):
         """This quadruped is considered fallen if its body is 0.12m off the ground"""
-        return self.robot.pose.p[:, 2] < 0.12 + ground_height
+        return self.robot.pose.p[:, 2] < 0.15 + ground_height
