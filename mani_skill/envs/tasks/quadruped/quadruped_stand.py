@@ -12,7 +12,7 @@ from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.building import actors
-from mani_skill.utils.building.ground import build_ground, build_meter_ground
+from mani_skill.utils.building.ground import build_ground
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.structs.pose import Pose
 
@@ -58,19 +58,10 @@ class QuadrupedStandEnv(BaseEnv):
         ]
 
     def _load_scene(self, options: dict):
-        # for i in range(10):
-        #     ground = build_ground(self._scene, return_builder=True)
-        #     ground.initial_pose = sapien.Pose(p=[i * 40, 0, 0])
-        #     ground.build_static(name="ground")
-        # self.ground = self._scene.create_actor_builder()
-        self.ground = build_meter_ground(self._scene, floor_width=1000)
+        self.ground = build_ground(self._scene)
         self.cube = actors.build_cube(
             self._scene, 0.05, color=[1, 0, 0, 1], name="cube"
         )
-        # TODO (stao): why is this collision mesh so wacky?
-        # mesh = self.agent.robot.get_collision_mesh(first_only=True)
-        # self.height = -mesh[0].bounding_box.bounds[0, 2]
-        self.height = 1.626
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
@@ -82,7 +73,8 @@ class QuadrupedStandEnv(BaseEnv):
         # forces = self.agent.robot.get_net_contact_forces(["RH_KFE", "LH_KFE"]).norm(
         #     dim=(1, 2)
         # )
-        return {"success": self.agent.is_standing()}
+        is_standing = self.agent.is_standing()
+        return {"fail": ~is_standing}
 
     def _get_obs_extra(self, info: Dict):
         return dict(robot_pose=self.agent.robot.pose.raw_pose)

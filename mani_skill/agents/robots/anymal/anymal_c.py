@@ -15,12 +15,22 @@ from mani_skill.utils.structs.articulation import Articulation
 class ANYmalC(BaseAgent):
     uid = "anymal-c"
     urdf_path = f"{PACKAGE_ASSET_DIR}/robots/anymal-c/urdf/anymal.urdf"
-    urdf_config = dict()
+    urdf_config = dict(
+        _materials=dict(
+            foot=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)
+        ),
+        link=dict(
+            LF_FOOT=dict(material="foot", patch_radius=0.1, min_patch_radius=0.1),
+            LH_FOOT=dict(material="foot", patch_radius=0.1, min_patch_radius=0.1),
+            RF_FOOT=dict(material="foot", patch_radius=0.1, min_patch_radius=0.1),
+            RH_FOOT=dict(material="foot", patch_radius=0.1, min_patch_radius=0.1),
+        ),
+    )
     fix_root_link = False
 
     keyframes = dict(
         standing=Keyframe(
-            pose=sapien.Pose(p=[0, 0, 0.8]),
+            pose=sapien.Pose(p=[0, 0, 0.6]),
             qpos=np.array(
                 [0.03, -0.03, 0.03, -0.03, 0.4, 0.4, -0.4, -0.4, -0.8, -0.8, 0.8, 0.8]
             ),
@@ -50,7 +60,6 @@ class ANYmalC(BaseAgent):
         self.arm_stiffness = 85.0
         self.arm_damping = 2.0
         self.arm_force_limit = 100
-
         # delta action scale for Omni Isaac Gym Envs is self.dt * self.action_scale = 1/60 * 13.5. NOTE that their self.dt value is not the same as the actual DT used in sim...., they use default of 1/100
         pd_joint_delta_pos = PDJointPosControllerConfig(
             self.joint_names,
@@ -73,9 +82,10 @@ class ANYmalC(BaseAgent):
             use_delta=False,
         )
         controller_configs = dict(
-            pd_joint_delta_pos=pd_joint_delta_pos,
-            pd_joint_pos=pd_joint_pos,
-            balance_passive_force=False,
+            pd_joint_delta_pos=dict(
+                body=pd_joint_delta_pos, balance_passive_force=False
+            ),
+            pd_joint_pos=dict(body=pd_joint_pos, balance_passive_force=False),
         )
         return controller_configs
 
