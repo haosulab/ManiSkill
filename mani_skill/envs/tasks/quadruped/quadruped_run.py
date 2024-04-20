@@ -69,13 +69,6 @@ class QuadrupedRunEnv(BaseEnv):
             add_collision=False,
             body_type="kinematic",
         )
-        for link in self.agent.robot.links:
-            link.set_collision_group_bit(2, 30, 1)
-        # self.ground.set_collision_group_bit(2, 30, 1)
-        # for body in link._bodies:
-        #     for cs in body.get_collision_shapes():
-        #         cg = cs.get_collision_groups()
-        #         cg[2] |= 1 << 30
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
@@ -124,7 +117,7 @@ class QuadrupedRunEnv(BaseEnv):
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
 
 
-@register_env("ANYmalC-Run-v1", max_episode_steps=200)
+# @register_env("ANYmalC-Run-v1", max_episode_steps=200)
 class AnymalCStandEnv(QuadrupedRunEnv):
     def __init__(self, *args, robot_uids="anymal-c", **kwargs):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
