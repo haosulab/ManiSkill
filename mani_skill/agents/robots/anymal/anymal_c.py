@@ -27,10 +27,11 @@ class ANYmalC(BaseAgent):
         ),
     )
     fix_root_link = False
+    disable_self_collisions = True
 
     keyframes = dict(
         standing=Keyframe(
-            pose=sapien.Pose(p=[0, 0, 0.6]),
+            pose=sapien.Pose(p=[0, 0, 0.545]),
             qpos=np.array(
                 [0.03, -0.03, 0.03, -0.03, 0.4, 0.4, -0.4, -0.4, -0.8, -0.8, 0.8, 0.8]
             ),
@@ -63,8 +64,10 @@ class ANYmalC(BaseAgent):
         # delta action scale for Omni Isaac Gym Envs is self.dt * self.action_scale = 1/60 * 13.5. NOTE that their self.dt value is not the same as the actual DT used in sim...., they use default of 1/100
         pd_joint_delta_pos = PDJointPosControllerConfig(
             self.joint_names,
-            -0.225,
-            0.225,
+            # -0.225,
+            # 0.225,
+            -1,
+            1,
             self.arm_stiffness,
             self.arm_damping,
             self.arm_force_limit,
@@ -89,29 +92,8 @@ class ANYmalC(BaseAgent):
         )
         return controller_configs
 
-    def _load_articulation(self):
-        """
-        Load the robot articulation
-        """
-        loader = self.scene.create_urdf_loader()
-        loader.name = self.uid
-        if self._agent_idx is not None:
-            loader.name = f"{self.uid}-agent-{self._agent_idx}"
-        loader.fix_root_link = self.fix_root_link
-
-        urdf_path = format_path(str(self.urdf_path))
-
-        urdf_config = sapien_utils.parse_urdf_config(self.urdf_config, self.scene)
-        sapien_utils.check_urdf_config(urdf_config)
-
-        # TODO(jigu): support loading multiple convex collision shapes
-        sapien_utils.apply_urdf_config(loader, urdf_config)
-        loader.disable_self_collisions = True
-        self.robot: Articulation = loader.load(urdf_path)
-        assert self.robot is not None, f"Fail to load URDF from {urdf_path}"
-
-    def is_standing(self):
-        """This quadruped is considered standing if it is face up and body is at least 0.5m off the ground"""
+    def is_standing(self, ground_height=0):
+        """This quadruped is considered standing if it is face up and body is at least 0.35m off the ground"""
         target_q = torch.tensor([1, 0, 0, 0], device=self.device)
         inner_prod = (self.robot.pose.q * target_q).sum(axis=1)
         # angle_diff = 1 - (inner_prod ** 2) # computes a distance from 0 to 1 between 2 quaternions
@@ -120,5 +102,9 @@ class ANYmalC(BaseAgent):
         )  # computes an angle between 2 quaternions
         # about 20 degrees
         aligned = angle_diff < 0.349
-        high_enough = self.robot.pose.p[:, 2] > 0.5
-        return torch.logical_and(aligned, high_enough)
+        high_enough = self.robot.pose.p[:, 2] > 0.35 + ground_height
+        return aligned & high_enough
+
+    def is_fallen(self, ground_height=0):
+        """This quadruped is considered fallen if its body is 0.12m off the ground"""
+        return self.robot.pose.p[:, 2] < 0.12 + ground_height

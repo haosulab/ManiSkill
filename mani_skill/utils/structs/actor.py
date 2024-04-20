@@ -212,6 +212,12 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
             torch.linalg.norm(self.angular_velocity, axis=1) <= ang_thresh,
         )
 
+    def set_collision_group_bit(self, group: int, bit_idx: int, bit: int):
+        """Set's a specific collision group bit for all collision shapes in all parallel actors"""
+        for body in self._bodies:
+            for cs in body.get_collision_shapes():
+                cs.collision_groups[group] |= bit << bit_idx
+
     # -------------------------------------------------------------------------- #
     # Exposed actor properties, getters/setters that automatically handle
     # CPU and GPU based actors

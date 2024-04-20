@@ -6,115 +6,125 @@ import torch
 from transforms3d.euler import euler2quat
 
 from mani_skill.agents.robots.anymal.anymal_c import ANYmalC
-from mani_skill.agents.robots.fetch.fetch import Fetch
-from mani_skill.agents.robots.panda.panda import Panda
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.building import actors
-from mani_skill.utils.building.ground import build_ground, build_meter_ground
+from mani_skill.utils.building.ground import build_ground
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.structs.pose import Pose
-from mani_skill.utils.structs.types import GPUMemoryConfig, SceneConfig, SimConfig
+from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 
 
-# @register_env("QuadrupedRun-v1", max_episode_steps=200)
 class QuadrupedRunEnv(BaseEnv):
-
     SUPPORTED_ROBOTS = ["anymal-c"]
     agent: ANYmalC
 
     def __init__(self, *args, robot_uids="anymal-c", **kwargs):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
-    """
-    NOTE that Isaac Anymal has these settings
-    why is their patch/contact count so low compared to ours?
-    gpu_max_rigid_contact_count: 524288
-    gpu_max_rigid_patch_count: 163840
-    gpu_found_lost_pairs_capacity: 4194304
-    gpu_found_lost_aggregate_pairs_capacity: 33554432
-    gpu_total_aggregate_pairs_capacity: 4194304
-    """
-
     @property
     def _default_sim_config(self):
-        return SimConfig(
-            sim_freq=100,
-            control_freq=50,
-            gpu_memory_cfg=GPUMemoryConfig(
-                heap_capacity=2**27,
-                temp_buffer_capacity=2**25,
-                found_lost_pairs_capacity=2**22,
-                found_lost_aggregate_pairs_capacity=2**25,
-                total_aggregate_pairs_capacity=2**22,
-                max_rigid_patch_count=2**18,
-                max_rigid_contact_count=2**20,
-            ),
-            scene_cfg=SceneConfig(
-                solver_iterations=4,
-                bounce_threshold=0.2,
-            ),
-        )
+        return SimConfig(gpu_memory_cfg=GPUMemoryConfig())
 
     @property
     def _default_sensor_configs(self):
-        pose = sapien_utils.look_at([1.5, 1.5, 1], [0.0, 0.0, 0])
+        pose = sapien_utils.look_at(eye=[0.5, 0, 0.1], target=[1.0, 0, 0.0])
         return [
             CameraConfig(
                 "base_camera",
-                pose.p,
-                pose.q,
-                128,
-                128,
-                np.pi / 2,
-                0.01,
-                100,
-                # link=self.agent.robot.links[0],
+                pose=pose,
+                width=128,
+                height=128,
+                fov=np.pi / 2,
+                near=0.01,
+                far=100,
+                mount=self.agent.robot.links[0],
             )
         ]
 
     @property
     def _default_human_render_camera_configs(self):
-        pose = sapien_utils.look_at([2.5, 2.5, 1], [0.0, 0.0, 0])
-        return CameraConfig(
-            "render_camera",
-            pose.p,
-            pose.q,
-            512,
-            512,
-            1,
-            0.01,
-            100,
-            # link=self.agent.robot.links[0],
-        )
+        pose = sapien_utils.look_at([-2.5, 0.5, 2], [0.0, 0.0, 0])
+        return [
+            CameraConfig(
+                "render_camera",
+                pose=pose,
+                width=512,
+                height=512,
+                fov=1,
+                near=0.01,
+                far=100,
+                mount=self.agent.robot.links[0],
+            )
+        ]
 
     def _load_scene(self, options: dict):
-        self.ground = build_meter_ground(self._scene, floor_width=20)
-        self.height = 0.63
+        self.ground = build_ground(self._scene)
+        self.goal = actors.build_sphere(
+            self._scene,
+            radius=0.2,
+            color=[0, 1, 0, 1],
+            name="goal",
+            add_collision=False,
+            body_type="kinematic",
+        )
+        for link in self.agent.robot.links:
+            link.set_collision_group_bit(2, 30, 1)
+        # self.ground.set_collision_group_bit(2, 30, 1)
+        # for body in link._bodies:
+        #     for cs in body.get_collision_shapes():
+        #         cg = cs.get_collision_groups()
+        #         cg[2] |= 1 << 30
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
-            self.agent.robot.set_pose(Pose.create_from_pq(p=[0, 0, self.height]))
-            self.agent.reset(init_qpos=torch.zeros(self.agent.robot.max_dof))
+            b = len(env_idx)
+            keyframe = self.agent.keyframes["standing"]
+            self.agent.robot.set_pose(keyframe.pose)
+            self.agent.robot.set_qpos(keyframe.qpos)
+            # sample random goal
+            xyz = torch.zeros((b, 3))
+            xyz[:, :2] = torch.rand(size=(b, 2)) + torch.tensor([1.5, 0])
+            self.goal.set_pose(Pose.create_from_pq(xyz))
 
     def evaluate(self):
-        return {"success": torch.zeros(self.num_envs, dtype=bool, device=self.device)}
+        is_fallen = self.agent.is_fallen()
+        robot_to_goal_dist = torch.linalg.norm(
+            self.goal.pose.p[:, :2] - self.agent.robot.pose.p[:, :2], axis=1
+        )
+        reached_goal = robot_to_goal_dist < 0.35
+        return {
+            "success": reached_goal & ~is_fallen,
+            "fail": is_fallen,
+            "robot_to_goal_dist": robot_to_goal_dist,
+            "reached_goal": reached_goal,
+            "is_fallen": is_fallen,
+        }
 
     def _get_obs_extra(self, info: Dict):
-        return dict()
+        obs = dict()
+        if self.obs_mode in ["state", "state_dict"]:
+            obs.update(
+                goal_pos=self.goal.pose.p[:, :2],
+                robot_to_goal=self.goal.pose.p[:, :2] - self.agent.robot.pose.p[:, :2],
+            )
+        return obs
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        xvel = self.agent.robot.root_linear_velocity[:, 0]
-        # cts = self._scene.get_contacts()
-        # print(len(cts))
-        # for ct in cts:
-        #     # if ct.bodies[1].entity.name == "base" or ct.bodies[0].entity.name == "base":
-        #     print(ct)
-        return xvel / 10
+        robot_to_goal_dist = info["robot_to_goal_dist"]
+        reaching_reward = 1 - torch.tanh(1 * robot_to_goal_dist)
+        reward = reaching_reward
+        return reward
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
         max_reward = 1.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
+
+
+@register_env("ANYmalC-Run-v1", max_episode_steps=200)
+class AnymalCStandEnv(QuadrupedRunEnv):
+    def __init__(self, *args, robot_uids="anymal-c", **kwargs):
+        super().__init__(*args, robot_uids=robot_uids, **kwargs)

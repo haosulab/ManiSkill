@@ -91,6 +91,8 @@ def build_ground(
         floor_comp.attach(shape)
         obj.add_component(floor_comp)
 
+    return actor
+
 
 def build_meter_ground(
     scene: ManiSkillScene,
