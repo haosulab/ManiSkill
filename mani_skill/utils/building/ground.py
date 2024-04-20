@@ -19,17 +19,17 @@ def build_ground(
     floor_width: int = 100,
     altitude=0,
     name="ground",
-    return_builder=False,
 ):
+    """Procedurally creates a checkered floor given a floor width in meters.
+
+    Note that this function runs slower as floor width becomes larger, but in general this function takes no more than 0.05s to run
+    and usually is never run more than once as it is for building a scene, not loading.
+    """
     ground = scene.create_actor_builder()
     ground.add_plane_collision(
         sapien.Pose(p=[0, 0, altitude], q=[0.7071068, 0, -0.7071068, 0]),
     )
-    if return_builder:
-        return ground
     actor = ground.build_static(name=name)
-
-    floor_comp = sapien.render.RenderBodyComponent()
 
     # generate a grid of right triangles that form 1x1 meter squares centered at (0, 0, 0)
     num_verts = (floor_width + 1) ** 2
@@ -40,6 +40,7 @@ def build_ground(
     xys = np.stack((yy, xx), axis=2).reshape(-1, 2)
     vertices[:, 0] = xys[:, 0]
     vertices[:, 1] = xys[:, 1]
+    vertices[:, 2] = altitude
     normals = np.zeros((len(vertices), 3))
     normals[:, 2] = 1
 
@@ -84,8 +85,10 @@ def build_ground(
     shape = sapien.render.RenderShapeTriangleMesh(
         vertices=vertices, triangles=triangles, normals=normals, uvs=uvs, material=mat
     )
-    floor_comp.attach(shape)
+
     for obj in actor._objs:
+        floor_comp = sapien.render.RenderBodyComponent()
+        floor_comp.attach(shape)
         obj.add_component(floor_comp)
 
 
