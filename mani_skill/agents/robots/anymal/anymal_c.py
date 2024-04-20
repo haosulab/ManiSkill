@@ -3,7 +3,7 @@ import numpy as np
 import sapien
 import torch
 
-from mani_skill import PACKAGE_ASSET_DIR, format_path
+from mani_skill import PACKAGE_ASSET_DIR
 from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
@@ -66,8 +66,8 @@ class ANYmalC(BaseAgent):
             self.joint_names,
             # -0.225,
             # 0.225,
-            -1,
-            1,
+            -0.4,
+            0.4,
             self.arm_stiffness,
             self.arm_damping,
             self.arm_force_limit,
@@ -84,6 +84,7 @@ class ANYmalC(BaseAgent):
             normalize_action=False,
             use_delta=False,
         )
+        # TODO (stao): For quadrupeds perhaps we disable gravit for all links except the root?
         controller_configs = dict(
             pd_joint_delta_pos=dict(
                 body=pd_joint_delta_pos, balance_passive_force=False
