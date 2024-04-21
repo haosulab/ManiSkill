@@ -58,16 +58,14 @@ class ANYmalC(BaseAgent):
 
     @property
     def _controller_configs(self):
-        self.arm_stiffness = 85.0
+        self.arm_stiffness = 80.0
         self.arm_damping = 2.0
         self.arm_force_limit = 100
         # delta action scale for Omni Isaac Gym Envs is self.dt * self.action_scale = 1/60 * 13.5. NOTE that their self.dt value is not the same as the actual DT used in sim...., they use default of 1/100
         pd_joint_delta_pos = PDJointPosControllerConfig(
             self.joint_names,
-            # -0.225,
-            # 0.225,
-            -0.4,
-            0.4,
+            -0.225,
+            0.225,
             self.arm_stiffness,
             self.arm_damping,
             self.arm_force_limit,
@@ -112,5 +110,5 @@ class ANYmalC(BaseAgent):
         return aligned & high_enough
 
     def is_fallen(self, ground_height=0):
-        """This quadruped is considered fallen if its body is 0.12m off the ground"""
-        return self.robot.pose.p[:, 2] < 0.15 + ground_height
+        """This quadruped is considered fallen if its body is 0.175m off the ground"""
+        return self.robot.pose.p[:, 2] < 0.175 + ground_height
