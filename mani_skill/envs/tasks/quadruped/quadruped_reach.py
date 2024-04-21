@@ -82,11 +82,9 @@ class QuadrupedReachEnv(BaseEnv):
             # sample random goal
             xyz = torch.zeros((b, 3))
             noise_scale = 1
-            xyz[:, :2] = (
-                torch.rand(size=(b, 2)) * noise_scale
-                - noise_scale / 2
-                + torch.tensor([2.5, 0])
-            )
+            xyz[:, 0] = torch.rand(size=(b,)) * noise_scale - noise_scale / 2 + 2.5
+            noise_scale = 4
+            xyz[:, 1] = torch.rand(size=(b,)) * noise_scale - noise_scale / 2
             self.goal.set_pose(Pose.create_from_pq(xyz))
 
     def evaluate(self):
@@ -115,7 +113,14 @@ class QuadrupedReachEnv(BaseEnv):
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         robot_to_goal_dist = info["robot_to_goal_dist"]
         reaching_reward = 1 - torch.tanh(1 * robot_to_goal_dist)
-        reward = reaching_reward
+
+        # various penalties:
+        lin_vel_z_l2 = torch.square(self.agent.robot.root_linear_velocity[:, 2])
+        ang_vel_xy_l2 = (
+            torch.square(self.agent.robot.root_angular_velocity[:, :2])
+        ).sum(axis=1)
+        penalties = lin_vel_z_l2 * -0.15 + ang_vel_xy_l2 * -0.05
+        reward = reaching_reward + penalties
         return reward
 
     def compute_normalized_dense_reward(
@@ -125,7 +130,7 @@ class QuadrupedReachEnv(BaseEnv):
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
 
 
-@register_env("AnymalC-Reach-v1", max_episode_steps=200)
+# @register_env("AnymalC-Reach-v1", max_episode_steps=200)
 class AnymalCReachEnv(QuadrupedReachEnv):
     def __init__(self, *args, robot_uids="anymal-c", **kwargs):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)

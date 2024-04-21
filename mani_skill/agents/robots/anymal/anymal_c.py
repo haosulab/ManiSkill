@@ -14,7 +14,7 @@ from mani_skill.utils.structs.articulation import Articulation
 @register_agent()
 class ANYmalC(BaseAgent):
     uid = "anymal-c"
-    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/anymal-c/urdf/anymal.urdf"
+    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/anymal-c/urdf/anymal_old.urdf"
     urdf_config = dict(
         _materials=dict(
             foot=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)

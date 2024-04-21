@@ -54,17 +54,28 @@ def main():
     # create isaac environment
     env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
     # while simulation_app.is_running():
+    # import ipdb;ipdb.set_trace()
+    torch.set_printoptions(precision=2)
     with torch.inference_mode():
         env.reset(seed=2022)
-        N = 100
-        # import ipdb;ipdb.set_trace()
+        # take a warm up step first
+        env.step((
+                    2 * torch.rand(env.action_space.shape, device=env.device)
+                    - 1
+                ))
+        obs, _ = env.reset(seed=2022)
+        N = 10000
         with profiler.profile("env.step", total_steps=N, num_envs=num_envs):
             for i in range(N):
                 actions = (
-                    2 * torch.rand(env.action_space.shape, device=env.device)
+                    2 * torch.zeros(env.action_space.shape, device=env.device)
                     - 1
-                )
+                ) + 1
+                # actions[:, 0] = -1
+                actions[:, -5] =1
                 obs, rew, terminated, truncated, info = env.step(actions)
+                print(obs["policy"][0, -5])
+                # import ipdb;ipdb.set_trace()
         profiler.log_stats("env.step")
 
         env.reset(seed=2022)
