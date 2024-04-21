@@ -81,7 +81,12 @@ class QuadrupedReachEnv(BaseEnv):
             self.agent.robot.set_qpos(keyframe.qpos)
             # sample random goal
             xyz = torch.zeros((b, 3))
-            xyz[:, :2] = torch.rand(size=(b, 2)) + torch.tensor([1.5, 0])
+            noise_scale = 1
+            xyz[:, :2] = (
+                torch.rand(size=(b, 2)) * noise_scale
+                - noise_scale / 2
+                + torch.tensor([2.5, 0])
+            )
             self.goal.set_pose(Pose.create_from_pq(xyz))
 
     def evaluate(self):
@@ -120,7 +125,7 @@ class QuadrupedReachEnv(BaseEnv):
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
 
 
-@register_env("AnymalC-Reach-v1", max_episode_steps=100)
+@register_env("AnymalC-Reach-v1", max_episode_steps=200)
 class AnymalCReachEnv(QuadrupedReachEnv):
     def __init__(self, *args, robot_uids="anymal-c", **kwargs):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
