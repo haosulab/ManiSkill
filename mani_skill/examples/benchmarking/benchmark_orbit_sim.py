@@ -3,50 +3,30 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Script to run an environment with zero action agent."""
-
-from __future__ import annotations
-
-import time
-
-import tqdm
+"""Script to train RL agent with RSL-RL."""
 
 """Launch Isaac Sim Simulator first."""
 
-
 import argparse
-import logging
-
-import carb
-
-logging.getLogger("omni.hydra").setLevel(logging.ERROR)
-logging.getLogger("omni.isaac.urdf").setLevel(logging.ERROR)
-logging.getLogger("omni.physx.plugin").setLevel(logging.ERROR)
 
 from omni.isaac.orbit.app import AppLauncher
 
 # add argparse arguments
-parser = argparse.ArgumentParser(description="Zero agent for Orbit environments.")
+parser = argparse.ArgumentParser(description="Train an RL agent with RSL-RL.")
+parser.add_argument("--video", action="store_true", default=False, help="Record videos during training.")
+parser.add_argument("--video_length", type=int, default=200, help="Length of the recorded video (in steps).")
+parser.add_argument("--video_interval", type=int, default=2000, help="Interval between video recordings (in steps).")
+parser.add_argument("--cpu", action="store_true", default=False, help="Use CPU pipeline.")
 parser.add_argument(
-    "--cpu", action="store_true", default=False, help="Use CPU pipeline."
+    "--disable_fabric", action="store_true", default=False, help="Disable fabric and use USD I/O operations."
 )
-parser.add_argument(
-    "--num_envs", type=int, default=None, help="Number of environments to simulate."
-)
+parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
-parser.add_argument(
-    "-f",
-    "--format",
-    type=str,
-    default="stdout",
-    help="format of results. Can be stdout or json.",
-)
+parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
+# append RSL-RL cli arguments
+# cli_args.add_rsl_rl_args(parser)
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
-import os
-
-app_experience = f"{os.environ['EXP_PATH']}/omni.isaac.sim.python.gym.headless.kit"
-# parse the arguments
 args_cli = parser.parse_args()
 
 # launch omniverse app
@@ -55,83 +35,55 @@ simulation_app = app_launcher.app
 
 """Rest everything follows."""
 
-import traceback
-
-import carb
 import gymnasium as gym
-import omni.isaac.contrib_tasks  # noqa: F401
-import omni.isaac.orbit_tasks  # noqa: F401
 import torch
+
+from omni.isaac.orbit.envs import RLTaskEnvCfg
+
+import omni.isaac.orbit_tasks  # noqa: F401
 from omni.isaac.orbit_tasks.utils import parse_env_cfg
 from profiling import Profiler
-
-
 def main():
-    """Zero actions agent with Orbit environment."""
-    profiler = Profiler(args_cli.format)
+    """Train with RSL-RL agent."""
     # parse configuration
+    profiler = Profiler()
     num_envs = args_cli.num_envs
-    env_cfg = parse_env_cfg(args_cli.task, use_gpu=not args_cli.cpu, num_envs=num_envs)
-    # create environment
-    env = gym.make(args_cli.task, cfg=env_cfg)
-    print(
-        "# -------------------------------------------------------------------------- #"
+    env_cfg: RLTaskEnvCfg = parse_env_cfg(
+        args_cli.task, use_gpu=not args_cli.cpu, num_envs=args_cli.num_envs, use_fabric=not args_cli.disable_fabric
     )
-    print(
-        f"Benchmarking Isaac Orbit GPU Simulation with {num_envs} parallel environments"
-    )
-    print(f"env_id={args_cli.task}")
-    print(
-        f"sim_freq={1 / env.unwrapped.physics_dt}, control_freq={1 / env.unwrapped.step_dt}"
-    )
-    print(f"observation space: {env.observation_space}")
-    print(f"action space: {env.unwrapped.single_action_space}")
-    print(
-        "# -------------------------------------------------------------------------- #"
-    )
-
+    # create isaac environment
+    env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
+    # while simulation_app.is_running():
     with torch.inference_mode():
         env.reset(seed=2022)
-        env.step(torch.from_numpy(env.action_space.sample()).cuda())  # warmup step
-        env.reset(seed=2022)
-        torch.manual_seed(0)
-
         N = 100
+        # import ipdb;ipdb.set_trace()
         with profiler.profile("env.step", total_steps=N, num_envs=num_envs):
             for i in range(N):
                 actions = (
-                    2 * torch.rand(env.action_space.shape, device=env.unwrapped.device)
+                    2 * torch.rand(env.action_space.shape, device=env.device)
                     - 1
                 )
                 obs, rew, terminated, truncated, info = env.step(actions)
         profiler.log_stats("env.step")
 
         env.reset(seed=2022)
-        torch.manual_seed(0)
         N = 1000
         with profiler.profile("env.step+env.reset", total_steps=N, num_envs=num_envs):
             for i in range(N):
                 actions = (
-                    2 * torch.rand(env.action_space.shape, device=env.unwrapped.device)
-                    - 1
+                    2 * torch.rand(env.action_space.shape, device=env.device) - 1
                 )
                 obs, rew, terminated, truncated, info = env.step(actions)
                 if i % 200 == 0 and i != 0:
                     env.reset()
         profiler.log_stats("env.step+env.reset")
-
     # close the simulator
     env.close()
 
 
 if __name__ == "__main__":
-    try:
-        # run the main execution
-        main()
-    except Exception as err:
-        carb.log_error(err)
-        carb.log_error(traceback.format_exc())
-        raise
-    finally:
-        # close sim app
-        simulation_app.close()
+    # run the main function
+    main()
+    # close sim app
+    simulation_app.close()
