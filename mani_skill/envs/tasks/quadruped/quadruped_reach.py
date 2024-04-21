@@ -13,7 +13,7 @@ from mani_skill.utils.building import actors
 from mani_skill.utils.building.ground import build_ground
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.structs.pose import Pose
-from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
+from mani_skill.utils.structs.types import GPUMemoryConfig, SceneConfig, SimConfig
 
 
 class QuadrupedReachEnv(BaseEnv):
@@ -25,7 +25,10 @@ class QuadrupedReachEnv(BaseEnv):
 
     @property
     def _default_sim_config(self):
-        return SimConfig(gpu_memory_cfg=GPUMemoryConfig())
+        return SimConfig(
+            gpu_memory_cfg=GPUMemoryConfig(max_rigid_contact_count=2**20),
+            scene_cfg=SceneConfig(solver_iterations=4, solver_velocity_iterations=0),
+        )
 
     @property
     def _default_sensor_configs(self):
@@ -117,7 +120,7 @@ class QuadrupedReachEnv(BaseEnv):
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
 
 
-@register_env("ANYmalC-Reach-v1", max_episode_steps=100)
+@register_env("AnymalC-Reach-v1", max_episode_steps=100)
 class AnymalCReachEnv(QuadrupedReachEnv):
     def __init__(self, *args, robot_uids="anymal-c", **kwargs):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
