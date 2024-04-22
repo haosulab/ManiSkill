@@ -21,8 +21,10 @@ You should be able to run both CPU and GPU simulation, which you can test below
 docker pull haosulab/mani-skill
 docker run --rm -it --gpus all haosulab/mani-skill python -m mani_skill.examples.demo_random_action
 docker run --rm -it --gpus all haosulab/mani-skill python -m mani_skill.examples.benchmarking.gpu_sim
-
 ```
+
+Note that inside a docker image you generally cannot render a GUI to see the results. You can still record videos and the demo scripts have options to record videos insteading of rendering a GUI.
+
 <!-- 
 ## Run GUI Applications
 
