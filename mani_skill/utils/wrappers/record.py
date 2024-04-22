@@ -212,6 +212,7 @@ class RecordEpisode(gym.Wrapper):
         save_video=True,
         info_on_video=False,
         save_on_reset=True,
+        save_video_trigger=None,
         max_steps_per_video=None,
         clean_on_close=True,
         record_reward=True,
@@ -225,10 +226,13 @@ class RecordEpisode(gym.Wrapper):
         if save_trajectory or save_video:
             self.output_dir.mkdir(parents=True, exist_ok=True)
         self.video_fps = video_fps
+        self._elapsed_record_steps = 0
         self._episode_id = -1
         self._video_id = -1
         self._video_steps = 0
         self._closed = False
+
+        self.save_video_trigger = save_video_trigger
 
         self._trajectory_buffer: Step = None
 
@@ -267,7 +271,7 @@ class RecordEpisode(gym.Wrapper):
                 self._json_data["source_type"] = source_type
             if source_desc is not None:
                 self._json_data["source_desc"] = source_desc
-        self.save_video = save_video
+        self._save_video = save_video
         self.info_on_video = info_on_video
         self._render_images = []
         if info_on_video and physx.is_gpu_enabled():
@@ -284,6 +288,15 @@ class RecordEpisode(gym.Wrapper):
     def base_env(self) -> BaseEnv:
         return self.env.unwrapped
 
+    @property
+    def save_video(self):
+        if not self._save_video:
+            return False
+        if self.save_video_trigger is not None:
+            return self.save_video_trigger(self._elapsed_record_steps)
+        else:
+            return self._save_video
+
     def capture_image(self):
         img = self.env.render()
         img = common.to_numpy(img)
@@ -298,6 +311,7 @@ class RecordEpisode(gym.Wrapper):
         options: Optional[dict] = dict(),
         **kwargs,
     ):
+
         if self.save_on_reset:
             if self.save_video and self.num_envs == 1:
                 self.flush_video()
@@ -464,7 +478,7 @@ class RecordEpisode(gym.Wrapper):
                 and self._video_steps >= self.max_steps_per_video
             ):
                 self.flush_video()
-
+        self._elapsed_record_steps += 1
         return obs, rew, terminated, truncated, info
 
     def flush_trajectory(

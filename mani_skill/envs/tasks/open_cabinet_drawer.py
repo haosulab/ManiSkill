@@ -275,19 +275,22 @@ class OpenCabinetDrawerEnv(BaseEnv):
         )
         reaching_reward = 1 - torch.tanh(5 * tcp_to_handle_dist)
         # import ipdb;ipdb.set_trace()
-        open_reward = 1 - torch.div(
-            self.target_qpos - self.handle_link.joint.qpos, self.target_qpos
+        open_reward = 2 * (
+            1
+            - torch.div(
+                self.target_qpos - self.handle_link.joint.qpos, self.target_qpos
+            )
         )
         # print(open_reward.shape)
-        open_reward[info["open_enough"]] = 2  # give max reward here
+        open_reward[info["open_enough"]] = 3  # give max reward here
         reward = reaching_reward + open_reward
-        reward[info["success"]] = 3.0
+        reward[info["success"]] = 4.0
         return reward
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        max_reward = 3.0
+        max_reward = 4.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
 
 
