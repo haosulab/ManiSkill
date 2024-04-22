@@ -30,10 +30,10 @@ class Fetch(BaseAgent):
             gripper=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)
         ),
         link=dict(
-            fetch_leftfinger=dict(
+            r_gripper_finger_link=dict(
                 material="gripper", patch_radius=0.1, min_patch_radius=0.1
             ),
-            fetch_rightfinger=dict(
+            l_gripper_finger_link=dict(
                 material="gripper", patch_radius=0.1, min_patch_radius=0.1
             ),
         ),
