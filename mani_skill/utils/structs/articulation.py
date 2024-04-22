@@ -306,6 +306,16 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             first_only (bool): Whether to return the collision mesh of just the first articulation managed by this object. If True,
                 this also returns a single Trimesh.Mesh object instead of a list
         """
+        assert (
+            not self.merged
+        ), "Currently you cannot fetch collision meshes of merged articulations as merged articulations only share a root link"
+        if physx.is_gpu_enabled():
+            assert (
+                self._scene._gpu_sim_initialized
+            ), "During GPU simulation link pose data is not accessible until after \
+                initialization, and link poses are needed to get the correct collision mesh of an entire articulation"
+        else:
+            self._objs[0].pose = self._objs[0].pose
         # TODO (stao): Can we have a batched version of trimesh?
         meshes: List[trimesh.Trimesh] = []
 
@@ -315,22 +325,15 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
                 link_mesh = merge_meshes(get_component_meshes(link))
                 if link_mesh is not None:
                     if to_world_frame:
-                        link_mesh.apply_transform(link.pose.to_transformation_matrix())
+                        pose = self.links[link.index].pose[i]
+                        link_mesh.apply_transform(pose.sp.to_transformation_matrix())
                     art_meshes.append(link_mesh)
             mesh = merge_meshes(art_meshes)
             meshes.append(mesh)
             if first_only:
                 break
         if to_world_frame:
-            if physx.is_gpu_enabled():
-                if self._scene._gpu_sim_initialized:
-                    mat = self.pose
-                else:
-                    # if scene is not set up yet / gpu init hasn't been called,
-                    # we fall back to using the initial pose of the articulation
-                    mat = self.inital_pose
-            else:
-                mat = self.pose
+            mat = self.pose
             for i, mesh in enumerate(meshes):
                 if mat is not None:
                     if len(mat) > 1:

@@ -74,7 +74,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
 
     @property
     def _default_human_render_camera_configs(self):
-        pose = sapien_utils.look_at(eye=[-2.3, -1.5, 1.8], target=[-0.3, 0.5, 0])
+        pose = sapien_utils.look_at(eye=[-1.8, -1.3, 1.8], target=[-0.3, 0.5, 0])
         return CameraConfig(
             "render_camera", pose=pose, width=512, height=512, fov=1, near=0.01, far=100
         )
