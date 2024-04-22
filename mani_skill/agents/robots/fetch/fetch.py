@@ -18,6 +18,7 @@ from mani_skill.utils.structs.link import Link
 from mani_skill.utils.structs.types import Array
 
 FETCH_UNIQUE_COLLISION_BIT = 1 << 30
+"""Collision bit of the fetch robot wheel links"""
 
 
 @register_agent()
