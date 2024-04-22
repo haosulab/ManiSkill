@@ -324,7 +324,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         if to_world_frame:
             if physx.is_gpu_enabled():
                 if self._scene._gpu_sim_initialized:
-                    mat = self.pose.to_transformation_matrix()
+                    mat = self.pose
                 else:
                     # if scene is not set up yet / gpu init hasn't been called,
                     # we fall back to using the initial pose of the articulation

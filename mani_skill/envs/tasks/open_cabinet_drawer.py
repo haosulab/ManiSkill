@@ -101,7 +101,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
         model_ids = np.concatenate(
             [model_ids] * np.ceil(self.num_envs / len(self.all_model_ids)).astype(int)
         )[: self.num_envs]
-        cabinets = []
+        self._cabinets = []
         self.cabinet_heights = []
         handle_links: List[List[Link]] = []
         handle_links_meshes: List[List[trimesh.Trimesh]] = []
@@ -111,8 +111,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
             )
             cabinet_builder.set_scene_idxs(scene_idxs=[i])
             cabinet = cabinet_builder.build(name=f"{model_id}-{i}")
-            collision_mesh = cabinet.get_first_collision_mesh()
-            self.cabinet_heights.append(-collision_mesh.bounding_box.bounds[0, 2])
+            self._cabinets.append(cabinet)
             handle_links.append([])
             handle_links_meshes.append([])
 
@@ -127,21 +126,20 @@ class OpenCabinetDrawerEnv(BaseEnv):
                             filter=lambda _, x: "handle" in x.name, mesh_name="handle"
                         )[0]
                     )
-            cabinets.append(cabinet)
 
         # we can merge different articulations with different degrees of freedoms into a single view/object
         # allowing you to manage all of them under one object and retrieve data like qpos, pose, etc. all together
         # and with high performance. Note that some properties such as qpos and qlimits are now padded.
-        self.cabinet = Articulation.merge(cabinets, name="cabinet")
+        self.cabinet = Articulation.merge(self._cabinets, name="cabinet")
 
-        # TODO (stao): At the moment this task hardcodes the first handle link to be the one to open
+        # TODO (stao): At the moment this task hardcodes the last handle link to be the one to open
         self.handle_link = Link.merge(
-            [links[0] for links in handle_links], name="handle_link"
+            [links[-1] for links in handle_links], name="handle_link"
         )
         # store the position of the handle mesh itself relative to the link it is apart of
         self.handle_link_pos = common.to_tensor(
             np.array(
-                [meshes[0].bounding_box.center_mass for meshes in handle_links_meshes]
+                [meshes[-1].bounding_box.center_mass for meshes in handle_links_meshes]
             )
         )
 
@@ -154,6 +152,11 @@ class OpenCabinetDrawerEnv(BaseEnv):
             add_collision=False,
         )
         self._hidden_objects.append(self.handle_link_goal)
+
+    def _after_reconfigure(self, options):
+        for cabinet in self._cabinets:
+            collision_mesh = cabinet.get_first_collision_mesh()
+            self.cabinet_heights.append(-collision_mesh.bounding_box.bounds[0, 2])
 
     @property
     def handle_link_positions(self):
@@ -227,10 +230,15 @@ class OpenCabinetDrawerEnv(BaseEnv):
         # we can still fetch a joint that represents the parent joint of all those links
         # and easily get the qpos value.
         open_enough = self.handle_link.joint.qpos >= self.target_qpos
+        handle_link_pos = self.handle_link_positions
+        self.handle_link_goal.set_pose(Pose.create_from_pq(p=handle_link_pos))
         link_is_static = (
             torch.linalg.norm(self.handle_link.angular_velocity, axis=1) <= 1
         ) & (torch.linalg.norm(self.handle_link.linear_velocity, axis=1) <= 0.1)
-        return {"success": open_enough & link_is_static}
+        return {
+            "success": open_enough & link_is_static,
+            "handle_link_pos": handle_link_pos,
+        }
 
     def _get_obs_extra(self, info: Dict):
         obs = dict(
@@ -238,16 +246,15 @@ class OpenCabinetDrawerEnv(BaseEnv):
         )
         if "state" in self.obs_mode:
             obs.update(
-                tcp_to_handle_pos=self.handle_link_goal.pose.p - self.agent.tcp.pose.p,
+                tcp_to_handle_pos=info["handle_link_pos"] - self.agent.tcp.pose.p,
                 target_link_qpos=self.handle_link.joint.qpos,
-                target_handle_pos=self.handle_link_goal.pose.p,
+                target_handle_pos=info["handle_link_pos"],
             )
         return obs
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        return self.agent.tcp.pose.p[:, 0]
         tcp_to_handle_dist = torch.linalg.norm(
-            self.agent.tcp.pose.p - self.handle_link.pose.p, axis=1
+            self.agent.tcp.pose.p - info["handle_link_pos"], axis=1
         )
         reaching_reward = 1 - torch.tanh(5 * tcp_to_handle_dist)
         reward = reaching_reward
