@@ -262,8 +262,6 @@ class PegInsertionSideEnv(BaseEnv):
             )
         return obs
 
-    # TODO (stao): Write batched version of dense reward function
-    # Code here: https://github.com/haosulab/ManiSkill2/blob/4067abce40dc8b7d7c926eabc9c48e802489014c/mani_skill2/envs/ms2/assembly/peg_insertion_side.py#L154
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         # Stage 1: Encourage gripper to be rotated to be lined up with the peg
 

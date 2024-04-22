@@ -27,7 +27,7 @@ Now recorded trajectories of your task will include the height as part of the en
 
 ### Pair-wise Contact Forces
 
-You may notice that in some tasks like [PickCube-v1](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill/envs/tasks/pikc_cube.py) we call a function `self.agent.is_grasping(self.)`. In ManiSkill, we leverage the pairwise impulses/forces API of SAPIEN to compute the forces betewen two objects. In the case of robots with two-finger grippers we check if both fingers are contacting a queried object. This is particularly useful for building better reward functions.
+You may notice that in some tasks like [PickCube-v1](https://github.com/haosulab/ManiSkill/blob/dev/mani_skill/envs/tasks/pikc_cube.py) we call a function `self.agent.is_grasping(self.)`. In ManiSkill, we leverage the pairwise impulses/forces API of SAPIEN to compute the forces betewen two objects. In the case of robots with two-finger grippers we check if both fingers are contacting a queried object. This is particularly useful for building better reward functions.
 
 
 #### On the CPU
@@ -63,7 +63,7 @@ contacts = query.cuda_impulses.torch().clone() / scene.timestep
 # results in a array of shape (len(body_pairs), 3)
 ```
 
-There are plans to make a simpler managed version of the SAPIEN pair-wise contacts API. If you want to use it yourself you can check out how it is used to check two-finger grasps on the [Panda Robot](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill/agents/robots/panda/panda.py) or generate tactile sensing data on the [Allegro Hand](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill/agents/robots/allegro_hand/allegro_touch.py).
+There are plans to make a simpler managed version of the SAPIEN pair-wise contacts API. If you want to use it yourself you can check out how it is used to check two-finger grasps on the [Panda Robot](https://github.com/haosulab/ManiSkill/blob/dev/mani_skill/agents/robots/panda/panda.py) or generate tactile sensing data on the [Allegro Hand](https://github.com/haosulab/ManiSkill/blob/dev/mani_skill/agents/robots/allegro_hand/allegro_touch.py).
 
 ### Net Contact forces
 

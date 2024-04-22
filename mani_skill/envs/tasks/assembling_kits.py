@@ -38,7 +38,7 @@ class AssemblingKitsEnv(BaseEnv):
         if not (self._kit_dir.exists() and self._models_dir.exists()):
             raise FileNotFoundError(
                 "The objects/kits are not found."
-                "Please download (ManiSkill2) AssemblingKits assets:"
+                "Please download (ManiSkill) AssemblingKits assets:"
                 "`python -m mani_skill.utils.download_asset assembling_kits`."
             )
 

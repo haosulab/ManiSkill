@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Test script to run all pytests with different python versions via docker
-# Assumes you are running from the root directory of ManiSkill2 repository and you have downloaded all assets via
+# Assumes you are running from the root directory of ManiSkill repository and you have downloaded all assets via
 # python -m mani_skill2.utils.download_asset all
 
 TESTED_PYTHON_VERSIONS=('3.8' '3.9' '3.10' '3.11')
@@ -15,7 +15,7 @@ done
 for PYTHON_VERSION in "${TESTED_PYTHON_VERSIONS[@]}"
 do
     echo "=== Testing Python Version ${PYTHON_VERSION} ==="
-    container_name="maniskill2_test_${PYTHON_VERSION}"
+    container_name="ManiSkill_test_${PYTHON_VERSION}"
 
     # stop and delete container if it is up already, ignore if it doesn't exist
     docker container stop ${container_name} > /dev/null 2>&1 || true

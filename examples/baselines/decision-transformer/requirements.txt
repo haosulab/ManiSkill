@@ -1,6 +1,0 @@
-numpy
-torch==2.0.1
-tqdm
-wandb
-transformers
-h5py

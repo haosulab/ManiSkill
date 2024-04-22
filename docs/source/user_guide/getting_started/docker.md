@@ -33,7 +33,7 @@ To run GUI applications from the docker container (the host is attached with a d
 ```bash
 # Allow local X11 connections
 xhost +local:root
-# Run ManiSkill2 docker image with the NVIDIA GPU
+# Run ManiSkill docker image with the NVIDIA GPU
 docker run --rm -it --gpus all \
     -v /tmp/.X11-unix:/tmp/.X11-unix -e DISPLAY \
     haosulab/mani-skill \
@@ -57,4 +57,4 @@ Then, forward the port of VNC (5900 by default) to the local host. On your local
 
 - <https://medium.com/@benjamin.botto/opengl-and-cuda-applications-in-docker-af0eece000f1>
 - <http://wiki.ros.org/docker/Tutorials/GUI>
-- <https://github.com/haosulab/ManiSkill2/issues/62>
+- <https://github.com/haosulab/ManiSkill/issues/62>

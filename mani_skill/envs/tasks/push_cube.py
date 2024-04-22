@@ -1,11 +1,11 @@
 """
 Code for a minimal environment/task with just a robot being loaded. We recommend copying this template and modifying as you need.
 
-At a high-level, ManiSkill2 tasks can minimally be defined by how the environment resets, what agents/objects are
+At a high-level, ManiSkill tasks can minimally be defined by how the environment resets, what agents/objects are
 loaded, goal parameterization, and success conditions
 
 Environment reset is comprised of running two functions, `self._reconfigure` and `self.initialize_episode`, which is auto
-run by ManiSkill2. As a user, you can override a number of functions that affect reconfiguration and episode initialization.
+run by ManiSkill. As a user, you can override a number of functions that affect reconfiguration and episode initialization.
 
 Reconfiguration will reset the entire environment scene and allow you to load/swap assets and agents.
 
