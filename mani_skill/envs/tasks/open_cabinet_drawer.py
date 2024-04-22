@@ -145,7 +145,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
 
         self.handle_link_goal = actors.build_sphere(
             self._scene,
-            radius=0.05,
+            radius=0.02,
             color=[0, 1, 0, 1],
             name="handle_link_goal",
             body_type="kinematic",
@@ -185,14 +185,9 @@ class OpenCabinetDrawerEnv(BaseEnv):
 
         with torch.device(self.device):
             b = len(env_idx)
-            try:
-                xyz = torch.zeros((b, 3))
-                xyz[:, 2] = self.cabinet_zs[env_idx]
-                self.cabinet.set_pose(Pose.create_from_pq(p=xyz))
-            except:
-                import ipdb
-
-                ipdb.set_trace()
+            xyz = torch.zeros((b, 3))
+            xyz[:, 2] = self.cabinet_zs[env_idx]
+            self.cabinet.set_pose(Pose.create_from_pq(p=xyz))
             # the three lines here are necessary to update all link poses whenever qpos and root pose of articulation change
             # that way you can use the correct link poses as done below
             if physx.is_gpu_enabled():
@@ -274,7 +269,6 @@ class OpenCabinetDrawerEnv(BaseEnv):
             self.agent.tcp.pose.p - info["handle_link_pos"], axis=1
         )
         reaching_reward = 1 - torch.tanh(5 * tcp_to_handle_dist)
-        # import ipdb;ipdb.set_trace()
         open_reward = 2 * (
             1
             - torch.div(
