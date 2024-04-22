@@ -15,9 +15,13 @@ docker run hello-world
 
 We provide a docker image (`haosulab/mani-skill`) and its corresponding [Dockerfile](https://github.com/haosulab/ManiSkill2/blob/dev/docker/Dockerfile).
 
+You should be able to run both CPU and GPU simulation, which you can test below
+
 ```bash
 docker pull haosulab/mani-skill
 docker run --rm -it --gpus all haosulab/mani-skill python -m mani_skill.examples.demo_random_action
+docker run --rm -it --gpus all haosulab/mani-skill python -m mani_skill.examples.benchmarking.gpu_sim
+
 ```
 <!-- 
 ## Run GUI Applications
