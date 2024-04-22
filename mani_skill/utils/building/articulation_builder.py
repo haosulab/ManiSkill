@@ -135,7 +135,6 @@ class ArticulationBuilder(SapienArticulationBuilder):
                 links[0].components[0].joint.type = (
                     "fixed" if fix_root_link else "undefined"
                 )
-
             articulation: physx.PhysxArticulation = links[0].components[0].articulation
             if build_mimic_joints:
                 for mimic in self.mimic_joint_records:
@@ -177,14 +176,12 @@ class ArticulationBuilder(SapienArticulationBuilder):
                             rest_length=offset,
                             stiffness=1e5,
                         )
-
-            for l in links:
-                sub_scene.add_entity(l)
-            articulation: physx.PhysxArticulation = l.components[0].articulation
             if initial_pose_b == 1:
                 articulation.pose = to_sapien_pose(initial_pose_np)
             else:
                 articulation.pose = to_sapien_pose(initial_pose_np[i])
+            for l in links:
+                sub_scene.add_entity(l)
             articulation.name = f"scene-{scene_idx}_{self.name}"
             articulations.append(articulation)
 
