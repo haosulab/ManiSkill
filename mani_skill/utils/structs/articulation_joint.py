@@ -53,7 +53,6 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
     def create(
         cls,
         physx_joints: List[physx.PhysxArticulationJoint],
-        # articulation: Articulation,
         physx_articulations: List[physx.PhysxArticulation],
         scene: ManiSkillScene,
         scene_idxs: torch.Tensor,
@@ -65,39 +64,13 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
         Note that the properties articulation, child_link, parent_link are by default None
         as they might not make sense in GPU sim and must be set by user
         """
-        # naming convention of the original physx joints is "scene-<id>-<articulation_name>_<original_joint_name>"
-        # shared_name = "_".join(
-        #     physx_joints[0].name.replace(articulation.name, "", 1).split("_")[1:]
-        # )
-        # child_link = None
-        # parent_link = None
-        # if not articulation._merged:
-        #     if physx_joints[0].child_link is not None:
-        #         child_link = articulation.links_map[
-        #             "_".join(
-        #                 physx_joints[0]
-        #                 .child_link.name.replace(articulation.name, "", 1)
-        #                 .split("_")[1:]
-        #             )
-        #         ]
-        #     if physx_joints[0].parent_link is not None:
-        #         parent_link = articulation.links_map[
-        #             "_".join(
-        #                 physx_joints[0]
-        #                 .parent_link.name.replace(articulation.name, "", 1)
-        #                 .split("_")[1:]
-        #             )
-        #         ]
         return cls(
-            # articulation=articulation,
             index=joint_index,
             active_index=active_joint_index,
             _objs=physx_joints,
             _physx_articulations=physx_articulations,
             _scene=scene,
             _scene_idxs=scene_idxs,
-            # child_link=child_link,
-            # parent_link=parent_link,
         )
 
     # -------------------------------------------------------------------------- #
@@ -119,9 +92,28 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
         """
         The qpos of this joint in the articulation
         """
-        return self.px.cuda_articulation_qpos.torch()[
-            self._data_index, self.active_index
-        ]
+        if physx.is_gpu_enabled():
+            return self.px.cuda_articulation_qpos.torch()[
+                self._data_index, self.active_index
+            ]
+        else:
+            return torch.tensor(
+                [[self._physx_articulations[0].qpos[self.active_index]]]
+            )
+
+    @property
+    def qvel(self):
+        """
+        The qvel of this joint in the articulation
+        """
+        if physx.is_gpu_enabled():
+            return self.px.cuda_articulation_qvel.torch()[
+                self._data_index, self.active_index
+            ]
+        else:
+            return torch.tensor(
+                [[self._physx_articulations[0].qvel[self.active_index]]]
+            )
 
     # -------------------------------------------------------------------------- #
     # Functions from physx.PhysxArticulationJoint
@@ -291,7 +283,7 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
     @property
     def limits(self) -> torch.Tensor:
         # TODO (stao): create a decorator that caches results once gpu sim is initialized for performance
-        return torch.from_numpy(np.array([obj.limits for obj in self._objs]))
+        return common.to_tensor(np.array([obj.limits for obj in self._objs]))
 
     @limits.setter
     @before_gpu_init

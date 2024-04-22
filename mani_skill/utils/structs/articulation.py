@@ -329,6 +329,8 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
                     # if scene is not set up yet / gpu init hasn't been called,
                     # we fall back to using the initial pose of the articulation
                     mat = self.inital_pose
+            else:
+                mat = self.pose
             for i, mesh in enumerate(meshes):
                 if mat is not None:
                     if len(mat) > 1:

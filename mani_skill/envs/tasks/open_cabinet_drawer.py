@@ -2,6 +2,7 @@ from typing import Any, Dict, List, Union
 
 import numpy as np
 import sapien
+import sapien.physx as physx
 import torch
 import trimesh
 
@@ -16,6 +17,7 @@ from mani_skill.utils.geometry.geometry import transform_points
 from mani_skill.utils.io_utils import load_json
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.structs import Articulation, Link, Pose
+from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 
 
 # TODO (stao): we need to cut the meshes of all the cabinets in this dataset for gpu sim, not registering task for now
@@ -26,12 +28,15 @@ class OpenCabinetDrawerEnv(BaseEnv):
     agent: Union[Fetch]
     handle_types = ["prismatic"]
 
+    min_open_frac = 0.75
+
     def __init__(
         self,
         *args,
         robot_uids="fetch",
         robot_init_qpos_noise=0.02,
         reconfiguration_freq=None,
+        num_envs=1,
         **kwargs,
     ):
         TRAIN_JSON = (
@@ -41,24 +46,38 @@ class OpenCabinetDrawerEnv(BaseEnv):
         train_data = load_json(TRAIN_JSON)
         self.all_model_ids = np.array(list(train_data.keys()))
         if reconfiguration_freq is None:
-            reconfiguration_freq = 1
+            # if not user set, we pick a number
+            if num_envs == 1:
+                reconfiguration_freq = 1
+            else:
+                reconfiguration_freq = 0
         super().__init__(
             *args,
             robot_uids=robot_uids,
             reconfiguration_freq=reconfiguration_freq,
+            num_envs=num_envs,
             **kwargs,
         )
 
     @property
+    def _default_sim_config(self):
+        return SimConfig(
+            spacing=10,
+            gpu_memory_cfg=GPUMemoryConfig(
+                max_rigid_contact_count=2**23, max_rigid_patch_count=2**21
+            ),
+        )
+
+    @property
     def _default_sensor_configs(self):
-        pose = sapien_utils.look_at(eye=[-2.5, -1.5, 1.8], target=[-0.3, 0.5, 0.1])
-        return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
+        return []
 
     @property
     def _default_human_render_camera_configs(self):
         pose = sapien_utils.look_at(eye=[-2.3, -1.5, 1.8], target=[-0.3, 0.5, 0])
-        # TODO (stao): how much does far affect rendering speed?
-        return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
+        return CameraConfig(
+            "render_camera", pose=pose, width=512, height=512, fov=1, near=0.01, far=100
+        )
 
     def _load_scene(self, options: dict):
         self.ground = build_ground(self._scene)
@@ -121,7 +140,9 @@ class OpenCabinetDrawerEnv(BaseEnv):
         )
         # store the position of the handle mesh itself relative to the link it is apart of
         self.handle_link_pos = common.to_tensor(
-            [meshes[0].bounding_box.center_mass for meshes in handle_links_meshes]
+            np.array(
+                [meshes[0].bounding_box.center_mass for meshes in handle_links_meshes]
+            )
         )
 
         self.handle_link_goal = actors.build_sphere(
@@ -134,62 +155,46 @@ class OpenCabinetDrawerEnv(BaseEnv):
         )
         self._hidden_objects.append(self.handle_link_goal)
 
+    @property
+    def handle_link_positions(self):
+        return transform_points(
+            self.handle_link.pose.to_transformation_matrix().clone(),
+            common.to_tensor(self.handle_link_pos),
+        )
+
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
-        # TODO (stao): Clean up this code and try to batch / cache more if possible.
-        # And support partial resets
+
         with torch.device(self.device):
             b = len(env_idx)
             xyz = torch.zeros((b, 3))
             xyz[:, 2] = torch.tensor(self.cabinet_heights)
             self.cabinet.set_pose(Pose.create_from_pq(p=xyz))
 
-            # self.cabinet.set_qpos(torch.zeros(b, self.cabinet.max_dof))
-
-            # this is not pure uniform but for faster initialization to deal with different cabinet DOFs we just sample 0 to 10000 and take the modulo which is close enough
-            # self.link_indices = torch.randint(
-            #     0, 10000, size=(len(self.handle_links),)
-            # ) % torch.tensor([len(x) for x in self.handle_links], dtype=int)
-
-            # self.handle_link = Link.merge(
-            #     [x[self.link_indices[i]] for i, x in enumerate(self.handle_links)],
-            #     self.cabinet,
-            # )
-            # # cache/save the slice to reference the qpos and qvel of the link/joint we want to open
-            # index_q = []
-            # for art, link in zip(self.cabinet._objs, self.handle_link._objs):
-            #     index_q.append(art.active_joints.index(link.joint))
-            # index_q = torch.tensor(index_q, dtype=int)
-            # self.target_qpos_idx = (torch.arange(0, b), index_q)
-
             # the three lines here are necessary to update all link poses whenever qpos and root pose of articulation change
             # that way you can use the correct link poses as done below for your task.
-            self._scene._gpu_apply_all()
-            self._scene.px.gpu_update_articulation_kinematics()
-            self._scene._gpu_fetch_all()
+            if physx.is_gpu_enabled():
+                self._scene._gpu_apply_all()
+                self._scene.px.gpu_update_articulation_kinematics()
+                self._scene._gpu_fetch_all()
 
-            handle_link_positions = transform_points(
-                self.handle_link.pose.to_transformation_matrix().clone(),
-                common.to_tensor(self.handle_link_pos),
+            self.handle_link_goal.set_pose(
+                Pose.create_from_pq(p=self.handle_link_positions)
             )
-            # handle_link_positions = self.handle_link.pose.p
-            self.handle_link_goal.set_pose(Pose.create_from_pq(p=handle_link_positions))
-            import ipdb
 
-            ipdb.set_trace()
-            # # close all the cabinets. We know beforehand that lower qlimit means "closed" for these assets.
-            qlimits = self.cabinet.get_qlimits()  # [N, self.cabinet.max_dof, 2])
-            # self.cabinet.set_qpos(qlimits[:, :, 0])
+            # close all the cabinets. We know beforehand that lower qlimit means "closed" for these assets.
+            qlimits = self.cabinet.get_qlimits()  # [b, self.cabinet.max_dof, 2])
+            self.cabinet.set_qpos(qlimits[:, :, 0])
 
-            # # get the qmin qmax values of the joint corresponding to the selected links
-            # target_qlimits = qlimits[self.target_qpos_idx]
-            # qmin, qmax = target_qlimits[:, 0], target_qlimits[:, 1]
-            # self.target_qpos = qmin + (qmax - qmin) * 0.9
+            # get the qmin qmax values of the joint corresponding to the selected links
+            target_qlimits = self.handle_link.joint.limits  # [b, 1, 2]
+            qmin, qmax = target_qlimits[..., 0], target_qlimits[..., 1]
+            self.target_qpos = qmin + (qmax - qmin) * self.min_open_frac
 
             # NOTE (stao): This is a temporary work around for the issue where the cabinet drawers/doors might open
             # themselves on the first step. It's unclear why this happens on GPU sim only atm.
-            self.cabinet.set_qpos(qlimits[:, :, 0])
-            self._scene._gpu_apply_all()
-            self._scene.px.step()
+            if physx.is_gpu_enabled():
+                self._scene._gpu_apply_all()
+                self._scene.px.step()
 
             # initialize robot
             if self.robot_uids == "fetch":
@@ -219,30 +224,23 @@ class OpenCabinetDrawerEnv(BaseEnv):
 
     def evaluate(self):
         # even though self.handle_link is a different link across different articulations
-        # we can still fetch a joint that represnets the parent joint of all those links
+        # we can still fetch a joint that represents the parent joint of all those links
         # and easily get the qpos value.
-        self.handle_link.joint.qpos
-        return {}
-        link_qpos = self.cabinet.qpos[self.target_qpos_idx]
-        self.cabinet.qvel[self.target_qpos_idx]
-        open_enough = link_qpos >= self.target_qpos
-        return {"success": open_enough, "link_qpos": link_qpos}
+        open_enough = self.handle_link.joint.qpos >= self.target_qpos
+        link_is_static = (
+            torch.linalg.norm(self.handle_link.angular_velocity, axis=1) <= 1
+        ) & (torch.linalg.norm(self.handle_link.linear_velocity, axis=1) <= 0.1)
+        return {"success": open_enough & link_is_static}
 
     def _get_obs_extra(self, info: Dict):
-        return dict()
-        # TODO (stao): fix the observation to be correct when in state or not mode
-        # moreover also check if hiding goal visual affects the observation data as well
         obs = dict(
             tcp_pose=self.agent.tcp.pose.raw_pose,
-            target_handle_pos=self.handle_link_goal.pose.p,
         )
         if "state" in self.obs_mode:
             obs.update(
                 tcp_to_handle_pos=self.handle_link_goal.pose.p - self.agent.tcp.pose.p,
-                target_link_qpos=self.cabinet.qpos[self.target_qpos_idx],
-                # obs_pose=self.cube.pose.raw_pose,
-                # tcp_to_obj_pos=self.cube.pose.p - self.agent.tcp.pose.p,
-                # obj_to_goal_pos=self.goal_site.pose.p - self.cube.pose.p,
+                target_link_qpos=self.handle_link.joint.qpos,
+                target_handle_pos=self.handle_link_goal.pose.p,
             )
         return obs
 

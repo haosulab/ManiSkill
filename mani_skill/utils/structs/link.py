@@ -52,17 +52,10 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
     def create(
         cls,
         physx_links: List[physx.PhysxArticulationLinkComponent],
-        # articulation: Articulation = None,
         scene: ManiSkillScene,
         scene_idxs: torch.Tensor,
     ):
-        # shared_name = "_".join(
-        #     physx_links[0].name.replace(articulation.name, "", 1).split("_")[1:]
-        # )
-        # if scene_idxs is None and articulation is not None:
-        #     scene_idxs = articulation._scene_idxs
         return cls(
-            # articulation=articulation,
             _objs=physx_links,
             _scene=scene,
             _scene_idxs=scene_idxs,
