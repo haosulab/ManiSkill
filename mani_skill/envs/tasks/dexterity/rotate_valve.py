@@ -13,6 +13,7 @@ from mani_skill.utils.geometry.rotation_conversions import axis_angle_to_quatern
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs.articulation import Articulation
+from mani_skill.utils.structs.link import Link
 from mani_skill.utils.structs.pose import Pose, vectorize_pose
 from mani_skill.utils.structs.types import Array
 
@@ -108,6 +109,7 @@ class RotateValveEnv(BaseEnv):
 
         valves: List[Articulation] = []
         capsule_lens = []
+        valve_links = []
         for i, valve_angles in enumerate(valve_angles_list):
             scene_idxs = [i]
             if self.difficulty_level < 3:
@@ -128,10 +130,11 @@ class RotateValveEnv(BaseEnv):
                     capsule_radius_scale=scales[1],
                 )
             valves.append(valve)
+            valve_links.append(valve.links_map["valve"])
             capsule_lens.append(capsule_len)
         self.valve = Articulation.merge(valves, "valve_station")
         self.capsule_lens = torch.from_numpy(np.array(capsule_lens)).to(self.device)
-        self.valve_link = sapien_utils.get_obj_by_name(self.valve.get_links(), "valve")
+        self.valve_link = Link.merge(valve_links, name="valve")
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         self._initialize_actors(env_idx)
