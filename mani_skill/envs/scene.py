@@ -613,13 +613,18 @@ class ManiSkillScene:
     def _gpu_setup_sensors(self, sensors: Dict[str, BaseSensor]):
         for name, sensor in sensors.items():
             if isinstance(sensor, Camera):
-                camera_group = self.render_system_group.create_camera_group(
-                    sensor.camera._render_cameras,
-                    sensor.texture_names,
-                )
+                try:
+                    camera_group = self.render_system_group.create_camera_group(
+                        sensor.camera._render_cameras,
+                        sensor.texture_names,
+                    )
+                except RuntimeError as e:
+                    raise RuntimeError(
+                        "Unable to create GPU parallelized camera group. If the error is about being unable to create a buffer, you are likely using too many Cameras. Either use less cameras (via less parallel envs) and/or reduce the size of the cameras"
+                    ) from e
                 sensor.camera.camera_group = camera_group
                 self.camera_groups[name] = camera_group
             else:
                 raise NotImplementedError(
-                    f"This sensor {sensor} has not been implemented yet on the GPU"
+                    f"This sensor {sensor} of type {sensor.__class__} has not been implemented yet on the GPU"
                 )
