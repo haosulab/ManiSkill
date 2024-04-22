@@ -26,9 +26,16 @@ def _load_partnet_mobility_dataset():
             if urdf_path.exists():
                 return urdf_path
 
-    PARTNET_MOBILITY["model_urdf_paths"] = {
-        k: find_urdf_path(k) for k in PARTNET_MOBILITY["model_data"].keys()
-    }
+    PARTNET_MOBILITY["model_urdf_paths"] = {}
+    for k in PARTNET_MOBILITY["model_data"].keys():
+        urdf_path = find_urdf_path(k)
+        if urdf_path is not None:
+            PARTNET_MOBILITY["model_urdf_paths"][k] = urdf_path
+
+    if len(PARTNET_MOBILITY["model_urdf_paths"]) == 0:
+        raise RuntimeError(
+            "Partnet Mobility dataset not found. Download it by running python -m mani_skill.utils.download_asset partnet_mobility_cabinet"
+        )
 
 
 def get_partnet_mobility_builder(
