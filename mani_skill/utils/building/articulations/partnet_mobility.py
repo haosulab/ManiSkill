@@ -1,5 +1,6 @@
 from mani_skill import ASSET_DIR, PACKAGE_ASSET_DIR
 from mani_skill.envs.scene import ManiSkillScene
+from mani_skill.utils import sapien_utils
 from mani_skill.utils.geometry.trimesh_utils import (
     get_articulation_meshes,
     merge_meshes,
@@ -51,7 +52,12 @@ def get_partnet_mobility_builder(
     loader.load_multiple_collisions_from_file = True
     loader.disable_self_collisions = True
     urdf_path = PARTNET_MOBILITY["model_urdf_paths"][id]
+    urdf_config = sapien_utils.parse_urdf_config(
+        dict(
+            material=dict(static_friction=1, dynamic_friction=1, restitution=0),
+        )
+    )
+    sapien_utils.apply_urdf_config(loader, urdf_config)
     articulation_builders, _, _ = loader.parse(str(urdf_path))
     builder = articulation_builders[0]
-
     return builder

@@ -80,7 +80,7 @@ class ANYmalC(BaseAgent):
 
         urdf_path = format_path(str(self.urdf_path))
 
-        urdf_config = sapien_utils.parse_urdf_config(self.urdf_config, self.scene)
+        urdf_config = sapien_utils.parse_urdf_config(self.urdf_config)
         sapien_utils.check_urdf_config(urdf_config)
 
         # TODO(jigu): support loading multiple convex collision shapes
