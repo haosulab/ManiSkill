@@ -45,6 +45,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         train_data = load_json(TRAIN_JSON)
         self.all_model_ids = np.array(list(train_data.keys()))
+        # self.all_model_ids = np.array(["1004", "1004"])
         if reconfiguration_freq is None:
             # if not user set, we pick a number
             if num_envs == 1:
@@ -134,12 +135,12 @@ class OpenCabinetDrawerEnv(BaseEnv):
 
         # TODO (stao): At the moment this task hardcodes the last handle link to be the one to open
         self.handle_link = Link.merge(
-            [links[-1] for links in handle_links], name="handle_link"
+            [links[0] for links in handle_links], name="handle_link"
         )
         # store the position of the handle mesh itself relative to the link it is apart of
         self.handle_link_pos = common.to_tensor(
             np.array(
-                [meshes[-1].bounding_box.center_mass for meshes in handle_links_meshes]
+                [meshes[0].bounding_box.center_mass for meshes in handle_links_meshes]
             )
         )
 
@@ -269,22 +270,23 @@ class OpenCabinetDrawerEnv(BaseEnv):
             self.agent.tcp.pose.p - info["handle_link_pos"], axis=1
         )
         reaching_reward = 1 - torch.tanh(5 * tcp_to_handle_dist)
-        open_reward = 2 * (
-            1
-            - torch.div(
-                self.target_qpos - self.handle_link.joint.qpos, self.target_qpos
-            )
+        amount_to_open_left = torch.div(
+            self.target_qpos - self.handle_link.joint.qpos, self.target_qpos
         )
+        open_reward = 2 * (1 - amount_to_open_left)
+        reaching_reward[
+            amount_to_open_left < 0.999
+        ] = 2  # if joint opens even a tiny bit, we don't need reach reward anymore
         # print(open_reward.shape)
         open_reward[info["open_enough"]] = 3  # give max reward here
         reward = reaching_reward + open_reward
-        reward[info["success"]] = 4.0
+        reward[info["success"]] = 5.0
         return reward
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        max_reward = 4.0
+        max_reward = 5.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
 
 
