@@ -9,6 +9,7 @@ import trimesh
 from mani_skill import PACKAGE_ASSET_DIR
 from mani_skill.agents.robots import Fetch
 from mani_skill.envs.sapien_env import BaseEnv
+from mani_skill.envs.utils import randomization
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.building import actors, articulations
@@ -232,7 +233,12 @@ class OpenCabinetDrawerEnv(BaseEnv):
                     ]
                 )
                 self.agent.reset(qpos)
-                self.agent.robot.set_pose(sapien.Pose([-1.5, 0, 0]))
+                dist = randomization.uniform(1.6, 1.8, size=(b,))
+                theta = randomization.uniform(0.9 * torch.pi, 1.1 * torch.pi, size=(b,))
+                xyz = torch.zeros((b, 3))
+                xyz[:, 0] += torch.cos(theta) * dist
+                xyz[:, 1] += torch.sin(theta) * dist
+                self.agent.robot.set_pose(Pose.create_from_pq(p=xyz))
 
     ### Useful properties ###
 
