@@ -17,4 +17,4 @@ from .stack_cube import StackCubeEnv
 from .two_robot_pick_cube import TwoRobotPickCube
 from .two_robot_stack_cube import TwoRobotStackCube
 from .rotate_cube import RotateCubeEnv
-from .cartpole_balance import CartpoleBalance
+from .cartpole import CartpoleEnv

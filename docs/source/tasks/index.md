@@ -277,3 +277,41 @@ Using the TriFingerPro robot, rotate a cube
 
 **Success Conditions:**
 - The rotated cube should be within 0.02 m of the goal position and 0.1 rad of the goal orientation.
+
+## dm_control Tasks
+
+### CartpoleBalance-v1
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+Use the Cartpole robot to balance a pole on a cart.
+
+
+**Supported Robots: Cartpole**
+
+**Randomizations:**
+- Pole direction is randomized around the vertical axis. the range is [-0.05, 0.05] radians.
+
+**Fail Conditions:**
+- Pole is lower than the horizontal plane
+
+### CartpoleSwingup-v1
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+Use the Cartpole robot to swing up a pole on a cart.
+
+
+**Supported Robots: Cartpole**
+
+**Randomizations:**
+- Pole direction is randomized around the whole circle. the range is [-pi, pi] radians.
+
+**Success Conditions:**
+- No specific success conditions. The task is considered successful if the pole is upright for the whole episode. We can threshold the episode accumulated reward to determine success.
