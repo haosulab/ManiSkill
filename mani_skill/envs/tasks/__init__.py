@@ -2,6 +2,7 @@ from .assembling_kits import AssemblingKitsEnv
 from .dexterity import RotateSingleObjectInHand, RotateValveEnv
 from .empty_env import EmptyEnv
 from .fmb import FMBAssembly1Env
+from .humanoid import *
 from .lift_peg_upright import LiftPegUprightEnv
 from .open_cabinet_drawer import OpenCabinetDoorEnv, OpenCabinetDrawerEnv
 from .peg_insertion_side import PegInsertionSideEnv
@@ -16,5 +17,4 @@ from .rotate_cube import RotateCubeEnv
 from .stack_cube import StackCubeEnv
 from .two_robot_pick_cube import TwoRobotPickCube
 from .two_robot_stack_cube import TwoRobotStackCube
-from .rotate_cube import RotateCubeEnv
 from .cartpole import CartpoleEnv

@@ -134,6 +134,7 @@ def get_local_aabc_for_actor(actor: sapien.Entity):
 
 
 def transform_points(H: torch.Tensor, pts: torch.Tensor) -> torch.Tensor:
+    """transforms a batch of pts by a batch of transformation matrices H"""
     assert H.shape[1:] == (4, 4), H.shape
     assert pts.ndim == 2 and pts.shape[1] == 3, pts.shape
     return (

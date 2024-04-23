@@ -1,4 +1,4 @@
-from collections import OrderedDict
+
 
 import gymnasium as gym
 import numpy as np
@@ -70,7 +70,7 @@ def solve(env: PandaAvoidObstaclesEnv, seed=None, debug=False, vis=False):
             break
     planner.close()
     if res == -1:
-        return OrderedDict(), 0, False, False, {"success": False, "elapsed_steps": 0}
+        return dict(), 0, False, False, {"success": False, "elapsed_steps": 0}
     return res
 
 

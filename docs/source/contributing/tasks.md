@@ -66,7 +66,7 @@ class PushCube(BaseEnv):
     # ...
     # Specify default simulation/gpu memory configurations to override any default values
     @property
-    def _default_sim_cfg(self):
+    def _default_sim_config(self):
         return SimConfig(
             gpu_memory_cfg=GPUMemoryConfig(
                 found_lost_pairs_capacity=2**25, max_rigid_patch_count=2**18
@@ -81,7 +81,7 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 class RotateSingleObjectInHand(BaseEnv):
     # ...
     @property
-    def _default_sim_cfg(self):
+    def _default_sim_config(self):
         return SimConfig(
             gpu_memory_cfg=GPUMemoryConfig(
                 max_rigid_contact_count=self.num_envs * max(1024, self.num_envs) * 8,

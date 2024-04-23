@@ -10,19 +10,17 @@ import trimesh.scene
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--env-id", type=str, default="PushCube-v1", help="The environment ID of the task you want to simulate")
-    parser.add_argument("-o", "--obs-mode", type=str, default="none")
     parser.add_argument(
         "-s",
         "--seed",
         type=int,
-        help="Seed the random actions and simulator. Default is no seed",
+        help="Seed the random actions and environment. Default is no seed",
     )
     args = parser.parse_args()
     return args
 
 
 def main(args):
-    np.set_printoptions(suppress=True, precision=3)
     if args.seed is not None:
         np.random.seed(args.seed)
     env: BaseEnv = gym.make(
@@ -41,7 +39,7 @@ def main(args):
 
 
         # view from first camera
-        for uid, cfg in env.unwrapped._all_sensor_configs_parsed.items():
+        for uid, cfg in env.unwrapped._all_sensor_configs.items():
             if isinstance(cfg, CameraConfig):
                 cam2world = obs["sensor_param"][uid]["cam2world_gl"]
                 camera = trimesh.scene.Camera(uid, (1024, 1024), fov=(np.rad2deg(cfg.fov), np.rad2deg(cfg.fov)))

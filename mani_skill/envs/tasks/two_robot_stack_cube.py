@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from typing import Any, Dict, Tuple
 
 import numpy as np
@@ -55,7 +54,7 @@ class TwoRobotStackCube(BaseEnv):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     @property
-    def _default_sim_cfg(self):
+    def _default_sim_config(self):
         return SimConfig(
             gpu_memory_cfg=GPUMemoryConfig(
                 found_lost_pairs_capacity=2**25,
@@ -65,12 +64,12 @@ class TwoRobotStackCube(BaseEnv):
         )
 
     @property
-    def _sensor_configs(self):
+    def _default_sensor_configs(self):
         pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
         return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
-    def _human_render_camera_configs(self):
+    def _default_human_render_camera_configs(self):
         # pose = sapien_utils.look_at([1.4, 0.8, 0.75], [0.0, 0.1, 0.1]) # this perspective is good for demos
         pose = sapien_utils.look_at(eye=[0.6, 0.2, 0.4], target=[-0.1, 0, 0.1])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
@@ -180,7 +179,7 @@ class TwoRobotStackCube(BaseEnv):
         }
 
     def _get_obs_extra(self, info: Dict):
-        obs = OrderedDict(
+        obs = dict(
             left_arm_tcp=self.left_agent.tcp.pose.raw_pose,
             right_arm_tcp=self.right_agent.tcp.pose.raw_pose,
         )

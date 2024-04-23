@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from typing import Any, Dict, Union
 
 import numpy as np
@@ -68,16 +67,16 @@ class PegInsertionSideEnv(BaseEnv):
         )
 
     @property
-    def _default_sim_cfg(self):
+    def _default_sim_config(self):
         return SimConfig()
 
     @property
-    def _sensor_configs(self):
+    def _default_sensor_configs(self):
         pose = sapien_utils.look_at([0, -0.3, 0.2], [0, 0, 0.1])
         return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
-    def _human_render_camera_configs(self):
+    def _default_human_render_camera_configs(self):
         pose = sapien_utils.look_at([0.5, -0.5, 0.8], [0.05, -0.1, 0.4])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
@@ -253,7 +252,7 @@ class PegInsertionSideEnv(BaseEnv):
         return dict(success=success, peg_head_pos_at_hole=peg_head_pos_at_hole)
 
     def _get_obs_extra(self, info: Dict):
-        obs = OrderedDict(tcp_pose=self.agent.tcp.pose.raw_pose)
+        obs = dict(tcp_pose=self.agent.tcp.pose.raw_pose)
         if self._obs_mode in ["state", "state_dict"]:
             obs.update(
                 peg_pose=self.peg.pose.raw_pose,
@@ -263,8 +262,6 @@ class PegInsertionSideEnv(BaseEnv):
             )
         return obs
 
-    # TODO (stao): Write batched version of dense reward function
-    # Code here: https://github.com/haosulab/ManiSkill2/blob/4067abce40dc8b7d7c926eabc9c48e802489014c/mani_skill2/envs/ms2/assembly/peg_insertion_side.py#L154
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         # Stage 1: Encourage gripper to be rotated to be lined up with the peg
 

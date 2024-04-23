@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-__version__ = "3.0.0.dev10"
+__version__ = "3.0.0.dev13"
 
 long_description = """ManiSkill is a powerful unified framework for robot simulation and training powered by [SAPIEN](https://sapien.ucsd.edu/). The entire stack is as open-source as possible. Among its features, it includes
 - GPU parallelized visual data collection system. A policy can collect RGBD + Segmentation data at about 10,000+ FPS with 1 GPU, 10-100x faster than any other simulator
@@ -17,9 +17,9 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="ManiSkill contributors",
-    url="https://github.com/haosulab/ManiSkill2",
+    url="https://github.com/haosulab/ManiSkill",
     packages=find_packages(include=["mani_skill*"]),
-    python_requires=">=3.8",
+    python_requires=">=3.9",
     setup_requires=["setuptools>=62.3.0"],
     install_requires=[
         "numpy>=1.22",
@@ -39,7 +39,7 @@ setup(
         "imageio",
         "imageio[ffmpeg]",
         "mplib>=0.1.1",
-        "fast_kinematics",
+        "fast_kinematics==0.0.1",
         "huggingface_hub",  # we use HF to version control some assets/datasets more easily
     ],
     # Glob patterns do not automatically match dotfiles

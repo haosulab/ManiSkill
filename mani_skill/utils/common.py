@@ -189,7 +189,7 @@ def flatten_state_dict(
         np.ndarray | torch.Tensor: flattened states.
 
     Notes:
-        The input is recommended to be ordered (e.g. OrderedDict).
+        The input is recommended to be ordered (e.g. dict).
         However, since python 3.7, dictionary order is guaranteed to be insertion order.
     """
     states = []

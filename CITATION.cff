@@ -32,13 +32,13 @@ authors:
   given-names: "Rui"
 - family-names: "Su"
   given-names: "Hao"
-title: "ManiSkill2"
+title: "ManiSkill"
 version: 0.3.0
 date-released: 2022-08-15
-url: "https://github.com/haosulab/ManiSkill2"
+url: "https://github.com/haosulab/ManiSkill"
 preferred-citation:
   type: conference-paper
-  title: "ManiSkill2: A Unified Benchmark for Generalizable Manipulation Skills"
+  title: "ManiSkill: A Unified Benchmark for Generalizable Manipulation Skills"
   authors:
   - family-names: "Gu"
     given-names: "Jiayuan"

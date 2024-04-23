@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections import OrderedDict
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, Sequence, Union
 
@@ -95,11 +94,11 @@ def update_camera_cfgs_from_dict(
 
 def parse_camera_cfgs(camera_cfgs):
     if isinstance(camera_cfgs, (tuple, list)):
-        return OrderedDict([(cfg.uid, cfg) for cfg in camera_cfgs])
+        return dict([(cfg.uid, cfg) for cfg in camera_cfgs])
     elif isinstance(camera_cfgs, dict):
-        return OrderedDict(camera_cfgs)
+        return dict(camera_cfgs)
     elif isinstance(camera_cfgs, CameraConfig):
-        return OrderedDict([(camera_cfgs.uid, camera_cfgs)])
+        return dict([(camera_cfgs.uid, camera_cfgs)])
     else:
         raise TypeError(type(camera_cfgs))
 
@@ -152,7 +151,7 @@ class Camera(BaseSensor):
                 far=camera_cfg.far,
             )
         else:
-            self.camera = scene.add_mounted_camera(
+            self.camera = scene.add_camera(
                 name=camera_cfg.uid,
                 mount=self.entity,
                 pose=camera_cfg.pose,

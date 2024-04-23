@@ -13,13 +13,13 @@ from mani_skill.utils.geometry.trimesh_utils import (
     get_render_shape_meshes,
     merge_meshes,
 )
-from mani_skill.utils.structs.base import BaseStruct, PhysxRigidBodyComponentStruct
+from mani_skill.utils.structs.articulation_joint import ArticulationJoint
+from mani_skill.utils.structs.base import PhysxRigidBodyComponentStruct
+from mani_skill.utils.structs.pose import Pose, to_sapien_pose, vectorize_pose
 
 if TYPE_CHECKING:
-    from mani_skill.utils.structs import Articulation, ArticulationJoint
-
-from mani_skill.utils.structs.pose import Pose, to_sapien_pose, vectorize_pose
-from mani_skill.utils.structs.types import Array
+    from mani_skill.envs.scene import ManiSkillScene
+    from mani_skill.utils.structs import Articulation
 
 
 @dataclass
@@ -29,37 +29,38 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
     """
 
     articulation: Articulation = None
+    """the articulation that this link is a part of. If this is None, most likely this link object is a view/merged link object in which case
+    there is no one articulation that can be referenced easily"""
 
     name: str = None
 
     joint: ArticulationJoint = None
-    """the joint of which this link is a child of"""
+    """the joint of which this link is a child of. If this is a view/merged link then this joint is also a view/merged joint"""
 
     meshes: Dict[str, List[trimesh.Trimesh]] = field(default_factory=dict)
     """
     map from user-defined mesh groups (e.g. "handle" meshes for cabinets) to a list of trimesh.Trimesh objects corresponding to each physx link object managed here
     """
 
+    def __str__(self):
+        return f"<{self.name}: struct of type {self.__class__}; managing {self._num_objs} {self._objs[0].__class__} objects>"
+
+    def __repr__(self):
+        return self.__str__()
+
     @classmethod
     def create(
         cls,
         physx_links: List[physx.PhysxArticulationLinkComponent],
-        articulation: Articulation = None,
-        scene_idxs: torch.Tensor = None,
+        scene: ManiSkillScene,
+        scene_idxs: torch.Tensor,
     ):
-        shared_name = "_".join(
-            physx_links[0].name.replace(articulation.name, "", 1).split("_")[1:]
-        )
-        if scene_idxs is None and articulation is not None:
-            scene_idxs = articulation._scene_idxs
         return cls(
-            articulation=articulation,
             _objs=physx_links,
-            _scene=articulation._scene,
+            _scene=scene,
             _scene_idxs=scene_idxs,
-            name=shared_name,
             _body_data_name="cuda_rigid_body_data"
-            if isinstance(articulation.px, physx.PhysxGpuSystem)
+            if isinstance(scene.px, physx.PhysxGpuSystem)
             else None,
             _bodies=physx_links,
         )
@@ -67,19 +68,45 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
     @classmethod
     def merge(cls, links: List["Link"], name: str = None):
         objs = []
+        joint_objs = []
+        merged_joint_indexes = []
+        merged_active_joint_indexes = []
+        articulation_objs = []
+        is_root = links[0].is_root
         merged_scene_idxs = []
         num_objs_per_actor = links[0]._num_objs
         for link in links:
             objs += link._objs
-            merged_scene_idxs.append(link._scene_idxs)
+            assert (
+                link.is_root == is_root
+            ), "all links given to merge must all be root or all not be root links"
+            if not is_root:
+                joint_objs += link.joint._objs
+                articulation_objs += link.articulation._objs
+                merged_scene_idxs.append(link._scene_idxs)
+                merged_active_joint_indexes.append(link.joint.active_index)
+                merged_joint_indexes.append(link.joint.index)
             assert (
                 link._num_objs == num_objs_per_actor
             ), "Each given link must have the same number of managed objects"
         merged_scene_idxs = torch.concat(merged_scene_idxs)
         merged_link = Link.create(
-            objs, articulation=links[0].articulation, scene_idxs=merged_scene_idxs
+            objs, scene=links[0]._scene, scene_idxs=merged_scene_idxs
         )
+        if not is_root:
+            merged_active_joint_indexes = torch.concat(merged_active_joint_indexes)
+            merged_joint_indexes = torch.concat(merged_joint_indexes)
+            merged_joint = ArticulationJoint.create(
+                joint_objs,
+                physx_articulations=articulation_objs,
+                scene=links[0]._scene,
+                scene_idxs=merged_scene_idxs,
+                joint_index=merged_joint_indexes,
+                active_joint_index=merged_active_joint_indexes,
+            )
+            merged_link.joint = merged_joint
         # remove articulation reference as it does not make sense and is only used to instantiate some properties like the physx system
+        # TODO (stao): akin to the joint merging above, we can also make a view of the articulations of each link. Is it necessary?
         merged_link.articulation = None
         merged_link.name = name
         return merged_link
@@ -109,7 +136,8 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
         mesh_name: str,
     ):
         """
-        Generates mesh objects (trimesh.Trimesh) for each managed physx link and saves them to self.meshes[mesh_name] in addition to returning them here.
+        Generates mesh objects (trimesh.Trimesh) for each managed physx link given a filter and
+        saves them to self.meshes[mesh_name] in addition to returning them here.
         """
         # TODO (stao): should we create a Mesh wrapper? that is basically trimesh.Trimesh but all batched.
         if mesh_name in self.meshes:

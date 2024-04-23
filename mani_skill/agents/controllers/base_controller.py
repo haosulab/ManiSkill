@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections import OrderedDict
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List
 
@@ -200,7 +199,7 @@ class DictController(BaseController):
         self._control_freq = control_freq
         self.balance_passive_force = balance_passive_force
 
-        self.controllers: Dict[str, BaseController] = OrderedDict()
+        self.controllers: Dict[str, BaseController] = dict()
         for uid, config in configs.items():
             self.controllers[uid] = config.controller_cls(
                 config, articulation, control_freq, sim_freq=sim_freq, scene=scene
@@ -241,22 +240,6 @@ class DictController(BaseController):
     def set_action(self, action: Dict[str, np.ndarray]):
         for uid, controller in self.controllers.items():
             controller.set_action(common.to_tensor(action[uid]))
-
-    def before_simulation_step(self):
-        if physx.is_gpu_enabled():
-            return
-        else:
-            if self.balance_passive_force:
-                qf = self.articulation.compute_passive_force(
-                    gravity=True, coriolis_and_centrifugal=True
-                )
-            else:
-                qf = np.zeros(self.articulation.max_dof)
-            for controller in self.controllers.values():
-                ret = controller.before_simulation_step()
-                if ret is not None and "qf" in ret:
-                    qf = qf + ret["qf"]
-            self.articulation.set_qf(qf)
 
     def get_state(self) -> dict:
         states = {}

@@ -36,7 +36,7 @@ def test_envs_obs_modes(env_id, obs_mode):
     action_space = env.action_space
     for _ in range(5):
         obs, rew, terminated, truncated, info = env.step(action_space.sample())
-    assert_isinstance(obs, np.ndarray)
+    assert_isinstance(obs, [np.ndarray, bool, float, int])
     assert_isinstance(rew, float)
     assert_isinstance(terminated, bool)
     assert_isinstance(truncated, bool)
@@ -46,6 +46,17 @@ def test_envs_obs_modes(env_id, obs_mode):
             assert obs["sensor_data"][cam]["rgb"].shape == (128, 128, 3)
             assert obs["sensor_data"][cam]["depth"].shape == (128, 128, 1)
             assert obs["sensor_data"][cam]["depth"].dtype == np.uint16
+            assert obs["sensor_data"][cam]["segmentation"].shape == (128, 128, 1)
+            assert obs["sensor_data"][cam]["segmentation"].dtype == np.uint16
+            assert obs["sensor_param"][cam]["extrinsic_cv"].shape == (3, 4)
+            assert obs["sensor_param"][cam]["intrinsic_cv"].shape == (3, 3)
+            assert obs["sensor_param"][cam]["cam2world_gl"].shape == (4, 4)
+    elif obs_mode == "pointcloud":
+        num_pts = len(obs["pointcloud"]["xyzw"])
+        assert obs["pointcloud"]["xyzw"].shape == (num_pts, 4)
+        assert obs["pointcloud"]["rgb"].shape == (num_pts, 3)
+        assert obs["pointcloud"]["segmentation"].shape == (num_pts, 1)
+        assert obs["pointcloud"]["segmentation"].dtype == np.uint16
     env.close()
     del env
 
@@ -127,10 +138,7 @@ def test_states(env_id):
 @pytest.mark.parametrize("robot_uids", SINGLE_ARM_STATIONARY_ROBOTS)
 def test_robots(env_id, robot_uids):
     if env_id in [
-        "PandaAvoidObstacles-v0",
-        "PegInsertionSide-v0",
-        "PickClutterYCB-v0",
-        "TurnFaucet-v0",
+        "PegInsertionSide-v1",
         "OpenCabinetDoor-v1",
         "OpenCabinetDrawer-v1",
         "PushChair-v1",

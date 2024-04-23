@@ -46,19 +46,19 @@ html_theme_options = {
     "icon_links": [
         {
             "name": "GitHub",
-            "url": "https://github.com/haosulab/maniskill2",
+            "url": "https://github.com/haosulab/ManiSkill",
             "icon": "fa-brands fa-github",
         }
     ],
     "external_links": [
-        {"name": "Changelog", "url": "https://github.com/haosulab/maniskill2/releases"},
+        {"name": "Changelog", "url": "https://github.com/haosulab/ManiSkill/releases"},
     ]
 
 }
 html_context = {
     "display_github": True,
     "github_user": "haosulab",
-    "github_repo": "ManiSkill2",
+    "github_repo": "ManiSkill",
     "github_version": "dev",
     "conf_py_path": "/source/",
     "doc_path": "docs/source"

@@ -191,8 +191,8 @@ class ActorBuilder(SAPIENActorBuilder):
         initial_pose_np = common.to_numpy(initial_pose.raw_pose)
 
         entities = []
-        i = 0
-        for scene_idx in self.scene_idxs:
+
+        for i, scene_idx in enumerate(self.scene_idxs):
             sub_scene = self.scene.sub_scenes[scene_idx]
             entity = self.build_entity()
             # prepend scene idx to entity name to indicate which sub-scene it is in
@@ -204,7 +204,6 @@ class ActorBuilder(SAPIENActorBuilder):
                 entity.pose = to_sapien_pose(initial_pose_np[i])
             sub_scene.add_entity(entity)
             entities.append(entity)
-            i += 1
         actor = Actor.create_from_entities(entities, self.scene, self.scene_idxs)
 
         # if it is a static body type and this is a GPU sim but we are given a single initial pose, we repeat it for the purposes of observations

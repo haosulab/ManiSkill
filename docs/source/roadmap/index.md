@@ -5,7 +5,7 @@ We are constantly working to improve ManiSkill on all aspects, from simulation/r
 
 - GPU parallelized low-level mobile manipulation tasks (at the moment you can just take random actions but there are no reward/success metrics)
 - More fully interactive scene datasets
-- More industrial robots properly modelled and added into simulation
+- More industrial robots properly modelled and added into simulation (Google Robot, UR5, Unitree H1 etc.)
 - Larger demonstration datasets, especially tele-operated demonstrations
 - Offline RL Baselines (Algorithms like IQL, CQL, etc.)
 - Behavior Cloning Baselines (Algorithms like 3D Diffusion Policy, etc.)
