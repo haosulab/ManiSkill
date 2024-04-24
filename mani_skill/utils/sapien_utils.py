@@ -108,7 +108,7 @@ def check_urdf_config(urdf_config: dict):
                 )
 
 
-def parse_urdf_config(config_dict: dict, scene: ManiSkillScene) -> Dict:
+def parse_urdf_config(config_dict: dict) -> Dict:
     """Parse config from dict for SAPIEN URDF loader.
 
     Args:
@@ -123,15 +123,13 @@ def parse_urdf_config(config_dict: dict, scene: ManiSkillScene) -> Dict:
 
     # Create the global physical material for all links
     if "material" in config_dict:
-        urdf_config["material"] = scene.create_physical_material(
-            **config_dict["material"]
-        )
+        urdf_config["material"] = physx.PhysxMaterial(**config_dict["material"])
 
     # Create link-specific physical materials
     materials = {}
     if "_materials" in config_dict:
         for k, v in config_dict["_materials"].items():
-            materials[k] = scene.create_physical_material(**v)
+            materials[k] = physx.PhysxMaterial(**v)
 
     # Specify properties for links
     if "link" in config_dict:

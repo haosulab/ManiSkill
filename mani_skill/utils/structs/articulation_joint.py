@@ -283,7 +283,7 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
     @property
     def limits(self) -> torch.Tensor:
         # TODO (stao): create a decorator that caches results once gpu sim is initialized for performance
-        return common.to_tensor(np.array([obj.limits for obj in self._objs]))
+        return common.to_tensor(np.array([obj.limits[0] for obj in self._objs]))
 
     @limits.setter
     @before_gpu_init

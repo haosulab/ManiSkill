@@ -9,6 +9,7 @@ import trimesh
 from mani_skill import PACKAGE_ASSET_DIR
 from mani_skill.agents.robots import Fetch
 from mani_skill.envs.sapien_env import BaseEnv
+from mani_skill.envs.utils import randomization
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.building import actors, articulations
@@ -27,6 +28,9 @@ class OpenCabinetDrawerEnv(BaseEnv):
     SUPPORTED_ROBOTS = ["fetch"]
     agent: Union[Fetch]
     handle_types = ["prismatic"]
+    TRAIN_JSON = (
+        PACKAGE_ASSET_DIR / "partnet_mobility/meta/info_cabinet_drawer_train.json"
+    )
 
     min_open_frac = 0.75
 
@@ -39,12 +43,10 @@ class OpenCabinetDrawerEnv(BaseEnv):
         num_envs=1,
         **kwargs,
     ):
-        TRAIN_JSON = (
-            PACKAGE_ASSET_DIR / "partnet_mobility/meta/info_cabinet_drawer_train.json"
-        )
         self.robot_init_qpos_noise = robot_init_qpos_noise
-        train_data = load_json(TRAIN_JSON)
+        train_data = load_json(self.TRAIN_JSON)
         self.all_model_ids = np.array(list(train_data.keys()))
+        # self.all_model_ids = np.array(["1004", "1004"])
         if reconfiguration_freq is None:
             # if not user set, we pick a number
             if num_envs == 1:
@@ -74,7 +76,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
 
     @property
     def _default_human_render_camera_configs(self):
-        pose = sapien_utils.look_at(eye=[-2.3, -1.5, 1.8], target=[-0.3, 0.5, 0])
+        pose = sapien_utils.look_at(eye=[-1.8, -1.3, 1.8], target=[-0.3, 0.5, 0])
         return CameraConfig(
             "render_camera", pose=pose, width=512, height=512, fov=1, near=0.01, far=100
         )
@@ -96,13 +98,15 @@ class OpenCabinetDrawerEnv(BaseEnv):
                 cs.set_collision_groups(cg)
 
     def _load_cabinets(self, joint_types: List[str]):
-        rand_idx = torch.randperm(len(self.all_model_ids))
+        rand_idx = self._episode_rng.permutation(np.arange(0, len(self.all_model_ids)))
         model_ids = self.all_model_ids[rand_idx]
         model_ids = np.concatenate(
             [model_ids] * np.ceil(self.num_envs / len(self.all_model_ids)).astype(int)
         )[: self.num_envs]
-        cabinets = []
-        self.cabinet_heights = []
+        link_ids = self._episode_rng.randint(0, 2**31, size=len(model_ids))
+
+        self._cabinets = []
+        self.cabinet_zs = []
         handle_links: List[List[Link]] = []
         handle_links_meshes: List[List[trimesh.Trimesh]] = []
         for i, model_id in enumerate(model_ids):
@@ -111,8 +115,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
             )
             cabinet_builder.set_scene_idxs(scene_idxs=[i])
             cabinet = cabinet_builder.build(name=f"{model_id}-{i}")
-            collision_mesh = cabinet.get_first_collision_mesh()
-            self.cabinet_heights.append(-collision_mesh.bounding_box.bounds[0, 2])
+            self._cabinets.append(cabinet)
             handle_links.append([])
             handle_links_meshes.append([])
 
@@ -127,27 +130,28 @@ class OpenCabinetDrawerEnv(BaseEnv):
                             filter=lambda _, x: "handle" in x.name, mesh_name="handle"
                         )[0]
                     )
-            cabinets.append(cabinet)
 
         # we can merge different articulations with different degrees of freedoms into a single view/object
         # allowing you to manage all of them under one object and retrieve data like qpos, pose, etc. all together
         # and with high performance. Note that some properties such as qpos and qlimits are now padded.
-        self.cabinet = Articulation.merge(cabinets, name="cabinet")
-
-        # TODO (stao): At the moment this task hardcodes the first handle link to be the one to open
+        self.cabinet = Articulation.merge(self._cabinets, name="cabinet")
         self.handle_link = Link.merge(
-            [links[0] for links in handle_links], name="handle_link"
+            [links[link_ids[i] % len(links)] for i, links in enumerate(handle_links)],
+            name="handle_link",
         )
         # store the position of the handle mesh itself relative to the link it is apart of
         self.handle_link_pos = common.to_tensor(
             np.array(
-                [meshes[0].bounding_box.center_mass for meshes in handle_links_meshes]
+                [
+                    meshes[link_ids[i] % len(meshes)].bounding_box.center_mass
+                    for i, meshes in enumerate(handle_links_meshes)
+                ]
             )
         )
 
         self.handle_link_goal = actors.build_sphere(
             self._scene,
-            radius=0.05,
+            radius=0.02,
             color=[0, 1, 0, 1],
             name="handle_link_goal",
             body_type="kinematic",
@@ -155,40 +159,55 @@ class OpenCabinetDrawerEnv(BaseEnv):
         )
         self._hidden_objects.append(self.handle_link_goal)
 
-    @property
-    def handle_link_positions(self):
+    def _after_reconfigure(self, options):
+        # To spawn cabinets in the right place, we need to change their z position such that
+        # the bottom of the cabinet sits at z=0 (the floor). Luckily the partnet mobility dataset is made such that
+        # the negative of the lower z-bound of the collision mesh bounding box is the right value
+
+        # this code is in _after_reconfigure since retrieving collision meshes requires the GPU to be initialized
+        # which occurs after the initial reconfigure call (after self._load_scene() is called)
+        for cabinet in self._cabinets:
+            collision_mesh = cabinet.get_first_collision_mesh()
+            self.cabinet_zs.append(-collision_mesh.bounding_box.bounds[0, 2])
+        self.cabinet_zs = common.to_tensor(self.cabinet_zs)
+
+        # get the qmin qmax values of the joint corresponding to the selected links
+        target_qlimits = self.handle_link.joint.limits  # [b, 1, 2]
+        qmin, qmax = target_qlimits[..., 0], target_qlimits[..., 1]
+        self.target_qpos = qmin + (qmax - qmin) * self.min_open_frac
+
+    def handle_link_positions(self, env_idx: torch.Tensor = None):
+        if env_idx is None:
+            return transform_points(
+                self.handle_link.pose.to_transformation_matrix().clone(),
+                common.to_tensor(self.handle_link_pos),
+            )
         return transform_points(
-            self.handle_link.pose.to_transformation_matrix().clone(),
-            common.to_tensor(self.handle_link_pos),
+            self.handle_link.pose[env_idx].to_transformation_matrix().clone(),
+            common.to_tensor(self.handle_link_pos[env_idx]),
         )
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
 
         with torch.device(self.device):
             b = len(env_idx)
-            xyz = torch.zeros((b, 3))
-            xyz[:, 2] = torch.tensor(self.cabinet_heights)
-            self.cabinet.set_pose(Pose.create_from_pq(p=xyz))
-
+            xy = torch.zeros((b, 3))
+            xy[:, 2] = self.cabinet_zs[env_idx]
+            self.cabinet.set_pose(Pose.create_from_pq(p=xy))
             # the three lines here are necessary to update all link poses whenever qpos and root pose of articulation change
-            # that way you can use the correct link poses as done below for your task.
+            # that way you can use the correct link poses as done below
             if physx.is_gpu_enabled():
                 self._scene._gpu_apply_all()
                 self._scene.px.gpu_update_articulation_kinematics()
                 self._scene._gpu_fetch_all()
-
+            # handle_link_positions is the position handle mesh itself
             self.handle_link_goal.set_pose(
-                Pose.create_from_pq(p=self.handle_link_positions)
+                Pose.create_from_pq(p=self.handle_link_positions(env_idx))
             )
 
             # close all the cabinets. We know beforehand that lower qlimit means "closed" for these assets.
             qlimits = self.cabinet.get_qlimits()  # [b, self.cabinet.max_dof, 2])
-            self.cabinet.set_qpos(qlimits[:, :, 0])
-
-            # get the qmin qmax values of the joint corresponding to the selected links
-            target_qlimits = self.handle_link.joint.limits  # [b, 1, 2]
-            qmin, qmax = target_qlimits[..., 0], target_qlimits[..., 1]
-            self.target_qpos = qmin + (qmax - qmin) * self.min_open_frac
+            self.cabinet.set_qpos(qlimits[env_idx, :, 0])
 
             # NOTE (stao): This is a temporary work around for the issue where the cabinet drawers/doors might open
             # themselves on the first step. It's unclear why this happens on GPU sim only atm.
@@ -198,7 +217,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
 
             # initialize robot
             if self.robot_uids == "fetch":
-                qpos = np.array(
+                qpos = torch.tensor(
                     [
                         0,
                         0,
@@ -217,8 +236,20 @@ class OpenCabinetDrawerEnv(BaseEnv):
                         0.015,
                     ]
                 )
-                self.agent.reset(qpos)
-                self.agent.robot.set_pose(sapien.Pose([-1.5, 0, 0]))
+                qpos = qpos.repeat(b).reshape(b, -1)
+                dist = randomization.uniform(1.6, 1.8, size=(b,))
+                theta = randomization.uniform(0.9 * torch.pi, 1.1 * torch.pi, size=(b,))
+                xy = torch.zeros((b, 2))
+                xy[:, 0] += torch.cos(theta) * dist
+                xy[:, 1] += torch.sin(theta) * dist
+                qpos[:, :2] = xy
+                noise_ori = randomization.uniform(
+                    -0.05 * torch.pi, 0.05 * torch.pi, size=(b,)
+                )
+                ori = (theta - torch.pi) + noise_ori
+                qpos[:, 2] = ori
+                self.agent.robot.set_qpos(qpos)
+                self.agent.robot.set_pose(sapien.Pose())
 
     ### Useful properties ###
 
@@ -227,39 +258,58 @@ class OpenCabinetDrawerEnv(BaseEnv):
         # we can still fetch a joint that represents the parent joint of all those links
         # and easily get the qpos value.
         open_enough = self.handle_link.joint.qpos >= self.target_qpos
+        handle_link_pos = self.handle_link_positions()
+        self.handle_link_goal.set_pose(Pose.create_from_pq(p=handle_link_pos))
         link_is_static = (
             torch.linalg.norm(self.handle_link.angular_velocity, axis=1) <= 1
         ) & (torch.linalg.norm(self.handle_link.linear_velocity, axis=1) <= 0.1)
-        return {"success": open_enough & link_is_static}
+        return {
+            "success": open_enough & link_is_static,
+            "handle_link_pos": handle_link_pos,
+            "open_enough": open_enough,
+        }
 
     def _get_obs_extra(self, info: Dict):
         obs = dict(
             tcp_pose=self.agent.tcp.pose.raw_pose,
         )
+
         if "state" in self.obs_mode:
             obs.update(
-                tcp_to_handle_pos=self.handle_link_goal.pose.p - self.agent.tcp.pose.p,
+                tcp_to_handle_pos=info["handle_link_pos"] - self.agent.tcp.pose.p,
                 target_link_qpos=self.handle_link.joint.qpos,
-                target_handle_pos=self.handle_link_goal.pose.p,
+                target_handle_pos=info["handle_link_pos"],
             )
         return obs
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        return self.agent.tcp.pose.p[:, 0]
         tcp_to_handle_dist = torch.linalg.norm(
-            self.agent.tcp.pose.p - self.handle_link.pose.p, axis=1
+            self.agent.tcp.pose.p - info["handle_link_pos"], axis=1
         )
         reaching_reward = 1 - torch.tanh(5 * tcp_to_handle_dist)
-        reward = reaching_reward
+        amount_to_open_left = torch.div(
+            self.target_qpos - self.handle_link.joint.qpos, self.target_qpos
+        )
+        open_reward = 2 * (1 - amount_to_open_left)
+        reaching_reward[
+            amount_to_open_left < 0.999
+        ] = 2  # if joint opens even a tiny bit, we don't need reach reward anymore
+        # print(open_reward.shape)
+        open_reward[info["open_enough"]] = 3  # give max reward here
+        reward = reaching_reward + open_reward
+        reward[info["success"]] = 5.0
         return reward
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        max_reward = 1.0
+        max_reward = 5.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
 
 
-# @register_env("OpenCabinetDoor-v1", max_episode_steps=200)
+@register_env("OpenCabinetDoor-v1", max_episode_steps=100)
 class OpenCabinetDoorEnv(OpenCabinetDrawerEnv):
-    handle_types = ["revolute"]
+    TRAIN_JSON = (
+        PACKAGE_ASSET_DIR / "partnet_mobility/meta/info_cabinet_door_train.json"
+    )
+    handle_types = ["revolute", "revolute_unwrapped"]

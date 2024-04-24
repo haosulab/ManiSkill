@@ -1,5 +1,6 @@
 from mani_skill import ASSET_DIR, PACKAGE_ASSET_DIR
 from mani_skill.envs.scene import ManiSkillScene
+from mani_skill.utils import sapien_utils
 from mani_skill.utils.geometry.trimesh_utils import (
     get_articulation_meshes,
     merge_meshes,
@@ -17,6 +18,11 @@ def _load_partnet_mobility_dataset():
             PACKAGE_ASSET_DIR / "partnet_mobility/meta/info_cabinet_drawer_train.json"
         ),
     }
+    PARTNET_MOBILITY["model_data"].update(
+        load_json(
+            PACKAGE_ASSET_DIR / "partnet_mobility/meta/info_cabinet_door_train.json"
+        )
+    )
 
     def find_urdf_path(model_id):
         model_dir = ASSET_DIR / "partnet_mobility/dataset" / str(model_id)
@@ -26,9 +32,16 @@ def _load_partnet_mobility_dataset():
             if urdf_path.exists():
                 return urdf_path
 
-    PARTNET_MOBILITY["model_urdf_paths"] = {
-        k: find_urdf_path(k) for k in PARTNET_MOBILITY["model_data"].keys()
-    }
+    PARTNET_MOBILITY["model_urdf_paths"] = {}
+    for k in PARTNET_MOBILITY["model_data"].keys():
+        urdf_path = find_urdf_path(k)
+        if urdf_path is not None:
+            PARTNET_MOBILITY["model_urdf_paths"][k] = urdf_path
+
+    if len(PARTNET_MOBILITY["model_urdf_paths"]) == 0:
+        raise RuntimeError(
+            "Partnet Mobility dataset not found. Download it by running python -m mani_skill.utils.download_asset partnet_mobility_cabinet"
+        )
 
 
 def get_partnet_mobility_builder(
@@ -44,7 +57,12 @@ def get_partnet_mobility_builder(
     loader.load_multiple_collisions_from_file = True
     loader.disable_self_collisions = True
     urdf_path = PARTNET_MOBILITY["model_urdf_paths"][id]
+    urdf_config = sapien_utils.parse_urdf_config(
+        dict(
+            material=dict(static_friction=1, dynamic_friction=1, restitution=0),
+        )
+    )
+    sapien_utils.apply_urdf_config(loader, urdf_config)
     articulation_builders, _, _ = loader.parse(str(urdf_path))
     builder = articulation_builders[0]
-
     return builder

@@ -545,7 +545,6 @@ class BaseEnv(gym.Env):
 
         if physx.is_gpu_enabled():
             self._scene._setup_gpu()
-            self._scene._gpu_fetch_all()
         # for GPU sim, we have to setup sensors after we call setup gpu in order to enable loading mounted sensors as they depend on GPU buffer data
         self._setup_sensors(options)
         if self._viewer is not None:
