@@ -19,7 +19,8 @@ python ppo.py --env_id="PushCube-v1" \
 To evaluate, you can run
 ```bash
 python ppo.py --env_id="PickCube-v1" \
-   --evaluate --num_eval_envs=1 --checkpoint=runs/PickCube-v1__ppo__1__1710225023/ppo_101.cleanrl_model
+   --evaluate --checkpoint=path/to/model.cleanrl_model \
+   --num_eval_envs=1
 ```
 
 Note that with `--evaluate`, trajectories are saved from a GPU simulation. In order to support replaying these trajectories correctly with the `maniskill.trajectory.replay_trajectory` tool, the number of evaluation environments must be fixed to `1`. This is necessary in order to ensure reproducibility for tasks that have randomizations on geometry (e.g. PickSingleYCB).
@@ -92,6 +93,16 @@ python ppo_rgb.py --env_id="OpenCabinetDrawer-v1" \
   --num_envs=256 --update_epochs=8 --num_minibatches=16 \
   --total_timesteps=100_000_000 --num-steps=100 --num-eval-steps=100
 ```
+
+To evaluate a trained policy you can run
+
+```bash
+python ppo_rgb.py --env_id="OpenCabinetDrawer-v1" \
+   --evaluate --checkpoint=path/to/model.cleanrl_model \
+    --num_eval_envs=1 --num-eval-steps=1000
+```
+
+and it will save videos to the `path/to/test_videos`.
 
 ## Some Notes
 

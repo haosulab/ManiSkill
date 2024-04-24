@@ -217,8 +217,6 @@ def flatten_state_dict(
             state = flatten_state_dict(value, use_torch=use_torch)
             if state.size == 0:
                 state = None
-            if use_torch:
-                state = to_tensor(state)
         elif isinstance(value, (tuple, list)):
             state = None if len(value) == 0 else value
             if use_torch:
@@ -241,15 +239,10 @@ def flatten_state_dict(
             if use_torch:
                 state = to_tensor(state)
 
+        elif isinstance(value, torch.Tensor):
+            state = value
         else:
-            is_torch_tensor = False
-            if isinstance(value, torch.Tensor):
-                state = value
-                if len(state.shape) == 1:
-                    state = state[:, None]
-                is_torch_tensor = True
-            if not is_torch_tensor:
-                raise TypeError("Unsupported type: {}".format(type(value)))
+            raise TypeError("Unsupported type: {}".format(type(value)))
         if state is not None:
             states.append(state)
 

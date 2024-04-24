@@ -3,6 +3,7 @@ import os
 import random
 import time
 from dataclasses import dataclass
+from typing import Optional
 
 import gymnasium as gym
 import numpy as np
@@ -43,6 +44,10 @@ class Args:
     """whether to upload the saved model to huggingface"""
     hf_entity: str = ""
     """the user or org name of the model repository from the Hugging Face Hub"""
+    evaluate: bool = False
+    """if toggled, only runs evaluation with the given model checkpoint and saves the evaluation trajectories"""
+    checkpoint: str = None
+    """path to a pretrained checkpoint file to start evaluation/training from"""
 
     # Algorithm specific arguments
     env_id: str = "PickCube-v1"
@@ -85,6 +90,8 @@ class Args:
     """the target KL divergence threshold"""
     eval_freq: int = 25
     """evaluation frequency in terms of iterations"""
+    save_train_video_freq: Optional[int] = None
+    """frequency to save training videos in terms of iterations"""
     finite_horizon_gae: bool = True
 
     # to be filled in runtime
@@ -251,23 +258,28 @@ if __name__ == "__main__":
     args.num_iterations = args.total_timesteps // args.batch_size
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
 
-    if args.track:
-        import wandb
+    writer = None
+    if not args.evaluate:
+        print("Running training")
+        if args.track:
+            import wandb
 
-        wandb.init(
-            project=args.wandb_project_name,
-            entity=args.wandb_entity,
-            sync_tensorboard=True,
-            config=vars(args),
-            name=run_name,
-            monitor_gym=True,
-            save_code=True,
+            wandb.init(
+                project=args.wandb_project_name,
+                entity=args.wandb_entity,
+                sync_tensorboard=True,
+                config=vars(args),
+                name=run_name,
+                monitor_gym=True,
+                save_code=True,
+            )
+        writer = SummaryWriter(f"runs/{run_name}")
+        writer.add_text(
+            "hyperparameters",
+            "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
         )
-    writer = SummaryWriter(f"runs/{run_name}")
-    writer.add_text(
-        "hyperparameters",
-        "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
-    )
+    else:
+        print("Running evaluation")
 
     # TRY NOT TO MODIFY: seeding
     random.seed(args.seed)
@@ -278,8 +290,8 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # env setup
-    env_kwargs = dict(obs_mode="rgbd", control_mode="pd_joint_delta_pos", render_mode="rgb_array")
-    envs = gym.make(args.env_id, num_envs=args.num_envs, **env_kwargs)
+    env_kwargs = dict(obs_mode="rgbd", control_mode="pd_joint_delta_pos", render_mode="rgb_array", sim_backend="gpu")
+    envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, **env_kwargs)
     eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, **env_kwargs)
 
     # rgbd obs mode returns a dict of data, we flatten it so there is just a rgbd key and state key
@@ -289,7 +301,14 @@ if __name__ == "__main__":
         envs = FlattenActionSpaceWrapper(envs)
         eval_envs = FlattenActionSpaceWrapper(eval_envs)
     if args.capture_video:
-        eval_envs = RecordEpisode(eval_envs, output_dir=f"runs/{run_name}/videos", save_trajectory=False, max_steps_per_video=args.num_eval_steps, video_fps=30)
+        eval_output_dir = f"runs/{run_name}/videos"
+        if args.evaluate:
+            eval_output_dir = f"{os.path.dirname(args.checkpoint)}/test_videos"
+        print(f"Saving eval videos to {eval_output_dir}")
+        if args.save_train_video_freq is not None:
+            save_video_trigger = lambda x : (x // args.num_steps) % args.save_train_video_freq == 0
+            envs = RecordEpisode(envs, output_dir=f"runs/{run_name}/train_videos", save_trajectory=False, save_video_trigger=save_video_trigger, max_steps_per_video=args.num_steps, video_fps=30)
+        eval_envs = RecordEpisode(eval_envs, output_dir=eval_output_dir, save_trajectory=args.evaluate, max_steps_per_video=args.num_eval_steps, video_fps=30)
     envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=False, **env_kwargs)
     eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=False, **env_kwargs)
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
@@ -317,6 +336,9 @@ if __name__ == "__main__":
     print(f"####")
     agent = Agent(envs, sample_obs=next_obs).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
+
+    if args.checkpoint:
+        agent.load_state_dict(torch.load(args.checkpoint))
 
     for iteration in range(1, args.num_iterations + 1):
         print(f"Epoch: {iteration}, global_step={global_step}")
@@ -346,17 +368,19 @@ if __name__ == "__main__":
             print(f"Evaluated {args.num_eval_steps * args.num_envs} steps resulting in {len(eps_lens)} episodes")
             if len(successes) > 0:
                 successes = np.concatenate(successes)
-                writer.add_scalar("charts/eval_success_rate", successes.mean(), global_step)
+                if writer is not None: writer.add_scalar("charts/eval_success_rate", successes.mean(), global_step)
                 print(f"eval_success_rate={successes.mean()}")
             if len(failures) > 0:
                 failures = np.concatenate(failures)
-                writer.add_scalar("charts/eval_fail_rate", failures.mean(), global_step)
+                if writer is not None: writer.add_scalar("charts/eval_fail_rate", failures.mean(), global_step)
                 print(f"eval_fail_rate={failures.mean()}")
 
             print(f"eval_episodic_return={returns.mean()}")
-            writer.add_scalar("charts/eval_episodic_return", returns.mean(), global_step)
-            writer.add_scalar("charts/eval_episodic_length", eps_lens.mean(), global_step)
-
+            if writer is not None:
+                writer.add_scalar("charts/eval_episodic_return", returns.mean(), global_step)
+                writer.add_scalar("charts/eval_episodic_length", eps_lens.mean(), global_step)
+            if args.evaluate:
+                break
         if args.save_model and iteration % args.eval_freq == 1:
             model_path = f"runs/{run_name}/{args.exp_name}_{iteration}.cleanrl_model"
             torch.save(agent.state_dict(), model_path)
@@ -522,10 +546,10 @@ if __name__ == "__main__":
         writer.add_scalar("charts/update_time", update_time, global_step)
         writer.add_scalar("charts/rollout_time", rollout_time, global_step)
         writer.add_scalar("charts/rollout_fps", args.num_envs * args.num_steps / rollout_time, global_step)
-    if args.save_model:
+    if args.save_model and not args.evaluate:
         model_path = f"runs/{run_name}/{args.exp_name}_final.cleanrl_model"
         torch.save(agent.state_dict(), model_path)
         print(f"model saved to {model_path}")
 
     envs.close()
-    writer.close()
+    if writer is not None: writer.close()

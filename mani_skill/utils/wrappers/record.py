@@ -372,6 +372,8 @@ class RecordEpisode(gym.Wrapper):
                         for k in x.keys():
                             recursive_replace(x[k], y[k])
 
+                # TODO (stao): how do we store states from GPU sim of tasks with objects not in every sub-scene?
+                # Maybe we shouldn't?
                 recursive_replace(self._trajectory_buffer.state, first_step.state)
                 recursive_replace(
                     self._trajectory_buffer.observation, first_step.observation
@@ -484,7 +486,7 @@ class RecordEpisode(gym.Wrapper):
     def flush_trajectory(
         self,
         verbose=False,
-        ignore_empty_transition=False,
+        ignore_empty_transition=True,
         env_idxs_to_flush=None,
     ):
         flush_count = 0
@@ -598,7 +600,6 @@ class RecordEpisode(gym.Wrapper):
                     fail=self._trajectory_buffer.success[end_ptr - 1, env_idx]
                 )
             recursive_add_to_h5py(group, self._trajectory_buffer.state, "env_states")
-
             if self.record_reward:
                 group.create_dataset(
                     "rewards",
