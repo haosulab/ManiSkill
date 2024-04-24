@@ -278,7 +278,7 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # env setup
-    env_kwargs = dict(obs_mode="rgbd", control_mode="pd_ee_delta_pose", render_mode="rgb_array")
+    env_kwargs = dict(obs_mode="rgbd", control_mode="pd_joint_delta_pos", render_mode="rgb_array")
     envs = gym.make(args.env_id, num_envs=args.num_envs, **env_kwargs)
     eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, **env_kwargs)
 
@@ -366,7 +366,7 @@ if __name__ == "__main__":
             frac = 1.0 - (iteration - 1.0) / args.num_iterations
             lrnow = frac * args.learning_rate
             optimizer.param_groups[0]["lr"] = lrnow
-
+        rollout_time = time.time()
         for step in range(0, args.num_steps):
             global_step += args.num_envs
             obs[step] = next_obs
@@ -394,7 +394,7 @@ if __name__ == "__main__":
                 for k in info["final_observation"]:
                     info["final_observation"][k] = info["final_observation"][k][done_mask]
                 final_values[step, torch.arange(args.num_envs, device=device)[done_mask]] = agent.get_value(info["final_observation"]).view(-1)
-
+        rollout_time = time.time() - rollout_time
         # bootstrap value according to termination and truncation
         with torch.no_grad():
             next_value = agent.get_value(next_obs).reshape(1, -1)
@@ -450,6 +450,7 @@ if __name__ == "__main__":
         agent.train()
         b_inds = np.arange(args.batch_size)
         clipfracs = []
+        update_time = time.time()
         for epoch in range(args.update_epochs):
             np.random.shuffle(b_inds)
             for start in range(0, args.batch_size, args.minibatch_size):
@@ -503,12 +504,11 @@ if __name__ == "__main__":
 
             if args.target_kl is not None and approx_kl > args.target_kl:
                 break
-
+        update_time = time.time() - update_time
         y_pred, y_true = b_values.cpu().numpy(), b_returns.cpu().numpy()
         var_y = np.var(y_true)
         explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
 
-        # TRY NOT TO MODIFY: record rewards for plotting purposes
         writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
         writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
         writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
@@ -519,6 +519,9 @@ if __name__ == "__main__":
         writer.add_scalar("losses/explained_variance", explained_var, global_step)
         print("SPS:", int(global_step / (time.time() - start_time)))
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
+        writer.add_scalar("charts/update_time", update_time, global_step)
+        writer.add_scalar("charts/rollout_time", rollout_time, global_step)
+        writer.add_scalar("charts/rollout_fps", args.num_envs * args.num_steps / rollout_time, global_step)
     if args.save_model:
         model_path = f"runs/{run_name}/{args.exp_name}_final.cleanrl_model"
         torch.save(agent.state_dict(), model_path)
