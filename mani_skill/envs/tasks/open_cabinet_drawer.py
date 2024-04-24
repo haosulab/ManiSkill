@@ -28,6 +28,9 @@ class OpenCabinetDrawerEnv(BaseEnv):
     SUPPORTED_ROBOTS = ["fetch"]
     agent: Union[Fetch]
     handle_types = ["prismatic"]
+    TRAIN_JSON = (
+        PACKAGE_ASSET_DIR / "partnet_mobility/meta/info_cabinet_drawer_train.json"
+    )
 
     min_open_frac = 0.75
 
@@ -40,11 +43,8 @@ class OpenCabinetDrawerEnv(BaseEnv):
         num_envs=1,
         **kwargs,
     ):
-        TRAIN_JSON = (
-            PACKAGE_ASSET_DIR / "partnet_mobility/meta/info_cabinet_drawer_train.json"
-        )
         self.robot_init_qpos_noise = robot_init_qpos_noise
-        train_data = load_json(TRAIN_JSON)
+        train_data = load_json(self.TRAIN_JSON)
         self.all_model_ids = np.array(list(train_data.keys()))
         # self.all_model_ids = np.array(["1004", "1004"])
         if reconfiguration_freq is None:
@@ -98,11 +98,13 @@ class OpenCabinetDrawerEnv(BaseEnv):
                 cs.set_collision_groups(cg)
 
     def _load_cabinets(self, joint_types: List[str]):
-        rand_idx = torch.randperm(len(self.all_model_ids))
+        rand_idx = self._episode_rng.permutation(np.arange(0, len(self.all_model_ids)))
         model_ids = self.all_model_ids[rand_idx]
         model_ids = np.concatenate(
             [model_ids] * np.ceil(self.num_envs / len(self.all_model_ids)).astype(int)
         )[: self.num_envs]
+        link_ids = self._episode_rng.randint(0, 2**31, size=len(model_ids))
+
         self._cabinets = []
         self.cabinet_zs = []
         handle_links: List[List[Link]] = []
@@ -133,15 +135,17 @@ class OpenCabinetDrawerEnv(BaseEnv):
         # allowing you to manage all of them under one object and retrieve data like qpos, pose, etc. all together
         # and with high performance. Note that some properties such as qpos and qlimits are now padded.
         self.cabinet = Articulation.merge(self._cabinets, name="cabinet")
-
-        # TODO (stao): At the moment this task hardcodes the last handle link to be the one to open
         self.handle_link = Link.merge(
-            [links[0] for links in handle_links], name="handle_link"
+            [links[link_ids[i] % len(links)] for i, links in enumerate(handle_links)],
+            name="handle_link",
         )
         # store the position of the handle mesh itself relative to the link it is apart of
         self.handle_link_pos = common.to_tensor(
             np.array(
-                [meshes[0].bounding_box.center_mass for meshes in handle_links_meshes]
+                [
+                    meshes[link_ids[i] % len(meshes)].bounding_box.center_mass
+                    for i, meshes in enumerate(handle_links_meshes)
+                ]
             )
         )
 
@@ -303,6 +307,9 @@ class OpenCabinetDrawerEnv(BaseEnv):
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
 
 
-# @register_env("OpenCabinetDoor-v1", max_episode_steps=200)
+@register_env("OpenCabinetDoor-v1", max_episode_steps=100)
 class OpenCabinetDoorEnv(OpenCabinetDrawerEnv):
-    handle_types = ["revolute"]
+    TRAIN_JSON = (
+        PACKAGE_ASSET_DIR / "partnet_mobility/meta/info_cabinet_door_train.json"
+    )
+    handle_types = ["revolute", "revolute_unwrapped"]

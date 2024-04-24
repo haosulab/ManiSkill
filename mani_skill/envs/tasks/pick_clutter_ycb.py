@@ -164,9 +164,6 @@ class PickClutterEnv(BaseEnv):
             # reset objects to original poses
             if b == self.num_envs:
                 # if all envs reset
-                import ipdb
-
-                ipdb.set_trace()
                 self.all_objects.pose = self.all_objects.inital_pose
             else:
                 # if only some envs reset, we unfortunately still have to do some mask wrangling

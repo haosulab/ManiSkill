@@ -18,6 +18,11 @@ def _load_partnet_mobility_dataset():
             PACKAGE_ASSET_DIR / "partnet_mobility/meta/info_cabinet_drawer_train.json"
         ),
     }
+    PARTNET_MOBILITY["model_data"].update(
+        load_json(
+            PACKAGE_ASSET_DIR / "partnet_mobility/meta/info_cabinet_door_train.json"
+        )
+    )
 
     def find_urdf_path(model_id):
         model_dir = ASSET_DIR / "partnet_mobility/dataset" / str(model_id)
