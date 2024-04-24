@@ -44,7 +44,7 @@ A simple task where the objective is to grasp a red cube and move it to a target
 :::
 
 <video preload="auto" controls="True" width="100%">
-<source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/PickCube-v1_rt.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill/raw/dev/figures/environment_demos/PickCube-v1_rt.mp4" type="video/mp4">
 </video>
 
 ### StackCube-v1
@@ -69,7 +69,7 @@ The goal is to pick up a red cube and stack it on top of a green cube and let go
 :::
 
 <video preload="auto" controls="True" width="100%">
-<source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/StackCube-v1_rt.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill/raw/dev/figures/environment_demos/StackCube-v1_rt.mp4" type="video/mp4">
 </video>
 
 ### PickSingleYCB-v1
@@ -102,7 +102,7 @@ Pick up a random object sampled from the [YCB dataset](https://www.ycbbenchmarks
 
 
 <video preload="auto" controls="True" width="100%">
-<source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/PickSingleYCB-v1_rt.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill/raw/dev/figures/environment_demos/PickSingleYCB-v1_rt.mp4" type="video/mp4">
 </video>
 
 ### PegInsertionSide-v1
@@ -128,7 +128,7 @@ Pick up a orange-white peg and insert the orange end into the box with a hole in
 :::
 
 <video preload="auto" controls="True" width="100%">
-<source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/PegInsertionSide-v1_rt.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill/raw/dev/figures/environment_demos/PegInsertionSide-v1_rt.mp4" type="video/mp4">
 </video>
 
 ### LiftPegUpright-v1
@@ -149,7 +149,7 @@ A simple task where the objective is to move a peg laying on the table to any up
 :::
 
 <video preload="auto" controls="True" width="100%">
-<source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/LiftPegUpright-v1_rt.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill/raw/dev/figures/environment_demos/LiftPegUpright-v1_rt.mp4" type="video/mp4">
 </video>
 
 ### PushCube-v1
@@ -172,7 +172,7 @@ A simple task where the objective is to push and move a cube to a goal region in
 :::
 
 <video preload="auto" controls="True" width="100%">
-<source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/PushCube-v1_rt.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill/raw/dev/figures/environment_demos/PushCube-v1_rt.mp4" type="video/mp4">
 </video>
 
 ### PullCube-v1
@@ -194,7 +194,7 @@ A simple task where the objective is to pull a cube onto a target.
 :::
 
 <video preload="auto" controls="True" width="100%">
-<source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/PullCube-v1_rt.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill/raw/dev/figures/environment_demos/PullCube-v1_rt.mp4" type="video/mp4">
 </video>
 
 ### AssemblingKits-v1
@@ -219,7 +219,7 @@ The robot must pick up one of the misplaced shapes on the board/kit and insert i
 :::
 
 <video preload="auto" controls="True" width="100%">
-<source src="https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/AssemblingKits-v1_rt.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill/raw/dev/figures/environment_demos/AssemblingKits-v1_rt.mp4" type="video/mp4">
 </video>
 
 ## Table-Top Dexterous Hand Tasks
@@ -250,7 +250,7 @@ Using the D'Claw robot, rotate a [ROBEL valve](https://sites.google.com/view/rob
 **Goal Specification:**
 - Rotation direction $r$ which can be 1 or -1. Note that the amount to rotate is implicit and depends of level
 
-:::{figure} https://github.com/haosulab/ManiSkill2/raw/dev/figures/environment_demos/RotateValve-v1_rt.png
+:::{figure} https://github.com/haosulab/ManiSkill/raw/dev/figures/environment_demos/RotateValve-v1_rt.png
 :alt: rotate valve task
 :::
 
@@ -280,7 +280,7 @@ Using the TriFingerPro robot, rotate a cube
 
 ## Control Tasks
 
-### CartPole-v1
+### MS-CartPole-v1
 
 
 :::{dropdown} Task Card
@@ -301,4 +301,7 @@ Keep the CartPole stable and up right by sliding it left and right
 
 **Goal Specification:**
 - None
-:::
+
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill/raw/dev/figures/environment_demos/MS-CartPole-v1_rt.mp4" type="video/mp4">
+</video>

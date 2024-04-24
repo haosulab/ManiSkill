@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from typing import Any, Dict, List, Union
 
 import numpy as np
@@ -14,6 +13,7 @@ from mani_skill.utils.geometry.rotation_conversions import axis_angle_to_quatern
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs.articulation import Articulation
+from mani_skill.utils.structs.link import Link
 from mani_skill.utils.structs.pose import Pose, vectorize_pose
 from mani_skill.utils.structs.types import Array
 
@@ -59,12 +59,12 @@ class RotateValveEnv(BaseEnv):
         super().__init__(*args, robot_uids="dclaw", **kwargs)
 
     @property
-    def _sensor_configs(self):
+    def _default_sensor_configs(self):
         pose = sapien_utils.look_at(eye=[0.3, 0, 0.3], target=[-0.1, 0, 0.05])
         return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
-    def _human_render_camera_configs(self):
+    def _default_human_render_camera_configs(self):
         pose = sapien_utils.look_at([0.2, 0.4, 0.4], [0.0, 0.0, 0.1])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
@@ -109,6 +109,7 @@ class RotateValveEnv(BaseEnv):
 
         valves: List[Articulation] = []
         capsule_lens = []
+        valve_links = []
         for i, valve_angles in enumerate(valve_angles_list):
             scene_idxs = [i]
             if self.difficulty_level < 3:
@@ -129,10 +130,11 @@ class RotateValveEnv(BaseEnv):
                     capsule_radius_scale=scales[1],
                 )
             valves.append(valve)
+            valve_links.append(valve.links_map["valve"])
             capsule_lens.append(capsule_len)
         self.valve = Articulation.merge(valves, "valve_station")
         self.capsule_lens = torch.from_numpy(np.array(capsule_lens)).to(self.device)
-        self.valve_link = sapien_utils.get_obj_by_name(self.valve.get_links(), "valve")
+        self.valve_link = Link.merge(valve_links, name="valve")
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         self._initialize_actors(env_idx)
@@ -185,7 +187,7 @@ class RotateValveEnv(BaseEnv):
         with torch.device(self.device):
             valve_qpos = self.valve.qpos
             valve_qvel = self.valve.qvel
-            obs = OrderedDict(
+            obs = dict(
                 rotate_dir=self.rotate_direction.to(torch.float32),
                 valve_qpos=valve_qpos,
                 valve_qvel=valve_qvel,

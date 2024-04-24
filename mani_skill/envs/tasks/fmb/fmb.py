@@ -1,5 +1,4 @@
 import os.path as osp
-from collections import OrderedDict
 from typing import Any, Dict
 
 import numpy as np
@@ -44,12 +43,12 @@ class FMBAssembly1Env(BaseEnv):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     @property
-    def _sensor_configs(self):
+    def _default_sensor_configs(self):
         pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
         return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
-    def _human_render_camera_configs(self):
+    def _default_human_render_camera_configs(self):
         pose = sapien_utils.look_at([1.0, 0.8, 0.8], [0.0, 0.0, 0.35])
         return CameraConfig("render_camera", pose, 1024, 1024, 1, 0.01, 100)
 
@@ -157,7 +156,7 @@ class FMBAssembly1Env(BaseEnv):
         return {"success": torch.zeros(self.num_envs, device=self.device, dtype=bool)}
 
     def _get_obs_extra(self, info: Dict):
-        return OrderedDict()
+        return dict()
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         return torch.zeros(self.num_envs, device=self.device)

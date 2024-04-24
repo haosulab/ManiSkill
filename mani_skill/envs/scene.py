@@ -29,11 +29,13 @@ class ManiSkillScene:
 
     def __init__(
         self,
-        sub_scenes: List[sapien.Scene],
-        sim_cfg: SimConfig,
+        sub_scenes: List[sapien.Scene] = None,
+        sim_cfg: SimConfig = SimConfig(),
         debug_mode: bool = True,
         device: Device = None,
     ):
+        if sub_scenes is None:
+            sub_scenes = [sapien.Scene()]
         self.sub_scenes = sub_scenes
         self.px: Union[physx.PhysxCpuSystem, physx.PhysxGpuSystem] = self.sub_scenes[
             0
@@ -517,10 +519,14 @@ class ManiSkillScene:
         # all the actors and articulations to their original poses as they likely have collided
         for actor in self.non_static_actors:
             actor.set_pose(actor.inital_pose)
+        for articulation in self.articulations.values():
+            articulation.set_pose(articulation.inital_pose)
+        self.px.gpu_apply_rigid_dynamic_data()
+        self.px.gpu_apply_articulation_root_pose()
+
         self.px.cuda_rigid_body_data.torch()[:, 7:] = (
             self.px.cuda_rigid_body_data.torch()[:, 7:] * 0
         )  # zero out all velocities
-        self.px.gpu_apply_rigid_dynamic_data()
         self.px.gpu_apply_articulation_root_velocity()
         self.px.cuda_articulation_qvel.torch()[:, :] = (
             self.px.cuda_articulation_qvel.torch() * 0
@@ -528,6 +534,7 @@ class ManiSkillScene:
         self.px.gpu_apply_articulation_qvel()
 
         self._gpu_sim_initialized = True
+        self.px.gpu_update_articulation_kinematics()
         self._gpu_fetch_all()
 
     def _gpu_apply_all(self):
@@ -611,13 +618,18 @@ class ManiSkillScene:
     def _gpu_setup_sensors(self, sensors: Dict[str, BaseSensor]):
         for name, sensor in sensors.items():
             if isinstance(sensor, Camera):
-                camera_group = self.render_system_group.create_camera_group(
-                    sensor.camera._render_cameras,
-                    sensor.texture_names,
-                )
+                try:
+                    camera_group = self.render_system_group.create_camera_group(
+                        sensor.camera._render_cameras,
+                        sensor.texture_names,
+                    )
+                except RuntimeError as e:
+                    raise RuntimeError(
+                        "Unable to create GPU parallelized camera group. If the error is about being unable to create a buffer, you are likely using too many Cameras. Either use less cameras (via less parallel envs) and/or reduce the size of the cameras"
+                    ) from e
                 sensor.camera.camera_group = camera_group
                 self.camera_groups[name] = camera_group
             else:
                 raise NotImplementedError(
-                    f"This sensor {sensor} has not been implemented yet on the GPU"
+                    f"This sensor {sensor} of type {sensor.__class__} has not been implemented yet on the GPU"
                 )

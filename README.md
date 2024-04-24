@@ -3,7 +3,7 @@
 ![teaser](figures/teaser_v2.jpg)
 
 [![PyPI version](https://badge.fury.io/py/mani-skill.svg)](https://badge.fury.io/py/mani-skill)
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/haosulab/ManiSkill2/blob/main/examples/tutorials/1_quickstart.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/haosulab/ManiSkill/blob/main/examples/tutorials/1_quickstart.ipynb)
 [![Docs status](https://img.shields.io/badge/docs-passing-brightgreen.svg)](https://maniskill.readthedocs.io/en/dev/)
 [![Discord](https://img.shields.io/discord/996566046414753822?logo=discord)](https://discord.gg/x8yUZe5AdN)
 
@@ -22,13 +22,11 @@ Please refer to our [documentation](https://maniskill.readthedocs.io/en/dev/) to
 
 Note previously there was previously a ManiSkill and ManiSkill2, we are rebranding it all to just ManiSkill and the python package versioning tells you which iteration (3.0.0 now means ManiSkill3)
 
-<!-- There are also hands-on [tutorials](examples/tutorials) (e.g, [quickstart colab tutorial](https://colab.research.google.com/github/haosulab/ManiSkill2/blob/main/examples/tutorials/1_quickstart.ipynb)). -->
 
 **Table of Contents**
 
 - [Installation](#installation)
 - [Getting Started](#getting-started)
-<!-- - [Reinforcement Learning Example with ManiSkill2-Learn](#reinforcement-learning-example-with-maniskill2-learn) -->
 - [Demonstrations](#demonstrations)
 - [Leaderboard](#leaderboard)
 - [License](#license)
@@ -51,11 +49,11 @@ You can also install the main `mani_skill` package from github/source:
 
 ```bash
 # GitHub
-pip install --upgrade git+https://github.com/haosulab/ManiSkill2.git@dev
+pip install --upgrade git+https://github.com/haosulab/ManiSkill.git@dev
 
 # Source
-git clone https://github.com/haosulab/ManiSkill2.git
-cd ManiSkill2 && git checkout -b dev --track origin/dev && pip install -e .
+git clone https://github.com/haosulab/ManiSkill.git
+cd ManiSkill && git checkout -b dev --track origin/dev && pip install -e .
 ```
 
 ---
@@ -78,7 +76,7 @@ Please refer to our [documentation](https://maniskill.readthedocs.io/en/dev) for
 
 We further provide a docker image (`haosulab/mani-skill`) on [Docker Hub](https://hub.docker.com/repository/docker/haosulab/mani-skill/general) and its corresponding [Dockerfile](./docker/Dockerfile).
 
-If you encounter any issues with installation, please see the [troubleshooting](https://maniskill.readthedocs.io/en/dev/user_guide/getting_started/installation.html) section for common fixes or submit an [issue](https://github.com/haosulab/ManiSkill2/issues).
+If you encounter any issues with installation, please see the [troubleshooting](https://maniskill.readthedocs.io/en/dev/user_guide/getting_started/installation.html) section for common fixes or submit an [issue](https://github.com/haosulab/ManiSkill/issues).
 
 ## Getting Started
 
@@ -92,7 +90,7 @@ The assets are licensed under [CC BY-NC 4.0](https://creativecommons.org/license
 
 ## Citation
 
-If you use ManiSkill2 or its assets and models, consider citing the following publication:
+If you use ManiSkill or its assets and models, consider citing the following publication:
 
 ```
 @inproceedings{gu2023maniskill2,

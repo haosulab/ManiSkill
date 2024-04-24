@@ -1,6 +1,5 @@
 """Adapted from https://github.com/google-deepmind/dm_control/blob/main/dm_control/suite/cartpole.py"""
 import os
-from collections import OrderedDict
 from typing import Any, Dict, Union
 
 import numpy as np
@@ -58,7 +57,7 @@ class CartPoleRobot(BaseAgent):
         self.robot_link_ids = [link.name for link in self.robot.get_links()]
 
 
-@register_env("CartPole-v1", max_episode_steps=500, override=True)
+@register_env("MS-CartPole-v1", max_episode_steps=500)
 class CartPoleEnv(BaseEnv):
     SUPPORTED_REWARD_MODES = ["sparse", "none"]
 
@@ -72,18 +71,18 @@ class CartPoleEnv(BaseEnv):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     @property
-    def _default_sim_cfg(self):
+    def _default_sim_config(self):
         return SimConfig(
             sim_freq=100, control_freq=100, scene_cfg=SceneConfig(solver_iterations=2)
         )
 
     @property
-    def _sensor_configs(self):
+    def _default_sensor_configs(self):
         pose = sapien_utils.look_at(eye=[0, -4, 1], target=[0, 0, 1])
         return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
-    def _human_render_camera_configs(self):
+    def _default_human_render_camera_configs(self):
         pose = sapien_utils.look_at(eye=[0, -4, 1], target=[0, 0, 1])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
@@ -105,10 +104,10 @@ class CartPoleEnv(BaseEnv):
 
     @property
     def pole_angle_cosine(self):
-        return torch.cos(self.agent.robot.joint_map["hinge_1"].qpos)
+        return torch.cos(self.agent.robot.joints_map["hinge_1"].qpos)
 
     def evaluate(self):
-        cart_pos = self.agent.robot.joint_map["slider"].qpos
+        cart_pos = self.agent.robot.joints_map["slider"].qpos
         pole_angle_cosine = self.pole_angle_cosine
         cart_in_bounds = cart_pos < self.CART_RANGE[1]
         cart_in_bounds = cart_in_bounds & (cart_pos > self.CART_RANGE[0])
@@ -119,7 +118,7 @@ class CartPoleEnv(BaseEnv):
         return {"cart_in_bounds": cart_in_bounds, "angle_in_bounds": angle_in_bounds}
 
     def _get_obs_extra(self, info: Dict):
-        return OrderedDict()
+        return dict()
 
     def compute_sparse_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         return info["cart_in_bounds"] * info["angle_in_bounds"]

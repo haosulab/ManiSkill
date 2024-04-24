@@ -1,6 +1,6 @@
 # Observation
 
-<!-- See our [colab tutorial](https://colab.research.google.com/github/haosulab/ManiSkill2/blob/main/examples/tutorials/customize_environments.ipynb#scrollTo=NaSQ7CD2sswC) for how to customize cameras. -->
+<!-- See our [colab tutorial](https://colab.research.google.com/github/haosulab/ManiSkill/blob/main/examples/tutorials/customize_environments.ipynb#scrollTo=NaSQ7CD2sswC) for how to customize cameras. -->
 
 ## Observation mode
 

@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from typing import Dict, Generic, List, TypeVar
 
 import torch
@@ -14,7 +13,7 @@ class MultiAgent(BaseAgent, Generic[T]):
 
     def __init__(self, agents: List[BaseAgent]):
         self.agents = agents
-        self.agents_dict: Dict[str, BaseAgent] = OrderedDict()
+        self.agents_dict: Dict[str, BaseAgent] = dict()
         self.scene = agents[0].scene
         self.sensor_configs = []
         for i, agent in enumerate(self.agents):
@@ -22,7 +21,7 @@ class MultiAgent(BaseAgent, Generic[T]):
             self.agents_dict[f"{agent.uid}-{i}"] = agent
 
     def get_proprioception(self):
-        proprioception = OrderedDict()
+        proprioception = dict()
         for i, agent in enumerate(self.agents):
             proprioception[f"{agent.uid}-{i}"] = agent.get_proprioception()
         return proprioception

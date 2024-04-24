@@ -17,9 +17,9 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="ManiSkill contributors",
-    url="https://github.com/haosulab/ManiSkill2",
+    url="https://github.com/haosulab/ManiSkill",
     packages=find_packages(include=["mani_skill*"]),
-    python_requires=">=3.8",
+    python_requires=">=3.9",
     setup_requires=["setuptools>=62.3.0"],
     install_requires=[
         "numpy>=1.22",

@@ -40,6 +40,9 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
     """
     name: str = None
 
+    merged: bool = False
+    """Whether this object is a view of other actors as a result of Actor.merge"""
+
     def __hash__(self):
         return self._objs[0].__hash__()
 
@@ -118,6 +121,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
         merged_actor = Actor.create_from_entities(objs, scene, merged_scene_idxs)
         merged_actor.name = name
         merged_actor.inital_pose = Pose.create(torch.vstack(_builder_initial_poses))
+        merged_actor.merged = True
         scene.actor_views[merged_actor.name] = merged_actor
         return merged_actor
 
@@ -150,6 +154,9 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
 
     @cache
     def has_collision_shapes(self):
+        assert (
+            not self.merged
+        ), "Check if a merged actor has collision shape is not supported as the managed objects could all be very different"
         return (
             len(
                 self._objs[0]
@@ -181,9 +188,10 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
             self.px.gpu_apply_rigid_dynamic_data()
             self.px.gpu_fetch_rigid_dynamic_data()
         else:
-            self._objs[0].find_component_by_type(
-                sapien.render.RenderBodyComponent
-            ).visibility = 0
+            for obj in self._objs:
+                obj.find_component_by_type(
+                    sapien.render.RenderBodyComponent
+                ).visibility = 0
         # set hidden *after* setting/getting so not applied to self.before_hide_pose erroenously
         self.hidden = True
 
@@ -199,9 +207,10 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
                 self.px.gpu_apply_rigid_dynamic_data()
                 self.px.gpu_fetch_rigid_dynamic_data()
         else:
-            self._objs[0].find_component_by_type(
-                sapien.render.RenderBodyComponent
-            ).visibility = 1
+            for obj in self._objs:
+                obj.find_component_by_type(
+                    sapien.render.RenderBodyComponent
+                ).visibility = 1
 
     def is_static(self, lin_thresh=1e-2, ang_thresh=1e-1):
         """
@@ -222,7 +231,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
                 "Cannot physically remove object from scene during GPU simulation. This can only be done in CPU simulation. If you wish to remove an object physically, the best way is to move the object far away."
             )
         else:
-            self._objs[0].remove_from_scene()
+            [obj.remove_from_scene() for obj in self._objs]
 
     @property
     def pose(self) -> Pose:
@@ -240,8 +249,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
                     ]
                     return Pose.create(raw_pose)
         else:
-            assert len(self._objs) == 1
-            return Pose.create(self._objs[0].pose)
+            return Pose.create([obj.pose for obj in self._objs])
 
     @pose.setter
     def pose(self, arg1: Union[Pose, sapien.Pose, Array]) -> None:
@@ -260,8 +268,8 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
                     obj.pose = arg1
             else:
                 if len(arg1.shape) == 2:
-                    for obj in self._objs:
-                        obj.pose = to_sapien_pose(arg1[0])
+                    for i, obj in enumerate(self._objs):
+                        obj.pose = to_sapien_pose(arg1[i])
                 else:
                     arg1 = to_sapien_pose(arg1)
 

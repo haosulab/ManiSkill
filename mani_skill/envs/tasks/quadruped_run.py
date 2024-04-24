@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from typing import Any, Dict
 
 import numpy as np
@@ -39,7 +38,7 @@ class QuadrupedRunEnv(BaseEnv):
     """
 
     @property
-    def _default_sim_cfg(self):
+    def _default_sim_config(self):
         return SimConfig(
             sim_freq=100,
             control_freq=50,
@@ -59,7 +58,7 @@ class QuadrupedRunEnv(BaseEnv):
         )
 
     @property
-    def _sensor_configs(self):
+    def _default_sensor_configs(self):
         pose = sapien_utils.look_at([1.5, 1.5, 1], [0.0, 0.0, 0])
         return [
             CameraConfig(
@@ -76,7 +75,7 @@ class QuadrupedRunEnv(BaseEnv):
         ]
 
     @property
-    def _human_render_camera_configs(self):
+    def _default_human_render_camera_configs(self):
         pose = sapien_utils.look_at([2.5, 2.5, 1], [0.0, 0.0, 0])
         return CameraConfig(
             "render_camera",
@@ -103,7 +102,7 @@ class QuadrupedRunEnv(BaseEnv):
         return {"success": torch.zeros(self.num_envs, dtype=bool, device=self.device)}
 
     def _get_obs_extra(self, info: Dict):
-        return OrderedDict()
+        return dict()
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         xvel = self.agent.robot.root_linear_velocity[:, 0]
