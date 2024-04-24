@@ -658,15 +658,20 @@ class RecordEpisode(gym.Wrapper):
                 )
             self._trajectory_buffer.env_episode_ptr -= min_env_ptr
 
-    def flush_video(self, suffix="", verbose=False, ignore_empty_transition=True):
+    def flush_video(
+        self, name=None, suffix="", verbose=False, ignore_empty_transition=True
+    ):
         if len(self._render_images) == 0:
             return
         if ignore_empty_transition and len(self._render_images) == 1:
             return
         self._video_id += 1
-        video_name = "{}".format(self._video_id)
-        if suffix:
-            video_name += "_" + suffix
+        if name is None:
+            video_name = "{}".format(self._video_id)
+            if suffix:
+                video_name += "_" + suffix
+        else:
+            video_name = name
         images_to_video(
             self._render_images,
             str(self.output_dir),

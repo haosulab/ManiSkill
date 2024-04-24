@@ -163,8 +163,8 @@ class PegInsertionSideEnv(BaseEnv):
             self.table_scene.initialize(env_idx)
 
             # initialize the box and peg
-            xy = torch.rand((b, 2)) * torch.tensor([0.175, 0.3]) + torch.tensor(
-                [0, -0.15]
+            xy = randomization.uniform(
+                low=torch.tensor([-0.1, -0.3]), high=torch.tensor([0.1, 0]), size=(b, 2)
             )
             pos = torch.zeros((b, 3))
             pos[:, :2] = xy
@@ -174,12 +174,14 @@ class PegInsertionSideEnv(BaseEnv):
                 self.device,
                 lock_x=True,
                 lock_y=True,
-                bounds=(np.pi / 2 - np.pi / 3, np.pi / 2 - np.pi / 3),
+                bounds=(np.pi / 2 - np.pi / 3, np.pi / 2 + np.pi / 3),
             )
             self.peg.set_pose(Pose.create_from_pq(pos, quat))
 
-            xy = torch.rand((b, 2)) * torch.tensor([0.1, 0.2]) + torch.tensor(
-                [-0.05, 0.2]
+            xy = randomization.uniform(
+                low=torch.tensor([-0.05, 0.2]),
+                high=torch.tensor([0.05, 0.4]),
+                size=(b, 2),
             )
             pos = torch.zeros((b, 3))
             pos[:, :2] = xy

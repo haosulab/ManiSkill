@@ -187,9 +187,9 @@ class OpenCabinetDrawerEnv(BaseEnv):
 
         with torch.device(self.device):
             b = len(env_idx)
-            xyz = torch.zeros((b, 3))
-            xyz[:, 2] = self.cabinet_zs[env_idx]
-            self.cabinet.set_pose(Pose.create_from_pq(p=xyz))
+            xy = torch.zeros((b, 3))
+            xy[:, 2] = self.cabinet_zs[env_idx]
+            self.cabinet.set_pose(Pose.create_from_pq(p=xy))
             # the three lines here are necessary to update all link poses whenever qpos and root pose of articulation change
             # that way you can use the correct link poses as done below
             if physx.is_gpu_enabled():
@@ -213,7 +213,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
 
             # initialize robot
             if self.robot_uids == "fetch":
-                qpos = np.array(
+                qpos = torch.tensor(
                     [
                         0,
                         0,
@@ -232,13 +232,20 @@ class OpenCabinetDrawerEnv(BaseEnv):
                         0.015,
                     ]
                 )
-                self.agent.reset(qpos)
+                qpos = qpos.repeat(b).reshape(b, -1)
                 dist = randomization.uniform(1.6, 1.8, size=(b,))
                 theta = randomization.uniform(0.9 * torch.pi, 1.1 * torch.pi, size=(b,))
-                xyz = torch.zeros((b, 3))
-                xyz[:, 0] += torch.cos(theta) * dist
-                xyz[:, 1] += torch.sin(theta) * dist
-                self.agent.robot.set_pose(Pose.create_from_pq(p=xyz))
+                xy = torch.zeros((b, 2))
+                xy[:, 0] += torch.cos(theta) * dist
+                xy[:, 1] += torch.sin(theta) * dist
+                qpos[:, :2] = xy
+                noise_ori = randomization.uniform(
+                    -0.05 * torch.pi, 0.05 * torch.pi, size=(b,)
+                )
+                ori = (theta - torch.pi) + noise_ori
+                qpos[:, 2] = ori
+                self.agent.robot.set_qpos(qpos)
+                self.agent.robot.set_pose(sapien.Pose())
 
     ### Useful properties ###
 
