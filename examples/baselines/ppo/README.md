@@ -88,12 +88,9 @@ The visual PPO baseline is not guaranteed to work for tasks not tested below as 
 python ppo_rgb.py --env_id="PushCube-v1" \
   --num_envs=512 --update_epochs=8 --num_minibatches=16 \
   --total_timesteps=1_000_000 --eval_freq=10 --num-steps=20
-python ppo_rgb.py --env_id="PickCube-v1" \
-  --num_envs=256 --update_epochs=8 --num_minibatches=16 \
-  --total_timesteps=10_000_000
 python ppo_rgb.py --env_id="OpenCabinetDrawer-v1" \
-  --num_envs=256 --update_epochs=8 --num_minibatches=32 \
-  --total_timesteps=10_000_000 --num-steps=100 --num-eval-steps=100
+  --num_envs=256 --update_epochs=8 --num_minibatches=16 \
+  --total_timesteps=100_000_000 --num-steps=100 --num-eval-steps=100
 ```
 
 ## Some Notes
