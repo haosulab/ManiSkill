@@ -1,8 +1,10 @@
+"""NOTE: This scene builder class API is a WIP still. Temporarily used for managing a few pre-built scenes"""
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Dict, List
 
 import sapien
+import torch
 
 if TYPE_CHECKING:
     from mani_skill.envs.sapien_env import BaseEnv
@@ -31,7 +33,7 @@ class SceneBuilder:
         """
         raise NotImplementedError()
 
-    def initialize(self, **kwargs):
+    def initialize(self, env_idx: torch.Tensor, **kwargs):
         """
         Should initialize the scene, which can include e.g. setting the pose of all objects, changing the qpos/pose of articulations/robots etc.
         """
