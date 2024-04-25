@@ -217,7 +217,8 @@ def flatten_state_dict(
             state = flatten_state_dict(value, use_torch=use_torch)
             if state.size == 0:
                 state = None
-            state = to_tensor(state)
+            if use_torch:
+                state = to_tensor(state)
         elif isinstance(value, (tuple, list)):
             state = None if len(value) == 0 else value
             if use_torch:
