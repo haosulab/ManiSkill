@@ -66,7 +66,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
         return SimConfig(
             spacing=10,
             gpu_memory_cfg=GPUMemoryConfig(
-                max_rigid_contact_count=2**23, max_rigid_patch_count=2**21
+                max_rigid_contact_count=2**21, max_rigid_patch_count=2**19
             ),
         )
 
@@ -205,16 +205,6 @@ class OpenCabinetDrawerEnv(BaseEnv):
                 Pose.create_from_pq(p=self.handle_link_positions(env_idx))
             )
 
-            # close all the cabinets. We know beforehand that lower qlimit means "closed" for these assets.
-            qlimits = self.cabinet.get_qlimits()  # [b, self.cabinet.max_dof, 2])
-            self.cabinet.set_qpos(qlimits[env_idx, :, 0])
-
-            # NOTE (stao): This is a temporary work around for the issue where the cabinet drawers/doors might open
-            # themselves on the first step. It's unclear why this happens on GPU sim only atm.
-            if physx.is_gpu_enabled():
-                self._scene._gpu_apply_all()
-                self._scene.px.step()
-
             # initialize robot
             if self.robot_uids == "fetch":
                 qpos = torch.tensor(
@@ -250,8 +240,19 @@ class OpenCabinetDrawerEnv(BaseEnv):
                 qpos[:, 2] = ori
                 self.agent.robot.set_qpos(qpos)
                 self.agent.robot.set_pose(sapien.Pose())
+            # close all the cabinets. We know beforehand that lower qlimit means "closed" for these assets.
+            qlimits = self.cabinet.get_qlimits()  # [b, self.cabinet.max_dof, 2])
+            self.cabinet.set_qpos(qlimits[env_idx, :, 0])
+            self.cabinet.set_qvel(self.cabinet.qpos[env_idx] * 0)
 
-    ### Useful properties ###
+            # NOTE (stao): This is a temporary work around for the issue where the cabinet drawers/doors might open
+            # themselves on the first step. It's unclear why this happens on GPU sim only atm.
+            # moreover despite setting qpos/qvel to 0, the cabinets might still move on their own a little bit.
+            # this may be due to oblong meshes.
+            if physx.is_gpu_enabled():
+                self._scene._gpu_apply_all()
+                self._scene.px.step()
+                self._scene._gpu_fetch_all()
 
     def evaluate(self):
         # even though self.handle_link is a different link across different articulations
@@ -259,7 +260,11 @@ class OpenCabinetDrawerEnv(BaseEnv):
         # and easily get the qpos value.
         open_enough = self.handle_link.joint.qpos >= self.target_qpos
         handle_link_pos = self.handle_link_positions()
-        self.handle_link_goal.set_pose(Pose.create_from_pq(p=handle_link_pos))
+        # TODO (stao): setting the pose of the visual sphere here seems to cause mayhem with cabinet qpos
+        # self.handle_link_goal.set_pose(Pose.create_from_pq(p=self.handle_link_positions()))
+        # self._scene._gpu_apply_all()
+        # self._scene._gpu_fetch_all()
+        # update the goal sphere to its new position
         link_is_static = (
             torch.linalg.norm(self.handle_link.angular_velocity, axis=1) <= 1
         ) & (torch.linalg.norm(self.handle_link.linear_velocity, axis=1) <= 0.1)
