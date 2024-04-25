@@ -1,0 +1,12 @@
+# Blender 3.6.5 MTL File: 'meshes.blend'
+# www.blender.org
+
+newmtl black_metal
+Ns 409.599976
+Ka 0.250000 0.250000 0.250000
+Kd 0.023153 0.023153 0.023153
+Ks 0.600000 0.600000 0.600000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3

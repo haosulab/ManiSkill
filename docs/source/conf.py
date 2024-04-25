@@ -1,3 +1,4 @@
+__version__ = "3.0.0.dev14"
 # Configuration file for the Sphinx documentation builder.
 #
 # For the full list of built-in configuration values, see the documentation:
@@ -6,10 +7,11 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = "ManiSkill2"
-copyright = "2023, ManiSkill2 Contributors"
-author = "ManiSkill2 Contributors"
-release = "0.5.0"
+project = "ManiSkill"
+copyright = "2024, ManiSkill Contributors"
+author = "ManiSkill Contributors"
+release = __version__
+version = __version__
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -21,6 +23,9 @@ extensions = [
     "sphinx_copybutton",
     "myst_parser",
     "sphinx_subfigure",
+    "sphinxcontrib.video",
+    "sphinx_togglebutton",
+    "sphinx_design"
 ]
 
 # https://myst-parser.readthedocs.io/en/latest/syntax/optional.html
@@ -35,12 +40,28 @@ exclude_patterns = []
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = "sphinx_book_theme"
+html_theme = "pydata_sphinx_theme"
+html_theme_options = {
+    "use_edit_page_button": True,
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/haosulab/ManiSkill",
+            "icon": "fa-brands fa-github",
+        }
+    ],
+    "external_links": [
+        {"name": "Changelog", "url": "https://github.com/haosulab/ManiSkill/releases"},
+    ]
 
+}
 html_context = {
     "display_github": True,
     "github_user": "haosulab",
-    "github_repo": "ManiSkill2",
+    "github_repo": "ManiSkill",
     "github_version": "main",
-    "conf_py_path": "/source/"
+    "conf_py_path": "/source/",
+    "doc_path": "docs/source"
 }
+
+html_static_path = ['_static']

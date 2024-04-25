@@ -2,25 +2,61 @@ import gymnasium as gym
 import numpy as np
 import pytest
 
-from mani_skill2.envs.sapien_env import BaseEnv
+from mani_skill.agents.multi_agent import MultiAgent
+from mani_skill.envs.sapien_env import BaseEnv
 from tests.utils import (
     CONTROL_MODES_STATIONARY_SINGLE_ARM,
     ENV_IDS,
+    MULTI_AGENT_ENV_IDS,
     OBS_MODES,
-    ROBOTS,
+    SINGLE_ARM_STATIONARY_ROBOTS,
     STATIONARY_ENV_IDS,
+    assert_isinstance,
     assert_obs_equal,
 )
 
 
 @pytest.mark.parametrize("env_id", ENV_IDS)
+def test_all_envs(env_id):
+    env = gym.make(env_id, obs_mode="state")
+    obs, _ = env.reset()
+    action_space = env.action_space
+    for _ in range(5):
+        obs, rew, terminated, truncated, info = env.step(action_space.sample())
+    env.close()
+    del env
+
+
+@pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS)
 @pytest.mark.parametrize("obs_mode", OBS_MODES)
 def test_envs_obs_modes(env_id, obs_mode):
     env = gym.make(env_id, obs_mode=obs_mode)
-    env.reset()
+    obs, _ = env.reset()
+    assert_isinstance(obs, np.ndarray)
     action_space = env.action_space
     for _ in range(5):
-        env.step(action_space.sample())
+        obs, rew, terminated, truncated, info = env.step(action_space.sample())
+    assert_isinstance(obs, [np.ndarray, bool, float, int])
+    assert_isinstance(rew, float)
+    assert_isinstance(terminated, bool)
+    assert_isinstance(truncated, bool)
+    assert_isinstance(info, [np.ndarray, bool, float, int])
+    if obs_mode == "rgbd":
+        for cam in obs["sensor_data"].keys():
+            assert obs["sensor_data"][cam]["rgb"].shape == (128, 128, 3)
+            assert obs["sensor_data"][cam]["depth"].shape == (128, 128, 1)
+            assert obs["sensor_data"][cam]["depth"].dtype == np.uint16
+            assert obs["sensor_data"][cam]["segmentation"].shape == (128, 128, 1)
+            assert obs["sensor_data"][cam]["segmentation"].dtype == np.uint16
+            assert obs["sensor_param"][cam]["extrinsic_cv"].shape == (3, 4)
+            assert obs["sensor_param"][cam]["intrinsic_cv"].shape == (3, 3)
+            assert obs["sensor_param"][cam]["cam2world_gl"].shape == (4, 4)
+    elif obs_mode == "pointcloud":
+        num_pts = len(obs["pointcloud"]["xyzw"])
+        assert obs["pointcloud"]["xyzw"].shape == (num_pts, 4)
+        assert obs["pointcloud"]["rgb"].shape == (num_pts, 3)
+        assert obs["pointcloud"]["segmentation"].shape == (num_pts, 1)
+        assert obs["pointcloud"]["segmentation"].dtype == np.uint16
     env.close()
     del env
 
@@ -51,9 +87,10 @@ def test_env_seeded_reset():
     env.close()
     del env
 
+
 def test_env_seeded_sequence_reset():
     N = 17
-    env = gym.make(ENV_IDS[0], max_episode_steps=5)
+    env = gym.make(STATIONARY_ENV_IDS[0], max_episode_steps=5)
     obs, _ = env.reset(seed=2000)
     actions = [env.action_space.sample() for _ in range(N)]
     for i in range(N):
@@ -69,8 +106,9 @@ def test_env_seeded_sequence_reset():
     assert_obs_equal(obs, first_obs)
     del env
 
+
 def test_env_raise_value_error_for_nan_actions():
-    env = gym.make(ENV_IDS[0])
+    env = gym.make(STATIONARY_ENV_IDS[0])
     obs, _ = env.reset(seed=2000)
     with pytest.raises(ValueError):
         env.step(env.action_space.sample() * np.nan)
@@ -78,41 +116,52 @@ def test_env_raise_value_error_for_nan_actions():
     del env
 
 
-@pytest.mark.parametrize("env_id", ENV_IDS)
+@pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS)
 def test_states(env_id):
     env: BaseEnv = gym.make(env_id)
     obs, _ = env.reset(seed=1000)
     for _ in range(5):
         env.step(env.action_space.sample())
-    state = env.get_state()
+    state = env.get_state_dict()
     obs = env.get_obs()
 
     for _ in range(50):
         env.step(env.action_space.sample())
-    env.set_state(state)
+    env.set_state_dict(state)
     new_obs = env.get_obs()
     assert_obs_equal(obs, new_obs)
     env.close()
     del env
 
 
-@pytest.mark.parametrize("env_id", ENV_IDS)
-@pytest.mark.parametrize("robot", ROBOTS)
-def test_robots(env_id, robot):
+@pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS)
+@pytest.mark.parametrize("robot_uids", SINGLE_ARM_STATIONARY_ROBOTS)
+def test_robots(env_id, robot_uids):
     if env_id in [
-        "PandaAvoidObstacles-v0",
-        "PegInsertionSide-v0",
-        "PickClutterYCB-v0",
-        "TurnFaucet-v0",
+        "PegInsertionSide-v1",
         "OpenCabinetDoor-v1",
         "OpenCabinetDrawer-v1",
         "PushChair-v1",
         "MoveBucket-v1",
     ]:
         pytest.skip(reason=f"Env {env_id} does not support robots other than panda")
-    env = gym.make(env_id, robot=robot)
+    env = gym.make(env_id, robot_uids=robot_uids)
     env.reset()
     action_space = env.action_space
+    for _ in range(5):
+        env.step(action_space.sample())
+    env.close()
+    del env
+
+
+@pytest.mark.parametrize("env_id", MULTI_AGENT_ENV_IDS)
+def test_multi_agent(env_id):
+    env = gym.make(env_id, num_envs=1)
+    env.reset()
+    action_space = env.action_space
+    assert isinstance(action_space, gym.spaces.Dict)
+    assert isinstance(env.unwrapped.single_action_space, gym.spaces.Dict)
+    assert isinstance(env.unwrapped.agent, MultiAgent)
     for _ in range(5):
         env.step(action_space.sample())
     env.close()

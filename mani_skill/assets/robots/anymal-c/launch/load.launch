@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<launch>
+
+  <!-- Give the robot description parameter a name -->
+  <arg name="description_name"           default="anymal_description"/>
+  <!-- Set robot description path -->
+  <arg name="description_file"           default="$(find anymal_c_simple_description)/urdf/anymal.urdf"/>
+
+
+  <!-- Run xacro script to generate ANYmal description -->
+  <param name="$(arg description_name)" textfile="$(arg description_file)"/>
+
+</launch>
