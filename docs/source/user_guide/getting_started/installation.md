@@ -7,19 +7,20 @@ Installation of ManiSkill is extremely simple, you only need to run a few pip in
 pip install --upgrade mani_skill
 # install a version of torch that is compatible with your system
 pip install torch torchvision torchaudio
-# if you are on CUDA 11 you must also run
-pip install fast_kinematics==0.1.11
 ```
 
 You can also install the main `mani_skill` package from github/source:
 
 ```bash
 # GitHub
-pip install --upgrade git+https://github.com/haosulab/ManiSkill.git@dev
+pip install --upgrade git+https://github.com/haosulab/ManiSkill.git
 
 # Source
 git clone https://github.com/haosulab/ManiSkill.git
-cd ManiSkill && git checkout -b dev --track origin/dev && pip install -e .
+cd ManiSkill && pip install -e .
+
+# remember to install a version of torch that is compatible with your system
+pip install torch torchvision torchaudio
 ```
 
 :::{note}
@@ -34,7 +35,7 @@ The rigid-body tasks, powered by SAPIEN, are ready to use after installation. Te
 python -m mani_skill.examples.demo_random_action
 ```
 
-A docker image is also provided on [Docker Hub](https://hub.docker.com/repository/docker/haosulab/mani-skill/general) called  `haosulab/mani-skill` and its corresponding [Dockerfile](https://github.com/haosulab/ManiSkill/blob/dev/docker/Dockerfile).
+A docker image is also provided on [Docker Hub](https://hub.docker.com/repository/docker/haosulab/mani-skill/general) called  `haosulab/mani-skill` and its corresponding [Dockerfile](https://github.com/haosulab/ManiSkill/blob/main/docker/Dockerfile).
 
 Once you are done here, you can head over to the [quickstart page](./quickstart.md) to try out some live demos and start to program with ManiSkill.
 <!-- 

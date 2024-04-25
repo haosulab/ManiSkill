@@ -23,7 +23,7 @@ The next section will detail each of the pre-built controllers and what they do
 from mani_skill.agents.controllers import PassiveControllerConfig
 ```
 
-This controller lets you enforce given joints to be not controlled by actions. An example of this is used for the [CartPole environment](https://github.com/haosulab/ManiSkill/blob/dev/mani_skill/envs/tasks/control/cartpole.py) which defines the CartPole robot as having passive control over the hinge joint of the CartPole (the CartPole task only allows control of the sliding box).
+This controller lets you enforce given joints to be not controlled by actions. An example of this is used for the [CartPole environment](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/tasks/control/cartpole.py) which defines the CartPole robot as having passive control over the hinge joint of the CartPole (the CartPole task only allows control of the sliding box).
 
 ### PD Joint Position
 

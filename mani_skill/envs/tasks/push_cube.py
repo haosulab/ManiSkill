@@ -49,7 +49,7 @@ class PushCubeEnv(BaseEnv):
     ------------------
     - the cube's xy position is within goal_radius (default 0.1) of the target's xy position by euclidean distance.
 
-    Visualization: https://maniskill.readthedocs.io/en/dev/tasks/index.html#pushcube-v1
+    Visualization: https://maniskill.readthedocs.io/en/latest/tasks/index.html#pushcube-v1
     """
 
     SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]

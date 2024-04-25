@@ -9,7 +9,7 @@ To start contributing, raise an issue at https://github.com/haosulab/ManiSkill/i
 We recommend using Python 3.9 to build and develop on ManiSkill, although we currently aim to support versions 3.8 and above. To get started you must set up a conda/mamba environment which can be done as follows
 
 ```
-conda create -n "ms3_dev" "python==3.9"
+conda create -n "ms_dev" "python==3.9"
 git clone https://github.com/haosulab/ManiSkill.git
 cd ManiSkill
 pip install -e .[build] # install ManiSkill locally with testing dependencies
@@ -66,6 +66,6 @@ python -m twine upload dist/*
 
 ## Adding New Tasks
 
-ManiSkill is built to support building your own custom tasks easily. The documentation on how to use the ManiSkill API to do so is here: https://maniskill.readthedocs.io/en/dev/user_guide/tutorials/custom_tasks.html
+ManiSkill is built to support building your own custom tasks easily. The documentation on how to use the ManiSkill API to do so is here: https://maniskill.readthedocs.io/en/latest/user_guide/tutorials/custom_tasks.html
 
-We encourage users to either create their own repositories with their own tasks for others to use, or to submit to this ManiSkill repo to be part of the official, *vetted*, task list. For tasks in this repo, we do a number of checks to ensure they are of high quality and are well documented. For detailed information on how to add new tasks, see https://maniskill.readthedocs.io/en/dev/contributing/task.html
+We encourage users to either create their own repositories with their own tasks for others to use, or to submit to this ManiSkill repo to be part of the official, *vetted*, task list. For tasks in this repo, we do a number of checks to ensure they are of high quality and are well documented. For detailed information on how to add new tasks, see https://maniskill.readthedocs.io/en/latest/contributing/task.html

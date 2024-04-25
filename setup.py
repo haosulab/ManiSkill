@@ -8,7 +8,7 @@ long_description = """ManiSkill is a powerful unified framework for robot simula
 - GPU parallelized tasks, enabling incredibly fast synthetic data collection in simulation at the same or faster speed as other GPU sims like IsaacSim
 - GPU parallelized tasks support simulating diverse scenes where every parallel environment has a completely different scene/set of objects
 - Flexible task building API
-Please refer our [documentation](https://maniskill.readthedocs.io/en/dev) to learn more information."""
+Please refer our [documentation](https://maniskill.readthedocs.io/en/latest) to learn more information."""
 
 setup(
     name="mani_skill",
