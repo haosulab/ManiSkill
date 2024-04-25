@@ -13,17 +13,17 @@ The PPO baseline is not guaranteed to work for tasks not tested below as some ta
 ```bash
 python ppo.py --env_id="PushCube-v1" \
   --num_envs=2048 --update_epochs=8 --num_minibatches=32 \
-  --total_timesteps=5_000_000 --eval_freq=10 --num-steps=20
+  --total_timesteps=2_000_000 --eval_freq=10 --num-steps=20
 ```
 
 To evaluate, you can run
 ```bash
-python ppo.py --env_id="PickCube-v1" \
-   --evaluate --checkpoint=path/to/model.cleanrl_model \
-   --num_eval_envs=1
+python ppo.py --env_id="PushCube-v1" \
+   --evaluate --checkpoint=path/to/model.pt \
+   --num_eval_envs=1 --num-eval-steps=1000
 ```
 
-Note that with `--evaluate`, trajectories are saved from a GPU simulation. In order to support replaying these trajectories correctly with the `maniskill.trajectory.replay_trajectory` tool, the number of evaluation environments must be fixed to `1`. This is necessary in order to ensure reproducibility for tasks that have randomizations on geometry (e.g. PickSingleYCB).
+Note that with `--evaluate`, trajectories are saved from a GPU simulation. In order to support replaying these trajectories correctly with the `maniskill.trajectory.replay_trajectory` tool for some task, the number of evaluation environments must be fixed to `1`. This is necessary in order to ensure reproducibility for tasks that have randomizations on geometry (e.g. PickSingleYCB). Other tasks without geometrical randomization like PushCube are fine and you can increase the number of evaluation environments. 
 
 
 Below is a full list of various commands you can run to train a policy to solve various tasks with PPO that are lightly tuned already. The fastest one is the PushCube-v1 task which can take less than a minute to train on the GPU.
@@ -98,11 +98,23 @@ To evaluate a trained policy you can run
 
 ```bash
 python ppo_rgb.py --env_id="OpenCabinetDrawer-v1" \
-   --evaluate --checkpoint=path/to/model.cleanrl_model \
+   --evaluate --checkpoint=path/to/model.pt \
     --num_eval_envs=1 --num-eval-steps=1000
 ```
 
 and it will save videos to the `path/to/test_videos`.
+
+## Replaying Evaluation Trajectories
+
+It might be useful to get some nicer looking videos. A simple way to do that is to first use the evaluation scripts provided above. It will then save a .h5 and .json file with a name equal to the date and time that you can then replay with different settings as so
+
+```bash
+python -m mani_skill.trajectory.replay_trajectory \
+  --traj-path=path/to/trajectory.h5 --use-env-states --shader="rt-fast" \
+  --save-video --allow-failure
+```
+
+This will use environment states to replay trajectories, turn on the ray-tracer (There is also "rt" which is higher quality but slower), and save all videos including failed trajectories.
 
 ## Some Notes
 
