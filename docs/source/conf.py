@@ -1,4 +1,4 @@
-__version__ = "3.0.0.dev0"
+__version__ = "3.0.0.dev14"
 # Configuration file for the Sphinx documentation builder.
 #
 # For the full list of built-in configuration values, see the documentation:
@@ -59,7 +59,7 @@ html_context = {
     "display_github": True,
     "github_user": "haosulab",
     "github_repo": "ManiSkill",
-    "github_version": "dev",
+    "github_version": "main",
     "conf_py_path": "/source/",
     "doc_path": "docs/source"
 }
