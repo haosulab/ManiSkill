@@ -1,6 +1,6 @@
 # ManiSkill
 
-**ManiSkill 3 beta version releases soon. We strongly recommend new users to wait until that releases. To stay tuned you can star/watch this repository and/or join our discord and/our follow our twitter https://twitter.com/HaoSuLabUCSD. For now you can read about the features below.**
+**ManiSkill 3 beta version releases soon. We strongly recommend new users to wait until that releases. To stay tuned you can star/watch this repository and/or join our [discord](https://discord.gg/x8yUZe5AdN) and/or follow our twitter https://twitter.com/HaoSuLabUCSD. For now you can read about the features below.**
 
 **Users looking for the original ManiSkill2 can find the commit for that codebase at https://github.com/haosulab/ManiSkill/tree/v0.5.3**
 
@@ -9,8 +9,8 @@
 
 ![teaser](figures/teaser_v2.jpg)
 
-[![PyPI version](https://badge.fury.io/py/mani-skill.svg)](https://badge.fury.io/py/mani-skill)
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/haosulab/ManiSkill/blob/main/examples/tutorials/1_quickstart.ipynb)
+<!-- [![PyPI version](https://badge.fury.io/py/mani-skill.svg)](https://badge.fury.io/py/mani-skill) -->
+<!-- [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/haosulab/ManiSkill/blob/main/examples/tutorials/1_quickstart.ipynb) -->
 [![Docs status](https://img.shields.io/badge/docs-passing-brightgreen.svg)](https://maniskill.readthedocs.io/en/latest/)
 [![Discord](https://img.shields.io/discord/996566046414753822?logo=discord)](https://discord.gg/x8yUZe5AdN)
 
