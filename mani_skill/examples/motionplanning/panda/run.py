@@ -4,11 +4,11 @@ import numpy as np
 from tqdm import tqdm
 import os.path as osp
 from mani_skill.utils.wrappers.record import RecordEpisode
-from mani_skill.examples.motionplanning.panda.solutions import solvePickCube, solveStackCube
+from mani_skill.examples.motionplanning.panda.solutions import solvePickCube, solveStackCube, solvePegInsertionSide
 MP_SOLUTIONS = {
     "PickCube-v1": solvePickCube,
     "StackCube-v1": solveStackCube,
-    # "PegInsertionSide-v1": solvePegInsertionSide
+    "PegInsertionSide-v1": solvePegInsertionSide
 }
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
