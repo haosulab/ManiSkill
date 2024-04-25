@@ -97,9 +97,7 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
                 self._data_index, self.active_index
             ]
         else:
-            return torch.tensor(
-                [[self._physx_articulations[0].qpos[self.active_index]]]
-            )
+            return torch.tensor([self._physx_articulations[0].qpos[self.active_index]])
 
     @property
     def qvel(self):

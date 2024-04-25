@@ -157,7 +157,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
             body_type="kinematic",
             add_collision=False,
         )
-        self._hidden_objects.append(self.handle_link_goal)
+        # self._hidden_objects.append(self.handle_link_goal)
 
     def _after_reconfigure(self, options):
         # To spawn cabinets in the right place, we need to change their z position such that

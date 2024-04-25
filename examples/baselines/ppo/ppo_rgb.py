@@ -16,7 +16,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 # ManiSkill specific imports
 import mani_skill.envs
-from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper
+from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper, FlattenRGBDObservationWrapper
 from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 
@@ -60,8 +60,6 @@ class Args:
     """the number of parallel environments"""
     num_eval_envs: int = 8
     """the number of parallel evaluation environments"""
-    partial_reset: bool = True
-    """toggle if the environments should perform partial resets"""
     num_steps: int = 50
     """the number of steps to run in each environment per policy rollout"""
     num_eval_steps: int = 50
@@ -88,7 +86,7 @@ class Args:
     """coefficient of the value function"""
     max_grad_norm: float = 0.5
     """the maximum norm for the gradient clipping"""
-    target_kl: float = 0.1
+    target_kl: float = 0.2
     """the target KL divergence threshold"""
     eval_freq: int = 25
     """evaluation frequency in terms of iterations"""
@@ -109,33 +107,132 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     torch.nn.init.constant_(layer.bias, bias_const)
     return layer
 
+class DictArray(object):
+    def __init__(self, buffer_shape, element_space, data_dict=None, device=None):
+        self.buffer_shape = buffer_shape
+        if data_dict:
+            self.data = data_dict
+        else:
+            assert isinstance(element_space, gym.spaces.dict.Dict)
+            self.data = {}
+            for k, v in element_space.items():
+                if isinstance(v, gym.spaces.dict.Dict):
+                    self.data[k] = DictArray(buffer_shape, v)
+                else:
+                    self.data[k] = torch.zeros(buffer_shape + v.shape).to(device)
+
+    def keys(self):
+        return self.data.keys()
+
+    def __getitem__(self, index):
+        if isinstance(index, str):
+            return self.data[index]
+        return {
+            k: v[index] for k, v in self.data.items()
+        }
+
+    def __setitem__(self, index, value):
+        if isinstance(index, str):
+            self.data[index] = value
+        for k, v in value.items():
+            self.data[k][index] = v
+
+    @property
+    def shape(self):
+        return self.buffer_shape
+
+    def reshape(self, shape):
+        t = len(self.buffer_shape)
+        new_dict = {}
+        for k,v in self.data.items():
+            if isinstance(v, DictArray):
+                new_dict[k] = v.reshape(shape)
+            else:
+                new_dict[k] = v.reshape(shape + v.shape[t:])
+        new_buffer_shape = next(iter(new_dict.values())).shape[:len(shape)]
+        return DictArray(new_buffer_shape, None, data_dict=new_dict)
+
+class NatureCNN(nn.Module):
+    def __init__(self, sample_obs):
+        super().__init__()
+
+        extractors = {}
+
+        self.out_features = 0
+        feature_size = 256
+        in_channels=sample_obs["rgb"].shape[-1]
+        image_size=(sample_obs["rgb"].shape[1], sample_obs["rgb"].shape[2])
+        state_size=sample_obs["state"].shape[-1]
+
+        # here we use a NatureCNN architecture to process images, but any architecture is permissble here
+        cnn = nn.Sequential(
+            nn.Conv2d(
+                in_channels=in_channels,
+                out_channels=32,
+                kernel_size=8,
+                stride=4,
+                padding=0,
+            ),
+            nn.ReLU(),
+            nn.Conv2d(
+                in_channels=32, out_channels=64, kernel_size=4, stride=2, padding=0
+            ),
+            nn.ReLU(),
+            nn.Conv2d(
+                in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=0
+            ),
+            nn.ReLU(),
+            nn.Flatten(),
+        )
+
+        # to easily figure out the dimensions after flattening, we pass a test tensor
+        with torch.no_grad():
+            n_flatten = cnn(sample_obs["rgb"].float().permute(0,3,1,2).cpu()).shape[1]
+            fc = nn.Sequential(nn.Linear(n_flatten, feature_size), nn.ReLU())
+        extractors["rgb"] = nn.Sequential(cnn, fc)
+        self.out_features += feature_size
+
+        # for state data we simply pass it through a single linear layer
+        extractors["state"] = nn.Linear(state_size, 64)
+        self.out_features += 64
+
+        self.extractors = nn.ModuleDict(extractors)
+
+    def forward(self, observations) -> torch.Tensor:
+        encoded_tensor_list = []
+        # self.extractors contain nn.Modules that do all the processing.
+        for key, extractor in self.extractors.items():
+            obs = observations[key]
+            if key == "rgb":
+                obs = obs.float().permute(0,3,1,2)
+                obs = obs / 255
+            encoded_tensor_list.append(extractor(obs))
+        return torch.cat(encoded_tensor_list, dim=1)
 
 class Agent(nn.Module):
-    def __init__(self, envs):
+    def __init__(self, envs, sample_obs):
         super().__init__()
+        self.feature_net = NatureCNN(sample_obs=sample_obs)
+        # latent_size = np.array(envs.unwrapped.single_observation_space.shape).prod()
+        latent_size = self.feature_net.out_features
         self.critic = nn.Sequential(
-            layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 256)),
+            layer_init(nn.Linear(latent_size, 512)),
             nn.Tanh(),
-            layer_init(nn.Linear(256, 256)),
-            nn.Tanh(),
-            layer_init(nn.Linear(256, 256)),
-            nn.Tanh(),
-            layer_init(nn.Linear(256, 1)),
+            layer_init(nn.Linear(512, 1)),
         )
         self.actor_mean = nn.Sequential(
-            layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 256)),
+            layer_init(nn.Linear(latent_size, 512)),
             nn.Tanh(),
-            layer_init(nn.Linear(256, 256)),
-            nn.Tanh(),
-            layer_init(nn.Linear(256, 256)),
-            nn.Tanh(),
-            layer_init(nn.Linear(256, np.prod(envs.single_action_space.shape)), std=0.01*np.sqrt(2)),
+            layer_init(nn.Linear(512, np.prod(envs.unwrapped.single_action_space.shape)), std=0.01*np.sqrt(2)),
         )
-        self.actor_logstd = nn.Parameter(torch.ones(1, np.prod(envs.single_action_space.shape)) * -0.5)
-
+        self.actor_logstd = nn.Parameter(torch.ones(1, np.prod(envs.unwrapped.single_action_space.shape)) * -0.5)
+    def get_features(self, x):
+        return self.feature_net(x)
     def get_value(self, x):
+        x = self.feature_net(x)
         return self.critic(x)
     def get_action(self, x, deterministic=False):
+        x = self.feature_net(x)
         action_mean = self.actor_mean(x)
         if deterministic:
             return action_mean
@@ -144,6 +241,7 @@ class Agent(nn.Module):
         probs = Normal(action_mean, action_std)
         return probs.sample()
     def get_action_and_value(self, x, action=None):
+        x = self.feature_net(x)
         action_mean = self.actor_mean(x)
         action_logstd = self.actor_logstd.expand_as(action_mean)
         action_std = torch.exp(action_logstd)
@@ -159,6 +257,7 @@ if __name__ == "__main__":
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
     args.num_iterations = args.total_timesteps // args.batch_size
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
+
     writer = None
     if not args.evaluate:
         print("Running training")
@@ -191,9 +290,13 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # env setup
-    env_kwargs = dict(obs_mode="state", control_mode="pd_joint_delta_pos", render_mode="rgb_array", sim_backend="gpu")
-    envs = gym.make(args.env_id, num_envs=args.num_envs, **env_kwargs)
+    env_kwargs = dict(obs_mode="rgbd", control_mode="pd_joint_delta_pos", render_mode="rgb_array", sim_backend="gpu")
+    envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, **env_kwargs)
     eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, **env_kwargs)
+
+    # rgbd obs mode returns a dict of data, we flatten it so there is just a rgbd key and state key
+    envs = FlattenRGBDObservationWrapper(envs, rgb_only=True)
+    eval_envs = FlattenRGBDObservationWrapper(eval_envs, rgb_only=True)
     if isinstance(envs.action_space, gym.spaces.Dict):
         envs = FlattenActionSpaceWrapper(envs)
         eval_envs = FlattenActionSpaceWrapper(eval_envs)
@@ -206,15 +309,12 @@ if __name__ == "__main__":
             save_video_trigger = lambda x : (x // args.num_steps) % args.save_train_video_freq == 0
             envs = RecordEpisode(envs, output_dir=f"runs/{run_name}/train_videos", save_trajectory=False, save_video_trigger=save_video_trigger, max_steps_per_video=args.num_steps, video_fps=30)
         eval_envs = RecordEpisode(eval_envs, output_dir=eval_output_dir, save_trajectory=args.evaluate, max_steps_per_video=args.num_eval_steps, video_fps=30)
-    envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=not args.partial_reset, **env_kwargs)
-    eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=not args.partial_reset, **env_kwargs)
+    envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=False, **env_kwargs)
+    eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=False, **env_kwargs)
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
-    agent = Agent(envs).to(device)
-    optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
-
     # ALGO Logic: Storage setup
-    obs = torch.zeros((args.num_steps, args.num_envs) + envs.single_observation_space.shape).to(device)
+    obs = DictArray((args.num_steps, args.num_envs), envs.single_observation_space, device=device)
     actions = torch.zeros((args.num_steps, args.num_envs) + envs.single_action_space.shape).to(device)
     logprobs = torch.zeros((args.num_steps, args.num_envs)).to(device)
     rewards = torch.zeros((args.num_steps, args.num_envs)).to(device)
@@ -234,9 +334,8 @@ if __name__ == "__main__":
     print(f"args.num_iterations={args.num_iterations} args.num_envs={args.num_envs} args.num_eval_envs={args.num_eval_envs}")
     print(f"args.minibatch_size={args.minibatch_size} args.batch_size={args.batch_size} args.update_epochs={args.update_epochs}")
     print(f"####")
-    action_space_low, action_space_high = torch.from_numpy(envs.single_action_space.low).to(device), torch.from_numpy(envs.single_action_space.high).to(device)
-    def clip_action(action: torch.Tensor):
-        return torch.clamp(action.detach(), action_space_low, action_space_high)
+    agent = Agent(envs, sample_obs=next_obs).to(device)
+    optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     if args.checkpoint:
         agent.load_state_dict(torch.load(args.checkpoint))
@@ -291,7 +390,6 @@ if __name__ == "__main__":
             frac = 1.0 - (iteration - 1.0) / args.num_iterations
             lrnow = frac * args.learning_rate
             optimizer.param_groups[0]["lr"] = lrnow
-
         rollout_time = time.time()
         for step in range(0, args.num_steps):
             global_step += args.num_envs
@@ -306,22 +404,20 @@ if __name__ == "__main__":
             logprobs[step] = logprob
 
             # TRY NOT TO MODIFY: execute the game and log data.
-            next_obs, reward, terminations, truncations, infos = envs.step(clip_action(action))
+            next_obs, reward, terminations, truncations, infos = envs.step(action)
             next_done = torch.logical_or(terminations, truncations).to(torch.float32)
             rewards[step] = reward.view(-1)
 
             if "final_info" in infos:
-                final_info = infos["final_info"]
-                done_mask = final_info["_final_info"]
-                episodic_return = final_info['episode']['r'][done_mask].cpu().numpy().mean()
-                if "success" in final_info:
-                    writer.add_scalar("charts/success_rate", final_info["success"][done_mask].cpu().numpy().mean(), global_step)
-                if "fail" in final_info:
-                    writer.add_scalar("charts/fail_rate", final_info["fail"][done_mask].cpu().numpy().mean(), global_step)
+                info = infos["final_info"]
+                done_mask = info["_final_info"]
+                episodic_return = info['episode']['r'][done_mask].mean().cpu().numpy()
+                writer.add_scalar("charts/success_rate", info["success"][done_mask].float().mean().cpu().numpy(), global_step)
                 writer.add_scalar("charts/episodic_return", episodic_return, global_step)
-                writer.add_scalar("charts/episodic_length", final_info["elapsed_steps"][done_mask].cpu().numpy().mean(), global_step)
-
-                final_values[step, torch.arange(args.num_envs, device=device)[done_mask]] = agent.get_value(final_info["final_observation"][done_mask]).view(-1)
+                writer.add_scalar("charts/episodic_length", info["elapsed_steps"][done_mask].float().mean().cpu().numpy(), global_step)
+                for k in info["final_observation"]:
+                    info["final_observation"][k] = info["final_observation"][k][done_mask]
+                final_values[step, torch.arange(args.num_envs, device=device)[done_mask]] = agent.get_value(info["final_observation"]).view(-1)
         rollout_time = time.time() - rollout_time
         # bootstrap value according to termination and truncation
         with torch.no_grad():
@@ -367,7 +463,7 @@ if __name__ == "__main__":
             returns = advantages + values
 
         # flatten the batch
-        b_obs = obs.reshape((-1,) + envs.single_observation_space.shape)
+        b_obs = obs.reshape((-1,))
         b_logprobs = logprobs.reshape(-1)
         b_actions = actions.reshape((-1,) + envs.single_action_space.shape)
         b_advantages = advantages.reshape(-1)
@@ -433,7 +529,6 @@ if __name__ == "__main__":
             if args.target_kl is not None and approx_kl > args.target_kl:
                 break
         update_time = time.time() - update_time
-
         y_pred, y_true = b_values.cpu().numpy(), b_returns.cpu().numpy()
         var_y = np.var(y_true)
         explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
@@ -451,11 +546,10 @@ if __name__ == "__main__":
         writer.add_scalar("charts/update_time", update_time, global_step)
         writer.add_scalar("charts/rollout_time", rollout_time, global_step)
         writer.add_scalar("charts/rollout_fps", args.num_envs * args.num_steps / rollout_time, global_step)
-    if not args.evaluate:
-        if args.save_model:
-            model_path = f"runs/{run_name}/{args.exp_name}_final.cleanrl_model"
-            torch.save(agent.state_dict(), model_path)
-            print(f"model saved to {model_path}")
-        writer.close()
+    if args.save_model and not args.evaluate:
+        model_path = f"runs/{run_name}/{args.exp_name}_final.pt"
+        torch.save(agent.state_dict(), model_path)
+        print(f"model saved to {model_path}")
+
     envs.close()
-    eval_envs.close()
+    if writer is not None: writer.close()

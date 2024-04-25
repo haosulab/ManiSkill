@@ -259,6 +259,8 @@ class BaseEnv(gym.Env):
             else 0
         )
         obs, _ = self.reset(seed=2022, options=dict(reconfigure=True))
+        self._init_raw_obs = common.to_cpu_tensor(obs)
+        """the raw observation returned by the env.reset (a cpu torch tensor/dict of tensors). Useful for future observation wrappers to use to auto generate observation spaces"""
         if physx.is_gpu_enabled():
             obs = common.to_numpy(obs)
         self._init_raw_obs = obs.copy()
@@ -286,7 +288,7 @@ class BaseEnv(gym.Env):
         if physx.is_gpu_enabled():
             return gym_utils.convert_observation_to_space(self._init_raw_obs, unbatched=True)
         else:
-            return gym_utils.convert_observation_to_space(self._init_raw_obs)
+            return gym_utils.convert_observation_to_space(common.to_numpy(self._init_raw_obs))
 
     @cached_property
     def observation_space(self):
