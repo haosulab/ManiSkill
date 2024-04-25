@@ -112,7 +112,7 @@ def initialize_sources():
             uid = f"partnet_mobility/{model_id}"
             DATA_SOURCES[uid] = DataSource(
                 url=f"https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/partnet_mobility/dataset/{model_id}.zip",
-                output_dir=ASSET_DIR / "partnet_mobility" / "dataset",
+                target_path=ASSET_DIR / "partnet_mobility" / "dataset" / model_id,
             )
             category_uids[category].append(uid)
 
