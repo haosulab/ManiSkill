@@ -157,7 +157,6 @@ class OpenCabinetDrawerEnv(BaseEnv):
             body_type="kinematic",
             add_collision=False,
         )
-        # self._hidden_objects.append(self.handle_link_goal)
 
     def _after_reconfigure(self, options):
         # To spawn cabinets in the right place, we need to change their z position such that
@@ -194,16 +193,6 @@ class OpenCabinetDrawerEnv(BaseEnv):
             xy = torch.zeros((b, 3))
             xy[:, 2] = self.cabinet_zs[env_idx]
             self.cabinet.set_pose(Pose.create_from_pq(p=xy))
-            # the three lines here are necessary to update all link poses whenever qpos and root pose of articulation change
-            # that way you can use the correct link poses as done below
-            if physx.is_gpu_enabled():
-                self._scene._gpu_apply_all()
-                self._scene.px.gpu_update_articulation_kinematics()
-                self._scene._gpu_fetch_all()
-            # handle_link_positions is the position handle mesh itself
-            self.handle_link_goal.set_pose(
-                Pose.create_from_pq(p=self.handle_link_positions(env_idx))
-            )
 
             # initialize robot
             if self.robot_uids == "fetch":
@@ -251,8 +240,13 @@ class OpenCabinetDrawerEnv(BaseEnv):
             # this may be due to oblong meshes.
             if physx.is_gpu_enabled():
                 self._scene._gpu_apply_all()
+                self._scene.px.gpu_update_articulation_kinematics()
                 self._scene.px.step()
                 self._scene._gpu_fetch_all()
+
+            self.handle_link_goal.set_pose(
+                Pose.create_from_pq(p=self.handle_link_positions(env_idx))
+            )
 
     def evaluate(self):
         # even though self.handle_link is a different link across different articulations
