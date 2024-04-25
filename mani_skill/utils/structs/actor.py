@@ -107,16 +107,11 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
         scene = actors[0]._scene
         _builder_initial_poses = []
         merged_scene_idxs = []
-        num_objs_per_actor = actors[0]._num_objs
+        actors[0]._num_objs
         for actor in actors:
             objs += actor._objs
             merged_scene_idxs.append(actor._scene_idxs)
             _builder_initial_poses.append(actor.inital_pose.raw_pose)
-            assert (
-                actor._num_objs == num_objs_per_actor
-            ), "Each given actor must have the same number of managed objects"
-        # TODO (stao): Can we support e.g. each Actor having len(actor._objs) > 1? It would mean fetching pose data or any kind of data is highly uintuitive
-        # we definitely cannot permit some actors to have more objs than others, otherwise the data is ragged.
         merged_scene_idxs = torch.concat(merged_scene_idxs)
         merged_actor = Actor.create_from_entities(objs, scene, merged_scene_idxs)
         merged_actor.name = name
