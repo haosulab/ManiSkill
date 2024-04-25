@@ -1,5 +1,5 @@
 import os.path as osp
-from typing import Any, Dict
+from typing import Dict
 
 import numpy as np
 import sapien
@@ -15,6 +15,7 @@ from mani_skill.utils.building.actor_builder import ActorBuilder
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs.pose import Pose
+from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 
 
 @register_env("FMBAssembly1Easy-v1", max_episode_steps=500)
@@ -43,6 +44,14 @@ class FMBAssembly1Env(BaseEnv):
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
+
+    @property
+    def _default_sim_config(self):
+        return SimConfig(
+            gpu_memory_cfg=GPUMemoryConfig(
+                max_rigid_contact_count=2**21, max_rigid_patch_count=2**20
+            )
+        )
 
     @property
     def _default_sensor_configs(self):
@@ -170,19 +179,11 @@ class FMBAssembly1Env(BaseEnv):
         return {"success": bridge_placed}
 
     def _get_obs_extra(self, info: Dict):
-        obs = dict(tcp_pose=self.agent.tcp_pose)
+        obs = dict(tcp_pose=self.agent.tcp.pose.raw_pose)
         if self.obs_mode in ["state", "state_dict"]:
             obs.update(
+                board_pos=self.board.pose.p,
                 bridge_pose=self.bridge.pose.raw_pose,
                 reorienting_fixture_pose=self.reorienting_fixture.pose.raw_pose,
             )
         return dict()
-
-    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        return torch.zeros(self.num_envs, device=self.device)
-
-    def compute_normalized_dense_reward(
-        self, obs: Any, action: torch.Tensor, info: Dict
-    ):
-        max_reward = 1.0
-        return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
