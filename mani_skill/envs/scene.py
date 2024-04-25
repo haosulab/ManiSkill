@@ -63,6 +63,9 @@ class ManiSkillScene:
         """Used internally by various objects like Actor, Link, and Controllers to auto mask out sub-scenes so they do not get modified during
         partial env resets"""
 
+        self._needs_fetch = False
+        """Used internally to raise some errors ahead of time of when there may be undefined behaviors"""
+
     @property
     def timestep(self):
         return self.px.timestep
@@ -541,6 +544,10 @@ class ManiSkillScene:
         """
         Calls gpu_apply to update all body data, qpos, qvel, qf, and root poses
         """
+        assert (
+            not self._needs_fetch
+        ), "Once _gpu_apply_all is called, you must call _gpu_fetch_all before calling _gpu_apply_all again\
+            as otherwise there is undefined behavior that is likely impossible to debug"
         self.px.gpu_apply_rigid_dynamic_data()
         self.px.gpu_apply_articulation_qpos()
         self.px.gpu_apply_articulation_qvel()
@@ -549,6 +556,7 @@ class ManiSkillScene:
         self.px.gpu_apply_articulation_root_velocity()
         self.px.gpu_apply_articulation_target_position()
         self.px.gpu_apply_articulation_target_velocity()
+        self._needs_fetch = True
 
     def _gpu_fetch_all(self):
         """
@@ -569,6 +577,8 @@ class ManiSkillScene:
 
             # unused fetches
             # self.px.gpu_fetch_articulation_qacc()
+
+        self._needs_fetch = False
 
     # ---------------------------------------------------------------------------- #
     # CPU/GPU sim Rendering Code
