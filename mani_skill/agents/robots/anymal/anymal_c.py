@@ -1,4 +1,3 @@
-# TODO (stao): Anymal may not be modelled correctly or efficiently at the moment
 import torch
 
 from mani_skill import PACKAGE_ASSET_DIR, format_path

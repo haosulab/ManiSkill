@@ -8,15 +8,16 @@ from transforms3d.euler import euler2quat
 
 from mani_skill.agents.robots.panda.panda import Panda
 from mani_skill.envs.sapien_env import BaseEnv
+from mani_skill.envs.utils import randomization
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.building.actor_builder import ActorBuilder
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
+from mani_skill.utils.structs.pose import Pose
 
 
-# TODO (stao): Complete this task example
-# @register_env("FMBAssembly1-v1", max_episode_steps=200)
+@register_env("FMBAssembly1Easy-v1", max_episode_steps=500)
 class FMBAssembly1Env(BaseEnv):
     """
     Task Description
@@ -35,6 +36,7 @@ class FMBAssembly1Env(BaseEnv):
     Visualization: TODO: ADD LINK HERE
     """
 
+    SUPPORTED_REWARD_MODES = ["sparse", "none"]
     SUPPORTED_ROBOTS = ["panda"]
     agent: Panda
 
@@ -116,46 +118,64 @@ class FMBAssembly1Env(BaseEnv):
         self.reorienting_fixture = builder.build_kinematic("reorienting_fixture")
 
         builder = self._scene.create_actor_builder()
-        # builder.add_box_visual(
-        #     half_size=[0.02, 0.035, 0.4],
-        #     material=sapien.render.RenderMaterial(base_color=[0, 1, 1, 0.3]),
-        # )
         self.bridge_grasp = builder.build_kinematic(name="bridge_grasp")
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
-        self.table_scene.initialize(env_idx)
-        offset_pose = sapien.Pose(p=[0.02, -0.115, 0], q=euler2quat(0, 0, np.pi / 2))
-        self.board.set_pose(
-            sapien.Pose(p=np.array([0.115, 0.115, 0.034444])) * offset_pose
-        )
-        self.peg.set_pose(sapien.Pose(p=np.array([0.115, 0.115, 0.0585])) * offset_pose)
-        self.purple_u.set_pose(
-            sapien.Pose(p=np.array([0.115, 0.047, 0.06375])) * offset_pose
-        )
-        self.blue_u.set_pose(
-            sapien.Pose(p=np.array([0.115, 0.183, 0.06375])) * offset_pose
-        )
-        self.bridge.set_pose(
-            sapien.Pose(p=np.array([0.115, 0.115, 0.048667])) * offset_pose
-        )
-        self.reorienting_fixture.set_pose(sapien.Pose(p=np.array([0.05, 0.25, 0.0285])))
-
-        # place_order = [self.purple_u, self.blue_u, self.purple_u, self.peg, self.bridge]
-        # for i, obj in enumerate(place_order):
-        #     obj.set_pose(obj.pose * sapien.Pose([0, 0, 0]))
-
-        self.bridge.set_pose(
-            sapien.Pose(
-                p=[-0.12, 0.23, 0.048667 / 2], q=euler2quat(0, -np.pi / 2, np.pi / 2)
+        with torch.device(self.device):
+            b = len(env_idx)
+            self.table_scene.initialize(env_idx)
+            offset_pose = sapien.Pose(
+                p=[0.02, -0.115, 0], q=euler2quat(0, 0, np.pi / 2)
             )
-        )
-        self.bridge_grasp_offset = sapien.Pose(p=[0, 0, 0.03])
-        self.bridge_grasp.set_pose(self.bridge.pose * self.bridge_grasp_offset)
+            self.board.set_pose(
+                sapien.Pose(p=np.array([0.115, 0.115, 0.034444])) * offset_pose
+            )
+            self.peg.set_pose(
+                sapien.Pose(p=np.array([0.115, 0.115, 0.0585])) * offset_pose
+            )
+            self.purple_u.set_pose(
+                sapien.Pose(p=np.array([0.115, 0.047, 0.06375])) * offset_pose
+            )
+            self.blue_u.set_pose(
+                sapien.Pose(p=np.array([0.115, 0.183, 0.06375])) * offset_pose
+            )
+            self.goal_bridge_pose = (
+                Pose.create_from_pq(p=np.array([0.115, 0.115, 0.048667])) * offset_pose
+            )
+
+            self.reorienting_fixture.set_pose(
+                sapien.Pose(p=np.array([0.05, 0.25, 0.0285]))
+            )
+
+            # self.bridge.set_pose(
+
+            # )
+            xyz = torch.zeros((b, 3))
+            xyz[:, :2] = randomization.uniform(-0.025, 0.025, size=(b, 2))
+            bridge_pose = Pose.create_from_pq(
+                p=torch.tensor([-0.13, 0.23, 0.048667 / 2]) + xyz,
+                q=euler2quat(0, -np.pi / 2, np.pi / 2),
+            )
+
+            self.bridge.set_pose(bridge_pose)
+
+            self.bridge_grasp_offset = sapien.Pose(p=[0, 0, 0.03])
+            self.bridge_grasp.set_pose(self.bridge.pose * self.bridge_grasp_offset)
 
     def evaluate(self):
-        return {"success": torch.zeros(self.num_envs, device=self.device, dtype=bool)}
+        bridge_placed = (
+            torch.linalg.norm(self.bridge.pose.p - self.goal_bridge_pose.p, axis=1)
+            < 0.005
+        )
+        return {"success": bridge_placed}
 
     def _get_obs_extra(self, info: Dict):
+        obs = dict(tcp_pose=self.agent.tcp_pose)
+        if self.obs_mode in ["state", "state_dict"]:
+            obs.update(
+                bridge_pose=self.bridge.pose.raw_pose,
+                reorienting_fixture_pose=self.reorienting_fixture.pose.raw_pose,
+            )
         return dict()
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
