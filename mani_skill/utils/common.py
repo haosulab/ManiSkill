@@ -164,9 +164,9 @@ def to_tensor(array: Union[torch.Tensor, np.array, Sequence], device: Device = N
             if ret.dtype == torch.float64:
                 ret = ret.float()
         elif np.iterable(array):
-            ret = torch.tensor(array)
+            ret = torch.Tensor(array)
         else:
-            ret = torch.tensor(array)
+            ret = torch.Tensor(array)
         if device is None:
             return ret
         else:
@@ -217,6 +217,7 @@ def flatten_state_dict(
             state = flatten_state_dict(value, use_torch=use_torch)
             if state.size == 0:
                 state = None
+            state = to_tensor(state)
         elif isinstance(value, (tuple, list)):
             state = None if len(value) == 0 else value
             if use_torch:
@@ -241,6 +242,8 @@ def flatten_state_dict(
 
         elif isinstance(value, torch.Tensor):
             state = value
+            if len(state.shape) == 1:
+                state = state[:, None]
         else:
             raise TypeError("Unsupported type: {}".format(type(value)))
         if state is not None:
