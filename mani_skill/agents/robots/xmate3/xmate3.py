@@ -163,7 +163,6 @@ class Xmate3Robotiq(BaseAgent):
                 near=0.01,
                 far=100,
                 entity_uid="camera_base_link",
-                hide_link=False,
             ),
             CameraConfig(
                 uid="hand_camera",
@@ -174,7 +173,6 @@ class Xmate3Robotiq(BaseAgent):
                 near=0.01,
                 far=100,
                 entity_uid="camera_hand_link",
-                hide_link=False,
             ),
         ]
 

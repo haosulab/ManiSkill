@@ -21,7 +21,8 @@ from mani_skill.utils.structs import Articulation, Link, Pose
 from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 
 
-# TODO (stao): we need to cut the meshes of all the cabinets in this dataset for gpu sim, not registering task for now
+# TODO (stao): we need to cut the meshes of all the cabinets in this dataset for gpu sim, there may be some wierd physics
+# that may happen although it seems okay for state based RL
 @register_env("OpenCabinetDrawer-v1", max_episode_steps=100)
 class OpenCabinetDrawerEnv(BaseEnv):
 

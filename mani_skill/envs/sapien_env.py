@@ -689,6 +689,8 @@ class BaseEnv(gym.Env):
         # or disable partial reset features explicitly for tasks that have a reconfiguration frequency
         if "env_idx" in options:
             env_idx = options["env_idx"]
+            if len(env_idx) != self.num_envs and reconfigure:
+                raise RuntimeError("Cannot do a partial reset and reconfigure the environment. You must do one or the other.")
             self._scene._reset_mask = torch.zeros(
                 self.num_envs, dtype=bool, device=self.device
             )
