@@ -347,6 +347,10 @@ class BaseEnv(gym.Env):
         return []
 
     @property
+    def scene(self):
+        return self._scene
+
+    @property
     def sim_freq(self):
         return self._sim_freq
 
