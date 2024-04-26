@@ -79,7 +79,7 @@ python ppo.py --env_id="OpenCabinetDrawer-v1" \
 
 ## Visual Based RL
 
-Below is a sample of various commands for training a image-based policy with PPO that are lightly tuned. The fastest again is also PushCube-v1 which can take about 1-5 minutes and PickCube-v1 which takes 30-60 minutes. You will need to tune the `--num_envs` argument according to how much GPU memory you have as rendering visual observations uses a lot of memory. The settings below should all take less than 15GB of GPU memory. Note that while if you have enough memory you can easily increase the number of environments, this does not necessarily mean wall-time or sample efficiency improve.
+Below is a sample of various commands for training a image-based policy with PPO that are lightly tuned. The fastest again is also PushCube-v1 which can take about 1-5 minutes and PickCube-v1 which takes 15-45 minutes. You will need to tune the `--num_envs` argument according to how much GPU memory you have as rendering visual observations uses a lot of memory. The settings below should all take less than 15GB of GPU memory. Note that while if you have enough memory you can easily increase the number of environments, this does not necessarily mean wall-time or sample efficiency improve.
 
 The visual PPO baseline is not guaranteed to work for tasks not tested below as some tasks do not have dense rewards yet or well tuned ones, or simply are too hard with standard PPO (or our team has not had time to verify results yet)
 
@@ -87,11 +87,11 @@ The visual PPO baseline is not guaranteed to work for tasks not tested below as 
 
 ```bash
 python ppo_rgb.py --env_id="PushCube-v1" \
-  --num_envs=512 --update_epochs=8 --num_minibatches=16 \
+  --num_envs=256 --update_epochs=8 --num_minibatches=8 \
   --total_timesteps=1_000_000 --eval_freq=10 --num-steps=20
-python ppo_rgb.py --env_id="OpenCabinetDrawer-v1" \
-  --num_envs=256 --update_epochs=8 --num_minibatches=16 \
-  --total_timesteps=100_000_000 --num-steps=100 --num-eval-steps=100
+python ppo_rgb.py --env_id="PickCube-v1" \
+  --num_envs=256 --update_epochs=8 --num_minibatches=8 \
+  --total_timesteps=10_000_000
 ```
 
 To evaluate a trained policy you can run

@@ -30,7 +30,7 @@ class VisualEncoderWrapper(gym.ObservationWrapper):
             )  # HWC -> CHW
             self.single_image_embedding_size = 512  # for resnet18
 
-        self.base_env._update_obs_space(
+        self.base_env.update_obs_space(
             common.to_numpy(
                 self.observation(common.to_tensor(self.base_env._init_raw_obs))
             )

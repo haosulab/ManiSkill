@@ -22,7 +22,7 @@ from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 
 @dataclass
 class Args:
-    exp_name: str = os.path.basename(__file__)[: -len(".py")]
+    exp_name: Optional[str] = None
     """the name of this experiment"""
     seed: int = 1
     """seed of the experiment"""
@@ -193,8 +193,8 @@ class NatureCNN(nn.Module):
         self.out_features += feature_size
 
         # for state data we simply pass it through a single linear layer
-        extractors["state"] = nn.Linear(state_size, 64)
-        self.out_features += 64
+        extractors["state"] = nn.Linear(state_size, 256)
+        self.out_features += 256
 
         self.extractors = nn.ModuleDict(extractors)
 
@@ -217,12 +217,12 @@ class Agent(nn.Module):
         latent_size = self.feature_net.out_features
         self.critic = nn.Sequential(
             layer_init(nn.Linear(latent_size, 512)),
-            nn.Tanh(),
+            nn.ReLU(inplace=True),
             layer_init(nn.Linear(512, 1)),
         )
         self.actor_mean = nn.Sequential(
             layer_init(nn.Linear(latent_size, 512)),
-            nn.Tanh(),
+            nn.ReLU(inplace=True),
             layer_init(nn.Linear(512, np.prod(envs.unwrapped.single_action_space.shape)), std=0.01*np.sqrt(2)),
         )
         self.actor_logstd = nn.Parameter(torch.ones(1, np.prod(envs.unwrapped.single_action_space.shape)) * -0.5)
@@ -256,8 +256,11 @@ if __name__ == "__main__":
     args.batch_size = int(args.num_envs * args.num_steps)
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
     args.num_iterations = args.total_timesteps // args.batch_size
-    run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
-
+    if args.exp_name is None:
+        args.exp_name = os.path.basename(__file__)[: -len(".py")]
+        run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
+    else:
+        run_name = args.exp_name
     writer = None
     if not args.evaluate:
         print("Running training")
@@ -297,6 +300,7 @@ if __name__ == "__main__":
     # rgbd obs mode returns a dict of data, we flatten it so there is just a rgbd key and state key
     envs = FlattenRGBDObservationWrapper(envs, rgb_only=True)
     eval_envs = FlattenRGBDObservationWrapper(eval_envs, rgb_only=True)
+
     if isinstance(envs.action_space, gym.spaces.Dict):
         envs = FlattenActionSpaceWrapper(envs)
         eval_envs = FlattenActionSpaceWrapper(eval_envs)
@@ -308,7 +312,7 @@ if __name__ == "__main__":
         if args.save_train_video_freq is not None:
             save_video_trigger = lambda x : (x // args.num_steps) % args.save_train_video_freq == 0
             envs = RecordEpisode(envs, output_dir=f"runs/{run_name}/train_videos", save_trajectory=False, save_video_trigger=save_video_trigger, max_steps_per_video=args.num_steps, video_fps=30)
-        eval_envs = RecordEpisode(eval_envs, output_dir=eval_output_dir, save_trajectory=args.evaluate, max_steps_per_video=args.num_eval_steps, video_fps=30)
+        eval_envs = RecordEpisode(eval_envs, output_dir=eval_output_dir, save_trajectory=args.evaluate, trajectory_name="trajectory", max_steps_per_video=args.num_eval_steps, video_fps=30)
     envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=False, **env_kwargs)
     eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=False, **env_kwargs)
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"

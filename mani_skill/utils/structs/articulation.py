@@ -42,7 +42,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     name: str = None
     """Name of this articulation"""
-    inital_pose: Pose = None
+    initial_pose: Pose = None
     """The initial pose of this articulation"""
 
     merged: bool = False

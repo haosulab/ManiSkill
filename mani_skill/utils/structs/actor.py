@@ -32,7 +32,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
     px_body_type: Literal["kinematic", "static", "dynamic"] = None
     hidden: bool = False
 
-    inital_pose: Pose = None
+    initial_pose: Pose = None
     """
     The initial pose of this Actor, as defined when creating the actor via the ActorBuilder. It is necessary to track
     this pose to ensure the actor is still at the correct pose once gpu system is initialized. It may also be useful
@@ -111,11 +111,11 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
         for actor in actors:
             objs += actor._objs
             merged_scene_idxs.append(actor._scene_idxs)
-            _builder_initial_poses.append(actor.inital_pose.raw_pose)
+            _builder_initial_poses.append(actor.initial_pose.raw_pose)
         merged_scene_idxs = torch.concat(merged_scene_idxs)
         merged_actor = Actor.create_from_entities(objs, scene, merged_scene_idxs)
         merged_actor.name = name
-        merged_actor.inital_pose = Pose.create(torch.vstack(_builder_initial_poses))
+        merged_actor.initial_pose = Pose.create(torch.vstack(_builder_initial_poses))
         merged_actor.merged = True
         scene.actor_views[merged_actor.name] = merged_actor
         return merged_actor
@@ -234,7 +234,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
             if self.px_body_type == "static":
                 # NOTE (stao): usually _builder_initial_pose is just one pose, but for static objects in GPU sim we repeat it if necessary so it can be used
                 # as part of observations if needed
-                return self.inital_pose
+                return self.initial_pose
             else:
                 if self.hidden:
                     return Pose.create(self.before_hide_pose)

@@ -38,31 +38,8 @@ def main(args):
     else:
         env = gym.make_vec(args.env_id, num_envs=args.num_envs, vectorization_mode="async", vector_kwargs=dict(context="spawn"), obs_mode=args.obs_mode,)
         base_env = gym.make(args.env_id, obs_mode=args.obs_mode).unwrapped
-    sensor_settings_str = []
-    for uid, cam in base_env._sensors.items():
-        cfg = cam.cfg
-        sensor_settings_str.append(f"{cfg.width}x{cfg.height}")
-    sensor_settings_str = "_".join(sensor_settings_str)
-    print(
-        "# -------------------------------------------------------------------------- #"
-    )
-    print(
-        f"Benchmarking ManiSkill GPU Simulation with {num_envs} parallel environments"
-    )
-    print(
-        f"env_id={args.env_id}, obs_mode={args.obs_mode}, control_mode={args.control_mode}"
-    )
-    print(
-        f"render_mode={args.render_mode}, sensor_details={sensor_settings_str}, save_video={args.save_video}"
-    )
-    print(
-        f"sim_freq={base_env.sim_freq}, control_freq={base_env.control_freq}"
-    )
-    print(f"observation space: {env.observation_space}")
-    print(f"action space: {base_env.single_action_space}")
-    print(
-        "# -------------------------------------------------------------------------- #"
-    )
+
+    base_env.print_sim_details()
     images = []
     video_nrows = int(np.sqrt(num_envs))
     with torch.inference_mode():

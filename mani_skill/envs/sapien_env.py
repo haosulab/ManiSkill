@@ -275,8 +275,8 @@ class BaseEnv(gym.Env):
         self.single_observation_space
         self.observation_space
 
-    def _update_obs_space(self, obs: Any):
-        """call this function if you modify the observations returned by env.step and env.reset via an observation wrapper. The given observation must be a numpy array"""
+    def update_obs_space(self, obs: Any):
+        """call this function if you modify the observations returned by env.step and env.reset via an observation wrapper."""
         self._init_raw_obs = common.to_numpy(obs)
         del self.single_observation_space
         del self.observation_space
@@ -345,6 +345,10 @@ class BaseEnv(gym.Env):
     ]:
         """Add default cameras for rendering when using render_mode='rgb_array'. These can be overriden by the user at env creation time """
         return []
+
+    @property
+    def scene(self):
+        return self._scene
 
     @property
     def sim_freq(self):
@@ -902,7 +906,10 @@ class BaseEnv(gym.Env):
     # Simulation and other gym interfaces
     # -------------------------------------------------------------------------- #
     def _set_scene_config(self):
-        physx.set_scene_config(**self.sim_cfg.scene_cfg.dict())
+        # **self.sim_cfg.scene_cfg.dict()
+        physx.set_shape_config(contact_offset=self.sim_cfg.scene_cfg.contact_offset, rest_offset=self.sim_cfg.scene_cfg.rest_offset)
+        physx.set_body_config(solver_position_iterations=self.sim_cfg.scene_cfg.solver_position_iterations, solver_velocity_iterations=self.sim_cfg.scene_cfg.solver_velocity_iterations, sleep_threshold=self.sim_cfg.scene_cfg.sleep_threshold)
+        physx.set_scene_config(gravity=self.sim_cfg.scene_cfg.gravity, bounce_threshold=self.sim_cfg.scene_cfg.bounce_threshold, enable_pcm=self.sim_cfg.scene_cfg.enable_pcm, enable_tgs=self.sim_cfg.scene_cfg.enable_tgs, enable_ccd=self.sim_cfg.scene_cfg.enable_ccd, enable_enhanced_determinism=self.sim_cfg.scene_cfg.enable_enhanced_determinism, enable_friction_every_iteration=self.sim_cfg.scene_cfg.enable_friction_every_iteration, cpu_workers=self.sim_cfg.scene_cfg.cpu_workers )
         physx.set_default_material(**self.sim_cfg.default_materials_cfg.dict())
 
     def _setup_scene(self):
@@ -1169,3 +1176,34 @@ class BaseEnv(gym.Env):
     #     scene_mesh = merge_meshes(meshes)
     #     scene_pcd = scene_mesh.sample(num_points)
     #     return scene_pcd
+
+
+    # Printing metrics/info
+    def print_sim_details(self):
+        sensor_settings_str = []
+        for uid, cam in self._sensors.items():
+            if isinstance(cam, Camera):
+                cfg = cam.cfg
+                sensor_settings_str.append(f"RGBD ({cfg.width}x{cfg.height})")
+        sensor_settings_str = "_".join(sensor_settings_str)
+        sim_backend = "gpu" if physx.is_gpu_enabled() else "cpu"
+        print(
+        "# -------------------------------------------------------------------------- #"
+        )
+        print(
+            f"Task ID: {self.spec.id}, {self.num_envs} parallel environments, sim_backend={sim_backend}"
+        )
+        print(
+            f"obs_mode={self.obs_mode}, control_mode={self.control_mode}"
+        )
+        print(
+            f"render_mode={self.render_mode}, sensor_details={sensor_settings_str}"
+        )
+        print(
+            f"sim_freq={self.sim_freq}, control_freq={self.control_freq}"
+        )
+        print(f"observation space: {self.observation_space}")
+        print(f"(single) action space: {self.single_action_space}")
+        print(
+            "# -------------------------------------------------------------------------- #"
+        )
