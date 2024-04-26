@@ -1176,3 +1176,34 @@ class BaseEnv(gym.Env):
     #     scene_mesh = merge_meshes(meshes)
     #     scene_pcd = scene_mesh.sample(num_points)
     #     return scene_pcd
+
+
+    # Printing metrics/info
+    def print_sim_details(self):
+        sensor_settings_str = []
+        for uid, cam in self._sensors.items():
+            if isinstance(cam, Camera):
+                cfg = cam.cfg
+                sensor_settings_str.append(f"RGBD ({cfg.width}x{cfg.height})")
+        sensor_settings_str = "_".join(sensor_settings_str)
+        sim_backend = "gpu" if physx.is_gpu_enabled() else "cpu"
+        print(
+        "# -------------------------------------------------------------------------- #"
+        )
+        print(
+            f"Task ID: {self.spec.id}, {self.num_envs} parallel environments, sim_backend={sim_backend}"
+        )
+        print(
+            f"obs_mode={self.obs_mode}, control_mode={self.control_mode}"
+        )
+        print(
+            f"render_mode={self.render_mode}, sensor_details={sensor_settings_str}"
+        )
+        print(
+            f"sim_freq={self.sim_freq}, control_freq={self.control_freq}"
+        )
+        print(f"observation space: {self.observation_space}")
+        print(f"(single) action space: {self.single_action_space}")
+        print(
+            "# -------------------------------------------------------------------------- #"
+        )
