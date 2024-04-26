@@ -165,7 +165,7 @@ class Agent(nn.Module):
         state_feature = self.state_extractor(state)
         # pc_feature: (b, 128)
         # state_feature: (b, 128)
-        x = torch.concatenate([pc_feature, pc_feature], dim=-1)
+        x = torch.concatenate([pc_feature, state_feature], dim=-1)
         return self.critic(x)
 
     def get_action(self, pc, state, deterministic=False):
@@ -173,7 +173,7 @@ class Agent(nn.Module):
         state_feature = self.state_extractor(state)
         # pc_feature: (b, 128)
         # state_feature: (b, 128)
-        x = torch.concatenate([pc_feature, pc_feature], dim=-1)
+        x = torch.concatenate([pc_feature, state_feature], dim=-1)
         action_mean = self.actor_mean(x)
         if deterministic:
             return action_mean
@@ -187,7 +187,7 @@ class Agent(nn.Module):
         state_feature = self.state_extractor(state)
         # pc_feature: (b, 128)
         # state_feature: (b, 128)
-        x = torch.concatenate([pc_feature, pc_feature], dim=-1)
+        x = torch.concatenate([pc_feature, state_feature], dim=-1)
         action_mean = self.actor_mean(x)
         action_logstd = self.actor_logstd.expand_as(action_mean)
         action_std = torch.exp(action_logstd)
