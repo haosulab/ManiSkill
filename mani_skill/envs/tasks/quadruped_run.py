@@ -52,7 +52,7 @@ class QuadrupedRunEnv(BaseEnv):
                 max_rigid_contact_count=2**20,
             ),
             scene_cfg=SceneConfig(
-                solver_iterations=4,
+                solver_position_iterations=4,
                 bounce_threshold=0.2,
             ),
         )
