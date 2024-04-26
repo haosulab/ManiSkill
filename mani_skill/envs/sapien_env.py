@@ -275,8 +275,8 @@ class BaseEnv(gym.Env):
         self.single_observation_space
         self.observation_space
 
-    def _update_obs_space(self, obs: Any):
-        """call this function if you modify the observations returned by env.step and env.reset via an observation wrapper. The given observation must be a numpy array"""
+    def update_obs_space(self, obs: Any):
+        """call this function if you modify the observations returned by env.step and env.reset via an observation wrapper."""
         self._init_raw_obs = common.to_numpy(obs)
         del self.single_observation_space
         del self.observation_space

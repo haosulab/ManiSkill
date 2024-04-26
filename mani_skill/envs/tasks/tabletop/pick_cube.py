@@ -70,8 +70,11 @@ class PickCubeEnv(BaseEnv):
             self.goal_site.set_pose(Pose.create_from_pq(goal_xyz))
 
     def _get_obs_extra(self, info: Dict):
+        # in reality some people hack is_grasped into observations by checking if the gripper can close fully or not
         obs = dict(
-            tcp_pose=self.agent.tcp.pose.raw_pose, goal_pos=self.goal_site.pose.p
+            is_grasped=info["is_grasped"],
+            tcp_pose=self.agent.tcp.pose.raw_pose,
+            goal_pos=self.goal_site.pose.p,
         )
         if "state" in self.obs_mode:
             obs.update(
@@ -86,11 +89,13 @@ class PickCubeEnv(BaseEnv):
             torch.linalg.norm(self.goal_site.pose.p - self.cube.pose.p, axis=1)
             <= self.goal_thresh
         )
+        is_grasped = self.agent.is_grasping(self.cube)
         is_robot_static = self.agent.is_static(0.2)
         return {
             "success": is_obj_placed & is_robot_static,
             "is_obj_placed": is_obj_placed,
             "is_robot_static": is_robot_static,
+            "is_grasped": is_grasped,
         }
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
@@ -100,7 +105,7 @@ class PickCubeEnv(BaseEnv):
         reaching_reward = 1 - torch.tanh(5 * tcp_to_obj_dist)
         reward = reaching_reward
 
-        is_grasped = self.agent.is_grasping(self.cube)
+        is_grasped = info["is_grasped"]
         reward += is_grasped
 
         obj_to_goal_dist = torch.linalg.norm(
