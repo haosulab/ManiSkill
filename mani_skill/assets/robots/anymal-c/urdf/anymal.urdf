@@ -13,51 +13,11 @@
             </geometry>
         </visual>
         <collision>
-            <origin rpy="0 0 0" xyz="0 0 0"/>
+            <origin rpy="0 1.57079632679 0" xyz="0 0 0"/>
             <geometry>
-                <box size="0.58 0.14 0.18"/>
+                <cylinder length="0.75" radius="0.075"/>
             </geometry>
         </collision>
-        <collision>
-            <origin rpy="0 1.57079632679 0" xyz="0.2175 0.07 0"/>
-            <geometry>
-                <cylinder length="0.145" radius="0.09"/>
-            </geometry>
-        </collision>
-        <collision>
-            <origin rpy="0 1.57079632679 0" xyz="-0.2175 0.07 0"/>
-            <geometry>
-                <cylinder length="0.145" radius="0.09"/>
-            </geometry>
-        </collision>
-        <collision>
-            <origin rpy="0 1.57079632679 0" xyz="0.2175 -0.07 0"/>
-            <geometry>
-                <cylinder length="0.145" radius="0.09"/>
-            </geometry>
-        </collision>
-        <collision>
-            <origin rpy="0 1.57079632679 0" xyz="-0.2175 -0.07 0"/>
-            <geometry>
-                <cylinder length="0.145" radius="0.09"/>
-            </geometry>
-        </collision>
-        <!-- Shell self filtering -->
-        <self_filter>
-            <origin rpy="0 0 0" xyz="0 0 0"/>
-            <geometry>
-                <box size="1.05 0.5 0.5"/>
-            </geometry>
-        </self_filter>
-    </link>
-    <!-- Fixed joint to add dummy inertia link -->
-    <joint name="base_to_base_inertia" type="fixed">
-        <parent link="base"/>
-        <child link="base_inertia"/>
-        <origin rpy="0 0 0" xyz="0 0 0"/>
-    </joint>
-    <!-- Dummy inertia link, because KDL cannot have inertia on the base link -->
-    <link name="base_inertia">
         <inertial>
             <origin rpy="0 0 0" xyz="-0.018 -0.002 0.024"/>
             <mass value="6.222"/>
@@ -158,24 +118,6 @@
                 <mesh filename="../meshes/face.dae" scale="1.0 1.0 1.0"/>
             </geometry>
         </visual>
-        <collision>
-            <origin rpy="0 0 0" xyz="0.055 0 0"/>
-            <geometry>
-                <box size="0.11 0.14 0.18"/>
-            </geometry>
-        </collision>
-        <collision>
-            <origin rpy="0 1.57079632679 0" xyz="0.055 0.07 0"/>
-            <geometry>
-                <cylinder length="0.11" radius="0.09"/>
-            </geometry>
-        </collision>
-        <collision>
-            <origin rpy="0 1.57079632679 0" xyz="0.055 -0.07 0"/>
-            <geometry>
-                <cylinder length="0.11" radius="0.09"/>
-            </geometry>
-        </collision>
         <inertial>
             <origin rpy="0 0 0" xyz="0.042 -0.001 0.004"/>
             <mass value="0.73"/>
@@ -279,24 +221,6 @@
                 <mesh filename="../meshes/face.dae" scale="1.0 1.0 1.0"/>
             </geometry>
         </visual>
-        <collision>
-            <origin rpy="0 0 0" xyz="0.055 0 0"/>
-            <geometry>
-                <box size="0.11 0.14 0.18"/>
-            </geometry>
-        </collision>
-        <collision>
-            <origin rpy="0 1.57079632679 0" xyz="0.055 0.07 0"/>
-            <geometry>
-                <cylinder length="0.11" radius="0.09"/>
-            </geometry>
-        </collision>
-        <collision>
-            <origin rpy="0 1.57079632679 0" xyz="0.055 -0.07 0"/>
-            <geometry>
-                <cylinder length="0.11" radius="0.09"/>
-            </geometry>
-        </collision>
         <inertial>
             <origin rpy="0 0 0" xyz="0.042 -0.001 0.004"/>
             <mass value="0.73"/>
@@ -429,12 +353,6 @@
             </geometry>
             <material name="orange"/>
         </visual>
-        <collision>
-            <origin rpy="0 0 0" xyz="0 0 0.005"/>
-            <geometry>
-                <box size="0.024 0.024 0.01"/>
-            </geometry>
-        </collision>
         <inertial>
             <mass value="0.01"/>
             <origin xyz="0 0 0"/>
@@ -568,12 +486,6 @@
                 <mesh filename="../meshes/lidar_cage.dae" scale="1.0 1.0 1.0"/>
             </geometry>
         </visual>
-        <collision>
-            <origin rpy="0 0 0" xyz="0 0 0.06"/>
-            <geometry>
-                <cylinder length="0.12" radius="0.07"/>
-            </geometry>
-        </collision>
         <inertial>
             <origin rpy="0.0 0.0 0.0" xyz="0.002 0.0 0.099"/>
             <mass value="0.545"/>
@@ -626,7 +538,7 @@
         <child link="LF_HIP"/>
         <origin rpy="0 0 0" xyz="0 0 0"/>
         <axis xyz="1 0 0"/>
-        <limit effort="80.0" lower="-0.72" upper="0.49" velocity="7.5"/>
+        <limit effort="80.0" lower="-0.51" upper="0.49" velocity="7.5"/>
         <dynamics damping="0.0" friction="0.0"/>
     </joint>
     <!-- Drive output link -->
@@ -671,12 +583,6 @@
                 <mesh filename="../meshes/drive.dae" scale="1.0 1.0 1.0"/>
             </geometry>
         </visual>
-        <collision>
-            <origin rpy="0 1.57079632679 0" xyz="-0.07 0 0"/>
-            <geometry>
-                <cylinder length="0.14" radius="0.05"/>
-            </geometry>
-        </collision>
         <inertial>
             <origin rpy="0 0 0" xyz="-0.063 7e-05 0.00046"/>
             <mass value="2.04"/>
@@ -689,7 +595,7 @@
         <child link="LF_THIGH"/>
         <origin rpy="0 0 0" xyz="0 0 0"/>
         <axis xyz="1 0 0"/>
-        <limit effort="80.0" lower="-9.42477796077" upper="9.42477796077" velocity="7.5"/>
+        <limit effort="80.0" lower="-0.1" upper="0.9" velocity="7.5"/>
         <dynamics damping="0.0" friction="0.0"/>
     </joint>
     <!-- Drive output link -->
@@ -714,19 +620,6 @@
                 <mesh filename="../meshes/thigh.dae" scale="1.0 1.0 1.0"/>
             </geometry>
         </visual>
-        <!-- Thigh collision -->
-        <collision>
-            <origin rpy="1.57079632679 0 0" xyz="0 0.04 0"/>
-            <geometry>
-                <cylinder length="0.08" radius="0.065"/>
-            </geometry>
-        </collision>
-        <collision>
-            <origin rpy="0 0 0" xyz="0 0.03 -0.1413135"/>
-            <geometry>
-                <box size="0.075 0.06 0.282627"/>
-            </geometry>
-        </collision>
         <inertial>
             <origin rpy="0 0 0" xyz="0.0 0.018 -0.169"/>
             <mass value="1.03"/>
@@ -750,7 +643,7 @@
         <collision>
             <origin rpy="0 1.57079632679 0" xyz="-0.07 0 0"/>
             <geometry>
-                <cylinder length="0.14" radius="0.05"/>
+                <cylinder length="0.08" radius="0.06"/>
             </geometry>
         </collision>
         <inertial>
@@ -765,7 +658,7 @@
         <child link="LF_SHANK"/>
         <origin rpy="0 0 0" xyz="0 0 0"/>
         <axis xyz="1 0 0"/>
-        <limit effort="80.0" lower="-9.42477796077" upper="9.42477796077" velocity="7.5"/>
+        <limit effort="80.0" lower="-1.3" upper="-0.3" velocity="7.5"/>
         <dynamics damping="0.0" friction="0.0"/>
     </joint>
     <!-- Drive output link -->
@@ -775,6 +668,13 @@
             <mass value="0.001"/>
             <inertia ixx="0.000001" ixy="0.0" ixz="0.0" iyy="0.000001" iyz="0.0" izz="0.000001"/>
         </inertial>
+        <!-- Adapter collision -->
+        <collision>
+            <origin rpy="0 0 0" xyz="0.01 -0.1 -0.2"/>
+            <geometry>
+                <cylinder length="0.2" radius="0.0175"/>
+            </geometry>
+        </collision>
     </link>
     <!-- joint KFE shank -->
     <joint name="LF_shank_LF_shank_fixed" type="fixed">
@@ -790,19 +690,6 @@
                 <mesh filename="../meshes/shank_l.dae" scale="1.0 1.0 1.0"/>
             </geometry>
         </visual>
-        <!-- Shank collision -->
-        <collision>
-            <origin rpy="1.57079632679 0 0" xyz="0 0.02 0"/>
-            <geometry>
-                <cylinder length="0.04" radius="0.06"/>
-            </geometry>
-        </collision>
-        <collision>
-            <origin rpy="1.57079632679 0 0" xyz="0.057499 0.02 0"/>
-            <geometry>
-                <box size="0.114998 0.0675 0.04"/>
-            </geometry>
-        </collision>
         <inertial>
             <origin rpy="0 0 0" xyz="0.03463 0.00688 0.00098"/>
             <mass value="0.33742"/>
@@ -811,7 +698,7 @@
     </link>
     <!-- Leg configurations: xx (knees bent inwards), xo (knees bent backwards) -->
     <!-- joint shank foot -->
-    <joint name="LF_shank_fixed_LF_FOOT" type="fixed">
+    <joint name="LF_shank_fixed_LF_FOOT" type="fixed" dont_collapse="true">
         <parent link="LF_shank_fixed"/>
         <child link="LF_FOOT"/>
         <origin rpy="0 0 0" xyz="0.08795 0.01305 -0.33797"/>
@@ -824,13 +711,6 @@
                 <mesh filename="../meshes/foot.dae" scale="1.0 1.0 1.0"/>
             </geometry>
         </visual>
-        <!-- Adapter collision -->
-        <collision>
-            <origin rpy="0 0 0" xyz="0 0 0.168985"/>
-            <geometry>
-                <cylinder length="0.282504" radius="0.0175"/>
-            </geometry>
-        </collision>
         <!-- Foot collision -->
         <collision>
             <origin xyz="0 0 0.0225"/>
@@ -870,7 +750,7 @@
         <child link="RF_HIP"/>
         <origin rpy="0 0 0" xyz="0 0 0"/>
         <axis xyz="1 0 0"/>
-        <limit effort="80.0" lower="-0.49" upper="0.72" velocity="7.5"/>
+        <limit effort="80.0" lower="-0.49" upper="0.51" velocity="7.5"/>
         <dynamics damping="0.0" friction="0.0"/>
     </joint>
     <!-- Drive output link -->
@@ -915,12 +795,6 @@
                 <mesh filename="../meshes/drive.dae" scale="1.0 1.0 1.0"/>
             </geometry>
         </visual>
-        <collision>
-            <origin rpy="0 1.57079632679 0" xyz="-0.07 0 0"/>
-            <geometry>
-                <cylinder length="0.14" radius="0.05"/>
-            </geometry>
-        </collision>
         <inertial>
             <origin rpy="0 0 0" xyz="-0.063 7e-05 0.00046"/>
             <mass value="2.04"/>
@@ -933,7 +807,7 @@
         <child link="RF_THIGH"/>
         <origin rpy="0 0 0" xyz="0 0 0"/>
         <axis xyz="-1 0 0"/>
-        <limit effort="80.0" lower="-9.42477796077" upper="9.42477796077" velocity="7.5"/>
+        <limit effort="80.0" lower="-0.1" upper="0.9" velocity="7.5"/>
         <dynamics damping="0.0" friction="0.0"/>
     </joint>
     <!-- Drive output link -->
@@ -958,19 +832,6 @@
                 <mesh filename="../meshes/thigh.dae" scale="1.0 1.0 1.0"/>
             </geometry>
         </visual>
-        <!-- Thigh collision -->
-        <collision>
-            <origin rpy="1.57079632679 0 0" xyz="0 -0.04 0"/>
-            <geometry>
-                <cylinder length="0.08" radius="0.065"/>
-            </geometry>
-        </collision>
-        <collision>
-            <origin rpy="0 0 0" xyz="0 -0.03 -0.1413135"/>
-            <geometry>
-                <box size="0.075 0.06 0.282627"/>
-            </geometry>
-        </collision>
         <inertial>
             <origin rpy="0 0 0" xyz="0.0 -0.018 -0.169"/>
             <mass value="1.03"/>
@@ -994,7 +855,7 @@
         <collision>
             <origin rpy="0 1.57079632679 0" xyz="-0.07 0 0"/>
             <geometry>
-                <cylinder length="0.14" radius="0.05"/>
+                <cylinder length="0.08" radius="0.06"/>
             </geometry>
         </collision>
         <inertial>
@@ -1009,7 +870,7 @@
         <child link="RF_SHANK"/>
         <origin rpy="0 0 0" xyz="0 0 0"/>
         <axis xyz="-1 0 0"/>
-        <limit effort="80.0" lower="-9.42477796077" upper="9.42477796077" velocity="7.5"/>
+        <limit effort="80.0" lower="-1.3" upper="-0.3" velocity="7.5"/>
         <dynamics damping="0.0" friction="0.0"/>
     </joint>
     <!-- Drive output link -->
@@ -1019,6 +880,13 @@
             <mass value="0.001"/>
             <inertia ixx="0.000001" ixy="0.0" ixz="0.0" iyy="0.000001" iyz="0.0" izz="0.000001"/>
         </inertial>
+        <!-- Adapter collision -->
+        <collision>
+            <origin rpy="0 0 0" xyz="0.01 0.1 -0.2"/>
+            <geometry>
+                <cylinder length="0.2" radius="0.0175"/>
+            </geometry>
+        </collision>
     </link>
     <!-- joint KFE shank -->
     <joint name="RF_shank_RF_shank_fixed" type="fixed">
@@ -1034,19 +902,6 @@
                 <mesh filename="../meshes/shank_r.dae" scale="1.0 1.0 1.0"/>
             </geometry>
         </visual>
-        <!-- Shank collision -->
-        <collision>
-            <origin rpy="1.57079632679 0 0" xyz="0 -0.02 0"/>
-            <geometry>
-                <cylinder length="0.04" radius="0.06"/>
-            </geometry>
-        </collision>
-        <collision>
-            <origin rpy="1.57079632679 0 0" xyz="0.057499 -0.02 0"/>
-            <geometry>
-                <box size="0.114998 0.0675 0.04"/>
-            </geometry>
-        </collision>
         <inertial>
             <origin rpy="0 0 0" xyz="0.03463 -0.00688 0.00098"/>
             <mass value="0.33742"/>
@@ -1055,7 +910,7 @@
     </link>
     <!-- Leg configurations: xx (knees bent inwards), xo (knees bent backwards) -->
     <!-- joint shank foot -->
-    <joint name="RF_shank_fixed_RF_FOOT" type="fixed">
+    <joint name="RF_shank_fixed_RF_FOOT" type="fixed" dont_collapse="true">
         <parent link="RF_shank_fixed"/>
         <child link="RF_FOOT"/>
         <origin rpy="0 0 0" xyz="0.08795 -0.01305 -0.33797"/>
@@ -1068,13 +923,6 @@
                 <mesh filename="../meshes/foot.dae" scale="1.0 1.0 1.0"/>
             </geometry>
         </visual>
-        <!-- Adapter collision -->
-        <collision>
-            <origin rpy="0 0 0" xyz="0 0 0.168985"/>
-            <geometry>
-                <cylinder length="0.282504" radius="0.0175"/>
-            </geometry>
-        </collision>
         <!-- Foot collision -->
         <collision>
             <origin xyz="0 0 0.0225"/>
@@ -1114,7 +962,7 @@
         <child link="LH_HIP"/>
         <origin rpy="0 0 0" xyz="0 0 0"/>
         <axis xyz="-1 0 0"/>
-        <limit effort="80.0" lower="-0.72" upper="0.49" velocity="7.5"/>
+        <limit effort="80.0" lower="-0.51" upper="0.49" velocity="7.5"/>
         <dynamics damping="0.0" friction="0.0"/>
     </joint>
     <!-- Drive output link -->
@@ -1159,12 +1007,6 @@
                 <mesh filename="../meshes/drive.dae" scale="1.0 1.0 1.0"/>
             </geometry>
         </visual>
-        <collision>
-            <origin rpy="0 1.57079632679 0" xyz="-0.07 0 0"/>
-            <geometry>
-                <cylinder length="0.14" radius="0.05"/>
-            </geometry>
-        </collision>
         <inertial>
             <origin rpy="0 0 0" xyz="-0.063 7e-05 0.00046"/>
             <mass value="2.04"/>
@@ -1177,7 +1019,7 @@
         <child link="LH_THIGH"/>
         <origin rpy="0 0 0" xyz="0 0 0"/>
         <axis xyz="1 0 0"/>
-        <limit effort="80.0" lower="-9.42477796077" upper="9.42477796077" velocity="7.5"/>
+        <limit effort="80.0" lower="-0.9" upper="0.1" velocity="7.5"/>
         <dynamics damping="0.0" friction="0.0"/>
     </joint>
     <!-- Drive output link -->
@@ -1202,19 +1044,6 @@
                 <mesh filename="../meshes/thigh.dae" scale="1.0 1.0 1.0"/>
             </geometry>
         </visual>
-        <!-- Thigh collision -->
-        <collision>
-            <origin rpy="1.57079632679 0 0" xyz="0 0.04 0"/>
-            <geometry>
-                <cylinder length="0.08" radius="0.065"/>
-            </geometry>
-        </collision>
-        <collision>
-            <origin rpy="0 0 0" xyz="0 0.03 -0.1413135"/>
-            <geometry>
-                <box size="0.075 0.06 0.282627"/>
-            </geometry>
-        </collision>
         <inertial>
             <origin rpy="0 0 0" xyz="-0.0 0.018 -0.169"/>
             <mass value="1.03"/>
@@ -1238,7 +1067,7 @@
         <collision>
             <origin rpy="0 1.57079632679 0" xyz="-0.07 0 0"/>
             <geometry>
-                <cylinder length="0.14" radius="0.05"/>
+                <cylinder length="0.08" radius="0.06"/>
             </geometry>
         </collision>
         <inertial>
@@ -1253,7 +1082,7 @@
         <child link="LH_SHANK"/>
         <origin rpy="0 0 0" xyz="0 0 0"/>
         <axis xyz="1 0 0"/>
-        <limit effort="80.0" lower="-9.42477796077" upper="9.42477796077" velocity="7.5"/>
+        <limit effort="80.0" lower="0.3" upper="1.3" velocity="7.5"/>
         <dynamics damping="0.0" friction="0.0"/>
     </joint>
     <!-- Drive output link -->
@@ -1263,6 +1092,13 @@
             <mass value="0.001"/>
             <inertia ixx="0.000001" ixy="0.0" ixz="0.0" iyy="0.000001" iyz="0.0" izz="0.000001"/>
         </inertial>
+        <!-- Adapter collision -->
+        <collision>
+            <origin rpy="0 0 0" xyz="0.01 0.1 -0.2"/>
+            <geometry>
+                <cylinder length="0.2" radius="0.0175"/>
+            </geometry>
+        </collision>
     </link>
     <!-- joint KFE shank -->
     <joint name="LH_shank_LH_shank_fixed" type="fixed">
@@ -1279,18 +1115,6 @@
             </geometry>
         </visual>
         <!-- Shank collision -->
-        <collision>
-            <origin rpy="1.57079632679 0 0" xyz="0 0.02 0"/>
-            <geometry>
-                <cylinder length="0.04" radius="0.06"/>
-            </geometry>
-        </collision>
-        <collision>
-            <origin rpy="1.57079632679 0 0" xyz="-0.057499 0.02 0"/>
-            <geometry>
-                <box size="0.114998 0.0675 0.04"/>
-            </geometry>
-        </collision>
         <inertial>
             <origin rpy="0 0 0" xyz="-0.03463 0.00688 0.00098"/>
             <mass value="0.33742"/>
@@ -1299,7 +1123,7 @@
     </link>
     <!-- Leg configurations: xx (knees bent inwards), xo (knees bent backwards) -->
     <!-- joint shank foot -->
-    <joint name="LH_shank_fixed_LH_FOOT" type="fixed">
+    <joint name="LH_shank_fixed_LH_FOOT" type="fixed" dont_collapse="true">
         <parent link="LH_shank_fixed"/>
         <child link="LH_FOOT"/>
         <origin rpy="0 0 0" xyz="-0.08795 0.01305 -0.33797"/>
@@ -1312,13 +1136,6 @@
                 <mesh filename="../meshes/foot.dae" scale="1.0 1.0 1.0"/>
             </geometry>
         </visual>
-        <!-- Adapter collision -->
-        <collision>
-            <origin rpy="0 0 0" xyz="0 0 0.168985"/>
-            <geometry>
-                <cylinder length="0.282504" radius="0.0175"/>
-            </geometry>
-        </collision>
         <!-- Foot collision -->
         <collision>
             <origin xyz="0 0 0.0225"/>
@@ -1358,7 +1175,7 @@
         <child link="RH_HIP"/>
         <origin rpy="0 0 0" xyz="0 0 0"/>
         <axis xyz="-1 0 0"/>
-        <limit effort="80.0" lower="-0.49" upper="0.72" velocity="7.5"/>
+        <limit effort="80.0" lower="-0.49" upper="0.51" velocity="7.5"/>
         <dynamics damping="0.0" friction="0.0"/>
     </joint>
     <!-- Drive output link -->
@@ -1403,12 +1220,6 @@
                 <mesh filename="../meshes/drive.dae" scale="1.0 1.0 1.0"/>
             </geometry>
         </visual>
-        <collision>
-            <origin rpy="0 1.57079632679 0" xyz="-0.07 0 0"/>
-            <geometry>
-                <cylinder length="0.14" radius="0.05"/>
-            </geometry>
-        </collision>
         <inertial>
             <origin rpy="0 0 0" xyz="-0.063 7e-05 0.00046"/>
             <mass value="2.04"/>
@@ -1421,7 +1232,7 @@
         <child link="RH_THIGH"/>
         <origin rpy="0 0 0" xyz="0 0 0"/>
         <axis xyz="-1 0 0"/>
-        <limit effort="80.0" lower="-9.42477796077" upper="9.42477796077" velocity="7.5"/>
+        <limit effort="80.0" lower="-0.9" upper="0.1" velocity="7.5"/>
         <dynamics damping="0.0" friction="0.0"/>
     </joint>
     <!-- Drive output link -->
@@ -1446,19 +1257,6 @@
                 <mesh filename="../meshes/thigh.dae" scale="1.0 1.0 1.0"/>
             </geometry>
         </visual>
-        <!-- Thigh collision -->
-        <collision>
-            <origin rpy="1.57079632679 0 0" xyz="0 -0.04 0"/>
-            <geometry>
-                <cylinder length="0.08" radius="0.065"/>
-            </geometry>
-        </collision>
-        <collision>
-            <origin rpy="0 0 0" xyz="0 -0.03 -0.1413135"/>
-            <geometry>
-                <box size="0.075 0.06 0.282627"/>
-            </geometry>
-        </collision>
         <inertial>
             <origin rpy="0 0 0" xyz="-0.0 -0.018 -0.169"/>
             <mass value="1.03"/>
@@ -1482,7 +1280,7 @@
         <collision>
             <origin rpy="0 1.57079632679 0" xyz="-0.07 0 0"/>
             <geometry>
-                <cylinder length="0.14" radius="0.05"/>
+                <cylinder length="0.08" radius="0.06"/>
             </geometry>
         </collision>
         <inertial>
@@ -1497,7 +1295,7 @@
         <child link="RH_SHANK"/>
         <origin rpy="0 0 0" xyz="0 0 0"/>
         <axis xyz="-1 0 0"/>
-        <limit effort="80.0" lower="-9.42477796077" upper="9.42477796077" velocity="7.5"/>
+        <limit effort="80.0" lower="0.3" upper="1.3" velocity="7.5"/>
         <dynamics damping="0.0" friction="0.0"/>
     </joint>
     <!-- Drive output link -->
@@ -1507,6 +1305,13 @@
             <mass value="0.001"/>
             <inertia ixx="0.000001" ixy="0.0" ixz="0.0" iyy="0.000001" iyz="0.0" izz="0.000001"/>
         </inertial>
+        <!-- Adapter collision -->
+        <collision>
+            <origin rpy="0 0 0" xyz="0.01 -0.1 -0.2"/>
+            <geometry>
+                <cylinder length="0.2" radius="0.0175"/>
+            </geometry>
+        </collision>
     </link>
     <!-- joint KFE shank -->
     <joint name="RH_shank_RH_shank_fixed" type="fixed">
@@ -1522,19 +1327,6 @@
                 <mesh filename="../meshes/shank_l.dae" scale="1.0 1.0 1.0"/>
             </geometry>
         </visual>
-        <!-- Shank collision -->
-        <collision>
-            <origin rpy="1.57079632679 0 0" xyz="0 -0.02 0"/>
-            <geometry>
-                <cylinder length="0.04" radius="0.06"/>
-            </geometry>
-        </collision>
-        <collision>
-            <origin rpy="1.57079632679 0 0" xyz="-0.057499 -0.02 0"/>
-            <geometry>
-                <box size="0.114998 0.0675 0.04"/>
-            </geometry>
-        </collision>
         <inertial>
             <origin rpy="0 0 0" xyz="-0.03463 -0.00688 0.00098"/>
             <mass value="0.33742"/>
@@ -1543,7 +1335,7 @@
     </link>
     <!-- Leg configurations: xx (knees bent inwards), xo (knees bent backwards) -->
     <!-- joint shank foot -->
-    <joint name="RH_shank_fixed_RH_FOOT" type="fixed">
+    <joint name="RH_shank_fixed_RH_FOOT" type="fixed" dont_collapse="true">
         <parent link="RH_shank_fixed"/>
         <child link="RH_FOOT"/>
         <origin rpy="0 0 0" xyz="-0.08795 -0.01305 -0.33797"/>
@@ -1556,13 +1348,6 @@
                 <mesh filename="../meshes/foot.dae" scale="1.0 1.0 1.0"/>
             </geometry>
         </visual>
-        <!-- Adapter collision -->
-        <collision>
-            <origin rpy="0 0 0" xyz="0 0 0.168985"/>
-            <geometry>
-                <cylinder length="0.282504" radius="0.0175"/>
-            </geometry>
-        </collision>
         <!-- Foot collision -->
         <collision>
             <origin xyz="0 0 0.0225"/>
@@ -1593,10 +1378,7 @@
         <inertial>
             <origin rpy="0 0 0" xyz="0.116 0.0 0.0758"/>
             <mass value="0.142"/>
-            <inertia ixx="0.001" ixy="0.00" ixz="0.00" iyy="0.001" iyz="0.00" izz="0.001"/>
-            <!-- This is original inertia attribtue but it is invalid -->
-            <!-- <inertia ixx="0.001" ixy="0.001" ixz="0.001" iyy="0.001" iyz="0.001" izz="0.001"/> -->
+            <inertia ixx="0.001" ixy="0.001" ixz="0.001" iyy="0.001" iyz="0.001" izz="0.001"/>
         </inertial>
     </link>
 </robot>
-

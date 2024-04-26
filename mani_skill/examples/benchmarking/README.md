@@ -8,16 +8,16 @@ Code here is used to benchmark the performance of various simulators/benchmarks 
 To benchmark ManiSkill + SAPIEN, after following the setup instructions on this repository's README.md, run
 
 ```
-python benchmark_maniskill.py -e "PickCube-v1" --num-envs=1024 --obs-mode=state # test just state simulation
-python benchmark_maniskill.py -e "PickCube-v1" --num-envs=128 --obs-mode=rgbd # test state sim + parallel rendering one 128x128 RGBD cameras per environment
-python benchmark_maniskill.py -e "PickCube-v1" --num-envs=128 --save-video # save a video showing all 128 visual observations
+python gpu_sim.py -e "PickCube-v1" --num-envs=1024 --obs-mode=state # test just state simulation
+python gpu_sim.py -e "PickCube-v1" --num-envs=128 --obs-mode=rgbd # test state sim + parallel rendering one 128x128 RGBD cameras per environment
+python gpu_sim.py -e "PickCube-v1" --num-envs=128 --save-video # save a video showing all 128 visual observations
 ```
 
 
 To get the reported results, we run two commands on a machine with a RTX 4090:
 ```
-python benchmark_maniskill.py -e "PickCube-v1" --num-envs=4096 --obs-mode=state --control-freq=50
-python benchmark_maniskill.py -e "PickCube-v1" --num-envs=1536 --obs-mode=rgbd --control-freq=50
+python gpu_sim.py -e "PickCube-v1" --num-envs=4096 --obs-mode=state --control-freq=50
+python gpu_sim.py -e "PickCube-v1" --num-envs=1536 --obs-mode=rgbd --control-freq=50
 # note we use --control-freq=50 as this is the control frequency isaac sim based repos tend to use
 ```
 

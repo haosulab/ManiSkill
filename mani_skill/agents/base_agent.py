@@ -60,6 +60,10 @@ class BaseAgent:
     """Whether to fix the root link of the robot"""
     load_multiple_collisions: bool = False
     """Whether the referenced collision meshes of a robot definition should be loaded as multiple convex collisions"""
+    disable_self_collisions: bool = False
+    """Whether to disable self collisions. This is generally not recommended as you should be defining a SRDF file to exclude specific collisions.
+    However for some robots/tasks it may be easier to disable all self collisions between links in the robot to increase simulation speed
+    """
 
     keyframes: Dict[str, Keyframe] = dict()
     """a dict of predefined keyframes similar to what Mujoco does that you can use to reset the agent to that may be of interest"""
@@ -123,6 +127,7 @@ class BaseAgent:
             loader.name = f"{self.uid}-agent-{self._agent_idx}"
         loader.fix_root_link = self.fix_root_link
         loader.load_multiple_collisions_from_file = self.load_multiple_collisions
+        loader.disable_self_collisions = self.disable_self_collisions
 
         if self.urdf_config is not None:
             urdf_config = sapien_utils.parse_urdf_config(self.urdf_config)

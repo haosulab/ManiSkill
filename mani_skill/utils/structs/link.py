@@ -177,6 +177,12 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
     # def index_q(self) -> torch.Tensor:
     #     """The indexes of the managed link objects in their respective articulations. These correspond with position in the qpos and qvel of articulations"""
 
+    def set_collision_group_bit(self, group: int, bit_idx: int, bit: int):
+        """Set's a specific collision group bit for all collision shapes in all parallel actors"""
+        for body in self._bodies:
+            for cs in body.get_collision_shapes():
+                cs.collision_groups[group] |= bit << bit_idx
+
     # -------------------------------------------------------------------------- #
     # Functions from sapien.Component
     # -------------------------------------------------------------------------- #

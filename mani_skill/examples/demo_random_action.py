@@ -14,9 +14,10 @@ def parse_args(args=None):
     parser.add_argument("-b", "--sim-backend", type=str, default="auto", help="Which simulation backend to use. Can be 'auto', 'cpu', 'gpu'")
     parser.add_argument("--reward-mode", type=str)
     parser.add_argument("-c", "--control-mode", type=str)
-    parser.add_argument("--render-mode", type=str, default="rgb_array", help="Can be 'human' to open a viewer, or rgb_array / sensors which change the cameras saved videos use")
+    parser.add_argument("--render-mode", type=str)
     parser.add_argument("--shader", default="default", type=str, help="Change shader used for rendering. Default is 'default' which is very fast. Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer")
-    parser.add_argument("--record-dir", type=str, help="Where to save recorded videos. If none, no videos are saved")
+    parser.add_argument("--record-dir", type=str)
+    parser.add_argument("-p", "--pause", action="store_true", help="If using human render mode, auto pauses the simulation upon loading")
     parser.add_argument("--quiet", action="store_true", help="Disable verbose output.")
     parser.add_argument(
         "-s",
@@ -68,6 +69,8 @@ def main(args):
     obs, _ = env.reset(seed=args.seed)
     env.action_space.seed(args.seed)
     if args.render_mode is not None:
+        viewer = env.render()
+        viewer.paused = args.pause
         env.render()
 
     while True:

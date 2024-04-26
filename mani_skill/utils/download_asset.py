@@ -235,6 +235,10 @@ def download(
             else:
                 print(f"Skip existing: {output_path}")
                 return output_path
+    output_path.mkdir(parents=True, exist_ok=True)
+    if data_source.hf_repo_id is not None:
+        download_from_hf_datasets(data_source)
+        return
 
     Path(output_dir).mkdir(parents=True, exist_ok=True)
     if data_source.hf_repo_id is not None:
