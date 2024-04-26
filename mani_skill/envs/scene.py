@@ -521,9 +521,9 @@ class ManiSkillScene:
         # As physx_system.gpu_init() was called a single physx step was also taken. So we need to reset
         # all the actors and articulations to their original poses as they likely have collided
         for actor in self.non_static_actors:
-            actor.set_pose(actor.inital_pose)
+            actor.set_pose(actor.initial_pose)
         for articulation in self.articulations.values():
-            articulation.set_pose(articulation.inital_pose)
+            articulation.set_pose(articulation.initial_pose)
         self.px.gpu_apply_rigid_dynamic_data()
         self.px.gpu_apply_articulation_root_pose()
 

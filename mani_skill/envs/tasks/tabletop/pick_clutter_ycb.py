@@ -164,11 +164,11 @@ class PickClutterEnv(BaseEnv):
             # reset objects to original poses
             if b == self.num_envs:
                 # if all envs reset
-                self.all_objects.pose = self.all_objects.inital_pose
+                self.all_objects.pose = self.all_objects.initial_pose
             else:
                 # if only some envs reset, we unfortunately still have to do some mask wrangling
                 mask = torch.isin(self.all_objects._scene_idxs, env_idx)
-                self.all_objects.pose = self.all_objects.inital_pose[mask]
+                self.all_objects.pose = self.all_objects.initial_pose[mask]
 
     def evaluate(self):
         return {

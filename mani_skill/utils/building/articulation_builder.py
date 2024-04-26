@@ -188,6 +188,6 @@ class ArticulationBuilder(SapienArticulationBuilder):
         articulation: Articulation = Articulation.create_from_physx_articulations(
             articulations, self.scene, self.scene_idxs
         )
-        articulation.inital_pose = initial_pose
+        articulation.initial_pose = initial_pose
         self.scene.articulations[self.name] = articulation
         return articulation
