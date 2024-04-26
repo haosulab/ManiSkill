@@ -137,7 +137,7 @@ def to_tensor(array: Union[torch.Tensor, np.array, Sequence], device: Device = N
     """
     if isinstance(array, (dict)):
         return {k: to_tensor(v) for k, v in array.items()}
-    if get_backend_name() == "torch":
+    if physx.is_gpu_enabled():
         if isinstance(array, np.ndarray):
             if array.dtype == np.uint16:
                 array = array.astype(np.int32)
@@ -147,12 +147,12 @@ def to_tensor(array: Union[torch.Tensor, np.array, Sequence], device: Device = N
         elif isinstance(array, torch.Tensor):
             ret = array
         else:
-            ret = torch.Tensor(array)
+            ret = torch.tensor(array)
         if device is None:
             return ret.cuda()
         else:
             return ret.to(device)
-    elif get_backend_name() == "numpy":
+    else:
         if isinstance(array, np.ndarray):
             if array.dtype == np.uint16:
                 array = array.astype(np.int32)
@@ -173,6 +173,23 @@ def to_tensor(array: Union[torch.Tensor, np.array, Sequence], device: Device = N
             return ret.to(device)
 
 
+def to_cpu_tensor(array: Union[torch.Tensor, np.array, Sequence]):
+    """
+    Maps any given sequence to a torch tensor on the CPU.
+    """
+    if isinstance(array, (dict)):
+        return {k: to_tensor(v) for k, v in array.items()}
+    if isinstance(array, np.ndarray):
+        ret = torch.from_numpy(array)
+        if ret.dtype == torch.float64:
+            ret = ret.float()
+        return ret
+    elif isinstance(array, torch.Tensor):
+        return array.cpu()
+    else:
+        return torch.tensor(array).cpu()
+
+
 # TODO (stao): Clean up this code
 def flatten_state_dict(
     state_dict: dict, use_torch=False, device: Device = None
@@ -181,6 +198,7 @@ def flatten_state_dict(
 
     Args:
         state_dict: a dictionary containing scalars or 1-dim vectors.
+        use_torch (bool): Whether to convert the data to torch tensors.
 
     Raises:
         AssertionError: If a value of @state_dict is an ndarray with ndim > 2.
@@ -223,15 +241,12 @@ def flatten_state_dict(
             if use_torch:
                 state = to_tensor(state)
 
+        elif isinstance(value, torch.Tensor):
+            state = value
+            if len(state.shape) == 1:
+                state = state[:, None]
         else:
-            is_torch_tensor = False
-            if isinstance(value, torch.Tensor):
-                state = value
-                if len(state.shape) == 1:
-                    state = state[:, None]
-                is_torch_tensor = True
-            if not is_torch_tensor:
-                raise TypeError("Unsupported type: {}".format(type(value)))
+            raise TypeError("Unsupported type: {}".format(type(value)))
         if state is not None:
             states.append(state)
 

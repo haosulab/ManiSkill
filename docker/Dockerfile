@@ -41,4 +41,9 @@ SHELL ["/bin/bash", "-c"]
 COPY nvidia_icd.json /usr/share/vulkan/icd.d/nvidia_icd.json
 COPY nvidia_layers.json /etc/vulkan/implicit_layer.d/nvidia_layers.json
 
-RUN pip install mani-skill==3.0.0.dev3 && pip cache purge
+# install dependencies
+RUN pip install --upgrade mani-skill && pip cache purge
+RUN pip install torch 
+
+# download physx GPU binary via sapien
+RUN python -c "exec('import sapien.physx as physx;\ntry:\n  physx.enable_gpu()\nexcept:\n  pass;')"

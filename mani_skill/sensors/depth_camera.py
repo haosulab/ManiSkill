@@ -77,9 +77,6 @@ class StereoDepthCamera(Camera):
                 pose=camera_cfg.pose,
             )
 
-        if camera_cfg.hide_link:
-            self.actor.hide_visual()
-
         # Filter texture names according to renderer type if necessary (legacy for Kuafu)
         self.texture_names = camera_cfg.texture_names
 

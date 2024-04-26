@@ -12,8 +12,9 @@ from sapien.wrapper.articulation_builder import (
 from sapien.wrapper.articulation_builder import LinkBuilder
 
 from mani_skill import logger
-from mani_skill.utils import sapien_utils
-from mani_skill.utils.structs.articulation import Articulation
+from mani_skill.utils import common, sapien_utils
+from mani_skill.utils.structs import Articulation, Pose
+from mani_skill.utils.structs.pose import to_sapien_pose
 
 if TYPE_CHECKING:
     from mani_skill.envs.scene import ManiSkillScene
@@ -101,7 +102,9 @@ class ArticulationBuilder(SapienArticulationBuilder):
         entities[0].pose = self.initial_pose
         return entities
 
-    def build(self, name=None, fix_root_link=None, build_mimic_joints=True):
+    def build(
+        self, name=None, fix_root_link=None, build_mimic_joints=True
+    ) -> Articulation:
         assert self.scene is not None
         if name is not None:
             self.set_name(name)
@@ -115,10 +118,15 @@ class ArticulationBuilder(SapienArticulationBuilder):
             pass
         else:
             self.scene_idxs = torch.arange((self.scene.num_envs), dtype=int)
+        num_arts = len(self.scene_idxs)
+        initial_pose = Pose.create(self.initial_pose)
+        initial_pose_b = initial_pose.raw_pose.shape[0]
+        assert initial_pose_b == 1 or initial_pose_b == num_arts
+        initial_pose_np = common.to_numpy(initial_pose.raw_pose)
 
         articulations = []
 
-        for scene_idx in self.scene_idxs:
+        for i, scene_idx in enumerate(self.scene_idxs):
             sub_scene = self.scene.sub_scenes[scene_idx]
             links: List[sapien.Entity] = self.build_entities(
                 name_prefix=f"scene-{scene_idx}-{self.name}_"
@@ -127,9 +135,7 @@ class ArticulationBuilder(SapienArticulationBuilder):
                 links[0].components[0].joint.type = (
                     "fixed" if fix_root_link else "undefined"
                 )
-            links[0].pose = self.initial_pose
-
-            articulation = links[0].components[0].articulation
+            articulation: physx.PhysxArticulation = links[0].components[0].articulation
             if build_mimic_joints:
                 for mimic in self.mimic_joint_records:
                     joint = articulation.find_joint_by_name(
@@ -170,15 +176,18 @@ class ArticulationBuilder(SapienArticulationBuilder):
                             rest_length=offset,
                             stiffness=1e5,
                         )
-
+            if initial_pose_b == 1:
+                articulation.pose = to_sapien_pose(initial_pose_np)
+            else:
+                articulation.pose = to_sapien_pose(initial_pose_np[i])
             for l in links:
                 sub_scene.add_entity(l)
-            articulation: physx.PhysxArticulation = l.components[0].articulation
             articulation.name = f"scene-{scene_idx}_{self.name}"
             articulations.append(articulation)
 
-        articulation = Articulation.create_from_physx_articulations(
+        articulation: Articulation = Articulation.create_from_physx_articulations(
             articulations, self.scene, self.scene_idxs
         )
+        articulation.initial_pose = initial_pose
         self.scene.articulations[self.name] = articulation
         return articulation

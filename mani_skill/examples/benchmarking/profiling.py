@@ -4,10 +4,8 @@ from typing import Literal
 
 import torch
 
-try:
-    from mani_skill.utils import common
-except:
-    pass
+from mani_skill.utils import common
+
 
 class Profiler:
     """
@@ -15,7 +13,7 @@ class Profiler:
     """
 
     def __init__(
-        self, output_format: Literal["stdout", "json"] = "stdout", synchronize_torch: bool = True
+        self, output_format: Literal["stdout", "json"], synchronize_torch: bool = True
     ) -> None:
         self.output_format = output_format
         self.synchronize_torch = synchronize_torch

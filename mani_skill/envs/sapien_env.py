@@ -75,7 +75,7 @@ class BaseEnv(gym.Env):
             passing in a SimConfig object, while typed, will override every attribute including the task defaults. Some environments
             define their own recommended default sim configurations via the `self._default_sim_cfg` attribute that generally should not be
             completely overriden. For a full detail/explanation of what is in the sim config see the type hints / go to the source
-            https://github.com/haosulab/ManiSkill2/blob/main/mani_skill/utils/structs/types.py
+            https://github.com/haosulab/ManiSkill/blob/main/mani_skill/utils/structs/types.py
 
         reconfiguration_freq (int): How frequently to call reconfigure when environment is reset via `self.reset(...)`
             Generally for most users who are not building tasks this does not need to be changed. The default is 0, which means
@@ -145,11 +145,11 @@ class BaseEnv(gym.Env):
         human_render_camera_cfgs: dict = None,
         robot_uids: Union[str, BaseAgent, List[Union[str, BaseAgent]]] = None,
         sim_cfg: Union[SimConfig, dict] = dict(),
-        reconfiguration_freq: int = 0,
+        reconfiguration_freq: int = None,
         sim_backend: str = "auto",
     ):
         self.num_envs = num_envs
-        self.reconfiguration_freq = reconfiguration_freq
+        self.reconfiguration_freq = reconfiguration_freq if reconfiguration_freq is not None else 0
         self._reconfig_counter = 0
         self._custom_sensor_configs = sensor_cfgs
         self._custom_human_render_camera_configs = human_render_camera_cfgs
@@ -259,6 +259,8 @@ class BaseEnv(gym.Env):
             else 0
         )
         obs, _ = self.reset(seed=2022, options=dict(reconfigure=True))
+        self._init_raw_obs = common.to_cpu_tensor(obs)
+        """the raw observation returned by the env.reset (a cpu torch tensor/dict of tensors). Useful for future observation wrappers to use to auto generate observation spaces"""
         if physx.is_gpu_enabled():
             obs = common.to_numpy(obs)
         self._init_raw_obs = obs.copy()
@@ -273,8 +275,8 @@ class BaseEnv(gym.Env):
         self.single_observation_space
         self.observation_space
 
-    def _update_obs_space(self, obs: Any):
-        """call this function if you modify the observations returned by env.step and env.reset via an observation wrapper. The given observation must be a numpy array"""
+    def update_obs_space(self, obs: Any):
+        """call this function if you modify the observations returned by env.step and env.reset via an observation wrapper."""
         self._init_raw_obs = common.to_numpy(obs)
         del self.single_observation_space
         del self.observation_space
@@ -286,7 +288,7 @@ class BaseEnv(gym.Env):
         if physx.is_gpu_enabled():
             return gym_utils.convert_observation_to_space(self._init_raw_obs, unbatched=True)
         else:
-            return gym_utils.convert_observation_to_space(self._init_raw_obs)
+            return gym_utils.convert_observation_to_space(common.to_numpy(self._init_raw_obs))
 
     @cached_property
     def observation_space(self):
@@ -343,6 +345,10 @@ class BaseEnv(gym.Env):
     ]:
         """Add default cameras for rendering when using render_mode='rgb_array'. These can be overriden by the user at env creation time """
         return []
+
+    @property
+    def scene(self):
+        return self._scene
 
     @property
     def sim_freq(self):
@@ -545,7 +551,6 @@ class BaseEnv(gym.Env):
 
         if physx.is_gpu_enabled():
             self._scene._setup_gpu()
-            self._scene._gpu_fetch_all()
         # for GPU sim, we have to setup sensors after we call setup gpu in order to enable loading mounted sensors as they depend on GPU buffer data
         self._setup_sensors(options)
         if self._viewer is not None:
@@ -688,6 +693,8 @@ class BaseEnv(gym.Env):
         # or disable partial reset features explicitly for tasks that have a reconfiguration frequency
         if "env_idx" in options:
             env_idx = options["env_idx"]
+            if len(env_idx) != self.num_envs and reconfigure:
+                raise RuntimeError("Cannot do a partial reset and reconfigure the environment. You must do one or the other.")
             self._scene._reset_mask = torch.zeros(
                 self.num_envs, dtype=bool, device=self.device
             )
@@ -899,7 +906,10 @@ class BaseEnv(gym.Env):
     # Simulation and other gym interfaces
     # -------------------------------------------------------------------------- #
     def _set_scene_config(self):
-        physx.set_scene_config(**self.sim_cfg.scene_cfg.dict())
+        # **self.sim_cfg.scene_cfg.dict()
+        physx.set_shape_config(contact_offset=self.sim_cfg.scene_cfg.contact_offset, rest_offset=self.sim_cfg.scene_cfg.rest_offset)
+        physx.set_body_config(solver_position_iterations=self.sim_cfg.scene_cfg.solver_position_iterations, solver_velocity_iterations=self.sim_cfg.scene_cfg.solver_velocity_iterations, sleep_threshold=self.sim_cfg.scene_cfg.sleep_threshold)
+        physx.set_scene_config(gravity=self.sim_cfg.scene_cfg.gravity, bounce_threshold=self.sim_cfg.scene_cfg.bounce_threshold, enable_pcm=self.sim_cfg.scene_cfg.enable_pcm, enable_tgs=self.sim_cfg.scene_cfg.enable_tgs, enable_ccd=self.sim_cfg.scene_cfg.enable_ccd, enable_enhanced_determinism=self.sim_cfg.scene_cfg.enable_enhanced_determinism, enable_friction_every_iteration=self.sim_cfg.scene_cfg.enable_friction_every_iteration, cpu_workers=self.sim_cfg.scene_cfg.cpu_workers )
         physx.set_default_material(**self.sim_cfg.default_materials_cfg.dict())
 
     def _setup_scene(self):
@@ -1166,3 +1176,34 @@ class BaseEnv(gym.Env):
     #     scene_mesh = merge_meshes(meshes)
     #     scene_pcd = scene_mesh.sample(num_points)
     #     return scene_pcd
+
+
+    # Printing metrics/info
+    def print_sim_details(self):
+        sensor_settings_str = []
+        for uid, cam in self._sensors.items():
+            if isinstance(cam, Camera):
+                cfg = cam.cfg
+                sensor_settings_str.append(f"RGBD ({cfg.width}x{cfg.height})")
+        sensor_settings_str = "_".join(sensor_settings_str)
+        sim_backend = "gpu" if physx.is_gpu_enabled() else "cpu"
+        print(
+        "# -------------------------------------------------------------------------- #"
+        )
+        print(
+            f"Task ID: {self.spec.id}, {self.num_envs} parallel environments, sim_backend={sim_backend}"
+        )
+        print(
+            f"obs_mode={self.obs_mode}, control_mode={self.control_mode}"
+        )
+        print(
+            f"render_mode={self.render_mode}, sensor_details={sensor_settings_str}"
+        )
+        print(
+            f"sim_freq={self.sim_freq}, control_freq={self.control_freq}"
+        )
+        print(f"observation space: {self.observation_space}")
+        print(f"(single) action space: {self.single_action_space}")
+        print(
+            "# -------------------------------------------------------------------------- #"
+        )

@@ -2,16 +2,16 @@ import gymnasium as gym
 import numpy as np
 import sapien.core as sapien
 
-from mani_skill.envs.assembly.peg_insertion_side import PegInsertionSideEnv
-from mani_skill.examples.motionplanning.motionplanner import \
+from mani_skill.envs import PegInsertionSideEnv
+from mani_skill.examples.motionplanning.panda.motionplanner import \
     PandaArmMotionPlanningSolver
-from mani_skill.examples.motionplanning.utils import (
+from mani_skill.examples.motionplanning.panda.utils import (
     compute_grasp_info_by_obb, get_actor_obb)
 
 
 def main():
     env: PegInsertionSideEnv = gym.make(
-        "PegInsertionSide-v0",
+        "PegInsertionSide-v1",
         obs_mode="none",
         control_mode="pd_joint_pos",
         render_mode="rgb_array",
@@ -44,7 +44,7 @@ def solve(env: PegInsertionSideEnv, seed=None, debug=False, vis=False):
 
     obb = get_actor_obb(env.peg)
     approaching = np.array([0, 0, -1])
-    target_closing = env.agent.tcp.pose.to_transformation_matrix()[:3, 1]
+    target_closing = env.agent.tcp.pose.to_transformation_matrix()[0, :3, 1].numpy()
 
     peg_init_pose = env.peg.pose
 
@@ -53,7 +53,7 @@ def solve(env: PegInsertionSideEnv, seed=None, debug=False, vis=False):
     )
     closing, center = grasp_info["closing"], grasp_info["center"]
     grasp_pose = env.agent.build_grasp_pose(approaching, closing, center)
-    offset = sapien.Pose([-max(0.05, env.peg_half_size[0] / 2 + 0.01), 0, 0])
+    offset = sapien.Pose([-max(0.05, env.peg_half_sizes[0, 0] / 2 + 0.01), 0, 0])
     grasp_pose = grasp_pose * (offset)
 
     # -------------------------------------------------------------------------- #
@@ -74,7 +74,7 @@ def solve(env: PegInsertionSideEnv, seed=None, debug=False, vis=False):
 
     # align the peg with the hole
     insert_pose = env.goal_pose * peg_init_pose.inv() * grasp_pose
-    offset = sapien.Pose([-0.01 - env.peg_half_size[0], 0, 0])
+    offset = sapien.Pose([-0.01 - env.peg_half_sizes[0, 0], 0, 0])
     pre_insert_pose = insert_pose * (offset)
     planner.move_to_pose_with_screw(pre_insert_pose)
     # refine the insertion pose

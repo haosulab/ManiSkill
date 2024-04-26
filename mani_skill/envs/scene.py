@@ -63,6 +63,9 @@ class ManiSkillScene:
         """Used internally by various objects like Actor, Link, and Controllers to auto mask out sub-scenes so they do not get modified during
         partial env resets"""
 
+        self._needs_fetch = False
+        """Used internally to raise some errors ahead of time of when there may be undefined behaviors"""
+
     @property
     def timestep(self):
         return self.px.timestep
@@ -518,11 +521,15 @@ class ManiSkillScene:
         # As physx_system.gpu_init() was called a single physx step was also taken. So we need to reset
         # all the actors and articulations to their original poses as they likely have collided
         for actor in self.non_static_actors:
-            actor.set_pose(actor.inital_pose)
+            actor.set_pose(actor.initial_pose)
+        for articulation in self.articulations.values():
+            articulation.set_pose(articulation.initial_pose)
+        self.px.gpu_apply_rigid_dynamic_data()
+        self.px.gpu_apply_articulation_root_pose()
+
         self.px.cuda_rigid_body_data.torch()[:, 7:] = (
             self.px.cuda_rigid_body_data.torch()[:, 7:] * 0
         )  # zero out all velocities
-        self.px.gpu_apply_rigid_dynamic_data()
         self.px.gpu_apply_articulation_root_velocity()
         self.px.cuda_articulation_qvel.torch()[:, :] = (
             self.px.cuda_articulation_qvel.torch() * 0
@@ -530,12 +537,17 @@ class ManiSkillScene:
         self.px.gpu_apply_articulation_qvel()
 
         self._gpu_sim_initialized = True
+        self.px.gpu_update_articulation_kinematics()
         self._gpu_fetch_all()
 
     def _gpu_apply_all(self):
         """
         Calls gpu_apply to update all body data, qpos, qvel, qf, and root poses
         """
+        assert (
+            not self._needs_fetch
+        ), "Once _gpu_apply_all is called, you must call _gpu_fetch_all before calling _gpu_apply_all again\
+            as otherwise there is undefined behavior that is likely impossible to debug"
         self.px.gpu_apply_rigid_dynamic_data()
         self.px.gpu_apply_articulation_qpos()
         self.px.gpu_apply_articulation_qvel()
@@ -544,6 +556,7 @@ class ManiSkillScene:
         self.px.gpu_apply_articulation_root_velocity()
         self.px.gpu_apply_articulation_target_position()
         self.px.gpu_apply_articulation_target_velocity()
+        self._needs_fetch = True
 
     def _gpu_fetch_all(self):
         """
@@ -564,6 +577,8 @@ class ManiSkillScene:
 
             # unused fetches
             # self.px.gpu_fetch_articulation_qacc()
+
+        self._needs_fetch = False
 
     # ---------------------------------------------------------------------------- #
     # CPU/GPU sim Rendering Code
@@ -613,13 +628,18 @@ class ManiSkillScene:
     def _gpu_setup_sensors(self, sensors: Dict[str, BaseSensor]):
         for name, sensor in sensors.items():
             if isinstance(sensor, Camera):
-                camera_group = self.render_system_group.create_camera_group(
-                    sensor.camera._render_cameras,
-                    sensor.texture_names,
-                )
+                try:
+                    camera_group = self.render_system_group.create_camera_group(
+                        sensor.camera._render_cameras,
+                        sensor.texture_names,
+                    )
+                except RuntimeError as e:
+                    raise RuntimeError(
+                        "Unable to create GPU parallelized camera group. If the error is about being unable to create a buffer, you are likely using too many Cameras. Either use less cameras (via less parallel envs) and/or reduce the size of the cameras"
+                    ) from e
                 sensor.camera.camera_group = camera_group
                 self.camera_groups[name] = camera_group
             else:
                 raise NotImplementedError(
-                    f"This sensor {sensor} has not been implemented yet on the GPU"
+                    f"This sensor {sensor} of type {sensor.__class__} has not been implemented yet on the GPU"
                 )

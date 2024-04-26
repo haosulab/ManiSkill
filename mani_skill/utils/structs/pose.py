@@ -93,7 +93,9 @@ class Pose:
         return cls(raw_pose=raw_pose)
 
     @classmethod
-    def create(cls, pose: Union[torch.Tensor, sapien.Pose, "Pose"]) -> "Pose":
+    def create(
+        cls, pose: Union[torch.Tensor, sapien.Pose, List[sapien.Pose], "Pose"]
+    ) -> "Pose":
         if isinstance(pose, sapien.Pose):
             raw_pose = torch.hstack(
                 [common.to_tensor(pose.p), common.to_tensor(pose.q)]
@@ -101,6 +103,16 @@ class Pose:
             return cls(raw_pose=add_batch_dim(raw_pose))
         elif isinstance(pose, cls):
             return pose
+        elif isinstance(pose, list) and isinstance(pose[0], sapien.Pose):
+            ps = []
+            qs = []
+            for p in pose:
+                ps.append(p.p)
+                qs.append(p.q)
+            ps = common.to_tensor(ps)
+            qs = common.to_tensor(qs)
+            return cls(raw_pose=torch.hstack([ps, qs]))
+
         else:
             assert len(pose.shape) <= 2 and len(pose.shape) > 0
             pose = common.to_tensor(pose)

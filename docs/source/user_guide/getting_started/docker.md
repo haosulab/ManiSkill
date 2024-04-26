@@ -13,12 +13,18 @@ docker run hello-world
 
 ## Run ManiSkill in Docker
 
-We provide a docker image (`haosulab/mani-skill`) and its corresponding [Dockerfile](https://github.com/haosulab/ManiSkill2/blob/dev/docker/Dockerfile).
+We provide a docker image (`maniskill/base`) and its corresponding [Dockerfile](https://github.com/haosulab/ManiSkill/blob/main/docker/Dockerfile).
+
+You should be able to run both CPU and GPU simulation, which you can test below
 
 ```bash
-docker pull haosulab/mani-skill
-docker run --rm -it --gpus all haosulab/mani-skill python -m mani_skill.examples.demo_random_action
+docker pull maniskill/base
+docker run --rm -it --gpus all maniskill/base python -m mani_skill.examples.demo_random_action
+docker run --rm -it --gpus all maniskill/base python -m mani_skill.examples.benchmarking.gpu_sim
 ```
+
+Note that inside a docker image you generally cannot render a GUI to see the results. You can still record videos and the demo scripts have options to record videos insteading of rendering a GUI.
+
 <!-- 
 ## Run GUI Applications
 
@@ -27,7 +33,7 @@ To run GUI applications from the docker container (the host is attached with a d
 ```bash
 # Allow local X11 connections
 xhost +local:root
-# Run ManiSkill2 docker image with the NVIDIA GPU
+# Run ManiSkill docker image with the NVIDIA GPU
 docker run --rm -it --gpus all \
     -v /tmp/.X11-unix:/tmp/.X11-unix -e DISPLAY \
     haosulab/mani-skill \
@@ -51,4 +57,4 @@ Then, forward the port of VNC (5900 by default) to the local host. On your local
 
 - <https://medium.com/@benjamin.botto/opengl-and-cuda-applications-in-docker-af0eece000f1>
 - <http://wiki.ros.org/docker/Tutorials/GUI>
-- <https://github.com/haosulab/ManiSkill2/issues/62>
+- <https://github.com/haosulab/ManiSkill/issues/62>

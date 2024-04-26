@@ -73,7 +73,9 @@ class CartPoleEnv(BaseEnv):
     @property
     def _default_sim_config(self):
         return SimConfig(
-            sim_freq=100, control_freq=100, scene_cfg=SceneConfig(solver_iterations=2)
+            sim_freq=100,
+            control_freq=100,
+            scene_cfg=SceneConfig(solver_position_iterations=2),
         )
 
     @property

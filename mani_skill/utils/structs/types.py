@@ -46,7 +46,8 @@ class SceneConfig:
     bounce_threshold: float = 2.0
     sleep_threshold: float = 0.005
     contact_offset: float = 0.02
-    solver_iterations: int = 15
+    rest_offset: float = 0
+    solver_position_iterations: int = 15
     solver_velocity_iterations: int = 1
     enable_pcm: bool = True
     enable_tgs: bool = True

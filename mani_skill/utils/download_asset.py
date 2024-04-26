@@ -112,7 +112,7 @@ def initialize_sources():
             uid = f"partnet_mobility/{model_id}"
             DATA_SOURCES[uid] = DataSource(
                 url=f"https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/partnet_mobility/dataset/{model_id}.zip",
-                output_dir=ASSET_DIR / "partnet_mobility" / "dataset",
+                target_path=ASSET_DIR / "partnet_mobility" / "dataset" / model_id,
             )
             category_uids[category].append(uid)
 
@@ -122,6 +122,13 @@ def initialize_sources():
     DATA_GROUPS["partnet_mobility_chair"] = category_uids["chair"]
     DATA_GROUPS["partnet_mobility_bucket"] = category_uids["bucket"]
     DATA_GROUPS["partnet_mobility_faucet"] = category_uids["faucet"]
+    DATA_GROUPS["partnet_mobility"] = set(
+        category_uids["cabinet_drawer"]
+        + category_uids["cabinet_door"]
+        + category_uids["chair"]
+        + category_uids["bucket"]
+        + category_uids["faucet"]
+    )
 
     DATA_GROUPS["OpenCabinetDrawer-v1"] = category_uids["cabinet_drawer"]
     DATA_GROUPS["OpenCabinetDoor-v1"] = category_uids["cabinet_door"]
@@ -233,6 +240,11 @@ def download(
         download_from_hf_datasets(data_source)
         return
 
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    if data_source.hf_repo_id is not None:
+        download_from_hf_datasets(data_source)
+        return
+
     # Download files to temporary location
     try:
         if verbose:
@@ -253,7 +265,6 @@ def download(
     except URLError as err:
         print(f"Failed to download {data_source.url}")
         raise err
-
     # Verify checksum
     if data_source.checksum is not None and data_source.checksum != sha256sum(
         tmp_filename

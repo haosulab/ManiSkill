@@ -42,8 +42,6 @@ class CameraConfig(BaseSensorConfig):
     """entity_uid (str, optional): unique id of the entity to mount the camera. Defaults to None."""
     mount: Union[Actor, Link] = None
     """the Actor or Link to mount the camera on top of. This means the global pose of the mounted camera is now mount.pose * local_pose"""
-    hide_link: bool = False
-    """hide_link (bool, optional): whether to hide the link to mount the camera. Defaults to False."""
     texture_names: Sequence[str] = ("Color", "PositionSegmentation")
     """texture_names (Sequence[str], optional): texture names to render. Defaults to ("Color", "PositionSegmentation"). Note that the renderign speed will not really change if you remove PositionSegmentation"""
 
@@ -161,14 +159,6 @@ class Camera(BaseSensor):
                 intrinsic=intrinsic,
                 near=camera_cfg.near,
                 far=camera_cfg.far,
-            )
-
-        if camera_cfg.hide_link:
-            # TODO (stao): re-implement this
-            from mani_skill import logger
-
-            logger.warn(
-                "camera hide_link option is not implemented yet so this won't be hidden"
             )
 
         # Filter texture names according to renderer type if necessary (legacy for Kuafu)

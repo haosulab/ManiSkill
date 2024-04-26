@@ -24,13 +24,13 @@ and `env.step` follows below:
 
 This tutorial will take you through most of the important yellow modules in the figures above that should be implemented to build a task.
 
-To follow this tutorial easily, we recommend reading this alongside reading the [annotated code for the PushCube task](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill/envs/tasks/push_cube.py) which describes the purpose of nearly every line of code. The [advanced features page](./custom_tasks_advanced.md) covers additional topics to do more advanced simulation and optimization such as dynamic GPU memory configuration, heterogenous object simulation, and more. 
+To follow this tutorial easily, we recommend reading this alongside reading the [annotated code for the PushCube task](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/tasks/push_cube.py) which describes the purpose of nearly every line of code. The [advanced features page](./custom_tasks_advanced.md) covers additional topics to do more advanced simulation and optimization such as dynamic GPU memory configuration, heterogenous object simulation, and more. 
 
-If you want to skip the tutorial and start from a template you can use the [PushCube task](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill/envs/tasks/push_cube.py) as a template, the [annotated template](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill/envs/template.py), or the [bare minimum template](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill/envs/minimal_template.py).
+If you want to skip the tutorial and start from a template you can use the [PushCube task](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/tasks/push_cube.py) as a template, the [annotated template](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/template.py), or the [bare minimum template](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/minimal_template.py).
 
 <!-- This tutorial will first cover each of the core components, and then showcase 3 different tutorial tasks ([PushCube](#example-task-1-push-cube), [PickSingleYCB](#example-task-2-pick-single-ycb), [OpenCabinetDrawer](#example-task-3-open-cabinet-drawer)) that showcase how to use most of the features in ManiSkill. -->
 
-If you have any questions or issues, feel free to ask in our [discord](https://discord.gg/vJb6wUmWXA) or on our [github](https://github.com/haosulab/ManiSkill2/issues)
+If you have any questions or issues, feel free to ask in our [discord](https://discord.gg/vJb6wUmWXA) or on our [github](https://github.com/haosulab/ManiSkill/issues)
 
 ## Setting up the Task Class
 
@@ -73,7 +73,7 @@ class PushCubeEnv(BaseEnv):
 
 Initializing these robots occurs in the initialization / randomization section covered later. With this setup you can later access agent data via `self.agent` and the specific articulation data of the robot via `self.agent.robot`. For multi-robot setups you can access each agent via `self.agent.agents`.
 
-To create your own custom robots/agents, we will provide a tutorial on the basics of modelling a robot for simulation and use in ManiSkill in the near future. For now you can look at the code for Panda at [mani_skill/agents/robots/panda/panda.py](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill/agents/robots/panda/panda.py)
+To create your own custom robots/agents, we will provide a tutorial on the basics of modelling a robot for simulation and use in ManiSkill in the near future. For now you can look at the code for Panda at [mani_skill/agents/robots/panda/panda.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/panda/panda.py)
 <!-- TODO (stao): link custom robots docs later -->
 
 #### Building Actors
@@ -159,7 +159,7 @@ In general one use case of setting a positive `reconfiguration_freq` value is fo
 
 ## Episode Initialization / Randomization
 
-Task initialization and randomization is handled in the `_initalize_actors` function and is called whenever `env.reset` is called. The objective here is to set the initial states of objects, including the robot. As the task ideally should be simulatable on the GPU, batched code is unavoidable. Note that furthermore, by default everything in ManiSkill tries to stay batched, even if there is only one element. Finally, like `_load_scene` the options argument is also passed down here if needed.
+Task initialization and randomization is handled in the `_initialize_episode` function and is called whenever `env.reset` is called. The objective here is to set the initial states of objects, including the robot. As the task ideally should be simulatable on the GPU, batched code is unavoidable. Note that furthermore, by default everything in ManiSkill tries to stay batched, even if there is only one element. Finally, like `_load_scene` the options argument is also passed down here if needed.
 
 An example from part of the PushCube task
 
@@ -168,7 +168,7 @@ from mani_skill.utils.structs.pose import Pose
 import torch
 class PushCubeEnv(BaseEnv):
     # ...
-    def _initialize_actors(self, env_idx: torch.Tensor, options: dict):
+    def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         # use the torch.device context manager to automatically create tensors on CPU or CUDA depending on self.device, the device the environment runs on
         with torch.device(self.device):
             b = len(env_idx)
@@ -184,7 +184,7 @@ class PushCubeEnv(BaseEnv):
             self.obj.set_pose(obj_pose)
 ```
 
-An `env_idx` is one of the arguments to this function, and is a list of environment IDs that need initialization. This is given as ManiSkill supports **partial resets**, where at each timestep potentially only a subset of parallel environments will undergo a reset, which calls `_initialize_actors` here. 
+An `env_idx` is one of the arguments to this function, and is a list of environment IDs that need initialization. This is given as ManiSkill supports **partial resets**, where at each timestep potentially only a subset of parallel environments will undergo a reset, which calls `_initialize_episode` here. 
 
 Since a scene builder is used, to initialize objects to their original states, we simply call `self.table_scene.initialize(env_idx)`, a function all scene builders implement.
 

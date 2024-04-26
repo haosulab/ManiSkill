@@ -7,19 +7,20 @@ Installation of ManiSkill is extremely simple, you only need to run a few pip in
 pip install --upgrade mani_skill
 # install a version of torch that is compatible with your system
 pip install torch torchvision torchaudio
-# if you are on CUDA 11 you must also run
-pip install fast_kinematics==0.1.11
 ```
 
 You can also install the main `mani_skill` package from github/source:
 
 ```bash
 # GitHub
-pip install --upgrade git+https://github.com/haosulab/ManiSkill2.git@dev
+pip install --upgrade git+https://github.com/haosulab/ManiSkill.git
 
 # Source
-git clone https://github.com/haosulab/ManiSkill2.git
-cd ManiSkill2 && git checkout -b dev --track origin/dev && pip install -e .
+git clone https://github.com/haosulab/ManiSkill.git
+cd ManiSkill && pip install -e .
+
+# remember to install a version of torch that is compatible with your system
+pip install torch torchvision torchaudio
 ```
 
 :::{note}
@@ -34,17 +35,17 @@ The rigid-body tasks, powered by SAPIEN, are ready to use after installation. Te
 python -m mani_skill.examples.demo_random_action
 ```
 
-A docker image is also provided on [Docker Hub](https://hub.docker.com/repository/docker/haosulab/mani-skill/general) called  `haosulab/mani-skill` and its corresponding [Dockerfile](https://github.com/haosulab/ManiSkill2/blob/dev/docker/Dockerfile).
+A docker image is also provided on [Docker Hub](https://hub.docker.com/repository/docker/haosulab/mani-skill/general) called  `haosulab/mani-skill` and its corresponding [Dockerfile](https://github.com/haosulab/ManiSkill/blob/main/docker/Dockerfile).
 
 Once you are done here, you can head over to the [quickstart page](./quickstart.md) to try out some live demos and start to program with ManiSkill.
 <!-- 
-## Soft-body tasks / Warp (ManiSkill2-version)
+## Soft-body tasks / Warp (ManiSkill-version)
 
 :::{note}
 The following section is to install [NVIDIA Warp](https://github.com/NVIDIA/warp) for soft-body tasks. You can skip it if you do not need soft-body tasks yet.
 :::
 
-The soft-body tasks in ManiSkill2 are supported by SAPIEN and customized NVIDIA Warp. **CUDA toolkit >= 11.3 and gcc** are required. You can download and install the CUDA toolkit from the [offical website](https://developer.nvidia.com/cuda-downloads?target_os=Linux).
+The soft-body tasks in ManiSkill are supported by SAPIEN and customized NVIDIA Warp. **CUDA toolkit >= 11.3 and gcc** are required. You can download and install the CUDA toolkit from the [offical website](https://developer.nvidia.com/cuda-downloads?target_os=Linux).
 
 Assuming the CUDA toolkit is installed at `/usr/local/cuda`, you need to ensure `CUDA_PATH` or `CUDA_HOME` is set properly:
 
@@ -62,11 +63,11 @@ gcc --version
 If `nvcc` is included in `$PATH`, we will try to figure out the variable `CUDA_PATH` automatically.
 :::
 
-After CUDA is properly set up, compile Warp customized for ManiSkill2:
+After CUDA is properly set up, compile Warp customized for ManiSkill:
 
 ``` bash
 # If you encounter "ModuleNotFoundError: No module named 'warp'", please add warp_maniskill to the python path. 
-export PYTHONPATH=/path/to/ManiSkill2/warp_maniskill:$PYTHONPATH
+export PYTHONPATH=/path/to/ManiSkill/warp_maniskill:$PYTHONPATH
 # warp.so is generated under warp_maniskill/warp/bin
 python -m warp_maniskill.build_lib
 ```

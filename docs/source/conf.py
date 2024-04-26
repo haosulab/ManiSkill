@@ -1,4 +1,4 @@
-__version__ = "3.0.0.dev0"
+__version__ = "3.0.0.dev14"
 # Configuration file for the Sphinx documentation builder.
 #
 # For the full list of built-in configuration values, see the documentation:
@@ -46,20 +46,20 @@ html_theme_options = {
     "icon_links": [
         {
             "name": "GitHub",
-            "url": "https://github.com/haosulab/maniskill2",
+            "url": "https://github.com/haosulab/ManiSkill",
             "icon": "fa-brands fa-github",
         }
     ],
     "external_links": [
-        {"name": "Changelog", "url": "https://github.com/haosulab/maniskill2/releases"},
+        {"name": "Changelog", "url": "https://github.com/haosulab/ManiSkill/releases"},
     ]
 
 }
 html_context = {
     "display_github": True,
     "github_user": "haosulab",
-    "github_repo": "ManiSkill2",
-    "github_version": "dev",
+    "github_repo": "ManiSkill",
+    "github_version": "main",
     "conf_py_path": "/source/",
     "doc_path": "docs/source"
 }

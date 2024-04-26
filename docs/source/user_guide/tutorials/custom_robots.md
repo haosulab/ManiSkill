@@ -41,7 +41,7 @@ To import a URDF/MJCF file, you simply provide a path to the definition file and
 
 #### URDF
 
-To get started, you first need to get a valid URDF file like this one for the Panda robot: https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill/assets/robots/panda/panda_v2.urdf
+To get started, you first need to get a valid URDF file like this one for the Panda robot: https://github.com/haosulab/ManiSkill/blob/main/mani_skill/assets/robots/panda/panda_v2.urdf
 
 Then in the agent class add
 
@@ -54,13 +54,13 @@ class MyPanda(BaseAgent):
 Note that there are a number of common issues users may face (often due to incorrectly formatted URDFs / collision meshes) which are documented in the [FAQ / Troubleshooting Section](#faq--troubleshooting)
 
 
-<!-- For a starting template check out https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill/agents/robots/_template/template_robot.py -->
+<!-- For a starting template check out https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/_template/template_robot.py -->
 
 #### Mujoco MJCF
 
 ManiSkill supports importing [Mujoco's MJCF format](https://mujoco.readthedocs.io/en/latest/modeling.html) of files to load robots (and other objects), although not all features are supported.
 
-For example code that loads the robot and the scene see https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill/envs/tasks/control/cartpole.py
+For example code that loads the robot and the scene see https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/tasks/control/cartpole.py
 
 
 At the moment, the following are not supported:
@@ -236,7 +236,7 @@ Instead, similar to many other simulators a "fake" mobile base is made (that is 
 
 WIP
 
-For now see the implementation of [Allegro hand with touch sensors](https://github.com/haosulab/ManiSkill2/blob/dev/mani_skill/agents/robots/allegro_hand/allegro_touch.py)
+For now see the implementation of [Allegro hand with touch sensors](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/allegro_hand/allegro_touch.py)
 
 ### Quadrupeds / Legged motion
 

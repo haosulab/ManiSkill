@@ -42,8 +42,10 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     name: str = None
     """Name of this articulation"""
+    initial_pose: Pose = None
+    """The initial pose of this articulation"""
 
-    _merged: bool = False
+    merged: bool = False
     """
     whether or not this articulation object is a merged articulation where it is managing many articulations with different dofs.
 
@@ -74,7 +76,11 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         scene: ManiSkillScene,
         scene_idxs: torch.Tensor,
         _merged: bool = False,
-    ):
+    ) -> Articulation:
+        """
+        Create a managed articulation object given a list of physx articulations. Note that this function requires all given articulations
+        to be the same articulations. To create an object to manage different articulations use the .merge function.
+        """
         shared_name = "_".join(physx_articulations[0].name.split("_")[1:])
 
         # NOTE (stao): This is a little bit of a non-standard way to use @classmethod style creation functions for dataclasses
@@ -84,81 +90,126 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             _objs=physx_articulations,
             _scene=scene,
             _scene_idxs=scene_idxs,
-            links=[],
-            links_map=dict(),
+            links=None,
+            links_map=None,
             root=None,
-            joints=[],
-            joints_map=dict(),
-            active_joints=[],
-            active_joints_map=dict(),
+            joints=None,
+            joints_map=None,
+            active_joints=None,
+            active_joints_map=None,
             name=shared_name,
-            _merged=_merged,
+            merged=_merged,
         )
         # create link and joint structs
-        # num_links = len(physx_articulations[0].links)
         num_links = max([len(x.links) for x in physx_articulations])
         all_links_objs: List[List[physx.PhysxArticulationLinkComponent]] = [
             [] for _ in range(num_links)
         ]
-        # num_joints = len(physx_articulations[0].joints)
         num_joints = max([len(x.joints) for x in physx_articulations])
         all_joint_objs: List[List[physx.PhysxArticulationJoint]] = [
             [] for _ in range(num_joints)
         ]
 
-        links_map = dict()
+        links_map: Dict[str, Link] = dict()
         for articulation in physx_articulations:
-            # assert num_links == len(articulation.links) and num_joints == len(
-            #     articulation.joints
-            # ), "Gave different physx articulations. Each Articulation object can only manage the same articulations, not different ones"
+            if not _merged:
+                assert num_links == len(articulation.links) and num_joints == len(
+                    articulation.joints
+                ), "Gave different physx articulations. Articulation object created via create_from_physx_articulations can only \
+                    manage the same articulations, not different ones. Use merge instead if you want to manage different articulations"
             for i, link in enumerate(articulation.links):
                 all_links_objs[i].append(link)
             for i, joint in enumerate(articulation.joints):
                 all_joint_objs[i].append(joint)
         wrapped_links: List[Link] = []
+
+        root = None
         for links in all_links_objs:
-            wrapped_link = Link.create(links, self)
+            wrapped_link = Link.create(links, scene, scene_idxs)
+            wrapped_link.name = "_".join(
+                links[0].name.replace(self.name, "", 1).split("_")[1:]
+            )
+            wrapped_link.articulation = self
             links_map[wrapped_link.name] = wrapped_link
             wrapped_links.append(wrapped_link)
             assert wrapped_link.is_root.any() == wrapped_link.is_root.all()
             if wrapped_link.is_root.any():
                 root = wrapped_link
-        self.links = wrapped_links
-        self.links_map = links_map
+                if _merged:
+                    break
+        assert root is not None, "root link was not found"
         self.root = root
 
-        # create Joint objects and figure out active joint references
-        all_active_joint_names = [
-            x.name for x in physx_articulations[0].get_active_joints()
-        ]
-        all_joint_names = [x.name for x in physx_articulations[0].joints]
-        active_joint_indices = [
-            all_joint_names.index(x) for x in all_active_joint_names
-        ]
+        # we can only really have links and links maps when this is not a merged articulation.
+        # For merged articulations only the root link can make sense (it holds the root pose)
+        if not _merged:
+            self.links = wrapped_links
+            self.links_map = links_map
 
-        joints_map = dict()
-        wrapped_joints: List[ArticulationJoint] = []
-        for joint_index, joints in enumerate(all_joint_objs):
-            try:
-                active_joint_index = all_active_joint_names.index(
-                    all_joint_names[joint_index]
+            # create Joint objects and figure out active joint references
+            all_active_joint_names = [
+                x.name for x in physx_articulations[0].get_active_joints()
+            ]
+            all_joint_names = [x.name for x in physx_articulations[0].joints]
+            active_joint_indices = [
+                all_joint_names.index(x) for x in all_active_joint_names
+            ]
+
+            joints_map = dict()
+            wrapped_joints: List[ArticulationJoint] = []
+            for joint_index, joints in enumerate(all_joint_objs):
+                try:
+                    active_joint_index = all_active_joint_names.index(
+                        all_joint_names[joint_index]
+                    )
+                except:
+                    active_joint_index = None
+                wrapped_joint = ArticulationJoint.create(
+                    physx_joints=joints,
+                    physx_articulations=physx_articulations,
+                    scene=scene,
+                    scene_idxs=scene_idxs,
+                    joint_index=torch.zeros(
+                        len(joints), dtype=torch.int32, device=self.device
+                    )
+                    + joint_index,
+                    active_joint_index=torch.zeros(
+                        len(joints), dtype=torch.int32, device=self.device
+                    )
+                    + active_joint_index
+                    if active_joint_index is not None
+                    else None,
                 )
-            except:
-                active_joint_index = None
-            wrapped_joint = ArticulationJoint.create(
-                joints, self, joint_index, active_joint_index
-            )
-            joints_map[wrapped_joint.name] = wrapped_joint
-            wrapped_joints.append(wrapped_joint)
-        self.joints = wrapped_joints
-        self.joints_map = joints_map
-        self.active_joints = [wrapped_joints[i] for i in active_joint_indices]
-        self.active_joints_map = {joint.name: joint for joint in self.active_joints}
+                wrapped_joint.name = "_".join(
+                    joints[0].name.replace(self.name, "", 1).split("_")[1:]
+                )
+                wrapped_joint.articulation = self
+                joints_map[wrapped_joint.name] = wrapped_joint
+                wrapped_joints.append(wrapped_joint)
+            self.joints = wrapped_joints
+            self.joints_map = joints_map
+            self.active_joints = [wrapped_joints[i] for i in active_joint_indices]
+            self.active_joints_map = {joint.name: joint for joint in self.active_joints}
 
-        # add references to the right joint in all links
-        for joint in self.joints:
-            if joint.child_link is not None:
-                joint.child_link.joint = joint
+            # add references of joints to links and links to joints
+            for joint in self.joints:
+                if joint._objs[0].child_link is not None:
+                    joint.child_link = self.links_map[
+                        "_".join(
+                            joint._objs[0]
+                            .child_link.name.replace(self.name, "", 1)
+                            .split("_")[1:]
+                        )
+                    ]
+                    joint.child_link.joint = joint
+                if joint._objs[0].parent_link is not None:
+                    joint.parent_link = self.links_map[
+                        "_".join(
+                            joint._objs[0]
+                            .parent_link.name.replace(self.name, "", 1)
+                            .split("_")[1:]
+                        )
+                    ]
         return self
 
     @classmethod
@@ -221,6 +272,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     @cached_property
     def max_dof(self) -> int:
+        """the max DOF out of all managed objects. This is used to padd attributes like qpos"""
         return max([obj.dof for obj in self._objs])
 
     # currently does not work in SAPIEN. Must set collision groups prior to building Link
@@ -232,30 +284,64 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     #                 g0, g1, g2, g3 = s.get_collision_groups()
     #                 s.set_collision_groups([g0, g1, g2 | (1 << 29), g3])
 
-    def get_collision_mesh(
-        self, to_world_frame: bool = True, first_only: bool = True
-    ) -> trimesh.Trimesh:
+    def get_first_collision_mesh(self, to_world_frame: bool = True) -> trimesh.Trimesh:
         """
-        Returns the collision mesh of each managed articulation object. Results of this are cached
+        Returns the collision mesh of the first managed articulation object. Note results of this are not cached or optimized at the moment
+        so this function can be slow if called too often
 
-        TODO (stao): Can we have a batched version of trimesh?
+        Args:
+            to_world_frame (bool): Whether to transform the collision mesh pose to the world frame
         """
-        meshes = []
-        mat = self.pose.to_transformation_matrix()
+        return self.get_collision_meshes(to_world_frame=to_world_frame, first_only=True)
+
+    def get_collision_meshes(
+        self, to_world_frame: bool = True, first_only: bool = False
+    ) -> List[trimesh.Trimesh]:
+        """
+        Returns the collision mesh of each managed articulation object. Note results of this are not cached or optimized at the moment
+        so this function can be slow if called too often
+
+        Args:
+            to_world_frame (bool): Whether to transform the collision mesh pose to the world frame
+            first_only (bool): Whether to return the collision mesh of just the first articulation managed by this object. If True,
+                this also returns a single Trimesh.Mesh object instead of a list
+        """
+        assert (
+            not self.merged
+        ), "Currently you cannot fetch collision meshes of merged articulations as merged articulations only share a root link"
+        if physx.is_gpu_enabled():
+            assert (
+                self._scene._gpu_sim_initialized
+            ), "During GPU simulation link pose data is not accessible until after \
+                initialization, and link poses are needed to get the correct collision mesh of an entire articulation"
+        else:
+            self._objs[0].pose = self._objs[0].pose
+        # TODO (stao): Can we have a batched version of trimesh?
+        meshes: List[trimesh.Trimesh] = []
+
         for i, art in enumerate(self._objs):
             art_meshes = []
             for link in art.links:
                 link_mesh = merge_meshes(get_component_meshes(link))
                 if link_mesh is not None:
                     if to_world_frame:
-                        link_mesh.apply_transform(link.pose.to_transformation_matrix())
+                        pose = self.links[link.index].pose[i]
+                        link_mesh.apply_transform(pose.sp.to_transformation_matrix())
                     art_meshes.append(link_mesh)
             mesh = merge_meshes(art_meshes)
-            if to_world_frame:
-                mesh.apply_transform(mat[i])
             meshes.append(mesh)
             if first_only:
                 break
+        if to_world_frame:
+            mat = self.pose
+            for i, mesh in enumerate(meshes):
+                if mat is not None:
+                    if len(mat) > 1:
+                        mesh.apply_transform(mat[i].sp.to_transformation_matrix())
+                    else:
+                        mesh.apply_transform(mat.sp.to_transformation_matrix())
+        if first_only:
+            return meshes[0]
         return meshes
 
     def get_net_contact_forces(self, link_names: Union[List[str], Tuple[str]]):
@@ -309,14 +395,14 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     # def create_fixed_tendon(self, link_chain: list[PhysxArticulationLinkComponent], coefficients: list[float], recip_coefficients: list[float], rest_length: float = 0, offset: float = 0, stiffness: float = 0, damping: float = 0, low: float = -3.4028234663852886e+38, high: float = 3.4028234663852886e+38, limit_stiffness: float = 0) -> None: ...
     def find_joint_by_name(self, arg0: str) -> ArticulationJoint:
-        if self._merged:
+        if self.merged:
             raise RuntimeError(
                 "Cannot call find_joint_by_name when the articulation object is managing articulations of different dofs"
             )
         return self.joints_map[arg0]
 
     def find_link_by_name(self, arg0: str) -> Link:
-        if self._merged:
+        if self.merged:
             raise RuntimeError(
                 "Cannot call find_link_by_name when the articulation object is managing articulations of different dofs"
             )

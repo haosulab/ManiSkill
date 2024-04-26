@@ -6,11 +6,11 @@ To submit to the challenge, you need to submit a URL to your docker image which 
 
 In brief, you need to:
 
-- Create a file named "user_solution.py", and implement a `UserPolicy` in it. An example is provided [here](https://github.com/haosulab/ManiSkill2/tree/main/examples/submission).
+- Create a file named "user_solution.py", and implement a `UserPolicy` in it. An example is provided [here](https://github.com/haosulab/ManiSkill/tree/main/examples/submission).
 - Build a docker image that includes "user_solution.py" and other codes and dependencies (e.g., model weights).
 - Test the docker image locally, give it a unique tag, and push it to a public docker registry.
 
-Please see the [evaluation script](https://github.com/haosulab/ManiSkill2/tree/main/mani_skill/evaluation/run_evaluation.py) for how your submission will be evaluated. You can locally test your submission by `python -m mani_skill.evaluation.run_evaluation ...`. We will use the same script (with a different subclass of `BaseEvaluator` and held-out configuration files) to evaluate your online submission.
+Please see the [evaluation script](https://github.com/haosulab/ManiSkill/tree/main/mani_skill/evaluation/run_evaluation.py) for how your submission will be evaluated. You can locally test your submission by `python -m mani_skill.evaluation.run_evaluation ...`. We will use the same script (with a different subclass of `BaseEvaluator` and held-out configuration files) to evaluate your online submission.
 
 ## Create and locally verify a solution
 
@@ -33,7 +33,7 @@ python -m mani_skill.evaluation.run_evaluation -e ${ENV_ID} -o ${OUTPUT_DIR} -n 
 
 Install [nvidia-docker v2](https://github.com/NVIDIA/nvidia-docker) following instructions here: <https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#docker>. Note: only supports Linux; no Windows or MacOS.
 
-We provide a base image at Dockerhub: `haosulab/mani-skill:latest`. It is based on `nvidia/cudagl:11.3.1-devel-ubuntu20.04`. The corresponding Dockerfile is [here](https://github.com/haosulab/ManiSkill2/blob/main/docker/Dockerfile).
+We provide a base image at Dockerhub: `haosulab/mani-skill:latest`. It is based on `nvidia/cudagl:11.3.1-devel-ubuntu20.04`. The corresponding Dockerfile is [here](https://github.com/haosulab/ManiSkill/blob/main/docker/Dockerfile).
 
 Here is an example of how to customize the base docker image.
 

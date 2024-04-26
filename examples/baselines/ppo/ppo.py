@@ -3,6 +3,7 @@ import os
 import random
 import time
 from dataclasses import dataclass
+from typing import Optional
 
 import gymnasium as gym
 import numpy as np
@@ -21,7 +22,7 @@ from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 
 @dataclass
 class Args:
-    exp_name: str = os.path.basename(__file__)[: -len(".py")]
+    exp_name: Optional[str] = None
     """the name of this experiment"""
     seed: int = 1
     """seed of the experiment"""
@@ -91,6 +92,8 @@ class Args:
     """the target KL divergence threshold"""
     eval_freq: int = 25
     """evaluation frequency in terms of iterations"""
+    save_train_video_freq: Optional[int] = None
+    """frequency to save training videos in terms of iterations"""
     finite_horizon_gae: bool = True
 
     # to be filled in runtime
@@ -155,7 +158,11 @@ if __name__ == "__main__":
     args.batch_size = int(args.num_envs * args.num_steps)
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
     args.num_iterations = args.total_timesteps // args.batch_size
-    run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
+    if args.exp_name is None:
+        args.exp_name = os.path.basename(__file__)[: -len(".py")]
+        run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
+    else:
+        run_name = args.exp_name
     writer = None
     if not args.evaluate:
         print("Running training")
@@ -197,9 +204,12 @@ if __name__ == "__main__":
     if args.capture_video:
         eval_output_dir = f"runs/{run_name}/videos"
         if args.evaluate:
-            eval_output_dir = f"videos"
+            eval_output_dir = f"{os.path.dirname(args.checkpoint)}/test_videos"
         print(f"Saving eval videos to {eval_output_dir}")
-        eval_envs = RecordEpisode(eval_envs, output_dir=eval_output_dir, save_trajectory=args.evaluate, max_steps_per_video=args.num_eval_steps, video_fps=30)
+        if args.save_train_video_freq is not None:
+            save_video_trigger = lambda x : (x // args.num_steps) % args.save_train_video_freq == 0
+            envs = RecordEpisode(envs, output_dir=f"runs/{run_name}/train_videos", save_trajectory=False, save_video_trigger=save_video_trigger, max_steps_per_video=args.num_steps, video_fps=30)
+        eval_envs = RecordEpisode(eval_envs, output_dir=eval_output_dir, save_trajectory=args.evaluate, trajectory_name="trajectory", max_steps_per_video=args.num_eval_steps, video_fps=30)
     envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=not args.partial_reset, **env_kwargs)
     eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=not args.partial_reset, **env_kwargs)
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
@@ -277,7 +287,7 @@ if __name__ == "__main__":
             if args.evaluate:
                 break
         if args.save_model and iteration % args.eval_freq == 1:
-            model_path = f"runs/{run_name}/{args.exp_name}_{iteration}.cleanrl_model"
+            model_path = f"runs/{run_name}/{args.exp_name}_{iteration}.pt"
             torch.save(agent.state_dict(), model_path)
             print(f"model saved to {model_path}")
         # Annealing the rate if instructed to do so.
@@ -286,6 +296,7 @@ if __name__ == "__main__":
             lrnow = frac * args.learning_rate
             optimizer.param_groups[0]["lr"] = lrnow
 
+        rollout_time = time.time()
         for step in range(0, args.num_steps):
             global_step += args.num_envs
             obs[step] = next_obs
@@ -315,7 +326,7 @@ if __name__ == "__main__":
                 writer.add_scalar("charts/episodic_length", final_info["elapsed_steps"][done_mask].cpu().numpy().mean(), global_step)
 
                 final_values[step, torch.arange(args.num_envs, device=device)[done_mask]] = agent.get_value(final_info["final_observation"][done_mask]).view(-1)
-
+        rollout_time = time.time() - rollout_time
         # bootstrap value according to termination and truncation
         with torch.no_grad():
             next_value = agent.get_value(next_obs).reshape(1, -1)
@@ -371,6 +382,7 @@ if __name__ == "__main__":
         agent.train()
         b_inds = np.arange(args.batch_size)
         clipfracs = []
+        update_time = time.time()
         for epoch in range(args.update_epochs):
             np.random.shuffle(b_inds)
             for start in range(0, args.batch_size, args.minibatch_size):
@@ -386,6 +398,9 @@ if __name__ == "__main__":
                     old_approx_kl = (-logratio).mean()
                     approx_kl = ((ratio - 1) - logratio).mean()
                     clipfracs += [((ratio - 1.0).abs() > args.clip_coef).float().mean().item()]
+
+                if args.target_kl is not None and approx_kl > args.target_kl:
+                    break
 
                 mb_advantages = b_advantages[mb_inds]
                 if args.norm_adv:
@@ -421,12 +436,12 @@ if __name__ == "__main__":
 
             if args.target_kl is not None and approx_kl > args.target_kl:
                 break
+        update_time = time.time() - update_time
 
         y_pred, y_true = b_values.cpu().numpy(), b_returns.cpu().numpy()
         var_y = np.var(y_true)
         explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
 
-        # TRY NOT TO MODIFY: record rewards for plotting purposes
         writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
         writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
         writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
@@ -437,7 +452,9 @@ if __name__ == "__main__":
         writer.add_scalar("losses/explained_variance", explained_var, global_step)
         print("SPS:", int(global_step / (time.time() - start_time)))
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
-
+        writer.add_scalar("charts/update_time", update_time, global_step)
+        writer.add_scalar("charts/rollout_time", rollout_time, global_step)
+        writer.add_scalar("charts/rollout_fps", args.num_envs * args.num_steps / rollout_time, global_step)
     if not args.evaluate:
         if args.save_model:
             model_path = f"runs/{run_name}/{args.exp_name}_final.cleanrl_model"

@@ -32,13 +32,16 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
     px_body_type: Literal["kinematic", "static", "dynamic"] = None
     hidden: bool = False
 
-    inital_pose: Pose = None
+    initial_pose: Pose = None
     """
     The initial pose of this Actor, as defined when creating the actor via the ActorBuilder. It is necessary to track
     this pose to ensure the actor is still at the correct pose once gpu system is initialized. It may also be useful
     to help reset a environment to an initial state without having to manage initial poses yourself
     """
     name: str = None
+
+    merged: bool = False
+    """Whether this object is a view of other actors as a result of Actor.merge"""
 
     def __hash__(self):
         return self._objs[0].__hash__()
@@ -104,20 +107,16 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
         scene = actors[0]._scene
         _builder_initial_poses = []
         merged_scene_idxs = []
-        num_objs_per_actor = actors[0]._num_objs
+        actors[0]._num_objs
         for actor in actors:
             objs += actor._objs
             merged_scene_idxs.append(actor._scene_idxs)
-            _builder_initial_poses.append(actor.inital_pose.raw_pose)
-            assert (
-                actor._num_objs == num_objs_per_actor
-            ), "Each given actor must have the same number of managed objects"
-        # TODO (stao): Can we support e.g. each Actor having len(actor._objs) > 1? It would mean fetching pose data or any kind of data is highly uintuitive
-        # we definitely cannot permit some actors to have more objs than others, otherwise the data is ragged.
+            _builder_initial_poses.append(actor.initial_pose.raw_pose)
         merged_scene_idxs = torch.concat(merged_scene_idxs)
         merged_actor = Actor.create_from_entities(objs, scene, merged_scene_idxs)
         merged_actor.name = name
-        merged_actor.inital_pose = Pose.create(torch.vstack(_builder_initial_poses))
+        merged_actor.initial_pose = Pose.create(torch.vstack(_builder_initial_poses))
+        merged_actor.merged = True
         scene.actor_views[merged_actor.name] = merged_actor
         return merged_actor
 
@@ -150,6 +149,9 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
 
     @cache
     def has_collision_shapes(self):
+        assert (
+            not self.merged
+        ), "Check if a merged actor has collision shape is not supported as the managed objects could all be very different"
         return (
             len(
                 self._objs[0]
@@ -181,9 +183,10 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
             self.px.gpu_apply_rigid_dynamic_data()
             self.px.gpu_fetch_rigid_dynamic_data()
         else:
-            self._objs[0].find_component_by_type(
-                sapien.render.RenderBodyComponent
-            ).visibility = 0
+            for obj in self._objs:
+                obj.find_component_by_type(
+                    sapien.render.RenderBodyComponent
+                ).visibility = 0
         # set hidden *after* setting/getting so not applied to self.before_hide_pose erroenously
         self.hidden = True
 
@@ -199,9 +202,10 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
                 self.px.gpu_apply_rigid_dynamic_data()
                 self.px.gpu_fetch_rigid_dynamic_data()
         else:
-            self._objs[0].find_component_by_type(
-                sapien.render.RenderBodyComponent
-            ).visibility = 1
+            for obj in self._objs:
+                obj.find_component_by_type(
+                    sapien.render.RenderBodyComponent
+                ).visibility = 1
 
     def is_static(self, lin_thresh=1e-2, ang_thresh=1e-1):
         """
@@ -211,12 +215,6 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
             torch.linalg.norm(self.linear_velocity, axis=1) <= lin_thresh,
             torch.linalg.norm(self.angular_velocity, axis=1) <= ang_thresh,
         )
-
-    def set_collision_group_bit(self, group: int, bit_idx: int, bit: int):
-        """Set's a specific collision group bit for all collision shapes in all parallel actors"""
-        for body in self._bodies:
-            for cs in body.get_collision_shapes():
-                cs.collision_groups[group] |= bit << bit_idx
 
     # -------------------------------------------------------------------------- #
     # Exposed actor properties, getters/setters that automatically handle
@@ -228,7 +226,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
                 "Cannot physically remove object from scene during GPU simulation. This can only be done in CPU simulation. If you wish to remove an object physically, the best way is to move the object far away."
             )
         else:
-            self._objs[0].remove_from_scene()
+            [obj.remove_from_scene() for obj in self._objs]
 
     @property
     def pose(self) -> Pose:
@@ -236,7 +234,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
             if self.px_body_type == "static":
                 # NOTE (stao): usually _builder_initial_pose is just one pose, but for static objects in GPU sim we repeat it if necessary so it can be used
                 # as part of observations if needed
-                return self.inital_pose
+                return self.initial_pose
             else:
                 if self.hidden:
                     return Pose.create(self.before_hide_pose)
@@ -246,8 +244,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
                     ]
                     return Pose.create(raw_pose)
         else:
-            assert len(self._objs) == 1
-            return Pose.create(self._objs[0].pose)
+            return Pose.create([obj.pose for obj in self._objs])
 
     @pose.setter
     def pose(self, arg1: Union[Pose, sapien.Pose, Array]) -> None:
@@ -266,8 +263,8 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
                     obj.pose = arg1
             else:
                 if len(arg1.shape) == 2:
-                    for obj in self._objs:
-                        obj.pose = to_sapien_pose(arg1[0])
+                    for i, obj in enumerate(self._objs):
+                        obj.pose = to_sapien_pose(arg1[i])
                 else:
                     arg1 = to_sapien_pose(arg1)
 
