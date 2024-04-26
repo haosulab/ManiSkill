@@ -130,7 +130,7 @@ class BaseAgent:
         loader.disable_self_collisions = self.disable_self_collisions
 
         if self.urdf_config is not None:
-            urdf_config = sapien_utils.parse_urdf_config(self.urdf_config, self.scene)
+            urdf_config = sapien_utils.parse_urdf_config(self.urdf_config)
             sapien_utils.check_urdf_config(urdf_config)
             sapien_utils.apply_urdf_config(loader, urdf_config)
 
