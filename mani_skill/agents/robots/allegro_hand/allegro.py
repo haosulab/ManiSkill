@@ -1,11 +1,12 @@
 from copy import deepcopy
 from typing import List
 
+import numpy as np
 import sapien
 import torch
 
 from mani_skill import PACKAGE_ASSET_DIR
-from mani_skill.agents.base_agent import BaseAgent
+from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
 from mani_skill.utils import sapien_utils
@@ -35,7 +36,31 @@ class AllegroHandRight(BaseAgent):
             ),
         },
     )
-    sensor_configs = {}
+    keyframes = dict(
+        palm_up=Keyframe(
+            qpos=np.array(
+                [
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                ]
+            ),
+            pose=sapien.Pose([0, 0, 0.5], q=[-0.707, 0, 0.707, 0]),
+        )
+    )
 
     def __init__(self, *args, **kwargs):
         self.joint_names = [

@@ -728,9 +728,10 @@ class MJCFLoader:
         actor_builders: List[ActorBuilder] = []
         for i, body in enumerate(xml.find("worldbody").findall("body")):
             # determine first if this body is really an articulation or a actor
-            has_joint = body.find("joint") is not None
+            body.find("joint") is not None
             has_freejoint = body.find("freejoint") is not None
-            if has_joint:
+            # TODO (is it the case any <body> tag refers to an articulation?)
+            if True:
                 builder = self.scene.create_articulation_builder()
                 articulation_builders.append(builder)
                 dummy_root_link = builder.create_link_builder(None)

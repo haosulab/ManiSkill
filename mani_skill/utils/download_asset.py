@@ -7,13 +7,14 @@ See also:
 
 import argparse
 import hashlib
+import os
 import os.path as osp
 import shutil
 import urllib.request
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 from urllib.error import URLError
 
 from huggingface_hub import snapshot_download
@@ -25,12 +26,15 @@ from mani_skill.utils.io_utils import load_json
 
 @dataclass
 class DataSource:
-    url: str = None
-    hf_repo_id: str = None
-    target_path: str = None
+    url: Optional[str] = None
+    hf_repo_id: Optional[str] = None
+    github_url: Optional[str] = None
+    target_path: Optional[str] = None
     """the folder where the file will be downloaded to"""
-    checksum: str = None
-    filename: str = None
+    checksum: Optional[str] = None
+    zip_dirname: Optional[str] = None
+    """what to rename a zip files generated directory to"""
+    filename: Optional[str] = None
     """name to change the downloaded file to. If None, will not change the name"""
     output_dir: str = ASSET_DIR
 
@@ -150,6 +154,18 @@ def initialize_extra_sources():
         url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/xmate3_robotiq.zip",
         target_path="robots/xmate3_robotiq",
         checksum="ddda102a20eb41e28a0a501702e240e5d7f4084221a44f580e729f08b7c12d1a",
+    )
+    DATA_SOURCES["ur10e"] = DataSource(
+        url="https://github.com/haosulab/ManiSkill-UR10e/archive/refs/tags/v0.1.0.zip",
+        target_path="robots/ur10e",
+    )
+    DATA_SOURCES["anymal_c"] = DataSource(
+        url="https://github.com/haosulab/ManiSkill-ANYmalC/archive/refs/tags/v0.1.0.zip",
+        target_path="robots/anymal_c",
+    )
+    DATA_SOURCES["unitree_h1"] = DataSource(
+        url="https://github.com/haosulab/ManiSkill-UnitreeH1/archive/refs/tags/v0.1.0.zip",
+        target_path="robots/unitree_h1",
     )
 
     # ---------------------------------------------------------------------------- #
@@ -283,6 +299,20 @@ def download(
                     zip_ref.extract(file, output_dir)
             else:
                 zip_ref.extractall(output_dir)
+            shared_base_dir = None
+            for file in zip_ref.filelist:
+                base_dir = file.filename.split("/")[0]
+                if shared_base_dir is None:
+                    shared_base_dir = base_dir
+                elif shared_base_dir != base_dir:
+                    shared_base_dir = None
+            if shared_base_dir is not None and shared_base_dir != osp.basename(
+                data_source.target_path
+            ):
+                os.rename(
+                    osp.join(output_dir, shared_base_dir),
+                    osp.join(output_dir, osp.basename(data_source.target_path)),
+                )
     else:
         shutil.move(tmp_filename, output_path / base_filename)
 

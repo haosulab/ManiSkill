@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Dict
 
 import numpy as np
 import sapien
@@ -16,6 +16,7 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 
 @register_env("Empty-v1", max_episode_steps=200000)
 class EmptyEnv(BaseEnv):
+    SUPPORTED_REWARD_MODES = ["none"]
     """
     This is just a dummy environment for showcasing robots in a empty scene
     """
@@ -30,67 +31,17 @@ class EmptyEnv(BaseEnv):
 
     @property
     def _default_human_render_camera_configs(self):
-        pose = sapien_utils.look_at([1.75, -1.75, 1.5], [0.0, 0.0, 0.2])
+        pose = sapien_utils.look_at([1.25, -1.25, 1.5], [0.0, 0.0, 0.2])
         return CameraConfig("render_camera", pose, 2048, 2048, 1, 0.01, 100)
 
     def _load_scene(self, options: dict):
         build_ground(self._scene)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
-        if self.robot_uids == "panda":
-            qpos = np.array(
-                [
-                    0.0,
-                    0.0,
-                    0,
-                    -np.pi * 6 / 8,
-                    0,
-                    np.pi * 3 / 4,
-                    np.pi / 4,
-                    0.04,
-                    0.04,
-                ]
-            )
-            self.agent.robot.set_qpos(qpos)
-        elif self.robot_uids == "xmate3_robotiq":
-            qpos = np.array(
-                [0, np.pi / 6, 0, np.pi / 3, 0, np.pi / 2, -np.pi / 2, 0, 0]
-            )
-            self.agent.robot.set_qpos(qpos)
-            self.agent.robot.set_pose(sapien.Pose([-0.562, 0, 0]))
-        elif self.robot_uids == "fetch":
-            qpos = np.array(
-                [
-                    0,
-                    0,
-                    0,
-                    0.04,
-                    0,
-                    0,
-                    0,
-                    -np.pi / 4,
-                    0,
-                    np.pi / 4,
-                    0,
-                    np.pi / 3,
-                    0,
-                    0.015,
-                    0.015,
-                ]
-            )
-            self.agent.robot.set_qpos(qpos)
+        pass
 
     def evaluate(self):
         return {}
 
     def _get_obs_extra(self, info: Dict):
         return dict()
-
-    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        return torch.zeros(self.num_envs, device=self.device)
-
-    def compute_normalized_dense_reward(
-        self, obs: Any, action: torch.Tensor, info: Dict
-    ):
-        max_reward = 1.0
-        return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward

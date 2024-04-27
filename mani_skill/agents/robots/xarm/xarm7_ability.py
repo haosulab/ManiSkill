@@ -1,10 +1,12 @@
 from copy import deepcopy
 from typing import Dict, Tuple
 
+import numpy as np
+import sapien
 import sapien.physx as physx
 
 from mani_skill import PACKAGE_ASSET_DIR
-from mani_skill.agents.base_agent import BaseAgent
+from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
 from mani_skill.utils import sapien_utils
@@ -39,6 +41,33 @@ class XArm7Ability(BaseAgent):
         ),
     )
 
+    keyframes = dict(
+        rest=Keyframe(
+            qpos=np.array(
+                [
+                    0.0,
+                    -0.4,
+                    0.0,
+                    0.5,
+                    0.0,
+                    0.9,
+                    -3.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                ]
+            ),
+            pose=sapien.Pose(p=[0, 0, 0]),
+        )
+    )
+
     def __init__(self, *args, **kwargs):
         self.arm_joint_names = [
             "joint1",
@@ -49,8 +78,8 @@ class XArm7Ability(BaseAgent):
             "joint6",
             "joint7",
         ]
-        self.arm_stiffness = 1e4
-        self.arm_damping = 1e3
+        self.arm_stiffness = 1e3
+        self.arm_damping = 1e2
         self.arm_force_limit = 500
 
         self.hand_joint_names = [

@@ -10,6 +10,10 @@ import torch
 from gymnasium import spaces
 
 from mani_skill import format_path
+from mani_skill.agents.controllers.pd_joint_pos import (
+    PDJointPosController,
+    PDJointPosControllerConfig,
+)
 from mani_skill.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.structs import Actor, Array, Articulation, Pose
@@ -105,7 +109,26 @@ class BaseAgent:
     def _controller_configs(
         self,
     ) -> Dict[str, Union[ControllerConfig, DictControllerConfig]]:
-        raise NotImplementedError()
+
+        return dict(
+            pd_joint_pos=PDJointPosControllerConfig(
+                [x.name for x in self.robot.active_joints],
+                lower=None,
+                upper=None,
+                stiffness=100,
+                damping=10,
+                normalize_action=False,
+            ),
+            pd_joint_delta_pos=PDJointPosControllerConfig(
+                [x.name for x in self.robot.active_joints],
+                lower=-0.1,
+                upper=0.1,
+                stiffness=100,
+                damping=10,
+                normalize_action=True,
+                use_delta=True,
+            ),
+        )
 
     @property
     def device(self):
@@ -170,8 +193,8 @@ class BaseAgent:
         # create controller on the fly here
         if control_mode not in self.controllers:
             config = self._controller_configs[self._control_mode]
+            balance_passive_force = True
             if isinstance(config, dict):
-                balance_passive_force = True
                 if "balance_passive_force" in config:
                     balance_passive_force = config.pop("balance_passive_force")
                 self.controllers[control_mode] = CombinedController(
@@ -179,17 +202,13 @@ class BaseAgent:
                     self.robot,
                     self._control_freq,
                     scene=self.scene,
-                    balance_passive_force=balance_passive_force,
                 )
             else:
                 self.controllers[control_mode] = config.controller_cls(
                     config, self.robot, self._control_freq, scene=self.scene
                 )
             self.controllers[control_mode].set_drive_property()
-            if (
-                isinstance(self.controllers[control_mode], DictController)
-                and self.controllers[control_mode].balance_passive_force
-            ):
+            if balance_passive_force:
                 # NOTE (stao): Balancing passive force is currently not supported in PhysX, so we work around by disabling gravity
                 for link in self.robot.links:
                     link.disable_gravity = True

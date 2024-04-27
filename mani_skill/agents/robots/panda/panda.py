@@ -7,7 +7,7 @@ import sapien.physx as physx
 import torch
 
 from mani_skill import PACKAGE_ASSET_DIR
-from mani_skill.agents.base_agent import BaseAgent
+from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
 from mani_skill.utils import common, sapien_utils
@@ -31,6 +31,26 @@ class Panda(BaseAgent):
             ),
         ),
     )
+
+    keyframes = dict(
+        rest=Keyframe(
+            qpos=np.array(
+                [
+                    0.0,
+                    np.pi / 8,
+                    0,
+                    -np.pi * 5 / 8,
+                    0,
+                    np.pi * 3 / 4,
+                    np.pi / 4,
+                    0.04,
+                    0.04,
+                ]
+            ),
+            pose=sapien.Pose(),
+        )
+    )
+
     arm_joint_names = [
         "panda_joint1",
         "panda_joint2",

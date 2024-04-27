@@ -190,14 +190,12 @@ class DictController(BaseController):
         articulation: Articulation,
         control_freq: int,
         sim_freq: int = None,
-        balance_passive_force=True,
         scene: ManiSkillScene = None,
     ):
         self.scene = scene
         self.configs = configs
         self.articulation = articulation
         self._control_freq = control_freq
-        self.balance_passive_force = balance_passive_force
 
         self.controllers: Dict[str, BaseController] = dict()
         for uid, config in configs.items():
