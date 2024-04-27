@@ -27,6 +27,7 @@ from mani_skill.utils.io_utils import load_json
 class DataSource:
     url: str = None
     hf_repo_id: str = None
+    github_url: str = None
     target_path: str = None
     """the folder where the file will be downloaded to"""
     checksum: str = None

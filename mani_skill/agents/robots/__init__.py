@@ -6,5 +6,6 @@ from .humanoid import Humanoid
 from .panda import Panda, PandaRealSensed435
 from .trifingerpro import TriFingerPro
 from .unitree_h1 import UnitreeH1, UnitreeH1Simplified
+from .ur_e import UR10e
 from .xarm import XArm7Ability
 from .xmate3 import Xmate3Robotiq

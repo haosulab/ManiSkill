@@ -115,16 +115,16 @@ class BaseAgent:
                 [x.name for x in self.robot.active_joints],
                 lower=None,
                 upper=None,
-                stiffness=1000,
-                damping=100,
+                stiffness=100,
+                damping=10,
                 normalize_action=False,
             ),
             pd_joint_delta_pos=PDJointPosControllerConfig(
                 [x.name for x in self.robot.active_joints],
                 lower=-0.1,
                 upper=0.1,
-                stiffness=1000,
-                damping=100,
+                stiffness=100,
+                damping=10,
                 normalize_action=True,
                 use_delta=True,
             ),
@@ -193,8 +193,8 @@ class BaseAgent:
         # create controller on the fly here
         if control_mode not in self.controllers:
             config = self._controller_configs[self._control_mode]
+            balance_passive_force = True
             if isinstance(config, dict):
-                balance_passive_force = True
                 if "balance_passive_force" in config:
                     balance_passive_force = config.pop("balance_passive_force")
                 self.controllers[control_mode] = CombinedController(
@@ -202,17 +202,13 @@ class BaseAgent:
                     self.robot,
                     self._control_freq,
                     scene=self.scene,
-                    balance_passive_force=balance_passive_force,
                 )
             else:
                 self.controllers[control_mode] = config.controller_cls(
                     config, self.robot, self._control_freq, scene=self.scene
                 )
             self.controllers[control_mode].set_drive_property()
-            if (
-                isinstance(self.controllers[control_mode], DictController)
-                and self.controllers[control_mode].balance_passive_force
-            ):
+            if balance_passive_force:
                 # NOTE (stao): Balancing passive force is currently not supported in PhysX, so we work around by disabling gravity
                 for link in self.robot.links:
                     link.disable_gravity = True
