@@ -63,20 +63,15 @@ class MJCFLoader(SAPIENMJCFLoader):
             mjcf_file, package_dir
         )
 
-        if len(articulation_builders) > 1 or len(actor_builders) != 0:
-            raise Exception(
-                "URDF contains multiple objects, call load_multiple instead"
-            )
-
         articulations: List[Articulation] = []
-        for b in articulation_builders:
+        for b in articulation_builders[:1]:
             b.set_scene_idxs(scene_idxs)
             b.disable_self_collisions = self.disable_self_collisions
             articulations.append(b.build())
 
         actors: List[Actor] = []
-        for b in actor_builders:
-            actors.append(b.build())
+        # for b in actor_builders:
+        #     actors.append(b.build())
 
         if len(cameras) > 0:
             name2entity = dict()

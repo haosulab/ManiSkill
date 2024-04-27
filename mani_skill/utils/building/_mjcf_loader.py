@@ -730,7 +730,7 @@ class MJCFLoader:
             # determine first if this body is really an articulation or a actor
             has_joint = body.find("joint") is not None
             has_freejoint = body.find("freejoint") is not None
-            if has_joint:
+            if has_joint or has_freejoint:
                 builder = self.scene.create_articulation_builder()
                 articulation_builders.append(builder)
                 dummy_root_link = builder.create_link_builder(None)

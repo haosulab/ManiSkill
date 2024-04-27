@@ -7,7 +7,7 @@ import sapien.physx as physx
 import torch
 
 from mani_skill import PACKAGE_ASSET_DIR
-from mani_skill.agents.base_agent import BaseAgent
+from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
 from mani_skill.sensors.camera import CameraConfig
@@ -37,6 +37,33 @@ class Fetch(BaseAgent):
                 material="gripper", patch_radius=0.1, min_patch_radius=0.1
             ),
         ),
+    )
+
+    keyframes = dict(
+        rest=Keyframe(
+            pose=sapien.Pose(),
+            qpos=np.array(
+                np.array(
+                    [
+                        0,
+                        0,
+                        0,
+                        0.1,
+                        0,
+                        -0.370,
+                        0.562,
+                        -0.75,
+                        0.695,
+                        1.0,
+                        0.0,
+                        np.pi / 2,
+                        0,
+                        0.015,
+                        0.015,
+                    ]
+                )
+            ),
+        )
     )
 
     @property
