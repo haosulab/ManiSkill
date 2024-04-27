@@ -1,5 +1,8 @@
+import numpy as np
+import sapien
+
 from mani_skill import PACKAGE_ASSET_DIR
-from mani_skill.agents.base_agent import BaseAgent
+from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
 from mani_skill.sensors.camera import CameraConfig
@@ -11,6 +14,37 @@ class Humanoid(BaseAgent):
     mjcf_path = f"{PACKAGE_ASSET_DIR}/robots/humanoid/humanoid.xml"
     urdf_config = dict()
     fix_root_link = False  # False as there is a freejoint on the root body
+
+    keyframes = dict(
+        squat=Keyframe(
+            qpos=np.array(
+                [
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.12,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    -0.25,
+                    -0.25,
+                    -0.25,
+                    -0.25,
+                    -0.5,
+                    -0.5,
+                    -1.3,
+                    -1.3,
+                    -0.8,
+                    -0.8,
+                    0.0,
+                    0.0,
+                ]
+            ),
+            pose=sapien.Pose(p=[0, 0, -0.375]),
+        )
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
