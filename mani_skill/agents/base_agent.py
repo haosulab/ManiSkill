@@ -10,6 +10,10 @@ import torch
 from gymnasium import spaces
 
 from mani_skill import format_path
+from mani_skill.agents.controllers.pd_joint_pos import (
+    PDJointPosController,
+    PDJointPosControllerConfig,
+)
 from mani_skill.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.structs import Actor, Array, Articulation, Pose
@@ -105,7 +109,26 @@ class BaseAgent:
     def _controller_configs(
         self,
     ) -> Dict[str, Union[ControllerConfig, DictControllerConfig]]:
-        raise NotImplementedError()
+
+        return dict(
+            pd_joint_pos=PDJointPosControllerConfig(
+                [x.name for x in self.robot.active_joints],
+                lower=None,
+                upper=None,
+                stiffness=1000,
+                damping=100,
+                normalize_action=False,
+            ),
+            pd_joint_delta_pos=PDJointPosControllerConfig(
+                [x.name for x in self.robot.active_joints],
+                lower=-0.1,
+                upper=0.1,
+                stiffness=1000,
+                damping=100,
+                normalize_action=True,
+                use_delta=True,
+            ),
+        )
 
     @property
     def device(self):
