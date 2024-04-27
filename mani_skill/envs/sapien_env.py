@@ -141,8 +141,8 @@ class BaseEnv(gym.Env):
         render_mode: str = None,
         shader_dir: str = "default",
         enable_shadow: bool = False,
-        sensor_cfgs: dict = None,
-        human_render_camera_cfgs: dict = None,
+        sensor_configs: dict = None,
+        human_render_camera_configs: dict = None,
         robot_uids: Union[str, BaseAgent, List[Union[str, BaseAgent]]] = None,
         sim_cfg: Union[SimConfig, dict] = dict(),
         reconfiguration_freq: int = None,
@@ -151,8 +151,8 @@ class BaseEnv(gym.Env):
         self.num_envs = num_envs
         self.reconfiguration_freq = reconfiguration_freq if reconfiguration_freq is not None else 0
         self._reconfig_counter = 0
-        self._custom_sensor_configs = sensor_cfgs
-        self._custom_human_render_camera_configs = human_render_camera_cfgs
+        self._custom_sensor_configs = sensor_configs
+        self._custom_human_render_camera_configs = human_render_camera_configs
         self.robot_uids = robot_uids
         if self.SUPPORTED_ROBOTS is not None:
             assert robot_uids in self.SUPPORTED_ROBOTS
