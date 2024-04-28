@@ -50,8 +50,10 @@ if __name__ == "__main__":
             kf = env.agent.keyframes[args.keyframe]
         else:
             for kf in env.agent.keyframes.values():
+                # keep the first keyframe we find
                 break
-        env.agent.robot.set_qpos(kf.qpos)
+        if kf.qpos is not None:
+            env.agent.robot.set_qpos(kf.qpos)
         if kf.qvel is not None:
             env.agent.robot.set_qvel(kf.qvel)
         env.agent.robot.set_pose(kf.pose)

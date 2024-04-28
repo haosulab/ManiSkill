@@ -167,6 +167,10 @@ def initialize_extra_sources():
         url="https://github.com/haosulab/ManiSkill-UnitreeH1/archive/refs/tags/v0.1.0.zip",
         target_path="robots/unitree_h1",
     )
+    DATA_SOURCES["unitree_go2"] = DataSource(
+        url="https://github.com/haosulab/ManiSkill-UnitreeGo2/archive/refs/tags/v0.1.0.zip",
+        target_path="robots/unitree_go2",
+    )
 
     # ---------------------------------------------------------------------------- #
     # Visual backgrounds

@@ -33,7 +33,7 @@ DictControllerConfig = Dict[str, ControllerConfig]
 @dataclass
 class Keyframe:
     pose: sapien.Pose
-    qpos: Array
+    qpos: Optional[Array] = None
     qvel: Optional[Array] = None
 
 
