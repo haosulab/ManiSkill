@@ -20,7 +20,7 @@ class UnitreeGo2(BaseAgent):
 
     keyframes = dict(
         standing=Keyframe(
-            pose=sapien.Pose(p=[0, 0, 0.3]),
+            pose=sapien.Pose(p=[0, 0, 0.29]),
             qpos=np.array(
                 [0.0, 0.0, 0.0, 0.0, 0.9, 0.9, 0.9, 0.9, -1.8, -1.8, -1.8, -1.8]
             ),
