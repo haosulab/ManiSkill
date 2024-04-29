@@ -154,7 +154,7 @@ class CartpoleEnv(BaseEnv):
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
 
 
-@register_env("MS-CartpoleBalance-v1", max_episode_steps=250)
+@register_env("MS-CartpoleBalance-v1", max_episode_steps=1000)
 class CartpoleBalanceEnv(CartpoleEnv):
     def __init__(self, *args, **kwargs):
         super().__init__(
@@ -176,7 +176,7 @@ class CartpoleBalanceEnv(CartpoleEnv):
         return dict(fail=self.pole_angle_cosine < 0)
 
 
-@register_env("MS-CartpoleSwingUp-v1", max_episode_steps=250)
+@register_env("MS-CartpoleSwingUp-v1", max_episode_steps=1000)
 class CartpoleSwingUpEnv(CartpoleEnv):
     def __init__(self, *args, **kwargs):
         super().__init__(
