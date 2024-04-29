@@ -380,6 +380,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
                 common.to_tensor(sapien_utils.compute_total_impulse(body_contacts))
                 / self._scene.timestep
             )
+            # TODO (stao): (unify contacts api between gpu / cpu)
             return net_force[None, :]
 
     # -------------------------------------------------------------------------- #
