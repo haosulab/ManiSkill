@@ -24,7 +24,7 @@ import torch.random
 
 from mani_skill.agents.robots import CartPole
 from mani_skill.envs.sapien_env import BaseEnv
-from mani_skill.envs.utils.reward.common import tolerance
+from mani_skill.envs.utils.rewards.common import tolerance
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.registration import register_env
@@ -33,12 +33,11 @@ from mani_skill.utils.structs.types import Array, GPUMemoryConfig, SimConfig
 
 
 class CartpoleEnv(BaseEnv):
-    SUPPORTED_ROBOTS = ["cart_pole"]
 
-    agent: Union[CartPole]
+    agent: Union[CartPoleRobot]
 
     def __init__(
-        self, *args, robot_uids="cart_pole", robot_init_qpos_noise=0.1, **kwargs
+        self, *args, robot_uids=CartPoleRobot, robot_init_qpos_noise=0.1, **kwargs
     ):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
