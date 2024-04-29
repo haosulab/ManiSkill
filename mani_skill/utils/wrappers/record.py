@@ -216,7 +216,7 @@ class RecordEpisode(gym.Wrapper):
         max_steps_per_video=None,
         clean_on_close=True,
         record_reward=True,
-        video_fps=20,
+        video_fps=30,
         source_type=None,
         source_desc=None,
     ):

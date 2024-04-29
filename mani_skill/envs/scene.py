@@ -485,17 +485,23 @@ class ManiSkillScene:
             state_dict["articulations"][
                 articulation.name
             ] = articulation.get_state().clone()
+        if len(state_dict["actors"]) == 0:
+            del state_dict["actors"]
+        if len(state_dict["articulations"]) == 0:
+            del state_dict["articulations"]
         return state_dict
 
     def set_sim_state(self, state: Dict):
-        for actor_id, actor_state in state["actors"].items():
-            if len(actor_state.shape) == 1:
-                actor_state = actor_state[None, :]
-            self.actors[actor_id].set_state(actor_state)
-        for art_id, art_state in state["articulations"].items():
-            if len(art_state.shape) == 1:
-                art_state = art_state[None, :]
-            self.articulations[art_id].set_state(art_state)
+        if "actors" in state:
+            for actor_id, actor_state in state["actors"].items():
+                if len(actor_state.shape) == 1:
+                    actor_state = actor_state[None, :]
+                self.actors[actor_id].set_state(actor_state)
+        if "articulations" in state:
+            for art_id, art_state in state["articulations"].items():
+                if len(art_state.shape) == 1:
+                    art_state = art_state[None, :]
+                self.articulations[art_id].set_state(art_state)
 
     # ---------------------------------------------------------------------------- #
     # GPU Simulation Management
