@@ -343,6 +343,9 @@ def parse_args(args=None):
         type=str,
         help="Change shader used for rendering. Default is 'default' which is very fast. Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer",
     )
+    parser.add_argument(
+        "--video-fps", default=30, type=int, help="The FPS of saved videos"
+    )
 
     return parser.parse_args(args)
 
@@ -418,6 +421,7 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
         save_trajectory=args.save_traj,
         trajectory_name=new_traj_name,
         save_video=args.save_video,
+        video_fps=args.video_fps,
         record_reward=args.record_rewards,
     )
 

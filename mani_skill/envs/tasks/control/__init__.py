@@ -1,1 +1,1 @@
-from .cartpole import CartPoleEnv
+from .cartpole import CartpoleBalanceEnv, CartpoleSwingUpEnv

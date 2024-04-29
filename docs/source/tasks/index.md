@@ -280,28 +280,42 @@ Using the TriFingerPro robot, rotate a cube
 
 ## Control Tasks
 
-### MS-CartPole-v1
-
+### MS-CartpoleBalance-v1
 
 :::{dropdown} Task Card
 :icon: note
 :color: primary
 
 **Task Description:**
-Keep the CartPole stable and up right by sliding it left and right
+Use the Cartpole robot to balance a pole on a cart.
 
-**Supported Robots: None**
+
+**Supported Robots: Cartpole**
 
 **Randomizations:**
-- TODO
+- Pole direction is randomized around the vertical axis. the range is [-0.05, 0.05] radians.
 
-**Success Conditions:**
-- the cart is within 0.25m of the center of the rail (which is at 0)
-- the cosine of the hinge angle attaching the pole is between 0.995 and 1
-
-**Goal Specification:**
-- None
+**Fail Conditions:**
+- Pole is lower than the horizontal plane
 
 <video preload="auto" controls="True" width="100%">
-<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/MS-CartPole-v1_rt.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/MS-CartpoleBalance-v1_rt.mp4" type="video/mp4">
 </video>
+
+### MS-CartpoleSwingup-v1
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+Use the Cartpole robot to swing up a pole on a cart.
+
+
+**Supported Robots: Cartpole**
+
+**Randomizations:**
+- Pole direction is randomized around the whole circle. the range is [-pi, pi] radians.
+
+**Success Conditions:**
+- No specific success conditions. The task is considered successful if the pole is upright for the whole episode. We can threshold the episode accumulated reward to determine success.

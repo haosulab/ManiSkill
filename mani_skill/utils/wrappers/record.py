@@ -216,7 +216,7 @@ class RecordEpisode(gym.Wrapper):
         max_steps_per_video=None,
         clean_on_close=True,
         record_reward=True,
-        video_fps=20,
+        video_fps=30,
         source_type=None,
         source_desc=None,
     ):
@@ -597,7 +597,7 @@ class RecordEpisode(gym.Wrapper):
                     dtype=bool,
                 )
                 episode_info.update(
-                    fail=self._trajectory_buffer.success[end_ptr - 1, env_idx]
+                    fail=self._trajectory_buffer.fail[end_ptr - 1, env_idx]
                 )
             recursive_add_to_h5py(group, self._trajectory_buffer.state, "env_states")
             if self.record_reward:
