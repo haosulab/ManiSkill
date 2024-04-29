@@ -145,7 +145,7 @@ class CartpoleEnv(BaseEnv):
         # small_velocity is 1 when the angular velocity is small, 0.5 when the angular velocity is large
         # centered is 1 when the cart is centered, 0 when the cart is at the edge of the screen
 
-        reward = (upright * centered * small_control * small_velocity).mean()
+        reward = upright * centered * small_control * small_velocity
         return reward
 
     def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
