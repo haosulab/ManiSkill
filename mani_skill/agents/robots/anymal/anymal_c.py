@@ -3,7 +3,7 @@ import numpy as np
 import sapien
 import torch
 
-from mani_skill import PACKAGE_ASSET_DIR
+from mani_skill import ASSET_DIR
 from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
@@ -14,7 +14,7 @@ from mani_skill.utils.structs.articulation import Articulation
 @register_agent()
 class ANYmalC(BaseAgent):
     uid = "anymal_c"
-    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/anymal_c/urdf/anymal_old.urdf"
+    urdf_path = f"{ASSET_DIR}/robots/anymal_c/urdf/anymal.urdf"
     urdf_config = dict(
         _materials=dict(
             foot=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)
