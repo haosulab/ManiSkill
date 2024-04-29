@@ -197,7 +197,6 @@ class DictController(BaseController):
         self.configs = configs
         self.articulation = articulation
         self._control_freq = control_freq
-        self.balance_passive_force = balance_passive_force
 
         self.controllers: Dict[str, BaseController] = dict()
         for uid, config in configs.items():

@@ -112,7 +112,7 @@ def initialize_sources():
             uid = f"partnet_mobility/{model_id}"
             DATA_SOURCES[uid] = DataSource(
                 url=f"https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/partnet_mobility/dataset/{model_id}.zip",
-                output_dir=ASSET_DIR / "partnet_mobility" / "dataset",
+                target_path=ASSET_DIR / "partnet_mobility" / "dataset" / model_id,
             )
             category_uids[category].append(uid)
 
@@ -122,6 +122,13 @@ def initialize_sources():
     DATA_GROUPS["partnet_mobility_chair"] = category_uids["chair"]
     DATA_GROUPS["partnet_mobility_bucket"] = category_uids["bucket"]
     DATA_GROUPS["partnet_mobility_faucet"] = category_uids["faucet"]
+    DATA_GROUPS["partnet_mobility"] = set(
+        category_uids["cabinet_drawer"]
+        + category_uids["cabinet_door"]
+        + category_uids["chair"]
+        + category_uids["bucket"]
+        + category_uids["faucet"]
+    )
 
     DATA_GROUPS["OpenCabinetDrawer-v1"] = category_uids["cabinet_drawer"]
     DATA_GROUPS["OpenCabinetDoor-v1"] = category_uids["cabinet_door"]
@@ -143,6 +150,22 @@ def initialize_extra_sources():
         url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/xmate3_robotiq.zip",
         target_path="robots/xmate3_robotiq",
         checksum="ddda102a20eb41e28a0a501702e240e5d7f4084221a44f580e729f08b7c12d1a",
+    )
+    DATA_SOURCES["ur10e"] = DataSource(
+        url="https://github.com/haosulab/ManiSkill-UR10e/archive/refs/tags/v0.1.0.zip",
+        target_path="robots/ur10e",
+    )
+    DATA_SOURCES["anymal_c"] = DataSource(
+        url="https://github.com/haosulab/ManiSkill-ANYmalC/archive/refs/tags/v0.1.1.zip",
+        target_path="robots/anymal_c",
+    )
+    DATA_SOURCES["unitree_h1"] = DataSource(
+        url="https://github.com/haosulab/ManiSkill-UnitreeH1/archive/refs/tags/v0.1.0.zip",
+        target_path="robots/unitree_h1",
+    )
+    DATA_SOURCES["unitree_go2"] = DataSource(
+        url="https://github.com/haosulab/ManiSkill-UnitreeGo2/archive/refs/tags/v0.1.0.zip",
+        target_path="robots/unitree_go2",
     )
 
     # ---------------------------------------------------------------------------- #
@@ -253,7 +276,6 @@ def download(
     except URLError as err:
         print(f"Failed to download {data_source.url}")
         raise err
-
     # Verify checksum
     if data_source.checksum is not None and data_source.checksum != sha256sum(
         tmp_filename
@@ -272,6 +294,20 @@ def download(
                     zip_ref.extract(file, output_dir)
             else:
                 zip_ref.extractall(output_dir)
+            shared_base_dir = None
+            for file in zip_ref.filelist:
+                base_dir = file.filename.split("/")[0]
+                if shared_base_dir is None:
+                    shared_base_dir = base_dir
+                elif shared_base_dir != base_dir:
+                    shared_base_dir = None
+            if shared_base_dir is not None and shared_base_dir != osp.basename(
+                data_source.target_path
+            ):
+                os.rename(
+                    osp.join(output_dir, shared_base_dir),
+                    osp.join(output_dir, osp.basename(data_source.target_path)),
+                )
     else:
         shutil.move(tmp_filename, output_path / base_filename)
 
