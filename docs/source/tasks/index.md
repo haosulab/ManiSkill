@@ -278,9 +278,9 @@ Using the TriFingerPro robot, rotate a cube
 **Success Conditions:**
 - The rotated cube should be within 0.02 m of the goal position and 0.1 rad of the goal orientation.
 
-## dm_control Tasks
+## Control Tasks
 
-### CartpoleBalance-v1
+### MS-CartpoleBalance-v1
 
 :::{dropdown} Task Card
 :icon: note
@@ -298,7 +298,11 @@ Use the Cartpole robot to balance a pole on a cart.
 **Fail Conditions:**
 - Pole is lower than the horizontal plane
 
-### CartpoleSwingup-v1
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/MS-CartpoleBalance-v1_rt.mp4" type="video/mp4">
+</video>
+
+### MS-CartpoleSwingup-v1
 
 :::{dropdown} Task Card
 :icon: note
