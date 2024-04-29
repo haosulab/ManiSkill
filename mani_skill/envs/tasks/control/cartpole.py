@@ -81,10 +81,7 @@ class CartpoleEnv(BaseEnv):
 
     agent: Union[CartPoleRobot]
 
-    def __init__(
-        self, *args, robot_uids=CartPoleRobot, robot_init_qpos_noise=0.1, **kwargs
-    ):
-        self.robot_init_qpos_noise = robot_init_qpos_noise
+    def __init__(self, *args, robot_uids=CartPoleRobot, **kwargs):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     @property
@@ -97,12 +94,12 @@ class CartpoleEnv(BaseEnv):
 
     @property
     def _default_sensor_configs(self):
-        pose = sapien_utils.look_at(eye=[2, 0, 4], target=[-0.1, 0, 0.1])
+        pose = sapien_utils.look_at(eye=[0, -4, 1], target=[0, 0, 1])
         return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
     def _default_human_render_camera_configs(self):
-        pose = sapien_utils.look_at([2, 2.4, 3], [0.0, 0.0, 0.35])
+        pose = sapien_utils.look_at(eye=[0, -4, 1], target=[0, 0, 1])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
     def _load_scene(self, options: dict):
@@ -162,26 +159,18 @@ class CartpoleBalanceEnv(CartpoleEnv):
     def __init__(self, *args, **kwargs):
         super().__init__(
             *args,
-            robot_init_qpos_noise=0.05,
             **kwargs,
         )
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
             b = len(env_idx)
-            dof = self.agent.robot.dof
-            if isinstance(dof, torch.Tensor):
-                dof = dof[0]
-
-            init_qpos = torch.zeros(b, dof) * np.pi
-            init_qpos += torch.randn((b, dof)) * self.robot_init_qpos_noise
-            self.agent.reset(init_qpos)
-            self.agent.robot.set_pose(
-                Pose.create_from_pq(
-                    torch.tensor([0.0, 0, -0.5 + 0.022]),
-                    torch.tensor([1, 0, 0, 0]),
-                )
-            )
+            qpos = torch.zeros((b, 2))
+            qpos[:, 0] = randomization.uniform(-0.1, 0.1, size=(b,))
+            qpos[:, 1] = randomization.uniform(-0.034, 0.034, size=(b,))
+            qvel = torch.randn(size=(b, 2)) * 0.01
+            self.agent.robot.set_qpos(qpos)
+            self.agent.robot.set_qvel(qvel)
 
     def evaluate(self):
         return dict(fail=self.pole_angle_cosine < 0)
@@ -192,23 +181,15 @@ class CartpoleSwingUpEnv(CartpoleEnv):
     def __init__(self, *args, **kwargs):
         super().__init__(
             *args,
-            robot_init_qpos_noise=0.3,
             **kwargs,
         )
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
             b = len(env_idx)
-            dof = self.agent.robot.dof
-            if isinstance(dof, torch.Tensor):
-                dof = dof[0]
-
-            init_qpos = torch.rand(b, dof) * np.pi
-            init_qpos += torch.randn((b, dof)) * self.robot_init_qpos_noise
-            self.agent.reset(init_qpos)
-            self.agent.robot.set_pose(
-                Pose.create_from_pq(
-                    torch.tensor([0.0, 0, -0.5 + 0.022]),
-                    torch.tensor([1, 0, 0, 0]),
-                )
-            )
+            qpos = torch.zeros((b, 2))
+            qpos[:, 0] = torch.randn((b,)) * 0.01
+            qpos[:, 1] = torch.randn((b,)) * 0.01 + torch.pi
+            qvel = torch.randn(size=(b, 2)) * 0.01
+            self.agent.robot.set_qpos(qpos)
+            self.agent.robot.set_qvel(qvel)
