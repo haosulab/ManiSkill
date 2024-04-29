@@ -67,6 +67,12 @@ python ppo.py --env_id="MS-CartPole-v1" \
    --gamma=0.99 --gae_lambda=0.95 \
    --eval_freq=5
 
+# note that quadruped simulation is still being optimized and the reward function for this task
+# is not that optimal although it works.
+python ppo.py --env_id="AnymalC-Reach-v1" \
+  --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
+  --total_timesteps=75_000_000 --num-steps=200 --num-eval-steps=200 \
+  --gamma=0.99 --gae_lambda=0.95
 python ppo.py --env_id="UnitreeH1Stand-v1" \
   --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
   --total_timesteps=100_000_000 --num-steps=100 --num-eval-steps=1000 \

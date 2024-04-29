@@ -12,13 +12,16 @@ from mani_skill.utils import sapien_utils
 from mani_skill.utils.building import actors
 from mani_skill.utils.building.ground import build_ground
 from mani_skill.utils.registration import register_env
+from mani_skill.utils.structs.articulation_joint import ArticulationJoint
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import GPUMemoryConfig, SceneConfig, SimConfig
 
 
 class QuadrupedReachEnv(BaseEnv):
-    SUPPORTED_ROBOTS = ["anymal-c"]
+    SUPPORTED_ROBOTS = ["anymal_c"]
     agent: ANYmalC
+
+    _UNDESIRED_CONTACT_LINK_NAMES: ArticulationJoint = None
 
     def __init__(self, *args, robot_uids="anymal-c", **kwargs):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
@@ -83,9 +86,9 @@ class QuadrupedReachEnv(BaseEnv):
             self.agent.robot.set_qpos(keyframe.qpos)
             # sample random goal
             xyz = torch.zeros((b, 3))
+            xyz[:, 0] = 2.5
             noise_scale = 1
             xyz[:, 0] = torch.rand(size=(b,)) * noise_scale - noise_scale / 2 + 2.5
-            noise_scale = 4
             xyz[:, 1] = torch.rand(size=(b,)) * noise_scale - noise_scale / 2
             self.goal.set_pose(Pose.create_from_pq(xyz))
 
@@ -112,6 +115,13 @@ class QuadrupedReachEnv(BaseEnv):
             )
         return obs
 
+    def _compute_undesired_contacts(self, threshold=1.0):
+        forces = self.agent.robot.get_net_contact_forces(
+            self._UNDESIRED_CONTACT_LINK_NAMES
+        )
+        contact_exists = torch.norm(forces, dim=-1).max(-1).values > threshold
+        return contact_exists
+
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         robot_to_goal_dist = info["robot_to_goal_dist"]
         reaching_reward = 1 - torch.tanh(1 * robot_to_goal_dist)
@@ -121,8 +131,14 @@ class QuadrupedReachEnv(BaseEnv):
         ang_vel_xy_l2 = (
             torch.square(self.agent.robot.root_angular_velocity[:, :2])
         ).sum(axis=1)
-        penalties = lin_vel_z_l2 * -0.15 + ang_vel_xy_l2 * -0.05
+        penalties = (
+            lin_vel_z_l2 * -2
+            + ang_vel_xy_l2 * -0.05
+            + self._compute_undesired_contacts() * -1
+        )
         reward = reaching_reward + penalties
+
+        reward[info["fail"]] = -100
         return reward
 
     def compute_normalized_dense_reward(
@@ -132,7 +148,9 @@ class QuadrupedReachEnv(BaseEnv):
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
 
 
-# @register_env("AnymalC-Reach-v1", max_episode_steps=200)
+@register_env("AnymalC-Reach-v1", max_episode_steps=200)
 class AnymalCReachEnv(QuadrupedReachEnv):
-    def __init__(self, *args, robot_uids="anymal-c", **kwargs):
+    _UNDESIRED_CONTACT_LINK_NAMES = ["LF_KFE", "RF_KFE", "LH_KFE", "RH_KFE"]
+
+    def __init__(self, *args, robot_uids="anymal_c", **kwargs):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
