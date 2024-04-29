@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from functools import cache
+from functools import cached_property
 from typing import TYPE_CHECKING, List, Literal, Union
 
 import numpy as np
@@ -147,7 +147,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
                 self.set_linear_velocity(state[7:10])
                 self.set_angular_velocity(state[10:13])
 
-    @cache
+    @cached_property
     def has_collision_shapes(self):
         assert (
             not self.merged
@@ -169,7 +169,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
         As a result we do not permit hiding and showing visuals of objects with collision shapes as this affects the actual simulation.
         Note that this operation can also be fairly slow as we need to run px.gpu_apply_rigid_dynamic_data and px.gpu_fetch_rigid_dynamic_data.
         """
-        assert not self.has_collision_shapes()
+        assert not self.has_collision_shapes
         if self.hidden:
             return
         if physx.is_gpu_enabled():
@@ -191,7 +191,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
         self.hidden = True
 
     def show_visual(self):
-        assert not self.has_collision_shapes()
+        assert not self.has_collision_shapes
         if not self.hidden:
             return
         # set hidden *before* setting/getting so not applied to self.before_hide_pose erroenously

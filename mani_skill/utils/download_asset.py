@@ -160,7 +160,7 @@ def initialize_extra_sources():
         target_path="robots/ur10e",
     )
     DATA_SOURCES["anymal_c"] = DataSource(
-        url="https://github.com/haosulab/ManiSkill-ANYmalC/archive/refs/tags/v0.1.0.zip",
+        url="https://github.com/haosulab/ManiSkill-ANYmalC/archive/refs/tags/v0.1.1.zip",
         target_path="robots/anymal_c",
     )
     DATA_SOURCES["unitree_h1"] = DataSource(
