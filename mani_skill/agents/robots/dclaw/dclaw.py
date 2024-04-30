@@ -1,10 +1,12 @@
 from copy import deepcopy
 from typing import List
 
+import numpy as np
+import sapien
 import torch
 
 from mani_skill import PACKAGE_ASSET_DIR
-from mani_skill.agents.base_agent import BaseAgent
+from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
 from mani_skill.agents.utils import get_active_joint_indices
@@ -27,7 +29,12 @@ class DClaw(BaseAgent):
             link_f3_3=dict(material="tip", patch_radius=0.1, min_patch_radius=0.1),
         ),
     )
-    sensor_configs = {}
+    keyframes = dict(
+        rest=Keyframe(
+            pose=sapien.Pose(p=[0, 0, 0.5], q=[0, 0, -1, 0]),
+            qpos=np.array([0, 0, 0, 0, 0, 0, 0, 0, 0]),
+        )
+    )
 
     def __init__(self, *args, **kwargs):
         self.joint_names = [

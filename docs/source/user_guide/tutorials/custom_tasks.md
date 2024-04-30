@@ -73,8 +73,7 @@ class PushCubeEnv(BaseEnv):
 
 Initializing these robots occurs in the initialization / randomization section covered later. With this setup you can later access agent data via `self.agent` and the specific articulation data of the robot via `self.agent.robot`. For multi-robot setups you can access each agent via `self.agent.agents`.
 
-To create your own custom robots/agents, we will provide a tutorial on the basics of modelling a robot for simulation and use in ManiSkill in the near future. For now you can look at the code for Panda at [mani_skill/agents/robots/panda/panda.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/panda/panda.py)
-<!-- TODO (stao): link custom robots docs later -->
+To create your own custom robots/agents, see the [custom robots tutorial](./custom_robots.md).
 
 #### Building Actors
 

@@ -7,7 +7,7 @@ import torch
 from transforms3d.euler import euler2quat
 
 from mani_skill import ASSET_DIR
-from mani_skill.agents.robots import PandaRealSensed435
+from mani_skill.agents.robots import PandaWristCam
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.utils import randomization
 from mani_skill.sensors.camera import CameraConfig
@@ -22,13 +22,13 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 @register_env("AssemblingKits-v1", max_episode_steps=200)
 class AssemblingKitsEnv(BaseEnv):
     SUPPORTED_REWARD_MODES = ["sparse", "none"]
-    SUPPORTED_ROBOTS = ["panda_realsensed435"]
-    agent: Union[PandaRealSensed435]
+    SUPPORTED_ROBOTS = ["panda_wristcam"]
+    agent: Union[PandaWristCam]
 
     def __init__(
         self,
         asset_root=f"{ASSET_DIR}/tasks/assembling_kits",
-        robot_uids="panda_realsensed435",
+        robot_uids="panda_wristcam",
         num_envs=1,
         **kwargs,
     ):

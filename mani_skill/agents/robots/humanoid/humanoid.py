@@ -51,6 +51,14 @@ class Humanoid(BaseAgent):
 
     @property
     def _controller_configs(self):
+        pd_joint_pos = PDJointPosControllerConfig(
+            [x.name for x in self.robot.active_joints],
+            lower=None,
+            upper=None,
+            stiffness=100,
+            damping=10,
+            normalize_action=False,
+        )
         pd_joint_delta_pos = PDJointPosControllerConfig(
             [j.name for j in self.robot.active_joints],
             -1,
@@ -60,7 +68,11 @@ class Humanoid(BaseAgent):
             force_limit=100,
             use_delta=True,
         )
-        return dict(pd_joint_delta_pos=pd_joint_delta_pos)
-
-    def _after_init(self):
-        pass
+        return deepcopy_dict(
+            dict(
+                pd_joint_pos=dict(body=pd_joint_pos, balance_passive_force=False),
+                pd_joint_delta_pos=dict(
+                    body=pd_joint_delta_pos, balance_passive_force=False
+                ),
+            )
+        )

@@ -4,9 +4,10 @@ We are constantly working to improve ManiSkill on all aspects, from simulation/r
 
 
 - GPU parallelized low-level mobile manipulation tasks (at the moment you can just take random actions but there are no reward/success metrics)
-- More fully interactive scene datasets
+- More fully interactive scene datasets (currently there is only ReplicaCAD. There is also AI2THOR scenes but they are not interactable)
 - More industrial robots properly modelled and added into simulation (Google Robot, UR5, Unitree H1 etc.)
 - Larger demonstration datasets, especially tele-operated demonstrations
+- RL Baselines (Algorithms like SAC, TDMPC2 etc.)
 - Offline RL Baselines (Algorithms like IQL, CQL, etc.)
 - Behavior Cloning Baselines (Algorithms like 3D Diffusion Policy, etc.)
 - Vision Language Model Baselines (Algorithms like PerAct, VoxPoser, etc.)

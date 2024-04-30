@@ -4,7 +4,7 @@ import numpy as np
 import sapien
 import torch
 
-from mani_skill.agents.robots.panda import PandaRealSensed435
+from mani_skill.agents.robots.panda import PandaWristCam
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.envs.utils import randomization
@@ -50,11 +50,11 @@ def _build_box_with_hole(
 @register_env("PegInsertionSide-v1", max_episode_steps=100)
 class PegInsertionSideEnv(BaseEnv):
     SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "sparse", "none")
-    SUPPORTED_ROBOTS = ["panda_realsensed435"]
-    agent: Union[PandaRealSensed435]
+    SUPPORTED_ROBOTS = ["panda_wristcam"]
+    agent: Union[PandaWristCam]
     _clearance = 0.003
 
-    def __init__(self, *args, robot_uids="panda_realsensed435", num_envs=1, **kwargs):
+    def __init__(self, *args, robot_uids="panda_wristcam", num_envs=1, **kwargs):
         reconfiguration_freq = 0
         if num_envs == 1:
             reconfiguration_freq = 1

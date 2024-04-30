@@ -1,2 +1,2 @@
 from .panda import Panda
-from .panda_realsensed435 import PandaRealSensed435
+from .panda_wristcam import PandaWristCam

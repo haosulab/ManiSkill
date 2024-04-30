@@ -70,6 +70,8 @@ def parse_args(args=None):
     parser.add_argument(
         "uid",
         type=str,
+        nargs="?",
+        default="",
         help="An environment id (e.g. PickCube-v1) or 'all' for all available demonstrations.",
     )
     parser.add_argument("--quiet", action="store_true", help="Disable verbose output.")
@@ -90,8 +92,9 @@ def parse_args(args=None):
 
 def main(args):
     verbose = not args.quiet
+
     if args.uid == "":
-        print("Available uids:")
+        print("Available dataset UIDs:")
         print(list(DATASET_SOURCES.keys()))
         return
 
