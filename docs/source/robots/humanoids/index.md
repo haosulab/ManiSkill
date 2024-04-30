@@ -1,0 +1,31 @@
+# Humanoids
+
+## Unitree H1
+
+```{figure} ../images/unitree_h1.png
+```
+
+Robot UID: `unitree_h1`
+
+Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/unitree_h1/h1.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/unitree_h1/h1.py)
+
+Robot Description: [https://github.com/haosulab/ManiSkill-UnitreeH1](https://github.com/haosulab/ManiSkill-UnitreeH1)
+
+### With Dextrous Hands (WIP)
+
+### With Mounted Sensors (WIP)
+
+Main blocker here is actually its unclear where people typically mount cameras/depth sensors onto Unitree H1
+
+## Stompy (KScale Labs)
+
+## Mujoco Humanoid
+
+```{figure} ../images/unitree_h1.png
+```
+
+Robot UID: `unitree_h1`
+
+Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/unitree_h1/h1.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/unitree_h1/h1.py)
+
+Robot Description: [https://github.com/haosulab/ManiSkill-UnitreeH1](https://github.com/haosulab/ManiSkill-UnitreeH1)
