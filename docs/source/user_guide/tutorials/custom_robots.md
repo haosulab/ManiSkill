@@ -19,7 +19,8 @@ To create your own robot (also known as an Agent) you need to inherit the `BaseA
 ```python
 import sapien
 import numpy as np
-from mani_skill.agents.base_agent import BaseAgent
+from mani_skill.agents.base_agent import BaseAgent, Keyframe
+from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
 @register_agent()
 class MyPanda(BaseAgent):
@@ -102,8 +103,6 @@ It sometimes is useful to define some predefined robot poses and joint positions
 For example, we define a "rest" keyframe for the panda robot and a "standing" keyframe for the quadruped. These keyframes let you define a pre-defined pose, and optionally qpos (joint positions) and qvel (joint velocities).
 
 ```python
-from mani_skill.agents.base_agent import BaseAgent, Keyframe
-# ...
 class MyPanda(BaseAgent):
     # ...
     keyframes = dict(
@@ -117,8 +116,6 @@ class MyPanda(BaseAgent):
 ```
 
 ```python
-from mani_skill.agents.base_agent import BaseAgent, Keyframe
-# ...
 class ANYmalC(BaseAgent):
     # ...
     keyframes = dict(
@@ -305,13 +302,97 @@ You can also visualize where the camera is in the viewport as so:
 :::{figure} images/panda_robot_camera_lines.png
 :::
 
-## Advanced Tips and Tricks:
+## Advanced Tips and Tricks
+
+### Fast Simulation Tricks
+
+Ultimately a fast simulation depends on correct and efficient modelling of the robots and the objects in the environment. For robots, there are a few notable ways to improve simulation speed, especially on the GPU.
+
+
+
+#### Simplified Collision Meshes
+
+Simulation is in essence a contact collision solver, and this runs faster when there are 
+
+1. Less contacts
+2. Contacts that do exist are between simple primitive shapes (planes, boxes, cylinders etc.)
+
+
+To achieve fewer contacts and leverage just basic primitives, the model of the ANYmal-C robot has been massively simplified as shown below.
+
+:::{figure} images/anymal-visual-collision.png
+:::
+
+Another way to acheive fewer contacts is to remove collision shapes/meshes that are more often not going to be close to another one. Normally the collision mesh of the quadruped above is "dense" with no gaps between parts. By leaving big enough gaps in between, the physics simulation never needs to bother checking collisions between parts that are normally close together. The minimum gap required is determined by the simulation configuration `contact_offset` which acts as a first-pass filter to determine whether a contact between two bodies (Actor/Links) in the simulation needs to be checked and resolved.
+
+Moreover, when there are fewer contacts the GPU memory requirements are significantly lessened.
+
+#### Tuned Simulation Configurations
+
+Depending on the task you can massively increase simulation speed by reducing the `solver_position_iterations` configuration. Generally as a rule of thumb you need `solver_position_iterations` value of 15 or more to accurately simulate robot manipulation (this again depends on a case by case basis). For navigation / locomotion tasks a `solver_position_iterations` value of 4 may suffice.
+
+See the [sim configuration definition](https://github.com/haosulab/ManiSkill/tree/main/mani_skill/utils/structs/types.py) for more details.
+
 
 ### Mobile Bases
 
 Robots like Fetch have a mobile base, which allows translational movement and rotational movement of the entire robot. In simulation, it is not trivial to simulate the actual physics of wheels moving along a floor and simulating this would be fairly slow. 
 
-Instead, similar to many other simulators a "fake" mobile base is made (that is realistic enough to easily do sim2real transfer in terms of the controller). This is made by modifying a URDF of a robot like Fetch, and adding joints that let the base link translate (prismatic joint) and rotate (revolute joint). 
+Instead, similar to many other simulators a "fake" mobile base is made (that is realistic enough to easily do sim2real transfer in terms of the controller). This is made by modifying a URDF of a robot like Fetch, and adding joints that let the base link translate (prismatic joint) and rotate (revolute joint). See the [Fetch URDF code](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/assets/robots/fetch/fetch.urdf#L3-L40) for the modifications made. 
+
+After modifying the URDF to include dummy links to allow mobile base movement, you then should define a controller (recommended to be separate from the rest of the robot). For the Fetch robot we define a separate controller for the robot arm, gripper, body, and the mobile-base via dictionaries in [our codebase here](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/fetch/fetch.py). We recommend using the PDBaseVelControllerConfig as done below which permits control via XY translational movement and Z-axis rotation.
+
+```python
+class Fetch(BaseAgent):
+    # ...
+    @property
+    def _controller_configs(self):
+        # ... defining other controllers
+        base_pd_joint_vel = PDBaseVelControllerConfig(
+            self.base_joint_names,
+            lower=[-0.5, -0.5, -3.14],
+            upper=[0.5, 0.5, 3.14],
+            damping=1000,
+            force_limit=500,
+        )
+
+        controller_configs = dict(
+            pd_joint_delta_pos=dict(
+                arm=arm_pd_joint_delta_pos,
+                gripper=gripper_pd_joint_pos,
+                body=body_pd_joint_delta_pos,
+                base=base_pd_joint_vel,
+            ),
+            # ...
+        )
+        # ...
+```
+
+Finally, we also need to disable collisions between parts of the robot and the floor it is moving on top of. This is to increase simulation speed as there is no need to compute contact between the robot and the floor (the robot is technically hovering to simulate mobile base movement).
+
+For fetch, we only really need to disable the collisions between the wheel links that are too close to the floor and the floor itself. 
+
+This is done by implementing the `_after_init` function as so
+
+```python
+class Fetch(BaseAgent):
+    # ...
+    def _after_init(self):
+        self.l_wheel_link: Link = self.robot.links_map["l_wheel_link"]
+        self.r_wheel_link: Link = self.robot.links_map["r_wheel_link"]
+        for link in [self.l_wheel_link, self.r_wheel_link]:
+            link.set_collision_group_bit(group=2, bit_idx=30, bit=1)
+```
+
+And then in whichever task code you write that builds a ground plane, suppose the Actor object is stored at `self.ground` while loading the scene you can run
+
+```python
+def _load_scene(self, options: dict):
+    # ...
+    self.ground.set_collision_group_bit(group=2, bit_idx=30, bit=1)
+```
+
+Disabling collisions can be a bit confusing but generally anything that has their collision group 2 bit set will not collide with any other object that has the same bit set to 1. There is also a maximum of 32 settable bits (from `bit_idx = 0` to `bit_idx=31`).
 
 ### Tactile Sensing
 
@@ -321,7 +402,15 @@ For now see the implementation of [Allegro hand with touch sensors](https://gith
 
 ### Quadrupeds / Legged motion
 
-WIP
+For fast simulation of quadrupeds a few tricks are generally used. We will use the ANYmal-C robot as a case study. 
+
+First is the use of simplified collision meshes. The URDF used by ManiSkill is [this one](https://github.com/haosulab/ManiSkill-ANYmalC/blob/main/urdf/anymal.urdf) and the original URDF is saved [here](https://github.com/haosulab/ManiSkill-ANYmalC/blob/main/urdf/anymal_original.urdf). You will notice that the anymal.urdf file has noticeably less collisions defined and in fact the collision mesh compared to the visual mesh looks like this:
+
+:::{figure} images/anymal-visual-collision.png
+:::
+
+
+You can view collisons of any object/articulation in the simulation via the GUI viewer by clicking any link on the articulation and under the articulation tab click Show collision. For individual objects you can do the same under the Entity tab.
 
 ## FAQ / Troubleshooting
 

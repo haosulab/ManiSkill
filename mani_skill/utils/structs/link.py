@@ -181,7 +181,9 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
         """Set's a specific collision group bit for all collision shapes in all parallel actors"""
         for body in self._bodies:
             for cs in body.get_collision_shapes():
-                cs.collision_groups[group] |= bit << bit_idx
+                cg = cs.collision_groups
+                cg[group] |= bit << bit_idx
+                cs.set_collision_groups(cg)
 
     # -------------------------------------------------------------------------- #
     # Functions from sapien.Component
