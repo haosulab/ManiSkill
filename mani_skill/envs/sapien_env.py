@@ -763,10 +763,9 @@ class BaseEnv(gym.Env):
     def _clear_sim_state(self):
         """Clear simulation state (velocities)"""
         for actor in self._scene.actors.values():
-            if actor.px_body_type == "static":
-                continue
-            actor.set_linear_velocity([0., 0., 0.])
-            actor.set_angular_velocity([0., 0., 0.])
+            if actor.px_body_type == "dynamic":
+                actor.set_linear_velocity([0., 0., 0.])
+                actor.set_angular_velocity([0., 0., 0.])
         for articulation in self._scene.articulations.values():
             articulation.set_qvel(np.zeros(articulation.max_dof))
             articulation.set_root_linear_velocity([0., 0., 0.])
