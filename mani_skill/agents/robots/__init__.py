@@ -4,6 +4,7 @@ from .dclaw import DClaw
 from .fetch import Fetch
 from .humanoid import Humanoid
 from .panda import *
+from .stompy import Stompy
 from .trifingerpro import TriFingerPro
 from .unitree_go import *
 from .unitree_h1 import UnitreeH1, UnitreeH1Simplified
