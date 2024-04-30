@@ -386,7 +386,7 @@ if __name__ == "__main__":
             if args.evaluate:
                 break
         if args.save_model and iteration % args.eval_freq == 1:
-            model_path = f"runs/{run_name}/{args.exp_name}_{iteration}.pt"
+            model_path = f"runs/{run_name}/ckpt_{iteration}.pt"
             torch.save(agent.state_dict(), model_path)
             print(f"model saved to {model_path}")
         # Annealing the rate if instructed to do so.
@@ -551,7 +551,7 @@ if __name__ == "__main__":
         writer.add_scalar("charts/rollout_time", rollout_time, global_step)
         writer.add_scalar("charts/rollout_fps", args.num_envs * args.num_steps / rollout_time, global_step)
     if args.save_model and not args.evaluate:
-        model_path = f"runs/{run_name}/{args.exp_name}_final.pt"
+        model_path = f"runs/{run_name}/final_ckpt.pt"
         torch.save(agent.state_dict(), model_path)
         print(f"model saved to {model_path}")
 

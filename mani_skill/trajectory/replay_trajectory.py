@@ -346,6 +346,12 @@ def parse_args(args=None):
     parser.add_argument(
         "--video-fps", default=30, type=int, help="The FPS of saved videos"
     )
+    parser.add_argument(
+        "--render-mode",
+        default="rgb_array",
+        type=str,
+        help="The render mode used in the video saving",
+    )
 
     return parser.parse_args(args)
 
@@ -383,7 +389,9 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
     env_kwargs["reward_mode"] = args.reward_mode
     env_kwargs[
         "render_mode"
-    ] = "rgb_array"  # note this only affects the videos saved as RecordEpisode wrapper calls env.render
+    ] = (
+        args.render_mode
+    )  # note this only affects the videos saved as RecordEpisode wrapper calls env.render
 
     # handle warnings/errors for replaying trajectories generated during GPU simulation
     if "num_envs" in env_kwargs:
