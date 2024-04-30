@@ -2,11 +2,9 @@ import argparse
 import gymnasium as gym
 import numpy as np
 import sapien
-from tqdm import tqdm
-import os.path as osp
 from transforms3d.euler import euler2quat
 
-from mani_skill.envs import StackCubeEnv
+from mani_skill.envs.tasks import StackCubeEnv
 from mani_skill.examples.motionplanning.panda.motionplanner import \
     PandaArmMotionPlanningSolver
 from mani_skill.examples.motionplanning.panda.utils import (

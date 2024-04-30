@@ -326,8 +326,9 @@ def test_hidden_objs(env_id):
         raw_pose = hide_obj.pose.raw_pose.clone()
         p = hide_obj.pose.p.clone()
         q = hide_obj.pose.q.clone()
-        linvel = hide_obj.linear_velocity.clone()
-        angvel = hide_obj.angular_velocity.clone()
+        if hide_obj.px_body_type == "dynamic":
+            linvel = hide_obj.linear_velocity.clone()
+            angvel = hide_obj.angular_velocity.clone()
         # 1. check relevant hidden properties are active
         assert hide_obj.hidden
         assert hasattr(hide_obj, "before_hide_pose")
@@ -346,9 +347,10 @@ def test_hidden_objs(env_id):
             < 1e6
         ).all()
 
-        # 3. check that linvel and angvel same as before
-        assert (hide_obj.linear_velocity == linvel).all()
-        assert (hide_obj.angular_velocity == angvel).all()
+        if hide_obj.px_body_type == "dynamic":
+            # 3. check that linvel and angvel same as before
+            assert (hide_obj.linear_velocity == linvel).all()
+            assert (hide_obj.angular_velocity == angvel).all()
 
         # 4. Check data stored in buffer has same q but different p
         assert (
@@ -381,9 +383,10 @@ def test_hidden_objs(env_id):
         # 1. check relevant hidden properties are active
         assert not hide_obj.hidden
 
-        # 2. check that qvel, linvel, angvel same as before
-        assert (hide_obj.linear_velocity == linvel).all()
-        assert (hide_obj.angular_velocity == angvel).all()
+        if hide_obj.px_body_type == "dynamic":
+            # 2. check that qvel, linvel, angvel same as before
+            assert (hide_obj.linear_velocity == linvel).all()
+            assert (hide_obj.angular_velocity == angvel).all()
 
         # 3. check gpu buffer goes back to normal
         assert torch.isclose(

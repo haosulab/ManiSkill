@@ -2,7 +2,7 @@ import gymnasium as gym
 import numpy as np
 import sapien.core as sapien
 
-from mani_skill.envs import PegInsertionSideEnv
+from mani_skill.envs.tasks import PegInsertionSideEnv
 from mani_skill.examples.motionplanning.panda.motionplanner import \
     PandaArmMotionPlanningSolver
 from mani_skill.examples.motionplanning.panda.utils import (
