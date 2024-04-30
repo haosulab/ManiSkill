@@ -1,4 +1,4 @@
-__version__ = "3.0.0.dev14"
+__version__ = "3.0.0.b0"
 # Configuration file for the Sphinx documentation builder.
 #
 # For the full list of built-in configuration values, see the documentation:

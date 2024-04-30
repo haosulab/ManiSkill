@@ -14,10 +14,11 @@ This tutorial will guide you through on how to implement the Panda robot in Mani
 
 ## 1. Robot Class and Importing the Robot
 
-To create your own robot (also known as an Agent) you need to inherit the `BaseAgent` class, give it name, and optionally register the agent.
+To create your own robot (also known as an Agent) you need to inherit the `BaseAgent` class, give it name, and optionally register the agent. We will create a new file called `my_panda.py` and add the following
 
 ```python
 import sapien
+import numpy as np
 from mani_skill.agents.base_agent import BaseAgent
 from mani_skill.agents.registration import register_agent
 @register_agent()
@@ -28,6 +29,8 @@ class MyPanda(BaseAgent):
 Registering the agent allows you to create environments that instantiate your robot for you via a string uid in the future with the code below:
 
 ```python
+import mani_skill.envs
+import my_panda
 env = gym.make("EmptyEnv-v1", robot_uids="my_panda")
 ```
 
@@ -41,9 +44,9 @@ To import a URDF/MJCF file, you simply provide a path to the definition file and
 
 #### URDF
 
-To get started, you first need to get a valid URDF file like this one for the Panda robot: https://github.com/haosulab/ManiSkill/blob/main/mani_skill/assets/robots/panda/panda_v2.urdf
+To get started, you first need to get a valid URDF file like this one for the [Panda robot](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/assets/robots/panda/panda_v2.urdf)
 
-Then in the agent class add
+Then in the agent class add the urdf_path.
 
 ```python
 class MyPanda(BaseAgent):
@@ -52,9 +55,6 @@ class MyPanda(BaseAgent):
 ```
 
 Note that there are a number of common issues users may face (often due to incorrectly formatted URDFs / collision meshes) which are documented in the [FAQ / Troubleshooting Section](#faq--troubleshooting)
-
-
-<!-- For a starting template check out https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/_template/template_robot.py -->
 
 #### Mujoco MJCF
 
@@ -71,7 +71,81 @@ At the moment, the following are not supported:
 
 These may be supported in the future so stay tuned for updates.
 
-## 2. Defining Controllers
+#### Testing the loaded URDF/MJCF
+
+We recommend you create a simple test script `test.py` that imports your new robot and leverages the existing demo robot script. While not required it may be helpful to read the [demo robot script](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/examples/demo_robot.py) in order to get more familiarity with using ManiSkill. In `test.py` write
+
+```python
+import my_panda # imports your robot and registers it
+# imports the demo_robot example script and lets you test your new robot
+import mani_skill.examples.demo_robot as demo_robot_script
+demo_robot_script.main()
+```
+
+Then run the following to open the simulation visualizer (without taking any actions) to let you look at the robot.
+
+```bash
+python test.py -r "my_panda" # the uid of your new robot
+```
+
+If you used the panda URDF it should look something like this where the robot is at position 0 and all joints are set to 0. Some robots might be seen sunken into the ground e.g. what the ANYmal-C quadruped looks like. This is because we initialize the pose of the root link of the robot to be 0, which might make it be inside the ground. We will fix this in the next step by defining a keyframe from which we can initialize from.
+
+:::{figure} images/loaded_anymal_panda_0.png
+:::
+
+
+
+## 2. Defining Keyframes
+
+It sometimes is useful to define some predefined robot poses and joint positions that users can initialize to to visualize the robot in poses of interest. This is an idea adopted from [Mujoco's keyframes](https://mujoco.readthedocs.io/en/stable/XMLreference.html#keyframe)
+
+For example, we define a "rest" keyframe for the panda robot and a "standing" keyframe for the quadruped. These keyframes let you define a pre-defined pose, and optionally qpos (joint positions) and qvel (joint velocities).
+
+```python
+from mani_skill.agents.base_agent import BaseAgent, Keyframe
+# ...
+class MyPanda(BaseAgent):
+    # ...
+    keyframes = dict(
+        rest=Keyframe(
+            qpos=np.array(
+                [0.0, np.pi / 8, 0, -np.pi * 5 / 8, 0, np.pi * 3 / 4, np.pi / 4, 0.04, 0.04]
+            ),
+            pose=sapien.Pose(),
+        )
+    )
+```
+
+```python
+from mani_skill.agents.base_agent import BaseAgent, Keyframe
+# ...
+class ANYmalC(BaseAgent):
+    # ...
+    keyframes = dict(
+        standing=Keyframe(
+            # notice how we set the z position to be above 0, so the robot is not intersecting the ground
+            pose=sapien.Pose(p=[0, 0, 0.545]),
+            qpos=np.array(
+                [0.03, -0.03, 0.03, -0.03, 0.4, 0.4, -0.4, -0.4, -0.8, -0.8, 0.8, 0.8]
+            ),
+        )
+    )
+```
+
+The keyframe can also specify `qvel` values as well. Using that keyframe you can set the robot to the given pose, qpos, qvel and you can get the desired predefined keyframe
+
+Running the script again should have correctly loaded poses and joint positions. The script by default picks the first keyframe defined. You can add more and select them shown below.
+
+```bash
+python test.py -r "my_panda"
+python test.py -r "my_panda" -k "name_of_keyframe_to_show"
+```
+
+:::{figure} images/loaded_anymal_panda_keyframe.png 
+:::
+
+
+## 3. Defining Controllers
 
 ManiSkill permits defining multiple controllers for a single agent/robot, allowing for easy research and testing on different controllers to explore problems like sim2real and more. 
 
@@ -99,7 +173,7 @@ In brief, we will show how to work with both the PDJointPosController and PDJoin
 To define controllers, you need to implement the `_controller_configs` property as done below
 
 ```python
-class Panda(BaseAgent):
+class MyPanda(BaseAgent):
     # ...
     arm_joint_names = [
         "panda_joint1",
@@ -166,13 +240,30 @@ class Panda(BaseAgent):
 
 We defined two controllers to control the arm joints and one for the gripper. Using a dictionary, you can define multiple control modes that interchangeably use different controllers of the joints. Above we defined a `pd_joint_delta_pos` and a `pd_joint_pos` controller which switch just the controller of the arm joints.
 
+To try this out, simply run the following and unpause the simulation when you are ready (pause button at the top left)
+
+```bash
+python -m test.py -r "my_panda" -c "pd_joint_delta_pos" --random-actions
+```
+
+This samples random actions to take using the given controller. You may want to tune the controller so that the robot doesn't move too far but also doesn't move too little.
+
+You can also test the stability of the robot you modelled by trying and set all the joints to the keyframe qpos values with the `pd_joint_pos` controller as so
+
+```bash
+python -m test.py -r "my_panda" -c "pd_joint_pos" --keyframe-actions
+```
+
+If the robot is staying still in the given keyframe, it is working well.
+
+
 Stiffness corresponds with the P and damping corresponds with the D of PD controllers, see the [controllers page](../concepts/controllers.md#terminology) for more details.
 
 Tuning the values of stiffness, damping, and other properties affect the sim2real transfer of a simulated robot to the real world. At the moment our team is working on developing a better pipeline with documentation for system identification to pick better controllers and/or hyperparameters. 
 
 Note that when taking a robot implemented in another simulator like Mujoco, you usually cannot directly copy the joint hyperparameters to ManiSkill, so you almost always need some manual tuning. 
 
-## 3. Defining Sensors
+## 4. Defining Sensors
 
 ManiSkill supports defining sensors mounted onto the robot and sensors positioned relative to the robot by defining the `_default_sensor_configs` property.
 
@@ -200,29 +291,6 @@ class PandaRealSensed435(Panda):
 
 You simply return a sensor config (here we use a CameraConfig) to define the sensor to add, and specify where to mount the sensor. For most sensors, you must define a pose, which is now used as a pose relative to the mount pose. In the example above we add a camera to the camera link / wrist mount of the panda robot (which is already oriented facing the correct direction so the pose defined is just the identity)
 
-## 4. Defining Keyframes
-
-It sometimes is useful to define some predefined robot poses and joint positions that users can initialize to to visualize the robot in poses of interest. This is an idea adopted from [Mujoco's keyframes](https://mujoco.readthedocs.io/en/stable/XMLreference.html#keyframe)
-
-For example, we define a "standing" keyframe for the Unitree H1 robot like so
-
-```python
-from mani_skill.agents.base_agent import BaseAgent, Keyframe
-# ...
-class UnitreeH1(BaseAgent):
-    # ...
-    keyframes = dict(
-        standing=Keyframe(
-            pose=sapien.Pose(p=[0, 0, 0.975]),
-            qpos=np.array([0, 0, 0, 0, 0, 0, 0, -0.4, -0.4, 0.0, 0.0, 0.8, 0.8, 0.0, 0.0, -0.4, -0.4, 0.0, 0.0]) * 1,
-        )
-    )
-```
-
-The keyframe can also specify `qvel` values as well. Using that keyframe you can set the robot to the given pose, qpos, qvel and you can get the desired predefined keyframe
-
-:::{figure} images/unitree_h1_standing.png 
-:::
 
 ## Advanced Tips and Tricks:
 

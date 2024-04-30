@@ -26,7 +26,8 @@ def parse_args(args=None):
     )
     args = parser.parse_args()
     return args
-if __name__ == "__main__":
+
+def main():
     args = parse_args()
     env = gym.make(
         "Empty-v1",
@@ -67,3 +68,6 @@ if __name__ == "__main__":
             assert kf is not None, "this robot has no keyframes, cannot use it to set actions"
             env.step(kf.qpos)
         viewer = env.render()
+
+if __name__ == "__main__":
+    main()
