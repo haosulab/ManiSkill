@@ -26,7 +26,7 @@ setup(
         "scipy",
         "dacite",
         "gymnasium==0.29.1",
-        "sapien==3.0.0.dev2",
+        "sapien==3.0.0.b0",
         "h5py",
         "pyyaml",
         "tqdm",

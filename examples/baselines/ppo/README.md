@@ -109,7 +109,7 @@ python ppo_rgb.py --env_id="PickCube-v1" \
 To evaluate a trained policy you can run
 
 ```bash
-python ppo_rgb.py --env_id="OpenCabinetDrawer-v1" \
+python ppo_rgb.py --env_id="PickCube-v1" \
   --evaluate --checkpoint=path/to/model.pt \
   --num_eval_envs=1 --num-eval-steps=1000
 ```
