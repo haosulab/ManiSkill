@@ -5,20 +5,23 @@ ManiSkill supports importing robots and assets via URDF and MJCF definitions. As
 In summary, the following elements must be completed before a robot is usable.
 
 1. Create a robot class and specify a uid, as well as a urdf/mjcf file to import
-2. Define robot controller(s) (e.g. PD joint position control)
-3. (Optional): Define mounted sensors / sensors relative to the robot (e.g. wrist cameras)
-4. (Optional): Define useful keyframes (snapshots of robot state) for users
+2. Define useful keyframes (snapshots of robot state) for testing and other users
+3. Define robot controller(s) (e.g. PD joint position control)
+4. Define mounted sensors / sensors relative to the robot (e.g. wrist cameras)
+5. Modeling materials of specific links to enable functionality (e.g. quadruped movement or object grasping)
 
 This tutorial will guide you through on how to implement the Panda robot in ManiSkill. It will also cover some tips/tricks for modelling other categories of robots to ensure the simulation runs fast and accurately (e.g., mobile manipulators like Fetch, quadrupeds like Anymal)
 
 
 ## 1. Robot Class and Importing the Robot
 
-To create your own robot (also known as an Agent) you need to inherit the `BaseAgent` class, give it name, and optionally register the agent.
+To create your own robot (also known as an Agent) you need to inherit the `BaseAgent` class, give it name, and optionally register the agent. We will create a new file called `my_panda.py` and add the following
 
 ```python
 import sapien
-from mani_skill.agents.base_agent import BaseAgent
+import numpy as np
+from mani_skill.agents.base_agent import BaseAgent, Keyframe
+from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
 @register_agent()
 class MyPanda(BaseAgent):
@@ -28,6 +31,8 @@ class MyPanda(BaseAgent):
 Registering the agent allows you to create environments that instantiate your robot for you via a string uid in the future with the code below:
 
 ```python
+import mani_skill.envs
+import my_panda
 env = gym.make("EmptyEnv-v1", robot_uids="my_panda")
 ```
 
@@ -41,9 +46,9 @@ To import a URDF/MJCF file, you simply provide a path to the definition file and
 
 #### URDF
 
-To get started, you first need to get a valid URDF file like this one for the Panda robot: https://github.com/haosulab/ManiSkill/blob/main/mani_skill/assets/robots/panda/panda_v2.urdf
+To get started, you first need to get a valid URDF file like this one for the [Panda robot](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/assets/robots/panda/panda_v2.urdf)
 
-Then in the agent class add
+Then in the agent class add the urdf_path.
 
 ```python
 class MyPanda(BaseAgent):
@@ -52,9 +57,6 @@ class MyPanda(BaseAgent):
 ```
 
 Note that there are a number of common issues users may face (often due to incorrectly formatted URDFs / collision meshes) which are documented in the [FAQ / Troubleshooting Section](#faq--troubleshooting)
-
-
-<!-- For a starting template check out https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/_template/template_robot.py -->
 
 #### Mujoco MJCF
 
@@ -71,7 +73,76 @@ At the moment, the following are not supported:
 
 These may be supported in the future so stay tuned for updates.
 
-## 2. Defining Controllers
+#### Testing the loaded URDF/MJCF
+
+We recommend you create a simple test script `test.py` that imports your new robot and leverages the existing demo robot script. While not required it may be helpful to read the [demo robot script](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/examples/demo_robot.py) in order to get more familiarity with using ManiSkill. In `test.py` write
+
+```python
+import my_panda # imports your robot and registers it
+# imports the demo_robot example script and lets you test your new robot
+import mani_skill.examples.demo_robot as demo_robot_script
+demo_robot_script.main()
+```
+
+Then run the following to open the simulation visualizer (without taking any actions) to let you look at the robot.
+
+```bash
+python test.py -r "my_panda" # the uid of your new robot
+```
+
+If you used the panda URDF it should look something like this where the robot is at position 0 and all joints are set to 0. Some robots might be seen sunken into the ground e.g. what the ANYmal-C quadruped looks like. This is because we initialize the pose of the root link of the robot to be 0, which might make it be inside the ground. We will fix this in the next step by defining a keyframe from which we can initialize from.
+
+:::{figure} images/loaded_anymal_panda_0.png
+:::
+
+
+## 2. Defining Keyframes
+
+It sometimes is useful to define some predefined robot poses and joint positions that users can initialize to to visualize the robot in poses of interest. This is an idea adopted from [Mujoco's keyframes](https://mujoco.readthedocs.io/en/stable/XMLreference.html#keyframe)
+
+For example, we define a "rest" keyframe for the panda robot and a "standing" keyframe for the quadruped. These keyframes let you define a pre-defined pose, and optionally qpos (joint positions) and qvel (joint velocities).
+
+```python
+class MyPanda(BaseAgent):
+    # ...
+    keyframes = dict(
+        rest=Keyframe(
+            qpos=np.array(
+                [0.0, np.pi / 8, 0, -np.pi * 5 / 8, 0, np.pi * 3 / 4, np.pi / 4, 0.04, 0.04]
+            ),
+            pose=sapien.Pose(),
+        )
+    )
+```
+
+```python
+class ANYmalC(BaseAgent):
+    # ...
+    keyframes = dict(
+        standing=Keyframe(
+            # notice how we set the z position to be above 0, so the robot is not intersecting the ground
+            pose=sapien.Pose(p=[0, 0, 0.545]),
+            qpos=np.array(
+                [0.03, -0.03, 0.03, -0.03, 0.4, 0.4, -0.4, -0.4, -0.8, -0.8, 0.8, 0.8]
+            ),
+        )
+    )
+```
+
+The keyframe can also specify `qvel` values as well. Using that keyframe you can set the robot to the given pose, qpos, qvel and you can get the desired predefined keyframe
+
+Running the script again should have correctly loaded poses and joint positions. The script by default picks the first keyframe defined. You can add more and select them shown below.
+
+```bash
+python test.py -r "my_panda"
+python test.py -r "my_panda" -k "name_of_keyframe_to_show"
+```
+
+:::{figure} images/loaded_anymal_panda_keyframe.png 
+:::
+
+
+## 3. Defining Controllers
 
 ManiSkill permits defining multiple controllers for a single agent/robot, allowing for easy research and testing on different controllers to explore problems like sim2real and more. 
 
@@ -99,7 +170,7 @@ In brief, we will show how to work with both the PDJointPosController and PDJoin
 To define controllers, you need to implement the `_controller_configs` property as done below
 
 ```python
-class Panda(BaseAgent):
+class MyPanda(BaseAgent):
     # ...
     arm_joint_names = [
         "panda_joint1",
@@ -166,24 +237,45 @@ class Panda(BaseAgent):
 
 We defined two controllers to control the arm joints and one for the gripper. Using a dictionary, you can define multiple control modes that interchangeably use different controllers of the joints. Above we defined a `pd_joint_delta_pos` and a `pd_joint_pos` controller which switch just the controller of the arm joints.
 
+To try this out, simply run the following and unpause the simulation when you are ready (pause button at the top left)
+
+```bash
+python -m test.py -r "my_panda" -c "pd_joint_delta_pos" --random-actions
+```
+
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/docs/source/_static/videos/docs/source/_static/videos/panda_random_actions.mp4" type="video/mp4">
+</video>
+
+This samples random actions to take using the given controller. You may want to tune the controller so that the robot doesn't move too far but also doesn't move too little.
+
+You can also test the stability of the robot you modelled by trying and set all the joints to the keyframe qpos values with the `pd_joint_pos` controller as so
+
+```bash
+python -m test.py -r "my_panda" -c "pd_joint_pos" --keyframe-actions
+```
+
+If the robot is staying still in the given keyframe, it is working well.
+
+
 Stiffness corresponds with the P and damping corresponds with the D of PD controllers, see the [controllers page](../concepts/controllers.md#terminology) for more details.
 
 Tuning the values of stiffness, damping, and other properties affect the sim2real transfer of a simulated robot to the real world. At the moment our team is working on developing a better pipeline with documentation for system identification to pick better controllers and/or hyperparameters. 
 
 Note that when taking a robot implemented in another simulator like Mujoco, you usually cannot directly copy the joint hyperparameters to ManiSkill, so you almost always need some manual tuning. 
 
-## 3. Defining Sensors
+## 4. Defining Sensors
 
-ManiSkill supports defining sensors mounted onto the robot and sensors positioned relative to the robot by defining the `_default_sensor_configs` property.
+ManiSkill supports defining sensors mounted onto the robot and sensors positioned relative to the robot by defining the `_sensor_configs` property.
 
 An example of this done in the Panda robot with a real sense camera attached:
 
 ```python
 from mani_skill.sensors.camera import CameraConfig
-class PandaRealSensed435(Panda):
+class MyPanda(Panda):
     # ...
     @property
-    def _default_sensor_configs(self):
+    def _sensor_configs(self):
         return [
             CameraConfig(
                 uid="hand_camera",
@@ -198,39 +290,138 @@ class PandaRealSensed435(Panda):
         ]
 ```
 
-You simply return a sensor config (here we use a CameraConfig) to define the sensor to add, and specify where to mount the sensor. For most sensors, you must define a pose, which is now used as a pose relative to the mount pose. In the example above we add a camera to the camera link / wrist mount of the panda robot (which is already oriented facing the correct direction so the pose defined is just the identity)
+You simply return a sensor config (here we use a CameraConfig) to define the sensor to add, and specify where to mount the sensor. For most sensors, you must define a pose, which is now used as a pose relative to the mount pose. In the example above we add a camera to the camera link / wrist mount of the panda robot (which is already oriented facing the correct direction so the pose defined is just the identity).
 
-## 4. Defining Keyframes
+To visualize the sensor data you can use the same demo script and open this tab
 
-It sometimes is useful to define some predefined robot poses and joint positions that users can initialize to to visualize the robot in poses of interest. This is an idea adopted from [Mujoco's keyframes](https://mujoco.readthedocs.io/en/stable/XMLreference.html#keyframe)
-
-For example, we define a "standing" keyframe for the Unitree H1 robot like so
-
-```python
-from mani_skill.agents.base_agent import BaseAgent, Keyframe
-# ...
-class UnitreeH1(BaseAgent):
-    # ...
-    keyframes = dict(
-        standing=Keyframe(
-            pose=sapien.Pose(p=[0, 0, 0.975]),
-            qpos=np.array([0, 0, 0, 0, 0, 0, 0, -0.4, -0.4, 0.0, 0.0, 0.8, 0.8, 0.0, 0.0, -0.4, -0.4, 0.0, 0.0]) * 1,
-        )
-    )
-```
-
-The keyframe can also specify `qvel` values as well. Using that keyframe you can set the robot to the given pose, qpos, qvel and you can get the desired predefined keyframe
-
-:::{figure} images/unitree_h1_standing.png 
+:::{figure} images/gui-side-camera.png 
 :::
 
-## Advanced Tips and Tricks:
+You can also visualize where the camera is in the viewport as so:
+
+:::{figure} images/panda_robot_camera_lines.png
+:::
+
+## 5. Modeling Link Materials
+
+Finally, in order to ensure correct simulation, you likely will need to modify the physical materials (controlling e.g. friction) of parts of the robot in order to enable quadruped movement or object manipulation via grasping. By default all objects start with static and dynamic friction values of 0.3, but this is insufficient for picking up objects and will cause most objects to slip out of the gripper. To fix this, you can define a `urdf_config` as so. You can define a default material (here we define a gripper material) and then use that as a template to instantiate the materials of specific links. We only set the material for the left and right finger links. 
+
+```python
+class MyPanda(BaseAgent):
+    # ... 
+    urdf_config = dict(
+        _materials=dict(
+            gripper=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)
+        ),
+        link=dict(
+            panda_leftfinger=dict(
+                material="gripper", patch_radius=0.1, min_patch_radius=0.1
+            ),
+            panda_rightfinger=dict(
+                material="gripper", patch_radius=0.1, min_patch_radius=0.1
+            ),
+        ),
+    )
+    # ... 
+```
+
+Generally a friction of 2.0 is as high as you may ever need to go and is a good value to start with if you want this part of the robot to be able to grab onto something / prevent any slipping. For the ANYmal-C robot a friction of 2.0 was set as well for the 4 feet links.
+
+## Advanced Tips and Tricks
+
+### Fast Simulation Tricks
+
+Ultimately a fast simulation depends on correct and efficient modelling of the robots and the objects in the environment. For robots, there are a few notable ways to improve simulation speed, especially on the GPU.
+
+
+
+#### Simplified Collision Meshes
+
+Simulation is in essence a contact collision solver, and this runs faster when there are 
+
+1. Less contacts
+2. Contacts that do exist are between simple primitive shapes (planes, boxes, cylinders etc.)
+
+
+To achieve fewer contacts and leverage just basic primitives, the model of the ANYmal-C robot has been massively simplified as shown below.
+
+:::{figure} images/anymal-visual-collision.png
+:::
+
+Another way to acheive fewer contacts is to remove collision shapes/meshes that are more often not going to be close to another one. Normally the collision mesh of the quadruped above is "dense" with no gaps between parts. By leaving big enough gaps in between, the physics simulation never needs to bother checking collisions between parts that are normally close together. The minimum gap required is determined by the simulation configuration `contact_offset` which acts as a first-pass filter to determine whether a contact between two bodies (Actor/Links) in the simulation needs to be checked and resolved.
+
+Moreover, when there are fewer contacts the GPU memory requirements are significantly lessened.
+
+#### Tuned Simulation Configurations
+
+Depending on the task you can massively increase simulation speed by reducing the `solver_position_iterations` configuration. Generally as a rule of thumb you need `solver_position_iterations` value of 15 or more to accurately simulate robot manipulation (this again depends on a case by case basis). For navigation / locomotion tasks a `solver_position_iterations` value of 4 may suffice.
+
+See the [sim configuration definition](https://github.com/haosulab/ManiSkill/tree/main/mani_skill/utils/structs/types.py) for more details.
+
+#### Condensed Robot Descriptions (WIP)
+
+(WIP)
+
 
 ### Mobile Bases
 
 Robots like Fetch have a mobile base, which allows translational movement and rotational movement of the entire robot. In simulation, it is not trivial to simulate the actual physics of wheels moving along a floor and simulating this would be fairly slow. 
 
-Instead, similar to many other simulators a "fake" mobile base is made (that is realistic enough to easily do sim2real transfer in terms of the controller). This is made by modifying a URDF of a robot like Fetch, and adding joints that let the base link translate (prismatic joint) and rotate (revolute joint). 
+Instead, similar to many other simulators a "fake" mobile base is made (that is realistic enough to easily do sim2real transfer in terms of the controller). This is made by modifying a URDF of a robot like Fetch, and adding joints that let the base link translate (prismatic joint) and rotate (revolute joint). See the [Fetch URDF code](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/assets/robots/fetch/fetch.urdf#L3-L40) for the modifications made. 
+
+After modifying the URDF to include dummy links to allow mobile base movement, you then should define a controller (recommended to be separate from the rest of the robot). For the Fetch robot we define a separate controller for the robot arm, gripper, body, and the mobile-base via dictionaries in [our codebase here](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/fetch/fetch.py). We recommend using the PDBaseVelControllerConfig as done below which permits control via XY translational movement and Z-axis rotation.
+
+```python
+class Fetch(BaseAgent):
+    # ...
+    @property
+    def _controller_configs(self):
+        # ... defining other controllers
+        base_pd_joint_vel = PDBaseVelControllerConfig(
+            self.base_joint_names,
+            lower=[-0.5, -0.5, -3.14],
+            upper=[0.5, 0.5, 3.14],
+            damping=1000,
+            force_limit=500,
+        )
+
+        controller_configs = dict(
+            pd_joint_delta_pos=dict(
+                arm=arm_pd_joint_delta_pos,
+                gripper=gripper_pd_joint_pos,
+                body=body_pd_joint_delta_pos,
+                base=base_pd_joint_vel,
+            ),
+            # ...
+        )
+        # ...
+```
+
+Finally, we also need to disable collisions between parts of the robot and the floor it is moving on top of. This is to increase simulation speed as there is no need to compute contact between the robot and the floor (the robot is technically hovering to simulate mobile base movement).
+
+For fetch, we only really need to disable the collisions between the wheel links that are too close to the floor and the floor itself. 
+
+This is done by implementing the `_after_init` function as so
+
+```python
+class Fetch(BaseAgent):
+    # ...
+    def _after_init(self):
+        self.l_wheel_link: Link = self.robot.links_map["l_wheel_link"]
+        self.r_wheel_link: Link = self.robot.links_map["r_wheel_link"]
+        for link in [self.l_wheel_link, self.r_wheel_link]:
+            link.set_collision_group_bit(group=2, bit_idx=30, bit=1)
+```
+
+And then in whichever task code you write that builds a ground plane, suppose the Actor object is stored at `self.ground` while loading the scene you can run
+
+```python
+def _load_scene(self, options: dict):
+    # ...
+    self.ground.set_collision_group_bit(group=2, bit_idx=30, bit=1)
+```
+
+Disabling collisions can be a bit confusing but generally anything that has their collision group 2 bit set will not collide with any other object that has the same bit set to 1. There is also a maximum of 32 settable bits (from `bit_idx = 0` to `bit_idx=31`).
 
 ### Tactile Sensing
 
@@ -240,7 +431,15 @@ For now see the implementation of [Allegro hand with touch sensors](https://gith
 
 ### Quadrupeds / Legged motion
 
-WIP
+For fast simulation of quadrupeds a few tricks are generally used. We will use the ANYmal-C robot as a case study. 
+
+First is the use of simplified collision meshes. The URDF used by ManiSkill is [this one](https://github.com/haosulab/ManiSkill-ANYmalC/blob/main/urdf/anymal.urdf) and the original URDF is saved [here](https://github.com/haosulab/ManiSkill-ANYmalC/blob/main/urdf/anymal_original.urdf). You will notice that the anymal.urdf file has noticeably less collisions defined and in fact the collision mesh compared to the visual mesh looks like this:
+
+:::{figure} images/anymal-visual-collision.png
+:::
+
+
+You can view collisons of any object/articulation in the simulation via the GUI viewer by clicking any link on the articulation and under the articulation tab click Show collision. For individual objects you can do the same under the Entity tab.
 
 ## FAQ / Troubleshooting
 

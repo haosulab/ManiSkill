@@ -26,7 +26,7 @@ class EmptyEnv(BaseEnv):
 
     @property
     def _default_sensor_configs(self):
-        pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
+        pose = sapien_utils.look_at([1.25, -1.25, 1.5], [0.0, 0.0, 0.2])
         return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
@@ -35,7 +35,8 @@ class EmptyEnv(BaseEnv):
         return CameraConfig("render_camera", pose, 2048, 2048, 1, 0.01, 100)
 
     def _load_scene(self, options: dict):
-        build_ground(self._scene)
+        self.ground = build_ground(self._scene)
+        self.ground.set_collision_group_bit(group=2, bit_idx=30, bit=1)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         pass
