@@ -246,6 +246,10 @@ To try this out, simply run the following and unpause the simulation when you ar
 python -m test.py -r "my_panda" -c "pd_joint_delta_pos" --random-actions
 ```
 
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/docs/source/_static/videos/docs/source/_static/videos/panda_random_actions.mp4" type="video/mp4">
+</video>
+
 This samples random actions to take using the given controller. You may want to tune the controller so that the robot doesn't move too far but also doesn't move too little.
 
 You can also test the stability of the robot you modelled by trying and set all the joints to the keyframe qpos values with the `pd_joint_pos` controller as so
@@ -265,16 +269,16 @@ Note that when taking a robot implemented in another simulator like Mujoco, you 
 
 ## 4. Defining Sensors
 
-ManiSkill supports defining sensors mounted onto the robot and sensors positioned relative to the robot by defining the `_default_sensor_configs` property.
+ManiSkill supports defining sensors mounted onto the robot and sensors positioned relative to the robot by defining the `_sensor_configs` property.
 
 An example of this done in the Panda robot with a real sense camera attached:
 
 ```python
 from mani_skill.sensors.camera import CameraConfig
-class PandaRealSensed435(Panda):
+class MyPanda(Panda):
     # ...
     @property
-    def _default_sensor_configs(self):
+    def _sensor_configs(self):
         return [
             CameraConfig(
                 uid="hand_camera",
@@ -289,8 +293,17 @@ class PandaRealSensed435(Panda):
         ]
 ```
 
-You simply return a sensor config (here we use a CameraConfig) to define the sensor to add, and specify where to mount the sensor. For most sensors, you must define a pose, which is now used as a pose relative to the mount pose. In the example above we add a camera to the camera link / wrist mount of the panda robot (which is already oriented facing the correct direction so the pose defined is just the identity)
+You simply return a sensor config (here we use a CameraConfig) to define the sensor to add, and specify where to mount the sensor. For most sensors, you must define a pose, which is now used as a pose relative to the mount pose. In the example above we add a camera to the camera link / wrist mount of the panda robot (which is already oriented facing the correct direction so the pose defined is just the identity).
 
+To visualize the sensor data you can use the same demo script and open this tab
+
+:::{figure} images/gui-side-camera.png 
+:::
+
+You can also visualize where the camera is in the viewport as so:
+
+:::{figure} images/panda_robot_camera_lines.png
+:::
 
 ## Advanced Tips and Tricks:
 
