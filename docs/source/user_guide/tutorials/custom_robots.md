@@ -5,9 +5,10 @@ ManiSkill supports importing robots and assets via URDF and MJCF definitions. As
 In summary, the following elements must be completed before a robot is usable.
 
 1. Create a robot class and specify a uid, as well as a urdf/mjcf file to import
-2. Define robot controller(s) (e.g. PD joint position control)
-3. (Optional): Define mounted sensors / sensors relative to the robot (e.g. wrist cameras)
-4. (Optional): Define useful keyframes (snapshots of robot state) for users
+2. Define useful keyframes (snapshots of robot state) for testing and other users
+3. Define robot controller(s) (e.g. PD joint position control)
+4. Define mounted sensors / sensors relative to the robot (e.g. wrist cameras)
+5. Modeling materials of specific links to enable functionality (e.g. quadruped movement or object grasping)
 
 This tutorial will guide you through on how to implement the Panda robot in ManiSkill. It will also cover some tips/tricks for modelling other categories of robots to ensure the simulation runs fast and accurately (e.g., mobile manipulators like Fetch, quadrupeds like Anymal)
 
@@ -93,7 +94,6 @@ If you used the panda URDF it should look something like this where the robot is
 
 :::{figure} images/loaded_anymal_panda_0.png
 :::
-
 
 
 ## 2. Defining Keyframes
@@ -302,6 +302,31 @@ You can also visualize where the camera is in the viewport as so:
 :::{figure} images/panda_robot_camera_lines.png
 :::
 
+## 5. Modeling Link Materials
+
+Finally, in order to ensure correct simulation, you likely will need to modify the physical materials (controlling e.g. friction) of parts of the robot in order to enable quadruped movement or object manipulation via grasping. By default all objects start with static and dynamic friction values of 0.3, but this is insufficient for picking up objects and will cause most objects to slip out of the gripper. To fix this, you can define a `urdf_config` as so. You can define a default material (here we define a gripper material) and then use that as a template to instantiate the materials of specific links. We only set the material for the left and right finger links. 
+
+```python
+class MyPanda(BaseAgent):
+    # ... 
+    urdf_config = dict(
+        _materials=dict(
+            gripper=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)
+        ),
+        link=dict(
+            panda_leftfinger=dict(
+                material="gripper", patch_radius=0.1, min_patch_radius=0.1
+            ),
+            panda_rightfinger=dict(
+                material="gripper", patch_radius=0.1, min_patch_radius=0.1
+            ),
+        ),
+    )
+    # ... 
+```
+
+Generally a friction of 2.0 is as high as you may ever need to go and is a good value to start with if you want this part of the robot to be able to grab onto something / prevent any slipping. For the ANYmal-C robot a friction of 2.0 was set as well for the 4 feet links.
+
 ## Advanced Tips and Tricks
 
 ### Fast Simulation Tricks
@@ -332,6 +357,10 @@ Moreover, when there are fewer contacts the GPU memory requirements are signific
 Depending on the task you can massively increase simulation speed by reducing the `solver_position_iterations` configuration. Generally as a rule of thumb you need `solver_position_iterations` value of 15 or more to accurately simulate robot manipulation (this again depends on a case by case basis). For navigation / locomotion tasks a `solver_position_iterations` value of 4 may suffice.
 
 See the [sim configuration definition](https://github.com/haosulab/ManiSkill/tree/main/mani_skill/utils/structs/types.py) for more details.
+
+#### Condensed Robot Descriptions (WIP)
+
+(WIP)
 
 
 ### Mobile Bases
