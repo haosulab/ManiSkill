@@ -1,10 +1,3 @@
-"""Utilities to download assets.
-
-See also:
-    https://github.com/facebookresearch/habitat-sim/blob/main/src_python/habitat_sim/utils/datasets_download.py
-    https://github.com/StanfordVL/iGibson/blob/master/igibson/utils/assets_utils.py
-"""
-
 import argparse
 import hashlib
 import os
@@ -170,6 +163,10 @@ def initialize_extra_sources():
     DATA_SOURCES["unitree_go2"] = DataSource(
         url="https://github.com/haosulab/ManiSkill-UnitreeGo2/archive/refs/tags/v0.1.0.zip",
         target_path="robots/unitree_go2",
+    )
+    DATA_SOURCES["stompy"] = DataSource(
+        url="https://github.com/haosulab/ManiSkill-Stompy/archive/refs/tags/v0.1.0.zip",
+        target_path="robots/stompy",
     )
 
     # ---------------------------------------------------------------------------- #
