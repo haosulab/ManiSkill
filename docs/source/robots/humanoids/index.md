@@ -17,7 +17,16 @@ Robot Description: [https://github.com/haosulab/ManiSkill-UnitreeH1](https://git
 
 Main blocker here is actually its unclear where people typically mount cameras/depth sensors onto Unitree H1
 
-## Stompy (KScale Labs)
+## Stompy (from KScale Labs)
+
+```{figure} ../images/stompy.png
+```
+
+Robot UID: `stompy`
+
+Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/stompy/stompy.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/stompy/stompy.py)
+
+Robot Description: [https://github.com/haosulab/ManiSkill-Stompy](https://github.com/haosulab/ManiSkill-Stompy)
 
 ## Mujoco Humanoid
 
