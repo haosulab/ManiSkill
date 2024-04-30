@@ -244,7 +244,7 @@ python -m test.py -r "my_panda" -c "pd_joint_delta_pos" --random-actions
 ```
 
 <video preload="auto" controls="True" width="100%">
-<source src="https://github.com/haosulab/ManiSkill/raw/main/docs/source/_static/videos/docs/source/_static/videos/panda_random_actions.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/docs/source/_static/videos/panda_random_actions.mp4" type="video/mp4">
 </video>
 
 This samples random actions to take using the given controller. You may want to tune the controller so that the robot doesn't move too far but also doesn't move too little.
