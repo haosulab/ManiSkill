@@ -32,8 +32,10 @@ To stop data collection press "q" to quit. This will then save the trajectory da
 You can always press "h" to bring up a help menu describing the keyboard commands.
 
 
-<!-- ## Space Mouse -->
-<!-- 
 ## Meta Quest 3
 
-Requirements: Meta Quest 3 -->
+Currently WIP
+
+## Apple Vision Pro 
+
+Currently WIP

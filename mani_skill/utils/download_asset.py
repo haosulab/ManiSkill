@@ -19,6 +19,8 @@ from mani_skill.utils.io_utils import load_json
 
 @dataclass
 class DataSource:
+    source_type: str
+    """what kind of data is this"""
     url: Optional[str] = None
     hf_repo_id: Optional[str] = None
     github_url: Optional[str] = None
@@ -54,6 +56,7 @@ def initialize_sources():
 
     # TODO add google scanned objects
     DATA_SOURCES["ycb"] = DataSource(
+        source_type="task_assets",
         url="https://huggingface.co/datasets/haosulab/ManiSkill2/resolve/main/data/mani_skill2_ycb.zip",
         target_path="assets/mani_skill2_ycb",
         checksum="174001ba1003cc0c5adda6453f4433f55ec7e804f0f0da22d015d525d02262fb",
@@ -61,6 +64,7 @@ def initialize_sources():
     DATA_GROUPS["PickSingleYCB-v1"] = ["ycb"]
 
     DATA_SOURCES["pick_clutter_ycb"] = DataSource(
+        source_type="task_assets",
         url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/pick_clutter/ycb_train_5k.json.gz",
         target_path="tasks/pick_clutter",
         checksum="70ec176c7036f326ea7813b77f8c03bea9db5960198498957a49b2895a9ec338",
@@ -68,6 +72,7 @@ def initialize_sources():
     DATA_GROUPS["PickClutterYCB-v1"] = ["ycb", "pick_clutter_ycb"]
 
     DATA_SOURCES["assembling_kits"] = DataSource(
+        source_type="task_assets",
         url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/assembling_kits_v1.zip",
         target_path="tasks/assembling_kits",
         checksum="e3371f17a07a012edaa3a0b3604fb1577f3fb921876c3d5ed59733dd75a6b4a0",
@@ -75,6 +80,7 @@ def initialize_sources():
     DATA_GROUPS["AssemblingKits-v1"] = ["assembling_kits"]
 
     DATA_SOURCES["panda_avoid_obstacles"] = DataSource(
+        source_type="task_assets",
         url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/avoid_obstacles/panda_train_2k.json.gz",
         target_path="tasks/avoid_obstacles",
         checksum="44dae9a0804172515c290c1f49a1e7e72d76e40201a2c5c7d4a3ccd43b4d5be4",
@@ -82,6 +88,7 @@ def initialize_sources():
     DATA_GROUPS["PandaAvoidObstacles-v1"] = ["panda_avoid_obstacles"]
 
     DATA_SOURCES["pinch"] = DataSource(
+        source_type="task_assets",
         url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/pinch.zip",
         target_path="tasks/pinch",
         checksum="3281d2d777fad42e6d37371b2d3ee16fb1c39984907176718ca2e4f447326fe7",
@@ -89,6 +96,7 @@ def initialize_sources():
     DATA_GROUPS["Pinch-v1"] = ["pinch"]
 
     DATA_SOURCES["write"] = DataSource(
+        source_type="task_assets",
         url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/write.zip",
         target_path="tasks/write",
         checksum="c5b49e581bfed9cfb2107a607faf52795f840e93f5a7ad389290314513b4b634",
@@ -108,6 +116,7 @@ def initialize_sources():
         for model_id in model_ids:
             uid = f"partnet_mobility/{model_id}"
             DATA_SOURCES[uid] = DataSource(
+                source_type="objects",
                 url=f"https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/partnet_mobility/dataset/{model_id}.zip",
                 target_path=ASSET_DIR / "partnet_mobility" / "dataset" / model_id,
             )
@@ -137,6 +146,7 @@ def initialize_sources():
     # Interactable Scene Datasets
     # ---------------------------------------------------------------------------- #
     DATA_SOURCES["ReplicaCAD"] = DataSource(
+        source_type="scene",
         hf_repo_id="haosulab/ReplicaCAD",
         target_path="scene_datasets/replica_cad_dataset",
     )
@@ -144,27 +154,33 @@ def initialize_sources():
 
 def initialize_extra_sources():
     DATA_SOURCES["xmate3_robotiq"] = DataSource(
+        source_type="robot",
         url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/xmate3_robotiq.zip",
         target_path="robots/xmate3_robotiq",
         checksum="ddda102a20eb41e28a0a501702e240e5d7f4084221a44f580e729f08b7c12d1a",
     )
     DATA_SOURCES["ur10e"] = DataSource(
+        source_type="robot",
         url="https://github.com/haosulab/ManiSkill-UR10e/archive/refs/tags/v0.1.0.zip",
         target_path="robots/ur10e",
     )
     DATA_SOURCES["anymal_c"] = DataSource(
+        source_type="robot",
         url="https://github.com/haosulab/ManiSkill-ANYmalC/archive/refs/tags/v0.1.1.zip",
         target_path="robots/anymal_c",
     )
     DATA_SOURCES["unitree_h1"] = DataSource(
+        source_type="robot",
         url="https://github.com/haosulab/ManiSkill-UnitreeH1/archive/refs/tags/v0.1.0.zip",
         target_path="robots/unitree_h1",
     )
     DATA_SOURCES["unitree_go2"] = DataSource(
+        source_type="robot",
         url="https://github.com/haosulab/ManiSkill-UnitreeGo2/archive/refs/tags/v0.1.0.zip",
         target_path="robots/unitree_go2",
     )
     DATA_SOURCES["stompy"] = DataSource(
+        source_type="robot",
         url="https://github.com/haosulab/ManiSkill-Stompy/archive/refs/tags/v0.1.0.zip",
         target_path="robots/stompy",
     )
@@ -174,7 +190,7 @@ def initialize_extra_sources():
     # ---------------------------------------------------------------------------- #
 
     # All backgrounds
-    DATA_GROUPS["backgrounds"] = ["minimalistic_modern_bedroom"]
+    # DATA_GROUPS["backgrounds"] = ["minimalistic_modern_bedroom"]
 
     # TODO add Replica, MatterPort 3D?
 
@@ -329,7 +345,15 @@ def parse_args(args=None):
     parser.add_argument(
         "uid",
         type=str,
+        default="",
+        nargs="?",
         help="Asset UID. Use 'all' to download all assets.",
+    )
+    parser.add_argument(
+        "-l",
+        "--list",
+        type=str,
+        help="List all assets available for donwload through this script in a given category. There are 3 categories: 'scene', 'robot', 'task_assets', and 'objects'",
     )
     parser.add_argument("--quiet", action="store_true", help="Disable verbose output.")
     parser.add_argument(
@@ -342,16 +366,24 @@ def parse_args(args=None):
 
 
 def main(args):
+    global DATA_SOURCES, DATA_GROUPS
     verbose = not args.quiet
 
     initialize_sources()
     initialize_extra_sources()
 
+    if args.list:
+        downloadable_ids = []
+        for k, v in DATA_SOURCES.items():
+            if v.source_type == args.list:
+                downloadable_ids.append(k)
+        print(f"For category {args.list} the following asset UIDs are available")
+        print(downloadable_ids)
+        exit()
     if args.uid == "":
         print("Available asset (group) uids:")
         print(list(DATA_GROUPS.keys()))
         return
-
     if args.uid == "all":
         if verbose:
             print("All assets will be downloaded. This may take a while.")
