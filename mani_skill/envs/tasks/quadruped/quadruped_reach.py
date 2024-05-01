@@ -53,7 +53,7 @@ class QuadrupedReachEnv(BaseEnv):
 
     @property
     def _default_human_render_camera_configs(self):
-        pose = sapien_utils.look_at([-2.5, 0.5, 2], [0.0, 0.0, 0])
+        pose = sapien_utils.look_at([-2.0, 1.5, 3], [1.5, 0.0, 0.5])
         return [
             CameraConfig(
                 "render_camera",
@@ -63,7 +63,7 @@ class QuadrupedReachEnv(BaseEnv):
                 fov=1,
                 near=0.01,
                 far=100,
-                mount=self.agent.robot.links[0],
+                # mount=self.agent.robot.links[0],
             )
         ]
 
