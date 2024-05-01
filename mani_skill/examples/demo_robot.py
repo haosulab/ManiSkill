@@ -13,6 +13,7 @@ from mani_skill.utils.structs.types import SceneConfig, SimConfig
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-r", "--robot-uid", type=str, default="panda", help="The id of the robot to place in the environment")
+    parser.add_argument("-b", "--sim-backend", type=str, default="auto", help="Which simulation backend to use. Can be 'auto', 'cpu', 'gpu'")
     parser.add_argument("-c", "--control-mode", type=str, default="pd_joint_pos", help="The control mode to use. Note that for new robots being implemented if the _controller_configs is not implemented in the selected robot, we by default provide two default controllers, 'pd_joint_pos' and 'pd_joint_delta_pos' ")
     parser.add_argument("-k", "--keyframe", type=str, help="The name of the keyframe of the robot to display")
     parser.add_argument("--shader", default="default", type=str, help="Change shader used for rendering. Default is 'default' which is very fast. Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer")
@@ -37,8 +38,8 @@ def main():
         control_mode=args.control_mode,
         robot_uids=args.robot_uid,
         shader_dir=args.shader,
-        sim_cfg=SimConfig(sim_freq=100, scene_cfg=SceneConfig(solver_position_iterations=50)),
         render_mode="human",
+        sim_backend=args.sim_backend,
     )
     env.reset(seed=0)
     env: BaseEnv = env.unwrapped
@@ -58,6 +59,10 @@ def main():
         if kf.qvel is not None:
             env.agent.robot.set_qvel(kf.qvel)
         env.agent.robot.set_pose(kf.pose)
+    if env.gpu_sim_enabled:
+        env.scene._gpu_apply_all()
+        env.scene.px.gpu_update_articulation_kinematics()
+        env.scene._gpu_fetch_all()
     viewer = env.render()
     viewer.paused = True
     viewer = env.render()

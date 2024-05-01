@@ -156,6 +156,11 @@ class BaseEnv(gym.Env):
         self.robot_uids = robot_uids
         if self.SUPPORTED_ROBOTS is not None:
             assert robot_uids in self.SUPPORTED_ROBOTS
+
+        if physx.is_gpu_enabled() and num_envs == 1 and (sim_backend == "auto" or sim_backend == "cpu"):
+            logger.warn("GPU simulation has already been enabled on this process, switching to GPU backend")
+            sim_backend == "gpu"
+
         if num_envs > 1 or sim_backend == "gpu":
             if not physx.is_gpu_enabled():
                 physx.enable_gpu()
@@ -284,6 +289,11 @@ class BaseEnv(gym.Env):
     @cached_property
     def observation_space(self):
         return batch_space(self.single_observation_space, n=self.num_envs)
+
+    @property
+    def gpu_sim_enabled(self):
+        """Whether the gpu simulation is enabled. A wrapper over physx.is_gpu_enabled()"""
+        return physx.is_gpu_enabled()
 
     @property
     def _default_sim_config(self):

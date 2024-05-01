@@ -166,6 +166,7 @@ class PickSingleYCBEnv(BaseEnv):
             obj_to_goal_pos=obj_to_goal_pos,
             is_obj_placed=is_obj_placed,
             is_robot_static=is_robot_static,
+            is_grasping=self.agent.is_grasping(self.obj),
             success=torch.logical_and(is_obj_placed, is_robot_static),
         )
 
@@ -173,6 +174,7 @@ class PickSingleYCBEnv(BaseEnv):
         obs = dict(
             tcp_pose=self.agent.tcp.pose.raw_pose,
             goal_pos=self.goal_site.pose.p,
+            is_grasping=info["is_grasping"],
         )
         if "state" in self.obs_mode:
             obs.update(
@@ -190,7 +192,7 @@ class PickSingleYCBEnv(BaseEnv):
         reaching_reward = 1 - torch.tanh(5 * tcp_to_obj_dist)
         reward = reaching_reward
 
-        is_grasped = self.agent.is_grasping(self.obj)
+        is_grasped = info["is_grasping"]
         reward += is_grasped
 
         obj_to_goal_dist = torch.linalg.norm(

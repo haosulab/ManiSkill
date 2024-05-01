@@ -131,10 +131,11 @@ class ANYmalC(BaseAgent):
 
 The keyframe can also specify `qvel` values as well. Using that keyframe you can set the robot to the given pose, qpos, qvel and you can get the desired predefined keyframe
 
-Running the script again should have correctly loaded poses and joint positions. The script by default picks the first keyframe defined. You can add more and select them shown below.
+Running the script again should have correctly loaded poses and joint positions. The script by default picks the first keyframe defined. You can add more and select them shown below. You may also want to check if it is working on the GPU simulation as well
 
 ```bash
 python test.py -r "my_panda"
+python test.py -r "my_panda" -b "gpu" # use gpu simulation
 python test.py -r "my_panda" -k "name_of_keyframe_to_show"
 ```
 
@@ -241,6 +242,7 @@ To try this out, simply run the following and unpause the simulation when you ar
 
 ```bash
 python -m test.py -r "my_panda" -c "pd_joint_delta_pos" --random-actions
+python -m test.py -r "my_panda" -c "pd_joint_delta_pos" -b "gpu" --random-actions
 ```
 
 <video preload="auto" controls="True" width="100%">
@@ -253,6 +255,7 @@ You can also test the stability of the robot you modelled by trying and set all 
 
 ```bash
 python -m test.py -r "my_panda" -c "pd_joint_pos" --keyframe-actions
+python -m test.py -r "my_panda" -c "pd_joint_pos" -b "gpu" --keyframe-actions
 ```
 
 If the robot is staying still in the given keyframe, it is working well.
