@@ -440,17 +440,11 @@ class BaseEnv(gym.Env):
 
     def get_sensor_obs(self) -> Dict[str, Dict[str, torch.Tensor]]:
         """Get raw sensor data for use as observations."""
-        sensor_data = dict()
-        for name, sensor in self._sensors.items():
-            sensor_data[name] = sensor.get_obs()
-        return sensor_data
+        return self.scene.get_sensor_obs()
 
     def get_sensor_images(self) -> Dict[str, Dict[str, torch.Tensor]]:
         """Get raw sensor data as images for visualization purposes."""
-        sensor_data = dict()
-        for name, sensor in self._sensors.items():
-            sensor_data[name] = sensor.get_images()
-        return sensor_data
+        return self.scene.get_sensor_images()
 
     def get_sensor_params(self) -> Dict[str, Dict[str, torch.Tensor]]:
         """Get all sensor parameters."""
@@ -1117,9 +1111,9 @@ class BaseEnv(gym.Env):
         images = []
         self._scene.update_render()
         self.capture_sensor_data()
-        sensor_images = self.get_sensor_obs()
-        for sensor_images in sensor_images.values():
-            images.extend(observations_to_images(sensor_images))
+        sensor_images = self.get_sensor_images()
+        for image in sensor_images.values():
+            images.append(image)
         return tile_images(images)
 
     def render(self):
@@ -1136,13 +1130,9 @@ class BaseEnv(gym.Env):
             return self.render_human()
         elif self.render_mode == "rgb_array":
             res = self.render_rgb_array()
-            if self.num_envs == 1:
-                res = common.to_numpy(common.unbatch(res))
             return res
         elif self.render_mode == "sensors":
             res = self.render_sensors()
-            if self.num_envs == 1:
-                res = common.to_numpy(common.unbatch(res))
             return res
         else:
             raise NotImplementedError(f"Unsupported render mode {self.render_mode}.")

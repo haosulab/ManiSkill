@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Dict, Sequence, Union
 import numpy as np
 import sapien
 import sapien.render
+from torch._tensor import Tensor
 
 from mani_skill.utils.structs import Actor, Articulation, Link
 from mani_skill.utils.structs.pose import Pose
@@ -14,7 +15,7 @@ from mani_skill.utils.structs.types import Array
 if TYPE_CHECKING:
     from mani_skill.envs.scene import ManiSkillScene
 
-from mani_skill.utils import sapien_utils
+from mani_skill.utils import sapien_utils, visualization
 
 from .base_sensor import BaseSensor, BaseSensorConfig
 
@@ -176,6 +177,11 @@ class Camera(BaseSensor):
 
     def get_picture(self, name: str):
         return self.camera.get_picture(name)
+
+    def get_images(self) -> Tensor:
+        return visualization.tile_images(
+            visualization.observations_to_images(self.get_obs())
+        )
 
     # TODO (stao): Computing camera parameters on GPU sim is not that fast, especially with mounted cameras and for model_matrix computation.
     def get_params(self):
