@@ -2,6 +2,8 @@
 
 Code for running the PPO RL algorithm is adapted from [CleanRL](https://github.com/vwxyzjn/cleanrl/). It is written to be single-file and easy to follow/read, and supports state-based RL and visual-based RL code.
 
+Note that ManiSkill is still in beta, so we have not finalized training scripts for every pre-built task (some of which are simply too hard to solve with RL anyway).
+
 
 ## State Based RL
 
@@ -89,7 +91,7 @@ python ppo.py --env_id="OpenCabinetDrawer-v1" \
   --total_timesteps=10_000_000 --num-steps=100 --num-eval-steps=100   
 ```
 
-## Visual Based RL
+## Visual (RGB) Based RL
 
 Below is a sample of various commands for training a image-based policy with PPO that are lightly tuned. The fastest again is also PushCube-v1 which can take about 1-5 minutes and PickCube-v1 which takes 15-45 minutes. You will need to tune the `--num_envs` argument according to how much GPU memory you have as rendering visual observations uses a lot of memory. The settings below should all take less than 15GB of GPU memory. Note that while if you have enough memory you can easily increase the number of environments, this does not necessarily mean wall-time or sample efficiency improve.
 
@@ -118,6 +120,14 @@ python ppo_rgb.py --env_id="PickCube-v1" \
 ```
 
 and it will save videos to the `path/to/test_videos`.
+
+## Visual (RGB+Depth) Based RL
+
+WIP
+
+## Visual (Pointcloud) Based RL
+
+WIP
 
 ## Replaying Evaluation Trajectories
 
