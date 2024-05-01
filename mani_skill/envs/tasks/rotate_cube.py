@@ -349,7 +349,7 @@ class RotateCubeEnv(BaseEnv):
 
 
 # TODO (stao): pick a better name, TrifingerRotateCube? perhaps?
-@register_env("RotateCubeLevel0-v1", max_episode_steps=250)
+@register_env("TriFingerRotateCubeLevel0-v1", max_episode_steps=250)
 class RotateCubeEnvLevel0(RotateCubeEnv):
     def __init__(self, *args, **kwargs):
         super().__init__(
@@ -360,7 +360,7 @@ class RotateCubeEnvLevel0(RotateCubeEnv):
         )
 
 
-@register_env("RotateCubeLevel1-v1", max_episode_steps=250)
+@register_env("TriFingerRotateCubeLevel1-v1", max_episode_steps=250)
 class RotateCubeEnvLevel1(RotateCubeEnv):
     def __init__(self, *args, **kwargs):
         super().__init__(
@@ -371,7 +371,7 @@ class RotateCubeEnvLevel1(RotateCubeEnv):
         )
 
 
-@register_env("RotateCubeLevel2-v1", max_episode_steps=250)
+@register_env("TriFingerRotateCubeLevel2-v1", max_episode_steps=250)
 class RotateCubeEnvLevel2(RotateCubeEnv):
     def __init__(self, *args, **kwargs):
         super().__init__(
@@ -382,7 +382,7 @@ class RotateCubeEnvLevel2(RotateCubeEnv):
         )
 
 
-@register_env("RotateCubeLevel3-v1", max_episode_steps=250)
+@register_env("TriFingerRotateCubeLevel3-v1", max_episode_steps=250)
 class RotateCubeEnvLevel3(RotateCubeEnv):
     def __init__(self, *args, **kwargs):
         super().__init__(
@@ -393,7 +393,7 @@ class RotateCubeEnvLevel3(RotateCubeEnv):
         )
 
 
-@register_env("RotateCubeLevel4-v1", max_episode_steps=250)
+@register_env("TriFingerRotateCubeLevel4-v1", max_episode_steps=250)
 class RotateCubeEnvLevel4(RotateCubeEnv):
     def __init__(self, *args, **kwargs):
         super().__init__(
