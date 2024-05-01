@@ -93,7 +93,7 @@ python ppo.py --env_id="OpenCabinetDrawer-v1" \
 
 Below is a sample of various commands for training a image-based policy with PPO that are lightly tuned. The fastest again is also PushCube-v1 which can take about 1-5 minutes and PickCube-v1 which takes 15-45 minutes. You will need to tune the `--num_envs` argument according to how much GPU memory you have as rendering visual observations uses a lot of memory. The settings below should all take less than 15GB of GPU memory. Note that while if you have enough memory you can easily increase the number of environments, this does not necessarily mean wall-time or sample efficiency improve.
 
-The visual PPO baseline is not guaranteed to work for tasks not tested below as some tasks do not have dense rewards yet or well tuned ones, or simply are too hard with standard PPO (or our team has not had time to verify results yet)
+The visual PPO baseline is not guaranteed to work for tasks not tested below as some tasks do not have dense rewards yet or well tuned ones, or simply are too hard with standard PPO (or our team has not had time to verify results yet).
 
 
 
@@ -102,6 +102,9 @@ python ppo_rgb.py --env_id="PushCube-v1" \
   --num_envs=256 --update_epochs=8 --num_minibatches=8 \
   --total_timesteps=1_000_000 --eval_freq=10 --num-steps=20
 python ppo_rgb.py --env_id="PickCube-v1" \
+  --num_envs=256 --update_epochs=8 --num_minibatches=8 \
+  --total_timesteps=10_000_000
+python ppo_rgb.py --env_id="PickSingleYCB-v1" \
   --num_envs=256 --update_epochs=8 --num_minibatches=8 \
   --total_timesteps=10_000_000
 ```
@@ -131,3 +134,4 @@ This will use environment states to replay trajectories, turn on the ray-tracer 
 ## Some Notes
 
 - The code currently does not have the best way to evaluate the agents in that during GPU simulation, all assets are frozen per parallel environment (changing them slows training down). Thus when doing evaluation, even though we evaluate on multiple (8 is default) environments at once, they will always feature the same set of geometry. This only affects tasks where there is geometry variation (e.g. PickClutterYCB, OpenCabinetDrawer). You can make it more accurate by increasing the number of evaluation environments. Our team is discussing still what is the best way to evaluate trained agents properly without hindering performance.
+- Many tasks support visual observations, however we have not carefully verified if the camera poses for the tasks are setup in a way that makes it possible to solve the task from visual observations.
