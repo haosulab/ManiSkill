@@ -84,8 +84,11 @@ class OpenCabinetDrawerEnv(BaseEnv):
 
     def _load_scene(self, options: dict):
         self.ground = build_ground(self._scene)
+        # temporarily turn off the logging as there will be big red warnings
+        # about the cabinets having oblong meshes which we ignore for now.
+        sapien.set_log_level("off")
         self._load_cabinets(self.handle_types)
-
+        sapien.set_log_level("warn")
         from mani_skill.agents.robots.fetch import FETCH_UNIQUE_COLLISION_BIT
 
         self.ground.set_collision_group_bit(

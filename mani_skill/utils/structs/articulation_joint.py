@@ -92,6 +92,9 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
         """
         The qpos of this joint in the articulation
         """
+        assert (
+            self.active_index is not None
+        ), "Inactive joints do not have qpos/qvel values"
         if physx.is_gpu_enabled():
             return self.px.cuda_articulation_qpos.torch()[
                 self._data_index, self.active_index
@@ -104,14 +107,15 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
         """
         The qvel of this joint in the articulation
         """
+        assert (
+            self.active_index is not None
+        ), "Inactive joints do not have qpos/qvel values"
         if physx.is_gpu_enabled():
             return self.px.cuda_articulation_qvel.torch()[
                 self._data_index, self.active_index
             ]
         else:
-            return torch.tensor(
-                [[self._physx_articulations[0].qvel[self.active_index]]]
-            )
+            return torch.tensor([self._physx_articulations[0].qvel[self.active_index]])
 
     # -------------------------------------------------------------------------- #
     # Functions from physx.PhysxArticulationJoint
