@@ -127,11 +127,9 @@ class TableSceneBuilder(SceneBuilder):
             self.env.agent.reset(qpos)
             self.env.agent.robot.set_pose(sapien.Pose([-1.05, 0, -self.table_height]))
 
-            for body in self.ground._bodies:
-                for cs in body.get_collision_shapes():
-                    cg = cs.get_collision_groups()
-                    cg[2] |= FETCH_UNIQUE_COLLISION_BIT
-                    cs.set_collision_groups(cg)
+            self.ground.set_collision_group_bit(
+                group=2, bit_idx=FETCH_UNIQUE_COLLISION_BIT, bit=1
+            )
         elif self.env.robot_uids == ("panda", "panda"):
             agent: MultiAgent = self.env.agent
             qpos = np.array(

@@ -190,11 +190,9 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
             )
 
     def disable_fetch_ground_collisions(self):
-        for body in self.bg._bodies:
-            cs = body.get_collision_shapes()[0]
-            cg = cs.get_collision_groups()
-            cg[2] |= FETCH_UNIQUE_COLLISION_BIT
-            cs.set_collision_groups(cg)
+        self.bg.set_collision_group_bit(
+            group=2, bit_idx=FETCH_UNIQUE_COLLISION_BIT, bit=1
+        )
 
     def set_actor_default_poses_vels(self):
         for actor, pose in self.actor_default_poses:
