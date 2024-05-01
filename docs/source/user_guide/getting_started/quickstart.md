@@ -12,6 +12,7 @@ import mani_skill.envs
 
 env = gym.make(
     "PickCube-v1", # there are more tasks e.g. "PushCube-v1", "PegInsertionSide-v1", ...
+    num_envs=1,
     obs_mode="state", # there is also "state_dict", "rgbd", ...
     control_mode="pd_ee_delta_pose", # there is also "pd_joint_delta_pos", ...
     render_mode="human"
@@ -28,6 +29,8 @@ while not done:
     env.render()  # a display is required to render
 env.close()
 ```
+
+Changing `num_envs` to a value > 1 will automatically turn on the GPU simulation mode. More quick details [covered below](#gpu-parallelizedvectorized-tasks)
 
 You can also run the same code from the command line to demo random actions
 
@@ -63,26 +66,19 @@ python -m mani_skill.examples.demo_random_action -e "ReplicaCAD_SceneManipulatio
 <source src="https://github.com/haosulab/ManiSkill/raw/main/docs/source/_static/videos/fetch_random_action_replica_cad_rt.mp4" type="video/mp4">
 </video>
 
+
+You may notice that everything returned by the environment is a torch Tensor and has a batch dimension with value 1. To reduce extra code handling numpy vs torch, cpu vs gpu sim, everything in ManiSkill defaults to serving/using batched torch Tensors of all data. To change the environment to serve numpy, unbatched data simply do the following
+
+```python
+from mani_skill.utils.wrappers.gymnasium import ManiSkillCPUGymWrapper
+env = gym.make(env_id)
+env = ManiSkillCPUGymWrapper(env)
+obs, _ = env.reset() # obs is numpy and unbatched
+```
+
+
 For a compilation of demos you can run without having to write any extra code check out the [demos page](../demos/index)
 
-## Task Instantiation Options
-
-
-Each ManiSkill task supports different **observation modes** and **control modes**, which determine its **observation space** and **action space**. They can be specified by `gym.make(env_id, obs_mode=..., control_mode=...)`.
-
-The common observation modes are `state`, `rgbd`, `pointcloud`. We also support `state_dict` (states organized as a hierarchical dictionary) and `sensor_data` (raw visual observations without postprocessing). Please refer to [Observation](../concepts/observation.md) for more details.
-
-We support a wide range of controllers. Different controllers can have different effects on your algorithms. Thus, it is recommended to understand the action space you are going to use. Please refer to [Controllers](../concepts/controllers.md) for more details.
-
-Some tasks require **downloading assets** that are not stored in the python package itself. You can download task-specific assets by `python -m mani_skill.utils.download_asset ${ENV_ID}`. The assets will be downloaded to `~/maniskill/data` by default, but you can also use the environment variable `MS_ASSET_DIR` to change this destination. Please refer to [Tasks](../../tasks/index.md) for all tasks built in out of the box, and which tasks require downloading assets.
-
-Some ManiSkill tasks also support swapping robot embodiments such as the `PickCube-v1` task. You can try using the fetch robot instead by running
-
-```
-gym.make("PickCube-v1", robot_uids="fetch")
-```
-
-You may also notice the argument is `robot_uids` plural, this is because we also support tasks with multiple robots which can be done by passing in tuple like `robot_uids=("fetch", "fetch", "panda")`.
 
 ## GPU Parallelized/Vectorized Tasks
 
@@ -135,3 +131,23 @@ which will look something like this
 <video preload="auto" controls="True" width="100%">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/docs/source/_static/videos/mani_skill_gpu_sim-PickCube-v1-num_envs=16-obs_mode=state-render_mode=sensors.mp4" type="video/mp4">
 </video>
+
+
+## Task Instantiation Options
+
+
+Each ManiSkill task supports different **observation modes** and **control modes**, which determine its **observation space** and **action space**. They can be specified by `gym.make(env_id, obs_mode=..., control_mode=...)`.
+
+The common observation modes are `state`, `rgbd`, `pointcloud`. We also support `state_dict` (states organized as a hierarchical dictionary) and `sensor_data` (raw visual observations without postprocessing). Please refer to [Observation](../concepts/observation.md) for more details.
+
+We support a wide range of controllers. Different controllers can have different effects on your algorithms. Thus, it is recommended to understand the action space you are going to use. Please refer to [Controllers](../concepts/controllers.md) for more details.
+
+Some tasks require **downloading assets** that are not stored in the python package itself. You can download task-specific assets by `python -m mani_skill.utils.download_asset ${ENV_ID}`. The assets will be downloaded to `~/maniskill/data` by default, but you can also use the environment variable `MS_ASSET_DIR` to change this destination. Please refer to [Tasks](../../tasks/index.md) for all tasks built in out of the box, and which tasks require downloading assets.
+
+Some ManiSkill tasks also support swapping robot embodiments such as the `PickCube-v1` task. You can try using the fetch robot instead by running
+
+```
+gym.make("PickCube-v1", robot_uids="fetch")
+```
+
+You may also notice the argument is `robot_uids` plural, this is because we also support tasks with multiple robots which can be done by passing in tuple like `robot_uids=("fetch", "fetch", "panda")`. Note that not all tasks support loading any robot or multiple robots as they were designed to evaluate those settings.

@@ -30,6 +30,7 @@ class AssemblingKitsEnv(BaseEnv):
         asset_root=f"{ASSET_DIR}/tasks/assembling_kits",
         robot_uids="panda_wristcam",
         num_envs=1,
+        reconfiguration_freq=None,
         **kwargs,
     ):
         self.asset_root = Path(asset_root)
@@ -49,9 +50,11 @@ class AssemblingKitsEnv(BaseEnv):
         self.symmetry = self._episode_json["config"]["symmetry"]
         self.color = self._episode_json["config"]["color"]
         self.object_scale = self._episode_json["config"]["object_scale"]
-        reconfiguration_freq = 0
-        if num_envs == 1:
-            reconfiguration_freq = 1
+        if reconfiguration_freq is None:
+            if num_envs == 1:
+                reconfiguration_freq = 1
+            else:
+                reconfiguration_freq = 0
         super().__init__(
             robot_uids=robot_uids,
             num_envs=num_envs,

@@ -54,10 +54,19 @@ class PegInsertionSideEnv(BaseEnv):
     agent: Union[PandaWristCam]
     _clearance = 0.003
 
-    def __init__(self, *args, robot_uids="panda_wristcam", num_envs=1, **kwargs):
-        reconfiguration_freq = 0
-        if num_envs == 1:
-            reconfiguration_freq = 1
+    def __init__(
+        self,
+        *args,
+        robot_uids="panda_wristcam",
+        num_envs=1,
+        reconfiguration_freq=None,
+        **kwargs,
+    ):
+        if reconfiguration_freq is None:
+            if num_envs == 1:
+                reconfiguration_freq = 1
+            else:
+                reconfiguration_freq = 0
         super().__init__(
             *args,
             robot_uids=robot_uids,

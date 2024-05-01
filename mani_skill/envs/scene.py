@@ -649,3 +649,17 @@ class ManiSkillScene:
                 raise NotImplementedError(
                     f"This sensor {sensor} of type {sensor.__class__} has not been implemented yet on the GPU"
                 )
+
+    def get_sensor_obs(self) -> Dict[str, Dict[str, torch.Tensor]]:
+        """Get raw sensor data for use as observations."""
+        sensor_data = dict()
+        for name, sensor in self.sensors.items():
+            sensor_data[name] = sensor.get_obs()
+        return sensor_data
+
+    def get_sensor_images(self) -> Dict[str, Dict[str, torch.Tensor]]:
+        """Get raw sensor data as images for visualization purposes."""
+        sensor_data = dict()
+        for name, sensor in self.sensors.items():
+            sensor_data[name] = sensor.get_images()
+        return sensor_data

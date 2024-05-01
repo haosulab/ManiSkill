@@ -255,17 +255,11 @@ class BaseEnv(gym.Env):
         self._set_main_rng(2022)
         self._elapsed_steps = (
             torch.zeros(self.num_envs, device=self.device, dtype=torch.int32)
-            if physx.is_gpu_enabled()
-            else 0
         )
         obs, _ = self.reset(seed=2022, options=dict(reconfigure=True))
         self._init_raw_obs = common.to_cpu_tensor(obs)
         """the raw observation returned by the env.reset (a cpu torch tensor/dict of tensors). Useful for future observation wrappers to use to auto generate observation spaces"""
-        if physx.is_gpu_enabled():
-            obs = common.to_numpy(obs)
-        self._init_raw_obs = obs.copy()
-        """the raw observation returned by the env.reset. Useful for future observation wrappers to use to auto generate observation spaces"""
-        self._init_raw_state = common.to_numpy(self.get_state_dict())
+        self._init_raw_state = common.to_cpu_tensor(self.get_state_dict())
         """the initial raw state returned by env.get_state. Useful for reconstructing state dictionaries from flattened state vectors"""
 
         self.action_space = self.agent.action_space
@@ -275,9 +269,9 @@ class BaseEnv(gym.Env):
         self.single_observation_space
         self.observation_space
 
-    def update_obs_space(self, obs: Any):
+    def update_obs_space(self, obs: torch.Tensor):
         """call this function if you modify the observations returned by env.step and env.reset via an observation wrapper."""
-        self._init_raw_obs = common.to_numpy(obs)
+        self._init_raw_obs = obs
         del self.single_observation_space
         del self.observation_space
         self.single_observation_space
@@ -285,17 +279,11 @@ class BaseEnv(gym.Env):
 
     @cached_property
     def single_observation_space(self):
-        if physx.is_gpu_enabled():
-            return gym_utils.convert_observation_to_space(self._init_raw_obs, unbatched=True)
-        else:
-            return gym_utils.convert_observation_to_space(common.to_numpy(self._init_raw_obs))
+        return gym_utils.convert_observation_to_space(common.to_numpy(self._init_raw_obs), unbatched=True)
 
     @cached_property
     def observation_space(self):
-        if physx.is_gpu_enabled():
-            return batch_space(self.single_observation_space, n=self.num_envs)
-        else:
-            return self.single_observation_space
+        return batch_space(self.single_observation_space, n=self.num_envs)
 
     @property
     def _default_sim_config(self):
@@ -440,17 +428,11 @@ class BaseEnv(gym.Env):
 
     def get_sensor_obs(self) -> Dict[str, Dict[str, torch.Tensor]]:
         """Get raw sensor data for use as observations."""
-        sensor_data = dict()
-        for name, sensor in self._sensors.items():
-            sensor_data[name] = sensor.get_obs()
-        return sensor_data
+        return self.scene.get_sensor_obs()
 
     def get_sensor_images(self) -> Dict[str, Dict[str, torch.Tensor]]:
         """Get raw sensor data as images for visualization purposes."""
-        sensor_data = dict()
-        for name, sensor in self._sensors.items():
-            sensor_data[name] = sensor.get_images()
-        return sensor_data
+        return self.scene.get_sensor_images()
 
     def get_sensor_params(self) -> Dict[str, Dict[str, torch.Tensor]]:
         """Get all sensor parameters."""
@@ -493,9 +475,7 @@ class BaseEnv(gym.Env):
                 obs=obs, action=action, info=info
             )
         elif self._reward_mode == "none":
-            reward = 0
-            if physx.is_gpu_enabled():
-                reward = torch.zeros((self.num_envs, ), dtype=torch.float, device=self.device)
+            reward = torch.zeros((self.num_envs, ), dtype=torch.float, device=self.device)
         else:
             raise NotImplementedError(self._reward_mode)
         return reward
@@ -704,10 +684,7 @@ class BaseEnv(gym.Env):
             self._scene._reset_mask = torch.ones(
                 self.num_envs, dtype=bool, device=self.device
             )
-        if physx.is_gpu_enabled():
-            self._elapsed_steps[env_idx] = 0
-        else:
-            self._elapsed_steps = 0
+        self._elapsed_steps[env_idx] = 0
 
         self._clear_sim_state()
         if self.reconfiguration_freq != 0:
@@ -728,9 +705,7 @@ class BaseEnv(gym.Env):
             self._scene.px.gpu_update_articulation_kinematics()
             self._scene._gpu_fetch_all()
         obs = self.get_obs()
-        if not physx.is_gpu_enabled():
-            obs = common.to_numpy(common.unbatch(obs))
-            self._elapsed_steps = 0
+
         return obs, dict(reconfigure=reconfigure)
 
     def _set_main_rng(self, seed):
@@ -797,23 +772,13 @@ class BaseEnv(gym.Env):
             else:
                 terminated = torch.zeros(self.num_envs, dtype=bool, device=self.device)
 
-        if physx.is_gpu_enabled():
-            return (
-                obs,
-                reward,
-                terminated,
-                torch.zeros(self.num_envs, dtype=bool, device=self.device),
-                info,
-            )
-        else:
-            # On CPU sim mode, we always return numpy / python primitives without any batching.
-            return common.unbatch(
-                common.to_numpy(obs),
-                common.to_numpy(reward),
-                common.to_numpy(terminated),
-                False,
-                common.to_numpy(info),
-            )
+        return (
+            obs,
+            reward,
+            terminated,
+            torch.zeros(self.num_envs, dtype=bool, device=self.device),
+            info,
+        )
 
     def step_action(
         self, action: Union[None, np.ndarray, torch.Tensor, Dict]
@@ -1117,9 +1082,9 @@ class BaseEnv(gym.Env):
         images = []
         self._scene.update_render()
         self.capture_sensor_data()
-        sensor_images = self.get_sensor_obs()
-        for sensor_images in sensor_images.values():
-            images.extend(observations_to_images(sensor_images))
+        sensor_images = self.get_sensor_images()
+        for image in sensor_images.values():
+            images.append(image)
         return tile_images(images)
 
     def render(self):
@@ -1136,13 +1101,9 @@ class BaseEnv(gym.Env):
             return self.render_human()
         elif self.render_mode == "rgb_array":
             res = self.render_rgb_array()
-            if self.num_envs == 1:
-                res = common.to_numpy(common.unbatch(res))
             return res
         elif self.render_mode == "sensors":
             res = self.render_sensors()
-            if self.num_envs == 1:
-                res = common.to_numpy(common.unbatch(res))
             return res
         else:
             raise NotImplementedError(f"Unsupported render mode {self.render_mode}.")
@@ -1183,8 +1144,8 @@ class BaseEnv(gym.Env):
         for uid, cam in self._sensors.items():
             if isinstance(cam, Camera):
                 cfg = cam.cfg
-                sensor_settings_str.append(f"RGBD ({cfg.width}x{cfg.height})")
-        sensor_settings_str = "_".join(sensor_settings_str)
+                sensor_settings_str.append(f"RGBD({cfg.width}x{cfg.height})")
+        sensor_settings_str = ", ".join(sensor_settings_str)
         sim_backend = "gpu" if physx.is_gpu_enabled() else "cpu"
         print(
         "# -------------------------------------------------------------------------- #"

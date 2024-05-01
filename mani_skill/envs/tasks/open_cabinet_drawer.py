@@ -20,7 +20,7 @@ from mani_skill.utils.registration import register_env
 from mani_skill.utils.structs import Articulation, Link, Pose
 from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 
-
+CABINET_COLLISION_BIT = 29
 # TODO (stao): we need to cut the meshes of all the cabinets in this dataset for gpu sim, there may be some wierd physics
 # that may happen although it seems okay for state based RL
 @register_env("OpenCabinetDrawer-v1", max_episode_steps=100)
@@ -84,21 +84,23 @@ class OpenCabinetDrawerEnv(BaseEnv):
 
     def _load_scene(self, options: dict):
         self.ground = build_ground(self._scene)
+        # temporarily turn off the logging as there will be big red warnings
+        # about the cabinets having oblong meshes which we ignore for now.
+        sapien.set_log_level("off")
         self._load_cabinets(self.handle_types)
-
+        sapien.set_log_level("warn")
         from mani_skill.agents.robots.fetch import FETCH_UNIQUE_COLLISION_BIT
 
-        # TODO (stao) (arth): is there a better way to model robots in sim. This feels very unintuitive.
-        for obj in self.ground._objs:
-            for cs in obj.find_component_by_type(
-                sapien.physx.PhysxRigidStaticComponent
-            ).get_collision_shapes():
-                cg = cs.get_collision_groups()
-                cg[2] |= FETCH_UNIQUE_COLLISION_BIT
-                cg[2] |= 1 << 29  # make ground ignore collisions with the cabinets
-                cs.set_collision_groups(cg)
+        self.ground.set_collision_group_bit(
+            group=2, bit_idx=FETCH_UNIQUE_COLLISION_BIT, bit=1
+        )
+        self.ground.set_collision_group_bit(
+            group=2, bit_idx=CABINET_COLLISION_BIT, bit=1
+        )
 
     def _load_cabinets(self, joint_types: List[str]):
+        # we sample random cabinet model_ids with numpy as numpy is always deterministic based on seed, regardless of
+        # GPU/CPU simulation backends. This is useful for replaying demonstrations.
         rand_idx = self._episode_rng.permutation(np.arange(0, len(self.all_model_ids)))
         model_ids = self.all_model_ids[rand_idx]
         model_ids = np.concatenate(
@@ -107,21 +109,31 @@ class OpenCabinetDrawerEnv(BaseEnv):
         link_ids = self._episode_rng.randint(0, 2**31, size=len(model_ids))
 
         self._cabinets = []
-        self.cabinet_zs = []
         handle_links: List[List[Link]] = []
         handle_links_meshes: List[List[trimesh.Trimesh]] = []
         for i, model_id in enumerate(model_ids):
+            # partnet-mobility is a dataset source and the ids are the ones we sampled
+            # we provide tools to easily create the articulation builder like so by querying
+            # the dataset source and unique ID
             cabinet_builder = articulations.get_articulation_builder(
                 self._scene, f"partnet-mobility:{model_id}"
             )
             cabinet_builder.set_scene_idxs(scene_idxs=[i])
             cabinet = cabinet_builder.build(name=f"{model_id}-{i}")
+
+            # this disables self collisions by setting the group 2 bit at CABINET_COLLISION_BIT all the same
+            # that bit is also used to disable collision with the ground plane
+            for link in cabinet.links:
+                link.set_collision_group_bit(
+                    group=2, bit_idx=CABINET_COLLISION_BIT, bit=1
+                )
             self._cabinets.append(cabinet)
             handle_links.append([])
             handle_links_meshes.append([])
 
             # TODO (stao): At the moment code for selecting semantic parts of articulations
-            # is not very simple
+            # is not very simple. Will be improved in the future as we add in features that
+            # support part and mesh-wise annotations in a standard querable format
             for link, joint in zip(cabinet.links, cabinet.joints):
                 if joint.type[0] in joint_types:
                     handle_links[-1].append(link)
@@ -132,7 +144,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
                         )[0]
                     )
 
-        # we can merge different articulations with different degrees of freedoms into a single view/object
+        # we can merge different articulations/links with different degrees of freedoms into a single view/object
         # allowing you to manage all of them under one object and retrieve data like qpos, pose, etc. all together
         # and with high performance. Note that some properties such as qpos and qlimits are now padded.
         self.cabinet = Articulation.merge(self._cabinets, name="cabinet")
@@ -166,6 +178,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
 
         # this code is in _after_reconfigure since retrieving collision meshes requires the GPU to be initialized
         # which occurs after the initial reconfigure call (after self._load_scene() is called)
+        self.cabinet_zs = []
         for cabinet in self._cabinets:
             collision_mesh = cabinet.get_first_collision_mesh()
             self.cabinet_zs.append(-collision_mesh.bounding_box.bounds[0, 2])

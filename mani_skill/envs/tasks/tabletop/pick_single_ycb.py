@@ -39,15 +39,18 @@ class PickSingleYCBEnv(BaseEnv):
         robot_uids="panda",
         robot_init_qpos_noise=0.02,
         num_envs=1,
+        reconfiguration_freq=None,
         **kwargs,
     ):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         self.model_id = None
         _load_ycb_dataset()
         self.all_model_ids = np.array(list(MODEL_DBS["YCB"]["model_data"].keys()))
-        reconfiguration_freq = 0
-        if num_envs == 1:
-            reconfiguration_freq = 1
+        if reconfiguration_freq is None:
+            if num_envs == 1:
+                reconfiguration_freq = 1
+            else:
+                reconfiguration_freq = 0
         super().__init__(
             *args,
             robot_uids=robot_uids,

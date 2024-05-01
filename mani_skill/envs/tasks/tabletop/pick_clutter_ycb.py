@@ -36,6 +36,8 @@ class PickClutterEnv(BaseEnv):
         *args,
         robot_uids="panda",
         robot_init_qpos_noise=0.02,
+        num_envs=1,
+        reconfigure_freq=None,
         episode_json: str = None,
         **kwargs,
     ):
@@ -50,13 +52,18 @@ class PickClutterEnv(BaseEnv):
                 "`python -m mani_skill.utils.download_asset pick_clutter_ycb`."
             )
         self._episodes: List[Dict] = load_json(episode_json)
-
-        super().__init__(*args, robot_uids=robot_uids, **kwargs)
-
-        if self.num_envs == 1:
-            # with just one environment there isn't going to be a lot of geometrical variation
-            # so setting the freq below to 1 ensures each reset (while a little slower) changes the loaded geometries
-            self.reconfiguration_freq = 1
+        if reconfiguration_freq is None:
+            if num_envs == 1:
+                reconfiguration_freq = 1
+            else:
+                reconfiguration_freq = 0
+        super().__init__(
+            *args,
+            robot_uids=robot_uids,
+            num_envs=num_envs,
+            reconfiguration_freq=reconfiguration_freq,
+            **kwargs,
+        )
 
     @property
     def _default_sim_config(self):

@@ -44,15 +44,15 @@ def sensor_data_to_rgbd(
                         # NOTE (stao): This is a bit of a hack since normally we have generic to_numpy call to convert
                         # internal torch tensors to numpy if we do not use GPU simulation
                         # but torch does not have a uint16 type so we convert that here earlier
-                        if not physx.is_gpu_enabled():
-                            depth_data = depth_data.numpy().astype(np.uint16)
+                        # if not physx.is_gpu_enabled():
+                        #     depth_data = depth_data.numpy().astype(np.uint16)
                         new_images["depth"] = depth_data
                     if segmentation:
                         segmentation_data = ori_images[key][..., [3]]
-                        if not physx.is_gpu_enabled():
-                            segmentation_data = segmentation_data.numpy().astype(
-                                np.uint16
-                            )
+                        # if not physx.is_gpu_enabled():
+                        #     segmentation_data = segmentation_data.numpy().astype(
+                        #         np.uint16
+                        #     )
                         new_images["segmentation"] = segmentation_data  # [H, W, 1]
                 else:
                     new_images[key] = ori_images[key]
@@ -108,8 +108,8 @@ def sensor_data_to_pointcloud(observation: Dict, sensors: Dict[str, BaseSensor])
         pointcloud_obs[key] = torch.concat(value, axis=1)
     observation["pointcloud"] = pointcloud_obs
 
-    if not physx.is_gpu_enabled():
-        observation["pointcloud"]["segmentation"] = (
-            observation["pointcloud"]["segmentation"].numpy().astype(np.uint16)
-        )
+    # if not physx.is_gpu_enabled():
+    #     observation["pointcloud"]["segmentation"] = (
+    #         observation["pointcloud"]["segmentation"].numpy().astype(np.uint16)
+    #     )
     return observation

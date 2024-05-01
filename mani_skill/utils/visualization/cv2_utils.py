@@ -6,7 +6,7 @@ import numpy as np
 import tqdm
 
 
-def images_to_video(
+def images_to_video_cv2(
     images: List[np.ndarray],
     output_dir: str,
     video_name: str,

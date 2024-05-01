@@ -8,6 +8,7 @@ import gymnasium as gym
 import h5py
 import numpy as np
 import sapien.physx as physx
+import torch
 
 from mani_skill import get_commit_info
 from mani_skill.envs.sapien_env import BaseEnv
@@ -274,9 +275,9 @@ class RecordEpisode(gym.Wrapper):
         self._save_video = save_video
         self.info_on_video = info_on_video
         self._render_images = []
-        if info_on_video and physx.is_gpu_enabled():
+        if info_on_video and self.num_envs > 1:
             raise ValueError(
-                "Cannot turn info_on_video=True when using GPU simulation as the text would be too small"
+                "Cannot turn info_on_video=True when the number of environments parallelized is > 1"
             )
         self.video_nrows = int(np.sqrt(self.unwrapped.num_envs))
 
@@ -468,6 +469,9 @@ class RecordEpisode(gym.Wrapper):
 
             if self.info_on_video:
                 scalar_info = gym_utils.extract_scalars_from_info(info)
+                if isinstance(rew, torch.Tensor) and len(rew.shape) > 1:
+                    rew = rew[0]
+                rew = float(common.to_numpy(rew))
                 extra_texts = [
                     f"reward: {rew:.3f}",
                     "action: {}".format(",".join([f"{x:.2f}" for x in action])),
