@@ -1,9 +1,9 @@
 from .control import *
-from .dexterity import RotateSingleObjectInHand, RotateValveEnv
+from .dexterity import *
 from .empty_env import EmptyEnv
-from .fmb import FMBAssembly1Env
+from .fmb import *
 from .humanoid import *
-from .open_cabinet_drawer import OpenCabinetDoorEnv, OpenCabinetDrawerEnv
+from .mobile_manipulation import *
 from .quadruped import *
 from .rotate_cube import RotateCubeEnv
 from .tabletop import *

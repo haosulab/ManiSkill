@@ -36,7 +36,7 @@ Using the D'Claw robot, rotate a [ROBEL valve](https://sites.google.com/view/rob
 :::
 
 
-### RotateCubeLevel0-v1
+### TriFingerRotateCubeLevel0-v1
 ![dense-reward][reward-badge]
 
 (Note there is Level0, Level1, ... to Level4)
