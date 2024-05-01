@@ -47,9 +47,6 @@ class ManiSkillScene:
 
         self.render_system_group: sapien.render.RenderSystemGroup = None
         self.camera_groups: Dict[str, sapien.render.RenderCameraGroup] = dict()
-        self.merge_camera_groups = False
-        """Whether to merge all camera groups instead having one per set of cameras across parallel scenes. Merging them all into one
-        will improve rendering efficiency at the cost of being unable to selectively render from the original groups of cameras"""
 
         self.actors: Dict[str, Actor] = dict()
         self.articulations: Dict[str, Articulation] = dict()
