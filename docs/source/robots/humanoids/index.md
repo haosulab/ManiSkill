@@ -30,11 +30,11 @@ Robot Description: [https://github.com/haosulab/ManiSkill-Stompy](https://github
 
 ## Mujoco Humanoid
 
-```{figure} ../images/unitree_h1.png
+```{figure} ../images/mujoco_humanoid.png
 ```
 
-Robot UID: `unitree_h1`
+Robot UID: `humanoid`
 
-Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/unitree_h1/h1.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/unitree_h1/h1.py)
+Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/humanoid/humanoid.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/humanoid/humanoid.py)
 
-Robot Description: [https://github.com/haosulab/ManiSkill-UnitreeH1](https://github.com/haosulab/ManiSkill-UnitreeH1)
+Robot Description: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/assets/robots/humanoid](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/assets/robots/humanoid)

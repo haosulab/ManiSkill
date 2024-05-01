@@ -5,7 +5,7 @@
 
 ManiSkill features a number of built-in rigid-body tasks, all GPU parallelized and demonstrate a range of features. They are generally categorized into a few categories.
 
-Soft-body tasks will be added back in as they are still in development as part of a new soft-body simulator we are working on. For some categories there are very few tasks and/or no dense rewards. We are in the process of still adding some examples in (and welcome outside contributions on these efforts!)
+Soft-body tasks will be added back in as they are still in development as part of a new soft-body simulator we are working on. For some categories there are very few tasks and/or no dense rewards as this is the beta release. We are in the process of still adding some examples in (and welcome outside contributions on these efforts!)
 
 For each task documented in these sections we provide a "Task Card" which briefly describes all the important aspects of the task, including task description, supported robots, randomizations, success/fail conditions, and goal specification in observations. We further show tags describing whether there are dense rewards provided, and if assets need to be downloaded
 
@@ -27,4 +27,5 @@ quadruped/index
 humanoid/index
 mobile_manipulation/index
 dextrous/index
+digital_twins/index
 ```
