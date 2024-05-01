@@ -59,3 +59,6 @@ def get_commit_info(show_modified_files=False, show_untracked_files=False):
         # https://github.com/gitpython-developers/GitPython/issues/718#issuecomment-360267779
         repo.__del__()
         return commit_info
+
+
+from .envs import *
