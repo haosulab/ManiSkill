@@ -37,7 +37,7 @@ class PickClutterEnv(BaseEnv):
         robot_uids="panda",
         robot_init_qpos_noise=0.02,
         num_envs=1,
-        reconfigure_freq=None,
+        reconfiguration_freq=None,
         episode_json: str = None,
         **kwargs,
     ):
