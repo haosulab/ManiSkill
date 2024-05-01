@@ -37,7 +37,7 @@ class PickClutterEnv(BaseEnv):
         robot_uids="panda",
         robot_init_qpos_noise=0.02,
         num_envs=1,
-        reconfigure_freq=None,
+        reconfiguration_freq=None,
         episode_json: str = None,
         **kwargs,
     ):
@@ -201,7 +201,5 @@ class PickClutterYCBEnv(PickClutterEnv):
     DEFAULT_EPISODE_JSON = f"{ASSET_DIR}/tasks/pick_clutter/ycb_train_5k.json.gz"
 
     def _load_model(self, model_id):
-        builder, _ = actors.build_actor_ycb(
-            model_id, self._scene, name=model_id, return_builder=True
-        )
+        builder = actors.get_actor_builder(self._scene, id=f"ycb:{model_id}")
         return builder
