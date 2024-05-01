@@ -113,6 +113,9 @@ class OpenCabinetDrawerEnv(BaseEnv):
             )
             cabinet_builder.set_scene_idxs(scene_idxs=[i])
             cabinet = cabinet_builder.build(name=f"{model_id}-{i}")
+
+            # this disables self collisions by setting the group 2 bit at CABINET_COLLISION_BIT all the same
+            # that bit is also used to disable collision with the ground plane
             for link in cabinet.links:
                 link.set_collision_group_bit(
                     group=2, bit_idx=CABINET_COLLISION_BIT, bit=1
