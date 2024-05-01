@@ -20,7 +20,7 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
         self.base_env: BaseEnv = env.unwrapped
         super().__init__(env)
         self.rgb_only = rgb_only
-        new_obs = self.observation(common.to_cpu_tensor(self.base_env._init_raw_obs))
+        new_obs = self.observation(self.base_env._init_raw_obs)
         self.base_env.update_obs_space(new_obs)
 
     def observation(self, observation: Dict):

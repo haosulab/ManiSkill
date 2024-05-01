@@ -1,9 +1,11 @@
 import gymnasium as gym
 import numpy as np
 import pytest
+import torch
 
 from mani_skill.agents.multi_agent import MultiAgent
 from mani_skill.envs.sapien_env import BaseEnv
+from mani_skill.utils.wrappers.gymnasium import ManiSkillCPUGymWrapper
 from tests.utils import (
     CONTROL_MODES_STATIONARY_SINGLE_ARM,
     ENV_IDS,
@@ -31,8 +33,10 @@ def test_all_envs(env_id):
 @pytest.mark.parametrize("obs_mode", OBS_MODES)
 def test_envs_obs_modes(env_id, obs_mode):
     env = gym.make(env_id, obs_mode=obs_mode)
+    env = ManiSkillCPUGymWrapper(env)
     obs, _ = env.reset()
-    assert_isinstance(obs, np.ndarray)
+    assert_isinstance(obs, [np.ndarray, bool, float, int])
+
     action_space = env.action_space
     for _ in range(5):
         obs, rew, terminated, truncated, info = env.step(action_space.sample())
@@ -45,9 +49,9 @@ def test_envs_obs_modes(env_id, obs_mode):
         for cam in obs["sensor_data"].keys():
             assert obs["sensor_data"][cam]["rgb"].shape == (128, 128, 3)
             assert obs["sensor_data"][cam]["depth"].shape == (128, 128, 1)
-            assert obs["sensor_data"][cam]["depth"].dtype == np.uint16
+            assert obs["sensor_data"][cam]["depth"].dtype == np.int16
             assert obs["sensor_data"][cam]["segmentation"].shape == (128, 128, 1)
-            assert obs["sensor_data"][cam]["segmentation"].dtype == np.uint16
+            assert obs["sensor_data"][cam]["segmentation"].dtype == np.int16
             assert obs["sensor_param"][cam]["extrinsic_cv"].shape == (3, 4)
             assert obs["sensor_param"][cam]["intrinsic_cv"].shape == (3, 3)
             assert obs["sensor_param"][cam]["cam2world_gl"].shape == (4, 4)
@@ -56,7 +60,42 @@ def test_envs_obs_modes(env_id, obs_mode):
         assert obs["pointcloud"]["xyzw"].shape == (num_pts, 4)
         assert obs["pointcloud"]["rgb"].shape == (num_pts, 3)
         assert obs["pointcloud"]["segmentation"].shape == (num_pts, 1)
-        assert obs["pointcloud"]["segmentation"].dtype == np.uint16
+        assert obs["pointcloud"]["segmentation"].dtype == np.int16
+    env.close()
+    del env
+
+
+@pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS)
+@pytest.mark.parametrize("obs_mode", OBS_MODES)
+def test_envs_obs_modes_without_cpu_gym_wrapper(env_id, obs_mode):
+    env = gym.make(env_id, obs_mode=obs_mode)
+    obs, _ = env.reset()
+    assert_isinstance(obs, torch.Tensor)
+
+    action_space = env.action_space
+    for _ in range(5):
+        obs, rew, terminated, truncated, info = env.step(action_space.sample())
+    assert_isinstance(obs, [torch.Tensor])
+    assert_isinstance(rew, torch.Tensor)
+    assert_isinstance(terminated, torch.Tensor)
+    assert_isinstance(truncated, torch.Tensor)
+    assert_isinstance(info, torch.Tensor)
+    if obs_mode == "rgbd":
+        for cam in obs["sensor_data"].keys():
+            assert obs["sensor_data"][cam]["rgb"].shape == (1, 128, 128, 3)
+            assert obs["sensor_data"][cam]["depth"].shape == (1, 128, 128, 1)
+            assert obs["sensor_data"][cam]["depth"].dtype == torch.int16
+            assert obs["sensor_data"][cam]["segmentation"].shape == (1, 128, 128, 1)
+            assert obs["sensor_data"][cam]["segmentation"].dtype == torch.int16
+            assert obs["sensor_param"][cam]["extrinsic_cv"].shape == (1, 3, 4)
+            assert obs["sensor_param"][cam]["intrinsic_cv"].shape == (1, 3, 3)
+            assert obs["sensor_param"][cam]["cam2world_gl"].shape == (1, 4, 4)
+    elif obs_mode == "pointcloud":
+        num_pts = len(obs["pointcloud"]["xyzw"][0])
+        assert obs["pointcloud"]["xyzw"].shape == (1, num_pts, 4)
+        assert obs["pointcloud"]["rgb"].shape == (1, num_pts, 3)
+        assert obs["pointcloud"]["segmentation"].shape == (1, num_pts, 1)
+        assert obs["pointcloud"]["segmentation"].dtype == torch.int16
     env.close()
     del env
 
