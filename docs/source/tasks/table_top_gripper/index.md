@@ -3,6 +3,8 @@
 [asset-badge]: https://img.shields.io/badge/download%20asset-yes-blue.svg
 [reward-badge]: https://img.shields.io/badge/dense%20reward-yes-green.svg
 
+These are tasks situated on table and involve a two-finger gripper arm robot manipulating objects on the surface.
+
 ## PickCube-v1
 ![dense-reward][reward-badge]
 
