@@ -20,7 +20,7 @@ from mani_skill.utils.registration import register_env
 from mani_skill.utils.structs import Articulation, Link, Pose
 from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 
-
+CABINET_COLLISION_BIT = 29
 # TODO (stao): we need to cut the meshes of all the cabinets in this dataset for gpu sim, there may be some wierd physics
 # that may happen although it seems okay for state based RL
 @register_env("OpenCabinetDrawer-v1", max_episode_steps=100)
@@ -88,15 +88,12 @@ class OpenCabinetDrawerEnv(BaseEnv):
 
         from mani_skill.agents.robots.fetch import FETCH_UNIQUE_COLLISION_BIT
 
-        # TODO (stao) (arth): is there a better way to model robots in sim. This feels very unintuitive.
-        for obj in self.ground._objs:
-            for cs in obj.find_component_by_type(
-                sapien.physx.PhysxRigidStaticComponent
-            ).get_collision_shapes():
-                cg = cs.get_collision_groups()
-                cg[2] |= FETCH_UNIQUE_COLLISION_BIT
-                cg[2] |= 1 << 29  # make ground ignore collisions with the cabinets
-                cs.set_collision_groups(cg)
+        self.ground.set_collision_group_bit(
+            group=2, bit_idx=FETCH_UNIQUE_COLLISION_BIT, bit=1
+        )
+        self.ground.set_collision_group_bit(
+            group=2, bit_idx=CABINET_COLLISION_BIT, bit=1
+        )
 
     def _load_cabinets(self, joint_types: List[str]):
         rand_idx = self._episode_rng.permutation(np.arange(0, len(self.all_model_ids)))
@@ -116,6 +113,10 @@ class OpenCabinetDrawerEnv(BaseEnv):
             )
             cabinet_builder.set_scene_idxs(scene_idxs=[i])
             cabinet = cabinet_builder.build(name=f"{model_id}-{i}")
+            for link in cabinet.links:
+                link.set_collision_group_bit(
+                    group=2, bit_idx=CABINET_COLLISION_BIT, bit=1
+                )
             self._cabinets.append(cabinet)
             handle_links.append([])
             handle_links_meshes.append([])

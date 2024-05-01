@@ -369,7 +369,9 @@ class Fetch(BaseAgent):
         self.l_wheel_link: Link = self.robot.links_map["l_wheel_link"]
         self.r_wheel_link: Link = self.robot.links_map["r_wheel_link"]
         for link in [self.l_wheel_link, self.r_wheel_link]:
-            link.set_collision_group_bit(group=2, bit_idx=30, bit=1)
+            link.set_collision_group_bit(
+                group=2, bit_idx=FETCH_UNIQUE_COLLISION_BIT, bit=1
+            )
 
         self.torso_lift_link: Link = sapien_utils.get_obj_by_name(
             self.robot.get_links(), "torso_lift_link"
