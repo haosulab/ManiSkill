@@ -5,16 +5,16 @@ import trimesh
 from tqdm import tqdm
 from transforms3d.euler import euler2quat
 
-from mani_skill.envs.assembly.plug_charger import PlugChargerEnv
-from mani_skill.examples.motionplanning.motionplanner import \
+from mani_skill.envs.tasks import PlugChargerEnv
+from mani_skill.examples.motionplanning.panda.motionplanner import \
     PandaArmMotionPlanningSolver
-from mani_skill.examples.motionplanning.utils import (
+from mani_skill.examples.motionplanning.panda.utils import (
     compute_grasp_info_by_obb, get_actor_obb)
 
 
 def main():
     env: PlugChargerEnv = gym.make(
-        "PlugCharger-v0",
+        "PlugCharger-v1",
         obs_mode="none",
         control_mode="pd_joint_pos",
         render_mode="rgb_array",
@@ -38,7 +38,7 @@ def solve(env: PlugChargerEnv, seed=None, debug=False, vis=False):
         debug=debug,
         vis=vis,
         base_pose=env.unwrapped.agent.robot.pose,
-        visualize_target_grasp_pose=vis,
+        visualize_target_grasp_pose=False,
         print_env_info=False,
         joint_vel_limits=0.5,
         joint_acc_limits=0.5,
@@ -51,11 +51,11 @@ def solve(env: PlugChargerEnv, seed=None, debug=False, vis=False):
 
     obb = trimesh.primitives.Box(
         extents=charger_base_size,
-        transform=charger_base_pose.to_transformation_matrix(),
+        transform=charger_base_pose.sp.to_transformation_matrix(),
     )
 
     approaching = np.array([0, 0, -1])
-    target_closing = env.agent.tcp.entity_pose.to_transformation_matrix()[:3, 1]
+    target_closing = env.agent.tcp.pose.sp.to_transformation_matrix()[:3, 1]
     grasp_info = compute_grasp_info_by_obb(
         obb,
         approaching=approaching,
@@ -85,12 +85,12 @@ def solve(env: PlugChargerEnv, seed=None, debug=False, vis=False):
     # Align
     # -------------------------------------------------------------------------- #
     pre_insert_pose = (
-        env.goal_pose
+        env.goal_pose.sp
         * sapien.Pose([-0.05, 0.0, 0.0])
-        * env.charger.pose.inv()
-        * env.agent.tcp.entity_pose
+        * env.charger.pose.sp.inv()
+        * env.agent.tcp.pose.sp
     )
-    insert_pose = env.goal_pose * env.charger.pose.inv() * env.agent.tcp.entity_pose
+    insert_pose = env.goal_pose.sp * env.charger.pose.sp.inv() * env.agent.tcp.pose.sp
     planner.move_to_pose_with_screw(pre_insert_pose, refine_steps=0)
     planner.move_to_pose_with_screw(pre_insert_pose, refine_steps=5)
     # -------------------------------------------------------------------------- #

@@ -35,6 +35,7 @@ def solve(env: PegInsertionSideEnv, seed=None, debug=False, vis=False):
         debug=debug,
         vis=vis,
         base_pose=env.unwrapped.agent.robot.pose,
+        visualize_target_grasp_pose=vis,
         print_env_info=False,
         joint_vel_limits=0.5,
         joint_acc_limits=0.5,

@@ -34,6 +34,30 @@ A simple task where the objective is to grasp a red cube and move it to a target
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PickCube-v1_rt.mp4" type="video/mp4">
 </video>
 
+## PlugCharger-v1
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+The robot must pick up one of the misplaced shapes on the board/kit and insert it into the correct empty slot.
+
+**Supported Robots: Panda with RealSense wrist camera**
+
+**Randomizations:**
+- The charger position is randomized on the XY plane on top of the table. The rotation is also randomized
+- The receptacle position is randomized on the XY plane and the rotation is also randomized. Note that the human render camera has its pose
+fixed relative to the receptacle.
+
+**Success Conditions:**
+- The charger is inserted into the receptacle
+:::
+
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PlugCharger-v1_rt.mp4" type="video/mp4">
+</video>
+
 ## StackCube-v1
 ![dense-reward][reward-badge]
 :::{dropdown} Task Card
@@ -208,3 +232,4 @@ The robot must pick up one of the misplaced shapes on the board/kit and insert i
 <video preload="auto" controls="True" width="100%">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/AssemblingKits-v1_rt.mp4" type="video/mp4">
 </video>
+
