@@ -223,7 +223,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
         for body in self._bodies:
             for cs in body.get_collision_shapes():
                 cg = cs.get_collision_groups()
-                cg[group] |= bit_idx << bit
+                cg[group] |= bit << bit_idx
                 cs.set_collision_groups(cg)
 
     def get_first_collision_mesh(self, to_world_frame: bool = True) -> trimesh.Trimesh:

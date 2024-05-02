@@ -174,6 +174,7 @@ class PickSingleYCBEnv(BaseEnv):
             obj_to_goal_pos=obj_to_goal_pos,
             is_obj_placed=is_obj_placed,
             is_robot_static=is_robot_static,
+            is_grasping=self.agent.is_grasping(self.obj),
             success=torch.logical_and(is_obj_placed, is_robot_static),
         )
 

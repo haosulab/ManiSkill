@@ -73,6 +73,18 @@ At the moment, the following are not supported:
 
 These may be supported in the future so stay tuned for updates.
 
+#### Robot Loading Options
+
+Some robots need additional configuration to be loaded e.g. quadrupeds. For Quadrupeds, we need to ensure the root link is not fixed so the robot body can freely move around. For the AnymalC robot this was done by doing
+
+```python
+class ANYmalC(BaseAgent):
+    # ...
+    fix_root_link = False
+```
+
+You can also automatically disable all self collisions of the robot by adding `disable_self_collisions = True` although this is not recommended. If you want to disable self collisions to improve simulation speed, we recommend instead simplifying the collision meshes, see [this section](#simplified-collision-meshes) for what it looks like.
+
 #### Testing the loaded URDF/MJCF
 
 We recommend you create a simple test script `test.py` that imports your new robot and leverages the existing demo robot script. While not required it may be helpful to read the [demo robot script](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/examples/demo_robot.py) in order to get more familiarity with using ManiSkill. In `test.py` write
@@ -131,10 +143,11 @@ class ANYmalC(BaseAgent):
 
 The keyframe can also specify `qvel` values as well. Using that keyframe you can set the robot to the given pose, qpos, qvel and you can get the desired predefined keyframe
 
-Running the script again should have correctly loaded poses and joint positions. The script by default picks the first keyframe defined. You can add more and select them shown below.
+Running the script again should have correctly loaded poses and joint positions. The script by default picks the first keyframe defined. You can add more and select them shown below. You may also want to check if it is working on the GPU simulation as well
 
 ```bash
 python test.py -r "my_panda"
+python test.py -r "my_panda" -b "gpu" # use gpu simulation
 python test.py -r "my_panda" -k "name_of_keyframe_to_show"
 ```
 
@@ -237,10 +250,25 @@ class MyPanda(BaseAgent):
 
 We defined two controllers to control the arm joints and one for the gripper. Using a dictionary, you can define multiple control modes that interchangeably use different controllers of the joints. Above we defined a `pd_joint_delta_pos` and a `pd_joint_pos` controller which switch just the controller of the arm joints.
 
+Note that by default we automatically balance passive forces (gravity) for controlling. This behavior is not desirable for robots where the root is not fixed like Quadrupeds or humanoids. To disable that simply add `balance_passive_force=False` to the controller dict.
+
+```python
+controller_configs = dict(
+    pd_joint_delta_pos=dict(
+        arm=arm_pd_joint_delta_pos, gripper=gripper_pd_joint_pos, 
+        balance_passive_force=False
+    ),
+    # ...
+)
+# ...
+```
+
+
 To try this out, simply run the following and unpause the simulation when you are ready (pause button at the top left)
 
 ```bash
 python -m test.py -r "my_panda" -c "pd_joint_delta_pos" --random-actions
+python -m test.py -r "my_panda" -c "pd_joint_delta_pos" -b "gpu" --random-actions
 ```
 
 <video preload="auto" controls="True" width="100%">
@@ -253,6 +281,7 @@ You can also test the stability of the robot you modelled by trying and set all 
 
 ```bash
 python -m test.py -r "my_panda" -c "pd_joint_pos" --keyframe-actions
+python -m test.py -r "my_panda" -c "pd_joint_pos" -b "gpu" --keyframe-actions
 ```
 
 If the robot is staying still in the given keyframe, it is working well.
@@ -360,7 +389,7 @@ See the [sim configuration definition](https://github.com/haosulab/ManiSkill/tre
 
 #### Condensed Robot Descriptions (WIP)
 
-(WIP)
+Simulating robots can be much faster when the number of joints and links are smaller. Many robot URDFs out there often have a ton of useless joints/links that are fixed and arise due to how people export URDFs. We are still writing a tool that tries to automatically "compress" URDF files to get rid of the useless joints/links and merge them where possible.
 
 
 ### Mobile Bases

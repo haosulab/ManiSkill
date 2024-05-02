@@ -1,14 +1,14 @@
 # ManiSkill Tutorials
 
 
-TODO: These are a WIP for ManiSkill 3, the old tutorials will be added back when they are refactored.
-<!-- This folder contains some simple tutorials (notebooks and single-file implementations) for how to use and customize ManiSkill, leverage fast vectorized environments, as well as train agents with Reinforcement Learning and Imitation Learning. These notebooks all designed to run both on Google Colab as well as locally. We have made the Colab examples fast enough to run under ~30 minutes even with visual observations and Colab resources. We recommend running the notebooks/tutorials locally if you have a more powerful GPU and CPU as Colab can be quite slow (they provide a low-end GPU and only 2 CPU cores).
+This folder contains some simple tutorials (notebooks and single-file implementations) for how to use and customize ManiSkill, leverage fast vectorized environments, as well as train agents with Reinforcement Learning and Imitation Learning. These notebooks all designed to run both on Google Colab as well as locally.
 
-The learning tutorials use PyTorch and Stable Baselines 3 but ManiSkill can easily work with other frameworks as well. 
+Quick-Start + Feature Show Case: https://colab.research.google.com/github/haosulab/ManiSkill/blob/main/examples/tutorials/1_quickstart.ipynb
+- Covers all the core features of ManiSkill
+- Has some RL examples for training state-based and visual-based policies very quickly
 
-Getting Started: https://colab.research.google.com/github/haosulab/ManiSkill/blob/main/examples/tutorials/1_quickstart.ipynb
 
-Reinforcement Learning:
+<!-- Reinforcement Learning:
  - Notebook https://colab.research.google.com/github/haosulab/ManiSkill/blob/main/examples/tutorials/2_reinforcement_learning.ipynb
  - Single-file implementations: https://github.com/haosulab/ManiSkill/tree/main/examples/tutorials/reinforcement-learning
 
