@@ -1,6 +1,6 @@
-# Custom Tasks (Advanced Features)
+# Advanced Features
 
-This page covers nearly every feature useful for task building in ManiSkill. If you haven't already it is recommended to get a better understanding of how GPU simulation generally works described on [this page](../concepts/gpu_simulation.md). It can provide some good context for various terminology and ideas presented in this advanced features tutorial.
+This page covers nearly every feature useful for task building in ManiSkill. If you haven't already it is recommended to get a better understanding of how GPU simulation generally works described on [this page](../../concepts/gpu_simulation.md). It can provide some good context for various terminology and ideas presented in this advanced features tutorial.
 
 ## Custom/Extra State
 
@@ -31,7 +31,7 @@ You may notice that in some tasks like [PickCube-v1](https://github.com/haosulab
 
 
 #### On the CPU
-If you have an two `Actor` or `Link` class objects, call them `x1, x2`, in a `ManiSkillScene` (accessible in custom tasks via `self._scene`), you can generate the contact force between them via
+If you have an two `Actor` or `Link` class objects, call them `x1, x2`, in a `ManiSkillScene` (accessible in custom tasks via `self.scene`), you can generate the contact force between them via
 
 ```python
 from mani_skill.utils import sapien_utils
@@ -85,7 +85,7 @@ class MyCustomTask(BaseEnv):
         # ... sample a list of YCB object IDs
         for i, model_id in enumerate(model_ids):
             builder, obj_height = build_actor_ycb(
-                model_id, self._scene, name=model_id, return_builder=True
+                model_id, self.scene, name=model_id, return_builder=True
             )
             builder.set_scene_idxs([i]) # spawn only in sub-scene i
             actors.append(builder.build(name=f"{model_id}-{i}"))
@@ -270,14 +270,14 @@ class MyCustomTask(BaseEnv):
 Mounted cameras will generally be a little slower than static cameras unless you disable computing camera parameters. Camera parameters cannot be cached as e.g. the extrinsics constantly can change
 :::
 
-Mounted cameras also allow for some easy camera pose domain randomization [detailed further here](./domain_randomization.md#during-episode-initialization--resets). Cameras do not necessarily need to be mounted on standard objects, they can also be mounted onto "empty" actors that have no visual or collision shapes that you can create like so
+Mounted cameras also allow for some easy camera pose domain randomization [detailed further here](../domain_randomization.md#during-episode-initialization--resets). Cameras do not necessarily need to be mounted on standard objects, they can also be mounted onto "empty" actors that have no visual or collision shapes that you can create like so
 
 ```python
 class MyCustomTask(BaseEnv):
     # ...
     def _load_scene(self, options: dict):
         # ... your loading code
-        self.cam_mount = self._scene.create_actor_builder().build_kinematic("camera_mount")
+        self.cam_mount = self.scene.create_actor_builder().build_kinematic("camera_mount")
 ```
 
 `self.cam_mount` has it's own pose data and if changed the camera will move with it.
@@ -304,13 +304,13 @@ class MyCustomTask(BaseEnv):
 
 In general it is not recommended to modify simulation state (e.g. setting an object pose) outside of the `_load_scene` function (called by reconfigure) or episode initialization in `_initialize_episode`. The reason is this can lead to sub-optimal task code that may make your task run slower than expected as in GPU simulation generally setting (and fetching) states takes some time. If you are only doing CPU simulation then this is generally fine and not slow at all.
 
-Regardless there are some use cases to do so (e.g. change mounted camera pose every single timestep to a desired location). In such cases, you must make sure you call `self._scene.gpu_apply_all()` after all of your state setting code runs during GPU simulation. This applies the changes you make to sim state and ensures it persists to the next environment time step.
+Regardless there are some use cases to do so (e.g. change mounted camera pose every single timestep to a desired location). In such cases, you must make sure you call `self.scene.gpu_apply_all()` after all of your state setting code runs during GPU simulation. This applies the changes you make to sim state and ensures it persists to the next environment time step.
 
-Moreover, if you need access to up to date data in GPU simulation, you should call `self._scene.gpu_fetch_all()` before reading any data like object pose. If you need up to date link pose data, you need to call `self._scene.px.gpu_update_articulation_kinematics()` before calling `self._scene.gpu_fetch_all()`.
+Moreover, if you need access to up to date data in GPU simulation, you should call `self.scene.gpu_fetch_all()` before reading any data like object pose. If you need up to date link pose data, you need to call `self.scene.px.gpu_update_articulation_kinematics()` before calling `self.scene.gpu_fetch_all()`.
 
 :::{note} As we are constantly working to improve simulation speed and quality
-it is possible the behavior of `self._scene.gpu_fetch_all()` may change in the future. If you want to call functions without worrying about 
-changes you should use the original SAPIEN API for GPU data which is exposed via `self._scene.px` and gives more fine grained control about
+it is possible the behavior of `self.scene.gpu_fetch_all()` may change in the future. If you want to call functions without worrying about 
+changes you should use the original SAPIEN API for GPU data which is exposed via `self.scene.px` and gives more fine grained control about
 what GPU data to fetch (which is more efficient than fetching all of it)
 :::
 

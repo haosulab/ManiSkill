@@ -27,7 +27,7 @@ class BaseStruct(Generic[T]):
     """list of objects of type T managed by this dataclass"""
     _scene_idxs: torch.Tensor
     """a list of indexes parallel to `self._objs` indicating which sub-scene each of those objects are actually in by index"""
-    _scene: ManiSkillScene
+    scene: ManiSkillScene
     """The ManiSkillScene object that manages the sub-scenes this dataclasses's objects are in"""
 
     def __post_init__(self):
@@ -54,7 +54,7 @@ class BaseStruct(Generic[T]):
     @property
     def px(self):
         """The physx system objects managed by this dataclass are working on"""
-        return self._scene.px
+        return self.scene.px
 
 
 @dataclass
@@ -89,7 +89,7 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
     @property
     def px(self):
         """The physx system objects managed by this dataclass are working on"""
-        return self._scene.px
+        return self.scene.px
 
     @cached_property
     def _body_data_index(self):
@@ -114,7 +114,7 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
             # NOTE (stao): physx5 calls the output forces but they are actually impulses
             return (
                 self._body_force_query.cuda_impulses.torch().clone()
-                / self._scene.timestep
+                / self.scene.timestep
             )
         else:
             body_contacts = sapien_utils.get_actor_contacts(
@@ -122,7 +122,7 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
             )
             net_force = (
                 common.to_tensor(sapien_utils.compute_total_impulse(body_contacts))
-                / self._scene.timestep
+                / self.scene.timestep
             )
             return net_force[None, :]
 
@@ -326,7 +326,7 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
         if physx.is_gpu_enabled():
             arg1 = common.to_tensor(arg1)
             self._body_data[
-                self._body_data_index[self._scene._reset_mask[self._scene_idxs]], 10:13
+                self._body_data_index[self.scene._reset_mask[self._scene_idxs]], 10:13
             ] = arg1
         else:
             arg1 = common.to_numpy(arg1)
@@ -394,7 +394,7 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
         if physx.is_gpu_enabled():
             arg1 = common.to_tensor(arg1)
             self._body_data[
-                self._body_data_index[self._scene._reset_mask[self._scene_idxs]], 7:10
+                self._body_data_index[self.scene._reset_mask[self._scene_idxs]], 7:10
             ] = arg1
         else:
             arg1 = common.to_numpy(arg1)

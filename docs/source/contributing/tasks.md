@@ -2,7 +2,7 @@
 
 ManiSkill is both an API as well as a source of high-quality simulated tasks in robotics. We encourage users to build off the ManiSkill API in their own codebases using our flexible API for CPU/GPU simulation. The documentation on how to use the ManiSkill API to do so is here: https://maniskill.readthedocs.io/en/latest/user_guide/tutorials/custom_tasks.html
 
-For those who want to maintain a high standard for task building in addition to contributing official tasks to ManiSkill, we require the following
+For those who want to maintain a high standard for task building in addition to contributing official tasks to ManiSkill, we recommend the following
 - Proper labelling of which robots/agents are supported
 - Good use of typing when possible
 - Documentation on what the task is, reset distribution/task randomizations, etc. 

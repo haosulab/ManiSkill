@@ -41,7 +41,7 @@ class SceneBuilder:
 
     @property
     def scene(self):
-        return self.env._scene
+        return self.env.scene
 
     @property
     def scene_objects(self) -> List[Actor]:

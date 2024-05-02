@@ -81,16 +81,16 @@ class TwoRobotStackCube(BaseEnv):
         )
         self.table_scene.build()
         self.cubeA = actors.build_cube(
-            self._scene,
+            self.scene,
             half_size=0.02,
             color=np.array([12, 42, 160, 255]) / 255,
             name="cubeA",
         )
         self.cubeB = actors.build_cube(
-            self._scene, half_size=0.02, color=[0, 1, 0, 1], name="cubeB"
+            self.scene, half_size=0.02, color=[0, 1, 0, 1], name="cubeB"
         )
         self.goal_region = actors.build_red_white_target(
-            self._scene,
+            self.scene,
             radius=self.goal_radius,
             thickness=1e-5,
             name="goal_region",

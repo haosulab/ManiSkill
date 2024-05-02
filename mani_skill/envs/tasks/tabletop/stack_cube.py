@@ -41,10 +41,10 @@ class StackCubeEnv(BaseEnv):
         )
         self.table_scene.build()
         self.cubeA = actors.build_cube(
-            self._scene, half_size=0.02, color=[1, 0, 0, 1], name="cubeA"
+            self.scene, half_size=0.02, color=[1, 0, 0, 1], name="cubeA"
         )
         self.cubeB = actors.build_cube(
-            self._scene, half_size=0.02, color=[0, 1, 0, 1], name="cubeB"
+            self.scene, half_size=0.02, color=[0, 1, 0, 1], name="cubeB"
         )
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):

@@ -18,20 +18,23 @@ SAPIEN permits sub-scenes to be located at any location you want, ManiSkill just
 
 In ManiSkill, the gym API is adopted to create, reset, and step through environments.
 
-The reset part consists of one time reconfiguration followed by initialization:
+The `env.reset` part consists of one time reconfiguration followed by initialization:
 
 1. Reconfiguration: Loading objects (comrpised of actors/articulations/lights) into the scene (basically spawning them in with an initial pose and not doing anything else)
 2. A call to `physx_system.gpu_init()` to initialize all GPU memory buffers and setting up all the rendering groups for parallelized rendering
 3. Initializing all actors and articulations (set poses, qpos values etc.).
-4. Running `gpu_apply_*` to then save all the initialized data in step 3 to the GPU buffers to prepare for simulation
-5. Run `physx_system.gpu_fetch_*` to update relevant GPU buffers and generate observation data out of that
+4. Running `physx_system.gpu_apply_*` to then save all the initialized data in step 3 to the GPU buffers to prepare for simulation
+5. Run `physx_system.gpu_update_articulation_kinematics()` to update any articulation data (e.g., link poses) to prepare for fetching 
+6. Run `physx_system.gpu_fetch_*` to update relevant GPU buffers and generate observation data out of that
+
+In code we save the `physx_system` variable to `env.scene.px`
 
 :::{figure} ../tutorials/images/env_create_env_reset_flow.png 
 :::
 
-The step part consists of a repeated flow of taking in actions and generating output for env.step 
+The `env.step` part consists of a repeated flow of taking in actions and generating output for env.step 
 
-1. Get user's action and clip it
+1. Get user's action (and potentially clip it)
 2. Process the action and turn it into target joint position/velocity control signals to control agents
 3. Run `physx_system.gpu_apply_articulation_target_position` and `physx_syste.gpu_apply_articulation_target_velocity` to apply the targets from step 2.
 4. Run `physx_system.step()` multiple times to step through the simulation
@@ -51,7 +54,7 @@ Rigid body data (which includes pose (7D), linear velocity (3D), and angular vel
 
 Users who plan to work with the GPU buffers directly may find this useful to understand, otherwise if you just use the exposed APIs given by ManiSkill shown in the tutorials this is all handled for you.
 
-Notably this GPU buffer is not guaranteed to follow any intuitive sense of organization (e.g. every k rows holds data for one sub-scene) which is the tradeoff for getting better performance. But in any case this example shows the organization of data when the physx scene has 3 rigid body actors in red and 3 articulations with varying number of links / degrees of freedom (DOF) in green. SAPIEN will pad the number of rows allocated per articulation to be the highest DOF in the entire physx scene.
+Notably this GPU buffer is not guaranteed to follow any intuitive sense of organization (e.g. every k rows holds data for one sub-scene) which is the tradeoff for getting better performance. But in any case this example shows the organization of data when the physx scene has 3 rigid body actors in <span style="color:red">red</span> and 3 articulations with varying number of links / degrees of freedom (DOF) in <span style="color:green">green</span>. SAPIEN will pad the number of rows allocated per articulation to be the highest DOF in the entire physx scene.
 
 ## ManiSkill Design Principles
 
@@ -61,12 +64,12 @@ ManiSkill aims to support both CPU and GPU parallelization schemes for paralleli
 
 ### Managed Objects and Views
 
-ManiSkill can be seen as a pythonic interface over SAPIEN, the underlying system. SAPIEN seeks to be minimal, flexible, and fast. ManiSkill is more managed and provides tools to use SAPIEN easily. A common example of this is that many objects in SAPIEN have equivalents in ManiSkill that simply wrap around the SAPIEN objects, most of which can be found in the `mani_skill.utils.structs` module
+ManiSkill can be seen as a pythonic interface over SAPIEN, the underlying system. SAPIEN seeks to be minimal, flexible, and fast. ManiSkill is more managed and provides tools to use SAPIEN easily for various workflows particularly in machine learning. A common example of this is that many objects in SAPIEN have equivalents in ManiSkill that simply wrap around the SAPIEN objects, most of which can be found in the [`mani_skill.utils.structs` module](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/utils/structs)
 
-The `Actor` class for example wraps around `sapien.Entity` objects that correspond to actual objects spawned in the simulator in each sub-scene, and allows easy access to otherwise highly compact/optimized GPU buffers that SAPIEN exposes to then fetch batched data like pose, velocities, pairwise contact forces etc.
+The [`Actor`](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/utils/structs/actor.py) class for example wraps around `sapien.Entity` objects that correspond to actual objects spawned in the simulator in each sub-scene, and allows easy access to otherwise highly compact/optimized GPU buffers that SAPIEN exposes to then fetch batched data like pose, velocities, pairwise contact forces etc.
 
-Similarly, the `Pose` class itself is a wrapper around the common `sapien.Pose` object and is effectively a batched version of that.
+Similarly, the [`Pose`](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/utils/structs/pose.py) class itself is a wrapper around the common `sapien.Pose` object and is effectively a batched version of that.
 
 Another way to view these wrappers is to see that these wrappers are alternative **views** of otherwise the same data the raw GPU buffers expose. By understanding this perspective, it becomes easier to think about building tasks where you are simulating very different sub-scenes with different articulations that have different degrees of freedoms and different numbers of objects.
 
-The functions `Actor.merge` and `Articulation.merge` enable reshaping the view you have over the GPU buffers so that you can e.g. get the poses of a different objects in different parallel sub-scenes. You are no longer restricted to fetching data of just the same geometries and being forced to write complicated for loops to figure out what indices on the GPU buffer correspond with what you want. 
+The functions `Actor.merge`, `Articulation.merge`, and `Link.merge` enable reshaping the view you have over the GPU buffers so that you can e.g. get the poses of a different objects in different parallel sub-scenes. You are no longer restricted to fetching data of just the same geometries and being forced to write complicated for loops / indexing code to figure out what indices on the GPU buffer correspond with what you want. 

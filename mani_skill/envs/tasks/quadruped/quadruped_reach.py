@@ -68,9 +68,9 @@ class QuadrupedReachEnv(BaseEnv):
         ]
 
     def _load_scene(self, options: dict):
-        self.ground = build_ground(self._scene)
+        self.ground = build_ground(self.scene)
         self.goal = actors.build_sphere(
-            self._scene,
+            self.scene,
             radius=0.2,
             color=[0, 1, 0, 1],
             name="goal",

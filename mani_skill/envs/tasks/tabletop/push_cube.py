@@ -110,7 +110,7 @@ class PushCubeEnv(BaseEnv):
         # we then add the cube that we want to push and give it a color and size using a convenience build_cube function
         # we specify the body_type to be "dynamic" as it should be able to move when touched by other objects / the robot
         self.obj = actors.build_cube(
-            self._scene,
+            self.scene,
             half_size=self.cube_half_size,
             color=np.array([12, 42, 160, 255]) / 255,
             name="cube",
@@ -121,7 +121,7 @@ class PushCubeEnv(BaseEnv):
         # we specify add_collisions=False as we only use this as a visual for videos and do not want it to affect the actual physics
         # we finally specify the body_type to be "kinematic" so that the object stays in place
         self.goal_region = actors.build_red_white_target(
-            self._scene,
+            self.scene,
             radius=self.goal_radius,
             thickness=1e-5,
             name="goal_region",

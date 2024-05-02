@@ -96,7 +96,7 @@ class SceneManipulationEnv(BaseEnv):
 
     def _load_scene(self, options: dict):
         self.scene_builder.build(
-            self._scene,
+            self.scene,
             scene_idx=self.sampled_scene_idx,
             convex_decomposition=self.convex_decomposition,
         )

@@ -1,6 +1,6 @@
 # Domain Randomization
 
-One of the benefits of simulation is the ability to chop and change a number of aspects that would otherwise be expensive or time-consuming to do in the real world. This documents demonstrates a number of simple tools for randomization from texture randomization to camera pose randomizations.
+One of the benefits of simulation is the ability to chop and change a number of aspects that would otherwise be expensive or time-consuming to do in the real world. This documents demonstrates a number of simple tools for randomization. In the beta release we currently only have a tutorial on how to do camera randomization.
 
 ## Camera Randomization
 
@@ -14,6 +14,7 @@ Simply providing batched data to the CameraConfigs of your sensors as done below
 import torch
 from mani_skill.envs.utils import randomization
 from mani_skill.utils import sapien_utils
+
 class MyCustomTask(BaseEnv):
     # ...
     @property
@@ -29,13 +30,28 @@ class MyCustomTask(BaseEnv):
         return [CameraConfig("base_camera", pose=pose, width=128, height=128, fov=np.pi / 2, near=0.01, far=100)]
 ```
 
+To verify it works you can run the test script here
+
+:::{dropdown} Test Script
+```python
+from mani_skill.utils.wrappers import RecordEpisode
+from your_env_code import MyCustomTask
+env = MyCustomTask(num_envs=16, render_mode="sensors")
+env = RecordEpisode(env, "./videos", save_trajectory=False)
+env.reset(seed=0)
+for _ in range(10):
+    env.step(env.action_space.sample())
+env.close()
+```
+:::
+
 It will generate the following result (for 16 parallel environments) on e.g. the PickCube-v1 task:
 
 :::{figure} images/camera_domain_randomization.png
 :::
 
 
-Note that this method of randomization only randomizes during task reconfiguration, not during each episode reset (which calls `_initialize_episode`). In GPU simulation with enough parallel environments it shouldn't matter too much if you never reconfigure again, but if you wish you can set a `reconfiguration_freq` value documented [here](./custom_tasks.md#reconfiguring-and-optimization)
+Note that this method of randomization only randomizes during task reconfiguration, not during each episode reset (which calls `_initialize_episode`). In GPU simulation with enough parallel environments it shouldn't matter too much if you never reconfigure again, but if you wish you can set a `reconfiguration_freq` value documented [here](./custom_tasks/loading_objects.md#reconfiguring-and-optimization)
 
 ### During Episode Initialization / Resets
 
@@ -44,7 +60,7 @@ Cameras when created cannot have their configurations modified after reconfigura
 ```python
 def _load_scene(self, options: dict):
     # ... your loading code
-    self.cam_mount = self._scene.create_actor_builder().build_kinematic("camera_mount")
+    self.cam_mount = self.scene.create_actor_builder().build_kinematic("camera_mount")
 ```
 
 Now we can mount our camera by modifying the camera config to specify where to mount it via the `mount` argument. Note that the pose argument of the camera config is now the local pose, and we simply use `sapien.Pose()` which gives the identity pose. The world pose of mounted cameras are equal to the pose of mount multiplied by the local pose, meaning we can easily move this camera around during episode initialization instead of during reconfiguration.
@@ -65,7 +81,7 @@ class MyCustomTask(BaseEnv):
         ]
 ```
 
-Once the camera config is properly defined, we can move mount however we wish in the world and the camera will follow. For camera pose randomization you can copy the code written earlier to randomize camera pose directly into `_initialize_episode`
+Once the camera config is properly defined, we can move the camera mount however we wish in the world and the camera will follow. For camera pose randomization you can copy the code written earlier to randomize camera pose directly into `_initialize_episode`
 
 ```python
 import torch

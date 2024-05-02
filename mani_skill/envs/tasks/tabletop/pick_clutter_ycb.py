@@ -134,7 +134,7 @@ class PickClutterEnv(BaseEnv):
         self.all_objects = Actor.merge(all_objects, name="all_objects")
 
         self.goal_site = actors.build_sphere(
-            self._scene,
+            self.scene,
             radius=0.01,
             color=[0, 1, 0, 1],
             name="goal_site",
@@ -201,5 +201,5 @@ class PickClutterYCBEnv(PickClutterEnv):
     DEFAULT_EPISODE_JSON = f"{ASSET_DIR}/tasks/pick_clutter/ycb_train_5k.json.gz"
 
     def _load_model(self, model_id):
-        builder = actors.get_actor_builder(self._scene, id=f"ycb:{model_id}")
+        builder = actors.get_actor_builder(self.scene, id=f"ycb:{model_id}")
         return builder

@@ -82,7 +82,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
             ]
         return cls(
             _objs=entities,
-            _scene=scene,
+            scene=scene,
             _scene_idxs=scene_idxs,
             px_body_type=px_body_type,
             _bodies=bodies,
@@ -106,7 +106,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
             name (str): A new name to give the merged actors. If none, the name will default to the first actor's name
         """
         objs = []
-        scene = actors[0]._scene
+        scene = actors[0].scene
         _builder_initial_poses = []
         merged_scene_idxs = []
         actors[0]._num_objs
@@ -311,10 +311,10 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
             if not isinstance(arg1, torch.Tensor):
                 arg1 = vectorize_pose(arg1)
             if self.hidden:
-                self.before_hide_pose[self._scene._reset_mask[self._scene_idxs]] = arg1
+                self.before_hide_pose[self.scene._reset_mask[self._scene_idxs]] = arg1
             else:
                 self.px.cuda_rigid_body_data.torch()[
-                    self._body_data_index[self._scene._reset_mask[self._scene_idxs]], :7
+                    self._body_data_index[self.scene._reset_mask[self._scene_idxs]], :7
                 ] = arg1
         else:
             if isinstance(arg1, sapien.Pose):

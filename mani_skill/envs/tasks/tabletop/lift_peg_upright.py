@@ -51,7 +51,7 @@ class LiftPegUprightEnv(BaseEnv):
 
         # the peg that we want to manipulate
         self.peg = actors.build_twocolor_peg(
-            self._scene,
+            self.scene,
             length=self.peg_half_length,
             width=self.peg_half_width,
             color_1=np.array([176, 14, 14, 255]) / 255,

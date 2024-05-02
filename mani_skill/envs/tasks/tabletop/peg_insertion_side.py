@@ -121,7 +121,7 @@ class PegInsertionSideEnv(BaseEnv):
                 scene_idxs = [i]
                 length = lengths[i]
                 radius = radii[i]
-                builder = self._scene.create_actor_builder()
+                builder = self.scene.create_actor_builder()
                 builder.add_box_collision(half_size=[length, radius, radius])
                 # peg head
                 mat = sapien.render.RenderMaterial(
@@ -156,7 +156,7 @@ class PegInsertionSideEnv(BaseEnv):
                     length,
                 )
                 builder = _build_box_with_hole(
-                    self._scene, inner_radius, outer_radius, depth, center=centers[i]
+                    self.scene, inner_radius, outer_radius, depth, center=centers[i]
                 )
                 builder.set_scene_idxs(scene_idxs)
                 box = builder.build_kinematic(f"box_with_hole_{i}")

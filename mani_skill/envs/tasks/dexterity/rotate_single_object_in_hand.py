@@ -97,7 +97,7 @@ class RotateSingleObjectInHand(BaseEnv):
         obj_heights = []
         if self.difficulty_level == 0:
             self.obj = build_cube(
-                self._scene,
+                self.scene,
                 half_size=0.04,
                 color=np.array([255, 255, 255, 255]) / 255,
                 name="cube",
@@ -108,7 +108,7 @@ class RotateSingleObjectInHand(BaseEnv):
             half_sizes = (torch.randn(self.num_envs) * 0.1 + 1) * 0.04
             self._objs: List[Actor] = []
             for i, half_size in enumerate(half_sizes):
-                builder = self._scene.create_actor_builder()
+                builder = self.scene.create_actor_builder()
                 builder.add_box_collision(
                     half_size=[half_size] * 3,
                 )
@@ -137,7 +137,7 @@ class RotateSingleObjectInHand(BaseEnv):
             )[: self.num_envs]
             self._objs: List[Actor] = []
             for i, model_id in enumerate(model_ids):
-                builder = actors.get_actor_builder(self._scene, id=f"ycb:{model_id}")
+                builder = actors.get_actor_builder(self.scene, id=f"ycb:{model_id}")
                 builder.set_scene_idxs([i])
                 self._objs.append(builder.build(name=f"{model_id}-{i}"))
             self.obj = Actor.merge(self._objs, name="ycb_object")

@@ -83,7 +83,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
         )
 
     def _load_scene(self, options: dict):
-        self.ground = build_ground(self._scene)
+        self.ground = build_ground(self.scene)
         # temporarily turn off the logging as there will be big red warnings
         # about the cabinets having oblong meshes which we ignore for now.
         sapien.set_log_level("off")
@@ -116,7 +116,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
             # we provide tools to easily create the articulation builder like so by querying
             # the dataset source and unique ID
             cabinet_builder = articulations.get_articulation_builder(
-                self._scene, f"partnet-mobility:{model_id}"
+                self.scene, f"partnet-mobility:{model_id}"
             )
             cabinet_builder.set_scene_idxs(scene_idxs=[i])
             cabinet = cabinet_builder.build(name=f"{model_id}-{i}")
@@ -163,7 +163,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
         )
 
         self.handle_link_goal = actors.build_sphere(
-            self._scene,
+            self.scene,
             radius=0.02,
             color=[0, 1, 0, 1],
             name="handle_link_goal",
@@ -253,10 +253,10 @@ class OpenCabinetDrawerEnv(BaseEnv):
             # moreover despite setting qpos/qvel to 0, the cabinets might still move on their own a little bit.
             # this may be due to oblong meshes.
             if physx.is_gpu_enabled():
-                self._scene._gpu_apply_all()
-                self._scene.px.gpu_update_articulation_kinematics()
-                self._scene.px.step()
-                self._scene._gpu_fetch_all()
+                self.scene._gpu_apply_all()
+                self.scene.px.gpu_update_articulation_kinematics()
+                self.scene.px.step()
+                self.scene._gpu_fetch_all()
 
             self.handle_link_goal.set_pose(
                 Pose.create_from_pq(p=self.handle_link_positions(env_idx))
@@ -270,8 +270,8 @@ class OpenCabinetDrawerEnv(BaseEnv):
         handle_link_pos = self.handle_link_positions()
         # TODO (stao): setting the pose of the visual sphere here seems to cause mayhem with cabinet qpos
         # self.handle_link_goal.set_pose(Pose.create_from_pq(p=self.handle_link_positions()))
-        # self._scene._gpu_apply_all()
-        # self._scene._gpu_fetch_all()
+        # self.scene._gpu_apply_all()
+        # self.scene._gpu_fetch_all()
         # update the goal sphere to its new position
         link_is_static = (
             torch.linalg.norm(self.handle_link.angular_velocity, axis=1) <= 1

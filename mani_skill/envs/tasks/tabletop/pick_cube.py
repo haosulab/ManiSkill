@@ -42,10 +42,10 @@ class PickCubeEnv(BaseEnv):
         )
         self.table_scene.build()
         self.cube = actors.build_cube(
-            self._scene, half_size=self.cube_half_size, color=[1, 0, 0, 1], name="cube"
+            self.scene, half_size=self.cube_half_size, color=[1, 0, 0, 1], name="cube"
         )
         self.goal_site = actors.build_sphere(
-            self._scene,
+            self.scene,
             radius=self.goal_thresh,
             color=[0, 1, 0, 1],
             name="goal_site",

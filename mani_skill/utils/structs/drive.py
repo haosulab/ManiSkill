@@ -55,7 +55,7 @@ class Drive(PhysxJointComponentStruct[physx.PhysxDriveComponent]):
             _scene_idxs=scene_idxs,
             pose_in_child=pose1,
             pose_in_parent=pose0,
-            _scene=scene,
+            scene=scene,
         )
 
     @staticmethod
