@@ -172,11 +172,6 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
             bboxes.append(merged_mesh.bounding_box)
         return bboxes
 
-    # TODO (stao): is there a easy way to implement this
-    # @cached_property
-    # def index_q(self) -> torch.Tensor:
-    #     """The indexes of the managed link objects in their respective articulations. These correspond with position in the qpos and qvel of articulations"""
-
     def set_collision_group_bit(self, group: int, bit_idx: int, bit: int):
         """Set's a specific collision group bit for all collision shapes in all parallel actors"""
         for body in self._bodies:

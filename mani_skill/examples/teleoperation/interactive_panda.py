@@ -123,7 +123,6 @@ def solve(env: BaseEnv, debug=False, vis=False):
         env.render_human()
         execute_current_pose = False
         if viewer.window.key_press("h"):
-            # TODO (stao): print help menu
             print("""Available commands:
             h: print this help menu
             g: toggle gripper to close/open

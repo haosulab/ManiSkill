@@ -348,7 +348,6 @@ class RotateCubeEnv(BaseEnv):
         return norm_dense_reward
 
 
-# TODO (stao): pick a better name, TrifingerRotateCube? perhaps?
 @register_env("TriFingerRotateCubeLevel0-v1", max_episode_steps=250)
 class RotateCubeEnvLevel0(RotateCubeEnv):
     def __init__(self, *args, **kwargs):

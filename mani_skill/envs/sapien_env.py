@@ -324,8 +324,7 @@ class BaseEnv(gym.Env):
             self.agent = agents[0]
         else:
             self.agent = MultiAgent(agents)
-        # TODO (stao): do we stil need this?
-        # set_articulation_render_material(self.agent.robot, specular=0.9, roughness=0.3)
+
     @property
     def _default_sensor_configs(
         self,

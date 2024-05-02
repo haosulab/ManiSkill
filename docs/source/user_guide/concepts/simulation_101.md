@@ -79,3 +79,8 @@ Prismatic joints are joints that behave like sliders, where two connected links 
 #### Example
 
 An example of an articulation would be a cabinet as shown below. The cabinet below has a base link which is the entire cabinet itself, a link for the top drawer, and a link for the bottom door. 
+
+The joint connecting the top drawer with the base is a prismatic joint and you can see the direction in light blue of that joint. The joint connecting the bottom door with the base is a revolute joint and you can see the axis of rotation in purple.
+
+```{figure} images/cabinet_joints.png
+```
