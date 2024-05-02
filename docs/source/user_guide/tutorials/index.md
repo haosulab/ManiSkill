@@ -13,8 +13,7 @@ These are tutorials written by the maintainers of ManiSkill and the community, s
 ```{toctree}
 :titlesonly:
 
-custom_tasks
-custom_tasks_advanced
+custom_tasks/index
 custom_robots
 custom_reusable_scenes
 domain_randomization

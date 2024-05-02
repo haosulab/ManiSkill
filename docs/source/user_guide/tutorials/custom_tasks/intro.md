@@ -1,6 +1,6 @@
-# Custom Tasks
+# Introduction to Task Building
 
-Building custom tasks in ManiSkill is straightforward and flexible. ManiSkill provides a number of features to help abstract away most of the GPU memory management required for parallel simulation and rendering. By the end of this tutorial, you will learn how to create simple rigid-body tasks that simulate both on GPU and CPU.
+Building custom tasks in ManiSkill is straightforward and flexible. ManiSkill provides a number of features to help abstract away most of the GPU memory management required for parallel simulation and rendering. By the end of this tutorial, you will learn how to create simple rigid-body tasks that simulate both on GPU and CPU. If you aren't familiar with robotics/simulation and some terminology, we recommend you check out the [simulation / robotics 101 page](../../concepts/simulation_101.md).
 
 Building a custom task in ManiSkill is comprised of the following core components
 
@@ -14,12 +14,12 @@ Building a custom task in ManiSkill is comprised of the following core component
 
 Visually the flow of environment creation under the gym API via `gym.make` and `env.reset` looks as so:
 
-:::{figure} images/env_create_env_reset_flow.png 
+:::{figure} ../images/env_create_env_reset_flow.png 
 :::
 
 and `env.step` follows below:
 
-:::{figure} images/env_step_flow.png 
+:::{figure} ../images/env_step_flow.png 
 :::
 
 This tutorial will take you through most of the important yellow modules in the figures above that should be implemented to build a task.
@@ -133,27 +133,7 @@ class PushCubeEnv(BaseEnv):
 ```
 The TableSceneBuilder is perfect for easily building table-top tasks, it creates a table and floor for you, and places the fetch and panda robots in reasonable locations.
 
-#### Building Articulations
-
-WIP
-
-#### Reconfiguring and Optimization
-
-In general loading is always quite slow, especially on the GPU so by default, ManiSkill reconfigures just once. Any call to `env.reset()` will not trigger a reconfiguration unless you call `env.reset(seed=seed, options=dict(reconfigure=True))` (seed is not needed but recommended if you are reconfiguring for reproducibility).
-
-If you want calls to `env.reset()` to by default reconfigure, you can set a default value for `reconfiguration_freq` in your task's `__init__` function
-
-```python
-class PushCubeEnv(BaseEnv):
-    # ...
-    def __init__(self, *args, robot_uids="panda", reconfiguration_freq=1, **kwargs):
-        super().__init__(*args, robot_uids=robot_uids, reconfiguration_freq=reconfiguration_freq, **kwargs)
-```
-
-A `reconfiguration_freq` value of 1 means every during every reset we reconfigure. A `reconfiguration_freq` of `k` means every `k` resets we reconfigure. A `reconfiguration_freq` of 0 (the default) means we never reconfigure again.
-
-In general one use case of setting a positive `reconfiguration_freq` value is for when you want to simulate a task in parallel where each parallel environment is working with a different object/articulation and there are way more object variants than number of parallel environments. For machine learning / RL workflows, setting `reconfiguration_freq` to e.g. 10 ensures every 10 resets the objects being simulated on are randomized which can diversify the data collected for online training while keeping simulation fast by reconfiguring infrequently.
-
+A tutorial on how to build actors beyond primitive shapes (boxes, spheres etc.) and load articulated objects is covered in the [tutorial after this one](./loading_objects.md). We recommend you to first complete this tutorial before moving onto the next.
 
 ## Episode Initialization / Randomization
 
@@ -255,7 +235,7 @@ When writing evaluate ensure the data returned in the dictionary is all batched 
 :::
 
 The end result should yield the following
-:::{figure} images/push_cube_evaluate.png 
+:::{figure} ../images/push_cube_evaluate.png 
 :::
 
 
@@ -353,7 +333,7 @@ To visualize the human render you can change `render_mode` to "rgb_array".
 Alternatively via the GUI which can be opened by doing a while loop while running `env.render_human()`, under the control tab you can select any of the registered cameras and look at the exact RGB data it returns.
 
 
-:::{figure} images/gui-side-camera.png 
+:::{figure} ../images/gui-side-camera.png 
 :::
 
 :::{tip}

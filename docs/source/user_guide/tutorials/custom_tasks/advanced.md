@@ -1,4 +1,4 @@
-# Custom Tasks (Advanced Features)
+# Advanced Features
 
 This page covers nearly every feature useful for task building in ManiSkill. If you haven't already it is recommended to get a better understanding of how GPU simulation generally works described on [this page](../concepts/gpu_simulation.md). It can provide some good context for various terminology and ideas presented in this advanced features tutorial.
 
