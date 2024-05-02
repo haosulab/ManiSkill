@@ -15,16 +15,16 @@
 [![Discord](https://img.shields.io/discord/996566046414753822?logo=discord)](https://discord.gg/x8yUZe5AdN)
 
 ManiSkill is a powerful unified framework for robot simulation and training powered by [SAPIEN](https://sapien.ucsd.edu/). The entire stack is as open-source as possible. Among its features, it includes
-- GPU parallelized visual data collection system. A policy can collect RGBD + Segmentation data at about 10,000+ FPS with a 4090 GPU, 10-100x faster compared to simulators like Isaac Sim.
-- Example tasks covering a wide range of different robot embodiments (quadruped, mobile manipulators, single-arm robots) as well as a wide range of different tasks (table-top, locomotion, scene-level manipulation)
-- GPU parallelized tasks, enabling incredibly fast synthetic data collection in simulation at the same or faster speed as other GPU sims like IsaacSim
+- GPU parallelized visual data collection system. A policy can collect RGBD + Segmentation data at 20k FPS with a 4090 GPU, 10-100x faster compared to most other simulators.
+- Example tasks covering a wide range of different robot embodiments (quadruped, mobile manipulators, single-arm robots) as well as a wide range of different tasks (table-top, locomotion, dextrous manipulation)
+- GPU parallelized tasks, enabling incredibly fast synthetic data collection in simulation
 - GPU parallelized tasks support simulating diverse scenes where every parallel environment has a completely different scene/set of objects
 - Flexible task building API that abstracts away much of the complex GPU memory management code
 <!-- - Evaluate models trained on real-world data in simulation, no robot hardware needed -->
 
 ManiSkill plans to enable all kinds of workflows, including but not limited to 2D/3D vision-based reinforcement learning, imitation learning, sense-plan-act, etc. At the moment the repo contains just state/visual RL baselines, others are coming soon.
 <!-- 
-Please refer to our [documentation](https://maniskill.readthedocs.io/en/main/) to learn more information from tutorials on building tasks to data collection. To quickly get started after installation check out https://maniskill.readthedocs.io/en/latest/user_guide/getting_started/quickstart.html.
+Please refer to our [documentation](https://maniskill.readthedocs.io/en/latest/) to learn more information from tutorials on building tasks to data collection. To quickly get started after installation check out https://maniskill.readthedocs.io/en/latest/user_guide/getting_started/quickstart.html.
 
 
 Note previously there was previously a ManiSkill and ManiSkill2, we are rebranding it all to just ManiSkill and the python package versioning tells you which iteration (3.0.0 now means ManiSkill3)
