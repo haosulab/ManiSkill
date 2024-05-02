@@ -117,6 +117,7 @@ Pick up a random object sampled from the [YCB dataset](https://www.ycbbenchmarks
 </video>
 
 ## PegInsertionSide-v1
+![dense-reward][reward-badge]
 
 :::{dropdown} Task Card
 :icon: note
