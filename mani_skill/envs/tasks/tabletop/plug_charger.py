@@ -7,11 +7,13 @@ from transforms3d.euler import euler2quat
 
 from mani_skill.agents.robots import Fetch, Panda
 from mani_skill.envs.sapien_env import BaseEnv
+from mani_skill.envs.utils import randomization
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.geometry import rotation_conversions
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table.table_scene_builder import TableSceneBuilder
+from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import SimConfig
 
 
@@ -37,19 +39,23 @@ class PlugChargerEnv(BaseEnv):
     @property
     def _default_sensor_configs(self):
         pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
-        return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
+        return [
+            CameraConfig("base_camera", pose=pose, width=128, height=128, fov=np.pi / 2)
+        ]
 
     @property
     def _default_human_render_camera_configs(self):
         pose = sapien_utils.look_at([0.3, 0.4, 0.1], [0, 0, 0])
-        return CameraConfig(
-            "render_camera",
-            pose=pose,
-            width=512,
-            height=512,
-            fov=1,
-            mount=self.receptacle,
-        )
+        return [
+            CameraConfig(
+                "render_camera",
+                pose=pose,
+                width=512,
+                height=512,
+                fov=1,
+                mount=self.receptacle,
+            )
+        ]
 
     def _build_charger(self, peg_size, base_size, gap):
         builder = self.scene.create_actor_builder()
@@ -153,27 +159,32 @@ class PlugChargerEnv(BaseEnv):
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
-            len(env_idx)
+            b = len(env_idx)
             self.table_scene_builder.initialize(env_idx)
             # Initialize charger
-            xy = self._episode_rng.uniform(
-                [-0.1, -0.2], [-0.01 - self._peg_size[0] * 2, 0.2]
+            xy = randomization.uniform(
+                [-0.1, -0.2], [-0.01 - self._peg_size[0] * 2, 0.2], size=(b, 2)
             )
-            # xy = [-0.05, 0]
-            pos = np.hstack([xy, self._base_size[2]])
-            ori = self._episode_rng.uniform(-np.pi / 3, np.pi / 3)
-            # ori = 0
-            quat = euler2quat(0, 0, ori)
-            self.charger.set_pose(sapien.Pose(pos, quat))
+            pos = torch.zeros((b, 3))
+            pos[:, :2] = xy
+            pos[:, 2] = self._base_size[2]
+            ori = randomization.random_quaternions(
+                n=b, lock_x=True, lock_y=True, bounds=(-torch.pi / 3, torch.pi / 3)
+            )
+            self.charger.set_pose(Pose.create_from_pq(pos, ori))
 
             # Initialize receptacle
-            xy = self._episode_rng.uniform([0.01, -0.1], [0.1, 0.1])
-            # xy = [0.05, 0]
-            pos = np.hstack([xy, 0.1])
-            ori = np.pi + self._episode_rng.uniform(-np.pi / 8, np.pi / 8)
-            # ori = np.pi
-            quat = euler2quat(0, 0, ori)
-            self.receptacle.set_pose(sapien.Pose(pos, quat))
+            xy = randomization.uniform([0.01, -0.1], [0.1, 0.1], size=(b, 2))
+            pos = torch.zeros((b, 3))
+            pos[:, :2] = xy
+            pos[:, 2] = 0.1
+            ori = randomization.random_quaternions(
+                n=b,
+                lock_x=True,
+                lock_y=True,
+                bounds=(torch.pi - torch.pi / 8, torch.pi + torch.pi / 8),
+            )
+            self.receptacle.set_pose(Pose.create_from_pq(pos, ori))
 
             self.goal_pose = self.receptacle.pose * (
                 sapien.Pose(q=euler2quat(0, 0, np.pi))
