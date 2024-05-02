@@ -288,7 +288,7 @@ class RotateValveEnvLevel2(RotateValveEnv):
         )
 
 
-@register_env("RotateValveLevel3-v1", max_episode_steps=50)
+@register_env("RotateValveLevel3-v1", max_episode_steps=150)
 class RotateValveEnvLevel3(RotateValveEnv):
     def __init__(self, *args, **kwargs):
         super().__init__(
