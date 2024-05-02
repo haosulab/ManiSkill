@@ -127,13 +127,10 @@ def main(args):
         for cam in obs["sensor_data"].keys():
             if "rgb" in obs["sensor_data"][cam]:
 
-                rgb = common.to_numpy(obs["sensor_data"][cam]["rgb"])
-                seg = common.to_numpy(obs["sensor_data"][cam]["segmentation"])
+                rgb = common.to_numpy(obs["sensor_data"][cam]["rgb"][0])
+                seg = common.to_numpy(obs["sensor_data"][cam]["segmentation"][0])
                 if selected_id is not None:
                     seg = seg == selected_id
-                if args.num_envs > 1:
-                    rgb = rgb[0]
-                    seg = seg[0]
                 imgs.append(rgb)
                 seg_rgb = np.zeros_like(rgb)
                 seg = seg % len(color_pallete)

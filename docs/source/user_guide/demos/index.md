@@ -70,8 +70,6 @@ alt: SAPIEN GUI showing the rotate single object in hand task
 ---
 ```
 
-This task also uses a feature unique to ManiSkill/SAPIEN where you can retrieve object-pair contact impulses/forces, in addition to object net contact forces. 
-
 To quickly demo tasks that support simulating different objects and articulations (with different dofs) across parallel environments see the [GPU Simulation section](#gpu-simulation)
 
 <!-- 
@@ -91,7 +89,8 @@ python -m mani_skill.examples.benchmarking.gpu_sim -e "PickCube-v1" -n 4096
 
 To save videos of the visual observations the agent would get (in this case it is just rgb and depth) you can run
 ```bash
-python -m mani_skill.examples.benchmarking.gpu_sim -e "PickCube-v1" -n 64 --save-video --render-mode="sensors"
+python -m mani_skill.examples.benchmarking.gpu_sim -e "PickCube-v1" -n 64 \
+  --save-video --render-mode="sensors"
 ```
 it should run quite fast! (3000+ fps on a 4090, you can increase the number envs for higher FPS). You can change `--render-mode="rgb_array"` to render from higher quality cameras.
 
@@ -100,15 +99,17 @@ it should run quite fast! (3000+ fps on a 4090, you can increase the number envs
 </video>
 
 
-To try out the heterogenous object simulation features you can run
+To try out the diverse parallel simulation features you can run
 ```bash
-python -m mani_skill.examples.benchmarking.gpu_sim -e "PickSingleYCB-v1" -n 64 --save-video --render-mode="sensors"
-python -m mani_skill.examples.benchmarking.gpu_sim -e "RotateValveLevel2-v1" -n 64 --save-video --render-mode="sensors"
+python -m mani_skill.examples.benchmarking.gpu_sim -e "PickSingleYCB-v1" -n 64 \
+  --save-video --render-mode="sensors"
+python -m mani_skill.examples.benchmarking.gpu_sim -e "OpenCabinetDrawer-v1" -n 64 \
+  --save-video --render-mode="sensors"
 ```
-which shows two tasks that have different objects and articulations in every parallel environment. Below is an example for the PickSingleYCB task.
+which shows two tasks that have different objects and articulations in every parallel environment. Below is an example for the OpenCabinetDrawer task.
 
 <video preload="auto" controls="True" width="100%">
-<source src="https://github.com/haosulab/ManiSkill/raw/main/docs/source/_static/videos/mani_skill_gpu_sim-PickSingleYCB-v1-num_envs=16-obs_mode=state-render_mode=sensors.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/docs/source/_static/videos/mani_skill_gpu_sim-OpenCabinetDrawer-v1-num_envs=16-obs_mode=state-render_mode=sensors.mp4" type="video/mp4">
 </video>
 
 
@@ -161,4 +162,50 @@ python -m mani_skill.examples.demo_vis_pcd -e "StackCube-v1"
 
 
 ```{figure}  images/pcd_vis.png
+```
+
+## Visualize Segmentation Data
+
+You can run the following to visualize the segmentation data
+
+```bash
+python -m mani_skill.examples.demo_vis_segmentation -e "StackCube-v1"
+python -m mani_skill.examples.demo_vis_segmentation -e "StackCube-v1" \
+  --id id_of_part # mask out everything but the selected part
+```
+
+
+```{figure}  images/seg_vis.png
+```
+
+## Visualize RGBD Data
+
+You can run the following to visualize the rgbd data
+
+```bash
+python -m mani_skill.examples.demo_vis_rgbd -e "StackCube-v1"
+```
+
+
+```{figure}  images/rgbd_vis.png
+```
+
+## Visualize Reset Distributions
+
+Determining how difficult a task might be for ML algorithms like reinforcement learning and imitation learning can heavily depend on the reset distribution of the task. To see what the reset distribution of any task (the result of repeated env.reset calls) looks like you can run
+
+```bash
+python -m mani_skill.examples.demo_reset_distribution -e "PegInsertionSide-v1"
+```
+
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/docs/source/_static/videos/PegInsertionSide-v1_reset_distribution.mp4" type="video/mp4">
+</video>
+
+## Visualize Any Robot
+
+Run the following to open a viewer displaying any robot given in a empty scene with just a floor. You can also specify different keyframes if there are any pre-defined to visualize.
+
+```bash
+python -m mani_skill.examples.demo_robot -r "panda"
 ```

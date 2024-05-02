@@ -1,4 +1,6 @@
 # Control Tasks
+[asset-badge]: https://img.shields.io/badge/download%20asset-yes-blue.svg
+[reward-badge]: https://img.shields.io/badge/dense%20reward-yes-green.svg
 
 These tasks are typical classical control tasks, some of which is adapted from the [DM-Control Suite](https://github.com/google-deepmind/dm_control/). Some tasks directly import the MJCF files from DM-Control.
 
