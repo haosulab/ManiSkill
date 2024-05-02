@@ -158,6 +158,26 @@ class MyCustomTask(BaseEnv):
 ```
 
 
+## Getting Collision Shapes + Bounding Boxes
+
+Both Actor and Articulation objects have a `get_first_collision_mesh` API which returns a `trimesh.Trimesh` object in the world frame representing the combined collision mesh from the trimesh package. Currently we do not have a batched mesh processing library and rely on trimesh still, so we currently only support getting collision mesh of an actor/articulation when all the managed objects are the same.
+
+Once a collision mesh is obtained, you can use it to get a bounding box. Note that you cannot get this collision mesh until after the `_load_scene` function. This is because for GPU simulation, we currently cannot get the correct collision mesh prior to the GPU buffers being initialized (which occurs at the end of reconfiguration).
+
+A use case for bounding boxes is to spawn objects so that they are upright and don't intersect `z=0`. In the PickSingleYCB task we do the following.
+
+```python
+def _after_reconfigure(self, options: dict):
+    self.object_zs = []
+    # self._objs is a list of Actor objects
+    for obj in self._objs:
+        collision_mesh = obj.get_first_collision_mesh()
+        # this value is used to set object pose so the bottom is at z=0
+        self.object_zs.append(-collision_mesh.bounding_box.bounds[0, 2])
+    self.object_zs = common.to_tensor(self.object_zs)
+```
+
+While in ManiSkill we do this to set object poses for tasks like PickSingleYCB and OpenCabinetDrawer, it is recommended to avoid this and to cache bounding box / collision mesh information in a file (e.g. JSON) and to load that when the environment is created.
 
 ## Task Sim Configurations
 
