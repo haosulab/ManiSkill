@@ -12,7 +12,9 @@ def uniform(
     size: Sequence,
     device: Device = None,
 ):
-    low = common.to_tensor(low, device=device)
-    high = common.to_tensor(high, device=device)
+    if not isinstance(low, float):
+        low = common.to_tensor(low, device=device)
+    if not isinstance(high, float):
+        high = common.to_tensor(high, device=device)
     dist = high - low
     return torch.rand(size=size, device=device) * dist + low
