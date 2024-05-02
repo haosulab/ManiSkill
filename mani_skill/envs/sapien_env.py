@@ -761,7 +761,10 @@ class BaseEnv(gym.Env):
     # -------------------------------------------------------------------------- #
 
     def step(self, action: Union[None, np.ndarray, torch.Tensor, Dict]):
-        action = self.step_action(action)
+        """
+        Take a step through the environment with an action
+        """
+        action = self._step_action(action)
         self._elapsed_steps += 1
         info = self.get_info()
         obs = self.get_obs(info)
@@ -786,7 +789,7 @@ class BaseEnv(gym.Env):
             info,
         )
 
-    def step_action(
+    def _step_action(
         self, action: Union[None, np.ndarray, torch.Tensor, Dict]
     ) -> Union[None, torch.Tensor]:
         set_action = False

@@ -1,6 +1,6 @@
 # Advanced Features
 
-This page covers nearly every feature useful for task building in ManiSkill. If you haven't already it is recommended to get a better understanding of how GPU simulation generally works described on [this page](../concepts/gpu_simulation.md). It can provide some good context for various terminology and ideas presented in this advanced features tutorial.
+This page covers nearly every feature useful for task building in ManiSkill. If you haven't already it is recommended to get a better understanding of how GPU simulation generally works described on [this page](../../concepts/gpu_simulation.md). It can provide some good context for various terminology and ideas presented in this advanced features tutorial.
 
 ## Custom/Extra State
 
@@ -270,7 +270,7 @@ class MyCustomTask(BaseEnv):
 Mounted cameras will generally be a little slower than static cameras unless you disable computing camera parameters. Camera parameters cannot be cached as e.g. the extrinsics constantly can change
 :::
 
-Mounted cameras also allow for some easy camera pose domain randomization [detailed further here](./domain_randomization.md#during-episode-initialization--resets). Cameras do not necessarily need to be mounted on standard objects, they can also be mounted onto "empty" actors that have no visual or collision shapes that you can create like so
+Mounted cameras also allow for some easy camera pose domain randomization [detailed further here](../domain_randomization.md#during-episode-initialization--resets). Cameras do not necessarily need to be mounted on standard objects, they can also be mounted onto "empty" actors that have no visual or collision shapes that you can create like so
 
 ```python
 class MyCustomTask(BaseEnv):

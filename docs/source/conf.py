@@ -1,3 +1,6 @@
+import os
+import sys
+sys.path.insert(0, os.path.abspath("../../mani_skill"))
 __version__ = "3.0.0.b0"
 # Configuration file for the Sphinx documentation builder.
 #
@@ -65,3 +68,6 @@ html_context = {
 }
 
 html_static_path = ['_static']
+
+autodoc_typehints = "description"
+autodoc_typehints_description_target = "all"

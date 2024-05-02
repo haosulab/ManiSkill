@@ -24,7 +24,7 @@ and `env.step` follows below:
 
 This tutorial will take you through most of the important yellow modules in the figures above that should be implemented to build a task.
 
-To follow this tutorial easily, we recommend reading this alongside reading the [annotated code for the PushCube task](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/tasks/push_cube.py) which describes the purpose of nearly every line of code. The [advanced features page](./custom_tasks_advanced.md) covers additional topics to do more advanced simulation and optimization such as dynamic GPU memory configuration, diverse object simulation, and more. 
+To follow this tutorial easily, we recommend reading this alongside reading the [annotated code for the PushCube task](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/tasks/push_cube.py) which describes the purpose of nearly every line of code. The [advanced features page](./advanced.md) covers additional topics to do more advanced simulation and optimization such as dynamic GPU memory configuration, diverse object simulation, and more. 
 
 If you want to skip the tutorial and start from a template you can use the [PushCube task](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/tasks/push_cube.py) as a template, the [annotated template](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/template.py), or the [bare minimum template](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/minimal_template.py).
 
@@ -49,7 +49,7 @@ class PushCubeEnv(BaseEnv):
 
 At the start of any task, you must load in all objects (robots, assets, articulations, lighting etc.) into each parallel environment, also known as a sub-scene. This is also known as **reconfiguration** and generally only ever occurs once. Loading these objects is done in the `_load_scene` function of your custom task class. The objective is to simply load objects in, and nothing else. For GPU simulation at this stage you cannot change object states (like pose, qpos), only initial poses can be modified. Changing/randomizing states is done in the section on [episode initialization / randomization](#episode-initialization--randomization).
 
-Building objects in ManiSkill is nearly the exact same as it is in SAPIEN. You create an `ActorBuilder` via `self.scene.create_actor_builder` and via the actor builder add visual and collision shapes. Visual shapes only affect visual rendering processes while collision shapes affect the physical simulation. ManiSkill further will create the actor for you in every sub-scene (unless you use [scene-masks/scene-idxs](./custom_tasks_advanced.md#scene-masks), a more advanced feature).
+Building objects in ManiSkill is nearly the exact same as it is in SAPIEN. You create an `ActorBuilder` via `self.scene.create_actor_builder` and via the actor builder add visual and collision shapes. Visual shapes only affect visual rendering processes while collision shapes affect the physical simulation. ManiSkill further will create the actor for you in every sub-scene (unless you use [scene-masks/scene-idxs](./advanced.md#scene-masks), a more advanced feature).
 
 #### Building Robots
 
@@ -72,7 +72,7 @@ class PushCubeEnv(BaseEnv):
 
 Initializing these robots occurs in the initialization / randomization section covered later. With this setup you can later access agent data via `self.agent` and the specific articulation data of the robot via `self.agent.robot`. For multi-robot setups you can access each agent via `self.agent.agents`.
 
-To create your own custom robots/agents, see the [custom robots tutorial](./custom_robots.md).
+To create your own custom robots/agents, see the [custom robots tutorial](../custom_robots.md).
 
 #### Building Actors
 
@@ -120,7 +120,7 @@ self.obj.linear_velocity # batched velocities of shape (N, 3)
 # and more ...
 ```
 
-For object building, you can also use reusable pre-built scene builders (tutorial on how to customize/make your own [here](./custom_reusable_scenes.md)). In Push Cube it is done as so
+For object building, you can also use reusable pre-built scene builders (tutorial on how to customize/make your own [here](../custom_reusable_scenes.md)). In Push Cube it is done as so
 ```python
 class PushCubeEnv(BaseEnv):
     # ...
@@ -268,7 +268,7 @@ class PushCubeEnv(BaseEnv):
         return obs
 ```
 
-In order to understand exactly what data is returned in observations, check out the [section on observations here](../concepts/observation.md)
+In order to understand exactly what data is returned in observations, check out the [section on observations here](../../concepts/observation.md)
 
 ## (Optional) Dense Reward Function
 

@@ -48,5 +48,5 @@ workflows/index -->
 :caption: Additional Resources
 
 additional_resources/performance_benchmarking
-<!-- additional_resources/education -->
+reference/index.rst
 ```
