@@ -82,7 +82,7 @@ class ANYmalC(BaseAgent):
             normalize_action=False,
             use_delta=False,
         )
-        # TODO (stao): For quadrupeds perhaps we disable gravit for all links except the root?
+        # TODO (stao): For quadrupeds perhaps we disable gravity for all links except the root?
         controller_configs = dict(
             pd_joint_delta_pos=dict(
                 body=pd_joint_delta_pos, balance_passive_force=False

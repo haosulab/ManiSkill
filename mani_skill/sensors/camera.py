@@ -67,10 +67,7 @@ def update_camera_cfgs_from_dict(
         if k in camera_cfgs:
             continue
         for cfg in camera_cfgs.values():
-            if k == "add_segmentation":
-                # TODO (stao): doesn't work this way anymore
-                cfg.texture_names += ("Segmentation",)
-            elif not hasattr(cfg, k):
+            if not hasattr(cfg, k):
                 raise AttributeError(f"{k} is not a valid attribute of CameraConfig")
             else:
                 setattr(cfg, k, v)

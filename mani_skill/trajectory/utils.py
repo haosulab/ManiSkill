@@ -8,8 +8,6 @@ import numpy as np
 
 from mani_skill.utils.structs.types import Array
 
-# TODO (stao): some functions here may better be moved to the common module
-
 
 def _get_dict_len(x):
     if isinstance(x, dict) or isinstance(x, h5py.Group):
