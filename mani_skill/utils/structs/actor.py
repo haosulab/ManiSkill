@@ -9,8 +9,10 @@ import sapien
 import sapien.physx as physx
 import sapien.render
 import torch
+import trimesh
 
 from mani_skill.utils import common
+from mani_skill.utils.geometry.trimesh_utils import get_component_meshes, merge_meshes
 from mani_skill.utils.structs.base import PhysxRigidDynamicComponentStruct
 from mani_skill.utils.structs.pose import Pose, to_sapien_pose, vectorize_pose
 from mani_skill.utils.structs.types import Array
@@ -97,7 +99,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
         This can be useful for e.g. randomizing the asset loaded into a task and being able to do object.pose to fetch the pose of all randomized assets
         or object.set_pose to change the pose of each of the different assets, despite the assets not being uniform across all sub-scenes.
 
-        For example usage of this method, see mani_skill /envs/tasks/pick_single_ycb.py
+        For example usage of this method, see mani_skill/envs/tasks/pick_single_ycb.py
 
         Args:
             actors (List[Actor]): The actors to merge into one actor object to manage
@@ -223,6 +225,55 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
                 cg = cs.get_collision_groups()
                 cg[group] |= bit << bit_idx
                 cs.set_collision_groups(cg)
+
+    def get_first_collision_mesh(self, to_world_frame: bool = True) -> trimesh.Trimesh:
+        """
+        Returns the collision mesh of each managed actor object. Note results of this are not cached or optimized at the moment
+        so this function can be slow if called too often
+
+        Args:
+            to_world_frame (bool): Whether to transform the collision mesh pose to the world frame
+        """
+        return self.get_collision_meshes(to_world_frame=to_world_frame, first_only=True)
+
+    def get_collision_meshes(
+        self, to_world_frame: bool = True, first_only: bool = False
+    ) -> List[trimesh.Trimesh]:
+        """
+        Returns the collision mesh of each managed actor object. Note results of this are not cached or optimized at the moment
+        so this function can be slow if called too often
+
+        Args:
+            to_world_frame (bool): Whether to transform the collision mesh pose to the world frame
+            first_only (bool): Whether to return the collision mesh of just the first actor managed by this object. If True,
+                this also returns a single Trimesh.Mesh object instead of a list
+        """
+        assert (
+            not self.merged
+        ), "Currently you cannot fetch collision meshes of merged actors"
+
+        meshes: List[trimesh.Trimesh] = []
+
+        for i, actor in enumerate(self._objs):
+            actor_meshes = []
+            for comp in actor.components:
+                if isinstance(comp, physx.PhysxRigidBaseComponent):
+                    actor_meshes.append(merge_meshes(get_component_meshes(comp)))
+            mesh = merge_meshes(actor_meshes)
+            meshes.append(mesh)
+            if first_only:
+                break
+        if to_world_frame:
+            mat = self.pose
+            for i, mesh in enumerate(meshes):
+                if mat is not None:
+                    if len(mat) > 1:
+                        mesh.apply_transform(mat[i].sp.to_transformation_matrix())
+                    else:
+                        mesh.apply_transform(mat.sp.to_transformation_matrix())
+        if first_only:
+            return meshes[0]
+        return meshes
 
     # -------------------------------------------------------------------------- #
     # Exposed actor properties, getters/setters that automatically handle

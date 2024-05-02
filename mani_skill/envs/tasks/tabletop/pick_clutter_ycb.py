@@ -201,7 +201,5 @@ class PickClutterYCBEnv(PickClutterEnv):
     DEFAULT_EPISODE_JSON = f"{ASSET_DIR}/tasks/pick_clutter/ycb_train_5k.json.gz"
 
     def _load_model(self, model_id):
-        builder, _ = actors.build_actor_ycb(
-            model_id, self._scene, name=model_id, return_builder=True
-        )
+        builder = actors.get_actor_builder(self._scene, id=f"ycb:{model_id}")
         return builder

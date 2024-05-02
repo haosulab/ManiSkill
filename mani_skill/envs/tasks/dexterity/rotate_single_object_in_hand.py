@@ -5,17 +5,15 @@ import sapien
 import torch
 import torch.nn.functional as F
 
+from mani_skill import ASSET_DIR
 from mani_skill.agents.robots import AllegroHandRightTouch
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
-from mani_skill.utils import sapien_utils
-from mani_skill.utils.building.actors import (
-    MODEL_DBS,
-    _load_ycb_dataset,
-    build_actor_ycb,
-    build_cube,
-)
+from mani_skill.utils import common, sapien_utils
+from mani_skill.utils.building import actors
+from mani_skill.utils.building.actors import build_cube
 from mani_skill.utils.geometry.rotation_conversions import quaternion_apply
+from mani_skill.utils.io_utils import load_json
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs.actor import Actor
@@ -34,13 +32,13 @@ class RotateSingleObjectInHand(BaseEnv):
         robot_init_qpos_noise=0.02,
         obj_init_pos_noise=0.02,
         difficulty_level: int = -1,
+        num_envs=1,
+        reconfiguration_freq=None,
         **kwargs,
     ):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         self.obj_init_pos_noise = obj_init_pos_noise
         self.obj_heights: torch.Tensor = torch.Tensor()
-        _load_ycb_dataset()
-
         if (
             not isinstance(difficulty_level, int)
             or difficulty_level >= 4
@@ -50,8 +48,19 @@ class RotateSingleObjectInHand(BaseEnv):
                 f"Difficulty level must be a int within 0-3, but get {difficulty_level}"
             )
         self.difficulty_level = difficulty_level
-
-        super().__init__(*args, robot_uids="allegro_hand_right_touch", **kwargs)
+        if self.difficulty_level >= 2:
+            if reconfiguration_freq is None:
+                if num_envs == 1:
+                    reconfiguration_freq = 1
+                else:
+                    reconfiguration_freq = 0
+        super().__init__(
+            *args,
+            robot_uids="allegro_hand_right_touch",
+            num_envs=num_envs,
+            reconfiguration_freq=reconfiguration_freq,
+            **kwargs,
+        )
 
         with torch.device(self.device):
             self.prev_unit_vector = torch.zeros((self.num_envs, 3))
@@ -97,7 +106,7 @@ class RotateSingleObjectInHand(BaseEnv):
             obj_heights.append(0.03)
         elif self.difficulty_level == 1:
             half_sizes = (torch.randn(self.num_envs) * 0.1 + 1) * 0.04
-            actors: List[Actor] = []
+            self._objs: List[Actor] = []
             for i, half_size in enumerate(half_sizes):
                 builder = self._scene.create_actor_builder()
                 builder.add_box_collision(
@@ -109,34 +118,46 @@ class RotateSingleObjectInHand(BaseEnv):
                         base_color=np.array([255, 255, 255, 255]) / 255,
                     ),
                 )
-                scene_idxs = [i]
-                builder.set_scene_idxs(scene_idxs)
-                actors.append(builder.build(name=f"cube-{i}"))
+                builder.set_scene_idxs([i])
+                self._objs.append(builder.build(name=f"cube-{i}"))
                 obj_heights.append(half_size)
-            self.obj = Actor.merge(actors, name="cube")
+            self.obj = Actor.merge(self._objs, name="cube")
         elif self.difficulty_level >= 2:
-            all_model_ids = np.array(list(MODEL_DBS["YCB"]["model_data"].keys()))
+            all_model_ids = np.array(
+                list(
+                    load_json(
+                        ASSET_DIR / "assets/mani_skill2_ycb/info_pick_v0.json"
+                    ).keys()
+                )
+            )
             rand_idx = torch.randperm(len(all_model_ids))
             model_ids = all_model_ids[rand_idx]
             model_ids = np.concatenate(
                 [model_ids] * np.ceil(self.num_envs / len(all_model_ids)).astype(int)
             )[: self.num_envs]
-            actors: List[Actor] = []
+            self._objs: List[Actor] = []
             for i, model_id in enumerate(model_ids):
-                builder, obj_height = build_actor_ycb(
-                    model_id, self._scene, name=model_id, return_builder=True
-                )
-                scene_idxs = [i]
-                builder.set_scene_idxs(scene_idxs)
-                actors.append(builder.build(name=f"{model_id}-{i}"))
-                obj_heights.append(obj_height)
-            self.obj = Actor.merge(actors, name="ycb_object")
+                builder = actors.get_actor_builder(self._scene, id=f"ycb:{model_id}")
+                builder.set_scene_idxs([i])
+                self._objs.append(builder.build(name=f"{model_id}-{i}"))
+            self.obj = Actor.merge(self._objs, name="ycb_object")
         else:
             raise ValueError(
-                f"Difficulty level must be a int within 0-4, but get {self.difficulty_level}"
+                f"Difficulty level must be an int within 0-4, but get {self.difficulty_level}"
             )
 
-        self.obj_heights = torch.from_numpy(np.array(obj_heights)).to(self.device)
+        if self.difficulty_level < 2:
+            # for levels 0 and 1 we already know object heights. For other levels we need to compute them
+            self.obj_heights = common.to_tensor(obj_heights)
+
+    def _after_reconfigure(self, options: dict):
+        if self.difficulty_level >= 2:
+            self.obj_heights = []
+            for obj in self._objs:
+                collision_mesh = obj.get_first_collision_mesh()
+                # this value is used to set object pose so the bottom is at z=0
+                self.obj_heights.append(-collision_mesh.bounding_box.bounds[0, 2])
+            self.obj_heights = common.to_tensor(self.obj_heights)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         self._initialize_actors(env_idx)

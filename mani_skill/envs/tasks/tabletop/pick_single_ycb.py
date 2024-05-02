@@ -4,19 +4,16 @@ import numpy as np
 import sapien
 import torch
 
+from mani_skill import ASSET_DIR
 from mani_skill.agents.robots.fetch.fetch import Fetch
 from mani_skill.agents.robots.panda.panda import Panda
 from mani_skill.agents.robots.xmate3.xmate3 import Xmate3Robotiq
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.utils.randomization.pose import random_quaternions
 from mani_skill.sensors.camera import CameraConfig
-from mani_skill.utils import sapien_utils
-from mani_skill.utils.building.actors import (
-    MODEL_DBS,
-    _load_ycb_dataset,
-    build_actor_ycb,
-    build_sphere,
-)
+from mani_skill.utils import common, sapien_utils
+from mani_skill.utils.building import actors
+from mani_skill.utils.io_utils import load_json
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs.actor import Actor
@@ -44,8 +41,11 @@ class PickSingleYCBEnv(BaseEnv):
     ):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         self.model_id = None
-        _load_ycb_dataset()
-        self.all_model_ids = np.array(list(MODEL_DBS["YCB"]["model_data"].keys()))
+        self.all_model_ids = np.array(
+            list(
+                load_json(ASSET_DIR / "assets/mani_skill2_ycb/info_pick_v0.json").keys()
+            )
+        )
         if reconfiguration_freq is None:
             if num_envs == 1:
                 reconfiguration_freq = 1
@@ -96,19 +96,19 @@ class PickSingleYCBEnv(BaseEnv):
                 or set reconfiguration_freq to be > 1."""
             )
 
-        actors: List[Actor] = []
+        self._objs: List[Actor] = []
         self.obj_heights = []
         for i, model_id in enumerate(model_ids):
             # TODO: before official release we will finalize a metadata dataclass that these build functions should return.
-            builder, obj_height = build_actor_ycb(
-                model_id, self._scene, name=model_id, return_builder=True
+            builder = actors.get_actor_builder(
+                self._scene,
+                id=f"ycb:{model_id}",
             )
             builder.set_scene_idxs([i])
-            actors.append(builder.build(name=f"{model_id}-{i}"))
-            self.obj_heights.append(obj_height)
-        self.obj = Actor.merge(actors, name="ycb_object")
+            self._objs.append(builder.build(name=f"{model_id}-{i}"))
+        self.obj = Actor.merge(self._objs, name="ycb_object")
 
-        self.goal_site = build_sphere(
+        self.goal_site = actors.build_sphere(
             self._scene,
             radius=self.goal_thresh,
             color=[0, 1, 0, 1],
@@ -118,15 +118,21 @@ class PickSingleYCBEnv(BaseEnv):
         )
         self._hidden_objects.append(self.goal_site)
 
+    def _after_reconfigure(self, options: dict):
+        self.object_zs = []
+        for obj in self._objs:
+            collision_mesh = obj.get_first_collision_mesh()
+            # this value is used to set object pose so the bottom is at z=0
+            self.object_zs.append(-collision_mesh.bounding_box.bounds[0, 2])
+        self.object_zs = common.to_tensor(self.object_zs)
+
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)
             xyz = torch.zeros((b, 3))
             xyz[:, :2] = torch.rand((b, 2)) * 0.2 - 0.1
-            for i in range(b):
-                # use ycb object bounding box heights to set it properly on the table
-                xyz[i, 2] = self.obj_heights[i] / 2
+            xyz[:, 2] = self.object_zs[env_idx]
 
             qs = random_quaternions(b, lock_x=True, lock_y=True)
             self.obj.set_pose(Pose.create_from_pq(p=xyz, q=qs))
@@ -161,8 +167,10 @@ class PickSingleYCBEnv(BaseEnv):
     def evaluate(self):
         obj_to_goal_pos = self.goal_site.pose.p - self.obj.pose.p
         is_obj_placed = torch.linalg.norm(obj_to_goal_pos, axis=1) <= self.goal_thresh
+        is_grasped = self.agent.is_grasping(self.obj)
         is_robot_static = self.agent.is_static(0.2)
         return dict(
+            is_grasped=is_grasped,
             obj_to_goal_pos=obj_to_goal_pos,
             is_obj_placed=is_obj_placed,
             is_robot_static=is_robot_static,
@@ -174,7 +182,7 @@ class PickSingleYCBEnv(BaseEnv):
         obs = dict(
             tcp_pose=self.agent.tcp.pose.raw_pose,
             goal_pos=self.goal_site.pose.p,
-            is_grasping=info["is_grasping"],
+            is_grasped=info["is_grasped"],
         )
         if "state" in self.obs_mode:
             obs.update(
@@ -192,7 +200,7 @@ class PickSingleYCBEnv(BaseEnv):
         reaching_reward = 1 - torch.tanh(5 * tcp_to_obj_dist)
         reward = reaching_reward
 
-        is_grasped = info["is_grasping"]
+        is_grasped = info["is_grasped"]
         reward += is_grasped
 
         obj_to_goal_dist = torch.linalg.norm(
