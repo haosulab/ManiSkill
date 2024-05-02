@@ -5,7 +5,7 @@ import sapien
 import torch
 from transforms3d.euler import euler2quat
 
-from mani_skill.agents.robots import Fetch, Panda
+from mani_skill.agents.robots import PandaWristCam
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.utils import randomization
 from mani_skill.sensors.camera import CameraConfig
@@ -25,10 +25,12 @@ class PlugChargerEnv(BaseEnv):
     _clearance = 5e-4  # single side clearance
     _receptacle_size = [1e-2, 5e-2, 5e-2]  # receptacle half size
 
-    SUPPORTED_ROBOTS = ["panda"]
-    agent: Union[Panda]
+    SUPPORTED_ROBOTS = ["panda_wristcam"]
+    agent: Union[PandaWristCam]
 
-    def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
+    def __init__(
+        self, *args, robot_uids="panda_wristcam", robot_init_qpos_noise=0.02, **kwargs
+    ):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
@@ -161,6 +163,31 @@ class PlugChargerEnv(BaseEnv):
         with torch.device(self.device):
             b = len(env_idx)
             self.table_scene_builder.initialize(env_idx)
+
+            # Initialize agent
+            qpos = torch.tensor(
+                [
+                    0.0,
+                    np.pi / 8,
+                    0,
+                    -np.pi * 5 / 8,
+                    0,
+                    np.pi * 3 / 4,
+                    np.pi / 4,
+                    0.04,
+                    0.04,
+                ]
+            )
+            qpos = (
+                torch.normal(
+                    0, self.robot_init_qpos_noise, (b, len(qpos)), device=self.device
+                )
+                + qpos
+            )
+            qpos[:, -2:] = 0.04
+            self.agent.robot.set_qpos(qpos)
+            self.agent.robot.set_pose(sapien.Pose([-0.615, 0, 0]))
+
             # Initialize charger
             xy = randomization.uniform(
                 [-0.1, -0.2], [-0.01 - self._peg_size[0] * 2, 0.2], size=(b, 2)
