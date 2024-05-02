@@ -88,7 +88,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         # convenience
         self = cls(
             _objs=physx_articulations,
-            _scene=scene,
+            scene=scene,
             _scene_idxs=scene_idxs,
             links=None,
             links_map=None,
@@ -215,7 +215,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     @classmethod
     def merge(cls, articulations: List["Articulation"], name: str = None):
         objs = []
-        scene = articulations[0]._scene
+        scene = articulations[0].scene
         merged_scene_idxs = []
         num_objs_per_actor = articulations[0]._num_objs
         for articulation in articulations:
@@ -311,7 +311,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         ), "Currently you cannot fetch collision meshes of merged articulations as merged articulations only share a root link"
         if physx.is_gpu_enabled():
             assert (
-                self._scene._gpu_sim_initialized
+                self.scene._gpu_sim_initialized
             ), "During GPU simulation link pose data is not accessible until after \
                 initialization, and link poses are needed to get the correct collision mesh of an entire articulation"
         else:
@@ -367,7 +367,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
                 .clone()
                 .reshape(len(link_names), -1, 3)
                 .transpose(1, 0)
-                / self._scene.timestep
+                / self.scene.timestep
             )
         else:
 
@@ -378,7 +378,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             )
             net_force = (
                 common.to_tensor(sapien_utils.compute_total_impulse(body_contacts))
-                / self._scene.timestep
+                / self.scene.timestep
             )
             # TODO (stao): (unify contacts api between gpu / cpu)
             return net_force[None, :]
@@ -543,7 +543,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         if physx.is_gpu_enabled():
             arg1 = common.to_tensor(arg1)
             self.px.cuda_articulation_qf.torch()[
-                self._data_index[self._scene._reset_mask[self._scene_idxs]],
+                self._data_index[self.scene._reset_mask[self._scene_idxs]],
                 : self.max_dof,
             ] = arg1
         else:
@@ -582,7 +582,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         if physx.is_gpu_enabled():
             arg1 = common.to_tensor(arg1)
             self.px.cuda_articulation_qpos.torch()[
-                self._data_index[self._scene._reset_mask[self._scene_idxs]],
+                self._data_index[self.scene._reset_mask[self._scene_idxs]],
                 : self.max_dof,
             ] = arg1
         else:
@@ -605,7 +605,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         if physx.is_gpu_enabled():
             arg1 = common.to_tensor(arg1)
             self.px.cuda_articulation_qvel.torch()[
-                self._data_index[self._scene._reset_mask[self._scene_idxs]],
+                self._data_index[self.scene._reset_mask[self._scene_idxs]],
                 : self.max_dof,
             ] = arg1
         else:
@@ -623,7 +623,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         if physx.is_gpu_enabled():
             arg1 = common.to_tensor(arg1)
             self.px.cuda_rigid_body_data.torch()[
-                self.root._body_data_index[self._scene._reset_mask[self._scene_idxs]],
+                self.root._body_data_index[self.scene._reset_mask[self._scene_idxs]],
                 10:13,
             ] = arg1
         else:
@@ -641,7 +641,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         if physx.is_gpu_enabled():
             arg1 = common.to_tensor(arg1)
             self.px.cuda_rigid_body_data.torch()[
-                self.root._body_data_index[self._scene._reset_mask[self._scene_idxs]],
+                self.root._body_data_index[self.scene._reset_mask[self._scene_idxs]],
                 7:10,
             ] = arg1
         else:

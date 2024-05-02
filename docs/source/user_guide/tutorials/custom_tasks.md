@@ -34,7 +34,7 @@ If you have any questions or issues, feel free to ask in our [discord](https://d
 
 ## Setting up the Task Class
 
-All tasks are defined by their own class and must inherit `BaseEnv`, similar to the design of many other robot learning simulation frameworks. You must then also register the class with a decorator so that the environment can be easily created via the `gym.make(env_id=...)` command in the future. Environment registration is done via `@register_env(env_id, max_episode_steps=...)` where max_episode_steps indicates the timelimit of the task.
+All tasks are defined by their own class and must inherit `BaseEnv`, similar to the design of many other robot learning simulation frameworks. You must then also register the class with a decorator so that the environment can be easily created via the `gym.make(env_id=...)` command in the future. Environment registration is done via `@register_env(env_id, max_episode_steps=...)` where `max_episode_steps` indicates the timelimit of the task.
 
 ```python
 import sapien
@@ -51,7 +51,7 @@ class PushCubeEnv(BaseEnv):
 
 At the start of any task, you must load in all objects (robots, assets, articulations, lighting etc.) into each parallel environment, also known as a sub-scene. This is also known as **reconfiguration** and generally only ever occurs once. Loading these objects is done in the `_load_scene` function of your custom task class. The objective is to simply load objects in, and nothing else. For GPU simulation at this stage you cannot change object states (like pose, qpos), only initial poses can be modified. Changing/randomizing states is done in the section on [episode initialization / randomization](#episode-initialization--randomization).
 
-Building objects in ManiSkill is nearly the exact same as it is in SAPIEN. You create an `ActorBuilder` via `self._scene.create_actor_builder` and via the actor builder add visual and collision shapes. Visual shapes only affect visual rendering processes while collision shapes affect the physical simulation. ManiSkill further will create the actor for you in every sub-scene (unless you use [scene-masks/scene-idxs](./custom_tasks_advanced.md#scene-masks), a more advanced feature).
+Building objects in ManiSkill is nearly the exact same as it is in SAPIEN. You create an `ActorBuilder` via `self.scene.create_actor_builder` and via the actor builder add visual and collision shapes. Visual shapes only affect visual rendering processes while collision shapes affect the physical simulation. ManiSkill further will create the actor for you in every sub-scene (unless you use [scene-masks/scene-idxs](./custom_tasks_advanced.md#scene-masks), a more advanced feature).
 
 #### Building Robots
 
@@ -85,7 +85,7 @@ class PushCubeEnv(BaseEnv):
     # ...
     def _load_scene(self, options: dict):
         # ...
-        builder = self._scene.create_actor_builder()
+        builder = self.scene.create_actor_builder()
         builder.add_box_collision(
             # for boxes we specify half length of each side
             half_size=[0.02] * 3,

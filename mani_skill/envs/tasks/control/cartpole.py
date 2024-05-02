@@ -103,7 +103,7 @@ class CartpoleEnv(BaseEnv):
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
     def _load_scene(self, options: dict):
-        loader = self._scene.create_mjcf_loader()
+        loader = self.scene.create_mjcf_loader()
         articulation_builders, actor_builders, sensor_configs = loader.parse(MJCF_FILE)
         for a in actor_builders:
             a.build(a.name)

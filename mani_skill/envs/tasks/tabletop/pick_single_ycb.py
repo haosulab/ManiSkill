@@ -101,7 +101,7 @@ class PickSingleYCBEnv(BaseEnv):
         for i, model_id in enumerate(model_ids):
             # TODO: before official release we will finalize a metadata dataclass that these build functions should return.
             builder, obj_height = build_actor_ycb(
-                model_id, self._scene, name=model_id, return_builder=True
+                model_id, self.scene, name=model_id, return_builder=True
             )
             builder.set_scene_idxs([i])
             actors.append(builder.build(name=f"{model_id}-{i}"))
@@ -109,7 +109,7 @@ class PickSingleYCBEnv(BaseEnv):
         self.obj = Actor.merge(actors, name="ycb_object")
 
         self.goal_site = build_sphere(
-            self._scene,
+            self.scene,
             radius=self.goal_thresh,
             color=[0, 1, 0, 1],
             name="goal_site",

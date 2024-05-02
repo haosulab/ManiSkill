@@ -68,7 +68,7 @@ class FMBAssembly1Env(BaseEnv):
             env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
         )
         self.table_scene.build()
-        builder = self._scene.create_actor_builder()
+        builder = self.scene.create_actor_builder()
 
         rot_correction = sapien.Pose(q=euler2quat(np.pi / 2, 0, 0))
         builder.add_nonconvex_collision_from_file(
@@ -78,7 +78,7 @@ class FMBAssembly1Env(BaseEnv):
             osp.join(osp.dirname(__file__), "assets/board_1.glb"), rot_correction
         )
         self.board = builder.build_kinematic("board")
-        builder = self._scene.create_actor_builder()
+        builder = self.scene.create_actor_builder()
         builder.add_convex_collision_from_file(
             osp.join(osp.dirname(__file__), "assets/yellow_peg.glb"), rot_correction
         )
@@ -87,7 +87,7 @@ class FMBAssembly1Env(BaseEnv):
         )
         self.peg = builder.build("yellow_peg")
 
-        builder = self._scene.create_actor_builder()
+        builder = self.scene.create_actor_builder()
         builder.add_multiple_convex_collisions_from_file(
             osp.join(osp.dirname(__file__), "assets/purple_u.ply")
         )
@@ -96,7 +96,7 @@ class FMBAssembly1Env(BaseEnv):
         )
         self.purple_u = builder.build("purple_u")
 
-        builder = self._scene.create_actor_builder()
+        builder = self.scene.create_actor_builder()
         builder.add_multiple_convex_collisions_from_file(
             osp.join(osp.dirname(__file__), "assets/blue_u.ply")
         )
@@ -105,7 +105,7 @@ class FMBAssembly1Env(BaseEnv):
         )
         self.blue_u = builder.build("blue_u")
 
-        builder = self._scene.create_actor_builder()
+        builder = self.scene.create_actor_builder()
         builder.add_multiple_convex_collisions_from_file(
             osp.join(osp.dirname(__file__), "assets/green_bridge.ply")
         )
@@ -115,7 +115,7 @@ class FMBAssembly1Env(BaseEnv):
         self.bridge = builder.build("green_bridge")
 
         rot_correction = sapien.Pose(q=euler2quat(np.pi / 2, 0, np.pi / 2))
-        builder = self._scene.create_actor_builder()
+        builder = self.scene.create_actor_builder()
         builder.add_nonconvex_collision_from_file(
             osp.join(osp.dirname(__file__), "assets/reorienting_fixture.glb"),
             rot_correction,
@@ -126,7 +126,7 @@ class FMBAssembly1Env(BaseEnv):
         )
         self.reorienting_fixture = builder.build_kinematic("reorienting_fixture")
 
-        builder = self._scene.create_actor_builder()
+        builder = self.scene.create_actor_builder()
         self.bridge_grasp = builder.build_kinematic(name="bridge_grasp")
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):

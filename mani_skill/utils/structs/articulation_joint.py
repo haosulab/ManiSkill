@@ -69,7 +69,7 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
             active_index=active_joint_index,
             _objs=physx_joints,
             _physx_articulations=physx_articulations,
-            _scene=scene,
+            scene=scene,
             _scene_idxs=scene_idxs,
         )
 

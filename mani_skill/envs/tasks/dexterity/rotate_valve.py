@@ -114,7 +114,7 @@ class RotateValveEnv(BaseEnv):
             scene_idxs = [i]
             if self.difficulty_level < 3:
                 valve, capsule_len = build_robel_valve(
-                    self._scene,
+                    self.scene,
                     valve_angles=valve_angles,
                     scene_idxs=scene_idxs,
                     name=f"valve_station_{i}",
@@ -122,7 +122,7 @@ class RotateValveEnv(BaseEnv):
             else:
                 scales = self._main_rng.randn(2) * 0.1 + 1
                 valve, capsule_len = build_robel_valve(
-                    self._scene,
+                    self.scene,
                     valve_angles=valve_angles,
                     scene_idxs=scene_idxs,
                     name=f"valve_station_{i}",

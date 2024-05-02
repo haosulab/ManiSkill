@@ -43,7 +43,7 @@ class PandaArmMotionPlanningSolver:
         self.grasp_pose_visual = None
         if self.vis and self.visualize_target_grasp_pose:
             self.grasp_pose_visual = build_panda_gripper_grasp_pose_visual(
-                env.unwrapped._scene
+                env.unwrapped.scene
             )
             self.grasp_pose_visual.set_pose(env.unwrapped.agent.tcp.pose)
         self.elapsed_steps = 0

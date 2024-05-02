@@ -6,7 +6,7 @@ def before_gpu_init(func):
 
     def wrapper(self, *args, **kwargs):
         assert (
-            self._scene._gpu_sim_initialized == False
+            self.scene._gpu_sim_initialized == False
         ), f"{func} can only be called when the GPU simulation has not been initialized yet"
         return func(self, *args, **kwargs)
 

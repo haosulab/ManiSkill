@@ -47,7 +47,7 @@ class PullCubeEnv(BaseEnv):
 
         # create cube
         self.obj = actors.build_cube(
-            self._scene,
+            self.scene,
             half_size=self.cube_half_size,
             color=np.array([12, 42, 160, 255]) / 255,
             name="cube",
@@ -56,7 +56,7 @@ class PullCubeEnv(BaseEnv):
 
         # create target
         self.goal_region = actors.build_red_white_target(
-            self._scene,
+            self.scene,
             radius=self.goal_radius,
             thickness=1e-5,
             name="goal_region",

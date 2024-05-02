@@ -162,7 +162,7 @@ class AssemblingKitsEnv(BaseEnv):
         object_goal_pos, objects_goal_rot = self._parse_json(
             self._kit_dir / f"{kit_id}.json"
         )
-        builder = self._scene.create_actor_builder()
+        builder = self.scene.create_actor_builder()
         kit_path = str(self._kit_dir / f"{kit_id}.obj")
         builder.add_nonconvex_collision_from_file(kit_path)
         builder.add_visual_from_file(
@@ -179,7 +179,7 @@ class AssemblingKitsEnv(BaseEnv):
         collision_path = self._models_dir / "collision" / f"{object_id:02d}.obj"
         visual_path = self._models_dir / "visual" / f"{object_id:02d}.obj"
 
-        builder = self._scene.create_actor_builder()
+        builder = self.scene.create_actor_builder()
         if static:
             builder.add_nonconvex_collision_from_file(
                 str(collision_path), scale=self.object_scale

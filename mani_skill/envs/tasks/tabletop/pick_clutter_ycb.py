@@ -134,7 +134,7 @@ class PickClutterEnv(BaseEnv):
         self.all_objects = Actor.merge(all_objects, name="all_objects")
 
         self.goal_site = actors.build_sphere(
-            self._scene,
+            self.scene,
             radius=0.01,
             color=[0, 1, 0, 1],
             name="goal_site",
@@ -202,6 +202,6 @@ class PickClutterYCBEnv(PickClutterEnv):
 
     def _load_model(self, model_id):
         builder, _ = actors.build_actor_ycb(
-            model_id, self._scene, name=model_id, return_builder=True
+            model_id, self.scene, name=model_id, return_builder=True
         )
         return builder

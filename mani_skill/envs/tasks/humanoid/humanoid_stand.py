@@ -36,7 +36,7 @@ class HumanoidStandEnv(BaseEnv):
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
     def _load_scene(self, options: dict):
-        build_ground(self._scene)
+        build_ground(self.scene)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         pass
