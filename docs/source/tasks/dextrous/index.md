@@ -31,10 +31,39 @@ Using the D'Claw robot, rotate a [ROBEL valve](https://sites.google.com/view/rob
 - Rotation direction $r$ which can be 1 or -1. Note that the amount to rotate is implicit and depends of level
 :::
 
-:::{figure} https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/RotateValve-v1_rt.png
-:alt: rotate valve task
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/RotateValveLevel1-v1_rt.mp4" type="video/mp4">
+</video>
+
+
+
+### RotateSingleObjectInHandLevel0-v1
+![dense-reward][reward-badge]
+
+(Note there is Level0, Level1, ... to Level4)
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+Using the allegro hand with tactile sensors, rotate a random object.
+
+**Supported Robots: Allegro Hand**
+
+**Randomizations:**
+WIP
+
+**Success Conditions:**
+WIP
+
+**Goal Specification:**
+WIP
 :::
 
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/RotateSingleObjectInHandLevel3-v1_rt.mp4" type="video/mp4">
+</video>
 
 ### TriFingerRotateCubeLevel0-v1
 ![dense-reward][reward-badge]
