@@ -532,8 +532,6 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
                     env.flush_video(ignore_empty_transition=False)
                 break
             else:
-                # Rollback episode id for failed attempts
-                env._episode_id -= 1
                 if args.verbose:
                     print("info", info)
         else:
