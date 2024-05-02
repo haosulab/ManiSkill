@@ -50,11 +50,3 @@ docker run --rm --gpus all -p 5900:5900 \
 ```
 
 Then, forward the port of VNC (5900 by default) to the local host. On your local machine, install a [VNC viewer](https://www.realvnc.com/en/connect/download/viewer/) and connect to the localhost port(e.g. localhost:5900). -->
-
----
-
-**References**:
-
-- <https://medium.com/@benjamin.botto/opengl-and-cuda-applications-in-docker-af0eece000f1>
-- <http://wiki.ros.org/docker/Tutorials/GUI>
-- <https://github.com/haosulab/ManiSkill/issues/62>

@@ -5,12 +5,12 @@ Building custom tasks in ManiSkill is straightforward and flexible. ManiSkill pr
 Building a custom task in ManiSkill is comprised of the following core components
 
 1. [Setting up the Task Class](#setting-up-the-task-class)
-2. [Loading (Robots, Assets, Sensors, etc.)](#loading) (done once)
-3. [Episode initialization / Randomization](#episode-initialization--randomization) (done every env.reset)
-4. [Success/Failure Condition](#successfailure-conditions) (done every env.step)
-5. [Extra Observations](#extra-observations) (done every env.step)
-6. [(Optional) Dense Reward Function](#optional-dense-reward-function) (done every env.step)
-7. [(Optional) Setting up cameras/sensors for observations and rendering/recording](#optional-setting-up-camerassensors-for-observations-and-recording) (done once)
+2. [Loading (Robots, Assets, Sensors, etc.)](#loading) (run once)
+3. [Episode initialization / Randomization](#episode-initialization--randomization) (run every env.reset)
+4. [Success/Failure Condition](#successfailure-conditions) (run every env.step)
+5. [Extra Observations](#extra-observations) (run every env.step)
+6. [(Optional) Dense Reward Function](#optional-dense-reward-function) (run every env.step)
+7. [(Optional) Setting up cameras/sensors for observations and rendering/recording](#optional-setting-up-camerassensors-for-observations-and-recording) (run once)
 
 Visually the flow of environment creation under the gym API via `gym.make` and `env.reset` looks as so:
 

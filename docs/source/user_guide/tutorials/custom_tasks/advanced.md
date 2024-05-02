@@ -94,6 +94,8 @@ Here we have a list of YCB object ids in `model_ids`. For the ith `model_id` we 
 
 ## Merging
 
+ManiSkill is able to easily support task building with diverse objects/articulations via a merging tool, which is way of viewing and reshaping existing data (on the GPU) into a single object to access from.
+
 ### Merging Actors
 
 In the [scene masks](#scene-masks) section we saw how we can restrict actors being built to specific scenes. However now we have a list of Actor objects and fetching the pose of each actor would need a for loop. The solution here is to create a new Actor that represents/views that entire list of actors via `Actor.merge` as done below (taken from the PickSingleYCB-v1 code). Once done, writing evaluation and reward functions become much easier as you can fetch the pose and other data of all the different actors with one batched attribute.
@@ -112,11 +114,50 @@ class MyCustomTask(BaseEnv):
         # etc.
 ```
 
-Properties that exist regardless of geometry like object pose can be easily fetched after merging actors. This enables simple heterogenous simulation of diverse objects/geometries.
+Properties that exist regardless of geometry like object pose can be easily fetched after merging actors. This enables simple diverse simulation of diverse objects/geometries.
 
 ### Merging Articulations
 
-WIP
+Similar to Actors, you can also merge Articulations. Note that this has a number of caveats since we allow merging articulations that may have completely different link/joint structures and DOFs.
+
+
+```python
+from mani_skill.utils.structs import Articulation
+class MyCustomTask(BaseEnv):
+    # ...
+    def _load_scene(self, options: dict):
+        # ... code to create list of articulations using scene masking
+        art = Articulation.merge(articulations, name="name")
+        art.pose.p # shape (N, 3)
+        art.pose.q # shape (N, 4)
+        art.qpos # shape (N, art.max_dof)
+        art.qvel # shape (N, art.max_dof)
+        art.qlimits # shape (N, art.max_dof, 2)
+```
+
+Properties that exist regardless of articulation include the base link's data (e.g. pose, velocities etc.). The qpos, qvel data of the merged articulation is also retrievable but note that it is padded now to the max dof, which you can get via `art.max_dof`. Retrieving the qpos values of joints you want can be a bit tricky, but that can be mostly handled by merging links which is detailed in the next section
+
+### Merging Links
+
+Similar to Actors, you can also merge any list of links sourced from any articulations you create. Upon merging, ManiSkill will also create a merged joint object that gives easy access to qpos values of links/joints you need without having to mess with complex indexing of padded data.
+
+
+```python
+from mani_skill.utils.structs import Link
+class MyCustomTask(BaseEnv):
+    # ...
+    def _load_scene(self, options: dict):
+        # ... code to create list of articulations using scene masking
+        # and then to select one link from each articulation
+        link = Link.merge(links, name="my_link")
+        link.pose.p # shape (N, 3)
+        link.pose.q # shape (N, 4)
+        link.joint # a merged joint object
+        link.joint.qpos # shape (N, 1)
+        link.joint.qvel # shape (N, 1)
+```
+
+
 
 ## Task Sim Configurations
 
