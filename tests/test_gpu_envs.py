@@ -420,6 +420,3 @@ def test_hidden_objs(env_id):
     test_fn()
     env.close()
     del env
-
-
-# TODO (stao): Add test for tasks where there is no success/success and failure/no success or failure
