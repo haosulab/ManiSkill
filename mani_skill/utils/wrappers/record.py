@@ -251,6 +251,7 @@ class RecordEpisode(gym.Wrapper):
                 resets you may set max_steps_per_video equal to the max_episode_steps"
         self.clean_on_close = clean_on_close
         self.record_reward = record_reward
+        self.record_env_state = True
         if self.save_trajectory:
             if not trajectory_name:
                 trajectory_name = time.strftime("%Y%m%d_%H%M%S")
@@ -375,12 +376,14 @@ class RecordEpisode(gym.Wrapper):
 
                 # TODO (stao): how do we store states from GPU sim of tasks with objects not in every sub-scene?
                 # Maybe we shouldn't?
-                recursive_replace(self._trajectory_buffer.state, first_step.state)
+                if self.record_env_state:
+                    recursive_replace(self._trajectory_buffer.state, first_step.state)
                 recursive_replace(
                     self._trajectory_buffer.observation, first_step.observation
                 )
                 recursive_replace(self._trajectory_buffer.action, first_step.action)
-                recursive_replace(self._trajectory_buffer.reward, first_step.reward)
+                if self.record_reward:
+                    recursive_replace(self._trajectory_buffer.reward, first_step.reward)
                 recursive_replace(
                     self._trajectory_buffer.terminated, first_step.terminated
                 )
@@ -417,10 +420,11 @@ class RecordEpisode(gym.Wrapper):
                 # this fixes the issue where gymnasium applies a non-batched timelimit wrapper
                 truncated = self.base_env.elapsed_steps >= self.max_episode_steps
             state_dict = self.base_env.get_state_dict()
-            self._trajectory_buffer.state = common.append_dict_array(
-                self._trajectory_buffer.state,
-                common.to_numpy(common.batch(state_dict)),
-            )
+            if self.record_env_state:
+                self._trajectory_buffer.state = common.append_dict_array(
+                    self._trajectory_buffer.state,
+                    common.to_numpy(common.batch(state_dict)),
+                )
             self._trajectory_buffer.observation = common.append_dict_array(
                 self._trajectory_buffer.observation,
                 common.to_numpy(common.batch(obs)),
@@ -430,10 +434,11 @@ class RecordEpisode(gym.Wrapper):
                 self._trajectory_buffer.action,
                 common.to_numpy(common.batch(action)),
             )
-            self._trajectory_buffer.reward = common.append_dict_array(
-                self._trajectory_buffer.reward,
-                common.to_numpy(common.batch(rew)),
-            )
+            if self.record_reward:
+                self._trajectory_buffer.reward = common.append_dict_array(
+                    self._trajectory_buffer.reward,
+                    common.to_numpy(common.batch(rew)),
+                )
             self._trajectory_buffer.terminated = common.append_dict_array(
                 self._trajectory_buffer.terminated,
                 common.to_numpy(common.batch(terminated)),
@@ -603,7 +608,10 @@ class RecordEpisode(gym.Wrapper):
                 episode_info.update(
                     fail=self._trajectory_buffer.fail[end_ptr - 1, env_idx]
                 )
-            recursive_add_to_h5py(group, self._trajectory_buffer.state, "env_states")
+            if self.record_env_state:
+                recursive_add_to_h5py(
+                    group, self._trajectory_buffer.state, "env_states"
+                )
             if self.record_reward:
                 group.create_dataset(
                     "rewards",
@@ -632,18 +640,21 @@ class RecordEpisode(gym.Wrapper):
             )
             min_env_ptr = self._trajectory_buffer.env_episode_ptr.min()
             N = len(self._trajectory_buffer.done)
-            self._trajectory_buffer.state = common.index_dict_array(
-                self._trajectory_buffer.state, slice(min_env_ptr, N)
-            )
+
+            if self.record_env_state:
+                self._trajectory_buffer.state = common.index_dict_array(
+                    self._trajectory_buffer.state, slice(min_env_ptr, N)
+                )
             self._trajectory_buffer.observation = common.index_dict_array(
                 self._trajectory_buffer.observation, slice(min_env_ptr, N)
             )
             self._trajectory_buffer.action = common.index_dict_array(
                 self._trajectory_buffer.action, slice(min_env_ptr, N)
             )
-            self._trajectory_buffer.reward = common.index_dict_array(
-                self._trajectory_buffer.reward, slice(min_env_ptr, N)
-            )
+            if self.record_reward:
+                self._trajectory_buffer.reward = common.index_dict_array(
+                    self._trajectory_buffer.reward, slice(min_env_ptr, N)
+                )
             self._trajectory_buffer.terminated = common.index_dict_array(
                 self._trajectory_buffer.terminated, slice(min_env_ptr, N)
             )

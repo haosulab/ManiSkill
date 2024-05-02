@@ -503,6 +503,7 @@ class BaseEnv(gym.Env):
                 reward = -info["fail"]
             else:
                 reward = torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
+        return reward
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         raise NotImplementedError()
