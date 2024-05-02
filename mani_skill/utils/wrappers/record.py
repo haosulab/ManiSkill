@@ -577,14 +577,20 @@ class RecordEpisode(gym.Wrapper):
                 # NOTE (stao): With multiple envs in GPU simulation, reset_kwargs do not make much sense
                 episode_info.update(reset_kwargs=dict())
 
-            actions = self._trajectory_buffer.action[start_ptr + 1 : end_ptr, env_idx]
+            # slice some data to remove the first dummy frame.
+            actions = common.index_dict_array(
+                self._trajectory_buffer.action, (slice(start_ptr + 1, end_ptr), env_idx)
+            )
             terminated = self._trajectory_buffer.terminated[
                 start_ptr + 1 : end_ptr, env_idx
             ]
             truncated = self._trajectory_buffer.truncated[
                 start_ptr + 1 : end_ptr, env_idx
             ]
-            group.create_dataset("actions", data=actions, dtype=np.float32)
+            if isinstance(self._trajectory_buffer.action, dict):
+                recursive_add_to_h5py(group, actions, "actions")
+            else:
+                group.create_dataset("actions", data=actions, dtype=np.float32)
             group.create_dataset("terminated", data=terminated, dtype=bool)
             group.create_dataset("truncated", data=truncated, dtype=bool)
 

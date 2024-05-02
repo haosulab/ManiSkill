@@ -233,3 +233,51 @@ The robot must pick up one of the misplaced shapes on the board/kit and insert i
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/AssemblingKits-v1_rt.mp4" type="video/mp4">
 </video>
 
+
+## TwoRobotPickCube-v1
+![dense-reward][reward-badge]
+
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+One robot must push/give the cube on its side to the other side so the other robot can pick it up and bring it to a goal
+
+**Supported Robots: (Panda, Panda)**
+
+**Randomizations:**
+- cube position is spawned on one side and randomized on the XY plane.
+
+**Success Conditions:**
+- the cube's xy position is within 0.025 meteres of the goal position by euclidean distance.
+:::
+
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/TwoRobotPickCube-v1_rt.mp4" type="video/mp4">
+</video>
+
+
+## TwoRobotStackCube-v1
+![dense-reward][reward-badge]
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+One robot must push/give the cube on its side to the other side so the other robot can stack another cube on top of it.
+
+**Supported Robots: (Panda, Panda)**
+
+**Randomizations:**
+- two cubes are spawned on both sides of the table and have their positon randomized on the XY plane
+
+**Success Conditions:**
+- the blue cube is on top of the green cube and neither cube is being grasped by any robot
+:::
+
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/TwoRobotStackCube-v1_rt.mp4" type="video/mp4">
+</video>
