@@ -274,7 +274,7 @@ class RecordEpisode(gym.Wrapper):
                 self._json_data["source_desc"] = source_desc
         self._save_video = save_video
         self.info_on_video = info_on_video
-        self._render_images = []
+        self.render_images = []
         if info_on_video and self.num_envs > 1:
             raise ValueError(
                 "Cannot turn info_on_video=True when the number of environments parallelized is > 1"
@@ -405,7 +405,7 @@ class RecordEpisode(gym.Wrapper):
         if self.save_video and self._video_steps == 0:
             # save the first frame of the video here (s_0) instead of inside reset as user
             # may call env.reset(...) multiple times but we want to ignore empty trajectories
-            self._render_images.append(self.capture_image())
+            self.render_images.append(self.capture_image())
         obs, rew, terminated, truncated, info = super().step(action)
 
         if self.save_trajectory:
@@ -478,7 +478,7 @@ class RecordEpisode(gym.Wrapper):
                 ]
                 image = put_info_on_image(image, scalar_info, extras=extra_texts)
 
-            self._render_images.append(image)
+            self.render_images.append(image)
             if (
                 self.max_steps_per_video is not None
                 and self._video_steps >= self.max_steps_per_video
@@ -666,9 +666,9 @@ class RecordEpisode(gym.Wrapper):
     def flush_video(
         self, name=None, suffix="", verbose=False, ignore_empty_transition=True
     ):
-        if len(self._render_images) == 0:
+        if len(self.render_images) == 0:
             return
-        if ignore_empty_transition and len(self._render_images) == 1:
+        if ignore_empty_transition and len(self.render_images) == 1:
             return
         self._video_id += 1
         if name is None:
@@ -678,14 +678,14 @@ class RecordEpisode(gym.Wrapper):
         else:
             video_name = name
         images_to_video(
-            self._render_images,
+            self.render_images,
             str(self.output_dir),
             video_name=video_name,
             fps=self.video_fps,
             verbose=verbose,
         )
         self._video_steps = 0
-        self._render_images = []
+        self.render_images = []
 
     def close(self) -> None:
         if self._closed:

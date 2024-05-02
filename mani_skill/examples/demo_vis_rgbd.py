@@ -58,11 +58,8 @@ def main(args):
         for cam in obs["sensor_data"].keys():
             if "rgb" in obs["sensor_data"][cam]:
 
-                rgb = common.to_numpy(obs["sensor_data"][cam]["rgb"])
-                depth = common.to_numpy(obs["sensor_data"][cam]["depth"]).astype(np.float32)
-                if args.num_envs > 1:
-                    rgb = rgb[0]
-                    depth = depth[0]
+                rgb = common.to_numpy(obs["sensor_data"][cam]["rgb"][0])
+                depth = common.to_numpy(obs["sensor_data"][cam]["depth"][0]).astype(np.float32)
                 depth = depth / (depth.max() - depth.min())
                 imgs.append(rgb)
                 depth_rgb = np.zeros_like(rgb)

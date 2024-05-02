@@ -41,15 +41,15 @@ def main(args):
     while True:
         action = env.action_space.sample()
         obs, reward, terminated, truncated, info = env.step(action)
-        xyz = obs["pointcloud"]["xyzw"][..., :3]
-        colors = obs["pointcloud"]["rgb"]
+        xyz = obs["pointcloud"]["xyzw"][0, ..., :3]
+        colors = obs["pointcloud"]["rgb"][0]
         pcd = trimesh.points.PointCloud(xyz, colors)
 
 
         # view from first camera
         for uid, cfg in env.unwrapped._sensor_configs.items():
             if isinstance(cfg, CameraConfig):
-                cam2world = obs["sensor_param"][uid]["cam2world_gl"]
+                cam2world = obs["sensor_param"][uid]["cam2world_gl"][0]
                 camera = trimesh.scene.Camera(uid, (1024, 1024), fov=(np.rad2deg(cfg.fov), np.rad2deg(cfg.fov)))
             break
         trimesh.Scene([pcd], camera=camera, camera_transform=cam2world).show()
