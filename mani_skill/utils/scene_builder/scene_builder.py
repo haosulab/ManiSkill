@@ -20,6 +20,9 @@ class SceneBuilder:
     """Env which scenebuilder will build in."""
     env: BaseEnv
 
+    """Robot init qpos noise"""
+    robot_init_qpos_noise: float = 0.02
+
     """Whether this scene builder will add its own lighting when build is called. If False, ManiSkill will add some default lighting"""
     builds_lighting: bool = False
 
@@ -43,8 +46,9 @@ class SceneBuilder:
     """
     navigable_positions: list[Union[np.ndarray, spaces.Box, Any]]
 
-    def __init__(self, env):
+    def __init__(self, env, robot_init_qpos_noise=0.02):
         self.env = env
+        self.robot_init_qpos_noise = robot_init_qpos_noise
 
     def build(self, build_config_idxs: List[int] = None):
         """

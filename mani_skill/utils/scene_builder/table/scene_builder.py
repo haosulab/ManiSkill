@@ -16,7 +16,6 @@ from mani_skill.utils.scene_builder import SceneBuilder
 
 # TODO (stao): make the build and initialize api consistent with other scenes
 class TableSceneBuilder(SceneBuilder):
-    robot_init_qpos_noise: float = 0.02
 
     def build(self):
         builder = self.scene.create_actor_builder()
