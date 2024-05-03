@@ -3,7 +3,6 @@ SceneBuilder for the AI2Thor scenes, using configurations and assets stored in h
 
 """
 
-
 import json
 import os.path as osp
 from pathlib import Path
@@ -17,7 +16,7 @@ import transforms3d
 from tqdm import tqdm
 
 from mani_skill import ASSET_DIR
-from mani_skill.agents.robots.fetch import FETCH_UNIQUE_COLLISION_BIT, Fetch
+from mani_skill.agents.robots.fetch import FETCH_WHEELS_COLLISION_BIT, Fetch
 from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.utils.scene_builder import SceneBuilder
 from mani_skill.utils.structs.actor import Actor
@@ -191,7 +190,7 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
 
     def disable_fetch_ground_collisions(self):
         self.bg.set_collision_group_bit(
-            group=2, bit_idx=FETCH_UNIQUE_COLLISION_BIT, bit=1
+            group=2, bit_idx=FETCH_WHEELS_COLLISION_BIT, bit=1
         )
 
     def set_actor_default_poses_vels(self):

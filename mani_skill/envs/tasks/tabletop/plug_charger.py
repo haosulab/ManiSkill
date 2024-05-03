@@ -12,7 +12,7 @@ from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.geometry import rotation_conversions
 from mani_skill.utils.registration import register_env
-from mani_skill.utils.scene_builder.table.table_scene_builder import TableSceneBuilder
+from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import SimConfig
 
@@ -140,10 +140,10 @@ class PlugChargerEnv(BaseEnv):
         return builder.build_kinematic(name="receptacle")
 
     def _load_scene(self, options: dict):
-        self.table_scene_builder = TableSceneBuilder(
+        self.scene_builder = TableSceneBuilder(
             self, robot_init_qpos_noise=self.robot_init_qpos_noise
         )
-        self.table_scene_builder.build()
+        self.scene_builder.build()
         self.charger = self._build_charger(
             self._peg_size,
             self._base_size,
@@ -162,7 +162,7 @@ class PlugChargerEnv(BaseEnv):
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
             b = len(env_idx)
-            self.table_scene_builder.initialize(env_idx)
+            self.scene_builder.initialize(env_idx)
 
             # Initialize agent
             qpos = torch.tensor(
