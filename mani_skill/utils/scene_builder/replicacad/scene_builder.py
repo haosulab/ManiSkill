@@ -243,6 +243,7 @@ class ReplicaCADSceneBuilder(SceneBuilder):
                         light_pos_fixed,
                         color=np.array(light_cfg["color"])
                         * np.abs(light_cfg["intensity"]),
+                        scene_idxs=env_idx,
                     )
             self.scene.set_ambient_light([0.3, 0.3, 0.3])
 
