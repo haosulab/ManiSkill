@@ -192,10 +192,10 @@ python -m mani_skill.examples.demo_vis_rgbd -e "StackCube-v1"
 
 ## Visualize Reset Distributions
 
-Determining how difficult a task might be for ML algorithms like reinforcement learning and imitation learning can heavily depend on the reset distribution of the task. To see what the reset distribution of any task (the result of repeated env.reset calls) looks like you can run
+Determining how difficult a task might be for ML algorithms like reinforcement learning and imitation learning can heavily depend on the reset distribution of the task. To see what the reset distribution of any task (the result of repeated env.reset calls) looks like you can run the following to save a video to the `videos` folder
 
 ```bash
-python -m mani_skill.examples.demo_reset_distribution -e "PegInsertionSide-v1"
+python -m mani_skill.examples.demo_reset_distribution -e "PegInsertionSide-v1" --record-dir="videos"
 ```
 
 <video preload="auto" controls="True" width="100%">
