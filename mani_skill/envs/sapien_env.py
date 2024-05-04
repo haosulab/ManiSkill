@@ -262,6 +262,7 @@ class BaseEnv(gym.Env):
             torch.zeros(self.num_envs, device=self.device, dtype=torch.int32)
         )
         obs, _ = self.reset(seed=2022, options=dict(reconfigure=True))
+
         self._init_raw_obs = common.to_cpu_tensor(obs)
         """the raw observation returned by the env.reset (a cpu torch tensor/dict of tensors). Useful for future observation wrappers to use to auto generate observation spaces"""
         self._init_raw_state = common.to_cpu_tensor(self.get_state_dict())

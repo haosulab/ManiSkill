@@ -54,7 +54,6 @@ def main(args):
         sim_backend=args.sim_backend,
         **args.env_kwargs
     )
-
     record_dir = args.record_dir
     if record_dir:
         record_dir = record_dir.format(env_id=args.env_id)
