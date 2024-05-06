@@ -316,7 +316,7 @@ if __name__ == "__main__":
 
             if "final_info" in infos:
                 final_info = infos["final_info"]
-                done_mask = final_info["_final_info"]
+                done_mask = infos["_final_info"]
                 episodic_return = final_info['episode']['r'][done_mask].cpu().numpy().mean()
                 if "success" in final_info:
                     writer.add_scalar("charts/success_rate", final_info["success"][done_mask].cpu().numpy().mean(), global_step)
