@@ -40,7 +40,7 @@ setup(
         "imageio",
         "imageio[ffmpeg]",
         "mplib>=0.1.1",
-        "fast_kinematics==0.0.1",
+        "fast_kinematics==0.2.2",
         "IPython",
         "huggingface_hub",  # we use HF to version control some assets/datasets more easily
     ],
