@@ -267,8 +267,8 @@ controller_configs = dict(
 To try this out, simply run the following and unpause the simulation when you are ready (pause button at the top left)
 
 ```bash
-python -m test.py -r "my_panda" -c "pd_joint_delta_pos" --random-actions
-python -m test.py -r "my_panda" -c "pd_joint_delta_pos" -b "gpu" --random-actions
+python test.py -r "my_panda" -c "pd_joint_delta_pos" --random-actions
+python test.py -r "my_panda" -c "pd_joint_delta_pos" -b "gpu" --random-actions
 ```
 
 <video preload="auto" controls="True" width="100%">
@@ -280,8 +280,8 @@ This samples random actions to take using the given controller. You may want to 
 You can also test the stability of the robot you modelled by trying and set all the joints to the keyframe qpos values with the `pd_joint_pos` controller as so
 
 ```bash
-python -m test.py -r "my_panda" -c "pd_joint_pos" --keyframe-actions
-python -m test.py -r "my_panda" -c "pd_joint_pos" -b "gpu" --keyframe-actions
+python test.py -r "my_panda" -c "pd_joint_pos" --keyframe-actions
+python test.py -r "my_panda" -c "pd_joint_pos" -b "gpu" --keyframe-actions
 ```
 
 If the robot is staying still in the given keyframe, it is working well.
