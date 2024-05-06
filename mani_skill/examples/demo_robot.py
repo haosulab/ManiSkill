@@ -3,13 +3,11 @@ Instantiates a empty environment with a floor, and attempts to place any given r
 """
 
 import argparse
-import sys
 
 import gymnasium as gym
-
-import mani_skill.envs
+import mani_skill
+from mani_skill.agents.controllers.base_controller import DictController
 from mani_skill.envs.sapien_env import BaseEnv
-from mani_skill.utils.structs.types import SceneConfig, SimConfig
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-r", "--robot-uid", type=str, default="panda", help="The id of the robot to place in the environment")
@@ -71,7 +69,10 @@ def main():
             env.step(env.action_space.sample())
         elif args.keyframe_actions:
             assert kf is not None, "this robot has no keyframes, cannot use it to set actions"
-            env.step(kf.qpos)
+            if isinstance(env.agent.controller, DictController):
+                env.step(env.agent.controller.from_qpos(kf.qpos))
+            else:
+                env.step(kf.qpos)
         viewer = env.render()
 
 if __name__ == "__main__":
