@@ -16,7 +16,7 @@ from mani_skill.utils.structs.types import SimConfig
 
 
 class BaseDigitalTwinEnv(BaseEnv):
-    SUPPORTED_OBS_MODES = ["rgbd"]
+    SUPPORTED_OBS_MODES = ["none", "state", "state_dict", "rgbd"]
 
     rgb_overlay_path: Optional[str] = None
     """path to the file to place on the greenscreen"""

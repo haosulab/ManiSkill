@@ -37,7 +37,7 @@ class PutCarrotOnPlateInScene(BaseBridgeEnv):
                             ]
                         )
                     )
-        xyz_configs = torch.tensor(xyz_configs)
+        xyz_configs = torch.tensor(np.stack(xyz_configs))
         quat_configs = torch.tensor(
             [
                 np.array([euler2quat(0, 0, np.pi), [1, 0, 0, 0]]),
