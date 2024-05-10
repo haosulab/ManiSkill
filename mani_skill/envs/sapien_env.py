@@ -460,9 +460,9 @@ class BaseEnv(gym.Env):
         )
 
     @property
-    def robot_link_ids(self):
+    def robot_link_names(self):
         """Get link ids for the robot. This is used for segmentation observations."""
-        return self.agent.robot_link_ids
+        return self.agent.robot_link_names
 
     # -------------------------------------------------------------------------- #
     # Reward mode

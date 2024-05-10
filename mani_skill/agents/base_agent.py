@@ -160,8 +160,8 @@ class BaseAgent:
         self.robot: Articulation = loader.load(asset_path)
         assert self.robot is not None, f"Fail to load URDF/MJCF from {asset_path}"
 
-        # Cache robot link ids
-        self.robot_link_ids = [link.name for link in self.robot.get_links()]
+        # Cache robot link names
+        self.robot_link_names = [link.name for link in self.robot.get_links()]
 
     def _after_loading_articulation(self):
         """After loading articulation and before setting up controller. Not recommended, but is useful for when creating

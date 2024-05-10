@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Literal
 
 import numpy as np
 import sapien
@@ -14,9 +14,9 @@ from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.pose import Pose
 
 
-class WidowX250SBridgeDataset(WidowX250S):
-    uid = "widowx250s_bridgedataset"
-    # class WidowXBridgeDatasetCameraSetupConfig(WidowXDefaultConfig):
+class WidowX250SBridgeDatasetFlatTable(WidowX250S):
+    uid = "widowx250s_bridgedataset_flat_table"
+
     @property
     def _sensor_configs(self):
         return [
@@ -35,11 +35,34 @@ class WidowX250SBridgeDataset(WidowX250S):
         ]
 
 
+class WidowX250SBridgeDatasetSink(WidowX250S):
+    uid = "widowx250s_bridgedataset_sink"
+
+    @property
+    def _sensor_configs(self):
+        return [
+            CameraConfig(
+                uid="3rd_view_camera",  # the camera used for real evaluation for the sink setup
+                pose=sapien.Pose(
+                    [-0.00300001, -0.21, 0.39], [-0.907313, 0.0782, -0.36434, -0.194741]
+                ),
+                entity_uid="base_link",
+                width=640,
+                height=480,
+                intrinsic=np.array(
+                    [[623.588, 0, 319.501], [0, 623.588, 239.545], [0, 0, 1]]
+                ),
+            )
+        ]
+
+
 class BaseBridgeEnv(BaseDigitalTwinEnv):
     """Base Digital Twin environment for digital twins of the BridgeData v2"""
 
     SUPPORTED_REWARD_MODES = ["none"]
+    scene_setting: Literal["flat_table", "sink"] = "flat_table"
     rgb_overlay_cameras = ["3rd_view_camera"]
+    rgb_overlay_path = ""
     scene_table_height: float = 0.87
     objs: Dict[str, Actor] = dict()
 
@@ -53,8 +76,20 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
         self.obj_names = obj_names
         self.xyz_configs = xyz_configs
         self.quat_configs = quat_configs
+        if self.scene_setting == "flat_table":
+            self.rgb_overlay_path = str(
+                ASSET_DIR
+                / "tasks/bridge_dataset/real_inpainting/bridge_real_eval_1.png"
+            )
+        elif self.scene_setting == "sink":
+            self.rgb_overlay_path = str(
+                ASSET_DIR / "tasks/bridge_dataset/real_inpainting/bridge_sink.png"
+            )
+        robot_cls = WidowX250SBridgeDatasetFlatTable
+        if self.scene_setting == "sink":
+            robot_cls = WidowX250SBridgeDatasetSink
         super().__init__(
-            robot_uids=WidowX250SBridgeDataset,
+            robot_uids=robot_cls,
             **kwargs,
         )
 
@@ -95,14 +130,19 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
         # load background
         builder = self.scene.create_actor_builder()
         scene_pose = sapien.Pose(q=[0.707, 0.707, 0, 0])
-        scene_file = str(
-            ASSET_DIR / "tasks/bridge_dataset/stages/bridge_table_1_v1.glb"
-        )
+        scene_offset = np.array([-2.0634, -2.8313, 0.0])
+        if self.scene_setting == "flat_table":
+            scene_file = str(
+                ASSET_DIR / "tasks/bridge_dataset/stages/bridge_table_1_v1.glb"
+            )
+
+        elif self.scene_setting == "sink":
+            scene_file = str(
+                ASSET_DIR / "tasks/bridge_dataset/stages/bridge_table_1_v2.glb"
+            )
         builder.add_nonconvex_collision_from_file(scene_file, pose=scene_pose)
         builder.add_visual_from_file(scene_file, pose=scene_pose)
-        scene_offset = np.array(
-            [-2.0634, -2.8313, 0.0]
-        )  # corresponds to the default offset of bridge_table_1_v1.glb
+
         builder.initial_pose = sapien.Pose(-scene_offset)
         builder.build_static(name="arena")
 
@@ -117,29 +157,40 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
             b = len(env_idx)
             pos_episode_ids = torch.randint(0, len(self.xyz_configs), size=(b,))
             quat_episode_ids = torch.randint(0, len(self.quat_configs), size=(b,))
-            # if self.robot_uid in ['widowx', 'widowx_bridge_dataset_camera_setup']:
             # measured values for bridge dataset
-            qpos = np.array(
-                [
-                    -0.01840777,
-                    0.0398835,
-                    0.22242722,
-                    -0.00460194,
-                    1.36524296,
-                    0.00153398,
-                    0.037,
-                    0.037,
-                ]
-            )
+            if self.scene_setting == "flat_table":
+                qpos = np.array(
+                    [
+                        -0.01840777,
+                        0.0398835,
+                        0.22242722,
+                        -0.00460194,
+                        1.36524296,
+                        0.00153398,
+                        0.037,
+                        0.037,
+                    ]
+                )
+                self.agent.robot.set_pose(
+                    sapien.Pose([0.147, 0.028, 0.870], q=[0, 0, 0, 1])
+                )
+            elif self.scene_setting == "sink":
+                qpos = np.array(
+                    [
+                        -0.2600599,
+                        -0.12875618,
+                        0.04461369,
+                        -0.00652761,
+                        1.7033415,
+                        -0.26983038,
+                        0.037,
+                        0.037,
+                    ]
+                )
+                self.agent.robot.set_pose(
+                    sapien.Pose([0.147, 0.070, 0.85], q=[0, 0, 0, 1])
+                )
             self.agent.robot.set_qpos(qpos)
-            # self.agent.robot.set_pose(sapien.Pose(robot_init_xyz, robot_init_rot_quat))
-            # elif self.robot_uid == 'widowx_sink_camera_setup':
-            #     qpos = np.array([-0.2600599, -0.12875618, 0.04461369, -0.00652761, 1.7033415, -0.26983038, 0.037,
-            #                         0.037])
-            robot_init_height = 0.870
-            self.agent.robot.set_pose(
-                sapien.Pose([0.147, 0.028, robot_init_height], q=[0, 0, 0, 1])
-            )
 
             for i, actor in enumerate(self.objs.values()):
                 xyz = self.xyz_configs[pos_episode_ids, i]

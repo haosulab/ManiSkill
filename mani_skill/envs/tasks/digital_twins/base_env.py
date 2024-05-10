@@ -11,12 +11,23 @@ import torch
 from mani_skill import ASSET_DIR
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
-from mani_skill.utils import sapien_utils
+from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.structs.types import SimConfig
 
 
 class BaseDigitalTwinEnv(BaseEnv):
-    SUPPORTED_OBS_MODES = ["none", "state", "state_dict", "rgbd"]
+    """Base Environment class for easily setting up digital twins for real2sim and sim2real
+
+    This is based on the [SIMPLER](https://simpler-env.github.io/) and has the following tricks for
+    making accurate simulated environments of real world datasets
+
+    Greenscreening: TODO
+
+    Texture Matching: TODO
+
+    """
+
+    SUPPORTED_OBS_MODES = ["none", "state", "state_dict", "rgb", "rgbd"]
 
     rgb_overlay_path: Optional[str] = None
     """path to the file to place on the greenscreen"""
@@ -38,8 +49,8 @@ class BaseDigitalTwinEnv(BaseEnv):
                     "If you installed this repo through 'pip install .' , "
                     "you can download this directory https://github.com/simpler-env/ManiSkill2_real2sim/tree/main/data to get the real-world image overlay assets. "
                 )
-            self.rgb_overlay_img = (
-                cv2.cvtColor(cv2.imread(self.rgb_overlay_path), cv2.COLOR_BGR2RGB) / 255
+            self.rgb_overlay_img = cv2.cvtColor(
+                cv2.imread(self.rgb_overlay_path), cv2.COLOR_BGR2RGB
             )  # (H, W, 3); float32
         else:
             self.rgb_overlay_img = None
@@ -49,21 +60,6 @@ class BaseDigitalTwinEnv(BaseEnv):
     @property
     def _default_sim_config(self):
         return SimConfig()
-
-    @property
-    def _default_sensor_configs(self):
-        pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
-        return [
-            CameraConfig(
-                "base_camera",
-                pose=pose,
-                width=128,
-                height=128,
-                fov=np.pi / 2,
-                near=0.01,
-                far=100,
-            )
-        ]
 
     @property
     def _default_human_render_camera_configs(self):
@@ -107,65 +103,100 @@ class BaseDigitalTwinEnv(BaseEnv):
         actor = builder.build(name=model_id)
         return actor
 
+    def _after_reconfigure(self, options):
+        target_object_actor_ids = [
+            x._objs[0].per_scene_id
+            for x in self.scene.actors.values()
+            if x.name
+            not in ["ground", "goal_site", "", "arena"]
+            + self.rgb_always_overlay_objects
+        ]
+        self.target_object_actor_ids = torch.tensor(
+            target_object_actor_ids, dtype=torch.int16, device=self.device
+        )
+        # get the robot link ids
+        robot_links = (
+            self.agent.robot.get_links()
+        )  # e.g., [Actor(name="root", id="1"), Actor(name="root_arm_1_link_1", id="2"), Actor(name="root_arm_1_link_2", id="3"), ...]
+        self.robot_link_ids = torch.tensor(
+            [x._objs[0].entity.per_scene_id for x in robot_links],
+            dtype=torch.int16,
+            device=self.device,
+        )
+
+        # get the link ids of other articulated objects
+        other_link_ids = []
+        # for art_obj in self._scene.get_all_articulations():
+        #     if art_obj is self.agent.robot:
+        #         continue
+        #     if art_obj.name in self.rgb_always_overlay_objects:
+        #         continue
+        #     for link in art_obj.get_links():
+        #         other_link_ids.append(link.id)
+        other_link_ids = np.array(other_link_ids, dtype=np.int32)
+
+        self.rgb_overlay_images: dict[str, torch.Tensor] = dict()
+        for camera_name in self.rgb_overlay_cameras:
+            sensor = self._sensor_configs[camera_name]
+            if isinstance(sensor, CameraConfig):
+                rgb_overlay_img = cv2.resize(
+                    self.rgb_overlay_img, (sensor.width, sensor.height)
+                )
+                self.rgb_overlay_images[camera_name] = common.to_tensor(rgb_overlay_img)
+
+    def _green_sceen_rgb(self, rgb, segmentation, overlay_img):
+        """returns green screened RGB data"""
+        actor_seg = segmentation[..., 0]
+        mask = torch.ones_like(actor_seg)
+        if ("background" in self.rgb_overlay_mode) or (
+            "debug" in self.rgb_overlay_mode
+        ):
+            if ("object" not in self.rgb_overlay_mode) or (
+                "debug" in self.rgb_overlay_mode
+            ):
+                # only overlay the background and keep the foregrounds (robot and target objects) rendered in simulation
+                mask[
+                    torch.isin(
+                        actor_seg,
+                        torch.concatenate(
+                            [self.robot_link_ids, self.target_object_actor_ids]
+                        ),
+                    )
+                ] = 0
+                # mask[np.isin(actor_seg, np.concatenate([robot_link_ids, target_object_actor_ids, other_link_ids]))] = 0.0
+            else:
+                # overlay everything except the robot links
+                mask[np.isin(actor_seg, self.robot_link_ids)] = 0.0
+        else:
+            raise NotImplementedError(self.rgb_overlay_mode)
+        mask = mask[..., None]
+
+        # perform overlay on the RGB observation image
+        if "debug" not in self.rgb_overlay_mode:
+            rgb = rgb * (1 - mask) + overlay_img * mask
+        else:
+            # debug
+            # obs['sensor_data'][camera_name]['Color'][..., :3] = obs['sensor_data'][camera_name]['Color'][..., :3] * (1 - mask) + rgb_overlay_img * mask
+            rgb = rgb * 0.5 + overlay_img * 0.5
+        return rgb
+
     def get_obs(self, info: dict = None):
         obs = super().get_obs(info)
 
         # "greenscreen" process
-        if self._obs_mode == "rgbd" and self.rgb_overlay_img is not None:
+        if self._obs_mode == "rgb" and self.rgb_overlay_img is not None:
             # TODO (parallelize this?)
             # get the actor ids of objects to manipulate; note that objects here are not articulated
-            target_object_actor_ids = [
-                x._objs[0].per_scene_id
-                for x in self.scene.actors.values()
-                if x.name
-                not in ["ground", "goal_site", "", "arena"]
-                + self.rgb_always_overlay_objects
-            ]
-            target_object_actor_ids = np.array(target_object_actor_ids, dtype=np.int32)
 
-            # get the robot link ids
-            robot_links = (
-                self.agent.robot.get_links()
-            )  # e.g., [Actor(name="root", id="1"), Actor(name="root_arm_1_link_1", id="2"), Actor(name="root_arm_1_link_2", id="3"), ...]
-            robot_link_ids = np.array(
-                [x._objs[0].entity.per_scene_id for x in robot_links], dtype=np.int32
-            )
-
-            # get the link ids of other articulated objects
-            other_link_ids = []
-            # for art_obj in self._scene.get_all_articulations():
-            #     if art_obj is self.agent.robot:
-            #         continue
-            #     if art_obj.name in self.rgb_always_overlay_objects:
-            #         continue
-            #     for link in art_obj.get_links():
-            #         other_link_ids.append(link.id)
-            other_link_ids = np.array(other_link_ids, dtype=np.int32)
-
-            # for camera_name in self.rgb_overlay_cameras:
-            #     # obtain overlay mask based on segmentation info
-            #     assert 'segmentation' in obs['sensor_data'][camera_name].keys(), 'Image overlay requires segment info in the observation!'
-            #     seg = obs['sensor_data'][camera_name]['segmentation'] # (H, W, 4); [..., 0] is mesh-level; [..., 1] is actor-level; [..., 2:] is zero (unused)
-            #     import ipdb;ipdb.set_trace()
-            #     actor_seg = seg[..., 0]
-            #     mask = torch.ones_like(actor_seg)
-            #     if ('background' in self.rgb_overlay_mode) or ('debug' in self.rgb_overlay_mode):
-            #         if ('object' not in self.rgb_overlay_mode) or ('debug' in self.rgb_overlay_mode):
-            #             # only overlay the background and keep the foregrounds (robot and target objects) rendered in simulation
-            #             mask[np.isin(actor_seg, np.concatenate([robot_link_ids, target_object_actor_ids, other_link_ids]))] = 0.0
-            #         else:
-            #             # overlay everything except the robot links
-            #             mask[np.isin(actor_seg, robot_link_ids)] = 0.0
-            #     else:
-            #         raise NotImplementedError(self.rgb_overlay_mode)
-            #     mask = mask[..., np.newaxis]
-
-            #     # perform overlay on the RGB observation image
-            #     rgb_overlay_img = cv2.resize(self.rgb_overlay_img, (obs['image'][camera_name]['Color'].shape[1], obs['image'][camera_name]['Color'].shape[0]))
-            #     if 'debug' not in self.rgb_overlay_mode:
-            #         obs['image'][camera_name]['Color'][..., :3] = obs['image'][camera_name]['Color'][..., :3] * (1 - mask) + rgb_overlay_img * mask
-            #     else:
-            #         # debug
-            #         # obs['image'][camera_name]['Color'][..., :3] = obs['image'][camera_name]['Color'][..., :3] * (1 - mask) + rgb_overlay_img * mask
-            #         obs['image'][camera_name]['Color'][..., :3] = obs['image'][camera_name]['Color'][..., :3] * 0.5 + rgb_overlay_img * 0.5
+            for camera_name in self.rgb_overlay_cameras:
+                # obtain overlay mask based on segmentation info
+                assert (
+                    "segmentation" in obs["sensor_data"][camera_name].keys()
+                ), "Image overlay requires segment info in the observation!"
+                green_screened_rgb = self._green_sceen_rgb(
+                    obs["sensor_data"][camera_name]["rgb"],
+                    obs["sensor_data"][camera_name]["segmentation"],
+                    self.rgb_overlay_images[camera_name],
+                )
+                obs["sensor_data"][camera_name]["rgb"] = green_screened_rgb
         return obs
