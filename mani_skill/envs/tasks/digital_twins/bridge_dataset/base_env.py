@@ -3,7 +3,7 @@ from typing import Dict, List
 import numpy as np
 import sapien
 import torch
-from sapien.pysapien.physx import PhysxMaterial
+from sapien.physx import PhysxMaterial
 
 from mani_skill import ASSET_DIR
 from mani_skill.agents.robots.widowx.widowx import WidowX250S
