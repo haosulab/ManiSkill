@@ -10,6 +10,7 @@
             "request": "launch",
             "preLaunchTask": "",
             "program": "${workspaceFolder}/scripts/intro_to_maniskill.py",
+            "args": ["--visual"],
             "console": "integratedTerminal",
             "justMyCode": false,
             "env": {},
