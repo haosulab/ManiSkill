@@ -30,7 +30,7 @@ class Args:
     """if toggled, `torch.backends.cudnn.deterministic=False`"""
     cuda: bool = True
     """if toggled, cuda will be enabled by default"""
-    track: bool = False
+    track: bool = True
     """if toggled, this experiment will be tracked with Weights and Biases"""
     wandb_project_name: str = "cleanRL"
     """the wandb's project name"""
@@ -334,10 +334,12 @@ if __name__ == "__main__":
     eps_returns = torch.zeros(args.num_envs, dtype=torch.float, device=device)
     eps_lens = np.zeros(args.num_envs)
     place_rew = torch.zeros(args.num_envs, device=device)
+
     print(f"####")
     print(f"args.num_iterations={args.num_iterations} args.num_envs={args.num_envs} args.num_eval_envs={args.num_eval_envs}")
     print(f"args.minibatch_size={args.minibatch_size} args.batch_size={args.batch_size} args.update_epochs={args.update_epochs}")
     print(f"####")
+    
     agent = Agent(envs, sample_obs=next_obs).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
@@ -356,35 +358,45 @@ if __name__ == "__main__":
             eps_lens = []
             successes = []
             failures = []
+
             for _ in range(args.num_eval_steps):
                 with torch.no_grad():
                     eval_obs, _, eval_terminations, eval_truncations, eval_infos = eval_envs.step(agent.get_action(eval_obs, deterministic=True))
+                    
                     if "final_info" in eval_infos:
                         mask = eval_infos["_final_info"]
                         eps_lens.append(eval_infos["final_info"]["elapsed_steps"][mask].cpu().numpy())
                         returns.append(eval_infos["final_info"]["episode"]["r"][mask].cpu().numpy())
+
                         if "success" in eval_infos:
                             successes.append(eval_infos["final_info"]["success"][mask].cpu().numpy())
+                        
                         if "fail" in eval_infos:
                             failures.append(eval_infos["final_info"]["fail"][mask].cpu().numpy())
+            
             returns = np.concatenate(returns)
             eps_lens = np.concatenate(eps_lens)
             print(f"Evaluated {args.num_eval_steps * args.num_envs} steps resulting in {len(eps_lens)} episodes")
+            
             if len(successes) > 0:
                 successes = np.concatenate(successes)
                 if writer is not None: writer.add_scalar("charts/eval_success_rate", successes.mean(), global_step)
                 print(f"eval_success_rate={successes.mean()}")
+            
             if len(failures) > 0:
                 failures = np.concatenate(failures)
                 if writer is not None: writer.add_scalar("charts/eval_fail_rate", failures.mean(), global_step)
                 print(f"eval_fail_rate={failures.mean()}")
 
             print(f"eval_episodic_return={returns.mean()}")
+            
             if writer is not None:
                 writer.add_scalar("charts/eval_episodic_return", returns.mean(), global_step)
                 writer.add_scalar("charts/eval_episodic_length", eps_lens.mean(), global_step)
+            
             if args.evaluate:
                 break
+        
         if args.save_model and iteration % args.eval_freq == 1:
             model_path = f"runs/{run_name}/ckpt_{iteration}.pt"
             torch.save(agent.state_dict(), model_path)
