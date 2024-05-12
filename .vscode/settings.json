@@ -1,0 +1,40 @@
+{
+    "editor.rulers": [120],
+    "typescript.tsc.autoDetect": "off",
+    "grunt.autoDetect": "off",
+    "jake.autoDetect": "off",
+    "gulp.autoDetect": "off",
+    "npm.autoDetect": "off",
+    "spellright.language": [
+        "en"
+    ],
+    "spellright.documentTypes": [
+        "markdown",
+        "latex",
+        "plaintext",
+        "cpp",
+        "asciidoc"
+    ],
+
+    // This enables python language server. Seems to work slightly better than jedi:
+    "python.jediEnabled": false,
+
+    // Those paths are automatically filled by build system, see `repo.toml` for configuration:
+    "python.analysis.extraPaths": [
+        "/opt/conda/lib/python3.9/site-packages/"
+],
+
+    "python.languageServer": "Pylance",
+    //"python.defaultInterpreterPath": "${workspaceFolder}/kit/python/bin/python3",
+    "python.defaultInterpreterPath": "/opt/conda/bin/python",
+    // python.pythonPath is deprecated
+    // "python.pythonPath": "${workspaceFolder}/kit/python/bin/python3",
+
+    // We use "black" as a formatter:
+    "python.formatting.provider": "black",
+    "python.formatting.blackArgs": ["--line-length", "120"],
+
+    // Use flake8 for linting
+    "python.linting.pylintEnabled": false,
+    "python.linting.flake8Enabled": true,
+}
