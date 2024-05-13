@@ -21,7 +21,9 @@
 
     // Those paths are automatically filled by build system, see `repo.toml` for configuration:
     "python.analysis.extraPaths": [
-        "/opt/conda/lib/python3.9/site-packages/"
+        "/opt/conda/lib/python3.9/site-packages/",
+        "scripts/",
+        "3rd_party/skrl/"
 ],
 
     "python.languageServer": "Pylance",

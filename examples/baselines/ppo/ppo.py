@@ -463,3 +463,5 @@ if __name__ == "__main__":
         writer.close()
     envs.close()
     eval_envs.close()
+
+    wandb.finish()

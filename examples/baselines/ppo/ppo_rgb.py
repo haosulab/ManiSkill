@@ -20,6 +20,23 @@ from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper, Flatten
 from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 
+# Memory logging
+import sys
+sys.path.append("./")
+sys.path.append("../")
+sys.path.append("../scripts/")
+sys.path.append("scripts/")
+from mem_logger import MemLogger
+LOG_PATH = "/home/filip-grigorov/code/scripts/data/"
+memory_logger = MemLogger(
+    device="cuda" if torch.cuda.is_available() else "cpu", 
+    dump_after=100, 
+    gpu_mem_logs_path=LOG_PATH, 
+    cpu_mem_logs_path=LOG_PATH, 
+    loss_logs_path=LOG_PATH, 
+    lbl="train_visual"
+)
+
 @dataclass
 class Args:
     exp_name: Optional[str] = None
@@ -439,6 +456,7 @@ if __name__ == "__main__":
             obs[step] = next_obs
             dones[step] = next_done
 
+            # NOTE: Logging
             tf_rgb_log = obs[step]["rgb"].detach()[0].cpu().numpy()
             wandb.log({
                 f"obs[{step}]": wandb.Image(tf_rgb_log)
@@ -457,6 +475,14 @@ if __name__ == "__main__":
             next_obs, reward, terminations, truncations, infos = envs.step(action)
             next_done = torch.logical_or(terminations, truncations).to(torch.float32)
             rewards[step] = reward.view(-1)
+
+            # NOTE: Logging
+            gpu_allocated_mem = memory_logger.get_gpu_allocated_memory()
+            cpu_allocated_mem = memory_logger.get_cpu_allocated_memory()
+            wandb.log({
+                "gpu_alloc_mem": gpu_allocated_mem,
+                "cpu_alloc_mem": cpu_allocated_mem,
+            })
 
             if "final_info" in infos:
                 final_info = infos["final_info"]
@@ -618,4 +644,7 @@ if __name__ == "__main__":
         print(f"model saved to {model_path}")
 
     envs.close()
+
     if writer is not None: writer.close()
+
+    wandb.finish()
