@@ -2,7 +2,7 @@
 
 ```{figure} teaser.png
 ```
-<p style="text-align: center; font-size: 0.8rem; color: #999;margin-top: -1rem;">Sample of environements/robots rendered with ray-tracing. Scene datasets sourced from AI2THOR and ReplicaCAD</p>
+<p style="text-align: center; font-size: 0.8rem; color: #999;margin-top: -1rem;">Sample of environments/robots rendered with ray-tracing. Scene datasets sourced from AI2THOR and ReplicaCAD</p>
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/haosulab/ManiSkill/blob/main/examples/tutorials/1_quickstart.ipynb)
 [![PyPI version](https://badge.fury.io/py/mani-skill.svg)](https://badge.fury.io/py/mani-skill)

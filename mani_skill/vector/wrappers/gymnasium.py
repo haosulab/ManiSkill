@@ -116,14 +116,14 @@ class ManiSkillVectorEnv(VectorEnv):
             final_obs = obs
             env_idx = torch.arange(0, self.num_envs, device=self.device)[dones]
             obs, _ = self.reset(options=dict(env_idx=env_idx))
-            infos["final_info"] = infos
+            infos["episode"]["_r"] = dones
+            infos["final_info"] = infos.copy()
             # gymnasium calls it final observation but it really is just o_{t+1} or the true next observation
             infos["final_observation"] = final_obs
             # NOTE (stao): that adding masks like below is a bit redundant and not necessary
             # but this is to follow the standard gymnasium API
             infos["_final_info"] = dones
             infos["_final_observation"] = dones
-            infos["episode"]["_r"] = dones
             infos["_elapsed_steps"] = dones
             # NOTE (stao): Unlike gymnasium, the code here does not add masks for every key in the info object.
         return obs, rew, terminations, truncations, infos

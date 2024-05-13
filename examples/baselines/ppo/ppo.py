@@ -316,7 +316,7 @@ if __name__ == "__main__":
 
             if "final_info" in infos:
                 final_info = infos["final_info"]
-                done_mask = final_info["_final_info"]
+                done_mask = infos["_final_info"]
                 episodic_return = final_info['episode']['r'][done_mask].cpu().numpy().mean()
                 if "success" in final_info:
                     writer.add_scalar("charts/success_rate", final_info["success"][done_mask].cpu().numpy().mean(), global_step)
@@ -325,7 +325,7 @@ if __name__ == "__main__":
                 writer.add_scalar("charts/episodic_return", episodic_return, global_step)
                 writer.add_scalar("charts/episodic_length", final_info["elapsed_steps"][done_mask].cpu().numpy().mean(), global_step)
 
-                final_values[step, torch.arange(args.num_envs, device=device)[done_mask]] = agent.get_value(final_info["final_observation"][done_mask]).view(-1)
+                final_values[step, torch.arange(args.num_envs, device=device)[done_mask]] = agent.get_value(infos["final_observation"][done_mask]).view(-1)
         rollout_time = time.time() - rollout_time
         # bootstrap value according to termination and truncation
         with torch.no_grad():

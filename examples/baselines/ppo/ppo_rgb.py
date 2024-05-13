@@ -413,15 +413,15 @@ if __name__ == "__main__":
             rewards[step] = reward.view(-1)
 
             if "final_info" in infos:
-                info = infos["final_info"]
-                done_mask = info["_final_info"]
-                episodic_return = info['episode']['r'][done_mask].mean().cpu().numpy()
-                writer.add_scalar("charts/success_rate", info["success"][done_mask].float().mean().cpu().numpy(), global_step)
+                final_info = infos["final_info"]
+                done_mask = infos["_final_info"]
+                episodic_return = final_info['episode']['r'][done_mask].mean().cpu().numpy()
+                writer.add_scalar("charts/success_rate", final_info["success"][done_mask].float().mean().cpu().numpy(), global_step)
                 writer.add_scalar("charts/episodic_return", episodic_return, global_step)
-                writer.add_scalar("charts/episodic_length", info["elapsed_steps"][done_mask].float().mean().cpu().numpy(), global_step)
-                for k in info["final_observation"]:
-                    info["final_observation"][k] = info["final_observation"][k][done_mask]
-                final_values[step, torch.arange(args.num_envs, device=device)[done_mask]] = agent.get_value(info["final_observation"]).view(-1)
+                writer.add_scalar("charts/episodic_length", final_info["elapsed_steps"][done_mask].float().mean().cpu().numpy(), global_step)
+                for k in infos["final_observation"]:
+                    infos["final_observation"][k] = infos["final_observation"][k][done_mask]
+                final_values[step, torch.arange(args.num_envs, device=device)[done_mask]] = agent.get_value(infos["final_observation"]).view(-1)
         rollout_time = time.time() - rollout_time
         # bootstrap value according to termination and truncation
         with torch.no_grad():
