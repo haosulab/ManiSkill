@@ -1,0 +1,3 @@
+[submodule "skrl"]
+	path = skrl
+	url = git@github.com:filipgrigorov-portfolio/skrl.git
