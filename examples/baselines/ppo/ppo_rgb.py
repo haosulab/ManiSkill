@@ -303,7 +303,7 @@ if __name__ == "__main__":
         print("Running training")
         if args.track:
             import wandb
-
+            wandb.login()
             wandb.init(
                 project=args.wandb_project_name,
                 entity=args.wandb_entity,
