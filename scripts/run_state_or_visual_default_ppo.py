@@ -54,8 +54,8 @@ def run_default_state_ppo():
         f"--exp-name={'state-pushcube'}",
         f"--num_envs={1024}",
         f"--update_epochs={8}", 
-        f"--num_minibatches={32}",
-        f"--total_timesteps={600_000}",
+        f"--num_minibatches={16}", #32
+        f"--total_timesteps={250_000}", #600_000
         f"--eval_freq={8}",
         f"--num-steps={20}"
     ])
