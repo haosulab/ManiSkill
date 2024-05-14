@@ -5,11 +5,11 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug intro_to_maniskill.py",
+            "name": "Debug run_state_or_visual_default_ppo.py",
             "type": "debugpy",
             "request": "launch",
             "preLaunchTask": "",
-            "program": "${workspaceFolder}/scripts/intro_to_maniskill.py",
+            "program": "${workspaceFolder}/scripts/run_state_or_visual_default_ppo.py",
             "args": ["--visual"],
             "console": "integratedTerminal",
             "justMyCode": false,
