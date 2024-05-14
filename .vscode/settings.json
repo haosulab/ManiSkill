@@ -23,7 +23,7 @@
     "python.analysis.extraPaths": [
         "/opt/conda/lib/python3.9/site-packages/",
         "scripts/",
-        "3rd_party/skrl/"
+        "3rdparty/skrl/"
 ],
 
     "python.languageServer": "Pylance",
