@@ -30,21 +30,21 @@ class SceneBuilder:
     **Optional** list of scene configuration information that can be used to build/init scenes. Can be a dictionary, a path to a json file, or some other data.
     Some scenes will need to load config data, while others might not.
     """
-    build_configs: Optional[List[Any]]
-    init_configs: Optional[List[Any]]
+    build_configs: Optional[List[Any]] = None
+    init_configs: Optional[List[Any]] = None
 
     """
     Dictionaries mapping names to scene objects, movable objects, and articulations for easy reference.
     """
-    scene_objects: Optional[Dict[str, Actor]]
-    movable_objects: Optional[Dict[str, Actor]]
-    articulations: Optional[Dict[str, Articulation]]
+    scene_objects: Optional[Dict[str, Actor]] = None
+    movable_objects: Optional[Dict[str, Actor]] = None
+    articulations: Optional[Dict[str, Articulation]] = None
 
     """
     Some scenes allow for mobile robots to move through these scene. In this case, a list of navigable positions per env_idx should be provided for easy initialization.
     Can be a discretized list, range, spaces.Box, etc
     """
-    navigable_positions: Optional[List[Union[Array, spaces.Box]]]
+    navigable_positions: Optional[List[Union[Array, spaces.Box]]] = None
 
     def __init__(self, env, robot_init_qpos_noise=0.02):
         self.env = env
