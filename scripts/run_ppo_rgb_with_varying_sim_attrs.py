@@ -8,14 +8,14 @@ from mani_skill.utils.wrappers import RecordEpisode
 import subprocess as sp
 import time
 
-def run_default_visual_ppo_with_varying_sim_params():
+def run_default_visual_ppo_with_varying_sim_params(render_quality="high"):
     print("Running visual-based PPO")
 
     start_time = time.time()
 
     sp.run([
         "python", 
-        "examples/baselines/ppo/ppo_rgb_with_varying_sim.py", 
+        "examples/baselines/ppo/ppo_rgb_with_custom_rendering_quality.py", 
         f"--env_id={'PushCube-v1'}", 
         f"--exp-name={'rgb-pushcube'}",
         f"--num_envs={64}",
@@ -23,7 +23,8 @@ def run_default_visual_ppo_with_varying_sim_params():
         f"--num_minibatches={16}",
         f"--total_timesteps={250_000}",
         f"--eval_freq={10}",
-        f"--num-steps={20}"
+        f"--num-steps={20}",
+        f"--sim_quality={render_quality}" # high quality raycasting
     ])
 
     end_time = time.time()
@@ -47,7 +48,8 @@ def run_default_visual_ppo():
         f"--num_minibatches={16}",
         f"--total_timesteps={250_000}",
         f"--eval_freq={10}",
-        f"--num-steps={20}"
+        f"--num-steps={20}",
+        f"--sim_quality={''}" # rasterization
     ])
 
     end_time = time.time()
@@ -66,6 +68,7 @@ if __name__ == "__main__":
     if args.visual_default:
         run_default_visual_ppo()
     elif args.visual_vary_sim:
-        run_default_visual_ppo_with_varying_sim_params()
+        render_quality_list = ["high", "medium", "low", ""]
+        run_default_visual_ppo_with_varying_sim_params(render_quality=render_quality_list[0])
     else:
         print("No option has been selected")

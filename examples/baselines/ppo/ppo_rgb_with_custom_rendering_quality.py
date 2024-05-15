@@ -14,6 +14,8 @@ import tyro
 from torch.distributions.normal import Normal
 from torch.utils.tensorboard import SummaryWriter
 
+import sapien
+
 # ManiSkill specific imports
 import mani_skill.envs
 from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper, FlattenRGBDObservationWrapper
@@ -65,6 +67,9 @@ class Args:
     """if toggled, only runs evaluation with the given model checkpoint and saves the evaluation trajectories"""
     checkpoint: str = None
     """path to a pretrained checkpoint file to start evaluation/training from"""
+    # Simulation specific parameter
+    sim_quality: str = ""
+    """the quality of the simulation rendering (rasterization vs raycasting)"""
 
     # Algorithm specific arguments
     env_id: str = "PickCube-v1"
@@ -286,37 +291,6 @@ class Agent(nn.Module):
 
 
 if __name__ == "__main__":
-    # Varying simulation/rendering params
-    import sapien
-    TYPE = "low"
-    if TYPE == "high":
-        sapien.render.set_camera_shader_dir("rt")
-        sapien.render.set_viewer_shader_dir("rt")
-        sapien.render.set_ray_tracing_samples_per_pixel(64)
-        sapien.render.set_ray_tracing_path_depth(16)
-        sapien.render.set_ray_tracing_denoiser("optix")
-        ENABLE_SHADOWS = True
-
-    elif TYPE == "medium":
-        sapien.render.set_camera_shader_dir("rt")
-        sapien.render.set_viewer_shader_dir("rt")
-        sapien.render.set_ray_tracing_samples_per_pixel(4)
-        sapien.render.set_ray_tracing_path_depth(3)
-        sapien.render.set_ray_tracing_denoiser("optix")
-        ENABLE_SHADOWS = False
-
-    elif TYPE == "low":
-        sapien.render.set_camera_shader_dir("rt")
-        sapien.render.set_viewer_shader_dir("rt")
-        sapien.render.set_ray_tracing_samples_per_pixel(2)
-        sapien.render.set_ray_tracing_path_depth(1)
-        sapien.render.set_ray_tracing_denoiser("none")
-        ENABLE_SHADOWS = False
-
-    else: # rasterization
-        ENABLE_SHADOWS = False
-
-
     args = tyro.cli(Args)
     args.batch_size = int(args.num_envs * args.num_steps)
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
@@ -327,6 +301,35 @@ if __name__ == "__main__":
         run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
     else:
         run_name = args.exp_name
+
+    # Varying simulation/rendering params
+    RENDER_TYPE = args.sim_quality
+    if RENDER_TYPE == "high":
+        sapien.render.set_camera_shader_dir("rt")
+        sapien.render.set_viewer_shader_dir("rt")
+        sapien.render.set_ray_tracing_samples_per_pixel(64)
+        sapien.render.set_ray_tracing_path_depth(16)
+        sapien.render.set_ray_tracing_denoiser("optix")
+        ENABLE_SHADOWS = True
+
+    elif RENDER_TYPE == "medium":
+        sapien.render.set_camera_shader_dir("rt")
+        sapien.render.set_viewer_shader_dir("rt")
+        sapien.render.set_ray_tracing_samples_per_pixel(4)
+        sapien.render.set_ray_tracing_path_depth(3)
+        sapien.render.set_ray_tracing_denoiser("optix")
+        ENABLE_SHADOWS = False
+
+    elif RENDER_TYPE == "low":
+        sapien.render.set_camera_shader_dir("rt")
+        sapien.render.set_viewer_shader_dir("rt")
+        sapien.render.set_ray_tracing_samples_per_pixel(2)
+        sapien.render.set_ray_tracing_path_depth(1)
+        sapien.render.set_ray_tracing_denoiser("none")
+        ENABLE_SHADOWS = False
+
+    else: # rasterization
+        ENABLE_SHADOWS = False
     
     writer = None
     
@@ -455,8 +458,8 @@ if __name__ == "__main__":
                         if "fail" in eval_infos:
                             failures.append(eval_infos["final_info"]["fail"][mask].cpu().numpy())
             
-            returns = np.concatenate(returns)
-            eps_lens = np.concatenate(eps_lens)
+            returns = np.concatenate(returns) if len(returns) > 0 else np.array(returns)
+            eps_lens = np.concatenate(eps_lens) if len(eps_lens) > 0 else np.array(eps_lens)
             print(f"Evaluated {args.num_eval_steps * args.num_envs} steps resulting in {len(eps_lens)} episodes")
             
             if len(successes) > 0:
@@ -499,6 +502,8 @@ if __name__ == "__main__":
 
             # NOTE: Logging
             tf_rgb_log = obs[step]["rgb"].detach()[0].cpu().numpy()
+            if tf_rgb_log.shape[-1] > 3:
+                tf_rgb_log = tf_rgb_log[..., :3]
             wandb.log({
                 f"obs[{step}]": wandb.Image(tf_rgb_log)
             })

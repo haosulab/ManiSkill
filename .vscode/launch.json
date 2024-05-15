@@ -29,5 +29,18 @@
             "python": "/opt/conda/bin/python",
             
         },
+        {
+            "name": "Debug run_ppo_rgb_with_varying_tasks.py",
+            "type": "debugpy",
+            "request": "launch",
+            "preLaunchTask": "",
+            "program": "${workspaceFolder}/scripts/run_ppo_rgb_with_varying_tasks.py",
+            "args": ["--visual_vary_tasks"],
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {},
+            "python": "/opt/conda/bin/python",
+            
+        },
     ]
 }
