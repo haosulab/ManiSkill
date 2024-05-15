@@ -26,13 +26,14 @@ class SceneManipulationEnv(BaseEnv):
     Args:
         robot_uids: Which robot to place into the scene. Default is "fetch"
 
-        fixed_scene: whether to sample a single scene and never reconfigure the scene during episode resets
-        Default to True as reconfiguration/reloading scenes is expensive. When true, call env.reset(seed=seed, options=dict(reconfigure=True))
+        fixed_scene: whether to build static set of scenes.
+        Default is True as reconfiguring is expensive. When fixed_scene=True, one can rebuild scenes via env.reset(seed=seed, options=dict(reconfigure=True))
 
         scene_builder_cls: Scene builder class to build a scene with. Default is the ArchitecTHORSceneBuilder which builds a scene from AI2THOR.
             Any of the AI2THOR SceneBuilders are supported in this environment
 
-        convex_decomposition: Choice of convex decomposition algorithm to generate collision meshes for objects. Default is `coacd` which uses https://github.com/SarahWeiii/CoACD
+        build_config_idxs (optional): which build configs (static builds) to sample. Your scene_builder_cls may or may not require these.
+        init_config_idxs (optional): which init configs (additional init options) to sample. Your scene_builder_cls may or may not require these.
     """
 
     SUPPORTED_ROBOTS = ["panda", "fetch"]
