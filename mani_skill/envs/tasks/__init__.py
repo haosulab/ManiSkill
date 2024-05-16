@@ -1,6 +1,6 @@
 from .control import *
 from .dexterity import *
-from .digital_twins.bridge_dataset import *
+from .digital_twins.bridge_dataset_eval import *
 from .empty_env import EmptyEnv
 from .fmb import *
 from .humanoid import *
