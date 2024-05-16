@@ -1,5 +1,3 @@
-import sys
-
 from setuptools import find_packages, setup
 
 __version__ = "3.0.0b3"
@@ -13,31 +11,6 @@ long_description = """ManiSkill is a powerful unified framework for robot simula
 
 Please refer our [documentation](https://maniskill.readthedocs.io/en/latest) to learn more information."""
 
-install_requires = [
-    "numpy>=1.22",
-    "scipy",
-    "dacite",
-    "gymnasium==0.29.1",
-    "sapien==3.0.0.b0",
-    "h5py",
-    "pyyaml",
-    "tqdm",
-    "GitPython",
-    "tabulate",
-    "transforms3d",
-    "trimesh",
-    "rtree",
-    "opencv-python",
-    "imageio",
-    "imageio[ffmpeg]",
-    "IPython",
-    "huggingface_hub",  # we use HF to version control some assets/datasets more easily
-]
-if sys.platform.startswith("linux"):
-    install_requires += ["mplib>=0.1.1", "fast_kinematics==0.2.2"]
-# Currently the above 2 packages are not supported on windows systems
-
-
 setup(
     name="mani_skill",
     version=__version__,
@@ -49,7 +22,28 @@ setup(
     packages=find_packages(include=["mani_skill*"]),
     python_requires=">=3.9",
     setup_requires=["setuptools>=62.3.0"],
-    install_requires=install_requires,
+    install_requires=[
+        "numpy>=1.22",
+        "scipy",
+        "dacite",
+        "gymnasium==0.29.1",
+        "sapien==3.0.0.b0",
+        "h5py",
+        "pyyaml",
+        "tqdm",
+        "GitPython",
+        "tabulate",
+        "transforms3d",
+        "trimesh",
+        "rtree",
+        "opencv-python",
+        "imageio",
+        "imageio[ffmpeg]",
+        "mplib>=0.1.1;platform_system=='Linux'",
+        "fast_kinematics==0.2.2;platform_system=='Linux'",
+        "IPython",
+        "huggingface_hub",  # we use HF to version control some assets/datasets more easily
+    ],
     # Glob patterns do not automatically match dotfiles
     package_data={
         "mani_skill": ["assets/**", "envs/**/*", "utils/**/*"],
