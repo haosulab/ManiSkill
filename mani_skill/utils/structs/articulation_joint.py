@@ -276,16 +276,14 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
 
     @friction.setter
     # @before_gpu_init
+    # TODO (stao): can we set this after gpu is initialized?
     def friction(self, arg1: float) -> None:
         for joint in self._objs:
             joint.friction = arg1
 
-    @cached_property
+    @property
     def global_pose(self) -> Pose:
-        raw_poses = np.stack(
-            [np.concatenate([x.global_pose.p, x.global_pose.q]) for x in self._objs]
-        )
-        return Pose.create(common.to_tensor(raw_poses))
+        return self.pose_in_child * self.child_link.pose
 
     @property
     def limits(self) -> torch.Tensor:
@@ -311,19 +309,26 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
     #     """
     #     :type: PhysxArticulationLinkComponent
     #     """
-    # @property
-    # def pose_in_child(self) -> sapien.pysapien.Pose:
-    #     """
-    #     :type: sapien.pysapien.Pose
-    #     """
+    @cached_property
+    def pose_in_child(self):
+        raw_poses = np.stack(
+            [np.concatenate([x.pose_in_child.p, x.pose_in_child.q]) for x in self._objs]
+        )
+        return Pose.create(common.to_tensor(raw_poses))
+
     # @pose_in_child.setter
     # def pose_in_child(self, arg1: sapien.pysapien.Pose) -> None:
     #     pass
-    # @property
-    # def pose_in_parent(self) -> sapien.pysapien.Pose:
-    #     """
-    #     :type: sapien.pysapien.Pose
-    #     """
+    @cached_property
+    def pose_in_parent(self):
+        raw_poses = np.stack(
+            [
+                np.concatenate([x.pose_in_parent.p, x.pose_in_parent.q])
+                for x in self._objs
+            ]
+        )
+        return Pose.create(common.to_tensor(raw_poses))
+
     # @pose_in_parent.setter
     # def pose_in_parent(self, arg1: sapien.pysapien.Pose) -> None:
     #     pass
