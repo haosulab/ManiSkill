@@ -12,6 +12,7 @@ import torch
 from mani_skill.utils import common
 from mani_skill.utils.structs.base import BaseStruct
 from mani_skill.utils.structs.decorators import before_gpu_init
+from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:
@@ -143,7 +144,9 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
     def get_friction(self):
         return self.friction
 
-    # def get_global_pose(self) -> sapien.pysapien.Pose: ...
+    def get_global_pose(self):
+        return self.global_pose
+
     def get_limits(self):
         return self.limits
 
@@ -277,11 +280,13 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
         for joint in self._objs:
             joint.friction = arg1
 
-    # @property
-    # def global_pose(self) -> sapien.pysapien.Pose:
-    #     """
-    #     :type: sapien.pysapien.Pose
-    #     """
+    @cached_property
+    def global_pose(self) -> Pose:
+        raw_poses = np.stack(
+            [np.concatenate([x.global_pose.p, x.global_pose.q]) for x in self._objs]
+        )
+        return Pose.create(common.to_tensor(raw_poses))
+
     @property
     def limits(self) -> torch.Tensor:
         # TODO (stao): create a decorator that caches results once gpu sim is initialized for performance

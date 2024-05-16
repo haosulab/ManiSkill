@@ -3,7 +3,6 @@ from typing import Dict, List, Union
 import numpy as np
 import sapien.physx as physx
 import torch
-from networkx import density
 
 from mani_skill import PACKAGE_ASSET_DIR
 from mani_skill.agents.robots import Fetch, Panda
@@ -119,14 +118,14 @@ class TurnFaucetEnv(BaseEnv):
         self.model_offsets = common.to_tensor(self.model_offsets, device=self.device)
         self.model_offsets[:, 2] += 0.01  # small clearance
 
-        self.handle_link_goal = actors.build_sphere(
-            self.scene,
-            radius=0.03,
-            color=[0, 1, 0, 1],
-            name="switch_link_goal",
-            body_type="kinematic",
-            add_collision=False,
-        )
+        # self.handle_link_goal = actors.build_sphere(
+        #     self.scene,
+        #     radius=0.03,
+        #     color=[0, 1, 0, 1],
+        #     name="switch_link_goal",
+        #     body_type="kinematic",
+        #     add_collision=False,
+        # )
 
         qlimits = self.target_switch_link.joint.get_limits()
         qmin, qmax = qlimits[:, 0], qlimits[:, 1]
@@ -136,6 +135,10 @@ class TurnFaucetEnv(BaseEnv):
         self.target_angle[torch.isinf(qmax)] = torch.pi / 2
         # the angle to go
         self.target_angle_diff = self.target_angle - self.init_angle
+        joint_pose = (
+            self.target_switch_link.joint.get_global_pose().to_transformation_matrix()
+        )
+        self.target_joint_axis = joint_pose[:, :3, 0]
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
@@ -163,7 +166,7 @@ class TurnFaucetEnv(BaseEnv):
             )
             self.target_link_pos = cmass_pose.p
 
-            self.handle_link_goal.set_pose(cmass_pose)
+            # self.handle_link_goal.set_pose(cmass_pose)
 
     @property
     def current_angle(self):
@@ -177,7 +180,7 @@ class TurnFaucetEnv(BaseEnv):
         obs = dict(
             tcp_pose=self.agent.tcp.pose.raw_pose,
             target_angle_diff=self.target_angle_diff,
-            # target_joint_axis=self.target_joint_axis,
+            target_joint_axis=self.target_joint_axis,
             target_link_pos=self.target_link_pos,
         )
 
