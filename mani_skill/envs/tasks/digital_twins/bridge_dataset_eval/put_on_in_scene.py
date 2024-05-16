@@ -3,7 +3,9 @@ import sapien
 import torch
 from transforms3d.euler import euler2quat
 
-from mani_skill.envs.tasks.digital_twins.bridge_dataset.base_env import BaseBridgeEnv
+from mani_skill.envs.tasks.digital_twins.bridge_dataset_eval.base_env import (
+    BaseBridgeEnv,
+)
 from mani_skill.utils.registration import register_env
 
 
@@ -55,7 +57,7 @@ class PutCarrotOnPlateInScene(BaseBridgeEnv):
         return "put carrot on plate"
 
 
-@register_env("PutEggplantInBasketScene-v1", max_episode_steps=120)
+@register_env("PutEggplantInBasketScene-v0", max_episode_steps=120)
 class PutEggplantInBasketScene(BaseBridgeEnv):
     scene_setting = "sink"
 

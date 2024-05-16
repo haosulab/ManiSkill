@@ -16,7 +16,7 @@ from mani_skill.utils.structs.types import SimConfig
 
 
 class BaseDigitalTwinEnv(BaseEnv):
-    """Base Environment class for easily setting up digital twins for real2sim and sim2real
+    """Base Environment class for easily setting up evaluation digital twins for real2sim and sim2real
 
     This is based on the [SIMPLER](https://simpler-env.github.io/) and has the following tricks for
     making accurate simulated environments of real world datasets
@@ -24,6 +24,9 @@ class BaseDigitalTwinEnv(BaseEnv):
     Greenscreening: TODO
 
     Texture Matching: TODO
+
+    Note that this is not a general purpose system for building digital twins you can train and then transfer
+    to the real world. This is designed to support fast evaluation in simulation of real world policies.
 
     """
 

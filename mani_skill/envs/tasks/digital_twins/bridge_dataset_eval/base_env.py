@@ -9,7 +9,7 @@ from mani_skill import ASSET_DIR
 from mani_skill.agents.robots.widowx.widowx import WidowX250S
 from mani_skill.envs.tasks.digital_twins.base_env import BaseDigitalTwinEnv
 from mani_skill.sensors.camera import CameraConfig
-from mani_skill.utils import common, sapien_utils
+from mani_skill.utils import common, io_utils, sapien_utils
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.pose import Pose
 
@@ -59,12 +59,16 @@ class WidowX250SBridgeDatasetSink(WidowX250S):
 class BaseBridgeEnv(BaseDigitalTwinEnv):
     """Base Digital Twin environment for digital twins of the BridgeData v2"""
 
+    SUPPORTED_OBS_MODES = ["rgb"]
     SUPPORTED_REWARD_MODES = ["none"]
     scene_setting: Literal["flat_table", "sink"] = "flat_table"
     rgb_overlay_cameras = ["3rd_view_camera"]
     rgb_overlay_path = ""
     scene_table_height: float = 0.87
     objs: Dict[str, Actor] = dict()
+
+    obj_static_friction = 0.5
+    obj_dynamic_friction = 0.5
 
     def __init__(
         self,
@@ -81,13 +85,16 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
                 ASSET_DIR
                 / "tasks/bridge_dataset/real_inpainting/bridge_real_eval_1.png"
             )
+            robot_cls = WidowX250SBridgeDatasetFlatTable
         elif self.scene_setting == "sink":
             self.rgb_overlay_path = str(
                 ASSET_DIR / "tasks/bridge_dataset/real_inpainting/bridge_sink.png"
             )
-        robot_cls = WidowX250SBridgeDatasetFlatTable
-        if self.scene_setting == "sink":
             robot_cls = WidowX250SBridgeDatasetSink
+
+        self.model_db: Dict[str, Dict] = io_utils.load_json(
+            ASSET_DIR / "tasks/bridge_dataset/custom/info_bridge_custom_v0.json"
+        )
         super().__init__(
             robot_uids=robot_cls,
             **kwargs,
@@ -115,14 +122,17 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
         self,
         model_id: str,
         scale: float = 1,
-        physical_material: PhysxMaterial = None,
-        density: float = 1000,
     ):
+        density = self.model_db[model_id].get("density", 1000)
         return super()._build_actor_helper(
             model_id,
             scale,
-            physical_material,
-            density,
+            physical_material=PhysxMaterial(
+                static_friction=self.obj_static_friction,
+                dynamic_friction=self.obj_dynamic_friction,
+                restitution=0.0,
+            ),
+            density=density,
             root_dir=ASSET_DIR / "tasks/bridge_dataset/custom",
         )
 
