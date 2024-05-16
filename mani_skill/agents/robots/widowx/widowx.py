@@ -100,7 +100,7 @@ class WidowX250S(BaseAgent):
             stiffness=self.arm_stiffness,
             damping=self.arm_damping,
             normalize_action=False,
-            frame="ee_align",
+            frame="ee_align2",
             use_target=True,
         )
 

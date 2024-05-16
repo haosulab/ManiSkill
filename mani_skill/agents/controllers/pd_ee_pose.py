@@ -3,6 +3,7 @@ from typing import List, Sequence, Union
 
 import fast_kinematics
 import numpy as np
+import sapien
 import sapien.physx as physx
 import torch
 from gymnasium import spaces
@@ -260,6 +261,16 @@ class PDEEPoseController(PDEEPosController):
                 # origin at ee but base rotation
                 target_pose = delta_pose * prev_ee_pose_at_base
                 target_pose.set_p(prev_ee_pose_at_base.p + delta_pos)
+            elif self.config.frame == "ee_align2":
+                # TODO (stao): document this frame choice
+                # cur_ee_pose_at_base = self.compute_fk(self.qpos)
+                cur_ee_pose_at_base = self.ee_link.pose.sp
+                target_pose = (
+                    sapien.Pose(p=cur_ee_pose_at_base.p)
+                    * delta_pose.sp
+                    * sapien.Pose(p=cur_ee_pose_at_base.p).inv()
+                ) * prev_ee_pose_at_base.sp
+                target_pose = Pose.create(target_pose)
             else:
                 raise NotImplementedError(self.config.frame)
         else:

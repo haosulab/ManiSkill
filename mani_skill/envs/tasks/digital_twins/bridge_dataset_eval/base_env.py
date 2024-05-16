@@ -207,3 +207,7 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
                 actor.set_pose(
                     Pose.create_from_pq(p=xyz, q=self.quat_configs[quat_episode_ids, i])
                 )
+
+    def is_final_subtask(self):
+        # whether the current subtask is the final one, only meaningful for long-horizon tasks
+        return True
