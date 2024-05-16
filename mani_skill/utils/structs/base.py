@@ -4,16 +4,17 @@ from dataclasses import dataclass
 from functools import cached_property
 from typing import TYPE_CHECKING, Generic, List, TypeVar
 
+import numpy as np
 import sapien.physx as physx
 import torch
 
 from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.structs.decorators import before_gpu_init
+from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:
     from mani_skill.envs.scene import ManiSkillScene
-    from mani_skill.utils.structs.pose import Pose
 T = TypeVar("T")
 
 
@@ -83,6 +84,7 @@ class PhysxRigidBaseComponentStruct(BaseStruct[T], Generic[T]):
 
 @dataclass
 class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]):
+    _bodies: List[physx.PhysxRigidBodyComponent]
     _body_data_name: str
     _body_data_index_internal: slice = None
 
@@ -142,7 +144,9 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
     def get_auto_compute_mass(self) -> bool:
         return self.auto_compute_mass
 
-    # def get_cmass_local_pose(self) -> sapien.pysapien.Pose: ...
+    def get_cmass_local_pose(self) -> Pose:
+        return
+
     def get_disable_gravity(self) -> bool:
         return self.disable_gravity
 
@@ -195,11 +199,16 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
     def auto_compute_mass(self) -> torch.Tensor:
         return torch.tensor([body.auto_compute_mass for body in self._bodies])
 
-    # @property
-    # def cmass_local_pose(self) -> sapien.pysapien.Pose:
-    #     """
-    #     :type: sapien.pysapien.Pose
-    #     """
+    @cached_property
+    def cmass_local_pose(self) -> Pose:
+        raw_poses = np.stack(
+            [
+                np.concatenate([x.cmass_local_pose.p, x.cmass_local_pose.q])
+                for x in self._bodies
+            ]
+        )
+        return Pose.create(common.to_tensor(raw_poses))
+
     # @cmass_local_pose.setter
     # def cmass_local_pose(self, arg1: sapien.pysapien.Pose) -> None:
     #     pass

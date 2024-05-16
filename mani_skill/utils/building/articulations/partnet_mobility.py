@@ -18,11 +18,10 @@ def _load_partnet_mobility_dataset():
             PACKAGE_ASSET_DIR / "partnet_mobility/meta/info_cabinet_drawer_train.json"
         ),
     }
-    PARTNET_MOBILITY["model_data"].update(
-        load_json(
-            PACKAGE_ASSET_DIR / "partnet_mobility/meta/info_cabinet_door_train.json"
+    for data_file in ["info_cabinet_drawer_train.json", "info_faucet_train.json"]:
+        PARTNET_MOBILITY["model_data"].update(
+            load_json(PACKAGE_ASSET_DIR / "partnet_mobility/meta" / data_file)
         )
-    )
 
     def find_urdf_path(model_id):
         model_dir = ASSET_DIR / "partnet_mobility/dataset" / str(model_id)
@@ -45,7 +44,10 @@ def _load_partnet_mobility_dataset():
 
 
 def get_partnet_mobility_builder(
-    scene: ManiSkillScene, id: str, fix_root_link: bool = True
+    scene: ManiSkillScene,
+    id: str,
+    fix_root_link: bool = True,
+    urdf_config: dict = dict(),
 ):
     global PARTNET_MOBILITY
     if PARTNET_MOBILITY is None:
@@ -56,12 +58,13 @@ def get_partnet_mobility_builder(
     loader.scale = metadata["scale"]
     loader.load_multiple_collisions_from_file = True
     urdf_path = PARTNET_MOBILITY["model_urdf_paths"][id]
-    urdf_config = sapien_utils.parse_urdf_config(
+    applied_urdf_config = sapien_utils.parse_urdf_config(
         dict(
             material=dict(static_friction=1, dynamic_friction=1, restitution=0),
         )
     )
-    sapien_utils.apply_urdf_config(loader, urdf_config)
+    applied_urdf_config.update(**urdf_config)
+    sapien_utils.apply_urdf_config(loader, applied_urdf_config)
     articulation_builders, _, _ = loader.parse(str(urdf_path))
     builder = articulation_builders[0]
     return builder
