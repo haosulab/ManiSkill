@@ -105,6 +105,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
                 active_joint_index=merged_active_joint_indexes,
             )
             merged_link.joint = merged_joint
+            merged_joint.child_link = merged_link
         # remove articulation reference as it does not make sense and is only used to instantiate some properties like the physx system
         # TODO (stao): akin to the joint merging above, we can also make a view of the articulations of each link. Is it necessary?
         merged_link.articulation = None

@@ -156,8 +156,12 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
     def get_parent_link(self):
         return self.parent_link
 
-    # def get_pose_in_child(self) -> sapien.pysapien.Pose: ...
-    # def get_pose_in_parent(self) -> sapien.pysapien.Pose: ...
+    def get_pose_in_child(self):
+        return self.pose_in_child
+
+    def get_pose_in_parent(self):
+        return self.pose_in_parent
+
     def get_stiffness(self) -> float:
         return self.stiffness
 
