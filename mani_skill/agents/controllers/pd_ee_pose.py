@@ -1,7 +1,11 @@
 from dataclasses import dataclass
 from typing import List, Sequence, Union
 
-import fast_kinematics
+try:
+    import fast_kinematics
+except:
+    # not all systems support the fast_kinematics package at the moment
+    fast_kinematics = None
 import numpy as np
 import sapien.physx as physx
 import torch
@@ -42,6 +46,10 @@ class PDEEPosController(PDJointPosController):
         self.ee_link_idx = self.articulation.get_links().index(self.ee_link)
 
         if physx.is_gpu_enabled():
+            assert (
+                fast_kinematics is not None
+            ), "fast_kinematics is not installed. This is likely because your system does not support the fast_kinematics library which provides GPU accelerated inverse kinematics solvers"
+
             self.fast_kinematics_model = fast_kinematics.FastKinematics(
                 self.config.urdf_path, self.scene.num_envs, self.config.ee_link
             )

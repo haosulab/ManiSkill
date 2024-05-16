@@ -49,6 +49,19 @@ We also have a quick start [colab notebook](https://colab.research.google.com/gi
 
 For a full list of example scripts you can run see [the docs](https://maniskill.readthedocs.io/en/latest/user_guide/demos/index.html).
 
+## System Support
+
+We currently best support Linux based systems. There is limited support for windows and no support for MacOS at the moment. We are working on trying to support more features on other systems but this may take some time. Most constraints stem from what the [SAPIEN](https://github.com/haosulab/SAPIEN/) package is capable of supporting.
+
+| System / GPU         | CPU Sim | GPU Sim | Rendering |
+| -------------------- | ------- | ------- | --------- |
+| Linux / NVIDIA GPU   | ✅      | ✅      | ✅        |
+| Windows / NVIDIA GPU | ✅      | ❌      | ✅        |
+| Windows / AMD GPU    | ✅      | ❌      | ✅        |
+| WSL / Anything       | ✅      | ❌      | ❌        |
+| MacOS / Anything     | ❌      | ❌      | ❌        |
+
+
 ## License
 
 All rigid body environments in ManiSkill are licensed under fully permissive licenses (e.g., Apache-2.0).
