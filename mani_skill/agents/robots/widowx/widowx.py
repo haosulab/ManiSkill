@@ -85,16 +85,23 @@ class WidowX250S(BaseAgent):
         )
         arm_pd_ee_delta_pose = PDEEPoseControllerConfig(
             self.arm_joint_names,
-            pos_lower=-1.0,
-            pos_upper=1.0,
-            rot_bound=np.pi / 2,
+            pos_lower=-0.1,
+            pos_upper=0.1,
+            rot_bound=0.1,
             stiffness=self.arm_stiffness,
             damping=self.arm_damping,
-            use_delta=True,
             normalize_action=False,
         )
         arm_pd_ee_target_delta_pose_align2 = PDEEPoseControllerConfig(
-            *arm_common_args, frame="ee_align2", use_target=True, **arm_common_kwargs
+            self.arm_joint_names,
+            pos_lower=-0.1,
+            pos_upper=0.1,
+            rot_bound=0.1,
+            stiffness=self.arm_stiffness,
+            damping=self.arm_damping,
+            normalize_action=False,
+            frame="ee_align",
+            use_target=True,
         )
 
         extra_gripper_clearance = 0.001  # since real gripper is PID, we use extra clearance to mitigate PD small errors; also a trick to have force when grasping
@@ -110,7 +117,7 @@ class WidowX250S(BaseAgent):
         )
         _C["arm"] = dict(
             arm_pd_ee_delta_pose=arm_pd_ee_delta_pose,
-            # arm_pd_ee_target_delta_pose_align2=arm_pd_ee_target_delta_pose_align2,
+            arm_pd_ee_target_delta_pose_align2=arm_pd_ee_target_delta_pose_align2,
             arm_pd_joint_delta_pos=arm_pd_joint_delta_pos,
         )
 

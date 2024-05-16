@@ -118,7 +118,6 @@ class PDEEPosController(PDJointPosController):
                 .permute(0, 2, 1)
             )
             jacobian = jacobian[:, :, self.qmask]
-            # NOTE (stao): a bit of a hacky way to check if we want to do IK on position or pose here
             if pos_only:
                 jacobian = jacobian[:, 0:3]
 
