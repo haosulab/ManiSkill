@@ -14,7 +14,7 @@ def parse_args(args=None):
     parser.add_argument("-b", "--sim-backend", type=str, default="auto", help="Which simulation backend to use. Can be 'auto', 'cpu', 'gpu'")
     parser.add_argument("--reward-mode", type=str)
     parser.add_argument("-c", "--control-mode", type=str)
-    parser.add_argument("--render-mode", type=str)
+    parser.add_argument("--render-mode", type=str, default="rgb_array")
     parser.add_argument("--shader", default="default", type=str, help="Change shader used for rendering. Default is 'default' which is very fast. Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer")
     parser.add_argument("--record-dir", type=str)
     parser.add_argument("-p", "--pause", action="store_true", help="If using human render mode, auto pauses the simulation upon loading")
@@ -58,7 +58,7 @@ def main(args):
     record_dir = args.record_dir
     if record_dir:
         record_dir = record_dir.format(env_id=args.env_id)
-        env = RecordEpisode(env, record_dir)
+        env = RecordEpisode(env, record_dir, info_on_video=True)
 
     if verbose:
         print("Observation space", env.observation_space)
