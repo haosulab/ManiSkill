@@ -1,5 +1,3 @@
-"""NOTE: This scene builder class API is a WIP still. Temporarily used for managing a few pre-built scenes"""
-
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Dict, List, Union, Optional
@@ -17,34 +15,29 @@ from mani_skill.utils.structs.types import Array
 class SceneBuilder:
     """Base class for defining scene builders that can be reused across tasks"""
 
-    """Env which scenebuilder will build in."""
     env: BaseEnv
+    """Env which scenebuilder will build in."""
 
-    """Robot init qpos noise"""
     robot_init_qpos_noise: float = 0.02
+    """Robot init qpos noise"""
 
-    """Whether this scene builder will add its own lighting when build is called. If False, ManiSkill will add some default lighting"""
     builds_lighting: bool = False
+    """Whether this scene builder will add its own lighting when build is called. If False, ManiSkill will add some default lighting"""
 
-    """
-    **Optional** list of scene configuration information that can be used to build/init scenes. Can be a dictionary, a path to a json file, or some other data.
-    Some scenes will need to load config data, while others might not.
-    """
     build_configs: Optional[List[Any]] = None
+    """List of scene configuration information that can be used to **build** scenes during reconfiguration (i.e. `env.reset(seed=seed, options=dict(reconfigure=True))`). Can be a dictionary, a path to a json file, or some other data. If a scene needs to load build config data, it will index/sample such build configs from this list."""
     init_configs: Optional[List[Any]] = None
+    """List of scene configuration information that can be used to **init** scenes during reconfiguration (i.e. `env.reset()`). Can be a dictionary, a path to a json file, or some other data. If a scene needs to load init config data, it will index/sample such init configs from this list."""
 
-    """
-    Dictionaries mapping names to scene objects, movable objects, and articulations for easy reference.
-    """
     scene_objects: Optional[Dict[str, Actor]] = None
+    """Scene objects are any dynamic, kinematic, or static Actor built by the scene builder. Useful for accessing objects in the scene directly."""
     movable_objects: Optional[Dict[str, Actor]] = None
+    """Movable objects are any **dynamic** Actor built by the scene builder. movable_objects is a subset of scene_objects. Can be used to query dynamic objects for e.g. task initialization."""
     articulations: Optional[Dict[str, Articulation]] = None
+    """Articulations are any articulation loaded in by the scene builder."""
 
-    """
-    Some scenes allow for mobile robots to move through these scene. In this case, a list of navigable positions per env_idx should be provided for easy initialization.
-    Can be a discretized list, range, spaces.Box, etc
-    """
     navigable_positions: Optional[List[Union[Array, spaces.Box]]] = None
+    """Some scenes allow for mobile robots to move through these scene. In this case, a list of navigable positions per env_idx (e.g. loaded from a navmesh) should be provided for easy initialization. Can be a discretized list, range, spaces.Box, etc."""
 
     def __init__(self, env, robot_init_qpos_noise=0.02):
         self.env = env

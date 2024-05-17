@@ -1,9 +1,3 @@
-"""
-Code for building scenes from the ReplicaCAD dataset https://aihabitat.org/datasets/replica_cad/
-
-This code is also heavily commented to serve as a tutorial for how to build custom scenes from scratch and/or port scenes over from other datasets/simulators
-"""
-
 import json
 import os
 import os.path as osp
@@ -24,7 +18,7 @@ from mani_skill.utils.scene_builder.registration import register_scene_builder
 from mani_skill.utils.structs import Actor
 from mani_skill.utils.building import actors
 
-from ..scene_builder import ReplicaCADSceneBuilder
+from mani_skill.utils.scene_builder.replicacad import ReplicaCADSceneBuilder
 
 HIDDEN_OBJ_COLLISION_GROUP = 30
 HIDDEN_POSE = sapien.Pose(p=[99999] * 3)
