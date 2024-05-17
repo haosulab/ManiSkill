@@ -68,7 +68,7 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
                     os.listdir(
                         osp.join(
                             ASSET_DIR,
-                            "scene_datasets/replica_cad_dataset/rearrange/v1_extracted",
+                            "scene_datasets/replica_cad_dataset/rearrange",
                             split,
                             task,
                         ),
@@ -84,7 +84,7 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
             with open(
                 osp.join(
                     ASSET_DIR,
-                    "scene_datasets/replica_cad_dataset/rearrange/v1_extracted",
+                    "scene_datasets/replica_cad_dataset/rearrange",
                     rc,
                 ),
                 "rb",
@@ -131,7 +131,7 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
             with open(
                 osp.join(
                     ASSET_DIR,
-                    "scene_datasets/replica_cad_dataset/rearrange/v1_extracted",
+                    "scene_datasets/replica_cad_dataset/rearrange",
                     rc,
                 ),
                 "rb",
