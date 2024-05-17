@@ -36,7 +36,6 @@ setup(
         "transforms3d",
         "trimesh",
         "rtree",
-        "opencv-python",
         "imageio",
         "imageio[ffmpeg]",
         "mplib>=0.1.1;platform_system=='Linux'",
