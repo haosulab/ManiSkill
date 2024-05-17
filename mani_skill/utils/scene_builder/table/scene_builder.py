@@ -9,14 +9,13 @@ import torch
 from transforms3d.euler import euler2quat
 
 from mani_skill.agents.multi_agent import MultiAgent
-from mani_skill.agents.robots.fetch import FETCH_UNIQUE_COLLISION_BIT
+from mani_skill.agents.robots.fetch import FETCH_WHEELS_COLLISION_BIT
 from mani_skill.utils.building.ground import build_ground
 from mani_skill.utils.scene_builder import SceneBuilder
 
 
 # TODO (stao): make the build and initialize api consistent with other scenes
 class TableSceneBuilder(SceneBuilder):
-    robot_init_qpos_noise: float = 0.02
 
     def build(self):
         builder = self.scene.create_actor_builder()
@@ -45,7 +44,7 @@ class TableSceneBuilder(SceneBuilder):
 
         self.ground = build_ground(self.scene, altitude=-self.table_height)
         self.table = table
-        self._scene_objects: List[sapien.Entity] = [self.table, self.ground]
+        self.scene_objects: List[sapien.Entity] = [self.table, self.ground]
 
     def initialize(self, env_idx: torch.Tensor):
         # table_height = 0.9196429
@@ -128,7 +127,7 @@ class TableSceneBuilder(SceneBuilder):
             self.env.agent.robot.set_pose(sapien.Pose([-1.05, 0, -self.table_height]))
 
             self.ground.set_collision_group_bit(
-                group=2, bit_idx=FETCH_UNIQUE_COLLISION_BIT, bit=1
+                group=2, bit_idx=FETCH_WHEELS_COLLISION_BIT, bit=1
             )
         elif self.env.robot_uids == ("panda", "panda"):
             agent: MultiAgent = self.env.agent
@@ -167,13 +166,3 @@ class TableSceneBuilder(SceneBuilder):
         ):
             # Need to specify the robot qpos for each sub-scenes using tensor api
             pass
-
-    @property
-    def scene_objects(self):
-        return self._scene_objects
-
-    @property
-    def movable_objects(self):
-        raise AttributeError(
-            "For TableScene, additional movable objects must be added and managed at Task-level"
-        )

@@ -17,8 +17,10 @@ from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.link import Link
 from mani_skill.utils.structs.types import Array
 
-FETCH_UNIQUE_COLLISION_BIT = 30
+FETCH_WHEELS_COLLISION_BIT = 30
 """Collision bit of the fetch robot wheel links"""
+FETCH_BASE_COLLISION_BIT = 31
+"""Collision bit of the fetch base"""
 
 
 @register_agent()
@@ -43,25 +45,23 @@ class Fetch(BaseAgent):
         rest=Keyframe(
             pose=sapien.Pose(),
             qpos=np.array(
-                np.array(
-                    [
-                        0,
-                        0,
-                        0,
-                        0.1,
-                        0,
-                        -0.370,
-                        0.562,
-                        -0.75,
-                        0.695,
-                        1.0,
-                        0.0,
-                        np.pi / 2,
-                        0,
-                        0.015,
-                        0.015,
-                    ]
-                )
+                [
+                    0,
+                    0,
+                    0,
+                    0.386,
+                    0,
+                    -0.370,
+                    0.562,
+                    -1.032,
+                    0.695,
+                    0.955,
+                    -0.1,
+                    2.077,
+                    0,
+                    0.015,
+                    0.015,
+                ]
             ),
         )
     )
@@ -90,27 +90,6 @@ class Fetch(BaseAgent):
                 entity_uid="gripper_link",
             ),
         ]
-
-    REACHABLE_DIST = 1.5
-    RESTING_QPOS = np.array(
-        [
-            0,
-            0,
-            0,
-            0.386,
-            0,
-            -0.370,
-            0.562,
-            -1.032,
-            0.695,
-            0.955,
-            -0.1,
-            2.077,
-            0,
-            0.015,
-            0.015,
-        ]
-    )
 
     def __init__(self, *args, **kwargs):
         self.arm_joint_names = [
@@ -370,8 +349,11 @@ class Fetch(BaseAgent):
         self.r_wheel_link: Link = self.robot.links_map["r_wheel_link"]
         for link in [self.l_wheel_link, self.r_wheel_link]:
             link.set_collision_group_bit(
-                group=2, bit_idx=FETCH_UNIQUE_COLLISION_BIT, bit=1
+                group=2, bit_idx=FETCH_WHEELS_COLLISION_BIT, bit=1
             )
+        self.base_link.set_collision_group_bit(
+            group=2, bit_idx=FETCH_BASE_COLLISION_BIT, bit=1
+        )
 
         self.torso_lift_link: Link = sapien_utils.get_obj_by_name(
             self.robot.get_links(), "torso_lift_link"

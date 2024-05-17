@@ -14,7 +14,7 @@ from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import common, io_utils, sapien_utils
 from mani_skill.utils.geometry import rotation_conversions
 from mani_skill.utils.registration import register_env
-from mani_skill.utils.scene_builder.table.table_scene_builder import TableSceneBuilder
+from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs import Actor, Pose
 from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 
@@ -64,9 +64,7 @@ class AssemblingKitsEnv(BaseEnv):
 
     @property
     def _default_sim_config(self):
-        return SimConfig(
-            gpu_memory_cfg=GPUMemoryConfig(max_rigid_contact_count=2**20)
-        )
+        return SimConfig(gpu_memory_cfg=GPUMemoryConfig(max_rigid_contact_count=2**20))
 
     @property
     def _default_sensor_configs(self):

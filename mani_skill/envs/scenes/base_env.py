@@ -1,6 +1,7 @@
-from typing import Any, Dict, Union
+from typing import Any, Dict, Union, List
 
 import numpy as np
+import torch
 import sapien as sapien
 import sapien.physx as physx
 import torch
@@ -25,13 +26,14 @@ class SceneManipulationEnv(BaseEnv):
     Args:
         robot_uids: Which robot to place into the scene. Default is "fetch"
 
-        fixed_scene: whether to sample a single scene and never reconfigure the scene during episode resets
-        Default to True as reconfiguration/reloading scenes is expensive. When true, call env.reset(seed=seed, options=dict(reconfigure=True))
+        fixed_scene: whether to build static set of scenes.
+        Default is True as reconfiguring is expensive. When fixed_scene=True, one can rebuild scenes via env.reset(seed=seed, options=dict(reconfigure=True))
 
         scene_builder_cls: Scene builder class to build a scene with. Default is the ArchitecTHORSceneBuilder which builds a scene from AI2THOR.
             Any of the AI2THOR SceneBuilders are supported in this environment
 
-        convex_decomposition: Choice of convex decomposition algorithm to generate collision meshes for objects. Default is `coacd` which uses https://github.com/SarahWeiii/CoACD
+        build_config_idxs (optional): which build configs (static builds) to sample. Your scene_builder_cls may or may not require these.
+        init_config_idxs (optional): which init configs (additional init options) to sample. Your scene_builder_cls may or may not require these.
     """
 
     SUPPORTED_ROBOTS = ["panda", "fetch"]
@@ -41,28 +43,20 @@ class SceneManipulationEnv(BaseEnv):
         self,
         *args,
         robot_uids="fetch",
-        robot_init_qpos_noise=0.02,
         fixed_scene=True,
         scene_builder_cls: Union[str, SceneBuilder] = "ReplicaCAD",
-        convex_decomposition="coacd",
-        scene_idxs=None,
+        build_config_idxs=None,
+        init_config_idxs=None,
         **kwargs
     ):
-        self.robot_init_qpos_noise = robot_init_qpos_noise
         self.fixed_scene = fixed_scene
-        self.sampled_scene_idx: int = None
         if isinstance(scene_builder_cls, str):
             scene_builder_cls = REGISTERED_SCENE_BUILDERS[
                 scene_builder_cls
             ].scene_builder_cls
         self.scene_builder: SceneBuilder = scene_builder_cls(self)
-        if isinstance(scene_idxs, int):
-            self.scene_idxs = [scene_idxs]
-        elif isinstance(scene_idxs, list):
-            self.scene_idxs = scene_idxs
-        else:
-            self.scene_idxs = np.arange(0, len(self.scene_builder.scene_configs))
-        self.convex_decomposition = convex_decomposition
+        self.build_config_idxs = build_config_idxs
+        self.init_config_idxs = init_config_idxs
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     @property
@@ -71,8 +65,8 @@ class SceneManipulationEnv(BaseEnv):
             spacing=50,
             gpu_memory_cfg=GPUMemoryConfig(
                 found_lost_pairs_capacity=2**25,
-                max_rigid_patch_count=2**19,
-                max_rigid_contact_count=2**21,
+                max_rigid_patch_count=2**21,
+                max_rigid_contact_count=2**23,
             ),
         )
 
@@ -80,30 +74,47 @@ class SceneManipulationEnv(BaseEnv):
         self._set_episode_rng(seed)
         if options is None:
             options = dict(reconfigure=False)
+        if "reconfigure" not in options:
+            options["reconfigure"] = False
         if not self.fixed_scene:
             options["reconfigure"] = True
         if "reconfigure" in options and options["reconfigure"]:
-            self.sampled_scene_idx = self.scene_idxs[
-                self._episode_rng.randint(0, len(self.scene_idxs))
-            ]
-            self.sampled_scene_idx = int(self.sampled_scene_idx)
+            self.build_config_idxs = options.pop(
+                "build_config_idxs", self.build_config_idxs
+            )
+            self.init_config_idxs = options.pop(
+                "init_config_idxs", self.init_config_idxs
+            )
         return super().reset(seed, options)
 
     def _load_lighting(self, options: dict):
         if self.scene_builder.builds_lighting:
             return
-        return super()._load_lighting()
+        return super()._load_lighting(options)
 
     def _load_scene(self, options: dict):
-        self.scene_builder.build(
-            self.scene,
-            scene_idx=self.sampled_scene_idx,
-            convex_decomposition=self.convex_decomposition,
-        )
+        if self.scene_builder.build_configs is not None:
+            self.scene_builder.build(
+                self.build_config_idxs
+                if self.build_config_idxs is not None
+                else self.scene_builder.sample_build_config_idxs()
+            )
+        else:
+            self.scene_builder.build()
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
-            self.scene_builder.initialize(env_idx)
+            if self.scene_builder.init_configs is not None:
+                self.scene_builder.initialize(
+                    env_idx,
+                    (
+                        self.init_config_idxs
+                        if self.init_config_idxs is not None
+                        else self.scene_builder.sample_init_config_idxs()
+                    ),
+                )
+            else:
+                self.scene_builder.initialize(env_idx)
 
     def evaluate(self) -> dict:
         return dict()

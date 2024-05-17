@@ -1,1 +1,1 @@
-from .fetch import FETCH_UNIQUE_COLLISION_BIT, Fetch
+from .fetch import FETCH_WHEELS_COLLISION_BIT, FETCH_BASE_COLLISION_BIT, Fetch
