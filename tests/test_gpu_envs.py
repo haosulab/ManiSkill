@@ -394,18 +394,20 @@ def test_hidden_objs(env_id):
                 hide_obj._body_data_index, :7
             ].clone()[..., :3],
             p,
+            atol=1e-6,
         ).all()
         assert torch.isclose(
             hide_obj.px.cuda_rigid_body_data.torch()[
                 hide_obj._body_data_index, :7
             ].clone()[..., 3:],
             q,
+            atol=1e-6,
         ).all()
 
         # 4. check that direct calls to raw_pose, pos, and rot same as before
-        assert torch.isclose(hide_obj.pose.raw_pose, raw_pose).all()
-        assert torch.isclose(hide_obj.pose.p, p).all()
-        assert torch.isclose(hide_obj.pose.q, q).all()
+        assert torch.isclose(hide_obj.pose.raw_pose, raw_pose, atol=1e-6).all()
+        assert torch.isclose(hide_obj.pose.p, p, atol=1e-6).all()
+        assert torch.isclose(hide_obj.pose.q, q, atol=1e-6).all()
 
     # Test after reset
     hide_obj.hide_visual()

@@ -1,10 +1,13 @@
 import argparse
+import signal
 
 import gymnasium as gym
+from matplotlib import pyplot as plt
 import numpy as np
 
+signal.signal(signal.SIGINT, signal.SIG_DFL) # allow ctrl+c
 from mani_skill.envs.sapien_env import BaseEnv
-from mani_skill.utils.visualization.cv2_utils import OpenCVViewer
+from mani_skill.utils import visualization
 from mani_skill.utils.wrappers import RecordEpisode
 
 
@@ -58,7 +61,19 @@ def main():
     # Viewer
     if args.enable_sapien_viewer:
         env.render_human()
-    opencv_viewer = OpenCVViewer(exit_on_esc=False)
+    renderer = visualization.ImageRenderer()
+    # disable all default plt shortcuts that are lowercase letters
+    plt.rcParams["keymap.fullscreen"].remove("f")
+    plt.rcParams["keymap.home"].remove("h")
+    plt.rcParams["keymap.home"].remove("r")
+    plt.rcParams["keymap.back"].remove("c")
+    plt.rcParams["keymap.forward"].remove("v")
+    plt.rcParams["keymap.pan"].remove("p")
+    plt.rcParams["keymap.zoom"].remove("o")
+    plt.rcParams["keymap.save"].remove("s")
+    plt.rcParams["keymap.grid"].remove("g")
+    plt.rcParams["keymap.yscale"].remove("l")
+    plt.rcParams["keymap.xscale"].remove("k")
 
     def render_wait():
         if not args.enable_sapien_viewer:
@@ -83,21 +98,22 @@ def main():
         if args.enable_sapien_viewer:
             env.render_human()
 
-        render_frame = env.render()
+        render_frame = env.render().cpu().numpy()[0]
 
         if after_reset:
             after_reset = False
             # Re-focus on opencv viewer
             if args.enable_sapien_viewer:
-                opencv_viewer.close()
-                opencv_viewer = OpenCVViewer(exit_on_esc=False)
-
+                renderer.close()
+                renderer = visualization.ImageRenderer()
+                pass
         # -------------------------------------------------------------------------- #
         # Interaction
         # -------------------------------------------------------------------------- #
         # Input
-        key = opencv_viewer.imshow(render_frame)
-
+        renderer(render_frame)
+        # key = opencv_viewer.imshow(render_frame.cpu().numpy()[0])
+        key = renderer.last_event.key if renderer.last_event is not None else None
         body_action = np.zeros([3])
         base_action = np.zeros([3])  # hardcoded for fetch robot
 
@@ -192,18 +208,7 @@ def main():
 
         # Visualize observation
         if key == "v":
-            if "rgbd" in env.obs_mode:
-                from itertools import chain
-
-                from mani_skill.utils.visualization.misc import (
-                    observations_to_images, tile_images)
-
-                images = list(
-                    chain(*[observations_to_images(x) for x in obs["image"].values()])
-                )
-                render_frame = tile_images(images)
-                opencv_viewer.imshow(render_frame)
-            elif "pointcloud" in env.obs_mode:
+            if "pointcloud" in env.obs_mode:
                 import trimesh
 
                 xyzw = obs["pointcloud"]["xyzw"]

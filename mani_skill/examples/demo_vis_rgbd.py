@@ -1,13 +1,15 @@
 import signal
+import sys
+
+from matplotlib import pyplot as plt
 
 from mani_skill.utils import common
-from mani_skill.utils.visualization.misc import tile_images
+from mani_skill.utils import visualization
 signal.signal(signal.SIGINT, signal.SIG_DFL) # allow ctrl+c
 
 import argparse
 
 import gymnasium as gym
-import cv2
 import numpy as np
 
 from mani_skill.envs.sapien_env import BaseEnv
@@ -26,6 +28,12 @@ def parse_args(args=None):
     )
     args = parser.parse_args()
     return args
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+
+
 
 
 def main(args):
@@ -50,6 +58,8 @@ def main(args):
             n_cams += 1
     print(f"Visualizing {n_cams} RGBD cameras")
 
+    renderer = visualization.ImageRenderer()
+
     while True:
         action = env.action_space.sample()
         obs, reward, terminated, truncated, info = env.step(action)
@@ -66,11 +76,8 @@ def main(args):
                 depth_rgb[..., :] = depth*255
                 imgs.append(depth_rgb)
                 cam_num += 1
-        img = tile_images(imgs, nrows=n_cams)
-
-        cv2.imshow('image',cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
-        cv2.waitKey(0)
-
+        img = visualization.tile_images(imgs, nrows=n_cams)
+        renderer(img)
 
 if __name__ == "__main__":
     main(parse_args())

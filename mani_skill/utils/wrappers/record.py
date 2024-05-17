@@ -473,6 +473,7 @@ class RecordEpisode(gym.Wrapper):
             image = self.capture_image()
 
             if self.info_on_video:
+                info = common.to_numpy(info)
                 scalar_info = gym_utils.extract_scalars_from_info(info)
                 if isinstance(rew, torch.Tensor) and len(rew.shape) > 1:
                     rew = rew[0]

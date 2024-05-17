@@ -1,11 +1,11 @@
 import os
 from typing import Dict, List, Optional
 
-import cv2
 import imageio
 import numpy as np
 import torch
 import tqdm
+from PIL import Image, ImageDraw, ImageFont
 
 from mani_skill.utils.structs.types import Array
 
@@ -170,75 +170,32 @@ def tile_images(images: List[Array], nrows=1) -> Array:
     return output_image
 
 
-def put_text_on_image(image: Array, lines: List[str]):
+TEXT_FONT = None
+
+
+def put_text_on_image(image: np.ndarray, lines: List[str]):
+    global TEXT_FONT
     assert image.dtype == np.uint8, image.dtype
     image = image.copy()
-
-    font_size = 0.5
-    font_thickness = 1
-    font = cv2.FONT_HERSHEY_SIMPLEX
-
-    y = 0
-    for line in lines:
-        textsize = cv2.getTextSize(line, font, font_size, font_thickness)[0]
-        y += textsize[1] + 10
-        x = 10
-        cv2.putText(
-            image,
-            line,
-            (x, y),
-            font,
-            font_size,
-            (0, 255, 0),
-            font_thickness,
-            lineType=cv2.LINE_AA,
+    image = Image.fromarray(image)
+    draw = ImageDraw.Draw(image)
+    if TEXT_FONT is None:
+        TEXT_FONT = ImageFont.truetype(
+            os.path.join(os.path.dirname(__file__), "UbuntuSansMono-Regular.ttf"),
+            size=16,
         )
-    return image
-
-
-def append_text_to_image(image: Array, lines: List[str]):
-    r"""Appends text left to an image of size (height, width, channels).
-    The returned image has white text on a black background.
-    Args:
-        image: the image to put text
-        text: a string to display
-    Returns:
-        A new image with text inserted left to the input image
-    See also:
-        habitat.utils.visualization.utils
-    """
-    # h, w, c = image.shape
-    font_size = 0.5
-    font_thickness = 1
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    blank_image = np.zeros(image.shape, dtype=np.uint8)
-
-    y = 0
+    y = -10
     for line in lines:
-        textsize = cv2.getTextSize(line, font, font_size, font_thickness)[0]
-        y += textsize[1] + 10
+        bbox = draw.textbbox((0, 0), text=line)
+        textheight = bbox[3] - bbox[1]
+        y += textheight + 10
         x = 10
-        cv2.putText(
-            blank_image,
-            line,
-            (x, y),
-            font,
-            font_size,
-            (255, 255, 255),
-            font_thickness,
-            lineType=cv2.LINE_AA,
-        )
-    # text_image = blank_image[0 : y + 10, 0:w]
-    # final = np.concatenate((image, text_image), axis=0)
-    final = np.concatenate((blank_image, image), axis=1)
-    return final
+        draw.text((x, y), text=line, fill=(0, 255, 0), font=TEXT_FONT)
+    return np.array(image)
 
 
 def put_info_on_image(image, info: Dict[str, float], extras=None, overlay=True):
     lines = [f"{k}: {v:.3f}" for k, v in info.items()]
     if extras is not None:
         lines.extend(extras)
-    if overlay:
-        return put_text_on_image(image, lines)
-    else:
-        return append_text_to_image(image, lines)
+    return put_text_on_image(image, lines)
