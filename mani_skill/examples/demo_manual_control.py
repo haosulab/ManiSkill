@@ -5,11 +5,9 @@ import gymnasium as gym
 from matplotlib import pyplot as plt
 import numpy as np
 
-from mani_skill.utils.visualization.renderer import ImageRenderer
 signal.signal(signal.SIGINT, signal.SIG_DFL) # allow ctrl+c
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.utils import visualization
-from mani_skill.utils.visualization.cv2_utils import OpenCVViewer
 from mani_skill.utils.wrappers import RecordEpisode
 
 
@@ -63,7 +61,6 @@ def main():
     # Viewer
     if args.enable_sapien_viewer:
         env.render_human()
-    # opencv_viewer = OpenCVViewer(exit_on_esc=False)
     renderer = visualization.ImageRenderer()
     # disable all default plt shortcuts that are lowercase letters
     plt.rcParams["keymap.fullscreen"].remove("f")

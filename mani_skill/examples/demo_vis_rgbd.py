@@ -10,7 +10,6 @@ signal.signal(signal.SIGINT, signal.SIG_DFL) # allow ctrl+c
 import argparse
 
 import gymnasium as gym
-import cv2
 import numpy as np
 
 from mani_skill.envs.sapien_env import BaseEnv

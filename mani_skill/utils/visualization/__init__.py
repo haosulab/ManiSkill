@@ -1,4 +1,3 @@
-from .cv2_utils import OpenCVViewer
 from .jupyter_utils import display_images
 from .misc import (
     images_to_video,
