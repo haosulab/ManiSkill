@@ -135,10 +135,7 @@ class TurnFaucetEnv(BaseEnv):
         self.target_angle[torch.isinf(qmax)] = torch.pi / 2
         # the angle to go
         self.target_angle_diff = self.target_angle - self.init_angle
-        joint_pose = (
-            self.target_switch_link.joint.get_global_pose().to_transformation_matrix()
-        )
-        self.target_joint_axis = joint_pose[:, :3, 0]
+        self.target_joint_axis = torch.zeros((self.num_envs, 3), device=self.device)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
@@ -165,7 +162,10 @@ class TurnFaucetEnv(BaseEnv):
                 self.target_switch_link.pose * self.target_switch_link.cmass_local_pose
             )
             self.target_link_pos = cmass_pose.p
-
+            joint_pose = (
+                self.target_switch_link.joint.get_global_pose().to_transformation_matrix()
+            )
+            self.target_joint_axis[env_idx] = joint_pose[env_idx, :3, 0]
             # self.handle_link_goal.set_pose(cmass_pose)
 
     @property
