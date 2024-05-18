@@ -16,6 +16,7 @@ from mani_skill.utils.geometry.trimesh_utils import (
 from mani_skill.utils.structs.articulation_joint import ArticulationJoint
 from mani_skill.utils.structs.base import PhysxRigidBodyComponentStruct
 from mani_skill.utils.structs.pose import Pose, to_sapien_pose, vectorize_pose
+from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:
     from mani_skill.envs.scene import ManiSkillScene
@@ -196,7 +197,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
             return Pose.create(self._objs[0].entity_pose)
 
     @pose.setter
-    def pose(self, arg1: Union[Pose, sapien.Pose]) -> None:
+    def pose(self, arg1: Union[Pose, sapien.Pose, Array]) -> None:
         if physx.is_gpu_enabled():
             self.px.cuda_rigid_body_data.torch()[
                 self._body_data_index[self.scene._reset_mask[self._scene_idxs]], :7
@@ -207,10 +208,12 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
                     obj.pose = arg1
             else:
                 if len(arg1.shape) == 2:
-                    for obj in self._objs:
-                        obj.pose = to_sapien_pose(arg1[0])
+                    for i, obj in enumerate(self._objs):
+                        obj.pose = arg1[i].sp
                 else:
                     arg1 = to_sapien_pose(arg1)
+                    for i, obj in enumerate(self._objs):
+                        obj.pose = arg1
 
     def set_pose(self, arg1: Union[Pose, sapien.Pose]) -> None:
         self.pose = arg1

@@ -224,7 +224,7 @@ class Pose:
     #     pass
 
 
-def vectorize_pose(pose: Union[sapien.Pose, Pose]) -> torch.Tensor:
+def vectorize_pose(pose: Union[sapien.Pose, Pose, Array]) -> torch.Tensor:
     """
     Maps several formats of Pose representation to the appropriate tensor representation
     """
@@ -237,6 +237,8 @@ def vectorize_pose(pose: Union[sapien.Pose, Pose]) -> torch.Tensor:
             return np.hstack([pose.p, pose.q])
     elif isinstance(pose, Pose):
         return pose.raw_pose
+    else:
+        return common.to_tensor(pose)
 
 
 def to_sapien_pose(pose: Union[torch.Tensor, sapien.Pose, Pose]) -> sapien.Pose:

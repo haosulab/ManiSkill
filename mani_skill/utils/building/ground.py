@@ -45,7 +45,7 @@ def build_ground(
     normals[:, 2] = 1
 
     mat = sapien.render.RenderMaterial()
-    mat.diffuse_texture = sapien.render.RenderTexture2D(
+    mat.base_color_texture = sapien.render.RenderTexture2D(
         filename=osp.join(
             osp.dirname(__file__), "assets/floor_tiles_06_diff_2k_aligned.png"
         )

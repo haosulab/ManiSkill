@@ -223,7 +223,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
         )
 
     def set_collision_group_bit(self, group: int, bit_idx: int, bit: int):
-        """Set's a specific collision group bit for all collision shapes in all parallel actors"""
+        """Sets a specific collision group bit for all collision shapes in all parallel actors"""
         for body in self._bodies:
             for cs in body.get_collision_shapes():
                 cg = cs.get_collision_groups()
@@ -232,7 +232,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
 
     def get_first_collision_mesh(self, to_world_frame: bool = True) -> trimesh.Trimesh:
         """
-        Returns the collision mesh of each managed actor object. Note results of this are not cached or optimized at the moment
+        Returns the collision mesh of the first managed actor object. Note results of this are not cached or optimized at the moment
         so this function can be slow if called too often
 
         Args:
@@ -327,9 +327,11 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
             else:
                 if len(arg1.shape) == 2:
                     for i, obj in enumerate(self._objs):
-                        obj.pose = to_sapien_pose(arg1[i])
+                        obj.pose = arg1[i].sp
                 else:
                     arg1 = to_sapien_pose(arg1)
+                    for i, obj in enumerate(self._objs):
+                        obj.pose = arg1
 
     def set_pose(self, arg1: Union[Pose, sapien.Pose]) -> None:
         self.pose = arg1
