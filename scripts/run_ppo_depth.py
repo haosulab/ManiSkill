@@ -15,7 +15,7 @@ def run_default_visual_ppo_with_varying_sim_params(task='PushCube-v1', name='rgb
 
     sp.run([
         "python", 
-        "examples/baselines/ppo/ppo_rgb_custom.py", 
+        "examples/baselines/ppo/ppo_pointcloud_custom.py", 
         f"--env_id={task}", 
         f"--exp-name={name}",
         f"--num_envs={40}",
@@ -63,15 +63,14 @@ def run_default_visual_ppo(task='PushCube-v1', name='rgb-pushcube'):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--visual_default", action='store_true') # default is False
-    parser.add_argument("--visual_vary_cam_pose", action='store_true') # default is False
-    parser.add_argument("--visual_vary_cam_pose_same_task", action='store_true') # default is False
+    parser.add_argument("--visual_pointcloud", action='store_true') # default is False
 
     args = parser.parse_args()
 
     if args.visual_default:
         run_default_visual_ppo()
 
-    elif args.visual_vary_cam_pose:
+    elif args.visual_pointcloud:
         tasks = [
             "PushCube-v1", 
             "PickCube-v1", 
@@ -82,12 +81,12 @@ if __name__ == "__main__":
         ]
 
         names = [
-            "rgb-pushcube-high-raytracing", 
-            "rgb-pickcube-high-raytracing", 
-            "rgb-stackcube-high-raytracing", 
-            "rgb-peginsertionside-high-raytracing", 
-            "rgb-assemblingkits-high-raytracing", 
-            "rgb-plugcharger-high-raytracing"
+            "rgb-pushcube-high-raytracing-depth", 
+            "rgb-pickcube-high-raytracing-depth", 
+            "rgb-stackcube-high-raytracing-depth", 
+            "rgb-peginsertionside-high-raytracing-depth", 
+            "rgb-assemblingkits-high-raytracing-depth", 
+            "rgb-plugcharger-high-raytracing-depth"
         ]
 
         assert len(tasks) == len(names), "equal number of params"
@@ -99,18 +98,6 @@ if __name__ == "__main__":
             name = names[idx]
             print(f"Running experiment for {task_name}-{name}")
             run_default_visual_ppo_with_varying_sim_params(task=task_name, name=name)
-            wait_time_s = 3
-            print(f"Waiting for {wait_time_s} seconds ...")
-            time.sleep(wait_time_s)
-
-    elif args.visual_vary_cam_pose_same_task:
-        task = "PushCube-v1"
-        quality = "rasterization"
-        N = 1
-        for i in range(N):
-            name = f"rgb-pushcube-{quality}-raytracing-sample{i}"
-            print(f"Running experiment {i + 1} for {task}-{name}")
-            run_default_visual_ppo_with_varying_sim_params(task=task, name=name, render_quality=quality)
             wait_time_s = 3
             print(f"Waiting for {wait_time_s} seconds ...")
             time.sleep(wait_time_s)

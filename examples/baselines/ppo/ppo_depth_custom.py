@@ -15,12 +15,12 @@ import sapien
 
 # ManiSkill specific imports
 import mani_skill.envs
-from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper, FlattenRGBDObservationWrapper
+from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper
 from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 
 # Custom utils
-from agents import Agent
+from agents import Agent, FlattenDepthObservationWrapper
 from data_utils import DictArray
 from visual_args import Args
 
@@ -153,8 +153,8 @@ if __name__ == "__main__":
     )
 
     # rgbd obs mode returns a dict of data, we flatten it so there is just a rgbd key and state key
-    envs = FlattenRGBDObservationWrapper(envs, rgb_only=True)
-    eval_envs = FlattenRGBDObservationWrapper(eval_envs, rgb_only=True)
+    envs = FlattenDepthObservationWrapper(envs)
+    eval_envs = FlattenDepthObservationWrapper(eval_envs)
 
     if isinstance(envs.action_space, gym.spaces.Dict):
         envs = FlattenActionSpaceWrapper(envs)

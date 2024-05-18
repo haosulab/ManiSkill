@@ -42,5 +42,32 @@
             "python": "/opt/conda/bin/python",
             
         },
+        {
+            "name": "Debug run_ppo_pointcloud.py",
+            "type": "debugpy",
+            "request": "launch",
+            "preLaunchTask": "",
+            "program": "${workspaceFolder}/scripts/run_ppo_pointcloud.py",
+            "args": ["--visual_pointcloud"],
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {},
+            "python": "/opt/conda/bin/python",
+            
+        },
+
+        {
+            "name": "Debug run_ppo_state_or_visual_default.py",
+            "type": "debugpy",
+            "request": "launch",
+            "preLaunchTask": "",
+            "program": "${workspaceFolder}/scripts/run_ppo_state_or_visual_default.py",
+            "args": ["--visual"],
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {},
+            "python": "/opt/conda/bin/python",
+            
+        },
     ]
 }

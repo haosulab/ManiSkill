@@ -3,6 +3,9 @@ import os
 import random
 import time
 
+import imageio as io
+from PIL import Image
+
 import gymnasium as gym
 import numpy as np
 import torch
@@ -12,6 +15,8 @@ import tyro
 from torch.utils.tensorboard import SummaryWriter
 
 import sapien
+import trimesh
+import trimesh.scene
 
 # ManiSkill specific imports
 import mani_skill.envs
@@ -20,7 +25,8 @@ from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 
 # Custom utils
-from agents import Agent
+from agents import compute_GAE, FlattenPointcloudObservationWrapper
+from agents import PointcloudAgent
 from data_utils import DictArray
 from visual_args import Args
 
@@ -139,7 +145,7 @@ if __name__ == "__main__":
 
     # env setup
     env_kwargs = dict(
-        obs_mode="rgbd", 
+        obs_mode="pointcloud", 
         control_mode="pd_joint_delta_pos", 
         render_mode="rgb_array", 
         sim_backend="gpu",
@@ -153,8 +159,8 @@ if __name__ == "__main__":
     )
 
     # rgbd obs mode returns a dict of data, we flatten it so there is just a rgbd key and state key
-    envs = FlattenRGBDObservationWrapper(envs, rgb_only=True)
-    eval_envs = FlattenRGBDObservationWrapper(eval_envs, rgb_only=True)
+    envs = FlattenPointcloudObservationWrapper(envs, pointcloud_only=True)
+    eval_envs = FlattenPointcloudObservationWrapper(eval_envs, pointcloud_only=True)
 
     if isinstance(envs.action_space, gym.spaces.Dict):
         envs = FlattenActionSpaceWrapper(envs)
@@ -170,12 +176,13 @@ if __name__ == "__main__":
             envs = RecordEpisode(envs, output_dir=f"runs/{run_name}/train_videos", save_trajectory=False, save_video_trigger=save_video_trigger, max_steps_per_video=args.num_steps, video_fps=30)
         eval_envs = RecordEpisode(eval_envs, output_dir=eval_output_dir, save_trajectory=args.evaluate, trajectory_name="trajectory", max_steps_per_video=args.num_eval_steps, video_fps=30)
     
+    # Maniskill wrapper around gym
     envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=False, **env_kwargs)
     eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=False, **env_kwargs)
     
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
-    # ALGO Logic: Storage setup
+    # NOTE: ALGO Logic: Storage setup
     obs = DictArray((args.num_steps, args.num_envs), envs.single_observation_space, device=device)
     actions = torch.zeros((args.num_steps, args.num_envs) + envs.single_action_space.shape).to(device)
     logprobs = torch.zeros((args.num_steps, args.num_envs)).to(device)
@@ -183,7 +190,7 @@ if __name__ == "__main__":
     dones = torch.zeros((args.num_steps, args.num_envs)).to(device)
     values = torch.zeros((args.num_steps, args.num_envs)).to(device)
 
-    # TRY NOT TO MODIFY: start the game
+    # NOTE: TRY NOT TO MODIFY: start the game
     global_step = 0
     start_time = time.time()
     next_obs, _ = envs.reset(seed=args.seed)
@@ -198,15 +205,22 @@ if __name__ == "__main__":
     print(f"args.minibatch_size={args.minibatch_size} args.batch_size={args.batch_size} args.update_epochs={args.update_epochs}")
     print(f"####")
     
-    agent = Agent(envs, sample_obs=next_obs, is_tracked=args.track).to(device)
+    # NOTE: Pointcloud encoder (setup agent/s)
+    agent = PointcloudAgent(envs, sample_obs=next_obs, is_tracked=args.track).agent.to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     if args.checkpoint:
         agent.load_state_dict(torch.load(args.checkpoint))
 
+
+
+    # NOTE: number of iterations is total_timesteps / batch_size
     for iteration in range(1, args.num_iterations + 1):
-        print(f"Epoch: {iteration}, global_step={global_step}")
+        print(f"Epoch: {iteration}, global_step={global_step}") #---------------------------------- time start
+
         final_values = torch.zeros((args.num_steps, args.num_envs), device=device)
+
+        # EVALUATION ------------------------------------------------------------------------------
         agent.eval()
         if iteration % args.eval_freq == 1:
             # evaluate
@@ -219,7 +233,8 @@ if __name__ == "__main__":
 
             for _ in range(args.num_eval_steps):
                 with torch.no_grad():
-                    eval_obs, _, eval_terminations, eval_truncations, eval_infos = eval_envs.step(agent.get_action(eval_obs, deterministic=True))
+                    eval_obs, _, eval_terminations, eval_truncations, eval_infos = \
+                        eval_envs.step(agent.get_action(eval_obs, deterministic=True))
                     
                     if "final_info" in eval_infos:
                         mask = eval_infos["_final_info"]
@@ -246,15 +261,19 @@ if __name__ == "__main__":
                 if writer is not None: writer.add_scalar("charts/eval_fail_rate", failures.mean(), global_step)
                 print(f"eval_fail_rate={failures.mean()}")
 
-            print(f"eval_episodic_return={returns.mean()}")
+            print(f"eval_episodic_return (reward)={returns.mean()}")
             
             if writer is not None:
-                writer.add_scalar("charts/eval_episodic_return", returns.mean(), global_step)
-                writer.add_scalar("charts/eval_episodic_length", eps_lens.mean(), global_step)
+                writer.add_scalar("charts/eval_episodic_return (reward)", returns.mean(), global_step)
+                writer.add_scalar("charts/eval_episodic_length (time per episode)", eps_lens.mean(), global_step)
             
             if args.evaluate:
                 break
-        
+        # EVALUATION ends -------------------------------------------------------------------------------------------
+
+
+
+
         if args.save_model and iteration % args.eval_freq == 1:
             model_path = f"runs/{run_name}/ckpt_{iteration}.pt"
             torch.save(agent.state_dict(), model_path)
@@ -268,22 +287,44 @@ if __name__ == "__main__":
         
         rollout_time = time.time()
 
-        # NOTE: Main loop
+
+
+
+        # NOTE: Main loop (train) --------------------------------------------------------------------------------------
         for step in range(0, args.num_steps):
             global_step += args.num_envs
             obs[step] = next_obs
             dones[step] = next_done
 
-            # NOTE: Logging
-            tf_rgb_log = obs[step]["rgb"].detach()[0].cpu().numpy()
-            if tf_rgb_log.shape[-1] > 3:
-                tf_rgb_log = tf_rgb_log[..., :3]
+
+
+            # NOTE: Logging (pointcloud to mesh)
+            xyz_log = obs["pointcloud"]["xyzw"][0, ..., :3].detach().cpu().numpy()
+            colors_log = obs["pointcloud"]["rgb"][0].detach().cpu().numpy()
+            pcd = trimesh.points.PointCloud(xyz_log, colors_log)
+
+            for uid, cfg in envs.unwrapped._sensor_configs.items():
+                if isinstance(cfg, CameraConfig):
+                    cam2world = obs["sensor_param"][uid]["cam2world_gl"][0]
+                    mesh_camera = trimesh.scene.Camera(uid, (1024, 1024), fov=(np.rad2deg(cfg.fov), np.rad2deg(cfg.fov)))
+                    mesh_scene = trimesh.Scene([pcd], camera=mesh_camera, camera_transform=cam2world)
+                    break
+            
+            img_log = np.array(Image.open(io.BytesIO(mesh_scene.save_image(resolution=(1080, 1080)))))
+            
+            if img_log.shape[-1] > 3:
+                img_log = img_log[..., :3]
             wandb.log({
-                f"obs[{step}]": wandb.Image(tf_rgb_log)
+                f"obs[{step}]": wandb.Image(img_log)
             })
             #writer.add_image(f"observations_{step}", tf_rgb_log)
 
+
+
+
             # ALGO LOGIC: action logic
+
+            # (1) Get action and value for given observation
             with torch.no_grad():
                 action, logprob, _, value = agent.get_action_and_value(next_obs)
                 values[step] = value.flatten()
@@ -292,9 +333,14 @@ if __name__ == "__main__":
             logprobs[step] = logprob
 
             # TRY NOT TO MODIFY: execute the game and log data.
+            # (2) Given an action step forward
             next_obs, reward, terminations, truncations, infos = envs.step(action)
             next_done = torch.logical_or(terminations, truncations).to(torch.float32)
             rewards[step] = reward.view(-1)
+
+
+
+
 
             # NOTE: Logging
             gpu_allocated_mem = memory_logger.get_gpu_allocated_memory()
@@ -304,6 +350,10 @@ if __name__ == "__main__":
                 "cpu_alloc_mem": cpu_allocated_mem,
             })
 
+
+
+
+            # (3) Check if we are done
             if "final_info" in infos:
                 final_info = infos["final_info"]
                 done_mask = infos["_final_info"]
@@ -320,7 +370,13 @@ if __name__ == "__main__":
         
         rollout_time = time.time() - rollout_time
         
+
+
+
+
+
         # bootstrap value according to termination and truncation
+        # (4) Given the current action/observation, compute advatnage to update policies
         with torch.no_grad():
             next_value = agent.get_value(next_obs).reshape(1, -1)
             advantages = torch.zeros_like(rewards).to(device)
@@ -330,7 +386,7 @@ if __name__ == "__main__":
                 if t == args.num_steps - 1:
                     next_not_done = 1.0 - next_done
                     nextvalues = next_value
-                else:
+                else: # not the last row in rewards
                     next_not_done = 1.0 - dones[t + 1]
                     nextvalues = values[t + 1]
                 
@@ -339,28 +395,14 @@ if __name__ == "__main__":
                 # if next_not_done is 1, final_values is always 0
                 # if next_not_done is 0, then use final_values, which is computed according to bootstrap_at_done
                 if args.finite_horizon_gae:
-                    """
-                    See GAE paper equation(16) line 1, we will compute the GAE based on this line only
-                    1             *(  -V(s_t)  + r_t                                                               + gamma * V(s_{t+1})   )
-                    lambda        *(  -V(s_t)  + r_t + gamma * r_{t+1}                                             + gamma^2 * V(s_{t+2}) )
-                    lambda^2      *(  -V(s_t)  + r_t + gamma * r_{t+1} + gamma^2 * r_{t+2}                         + ...                  )
-                    lambda^3      *(  -V(s_t)  + r_t + gamma * r_{t+1} + gamma^2 * r_{t+2} + gamma^3 * r_{t+3}
-                    We then normalize it by the sum of the lambda^i (instead of 1-lambda)
-                    """
-                    if t == args.num_steps - 1: # initialize
-                        lam_coef_sum = 0.
-                        reward_term_sum = 0. # the sum of the second term
-                        value_term_sum = 0. # the sum of the third term
-                    
-                    lam_coef_sum = lam_coef_sum * next_not_done
-                    reward_term_sum = reward_term_sum * next_not_done
-                    value_term_sum = value_term_sum * next_not_done
-
-                    lam_coef_sum = 1 + args.gae_lambda * lam_coef_sum
-                    reward_term_sum = args.gae_lambda * args.gamma * reward_term_sum + lam_coef_sum * rewards[t]
-                    value_term_sum = args.gae_lambda * args.gamma * value_term_sum + args.gamma * real_next_values
-
-                    advantages[t] = (reward_term_sum + value_term_sum) / lam_coef_sum - values[t]
+                    advantages[t] = compute_GAE(
+                        t, args.num_steps, 
+                        next_not_done, 
+                        args.gae_lambda, args.gamma, 
+                        rewards,
+                        real_next_values, 
+                        values
+                    )
                 else:
                     delta = rewards[t] + args.gamma * real_next_values - values[t]
                      # Here actually we should use next_not_terminated, but we don't have lastgamlam if terminated
@@ -377,10 +419,16 @@ if __name__ == "__main__":
         b_values = values.reshape(-1)
 
         # NOTE: Optimizing the policy and value network
+        # (5) Train the policies based on advantage of given x|a
         agent.train()
         b_inds = np.arange(args.batch_size)
         clipfracs = []
         update_time = time.time()
+
+
+
+
+
 
         for epoch in range(args.update_epochs):
             np.random.shuffle(b_inds)
@@ -405,12 +453,12 @@ if __name__ == "__main__":
                 if args.norm_adv:
                     mb_advantages = (mb_advantages - mb_advantages.mean()) / (mb_advantages.std() + 1e-8)
 
-                # Policy loss
+                # POLICY loss
                 pg_loss1 = -mb_advantages * ratio
                 pg_loss2 = -mb_advantages * torch.clamp(ratio, 1 - args.clip_coef, 1 + args.clip_coef)
                 pg_loss = torch.max(pg_loss1, pg_loss2).mean()
 
-                # Value loss
+                # VALUE loss
                 newvalue = newvalue.view(-1)
                 if args.clip_vloss:
                     v_loss_unclipped = (newvalue - b_returns[mb_inds]) ** 2
@@ -437,7 +485,11 @@ if __name__ == "__main__":
                 break
 
         update_time = time.time() - update_time
-        
+
+
+
+
+        # NOTE: Logging
         y_pred, y_true = b_values.cpu().numpy(), b_returns.cpu().numpy()
         var_y = np.var(y_true)
         explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
@@ -458,13 +510,15 @@ if __name__ == "__main__":
         writer.add_scalar("charts/rollout_time", rollout_time, global_step)
         writer.add_scalar("charts/rollout_fps", args.num_envs * args.num_steps / rollout_time, global_step)
 
+
+
     if args.save_model and not args.evaluate:
         model_path = f"runs/{run_name}/final_ckpt.pt"
         torch.save(agent.state_dict(), model_path)
         print(f"model saved to {model_path}")
 
+
+
     envs.close()
-
     if writer is not None: writer.close()
-
     wandb.finish()
