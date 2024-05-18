@@ -212,6 +212,8 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
                         obj.pose = arg1[i].sp
                 else:
                     arg1 = to_sapien_pose(arg1)
+                    for i, obj in enumerate(self._objs):
+                        obj.pose = arg1
 
     def set_pose(self, arg1: Union[Pose, sapien.Pose]) -> None:
         self.pose = arg1
