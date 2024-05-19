@@ -369,7 +369,7 @@ if __name__ == "__main__":
                             failures.append(eval_infos["final_info"]["fail"][mask].cpu().numpy())
             returns = np.concatenate(returns)
             eps_lens = np.concatenate(eps_lens)
-            print(f"Evaluated {args.num_eval_steps * args.num_envs} steps resulting in {len(eps_lens)} episodes")
+            print(f"Evaluated {args.num_eval_steps * args.num_eval_envs} steps resulting in {len(eps_lens)} episodes")
             if len(successes) > 0:
                 successes = np.concatenate(successes)
                 if writer is not None: writer.add_scalar("charts/eval_success_rate", successes.mean(), global_step)
