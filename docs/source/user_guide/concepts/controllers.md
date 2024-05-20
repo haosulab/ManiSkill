@@ -33,6 +33,23 @@ from mani_skill.agents.controllers import PDJointPosControllerConfig
 
 With a PD controller, controls the joint positions of the given joints via actions.
 
+
+### PD EE (End-Effector) Pose
+
+
+This controller has both a pose and a position variant allowing for more intuitive control of just the end-effector (or any link) of a robot. The default options of this controller are set to be the more intuitive option, but there are multiple possible choices.
+
+To understand how this works, it is important to first understand that there are 3 relevant transformation frames:
+
+1. World Frame
+2. Root Link Frame
+3. End Effector / Body Frame (Our PD EE controllers in fact support controlling any link, not just the end-effector)
+
+These are highlighted below and shown with RGB axes where Red = X-axis, Green = Y-axis, and Blue = Z-axis. Note that in ManiSkill/SAPIEN, Z is canonically the natural "up/down direction" which is different to some other simulators.
+
+```{figure} images/robot-with-frames.png
+```
+
 ## Deep Dive Example of the Franka Emika Panda Robot Controllers:
 
 To help detail how controllers work in detail, below we explain with formulae how the controllers are controlling the root in simulation.
