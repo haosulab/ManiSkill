@@ -111,9 +111,9 @@ class NatureCNN3D(nn.Module):
         with torch.no_grad():
             input_data = sample_obs["depth"].float().permute(0,3,1,2).cpu()
             if self.with_rgb:
-                depth = sample_obs["depth"].float().permute(0,3,1,2).cpu()
-                rgb = sample_obs["rgb"].float().permute(0,3,1,2).cpu()
-                input_data = torch.concat([depth, rgb], axis=-1)
+                depth = sample_obs["depth"][..., :1].float().permute(0,3,1,2).cpu()
+                rgb = sample_obs["depth"][..., 1:].float().permute(0,3,1,2).cpu()
+                input_data = torch.concat([depth, rgb], axis=1)
 
             n_flatten = cnn(input_data).shape[1]
             fc = nn.Sequential(nn.Linear(n_flatten, feature_size), nn.ReLU())
@@ -137,7 +137,8 @@ class NatureCNN3D(nn.Module):
                 if self.with_rgb:
                     rgb = obs[..., 1:].float().permute(0,3,1,2) / 255
                     depth = obs[..., :1].float().permute(0,3,1,2) / 65535
-                    obs = torch.concat([depth, rgb], axis=-1)
+                    range = (depth.min(), depth.max()) # debug
+                    obs = torch.concat([depth, rgb], axis=1)
                 else:
                     # TODO: Check the range of the depth
                     obs = obs[..., :1].float().permute(0,3,1,2) / 65535
