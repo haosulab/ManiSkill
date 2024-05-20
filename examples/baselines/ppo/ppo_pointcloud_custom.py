@@ -3,7 +3,7 @@ import os
 import random
 import time
 
-import imageio as io
+import io
 from PIL import Image
 
 import gymnasium as gym
@@ -14,7 +14,6 @@ import torch.optim as optim
 import tyro
 from torch.utils.tensorboard import SummaryWriter
 
-import sapien
 import trimesh
 import trimesh.scene
 
@@ -28,6 +27,7 @@ from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 from agents import compute_GAE, FlattenPointcloudObservationWrapper
 from agents import PointcloudAgent
 from data_utils import DictArray
+from sim_utils import set_simulation_quality
 from visual_args import Args
 
 # Memory logging
@@ -58,49 +58,22 @@ if __name__ == "__main__":
 
     # Varying simulation/rendering params (experiment)
     RENDER_TYPE = args.sim_quality
-    if RENDER_TYPE == "high":
-        sapien.render.set_camera_shader_dir("rt")
-        sapien.render.set_viewer_shader_dir("rt")
-        sapien.render.set_ray_tracing_samples_per_pixel(64)
-        sapien.render.set_ray_tracing_path_depth(16)
-        sapien.render.set_ray_tracing_denoiser("optix")
-        ENABLE_SHADOWS = True
+    ENABLE_SHADOWS = set_simulation_quality(RENDER_TYPE)
 
-    elif RENDER_TYPE == "medium":
-        sapien.render.set_camera_shader_dir("rt")
-        sapien.render.set_viewer_shader_dir("rt")
-        sapien.render.set_ray_tracing_samples_per_pixel(4)
-        sapien.render.set_ray_tracing_path_depth(3)
-        sapien.render.set_ray_tracing_denoiser("optix")
-        ENABLE_SHADOWS = False
+    from custom_tasks import *
+    print("Randomize existing camera poses")
+    tasks_mapping = {
+        "PullCube-v1": "PullCube-pcd",
+        "PushCube-v1": "PushCube-pcd",
+        "PickCube-v1": "PickCube-pcd",
+        "StackCube-v1": "StackCube-pcd",
+        "PegInsertionSide-v1": "PegInsertionSide-pcd",
+        "AssemblingKits-v1": "AssemblingKits-pcd",
+        "PlugCharger-v1": "PlugCharger-pcd"
+    }
 
-    elif RENDER_TYPE == "low":
-        sapien.render.set_camera_shader_dir("rt")
-        sapien.render.set_viewer_shader_dir("rt")
-        sapien.render.set_ray_tracing_samples_per_pixel(2)
-        sapien.render.set_ray_tracing_path_depth(1)
-        sapien.render.set_ray_tracing_denoiser("none")
-        ENABLE_SHADOWS = False
-
-    else: # rasterization
-        ENABLE_SHADOWS = False
-
-    # Randomize camera pose (experiment)
-    if args.random_cam_pose:
-        from custom_tasks import *
-        print("Randomize existing camera poses")
-        tasks_mapping = {
-            "PullCube-v1": "PullCube-RandomCameraPose",
-            "PushCube-v1": "PushCube-RandomCameraPose",
-            "PickCube-v1": "PickCube-RandomCameraPose",
-            "StackCube-v1": "StackCube-RandomCameraPose",
-            "PegInsertionSide-v1": "PegInsertionSide-RandomCameraPose",
-            "AssemblingKits-v1": "AssemblingKits-RandomCameraPose",
-            "PlugCharger-v1": "PlugCharger-RandomCameraPose"
-        }
-
-        args.env_id = tasks_mapping[args.env_id]
-        args.exp_name = args.exp_name + "-random-cam-pose"
+    args.env_id = tasks_mapping[args.env_id]
+    args.exp_name = args.exp_name + "-pcd"
     
 
 
@@ -299,18 +272,33 @@ if __name__ == "__main__":
 
 
             # NOTE: Logging (pointcloud to mesh)
-            xyz_log = obs["pointcloud"]["xyzw"][0, ..., :3].detach().cpu().numpy()
-            colors_log = obs["pointcloud"]["rgb"][0].detach().cpu().numpy()
-            pcd = trimesh.points.PointCloud(xyz_log, colors_log)
+            xyz_log = obs["pcd"][0, ..., :3].detach().cpu().numpy()[0]
+            colors_log = obs["pcd"][0, ..., 3:].detach().cpu().numpy() if obs["pcd"].shape[-1] > 3 else \
+                np.zeros_like(xyz_log)[0]
 
-            for uid, cfg in envs.unwrapped._sensor_configs.items():
-                if isinstance(cfg, CameraConfig):
-                    cam2world = obs["sensor_param"][uid]["cam2world_gl"][0]
-                    mesh_camera = trimesh.scene.Camera(uid, (1024, 1024), fov=(np.rad2deg(cfg.fov), np.rad2deg(cfg.fov)))
-                    mesh_scene = trimesh.Scene([pcd], camera=mesh_camera, camera_transform=cam2world)
-                    break
-            
-            img_log = np.array(Image.open(io.BytesIO(mesh_scene.save_image(resolution=(1080, 1080)))))
+            # debug
+            import pickle
+            pcd_log = {
+                "xyz": xyz_log,
+                "rgb": colors_log,
+            }
+            with open('pcd_log_TEST.pickle', 'wb') as handle:
+                pickle.dump(pcd_log, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            # debug
+
+            pcd = trimesh.points.PointCloud(xyz_log, colors_log)
+            UID = 0
+            fov_angle = np.rad2deg(np.pi / 2)
+            mesh_camera = trimesh.scene.Camera(UID, (1024, 1024), fov=(fov_angle, fov_angle))
+            cam2world = np.array(
+                [[ 0.        , -0.78086877,  0.62469506,  0.3       ],  
+                [ 1.        ,  0.        ,  0.        ,  0.        ],
+                [ 0.        ,  0.62469506,  0.7808688 ,  0.6       ],
+                [ 0.        ,  0.        ,  0.        ,  1.        ]]
+            )
+            mesh_scene = trimesh.Scene([pcd], camera=mesh_camera, camera_transform=cam2world)
+            rendered_img = mesh_scene.save_image(resolution=(800, 600))
+            img_log = np.array(rendered_img)
             
             if img_log.shape[-1] > 3:
                 img_log = img_log[..., :3]

@@ -24,12 +24,22 @@ class FlattenPointcloudObservationWrapper(gym.ObservationWrapper):
     def __init__(self, env, pointcloud_only=False) -> None:
         self.base_env: BaseEnv = env.unwrapped
         super().__init__(env)
+
         self.pointcloud_only = pointcloud_only
+        self.SAVE_TRANSFORM = False
+
         new_obs = self.observation(self.base_env._init_raw_obs)
         self.base_env.update_obs_space(new_obs)
 
     def observation(self, observation: Dict):
         sensor_data = observation.pop("pointcloud")
+
+        if self.SAVE_TRANSFORM:
+            print("Saving cam2world from pcd task")
+            assert "base_camera" in observation["sensor_param"], "there is a base camera sensor defined"
+            cam2world = observation["sensor_param"]["base_camera"]["cam2world_gl"][0].cpu().numpy()
+            np.save("cam2world_TEST.npy", cam2world)
+
         del observation["sensor_param"]
 
         points3d = []

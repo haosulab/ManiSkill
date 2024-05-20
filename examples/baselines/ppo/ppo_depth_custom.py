@@ -11,8 +11,6 @@ import torch.optim as optim
 import tyro
 from torch.utils.tensorboard import SummaryWriter
 
-import sapien
-
 # ManiSkill specific imports
 import mani_skill.envs
 from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper
@@ -22,6 +20,7 @@ from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 # Custom utils
 from agents import Agent, FlattenDepthObservationWrapper
 from data_utils import DictArray
+from sim_utils import set_simulation_quality
 from visual_args import Args
 
 # Memory logging
@@ -52,32 +51,7 @@ if __name__ == "__main__":
 
     # Varying simulation/rendering params (experiment)
     RENDER_TYPE = args.sim_quality
-    if RENDER_TYPE == "high":
-        sapien.render.set_camera_shader_dir("rt")
-        sapien.render.set_viewer_shader_dir("rt")
-        sapien.render.set_ray_tracing_samples_per_pixel(64)
-        sapien.render.set_ray_tracing_path_depth(16)
-        sapien.render.set_ray_tracing_denoiser("optix")
-        ENABLE_SHADOWS = True
-
-    elif RENDER_TYPE == "medium":
-        sapien.render.set_camera_shader_dir("rt")
-        sapien.render.set_viewer_shader_dir("rt")
-        sapien.render.set_ray_tracing_samples_per_pixel(4)
-        sapien.render.set_ray_tracing_path_depth(3)
-        sapien.render.set_ray_tracing_denoiser("optix")
-        ENABLE_SHADOWS = False
-
-    elif RENDER_TYPE == "low":
-        sapien.render.set_camera_shader_dir("rt")
-        sapien.render.set_viewer_shader_dir("rt")
-        sapien.render.set_ray_tracing_samples_per_pixel(2)
-        sapien.render.set_ray_tracing_path_depth(1)
-        sapien.render.set_ray_tracing_denoiser("none")
-        ENABLE_SHADOWS = False
-
-    else: # rasterization
-        ENABLE_SHADOWS = False
+    ENABLE_SHADOWS = set_simulation_quality(RENDER_TYPE)
 
     # Randomize camera pose (experiment)
     if args.random_cam_pose:

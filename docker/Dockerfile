@@ -25,8 +25,10 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     ca-certificates \
     cmake \
     curl \
+    freeglut3-dev \
     git \
     htop \
+    jupyter-core \
     libegl1 \
     libxext6 \
     libjpeg-dev \
@@ -59,7 +61,11 @@ COPY nvidia_layers.json /etc/vulkan/implicit_layer.d/nvidia_layers.json
 
 # install dependencies
 RUN pip install --upgrade mani-skill && pip cache purge
+RUN pip install jupyterlab
+RUN pip install "pyglet<2"
 RUN pip install torch tensorboard
+RUN pip install tqdm
+RUN pip install trimesh
 RUN pip install tyro
 
 # download physx GPU binary via sapien

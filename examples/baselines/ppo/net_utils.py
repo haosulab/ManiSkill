@@ -64,7 +64,7 @@ def farthest_point_sample(xyz, npoint):
     """
     Input:
         xyz: pointcloud data, [B, N, 3]
-        npoint: number of samples
+        npoint: number of samples (what we reduce the input sets to to around centroids)
     Return:
         centroids: sampled pointcloud index, [B, npoint]
     """
@@ -72,12 +72,12 @@ def farthest_point_sample(xyz, npoint):
     B, N, C = xyz.shape
     centroids = torch.zeros(B, npoint, dtype=torch.long).to(device)
     distance = torch.ones(B, N).to(device) * 1e10
-    farthest = torch.randint(0, N, (B,), dtype=torch.long).to(device)
+    farthest = torch.randint(low=0, high=N, size=(B,), dtype=torch.long).to(device)
     batch_indices = torch.arange(B, dtype=torch.long).to(device)
     for i in range(npoint):
         centroids[:, i] = farthest
-        centroid = xyz[batch_indices, farthest, :].view(B, 1, 3)
-        dist = torch.sum((xyz - centroid) ** 2, -1)
+        centroid = xyz[batch_indices, farthest, :].view(B, 1, 3) # compute given centroid for sample i
+        dist = torch.sum((xyz - centroid) ** 2, -1) # compute SUM_over_i[(x_i - centroid_i)^2]
         mask = dist < distance
         distance[mask] = dist[mask]
         farthest = torch.max(distance, -1)[1]
@@ -97,10 +97,10 @@ def query_ball_point(radius, nsample, xyz, new_xyz):
     device = xyz.device
     B, N, C = xyz.shape
     _, S, _ = new_xyz.shape
-    group_idx = torch.arange(N, dtype=torch.long).to(device).view(1, 1, N).repeat([B, S, 1])
+    group_idx = torch.arange(N, dtype=torch.long).to(device).view(1, 1, N).repeat([B, S, 1]) # [B, S, N]
     sqrdists = square_distance(new_xyz, xyz)
-    group_idx[sqrdists > radius ** 2] = N
-    group_idx = group_idx.sort(dim=-1)[0][:, :, :nsample]
+    group_idx[sqrdists > radius ** 2] = N # far away points are given big distances
+    group_idx = group_idx.sort(dim=-1)[0][:, :, :nsample] # sort and cut to the number of nsample
     group_first = group_idx[:, :, 0].view(B, S, 1).repeat([1, 1, nsample])
     mask = group_idx == N
     group_idx[mask] = group_first[mask]
@@ -187,7 +187,7 @@ class PointNetSetAbstraction(nn.Module):
             new_points_concat: sample points feature data, [B, D', S]
         """
 
-        #xyz = xyz.permute(0, 2, 1)
+        xyz = xyz.permute(0, 2, 1)
         if points is not None:
             points = points.permute(0, 2, 1)
 
@@ -203,7 +203,7 @@ class PointNetSetAbstraction(nn.Module):
             bn = self.mlp_bns[i]
             new_points =  F.relu(bn(conv(new_points)))
 
-        new_points = torch.max(new_points, 2)[0]
+        new_points = torch.max(new_points, dim=2)[0]
         new_xyz = new_xyz.permute(0, 2, 1)
         
         return new_xyz, new_points
