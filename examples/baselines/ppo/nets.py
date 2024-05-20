@@ -68,7 +68,86 @@ class NatureCNN(nn.Module):
                 obs = obs / 255
             encoded_tensor_list.append(extractor(obs))
         return torch.cat(encoded_tensor_list, dim=1)
-    
+
+#TODO
+class NatureCNN3D(nn.Module):
+    """ Supports rgbb """
+    def __init__(self, sample_obs, with_rgb=False, with_state=False):
+        super().__init__()
+
+        # NOTE: Run rgb or rgb + state
+        self.with_rgb = with_rgb
+        self.with_state = with_state
+
+        extractors = {}
+
+        self.out_features = 0
+        feature_size = 256
+        in_channels = sample_obs["depth"].shape[-1]
+        state_size = sample_obs["state"].shape[-1]
+
+        # here we use a NatureCNN architecture to process images, but any architecture is permissble here
+        cnn = nn.Sequential(
+            nn.Conv2d(
+                in_channels=in_channels,
+                out_channels=32,
+                kernel_size=8,
+                stride=4,
+                padding=0,
+            ),
+            nn.ReLU(),
+            nn.Conv2d(
+                in_channels=32, out_channels=64, kernel_size=4, stride=2, padding=0
+            ),
+            nn.ReLU(),
+            nn.Conv2d(
+                in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=0
+            ),
+            nn.ReLU(),
+            nn.Flatten(),
+        )
+
+        # to easily figure out the dimensions after flattening, we pass a test tensor
+        with torch.no_grad():
+            input_data = sample_obs["depth"].float().permute(0,3,1,2).cpu()
+            if self.with_rgb:
+                depth = sample_obs["depth"].float().permute(0,3,1,2).cpu()
+                rgb = sample_obs["rgb"].float().permute(0,3,1,2).cpu()
+                input_data = torch.concat([depth, rgb], axis=-1)
+
+            n_flatten = cnn(input_data).shape[1]
+            fc = nn.Sequential(nn.Linear(n_flatten, feature_size), nn.ReLU())
+
+        extractors["depth"] = nn.Sequential(cnn, fc)
+        self.out_features += feature_size
+
+        # for state data we simply pass it through a single linear layer
+        if self.with_state:
+            extractors["state"] = nn.Linear(state_size, 256)
+            self.out_features += 256
+
+        self.extractors = nn.ModuleDict(extractors)
+
+    def forward(self, observations) -> torch.Tensor:
+        encoded_tensor_list = []
+        # self.extractors contain nn.Modules that do all the processing.
+        for key, extractor in self.extractors.items():
+            obs = observations[key]
+            if key == "depth":
+                if self.with_rgb:
+                    rgb = obs[..., 1:].float().permute(0,3,1,2) / 255
+                    depth = obs[..., :1].float().permute(0,3,1,2) / 65535
+                    obs = torch.concat([depth, rgb], axis=-1)
+                else:
+                    # TODO: Check the range of the depth
+                    obs = obs[..., :1].float().permute(0,3,1,2) / 65535
+
+            elif key == "state" and not self.with_state:
+                continue
+
+            encoded_tensor_list.append(extractor(obs))
+        
+        return torch.cat(encoded_tensor_list, dim=1) 
 
 # Pointcloud
 from net_utils import *

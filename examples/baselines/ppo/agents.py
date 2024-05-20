@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 from torch.distributions.normal import Normal
 
-from nets import layer_init, NatureCNN, PcdEncoder
+from nets import layer_init, NatureCNN, NatureCNN3D, PcdEncoder
 
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.utils import common
@@ -65,9 +65,11 @@ class FlattenDepthObservationWrapper(gym.ObservationWrapper):
     Flattens the rgbd mode observations into a dictionary with two keys, "rgbd" and "state"
     """
 
-    def __init__(self, env) -> None:
+    def __init__(self, env, with_rgb=False) -> None:
         self.base_env: BaseEnv = env.unwrapped
         super().__init__(env)
+
+        self.with_rgb = with_rgb
         new_obs = self.observation(self.base_env._init_raw_obs)
         self.base_env.update_obs_space(new_obs)
 
@@ -77,12 +79,14 @@ class FlattenDepthObservationWrapper(gym.ObservationWrapper):
         images = []
         for cam_data in sensor_data.values():
             images.append(cam_data["depth"])
+            if self.with_rgb:
+                images.append(cam_data["rgb"])
 
         images = torch.concat(images, axis=-1)
         
         # flatten the rest of the data which should just be state data
         observation = common.flatten_state_dict(observation, use_torch=True)
-        return dict(state=observation, rgbd=images)
+        return dict(state=observation, depth=images)
         
 
 def compute_GAE(t, next_not_done, gae_lambda, gamma, rewards, real_next_values, values, lam_coef_sum, reward_term_sum, value_term_sum):
@@ -168,4 +172,9 @@ class PointcloudAgent:
     def __init__(self, envs, sample_obs, is_tracked=False, with_rgb=False):
         self.feature_encoder = PcdEncoder(sample_obs=sample_obs, normal_channel=False) if not with_rgb else \
             PcdEncoder(sample_obs=sample_obs, normal_channel=False) # TODO: Change to accomodate rgb codes for each pcd
+        self.agent = Agent(envs=envs, sample_obs=sample_obs, feature_net=self.feature_encoder, is_tracked=is_tracked)
+
+class RGBDAgent:
+    def __init__(self, envs, sample_obs, is_tracked=False, with_rgb=False):
+        self.feature_encoder = NatureCNN3D(sample_obs=sample_obs, with_rgb=with_rgb, with_state=False)
         self.agent = Agent(envs=envs, sample_obs=sample_obs, feature_net=self.feature_encoder, is_tracked=is_tracked)

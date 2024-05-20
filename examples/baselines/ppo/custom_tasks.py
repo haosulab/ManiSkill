@@ -27,7 +27,7 @@ class PushCubeEnvWithRandomCamPose(push_cube.PushCubeEnv):
         #RESOLUTION = (256, 256)
         return [CameraConfig("base_camera", pose=pose, width=RESOLUTION[0], height=RESOLUTION[1], fov=np.pi / 2, near=0.01, far=100)]
     
-@register_env("PushCube-pcd", max_episode_steps=50)
+@register_env("PushCube-Pcd", max_episode_steps=50)
 class PushCubeEnvWithPointcloud(push_cube.PushCubeEnv):
     @property
     def _default_sensor_configs(self):

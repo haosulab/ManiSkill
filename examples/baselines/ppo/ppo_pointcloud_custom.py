@@ -63,13 +63,13 @@ if __name__ == "__main__":
     from custom_tasks import *
     print("Randomize existing camera poses")
     tasks_mapping = {
-        "PullCube-v1": "PullCube-pcd",
-        "PushCube-v1": "PushCube-pcd",
-        "PickCube-v1": "PickCube-pcd",
-        "StackCube-v1": "StackCube-pcd",
-        "PegInsertionSide-v1": "PegInsertionSide-pcd",
-        "AssemblingKits-v1": "AssemblingKits-pcd",
-        "PlugCharger-v1": "PlugCharger-pcd"
+        "PullCube-v1": "PullCube-Pcd",
+        "PushCube-v1": "PushCube-Pcd",
+        "PickCube-v1": "PickCube-Pcd",
+        "StackCube-v1": "StackCube-Pcd",
+        "PegInsertionSide-v1": "PegInsertionSide-Pcd",
+        "AssemblingKits-v1": "AssemblingKits-Pcd",
+        "PlugCharger-v1": "PlugCharger-Pcd"
     }
 
     args.env_id = tasks_mapping[args.env_id]

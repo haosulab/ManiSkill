@@ -18,7 +18,7 @@ from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 
 # Custom utils
-from agents import Agent, FlattenDepthObservationWrapper
+from agents import RGBDAgent, FlattenDepthObservationWrapper
 from data_utils import DictArray
 from sim_utils import set_simulation_quality
 from visual_args import Args
@@ -56,7 +56,7 @@ if __name__ == "__main__":
     # Randomize camera pose (experiment)
     if args.random_cam_pose:
         from custom_tasks import *
-        print("Randomize existing camera poses")
+        print("Randomize existing camera poses (with depth)")
         tasks_mapping = {
             "PullCube-v1": "PullCube-RandomCameraPose",
             "PushCube-v1": "PushCube-RandomCameraPose",
@@ -68,7 +68,7 @@ if __name__ == "__main__":
         }
 
         args.env_id = tasks_mapping[args.env_id]
-        args.exp_name = args.exp_name + "-random-cam-pose"
+        args.exp_name = args.exp_name + "-depth-random-cam-pose"
     
 
 
@@ -127,8 +127,9 @@ if __name__ == "__main__":
     )
 
     # rgbd obs mode returns a dict of data, we flatten it so there is just a rgbd key and state key
-    envs = FlattenDepthObservationWrapper(envs)
-    eval_envs = FlattenDepthObservationWrapper(eval_envs)
+    WITH_RGB = False
+    envs = FlattenDepthObservationWrapper(envs, with_rgb=WITH_RGB)
+    eval_envs = FlattenDepthObservationWrapper(eval_envs, with_rgb=WITH_RGB)
 
     if isinstance(envs.action_space, gym.spaces.Dict):
         envs = FlattenActionSpaceWrapper(envs)
@@ -172,7 +173,7 @@ if __name__ == "__main__":
     print(f"args.minibatch_size={args.minibatch_size} args.batch_size={args.batch_size} args.update_epochs={args.update_epochs}")
     print(f"####")
     
-    agent = Agent(envs, sample_obs=next_obs, is_tracked=args.track).to(device)
+    agent = RGBDAgent(envs, sample_obs=next_obs, is_tracked=args.track, with_rgb=WITH_RGB).agent.to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     if args.checkpoint:
@@ -249,13 +250,14 @@ if __name__ == "__main__":
             dones[step] = next_done
 
             # NOTE: Logging
-            tf_rgb_log = obs[step]["rgb"].detach()[0].cpu().numpy()
-            if tf_rgb_log.shape[-1] > 3:
-                tf_rgb_log = tf_rgb_log[..., :3]
-            wandb.log({
-                f"obs[{step}]": wandb.Image(tf_rgb_log)
-            })
-            #writer.add_image(f"observations_{step}", tf_rgb_log)
+            if args.track:
+                tf_depth_log = obs[step]["depth"].detach()[0].cpu().numpy()
+                if tf_depth_log.shape[-1] > 1:
+                    tf_depth_log = tf_depth_log[..., :1]
+                wandb.log({
+                    f"obs[{step}]": wandb.Image(tf_depth_log)
+                })
+                #writer.add_image(f"observations_{step}", tf_rgb_log)
 
             # ALGO LOGIC: action logic
             with torch.no_grad():
@@ -271,12 +273,13 @@ if __name__ == "__main__":
             rewards[step] = reward.view(-1)
 
             # NOTE: Logging
-            gpu_allocated_mem = memory_logger.get_gpu_allocated_memory()
-            cpu_allocated_mem = memory_logger.get_cpu_allocated_memory()
-            wandb.log({
-                "gpu_alloc_mem": gpu_allocated_mem,
-                "cpu_alloc_mem": cpu_allocated_mem,
-            })
+            if args.track:
+                gpu_allocated_mem = memory_logger.get_gpu_allocated_memory()
+                cpu_allocated_mem = memory_logger.get_cpu_allocated_memory()
+                wandb.log({
+                    "gpu_alloc_mem": gpu_allocated_mem,
+                    "cpu_alloc_mem": cpu_allocated_mem,
+                })
 
             if "final_info" in infos:
                 final_info = infos["final_info"]

@@ -271,12 +271,13 @@ if __name__ == "__main__":
             rewards[step] = reward.view(-1)
 
             # NOTE: Logging
-            gpu_allocated_mem = memory_logger.get_gpu_allocated_memory()
-            cpu_allocated_mem = memory_logger.get_cpu_allocated_memory()
-            wandb.log({
-                "gpu_alloc_mem": gpu_allocated_mem,
-                "cpu_alloc_mem": cpu_allocated_mem,
-            })
+            if args.track:
+                gpu_allocated_mem = memory_logger.get_gpu_allocated_memory()
+                cpu_allocated_mem = memory_logger.get_cpu_allocated_memory()
+                wandb.log({
+                    "gpu_alloc_mem": gpu_allocated_mem,
+                    "cpu_alloc_mem": cpu_allocated_mem,
+                })
 
             if "final_info" in infos:
                 final_info = infos["final_info"]
