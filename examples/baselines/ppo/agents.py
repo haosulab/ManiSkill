@@ -50,7 +50,7 @@ class FlattenPointcloudObservationWrapper(gym.ObservationWrapper):
 
             if not self.pointcloud_only and type == "rgb":
                 last_xyz = points3d[-1]
-                pnt_rgb = data[0]
+                pnt_rgb = data
                 xyz_with_rgb = torch.concat([last_xyz, pnt_rgb], axis=-1)
                 points3d[-1] = xyz_with_rgb
 
@@ -85,7 +85,7 @@ class FlattenDepthObservationWrapper(gym.ObservationWrapper):
         return dict(state=observation, rgbd=images)
         
 
-def compute_GAE(t, num_steps, next_not_done, gae_lambda, gamma, rewards, real_next_values, values):
+def compute_GAE(t, next_not_done, gae_lambda, gamma, rewards, real_next_values, values, lam_coef_sum, reward_term_sum, value_term_sum):
     """
     See GAE paper equation(16) line 1, we will compute the GAE based on this line only
     1             *(  -V(s_t)  + r_t                                                               + gamma * V(s_{t+1})   )
@@ -94,10 +94,6 @@ def compute_GAE(t, num_steps, next_not_done, gae_lambda, gamma, rewards, real_ne
     lambda^3      *(  -V(s_t)  + r_t + gamma * r_{t+1} + gamma^2 * r_{t+2} + gamma^3 * r_{t+3}
     We then normalize it by the sum of the lambda^i (instead of 1-lambda)
     """
-    if t == num_steps - 1: # initialize
-        lam_coef_sum = 0.
-        reward_term_sum = 0. # the sum of the second term
-        value_term_sum = 0. # the sum of the third term
     
     lam_coef_sum = lam_coef_sum * next_not_done
     reward_term_sum = reward_term_sum * next_not_done
@@ -108,7 +104,7 @@ def compute_GAE(t, num_steps, next_not_done, gae_lambda, gamma, rewards, real_ne
     value_term_sum = gae_lambda * gamma * value_term_sum + gamma * real_next_values
 
     advantage = (reward_term_sum + value_term_sum) / lam_coef_sum - values[t]
-    return advantage
+    return advantage, lam_coef_sum, reward_term_sum, value_term_sum
 
 
 class Agent(nn.Module):
@@ -169,6 +165,7 @@ class Agent(nn.Module):
         return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x)
     
 class PointcloudAgent:
-    def __init__(self, envs, sample_obs, is_tracked=False):
-        self.feature_encoder = PcdEncoder(sample_obs=sample_obs, normal_channel=False)
+    def __init__(self, envs, sample_obs, is_tracked=False, with_rgb=False):
+        self.feature_encoder = PcdEncoder(sample_obs=sample_obs, normal_channel=False) if not with_rgb else \
+            PcdEncoder(sample_obs=sample_obs, normal_channel=False) # TODO: Change to accomodate rgb codes for each pcd
         self.agent = Agent(envs=envs, sample_obs=sample_obs, feature_net=self.feature_encoder, is_tracked=is_tracked)

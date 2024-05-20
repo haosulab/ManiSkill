@@ -18,7 +18,7 @@ def run_default_visual_ppo_with_varying_sim_params(task='PushCube-v1', name='rgb
         "examples/baselines/ppo/ppo_pointcloud_custom.py", 
         f"--env_id={task}", 
         f"--exp-name={name}",
-        f"--num_envs={40}",
+        f"--num_envs={22}",
         f"--update_epochs={8}", 
         f"--num_minibatches={16}",
         f"--total_timesteps={250_000}",
@@ -73,20 +73,20 @@ if __name__ == "__main__":
     elif args.visual_pointcloud:
         tasks = [
             "PushCube-v1", 
-            "PickCube-v1", 
-            "StackCube-v1", 
-            "PegInsertionSide-v1", 
-            "AssemblingKits-v1", # realsense
-            "PlugCharger-v1"
+            #"PickCube-v1", 
+            #"StackCube-v1", 
+            #"PegInsertionSide-v1", 
+            #"AssemblingKits-v1", # realsense
+            #"PlugCharger-v1"
         ]
 
         names = [
             "rgb-pushcube-high-raytracing-pointcloud", 
-            "rgb-pickcube-high-raytracing-pointcloud", 
-            "rgb-stackcube-high-raytracing-pointcloud", 
-            "rgb-peginsertionside-high-raytracing-pointcloud", 
-            "rgb-assemblingkits-high-raytracing-pointcloud", 
-            "rgb-plugcharger-high-raytracing-pointcloud"
+            #"rgb-pickcube-high-raytracing-pointcloud", 
+            #"rgb-stackcube-high-raytracing-pointcloud", 
+            #"rgb-peginsertionside-high-raytracing-pointcloud", 
+            #"rgb-assemblingkits-high-raytracing-pointcloud", 
+            #"rgb-plugcharger-high-raytracing-pointcloud"
         ]
 
         assert len(tasks) == len(names), "equal number of params"

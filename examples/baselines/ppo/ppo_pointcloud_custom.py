@@ -132,6 +132,7 @@ if __name__ == "__main__":
     )
 
     # rgbd obs mode returns a dict of data, we flatten it so there is just a rgbd key and state key
+    # TODO: Add support further down the line for pcd + rgb codes
     envs = FlattenPointcloudObservationWrapper(envs, pointcloud_only=True)
     eval_envs = FlattenPointcloudObservationWrapper(eval_envs, pointcloud_only=True)
 
@@ -277,34 +278,34 @@ if __name__ == "__main__":
                 np.zeros_like(xyz_log)[0]
 
             # debug
-            import pickle
-            pcd_log = {
-                "xyz": xyz_log,
-                "rgb": colors_log,
-            }
-            with open('pcd_log_TEST.pickle', 'wb') as handle:
-                pickle.dump(pcd_log, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            # import pickle
+            # pcd_log = {
+            #     "xyz": xyz_log,
+            #     "rgb": colors_log,
+            # }
+            # with open('pcd_log_TEST.pickle', 'wb') as handle:
+            #     pickle.dump(pcd_log, handle, protocol=pickle.HIGHEST_PROTOCOL)
             # debug
 
-            pcd = trimesh.points.PointCloud(xyz_log, colors_log)
-            UID = 0
-            fov_angle = np.rad2deg(np.pi / 2)
-            mesh_camera = trimesh.scene.Camera(UID, (1024, 1024), fov=(fov_angle, fov_angle))
-            cam2world = np.array(
-                [[ 0.        , -0.78086877,  0.62469506,  0.3       ],  
-                [ 1.        ,  0.        ,  0.        ,  0.        ],
-                [ 0.        ,  0.62469506,  0.7808688 ,  0.6       ],
-                [ 0.        ,  0.        ,  0.        ,  1.        ]]
-            )
-            mesh_scene = trimesh.Scene([pcd], camera=mesh_camera, camera_transform=cam2world)
-            rendered_img = mesh_scene.save_image(resolution=(800, 600))
-            img_log = np.array(rendered_img)
+            # pcd = trimesh.points.PointCloud(xyz_log, colors_log)
+            # UID = 0
+            # fov_angle = np.rad2deg(np.pi / 2)
+            # mesh_camera = trimesh.scene.Camera(UID, (1024, 1024), fov=(fov_angle, fov_angle))
+            # cam2world = np.array(
+            #     [[ 0.        , -0.78086877,  0.62469506,  0.3       ],  
+            #     [ 1.        ,  0.        ,  0.        ,  0.        ],
+            #     [ 0.        ,  0.62469506,  0.7808688 ,  0.6       ],
+            #     [ 0.        ,  0.        ,  0.        ,  1.        ]]
+            # )
+            # mesh_scene = trimesh.Scene([pcd], camera=mesh_camera, camera_transform=cam2world)
+            # rendered_img = mesh_scene.save_image(resolution=(800, 600))
+            # img_log = np.array(rendered_img)
             
-            if img_log.shape[-1] > 3:
-                img_log = img_log[..., :3]
-            wandb.log({
-                f"obs[{step}]": wandb.Image(img_log)
-            })
+            # if img_log.shape[-1] > 3:
+            #     img_log = img_log[..., :3]
+            # wandb.log({
+            #     f"obs[{step}]": wandb.Image(img_log)
+            # })
             #writer.add_image(f"observations_{step}", tf_rgb_log)
 
 
@@ -331,12 +332,13 @@ if __name__ == "__main__":
 
 
             # NOTE: Logging
-            gpu_allocated_mem = memory_logger.get_gpu_allocated_memory()
-            cpu_allocated_mem = memory_logger.get_cpu_allocated_memory()
-            wandb.log({
-                "gpu_alloc_mem": gpu_allocated_mem,
-                "cpu_alloc_mem": cpu_allocated_mem,
-            })
+            if args.track:
+                gpu_allocated_mem = memory_logger.get_gpu_allocated_memory()
+                cpu_allocated_mem = memory_logger.get_cpu_allocated_memory()
+                wandb.log({
+                    "gpu_alloc_mem": gpu_allocated_mem,
+                    "cpu_alloc_mem": cpu_allocated_mem,
+                })
 
 
 
@@ -383,13 +385,18 @@ if __name__ == "__main__":
                 # if next_not_done is 1, final_values is always 0
                 # if next_not_done is 0, then use final_values, which is computed according to bootstrap_at_done
                 if args.finite_horizon_gae:
-                    advantages[t] = compute_GAE(
-                        t, args.num_steps, 
+                    if t == args.num_steps - 1: # initialize
+                        lam_coef_sum = 0.
+                        reward_term_sum = 0. # the sum of the second term
+                        value_term_sum = 0. # the sum of the third term
+                    advantages[t], lam_coef_sum, reward_term_sum, value_term_sum = compute_GAE(
+                        t, 
                         next_not_done, 
                         args.gae_lambda, args.gamma, 
                         rewards,
                         real_next_values, 
-                        values
+                        values,
+                        lam_coef_sum, reward_term_sum, value_term_sum
                     )
                 else:
                     delta = rewards[t] + args.gamma * real_next_values - values[t]
