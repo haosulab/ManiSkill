@@ -277,7 +277,9 @@ class PDEEPoseController(PDEEPosController):
                 )
             target_pose = Pose.create_from_pq(p, q)
         else:
-            assert self.config.frame == "base", self.config.frame
+            assert (
+                self.config.frame == "root_translation:root_aligned_body_rotation"
+            ), self.config.frame
             target_pos, target_rot = action[:, 0:3], action[:, 3:6]
             target_quat = matrix_to_quaternion(
                 euler_angles_to_matrix(target_rot, "XYZ")

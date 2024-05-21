@@ -14,10 +14,7 @@ There are a few key elements to remember about controllers in ManiSkill
 
 The next section will detail each of the pre-built controllers and what they do
 
-## Prebuilt Controllers (Docs WIP)
-
-
-### Passive
+## Passive
 
 ```python
 from mani_skill.agents.controllers import PassiveControllerConfig
@@ -25,7 +22,7 @@ from mani_skill.agents.controllers import PassiveControllerConfig
 
 This controller lets you enforce given joints to be not controlled by actions. An example of this is used for the [CartPole environment](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/tasks/control/cartpole.py) which defines the CartPole robot as having passive control over the hinge joint of the CartPole (the CartPole task only allows control of the sliding box).
 
-### PD Joint Position
+## PD Joint Position
 
 ```python
 from mani_skill.agents.controllers import PDJointPosControllerConfig
@@ -34,7 +31,11 @@ from mani_skill.agents.controllers import PDJointPosControllerConfig
 With a PD controller, controls the joint positions of the given joints via actions.
 
 
-### PD EE (End-Effector) Delta Pose
+## PD EE (End-Effector) Pose
+
+```python
+from mani_skill.agents.controllers import PDEEPoseControllerConfig
+```
 
 
 This controller has both a pose and a position variant allowing for more intuitive control of just the end-effector (or any link) of a robot. The default options of this controller are set to be the more intuitive option, but there are multiple possible choices.
@@ -52,15 +53,71 @@ These are highlighted below and shown with RGB axes where Red = X-axis, Green = 
 
 In this controller the implemented variant is a decoupled control of translation and rotation of the end effector. This means actions taken to translate do not affect the action taken to rotate the end effector around. This results in 6 dimensions of control, 3 for 3D translation, and another 3 for rotation detailed below. 
 
+This controller like others offers delta based and absolute control. Internally at each environment timestep given an action, ManiSkill computes the appropriate new target pose of the end-effector and leverages inverse kinematics to compute the joint actions that can best achieve that target pose. Configurations of this controller effectively change how this new target pose is computed.
+
+### Delta Control
+
+This is enabled by default and configured with the `use_delta` property. It allows the user to submit actions that define deltas in the end-effector pose to move towards. There are 4 frames of control that are permitted, arising from 2 choices for translation multiplied by 2 choices for rotation. The frame is defined by the `frame` property and follows the naming scheme below
+
+```python
+# Naming Scheme is <frame>_translation:<frame>_rotation
+# The following 4 frame combos are possible
+"body_translation:root_aligned_body_rotation",
+"root_translation:root_aligned_body_rotation",
+"body_translation:body_aligned_body_rotation",
+"root_translation:body_aligned_body_rotation",
+# This is the default frame combo
+"root_translation:root_aligned_body_rotation"
+```
+
+
 #### Translation
 
-For translation in this controller, the user specifies a delta X, Y, and Z action indicating how far to move in all those dimensions. Inverse kinematics is then used to determine the required joint actions to achieve the desired translation.
+For translation in this controller, the user specifies a delta X, Y, and Z action (in meters if not normalized) indicating how far to move in all those dimensions. Inverse kinematics is then used to determine the required joint actions to achieve the desired translation.
+
+There are two frames for position translation defined in ManiSkill, root frame and body frame translation shown below by setting the corresponding dimension in the action to > 0 and the rest to 0.
+
+<video preload="auto" autoplay="True" loop="True" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/docs/source/_static/controllers/root_translation.mp4" type="video/mp4">
+</video>
+
+<video preload="auto" autoplay="True" loop="True" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/docs/source/_static/controllers/body_translation.mp4" type="video/mp4">
+</video>
 
 #### Rotation
 
 <!-- Notes on how these videos/gifs were generated. stao hacked the control_window.py code in SAPIEN to fix where the coordinate frame position was placed. -->
 
-### PD EE Target Pose
+For rotation in this controller, the user specifies a delta X, Y, and Z axis rotation (in radians if not normalized) indicating how far to rotate in all those dimensions. They are processed as XYZ euler angles and converted to a quaternion internally. Inverse kinematics is then used to determine the required joint actions to achieve the desired rotation.
+
+ManiSkill implements two types of rotation based control that are generally the most intuitive to understand and commonly used in real-world robots, which is rotation under one orientation aligned/positioned at another frame. In particular there are two rotation frames supported: root aligned body and body aligned body. A aligned B means rotation in the frame with the same orientation as frame A and same position as frame B. Both frames are shown below by setting the corresponding dimension in the action to > 0 and the rest to 0.
+
+
+<video preload="auto" autoplay="True" loop="True" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/docs/source/_static/controllers/root_aligned_body_rotation.mp4" type="video/mp4">
+</video>
+
+<video preload="auto" autoplay="True" loop="True" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/docs/source/_static/controllers/body_aligned_body_rotation.mp4" type="video/mp4">
+</video>
+
+### Non Delta Control
+
+When `use_delta=False` this is enabled. Actions must then define a 3D position and rotation (via XYZ euler angles) and use the frame `root_translation:root_aligned_body_rotation` (which is also the default). This kind of control works more similarly to motion planning where you pick a target pose and ManiSkill picks joint actions that try to reach that target pose.
+
+### GPU Sim Caveats
+
+At the moment we only support fast GPU accelerated delta end-effector control. Support for GPU accelerated absolute end-effector control requires some much more complicated code but can be possible if one uses [cuRobo](https://github.com/NVlabs/curobo) to generate motion plans given target poses. 
+
+
+## PD EE Pos
+
+```python
+from mani_skill.agents.controllers import PDEEPosControllerConfig
+```
+
+The same as PD EE Pose controller but there is no rotation control and actions are 3 dimensional as a result. There are only two frames defining the frame for translation: `"root_translation"` and `"body_translation"`
 
 
 ## Deep Dive Example of the Franka Emika Panda Robot Controllers:
