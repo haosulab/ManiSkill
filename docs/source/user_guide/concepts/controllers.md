@@ -78,11 +78,11 @@ For translation in this controller, the user specifies a delta X, Y, and Z actio
 There are two frames for position translation defined in ManiSkill, root frame and body frame translation shown below by setting the corresponding dimension in the action to > 0 and the rest to 0.
 
 <video preload="auto" autoplay="True" loop="True" controls="True" width="100%">
-<source src="https://github.com/haosulab/ManiSkill/raw/main/docs/source/_static/controllers/root_translation.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/docs/source/_static/videos/controllers/root_translation.mp4" type="video/mp4">
 </video>
 
 <video preload="auto" autoplay="True" loop="True" controls="True" width="100%">
-<source src="https://github.com/haosulab/ManiSkill/raw/main/docs/source/_static/controllers/body_translation.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/docs/source/_static/videos/controllers/body_translation.mp4" type="video/mp4">
 </video>
 
 #### Rotation
@@ -100,11 +100,11 @@ ManiSkill implements two types of rotation based control that are generally the 
 
 
 <video preload="auto" autoplay="True" loop="True" controls="True" width="100%">
-<source src="https://github.com/haosulab/ManiSkill/raw/main/docs/source/_static/controllers/root_aligned_body_rotation.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/docs/source/_static/videos/controllers/root_aligned_body_rotation.mp4" type="video/mp4">
 </video>
 
 <video preload="auto" autoplay="True" loop="True" controls="True" width="100%">
-<source src="https://github.com/haosulab/ManiSkill/raw/main/docs/source/_static/controllers/body_aligned_body_rotation.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/docs/source/_static/videos/controllers/body_aligned_body_rotation.mp4" type="video/mp4">
 </video>
 
 ### Non Delta Control
