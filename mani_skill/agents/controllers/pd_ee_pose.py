@@ -118,7 +118,8 @@ class PDEEPosController(PDJointPosController):
     def compute_ik(
         self, target_pose: Pose, action: Array, pos_only=True, max_iterations=100
     ):
-        # Assume the target pose is defined in the base frame
+        # NOTE (stao): it is a bit strange code wise that target_pose and action are both given since
+        # GPU sim can only use the delta action directly and cannot generate joint targets via a target pose
         if physx.is_gpu_enabled():
             ## GPU IK mixed frame is basically all relative to base frame...
             ## CPU depends...
@@ -130,7 +131,6 @@ class PDEEPosController(PDJointPosController):
                 .permute(0, 2, 1)
             )
             jacobian = jacobian[:, :, self.qmask]
-            # NOTE (stao): a bit of a hacky way to check if we want to do IK on position or pose here
             if pos_only:
                 jacobian = jacobian[:, 0:3]
 
@@ -154,19 +154,15 @@ class PDEEPosController(PDJointPosController):
         # Keep the current rotation and change the position
         if self.config.use_delta:
             delta_pose = Pose.create(action)
-
-            if self.config.frame == "base":
+            if self.config.frame == "root_translation":
                 target_pose = delta_pose * prev_ee_pose_at_base
-                # target_pose.set_p(prev_ee_pose_at_base.p + delta_pose.p)
-            elif self.config.frame == "ee":
+            elif self.config.frame == "body_translation":
                 target_pose = prev_ee_pose_at_base * delta_pose
-                # target_pose.set_p(prev_ee_pose_at_base.p + delta_pose.p)
             else:
                 raise NotImplementedError(self.config.frame)
         else:
-            assert self.config.frame == "base", self.config.frame
+            assert self.config.frame == "root_translation", self.config.frame
             target_pose = Pose.create(action)
-
         return target_pose
 
     def set_action(self, action: Array):
@@ -194,10 +190,11 @@ class PDEEPosController(PDJointPosController):
         return {}
 
     def set_state(self, state: dict):
-        # if self.config.use_target:
-        #     target_pose = state["target_pose"]
-        #     self._target_pose = sapien.Pose(target_pose[:3], target_pose[3:])
-        raise NotImplementedError()
+        if self.config.use_target:
+            target_pose = state["target_pose"]
+            self._target_pose = Pose.create_from_pq(
+                target_pose[:, :3], target_pose[:, 3:]
+            )
 
 
 @dataclass
@@ -210,7 +207,12 @@ class PDEEPosControllerConfig(ControllerConfig):
     friction: Union[float, Sequence[float]] = 0.0
     ee_link: str = None
     urdf_path: str = None
-    frame: str = "ee"  # [base, ee]
+    frame: Literal[
+        "body_translation",
+        "root_translation",
+    ] = "root_translation"
+    """Choice of frame to use for translational and rotational control of the end-effector. To learn how these work explicitly
+    with videos of each one's behavior see https://maniskill.readthedocs.io/en/latest/user_guide/concepts/controllers.html#pd-ee-end-effector-pose"""
     use_delta: bool = True
     use_target: bool = False
     interpolate: bool = False
@@ -284,7 +286,6 @@ class PDEEPoseController(PDEEPosController):
             target_quat = matrix_to_quaternion(
                 euler_angles_to_matrix(target_rot, "XYZ")
             )
-            # target_quat = Rotation.from_rotvec(target_rot).as_quat()[[3, 0, 1, 2]]
             target_pose = Pose.create_from_pq(target_pos, target_quat)
 
         return target_pose
@@ -309,7 +310,8 @@ class PDEEPoseControllerConfig(ControllerConfig):
         "body_translation:body_aligned_body_rotation",
         "root_translation:body_aligned_body_rotation",
     ] = "root_translation:root_aligned_body_rotation"
-    """Choice of frame to use for translational and rotational control of the end-effector. To learn how these work explicitly with videos of each one's behavior see TODO (stao)"""
+    """Choice of frame to use for translational and rotational control of the end-effector. To learn how these work explicitly
+    with videos of each one's behavior see https://maniskill.readthedocs.io/en/latest/user_guide/concepts/controllers.html#pd-ee-end-effector-pose"""
     use_delta: bool = True
     """Whether to use delta-action control. If true then actions indicate the delta/change in position via translation and orientation via
     rotation. If false, then actions indicate in the base frame (typically wherever the root link of the robot is) what pose the end effector
