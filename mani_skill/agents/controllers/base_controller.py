@@ -58,8 +58,8 @@ class BaseController:
         if sim_freq is None:  # infer from scene
             sim_timestep = self.articulation.px.timestep
             sim_freq = round(1.0 / sim_timestep)
-        # Number of simulation steps per control step
         self._sim_steps = sim_freq // control_freq
+        """Number of simulation steps per control step"""
 
         self._initialize_joints()
         self._initialize_action_space()
@@ -118,7 +118,7 @@ class BaseController:
         raise NotImplementedError
 
     def reset(self):
-        """Resets the controller to an initial state"""
+        """Resets the controller to an initial state. This is called upon environment creation and each environment reset"""
 
     def _preprocess_action(self, action: Array):
         # TODO(jigu): support discrete action
@@ -290,10 +290,10 @@ class CombinedController(DictController):
             action_dim = self.action_space.shape[1]
         else:
             action_dim = self.action_space.shape[0]
-        assert action.shape == (self.scene.num_envs, action_dim), (
-            action.shape,
+        assert action.shape == (
+            self.scene.num_envs,
             action_dim,
-        )
+        ), f"Received action of shape {action.shape} but expected shape ({self.scene.num_envs}, {action_dim})"
         for uid, controller in self.controllers.items():
             start, end = self.action_mapping[uid]
             controller.set_action(action[:, start:end])

@@ -93,7 +93,7 @@ class PDJointPosController(BaseController):
     def before_simulation_step(self):
         self._step += 1
 
-        # Compute the next target
+        # Compute the next target via a linear interpolation
         if self.config.interpolate:
             targets = self._start_qpos + self._step_size * self._step
             self.set_drive_targets(targets)
