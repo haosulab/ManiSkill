@@ -34,7 +34,7 @@ from mani_skill.agents.controllers import PDJointPosControllerConfig
 With a PD controller, controls the joint positions of the given joints via actions.
 
 
-### PD EE (End-Effector) Pose
+### PD EE (End-Effector) Delta Pose
 
 
 This controller has both a pose and a position variant allowing for more intuitive control of just the end-effector (or any link) of a robot. The default options of this controller are set to be the more intuitive option, but there are multiple possible choices.
@@ -45,10 +45,23 @@ To understand how this works, it is important to first understand that there are
 2. Root Link Frame
 3. End Effector / Body Frame (Our PD EE controllers in fact support controlling any link, not just the end-effector)
 
-These are highlighted below and shown with RGB axes where Red = X-axis, Green = Y-axis, and Blue = Z-axis. Note that in ManiSkill/SAPIEN, Z is canonically the natural "up/down direction" which is different to some other simulators.
+These are highlighted below and shown with RGB axes where Red = X-axis, Green = Y-axis, and Blue = Z-axis. The desired body to control shown below is a dummy link representing the tool control point (TCP) which is a simple offset from the actual end effector link (hence the origin of the body frame is in the space between the grippers). Note that in ManiSkill/SAPIEN, Z is canonically the natural "up/down direction" which is different to some other simulators.
 
 ```{figure} images/robot-with-frames.png
 ```
+
+In this controller the implemented variant is a decoupled control of translation and rotation of the end effector. This means actions taken to translate do not affect the action taken to rotate the end effector around. This results in 6 dimensions of control, 3 for 3D translation, and another 3 for rotation detailed below. 
+
+#### Translation
+
+For translation in this controller, the user specifies a delta X, Y, and Z action indicating how far to move in all those dimensions. Inverse kinematics is then used to determine the required joint actions to achieve the desired translation.
+
+#### Rotation
+
+<!-- Notes on how these videos/gifs were generated. stao hacked the control_window.py code in SAPIEN to fix where the coordinate frame position was placed. -->
+
+### PD EE Target Pose
+
 
 ## Deep Dive Example of the Franka Emika Panda Robot Controllers:
 

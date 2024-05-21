@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Sequence, Union
+from typing import List, Literal, Sequence, Union
 
 try:
     import fast_kinematics
@@ -16,6 +16,8 @@ from mani_skill.utils import common, gym_utils, sapien_utils
 from mani_skill.utils.geometry.rotation_conversions import (
     euler_angles_to_matrix,
     matrix_to_quaternion,
+    quaternion_apply,
+    quaternion_multiply,
 )
 from mani_skill.utils.structs import ArticulationJoint, Pose
 from mani_skill.utils.structs.types import Array, DriveMode
@@ -118,6 +120,8 @@ class PDEEPosController(PDJointPosController):
     ):
         # Assume the target pose is defined in the base frame
         if physx.is_gpu_enabled():
+            ## GPU IK mixed frame is basically all relative to base frame...
+            ## CPU depends...
             jacobian = (
                 self.fast_kinematics_model.jacobian_mixed_frame_pytorch(
                     self.articulation.get_qpos()[:, self.active_ancestor_joint_idxs]
@@ -133,7 +137,6 @@ class PDEEPosController(PDJointPosController):
             # NOTE (stao): this method of IK is from https://mathweb.ucsd.edu/~sbuss/ResearchWeb/ikmethods/iksurvey.pdf by Samuel R. Buss
             delta_joint_pos = torch.linalg.pinv(jacobian) @ action.unsqueeze(-1)
             return self.qpos + delta_joint_pos.squeeze(-1)
-
         else:
             result, success, error = self.pmodel.compute_inverse_kinematics(
                 self.ee_link_idx,
@@ -154,8 +157,10 @@ class PDEEPosController(PDJointPosController):
 
             if self.config.frame == "base":
                 target_pose = delta_pose * prev_ee_pose_at_base
+                # target_pose.set_p(prev_ee_pose_at_base.p + delta_pose.p)
             elif self.config.frame == "ee":
                 target_pose = prev_ee_pose_at_base * delta_pose
+                # target_pose.set_p(prev_ee_pose_at_base.p + delta_pose.p)
             else:
                 raise NotImplementedError(self.config.frame)
         else:
@@ -260,17 +265,17 @@ class PDEEPoseController(PDEEPosController):
             delta_pos, delta_rot = action[:, 0:3], action[:, 3:6]
             delta_quat = matrix_to_quaternion(euler_angles_to_matrix(delta_rot, "XYZ"))
             delta_pose = Pose.create_from_pq(delta_pos, delta_quat)
-
-            if self.config.frame == "base":
-                target_pose = delta_pose * prev_ee_pose_at_base
-            elif self.config.frame == "ee":
-                target_pose = prev_ee_pose_at_base * delta_pose
-            elif self.config.frame == "ee_align":
-                # origin at ee but base rotation
-                target_pose = delta_pose * prev_ee_pose_at_base
-                target_pose.set_p(prev_ee_pose_at_base.p + delta_pos)
-            else:
-                raise NotImplementedError(self.config.frame)
+            if "root_aligned_body_rotation" in self.config.frame:
+                q = quaternion_multiply(delta_pose.q, prev_ee_pose_at_base.q)
+            if "body_aligned_body_rotation" in self.config.frame:
+                q = quaternion_multiply(prev_ee_pose_at_base.q, delta_pose.q)
+            if "root_translation" in self.config.frame:
+                p = prev_ee_pose_at_base.p + delta_pos
+            if "body_translation" in self.config.frame:
+                p = prev_ee_pose_at_base.p + quaternion_apply(
+                    prev_ee_pose_at_base.q, delta_pose.p
+                )
+            target_pose = Pose.create_from_pq(p, q)
         else:
             assert self.config.frame == "base", self.config.frame
             target_pos, target_rot = action[:, 0:3], action[:, 3:6]
@@ -293,11 +298,25 @@ class PDEEPoseControllerConfig(ControllerConfig):
     force_limit: Union[float, Sequence[float]] = 1e10
     friction: Union[float, Sequence[float]] = 0.0
     ee_link: str = None
+    """The name of the end-effector link to control. Note that it does not have to be a end-effector necessarily and could just be any link."""
     urdf_path: str = None
-    frame: str = "ee"  # [base, ee, ee_align]
+    """Path to the URDF file defining the robot to control."""
+    frame: Literal[
+        "body_translation:root_aligned_body_rotation",
+        "root_translation:root_aligned_body_rotation",
+        "body_translation:body_aligned_body_rotation",
+        "root_translation:body_aligned_body_rotation",
+    ] = "root_translation:root_aligned_body_rotation"
+    """Choice of frame to use for translational and rotational control of the end-effector. To learn how these work explicitly with videos of each one's behavior see TODO (stao)"""
     use_delta: bool = True
+    """Whether to use delta-action control. If true then actions indicate the delta/change in position via translation and orientation via
+    rotation. If false, then actions indicate in the base frame (typically wherever the root link of the robot is) what pose the end effector
+    should try and reach via inverse kinematics. """
     use_target: bool = False
+    """Whether to use the most recent target end-effector pose for control. If false, actions taken in a chosen frame will be taken
+    relative to the instantaneous/current end-effector pose. """
     interpolate: bool = False
     normalize_action: bool = True
+    """Whether to normalize each action dimension into a range of [-1, 1]. Normally for most machine learning workflows this is recommended to be kept true."""
     drive_mode: Union[Sequence[DriveMode], DriveMode] = "force"
     controller_cls = PDEEPoseController
