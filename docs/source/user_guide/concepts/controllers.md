@@ -87,7 +87,12 @@ There are two frames for position translation defined in ManiSkill, root frame a
 
 #### Rotation
 
-<!-- Notes on how these videos/gifs were generated. stao hacked the control_window.py code in SAPIEN to fix where the coordinate frame position was placed. -->
+<!-- Notes on how these videos/gifs were generated. stao hacked the control_window.py code in SAPIEN to fix where the coordinate frame position was placed. 
+The video render pose is sapien.Pose([0.384141, -0.700805, 0.569922], [0.587463, -0.163646, 0.122785, 0.782963])
+
+keyframe qpos of rest panda modified to kf.qpos[-4] += 0.5
+robot pose modified to sapien.Pose([-0.302144, -3.72529e-09, -5.96046e-08], [0.984722, 9.31323e-10, -1.50322e-08, -0.174137])
+-->
 
 For rotation in this controller, the user specifies a delta X, Y, and Z axis rotation (in radians if not normalized) indicating how far to rotate in all those dimensions. They are processed as XYZ euler angles and converted to a quaternion internally. Inverse kinematics is then used to determine the required joint actions to achieve the desired rotation.
 
