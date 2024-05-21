@@ -290,10 +290,10 @@ class CombinedController(DictController):
             action_dim = self.action_space.shape[1]
         else:
             action_dim = self.action_space.shape[0]
-        assert action.shape == (self.scene.num_envs, action_dim), (
-            action.shape,
+        assert action.shape == (
+            self.scene.num_envs,
             action_dim,
-        )
+        ), f"Received action of shape {action.shape} but expected shape ({self.scene.num_envs}, {action_dim})"
         for uid, controller in self.controllers.items():
             start, end = self.action_mapping[uid]
             controller.set_action(action[:, start:end])

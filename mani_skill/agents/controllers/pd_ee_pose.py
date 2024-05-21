@@ -32,6 +32,17 @@ class PDEEPosController(PDJointPosController):
     config: "PDEEPosControllerConfig"
     _target_pose = None
 
+    def _check_gpu_sim_works(self):
+        assert (
+            self.config.frame == "root_translation"
+        ), "currently only translation in the root frame for EE control is supported in GPU sim"
+        assert (
+            self.config.use_delta == True
+        ), "currently only delta EE control is supported in GPU sim"
+        assert (
+            self.config.use_target == False
+        ), "Currently cannot take actions relative to last target pose in GPU sim"
+
     def _initialize_joints(self):
         self.initial_qpos = None
         super()._initialize_joints()
@@ -51,7 +62,7 @@ class PDEEPosController(PDJointPosController):
             assert (
                 fast_kinematics is not None
             ), "fast_kinematics is not installed. This is likely because your system does not support the fast_kinematics library which provides GPU accelerated inverse kinematics solvers"
-
+            self._check_gpu_sim_works()
             self.fast_kinematics_model = fast_kinematics.FastKinematics(
                 self.config.urdf_path, self.scene.num_envs, self.config.ee_link
             )
@@ -88,8 +99,8 @@ class PDEEPosController(PDJointPosController):
             self.qmask[self.active_joint_indices] = 1
 
     def _initialize_action_space(self):
-        low = np.float32(np.broadcast_to(self.config.lower, 3))
-        high = np.float32(np.broadcast_to(self.config.upper, 3))
+        low = np.float32(np.broadcast_to(self.config.pos_lower, 3))
+        high = np.float32(np.broadcast_to(self.config.pos_upper, 3))
         self.single_action_space = spaces.Box(low, high, dtype=np.float32)
 
     @property
@@ -197,16 +208,26 @@ class PDEEPosController(PDJointPosController):
             )
 
 
+# TODO (stao): This config should really inherit the pd joint pos controller config
 @dataclass
 class PDEEPosControllerConfig(ControllerConfig):
-    lower: Union[float, Sequence[float]]
-    upper: Union[float, Sequence[float]]
+    pos_lower: Union[float, Sequence[float]]
+    """Lower bound for position control. If a single float then X, Y, and Z rotations are bounded by this value. Otherwise can be three floats to specify each dimensions bounds"""
+    pos_upper: Union[float, Sequence[float]]
+    """Upper bound for position control. If a single float then X, Y, and Z rotations are bounded by this value. Otherwise can be three floats to specify each dimensions bounds"""
+
+    # TODO (stao): note stiffness, damping, force limit and friction are properties used by PDJointPos controller, which the PDEEPosController controller inherits from
+    # this should be changed as its difficult to figure out how this code is used
     stiffness: Union[float, Sequence[float]]
     damping: Union[float, Sequence[float]]
     force_limit: Union[float, Sequence[float]] = 1e10
     friction: Union[float, Sequence[float]] = 0.0
+
     ee_link: str = None
+    """The name of the end-effector link to control. Note that it does not have to be a end-effector necessarily and could just be any link."""
     urdf_path: str = None
+    """Path to the URDF file defining the robot to control."""
+
     frame: Literal[
         "body_translation",
         "root_translation",
@@ -214,9 +235,15 @@ class PDEEPosControllerConfig(ControllerConfig):
     """Choice of frame to use for translational and rotational control of the end-effector. To learn how these work explicitly
     with videos of each one's behavior see https://maniskill.readthedocs.io/en/latest/user_guide/concepts/controllers.html#pd-ee-end-effector-pose"""
     use_delta: bool = True
+    """Whether to use delta-action control. If true then actions indicate the delta/change in position via translation and orientation via
+    rotation. If false, then actions indicate in the base frame (typically wherever the root link of the robot is) what pose the end effector
+    should try and reach via inverse kinematics. """
     use_target: bool = False
+    """Whether to use the most recent target end-effector pose for control. If false, actions taken in a chosen frame will be taken
+    relative to the instantaneous/current end-effector pose. """
     interpolate: bool = False
     normalize_action: bool = True
+    """Whether to normalize each action dimension into a range of [-1, 1]. Normally for most machine learning workflows this is recommended to be kept true."""
     drive_mode: Union[Sequence[DriveMode], DriveMode] = "force"
     controller_cls = PDEEPosController
 
@@ -224,12 +251,23 @@ class PDEEPosControllerConfig(ControllerConfig):
 class PDEEPoseController(PDEEPosController):
     config: "PDEEPoseControllerConfig"
 
+    def _check_gpu_sim_works(self):
+        assert (
+            self.config.frame == "root_translation:root_aligned_body_rotation"
+        ), "currently only translation in the root frame for EE control is supported in GPU sim"
+        assert (
+            self.config.use_delta == True
+        ), "currently only delta EE control is supported in GPU sim"
+        assert (
+            self.config.use_target == False
+        ), "Currently cannot take actions relative to last target pose in GPU sim"
+
     def _initialize_action_space(self):
         low = np.float32(
             np.hstack(
                 [
                     np.broadcast_to(self.config.pos_lower, 3),
-                    np.broadcast_to(-self.config.rot_bound, 3),
+                    np.broadcast_to(self.config.rot_lower, 3),
                 ]
             )
         )
@@ -237,7 +275,7 @@ class PDEEPoseController(PDEEPosController):
             np.hstack(
                 [
                     np.broadcast_to(self.config.pos_upper, 3),
-                    np.broadcast_to(self.config.rot_bound, 3),
+                    np.broadcast_to(self.config.rot_lower, 3),
                 ]
             )
         )
@@ -254,7 +292,7 @@ class PDEEPoseController(PDEEPosController):
         rot_action[rot_norm > 1] = torch.mul(rot_action, 1 / rot_norm[:, None])[
             rot_norm > 1
         ]
-        rot_action = rot_action * self.config.rot_bound
+        rot_action = rot_action * self.config.rot_lower
         return torch.hstack([pos_action, rot_action])
 
     def compute_ik(self, target_pose: Pose, action: Array, max_iterations=100):
@@ -292,18 +330,17 @@ class PDEEPoseController(PDEEPosController):
 
 
 @dataclass
-class PDEEPoseControllerConfig(ControllerConfig):
-    pos_lower: Union[float, Sequence[float]]
-    pos_upper: Union[float, Sequence[float]]
-    rot_bound: float
-    stiffness: Union[float, Sequence[float]]
-    damping: Union[float, Sequence[float]]
+class PDEEPoseControllerConfig(PDEEPosControllerConfig):
+
+    rot_lower: Union[float, Sequence[float]] = None
+    """Lower bound for rotation control. If a single float then X, Y, and Z rotations are bounded by this value. Otherwise can be three floats to specify each dimensions bounds"""
+    rot_upper: Union[float, Sequence[float]] = None
+    """Upper bound for rotation control. If a single float then X, Y, and Z rotations are bounded by this value. Otherwise can be three floats to specify each dimensions bounds"""
+    stiffness: Union[float, Sequence[float]] = None
+    damping: Union[float, Sequence[float]] = None
     force_limit: Union[float, Sequence[float]] = 1e10
     friction: Union[float, Sequence[float]] = 0.0
-    ee_link: str = None
-    """The name of the end-effector link to control. Note that it does not have to be a end-effector necessarily and could just be any link."""
-    urdf_path: str = None
-    """Path to the URDF file defining the robot to control."""
+
     frame: Literal[
         "body_translation:root_aligned_body_rotation",
         "root_translation:root_aligned_body_rotation",
@@ -312,15 +349,5 @@ class PDEEPoseControllerConfig(ControllerConfig):
     ] = "root_translation:root_aligned_body_rotation"
     """Choice of frame to use for translational and rotational control of the end-effector. To learn how these work explicitly
     with videos of each one's behavior see https://maniskill.readthedocs.io/en/latest/user_guide/concepts/controllers.html#pd-ee-end-effector-pose"""
-    use_delta: bool = True
-    """Whether to use delta-action control. If true then actions indicate the delta/change in position via translation and orientation via
-    rotation. If false, then actions indicate in the base frame (typically wherever the root link of the robot is) what pose the end effector
-    should try and reach via inverse kinematics. """
-    use_target: bool = False
-    """Whether to use the most recent target end-effector pose for control. If false, actions taken in a chosen frame will be taken
-    relative to the instantaneous/current end-effector pose. """
-    interpolate: bool = False
-    normalize_action: bool = True
-    """Whether to normalize each action dimension into a range of [-1, 1]. Normally for most machine learning workflows this is recommended to be kept true."""
-    drive_mode: Union[Sequence[DriveMode], DriveMode] = "force"
+
     controller_cls = PDEEPoseController

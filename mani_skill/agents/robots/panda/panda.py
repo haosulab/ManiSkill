@@ -102,23 +102,24 @@ class Panda(BaseAgent):
 
         # PD ee position
         arm_pd_ee_delta_pos = PDEEPosControllerConfig(
-            self.arm_joint_names,
-            -0.1,
-            0.1,
-            self.arm_stiffness,
-            self.arm_damping,
-            self.arm_force_limit,
+            joint_names=self.arm_joint_names,
+            pos_lower=-0.1,
+            pos_upper=0.1,
+            stiffness=self.arm_stiffness,
+            damping=self.arm_damping,
+            force_limit=self.arm_force_limit,
             ee_link=self.ee_link_name,
             urdf_path=self.urdf_path,
         )
         arm_pd_ee_delta_pose = PDEEPoseControllerConfig(
-            self.arm_joint_names,
-            -0.1,
-            0.1,
-            0.1,
-            self.arm_stiffness,
-            self.arm_damping,
-            self.arm_force_limit,
+            joint_names=self.arm_joint_names,
+            pos_lower=-0.1,
+            pos_upper=0.1,
+            rot_lower=-0.1,
+            rot_upper=0.1,
+            stiffness=self.arm_stiffness,
+            damping=self.arm_damping,
+            force_limit=self.arm_force_limit,
             ee_link=self.ee_link_name,
             urdf_path=self.urdf_path,
         )
