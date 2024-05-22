@@ -155,7 +155,8 @@ class BaseEnv(gym.Env):
         self._custom_human_render_camera_configs = human_render_camera_configs
         self.robot_uids = robot_uids
         if self.SUPPORTED_ROBOTS is not None:
-            assert robot_uids in self.SUPPORTED_ROBOTS
+            if robot_uids not in self.SUPPORTED_ROBOTS:
+                logger.warn(f"{robot_uids} is not in the task's list of supported robots. Code may not run as intended")
 
         if physx.is_gpu_enabled() and num_envs == 1 and (sim_backend == "auto" or sim_backend == "cpu"):
             logger.warn("GPU simulation has already been enabled on this process, switching to GPU backend")
