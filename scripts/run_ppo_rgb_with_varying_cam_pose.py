@@ -74,31 +74,33 @@ if __name__ == "__main__":
     elif args.visual_vary_cam_pose:
         tasks = [
             "PushCube-v1", 
-            "PickCube-v1", 
-            "StackCube-v1", 
-            "PegInsertionSide-v1", 
-            "AssemblingKits-v1", # realsense
-            "PlugCharger-v1"
+            # "PickCube-v1", 
+            # "StackCube-v1", 
+            # "PegInsertionSide-v1", 
+            # "AssemblingKits-v1", # realsense
+            # "PlugCharger-v1"
         ]
 
+        RENDER_QUALITY = "high"
+        MODALITY = "rgb"
         names = [
-            "rgb-pushcube-high-raytracing", 
-            "rgb-pickcube-high-raytracing", 
-            "rgb-stackcube-high-raytracing", 
-            "rgb-peginsertionside-high-raytracing", 
-            "rgb-assemblingkits-high-raytracing", 
-            "rgb-plugcharger-high-raytracing"
+            f"modality-{MODALITY}-pushcube-{RENDER_QUALITY}", 
+            # f"modality-{MODALITY}-pickcube-{RENDER_QUALITY}",
+            # f"modality-{MODALITY}-stackcube-{RENDER_QUALITY}",
+            # f"modality-{MODALITY}-peginsertionside-{RENDER_QUALITY}",
+            # f"modality-{MODALITY}-assemblingkits-{RENDER_QUALITY}",
+            # f"modality-{MODALITY}-plugcharger-{RENDER_QUALITY}", 
         ]
 
         assert len(tasks) == len(names), "equal number of params"
 
-        print("Render quality is high (baseline)")
+        print(f"Render quality is {RENDER_QUALITY}")
 
         for idx in range(len(tasks)):
             task_name = tasks[idx]
             name = names[idx]
             print(f"Running experiment for {task_name}-{name}")
-            run_default_visual_ppo_with_varying_sim_params(task=task_name, name=name)
+            run_default_visual_ppo_with_varying_sim_params(task=task_name, name=name, render_quality=RENDER_QUALITY)
             wait_time_s = 3
             print(f"Waiting for {wait_time_s} seconds ...")
             time.sleep(wait_time_s)

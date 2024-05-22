@@ -152,6 +152,7 @@ class Agent(nn.Module):
 
     def get_value(self, x):
         return self.critic(x)
+    
     def get_action(self, x, deterministic=False):
         action_mean = self.actor_mean(x)
         if deterministic:
@@ -160,6 +161,7 @@ class Agent(nn.Module):
         action_std = torch.exp(action_logstd)
         probs = Normal(action_mean, action_std)
         return probs.sample()
+    
     def get_action_and_value(self, x, action=None):
         action_mean = self.actor_mean(x)
         action_logstd = self.actor_logstd.expand_as(action_mean)

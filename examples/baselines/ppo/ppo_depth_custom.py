@@ -127,7 +127,8 @@ if __name__ == "__main__":
     )
 
     # rgbd obs mode returns a dict of data, we flatten it so there is just a rgbd key and state key
-    WITH_RGB = True
+    WITH_RGB = True # NOTE: depth + rgb
+    WITH_STATE = True # NOTE: depth + rgb + state
     envs = FlattenDepthObservationWrapper(envs, with_rgb=WITH_RGB)
     eval_envs = FlattenDepthObservationWrapper(eval_envs, with_rgb=WITH_RGB)
 
@@ -173,7 +174,7 @@ if __name__ == "__main__":
     print(f"args.minibatch_size={args.minibatch_size} args.batch_size={args.batch_size} args.update_epochs={args.update_epochs}")
     print(f"####")
     
-    agent = RGBDAgent(envs, sample_obs=next_obs, is_tracked=args.track, with_rgb=WITH_RGB).agent.to(device)
+    agent = RGBDAgent(envs, sample_obs=next_obs, is_tracked=args.track, with_rgb=WITH_RGB, with_state=WITH_STATE).agent.to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     if args.checkpoint:
@@ -251,7 +252,9 @@ if __name__ == "__main__":
 
             # NOTE: Logging
             if args.track:
+                import skimage.exposure
                 tf_depth_log = obs[step]["depth"].detach()[0].cpu().numpy()
+                tf_depth_log = skimage.exposure.rescale_intensity(tf_depth_log, in_range='image', out_range=(0, 255)).astype(np.uint8)
                 if tf_depth_log.shape[-1] > 1:
                     tf_depth_log = tf_depth_log[..., :1]
                 wandb.log({

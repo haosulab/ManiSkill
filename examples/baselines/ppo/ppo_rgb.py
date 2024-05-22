@@ -286,6 +286,8 @@ class Agent(nn.Module):
 
 
 if __name__ == "__main__":
+    raise("Please, use \"ppo_rgb_custom.py\" as changes are introduced there!")
+
     args = tyro.cli(Args)
     args.batch_size = int(args.num_envs * args.num_steps)
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
@@ -335,6 +337,7 @@ if __name__ == "__main__":
     envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, **env_kwargs)
 
     # rgbd obs mode returns a dict of data, we flatten it so there is just a rgbd key and state key
+    WITH_STATE = False # NOTE: rgb + state or rgb
     envs = FlattenRGBDObservationWrapper(envs, rgb_only=True)
     eval_envs = FlattenRGBDObservationWrapper(eval_envs, rgb_only=True)
 
@@ -380,7 +383,7 @@ if __name__ == "__main__":
     print(f"args.minibatch_size={args.minibatch_size} args.batch_size={args.batch_size} args.update_epochs={args.update_epochs}")
     print(f"####")
     
-    agent = Agent(envs, sample_obs=next_obs, is_tracked=args.track).to(device)
+    agent = Agent(envs, sample_obs=next_obs, is_tracked=args.track, with_state=WITH_STATE).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     if args.checkpoint:

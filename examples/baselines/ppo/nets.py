@@ -9,11 +9,11 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     return layer
 
 class NatureCNN(nn.Module):
-    def __init__(self, sample_obs, is_rgb_only=False):
+    def __init__(self, sample_obs, with_state=False):
         super().__init__()
 
         # NOTE: Run rgb or rgb + state
-        self.is_rgb_only = is_rgb_only
+        self.with_state = with_state
 
         extractors = {}
 
@@ -52,7 +52,7 @@ class NatureCNN(nn.Module):
         self.out_features += feature_size
 
         # for state data we simply pass it through a single linear layer
-        if not self.is_rgb_only:
+        if self.with_state:
             extractors["state"] = nn.Linear(state_size, 256)
             self.out_features += 256
 

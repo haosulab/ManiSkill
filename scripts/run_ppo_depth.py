@@ -80,8 +80,10 @@ if __name__ == "__main__":
             # "PlugCharger-v1"
         ]
 
+        RENDER_QUALITY = "high"
+        MODALITY = "depth+rgb+state" # depth+rgb+state, depth+rgb, depth
         names = [
-            "rgb-pushcube-high-raytracing-depth", 
+            f"modality-{MODALITY}-pushcube-{RENDER_QUALITY}", 
             # "rgb-pickcube-high-raytracing-depth", 
             # "rgb-stackcube-high-raytracing-depth", 
             # "rgb-peginsertionside-high-raytracing-depth", 
@@ -91,13 +93,13 @@ if __name__ == "__main__":
 
         assert len(tasks) == len(names), "equal number of params"
 
-        print("Render quality is high (baseline)")
+        print(f"Render quality is {RENDER_QUALITY}")
 
         for idx in range(len(tasks)):
             task_name = tasks[idx]
             name = names[idx]
             print(f"Running experiment for {task_name}-{name}")
-            run_default_visual_ppo_with_varying_sim_params(task=task_name, name=name)
+            run_default_visual_ppo_with_varying_sim_params(task=task_name, name=name, render_quality=RENDER_QUALITY)
             wait_time_s = 3
             print(f"Waiting for {wait_time_s} seconds ...")
             time.sleep(wait_time_s)

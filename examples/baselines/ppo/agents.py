@@ -112,12 +112,14 @@ def compute_GAE(t, next_not_done, gae_lambda, gamma, rewards, real_next_values, 
 
 
 class Agent(nn.Module):
-    def __init__(self, envs, sample_obs, feature_net=None, is_tracked=False):
+    def __init__(self, envs, sample_obs, feature_net=None, is_tracked=False, with_state=False):
         super().__init__()
+
+        print(f"Running with state: {with_state}")
 
         self.is_tracked = is_tracked
 
-        self.feature_net = NatureCNN(sample_obs=sample_obs) if feature_net is None else feature_net
+        self.feature_net = NatureCNN(sample_obs=sample_obs, with_state=with_state) if feature_net is None else feature_net
         
         # latent_size = np.array(envs.unwrapped.single_observation_space.shape).prod()
         latent_size = self.feature_net.out_features
@@ -175,6 +177,7 @@ class PointcloudAgent:
         self.agent = Agent(envs=envs, sample_obs=sample_obs, feature_net=self.feature_encoder, is_tracked=is_tracked)
 
 class RGBDAgent:
-    def __init__(self, envs, sample_obs, is_tracked=False, with_rgb=False):
-        self.feature_encoder = NatureCNN3D(sample_obs=sample_obs, with_rgb=with_rgb, with_state=False)
+    def __init__(self, envs, sample_obs, is_tracked=False, with_rgb=False, with_state=False):
+        self.feature_encoder = NatureCNN3D(sample_obs=sample_obs, with_rgb=with_rgb, with_state=with_state)
+        print(f"Running with state: {with_state}")
         self.agent = Agent(envs=envs, sample_obs=sample_obs, feature_net=self.feature_encoder, is_tracked=is_tracked)

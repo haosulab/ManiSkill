@@ -1,4 +1,5 @@
 FROM nvidia/cudagl:11.3.1-devel-ubuntu20.04
+# FROM nvidia/cuda:12.0.0-devel-ubuntu20.04
 ENV NVIDIA_DRIVER_CAPABILITIES all
 ARG PYTHON_VERSION=3.9
 
@@ -34,6 +35,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     libjpeg-dev \
     libpng-dev  \
     libvulkan1 \
+    mesa-utils \
     rsync \
     tmux \
     unzip \
