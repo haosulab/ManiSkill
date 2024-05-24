@@ -66,16 +66,28 @@ if __name__ == "__main__":
     #TODO
 
     # (4) Randomize material properties
+    RANDOMIZE_MATERIAL = False
     specularity = [0.0, 0.5, 1.0] # 0.0 is mirror-like
     metallicity = [0.0, 1.0] # 0.0 is for non-metals and 1.0 is for metals
     index_of_refraction = [1.0, 1.4500000476837158, 1.9]
     transmission = [0.0, 0.5, 1.0]
+    material_colors = [
+        # R,G,B,A
+        np.array([12, 42, 160, 255]), 
+        np.array([160, 42, 12, 255]), 
+        np.array([12, 160, 42, 255]), 
+        np.array([12, 42, 160, 100]), 
+    ]
 
-    random_idx = int(np.random.uniform(low=0, high=len(specularity) - 1))
+    random_idx = int(np.random.uniform(low=0, high=len(specularity) - 1)) if RANDOMIZE_MATERIAL else -1
     random_specular_val = specularity[random_idx]
     random_metallic_val = metallicity[random_idx]
     random_ior = index_of_refraction[random_idx]
     random_transmission = transmission[random_idx]
+
+    RANDOMIZE_MATERIAL_COLOR = False
+    random_idx = int(np.random.uniform(low=0, high=len(material_colors) - 1)) if RANDOMIZE_MATERIAL_COLOR else -1
+    material_color = material_colors[random_idx]
 
     sim_params = dict(
         sensor_configs=sensor_configs,
@@ -87,6 +99,7 @@ if __name__ == "__main__":
         metallicity=random_metallic_val,
         ior=random_ior,
         transmission=random_transmission,
+        material_color=material_color,
         light_color=[]
     )
 
@@ -179,9 +192,9 @@ if __name__ == "__main__":
         print(f"Rollout complete in {rollout_time} secs!")
 
         # Log data here
-        fig, axes = plt.subplots(1, args.num_steps, figsize=(30, 30))
+        fig, axes = plt.subplots(1, args.num_steps, figsize=(50, 50))
         for idx in range(args.num_steps):
             axes[idx].imshow(frames[idx])
-        plt.savefig(f"visualizations/env_sim_params_imgs_{iteration + 1}.jpg")
+        plt.savefig(f"visualizations/env_sim_params_imgs_{iteration + 1}.png", dpi=300, bbox_inches='tight')
 
     envs.close()

@@ -238,7 +238,7 @@ class PushCubeEnvWithRandomization(push_cube.PushCubeEnv):
             physics_properties["mass"] = self.sim_params["mass"] #TODO: Add support
             physics_properties["density"] = self.sim_params["density"]
 
-        color = np.array([12, 42, 160, 255]) / 255
+        color = self.sim_params["material_color"] / 255 #np.array([12, 42, 160, 255]) / 255
         if self.randomize_material:
             specularity = self.sim_params["specularity"]
             metallicity = self.sim_params["metallicity"]
