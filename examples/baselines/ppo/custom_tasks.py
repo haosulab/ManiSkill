@@ -158,18 +158,28 @@ class CustomBuiltPrimitives:
         name: str,
         body_type: str = "dynamic",
         add_collision: bool = True,
+        material: sapien.render.RenderMaterial = None,
+        physics_properties: dict = {},
+
     ):
         builder = scene.create_actor_builder()
+
         if add_collision:
-            builder.add_box_collision(
-                half_size=[half_size] * 3,
-            )
+            if physics_properties:
+                builder.add_box_collision(
+                    half_size=[half_size] * 3,
+                    density=physics_properties["density"]
+                )
+            else:
+                builder.add_box_collision(
+                    half_size=[half_size] * 3,
+                )
+        
         builder.add_box_visual(
             half_size=[half_size] * 3,
-            material=sapien.render.RenderMaterial(
-                base_color=color,
-            ),
+            material=sapien.render.RenderMaterial(base_color=color,) if material is None else material,
         )
+        
         return _build_by_type(builder, name, body_type)
 
 #TODO
@@ -224,16 +234,18 @@ class PushCubeEnvWithRandomization(push_cube.PushCubeEnv):
             light_color = self.sim_params["light_color"]
             self.table_scene.scene.set_ambient_light(color=light_color)
 
+        physics_properties = {}
         if self.randomize_physics:
-            self.obj.mass = self.sim_params["mass"] #TODO: Add support
+            physics_properties["mass"] = self.sim_params["mass"] #TODO: Add support
+            physics_properties["density"] = self.sim_params["density"]
 
+        color = np.array([12, 42, 160, 255]) / 255
         if self.randomize_material:
             specularity = self.sim_params["specularity"]
             metallicity = self.sim_params["metallicity"]
             ior = self.sim_params["ior"]
             transmission = self.sim_params["transmission"]
 
-            color = np.array([12, 42, 160, 255]) / 255
             custom_material = sapien.render.RenderMaterial(
                 base_color=color, 
                 metallic=metallicity, 
@@ -247,10 +259,11 @@ class PushCubeEnvWithRandomization(push_cube.PushCubeEnv):
         self.obj = CustomBuiltPrimitives.build_cube(
             self.scene,
             half_size=self.cube_half_size,
-            #color=color,
+            color=color,
             name="cube",
             body_type="dynamic",
-            material=custom_material
+            material=custom_material,
+            physics_properties=physics_properties
         )
 
 
