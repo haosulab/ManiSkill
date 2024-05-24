@@ -40,3 +40,7 @@ imgui.ini
 # testing
 .coverage*
 htmlcov/
+
+wandb/
+runs/
+*.png
