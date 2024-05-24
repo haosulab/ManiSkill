@@ -83,7 +83,7 @@ def run_default_visual_ppo(task, name, render_quality):
         f"--num_envs={40}", #256 default
         f"--update_epochs={8}", 
         f"--num_minibatches={16}",
-        f"--total_timesteps={250_000}",
+        f"--total_timesteps={2_000_000}",
         f"--eval_freq={10}",
         f"--num-steps={20}",
         f"--sim_quality={render_quality}" # rasterization
@@ -114,9 +114,10 @@ if __name__ == "__main__":
         ]
 
         RENDER_QUALITY = "high"
-        MODALITY = "rgb+state"
+        MODALITY = "rgb"
+        EXPERIMENT = "iterations/runs-2000000" # modality or sim-quality etc.
         names = [
-            f"modality-{MODALITY}-pushcube-{RENDER_QUALITY}", 
+            f"{EXPERIMENT}-{MODALITY}-pushcube-{RENDER_QUALITY}", 
             # f"modality-{MODALITY}-pickcube-{RENDER_QUALITY}",
             # f"modality-{MODALITY}-stackcube-{RENDER_QUALITY}",
             # f"modality-{MODALITY}-peginsertionside-{RENDER_QUALITY}",

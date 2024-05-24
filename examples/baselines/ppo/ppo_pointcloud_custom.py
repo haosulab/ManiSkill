@@ -73,7 +73,7 @@ if __name__ == "__main__":
     }
 
     args.env_id = tasks_mapping[args.env_id]
-    args.exp_name = args.exp_name + "-pcd"
+    args.exp_name = args.exp_name
     
 
 

@@ -6,6 +6,7 @@ from mani_skill.envs.tasks.tabletop import *
 from mani_skill.envs.utils import randomization
 from mani_skill.utils.structs import Pose
 from mani_skill.sensors.camera import CameraConfig
+from sapien.sensor import StereoDepthSensor, StereoDepthSensorConfig
 from mani_skill.utils import sapien_utils
 
 #NOTE: Smaller camera objects render faster

@@ -112,12 +112,14 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # env setup
+    RESOLUTION = (128, 128)
     env_kwargs = dict(
         obs_mode="rgbd", 
         control_mode="pd_joint_delta_pos", 
         render_mode="rgb_array", 
         sim_backend="gpu",
         enable_shadow=ENABLE_SHADOWS,
+        sensor_configs=dict(width=RESOLUTION[0], height=RESOLUTION[1])
     )
     eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, **env_kwargs)
     envs = gym.make(
@@ -127,7 +129,7 @@ if __name__ == "__main__":
     )
 
     # rgbd obs mode returns a dict of data, we flatten it so there is just a rgbd key and state key
-    WITH_STATE = True # NOTE: rgb + state or rgb
+    WITH_STATE = False # NOTE: rgb + state or rgb
     envs = FlattenRGBDObservationWrapper(envs, rgb_only=True)
     eval_envs = FlattenRGBDObservationWrapper(eval_envs, rgb_only=True)
 
