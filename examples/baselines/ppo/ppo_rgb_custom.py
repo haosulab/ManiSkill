@@ -11,8 +11,6 @@ import torch.optim as optim
 import tyro
 from torch.utils.tensorboard import SummaryWriter
 
-import sapien
-
 # ManiSkill specific imports
 import mani_skill.envs
 from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper, FlattenRGBDObservationWrapper
@@ -22,6 +20,7 @@ from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 # Custom utils
 from agents import Agent
 from data_utils import DictArray
+from sim_utils import set_simulation_quality
 from visual_args import Args
 
 # Memory logging
@@ -52,32 +51,7 @@ if __name__ == "__main__":
 
     # Varying simulation/rendering params (experiment)
     RENDER_TYPE = args.sim_quality
-    if RENDER_TYPE == "high":
-        sapien.render.set_camera_shader_dir("rt")
-        sapien.render.set_viewer_shader_dir("rt")
-        sapien.render.set_ray_tracing_samples_per_pixel(64)
-        sapien.render.set_ray_tracing_path_depth(16)
-        sapien.render.set_ray_tracing_denoiser("optix")
-        ENABLE_SHADOWS = True
-
-    elif RENDER_TYPE == "medium":
-        sapien.render.set_camera_shader_dir("rt")
-        sapien.render.set_viewer_shader_dir("rt")
-        sapien.render.set_ray_tracing_samples_per_pixel(4)
-        sapien.render.set_ray_tracing_path_depth(3)
-        sapien.render.set_ray_tracing_denoiser("optix")
-        ENABLE_SHADOWS = False
-
-    elif RENDER_TYPE == "low":
-        sapien.render.set_camera_shader_dir("rt")
-        sapien.render.set_viewer_shader_dir("rt")
-        sapien.render.set_ray_tracing_samples_per_pixel(2)
-        sapien.render.set_ray_tracing_path_depth(1)
-        sapien.render.set_ray_tracing_denoiser("none")
-        ENABLE_SHADOWS = False
-
-    else: # rasterization
-        ENABLE_SHADOWS = False
+    ENABLE_SHADOWS = set_simulation_quality(RENDER_TYPE)
 
     # Randomize camera pose (experiment)
     if args.random_cam_pose:
@@ -153,6 +127,7 @@ if __name__ == "__main__":
     )
 
     # rgbd obs mode returns a dict of data, we flatten it so there is just a rgbd key and state key
+    WITH_STATE = True # NOTE: rgb + state or rgb
     envs = FlattenRGBDObservationWrapper(envs, rgb_only=True)
     eval_envs = FlattenRGBDObservationWrapper(eval_envs, rgb_only=True)
 
@@ -198,7 +173,7 @@ if __name__ == "__main__":
     print(f"args.minibatch_size={args.minibatch_size} args.batch_size={args.batch_size} args.update_epochs={args.update_epochs}")
     print(f"####")
     
-    agent = Agent(envs, sample_obs=next_obs, is_tracked=args.track).to(device)
+    agent = Agent(envs, sample_obs=next_obs, is_tracked=args.track, with_state=WITH_STATE).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     if args.checkpoint:
@@ -297,12 +272,13 @@ if __name__ == "__main__":
             rewards[step] = reward.view(-1)
 
             # NOTE: Logging
-            gpu_allocated_mem = memory_logger.get_gpu_allocated_memory()
-            cpu_allocated_mem = memory_logger.get_cpu_allocated_memory()
-            wandb.log({
-                "gpu_alloc_mem": gpu_allocated_mem,
-                "cpu_alloc_mem": cpu_allocated_mem,
-            })
+            if args.track:
+                gpu_allocated_mem = memory_logger.get_gpu_allocated_memory()
+                cpu_allocated_mem = memory_logger.get_cpu_allocated_memory()
+                wandb.log({
+                    "gpu_alloc_mem": gpu_allocated_mem,
+                    "cpu_alloc_mem": cpu_allocated_mem,
+                })
 
             if "final_info" in infos:
                 final_info = infos["final_info"]

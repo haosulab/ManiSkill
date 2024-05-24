@@ -55,7 +55,6 @@
             "python": "/opt/conda/bin/python",
             
         },
-
         {
             "name": "Debug run_ppo_state_or_visual_default.py",
             "type": "debugpy",
@@ -63,6 +62,19 @@
             "preLaunchTask": "",
             "program": "${workspaceFolder}/scripts/run_ppo_state_or_visual_default.py",
             "args": ["--visual"],
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {},
+            "python": "/opt/conda/bin/python",
+            
+        },
+        {
+            "name": "Debug run_ppo_depth.py",
+            "type": "debugpy",
+            "request": "launch",
+            "preLaunchTask": "",
+            "program": "${workspaceFolder}/scripts/run_ppo_depth.py",
+            "args": ["--visual_depth"],
             "console": "integratedTerminal",
             "justMyCode": false,
             "env": {},
