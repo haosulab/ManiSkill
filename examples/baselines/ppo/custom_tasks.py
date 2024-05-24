@@ -182,7 +182,6 @@ class CustomBuiltPrimitives:
         
         return _build_by_type(builder, name, body_type)
 
-#TODO
 @register_env("PushCube-Randomization", max_episode_steps=50)
 class PushCubeEnvWithRandomization(push_cube.PushCubeEnv):
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
@@ -197,8 +196,6 @@ class PushCubeEnvWithRandomization(push_cube.PushCubeEnv):
         self.randomize_material = self.sim_params["randomize_material"]
 
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
-
-        raise("WIP")
 
     @property
     def _default_sensor_configs(self):
@@ -216,8 +213,8 @@ class PushCubeEnvWithRandomization(push_cube.PushCubeEnv):
         return [CameraConfig(
             "base_camera", 
             pose=pose, 
-            width=self.resolution[1], 
-            height=self.resolution[0], 
+            width=self.resolution["width"], 
+            height=self.resolution["height"], 
             fov=np.pi / 2, 
             near=0.01, 
             far=100)]
@@ -232,6 +229,8 @@ class PushCubeEnvWithRandomization(push_cube.PushCubeEnv):
         # NOTE: Randomization
         if self.randomize_lights:
             light_color = self.sim_params["light_color"]
+            if len(light_color) == 0:
+                light_color = [255, 255, 255, 255]
             self.table_scene.scene.set_ambient_light(color=light_color)
 
         physics_properties = {}
