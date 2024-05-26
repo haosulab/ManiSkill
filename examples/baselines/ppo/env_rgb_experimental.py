@@ -159,6 +159,35 @@ if __name__ == "__main__":
     print(f"args.num_iterations={args.num_iterations} args.num_envs={args.num_envs} args.num_eval_envs={args.num_eval_envs}")
     print(f"####")
 
+    BENCHMARK = True
+    SAVE_IMGS = False
+
+    # Wandb
+    if BENCHMARK:
+        import wandb
+        wandb.login()
+        wandb.init(
+            project="Raycast vs Rasterization benchmark",
+            entity="embarc_lab",
+            sync_tensorboard=False,
+        )
+
+        # Memory logging
+        import sys
+        sys.path.append("./")
+        sys.path.append("../")
+        sys.path.append("../scripts/")
+        sys.path.append("scripts/")
+        from mem_logger import MemLogger
+        LOG_PATH = "/home/filip-grigorov/code/scripts/data/"
+        memory_logger = MemLogger(
+            device="cuda" if torch.cuda.is_available() else "cpu", 
+            dump_after=100, 
+            gpu_mem_logs_path=LOG_PATH, 
+            cpu_mem_logs_path=LOG_PATH, 
+            loss_logs_path=LOG_PATH, 
+            lbl="train_visual"
+        )
 
     for iteration in range(1, args.num_iterations + 1):
         frames = []
@@ -171,20 +200,43 @@ if __name__ == "__main__":
                 probs = torch.distributions.normal.Normal(loc=0.0, scale=1.0)
                 action = probs.sample(sample_shape=[1, 8])
                 print(f"Sampled action: {action}")
+
+            step_time_pnt = time.time()
+
             next_obs, reward, terminations, truncations, infos = envs.step(action)
 
-            img_log = next_obs["rgb"].detach()[0].cpu().numpy()
-            if img_log.shape[-1] > 3:
-                img_log = img_log[..., :3]
-            frames.append(img_log)
+            if BENCHMARK:
+                wandb.log({
+                    "run/elapsed_time_pert_step() (ms)": (time.time() - step_time_pnt) * 1e-3,
+                })
+
+            # Logging
+            if BENCHMARK:
+                gpu_allocated_mem = memory_logger.get_gpu_allocated_memory()
+                cpu_allocated_mem = memory_logger.get_cpu_allocated_memory()
+                wandb.log({
+                    "run/gpu_alloc_mem": gpu_allocated_mem,
+                    "run/cpu_alloc_mem": cpu_allocated_mem,
+                })
+
+            if SAVE_IMGS:
+                img_log = next_obs["rgb"].detach()[0].cpu().numpy()
+                if img_log.shape[-1] > 3:
+                    img_log = img_log[..., :3]
+                frames.append(img_log)
 
         rollout_time = time.time() - rollout_time
+        if BENCHMARK:
+            wandb.log({
+                "run/rollout_time (s)": (time.time() - step_time_pnt),
+            })
         print(f"Rollout complete in {rollout_time} secs!")
 
         # Log data here
-        fig, axes = plt.subplots(1, args.num_steps, figsize=(50, 50))
-        for idx in range(args.num_steps):
-            axes[idx].imshow(frames[idx])
-        plt.savefig(f"visualizations/env_sim_params_imgs_{iteration + 1}.png", dpi=300, bbox_inches='tight')
+        if SAVE_IMGS:
+            fig, axes = plt.subplots(1, args.num_steps, figsize=(50, 50))
+            for idx in range(args.num_steps):
+                axes[idx].imshow(frames[idx])
+            plt.savefig(f"visualizations/env_sim_params_imgs_{iteration + 1}.png", dpi=300, bbox_inches='tight')
 
     envs.close()

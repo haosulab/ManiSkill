@@ -35,6 +35,9 @@ class Args:
     # Camera/s pose
     random_cam_pose: bool = False
     """ randomize camera/s pose (to existing cameras in task) """
+    # Vary the simulation parameters such as material, light etc.
+    vary_sim_parameters: bool = False
+    """ Variation of the simulation parameters (material color, specularity, light color etc.) """
 
     # Algorithm specific arguments
     env_id: str = "PickCube-v1"

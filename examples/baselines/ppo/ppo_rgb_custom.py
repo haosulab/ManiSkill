@@ -20,7 +20,7 @@ from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 # Custom utils
 from agents import Agent
 from data_utils import DictArray
-from sim_utils import set_simulation_quality
+from sim_utils import *
 from visual_args import Args
 
 # Memory logging
@@ -53,7 +53,13 @@ if __name__ == "__main__":
     RENDER_TYPE = args.sim_quality
     ENABLE_SHADOWS = set_simulation_quality(RENDER_TYPE)
 
-    # Randomize camera pose (experiment)
+    # Camera resolution
+    RESOLUTION = SimulationQuantities.RESOLUTIONS[0]
+    sensor_configs = dict(width=RESOLUTION[0], height=RESOLUTION[1])
+    print(f"Camera resolution: {RESOLUTION}")
+
+    # Possible randomizations
+    sim_params = {}
     if args.random_cam_pose:
         from custom_tasks import *
         print("Randomize existing camera poses")
@@ -69,6 +75,58 @@ if __name__ == "__main__":
 
         args.env_id = tasks_mapping[args.env_id]
         args.exp_name = args.exp_name + "-random-cam-pose"
+
+    elif args.vary_sim_parameters:
+        from custom_tasks import *
+        print("Randomize existing camera poses")
+        tasks_mapping = {
+            "PullCube-v1": "PullCube-Randomization",
+            "PushCube-v1": "PushCube-Randomization",
+            "PickCube-v1": "PickCube-Randomization",
+            "StackCube-v1": "StackCube-Randomization",
+            "PegInsertionSide-v1": "PegInsertionSide-Randomization",
+            "AssemblingKits-v1": "AssemblingKits-Randomization",
+            "PlugCharger-v1": "PlugCharger-Randomization"
+        }
+
+        args.env_id = tasks_mapping[args.env_id]
+        args.exp_name = args.exp_name + "-randomization"
+
+        # (1) Light properties
+        light_color = SimulationQuantities.LIGHT_COLORS[0]
+        light_directions = [SimulationQuantities.LIGHT_DIRECTIONS[0]]
+
+        # (2) Material properties
+        specularity = SimulationQuantities.SPECULARITY[-1]
+        metallicity = SimulationQuantities.METALLICITY[0]
+        index_of_refraction = SimulationQuantities.INDEX_OF_REFRACTION[1]
+        transmission = SimulationQuantities.TRANSMISSION[0]
+        material_color = SimulationQuantities.MATERIAL_COLORS[0]
+
+        # (3) Material color
+        material_color = SimulationQuantities.MATERIAL_COLORS[0]
+
+        # (4) Material physics properties
+        mass = None
+        density = None
+
+        CHANGE_TARGET = True
+
+        sim_params = dict(
+            sensor_configs=sensor_configs,
+            mass=mass,
+            density=density,
+            specularity=specularity,
+            metallicity=metallicity,
+            ior=index_of_refraction,
+            transmission=transmission,
+            material_color=material_color,
+            light_color=light_color,
+            light_directions = light_directions,
+            change_target=CHANGE_TARGET
+        )
+
+
     
 
 
@@ -111,17 +169,37 @@ if __name__ == "__main__":
 
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
-    # env setup
-    RESOLUTION = (128, 128)
+    # Environment setup !!!
     env_kwargs = dict(
         obs_mode="rgbd", 
         control_mode="pd_joint_delta_pos", 
         render_mode="rgb_array", 
         sim_backend="gpu",
         enable_shadow=ENABLE_SHADOWS,
-        sensor_configs=dict(width=RESOLUTION[0], height=RESOLUTION[1])
+        sensor_configs=sensor_configs
     )
-    eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, **env_kwargs)
+
+    # NOTE: Possible randomization
+    if args.vary_sim_parameters:
+        print("Setting up custom simulation parameters")
+        env_kwargs = dict(
+            obs_mode="rgbd", 
+            control_mode="pd_joint_delta_pos", 
+            render_mode="rgb_array", 
+            sim_backend="gpu",
+            enable_shadow=ENABLE_SHADOWS,
+            sensor_configs=sensor_configs,
+            sim_params=sim_params
+        )
+
+    # Eval
+    eval_envs = gym.make(
+        args.env_id, 
+        num_envs=args.num_eval_envs, 
+        **env_kwargs
+    )
+    
+    # Train
     envs = gym.make(
         args.env_id, 
         num_envs=args.num_envs if not args.evaluate else 1, 
