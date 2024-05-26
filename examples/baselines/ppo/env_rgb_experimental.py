@@ -38,8 +38,8 @@ if __name__ == "__main__":
     # EXPERIMENTS (with sim params)
     # TODO: Varying simulation/rendering params (experiment)
     # (1) Simulation quality
-    RENDER_TYPE = args.sim_quality
-    ENABLE_SHADOWS = set_simulation_quality(RENDER_TYPE)
+    args.sim_quality = "rasterization"
+    ENABLE_SHADOWS = set_simulation_quality(args.sim_quality)
 
     print("Randomize existing camera poses")
     tasks_mapping = {
@@ -77,7 +77,7 @@ if __name__ == "__main__":
     mass = None
     density = None
 
-    CHANGE_TARGET = False
+    CHANGE_TARGET = True
 
     sim_params = dict(
         sensor_configs=sensor_configs,
@@ -128,7 +128,7 @@ if __name__ == "__main__":
     )
 
     # rgbd obs mode returns a dict of data, we flatten it so there is just a rgbd key and state key
-    WITH_STATE = True # NOTE: rgb + state or rgb
+    WITH_STATE = False # NOTE: rgb + state or rgb
     envs = FlattenRGBDObservationWrapper(envs, rgb_only=True)
 
     if isinstance(envs.action_space, gym.spaces.Dict):

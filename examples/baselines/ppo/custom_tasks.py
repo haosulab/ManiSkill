@@ -9,6 +9,7 @@ from mani_skill.sensors.camera import CameraConfig
 from sapien.sensor import StereoDepthSensor, StereoDepthSensorConfig
 from mani_skill.utils import sapien_utils
 
+from task_utils import *
 from sim_utils import SimulationQuantities
 
 #NOTE: Smaller camera objects render faster
@@ -132,117 +133,6 @@ class PlugChargerEnvWithRandomCamPose(plug_charger.PlugChargerEnv):
         return [CameraConfig("base_camera", pose=pose, width=128, height=128, fov=np.pi / 2, near=0.01, far=100)]
 
 
-import sapien
-from mani_skill.utils.building import actors
-from mani_skill.utils.scene_builder.table import TableSceneBuilder
-from mani_skill.envs.scene import ManiSkillScene
-
-from mani_skill.utils.building.actor_builder import ActorBuilder
-
-
-def _build_by_type(builder: ActorBuilder, name, body_type):
-    if body_type == "dynamic":
-        actor = builder.build(name=name)
-    elif body_type == "static":
-        actor = builder.build_static(name=name)
-    elif body_type == "kinematic":
-        actor = builder.build_kinematic(name=name)
-    else:
-        raise ValueError(f"Unknown body type {body_type}")
-    return actor
-
-class CustomBuiltPrimitives:
-    @staticmethod
-    def build_cube(
-        scene: ManiSkillScene,
-        half_size: float,
-        color,
-        name: str,
-        body_type: str = "dynamic",
-        add_collision: bool = True,
-        material: sapien.render.RenderMaterial = None,
-        physics_properties: dict = {},
-
-    ):
-        builder = scene.create_actor_builder()
-
-        if add_collision:
-            if physics_properties:
-                builder.add_box_collision(
-                    half_size=[half_size] * 3,
-                    density=physics_properties["density"]
-                )
-            else:
-                builder.add_box_collision(
-                    half_size=[half_size] * 3,
-                )
-        
-        builder.add_box_visual(
-            half_size=[half_size] * 3,
-            material=sapien.render.RenderMaterial(base_color=color,) if material is None else material
-        )
-        
-        return _build_by_type(builder, name, body_type)
-    
-    @staticmethod
-    def build_red_white_target(
-        scene: ManiSkillScene,
-        radius: float,
-        thickness: float,
-        name: str,
-        body_type: str = "dynamic",
-        add_collision: bool = True,
-    ):
-        TARGET_RED = np.array([194, 19, 22, 255]) / 255
-        builder = scene.create_actor_builder()
-        builder.add_cylinder_visual(
-            radius=radius,
-            half_length=thickness / 2,
-            material=sapien.render.RenderMaterial(base_color=TARGET_RED),
-        )
-        builder.add_cylinder_visual(
-            radius=radius * 4 / 5,
-            half_length=thickness / 2 + 1e-5,
-            material=sapien.render.RenderMaterial(base_color=[1, 1, 1, 1]),
-        )
-        builder.add_cylinder_visual(
-            radius=radius * 3 / 5,
-            half_length=thickness / 2 + 2e-5,
-            material=sapien.render.RenderMaterial(base_color=TARGET_RED),
-        )
-        builder.add_cylinder_visual(
-            radius=radius * 2 / 5,
-            half_length=thickness / 2 + 3e-5,
-            material=sapien.render.RenderMaterial(base_color=[1, 1, 1, 1]),
-        )
-        builder.add_cylinder_visual(
-            radius=radius * 1 / 5,
-            half_length=thickness / 2 + 4e-5,
-            material=sapien.render.RenderMaterial(base_color=TARGET_RED),
-        )
-        if add_collision:
-            builder.add_cylinder_collision(
-                radius=radius,
-                half_length=thickness / 2,
-            )
-            builder.add_cylinder_collision(
-                radius=radius * 4 / 5,
-                half_length=thickness / 2 + 1e-5,
-            )
-            builder.add_cylinder_collision(
-                radius=radius * 3 / 5,
-                half_length=thickness / 2 + 2e-5,
-            )
-            builder.add_cylinder_collision(
-                radius=radius * 2 / 5,
-                half_length=thickness / 2 + 3e-5,
-            )
-            builder.add_cylinder_collision(
-                radius=radius * 1 / 5,
-                half_length=thickness / 2 + 4e-5,
-            )
-        return _build_by_type(builder, name, body_type)
-
 @register_env("PushCube-Randomization", max_episode_steps=50)
 class PushCubeEnvWithRandomization(push_cube.PushCubeEnv):
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
@@ -322,7 +212,7 @@ class PushCubeEnvWithRandomization(push_cube.PushCubeEnv):
 
         is_new_material_needed = False
 
-        speculairty = SimulationQuantities.SPECULARITY[1]
+        specularity = SimulationQuantities.SPECULARITY[1]
         if self.sim_params["specularity"] is not None:
             print("Cube material specularity is changed")
             specularity = self.sim_params["specularity"]
@@ -374,8 +264,14 @@ class PushCubeEnvWithRandomization(push_cube.PushCubeEnv):
         # we finally specify the body_type to be "kinematic" so that the object stays in place
         if self.sim_params["change_target"]:
             print("Target will be changed")
-            # TODO: Simplify the texture of the table
-            pass
+            self.goal_region = CustomBuiltPrimitives.build_red_white_target_V1(
+                self.scene,
+                radius=self.goal_radius,
+                thickness=1e-5,
+                name="goal_region",
+                add_collision=False,
+                body_type="kinematic",
+            )
         else:
             self.goal_region = CustomBuiltPrimitives.build_red_white_target(
                 self.scene,

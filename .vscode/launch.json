@@ -81,5 +81,17 @@
             "python": "/opt/conda/bin/python",
             
         },
+        {
+            "name": "Debug env_rgb_experimental.py",
+            "type": "debugpy",
+            "request": "launch",
+            "preLaunchTask": "",
+            "program": "${workspaceFolder}/examples/baselines/ppo/env_rgb_experimental.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {},
+            "python": "/opt/conda/bin/python",
+            
+        },
     ]
 }
