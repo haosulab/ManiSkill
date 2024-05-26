@@ -16,7 +16,7 @@ from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 # Custom utils
 from agents import Agent
 from custom_tasks import *
-from sim_utils import set_simulation_quality
+from sim_utils import *
 from visual_args import Args
 
 # NOTE: This is experimental code that if successful is merged into ppo_rgb_custom.py
@@ -53,74 +53,44 @@ if __name__ == "__main__":
     
 
     # NOTE: Happens at start
-    # (2) Randomize camera resolution
-    RANDOMIZE_RESOLUTION = False
-    resolutions = [(128, 128), (256, 256), (512, 512), (1024, 1024)]
-    random_resolution_pick = int(np.random.uniform(low=0, high=len(resolutions) - 1)) if RANDOMIZE_RESOLUTION else -2
-    random_resolution_pair = resolutions[random_resolution_pick]
-    print(f"Chosen resolution: {random_resolution_pair}")
+    # (2) Camera resolution
+    resolution = SimulationQuantities.RESOLUTIONS[2]
+    print(f"Chosen resolution: {resolution}")
     # numpy convention -> (h, w)
-    sensor_configs = dict(width=random_resolution_pair[1], height=random_resolution_pair[0])
+    sensor_configs = dict(width=resolution[1], height=resolution[0])
 
-    # (3) Randomize light properties
-    RANDOMIZE_LIGHT = True
-    light_colors = [
-        np.array([ 0.5, 0.5, 0.5 ]),
-        np.array([ 1.0, 0.5, 0.5 ]),
-        np.array([ 0.5, 1.0, 0.5 ]),
-        np.array([ 0.5, 0.5, 1.0 ]),
-    ]
+    # (3) Light properties
+    light_color = SimulationQuantities.LIGHT_COLORS[0]
+    light_directions = [SimulationQuantities.LIGHT_DIRECTIONS[0]]
 
-    random_idx = int(np.random.uniform(low=0, high=len(light_colors) - 1)) if RANDOMIZE_LIGHT else -1
-    light_color = light_colors[random_idx]
+    # (4) Material properties
+    specularity = SimulationQuantities.SPECULARITY[-1]
+    metallicity = SimulationQuantities.METALLICITY[0]
+    index_of_refraction = SimulationQuantities.INDEX_OF_REFRACTION[1]
+    transmission = SimulationQuantities.TRANSMISSION[0]
+    material_color = SimulationQuantities.MATERIAL_COLORS[0]
 
-    RANDOMIZE_LIGHT_DIR = True
-    light_directions = [
-        np.array([ 0.5, 0.5, 0.5 ]),
-        np.array([]),
-    ]
+    # (5) Material color
+    material_color = SimulationQuantities.MATERIAL_COLORS[0]
 
-    random_idx = int(np.random.uniform(low=0, high=len(light_directions) - 1)) if RANDOMIZE_LIGHT_DIR else -1
-    light_direction = light_directions[random_idx]
+    # (6) Material physics properties
+    mass = None
+    density = None
 
-    # (4) Randomize material properties
-    RANDOMIZE_MATERIAL = False
-    specularity = [0.0, 0.5, 1.0] # 0.0 is mirror-like
-    metallicity = [0.0, 0.5, 1.0] # 0.0 is for non-metals and 1.0 is for metals
-    index_of_refraction = [1.0, 1.4500000476837158, 1.9]
-    transmission = [0.0, 0.5, 1.0]
-    material_colors = [
-        # R,G,B,A
-        np.array([12, 42, 160, 255]), 
-        np.array([160, 42, 12, 255]), 
-        np.array([12, 160, 42, 255]), 
-        np.array([12, 42, 160, 100]), 
-        np.array([12, 42, 160, 30]), 
-    ]
-
-    random_idx = int(np.random.uniform(low=0, high=len(specularity) - 1)) if RANDOMIZE_MATERIAL else -1
-    random_specular_val = specularity[random_idx]
-    random_metallic_val = metallicity[random_idx]
-    random_ior = index_of_refraction[random_idx]
-    random_transmission = transmission[random_idx]
-
-    RANDOMIZE_MATERIAL_COLOR = False
-    random_idx = int(np.random.uniform(low=0, high=len(material_colors) - 1)) if RANDOMIZE_MATERIAL_COLOR else -1
-    material_color = material_colors[random_idx]
+    CHANGE_TARGET = False
 
     sim_params = dict(
         sensor_configs=sensor_configs,
-        randomize_lights=False,
-        randomize_physics=False,
-        randomize_material=True,
-        mass=None,
-        specularity=random_specular_val,
-        metallicity=random_metallic_val,
-        ior=random_ior,
-        transmission=random_transmission,
+        mass=mass,
+        density=density,
+        specularity=specularity,
+        metallicity=metallicity,
+        ior=index_of_refraction,
+        transmission=transmission,
         material_color=material_color,
         light_color=light_color,
-        light_direction = light_direction,
+        light_directions = light_directions,
+        change_target=CHANGE_TARGET
     )
 
     env_kwargs = dict(

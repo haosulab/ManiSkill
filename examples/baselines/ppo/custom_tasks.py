@@ -9,6 +9,8 @@ from mani_skill.sensors.camera import CameraConfig
 from sapien.sensor import StereoDepthSensor, StereoDepthSensorConfig
 from mani_skill.utils import sapien_utils
 
+from sim_utils import SimulationQuantities
+
 #NOTE: Smaller camera objects render faster
 
 @register_env("PushCube-RandomCameraPose", max_episode_steps=50)
@@ -177,9 +179,68 @@ class CustomBuiltPrimitives:
         
         builder.add_box_visual(
             half_size=[half_size] * 3,
-            material=sapien.render.RenderMaterial(base_color=color,) if material is None else material,
+            material=sapien.render.RenderMaterial(base_color=color,) if material is None else material
         )
         
+        return _build_by_type(builder, name, body_type)
+    
+    @staticmethod
+    def build_red_white_target(
+        scene: ManiSkillScene,
+        radius: float,
+        thickness: float,
+        name: str,
+        body_type: str = "dynamic",
+        add_collision: bool = True,
+    ):
+        TARGET_RED = np.array([194, 19, 22, 255]) / 255
+        builder = scene.create_actor_builder()
+        builder.add_cylinder_visual(
+            radius=radius,
+            half_length=thickness / 2,
+            material=sapien.render.RenderMaterial(base_color=TARGET_RED),
+        )
+        builder.add_cylinder_visual(
+            radius=radius * 4 / 5,
+            half_length=thickness / 2 + 1e-5,
+            material=sapien.render.RenderMaterial(base_color=[1, 1, 1, 1]),
+        )
+        builder.add_cylinder_visual(
+            radius=radius * 3 / 5,
+            half_length=thickness / 2 + 2e-5,
+            material=sapien.render.RenderMaterial(base_color=TARGET_RED),
+        )
+        builder.add_cylinder_visual(
+            radius=radius * 2 / 5,
+            half_length=thickness / 2 + 3e-5,
+            material=sapien.render.RenderMaterial(base_color=[1, 1, 1, 1]),
+        )
+        builder.add_cylinder_visual(
+            radius=radius * 1 / 5,
+            half_length=thickness / 2 + 4e-5,
+            material=sapien.render.RenderMaterial(base_color=TARGET_RED),
+        )
+        if add_collision:
+            builder.add_cylinder_collision(
+                radius=radius,
+                half_length=thickness / 2,
+            )
+            builder.add_cylinder_collision(
+                radius=radius * 4 / 5,
+                half_length=thickness / 2 + 1e-5,
+            )
+            builder.add_cylinder_collision(
+                radius=radius * 3 / 5,
+                half_length=thickness / 2 + 2e-5,
+            )
+            builder.add_cylinder_collision(
+                radius=radius * 2 / 5,
+                half_length=thickness / 2 + 3e-5,
+            )
+            builder.add_cylinder_collision(
+                radius=radius * 1 / 5,
+                half_length=thickness / 2 + 4e-5,
+            )
         return _build_by_type(builder, name, body_type)
 
 @register_env("PushCube-Randomization", max_episode_steps=50)
@@ -191,28 +252,27 @@ class PushCubeEnvWithRandomization(push_cube.PushCubeEnv):
         self.sim_params = kwargs["sim_params"]
         del kwargs["sim_params"]
         self.resolution = self.sim_params["sensor_configs"]
-        self.randomize_lights = self.sim_params["randomize_lights"]
-        self.randomize_physics = self.sim_params["randomize_physics"]
-        self.randomize_material = self.sim_params["randomize_material"]
 
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
+
+        self.cam_pose = None
 
     @property
     def _default_sensor_configs(self):
         pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
-        pose = Pose.create(pose)
+        self.cam_pose = Pose.create(pose)
 
         # randomize
-        pose = pose * Pose.create_from_pq(
-            p=torch.rand((self.num_envs, 3)) * 0.05 - 0.025,
-            q=randomization.random_quaternions(
-                n=self.num_envs, device=self.device, bounds=(-np.pi / 24, np.pi / 24)
-            ),
-        )
+        # pose = pose * Pose.create_from_pq(
+        #     p=torch.rand((self.num_envs, 3)) * 0.05 - 0.025,
+        #     q=randomization.random_quaternions(
+        #         n=self.num_envs, device=self.device, bounds=(-np.pi / 24, np.pi / 24)
+        #     ),
+        # )
 
         return [CameraConfig(
             "base_camera", 
-            pose=pose, 
+            pose=self.cam_pose, 
             width=self.resolution["width"], 
             height=self.resolution["height"], 
             fov=np.pi / 2, 
@@ -227,26 +287,67 @@ class PushCubeEnvWithRandomization(push_cube.PushCubeEnv):
         self.table_scene.build()
 
         # NOTE: Randomization of light, material and physics properties
-        if self.randomize_lights:
+        if self.sim_params["light_color"] is not None:
+            print("Light color is changed")
             light_color = self.sim_params["light_color"]
             if len(light_color) == 0:
                 light_color = [0.5, 0.5, 0.5] # default
             self.table_scene.scene.set_ambient_light(color=light_color)
-            if len(self.sim_params["light_direction"]) > 0:
-                self.table_scene.scene.add_point_light(position=self.sim_params["light_direction"], color=light_color)
+
+        if self.sim_params["light_directions"] is not None:
+            print("Light direction/s is/are changed")
+            num_lights = len(self.sim_params["light_directions"])
+            if num_lights > 0:
+                for idx in range(num_lights):
+                    light_dir = self.sim_params["light_directions"][idx]
+                    if len(light_dir) == 3:
+                        print("Creating a light source")
+                        self.table_scene.scene.add_point_light(position=self.cam_pose.get_p(), color=light_color)
+
 
         physics_properties = {}
-        if self.randomize_physics:
+        if self.sim_params["mass"] is not None:
+            print("Cube mass is changed")
             physics_properties["mass"] = self.sim_params["mass"] #TODO: Add support
+            
+        if self.sim_params["density"] is not None:
+            print("Cube density is changed")
             physics_properties["density"] = self.sim_params["density"]
 
-        color = self.sim_params["material_color"] / 255 #np.array([12, 42, 160, 255]) / 255
-        if self.randomize_material:
-            specularity = self.sim_params["specularity"]
-            metallicity = self.sim_params["metallicity"]
-            ior = self.sim_params["ior"]
-            transmission = self.sim_params["transmission"]
+        if self.sim_params["material_color"] is not None:
+            print("Cube material color is changed")
+            color = self.sim_params["material_color"] / 255
+        else:
+            color = np.array([12, 42, 160, 255]) / 255
 
+        is_new_material_needed = False
+
+        speculairty = SimulationQuantities.SPECULARITY[1]
+        if self.sim_params["specularity"] is not None:
+            print("Cube material specularity is changed")
+            specularity = self.sim_params["specularity"]
+            is_new_material_needed = True
+            
+        metallicity = SimulationQuantities.METALLICITY[0]
+        if self.sim_params["metallicity"] is not None:
+            print("Cube material metallicity is changed")
+            metallicity = self.sim_params["metallicity"]
+            is_new_material_needed = True
+            
+        ior = SimulationQuantities.INDEX_OF_REFRACTION[1]
+        if self.sim_params["ior"] is not None:
+            print("Cube material index of refraction is changed")
+            ior = self.sim_params["ior"]
+            is_new_material_needed = True
+        
+        transmission = SimulationQuantities.TRANSMISSION[0]
+        if self.sim_params["transmission"] is not None:
+            print("Cube material transmission is changed")
+            transmission = self.sim_params["transmission"]
+            is_new_material_needed = True
+
+        custom_material = None
+        if is_new_material_needed:
             custom_material = sapien.render.RenderMaterial(
                 base_color=color, 
                 metallic=metallicity, 
@@ -271,14 +372,19 @@ class PushCubeEnvWithRandomization(push_cube.PushCubeEnv):
         # we also add in red/white target to visualize where we want the cube to be pushed to
         # we specify add_collisions=False as we only use this as a visual for videos and do not want it to affect the actual physics
         # we finally specify the body_type to be "kinematic" so that the object stays in place
-        self.goal_region = actors.build_red_white_target(
-            self.scene,
-            radius=self.goal_radius,
-            thickness=1e-5,
-            name="goal_region",
-            add_collision=False,
-            body_type="kinematic",
-        )
+        if self.sim_params["change_target"]:
+            print("Target will be changed")
+            # TODO: Simplify the texture of the table
+            pass
+        else:
+            self.goal_region = CustomBuiltPrimitives.build_red_white_target(
+                self.scene,
+                radius=self.goal_radius,
+                thickness=1e-5,
+                name="goal_region",
+                add_collision=False,
+                body_type="kinematic",
+            )
 
         # optionally you can automatically hide some Actors from view by appending to the self._hidden_objects list. When visual observations
         # are generated or env.render_sensors() is called or env.render() is called with render_mode="sensors", the actor will not show up.
