@@ -41,7 +41,7 @@ def run_default_visual_ppo(task, name, render_quality):
 
     sp.run([
         "python", 
-        "examples/baselines/ppo/ppo_rgb.py", 
+        "examples/baselines/ppo/ppo_rgb_custom.py", 
         f"--env_id={task}", 
         f"--exp-name={name}",
         f"--num_envs={64}",
