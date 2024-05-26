@@ -63,12 +63,30 @@ if __name__ == "__main__":
     sensor_configs = dict(width=random_resolution_pair[1], height=random_resolution_pair[0])
 
     # (3) Randomize light properties
-    #TODO
+    RANDOMIZE_LIGHT = True
+    light_colors = [
+        np.array([ 0.5, 0.5, 0.5 ]),
+        np.array([ 1.0, 0.5, 0.5 ]),
+        np.array([ 0.5, 1.0, 0.5 ]),
+        np.array([ 0.5, 0.5, 1.0 ]),
+    ]
+
+    random_idx = int(np.random.uniform(low=0, high=len(light_colors) - 1)) if RANDOMIZE_LIGHT else -1
+    light_color = light_colors[random_idx]
+
+    RANDOMIZE_LIGHT_DIR = True
+    light_directions = [
+        np.array([ 0.5, 0.5, 0.5 ]),
+        np.array([]),
+    ]
+
+    random_idx = int(np.random.uniform(low=0, high=len(light_directions) - 1)) if RANDOMIZE_LIGHT_DIR else -1
+    light_direction = light_directions[random_idx]
 
     # (4) Randomize material properties
     RANDOMIZE_MATERIAL = False
     specularity = [0.0, 0.5, 1.0] # 0.0 is mirror-like
-    metallicity = [0.0, 1.0] # 0.0 is for non-metals and 1.0 is for metals
+    metallicity = [0.0, 0.5, 1.0] # 0.0 is for non-metals and 1.0 is for metals
     index_of_refraction = [1.0, 1.4500000476837158, 1.9]
     transmission = [0.0, 0.5, 1.0]
     material_colors = [
@@ -77,6 +95,7 @@ if __name__ == "__main__":
         np.array([160, 42, 12, 255]), 
         np.array([12, 160, 42, 255]), 
         np.array([12, 42, 160, 100]), 
+        np.array([12, 42, 160, 30]), 
     ]
 
     random_idx = int(np.random.uniform(low=0, high=len(specularity) - 1)) if RANDOMIZE_MATERIAL else -1
@@ -100,7 +119,8 @@ if __name__ == "__main__":
         ior=random_ior,
         transmission=random_transmission,
         material_color=material_color,
-        light_color=[]
+        light_color=light_color,
+        light_direction = light_direction,
     )
 
     env_kwargs = dict(

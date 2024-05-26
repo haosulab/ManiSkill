@@ -226,12 +226,14 @@ class PushCubeEnvWithRandomization(push_cube.PushCubeEnv):
         )
         self.table_scene.build()
 
-        # NOTE: Randomization
+        # NOTE: Randomization of light, material and physics properties
         if self.randomize_lights:
             light_color = self.sim_params["light_color"]
             if len(light_color) == 0:
-                light_color = [255, 255, 255, 255]
+                light_color = [0.5, 0.5, 0.5] # default
             self.table_scene.scene.set_ambient_light(color=light_color)
+            if len(self.sim_params["light_direction"]) > 0:
+                self.table_scene.scene.add_point_light(position=self.sim_params["light_direction"], color=light_color)
 
         physics_properties = {}
         if self.randomize_physics:
