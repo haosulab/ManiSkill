@@ -27,7 +27,7 @@ def run_visual_ppo_with_varied_sim_params(task, name, render_quality):
         f"--eval_freq={1}",
         f"--num-steps={20}",
         f"--sim_quality={render_quality}",
-        #f"--vary_sim_parameters",
+        f"--vary_sim_parameters",
         f"--evaluate",
         f"--checkpoint={CHECKPOINT}",
         f"--track"
