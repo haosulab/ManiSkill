@@ -25,73 +25,22 @@ from visual_args import Args
 if __name__ == "__main__":
     args = tyro.cli(Args)
 
-    args.env_id = "PushCube-v1"
-    args.exp_name = "experimental-pushcube"
+    args.env_id = "AssemblingKits-v1" # 
+    args.exp_name = "benchmark-rendering-task"
     
     args.num_envs = 1
     args.num_steps = 5
     args.num_iterations = 100
 
-
-
-
-    # EXPERIMENTS (with sim params)
-    # TODO: Varying simulation/rendering params (experiment)
-    # (1) Simulation quality
-    args.sim_quality = "high"
+    # NOTE: rendering
+    args.sim_quality = "rasterization"
     ENABLE_SHADOWS = set_simulation_quality(args.sim_quality)
-
-    print("Randomize existing camera poses")
-    tasks_mapping = {
-        "PushCube-v1": "PushCube-Randomization",
-    }
-    if args.env_id not in tasks_mapping:
-        raise(f"{args.env_id} not in supported tasks")
-
-    args.env_id = tasks_mapping[args.env_id]
-    args.exp_name = args.exp_name + "-randomization"
     
-
-    # NOTE: Happens at start
-    # (2) Camera resolution
+    # NOTE: camera resolution
     resolution = SimulationQuantities.RESOLUTIONS[2]
     print(f"Chosen resolution: {resolution}")
     # numpy convention -> (h, w)
     sensor_configs = dict(width=resolution[1], height=resolution[0])
-
-    # (3) Light properties
-    light_color = SimulationQuantities.LIGHT_COLORS[0]
-    light_directions = [SimulationQuantities.LIGHT_DIRECTIONS[0]]
-
-    # (4) Material properties
-    specularity = SimulationQuantities.SPECULARITY[-1]
-    metallicity = SimulationQuantities.METALLICITY[0]
-    index_of_refraction = SimulationQuantities.INDEX_OF_REFRACTION[1]
-    transmission = SimulationQuantities.TRANSMISSION[0]
-    material_color = SimulationQuantities.MATERIAL_COLORS[0]
-
-    # (5) Material color
-    material_color = SimulationQuantities.MATERIAL_COLORS[0]
-
-    # (6) Material physics properties
-    mass = None
-    density = None
-
-    CHANGE_TARGET = True
-
-    sim_params = dict(
-        sensor_configs=sensor_configs,
-        mass=mass,
-        density=density,
-        specularity=specularity,
-        metallicity=metallicity,
-        ior=index_of_refraction,
-        transmission=transmission,
-        material_color=material_color,
-        light_color=light_color,
-        light_directions = light_directions,
-        change_target=CHANGE_TARGET
-    )
 
     env_kwargs = dict(
         obs_mode="rgbd", 
@@ -99,7 +48,6 @@ if __name__ == "__main__":
         render_mode="rgb_array", 
         sim_backend="gpu",
         enable_shadow=ENABLE_SHADOWS,
-        sim_params=sim_params
     )
 
 
