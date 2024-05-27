@@ -1,4 +1,5 @@
 import argparse
+import os
 
 import gymnasium as gym
 import mani_skill.envs
@@ -13,19 +14,24 @@ def run_visual_ppo_with_varied_sim_params(task, name, render_quality):
 
     start_time = time.time()
 
+    CHECKPOINT = os.path.join(os.getcwd(), "runs/sim-params-default-rgb-pushcube-high/final_ckpt.pt")
     sp.run([
         "python", 
         "examples/baselines/ppo/ppo_rgb_custom.py", 
         f"--env_id={task}", 
         f"--exp-name={name}",
         f"--num_envs={64}",
+        f"--num_eval_envs={8}",
         f"--update_epochs={8}", 
         f"--num_minibatches={16}",
         f"--total_timesteps={300_000}",
-        f"--eval_freq={10}",
+        f"--eval_freq={1}",
         f"--num-steps={20}",
         f"--sim_quality={render_quality}",
-        f"--vary_sim_parameters"
+        f"--vary_sim_parameters",
+        f"--evaluate",
+        f"--checkpoint={CHECKPOINT}",
+        f"--track"
     ])
 
     end_time = time.time()
@@ -48,7 +54,7 @@ def run_default_visual_ppo(task, name, render_quality):
         f"--update_epochs={8}", 
         f"--num_minibatches={16}",
         f"--total_timesteps={300_000}",
-        f"--eval_freq={10}",
+        f"--eval_freq={1}",
         f"--num-steps={20}",
         f"--sim_quality={render_quality}"
     ])

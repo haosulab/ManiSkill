@@ -93,5 +93,18 @@
             "python": "/opt/conda/bin/python",
             
         },
+        {
+            "name": "Debug run_ppo_rgb_with_varying_simulation_parameters.py",
+            "type": "debugpy",
+            "request": "launch",
+            "preLaunchTask": "",
+            "program": "${workspaceFolder}/scripts/run_ppo_rgb_with_varying_simulation_parameters.py",
+            "args": ["--visual_vary_sim"],
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {},
+            "python": "/opt/conda/bin/python",
+            
+        },
     ]
 }
