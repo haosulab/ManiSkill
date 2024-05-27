@@ -83,6 +83,9 @@ class Args:
     save_train_video_freq: Optional[int] = None
     """frequency to save training videos in terms of iterations"""
     finite_horizon_gae: bool = True
+    # Evaluate only without training
+    eval_only: bool = False
+    """ Evaluate only (load pre-trained policy) without training """
 
     # to be filled in runtime
     batch_size: int = 0

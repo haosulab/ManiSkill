@@ -23,6 +23,8 @@ from data_utils import DictArray
 from sim_utils import *
 from visual_args import Args
 
+
+
 # Memory logging
 import sys
 sys.path.append("./")
@@ -138,7 +140,7 @@ if __name__ == "__main__":
         run_name = args.exp_name
 
     writer = None
-    
+
     if not args.evaluate:
         print("Running training")
         if args.track:
@@ -153,6 +155,7 @@ if __name__ == "__main__":
                 monitor_gym=True,
                 save_code=True,
             )
+
         writer = SummaryWriter(f"runs/{run_name}")
         writer.add_text(
             "hyperparameters",
@@ -257,10 +260,12 @@ if __name__ == "__main__":
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     if args.checkpoint:
+        print(f"Loading checkpoint from {args.checkpoint}")
         agent.load_state_dict(torch.load(args.checkpoint))
 
     for iteration in range(1, args.num_iterations + 1):
         print(f"Epoch: {iteration}, global_step={global_step}")
+
         final_values = torch.zeros((args.num_steps, args.num_envs), device=device)
         agent.eval()
         if iteration % args.eval_freq == 1:
@@ -309,7 +314,10 @@ if __name__ == "__main__":
             
             if args.evaluate:
                 break
-        
+
+
+
+
         if args.save_model and iteration % args.eval_freq == 1:
             model_path = f"runs/{run_name}/ckpt_{iteration}.pt"
             torch.save(agent.state_dict(), model_path)
@@ -330,12 +338,13 @@ if __name__ == "__main__":
             dones[step] = next_done
 
             # NOTE: Logging
-            tf_rgb_log = obs[step]["rgb"].detach()[0].cpu().numpy()
-            if tf_rgb_log.shape[-1] > 3:
-                tf_rgb_log = tf_rgb_log[..., :3]
-            wandb.log({
-                f"obs[{step}]": wandb.Image(tf_rgb_log)
-            })
+            if args.track:
+                tf_rgb_log = obs[step]["rgb"].detach()[0].cpu().numpy()
+                if tf_rgb_log.shape[-1] > 3:
+                    tf_rgb_log = tf_rgb_log[..., :3]
+                wandb.log({
+                    f"obs[{step}]": wandb.Image(tf_rgb_log)
+                })
             #writer.add_image(f"observations_{step}", tf_rgb_log)
 
             # ALGO LOGIC: action logic
@@ -372,7 +381,8 @@ if __name__ == "__main__":
                 for k in infos["final_observation"]:
                     infos["final_observation"][k] = infos["final_observation"][k][done_mask]
                 
-                final_values[step, torch.arange(args.num_envs, device=device)[done_mask]] = agent.get_value(infos["final_observation"]).view(-1)
+                num_envs_range_for_done = torch.arange(args.num_envs, device=device)[done_mask]
+                final_values[step, num_envs_range_for_done] = agent.get_value(infos["final_observation"]).view(-1)
         
         rollout_time = time.time() - rollout_time
         
