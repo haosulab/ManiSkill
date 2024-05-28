@@ -19,7 +19,57 @@ from custom_tasks import *
 from sim_utils import *
 from visual_args import Args
 
-# NOTE: This is experimental code that if successful is merged into ppo_rgb_custom.py
+# Definitions
+ENABLE_WANDB = False
+SAVE_IMGS = False
+
+def run_rendering(args, envs):
+    for iteration in range(1, args.num_iterations + 1):
+        frames = []
+
+        print(f"Epoch: {iteration}, global_step={global_step}")
+        rollout_time = time.time()
+
+        for step in range(0, args.num_steps):
+            with torch.no_grad():
+                probs = torch.distributions.normal.Normal(loc=0.0, scale=1.0)
+                action = probs.sample(sample_shape=[args.num_envs, 8])
+                #print(f"Sampled action: {action}")
+
+            step_time_pnt = time.time()
+
+            next_obs, reward, terminations, truncations, infos = envs.step(action)
+
+            elapsed_time_ms = (time.time() - step_time_pnt) * 1e-3
+
+            time_pnts.append(elapsed_time_ms)
+
+            if ENABLE_WANDB:
+                wandb.log({
+                    "ENABLE_WANDB/elapsed_time_pert_step() (ms)": elapsed_time_ms,
+                })
+
+            if SAVE_IMGS:
+                img_log = next_obs["rgb"].detach()[0].cpu().numpy()
+                if img_log.shape[-1] > 3:
+                    img_log = img_log[..., :3]
+                frames.append(img_log)
+
+        rollout_time = time.time() - rollout_time
+        if ENABLE_WANDB:
+            wandb.log({
+                "ENABLE_WANDB/rollout_time (s)": (time.time() - step_time_pnt),
+            })
+        print(f"Rollout complete in {rollout_time} secs!")
+
+        # Log data here
+        if SAVE_IMGS:
+            fig, axes = plt.subplots(1, args.num_steps, figsize=(50, 50))
+            for idx in range(args.num_steps):
+                axes[idx].imshow(frames[idx])
+            plt.savefig(f"visualizations/env_sim_params_imgs_{iteration + 1}.png", dpi=300, bbox_inches='tight')
+
+    return time_pnts
 
 
 if __name__ == "__main__":
@@ -28,12 +78,12 @@ if __name__ == "__main__":
     args.env_id = "AssemblingKits-v1" # 
     args.exp_name = "benchmark-rendering-task"
     
-    args.num_envs = 1
+    args.num_envs = 40
     args.num_steps = 5
     args.num_iterations = 100
 
     # NOTE: rendering
-    args.sim_quality = "rasterization"
+    args.sim_quality = "high"
     ENABLE_SHADOWS = set_simulation_quality(args.sim_quality)
     
     # NOTE: camera resolution
@@ -49,10 +99,6 @@ if __name__ == "__main__":
         sim_backend="gpu",
         enable_shadow=ENABLE_SHADOWS,
     )
-
-
-
-
 
     # ------------------------------------------------------------------------------------------------------------------
     if args.exp_name is None:
@@ -107,9 +153,6 @@ if __name__ == "__main__":
     print(f"args.num_iterations={args.num_iterations} args.num_envs={args.num_envs} args.num_eval_envs={args.num_eval_envs}")
     print(f"####")
 
-    ENABLE_WANDB = False
-    SAVE_IMGS = False
-
     # Wandb
     if ENABLE_WANDB:
         import wandb
@@ -120,78 +163,12 @@ if __name__ == "__main__":
             sync_tensorboard=False,
         )
 
-        # Memory logging
-        import sys
-        sys.path.append("./")
-        sys.path.append("../")
-        sys.path.append("../scripts/")
-        sys.path.append("scripts/")
-        from mem_logger import MemLogger
-        LOG_PATH = "/home/filip-grigorov/code/scripts/data/"
-        memory_logger = MemLogger(
-            device="cuda" if torch.cuda.is_available() else "cpu", 
-            dump_after=100, 
-            gpu_mem_logs_path=LOG_PATH, 
-            cpu_mem_logs_path=LOG_PATH, 
-            loss_logs_path=LOG_PATH, 
-            lbl="train_visual"
-        )
-
     time_pnts = []
 
-    for iteration in range(1, args.num_iterations + 1):
-        frames = []
+    print(sapien.render.get_device_summary())
+    print(sapien.render.get_camera_shader_dir())
 
-        print(f"Epoch: {iteration}, global_step={global_step}")
-        rollout_time = time.time()
-
-        for step in range(0, args.num_steps):
-            with torch.no_grad():
-                probs = torch.distributions.normal.Normal(loc=0.0, scale=1.0)
-                action = probs.sample(sample_shape=[1, 8])
-                #print(f"Sampled action: {action}")
-
-            step_time_pnt = time.time()
-
-            next_obs, reward, terminations, truncations, infos = envs.step(action)
-
-            elapsed_time_ms = (time.time() - step_time_pnt) * 1e-3
-
-            time_pnts.append(elapsed_time_ms)
-
-            if ENABLE_WANDB:
-                wandb.log({
-                    "ENABLE_WANDB/elapsed_time_pert_step() (ms)": elapsed_time_ms,
-                })
-
-            # Logging
-            if ENABLE_WANDB:
-                gpu_allocated_mem = memory_logger.get_gpu_allocated_memory()
-                cpu_allocated_mem = memory_logger.get_cpu_allocated_memory()
-                wandb.log({
-                    "ENABLE_WANDB/gpu_alloc_mem": gpu_allocated_mem,
-                    "ENABLE_WANDB/cpu_alloc_mem": cpu_allocated_mem,
-                })
-
-            if SAVE_IMGS:
-                img_log = next_obs["rgb"].detach()[0].cpu().numpy()
-                if img_log.shape[-1] > 3:
-                    img_log = img_log[..., :3]
-                frames.append(img_log)
-
-        rollout_time = time.time() - rollout_time
-        if ENABLE_WANDB:
-            wandb.log({
-                "ENABLE_WANDB/rollout_time (s)": (time.time() - step_time_pnt),
-            })
-        print(f"Rollout complete in {rollout_time} secs!")
-
-        # Log data here
-        if SAVE_IMGS:
-            fig, axes = plt.subplots(1, args.num_steps, figsize=(50, 50))
-            for idx in range(args.num_steps):
-                axes[idx].imshow(frames[idx])
-            plt.savefig(f"visualizations/env_sim_params_imgs_{iteration + 1}.png", dpi=300, bbox_inches='tight')
+    time_pnts = run_rendering(args, envs)
 
     print("------------ Summary ------------")
     mean = np.mean(time_pnts)
