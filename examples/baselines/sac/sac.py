@@ -344,7 +344,7 @@ if __name__ == "__main__":
 
     while global_step < args.total_timesteps:
         print(f"Global Step: {global_step}")
-        if (global_step - args.training_freq) // args.eval_freq < global_step // args.eval_freq:
+        if args.eval_freq > 0 and (global_step - args.training_freq) // args.eval_freq < global_step // args.eval_freq:
             # evaluate
             actor.eval()
             print("Evaluating")
