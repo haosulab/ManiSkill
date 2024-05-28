@@ -15,21 +15,15 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from stable_baselines3.common.buffers import ReplayBuffer
 from torch.utils.tensorboard import SummaryWriter
 import tyro
 
-import datetime
-from collections import defaultdict
-# from rookie.utils.profiling import NonOverlappingTimeProfiler
-from stable_baselines3.common.buffers import ReplayBuffer
-from torch.utils.tensorboard import SummaryWriter
 import mani_skill.envs
 
 
 @dataclass
 class Args:
-    exp_name: str = os.path.basename(__file__)[: -len(".py")]
+    exp_name: Optional[str] = None
     """the name of this experiment"""
     seed: int = 1
     """seed of the experiment"""
@@ -49,6 +43,8 @@ class Args:
     """path to a pretrained checkpoint file to start evaluation/training from"""
     capture_video: bool = True
     """whether to capture videos of the agent performances (check out `videos` folder)"""
+    save_model: bool = True
+    """whether to save the model checkpoints"""
 
     # Env specific arguments
     env_id: str = "PushCube-v1"
@@ -71,6 +67,8 @@ class Args:
     """total timesteps of the experiments"""
     buffer_size: int = 1_000_000
     """the replay memory buffer size"""
+    buffer_device: str = "cpu"
+    """where the replay buffer is stored. Can be 'cpu' or 'cuda' for GPU"""
     gamma: float = 0.8
     """the discount factor gamma"""
     tau: float = 0.01
@@ -98,6 +96,68 @@ class Args:
     utd: float = 0.5
     """update to data ratio"""
     partial_reset: bool = False
+
+    # to be filled in runtime
+    grad_steps_per_iteration: int = 0
+    """the number of gradient updates per iteration"""
+    steps_per_env: int = 0
+    """the number of steps each parallel env takes per iteration"""
+
+@dataclass
+class ReplayBufferSample:
+    obs: torch.Tensor
+    next_obs: torch.Tensor
+    actions: torch.Tensor
+    rewards: torch.Tensor
+    dones: torch.Tensor
+class ReplayBuffer:
+    def __init__(self, env, num_envs: int, buffer_size: int, storage_device: torch.device, sample_device: torch.device):
+        self.buffer_size = buffer_size
+        self.pos = 0
+        self.full = False
+        self.num_envs = num_envs
+        self.storage_device = storage_device
+        self.sample_device = sample_device
+        self.obs = torch.zeros((buffer_size, num_envs) + env.single_observation_space.shape).to(storage_device)
+        self.next_obs = torch.zeros((buffer_size, num_envs) + env.single_observation_space.shape).to(storage_device)
+        self.actions = torch.zeros((buffer_size, num_envs) + env.single_action_space.shape).to(storage_device)
+        self.logprobs = torch.zeros((buffer_size, num_envs)).to(storage_device)
+        self.rewards = torch.zeros((buffer_size, num_envs)).to(storage_device)
+        self.dones = torch.zeros((buffer_size, num_envs)).to(storage_device)
+        self.values = torch.zeros((buffer_size, num_envs)).to(storage_device)
+
+    def add(self, obs: torch.Tensor, next_obs: torch.Tensor, action: torch.Tensor, reward: torch.Tensor, done: torch.Tensor):
+        if self.storage_device == torch.device("cpu"):
+            obs = obs.cpu()
+            next_obs = next_obs.cpu()
+            action = action.cpu()
+            reward = reward.cpu()
+            done = done.cpu()
+
+        self.obs[self.pos] = obs
+        self.next_obs[self.pos] = next_obs
+
+        self.actions[self.pos] = action
+        self.rewards[self.pos] = reward
+        self.dones[self.pos] = done
+
+        self.pos += 1
+        if self.pos == self.buffer_size:
+            self.full = True
+            self.pos = 0
+    def sample(self, batch_size: int):
+        if self.full:
+            batch_inds = torch.randint(0, self.buffer_size, size=(batch_size, ))
+        else:
+            batch_inds = torch.randint(0, self.pos, size=(batch_size, ))
+        env_inds = torch.randint(0, self.num_envs, size=(batch_size, ))
+        return ReplayBufferSample(
+            obs=self.obs[batch_inds, env_inds].to(self.sample_device),
+            next_obs=self.next_obs[batch_inds, env_inds].to(self.sample_device),
+            actions=self.actions[batch_inds, env_inds].to(self.sample_device),
+            rewards=self.rewards[batch_inds, env_inds].to(self.sample_device),
+            dones=self.dones[batch_inds, env_inds].to(self.sample_device)
+        )
 
 # ALGO LOGIC: initialize agent here:
 class SoftQNetwork(nn.Module):
@@ -177,7 +237,8 @@ class Actor(nn.Module):
 
 if __name__ == "__main__":
     args = tyro.cli(Args)
-
+    args.grad_steps_per_iteration = int(args.training_freq * args.utd)
+    args.steps_per_env = args.training_freq // args.num_envs
     if args.exp_name is None:
         args.exp_name = os.path.basename(__file__)[: -len(".py")]
         run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
@@ -264,13 +325,13 @@ if __name__ == "__main__":
 
     envs.single_observation_space.dtype = np.float32
     rb = ReplayBuffer(
-        args.buffer_size,
-        envs.single_observation_space,
-        envs.single_action_space,
-        device,
-        n_envs=args.num_envs,
-        handle_timeout_termination=False, # stable-baselines3 has not fully supported Gymnasium's termination signal
+        env=envs,
+        num_envs=args.num_envs,
+        buffer_size=args.buffer_size,
+        storage_device=torch.device(args.buffer_device),
+        sample_device=device
     )
+
 
     # TRY NOT TO MODIFY: start the game
     obs, info = envs.reset(seed=args.seed) # in Gymnasium, seed is given to reset() instead of seed()
@@ -278,9 +339,8 @@ if __name__ == "__main__":
     global_step = 0
     global_update = 0
     learning_has_started = False
-    num_updates_per_training = int(args.training_freq * args.utd)
 
-    global_steps_per_iteration = args.num_envs * (args.training_freq // args.num_envs)
+    global_steps_per_iteration = args.num_envs * (args.steps_per_env)
 
     while global_step < args.total_timesteps:
         print(f"Global Step: {global_step}")
@@ -324,9 +384,19 @@ if __name__ == "__main__":
             if args.evaluate:
                 break
 
+            if args.save_model:
+                model_path = f"runs/{run_name}/ckpt_{global_step}.pt"
+                torch.save({
+                    'actor': actor.state_dict(),
+                    'qf1': qf1_target.state_dict(),
+                    'qf2': qf2_target.state_dict(),
+                    'log_alpha': log_alpha,
+                }, model_path)
+                print(f"model saved to {model_path}")
+
         # Collect samples from environemnts
         rollout_time = time.time()
-        for local_step in range(args.training_freq // args.num_envs):
+        for local_step in range(args.steps_per_env):
             global_step += 1 * args.num_envs
 
             # ALGO LOGIC: put action logic here
@@ -353,7 +423,7 @@ if __name__ == "__main__":
                 writer.add_scalar("charts/episodic_return", episodic_return, global_step)
                 writer.add_scalar("charts/episodic_length", final_info["elapsed_steps"][done_mask].cpu().numpy().mean(), global_step)
 
-            rb.add(obs.cpu().numpy(), real_next_obs.cpu().numpy(), actions.cpu().numpy(), rewards.cpu().numpy(), next_done.cpu().numpy(), infos)
+            rb.add(obs, real_next_obs, actions, rewards, next_done)
 
             # TRY NOT TO MODIFY: CRUCIAL step easy to overlook
             obs = next_obs
@@ -365,21 +435,21 @@ if __name__ == "__main__":
 
         update_time = time.time()
         learning_has_started = True
-        for local_update in range(num_updates_per_training):
+        for local_update in range(args.grad_steps_per_iteration):
             global_update += 1
             data = rb.sample(args.batch_size)
 
             # update the value networks
             with torch.no_grad():
-                next_state_actions, next_state_log_pi, _ = actor.get_action(data.next_observations)
-                qf1_next_target = qf1_target(data.next_observations, next_state_actions)
-                qf2_next_target = qf2_target(data.next_observations, next_state_actions)
+                next_state_actions, next_state_log_pi, _ = actor.get_action(data.next_obs)
+                qf1_next_target = qf1_target(data.next_obs, next_state_actions)
+                qf2_next_target = qf2_target(data.next_obs, next_state_actions)
                 min_qf_next_target = torch.min(qf1_next_target, qf2_next_target) - alpha * next_state_log_pi
                 next_q_value = data.rewards.flatten() + (1 - data.dones.flatten()) * args.gamma * (min_qf_next_target).view(-1)
                 # data.dones is "stop_bootstrap", which is computed earlier according to args.bootstrap_at_done
 
-            qf1_a_values = qf1(data.observations, data.actions).view(-1)
-            qf2_a_values = qf2(data.observations, data.actions).view(-1)
+            qf1_a_values = qf1(data.obs, data.actions).view(-1)
+            qf2_a_values = qf2(data.obs, data.actions).view(-1)
             qf1_loss = F.mse_loss(qf1_a_values, next_q_value)
             qf2_loss = F.mse_loss(qf2_a_values, next_q_value)
             qf_loss = qf1_loss + qf2_loss
@@ -390,9 +460,9 @@ if __name__ == "__main__":
 
             # update the policy network
             if global_update % args.policy_frequency == 0:  # TD 3 Delayed update support
-                pi, log_pi, _ = actor.get_action(data.observations)
-                qf1_pi = qf1(data.observations, pi)
-                qf2_pi = qf2(data.observations, pi)
+                pi, log_pi, _ = actor.get_action(data.obs)
+                qf1_pi = qf1(data.obs, pi)
+                qf2_pi = qf2(data.obs, pi)
                 min_qf_pi = torch.min(qf1_pi, qf2_pi)
                 actor_loss = ((alpha * log_pi) - min_qf_pi).mean()
 
@@ -402,7 +472,7 @@ if __name__ == "__main__":
 
                 if args.autotune:
                     with torch.no_grad():
-                        _, log_pi, _ = actor.get_action(data.observations)
+                        _, log_pi, _ = actor.get_action(data.obs)
                     # if args.correct_alpha:
                     alpha_loss = (-log_alpha.exp() * (log_pi + target_entropy)).mean()
                     # else:
@@ -436,16 +506,15 @@ if __name__ == "__main__":
             writer.add_scalar("charts/rollout_fps", global_steps_per_iteration / rollout_time, global_step)
             if args.autotune:
                 writer.add_scalar("losses/alpha_loss", alpha_loss.item(), global_step)
-        # # Checkpoint
-        # if args.save_freq and ( global_step >= args.total_timesteps or \
-        #         (global_step - args.training_freq) // args.save_freq < global_step // args.save_freq):
-        #     os.makedirs(f'{log_path}/checkpoints', exist_ok=True)
-        #     torch.save({
-        #         'actor': actor.state_dict(),
-        #         'qf1': qf1_target.state_dict(),
-        #         'qf2': qf2_target.state_dict(),
-        #         'log_alpha': log_alpha,
-        #     }, f'{log_path}/checkpoints/{global_step}.pt')
 
+    if not args.evaluate and args.save_model:
+        model_path = f"runs/{run_name}/final_ckpt.pt"
+        torch.save({
+            'actor': actor.state_dict(),
+            'qf1': qf1_target.state_dict(),
+            'qf2': qf2_target.state_dict(),
+            'log_alpha': log_alpha,
+        }, model_path)
+        print(f"model saved to {model_path}")
+        writer.close()
     envs.close()
-    writer.close()
