@@ -31,8 +31,20 @@ def set_simulation_quality(render_quality):
         sapien.render.set_ray_tracing_denoiser("none")
         ENABLE_SHADOWS = False
 
+    elif render_quality == "ultra":
+        print("Ultra high quality raycasting is set")
+        sapien.render.set_camera_shader_dir("rt")
+        sapien.render.set_viewer_shader_dir("rt")
+        sapien.render.set_ray_tracing_samples_per_pixel(256)
+        sapien.render.set_ray_tracing_path_depth(32)
+        sapien.render.set_ray_tracing_denoiser("optix")
+        ENABLE_SHADOWS = True
+
     else: # rasterization
         print("Rasterization is set")
+        sapien.render.set_camera_shader_dir("")
+        sapien.render.set_viewer_shader_dir("")
+        sapien.render.set_ray_tracing_denoiser("none")
         ENABLE_SHADOWS = False
 
     return ENABLE_SHADOWS

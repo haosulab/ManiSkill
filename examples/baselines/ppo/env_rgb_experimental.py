@@ -30,7 +30,7 @@ if __name__ == "__main__":
     
     args.num_envs = 1
     args.num_steps = 5
-    args.num_iterations = 1
+    args.num_iterations = 100
 
 
 
@@ -38,7 +38,7 @@ if __name__ == "__main__":
     # EXPERIMENTS (with sim params)
     # TODO: Varying simulation/rendering params (experiment)
     # (1) Simulation quality
-    args.sim_quality = "rasterization"
+    args.sim_quality = "high"
     ENABLE_SHADOWS = set_simulation_quality(args.sim_quality)
 
     print("Randomize existing camera poses")
@@ -159,15 +159,15 @@ if __name__ == "__main__":
     print(f"args.num_iterations={args.num_iterations} args.num_envs={args.num_envs} args.num_eval_envs={args.num_eval_envs}")
     print(f"####")
 
-    BENCHMARK = True
+    ENABLE_WANDB = False
     SAVE_IMGS = False
 
     # Wandb
-    if BENCHMARK:
+    if ENABLE_WANDB:
         import wandb
         wandb.login()
         wandb.init(
-            project="Raycast vs Rasterization benchmark",
+            project="Raycast vs Rasterization ENABLE_WANDB",
             entity="embarc_lab",
             sync_tensorboard=False,
         )
@@ -189,6 +189,8 @@ if __name__ == "__main__":
             lbl="train_visual"
         )
 
+    time_pnts = []
+
     for iteration in range(1, args.num_iterations + 1):
         frames = []
 
@@ -199,24 +201,28 @@ if __name__ == "__main__":
             with torch.no_grad():
                 probs = torch.distributions.normal.Normal(loc=0.0, scale=1.0)
                 action = probs.sample(sample_shape=[1, 8])
-                print(f"Sampled action: {action}")
+                #print(f"Sampled action: {action}")
 
             step_time_pnt = time.time()
 
             next_obs, reward, terminations, truncations, infos = envs.step(action)
 
-            if BENCHMARK:
+            elapsed_time_ms = (time.time() - step_time_pnt) * 1e-3
+
+            time_pnts.append(elapsed_time_ms)
+
+            if ENABLE_WANDB:
                 wandb.log({
-                    "run/elapsed_time_pert_step() (ms)": (time.time() - step_time_pnt) * 1e-3,
+                    "ENABLE_WANDB/elapsed_time_pert_step() (ms)": elapsed_time_ms,
                 })
 
             # Logging
-            if BENCHMARK:
+            if ENABLE_WANDB:
                 gpu_allocated_mem = memory_logger.get_gpu_allocated_memory()
                 cpu_allocated_mem = memory_logger.get_cpu_allocated_memory()
                 wandb.log({
-                    "run/gpu_alloc_mem": gpu_allocated_mem,
-                    "run/cpu_alloc_mem": cpu_allocated_mem,
+                    "ENABLE_WANDB/gpu_alloc_mem": gpu_allocated_mem,
+                    "ENABLE_WANDB/cpu_alloc_mem": cpu_allocated_mem,
                 })
 
             if SAVE_IMGS:
@@ -226,9 +232,9 @@ if __name__ == "__main__":
                 frames.append(img_log)
 
         rollout_time = time.time() - rollout_time
-        if BENCHMARK:
+        if ENABLE_WANDB:
             wandb.log({
-                "run/rollout_time (s)": (time.time() - step_time_pnt),
+                "ENABLE_WANDB/rollout_time (s)": (time.time() - step_time_pnt),
             })
         print(f"Rollout complete in {rollout_time} secs!")
 
@@ -238,5 +244,12 @@ if __name__ == "__main__":
             for idx in range(args.num_steps):
                 axes[idx].imshow(frames[idx])
             plt.savefig(f"visualizations/env_sim_params_imgs_{iteration + 1}.png", dpi=300, bbox_inches='tight')
+
+    print("------------ Summary ------------")
+    mean = np.mean(time_pnts)
+    std = np.std(time_pnts)
+    min = np.min(time_pnts)
+    max = np.max(time_pnts)
+    print(f"Elapsed time (ms): \nmean: {mean}\nstd: {std}\nmin: {min}\nmax: {max}\n\n\n")
 
     envs.close()
