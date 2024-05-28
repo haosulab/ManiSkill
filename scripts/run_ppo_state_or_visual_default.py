@@ -58,7 +58,7 @@ def run_default_state_ppo(task, name):
         f"--num_envs={40}", #1024 default
         f"--update_epochs={8}", 
         f"--num_minibatches={16}", #32
-        f"--total_timesteps={250_000}", #600_000
+        f"--total_timesteps={1_000_000}", #600_000
         f"--eval_freq={8}",
         f"--num-steps={20}"
     ])
@@ -83,7 +83,7 @@ def run_default_visual_ppo(task, name, render_quality):
         f"--num_envs={40}", #256 default
         f"--update_epochs={8}", 
         f"--num_minibatches={16}",
-        f"--total_timesteps={2_000_000}",
+        f"--total_timesteps={1_000_000}",
         f"--eval_freq={10}",
         f"--num-steps={20}",
         f"--sim_quality={render_quality}" # rasterization
@@ -105,24 +105,24 @@ if __name__ == "__main__":
 
     if args.visual:
         tasks = [
-            "PushCube-v1", 
-            # "PickCube-v1", 
-            # "StackCube-v1", 
-            # "PegInsertionSide-v1", 
-            # "AssemblingKits-v1", # realsense
-            # "PlugCharger-v1"
+            #"PushCube-v1", 
+            #"PickCube-v1", 
+            #"StackCube-v1", 
+            #"PegInsertionSide-v1", 
+            #"AssemblingKits-v1", # realsense
+            #"PlugCharger-v1"
         ]
 
         RENDER_QUALITY = "high"
         MODALITY = "rgb"
-        EXPERIMENT = "iterations/runs-2000000" # modality or sim-quality etc.
+        EXPERIMENT = "iterations/runs-5M" # modality or sim-quality etc.
         names = [
-            f"{EXPERIMENT}-{MODALITY}-pushcube-{RENDER_QUALITY}", 
-            # f"modality-{MODALITY}-pickcube-{RENDER_QUALITY}",
-            # f"modality-{MODALITY}-stackcube-{RENDER_QUALITY}",
-            # f"modality-{MODALITY}-peginsertionside-{RENDER_QUALITY}",
-            # f"modality-{MODALITY}-assemblingkits-{RENDER_QUALITY}",
-            # f"modality-{MODALITY}-plugcharger-{RENDER_QUALITY}", 
+            #f"{EXPERIMENT}-{MODALITY}-pushcube-{RENDER_QUALITY}", 
+            #f"{EXPERIMENT}-{MODALITY}-pickcube-{RENDER_QUALITY}",
+            #f"{EXPERIMENT}-{MODALITY}-stackcube-{RENDER_QUALITY}",
+            #f"{EXPERIMENT}-{MODALITY}-peginsertionside-{RENDER_QUALITY}",
+            #f"{EXPERIMENT}-{MODALITY}-assemblingkits-{RENDER_QUALITY}",
+            #f"{EXPERIMENT}-{MODALITY}-plugcharger-{RENDER_QUALITY}", 
         ]
 
         assert len(tasks) == len(names), "equal number of params"
@@ -140,23 +140,24 @@ if __name__ == "__main__":
 
     elif args.state:
         tasks = [
-            "PushCube-v1", 
-            # "PickCube-v1", 
-            # "StackCube-v1", 
-            # "PegInsertionSide-v1", 
-            # "AssemblingKits-v1", # realsense
-            # "PlugCharger-v1"
+            #"PushCube-v1", 
+            #"PickCube-v1", 
+            #"StackCube-v1", 
+            #"PegInsertionSide-v1", 
+            #"AssemblingKits-v1", # realsense
+            #"PlugCharger-v1"
         ]
 
         RENDER_QUALITY = ""
         MODALITY = "state"
+        EXPERIMENT = "iterations/runs-5M" # modality or sim-quality etc.
         names = [
-            f"modality-{MODALITY}-pushcube-{RENDER_QUALITY}",
-            # f"modality-{MODALITY}-pickcube-{RENDER_QUALITY}",
-            # f"modality-{MODALITY}-stackcube-{RENDER_QUALITY}",
-            # f"modality-{MODALITY}-peginsertionside-{RENDER_QUALITY}",
-            # f"modality-{MODALITY}-assemblingkits-{RENDER_QUALITY}",
-            # f"modality-{MODALITY}-plugcharger-{RENDER_QUALITY}", 
+            #f"{EXPERIMENT}-{MODALITY}-pushcube-{RENDER_QUALITY}",
+            #f"{EXPERIMENT}-{MODALITY}-pickcube-{RENDER_QUALITY}",
+            #f"{EXPERIMENT}-{MODALITY}-stackcube-{RENDER_QUALITY}",
+            #f"{EXPERIMENT}-{MODALITY}-peginsertionside-{RENDER_QUALITY}",
+            #f"{EXPERIMENT}-{MODALITY}-assemblingkits-{RENDER_QUALITY}",
+            #f"{EXPERIMENT}-{MODALITY}-plugcharger-{RENDER_QUALITY}", 
         ]
 
         for idx in range(len(tasks)):
