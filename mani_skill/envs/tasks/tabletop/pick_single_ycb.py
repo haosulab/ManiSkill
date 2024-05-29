@@ -7,6 +7,7 @@ import torch
 from mani_skill import ASSET_DIR
 from mani_skill.agents.robots.fetch.fetch import Fetch
 from mani_skill.agents.robots.panda.panda import Panda
+from mani_skill.agents.robots.panda.panda_wristcam import PandaWristCam
 from mani_skill.agents.robots.xmate3.xmate3 import Xmate3Robotiq
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.utils.randomization.pose import random_quaternions
@@ -26,8 +27,8 @@ WARNED_ONCE = False
 @register_env("PickSingleYCB-v1", max_episode_steps=50)
 class PickSingleYCBEnv(BaseEnv):
 
-    SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
-    agent: Union[Panda, Xmate3Robotiq, Fetch]
+    SUPPORTED_ROBOTS = ["panda", "panda_wristcam", "xmate3_robotiq", "fetch"]
+    agent: Union[Panda, PandaWristCam, Xmate3Robotiq, Fetch]
     goal_thresh = 0.025
 
     def __init__(
@@ -143,7 +144,7 @@ class PickSingleYCBEnv(BaseEnv):
             self.goal_site.set_pose(Pose.create_from_pq(goal_xyz))
 
             # Initialize robot arm to a higher position above the table than the default typically used for other table top tasks
-            if self.robot_uids == "panda":
+            if self.robot_uids == "panda" or self.robot_uids == "panda_wristcam":
                 # fmt: off
                 qpos = np.array(
                     [0.0, 0, 0, -np.pi * 2 / 3, 0, np.pi * 2 / 3, np.pi / 4, 0.04, 0.04]
