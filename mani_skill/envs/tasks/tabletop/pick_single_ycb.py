@@ -144,7 +144,7 @@ class PickSingleYCBEnv(BaseEnv):
             self.goal_site.set_pose(Pose.create_from_pq(goal_xyz))
 
             # Initialize robot arm to a higher position above the table than the default typically used for other table top tasks
-            if self.robot_uids == "panda":
+            if self.robot_uids == "panda" or self.robot_uids == "panda_wristcam":
                 # fmt: off
                 qpos = np.array(
                     [0.0, 0, 0, -np.pi * 2 / 3, 0, np.pi * 2 / 3, np.pi / 4, 0.04, 0.04]
