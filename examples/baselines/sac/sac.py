@@ -93,7 +93,7 @@ class Args:
     """training frequency (in steps)"""
     utd: float = 0.5
     """update to data ratio"""
-    partial_reset: bool = True
+    partial_reset: bool = False
 
     # to be filled in runtime
     grad_steps_per_iteration: int = 0
