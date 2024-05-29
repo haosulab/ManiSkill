@@ -1,9 +1,7 @@
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import numpy as np
-import sapien
 import torch
-from transforms3d.euler import euler2quat
 
 from mani_skill.agents.robots.anymal.anymal_c import ANYmalC
 from mani_skill.envs.sapien_env import BaseEnv
@@ -12,7 +10,6 @@ from mani_skill.utils import sapien_utils
 from mani_skill.utils.building import actors
 from mani_skill.utils.building.ground import build_ground
 from mani_skill.utils.registration import register_env
-from mani_skill.utils.structs.articulation_joint import ArticulationJoint
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import GPUMemoryConfig, SceneConfig, SimConfig
 
@@ -21,7 +18,7 @@ class QuadrupedReachEnv(BaseEnv):
     SUPPORTED_ROBOTS = ["anymal_c"]
     agent: ANYmalC
 
-    _UNDESIRED_CONTACT_LINK_NAMES: ArticulationJoint = None
+    _UNDESIRED_CONTACT_LINK_NAMES: List[str] = None
 
     def __init__(self, *args, robot_uids="anymal-c", **kwargs):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
@@ -107,7 +104,10 @@ class QuadrupedReachEnv(BaseEnv):
         }
 
     def _get_obs_extra(self, info: Dict):
-        obs = dict()
+        obs = dict(
+            root_linear_velocity=self.agent.robot.root_linear_velocity,
+            root_angular_velocity=self.agent.robot.root_angular_velocity,
+        )
         if self.obs_mode in ["state", "state_dict"]:
             obs.update(
                 goal_pos=self.goal.pose.p[:, :2],
@@ -136,15 +136,14 @@ class QuadrupedReachEnv(BaseEnv):
             + ang_vel_xy_l2 * -0.05
             + self._compute_undesired_contacts() * -1
         )
-        reward = reaching_reward + penalties
-
+        reward = 2 * reaching_reward + penalties
         reward[info["fail"]] = -100
         return reward
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        max_reward = 1.0
+        max_reward = 2.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
 
 
