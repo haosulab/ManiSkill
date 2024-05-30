@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 from torch.distributions.normal import Normal
 
-from nets import layer_init, NatureCNN, NatureCNN3D, PcdEncoder
+from nets import *
 
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.utils import common
@@ -109,6 +109,61 @@ def compute_GAE(t, next_not_done, gae_lambda, gamma, rewards, real_next_values, 
 
     advantage = (reward_term_sum + value_term_sum) / lam_coef_sum - values[t]
     return advantage, lam_coef_sum, reward_term_sum, value_term_sum
+
+
+class StateAgent(nn.Module):
+    def __init__(self, envs):
+        super().__init__()
+
+        self.critic = StateCritic(envs.single_observation_space)
+
+        # self.critic = nn.Sequential(
+        #     layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 256)),
+        #     nn.Tanh(),
+        #     layer_init(nn.Linear(256, 256)),
+        #     nn.Tanh(),
+        #     layer_init(nn.Linear(256, 256)),
+        #     nn.Tanh(),
+        #     layer_init(nn.Linear(256, 1)),
+        # )
+
+        self.actor_mean = StateActor(envs.single_observation_space, envs.single_action_space)
+
+        # self.actor_mean = nn.Sequential(
+        #     layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 256)),
+        #     nn.Tanh(),
+        #     layer_init(nn.Linear(256, 256)),
+        #     nn.Tanh(),
+        #     layer_init(nn.Linear(256, 256)),
+        #     nn.Tanh(),
+        #     layer_init(nn.Linear(256, np.prod(envs.single_action_space.shape)), std=0.01*np.sqrt(2)),
+        # )
+
+        self.actor_logstd = nn.Parameter(torch.ones(1, np.prod(envs.single_action_space.shape)) * -0.5)
+
+    def get_value(self, x):
+        return self.critic(x)
+    
+    def get_action(self, x, deterministic=False):
+        action_mean = self.actor_mean(x)
+        
+        if deterministic:
+            return action_mean
+        
+        action_logstd = self.actor_logstd.expand_as(action_mean)
+        action_std = torch.exp(action_logstd)
+        probs = Normal(action_mean, action_std)
+        return probs.sample()
+    
+    def get_action_and_value(self, x, action=None):
+        action_mean = self.actor_mean(x)
+        action_logstd = self.actor_logstd.expand_as(action_mean)
+        action_std = torch.exp(action_logstd)
+        probs = Normal(action_mean, action_std)
+        
+        if action is None:
+            action = probs.sample()
+        return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x)
 
 
 class Agent(nn.Module):

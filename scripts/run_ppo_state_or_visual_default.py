@@ -55,12 +55,14 @@ def run_default_state_ppo(task, name):
         "examples/baselines/ppo/ppo.py", 
         f"--env_id={task}", 
         f"--exp-name={name}",
-        f"--num_envs={40}", #1024 default
+        f"--num_envs={512}", #1024 default or 40
         f"--update_epochs={8}", 
         f"--num_minibatches={16}", #32
         f"--total_timesteps={1_000_000}", #600_000
         f"--eval_freq={8}",
-        f"--num-steps={20}"
+        f"--num-steps={300}", # 20 usually
+        f"--num_eval_envs={8}", # 8 usually
+        f"--track"
     ])
 
     end_time = time.time()
@@ -107,7 +109,7 @@ if __name__ == "__main__":
         tasks = [
             #"PushCube-v1", 
             #"PickCube-v1", 
-            #"StackCube-v1", 
+            "StackCube-v1", 
             #"PegInsertionSide-v1", 
             #"AssemblingKits-v1", # realsense
             #"PlugCharger-v1"
@@ -115,11 +117,11 @@ if __name__ == "__main__":
 
         RENDER_QUALITY = "high"
         MODALITY = "rgb"
-        EXPERIMENT = "iterations/runs-5M" # modality or sim-quality etc.
+        EXPERIMENT = "iterations/runs-1M" # modality or sim-quality etc.
         names = [
             #f"{EXPERIMENT}-{MODALITY}-pushcube-{RENDER_QUALITY}", 
             #f"{EXPERIMENT}-{MODALITY}-pickcube-{RENDER_QUALITY}",
-            #f"{EXPERIMENT}-{MODALITY}-stackcube-{RENDER_QUALITY}",
+            f"{EXPERIMENT}-{MODALITY}-stackcube-{RENDER_QUALITY}",
             #f"{EXPERIMENT}-{MODALITY}-peginsertionside-{RENDER_QUALITY}",
             #f"{EXPERIMENT}-{MODALITY}-assemblingkits-{RENDER_QUALITY}",
             #f"{EXPERIMENT}-{MODALITY}-plugcharger-{RENDER_QUALITY}", 
@@ -141,7 +143,7 @@ if __name__ == "__main__":
     elif args.state:
         tasks = [
             #"PushCube-v1", 
-            #"PickCube-v1", 
+            "PickCube-v1", 
             #"StackCube-v1", 
             #"PegInsertionSide-v1", 
             #"AssemblingKits-v1", # realsense
@@ -150,10 +152,10 @@ if __name__ == "__main__":
 
         RENDER_QUALITY = ""
         MODALITY = "state"
-        EXPERIMENT = "iterations/runs-5M" # modality or sim-quality etc.
+        EXPERIMENT = "iterations/runs-1M" # modality or sim-quality etc.
         names = [
             #f"{EXPERIMENT}-{MODALITY}-pushcube-{RENDER_QUALITY}",
-            #f"{EXPERIMENT}-{MODALITY}-pickcube-{RENDER_QUALITY}",
+            f"{EXPERIMENT}-{MODALITY}-pickcube-{RENDER_QUALITY}",
             #f"{EXPERIMENT}-{MODALITY}-stackcube-{RENDER_QUALITY}",
             #f"{EXPERIMENT}-{MODALITY}-peginsertionside-{RENDER_QUALITY}",
             #f"{EXPERIMENT}-{MODALITY}-assemblingkits-{RENDER_QUALITY}",
