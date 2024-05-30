@@ -8,19 +8,19 @@ import os.path as osp
 from pathlib import Path
 from typing import Dict, List, Tuple, Union
 
-import torch
 import numpy as np
 import sapien
 import sapien.core as sapien
 import sapien.physx as physx
+import torch
 import transforms3d
 from tqdm import tqdm
 
 from mani_skill import ASSET_DIR
 from mani_skill.agents.robots.fetch import (
-    Fetch,
-    FETCH_WHEELS_COLLISION_BIT,
     FETCH_BASE_COLLISION_BIT,
+    FETCH_WHEELS_COLLISION_BIT,
+    Fetch,
 )
 from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.utils.scene_builder import SceneBuilder
@@ -40,9 +40,16 @@ OBJECT_SEMANTIC_ID_MAPPING, SEMANTIC_ID_OBJECT_MAPPING, MOVEABLE_OBJECT_IDS = (
     None,
 )
 
-# TODO (arth): fix coacd so this isn't necessary
-WORKING_OBJS = ["apple", "potato", "tomato"]
-
+WORKING_OBJS = [
+    "apple",
+    "potato",
+    "tomato",
+    "lettuce",
+    "soap",
+    "sponge",
+    "plate",
+    "book",
+]
 FETCH_BUILD_CONFIG_IDX_TO_START_POS = {
     0: (-3, 0),
     1: (-2, -2),
@@ -232,6 +239,8 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
                 )
                 if npy_fp.exists():
                     self._navigable_positions[bci] = np.load(npy_fp)
+
+        self.scene.set_ambient_light([0.3, 0.3, 0.3])
 
         # merge actors into one
         self.bg = Actor.create_from_entities(

@@ -1,7 +1,6 @@
-from typing import Any, Dict, Union, List
+from typing import Any, Dict, Union
 
 import numpy as np
-import torch
 import sapien as sapien
 import sapien.physx as physx
 import torch
@@ -20,8 +19,8 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 @register_env("SceneManipulation-v1", max_episode_steps=200)
 class SceneManipulationEnv(BaseEnv):
     """
-    A base environment for simulating manipulation tasks in more complex scenes. Creating this base environment is only useful for explorations/visualization, there are no success/failure
-    metrics or rewards.
+    A base environment for simulating manipulation tasks in more complex scenes. Creating this base environment is only useful
+    for explorations/visualization, there are no success/failure metrics or rewards.
 
     Args:
         robot_uids: Which robot to place into the scene. Default is "fetch"
