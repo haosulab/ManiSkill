@@ -2,18 +2,21 @@
 
 We provide a command line tool to download scene datasets (typically adapted from the original dataset). 
 
-ManiSkill can build any scene provided assets are provided. ManiSkill out of the box provides code and download links to use the [ReplicaCAD] and [AI2THOR] set of scenes (shown below). These are picked because we are able to make them *interactive* scenes where objects can be manipulated and moved around.
+ManiSkill can build any scene provided assets are provided. ManiSkill out of the box provides code and download links to use the [ReplicaCAD](https://aihabitat.org/datasets/replica_cad/) and [AI2THOR](https://github.com/allenai/ai2thor) set of scenes (shown below). These are picked because we are able to make them *interactive* scenes where objects can be manipulated and moved around.
 
+```{figure} images/two_scenes_examples.png
+```
 
 ```bash
 # list all scene datasets available for download
 python -m mani_skill.utils.download_asset --list "scene"
-python -m mani_skill.utils.download_asset ReplicaCAD
+python -m mani_skill.utils.download_asset ReplicaCAD # small scene and fast to download
+python -m mani_skill.utils.download_asset AI2THOR # lots of scenes and slow to download
 ```
 
 ## Exploring the Scene Datasets
 
-To explore the scene datasets, you can provide an environment ID and a seed (to change which scene is sampled if there are several available) and run the random action script as shown below
+To explore the scene datasets, you can provide an environment ID and a seed (to change which scene is sampled if there are several available) and run the random action script. Shown below are the two environment IDs configured already to enable you to play with ReplicaCAD and ArchitecTHOR, one of the scene sets in AI2THOR.
 
 ```bash
 python -m mani_skill.examples.demo_random_action \
