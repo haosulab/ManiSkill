@@ -1,7 +1,6 @@
-from typing import Any, Dict, Union, List
+from typing import Any, Dict, Union
 
 import numpy as np
-import torch
 import sapien as sapien
 import sapien.physx as physx
 import torch
@@ -20,14 +19,15 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 @register_env("SceneManipulation-v1", max_episode_steps=200)
 class SceneManipulationEnv(BaseEnv):
     """
-    A base environment for simulating manipulation tasks in more complex scenes. Creating this base environment is only useful for explorations/visualization, there are no success/failure
-    metrics or rewards.
+    A base environment for simulating manipulation tasks in more complex scenes. Creating this base environment is only useful
+    for explorations/visualization, there are no success/failure metrics or rewards.
 
     Args:
         robot_uids: Which robot to place into the scene. Default is "fetch"
 
-        fixed_scene: whether to build static set of scenes.
-        Default is True as reconfiguring is expensive. When fixed_scene=True, one can rebuild scenes via env.reset(seed=seed, options=dict(reconfigure=True))
+        fixed_scene:
+            When True, will never reconfigure the environment during resets unless you run env.reset(seed=seed, options=dict(reconfigure=True))
+            and explicitly reconfigure. If False, will reconfigure every reset.
 
         scene_builder_cls: Scene builder class to build a scene with. Default is the ArchitecTHORSceneBuilder which builds a scene from AI2THOR.
             Any of the AI2THOR SceneBuilders are supported in this environment
@@ -43,13 +43,13 @@ class SceneManipulationEnv(BaseEnv):
         self,
         *args,
         robot_uids="fetch",
-        fixed_scene=True,
         scene_builder_cls: Union[str, SceneBuilder] = "ReplicaCAD",
         build_config_idxs=None,
         init_config_idxs=None,
+        num_envs=1,
+        reconfiguration_freq=None,
         **kwargs
     ):
-        self.fixed_scene = fixed_scene
         if isinstance(scene_builder_cls, str):
             scene_builder_cls = REGISTERED_SCENE_BUILDERS[
                 scene_builder_cls
@@ -57,7 +57,18 @@ class SceneManipulationEnv(BaseEnv):
         self.scene_builder: SceneBuilder = scene_builder_cls(self)
         self.build_config_idxs = build_config_idxs
         self.init_config_idxs = init_config_idxs
-        super().__init__(*args, robot_uids=robot_uids, **kwargs)
+        if reconfiguration_freq is None:
+            if num_envs == 1:
+                reconfiguration_freq = 1
+            else:
+                reconfiguration_freq = 0
+        super().__init__(
+            *args,
+            robot_uids=robot_uids,
+            reconfiguration_freq=reconfiguration_freq,
+            num_envs=num_envs,
+            **kwargs
+        )
 
     @property
     def _default_sim_config(self):
@@ -74,10 +85,6 @@ class SceneManipulationEnv(BaseEnv):
         self._set_episode_rng(seed)
         if options is None:
             options = dict(reconfigure=False)
-        if "reconfigure" not in options:
-            options["reconfigure"] = False
-        if not self.fixed_scene:
-            options["reconfigure"] = True
         if "reconfigure" in options and options["reconfigure"]:
             self.build_config_idxs = options.pop(
                 "build_config_idxs", self.build_config_idxs
@@ -130,10 +137,10 @@ class SceneManipulationEnv(BaseEnv):
     @property
     def _default_sensor_configs(self):
         if self.robot_uids == "fetch":
-            return ()
+            return []
 
         pose = sapien_utils.look_at([0.3, 0, 0.6], [-0.1, 0, 0.1])
-        return CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)
+        return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
     def _default_human_render_camera_configs(self):

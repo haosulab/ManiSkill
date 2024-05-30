@@ -157,6 +157,12 @@ def initialize_sources():
         target_path="scene_datasets/replica_cad_dataset/rearrange",
     )
 
+    DATA_SOURCES["AI2THOR"] = DataSource(
+        source_type="scene",
+        url="https://huggingface.co/datasets/haosulab/AI2THOR/resolve/main/ai2thor.zip",
+        target_path="scene_datasets/ai2thor",
+    )
+
 
 def initialize_extra_sources():
     DATA_SOURCES["xmate3_robotiq"] = DataSource(
