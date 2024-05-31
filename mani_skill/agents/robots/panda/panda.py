@@ -234,30 +234,25 @@ class Panda(BaseAgent):
 
     def is_grasping(self, object: Actor = None, min_impulse=1e-6, max_angle=85):
         if physx.is_gpu_enabled():
-            if object.name not in self.queries:
-                body_pairs = list(zip(self.finger1_link._bodies, object._bodies))
-                body_pairs += list(zip(self.finger2_link._bodies, object._bodies))
-                self.queries[object.name] = (
-                    self.scene.px.gpu_create_contact_pair_impulse_query(body_pairs),
-                    (len(object._bodies), 3),
-                )
-            query, contacts_shape = self.queries[object.name]
-            self.scene.px.gpu_query_contact_pair_impulses(query)
-            # query.cuda_contacts # (num_unique_pairs * num_envs, 3)
-            contacts = (
-                query.cuda_impulses.torch().clone().reshape((-1, *contacts_shape))
+            l_contact_forces = self.scene.get_pairwise_contact_forces(
+                self.finger1_link, object
             )
-            lforce = torch.linalg.norm(contacts[0], axis=1)
-            rforce = torch.linalg.norm(contacts[1], axis=1)
+            r_contact_forces = self.scene.get_pairwise_contact_forces(
+                self.finger2_link, object
+            )
+            lforce = torch.linalg.norm(l_contact_forces, axis=1)
+            rforce = torch.linalg.norm(r_contact_forces, axis=1)
+            # lforce = torch.linalg.norm(contacts[0], axis=1)
+            # rforce = torch.linalg.norm(contacts[1], axis=1)
 
             # NOTE (stao): 0.5 * time_step is a decent value when tested on a pick cube task.
-            min_force = 0.5 * self.scene.px.timestep
+            min_force = 0.5
 
             # direction to open the gripper
             ldirection = self.finger1_link.pose.to_transformation_matrix()[..., :3, 1]
             rdirection = -self.finger2_link.pose.to_transformation_matrix()[..., :3, 1]
-            langle = common.compute_angle_between(ldirection, contacts[0])
-            rangle = common.compute_angle_between(rdirection, contacts[1])
+            langle = common.compute_angle_between(ldirection, l_contact_forces)
+            rangle = common.compute_angle_between(rdirection, r_contact_forces)
             lflag = torch.logical_and(
                 lforce >= min_force, torch.rad2deg(langle) <= max_angle
             )
@@ -270,10 +265,10 @@ class Panda(BaseAgent):
             contacts = self.scene.get_contacts()
 
             if object is None:
-                finger1_contacts = sapien_utils.get_actor_contacts(
+                finger1_contacts = sapien_utils.get_cpu_actor_contacts(
                     contacts, self.finger1_link._bodies[0].entity
                 )
-                finger2_contacts = sapien_utils.get_actor_contacts(
+                finger2_contacts = sapien_utils.get_cpu_actor_contacts(
                     contacts, self.finger2_link._bodies[0].entity
                 )
                 return (

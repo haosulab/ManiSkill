@@ -8,7 +8,7 @@ from sapien.render import RenderCameraComponent
 
 from mani_skill.sensors.base_sensor import BaseSensor
 from mani_skill.sensors.camera import Camera
-from mani_skill.utils import common
+from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.articulation import Articulation
 from mani_skill.utils.structs.drive import Drive
@@ -66,6 +66,15 @@ class ManiSkillScene:
         self._needs_fetch = False
         """Used internally to raise some errors ahead of time of when there may be undefined behaviors"""
 
+        self.pairwise_contact_queries: Dict[
+            str, physx.PhysxGpuContactPairImpulseQuery
+        ] = dict()
+        """dictionary mapping pairwise contact query keys to GPU contact queries. Used in GPU simulation only to cache queries as
+        query creation will pause any GPU sim computation."""
+
+    # -------------------------------------------------------------------------- #
+    # Functions from sapien.Scene
+    # -------------------------------------------------------------------------- #
     @property
     def timestep(self):
         return self.px.timestep
@@ -229,6 +238,7 @@ class ManiSkillScene:
             self.sub_scenes[0].update_render()
 
     def get_contacts(self):
+        # TODO (stao): deprecate this API
         return self.px.get_contacts()
 
     def get_all_actors(self):
@@ -486,11 +496,61 @@ class ManiSkillScene:
     #     self.render_system.cubemap = sapien.render.RenderCubemap(px, nx, py, ny, pz, nz)
 
     # ---------------------------------------------------------------------------- #
-    # Additional useful properties
+    # Additional useful properties / functions
     # ---------------------------------------------------------------------------- #
     @property
     def num_envs(self):
         return len(self.sub_scenes)
+
+    def get_pairwise_contact_impulses(
+        self, obj1: Union[Actor, Link], obj2: Union[Actor, Link]
+    ):
+        """
+        Get the impulse vectors between two actors/links. Returns impulse vector of shape (B, N, 3)
+        where B is the number of environments, N is the number of actors/links managed by obj1 (obj2 must have the same number)
+        and 3 is the dimension of the impulse vector itself, representing x, y, and z direction of impulse.
+
+        Note that dividing the impulse value by self.px.timestep yields the pairwise contact force in Newtons. The equivalent API for that
+        is self.get_pairwise_contact_force(obj1, obj2). It is generally recommended to use the force values since they are independent of the
+        timestep (dt = 1 / sim_freq) of the simulation.
+
+        Args:
+            obj1: Actor | Link
+            obj2: Actor | Link
+        """
+        if physx.is_gpu_enabled():
+            query_hash = hash((obj1, obj2))
+            if query_hash not in self.pairwise_contact_queries:
+                body_pairs = list(zip(obj1._bodies, obj2._bodies))
+                self.pairwise_contact_queries[
+                    query_hash
+                ] = self.px.gpu_create_contact_pair_impulse_query(body_pairs)
+
+            query = self.pairwise_contact_queries[query_hash]
+            self.px.gpu_query_contact_pair_impulses(query)
+            # query.cuda_impulses # (num_unique_pairs * num_envs, 3)
+            pairwise_contact_impulses = query.cuda_impulses.torch().clone()
+            return pairwise_contact_impulses
+        else:
+            contacts = self.px.get_contacts()
+            pairwise_contact_impulses = sapien_utils.get_pairwise_contact_impulse(
+                contacts, obj1._bodies[0]
+            )
+            return common.to_tensor(pairwise_contact_impulses)[None, :]
+
+    def get_pairwise_contact_forces(
+        self, obj1: Union[Actor, Link], obj2: Union[Actor, Link]
+    ):
+        """
+        Get the force vectors between two actors/links. Returns force vector of shape (B, N, 3)
+        where B is the number of environments, N is the number of actors/links managed by obj1 (obj2 must have the same number)
+        and 3 is the dimension of the force vector itself, representing x, y, and z direction of force.
+
+        Args:
+            obj1: Actor | Link
+            obj2: Actor | Link
+        """
+        return self.get_pairwise_contact_impulses(obj1, obj2) / self.px.timestep
 
     # -------------------------------------------------------------------------- #
     # Simulation state (required for MPC)

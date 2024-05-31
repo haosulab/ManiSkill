@@ -371,7 +371,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             )
         else:
 
-            body_contacts = sapien_utils.get_articulation_contacts(
+            body_contacts = sapien_utils.get_cpu_articulation_contacts(
                 self.px.get_contacts(),
                 self._objs[0],
                 included_links=[self.links_map[k]._objs[0] for k in link_names],

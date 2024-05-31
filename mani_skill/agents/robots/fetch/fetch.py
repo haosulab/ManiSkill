@@ -406,10 +406,10 @@ class Fetch(BaseAgent):
             contacts = self.scene.get_contacts()
 
             if object is None:
-                finger1_contacts = sapien_utils.get_actor_contacts(
+                finger1_contacts = sapien_utils.get_cpu_actor_contacts(
                     contacts, self.finger1_link._bodies[0].entity
                 )
-                finger2_contacts = sapien_utils.get_actor_contacts(
+                finger2_contacts = sapien_utils.get_cpu_actor_contacts(
                     contacts, self.finger2_link._bodies[0].entity
                 )
                 return (

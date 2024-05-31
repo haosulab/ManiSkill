@@ -25,7 +25,7 @@ class BaseStruct(Generic[T]):
     """
 
     _objs: List[T]
-    """list of objects of type T managed by this dataclass"""
+    """list of objects of type T managed by this dataclass. This should not be modified after initialization. The struct hash is dependent on the hash of this list."""
     _scene_idxs: torch.Tensor
     """a list of indexes parallel to `self._objs` indicating which sub-scene each of those objects are actually in by index"""
     scene: ManiSkillScene
@@ -40,6 +40,9 @@ class BaseStruct(Generic[T]):
 
     def __repr__(self):
         return self.__str__()
+
+    def __hash__(self):
+        return hash(tuple([obj.__hash__() for obj in self._objs]))
 
     @property
     def device(self):
@@ -119,7 +122,7 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
                 / self.scene.timestep
             )
         else:
-            body_contacts = sapien_utils.get_actor_contacts(
+            body_contacts = sapien_utils.get_cpu_actor_contacts(
                 self.px.get_contacts(), self._bodies[0].entity
             )
             net_force = (
