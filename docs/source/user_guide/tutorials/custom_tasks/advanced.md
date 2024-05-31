@@ -27,7 +27,21 @@ Now recorded trajectories of your task will include the height as part of the en
 
 ### Pair-wise Contact Forces
 
-You may notice that in some tasks like [PickCube-v1](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/tasks/pikc_cube.py) we call a function `self.agent.is_grasping(self.)`. In ManiSkill, we leverage the pairwise impulses/forces API of SAPIEN to compute the forces betewen two objects. In the case of robots with two-finger grippers we check if both fingers are contacting a queried object. This is particularly useful for building better reward functions.
+You may notice that in some tasks like [PickCube-v1](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/tasks/pikc_cube.py) we call a function `self.agent.is_grasping(...)`. In ManiSkill, we leverage the pairwise impulses/forces API of SAPIEN to compute the forces betewen two objects. In the case of robots with two-finger grippers we check if both fingers are contacting a queried object. This is particularly useful for building better reward functions for faster RL. 
+
+The API for querying pair-wise contact forces is unified between the GPU and CPU and is accessible via the `self.scene` object in your environment, accessible as so given a pair of actors/links of type `Actor | Link` to query
+
+```python
+self.scene: ManiSkillScene
+self.get_pairwise_contact_forces(actor_1, link_2)
+```
+
+:::{dropdown} Internal Implementation Caveats/Details
+At the moment contacts work a bit different compared to CPU and GPU internally although they are unified under one interface/function for users.
+
+On the GPU, one must create contact queries objects ahead of time and for performance reasons these are cached. Creating contact queries pauses all GPU computations similar to changing object poses/states. In ManiSkill this handled for users and it automatically creates queries if the queried contact forces are between objects that have not been queried before.
+:::
+
 
 
 #### On the CPU
