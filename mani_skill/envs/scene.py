@@ -506,8 +506,8 @@ class ManiSkillScene:
         self, obj1: Union[Actor, Link], obj2: Union[Actor, Link]
     ):
         """
-        Get the impulse vectors between two actors/links. Returns impulse vector of shape (B, N, 3)
-        where B is the number of environments, N is the number of actors/links managed by obj1 (obj2 must have the same number)
+        Get the impulse vectors between two actors/links. Returns impulse vector of shape (N, D, 3)
+        where N is the number of environments, D is the number of actors/links managed by obj1 (obj2 must have the same number)
         and 3 is the dimension of the impulse vector itself, representing x, y, and z direction of impulse.
 
         Note that dividing the impulse value by self.px.timestep yields the pairwise contact force in Newtons. The equivalent API for that
@@ -542,8 +542,8 @@ class ManiSkillScene:
         self, obj1: Union[Actor, Link], obj2: Union[Actor, Link]
     ):
         """
-        Get the force vectors between two actors/links. Returns force vector of shape (B, N, 3)
-        where B is the number of environments, N is the number of actors/links managed by obj1 (obj2 must have the same number)
+        Get the force vectors between two actors/links. Returns force vector of shape (N, D, 3)
+        where N is the number of environments, D is the number of actors/links managed by obj1 (obj2 must have the same number)
         and 3 is the dimension of the force vector itself, representing x, y, and z direction of force.
 
         Args:

@@ -42,42 +42,7 @@ At the moment contacts work a bit different compared to CPU and GPU internally a
 On the GPU, one must create contact queries objects ahead of time and for performance reasons these are cached. Creating contact queries pauses all GPU computations similar to changing object poses/states. In ManiSkill this handled for users and it automatically creates queries if the queried contact forces are between objects that have not been queried before.
 :::
 
-
-
-#### On the CPU
-If you have an two `Actor` or `Link` class objects, call them `x1, x2`, in a `ManiSkillScene` (accessible in custom tasks via `self.scene`), you can generate the contact force between them via
-
-```python
-from mani_skill.utils import sapien_utils
-impulses = sapien_utils.get_pairwise_contact_impulse(
-    scene.get_contacts(), x1._bodies[0].entity, x2._bodies[0].entity
-)
-```
-
-#### On the GPU
-
-To get pair-wise contact forces on the GPU you have to first generate a list of 2-tuples of bodies you wish to compute contacts between. If you have an two `Actor` or `Link` class objects, call them `x1, x2`, you can generate the contact force between them via
-
-
-```python
-# this generates N 2-tuples where N is the number of parallel envs
-body_pairs = list(zip(x1._bodies, x2._bodies))
-```
-You are not restricted to having to use all of the `_bodies`, you can pick any subset of them if you wish.
-
-Then you can generate and cache the pair impulse query as so
-```python
-query = scene.px.gpu_create_contact_pair_impulse_query(body_pairs)
-```
-
-To fetch the impulses of the contacts between bodies
-```python
-# impulses divided by the physx timestep gives forces in newtons
-contacts = query.cuda_impulses.torch().clone() / scene.timestep
-# results in a array of shape (len(body_pairs), 3)
-```
-
-There are plans to make a simpler managed version of the SAPIEN pair-wise contacts API. If you want to use it yourself you can check out how it is used to check two-finger grasps on the [Panda Robot](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/panda/panda.py) or generate tactile sensing data on the [Allegro Hand](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/allegro_hand/allegro_touch.py).
+For significantly more advanced/optimized usage of the contact forces API using the SAPIEN API directly instead of ManiSkill you can look at how [get_pairwise_contact_forces is implemented on GitHub](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/scene.py#L505-L539)
 
 ### Net Contact forces
 
