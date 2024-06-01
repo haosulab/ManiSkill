@@ -24,9 +24,9 @@ and `env.step` follows below:
 
 This tutorial will take you through most of the important yellow modules in the figures above that should be implemented to build a task.
 
-To follow this tutorial easily, we recommend reading this alongside reading the [annotated code for the PushCube task](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/tasks/push_cube.py) which describes the purpose of nearly every line of code. The [advanced features page](./advanced.md) covers additional topics to do more advanced simulation and optimization such as dynamic GPU memory configuration, diverse object simulation, and more. 
+To follow this tutorial easily, we recommend reading this alongside reading the [annotated code for the PushCube task](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/tasks/tabletop/push_cube.py) which describes the purpose of nearly every line of code. The [advanced features page](./advanced.md) covers additional topics to do more advanced simulation and optimization such as dynamic GPU memory configuration, diverse object simulation, and more. 
 
-If you want to skip the tutorial and start from a template you can use the [PushCube task](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/tasks/push_cube.py) as a template, the [annotated template](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/template.py), or the [bare minimum template](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/minimal_template.py).
+If you want to skip the tutorial and start from a template you can use the [PushCube task](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/tasks/tabletop/push_cube.py) as a template, the [annotated template](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/template.py), or the [bare minimum template](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/minimal_template.py).
 
 If you have any questions or issues, feel free to ask in our [discord](https://discord.gg/vJb6wUmWXA) or on our [github](https://github.com/haosulab/ManiSkill/issues)
 
