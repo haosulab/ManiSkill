@@ -69,6 +69,9 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     def __repr__(self):
         return self.__str__()
 
+    def __hash__(self):
+        return hash(tuple([obj.__hash__() for obj in self._objs]))
+
     @classmethod
     def create_from_physx_articulations(
         cls,
