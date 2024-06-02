@@ -232,93 +232,35 @@ class Panda(BaseAgent):
             str, Tuple[physx.PhysxGpuContactPairImpulseQuery, Tuple[int]]
         ] = dict()
 
-    def is_grasping(self, object: Actor = None, min_impulse=1e-6, max_angle=85):
-        if physx.is_gpu_enabled():
-            if object.name not in self.queries:
-                body_pairs = list(zip(self.finger1_link._bodies, object._bodies))
-                body_pairs += list(zip(self.finger2_link._bodies, object._bodies))
-                self.queries[object.name] = (
-                    self.scene.px.gpu_create_contact_pair_impulse_query(body_pairs),
-                    (len(object._bodies), 3),
-                )
-            query, contacts_shape = self.queries[object.name]
-            self.scene.px.gpu_query_contact_pair_impulses(query)
-            # query.cuda_contacts # (num_unique_pairs * num_envs, 3)
-            contacts = (
-                query.cuda_impulses.torch().clone().reshape((-1, *contacts_shape))
-            )
-            lforce = torch.linalg.norm(contacts[0], axis=1)
-            rforce = torch.linalg.norm(contacts[1], axis=1)
+    def is_grasping(self, object: Actor, min_force=0.5, max_angle=85):
+        """Check if the robot is grasping an object
 
-            # NOTE (stao): 0.5 * time_step is a decent value when tested on a pick cube task.
-            min_force = 0.5 * self.scene.px.timestep
+        Args:
+            object (Actor): The object to check if the robot is grasping
+            min_force (float, optional): Minimum force before the robot is considered to be grasping the object in Newtons. Defaults to 0.5.
+            max_angle (int, optional): Maximum angle of contact to consider grasping. Defaults to 85.
+        """
+        l_contact_forces = self.scene.get_pairwise_contact_forces(
+            self.finger1_link, object
+        )
+        r_contact_forces = self.scene.get_pairwise_contact_forces(
+            self.finger2_link, object
+        )
+        lforce = torch.linalg.norm(l_contact_forces, axis=1)
+        rforce = torch.linalg.norm(r_contact_forces, axis=1)
 
-            # direction to open the gripper
-            ldirection = self.finger1_link.pose.to_transformation_matrix()[..., :3, 1]
-            rdirection = -self.finger2_link.pose.to_transformation_matrix()[..., :3, 1]
-            langle = common.compute_angle_between(ldirection, contacts[0])
-            rangle = common.compute_angle_between(rdirection, contacts[1])
-            lflag = torch.logical_and(
-                lforce >= min_force, torch.rad2deg(langle) <= max_angle
-            )
-            rflag = torch.logical_and(
-                rforce >= min_force, torch.rad2deg(rangle) <= max_angle
-            )
-
-            return torch.logical_and(lflag, rflag)
-        else:
-            contacts = self.scene.get_contacts()
-
-            if object is None:
-                finger1_contacts = sapien_utils.get_actor_contacts(
-                    contacts, self.finger1_link._bodies[0].entity
-                )
-                finger2_contacts = sapien_utils.get_actor_contacts(
-                    contacts, self.finger2_link._bodies[0].entity
-                )
-                return (
-                    np.linalg.norm(sapien_utils.compute_total_impulse(finger1_contacts))
-                    >= min_impulse
-                    and np.linalg.norm(
-                        sapien_utils.compute_total_impulse(finger2_contacts)
-                    )
-                    >= min_impulse
-                )
-            else:
-                limpulse = sapien_utils.get_pairwise_contact_impulse(
-                    contacts,
-                    self.finger1_link._bodies[0].entity,
-                    object._bodies[0].entity,
-                )
-                rimpulse = sapien_utils.get_pairwise_contact_impulse(
-                    contacts,
-                    self.finger2_link._bodies[0].entity,
-                    object._bodies[0].entity,
-                )
-
-                # direction to open the gripper
-                ldirection = self.finger1_link.pose.to_transformation_matrix()[
-                    ..., :3, 1
-                ]
-                rdirection = -self.finger2_link.pose.to_transformation_matrix()[
-                    ..., :3, 1
-                ]
-
-                # TODO Convert this to batched code
-                # angle between impulse and open direction
-                langle = common.np_compute_angle_between(ldirection[0], limpulse)
-                rangle = common.np_compute_angle_between(rdirection[0], rimpulse)
-
-                lflag = (
-                    np.linalg.norm(limpulse) >= min_impulse
-                    and np.rad2deg(langle) <= max_angle
-                )
-                rflag = (
-                    np.linalg.norm(rimpulse) >= min_impulse
-                    and np.rad2deg(rangle) <= max_angle
-                )
-
-                return torch.tensor([all([lflag, rflag])], dtype=bool)
+        # direction to open the gripper
+        ldirection = self.finger1_link.pose.to_transformation_matrix()[..., :3, 1]
+        rdirection = -self.finger2_link.pose.to_transformation_matrix()[..., :3, 1]
+        langle = common.compute_angle_between(ldirection, l_contact_forces)
+        rangle = common.compute_angle_between(rdirection, r_contact_forces)
+        lflag = torch.logical_and(
+            lforce >= min_force, torch.rad2deg(langle) <= max_angle
+        )
+        rflag = torch.logical_and(
+            rforce >= min_force, torch.rad2deg(rangle) <= max_angle
+        )
+        return torch.logical_and(lflag, rflag)
 
     def is_static(self, threshold: float = 0.2):
         qvel = self.robot.get_qvel()[..., :-2]

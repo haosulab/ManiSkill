@@ -69,6 +69,9 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     def __repr__(self):
         return self.__str__()
 
+    def __hash__(self):
+        return self.__maniskill_hash__
+
     @classmethod
     def create_from_physx_articulations(
         cls,
@@ -344,14 +347,12 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             return meshes[0]
         return meshes
 
-    def get_net_contact_forces(self, link_names: Union[List[str], Tuple[str]]):
-        """Get net contact forces for several links together. This should be faster compared to using
-        link.get_net_contact_forces on each link.
+    def get_net_contact_impulses(self, link_names: Union[List[str], Tuple[str]]):
+        """Get net contact impulses for several links together. This should be faster compared to using
+        link.get_net_contact_impulses on each link.
 
-
-        Returns torch.Tensor of shape (num_envs, len(link_names), 3)
+        Returns impulse vector of shape (N, len(link_names), 3) where N is the number of environments
         """
-
         if physx.is_gpu_enabled():
             if tuple(link_names) not in self._net_contact_force_queries:
                 bodies = []
@@ -367,21 +368,28 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
                 .clone()
                 .reshape(len(link_names), -1, 3)
                 .transpose(1, 0)
-                / self.scene.timestep
             )
         else:
 
-            body_contacts = sapien_utils.get_articulation_contacts(
+            body_contacts = sapien_utils.get_cpu_articulation_contacts(
                 self.px.get_contacts(),
                 self._objs[0],
                 included_links=[self.links_map[k]._objs[0] for k in link_names],
             )
-            net_force = (
-                common.to_tensor(sapien_utils.compute_total_impulse(body_contacts))
-                / self.scene.timestep
+            net_force = common.to_tensor(
+                sapien_utils.compute_total_impulse(body_contacts)
             )
             # TODO (stao): (unify contacts api between gpu / cpu)
             return net_force[None, :]
+
+    def get_net_contact_forces(self, link_names: Union[List[str], Tuple[str]]):
+        """Get net contact forces for several links together. This should be faster compared to using
+        link.get_net_contact_forces on each link.
+
+
+        Returns force vector of shape (N, len(link_names), 3) where N is the number of environments
+        """
+        return self.get_net_contact_impulses(link_names) / self.scene.timestep
 
     # -------------------------------------------------------------------------- #
     # Functions from physx.PhysxArticulation
