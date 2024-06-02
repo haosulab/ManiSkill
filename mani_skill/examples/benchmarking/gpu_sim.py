@@ -46,6 +46,7 @@ def main(args):
         env.reset(seed=2022)
         env.step(env.action_space.sample())  # warmup step
         env.reset(seed=2022)
+        import ipdb;ipdb.set_trace()
         if args.save_video:
             images.append(env.render().cpu().numpy())
         N = 100

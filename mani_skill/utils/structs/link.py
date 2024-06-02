@@ -53,7 +53,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
         return self.__str__()
 
     def __hash__(self):
-        return hash(tuple([obj.__hash__() for obj in self._objs]))
+        return self.__maniskill_hash__
 
     @classmethod
     def create(

@@ -42,6 +42,12 @@ class BaseStruct(Generic[T]):
         return self.__str__()
 
     def __hash__(self):
+        return self.__maniskill_hash__
+
+    @cached_property
+    def __maniskill_hash__(self):
+        """A better hash to use compared to the default frozen dataclass hash.
+        It is tied directly to the only immutable field (the _objs list)."""
         return hash(tuple([obj.__hash__() for obj in self._objs]))
 
     @property

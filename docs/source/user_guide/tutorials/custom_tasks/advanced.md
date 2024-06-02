@@ -190,13 +190,15 @@ class GPUMemoryConfig:
     def dict(self):
         return {k: v for k, v in asdict(self).items()}
 
+
 @dataclass
 class SceneConfig:
     gravity: np.ndarray = field(default_factory=lambda: np.array([0, 0, -9.81]))
     bounce_threshold: float = 2.0
     sleep_threshold: float = 0.005
     contact_offset: float = 0.02
-    solver_iterations: int = 15
+    rest_offset: float = 0
+    solver_position_iterations: int = 15
     solver_velocity_iterations: int = 1
     enable_pcm: bool = True
     enable_tgs: bool = True
