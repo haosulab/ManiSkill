@@ -29,11 +29,12 @@ Now recorded trajectories of your task will include the height as part of the en
 
 You may notice that in some tasks like [PickCube-v1](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/tasks/pikc_cube.py) we call a function `self.agent.is_grasping(...)`. In ManiSkill, we leverage the pairwise impulses/forces API of SAPIEN to compute the forces betewen two objects. In the case of robots with two-finger grippers we check if both fingers are contacting a queried object. This is particularly useful for building better reward functions for faster RL. 
 
-The API for querying pair-wise contact forces is unified between the GPU and CPU and is accessible via the `self.scene` object in your environment, accessible as so given a pair of actors/links of type `Actor | Link` to query
+The API for querying pair-wise contact forces is unified between the GPU and CPU and is accessible via the `self.scene` object in your environment, accessible as so given a pair of actors/links of type `Actor | Link` to query via the ManiSkillScene object.
 
 ```python
 self.scene: ManiSkillScene
-self.get_pairwise_contact_forces(actor_1, link_2)
+forces = self.scene.get_pairwise_contact_forces(actor_1, link_2)
+# forces is shape (N, 3) where N is the number of environments
 ```
 
 :::{dropdown} Internal Implementation Caveats/Details
@@ -49,7 +50,7 @@ For significantly more advanced/optimized usage of the contact forces API using 
 Net contact forces are nearly the same as the pair-wise contact forces in terms of SAPIEN API but ManiSkill provides a convenient way to fetch this data for Actors and Articulations that works on CPU and GPU as so
 
 ```python
-actor.get_net_contact_forces() # shape (N, 3)
+actor.get_net_contact_forces() # shape (N, 3), N is number of environments
 articulation.get_net_contact_forces(link_names) # shape (N, len(link_names), 3)
 ```
 
