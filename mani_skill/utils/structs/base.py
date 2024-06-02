@@ -114,20 +114,28 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
         return self.px.gpu_create_contact_body_impulse_query(self._bodies)
 
     def get_net_contact_forces(self):
+        """
+        Get the net contact forces on this body. Returns force vector of shape (N, 3)
+        where N is the number of environments, and 3 is the dimension of the force vector itself,
+        representing x, y, and z direction of force.
+        """
+        return self.get_net_contact_impulses() / self.scene.timestep
+
+    def get_net_contact_impulses(self):
+        """
+        Get the net contact impulses on this body. Returns impulse vector of shape (N, 3)
+        where N is the number of environments, and 3 is the dimension of the impulse vector itself,
+        representing x, y, and z direction of impulse.
+        """
         if physx.is_gpu_enabled():
             self.px.gpu_query_contact_body_impulses(self._body_force_query)
-            # NOTE (stao): physx5 calls the output forces but they are actually impulses
-            return (
-                self._body_force_query.cuda_impulses.torch().clone()
-                / self.scene.timestep
-            )
+            return self._body_force_query.cuda_impulses.torch().clone()
         else:
             body_contacts = sapien_utils.get_cpu_actor_contacts(
                 self.px.get_contacts(), self._bodies[0].entity
             )
-            net_force = (
-                common.to_tensor(sapien_utils.compute_total_impulse(body_contacts))
-                / self.scene.timestep
+            net_force = common.to_tensor(
+                sapien_utils.compute_total_impulse(body_contacts)
             )
             return net_force[None, :]
 
