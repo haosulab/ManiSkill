@@ -70,7 +70,12 @@ class ManiSkillScene:
             str, physx.PhysxGpuContactPairImpulseQuery
         ] = dict()
         """dictionary mapping pairwise contact query keys to GPU contact queries. Used in GPU simulation only to cache queries as
-        query creation will pause any GPU sim computation."""
+        query creation will pause any GPU sim computation"""
+        self._pairwise_contact_query_unique_hashes: Dict[str, int] = dict()
+        """maps keys in self.pairwise_contact_queries to unique hashes dependent on the actual objects involved in the query.
+        This is used to determine automatically when to rebuild contact queries as keys for self.pairwise_contact_queries are kept
+        non-unique between episode resets in order to be easily rebuilt and deallocate old queries. This essentially acts as a way
+        to invalidate the cached queries."""
 
     # -------------------------------------------------------------------------- #
     # Functions from sapien.Scene
@@ -523,13 +528,22 @@ class ManiSkillScene:
         # write this code below themselves.
         if physx.is_gpu_enabled():
             query_hash = hash((obj1, obj2))
-            if query_hash not in self.pairwise_contact_queries:
+            query_key = obj1.name + obj2.name
+
+            # we rebuild the potentially expensive contact query if it has not existed previously
+            # or if it has, the managed objects are a different set
+            rebuild_query = (query_key not in self.pairwise_contact_queries) or (
+                query_key in self._pairwise_contact_query_unique_hashes
+                and self._pairwise_contact_query_unique_hashes[query_key] != query_hash
+            )
+            if rebuild_query:
                 body_pairs = list(zip(obj1._bodies, obj2._bodies))
                 self.pairwise_contact_queries[
-                    query_hash
+                    query_key
                 ] = self.px.gpu_create_contact_pair_impulse_query(body_pairs)
+                self._pairwise_contact_query_unique_hashes[query_key] = query_hash
 
-            query = self.pairwise_contact_queries[query_hash]
+            query = self.pairwise_contact_queries[query_key]
             self.px.gpu_query_contact_pair_impulses(query)
             # query.cuda_impulses is shape (num_unique_pairs * num_envs, 3)
             pairwise_contact_impulses = query.cuda_impulses.torch().clone()
