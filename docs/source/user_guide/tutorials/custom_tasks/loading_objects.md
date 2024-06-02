@@ -58,7 +58,7 @@ def _load_scene(self, options):
     builder = self.scene.create_articulation_builder()
 ```
 
-Then you can use the standard SAPIEN API for creating articulations, a tutorial of which can be found on the [SAPIEN articulation tutorial documentation](https://sapien.ucsd.edu/docs/latest/tutorial/basic/create_articulations.html)
+Then you can use the standard SAPIEN API for creating articulations, a tutorial of which can be found on the [SAPIEN articulation tutorial documentation](https://sapien.ucsd.edu/docs/latest/tutorial/basic/create_articulations.html). You essentially just need to define what the links and joints are and how they connect. Links are created like Actors and can have visual and collision shapes added via the python API.
 
 ### Using the URDF Loader
 
@@ -98,7 +98,7 @@ def _load_scene(self, options):
     # if collision meshes contain multiple convex meshes
     # you can set this to True to try and load them
     loader.load_multiple_collisions_from_file = True
-    
+
     articulation_builders, _, _ = loader.parse(str(urdf_path))
     builder = articulation_builders[0]
     builder.build(name="my_articulation")
@@ -111,9 +111,6 @@ In general loading is always quite slow, especially on the GPU so by default, Ma
 However, during CPU simulation with just a single environment (or GPU simulation with very few environments) the loaded object geometries never get to change as reconfiguration doesn't happen more than once. This behavior can be changed by setting the `reconfiguration_freq` value of your task. 
 
 The recommended way to do this is as follows (taken from the PickSingleYCB task):
-
-
-
 
 ```python
 class PickSingleYCBEnv(BaseEnv):
