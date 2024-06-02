@@ -518,6 +518,9 @@ class ManiSkillScene:
             obj1: Actor | Link
             obj2: Actor | Link
         """
+        # TODO (stao): Is there any optimization improvement when putting all queries all together and fetched together
+        # vs multiple smaller queries? If so, might be worth exposing a helpful API for that instead of having user
+        # write this code below themselves.
         if physx.is_gpu_enabled():
             query_hash = hash((obj1, obj2))
             if query_hash not in self.pairwise_contact_queries:
