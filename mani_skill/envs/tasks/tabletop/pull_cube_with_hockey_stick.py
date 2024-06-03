@@ -117,11 +117,11 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             name="cube",
             body_type="dynamic",
         )
-        model_id = "1349b2169a97a0ff54e1b6f41fdd78a"
+        model_id = "4000" # from info_bucket_train.json
         builder = articulations.get_articulation_builder(
             self.scene, f"partnet-mobility:{model_id}"
             )
-        self.bottle = builder.build(name="bottle")
+        self.bucket = builder.build(name="bottle")
 
         
 
