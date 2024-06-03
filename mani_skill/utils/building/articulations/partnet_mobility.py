@@ -57,6 +57,7 @@ def get_partnet_mobility_builder(
     loader.fix_root_link = fix_root_link
     loader.scale = metadata["scale"]
     loader.load_multiple_collisions_from_file = True
+    print("PARTNET_MOBILITY: ", PARTNET_MOBILITY)
     urdf_path = PARTNET_MOBILITY["model_urdf_paths"][id]
     applied_urdf_config = sapien_utils.parse_urdf_config(
         dict(
