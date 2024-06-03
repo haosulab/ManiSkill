@@ -538,16 +538,15 @@ class ManiSkillScene:
             )
             if rebuild_query:
                 body_pairs = list(zip(obj1._bodies, obj2._bodies))
-                self.pairwise_contact_queries[
-                    query_key
-                ] = self.px.gpu_create_contact_pair_impulse_query(body_pairs)
+                self.pairwise_contact_queries[query_key] = (
+                    self.px.gpu_create_contact_pair_impulse_query(body_pairs)
+                )
                 self._pairwise_contact_query_unique_hashes[query_key] = query_hash
 
             query = self.pairwise_contact_queries[query_key]
             self.px.gpu_query_contact_pair_impulses(query)
             # query.cuda_impulses is shape (num_unique_pairs * num_envs, 3)
             pairwise_contact_impulses = query.cuda_impulses.torch().clone()
-            print(pairwise_contact_impulses.shape)
             return pairwise_contact_impulses
         else:
             contacts = self.px.get_contacts()
