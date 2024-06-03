@@ -40,7 +40,7 @@ from mani_skill.utils.structs.types import Array
 
 _stick_length = 0.4
 _stick_end_length = 0.2
-_stick_thickness = 3e-2 # y & z thicky
+_stick_thickness = 1e-2 # y & z thicky
 
 def _build_hockey_stick(
     scene: ManiSkillScene, 
@@ -68,18 +68,6 @@ def _build_hockey_stick(
         builder.add_box_visual(pose, half_size, material=material)
 
     return builder.build(name="hockey_stick")
-
-
-
-    # end of stick (another stick)
-
-from mani_skill.utils.building import articulations
-
-
-
-
-
-
 
 
 @register_env("PullCubeWithHockeyStick-v1", max_episode_steps=100)
@@ -183,7 +171,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
                 - (_stick_end_length + 3* self.cube_half_size),
                 0])
             target_region_xyz = xyz + offset
-            target_region_xyz[..., 2] = 1e-3 + _stick_thickness/2
+            target_region_xyz[..., 2] = _stick_thickness/2
             self.hockey_stick.set_pose(
                 Pose.create_from_pq(
                     p=target_region_xyz,
@@ -230,6 +218,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
         # # 2. mock - add reward when we pick up the stick
         is_grasped = info["is_grasped"]
         reward+= is_grasped
+        print("sum(is_grasped):", sum(is_grasped))
 
         # 3. Add reward as the distance of the end of the stick to the cube decreases
         # end_of_stick_pos = self.hockey_stick.pose.p + torch.tensor([_stick_length/2, -_stick_end_length, 0])
