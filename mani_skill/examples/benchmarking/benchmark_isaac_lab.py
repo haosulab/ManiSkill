@@ -83,11 +83,25 @@ def main():
                 )
                 obs, rew, terminated, truncated, info = env.step(actions)
         profiler.log_stats("env.step")
+        env.reset(seed=2022)
+        N = 1000
+        with profiler.profile("env.step+env.reset", total_steps=N, num_envs=args_cli.num_envs):
+            for i in range(N):
+                actions = (
+                    2 * torch.rand(env.action_space.shape, device=env.unwrapped.device) - 1
+                )
+                obs, rew, terminated, truncated, info = env.step(actions)
+                if i % 200 == 0 and i != 0:
+                    env.reset()
+        profiler.log_stats("env.step+env.reset")
     env.close()
     return
 
 if __name__ == "__main__":
-    """Test with ./isaaclab.sh -p benchmark_isaac_lab.py --headless --task=...  --num_envs 128"""
+    """Test with
+    isaaclab -p benchmark_isaac_lab.py \
+        --headless --task=Isaac-Lift-Cube-Franka-v0 --num_envs=1024
+    """
     # run the main function
     main()
     # close sim app
