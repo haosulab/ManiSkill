@@ -1,3 +1,4 @@
+import torch
 from mani_skill.envs.tasks.control.cartpole import CartpoleBalanceEnv
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.structs.types import SceneConfig, SimConfig
@@ -15,3 +16,5 @@ class CartPoleBalanceBenchmarkEnv(CartpoleBalanceEnv):
                 solver_position_iterations=4, solver_velocity_iterations=0
             ),
         )
+    def compute_dense_reward(self, obs, action, info):
+        return torch.zeros(self.num_envs, device=self.device)
