@@ -34,7 +34,7 @@ from mani_skill.utils.structs.types import Array, GPUMemoryConfig, SimConfig
 
 
 @register_env("PullCubeWithHockeyStick-v1", max_episode_steps=50)
-class PullCubeWithHockeyStick(BaseEnv):
+class PullCubeWithHockeyStickEnv(BaseEnv):
 
     SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
 
