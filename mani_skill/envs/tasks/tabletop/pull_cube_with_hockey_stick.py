@@ -234,6 +234,8 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
         # )
 
         # reward[info["success"]] = 5
+        if reward is None:
+            raise Exception("muah muah muah, something went wrong!")
         return reward
 
     def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
