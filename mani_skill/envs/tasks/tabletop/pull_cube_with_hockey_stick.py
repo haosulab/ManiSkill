@@ -38,9 +38,9 @@ from mani_skill.utils.structs.types import Array
 
 
 
-_stick_length = 0.4
-_stick_end_length = 0.2
-_stick_thickness = 1e-2 # y & z thicky
+_stick_length = 0.2
+_stick_end_length = 0.1
+_stick_thickness = 5e-3 # y & z thicky
 goal_thresh = 0.025
 
 def _build_hockey_stick(
@@ -56,13 +56,13 @@ def _build_hockey_stick(
     )
 
     half_sizes = [
-        [stick_length / 2, stick_thickness / 2, stick_thickness / 2], # long stick
-        [stick_thickness / 2, end_of_stick_length / 2, stick_thickness / 2], # end of stick
+        [stick_length, stick_thickness, stick_thickness], # long stick
+        [stick_thickness, end_of_stick_length, stick_thickness], # end of stick
     ]
 
     poses = [
         sapien.Pose(p=[0, 0, 0]),
-        sapien.Pose(p=[stick_length / 2 + stick_thickness / 2, end_of_stick_length / 2 - stick_thickness / 2, 0]),
+        sapien.Pose(p=[stick_length+ stick_thickness , end_of_stick_length - stick_thickness, 0]),
     ]
     for pose, half_size in zip(poses, half_sizes):
         builder.add_box_collision(pose, half_size)
@@ -141,7 +141,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
 
         self.grasp_stick_region = actors.build_sphere(
             self.scene,
-            radius=self.goal_thresh,
+            radius=goal_thresh,
             color=[0, 1, 1, 1],
             name="grasp_stick_region",
             body_type="kinematic",
@@ -150,7 +150,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
 
         self.long_stick_region = actors.build_sphere(
             self.scene,
-            radius=self.goal_thresh,
+            radius=goal_thresh,
             color=[0, 1, 0, 1],
             name="long_stick_region",
             body_type="kinematic",
@@ -188,11 +188,11 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
 
             # set the stick's initial position
             offset = torch.tensor([
-                - (_stick_length/2 - 2 * self.cube_half_size) , 
+                - (_stick_length - 2 * self.cube_half_size) , 
                 - (_stick_end_length + 3* self.cube_half_size),
                 0])
             target_region_xyz = xyz + offset
-            target_region_xyz[..., 2] = _stick_thickness/2
+            target_region_xyz[..., 2] = _stick_thickness
             self.hockey_stick.set_pose(
                 Pose.create_from_pq(
                     p=target_region_xyz,
@@ -203,9 +203,13 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             # print("self.hockey_stick.pose.p:", self.hockey_stick.pose.p)
             # print("self.cube.pose.p:", self.cube.pose.p)
 
-            # set long stick region to appear over the end of the stick
-            target_region_xyz = xyz + offset
-            target_region_xyz[..., 2] = _stick_end_length + _stick_thickness/2
+            # set long stick region to appear over the grasping region of the stick
+            offset = torch.tensor([
+                _stick_length - _stick_thickness,
+                _stick_end_length - _stick_thickness,
+                0])
+            target_region_xyz = self.hockey_stick.pose.p + offset
+            target_region_xyz[..., 2] = 4 * _stick_thickness
             self.long_stick_region.set_pose(
                 Pose.create_from_pq(
                     p=target_region_xyz,
@@ -214,8 +218,12 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             )
 
             # set grasp stick region to appear over the end of the stick
+            offset = torch.tensor([
+                -(_stick_length - _stick_thickness),
+                -(_stick_end_length - _stick_thickness),
+                0])
             target_region_xyz = xyz + offset
-            target_region_xyz[..., 2] = -_stick_end_length - _stick_thickness/2
+            target_region_xyz[..., 2] = 4 * _stick_thickness
             self.grasp_stick_region.set_pose(
                 Pose.create_from_pq(
                     p=target_region_xyz,
