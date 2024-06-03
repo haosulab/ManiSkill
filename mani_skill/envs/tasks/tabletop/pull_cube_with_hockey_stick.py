@@ -81,6 +81,7 @@ from mani_skill.utils.building import articulations
 
 
 
+
 @register_env("PullCubeWithHockeyStick-v1", max_episode_steps=50)
 class PullCubeWithHockeyStickEnv(BaseEnv):
 
