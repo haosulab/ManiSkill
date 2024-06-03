@@ -38,27 +38,40 @@ from mani_skill.utils.structs.types import Array
 
 
 
-# _stick_length = 2
-# _stick_end_length = 1
-# _stick_thickness = 1e-2
+_stick_length = 2
+_stick_end_length = 1
+_stick_thickness = 1e-2 # y & z thicky
 
-# def _build_hockey_stick(
-#     scene: ManiSkillScene, 
-#     stick_length: float, 
-#     end_of_stick_length: float,
-# ):
-#     builder = scene.create_actor_builder()
+def _build_hockey_stick(
+    scene: ManiSkillScene, 
+    stick_length: float, 
+    end_of_stick_length: float,
+    stick_thickness: float,
+):
+    builder = scene.create_actor_builder()
 
-#     # stick
-#     material = sapien.render.RenderMaterial(
-#         base_color=sapien_utils.hex2rgba("#FFD289"), roughness=0.5, specular=0.5
-#     )
+    material = sapien.render.RenderMaterial(
+        base_color=sapien_utils.hex2rgba("#FFD289"), roughness=0.5, specular=0.5
+    )
 
-#     builder.add_box_collision()
+    half_sizes = [
+        [stick_length / 2, stick_thickness / 2, stick_thickness / 2], # long stick
+        [end_of_stick_length / 2, stick_thickness / 2, stick_thickness / 2], # end of stick
+    ]
+
+    poses = [
+        sapien.Pose(p=[0, 0, 0]),
+        sapien.Pose(p=[stick_length / 2 + stick_thickness / 2, end_of_stick_length / 2 - stick_thickness / 2, 0]),
+    ]
+    for pose, half_size in zip(poses, half_sizes):
+        builder.add_box_collision(pose, half_size)
+        builder.add_box_visual(pose, half_size, material=material)
+
+    return builder.build_kinematic(name="hockey_stick")
 
 
 
-#     # end of stick (another stick)
+    # end of stick (another stick)
 
 from mani_skill.utils.building import articulations
 
@@ -117,11 +130,13 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             name="cube",
             body_type="dynamic",
         )
-        model_id = "4000" # from info_bucket_train.json
-        builder = articulations.get_articulation_builder(
-            self.scene, f"partnet-mobility:{model_id}"
-            )
-        self.bucket = builder.build(name="bottle")
+
+        self.hockey_stick = _build_hockey_stick(
+            self.scene,
+            stick_length=_stick_length,
+            end_of_stick_length=_stick_end_length,
+            stick_thickness=_stick_thickness,
+        )
 
         
 
@@ -143,11 +158,11 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             print("self.bottle: ", self.bottle)
             print("self.bottle attributes: ", dir(self.bottle))
             target_region_xyz = xyz + torch.tensor([0.1 + self.goal_radius, 0, 0])
-            target_region_xyz[..., 2] = 1e-3
-            self.bottle.set_pose(
+            target_region_xyz[..., 2] = 1e-3 + _stick_thickness/2
+            self.hockey_stick.set_pose(
                 Pose.create_from_pq(
                     p=target_region_xyz,
-                    q=euler2quat(0, np.pi / 2, 0),
+                    q=euler2quat(0, 0, 0),
                 )
             )
 
