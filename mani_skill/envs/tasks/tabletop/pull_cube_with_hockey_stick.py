@@ -33,7 +33,6 @@ from mani_skill.utils.structs import Pose
 from mani_skill.utils.structs.types import Array, GPUMemoryConfig, SimConfig
 
 
-# @register_env("AssemblyCubes-v1", max_episode_steps=100)
 @register_env("PullCubeWithHockeyStick-v1", max_episode_steps=50)
 class PullCubeWithHockeyStick(BaseEnv):
 
