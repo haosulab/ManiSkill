@@ -224,16 +224,16 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
         reward = reaching_reward
 
 
-        # 2. mock - add reward when we pick up the stick
-        is_grasped = info["is_grasped"]
-        reward+= is_grasped
+        # # 2. mock - add reward when we pick up the stick
+        # is_grasped = info["is_grasped"]
+        # reward+= is_grasped
 
         # 3. Add reward as distance of the stick to the cube decreases
         # dist_to_cube = torch.linalg.norm(
         #     self.cube.pose.p - self.hockey_stick.pose.p, axis=1
         # )
 
-        reward[info["success"]] = 5
+        # reward[info["success"]] = 5
         return reward
 
     def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
