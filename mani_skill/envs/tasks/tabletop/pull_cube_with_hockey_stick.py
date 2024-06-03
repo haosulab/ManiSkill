@@ -38,8 +38,8 @@ from mani_skill.utils.structs.types import Array
 
 
 
-_stick_length = 0.2
-_stick_end_length = 0.1
+_stick_length = 0.4
+_stick_end_length = 0.2
 _stick_thickness = 3e-2 # y & z thicky
 
 def _build_hockey_stick(
@@ -56,7 +56,7 @@ def _build_hockey_stick(
 
     half_sizes = [
         [stick_length / 2, stick_thickness / 2, stick_thickness / 2], # long stick
-        [end_of_stick_length / 2, stick_thickness / 2, stick_thickness / 2], # end of stick
+        [stick_thickness / 2, end_of_stick_length / 2, stick_thickness / 2], # end of stick
     ]
 
     poses = [
