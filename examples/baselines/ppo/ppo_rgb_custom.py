@@ -51,6 +51,10 @@ if __name__ == "__main__":
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
     args.num_iterations = args.total_timesteps // args.batch_size
 
+    print(f"Batch size: {args.batch_size}")
+    print(f"Total timesteps: {args.total_timesteps}")
+    print(f"Number of iters: {args.num_iterations}")
+
     # Varying simulation/rendering params (experiment)
     RENDER_TYPE = args.sim_quality
     ENABLE_SHADOWS = set_simulation_quality(RENDER_TYPE)

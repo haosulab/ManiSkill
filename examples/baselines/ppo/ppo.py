@@ -132,6 +132,10 @@ if __name__ == "__main__":
     args.batch_size = int(args.num_envs * args.num_steps)
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
     args.num_iterations = args.total_timesteps // args.batch_size
+    #print(args.total_timesteps)
+    #print(args.batch_size)
+    #print(args.num_iterations)
+    #raise("debug")
     
     if args.exp_name is None:
         args.exp_name = os.path.basename(__file__)[: -len(".py")]

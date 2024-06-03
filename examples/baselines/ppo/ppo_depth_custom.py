@@ -128,7 +128,7 @@ if __name__ == "__main__":
 
     # rgbd obs mode returns a dict of data, we flatten it so there is just a rgbd key and state key
     WITH_RGB = True # NOTE: depth + rgb
-    WITH_STATE = True # NOTE: depth + rgb + state
+    WITH_STATE = False # NOTE: depth + rgb + state
     envs = FlattenDepthObservationWrapper(envs, with_rgb=WITH_RGB)
     eval_envs = FlattenDepthObservationWrapper(eval_envs, with_rgb=WITH_RGB)
 

@@ -21,10 +21,11 @@ def run_default_visual_ppo_with_varying_sim_params(task='PushCube-v1', name='rgb
         f"--num_envs={40}",
         f"--update_epochs={8}", 
         f"--num_minibatches={16}",
-        f"--total_timesteps={250_000}",
+        f"--total_timesteps={10_000_000}",
         f"--eval_freq={10}",
-        f"--num-steps={20}",
+        f"--num-steps={40}",
         f"--sim_quality={render_quality}",
+        f"--track"
         #f"--random_cam_pose"
     ])
 
@@ -45,10 +46,10 @@ def run_default_visual_ppo(task='PushCube-v1', name='rgb-pushcube'):
         "examples/baselines/ppo/ppo_rgb.py", 
         f"--env_id={task}", 
         f"--exp-name={name}",
-        f"--num_envs={64}",#256, 64, 32
+        f"--num_envs={256}",#256, 64, 32
         f"--update_epochs={8}", 
         f"--num_minibatches={16}",
-        f"--total_timesteps={250_000}",
+        f"--total_timesteps={10_000_000}",
         f"--eval_freq={10}",
         f"--num-steps={20}",
         f"--sim_quality={''}" # rasterization
@@ -72,23 +73,24 @@ if __name__ == "__main__":
 
     elif args.visual_depth:
         tasks = [
-            "PushCube-v1", 
+            #"PushCube-v1", 
             # "PickCube-v1", 
-            # "StackCube-v1", 
+            "StackCube-v1", 
             # "PegInsertionSide-v1", 
             # "AssemblingKits-v1", # realsense
             # "PlugCharger-v1"
         ]
 
         RENDER_QUALITY = "high"
-        MODALITY = "depth+rgb+state" # depth+rgb+state, depth+rgb, depth
+        MODALITY = "depth+rgb" # depth+rgb+state, depth+rgb, depth
+        EXPERIMENT = f"runtime/measures-success-rate-rt" # modality or sim-quality etc.
         names = [
-            f"modality-{MODALITY}-pushcube-{RENDER_QUALITY}", 
-            # "rgb-pickcube-high-raytracing-depth", 
-            # "rgb-stackcube-high-raytracing-depth", 
-            # "rgb-peginsertionside-high-raytracing-depth", 
-            # "rgb-assemblingkits-high-raytracing-depth", 
-            # "rgb-plugcharger-high-raytracing-depth"
+            #f"{EXPERIMENT}-{MODALITY}-pushcube-{RENDER_QUALITY}", 
+            #f"{EXPERIMENT}-{MODALITY}-pickcube-{RENDER_QUALITY}",
+            f"{EXPERIMENT}-{MODALITY}-stackcube-{RENDER_QUALITY}",
+            #f"{EXPERIMENT}-{MODALITY}-peginsertionside-{RENDER_QUALITY}",
+            #f"{EXPERIMENT}-{MODALITY}-assemblingkits-{RENDER_QUALITY}",
+            #f"{EXPERIMENT}-{MODALITY}-plugcharger-{RENDER_QUALITY}",
         ]
 
         assert len(tasks) == len(names), "equal number of params"
