@@ -1,5 +1,10 @@
 # Performance Benchmarking
 
+This page documents code and results of benchmarking various robotics simulators on a number of dimensions. It is still a WIP as we write more fair benchmarking code that more accurately compares simulators under the same conditions.
+
+## Benchmarking Details/Methodology
+WIP
+
 
 ## ManiSkill
 
@@ -23,4 +28,15 @@ env.step: 18549.002 steps/s, 12.076 parallel steps/s, 100 steps in 8.281s
 env.step+env.reset: 18146.848 steps/s, 11.814 parallel steps/s, 1000 steps in 84.643s
 ```
 
-On 4090's generally the bottle neck is the memory available to spawn more cameras in parallel scenes. Results on high memory GPUs will be published later.
+
+## Isaac Lab
+
+To benchmark [Isaac Lab](https://github.com/isaac-sim/IsaacLab), follow their installation instructions here https://isaac-sim.github.io/IsaacLab/source/setup/installation/index.html. We recommend making a conda/mamba environment to install it. Then after activating the environment, run
+
+```
+cd mani_skill/examples/benchmarking
+# test state simulation
+python isaac_lab_gpu_sim.py --task "Isaac-Lift-Cube-Franka-v0" --num_envs 4096 --headless
+# test rendering just RGB
+python isaac_lab_gpu_sim.py --task "Isaac-Cartpole-RGB-Camera-Direct-v0" --num_envs 256 --enable_cameras --headless
+```
