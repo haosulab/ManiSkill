@@ -138,7 +138,6 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             end_of_stick_length=_stick_end_length,
             stick_thickness=_stick_thickness,
         )
-        print("self.hockey_stick.pose.p:", self.hockey_stick.pose.p)
 
         self.goal_region = actors.build_red_white_target(
             self.scene,
@@ -191,6 +190,9 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
                     q=euler2quat(0, 0, 0),
                 )
             )
+
+            print("self.hockey_stick.pose.p:", self.hockey_stick.pose.p)
+            print("self.cube.pose.p:", self.cube.pose.p)
 
     def evaluate(self):
         is_obj_in_goal = (
