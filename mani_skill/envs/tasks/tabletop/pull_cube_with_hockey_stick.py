@@ -192,14 +192,25 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             )
 
     def evaluate(self):
+        is_obj_in_goal = (
+            torch.linalg.norm(
+                self.obj.pose.p[..., :2] - self.goal_region.pose.p[..., :2], axis=1
+            )
+            < self.goal_radius
+        )
+        is_grasped = self.agent.is_grasping(self.hockey_stick)
+        is_robot_static = self.agent.is_static(0.2)
+
         return {
-            "success": True,
+            "success": is_obj_in_goal & is_robot_static,
+            "is_obj_in_goal": is_obj_in_goal,
+            "is_robot_static": is_robot_static,
+            "is_grasped": is_grasped,
         }
 
     def _get_obs_extra(self, info: Dict):
-        obs = dict(
-            tcp_pose=self.agent.tcp.pose.raw_pose,
-        )
+        # default observartions
+        obs = dict(tcp_pose=self.agent.tcp.pose.raw_pose,)
         if self._obs_mode in ["state", "state_dict"]:
             pass
         return obs
