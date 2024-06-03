@@ -156,7 +156,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             body_type="kinematic",
             add_collision=False,
         )
-        self._hidden_objects.append(self.long_stick_regions)
+        self._hidden_objects.append(self.long_stick_region)
         self._hidden_objects.append(self.grasp_stick_region)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
