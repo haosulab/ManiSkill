@@ -8,6 +8,80 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     torch.nn.init.constant_(layer.bias, bias_const)
     return layer
 
+class StateCritic(nn.Module):
+    def __init__(self, observation_space):
+        super(StateCritic, self).__init__()
+
+        self.critic = nn.Sequential(
+            layer_init(nn.Linear(np.array(observation_space.shape).prod(), 256)),
+            nn.Tanh(),
+            layer_init(nn.Linear(256, 256)),
+            nn.Tanh(),
+            layer_init(nn.Linear(256, 256)),
+            nn.Tanh(),
+            layer_init(nn.Linear(256, 1)),
+        )
+
+    def forward(self, x):
+        return self.critic(x)
+    
+class StateCriticV1(nn.Module):
+    def __init__(self, observation_space):
+        super(StateCriticV1, self).__init__()
+
+        self.critic = nn.Sequential(
+            layer_init(nn.Linear(np.array(observation_space.shape).prod(), 256)),
+            nn.BatchNorm1d(num_features=256),
+            nn.ReLU(),
+            layer_init(nn.Linear(256, 256)),
+            nn.BatchNorm1d(num_features=256),
+            nn.ReLU(),
+            layer_init(nn.Linear(256, 256)),
+            nn.BatchNorm1d(num_features=256),
+            nn.ReLU(),
+            layer_init(nn.Linear(256, 1)),
+        )
+
+    def forward(self, x):
+        return self.critic(x)
+    
+class StateActor(nn.Module):
+    def __init__(self, observation_space, action_space):
+        super(StateActor, self).__init__()
+
+        self.actor_mean = nn.Sequential(
+            layer_init(nn.Linear(np.array(observation_space.shape).prod(), 256)),
+            nn.Tanh(),
+            layer_init(nn.Linear(256, 256)),
+            nn.Tanh(),
+            layer_init(nn.Linear(256, 256)),
+            nn.Tanh(),
+            layer_init(nn.Linear(256, np.prod(action_space.shape)), std=0.01*np.sqrt(2)),
+        )
+
+    def forward(self, x):
+        return self.actor_mean(x)
+    
+class StateActorV1(nn.Module):
+    def __init__(self, observation_space, action_space):
+        super(StateActorV1, self).__init__()
+
+        self.actor_mean = nn.Sequential(
+            layer_init(nn.Linear(np.array(observation_space.shape).prod(), 256)),
+            nn.BatchNorm1d(num_features=256),
+            nn.ReLU(),
+            layer_init(nn.Linear(256, 256)),
+            nn.BatchNorm1d(num_features=256),
+            nn.ReLU(),
+            layer_init(nn.Linear(256, 256)),
+            nn.BatchNorm1d(num_features=256),
+            nn.ReLU(),
+            layer_init(nn.Linear(256, np.prod(action_space.shape)), std=0.01*np.sqrt(2)),
+        )
+
+    def forward(self, x):
+        return self.actor_mean(x)
+
 class NatureCNN(nn.Module):
     def __init__(self, sample_obs, with_state=False):
         super().__init__()

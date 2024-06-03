@@ -20,6 +20,8 @@ from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper
 from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 
+from agents import StateAgent
+
 # Memory logging
 import sys
 sys.path.append("./")
@@ -47,7 +49,7 @@ class Args:
     """if toggled, `torch.backends.cudnn.deterministic=False`"""
     cuda: bool = True
     """if toggled, cuda will be enabled by default"""
-    track: bool = True
+    track: bool = False
     """if toggled, this experiment will be tracked with Weights and Biases"""
     wandb_project_name: str = "cleanRL"
     """the wandb's project name"""
@@ -121,55 +123,8 @@ class Args:
     num_iterations: int = 0
     """the number of iterations (computed in runtime)"""
 
-def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
-    torch.nn.init.orthogonal_(layer.weight, std)
-    torch.nn.init.constant_(layer.bias, bias_const)
-    return layer
 
 
-class Agent(nn.Module):
-    def __init__(self, envs):
-        super().__init__()
-        self.critic = nn.Sequential(
-            layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 256)),
-            nn.Tanh(),
-            layer_init(nn.Linear(256, 256)),
-            nn.Tanh(),
-            layer_init(nn.Linear(256, 256)),
-            nn.Tanh(),
-            layer_init(nn.Linear(256, 1)),
-        )
-        self.actor_mean = nn.Sequential(
-            layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 256)),
-            nn.Tanh(),
-            layer_init(nn.Linear(256, 256)),
-            nn.Tanh(),
-            layer_init(nn.Linear(256, 256)),
-            nn.Tanh(),
-            layer_init(nn.Linear(256, np.prod(envs.single_action_space.shape)), std=0.01*np.sqrt(2)),
-        )
-        self.actor_logstd = nn.Parameter(torch.ones(1, np.prod(envs.single_action_space.shape)) * -0.5)
-
-    def get_value(self, x):
-        return self.critic(x)
-    
-    def get_action(self, x, deterministic=False):
-        action_mean = self.actor_mean(x)
-        if deterministic:
-            return action_mean
-        action_logstd = self.actor_logstd.expand_as(action_mean)
-        action_std = torch.exp(action_logstd)
-        probs = Normal(action_mean, action_std)
-        return probs.sample()
-    
-    def get_action_and_value(self, x, action=None):
-        action_mean = self.actor_mean(x)
-        action_logstd = self.actor_logstd.expand_as(action_mean)
-        action_std = torch.exp(action_logstd)
-        probs = Normal(action_mean, action_std)
-        if action is None:
-            action = probs.sample()
-        return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x)
 
 
 if __name__ == "__main__":
@@ -177,6 +132,10 @@ if __name__ == "__main__":
     args.batch_size = int(args.num_envs * args.num_steps)
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
     args.num_iterations = args.total_timesteps // args.batch_size
+    #print(args.total_timesteps)
+    #print(args.batch_size)
+    #print(args.num_iterations)
+    #raise("debug")
     
     if args.exp_name is None:
         args.exp_name = os.path.basename(__file__)[: -len(".py")]
@@ -215,9 +174,16 @@ if __name__ == "__main__":
 
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
-    # env setup
-    env_kwargs = dict(obs_mode="state", control_mode="pd_joint_delta_pos", render_mode="rgb_array", sim_backend="gpu")
+    # Environment setup
+    env_kwargs = dict(
+        obs_mode="state", 
+        control_mode="pd_joint_delta_pos", 
+        render_mode="rgb_array", 
+        sim_backend="gpu"
+    )
+
     envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, **env_kwargs)
+    
     eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, **env_kwargs)
     
     if isinstance(envs.action_space, gym.spaces.Dict):
@@ -239,7 +205,7 @@ if __name__ == "__main__":
     
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
-    agent = Agent(envs).to(device)
+    agent = StateAgent(envs).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     # ALGO Logic: Storage setup
@@ -299,8 +265,8 @@ if __name__ == "__main__":
                         if "fail" in eval_infos:
                             failures.append(eval_infos["final_info"]["fail"][mask].cpu().numpy())
             
-            returns = np.concatenate(returns)
-            eps_lens = np.concatenate(eps_lens)
+            returns = np.concatenate(returns) if len(returns) else np.array(returns)
+            eps_lens = np.concatenate(eps_lens) if len(eps_lens) else np.array(eps_lens)
             
             print(f"Evaluated {args.num_eval_steps * args.num_envs} steps resulting in {len(eps_lens)} episodes")
             
@@ -356,18 +322,22 @@ if __name__ == "__main__":
             rewards[step] = reward.view(-1)
 
             # NOTE: Logging
-            gpu_allocated_mem = memory_logger.get_gpu_allocated_memory()
-            cpu_allocated_mem = memory_logger.get_cpu_allocated_memory()
-            wandb.log({
-                "gpu_alloc_mem": gpu_allocated_mem,
-                "cpu_alloc_mem": cpu_allocated_mem,
-            })
+            if args.track:
+                gpu_allocated_mem = memory_logger.get_gpu_allocated_memory()
+                cpu_allocated_mem = memory_logger.get_cpu_allocated_memory()
+                wandb.log({
+                    "gpu_alloc_mem": gpu_allocated_mem,
+                    "cpu_alloc_mem": cpu_allocated_mem,
+                })
 
             if "final_info" in infos:
                 final_info = infos["final_info"]
                 done_mask = infos["_final_info"]
                 episodic_return = final_info['episode']['r'][done_mask].cpu().numpy().mean()
                 if "success" in final_info:
+                    # debug
+                    #print(f"Mean success in training: {final_info['success'][done_mask].cpu().numpy().mean()}")
+                    # debug
                     writer.add_scalar("charts/success_rate", final_info["success"][done_mask].cpu().numpy().mean(), global_step)
                 if "fail" in final_info:
                     writer.add_scalar("charts/fail_rate", final_info["fail"][done_mask].cpu().numpy().mean(), global_step)
@@ -521,4 +491,5 @@ if __name__ == "__main__":
     envs.close()
     eval_envs.close()
 
-    wandb.finish()
+    if args.track:
+        wandb.finish()

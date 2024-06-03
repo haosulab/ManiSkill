@@ -55,12 +55,14 @@ def run_default_state_ppo(task, name):
         "examples/baselines/ppo/ppo.py", 
         f"--env_id={task}", 
         f"--exp-name={name}",
-        f"--num_envs={40}", #1024 default
-        f"--update_epochs={8}", 
+        f"--num_envs={1024}", #1024 default or 40
+        f"--update_epochs={32}", #8 
         f"--num_minibatches={16}", #32
-        f"--total_timesteps={1_000_000}", #600_000
+        f"--total_timesteps={5_000_000}", #600_000
         f"--eval_freq={8}",
-        f"--num-steps={20}"
+        f"--num-steps={20}", # 20 usually
+        f"--num_eval_envs={8}", # 8 usually
+        f"--track"
     ])
 
     end_time = time.time()
@@ -80,13 +82,14 @@ def run_default_visual_ppo(task, name, render_quality):
         "examples/baselines/ppo/ppo_rgb_custom.py", 
         f"--env_id={task}", 
         f"--exp-name={name}",
-        f"--num_envs={40}", #256 default
+        f"--num_envs={256}", #256 default: 20, 60, 100, 200, 256 (the max I can do with rtx 4090), 400 (not working)
         f"--update_epochs={8}", 
         f"--num_minibatches={16}",
-        f"--total_timesteps={1_000_000}",
+        f"--total_timesteps={10_000_000}",
         f"--eval_freq={10}",
-        f"--num-steps={20}",
-        f"--sim_quality={render_quality}" # rasterization
+        f"--num-steps={80}", # 20 by default
+        f"--sim_quality={render_quality}",
+        f"--track"
     ])
 
     end_time = time.time()
@@ -107,19 +110,19 @@ if __name__ == "__main__":
         tasks = [
             #"PushCube-v1", 
             #"PickCube-v1", 
-            #"StackCube-v1", 
+            "StackCube-v1", 
             #"PegInsertionSide-v1", 
             #"AssemblingKits-v1", # realsense
             #"PlugCharger-v1"
         ]
 
-        RENDER_QUALITY = "high"
-        MODALITY = "rgb"
-        EXPERIMENT = "iterations/runs-5M" # modality or sim-quality etc.
+        RENDER_QUALITY = "high" # rasterization
+        MODALITY = "rgb" # rgbd
+        EXPERIMENT = f"runtime/measures-success-rate-rt" # modality or sim-quality etc.
         names = [
             #f"{EXPERIMENT}-{MODALITY}-pushcube-{RENDER_QUALITY}", 
             #f"{EXPERIMENT}-{MODALITY}-pickcube-{RENDER_QUALITY}",
-            #f"{EXPERIMENT}-{MODALITY}-stackcube-{RENDER_QUALITY}",
+            f"{EXPERIMENT}-{MODALITY}-stackcube-{RENDER_QUALITY}",
             #f"{EXPERIMENT}-{MODALITY}-peginsertionside-{RENDER_QUALITY}",
             #f"{EXPERIMENT}-{MODALITY}-assemblingkits-{RENDER_QUALITY}",
             #f"{EXPERIMENT}-{MODALITY}-plugcharger-{RENDER_QUALITY}", 
@@ -148,9 +151,9 @@ if __name__ == "__main__":
             #"PlugCharger-v1"
         ]
 
-        RENDER_QUALITY = ""
+        RENDER_QUALITY = "rasterization"
         MODALITY = "state"
-        EXPERIMENT = "iterations/runs-5M" # modality or sim-quality etc.
+        EXPERIMENT = "iterations/timesteps-1M" # modality or sim-quality etc.
         names = [
             #f"{EXPERIMENT}-{MODALITY}-pushcube-{RENDER_QUALITY}",
             #f"{EXPERIMENT}-{MODALITY}-pickcube-{RENDER_QUALITY}",
