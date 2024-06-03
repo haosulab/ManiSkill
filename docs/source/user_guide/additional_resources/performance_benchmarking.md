@@ -20,10 +20,10 @@ Results below are what occur when following the methodology above. The tables al
 
 ### Cartpole Balance
 
-| Simulator/Framework | State FPS | RGB FPS | Depth FPS | RGB+Depth Observation FPS | RGB+Depth+Segmentation Observation FPS |
-| ------------------- | --------- | ------- | --------- | ------------------------- | -------------------------------------- |
-| SAPIEN/ManiSkill    |           |         |           |                           |                                        |
-| IsaacSim/IsaacLab   |           |         |           | N/A                       | N/A                                    |
+| Simulator/Framework | State FPS   | RGB FPS   | Depth FPS | RGB+Depth Observation FPS | RGB+Depth+Segmentation Observation FPS |
+| ------------------- | ----------- | --------- | --------- | ------------------------- | -------------------------------------- |
+| SAPIEN/ManiSkill    | 2537724.820 | 33018.081 | 33018.081 | 33018.081                 | 33018.081                              |
+| IsaacSim/IsaacLab   |             |           |           | N/A                       | N/A                                    |
 
 ### Pick Cube
 
@@ -34,40 +34,28 @@ Results below are what occur when following the methodology above. The tables al
 
 ## Commands for Reproducing the Results
 
-## ManiSkill
+### ManiSkill
 
-To benchmark ManiSkill + SAPIEN, after following the setup instructions on this repository's README.md, run
+To benchmark SAPIEN / ManiSkill, after following the setup instructions on this repository's README.md, run
 
 ```
+# test state simulation
 python -m mani_skill.examples.benchmarking.gpu_sim -e "PickCubeBenchmark-v1" -n=4096 -o=state
-python -m mani_skill.examples.benchmarking.gpu_sim -e "PickCubeBenchmark-v1" -n=1536 -o=rgbd
+# test rendering RGB, Depth, and Segmentation
+python -m mani_skill.examples.benchmarking.gpu_sim -e "PickCubeBenchmark-v1" -n=1024 -o=rgbd
 ```
 The environments available are "PickCubeBenchmark-v1" and "CartpoleBalanceBenchmark-v1" (modified versions of the default environment in ManiSkill for benchmarking purposes)
 
-
-These are the expected state-based only results on a single 4090 GPU:
-```
-env.step: 318580.257 steps/s, 77.778 parallel steps/s, 1000 steps in 12.857s
-env.step+env.reset: 316447.114 steps/s, 77.258 parallel steps/s, 1000 steps in 12.944s
-```
-
-These are the expected visual observations/rendering results on a single 4090 GPU:
-```
-env.step: 18549.002 steps/s, 12.076 parallel steps/s, 100 steps in 8.281s
-env.step+env.reset: 18146.848 steps/s, 11.814 parallel steps/s, 1000 steps in 84.643s
-```
-
-
 ## Isaac Lab
 
-To benchmark [Isaac Lab](https://github.com/isaac-sim/IsaacLab), follow their installation instructions here https://isaac-sim.github.io/IsaacLab/source/setup/installation/index.html. We recommend making a conda/mamba environment to install it. Then after activating the environment, run
+To benchmark [Isaac Sim / Isaac Lab](https://github.com/isaac-sim/IsaacLab), follow their installation instructions here https://isaac-sim.github.io/IsaacLab/source/setup/installation/index.html. We recommend making a conda/mamba environment to install it. Then after activating the environment, run
 
 ```
 cd mani_skill/examples/benchmarking
 # test state simulation
-python isaac_lab_gpu_sim.py --task "Isaac-Lift-Cube-Franka-v0" --num_envs 4096 --headless
+python isaac_lab_gpu_sim.py --task "Isaac-Cartpole-Direct-v0" --num_envs 4096  --headless
 # test rendering just RGB
-python isaac_lab_gpu_sim.py --task "Isaac-Cartpole-RGB-Camera-Direct-v0" --num_envs 256 --enable_cameras --headless
+python isaac_lab_gpu_sim.py --task "Isaac-Cartpole-RGB-Camera-Direct-Benchmark-v0" --num_envs 256 --enable_cameras --headless
 ```
 
 
