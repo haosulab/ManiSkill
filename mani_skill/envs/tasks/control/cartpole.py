@@ -26,6 +26,7 @@ MJCF_FILE = f"{os.path.join(os.path.dirname(__file__), 'assets/cartpole.xml')}"
 class CartPoleRobot(BaseAgent):
     uid = "cart_pole"
     mjcf_path = MJCF_FILE
+    disable_self_collisions = True
 
     @property
     def _controller_configs(self):
@@ -87,15 +88,18 @@ class CartpoleEnv(BaseEnv):
     @property
     def _default_sim_config(self):
         return SimConfig(
-            sim_freq=100,
-            control_freq=100,
-            scene_cfg=SceneConfig(solver_position_iterations=2),
+            sim_freq=120,
+            spacing=20,
+            control_freq=60,
+            scene_cfg=SceneConfig(
+                solver_position_iterations=4, solver_velocity_iterations=0
+            ),
         )
 
     @property
     def _default_sensor_configs(self):
-        pose = sapien_utils.look_at(eye=[0, -4, 1], target=[0, 0, 1])
-        return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
+        pose = sapien_utils.look_at(eye=[0, -7, 1], target=[0, 0, 1])
+        return [CameraConfig("base_camera", pose, 80, 80, np.pi / 2, 0.01, 100)]
 
     @property
     def _default_human_render_camera_configs(self):

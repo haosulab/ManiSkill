@@ -453,9 +453,9 @@ class BaseEnv(gym.Env):
         self.scene.update_render()
         self.capture_sensor_data()
         return dict(
-            agent=self._get_obs_agent(),
-            extra=self._get_obs_extra(info),
-            sensor_param=self.get_sensor_params(),
+            # agent=self._get_obs_agent(),
+            # extra=self._get_obs_extra(info),
+            # sensor_param=self.get_sensor_params(),
             sensor_data=self.get_sensor_obs(),
         )
 
@@ -765,11 +765,11 @@ class BaseEnv(gym.Env):
         """
         Take a step through the environment with an action
         """
-        action = self._step_action(action)
+        # action = self._step_action(action)
         self._elapsed_steps += 1
         info = self.get_info()
         obs = self.get_obs(info)
-        reward = self.get_reward(obs=obs, action=action, info=info)
+        reward = 0#self.get_reward(obs=obs, action=action, info=info)
         if "success" in info:
 
             if "fail" in info:

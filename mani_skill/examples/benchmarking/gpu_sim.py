@@ -48,14 +48,15 @@ def main(args):
         env.reset(seed=2022)
         if args.save_video:
             images.append(env.render().cpu().numpy())
-        N = 100
+        N = 1000
         with profiler.profile("env.step", total_steps=N, num_envs=num_envs):
             for i in range(N):
-                actions = (
-                    2 * torch.rand(env.action_space.shape, device=base_env.device)
-                    - 1
-                )
-                obs, rew, terminated, truncated, info = env.step(actions)
+                # actions = (
+                #     2 * torch.rand(env.action_space.shape, device=base_env.device)
+                #     - 1
+                # )
+                obs, rew, terminated, truncated, info = env.step(None)
+                current_obs = obs["sensor_data"]["base_camera"]["rgb"].clone()
                 if args.save_video:
                     images.append(env.render().cpu().numpy())
         profiler.log_stats("env.step")

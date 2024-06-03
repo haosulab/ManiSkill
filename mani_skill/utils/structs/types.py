@@ -26,12 +26,12 @@ class GPUMemoryConfig:
     max_rigid_contact_count: int = 2**19
     """Increase this if you get 'Contact buffer overflow detected'"""
     max_rigid_patch_count: int = (
-        2**18
+        2**15
     )  # 81920 is SAPIEN default but most tasks work with 2**18
     """Increase this if you get 'Patch buffer overflow detected'"""
     heap_capacity: int = 2**26
     found_lost_pairs_capacity: int = (
-        2**25
+        2**21
     )  # 262144 is SAPIEN default but most tasks work with 2**25
     found_lost_aggregate_pairs_capacity: int = 2**10
     total_aggregate_pairs_capacity: int = 2**10
@@ -43,7 +43,7 @@ class GPUMemoryConfig:
 @dataclass
 class SceneConfig:
     gravity: np.ndarray = field(default_factory=lambda: np.array([0, 0, -9.81]))
-    bounce_threshold: float = 2.0
+    bounce_threshold: float = 0.5
     sleep_threshold: float = 0.005
     contact_offset: float = 0.02
     rest_offset: float = 0
