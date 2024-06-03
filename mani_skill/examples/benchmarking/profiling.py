@@ -1,11 +1,13 @@
+import os
 import time
 from contextlib import contextmanager
 from typing import Literal
 
+import psutil
 import torch
 
 from mani_skill.utils import common
-
+import subprocess as sp
 
 class Profiler:
     """
@@ -54,6 +56,9 @@ class Profiler:
     @contextmanager
     def profile(self, name: str, total_steps: int, num_envs: int):
         print(f"start recording {name} metrics")
+        process = psutil.Process(os.getpid())
+        cpu_mem_use = process.memory_info().rss
+        gpu_mem_use = torch.cuda.mem_get_info()
         torch.cuda.synchronize()
         stime = time.time()
         yield
@@ -66,6 +71,8 @@ class Profiler:
             fps=total_steps * num_envs / dt,
             psps=total_steps / dt,
             total_steps=total_steps,
+            cpu_mem_use=cpu_mem_use,
+            gpu_mem_use=gpu_mem_use[1] - gpu_mem_use[0],
         )
         torch.cuda.synchronize()
 
@@ -73,4 +80,7 @@ class Profiler:
         stats = self.stats[name]
         self.log(
             f"{name}: {stats['fps']:0.3f} steps/s, {stats['psps']:0.3f} parallel steps/s, {stats['total_steps']} steps in {stats['dt']:0.3f}s"
+        )
+        self.log(
+            f"{' ' * 4}CPU mem: {stats['cpu_mem_use'] / (1024**2):0.3f} MB, GPU mem: {stats['gpu_mem_use'] / (1024**2):0.3f} MB"
         )
