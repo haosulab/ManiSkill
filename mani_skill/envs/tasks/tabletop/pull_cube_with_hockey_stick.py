@@ -38,9 +38,9 @@ from mani_skill.utils.structs.types import Array
 
 
 
-_stick_length = 2
-_stick_end_length = 1
-_stick_thickness = 1e-2 # y & z thicky
+_stick_length = 0.2
+_stick_end_length = 0.1
+_stick_thickness = 3e-2 # y & z thicky
 
 def _build_hockey_stick(
     scene: ManiSkillScene, 
