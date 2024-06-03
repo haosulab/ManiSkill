@@ -191,8 +191,8 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
                 )
             )
 
-            print("self.hockey_stick.pose.p:", self.hockey_stick.pose.p)
-            print("self.cube.pose.p:", self.cube.pose.p)
+            # print("self.hockey_stick.pose.p:", self.hockey_stick.pose.p)
+            # print("self.cube.pose.p:", self.cube.pose.p)
 
     def evaluate(self):
         is_obj_in_goal = (
@@ -235,8 +235,6 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
         # end_of_stick_pos = self.hockey_stick.pose.p + torch.tensor([_stick_length/2, -_stick_end_length, 0])
 
         reward[info["success"]] = 5
-        if reward is None:
-            raise Exception("muah muah muah, something went wrong!")
         return reward
 
     def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
