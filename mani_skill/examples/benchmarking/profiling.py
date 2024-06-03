@@ -6,7 +6,10 @@ from typing import Literal
 import psutil
 import torch
 
-from mani_skill.utils import common
+try:
+    from mani_skill.utils import common
+except:
+    pass
 import subprocess as sp
 
 class Profiler:
