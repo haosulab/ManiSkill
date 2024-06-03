@@ -82,7 +82,7 @@ from mani_skill.utils.building import articulations
 
 
 
-@register_env("PullCubeWithHockeyStick-v1", max_episode_steps=50)
+@register_env("PullCubeWithHockeyStick-v1", max_episode_steps=100)
 class PullCubeWithHockeyStickEnv(BaseEnv):
 
     SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
@@ -138,6 +138,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             end_of_stick_length=_stick_end_length,
             stick_thickness=_stick_thickness,
         )
+        print("self.hockey_stick.pose.p:", self.hockey_stick.pose.p)
 
         self.goal_region = actors.build_red_white_target(
             self.scene,
@@ -225,15 +226,13 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
 
 
         # # 2. mock - add reward when we pick up the stick
-        # is_grasped = info["is_grasped"]
-        # reward+= is_grasped
+        is_grasped = info["is_grasped"]
+        reward+= is_grasped
 
-        # 3. Add reward as distance of the stick to the cube decreases
-        # dist_to_cube = torch.linalg.norm(
-        #     self.cube.pose.p - self.hockey_stick.pose.p, axis=1
-        # )
+        # 3. Add reward as the distance of the end of the stick to the cube decreases
+        end_of_stick_pos = self.hockey_stick.pose.p + torch.tensor([_stick_length/2, -_stick_end_length, 0])
 
-        # reward[info["success"]] = 5
+        reward[info["success"]] = 5
         if reward is None:
             raise Exception("muah muah muah, something went wrong!")
         return reward
