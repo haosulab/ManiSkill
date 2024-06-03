@@ -1,0 +1,94 @@
+# Copyright (c) 2022-2024, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
+"""Script to train RL agent with RL-Games."""
+
+"""Launch Isaac Sim Simulator first."""
+
+import argparse
+
+from omni.isaac.lab.app import AppLauncher
+
+# add argparse arguments
+parser = argparse.ArgumentParser(description="Train an RL agent with RL-Games.")
+parser.add_argument("--video", action="store_true", default=False, help="Record videos during training.")
+parser.add_argument("--video_length", type=int, default=200, help="Length of the recorded video (in steps).")
+parser.add_argument("--video_interval", type=int, default=2000, help="Interval between video recordings (in steps).")
+parser.add_argument("--cpu", action="store_true", default=False, help="Use CPU pipeline.")
+parser.add_argument(
+    "--disable_fabric", action="store_true", default=False, help="Disable fabric and use USD I/O operations."
+)
+parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
+parser.add_argument("--task", type=str, default=None, help="Name of the task.")
+parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
+parser.add_argument(
+    "--distributed", action="store_true", default=False, help="Run training with multiple GPUs or nodes."
+)
+parser.add_argument("--max_iterations", type=int, default=None, help="RL Policy training iterations.")
+
+# append AppLauncher cli args
+AppLauncher.add_app_launcher_args(parser)
+# parse the arguments
+args_cli = parser.parse_args()
+
+# launch omniverse app
+app_launcher = AppLauncher(args_cli)
+simulation_app = app_launcher.app
+
+"""Rest everything follows."""
+
+import gymnasium as gym
+import math
+import os
+from datetime import datetime
+from profiling import Profiler
+
+from omni.isaac.lab.utils.dict import print_dict
+from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
+
+import omni.isaac.lab_tasks  # noqa: F401
+from omni.isaac.lab_tasks.utils import parse_env_cfg
+
+def main():
+    """Train with RL-Games agent."""
+    # parse seed from command line
+    args_cli_seed = args_cli.seed
+
+    # parse configuration
+    env_cfg = parse_env_cfg(
+        args_cli.task, use_gpu=not args_cli.cpu, num_envs=args_cli.num_envs, use_fabric=not args_cli.disable_fabric
+    )
+    profiler = Profiler(output_format="stdout")
+    import torch
+    # create isaac environment
+    env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
+    # env.reset(seed=2022)[0]
+    # action = torch.from_numpy(env.action_space.sample()).to(env.device)
+    # env.step(action)
+    # obs = env.reset(seed=2022)[0]
+    with torch.inference_mode():
+        env.reset(seed=2022)
+        env.step(torch.from_numpy(env.action_space.sample()).cuda())  # warmup step
+        env.reset(seed=2022)
+        torch.manual_seed(0)
+
+        N = 1000
+        with profiler.profile("env.step", total_steps=N, num_envs=args_cli.num_envs):
+            for i in range(N):
+                actions = (
+                    2 * torch.rand(env.action_space.shape, device=env.unwrapped.device)
+                    - 1
+                )
+                obs, rew, terminated, truncated, info = env.step(actions)
+        profiler.log_stats("env.step")
+    env.close()
+    return
+
+if __name__ == "__main__":
+    """Test with ./isaaclab.sh -p benchmark_isaac_lab.py --headless --task=...  --num_envs 128"""
+    # run the main function
+    main()
+    # close sim app
+    simulation_app.close()
