@@ -7,6 +7,7 @@ from .pick_single_ycb import PickSingleYCBEnv
 from .plug_charger import PlugChargerEnv
 from .pull_cube import PullCubeEnv
 from .push_cube import PushCubeEnv
+from .pull_cube_with_hockey_stick import PullCubeWithHockeyStickEnv
 from .stack_cube import StackCubeEnv
 from .turn_faucet import TurnFaucetEnv
 from .two_robot_pick_cube import TwoRobotPickCube
