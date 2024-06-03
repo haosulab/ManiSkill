@@ -41,6 +41,7 @@ from mani_skill.utils.structs.types import Array
 _stick_length = 0.4
 _stick_end_length = 0.2
 _stick_thickness = 1e-2 # y & z thicky
+goal_thresh = 0.025
 
 def _build_hockey_stick(
     scene: ManiSkillScene, 
@@ -221,7 +222,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
                     q=euler2quat(0, 0, 0),
                 )
             )
-            
+
 
     def evaluate(self):
         is_obj_in_goal = (
