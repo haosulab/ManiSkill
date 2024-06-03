@@ -67,7 +67,7 @@ def _build_hockey_stick(
         builder.add_box_collision(pose, half_size)
         builder.add_box_visual(pose, half_size, material=material)
 
-    return builder.build_kinematic(name="hockey_stick")
+    return builder.build(name="hockey_stick")
 
 
 
@@ -139,6 +139,15 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             stick_thickness=_stick_thickness,
         )
 
+        self.goal_region = actors.build_red_white_target(
+            self.scene,
+            radius=self.goal_radius,
+            thickness=1e-5,
+            name="goal_region",
+            add_collision=False,
+            body_type="kinematic",
+        )
+
         
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
@@ -154,6 +163,19 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             q = [1, 0, 0, 0]
             obj_pose = Pose.create_from_pq(p=xyz, q=q)
             self.obj.set_pose(obj_pose)
+
+            
+            # set the goal's initial position
+            target_region_xyz = xyz - torch.tensor([0.1 + self.goal_radius, 0, 0])
+            # set a little bit above 0 so the target is sitting on the table
+            target_region_xyz[..., 2] = 1e-3
+            self.goal_region.set_pose(
+                Pose.create_from_pq(
+                    p=target_region_xyz,
+                    q=euler2quat(0, np.pi / 2, 0),
+                )
+            )
+
 
             # set the stick's initial position
             offset = torch.tensor([
