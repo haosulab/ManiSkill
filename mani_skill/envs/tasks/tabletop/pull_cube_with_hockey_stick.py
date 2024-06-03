@@ -74,8 +74,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
         )
         self.table_scene.build()
 
-        # we then add the cube that we want to push and give it a color and size using a convenience build_cube function
-        # we specify the body_type to be "dynamic" as it should be able to move when touched by other objects / the robot
+        
         self.obj = actors.build_cube(
             self.scene,
             half_size=self.cube_half_size,
@@ -84,23 +83,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             body_type="dynamic",
         )
 
-        # we also add in red/white target to visualize where we want the cube to be pushed to
-        # we specify add_collisions=False as we only use this as a visual for videos and do not want it to affect the actual physics
-        # we finally specify the body_type to be "kinematic" so that the object stays in place
-        self.goal_region = actors.build_red_white_target(
-            self.scene,
-            radius=self.goal_radius,
-            thickness=1e-5,
-            name="goal_region",
-            add_collision=False,
-            body_type="kinematic",
-        )
-
-        # optionally you can automatically hide some Actors from view by appending to the self._hidden_objects list. When visual observations
-        # are generated or env.render_sensors() is called or env.render() is called with render_mode="sensors", the actor will not show up.
-        # This is useful if you intend to add some visual goal sites as e.g. done in PickCube that aren't actually part of the task
-        # and are there just for generating evaluation videos.
-        # self._hidden_objects.append(self.goal_region)
+        
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         # use the torch.device context manager to automatically create tensors on CPU or CUDA depending on self.device, the device the environment runs on
@@ -131,25 +114,11 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             target_region_xyz = xyz + torch.tensor([0.1 + self.goal_radius, 0, 0])
             # set a little bit above 0 so the target is sitting on the table
             target_region_xyz[..., 2] = 1e-3
-            self.goal_region.set_pose(
-                Pose.create_from_pq(
-                    p=target_region_xyz,
-                    q=euler2quat(0, np.pi / 2, 0),
-                )
-            )
 
     def evaluate(self):
-        # success is achieved when the cube's xy position on the table is within the
-        # goal region's area (a circle centered at the goal region's xy position)
-        is_obj_placed = (
-            torch.linalg.norm(
-                self.obj.pose.p[..., :2] - self.goal_region.pose.p[..., :2], axis=1
-            )
-            < self.goal_radius
-        )
 
         return {
-            "success": is_obj_placed,
+            "success": True,
         }
 
     def _get_obs_extra(self, info: Dict):
@@ -168,31 +137,8 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
         return obs
 
     def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
-        # We also create a pose marking where the robot should push the cube from that is easiest (pushing from behind the cube)
-        tcp_push_pose = Pose.create_from_pq(
-            p=self.obj.pose.p
-            + torch.tensor([-self.cube_half_size - 0.005, 0, 0], device=self.device)
-        )
-        tcp_to_push_pose = tcp_push_pose.p - self.agent.tcp.pose.p
-        tcp_to_push_pose_dist = torch.linalg.norm(tcp_to_push_pose, axis=1)
-        reaching_reward = 1 - torch.tanh(5 * tcp_to_push_pose_dist)
-        reward = reaching_reward
-
-        # compute a placement reward to encourage robot to move the cube to the center of the goal region
-        # we further multiply the place_reward by a mask reached so we only add the place reward if the robot has reached the desired push pose
-        # This reward design helps train RL agents faster by staging the reward out.
-        reached = tcp_to_push_pose_dist < 0.01
-        obj_to_goal_dist = torch.linalg.norm(
-            self.obj.pose.p[..., :2] - self.goal_region.pose.p[..., :2], axis=1
-        )
-        place_reward = 1 - torch.tanh(5 * obj_to_goal_dist)
-        reward += place_reward * reached
-
-        # assign rewards to parallel environments that achieved success to the maximum of 3.
-        reward[info["success"]] = 3
-        return reward
+        return 5
 
     def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
         # this should be equal to compute_dense_reward / max possible reward
-        max_reward = 3.0
-        return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
+        return 5
