@@ -88,9 +88,7 @@ class CartpoleEnv(BaseEnv):
     @property
     def _default_sim_config(self):
         return SimConfig(
-            sim_freq=120,
             spacing=20,
-            control_freq=60,
             scene_cfg=SceneConfig(
                 solver_position_iterations=4, solver_velocity_iterations=0
             ),

@@ -12,7 +12,7 @@ from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 from mani_skill.examples.benchmarking.profiling import Profiler
 from mani_skill.utils.visualization.misc import images_to_video, tile_images
 from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper
-
+import mani_skill.examples.benchmarking.envs # import benchmark env code
 
 def main(args):
     profiler = Profiler(output_format=args.format)

@@ -41,7 +41,11 @@ env.step+env.reset: 17953.079 steps/s, 11.688 parallel steps/s, 1000 steps in 85
 To benchmark [Isaac Lab](https://github.com/isaac-sim/IsaacLab), follow their installation instructions here https://isaac-sim.github.io/IsaacLab/source/setup/installation/index.html. We recommend making a conda/mamba environment to install it. Then after activating the environment, run
 
 ```
+# test state simulation
 python isaac_lab_gpu_sim.py --task "Isaac-Lift-Cube-Franka-v0" --num_envs 4096 --headless
+# test rendering just RGB
+python isaac_lab_gpu_sim.py --task "Isaac-Cartpole-RGB-Camera-Direct-v0" --num_envs 256 --enable_cameras --headless
+
 ```
 
 

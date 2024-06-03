@@ -12,7 +12,6 @@ from mani_skill.utils.building import actors
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs.pose import Pose
-from mani_skill.utils.structs.types import GPUMemoryConfig, SceneConfig, SimConfig
 
 
 @register_env("PickCube-v1", max_episode_steps=50)
@@ -35,14 +34,6 @@ class PickCubeEnv(BaseEnv):
     def _default_human_render_camera_configs(self):
         pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
-
-    @property
-    def _default_sim_config(self):
-        return SimConfig(
-            scene_cfg=SceneConfig(
-                solver_position_iterations=8, solver_velocity_iterations=0
-            )
-        )
 
     def _load_scene(self, options: dict):
         self.table_scene = TableSceneBuilder(
@@ -97,13 +88,13 @@ class PickCubeEnv(BaseEnv):
             torch.linalg.norm(self.goal_site.pose.p - self.cube.pose.p, axis=1)
             <= self.goal_thresh
         )
-        # is_grasped = self.agent.is_grasping(self.cube)
+        is_grasped = self.agent.is_grasping(self.cube)
         is_robot_static = self.agent.is_static(0.2)
         return {
             "success": is_obj_placed & is_robot_static,
             "is_obj_placed": is_obj_placed,
             "is_robot_static": is_robot_static,
-            # "is_grasped": is_grasped,
+            "is_grasped": is_grasped,
         }
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
@@ -113,14 +104,14 @@ class PickCubeEnv(BaseEnv):
         reaching_reward = 1 - torch.tanh(5 * tcp_to_obj_dist)
         reward = reaching_reward
 
-        # is_grasped = info["is_grasped"]
-        # reward += is_grasped
+        is_grasped = info["is_grasped"]
+        reward += is_grasped
 
         obj_to_goal_dist = torch.linalg.norm(
             self.goal_site.pose.p - self.cube.pose.p, axis=1
         )
         place_reward = 1 - torch.tanh(5 * obj_to_goal_dist)
-        reward += place_reward  # * is_grasped
+        reward += place_reward * is_grasped
 
         static_reward = 1 - torch.tanh(
             5 * torch.linalg.norm(self.agent.robot.get_qvel()[..., :-2], axis=1)
