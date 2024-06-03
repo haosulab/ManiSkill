@@ -157,8 +157,8 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
 
             # set the stick's initial position
             offset = torch.tensor([
-                - (_stick_length - 4 * self.cube_half_size) , 
-                - (_stick_end_length + self.cube_half_size),
+                - (_stick_length/2 - 2 * self.cube_half_size) , 
+                - (_stick_end_length + 3* self.cube_half_size),
                 0])
             target_region_xyz = xyz + offset
             target_region_xyz[..., 2] = 1e-3 + _stick_thickness/2
