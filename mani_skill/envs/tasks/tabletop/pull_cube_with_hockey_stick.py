@@ -136,7 +136,27 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             body_type="kinematic",
         )
 
-        
+        # mock position, to check the end of stick pos and grasp stick pos are correct
+
+        self.grasp_stick_region = actors.build_sphere(
+            self.scene,
+            radius=self.goal_thresh,
+            color=[0, 1, 1, 1],
+            name="grasp_stick_region",
+            body_type="kinematic",
+            add_collision=False,
+        )
+
+        self.long_stick_region = actors.build_sphere(
+            self.scene,
+            radius=self.goal_thresh,
+            color=[0, 1, 0, 1],
+            name="long_stick_region",
+            body_type="kinematic",
+            add_collision=False,
+        )
+        self._hidden_objects.append(self.long_stick_regions)
+        self._hidden_objects.append(self.grasp_stick_region)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
@@ -182,6 +202,27 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             # print("self.hockey_stick.pose.p:", self.hockey_stick.pose.p)
             # print("self.cube.pose.p:", self.cube.pose.p)
 
+            # set long stick region to appear over the end of the stick
+            target_region_xyz = xyz + offset
+            target_region_xyz[..., 2] = _stick_end_length + _stick_thickness/2
+            self.long_stick_region.set_pose(
+                Pose.create_from_pq(
+                    p=target_region_xyz,
+                    q=euler2quat(0, 0, 0),
+                )
+            )
+
+            # set grasp stick region to appear over the end of the stick
+            target_region_xyz = xyz + offset
+            target_region_xyz[..., 2] = -_stick_end_length - _stick_thickness/2
+            self.grasp_stick_region.set_pose(
+                Pose.create_from_pq(
+                    p=target_region_xyz,
+                    q=euler2quat(0, 0, 0),
+                )
+            )
+            
+
     def evaluate(self):
         is_obj_in_goal = (
             torch.linalg.norm(
@@ -218,7 +259,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
         # # 2. mock - add reward when we pick up the stick
         is_grasped = info["is_grasped"]
         reward+= is_grasped
-        print("sum(is_grasped):", sum(is_grasped))
+        # print("sum(is_grasped):", sum(is_grasped))
 
         # 3. Add reward as the distance of the end of the stick to the cube decreases
         # end_of_stick_pos = self.hockey_stick.pose.p + torch.tensor([_stick_length/2, -_stick_end_length, 0])
