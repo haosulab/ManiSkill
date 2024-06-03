@@ -50,7 +50,7 @@ from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
 
 import omni.isaac.lab_tasks  # noqa: F401
 from omni.isaac.lab_tasks.utils import parse_env_cfg
-
+import envs.isaaclab
 def main():
     """Train with RL-Games agent."""
     # parse seed from command line

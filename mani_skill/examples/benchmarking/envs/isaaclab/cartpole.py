@@ -25,7 +25,7 @@ from omni.isaac.lab.utils.math import sample_uniform
 
 
 @configclass
-class CartpoleRGBCameraEnvCfg(DirectRLEnvCfg):
+class CartpoleRGBCameraBenchmarkEnvCfg(DirectRLEnvCfg):
     # simulation
     sim: SimulationCfg = SimulationCfg(dt=1 / 120)
 
@@ -73,7 +73,7 @@ class CartpoleRGBCameraEnvCfg(DirectRLEnvCfg):
     rew_scale_pole_vel = -0.005
 
 
-class CartpoleDepthCameraEnvCfg(CartpoleRGBCameraEnvCfg):
+class CartpoleDepthCameraBenchmarkEnvCfg(CartpoleRGBCameraBenchmarkEnvCfg):
     # camera
     tiled_camera: TiledCameraCfg = TiledCameraCfg(
         prim_path="/World/envs/env_.*/Camera",
@@ -91,12 +91,17 @@ class CartpoleDepthCameraEnvCfg(CartpoleRGBCameraEnvCfg):
     num_observations = num_channels * tiled_camera.height * tiled_camera.width
 
 
-class CartpoleCameraEnv(DirectRLEnv):
+class CartpoleCameraBenchmarkEnv(DirectRLEnv):
+    """Benchmark environment for CartPole task with a camera.
 
-    cfg: CartpoleRGBCameraEnvCfg | CartpoleDepthCameraEnvCfg
+    Modification from original:
+    - Remove reward / evaluation functions
+    """
+
+    cfg: CartpoleRGBCameraBenchmarkEnvCfg | CartpoleDepthCameraBenchmarkEnvCfg
 
     def __init__(
-        self, cfg: CartpoleRGBCameraEnvCfg | CartpoleDepthCameraEnvCfg, render_mode: str | None = None, **kwargs
+        self, cfg: CartpoleRGBCameraBenchmarkEnvCfg | CartpoleDepthCameraBenchmarkEnvCfg, render_mode: str | None = None, **kwargs
     ):
         super().__init__(cfg, render_mode, **kwargs)
 
@@ -175,18 +180,7 @@ class CartpoleCameraEnv(DirectRLEnv):
         return observations
 
     def _get_rewards(self) -> torch.Tensor:
-        total_reward = compute_rewards(
-            self.cfg.rew_scale_alive,
-            self.cfg.rew_scale_terminated,
-            self.cfg.rew_scale_pole_pos,
-            self.cfg.rew_scale_cart_vel,
-            self.cfg.rew_scale_pole_vel,
-            self.joint_pos[:, self._pole_dof_idx[0]],
-            self.joint_vel[:, self._pole_dof_idx[0]],
-            self.joint_pos[:, self._cart_dof_idx[0]],
-            self.joint_vel[:, self._cart_dof_idx[0]],
-            self.reset_terminated,
-        )
+        total_reward = torch.zeros((self.num_envs,), device=self.sim.device)
         return total_reward
 
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
@@ -221,25 +215,3 @@ class CartpoleCameraEnv(DirectRLEnv):
         self._cartpole.write_root_pose_to_sim(default_root_state[:, :7], env_ids)
         self._cartpole.write_root_velocity_to_sim(default_root_state[:, 7:], env_ids)
         self._cartpole.write_joint_state_to_sim(joint_pos, joint_vel, None, env_ids)
-
-
-@torch.jit.script
-def compute_rewards(
-    rew_scale_alive: float,
-    rew_scale_terminated: float,
-    rew_scale_pole_pos: float,
-    rew_scale_cart_vel: float,
-    rew_scale_pole_vel: float,
-    pole_pos: torch.Tensor,
-    pole_vel: torch.Tensor,
-    cart_pos: torch.Tensor,
-    cart_vel: torch.Tensor,
-    reset_terminated: torch.Tensor,
-):
-    rew_alive = rew_scale_alive * (1.0 - reset_terminated.float())
-    rew_termination = rew_scale_terminated * reset_terminated.float()
-    rew_pole_pos = rew_scale_pole_pos * torch.sum(torch.square(pole_pos).unsqueeze(dim=1), dim=-1)
-    rew_cart_vel = rew_scale_cart_vel * torch.sum(torch.abs(cart_vel).unsqueeze(dim=1), dim=-1)
-    rew_pole_vel = rew_scale_pole_vel * torch.sum(torch.abs(pole_vel).unsqueeze(dim=1), dim=-1)
-    total_reward = rew_alive + rew_termination + rew_pole_pos + rew_cart_vel + rew_pole_vel
-    return total_reward
