@@ -154,9 +154,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             obj_pose = Pose.create_from_pq(p=xyz, q=q)
             self.obj.set_pose(obj_pose)
 
-            # set the bottle's initial position
-            print("self.bottle: ", self.bottle)
-            print("self.bottle attributes: ", dir(self.bottle))
+            # set the stick's initial position
             target_region_xyz = xyz + torch.tensor([0.1 + self.goal_radius, 0, 0])
             target_region_xyz[..., 2] = 1e-3 + _stick_thickness/2
             self.hockey_stick.set_pose(
