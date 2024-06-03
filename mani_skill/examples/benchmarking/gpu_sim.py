@@ -49,12 +49,12 @@ def main(args):
         if args.save_video:
             images.append(env.render().cpu().numpy())
         N = 1000
-        actions = (
-            2 * torch.rand(env.action_space.shape, device=base_env.device)
-            - 1
-        )
         with profiler.profile("env.step", total_steps=N, num_envs=num_envs):
             for i in range(N):
+                actions = (
+                    2 * torch.rand(env.action_space.shape, device=base_env.device)
+                    - 1
+                )
                 obs, rew, terminated, truncated, info = env.step(actions)
                 if args.save_video:
                     images.append(env.render().cpu().numpy())
