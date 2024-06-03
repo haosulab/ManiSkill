@@ -1,6 +1,8 @@
-# Benchmarking
+# Benchmarking (WIP)
 
 Code here is used to benchmark the performance of various simulators/benchmarks under as fair conditions as possible. To keep tests fair, the code here ensures the simulators are simulating the same task, same robot and dynamic objects, and use the same simulation and control frequencies. 
+
+This is still WIP as we work on more fair evaluations that align environments more closely and compare robot learning workflows.
 
 
 ## ManiSkill
@@ -34,35 +36,15 @@ env.step+env.reset: 17953.079 steps/s, 11.688 parallel steps/s, 1000 steps in 85
 ```
 
 
-## Isaac Orbit
+## Isaac Lab
 
-To benchmark [Isaac Orbit](https://github.com/NVIDIA-Omniverse/orbit), follow their installation instructions here https://isaac-orbit.github.io/orbit/source/setup/installation.html. We recommend making a conda/mamba environment to install it. Then after activating the environment, run
-
-```
-python benchmark_orbit_sim.py --task "Isaac-Lift-Cube-Franka-v0" --num_envs 4096 --headless
-```
-
-These are the expected results as tested on a RTX 4090:
-```
-env.step: 41043.659 steps/s, 10.020 parallel steps/s, 100 steps in 9.980s
-env.step+env.reset: 53911.399 steps/s, 13.162 parallel steps/s, 1000 steps in 75.977s
-```
-
-Note that the FPS appears to be much lower than reported by Isaac Orbit's original paper (up to 125,000 FPS). It is unclear why that is at the moment but even then as it stands ManiSkill tasks are much faster by at least 2-3x.
-
-## OmniIsaacGymEnvs
-
-To benchmark [OmniIsaacGymEnvs](https://github.com/NVIDIA-Omniverse/OmniIsaacGymEnvs), follow their installation instructions on their repository 
+To benchmark [Isaac Lab](https://github.com/isaac-sim/IsaacLab), follow their installation instructions here https://isaac-sim.github.io/IsaacLab/source/setup/installation/index.html. We recommend making a conda/mamba environment to install it. Then after activating the environment, run
 
 ```
-alias PYTHON_PATH=~/.local/share/ov/pkg/isaac_sim-*/python.sh
-PYTHON_PATH scripts/benchmark_omniisaac_sim.py headless=True num_envs=4096 task="FrankaCabinet"
+python isaac_lab_gpu_sim.py --task "Isaac-Lift-Cube-Franka-v0" --num_envs 4096 --headless
 ```
-<!-- Notes: FrankaCabinet uses solver iterations 12 and 120:60 sim to control freq, which makes it run faster than other sims -->
-<!-- 
-## RoboSuite
 
-To benchmark [Robosuite](https://github.com/ARISE-Initiative/robosuite) (powered by Mujoco), run
 
-Note that RoboSuite currently has not integrated the new MJX which brings GPU parallelized simulation so speeds here are expectedly much lower. Once MJX is supported we will benchmark their GPU simulation properly. -->
+## Benchmarking Details/Methodology
 
+See [the performance benchmarking documentation](https://maniskill.readthedocs.io/en/latest/user_guide/additional_resources/performance_benchmarking.html) for in depth details.
