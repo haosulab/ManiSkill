@@ -124,7 +124,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
         self.table_scene.build()
 
         
-        self.obj = actors.build_cube(
+        self.cube = actors.build_cube(
             self.scene,
             half_size=self.cube_half_size,
             color=np.array([12, 42, 160, 255]) / 255,
@@ -162,7 +162,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             xyz[..., 2] = self.cube_half_size
             q = [1, 0, 0, 0]
             obj_pose = Pose.create_from_pq(p=xyz, q=q)
-            self.obj.set_pose(obj_pose)
+            self.cube.set_pose(obj_pose)
 
             
             # set the goal's initial position
@@ -194,7 +194,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
     def evaluate(self):
         is_obj_in_goal = (
             torch.linalg.norm(
-                self.obj.pose.p[..., :2] - self.goal_region.pose.p[..., :2], axis=1
+                self.cube.pose.p[..., :2] - self.goal_region.pose.p[..., :2], axis=1
             )
             < self.goal_radius
         )
@@ -216,8 +216,26 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
         return obs
 
     def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
-        return 5
+        # 1. mock - add reward the closer robot hand gets to stick
+        dist_to_stick = torch.linalg.norm(
+            self.hockey_stick.pose.p - self.agent.tcp.pose.p, axis=1
+        )
+        reaching_reward = 1 - torch.tanh(5 * dist_to_stick)
+        reward = reaching_reward
+
+
+        # 2. mock - add reward when we pick up the stick
+        is_grasped = info["is_grasped"]
+        reward+= is_grasped
+
+        # 3. Add reward as distance of the stick to the cube decreases
+        # dist_to_cube = torch.linalg.norm(
+        #     self.cube.pose.p - self.hockey_stick.pose.p, axis=1
+        # )
+
+        reward[info["success"]] = 5
+        return reward
 
     def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
         # this should be equal to compute_dense_reward / max possible reward
-        return 5
+        return self.compute_dense_reward(obs=obs, action=action, info=info) / 5
