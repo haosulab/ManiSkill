@@ -27,50 +27,30 @@ Now recorded trajectories of your task will include the height as part of the en
 
 ### Pair-wise Contact Forces
 
-You may notice that in some tasks like [PickCube-v1](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/tasks/pikc_cube.py) we call a function `self.agent.is_grasping(self.)`. In ManiSkill, we leverage the pairwise impulses/forces API of SAPIEN to compute the forces betewen two objects. In the case of robots with two-finger grippers we check if both fingers are contacting a queried object. This is particularly useful for building better reward functions.
+You may notice that in some tasks like [PickCube-v1](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/tasks/pikc_cube.py) we call a function `self.agent.is_grasping(...)`. In ManiSkill, we leverage the pairwise impulses/forces API of SAPIEN to compute the forces betewen two objects. In the case of robots with two-finger grippers we check if both fingers are contacting a queried object. This is particularly useful for building better reward functions for faster RL. 
 
-
-#### On the CPU
-If you have an two `Actor` or `Link` class objects, call them `x1, x2`, in a `ManiSkillScene` (accessible in custom tasks via `self.scene`), you can generate the contact force between them via
+The API for querying pair-wise contact forces is unified between the GPU and CPU and is accessible via the `self.scene` object in your environment, accessible as so given a pair of actors/links of type `Actor | Link` to query via the ManiSkillScene object.
 
 ```python
-from mani_skill.utils import sapien_utils
-impulses = sapien_utils.get_pairwise_contact_impulse(
-    scene.get_contacts(), x1._bodies[0].entity, x2._bodies[0].entity
-)
+self.scene: ManiSkillScene
+forces = self.scene.get_pairwise_contact_forces(actor_1, link_2)
+# forces is shape (N, 3) where N is the number of environments
 ```
 
-#### On the GPU
+:::{dropdown} Internal Implementation Caveats/Details
+At the moment contacts work a bit different compared to CPU and GPU internally although they are unified under one interface/function for users.
 
-To get pair-wise contact forces on the GPU you have to first generate a list of 2-tuples of bodies you wish to compute contacts between. If you have an two `Actor` or `Link` class objects, call them `x1, x2`, you can generate the contact force between them via
+On the GPU, one must create contact queries objects ahead of time and for performance reasons these are cached. Creating contact queries pauses all GPU computations similar to changing object poses/states. In ManiSkill this handled for users and it automatically creates queries if the queried contact forces are between objects that have not been queried before.
+:::
 
-
-```python
-# this generates N 2-tuples where N is the number of parallel envs
-body_pairs = list(zip(x1._bodies, x2._bodies))
-```
-You are not restricted to having to use all of the `_bodies`, you can pick any subset of them if you wish.
-
-Then you can generate and cache the pair impulse query as so
-```python
-query = scene.px.gpu_create_contact_pair_impulse_query(body_pairs)
-```
-
-To fetch the impulses of the contacts between bodies
-```python
-# impulses divided by the physx timestep gives forces in newtons
-contacts = query.cuda_impulses.torch().clone() / scene.timestep
-# results in a array of shape (len(body_pairs), 3)
-```
-
-There are plans to make a simpler managed version of the SAPIEN pair-wise contacts API. If you want to use it yourself you can check out how it is used to check two-finger grasps on the [Panda Robot](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/panda/panda.py) or generate tactile sensing data on the [Allegro Hand](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/allegro_hand/allegro_touch.py).
+For significantly more advanced/optimized usage of the contact forces API using the SAPIEN API directly instead of ManiSkill you can look at how [get_pairwise_contact_forces is implemented on GitHub](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/scene.py#L505-L539)
 
 ### Net Contact forces
 
 Net contact forces are nearly the same as the pair-wise contact forces in terms of SAPIEN API but ManiSkill provides a convenient way to fetch this data for Actors and Articulations that works on CPU and GPU as so
 
 ```python
-actor.get_net_contact_forces() # shape (N, 3)
+actor.get_net_contact_forces() # shape (N, 3), N is number of environments
 articulation.get_net_contact_forces(link_names) # shape (N, len(link_names), 3)
 ```
 
@@ -211,13 +191,15 @@ class GPUMemoryConfig:
     def dict(self):
         return {k: v for k, v in asdict(self).items()}
 
+
 @dataclass
 class SceneConfig:
     gravity: np.ndarray = field(default_factory=lambda: np.array([0, 0, -9.81]))
     bounce_threshold: float = 2.0
     sleep_threshold: float = 0.005
     contact_offset: float = 0.02
-    solver_iterations: int = 15
+    rest_offset: float = 0
+    solver_position_iterations: int = 15
     solver_velocity_iterations: int = 1
     enable_pcm: bool = True
     enable_tgs: bool = True

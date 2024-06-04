@@ -43,11 +43,17 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
     map from user-defined mesh groups (e.g. "handle" meshes for cabinets) to a list of trimesh.Trimesh objects corresponding to each physx link object managed here
     """
 
+    merged: bool = False
+    """whether this link is result of Link.merge or not"""
+
     def __str__(self):
         return f"<{self.name}: struct of type {self.__class__}; managing {self._num_objs} {self._objs[0].__class__} objects>"
 
     def __repr__(self):
         return self.__str__()
+
+    def __hash__(self):
+        return self.__maniskill_hash__
 
     @classmethod
     def create(
@@ -111,6 +117,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
         # TODO (stao): akin to the joint merging above, we can also make a view of the articulations of each link. Is it necessary?
         merged_link.articulation = None
         merged_link.name = name
+        merged_link.merged = True
         return merged_link
 
     # -------------------------------------------------------------------------- #

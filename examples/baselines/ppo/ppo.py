@@ -60,7 +60,7 @@ class Args:
     num_eval_envs: int = 8
     """the number of parallel evaluation environments"""
     partial_reset: bool = True
-    """toggle if the environments should perform partial resets"""
+    """whether to let parallel environments reset upon termination instead of truncation"""
     num_steps: int = 50
     """the number of steps to run in each environment per policy rollout"""
     num_eval_steps: int = 50

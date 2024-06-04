@@ -8,7 +8,7 @@ from sapien.render import RenderCameraComponent
 
 from mani_skill.sensors.base_sensor import BaseSensor
 from mani_skill.sensors.camera import Camera
-from mani_skill.utils import common
+from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.articulation import Articulation
 from mani_skill.utils.structs.drive import Drive
@@ -66,6 +66,20 @@ class ManiSkillScene:
         self._needs_fetch = False
         """Used internally to raise some errors ahead of time of when there may be undefined behaviors"""
 
+        self.pairwise_contact_queries: Dict[
+            str, physx.PhysxGpuContactPairImpulseQuery
+        ] = dict()
+        """dictionary mapping pairwise contact query keys to GPU contact queries. Used in GPU simulation only to cache queries as
+        query creation will pause any GPU sim computation"""
+        self._pairwise_contact_query_unique_hashes: Dict[str, int] = dict()
+        """maps keys in self.pairwise_contact_queries to unique hashes dependent on the actual objects involved in the query.
+        This is used to determine automatically when to rebuild contact queries as keys for self.pairwise_contact_queries are kept
+        non-unique between episode resets in order to be easily rebuilt and deallocate old queries. This essentially acts as a way
+        to invalidate the cached queries."""
+
+    # -------------------------------------------------------------------------- #
+    # Functions from sapien.Scene
+    # -------------------------------------------------------------------------- #
     @property
     def timestep(self):
         return self.px.timestep
@@ -229,6 +243,7 @@ class ManiSkillScene:
             self.sub_scenes[0].update_render()
 
     def get_contacts(self):
+        # TODO (stao): deprecate this API
         return self.px.get_contacts()
 
     def get_all_actors(self):
@@ -486,11 +501,73 @@ class ManiSkillScene:
     #     self.render_system.cubemap = sapien.render.RenderCubemap(px, nx, py, ny, pz, nz)
 
     # ---------------------------------------------------------------------------- #
-    # Additional useful properties
+    # Additional useful properties / functions
     # ---------------------------------------------------------------------------- #
     @property
     def num_envs(self):
         return len(self.sub_scenes)
+
+    def get_pairwise_contact_impulses(
+        self, obj1: Union[Actor, Link], obj2: Union[Actor, Link]
+    ):
+        """
+        Get the impulse vectors between two actors/links. Returns impulse vector of shape (N, 3)
+        where N is the number of environments and 3 is the dimension of the impulse vector itself,
+        representing x, y, and z direction of impulse.
+
+        Note that dividing the impulse value by self.px.timestep yields the pairwise contact force in Newtons. The equivalent API for that
+        is self.get_pairwise_contact_force(obj1, obj2). It is generally recommended to use the force values since they are independent of the
+        timestep (dt = 1 / sim_freq) of the simulation.
+
+        Args:
+            obj1: Actor | Link
+            obj2: Actor | Link
+        """
+        # TODO (stao): Is there any optimization improvement when putting all queries all together and fetched together
+        # vs multiple smaller queries? If so, might be worth exposing a helpful API for that instead of having user
+        # write this code below themselves.
+        if physx.is_gpu_enabled():
+            query_hash = hash((obj1, obj2))
+            query_key = obj1.name + obj2.name
+
+            # we rebuild the potentially expensive contact query if it has not existed previously
+            # or if it has, the managed objects are a different set
+            rebuild_query = (query_key not in self.pairwise_contact_queries) or (
+                query_key in self._pairwise_contact_query_unique_hashes
+                and self._pairwise_contact_query_unique_hashes[query_key] != query_hash
+            )
+            if rebuild_query:
+                body_pairs = list(zip(obj1._bodies, obj2._bodies))
+                self.pairwise_contact_queries[
+                    query_key
+                ] = self.px.gpu_create_contact_pair_impulse_query(body_pairs)
+                self._pairwise_contact_query_unique_hashes[query_key] = query_hash
+
+            query = self.pairwise_contact_queries[query_key]
+            self.px.gpu_query_contact_pair_impulses(query)
+            # query.cuda_impulses is shape (num_unique_pairs * num_envs, 3)
+            pairwise_contact_impulses = query.cuda_impulses.torch().clone()
+            return pairwise_contact_impulses
+        else:
+            contacts = self.px.get_contacts()
+            pairwise_contact_impulses = sapien_utils.get_pairwise_contact_impulse(
+                contacts, obj1._bodies[0].entity, obj2._bodies[0].entity
+            )
+            return common.to_tensor(pairwise_contact_impulses)[None, :]
+
+    def get_pairwise_contact_forces(
+        self, obj1: Union[Actor, Link], obj2: Union[Actor, Link]
+    ):
+        """
+        Get the force vectors between two actors/links. Returns force vector of shape (N, 3)
+        where N is the number of environments and 3 is the dimension of the force vector itself,
+        representing x, y, and z direction of force.
+
+        Args:
+            obj1: Actor | Link
+            obj2: Actor | Link
+        """
+        return self.get_pairwise_contact_impulses(obj1, obj2) / self.px.timestep
 
     # -------------------------------------------------------------------------- #
     # Simulation state (required for MPC)
@@ -519,17 +596,26 @@ class ManiSkillScene:
             del state_dict["articulations"]
         return state_dict
 
-    def set_sim_state(self, state: Dict):
+    def set_sim_state(self, state: Dict, env_idx: torch.Tensor = None):
+        if env_idx is not None:
+            prev_reset_mask = self._reset_mask.clone()
+            # safe guard against setting the wrong states
+            self._reset_mask[:] = False
+            self._reset_mask[env_idx] = True
+
         if "actors" in state:
             for actor_id, actor_state in state["actors"].items():
                 if len(actor_state.shape) == 1:
                     actor_state = actor_state[None, :]
-                self.actors[actor_id].set_state(actor_state)
+                # do not pass in env_idx to avoid redundant reset mask changes
+                self.actors[actor_id].set_state(actor_state, None)
         if "articulations" in state:
             for art_id, art_state in state["articulations"].items():
                 if len(art_state.shape) == 1:
                     art_state = art_state[None, :]
-                self.articulations[art_id].set_state(art_state)
+                self.articulations[art_id].set_state(art_state, None)
+        if env_idx is not None:
+            self._reset_mask = prev_reset_mask
 
     # ---------------------------------------------------------------------------- #
     # GPU Simulation Management

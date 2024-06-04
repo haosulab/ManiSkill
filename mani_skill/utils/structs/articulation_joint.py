@@ -41,14 +41,14 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
 
     _physx_articulations: List[physx.PhysxArticulation] = None
 
-    def __hash__(self):
-        return self._objs[0].__hash__()
-
     def __str__(self):
         return f"<{self.name}: struct of type {self.__class__}; managing {self._num_objs} {self._objs[0].__class__} objects>"
 
     def __repr__(self):
         return self.__str__()
+
+    def __hash__(self):
+        return self.__maniskill_hash__
 
     @classmethod
     def create(
