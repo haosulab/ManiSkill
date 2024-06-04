@@ -597,6 +597,12 @@ class ManiSkillScene:
         return state_dict
 
     def set_sim_state(self, state: Dict, env_idx: torch.Tensor = None):
+        if env_idx is not None:
+            prev_reset_mask = self._reset_mask.clone()
+            # safe guard against setting the wrong states
+            self._reset_mask[:] = False
+            self._reset_mask[env_idx] = True
+
         if "actors" in state:
             for actor_id, actor_state in state["actors"].items():
                 if len(actor_state.shape) == 1:
@@ -607,6 +613,8 @@ class ManiSkillScene:
                 if len(art_state.shape) == 1:
                     art_state = art_state[None, :]
                 self.articulations[art_id].set_state(art_state, env_idx)
+        if env_idx is not None:
+            self._reset_mask = prev_reset_mask
 
     # ---------------------------------------------------------------------------- #
     # GPU Simulation Management

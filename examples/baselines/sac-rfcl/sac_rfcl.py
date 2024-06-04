@@ -42,11 +42,11 @@ class Args:
     """if toggled, this experiment will be tracked with Weights and Biases"""
     wandb_project_name: str = "cleanRL"
     """the wandb's project name"""
-    wandb_entity: str = None
+    wandb_entity: Optional[str] = None
     """the entity (team) of wandb's project"""
     evaluate: bool = False
     """if toggled, only runs evaluation with the given model checkpoint and saves the evaluation trajectories"""
-    checkpoint: str = None
+    checkpoint: Optional[str] = None
     """path to a pretrained checkpoint file to start evaluation/training from"""
     capture_video: bool = True
     """whether to capture videos of the agent performances (check out `videos` folder)"""
@@ -377,19 +377,22 @@ class ReverseForwardCurriculumWrapper(gym.Wrapper):
             env_idx = torch.arange(0, self.base_env.num_envs, device=self.base_env.device)
         if self.curriculum_mode == "reverse":
             # set initial state accordingly
-            b = self.base_env.num_envs
+            b = len(env_idx)
+
             # TODO (stao): handle partial resets later
             self.sampled_traj_indexes[env_idx] = torch.from_numpy(self.base_env._episode_rng.randint(0, len(self.env_states), size=(b, ))).int().to(self.base_env.device)
+            reset_traj_indexes = self.sampled_traj_indexes[env_idx]
             if self.eval_mode:
-                self.base_env.set_state(self.env_states[self.sampled_traj_indexes, 5 + torch.zeros((b, ), dtype=torch.int, device=self.base_env.device)])
+                self.base_env.set_state(self.env_states[self.sampled_traj_indexes, 5 + torch.zeros((b, ), dtype=torch.int, device=self.base_env.device)], env_idx)
             elif self.reverse_curriculum_sampler == "geometric":
                 x_start_steps_density_list = [0.5, 0.25, 0.125, 0.125 / 2, 0.125 / 2]
                 sampled_offsets = torch.from_numpy(self.base_env._episode_rng.randint(0, len(x_start_steps_density_list), size=(b, ))).to(self.base_env.device)
-                x_start_steps = self.demo_curriculum_step[self.sampled_traj_indexes] + sampled_offsets
-                x_start_steps = torch.clamp(x_start_steps, torch.zeros((b, ), device=self.base_env.device), self.demo_horizon[self.sampled_traj_indexes] - 1).int()
-            self.dynamic_max_episode_steps[env_idx] = 8 + (self.demo_horizon[self.sampled_traj_indexes] - x_start_steps) // self.demo_horizon_to_max_steps_ratio
-            self.base_env.set_state(self.env_states[self.sampled_traj_indexes, x_start_steps])
+                x_start_steps = self.demo_curriculum_step[reset_traj_indexes] + sampled_offsets
+                x_start_steps = torch.clamp(x_start_steps, torch.zeros((b, ), device=self.base_env.device), self.demo_horizon[reset_traj_indexes] - 1).int()
+            self.dynamic_max_episode_steps[env_idx] = 8 + (self.demo_horizon[reset_traj_indexes] - x_start_steps) // self.demo_horizon_to_max_steps_ratio
+            # unsure why self.env_states[reset_traj_indexes, x_start_steps].shape causes a device side assert
 
+            self.base_env.set_state(self.env_states[reset_traj_indexes, x_start_steps], env_idx)
         obs = self.base_env.get_obs()
         return obs, {}
 
