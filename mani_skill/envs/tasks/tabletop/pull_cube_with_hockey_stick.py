@@ -204,32 +204,32 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             # print("self.cube.pose.p:", self.cube.pose.p)
 
             # set long stick region to appear over the grasping region of the stick
-            offset = torch.tensor([
-                _stick_length + _stick_thickness,
-                _stick_end_length,
-                0])
-            target_region_xyz = torch.tensor(self.hockey_stick.pose.p) + offset
-            target_region_xyz[..., 2] = 4 * _stick_thickness
-            self.long_stick_region.set_pose(
-                Pose.create_from_pq(
-                    p=target_region_xyz,
-                    q=euler2quat(0, 0, 0),
-                )
-            )
+            # offset = torch.tensor([
+            #     _stick_length + _stick_thickness,
+            #     _stick_end_length,
+            #     0])
+            # target_region_xyz = torch.tensor(self.hockey_stick.pose.p) + offset
+            # target_region_xyz[..., 2] = 4 * _stick_thickness
+            # self.long_stick_region.set_pose(
+            #     Pose.create_from_pq(
+            #         p=target_region_xyz,
+            #         q=euler2quat(0, 0, 0),
+            #     )
+            # )
 
-            # set grasp stick region to appear over the end of the stick
-            offset = torch.tensor([
-                -_stick_length/2,
-                0,
-                0])
-            target_region_xyz = torch.tensor(self.hockey_stick.pose.p)  + offset
-            target_region_xyz[..., 2] = 4 * _stick_thickness
-            self.grasp_stick_region.set_pose(
-                Pose.create_from_pq(
-                    p=target_region_xyz,
-                    q=euler2quat(0, 0, 0),
-                )
-            )
+            # # set grasp stick region to appear over the end of the stick
+            # offset = torch.tensor([
+            #     -_stick_length/2,
+            #     0,
+            #     0])
+            # target_region_xyz = torch.tensor(self.hockey_stick.pose.p)  + offset
+            # target_region_xyz[..., 2] = 4 * _stick_thickness
+            # self.grasp_stick_region.set_pose(
+            #     Pose.create_from_pq(
+            #         p=target_region_xyz,
+            #         q=euler2quat(0, 0, 0),
+            #     )
+            # )
 
 
 
