@@ -346,6 +346,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
         # temp return
         is_grasped = info["is_grasped"]
         reward+= is_grasped
+        return reward
 
 
     def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
