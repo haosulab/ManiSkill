@@ -220,7 +220,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             # set grasp stick region to appear over the end of the stick
             offset = torch.tensor([
                 -_stick_length/2,
-                0
+                0,
                 0])
             target_region_xyz = torch.tensor(self.hockey_stick.pose.p) # + offset
             target_region_xyz[..., 2] = 4 * _stick_thickness
