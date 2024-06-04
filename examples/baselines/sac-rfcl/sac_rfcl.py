@@ -112,17 +112,19 @@ class Args:
     """number of demonstrations to load. If None all are loaded. If given a int, that many demos
     are sampled from the given dataset"""
 
-    reverse_step_size: int = 4
+    reverse_step_size: int = 3
     """the number of steps to reverse the curriculum by"""
-    curriculum_method: str = "geometric"
-    """the curriculum to use. Can be 'geometric' or 'uniform'"""
+    reverse_curriculum_sampler: str = "geometric"
+    """the sampler to use for picking which env state to start from in the reverse curriculum"""
     # TODO not implemented
     per_demo_buffer_size: int = 3
     """number of sequential successes before considering advancing the curriculum """
     # TODO not implemented
     demo_horizon_to_max_steps_ratio: float = 3
     """the demo horizon to max steps ratio for dynamic timelimits for faster training with partial resets"""
-
+    max_steps_min: int = 8
+    """the minimum max episode steps before truncating. In combination with demo_horizon_to_max_steps_ratio the environment resets
+    every (max_steps_min + (T - k) // demo_horizon_to_max_steps_ratio) steps where T is the length of the demo and k is the curriculum step of that demo"""
 
 
     # to be filled in runtime
@@ -272,6 +274,7 @@ class ReverseForwardCurriculumWrapper(gym.Wrapper):
     def __init__(self, env, dataset_path,
                  reverse_curriculum_sampler: str = "uniform",
                  demo_horizon_to_max_steps_ratio: float = 3.0,
+                 max_steps_min: int = 8,
                  per_demo_buffer_size = 3,
                  reverse_step_size = 1,
                  traj_ids: list[str] = None,
@@ -283,8 +286,8 @@ class ReverseForwardCurriculumWrapper(gym.Wrapper):
 
         # Reverse curriculum specific configs
         self.reverse_curriculum_sampler = reverse_curriculum_sampler
-        """choice of sampler"""
         self.demo_horizon_to_max_steps_ratio = demo_horizon_to_max_steps_ratio
+        self.max_steps_min = max_steps_min
         self.per_demo_buffer_size = per_demo_buffer_size
         self.reverse_step_size = reverse_step_size
 
@@ -467,7 +470,7 @@ if __name__ == "__main__":
 
     curriculum_wrapped_envs = ReverseForwardCurriculumWrapper(
         envs, args.dataset_path,
-        reverse_curriculum_sampler=args.curriculum_method,
+        reverse_curriculum_sampler=args.reverse_curriculum_sampler,
         demo_horizon_to_max_steps_ratio=args.demo_horizon_to_max_steps_ratio,
         per_demo_buffer_size=args.per_demo_buffer_size,
         reverse_step_size=args.reverse_step_size,
@@ -616,24 +619,24 @@ if __name__ == "__main__":
                 }, model_path)
                 print(f"model saved to {model_path}")
 
-
-        solved_frac = (curriculum_wrapped_envs.demo_solved).float().mean().item()
-        # handle stage 1 to stage 2 training transition
-        if solved_frac >= 0.9:
-            print("Reverse solved >= 0.9 of demos. Stopping stage 1 training and beginning stage 2")
-            writer.add_scalar("charts/stage_1_steps", global_step, global_step)
-            envs.curriculum_mode = "none"
-            # reset the environment and begin training as if training anew
-            envs.reset()
-            print(f"Loading current online replay buffer as offline replay buffer and resetting online buffer")
-            offline_rb = rb
-            rb = ReplayBuffer(
-                env=envs,
-                num_envs=args.num_envs,
-                buffer_size=args.buffer_size,
-                storage_device=torch.device(args.buffer_device),
-                sample_device=device
-            )
+        if curriculum_wrapped_envs.curriculum_mode == "reverse":
+            solved_frac = (curriculum_wrapped_envs.demo_solved).float().mean().item()
+            # handle stage 1 to stage 2 training transition
+            if solved_frac >= 0.9:
+                print("Reverse solved >= 0.9 of demos. Stopping stage 1 training and beginning stage 2")
+                writer.add_scalar("charts/stage_1_steps", global_step, global_step)
+                curriculum_wrapped_envs.curriculum_mode = "none"
+                # reset the environment and begin training as if training anew
+                envs.reset()
+                print(f"Loading current online replay buffer as offline replay buffer and resetting online buffer")
+                offline_rb = rb
+                rb = ReplayBuffer(
+                    env=envs,
+                    num_envs=args.num_envs,
+                    buffer_size=args.buffer_size,
+                    storage_device=torch.device(args.buffer_device),
+                    sample_device=device
+                )
 
 
 
