@@ -18,7 +18,7 @@ python -m mani_skill.utils.download_demo "PickCube-v1"
 Process the demonstrations in preparation for the imitation learning workflow
 ```bash
 python -m mani_skill.trajectory.replay_trajectory \
-  --traj-path path/to/trajectory.h5 \
+  --traj-path ~/.maniskill/demos/PickCube-v1/teleop/trajectory.h5 \
   --use-first-env-state -b "gpu" \
   -c pd_joint_delta_pos -o state \
   --save-traj

@@ -351,7 +351,7 @@ if __name__ == "__main__":
     from curriculum_wrappers import ReverseCurriculumWrapper, ReverseCurriculumConfig, ForwardCurriculumConfig
     curriculum_wrapped_envs = ReverseCurriculumWrapper(
         envs, args.dataset_path,
-        reverse_curriculum_config=ReverseCurriculumConfig(
+        cfg=ReverseCurriculumConfig(
             reverse_curriculum_sampler=args.reverse_curriculum_sampler,
             demo_horizon_to_max_steps_ratio=args.demo_horizon_to_max_steps_ratio,
             per_demo_buffer_size=args.per_demo_buffer_size,

@@ -14,8 +14,8 @@ class ReverseCurriculumConfig:
     reverse_curriculum_sampler: str = "uniform"
     demo_horizon_to_max_steps_ratio: float = 3.0
     max_steps_min: int = 8
-    per_demo_buffer_size = 3
-    reverse_step_size = 1
+    per_demo_buffer_size: int = 3
+    reverse_step_size: int = 1
     traj_ids: list[str] = None
 
 class ReverseCurriculumWrapper(gym.Wrapper):
@@ -131,9 +131,9 @@ class ReverseCurriculumWrapper(gym.Wrapper):
 
 @dataclass
 class ForwardCurriculumConfig:
-    forward_curriculum = "success_once_score"
-    staleness_coef =  0.1
-    staleness_temperature =  0.1
-    staleness_transform = "rankmin"
-    score_transform = "rankmin"
-    score_temperature = 0.1
+    forward_curriculum: str = "success_once_score"
+    staleness_coef: float =  0.1
+    staleness_temperature: float =  0.1
+    staleness_transform: str = "rankmin"
+    score_transform: str = "rankmin"
+    score_temperature: float = 0.1
