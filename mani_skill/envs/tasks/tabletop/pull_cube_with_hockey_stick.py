@@ -265,9 +265,6 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             torch.tensor(self.agent.tcp.pose.p) - self._get_pos_of_grasp_stick(), axis=1
         )
 
-        print("type(dst_cube_to_end_of_stick):", type(dst_cube_to_end_of_stick))
-        print("type(dst_robot_to_grasp_stick_pos):", type(dst_robot_to_grasp_stick_pos))
-
         return dst_cube_to_end_of_stick.to(self.device), dst_robot_to_grasp_stick_pos.to(self.device)
 
 
@@ -296,17 +293,17 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
         }
 
     def _get_obs_extra(self, info: Dict):
-        # dst_cube_to_end_of_stick, dst_robot_to_grasp_stick_pos = self._get_distances()
+        dst_cube_to_end_of_stick, dst_robot_to_grasp_stick_pos = self._get_distances()
         # default observartions
         obs = dict(tcp_pose=self.agent.tcp.pose.raw_pose,)
-        # if self._obs_mode in ["state", "state_dict"]:
-        #     obs.update(
-        #         obj_pose=self.cube.pose.raw_pose,
-        #         dst_cube_to_end_of_stick = dst_cube_to_end_of_stick,
-        #         dst_robot_to_grasp_stick_pos = dst_robot_to_grasp_stick_pos,
-        #         stick_pose = self.hockey_stick.pose.raw_pose,
-        #         obj_to_goal_dist = self.goal_region.pose.p - self.cube.pose.p,
-        #     )
+        if self._obs_mode in ["state", "state_dict"]:
+            obs.update(
+                obj_pose=self.cube.pose.raw_pose,
+                dst_cube_to_end_of_stick = dst_cube_to_end_of_stick,
+                dst_robot_to_grasp_stick_pos = dst_robot_to_grasp_stick_pos,
+                stick_pose = self.hockey_stick.pose.raw_pose,
+                obj_to_goal_dist = self.goal_region.pose.p - self.cube.pose.p,
+            )
         return obs
 
     def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
