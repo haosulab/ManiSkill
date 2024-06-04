@@ -6,6 +6,8 @@ Currently this code only works with environments that do not have geometry varia
 
 Code has been tested and working on the following environments: PickCube-v1
 
+This implementation currently does not include the forward curriculum.
+
 ## Download and Process Dataset
 
 Download demonstrations for a desired task e.g. PickCube-v1
