@@ -257,17 +257,20 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     def set_state(self, state: Array, env_idx: torch.Tensor = None):
         if physx.is_gpu_enabled():
+            if env_idx is not None:
+                prev_reset_mask = self.scene._reset_mask.clone()
+                # safe guard against setting the wrong states
+                self.scene._reset_mask[:] = False
+                self.scene._reset_mask[env_idx] = True
             state = common.to_tensor(state)
-            if env_idx is None:
-                indexes = slice(None)
-            else:
-                indexes = env_idx
-            self.set_root_pose(Pose.create(state[indexes, :7]))
-            self.set_root_linear_velocity(state[indexes, 7:10])
-            self.set_root_angular_velocity(state[indexes, 10:13])
+            self.set_root_pose(Pose.create(state[:, :7]))
+            self.set_root_linear_velocity(state[:, 7:10])
+            self.set_root_angular_velocity(state[:, 10:13])
             # TODO (stao): Handle get/set state for envs with different DOFs. Perhaps need to let user set a padding ahead of time to ensure state is the same?
-            self.set_qpos(state[indexes, 13 : 13 + self.max_dof])
-            self.set_qvel(state[indexes, 13 + self.max_dof :])
+            self.set_qpos(state[:, 13 : 13 + self.max_dof])
+            self.set_qvel(state[:, 13 + self.max_dof :])
+            if env_idx is not None:
+                self.scene._reset_mask = prev_reset_mask
         else:
             state = common.to_numpy(state[0])
             self.set_root_pose(sapien.Pose(state[0:3], state[3:7]))
