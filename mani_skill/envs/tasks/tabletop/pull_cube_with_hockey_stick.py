@@ -335,7 +335,11 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
         reward += static_reward * info["is_obj_in_goal"]
 
         reward[info["success"]] = 5
+        # return reward
+        # convert reward to a tensor and return
+        reward = torch.tensor(reward, device=self.device)
         return reward
+
 
     def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
         # this should be equal to compute_dense_reward / max possible reward
