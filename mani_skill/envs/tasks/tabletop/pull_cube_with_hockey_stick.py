@@ -222,7 +222,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
                 -_stick_length/2,
                 0,
                 0])
-            target_region_xyz = torch.tensor(self.hockey_stick.pose.p) # + offset
+            target_region_xyz = torch.tensor(self.hockey_stick.pose.p)  + offset
             target_region_xyz[..., 2] = 4 * _stick_thickness
             self.grasp_stick_region.set_pose(
                 Pose.create_from_pq(
