@@ -29,7 +29,7 @@ class Profiler:
         if self.output_format == "stdout":
             print(msg)
 
-    def update_csv(self, csv_path: str, ids: dict):
+    def update_csv(self, csv_path: str, data: dict):
         import pandas as pd
         import os
 
@@ -42,14 +42,14 @@ class Profiler:
         for k in stats_flat:
             if k not in df:
                 df[k] = None
-        for k in ids:
+        for k in data:
             if k not in df:
                 df[k] = None
             if cond is None:
-                cond = df[k] == ids[k]
+                cond = df[k] == data[k]
             else:
-                cond = cond & (df[k] == ids[k])
-        data_dict = {**ids, **stats_flat}
+                cond = cond & (df[k] == data[k])
+        data_dict = {**data, **stats_flat}
         if not cond.any():
             df.loc[len(df)] = data_dict
         else:

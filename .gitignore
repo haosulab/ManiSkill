@@ -37,6 +37,9 @@ imgui.ini
 /videos
 /examples/benchmarking/videos
 
+# benchmarking
+/benchmark_results
+
 # testing
 .coverage*
 htmlcov/

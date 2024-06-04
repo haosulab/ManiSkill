@@ -46,6 +46,8 @@ python -m mani_skill.examples.benchmarking.gpu_sim -e "PickCubeBenchmark-v1" -n=
 ```
 The environments available are "PickCubeBenchmark-v1" and "CartpoleBalanceBenchmark-v1" (modified versions of the default environment in ManiSkill for benchmarking purposes)
 
+To generate the plots you can run
+
 ## Isaac Lab
 
 To benchmark [Isaac Sim / Isaac Lab](https://github.com/isaac-sim/IsaacLab), follow their installation instructions here https://isaac-sim.github.io/IsaacLab/source/setup/installation/index.html. We recommend making a conda/mamba environment to install it. Then after activating the environment, run
@@ -55,7 +57,12 @@ cd mani_skill/examples/benchmarking
 # test state simulation
 python isaac_lab_gpu_sim.py --task "Isaac-Cartpole-Direct-v0" --num_envs 4096  --headless
 # test rendering just RGB
-python isaac_lab_gpu_sim.py --task "Isaac-Cartpole-RGB-Camera-Direct-Benchmark-v0" --num_envs 256 --enable_cameras --headless
+python isaac_lab_gpu_sim.py --task "Isaac-Cartpole-RGB-Camera-Direct-Benchmark-v0" \
+  --num_envs 256 --enable_cameras --headless
+# test rendering RGB+Depth
+python isaac_lab_gpu_sim.py --task "Isaac-Cartpole-RGB-Camera-Direct-Benchmark-v0" \
+  --num_envs 4 --obs_mode rgbd \
+  --enable_cameras --headless
 ```
 
 

@@ -96,13 +96,46 @@ class CartpoleCameraBenchmarkEnv(DirectRLEnv):
 
     Modification from original:
     - Remove reward / evaluation functions
+    - Support RGB+Depth and multiple camera setups
     """
 
     cfg: CartpoleRGBCameraBenchmarkEnvCfg | CartpoleDepthCameraBenchmarkEnvCfg
 
     def __init__(
-        self, cfg: CartpoleRGBCameraBenchmarkEnvCfg | CartpoleDepthCameraBenchmarkEnvCfg, render_mode: str | None = None, **kwargs
+        self, cfg: CartpoleRGBCameraBenchmarkEnvCfg | CartpoleDepthCameraBenchmarkEnvCfg, render_mode: str | None = None, camera_width=128, camera_height=128, num_cameras=1, obs_mode="rgb", **kwargs
     ):
+        # configure cameras
+        self.has_rgb = obs_mode in ["rgb", "rgbd"]
+        self.has_depth = obs_mode in ["depth", "rgbd"]
+
+        self.num_cameras = num_cameras
+        self.tiled_rgb_camera_cfgs = []
+        self.tiled_depth_camera_cfgs = []
+        for i in range(num_cameras):
+            if self.has_rgb:
+                tiled_camera_cfg = TiledCameraCfg(
+                    prim_path=f"/World/envs/env_.*/Camera_RGB_{i}",
+                    offset=TiledCameraCfg.OffsetCfg(pos=(-4.0, 0.0, 3.0), rot=(0.9945, 0.0, 0.1045, 0.0), convention="world"),
+                    data_types=["rgb"],
+                    spawn=sim_utils.PinholeCameraCfg(
+                        focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 20.0)
+                    ),
+                    width=camera_width,
+                    height=camera_height,
+                )
+                self.tiled_rgb_camera_cfgs.append(tiled_camera_cfg)
+            if self.has_depth:
+                tiled_camera_cfg = TiledCameraCfg(
+                    prim_path=f"/World/envs/env_.*/Camera_Depth_{i}",
+                    offset=TiledCameraCfg.OffsetCfg(pos=(-4.0, 0.0, 3.0), rot=(0.9945, 0.0, 0.1045, 0.0), convention="world"),
+                    data_types=["depth"],
+                    spawn=sim_utils.PinholeCameraCfg(
+                        focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 20.0)
+                    ),
+                    width=camera_width,
+                    height=camera_height,
+                )
+                self.tiled_depth_camera_cfgs.append(tiled_camera_cfg)
         super().__init__(cfg, render_mode, **kwargs)
 
         self._cart_dof_idx, _ = self._cartpole.find_joints(self.cfg.cart_dof_name)
@@ -131,16 +164,17 @@ class CartpoleCameraBenchmarkEnv(DirectRLEnv):
 
         # set up spaces
         self.single_observation_space = gym.spaces.Dict()
-        self.single_observation_space["policy"] = gym.spaces.Box(
-            low=-np.inf,
-            high=np.inf,
-            shape=(self.cfg.tiled_camera.height, self.cfg.tiled_camera.width, self.cfg.num_channels),
-        )
-        if self.num_states > 0:
-            self.single_observation_space["critic"] = gym.spaces.Box(
+        if self.has_rgb:
+            self.single_observation_space["rgb"] = gym.spaces.Box(
                 low=-np.inf,
                 high=np.inf,
-                shape=(self.cfg.tiled_camera.height, self.cfg.tiled_camera.width, self.cfg.num_channels),
+                shape=(self.num_cameras, self.tiled_rgb_camera_cfgs[0].height, self.tiled_rgb_camera_cfgs[0].width, 3),
+            )
+        if self.has_depth:
+            self.single_observation_space["depth"] = gym.spaces.Box(
+                low=-np.inf,
+                high=np.inf,
+                shape=(self.num_cameras, self.tiled_rgb_camera_cfgs[0].height, self.tiled_rgb_camera_cfgs[0].width, 1),
             )
         self.single_action_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_actions,))
 
@@ -154,7 +188,11 @@ class CartpoleCameraBenchmarkEnv(DirectRLEnv):
     def _setup_scene(self):
         """Setup the scene with the cartpole and camera."""
         self._cartpole = Articulation(self.cfg.robot_cfg)
-        self._tiled_camera = TiledCamera(self.cfg.tiled_camera)
+        if self.has_rgb:
+            self.tiled_rgb_cameras = [TiledCamera(cfg) for cfg in self.tiled_rgb_camera_cfgs]
+        if self.has_depth:
+            self.tiled_depth_cameras = [TiledCamera(cfg) for cfg in self.tiled_depth_camera_cfgs]
+
         # add ground plane
         spawn_ground_plane(prim_path="/World/ground", cfg=GroundPlaneCfg(size=(500, 500)))
         # clone, filter, and replicate
@@ -163,7 +201,13 @@ class CartpoleCameraBenchmarkEnv(DirectRLEnv):
 
         # add articultion and sensors to scene
         self.scene.articulations["cartpole"] = self._cartpole
-        self.scene.sensors["tiled_camera"] = self._tiled_camera
+        if self.has_rgb:
+            for i in range(self.num_cameras):
+                self.scene.sensors[f"tiled_rgb_camera_{i}"] = self.tiled_rgb_cameras
+        if self.has_depth:
+            for i in range(self.num_cameras):
+                self.scene.sensors[f"tiled_depth_camera_{i}"] = self.tiled_depth_cameras
+        # self.scene.sensors["tiled_camera"] = self._tiled_camera
         # add lights
         light_cfg = sim_utils.DomeLightCfg(intensity=2000.0, color=(0.75, 0.75, 0.75))
         light_cfg.func("/World/Light", light_cfg)
@@ -175,8 +219,19 @@ class CartpoleCameraBenchmarkEnv(DirectRLEnv):
         self._cartpole.set_joint_effort_target(self.actions, joint_ids=self._cart_dof_idx)
 
     def _get_observations(self) -> dict:
-        data_type = "rgb" if "rgb" in self.cfg.tiled_camera.data_types else "depth"
-        observations = {"policy": self._tiled_camera.data.output[data_type].clone()}
+        # data_type = "rgb" if "rgb" in self.cfg.tiled_camera.data_types else "depth"
+        # observations = {"policy": self._tiled_camera.data.output[data_type].clone()}
+        observations = {}
+        if self.has_rgb:
+            rgbs = []
+            for cam, cfg in zip(self.tiled_rgb_cameras, self.tiled_rgb_camera_cfgs):
+                rgbs.append(cam.data.output["rgb"].clone())
+            observations["rgb"] = torch.stack(rgbs, dim=1)
+        if self.has_depth:
+            depths = []
+            for cam, cfg in zip(self.tiled_depth_cameras, self.tiled_depth_camera_cfgs):
+                depths.append(cam.data.output["depth"].clone())
+            observations["depth"] = torch.stack(depths, dim=1)
         return observations
 
     def _get_rewards(self) -> torch.Tensor:
