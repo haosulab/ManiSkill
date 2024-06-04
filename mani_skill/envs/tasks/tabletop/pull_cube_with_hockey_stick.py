@@ -286,22 +286,22 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             "is_obj_in_goal": is_obj_in_goal,
             "is_robot_static": is_robot_static,
             "is_grasped": is_grasped,
-            "dst_cube_to_end_of_stick": dst_cube_to_end_of_stick,
-            "dst_robot_to_grasp_stick_pos": dst_robot_to_grasp_stick_pos,
+            # "dst_cube_to_end_of_stick": dst_cube_to_end_of_stick,
+            # "dst_robot_to_grasp_stick_pos": dst_robot_to_grasp_stick_pos,
         }
 
     def _get_obs_extra(self, info: Dict):
         dst_cube_to_end_of_stick, dst_robot_to_grasp_stick_pos = self._get_distances()
         # default observartions
         obs = dict(tcp_pose=self.agent.tcp.pose.raw_pose,)
-        if self._obs_mode in ["state", "state_dict"]:
-            obs.update(
-                obj_pose=self.cube.pose.raw_pose,
-                dst_cube_to_end_of_stick = dst_cube_to_end_of_stick,
-                dst_robot_to_grasp_stick_pos = dst_robot_to_grasp_stick_pos,
-                stick_pose = self.hockey_stick.pose.raw_pose,
-                obj_to_goal_dist = self.goal_region.pose.p - self.cube.pose.p,
-            )
+        # if self._obs_mode in ["state", "state_dict"]:
+        #     obs.update(
+        #         obj_pose=self.cube.pose.raw_pose,
+        #         dst_cube_to_end_of_stick = dst_cube_to_end_of_stick,
+        #         dst_robot_to_grasp_stick_pos = dst_robot_to_grasp_stick_pos,
+        #         stick_pose = self.hockey_stick.pose.raw_pose,
+        #         obj_to_goal_dist = self.goal_region.pose.p - self.cube.pose.p,
+        #     )
         return obs
 
     def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
