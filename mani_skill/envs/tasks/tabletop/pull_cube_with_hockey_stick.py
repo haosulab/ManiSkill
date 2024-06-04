@@ -238,7 +238,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
         offset = torch.tensor([
                 _stick_length + _stick_thickness,
                 _stick_end_length,
-                0])
+                0]).to(self.device)
         return torch.tensor(self.hockey_stick.pose.p + offset).to(self.device)
     
     def _get_pos_of_grasp_stick(self):
@@ -246,7 +246,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
         offset = torch.tensor([
                 -_stick_length/2,
                 0,
-                0])
+                0]).to(self.device)
         return torch.tensor(self.hockey_stick.pose.p + offset).to(self.device)
 
     def _get_distances(self):
