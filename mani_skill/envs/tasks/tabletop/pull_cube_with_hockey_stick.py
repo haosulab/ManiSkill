@@ -345,7 +345,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
 
         # temp return
         is_grasped = info["is_grasped"]
-        reward+= is_grasped
+        reward = is_grasped
         return reward
 
 
