@@ -970,7 +970,7 @@ class BaseEnv(gym.Env):
         """
         return common.flatten_state_dict(self.get_state_dict(), use_torch=True)
 
-    def set_state_dict(self, state: Dict):
+    def set_state_dict(self, state: Dict, env_idx: torch.Tensor = None):
         """
         Set environment state with a state dictionary. Override to include task information (e.g., goal)
 
@@ -978,13 +978,13 @@ class BaseEnv(gym.Env):
         the order of data in the vector is the same exact order that would be returned by flattening the state dictionary you get from
         `env.get_state_dict()` or the result of `env.get_state()`
         """
-        self.scene.set_sim_state(state)
+        self.scene.set_sim_state(state, env_idx)
         if physx.is_gpu_enabled():
             self.scene._gpu_apply_all()
             self.scene.px.gpu_update_articulation_kinematics()
             self.scene._gpu_fetch_all()
 
-    def set_state(self, state: Array):
+    def set_state(self, state: Array, env_idx: torch.Tensor = None):
         """
         Set environment state with a flat state vector. Internally this reconstructs the state dictionary and calls `env.set_state_dict`
 
@@ -1002,7 +1002,7 @@ class BaseEnv(gym.Env):
             size = art_state.shape[-1]
             state_dict["articulations"][art_id] = state[:, start : start + size]
             start += size
-        self.set_state_dict(state_dict)
+        self.set_state_dict(state_dict, env_idx)
 
     # -------------------------------------------------------------------------- #
     # Visualization

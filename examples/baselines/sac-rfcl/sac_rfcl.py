@@ -114,8 +114,8 @@ class Args:
 
     reverse_step_size: int = 4
     """the number of steps to reverse the curriculum by"""
-    curriculum_method: str = "reverse_geometric"
-    """the curriculum to use. Can be 'reverse_geometric' or 'uniform'"""
+    curriculum_method: str = "geometric"
+    """the curriculum to use. Can be 'geometric' or 'uniform'"""
     # TODO not implemented
     per_demo_buffer_size: int = 3
     """number of sequential successes before considering advancing the curriculum """
@@ -270,19 +270,26 @@ class Actor(nn.Module):
 class ReverseForwardCurriculumWrapper(gym.Wrapper):
     """Apply this before any auto reset wrapper"""
     def __init__(self, env, dataset_path,
-                 curriculum: str = "uniform",
+                 reverse_curriculum_sampler: str = "uniform",
                  demo_horizon_to_max_steps_ratio: float = 3.0,
                  per_demo_buffer_size = 3,
                  reverse_step_size = 1,
                  traj_ids: list[str] = None,
                  eval_mode=False):
         super().__init__(env)
-        self.curriculum_mode = "reverse" # "reverse" or "forward"
+        self.curriculum_mode = "reverse" # "reverse" or "forward" or "none"
+        """which curriculum to apply to modify env states during training"""
         self.eval_mode = eval_mode
-        self.curriculum = curriculum
+
+        # Reverse curriculum specific configs
+        self.reverse_curriculum_sampler = reverse_curriculum_sampler
+        """choice of sampler"""
         self.demo_horizon_to_max_steps_ratio = demo_horizon_to_max_steps_ratio
         self.per_demo_buffer_size = per_demo_buffer_size
         self.reverse_step_size = reverse_step_size
+
+        # Forward curriculum specific configs
+
 
         dataset_path = os.path.expanduser(dataset_path)
         h5py_file = h5py.File(dataset_path, "r")
@@ -314,11 +321,13 @@ class ReverseForwardCurriculumWrapper(gym.Wrapper):
             self.demo_curriculum_step = self.demo_horizon - 1
         h5py_file.close()
 
-        self._demo_success_rate_buffer_pos = 0
+        self._demo_success_rate_buffer_pos = torch.zeros((traj_count, ), dtype=torch.int, device=self.base_env.device)
         self.demo_success_rate_buffers = torch.zeros((traj_count, self.per_demo_buffer_size), dtype=torch.bool, device=self.base_env.device)
 
 
         self.max_episode_steps = gym_utils.find_max_episode_steps_value(self.env)
+        self.sampled_traj_indexes = torch.zeros((self.base_env.num_envs, ), dtype=torch.int, device=self.base_env.device)
+        self.dynamic_max_episode_steps = torch.zeros((self.base_env.num_envs, ), dtype=torch.int, device=self.base_env.device)
 
         print(f"ReverseForwardCurriculumWrapper initialized. Loaded {traj_count} demonstrations. Trajectory IDs: {traj_ids} \n \
               Mean Length: {np.mean(self.demo_horizon.cpu().numpy())}, \
@@ -330,38 +339,55 @@ class ReverseForwardCurriculumWrapper(gym.Wrapper):
     def step(self, action):
         obs, reward, terminated, truncated, info = super().step(action)
         if self.max_episode_steps is not None:
-            truncated: torch.Tensor = (
-                self.base_env.elapsed_steps >= self.max_episode_steps
-            )
-            assert truncated.any() == truncated.all()
+            if self.curriculum_mode == "reverse":
+                truncated: torch.Tensor = (
+                    self.base_env.elapsed_steps >= self.dynamic_max_episode_steps
+                )
+            else:
+                # without dynamic time limits except all envs to be synced.
+                # this might not be necessary though
+                truncated: torch.Tensor = (
+                    self.base_env.elapsed_steps >= self.max_episode_steps
+                )
+                assert truncated.any() == truncated.all()
         assert "success" in info, "Reverse curriculum wrapper currently requires there to be a success key in the info dict"
-        if not self.eval_mode and truncated.any():
 
-            self.demo_success_rate_buffers[self.sampled_traj_indexes, self._demo_success_rate_buffer_pos] = info["success"]
-            self._demo_success_rate_buffer_pos = (self._demo_success_rate_buffer_pos + 1) % self.per_demo_buffer_size
-            if "reverse" in self.curriculum:
-                # advance curriculum
+        if not self.eval_mode:
+            if self.curriculum_mode == "reverse" and truncated.any():
+                truncated_traj_idxs = self.sampled_traj_indexes[truncated]
+                self.demo_success_rate_buffers[truncated_traj_idxs, self._demo_success_rate_buffer_pos[truncated_traj_idxs]] = info["success"]
+
+                # advance curriculum. code below is indexing arrays shaped by the number of demos
+                self._demo_success_rate_buffer_pos[truncated_traj_idxs] = (self._demo_success_rate_buffer_pos[truncated_traj_idxs] + 1) % self.per_demo_buffer_size
                 per_demo_success_rates = self.demo_success_rate_buffers.float().mean(dim=1)
                 can_advance = per_demo_success_rates > 0.9
                 self.demo_curriculum_step[can_advance] -= self.reverse_step_size
                 self.demo_success_rate_buffers[can_advance, :] = 0
                 self.demo_solved[self.demo_curriculum_step < 0] = True
                 self.demo_curriculum_step = torch.clamp(self.demo_curriculum_step, 0)
+            elif self.curriculum_mode == "forward":
+                pass
 
         return obs, reward, terminated, truncated, info
-    def reset(self, *, seed=None, options=None):
+    def reset(self, *, seed=None, options=dict()):
         super().reset(seed=seed, options=options)
-        # set initial state accordingly
-        b = self.base_env.num_envs
-        # TODO (stao): handle partial resets later
-        self.sampled_traj_indexes = torch.from_numpy(self.base_env._episode_rng.randint(0, len(self.env_states), size=(b, ))).to(self.base_env.device)
-        if self.eval_mode:
-            self.base_env.set_state(self.env_states[self.sampled_traj_indexes, 5 + torch.zeros((b, ), dtype=torch.int, device=self.base_env.device)])
-        elif self.curriculum == "reverse_geometric":
-            x_start_steps_density_list = [0.5, 0.25, 0.125, 0.125 / 2, 0.125 / 2]
-            sampled_offsets = torch.from_numpy(self.base_env._episode_rng.randint(0, len(x_start_steps_density_list), size=(b, ))).to(self.base_env.device)
-            x_start_steps = self.demo_curriculum_step[self.sampled_traj_indexes] + sampled_offsets
-            x_start_steps = torch.clamp(x_start_steps, torch.zeros((b, ), device=self.base_env.device), self.demo_horizon[self.sampled_traj_indexes] - 1).int()
+        if "env_idx" in options:
+            env_idx = options["env_idx"]
+        else:
+            env_idx = torch.arange(0, self.base_env.num_envs, device=self.base_env.device)
+        if self.curriculum_mode == "reverse":
+            # set initial state accordingly
+            b = self.base_env.num_envs
+            # TODO (stao): handle partial resets later
+            self.sampled_traj_indexes[env_idx] = torch.from_numpy(self.base_env._episode_rng.randint(0, len(self.env_states), size=(b, ))).int().to(self.base_env.device)
+            if self.eval_mode:
+                self.base_env.set_state(self.env_states[self.sampled_traj_indexes, 5 + torch.zeros((b, ), dtype=torch.int, device=self.base_env.device)])
+            elif self.reverse_curriculum_sampler == "geometric":
+                x_start_steps_density_list = [0.5, 0.25, 0.125, 0.125 / 2, 0.125 / 2]
+                sampled_offsets = torch.from_numpy(self.base_env._episode_rng.randint(0, len(x_start_steps_density_list), size=(b, ))).to(self.base_env.device)
+                x_start_steps = self.demo_curriculum_step[self.sampled_traj_indexes] + sampled_offsets
+                x_start_steps = torch.clamp(x_start_steps, torch.zeros((b, ), device=self.base_env.device), self.demo_horizon[self.sampled_traj_indexes] - 1).int()
+            self.dynamic_max_episode_steps[env_idx] = 8 + (self.demo_horizon[self.sampled_traj_indexes] - x_start_steps) // self.demo_horizon_to_max_steps_ratio
             self.base_env.set_state(self.env_states[self.sampled_traj_indexes, x_start_steps])
 
         obs = self.base_env.get_obs()
@@ -438,7 +464,7 @@ if __name__ == "__main__":
 
     curriculum_wrapped_envs = ReverseForwardCurriculumWrapper(
         envs, args.dataset_path,
-        curriculum=args.curriculum_method,
+        reverse_curriculum_sampler=args.curriculum_method,
         demo_horizon_to_max_steps_ratio=args.demo_horizon_to_max_steps_ratio,
         per_demo_buffer_size=args.per_demo_buffer_size,
         reverse_step_size=args.reverse_step_size,
@@ -456,6 +482,7 @@ if __name__ == "__main__":
     # )
     envs = ManiSkillVectorEnv(curriculum_wrapped_envs, args.num_envs, ignore_terminations=not args.partial_reset, **env_kwargs)
     eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=not args.partial_reset, **env_kwargs)
+
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
 
@@ -589,21 +616,21 @@ if __name__ == "__main__":
 
         solved_frac = (curriculum_wrapped_envs.demo_solved).float().mean().item()
         # handle stage 1 to stage 2 training transition
-        # if solved_frac >= 0.9:
-        #     print("Reverse solved >= 0.9 of demos. Stopping stage 1 training and beginning stage 2")
-        #     writer.add_scalar("charts/stage_1_steps", global_step, global_step)
-        #     curriculum_wrapped_envs.curriculum_mode = "forward"
-        #     # reset the environment and begin training as if training anew
-        #     envs.reset()
-        #     print(f"Loading current online replay buffer as offline replay buffer and resetting online buffer")
-        #     offline_rb = rb
-        #     rb = ReplayBuffer(
-        #         env=envs,
-        #         num_envs=args.num_envs,
-        #         buffer_size=args.buffer_size,
-        #         storage_device=torch.device(args.buffer_device),
-        #         sample_device=device
-        #     )
+        if solved_frac >= 0.9:
+            print("Reverse solved >= 0.9 of demos. Stopping stage 1 training and beginning stage 2")
+            writer.add_scalar("charts/stage_1_steps", global_step, global_step)
+            envs.curriculum_mode = "none"
+            # reset the environment and begin training as if training anew
+            envs.reset()
+            print(f"Loading current online replay buffer as offline replay buffer and resetting online buffer")
+            offline_rb = rb
+            rb = ReplayBuffer(
+                env=envs,
+                num_envs=args.num_envs,
+                buffer_size=args.buffer_size,
+                storage_device=torch.device(args.buffer_device),
+                sample_device=device
+            )
 
 
 

@@ -255,15 +255,19 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         qvel = self.get_qvel()
         return torch.hstack([pose.p, pose.q, vel, ang_vel, qpos, qvel])
 
-    def set_state(self, state: Array):
+    def set_state(self, state: Array, env_idx: torch.Tensor = None):
         if physx.is_gpu_enabled():
             state = common.to_tensor(state)
-            self.set_root_pose(Pose.create(state[:, :7]))
-            self.set_root_linear_velocity(state[:, 7:10])
-            self.set_root_angular_velocity(state[:, 10:13])
+            if env_idx is None:
+                indexes = slice(None)
+            else:
+                indexes = env_idx
+            self.set_root_pose(Pose.create(state[indexes, :7]))
+            self.set_root_linear_velocity(state[indexes, 7:10])
+            self.set_root_angular_velocity(state[indexes, 10:13])
             # TODO (stao): Handle get/set state for envs with different DOFs. Perhaps need to let user set a padding ahead of time to ensure state is the same?
-            self.set_qpos(state[:, 13 : 13 + self.max_dof])
-            self.set_qvel(state[:, 13 + self.max_dof :])
+            self.set_qpos(state[indexes, 13 : 13 + self.max_dof])
+            self.set_qvel(state[indexes, 13 + self.max_dof :])
         else:
             state = common.to_numpy(state[0])
             self.set_root_pose(sapien.Pose(state[0:3], state[3:7]))

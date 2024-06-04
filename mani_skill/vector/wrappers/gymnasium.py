@@ -97,12 +97,12 @@ class ManiSkillVectorEnv(VectorEnv):
         self.returns += rew
 
         infos["episode"] = dict(r=self.returns)
-        if self.max_episode_steps is not None:
+
+        # fix issue with gymnasium replacing truncations with a single bool
+        if isinstance(truncations, bool) and self.max_episode_steps is not None:
             truncations: torch.Tensor = (
                 self.base_env.elapsed_steps >= self.max_episode_steps
             )
-        if isinstance(truncations, bool):
-            truncations = torch.tensor([truncations], device=self.device)
         if isinstance(terminations, bool):
             terminations = torch.tensor([terminations], device=self.device)
         if self.ignore_terminations:
