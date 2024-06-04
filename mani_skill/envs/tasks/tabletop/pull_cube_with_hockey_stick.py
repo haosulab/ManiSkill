@@ -232,6 +232,43 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             )
 
 
+
+    def _get_pos_of_end_of_stick(self):
+        '''get the middle of end the shorter stick (end of the stick)'''
+        offset = torch.tensor([
+                _stick_length + _stick_thickness,
+                _stick_end_length,
+                0])
+        return torch.tensor(self.hockey_stick.pose.p) + offset
+    
+    def _get_pos_of_grasp_stick(self):
+        '''get the grasping position of the stick (3/4 of the stick length from the end of the stick)'''
+        offset = torch.tensor([
+                -_stick_length/2,
+                0,
+                0])
+        return torch.tensor(self.hockey_stick.pose.p) + offset
+
+    def _get_distances(self):
+        '''
+        return two distances:
+        (1) from the end of the stick to the cube
+        (2) from the robot to the grasp region
+        '''
+        # calcs for (1)
+        dst_cube_to_end_of_stick = torch.linalg.norm(
+            self.cube.pose.p - self._get_pos_of_end_of_stick(), axis=1
+        )
+
+        # calcs for (2)
+        dst_robot_to_grasp_stick_pos = torch.linalg.norm(
+            self.agent.tcp.pose.p - self._get_pos_of_grasp_stick(), axis=1
+        )
+
+        return dst_cube_to_end_of_stick, dst_robot_to_grasp_stick_pos
+
+
+
     def evaluate(self):
         is_obj_in_goal = (
             torch.linalg.norm(
@@ -242,36 +279,60 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
         is_grasped = self.agent.is_grasping(self.hockey_stick)
         is_robot_static = self.agent.is_static(0.2)
 
+        dst_cube_to_end_of_stick, dst_robot_to_grasp_stick_pos = self._get_distances()
+
         return {
             "success": is_obj_in_goal & is_robot_static,
             "is_obj_in_goal": is_obj_in_goal,
             "is_robot_static": is_robot_static,
             "is_grasped": is_grasped,
+            "dst_cube_to_end_of_stick": dst_cube_to_end_of_stick,
+            "dst_robot_to_grasp_stick_pos": dst_robot_to_grasp_stick_pos,
         }
 
     def _get_obs_extra(self, info: Dict):
+        dst_cube_to_end_of_stick, dst_robot_to_grasp_stick_pos = self._get_distances()
         # default observartions
         obs = dict(tcp_pose=self.agent.tcp.pose.raw_pose,)
         if self._obs_mode in ["state", "state_dict"]:
-            pass
+            obs.update(
+                obj_pose=self.cube.pose.raw_pose,
+                dst_cube_to_end_of_stick = dst_cube_to_end_of_stick,
+                dst_robot_to_grasp_stick_pos = dst_robot_to_grasp_stick_pos,
+                stick_pose = self.hockey_stick.pose.raw_pose,
+                obj_to_goal_dist = self.goal_region.pose.p - self.cube.pose.p,
+            )
         return obs
 
     def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
-        # 1. mock - add reward the closer robot hand gets to stick
-        dist_to_stick = torch.linalg.norm(
-            self.hockey_stick.pose.p - self.agent.tcp.pose.p, axis=1
-        )
-        reaching_reward = 1 - torch.tanh(5 * dist_to_stick)
+        dst_cube_to_end_of_stick, dst_robot_to_grasp_stick_pos = self._get_distances()
+
+        # 1. Add reward the closer robot hand gets to the stick grasp pose
+        reaching_reward = 1 - torch.tanh(5 * dst_robot_to_grasp_stick_pos)
         reward = reaching_reward
 
 
-        # # 2. mock - add reward when we pick up the stick
+        # 2. Add reward when we pick up the stick
         is_grasped = info["is_grasped"]
         reward+= is_grasped
-        # print("sum(is_grasped):", sum(is_grasped))
 
         # 3. Add reward as the distance of the end of the stick to the cube decreases
-        # end_of_stick_pos = self.hockey_stick.pose.p + torch.tensor([_stick_length/2, -_stick_end_length, 0])
+        distance_reward = (1 - torch.tanh(5 * dst_cube_to_end_of_stick)) * is_grasped
+        reward += distance_reward
+
+        # 4. Add reward as the distance of the cube to the goal decreases
+        obj_to_goal_dist = torch.linalg.norm(
+            self.goal_region.pose.p - self.cube.pose.p, axis=1
+        )
+        # place_reward = (1 - torch.tanh(5 * obj_to_goal_dist)) * is_grasped
+        place_reward = (1 - torch.tanh(5 * obj_to_goal_dist)) * is_grasped
+        reward += place_reward
+        
+        # 4. Add reward when the robot is static
+        static_reward = 1 - torch.tanh(
+            5 * torch.linalg.norm(self.agent.robot.get_qvel()[..., :-2], axis=1)
+        )
+        reward += static_reward * info["is_obj_in_goal"]
 
         reward[info["success"]] = 5
         return reward
