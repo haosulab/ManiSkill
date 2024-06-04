@@ -4,7 +4,7 @@ Fast offline/online imitation learning in simulation based on "Reverse Forward C
 
 Currently this code only works with environments that do not have geometry variations between parallel environments (e.g. PickCube).
 
-Code has been tested and working on the following environments: PickCube-v1, PushCube-v1, StackCube-v1
+Code has been tested and working on the following environments: PickCube-v1
 
 ## Download and Process Dataset
 
@@ -36,3 +36,15 @@ python sac_rfcl.py --env_id="PickCube-v1" \
 ## Additional Notes about Implementation
 
 For SAC with RFCL, we always bootstrap on truncated/done.
+
+## Citation
+
+If you use this baseline please cite the following
+```
+@article{tao2024rfcl,
+  title={Reverse Forward Curriculum Learning for Extreme Sample and Demonstration Efficiency in RL},
+  author={Tao, Stone and Shukla, Arth and Chan, Tse-kai and Su, Hao},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year={2024}
+}
+```

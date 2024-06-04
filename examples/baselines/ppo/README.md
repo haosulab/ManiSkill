@@ -145,3 +145,26 @@ This will use environment states to replay trajectories, turn on the ray-tracer 
 
 - The code currently does not have the best way to evaluate the agents in that during GPU simulation, all assets are frozen per parallel environment (changing them slows training down). Thus when doing evaluation, even though we evaluate on multiple (8 is default) environments at once, they will always feature the same set of geometry. This only affects tasks where there is geometry variation (e.g. PickClutterYCB, OpenCabinetDrawer). You can make it more accurate by increasing the number of evaluation environments. Our team is discussing still what is the best way to evaluate trained agents properly without hindering performance.
 - Many tasks support visual observations, however we have not carefully verified if the camera poses for the tasks are setup in a way that makes it possible to solve the task from visual observations.
+
+## Citation
+
+If you use this baseline please cite the following
+```
+@article{DBLP:journals/corr/SchulmanWDRK17,
+  author       = {John Schulman and
+                  Filip Wolski and
+                  Prafulla Dhariwal and
+                  Alec Radford and
+                  Oleg Klimov},
+  title        = {Proximal Policy Optimization Algorithms},
+  journal      = {CoRR},
+  volume       = {abs/1707.06347},
+  year         = {2017},
+  url          = {http://arxiv.org/abs/1707.06347},
+  eprinttype    = {arXiv},
+  eprint       = {1707.06347},
+  timestamp    = {Mon, 13 Aug 2018 16:47:34 +0200},
+  biburl       = {https://dblp.org/rec/journals/corr/SchulmanWDRK17.bib},
+  bibsource    = {dblp computer science bibliography, https://dblp.org}
+}
+```

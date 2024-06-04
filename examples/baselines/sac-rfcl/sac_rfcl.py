@@ -1,4 +1,9 @@
+"""
+PyTorch version of Reverse Forward Curriculum Learning (RFCL) with Soft Actor-Critic
 
+Original Code: https://github.com/StoneT2000/rfcl
+Paper: https://arxiv.org/abs/2405.03379
+"""
 from dataclasses import dataclass
 import os
 import random
@@ -69,7 +74,7 @@ class Args:
     save_train_video_freq: Optional[int] = None
     """frequency to save training videos in terms of environment steps"""
 
-    # Algorithm specific arguments
+    # SAC specific arguments
     total_timesteps: int = 1_000_000
     """total timesteps of the experiments"""
     buffer_size: int = 1_000_000
@@ -116,15 +121,16 @@ class Args:
     """the number of steps to reverse the curriculum by"""
     reverse_curriculum_sampler: str = "geometric"
     """the sampler to use for picking which env state to start from in the reverse curriculum"""
-    # TODO not implemented
     per_demo_buffer_size: int = 3
     """number of sequential successes before considering advancing the curriculum """
-    # TODO not implemented
     demo_horizon_to_max_steps_ratio: float = 3
     """the demo horizon to max steps ratio for dynamic timelimits for faster training with partial resets"""
     max_steps_min: int = 8
     """the minimum max episode steps before truncating. In combination with demo_horizon_to_max_steps_ratio the environment resets
     every (max_steps_min + (T - k) // demo_horizon_to_max_steps_ratio) steps where T is the length of the demo and k is the curriculum step of that demo"""
+    percent_solved_to_complete_reverse_curriculum: float = 0.9
+    """the percentage of demos that need to be solved in reverse in order to advance to stage 2 training"""
+
 
 
     # to be filled in runtime
@@ -622,8 +628,8 @@ if __name__ == "__main__":
         if curriculum_wrapped_envs.curriculum_mode == "reverse":
             solved_frac = (curriculum_wrapped_envs.demo_solved).float().mean().item()
             # handle stage 1 to stage 2 training transition
-            if solved_frac >= 0.9:
-                print("Reverse solved >= 0.9 of demos. Stopping stage 1 training and beginning stage 2")
+            if solved_frac >= args.percent_solved_to_complete_reverse_curriculum:
+                print(f"Reverse solved >= {args.percent_solved_to_complete_reverse_curriculum} of demos. Stopping stage 1 training and beginning stage 2")
                 writer.add_scalar("charts/stage_1_steps", global_step, global_step)
                 curriculum_wrapped_envs.curriculum_mode = "none"
                 # reset the environment and begin training as if training anew

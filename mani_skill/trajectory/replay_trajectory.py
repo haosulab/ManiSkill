@@ -498,6 +498,7 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
                 ori_env_states = ori_env_states[1:]
                 if args.save_traj:
                     # replace the first saved env state
+                    # since we set state earlier and RecordEpisode will save the reset to state.
                     def recursive_replace(x, y):
                         if isinstance(x, np.ndarray):
                             x[-1, :] = y[-1, :]
