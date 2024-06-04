@@ -74,13 +74,13 @@ class Args:
     """the replay memory buffer size"""
     buffer_device: str = "cpu"
     """where the replay buffer is stored. Can be 'cpu' or 'cuda' for GPU"""
-    gamma: float = 0.8
+    gamma: float = 0.9
     """the discount factor gamma"""
-    tau: float = 0.01
+    tau: float = 0.005
     """target smoothing coefficient (default: 0.005)"""
-    batch_size: int = 1024
+    batch_size: int = 256
     """the batch size of sample from the replay memory"""
-    learning_starts: int = 4_000
+    learning_starts: int = 5_000
     """timestep to start learning"""
     policy_lr: float = 3e-4
     """the learning rate of the policy network optimizer"""
@@ -90,7 +90,7 @@ class Args:
     """the frequency of training policy (delayed)"""
     target_network_frequency: int = 1  # Denis Yarats' implementation delays this by 2.
     """the frequency of updates for the target nerworks"""
-    alpha: float = 0.2
+    alpha: float = 1.0
     """Entropy regularization coefficient."""
     autotune: bool = True
     """automatic tuning of the entropy coefficient"""
@@ -106,6 +106,10 @@ class Args:
     # RFCL specific arguments
     dataset_path: str = ""
     """path to the trajectory.h5 file to use for RFCL"""
+    num_demos: Optional[int] = None
+    """number of demonstrations to load. If None all are loaded. If given a int, that many demos
+    are sampled from the given dataset"""
+
     reverse_step_size: int = 4
     """the number of steps to reverse the curriculum by"""
     curriculum_method: str = "reverse_geometric"
@@ -116,6 +120,8 @@ class Args:
     # TODO not implemented
     demo_horizon_to_max_steps_ratio: float = 3
     """the demo horizon to max steps ratio for dynamic timelimits for faster training with partial resets"""
+
+
 
     # to be filled in runtime
     grad_steps_per_iteration: int = 0
@@ -185,10 +191,13 @@ class SoftQNetwork(nn.Module):
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(np.array(env.single_observation_space.shape).prod() + np.prod(env.single_action_space.shape), 256),
+            nn.LayerNorm(256),
             nn.ReLU(),
             nn.Linear(256, 256),
+            nn.LayerNorm(256),
             nn.ReLU(),
             nn.Linear(256, 256),
+            nn.LayerNorm(256),
             nn.ReLU(),
             nn.Linear(256, 1),
         )
@@ -258,17 +267,28 @@ class Actor(nn.Module):
 
 class ReverseCurriculumWrapper(gym.Wrapper):
     """Apply this before any auto reset wrapper"""
-    def __init__(self, env, dataset_path, curriculum: str = "uniform", eval_mode=False):
+    def __init__(self, env, dataset_path,
+                 curriculum: str = "uniform",
+                 demo_horizon_to_max_steps_ratio: float = 3.0,
+                 per_demo_buffer_size = 3,
+                 reverse_step_size = 1,
+                 traj_ids: list[str] = None,
+                 eval_mode=False):
         super().__init__(env)
         self.eval_mode = eval_mode
         self.curriculum = curriculum
+        self.demo_horizon_to_max_steps_ratio = demo_horizon_to_max_steps_ratio
+        self.per_demo_buffer_size = per_demo_buffer_size
+        self.reverse_step_size = reverse_step_size
 
         dataset_path = os.path.expanduser(dataset_path)
         h5py_file = h5py.File(dataset_path, "r")
         max_eps_len = -1
         env_states_flat_list = []
-        traj_count = len(h5py_file.keys())
-        for traj_id in h5py_file.keys():
+        if traj_ids is None:
+            traj_ids = list(h5py_file.keys())
+        traj_count = len(traj_ids)
+        for traj_id in traj_ids:
             env_states = dataset.load_h5_data(h5py_file[traj_id]["env_states"])
             env_states_flat = common.flatten_state_dict(env_states)
             max_eps_len = max(len(env_states_flat), max_eps_len)
@@ -285,7 +305,16 @@ class ReverseCurriculumWrapper(gym.Wrapper):
         if not self.eval_mode:
             self.demo_curriculum_step = self.demo_horizon - 1
         h5py_file.close()
+
+        self._demo_success_rate_buffer_pos = 0
+        self.demo_success_rate_buffers = torch.zeros((traj_count, self.per_demo_buffer_size), dtype=torch.bool, device=self.base_env.device)
+
+
         self.max_episode_steps = gym_utils.find_max_episode_steps_value(self.env)
+
+        print(f"ReverseCurriculumWrapper initialized. Loaded {traj_count} demonstrations. Trajectory IDs: {traj_ids} \n \
+              Mean Length: {np.mean(self.demo_horizon.cpu().numpy())}, \
+              Max Length: {np.max(self.demo_horizon.cpu().numpy())}")
     @property
     def base_env(self) -> BaseEnv:
         return self.env.unwrapped
@@ -298,13 +327,17 @@ class ReverseCurriculumWrapper(gym.Wrapper):
             )
             assert truncated.any() == truncated.all()
         assert "success" in info, "Reverse curriculum wrapper currently requires there to be a success key in the info dict"
-        if not self.eval_mode and truncated.any() and info["success"].any():
-            # import ipdb;ipdb.set_trace()
-            # TODO parallelize this success rate buffer accumulation step
-            for traj_idx in torch.unique(self.sampled_traj_indexes[info["success"]]):
-                self.demo_curriculum_step[traj_idx] -= 1
-                print(f"{traj_idx} advanced to {self.demo_curriculum_step[traj_idx]}")
-            self.demo_curriculum_step = torch.clamp(self.demo_curriculum_step, 0)
+        if not self.eval_mode and truncated.any():
+
+            self.demo_success_rate_buffers[self.sampled_traj_indexes, self._demo_success_rate_buffer_pos] = info["success"]
+            self._demo_success_rate_buffer_pos = (self._demo_success_rate_buffer_pos + 1) % self.per_demo_buffer_size
+            if "reverse" in self.curriculum:
+                # advance curriculum
+                per_demo_success_rates = self.demo_success_rate_buffers.float().mean(dim=1)
+                can_advance = per_demo_success_rates > 0.9
+                self.demo_curriculum_step[can_advance] -= self.reverse_step_size
+                self.demo_success_rate_buffers[can_advance, :] = 0
+                self.demo_curriculum_step = torch.clamp(self.demo_curriculum_step, 0)
 
         return obs, reward, terminated, truncated, info
     def reset(self, *, seed=None, options=None):
@@ -315,7 +348,7 @@ class ReverseCurriculumWrapper(gym.Wrapper):
         self.sampled_traj_indexes = torch.from_numpy(self.base_env._episode_rng.randint(0, len(self.env_states), size=(b, ))).to(self.base_env.device)
         if self.eval_mode:
             self.base_env.set_state(self.env_states[self.sampled_traj_indexes, 5 + torch.zeros((b, ), dtype=torch.int, device=self.base_env.device)])
-        elif self.curriculum == "uniform":
+        elif self.curriculum == "reverse_geometric":
             x_start_steps_density_list = [0.5, 0.25, 0.125, 0.125 / 2, 0.125 / 2]
             sampled_offsets = torch.from_numpy(self.base_env._episode_rng.randint(0, len(x_start_steps_density_list), size=(b, ))).to(self.base_env.device)
             x_start_steps = self.demo_curriculum_step[self.sampled_traj_indexes] + sampled_offsets
@@ -385,8 +418,33 @@ if __name__ == "__main__":
             save_video_trigger = lambda x : (x // 50) % args.save_train_video_freq == 0
             envs = RecordEpisode(envs, output_dir=f"runs/{run_name}/train_videos", save_trajectory=False, save_video_trigger=save_video_trigger, max_steps_per_video=50, video_fps=30)
         eval_envs = RecordEpisode(eval_envs, output_dir=eval_output_dir, save_trajectory=args.evaluate, trajectory_name="trajectory", max_steps_per_video=args.num_eval_steps, video_fps=30)
-    reverse_curriculum_wrapped_envs = ReverseCurriculumWrapper(envs, args.dataset_path, eval_mode=False)
-    eval_envs = ReverseCurriculumWrapper(eval_envs, args.dataset_path, eval_mode=True)
+
+    traj_ids = None
+    h5py_file = h5py.File(os.path.expanduser(args.dataset_path), "r")
+    traj_ids = list(h5py_file.keys())
+    h5py_file.close()
+
+    if args.num_demos is not None:
+        traj_ids = np.random.choice(traj_ids, size=args.num_demos, replace=False)
+
+    reverse_curriculum_wrapped_envs = ReverseCurriculumWrapper(
+        envs, args.dataset_path,
+        curriculum=args.curriculum_method,
+        demo_horizon_to_max_steps_ratio=args.demo_horizon_to_max_steps_ratio,
+        per_demo_buffer_size=args.per_demo_buffer_size,
+        reverse_step_size=args.reverse_step_size,
+        traj_ids=traj_ids,
+        eval_mode=False
+    )
+    eval_envs = ReverseCurriculumWrapper(
+        eval_envs, args.dataset_path,
+        curriculum=args.curriculum_method,
+        demo_horizon_to_max_steps_ratio=args.demo_horizon_to_max_steps_ratio,
+        per_demo_buffer_size=args.per_demo_buffer_size,
+        reverse_step_size=args.reverse_step_size,
+        traj_ids=traj_ids,
+        eval_mode=True
+    )
     envs = ManiSkillVectorEnv(reverse_curriculum_wrapped_envs, args.num_envs, ignore_terminations=not args.partial_reset, **env_kwargs)
     eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=not args.partial_reset, **env_kwargs)
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
@@ -428,7 +486,7 @@ if __name__ == "__main__":
     )
     h5py_file = h5py.File(os.path.expanduser(args.dataset_path), "r")
     total_offline_transitions = 0
-    for traj_id in h5py_file.keys():
+    for traj_id in traj_ids:
         trajectory = common.to_cpu_tensor(dataset.load_h5_data(h5py_file[traj_id]))
         total_offline_transitions += len(trajectory["obs"]) - 1
 
