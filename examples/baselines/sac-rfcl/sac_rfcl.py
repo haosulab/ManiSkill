@@ -99,10 +99,23 @@ class Args:
     utd: float = 0.5
     """update to data ratio"""
     partial_reset: bool = False
-    bootstrap_at_done: str = "always" # "always" | "never"
+    """whether to let parallel environments reset upon termination instead of truncation"""
+    bootstrap_at_done: str = "always"
+    """the bootstrap method to use when a done signal is received. Can be 'always' or 'never'"""
 
     # RFCL specific arguments
     dataset_path: str = ""
+    """path to the trajectory.h5 file to use for RFCL"""
+    reverse_step_size: int = 4
+    """the number of steps to reverse the curriculum by"""
+    curriculum_method: str = "reverse_geometric"
+    """the curriculum to use. Can be 'reverse_geometric' or 'uniform'"""
+    # TODO not implemented
+    per_demo_buffer_size: int = 3
+    """number of sequential successes before considering advancing the curriculum """
+    # TODO not implemented
+    demo_horizon_to_max_steps_ratio: float = 3
+    """the demo horizon to max steps ratio for dynamic timelimits for faster training with partial resets"""
 
     # to be filled in runtime
     grad_steps_per_iteration: int = 0

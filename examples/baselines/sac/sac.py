@@ -94,6 +94,9 @@ class Args:
     utd: float = 0.5
     """update to data ratio"""
     partial_reset: bool = False
+    """whether to let parallel environments reset upon termination instead of truncation"""
+    bootstrap_at_done: str = "always"
+    """the bootstrap method to use when a done signal is received. Can be 'always' or 'never'"""
 
     # to be filled in runtime
     grad_steps_per_iteration: int = 0
