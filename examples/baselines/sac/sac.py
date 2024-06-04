@@ -411,7 +411,10 @@ if __name__ == "__main__":
             # TRY NOT TO MODIFY: execute the game and log data.
             next_obs, rewards, terminations, truncations, infos = envs.step(actions)
             real_next_obs = next_obs.clone()
-            next_done = torch.logical_or(terminations, truncations).to(torch.float32)
+            if args.bootstrap_at_done == 'always':
+                next_done = torch.zeros_like(terminations).to(torch.float32)
+            else:
+                next_done = (terminations | truncations).to(torch.float32)
             if "final_info" in infos:
                 final_info = infos["final_info"]
                 done_mask = infos["_final_info"]
