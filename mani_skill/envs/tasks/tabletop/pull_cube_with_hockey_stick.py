@@ -71,7 +71,7 @@ def _build_hockey_stick(
     return builder.build(name="hockey_stick")
 
 
-@register_env("PullCubeWithHockeyStick-v1", max_episode_steps=100)
+@register_env("PullCubeWithHockeyStick-v1", max_episode_steps=50)
 class PullCubeWithHockeyStickEnv(BaseEnv):
 
     SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
