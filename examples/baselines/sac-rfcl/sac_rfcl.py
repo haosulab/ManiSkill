@@ -355,7 +355,7 @@ class ReverseForwardCurriculumWrapper(gym.Wrapper):
         if not self.eval_mode:
             if self.curriculum_mode == "reverse" and truncated.any():
                 truncated_traj_idxs = self.sampled_traj_indexes[truncated]
-                self.demo_success_rate_buffers[truncated_traj_idxs, self._demo_success_rate_buffer_pos[truncated_traj_idxs]] = info["success"]
+                self.demo_success_rate_buffers[truncated_traj_idxs, self._demo_success_rate_buffer_pos[truncated_traj_idxs]] = info["success"][truncated]
 
                 # advance curriculum. code below is indexing arrays shaped by the number of demos
                 self._demo_success_rate_buffer_pos[truncated_traj_idxs] = (self._demo_success_rate_buffer_pos[truncated_traj_idxs] + 1) % self.per_demo_buffer_size
