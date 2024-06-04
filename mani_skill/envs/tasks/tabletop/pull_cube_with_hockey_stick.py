@@ -83,6 +83,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
     goal_radius = 0.1
     cube_half_size = 0.02
 
+
     # same as pick_cube, stack_cube and push_cube
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
         self.robot_init_qpos_noise = robot_init_qpos_noise
