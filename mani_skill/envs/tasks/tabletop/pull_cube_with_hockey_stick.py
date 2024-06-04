@@ -265,6 +265,9 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             torch.tensor(self.agent.tcp.pose.p) - self._get_pos_of_grasp_stick(), axis=1
         )
 
+        print("type(dst_cube_to_end_of_stick):", type(dst_cube_to_end_of_stick))
+        print("type(dst_robot_to_grasp_stick_pos):", type(dst_robot_to_grasp_stick_pos))
+
         return dst_cube_to_end_of_stick, dst_robot_to_grasp_stick_pos
 
 
@@ -337,7 +340,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
         reward[info["success"]] = 5
         # return reward
         # convert reward to a tensor and return
-        print(type(reward))
+        print("type(reward):", type(reward))
         return reward
 
 
