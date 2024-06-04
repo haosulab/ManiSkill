@@ -538,9 +538,9 @@ class ManiSkillScene:
             )
             if rebuild_query:
                 body_pairs = list(zip(obj1._bodies, obj2._bodies))
-                self.pairwise_contact_queries[query_key] = (
-                    self.px.gpu_create_contact_pair_impulse_query(body_pairs)
-                )
+                self.pairwise_contact_queries[
+                    query_key
+                ] = self.px.gpu_create_contact_pair_impulse_query(body_pairs)
                 self._pairwise_contact_query_unique_hashes[query_key] = query_hash
 
             query = self.pairwise_contact_queries[query_key]
@@ -596,17 +596,26 @@ class ManiSkillScene:
             del state_dict["articulations"]
         return state_dict
 
-    def set_sim_state(self, state: Dict):
+    def set_sim_state(self, state: Dict, env_idx: torch.Tensor = None):
+        if env_idx is not None:
+            prev_reset_mask = self._reset_mask.clone()
+            # safe guard against setting the wrong states
+            self._reset_mask[:] = False
+            self._reset_mask[env_idx] = True
+
         if "actors" in state:
             for actor_id, actor_state in state["actors"].items():
                 if len(actor_state.shape) == 1:
                     actor_state = actor_state[None, :]
-                self.actors[actor_id].set_state(actor_state)
+                # do not pass in env_idx to avoid redundant reset mask changes
+                self.actors[actor_id].set_state(actor_state, None)
         if "articulations" in state:
             for art_id, art_state in state["articulations"].items():
                 if len(art_state.shape) == 1:
                     art_state = art_state[None, :]
-                self.articulations[art_id].set_state(art_state)
+                self.articulations[art_id].set_state(art_state, None)
+        if env_idx is not None:
+            self._reset_mask = prev_reset_mask
 
     # ---------------------------------------------------------------------------- #
     # GPU Simulation Management
