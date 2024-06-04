@@ -309,7 +309,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
     def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
         dst_cube_to_end_of_stick, dst_robot_to_grasp_stick_pos = self._get_distances()
 
-        1. Add reward the closer robot hand gets to the stick grasp pose
+        # 1. Add reward the closer robot hand gets to the stick grasp pose
         reaching_reward = 1 - torch.tanh(5 * dst_robot_to_grasp_stick_pos)
         reward = reaching_reward
 
