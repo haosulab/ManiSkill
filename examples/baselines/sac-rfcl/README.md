@@ -28,3 +28,8 @@ python sac_rfcl.py --env_id="PickCube-v1" \
   --total_timesteps=1_000_000 --eval_freq=50_000 \
   --dataset_path=~/.maniskill/demos/PickCube-v1/teleop/trajectory.state.pd_joint_delta_pos.h5
 ```
+
+
+## Additional Notes about Implementation
+
+For SAC with RFCL, we always bootstrap on truncated/done.

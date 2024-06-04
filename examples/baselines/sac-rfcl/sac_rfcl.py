@@ -9,7 +9,7 @@ from typing import Optional
 
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.trajectory import dataset
-from mani_skill.utils import common
+from mani_skill.utils import common, gym_utils
 from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper
 from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
@@ -99,6 +99,7 @@ class Args:
     utd: float = 0.5
     """update to data ratio"""
     partial_reset: bool = False
+    bootstrap_at_done: str = "always" # "always" | "never"
 
     # RFCL specific arguments
     dataset_path: str = ""
@@ -271,15 +272,20 @@ class ReverseCurriculumWrapper(gym.Wrapper):
         if not self.eval_mode:
             self.demo_curriculum_step = self.demo_horizon - 1
         h5py_file.close()
+        self.max_episode_steps = gym_utils.find_max_episode_steps_value(self.env)
     @property
     def base_env(self) -> BaseEnv:
         return self.env.unwrapped
 
     def step(self, action):
         obs, reward, terminated, truncated, info = super().step(action)
-        # assert truncated.any() == truncated.all()
+        if self.max_episode_steps is not None:
+            truncated: torch.Tensor = (
+                self.base_env.elapsed_steps >= self.max_episode_steps
+            )
+            assert truncated.any() == truncated.all()
         assert "success" in info, "Reverse curriculum wrapper currently requires there to be a success key in the info dict"
-        if not self.eval_mode and info["success"].any():
+        if not self.eval_mode and truncated.any() and info["success"].any():
             # import ipdb;ipdb.set_trace()
             # TODO parallelize this success rate buffer accumulation step
             for traj_idx in torch.unique(self.sampled_traj_indexes[info["success"]]):
@@ -295,15 +301,13 @@ class ReverseCurriculumWrapper(gym.Wrapper):
         # TODO (stao): handle partial resets later
         self.sampled_traj_indexes = torch.from_numpy(self.base_env._episode_rng.randint(0, len(self.env_states), size=(b, ))).to(self.base_env.device)
         if self.eval_mode:
-            self.base_env.set_state(self.env_states[self.sampled_traj_indexes, 30 + torch.zeros((b, ), dtype=torch.int, device=self.base_env.device)])
+            self.base_env.set_state(self.env_states[self.sampled_traj_indexes, 5 + torch.zeros((b, ), dtype=torch.int, device=self.base_env.device)])
         elif self.curriculum == "uniform":
             x_start_steps_density_list = [0.5, 0.25, 0.125, 0.125 / 2, 0.125 / 2]
-            # torch.arange(0, len(x_start_steps_density_list), device=self.base_env.device)[None, :].repeat(b, 1)
             sampled_offsets = torch.from_numpy(self.base_env._episode_rng.randint(0, len(x_start_steps_density_list), size=(b, ))).to(self.base_env.device)
             x_start_steps = self.demo_curriculum_step[self.sampled_traj_indexes] + sampled_offsets
             x_start_steps = torch.clamp(x_start_steps, torch.zeros((b, ), device=self.base_env.device), self.demo_horizon[self.sampled_traj_indexes] - 1).int()
             self.base_env.set_state(self.env_states[self.sampled_traj_indexes, x_start_steps])
-            print(f"Curriculum Mean: {torch.divide(self.demo_curriculum_step, self.demo_horizon).mean()}")
 
         obs = self.base_env.get_obs()
         return obs, {}
@@ -368,9 +372,9 @@ if __name__ == "__main__":
             save_video_trigger = lambda x : (x // 50) % args.save_train_video_freq == 0
             envs = RecordEpisode(envs, output_dir=f"runs/{run_name}/train_videos", save_trajectory=False, save_video_trigger=save_video_trigger, max_steps_per_video=50, video_fps=30)
         eval_envs = RecordEpisode(eval_envs, output_dir=eval_output_dir, save_trajectory=args.evaluate, trajectory_name="trajectory", max_steps_per_video=args.num_eval_steps, video_fps=30)
-    envs = ReverseCurriculumWrapper(envs, args.dataset_path, eval_mode=False)
+    reverse_curriculum_wrapped_envs = ReverseCurriculumWrapper(envs, args.dataset_path, eval_mode=False)
     eval_envs = ReverseCurriculumWrapper(eval_envs, args.dataset_path, eval_mode=True)
-    envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=not args.partial_reset, **env_kwargs)
+    envs = ManiSkillVectorEnv(reverse_curriculum_wrapped_envs, args.num_envs, ignore_terminations=not args.partial_reset, **env_kwargs)
     eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=not args.partial_reset, **env_kwargs)
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
@@ -429,16 +433,21 @@ if __name__ == "__main__":
         for i in range(len(trajectory["obs"]) - 1):
             done = False
             reward = 0.0
-            if trajectory["success"][i]:
-                reward = 1.0
-            import ipdb;ipdb.set_trace()
-            offline_rb.add(obs=trajectory["obs"][i][0], next_obs=trajectory["obs"][i + 1][0], action=trajectory["actions"][i], reward=torch.tensor(reward), done=torch.tensor(done))
+            if args.bootstrap_at_done == 'always':
+                if trajectory["success"][i]:
+                    reward = 1.0
+            else:
+                raise ValueError("Cannot run RFCL in SAC with bootstrap_at_done not equal to 'always'")
+            offline_rb.add(
+                obs=trajectory["obs"][i][0],
+                next_obs=trajectory["obs"][i + 1][0],
+                action=trajectory["actions"][i],
+                reward=torch.tensor(reward),
+                done=torch.tensor(done)
+            )
     h5py_file.close()
-
     # TRY NOT TO MODIFY: start the game
     obs, info = envs.reset(seed=args.seed) # in Gymnasium, seed is given to reset() instead of seed()
-    # while True:
-    #     envs.base_env.render_human()
     eval_obs, _ = eval_envs.reset(seed=args.seed)
     global_step = 0
     global_update = 0
@@ -514,7 +523,10 @@ if __name__ == "__main__":
             # TRY NOT TO MODIFY: execute the game and log data.
             next_obs, rewards, terminations, truncations, infos = envs.step(actions)
             real_next_obs = next_obs.clone()
-            next_done = torch.zeros_like(terminations, truncations).to(torch.float32)
+            if args.bootstrap_at_done == 'always':
+                next_done = torch.zeros_like(terminations).to(torch.float32)
+            else:
+                next_done = (terminations | truncations).to(torch.float32)
             if "final_info" in infos:
                 final_info = infos["final_info"]
                 done_mask = infos["_final_info"]
@@ -541,7 +553,13 @@ if __name__ == "__main__":
         learning_has_started = True
         for local_update in range(args.grad_steps_per_iteration):
             global_update += 1
-            data = rb.sample(args.batch_size)
+            data = rb.sample(args.batch_size // 2)
+            offline_data = offline_rb.sample(args.batch_size // 2)
+            data.obs = torch.cat([data.obs, offline_data.obs], dim=0)
+            data.next_obs = torch.cat([data.next_obs, offline_data.next_obs], dim=0)
+            data.actions = torch.cat([data.actions, offline_data.actions], dim=0)
+            data.rewards = torch.cat([data.rewards, offline_data.rewards], dim=0)
+            data.dones = torch.cat([data.dones, offline_data.dones], dim=0)
 
             # update the value networks
             with torch.no_grad():
@@ -608,6 +626,9 @@ if __name__ == "__main__":
             writer.add_scalar("charts/update_time", update_time, global_step)
             writer.add_scalar("charts/rollout_time", rollout_time, global_step)
             writer.add_scalar("charts/rollout_fps", global_steps_per_iteration / rollout_time, global_step)
+            start_step_fracs = torch.divide(reverse_curriculum_wrapped_envs.demo_curriculum_step, reverse_curriculum_wrapped_envs.demo_horizon - 1).cpu().numpy()
+            writer.add_histogram("charts/start_step_frac_dist", start_step_fracs, global_step),
+            writer.add_scalar("charts/start_step_frac_avg", start_step_fracs.mean(), global_step)
             if args.autotune:
                 writer.add_scalar("losses/alpha_loss", alpha_loss.item(), global_step)
 
