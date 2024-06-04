@@ -1,10 +1,22 @@
+"""
+PyTorch version of Reverse Forward Curriculum Learning (RFCL) with Soft Actor-Critic
 
+Original Code: https://github.com/StoneT2000/rfcl
+Paper: https://arxiv.org/abs/2405.03379
+"""
 from dataclasses import dataclass
 import os
 import random
+import re
+import shutil
 import time
 from typing import Optional
 
+from tqdm import tqdm
+
+from mani_skill.envs.sapien_env import BaseEnv
+from mani_skill.trajectory import dataset
+from mani_skill.utils import common, gym_utils
 from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper
 from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
@@ -19,7 +31,7 @@ from torch.utils.tensorboard import SummaryWriter
 import tyro
 
 import mani_skill.envs
-
+import h5py
 
 @dataclass
 class Args:
@@ -35,11 +47,11 @@ class Args:
     """if toggled, this experiment will be tracked with Weights and Biases"""
     wandb_project_name: str = "cleanRL"
     """the wandb's project name"""
-    wandb_entity: str = None
+    wandb_entity: Optional[str] = None
     """the entity (team) of wandb's project"""
     evaluate: bool = False
     """if toggled, only runs evaluation with the given model checkpoint and saves the evaluation trajectories"""
-    checkpoint: str = None
+    checkpoint: Optional[str] = None
     """path to a pretrained checkpoint file to start evaluation/training from"""
     capture_video: bool = True
     """whether to capture videos of the agent performances (check out `videos` folder)"""
@@ -62,20 +74,20 @@ class Args:
     save_train_video_freq: Optional[int] = None
     """frequency to save training videos in terms of environment steps"""
 
-    # Algorithm specific arguments
+    # SAC specific arguments
     total_timesteps: int = 1_000_000
     """total timesteps of the experiments"""
     buffer_size: int = 1_000_000
     """the replay memory buffer size"""
     buffer_device: str = "cpu"
     """where the replay buffer is stored. Can be 'cpu' or 'cuda' for GPU"""
-    gamma: float = 0.8
+    gamma: float = 0.9
     """the discount factor gamma"""
-    tau: float = 0.01
+    tau: float = 0.005
     """target smoothing coefficient (default: 0.005)"""
-    batch_size: int = 1024
+    batch_size: int = 256
     """the batch size of sample from the replay memory"""
-    learning_starts: int = 4_000
+    learning_starts: int = 5_000
     """timestep to start learning"""
     policy_lr: float = 3e-4
     """the learning rate of the policy network optimizer"""
@@ -85,7 +97,7 @@ class Args:
     """the frequency of training policy (delayed)"""
     target_network_frequency: int = 1  # Denis Yarats' implementation delays this by 2.
     """the frequency of updates for the target nerworks"""
-    alpha: float = 0.2
+    alpha: float = 1.0
     """Entropy regularization coefficient."""
     autotune: bool = True
     """automatic tuning of the entropy coefficient"""
@@ -97,6 +109,35 @@ class Args:
     """whether to let parallel environments reset upon termination instead of truncation"""
     bootstrap_at_done: str = "always"
     """the bootstrap method to use when a done signal is received. Can be 'always' or 'never'"""
+
+    # RFCL specific arguments
+    dataset_path: str = ""
+    """path to the trajectory.h5 file to use for RFCL"""
+    num_demos: Optional[int] = None
+    """number of demonstrations to load. If None all are loaded. If given a int, that many demos
+    are sampled from the given dataset"""
+
+    reverse_step_size: int = 3
+    """the number of steps to reverse the curriculum by"""
+    reverse_curriculum_sampler: str = "geometric"
+    """the sampler to use for picking which env state to start from in the reverse curriculum"""
+    per_demo_buffer_size: int = 3
+    """number of sequential successes before considering advancing the curriculum """
+    demo_horizon_to_max_steps_ratio: float = 3
+    """the demo horizon to max steps ratio for dynamic timelimits for faster training with partial resets"""
+    max_steps_min: int = 8
+    """the minimum max episode steps before truncating. In combination with demo_horizon_to_max_steps_ratio the environment resets
+    every (max_steps_min + (T - k) // demo_horizon_to_max_steps_ratio) steps where T is the length of the demo and k is the curriculum step of that demo"""
+    percent_solved_to_complete_reverse_curriculum: float = 0.9
+    """the percentage of demos that need to be solved in reverse in order to advance to stage 2 training"""
+
+    forward_curriculum = "success_once_score"
+    staleness_coef =  0.1
+    staleness_temperature =  0.1
+    staleness_transform = "rankmin"
+    score_transform = "rankmin"
+    score_temperature = 0.1
+
 
     # to be filled in runtime
     grad_steps_per_iteration: int = 0
@@ -166,10 +207,13 @@ class SoftQNetwork(nn.Module):
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(np.array(env.single_observation_space.shape).prod() + np.prod(env.single_action_space.shape), 256),
+            nn.LayerNorm(256),
             nn.ReLU(),
             nn.Linear(256, 256),
+            nn.LayerNorm(256),
             nn.ReLU(),
             nn.Linear(256, 256),
+            nn.LayerNorm(256),
             nn.ReLU(),
             nn.Linear(256, 1),
         )
@@ -236,6 +280,7 @@ class Actor(nn.Module):
         self.action_bias = self.action_bias.to(device)
         return super().to(device)
 
+
 if __name__ == "__main__":
     args = tyro.cli(Args)
     args.grad_steps_per_iteration = int(args.training_freq * args.utd)
@@ -249,6 +294,8 @@ if __name__ == "__main__":
     writer = None
     if not args.evaluate:
         print("Running training")
+        if os.path.exists(f"runs/{run_name}"):
+            shutil.rmtree(f"runs/{run_name}")
         if args.track:
             import wandb
 
@@ -278,7 +325,7 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # env setup
-    env_kwargs = dict(obs_mode="state", control_mode="pd_joint_delta_pos", render_mode="rgb_array", sim_backend="gpu")
+    env_kwargs = dict(obs_mode="state", control_mode="pd_joint_delta_pos", render_mode="rgb_array", reward_mode="sparse", sim_backend="gpu")
     envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, **env_kwargs)
     eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, **env_kwargs)
     if isinstance(envs.action_space, gym.spaces.Dict):
@@ -290,21 +337,41 @@ if __name__ == "__main__":
             eval_output_dir = f"{os.path.dirname(args.checkpoint)}/test_videos"
         print(f"Saving eval videos to {eval_output_dir}")
         if args.save_train_video_freq is not None:
-            save_video_trigger = lambda x : (x // args.num_steps) % args.save_train_video_freq == 0
-            envs = RecordEpisode(envs, output_dir=f"runs/{run_name}/train_videos", save_trajectory=False, save_video_trigger=save_video_trigger, max_steps_per_video=args.num_steps, video_fps=30)
+            save_video_trigger = lambda x : (x // 50) % args.save_train_video_freq == 0
+            envs = RecordEpisode(envs, output_dir=f"runs/{run_name}/train_videos", save_trajectory=False, save_video_trigger=save_video_trigger, max_steps_per_video=50, video_fps=30)
         eval_envs = RecordEpisode(eval_envs, output_dir=eval_output_dir, save_trajectory=args.evaluate, trajectory_name="trajectory", max_steps_per_video=args.num_eval_steps, video_fps=30)
-    envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=not args.partial_reset, **env_kwargs)
+
+    traj_ids = None
+    h5py_file = h5py.File(os.path.expanduser(args.dataset_path), "r")
+    traj_ids = list(h5py_file.keys())
+    h5py_file.close()
+
+    if args.num_demos is not None:
+        traj_ids = np.random.choice(traj_ids, size=args.num_demos, replace=False)
+    from curriculum_wrappers import ReverseCurriculumWrapper, ReverseCurriculumConfig, ForwardCurriculumConfig
+    curriculum_wrapped_envs = ReverseCurriculumWrapper(
+        envs, args.dataset_path,
+        cfg=ReverseCurriculumConfig(
+            reverse_curriculum_sampler=args.reverse_curriculum_sampler,
+            demo_horizon_to_max_steps_ratio=args.demo_horizon_to_max_steps_ratio,
+            per_demo_buffer_size=args.per_demo_buffer_size,
+            reverse_step_size=args.reverse_step_size,
+            traj_ids=traj_ids
+        ),
+        eval_mode=False
+    )
+
+    envs = ManiSkillVectorEnv(curriculum_wrapped_envs, args.num_envs, ignore_terminations=not args.partial_reset, **env_kwargs)
     eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=not args.partial_reset, **env_kwargs)
+
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
-
-
-    max_action = float(envs.single_action_space.high[0])
 
     actor = Actor(envs).to(device)
     qf1 = SoftQNetwork(envs).to(device)
     qf2 = SoftQNetwork(envs).to(device)
     qf1_target = SoftQNetwork(envs).to(device)
     qf2_target = SoftQNetwork(envs).to(device)
+
     if args.checkpoint is not None:
         ckpt = torch.load(args.checkpoint)
         actor.load_state_dict(ckpt['actor'])
@@ -332,8 +399,39 @@ if __name__ == "__main__":
         storage_device=torch.device(args.buffer_device),
         sample_device=device
     )
+    h5py_file = h5py.File(os.path.expanduser(args.dataset_path), "r")
+    total_offline_transitions = 0
+    for traj_id in traj_ids:
+        trajectory = common.to_cpu_tensor(dataset.load_h5_data(h5py_file[traj_id]))
+        total_offline_transitions += len(trajectory["obs"]) - 1
 
-
+    offline_rb = ReplayBuffer(
+        env=envs,
+        num_envs=1,
+        buffer_size=total_offline_transitions,
+        storage_device=torch.device(args.buffer_device),
+        sample_device=device
+    )
+    # fill offline replay buffer
+    h5py_file = h5py.File(os.path.expanduser(args.dataset_path), "r")
+    for traj_id in h5py_file.keys():
+        trajectory = common.to_cpu_tensor(dataset.load_h5_data(h5py_file[traj_id]))
+        for i in range(len(trajectory["obs"]) - 1):
+            done = False
+            reward = 0.0
+            if args.bootstrap_at_done == 'always':
+                if trajectory["success"][i]:
+                    reward = 1.0
+            else:
+                raise ValueError("Cannot run RFCL in SAC with bootstrap_at_done not equal to 'always'")
+            offline_rb.add(
+                obs=trajectory["obs"][i][0],
+                next_obs=trajectory["obs"][i + 1][0],
+                action=trajectory["actions"][i],
+                reward=torch.tensor(reward),
+                done=torch.tensor(done)
+            )
+    h5py_file.close()
     # TRY NOT TO MODIFY: start the game
     obs, info = envs.reset(seed=args.seed) # in Gymnasium, seed is given to reset() instead of seed()
     eval_obs, _ = eval_envs.reset(seed=args.seed)
@@ -342,9 +440,8 @@ if __name__ == "__main__":
     learning_has_started = False
 
     global_steps_per_iteration = args.num_envs * (args.steps_per_env)
-
+    pbar = tqdm(total=args.total_timesteps, initial=0, position=0, desc=run_name)
     while global_step < args.total_timesteps:
-        print(f"Global Step: {global_step}")
         if args.eval_freq > 0 and (global_step - args.training_freq) // args.eval_freq < global_step // args.eval_freq:
             # evaluate
             actor.eval()
@@ -395,6 +492,29 @@ if __name__ == "__main__":
                 }, model_path)
                 print(f"model saved to {model_path}")
 
+        if curriculum_wrapped_envs.curriculum_mode == "reverse":
+            solved_frac = (curriculum_wrapped_envs.demo_solved).float().mean().item()
+            # handle stage 1 to stage 2 training transition
+            if solved_frac >= args.percent_solved_to_complete_reverse_curriculum:
+                print(f"Reverse solved >= {args.percent_solved_to_complete_reverse_curriculum} of demos. Stopping stage 1 training and beginning stage 2")
+                writer.add_scalar("charts/stage_1_steps", global_step, global_step)
+                curriculum_wrapped_envs.curriculum_mode = "none"
+                # reset the environment and begin training as if training anew
+                envs.reset()
+                print(f"Loading current online replay buffer as offline replay buffer and resetting online buffer")
+                offline_rb = rb
+                rb = ReplayBuffer(
+                    env=envs,
+                    num_envs=args.num_envs,
+                    buffer_size=args.buffer_size,
+                    storage_device=torch.device(args.buffer_device),
+                    sample_device=device
+                )
+
+
+
+
+
         # Collect samples from environemnts
         rollout_time = time.time()
         for local_step in range(args.steps_per_env):
@@ -432,7 +552,7 @@ if __name__ == "__main__":
             # TRY NOT TO MODIFY: CRUCIAL step easy to overlook
             obs = next_obs
         rollout_time = time.time() - rollout_time
-
+        pbar.update(global_steps_per_iteration)
         # ALGO LOGIC: training.
         if global_step < args.learning_starts:
             continue
@@ -441,7 +561,13 @@ if __name__ == "__main__":
         learning_has_started = True
         for local_update in range(args.grad_steps_per_iteration):
             global_update += 1
-            data = rb.sample(args.batch_size)
+            data = rb.sample(args.batch_size // 2)
+            offline_data = offline_rb.sample(args.batch_size // 2)
+            data.obs = torch.cat([data.obs, offline_data.obs], dim=0)
+            data.next_obs = torch.cat([data.next_obs, offline_data.next_obs], dim=0)
+            data.actions = torch.cat([data.actions, offline_data.actions], dim=0)
+            data.rewards = torch.cat([data.rewards, offline_data.rewards], dim=0)
+            data.dones = torch.cat([data.dones, offline_data.dones], dim=0)
 
             # update the value networks
             with torch.no_grad():
@@ -508,6 +634,9 @@ if __name__ == "__main__":
             writer.add_scalar("charts/update_time", update_time, global_step)
             writer.add_scalar("charts/rollout_time", rollout_time, global_step)
             writer.add_scalar("charts/rollout_fps", global_steps_per_iteration / rollout_time, global_step)
+            start_step_fracs = torch.divide(curriculum_wrapped_envs.demo_curriculum_step, curriculum_wrapped_envs.demo_horizon - 1).cpu().numpy()
+            writer.add_histogram("charts/start_step_frac_dist", start_step_fracs, global_step),
+            writer.add_scalar("charts/start_step_frac_avg", start_step_fracs.mean(), global_step)
             if args.autotune:
                 writer.add_scalar("losses/alpha_loss", alpha_loss.item(), global_step)
 

@@ -18,3 +18,30 @@ python sac.py --env_id="PickCube-v1" \
   --total_timesteps=1_000_000 --eval_freq=50_000
 ```
 
+## Citation
+
+If you use this baseline please cite the following
+```
+@inproceedings{DBLP:conf/icml/HaarnojaZAL18,
+  author       = {Tuomas Haarnoja and
+                  Aurick Zhou and
+                  Pieter Abbeel and
+                  Sergey Levine},
+  editor       = {Jennifer G. Dy and
+                  Andreas Krause},
+  title        = {Soft Actor-Critic: Off-Policy Maximum Entropy Deep Reinforcement Learning
+                  with a Stochastic Actor},
+  booktitle    = {Proceedings of the 35th International Conference on Machine Learning,
+                  {ICML} 2018, Stockholmsm{\"{a}}ssan, Stockholm, Sweden, July
+                  10-15, 2018},
+  series       = {Proceedings of Machine Learning Research},
+  volume       = {80},
+  pages        = {1856--1865},
+  publisher    = {{PMLR}},
+  year         = {2018},
+  url          = {http://proceedings.mlr.press/v80/haarnoja18b.html},
+  timestamp    = {Wed, 03 Apr 2019 18:17:30 +0200},
+  biburl       = {https://dblp.org/rec/conf/icml/HaarnojaZAL18.bib},
+  bibsource    = {dblp computer science bibliography, https://dblp.org}
+}
+```

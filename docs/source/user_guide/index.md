@@ -40,11 +40,7 @@ tutorials/index
 concepts/index
 datasets/index
 data_collection/index
-
 ```
-<!-- algorithms_and_models/index
-workflows/index -->
-
 
 ```{toctree}
 :maxdepth: 2

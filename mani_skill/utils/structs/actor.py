@@ -140,12 +140,19 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
             ang_vel = self.get_angular_velocity()  # [N, 3]
         return torch.hstack([pose.p, pose.q, vel, ang_vel])
 
-    def set_state(self, state: Array):
+    def set_state(self, state: Array, env_idx: torch.Tensor = None):
         if physx.is_gpu_enabled():
+            if env_idx is not None:
+                prev_reset_mask = self.scene._reset_mask.clone()
+                # safe guard against setting the wrong states
+                self.scene._reset_mask[:] = False
+                self.scene._reset_mask[env_idx] = True
             state = common.to_tensor(state)
             self.set_pose(Pose.create(state[:, :7]))
             self.set_linear_velocity(state[:, 7:10])
             self.set_angular_velocity(state[:, 10:13])
+            if env_idx is not None:
+                self.scene._reset_mask = prev_reset_mask
         else:
             state = common.to_numpy(state[0])
             self.set_pose(sapien.Pose(state[0:3], state[3:7]))
