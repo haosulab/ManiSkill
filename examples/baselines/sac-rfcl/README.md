@@ -4,9 +4,11 @@ Fast offline/online imitation learning in simulation based on "Reverse Forward C
 
 Currently this code only works with environments that do not have geometry variations between parallel environments (e.g. PickCube).
 
+Code has been tested and working on the following environments: PickCube-v1, PushCube-v1, StackCube-v1
+
 ## Download and Process Dataset
 
-Download demonstrations for a desired task
+Download demonstrations for a desired task e.g. PickCube-v1
 ```bash
 python -m mani_skill.utils.download_demo "PickCube-v1"
 ```
@@ -24,9 +26,10 @@ python -m mani_skill.trajectory.replay_trajectory \
 
 ```bash
 python sac_rfcl.py --env_id="PickCube-v1" \
-  --num_envs=32 --utd=0.5 --buffer_size=1_000_000 \
+  --num_envs=16 --training_freq=32 --utd=0.5 --buffer_size=1_000_000 \
   --total_timesteps=1_000_000 --eval_freq=50_000 \
-  --dataset_path=~/.maniskill/demos/PickCube-v1/teleop/trajectory.state.pd_joint_delta_pos.h5
+  --dataset_path=~/.maniskill/demos/PickCube-v1/teleop/trajectory.state.pd_joint_delta_pos.h5 \
+  --exp-name="test3" --num-demos=5 --seed=2
 ```
 
 

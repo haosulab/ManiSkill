@@ -7,6 +7,8 @@ import shutil
 import time
 from typing import Optional
 
+from tqdm import tqdm
+
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.trajectory import dataset
 from mani_skill.utils import common, gym_utils
@@ -265,7 +267,7 @@ class Actor(nn.Module):
         return super().to(device)
 
 
-class ReverseCurriculumWrapper(gym.Wrapper):
+class ReverseForwardCurriculumWrapper(gym.Wrapper):
     """Apply this before any auto reset wrapper"""
     def __init__(self, env, dataset_path,
                  curriculum: str = "uniform",
@@ -275,6 +277,7 @@ class ReverseCurriculumWrapper(gym.Wrapper):
                  traj_ids: list[str] = None,
                  eval_mode=False):
         super().__init__(env)
+        self.curriculum_mode = "reverse" # "reverse" or "forward"
         self.eval_mode = eval_mode
         self.curriculum = curriculum
         self.demo_horizon_to_max_steps_ratio = demo_horizon_to_max_steps_ratio
@@ -298,6 +301,11 @@ class ReverseCurriculumWrapper(gym.Wrapper):
         self.demo_curriculum_step = torch.zeros((traj_count,), dtype=torch.int32)
         """the current curriculum step/stage for each demonstration given. Used in reverse curricula options"""
         self.demo_horizon = torch.zeros((traj_count,), dtype=torch.int32, device=self.base_env.device)
+        """length of each demo"""
+        self.demo_solved = torch.zeros((traj_count,), dtype=torch.bool, device=self.base_env.device)
+        """whether the demo is solved (meaning the curriculum stage has reached the end)"""
+
+
         for i, env_states_flat in enumerate(env_states_flat_list):
             self.env_states[i, :len(env_states_flat)] = torch.from_numpy(env_states_flat).float().to(self.base_env.device)
             self.demo_horizon[i] = len(env_states_flat)
@@ -312,7 +320,7 @@ class ReverseCurriculumWrapper(gym.Wrapper):
 
         self.max_episode_steps = gym_utils.find_max_episode_steps_value(self.env)
 
-        print(f"ReverseCurriculumWrapper initialized. Loaded {traj_count} demonstrations. Trajectory IDs: {traj_ids} \n \
+        print(f"ReverseForwardCurriculumWrapper initialized. Loaded {traj_count} demonstrations. Trajectory IDs: {traj_ids} \n \
               Mean Length: {np.mean(self.demo_horizon.cpu().numpy())}, \
               Max Length: {np.max(self.demo_horizon.cpu().numpy())}")
     @property
@@ -337,6 +345,7 @@ class ReverseCurriculumWrapper(gym.Wrapper):
                 can_advance = per_demo_success_rates > 0.9
                 self.demo_curriculum_step[can_advance] -= self.reverse_step_size
                 self.demo_success_rate_buffers[can_advance, :] = 0
+                self.demo_solved[self.demo_curriculum_step < 0] = True
                 self.demo_curriculum_step = torch.clamp(self.demo_curriculum_step, 0)
 
         return obs, reward, terminated, truncated, info
@@ -427,7 +436,7 @@ if __name__ == "__main__":
     if args.num_demos is not None:
         traj_ids = np.random.choice(traj_ids, size=args.num_demos, replace=False)
 
-    reverse_curriculum_wrapped_envs = ReverseCurriculumWrapper(
+    curriculum_wrapped_envs = ReverseForwardCurriculumWrapper(
         envs, args.dataset_path,
         curriculum=args.curriculum_method,
         demo_horizon_to_max_steps_ratio=args.demo_horizon_to_max_steps_ratio,
@@ -436,16 +445,16 @@ if __name__ == "__main__":
         traj_ids=traj_ids,
         eval_mode=False
     )
-    eval_envs = ReverseCurriculumWrapper(
-        eval_envs, args.dataset_path,
-        curriculum=args.curriculum_method,
-        demo_horizon_to_max_steps_ratio=args.demo_horizon_to_max_steps_ratio,
-        per_demo_buffer_size=args.per_demo_buffer_size,
-        reverse_step_size=args.reverse_step_size,
-        traj_ids=traj_ids,
-        eval_mode=True
-    )
-    envs = ManiSkillVectorEnv(reverse_curriculum_wrapped_envs, args.num_envs, ignore_terminations=not args.partial_reset, **env_kwargs)
+    # eval_envs = ReverseCurriculumWrapper(
+    #     eval_envs, args.dataset_path,
+    #     curriculum=args.curriculum_method,
+    #     demo_horizon_to_max_steps_ratio=args.demo_horizon_to_max_steps_ratio,
+    #     per_demo_buffer_size=args.per_demo_buffer_size,
+    #     reverse_step_size=args.reverse_step_size,
+    #     traj_ids=traj_ids,
+    #     eval_mode=True
+    # )
+    envs = ManiSkillVectorEnv(curriculum_wrapped_envs, args.num_envs, ignore_terminations=not args.partial_reset, **env_kwargs)
     eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=not args.partial_reset, **env_kwargs)
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
@@ -525,9 +534,8 @@ if __name__ == "__main__":
     learning_has_started = False
 
     global_steps_per_iteration = args.num_envs * (args.steps_per_env)
-
+    pbar = tqdm(total=args.total_timesteps, initial=0, position=0, desc=run_name)
     while global_step < args.total_timesteps:
-        print(f"Global Step: {global_step}")
         if args.eval_freq > 0 and (global_step - args.training_freq) // args.eval_freq < global_step // args.eval_freq:
             # evaluate
             actor.eval()
@@ -578,6 +586,29 @@ if __name__ == "__main__":
                 }, model_path)
                 print(f"model saved to {model_path}")
 
+
+        solved_frac = (curriculum_wrapped_envs.demo_solved).float().mean().item()
+        # handle stage 1 to stage 2 training transition
+        # if solved_frac >= 0.9:
+        #     print("Reverse solved >= 0.9 of demos. Stopping stage 1 training and beginning stage 2")
+        #     writer.add_scalar("charts/stage_1_steps", global_step, global_step)
+        #     curriculum_wrapped_envs.curriculum_mode = "forward"
+        #     # reset the environment and begin training as if training anew
+        #     envs.reset()
+        #     print(f"Loading current online replay buffer as offline replay buffer and resetting online buffer")
+        #     offline_rb = rb
+        #     rb = ReplayBuffer(
+        #         env=envs,
+        #         num_envs=args.num_envs,
+        #         buffer_size=args.buffer_size,
+        #         storage_device=torch.device(args.buffer_device),
+        #         sample_device=device
+        #     )
+
+
+
+
+
         # Collect samples from environemnts
         rollout_time = time.time()
         for local_step in range(args.steps_per_env):
@@ -615,7 +646,7 @@ if __name__ == "__main__":
             # TRY NOT TO MODIFY: CRUCIAL step easy to overlook
             obs = next_obs
         rollout_time = time.time() - rollout_time
-
+        pbar.update(global_steps_per_iteration)
         # ALGO LOGIC: training.
         if global_step < args.learning_starts:
             continue
@@ -697,7 +728,7 @@ if __name__ == "__main__":
             writer.add_scalar("charts/update_time", update_time, global_step)
             writer.add_scalar("charts/rollout_time", rollout_time, global_step)
             writer.add_scalar("charts/rollout_fps", global_steps_per_iteration / rollout_time, global_step)
-            start_step_fracs = torch.divide(reverse_curriculum_wrapped_envs.demo_curriculum_step, reverse_curriculum_wrapped_envs.demo_horizon - 1).cpu().numpy()
+            start_step_fracs = torch.divide(curriculum_wrapped_envs.demo_curriculum_step, curriculum_wrapped_envs.demo_horizon - 1).cpu().numpy()
             writer.add_histogram("charts/start_step_frac_dist", start_step_fracs, global_step),
             writer.add_scalar("charts/start_step_frac_avg", start_step_fracs.mean(), global_step)
             if args.autotune:
