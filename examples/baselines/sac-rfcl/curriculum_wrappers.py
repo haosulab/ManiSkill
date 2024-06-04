@@ -44,20 +44,20 @@ class ReverseCurriculumWrapper(gym.Wrapper):
         traj_ids = self.cfg.traj_ids
         if traj_ids is None:
             traj_ids = list(h5py_file.keys())
-        traj_count = len(traj_ids)
+        self.traj_count = len(traj_ids)
         for traj_id in traj_ids:
             env_states = load_h5_data(h5py_file[traj_id]["env_states"])
             env_states_flat = common.flatten_state_dict(env_states)
             max_eps_len = max(len(env_states_flat), max_eps_len)
             env_states_flat_list.append(env_states_flat)
 
-        self.env_states = torch.zeros((traj_count, max_eps_len, env_states_flat.shape[-1]), device=self.base_env.device)
+        self.env_states = torch.zeros((self.traj_count, max_eps_len, env_states_flat.shape[-1]), device=self.base_env.device)
         """environment states flattened into a matrix of shape (B, T, D) where B is the number of episodes, T is the maximum episode length, and D is the dimension of the state"""
-        self.demo_curriculum_step = torch.zeros((traj_count,), dtype=torch.int32)
+        self.demo_curriculum_step = torch.zeros((self.traj_count,), dtype=torch.int32)
         """the current curriculum step/stage for each demonstration given. Used in reverse curricula options"""
-        self.demo_horizon = torch.zeros((traj_count,), dtype=torch.int32, device=self.base_env.device)
+        self.demo_horizon = torch.zeros((self.traj_count,), dtype=torch.int32, device=self.base_env.device)
         """length of each demo"""
-        self.demo_solved = torch.zeros((traj_count,), dtype=torch.bool, device=self.base_env.device)
+        self.demo_solved = torch.zeros((self.traj_count,), dtype=torch.bool, device=self.base_env.device)
         """whether the demo is solved (meaning the curriculum stage has reached the end)"""
         for i, env_states_flat in enumerate(env_states_flat_list):
             self.env_states[i, :len(env_states_flat)] = torch.from_numpy(env_states_flat).float().to(self.base_env.device)
@@ -66,13 +66,14 @@ class ReverseCurriculumWrapper(gym.Wrapper):
             self.demo_curriculum_step = self.demo_horizon - 1
         h5py_file.close()
 
-        self._demo_success_rate_buffer_pos = torch.zeros((traj_count, ), dtype=torch.int, device=self.base_env.device)
-        self.demo_success_rate_buffers = torch.zeros((traj_count, self.per_demo_buffer_size), dtype=torch.bool, device=self.base_env.device)
+        self._demo_success_rate_buffer_pos = torch.zeros((self.traj_count, ), dtype=torch.int, device=self.base_env.device)
+        self.demo_success_rate_buffers = torch.zeros((self.traj_count, self.per_demo_buffer_size), dtype=torch.bool, device=self.base_env.device)
         self.max_episode_steps = gym_utils.find_max_episode_steps_value(self.env)
         self.sampled_traj_indexes = torch.zeros((self.base_env.num_envs, ), dtype=torch.int, device=self.base_env.device)
         self.dynamic_max_episode_steps = torch.zeros((self.base_env.num_envs, ), dtype=torch.int, device=self.base_env.device)
+        self._traj_index_density = np.ones((self.traj_count, ), dtype=np.float32) / self.traj_count
         assert self.max_episode_steps is not None, "Reverse curriculum wrapper requires max_episode_steps to be set"
-        print(f"ReverseForwardCurriculumWrapper initialized. Loaded {traj_count} demonstrations. Trajectory IDs: {traj_ids} \n \
+        print(f"ReverseForwardCurriculumWrapper initialized. Loaded {self.traj_count} demonstrations. Trajectory IDs: {traj_ids} \n \
               Mean Length: {np.mean(self.demo_horizon.cpu().numpy())}, \
               Max Length: {np.max(self.demo_horizon.cpu().numpy())}")
     @property
@@ -104,6 +105,13 @@ class ReverseCurriculumWrapper(gym.Wrapper):
                 self.demo_success_rate_buffers[can_advance, :] = 0
                 self.demo_solved[self.demo_curriculum_step < 0] = True
                 self.demo_curriculum_step = torch.clamp(self.demo_curriculum_step, 0)
+
+                if can_advance.any():
+                    # update the probability distribution for trajectory sampling
+                    self._traj_index_density = torch.divide(self.demo_curriculum_step, self.demo_horizon)
+                    self._traj_index_density[self.demo_solved] = 1e-6
+                    self._traj_index_density = (self._traj_index_density / self._traj_index_density.sum()).cpu().numpy()
+
         return obs, reward, terminated, truncated, info
     def reset(self, *, seed=None, options=dict()):
         super().reset(seed=seed, options=options)
@@ -114,7 +122,9 @@ class ReverseCurriculumWrapper(gym.Wrapper):
         if self.curriculum_mode == "reverse":
             # set initial state accordingly
             b = len(env_idx)
-            self.sampled_traj_indexes[env_idx] = torch.from_numpy(self.base_env._episode_rng.randint(0, len(self.env_states), size=(b, ))).int().to(self.base_env.device)
+            self.sampled_traj_indexes[env_idx] = torch.from_numpy(
+                self.base_env._episode_rng.choice(np.arange(0, self.traj_count), size=(b, ), replace=True, p=self._traj_index_density)
+            ).int().to(self.base_env.device)
             reset_traj_indexes = self.sampled_traj_indexes[env_idx]
             if self.eval_mode:
                 self.base_env.set_state(self.env_states[self.sampled_traj_indexes, 5 + torch.zeros((b, ), dtype=torch.int, device=self.base_env.device)], env_idx)
