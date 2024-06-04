@@ -307,45 +307,40 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
         return obs
 
     def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
-        # dst_cube_to_end_of_stick, dst_robot_to_grasp_stick_pos = self._get_distances()
+        dst_cube_to_end_of_stick, dst_robot_to_grasp_stick_pos = self._get_distances()
 
-        # 1. Add reward the closer robot hand gets to the stick grasp pose
-        # reaching_reward = 1 - torch.tanh(5 * dst_robot_to_grasp_stick_pos)
-        # reward = reaching_reward
+        1. Add reward the closer robot hand gets to the stick grasp pose
+        reaching_reward = 1 - torch.tanh(5 * dst_robot_to_grasp_stick_pos)
+        reward = reaching_reward
 
 
-        # # 2. Add reward when we pick up the stick
-        # is_grasped = info["is_grasped"]
-        # reward+= is_grasped
-
-        # # 3. Add reward as the distance of the end of the stick to the cube decreases
-        # distance_reward = (1 - torch.tanh(5 * dst_cube_to_end_of_stick)) * is_grasped
-        # reward += distance_reward
-
-        # # 4. Add reward as the distance of the cube to the goal decreases
-        # obj_to_goal_dist = torch.linalg.norm(
-        #     self.goal_region.pose.p - self.cube.pose.p, axis=1
-        # )
-        # # place_reward = (1 - torch.tanh(5 * obj_to_goal_dist)) * is_grasped
-        # place_reward = (1 - torch.tanh(5 * obj_to_goal_dist)) * is_grasped
-        # reward += place_reward
-        
-        # # 4. Add reward when the robot is static
-        # static_reward = 1 - torch.tanh(
-        #     5 * torch.linalg.norm(self.agent.robot.get_qvel()[..., :-2], axis=1)
-        # )
-        # reward += static_reward * info["is_obj_in_goal"]
-
-        # reward[info["success"]] = 5
-        # # return reward
-        # # convert reward to a tensor and return
-        # print("type(reward):", type(reward))
-        # return reward
-
-        # temp return
+        # 2. Add reward when we pick up the stick
         is_grasped = info["is_grasped"]
-        reward = is_grasped
+        reward+= is_grasped
+
+        # 3. Add reward as the distance of the end of the stick to the cube decreases
+        distance_reward = (1 - torch.tanh(5 * dst_cube_to_end_of_stick)) * is_grasped
+        reward += distance_reward
+
+        # 4. Add reward as the distance of the cube to the goal decreases
+        obj_to_goal_dist = torch.linalg.norm(
+            self.goal_region.pose.p - self.cube.pose.p, axis=1
+        )
+        # place_reward = (1 - torch.tanh(5 * obj_to_goal_dist)) * is_grasped
+        place_reward = (1 - torch.tanh(5 * obj_to_goal_dist)) * is_grasped
+        reward += place_reward
+        
+        # 4. Add reward when the robot is static
+        static_reward = 1 - torch.tanh(
+            5 * torch.linalg.norm(self.agent.robot.get_qvel()[..., :-2], axis=1)
+        )
+        reward += static_reward * info["is_obj_in_goal"]
+
+        reward[info["success"]] = 5
+        # return reward
+        # convert reward to a tensor and return
         return reward
+
 
 
     def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
