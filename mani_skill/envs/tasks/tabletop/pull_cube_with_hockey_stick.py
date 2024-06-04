@@ -319,14 +319,13 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
         reward+= is_grasped
 
         # 3. Add reward as the distance of the end of the stick to the cube decreases
-        distance_reward = (1 - torch.tanh(5 * dst_cube_to_end_of_stick)) * is_grasped
-        reward += distance_reward
+        # distance_reward = (1 - torch.tanh(5 * dst_cube_to_end_of_stick)) * is_grasped
+        # reward += distance_reward
 
         # 4. Add reward as the distance of the cube to the goal decreases
         obj_to_goal_dist = torch.linalg.norm(
             self.goal_region.pose.p - self.cube.pose.p, axis=1
         )
-        # place_reward = (1 - torch.tanh(5 * obj_to_goal_dist)) * is_grasped
         place_reward = (1 - torch.tanh(5 * obj_to_goal_dist)) * is_grasped
         reward += place_reward
         
