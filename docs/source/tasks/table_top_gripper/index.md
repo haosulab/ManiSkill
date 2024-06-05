@@ -293,7 +293,7 @@ One robot must push/give the cube on its side to the other side so the other rob
 **Task Description:**
 A simple task where the objective is to push and roll a ball to a goal region at the other end of the table.
 
-**Supported Robots: (Panda, Panda)**
+**Supported Robots: (Panda)**
 
 **Randomizations:**
 - the ball's xy position is randomized on top of a table in the region [0.2, 0.5] x [-0.4, 0.7]. It is placed flat on the table
