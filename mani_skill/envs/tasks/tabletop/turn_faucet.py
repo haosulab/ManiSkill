@@ -88,7 +88,6 @@ class TurnFaucetEnv(BaseEnv):
             # we provide tools to easily create the articulation builder like so by querying
             # the dataset source and unique ID
             model_info = self.train_info[model_id]
-            print("model_id: ", model_id)
             builder = articulations.get_articulation_builder(
                 self.scene,
                 f"partnet-mobility:{model_id}",
