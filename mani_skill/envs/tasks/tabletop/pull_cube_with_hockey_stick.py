@@ -1,20 +1,3 @@
-"""
-Code for a minimal environment/task with just a robot being loaded. We recommend copying this template and modifying as you need.
-
-At a high-level, ManiSkill tasks can minimally be defined by how the environment resets, what agents/objects are
-loaded, goal parameterization, and success conditions
-
-Environment reset is comprised of running two functions, `self._reconfigure` and `self.initialize_episode`, which is auto
-run by ManiSkill. As a user, you can override a number of functions that affect reconfiguration and episode initialization.
-
-Reconfiguration will reset the entire environment scene and allow you to load/swap assets and agents.
-
-Episode initialization will reset the positions of all objects (called actors), articulations, and agents,
-in addition to initializing any task relevant data like a goal
-
-See comments for how to make your own environment and what each required function should do
-"""
-
 from typing import Any, Dict, Union
 
 import numpy as np
