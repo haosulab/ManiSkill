@@ -35,7 +35,7 @@ def main(args):
     for cam_size in cam_sizes:
         fig, ax = plt.subplots()
         ax.grid(True)
-        ax.set_title(f"RGB Frames per second (FPS) vs Number of Parallel Envs. 1x{cam_size}x{cam_size} RGB Camera")
+        ax.set_title(f"RGB FPS vs Number of Parallel Envs. 1x{cam_size}x{cam_size} RGB Camera")
         ax.set_xlabel("Number of Parallel Envs")
         ax.set_ylabel("FPS")
         for i, (exp_name, df) in enumerate(data.items()):
@@ -53,7 +53,7 @@ def main(args):
     ax.grid(True)
     ax.set_xlabel("Camera Width/Height")
     ax.set_ylabel("FPS")
-    ax.set_title("Highest RGB Frames per second (FPS) vs Camera Size under 16GB GPU memory")
+    ax.set_title("Highest RGB FPS vs Camera Size under 16GB GPU memory")
     for i, (exp_name, df) in enumerate(data.items()):
         df = df[df["env.step/gpu_mem_use"] < 16 * 1024 * 1024 * 1024]
         df = df[(df["obs_mode"] == "rgb")]
@@ -74,7 +74,7 @@ def main(args):
     ax.grid(True)
     ax.set_xlabel("Number of Cameras")
     ax.set_ylabel("FPS")
-    ax.set_title("Highest RGB Frames per second (FPS) vs Number of 128x128 Cameras under 16GB GPU memory")
+    ax.set_title("Highest RGB FPS vs Number of 128x128 Cameras under 16GB GPU memory")
     for i, (exp_name, df) in enumerate(data.items()):
         df = df[df["env.step/gpu_mem_use"] < 16 * 1024 * 1024 * 1024]
         df = df[(df["obs_mode"] == "rgb")]
@@ -88,6 +88,21 @@ def main(args):
     plt.legend()
     plt.tight_layout()
     fig.savefig("benchmark_results/fps:num_cameras_rgb.png")
+
+    ### State results ###
+    # generate plot of state FPS against number of parallel environments
+    fig, ax = plt.subplots()
+    ax.grid(True)
+    ax.set_title("State FPS vs Number of Parallel Envs")
+    ax.set_xlabel("Number of Parallel Envs")
+    ax.set_ylabel("FPS")
+    for i, (exp_name, df) in enumerate(data.items()):
+        df = df[(df["obs_mode"] == "state")]
+        if len(df) == 0: continue
+        ax.plot(df["num_envs"], df["env.step/fps"], '-o', label=exp_name, color=COLOR_PALLETE[i % len(COLOR_PALLETE)])
+    plt.legend()
+    plt.tight_layout()
+    fig.savefig("benchmark_results/fps:num_envs_state.png")
 
 # To use this script, run it from the command line with the paths to the benchmark result files as arguments.
 # For example:

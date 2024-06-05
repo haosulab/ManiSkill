@@ -106,7 +106,7 @@ def main():
         env.reset(seed=2022)
         torch.manual_seed(0)
 
-        N = 100
+        N = 1000
         with profiler.profile("env.step", total_steps=N, num_envs=args_cli.num_envs):
             for i in range(N):
                 actions = (
@@ -116,7 +116,7 @@ def main():
                 obs, rew, terminated, truncated, info = env.step(actions)
         profiler.log_stats("env.step")
         env.reset(seed=2022)
-        N = 100
+        N = 1000
         with profiler.profile("env.step+env.reset", total_steps=N, num_envs=args_cli.num_envs):
             for i in range(N):
                 actions = (

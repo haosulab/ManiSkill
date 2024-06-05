@@ -14,9 +14,12 @@ Raw benchmark results can be read from the .csv files in the [results folder on 
 
 #### State
 
+:::{figure} benchmarking_results/rtx_3080/fps:num_envs_state.png
+:::
+
 #### RGB
 
-:::{figure} benchmarking_results/rtx_3080/fps:num_envs_1x128x128_rgb.png
+:::{figure} benchmarking_results/rtx_3080/fps:num_envs_1x256x256_rgb.png
 :::
 
 :::{figure} benchmarking_results/rtx_3080/fps:num_cameras_rgb.png

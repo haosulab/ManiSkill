@@ -111,10 +111,10 @@ def main(args):
         )
         if args.env_id in BENCHMARK_ENVS:
             data.update(
-            num_cameras=args.num_cams,
-            camera_width=args.cam_width,
-            camera_height=args.cam_height,
-        )
+                num_cameras=args.num_cams,
+                camera_width=args.cam_width,
+                camera_height=args.cam_height,
+            )
         profiler.update_csv(
             "benchmark_results/maniskill.csv",
             data,
