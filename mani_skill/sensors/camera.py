@@ -102,6 +102,8 @@ def parse_camera_cfgs(camera_cfgs):
 class Camera(BaseSensor):
     """Implementation of the Camera sensor which uses the sapien Camera."""
 
+    cfg: CameraConfig
+
     def __init__(
         self,
         camera_cfg: CameraConfig,
