@@ -6,7 +6,7 @@ Currently we just compare ManiSkill and [IsaacLab](https://github.com/isaac-sim/
 
 ## Results
 
-Raw benchmark results can be read from the .csv files in the [results folder on GitHub](https://github.com/haosulab/ManiSkill/blob/main/docs/source/user_guide/additional_resources/benchmarking_results). There are also plotted figures in that folder. Below we show a selection of some of the figures/results. The figures are also sometimes annotated with the GPU memory usage in GB or the number of parallel environments used for that result.
+Raw benchmark results can be read from the .csv files in the [results folder on GitHub](https://github.com/haosulab/ManiSkill/blob/main/docs/source/user_guide/additional_resources/benchmarking_results). There are also plotted figures in that folder. Below we show a selection of some of the figures/results from testing on a RTX 3080. The figures are also sometimes annotated with the GPU memory usage in GB or the number of parallel environments used for that result.
 
 *Note IsaacLab currently does not support RGB+Depth, or multiple cameras per sub-scene so there may not be results for IsaacLab on some figures
 
