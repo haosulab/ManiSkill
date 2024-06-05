@@ -282,3 +282,33 @@ One robot must push/give the cube on its side to the other side so the other rob
 <video preload="auto" controls="True" width="100%">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/TwoRobotStackCube-v1_rt.mp4" type="video/mp4">
 </video>
+
+## PullCubeWithHockeyStick-v1
+![dense-reward][reward-badge]
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+A robot needs to pick up a hockey stick and pull the cube towards the pre-specified target.
+
+**Supported Robots: (Panda)**
+
+**Randomizations:**
+- the cube's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat on the table
+- the target goal region (...)
+
+**Success Conditions:**
+- the cube position is within `goal_thresh` (default 0.025m) euclidean distance of the goal position
+- the robot is static (q velocity < 0.2)
+:::
+
+<video preload="auto" controls="True" width="100%">
+<source src="TO_BE_UPDATED" type="video/mp4">
+</video>
+
+
+
+
+
