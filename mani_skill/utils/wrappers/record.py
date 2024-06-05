@@ -338,7 +338,7 @@ class RecordEpisode(gym.Wrapper):
                 state=common.to_numpy(common.batch(state_dict)),
                 observation=common.to_numpy(common.batch(obs)),
                 # note first reward/action etc. are ignored when saving trajectories to disk
-                action=action,
+                action=common.to_numpy(common.batch(action)),
                 reward=np.zeros(
                     (
                         1,
@@ -575,6 +575,7 @@ class RecordEpisode(gym.Wrapper):
                 episode_info.update(reset_kwargs=dict())
 
             # slice some data to remove the first dummy frame.
+
             actions = common.index_dict_array(
                 self._trajectory_buffer.action, (slice(start_ptr + 1, end_ptr), env_idx)
             )
