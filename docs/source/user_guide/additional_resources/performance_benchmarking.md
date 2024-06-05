@@ -2,35 +2,33 @@
 
 This page documents code and results of benchmarking various robotics simulators on a number of dimensions. It is still a WIP as we write more fair benchmarking code that more accurately compares simulators under the same conditions.
 
-## Benchmarking Details/Methodology
-
-There are currently two benchmarked tasks: Cartpole Balance (classic control), and Pick Cube (manipulation). Details about the exact configurations of the two tasks are detailed in [this section](#task-configuration).
-
-For simulators that use physx (like ManiSkill and Isaac Lab), for comparison we try to align as many simulation configuration parameters (like number of solver position iterations) as well as object types (e.g. collision meshes, size of objects etc.) as close as possible.
-
-In the future we plan to benchmark other simulators using other physics engines (like Mujoco) although how to fairly do so is still WIP.
-
-Reward functions and evaluation functions are purposely left out and not benchmarked.
-
-Due to varying implementations of parallel rendering mechanisms, to benchmark the FPS when generating RGB, Depth, and/or Segmentation observations, we plot figures showing the FPS ablating on the number of parallel environments, image size, and number of cameras. Within each evaluation, we try and pick configurations that maximize the FPS when given fixed # of environments, # of cameras per environment, and image size.
+Currently we just compare ManiSkill and [IsaacLab](https://github.com/isaac-sim/IsaacLab) on two tasks, Cartpole Balancing (control) and PickCube (table top manipulation). For details on benchmarking methodology see [this section](#benchmarking-detailsmethodology)
 
 ## Results
 
-Results below are what occur when following the methodology above. The tables all show a snapshot of results using 4096 environments for measuring state-based FPS and the max number of environments runnable on a 4090 GPU using one 128x128 camera per environment. 
+Raw benchmark results can be read from the .csv files in the [results folder on GitHub](https://github.com/haosulab/ManiSkill/blob/main/docs/source/user_guide/additional_resources/benchmarking_results). There are also plotted figures in that folder. Below we show a selection of some of the figures/results
+
+*Note IsaacLab currently does not support RGB+Depth, or multiple cameras per sub-scene so there may not be results for IsaacLab on some figures
 
 ### Cartpole Balance
 
-| Simulator/Framework | State FPS   | RGB FPS   | Depth FPS | RGB+Depth FPS | RGB+Depth+Segmentation FPS |
-| ------------------- | ----------- | --------- | --------- | ------------- | -------------------------- |
-| SAPIEN/ManiSkill    | 2537724.820 | 33018.081 | 33018.081 | 33018.081     | 33018.081                  |
-| IsaacSim/IsaacLab   |             |           |           | N/A           | N/A                        |
+#### State
 
-### Pick Cube
+#### RGB
 
-| Simulator/Framework | State FPS  | RGB FPS   | Depth FPS | RGB+Depth FPS | RGB+Depth+Segmentation FPS |
-| ------------------- | ---------- | --------- | --------- | ------------- | -------------------------- |
-| SAPIEN/ManiSkill    | 318580.257 | 18549.002 | 18549.002 | 18549.002     | 18549.002                  |
-| IsaacSim/IsaacLab   |            |           |           | N/A           | N/A                        |
+:::{figure} benchmarking_results/rtx_3080/fps:num_envs_1x128x128_rgb.png
+:::
+
+:::{figure} benchmarking_results/rtx_3080/fps:num_cameras_rgb.png
+:::
+
+:::{figure} benchmarking_results/rtx_3080/fps:camera_size_rgb.png
+:::
+
+#### RGB+Depth
+
+
+
 
 ## Commands for Reproducing the Results
 
@@ -66,4 +64,17 @@ python isaac_lab_gpu_sim.py --task "Isaac-Cartpole-RGB-Camera-Direct-Benchmark-v
 ```
 
 
+## Benchmarking Details/Methodology
+
+There are currently two benchmarked tasks: Cartpole Balance (classic control), and Pick Cube (manipulation). Details about the exact configurations of the two tasks are detailed in the [next section](#task-configuration).
+
+For simulators that use physx (like ManiSkill and Isaac Lab), for comparison we try to align as many simulation configuration parameters (like number of solver position iterations) as well as object types (e.g. collision meshes, size of objects etc.) as close as possible.
+
+In the future we plan to benchmark other simulators using other physics engines (like Mujoco) although how to fairly do so is still WIP.
+
+Reward functions and evaluation functions are purposely left out and not benchmarked.
+
+Due to varying implementations of parallel rendering mechanisms, to benchmark the FPS when generating RGB, Depth, and/or Segmentation observations, we plot figures showing the FPS ablating on the number of parallel environments, image size, and number of cameras. Within each evaluation, we try and pick configurations that maximize the FPS when given fixed # of environments, # of cameras per environment, and/or image size.
+
 ## Task Configuration
+WIP
