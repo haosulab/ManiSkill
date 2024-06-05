@@ -282,3 +282,27 @@ One robot must push/give the cube on its side to the other side so the other rob
 <video preload="auto" controls="True" width="100%">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/TwoRobotStackCube-v1_rt.mp4" type="video/mp4">
 </video>
+
+## RollBall-v1
+![dense-reward][reward-badge]
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+A simple task where the objective is to push and roll a ball to a goal region at the other end of the table.
+
+**Supported Robots: (Panda, Panda)**
+
+**Randomizations:**
+- the ball's xy position is randomized on top of a table in the region [0.2, 0.5] x [-0.4, 0.7]. It is placed flat on the table
+- the target goal region is marked by a red/white circular target. The position of the target is randomized on top of a table in the region [-0.4, -0.7] x [0.2, -0.9]
+
+**Success Conditions:**
+-  the ball's xy position is within goal_radius (default 0.1) of the target's xy position by euclidean distance.
+:::
+
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/RollBall-v1.mp4" type="video/mp4">
+</video>

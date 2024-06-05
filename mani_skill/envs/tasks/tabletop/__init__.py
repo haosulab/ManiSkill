@@ -11,3 +11,4 @@ from .stack_cube import StackCubeEnv
 from .turn_faucet import TurnFaucetEnv
 from .two_robot_pick_cube import TwoRobotPickCube
 from .two_robot_stack_cube import TwoRobotStackCube
+from .roll_ball import RollBallEnv
