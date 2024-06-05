@@ -331,7 +331,6 @@ class RecordEpisode(gym.Wrapper):
             # if we reconfigure, there is the possibility that state dictionary looks different now
             # so trajectory buffer must be wiped
             self._trajectory_buffer = None
-
         if self.save_trajectory:
             state_dict = self.base_env.get_state_dict()
             action = common.batch(self.action_space.sample())
@@ -356,9 +355,6 @@ class RecordEpisode(gym.Wrapper):
                 fail=np.zeros((1, self.num_envs), dtype=bool),
                 env_episode_ptr=np.zeros((self.num_envs,), dtype=int),
             )
-            if self.num_envs == 1:
-                first_step.observation = common.batch(first_step.observation)
-                first_step.action = common.batch(first_step.action)
             env_idx = np.arange(self.num_envs)
             if "env_idx" in options:
                 env_idx = common.to_numpy(options["env_idx"])

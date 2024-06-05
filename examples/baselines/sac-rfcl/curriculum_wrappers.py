@@ -50,7 +50,6 @@ class ReverseCurriculumWrapper(gym.Wrapper):
             env_states_flat = common.flatten_state_dict(env_states)
             max_eps_len = max(len(env_states_flat), max_eps_len)
             env_states_flat_list.append(env_states_flat)
-
         self.env_states = torch.zeros((self.traj_count, max_eps_len, env_states_flat.shape[-1]), device=self.base_env.device)
         """environment states flattened into a matrix of shape (B, T, D) where B is the number of episodes, T is the maximum episode length, and D is the dimension of the state"""
         self.demo_curriculum_step = torch.zeros((self.traj_count,), dtype=torch.int32)

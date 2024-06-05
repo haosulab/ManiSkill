@@ -24,6 +24,7 @@ from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.trajectory import utils as trajectory_utils
 from mani_skill.trajectory.merge_trajectory import merge_h5
 from mani_skill.utils import common, gym_utils, io_utils, wrappers
+from mani_skill.utils.structs.link import Link
 
 
 def qpos_to_pd_joint_delta_pos(controller: PDJointPosController, qpos):
@@ -103,10 +104,15 @@ def from_pd_joint_pos_to_ee(
     # given target joint positions instead of current joint positions.
     # Thus, we need to compute forward kinematics
     pin_model = ori_controller.articulation.create_pinocchio_model()
+    assert (
+        "arm" in ori_controller.controllers
+    ), "Could not find the controller for the robot arm. This controller conversion tool requires there to be a key called 'arm' in the controller"
     ori_arm_controller: PDJointPosController = ori_controller.controllers["arm"]
     arm_controller: PDEEPoseController = controller.controllers["arm"]
-    assert arm_controller.config.frame == "ee"
-    ee_link: sapien.Link = arm_controller.ee_link
+    assert (
+        arm_controller.config.frame == "root_translation:root_aligned_body_rotation"
+    ), "Currently only support the 'root_translation:root_aligned_body_rotation' ee control frame"
+    ee_link: Link = arm_controller.ee_link
 
     info = {}
 
@@ -132,7 +138,7 @@ def from_pd_joint_pos_to_ee(
 
         flag = True
 
-        for _ in range(2):
+        for _ in range(4):
             if target_mode:
                 prev_ee_pose_at_base = arm_controller._target_pose
             else:
@@ -485,9 +491,13 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
         ori_control_mode = ep["control_mode"]
 
         for _ in range(args.max_retry + 1):
+            # Each trial for each trajectory to replay, we reset the environment
+            # and optionally set the first environment state
             env.reset(seed=seed, **reset_kwargs)
             if ori_env is not None:
                 ori_env.reset(seed=seed, **reset_kwargs)
+
+            # set first environment state and update recorded env state
             if args.use_first_env_state or args.use_env_states:
                 ori_env_states = trajectory_utils.dict_to_list_of_dicts(
                     ori_h5_file[traj_id]["env_states"]
@@ -509,11 +519,21 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
                     recursive_replace(
                         env._trajectory_buffer.state, common.batch(ori_env_states[0])
                     )
+                    fixed_obs = env.base_env.get_obs()
+                    recursive_replace(
+                        env._trajectory_buffer.observation,
+                        common.to_numpy(common.batch(fixed_obs)),
+                    )
             # Original actions to replay
             ori_actions = ori_h5_file[traj_id]["actions"][:]
             info = {}
 
             # Without conversion between control modes
+            assert not (
+                target_control_mode is not None and args.use_env_states
+            ), "Cannot use env states when trying to \
+                convert from one control mode to another. This is because control mode conversion causes there to be changes \
+                in how many actions are taken to achieve the same states"
             if target_control_mode is None:
                 n = len(ori_actions)
                 if pbar is not None:
@@ -549,6 +569,10 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
                     render=args.vis,
                     pbar=pbar,
                     verbose=args.verbose,
+                )
+            else:
+                raise NotImplementedError(
+                    f"Script currently does not support converting {ori_control_mode} to {target_control_mode}"
                 )
 
             success = info.get("success", False)
