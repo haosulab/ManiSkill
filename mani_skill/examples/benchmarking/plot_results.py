@@ -43,7 +43,7 @@ def main(args):
             if len(df) == 0: continue
             for j, (x, y) in enumerate(zip(df["num_envs"], df["env.step/fps"])):
                 ax.annotate(f'{df["env.step/gpu_mem_use"].iloc[j] / (1024 * 1024 * 1024):0.1f} GB', (x, y), textcoords="offset points", xytext=(0,5), ha='center', fontsize=7)
-            ax.plot(df["num_envs"], df["env.step/fps"], 'o', label=exp_name, color=COLOR_PALLETE[i % len(COLOR_PALLETE)])
+            ax.plot(df["num_envs"], df["env.step/fps"], '-o', label=exp_name, color=COLOR_PALLETE[i % len(COLOR_PALLETE)])
         plt.legend()
         plt.tight_layout()
         fig.savefig(f"benchmark_results/fps:num_envs_1x{cam_size}x{cam_size}_rgb.png")
@@ -63,7 +63,7 @@ def main(args):
         df = df.loc[ids]
         for j, (x, y) in enumerate(zip(df["camera_width"], df["env.step/fps"])):
             ax.annotate(f'{df["num_envs"].iloc[j]} envs', (x, y), textcoords="offset points", xytext=(0,5), ha='center')
-        ax.plot(df["camera_width"], df["env.step/fps"], 'o', label=exp_name, color=COLOR_PALLETE[i % len(COLOR_PALLETE)])
+        ax.plot(df["camera_width"], df["env.step/fps"], '-o', label=exp_name, color=COLOR_PALLETE[i % len(COLOR_PALLETE)])
     plt.legend()
     plt.tight_layout()
     fig.savefig("benchmark_results/fps:camera_size_rgb.png")
@@ -84,7 +84,7 @@ def main(args):
         if len(df) == 0: continue
         for j, (x, y) in enumerate(zip(df["num_cameras"], df["env.step/fps"])):
             ax.annotate(f'{df["num_envs"].iloc[j]} envs', (x, y), textcoords="offset points", xytext=(0,5), ha='center')
-        ax.plot(df["num_cameras"], df["env.step/fps"], 'o', label=exp_name, color=COLOR_PALLETE[i % len(COLOR_PALLETE)])
+        ax.plot(df["num_cameras"], df["env.step/fps"], '-o', label=exp_name, color=COLOR_PALLETE[i % len(COLOR_PALLETE)])
     plt.legend()
     plt.tight_layout()
     fig.savefig("benchmark_results/fps:num_cameras_rgb.png")

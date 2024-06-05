@@ -54,10 +54,39 @@ import omni.isaac.lab_tasks  # noqa: F401
 from omni.isaac.lab_tasks.utils import parse_env_cfg
 import envs.isaaclab
 import torch
+import sched, time
+
+
+env_created = False
+from threading import Timer
+
+class RepeatedTimer(object):
+    def __init__(self, interval, function, *args, **kwargs):
+        self._timer     = None
+        self.interval   = interval
+        self.function   = function
+        self.args       = args
+        self.kwargs     = kwargs
+        self.is_running = False
+        self.start()
+
+    def _run(self):
+        self.is_running = False
+        self.start()
+        self.function(*self.args, **self.kwargs)
+
+    def start(self):
+        if not self.is_running:
+            self._timer = Timer(self.interval, self._run)
+            self._timer.start()
+            self.is_running = True
+
+    def stop(self):
+        self._timer.cancel()
+        self.is_running = False
+
 def main():
-    """Train with RL-Games agent."""
-    # parse seed from command line
-    args_cli_seed = args_cli.seed
+    global env_created
 
     # parse configuration
     env_cfg = parse_env_cfg(
@@ -71,6 +100,7 @@ def main():
         env = gym.make(args_cli.task, cfg=env_cfg, camera_width=args_cli.cam_width, camera_height=args_cli.cam_height, num_cameras=args_cli.num_cams, obs_mode=args_cli.obs_mode, render_mode="rgb_array" if args_cli.video else None)
     with torch.inference_mode():
         env.reset(seed=2022)
+        env_created = True
         env.step(torch.from_numpy(env.action_space.sample()).cuda())  # warmup step
         env.reset(seed=2022)
         torch.manual_seed(0)
@@ -98,7 +128,6 @@ def main():
     env.close()
 
     # append results to csv
-    # try:
     env_id_mapping = {
         "Isaac-Cartpole-RGB-Camera-Direct-Benchmark-v0": "CartpoleBalanceBenchmark-v1",
         "Isaac-Cartpole-Direct-Benchmark-v0": "CartpoleBalanceBenchmark-v1"
@@ -123,14 +152,19 @@ def main():
             gpu_type=torch.cuda.get_device_name()
         ),
     )
-    # except:
-    #     pass
     return
 
 if __name__ == "__main__":
-    # run the main function
+    def exit_on_stall():
+        global env_created
+        if not env_created:
+            print("Simulation not running after 30 seconds. Exiting")
+            simulation_app.close()
+            exit()
+    rt = RepeatedTimer(30, exit_on_stall)
     try:
         main()
     finally:
         # close sim app
+        rt.stop()
         simulation_app.close()
