@@ -44,6 +44,7 @@ def main(args):
         for i, (exp_name, df) in enumerate(data.items()):
             df = df[(df["obs_mode"] == "rgb") & (df["camera_width"] == cam_size) & (df["camera_height"] == cam_size) & (df["num_cameras"] == 1) & (df["env.step/gpu_mem_use"] < 16 * 1024 * 1024 * 1024)]
             if len(df) == 0: continue
+            df = df.sort_values("num_envs")
             for j, (x, y) in enumerate(zip(df["num_envs"], df["env.step/fps"])):
                 ax.annotate(f'{df["env.step/gpu_mem_use"].iloc[j] / (1024 * 1024 * 1024):0.1f} GB', (x, y), textcoords="offset points", xytext=(0,5), ha='center', fontsize=7)
             ax.plot(df["num_envs"], df["env.step/fps"], '-o', label=exp_name, color=COLOR_PALLETE[i % len(COLOR_PALLETE)])
@@ -64,6 +65,7 @@ def main(args):
         if len(df) == 0: continue
         ids = df.groupby("camera_width").idxmax()["env.step/fps"].to_list()
         df = df.loc[ids]
+        df = df.sort_values("camera_width")
         for j, (x, y) in enumerate(zip(df["camera_width"], df["env.step/fps"])):
             ax.annotate(f'{df["num_envs"].iloc[j]} envs', (x, y), textcoords="offset points", xytext=(0,5), ha='center')
         ax.plot(df["camera_width"], df["env.step/fps"], '-o', label=exp_name, color=COLOR_PALLETE[i % len(COLOR_PALLETE)])
@@ -84,6 +86,7 @@ def main(args):
         df = df[df["camera_width"] == 128]
         ids = df.groupby("num_cameras").idxmax()["env.step/fps"].to_list()
         df = df.loc[ids]
+        df = df.sort_values("camera_width")
         if len(df) == 0: continue
         for j, (x, y) in enumerate(zip(df["num_cameras"], df["env.step/fps"])):
             ax.annotate(f'{df["num_envs"].iloc[j]} envs', (x, y), textcoords="offset points", xytext=(0,5), ha='center')
