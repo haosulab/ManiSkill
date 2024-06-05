@@ -62,7 +62,6 @@ class Profiler:
                 cond = cond & mask
         data_dict = {**data, **stats_flat}
         if not cond.any():
-            import ipdb;ipdb.set_trace()
             df = pd.concat([df, pd.DataFrame(data_dict, index=[len(df)])])
         else:
             # replace the first instance

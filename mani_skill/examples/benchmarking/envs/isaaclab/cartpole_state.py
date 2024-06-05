@@ -54,7 +54,7 @@ class CartpoleEnvCfg(DirectRLEnvCfg):
     rew_scale_pole_vel = -0.005
 
 
-class CartpoleEnv(DirectRLEnv):
+class CartpoleBenchmarkEnv(DirectRLEnv):
     cfg: CartpoleEnvCfg
 
     def __init__(self, cfg: CartpoleEnvCfg, render_mode: str | None = None, **kwargs):
