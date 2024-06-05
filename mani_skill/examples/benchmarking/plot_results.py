@@ -103,14 +103,16 @@ def main(args):
     ax.set_xlabel("Number of Parallel Envs")
     ax.set_ylabel("FPS")
     width = 0.8 / len(data)
+
     for i, (exp_name, df) in enumerate(data.items()):
         df = df[(df["obs_mode"] == "state") & (df["num_envs"] >= 32)]
         if len(df) == 0: continue
         x = np.arange(len(df)) + i * width
         ax.bar(x, df["env.step/fps"], label=exp_name, color=COLOR_PALLETE[i % len(COLOR_PALLETE)], width=width)
+        num_envs_list = df["num_envs"]
         for j, (x_val, y_val, mem_use) in enumerate(zip(x, df["env.step/fps"], df["env.step/gpu_mem_use"])):
             ax.annotate(f'{mem_use / (1024 * 1024 * 1024):0.1f} GB', (x_val, y_val), textcoords="offset points", xytext=(0,5), ha='center', fontsize=7)
-    ax.set_xticks(x - width / 2, df["num_envs"])
+    ax.set_xticks(x - width / 2, num_envs_list)
     plt.legend()
     plt.tight_layout()
     fig.savefig("benchmark_results/fps:num_envs_state.png")
