@@ -1,8 +1,10 @@
 # Benchmark state FPS
 for n in 4 16 32 64 128 256 512 1024 2048 4096 8192
 do
-  python gpu_sim.py -e "CartpoleBalanceBenchmark-v1" \
-    -n=$n -o=state
+  isaaclab -p isaac_lab_gpu_sim.py \
+      --task "Isaac-Cartpole-Direct-v0" \
+      --num_envs $n --obs_mode state \
+      --headless
 done
 
 # Benchmark number of cameras

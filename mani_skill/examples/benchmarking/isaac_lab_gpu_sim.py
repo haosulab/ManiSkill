@@ -25,9 +25,9 @@ parser.add_argument(
 parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument("--obs_mode", type=str, default="state", help="Observation mode")
-parser.add_argument("--num-cams", type=int, default=1, help="Number of cameras. Only used by benchmark environments")
-parser.add_argument("--cam-width", type=int, default=128, help="Width of cameras. Only used by benchmark environments")
-parser.add_argument("--cam-height", type=int, default=128, help="Height of cameras. Only used by benchmark environments")
+parser.add_argument("--num-cams", type=int, default=None, help="Number of cameras. Only used by benchmark environments")
+parser.add_argument("--cam-width", type=int, default=None, help="Width of cameras. Only used by benchmark environments")
+parser.add_argument("--cam-height", type=int, default=None, help="Height of cameras. Only used by benchmark environments")
 parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
 
 # append AppLauncher cli args
@@ -99,6 +99,9 @@ def main():
     # create isaac environment
     if args_cli.obs_mode in ["rgb", "rgbd", "depth"]:
         env = gym.make(args_cli.task, cfg=env_cfg, camera_width=args_cli.cam_width, camera_height=args_cli.cam_height, num_cameras=args_cli.num_cams, obs_mode=args_cli.obs_mode, render_mode="rgb_array" if args_cli.video else None)
+    else:
+        env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
+
     with torch.inference_mode():
         env.reset(seed=2022)
         env_created = True
@@ -131,13 +134,18 @@ def main():
     # append results to csv
     env_id_mapping = {
         "Isaac-Cartpole-RGB-Camera-Direct-Benchmark-v0": "CartpoleBalanceBenchmark-v1",
-        "Isaac-Cartpole-Direct-Benchmark-v0": "CartpoleBalanceBenchmark-v1"
+        "Isaac-Cartpole-Direct-Benchmark-v0": "CartpoleBalanceBenchmark-v1",
+        "Isaac-Cartpole-Direct-v0": "CartpoleBalanceBenchmark-v1"
     }
-    sensor_settings_str = []
-    for i in range(args_cli.num_cams):
-        cam_type = "RGB" if args_cli.obs_mode == "rgb" else "Depth"
-        sensor_settings_str.append(f"{cam_type}({args_cli.cam_width}x{args_cli.cam_height})")
-    sensor_settings_str = ", ".join(sensor_settings_str)
+
+    if args_cli.obs_mode in ["rgb", "rgbd", "depth"]:
+        sensor_settings_str = []
+        for i in range(args_cli.num_cams):
+            cam_type = "RGB" if args_cli.obs_mode == "rgb" else "Depth"
+            sensor_settings_str.append(f"{cam_type}({args_cli.cam_width}x{args_cli.cam_height})")
+        sensor_settings_str = ", ".join(sensor_settings_str)
+    else:
+        sensor_settings_str = ""
     Path("benchmark_results").mkdir(parents=True, exist_ok=True)
     profiler.update_csv(
         "benchmark_results/isaac_lab.csv",

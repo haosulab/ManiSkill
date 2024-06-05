@@ -55,7 +55,7 @@ class Profiler:
             if k not in df:
                 df[k] = None
 
-            mask = df.isna() if data[k] is None else df[k] == data[k]
+            mask = df[k].isna() if data[k] is None else df[k] == data[k]
             if cond is None:
                 cond = mask
             else:
@@ -63,7 +63,7 @@ class Profiler:
         data_dict = {**data, **stats_flat}
         if not cond.any():
             import ipdb;ipdb.set_trace()
-            df.loc[len(df)] = data_dict
+            df = pd.concat([df, pd.DataFrame(data_dict, index=[len(df)])])
         else:
             # replace the first instance
             df.loc[df.loc[cond].index[0]] = data_dict
