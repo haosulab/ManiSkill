@@ -138,31 +138,8 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             body_type="kinematic",
         )
 
-        # mock position, to check the end of stick pos and grasp stick pos are correct
-
-        self.grasp_stick_region = actors.build_sphere(
-            self.scene,
-            radius=goal_thresh,
-            color=[0, 1, 1, 1],
-            name="grasp_stick_region",
-            body_type="kinematic",
-            add_collision=False,
-        )
-
-        self.long_stick_region = actors.build_sphere(
-            self.scene,
-            radius=goal_thresh,
-            color=[0, 1, 0, 1],
-            name="long_stick_region",
-            body_type="kinematic",
-            add_collision=False,
-        )
-        self._hidden_objects.append(self.long_stick_region)
-        self._hidden_objects.append(self.grasp_stick_region)
-
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
-            # initial setup for handling multiple environments
             b = len(env_idx)
             self.table_scene.initialize(env_idx)
 
@@ -177,8 +154,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             
             # set the goal's initial position
             target_region_xyz = xyz - torch.tensor([0.1 + self.goal_radius, 0, 0])
-            # set a little bit above 0 so the target is sitting on the table
-            target_region_xyz[..., 2] = 1e-3
+            target_region_xyz[..., 2] = 1e-3 # # set the z pos slightly above 0 so the target is on (not in) the table
             self.goal_region.set_pose(
                 Pose.create_from_pq(
                     p=target_region_xyz,
@@ -200,39 +176,6 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
                     q=euler2quat(0, 0, 0),
                 )
             )
-
-            # print("self.hockey_stick.pose.p:", self.hockey_stick.pose.p)
-            # print("self.cube.pose.p:", self.cube.pose.p)
-
-            # set long stick region to appear over the grasping region of the stick
-            # offset = torch.tensor([
-            #     _stick_length + _stick_thickness,
-            #     _stick_end_length,
-            #     0])
-            # target_region_xyz = torch.tensor(self.hockey_stick.pose.p) + offset
-            # target_region_xyz[..., 2] = 4 * _stick_thickness
-            # self.long_stick_region.set_pose(
-            #     Pose.create_from_pq(
-            #         p=target_region_xyz,
-            #         q=euler2quat(0, 0, 0),
-            #     )
-            # )
-
-            # # set grasp stick region to appear over the end of the stick
-            # offset = torch.tensor([
-            #     -_stick_length/2,
-            #     0,
-            #     0])
-            # target_region_xyz = torch.tensor(self.hockey_stick.pose.p)  + offset
-            # target_region_xyz[..., 2] = 4 * _stick_thickness
-            # self.grasp_stick_region.set_pose(
-            #     Pose.create_from_pq(
-            #         p=target_region_xyz,
-            #         q=euler2quat(0, 0, 0),
-            #     )
-            # )
-
-
 
     def _get_pos_of_end_of_stick(self):
         '''get the middle of end the shorter stick (end of the stick)'''
@@ -308,37 +251,30 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
         return obs
 
     def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
-        dst_cube_to_end_of_stick, dst_robot_to_grasp_stick_pos = self._get_distances()
+        _, dst_robot_to_grasp_stick_pos = self._get_distances()
 
         # 1. Add reward the closer robot hand gets to the stick grasp pose
         reaching_reward = 1 - torch.tanh(5 * dst_robot_to_grasp_stick_pos)
         reward = reaching_reward
 
-
         # 2. Add reward when we pick up the stick
         is_grasped = info["is_grasped"]
         reward+= is_grasped
 
-        # 3. Add reward as the distance of the end of the stick to the cube decreases
-        # distance_reward = (1 - torch.tanh(5 * dst_cube_to_end_of_stick)) * is_grasped
-        # reward += distance_reward
-
-        # 4. Add reward as the distance of the cube to the goal decreases
+        # 3. Add reward as the distance of the cube to the goal decreases
         obj_to_goal_dist = torch.linalg.norm(
             self.goal_region.pose.p - self.cube.pose.p, axis=1
         )
         place_reward = (1 - torch.tanh(5 * obj_to_goal_dist)) * is_grasped
         reward += place_reward
         
-        # 4. Add reward when the robot is static
+        # 5. Add reward when the robot is static
         static_reward = 1 - torch.tanh(
             5 * torch.linalg.norm(self.agent.robot.get_qvel()[..., :-2], axis=1)
         )
         reward += static_reward * info["is_obj_in_goal"]
-
         reward[info["success"]] = 5
-        # return reward
-        # convert reward to a tensor and return
+        
         return reward
 
 
