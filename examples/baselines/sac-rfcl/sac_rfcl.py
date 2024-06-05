@@ -425,8 +425,8 @@ if __name__ == "__main__":
             else:
                 raise ValueError("Cannot run RFCL in SAC with bootstrap_at_done not equal to 'always'")
             offline_rb.add(
-                obs=trajectory["obs"][i][0],
-                next_obs=trajectory["obs"][i + 1][0],
+                obs=trajectory["obs"][i],
+                next_obs=trajectory["obs"][i + 1],
                 action=trajectory["actions"][i],
                 reward=torch.tensor(reward),
                 done=torch.tensor(done)
