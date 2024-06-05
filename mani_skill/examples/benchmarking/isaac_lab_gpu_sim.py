@@ -9,6 +9,7 @@
 
 import argparse
 from pathlib import Path
+import sys
 
 from omni.isaac.lab.app import AppLauncher
 
@@ -159,8 +160,7 @@ if __name__ == "__main__":
         global env_created
         if not env_created:
             print("Simulation not running after 30 seconds. Exiting")
-            simulation_app.close()
-            exit()
+            os._exit(-1)
     rt = RepeatedTimer(30, exit_on_stall)
     try:
         main()
