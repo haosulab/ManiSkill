@@ -54,12 +54,15 @@ class Profiler:
         for k in data:
             if k not in df:
                 df[k] = None
+
+            mask = df.isna() if data[k] is None else df[k] == data[k]
             if cond is None:
-                cond = df[k] == data[k]
+                cond = mask
             else:
-                cond = cond & (df[k] == data[k])
+                cond = cond & mask
         data_dict = {**data, **stats_flat}
         if not cond.any():
+            import ipdb;ipdb.set_trace()
             df.loc[len(df)] = data_dict
         else:
             # replace the first instance

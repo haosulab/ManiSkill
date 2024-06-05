@@ -30,12 +30,13 @@ class CartPoleBalanceBenchmarkEnv(CartpoleBalanceEnv):
     def _default_sensor_configs(self):
         pose = sapien_utils.look_at(eye=[0, -4, 1], target=[0, 0, 1])
         sensor_configs = []
-        for i in range(self.num_cameras):
-            sensor_configs.append(CameraConfig(uid=f"base_camera_{i}",
-                                               pose=pose,
-                                               width=self.camera_width,
-                                               height=self.camera_height,
-                                               fov=np.pi / 2))
+        if self.num_cameras is not None:
+            for i in range(self.num_cameras):
+                sensor_configs.append(CameraConfig(uid=f"base_camera_{i}",
+                                                pose=pose,
+                                                width=self.camera_width,
+                                                height=self.camera_height,
+                                                fov=np.pi / 2))
         return sensor_configs
 
     def compute_dense_reward(self, obs, action, info):
