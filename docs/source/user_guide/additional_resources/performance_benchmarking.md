@@ -1,6 +1,6 @@
 # Performance Benchmarking
 
-This page documents code and results of benchmarking various robotics simulators on a number of dimensions. It is still a WIP as we write more fair benchmarking code that more accurately compares simulators under the same conditions.
+This page documents code and results of benchmarking various robotics simulators on a number of dimensions. It is still a WIP as we write more fair benchmarking code that more accurately compares simulators under the same conditions. We currently only have public graphs/results on one environment.
 
 Currently we just compare ManiSkill and [IsaacLab](https://github.com/isaac-sim/IsaacLab) on two tasks, Cartpole Balancing (control) and PickCube (table top manipulation). For details on benchmarking methodology see [this section](#benchmarking-detailsmethodology)
 
@@ -30,42 +30,12 @@ Raw benchmark results can be read from the .csv files in the [results folder on 
 
 #### RGB+Depth
 
-
+ManiSkill renders RGB and RGB+Depth at the same speed, see figures above for results. IsaacLab currently does not support this.
 
 
 ## Commands for Reproducing the Results
 
-### ManiSkill
-
-To benchmark SAPIEN / ManiSkill, after following the setup instructions on this repository's README.md, run
-
-```
-# test state simulation
-python -m mani_skill.examples.benchmarking.gpu_sim -e "PickCubeBenchmark-v1" -n=4096 -o=state
-# test rendering RGB, Depth, and Segmentation
-python -m mani_skill.examples.benchmarking.gpu_sim -e "PickCubeBenchmark-v1" -n=1024 -o=rgbd
-```
-The environments available are "PickCubeBenchmark-v1" and "CartpoleBalanceBenchmark-v1" (modified versions of the default environment in ManiSkill for benchmarking purposes)
-
-To generate the plots you can run
-
-## Isaac Lab
-
-To benchmark [Isaac Sim / Isaac Lab](https://github.com/isaac-sim/IsaacLab), follow their installation instructions here https://isaac-sim.github.io/IsaacLab/source/setup/installation/index.html. We recommend making a conda/mamba environment to install it. Then after activating the environment, run
-
-```
-cd mani_skill/examples/benchmarking
-# test state simulation
-python isaac_lab_gpu_sim.py --task "Isaac-Cartpole-Direct-v0" --num_envs 4096  --headless
-# test rendering just RGB
-python isaac_lab_gpu_sim.py --task "Isaac-Cartpole-RGB-Camera-Direct-Benchmark-v0" \
-  --num_envs 256 --enable_cameras --headless
-# test rendering RGB+Depth
-python isaac_lab_gpu_sim.py --task "Isaac-Cartpole-RGB-Camera-Direct-Benchmark-v0" \
-  --num_envs 4 --obs_mode rgbd \
-  --enable_cameras --headless
-```
-
+See the scripts under [mani_skill/examples/benchmarking/scripts](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/examples/benchmarking/scripts)
 
 ## Benchmarking Details/Methodology
 
