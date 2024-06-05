@@ -9,10 +9,10 @@ from mani_skill.utils.structs.types import SceneConfig, SimConfig
 @register_env("CartpoleBalanceBenchmark-v1")
 class CartPoleBalanceBenchmarkEnv(CartpoleBalanceEnv):
     def __init__(self, *args, camera_width=128, camera_height=128, num_cameras=1, **kwargs):
-        super().__init__(*args, **kwargs)
         self.camera_width = camera_width
         self.camera_height = camera_height
         self.num_cameras = num_cameras
+        super().__init__(*args, **kwargs)
 
     @property
     def _default_sim_config(self):
@@ -30,8 +30,8 @@ class CartPoleBalanceBenchmarkEnv(CartpoleBalanceEnv):
     def _default_sensor_configs(self):
         pose = sapien_utils.look_at(eye=[0, -4, 1], target=[0, 0, 1])
         sensor_configs = []
-        for _ in range(self.num_cameras):
-            sensor_configs.append(CameraConfig(name="base_camera",
+        for i in range(self.num_cameras):
+            sensor_configs.append(CameraConfig(uid=f"base_camera_{i}",
                                                pose=pose,
                                                width=self.camera_width,
                                                height=self.camera_height,

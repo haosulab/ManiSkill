@@ -6,12 +6,16 @@ from typing import Literal
 import psutil
 import torch
 
-try:
-    from mani_skill.utils import common
-except:
-    pass
 import subprocess as sp
-
+def flatten_dict_keys(d: dict, prefix=""):
+    """Flatten a dict by expanding its keys recursively."""
+    out = dict()
+    for k, v in d.items():
+        if isinstance(v, dict):
+            out.update(flatten_dict_keys(v, prefix + k + "/"))
+        else:
+            out[prefix + k] = v
+    return out
 class Profiler:
     """
     A simple class to help profile/benchmark simulator code
@@ -30,6 +34,10 @@ class Profiler:
             print(msg)
 
     def update_csv(self, csv_path: str, data: dict):
+        """Update a csv file with the given data (a dict representing a unique identifier of the result row)
+        and stats. If the file does not exist, it will be created. The update will replace an existing row
+        if the given data matches the data in the row. If there are multiple matches, only the first match
+        will be replaced and the rest are deleted"""
         import pandas as pd
         import os
 
@@ -37,8 +45,9 @@ class Profiler:
             df = pd.read_csv(csv_path)
         else:
             df = pd.DataFrame()
-        stats_flat = common.flatten_dict_keys(self.stats)
+        stats_flat = flatten_dict_keys(self.stats)
         cond = None
+
         for k in stats_flat:
             if k not in df:
                 df[k] = None
@@ -53,7 +62,10 @@ class Profiler:
         if not cond.any():
             df.loc[len(df)] = data_dict
         else:
+            # replace the first instance
             df.loc[df.loc[cond].index[0]] = data_dict
+            df.drop(df.loc[cond].index[1:], inplace=True)
+            # delete other instances
         df.to_csv(csv_path, index=False)
 
     @contextmanager

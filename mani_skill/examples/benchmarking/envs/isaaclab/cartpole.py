@@ -174,7 +174,7 @@ class CartpoleCameraBenchmarkEnv(DirectRLEnv):
             self.single_observation_space["depth"] = gym.spaces.Box(
                 low=-np.inf,
                 high=np.inf,
-                shape=(self.num_cameras, self.tiled_rgb_camera_cfgs[0].height, self.tiled_rgb_camera_cfgs[0].width, 1),
+                shape=(self.num_cameras, self.tiled_depth_camera_cfgs[0].height, self.tiled_depth_camera_cfgs[0].width, 1),
             )
         self.single_action_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_actions,))
 
@@ -203,11 +203,10 @@ class CartpoleCameraBenchmarkEnv(DirectRLEnv):
         self.scene.articulations["cartpole"] = self._cartpole
         if self.has_rgb:
             for i in range(self.num_cameras):
-                self.scene.sensors[f"tiled_rgb_camera_{i}"] = self.tiled_rgb_cameras
+                self.scene.sensors[f"tiled_rgb_camera_{i}"] = self.tiled_rgb_cameras[i]
         if self.has_depth:
             for i in range(self.num_cameras):
-                self.scene.sensors[f"tiled_depth_camera_{i}"] = self.tiled_depth_cameras
-        # self.scene.sensors["tiled_camera"] = self._tiled_camera
+                self.scene.sensors[f"tiled_depth_camera_{i}"] = self.tiled_depth_cameras[i]
         # add lights
         light_cfg = sim_utils.DomeLightCfg(intensity=2000.0, color=(0.75, 0.75, 0.75))
         light_cfg.func("/World/Light", light_cfg)
@@ -221,17 +220,15 @@ class CartpoleCameraBenchmarkEnv(DirectRLEnv):
     def _get_observations(self) -> dict:
         # data_type = "rgb" if "rgb" in self.cfg.tiled_camera.data_types else "depth"
         # observations = {"policy": self._tiled_camera.data.output[data_type].clone()}
-        observations = {}
+        observations = {"sensors": {}}
+        for i in range(self.num_cameras):
+            observations["sensors"][f"cam_{i}"] = {}
         if self.has_rgb:
-            rgbs = []
-            for cam, cfg in zip(self.tiled_rgb_cameras, self.tiled_rgb_camera_cfgs):
-                rgbs.append(cam.data.output["rgb"].clone())
-            observations["rgb"] = torch.stack(rgbs, dim=1)
+            for i, (cam, cfg) in enumerate(zip(self.tiled_rgb_cameras, self.tiled_rgb_camera_cfgs)):
+                observations["sensors"][f"cam_{i}"]["rgb"] = cam.data.output["rgb"].clone()
         if self.has_depth:
-            depths = []
-            for cam, cfg in zip(self.tiled_depth_cameras, self.tiled_depth_camera_cfgs):
-                depths.append(cam.data.output["depth"].clone())
-            observations["depth"] = torch.stack(depths, dim=1)
+            for i, (cam, cfg) in enumerate(zip(self.tiled_depth_cameras, self.tiled_depth_camera_cfgs)):
+                observations["sensors"][f"cam_{i}"]["depth"] = cam.data.output["depth"].clone()
         return observations
 
     def _get_rewards(self) -> torch.Tensor:

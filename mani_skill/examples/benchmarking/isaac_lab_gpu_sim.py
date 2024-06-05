@@ -8,6 +8,7 @@
 """Launch Isaac Sim Simulator first."""
 
 import argparse
+from pathlib import Path
 
 from omni.isaac.lab.app import AppLauncher
 
@@ -32,6 +33,7 @@ parser.add_argument("--seed", type=int, default=None, help="Seed used for the en
 AppLauncher.add_app_launcher_args(parser)
 # parse the arguments
 args_cli = parser.parse_args()
+assert args_cli.obs_mode != "rgbd", "IsaacLab currently does not support rendering RGB + Depth"
 
 # launch omniverse app
 app_launcher = AppLauncher(args_cli)
@@ -51,6 +53,7 @@ from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
 import omni.isaac.lab_tasks  # noqa: F401
 from omni.isaac.lab_tasks.utils import parse_env_cfg
 import envs.isaaclab
+import torch
 def main():
     """Train with RL-Games agent."""
     # parse seed from command line
@@ -61,19 +64,18 @@ def main():
         args_cli.task, use_gpu=not args_cli.cpu, num_envs=args_cli.num_envs, use_fabric=not args_cli.disable_fabric
     )
     profiler = Profiler(output_format="stdout")
-    import torch
+
+
     # create isaac environment
-    if args_cli.obs_mode in ["rgb", "rgbd"]:
+    if args_cli.obs_mode in ["rgb", "rgbd", "depth"]:
         env = gym.make(args_cli.task, cfg=env_cfg, camera_width=args_cli.cam_width, camera_height=args_cli.cam_height, num_cameras=args_cli.num_cams, obs_mode=args_cli.obs_mode, render_mode="rgb_array" if args_cli.video else None)
-    import matplotlib.pyplot as plt
-    import ipdb;ipdb.set_trace()
     with torch.inference_mode():
         env.reset(seed=2022)
         env.step(torch.from_numpy(env.action_space.sample()).cuda())  # warmup step
         env.reset(seed=2022)
         torch.manual_seed(0)
 
-        N = 1000
+        N = 100
         with profiler.profile("env.step", total_steps=N, num_envs=args_cli.num_envs):
             for i in range(N):
                 actions = (
@@ -83,7 +85,7 @@ def main():
                 obs, rew, terminated, truncated, info = env.step(actions)
         profiler.log_stats("env.step")
         env.reset(seed=2022)
-        N = 1000
+        N = 100
         with profiler.profile("env.step+env.reset", total_steps=N, num_envs=args_cli.num_envs):
             for i in range(N):
                 actions = (
@@ -96,37 +98,39 @@ def main():
     env.close()
 
     # append results to csv
-    try:
-        env_id_mapping = {
-            "Isaac-Cartpole-RGB-Camera-Direct-Benchmark-v0": "CartpoleBalanceBenchmark-v1",
-            "Isaac-Cartpole-Direct-Benchmark-v0": "CartpoleBalanceBenchmark-v1"
-        }
-        sensor_settings_str = []
-        for uid, cam in base_env._sensors.items():
-            if isinstance(cam, Camera):
-                cfg = cam.cfg
-                sensor_settings_str.append(f"RGBD({cfg.width}x{cfg.height})")
-        profiler.update_csv(
-            "benchmark_results/isaac_lab.csv",
-            dict(
-                env_id=env_id_mapping[args_cli.task],
-                obs_mode=args_cli.obs_mode,
-                num_envs=args_cli.num_envs,
-                # control_mode=args.control_mode,
-                sensor_settings=sensor_settings_str,
-                gpu_type=torch.cuda.get_device_name()
-            ),
-        )
-    except:
-        pass
+    # try:
+    env_id_mapping = {
+        "Isaac-Cartpole-RGB-Camera-Direct-Benchmark-v0": "CartpoleBalanceBenchmark-v1",
+        "Isaac-Cartpole-Direct-Benchmark-v0": "CartpoleBalanceBenchmark-v1"
+    }
+    sensor_settings_str = []
+    for i in range(args_cli.num_cams):
+        cam_type = "RGB" if args_cli.obs_mode == "rgb" else "Depth"
+        sensor_settings_str.append(f"{cam_type}({args_cli.cam_width}x{args_cli.cam_height})")
+    sensor_settings_str = ", ".join(sensor_settings_str)
+    Path("benchmark_results").mkdir(parents=True, exist_ok=True)
+    profiler.update_csv(
+        "benchmark_results/isaac_lab.csv",
+        dict(
+            env_id=env_id_mapping[args_cli.task],
+            obs_mode=args_cli.obs_mode,
+            num_envs=args_cli.num_envs,
+            # control_mode=args.control_mode,
+            num_cameras=args_cli.num_cams,
+            camera_width=args_cli.cam_width,
+            camera_height=args_cli.cam_height,
+            sensor_settings=sensor_settings_str,
+            gpu_type=torch.cuda.get_device_name()
+        ),
+    )
+    # except:
+    #     pass
     return
 
 if __name__ == "__main__":
-    """Test with
-    isaaclab -p benchmark_isaac_lab.py \
-        --headless --task=Isaac-Lift-Cube-Franka-v0 --num_envs=1024
-    """
     # run the main function
-    main()
-    # close sim app
-    simulation_app.close()
+    try:
+        main()
+    finally:
+        # close sim app
+        simulation_app.close()

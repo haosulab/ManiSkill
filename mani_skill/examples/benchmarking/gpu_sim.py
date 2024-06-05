@@ -1,4 +1,6 @@
 import argparse
+from pathlib import Path
+from turtle import update
 
 import gymnasium as gym
 import numpy as np
@@ -99,22 +101,23 @@ def main(args):
         assert (
             args.save_video == False
         ), "Saving video slows down speed a lot and it will distort results"
-        sensor_settings_str = []
-        for uid, cam in base_env._sensors.items():
-            if isinstance(cam, Camera):
-                cfg = cam.cfg
-                sensor_settings_str.append(f"RGBD({cfg.width}x{cfg.height})")
-        sensor_settings_str = ", ".join(sensor_settings_str)
+        Path("benchmark_results").mkdir(parents=True, exist_ok=True)
+        data = dict(
+            env_id=args.env_id,
+            obs_mode=args.obs_mode,
+            num_envs=args.num_envs,
+            control_mode=args.control_mode,
+            gpu_type=torch.cuda.get_device_name()
+        )
+        if args.env_id in BENCHMARK_ENVS:
+            data.update(
+            num_cameras=args.num_cams,
+            camera_width=args.cam_width,
+            camera_height=args.cam_height,
+        )
         profiler.update_csv(
             "benchmark_results/maniskill.csv",
-            dict(
-                env_id=args.env_id,
-                obs_mode=args.obs_mode,
-                num_envs=args.num_envs,
-                control_mode=args.control_mode,
-                sensor_settings=sensor_settings_str,
-                gpu_type=torch.cuda.get_device_name()
-            ),
+            data,
         )
     except:
         pass

@@ -16,21 +16,21 @@ Due to varying implementations of parallel rendering mechanisms, to benchmark th
 
 ## Results
 
-Results below are what occur when following the methodology above. The tables all show a snapshot of results using 4096 environments for measuring state-based FPS and the max number of environments runnable on a 4090 GPU using 128x128 camera size 
+Results below are what occur when following the methodology above. The tables all show a snapshot of results using 4096 environments for measuring state-based FPS and the max number of environments runnable on a 4090 GPU using one 128x128 camera per environment. 
 
 ### Cartpole Balance
 
-| Simulator/Framework | State FPS   | RGB FPS   | Depth FPS | RGB+Depth Observation FPS | RGB+Depth+Segmentation Observation FPS |
-| ------------------- | ----------- | --------- | --------- | ------------------------- | -------------------------------------- |
-| SAPIEN/ManiSkill    | 2537724.820 | 33018.081 | 33018.081 | 33018.081                 | 33018.081                              |
-| IsaacSim/IsaacLab   |             |           |           | N/A                       | N/A                                    |
+| Simulator/Framework | State FPS   | RGB FPS   | Depth FPS | RGB+Depth FPS | RGB+Depth+Segmentation FPS |
+| ------------------- | ----------- | --------- | --------- | ------------- | -------------------------- |
+| SAPIEN/ManiSkill    | 2537724.820 | 33018.081 | 33018.081 | 33018.081     | 33018.081                  |
+| IsaacSim/IsaacLab   |             |           |           | N/A           | N/A                        |
 
 ### Pick Cube
 
-| Simulator/Framework | State FPS  | RGB FPS   | Depth FPS | RGB+Depth Observation FPS | RGB+Depth+Segmentation Observation FPS |
-| ------------------- | ---------- | --------- | --------- | ------------------------- | -------------------------------------- |
-| SAPIEN/ManiSkill    | 318580.257 | 18549.002 | 18549.002 | 18549.002                 | 18549.002                              |
-| IsaacSim/IsaacLab   |            |           |           | N/A                       | N/A                                    |
+| Simulator/Framework | State FPS  | RGB FPS   | Depth FPS | RGB+Depth FPS | RGB+Depth+Segmentation FPS |
+| ------------------- | ---------- | --------- | --------- | ------------- | -------------------------- |
+| SAPIEN/ManiSkill    | 318580.257 | 18549.002 | 18549.002 | 18549.002     | 18549.002                  |
+| IsaacSim/IsaacLab   |            |           |           | N/A           | N/A                        |
 
 ## Commands for Reproducing the Results
 
