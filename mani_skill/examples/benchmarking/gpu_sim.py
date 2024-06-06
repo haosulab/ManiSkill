@@ -96,31 +96,32 @@ def main(args):
                     env.reset()
         profiler.log_stats("env.step+env.reset")
     env.close()
-    # append results to csv
-    try:
-        assert (
-            args.save_video == False
-        ), "Saving video slows down speed a lot and it will distort results"
-        Path("benchmark_results").mkdir(parents=True, exist_ok=True)
-        data = dict(
-            env_id=args.env_id,
-            obs_mode=args.obs_mode,
-            num_envs=args.num_envs,
-            control_mode=args.control_mode,
-            gpu_type=torch.cuda.get_device_name()
-        )
-        if args.env_id in BENCHMARK_ENVS:
-            data.update(
-                num_cameras=args.num_cams,
-                camera_width=args.cam_width,
-                camera_height=args.cam_height,
+    if args.save_results:
+        # append results to csv
+        try:
+            assert (
+                args.save_video == False
+            ), "Saving video slows down speed a lot and it will distort results"
+            Path("benchmark_results").mkdir(parents=True, exist_ok=True)
+            data = dict(
+                env_id=args.env_id,
+                obs_mode=args.obs_mode,
+                num_envs=args.num_envs,
+                control_mode=args.control_mode,
+                gpu_type=torch.cuda.get_device_name()
             )
-        profiler.update_csv(
-            "benchmark_results/maniskill.csv",
-            data,
-        )
-    except:
-        pass
+            if args.env_id in BENCHMARK_ENVS:
+                data.update(
+                    num_cameras=args.num_cams,
+                    camera_width=args.cam_width,
+                    camera_height=args.cam_height,
+                )
+            profiler.update_csv(
+                "benchmark_results/maniskill.csv",
+                data,
+            )
+        except:
+            pass
 
 
 def parse_args():
@@ -145,11 +146,7 @@ def parse_args():
         "--save-video", action="store_true", help="whether to save videos"
     )
     parser.add_argument(
-        "-f",
-        "--format",
-        type=str,
-        default="stdout",
-        help="format of results. Can be stdout or json.",
+        "--save-results", action="store_true", help="whether to save results to a csv file"
     )
     args = parser.parse_args()
     return args
