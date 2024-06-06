@@ -156,7 +156,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
 
             # set the goal's initial position
             target_offset = torch.tensor(
-                [0.1 + _goal_radius + torch.rand(1) * 0.2, torch.rand(1) * 0.1, 0]
+                [0.1 + _goal_radius + torch.rand(1) * 0.2, 0, 0]
             )
             target_region_xyz = xyz - target_offset
             target_region_xyz[
@@ -172,7 +172,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             # set the stick's initial position
             stick_offset = torch.tensor(
                 [
-                    -(_stick_length - 2 * _cube_half_size - torch.rand(1) * 0.2),
+                    -(_stick_length - 2 * _cube_half_size - torch.rand(1) * 0.1),
                     -(_stick_end_length + 3 * _cube_half_size),
                     0,
                 ]
