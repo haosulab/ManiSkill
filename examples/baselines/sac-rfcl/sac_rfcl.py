@@ -564,13 +564,13 @@ if __name__ == "__main__":
         update_time = time.time()
         learning_has_started = True
         # we can maybe make this faster by sampling a big batch at a time...
-        data = rb.sample(args.grad_steps_per_iteration *args.batch_size // 2)
-        offline_data = offline_rb.sample(args.grad_steps_per_iteration *args.batch_size // 2)
-        data.obs = torch.cat([data.obs, offline_data.obs], dim=0)
-        data.next_obs = torch.cat([data.next_obs, offline_data.next_obs], dim=0)
-        data.actions = torch.cat([data.actions, offline_data.actions], dim=0)
-        data.rewards = torch.cat([data.rewards, offline_data.rewards], dim=0)
-        data.dones = torch.cat([data.dones, offline_data.dones], dim=0)
+        data = rb.sample(args.grad_steps_per_iteration *args.batch_size)
+        # offline_data = offline_rb.sample(args.grad_steps_per_iteration *args.batch_size // 2)
+        # data.obs = torch.cat([data.obs, offline_data.obs], dim=0)
+        # data.next_obs = torch.cat([data.next_obs, offline_data.next_obs], dim=0)
+        # data.actions = torch.cat([data.actions, offline_data.actions], dim=0)
+        # data.rewards = torch.cat([data.rewards, offline_data.rewards], dim=0)
+        # data.dones = torch.cat([data.dones, offline_data.dones], dim=0)
         batch_size = data.rewards.shape[0] // args.grad_steps_per_iteration
         for local_update in range(args.grad_steps_per_iteration):
             global_update += 1
