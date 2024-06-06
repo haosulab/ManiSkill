@@ -80,9 +80,8 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
     - the robot is static (q velocity < 0.2)
     """
 
+    SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "sparse", "none")
     SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
-
-    # Specify some supported robot types
     agent: Union[Panda, Xmate3Robotiq, Fetch]
 
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
