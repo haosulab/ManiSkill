@@ -27,7 +27,7 @@ def _build_hockey_stick(
     """
     Build a hockey stick, which consists of two parts:
     - a long stick
-    - a shorter stick perpendicular to the long stick at the end of the long stick
+    - a shorter stick perpendicular to the long stick, connected to each other at the end of the long stick
     """
     builder = scene.create_actor_builder()
 
