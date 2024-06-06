@@ -23,8 +23,8 @@ python -m mani_skill.trajectory.replay_trajectory \
   -c pd_joint_delta_pos -o state \
   --save-traj
 python -m mani_skill.trajectory.replay_trajectory \
-  --traj-path ~/.maniskill/demos/PickCube-v1/motionplanning/trajectory.h5 \
-  --use-first-env-state -b "cpu" \
+  --traj-path ~/.maniskill/demos/PickCube-v1/teleop/trajectory.h5 \
+  --use-first-env-state -b "gpu" \
   -c pd_joint_delta_pos -o state \
   --save-traj
 ```

@@ -11,7 +11,7 @@ We recommend using conda/mamba and you can install the dependencies as so:
 conda create -n "rfcl" "python==3.9"
 conda activate rfcl
 pip install --upgrade "jax[cuda12_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
-pip install -e rfcl-jax
+pip install -e rfcl_jax
 ```
 
 Then you can install ManiSkill and its dependencies
