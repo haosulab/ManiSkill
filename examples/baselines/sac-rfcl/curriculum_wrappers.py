@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import torch
 import os
 import gymnasium as gym
@@ -59,15 +59,25 @@ class ReverseCurriculumWrapper(gym.Wrapper):
         """length of each demo"""
         self.demo_solved = torch.zeros((self.traj_count,), dtype=torch.bool, device=self.base_env.device)
         """whether the demo is solved (meaning the curriculum stage has reached the end)"""
+        @dataclass
+        class DemoMeta:
+            success: list[int] = field(default_factory=list)
+            count: list[int] = field(default_factory=list)
+        self.demo_success_rate_buffers: dict[str, DemoMeta] = dict()
+
         for i, env_states_flat in enumerate(env_states_flat_list):
             self.env_states[i, :len(env_states_flat)] = torch.from_numpy(env_states_flat).float().to(self.base_env.device)
             self.demo_horizon[i] = len(env_states_flat)
+            self.demo_success_rate_buffers[i] = DemoMeta()
         if not self.eval_mode:
             self.demo_curriculum_step = self.demo_horizon - 1
         h5py_file.close()
 
         self._demo_success_rate_buffer_pos = torch.zeros((self.traj_count, ), dtype=torch.int, device=self.base_env.device)
-        self.demo_success_rate_buffers = torch.zeros((self.traj_count, self.per_demo_buffer_size), dtype=torch.bool, device=self.base_env.device)
+        # self.demo_success_rate_buffers = torch.zeros((self.traj_count, self.per_demo_buffer_size), dtype=torch.bool, device=self.base_env.device)
+
+
+
         self.max_episode_steps = gym_utils.find_max_episode_steps_value(self.env)
         self.sampled_traj_indexes = torch.zeros((self.base_env.num_envs, ), dtype=torch.int, device=self.base_env.device)
         self.sampled_start_steps = torch.zeros((self.base_env.num_envs, ), dtype=torch.int, device=self.base_env.device)
@@ -101,15 +111,43 @@ class ReverseCurriculumWrapper(gym.Wrapper):
                 mask = dones & (self.demo_curriculum_step[self.sampled_traj_indexes] >= self.sampled_start_steps)
                 traj_idxs_to_check = self.sampled_traj_indexes[mask]
                 can_advance = torch.zeros((self.traj_count, ), dtype=torch.bool, device=self.base_env.device)
-                for i, (traj_idx, success) in enumerate(zip(traj_idxs_to_check, info["success"][mask])):
-                    self.demo_success_rate_buffers[traj_idx, self._demo_success_rate_buffer_pos[traj_idx]] = success
-                    self._demo_success_rate_buffer_pos[traj_idx] = (self._demo_success_rate_buffer_pos[traj_idx] + 1) % self.per_demo_buffer_size
-                    if self.demo_success_rate_buffers[traj_idx].float().mean() > 0.9:
-                        can_advance[traj_idx] = True
+
+                successes_of_traj_to_check = info["success"][mask]
+                for traj_idx in range(self.traj_count):
+                    traj_mask = traj_idxs_to_check == traj_idx
+                    matched = traj_mask.sum()
+                    if matched > 0:
+                        metadata = self.demo_success_rate_buffers[traj_idx]
+                        metadata.success.append(successes_of_traj_to_check[traj_mask].sum().item())
+                        metadata.count.append(matched.item())
+                        tc = np.sum(metadata.count)
+                        if tc > self.per_demo_buffer_size:
+                            # import ipdb;ipdb.set_trace()
+                            sr_val = np.sum(metadata.success) / tc
+                            if sr_val >= 0.9:
+                                can_advance[traj_idx] = True
+                                metadata.success = []
+                                metadata.count = []
+                            else:
+                                trim_idx = 0
+                                ct = 0
+                                for i in range(len(metadata.count)):
+                                    ct += metadata.count[i]
+                                    if ct >= self.per_demo_buffer_size:
+                                        trim_idx = i
+                                metadata.success = metadata.success[trim_idx:]
+                                metadata.count = metadata.count[trim_idx:]
+
+
+                # for i, (traj_idx, success) in enumerate(zip(traj_idxs_to_check, info["success"][mask])):
+                #     self.demo_success_rate_buffers[traj_idx, self._demo_success_rate_buffer_pos[traj_idx]] = success
+                #     self._demo_success_rate_buffer_pos[traj_idx] = (self._demo_success_rate_buffer_pos[traj_idx] + 1) % self.per_demo_buffer_size
+                #     if self.demo_success_rate_buffers[traj_idx].float().mean() > 0.9:
+                #         can_advance[traj_idx] = True
 
                 # advance curriculum. code below is indexing arrays shaped by the number of demos
                 self.demo_curriculum_step[can_advance] -= self.reverse_step_size
-                self.demo_success_rate_buffers[can_advance, :] = 0
+                # self.demo_success_rate_buffers[can_advance, :] = 0
                 self.demo_solved[self.demo_curriculum_step < 0] = True
                 self.demo_curriculum_step = torch.clamp(self.demo_curriculum_step, 0)
 

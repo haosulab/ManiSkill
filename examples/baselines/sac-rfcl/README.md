@@ -23,10 +23,10 @@ python -m mani_skill.trajectory.replay_trajectory \
   -c pd_joint_delta_pos -o state \
   --save-traj
 python -m mani_skill.trajectory.replay_trajectory \
-  --traj-path ../../../demos/PickCube-v1/motionplanning/trajectory.h5 \
-  --use-first-env-state -b "gpu" \
+  --traj-path ~/.maniskill/demos/PickCube-v1/motionplanning/trajectory.h5 \
+  --use-first-env-state -b "cpu" \
   -c pd_joint_delta_pos -o state \
-  --save-traj --vis
+  --save-traj
 ```
 
 ## Train
@@ -50,9 +50,28 @@ python sac_rfcl.py --env_id="PickCube-v1" \
 python sac_rfcl.py --env_id="PickCube-v1" \
   --num_envs=128 --training_freq=128 --utd=0.125 --buffer_size=10_000 \
   --total_timesteps=5_000_000 --eval_freq=25_000 \
-  --dataset_path=../../../demos/PickCube-v1/motionplanning/trajectory.state.pd_joint_delta_pos.h5 \
+  --dataset_path=~/.maniskill/demos/PickCube-v1/teleop/trajectory.state.pd_joint_delta_pos.h5 \
   --num-demos=5 --seed=2 --reverse-step-size=3 --demo_horizon_to_max_steps_ratio=1.5 \
   --exp-name="pickcube-mptrajs_5_point_reverse-3_buf-10k_nooffline_-fast128:128-s2" \
+  --reverse_curriculum_sampler="point"
+
+python sac_rfcl.py --env_id="StackCube-v1" \
+  --num_envs=128 --training_freq=128 --utd=0.125 --buffer_size=10_000 \
+  --total_timesteps=5_000_000 --eval_freq=25_000 \
+  --dataset_path=~/.maniskill/demos/StackCube-v1/teleop/trajectory.state.pd_joint_delta_pos.h5 \
+  --num-demos=5 --seed=2 --reverse-step-size=3 --demo_horizon_to_max_steps_ratio=1.5 \
+  --exp-name="stackcube_traj-5_point_buf-10k_nooffline_fast128:128-s2" \
+  --reverse_curriculum_sampler="point"
+
+python ppo.py --env_id="StackCube-v1" \
+  --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
+  --total_timesteps=25_000_000
+python ppo_rfcl.py --env_id="StackCube-v1" \
+  --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
+  --total_timesteps=50_000_000 \
+  --dataset_path=~/.maniskill/demos/StackCube-v1/teleop/trajectory.state.pd_joint_delta_pos.h5 \
+  --num-demos=5 --seed=2 --reverse-step-size=3 --demo_horizon_to_max_steps_ratio=3 \
+  --exp-name="ppo_rfcl_stackcube" \
   --reverse_curriculum_sampler="point"
 ```
 

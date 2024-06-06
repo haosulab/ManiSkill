@@ -646,7 +646,12 @@ if __name__ == "__main__":
             writer.add_scalar("charts/start_step_frac_avg", start_step_fracs.mean(), global_step)
             if args.autotune:
                 writer.add_scalar("losses/alpha_loss", alpha_loss.item(), global_step)
-
+            for traj_idx in range(curriculum_wrapped_envs.traj_count):
+                if len(curriculum_wrapped_envs.demo_success_rate_buffers[traj_idx].count) > 0:
+                    traj_sr = np.sum(curriculum_wrapped_envs.demo_success_rate_buffers[traj_idx].success) / np.sum(curriculum_wrapped_envs.demo_success_rate_buffers[traj_idx].count)
+                else:
+                    traj_sr = 1.0 # just means we reset the buffers
+                writer.add_scalar(f"charts/traj_{traj_idx}_t_i_success_rate", traj_sr, global_step)
     if not args.evaluate and args.save_model:
         model_path = f"runs/{run_name}/final_ckpt.pt"
         torch.save({
