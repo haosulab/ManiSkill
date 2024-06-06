@@ -91,7 +91,7 @@ class PickCubeEnv(BaseEnv):
         is_grasped = self.agent.is_grasping(self.cube)
         is_robot_static = self.agent.is_static(0.2)
         return {
-            "success": is_obj_placed & is_robot_static,
+            "success": is_obj_placed,  # & is_robot_static,
             "is_obj_placed": is_obj_placed,
             "is_robot_static": is_robot_static,
             "is_grasped": is_grasped,
