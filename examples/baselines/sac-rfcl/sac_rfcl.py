@@ -502,15 +502,15 @@ if __name__ == "__main__":
                 curriculum_wrapped_envs.curriculum_mode = "none"
                 # reset the environment and begin training as if training anew
                 envs.reset()
-                print(f"Loading current online replay buffer as offline replay buffer and resetting online buffer")
-                offline_rb = rb
-                rb = ReplayBuffer(
-                    env=envs,
-                    num_envs=args.num_envs,
-                    buffer_size=args.buffer_size,
-                    storage_device=torch.device(args.buffer_device),
-                    sample_device=device
-                )
+                # print(f"Loading current online replay buffer as offline replay buffer and resetting online buffer")
+                # offline_rb = rb
+                # rb = ReplayBuffer(
+                #     env=envs,
+                #     num_envs=args.num_envs,
+                #     buffer_size=args.buffer_size,
+                #     storage_device=torch.device(args.buffer_device),
+                #     sample_device=device
+                # )
 
 
 

@@ -48,11 +48,11 @@ python sac_rfcl.py --env_id="PickCube-v1" \
   --dataset_path=~/.maniskill/demos/PickCube-v1/teleop/trajectory.state.pd_joint_delta_pos.h5 \
   --num-demos=5 --seed=2 --save_train_video_freq=30
 python sac_rfcl.py --env_id="PickCube-v1" \
-  --num_envs=64 --training_freq=128 --utd=0.125 --buffer_size=10_000 \
+  --num_envs=128 --training_freq=128 --utd=0.125 --buffer_size=10_000 \
   --total_timesteps=5_000_000 --eval_freq=25_000 \
   --dataset_path=../../../demos/PickCube-v1/motionplanning/trajectory.state.pd_joint_delta_pos.h5 \
   --num-demos=5 --seed=2 --reverse-step-size=3 --demo_horizon_to_max_steps_ratio=1.5 \
-  --exp-name="pickcube-mptrajs_5_point_reverse-3_buf-10k_nooffline_-fast64:128" \
+  --exp-name="pickcube-mptrajs_5_point_reverse-3_buf-10k_nooffline_-fast128:128-s2" \
   --reverse_curriculum_sampler="point"
 ```
 
