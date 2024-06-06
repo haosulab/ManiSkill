@@ -15,7 +15,7 @@ from mani_skill.utils.building import actors
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs import Pose
-from mani_skill.utils.structs.types import Array
+from mani_skill.utils.structs.types import Array, GPUMemoryConfig, SimConfig
 
 
 def _build_hockey_stick(
@@ -24,6 +24,11 @@ def _build_hockey_stick(
     end_of_stick_length: float,
     stick_thickness: float,
 ):
+    """
+    Build a hockey stick, which consists of two parts:
+    - a long stick
+    - a shorter stick perpendicular to the long stick at the end of the long stick
+    """
     builder = scene.create_actor_builder()
 
     material = sapien.render.RenderMaterial(
@@ -31,13 +36,13 @@ def _build_hockey_stick(
     )
 
     half_sizes = [
-        [stick_length, stick_thickness, stick_thickness],  # long stick
-        [stick_thickness, end_of_stick_length, stick_thickness],  # end of stick
+        [stick_length, stick_thickness, stick_thickness],  # a long stick
+        [stick_thickness, end_of_stick_length, stick_thickness],  # a shorter stick
     ]
 
     poses = [
-        sapien.Pose(p=[0, 0, 0]),
-        sapien.Pose(
+        sapien.Pose(p=[0, 0, 0]),  # a long stick
+        sapien.Pose(  # a shorter stick
             p=[stick_length + stick_thickness, end_of_stick_length - stick_thickness, 0]
         ),
     ]
@@ -46,6 +51,15 @@ def _build_hockey_stick(
         builder.add_box_visual(pose, half_size, material=material)
 
     return builder.build(name="hockey_stick")
+
+
+# set some commonly used values
+_goal_radius = 0.1
+_cube_half_size = 0.02
+_stick_length = 0.2
+_stick_end_length = 0.1
+_stick_thickness = 5e-3  # thickness of the stick in y and z axis
+_goal_thresh = 0.025
 
 
 @register_env("PullCubeWithHockeyStick-v1", max_episode_steps=50)
@@ -66,34 +80,30 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
     - the robot is static (q velocity < 0.2)
     """
 
-    # set some commonly used values
-    _goal_radius = 0.1
-    _cube_half_size = 0.02
-    _stick_length = 0.2
-    _stick_end_length = 0.1
-    _stick_thickness = 5e-3  # y & z thicky
-    goal_thresh = 0.025
-
     SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
 
     # Specify some supported robot types
     agent: Union[Panda, Xmate3Robotiq, Fetch]
 
-    # same as pick_cube, stack_cube and push_cube
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
-    # same as pick_cube, stack_cube and push_cube
+    @property
+    def _default_sim_config(self):
+        return SimConfig(
+            gpu_memory_cfg=GPUMemoryConfig(
+                found_lost_pairs_capacity=2**25, max_rigid_patch_count=2**18
+            )
+        )
+
     @property
     def _default_sensor_configs(self):
         pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
         return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
-    # same as pick_cube, stack_cube and push_cube
     @property
     def _default_human_render_camera_configs(self):
-        # registers a more high-definition (512x512) camera used just for rendering when render_mode="rgb_array" or calling env.render_rgb_array()
         pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
         return CameraConfig(
             "render_camera", pose=pose, width=512, height=512, fov=1, near=0.01, far=100
@@ -108,7 +118,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
 
         self.cube = actors.build_cube(
             self.scene,
-            half_size=self.cube_half_size,
+            half_size=_cube_half_size,
             color=np.array([12, 42, 160, 255]) / 255,
             name="cube",
             body_type="dynamic",
@@ -116,14 +126,14 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
 
         self.hockey_stick = _build_hockey_stick(
             self.scene,
-            stick_length=self._stick_length,
-            end_of_stick_length=self._stick_end_length,
-            stick_thickness=self._stick_thickness,
+            stick_length=_stick_length,
+            end_of_stick_length=_stick_end_length,
+            stick_thickness=_stick_thickness,
         )
 
         self.goal_region = actors.build_red_white_target(
             self.scene,
-            radius=self._goal_radius,
+            radius=_goal_radius,
             thickness=1e-5,
             name="goal_region",
             add_collision=False,
@@ -138,13 +148,13 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             # set the cube's initial position
             xyz = torch.zeros((b, 3))
             xyz[..., :2] = torch.rand((b, 2)) * 0.2 - 0.1
-            xyz[..., 2] = self.cube_half_size
+            xyz[..., 2] = _cube_half_size
             q = [1, 0, 0, 0]
             obj_pose = Pose.create_from_pq(p=xyz, q=q)
             self.cube.set_pose(obj_pose)
 
             # set the goal's initial position
-            target_region_xyz = xyz - torch.tensor([0.1 + self._goal_radius, 0, 0])
+            target_region_xyz = xyz - torch.tensor([0.1 + _goal_radius, 0, 0])
             target_region_xyz[
                 ..., 2
             ] = 1e-3  # # set the z pos slightly above 0 so the target is on (not in) the table
@@ -158,8 +168,8 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             # set the stick's initial position
             offset = torch.tensor(
                 [
-                    -(_stick_length - 2 * self.cube_half_size),
-                    -(_stick_end_length + 3 * self.cube_half_size),
+                    -(_stick_length - 2 * _cube_half_size),
+                    -(_stick_end_length + 3 * _cube_half_size),
                     0,
                 ]
             )
@@ -210,7 +220,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             torch.linalg.norm(
                 self.cube.pose.p[..., :2] - self.goal_region.pose.p[..., :2], axis=1
             )
-            < self._goal_radius
+            < _goal_thresh
         )
         is_grasped = self.agent.is_grasping(self.hockey_stick)
         is_robot_static = self.agent.is_static(0.2)
