@@ -125,7 +125,7 @@ class Args:
     """number of sequential successes before considering advancing the curriculum """
     demo_horizon_to_max_steps_ratio: float = 3
     """the demo horizon to max steps ratio for dynamic timelimits for faster training with partial resets"""
-    max_steps_min: int = 8
+    max_steps_min: int = 16
     """the minimum max episode steps before truncating. In combination with demo_horizon_to_max_steps_ratio the environment resets
     every (max_steps_min + (T - k) // demo_horizon_to_max_steps_ratio) steps where T is the length of the demo and k is the curriculum step of that demo"""
     percent_solved_to_complete_reverse_curriculum: float = 0.9
@@ -206,16 +206,16 @@ class SoftQNetwork(nn.Module):
     def __init__(self, env):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(np.array(env.single_observation_space.shape).prod() + np.prod(env.single_action_space.shape), 256),
+            layer_init(nn.Linear(np.array(env.single_observation_space.shape).prod() + np.prod(env.single_action_space.shape), 256)),
             nn.LayerNorm(256),
             nn.ReLU(),
-            nn.Linear(256, 256),
+            layer_init(nn.Linear(256, 256)),
             nn.LayerNorm(256),
             nn.ReLU(),
-            nn.Linear(256, 256),
+            layer_init(nn.Linear(256, 256)),
             nn.LayerNorm(256),
             nn.ReLU(),
-            nn.Linear(256, 1),
+            nn.Linear(256, 1)
         )
 
     def forward(self, x, a):
@@ -226,20 +226,23 @@ class SoftQNetwork(nn.Module):
 LOG_STD_MAX = 2
 LOG_STD_MIN = -5
 
-
+def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
+    torch.nn.init.orthogonal_(layer.weight, std)
+    torch.nn.init.constant_(layer.bias, bias_const)
+    return layer
 class Actor(nn.Module):
     def __init__(self, env):
         super().__init__()
         self.backbone = nn.Sequential(
-            nn.Linear(np.array(env.single_observation_space.shape).prod(), 256),
+            layer_init(nn.Linear(np.array(env.single_observation_space.shape).prod(), 256)),
             nn.ReLU(),
-            nn.Linear(256, 256),
+            layer_init(nn.Linear(256, 256)),
             nn.ReLU(),
-            nn.Linear(256, 256),
+            layer_init(nn.Linear(256, 256)),
             nn.ReLU(),
         )
-        self.fc_mean = nn.Linear(256, np.prod(env.single_action_space.shape))
-        self.fc_logstd = nn.Linear(256, np.prod(env.single_action_space.shape))
+        self.fc_mean = layer_init(nn.Linear(256, np.prod(env.single_action_space.shape)), std=1.0)
+        self.fc_logstd = layer_init(nn.Linear(256, np.prod(env.single_action_space.shape)), std=1.0)
         # action rescaling
         h, l = env.single_action_space.high, env.single_action_space.low
         self.register_buffer("action_scale", torch.tensor((h - l) / 2.0, dtype=torch.float32))
@@ -503,14 +506,14 @@ if __name__ == "__main__":
                 # reset the environment and begin training as if training anew
                 envs.reset()
                 # print(f"Loading current online replay buffer as offline replay buffer and resetting online buffer")
-                # offline_rb = rb
-                # rb = ReplayBuffer(
-                #     env=envs,
-                #     num_envs=args.num_envs,
-                #     buffer_size=args.buffer_size,
-                #     storage_device=torch.device(args.buffer_device),
-                #     sample_device=device
-                # )
+                offline_rb = rb
+                rb = ReplayBuffer(
+                    env=envs,
+                    num_envs=args.num_envs,
+                    buffer_size=args.buffer_size,
+                    storage_device=torch.device(args.buffer_device),
+                    sample_device=device
+                )
 
 
 
@@ -564,13 +567,16 @@ if __name__ == "__main__":
         update_time = time.time()
         learning_has_started = True
         # we can maybe make this faster by sampling a big batch at a time...
-        data = rb.sample(args.grad_steps_per_iteration *args.batch_size)
-        # offline_data = offline_rb.sample(args.grad_steps_per_iteration *args.batch_size // 2)
-        # data.obs = torch.cat([data.obs, offline_data.obs], dim=0)
-        # data.next_obs = torch.cat([data.next_obs, offline_data.next_obs], dim=0)
-        # data.actions = torch.cat([data.actions, offline_data.actions], dim=0)
-        # data.rewards = torch.cat([data.rewards, offline_data.rewards], dim=0)
-        # data.dones = torch.cat([data.dones, offline_data.dones], dim=0)
+        data = rb.sample(args.grad_steps_per_iteration *args.batch_size // 2)
+        offline_data = offline_rb.sample(args.grad_steps_per_iteration *args.batch_size // 2)
+
+        # NOTE (stao): This is critical, data must be interleaved since we do iterative gradient updates. You cannot simply concat
+        # as the data distribution of online and offline data is very different!
+        data.obs = torch.cat([data.obs, offline_data.obs], dim=-1).view(-1, data.obs.shape[-1])
+        data.next_obs = torch.cat([data.next_obs, offline_data.next_obs], dim=-1).view(-1, data.obs.shape[-1])
+        data.actions = torch.cat([data.actions, offline_data.actions], dim=-1).view(-1, data.actions.shape[-1])
+        data.rewards = torch.cat([data.rewards[:, None], offline_data.rewards[:, None]], dim=-1).view(-1, 1)
+        data.dones = torch.cat([data.dones[:, None], offline_data.dones[:, None]], dim=-1).view(-1, 1)
         batch_size = data.rewards.shape[0] // args.grad_steps_per_iteration
         for local_update in range(args.grad_steps_per_iteration):
             global_update += 1
@@ -581,10 +587,13 @@ if __name__ == "__main__":
                 next_state_actions, next_state_log_pi, _ = actor.get_action(data.next_obs[batch_slice])
                 qf1_next_target = qf1_target(data.next_obs[batch_slice], next_state_actions)
                 qf2_next_target = qf2_target(data.next_obs[batch_slice], next_state_actions)
-                min_qf_next_target = torch.min(qf1_next_target, qf2_next_target) - alpha * next_state_log_pi
-                next_q_value = data.rewards[batch_slice].flatten() + (1 - data.dones[batch_slice].flatten()) * args.gamma * (min_qf_next_target).view(-1)
+                # NOTE (stao): RFCL's jax based sac implementation has a different formulation compared to CleanRL.
+                min_qf_next_target = torch.min(qf1_next_target, qf2_next_target)# - alpha * next_state_log_pi
+                #  batch.reward + discount * batch.mask * next_q
+                # import ipdb;ipdb.set_trace()
+                next_q_value = data.rewards[batch_slice].flatten() +  args.gamma * (1 - data.dones[batch_slice].flatten()) * min_qf_next_target.view(-1)
+                # next_q_value = data.rewards[batch_slice].flatten() + (1 - data.dones[batch_slice].flatten()) * args.gamma * (min_qf_next_target).view(-1)
                 # data.dones is "stop_bootstrap", which is computed earlier according to args.bootstrap_at_done
-
             qf1_a_values = qf1(data.obs[batch_slice], data.actions[batch_slice]).view(-1)
             qf2_a_values = qf2(data.obs[batch_slice], data.actions[batch_slice]).view(-1)
             qf1_loss = F.mse_loss(qf1_a_values, next_q_value)
@@ -608,9 +617,11 @@ if __name__ == "__main__":
                 actor_optimizer.step()
 
                 if args.autotune:
-                    with torch.no_grad():
-                        _, log_pi, _ = actor.get_action(data.obs[batch_slice])
+                    # NOTE (stao): SAC jax uses current actor not next actors log_pi.
+                    # with torch.no_grad():
+                    #     _, log_pi, _ = actor.get_action(data.obs[batch_slice])
                     # if args.correct_alpha:
+                    log_pi = log_pi.detach()
                     alpha_loss = (-log_alpha.exp() * (log_pi + target_entropy)).mean()
                     # else:
                     #     alpha_loss = (-log_alpha * (log_pi + target_entropy)).mean()
@@ -620,7 +631,7 @@ if __name__ == "__main__":
                     alpha_loss.backward()
                     a_optimizer.step()
                     alpha = log_alpha.exp().item()
-
+                entropy = -log_pi.mean().item()
             # update the target networks
             if global_update % args.target_network_frequency == 0:
                 for param, target_param in zip(qf1.parameters(), qf1_target.parameters()):
@@ -638,6 +649,7 @@ if __name__ == "__main__":
             writer.add_scalar("losses/qf_loss", qf_loss.item() / 2.0, global_step)
             writer.add_scalar("losses/actor_loss", actor_loss.item(), global_step)
             writer.add_scalar("losses/alpha", alpha, global_step)
+            writer.add_scalar("losses/entropy", entropy, global_step)
             writer.add_scalar("charts/update_time", update_time, global_step)
             writer.add_scalar("charts/rollout_time", rollout_time, global_step)
             writer.add_scalar("charts/rollout_fps", global_steps_per_iteration / rollout_time, global_step)

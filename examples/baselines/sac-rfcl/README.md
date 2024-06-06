@@ -73,6 +73,16 @@ python ppo_rfcl.py --env_id="StackCube-v1" \
   --num-demos=5 --seed=2 --reverse-step-size=3 --demo_horizon_to_max_steps_ratio=3 \
   --exp-name="ppo_rfcl_stackcube" \
   --reverse_curriculum_sampler="point"
+
+
+
+python sac_rfcl.py --env_id="PickCube-v1" \
+  --num_envs=8 --training_freq=32 --utd=0.5 --buffer_size=1_000_000 \
+  --total_timesteps=5_000_000 --eval_freq=25_000 \
+  --dataset_path=~/.maniskill/demos/PickCube-v1/teleop/trajectory.state.pd_joint_delta_pos.h5 \
+  --num-demos=5 --seed=1014 --reverse-step-size=4 --demo_horizon_to_max_steps_ratio=3 \
+  --exp-name="sacrfcl-pickcube-test" \
+  --reverse_curriculum_sampler="geometric"
 ```
 
 
