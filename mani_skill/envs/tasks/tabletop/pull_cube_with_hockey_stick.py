@@ -155,9 +155,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             self.cube.set_pose(obj_pose)
 
             # set the goal's initial position
-            target_offset = torch.tensor(
-                [0.1 + _goal_radius + torch.rand(1) * 0.2, 0, 0]
-            )
+            target_offset = torch.tensor([0.1 + _goal_radius, 0, 0])
             target_region_xyz = xyz - target_offset
             target_region_xyz[
                 ..., 2
