@@ -21,8 +21,8 @@ from omegaconf import OmegaConf
 from rfcl.agents.sac import SAC, ActorCritic, SACConfig
 from rfcl.agents.sac.networks import DiagGaussianActor
 from rfcl.data.dataset import ReplayDataset, get_states_dataset
-from rfcl.envs.make_env import EnvConfig, get_initial_state_wrapper, make_env_from_cfg
-from rfcl.envs.wrappers.curriculum_wrappers import ReverseCurriculumWrapper, ReverseCurriculumConfig
+from rfcl.envs.make_env import EnvConfig, make_env_from_cfg
+from curriculum_wrappers import ReverseCurriculumWrapper, ReverseCurriculumConfig
 from rfcl.envs.wrappers.forward_curriculum import SeedBasedForwardCurriculumWrapper
 from rfcl.logger import LoggerConfig
 from rfcl.models import NetworkConfig, build_network_from_cfg
@@ -212,7 +212,7 @@ def main(cfg: SACExperiment):
     algo = SAC(
         env=env,
         eval_env=eval_env,
-        jax_env="gym:gpu",
+        env_type="gym:gpu",
         ac=ac,
         logger_cfg=logger_cfg,
         cfg=cfg.sac,
