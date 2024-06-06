@@ -56,12 +56,14 @@ def _build_hockey_stick(
 # set some commonly used values
 _goal_radius = 0.1
 _cube_half_size = 0.02
+
+# the following are half sizes of the hockey stick
 _stick_length = 0.2
 _stick_end_length = 0.1
 _stick_thickness = 5e-3  # thickness of the stick in y and z axis
 
 
-@register_env("PullCubeWithHockeyStick-v1", max_episode_steps=70)
+@register_env("PullCubeWithHockeyStick-v1", max_episode_steps=100)
 class PullCubeWithHockeyStickEnv(BaseEnv):
     """
     Task Description
@@ -277,10 +279,10 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             5 * torch.linalg.norm(self.agent.robot.get_qvel()[..., :-2], axis=1)
         )
         reward += 2 * static_reward * info["is_obj_in_goal"]
-        reward[info["success"]] = 20
+        reward[info["success"]] = 5
 
         return reward
 
     def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
-        max_reward = 20
+        max_reward = 5
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
