@@ -61,7 +61,7 @@ _stick_end_length = 0.1
 _stick_thickness = 5e-3  # thickness of the stick in y and z axis
 
 
-@register_env("PullCubeWithHockeyStick-v1", max_episode_steps=50)
+@register_env("PullCubeWithHockeyStick-v1", max_episode_steps=70)
 class PullCubeWithHockeyStickEnv(BaseEnv):
     """
     Task Description
@@ -276,7 +276,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
         static_reward = 1 - torch.tanh(
             5 * torch.linalg.norm(self.agent.robot.get_qvel()[..., :-2], axis=1)
         )
-        reward += static_reward * info["is_obj_in_goal"]
+        reward += 2 * static_reward * info["is_obj_in_goal"]
         reward[info["success"]] = 20
 
         return reward
