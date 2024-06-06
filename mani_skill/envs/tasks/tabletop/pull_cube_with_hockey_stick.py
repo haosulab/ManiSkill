@@ -271,14 +271,14 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
         obj_to_goal_dist = torch.linalg.norm(
             self.goal_region.pose.p - self.cube.pose.p, axis=1
         )
-        place_reward = (1 - torch.tanh(5 * obj_to_goal_dist)) * is_grasped
+        place_reward = 2 * (1 - torch.tanh(5 * obj_to_goal_dist)) * is_grasped
         reward += place_reward
 
-        # 5. Add reward when the robot is static
+        # 4. Add reward when the robot is static
         static_reward = 1 - torch.tanh(
             5 * torch.linalg.norm(self.agent.robot.get_qvel()[..., :-2], axis=1)
         )
-        reward += 2 * static_reward * info["is_obj_in_goal"]
+        reward += static_reward * info["is_obj_in_goal"]
         reward[info["success"]] = 5
 
         return reward
