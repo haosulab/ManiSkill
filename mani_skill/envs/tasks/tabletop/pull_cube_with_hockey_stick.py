@@ -71,7 +71,8 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
     Randomizations
     --------------
     - the cube's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat on the table
-    - the position of the stick and goal is always the same relative to the cube
+    - the hockey stick's y position is set at -0.12 and its x position is randomized in the region [-0.16, -0.04]. It is placed flat on the table
+    - the goal region is placed at a random xy position in the region [0.2, 0.4] x [0,0.1]. It is placed flat on the table
 
     Success Conditions
     ------------------
