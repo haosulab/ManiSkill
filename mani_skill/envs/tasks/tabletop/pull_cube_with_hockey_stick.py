@@ -17,11 +17,6 @@ from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs import Pose
 from mani_skill.utils.structs.types import Array
 
-_stick_length = 0.2
-_stick_end_length = 0.1
-_stick_thickness = 5e-3  # y & z thicky
-goal_thresh = 0.025
-
 
 def _build_hockey_stick(
     scene: ManiSkillScene,
@@ -63,7 +58,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
     Randomizations
     --------------
     - the cube's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat on the table
-    - the target goal region is marked by a red/white circular target. The position of the target is randomized on top of a table in the region [-0.4, -0.7] x [0.2, -0.9]
+    - the position of the stick and goal is always the same relative to the cube
 
     Success Conditions
     ------------------
@@ -71,14 +66,18 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
     - the robot is static (q velocity < 0.2)
     """
 
+    # set some commonly used values
+    _goal_radius = 0.1
+    _cube_half_size = 0.02
+    _stick_length = 0.2
+    _stick_end_length = 0.1
+    _stick_thickness = 5e-3  # y & z thicky
+    goal_thresh = 0.025
+
     SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
 
     # Specify some supported robot types
     agent: Union[Panda, Xmate3Robotiq, Fetch]
-
-    # set some commonly used values
-    goal_radius = 0.1
-    cube_half_size = 0.02
 
     # same as pick_cube, stack_cube and push_cube
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
@@ -117,14 +116,14 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
 
         self.hockey_stick = _build_hockey_stick(
             self.scene,
-            stick_length=_stick_length,
-            end_of_stick_length=_stick_end_length,
-            stick_thickness=_stick_thickness,
+            stick_length=self._stick_length,
+            end_of_stick_length=self._stick_end_length,
+            stick_thickness=self._stick_thickness,
         )
 
         self.goal_region = actors.build_red_white_target(
             self.scene,
-            radius=self.goal_radius,
+            radius=self._goal_radius,
             thickness=1e-5,
             name="goal_region",
             add_collision=False,
@@ -145,7 +144,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             self.cube.set_pose(obj_pose)
 
             # set the goal's initial position
-            target_region_xyz = xyz - torch.tensor([0.1 + self.goal_radius, 0, 0])
+            target_region_xyz = xyz - torch.tensor([0.1 + self._goal_radius, 0, 0])
             target_region_xyz[
                 ..., 2
             ] = 1e-3  # # set the z pos slightly above 0 so the target is on (not in) the table
@@ -211,7 +210,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             torch.linalg.norm(
                 self.cube.pose.p[..., :2] - self.goal_region.pose.p[..., :2], axis=1
             )
-            < self.goal_radius
+            < self._goal_radius
         )
         is_grasped = self.agent.is_grasping(self.hockey_stick)
         is_robot_static = self.agent.is_static(0.2)
