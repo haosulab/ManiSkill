@@ -274,10 +274,10 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             5 * torch.linalg.norm(self.agent.robot.get_qvel()[..., :-2], axis=1)
         )
         reward += static_reward * info["is_obj_in_goal"]
-        reward[info["success"]] = 5
+        reward[info["success"]] = 20
 
         return reward
 
     def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
-        # this should be equal to compute_dense_reward / max possible reward
-        return self.compute_dense_reward(obs=obs, action=action, info=info) / 5
+        max_reward = 20
+        return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
