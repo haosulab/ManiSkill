@@ -55,6 +55,21 @@ def _build_hockey_stick(
 
 @register_env("PullCubeWithHockeyStick-v1", max_episode_steps=50)
 class PullCubeWithHockeyStickEnv(BaseEnv):
+    """
+    Task Description
+    ----------------
+    A simple task where the robot needs to pick up a hockey stick use it to pull the cube towards the pre-specified target.
+
+    Randomizations
+    --------------
+    - the cube's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat on the table
+    - the target goal region is marked by a red/white circular target. The position of the target is randomized on top of a table in the region [-0.4, -0.7] x [0.2, -0.9]
+
+    Success Conditions
+    ------------------
+    - the cube position is within `goal_thresh` (default 0.025m) euclidean distance of the goal position
+    - the robot is static (q velocity < 0.2)
+    """
 
     SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
 
