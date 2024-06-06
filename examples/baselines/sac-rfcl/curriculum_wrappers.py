@@ -100,13 +100,13 @@ class ReverseCurriculumWrapper(gym.Wrapper):
             if self.curriculum_mode == "reverse" and dones.any():
                 mask = dones & (self.demo_curriculum_step[self.sampled_traj_indexes] >= self.sampled_start_steps)
                 traj_idxs_to_check = self.sampled_traj_indexes[mask]
-
                 can_advance = torch.zeros((self.traj_count, ), dtype=torch.bool, device=self.base_env.device)
                 for i, (traj_idx, success) in enumerate(zip(traj_idxs_to_check, info["success"][mask])):
                     self.demo_success_rate_buffers[traj_idx, self._demo_success_rate_buffer_pos[traj_idx]] = success
                     self._demo_success_rate_buffer_pos[traj_idx] = (self._demo_success_rate_buffer_pos[traj_idx] + 1) % self.per_demo_buffer_size
                     if self.demo_success_rate_buffers[traj_idx].float().mean() > 0.9:
                         can_advance[traj_idx] = True
+
                 # advance curriculum. code below is indexing arrays shaped by the number of demos
                 self.demo_curriculum_step[can_advance] -= self.reverse_step_size
                 self.demo_success_rate_buffers[can_advance, :] = 0
@@ -139,7 +139,8 @@ class ReverseCurriculumWrapper(gym.Wrapper):
                 x_start_steps_density_list = np.array([0.5, 0.25, 0.125, 0.125 / 2, 0.125 / 2])
                 sampled_offsets = self.base_env._episode_rng.choice(np.arange(0, len(x_start_steps_density_list)), size=(b, ), replace=True, p=x_start_steps_density_list)
                 sampled_offsets = torch.from_numpy(sampled_offsets).to(self.base_env.device)
-
+            elif self.reverse_curriculum_sampler == "point":
+                sampled_offsets = self.demo_curriculum_step[reset_traj_indexes] * 0
             elif self.reverse_curriculum_sampler == "bigeo":
                 pass
 
