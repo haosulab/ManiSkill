@@ -59,7 +59,6 @@ _cube_half_size = 0.02
 _stick_length = 0.2
 _stick_end_length = 0.1
 _stick_thickness = 5e-3  # thickness of the stick in y and z axis
-_goal_thresh = 0.025
 
 
 @register_env("PullCubeWithHockeyStick-v1", max_episode_steps=50)
@@ -76,7 +75,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
 
     Success Conditions
     ------------------
-    - the cube position is within `goal_thresh` (default 0.025m) euclidean distance of the goal position
+    - the cube's xy position is within goal_radius (default 0.1) of the target's xy position by euclidean distance.
     - the robot is static (q velocity < 0.2)
     """
 
@@ -220,7 +219,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             torch.linalg.norm(
                 self.cube.pose.p[..., :2] - self.goal_region.pose.p[..., :2], axis=1
             )
-            < _goal_thresh
+            < _goal_radius
         )
         is_grasped = self.agent.is_grasping(self.hockey_stick)
         is_robot_static = self.agent.is_static(0.2)
