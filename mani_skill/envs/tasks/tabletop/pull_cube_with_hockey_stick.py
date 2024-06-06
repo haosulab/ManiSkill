@@ -153,7 +153,10 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             self.cube.set_pose(obj_pose)
 
             # set the goal's initial position
-            target_region_xyz = xyz - torch.tensor([0.1 + _goal_radius, 0, 0])
+            target_offset = torch.tensor(
+                [0.1 + _goal_radius + torch.rand(1) * 0.2, torch.rand(1) * 0.1, 0]
+            )
+            target_region_xyz = xyz - target_offset
             target_region_xyz[
                 ..., 2
             ] = 1e-3  # # set the z pos slightly above 0 so the target is on (not in) the table
@@ -165,14 +168,14 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             )
 
             # set the stick's initial position
-            offset = torch.tensor(
+            stick_offset = torch.tensor(
                 [
-                    -(_stick_length - 2 * _cube_half_size),
+                    -(_stick_length - 2 * _cube_half_size + torch.rand(1) * 0.2),
                     -(_stick_end_length + 3 * _cube_half_size),
                     0,
                 ]
             )
-            target_region_xyz = xyz + offset
+            target_region_xyz = xyz + stick_offset
             target_region_xyz[..., 2] = _stick_thickness
             self.hockey_stick.set_pose(
                 Pose.create_from_pq(
