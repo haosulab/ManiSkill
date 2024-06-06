@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import torch
 import os
 import gymnasium as gym
@@ -22,14 +22,13 @@ class ReverseCurriculumWrapper(gym.Wrapper):
     """Apply this before any auto reset wrapper"""
     def __init__(self, env, dataset_path,
                  cfg = ReverseCurriculumConfig(),
-                 ignore_terminations: bool = True,
                  eval_mode=False):
         super().__init__(env)
         self.curriculum_mode = "reverse"
         """which curriculum to apply to modify env states during training"""
         self.eval_mode = eval_mode
         self.cfg = cfg
-        self.ignore_terminations = ignore_terminations
+
         # Reverse curriculum specific configs
         self.reverse_curriculum_sampler = self.cfg.reverse_curriculum_sampler
         self.demo_horizon_to_max_steps_ratio = self.cfg.demo_horizon_to_max_steps_ratio
@@ -51,6 +50,7 @@ class ReverseCurriculumWrapper(gym.Wrapper):
             env_states_flat = common.flatten_state_dict(env_states)
             max_eps_len = max(len(env_states_flat), max_eps_len)
             env_states_flat_list.append(env_states_flat)
+
         self.env_states = torch.zeros((self.traj_count, max_eps_len, env_states_flat.shape[-1]), device=self.base_env.device)
         """environment states flattened into a matrix of shape (B, T, D) where B is the number of episodes, T is the maximum episode length, and D is the dimension of the state"""
         self.demo_curriculum_step = torch.zeros((self.traj_count,), dtype=torch.int32)
@@ -59,28 +59,17 @@ class ReverseCurriculumWrapper(gym.Wrapper):
         """length of each demo"""
         self.demo_solved = torch.zeros((self.traj_count,), dtype=torch.bool, device=self.base_env.device)
         """whether the demo is solved (meaning the curriculum stage has reached the end)"""
-        @dataclass
-        class DemoMeta:
-            success: list[int] = field(default_factory=list)
-            count: list[int] = field(default_factory=list)
-        self.demo_success_rate_buffers: dict[str, DemoMeta] = dict()
-
         for i, env_states_flat in enumerate(env_states_flat_list):
             self.env_states[i, :len(env_states_flat)] = torch.from_numpy(env_states_flat).float().to(self.base_env.device)
             self.demo_horizon[i] = len(env_states_flat)
-            self.demo_success_rate_buffers[i] = DemoMeta()
         if not self.eval_mode:
             self.demo_curriculum_step = self.demo_horizon - 1
         h5py_file.close()
 
         self._demo_success_rate_buffer_pos = torch.zeros((self.traj_count, ), dtype=torch.int, device=self.base_env.device)
-        # self.demo_success_rate_buffers = torch.zeros((self.traj_count, self.per_demo_buffer_size), dtype=torch.bool, device=self.base_env.device)
-
-
-
+        self.demo_success_rate_buffers = torch.zeros((self.traj_count, self.per_demo_buffer_size), dtype=torch.bool, device=self.base_env.device)
         self.max_episode_steps = gym_utils.find_max_episode_steps_value(self.env)
         self.sampled_traj_indexes = torch.zeros((self.base_env.num_envs, ), dtype=torch.int, device=self.base_env.device)
-        self.sampled_start_steps = torch.zeros((self.base_env.num_envs, ), dtype=torch.int, device=self.base_env.device)
         self.dynamic_max_episode_steps = torch.zeros((self.base_env.num_envs, ), dtype=torch.int, device=self.base_env.device)
         self._traj_index_density = np.ones((self.traj_count, ), dtype=np.float32) / self.traj_count
         assert self.max_episode_steps is not None, "Reverse curriculum wrapper requires max_episode_steps to be set"
@@ -101,53 +90,19 @@ class ReverseCurriculumWrapper(gym.Wrapper):
             truncated: torch.Tensor = (
                 self.base_env.elapsed_steps >= self.max_episode_steps
             )
-        if self.ignore_terminations:
-            dones = truncated
-        else:
-            dones = terminated | truncated
+            assert truncated.any() == truncated.all()
         assert "success" in info, "Reverse curriculum wrapper currently requires there to be a success key in the info dict"
         if not self.eval_mode:
-            if self.curriculum_mode == "reverse" and dones.any():
-                mask = dones & (self.demo_curriculum_step[self.sampled_traj_indexes] >= self.sampled_start_steps)
-                traj_idxs_to_check = self.sampled_traj_indexes[mask]
-                can_advance = torch.zeros((self.traj_count, ), dtype=torch.bool, device=self.base_env.device)
-
-                successes_of_traj_to_check = info["success"][mask]
-                for traj_idx in range(self.traj_count):
-                    traj_mask = traj_idxs_to_check == traj_idx
-                    matched = traj_mask.sum()
-                    if matched > 0:
-                        metadata = self.demo_success_rate_buffers[traj_idx]
-                        metadata.success.append(successes_of_traj_to_check[traj_mask].sum().item())
-                        metadata.count.append(matched.item())
-                        tc = np.sum(metadata.count)
-                        if tc > self.per_demo_buffer_size:
-                            # import ipdb;ipdb.set_trace()
-                            sr_val = np.sum(metadata.success) / tc
-                            if sr_val >= 0.9:
-                                can_advance[traj_idx] = True
-                                metadata.success = []
-                                metadata.count = []
-                            else:
-                                trim_idx = 0
-                                ct = 0
-                                for i in range(len(metadata.count)):
-                                    ct += metadata.count[i]
-                                    if ct >= self.per_demo_buffer_size:
-                                        trim_idx = i
-                                metadata.success = metadata.success[trim_idx:]
-                                metadata.count = metadata.count[trim_idx:]
-
-
-                # for i, (traj_idx, success) in enumerate(zip(traj_idxs_to_check, info["success"][mask])):
-                #     self.demo_success_rate_buffers[traj_idx, self._demo_success_rate_buffer_pos[traj_idx]] = success
-                #     self._demo_success_rate_buffer_pos[traj_idx] = (self._demo_success_rate_buffer_pos[traj_idx] + 1) % self.per_demo_buffer_size
-                #     if self.demo_success_rate_buffers[traj_idx].float().mean() > 0.9:
-                #         can_advance[traj_idx] = True
+            if self.curriculum_mode == "reverse" and truncated.any():
+                truncated_traj_idxs = self.sampled_traj_indexes[truncated]
+                self.demo_success_rate_buffers[truncated_traj_idxs, self._demo_success_rate_buffer_pos[truncated_traj_idxs]] = info["success"][truncated]
 
                 # advance curriculum. code below is indexing arrays shaped by the number of demos
+                self._demo_success_rate_buffer_pos[truncated_traj_idxs] = (self._demo_success_rate_buffer_pos[truncated_traj_idxs] + 1) % self.per_demo_buffer_size
+                per_demo_success_rates = self.demo_success_rate_buffers.float().mean(dim=1)
+                can_advance = per_demo_success_rates > 0.9
                 self.demo_curriculum_step[can_advance] -= self.reverse_step_size
-                # self.demo_success_rate_buffers[can_advance, :] = 0
+                self.demo_success_rate_buffers[can_advance, :] = 0
                 self.demo_solved[self.demo_curriculum_step < 0] = True
                 self.demo_curriculum_step = torch.clamp(self.demo_curriculum_step, 0)
 
@@ -174,18 +129,11 @@ class ReverseCurriculumWrapper(gym.Wrapper):
             if self.eval_mode:
                 self.base_env.set_state(self.env_states[self.sampled_traj_indexes, 5 + torch.zeros((b, ), dtype=torch.int, device=self.base_env.device)], env_idx)
             elif self.reverse_curriculum_sampler == "geometric":
-                x_start_steps_density_list = np.array([0.5, 0.25, 0.125, 0.125 / 2, 0.125 / 2])
-                sampled_offsets = self.base_env._episode_rng.choice(np.arange(0, len(x_start_steps_density_list)), size=(b, ), replace=True, p=x_start_steps_density_list)
-                sampled_offsets = torch.from_numpy(sampled_offsets).to(self.base_env.device)
-            elif self.reverse_curriculum_sampler == "point":
-                sampled_offsets = self.demo_curriculum_step[reset_traj_indexes] * 0
-            elif self.reverse_curriculum_sampler == "bigeo":
-                pass
-
-            x_start_steps = self.demo_curriculum_step[reset_traj_indexes] + sampled_offsets
-            x_start_steps = torch.clamp(x_start_steps, torch.zeros((b, ), device=self.base_env.device), self.demo_horizon[reset_traj_indexes] - 1).int()
-            self.dynamic_max_episode_steps[env_idx] = 8 + ((self.demo_horizon[reset_traj_indexes] - x_start_steps) // self.demo_horizon_to_max_steps_ratio).int()
-            self.sampled_start_steps[env_idx] = x_start_steps
+                x_start_steps_density_list = [0.5, 0.25, 0.125, 0.125 / 2, 0.125 / 2]
+                sampled_offsets = torch.from_numpy(self.base_env._episode_rng.randint(0, len(x_start_steps_density_list), size=(b, ))).to(self.base_env.device)
+                x_start_steps = self.demo_curriculum_step[reset_traj_indexes] + sampled_offsets
+                x_start_steps = torch.clamp(x_start_steps, torch.zeros((b, ), device=self.base_env.device), self.demo_horizon[reset_traj_indexes] - 1).int()
+            self.dynamic_max_episode_steps[env_idx] = 8 + (self.demo_horizon[reset_traj_indexes] - x_start_steps) // self.demo_horizon_to_max_steps_ratio
             self.base_env.set_state(self.env_states[reset_traj_indexes, x_start_steps], env_idx)
         obs = self.base_env.get_obs()
         return obs, {}

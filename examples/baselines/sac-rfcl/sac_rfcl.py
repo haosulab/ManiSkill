@@ -358,7 +358,6 @@ if __name__ == "__main__":
             reverse_step_size=args.reverse_step_size,
             traj_ids=traj_ids
         ),
-        ignore_terminations = not args.partial_reset,
         eval_mode=False
     )
 
@@ -426,15 +425,15 @@ if __name__ == "__main__":
             else:
                 raise ValueError("Cannot run RFCL in SAC with bootstrap_at_done not equal to 'always'")
             offline_rb.add(
-                obs=trajectory["obs"][i],
-                next_obs=trajectory["obs"][i + 1],
+                obs=trajectory["obs"][i][0],
+                next_obs=trajectory["obs"][i + 1][0],
                 action=trajectory["actions"][i],
                 reward=torch.tensor(reward),
                 done=torch.tensor(done)
             )
     h5py_file.close()
     # TRY NOT TO MODIFY: start the game
-    obs, _ = envs.reset(seed=args.seed) # in Gymnasium, seed is given to reset() instead of seed()
+    obs, info = envs.reset(seed=args.seed) # in Gymnasium, seed is given to reset() instead of seed()
     eval_obs, _ = eval_envs.reset(seed=args.seed)
     global_step = 0
     global_update = 0
@@ -502,15 +501,15 @@ if __name__ == "__main__":
                 curriculum_wrapped_envs.curriculum_mode = "none"
                 # reset the environment and begin training as if training anew
                 envs.reset()
-                # print(f"Loading current online replay buffer as offline replay buffer and resetting online buffer")
-                # offline_rb = rb
-                # rb = ReplayBuffer(
-                #     env=envs,
-                #     num_envs=args.num_envs,
-                #     buffer_size=args.buffer_size,
-                #     storage_device=torch.device(args.buffer_device),
-                #     sample_device=device
-                # )
+                print(f"Loading current online replay buffer as offline replay buffer and resetting online buffer")
+                offline_rb = rb
+                rb = ReplayBuffer(
+                    env=envs,
+                    num_envs=args.num_envs,
+                    buffer_size=args.buffer_size,
+                    storage_device=torch.device(args.buffer_device),
+                    sample_device=device
+                )
 
 
 
@@ -536,14 +535,11 @@ if __name__ == "__main__":
                 next_done = torch.zeros_like(terminations).to(torch.float32)
             else:
                 next_done = (terminations | truncations).to(torch.float32)
-
-            success_mask = infos["success"]
             if "final_info" in infos:
                 final_info = infos["final_info"]
                 done_mask = infos["_final_info"]
                 real_next_obs[done_mask] = infos["final_observation"][done_mask]
                 episodic_return = final_info['episode']['r'][done_mask].cpu().numpy().mean()
-                success_mask[done_mask] = final_info["success"][done_mask]
                 if "success" in final_info:
                     writer.add_scalar("charts/success_rate", final_info["success"][done_mask].cpu().numpy().mean(), global_step)
                 if "fail" in final_info:
@@ -563,30 +559,27 @@ if __name__ == "__main__":
 
         update_time = time.time()
         learning_has_started = True
-        # we can maybe make this faster by sampling a big batch at a time...
-        data = rb.sample(args.grad_steps_per_iteration *args.batch_size)
-        # offline_data = offline_rb.sample(args.grad_steps_per_iteration *args.batch_size // 2)
-        # data.obs = torch.cat([data.obs, offline_data.obs], dim=0)
-        # data.next_obs = torch.cat([data.next_obs, offline_data.next_obs], dim=0)
-        # data.actions = torch.cat([data.actions, offline_data.actions], dim=0)
-        # data.rewards = torch.cat([data.rewards, offline_data.rewards], dim=0)
-        # data.dones = torch.cat([data.dones, offline_data.dones], dim=0)
-        batch_size = data.rewards.shape[0] // args.grad_steps_per_iteration
         for local_update in range(args.grad_steps_per_iteration):
             global_update += 1
-            batch_slice = slice(local_update*batch_size, (local_update + 1)*batch_size )
+            data = rb.sample(args.batch_size // 2)
+            offline_data = offline_rb.sample(args.batch_size // 2)
+            data.obs = torch.cat([data.obs, offline_data.obs], dim=0)
+            data.next_obs = torch.cat([data.next_obs, offline_data.next_obs], dim=0)
+            data.actions = torch.cat([data.actions, offline_data.actions], dim=0)
+            data.rewards = torch.cat([data.rewards, offline_data.rewards], dim=0)
+            data.dones = torch.cat([data.dones, offline_data.dones], dim=0)
 
             # update the value networks
             with torch.no_grad():
-                next_state_actions, next_state_log_pi, _ = actor.get_action(data.next_obs[batch_slice])
-                qf1_next_target = qf1_target(data.next_obs[batch_slice], next_state_actions)
-                qf2_next_target = qf2_target(data.next_obs[batch_slice], next_state_actions)
+                next_state_actions, next_state_log_pi, _ = actor.get_action(data.next_obs)
+                qf1_next_target = qf1_target(data.next_obs, next_state_actions)
+                qf2_next_target = qf2_target(data.next_obs, next_state_actions)
                 min_qf_next_target = torch.min(qf1_next_target, qf2_next_target) - alpha * next_state_log_pi
-                next_q_value = data.rewards[batch_slice].flatten() + (1 - data.dones[batch_slice].flatten()) * args.gamma * (min_qf_next_target).view(-1)
+                next_q_value = data.rewards.flatten() + (1 - data.dones.flatten()) * args.gamma * (min_qf_next_target).view(-1)
                 # data.dones is "stop_bootstrap", which is computed earlier according to args.bootstrap_at_done
 
-            qf1_a_values = qf1(data.obs[batch_slice], data.actions[batch_slice]).view(-1)
-            qf2_a_values = qf2(data.obs[batch_slice], data.actions[batch_slice]).view(-1)
+            qf1_a_values = qf1(data.obs, data.actions).view(-1)
+            qf2_a_values = qf2(data.obs, data.actions).view(-1)
             qf1_loss = F.mse_loss(qf1_a_values, next_q_value)
             qf2_loss = F.mse_loss(qf2_a_values, next_q_value)
             qf_loss = qf1_loss + qf2_loss
@@ -597,9 +590,9 @@ if __name__ == "__main__":
 
             # update the policy network
             if global_update % args.policy_frequency == 0:  # TD 3 Delayed update support
-                pi, log_pi, _ = actor.get_action(data.obs[batch_slice])
-                qf1_pi = qf1(data.obs[batch_slice], pi)
-                qf2_pi = qf2(data.obs[batch_slice], pi)
+                pi, log_pi, _ = actor.get_action(data.obs)
+                qf1_pi = qf1(data.obs, pi)
+                qf2_pi = qf2(data.obs, pi)
                 min_qf_pi = torch.min(qf1_pi, qf2_pi)
                 actor_loss = ((alpha * log_pi) - min_qf_pi).mean()
 
@@ -609,7 +602,7 @@ if __name__ == "__main__":
 
                 if args.autotune:
                     with torch.no_grad():
-                        _, log_pi, _ = actor.get_action(data.obs[batch_slice])
+                        _, log_pi, _ = actor.get_action(data.obs)
                     # if args.correct_alpha:
                     alpha_loss = (-log_alpha.exp() * (log_pi + target_entropy)).mean()
                     # else:
@@ -646,12 +639,7 @@ if __name__ == "__main__":
             writer.add_scalar("charts/start_step_frac_avg", start_step_fracs.mean(), global_step)
             if args.autotune:
                 writer.add_scalar("losses/alpha_loss", alpha_loss.item(), global_step)
-            for traj_idx in range(curriculum_wrapped_envs.traj_count):
-                if len(curriculum_wrapped_envs.demo_success_rate_buffers[traj_idx].count) > 0:
-                    traj_sr = np.sum(curriculum_wrapped_envs.demo_success_rate_buffers[traj_idx].success) / np.sum(curriculum_wrapped_envs.demo_success_rate_buffers[traj_idx].count)
-                else:
-                    traj_sr = 1.0 # just means we reset the buffers
-                writer.add_scalar(f"charts/traj_{traj_idx}_t_i_success_rate", traj_sr, global_step)
+
     if not args.evaluate and args.save_model:
         model_path = f"runs/{run_name}/final_ckpt.pt"
         torch.save({

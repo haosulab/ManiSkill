@@ -22,11 +22,6 @@ python -m mani_skill.trajectory.replay_trajectory \
   --use-first-env-state -b "gpu" \
   -c pd_joint_delta_pos -o state \
   --save-traj
-python -m mani_skill.trajectory.replay_trajectory \
-  --traj-path ~/.maniskill/demos/PickCube-v1/motionplanning/trajectory.h5 \
-  --use-first-env-state -b "cpu" \
-  -c pd_joint_delta_pos -o state \
-  --save-traj
 ```
 
 ## Train
@@ -37,42 +32,6 @@ python sac_rfcl.py --env_id="PickCube-v1" \
   --total_timesteps=1_000_000 --eval_freq=25_000 \
   --dataset_path=~/.maniskill/demos/PickCube-v1/teleop/trajectory.state.pd_joint_delta_pos.h5 \
   --num-demos=5 --seed=2 --save_train_video_freq=15
-python sac_rfcl.py --env_id="PickCube-v1" \
-  --num_envs=16 --training_freq=32 --utd=0.5 --buffer_size=1_000_000 \
-  --total_timesteps=1_000_000 --eval_freq=25_000 \
-  --dataset_path=../../../demos/PickCube-v1/motionplanning/trajectory.state.pd_joint_delta_pos.h5 \
-  --num-demos=5 --seed=2 --save_train_video_freq=15 --reverse-step-size=3 --demo_horizon_to_max_steps_ratio=1.5
-python sac_rfcl.py --env_id="PickCube-v1" \
-  --num_envs=64 --training_freq=64 --utd=0.25 --buffer_size=500_000 \
-  --total_timesteps=5_000_000 --eval_freq=25_000 \
-  --dataset_path=~/.maniskill/demos/PickCube-v1/teleop/trajectory.state.pd_joint_delta_pos.h5 \
-  --num-demos=5 --seed=2 --save_train_video_freq=30
-python sac_rfcl.py --env_id="PickCube-v1" \
-  --num_envs=128 --training_freq=128 --utd=0.125 --buffer_size=10_000 \
-  --total_timesteps=5_000_000 --eval_freq=25_000 \
-  --dataset_path=~/.maniskill/demos/PickCube-v1/teleop/trajectory.state.pd_joint_delta_pos.h5 \
-  --num-demos=5 --seed=2 --reverse-step-size=3 --demo_horizon_to_max_steps_ratio=1.5 \
-  --exp-name="pickcube-mptrajs_5_point_reverse-3_buf-10k_nooffline_-fast128:128-s2" \
-  --reverse_curriculum_sampler="point"
-
-python sac_rfcl.py --env_id="StackCube-v1" \
-  --num_envs=128 --training_freq=128 --utd=0.125 --buffer_size=10_000 \
-  --total_timesteps=5_000_000 --eval_freq=25_000 \
-  --dataset_path=~/.maniskill/demos/StackCube-v1/teleop/trajectory.state.pd_joint_delta_pos.h5 \
-  --num-demos=5 --seed=2 --reverse-step-size=3 --demo_horizon_to_max_steps_ratio=1.5 \
-  --exp-name="stackcube_traj-5_point_buf-10k_nooffline_fast128:128-s2" \
-  --reverse_curriculum_sampler="point"
-
-python ppo.py --env_id="StackCube-v1" \
-  --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
-  --total_timesteps=25_000_000
-python ppo_rfcl.py --env_id="StackCube-v1" \
-  --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
-  --total_timesteps=50_000_000 \
-  --dataset_path=~/.maniskill/demos/StackCube-v1/teleop/trajectory.state.pd_joint_delta_pos.h5 \
-  --num-demos=5 --seed=2 --reverse-step-size=3 --demo_horizon_to_max_steps_ratio=3 \
-  --exp-name="ppo_rfcl_stackcube" \
-  --reverse_curriculum_sampler="point"
 ```
 
 
