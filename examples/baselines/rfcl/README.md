@@ -44,13 +44,15 @@ To train with CPU vectorization (faster with a small number of parallel environm
 ```bash
 env=pickcube
 demos=5
-seed=0
-XLA_PYTHON_CLIENT_PREALLOCATE=false python rfcl_jax/train.py rfcl_jax/configs/ms3/sac_ms3_${env}.yml \
-  logger.exp_name="ms3/${env}/${name_prefix}_${demos}_demos_s${seed}" \
-  logger.wandb=False \
-  train.num_demos=${demos} \
-  seed=${seed} \
-  train.steps=4000000
+for seed in 2 3 4 5
+do
+  XLA_PYTHON_CLIENT_PREALLOCATE=false python rfcl_jax/train.py rfcl_jax/configs/ms3/sac_ms3_${env}.yml \
+    logger.exp_name="ms3/${env}/${name_prefix}_${demos}_demos_s${seed}" \
+    logger.wandb=False \
+    train.num_demos=${demos} \
+    seed=${seed} \
+    train.steps=400_000 sac.num_eval_steps=50
+done
 ```
 
 To train with the GPU vectorization (faster with a large number of parallel environments) run
@@ -59,7 +61,7 @@ env=pickcube
 demos=5
 seed=0
 XLA_PYTHON_CLIENT_PREALLOCATE=false python train_ms3.py rfcl_jax/configs/ms3/sac_ms3_${env}.yml \
-  logger.exp_name="ms3/${env}/${name_prefix}_${demos}_demos_s${seed}" \
+  logger.exp_name="ms3/${env}/${name_prefix}_${demos}_demos_s${seed}-gpusim" \
   logger.wandb=False \
   train.num_demos=${demos} \
   seed=${seed} \

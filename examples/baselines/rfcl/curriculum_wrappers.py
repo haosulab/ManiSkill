@@ -112,40 +112,53 @@ class ReverseCurriculumWrapper(gym.Wrapper):
                 mask = dones & (self.demo_curriculum_step[self.sampled_traj_indexes] >= self.sampled_start_steps)
                 traj_idxs_to_check = self.sampled_traj_indexes[mask]
                 can_advance = torch.zeros((self.traj_count, ), dtype=torch.bool, device=self.base_env.device)
-
                 successes_of_traj_to_check = info["success"][mask]
+                # impl below is the same as the original and is a for loop
+                traj_idxs_to_check = traj_idxs_to_check.cpu().numpy()
+                for success, traj_idx in zip(successes_of_traj_to_check, traj_idxs_to_check):
+                    self.demo_success_rate_buffers[traj_idx].success.append(success.item())
+                    if len(self.demo_success_rate_buffers[traj_idx].success) > self.per_demo_buffer_size:
+                        self.demo_success_rate_buffers[traj_idx].success.pop(0)
                 for traj_idx in range(self.traj_count):
-                    traj_mask = traj_idxs_to_check == traj_idx
-                    matched = traj_mask.sum()
-                    if matched > 0:
-                        metadata = self.demo_success_rate_buffers[traj_idx]
-                        metadata.success.append(successes_of_traj_to_check[traj_mask].sum().item())
-                        metadata.count.append(matched.item())
-                        tc = np.sum(metadata.count)
-                        if tc > self.per_demo_buffer_size:
-                            # import ipdb;ipdb.set_trace()
-                            sr_val = np.sum(metadata.success) / tc
-                            if sr_val >= 0.9:
-                                can_advance[traj_idx] = True
-                                metadata.success = []
-                                metadata.count = []
-                            else:
-                                trim_idx = 0
-                                ct = 0
-                                for i in range(len(metadata.count)):
-                                    ct += metadata.count[i]
-                                    if ct >= self.per_demo_buffer_size:
-                                        trim_idx = i
-                                metadata.success = metadata.success[trim_idx:]
-                                metadata.count = metadata.count[trim_idx:]
+                    metadata = self.demo_success_rate_buffers[traj_idx]
+                    if len(metadata.success) > 0 and np.mean(metadata.success) >= 1.0:
+                        can_advance[traj_idx] = True
+                        metadata.success = []
 
-
-                # for i, (traj_idx, success) in enumerate(zip(traj_idxs_to_check, info["success"][mask])):
-                #     self.demo_success_rate_buffers[traj_idx, self._demo_success_rate_buffer_pos[traj_idx]] = success
-                #     self._demo_success_rate_buffer_pos[traj_idx] = (self._demo_success_rate_buffer_pos[traj_idx] + 1) % self.per_demo_buffer_size
-                #     if self.demo_success_rate_buffers[traj_idx].float().mean() > 0.9:
-                #         can_advance[traj_idx] = True
-
+                # alternative impl is more parallelized
+                # for traj_idx in range(self.traj_count):
+                #     traj_mask = traj_idxs_to_check == traj_idx
+                #     matched = traj_mask.sum()
+                #     if matched > 0:
+                #         # successes_of_traj_idx = successes_of_traj_to_check[traj_mask]
+                #         # if successes_of_traj_idx.any():
+                #         #     for i, success in enumerate(successes_of_traj_idx):
+                #         #         self.demo_success_rate_buffers[traj_idx].success.append(success.item())
+                #         #         if len(self.demo_success_rate_buffers[traj_idx].success) > 3:
+                #         #             self.demo_success_rate_buffers[traj_idx].success.pop(0)
+                #         #     if np.mean(self.demo_success_rate_buffers[traj_idx].success) >= 1.0:
+                #         #         can_advance[traj_idx] = True
+                #         #         # self.demo_success_rate_buffers[traj_idx].count.append(1)
+                #         #     # import ipdb;ipdb.set_trace()
+                #         metadata = self.demo_success_rate_buffers[traj_idx]
+                #         metadata.success.append(successes_of_traj_to_check[traj_mask].sum().item())
+                #         metadata.count.append(matched.item())
+                #         tc = np.sum(metadata.count)
+                #         if tc > self.per_demo_buffer_size:
+                #             sr_val = np.sum(metadata.success) / tc
+                #             if sr_val >= 0.9:
+                #                 can_advance[traj_idx] = True
+                #                 metadata.success = []
+                #                 metadata.count = []
+                #             else:
+                #                 trim_idx = 0
+                #                 ct = 0
+                #                 for i in range(len(metadata.count)):
+                #                     ct += metadata.count[i]
+                #                     if ct >= self.per_demo_buffer_size:
+                #                         trim_idx = i
+                #                 metadata.success = metadata.success[trim_idx:]
+                #                 metadata.count = metadata.count[trim_idx:]
                 # advance curriculum. code below is indexing arrays shaped by the number of demos
                 self.demo_curriculum_step[can_advance] -= self.reverse_step_size
                 # self.demo_success_rate_buffers[can_advance, :] = 0
@@ -155,7 +168,7 @@ class ReverseCurriculumWrapper(gym.Wrapper):
                 if can_advance.any():
                     # update the probability distribution for trajectory sampling
                     self._traj_index_density = torch.divide(self.demo_curriculum_step, self.demo_horizon)
-                    self._traj_index_density[self.demo_solved] = 1e-6
+                    self._traj_index_density[self.demo_curriculum_step == 0] = 1e-6
                     self._traj_index_density = (self._traj_index_density / self._traj_index_density.sum()).cpu().numpy()
 
         return obs, reward, terminated, truncated, info
