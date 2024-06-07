@@ -27,7 +27,7 @@ def _build_hockey_stick(
     """
     Build a hockey stick, which consists of two parts:
     - a long stick
-    - a shorter stick perpendicular to the long stick, connected to each other at the end of the long stick
+    - a shorter stick perpendicular to the long stick
     """
     builder = scene.create_actor_builder()
 
@@ -60,7 +60,7 @@ _cube_half_size = 0.02
 # the following are half sizes of the hockey stick
 _stick_length = 0.2
 _stick_end_length = 0.1
-_stick_thickness = 5e-3  # thickness of the stick in y and z axis
+_stick_thickness = 5e-3  # thickness of sticks in y and z direction
 
 
 @register_env("PullCubeWithHockeyStick-v1", max_episode_steps=100)
@@ -74,7 +74,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
     --------------
     - the cube's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat on the table
     - the target goal region is marked by a red/white circular target. The position of the target is fixed to be the cube xy position + [0.1 + goal_radius, 0]
-    - the hockey stick's y position is set relatively to the cube xy position such that they never overlap. The y position is cube y position - 0.16; the x position is cube's position + random(-0.16, -0.06)
+    - the hockey stick's xy position is set relatively to the cube xy position such that they never overlap. The y position is cube y position -0.16; the x position is cube's position + random(-0.16, -0.06)
 
     Success Conditions
     ------------------
@@ -83,7 +83,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
     """
 
     SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "sparse", "none")
-    SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
+    SUPPORTED_ROBOTS = ["panda"]
     agent: Union[Panda, Xmate3Robotiq, Fetch]
 
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
@@ -111,7 +111,6 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
         )
 
     def _load_scene(self, options: dict):
-        # we use a prebuilt scene builder class that automatically loads in a floor and table.
         self.table_scene = TableSceneBuilder(
             env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
         )
@@ -157,9 +156,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             # set the goal's initial position
             target_offset = torch.tensor([0.1 + _goal_radius, 0, 0])
             target_region_xyz = xyz - target_offset
-            target_region_xyz[
-                ..., 2
-            ] = 1e-3  # # set the z pos slightly above 0 so the target is on (not in) the table
+            target_region_xyz[..., 2] = 1e-3
             self.goal_region.set_pose(
                 Pose.create_from_pq(
                     p=target_region_xyz,
@@ -167,7 +164,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
                 )
             )
 
-            # set the stick's initial position
+            # set the hockey stick's initial position
             stick_offset = torch.tensor(
                 [
                     -(_stick_length - 2 * _cube_half_size - torch.rand(1) * 0.1),
@@ -185,14 +182,14 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             )
 
     def _get_pos_of_end_of_stick(self):
-        """get the middle of end the shorter stick that's used for pulling the object"""
+        """get position of middle of the shorter stick (which is used for pulling the cube towards the goal)"""
         offset = torch.tensor(
             [_stick_length + _stick_thickness, _stick_end_length, 0]
         ).to(self.device)
         return torch.tensor(self.hockey_stick.pose.p + offset).to(self.device)
 
     def _get_pos_of_grasp_stick(self):
-        """get the grasping position of the stick (3/4 of the long stick length)"""
+        """get the grasping position of the stick (used to encourage the robot to grasp the stick at a reasonable position)"""
         offset = torch.tensor([-_stick_length / 2, 0, 0]).to(self.device)
         return torch.tensor(self.hockey_stick.pose.p + offset).to(self.device)
 
@@ -200,7 +197,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
         """
         return two distances:
         (1) from the end of the stick to the cube
-        (2) from the robot to the grasp region
+        (2) from the robot to the grasping position
         """
         # calcs for (1)
         dst_cube_to_end_of_stick = torch.linalg.norm(
@@ -277,8 +274,8 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             5 * torch.linalg.norm(self.agent.robot.get_qvel()[..., :-2], axis=1)
         )
         reward += static_reward * info["is_obj_in_goal"]
-        reward[info["success"]] = 5
 
+        reward[info["success"]] = 5
         return reward
 
     def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
