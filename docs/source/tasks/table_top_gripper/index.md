@@ -306,7 +306,7 @@ A simple task where the robot needs to pick up a hockey stick and use it to pull
 :::
 
 <video preload="auto" controls="True" width="100%">
-<source src="TO_BE_UPDATED" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PullCubeWithHockeyStick-v1.mp4" type="video/mp4">
 </video>
 
 
