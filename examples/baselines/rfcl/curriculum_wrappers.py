@@ -97,6 +97,8 @@ class ReverseCurriculumWrapper(gym.Wrapper):
         if self.curriculum_mode == "reverse":
             truncated: torch.Tensor = (
                 self.base_env.elapsed_steps >= self.dynamic_max_episode_steps
+            ) | (
+                self.base_env.elapsed_steps >= self.max_episode_steps
             )
         else:
             truncated: torch.Tensor = (
@@ -121,7 +123,7 @@ class ReverseCurriculumWrapper(gym.Wrapper):
                         self.demo_success_rate_buffers[traj_idx].success.pop(0)
                 for traj_idx in range(self.traj_count):
                     metadata = self.demo_success_rate_buffers[traj_idx]
-                    if len(metadata.success) > 0 and np.mean(metadata.success) >= 1.0:
+                    if len(metadata.success) > 0 and np.sum(metadata.success) / self.per_demo_buffer_size >= 1.0:
                         can_advance[traj_idx] = True
                         metadata.success = []
 
