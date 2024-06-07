@@ -291,7 +291,7 @@ One robot must push/give the cube on its side to the other side so the other rob
 :color: primary
 
 **Task Description:**
-A simple task where the robot needs to pick up a hockey stick use it to pull the cube towards the pre-specified target.
+A simple task where the robot needs to pick up a hockey stick and use it to pull the cube towards the pre-specified target.
 
 **Supported Robots: (Panda)**
 

@@ -68,7 +68,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
     """
     Task Description
     ----------------
-    A simple task where the robot needs to pick up a hockey stick use it to pull the cube towards the pre-specified target.
+    A simple task where the robot needs to pick up a hockey stick and use it to pull the cube towards the pre-specified target.
 
     Randomizations
     --------------
@@ -185,14 +185,14 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
             )
 
     def _get_pos_of_end_of_stick(self):
-        """get the middle of end the shorter stick (end of the stick)"""
+        """get the middle of end the shorter stick that's used for pulling the object"""
         offset = torch.tensor(
             [_stick_length + _stick_thickness, _stick_end_length, 0]
         ).to(self.device)
         return torch.tensor(self.hockey_stick.pose.p + offset).to(self.device)
 
     def _get_pos_of_grasp_stick(self):
-        """get the grasping position of the stick (3/4 of the stick length from the end of the stick)"""
+        """get the grasping position of the stick (3/4 of the long stick length)"""
         offset = torch.tensor([-_stick_length / 2, 0, 0]).to(self.device)
         return torch.tensor(self.hockey_stick.pose.p + offset).to(self.device)
 
