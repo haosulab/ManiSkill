@@ -261,7 +261,7 @@ class ReverseCurriculumWrapper(gym.Wrapper):
             self.sampled_start_steps[env_idx] = x_start_steps
             self.base_env.set_state(self.env_states[reset_traj_indexes, x_start_steps], env_idx)
         obs = self.base_env.get_obs()
-        return obs, {}
+        return obs, {"reconfigure": False}
 
 
 @dataclass
