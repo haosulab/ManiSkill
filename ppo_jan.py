@@ -202,6 +202,7 @@ def run(
     seperate_MLPs=True,
 ):
     batch_size = int(num_envs * num_steps)
+
     minibatch_size = int(batch_size // num_minibatches)
     num_iterations = total_timesteps // batch_size
 
