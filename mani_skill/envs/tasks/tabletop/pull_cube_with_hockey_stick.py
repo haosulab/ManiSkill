@@ -6,7 +6,7 @@ import torch
 import torch.random
 from transforms3d.euler import euler2quat
 
-from mani_skill.agents.robots import Fetch, Panda, Xmate3Robotiq
+from mani_skill.agents.robots import Panda
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.sensors.camera import CameraConfig
@@ -84,7 +84,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
 
     SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "sparse", "none")
     SUPPORTED_ROBOTS = ["panda"]
-    agent: Union[Panda, Xmate3Robotiq, Fetch]
+    agent: Union[Panda]
 
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
         self.robot_init_qpos_noise = robot_init_qpos_noise
