@@ -237,7 +237,7 @@ class PullCubeWithHockeyStickEnv(BaseEnv):
 
     def _get_obs_extra(self, info: Dict):
         dst_cube_to_end_of_stick, dst_robot_to_grasp_stick_pos = self._get_distances()
-        # default observartions
+
         obs = dict(
             tcp_pose=self.agent.tcp.pose.raw_pose,
         )
