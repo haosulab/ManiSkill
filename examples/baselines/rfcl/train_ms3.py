@@ -164,6 +164,9 @@ def main(cfg: SACExperiment):
             seed=cfg.seed + 1_000_000,
             video_path=video_path if cfg.save_eval_video else None,
         )
+        if cfg.save_eval_video:
+            from mani_skill.utils.wrappers import RecordEpisode as RecordEpisodeWrapper
+            eval_env = RecordEpisodeWrapper(eval_env, video_path, save_trajectory=False, max_steps_per_video=cfg.eval_env.max_episode_steps)
 
     curr_wrapped_env = ReverseCurriculumWrapper(
         env,
