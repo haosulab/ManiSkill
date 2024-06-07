@@ -16,7 +16,6 @@ from mani_skill.utils.scene_builder import SceneBuilder
 
 # TODO (stao): make the build and initialize api consistent with other scenes
 class TableSceneBuilder(SceneBuilder):
-
     def build(self):
         builder = self.scene.create_actor_builder()
         model_dir = Path(osp.dirname(__file__)) / "assets"
@@ -24,10 +23,14 @@ class TableSceneBuilder(SceneBuilder):
         scale = 1.75
 
         table_pose = sapien.Pose(q=euler2quat(0, 0, np.pi / 2))
-        builder.add_nonconvex_collision_from_file(
-            filename=table_model_file,
-            scale=[scale] * 3,
-            pose=table_pose,
+        # builder.add_nonconvex_collision_from_file(
+        #     filename=table_model_file,
+        #     scale=[scale] * 3,
+        #     pose=table_pose,
+        # )
+        builder.add_box_collision(
+            pose=sapien.Pose(p=[0, 0, 0.9196429 / 2]),
+            half_size=(2.418 / 2, 1.209 / 2, 0.9196429 / 2),
         )
         builder.add_visual_from_file(
             filename=table_model_file, scale=[scale] * 3, pose=table_pose

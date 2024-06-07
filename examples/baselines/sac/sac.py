@@ -94,6 +94,9 @@ class Args:
     utd: float = 0.5
     """update to data ratio"""
     partial_reset: bool = False
+    """whether to let parallel environments reset upon termination instead of truncation"""
+    bootstrap_at_done: str = "always"
+    """the bootstrap method to use when a done signal is received. Can be 'always' or 'never'"""
 
     # to be filled in runtime
     grad_steps_per_iteration: int = 0
@@ -408,7 +411,10 @@ if __name__ == "__main__":
             # TRY NOT TO MODIFY: execute the game and log data.
             next_obs, rewards, terminations, truncations, infos = envs.step(actions)
             real_next_obs = next_obs.clone()
-            next_done = torch.logical_or(terminations, truncations).to(torch.float32)
+            if args.bootstrap_at_done == 'always':
+                next_done = torch.zeros_like(terminations).to(torch.float32)
+            else:
+                next_done = (terminations | truncations).to(torch.float32)
             if "final_info" in infos:
                 final_info = infos["final_info"]
                 done_mask = infos["_final_info"]
