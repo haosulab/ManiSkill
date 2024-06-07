@@ -231,8 +231,15 @@ def main(cfg: SACExperiment):
             # callback function to log reverse curriculum metrics and stop training once reverse curriculum is done
             nonlocal curr_wrapped_env, algo
             logger = algo.logger
-            pts = torch.divide(curr_wrapped_env.demo_curriculum_step, curr_wrapped_env.demo_horizon - 1).cpu().numpy()
-            solved_frac = (curr_wrapped_env.demo_solved).float().mean().item()
+            # pts = torch.divide(curr_wrapped_env.demo_curriculum_step, curr_wrapped_env.demo_horizon - 1).cpu().numpy()
+            # solved_frac = (curr_wrapped_env.demo_solved).float().mean().item()
+            demo_metadata = curr_wrapped_env.demo_metadata
+            pts = []
+            solved_frac = 0
+            for k in demo_metadata:
+                pts.append(demo_metadata[k].start_step / (demo_metadata[k].total_steps - 1))
+                solved_frac += int(demo_metadata[k].solved)
+            solved_frac = solved_frac / len(demo_metadata)
             mean_start_step = np.mean(pts)
             logger.tb_writer.add_histogram("train_stats/start_step_frac_dist", pts, algo.state.total_env_steps)
             logger.tb_writer.add_scalar("train_stats/start_step_frac_avg", mean_start_step, algo.state.total_env_steps)

@@ -17,7 +17,17 @@ class ReverseCurriculumConfig:
     per_demo_buffer_size: int = 3
     reverse_step_size: int = 1
     traj_ids: list[str] = None
+from collections import deque, defaultdict
+@dataclass
+class DemoCurriculumMetadata:
+    start_step: int = None  # t_i
+    total_steps: int = None  # T_i
+    success_rate_buffer = deque(maxlen=2)  # size of this is m
+    episode_steps_back = deque(maxlen=2)
+    solved: bool = False  # whether we have reverse solved this demo
 
+def create_filled_deque(maxlen, fill_value):
+    return deque([fill_value] * maxlen, maxlen=maxlen)
 class ReverseCurriculumWrapper(gym.Wrapper):
     """Apply this before any auto reset wrapper"""
     def __init__(self, env, dataset_path,
@@ -54,27 +64,36 @@ class ReverseCurriculumWrapper(gym.Wrapper):
             env_states_flat_list.append(env_states_flat)
         self.env_states = torch.zeros((self.traj_count, max_eps_len, env_states_flat.shape[-1]), device=self.base_env.device)
         """environment states flattened into a matrix of shape (B, T, D) where B is the number of episodes, T is the maximum episode length, and D is the dimension of the state"""
-        self.demo_curriculum_step = torch.zeros((self.traj_count,), dtype=torch.int32)
-        """the current curriculum step/stage for each demonstration given. Used in reverse curricula options"""
+        self.demo_metadata = defaultdict(DemoCurriculumMetadata)
+
+
+        # self.demo_curriculum_step = torch.zeros((self.traj_count,), dtype=torch.int32)
+        # """the current curriculum step/stage for each demonstration given. Used in reverse curricula options"""
         self.demo_horizon = torch.zeros((self.traj_count,), dtype=torch.int32, device=self.base_env.device)
         """length of each demo"""
-        self.demo_solved = torch.zeros((self.traj_count,), dtype=torch.bool, device=self.base_env.device)
-        """whether the demo is solved (meaning the curriculum stage has reached the end)"""
-        @dataclass
-        class DemoMeta:
-            success: list[int] = field(default_factory=list)
-            count: list[int] = field(default_factory=list)
-        self.demo_success_rate_buffers: dict[str, DemoMeta] = dict()
+        # self.demo_solved = torch.zeros((self.traj_count,), dtype=torch.bool, device=self.base_env.device)
+        # """whether the demo is solved (meaning the curriculum stage has reached the end)"""
+        # @dataclass
+        # class DemoMeta:
+        #     success: list[int] = field(default_factory=list)
+        #     count: list[int] = field(default_factory=list)
+        # self.demo_success_rate_buffers: dict[str, DemoMeta] = dict()
 
         for i, env_states_flat in enumerate(env_states_flat_list):
             self.env_states[i, :len(env_states_flat)] = torch.from_numpy(env_states_flat).float().to(self.base_env.device)
             self.demo_horizon[i] = len(env_states_flat)
-            self.demo_success_rate_buffers[i] = DemoMeta()
-        if not self.eval_mode:
-            self.demo_curriculum_step = self.demo_horizon - 1
+            # self.demo_success_rate_buffers[i] = DemoMeta()
+
+            start_step = len(env_states_flat) - 1
+            self.demo_metadata[i].start_step = start_step
+            self.demo_metadata[i].total_steps =  len(env_states_flat)
+            self.demo_metadata[i].success_rate_buffer = create_filled_deque(self.per_demo_buffer_size, 0)
+            self.demo_metadata[i].episode_steps_back = create_filled_deque(self.per_demo_buffer_size, -1)
+        # if not self.eval_mode:
+        #     self.demo_curriculum_step = self.demo_horizon - 1
         h5py_file.close()
 
-        self._demo_success_rate_buffer_pos = torch.zeros((self.traj_count, ), dtype=torch.int, device=self.base_env.device)
+        # self._demo_success_rate_buffer_pos = torch.zeros((self.traj_count, ), dtype=torch.int, device=self.base_env.device)
         # self.demo_success_rate_buffers = torch.zeros((self.traj_count, self.per_demo_buffer_size), dtype=torch.bool, device=self.base_env.device)
 
 
@@ -111,67 +130,103 @@ class ReverseCurriculumWrapper(gym.Wrapper):
         assert "success" in info, "Reverse curriculum wrapper currently requires there to be a success key in the info dict"
         if not self.eval_mode:
             if self.curriculum_mode == "reverse" and dones.any():
-                mask = dones & (self.demo_curriculum_step[self.sampled_traj_indexes] >= self.sampled_start_steps)
-                traj_idxs_to_check = self.sampled_traj_indexes[mask]
-                can_advance = torch.zeros((self.traj_count, ), dtype=torch.bool, device=self.base_env.device)
-                successes_of_traj_to_check = info["success"][mask]
-                # impl below is the same as the original and is a for loop
-                traj_idxs_to_check = traj_idxs_to_check.cpu().numpy()
-                for success, traj_idx in zip(successes_of_traj_to_check, traj_idxs_to_check):
-                    self.demo_success_rate_buffers[traj_idx].success.append(success.item())
-                    if len(self.demo_success_rate_buffers[traj_idx].success) > self.per_demo_buffer_size:
-                        self.demo_success_rate_buffers[traj_idx].success.pop(0)
-                for traj_idx in range(self.traj_count):
-                    metadata = self.demo_success_rate_buffers[traj_idx]
-                    if len(metadata.success) > 0 and np.sum(metadata.success) / self.per_demo_buffer_size >= 1.0:
-                        can_advance[traj_idx] = True
-                        metadata.success = []
 
-                # alternative impl is more parallelized
+                for i in range(len(dones)):
+                    if dones[i].item():
+                        traj_idx = self.sampled_traj_indexes[i].item()
+                        metadata = self.demo_metadata[traj_idx]
+                        if self.sampled_start_steps[i].item() == metadata.start_step:
+                            metadata.success_rate_buffer.append(int(info["success"][i].item()))
+                            # metadata.episode_steps_back.append(final_info["steps_back"])
+                            # self.global_success_rate_history.append(int(success))
+                # curr advancing
+                change=False
+                for demo_id in range(self.traj_count):
+                    metadata = self.demo_metadata[demo_id]
+                    running_success_rate_mean = np.mean(metadata.success_rate_buffer)
+                    if running_success_rate_mean >= 1.0:
+                        metadata.success_rate_buffer = create_filled_deque(self.per_demo_buffer_size, 0)
+                        metadata.episode_steps_back = create_filled_deque(self.per_demo_buffer_size, -1)
+                        if metadata.start_step > 0:
+                            metadata.start_step = max(metadata.start_step - self.reverse_step_size, 0)
+                            if True:
+                                print(f"Demo {demo_id} stepping back to {metadata.start_step}")
+                            change = True
+                        else:
+                            if not metadata.solved:
+                                if True:
+                                    print(f"Demo {demo_id} is reverse solved!")
+                                metadata.solved = True
+                                change = True
+                if change:
+                    for demo_id in range(self.traj_count):
+                        self._traj_index_density[demo_id] = self.demo_metadata[demo_id].start_step / self.demo_metadata[demo_id].total_steps
+                        if self.demo_metadata[demo_id].start_step == 0:
+                            self._traj_index_density[demo_id] = 1e-6
+                    # self._traj_index_density[self.demo_curriculum_step == 0] = 1e-6
+                    self._traj_index_density = (self._traj_index_density / self._traj_index_density.sum())
+
+                # mask = dones & (self.demo_curriculum_step[self.sampled_traj_indexes] >= self.sampled_start_steps)
+                # traj_idxs_to_check = self.sampled_traj_indexes[mask]
+                # can_advance = torch.zeros((self.traj_count, ), dtype=torch.bool, device=self.base_env.device)
+                # successes_of_traj_to_check = info["success"][mask]
+                # # impl below is the same as the original and is a for loop
+                # traj_idxs_to_check = traj_idxs_to_check.cpu().numpy()
+                # for success, traj_idx in zip(successes_of_traj_to_check, traj_idxs_to_check):
+                #     self.demo_success_rate_buffers[traj_idx].success.append(success.item())
+                #     if len(self.demo_success_rate_buffers[traj_idx].success) > self.per_demo_buffer_size:
+                #         self.demo_success_rate_buffers[traj_idx].success.pop(0)
                 # for traj_idx in range(self.traj_count):
-                #     traj_mask = traj_idxs_to_check == traj_idx
-                #     matched = traj_mask.sum()
-                #     if matched > 0:
-                #         # successes_of_traj_idx = successes_of_traj_to_check[traj_mask]
-                #         # if successes_of_traj_idx.any():
-                #         #     for i, success in enumerate(successes_of_traj_idx):
-                #         #         self.demo_success_rate_buffers[traj_idx].success.append(success.item())
-                #         #         if len(self.demo_success_rate_buffers[traj_idx].success) > 3:
-                #         #             self.demo_success_rate_buffers[traj_idx].success.pop(0)
-                #         #     if np.mean(self.demo_success_rate_buffers[traj_idx].success) >= 1.0:
-                #         #         can_advance[traj_idx] = True
-                #         #         # self.demo_success_rate_buffers[traj_idx].count.append(1)
-                #         #     # import ipdb;ipdb.set_trace()
-                #         metadata = self.demo_success_rate_buffers[traj_idx]
-                #         metadata.success.append(successes_of_traj_to_check[traj_mask].sum().item())
-                #         metadata.count.append(matched.item())
-                #         tc = np.sum(metadata.count)
-                #         if tc > self.per_demo_buffer_size:
-                #             sr_val = np.sum(metadata.success) / tc
-                #             if sr_val >= 0.9:
-                #                 can_advance[traj_idx] = True
-                #                 metadata.success = []
-                #                 metadata.count = []
-                #             else:
-                #                 trim_idx = 0
-                #                 ct = 0
-                #                 for i in range(len(metadata.count)):
-                #                     ct += metadata.count[i]
-                #                     if ct >= self.per_demo_buffer_size:
-                #                         trim_idx = i
-                #                 metadata.success = metadata.success[trim_idx:]
-                #                 metadata.count = metadata.count[trim_idx:]
-                # advance curriculum. code below is indexing arrays shaped by the number of demos
-                self.demo_curriculum_step[can_advance] -= self.reverse_step_size
-                # self.demo_success_rate_buffers[can_advance, :] = 0
-                self.demo_solved[self.demo_curriculum_step < 0] = True
-                self.demo_curriculum_step = torch.clamp(self.demo_curriculum_step, 0)
+                #     metadata = self.demo_success_rate_buffers[traj_idx]
+                #     if len(metadata.success) > 0 and np.mean(metadata.success) >= 1.0:
+                #         can_advance[traj_idx] = True
+                #         metadata.success = []
 
-                if can_advance.any():
-                    # update the probability distribution for trajectory sampling
-                    self._traj_index_density = torch.divide(self.demo_curriculum_step, self.demo_horizon)
-                    self._traj_index_density[self.demo_curriculum_step == 0] = 1e-6
-                    self._traj_index_density = (self._traj_index_density / self._traj_index_density.sum()).cpu().numpy()
+                # # alternative impl is more parallelized
+                # # for traj_idx in range(self.traj_count):
+                # #     traj_mask = traj_idxs_to_check == traj_idx
+                # #     matched = traj_mask.sum()
+                # #     if matched > 0:
+                # #         # successes_of_traj_idx = successes_of_traj_to_check[traj_mask]
+                # #         # if successes_of_traj_idx.any():
+                # #         #     for i, success in enumerate(successes_of_traj_idx):
+                # #         #         self.demo_success_rate_buffers[traj_idx].success.append(success.item())
+                # #         #         if len(self.demo_success_rate_buffers[traj_idx].success) > 3:
+                # #         #             self.demo_success_rate_buffers[traj_idx].success.pop(0)
+                # #         #     if np.mean(self.demo_success_rate_buffers[traj_idx].success) >= 1.0:
+                # #         #         can_advance[traj_idx] = True
+                # #         #         # self.demo_success_rate_buffers[traj_idx].count.append(1)
+                # #         #     # import ipdb;ipdb.set_trace()
+                # #         metadata = self.demo_success_rate_buffers[traj_idx]
+                # #         metadata.success.append(successes_of_traj_to_check[traj_mask].sum().item())
+                # #         metadata.count.append(matched.item())
+                # #         tc = np.sum(metadata.count)
+                # #         if tc > self.per_demo_buffer_size:
+                # #             sr_val = np.sum(metadata.success) / tc
+                # #             if sr_val >= 0.9:
+                # #                 can_advance[traj_idx] = True
+                # #                 metadata.success = []
+                # #                 metadata.count = []
+                # #             else:
+                # #                 trim_idx = 0
+                # #                 ct = 0
+                # #                 for i in range(len(metadata.count)):
+                # #                     ct += metadata.count[i]
+                # #                     if ct >= self.per_demo_buffer_size:
+                # #                         trim_idx = i
+                # #                 metadata.success = metadata.success[trim_idx:]
+                # #                 metadata.count = metadata.count[trim_idx:]
+                # # advance curriculum. code below is indexing arrays shaped by the number of demos
+                # self.demo_curriculum_step[can_advance] -= self.reverse_step_size
+                # # self.demo_success_rate_buffers[can_advance, :] = 0
+                # self.demo_solved[self.demo_curriculum_step < 0] = True
+                # self.demo_curriculum_step = torch.clamp(self.demo_curriculum_step, 0)
+
+                # if can_advance.any():
+                #     # update the probability distribution for trajectory sampling
+                #     self._traj_index_density = torch.divide(self.demo_curriculum_step, self.demo_horizon)
+                #     self._traj_index_density[self.demo_curriculum_step == 0] = 1e-6
+                #     self._traj_index_density = (self._traj_index_density / self._traj_index_density.sum()).cpu().numpy()
 
         return obs, reward, terminated, truncated, info
     def reset(self, *, seed=None, options=dict()):
@@ -198,7 +253,9 @@ class ReverseCurriculumWrapper(gym.Wrapper):
             elif self.reverse_curriculum_sampler == "bigeo":
                 pass
 
-            x_start_steps = self.demo_curriculum_step[reset_traj_indexes] + sampled_offsets
+            x_start_steps = sampled_offsets
+            for i, traj_idx in enumerate(reset_traj_indexes):
+                x_start_steps[i] += self.demo_metadata[traj_idx.item()].start_step
             x_start_steps = torch.clamp(x_start_steps, torch.zeros((b, ), device=self.base_env.device), self.demo_horizon[reset_traj_indexes] - 1).int()
             self.dynamic_max_episode_steps[env_idx] = self.max_steps_min + ((self.demo_horizon[reset_traj_indexes] - x_start_steps) // self.demo_horizon_to_max_steps_ratio).int()
             self.sampled_start_steps[env_idx] = x_start_steps

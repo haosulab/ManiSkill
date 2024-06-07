@@ -42,16 +42,16 @@ python -m mani_skill.trajectory.replay_trajectory \
 To train with CPU vectorization (faster with a small number of parallel environments) run
 
 ```bash
-env=pickcube
+env=stackcube
 demos=5
-for seed in 2 3 4 5
+for seed in 0 1 2 3 4 5
 do
   XLA_PYTHON_CLIENT_PREALLOCATE=false python rfcl_jax/train.py rfcl_jax/configs/ms3-cpu/sac_ms3_${env}.yml \
     logger.exp_name="ms3/${env}/${name_prefix}_${demos}_demos_s${seed}" \
-    logger.wandb=False \
+    logger.wandb=True \
     train.num_demos=${demos} \
     seed=${seed} \
-    train.steps=400_000 sac.num_eval_steps=50
+    train.steps=1_000_000 sac.num_eval_steps=50
 done
 ```
 
