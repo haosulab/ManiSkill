@@ -239,6 +239,8 @@ def main(cfg: SACExperiment):
             for k in demo_metadata:
                 pts.append(demo_metadata[k].start_step / (demo_metadata[k].total_steps - 1))
                 solved_frac += int(demo_metadata[k].solved)
+                logger.tb_writer.add_scalar(f"train_stats/traj_{k}_sr_buffer", np.mean(demo_metadata[k].success_rate_buffer), algo.state.total_env_steps)
+                logger.tb_writer.add_scalar(f"train_stats/traj_{k}_start_step_frac_avg", demo_metadata[k].start_step, algo.state.total_env_steps)
             solved_frac = solved_frac / len(demo_metadata)
             mean_start_step = np.mean(pts)
             logger.tb_writer.add_histogram("train_stats/start_step_frac_dist", pts, algo.state.total_env_steps)

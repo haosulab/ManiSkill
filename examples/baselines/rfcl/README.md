@@ -59,7 +59,7 @@ To train with the GPU vectorization (faster with a large number of parallel envi
 ```bash
 env=pickcube
 demos=5
-seed=0
+seed=1
 XLA_PYTHON_CLIENT_PREALLOCATE=false python train_ms3.py rfcl_jax/configs/ms3-gpu/sac_ms3_${env}.yml \
   logger.exp_name="ms3/${env}/${name_prefix}_${demos}_demos_s${seed}-gpusim" \
   logger.wandb=False \
