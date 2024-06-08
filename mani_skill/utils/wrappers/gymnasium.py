@@ -19,6 +19,8 @@ class ManiSkillCPUGymWrapper(gym.Wrapper):
         assert (
             not physx.is_gpu_enabled()
         ), "This wrapper is only for environments on the CPU backend"
+        self.observation_space = self.base_env.single_observation_space
+        self.action_space = self.base_env.single_action_space
 
     @property
     def base_env(self) -> BaseEnv:
