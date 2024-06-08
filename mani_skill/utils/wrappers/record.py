@@ -709,7 +709,7 @@ class RecordEpisode(gym.Wrapper):
         self._closed = True
         if self.save_trajectory:
             # Handle the last episode only when `save_on_reset=True`
-            if self.save_on_reset:
+            if self.save_on_reset and self._trajectory_buffer is not None:
                 self.flush_trajectory(
                     ignore_empty_transition=True,
                     env_idxs_to_flush=np.arange(self.num_envs),

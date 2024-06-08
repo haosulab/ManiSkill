@@ -56,7 +56,10 @@ def extract_scalars_from_info(info: dict, blacklist=()) -> Dict[str, float]:
         # Things that are scalar-like will have an np.size of 1.
         # Strings also have an np.size of 1, so explicitly ban those
         elif np.size(v) == 1 and not isinstance(v, str):
-            ret[k] = float(v)
+            try:
+                ret[k] = float(v)
+            except:
+                pass
     return ret
 
 
