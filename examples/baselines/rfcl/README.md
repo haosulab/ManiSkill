@@ -1,6 +1,6 @@
 # Reverse Forward Curriculum Learning
 
-Fast offline/online imitation learning from sparse rewards in simulation based on "Reverse Forward Curriculum Learning for Extreme Sample and Demo Efficiency in Reinforcement Learning (ICLR 2024)". Code adapted from https://github.com/StoneT2000/rfcl/
+Fast offline/online imitation learning from sparse rewards in simulation based on ["Reverse Forward Curriculum Learning for Extreme Sample and Demo Efficiency in Reinforcement Learning (ICLR 2024)"](https://arxiv.org/abs/2405.03379). Code adapted from https://github.com/StoneT2000/rfcl/
 
 This code can be useful for solving tasks, verifying tasks are solvable via neural nets, and generating infinite demonstrations via trained neural nets, all without using dense rewards (provided the task is not too long horizon)
 

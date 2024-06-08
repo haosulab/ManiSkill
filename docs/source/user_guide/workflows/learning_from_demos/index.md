@@ -16,9 +16,9 @@ As part of these baselines we establish a few standard learning from demonstrati
 
 | Baseline                                            | Code                                                                                | Results | Paper                                    |
 | --------------------------------------------------- | ----------------------------------------------------------------------------------- | ------- | ---------------------------------------- |
-| SAC+Reverse Forward Curriculum Learning (SAC+RFCL)* | [Link](https://github.com/haosulab/ManiSkill/blob/main/examples/baselines/sac-rfcl) | WIP     | [Link](https://arxiv.org/abs/2405.03379) |
+| Reverse Forward Curriculum Learning (RFCL)* | [Link](https://github.com/haosulab/ManiSkill/blob/main/examples/baselines/rfcl) | WIP     | [Link](https://arxiv.org/abs/2405.03379) |
 | Reinforcement Learning from Prior Data (RLPD)       | WIP                                                                                 | WIP     | [Link](https://arxiv.org/abs/2302.02948) |
 | SAC + Demos (SAC+Demos)                             | WIP                                                                                 | N/A     |                                          |
 
 
-\* - This indicates the baseline uses environment state reset 
+\* - This indicates the baseline uses environment state reset which is typically a simulation only feature 
