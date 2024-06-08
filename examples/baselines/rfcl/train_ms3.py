@@ -215,7 +215,7 @@ def main(cfg: SACExperiment):
     algo = SAC(
         env=env,
         eval_env=eval_env,
-        env_type="gym:gpu",
+        env_type=env_cfg.env_type,
         ac=ac,
         logger_cfg=logger_cfg,
         cfg=cfg.sac,
