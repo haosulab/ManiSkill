@@ -282,3 +282,29 @@ One robot must push/give the cube on its side to the other side so the other rob
 <video preload="auto" controls="True" width="100%">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/TwoRobotStackCube-v1_rt.mp4" type="video/mp4">
 </video>
+
+
+## TranslatePeg-v1
+![dense-reward][reward-badge]
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+The goal is to translate a peg to the target position on the table.
+
+**Supported Robots: Panda, Fetch, xArm**
+
+**Randomizations:**
+- the peg's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat along it's length on the table
+- the target pose is identical, except translated 0.2 in the negative y direction
+
+**Success Conditions:**
+- The peg is translated to target position
+- the peg is static
+- the peg is not being grasped by the robot (robot must let go of the peg)
+:::
+
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/TranslatePeg-v1_rt.mp4" type="video/mp4">
+</video>
