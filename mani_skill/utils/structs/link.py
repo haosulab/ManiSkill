@@ -66,9 +66,11 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
             _objs=physx_links,
             scene=scene,
             _scene_idxs=scene_idxs,
-            _body_data_name="cuda_rigid_body_data"
-            if isinstance(scene.px, physx.PhysxGpuSystem)
-            else None,
+            _body_data_name=(
+                "cuda_rigid_body_data"
+                if isinstance(scene.px, physx.PhysxGpuSystem)
+                else None
+            ),
             _bodies=physx_links,
         )
 
@@ -181,12 +183,13 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
             bboxes.append(merged_mesh.bounding_box)
         return bboxes
 
-    def set_collision_group_bit(self, group: int, bit_idx: int, bit: int):
+    def set_collision_group_bit(self, group: int, bit_idx: int, bit: Union[int, bool]):
         """Set's a specific collision group bit for all collision shapes in all parallel actors"""
+        bit = int(bit)
         for body in self._bodies:
             for cs in body.get_collision_shapes():
-                cg = cs.collision_groups
-                cg[group] |= bit << bit_idx
+                cg = cs.get_collision_groups()
+                cg[group] = (cg[group] & ~(1 << bit_idx)) | (bit << bit_idx)
                 cs.set_collision_groups(cg)
 
     # -------------------------------------------------------------------------- #

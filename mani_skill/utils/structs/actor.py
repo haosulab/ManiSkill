@@ -229,12 +229,13 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
             torch.linalg.norm(self.angular_velocity, axis=1) <= ang_thresh,
         )
 
-    def set_collision_group_bit(self, group: int, bit_idx: int, bit: int):
-        """Sets a specific collision group bit for all collision shapes in all parallel actors"""
+    def set_collision_group_bit(self, group: int, bit_idx: int, bit: Union[int, bool]):
+        """Set's a specific collision group bit for all collision shapes in all parallel actors"""
+        bit = int(bit)
         for body in self._bodies:
             for cs in body.get_collision_shapes():
                 cg = cs.get_collision_groups()
-                cg[group] |= bit << bit_idx
+                cg[group] = (cg[group] & ~(1 << bit_idx)) | (bit << bit_idx)
                 cs.set_collision_groups(cg)
 
     def get_first_collision_mesh(self, to_world_frame: bool = True) -> trimesh.Trimesh:
