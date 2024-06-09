@@ -66,9 +66,11 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
             _objs=physx_links,
             scene=scene,
             _scene_idxs=scene_idxs,
-            _body_data_name="cuda_rigid_body_data"
-            if isinstance(scene.px, physx.PhysxGpuSystem)
-            else None,
+            _body_data_name=(
+                "cuda_rigid_body_data"
+                if isinstance(scene.px, physx.PhysxGpuSystem)
+                else None
+            ),
             _bodies=physx_links,
         )
 
@@ -186,6 +188,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
         for body in self._bodies:
             for cs in body.get_collision_shapes():
                 cg = cs.collision_groups
+                cg[group] &= ~(1 << bit_idx)
                 cg[group] |= bit << bit_idx
                 cs.set_collision_groups(cg)
 

@@ -227,6 +227,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
         for body in self._bodies:
             for cs in body.get_collision_shapes():
                 cg = cs.get_collision_groups()
+                cg[group] &= ~(1 << bit_idx)
                 cg[group] |= bit << bit_idx
                 cs.set_collision_groups(cg)
 
