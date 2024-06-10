@@ -51,7 +51,7 @@ class WhiteTableSceneBuilder(TableSceneBuilder):
 
 
 @register_env("PushT-easy-v1", max_episode_steps=100)
-class PushTEnv_Easy(BaseEnv):
+class PushTEnvEasy(BaseEnv):
     """
     Task Description
     ----------------
