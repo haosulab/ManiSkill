@@ -38,7 +38,7 @@ class WhiteTableSceneBuilder(TableSceneBuilder):
         super().build()
         table = self.scene_objects[0]
 
-        #cheap way to un-texture table until tablebuilder refactored perhaps
+        #cheap way to un-texture table so it's just white
         for part in table._objs:
             for triangle in part.find_component_by_type(sapien.render.RenderBodyComponent).render_shapes[0].parts:
                 triangle.material.set_base_color(np.array([255, 255, 255, 255]) / 255)
@@ -440,17 +440,18 @@ class PushTEnv_Easy(BaseEnv):
         inter_area = self.pseudo_render_intersection()
         tee_place_success = (inter_area) >= self.intersection_thresh
 
+        success = tee_place_success
+
+        ##Full push-T environment success
         # ee_to_start_pose = self.agent.tcp.pose.p - self.ee_starting_pos3D
         # ee_to_start_dist = torch.linalg.norm(ee_to_start_pose, axis=1)
         # reset_ee_success = ee_to_start_dist <= self.ee_dist_to_start_thresh
-
         # success = (tee_place_success & reset_ee_success)
-
-        success = tee_place_success
 
         return {
             "success": success,
         }
+        
 
     def _get_obs_extra(self, info: Dict):
         # some useful observation info for solving the task includes the pose of the tcp (tool center point) which is the point between the
@@ -469,12 +470,10 @@ class PushTEnv_Easy(BaseEnv):
         return obs
 
     def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
-        ##reward for overlap of the tees
-
         #legacy reward from 2D T environment is just 
-        #reward = self.pseudo_render_intersection() # - causes very slow learning, doesn't include ee reset reward
+        #reward = self.pseudo_render_intersection() # - causes very slow learning, doesn't include ee reset reward, not dense
 
-        #new reward: cos(z_rot_euler) + function of translation, between target and goal both in [0,1]
+        #new reward: function of cos(z_rot_euler) + function of translation (also added helping reaching reward) or success reward 
         ## z euler cosine similarity reward: -- quat_to_z_euler guarenteed to reutrn value from [0,2pi]
         tee_z_eulers = self.quat_to_z_euler(self.tee.pose.q)
         ##subtract the goal z rotatation to get relative rotation
@@ -494,25 +493,8 @@ class PushTEnv_Easy(BaseEnv):
         help_finding_tee_rew = (1 - torch.tanh(5 * tcp_to_push_pose_dist))/10
         reward += help_finding_tee_rew
 
-        # ##Give reward for having the T more than threshold of intersection with goal
-        # inter_area = self.pseudo_render_intersection()
-        # tee_pose_success = (inter_area) >= self.intersection_thresh
-        # reward[tee_pose_success] += 2
-
-        # ##summary: reward max up to this point is max of: 
-        # ##Trot_rew + Ttrans_rew + helping_rew + intersection_sucess
-        # ## == 0.5 + 0.5 + 0.1 + 1 == 2.1 max reward (not considering ee reset)
-
-        # ##giving the robot a little help by rewarding it for having its end-effector close to reset after it has successfuly placed
-        # #tcp_to_push_pose = self.tee.pose.p[:,0:2] - self.agent.tcp.pose.p[:,0:2]
-        # #have to get rid of encouragment for having ee close to tee com, then give reward for going batck to ee start
-        # ee_to_start_pose = self.agent.tcp.pose.p - self.ee_starting_pos3D
-        # ee_to_start_dist = torch.linalg.norm(ee_to_start_pose, axis=1)
-        # help_finding_ee_reset = ((1 - torch.tanh(5 * ee_to_start_dist))/10)
-        # reward[tee_pose_success] -= help_finding_tee_rew[tee_pose_success]
-        # reward[tee_pose_success] += help_finding_ee_reset[tee_pose_success]
-
-        #2.1 max reward (considering ee reset, since replaced help_finding_tee_rew with help_finding_ee_reset)
+        ###Full push-T environment rewards:
+        ## TODO - reward for reaching toward and reaching ee starting position only after T place success
 
         # assign rewards to parallel environments that achieved success to the maximum of 3
         # this means that not only is intersection above thresh, but ee is also less than dist thresh away from starting position
