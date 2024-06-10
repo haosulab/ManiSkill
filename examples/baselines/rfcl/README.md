@@ -33,8 +33,9 @@ python -m mani_skill.utils.download_demo "PickCube-v1"
 <!-- TODO (stao): note how this part can be optional if user wants to do action free learning -->
 Process the demonstrations in preparation for the learning workflow. We will use the teleoperated trajectories to train. Other provided demonstration sources (like motion planning and RL generated) can work as well but may require modifying a few hyperparameters.
 ```bash
+env_id="PickCube-v1"
 python -m mani_skill.trajectory.replay_trajectory \
-  --traj-path ~/.maniskill/demos/PickCube-v1/teleop/trajectory.h5 \
+  --traj-path ~/.maniskill/demos/${env_id}/motionplanning/trajectory.h5 \
   --use-first-env-state \
   -c pd_joint_delta_pos -o state \
   --save-traj
@@ -49,10 +50,10 @@ env_id=PickCube-v1
 demos=5 # number of demos to train on
 seed=42
 XLA_PYTHON_CLIENT_PREALLOCATE=false python rfcl_jax/train.py configs/base_sac_ms3.yml \
-  logger.exp_name="ms3/${env_id}/${name_prefix}_${demos}_demos_s${seed}" logger.wandb=True \
+  logger.exp_name="ms3/${env_id}/rfcl_${demos}_demos_s${seed}" logger.wandb=True \
   seed=${seed} train.num_demos=${demos} train.steps=1_000_000 \
   env.env_id=${env_id} \
-  train.dataset_path="~/.maniskill/demos/PickCube-v1/teleop/trajectory.state.pd_joint_delta_pos.h5" 
+  train.dataset_path="~/.maniskill/demos/${env_id}/motionplanning/trajectory.state.pd_joint_delta_pos.h5" 
 ```
 
 Version of RFCL that runs on the GPU vectorized environments is currently not implemented as the current code is already quite fast
@@ -77,7 +78,7 @@ XLA_PYTHON_CLIENT_PREALLOCATE=false python train_ms3.py rfcl_jax/configs/ms3-gpu
 To generate 1000 demonstrations you can run
 
 ```bash
-XLA_PYTHON_CLIENT_PREALLOCATE=false python scripts/collect_demos.py exps/path/to/model.jx \
+XLA_PYTHON_CLIENT_PREALLOCATE=false python rfcl_jax/scripts/collect_demos.py exps/path/to/model.jx \
   num_envs=8 num_episodes=1000
 ```
 This saves the demos 
