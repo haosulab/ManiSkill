@@ -6,6 +6,7 @@ from transforms3d.euler import euler2quat
 
 from mani_skill.agents.robots import Fetch, Panda, Xmate3Robotiq
 from mani_skill.envs.sapien_env import BaseEnv
+from mani_skill.envs.utils import randomization
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.building import actors
@@ -57,7 +58,7 @@ class PokeCubeEnv(BaseEnv):
             self.scene,
             length=self.peg_half_length,
             width=self.peg_half_width,
-            color_1=np.array([176, 14, 14, 255]) / 255,
+            color_1=np.array([12, 42, 160, 255]) / 255,
             color_2=np.array([12, 42, 160, 255]) / 255,
             name="peg",
             body_type="dynamic",
@@ -98,7 +99,13 @@ class PokeCubeEnv(BaseEnv):
             cube_xyz = torch.rand((b, 3)) * 0.2 - 0.1
             cube_xyz[..., 0] = peg_xyz[..., 0] + self.peg_half_length + 0.1
             cube_xyz[..., 2] = self.cube_half_size
-            cube_q = [1, 0, 0, 0]
+            cube_q = randomization.random_quaternions(
+                b,
+                lock_x=True,
+                lock_y=True,
+                lock_z=False,
+                bounds=(-np.pi / 6, np.pi / 6),
+            )
             cube_pose = Pose.create_from_pq(p=cube_xyz, q=cube_q)
             self.cube.set_pose(cube_pose)
             # initialize the goal region
@@ -144,9 +151,9 @@ class PokeCubeEnv(BaseEnv):
         head_to_cube_dist = torch.linalg.norm(
             self.peg_head_pos[..., :2] - self.cube.pose.p[..., :2], axis=1
         )
-        is_peg_cube_touch = head_to_cube_dist <= self.cube_half_size + 0.005
+        is_peg_cube_close = head_to_cube_dist <= self.cube_half_size + 0.005
 
-        is_peg_cube_fit = torch.logical_and(is_peg_cube_aligned, is_peg_cube_touch)
+        is_peg_cube_fit = torch.logical_and(is_peg_cube_aligned, is_peg_cube_close)
         is_peg_grasped = self.agent.is_grasping(self.peg)
         close_to_table = torch.abs(self.peg.pose.p[:, 2] - self.peg_half_width) < 0.005
         return {
@@ -170,9 +177,9 @@ class PokeCubeEnv(BaseEnv):
         angle_diff = info["angle_diff"]
         align_reward = 1 - torch.tanh(5.0 * angle_diff)
         head_to_cube_dist = info["head_to_cube_dist"]
-        touch_reward = 1 - torch.tanh(5.0 * head_to_cube_dist)
+        close_reward = 1 - torch.tanh(5.0 * head_to_cube_dist)
         is_peg_grasped = info["is_peg_grasped"] * reached
-        reward[is_peg_grasped] = (4 + touch_reward + align_reward)[is_peg_grasped]
+        reward[is_peg_grasped] = (4 + close_reward + align_reward)[is_peg_grasped]
 
         # cube to goal
         cube_to_goal_dist = torch.linalg.norm(

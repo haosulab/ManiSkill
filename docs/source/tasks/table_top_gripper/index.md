@@ -298,13 +298,14 @@ A simple task where the objective is to poke a red cube with a peg and push it t
 
 **Randomizations:**
 - the peg's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat along it's length on the table
-- the cube's x-coordinate is randomized in range [-0.1, 0.1] and y-coordinate is fixed to peg's  y-coordinate + peg half-length (0.12) + 0.1. It is placed flat on the table
+- the cube's x-coordinate is fixed to peg's x-coordinate + peg half-length (0.12) + 0.1 and y-coordinate is randomized in range [-0.1, 0.1]. It is placed flat on the table
+- the cube's z-axis rotation is randomized in range [-$\pi$/ 6, $\pi$ / 6]
 - the target goal region is marked by a red/white circular target. The position of the target is fixed to be the cube xy position + [0.05 + goal_radius, 0]
 
 **Success Conditions:**
 - the cube's xy position is within goal_radius (default 0.05) of the target's xy position by euclidean distance
-- the face of peg's head touch the cube and the orientation is aligned
-- the peg's z position is within 0.005 of its half-width (0.25), that is on the table
+- the face of peg's head is close to the cube's face and the orientation is aligned
+- the peg's z position is within 0.005 of its half-width (0.25), that is close the table
 
 :::
 
