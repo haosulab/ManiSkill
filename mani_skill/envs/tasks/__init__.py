@@ -7,3 +7,4 @@ from .mobile_manipulation import *
 from .quadruped import *
 from .rotate_cube import RotateCubeEnv
 from .tabletop import *
+from .digital_twins import *
