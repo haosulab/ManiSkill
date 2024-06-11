@@ -15,10 +15,8 @@ from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs import Pose
 from mani_skill.utils.structs.types import Array, GPUMemoryConfig, SimConfig
 
-##imports additional to pushcube imports
-import sapien #used to un-texture table and color tee
-from pathlib import Path
-from mani_skill.utils.building.ground import build_ground
+##additional imports - for making T block
+import sapien 
 
 ##extending TableSceneBuilder and only making 2 changes:
 ##1.Making table smooth and white, 2. adding support for keyframes of new robots - panda stick
@@ -38,10 +36,8 @@ class WhiteTableSceneBuilder(TableSceneBuilder):
             self.env.agent.robot.set_pose(sapien.Pose([-0.615, 0, 0]))
     def build(self):
         super().build()
-        table = self.scene_objects[0]
-
-        #cheap way to un-texture table until tablebuilder refactored perhaps
-        for part in table._objs:
+        #cheap way to un-texture table 
+        for part in self.table._objs:
             for triangle in part.find_component_by_type(sapien.render.RenderBodyComponent).render_shapes[0].parts:
                 triangle.material.set_base_color(np.array([255, 255, 255, 255]) / 255)
                 triangle.material.set_base_color_texture(None)
