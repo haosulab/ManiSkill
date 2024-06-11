@@ -299,6 +299,18 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
         else:
             [obj.remove_from_scene() for obj in self._objs]
 
+    def apply_force(self, force):
+        """Apply an instantaneous external force to this actor in Newtons"""
+        if physx.is_gpu_enabled():
+            self.px.cuda_rigid_body_force.torch()[
+                self._body_data_index, :3
+            ] = common.to_tensor(force)
+            self.px.gpu_apply_rigid_dynamic_force()
+        else:
+            # TODO (stao): fxiang might change the APIs due to how physx 5.4 handles rigid body poses.
+            pass
+            # [body.add_force_at_point(point=body) for body in self._bodies]
+
     @property
     def pose(self) -> Pose:
         if physx.is_gpu_enabled():
