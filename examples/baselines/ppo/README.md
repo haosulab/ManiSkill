@@ -90,6 +90,10 @@ python ppo.py --env_id="UnitreeH1Stand-v1" \
 python ppo.py --env_id="OpenCabinetDrawer-v1" \
   --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
   --total_timesteps=10_000_000 --num-steps=100 --num-eval-steps=100   
+
+python ppo.py --env_id="RollBall-v1" \
+  --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
+  --total_timesteps=20_000_000 --num-steps=80 --num_eval_steps=80 --gamma=0.95
 ```
 
 ## Visual (RGB) Based RL
