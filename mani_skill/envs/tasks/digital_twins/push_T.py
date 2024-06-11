@@ -64,7 +64,7 @@ class PushTEnv(BaseEnv):
 
     Success Conditions
     ------------------
-    - The T block covers 90% of the 2D goal T's area AND the robot's end effector is placed back to its starting position
+    - The T block covers 90% of the 2D goal T's area
 
     Identical Parameters
     --------------------
@@ -82,10 +82,10 @@ class PushTEnv(BaseEnv):
     
     TODO's
     ------
-    - Create PushT-v1 environment (make Task part ② required) - so far, all attempts lead to catastrophic forgetting
     - Add hand mounted camera for panda_stick robot, for visual rl
     - Add support for ur5e robot with hand mounted camera and real life end effector (3D cad link in their github README)
     - Tune Unspecified Real-World Parameters
+    - Add robot qpos to randomizations
 
     Visualization: TODO, example https://maniskill.readthedocs.io/en/latest/tasks/index.html#pushcube-v1
     """
@@ -119,10 +119,11 @@ class PushTEnv(BaseEnv):
 
     ##intersection threshold for success in T position
     intersection_thresh = 0.90
-    ##threshold for success - only after T has been placed, give additional reward 
-    ##for distance to original ee position
-    ee_dist_to_start_thresh = 0.01
-    #done with tunable Parameters
+
+    #T block design choices
+    T_mass = 0.8
+    T_dynamic_friction = 3
+    T_static_friction = 3
 
     def __init__(self, *args, robot_uids="panda_stick", robot_init_qpos_noise=0.02,**kwargs):
         # specifying robot_uids="panda_stick" as the default means gym.make("PushT-v1") will default to using the panda_stick arm.
@@ -185,7 +186,7 @@ class PushTEnv(BaseEnv):
                 ##these dimensions are an exact replica of the 3D tee model given by diffusion policy: https://cad.onshape.com/documents/f1140134e38f6ed6902648d5/w/a78cf81827600e4ff4058d03/e/f35f57fb7589f72e05c76caf
                 box1_half_w = 0.2/2
                 box1_half_h = 0.05/2
-                half_thickness = 0.04/2 if not target else 0
+                half_thickness = 0.04/2 if not target else 1e-4
 
                 ##we have to center tee at its com so rotations are applied to com
                 ##vertical block is (3/4) size of horizontal block, so
@@ -197,10 +198,14 @@ class PushTEnv(BaseEnv):
                 first_block_pose = sapien.Pose([0., 0.-com_y, 0.])
                 first_block_size = [box1_half_w, box1_half_h, half_thickness]
                 if not target:
-                    #builder._mass = 0.8
-                    #tee_material = sapien.pysapien.physx.PhysxMaterial(static_friction=20, dynamic_friction=20, restitution=0)
-                    #builder.add_box_collision(pose=first_block_pose, half_size=first_block_size, material=tee_material)
-                    builder.add_box_collision(pose=first_block_pose, half_size=first_block_size)
+                    builder._mass = self.T_mass
+                    tee_material = sapien.pysapien.physx.PhysxMaterial(
+                        static_friction=self.T_dynamic_friction, 
+                        dynamic_friction=self.T_static_friction, 
+                        restitution=0
+                    )
+                    builder.add_box_collision(pose=first_block_pose, half_size=first_block_size, material=tee_material)
+                    #builder.add_box_collision(pose=first_block_pose, half_size=first_block_size)
                 builder.add_box_visual(pose=first_block_pose, half_size=first_block_size, material=sapien.render.RenderMaterial(
                     base_color=base_color,
                 ),)
@@ -210,28 +215,26 @@ class PushTEnv(BaseEnv):
                 second_block_pose = sapien.Pose([0., 4*(box1_half_h)-com_y, 0.])
                 second_block_size = [box1_half_h, (3/4)*(box1_half_w), half_thickness]
                 if not target:
-                    #builder.add_box_collision(pose=second_block_pose, half_size=second_block_size,material=tee_material)
-                    builder.add_box_collision(pose=second_block_pose, half_size=second_block_size)
+                    builder.add_box_collision(pose=second_block_pose, half_size=second_block_size,material=tee_material)
+                    #builder.add_box_collision(pose=second_block_pose, half_size=second_block_size)
                 builder.add_box_visual(pose=second_block_pose, half_size=second_block_size, material=sapien.render.RenderMaterial(
                     base_color=base_color,
                 ),)
-                print("HEREHERHE", builder._mass)
                 if not target:
                     return builder.build(name=name)
                 else: return builder.build_kinematic(name=name)
 
         self.tee = create_tee(name="Tee", target=False)
-        self.goal_tee = create_tee(name="goal_Tee", target=True, base_color=np.array([255,255,255,255])/255)
+        self.goal_tee = create_tee(name="goal_Tee", target=True, base_color=np.array([128,128,128,255])/255)
 
         ##adding end-effector end-episode goal position
         builder = self.scene.create_actor_builder()
         builder.add_cylinder_visual(
             radius=0.02,
-            half_length=0.0,
-            material=sapien.render.RenderMaterial(base_color=np.array([255, 255, 255, 255]) / 255),
+            half_length=1e-4,
+            material=sapien.render.RenderMaterial(base_color=np.array([128, 128, 128, 255]) / 255),
         )
         self.ee_goal_pos = builder.build_kinematic(name="goal_ee")
-
 
         ############## Rest of function is Custom 2D "Pseudo-Rendering" function for fully batched GPU T Intersection Area Calculation ##############
         res = 64
