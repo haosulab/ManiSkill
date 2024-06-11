@@ -1,16 +1,19 @@
 # Digital Twins (WIP)
+[asset-badge]: https://img.shields.io/badge/download%20asset-yes-blue.svg
+[reward-badge]: https://img.shields.io/badge/dense%20reward-yes-green.svg
 
 ## PushT-easy-v1
 ![dense-reward][reward-badge]
+
 :::{dropdown} Task Card
 :icon: note
 :color: primary
 
 **Task Description:**
-Easier Digital Twin of real life push-T task from Diffusion Policy: https://diffusion-policy.cs.columbia.edu/
+Digital Twin of real life push-T task from Diffusion Policy: https://diffusion-policy.cs.columbia.edu/
 'In this task, the robot needs to
 ① precisely push the T- shaped block into the target region, and
-② move the end-effector to the end-zone which terminates the episode.' [② Not required for PushT-easy-v1]
+② move the end-effector to the end-zone which terminates the episode.' [We do not require ② for the digital task]
 
 **Supported Robots: PandaStick**
 
