@@ -17,7 +17,7 @@ Digital Twin of real life push-T task from Diffusion Policy: https://diffusion-p
 ② move the end-effector to the end-zone which terminates the episode." \
 [We do not require ② for the digital task]
 
-**Supported Robots: PandaStick**
+**Supported Robots: PandaStick (WIP UR5e)**
 
 **Randomizations:**
 - The 3D T block's initial center of mass is randomized in the region on the table: [-1,2] x [-1,1] + T Goal initial position. It is placed flat on the table
