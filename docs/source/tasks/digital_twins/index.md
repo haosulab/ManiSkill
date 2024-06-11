@@ -11,9 +11,11 @@
 
 **Task Description:**
 Digital Twin of real life push-T task from Diffusion Policy: https://diffusion-policy.cs.columbia.edu/
-'In this task, the robot needs to
-① precisely push the T- shaped block into the target region, and
-② move the end-effector to the end-zone which terminates the episode.' [We do not require ② for the digital task]
+
+'In this task, the robot needs to \
+① precisely push the T- shaped block into the target region, and \
+② move the end-effector to the end-zone which terminates the episode.' \
+[We do not require ② for the digital task]
 
 **Supported Robots: PandaStick**
 
