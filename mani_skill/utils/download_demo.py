@@ -3,31 +3,43 @@ import os
 import os.path as osp
 import urllib.request
 import zipfile
+from dataclasses import dataclass
+from typing import Optional
+from urllib.parse import urlparse
 
-from huggingface_hub import hf_hub_download, snapshot_download
 from tqdm import tqdm
 
 from mani_skill import DEMO_DIR
 
-DATASET_SOURCES = {}
+
+@dataclass
+class DemoDatasetSource:
+    raw_dataset_url: str
+    """URL pointing to the raw dataset which does not contain any observations, just env states, actions, and reset kwargs"""
+    pre_processed_dataset_url: Optional[str] = None
+    """URL pointing to preprocessed versions if any"""
+    env_type: str = "rigid_body"  # or soft_body
+
+
+DATASET_SOURCES: dict[str, DemoDatasetSource] = {}
 
 # Rigid body envs
-DATASET_SOURCES["PickCube-v1"] = dict(
-    env_type="rigid_body",
-    object_paths=[
-        "PickCube-v1/teleop/0.mp4",
-        "PickCube-v1/teleop/trajectory.h5",
-        "PickCube-v1/teleop/trajectory.json",
-    ],
+DATASET_SOURCES["PickCube-v1"] = DemoDatasetSource(
+    raw_dataset_url="https://huggingface.co/datasets/haosulab/ManiSkill_PickCube/resolve/main/PickCube-v1.zip?download=true"
 )
-DATASET_SOURCES["StackCube-v1"] = dict(
-    env_type="rigid_body",
-    object_paths=[
-        "StackCube-v1/teleop/0.mp4",
-        "StackCube-v1/teleop/trajectory.h5",
-        "StackCube-v1/teleop/trajectory.json",
-    ],
+DATASET_SOURCES["PushCube-v1"] = DemoDatasetSource(
+    raw_dataset_url="https://huggingface.co/datasets/haosulab/ManiSkill_PushCube/resolve/main/PushCube-v1.zip?download=true"
 )
+DATASET_SOURCES["StackCube-v1"] = DemoDatasetSource(
+    raw_dataset_url="https://huggingface.co/datasets/haosulab/ManiSkill_StackCube/resolve/main/StackCube-v1.zip?download=true"
+)
+DATASET_SOURCES["PegInsertionSide-v1"] = DemoDatasetSource(
+    raw_dataset_url="https://huggingface.co/datasets/haosulab/ManiSkill_PegInsertionSide/resolve/main/PegInsertionSide-v1.zip?download=true"
+)
+DATASET_SOURCES["PlugCharger-v1"] = DemoDatasetSource(
+    raw_dataset_url="https://huggingface.co/datasets/haosulab/ManiSkill_PlugCharger/resolve/main/PlugCharger-v1.zip?download=true"
+)
+
 pbar = None
 
 
@@ -43,23 +55,19 @@ def tqdmhook(t):
     return inner
 
 
-def download_file(base_path, object_path, verbose=True):
-    local_path = os.path.join(base_path, object_path)
-    tmp_local_path = os.path.join(base_path, object_path + ".tmp")
-    object_path = os.path.join("demos", object_path)
-    hf_url = (
-        f"https://huggingface.co/datasets/haosulab/ManiSkill/resolve/main/{object_path}"
-    )
+def download_file(base_path, url, verbose=True):
+    filename = os.path.basename(urlparse(url).path)
+    local_path = os.path.join(base_path, filename)
+    tmp_local_path = os.path.join(base_path, filename + ".tmp")
     # wget the file and put it in local_path
     os.makedirs(os.path.dirname(tmp_local_path), exist_ok=True)
-
     if verbose:
         with tqdm(
             unit_scale=True,
         ) as t:
-            urllib.request.urlretrieve(hf_url, tmp_local_path, reporthook=tqdmhook(t))
+            urllib.request.urlretrieve(url, tmp_local_path, reporthook=tqdmhook(t))
     else:
-        urllib.request.urlretrieve(hf_url, tmp_local_path, reporthook=tqdmhook(t))
+        urllib.request.urlretrieve(url, tmp_local_path, reporthook=tqdmhook(t))
 
     os.rename(tmp_local_path, local_path)
     return local_path
@@ -114,24 +122,20 @@ def main(args):
 
     for i, uid in enumerate(uids):
         meta = DATASET_SOURCES[uid]
-        object_paths = meta["object_paths"]
         output_dir = str(DEMO_DIR)
-        if args.output_dir:
-            output_dir = args.output_dir
-        final_path = osp.join(output_dir, uid)
+        final_path = osp.join(output_dir)
         if verbose:
             print(
                 f"Downloading demonstrations to {final_path} - {i+1}/{len(uids)}, {uid}"
             )
-        for object_path in object_paths:
-            local_path = download_file(
-                output_dir,
-                object_path,
-            )
-            if osp.splitext(local_path)[1] == ".zip":
-                with zipfile.ZipFile(local_path, "r") as zip_ref:
-                    zip_ref.extractall(final_path)
-                os.remove(local_path)
+        local_path = download_file(
+            output_dir,
+            meta.raw_dataset_url,
+        )
+        if osp.splitext(local_path)[1] == ".zip":
+            with zipfile.ZipFile(local_path, "r") as zip_ref:
+                zip_ref.extractall(final_path)
+            os.remove(local_path)
 
 
 if __name__ == "__main__":

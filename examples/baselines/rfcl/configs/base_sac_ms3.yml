@@ -1,0 +1,96 @@
+jax_env: False
+
+seed: 0
+algo: sac
+verbose: 1
+# Environment configuration
+env:
+  env_id: None
+  max_episode_steps: 50
+  num_envs: 8
+  env_type: "gym:cpu"
+  env_kwargs:
+    control_mode: "pd_joint_delta_pos"
+    render_mode: "rgb_array"
+    reward_mode: "sparse"
+eval_env:
+  num_envs: 2
+  max_episode_steps: 50
+
+sac:
+  num_seed_steps: 5_000
+  seed_with_policy: False
+  replay_buffer_capacity: 1_000_000
+  batch_size: 256
+  steps_per_env: 4
+  grad_updates_per_step: 16
+  actor_update_freq: 1
+
+  num_qs: 2
+  num_min_qs: 2
+
+  discount: 0.9
+  tau: 0.005
+  backup_entropy: False
+
+  eval_freq: 50_000
+  eval_steps: 250
+
+  log_freq: 1000
+  save_freq: 50_000
+
+  learnable_temp: True
+  initial_temperature: 1.0
+  
+network:
+  actor:
+    type: "mlp"
+    arch_cfg:
+      features: [256, 256, 256]
+      output_activation: "relu"
+  critic:
+    type: "mlp"
+    arch_cfg:
+      features: [256, 256, 256]
+      output_activation: "relu"
+      use_layer_norm: True
+
+train:
+  actor_lr: 3e-4
+  critic_lr: 3e-4
+  steps: 100_000_000
+  dataset_path: None
+  shuffle_demos: True
+  num_demos: 1000
+
+  data_action_scale: null
+
+  ## Reverse curriculum configs
+  reverse_step_size: 4
+  start_step_sampler: "geometric"
+  curriculum_method: "per_demo"
+  per_demo_buffer_size: 3
+  demo_horizon_to_max_steps_ratio: 3
+
+  load_actor: True
+  load_critic: True
+  load_as_offline_buffer: True
+  load_as_online_buffer: False
+
+  ## Forward curriculum configs
+  forward_curriculum: "success_once_score"
+  staleness_coef: 0.1
+  staleness_temperature: 0.1
+  staleness_transform: "rankmin"
+  score_transform: "rankmin"
+  score_temperature: 0.1
+  num_seeds: 1000
+
+logger:
+  tensorboard: True
+  wandb: False
+
+  workspace: "exps"
+  project_name: "RFCL-Sparse"
+  wandb_cfg:
+    group: "RFCL-ManiSkill3-Sparse-Baseline"
