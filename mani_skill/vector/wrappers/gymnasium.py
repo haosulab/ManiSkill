@@ -29,6 +29,9 @@ class ManiSkillVectorEnv(VectorEnv):
             the task reaching a success or fail state as defined in a task's evaluation function. Default is False, meaning there is early stop in
             episode rollouts. If set to True, this would generally for situations where you may want to model a task as infinite horizon where a task
             stops only due to the timelimit.
+        handle_truncations (bool): Whether this wrapper handles truncations based on the given max_episode_steps or whatever
+            max_episode_steps is defined in the environment's spec. If this is True it will override any truncation values set by
+            previous wrappers. Default is True.
     """
 
     def __init__(
@@ -38,6 +41,7 @@ class ManiSkillVectorEnv(VectorEnv):
         auto_reset: bool = True,
         max_episode_steps: int = None,
         ignore_terminations: bool = False,
+        handle_truncations: bool = True,
         **kwargs,
     ):
         if isinstance(env, str):
@@ -47,6 +51,7 @@ class ManiSkillVectorEnv(VectorEnv):
             num_envs = self.base_env.num_envs
         self.auto_reset = auto_reset
         self.ignore_terminations = ignore_terminations
+        self.handle_truncations = handle_truncations
         super().__init__(
             num_envs, self._env.single_observation_space, self._env.single_action_space
         )
@@ -99,7 +104,7 @@ class ManiSkillVectorEnv(VectorEnv):
         infos["episode"] = dict(r=self.returns)
 
         # fix issue with gymnasium replacing truncations with a single bool
-        if isinstance(truncations, bool) and self.max_episode_steps is not None:
+        if self.handle_truncations and self.max_episode_steps is not None:
             truncations: torch.Tensor = (
                 self.base_env.elapsed_steps >= self.max_episode_steps
             )
