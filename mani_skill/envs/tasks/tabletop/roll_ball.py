@@ -15,7 +15,7 @@ from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import Array, GPUMemoryConfig, SimConfig
 from transforms3d.euler import euler2quat
 
-@register_env("RollBall-v1", max_episode_steps=60)
+@register_env("RollBall-v1", max_episode_steps=80)
 class RollBallEnv(BaseEnv):
     """
     Task Description
@@ -38,12 +38,13 @@ class RollBallEnv(BaseEnv):
 
     goal_radius: float = 0.1 # radius of the goal region
     ball_radius: float = 0.035 # radius of the ball
-    reward_reach_proportion: float = 0.08 # proportion of the reward that is given for reaching the ball
+    reached_status: torch.Tensor
 
 
 
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
         self.robot_init_qpos_noise = robot_init_qpos_noise
+        self.reached_status = torch.zeros(kwargs["num_envs"], dtype=torch.float32)
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     @property
@@ -89,6 +90,8 @@ class RollBallEnv(BaseEnv):
         )
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
+        if self.reached_status.device != self.device:
+            self.reached_status = self.reached_status.to(self.device)
         with torch.device(self.device):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)
@@ -115,6 +118,7 @@ class RollBallEnv(BaseEnv):
                     q=euler2quat(0, np.pi / 2, 0),
                 )
             )
+        self.reached_status[env_idx] = 0.0
 
     def evaluate(self):
 
@@ -145,9 +149,11 @@ class RollBallEnv(BaseEnv):
         return obs
     
     def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
+        unit_vec = self.ball.pose.p - self.goal_region.pose.p
+        unit_vec = unit_vec / torch.linalg.norm(unit_vec, axis=1, keepdim=True)
         tcp_hit_pose = Pose.create_from_pq(
             p=self.ball.pose.p
-            + torch.tensor([0, self.ball_radius + 0.05, 0], device=self.device)
+            + unit_vec * (self.ball_radius + 0.05),
         )
         tcp_to_hit_pose = tcp_hit_pose.p - self.agent.tcp.pose.p
         tcp_to_hit_pose_dist = torch.linalg.norm(tcp_to_hit_pose, axis=1)
@@ -159,9 +165,12 @@ class RollBallEnv(BaseEnv):
         
         reached_reward = (1-torch.tanh(obj_to_goal_dist))
 
-        reward = reached_reward*(1-self.reward_reach_proportion)\
-              + reaching_reward*self.reward_reach_proportion\
+        reward = 20*reached_reward*self.reached_status\
+              + reaching_reward*(1-self.reached_status)\
+            + self.reached_status
 
+        self.reached_status[tcp_to_hit_pose_dist < 0.04] = 1.0
+        
         reward[info["success"]] = 30.0
         return reward
     
