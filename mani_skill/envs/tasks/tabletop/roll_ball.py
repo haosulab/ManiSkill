@@ -90,8 +90,7 @@ class RollBallEnv(BaseEnv):
         )
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
-        if self.reached_status.device != self.device:
-            self.reached_status = self.reached_status.to(self.device)
+        self.reached_status = self.reached_status.to(self.device)
         with torch.device(self.device):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)
@@ -157,6 +156,7 @@ class RollBallEnv(BaseEnv):
         )
         tcp_to_hit_pose = tcp_hit_pose.p - self.agent.tcp.pose.p
         tcp_to_hit_pose_dist = torch.linalg.norm(tcp_to_hit_pose, axis=1)
+        self.reached_status[tcp_to_hit_pose_dist < 0.04] = 1.0
         reaching_reward = (1 - torch.tanh(2*tcp_to_hit_pose_dist))
 
         obj_to_goal_dist = torch.linalg.norm(
@@ -168,8 +168,6 @@ class RollBallEnv(BaseEnv):
         reward = 20*reached_reward*self.reached_status\
               + reaching_reward*(1-self.reached_status)\
             + self.reached_status
-
-        self.reached_status[tcp_to_hit_pose_dist < 0.04] = 1.0
         
         reward[info["success"]] = 30.0
         return reward
