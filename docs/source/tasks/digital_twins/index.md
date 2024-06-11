@@ -2,7 +2,7 @@
 [asset-badge]: https://img.shields.io/badge/download%20asset-yes-blue.svg
 [reward-badge]: https://img.shields.io/badge/dense%20reward-yes-green.svg
 
-## PushT-easy-v1
+## PushT-v1
 ![dense-reward][reward-badge]
 
 :::{dropdown} Task Card
