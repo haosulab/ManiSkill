@@ -15,8 +15,10 @@ from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs import Pose
 from mani_skill.utils.structs.types import Array, GPUMemoryConfig, SimConfig
 
-##additional import for building white table
+##imports additional to pushcube imports
 import sapien #used to un-texture table and color tee
+from pathlib import Path
+from mani_skill.utils.building.ground import build_ground
 
 ##extending TableSceneBuilder and only making 2 changes:
 ##1.Making table smooth and white, 2. adding support for keyframes of new robots - panda stick
@@ -38,7 +40,7 @@ class WhiteTableSceneBuilder(TableSceneBuilder):
         super().build()
         table = self.scene_objects[0]
 
-        #cheap way to un-texture table so it's just white
+        #cheap way to un-texture table until tablebuilder refactored perhaps
         for part in table._objs:
             for triangle in part.find_component_by_type(sapien.render.RenderBodyComponent).render_shapes[0].parts:
                 triangle.material.set_base_color(np.array([255, 255, 255, 255]) / 255)
@@ -49,16 +51,15 @@ class WhiteTableSceneBuilder(TableSceneBuilder):
                 triangle.material.set_metallic_texture(None)
                 triangle.material.set_roughness_texture(None)
 
-
 @register_env("PushT-easy-v1", max_episode_steps=100)
 class PushTEnvEasy(BaseEnv):
     """
     Task Description
     ----------------
     Easier Digital Twin of real life push-T task from Diffusion Policy: https://diffusion-policy.cs.columbia.edu/
-    'In this task, the robot needs to
+    "In this task, the robot needs to
     ① precisely push the T- shaped block into the target region, and
-    ② move the end-effector to the end-zone which terminates the episode. [② Not required for PushT-easy-v1]'
+    ② move the end-effector to the end-zone which terminates the episode. [② Not required for PushT-easy-v1]"
 
     Randomizations
     --------------
@@ -93,9 +94,8 @@ class PushTEnvEasy(BaseEnv):
     Visualization: TODO, example https://maniskill.readthedocs.io/en/latest/tasks/index.html#pushcube-v1
     """
 
-    SUPPORTED_ROBOTS = ["panda_stick"]
-
     # Specify some supported robot types
+    SUPPORTED_ROBOTS = ["panda_stick"]
     agent: Union[PandaStick]
 
     ############### All Unspecified real-life Parameters Here ###############
@@ -201,6 +201,9 @@ class PushTEnvEasy(BaseEnv):
                 first_block_pose = sapien.Pose([0., 0.-com_y, 0.])
                 first_block_size = [box1_half_w, box1_half_h, half_thickness]
                 if not target:
+                    #builder._mass = 0.8
+                    #tee_material = sapien.pysapien.physx.PhysxMaterial(static_friction=20, dynamic_friction=20, restitution=0)
+                    #builder.add_box_collision(pose=first_block_pose, half_size=first_block_size, material=tee_material)
                     builder.add_box_collision(pose=first_block_pose, half_size=first_block_size)
                 builder.add_box_visual(pose=first_block_pose, half_size=first_block_size, material=sapien.render.RenderMaterial(
                     base_color=base_color,
@@ -211,10 +214,12 @@ class PushTEnvEasy(BaseEnv):
                 second_block_pose = sapien.Pose([0., 4*(box1_half_h)-com_y, 0.])
                 second_block_size = [box1_half_h, (3/4)*(box1_half_w), half_thickness]
                 if not target:
+                    #builder.add_box_collision(pose=second_block_pose, half_size=second_block_size,material=tee_material)
                     builder.add_box_collision(pose=second_block_pose, half_size=second_block_size)
                 builder.add_box_visual(pose=second_block_pose, half_size=second_block_size, material=sapien.render.RenderMaterial(
                     base_color=base_color,
                 ),)
+                print("HEREHERHE", builder._mass)
                 if not target:
                     return builder.build(name=name)
                 else: return builder.build_kinematic(name=name)
@@ -440,18 +445,17 @@ class PushTEnvEasy(BaseEnv):
         inter_area = self.pseudo_render_intersection()
         tee_place_success = (inter_area) >= self.intersection_thresh
 
-        success = tee_place_success
-
-        ##Full push-T environment success
         # ee_to_start_pose = self.agent.tcp.pose.p - self.ee_starting_pos3D
         # ee_to_start_dist = torch.linalg.norm(ee_to_start_pose, axis=1)
         # reset_ee_success = ee_to_start_dist <= self.ee_dist_to_start_thresh
+
         # success = (tee_place_success & reset_ee_success)
+
+        success = tee_place_success
 
         return {
             "success": success,
         }
-        
 
     def _get_obs_extra(self, info: Dict):
         # some useful observation info for solving the task includes the pose of the tcp (tool center point) which is the point between the
@@ -465,39 +469,38 @@ class PushTEnvEasy(BaseEnv):
             obs.update(
                 goal_pos=self.goal_tee.pose.p,
                 obj_pose=self.tee.pose.raw_pose,
-                ee_restart_goal_pos=self.ee_goal_pos.pose.p
+                #ee_restart_goal_pos=self.ee_goal_pos.pose.p ##for full implementation
             )
         return obs
 
     def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
-        #legacy reward from 2D T environment is just 
-        #reward = self.pseudo_render_intersection() # - causes very slow learning, doesn't include ee reset reward, not dense
+        ##reward for overlap of the tees
 
-        #new reward: function of cos(z_rot_euler) + function of translation (also added helping reaching reward) or success reward 
+        #legacy reward
+        #reward = self.pseudo_render_reward()
+
+        #new reward: cos(z_rot_euler) + function of translation, between target and goal both in [0,1]
         ## z euler cosine similarity reward: -- quat_to_z_euler guarenteed to reutrn value from [0,2pi]
         tee_z_eulers = self.quat_to_z_euler(self.tee.pose.q)
         ##subtract the goal z rotatation to get relative rotation
         rot_rew = (tee_z_eulers - self.goal_z_rot).cos()
-        ##cos output [-1,1], we want max reward of 0.5 for rotation
-        reward = (rot_rew+1)/4
+        ##cos output [-1,1], we want reward of 0.5
+        #reward = (rot_rew+1)/4
+        reward = (((rot_rew+1)/2)**2)/2
 
         ##x and y distance as reward
         tee_to_goal_pose = self.tee.pose.p[:,0:2] - self.goal_tee.pose.p[:,0:2]
         tee_to_goal_pose_dist = torch.linalg.norm(tee_to_goal_pose, axis=1)
-        reward += (1 - torch.tanh(5 * tee_to_goal_pose_dist))/2
-    
+        reward += ((1 - torch.tanh(5 * tee_to_goal_pose_dist))**2)/2
+        #
+
         ##giving the robot a little help by rewarding it for having its end-effector close to the tee center of mass
         #tcp_to_push_pose = self.tee.pose.p[:,0:2] - self.agent.tcp.pose.p[:,0:2]
         tcp_to_push_pose = self.tee.pose.p - self.agent.tcp.pose.p
         tcp_to_push_pose_dist = torch.linalg.norm(tcp_to_push_pose, axis=1)
-        help_finding_tee_rew = (1 - torch.tanh(5 * tcp_to_push_pose_dist))/10
-        reward += help_finding_tee_rew
+        reward += ((1 - torch.tanh(5 * tcp_to_push_pose_dist)).sqrt())/20
 
-        ###Full push-T environment rewards:
-        ## TODO - reward for reaching toward and reaching ee starting position only after T place success
-
-        # assign rewards to parallel environments that achieved success to the maximum of 3
-        # this means that not only is intersection above thresh, but ee is also less than dist thresh away from starting position
+        # assign rewards to parallel environments that achieved success to the maximum of 3.
         reward[info["success"]] = 3
         return reward
 
