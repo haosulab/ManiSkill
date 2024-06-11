@@ -47,8 +47,8 @@ class WhiteTableSceneBuilder(TableSceneBuilder):
                 triangle.material.set_metallic_texture(None)
                 triangle.material.set_roughness_texture(None)
 
-@register_env("PushT-easy-v1", max_episode_steps=100)
-class PushTEnvEasy(BaseEnv):
+@register_env("PushT-v1", max_episode_steps=100)
+class PushTEnv(BaseEnv):
     """
     Task Description
     ----------------
