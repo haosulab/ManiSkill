@@ -28,5 +28,5 @@ Digital Twin of real life push-T task from Diffusion Policy: https://diffusion-p
 :::
 
 <video preload="auto" controls="True" width="100%">
-<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PushCube-v1_rt.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PushT-v1_rt.mp4" type="video/mp4">
 </video>
