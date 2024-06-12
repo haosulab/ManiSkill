@@ -26,6 +26,7 @@ from mani_skill.trajectory.merge_trajectory import merge_h5
 from mani_skill.utils import common, gym_utils, io_utils, wrappers
 from mani_skill.utils.structs.link import Link
 
+
 def qpos_to_pd_joint_delta_pos(controller: PDJointPosController, qpos):
     assert type(controller) == PDJointPosController
     assert controller.config.use_delta
