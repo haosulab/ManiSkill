@@ -283,7 +283,6 @@ One robot must push/give the cube on its side to the other side so the other rob
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/TwoRobotStackCube-v1_rt.mp4" type="video/mp4">
 </video>
 
-
 ## PokeCube-v1
 ![dense-reward][reward-badge]
 
@@ -311,4 +310,32 @@ A simple task where the objective is to poke a red cube with a peg and push it t
 
 <video preload="auto" controls="True" width="100%">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PokeCube-v1_rt.mp4" type="video/mp4">
+</video>
+
+
+
+## PullCubeWithHockeyStick-v1
+![dense-reward][reward-badge]
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+A simple task where the robot needs to pick up a hockey stick and use it to pull the cube towards the pre-specified target.
+
+**Supported Robots: (Panda)**
+
+**Randomizations:**
+- the cube's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat on the table
+- the target goal region is marked by a red/white circular target. The position of the target is fixed to be the cube xy position + [0.1 + goal_radius, 0]
+- the hockey stick's xy position is set relatively to the cube xy position such that they never overlap. The y position is cube y position - 0.16; the x position is cube's position + random(-0.16, -0.06)
+
+**Success Conditions:**
+- the cube's xy position is within goal_radius (default 0.1) of the target's xy position by euclidean distance.
+- the robot is static (q velocity < 0.2)
+:::
+
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PullCubeWithHockeyStick-v1.mp4" type="video/mp4">
 </video>
