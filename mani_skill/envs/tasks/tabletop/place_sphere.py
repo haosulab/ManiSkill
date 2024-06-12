@@ -194,7 +194,7 @@ class PlaceSphereEnv(BaseEnv):
         obj_to_tcp_dist = torch.linalg.norm(tcp_pose - obj_pos, axis=1)
         reward = 2 * (1 - torch.tanh(5 * obj_to_tcp_dist))
 
-        # grasp and place reward
+        # grasping and placing rewards
         obj_pos = self.obj.pose.p
         bin_pos = self.bin.pose.p
         bin_top_pos = self.bin.pose.p.clone()
@@ -203,7 +203,7 @@ class PlaceSphereEnv(BaseEnv):
         place_reward = 1 - torch.tanh(5.0 * obj_to_bin_top_dist)
         reward[info["is_obj_grasped"]] = (4 + place_reward)[info["is_obj_grasped"]]
 
-        # ungrasp and static reward
+        # ungrasping and static rewards
         gripper_width = (self.agent.robot.get_qlimits()[0, -1, 1] * 2).to(
             self.device
         )
