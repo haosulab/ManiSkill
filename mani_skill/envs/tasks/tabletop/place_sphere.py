@@ -43,9 +43,10 @@ class PlaceSphereEnv(BaseEnv):
 
     # set some commonly used values
     radius = 0.02 # radius of the sphere
-    side_half_size = radius/8 # length of the shortest edge of the block
-    block_half_size = [side_half_size, 2*side_half_size+radius, 2*side_half_size+radius] # The bottom block of the bin, which is larger: The list represents the half length of the block along the [x, y, z] axis respectively.
-    edge_block_half_size = [side_half_size, 2*side_half_size+radius, 2*side_half_size] # The edge block of the bin, which is smaller. The representations are similar to the above one
+    inner_side_half_len = 0.02 # side length of the bin's inner square
+    short_side_half_size = 0.0025 # length of the shortest edge of the block
+    block_half_size = [short_side_half_size, 2*short_side_half_size+inner_side_half_len, 2*short_side_half_size+inner_side_half_len] # The bottom block of the bin, which is larger: The list represents the half length of the block along the [x, y, z] axis respectively.
+    edge_block_half_size = [short_side_half_size, 2*short_side_half_size+inner_side_half_len, 2*short_side_half_size] # The edge block of the bin, which is smaller. The representations are similar to the above one
         
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
         self.robot_init_qpos_noise = robot_init_qpos_noise
@@ -194,7 +195,7 @@ class PlaceSphereEnv(BaseEnv):
         obj_to_tcp_dist = torch.linalg.norm(tcp_pose - obj_pos, axis=1)
         reward = 2 * (1 - torch.tanh(5 * obj_to_tcp_dist))
 
-        # grasping and placing rewards
+        # grasp and place reward
         obj_pos = self.obj.pose.p
         bin_pos = self.bin.pose.p
         bin_top_pos = self.bin.pose.p.clone()
@@ -203,7 +204,7 @@ class PlaceSphereEnv(BaseEnv):
         place_reward = 1 - torch.tanh(5.0 * obj_to_bin_top_dist)
         reward[info["is_obj_grasped"]] = (4 + place_reward)[info["is_obj_grasped"]]
 
-        # ungrasping and static rewards
+        # ungrasp and static reward
         gripper_width = (self.agent.robot.get_qlimits()[0, -1, 1] * 2).to(
             self.device
         )
@@ -211,7 +212,7 @@ class PlaceSphereEnv(BaseEnv):
         ungrasp_reward = (
             torch.sum(self.agent.robot.get_qpos()[:, -2:], axis=1) / gripper_width
         )
-        ungrasp_reward[~is_obj_grasped] = 16.0 # give ungrasp a bigger reward, so that it learns faster and it exceeds the robot static reward so that the gripper can close
+        ungrasp_reward[~is_obj_grasped] = 16.0 # give ungrasp a bigger reward, so that it exceeds the robot static reward and the gripper can close
         v = torch.linalg.norm(self.obj.linear_velocity, axis=1)
         av = torch.linalg.norm(self.obj.angular_velocity, axis=1)
         static_reward = 1 - torch.tanh(v * 10 + av)
@@ -236,6 +237,7 @@ if __name__ == "__main__":
     env.reset()
     while True:
     	env.render_human()
+
 
 
 
