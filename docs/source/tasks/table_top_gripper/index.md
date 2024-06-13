@@ -335,6 +335,5 @@ A simple task where the objective is to push and roll a ball to a goal region at
 :::
 
 <video preload="auto" controls="True" width="100%">
-<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/RollBall-v1.mp4" type="video/mp4">
-=======
+<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/RollBall-v1_rt.mp4" type="video/mp4">
 </video>
