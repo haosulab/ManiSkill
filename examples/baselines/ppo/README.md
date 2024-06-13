@@ -38,6 +38,9 @@ python ppo.py --env_id="PickCube-v1" \
 python ppo.py --env_id="StackCube-v1" \
   --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
   --total_timesteps=25_000_000
+python ppo.py --env_id="PushT-v1" \
+  --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
+  --total_timesteps=25_000_000 --num-steps=100 --num_eval_steps=100 --gamma=0.99
 python ppo.py --env_id="PickSingleYCB-v1" \
   --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
   --total_timesteps=25_000_000
