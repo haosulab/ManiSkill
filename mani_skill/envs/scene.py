@@ -35,6 +35,7 @@ class ManiSkillScene:
         sim_cfg: SimConfig = SimConfig(),
         debug_mode: bool = True,
         device: Device = None,
+        parallel_gui_render_enabled: bool = False,
     ):
         if sub_scenes is None:
             sub_scenes = [sapien.Scene()]
@@ -79,7 +80,7 @@ class ManiSkillScene:
         non-unique between episode resets in order to be easily rebuilt and deallocate old queries. This essentially acts as a way
         to invalidate the cached queries."""
 
-        self.parallel_gui_render_enabled: bool = False
+        self.parallel_gui_render_enabled: bool = parallel_gui_render_enabled
         """Whether rendering all parallel scenes in the viewer/gui is enabled"""
 
     # -------------------------------------------------------------------------- #

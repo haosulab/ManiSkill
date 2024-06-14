@@ -45,6 +45,10 @@ def main(args):
     verbose = not args.quiet
     if args.seed is not None:
         np.random.seed(args.seed)
+    parallel_gui_render_enabled=args.render_mode == "human"
+    if args.render_mode == "human" and args.obs_mode in ["sensor_data", "rgb", "rgbd", "depth", "point_cloud"]:
+        print("Disabling parallel GUI render as observation mode is a visual one. Change observation mode to state or state_dict to see a parallel env render")
+        parallel_gui_render_enabled = False
     env: BaseEnv = gym.make(
         args.env_id,
         obs_mode=args.obs_mode,
@@ -54,6 +58,7 @@ def main(args):
         shader_dir=args.shader,
         num_envs=args.num_envs,
         sim_backend=args.sim_backend,
+        parallel_gui_render_enabled=parallel_gui_render_enabled,
         **args.env_kwargs
     )
 
