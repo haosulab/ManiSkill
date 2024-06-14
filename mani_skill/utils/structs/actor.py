@@ -186,9 +186,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
         if self.hidden:
             return
         if physx.is_gpu_enabled():
-            self.before_hide_pose = self.px.cuda_rigid_body_data.torch()[
-                self._body_data_index, :7
-            ].clone()
+            self.before_hide_pose = self.pose.raw_pose.clone()
 
             temp_pose = self.pose.raw_pose
             temp_pose[..., :3] += 99999
@@ -308,7 +306,16 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
                 return self.initial_pose
             else:
                 if self.hidden:
-                    return Pose.create(self.before_hide_pose)
+                    raw_pose = self.before_hide_pose
+                    if self.scene.parallel_gui_render_enabled:
+                        new_xyzs = (
+                            raw_pose[:, :3] - self.scene.scene_offsets[self._scene_idxs]
+                        )
+                        new_pose = torch.zeros_like(raw_pose)
+                        new_pose[:, 3:] = raw_pose[:, 3:]
+                        new_pose[:, :3] = new_xyzs
+                        raw_pose = new_pose
+                    return Pose.create(raw_pose)
                 else:
                     raw_pose = self.px.cuda_rigid_body_data.torch()[
                         self._body_data_index, :7

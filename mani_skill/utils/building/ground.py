@@ -29,6 +29,9 @@ def build_ground(
     ground.add_plane_collision(
         sapien.Pose(p=[0, 0, altitude], q=[0.7071068, 0, -0.7071068, 0]),
     )
+    if scene.parallel_gui_render_enabled:
+        # when building a ground and using a parallel render in the GUI, we want to only build one ground visual+collision plane
+        ground.set_scene_idxs([0])
     actor = ground.build_static(name=name)
 
     # generate a grid of right triangles that form 1x1 meter squares centered at (0, 0, 0)
