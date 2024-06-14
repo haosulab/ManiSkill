@@ -21,7 +21,7 @@ import mani_skill.examples.benchmarking.envs # import benchmark env code
 BENCHMARK_ENVS = ["PickCubeBenchmark-v1", "CartpoleBalanceBenchmark-v1"]
 
 def main(args):
-    profiler = Profiler(output_format=args.format)
+    profiler = Profiler(output_format="stdout")
     num_envs = args.num_envs
     sim_cfg = dict()
     if args.control_freq:
