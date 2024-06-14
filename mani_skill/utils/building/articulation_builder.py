@@ -125,9 +125,11 @@ class ArticulationBuilder(SapienArticulationBuilder):
         initial_pose_np = common.to_numpy(initial_pose.raw_pose)
 
         articulations = []
-
         for i, scene_idx in enumerate(self.scene_idxs):
-            sub_scene = self.scene.sub_scenes[scene_idx]
+            if self.scene.parallel_gui_render_enabled:
+                sub_scene = self.scene.sub_scenes[0]
+            else:
+                sub_scene = self.scene.sub_scenes[scene_idx]
             links: List[sapien.Entity] = self.build_entities(
                 name_prefix=f"scene-{scene_idx}-{self.name}_"
             )

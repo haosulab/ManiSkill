@@ -193,7 +193,10 @@ class ActorBuilder(SAPIENActorBuilder):
         entities = []
 
         for i, scene_idx in enumerate(self.scene_idxs):
-            sub_scene = self.scene.sub_scenes[scene_idx]
+            if self.scene.parallel_gui_render_enabled:
+                sub_scene = self.scene.sub_scenes[0]
+            else:
+                sub_scene = self.scene.sub_scenes[scene_idx]
             entity = self.build_entity()
             # prepend scene idx to entity name to indicate which sub-scene it is in
             entity.name = f"scene-{scene_idx}_{self.name}"

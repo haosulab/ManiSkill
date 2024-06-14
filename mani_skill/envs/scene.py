@@ -1,5 +1,7 @@
+from functools import cached_property
 from typing import Dict, List, Tuple, Union
 
+import numpy as np
 import sapien
 import sapien.physx as physx
 import sapien.render
@@ -76,6 +78,9 @@ class ManiSkillScene:
         This is used to determine automatically when to rebuild contact queries as keys for self.pairwise_contact_queries are kept
         non-unique between episode resets in order to be easily rebuilt and deallocate old queries. This essentially acts as a way
         to invalidate the cached queries."""
+
+        self.parallel_gui_render_enabled: bool = True
+        """Whether rendering all parallel scenes in the viewer/gui is enabled"""
 
     # -------------------------------------------------------------------------- #
     # Functions from sapien.Scene
@@ -568,6 +573,15 @@ class ManiSkillScene:
             obj2: Actor | Link
         """
         return self.get_pairwise_contact_impulses(obj1, obj2) / self.px.timestep
+
+    @cached_property
+    def scene_offsets(self):
+        return torch.tensor(
+            np.array(
+                [self.px.get_scene_offset(sub_scene) for sub_scene in self.sub_scenes]
+            ),
+            device=self.device,
+        )
 
     # -------------------------------------------------------------------------- #
     # Simulation state (required for MPC)

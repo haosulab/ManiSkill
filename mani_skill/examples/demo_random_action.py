@@ -52,6 +52,7 @@ def main(args):
         control_mode=args.control_mode,
         render_mode=args.render_mode,
         shader_dir=args.shader,
+        num_envs=args.num_envs,
         sim_backend=args.sim_backend,
         **args.env_kwargs
     )
@@ -82,7 +83,6 @@ def main(args):
             print("terminated", terminated)
             print("truncated", truncated)
             print("info", info)
-
         if args.render_mode is not None:
             env.render()
 
