@@ -1019,19 +1019,22 @@ class BaseEnv(gym.Env):
 
         Called by `self._reconfigure`
         """
-        if self.num_envs > 1:
-            side = int(np.ceil(self.num_envs ** 0.5))
-            idx = np.arange(self.num_envs)
-            offsets = np.stack([idx // side, idx % side, np.zeros_like(idx)], axis=1) * self.sim_cfg.spacing
-            self.viewer.set_scenes(self.scene.sub_scenes, offsets=offsets)
-            vs = self.viewer.window._internal_scene  # type: ignore
-            cubemap = self.scene.sub_scenes[0].render_system.get_cubemap()
-            if cubemap is not None:  # type: ignore [sapien may return None]
-                vs.set_cubemap(cubemap._internal_cubemap)
-            else:
-                vs.set_ambient_light([0.5, 0.5, 0.5])
-        else:
-            self._viewer.set_scene(self.scene.sub_scenes[0])
+        # commented code below is for a different parallel render system in the GUI but it does not support ray tracing
+        # instead to show parallel envs in the GUI they are all spawned into the same sub scene and offsets are auto
+        # added / subtracted from object poses.
+        # if self.num_envs > 1:
+        #     side = int(np.ceil(self.num_envs ** 0.5))
+        #     idx = np.arange(self.num_envs)
+        #     offsets = np.stack([idx // side, idx % side, np.zeros_like(idx)], axis=1) * self.sim_cfg.spacing
+        #     self.viewer.set_scenes(self.scene.sub_scenes, offsets=offsets)
+        #     vs = self.viewer.window._internal_scene  # type: ignore
+        #     cubemap = self.scene.sub_scenes[0].render_system.get_cubemap()
+        #     if cubemap is not None:  # type: ignore [sapien may return None]
+        #         vs.set_cubemap(cubemap._internal_cubemap)
+        #     else:
+        #         vs.set_ambient_light([0.5, 0.5, 0.5])
+        # else:
+        self._viewer.set_scene(self.scene.sub_scenes[0])
         control_window: sapien.utils.viewer.control_window.ControlWindow = (
             sapien_utils.get_obj_by_type(
                 self._viewer.plugins, sapien.utils.viewer.control_window.ControlWindow
