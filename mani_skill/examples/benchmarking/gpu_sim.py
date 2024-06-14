@@ -1,4 +1,6 @@
 import argparse
+from pathlib import Path
+from turtle import update
 
 import gymnasium as gym
 import numpy as np
@@ -8,14 +10,18 @@ import torch
 import tqdm
 
 import mani_skill.envs
+from mani_skill.envs.sapien_env import BaseEnv
+from mani_skill.sensors.camera import Camera
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 from mani_skill.examples.benchmarking.profiling import Profiler
 from mani_skill.utils.visualization.misc import images_to_video, tile_images
 from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper
+import mani_skill.examples.benchmarking.envs # import benchmark env code
 
+BENCHMARK_ENVS = ["PickCubeBenchmark-v1", "CartpoleBalanceBenchmark-v1"]
 
 def main(args):
-    profiler = Profiler(output_format=args.format)
+    profiler = Profiler(output_format="stdout")
     num_envs = args.num_envs
     sim_cfg = dict()
     if args.control_freq:
@@ -23,6 +29,14 @@ def main(args):
     if args.sim_freq:
         sim_cfg["sim_freq"] = args.sim_freq
     if not args.cpu_sim:
+        kwargs = dict()
+        if args.env_id in BENCHMARK_ENVS:
+            kwargs = dict(
+                camera_width=args.cam_width,
+                camera_height=args.cam_height,
+                num_cameras=args.num_cams,
+            )
+
         env = gym.make(
             args.env_id,
             num_envs=num_envs,
@@ -30,11 +44,12 @@ def main(args):
             # enable_shadow=True,
             render_mode=args.render_mode,
             control_mode=args.control_mode,
-            sim_cfg=sim_cfg
+            sim_cfg=sim_cfg,
+            **kwargs
         )
         if isinstance(env.action_space, gym.spaces.Dict):
             env = FlattenActionSpaceWrapper(env)
-        base_env = env.unwrapped
+        base_env: BaseEnv = env.unwrapped
     else:
         env = gym.make_vec(args.env_id, num_envs=args.num_envs, vectorization_mode="async", vector_kwargs=dict(context="spawn"), obs_mode=args.obs_mode,)
         base_env = gym.make(args.env_id, obs_mode=args.obs_mode).unwrapped
@@ -48,7 +63,7 @@ def main(args):
         env.reset(seed=2022)
         if args.save_video:
             images.append(env.render().cpu().numpy())
-        N = 100
+        N = 1000
         with profiler.profile("env.step", total_steps=N, num_envs=num_envs):
             for i in range(N):
                 actions = (
@@ -81,25 +96,32 @@ def main(args):
                     env.reset()
         profiler.log_stats("env.step+env.reset")
     env.close()
-    # append results to csv
-    try:
-        assert (
-            args.save_video == False
-        ), "Saving video slows down speed a lot and it will distort results"
-
-        profiler.update_csv(
-            "videos/benchmark_results_ms3.csv",
-            dict(
+    if args.save_results:
+        # append results to csv
+        try:
+            assert (
+                args.save_video == False
+            ), "Saving video slows down speed a lot and it will distort results"
+            Path("benchmark_results").mkdir(parents=True, exist_ok=True)
+            data = dict(
                 env_id=args.env_id,
                 obs_mode=args.obs_mode,
                 num_envs=args.num_envs,
                 control_mode=args.control_mode,
-                sensor_settings=sensor_settings_str,
                 gpu_type=torch.cuda.get_device_name()
-            ),
-        )
-    except:
-        pass
+            )
+            if args.env_id in BENCHMARK_ENVS:
+                data.update(
+                    num_cameras=args.num_cams,
+                    camera_width=args.cam_width,
+                    camera_height=args.cam_height,
+                )
+            profiler.update_csv(
+                "benchmark_results/maniskill.csv",
+                data,
+            )
+        except:
+            pass
 
 
 def parse_args():
@@ -111,6 +133,9 @@ def parse_args():
     parser.add_argument("--cpu-sim", action="store_true", help="Whether to use the CPU or GPU simulation")
     parser.add_argument("--control-freq", type=int, default=None, help="The control frequency to use")
     parser.add_argument("--sim-freq", type=int, default=None, help="The simulation frequency to use")
+    parser.add_argument("--num-cams", type=int, default=None, help="Number of cameras. Only used by benchmark environments")
+    parser.add_argument("--cam-width", type=int, default=None, help="Width of cameras. Only used by benchmark environments")
+    parser.add_argument("--cam-height", type=int, default=None, help="Height of cameras. Only used by benchmark environments")
     parser.add_argument(
         "--render-mode",
         type=str,
@@ -121,11 +146,7 @@ def parse_args():
         "--save-video", action="store_true", help="whether to save videos"
     )
     parser.add_argument(
-        "-f",
-        "--format",
-        type=str,
-        default="stdout",
-        help="format of results. Can be stdout or json.",
+        "--save-results", action="store_true", help="whether to save results to a csv file"
     )
     args = parser.parse_args()
     return args

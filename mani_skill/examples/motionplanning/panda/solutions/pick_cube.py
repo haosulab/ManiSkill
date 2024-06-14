@@ -26,7 +26,7 @@ def solve(env: PickCubeEnv, seed=None, debug=False, vis=False):
 
     approaching = np.array([0, 0, -1])
     # get transformation matrix of the tcp pose, is default batched and on torch
-    target_closing = env.agent.tcp.pose.to_transformation_matrix()[0, :3, 1].numpy()
+    target_closing = env.agent.tcp.pose.to_transformation_matrix()[0, :3, 1].cpu().numpy()
     # we can build a simple grasp pose using this information for Panda
     grasp_info = compute_grasp_info_by_obb(
         obb,
@@ -35,7 +35,7 @@ def solve(env: PickCubeEnv, seed=None, debug=False, vis=False):
         depth=FINGER_LENGTH,
     )
     closing, center = grasp_info["closing"], grasp_info["center"]
-    grasp_pose = env.agent.build_grasp_pose(approaching, closing, center)
+    grasp_pose = env.agent.build_grasp_pose(approaching, closing, env.cube.pose.sp.p)
 
     # -------------------------------------------------------------------------- #
     # Reach
@@ -52,7 +52,7 @@ def solve(env: PickCubeEnv, seed=None, debug=False, vis=False):
     # -------------------------------------------------------------------------- #
     # Move to goal pose
     # -------------------------------------------------------------------------- #
-    goal_pose = sapien.Pose(env.goal_site.pose.p[0], grasp_pose.q)
+    goal_pose = sapien.Pose(env.goal_site.pose.sp.p, grasp_pose.q)
     res = planner.move_to_pose_with_screw(goal_pose)
 
     planner.close()

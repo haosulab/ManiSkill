@@ -282,3 +282,83 @@ One robot must push/give the cube on its side to the other side so the other rob
 <video preload="auto" controls="True" width="100%">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/TwoRobotStackCube-v1_rt.mp4" type="video/mp4">
 </video>
+
+
+## PokeCube-v1
+![dense-reward][reward-badge]
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+A simple task where the objective is to poke a red cube with a peg and push it to a target goal position.
+
+**Supported Robots: Panda, Fetch, xArm**
+
+**Randomizations:**
+- the peg's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat along it's length on the table
+- the cube's x-coordinate is fixed to peg's x-coordinate + peg half-length (0.12) + 0.1 and y-coordinate is randomized in range [-0.1, 0.1]. It is placed flat on the table
+- the cube's z-axis rotation is randomized in range [-$\pi$/ 6, $\pi$ / 6]
+- the target goal region is marked by a red/white circular target. The position of the target is fixed to be the cube xy position + [0.05 + goal_radius, 0]
+
+**Success Conditions:**
+- the cube's xy position is within goal_radius (default 0.05) of the target's xy position by euclidean distance
+- the face of peg's head is close to the cube's face and the orientation is aligned
+- the peg's z position is within 0.005 of its half-width (0.25), that is close the table
+
+:::
+
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PokeCube-v1_rt.mp4" type="video/mp4">
+</video>
+
+## PlaceSphere-v1
+![dense-reward][reward-badge]
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+A simple task where the objective is to grasp a sphere and place it on top of a little bin.
+
+**Supported Robots: Panda**
+
+**Randomizations:**
+- the sphere's xy position is randomized on top of a table in the region [-0.1, -0.05] x [-0.1, 0.1]. It is placed at the first 1/4 zone along the x-axis
+- the bin's xy position is randomized on top of a table in the region [0.0, 1.0] x [-0.1, 0.1]. It is placed at the last 1/2 zone along the x-axis so that it doesn't collide the sphere
+
+**Success Conditions:**
+- the sphere is on top of the bin. That is, the sphere's xy-distance to the bin goes near 0, and its z-distance to the bin goes near the sphere radius + the bottom bin block's side length
+- the object is static. That is, its linear and angular velocities are bounded with a small value
+- the gripper is not grasping the object
+:::
+
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PlaceSphere-v1_rt.mp4" type="video/mp4">
+</video>
+  
+## RollBall-v1
+![dense-reward][reward-badge]
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+A simple task where the objective is to push and roll a ball to a goal region at the other end of the table.
+
+**Supported Robots: (Panda)**
+
+**Randomizations:**
+- the ball's xy position is randomized on top of a table in the region [0.2, 0.5] x [-0.4, 0.7]. It is placed flat on the table
+- the target goal region is marked by a red/white circular target. The position of the target is randomized on top of a table in the region [-0.4, -0.7] x [0.2, -0.9]
+
+**Success Conditions:**
+-  the ball's xy position is within goal_radius (default 0.1) of the target's xy position by euclidean distance.
+:::
+
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/RollBall-v1_rt.mp4" type="video/mp4">
+</video>

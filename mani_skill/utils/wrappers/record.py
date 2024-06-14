@@ -331,7 +331,6 @@ class RecordEpisode(gym.Wrapper):
             # if we reconfigure, there is the possibility that state dictionary looks different now
             # so trajectory buffer must be wiped
             self._trajectory_buffer = None
-
         if self.save_trajectory:
             state_dict = self.base_env.get_state_dict()
             action = common.batch(self.action_space.sample())
@@ -339,7 +338,7 @@ class RecordEpisode(gym.Wrapper):
                 state=common.to_numpy(common.batch(state_dict)),
                 observation=common.to_numpy(common.batch(obs)),
                 # note first reward/action etc. are ignored when saving trajectories to disk
-                action=action,
+                action=common.to_numpy(common.batch(action)),
                 reward=np.zeros(
                     (
                         1,
@@ -356,9 +355,6 @@ class RecordEpisode(gym.Wrapper):
                 fail=np.zeros((1, self.num_envs), dtype=bool),
                 env_episode_ptr=np.zeros((self.num_envs,), dtype=int),
             )
-            if self.num_envs == 1:
-                first_step.observation = common.batch(first_step.observation)
-                first_step.action = common.batch(first_step.action)
             env_idx = np.arange(self.num_envs)
             if "env_idx" in options:
                 env_idx = common.to_numpy(options["env_idx"])
@@ -579,6 +575,7 @@ class RecordEpisode(gym.Wrapper):
                 episode_info.update(reset_kwargs=dict())
 
             # slice some data to remove the first dummy frame.
+
             actions = common.index_dict_array(
                 self._trajectory_buffer.action, (slice(start_ptr + 1, end_ptr), env_idx)
             )
@@ -712,7 +709,7 @@ class RecordEpisode(gym.Wrapper):
         self._closed = True
         if self.save_trajectory:
             # Handle the last episode only when `save_on_reset=True`
-            if self.save_on_reset:
+            if self.save_on_reset and self._trajectory_buffer is not None:
                 self.flush_trajectory(
                     ignore_empty_transition=True,
                     env_idxs_to_flush=np.arange(self.num_envs),
