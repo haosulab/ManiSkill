@@ -906,8 +906,8 @@ class BaseEnv(gym.Env):
             scene_grid_length = int(np.ceil(np.sqrt(self.num_envs)))
             for scene_idx in range(self.num_envs):
                 scene_x, scene_y = (
-                    scene_idx % scene_grid_length,
-                    scene_idx // scene_grid_length,
+                    scene_idx % scene_grid_length - scene_grid_length // 2,
+                    scene_idx // scene_grid_length - scene_grid_length // 2,
                 )
                 scene = sapien.Scene(
                     systems=[self.physx_system, sapien.render.RenderSystem()]
