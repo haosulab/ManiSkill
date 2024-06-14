@@ -167,12 +167,12 @@ class PlaceSphereEnv(BaseEnv):
         is_obj_on_bin = torch.logical_and(xy_flag, z_flag)
         is_obj_static = self.obj.is_static(lin_thresh=1e-2, ang_thresh=0.5)
         is_obj_grasped = self.agent.is_grasping(self.obj)
-        success = is_obj_on_bin * is_obj_static * (~is_obj_grasped)
+        success = is_obj_on_bin & is_obj_static & (~is_obj_grasped)
         return {
             "is_obj_grasped": is_obj_grasped,
             "is_obj_on_bin": is_obj_on_bin,
             "is_obj_static": is_obj_static,
-            "success": success.bool(),
+            "success": success,
         }
 
     def _get_obs_extra(self, info: Dict):
@@ -229,16 +229,6 @@ class PlaceSphereEnv(BaseEnv):
         # this should be equal to compute_dense_reward / max possible reward
         max_reward = 13.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
-
-
-
-if __name__ == "__main__":
-    env = gym.make(id="PlaceSphere-v1", render_mode="sensors")
-    env.reset()
-    while True:
-    	env.render_human()
-
-
 
 
 
