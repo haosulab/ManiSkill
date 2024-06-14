@@ -12,6 +12,7 @@ from mani_skill.utils.building import actors
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs.pose import Pose
+from mani_skill.utils.structs.types import SimConfig
 
 
 @register_env("PickCube-v1", max_episode_steps=50)
@@ -34,6 +35,10 @@ class PickCubeEnv(BaseEnv):
     def _default_human_render_camera_configs(self):
         pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
+
+    @property
+    def _default_sim_config(self):
+        return SimConfig(spacing=3.0)
 
     def _load_scene(self, options: dict):
         self.table_scene = TableSceneBuilder(
