@@ -57,7 +57,7 @@ class PushTEnv(BaseEnv):
 
     Randomizations
     --------------
-    - 3D T block initial position on table  [-1,2] x [-1,1] + T Goal initial position
+    - 3D T block initial position on table  [-1,1] x [-1,2] + T Goal initial position
     - 3D T block initial z rotation         [0,2pi]
 
     Success Conditions
