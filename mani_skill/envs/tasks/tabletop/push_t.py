@@ -78,14 +78,12 @@ class PushTEnv(BaseEnv):
     - intersection % threshold for success  90%
     - Table View Camera parameters          sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
     
-    TODO's
-    ------
+    TODO's (xhin):
+    --------------
     - Add hand mounted camera for panda_stick robot, for visual rl
     - Add support for ur5e robot with hand mounted camera and real life end effector (3D cad link in their github README)
     - Tune Unspecified Real-World Parameters
     - Add robot qpos to randomizations
-
-    Visualization: TODO (xhin): example https://maniskill.readthedocs.io/en/latest/tasks/index.html#pushcube-v1
     """
 
     SUPPORTED_ROBOTS = ["panda_stick"]
