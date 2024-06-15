@@ -362,3 +362,32 @@ A simple task where the objective is to push and roll a ball to a goal region at
 <video preload="auto" controls="True" width="100%">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/RollBall-v1_rt.mp4" type="video/mp4">
 </video>
+
+## PushT-v1
+![dense-reward][reward-badge]
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+Digital Twin of real life push-T task from Diffusion Policy: https://diffusion-policy.cs.columbia.edu/
+
+"In this task, the robot needs to \
+1 precisely push the T- shaped block into the target region, and \
+2 move the end-effector to the end-zone which terminates the episode." \
+[We do not require 1 for the digital task]
+
+**Supported Robots: PandaStick (WIP UR5e)**
+
+**Randomizations:**
+- The 3D T block's initial center of mass is randomized in the region on the table: [-1,1] x [-1,2] + T Goal initial position. It is placed flat on the table
+- The 3D T block's initial z rotation is randomized in [0,2pi] around the center of mass of the block
+
+**Success Conditions:**
+- The 3D T block covers at least 90% of the 2D T goal zone
+:::
+
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PushT-v1_rt.mp4" type="video/mp4">
+</video>
