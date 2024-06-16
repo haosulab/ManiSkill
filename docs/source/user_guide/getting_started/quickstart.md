@@ -4,7 +4,7 @@ ManiSkill is a robotics simulator built on top of SAPIEN. It provides a standard
 
 ## Gym Interface
 
-Here is a basic example of how to make a ManiSkill task following the interface of [Gymnasium](https://gymnasium.farama.org/) and run a random policy.
+Here is a basic example of how to run a ManiSkill task following the interface of [Gymnasium](https://gymnasium.farama.org/) and execute a random policy.
 
 ```python
 import gymnasium as gym
@@ -35,7 +35,7 @@ Changing `num_envs` to a value > 1 will automatically turn on the GPU simulation
 You can also run the same code from the command line to demo random actions
 
 ```bash
-python -m mani_skill.examples.demo_random_action -e PickCube-v1 # run headless
+python -m mani_skill.examples.demo_random_action -e PickCube-v1 # run headless / without a display
 python -m mani_skill.examples.demo_random_action -e PickCube-v1 --render-mode="human" # run with A GUI
 ```
 

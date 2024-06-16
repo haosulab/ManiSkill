@@ -189,7 +189,10 @@ class ActorBuilder(SAPIENActorBuilder):
         initial_pose_b = initial_pose.raw_pose.shape[0]
         assert initial_pose_b == 1 or initial_pose_b == num_actors
         initial_pose_np = common.to_numpy(initial_pose.raw_pose)
-
+        if initial_pose_b == 1:
+            initial_pose_np = initial_pose_np.repeat(num_actors, axis=0)
+        if self.scene.parallel_gui_render_enabled:
+            initial_pose_np[:, :3] += self.scene.scene_offsets_np[self.scene_idxs]
         entities = []
 
         for i, scene_idx in enumerate(self.scene_idxs):
@@ -201,10 +204,7 @@ class ActorBuilder(SAPIENActorBuilder):
             # prepend scene idx to entity name to indicate which sub-scene it is in
             entity.name = f"scene-{scene_idx}_{self.name}"
             # set pose before adding to scene
-            if initial_pose_b == 1:
-                entity.pose = to_sapien_pose(initial_pose_np)
-            else:
-                entity.pose = to_sapien_pose(initial_pose_np[i])
+            entity.pose = to_sapien_pose(initial_pose_np[i])
             sub_scene.add_entity(entity)
             entities.append(entity)
         actor = Actor.create_from_entities(entities, self.scene, self.scene_idxs)

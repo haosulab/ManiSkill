@@ -215,16 +215,14 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
             if not isinstance(arg1, torch.Tensor):
                 arg1 = vectorize_pose(arg1)
             if self.scene.parallel_gui_render_enabled:
-                if self._num_objs > 1:
-                    if len(arg1.shape) == 1:
-                        arg1 = arg1.view(1, -1)
-                    mask = self.scene._reset_mask[self._scene_idxs]
-                    new_xyzs = arg1[:, :3] + self.scene.scene_offsets[self._scene_idxs]
-                    new_pose = torch.zeros((mask.sum(), 7), device=self.device)
-                    new_pose[:, 3:] = arg1[:, 3:]
-                    new_pose[:, :3] = new_xyzs
-                    arg1 = new_pose
-
+                if len(arg1.shape) == 1:
+                    arg1 = arg1.view(1, -1)
+                mask = self.scene._reset_mask[self._scene_idxs]
+                new_xyzs = arg1[:, :3] + self.scene.scene_offsets[self._scene_idxs]
+                new_pose = torch.zeros((mask.sum(), 7), device=self.device)
+                new_pose[:, 3:] = arg1[:, 3:]
+                new_pose[:, :3] = new_xyzs
+                arg1 = new_pose
             self.px.cuda_rigid_body_data.torch()[
                 self._body_data_index[self.scene._reset_mask[self._scene_idxs]], :7
             ] = arg1
