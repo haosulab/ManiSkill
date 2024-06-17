@@ -35,8 +35,12 @@ Changing `num_envs` to a value > 1 will automatically turn on the GPU simulation
 You can also run the same code from the command line to demo random actions
 
 ```bash
-python -m mani_skill.examples.demo_random_action -e PickCube-v1 # run headless / without a display
-python -m mani_skill.examples.demo_random_action -e PickCube-v1 --render-mode="human" # run with A GUI
+# run headless / without a display
+python -m mani_skill.examples.demo_random_action -e PickCube-v1
+# run with A GUI
+python -m mani_skill.examples.demo_random_action -e PickCube-v1 --render-mode="human"
+# visualize GPU parallelized environments
+python -m mani_skill.examples.demo_random_action -e PickCube-v1 --render-mode="human" --num-envs 16
 ```
 
 Running with `render_mode="human"` will open up a GUI shown below that you can use to interactively explore the scene, pause/play the script, teleport objects around, and more.
