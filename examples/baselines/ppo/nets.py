@@ -3,6 +3,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+from torchvision.models import resnet18
+import torchvision.transforms as transforms
+from torchvision import transforms
+
 def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     torch.nn.init.orthogonal_(layer.weight, std)
     torch.nn.init.constant_(layer.bias, bias_const)
@@ -83,8 +87,10 @@ class StateActorV1(nn.Module):
         return self.actor_mean(x)
 
 class NatureCNN(nn.Module):
-    def __init__(self, sample_obs, with_state=False):
+    def __init__(self, sample_obs, with_state=False, pretrained=False):
         super().__init__()
+
+        self.pretrained = pretrained
 
         # NOTE: Run rgb or rgb + state
         self.with_state = with_state
@@ -98,25 +104,39 @@ class NatureCNN(nn.Module):
         state_size = sample_obs["state"].shape[-1]
 
         # here we use a NatureCNN architecture to process images, but any architecture is permissble here
-        cnn = nn.Sequential(
-            nn.Conv2d(
-                in_channels=in_channels,
-                out_channels=32,
-                kernel_size=8,
-                stride=4,
-                padding=0,
-            ),
-            nn.ReLU(),
-            nn.Conv2d(
-                in_channels=32, out_channels=64, kernel_size=4, stride=2, padding=0
-            ),
-            nn.ReLU(),
-            nn.Conv2d(
-                in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=0
-            ),
-            nn.ReLU(),
-            nn.Flatten(),
-        )
+        cnn = None
+        if not self.pretrained:
+            cnn = nn.Sequential(
+                nn.Conv2d(
+                    in_channels=in_channels,
+                    out_channels=32,
+                    kernel_size=8,
+                    stride=4,
+                    padding=0,
+                ),
+                nn.ReLU(),
+                nn.Conv2d(
+                    in_channels=32, out_channels=64, kernel_size=4, stride=2, padding=0
+                ),
+                nn.ReLU(),
+                nn.Conv2d(
+                    in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=0
+                ),
+                nn.ReLU(),
+                nn.Flatten(),
+            )
+        else:
+            print("Using pretrained resnet18")
+
+            resnet = resnet18(pretrained=True)
+            # Remove the last fully connected layer
+            cnn = nn.Sequential(*list(resnet.children())[:-1])
+
+            #self.preprocess = transforms.Compose([
+            #     transforms.Resize(224),
+            #     transforms.ToTensor(),
+            #     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            # ])
 
         # to easily figure out the dimensions after flattening, we pass a test tensor
         with torch.no_grad():
@@ -139,9 +159,20 @@ class NatureCNN(nn.Module):
             obs = observations[key]
             if key == "rgb":
                 obs = obs.float().permute(0,3,1,2)
-                obs = obs / 255
-            encoded_tensor_list.append(extractor(obs))
+                if not self.pretrained:
+                    obs = obs / 255
+                else:
+                    obs = obs.resize_(224, 224)
+                    mean = [0.485, 0.456, 0.406]
+                    std = [0.229, 0.224, 0.225]
+                    obs[:, 0, ...] = (obs[:, 0, ...] - mean[0]) / std[0]
+                    obs[:, 1, ...] = (obs[:, 1, ...] - mean[1]) / std[1]
+                    obs[:, 2, ...] = (obs[:, 2, ...] - mean[2]) / std[2]
+            out = extractor(obs)
+            encoded_tensor_list.append(out)
         return torch.cat(encoded_tensor_list, dim=1)
+
+
 
 #TODO
 class NatureCNN3D(nn.Module):

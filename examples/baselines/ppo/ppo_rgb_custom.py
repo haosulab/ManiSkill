@@ -214,6 +214,7 @@ if __name__ == "__main__":
     )
 
     # rgbd obs mode returns a dict of data, we flatten it so there is just a rgbd key and state key
+    PRETRAINED = True
     WITH_STATE = False # NOTE: rgb + state or rgb
     envs = FlattenRGBDObservationWrapper(envs, rgb_only=True)
     eval_envs = FlattenRGBDObservationWrapper(eval_envs, rgb_only=True)
@@ -260,7 +261,7 @@ if __name__ == "__main__":
     print(f"args.minibatch_size={args.minibatch_size} args.batch_size={args.batch_size} args.update_epochs={args.update_epochs}")
     print(f"####")
     
-    agent = Agent(envs, sample_obs=next_obs, is_tracked=args.track, with_state=WITH_STATE).to(device)
+    agent = Agent(envs, sample_obs=next_obs, is_tracked=args.track, with_state=WITH_STATE, pretrained=PRETRAINED).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     if args.checkpoint:

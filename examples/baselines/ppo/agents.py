@@ -167,14 +167,14 @@ class StateAgent(nn.Module):
 
 
 class Agent(nn.Module):
-    def __init__(self, envs, sample_obs, feature_net=None, is_tracked=False, with_state=False):
+    def __init__(self, envs, sample_obs, feature_net=None, is_tracked=False, with_state=False, pretrained=False):
         super().__init__()
 
         print(f"Running with state: {with_state}")
 
         self.is_tracked = is_tracked
 
-        self.feature_net = NatureCNN(sample_obs=sample_obs, with_state=with_state) if feature_net is None else feature_net
+        self.feature_net = NatureCNN(sample_obs=sample_obs, with_state=with_state, pretrained=pretrained) if feature_net is None else feature_net
         
         # latent_size = np.array(envs.unwrapped.single_observation_space.shape).prod()
         latent_size = self.feature_net.out_features

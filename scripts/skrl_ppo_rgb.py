@@ -147,7 +147,7 @@ def run():
     TIMESTEPS = 500000
     cfg_trainer = {"timesteps": TIMESTEPS, "headless": True}
     trainer = SequentialTrainer(cfg=cfg_trainer, env=envs, agents=agent, wandblog=True)
-
+    
     trainer.train()
 
     if args.track:
