@@ -49,6 +49,8 @@ def main(args):
     if args.render_mode == "human" and args.obs_mode in ["sensor_data", "rgb", "rgbd", "depth", "point_cloud"]:
         print("Disabling parallel GUI render as observation mode is a visual one. Change observation mode to state or state_dict to see a parallel env render")
         parallel_gui_render_enabled = False
+    if args.render_mode == "human" and args.num_envs == 1:
+        parallel_gui_render_enabled = False
     env: BaseEnv = gym.make(
         args.env_id,
         obs_mode=args.obs_mode,

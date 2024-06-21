@@ -186,7 +186,7 @@ class BaseEnv(gym.Env):
             if obs_mode in ["sensor_data", "rgb", "rgbd", "pointcloud"]:
                 raise RuntimeError("""Currently you cannot use ray-tracing while running simulation with visual observation modes. You may still use
                 env.render_rgb_array() or the RecordEpisode wrapper to save videos of ray-traced results""")
-            if num_envs > 1:
+            if num_envs > 1 and parallel_gui_render_enabled == False:
                 raise RuntimeError("""Currently you cannot run ray-tracing on more than one environment in a single process""")
 
         assert not parallel_gui_render_enabled or (obs_mode not in ["sensor_data", "pointcloud", "rgb", "depth", "rgbd"]), \

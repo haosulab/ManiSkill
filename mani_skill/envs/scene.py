@@ -442,6 +442,11 @@ class ManiSkillScene:
                 light_position, sapien.math.shortest_rotation([1, 0, 0], direction)
             )
             scene.add_entity(entity)
+            if self.parallel_gui_render_enabled:
+                # for directional lights adding multiple does not make much sense
+                # and for parallel gui rendering setup accurate lighting does not matter as it is only
+                # for demo purposes
+                break
         return
 
     def add_spot_light(
