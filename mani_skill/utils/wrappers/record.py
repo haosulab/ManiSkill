@@ -333,12 +333,12 @@ class RecordEpisode(gym.Wrapper):
             self._trajectory_buffer = None
         if self.save_trajectory:
             state_dict = self.base_env.get_state_dict()
-            action = common.batch(self.action_space.sample())
+            action = common.batch(self.single_action_space.sample())
             first_step = Step(
                 state=common.to_numpy(common.batch(state_dict)),
                 observation=common.to_numpy(common.batch(obs)),
                 # note first reward/action etc. are ignored when saving trajectories to disk
-                action=common.to_numpy(common.batch(action)),
+                action=common.to_numpy(common.batch(action.repeat(self.num_envs, 0))),
                 reward=np.zeros(
                     (
                         1,
