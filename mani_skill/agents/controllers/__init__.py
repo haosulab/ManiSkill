@@ -15,6 +15,7 @@ from .pd_joint_vel import PDJointVelController, PDJointVelControllerConfig
 from .pd_joint_pos_vel import PDJointPosVelController, PDJointPosVelControllerConfig
 from .passive_controller import PassiveController, PassiveControllerConfig
 from .pd_base_vel import PDBaseVelController, PDBaseVelControllerConfig
+from .pd_base_vel import PDBaseForwardVelController, PDBaseForwardVelControllerConfig
 
 
 def deepcopy_dict(configs: dict):
