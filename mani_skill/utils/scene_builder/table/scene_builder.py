@@ -44,8 +44,12 @@ class TableSceneBuilder(SceneBuilder):
         self.table_length = aabb[1, 0] - aabb[0, 0]
         self.table_width = aabb[1, 1] - aabb[0, 1]
         self.table_height = aabb[1, 2] - aabb[0, 2]
-
-        self.ground = build_ground(self.scene, altitude=-self.table_height)
+        floor_width = 100
+        if self.scene.parallel_gui_render_enabled:
+            floor_width = 500
+        self.ground = build_ground(
+            self.scene, floor_width=floor_width, altitude=-self.table_height
+        )
         self.table = table
         self.scene_objects: List[sapien.Entity] = [self.table, self.ground]
 

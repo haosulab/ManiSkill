@@ -13,6 +13,7 @@ def parse_args(args=None):
     parser.add_argument("-o", "--obs-mode", type=str, default="none")
     parser.add_argument("-b", "--sim-backend", type=str, default="auto", help="Which simulation backend to use. Can be 'auto', 'cpu', 'gpu'")
     parser.add_argument("--reward-mode", type=str)
+    parser.add_argument("--num-envs", type=int, default=1, help="Number of environments to run.")
     parser.add_argument("-c", "--control-mode", type=str)
     parser.add_argument("--render-mode", type=str, default="rgb_array")
     parser.add_argument("--shader", default="default", type=str, help="Change shader used for rendering. Default is 'default' which is very fast. Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer")
@@ -44,6 +45,12 @@ def main(args):
     verbose = not args.quiet
     if args.seed is not None:
         np.random.seed(args.seed)
+    parallel_gui_render_enabled=args.render_mode == "human"
+    if args.render_mode == "human" and args.obs_mode in ["sensor_data", "rgb", "rgbd", "depth", "point_cloud"]:
+        print("Disabling parallel GUI render as observation mode is a visual one. Change observation mode to state or state_dict to see a parallel env render")
+        parallel_gui_render_enabled = False
+    if args.render_mode == "human" and args.num_envs == 1:
+        parallel_gui_render_enabled = False
     env: BaseEnv = gym.make(
         args.env_id,
         obs_mode=args.obs_mode,
@@ -51,7 +58,9 @@ def main(args):
         control_mode=args.control_mode,
         render_mode=args.render_mode,
         shader_dir=args.shader,
+        num_envs=args.num_envs,
         sim_backend=args.sim_backend,
+        parallel_gui_render_enabled=parallel_gui_render_enabled,
         **args.env_kwargs
     )
 
@@ -81,7 +90,6 @@ def main(args):
             print("terminated", terminated)
             print("truncated", truncated)
             print("info", info)
-
         if args.render_mode is not None:
             env.render()
 

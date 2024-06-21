@@ -186,9 +186,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
         if self.hidden:
             return
         if physx.is_gpu_enabled():
-            self.before_hide_pose = self.px.cuda_rigid_body_data.torch()[
-                self._body_data_index, :7
-            ].clone()
+            self.before_hide_pose = self.pose.raw_pose.clone()
 
             temp_pose = self.pose.raw_pose
             temp_pose[..., :3] += 99999
@@ -313,6 +311,14 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
                     raw_pose = self.px.cuda_rigid_body_data.torch()[
                         self._body_data_index, :7
                     ]
+                    if self.scene.parallel_gui_render_enabled:
+                        new_xyzs = (
+                            raw_pose[:, :3] - self.scene.scene_offsets[self._scene_idxs]
+                        )
+                        new_pose = torch.zeros_like(raw_pose)
+                        new_pose[:, 3:] = raw_pose[:, 3:]
+                        new_pose[:, :3] = new_xyzs
+                        raw_pose = new_pose
                     return Pose.create(raw_pose)
         else:
             return Pose.create([obj.pose for obj in self._objs])
@@ -324,10 +330,19 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
                 arg1 = vectorize_pose(arg1)
             if self.hidden:
                 self.before_hide_pose[self.scene._reset_mask[self._scene_idxs]] = arg1
-            else:
-                self.px.cuda_rigid_body_data.torch()[
-                    self._body_data_index[self.scene._reset_mask[self._scene_idxs]], :7
-                ] = arg1
+                return
+            if self.scene.parallel_gui_render_enabled:
+                if len(arg1.shape) == 1:
+                    arg1 = arg1.view(1, -1)
+                mask = self.scene._reset_mask[self._scene_idxs]
+                new_xyzs = arg1[:, :3] + self.scene.scene_offsets[self._scene_idxs]
+                new_pose = torch.zeros((mask.sum(), 7), device=self.device)
+                new_pose[:, 3:] = arg1[:, 3:]
+                new_pose[:, :3] = new_xyzs
+                arg1 = new_pose
+            self.px.cuda_rigid_body_data.torch()[
+                self._body_data_index[self.scene._reset_mask[self._scene_idxs]], :7
+            ] = arg1
         else:
             if isinstance(arg1, sapien.Pose):
                 for obj in self._objs:

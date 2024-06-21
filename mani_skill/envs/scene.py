@@ -1,5 +1,7 @@
-from typing import Dict, List, Tuple, Union
+from functools import cached_property
+from typing import Dict, List, Optional, Tuple, Union
 
+import numpy as np
 import sapien
 import sapien.physx as physx
 import sapien.render
@@ -33,6 +35,7 @@ class ManiSkillScene:
         sim_cfg: SimConfig = SimConfig(),
         debug_mode: bool = True,
         device: Device = None,
+        parallel_gui_render_enabled: bool = False,
     ):
         if sub_scenes is None:
             sub_scenes = [sapien.Scene()]
@@ -76,6 +79,9 @@ class ManiSkillScene:
         This is used to determine automatically when to rebuild contact queries as keys for self.pairwise_contact_queries are kept
         non-unique between episode resets in order to be easily rebuilt and deallocate old queries. This essentially acts as a way
         to invalidate the cached queries."""
+
+        self.parallel_gui_render_enabled: bool = parallel_gui_render_enabled
+        """Whether rendering all parallel scenes in the viewer/gui is enabled"""
 
     # -------------------------------------------------------------------------- #
     # Functions from sapien.Scene
@@ -375,14 +381,15 @@ class ManiSkillScene:
         shadow_near=0.1,
         shadow_far=10.0,
         shadow_map_size=2048,
-        scene_idxs=None,
+        scene_idxs: Optional[List[int]] = None,
     ):
-        lighting_scenes = (
-            self.sub_scenes
-            if scene_idxs is None
-            else [self.sub_scenes[i] for i in scene_idxs]
-        )
-        for scene in lighting_scenes:
+        if scene_idxs is None:
+            scene_idxs = list(range(len(self.sub_scenes)))
+        for scene_idx in scene_idxs:
+            if self.parallel_gui_render_enabled:
+                scene = self.sub_scenes[0]
+            else:
+                scene = self.sub_scenes[scene_idx]
             entity = sapien.Entity()
             light = sapien.render.RenderPointLightComponent()
             entity.add_component(light)
@@ -391,7 +398,11 @@ class ManiSkillScene:
             light.shadow_near = shadow_near
             light.shadow_far = shadow_far
             light.shadow_map_size = shadow_map_size
-            light.pose = sapien.Pose(position)
+            if self.parallel_gui_render_enabled:
+                light.pose = sapien.Pose(position + self.scene_offsets_np[scene_idx])
+            else:
+                light.pose = sapien.Pose(position)
+
             scene.add_entity(entity)
         return light
 
@@ -405,14 +416,15 @@ class ManiSkillScene:
         shadow_near=-10.0,
         shadow_far=10.0,
         shadow_map_size=2048,
-        scene_idxs=None,
+        scene_idxs: Optional[List[int]] = None,
     ):
-        lighting_scenes = (
-            self.sub_scenes
-            if scene_idxs is None
-            else [self.sub_scenes[i] for i in scene_idxs]
-        )
-        for scene in lighting_scenes:
+        if scene_idxs is None:
+            scene_idxs = list(range(len(self.sub_scenes)))
+        for scene_idx in scene_idxs:
+            if self.parallel_gui_render_enabled:
+                scene = self.sub_scenes[0]
+            else:
+                scene = self.sub_scenes[scene_idx]
             entity = sapien.Entity()
             light = sapien.render.RenderDirectionalLightComponent()
             entity.add_component(light)
@@ -422,10 +434,19 @@ class ManiSkillScene:
             light.shadow_far = shadow_far
             light.shadow_half_size = shadow_scale
             light.shadow_map_size = shadow_map_size
+            if self.parallel_gui_render_enabled:
+                light_position = position + self.scene_offsets_np[scene_idx]
+            else:
+                light_position = position
             light.pose = sapien.Pose(
-                position, sapien.math.shortest_rotation([1, 0, 0], direction)
+                light_position, sapien.math.shortest_rotation([1, 0, 0], direction)
             )
             scene.add_entity(entity)
+            if self.parallel_gui_render_enabled:
+                # for directional lights adding multiple does not make much sense
+                # and for parallel gui rendering setup accurate lighting does not matter as it is only
+                # for demo purposes
+                break
         return
 
     def add_spot_light(
@@ -439,14 +460,15 @@ class ManiSkillScene:
         shadow_near=0.1,
         shadow_far=10.0,
         shadow_map_size=2048,
-        scene_idxs=None,
+        scene_idxs: Optional[List[int]] = None,
     ):
-        lighting_scenes = (
-            self.sub_scenes
-            if scene_idxs is None
-            else [self.sub_scenes[i] for i in scene_idxs]
-        )
-        for scene in lighting_scenes:
+        if scene_idxs is None:
+            scene_idxs = list(range(len(self.sub_scenes)))
+        for scene_idx in scene_idxs:
+            if self.parallel_gui_render_enabled:
+                scene = self.sub_scenes[0]
+            else:
+                scene = self.sub_scenes[scene_idx]
             entity = sapien.Entity()
             light = sapien.render.RenderSpotLightComponent()
             entity.add_component(light)
@@ -457,8 +479,12 @@ class ManiSkillScene:
             light.shadow_map_size = shadow_map_size
             light.inner_fov = inner_fov
             light.outer_fov = outer_fov
+            if self.parallel_gui_render_enabled:
+                light_position = position + self.scene_offsets_np[scene_idx]
+            else:
+                light_position = position
             light.pose = sapien.Pose(
-                position, sapien.math.shortest_rotation([1, 0, 0], direction)
+                light_position, sapien.math.shortest_rotation([1, 0, 0], direction)
             )
             scene.add_entity(entity)
         return
@@ -568,6 +594,23 @@ class ManiSkillScene:
             obj2: Actor | Link
         """
         return self.get_pairwise_contact_impulses(obj1, obj2) / self.px.timestep
+
+    @cached_property
+    def scene_offsets(self):
+        """torch tensor of shape (num_envs, 3) representing the offset of each scene in the world frame"""
+        return torch.tensor(
+            np.array(
+                [self.px.get_scene_offset(sub_scene) for sub_scene in self.sub_scenes]
+            ),
+            device=self.device,
+        )
+
+    @cached_property
+    def scene_offsets_np(self):
+        """numpy array of shape (num_envs, 3) representing the offset of each scene in the world frame"""
+        return np.array(
+            [self.px.get_scene_offset(sub_scene) for sub_scene in self.sub_scenes]
+        )
 
     # -------------------------------------------------------------------------- #
     # Simulation state (required for MPC)

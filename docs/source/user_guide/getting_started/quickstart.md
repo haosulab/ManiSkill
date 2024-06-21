@@ -4,7 +4,7 @@ ManiSkill is a robotics simulator built on top of SAPIEN. It provides a standard
 
 ## Gym Interface
 
-Here is a basic example of how to make a ManiSkill task following the interface of [Gymnasium](https://gymnasium.farama.org/) and run a random policy.
+Here is a basic example of how to run a ManiSkill task following the interface of [Gymnasium](https://gymnasium.farama.org/) and execute a random policy.
 
 ```python
 import gymnasium as gym
@@ -35,8 +35,10 @@ Changing `num_envs` to a value > 1 will automatically turn on the GPU simulation
 You can also run the same code from the command line to demo random actions
 
 ```bash
-python -m mani_skill.examples.demo_random_action -e PickCube-v1 # run headless
-python -m mani_skill.examples.demo_random_action -e PickCube-v1 --render-mode="human" # run with A GUI
+# run headless / without a display
+python -m mani_skill.examples.demo_random_action -e PickCube-v1
+# run with A GUI
+python -m mani_skill.examples.demo_random_action -e PickCube-v1 --render-mode="human"
 ```
 
 Running with `render_mode="human"` will open up a GUI shown below that you can use to interactively explore the scene, pause/play the script, teleport objects around, and more.
@@ -110,7 +112,7 @@ for i in range(200):
 env.close()
 ```
 
-Note that as long as the GPU simulation is being used, all values returned by `env.step` and `env.reset` are batched and are torch tensors. With CPU simulation (`num_envs=1`), we keep to the standard gymnasium format and return unbatched numpy values. In general however, to make programming easier by default everything inside ManiSkill is kept as torch CPU/GPU tensors whenever possible, with the only exceptions being the return values of `env.step` and `env.reset`.
+Note that all values returned by `env.step` and `env.reset` are batched and are torch tensors. Whether GPU or CPU simulation is used then determines what device the tensor is on (CUDA or CPU).
 
 To benchmark the parallelized simulation, you can run 
 
@@ -131,6 +133,28 @@ which will look something like this
 <video preload="auto" controls="True" width="100%">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/docs/source/_static/videos/mani_skill_gpu_sim-PickCube-v1-num_envs=16-obs_mode=state-render_mode=sensors.mp4" type="video/mp4">
 </video>
+
+We further support opening a GUI to view all parallel environments at once, and you can also turn on ray-tracing for more photo-realism. Note that this feature is not useful for any practical purposes (for e.g. machine learning) apart from generating cool demonstration videos and so it is not well optimized.
+
+Turning the parallel GUI render on simply requires adding the argument `parallel_gui_render_enabled` to `gym.make` as so
+
+```python
+import gymnasium as gym
+import mani_skill.envs
+
+env = gym.make(
+    "PickCube-v1",
+    obs_mode="state",
+    control_mode="pd_joint_delta_pos",
+    num_envs=16,
+    parallel_gui_render_enabled=True,
+    shader_dir="rt-fast" # optionally set this argument for more photo-realistic rendering
+)
+```
+
+This will then open up a GUI that looks like so:
+```{figure} images/parallel_gui_render.png
+```
 
 
 ## Task Instantiation Options
