@@ -84,3 +84,16 @@ python -m mani_skill.trajectory.replay_trajectory \
   -c pd_joint_delta_pos -o state \
   --save-traj
 ```
+
+### Replaying Trajectories from One Control Mode to a Easier to Learn Control Mode
+
+In machine learning workflows, it can sometimes be easier to learn from some control modes such as end-effector control ones. The example below does that exactly
+
+```bash
+python -m mani_skill.trajectory.replay_trajectory \
+  --traj-path path/to/trajectory.h5 \
+  -c pd_ee_delta_pose -o state \
+  --save-traj
+```
+
+Note that some target control modes are difficult to convert to due to inherent differences in controllers. For highly precise tasks like PegInsertionSide and PlugCharger the success rate of conversion from e.g. `pd_joint_pos` control to `pd_ee_delta_pose` control is low. For less precise tasks like PickCube the success rate is near 100%.

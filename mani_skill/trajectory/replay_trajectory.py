@@ -71,7 +71,7 @@ def delta_pose_to_pd_ee_delta(
     assert isinstance(controller, PDEEPosController)
     assert controller.config.use_delta
     assert controller.config.normalize_action
-    low, high = controller.action_space.low, controller.action_space.high
+    low, high = controller.action_space_low, controller.action_space_high
     if pos_only:
         return gym_utils.inv_scale_action(delta_pose.p, low, high)
     delta_pose = np.r_[
@@ -82,7 +82,7 @@ def delta_pose_to_pd_ee_delta(
 
 
 def from_pd_joint_pos_to_ee(
-    output_mode,
+    output_mode: str,
     ori_actions,
     ori_env: BaseEnv,
     env: BaseEnv,
@@ -94,25 +94,23 @@ def from_pd_joint_pos_to_ee(
     if pbar is not None:
         pbar.reset(total=n)
 
-    pos_only = not ("pose" in output_mode)
-    target_mode = "target" in output_mode
-
     ori_controller: CombinedController = ori_env.agent.controller
     controller: CombinedController = env.agent.controller
-
-    # NOTE(jigu): We need to track the end-effector pose in the original env,
-    # given target joint positions instead of current joint positions.
-    # Thus, we need to compute forward kinematics
-    pin_model = ori_controller.articulation.create_pinocchio_model()
     assert (
         "arm" in ori_controller.controllers
     ), "Could not find the controller for the robot arm. This controller conversion tool requires there to be a key called 'arm' in the controller"
     ori_arm_controller: PDJointPosController = ori_controller.controllers["arm"]
     arm_controller: PDEEPoseController = controller.controllers["arm"]
-    assert (
-        arm_controller.config.frame == "root_translation:root_aligned_body_rotation"
-    ), "Currently only support the 'root_translation:root_aligned_body_rotation' ee control frame"
+    assert isinstance(arm_controller, PDEEPoseController) or isinstance(
+        arm_controller, PDEEPosController
+    ), "the arm controller must inherit PDEEPoseController or PDEEPosController"
+    assert arm_controller.config.frame in [
+        "root_translation:root_aligned_body_rotation",
+        "root_translation",
+    ], "Currently only support the 'root_translation:root_aligned_body_rotation' ee control frame for delta pose control and 'root_translation' ee control frame for delta pos control"
+    ori_ee_link = ori_env.agent.robot.links_map[arm_controller.ee_link.name]
     ee_link: Link = arm_controller.ee_link
+    pos_only = arm_controller.config.frame == "root_translation"
 
     info = {}
 
@@ -123,33 +121,19 @@ def from_pd_joint_pos_to_ee(
         ori_action = ori_actions[t]
         ori_action_dict = ori_controller.to_action_dict(ori_action)
         output_action_dict = ori_action_dict.copy()  # do not in-place modify
-
-        # Keep the joint positions with all DoF
-        full_qpos = ori_controller.articulation.get_qpos().numpy()[0]
-
         ori_env.step(ori_action)
-
-        # Use target joint positions for arm only
-        full_qpos[
-            ori_arm_controller.active_joint_indices
-        ] = ori_arm_controller._target_qpos.numpy()[0]
-        pin_model.compute_forward_kinematics(full_qpos)
-        target_ee_pose = pin_model.get_link_pose(arm_controller.ee_link_idx)
-
         flag = True
 
         for _ in range(4):
-            if target_mode:
-                prev_ee_pose_at_base = arm_controller._target_pose
-            else:
-                base_pose = arm_controller.articulation.pose.sp
-                prev_ee_pose_at_base = base_pose.inv() * ee_link.pose.sp
-
-            ee_pose_at_ee = prev_ee_pose_at_base.inv() * target_ee_pose
+            delta_q = [1, 0, 0, 0]
+            if "root_translation" in arm_controller.config.frame:
+                delta_position = ori_ee_link.pose.p - ee_link.pose.p
+            if "root_aligned_body_rotation" in arm_controller.config.frame:
+                delta_q = (ee_link.pose * ori_ee_link.pose.inv()).q.cpu().numpy()[0]
+            delta_pose = sapien.Pose(delta_position.cpu().numpy()[0], delta_q)
             arm_action = delta_pose_to_pd_ee_delta(
-                arm_controller, ee_pose_at_ee, pos_only=pos_only
+                arm_controller, delta_pose, pos_only=pos_only
             )
-
             if (np.abs(arm_action[:3])).max() > 1:  # position clipping
                 if verbose:
                     tqdm.write(f"Position action is clipped: {arm_action[:3]}")
@@ -185,9 +169,6 @@ def from_pd_joint_pos(
     verbose=False,
 ):
     if "ee" in output_mode:
-        raise NotImplementedError(
-            "At the moment converting pd joint pos to ee control has a bug and will be fixed later."
-        )
         return from_pd_joint_pos_to_ee(**locals())
 
     n = len(ori_actions)
