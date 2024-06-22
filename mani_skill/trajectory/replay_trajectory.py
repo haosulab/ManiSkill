@@ -24,7 +24,6 @@ from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.trajectory import utils as trajectory_utils
 from mani_skill.trajectory.merge_trajectory import merge_h5
 from mani_skill.utils import common, gym_utils, io_utils, wrappers
-from mani_skill.utils.geometry.rotation_conversions import quaternion_multiply
 from mani_skill.utils.structs.link import Link
 
 
