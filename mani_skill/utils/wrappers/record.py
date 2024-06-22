@@ -494,7 +494,17 @@ class RecordEpisode(gym.Wrapper):
         verbose=False,
         ignore_empty_transition=True,
         env_idxs_to_flush=None,
+        save: bool = True,
     ):
+        """
+        Flushes a trajectory and by default saves it to disk
+
+        Arguments:
+            verbose (bool): whether to print out information about the flushed trajectory
+            ignore_empty_transition (bool): whether to ignore trajectories that did not have any actions
+            env_idxs_to_flush: which environments by id to flush. If None, all environments are flushed.
+            save (bool): whether to save the trajectory to disk
+        """
         flush_count = 0
         if env_idxs_to_flush is None:
             env_idxs_to_flush = np.arange(0, self.num_envs)
@@ -505,139 +515,146 @@ class RecordEpisode(gym.Wrapper):
                 continue
             self._episode_id += 1
 
-            traj_id = "traj_{}".format(self._episode_id)
-            group = self._h5_file.create_group(traj_id, track_order=True)
+            if save:
+                traj_id = "traj_{}".format(self._episode_id)
+                group = self._h5_file.create_group(traj_id, track_order=True)
 
-            def recursive_add_to_h5py(group: h5py.Group, data: dict, key):
-                """simple recursive data insertion for nested data structures into h5py, optimizing for visual data as well"""
-                if isinstance(data, dict):
-                    subgrp = group.create_group(key, track_order=True)
-                    for k in data.keys():
-                        recursive_add_to_h5py(subgrp, data[k], k)
-                else:
-                    if key == "rgb":
-                        # NOTE(jigu): It is more efficient to use gzip than png for a sequence of images.
-                        group.create_dataset(
-                            "rgb",
-                            data=data[start_ptr:end_ptr, env_idx],
-                            dtype=data.dtype,
-                            compression="gzip",
-                            compression_opts=5,
-                        )
-                    elif key == "depth":
-                        # NOTE (stao): By default now cameras in ManiSkill return depth values of type uint16 for numpy
-                        group.create_dataset(
-                            key,
-                            data=data[start_ptr:end_ptr, env_idx],
-                            dtype=data.dtype,
-                            compression="gzip",
-                            compression_opts=5,
-                        )
-                    elif key == "seg":
-                        group.create_dataset(
-                            key,
-                            data=data[start_ptr:end_ptr, env_idx],
-                            dtype=data.dtype,
-                            compression="gzip",
-                            compression_opts=5,
-                        )
+                def recursive_add_to_h5py(group: h5py.Group, data: dict, key):
+                    """simple recursive data insertion for nested data structures into h5py, optimizing for visual data as well"""
+                    if isinstance(data, dict):
+                        subgrp = group.create_group(key, track_order=True)
+                        for k in data.keys():
+                            recursive_add_to_h5py(subgrp, data[k], k)
                     else:
-                        group.create_dataset(
-                            key, data=data[start_ptr:end_ptr, env_idx], dtype=data.dtype
-                        )
+                        if key == "rgb":
+                            # NOTE(jigu): It is more efficient to use gzip than png for a sequence of images.
+                            group.create_dataset(
+                                "rgb",
+                                data=data[start_ptr:end_ptr, env_idx],
+                                dtype=data.dtype,
+                                compression="gzip",
+                                compression_opts=5,
+                            )
+                        elif key == "depth":
+                            # NOTE (stao): By default now cameras in ManiSkill return depth values of type uint16 for numpy
+                            group.create_dataset(
+                                key,
+                                data=data[start_ptr:end_ptr, env_idx],
+                                dtype=data.dtype,
+                                compression="gzip",
+                                compression_opts=5,
+                            )
+                        elif key == "seg":
+                            group.create_dataset(
+                                key,
+                                data=data[start_ptr:end_ptr, env_idx],
+                                dtype=data.dtype,
+                                compression="gzip",
+                                compression_opts=5,
+                            )
+                        else:
+                            group.create_dataset(
+                                key,
+                                data=data[start_ptr:end_ptr, env_idx],
+                                dtype=data.dtype,
+                            )
 
-            # Observations need special processing
-            if isinstance(self._trajectory_buffer.observation, dict):
-                recursive_add_to_h5py(group, self._trajectory_buffer.observation, "obs")
-            elif isinstance(self._trajectory_buffer.observation, np.ndarray):
-                group.create_dataset(
-                    "obs",
-                    data=self._trajectory_buffer.observation[
-                        start_ptr:end_ptr, env_idx
-                    ],
-                    dtype=self._trajectory_buffer.observation.dtype,
-                )
-            else:
-                raise NotImplementedError(
-                    f"RecordEpisode wrapper does not know how to handle observation data of type {type(self._trajectory_buffer.observation)}"
-                )
+                # Observations need special processing
+                if isinstance(self._trajectory_buffer.observation, dict):
+                    recursive_add_to_h5py(
+                        group, self._trajectory_buffer.observation, "obs"
+                    )
+                elif isinstance(self._trajectory_buffer.observation, np.ndarray):
+                    group.create_dataset(
+                        "obs",
+                        data=self._trajectory_buffer.observation[
+                            start_ptr:end_ptr, env_idx
+                        ],
+                        dtype=self._trajectory_buffer.observation.dtype,
+                    )
+                else:
+                    raise NotImplementedError(
+                        f"RecordEpisode wrapper does not know how to handle observation data of type {type(self._trajectory_buffer.observation)}"
+                    )
 
-            episode_info = dict(
-                episode_id=self._episode_id,
-                episode_seed=self.base_env._episode_seed,
-                control_mode=self.base_env.control_mode,
-                elapsed_steps=end_ptr - start_ptr - 1,
-            )
-            if self.num_envs == 1:
-                episode_info.update(reset_kwargs=self.last_reset_kwargs)
-            else:
-                # NOTE (stao): With multiple envs in GPU simulation, reset_kwargs do not make much sense
-                episode_info.update(reset_kwargs=dict())
+                episode_info = dict(
+                    episode_id=self._episode_id,
+                    episode_seed=self.base_env._episode_seed,
+                    control_mode=self.base_env.control_mode,
+                    elapsed_steps=end_ptr - start_ptr - 1,
+                )
+                if self.num_envs == 1:
+                    episode_info.update(reset_kwargs=self.last_reset_kwargs)
+                else:
+                    # NOTE (stao): With multiple envs in GPU simulation, reset_kwargs do not make much sense
+                    episode_info.update(reset_kwargs=dict())
 
-            # slice some data to remove the first dummy frame.
+                # slice some data to remove the first dummy frame.
+                actions = common.index_dict_array(
+                    self._trajectory_buffer.action,
+                    (slice(start_ptr + 1, end_ptr), env_idx),
+                )
+                terminated = self._trajectory_buffer.terminated[
+                    start_ptr + 1 : end_ptr, env_idx
+                ]
+                truncated = self._trajectory_buffer.truncated[
+                    start_ptr + 1 : end_ptr, env_idx
+                ]
+                if isinstance(self._trajectory_buffer.action, dict):
+                    recursive_add_to_h5py(group, actions, "actions")
+                else:
+                    group.create_dataset("actions", data=actions, dtype=np.float32)
+                group.create_dataset("terminated", data=terminated, dtype=bool)
+                group.create_dataset("truncated", data=truncated, dtype=bool)
 
-            actions = common.index_dict_array(
-                self._trajectory_buffer.action, (slice(start_ptr + 1, end_ptr), env_idx)
-            )
-            terminated = self._trajectory_buffer.terminated[
-                start_ptr + 1 : end_ptr, env_idx
-            ]
-            truncated = self._trajectory_buffer.truncated[
-                start_ptr + 1 : end_ptr, env_idx
-            ]
-            if isinstance(self._trajectory_buffer.action, dict):
-                recursive_add_to_h5py(group, actions, "actions")
-            else:
-                group.create_dataset("actions", data=actions, dtype=np.float32)
-            group.create_dataset("terminated", data=terminated, dtype=bool)
-            group.create_dataset("truncated", data=truncated, dtype=bool)
+                if self._trajectory_buffer.success is not None:
+                    group.create_dataset(
+                        "success",
+                        data=self._trajectory_buffer.success[
+                            start_ptr + 1 : end_ptr, env_idx
+                        ],
+                        dtype=bool,
+                    )
+                    episode_info.update(
+                        success=self._trajectory_buffer.success[end_ptr - 1, env_idx]
+                    )
+                if self._trajectory_buffer.fail is not None:
+                    group.create_dataset(
+                        "fail",
+                        data=self._trajectory_buffer.fail[
+                            start_ptr + 1 : end_ptr, env_idx
+                        ],
+                        dtype=bool,
+                    )
+                    episode_info.update(
+                        fail=self._trajectory_buffer.fail[end_ptr - 1, env_idx]
+                    )
+                if self.record_env_state:
+                    recursive_add_to_h5py(
+                        group, self._trajectory_buffer.state, "env_states"
+                    )
+                if self.record_reward:
+                    group.create_dataset(
+                        "rewards",
+                        data=self._trajectory_buffer.reward[
+                            start_ptr + 1 : end_ptr, env_idx
+                        ],
+                        dtype=np.float32,
+                    )
 
-            if self._trajectory_buffer.success is not None:
-                group.create_dataset(
-                    "success",
-                    data=self._trajectory_buffer.success[
-                        start_ptr + 1 : end_ptr, env_idx
-                    ],
-                    dtype=bool,
-                )
-                episode_info.update(
-                    success=self._trajectory_buffer.success[end_ptr - 1, env_idx]
-                )
-            if self._trajectory_buffer.fail is not None:
-                group.create_dataset(
-                    "fail",
-                    data=self._trajectory_buffer.fail[start_ptr + 1 : end_ptr, env_idx],
-                    dtype=bool,
-                )
-                episode_info.update(
-                    fail=self._trajectory_buffer.fail[end_ptr - 1, env_idx]
-                )
-            if self.record_env_state:
-                recursive_add_to_h5py(
-                    group, self._trajectory_buffer.state, "env_states"
-                )
-            if self.record_reward:
-                group.create_dataset(
-                    "rewards",
-                    data=self._trajectory_buffer.reward[
-                        start_ptr + 1 : end_ptr, env_idx
-                    ],
-                    dtype=np.float32,
-                )
+                self._json_data["episodes"].append(episode_info)
+                dump_json(self._json_path, self._json_data, indent=2)
+                flush_count += 1
 
-            self._json_data["episodes"].append(episode_info)
-            dump_json(self._json_path, self._json_data, indent=2)
-            flush_count += 1
+            if verbose:
+                if flush_count == 1:
+                    print(f"Recorded episode {self._episode_id}")
+                else:
+                    print(
+                        f"Recorded episodes {self._episode_id - flush_count} to {self._episode_id}"
+                    )
 
-        if verbose:
-            if flush_count == 1:
-                print(f"Recorded episode {self._episode_id}")
-            else:
-                print(
-                    f"Recorded episodes {self._episode_id - flush_count} to {self._episode_id}"
-                )
         # truncate self._trajectory_buffer down to save memory
-
         if flush_count > 0:
             self._trajectory_buffer.env_episode_ptr[env_idxs_to_flush] = (
                 len(self._trajectory_buffer.done) - 1
@@ -679,26 +696,42 @@ class RecordEpisode(gym.Wrapper):
             self._trajectory_buffer.env_episode_ptr -= min_env_ptr
 
     def flush_video(
-        self, name=None, suffix="", verbose=False, ignore_empty_transition=True
+        self,
+        name=None,
+        suffix="",
+        verbose=False,
+        ignore_empty_transition=True,
+        save: bool = True,
     ):
+        """
+        Flush a video of the recorded episode(s) anb by default saves it to disk
+
+        Arguments:
+            name (str): name of the video file. If None, it will be named with the episode id.
+            suffix (str): suffix to add to the video file name
+            verbose (bool): whether to print out information about the flushed video
+            ignore_empty_transition (bool): whether to ignore trajectories that did not have any actions
+            save (bool): whether to save the video to disk
+        """
         if len(self.render_images) == 0:
             return
         if ignore_empty_transition and len(self.render_images) == 1:
             return
-        self._video_id += 1
-        if name is None:
-            video_name = "{}".format(self._video_id)
-            if suffix:
-                video_name += "_" + suffix
-        else:
-            video_name = name
-        images_to_video(
-            self.render_images,
-            str(self.output_dir),
-            video_name=video_name,
-            fps=self.video_fps,
-            verbose=verbose,
-        )
+        if save:
+            self._video_id += 1
+            if name is None:
+                video_name = "{}".format(self._video_id)
+                if suffix:
+                    video_name += "_" + suffix
+            else:
+                video_name = name
+            images_to_video(
+                self.render_images,
+                str(self.output_dir),
+                video_name=video_name,
+                fps=self.video_fps,
+                verbose=verbose,
+            )
         self._video_steps = 0
         self.render_images = []
 

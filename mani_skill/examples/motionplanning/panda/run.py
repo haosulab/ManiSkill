@@ -65,6 +65,9 @@ def main(args):
         successes.append(success)
         if args.only_count_success and not success:
             seed += 1
+            env.flush_trajectory(save=False)
+            if args.save_video:
+                env.flush_video(save=False)
             continue
         else:
             env.flush_trajectory()
