@@ -275,7 +275,7 @@ class PDEEPoseController(PDEEPosController):
             np.hstack(
                 [
                     np.broadcast_to(self.config.pos_upper, 3),
-                    np.broadcast_to(self.config.rot_lower, 3),
+                    np.broadcast_to(self.config.rot_upper, 3),
                 ]
             )
         )
