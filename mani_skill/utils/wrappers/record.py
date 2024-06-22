@@ -513,9 +513,9 @@ class RecordEpisode(gym.Wrapper):
             end_ptr = len(self._trajectory_buffer.done)
             if ignore_empty_transition and end_ptr - start_ptr <= 1:
                 continue
-            self._episode_id += 1
-
+            flush_count += 1
             if save:
+                self._episode_id += 1
                 traj_id = "traj_{}".format(self._episode_id)
                 group = self._h5_file.create_group(traj_id, track_order=True)
 
@@ -644,15 +644,14 @@ class RecordEpisode(gym.Wrapper):
 
                 self._json_data["episodes"].append(episode_info)
                 dump_json(self._json_path, self._json_data, indent=2)
-                flush_count += 1
 
-            if verbose:
-                if flush_count == 1:
-                    print(f"Recorded episode {self._episode_id}")
-                else:
-                    print(
-                        f"Recorded episodes {self._episode_id - flush_count} to {self._episode_id}"
-                    )
+                if verbose:
+                    if flush_count == 1:
+                        print(f"Recorded episode {self._episode_id}")
+                    else:
+                        print(
+                            f"Recorded episodes {self._episode_id - flush_count} to {self._episode_id}"
+                        )
 
         # truncate self._trajectory_buffer down to save memory
         if flush_count > 0:
