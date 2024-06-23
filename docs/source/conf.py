@@ -1,7 +1,7 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath("../../mani_skill"))
-__version__ = "3.0.0b4"
+__version__ = "3.0.0b5"
 # Configuration file for the Sphinx documentation builder.
 #
 # For the full list of built-in configuration values, see the documentation:
