@@ -117,6 +117,9 @@ python ppo_rgb.py --env_id="PickCube-v1" \
 python ppo_rgb.py --env_id="PickSingleYCB-v1" \
   --num_envs=256 --update_epochs=8 --num_minibatches=8 \
   --total_timesteps=10_000_000
+python ppo_rgb.py --env_id="PushT-v1" \
+  --num_envs=256 --update_epochs=8 --num_minibatches=8 \
+  --total_timesteps=25_000_000 --num-steps=100 --num_eval_steps=100 --gamma=0.99
 ```
 
 To evaluate a trained policy you can run
