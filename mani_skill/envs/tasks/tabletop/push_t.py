@@ -23,15 +23,15 @@ class WhiteTableSceneBuilder(TableSceneBuilder):
         super().initialize(env_idx)
         b = len(env_idx)
         if self.env.robot_uids == "panda_stick":
-            qpos = np.array([0.662,0.212,0.086,-2.685,-.115,2.898,1.673,])
-            qpos = (
-                self.env._episode_rng.normal(
-                    0, self.robot_init_qpos_noise, (b, len(qpos))
-                )
-                + qpos
-            )
-            self.env.agent.reset(qpos)
             self.env.agent.robot.set_pose(sapien.Pose([-0.615, 0, 0]))
+            #First define a randomized pose
+            target_pose = Pose(torch.Tensor([torch.empty(1).uniform_(0.2, 0.8),  
+                                             torch.empty(1).uniform_(-0.3, 0.3), 0, 0, 1, 0, 0]))
+            #Use IK to search for qpos with dummy action
+            qpos = self.env.pose_controller.compute_ik(target_pose, torch.zeros((1,6))) 
+            #Add a small Noise
+            qpos += self.env._episode_rng.normal(0, self.robot_init_qpos_noise, (b, len(qpos)))
+            self.env.agent.reset(qpos)
     def build(self):
         super().build()
         #cheap way to un-texture table 
@@ -159,7 +159,14 @@ class PushTEnv(BaseEnv):
         # load scene is a convienent place for this one time operation
         self.ee_starting_pos2D = self.ee_starting_pos2D.to(self.device)
         self.ee_starting_pos3D = self.ee_starting_pos3D.to(self.device)
-
+        
+        # define ee_controller to calculate initial qpos
+        self.pose_controller = self.agent._controller_configs['pd_ee_target_delta_pose']['arm'].controller_cls(
+            self.agent._controller_configs['pd_ee_delta_pose']['arm'],
+            self.agent.controllers[self.control_mode].articulation, 
+            self.agent.controllers[self.control_mode].control_freq, 
+            scene=self.agent.controllers[self.control_mode].scene)
+        
         # we use a prebuilt scene builder class that automatically loads in a floor and table.
         self.table_scene = WhiteTableSceneBuilder(
             env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
