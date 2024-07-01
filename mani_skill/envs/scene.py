@@ -689,10 +689,10 @@ class ManiSkillScene:
             articulation.set_pose(articulation.initial_pose)
 
         self.px.cuda_rigid_body_data.torch()[:, 7:] = (
-            self.px.cuda_rigid_body_data.torch()[:, 7:] * 0
+            torch.zeros_like(self.px.cuda_rigid_body_data.torch()[:, 7:])
         )  # zero out all velocities
         self.px.cuda_articulation_qvel.torch()[:, :] = (
-            self.px.cuda_articulation_qvel.torch() * 0
+            torch.zeros_like(self.px.cuda_articulation_qvel.torch())
         )  # zero out all q velocities
 
         self.px.gpu_apply_rigid_dynamic_data()
