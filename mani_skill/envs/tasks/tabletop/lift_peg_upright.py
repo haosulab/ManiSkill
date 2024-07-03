@@ -90,14 +90,14 @@ class LiftPegUprightEnv(BaseEnv):
                 obj_pose=self.peg.pose.raw_pose,
             )
         return obs
-    
+
     def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
         # rotation reward as cosine similarity between peg direction vectors
         # peg center of mass to end of peg, (1,0,0), rotated by peg pose rotation
         # dot product with its goal orientation: (0,0,1) or (0,0,-1)
         qmats = rotation_conversions.quaternion_to_matrix(self.peg.pose.q)
-        vec = torch.tensor([1.0,0,0], device=self.device)
-        goal_vec = torch.tensor([0,0,1.0], device=self.device)
+        vec = torch.tensor([1.0, 0, 0], device=self.device)
+        goal_vec = torch.tensor([0, 0, 1.0], device=self.device)
         rot_vec = (qmats @ vec).view(-1, 3)
         # abs since (0,0,-1) is also valid, values in [0,1]
         rot_rew = (rot_vec @ goal_vec).view(-1).abs()
@@ -112,12 +112,12 @@ class LiftPegUprightEnv(BaseEnv):
         # initially, we want to reach and grip peg
         to_grip_vec = self.peg.pose.p - self.agent.tcp.pose.p
         to_grip_dist = torch.linalg.norm(to_grip_vec, axis=1)
-        reaching_rew = 1 - torch.tanh(5*to_grip_dist)
+        reaching_rew = 1 - torch.tanh(5 * to_grip_dist)
         # reaching reward granted if gripping block
         reaching_rew[self.agent.is_grasping(self.peg)] = 1
         # weight reaching reward less
         reaching_rew = reaching_rew / 5
-        reward+=reaching_rew
+        reward += reaching_rew
 
         reward[info["success"]] = 3
         return reward

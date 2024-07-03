@@ -110,10 +110,12 @@ class PullCubeEnv(BaseEnv):
     def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
         # grippers should close and pull from behind the cube, not grip it
         # distance to backside of cube (+ 2*0.005) sufficiently encourages this
-        tcp_pull_pos = self.obj.pose.p + torch.tensor([self.cube_half_size + 2*0.005, 0, 0], device=self.device)
+        tcp_pull_pos = self.obj.pose.p + torch.tensor(
+            [self.cube_half_size + 2 * 0.005, 0, 0], device=self.device
+        )
         tcp_to_pull_pose = tcp_pull_pos - self.agent.tcp.pose.p
         tcp_to_pull_pose_dist = torch.linalg.norm(tcp_to_pull_pose, axis=1)
-        reaching_reward = 1 - torch.tanh(5 * tcp_to_pull_pose_dist)  
+        reaching_reward = 1 - torch.tanh(5 * tcp_to_pull_pose_dist)
         reward = reaching_reward
 
         reached = tcp_to_pull_pose_dist < 0.01
