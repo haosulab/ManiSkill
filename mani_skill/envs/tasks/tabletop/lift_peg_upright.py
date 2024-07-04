@@ -1,4 +1,4 @@
-from typing import Dict, Union
+from typing import Any, Dict, Union
 
 import numpy as np
 import torch
@@ -19,10 +19,6 @@ from mani_skill.utils.structs.types import Array
 
 @register_env("LiftPegUpright-v1", max_episode_steps=50)
 class LiftPegUprightEnv(BaseEnv):
-    SUPPORTED_REWARD_MODES = [
-        "sparse",
-        "none",
-    ]  # TODO add a denser reward for this later
     SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
     agent: Union[Panda, Xmate3Robotiq, Fetch]
 
@@ -94,3 +90,38 @@ class LiftPegUprightEnv(BaseEnv):
                 obj_pose=self.peg.pose.raw_pose,
             )
         return obs
+
+    def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
+        # rotation reward as cosine similarity between peg direction vectors
+        # peg center of mass to end of peg, (1,0,0), rotated by peg pose rotation
+        # dot product with its goal orientation: (0,0,1) or (0,0,-1)
+        qmats = rotation_conversions.quaternion_to_matrix(self.peg.pose.q)
+        vec = torch.tensor([1.0, 0, 0], device=self.device)
+        goal_vec = torch.tensor([0, 0, 1.0], device=self.device)
+        rot_vec = (qmats @ vec).view(-1, 3)
+        # abs since (0,0,-1) is also valid, values in [0,1]
+        rot_rew = (rot_vec @ goal_vec).view(-1).abs()
+        reward = rot_rew
+
+        # position reward using common maniskill distance reward pattern
+        # giving reward in [0,1] for moving center of mass toward half length above table
+        z_dist = torch.abs(self.peg.pose.p[:, 2] - self.peg_half_length)
+        reward += 1 - torch.tanh(5 * z_dist)
+
+        # small reward to motivate initial reaching
+        # initially, we want to reach and grip peg
+        to_grip_vec = self.peg.pose.p - self.agent.tcp.pose.p
+        to_grip_dist = torch.linalg.norm(to_grip_vec, axis=1)
+        reaching_rew = 1 - torch.tanh(5 * to_grip_dist)
+        # reaching reward granted if gripping block
+        reaching_rew[self.agent.is_grasping(self.peg)] = 1
+        # weight reaching reward less
+        reaching_rew = reaching_rew / 5
+        reward += reaching_rew
+
+        reward[info["success"]] = 3
+        return reward
+
+    def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
+        max_reward = 3.0
+        return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
