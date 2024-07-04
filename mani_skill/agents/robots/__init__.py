@@ -9,6 +9,7 @@ from .stompy import Stompy
 from .trifingerpro import TriFingerPro
 from .unitree_go import *
 from .unitree_h1 import *
+from .unitree_g1 import *
 from .ur_e import UR10e
 from .widowx import *
 from .xarm import XArm7Ability
