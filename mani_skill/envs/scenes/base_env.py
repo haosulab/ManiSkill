@@ -29,8 +29,9 @@ class SceneManipulationEnv(BaseEnv):
             When True, will never reconfigure the environment during resets unless you run env.reset(seed=seed, options=dict(reconfigure=True))
             and explicitly reconfigure. If False, will reconfigure every reset.
 
-        scene_builder_cls: Scene builder class to build a scene with. Default is the ArchitecTHORSceneBuilder which builds a scene from AI2THOR.
-            Any of the AI2THOR SceneBuilders are supported in this environment
+        scene_builder_cls:
+            Scene builder class to build a scene with. Default is ReplicaCAD. Furthermore, any of the AI2THOR SceneBuilders are supported in
+            this environment.
 
         build_config_idxs (optional): which build configs (static builds) to sample. Your scene_builder_cls may or may not require these.
         init_config_idxs (optional): which init configs (additional init options) to sample. Your scene_builder_cls may or may not require these.
