@@ -23,6 +23,7 @@ from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.envs.utils.observations import (
     sensor_data_to_pointcloud,
     sensor_data_to_rgbd,
+    sensor_data_to_voxel
 )
 from mani_skill.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill.sensors.camera import (
@@ -65,6 +66,8 @@ class BaseEnv(gym.Env):
         enable_shadow (bool): whether to enable shadow for lights. Defaults to False.
 
         sensor_cfgs (dict): configurations of sensors. See notes for more details.
+
+        obs_mode_config (dict): configuration hyperparameters of observations. See notes for more details.
 
         human_render_camera_cfgs (dict): configurations of human rendering cameras. Similar usage as @sensor_cfgs.
 
@@ -120,6 +123,8 @@ class BaseEnv(gym.Env):
     """all sensor configurations parsed from self._sensor_configs and agent._sensor_configs"""
     _agent_sensor_configs: Dict[str, BaseSensorConfig]
     """all agent sensor configs parsed from agent._sensor_configs"""
+    _obs_mode_config: Dict
+    """configurations for converting sensor data to observations under the current observation mode (e.g. voxel size and scene bounds for voxel observations)"""
     _human_render_cameras: Dict[str, Camera]
     """cameras used for rendering the current environment retrievable via `env.render_rgb_array()`. These are not used to generate observations"""
     _default_human_render_camera_configs: Dict[str, CameraConfig]
@@ -146,6 +151,7 @@ class BaseEnv(gym.Env):
         shader_dir: str = "default",
         enable_shadow: bool = False,
         sensor_configs: dict = None,
+        obs_mode_config: dict = None, 
         human_render_camera_configs: dict = None,
         robot_uids: Union[str, BaseAgent, List[Union[str, BaseAgent]]] = None,
         sim_cfg: Union[SimConfig, dict] = dict(),
@@ -156,6 +162,7 @@ class BaseEnv(gym.Env):
         self.num_envs = num_envs
         self.reconfiguration_freq = reconfiguration_freq if reconfiguration_freq is not None else 0
         self._reconfig_counter = 0
+        self._obs_mode_config = obs_mode_config
         self._custom_sensor_configs = sensor_configs
         self._custom_human_render_camera_configs = human_render_camera_configs
         self._parallel_gui_render_enabled = parallel_gui_render_enabled
@@ -417,6 +424,14 @@ class BaseEnv(gym.Env):
                 obs = sensor_data_to_rgbd(obs, self._sensors, rgb=True, depth=False, segmentation=True)
             elif self.obs_mode == "pointcloud":
                 obs = sensor_data_to_pointcloud(obs, self._sensors)
+            elif self.obs_mode == "voxel":
+                # assert on _obs_mode_config here, and pass them to the convertion function
+                assert self._obs_mode_config != None, "You mush pass in configs in voxel observation mode via obs_mode_config keyword arg in gym.make(). See the Maniskill docs for details. No such config detected."
+                assert "voxel_size" in self._obs_mode_config.keys(), "Lacking voxel_size (voxel size) in observation configs"
+                assert "coord_bounds" in self._obs_mode_config.keys(), "Lacking coord_bounds (coordinate bounds) in observation configs"
+                assert "device" in self._obs_mode_config.keys(), "Lacking device (device for voxelizations) in observation configs"
+                assert "segmentation" in self._obs_mode_config.keys(), "Lacking segmentation (a boolean indicating whether including voxel segmentations) in observation configs"
+                obs = sensor_data_to_voxel(obs, self._sensors, self._obs_mode_config)
         else:
             raise NotImplementedError(self._obs_mode)
         return obs
