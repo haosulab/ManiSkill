@@ -192,7 +192,7 @@ python -m mani_skill.examples.demo_vis_rgbd -e "StackCube-v1"
 
 ## Visualize Voxel Data
 
-You can run the following to visualize the voxelized data. It will give you the following voxelized scene under the default sensor settings.
+You can run the following to visualize the voxelized data. It will give you the following voxelized scene under the default sensor settings with only 1 camera at the front of the scene.
 
 ```bash
 python -m mani_skill.examples.demo_vis_voxel -e "PushCube-v1" 
