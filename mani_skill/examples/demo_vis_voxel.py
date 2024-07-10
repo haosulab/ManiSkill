@@ -24,7 +24,7 @@ def parse_args(args=None):
         nargs="*",
         type=float,
         default=[-1, -1, -1, 2, 2, 2],
-        help="Whether or not to perform voxel segmentation estimations and include them in the results"
+        help="The bounds of the 3D points' coordinates to be voxelized"
     )
     parser.add_argument(
         "-s",
