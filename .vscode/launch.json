@@ -61,7 +61,7 @@
             "request": "launch",
             "preLaunchTask": "",
             "program": "${workspaceFolder}/scripts/run_ppo_state_or_visual_default.py",
-            "args": ["--state"],
+            "args": ["--visual"],
             "console": "integratedTerminal",
             "justMyCode": false,
             "env": {},

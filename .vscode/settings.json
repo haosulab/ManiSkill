@@ -24,7 +24,8 @@
         "/opt/conda/lib/python3.9/site-packages/",
         "scripts/",
         "skrl/",
-        "mani_skill/utils/scene_builder/table/table_scene_builder.py"
+        "mani_skill/utils/scene_builder/table/table_scene_builder.py",
+        "/opt/conda/lib/python3.9/site-packages/mani_skill/",
 ],
 
     "python.languageServer": "Pylance",

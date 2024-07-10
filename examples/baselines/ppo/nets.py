@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from torchvision.models import resnet18
+from torchvision.models import resnet18, resnet50
 import torchvision.transforms as transforms
 from torchvision import transforms
 
@@ -128,9 +128,12 @@ class NatureCNN(nn.Module):
         else:
             print("Using pretrained resnet18")
 
-            resnet = resnet18(pretrained=True)
+            resnet = resnet18(pretrained=False) # False or True, whatever works
             # Remove the last fully connected layer
-            cnn = nn.Sequential(*list(resnet.children())[:-1])
+            cnn = nn.Sequential(
+                *list(resnet.children())[:-1], 
+                nn.Flatten()
+            )
 
             #self.preprocess = transforms.Compose([
             #     transforms.Resize(224),
@@ -141,7 +144,21 @@ class NatureCNN(nn.Module):
         # to easily figure out the dimensions after flattening, we pass a test tensor
         with torch.no_grad():
             n_flatten = cnn(sample_obs["rgb"].float().permute(0,3,1,2).cpu()).shape[1]
-            fc = nn.Sequential(nn.Linear(n_flatten, feature_size), nn.ReLU())
+            if pretrained:
+                sample_input = sample_obs["rgb"].resize_(
+                    sample_obs["rgb"].shape[0], 
+                    224, 
+                    224, 
+                    sample_obs["rgb"].shape[-1]
+                )
+                sample_input = sample_input.float().permute(0,3,1,2).cpu()
+                sample_out = cnn(sample_input)
+                n_flatten = sample_out.shape[1]
+            fc = nn.Sequential(
+                nn.Linear(n_flatten, feature_size), 
+                nn.ReLU()
+            )
+
         extractors["rgb"] = nn.Sequential(cnn, fc)
         self.out_features += feature_size
 
@@ -159,24 +176,203 @@ class NatureCNN(nn.Module):
             obs = observations[key]
             if key == "rgb":
                 obs = obs.float().permute(0,3,1,2)
+                #original_h, original_w = obs.shape[0], obs.shape[1]
                 if not self.pretrained:
                     obs = obs / 255
                 else:
-                    obs = obs.resize_(224, 224)
-                    mean = [0.485, 0.456, 0.406]
-                    std = [0.229, 0.224, 0.225]
-                    obs[:, 0, ...] = (obs[:, 0, ...] - mean[0]) / std[0]
-                    obs[:, 1, ...] = (obs[:, 1, ...] - mean[1]) / std[1]
-                    obs[:, 2, ...] = (obs[:, 2, ...] - mean[2]) / std[2]
+                    obs = obs.resize_(obs.shape[0], obs.shape[1], 224, 224)
+                    #mean = [0.485, 0.456, 0.406]
+                    #std = [0.229, 0.224, 0.225]
+                    #normalize_fn = transforms.Normalize(mean=mean, std=std)
+                    #obs = normalize_fn(obs) (only when pretrained=True)
+                    obs = obs / 255
+                    
+                    #obs[:, 0, ...] = (obs[:, 0, ...] - mean[0]) / std[0]
+                    # obs[:, 1, ...] = (obs[:, 1, ...] - mean[1]) / std[1]
+                    # obs[:, 2, ...] = (obs[:, 2, ...] - mean[2]) / std[2]
             out = extractor(obs)
             encoded_tensor_list.append(out)
         return torch.cat(encoded_tensor_list, dim=1)
 
+class NatureCNNGRU(nn.Module):
+    def __init__(self, sample_obs, hidden_dim=256, with_state=False, pretrained=None):
+        super().__init__()
+
+        # NOTE: Run rgb or rgb + state
+        self.with_state = with_state
+
+        self.out_features = 0
+        feature_size = 256
+        in_channels = sample_obs["rgb"].shape[-1]
+        image_size = (sample_obs["rgb"].shape[1], sample_obs["rgb"].shape[2])
+        state_size = sample_obs["state"].shape[-1]
+
+        # here we use a NatureCNN architecture to process images, but any architecture is permissble here
+        self.cnn = nn.Sequential(
+            nn.Conv2d(
+                in_channels=in_channels,
+                out_channels=32,
+                kernel_size=8,
+                stride=4,
+                padding=0,
+            ),
+            nn.ReLU(),
+            nn.Conv2d(
+                in_channels=32, out_channels=64, kernel_size=4, stride=2, padding=0
+            ),
+            nn.ReLU(),
+            nn.Conv2d(
+                in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=0
+            ),
+            nn.ReLU(),
+            #nn.Dropout2d(p=0.3, inplace=True), # experiment
+            nn.Flatten()
+        )
+
+        with torch.no_grad():
+            n_size = self.cnn(sample_obs["rgb"].float().permute(0,3,1,2).cpu())
+            n_size = n_size.shape[1]
+            self.gru = nn.Sequential(
+                nn.GRU(n_size, hidden_dim, batch_first=True),
+            )
+
+        # to easily figure out the dimensions after flattening, we pass a test tensor
+        with torch.no_grad():
+            n_flatten = self.cnn(sample_obs["rgb"].float().permute(0,3,1,2).cpu())
+            n_flatten, _ = self.gru(n_flatten)
+            n_flatten = n_flatten.shape[1]
+
+            self.fc = nn.Sequential(
+                nn.Linear(n_flatten, feature_size), 
+                nn.ReLU()
+            )
+
+        self.out_features += feature_size
+
+        # for state data we simply pass it through a single linear layer
+        self.fc_state = None
+        if self.with_state:
+            self.fc_state = nn.Linear(state_size, 256)
+            self.out_features += 256
+
+    def forward(self, observations) -> torch.Tensor:
+        encoded_tensor_list = []
+
+        obs = observations["rgb"]
+        obs = obs.float().permute(0,3,1,2)
+        obs = obs / 255
+        out = self.cnn(obs)
+        out, _ = self.gru(out)
+        out = self.fc(out)
+        encoded_tensor_list.append(out)
+
+        if self.with_state:
+            out = self.fc_state(out)
+            encoded_tensor_list.append(out)
+
+        return torch.cat(encoded_tensor_list, dim=1)
+
+class NatureCNNGRURGBD(nn.Module):
+    def __init__(self, sample_obs, hidden_dim=256, with_state=False, pretrained=None):
+        super().__init__()
+
+        # NOTE: Run rgb or rgb + state
+        self.with_state = with_state
+
+        self.out_features = 0
+        feature_size = 256
+        in_channels = sample_obs["rgbd"].shape[-1]
+        image_size = (sample_obs["rgbd"].shape[1], sample_obs["rgbd"].shape[2])
+        state_size = sample_obs["state"].shape[-1]
+
+        # here we use a NatureCNN architecture to process images, but any architecture is permissble here
+        self.cnn = nn.Sequential(
+            nn.Conv2d(
+                in_channels=in_channels,
+                out_channels=32,
+                kernel_size=8,
+                stride=4,
+                padding=0,
+            ),
+            nn.ReLU(),
+            nn.Conv2d(
+                in_channels=32, out_channels=64, kernel_size=4, stride=2, padding=0
+            ),
+            nn.ReLU(),
+
+
+            nn.Conv2d(
+                in_channels=64, out_channels=256, kernel_size=3, stride=1, padding=1
+            ),
+            nn.ReLU(),
+            nn.Conv2d(
+                in_channels=256, out_channels=64, kernel_size=3, stride=1, padding=1
+            ),
+            nn.ReLU(),
+
+
+            nn.Conv2d(
+                in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=0
+            ),
+            nn.ReLU(),
+            nn.Flatten()
+        )
+
+        with torch.no_grad():
+            n_size = self.cnn(sample_obs["rgbd"].float().permute(0,3,1,2).cpu())
+            n_size = n_size.shape[1]
+            self.gru = nn.Sequential(
+                nn.GRU(n_size, hidden_dim, batch_first=True),
+            )
+
+        # to easily figure out the dimensions after flattening, we pass a test tensor
+        with torch.no_grad():
+            n_flatten = self.cnn(sample_obs["rgbd"].float().permute(0,3,1,2).cpu())
+            n_flatten, _ = self.gru(n_flatten)
+            n_flatten = n_flatten.shape[1]
+            self.fc = nn.Sequential(
+                nn.Linear(n_flatten, feature_size), 
+                nn.ReLU()
+            )
+
+        self.out_features += feature_size
+
+        # for state data we simply pass it through a single linear layer
+        self.fc_state = None
+        if self.with_state:
+            self.fc_state = nn.Linear(state_size, 256)
+            self.out_features += 256
+
+    def forward(self, observations) -> torch.Tensor:
+        encoded_tensor_list = []
+
+        # RGB
+        obs_rgb = observations["rgbd"][..., 1:]
+        obs_rgb = obs_rgb.float().permute(0,3,1,2)
+        obs_rgb = obs_rgb / 255
+
+        # Depth
+        obs_depth = observations["rgbd"][..., :1]
+        obs_depth = obs_depth.float().permute(0,3,1,2)
+        obs_depth = obs_depth / 65535
+
+        obs = torch.concat([obs_rgb, obs_depth], axis=1)
+
+        out = self.cnn(obs)
+        out, _ = self.gru(out)
+        out = self.fc(out)
+        encoded_tensor_list.append(out)
+
+        if self.with_state:
+            out = self.fc_state(out)
+            encoded_tensor_list.append(out)
+
+        return torch.cat(encoded_tensor_list, dim=1)
 
 
 #TODO
 class NatureCNN3D(nn.Module):
-    """ Supports rgbb """
+    """ Supports rgbd """
     def __init__(self, sample_obs, with_rgb=False, with_state=False):
         super().__init__()
 

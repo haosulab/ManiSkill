@@ -174,7 +174,12 @@ class Agent(nn.Module):
 
         self.is_tracked = is_tracked
 
-        self.feature_net = NatureCNN(sample_obs=sample_obs, with_state=with_state, pretrained=pretrained) if feature_net is None else feature_net
+        #self.feature_net = NatureCNN(sample_obs=sample_obs, with_state=with_state, pretrained=pretrained)
+        print("\t\tUsing NatureCNNGRURGBD\n\n\n")
+        #self.feature_net = NatureCNNGRU(sample_obs=sample_obs, with_state=with_state, pretrained=pretrained)
+        self.feature_net = NatureCNNGRURGBD(sample_obs=sample_obs, with_state=with_state, pretrained=pretrained)
+        if feature_net:
+            feature_net = feature_net
         
         # latent_size = np.array(envs.unwrapped.single_observation_space.shape).prod()
         latent_size = self.feature_net.out_features
@@ -185,10 +190,12 @@ class Agent(nn.Module):
             layer_init(nn.Linear(512, 1)),
         )
         
+        STD_SCALE = 0.01
         self.actor_mean = nn.Sequential(
             layer_init(nn.Linear(latent_size, 512)),
             nn.ReLU(inplace=True),
-            layer_init(nn.Linear(512, np.prod(envs.unwrapped.single_action_space.shape)), std=0.01*np.sqrt(2)),
+            #nn.Dropout1d(p=0.3), # experiment
+            layer_init(nn.Linear(512, np.prod(envs.unwrapped.single_action_space.shape)), std=STD_SCALE * np.sqrt(2)),
         )
         
         self.actor_logstd = nn.Parameter(torch.ones(1, np.prod(envs.unwrapped.single_action_space.shape)) * -0.5)

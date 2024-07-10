@@ -1,0 +1,22 @@
+# tensorflow[and-cuda]
+tensorflow_datasets==4.9.4
+tensorflow_hub==0.16.0
+rlds==0.1.8
+tf_agents==0.19.0
+dm-reverb[tensorflow]==0.14.0
+apache_beam==2.54.0
+tfds-nightly==4.9.4.dev202403220044
+tfp-nightly==0.25.0.dev20240322
+matplotlib
+IPython==8.22.2
+mediapy==1.2.0
+coacd
+dlimp @ git+https://github.com/kvablack/dlimp@d08da3852c149548aaa8551186d619d87375df08
+plotly
+distrax==0.1.5
+flax==0.8.1
+ml_collections
+wandb
+einops
+transformers
+scipy==1.12.0

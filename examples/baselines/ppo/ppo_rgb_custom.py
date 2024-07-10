@@ -60,7 +60,8 @@ if __name__ == "__main__":
     ENABLE_SHADOWS = set_simulation_quality(RENDER_TYPE)
 
     # Camera resolution
-    RESOLUTION = SimulationQuantities.RESOLUTIONS[0]
+    CAM_IDX = 0 # -1
+    RESOLUTION = SimulationQuantities.RESOLUTIONS[CAM_IDX]
     sensor_configs = dict(width=RESOLUTION[0], height=RESOLUTION[1])
     print(f"Camera resolution: {RESOLUTION}")
 
@@ -68,7 +69,7 @@ if __name__ == "__main__":
     sim_params = {}
     if args.random_cam_pose:
         from custom_tasks import *
-        print("Randomize existing camera poses")
+        print("random_cam_pose")
         tasks_mapping = {
             "PullCube-v1": "PullCube-RandomCameraPose",
             "PushCube-v1": "PushCube-RandomCameraPose",
@@ -84,7 +85,7 @@ if __name__ == "__main__":
 
     elif args.vary_sim_parameters:
         from custom_tasks import *
-        print("Randomize existing camera poses")
+        print("vary_sim_parameters")
         tasks_mapping = {
             "PullCube-v1": "PullCube-Randomization",
             "PushCube-v1": "PushCube-Randomization",
@@ -216,8 +217,8 @@ if __name__ == "__main__":
     # rgbd obs mode returns a dict of data, we flatten it so there is just a rgbd key and state key
     PRETRAINED = True
     WITH_STATE = False # NOTE: rgb + state or rgb
-    envs = FlattenRGBDObservationWrapper(envs, rgb_only=True)
-    eval_envs = FlattenRGBDObservationWrapper(eval_envs, rgb_only=True)
+    envs = FlattenRGBDObservationWrapper(envs, rgb_only=False)
+    eval_envs = FlattenRGBDObservationWrapper(eval_envs, rgb_only=False)
 
     if isinstance(envs.action_space, gym.spaces.Dict):
         envs = FlattenActionSpaceWrapper(envs)
@@ -344,7 +345,7 @@ if __name__ == "__main__":
 
             # NOTE: Logging
             if args.track:
-                tf_rgb_log = obs[step]["rgb"].detach()[0].cpu().numpy()
+                tf_rgb_log = obs[step]["rgbd"].detach()[0].cpu().numpy()
                 if tf_rgb_log.shape[-1] > 3:
                     tf_rgb_log = tf_rgb_log[..., :3]
                 wandb.log({
@@ -362,6 +363,10 @@ if __name__ == "__main__":
 
             # TRY NOT TO MODIFY: execute the game and log data.
             next_obs, reward, terminations, truncations, infos = envs.step(action)
+            # plot the chosen actions from the normal distribution
+            # experiment
+            writer.add_scalar("sample/mean_chosen_action", action.mean(), global_step)
+
             next_done = torch.logical_or(terminations, truncations).to(torch.float32)
             rewards[step] = reward.view(-1)
 
@@ -373,6 +378,21 @@ if __name__ == "__main__":
                     "gpu_alloc_mem": gpu_allocated_mem,
                     "cpu_alloc_mem": cpu_allocated_mem,
                 })
+
+            # debug
+            if (infos['is_obj_placed'].any() and infos['is_robot_static'].any()) and infos['is_grasped'].any():
+                print(infos.keys())
+                if "final_info" in infos:
+                    print(f"\n\t\t\t reward: {infos['final_info']['episode']['r'][infos['_final_info']].mean().cpu().numpy()}")
+                    print(f"\n\t\t\t success rate: {infos['final_info']['success'][infos['_final_info']].float().mean().cpu().numpy()}")
+
+                print(f"\n\t\t\t is_obj_placed: {infos['is_obj_placed']}")
+                print(f"\n\t\t\t is_robot_static: {infos['is_robot_static']}")
+                print(f"\n\t\t\t success: {infos['success']}")
+                print(f"\n\t\t\t is_grasped: {infos['is_grasped']}\n\n\n")
+
+                raise("debug")
+            # debug
 
             if "final_info" in infos:
                 final_info = infos["final_info"]
