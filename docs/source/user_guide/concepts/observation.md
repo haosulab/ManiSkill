@@ -99,7 +99,7 @@ To use this observation mode, a dictionary of observation config parameters is r
 
 - `coord_bounds`: `[torch.float32, torch.float32, torch.float32, torch.float32, torch.float32, torch.float32]` It has form **[x_min, y_min, z_min, x_max, y_max, z_max]**  defining the metric volume to be voxelized.
 - `voxel_size`: `torch.int` Defining the side length of each voxel, assuming that all voxels are cubic.
-- `device`: `torch.device` The device on which the voxelization takes place.
+- `device`: `torch.device` The device on which the voxelization takes place. Something like **torch.device("cuda" if torch.cuda.is_available() else "cpu")**
 - `segmentation`: `bool` Defining whether or not to estimate voxel segmentations using the point cloud segmentations. If true then num_channels=11 (including one channel for voxel segmentation), otherwise num_channels=10.
 
 Then, as you step throught the environment you created and get observations, you can see the extra key `voxel_grid` indicating the voxel grid generated:
@@ -113,6 +113,14 @@ The voxel grid can be visualized below. This is an image showing the voxelized s
 ```{image} images/voxel_pushcube.png
 ---
 alt: Voxelized PushCube-v1 scene at the initial state
+---
+```
+
+The RGBD image data used to reconstruct the voxel scene above is shown in the following figure. Here we use only one base camera in PushCube-v1 task.
+
+```{image} images/voxel_cam_view_one.png
+---
+alt: Corresponding RGBD observations
 ---
 ```
 
@@ -131,7 +139,23 @@ python -m mani_skill.examples.demo_vis_voxel -e "PushCube-v1"
 
 When using just the default settings.
 
-Furthermore, if you use more sensors (currently only RGB and depth cameras) to film the scene and collect more point cloud and RGB data, you can get a more accurate voxel grid reconstruction of the scene.
+Furthermore, if you use more sensors (currently only RGB and depth cameras) to film the scene and collect more point cloud and RGB data from different poses, you can get a more accurate voxel grid reconstruction of the scene. Figure below gives a more completely reconstructed voxel scene of PushCube-v1 using more RGBD cameras.
+
+```{image} images/voxel_pushcube_complete.png
+---
+alt: Densely voxelized PushCube-v1 scene at the initial state
+---
+```
+
+It is reconstructed using 5 cameras located at the up, left, right, front, and back of the tabletop scene, respectively, as shown in the visualized RGBD observations below.
+
+```{image} images/voxel_cam_view_all.png
+---
+alt: Corresponding RGBD observations
+---
+```
+
+
 
 ## Segmentation Data
 
