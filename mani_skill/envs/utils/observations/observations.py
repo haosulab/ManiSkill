@@ -11,7 +11,7 @@ import torch
 from mani_skill.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill.sensors.camera import Camera
 from mani_skill.utils import common
-
+from mani_skill.envs.utils.observations.voxelizer import VoxelGrid
 
 def sensor_data_to_rgbd(
     observation: Dict,
