@@ -736,7 +736,7 @@ class ManiSkillScene:
             self.px.gpu_fetch_articulation_link_velocity()
             self.px.gpu_fetch_articulation_qpos()
             self.px.gpu_fetch_articulation_qvel()
-            # self.px.gpu_fetch_articulation_qacc()
+            self.px.gpu_fetch_articulation_qacc()
             self.px.gpu_fetch_articulation_target_qpos()
             self.px.gpu_fetch_articulation_target_qvel()
 
