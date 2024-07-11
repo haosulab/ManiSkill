@@ -76,12 +76,9 @@ class TimeLimitWrapper(gym.Wrapper):
         prev_frame_locals = sys._getframe(1).f_locals
         frame = sys._getframe(1)
         # check for user supplied max_episode_steps during gym.make calls
-        if (
-            frame.f_code.co_name == "make"
-            and "max_episode_steps" in prev_frame_locals
-            and prev_frame_locals["max_episode_steps"] is not None
-        ):
-            max_episode_steps = prev_frame_locals["max_episode_steps"]
+        if frame.f_code.co_name == "make" and "max_episode_steps" in prev_frame_locals:
+            if prev_frame_locals["max_episode_steps"] is not None:
+                max_episode_steps = prev_frame_locals["max_episode_steps"]
             # do some wrapper surgery to remove the previous timelimit wrapper
             # with gymnasium 0.29.1, this will remove the timelimit wrapper and nothing else.
             curr_env = env
