@@ -2,6 +2,7 @@ import argparse
 
 import gymnasium as gym
 import numpy as np
+import torch
 
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.utils.wrappers import RecordEpisode
@@ -81,7 +82,7 @@ def main(args):
         viewer = env.render()
         viewer.paused = args.pause
         env.render()
-
+    robot = env.agent.robot
     while True:
         action = env.action_space.sample()
         obs, reward, terminated, truncated, info = env.step(action)
@@ -94,7 +95,9 @@ def main(args):
             env.render()
 
         if args.render_mode is None or args.render_mode != "human":
-            if terminated or truncated:
+            if args.num_envs > 1 and torch.logical_or(terminated, truncated).any():
+                break
+            if args.num_envs == 1 and (terminated or truncated):
                 break
     env.close()
 

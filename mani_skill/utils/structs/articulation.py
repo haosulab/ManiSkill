@@ -536,11 +536,15 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     def pose(self, arg1: Union[Pose, sapien.Pose]) -> None:
         self.root_pose = arg1
 
-    # @property
-    # def qacc(self) -> numpy.ndarray[numpy.float32, _Shape[m, 1]]:
-    #     """
-    #     :type: numpy.ndarray[numpy.float32, _Shape[m, 1]]
-    #     """
+    @property
+    def qacc(self):
+        if physx.is_gpu_enabled():
+            return self.px.cuda_articulation_qacc.torch()[
+                self._data_index, : self.max_dof
+            ]
+        else:
+            return torch.from_numpy(self._objs[0].qacc[None, :])
+
     # @qacc.setter
     # def qacc(self, arg1: numpy.ndarray[numpy.float32, _Shape[m, 1]]) -> None:
     #     pass
