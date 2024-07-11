@@ -114,9 +114,8 @@ def make(env_id, **kwargs):
 
 
 def make_vec(env_id, **kwargs):
-    max_episode_steps = kwargs.pop("max_episode_steps", None)
-    env = make(env_id, **kwargs)
-    env = ManiSkillVectorEnv(env, max_episode_steps=max_episode_steps)
+    env = gym.make(env_id, **kwargs)
+    env = ManiSkillVectorEnv(env)
     return env
 
 
