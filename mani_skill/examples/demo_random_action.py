@@ -94,9 +94,10 @@ def main(args):
             env.render()
 
         if args.render_mode is None or args.render_mode != "human":
-            if args.num_envs > 1 and torch.logical_or(terminated, truncated).any():
-                break
-            if args.num_envs == 1 and (terminated or truncated):
+            # TODO (stao): add fix for gym.make envs using cpu time limit wrappers to remove the code below
+            if isinstance(truncated, bool):
+                truncated = torch.tensor([truncated], device=env.device)
+            if torch.logical_or(terminated, truncated).any():
                 break
     env.close()
 
