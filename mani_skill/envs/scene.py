@@ -129,13 +129,13 @@ class ManiSkillScene:
     ):
         return physx.PhysxMaterial(static_friction, dynamic_friction, restitution)
 
-    def remove_actor(self, actor : Actor):
+    def remove_actor(self, actor: Actor):
         if physx.is_gpu_enabled():
             raise NotImplementedError(
                 "Cannot remove actors after creating them in GPU sim at the moment"
             )
         else:
-            entities = [l for l in actor_objs]
+            entities = [l for l in actor._objs]
             for e in entities:
                 self.sub_scenes[0].remove_entity(e)
 
