@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import json
+import sys
 from copy import deepcopy
 from functools import partial
 from typing import TYPE_CHECKING, Dict, Type
 
 import gymnasium as gym
 from gymnasium.envs.registration import EnvSpec as GymEnvSpec
+from gymnasium.envs.registration import WrapperSpec
 
 from mani_skill import logger
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
@@ -66,27 +68,54 @@ def register(
     )
 
 
-def make(env_id, enable_segmentation=False, **kwargs):
+class TimeLimitWrapper(gym.Wrapper):
+    """like the standard gymnasium timelimit wrapper but fixes truncated variable to be a torch tensor and batched"""
+
+    def __init__(self, env: gym.Env, max_episode_steps: int):
+        super().__init__(env)
+        prev_frame_locals = sys._getframe(1).f_locals
+        frame = sys._getframe(1)
+        # check for user supplied max_episode_steps during gym.make calls
+        if frame.f_code.co_name == "make" and "max_episode_steps" in prev_frame_locals:
+            if prev_frame_locals["max_episode_steps"] is not None:
+                max_episode_steps = prev_frame_locals["max_episode_steps"]
+            # do some wrapper surgery to remove the previous timelimit wrapper
+            # with gymnasium 0.29.1, this will remove the timelimit wrapper and nothing else.
+            curr_env = env
+            while curr_env is not None:
+                if isinstance(curr_env, gym.wrappers.TimeLimit):
+                    self.env = curr_env.env
+                    break
+        self._max_episode_steps = max_episode_steps
+
+    @property
+    def base_env(self) -> BaseEnv:
+        return self.env.unwrapped
+
+    def step(self, action):
+        observation, reward, terminated, truncated, info = self.env.step(action)
+        truncated = self.base_env.elapsed_steps >= self._max_episode_steps
+        return observation, reward, terminated, truncated, info
+
+
+def make(env_id, **kwargs):
     """Instantiate a ManiSkill environment.
 
     Args:
         env_id (str): Environment ID.
         as_gym (bool, optional): Add TimeLimit wrapper as gym.
-        enable_segmentation (bool, optional): Whether to include Segmentation in observations.
         **kwargs: Keyword arguments to pass to the environment.
     """
     if env_id not in REGISTERED_ENVS:
         raise KeyError("Env {} not found in registry".format(env_id))
     env_spec = REGISTERED_ENVS[env_id]
-
     env = env_spec.make(**kwargs)
     return env
 
 
 def make_vec(env_id, **kwargs):
-    max_episode_steps = kwargs.pop("max_episode_steps", None)
-    env = make(env_id, **kwargs)
-    env = ManiSkillVectorEnv(env, max_episode_steps=max_episode_steps)
+    env = gym.make(env_id, **kwargs)
+    env = ManiSkillVectorEnv(env)
     return env
 
 
@@ -122,7 +151,7 @@ def register_env(uid: str, max_episode_steps=None, override=False, **kwargs):
                 logger.warn(f"Env {uid} is already registered. Skip registration.")
                 return cls
 
-        # Register for ManiSkil2
+        # Register for ManiSkill
         register(
             uid,
             cls,
@@ -138,6 +167,13 @@ def register_env(uid: str, max_episode_steps=None, override=False, **kwargs):
             max_episode_steps=max_episode_steps,
             disable_env_checker=True,  # Temporary solution as we allow empty observation spaces
             kwargs=deepcopy(kwargs),
+            additional_wrappers=[
+                WrapperSpec(
+                    "MSTimeLimit",
+                    entry_point="mani_skill.utils.registration:TimeLimitWrapper",
+                    kwargs=dict(max_episode_steps=max_episode_steps),
+                )
+            ],
         )
 
         return cls

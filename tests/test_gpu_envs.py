@@ -292,11 +292,10 @@ def test_partial_resets(env_id):
 
 
 @pytest.mark.gpu_sim
-@pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS[:1])
-def test_timelimits(env_id):
+def test_timelimits():
     """Test that the vec env batches the truncated variable correctly"""
     env = gym.make_vec(
-        env_id,
+        "PickCube-v1",
         num_envs=16,
         vectorization_mode="custom",
         vector_kwargs=dict(sim_cfg=LOW_MEM_SIM_CFG),

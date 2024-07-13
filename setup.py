@@ -38,7 +38,7 @@ setup(
         "rtree",
         "imageio",
         "imageio[ffmpeg]",
-        "mplib>=0.1.1;platform_system=='Linux'",
+        "mplib==0.1.1;platform_system=='Linux'",
         "fast_kinematics==0.2.2;platform_system=='Linux'",
         "IPython",
         "huggingface_hub",  # we use HF to version control some assets/datasets more easily
