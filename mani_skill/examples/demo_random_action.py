@@ -2,7 +2,6 @@ import argparse
 
 import gymnasium as gym
 import numpy as np
-import torch
 
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.utils.wrappers import RecordEpisode
