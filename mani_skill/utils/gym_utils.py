@@ -19,10 +19,12 @@ def find_max_episode_steps_value(env):
     while cur is not None:
         if hasattr(cur, "max_episode_steps"):
             return cur.max_episode_steps
+        if hasattr(cur, "_max_episode_steps"):
+            return cur._max_episode_steps
         if cur.spec is not None and cur.spec.max_episode_steps is not None:
             return cur.spec.max_episode_steps
         if hasattr(cur, "env"):
-            cur = env.env
+            cur = cur.env
         else:
             cur = None
     return None

@@ -408,13 +408,6 @@ class RecordEpisode(gym.Wrapper):
         obs, rew, terminated, truncated, info = super().step(action)
 
         if self.save_trajectory:
-            if (
-                isinstance(truncated, bool)
-                and self.num_envs > 1
-                and self.max_episode_steps is not None
-            ):
-                # this fixes the issue where gymnasium applies a non-batched timelimit wrapper
-                truncated = self.base_env.elapsed_steps >= self.max_episode_steps
             state_dict = self.base_env.get_state_dict()
             if self.record_env_state:
                 self._trajectory_buffer.state = common.append_dict_array(
