@@ -135,9 +135,7 @@ class ManiSkillScene:
                 "Cannot remove actors after creating them in GPU sim at the moment"
             )
         else:
-            entities = [l for l in actor._objs]
-            for e in entities:
-                self.sub_scenes[0].remove_entity(e)
+            self.sub_scenes[0].remove_entity(e for e in actor._objs)
 
     def remove_articulation(self, articulation: Articulation):
         if physx.is_gpu_enabled():
@@ -145,9 +143,7 @@ class ManiSkillScene:
                 "Cannot remove articulations after creating them in GPU sim at the moment"
             )
         else:
-            entities = [l.entity for l in articulation._objs[0].links]
-            for e in entities:
-                self.sub_scenes[0].remove_entity(e)
+            self.sub_scenes[0].remove_entity(l.entity for l in articulation._objs[0].links)
 
     def add_camera(
         self,
