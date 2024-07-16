@@ -65,8 +65,8 @@ class UnitreeG1(BaseAgent):
         "left_two_joint",
         "right_two_joint",
     ]
-    body_stiffness = 1e3
-    body_damping = 1e2
+    body_stiffness = 50
+    body_damping = 1
     body_force_limit = 100
 
     @property
@@ -110,3 +110,9 @@ class UnitreeG1(BaseAgent):
     def is_fallen(self):
         """Checks if G1 has fallen on the ground. Effectively checks if the torso is too low"""
         return self.robot.pose.p[:, 2] < 0.3
+
+
+@register_agent()
+class UnitreeG1Simplified(UnitreeG1):
+    uid = "unitree_g1_simplified"
+    urdf_path = f"{ASSET_DIR}/robots/unitree_g1/g1_simplified.urdf"

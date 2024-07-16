@@ -4,7 +4,7 @@ import numpy as np
 import sapien
 import torch
 
-from mani_skill.agents.robots import UnitreeH1, UnitreeH1Simplified, UnitreeG1
+from mani_skill.agents.robots import UnitreeH1Simplified, UnitreeG1Simplified
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import common, sapien_utils
@@ -100,10 +100,10 @@ class UnitreeH1StandEnv(HumanoidStandEnv):
 
 @register_env("UnitreeG1Stand-v1", max_episode_steps=1000)
 class UnitreeG1StandEnv(HumanoidStandEnv):
-    SUPPORTED_ROBOTS = ["unitree_g1"]
-    agent: Union[UnitreeG1]
+    SUPPORTED_ROBOTS = ["unitree_g1_simplified"]
+    agent: Union[UnitreeG1Simplified]
 
-    def __init__(self, *args, robot_uids="unitree_g1", **kwargs):
+    def __init__(self, *args, robot_uids="unitree_g1_simplified", **kwargs):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     @property
@@ -116,7 +116,7 @@ class UnitreeG1StandEnv(HumanoidStandEnv):
 
     @property
     def _default_human_render_camera_configs(self):
-        pose = sapien_utils.look_at([1.0, 1.0, 2.5], [0.0, 0.0, 0.75])
+        pose = sapien_utils.look_at([1.0, 1.0, 2.0], [0.0, 0.0, 0.75])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
@@ -128,4 +128,4 @@ class UnitreeG1StandEnv(HumanoidStandEnv):
             )
             random_qpos += common.to_tensor(standing_keyframe.qpos, device=self.device)
             self.agent.robot.set_qpos(random_qpos)
-            self.agent.robot.set_pose(sapien.Pose(p=[0, 0, 0.975]))
+            self.agent.robot.set_pose(sapien.Pose(p=[0, 0, 0.755]))
