@@ -123,10 +123,11 @@ def main(args):
     for i, uid in enumerate(uids):
         meta = DATASET_SOURCES[uid]
         output_dir = str(DEMO_DIR)
-        final_path = osp.join(output_dir)
+        if args.output_dir:
+            output_dir = args.output_dir
         if verbose:
             print(
-                f"Downloading demonstrations to {final_path} - {i+1}/{len(uids)}, {uid}"
+                f"Downloading demonstrations to {osp.abspath(output_dir)} - {i+1}/{len(uids)}, {uid}"
             )
         local_path = download_file(
             output_dir,
@@ -134,7 +135,7 @@ def main(args):
         )
         if osp.splitext(local_path)[1] == ".zip":
             with zipfile.ZipFile(local_path, "r") as zip_ref:
-                zip_ref.extractall(final_path)
+                zip_ref.extractall(output_dir)
             os.remove(local_path)
 
 

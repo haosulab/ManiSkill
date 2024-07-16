@@ -1,4 +1,4 @@
-from typing import Dict, Union
+from typing import Any, Dict, Union
 
 import numpy as np
 import torch
@@ -18,8 +18,6 @@ from mani_skill.utils.structs.types import Array
 
 @register_env("PullCube-v1", max_episode_steps=50)
 class PullCubeEnv(BaseEnv):
-    SUPPORTED_REWARD_MODES = ["sparse", "none"]
-
     SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
     agent: Union[Panda, Xmate3Robotiq, Fetch]
     goal_radius = 0.1
@@ -109,27 +107,27 @@ class PullCubeEnv(BaseEnv):
             )
         return obs
 
-    # TODO (fix the reward for pull cube)
-    # def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
-    #     tcp_push_pose = Pose.create_from_pq(
-    #         p=self.obj.pose.p
-    #         + torch.tensor([-self.cube_half_size - 0.005, 0, 0], device=self.device)
-    #     )
-    #     tcp_to_push_pose = tcp_push_pose.p - self.agent.tcp.pose.p
-    #     tcp_to_push_pose_dist = torch.linalg.norm(tcp_to_push_pose, axis=1)
-    #     reaching_reward = 1 - torch.tanh(5 * tcp_to_push_pose_dist)
-    #     reward = reaching_reward
+    def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
+        # grippers should close and pull from behind the cube, not grip it
+        # distance to backside of cube (+ 2*0.005) sufficiently encourages this
+        tcp_pull_pos = self.obj.pose.p + torch.tensor(
+            [self.cube_half_size + 2 * 0.005, 0, 0], device=self.device
+        )
+        tcp_to_pull_pose = tcp_pull_pos - self.agent.tcp.pose.p
+        tcp_to_pull_pose_dist = torch.linalg.norm(tcp_to_pull_pose, axis=1)
+        reaching_reward = 1 - torch.tanh(5 * tcp_to_pull_pose_dist)
+        reward = reaching_reward
 
-    #     reached = tcp_to_push_pose_dist < 0.01
-    #     obj_to_goal_dist = torch.linalg.norm(
-    #         self.obj.pose.p[..., :2] - self.goal_region.pose.p[..., :2], axis=1
-    #     )
-    #     place_reward = 1 - torch.tanh(5 * obj_to_goal_dist)
-    #     reward += place_reward * reached
+        reached = tcp_to_pull_pose_dist < 0.01
+        obj_to_goal_dist = torch.linalg.norm(
+            self.obj.pose.p[..., :2] - self.goal_region.pose.p[..., :2], axis=1
+        )
+        place_reward = 1 - torch.tanh(5 * obj_to_goal_dist)
+        reward += place_reward * reached
 
-    #     reward[info["success"]] = 3
-    #     return reward
+        reward[info["success"]] = 3
+        return reward
 
-    # def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
-    #     max_reward = 3.0
-    #     return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
+    def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
+        max_reward = 3.0
+        return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward

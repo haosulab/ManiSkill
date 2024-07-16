@@ -40,27 +40,27 @@ def test_envs_obs_modes(env_id, obs_mode):
     action_space = env.action_space
     for _ in range(5):
         obs, rew, terminated, truncated, info = env.step(action_space.sample())
-    assert_isinstance(obs, [np.ndarray, bool, float, int])
-    assert_isinstance(rew, float)
-    assert_isinstance(terminated, bool)
-    assert_isinstance(truncated, bool)
-    assert_isinstance(info, [np.ndarray, bool, float, int])
-    if obs_mode == "rgbd":
-        for cam in obs["sensor_data"].keys():
-            assert obs["sensor_data"][cam]["rgb"].shape == (128, 128, 3)
-            assert obs["sensor_data"][cam]["depth"].shape == (128, 128, 1)
-            assert obs["sensor_data"][cam]["depth"].dtype == np.int16
-            assert obs["sensor_data"][cam]["segmentation"].shape == (128, 128, 1)
-            assert obs["sensor_data"][cam]["segmentation"].dtype == np.int16
-            assert obs["sensor_param"][cam]["extrinsic_cv"].shape == (3, 4)
-            assert obs["sensor_param"][cam]["intrinsic_cv"].shape == (3, 3)
-            assert obs["sensor_param"][cam]["cam2world_gl"].shape == (4, 4)
-    elif obs_mode == "pointcloud":
-        num_pts = len(obs["pointcloud"]["xyzw"])
-        assert obs["pointcloud"]["xyzw"].shape == (num_pts, 4)
-        assert obs["pointcloud"]["rgb"].shape == (num_pts, 3)
-        assert obs["pointcloud"]["segmentation"].shape == (num_pts, 1)
-        assert obs["pointcloud"]["segmentation"].dtype == np.int16
+        assert_isinstance(obs, [np.ndarray, bool, float, int])
+        assert_isinstance(rew, float)
+        assert_isinstance(terminated, bool)
+        assert_isinstance(truncated, bool)
+        assert_isinstance(info, [np.ndarray, bool, float, int])
+        if obs_mode == "rgbd":
+            for cam in obs["sensor_data"].keys():
+                assert obs["sensor_data"][cam]["rgb"].shape == (128, 128, 3)
+                assert obs["sensor_data"][cam]["depth"].shape == (128, 128, 1)
+                assert obs["sensor_data"][cam]["depth"].dtype == np.int16
+                assert obs["sensor_data"][cam]["segmentation"].shape == (128, 128, 1)
+                assert obs["sensor_data"][cam]["segmentation"].dtype == np.int16
+                assert obs["sensor_param"][cam]["extrinsic_cv"].shape == (3, 4)
+                assert obs["sensor_param"][cam]["intrinsic_cv"].shape == (3, 3)
+                assert obs["sensor_param"][cam]["cam2world_gl"].shape == (4, 4)
+        elif obs_mode == "pointcloud":
+            num_pts = len(obs["pointcloud"]["xyzw"])
+            assert obs["pointcloud"]["xyzw"].shape == (num_pts, 4)
+            assert obs["pointcloud"]["rgb"].shape == (num_pts, 3)
+            assert obs["pointcloud"]["segmentation"].shape == (num_pts, 1)
+            assert obs["pointcloud"]["segmentation"].dtype == np.int16
     env.close()
     del env
 
@@ -75,27 +75,27 @@ def test_envs_obs_modes_without_cpu_gym_wrapper(env_id, obs_mode):
     action_space = env.action_space
     for _ in range(5):
         obs, rew, terminated, truncated, info = env.step(action_space.sample())
-    assert_isinstance(obs, [torch.Tensor])
-    assert_isinstance(rew, torch.Tensor)
-    assert_isinstance(terminated, torch.Tensor)
-    assert_isinstance(truncated, torch.Tensor)
-    assert_isinstance(info, torch.Tensor)
-    if obs_mode == "rgbd":
-        for cam in obs["sensor_data"].keys():
-            assert obs["sensor_data"][cam]["rgb"].shape == (1, 128, 128, 3)
-            assert obs["sensor_data"][cam]["depth"].shape == (1, 128, 128, 1)
-            assert obs["sensor_data"][cam]["depth"].dtype == torch.int16
-            assert obs["sensor_data"][cam]["segmentation"].shape == (1, 128, 128, 1)
-            assert obs["sensor_data"][cam]["segmentation"].dtype == torch.int16
-            assert obs["sensor_param"][cam]["extrinsic_cv"].shape == (1, 3, 4)
-            assert obs["sensor_param"][cam]["intrinsic_cv"].shape == (1, 3, 3)
-            assert obs["sensor_param"][cam]["cam2world_gl"].shape == (1, 4, 4)
-    elif obs_mode == "pointcloud":
-        num_pts = len(obs["pointcloud"]["xyzw"][0])
-        assert obs["pointcloud"]["xyzw"].shape == (1, num_pts, 4)
-        assert obs["pointcloud"]["rgb"].shape == (1, num_pts, 3)
-        assert obs["pointcloud"]["segmentation"].shape == (1, num_pts, 1)
-        assert obs["pointcloud"]["segmentation"].dtype == torch.int16
+        assert_isinstance(obs, [torch.Tensor])
+        assert_isinstance(rew, torch.Tensor)
+        assert_isinstance(terminated, torch.Tensor)
+        assert_isinstance(truncated, torch.Tensor)
+        assert_isinstance(info, torch.Tensor)
+        if obs_mode == "rgbd":
+            for cam in obs["sensor_data"].keys():
+                assert obs["sensor_data"][cam]["rgb"].shape == (1, 128, 128, 3)
+                assert obs["sensor_data"][cam]["depth"].shape == (1, 128, 128, 1)
+                assert obs["sensor_data"][cam]["depth"].dtype == torch.int16
+                assert obs["sensor_data"][cam]["segmentation"].shape == (1, 128, 128, 1)
+                assert obs["sensor_data"][cam]["segmentation"].dtype == torch.int16
+                assert obs["sensor_param"][cam]["extrinsic_cv"].shape == (1, 3, 4)
+                assert obs["sensor_param"][cam]["intrinsic_cv"].shape == (1, 3, 3)
+                assert obs["sensor_param"][cam]["cam2world_gl"].shape == (1, 4, 4)
+        elif obs_mode == "pointcloud":
+            num_pts = len(obs["pointcloud"]["xyzw"][0])
+            assert obs["pointcloud"]["xyzw"].shape == (1, num_pts, 4)
+            assert obs["pointcloud"]["rgb"].shape == (1, num_pts, 3)
+            assert obs["pointcloud"]["segmentation"].shape == (1, num_pts, 1)
+            assert obs["pointcloud"]["segmentation"].dtype == torch.int16
     env.close()
     del env
 
@@ -205,3 +205,18 @@ def test_multi_agent(env_id):
         env.step(action_space.sample())
     env.close()
     del env
+
+
+def test_envs_time_limit_typing():
+    env = gym.make("PickCube-v1", max_episode_steps=5)
+    env.reset()
+    for _ in range(5):
+        obs, rew, terminated, truncated, info = env.step(env.action_space.sample())
+        assert_isinstance(terminated, torch.Tensor)
+        assert_isinstance(truncated, torch.Tensor)
+    env = gym.make("PickCube-v1")  # should use default registered max episode steps
+    env.reset()
+    for _ in range(50):
+        obs, rew, terminated, truncated, info = env.step(env.action_space.sample())
+        assert_isinstance(terminated, torch.Tensor)
+        assert_isinstance(truncated, torch.Tensor)
