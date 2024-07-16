@@ -131,7 +131,7 @@ class ReplicaCADSceneBuilder(SceneBuilder):
             for obj_num, obj_meta in enumerate(build_config_json["object_instances"]):
 
                 # Again, for any dataset you will have to figure out how they reference object files
-                # Note that ASSET_DIR will always refer to the ~/.ms_data folder or whatever MS_ASSET_DIR is set to
+                # Note that ASSET_DIR will always refer to the ~/.maniskill/data folder or whatever MS_ASSET_DIR is set to
                 obj_cfg_path = osp.join(
                     ASSET_DIR,
                     "scene_datasets/replica_cad_dataset/configs/objects",
