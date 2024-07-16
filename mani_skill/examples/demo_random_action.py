@@ -81,7 +81,6 @@ def main(args):
         viewer = env.render()
         viewer.paused = args.pause
         env.render()
-
     while True:
         action = env.action_space.sample()
         obs, reward, terminated, truncated, info = env.step(action)

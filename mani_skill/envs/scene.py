@@ -688,11 +688,11 @@ class ManiSkillScene:
         for articulation in self.articulations.values():
             articulation.set_pose(articulation.initial_pose)
 
-        self.px.cuda_rigid_body_data.torch()[:, 7:] = (
-            torch.zeros_like(self.px.cuda_rigid_body_data.torch()[:, 7:])
+        self.px.cuda_rigid_body_data.torch()[:, 7:] = torch.zeros_like(
+            self.px.cuda_rigid_body_data.torch()[:, 7:]
         )  # zero out all velocities
-        self.px.cuda_articulation_qvel.torch()[:, :] = (
-            torch.zeros_like(self.px.cuda_articulation_qvel.torch())
+        self.px.cuda_articulation_qvel.torch()[:, :] = torch.zeros_like(
+            self.px.cuda_articulation_qvel.torch()
         )  # zero out all q velocities
 
         self.px.gpu_apply_rigid_dynamic_data()
@@ -736,11 +736,9 @@ class ManiSkillScene:
             self.px.gpu_fetch_articulation_link_velocity()
             self.px.gpu_fetch_articulation_qpos()
             self.px.gpu_fetch_articulation_qvel()
+            self.px.gpu_fetch_articulation_qacc()
             self.px.gpu_fetch_articulation_target_qpos()
             self.px.gpu_fetch_articulation_target_qvel()
-
-            # unused fetches
-            # self.px.gpu_fetch_articulation_qacc()
 
         self._needs_fetch = False
 
