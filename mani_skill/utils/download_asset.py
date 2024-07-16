@@ -188,7 +188,7 @@ def initialize_extra_sources():
     )
     DATA_SOURCES["unitree_g1"] = DataSource(
         source_type="robot",
-        url="https://github.com/matheecs/ManiSkill-UnitreeG1/archive/refs/tags/v0.1.0.zip",
+        url="https://github.com/haosulab/ManiSkill-UnitreeG1/archive/refs/tags/v0.1.0.zip",
         target_path="robots/unitree_g1",
     )
     DATA_SOURCES["unitree_go2"] = DataSource(
