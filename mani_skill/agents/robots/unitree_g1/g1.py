@@ -114,5 +114,5 @@ class UnitreeG1(BaseAgent):
 
 @register_agent()
 class UnitreeG1Simplified(UnitreeG1):
-    uid = "unitree_g1_simplified"
-    urdf_path = f"{ASSET_DIR}/robots/unitree_g1/g1_simplified.urdf"
+    uid = "unitree_g1_simplified_legs"
+    urdf_path = f"{ASSET_DIR}/robots/unitree_g1/g1_simplified_legs.urdf"

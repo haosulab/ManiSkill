@@ -100,10 +100,10 @@ class UnitreeH1StandEnv(HumanoidStandEnv):
 
 @register_env("UnitreeG1Stand-v1", max_episode_steps=1000)
 class UnitreeG1StandEnv(HumanoidStandEnv):
-    SUPPORTED_ROBOTS = ["unitree_g1_simplified"]
+    SUPPORTED_ROBOTS = ["unitree_g1_simplified_legs"]
     agent: Union[UnitreeG1Simplified]
 
-    def __init__(self, *args, robot_uids="unitree_g1_simplified", **kwargs):
+    def __init__(self, *args, robot_uids="unitree_g1_simplified_legs", **kwargs):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     @property
