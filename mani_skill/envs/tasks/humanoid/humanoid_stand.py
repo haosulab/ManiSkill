@@ -4,7 +4,7 @@ import numpy as np
 import sapien
 import torch
 
-from mani_skill.agents.robots import UnitreeH1, UnitreeH1Simplified
+from mani_skill.agents.robots import UnitreeH1Simplified, UnitreeG1Simplified
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import common, sapien_utils
@@ -89,8 +89,43 @@ class UnitreeH1StandEnv(HumanoidStandEnv):
             b = len(env_idx)
             standing_keyframe = self.agent.keyframes["standing"]
             random_qpos = (
+                torch.randn(
+                    size=(b, self.agent.robot.dof[0]), dtype=torch.float) * 0.05
+            )
+            random_qpos += common.to_tensor(standing_keyframe.qpos,
+                                            device=self.device)
+            self.agent.robot.set_qpos(random_qpos)
+            self.agent.robot.set_pose(sapien.Pose(p=[0, 0, 0.975]))
+
+
+@register_env("UnitreeG1Stand-v1", max_episode_steps=1000)
+class UnitreeG1StandEnv(HumanoidStandEnv):
+    SUPPORTED_ROBOTS = ["unitree_g1_simplified_legs"]
+    agent: Union[UnitreeG1Simplified]
+
+    def __init__(self, *args, robot_uids="unitree_g1_simplified_legs", **kwargs):
+        super().__init__(*args, robot_uids=robot_uids, **kwargs)
+
+    @property
+    def _default_sim_config(self):
+        return SimConfig(
+            gpu_memory_cfg=GPUMemoryConfig(
+                max_rigid_contact_count=2**22, max_rigid_patch_count=2**21
+            )
+        )
+
+    @property
+    def _default_human_render_camera_configs(self):
+        pose = sapien_utils.look_at([1.0, 1.0, 2.0], [0.0, 0.0, 0.75])
+        return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
+
+    def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
+        with torch.device(self.device):
+            b = len(env_idx)
+            standing_keyframe = self.agent.keyframes["standing"]
+            random_qpos = (
                 torch.randn(size=(b, self.agent.robot.dof[0]), dtype=torch.float) * 0.05
             )
             random_qpos += common.to_tensor(standing_keyframe.qpos, device=self.device)
             self.agent.robot.set_qpos(random_qpos)
-            self.agent.robot.set_pose(sapien.Pose(p=[0, 0, 0.975]))
+            self.agent.robot.set_pose(sapien.Pose(p=[0, 0, 0.755]))
