@@ -23,7 +23,10 @@ class PDJointPosVelController(PDJointPosController):
 
     def reset(self):
         super().reset()
-        self._target_qvel[self.scene._reset_mask] = torch.zeros_like(
+        if self._target_qvel is None:
+            self._target_qvel = self.qvel.clone()
+        else:
+            self._target_qvel[self.scene._reset_mask] = torch.zeros_like(
             self._target_qpos[self.scene._reset_mask], device=self.device
         )
 
