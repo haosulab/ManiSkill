@@ -1,8 +1,8 @@
 # Reverse Forward Curriculum Learning
 
-Fast offline/online imitation learning from sparse rewards in simulation based on ["Reverse Forward Curriculum Learning for Extreme Sample and Demo Efficiency in Reinforcement Learning (ICLR 2024)"](https://arxiv.org/abs/2405.03379). Code adapted from https://github.com/StoneT2000/rfcl/
+Fast offline/online imitation learning from sparse rewards from very few demonstrations in simulation based on ["Reverse Forward Curriculum Learning for Extreme Sample and Demo Efficiency in Reinforcement Learning (ICLR 2024)"](https://arxiv.org/abs/2405.03379). Code adapted from https://github.com/StoneT2000/rfcl/
 
-This code can be useful for solving tasks, verifying tasks are solvable via neural nets, and generating infinite demonstrations via trained neural nets, all without using dense rewards (provided the task is not too long horizon)
+This code can be useful for solving tasks, verifying tasks are solvable via neural nets, and generating infinite demonstrations via trained neural nets, all without using dense rewards (provided the task is not too long horizon).
 
 ## Installation
 To get started run `git clone https://github.com/StoneT2000/rfcl.git rfcl_jax --branch ms3-gpu` which contains the code for RFCL written in jax. While ManiSkill3 does run on torch, the jax implementation is much more optimized and trains faster.
@@ -31,7 +31,8 @@ python -m mani_skill.utils.download_demo "PickCube-v1"
 ```
 
 <!-- TODO (stao): note how this part can be optional if user wants to do action free learning -->
-Process the demonstrations in preparation for the learning workflow. We will use the teleoperated trajectories to train. Other provided demonstration sources (like motion planning and RL generated) can work as well but may require modifying a few hyperparameters.
+Process the demonstrations in preparation for the learning workflow. We will use the teleoperated trajectories to train. Other provided demonstration sources (like motion planning and RL generated) can work as well but may require modifying a few hyperparameters. RFCL is extremely demonstration efficient and so we only need to process and save 5 demonstrations for training here.
+
 ```bash
 env_id="PickCube-v1"
 python -m mani_skill.trajectory.replay_trajectory \
