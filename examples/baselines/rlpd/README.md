@@ -49,17 +49,30 @@ python -m mani_skill.trajectory.replay_trajectory \
 
 ## Train
 
-To train with environment vectorization (wall-time fast settings) run
+To train with environment vectorization run
 
 ```bash
 env_id=PickCube-v1
-demos=5 # number of demos to train on.
+demos=1000 # number of demos to train on.
 seed=42
 XLA_PYTHON_CLIENT_PREALLOCATE=false python train_ms3.py configs/base_rlpd_ms3.yml \
-  logger.exp_name="ms3/${env_id}/rlpd_${demos}_demos_s${seed}" logger.wandb=True \
-  seed=${seed} train.num_demos=${demos} train.steps=5_000_000 \
+  logger.exp_name="rlpd-${demos}_rl_demos-state-${seed}-walltime_efficient" logger.wandb=True \
+  seed=${seed} train.num_demos=${demos} train.steps=200_000 \
   env.env_id=${env_id} \
   train.dataset_path="~/.maniskill/demos/${env_id}/rl/trajectory.state.pd_joint_delta_pos.h5" 
 ```
 
-This should solve the PickCube-v1 task in a few minutes.
+This should solve the PickCube-v1 task in a few minutes, but won't get good sample efficiency.
+
+For sample-efficient settings you can use the sample-efficient configurations stored in configs/base_rlpd_ms3_sample_efficient.yml (no env parallelization, more critics, higher update-to-data ratio). This will take less environment samples but run slower.
+
+```bash
+env_id=PickCube-v1
+demos=1000 # number of demos to train on.
+seed=42
+XLA_PYTHON_CLIENT_PREALLOCATE=false python train_ms3.py configs/base_rlpd_ms3_sample_efficient.yml \
+  logger.exp_name="rlpd-${demos}_rl_demos-state-${seed}-sample_efficient" logger.wandb=True \
+  seed=${seed} train.num_demos=${demos} train.steps=200_000 \
+  env.env_id=${env_id} \
+  train.dataset_path="~/.maniskill/demos/${env_id}/rl/trajectory.state.pd_joint_delta_pos.h5"
+```
