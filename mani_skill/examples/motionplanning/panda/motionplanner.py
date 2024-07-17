@@ -86,7 +86,7 @@ class PandaArmMotionPlanningSolver:
         for i in range(n_step + refine_steps):
             qpos = result["position"][min(i, n_step - 1)]
             if self.control_mode == "pd_joint_pos_vel":
-                qvel = result["velocity"][(i, n_step - 1)]
+                qvel = result["velocity"][min(i, n_step - 1)]
                 action = np.hstack([qpos, qvel, self.gripper_state])
             else:
                 action = np.hstack([qpos, self.gripper_state])
