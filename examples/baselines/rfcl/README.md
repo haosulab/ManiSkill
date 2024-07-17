@@ -38,7 +38,7 @@ python -m mani_skill.trajectory.replay_trajectory \
   --traj-path ~/.maniskill/demos/${env_id}/motionplanning/trajectory.h5 \
   --use-first-env-state \
   -c pd_joint_delta_pos -o state \
-  --save-traj
+  --save-traj --count 5
 ```
 
 ## Train
