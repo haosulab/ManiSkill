@@ -170,7 +170,9 @@ def main(cfg: SACExperiment):
         steps=cfg.train.steps,
         verbose=cfg.verbose,
     )
-    algo.save(osp.join(algo.logger.model_path, "latest.jx"), with_buffer=True)
+    algo.save(osp.join(algo.logger.model_path, "latest.jx"), with_buffer=False)
+    # with_buffer=True means you can use the checkpoint to easily resume training with the same replay buffer data
+    # algo.save(osp.join(algo.logger.model_path, "latest.jx"), with_buffer=True)
     env.close(), eval_env.close()
 
 if __name__ == "__main__":

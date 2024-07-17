@@ -82,12 +82,14 @@ To generate 1000 demonstrations you can run
 XLA_PYTHON_CLIENT_PREALLOCATE=false python rfcl_jax/scripts/collect_demos.py exps/path/to/model.jx \
   num_envs=8 num_episodes=1000
 ```
-This saves the demos 
-
-which uses CPU vectorization to generate demonstrations in parallel. Note that while the demos are generated on the CPU, you can always convert them to demonstrations on the GPU via the [replay trajectory tool](https://maniskill.readthedocs.io/en/latest/user_guide/datasets/replay.html) as so
+This saves the demos which uses CPU vectorization to generate demonstrations in parallel. Note that while the demos are generated on the CPU, you can always convert them to demonstrations on the GPU via the [replay trajectory tool](https://maniskill.readthedocs.io/en/latest/user_guide/datasets/replay.html) as so
 
 ```bash
 python -m mani_skill.trajectory.replay_trajectory \
   --traj-path exps/ms3/PickCube-v1/_5_demos_s42/eval_videos/trajectory.h5 \
   -b gpu --use-first-env-state
 ```
+
+The replay_trajectory tool can also be used to generate videos
+
+See the rlpd_jax/scripts/collect_demos.py code for details on how to load the saved policies and modify it to your needs.

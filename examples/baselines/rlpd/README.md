@@ -64,7 +64,7 @@ XLA_PYTHON_CLIENT_PREALLOCATE=false python train_ms3.py configs/base_rlpd_ms3.ym
 
 This should solve the PickCube-v1 task in a few minutes, but won't get good sample efficiency.
 
-For sample-efficient settings you can use the sample-efficient configurations stored in configs/base_rlpd_ms3_sample_efficient.yml (no env parallelization, more critics, higher update-to-data ratio). This will take less environment samples but run slower.
+For sample-efficient settings you can use the sample-efficient configurations stored in configs/base_rlpd_ms3_sample_efficient.yml (no env parallelization, more critics, higher update-to-data ratio). This will take less environment samples (around 50K to solve) but runs slower.
 
 ```bash
 env_id=PickCube-v1
@@ -72,7 +72,29 @@ demos=1000 # number of demos to train on.
 seed=42
 XLA_PYTHON_CLIENT_PREALLOCATE=false python train_ms3.py configs/base_rlpd_ms3_sample_efficient.yml \
   logger.exp_name="rlpd-${demos}_rl_demos-state-${seed}-sample_efficient" logger.wandb=True \
-  seed=${seed} train.num_demos=${demos} train.steps=200_000 \
+  seed=${seed} train.num_demos=${demos} train.steps=100_000 \
   env.env_id=${env_id} \
   train.dataset_path="~/.maniskill/demos/${env_id}/rl/trajectory.state.pd_joint_delta_pos.h5"
 ```
+
+evaluation videos are saved to `exps/<exp_name>/videos`.
+
+## Generating Demonstrations / Evaluating policies
+
+To generate 1000 demonstrations you can run
+
+```bash
+XLA_PYTHON_CLIENT_PREALLOCATE=false python rlpd_jax/scripts/collect_demos.py exps/path/to/model.jx \
+  num_envs=8 num_episodes=1000
+```
+This saves the demos which uses CPU vectorization to generate demonstrations in parallel. Note that while the demos are generated on the CPU, you can always convert them to demonstrations on the GPU via the [replay trajectory tool](https://maniskill.readthedocs.io/en/latest/user_guide/datasets/replay.html) as so
+
+```bash
+python -m mani_skill.trajectory.replay_trajectory \
+  --traj-path exps/<exp_name>/eval_videos/trajectory.h5 \
+  -b gpu --use-first-env-state
+```
+
+The replay_trajectory tool can also be used to generate videos
+
+See the rlpd_jax/scripts/collect_demos.py code for details on how to load the saved policies and modify it to your needs.
