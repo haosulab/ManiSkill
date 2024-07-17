@@ -76,8 +76,8 @@ class BaseAgent:
         self,
         scene: ManiSkillScene,
         control_freq: int,
-        control_mode: str = None,
-        agent_idx: int = None,
+        control_mode: Optional[str] = None,
+        agent_idx: Optional[str] = None,
     ):
         self.scene = scene
         self._control_freq = control_freq

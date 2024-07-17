@@ -16,10 +16,10 @@ Robot Description: [https://github.com/haosulab/ManiSkill/tree/main/mani_skill/a
 
 ### Right Variant
 
-```{figure} ../images/allegro_hand_left.png
+```{figure} ../images/allegro_hand_right.png
 ```
 
-Robot UID: `allegro_hand_left`
+Robot UID: `allegro_hand_right`
 
 Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/allegro_hand/allegro.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/allegro_hand/allegro.py)
 

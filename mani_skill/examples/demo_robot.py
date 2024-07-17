@@ -41,15 +41,18 @@ def main():
     )
     env.reset(seed=0)
     env: BaseEnv = env.unwrapped
+    print(f"Selected robot {args.robot_uid}. Control mode: {args.control_mode}")
     print("Selected Robot has the following keyframes to view: ")
     print(env.agent.keyframes.keys())
     env.agent.robot.set_qpos(env.agent.robot.qpos * 0)
     kf = None
     if len(env.agent.keyframes) > 0:
+        kf_name = None
         if args.keyframe is not None:
-            kf = env.agent.keyframes[args.keyframe]
+            kf_name = args.keyframe
+            kf = env.agent.keyframes[kf_name]
         else:
-            for kf in env.agent.keyframes.values():
+            for kf_name, kf in env.agent.keyframes.items():
                 # keep the first keyframe we find
                 break
         if kf.qpos is not None:
@@ -57,6 +60,8 @@ def main():
         if kf.qvel is not None:
             env.agent.robot.set_qvel(kf.qvel)
         env.agent.robot.set_pose(kf.pose)
+        if kf_name is not None:
+            print(f"Viewing keyframe {kf_name}")
     if env.gpu_sim_enabled:
         env.scene._gpu_apply_all()
         env.scene.px.gpu_update_articulation_kinematics()
