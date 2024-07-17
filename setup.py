@@ -23,7 +23,7 @@ setup(
     python_requires=">=3.9",
     setup_requires=["setuptools>=62.3.0"],
     install_requires=[
-        "numpy>=1.22",
+        "numpy>=1.22,<2.0.0",
         "scipy",
         "dacite",
         "gymnasium==0.29.1",
