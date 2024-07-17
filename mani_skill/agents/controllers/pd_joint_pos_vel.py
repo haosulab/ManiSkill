@@ -27,8 +27,8 @@ class PDJointPosVelController(PDJointPosController):
             self._target_qvel = self.qvel.clone()
         else:
             self._target_qvel[self.scene._reset_mask] = torch.zeros_like(
-            self._target_qpos[self.scene._reset_mask], device=self.device
-        )
+                self._target_qpos[self.scene._reset_mask], device=self.device
+            )
 
     def set_drive_velocity_targets(self, targets):
         self.articulation.set_joint_drive_velocity_targets(
