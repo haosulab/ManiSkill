@@ -44,45 +44,57 @@ class HopperRobot(BaseAgent):
             CameraConfig(
                 uid="cam0",
                 pose=Pose.create_from_pq([0, -2.8, 0], euler2quat(0,0,np.pi/2)),
-                width=512,
-                height=512,
+                width=128,
+                height=128,
                 fov=70*(np.pi/180),
                 near=0.01,
                 far=100,
                 entity_uid="torso_dummy_1",
             ),
-            # CameraConfig(
-            #     uid="back",
-            #     pose=Pose.create_from_pq([-2, -0.2, -1.2], [1, 0, 0, 0]),
-            #     width=512,
-            #     height=512,
-            #     fov=np.pi/2,
-            #     near=0.01,
-            #     far=100,
-            #     entity_uid="torso_dummy_0",
-            # ),
         ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.real_links = [link for link in self.robot.links_map.keys() if 'dummy' not in link]
+        self.real_links_mass = torch.tensor([link.mass[0].item() for link in self.robot.links if 'dummy' not in link.name], device=self.device)
+        self.real_mass = self.real_links_mass.sum()
 
     @property
     def _controller_configs(self):
         # NOTE joints in [rootx,rooty,rooz] are for planar tracking, not control joints
-        pd_joint_delta_pos = PDJointPosControllerConfig(
-            [j.name for j in self.robot.active_joints if 'root' not in j.name],
-            -1,
-            1,
-            damping=5,
-            stiffness=20,
-            force_limit=100,
+        # TODO (xhin): further tune controller params
+        max_delta = 2.25 #best 
+        stiffness= 100
+        friction = 0.1
+        force_limit = 200
+        damping = 7.5   #end best
+        pd_joint_delta_pos_body = PDJointPosControllerConfig(
+            ["hip", "knee", "waist"],
+            lower=-max_delta,
+            upper=max_delta,
+            damping=damping,
+            stiffness=stiffness,
+            force_limit=force_limit,
+            friction=friction,
+            use_delta=True,
+        )
+        pd_joint_delta_pos_ankle = PDJointPosControllerConfig(
+            ["ankle"],
+            lower=-max_delta/3,
+            upper=max_delta/3,
+            damping=damping,
+            stiffness=stiffness,
+            force_limit=force_limit,
+            friction=friction,
             use_delta=True,
         )
         rest = PassiveControllerConfig([j.name for j in self.robot.active_joints if 'root' in j.name], damping=0, friction=0)
         return deepcopy_dict(
             dict(
                 pd_joint_delta_pos=dict(
-                    body=pd_joint_delta_pos, rest=rest, balance_passive_force=False
+                    body=pd_joint_delta_pos_body, 
+                    ankle=pd_joint_delta_pos_ankle,
+                    rest=rest, balance_passive_force=False
                 ),
             )
         )
@@ -99,9 +111,15 @@ class HopperRobot(BaseAgent):
         # only need the robot
         self.robot = loader.parse(asset_path)[0][0].build()
         assert self.robot is not None, f"Fail to load URDF/MJCF from {asset_path}"
-
-        # Cache robot link ids
         self.robot_link_ids = [link.name for link in self.robot.get_links()]
+
+    # planar agent has root joints in range [-inf, inf], not ideal in obs space
+    def get_proprioception(self):
+        return dict(
+            #don't include xslider qpos, for x trans invariance
+            qpos=self.robot.get_qpos()[:,1:],
+            qvel=self.robot.get_qvel(),
+        )
 
 class HopperEnv(BaseEnv):
     agent: Union[HopperRobot]
@@ -114,7 +132,12 @@ class HopperEnv(BaseEnv):
         return SimConfig(
             gpu_memory_cfg=GPUMemoryConfig(
                 found_lost_pairs_capacity=2**25, max_rigid_patch_count=2**18
-            )
+            ),
+            scene_cfg=SceneConfig(
+                solver_position_iterations=15, solver_velocity_iterations=15
+            ),
+            # sim_freq=50,
+            control_freq=25
         )
 
     @property
@@ -123,9 +146,7 @@ class HopperEnv(BaseEnv):
 
     @property
     def _default_human_render_camera_configs(self):
-        pose = sapien_utils.look_at(eye=[0, -2, 0.5], target=[0, 0, 0.5])
-        return [CameraConfig("render_camera", pose, 512, 512, (70/180)*np.pi, 0.01, 100)]
-        # return self.agent._sensor_configs
+        return self.agent._sensor_configs
 
     def _load_scene(self, options: dict):
         loader = self.scene.create_mjcf_loader()
@@ -135,7 +156,7 @@ class HopperEnv(BaseEnv):
         
         # load in the ground
         self.ground = build_ground(
-            self.scene, floor_width=2, floor_length=50, altitude=-0.075, floor_origin=(25-2,0)
+            self.scene, floor_width=2, floor_length=100, altitude=-0.075, xy_origin=(50-2,0)
         )
     
     def _initialize_episode(self, env_idx: torch.Tensor, options: Dict):
@@ -158,55 +179,61 @@ class HopperEnv(BaseEnv):
     def evaluate(self):
         return dict()
     
-    #dm_control function
+    @property # dm_control mjc function adapted for maniskill
+    def height(self):
+        """Returns relative height of the robot"""
+        return (self.agent.robot.links_map['torso'].pose.p[:,-1] - 
+                self.agent.robot.links_map['foot_heel'].pose.p[:,-1]).view(-1,1)
+    
+    @property # dm_control mjc function adapted for maniskill
+    def subtreelinvelx(self):
+        """Returns linvel x component of robot"""
+        return self.agent.robot.get_qvel()[:,0].view(-1,1)
+
+    # dm_control mjc function adapted for maniskill
     def touch(self, link_name):
         """Returns function of sensor force values"""
         force_vec = self.agent.robot.get_net_contact_forces([link_name])
         force_mag = torch.linalg.norm(force_vec, dim=-1)
         return torch.log1p(force_mag)
-    
-    #dm_control function
-    @property
-    def height(self):
-        """Returns relative height of the robot"""
-        return (self.agent.robot.links_map['torso'].pose.p[:,-1] - 
-                self.agent.robot.links_map['foot_heel'].pose.p[:,-1]).view(-1,1)
 
-    # overwrite basic obs state dict
-    # same as dm_control does, need to remove inclusion of rootx joint qpos
-    # obs is a 15 dim vec of qpos, qvel, and touch info
-    def _get_obs_state_dict(self, info: Dict):
-        return dict(
-            qpos=self.agent.robot.get_qpos()[:,1:],
-            qvel=self.agent.robot.get_qvel(),
+    # dm_control also includes foot pressures as state obs space
+    def _get_obs_extra(self, info: Dict):
+        obs = dict(
             toe_touch=self.touch("foot_toe"),
             heel_touch=self.touch("foot_heel"),
         )
-
+        return obs
+    
 @register_env("MS-HopperStand-v1", max_episode_steps=100)
 class HopperStandEnv(HopperEnv):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
     
     def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
-        rew = rewards.tolerance(self.height, lower=_STAND_HEIGHT, upper=2.0)
-        #print("rewards", rew.shape)
-        return rew.view(-1)
+        return rewards.tolerance(self.height, lower=_STAND_HEIGHT, upper=2.0).view(-1)
 
     def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
         # this should be equal to compute_dense_reward / max possible reward
         max_reward = 1.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
     
-# @register_env("MS-HopperHop-v1", max_episode_steps=1000)
-# class HopperStandEnv(HopperEnv):
-#     def __init__(self, *args, **kwargs):
-#         super().__init__(*args, **kwargs)
+@register_env("MS-HopperHop-v1", max_episode_steps=100)
+class HopperHopEnv(HopperEnv):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
     
-#     def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
-#         return 0
+    def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
+        standing = rewards.tolerance(self.height, lower=_STAND_HEIGHT, upper=2.0)
+        hopping = rewards.tolerance(self.subtreelinvelx,
+                                  lower=_HOP_SPEED, 
+                                  upper=float('inf'),
+                                  margin=_HOP_SPEED/2,
+                                  value_at_margin=0.5,
+                                  sigmoid='linear')
+        return (standing.view(-1) * hopping.view(-1))
 
-#     def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
-#         # this should be equal to compute_dense_reward / max possible reward
-#         max_reward = 1.0
-#         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
+    def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
+        # this should be equal to compute_dense_reward / max possible reward
+        max_reward = 1.0
+        return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
