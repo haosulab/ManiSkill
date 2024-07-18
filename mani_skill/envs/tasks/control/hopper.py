@@ -5,19 +5,25 @@ from typing import Any, Dict, Union
 
 import numpy as np
 import torch
+from transforms3d.euler import euler2quat
+
 from mani_skill.agents.base_agent import BaseAgent
 from mani_skill.agents.controllers import *
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.utils import randomization, rewards
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import common, sapien_utils
+
 # fix new imports later
 from mani_skill.utils.building.ground import build_ground
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.structs.pose import Pose
-from mani_skill.utils.structs.types import (Array, GPUMemoryConfig,
-                                            SceneConfig, SimConfig)
-from transforms3d.euler import euler2quat
+from mani_skill.utils.structs.types import (
+    Array,
+    GPUMemoryConfig,
+    SceneConfig,
+    SimConfig,
+)
 
 MJCF_FILE = f"{os.path.join(os.path.dirname(__file__), 'assets/hopper.xml')}"
 

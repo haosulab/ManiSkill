@@ -18,7 +18,7 @@ def build_ground(
     scene: ManiSkillScene,
     floor_width: int = 100,
     floor_length: int = None,
-    xy_origin: tuple = (0,0),
+    xy_origin: tuple = (0, 0),
     altitude=0,
     name="ground",
 ):

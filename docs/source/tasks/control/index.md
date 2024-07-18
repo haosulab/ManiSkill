@@ -59,7 +59,7 @@ Hopper robot stays upright and moves in positive x direction with hopping motion
 
 
 **Supported Robots: Hopper**
-
+ 
 **Randomizations:**
 - Hopper robot is randomly rotated [-pi, pi] radians about y axis.
 - Hopper qpos are uniformly sampled within their allowed ranges
