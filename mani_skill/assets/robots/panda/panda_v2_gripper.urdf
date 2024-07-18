@@ -4,6 +4,84 @@
 <!-- |    EDITING THIS FILE BY HAND IS NOT RECOMMENDED                                 | -->
 <!-- =================================================================================== -->
 <robot name="panda">
+  <link name="root">
+    <inertial>
+      <mass value="0"/>
+      <inertia ixx="0.00" ixy="0.00" ixz="0.00" iyy="0.00" iyz="0.00" izz="0.00"/>
+    </inertial>
+  </link>
+  <link name="root_arm_1_link_1">
+    <inertial>
+      <mass value="0"/>
+      <inertia ixx="0.00" ixy="0.00" ixz="0.00" iyy="0.00" iyz="0.00" izz="0.00"/>
+    </inertial>
+  </link>
+  <link name="root_arm_1_link_2">
+    <inertial>
+      <mass value="0"/>
+      <inertia ixx="0.00" ixy="0.00" ixz="0.00" iyy="0.00" iyz="0.00" izz="0.00"/>
+    </inertial>
+  </link>
+  <link name="root_arm_1_link_3">
+    <inertial>
+      <mass value="0"/>
+      <inertia ixx="0.00" ixy="0.00" ixz="0.00" iyy="0.00" iyz="0.00" izz="0.00"/>
+    </inertial>
+  </link>
+  <link name="root_arm_1_link_4">
+    <inertial>
+      <mass value="0"/>
+      <inertia ixx="0.00" ixy="0.00" ixz="0.00" iyy="0.00" iyz="0.00" izz="0.00"/>
+    </inertial>
+  </link>
+  <link name="root_arm_1_link_5">
+    <inertial>
+      <mass value="0"/>
+      <inertia ixx="0.00" ixy="0.00" ixz="0.00" iyy="0.00" iyz="0.00" izz="0.00"/>
+    </inertial>
+  </link>
+  <joint name="root_x_axis_joint" type="prismatic">
+    <parent link="root"/>
+    <child link="root_arm_1_link_1"/>
+    <axis xyz="1 0 0"/>
+    <limit effort="100" lower="-20" upper="20" velocity="0.50"/>
+    <dynamics damping="10.0" friction="10"/>
+  </joint>
+  <joint name="root_y_axis_joint" type="prismatic">
+    <parent link="root_arm_1_link_1"/>
+    <child link="root_arm_1_link_2"/>
+    <axis xyz="0 1 0"/>
+    <limit effort="100" lower="-20" upper="20" velocity="0.50"/>
+    <dynamics damping="10.0" friction="10"/>
+  </joint>
+  <joint name="root_z_axis_joint" type="prismatic">
+    <parent link="root_arm_1_link_2"/>
+    <child link="root_arm_1_link_3"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="100" lower="-20" upper="20" velocity="0.50"/>
+    <dynamics damping="10.0" friction="10"/>
+  </joint>
+  <joint name="root_x_rot_joint" type="revolute">
+    <parent link="root_arm_1_link_3"/>
+    <child link="root_arm_1_link_4"/>
+    <axis xyz="1 0 0"/>
+    <limit effort="100" lower="-20" upper="20" velocity="0.50"/>
+    <dynamics damping="10.0" friction="10"/>
+  </joint>
+  <joint name="root_y_rot_joint" type="revolute">
+    <parent link="root_arm_1_link_4"/>
+    <child link="root_arm_1_link_5"/>
+    <axis xyz="0 1 0"/>
+    <limit effort="100" lower="-20" upper="20" velocity="0.50"/>
+    <dynamics damping="10.0" friction="10"/>
+  </joint>
+  <joint name="root_z_rot_joint" type="revolute">
+    <parent link="root_arm_1_link_5"/>
+    <child link="panda_hand"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="100" lower="-20" upper="20" velocity="0.50"/>
+    <dynamics damping="10.0" friction="10"/>
+  </joint>
   <link name="panda_hand">
     <visual>
       <geometry>

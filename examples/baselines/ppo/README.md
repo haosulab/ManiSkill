@@ -89,6 +89,10 @@ python ppo.py --env_id="UnitreeH1Stand-v1" \
   --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
   --total_timesteps=100_000_000 --num-steps=100 --num-eval-steps=1000 \
   --gamma=0.99 --gae_lambda=0.95
+python ppo.py --env_id="UnitreeG1Stand-v1" \
+  --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
+  --total_timesteps=100_000_000 --num-steps=100 --num-eval-steps=1000 \
+  --gamma=0.99 --gae_lambda=0.95
 
 python ppo.py --env_id="OpenCabinetDrawer-v1" \
   --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
