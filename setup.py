@@ -35,7 +35,6 @@ setup(
         "tabulate",
         "transforms3d",
         "trimesh",
-        "rtree",
         "imageio",
         "imageio[ffmpeg]",
         "mplib==0.1.1;platform_system=='Linux'",
