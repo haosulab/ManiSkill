@@ -1,7 +1,7 @@
 import json
 import os
 import os.path as osp
-from typing import Dict, List
+from typing import Dict, List, Tuple
 from pathlib import Path
 from collections import defaultdict
 import copy
@@ -15,10 +15,10 @@ import transforms3d
 
 from mani_skill import ASSET_DIR
 from mani_skill.utils.scene_builder.registration import register_scene_builder
-from mani_skill.utils.structs import Actor
+from mani_skill.utils.structs import Actor, Articulation
 from mani_skill.utils.building import actors
 
-from mani_skill.utils.scene_builder.replicacad import ReplicaCADSceneBuilder
+from ...replicacad import ReplicaCADSceneBuilder
 
 HIDDEN_OBJ_COLLISION_GROUP = 30
 HIDDEN_POSE = sapien.Pose(p=[99999] * 3)
@@ -91,6 +91,8 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
         self.before_hide_collision_groups: Dict[str, List[int]] = dict()
 
     def build(self, build_config_idxs: List[int]):
+        if isinstance(build_config_idxs, int):
+            build_config_idxs = [build_config_idxs] * self.env.num_envs
         assert all(
             [bci in self.used_build_config_idxs for bci in build_config_idxs]
         ), f"got one or more unused build_config_idxs in {build_config_idxs}; This RCAD Rearrange task only uses the following build_config_idxs: {self.used_build_config_idxs}"
@@ -117,7 +119,7 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
 
         # self.rcad_to_rearrange_configs: which rearrange episode configs use each rcad config
         # default_object_poses: default poses for ycb objects from each rearrange episode config
-        self.rcad_to_rearrange_configs: Dict[str, List[str]] = defaultdict(list)
+        self.rcad_to_rearrange_configs: Dict[str, List[str]] = dict()
         default_object_poses: Dict[str, Dict[str, List[sapien.Pose]]] = dict()
         for rc in self._rearrange_configs:
             objects: Dict[str, List[sapien.Pose]] = defaultdict(list)
@@ -138,9 +140,10 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
                     obj_transform * sapien.Pose(transformation) * world_transform
                 )
 
-            self.rcad_to_rearrange_configs[Path(episode_json["scene_id"]).name].append(
-                rc
-            )
+            rcad_config_name = Path(episode_json["scene_id"]).name
+            if rcad_config_name not in self.rcad_to_rearrange_configs:
+                self.rcad_to_rearrange_configs[rcad_config_name] = []
+            self.rcad_to_rearrange_configs[rcad_config_name].append(rc)
             default_object_poses[rc] = objects
 
         # create init config
@@ -190,11 +193,14 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
             num_ycb_objs_to_build = rcad_config_to_num_ycb_objs_to_build[rcad_config]
 
             ycb_objs = defaultdict(list)
+            build_pos = [0, 0, 100]
             for actor_id, num_objs in num_ycb_objs_to_build.items():
                 for no in range(num_objs):
                     obj_instance_name = f"env-{env_num}_{actor_id}-{no}"
                     builder = actors.get_actor_builder(self.scene, id=f"ycb:{actor_id}")
                     builder.set_scene_idxs([env_num])
+                    builder.initial_pose = sapien.Pose(p=build_pos)
+                    build_pos[2] += 10
                     actor = builder.build(name=obj_instance_name)
 
                     ycb_objs[actor_id].append(actor)
@@ -202,6 +208,42 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
                     self.movable_objects[obj_instance_name] = actor
             self.ycb_objs_per_env.append(ycb_objs)
 
+        self.rcad_config_to_rearrange_ao_states: Dict[
+            str, List[List[Tuple[Articulation, torch.Tensor]]]
+        ] = defaultdict(list)
+        for env_num, bci in enumerate(build_config_idxs):
+            rcad_config = self.build_configs[bci]
+            rearrange_ao_states: List[List[Tuple[Articulation, torch.Tensor]]] = []
+            for rearrange_config in self.rcad_to_rearrange_configs[rcad_config]:
+                with open(
+                    osp.join(
+                        ASSET_DIR,
+                        "scene_datasets/replica_cad_dataset/rearrange",
+                        rearrange_config,
+                    ),
+                    "rb",
+                ) as f:
+                    episode_json = json.load(f)
+                episode_ao_states: Dict[str, Dict[str, int]] = episode_json["ao_states"]
+                articulation_qpos_pairs: List[Tuple[Articulation, torch.Tensor]] = []
+                for base_articulation_id, qpos_dict in episode_ao_states.items():
+                    aid, anum = base_articulation_id.split(":")
+                    articulation = self.articulations[
+                        f"env-{env_num}_{aid[:-1]}-{int(anum)}"
+                    ]
+                    base_qpos = torch.zeros(
+                        articulation.max_dof, device=self.env.device
+                    )
+                    for link_num, qpos_val in qpos_dict.items():
+                        qpos_idx = articulation.active_joints.index(
+                            articulation.joints[int(link_num)]
+                        )
+                        base_qpos[qpos_idx] = qpos_val
+                    articulation_qpos_pairs.append((articulation, base_qpos))
+                rearrange_ao_states.append(articulation_qpos_pairs)
+            self.rcad_config_to_rearrange_ao_states[rcad_config] = rearrange_ao_states
+
+    # TODO (arth): fix this to work with partial resets
     def initialize(self, env_idx: torch.Tensor, init_config_idxs: List[int]):
         assert all(
             [isinstance(bci, int) for bci in init_config_idxs]
@@ -229,6 +271,15 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
                         self.hide_actor(obj)
                     else:
                         self.show_actor(obj, pose)
+
+        for env_num, ici in zip(env_idx, init_config_idxs):
+            rcad_config = self.build_configs[self.build_config_idxs[env_num]]
+            ao_states = self.rcad_config_to_rearrange_ao_states[rcad_config][ici]
+            for articulation, qpos in ao_states:
+                base_qpos = articulation.qpos
+                base_qpos[env_num] *= 0
+                base_qpos[env_num] = qpos
+                articulation.set_qpos(base_qpos)
 
     def sample_build_config_idxs(self):
         used_build_config_idxs = list(self.used_build_config_idxs)

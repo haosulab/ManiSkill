@@ -8,11 +8,13 @@ import json
 import os.path as osp
 from typing import Dict, List, Tuple, Union
 from pathlib import Path
+from collections import defaultdict
 
 import numpy as np
 import sapien
 import torch
 import transforms3d
+import trimesh
 
 from mani_skill import ASSET_DIR
 from mani_skill.agents.robots.fetch import (
@@ -71,7 +73,6 @@ class ReplicaCADSceneBuilder(SceneBuilder):
         # keep track of background objects separately as we need to disable mobile robot collisions
         # note that we will create a merged actor using these objects to represent the bg
         bgs = [None] * self.env.num_envs
-
         for bci in np.unique(build_config_idxs):
             """
             Given a list of sampled build_config_idxs, build/load the scene objects
@@ -79,6 +80,8 @@ class ReplicaCADSceneBuilder(SceneBuilder):
             TODO (arth): return builder option to set static/dynamic in env
                 -  for now leave as-is since has smaller change in performance
             """
+
+            build_pos = [0, 0, -100]
 
             env_idx = [i for i, v in enumerate(build_config_idxs) if v == bci]
             unique_id = "scs-" + str(env_idx).replace(" ", "")
@@ -131,7 +134,7 @@ class ReplicaCADSceneBuilder(SceneBuilder):
             for obj_num, obj_meta in enumerate(build_config_json["object_instances"]):
 
                 # Again, for any dataset you will have to figure out how they reference object files
-                # Note that ASSET_DIR will always refer to the ~/.maniskill/data folder or whatever MS_ASSET_DIR is set to
+                # Note that ASSET_DIR will always refer to the ~/.ms_data folder or whatever MS_ASSET_DIR is set to
                 obj_cfg_path = osp.join(
                     ASSET_DIR,
                     "scene_datasets/replica_cad_dataset/configs/objects",
@@ -166,6 +169,8 @@ class ReplicaCADSceneBuilder(SceneBuilder):
                     else:
                         builder.add_multiple_convex_collisions_from_file(collision_file)
                     builder.set_scene_idxs(env_idx)
+                    builder.initial_pose = sapien.Pose(p=build_pos)
+                    build_pos[2] -= 10
                     actor = builder.build(name=f"{unique_id}_{actor_name}")
                     self._default_object_poses.append((actor, pose))
 
@@ -192,11 +197,14 @@ class ReplicaCADSceneBuilder(SceneBuilder):
                     )
 
             # ReplicaCAD also provides articulated objects
+            articulation_to_num = defaultdict(int)
             for i, articulated_meta in enumerate(
                 build_config_json["articulated_object_instances"]
             ):
 
                 template_name = articulated_meta["template_name"]
+                if "door" in template_name:
+                    continue
                 pos = articulated_meta["translation"]
                 rot = articulated_meta["rotation"]
                 urdf_path = osp.join(
@@ -204,7 +212,10 @@ class ReplicaCADSceneBuilder(SceneBuilder):
                     f"scene_datasets/replica_cad_dataset/urdf/{template_name}/{template_name}.urdf",
                 )
                 urdf_loader = self.scene.create_urdf_loader()
-                urdf_loader.name = f"{unique_id}_{template_name}-{i}"
+                articulation_name = (
+                    f"{template_name}-{articulation_to_num[template_name]}"
+                )
+                urdf_loader.name = f"{unique_id}_{articulation_name}"
                 urdf_loader.fix_root_link = articulated_meta["fixed_base"]
                 urdf_loader.disable_self_collisions = True
                 if "uniform_scale" in articulated_meta:
@@ -215,12 +226,19 @@ class ReplicaCADSceneBuilder(SceneBuilder):
 
                 # for now classify articulated objects as "movable" object
                 for env_num in env_idx:
-                    self.articulations[f"env-{env_num}_{articulation.name}"] = (
+                    self.articulations[f"env-{env_num}_{articulation_name}"] = (
                         articulation
                     )
-                    self.scene_objects[f"env-{env_num}_{articulation.name}"] = (
+                    self.scene_objects[f"env-{env_num}_{articulation_name}"] = (
                         articulation
                     )
+
+                for link in articulation.links:
+                    link.set_collision_group_bit(
+                        group=2, bit_idx=FETCH_WHEELS_COLLISION_BIT, bit=1
+                    )
+
+                articulation_to_num[template_name] += 1
 
             # ReplicaCAD also specifies where to put lighting
             with open(
@@ -248,16 +266,16 @@ class ReplicaCADSceneBuilder(SceneBuilder):
             self.scene.set_ambient_light([0.3, 0.3, 0.3])
 
             if self._navigable_positions[bci] is None:
-                npy_fp = (
+                mesh_fp = (
                     Path(ASSET_DIR)
                     / "scene_datasets/replica_cad_dataset/configs/scenes"
                     / (
                         Path(self.build_configs[bci]).stem
-                        + f".{str(self.env.robot_uids)}.navigable_positions.npy"
+                        + f".{str(self.env.robot_uids)}.navigable_positions.obj"
                     )
                 )
-                if npy_fp.exists():
-                    self._navigable_positions[bci] = np.load(npy_fp)
+                if mesh_fp.exists():
+                    self._navigable_positions[bci] = trimesh.load(mesh_fp)
 
         # merge actors into one
         self.bg = Actor.create_from_entities(
@@ -267,6 +285,9 @@ class ReplicaCADSceneBuilder(SceneBuilder):
             shared_name="scene_background",
         )
 
+        # For the purposes of physical simulation, we disable collisions between the Fetch robot and the scene background
+        self.disable_fetch_move_collisions(self.bg)
+
     def initialize(self, env_idx: torch.Tensor):
         if self.env.robot_uids == "fetch":
             agent: Fetch = self.env.agent
@@ -274,9 +295,6 @@ class ReplicaCADSceneBuilder(SceneBuilder):
             agent.reset(rest_keyframe.qpos)
 
             agent.robot.set_pose(sapien.Pose([-1, 0, 0.02]))
-
-            # For the purposes of physical simulation, we disable collisions between the Fetch robot and the scene background
-            self.disable_fetch_move_collisions(self.bg)
         else:
             raise NotImplementedError(self.env.robot_uids)
 
@@ -300,5 +318,5 @@ class ReplicaCADSceneBuilder(SceneBuilder):
             )
 
     @property
-    def navigable_positions(self) -> List[np.ndarray]:
+    def navigable_positions(self) -> List[trimesh.Trimesh]:
         return [self._navigable_positions[bci] for bci in self.build_config_idxs]

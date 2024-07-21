@@ -29,9 +29,8 @@ class SceneManipulationEnv(BaseEnv):
             When True, will never reconfigure the environment during resets unless you run env.reset(seed=seed, options=dict(reconfigure=True))
             and explicitly reconfigure. If False, will reconfigure every reset.
 
-        scene_builder_cls:
-            Scene builder class to build a scene with. Default is ReplicaCAD. Furthermore, any of the AI2THOR SceneBuilders are supported in
-            this environment.
+        scene_builder_cls: Scene builder class to build a scene with. Default is the ArchitecTHORSceneBuilder which builds a scene from AI2THOR.
+            Any of the AI2THOR SceneBuilders are supported in this environment
 
         build_config_idxs (optional): which build configs (static builds) to sample. Your scene_builder_cls may or may not require these.
         init_config_idxs (optional): which init configs (additional init options) to sample. Your scene_builder_cls may or may not require these.
@@ -90,9 +89,18 @@ class SceneManipulationEnv(BaseEnv):
             self.build_config_idxs = options.pop(
                 "build_config_idxs", self.build_config_idxs
             )
+            self.init_config_idxs = options.pop("init_config_idxs", None)
+        else:
+            assert (
+                "build_config_idxs" not in options
+            ), "options dict cannot contain build_config_idxs without reconfigure=True"
             self.init_config_idxs = options.pop(
                 "init_config_idxs", self.init_config_idxs
             )
+        if isinstance(self.build_config_idxs, int):
+            self.build_config_idxs = [self.build_config_idxs]
+        if isinstance(self.init_config_idxs, int):
+            self.init_config_idxs = [self.init_config_idxs]
         return super().reset(seed, options)
 
     def _load_lighting(self, options: dict):
