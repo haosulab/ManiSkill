@@ -14,7 +14,6 @@ import torch
 import transforms3d
 
 from mani_skill import ASSET_DIR
-from mani_skill.utils.scene_builder.registration import register_scene_builder
 from mani_skill.utils.structs import Actor, Articulation
 from mani_skill.utils.building import actors
 
@@ -24,7 +23,6 @@ HIDDEN_OBJ_COLLISION_GROUP = 30
 HIDDEN_POSE = sapien.Pose(p=[99999] * 3)
 
 
-@register_scene_builder("ReplicaCADRearrange")
 class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
 
     task_names: List[str] = ["set_table:train"]
