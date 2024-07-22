@@ -19,9 +19,8 @@ from mani_skill.utils.structs.types import Array, GPUMemoryConfig, SimConfig
 
 import matplotlib.pyplot as plt
 import gymnasium as gym
-
-@register_env("PlaceSphere-v1", max_episode_steps=50)
-class PlaceSphereEnv(BaseEnv):
+@register_env("PlaceSphere-v2", max_episode_steps=50)
+class PlaceSphereEnv_v2(BaseEnv):
     """
     Task Description
     ----------------
@@ -82,7 +81,7 @@ class PlaceSphereEnv(BaseEnv):
             "render_camera", pose=pose, width=512, height=512, fov=1, near=0.01, far=100
         )
         
-    def _build_bin(self, radius):
+    def _build_bin(self, radius,name):
         builder = self.scene.create_actor_builder()
         
         # init the locations of the basic blocks
@@ -110,7 +109,7 @@ class PlaceSphereEnv(BaseEnv):
             builder.add_box_visual(pose, half_size)
 
       	# build the kinematic bin
-        return builder.build_kinematic(name="bin")
+        return builder.build_kinematic(name=name)
 
     def _load_scene(self, options: dict):
         # load the table
@@ -129,7 +128,8 @@ class PlaceSphereEnv(BaseEnv):
         )
         
         # load the bin
-        self.bin = self._build_bin(self.radius)
+        self.bin1 = self._build_bin(self.radius,'bin1')
+        self.bin2 = self._build_bin(2*self.radius,'bin2')
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
@@ -146,18 +146,26 @@ class PlaceSphereEnv(BaseEnv):
             obj_pose = Pose.create_from_pq(p=xyz, q=q)
             self.obj.set_pose(obj_pose)
 
-            # init the bin in the last 1/2 zone along the x-axis (so that it doesn't collide the sphere)
-            pos = torch.zeros((b, 3))
-            pos[:, 0] = torch.rand((b, 1))[..., 0] * 0.1 # the last 1/2 zone of x ([0, 0.1])
-            pos[:, 1] = torch.rand((b, 1))[..., 0] * 0.2 - 0.1 # spanning all possible ys
-            pos[:, 2] = self.block_half_size[0] # on the table
-            q = [1, 0, 0, 0]
-            bin_pose = Pose.create_from_pq(p=pos, q=q)
-            self.bin.set_pose(bin_pose)
+
+            # init bin1 in the last 1/2 zone along the x-axis (so that it doesn't collide with the sphere)
+            pos1 = torch.zeros((b, 3))
+            pos1[:, 0] = torch.rand((b, 1))[..., 0] * 0.05 + 0.05  # ensuring it's within [0.05, 0.1]
+            pos1[:, 1] = torch.rand((b, 1))[..., 0] * 0.2 - 0.1  # spanning all possible ys
+            pos1[:, 2] = self.block_half_size[0]  # on the table
+            bin_pose1 = Pose.create_from_pq(p=pos1, q=q)
+            self.bin1.set_pose(bin_pose1)
+
+            # init bin2 in the last 1/2 zone along the x-axis and make sure it does not collide with bin1
+            pos2 = torch.zeros((b, 3))
+            pos2[:, 0] = pos1[:, 0] + 0.1  # fixed distance from bin1 along the x-axis
+            pos2[:, 1] = torch.rand((b, 1))[..., 0] * 0.2 - 0.1  # spanning all possible ys
+            pos2[:, 2] = self.block_half_size[0]  # on the table
+            bin_pose2 = Pose.create_from_pq(p=pos2, q=q)
+            self.bin2.set_pose(bin_pose2)
 
     def evaluate(self):
         pos_obj = self.obj.pose.p
-        pos_bin = self.bin.pose.p
+        pos_bin = self.bin1.pose.p
         offset = pos_obj - pos_bin
         xy_flag = (
             torch.linalg.norm(offset[..., :2], axis=1)
@@ -179,7 +187,7 @@ class PlaceSphereEnv(BaseEnv):
         obs = dict(
             is_grasped=info["is_obj_grasped"],
             tcp_pose=self.agent.tcp.pose.raw_pose,
-            bin_pos=self.bin.pose.p
+            bin_pos=self.bin1.pose.p
         )
         if "state" in self.obs_mode:
             obs.update(
@@ -197,8 +205,8 @@ class PlaceSphereEnv(BaseEnv):
 
         # grasp and place reward
         obj_pos = self.obj.pose.p
-        bin_pos = self.bin.pose.p
-        bin_top_pos = self.bin.pose.p.clone()
+        bin_pos = self.bin1.pose.p
+        bin_top_pos = self.bin1.pose.p.clone()
         bin_top_pos[:, 2] = bin_top_pos[:, 2] + self.block_half_size[0] + self.radius
         obj_to_bin_top_dist = torch.linalg.norm(bin_top_pos - obj_pos, axis=1)
         place_reward = 1 - torch.tanh(5.0 * obj_to_bin_top_dist)
@@ -229,7 +237,3 @@ class PlaceSphereEnv(BaseEnv):
         # this should be equal to compute_dense_reward / max possible reward
         max_reward = 13.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
-
-
-
-
