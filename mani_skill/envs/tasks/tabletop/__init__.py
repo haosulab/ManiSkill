@@ -15,3 +15,4 @@ from .poke_cube import PokeCubeEnv
 from .place_sphere import PlaceSphereEnv
 from .roll_ball import RollBallEnv
 from .push_t import PushTEnv
+from .stack_cube_v2 import StackCubeEnv_v2
