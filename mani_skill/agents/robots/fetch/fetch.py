@@ -252,8 +252,8 @@ class Fetch(BaseAgent):
         # -------------------------------------------------------------------------- #
         base_pd_joint_vel = PDBaseForwardVelControllerConfig(
             self.base_joint_names,
-            lower=[-0.5, -3.14],
-            upper=[0.5, 3.14],
+            lower=[-1, -3.14],
+            upper=[1, 3.14],
             damping=1000,
             force_limit=500,
         )
