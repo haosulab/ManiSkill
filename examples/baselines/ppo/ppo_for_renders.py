@@ -199,13 +199,13 @@ if __name__ == "__main__":
     env_kwargs = dict(obs_mode="state", control_mode="pd_joint_delta_pos", render_mode="rgb_array", sim_backend="gpu")
     envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, **env_kwargs)
 
-    render_pose = sapien_utils.look_at(eye=[-20.0, 20.0, 5.0], target=[1.5, 0.0, 0.5])
+    render_pose = sapien_utils.look_at(eye=[-20.0, 20.0, 5.0], target=[-7.0, 7.0, 0.5])
     eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs,
         shader_dir="rt",
         parallel_gui_render_enabled=True,
         human_render_camera_configs=dict(
             render_camera=dict(
-                width=1024, height=768, pose=np.concatenate([render_pose.p, render_pose.q]).tolist()
+                width=1024*3, height=768*3, pose=np.concatenate([render_pose.p, render_pose.q]).tolist()
             )
         ),
         **env_kwargs
