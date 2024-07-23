@@ -14,6 +14,13 @@ from mani_skill.utils import common
 class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
     """
     Flattens the rgbd mode observations into a dictionary with two keys, "rgbd" and "state"
+
+    Args:
+        rgb (bool): Whether to include rgb images in the observation
+        depth (bool): Whether to include depth images in the observation
+        state (bool): Whether to include state data in the observation
+
+    Note that the returned observations will have a "rgbd" or "rgb" or "depth" key depending on the rgb/depth bool flags.
     """
 
     def __init__(self, env, rgb=True, depth=True, state=True) -> None:
