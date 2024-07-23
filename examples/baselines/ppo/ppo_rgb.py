@@ -52,6 +52,8 @@ class Args:
     # Algorithm specific arguments
     env_id: str = "PickCube-v1"
     """the id of the environment"""
+    include_state: bool = True
+    """whether to include state information in observations"""
     total_timesteps: int = 10000000
     """total timesteps of the experiments"""
     learning_rate: float = 3e-4
@@ -162,7 +164,7 @@ class NatureCNN(nn.Module):
         feature_size = 256
         in_channels=sample_obs["rgb"].shape[-1]
         image_size=(sample_obs["rgb"].shape[1], sample_obs["rgb"].shape[2])
-        state_size=sample_obs["state"].shape[-1]
+
 
         # here we use a NatureCNN architecture to process images, but any architecture is permissble here
         cnn = nn.Sequential(
@@ -192,9 +194,11 @@ class NatureCNN(nn.Module):
         extractors["rgb"] = nn.Sequential(cnn, fc)
         self.out_features += feature_size
 
-        # for state data we simply pass it through a single linear layer
-        extractors["state"] = nn.Linear(state_size, 256)
-        self.out_features += 256
+        if "state" in sample_obs:
+            # for state data we simply pass it through a single linear layer
+            state_size = sample_obs["state"].shape[-1]
+            extractors["state"] = nn.Linear(state_size, 256)
+            self.out_features += 256
 
         self.extractors = nn.ModuleDict(extractors)
 
@@ -298,8 +302,8 @@ if __name__ == "__main__":
     envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, **env_kwargs)
 
     # rgbd obs mode returns a dict of data, we flatten it so there is just a rgbd key and state key
-    envs = FlattenRGBDObservationWrapper(envs, rgb_only=True)
-    eval_envs = FlattenRGBDObservationWrapper(eval_envs, rgb_only=True)
+    envs = FlattenRGBDObservationWrapper(envs, rgb=True, depth=False, state=args.include_state)
+    eval_envs = FlattenRGBDObservationWrapper(eval_envs, rgb=True, depth=False, state=args.include_state)
 
     if isinstance(envs.action_space, gym.spaces.Dict):
         envs = FlattenActionSpaceWrapper(envs)
@@ -416,7 +420,8 @@ if __name__ == "__main__":
                 final_info = infos["final_info"]
                 done_mask = infos["_final_info"]
                 episodic_return = final_info['episode']['r'][done_mask].mean().cpu().numpy()
-                writer.add_scalar("charts/success_rate", final_info["success"][done_mask].float().mean().cpu().numpy(), global_step)
+                if "success" in final_info:
+                    writer.add_scalar("charts/success_rate", final_info["success"][done_mask].float().mean().cpu().numpy(), global_step)
                 writer.add_scalar("charts/episodic_return", episodic_return, global_step)
                 writer.add_scalar("charts/episodic_length", final_info["elapsed_steps"][done_mask].float().mean().cpu().numpy(), global_step)
                 for k in infos["final_observation"]:
