@@ -221,6 +221,13 @@ if __name__ == "__main__":
         eval_envs = RecordEpisode(eval_envs, output_dir=eval_output_dir, save_trajectory=args.evaluate, trajectory_name="trajectory", max_steps_per_video=args.num_eval_steps, video_fps=30)
     envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=not args.partial_reset, **env_kwargs)
     eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=not args.partial_reset, **env_kwargs)
+
+    ### modify cameras for a nicer quality/look ###
+    for k, camera in eval_envs.base_env._human_render_cameras.items():
+        camera.camera.set_property("exposure", 2.2)
+        camera.camera.set_property("toneMapper", 2)
+    ###
+
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
     agent = Agent(envs).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)

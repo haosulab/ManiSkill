@@ -160,7 +160,6 @@ class Camera(BaseSensor):
                 near=camera_cfg.near,
                 far=camera_cfg.far,
             )
-
         # Filter texture names according to renderer type if necessary (legacy for Kuafu)
         self.texture_names = camera_cfg.texture_names
 

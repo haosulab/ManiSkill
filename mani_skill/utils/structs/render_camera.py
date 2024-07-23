@@ -222,9 +222,15 @@ class RenderCamera:
     # def set_property(self, name: str, value: float) -> None:
     #     self._render_cameras[0].set_property(name, value)
 
-    # @typing.overload
-    # def set_property(self, name: str, value: int) -> None:
-    #     self._render_cameras[0].set_property(name, value)
+    def set_property(self, name: str, value: Any) -> None:
+        """change properties of the camera. This is not well documented at the moment and is a heavily overloaded function.
+
+        At the moment you can do this:
+
+        - set_property("toneMapper", value) where value is 0 (gamma), 1 (sRGB), 2 (filmic) change the color management used. Default is 0 (gamma)
+        - set_property("exposure", value) where value is the exposure. Default is 1.0
+        """
+        self._render_cameras[0].set_property(name, value)
 
     def set_skew(self, skew: float) -> None:
         for obj in self._render_cameras:
