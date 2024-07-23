@@ -303,7 +303,10 @@ class RecordEpisode(gym.Wrapper):
         img = self.env.render()
         img = common.to_numpy(img)
         if len(img.shape) > 3:
-            img = tile_images(img, nrows=self.video_nrows)
+            if self.base_env._parallel_gui_render_enabled:
+                img = img[0]
+            else:
+                img = tile_images(img, nrows=self.video_nrows)
         return img
 
     def reset(

@@ -202,7 +202,7 @@ if __name__ == "__main__":
         parallel_gui_render_enabled=True,
         human_render_camera_configs=dict(
             render_camera=dict(
-                width=128, height=128
+                width=1024, height=1024
             )
         ),
         **env_kwargs
