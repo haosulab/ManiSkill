@@ -197,9 +197,18 @@ if __name__ == "__main__":
 
     # env setup
     env_kwargs = dict(obs_mode="state", control_mode="pd_joint_delta_pos", render_mode="rgb_array", sim_backend="gpu")
+    env_kwargs["sim_cfg"] = dict(gpu_memory_cfg=dict(max_rigid_contact_count=2**23, max_rigid_patch_count=2**20))
     envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, **env_kwargs)
 
-    render_pose = sapien_utils.look_at(eye=[-20.0, 20.0, 5.0], target=[-7.0, 7.0, 0.5])
+    ### Hardcode some nice camera render poses for demos ###
+    if args.env_id == "AnymalC-Reach-v1":
+        render_pose = sapien_utils.look_at(eye=[-20.0, 20.0, 5.0], target=[-7.0, 7.0, 0.5])
+    elif args.env_id == "PickCube-v1":
+        render_pose = sapien_utils.look_at(eye=[20.0, 20.0, 4.0], target=[7.0, 7.0, 0.5])
+    elif args.env_id == "OpenCabinetDrawer-v1":
+        render_pose = sapien_utils.look_at(eye=[-20.0, 20.0, 5.0], target=[-7.0, 7.0, 0.5])
+    elif args.env_id == "PushT-v1":
+        render_pose = sapien_utils.look_at(eye=[20.0, 20.0, 4.0], target=[7.0, 7.0, 0.5])
     eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs,
         shader_dir="rt",
         parallel_gui_render_enabled=True,
@@ -227,8 +236,12 @@ if __name__ == "__main__":
 
     ### modify cameras for a nicer quality/look ###
     for k, camera in eval_envs.base_env._human_render_cameras.items():
-        camera.camera.set_property("exposure", 3.4)
-        camera.camera.set_property("toneMapper", 2)
+        if args.env_id == "PushT-v1":
+            camera.camera.set_property("exposure", 3.1)
+            camera.camera.set_property("toneMapper", 2)
+        else:
+            camera.camera.set_property("exposure", 3.4)
+            camera.camera.set_property("toneMapper", 2)
     ###
 
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
