@@ -34,7 +34,7 @@
         <joint name="waist" range="-30 30"/>
         <geom name="pelvis" fromto="0 0 0 0 0 -.15" size="0.065"/>
         <body name="thigh" pos="0 0 -.2">
-          <joint name="hip" range="-170 10"/>
+          <joint name="hip" range="-144 10"/>
           <geom name="thigh" fromto="0 0 0 0 0 -.33" size="0.04"/>
           <body name="calf" pos="0 0 -.33">
             <joint name="knee" range="5 150"/>

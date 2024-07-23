@@ -620,14 +620,9 @@ class BaseEnv(gym.Env):
         # Cameras for rendering only
         self._human_render_cameras = dict()
         for uid, camera_cfg in self._human_render_camera_configs.items():
-            if uid in self._agent_sensor_configs:
-                articulation = self.agent.robot
-            else:
-                articulation = None
             self._human_render_cameras[uid] = Camera(
                 camera_cfg,
                 self.scene,
-                articulation=articulation,
             )
 
         self.scene.sensors = self._sensors

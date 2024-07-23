@@ -4,8 +4,8 @@ import os
 from typing import Any, Dict, Union
 
 import numpy as np
+import sapien
 import torch
-from transforms3d.euler import euler2quat
 
 from mani_skill.agents.base_agent import BaseAgent
 from mani_skill.agents.controllers import *
@@ -13,21 +13,15 @@ from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.utils import randomization, rewards
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import common, sapien_utils
-
-# fix new imports later
-from mani_skill.utils.building.ground import build_ground
 from mani_skill.utils.registration import register_env
-from mani_skill.utils.structs.pose import Pose
-from mani_skill.utils.structs.types import (
-    Array,
-    GPUMemoryConfig,
-    SceneConfig,
-    SimConfig,
+from mani_skill.utils.scene_builder.control.planar.scene_builder import (
+    PlanarSceneBuilder,
 )
+from mani_skill.utils.structs.pose import Pose
+from mani_skill.utils.structs.types import Array, SceneConfig, SimConfig
 
 MJCF_FILE = f"{os.path.join(os.path.dirname(__file__), 'assets/hopper.xml')}"
 
-# params from dm_control
 # Minimal height of torso over foot above which stand reward is 1.
 _STAND_HEIGHT = 0.6
 
@@ -38,22 +32,6 @@ _HOP_SPEED = 2
 class HopperRobot(BaseAgent):
     uid = "hopper"
     mjcf_path = MJCF_FILE
-
-    @property
-    def _sensor_configs(self):
-        return [
-            # replicated from xml file
-            CameraConfig(
-                uid="cam0",
-                pose=Pose.create_from_pq([0, -2.8, 0], euler2quat(0, 0, np.pi / 2)),
-                width=128,
-                height=128,
-                fov=70 * (np.pi / 180),
-                near=0.01,
-                far=100,
-                entity_uid="torso_dummy_1",
-            ),
-        ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -147,23 +125,44 @@ class HopperEnv(BaseEnv):
     @property
     def _default_sim_config(self):
         return SimConfig(
-            gpu_memory_cfg=GPUMemoryConfig(
-                found_lost_pairs_capacity=2**25, max_rigid_patch_count=2**18
-            ),
             scene_cfg=SceneConfig(
-                solver_position_iterations=15, solver_velocity_iterations=15
+                solver_position_iterations=4, solver_velocity_iterations=1
             ),
-            # sim_freq=50,
+            sim_freq=100,
             control_freq=25,
         )
 
     @property
     def _default_sensor_configs(self):
-        return self.agent._sensor_configs
+        return [
+            # replicated from xml file
+            CameraConfig(
+                uid="cam0",
+                pose=sapien_utils.look_at(eye=[0, -2.8, 0.8], target=[0, 0, 0]),
+                width=128,
+                height=128,
+                fov=45 * (np.pi / 180),
+                near=0.01,
+                far=100,
+                mount=self.agent.robot.links_map["torso_dummy_1"],
+            ),
+        ]
 
     @property
     def _default_human_render_camera_configs(self):
-        return self.agent._sensor_configs
+        return [
+            # replicated from xml file
+            CameraConfig(
+                uid="render_cam",
+                pose=sapien_utils.look_at(eye=[0, -2.8, 0.8], target=[0, 0, 0]),
+                width=512,
+                height=512,
+                fov=45 * (np.pi / 180),
+                near=0.01,
+                far=100,
+                mount=self.agent.robot.links_map["torso_dummy_1"],
+            ),
+        ]
 
     def _load_scene(self, options: dict):
         loader = self.scene.create_mjcf_loader()
@@ -171,31 +170,12 @@ class HopperEnv(BaseEnv):
         for a in actor_builders:
             a.build(a.name)
 
-        # load in the ground
-        self.ground = build_ground(
-            self.scene,
-            floor_width=2,
-            floor_length=100,
-            altitude=-0.075,
-            xy_origin=(50 - 2, 0),
-        )
+        self.planar_scene = PlanarSceneBuilder(env=self)
+        self.planar_scene.build()
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: Dict):
         with torch.device(self.device):
-            b = len(env_idx)
-            # qpos sampled same as dm_control, but ensure no self intersection explicitly here
-            random_qpos = torch.rand(b, self.agent.robot.dof[0])
-            q_lims = self.agent.robot.get_qlimits()
-            q_ranges = q_lims[..., 1] - q_lims[..., 0]
-            random_qpos *= q_ranges
-            random_qpos += q_lims[..., 0]
-
-            # overwrite planar joint qpos - these are special for planar robots
-            # first two joints are dummy rootx and rootz
-            random_qpos[:, :2] = 0
-            # y is axis of rotation of our planar robot (xz plane), so we randomize around it
-            random_qpos[:, 2] = torch.pi * (2 * torch.rand(b) - 1)  # (-pi,pi)
-            self.agent.robot.set_qpos(random_qpos)
+            self.planar_scene.initialize(env_idx)
 
     def evaluate(self):
         return dict()
@@ -221,15 +201,15 @@ class HopperEnv(BaseEnv):
         return torch.log1p(force_mag)
 
     # dm_control also includes foot pressures as state obs space
-    def _get_obs_extra(self, info: Dict):
-        obs = dict(
+    def _get_obs_state_dict(self, info: Dict):
+        return dict(
+            agent=self._get_obs_agent(),
             toe_touch=self.touch("foot_toe"),
             heel_touch=self.touch("foot_heel"),
         )
-        return obs
 
 
-@register_env("MS-HopperStand-v1", max_episode_steps=100)
+@register_env("MS-HopperStand-v1", max_episode_steps=600)
 class HopperStandEnv(HopperEnv):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -243,7 +223,7 @@ class HopperStandEnv(HopperEnv):
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
 
 
-@register_env("MS-HopperHop-v1", max_episode_steps=100)
+@register_env("MS-HopperHop-v1", max_episode_steps=600)
 class HopperHopEnv(HopperEnv):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
