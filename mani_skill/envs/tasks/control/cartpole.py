@@ -3,7 +3,9 @@ import os
 from typing import Any, Dict, Union
 
 import numpy as np
+import sapien
 import torch
+from transforms3d.euler import euler2quat
 
 from mani_skill.agents.base_agent import BaseAgent
 from mani_skill.agents.controllers import *
@@ -109,6 +111,17 @@ class CartpoleEnv(BaseEnv):
         articulation_builders, actor_builders, sensor_configs = loader.parse(MJCF_FILE)
         for a in actor_builders:
             a.build(a.name)
+
+        # background visual wall
+        self.wall = self.scene.create_actor_builder()
+        self.wall.add_box_visual(
+            half_size=(1e-3, 20, 10),
+            pose=sapien.Pose(p=[0, 1, 1], q=euler2quat(0, 0, np.pi / 2)),
+            material=sapien.render.RenderMaterial(
+                base_color=np.array([0.3, 0.3, 0.3, 1])
+            ),
+        )
+        self.wall.build_static(name="wall")
 
     def evaluate(self):
         return dict()
