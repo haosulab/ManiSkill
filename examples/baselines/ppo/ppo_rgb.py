@@ -416,7 +416,8 @@ if __name__ == "__main__":
                 final_info = infos["final_info"]
                 done_mask = infos["_final_info"]
                 episodic_return = final_info['episode']['r'][done_mask].mean().cpu().numpy()
-                writer.add_scalar("charts/success_rate", final_info["success"][done_mask].float().mean().cpu().numpy(), global_step)
+                if "success" in final_info:
+                    writer.add_scalar("charts/success_rate", final_info["success"][done_mask].float().mean().cpu().numpy(), global_step)
                 writer.add_scalar("charts/episodic_return", episodic_return, global_step)
                 writer.add_scalar("charts/episodic_length", final_info["elapsed_steps"][done_mask].float().mean().cpu().numpy(), global_step)
                 for k in infos["final_observation"]:
