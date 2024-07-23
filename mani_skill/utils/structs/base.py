@@ -33,7 +33,8 @@ class BaseStruct(Generic[T]):
 
     def __post_init__(self):
         if not isinstance(self._scene_idxs, torch.Tensor):
-            self._scene_idxs = common.to_tensor(self._scene_idxs).to(torch.int)
+            self._scene_idxs = common.to_tensor(self._scene_idxs)
+        self._scene_idxs = self._scene_idxs.to(torch.int).to(self.device)
 
     def __str__(self):
         return f"<struct of type {self.__class__}; managing {self._num_objs} {self._objs[0].__class__} objects>"

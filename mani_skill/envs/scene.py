@@ -240,11 +240,15 @@ class ManiSkillScene:
 
     def update_render(self):
         if physx.is_gpu_enabled():
-            if self.render_system_group is None:
-                self._setup_gpu_rendering()
-                self._gpu_setup_sensors(self.sensors)
-                self._gpu_setup_sensors(self.human_render_cameras)
-            self.render_system_group.update_render()
+            if not self.parallel_gui_render_enabled:
+                if self.render_system_group is None:
+                    self._setup_gpu_rendering()
+                    self._gpu_setup_sensors(self.sensors)
+                    self._gpu_setup_sensors(self.human_render_cameras)
+                self.render_system_group.update_render()
+            else:
+                self.sub_scenes[0].update_render()
+                self.px.sync_poses_gpu_to_cpu()
         else:
             self.sub_scenes[0].update_render()
 

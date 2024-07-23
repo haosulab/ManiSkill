@@ -159,6 +159,7 @@ class BaseEnv(gym.Env):
         self._custom_sensor_configs = sensor_configs
         self._custom_human_render_camera_configs = human_render_camera_configs
         self._parallel_gui_render_enabled = parallel_gui_render_enabled
+        """whether all objects are placed on one scene for the purpose of rendering all objects together instead of in parallel"""
         self.robot_uids = robot_uids
         if self.SUPPORTED_ROBOTS is not None:
             if robot_uids not in self.SUPPORTED_ROBOTS:
@@ -1082,13 +1083,27 @@ class BaseEnv(gym.Env):
         self.scene.update_render()
         images = []
         if physx.is_gpu_enabled():
-            for name in self.scene.human_render_cameras.keys():
-                camera_group = self.scene.camera_groups[name]
-                if camera_name is not None and name != camera_name:
-                    continue
-                camera_group.take_picture()
-                rgb = camera_group.get_picture_cuda("Color").torch()[..., :3].clone()
-                images.append(rgb)
+            if self._parallel_gui_render_enabled:
+                self.scene.update_render()
+                for name, camera in self.scene.human_render_cameras.items():
+                    camera.camera._render_cameras[0].take_picture()
+                    if self.shader_dir == "default":
+                        rgb = common.to_tensor(camera.camera._render_cameras[0].get_picture("Color"))[None, ...]
+                        rgb = (rgb[..., :3]).to(torch.uint8)
+                    else:
+                        rgb = common.to_tensor(camera.camera._render_cameras[0].get_picture("Color"))[
+                            None, ...
+                        ]
+                        rgb = (rgb[..., :3] * 255).to(torch.uint8)
+                    images.append(rgb)
+            else:
+                for name in self.scene.human_render_cameras.keys():
+                    camera_group = self.scene.camera_groups[name]
+                    if camera_name is not None and name != camera_name:
+                        continue
+                    camera_group.take_picture()
+                    rgb = camera_group.get_picture_cuda("Color").torch()[..., :3].clone()
+                    images.append(rgb)
         else:
             for name, camera in self.scene.human_render_cameras.items():
                 if camera_name is not None and name != camera_name:
