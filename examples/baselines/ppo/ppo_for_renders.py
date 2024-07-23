@@ -6,6 +6,7 @@ from typing import Optional
 
 import gymnasium as gym
 import numpy as np
+import sapien
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -15,7 +16,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 # ManiSkill specific imports
 import mani_skill.envs
-from mani_skill.utils import common
+from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper
 from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
@@ -197,12 +198,14 @@ if __name__ == "__main__":
     # env setup
     env_kwargs = dict(obs_mode="state", control_mode="pd_joint_delta_pos", render_mode="rgb_array", sim_backend="gpu")
     envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, **env_kwargs)
+
+    render_pose = sapien_utils.look_at(eye=[-20.0, 20.0, 5.0], target=[1.5, 0.0, 0.5])
     eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs,
-        shader_dir="rt-fast",
+        shader_dir="rt",
         parallel_gui_render_enabled=True,
         human_render_camera_configs=dict(
             render_camera=dict(
-                width=1024, height=1024
+                width=1024, height=768, pose=np.concatenate([render_pose.p, render_pose.q]).tolist()
             )
         ),
         **env_kwargs
@@ -224,7 +227,7 @@ if __name__ == "__main__":
 
     ### modify cameras for a nicer quality/look ###
     for k, camera in eval_envs.base_env._human_render_cameras.items():
-        camera.camera.set_property("exposure", 2.2)
+        camera.camera.set_property("exposure", 3.4)
         camera.camera.set_property("toneMapper", 2)
     ###
 

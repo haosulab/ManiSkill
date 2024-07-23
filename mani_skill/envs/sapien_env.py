@@ -633,7 +633,6 @@ class BaseEnv(gym.Env):
         """Loads lighting into the scene. Called by `self._reconfigure`. If not overriden will set some simple default lighting"""
 
         self.enable_shadow
-        #
         # self.scene.set_ambient_light(np.array([24,24,32]) / 255)
         self.scene.sub_scenes[0].set_environment_map(os.path.join(PACKAGE_ASSET_DIR, "hdr/Basement-Georgensgmünd-4K.hdr"))
         # self.scene.set_ambient_light(np.power(np.array([72, 75, 82]) / (255), 2.2))
