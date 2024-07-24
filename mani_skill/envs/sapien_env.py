@@ -632,14 +632,16 @@ class BaseEnv(gym.Env):
     def _load_lighting(self, options: dict):
         """Loads lighting into the scene. Called by `self._reconfigure`. If not overriden will set some simple default lighting"""
 
-        self.enable_shadow
+        shadow = self.enable_shadow
         # self.scene.set_ambient_light(np.array([24,24,32]) / 255)
-        self.scene.sub_scenes[0].set_environment_map(os.path.join(PACKAGE_ASSET_DIR, "hdr/Basement-Georgensgmünd-4K.hdr"))
+        self.beautify = True
+        if self.beautify:
+            self.scene.sub_scenes[0].set_environment_map(os.path.join(PACKAGE_ASSET_DIR, "hdr/Basement-Georgensgmünd-4K.hdr"))
         # self.scene.set_ambient_light(np.power(np.array([72, 75, 82]) / (255), 2.2))
         # Only the first of directional lights can have shadow
-        # self.scene.add_directional_light(
-        #     [1, 1, -1], [1, 1, 1], shadow=shadow, shadow_scale=5, shadow_map_size=2048
-        # )
+        self.scene.add_directional_light(
+            [-0.5, -0.4, -1], [1, 1, 1], shadow=shadow, shadow_scale=1, shadow_map_size=2048
+        )
         # self.scene.add_directional_light([0, 0, -1], [1, 1, 1])
         # self.scene.add_area_light_for_ray_tracing(pose=sapien_utils.look_at(eye=[0, 0, 0.5], target=[0, 0, 0]),color=[1, 1, 1], half_width=0.2, half_height=0.2)
 

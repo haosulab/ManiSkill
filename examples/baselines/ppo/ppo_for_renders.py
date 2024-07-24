@@ -197,28 +197,58 @@ if __name__ == "__main__":
 
     # env setup
     env_kwargs = dict(obs_mode="state", control_mode="pd_joint_delta_pos", render_mode="rgb_array", sim_backend="gpu")
-    env_kwargs["sim_cfg"] = dict(gpu_memory_cfg=dict(max_rigid_contact_count=2**23, max_rigid_patch_count=2**20))
+    env_kwargs["sim_cfg"] = dict(gpu_memory_cfg=dict(max_rigid_contact_count=2**24, max_rigid_patch_count=2**22))
     envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, **env_kwargs)
 
     ### Hardcode some nice camera render poses for demos ###
+    render_camera_kwargs = dict(
+        width=1024*3, height=768*3
+    )
     if args.env_id == "AnymalC-Reach-v1":
-        render_pose = sapien_utils.look_at(eye=[-20.0, 20.0, 5.0], target=[-7.0, 7.0, 0.5])
+        # use 256 envs
+        render_pose = sapien.Pose([-30.3385, 25.8259, 1.93919], [0.87144, 0.124749, 0.376192, -0.288979]) # low, close
+        # render_pose = sapien.Pose([-21.7081, 27.9541, 8.59818], [0.823817, 0.167767, 0.442089, -0.312629]) # high, far
+        render_camera_kwargs["fov"] = np.pi / 2
     elif args.env_id == "PickCube-v1":
-        render_pose = sapien_utils.look_at(eye=[20.0, 20.0, 4.0], target=[7.0, 7.0, 0.5])
+        # use 121 envs
+        # render_pose = sapien.Pose([14.6679, 14.4879, 1.02593], [0.297182, 0.367672, 0.125269, -0.872243])
+        render_pose = sapien.Pose([14.4132, 10.7887, 0.719717], [0.329888, 0.347935, 0.132306, -0.867531]) # low, close, dense
+        # render_pose = sapien.Pose([15.6638, 11.5589, 2.6056], [0.339485, 0.399996, 0.162494, -0.835673]) # high, far, dense
+        render_camera_kwargs["fov"] = np.pi / 2
+        env_kwargs["sim_cfg"]["spacing"] = 3.5
     elif args.env_id == "OpenCabinetDrawer-v1":
-        render_pose = sapien_utils.look_at(eye=[-20.0, 20.0, 5.0], target=[-7.0, 7.0, 0.5])
+        # use 121 envs
+        render_pose = sapien.Pose([-21.49, 16.1635, 1.78723], [0.841751, 0.157866, 0.350959, -0.378631]) # low, close
+        # render_pose = sapien.Pose([-21.81, 20.3586, 5.9498], [0.82159, 0.175024, 0.422545, -0.340313]) # high, far
+        env_kwargs["sim_cfg"]["spacing"] = 5
+        render_camera_kwargs["fov"] = np.pi / 2
     elif args.env_id == "PushT-v1":
-        render_pose = sapien_utils.look_at(eye=[20.0, 20.0, 4.0], target=[7.0, 7.0, 0.5])
+        # use 256 envs
+        render_pose = sapien.Pose([14.4132, 10.7887, 0.719717], [0.329888, 0.347935, 0.132306, -0.867531]) # low, close, dense
+        # render_pose = sapien.Pose([15.6638, 11.5589, 2.6056], [0.339485, 0.399996, 0.162494, -0.835673]) # high, far, dense
+        render_camera_kwargs["fov"] = np.pi / 2
+        env_kwargs["sim_cfg"]["spacing"] = 3.5
+    render_camera_kwargs["pose"] = pose=np.concatenate([render_pose.p, render_pose.q]).tolist()
+
     eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs,
-        shader_dir="rt",
+        shader_dir="rt-fast",
         parallel_gui_render_enabled=True,
         human_render_camera_configs=dict(
-            render_camera=dict(
-                width=1024*3, height=768*3, pose=np.concatenate([render_pose.p, render_pose.q]).tolist()
-            )
+            render_camera=render_camera_kwargs
         ),
         **env_kwargs
     )
+    ### modify cameras for a nicer quality/look ###
+    for k, camera in eval_envs.base_env._human_render_cameras.items():
+        if args.env_id == "PushT-v1":
+            camera.camera.set_property("exposure", 3.1)
+            camera.camera.set_property("toneMapper", 2)
+        else:
+            camera.camera.set_property("exposure", 2.9)
+            camera.camera.set_property("toneMapper", 2)
+    ##
+    # while True:
+    #     eval_envs.render_human()
     if isinstance(envs.action_space, gym.spaces.Dict):
         envs = FlattenActionSpaceWrapper(envs)
         eval_envs = FlattenActionSpaceWrapper(eval_envs)
@@ -234,15 +264,7 @@ if __name__ == "__main__":
     envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=not args.partial_reset, **env_kwargs)
     eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=not args.partial_reset, **env_kwargs)
 
-    ### modify cameras for a nicer quality/look ###
-    for k, camera in eval_envs.base_env._human_render_cameras.items():
-        if args.env_id == "PushT-v1":
-            camera.camera.set_property("exposure", 3.1)
-            camera.camera.set_property("toneMapper", 2)
-        else:
-            camera.camera.set_property("exposure", 3.4)
-            camera.camera.set_property("toneMapper", 2)
-    ###
+
 
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
     agent = Agent(envs).to(device)

@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 def build_ground(
     scene: ManiSkillScene,
-    floor_width: int = 100,
+    floor_width: int = 400,
     altitude=0,
     name="ground",
 ):
