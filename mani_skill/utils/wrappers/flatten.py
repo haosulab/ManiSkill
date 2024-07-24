@@ -14,12 +14,21 @@ from mani_skill.utils import common
 class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
     """
     Flattens the rgbd mode observations into a dictionary with two keys, "rgbd" and "state"
+
+    Args:
+        rgb (bool): Whether to include rgb images in the observation
+        depth (bool): Whether to include depth images in the observation
+        state (bool): Whether to include state data in the observation
+
+    Note that the returned observations will have a "rgbd" or "rgb" or "depth" key depending on the rgb/depth bool flags.
     """
 
-    def __init__(self, env, rgb_only=False) -> None:
+    def __init__(self, env, rgb=True, depth=True, state=True) -> None:
         self.base_env: BaseEnv = env.unwrapped
         super().__init__(env)
-        self.rgb_only = rgb_only
+        self.include_rgb = rgb
+        self.include_depth = depth
+        self.include_state = state
         new_obs = self.observation(self.base_env._init_raw_obs)
         self.base_env.update_obs_space(new_obs)
 
@@ -28,16 +37,23 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
         del observation["sensor_param"]
         images = []
         for cam_data in sensor_data.values():
-            images.append(cam_data["rgb"])
-            if not self.rgb_only:
+            if self.include_rgb:
+                images.append(cam_data["rgb"])
+            if self.include_depth:
                 images.append(cam_data["depth"])
         images = torch.concat(images, axis=-1)
         # flatten the rest of the data which should just be state data
         observation = common.flatten_state_dict(observation, use_torch=True)
-        if self.rgb_only:
-            return dict(state=observation, rgb=images)
-        else:
-            return dict(state=observation, rgbd=images)
+        ret = dict()
+        if self.include_state:
+            ret["state"] = observation
+        if self.include_rgb and not self.include_depth:
+            ret["rgb"] = images
+        elif self.include_rgb and self.include_depth:
+            ret["rgbd"] = images
+        elif self.include_depth and not self.include_rgb:
+            ret["depth"] = images
+        return ret
 
 
 class FlattenObservationWrapper(gym.ObservationWrapper):
