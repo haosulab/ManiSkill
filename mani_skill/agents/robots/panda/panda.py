@@ -129,10 +129,6 @@ class Panda(BaseAgent):
         arm_pd_ee_target_delta_pose = deepcopy(arm_pd_ee_delta_pose)
         arm_pd_ee_target_delta_pose.use_target = True
 
-        # PD ee position (for human-interaction/teleoperation)
-        arm_pd_ee_delta_pose_align = deepcopy(arm_pd_ee_delta_pose)
-        arm_pd_ee_delta_pose_align.frame = "ee_align"
-
         # PD joint velocity
         arm_pd_joint_vel = PDJointVelControllerConfig(
             self.arm_joint_names,
@@ -184,9 +180,6 @@ class Panda(BaseAgent):
             pd_ee_delta_pos=dict(arm=arm_pd_ee_delta_pos, gripper=gripper_pd_joint_pos),
             pd_ee_delta_pose=dict(
                 arm=arm_pd_ee_delta_pose, gripper=gripper_pd_joint_pos
-            ),
-            pd_ee_delta_pose_align=dict(
-                arm=arm_pd_ee_delta_pose_align, gripper=gripper_pd_joint_pos
             ),
             # TODO(jigu): how to add boundaries for the following controllers
             pd_joint_target_delta_pos=dict(

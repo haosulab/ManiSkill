@@ -144,6 +144,7 @@ Pick up a orange-white peg and insert the orange end into the box with a hole in
 </video>
 
 ## LiftPegUpright-v1
+![dense-reward][reward-badge]
 :::{dropdown} Task Card
 :icon: note
 :color: primary
@@ -157,7 +158,7 @@ A simple task where the objective is to move a peg laying on the table to any up
 - the peg's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat along it's length on the table
 
 **Success Conditions:**
-- the absolute value of the peg's z euler angle is within 0.08 of $\pi$/2 and the z position of the peg is within 0.005 of its half-length (0.12).
+- the absolute value of the peg's y euler angle is within 0.08 of $\pi$/2 and the z position of the peg is within 0.005 of its half-length (0.12).
 :::
 
 <video preload="auto" controls="True" width="100%">
@@ -188,6 +189,7 @@ A simple task where the objective is to push and move a cube to a goal region in
 </video>
 
 ## PullCube-v1
+![dense-reward][reward-badge]
 :::{dropdown} Task Card
 :icon: note
 :color: primary
@@ -376,7 +378,7 @@ Digital Twin of real life push-T task from Diffusion Policy: https://diffusion-p
 "In this task, the robot needs to \
 1 precisely push the T- shaped block into the target region, and \
 2 move the end-effector to the end-zone which terminates the episode." \
-[We do not require 1 for the digital task]
+[We do not require 2 for the digital task]
 
 **Supported Robots: PandaStick (WIP UR5e)**
 
