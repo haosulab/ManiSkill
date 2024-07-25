@@ -206,16 +206,18 @@ if __name__ == "__main__":
     )
     if args.env_id == "AnymalC-Reach-v1":
         # use 256 envs
-        render_pose = sapien.Pose([-30.3385, 25.8259, 1.93919], [0.87144, 0.124749, 0.376192, -0.288979]) # low, close
+        # render_pose = sapien.Pose([-30.3385, 25.8259, 1.93919], [0.87144, 0.124749, 0.376192, -0.288979]) # low, close
         # render_pose = sapien.Pose([-21.7081, 27.9541, 8.59818], [0.823817, 0.167767, 0.442089, -0.312629]) # high, far
+        render_pose = sapien.Pose([29.4451, -31.7862, 7.38546], [0.320231, -0.420681, 0.161669, 0.833272]) # high, far, front facing
         render_camera_kwargs["fov"] = np.pi / 2
     elif args.env_id == "PickCube-v1":
-        # use 121 envs
+        # use 169 envs
         # render_pose = sapien.Pose([14.6679, 14.4879, 1.02593], [0.297182, 0.367672, 0.125269, -0.872243])
-        render_pose = sapien.Pose([14.4132, 10.7887, 0.719717], [0.329888, 0.347935, 0.132306, -0.867531]) # low, close, dense
+        # render_pose = sapien.Pose([14.4132, 10.7887, 0.719717], [0.329888, 0.347935, 0.132306, -0.867531]) # low, close, dense
         # render_pose = sapien.Pose([15.6638, 11.5589, 2.6056], [0.339485, 0.399996, 0.162494, -0.835673]) # high, far, dense
+        render_pose = camera = sapien.Pose([19.8831, 19.4049, 2.95596], [0.282184, 0.397475, 0.129901, -0.86343]) # high, far
         render_camera_kwargs["fov"] = np.pi / 2
-        env_kwargs["sim_cfg"]["spacing"] = 3.5
+        env_kwargs["sim_cfg"]["spacing"] = 4.5
     elif args.env_id == "OpenCabinetDrawer-v1":
         # use 121 envs
         render_pose = sapien.Pose([-21.49, 16.1635, 1.78723], [0.841751, 0.157866, 0.350959, -0.378631]) # low, close
@@ -226,12 +228,13 @@ if __name__ == "__main__":
         # use 256 envs
         render_pose = sapien.Pose([14.4132, 10.7887, 0.719717], [0.329888, 0.347935, 0.132306, -0.867531]) # low, close, dense
         # render_pose = sapien.Pose([15.6638, 11.5589, 2.6056], [0.339485, 0.399996, 0.162494, -0.835673]) # high, far, dense
+        render_pose = camera = sapien.Pose([19.8831, 19.4049, 2.95596], [0.282184, 0.397475, 0.129901, -0.86343]) # high, far
         render_camera_kwargs["fov"] = np.pi / 2
-        env_kwargs["sim_cfg"]["spacing"] = 3.5
+        env_kwargs["sim_cfg"]["spacing"] = 4.5
     render_camera_kwargs["pose"] = pose=np.concatenate([render_pose.p, render_pose.q]).tolist()
 
     eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs,
-        shader_dir="rt-fast",
+        shader_dir="rt",
         parallel_gui_render_enabled=True,
         human_render_camera_configs=dict(
             render_camera=render_camera_kwargs
@@ -241,7 +244,7 @@ if __name__ == "__main__":
     ### modify cameras for a nicer quality/look ###
     for k, camera in eval_envs.base_env._human_render_cameras.items():
         if args.env_id == "PushT-v1":
-            camera.camera.set_property("exposure", 3.1)
+            camera.camera.set_property("exposure", 2.7)
             camera.camera.set_property("toneMapper", 2)
         else:
             camera.camera.set_property("exposure", 2.9)
