@@ -111,7 +111,7 @@ class UnitreeG1UpperBody(BaseAgent):
         self.left_hand_finger_link_r_2 = self.robot.links_map["left_six_link"]
         self.left_tcp = self.robot.links_map["left_palm_link"]
 
-    def right_hand_is_grasping(self, object: Actor, min_force=0.5, max_angle=110):
+    def right_hand_is_grasping(self, object: Actor, min_force=0.5, max_angle=85):
         """Check if the robot is grasping an object
 
         Args:
