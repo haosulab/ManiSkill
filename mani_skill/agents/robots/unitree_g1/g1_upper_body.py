@@ -97,11 +97,75 @@ class UnitreeG1UpperBody(BaseAgent):
     def _sensor_configs(self):
         return []
 
-    def is_standing(self):
-        """Checks if G1 is standing with a simple heuristic of checking if the torso is at a minimum height"""
-        # TODO add check for rotation of torso? so that robot can't fling itself off the floor and rotate everywhere?
-        return (self.robot.pose.p[:, 2] > 0.5) & (self.robot.pose.p[:, 2] < 1.0)
 
-    def is_fallen(self):
-        """Checks if G1 has fallen on the ground. Effectively checks if the torso is too low"""
-        return self.robot.pose.p[:, 2] < 0.3
+@register_agent()
+class UnitreeG1UpperBodyRightArm(BaseAgent):
+    uid = "unitree_g1_simplified_upper_body_right_arm"
+    urdf_path = f"{ASSET_DIR}/robots/unitree_g1/g1_simplified_upper_body.urdf"
+
+    keyframes = dict(
+        standing=Keyframe(
+            pose=sapien.Pose(p=[0, 0, 0.755]),
+            qpos=np.array([0.0] * (24)) * 1,
+        )
+    )
+
+    body_joints = [
+        "right_shoulder_roll_joint",
+        "right_shoulder_yaw_joint",
+        "right_elbow_pitch_joint",
+        "right_elbow_roll_joint",
+        "right_zero_joint",
+        "right_three_joint",
+        "right_five_joint",
+        "right_one_joint",
+        "right_four_joint",
+        "right_six_joint",
+        "right_two_joint",
+    ]
+    body_stiffness = 1e3
+    body_damping = 1e2
+    body_force_limit = 100
+
+    @property
+    def _controller_configs(self):
+        body_pd_joint_pos = PDJointPosControllerConfig(
+            self.body_joints,
+            lower=None,
+            upper=None,
+            stiffness=self.body_stiffness,
+            damping=self.body_damping,
+            force_limit=self.body_force_limit,
+            normalize_action=False,
+        )
+        body_pd_joint_delta_pos = PDJointPosControllerConfig(
+            self.body_joints,
+            lower=-0.2,
+            upper=0.2,
+            stiffness=self.body_stiffness,
+            damping=self.body_damping,
+            force_limit=self.body_force_limit,
+            use_delta=True,
+        )
+        passive = PassiveControllerConfig(
+            [
+                x
+                for x in list(self.robot.active_joints_map.keys())
+                if x not in self.body_joints
+            ],
+            damping=self.body_damping,
+        )
+        return dict(
+            pd_joint_pos=dict(
+                body=body_pd_joint_pos, passive=passive, balance_passive_force=True
+            ),
+            pd_joint_delta_pos=dict(
+                body=body_pd_joint_delta_pos,
+                passive=passive,
+                balance_passive_force=True,
+            ),
+        )
+
+    @property
+    def _sensor_configs(self):
+        return []
