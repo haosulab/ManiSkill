@@ -251,7 +251,7 @@ class RecordEpisode(gym.Wrapper):
                 resets you may set max_steps_per_video equal to the max_episode_steps"
         self.clean_on_close = clean_on_close
         self.record_reward = record_reward
-        self.record_env_state = True
+        self.record_env_state = False
         if self.save_trajectory:
             if not trajectory_name:
                 trajectory_name = time.strftime("%Y%m%d_%H%M%S")

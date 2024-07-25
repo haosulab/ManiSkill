@@ -202,7 +202,7 @@ if __name__ == "__main__":
 
     ### Hardcode some nice camera render poses for demos ###
     render_camera_kwargs = dict(
-        width=1024*3, height=768*3
+        width=1920*2, height=1080*2
     )
     if args.env_id == "AnymalC-Reach-v1":
         # use 256 envs
