@@ -32,25 +32,3 @@ class PlanarSceneBuilder(SceneBuilder):
         )
         self.wall.build_static(name="wall")
         self.scene_objects: List[sapien.Entity] = [self.ground, self.wall]
-
-    def initialize(self, env_idx: torch.Tensor):
-        b = len(env_idx)
-        robot = self.env.agent.uid
-        if robot == "hopper" or robot == "walker":
-            # qpos sampled same as dm_control, but ensure no self intersection explicitly here
-            random_qpos = torch.rand(b, self.env.agent.robot.dof[0])
-            q_lims = self.env.agent.robot.get_qlimits()
-            q_ranges = q_lims[..., 1] - q_lims[..., 0]
-            random_qpos *= q_ranges
-            random_qpos += q_lims[..., 0]
-
-            # overwrite planar joint qpos - these are special for planar robots
-            # first two joints are dummy rootx and rootz
-            random_qpos[:, :2] = 0
-            # y is axis of rotation of our planar robot (xz plane), so we randomize around it
-            random_qpos[:, 2] = torch.pi * (2 * torch.rand(b) - 1)  # (-pi,pi)
-            self.env.agent.reset(random_qpos)
-        elif robot == "cheetah":
-            raise NotImplementedError()
-        else:
-            raise NotImplementedError()
