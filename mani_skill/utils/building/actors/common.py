@@ -147,6 +147,63 @@ def build_red_white_target(
         )
     return _build_by_type(builder, name, body_type)
 
+def build_red_black_target(
+    scene: ManiSkillScene,
+    radius: float,
+    thickness: float,
+    name: str,
+    body_type: str = "dynamic",
+    add_collision: bool = True,
+):
+    TARGET_RED = np.array([194, 19, 22, 255]) / 255
+    builder = scene.create_actor_builder()
+    builder.add_cylinder_visual(
+        radius=radius,
+        half_length=thickness / 2,
+        material=sapien.render.RenderMaterial(base_color=TARGET_RED),
+    )
+    builder.add_cylinder_visual(
+        radius=radius * 4 / 5,
+        half_length=thickness / 2 + 1e-5,
+        material=sapien.render.RenderMaterial(base_color=[0, 0, 0, 1]),
+    )
+    builder.add_cylinder_visual(
+        radius=radius * 3 / 5,
+        half_length=thickness / 2 + 2e-5,
+        material=sapien.render.RenderMaterial(base_color=TARGET_RED),
+    )
+    builder.add_cylinder_visual(
+        radius=radius * 2 / 5,
+        half_length=thickness / 2 + 3e-5,
+        material=sapien.render.RenderMaterial(base_color=[0, 0, 0, 1]),
+    )
+    builder.add_cylinder_visual(
+        radius=radius * 1 / 5,
+        half_length=thickness / 2 + 4e-5,
+        material=sapien.render.RenderMaterial(base_color=TARGET_RED),
+    )
+    if add_collision:
+        builder.add_cylinder_collision(
+            radius=radius,
+            half_length=thickness / 2,
+        )
+        builder.add_cylinder_collision(
+            radius=radius * 4 / 5,
+            half_length=thickness / 2 + 1e-5,
+        )
+        builder.add_cylinder_collision(
+            radius=radius * 3 / 5,
+            half_length=thickness / 2 + 2e-5,
+        )
+        builder.add_cylinder_collision(
+            radius=radius * 2 / 5,
+            half_length=thickness / 2 + 3e-5,
+        )
+        builder.add_cylinder_collision(
+            radius=radius * 1 / 5,
+            half_length=thickness / 2 + 4e-5,
+        )
+    return _build_by_type(builder, name, body_type)
 
 def build_twocolor_peg(
     scene: ManiSkillScene,

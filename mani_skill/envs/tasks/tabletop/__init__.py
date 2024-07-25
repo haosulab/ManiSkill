@@ -17,3 +17,5 @@ from .roll_ball import RollBallEnv
 from .push_t import PushTEnv
 from .stack_cube_v2 import StackCubeEnv_v2
 from .align_cube_v1 import AlignCubeEnv_v1
+from .group_cube_v1 import GroupCubeEnv_v1
+from .place_sphere_v2 import PlaceSphereEnv_v2
