@@ -1,6 +1,6 @@
 import copy
 import os
-from typing import Dict, Union
+from typing import Any, Dict, Union
 
 import numpy as np
 import sapien
@@ -10,10 +10,12 @@ from transforms3d.euler import euler2quat
 from mani_skill.agents.robots import Fetch, Panda
 from mani_skill.agents.robots.unitree_g1.g1_upper_body import UnitreeG1UpperBody
 from mani_skill.envs.sapien_env import BaseEnv
+from mani_skill.envs.utils import randomization
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.kitchen_counter import KitchenCounterSceneBuilder
+from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import SimConfig
 
 
@@ -47,7 +49,7 @@ class HumanoidPickPlaceEnv(BaseEnv):
         self.kitchen_scene = self.scene_builder.build(scale=self.kitchen_scene_scale)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
-        pass
+        self.scene_builder.initialize(env_idx)
 
     def evaluate(self):
         return {
@@ -60,24 +62,103 @@ class HumanoidPickPlaceEnv(BaseEnv):
 
 
 class HumanoidPlaceAppleInBowl(HumanoidPickPlaceEnv):
+    @property
+    def _default_human_render_camera_configs(self):
+        return CameraConfig(
+            "render_camera",
+            sapien.Pose(
+                [0.279123, 0.303438, 1.34794], [0.252428, 0.396735, 0.114442, -0.875091]
+            ),
+            512,
+            512,
+            np.pi / 2,
+            0.01,
+            100,
+        )
+
     def _load_scene(self, options: Dict):
         super()._load_scene(options)
         scale = self.kitchen_scene_scale
         builder = self.scene.create_actor_builder()
-        table_pose = sapien.Pose(q=euler2quat(np.pi / 2, 0, np.pi))
+        fix_rotation_pose = sapien.Pose(q=euler2quat(np.pi / 2, 0, 0))
         model_dir = os.path.dirname(__file__) + "/assets"
-        builder.add_multiple_convex_collisions_from_file(
+        builder.add_nonconvex_collision_from_file(
             filename=os.path.join(model_dir, "frl_apartment_bowl_07.ply"),
-            pose=table_pose,
+            pose=fix_rotation_pose,
             scale=[scale] * 3,
         )
         builder.add_visual_from_file(
             filename=os.path.join(model_dir, "frl_apartment_bowl_07.glb"),
             scale=[scale] * 3,
-            pose=table_pose,
+            pose=fix_rotation_pose,
         )
         builder.initial_pose = sapien.Pose(p=[0, -0.4, 0.753])
-        self.bowl = builder.build(name="bowl")
+        self.bowl = builder.build_kinematic(name="bowl")
+
+        builder = self.scene.create_actor_builder()
+        model_dir = os.path.dirname(__file__) + "/assets"
+        builder.add_multiple_convex_collisions_from_file(
+            filename=os.path.join(model_dir, "apple_1.ply"),
+            pose=fix_rotation_pose,
+            scale=[scale * 0.8]
+            * 3,  # scale down more to make apple a bit smaller to be graspable
+        )
+        builder.add_visual_from_file(
+            filename=os.path.join(model_dir, "apple_1.glb"),
+            scale=[scale * 0.8] * 3,
+            pose=fix_rotation_pose,
+        )
+        builder.initial_pose = sapien.Pose(p=[0, -0.4, 0.78])
+        self.apple = builder.build(name="apple")
+
+    def evaluate(self):
+        is_obj_placed = (
+            torch.linalg.norm(self.bowl.pose.p - self.apple.pose.p, axis=1) <= 0.025
+        )
+        is_grasped = self.agent.right_hand_is_grasping(self.apple)
+        # is_robot_static = self.agent.is_static(0.2)
+        return {
+            "success": is_obj_placed,
+            "is_grasped": is_grasped,
+        }
+
+    def _get_obs_extra(self, info: Dict):
+        # in reality some people hack is_grasped into observations by checking if the gripper can close fully or not
+        obs = dict(
+            is_grasped=info["is_grasped"],
+            tcp_pose=self.agent.right_tcp.pose.raw_pose,
+            bowl_pos=self.bowl.pose.p,
+        )
+        if "state" in self.obs_mode:
+            obs.update(
+                obj_pose=self.apple.pose.raw_pose,
+                tcp_to_obj_pos=self.apple.pose.p - self.agent.right_tcp.pose.p,
+                obj_to_goal_pos=self.bowl.pose.p - self.apple.pose.p,
+            )
+        return obs
+
+    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+        tcp_to_obj_dist = torch.linalg.norm(
+            self.apple.pose.p - self.agent.right_tcp.pose.p, axis=1
+        )
+        reaching_reward = 1 - torch.tanh(5 * tcp_to_obj_dist)
+        reward = reaching_reward
+
+        is_grasped = info["is_grasped"]
+        reward += is_grasped
+
+        obj_to_goal_dist = torch.linalg.norm(
+            self.bowl.pose.p - self.apple.pose.p, axis=1
+        )
+        place_reward = 1 - torch.tanh(5 * obj_to_goal_dist)
+        reward += place_reward * is_grasped
+        reward[info["success"]] = 5
+        return reward
+
+    def compute_normalized_dense_reward(
+        self, obs: Any, action: torch.Tensor, info: Dict
+    ):
+        return self.compute_dense_reward(obs=obs, action=action, info=info) / 5
 
 
 @register_env("UnitreeG1PlaceAppleInBowl-v1", max_episode_steps=100)
@@ -90,13 +171,33 @@ class UnitreeG1PlaceAppleInBowlEnv(HumanoidPlaceAppleInBowl):
         self.init_robot_pose = copy.deepcopy(
             UnitreeG1UpperBody.keyframes["standing"].pose
         )
-        self.init_robot_pose.p = [-0.35, 0, 0.755]
+        self.init_robot_pose.p = [-0.3, 0, 0.755]
         super().__init__(
             *args, robot_uids="unitree_g1_simplified_upper_body_right_arm", **kwargs
         )
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: Dict):
         super()._initialize_episode(env_idx, options)
-        # initialize the robot
-        self.agent.robot.set_qpos(self.agent.keyframes["standing"].qpos)
-        self.agent.robot.set_pose(self.init_robot_pose)
+        with torch.device(self.device):
+            b = len(env_idx)
+            # initialize the robot
+            self.agent.robot.set_qpos(self.agent.keyframes["standing"].qpos)
+            self.agent.robot.set_pose(self.init_robot_pose)
+
+            # initialize the apple to be within reach
+            xyz = torch.zeros((b, 3))
+            # xyz[:, :2] = randomization.uniform(low=-0.1, high=0.1, size=(b, 2))
+            # xyz[:, :2] += torch.tensor([0.05, -0.05])
+            # xyz[:, 2] = 0.7335
+            qs = randomization.random_quaternions(b, lock_x=True, lock_y=True)
+            xyz[:, 2] = 0.86
+            xyz[:, 0] = -0.004581
+            xyz[:, 1] = -0.110529
+            # xyz[]
+            self.apple.set_pose(Pose.create_from_pq(xyz, qs))
+
+            # xyz = torch.zeros((b, 3))
+            # xyz[:, :2] = randomization.uniform(low=-0.025, high=0.025, size=(b, 2))
+            # xyz[:, :2] += torch.tensor([0.1, -0.4])
+            # xyz[:, 2] = 0.753
+            # self.bowl.set_pose(Pose.create_from_pq(xyz))

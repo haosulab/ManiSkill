@@ -1,11 +1,14 @@
 import numpy as np
 import sapien
+import torch
 
 from mani_skill import ASSET_DIR
 from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
 from mani_skill.sensors.camera import CameraConfig
+from mani_skill.utils import common
+from mani_skill.utils.structs.actor import Actor
 
 
 @register_agent()
@@ -95,11 +98,69 @@ class UnitreeG1UpperBody(BaseAgent):
 
     @property
     def _sensor_configs(self):
-        return []
+        return []  # TODO: Add sensors
+
+    def _after_init(self):
+        self.right_hand_finger_link_l_1 = self.robot.links_map["right_two_link"]
+        self.right_hand_finger_link_r_1 = self.robot.links_map["right_four_link"]
+        self.right_hand_finger_link_r_2 = self.robot.links_map["right_six_link"]
+        self.right_tcp = self.robot.links_map["right_palm_link"]
+
+        self.left_hand_finger_link_l_1 = self.robot.links_map["left_two_link"]
+        self.left_hand_finger_link_r_1 = self.robot.links_map["left_four_link"]
+        self.left_hand_finger_link_r_2 = self.robot.links_map["left_six_link"]
+        self.left_tcp = self.robot.links_map["left_palm_link"]
+
+    def right_hand_is_grasping(self, object: Actor, min_force=0.5, max_angle=110):
+        """Check if the robot is grasping an object
+
+        Args:
+            object (Actor): The object to check if the robot is grasping
+            min_force (float, optional): Minimum force before the robot is considered to be grasping the object in Newtons. Defaults to 0.5.
+            max_angle (int, optional): Maximum angle of contact to consider grasping. Defaults to 85.
+        """
+        l_contact_forces = self.scene.get_pairwise_contact_forces(
+            self.right_hand_finger_link_l_1, object
+        )
+        r_contact_forces_1 = self.scene.get_pairwise_contact_forces(
+            self.right_hand_finger_link_r_1, object
+        )
+        r_contact_forces_2 = self.scene.get_pairwise_contact_forces(
+            self.right_hand_finger_link_r_2, object
+        )
+        lforce = torch.linalg.norm(l_contact_forces, axis=1)
+        rforce_1 = torch.linalg.norm(r_contact_forces_1, axis=1)
+        rforce_2 = torch.linalg.norm(r_contact_forces_2, axis=1)
+
+        # direction to open the gripper
+        ldirection = self.right_hand_finger_link_l_1.pose.to_transformation_matrix()[
+            ..., :3, 1
+        ]
+        rdirection1 = -self.right_hand_finger_link_r_1.pose.to_transformation_matrix()[
+            ..., :3, 1
+        ]
+        rdirection2 = -self.right_hand_finger_link_r_2.pose.to_transformation_matrix()[
+            ..., :3, 1
+        ]
+
+        langle = common.compute_angle_between(ldirection, l_contact_forces)
+        rangle1 = common.compute_angle_between(rdirection1, r_contact_forces_1)
+        rangle2 = common.compute_angle_between(rdirection2, r_contact_forces_2)
+        lflag = torch.logical_and(
+            lforce >= min_force, torch.rad2deg(langle) <= max_angle
+        )
+        rflag1 = torch.logical_and(
+            rforce_1 >= min_force, torch.rad2deg(rangle1) <= max_angle
+        )
+        rflag2 = torch.logical_and(
+            rforce_2 >= min_force, torch.rad2deg(rangle2) <= max_angle
+        )
+        rflag = rflag1 | rflag2
+        return torch.logical_and(lflag, rflag)
 
 
 @register_agent()
-class UnitreeG1UpperBodyRightArm(BaseAgent):
+class UnitreeG1UpperBodyRightArm(UnitreeG1UpperBody):
     uid = "unitree_g1_simplified_upper_body_right_arm"
     urdf_path = f"{ASSET_DIR}/robots/unitree_g1/g1_simplified_upper_body.urdf"
 

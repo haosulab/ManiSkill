@@ -1,5 +1,4 @@
 from copy import deepcopy
-from typing import Dict, Tuple
 
 import numpy as np
 import sapien
@@ -220,10 +219,6 @@ class Panda(BaseAgent):
         self.tcp = sapien_utils.get_obj_by_name(
             self.robot.get_links(), self.ee_link_name
         )
-
-        self.queries: Dict[
-            str, Tuple[physx.PhysxGpuContactPairImpulseQuery, Tuple[int]]
-        ] = dict()
 
     def is_grasping(self, object: Actor, min_force=0.5, max_angle=85):
         """Check if the robot is grasping an object
