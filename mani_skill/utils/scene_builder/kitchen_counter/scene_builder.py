@@ -29,7 +29,7 @@ class KitchenCounterSceneBuilder(SceneBuilder):
         table = builder.build_static(name="kitchen-counter")
 
         floor_width = 100
-        if self.scene.parallel_gui_render_enabled:
+        if self.scene.parallel_in_single_scene:
             floor_width = 500
         self.ground = build_ground(self.scene, floor_width=floor_width, altitude=0)
         self.table = table

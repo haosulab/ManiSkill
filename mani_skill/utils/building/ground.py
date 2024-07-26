@@ -31,7 +31,7 @@ def build_ground(
     ground.add_plane_collision(
         sapien.Pose(p=[0, 0, altitude], q=[0.7071068, 0, -0.7071068, 0]),
     )
-    if scene.parallel_gui_render_enabled:
+    if scene.parallel_in_single_scene:
         # when building a ground and using a parallel render in the GUI, we want to only build one ground visual+collision plane
         ground.set_scene_idxs([0])
     actor = ground.build_static(name=name)
