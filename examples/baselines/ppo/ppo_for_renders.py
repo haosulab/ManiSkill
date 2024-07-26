@@ -197,7 +197,7 @@ if __name__ == "__main__":
 
     # env setup
     env_kwargs = dict(obs_mode="state", control_mode="pd_joint_delta_pos", render_mode="rgb_array", sim_backend="gpu")
-    env_kwargs["sim_cfg"] = dict(gpu_memory_cfg=dict(max_rigid_contact_count=2**24, max_rigid_patch_count=2**22))
+    env_kwargs["sim_cfg"] = dict(gpu_memory_cfg=dict(max_rigid_contact_count=2**26, max_rigid_patch_count=2**24))
     envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, **env_kwargs)
 
     ### Hardcode some nice camera render poses for demos ###
@@ -215,7 +215,7 @@ if __name__ == "__main__":
         # render_pose = sapien.Pose([14.6679, 14.4879, 1.02593], [0.297182, 0.367672, 0.125269, -0.872243])
         # render_pose = sapien.Pose([14.4132, 10.7887, 0.719717], [0.329888, 0.347935, 0.132306, -0.867531]) # low, close, dense
         # render_pose = sapien.Pose([15.6638, 11.5589, 2.6056], [0.339485, 0.399996, 0.162494, -0.835673]) # high, far, dense
-        render_pose = camera = sapien.Pose([19.8831, 19.4049, 2.95596], [0.282184, 0.397475, 0.129901, -0.86343]) # high, far
+        render_pose = sapien.Pose([19.8831, 19.4049, 2.95596], [0.282184, 0.397475, 0.129901, -0.86343]) # high, far
         render_camera_kwargs["fov"] = np.pi / 2
         env_kwargs["sim_cfg"]["spacing"] = 4.5
     elif args.env_id == "OpenCabinetDrawer-v1":
@@ -228,7 +228,13 @@ if __name__ == "__main__":
         # use 256 envs
         render_pose = sapien.Pose([14.4132, 10.7887, 0.719717], [0.329888, 0.347935, 0.132306, -0.867531]) # low, close, dense
         # render_pose = sapien.Pose([15.6638, 11.5589, 2.6056], [0.339485, 0.399996, 0.162494, -0.835673]) # high, far, dense
-        render_pose = camera = sapien.Pose([19.8831, 19.4049, 2.95596], [0.282184, 0.397475, 0.129901, -0.86343]) # high, far
+        render_pose = sapien.Pose([19.8831, 19.4049, 2.95596], [0.282184, 0.397475, 0.129901, -0.86343]) # high, far
+        render_camera_kwargs["fov"] = np.pi / 2
+        env_kwargs["sim_cfg"]["spacing"] = 4.5
+    elif args.env_id == "UnitreeG1PlaceAppleInBowl-v1":
+        # use 121 envs
+        # render_pose = sapien.Pose([16.8831, 15.4049, 2.95596], [0.282184, 0.397475, 0.129901, -0.86343]) # high, far
+        render_pose = sapien.Pose([10.0, 9.5, 1.7], [0.329888, 0.347935, 0.132306, -0.867531])
         render_camera_kwargs["fov"] = np.pi / 2
         env_kwargs["sim_cfg"]["spacing"] = 4.5
     render_camera_kwargs["pose"] = pose=np.concatenate([render_pose.p, render_pose.q]).tolist()
@@ -324,22 +330,22 @@ if __name__ == "__main__":
                             successes.append(eval_infos["final_info"]["success"][mask].cpu().numpy())
                         if "fail" in eval_infos:
                             failures.append(eval_infos["final_info"]["fail"][mask].cpu().numpy())
-            returns = np.concatenate(returns)
-            eps_lens = np.concatenate(eps_lens)
-            print(f"Evaluated {args.num_eval_steps * args.num_eval_envs} steps resulting in {len(eps_lens)} episodes")
-            if len(successes) > 0:
-                successes = np.concatenate(successes)
-                if writer is not None: writer.add_scalar("charts/eval_success_rate", successes.mean(), global_step)
-                print(f"eval_success_rate={successes.mean()}")
-            if len(failures) > 0:
-                failures = np.concatenate(failures)
-                if writer is not None: writer.add_scalar("charts/eval_fail_rate", failures.mean(), global_step)
-                print(f"eval_fail_rate={failures.mean()}")
+            # returns = np.concatenate(returns)
+            # eps_lens = np.concatenate(eps_lens)
+            # print(f"Evaluated {args.num_eval_steps * args.num_eval_envs} steps resulting in {len(eps_lens)} episodes")
+            # if len(successes) > 0:
+            #     successes = np.concatenate(successes)
+            #     if writer is not None: writer.add_scalar("charts/eval_success_rate", successes.mean(), global_step)
+            #     print(f"eval_success_rate={successes.mean()}")
+            # if len(failures) > 0:
+            #     failures = np.concatenate(failures)
+            #     if writer is not None: writer.add_scalar("charts/eval_fail_rate", failures.mean(), global_step)
+            #     print(f"eval_fail_rate={failures.mean()}")
 
-            print(f"eval_episodic_return={returns.mean()}")
-            if writer is not None:
-                writer.add_scalar("charts/eval_episodic_return", returns.mean(), global_step)
-                writer.add_scalar("charts/eval_episodic_length", eps_lens.mean(), global_step)
+            # print(f"eval_episodic_return={returns.mean()}")
+            # if writer is not None:
+            #     writer.add_scalar("charts/eval_episodic_return", returns.mean(), global_step)
+            #     writer.add_scalar("charts/eval_episodic_length", eps_lens.mean(), global_step)
             if args.evaluate:
                 break
         if args.save_model and iteration % args.eval_freq == 1:

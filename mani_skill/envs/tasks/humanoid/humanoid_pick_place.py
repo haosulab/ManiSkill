@@ -115,11 +115,15 @@ class HumanoidPlaceAppleInBowl(HumanoidPickPlaceEnv):
 
     def evaluate(self):
         is_obj_placed = (
-            torch.linalg.norm(self.bowl.pose.p - self.apple.pose.p, axis=1) <= 0.025
+            torch.linalg.norm(self.bowl.pose.p - self.apple.pose.p, axis=1) <= 0.05
+        )
+        hand_outside_bowl = (
+            self.agent.right_tcp.pose.p[:, 2] > self.bowl.pose.p[:, 2] + 0.125
         )
         is_grasped = self.agent.right_hand_is_grasping(self.apple, max_angle=110)
         return {
-            "success": is_obj_placed,
+            "success": is_obj_placed & hand_outside_bowl,
+            "hand_outside_bowl": hand_outside_bowl,
             "is_grasped": is_grasped,
         }
 
@@ -138,6 +142,10 @@ class HumanoidPlaceAppleInBowl(HumanoidPickPlaceEnv):
             )
         return obs
 
+    def _grasp_release_reward(self):
+        """a dense reward that rewards the agent for opening their hand"""
+        return 1 - torch.tanh(self.agent.right_hand_dist_to_open_grasp())
+
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         tcp_to_obj_dist = torch.linalg.norm(
             self.apple.pose.p - self.agent.right_tcp.pose.p, axis=1
@@ -150,25 +158,41 @@ class HumanoidPlaceAppleInBowl(HumanoidPickPlaceEnv):
 
         # encourage to bring apple to above the bowl then drop it.
         obj_to_goal_dist = torch.linalg.norm(
-            (self.bowl.pose.p + torch.tensor([0, 0, 0.1], device=self.device))
+            (self.bowl.pose.p + torch.tensor([0, 0, 0.15], device=self.device))
             - self.apple.pose.p,
             axis=1,
         )
         place_reward = 1 - torch.tanh(5 * obj_to_goal_dist)
         reward += place_reward * is_grasped
 
-        # once above the goal, encourage to release grasp from the correct place
-        obj_above_goal = obj_to_goal_dist < 0.025
-        reward[obj_above_goal] = 4 + place_reward
-        reward[obj_above_goal & ~info["is_grasped"]] = 5 + place_reward
+        # once above the goal, encourage to have the hand above the bowl still and begin releasing the grasp
+        obj_high_above_bowl = obj_to_goal_dist < 0.025
+        grasp_release_reward = self._grasp_release_reward()
+        reward[obj_high_above_bowl] = (
+            4
+            + place_reward[obj_high_above_bowl]
+            + grasp_release_reward[obj_high_above_bowl]
+        )
 
-        reward[info["success"]] = 7
+        # # encourage to drop the apple into the bowl by releasing the grasp.
+        # obj_above_bowl = torch.linalg.norm(
+        #     self.bowl.pose.p[:, :2]
+        #     - self.apple.pose.p[:, :2],
+        #     axis=1,
+        # ) < 0.05
+        # mask = obj_above_bowl & ~info["is_grasped"]
+        # reward[mask] = 6 + place_reward[mask] + grasp_release_reward
+        # if success, then hand is high enough and apple is in the bowl. Give a flat reward plus control terms of
+        # ensuring the hand is held up high and the grasp is open.
+        reward[info["success"]] = (
+            8 + (place_reward + grasp_release_reward)[info["success"]]
+        )
         return reward
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        return self.compute_dense_reward(obs=obs, action=action, info=info) / 7
+        return self.compute_dense_reward(obs=obs, action=action, info=info) / 10
 
 
 @register_env("UnitreeG1PlaceAppleInBowl-v1", max_episode_steps=100)
@@ -208,8 +232,8 @@ class UnitreeG1PlaceAppleInBowlEnv(HumanoidPlaceAppleInBowl):
 
             # initialize the apple to be within reach
             xyz = torch.zeros((b, 3))
-            # xyz[:, :2] = randomization.uniform(low=-0.1, high=0.1, size=(b, 2))
-            # xyz[:, :2] += torch.tensor([0.05, -0.05])
+            # xyz[:, :2] = randomization.uniform(low=-0.05, high=0.05, size=(b, 2))
+            xyz[:, :2] += torch.tensor([0.05, -0.05])
             # xyz[:, 2] = 0.7335
             qs = randomization.random_quaternions(b, lock_x=True, lock_y=True)
             xyz[:, 2] = 0.7335
@@ -218,8 +242,8 @@ class UnitreeG1PlaceAppleInBowlEnv(HumanoidPlaceAppleInBowl):
             # xyz[]
             self.apple.set_pose(Pose.create_from_pq(xyz, qs))
 
-            # xyz = torch.zeros((b, 3))
-            # xyz[:, :2] = randomization.uniform(low=-0.025, high=0.025, size=(b, 2))
-            # xyz[:, :2] += torch.tensor([0.1, -0.4])
-            # xyz[:, 2] = 0.753
-            # self.bowl.set_pose(Pose.create_from_pq(xyz))
+            xyz = torch.zeros((b, 3))
+            xyz[:, :2] = randomization.uniform(low=-0.025, high=0.025, size=(b, 2))
+            xyz[:, :2] += torch.tensor([0.0, -0.4])
+            xyz[:, 2] = 0.753
+            self.bowl.set_pose(Pose.create_from_pq(xyz))

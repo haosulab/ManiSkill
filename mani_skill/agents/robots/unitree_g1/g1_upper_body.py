@@ -22,7 +22,7 @@ class UnitreeG1UpperBody(BaseAgent):
     keyframes = dict(
         standing=Keyframe(
             pose=sapien.Pose(p=[0, 0, 0.755]),
-            qpos=np.array([0.0] * (24)) * 1,
+            qpos=np.array([0.0] * (24)),
         )
     )
 
@@ -105,11 +105,46 @@ class UnitreeG1UpperBody(BaseAgent):
         self.right_hand_finger_link_r_1 = self.robot.links_map["right_four_link"]
         self.right_hand_finger_link_r_2 = self.robot.links_map["right_six_link"]
         self.right_tcp = self.robot.links_map["right_palm_link"]
+        self.right_finger_joints = [
+            "right_one_joint",
+            "right_two_joint",
+            "right_three_joint",
+            "right_four_joint",
+            "right_five_joint",
+            "right_six_joint",
+        ]
+        self.right_finger_joint_indexes = [
+            self.robot.active_joints_map[joint].active_index[0].item()
+            for joint in self.right_finger_joints
+        ]
 
         self.left_hand_finger_link_l_1 = self.robot.links_map["left_two_link"]
         self.left_hand_finger_link_r_1 = self.robot.links_map["left_four_link"]
         self.left_hand_finger_link_r_2 = self.robot.links_map["left_six_link"]
         self.left_tcp = self.robot.links_map["left_palm_link"]
+
+        self.left_finger_joints = [
+            "left_one_joint",
+            "left_two_joint",
+            "left_three_joint",
+            "left_four_joint",
+            "left_five_joint",
+            "left_six_joint",
+        ]
+        self.left_finger_joint_indexes = [
+            self.robot.active_joints_map[joint].active_index[0].item()
+            for joint in self.left_finger_joints
+        ]
+
+    def right_hand_dist_to_open_grasp(self):
+        """compute the distance from the current qpos to a open grasp qpos for the right hand"""
+        return torch.mean(
+            torch.abs(self.robot.qpos[:, self.right_finger_joint_indexes]), dim=1
+        )
+
+    def left_hand_dist_to_open_grasp(self):
+        """compute the distance from the current qpos to a open grasp qpos for the left hand"""
+        return torch.abs(self.robot.qpos[:, self.left_finger_joint_indexes])
 
     def right_hand_is_grasping(self, object: Actor, min_force=0.5, max_angle=85):
         """Check if the robot is grasping an object
