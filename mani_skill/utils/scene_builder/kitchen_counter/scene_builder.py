@@ -36,5 +36,4 @@ class KitchenCounterSceneBuilder(SceneBuilder):
         self.scene_objects: List[sapien.Entity] = [self.table, self.ground]
 
     def initialize(self, env_idx: torch.Tensor):
-        # table_height = 0.9196429
-        len(env_idx)
+        pass
