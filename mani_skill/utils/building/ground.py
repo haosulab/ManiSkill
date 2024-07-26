@@ -17,6 +17,8 @@ if TYPE_CHECKING:
 def build_ground(
     scene: ManiSkillScene,
     floor_width: int = 100,
+    floor_length: int = None,
+    xy_origin: tuple = (0, 0),
     altitude=0,
     name="ground",
 ):
@@ -35,14 +37,17 @@ def build_ground(
     actor = ground.build_static(name=name)
 
     # generate a grid of right triangles that form 1x1 meter squares centered at (0, 0, 0)
-    num_verts = (floor_width + 1) ** 2
+    floor_length = floor_width if floor_length is None else floor_length
+    num_verts = (floor_width + 1) * (floor_length + 1)
     vertices = np.zeros((num_verts, 3))
     floor_half_width = floor_width / 2
-    ranges = np.arange(start=-floor_half_width, stop=floor_half_width + 1)
-    xx, yy = np.meshgrid(ranges, ranges)
+    floor_half_length = floor_length / 2
+    xrange = np.arange(start=-floor_half_width, stop=floor_half_width + 1)
+    yrange = np.arange(start=-floor_half_length, stop=floor_half_length + 1)
+    xx, yy = np.meshgrid(xrange, yrange)
     xys = np.stack((yy, xx), axis=2).reshape(-1, 2)
-    vertices[:, 0] = xys[:, 0]
-    vertices[:, 1] = xys[:, 1]
+    vertices[:, 0] = xys[:, 0] + xy_origin[0]
+    vertices[:, 1] = xys[:, 1] + xy_origin[1]
     vertices[:, 2] = altitude
     normals = np.zeros((len(vertices), 3))
     normals[:, 2] = 1
@@ -61,7 +66,7 @@ def build_ground(
 
     # TODO: This is fast but still two for loops which is a little annoying
     triangles = []
-    for i in range(floor_width):
+    for i in range(floor_length):
         triangles.append(
             np.stack(
                 [
@@ -72,7 +77,7 @@ def build_ground(
                 axis=1,
             )
         )
-    for i in range(floor_width):
+    for i in range(floor_length):
         triangles.append(
             np.stack(
                 [
