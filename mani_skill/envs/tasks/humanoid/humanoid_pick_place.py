@@ -7,8 +7,7 @@ import sapien
 import torch
 from transforms3d.euler import euler2quat
 
-from mani_skill.agents.robots import Fetch, Panda
-from mani_skill.agents.robots.unitree_g1.g1_upper_body import UnitreeG1UpperBody
+from mani_skill.agents.robots.unitree_g1.g1_upper_body import UnitreeG1UpperBodyRightArm
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.utils import randomization
 from mani_skill.sensors.camera import CameraConfig
@@ -187,12 +186,12 @@ class HumanoidPlaceAppleInBowl(HumanoidPickPlaceEnv):
 @register_env("UnitreeG1PlaceAppleInBowl-v1", max_episode_steps=100)
 class UnitreeG1PlaceAppleInBowlEnv(HumanoidPlaceAppleInBowl):
     SUPPORTED_ROBOTS = ["unitree_g1_simplified_upper_body_right_arm"]
-    agent: Union[UnitreeG1UpperBody]
+    agent: Union[UnitreeG1UpperBodyRightArm]
     kitchen_scene_scale = 0.82
 
     def __init__(self, *args, **kwargs):
         self.init_robot_pose = copy.deepcopy(
-            UnitreeG1UpperBody.keyframes["standing"].pose
+            UnitreeG1UpperBodyRightArm.keyframes["standing"].pose
         )
         self.init_robot_pose.p = [-0.3, 0, 0.755]
         super().__init__(
