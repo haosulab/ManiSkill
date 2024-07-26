@@ -307,7 +307,7 @@ class RecordEpisode(gym.Wrapper):
         img = self.env.render()
         img = common.to_numpy(img)
         if len(img.shape) > 3:
-            if self.base_env._parallel_gui_render_enabled:
+            if len(img) == 1:
                 img = img[0]
             else:
                 img = tile_images(img, nrows=self.video_nrows)
