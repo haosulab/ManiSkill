@@ -275,8 +275,8 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
             ao_states = self.rcad_config_to_rearrange_ao_states[rcad_config][ici]
             for articulation, qpos in ao_states:
                 base_qpos = articulation.qpos
-                base_qpos[env_num] *= 0
-                base_qpos[env_num] = qpos
+                base_qpos[articulation._scene_idxs.tolist().index(env_num)] *= 0
+                base_qpos[articulation._scene_idxs.tolist().index(env_num)] = qpos
                 articulation.set_qpos(base_qpos)
 
     def sample_build_config_idxs(self):
