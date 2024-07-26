@@ -137,7 +137,7 @@ class BaseEnv(gym.Env):
     """the numpy RNG that you can use to generate random numpy data"""
 
     _parallel_in_single_scene: bool = False
-    """whether all objects are placed on one scene for the purpose of rendering all objects together instead of in parallel"""
+    """whether all objects are placed in one scene for the purpose of rendering all objects together instead of in parallel"""
 
     def __init__(
         self,
