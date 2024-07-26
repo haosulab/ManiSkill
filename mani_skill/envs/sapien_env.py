@@ -85,9 +85,9 @@ class BaseEnv(gym.Env):
             we use the cpu sim backend. Can also be "cpu" or "gpu" to force usage of a particular sim backend. Note that if this is "cpu", num_envs
             can only be equal to 1.
 
-        parallel_in_single_scene (bool): By default this is False. If True, when using env.render_human() which opens a viewer/GUI,
-            the viewer will show all parallel environments. This is only really useful for generating cool videos showing
-            all environments at once but it is not recommended otherwise as it slows down simulation and rendering.
+        parallel_in_single_scene (bool): By default this is False. If True, rendered images and the GUI will show all objects in one view.
+            This is only really useful for generating cool videos showing all environments at once but it is not recommended
+            otherwise as it slows down simulation and rendering.
 
     Note:
         `sensor_cfgs` is used to update environement-specific sensor configurations.
