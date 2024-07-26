@@ -80,7 +80,7 @@ python ppo.py --env_id="MS-CartpoleSwingUp-v1" \
    --eval_freq=5
 python ppo.py --env_id="UnitreeG1PlaceAppleInBowl-v1" \
   --num_envs=512 --update_epochs=8 --num_minibatches=32 \
-  --total_timesteps=22_000_000 --num-steps=100 --num-eval-steps=100
+  --total_timesteps=50_000_000 --num-steps=100 --num-eval-steps=100
 # note that quadruped simulation is still being optimized and the reward function for this task
 # is not that optimal although it works.
 python ppo.py --env_id="AnymalC-Reach-v1" \

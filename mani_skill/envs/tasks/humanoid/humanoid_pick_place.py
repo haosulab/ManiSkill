@@ -221,14 +221,9 @@ class UnitreeG1PlaceAppleInBowlEnv(HumanoidPlaceAppleInBowl):
 
             # initialize the apple to be within reach
             xyz = torch.zeros((b, 3))
-            # xyz[:, :2] = randomization.uniform(low=-0.05, high=0.05, size=(b, 2))
-            xyz[:, :2] += torch.tensor([0.05, -0.05])
-            # xyz[:, 2] = 0.7335
+            xyz[:, :2] = randomization.uniform(low=-0.025, high=0.025, size=(b, 2))
             qs = randomization.random_quaternions(b, lock_x=True, lock_y=True)
             xyz[:, 2] = 0.7335
-            # xyz[:, 0] = -0.004581
-            # xyz[:, 1] = -0.110529
-            # xyz[]
             self.apple.set_pose(Pose.create_from_pq(xyz, qs))
 
             xyz = torch.zeros((b, 3))
