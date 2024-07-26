@@ -395,6 +395,7 @@ class ManiSkillScene:
             else:
                 scene = self.sub_scenes[scene_idx]
             entity = sapien.Entity()
+            entity.name = "point_light"
             light = sapien.render.RenderPointLightComponent()
             entity.add_component(light)
             light.color = color
@@ -430,6 +431,7 @@ class ManiSkillScene:
             else:
                 scene = self.sub_scenes[scene_idx]
             entity = sapien.Entity()
+            entity.name = "directional_light"
             light = sapien.render.RenderDirectionalLightComponent()
             entity.add_component(light)
             light.color = color
@@ -474,6 +476,7 @@ class ManiSkillScene:
             else:
                 scene = self.sub_scenes[scene_idx]
             entity = sapien.Entity()
+            entity.name = "spot_light"
             light = sapien.render.RenderSpotLightComponent()
             entity.add_component(light)
             light.color = color
