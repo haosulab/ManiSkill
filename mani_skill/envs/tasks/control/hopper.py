@@ -194,13 +194,6 @@ class HopperEnv(BaseEnv):
         com_vel = vels.sum(dim=0) / self.agent.robot_mass  # (b, 3)
         return com_vel[:, 0]
 
-    @property
-    def yrot(self):
-        """Returns rotvel y component of robot"""
-        # view rotation in range [-pi, pi]
-        rot = self.agent.robot.get_qpos()[:, 2].view(-1, 1) % (2 * np.pi)
-        return torch.where(rot < np.pi, rot, 2 * np.pi - rot)
-
     # dm_control mjc function adapted for maniskill
     def touch(self, link_name):
         """Returns function of sensor force values"""
@@ -224,15 +217,7 @@ class HopperStandEnv(HopperEnv):
 
     def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
         standing = rewards.tolerance(self.height, lower=_STAND_HEIGHT, upper=2.0)
-        upright = rewards.tolerance(
-            self.yrot,  # yrot in [-pi,pi]
-            lower=-np.pi / 6,
-            upper=np.pi / 6,
-            margin=1,
-            value_at_margin=0.5,
-            sigmoid="linear",
-        )
-        return standing.view(-1) * upright.view(-1)
+        return standing.view(-1)
 
     def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
         # this should be equal to compute_dense_reward / max possible reward
