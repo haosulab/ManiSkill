@@ -234,7 +234,8 @@ if __name__ == "__main__":
     elif args.env_id == "UnitreeG1PlaceAppleInBowl-v1":
         # use 121 envs
         # render_pose = sapien.Pose([16.8831, 15.4049, 2.95596], [0.282184, 0.397475, 0.129901, -0.86343]) # high, far
-        render_pose = sapien.Pose([10.0, 9.5, 1.7], [0.329888, 0.347935, 0.132306, -0.867531])
+        # render_pose = sapien.Pose([10.0, 9.5, 1.7], [0.329888, 0.347935, 0.132306, -0.867531])
+        render_pose = sapien_utils.look_at(eye=[9.5, 9.2, 1.4], target=[8, 8.5, 0.4])
         render_camera_kwargs["fov"] = np.pi / 2
         env_kwargs["sim_cfg"]["spacing"] = 4.5
     render_camera_kwargs["pose"] = pose=np.concatenate([render_pose.p, render_pose.q]).tolist()

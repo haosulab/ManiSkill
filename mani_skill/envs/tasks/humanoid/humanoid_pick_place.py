@@ -173,17 +173,6 @@ class HumanoidPlaceAppleInBowl(HumanoidPickPlaceEnv):
             + place_reward[obj_high_above_bowl]
             + grasp_release_reward[obj_high_above_bowl]
         )
-
-        # # encourage to drop the apple into the bowl by releasing the grasp.
-        # obj_above_bowl = torch.linalg.norm(
-        #     self.bowl.pose.p[:, :2]
-        #     - self.apple.pose.p[:, :2],
-        #     axis=1,
-        # ) < 0.05
-        # mask = obj_above_bowl & ~info["is_grasped"]
-        # reward[mask] = 6 + place_reward[mask] + grasp_release_reward
-        # if success, then hand is high enough and apple is in the bowl. Give a flat reward plus control terms of
-        # ensuring the hand is held up high and the grasp is open.
         reward[info["success"]] = (
             8 + (place_reward + grasp_release_reward)[info["success"]]
         )
