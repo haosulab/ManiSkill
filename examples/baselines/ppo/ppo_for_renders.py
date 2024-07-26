@@ -16,6 +16,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 # ManiSkill specific imports
 import mani_skill.envs
+from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper
 from mani_skill.utils.wrappers.record import RecordEpisode
@@ -204,6 +205,7 @@ if __name__ == "__main__":
     render_camera_kwargs = dict(
         width=1920*2, height=1080*2
     )
+    render_pose_sequence = None
     if args.env_id == "AnymalC-Reach-v1":
         # use 256 envs
         # render_pose = sapien.Pose([-30.3385, 25.8259, 1.93919], [0.87144, 0.124749, 0.376192, -0.288979]) # low, close
@@ -215,7 +217,14 @@ if __name__ == "__main__":
         # render_pose = sapien.Pose([14.6679, 14.4879, 1.02593], [0.297182, 0.367672, 0.125269, -0.872243])
         # render_pose = sapien.Pose([14.4132, 10.7887, 0.719717], [0.329888, 0.347935, 0.132306, -0.867531]) # low, close, dense
         # render_pose = sapien.Pose([15.6638, 11.5589, 2.6056], [0.339485, 0.399996, 0.162494, -0.835673]) # high, far, dense
-        render_pose = sapien.Pose([19.8831, 19.4049, 2.95596], [0.282184, 0.397475, 0.129901, -0.86343]) # high, far
+        # # render_pose = sapien.Pose([19.8831, 19.4049, 2.95596], [0.282184, 0.397475, 0.129901, -0.86343]) # high, far
+        # # fixed
+        # render_pose = sapien.Pose([22.9661, 13.8992, 0.730421], [0.285166, 0.34967, 0.112636, -0.885282]) # low, many
+
+        # rig path
+        render_pose_start = sapien.Pose([13.7536, 9.22762, 0.958594], [0.261144, 0.488681, 0.156065, -0.817703]) # low, single
+        render_pose_end = sapien.Pose([24.1196, 15.4081, 4.83893], [0.295782, 0.395164, 0.13607, -0.858978]) # high, many
+        render_pose_sequence = [(render_pose_start, 0), (render_pose_start, 30), (render_pose_end, 200)]
         render_camera_kwargs["fov"] = np.pi / 2
         env_kwargs["sim_cfg"]["spacing"] = 4.5
     elif args.env_id == "OpenCabinetDrawer-v1":
@@ -235,13 +244,14 @@ if __name__ == "__main__":
         # use 121 envs
         # render_pose = sapien.Pose([16.8831, 15.4049, 2.95596], [0.282184, 0.397475, 0.129901, -0.86343]) # high, far
         # render_pose = sapien.Pose([10.0, 9.5, 1.7], [0.329888, 0.347935, 0.132306, -0.867531])
-        render_pose = sapien_utils.look_at(eye=[9.5, 9.2, 1.4], target=[8, 8.5, 0.4])
+        # render_pose = sapien_utils.look_at(eye=[9.5, 9.2, 1.4], target=[8, 8.5, 0.4])
+        render_pose = sapien.Pose([13.9349, 13.9722, 1.58554], [0.266699, 0.369674, 0.111651, -0.883033])
         render_camera_kwargs["fov"] = np.pi / 2
         env_kwargs["sim_cfg"]["spacing"] = 4.5
     render_camera_kwargs["pose"] = pose=np.concatenate([render_pose.p, render_pose.q]).tolist()
 
     eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs,
-        shader_dir="rt",
+        # shader_dir="rt",
         parallel_gui_render_enabled=True,
         human_render_camera_configs=dict(
             render_camera=render_camera_kwargs
@@ -257,8 +267,27 @@ if __name__ == "__main__":
             camera.camera.set_property("exposure", 2.9)
             camera.camera.set_property("toneMapper", 2)
     ##
-    # while True:
-    #     eval_envs.render_human()
+    from transforms3d.euler import quat2euler, euler2quat
+    # interpolate between 2 camera poses
+    interpolated_render_poses = []
+    if render_pose_sequence is not None:
+        for i in range(len(render_pose_sequence) - 1):
+            render_pose_start, start_frame = render_pose_sequence[i]
+            render_pose_end, end_frame = render_pose_sequence[i+1]
+            e1 = np.array( quat2euler(render_pose_start.q))
+            e2 = np.array(quat2euler(render_pose_end.q))
+            # interpolated_quats = []
+            # import ipdb;ipdb.set_trace()
+            interpolated_render_poses += [
+                sapien.Pose(render_pose_start.p * (1-t) + render_pose_end.p * (t), q=euler2quat(*(e1 * (1-t) + e2 * t)))
+                for t in np.linspace(0, 1, end_frame - start_frame)
+            ]
+    it = 0
+    while True:
+        base_env: BaseEnv = eval_envs.base_env
+        base_env._human_render_cameras["render_camera"].camera.set_local_pose(interpolated_render_poses[it])
+        it = (it + 1) % len(interpolated_render_poses)
+        eval_envs.render_human()
     if isinstance(envs.action_space, gym.spaces.Dict):
         envs = FlattenActionSpaceWrapper(envs)
         eval_envs = FlattenActionSpaceWrapper(eval_envs)
