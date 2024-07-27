@@ -1080,7 +1080,6 @@ class BaseEnv(gym.Env):
         images = []
         if physx.is_gpu_enabled():
             if self._parallel_in_single_scene:
-                self.scene.update_render()
                 for name, camera in self.scene.human_render_cameras.items():
                     camera.camera._render_cameras[0].take_picture()
                     if self.shader_dir == "default":

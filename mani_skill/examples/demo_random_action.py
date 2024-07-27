@@ -45,7 +45,7 @@ def main(args):
     verbose = not args.quiet
     if args.seed is not None:
         np.random.seed(args.seed)
-    parallel_in_single_scene=args.render_mode == "human"
+    parallel_in_single_scene = args.render_mode == "human"
     if args.render_mode == "human" and args.obs_mode in ["sensor_data", "rgb", "rgbd", "depth", "point_cloud"]:
         print("Disabling parallel single scene/GUI render as observation mode is a visual one. Change observation mode to state or state_dict to see a parallel env render")
         parallel_in_single_scene = False
@@ -61,13 +61,12 @@ def main(args):
         num_envs=args.num_envs,
         sim_backend=args.sim_backend,
         parallel_in_single_scene=parallel_in_single_scene,
-        max_episode_steps=20,
         **args.env_kwargs
     )
     record_dir = args.record_dir
     if record_dir:
         record_dir = record_dir.format(env_id=args.env_id)
-        env = RecordEpisode(env, record_dir, info_on_video=True)
+        env = RecordEpisode(env, record_dir, info_on_video=False, max_steps_per_video=env._max_episode_steps)
 
     if verbose:
         print("Observation space", env.observation_space)
