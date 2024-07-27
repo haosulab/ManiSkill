@@ -40,6 +40,8 @@ class ManiSkillSB3VectorEnv(SB3VecEnv):
     def step_wait(self) -> VecEnvStepReturn:
         vec_obs, rews, terminations, truncations, infos = self._env.step(self.actions)
         for env_idx in range(self.num_envs):
+            if env_idx not in infos:
+                infos[env_idx] = dict()
             infos[env_idx]["TimeLimit.truncated"] = (
                 truncations[env_idx] and not terminations[env_idx]
             )
@@ -50,6 +52,8 @@ class ManiSkillSB3VectorEnv(SB3VecEnv):
         for i, done in enumerate(dones):
             if done:
                 # NOTE: ensure that it will not be inplace modified when reset
+                if i not in infos:
+                    infos[i] = dict()
                 infos[i]["terminal_observation"] = select_index_from_dict(vec_obs, i)
 
         reset_indices = np.where(dones)[0]
