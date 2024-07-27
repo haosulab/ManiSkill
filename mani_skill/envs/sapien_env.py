@@ -15,7 +15,7 @@ import torch
 from gymnasium.vector.utils import batch_space
 from sapien.utils import Viewer
 
-from mani_skill import logger
+from mani_skill import PACKAGE_ASSET_DIR, logger
 from mani_skill.agents import REGISTERED_AGENTS
 from mani_skill.agents.base_agent import BaseAgent
 from mani_skill.agents.multi_agent import MultiAgent
@@ -85,9 +85,9 @@ class BaseEnv(gym.Env):
             we use the cpu sim backend. Can also be "cpu" or "gpu" to force usage of a particular sim backend. Note that if this is "cpu", num_envs
             can only be equal to 1.
 
-        parallel_gui_render_enabled (bool): By default this is False. If True, when using env.render_human() which opens a viewer/GUI,
-            the viewer will show all parallel environments. This is only really useful for generating cool videos showing
-            all environments at once but it is not recommended otherwise as it slows down simulation and rendering.
+        parallel_in_single_scene (bool): By default this is False. If True, rendered images and the GUI will show all objects in one view.
+            This is only really useful for generating cool videos showing all environments at once but it is not recommended
+            otherwise as it slows down simulation and rendering.
 
     Note:
         `sensor_cfgs` is used to update environement-specific sensor configurations.
@@ -136,6 +136,9 @@ class BaseEnv(gym.Env):
     _episode_rng: np.random.RandomState = None
     """the numpy RNG that you can use to generate random numpy data"""
 
+    _parallel_in_single_scene: bool = False
+    """whether all objects are placed in one scene for the purpose of rendering all objects together instead of in parallel"""
+
     def __init__(
         self,
         num_envs: int = 1,
@@ -151,14 +154,14 @@ class BaseEnv(gym.Env):
         sim_cfg: Union[SimConfig, dict] = dict(),
         reconfiguration_freq: int = None,
         sim_backend: str = "auto",
-        parallel_gui_render_enabled: bool = False,
+        parallel_in_single_scene: bool = False,
     ):
         self.num_envs = num_envs
         self.reconfiguration_freq = reconfiguration_freq if reconfiguration_freq is not None else 0
         self._reconfig_counter = 0
         self._custom_sensor_configs = sensor_configs
         self._custom_human_render_camera_configs = human_render_camera_configs
-        self._parallel_gui_render_enabled = parallel_gui_render_enabled
+        self._parallel_in_single_scene = parallel_in_single_scene
         self.robot_uids = robot_uids
         if self.SUPPORTED_ROBOTS is not None:
             if robot_uids not in self.SUPPORTED_ROBOTS:
@@ -186,11 +189,11 @@ class BaseEnv(gym.Env):
             if obs_mode in ["sensor_data", "rgb", "rgbd", "pointcloud"]:
                 raise RuntimeError("""Currently you cannot use ray-tracing while running simulation with visual observation modes. You may still use
                 env.render_rgb_array() or the RecordEpisode wrapper to save videos of ray-traced results""")
-            if num_envs > 1 and parallel_gui_render_enabled == False:
+            if num_envs > 1 and parallel_in_single_scene == False:
                 raise RuntimeError("""Currently you cannot run ray-tracing on more than one environment in a single process""")
 
-        assert not parallel_gui_render_enabled or (obs_mode not in ["sensor_data", "pointcloud", "rgb", "depth", "rgbd"]), \
-            "Parallel rendering from parallel cameras is only supported when the gui/viewer is not used. parallel_gui_render_enabled must be False if using parallel rendering. If True only state based observations are supported."
+        assert not parallel_in_single_scene or (obs_mode not in ["sensor_data", "pointcloud", "rgb", "depth", "rgbd"]), \
+            "Parallel rendering from parallel cameras is only supported when the gui/viewer is not used. parallel_in_single_scene must be False if using parallel rendering. If True only state based observations are supported."
 
         # TODO (stao): move the merge code / handling union typed arguments outside here so classes inheriting BaseEnv only get
         # the already parsed sim config argument
@@ -633,12 +636,10 @@ class BaseEnv(gym.Env):
 
         shadow = self.enable_shadow
         self.scene.set_ambient_light([0.3, 0.3, 0.3])
-        # Only the first of directional lights can have shadow
         self.scene.add_directional_light(
             [1, 1, -1], [1, 1, 1], shadow=shadow, shadow_scale=5, shadow_map_size=2048
         )
         self.scene.add_directional_light([0, 0, -1], [1, 1, 1])
-
     # -------------------------------------------------------------------------- #
     # Reset
     # -------------------------------------------------------------------------- #
@@ -927,7 +928,7 @@ class BaseEnv(gym.Env):
                 sapien.Scene([self.physx_system, sapien.render.RenderSystem()])
             ]
         # create a "global" scene object that users can work with that is linked with all other scenes created
-        self.scene = ManiSkillScene(sub_scenes, sim_cfg=self.sim_cfg, device=self.device, parallel_gui_render_enabled=self._parallel_gui_render_enabled)
+        self.scene = ManiSkillScene(sub_scenes, sim_cfg=self.sim_cfg, device=self.device, parallel_in_single_scene=self._parallel_in_single_scene)
         self.physx_system.timestep = 1.0 / self._sim_freq
 
     def _clear(self):
@@ -1078,13 +1079,26 @@ class BaseEnv(gym.Env):
         self.scene.update_render()
         images = []
         if physx.is_gpu_enabled():
-            for name in self.scene.human_render_cameras.keys():
-                camera_group = self.scene.camera_groups[name]
-                if camera_name is not None and name != camera_name:
-                    continue
-                camera_group.take_picture()
-                rgb = camera_group.get_picture_cuda("Color").torch()[..., :3].clone()
-                images.append(rgb)
+            if self._parallel_in_single_scene:
+                for name, camera in self.scene.human_render_cameras.items():
+                    camera.camera._render_cameras[0].take_picture()
+                    if self.shader_dir == "default":
+                        rgb = common.to_tensor(camera.camera._render_cameras[0].get_picture("Color"))[None, ...]
+                        rgb = (rgb[..., :3]).to(torch.uint8)
+                    else:
+                        rgb = common.to_tensor(camera.camera._render_cameras[0].get_picture("Color"))[
+                            None, ...
+                        ]
+                        rgb = (rgb[..., :3] * 255).to(torch.uint8)
+                    images.append(rgb)
+            else:
+                for name in self.scene.human_render_cameras.keys():
+                    camera_group = self.scene.camera_groups[name]
+                    if camera_name is not None and name != camera_name:
+                        continue
+                    camera_group.take_picture()
+                    rgb = camera_group.get_picture_cuda("Color").torch()[..., :3].clone()
+                    images.append(rgb)
         else:
             for name, camera in self.scene.human_render_cameras.items():
                 if camera_name is not None and name != camera_name:

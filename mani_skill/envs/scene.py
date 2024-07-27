@@ -35,7 +35,7 @@ class ManiSkillScene:
         sim_cfg: SimConfig = SimConfig(),
         debug_mode: bool = True,
         device: Device = None,
-        parallel_gui_render_enabled: bool = False,
+        parallel_in_single_scene: bool = False,
     ):
         if sub_scenes is None:
             sub_scenes = [sapien.Scene()]
@@ -80,7 +80,7 @@ class ManiSkillScene:
         non-unique between episode resets in order to be easily rebuilt and deallocate old queries. This essentially acts as a way
         to invalidate the cached queries."""
 
-        self.parallel_gui_render_enabled: bool = parallel_gui_render_enabled
+        self.parallel_in_single_scene: bool = parallel_in_single_scene
         """Whether rendering all parallel scenes in the viewer/gui is enabled"""
 
     # -------------------------------------------------------------------------- #
@@ -240,11 +240,15 @@ class ManiSkillScene:
 
     def update_render(self):
         if physx.is_gpu_enabled():
-            if self.render_system_group is None:
-                self._setup_gpu_rendering()
-                self._gpu_setup_sensors(self.sensors)
-                self._gpu_setup_sensors(self.human_render_cameras)
-            self.render_system_group.update_render()
+            if not self.parallel_in_single_scene:
+                if self.render_system_group is None:
+                    self._setup_gpu_rendering()
+                    self._gpu_setup_sensors(self.sensors)
+                    self._gpu_setup_sensors(self.human_render_cameras)
+                self.render_system_group.update_render()
+            else:
+                self.px.sync_poses_gpu_to_cpu()
+                self.sub_scenes[0].update_render()
         else:
             self.sub_scenes[0].update_render()
 
@@ -386,11 +390,12 @@ class ManiSkillScene:
         if scene_idxs is None:
             scene_idxs = list(range(len(self.sub_scenes)))
         for scene_idx in scene_idxs:
-            if self.parallel_gui_render_enabled:
+            if self.parallel_in_single_scene:
                 scene = self.sub_scenes[0]
             else:
                 scene = self.sub_scenes[scene_idx]
             entity = sapien.Entity()
+            entity.name = "point_light"
             light = sapien.render.RenderPointLightComponent()
             entity.add_component(light)
             light.color = color
@@ -398,7 +403,7 @@ class ManiSkillScene:
             light.shadow_near = shadow_near
             light.shadow_far = shadow_far
             light.shadow_map_size = shadow_map_size
-            if self.parallel_gui_render_enabled:
+            if self.parallel_in_single_scene:
                 light.pose = sapien.Pose(position + self.scene_offsets_np[scene_idx])
             else:
                 light.pose = sapien.Pose(position)
@@ -421,11 +426,12 @@ class ManiSkillScene:
         if scene_idxs is None:
             scene_idxs = list(range(len(self.sub_scenes)))
         for scene_idx in scene_idxs:
-            if self.parallel_gui_render_enabled:
+            if self.parallel_in_single_scene:
                 scene = self.sub_scenes[0]
             else:
                 scene = self.sub_scenes[scene_idx]
             entity = sapien.Entity()
+            entity.name = "directional_light"
             light = sapien.render.RenderDirectionalLightComponent()
             entity.add_component(light)
             light.color = color
@@ -434,7 +440,7 @@ class ManiSkillScene:
             light.shadow_far = shadow_far
             light.shadow_half_size = shadow_scale
             light.shadow_map_size = shadow_map_size
-            if self.parallel_gui_render_enabled:
+            if self.parallel_in_single_scene:
                 light_position = position + self.scene_offsets_np[scene_idx]
             else:
                 light_position = position
@@ -442,7 +448,7 @@ class ManiSkillScene:
                 light_position, sapien.math.shortest_rotation([1, 0, 0], direction)
             )
             scene.add_entity(entity)
-            if self.parallel_gui_render_enabled:
+            if self.parallel_in_single_scene:
                 # for directional lights adding multiple does not make much sense
                 # and for parallel gui rendering setup accurate lighting does not matter as it is only
                 # for demo purposes
@@ -465,11 +471,12 @@ class ManiSkillScene:
         if scene_idxs is None:
             scene_idxs = list(range(len(self.sub_scenes)))
         for scene_idx in scene_idxs:
-            if self.parallel_gui_render_enabled:
+            if self.parallel_in_single_scene:
                 scene = self.sub_scenes[0]
             else:
                 scene = self.sub_scenes[scene_idx]
             entity = sapien.Entity()
+            entity.name = "spot_light"
             light = sapien.render.RenderSpotLightComponent()
             entity.add_component(light)
             light.color = color
@@ -479,7 +486,7 @@ class ManiSkillScene:
             light.shadow_map_size = shadow_map_size
             light.inner_fov = inner_fov
             light.outer_fov = outer_fov
-            if self.parallel_gui_render_enabled:
+            if self.parallel_in_single_scene:
                 light_position = position + self.scene_offsets_np[scene_idx]
             else:
                 light_position = position

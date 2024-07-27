@@ -2,7 +2,7 @@ import copy
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Callable, List, Optional, Union
 
 import gymnasium as gym
 import h5py
@@ -172,6 +172,7 @@ class RecordEpisode(gym.Wrapper):
     In the trajectory file env_states will be the same structure but each value/leaf in the dictionary will be a sequence of states representing the state of that particular entity in the simulation over time.
 
     In practice it is may be more useful to use slices of the env_states data (or the observations data), which can be done with
+
     ```python
     import mani_skill.trajectory.utils as trajectory_utils
     env_states = trajectory_utils.dict_to_list_of_dicts(env_states)
@@ -182,7 +183,7 @@ class RecordEpisode(gym.Wrapper):
     ```
 
     Args:
-        env: gym.Env
+        env: the environment to record
         output_dir: output directory
         save_trajectory: whether to save trajectory
         trajectory_name: name of trajectory file (.h5). Use timestamp if not provided.
@@ -194,33 +195,36 @@ class RecordEpisode(gym.Wrapper):
             Not that for environments simulated on the GPU (to leverage fast parallel rendering) you must
             set `max_steps_per_video` to a fixed number so that every `max_steps_per_video` steps a video is saved. This is
             required as there may be partial environment resets which makes it ambiguous about how to save/cut videos.
+        save_video_trigger: a function that takes the current number of elapsed environment steps and outputs a bool. If output is True, will start saving that timestep to the video.
         max_steps_per_video: how many steps can be recorded into a single video before flushing the video. If None this is not used. A internal step counter is maintained to do this.
             If the video is flushed at any point, the step counter is reset to 0.
         clean_on_close: whether to rename and prune trajectories when closed.
             See `clean_trajectories` for details.
+        record_reward: whether to record the reward in the trajectory data
+        record_env_state: whether to record the environment state in the trajectory data
         video_fps (int): The FPS of the video to generate if save_video is True
-
         source_type (Optional[str]): a word to describe the source of the actions used to record episodes (e.g. RL, motionplanning, teleoperation)
         source_desc (Optional[str]): A longer description describing how the demonstrations are collected
     """
 
     def __init__(
         self,
-        env,
-        output_dir,
-        save_trajectory=True,
-        trajectory_name=None,
-        save_video=True,
-        info_on_video=False,
-        save_on_reset=True,
-        save_video_trigger=None,
-        max_steps_per_video=None,
-        clean_on_close=True,
-        record_reward=True,
-        video_fps=30,
-        source_type=None,
-        source_desc=None,
-    ):
+        env: BaseEnv,
+        output_dir: str,
+        save_trajectory: bool = True,
+        trajectory_name: Optional[str] = None,
+        save_video: bool = True,
+        info_on_video: bool = False,
+        save_on_reset: bool = True,
+        save_video_trigger: Optional[Callable[[int], bool]] = None,
+        max_steps_per_video: Optional[int] = None,
+        clean_on_close: bool = True,
+        record_reward: bool = True,
+        record_env_state: bool = True,
+        video_fps: int = 30,
+        source_type: Optional[str] = None,
+        source_desc: Optional[str] = None,
+    ) -> None:
         super().__init__(env)
 
         self.output_dir = Path(output_dir)
@@ -251,7 +255,7 @@ class RecordEpisode(gym.Wrapper):
                 resets you may set max_steps_per_video equal to the max_episode_steps"
         self.clean_on_close = clean_on_close
         self.record_reward = record_reward
-        self.record_env_state = True
+        self.record_env_state = record_env_state
         if self.save_trajectory:
             if not trajectory_name:
                 trajectory_name = time.strftime("%Y%m%d_%H%M%S")
@@ -303,7 +307,10 @@ class RecordEpisode(gym.Wrapper):
         img = self.env.render()
         img = common.to_numpy(img)
         if len(img.shape) > 3:
-            img = tile_images(img, nrows=self.video_nrows)
+            if len(img) == 1:
+                img = img[0]
+            else:
+                img = tile_images(img, nrows=self.video_nrows)
         return img
 
     def reset(

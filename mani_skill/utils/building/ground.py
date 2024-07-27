@@ -31,7 +31,7 @@ def build_ground(
     ground.add_plane_collision(
         sapien.Pose(p=[0, 0, altitude], q=[0.7071068, 0, -0.7071068, 0]),
     )
-    if scene.parallel_gui_render_enabled:
+    if scene.parallel_in_single_scene:
         # when building a ground and using a parallel render in the GUI, we want to only build one ground visual+collision plane
         ground.set_scene_idxs([0])
     actor = ground.build_static(name=name)
@@ -56,7 +56,7 @@ def build_ground(
     mat.base_color_texture = sapien.render.RenderTexture2D(
         filename=osp.join(
             osp.dirname(__file__), "assets/floor_tiles_06_diff_2k_aligned.png"
-        )
+        ),
     )
     mat_square_len = 4  # hardcoded for the floor tile picture, saying that square tile is 4 meters wide
     uv_scale = floor_width / mat_square_len
