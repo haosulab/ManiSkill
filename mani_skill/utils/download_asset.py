@@ -13,6 +13,7 @@ from tqdm.auto import tqdm
 
 import mani_skill.envs  # import all environments to register them which auto registers data groups to allow asset download by environment ID.
 from mani_skill.utils import assets
+from mani_skill.utils.assets.data import DATA_GROUPS, DATA_SOURCES
 
 
 def prompt_yes_no(message):
@@ -207,7 +208,7 @@ def main(args):
         uids = list(assets.DATA_SOURCES.keys())
         show_progress = True
     elif args.uid in assets.DATA_GROUPS:
-        uids = assets.DATA_GROUPS[args.uid]
+        uids = assets.expand_data_group_into_individual_data_source_ids(args.uid)
         show_progress = True
     elif args.uid in assets.DATA_SOURCES:
         uids = [args.uid]

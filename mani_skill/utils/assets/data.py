@@ -30,7 +30,7 @@ class DataSource:
 DATA_SOURCES: Dict[str, DataSource] = {}
 """Data sources map data source IDs to their respective DataSource objects which contain info on what the data is and where to download it"""
 DATA_GROUPS: Dict[str, List[str]] = {}
-"""Data groups map group ids (typically environment IDs) to a list of data source IDs for easy group management"""
+"""Data groups map group ids (typically environment IDs) to a list of data source/group IDs for easy group management. data groups can be done hierarchicaly"""
 
 
 def is_data_source_downloaded(data_source_id: str):
@@ -102,8 +102,8 @@ def initialize_data_sources():
         + category_uids["faucet"]
     )
 
-    DATA_GROUPS["OpenCabinetDrawer-v1"] = category_uids["cabinet_drawer"]
-    DATA_GROUPS["OpenCabinetDoor-v1"] = category_uids["cabinet_door"]
+    # DATA_GROUPS["OpenCabinetDrawer-v1"] = category_uids["cabinet_drawer"]
+    # DATA_GROUPS["OpenCabinetDoor-v1"] = category_uids["cabinet_door"]
     DATA_GROUPS["PushChair-v1"] = category_uids["chair"]
     DATA_GROUPS["MoveBucket-v1"] = category_uids["bucket"]
     DATA_GROUPS["TurnFaucet-v1"] = category_uids["faucet"]
@@ -176,6 +176,23 @@ def initialize_data_sources():
         url="https://github.com/haosulab/ManiSkill-GoogleRobot/archive/refs/tags/v0.1.0.zip",
         target_path="robots/googlerobot",
     )
+
+
+def expand_data_group_into_individual_data_source_ids(data_group_id: str):
+    """Expand a data group into a list of individual data source IDs"""
+    uids = []
+
+    def helper(uid):
+        nonlocal uids
+        if uid in DATA_GROUPS:
+            [helper(x) for x in DATA_GROUPS[uid]]
+        elif uid in DATA_SOURCES:
+            uids.append(uid)
+
+    for uid in DATA_GROUPS[data_group_id]:
+        helper(uid)
+    uids = list(set(uids))
+    return uids
 
 
 initialize_data_sources()
