@@ -81,9 +81,15 @@ class BaseEnv(gym.Env):
             Generally for most users who are not building tasks this does not need to be changed. The default is 0, which means
             the environment reconfigures upon creation, and never again.
 
-        sim_backend (str): By default this is "auto". If sim_backend is "auto", then if num_envs == 1, we use the gpu sim backend, otherwise
-            we use the cpu sim backend. Can also be "cpu" or "gpu" to force usage of a particular sim backend. Note that if this is "cpu", num_envs
-            can only be equal to 1.
+        sim_backend (str): By default this is "auto". If sim_backend is "auto", then if num_envs == 1, we use the CPU sim backend, otherwise
+            we use the GPU sim backend and automatically pick a GPU to use.
+            Can also be "cpu" or "gpu" to force usage of a particular sim backend.
+            To select a particular GPU to run the simulation on, you can pass "cuda:n" where n is the ID of the GPU,
+            similar to the way PyTorch selects GPUs.
+            Note that if this is "cpu", num_envs can only be equal to 1.
+
+        render_backend (str): By default this is "gpu". If render_backend is "gpu", then we auto select a GPU to render with.
+            It can be "cuda:n" where n is the ID of the GPU to render with. If this is "cpu", then we render on the CPU.
 
         parallel_in_single_scene (bool): By default this is False. If True, rendered images and the GUI will show all objects in one view.
             This is only really useful for generating cool videos showing all environments at once but it is not recommended
@@ -139,6 +145,12 @@ class BaseEnv(gym.Env):
     _parallel_in_single_scene: bool = False
     """whether all objects are placed in one scene for the purpose of rendering all objects together instead of in parallel"""
 
+    _sim_device: sapien.Device = None
+    """the sapien device object the simulation runs on"""
+
+    _render_device: sapien.Device = None
+    """the sapien device object the renderer runs on"""
+
     def __init__(
         self,
         num_envs: int = 1,
@@ -154,6 +166,8 @@ class BaseEnv(gym.Env):
         sim_cfg: Union[SimConfig, dict] = dict(),
         reconfiguration_freq: int = None,
         sim_backend: str = "auto",
+        render_backend: str = "gpu",
+
         parallel_in_single_scene: bool = False,
     ):
         self.num_envs = num_envs
@@ -171,14 +185,37 @@ class BaseEnv(gym.Env):
             logger.warn("GPU simulation has already been enabled on this process, switching to GPU backend")
             sim_backend == "gpu"
 
-        if num_envs > 1 or sim_backend == "gpu":
-            if not physx.is_gpu_enabled():
-                physx.enable_gpu()
+        # determine the sim and render devices
+        if sim_backend == "auto":
+            if num_envs > 1:
+                self.device = torch.device(
+                    "cuda"
+                )
+                self._sim_device = sapien.Device("cuda")
+            else:
+                self.device = torch.device("cpu")
+                self._sim_device = sapien.Device("cpu")
+        elif sim_backend == "cpu":
+            self.device = torch.device("cpu")
+        elif sim_backend == "cuda" or sim_backend == "gpu":
             self.device = torch.device(
                 "cuda"
-            )  # TODO (stao): fix this for multi process support
-        else:
-            self.device = torch.device("cpu")
+            )
+            self._sim_device = sapien.Device("cuda")
+        elif sim_backend[:4] == "cuda":
+            self.device = torch.device(sim_backend)
+            self._sim_device = sapien.Device(sim_backend)
+        if self.device.type == "cuda":
+            if not physx.is_gpu_enabled():
+                physx.enable_gpu()
+
+        # determine render device
+        if render_backend == "gpu" or render_backend == "cuda":
+            self._render_device = sapien.Device("cuda")
+        elif render_backend == "cpu":
+            self._render_device = sapien.Device("cpu")
+        elif render_backend[:4] == "cuda":
+            self._render_device = sapien.Device(render_backend)
 
         # raise a number of nicer errors
         if sim_backend == "cpu" and num_envs > 1:
@@ -195,8 +232,6 @@ class BaseEnv(gym.Env):
         assert not parallel_in_single_scene or (obs_mode not in ["sensor_data", "pointcloud", "rgb", "depth", "rgbd"]), \
             "Parallel rendering from parallel cameras is only supported when the gui/viewer is not used. parallel_in_single_scene must be False if using parallel rendering. If True only state based observations are supported."
 
-        # TODO (stao): move the merge code / handling union typed arguments outside here so classes inheriting BaseEnv only get
-        # the already parsed sim config argument
         if isinstance(sim_cfg, SimConfig):
             sim_cfg = sim_cfg.dict()
         merged_gpu_sim_cfg = self._default_sim_config.dict()
@@ -900,8 +935,8 @@ class BaseEnv(gym.Env):
         """Setup the simulation scene instance.
         The function should be called in reset(). Called by `self._reconfigure`"""
         self._set_scene_config()
-        if physx.is_gpu_enabled():
-            self.physx_system = physx.PhysxGpuSystem()
+        if self._sim_device.is_cuda():
+            self.physx_system = physx.PhysxGpuSystem(device=self._sim_device)
             # Create the scenes in a square grid
             sub_scenes = []
             scene_grid_length = int(np.ceil(np.sqrt(self.num_envs)))
@@ -911,7 +946,7 @@ class BaseEnv(gym.Env):
                     scene_idx // scene_grid_length - scene_grid_length // 2,
                 )
                 scene = sapien.Scene(
-                    systems=[self.physx_system, sapien.render.RenderSystem()]
+                    systems=[self.physx_system, sapien.render.RenderSystem(self._render_device)]
                 )
                 self.physx_system.set_scene_offset(
                     scene,
@@ -925,7 +960,7 @@ class BaseEnv(gym.Env):
         else:
             self.physx_system = physx.PhysxCpuSystem()
             sub_scenes = [
-                sapien.Scene([self.physx_system, sapien.render.RenderSystem()])
+                sapien.Scene([self.physx_system, sapien.render.RenderSystem(self._render_device)])
             ]
         # create a "global" scene object that users can work with that is linked with all other scenes created
         self.scene = ManiSkillScene(sub_scenes, sim_cfg=self.sim_cfg, device=self.device, parallel_in_single_scene=self._parallel_in_single_scene)
