@@ -23,7 +23,7 @@ from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.envs.utils.observations import (
     sensor_data_to_pointcloud,
     sensor_data_to_rgbd,
-    sensor_data_to_voxel
+    sensor_data_to_voxel,
 )
 from mani_skill.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill.sensors.camera import (
@@ -162,11 +162,16 @@ class BaseEnv(gym.Env):
         self.num_envs = num_envs
         self.reconfiguration_freq = reconfiguration_freq if reconfiguration_freq is not None else 0
         self._reconfig_counter = 0
-        self._obs_mode_config = obs_mode_config
         self._custom_sensor_configs = sensor_configs
         self._custom_human_render_camera_configs = human_render_camera_configs
         self._parallel_gui_render_enabled = parallel_gui_render_enabled
         self.robot_uids = robot_uids
+
+        if obs_mode_config is None:
+            self._obs_mode_config = self._default_voxel_config
+        else:
+            self._obs_mode_config = obs_mode_config
+            
         if self.SUPPORTED_ROBOTS is not None:
             if robot_uids not in self.SUPPORTED_ROBOTS:
                 logger.warn(f"{robot_uids} is not in the task's list of supported robots. Code may not run as intended")
@@ -190,7 +195,7 @@ class BaseEnv(gym.Env):
             If you want to do CPU sim backends and have environment vectorization you must use multi-processing across CPUs.
             This can be done via the gymnasium's AsyncVectorEnv API""")
         if "rt" == shader_dir[:2]:
-            if obs_mode in ["sensor_data", "rgb", "rgbd", "pointcloud"]:
+            if obs_mode in ["sensor_data", "rgb", "rgbd", "pointcloud", "voxel"]:
                 raise RuntimeError("""Currently you cannot use ray-tracing while running simulation with visual observation modes. You may still use
                 env.render_rgb_array() or the RecordEpisode wrapper to save videos of ray-traced results""")
             if num_envs > 1 and parallel_gui_render_enabled == False:

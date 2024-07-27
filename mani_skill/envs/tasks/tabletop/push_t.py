@@ -154,6 +154,13 @@ class PushTEnv(BaseEnv):
             "render_camera", pose=pose, width=512, height=512, fov=1, near=0.01, far=100
         )
 
+    @property
+    def _default_voxel_config(self):
+        return {"coord_bounds": [-1, -1, -1, 2, 2, 2],
+                    "voxel_size": 200, 
+                    "device": torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
+                    "segmentation": True}
+    
     def _load_scene(self, options: dict):
         # have to put these parmaeters to device - defined before we had access to device
         # load scene is a convienent place for this one time operation

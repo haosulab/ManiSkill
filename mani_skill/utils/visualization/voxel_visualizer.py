@@ -5,7 +5,6 @@ import pyrender
 import torch
 import trimesh
 from pyrender.trackball import Trackball
-# from rlbench.backend.const import DEPTH_SCALE
 from scipy.spatial.transform import Rotation
 
 # SCALE_FACTOR = DEPTH_SCALE

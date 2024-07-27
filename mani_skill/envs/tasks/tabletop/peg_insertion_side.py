@@ -89,6 +89,13 @@ class PegInsertionSideEnv(BaseEnv):
         pose = sapien_utils.look_at([0.5, -0.5, 0.8], [0.05, -0.1, 0.4])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
+    @property
+    def _default_voxel_config(self):
+        return {"coord_bounds": [-1, -1, -1, 2, 2, 2],
+                    "voxel_size": 200, 
+                    "device": torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
+                    "segmentation": True}
+                    
     def _load_scene(self, options: dict):
         with torch.device(self.device):
             self.table_scene = TableSceneBuilder(self)

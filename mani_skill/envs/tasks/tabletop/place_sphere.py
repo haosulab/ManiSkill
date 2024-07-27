@@ -62,18 +62,9 @@ class PlaceSphereEnv(BaseEnv):
 
     @property
     def _default_sensor_configs(self):
-        pose = sapien_utils.look_at(eye=[0.3, 0, 0.2], target=[-0.1, 0, 0])
-        return [
-            CameraConfig(
-                "base_camera",
-                pose=pose,
-                width=128,
-                height=128,
-                fov=np.pi / 2,
-                near=0.01,
-                far=100,
-            )
-        ]
+        pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
+        return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
+
 
     @property
     def _default_human_render_camera_configs(self):
@@ -81,6 +72,13 @@ class PlaceSphereEnv(BaseEnv):
         return CameraConfig(
             "render_camera", pose=pose, width=512, height=512, fov=1, near=0.01, far=100
         )
+    
+    @property
+    def _default_voxel_config(self):
+        return {"coord_bounds": [-1, -1, -1, 2, 2, 2],
+                    "voxel_size": 200, 
+                    "device": torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
+                    "segmentation": True}
         
     def _build_bin(self, radius):
         builder = self.scene.create_actor_builder()
