@@ -191,12 +191,12 @@ class ActorBuilder(SAPIENActorBuilder):
         initial_pose_np = common.to_numpy(initial_pose.raw_pose)
         if initial_pose_b == 1:
             initial_pose_np = initial_pose_np.repeat(num_actors, axis=0)
-        if self.scene.parallel_gui_render_enabled:
+        if self.scene.parallel_in_single_scene:
             initial_pose_np[:, :3] += self.scene.scene_offsets_np[self.scene_idxs]
         entities = []
 
         for i, scene_idx in enumerate(self.scene_idxs):
-            if self.scene.parallel_gui_render_enabled:
+            if self.scene.parallel_in_single_scene:
                 sub_scene = self.scene.sub_scenes[0]
             else:
                 sub_scene = self.scene.sub_scenes[scene_idx]

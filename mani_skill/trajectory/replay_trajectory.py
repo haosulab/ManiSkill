@@ -510,12 +510,14 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
             info = {}
 
             # Without conversion between control modes
-            assert not (
-                target_control_mode is not None and args.use_env_states
+            assert (
+                target_control_mode is None
+                or ori_control_mode == target_control_mode
+                or not args.use_env_states
             ), "Cannot use env states when trying to \
                 convert from one control mode to another. This is because control mode conversion causes there to be changes \
                 in how many actions are taken to achieve the same states"
-            if target_control_mode is None:
+            if target_control_mode is None or ori_control_mode == target_control_mode:
                 n = len(ori_actions)
                 if pbar is not None:
                     pbar.reset(total=n)

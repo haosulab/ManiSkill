@@ -7,7 +7,7 @@ from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
 
 
-@register_agent()
+@register_agent(asset_download_ids=["ur10e"])
 class UR10e(BaseAgent):
     uid = "ur_10e"
     mjcf_path = f"{ASSET_DIR}/robots/ur10e/ur10e.xml"

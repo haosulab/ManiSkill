@@ -8,7 +8,9 @@ from mani_skill.agents.registration import register_agent
 from mani_skill.sensors.camera import CameraConfig
 
 
-@register_agent()  # uncomment this if you want to register the agent so you can instantiate it by ID when creating environments
+@register_agent(
+    asset_download_ids=["unitree_go2"]
+)  # uncomment this if you want to register the agent so you can instantiate it by ID when creating environments
 class UnitreeGo2(BaseAgent):
     uid = "unitree_go2"
     urdf_path = f"{ASSET_DIR}/robots/unitree_go2/urdf/go2_description.urdf"  # You can use f"{PACKAGE_ASSET_DIR}" to reference a urdf file in the mani_skill /assets package folder
