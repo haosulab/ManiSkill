@@ -11,7 +11,7 @@ from mani_skill.utils import sapien_utils
 from mani_skill.utils.structs.articulation import Articulation
 
 
-@register_agent()
+@register_agent(asset_download_ids=["anymal_c"])
 class ANYmalC(BaseAgent):
     uid = "anymal_c"
     urdf_path = f"{ASSET_DIR}/robots/anymal_c/urdf/anymal.urdf"
