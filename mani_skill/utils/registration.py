@@ -4,13 +4,14 @@ import json
 import sys
 from copy import deepcopy
 from functools import partial
-from typing import TYPE_CHECKING, Dict, Type
+from typing import TYPE_CHECKING, Dict, List, Optional, Type
 
 import gymnasium as gym
 from gymnasium.envs.registration import EnvSpec as GymEnvSpec
 from gymnasium.envs.registration import WrapperSpec
 
 from mani_skill import logger
+from mani_skill.utils import assets, download_asset
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 
 if TYPE_CHECKING:
@@ -23,17 +24,57 @@ class EnvSpec:
         uid: str,
         cls: Type[BaseEnv],
         max_episode_steps=None,
+        asset_download_ids: Optional[List[str]] = [],
         default_kwargs: dict = None,
     ):
         """A specification for a ManiSkill environment."""
         self.uid = uid
         self.cls = cls
         self.max_episode_steps = max_episode_steps
+        self.asset_download_ids = asset_download_ids
         self.default_kwargs = {} if default_kwargs is None else default_kwargs
 
     def make(self, **kwargs):
         _kwargs = self.default_kwargs.copy()
         _kwargs.update(kwargs)
+
+        # check if all assets necessary are downloaded
+        assets_to_download = []
+        for asset_id in self.asset_download_ids or []:
+            is_data_group = asset_id in assets.DATA_GROUPS
+            if is_data_group:
+                found_data_group_assets = True
+                for (
+                    data_source_id
+                ) in assets.expand_data_group_into_individual_data_source_ids(asset_id):
+                    if not assets.is_data_source_downloaded(data_source_id):
+                        assets_to_download.append(data_source_id)
+                        found_data_group_assets = False
+                if not found_data_group_assets:
+                    print(
+                        f"Environment {self.uid} requires a set of assets in group {asset_id}. At least 1 of those assets could not be found"
+                    )
+            else:
+                if not assets.is_data_source_downloaded(asset_id):
+                    assets_to_download.append(asset_id)
+                    data_source = assets.DATA_SOURCES[asset_id]
+                    print(
+                        f"Could not find asset {asset_id} at {data_source.output_dir / data_source.target_path}"
+                    )
+        if len(assets_to_download) > 0:
+            if len(assets_to_download) <= 5:
+                asset_download_msg = ", ".join(assets_to_download)
+            else:
+                asset_download_msg = f"{assets_to_download[:5]} (and {len(assets_to_download) - 10} more)"
+            response = download_asset.prompt_yes_no(
+                f"Environment {self.uid} requires asset(s) {asset_download_msg} which could not be found. Would you like to download them now?"
+            )
+            if response:
+                for asset_id in assets_to_download:
+                    download_asset.download(assets.DATA_SOURCES[asset_id])
+            else:
+                print("Exiting as assets are not found or downloaded")
+                exit()
         return self.cls(**_kwargs)
 
     @property
@@ -52,7 +93,11 @@ REGISTERED_ENVS: Dict[str, EnvSpec] = {}
 
 
 def register(
-    name: str, cls: Type[BaseEnv], max_episode_steps=None, default_kwargs: dict = None
+    name: str,
+    cls: Type[BaseEnv],
+    max_episode_steps=None,
+    asset_download_ids: List[str] = [],
+    default_kwargs: dict = None,
 ):
     """Register a ManiSkill environment."""
 
@@ -63,9 +108,19 @@ def register(
         logger.warn(f"Env {name} already registered")
     if not issubclass(cls, BaseEnv):
         raise TypeError(f"Env {name} must inherit from BaseEnv")
+
+    for asset_id in asset_download_ids:
+        if asset_id not in assets.DATA_SOURCES and asset_id not in assets.DATA_GROUPS:
+            raise KeyError(f"Asset {asset_id} not found in data sources or groups")
+
     REGISTERED_ENVS[name] = EnvSpec(
-        name, cls, max_episode_steps=max_episode_steps, default_kwargs=default_kwargs
+        name,
+        cls,
+        max_episode_steps=max_episode_steps,
+        asset_download_ids=asset_download_ids,
+        default_kwargs=default_kwargs,
     )
+    assets.DATA_GROUPS[name] = asset_download_ids
 
 
 class TimeLimitWrapper(gym.Wrapper):
@@ -119,12 +174,20 @@ def make_vec(env_id, **kwargs):
     return env
 
 
-def register_env(uid: str, max_episode_steps=None, override=False, **kwargs):
+def register_env(
+    uid: str,
+    max_episode_steps=None,
+    override=False,
+    asset_download_ids: List[str] = [],
+    **kwargs,
+):
     """A decorator to register ManiSkill environments.
 
     Args:
         uid (str): unique id of the environment.
         max_episode_steps (int): maximum number of steps in an episode.
+        asset_download_ids (List[str]): asset download ids the environment depends on. When environments are created
+            this list is checked to see if the user has all assets downloaded and if not, prompt the user if they wish to download them.
         override (bool): whether to override the environment if it is already registered.
 
     Notes:
@@ -156,6 +219,7 @@ def register_env(uid: str, max_episode_steps=None, override=False, **kwargs):
             uid,
             cls,
             max_episode_steps=max_episode_steps,
+            asset_download_ids=asset_download_ids,
             default_kwargs=deepcopy(kwargs),
         )
 

@@ -11,7 +11,7 @@ from mani_skill.utils import common
 from mani_skill.utils.structs.actor import Actor
 
 
-@register_agent()
+@register_agent(asset_download_ids=["unitree_g1"])
 class UnitreeG1UpperBody(BaseAgent):
     uid = "unitree_g1_simplified_upper_body"
     urdf_path = f"{ASSET_DIR}/robots/unitree_g1/g1_simplified_upper_body.urdf"
@@ -194,7 +194,7 @@ class UnitreeG1UpperBody(BaseAgent):
         return torch.logical_and(lflag, rflag)
 
 
-@register_agent()
+@register_agent(asset_download_ids=["unitree_g1"])
 class UnitreeG1UpperBodyRightArm(UnitreeG1UpperBody):
     uid = "unitree_g1_simplified_upper_body_right_arm"
     urdf_path = f"{ASSET_DIR}/robots/unitree_g1/g1_simplified_upper_body.urdf"

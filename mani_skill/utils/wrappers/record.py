@@ -14,6 +14,7 @@ from mani_skill import get_commit_info
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.utils import common, gym_utils
 from mani_skill.utils.io_utils import dump_json
+from mani_skill.utils.structs.types import Array
 from mani_skill.utils.visualization.misc import (
     images_to_video,
     put_info_on_image,
@@ -519,7 +520,9 @@ class RecordEpisode(gym.Wrapper):
                 traj_id = "traj_{}".format(self._episode_id)
                 group = self._h5_file.create_group(traj_id, track_order=True)
 
-                def recursive_add_to_h5py(group: h5py.Group, data: dict, key):
+                def recursive_add_to_h5py(
+                    group: h5py.Group, data: Union[dict, Array], key
+                ):
                     """simple recursive data insertion for nested data structures into h5py, optimizing for visual data as well"""
                     if isinstance(data, dict):
                         subgrp = group.create_group(key, track_order=True)
