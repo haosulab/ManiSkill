@@ -24,7 +24,7 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 WARNED_ONCE = False
 
 
-@register_env("PickSingleYCB-v1", max_episode_steps=50)
+@register_env("PickSingleYCB-v1", max_episode_steps=50, asset_download_ids=["ycb"])
 class PickSingleYCBEnv(BaseEnv):
 
     SUPPORTED_ROBOTS = ["panda", "panda_wristcam", "xmate3_robotiq", "fetch"]

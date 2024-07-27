@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
@@ -15,7 +16,7 @@ from mani_skill.agents.controllers.pd_joint_pos import (
     PDJointPosControllerConfig,
 )
 from mani_skill.sensors.base_sensor import BaseSensor, BaseSensorConfig
-from mani_skill.utils import sapien_utils
+from mani_skill.utils import assets, download_asset, sapien_utils
 from mani_skill.utils.structs import Actor, Array, Articulation, Pose
 
 from .controllers.base_controller import (
@@ -76,8 +77,8 @@ class BaseAgent:
         self,
         scene: ManiSkillScene,
         control_freq: int,
-        control_mode: str = None,
-        agent_idx: int = None,
+        control_mode: Optional[str] = None,
+        agent_idx: Optional[str] = None,
     ):
         self.scene = scene
         self._control_freq = control_freq
@@ -157,6 +158,25 @@ class BaseAgent:
             sapien_utils.check_urdf_config(urdf_config)
             sapien_utils.apply_urdf_config(loader, urdf_config)
 
+        if not os.path.exists(asset_path):
+            print(f"Robot {self.uid} definition file not found at {asset_path}")
+            if len(assets.DATA_GROUPS[self.uid]) > 0:
+                response = download_asset.prompt_yes_no(
+                    f"Robot {self.uid} has assets available for download. Would you like to download them now?"
+                )
+                if response:
+                    for (
+                        asset_id
+                    ) in assets.expand_data_group_into_individual_data_source_ids(
+                        self.uid
+                    ):
+                        download_asset.download(assets.DATA_SOURCES[asset_id])
+                else:
+                    print(f"Exiting as assets for robot {self.uid} are not downloaded")
+                    exit()
+            else:
+                print(f"Exiting as assets for robot {self.uid} are not found")
+                exit()
         self.robot: Articulation = loader.load(asset_path)
         assert self.robot is not None, f"Fail to load URDF/MJCF from {asset_path}"
 

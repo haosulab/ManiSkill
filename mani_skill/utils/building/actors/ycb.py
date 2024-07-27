@@ -15,7 +15,6 @@ def _load_ycb_dataset():
 def get_ycb_builder(
     scene: ManiSkillScene, id: str, add_collision: bool = True, add_visual: bool = True
 ):
-    global YCB_DATASET
     if "YCB" not in YCB_DATASET:
         _load_ycb_dataset()
     model_db = YCB_DATASET["model_data"]

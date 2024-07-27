@@ -1,5 +1,6 @@
 # {octicon}`rocket` Quickstart
 
+<!-- TODO: add link to new sapien website eventually -->
 ManiSkill is a robotics simulator built on top of SAPIEN. It provides a standard Gym/Gymnasium interface for easy use with existing learning workflows like RL and imitation learning. Moreover ManiSkill supports simulation on both the GPU and CPU, as well as fast parallelized rendering.
 
 ## Gym Interface
@@ -78,13 +79,14 @@ env = ManiSkillCPUGymWrapper(env)
 obs, _ = env.reset() # obs is numpy and unbatched
 ```
 
-
 For a compilation of demos you can run without having to write any extra code check out the [demos page](../demos/index)
+
+For the full documentation of options you can provide for gym.make see the [docstring in our repo](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/sapien_env.py)
 
 
 ## GPU Parallelized/Vectorized Tasks
 
-ManiSkill is powered by SAPIEN which supports GPU parallelized physics simulation and GPU parallelized rendering. This enables achieving 200,000+ state-based simulation FPS and 10,000+ FPS with rendering on a single 4090 GPU. For full benchmarking results see [this page](../additional_resources/performance_benchmarking)
+ManiSkill is powered by SAPIEN which supports GPU parallelized physics simulation and GPU parallelized rendering. This enables achieving 200,000+ state-based simulation FPS and 10,000+ FPS with rendering on a single 4090 GPU on a e.g. manipulation tasks. The FPS can be higher or lower depending on what is simulated. For full benchmarking results see [this page](../additional_resources/performance_benchmarking)
 
 In order to run massively parallelized tasks on a GPU, it is as simple as adding the `num_envs` argument to `gym.make` as so
 
@@ -100,6 +102,7 @@ env = gym.make(
 )
 print(env.observation_space) # will now have shape (16, ...)
 print(env.action_space) # will now have shape (16, ...)
+# env.single_observation_space and env.single_action_space provide non batched spaces
 
 obs, _ = env.reset(seed=0) # reset with a seed for determinism
 for i in range(200):
@@ -107,8 +110,6 @@ for i in range(200):
     obs, reward, terminated, truncated, info = env.step(action)
     done = terminated | truncated
     print(f"Obs shape: {obs.shape}, Reward shape {reward.shape}, Done shape {done.shape}")
-    # note at the moment we do not support showing all parallel sub-scenes 
-    # at once on a GUI, only during observation generation/video recording
 env.close()
 ```
 
@@ -134,9 +135,11 @@ which will look something like this
 <source src="https://github.com/haosulab/ManiSkill/raw/main/docs/source/_static/videos/mani_skill_gpu_sim-PickCube-v1-num_envs=16-obs_mode=state-render_mode=sensors.mp4" type="video/mp4">
 </video>
 
-We further support opening a GUI to view all parallel environments at once, and you can also turn on ray-tracing for more photo-realism. Note that this feature is not useful for any practical purposes (for e.g. machine learning) apart from generating cool demonstration videos and so it is not well optimized.
+### Parallel Rendering in one Scene
 
-Turning the parallel GUI render on simply requires adding the argument `parallel_gui_render_enabled` to `gym.make` as so
+We further support via recording or GUI to view all parallel environments at once, and you can also turn on ray-tracing for more photo-realism. Note that this feature is not useful for any practical purposes (for e.g. machine learning) apart from generating cool demonstration videos and so it is not well optimized.
+
+Turning the parallel GUI render on simply requires adding the argument `parallel_in_single_scene` to `gym.make` as so
 
 ```python
 import gymnasium as gym
@@ -147,7 +150,7 @@ env = gym.make(
     obs_mode="state",
     control_mode="pd_joint_delta_pos",
     num_envs=16,
-    parallel_gui_render_enabled=True,
+    parallel_in_single_scene=True,
     shader_dir="rt-fast" # optionally set this argument for more photo-realistic rendering
 )
 ```
@@ -156,6 +159,21 @@ This will then open up a GUI that looks like so:
 ```{figure} images/parallel_gui_render.png
 ```
 
+### Additional GPU simulation/rendering customization
+
+Finally on servers with multiple GPUs you can directly pick which devices/backends to use for simulation and rendering.
+
+```python
+import gymnasium as gym
+import mani_skill.envs
+
+env = gym.make(
+    "PickCube-v1",
+    num_envs=16,
+    sim_backend="cuda:1", # selects the GPU with index 1
+    render_backend="cuda", # auto selects a GPU
+)
+```
 
 ## Task Instantiation Options
 

@@ -45,7 +45,7 @@ class TableSceneBuilder(SceneBuilder):
         self.table_width = aabb[1, 1] - aabb[0, 1]
         self.table_height = aabb[1, 2] - aabb[0, 2]
         floor_width = 100
-        if self.scene.parallel_gui_render_enabled:
+        if self.scene.parallel_in_single_scene:
             floor_width = 500
         self.ground = build_ground(
             self.scene, floor_width=floor_width, altitude=-self.table_height
