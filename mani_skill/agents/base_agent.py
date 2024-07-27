@@ -165,7 +165,11 @@ class BaseAgent:
                     f"Robot {self.uid} has assets available for download. Would you like to download them now?"
                 )
                 if response:
-                    for asset_id in assets.DATA_GROUPS[self.uid]:
+                    for (
+                        asset_id
+                    ) in assets.expand_data_group_into_individual_data_source_ids(
+                        self.uid
+                    ):
                         download_asset.download(assets.DATA_SOURCES[asset_id])
                 else:
                     print(f"Exiting as assets for robot {self.uid} are not downloaded")
