@@ -136,7 +136,7 @@ which will look something like this
 
 We further support opening a GUI to view all parallel environments at once, and you can also turn on ray-tracing for more photo-realism. Note that this feature is not useful for any practical purposes (for e.g. machine learning) apart from generating cool demonstration videos and so it is not well optimized.
 
-Turning the parallel GUI render on simply requires adding the argument `parallel_gui_render_enabled` to `gym.make` as so
+Turning the parallel GUI render on simply requires adding the argument `parallel_in_single_scene` to `gym.make` as so
 
 ```python
 import gymnasium as gym
@@ -147,7 +147,7 @@ env = gym.make(
     obs_mode="state",
     control_mode="pd_joint_delta_pos",
     num_envs=16,
-    parallel_gui_render_enabled=True,
+    parallel_in_single_scene=True,
     shader_dir="rt-fast" # optionally set this argument for more photo-realistic rendering
 )
 ```
