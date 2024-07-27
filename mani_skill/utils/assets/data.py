@@ -45,29 +45,24 @@ def initialize_data_sources():
         target_path="assets/mani_skill2_ycb",
         checksum="174001ba1003cc0c5adda6453f4433f55ec7e804f0f0da22d015d525d02262fb",
     )
-    DATA_SOURCES["pick_clutter_ycb"] = DataSource(
+    DATA_SOURCES["pick_clutter_ycb_configs"] = DataSource(
         source_type="task_assets",
         url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/pick_clutter/ycb_train_5k.json.gz",
         target_path="tasks/pick_clutter",
         checksum="70ec176c7036f326ea7813b77f8c03bea9db5960198498957a49b2895a9ec338",
     )
-    # DATA_GROUPS["PickClutterYCB-v1"] = ["ycb", "pick_clutter_ycb"]
-
     DATA_SOURCES["assembling_kits"] = DataSource(
         source_type="task_assets",
         url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/assembling_kits_v1.zip",
         target_path="tasks/assembling_kits",
         checksum="e3371f17a07a012edaa3a0b3604fb1577f3fb921876c3d5ed59733dd75a6b4a0",
     )
-    DATA_GROUPS["AssemblingKits-v1"] = ["assembling_kits"]
-
     DATA_SOURCES["panda_avoid_obstacles"] = DataSource(
         source_type="task_assets",
         url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/avoid_obstacles/panda_train_2k.json.gz",
         target_path="tasks/avoid_obstacles",
         checksum="44dae9a0804172515c290c1f49a1e7e72d76e40201a2c5c7d4a3ccd43b4d5be4",
     )
-    DATA_GROUPS["PandaAvoidObstacles-v1"] = ["panda_avoid_obstacles"]
 
     # ---------------------------------------------------------------------------- #
     # PartNet-mobility
@@ -104,9 +99,9 @@ def initialize_data_sources():
 
     # DATA_GROUPS["OpenCabinetDrawer-v1"] = category_uids["cabinet_drawer"]
     # DATA_GROUPS["OpenCabinetDoor-v1"] = category_uids["cabinet_door"]
-    DATA_GROUPS["PushChair-v1"] = category_uids["chair"]
-    DATA_GROUPS["MoveBucket-v1"] = category_uids["bucket"]
-    DATA_GROUPS["TurnFaucet-v1"] = category_uids["faucet"]
+    # DATA_GROUPS["PushChair-v1"] = category_uids["chair"]
+    # DATA_GROUPS["MoveBucket-v1"] = category_uids["bucket"]
+    # DATA_GROUPS["TurnFaucet-v1"] = category_uids["faucet"]
 
     # ---------------------------------------------------------------------------- #
     # Interactable Scene Datasets

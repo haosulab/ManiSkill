@@ -19,7 +19,9 @@ from mani_skill.utils.structs import Actor, Pose
 from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 
 
-@register_env("AssemblingKits-v1", max_episode_steps=200)
+@register_env(
+    "AssemblingKits-v1", asset_download_ids=["assembling_kits"], max_episode_steps=200
+)
 class AssemblingKitsEnv(BaseEnv):
     SUPPORTED_REWARD_MODES = ["sparse", "none"]
     SUPPORTED_ROBOTS = ["panda_wristcam"]
@@ -64,7 +66,9 @@ class AssemblingKitsEnv(BaseEnv):
 
     @property
     def _default_sim_config(self):
-        return SimConfig(gpu_memory_cfg=GPUMemoryConfig(max_rigid_contact_count=2**20))
+        return SimConfig(
+            gpu_memory_cfg=GPUMemoryConfig(max_rigid_contact_count=2**20)
+        )
 
     @property
     def _default_sensor_configs(self):
