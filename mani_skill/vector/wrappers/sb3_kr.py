@@ -8,18 +8,36 @@ from stable_baselines3.common.vec_env.base_vec_env import (
     VecEnvObs,
     VecEnvStepReturn,
 )
-
+from typing import Dict
 from mani_skill.envs.sapien_env import BaseEnv
+import torch
+ 
 
+def to_cpu_numpy(data: Any) -> Any:
+    if isinstance(data, torch.Tensor):
+        return data.cpu().numpy()
+    elif isinstance(data, dict):
+        return {key: to_cpu_numpy(value) for key, value in data.items()}
+    elif isinstance(data, list):
+        return [to_cpu_numpy(item) for item in data]
+    elif isinstance(data, tuple):
+        return tuple(to_cpu_numpy(item) for item in data)
+    elif isinstance(data, set):
+        return {to_cpu_numpy(item) for item in data}
+    else:
+        return data
 
-def select_index_from_dict(data: dict, i: int):
-    out = dict()
-    for k, v in data.items():
-        if isinstance(v, dict):
-            out[k] = select_index_from_dict(v, i)
-        else:
-            out[k] = v[i]
-    return out
+def select_index_from_dict(data, i: int):
+    if isinstance(data, dict):
+        out={}
+        for k, v in data.items():
+            if isinstance(v, dict):
+                out[k] = select_index_from_dict(v, i)
+            else:
+                out[k] = v[i]
+        return out
+    else:
+        return data[i]
 
 class ManiSkillSB3VectorEnv(SB3VecEnv):
     """A wrapper for to make ManiSkill parallel simulation compatible with SB3 VecEnv"""
@@ -32,36 +50,38 @@ class ManiSkillSB3VectorEnv(SB3VecEnv):
 
     def reset(self) -> VecEnvObs:
         obs,_=self._env.reset(seed=self.seed()[0])
-        return obs
+        return to_cpu_numpy(obs)
 
     def step_async(self, actions: np.ndarray) -> None:
         self.actions=actions
 
     def step_wait(self) -> VecEnvStepReturn:
         vec_obs, rews, terminations, truncations, infos = self._env.step(self.actions)
+        vec_obs,rews,terminations,truncations,infos=to_cpu_numpy(vec_obs),to_cpu_numpy(rews),to_cpu_numpy(terminations),to_cpu_numpy(truncations),to_cpu_numpy(infos)
+        #print(vec_obs, rews, terminations, truncations, infos)
+        new_infos: List[Dict[str, Any]] = [{}] * self.num_envs
         for env_idx in range(self.num_envs):
-            if env_idx not in infos:
-                infos[env_idx] = dict()
-            infos[env_idx]["TimeLimit.truncated"] = (
+            new_infos[env_idx]['is_success']=infos['success'][env_idx]
+
+        for env_idx in range(self.num_envs):
+            new_infos[env_idx]["TimeLimit.truncated"] = (
                 truncations[env_idx] and not terminations[env_idx]
             )
         dones = terminations | truncations
         if not dones.any():
-            return vec_obs, rews, dones, infos
+            return vec_obs, rews, dones, new_infos
 
         for i, done in enumerate(dones):
             if done:
-                # NOTE: ensure that it will not be inplace modified when reset
-                if i not in infos:
-                    infos[i] = dict()
-                infos[i]["terminal_observation"] = select_index_from_dict(vec_obs, i)
+                new_infos[i]["terminal_observation"] = to_cpu_numpy(select_index_from_dict(vec_obs, i))
 
         reset_indices = np.where(dones)[0]
         options=dict()
         options["env_idx"]=reset_indices
 
-        vec_obs = self._env.reset(options=options)
-        return vec_obs, rews, dones, infos
+        vec_obs,_ = self._env.reset(options=options)
+        vec_obs=to_cpu_numpy(vec_obs)
+        return vec_obs, rews, dones, new_infos
 
 
     def close(self) -> None:
@@ -90,3 +110,23 @@ class ManiSkillSB3VectorEnv(SB3VecEnv):
         self, wrapper_class: Type[gym.Wrapper], indices: VecEnvIndices = None
     ) -> List[bool]:
         return [False] * self.num_envs
+    
+    @property
+    def device(self):
+        return self.base_env.device
+
+    @property
+    def base_env(self) -> BaseEnv:
+        return self._env.unwrapped
+
+    @property
+    def unwrapped(self):
+        return self.base_env
+    
+    @property
+    def env(self):
+        return self._env
+    
+    @property
+    def spec(self):
+        return self._env.spec
