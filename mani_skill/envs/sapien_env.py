@@ -197,6 +197,7 @@ class BaseEnv(gym.Env):
                 self._sim_device = sapien.Device("cpu")
         elif sim_backend == "cpu":
             self.device = torch.device("cpu")
+            self._sim_device = sapien.Device("cpu")
         elif sim_backend == "cuda" or sim_backend == "gpu":
             self.device = torch.device(
                 "cuda"
