@@ -58,6 +58,7 @@ class ManiSkillSB3VectorEnv(SB3VecEnv):
     def step_wait(self) -> VecEnvStepReturn:
         vec_obs, rews, terminations, truncations, infos = self._env.step(self.actions)
         vec_obs,rews,terminations,truncations,infos=to_cpu_numpy(vec_obs),to_cpu_numpy(rews),to_cpu_numpy(terminations),to_cpu_numpy(truncations),to_cpu_numpy(infos)
+        terminations=[False]*self.num_envs
         #print(vec_obs, rews, terminations, truncations, infos)
         new_infos: List[Dict[str, Any]] = [{}] * self.num_envs
         for env_idx in range(self.num_envs):
