@@ -18,6 +18,7 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SceneConfig, SimConf
 class QuadrupedReachEnv(BaseEnv):
     SUPPORTED_ROBOTS = ["anymal_c", "unitree_go2_simplified_locomotion"]
     agent: ANYmalC
+    default_qpos: torch.Tensor
 
     _UNDESIRED_CONTACT_LINK_NAMES: List[str] = None
 
@@ -137,7 +138,8 @@ class QuadrupedReachEnv(BaseEnv):
             lin_vel_z_l2 * -2
             + ang_vel_xy_l2 * -0.05
             + self._compute_undesired_contacts() * -1
-            # + torch.linalg.norm(self.agent.robot.qpos - self.default_qpos, axis=1) * -0.5
+            + torch.linalg.norm(self.agent.robot.qpos - self.default_qpos, axis=1)
+            * -0.05
         )
         reward = 2 * reaching_reward + penalties
         reward[info["fail"]] = -100
