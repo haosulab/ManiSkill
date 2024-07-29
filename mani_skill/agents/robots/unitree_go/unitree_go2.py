@@ -42,26 +42,26 @@ class UnitreeGo2(BaseAgent):
     ):
 
         return dict(
+            pd_joint_delta_pos=dict(
+                body=PDJointPosControllerConfig(
+                    [x.name for x in self.robot.active_joints],
+                    lower=-0.7,
+                    upper=0.7,
+                    stiffness=1000,
+                    damping=100,
+                    normalize_action=True,
+                    use_delta=True,
+                ),
+                balance_passive_force=False,
+            ),
             pd_joint_pos=dict(
                 body=PDJointPosControllerConfig(
                     [x.name for x in self.robot.active_joints],
                     lower=None,
                     upper=None,
-                    stiffness=100,
-                    damping=10,
+                    stiffness=1000,
+                    damping=100,
                     normalize_action=False,
-                ),
-                balance_passive_force=False,
-            ),
-            pd_joint_delta_pos=dict(
-                body=PDJointPosControllerConfig(
-                    [x.name for x in self.robot.active_joints],
-                    lower=-0.1,
-                    upper=0.1,
-                    stiffness=20,
-                    damping=5,
-                    normalize_action=True,
-                    use_delta=True,
                 ),
                 balance_passive_force=False,
             ),
@@ -76,8 +76,8 @@ class UnitreeGo2(BaseAgent):
 @register_agent(asset_download_ids=["unitree_go2"])
 class UnitreeGo2Simplified(UnitreeGo2):
     """
-    The UnitreeGo2 robot with heavily simplified collision meshes to enable faster simulation. Collisions are simplified for the purpose of locomotion tasksw
+    The UnitreeGo2 robot with heavily simplified collision meshes to enable faster simulation and easier locomotion.
     """
 
-    uid = "unitree_go2_simplified"
-    urdf_path = f"{ASSET_DIR}/robots/unitree_go2/urdf/go2_description_simplified.urdf"
+    uid = "unitree_go2_simplified_locomotion"
+    urdf_path = f"{ASSET_DIR}/robots/unitree_go2/urdf/go2_description_simplified_locomotion.urdf"

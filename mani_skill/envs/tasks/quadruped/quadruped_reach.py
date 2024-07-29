@@ -4,6 +4,7 @@ import numpy as np
 import torch
 
 from mani_skill.agents.robots.anymal.anymal_c import ANYmalC
+from mani_skill.agents.robots.unitree_go.unitree_go2 import UnitreeGo2Simplified
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
@@ -15,7 +16,7 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SceneConfig, SimConf
 
 
 class QuadrupedReachEnv(BaseEnv):
-    SUPPORTED_ROBOTS = ["anymal_c"]
+    SUPPORTED_ROBOTS = ["anymal_c", "unitree_go2_simplified_locomotion"]
     agent: ANYmalC
 
     _UNDESIRED_CONTACT_LINK_NAMES: List[str] = None
@@ -136,6 +137,7 @@ class QuadrupedReachEnv(BaseEnv):
             lin_vel_z_l2 * -2
             + ang_vel_xy_l2 * -0.05
             + self._compute_undesired_contacts() * -1
+            # + torch.linalg.norm(self.agent.robot.qpos - self.default_qpos, axis=1) * -0.5
         )
         reward = 2 * reaching_reward + penalties
         reward[info["fail"]] = -100
@@ -154,11 +156,17 @@ class AnymalCReachEnv(QuadrupedReachEnv):
 
     def __init__(self, *args, robot_uids="anymal_c", **kwargs):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
+        self.default_qpos = torch.from_numpy(ANYmalC.keyframes["standing"].qpos).to(
+            self.device
+        )
 
 
 @register_env("UnitreeGo2-Reach-v1", max_episode_steps=200)
-class AnymalCReachEnv(QuadrupedReachEnv):
+class UnitreeGo2ReachEnv(QuadrupedReachEnv):
     _UNDESIRED_CONTACT_LINK_NAMES = ["FR_thigh", "RR_thigh", "FL_thigh", "RL_thigh"]
 
-    def __init__(self, *args, robot_uids="unitree_go2_simplified", **kwargs):
+    def __init__(self, *args, robot_uids="unitree_go2_simplified_locomotion", **kwargs):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
+        self.default_qpos = torch.from_numpy(
+            UnitreeGo2Simplified.keyframes["standing"].qpos
+        ).to(self.device)
