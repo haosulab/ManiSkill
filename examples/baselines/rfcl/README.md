@@ -12,7 +12,7 @@ We recommend using conda/mamba and you can install the dependencies as so:
 ```bash
 conda create -n "rfcl" "python==3.9"
 conda activate rfcl
-pip install --upgrade "jax[cuda12_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+pip install "jax[cuda12_pip]==0.4.28" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 pip install -e rfcl_jax
 ```
 
@@ -20,8 +20,10 @@ Then you can install ManiSkill and its dependencies
 
 ```bash
 pip install mani_skill
-pip install torch
+pip install torch==2.3.1
 ```
+
+We recommend installing the specific jax/torch versions in order to ensure they run correctly.
 
 ## Download and Process Dataset
 

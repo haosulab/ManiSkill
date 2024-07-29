@@ -9,7 +9,7 @@ from mani_skill.sensors.camera import CameraConfig
 
 
 # TODO (stao) (xuanlin): Add mobile base, model it properly based on real2sim
-@register_agent()
+@register_agent(asset_download_ids=["googlerobot"])
 class GoogleRobot(BaseAgent):
     uid = "googlerobot"
     urdf_path = (
