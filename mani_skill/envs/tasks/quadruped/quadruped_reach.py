@@ -154,3 +154,11 @@ class AnymalCReachEnv(QuadrupedReachEnv):
 
     def __init__(self, *args, robot_uids="anymal_c", **kwargs):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
+
+
+@register_env("UnitreeGo2-Reach-v1", max_episode_steps=200)
+class AnymalCReachEnv(QuadrupedReachEnv):
+    _UNDESIRED_CONTACT_LINK_NAMES = ["FR_thigh", "RR_thigh", "FL_thigh", "RL_thigh"]
+
+    def __init__(self, *args, robot_uids="unitree_go2_simplified", **kwargs):
+        super().__init__(*args, robot_uids=robot_uids, **kwargs)
