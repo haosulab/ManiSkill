@@ -85,7 +85,7 @@ python ppo.py --env_id="UnitreeG1PlaceAppleInBowl-v1" \
 # is not that optimal although it works.
 python ppo.py --env_id="AnymalC-Reach-v1" \
   --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
-  --total_timesteps=75_000_000 --num-steps=200 --num-eval-steps=200 \
+  --total_timesteps=25_000_000 --num-steps=200 --num-eval-steps=200 \
   --gamma=0.99 --gae_lambda=0.95
 python ppo.py --env_id="UnitreeH1Stand-v1" \
   --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
