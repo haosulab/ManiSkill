@@ -422,6 +422,8 @@ if __name__ == "__main__":
                 episodic_return = final_info['episode']['r'][done_mask].mean().cpu().numpy()
                 if "success" in final_info:
                     writer.add_scalar("charts/success_rate", final_info["success"][done_mask].float().mean().cpu().numpy(), global_step)
+                if "fail" in final_info:
+                    writer.add_scalar("charts/fail_rate", final_info["fail"][done_mask].cpu().numpy().mean(), global_step)
                 writer.add_scalar("charts/episodic_return", episodic_return, global_step)
                 writer.add_scalar("charts/episodic_length", final_info["elapsed_steps"][done_mask].float().mean().cpu().numpy(), global_step)
                 for k in infos["final_observation"]:
