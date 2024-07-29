@@ -345,7 +345,11 @@ class RotateSingleObjectInHandLevel1(RotateSingleObjectInHand):
         )
 
 
-@register_env("RotateSingleObjectInHandLevel2-v1", max_episode_steps=300)
+@register_env(
+    "RotateSingleObjectInHandLevel2-v1",
+    max_episode_steps=300,
+    asset_download_ids=["ycb"],
+)
 class RotateSingleObjectInHandLevel2(RotateSingleObjectInHand):
     def __init__(self, *args, **kwargs):
         super().__init__(
@@ -357,7 +361,11 @@ class RotateSingleObjectInHandLevel2(RotateSingleObjectInHand):
         )
 
 
-@register_env("RotateSingleObjectInHandLevel3-v1", max_episode_steps=300)
+@register_env(
+    "RotateSingleObjectInHandLevel3-v1",
+    max_episode_steps=300,
+    asset_download_ids=["ycb"],
+)
 class RotateSingleObjectInHandLevel3(RotateSingleObjectInHand):
     def __init__(self, *args, **kwargs):
         super().__init__(

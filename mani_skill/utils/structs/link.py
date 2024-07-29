@@ -199,7 +199,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
     def pose(self) -> Pose:
         if physx.is_gpu_enabled():
             raw_pose = self.px.cuda_rigid_body_data.torch()[self._body_data_index, :7]
-            if self.scene.parallel_gui_render_enabled:
+            if self.scene.parallel_in_single_scene:
                 new_xyzs = raw_pose[:, :3] - self.scene.scene_offsets[self._scene_idxs]
                 new_pose = torch.zeros_like(raw_pose)
                 new_pose[:, 3:] = raw_pose[:, 3:]
@@ -214,11 +214,13 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
         if physx.is_gpu_enabled():
             if not isinstance(arg1, torch.Tensor):
                 arg1 = vectorize_pose(arg1)
-            if self.scene.parallel_gui_render_enabled:
+            if self.scene.parallel_in_single_scene:
                 if len(arg1.shape) == 1:
                     arg1 = arg1.view(1, -1)
                 mask = self.scene._reset_mask[self._scene_idxs]
-                new_xyzs = arg1[:, :3] + self.scene.scene_offsets[self._scene_idxs]
+                new_xyzs = (
+                    arg1[:, :3] + self.scene.scene_offsets[self._scene_idxs[mask]]
+                )
                 new_pose = torch.zeros((mask.sum(), 7), device=self.device)
                 new_pose[:, 3:] = arg1[:, 3:]
                 new_pose[:, :3] = new_xyzs

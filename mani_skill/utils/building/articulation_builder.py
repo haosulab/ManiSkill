@@ -126,7 +126,7 @@ class ArticulationBuilder(SapienArticulationBuilder):
 
         articulations = []
         for i, scene_idx in enumerate(self.scene_idxs):
-            if self.scene.parallel_gui_render_enabled:
+            if self.scene.parallel_in_single_scene:
                 sub_scene = self.scene.sub_scenes[0]
             else:
                 sub_scene = self.scene.sub_scenes[scene_idx]

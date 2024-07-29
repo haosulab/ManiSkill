@@ -1,0 +1,81 @@
+#version 450
+
+#include "push_constant.glsl"
+#include "grain.glsl"
+
+layout(set = 0, binding = 0, rgba32f) uniform readonly image2D HdrColor;
+layout(set = 0, binding = 1, rgba32f) uniform writeonly image2D Color;
+
+vec3 Gamma(vec3 x) {
+  return clamp(pow(x, vec3(1/2.2)), 0.0, 1.0);
+}
+
+vec3 sRGB(vec3 x) {
+  bvec3 cutoff = lessThan(x, vec3(0.0031308));
+  vec3 higher = vec3(1.055) * pow(x, vec3(1.0/2.4)) - vec3(0.055);
+  vec3 lower = x * vec3(12.92);
+  return clamp(mix(higher, lower, cutoff), 0.0, 1.0);
+}
+
+const mat3 ACESInputMat = mat3(
+    0.59719, 0.35458, 0.04823,
+    0.07600, 0.90834, 0.01566,
+    0.02840, 0.13383, 0.83777
+);
+
+const mat3 ACESOutputMat = mat3(
+     1.60475, -0.53108, -0.07367,
+    -0.10208,  1.10813, -0.00605,
+    -0.00327, -0.07276,  1.07602
+);
+
+vec3 RRTAndODTFit(vec3 v)
+{
+    vec3 a = v * (v + 0.0245786) - 0.000090537;
+    vec3 b = v * (0.983729 * v + 0.4329510) + 0.238081;
+    return a / b;
+}
+
+vec3 ACESsRGB(vec3 color) {
+    color = color * ACESInputMat;
+    color = RRTAndODTFit(color);
+    color = color * ACESOutputMat;
+    color = clamp(color, 0.0, 1.0);
+    return sRGB(color);
+}
+
+void main() {
+  uint x = gl_GlobalInvocationID.x;
+  uint y = gl_GlobalInvocationID.y;
+  vec4 color = imageLoad(HdrColor, ivec2(gl_GlobalInvocationID.xy));
+
+  // make nan visible for debugging
+  if (isnan(color.x + color.y + color.z)) {
+    color = vec4(1000.0, 0, 1000.0, 1);
+  }
+
+
+  if (toneMapper == 1) {
+    color = vec4(sRGB(color.rgb * exposure), color.a);
+  } else if (toneMapper == 2) {
+    color = vec4(ACESsRGB(color.rgb * exposure), color.a);
+  } else {
+    color = vec4(Gamma(color.rgb * exposure), color.a);
+  }
+
+  //imageStore(Color, ivec2(gl_GlobalInvocationID.xy), color);
+
+  // vec3 backgroundColor = color.rgb;
+  // vec2 resolution = vec2(gl_NumWorkGroups.xy);
+  // vec2 texCoord = vec2(gl_GlobalInvocationID.xy) / resolution;
+
+  // float grainSize = 2.0;
+  // vec3 g = vec3(grain(texCoord, resolution / grainSize));
+  // vec3 color2 = blendSoftLight(backgroundColor, g);
+  // float luminance = luma(backgroundColor);
+  // float response = smoothstep(0.05, 0.5, luminance);
+  // color2.rgb = mix(color2, backgroundColor, pow(response, 2.0));
+  color = mix(vec4(0.282, 0.294, 0.322, 1), color, color.a);
+  imageStore(Color, ivec2(gl_GlobalInvocationID.xy), color);
+  //imageStore(Color, ivec2(gl_GlobalInvocationID.xy), vec4(backgroundColor, color.a));
+}

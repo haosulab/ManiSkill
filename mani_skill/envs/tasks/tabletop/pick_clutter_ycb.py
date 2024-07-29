@@ -196,7 +196,11 @@ class PickClutterEnv(BaseEnv):
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
 
 
-@register_env("PickClutterYCB-v1", max_episode_steps=100)
+@register_env(
+    "PickClutterYCB-v1",
+    asset_download_ids=["ycb", "pick_clutter_ycb_configs"],
+    max_episode_steps=100,
+)
 class PickClutterYCBEnv(PickClutterEnv):
     DEFAULT_EPISODE_JSON = f"{ASSET_DIR}/tasks/pick_clutter/ycb_train_5k.json.gz"
 
