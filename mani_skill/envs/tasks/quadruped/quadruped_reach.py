@@ -65,7 +65,7 @@ class QuadrupedReachEnv(BaseEnv):
         ]
 
     def _load_scene(self, options: dict):
-        self.ground = build_ground(self.scene)
+        self.ground = build_ground(self.scene, floor_width=400)
         self.goal = actors.build_sphere(
             self.scene,
             radius=0.2,
@@ -86,6 +86,7 @@ class QuadrupedReachEnv(BaseEnv):
             xyz[:, 0] = 2.5
             noise_scale = 1
             xyz[:, 0] = torch.rand(size=(b,)) * noise_scale - noise_scale / 2 + 2.5
+            noise_scale = 2
             xyz[:, 1] = torch.rand(size=(b,)) * noise_scale - noise_scale / 2
             self.goal.set_pose(Pose.create_from_pq(xyz))
 

@@ -15,7 +15,7 @@ from mani_skill.utils.structs import Pose
 from mani_skill.utils.structs.actor import Actor
 
 
-@register_agent()
+@register_agent(asset_download_ids=["xmate3_robotiq"])
 class Xmate3Robotiq(BaseAgent):
     uid = "xmate3_robotiq"
     urdf_path = f"{ASSET_DIR}/robots/xmate3_robotiq/xmate3_robotiq.urdf"

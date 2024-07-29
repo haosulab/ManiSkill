@@ -9,7 +9,7 @@ from mani_skill.sensors.camera import CameraConfig
 
 
 # TODO (stao) (xuanlin): model it properly based on real2sim
-@register_agent()
+@register_agent(asset_download_ids=["widowx250s"])
 class WidowX250S(BaseAgent):
     uid = "widowx250s"
     urdf_path = f"{ASSET_DIR}/robots/widowx250s/wx250s.urdf"

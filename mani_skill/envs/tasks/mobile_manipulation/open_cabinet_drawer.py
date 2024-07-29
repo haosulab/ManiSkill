@@ -25,7 +25,11 @@ CABINET_COLLISION_BIT = 29
 
 # TODO (stao): we need to cut the meshes of all the cabinets in this dataset for gpu sim, there may be some wierd physics
 # that may happen although it seems okay for state based RL
-@register_env("OpenCabinetDrawer-v1", max_episode_steps=100)
+@register_env(
+    "OpenCabinetDrawer-v1",
+    asset_download_ids=["partnet_mobility_cabinet"],
+    max_episode_steps=100,
+)
 class OpenCabinetDrawerEnv(BaseEnv):
 
     SUPPORTED_ROBOTS = ["fetch"]
@@ -306,9 +310,9 @@ class OpenCabinetDrawerEnv(BaseEnv):
             self.target_qpos - self.handle_link.joint.qpos, self.target_qpos
         )
         open_reward = 2 * (1 - amount_to_open_left)
-        reaching_reward[amount_to_open_left < 0.999] = (
-            2  # if joint opens even a tiny bit, we don't need reach reward anymore
-        )
+        reaching_reward[
+            amount_to_open_left < 0.999
+        ] = 2  # if joint opens even a tiny bit, we don't need reach reward anymore
         # print(open_reward.shape)
         open_reward[info["open_enough"]] = 3  # give max reward here
         reward = reaching_reward + open_reward

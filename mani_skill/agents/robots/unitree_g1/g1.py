@@ -8,7 +8,7 @@ from mani_skill.agents.registration import register_agent
 from mani_skill.sensors.camera import CameraConfig
 
 
-@register_agent()
+@register_agent(asset_download_ids=["unitree_g1"])
 class UnitreeG1(BaseAgent):
     uid = "unitree_g1"
     urdf_path = f"{ASSET_DIR}/robots/unitree_g1/g1.urdf"
@@ -19,10 +19,7 @@ class UnitreeG1(BaseAgent):
     keyframes = dict(
         standing=Keyframe(
             pose=sapien.Pose(p=[0, 0, 0.755]),
-            qpos=np.array(
-                [0.0] * 37
-            )
-            * 1,
+            qpos=np.array([0.0] * 37) * 1,
         )
     )
 
@@ -112,7 +109,7 @@ class UnitreeG1(BaseAgent):
         return self.robot.pose.p[:, 2] < 0.3
 
 
-@register_agent()
+@register_agent(asset_download_ids=["unitree_g1"])
 class UnitreeG1Simplified(UnitreeG1):
     uid = "unitree_g1_simplified_legs"
     urdf_path = f"{ASSET_DIR}/robots/unitree_g1/g1_simplified_legs.urdf"
