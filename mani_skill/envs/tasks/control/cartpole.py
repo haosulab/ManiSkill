@@ -105,13 +105,6 @@ class CartpoleEnv(BaseEnv):
     def _default_human_render_camera_configs(self):
         pose = sapien_utils.look_at(eye=[0, -4, 1], target=[0, 0, 1])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
-
-    @property
-    def _default_voxel_config(self):
-        return {"coord_bounds": [-1, -1, -1, 2, 2, 2],
-                    "voxel_size": 200, 
-                    "device": torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
-                    "segmentation": True}
     
     def _load_scene(self, options: dict):
         loader = self.scene.create_mjcf_loader()

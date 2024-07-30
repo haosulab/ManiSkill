@@ -155,7 +155,7 @@ alt: Corresponding RGBD observations
 For a quick demo to visualize voxel grids, you can run
 
 ```bash
-python -m mani_skill.examples.demo_vis_voxel -e "PushCube-v1" --voxel-size 200 --zoom-factor 2 --coord-bounds -1 -1 -1 2 2 2 --device cuda
+python -m mani_skill.examples.demo_vis_voxel -e "PushCube-v1" --voxel-size 200 --zoom-factor 2 --coord-bounds -1 -1 -1 2 2 2 --segmentation --device cuda
 ```
 
 to override the default observation mode config kwargs. Or simply 
@@ -166,13 +166,13 @@ python -m mani_skill.examples.demo_vis_voxel -e "PushCube-v1"
 
 When using the default kwarg settings to override the default task obs_mode_config settings. 
 
-If you don't want any override to occur and only want to use the default task obs_mode_config settings, you can run
+If you don't want any override to occur and only want to use the default task obs_mode_config settings (defined in the **_default_voxel_config** property of each task), you can run
 
 ```bash
 python -m mani_skill.examples.demo_vis_voxel -e "PushCube-v1" --use-default True
 ```
 
-Note that this only works for simple tabletop tasks like PickCube-v1 and PushCube-v1. You still need to tune those configs for your own task and use your customized configs when needed.
+Note that this only works for some tabletop tasks like PickCube-v1 and PushCube-v1. You still need to tune those configs for your own task and use your customized configs when needed.
 
 Furthermore, if you use more sensors (currently only RGB and depth cameras) to film the scene and collect more point cloud and RGB data from different poses, you can get a more accurate voxel grid reconstruction of the scene. Figure below gives a more completely reconstructed voxel scene of PushCube-v1 using more RGBD cameras.
 
