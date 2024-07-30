@@ -3,7 +3,7 @@
 <!-- TODO: add link to new sapien website eventually -->
 ManiSkill is a robotics simulator built on top of SAPIEN. It provides a standard Gym/Gymnasium interface for easy use with existing learning workflows like RL and imitation learning. Moreover ManiSkill supports simulation on both the GPU and CPU, as well as fast parallelized rendering.
 
-## Gym Interface
+## Interface
 
 Here is a basic example of how to run a ManiSkill task following the interface of [Gymnasium](https://gymnasium.farama.org/) and execute a random policy.
 
@@ -31,7 +31,7 @@ while not done:
 env.close()
 ```
 
-Changing `num_envs` to a value > 1 will automatically turn on the GPU simulation mode. More quick details [covered below](#gpu-parallelizedvectorized-tasks)
+Changing `num_envs` to a value > 1 will automatically turn on the GPU simulation mode. More quick details [covered below](#gpu-parallelizedvectorized-tasks). You will also notice that all data returned is a batched torch tensor. To have the exact same API defined by [gym/gymnasium](https://gymnasium.farama.org/) see the section on [reinforcement learning setups](../reinforcement_learning/setup.md)
 
 You can also run the same code from the command line to demo random actions
 
@@ -73,9 +73,9 @@ python -m mani_skill.examples.demo_random_action -e "ReplicaCAD_SceneManipulatio
 You may notice that everything returned by the environment is a torch Tensor and has a batch dimension with value 1. To reduce extra code handling numpy vs torch, cpu vs gpu sim, everything in ManiSkill defaults to serving/using batched torch Tensors of all data. To change the environment to serve numpy, unbatched data simply do the following
 
 ```python
-from mani_skill.utils.wrappers.gymnasium import ManiSkillCPUGymWrapper
+from mani_skill.utils.wrappers.gymnasium import CPUGymWrapper
 env = gym.make(env_id)
-env = ManiSkillCPUGymWrapper(env)
+env = CPUGymWrapper(env)
 obs, _ = env.reset() # obs is numpy and unbatched
 ```
 

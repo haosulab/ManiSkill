@@ -1,4 +1,4 @@
-# Workflows
+# RL / IL Workflows
 
 We provide a number of tuned baselines/workflows for robot learning and training autonomous policies to solve robotics tasks. These span learning from demonstrations/imitation learning and reinforcement learning.
 
