@@ -153,7 +153,7 @@ def initialize_data_sources():
     )
     DATA_SOURCES["unitree_go2"] = DataSource(
         source_type="robot",
-        url="https://github.com/haosulab/ManiSkill-UnitreeGo2/archive/refs/tags/v0.1.0.zip",
+        url="https://github.com/haosulab/ManiSkill-UnitreeGo2/archive/refs/tags/v0.1.1.zip",
         target_path="robots/unitree_go2",
     )
     DATA_SOURCES["stompy"] = DataSource(
@@ -179,10 +179,10 @@ def expand_data_group_into_individual_data_source_ids(data_group_id: str):
 
     def helper(uid):
         nonlocal uids
-        if uid in DATA_GROUPS:
-            [helper(x) for x in DATA_GROUPS[uid]]
-        elif uid in DATA_SOURCES:
+        if uid in DATA_SOURCES:
             uids.append(uid)
+        elif uid in DATA_GROUPS:
+            [helper(x) for x in DATA_GROUPS[uid]]
 
     for uid in DATA_GROUPS[data_group_id]:
         helper(uid)

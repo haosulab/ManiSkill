@@ -36,6 +36,7 @@ class ManiSkillScene:
         debug_mode: bool = True,
         device: Device = None,
         parallel_in_single_scene: bool = False,
+        shader_dir: str = "default",
     ):
         if sub_scenes is None:
             sub_scenes = [sapien.Scene()]
@@ -47,6 +48,7 @@ class ManiSkillScene:
         self._gpu_sim_initialized = False
         self.debug_mode = debug_mode
         self.device = device
+        self.shader_dir = shader_dir
 
         self.render_system_group: sapien.render.RenderSystemGroup = None
         self.camera_groups: Dict[str, sapien.render.RenderCameraGroup] = dict()
@@ -826,3 +828,45 @@ class ManiSkillScene:
         for name, sensor in self.sensors.items():
             sensor_data[name] = sensor.get_images()
         return sensor_data
+
+    def get_human_render_camera_images(
+        self, camera_name: str = None
+    ) -> Dict[str, Dict[str, torch.Tensor]]:
+        image_data = dict()
+        if physx.is_gpu_enabled():
+            if self.parallel_in_single_scene:
+                for name, camera in self.human_render_cameras.items():
+                    camera.camera._render_cameras[0].take_picture()
+                    # TODO (stao): in the future shaders will be handled more cleanly
+                    if self.shader_dir == "default":
+                        rgb = common.to_tensor(
+                            camera.camera._render_cameras[0].get_picture("Color")
+                        )[None, ...]
+                        rgb = (rgb[..., :3]).to(torch.uint8)
+                    else:
+                        rgb = common.to_tensor(
+                            camera.camera._render_cameras[0].get_picture("Color")
+                        )[None, ...]
+                        rgb = (rgb[..., :3] * 255).to(torch.uint8)
+                    image_data[name] = rgb
+            else:
+                for name in self.human_render_cameras.keys():
+                    camera_group = self.camera_groups[name]
+                    if camera_name is not None and name != camera_name:
+                        continue
+                    camera_group.take_picture()
+                    rgb = (
+                        camera_group.get_picture_cuda("Color").torch()[..., :3].clone()
+                    )
+                    image_data[name] = rgb
+        else:
+            for name, camera in self.human_render_cameras.items():
+                if camera_name is not None and name != camera_name:
+                    continue
+                camera.capture()
+                if self.shader_dir == "default":
+                    rgb = (camera.get_picture("Color")[..., :3]).to(torch.uint8)
+                else:
+                    rgb = (camera.get_picture("Color")[..., :3] * 255).to(torch.uint8)
+                image_data[name] = rgb
+        return image_data
