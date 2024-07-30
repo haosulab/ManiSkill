@@ -46,6 +46,7 @@ class ManiSkillVectorEnv(VectorEnv):
             num_envs = self.base_env.num_envs
         self.auto_reset = auto_reset
         self.ignore_terminations = ignore_terminations
+        self.spec = self._env.spec
         super().__init__(
             num_envs, self._env.single_observation_space, self._env.single_action_space
         )
