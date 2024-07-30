@@ -11,7 +11,7 @@ from mani_skill.utils import sapien_utils
 from mani_skill.utils.structs.articulation import Articulation
 
 
-@register_agent()
+@register_agent(asset_download_ids=["anymal_c"])
 class ANYmalC(BaseAgent):
     uid = "anymal_c"
     urdf_path = f"{ASSET_DIR}/robots/anymal_c/urdf/anymal.urdf"
@@ -58,17 +58,17 @@ class ANYmalC(BaseAgent):
 
     @property
     def _controller_configs(self):
-        self.arm_stiffness = 80.0
-        self.arm_damping = 2.0
-        self.arm_force_limit = 100
+        self.stiffness = 80.0
+        self.damping = 2.0
+        self.force_limit = 100
         # delta action scale for Omni Isaac Gym Envs is self.dt * self.action_scale = 1/60 * 13.5. NOTE that their self.dt value is not the same as the actual DT used in sim...., they use default of 1/100
         pd_joint_delta_pos = PDJointPosControllerConfig(
             self.joint_names,
             -0.225,
             0.225,
-            self.arm_stiffness,
-            self.arm_damping,
-            self.arm_force_limit,
+            self.stiffness,
+            self.damping,
+            self.force_limit,
             normalize_action=True,
             use_delta=True,
         )
@@ -76,9 +76,9 @@ class ANYmalC(BaseAgent):
             self.joint_names,
             None,
             None,
-            self.arm_stiffness,
-            self.arm_damping,
-            self.arm_force_limit,
+            self.stiffness,
+            self.damping,
+            self.force_limit,
             normalize_action=False,
             use_delta=False,
         )

@@ -1,21 +1,21 @@
 from dataclasses import dataclass
-from typing import Dict
+from typing import Dict, List
 
 from mani_skill import logger
 from mani_skill.agents.base_agent import BaseAgent
+from mani_skill.utils import assets
 
 
 @dataclass
 class AgentSpec:
-    """Agent specifications. At the moment it is a simple wrapper around the agent_cls but the dataclass is used in case we may need additional metadata"""
-
     agent_cls: type[BaseAgent]
+    asset_download_ids: List[str]
 
 
 REGISTERED_AGENTS: Dict[str, AgentSpec] = {}
 
 
-def register_agent(override=False):
+def register_agent(asset_download_ids: List[str] = [], override=False):
     """A decorator to register agents into ManiSkill so they can be used easily by string uid.
 
     Args:
@@ -34,7 +34,10 @@ def register_agent(override=False):
                 )
             return agent_cls
 
-        REGISTERED_AGENTS[agent_cls.uid] = AgentSpec(agent_cls=agent_cls)
+        REGISTERED_AGENTS[agent_cls.uid] = AgentSpec(
+            agent_cls=agent_cls, asset_download_ids=asset_download_ids
+        )
+        assets.DATA_GROUPS[agent_cls.uid] = asset_download_ids
         return agent_cls
 
     return _register_agent

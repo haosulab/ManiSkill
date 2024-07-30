@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, Sequence, Union
 
@@ -85,6 +86,10 @@ def update_camera_cfgs_from_dict(
         cfg = camera_cfgs[name]
         for kk in v:
             assert hasattr(cfg, kk), f"{kk} is not a valid attribute of CameraConfig"
+        v = copy.deepcopy(v)
+        # for json serailizable gym.make args, user has to pass a list, not a Pose object.
+        if "pose" in v and isinstance(v["pose"], list):
+            v["pose"] = sapien.Pose(v["pose"][:3], v["pose"][3:])
         cfg.__dict__.update(v)
 
 
@@ -160,7 +165,6 @@ class Camera(BaseSensor):
                 near=camera_cfg.near,
                 far=camera_cfg.far,
             )
-
         # Filter texture names according to renderer type if necessary (legacy for Kuafu)
         self.texture_names = camera_cfg.texture_names
 
