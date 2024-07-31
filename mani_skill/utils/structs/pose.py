@@ -235,7 +235,7 @@ class Pose:
 
 
 def vectorize_pose(
-    pose: Union[sapien.Pose, Pose, Array], device: Device
+    pose: Union[sapien.Pose, Pose, Array], device: Optional[Device] = None
 ) -> torch.Tensor:
     """
     Maps several formats of Pose representation to the appropriate tensor representation
