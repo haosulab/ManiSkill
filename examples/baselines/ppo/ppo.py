@@ -342,7 +342,8 @@ if __name__ == "__main__":
                 logger.add_scalar("train/return", episodic_return.cpu().numpy().mean(), global_step)
                 logger.add_scalar("train/episode_len", episode_len.cpu().numpy().mean(), global_step)
                 logger.add_scalar("train/reward", (episodic_return.sum() / episode_len.sum()).cpu().numpy().mean(), global_step)
-                final_values[step, torch.arange(args.num_envs, device=device)[done_mask]] = agent.get_value(infos["final_observation"][done_mask]).view(-1)
+                with torch.no_grad():
+                    final_values[step, torch.arange(args.num_envs, device=device)[done_mask]] = agent.get_value(infos["final_observation"][done_mask]).view(-1)
         rollout_time = time.time() - rollout_time
         # bootstrap value according to termination and truncation
         with torch.no_grad():
