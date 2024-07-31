@@ -50,6 +50,8 @@ class HumanoidEnv(BaseEnv):
             scene_cfg=SceneConfig(
                 solver_position_iterations=4, solver_velocity_iterations=1
             ),
+            sim_freq=200,
+            control_freq=40,
         )
 
     # @property
@@ -88,34 +90,21 @@ class HumanoidEnv(BaseEnv):
         """Returns the height of the head."""
         return self.agent.robot.links_map["head"].pose.p[:, -1]
 
-    @property
-    def torso_upright(self):
+    def torso_upright(self, info):
         # print("rot_mat")
         # print(self.agent.robot.links_map["torso"].pose.to_transformation_matrix())
         # print("rot_mat_zz", self.agent.robot.links_map["torso"].pose.to_transformation_matrix()[:,2,2])
         # print("rot_mat.shape", self.agent.robot.links_map["torso"].pose.to_transformation_matrix().shape)
-        return self.agent.robot.links_map["torso"].pose.to_transformation_matrix()[
-            :, 2, 2
-        ]
+        return info["torso_xmat"][:, 2, 2]
 
     # not sure this is correct - are our pose rotations the same as mujocos?
     # test out the transpose (taking column instead of row)
     # right now, it should represnt the z axis of global in the local frame - hm, no, this should be correct
-    @property
-    def torso_vertical_orientation(self):
-        return (
-            self.agent.robot.links_map["torso"]
-            .pose.to_transformation_matrix()[:, 2, :3]
-            .view(-1, 3)
-        )
+    def torso_vertical_orientation(self, info):
+        return info["torso_xmat"][:, 2, :3].view(-1, 3)
 
-    @property
-    def extremities(self):
-        torso_frame = (
-            self.agent.robot.links_map["torso"]
-            .pose.to_transformation_matrix()[:, :3, :3]
-            .view(-1, 3, 3)
-        )
+    def extremities(self, info):
+        torso_frame = info["torso_xmat"][:, :3, :3].view(-1, 3, 3)
         torso_pos = self.agent.robot.links_map["torso"].pose.p
         positions = []
         for side in ("left_", "right_"):
@@ -146,9 +135,16 @@ class HumanoidEnv(BaseEnv):
         return dict(
             agent=self._get_obs_agent(),  # dm control blocks out first 7 qpos, happens by default for us, includes qpos & qvel
             head_height=self.head_height,  # (b,1)
-            extremities=self.extremities,  # (b, 4, 3)
-            torso_vertical=self.torso_vertical_orientation,  # (b, 3)
+            extremities=self.extremities(info),  # (b, 4, 3)
+            torso_vertical=self.torso_vertical_orientation(info),  # (b, 3)
             com_velocity=self.center_of_mass_velocity,  # (b, 3)
+        )
+
+    def evaluate(self) -> Dict:
+        return dict(
+            torso_xmat=self.agent.robot.links_map[
+                "torso"
+            ].pose.to_transformation_matrix()
         )
 
     def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
@@ -159,7 +155,7 @@ class HumanoidEnv(BaseEnv):
             margin=_STAND_HEIGHT / 4,
         )
         upright = rewards.tolerance(
-            self.torso_upright,
+            self.torso_upright(info),
             lower=0.9,
             upper=float("inf"),
             sigmoid="linear",
@@ -202,73 +198,18 @@ class HumanoidEnv(BaseEnv):
     def _initialize_episode(self, env_idx: torch.Tensor, options: Dict):
         with torch.device(self.device):
             b = len(env_idx)
-            #     # qpos sampled same as dm_control, but ensure no self intersection explicitly here
-            #     random_qpos = torch.rand(b, self.agent.robot.dof[0])
-            #     q_lims = self.agent.robot.get_qlimits()
-            #     q_ranges = q_lims[..., 1] - q_lims[..., 0]
-            #     random_qpos *= q_ranges
-            #     random_qpos += q_lims[..., 0]
+            # set agent root pose - torso now centered at dummy root at (0,0,0)
+            pose = Pose.create_from_pq(
+                p=[0, 0, 1.5], q=randomization.random_quaternions(b)
+            )
+            self.agent.robot.set_root_pose(pose)
+            # set randomized qpos
+            random_qpos = torch.rand(b, self.agent.robot.dof[0])
+            q_lims = self.agent.robot.get_qlimits()
+            q_ranges = q_lims[..., 1] - q_lims[..., 0]
+            random_qpos *= q_ranges
+            random_qpos += q_lims[..., 0]
+            self.agent.reset(random_qpos)
 
-            #     # overwrite planar joint qpos - these are special for planar robots
-            #     # first two joints are dummy rootx and rootz
-            #     random_qpos[:, :2] = 0
-            #     # y is axis of rotation of our planar robot (xz plane), so we randomize around it
-            #     random_qpos[:, 2] = torch.pi * (2 * torch.rand(b) - 1)  # (-pi,pi)
-            # self.agent.reset(self.agent.keyframes["squat"].qpos)
-            pos = sapien.Pose(p=[0, 0, 0], q=[1, 0, 0, 0])
-            self.agent.robot.set_root_pose(pos)
-            self.agent.reset(torch.zeros(b, self.agent.robot.dof[0]))
-        # @pass
-
-    # @property  # dm_control mjc function adapted for maniskill
-    # def height(self):
-    #     """Returns relative height of the robot"""
-    #     return (
-    #         self.agent.robot.links_map["torso"].pose.p[:, -1]
-    #         - self.agent.robot.links_map["foot_heel"].pose.p[:, -1]
-    #     ).view(-1, 1)
-
-    # # dm_control mjc function adapted for maniskill
-    # def touch(self, link_name):
-    #     """Returns function of sensor force values"""
-    #     force_vec = self.agent.robot.get_net_contact_forces([link_name])
-    #     force_mag = torch.linalg.norm(force_vec, dim=-1)
-    #     return torch.log1p(force_mag)
-
-
-# @register_env("MS-humanoidStand-v1", max_episode_steps=600)
-# class humanoidStandEnv(humanoidEnv):
-#     def __init__(self, *args, **kwargs):
-#         super().__init__(*args, **kwargs)
-
-#     def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
-#         standing = rewards.tolerance(self.height, lower=_STAND_HEIGHT, upper=2.0)
-#         return standing.view(-1)
-
-#     def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
-#         # this should be equal to compute_dense_reward / max possible reward
-#         max_reward = 1.0
-#         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
-
-
-# @register_env("MS-humanoidHop-v1", max_episode_steps=600)
-# class humanoidHopEnv(humanoidEnv):
-#     def __init__(self, *args, **kwargs):
-#         super().__init__(*args, **kwargs)
-
-#     def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
-#         standing = rewards.tolerance(self.height, lower=_STAND_HEIGHT, upper=2.0)
-#         hopping = rewards.tolerance(
-#             self.subtreelinvelx,
-#             lower=_HOP_SPEED,
-#             upper=float("inf"),
-#             margin=_HOP_SPEED / 2,
-#             value_at_margin=0.5,
-#             sigmoid="linear",
-#         )
-
-#         return standing.view(-1) * hopping.view(-1)
-
-#     def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
-#         max_reward = 1.0
-#         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
+            # print("forces", self.agent.robot.get_net_contact_forces(self.agent.robot.links_map.keys()).sum())
+            # self.agent.robot.collision
