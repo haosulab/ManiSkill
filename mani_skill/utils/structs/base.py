@@ -53,7 +53,10 @@ class BaseStruct(Generic[T]):
 
     @property
     def device(self):
-        return self.scene.device
+        if physx.is_gpu_enabled():
+            return torch.device("cuda")
+        else:
+            return torch.device("cpu")
 
     @property
     def _num_objs(self):
@@ -105,7 +108,7 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
         """a list of indexes of each GPU rigid body in the `px.cuda_rigid_body_data` buffer, one for each element in `self._objs`"""
         if self._body_data_index_internal is None:
             self._body_data_index_internal = torch.tensor(
-                [body.gpu_pose_index for body in self._bodies], device=self.device
+                [body.gpu_pose_index for body in self._bodies], device="cuda"
             )
         return self._body_data_index_internal
 

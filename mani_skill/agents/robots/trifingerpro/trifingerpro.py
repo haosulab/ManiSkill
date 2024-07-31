@@ -164,7 +164,7 @@ class TriFingerPro(BaseAgent):
         """
         Get the tip pose for each of the finger, three fingers in total
         """
-        tip_poses = [vectorize_pose(link.pose, device=self.device) for link in self.tip_links]
+        tip_poses = [vectorize_pose(link.pose) for link in self.tip_links]
         return torch.stack(tip_poses, dim=-1)
 
     # @property

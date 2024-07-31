@@ -3,7 +3,7 @@ Common utilities often reused for internal code and task building for users.
 """
 
 from collections import defaultdict
-from typing import Dict, Optional, Sequence, Tuple, Union
+from typing import Dict, Sequence, Tuple, Union
 
 import gymnasium as gym
 import numpy as np
@@ -124,7 +124,7 @@ def index_dict_array(x1, idx: Union[int, slice], inplace=True):
 
 
 # TODO (stao): this code can be simplified
-def to_tensor(array: Union[torch.Tensor, np.array, Sequence], device: Optional[Device] = None):
+def to_tensor(array: Union[torch.Tensor, np.array, Sequence], device: Device = None):
     """
     Maps any given sequence to a torch tensor on the CPU/GPU. If physx gpu is not enabled then we use CPU, otherwise GPU, unless specified
     by the device argument
@@ -149,10 +149,7 @@ def to_tensor(array: Union[torch.Tensor, np.array, Sequence], device: Optional[D
         else:
             ret = torch.tensor(array)
         if device is None:
-            if ret.device.type == "cpu":
-                return ret.cuda()
-            # keep same device if already on GPU
-            return ret
+            return ret.cuda()
         else:
             return ret.to(device)
     else:

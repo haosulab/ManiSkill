@@ -504,7 +504,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     @cached_property
     def dof(self) -> torch.tensor:
-        return torch.tensor([obj.dof for obj in self._objs], device=self.device)
+        return torch.tensor([obj.dof for obj in self._objs])
 
     # @property
     # def gpu_index(self) -> int:
@@ -580,7 +580,10 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             ]
         )
         padded_qlimits = torch.from_numpy(padded_qlimits).float()
-        return padded_qlimits.to(self.device)
+        if physx.is_gpu_enabled():
+            return padded_qlimits.cuda()
+        else:
+            return padded_qlimits
 
     @property
     def qpos(self):

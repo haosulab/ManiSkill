@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from typing import List, Union
 
-from git import Optional
 import numpy as np
 import sapien
 import sapien.physx as physx
@@ -95,11 +94,11 @@ class Pose:
 
     @classmethod
     def create(
-        cls, pose: Union[torch.Tensor, sapien.Pose, List[sapien.Pose], "Pose"], device: Optional[Device] = None
+        cls, pose: Union[torch.Tensor, sapien.Pose, List[sapien.Pose], "Pose"]
     ) -> "Pose":
         if isinstance(pose, sapien.Pose):
             raw_pose = torch.hstack(
-                [common.to_tensor(pose.p, device=device), common.to_tensor(pose.q, device=device)]
+                [common.to_tensor(pose.p), common.to_tensor(pose.q)]
             )
             return cls(raw_pose=add_batch_dim(raw_pose))
         elif isinstance(pose, cls):
@@ -110,8 +109,8 @@ class Pose:
             for p in pose:
                 ps.append(p.p)
                 qs.append(p.q)
-            ps = common.to_tensor(ps, device=device)
-            qs = common.to_tensor(qs, device=device)
+            ps = common.to_tensor(ps)
+            qs = common.to_tensor(qs)
             return cls(raw_pose=torch.hstack([ps, qs]))
 
         else:
@@ -136,11 +135,6 @@ class Pose:
     @property
     def device(self):
         return self.raw_pose.device
-
-    def to(self, device: Device):
-        if self.raw_pose.device == device:
-            return self
-        return Pose.create(self.raw_pose.to(device))
 
     # -------------------------------------------------------------------------- #
     # Functions from sapien.Pose
@@ -230,21 +224,21 @@ class Pose:
     #     pass
 
 
-def vectorize_pose(pose: Union[sapien.Pose, Pose, Array], device: Device) -> torch.Tensor:
+def vectorize_pose(pose: Union[sapien.Pose, Pose, Array]) -> torch.Tensor:
     """
     Maps several formats of Pose representation to the appropriate tensor representation
     """
     if isinstance(pose, sapien.Pose):
         if physx.is_gpu_enabled():
             return torch.concatenate(
-                [common.to_tensor(pose.p, device=device), common.to_tensor(pose.q, device=device)]
+                [common.to_tensor(pose.p), common.to_tensor(pose.q)]
             )
         else:
             return np.hstack([pose.p, pose.q])
     elif isinstance(pose, Pose):
         return pose.raw_pose
     else:
-        return common.to_tensor(pose, device=device)
+        return common.to_tensor(pose)
 
 
 def to_sapien_pose(pose: Union[torch.Tensor, sapien.Pose, Pose]) -> sapien.Pose:
