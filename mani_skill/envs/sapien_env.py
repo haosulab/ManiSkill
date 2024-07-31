@@ -718,7 +718,6 @@ class BaseEnv(gym.Env):
         if reconfigure:
             with torch.random.fork_rng():
                 torch.manual_seed(seed=self._episode_seed)
-                gc.collect() # force gc to collect which releases most GPU memory
                 self._reconfigure(options)
                 self._after_reconfigure(options)
 
@@ -985,10 +984,10 @@ class BaseEnv(gym.Env):
         self._human_render_cameras = dict()
         self.scene = None
         self._hidden_objects = []
+        gc.collect() # force gc to collect which releases most GPU memory
 
     def close(self):
         self._clear()
-        gc.collect()  # force gc to collect which releases most GPU memory
 
     def _close_viewer(self):
         if self._viewer is None:

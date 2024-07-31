@@ -52,7 +52,7 @@ class ManiSkillVectorEnv(VectorEnv):
         )
         if not self.ignore_terminations and auto_reset:
             assert (
-                self.base_env.reconfiguration_freq is None
+                self.base_env.reconfiguration_freq == 0
             ), "With partial resets, environment cannot be reconfigured automatically"
         self.returns = torch.zeros(self.num_envs, device=self.base_env.device)
 
