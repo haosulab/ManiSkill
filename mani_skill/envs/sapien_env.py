@@ -718,6 +718,7 @@ class BaseEnv(gym.Env):
         if reconfigure:
             with torch.random.fork_rng():
                 torch.manual_seed(seed=self._episode_seed)
+                gc.collect() # force gc to collect which releases most GPU memory
                 self._reconfigure(options)
                 self._after_reconfigure(options)
 
