@@ -51,23 +51,68 @@ class Humanoid(BaseAgent):
 
     @property
     def _controller_configs(self):
+        # pd_joint_pos = PDJointPosControllerConfig(
+        #     [x.name for x in self.robot.active_joints],
+        #     lower=None,
+        #     upper=None,
+        #     stiffness=100,
+        #     damping=10,
+        #     normalize_action=False,
+        # )
         pd_joint_pos = PDJointPosControllerConfig(
             [x.name for x in self.robot.active_joints],
             lower=None,
             upper=None,
-            stiffness=100,
+            stiffness=1000,
             damping=10,
             normalize_action=False,
         )
-        pd_joint_delta_pos = PDJointPosControllerConfig(
+        # pd_joint_delta_pos = PDJointPosControllerConfig(
+        #     [j.name for j in self.robot.active_joints],
+        #     -1,
+        #     1,
+        #     damping=5,
+        #     stiffness=20,
+        #     force_limit=100,
+        #     use_delta=True,
+        # )
+
+        # pd_joint_delta_pos = PDJointPosControllerConfig( #instantly causes error
+        #     [j.name for j in self.robot.active_joints],
+        #     -2,
+        #     2,
+        #     damping=50,
+        #     stiffness=500,
+        #     force_limit=20000000,
+        #     use_delta=True,
+        # )
+        # pd_joint_delta_pos = PDJointPosControllerConfig( #best yet, almost there
+        #     [j.name for j in self.robot.active_joints],
+        #     -3,
+        #     3,
+        #     damping=5,
+        #     stiffness=100,
+        #     force_limit=20000000,
+        #     use_delta=True,
+        # )
+        pd_joint_delta_pos = PDJointPosControllerConfig(  # best yet, almost there
             [j.name for j in self.robot.active_joints],
             -1,
             1,
-            damping=5,
-            stiffness=20,
-            force_limit=100,
+            damping=10,
+            stiffness=200,
+            force_limit=200,
             use_delta=True,
         )
+        # pd_joint_delta_pos = PDJointPosControllerConfig( #eventually causes error
+        #     [j.name for j in self.robot.active_joints],
+        #     -1,
+        #     1,
+        #     damping=10,
+        #     stiffness=1000,
+        #     force_limit=200,
+        #     use_delta=True,
+        # )
         return deepcopy_dict(
             dict(
                 pd_joint_pos=dict(body=pd_joint_pos, balance_passive_force=False),
