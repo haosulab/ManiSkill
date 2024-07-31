@@ -2,7 +2,7 @@ import copy
 import gc
 import os
 from functools import cached_property
-from typing import Any, Dict, List, Sequence, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import dacite
 import gymnasium as gym
@@ -423,7 +423,7 @@ class BaseEnv(gym.Env):
     def obs_mode(self):
         return self._obs_mode
 
-    def get_obs(self, info: Dict = None):
+    def get_obs(self, info: Optional[Dict] = None):
         """
         Return the current observation of the environment. User may call this directly to get the current observation
         as opposed to taking a step with actions in the environment.
@@ -581,7 +581,6 @@ class BaseEnv(gym.Env):
         self._setup_scene()
         self._load_agent(options)
         self._load_scene(options)
-
         self._load_lighting(options)
 
         if physx.is_gpu_enabled():

@@ -8,12 +8,8 @@ from mani_skill import PACKAGE_ASSET_DIR
 from mani_skill.agents.base_agent import BaseAgent
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
-from mani_skill.agents.utils import (
-    get_active_joint_indices,
-)
-from mani_skill.utils.sapien_utils import (
-    get_objs_by_names,
-)
+from mani_skill.agents.utils import get_active_joint_indices
+from mani_skill.utils.sapien_utils import get_objs_by_names
 from mani_skill.utils.structs.pose import vectorize_pose
 
 
@@ -23,6 +19,7 @@ class TriFingerPro(BaseAgent):
     Modified from https://github.com/NVIDIA-Omniverse/IsaacGymEnvs/blob/main/isaacgymenvs/tasks/trifinger.py
 
     """
+
     uid = "trifingerpro"
     urdf_path = f"{PACKAGE_ASSET_DIR}/robots/trifinger/trifingerpro.urdf"
     urdf_config = dict(
@@ -66,8 +63,16 @@ class TriFingerPro(BaseAgent):
         self.joint_stiffness = 1e2
         self.joint_damping = 1e1
         self.joint_force_limit = 2e1
-        self.tip_link_names = ["finger_tip_link_0", "finger_tip_link_120", "finger_tip_link_240"]
-        self.root_joint_names = ["finger_base_to_upper_joint_0", "finger_base_to_upper_joint_120", "finger_base_to_upper_joint_240"]
+        self.tip_link_names = [
+            "finger_tip_link_0",
+            "finger_tip_link_120",
+            "finger_tip_link_240",
+        ]
+        self.root_joint_names = [
+            "finger_base_to_upper_joint_0",
+            "finger_base_to_upper_joint_120",
+            "finger_base_to_upper_joint_240",
+        ]
 
         super().__init__(*args, **kwargs)
 
@@ -164,7 +169,9 @@ class TriFingerPro(BaseAgent):
         """
         Get the tip pose for each of the finger, three fingers in total
         """
-        tip_poses = [vectorize_pose(link.pose) for link in self.tip_links]
+        tip_poses = [
+            vectorize_pose(link.pose, device=self.device) for link in self.tip_links
+        ]
         return torch.stack(tip_poses, dim=-1)
 
     # @property
