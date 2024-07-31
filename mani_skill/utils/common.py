@@ -152,6 +152,7 @@ def to_tensor(
             ret = torch.tensor(array)
         if device is None:
             if ret.device.type == "cpu":
+                # TODO (stao): note that .cuda does move a tensor to the torch.device context, it moves to the default
                 return ret.cuda()
             # keep same device if already on GPU
             return ret
