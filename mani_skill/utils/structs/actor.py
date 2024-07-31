@@ -327,7 +327,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
     def pose(self, arg1: Union[Pose, sapien.Pose, Array]) -> None:
         if physx.is_gpu_enabled():
             if not isinstance(arg1, torch.Tensor):
-                arg1 = vectorize_pose(arg1)
+                arg1 = vectorize_pose(arg1, device=self.device)
             if self.hidden:
                 self.before_hide_pose[self.scene._reset_mask[self._scene_idxs]] = arg1
                 return

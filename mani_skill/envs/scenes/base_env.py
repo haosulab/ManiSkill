@@ -111,18 +111,17 @@ class SceneManipulationEnv(BaseEnv):
             self.scene_builder.build()
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
-        with torch.device(self.device):
-            if self.scene_builder.init_configs is not None:
-                self.scene_builder.initialize(
-                    env_idx,
-                    (
-                        self.init_config_idxs
-                        if self.init_config_idxs is not None
-                        else self.scene_builder.sample_init_config_idxs()
-                    ),
-                )
-            else:
-                self.scene_builder.initialize(env_idx)
+        if self.scene_builder.init_configs is not None:
+            self.scene_builder.initialize(
+                env_idx,
+                (
+                    self.init_config_idxs
+                    if self.init_config_idxs is not None
+                    else self.scene_builder.sample_init_config_idxs()
+                ),
+            )
+        else:
+            self.scene_builder.initialize(env_idx)
 
     def evaluate(self) -> dict:
         return dict()

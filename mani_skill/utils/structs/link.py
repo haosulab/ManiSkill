@@ -213,7 +213,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
     def pose(self, arg1: Union[Pose, sapien.Pose, Array]) -> None:
         if physx.is_gpu_enabled():
             if not isinstance(arg1, torch.Tensor):
-                arg1 = vectorize_pose(arg1)
+                arg1 = vectorize_pose(arg1, device=self.device)
             if self.scene.parallel_in_single_scene:
                 if len(arg1.shape) == 1:
                     arg1 = arg1.view(1, -1)

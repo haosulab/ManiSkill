@@ -22,7 +22,7 @@ def test_link_pose():
 @pytest.mark.gpu_sim
 def test_link_pose_gpu():
     env = PickCubeEnv(num_envs=4)
-    with torch.device(env.device):
+    with torch.cuda.device(env.device):
         env.agent.robot.pose = sapien.Pose(p=[0.2, 0.3, 0.5])
         assert torch.isclose(
             env.agent.robot.pose.p[0], torch.tensor([0.2, 0.3, 0.5])

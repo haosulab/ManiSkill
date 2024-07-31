@@ -2,7 +2,7 @@ import copy
 import gc
 import os
 from functools import cached_property
-from typing import Any, Dict, List, Sequence, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import dacite
 import gymnasium as gym
@@ -304,24 +304,25 @@ class BaseEnv(gym.Env):
         # Lighting
         self.enable_shadow = enable_shadow
 
-        # Use a fixed (main) seed to enhance determinism
-        self._main_seed = None
-        self._set_main_rng(2022)
-        self._elapsed_steps = (
-            torch.zeros(self.num_envs, device=self.device, dtype=torch.int32)
-        )
-        obs, _ = self.reset(seed=2022, options=dict(reconfigure=True))
-        self._init_raw_obs = common.to_cpu_tensor(obs)
-        """the raw observation returned by the env.reset (a cpu torch tensor/dict of tensors). Useful for future observation wrappers to use to auto generate observation spaces"""
-        self._init_raw_state = common.to_cpu_tensor(self.get_state_dict())
-        """the initial raw state returned by env.get_state. Useful for reconstructing state dictionaries from flattened state vectors"""
+        with torch.cuda.device(self.device):
+            # Use a fixed (main) seed to enhance determinism
+            self._main_seed = None
+            self._set_main_rng(2022)
+            self._elapsed_steps = (
+                torch.zeros(self.num_envs, device=self.device, dtype=torch.int32)
+            )
+            obs, _ = self.reset(seed=2022, options=dict(reconfigure=True))
+            self._init_raw_obs = common.to_cpu_tensor(obs)
+            """the raw observation returned by the env.reset (a cpu torch tensor/dict of tensors). Useful for future observation wrappers to use to auto generate observation spaces"""
+            self._init_raw_state = common.to_cpu_tensor(self.get_state_dict())
+            """the initial raw state returned by env.get_state. Useful for reconstructing state dictionaries from flattened state vectors"""
 
-        self.action_space = self.agent.action_space
-        self.single_action_space = self.agent.single_action_space
-        self._orig_single_action_space = copy.deepcopy(self.single_action_space)
-        # initialize the cached properties
-        self.single_observation_space
-        self.observation_space
+            self.action_space = self.agent.action_space
+            self.single_action_space = self.agent.single_action_space
+            self._orig_single_action_space = copy.deepcopy(self.single_action_space)
+            # initialize the cached properties
+            self.single_observation_space
+            self.observation_space
 
     def update_obs_space(self, obs: torch.Tensor):
         """call this function if you modify the observations returned by env.step and env.reset via an observation wrapper."""
@@ -423,7 +424,7 @@ class BaseEnv(gym.Env):
     def obs_mode(self):
         return self._obs_mode
 
-    def get_obs(self, info: Dict = None):
+    def get_obs(self, info: Optional[Dict] = None):
         """
         Return the current observation of the environment. User may call this directly to get the current observation
         as opposed to taking a step with actions in the environment.
@@ -437,28 +438,29 @@ class BaseEnv(gym.Env):
             info (Dict): The info object of the environment. Generally should always be the result of `self.get_info()`.
                 If this is None (the default), this function will call `self.get_info()` itself
         """
-        if info is None:
-            info = self.get_info()
-        if self._obs_mode == "none":
-            # Some cases do not need observations, e.g., MPC
-            return dict()
-        elif self._obs_mode == "state":
-            state_dict = self._get_obs_state_dict(info)
-            obs = common.flatten_state_dict(state_dict, use_torch=True, device=self.device)
-        elif self._obs_mode == "state_dict":
-            obs = self._get_obs_state_dict(info)
-        elif self._obs_mode in ["sensor_data", "rgbd", "rgb", "pointcloud"]:
-            obs = self._get_obs_with_sensor_data(info)
-            if self._obs_mode == "rgbd":
-                obs = sensor_data_to_rgbd(obs, self._sensors, rgb=True, depth=True, segmentation=True)
-            elif self._obs_mode == "rgb":
-                # NOTE (stao): this obs mode is merely a convenience, it does not make simulation run noticebally faster
-                obs = sensor_data_to_rgbd(obs, self._sensors, rgb=True, depth=False, segmentation=True)
-            elif self.obs_mode == "pointcloud":
-                obs = sensor_data_to_pointcloud(obs, self._sensors)
-        else:
-            raise NotImplementedError(self._obs_mode)
-        return obs
+        with torch.cuda.device(self.device):
+            if info is None:
+                info = self.get_info()
+            if self._obs_mode == "none":
+                # Some cases do not need observations, e.g., MPC
+                return dict()
+            elif self._obs_mode == "state":
+                state_dict = self._get_obs_state_dict(info)
+                obs = common.flatten_state_dict(state_dict, use_torch=True, device=self.device)
+            elif self._obs_mode == "state_dict":
+                obs = self._get_obs_state_dict(info)
+            elif self._obs_mode in ["sensor_data", "rgbd", "rgb", "pointcloud"]:
+                obs = self._get_obs_with_sensor_data(info)
+                if self._obs_mode == "rgbd":
+                    obs = sensor_data_to_rgbd(obs, self._sensors, rgb=True, depth=True, segmentation=True)
+                elif self._obs_mode == "rgb":
+                    # NOTE (stao): this obs mode is merely a convenience, it does not make simulation run noticebally faster
+                    obs = sensor_data_to_rgbd(obs, self._sensors, rgb=True, depth=False, segmentation=True)
+                elif self.obs_mode == "pointcloud":
+                    obs = sensor_data_to_pointcloud(obs, self._sensors)
+            else:
+                raise NotImplementedError(self._obs_mode)
+            return obs
 
     def _get_obs_state_dict(self, info: Dict):
         """Get (ground-truth) state-based observations."""
@@ -581,7 +583,6 @@ class BaseEnv(gym.Env):
         self._setup_scene()
         self._load_agent(options)
         self._load_scene(options)
-
         self._load_lighting(options)
 
         if physx.is_gpu_enabled():
@@ -704,63 +705,64 @@ class BaseEnv(gym.Env):
         the episode RNG deterministically.
 
         """
-        if options is None:
-            options = dict()
+        with torch.cuda.device(self.device):
+            if options is None:
+                options = dict()
 
-        self._set_main_rng(seed)
-        # we first set the first episode seed to allow environments to use it to reconfigure the environment with a seed
-        self._set_episode_rng(seed)
+            self._set_main_rng(seed)
+            # we first set the first episode seed to allow environments to use it to reconfigure the environment with a seed
+            self._set_episode_rng(seed)
 
-        reconfigure = options.get("reconfigure", False)
-        reconfigure = reconfigure or (
-            self._reconfig_counter == 0 and self.reconfiguration_freq != 0
-        )
-        if reconfigure:
-            with torch.random.fork_rng():
-                torch.manual_seed(seed=self._episode_seed)
-                gc.collect() # force gc to collect which releases most GPU memory
-                self._reconfigure(options)
-                self._after_reconfigure(options)
-
-        # TODO (stao): Reconfiguration when there is partial reset might not make sense and certainly broken here now.
-        # Solution to resolve that would be to ensure tasks that do reconfigure more than once are single-env only / cpu sim only
-        # or disable partial reset features explicitly for tasks that have a reconfiguration frequency
-        if "env_idx" in options:
-            env_idx = options["env_idx"]
-            if len(env_idx) != self.num_envs and reconfigure:
-                raise RuntimeError("Cannot do a partial reset and reconfigure the environment. You must do one or the other.")
-            self.scene._reset_mask = torch.zeros(
-                self.num_envs, dtype=bool, device=self.device
+            reconfigure = options.get("reconfigure", False)
+            reconfigure = reconfigure or (
+                self._reconfig_counter == 0 and self.reconfiguration_freq != 0
             )
-            self.scene._reset_mask[env_idx] = True
-        else:
-            env_idx = torch.arange(0, self.num_envs, device=self.device)
+            if reconfigure:
+                with torch.random.fork_rng():
+                    torch.manual_seed(seed=self._episode_seed)
+                    gc.collect() # force gc to collect which releases most GPU memory
+                    self._reconfigure(options)
+                    self._after_reconfigure(options)
+
+            # TODO (stao): Reconfiguration when there is partial reset might not make sense and certainly broken here now.
+            # Solution to resolve that would be to ensure tasks that do reconfigure more than once are single-env only / cpu sim only
+            # or disable partial reset features explicitly for tasks that have a reconfiguration frequency
+            if "env_idx" in options:
+                env_idx = options["env_idx"]
+                if len(env_idx) != self.num_envs and reconfigure:
+                    raise RuntimeError("Cannot do a partial reset and reconfigure the environment. You must do one or the other.")
+                self.scene._reset_mask = torch.zeros(
+                    self.num_envs, dtype=bool, device=self.device
+                )
+                self.scene._reset_mask[env_idx] = True
+            else:
+                env_idx = torch.arange(0, self.num_envs, device=self.device)
+                self.scene._reset_mask = torch.ones(
+                    self.num_envs, dtype=bool, device=self.device
+                )
+            self._elapsed_steps[env_idx] = 0
+
+            self._clear_sim_state()
+            if self.reconfiguration_freq != 0:
+                self._reconfig_counter -= 1
+            # Set the episode rng again after reconfiguration to guarantee seed reproducibility
+            self._set_episode_rng(self._episode_seed)
+            self.agent.reset()
+            with torch.random.fork_rng():
+                torch.manual_seed(self._episode_seed)
+                self._initialize_episode(env_idx, options)
+            # reset the reset mask back to all ones so any internal code in maniskill can continue to manipulate all scenes at once as usual
             self.scene._reset_mask = torch.ones(
                 self.num_envs, dtype=bool, device=self.device
             )
-        self._elapsed_steps[env_idx] = 0
+            if physx.is_gpu_enabled():
+                # ensure all updates to object poses and configurations are applied on GPU after task initialization
+                self.scene._gpu_apply_all()
+                self.scene.px.gpu_update_articulation_kinematics()
+                self.scene._gpu_fetch_all()
+            obs = self.get_obs()
 
-        self._clear_sim_state()
-        if self.reconfiguration_freq != 0:
-            self._reconfig_counter -= 1
-        # Set the episode rng again after reconfiguration to guarantee seed reproducibility
-        self._set_episode_rng(self._episode_seed)
-        self.agent.reset()
-        with torch.random.fork_rng():
-            torch.manual_seed(self._episode_seed)
-            self._initialize_episode(env_idx, options)
-        # reset the reset mask back to all ones so any internal code in maniskill can continue to manipulate all scenes at once as usual
-        self.scene._reset_mask = torch.ones(
-            self.num_envs, dtype=bool, device=self.device
-        )
-        if physx.is_gpu_enabled():
-            # ensure all updates to object poses and configurations are applied on GPU after task initialization
-            self.scene._gpu_apply_all()
-            self.scene.px.gpu_update_articulation_kinematics()
-            self.scene._gpu_fetch_all()
-        obs = self.get_obs()
-
-        return obs, dict(reconfigure=reconfigure)
+            return obs, dict(reconfigure=reconfigure)
 
     def _set_main_rng(self, seed):
         """Set the main random generator which is only used to set the seed of the episode RNG to improve reproducibility.
@@ -812,30 +814,31 @@ class BaseEnv(gym.Env):
         """
         Take a step through the environment with an action
         """
-        action = self._step_action(action)
-        self._elapsed_steps += 1
-        info = self.get_info()
-        obs = self.get_obs(info)
-        reward = self.get_reward(obs=obs, action=action, info=info)
-        if "success" in info:
+        with torch.cuda.device(self.device):
+            action = self._step_action(action)
+            self._elapsed_steps += 1
+            info = self.get_info()
+            obs = self.get_obs(info)
+            reward = self.get_reward(obs=obs, action=action, info=info)
+            if "success" in info:
 
-            if "fail" in info:
-                terminated = torch.logical_or(info["success"], info["fail"])
+                if "fail" in info:
+                    terminated = torch.logical_or(info["success"], info["fail"])
+                else:
+                    terminated = info["success"].clone()
             else:
-                terminated = info["success"].clone()
-        else:
-            if "fail" in info:
-                terminated = info["fail"].clone()
-            else:
-                terminated = torch.zeros(self.num_envs, dtype=bool, device=self.device)
+                if "fail" in info:
+                    terminated = info["fail"].clone()
+                else:
+                    terminated = torch.zeros(self.num_envs, dtype=bool, device=self.device)
 
-        return (
-            obs,
-            reward,
-            terminated,
-            torch.zeros(self.num_envs, dtype=bool, device=self.device),
-            info,
-        )
+            return (
+                obs,
+                reward,
+                terminated,
+                torch.zeros(self.num_envs, dtype=bool, device=self.device),
+                info,
+            )
 
     def _step_action(
         self, action: Union[None, np.ndarray, torch.Tensor, Dict]
@@ -903,13 +906,14 @@ class BaseEnv(gym.Env):
         """
         Get info about the current environment state, include elapsed steps and evaluation information
         """
-        info = dict(
-            elapsed_steps=self.elapsed_steps
-            if not physx.is_gpu_enabled()
-            else self._elapsed_steps.clone()
-        )
-        info.update(self.evaluate())
-        return info
+        with torch.cuda.device(self.device):
+            info = dict(
+                elapsed_steps=self.elapsed_steps
+                if not physx.is_gpu_enabled()
+                else self._elapsed_steps.clone()
+            )
+            info.update(self.evaluate())
+            return info
 
     def _before_control_step(self):
         """Code that runs before each action has been taken.
