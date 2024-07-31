@@ -161,7 +161,7 @@ This will then open up a GUI that looks like so:
 
 ### Additional GPU simulation/rendering customization
 
-Finally on servers with multiple GPUs you can directly pick which devices/backends to use for simulation and rendering.
+Finally on servers with multiple GPUs you can directly pick which devices/backends to use for simulation and rendering by setting the `CUDA_VISIBLE_DEVICES` environment variable. You can do this by running `export CUDA_VISIBLE_DEVICES=1` and then run the code below
 
 ```python
 import gymnasium as gym
@@ -170,10 +170,10 @@ import mani_skill.envs
 env = gym.make(
     "PickCube-v1",
     num_envs=16,
-    sim_backend="cuda:1", # selects the GPU with index 1
-    render_backend="cuda", # auto selects a GPU
 )
 ```
+
+while everything is labeled as device "cuda:0" it is actually using GPU device 1 now, which you can verify by running `nvidia-smi`.
 
 ## Task Instantiation Options
 
