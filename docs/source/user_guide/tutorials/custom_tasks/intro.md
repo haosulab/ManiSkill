@@ -147,21 +147,20 @@ import torch
 class PushCubeEnv(BaseEnv):
     # ...
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
-        # useing torch.device context manager to auto create tensors 
+        # note maniskill creates a torch device context so torch tensors are automatically
         # on CPU/CUDA depending on self.device, the device the env runs on
-        with torch.device(self.device):
-            b = len(env_idx)
-            # use the TableSceneBuilder to init all objects in that scene builder
-            self.table_scene.initialize(env_idx)
+        b = len(env_idx)
+        # use the TableSceneBuilder to init all objects in that scene builder
+        self.table_scene.initialize(env_idx)
 
-            # here is randomization code that randomizes the x, y position 
-            # of the cube we are pushing in the range [-0.1, -0.1] to [0.1, 0.1]
-            p = torch.zeros((b, 3))
-            p[..., :2] = torch.rand((b, 2)) * 0.2 - 0.1
-            p[..., 2] = self.cube_half_size
-            q = [1, 0, 0, 0]
-            obj_pose = Pose.create_from_pq(p=p, q=q)
-            self.obj.set_pose(obj_pose)
+        # here is randomization code that randomizes the x, y position 
+        # of the cube we are pushing in the range [-0.1, -0.1] to [0.1, 0.1]
+        p = torch.zeros((b, 3))
+        p[..., :2] = torch.rand((b, 2)) * 0.2 - 0.1
+        p[..., 2] = self.cube_half_size
+        q = [1, 0, 0, 0]
+        obj_pose = Pose.create_from_pq(p=p, q=q)
+        self.obj.set_pose(obj_pose)
 ```
 
 An `env_idx` is one of the arguments to this function, and is a list of environment IDs that need initialization. This is given as ManiSkill supports **partial resets**, where at each timestep potentially only a subset of parallel environments will undergo a reset, which calls `_initialize_episode` here. 
