@@ -22,3 +22,13 @@ do
     --exp-name="ppo-PickCube-v1-state-${seed}-walltime_efficient" \
     --wandb_entity="stonet2000" --track
 done
+
+for seed in ${seeds[@]}
+do
+  python ppo.py --env_id="PickSingleYCB-v1" --seed=${seed} \
+    --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
+    --total_timesteps=50_000_000 \
+    --no_partial_reset --reconfiguration_freq=1 \
+    --exp-name="ppo-PickSingleYCB-v1-state-${seed}-walltime_efficient" \
+    --wandb_entity="stonet2000" --track
+done
