@@ -16,6 +16,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 # ManiSkill specific imports
 import mani_skill.envs
+from mani_skill.utils import gym_utils
 from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper, FlattenRGBDObservationWrapper
 from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
@@ -254,6 +255,16 @@ class Agent(nn.Module):
             action = probs.sample()
         return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x)
 
+class Logger:
+    def __init__(self, log_wandb=False, tensorboard: SummaryWriter = None) -> None:
+        self.writer = tensorboard
+        self.log_wandb = log_wandb
+    def add_scalar(self, tag, scalar_value, step):
+        if self.log_wandb:
+            wandb.log({tag: scalar_value}, step=step)
+        self.writer.add_scalar(tag, scalar_value, step)
+    def close(self):
+        self.writer.close()
 
 if __name__ == "__main__":
     args = tyro.cli(Args)
@@ -265,28 +276,6 @@ if __name__ == "__main__":
         run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
     else:
         run_name = args.exp_name
-    writer = None
-    if not args.evaluate:
-        print("Running training")
-        if args.track:
-            import wandb
-
-            wandb.init(
-                project=args.wandb_project_name,
-                entity=args.wandb_entity,
-                sync_tensorboard=True,
-                config=vars(args),
-                name=run_name,
-                monitor_gym=True,
-                save_code=True,
-            )
-        writer = SummaryWriter(f"runs/{run_name}")
-        writer.add_text(
-            "hyperparameters",
-            "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
-        )
-    else:
-        print("Running evaluation")
 
     # TRY NOT TO MODIFY: seeding
     random.seed(args.seed)
@@ -320,6 +309,33 @@ if __name__ == "__main__":
     envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=False, **env_kwargs)
     eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=False, **env_kwargs)
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
+
+    max_episode_steps = gym_utils.find_max_episode_steps_value(envs._env)
+    logger = None
+    if not args.evaluate:
+        print("Running training")
+        if args.track:
+            import wandb
+            config = vars(args)
+            config["env_cfg"] = dict(**env_kwargs, num_envs=args.num_envs, env_id=args.env_id, reward_mode="normalized_dense", env_horizon=max_episode_steps)
+            wandb.init(
+                project=args.wandb_project_name,
+                entity=args.wandb_entity,
+                sync_tensorboard=False,
+                config=config,
+                name=run_name,
+                save_code=True,
+                group="PPO",
+                tags=["ppo", "walltime_efficient"]
+            )
+        writer = SummaryWriter(f"runs/{run_name}")
+        writer.add_text(
+            "hyperparameters",
+            "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
+        )
+        logger = Logger(log_wandb=args.track, tensorboard=writer)
+    else:
+        print("Running evaluation")
 
     # ALGO Logic: Storage setup
     obs = DictArray((args.num_steps, args.num_envs), envs.single_observation_space, device=device)
@@ -356,13 +372,15 @@ if __name__ == "__main__":
             # evaluate
             print("Evaluating")
             eval_envs.reset()
+            eval_total_reward = 0
             returns = []
             eps_lens = []
             successes = []
             failures = []
             for _ in range(args.num_eval_steps):
                 with torch.no_grad():
-                    eval_obs, _, eval_terminations, eval_truncations, eval_infos = eval_envs.step(agent.get_action(eval_obs, deterministic=True))
+                    eval_obs, eval_rew, eval_terminations, eval_truncations, eval_infos = eval_envs.step(agent.get_action(eval_obs, deterministic=True))
+                    eval_total_reward += eval_rew.sum()
                     if "final_info" in eval_infos:
                         mask = eval_infos["_final_info"]
                         eps_lens.append(eval_infos["final_info"]["elapsed_steps"][mask].cpu().numpy())
@@ -376,17 +394,18 @@ if __name__ == "__main__":
             print(f"Evaluated {args.num_eval_steps * args.num_eval_envs} steps resulting in {len(eps_lens)} episodes")
             if len(successes) > 0:
                 successes = np.concatenate(successes)
-                if writer is not None: writer.add_scalar("charts/eval_success_rate", successes.mean(), global_step)
+                if logger is not None: logger.add_scalar("eval/success", successes.mean(), global_step)
                 print(f"eval_success_rate={successes.mean()}")
             if len(failures) > 0:
                 failures = np.concatenate(failures)
-                if writer is not None: writer.add_scalar("charts/eval_fail_rate", failures.mean(), global_step)
+                if logger is not None: logger.add_scalar("eval/fail", failures.mean(), global_step)
                 print(f"eval_fail_rate={failures.mean()}")
 
             print(f"eval_episodic_return={returns.mean()}")
-            if writer is not None:
-                writer.add_scalar("charts/eval_episodic_return", returns.mean(), global_step)
-                writer.add_scalar("charts/eval_episodic_length", eps_lens.mean(), global_step)
+            if logger is not None:
+                logger.add_scalar("eval/reward", (eval_total_reward / (args.num_eval_steps * args.num_eval_envs)).mean().cpu().numpy(), global_step)
+                logger.add_scalar("eval/return", returns.mean(), global_step)
+                logger.add_scalar("eval/episode_len", eps_lens.mean(), global_step)
             if args.evaluate:
                 break
         if args.save_model and iteration % args.eval_freq == 1:
@@ -414,21 +433,22 @@ if __name__ == "__main__":
             # TRY NOT TO MODIFY: execute the game and log data.
             next_obs, reward, terminations, truncations, infos = envs.step(action)
             next_done = torch.logical_or(terminations, truncations).to(torch.float32)
-            rewards[step] = reward.view(-1)
+            rewards[step] = reward.view(-1) * args.reward_scale
 
             if "final_info" in infos:
                 final_info = infos["final_info"]
                 done_mask = infos["_final_info"]
-                episodic_return = final_info['episode']['r'][done_mask].mean().cpu().numpy()
+                episode_len = final_info["elapsed_steps"][done_mask]
+                episodic_return = final_info['episode']['r'][done_mask]
                 if "success" in final_info:
-                    writer.add_scalar("charts/success_rate", final_info["success"][done_mask].float().mean().cpu().numpy(), global_step)
+                    logger.add_scalar("train/success", final_info["success"][done_mask].cpu().numpy().mean(), global_step)
                 if "fail" in final_info:
-                    writer.add_scalar("charts/fail_rate", final_info["fail"][done_mask].cpu().numpy().mean(), global_step)
-                writer.add_scalar("charts/episodic_return", episodic_return, global_step)
-                writer.add_scalar("charts/episodic_length", final_info["elapsed_steps"][done_mask].float().mean().cpu().numpy(), global_step)
-                for k in infos["final_observation"]:
-                    infos["final_observation"][k] = infos["final_observation"][k][done_mask]
-                final_values[step, torch.arange(args.num_envs, device=device)[done_mask]] = agent.get_value(infos["final_observation"]).view(-1)
+                    logger.add_scalar("train/fail", final_info["fail"][done_mask].cpu().numpy().mean(), global_step)
+                logger.add_scalar("train/return", episodic_return.cpu().numpy().mean(), global_step)
+                logger.add_scalar("train/episode_len", episode_len.cpu().numpy().mean(), global_step)
+                logger.add_scalar("train/reward", (episodic_return.sum() / episode_len.sum()).cpu().numpy().mean(), global_step)
+                with torch.no_grad():
+                    final_values[step, torch.arange(args.num_envs, device=device)[done_mask]] = agent.get_value(infos["final_observation"]).view(-1)
         rollout_time = time.time() - rollout_time
         # bootstrap value according to termination and truncation
         with torch.no_grad():
