@@ -28,13 +28,14 @@ python ppo.py --env_id="PushCube-v1" \
 
 Note that with `--evaluate`, trajectories are saved from a GPU simulation. In order to support replaying these trajectories correctly with the `maniskill.trajectory.replay_trajectory` tool for some task, the number of evaluation environments must be fixed to `1`. This is necessary in order to ensure reproducibility for tasks that have randomizations on geometry (e.g. PickSingleYCB). Other tasks without geometrical randomization like PushCube are fine and you can increase the number of evaluation environments. 
 
-The examples.sh file has a full list of tested commands for running PPO successfully on many tasks.
+The examples.sh file has a full list of tested commands for running state based PPO successfully on many tasks.
+
+The results of running the baseline scripts for state based PPO are here: https://wandb.ai/stonet2000/ManiSkill/groups/PPO/workspace?nw=0pe9ybwmza7.
 
 ## Visual (RGB) Based RL
 
-Below is a sample of various commands for training a image-based policy with PPO that are lightly tuned. The fastest again is also PushCube-v1 which can take about 1-5 minutes and PickCube-v1 which takes 15-45 minutes. You will need to tune the `--num_envs` argument according to how much GPU memory you have as rendering visual observations uses a lot of memory. The settings below should all take less than 15GB of GPU memory. Note that while if you have enough memory you can easily increase the number of environments, this does not necessarily mean wall-time or sample efficiency improve.
+Below is a sample of various commands for training a image-based policy with PPO that are lightly tuned. The fastest again is also PushCube-v1 which can take about 1-5 minutes and PickCube-v1 which takes 15-45 minutes. You will need to tune the `--num_envs` argument according to how much GPU memory you have as rendering visual observations uses a lot of memory. The settings below should all take less than 15GB of GPU memory. The examples.sh file has a full list of tested commands for running visual based PPO successfully on many tasks.
 
-The visual PPO baseline is not guaranteed to work for tasks not tested below as some tasks do not have dense rewards yet or well tuned ones, or simply are too hard with standard PPO (or our team has not had time to verify results yet).
 
 ```bash
 python ppo_rgb.py --env_id="PushCube-v1" \
@@ -58,6 +59,8 @@ python ppo_rgb.py --env_id="PickCube-v1" \
 ```
 
 and it will save videos to the `path/to/test_videos`.
+
+The results of running the baseline scripts for RGB based PPO are a WIP.
 
 ## Visual (RGB+Depth) Based RL
 
