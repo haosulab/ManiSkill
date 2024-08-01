@@ -88,11 +88,14 @@ class Args:
     """the maximum norm for the gradient clipping"""
     target_kl: float = 0.1
     """the target KL divergence threshold"""
+    reward_scale: float = 1.0
+    """Scale the reward by this factor"""
     eval_freq: int = 25
     """evaluation frequency in terms of iterations"""
     save_train_video_freq: Optional[int] = None
     """frequency to save training videos in terms of iterations"""
     finite_horizon_gae: bool = True
+
 
     # to be filled in runtime
     batch_size: int = 0
@@ -201,13 +204,14 @@ if __name__ == "__main__":
     eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=not args.partial_reset, **env_kwargs)
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
+    max_episode_steps = gym_utils.find_max_episode_steps_value(envs._env)
     logger = None
     if not args.evaluate:
         print("Running training")
         if args.track:
             import wandb
             config = vars(args)
-            config["env_cfg"] = dict(**env_kwargs, num_envs=args.num_envs, env_id=args.env_id, reward_mode="normalized_dense", env_horizon=gym_utils.find_max_episode_steps_value(envs._env))
+            config["env_cfg"] = dict(**env_kwargs, num_envs=args.num_envs, env_id=args.env_id, reward_mode="normalized_dense", env_horizon=max_episode_steps)
             wandb.init(
                 project=args.wandb_project_name,
                 entity=args.wandb_entity,
@@ -329,6 +333,8 @@ if __name__ == "__main__":
             next_obs, reward, terminations, truncations, infos = envs.step(clip_action(action))
             next_done = torch.logical_or(terminations, truncations).to(torch.float32)
             rewards[step] = reward.view(-1)
+            if args.normalize_returns:
+                rewards[step] = rewards[step] / 100
 
             if "final_info" in infos:
                 final_info = infos["final_info"]
