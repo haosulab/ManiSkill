@@ -8,7 +8,7 @@ As part of these baselines we establish standardized [reinforcement learning ben
 
 ## Online Reinforcement Learning Baselines
 
-List of already implemented and tested online reinforcement learning baselines
+List of already implemented and tested online reinforcement learning baselines. The results link take you to the respective wandb pages for the results. You can change filters/views in the wandb workspace to view results with other settings (e.g. state based or RGB based training).
 
 | Baseline                                                            | Code                                                                           | Results | Paper                                    |
 | ------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ------- | ---------------------------------------- |
