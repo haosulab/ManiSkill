@@ -1,4 +1,4 @@
-# for fair and correct RL evaluation, we do not do partial environment / early resets
+# for fair and correct RL evaluation against most RL algorithms, we do not do partial environment / early resets (which speed up training)
 # moreover evaluation environments will reconfigure each reset in order to randomize the task completely as some
 # tasks have different objects which are not changed at during normal resets.
 # Furthermore, because of how these are evaluated, the hyperparameters here are tuned differently compared to with partial resets
