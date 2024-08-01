@@ -332,9 +332,7 @@ if __name__ == "__main__":
             # TRY NOT TO MODIFY: execute the game and log data.
             next_obs, reward, terminations, truncations, infos = envs.step(clip_action(action))
             next_done = torch.logical_or(terminations, truncations).to(torch.float32)
-            rewards[step] = reward.view(-1)
-            if args.normalize_returns:
-                rewards[step] = rewards[step] / 100
+            rewards[step] = reward.view(-1) * args.reward_scale
 
             if "final_info" in infos:
                 final_info = infos["final_info"]
