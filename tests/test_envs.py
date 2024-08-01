@@ -5,7 +5,7 @@ import torch
 
 from mani_skill.agents.multi_agent import MultiAgent
 from mani_skill.envs.sapien_env import BaseEnv
-from mani_skill.utils.wrappers.gymnasium import ManiSkillCPUGymWrapper
+from mani_skill.utils.wrappers.gymnasium import CPUGymWrapper
 from tests.utils import (
     CONTROL_MODES_STATIONARY_SINGLE_ARM,
     ENV_IDS,
@@ -33,7 +33,7 @@ def test_all_envs(env_id):
 @pytest.mark.parametrize("obs_mode", OBS_MODES)
 def test_envs_obs_modes(env_id, obs_mode):
     env = gym.make(env_id, obs_mode=obs_mode)
-    env = ManiSkillCPUGymWrapper(env)
+    env = CPUGymWrapper(env)
     obs, _ = env.reset()
     assert_isinstance(obs, [np.ndarray, bool, float, int])
 
