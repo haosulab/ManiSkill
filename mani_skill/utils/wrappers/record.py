@@ -223,6 +223,7 @@ class RecordEpisode(gym.Wrapper):
         record_reward: bool = True,
         record_env_state: bool = True,
         video_fps: int = 30,
+        avoid_overwriting_video: bool = False,
         source_type: Optional[str] = None,
         source_desc: Optional[str] = None,
     ) -> None:
@@ -286,6 +287,7 @@ class RecordEpisode(gym.Wrapper):
                 "Cannot turn info_on_video=True when the number of environments parallelized is > 1"
             )
         self.video_nrows = int(np.sqrt(self.unwrapped.num_envs))
+        self._avoid_overwriting_video = avoid_overwriting_video
 
     @property
     def num_envs(self):
@@ -725,6 +727,15 @@ class RecordEpisode(gym.Wrapper):
                 video_name = "{}".format(self._video_id)
                 if suffix:
                     video_name += "_" + suffix
+                if self._avoid_overwriting_video:
+                    while (
+                        Path(self.output_dir)
+                        / (video_name.replace(" ", "_").replace("\n", "_") + ".mp4")
+                    ).exists():
+                        self._video_id += 1
+                        video_name = "{}".format(self._video_id)
+                        if suffix:
+                            video_name += "_" + suffix
             else:
                 video_name = name
             images_to_video(
