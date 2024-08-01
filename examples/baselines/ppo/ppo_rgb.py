@@ -297,7 +297,7 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # env setup
-    env_kwargs = dict(obs_mode="rgbd", control_mode="pd_joint_delta_pos", render_mode="rgb_array", sim_backend="gpu")
+    env_kwargs = dict(obs_mode="rgbd", control_mode="pd_joint_delta_pos", render_mode="all", sim_backend="gpu")
     eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, **env_kwargs)
     envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, **env_kwargs)
 
@@ -422,6 +422,8 @@ if __name__ == "__main__":
                 episodic_return = final_info['episode']['r'][done_mask].mean().cpu().numpy()
                 if "success" in final_info:
                     writer.add_scalar("charts/success_rate", final_info["success"][done_mask].float().mean().cpu().numpy(), global_step)
+                if "fail" in final_info:
+                    writer.add_scalar("charts/fail_rate", final_info["fail"][done_mask].cpu().numpy().mean(), global_step)
                 writer.add_scalar("charts/episodic_return", episodic_return, global_step)
                 writer.add_scalar("charts/episodic_length", final_info["elapsed_steps"][done_mask].float().mean().cpu().numpy(), global_step)
                 for k in infos["final_observation"]:

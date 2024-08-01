@@ -2,7 +2,7 @@ import copy
 import gc
 import os
 from functools import cached_property
-from typing import Any, Dict, List, Sequence, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import dacite
 import gymnasium as gym
@@ -423,7 +423,7 @@ class BaseEnv(gym.Env):
     def obs_mode(self):
         return self._obs_mode
 
-    def get_obs(self, info: Dict = None):
+    def get_obs(self, info: Optional[Dict] = None):
         """
         Return the current observation of the environment. User may call this directly to get the current observation
         as opposed to taking a step with actions in the environment.
@@ -581,7 +581,6 @@ class BaseEnv(gym.Env):
         self._setup_scene()
         self._load_agent(options)
         self._load_scene(options)
-
         self._load_lighting(options)
 
         if physx.is_gpu_enabled():
@@ -718,6 +717,7 @@ class BaseEnv(gym.Env):
         if reconfigure:
             with torch.random.fork_rng():
                 torch.manual_seed(seed=self._episode_seed)
+                gc.collect() # force gc to collect which releases most GPU memory
                 self._reconfigure(options)
                 self._after_reconfigure(options)
 
@@ -964,7 +964,13 @@ class BaseEnv(gym.Env):
                 sapien.Scene([self.physx_system, sapien.render.RenderSystem(self._render_device)])
             ]
         # create a "global" scene object that users can work with that is linked with all other scenes created
-        self.scene = ManiSkillScene(sub_scenes, sim_cfg=self.sim_cfg, device=self.device, parallel_in_single_scene=self._parallel_in_single_scene)
+        self.scene = ManiSkillScene(
+            sub_scenes,
+            sim_cfg=self.sim_cfg,
+            device=self.device,
+            parallel_in_single_scene=self._parallel_in_single_scene,
+            shader_dir=self.shader_dir
+        )
         self.physx_system.timestep = 1.0 / self._sim_freq
 
     def _clear(self):
@@ -1114,37 +1120,9 @@ class BaseEnv(gym.Env):
             obj.show_visual()
         self.scene.update_render()
         images = []
-        if physx.is_gpu_enabled():
-            if self._parallel_in_single_scene:
-                for name, camera in self.scene.human_render_cameras.items():
-                    camera.camera._render_cameras[0].take_picture()
-                    if self.shader_dir == "default":
-                        rgb = common.to_tensor(camera.camera._render_cameras[0].get_picture("Color"))[None, ...]
-                        rgb = (rgb[..., :3]).to(torch.uint8)
-                    else:
-                        rgb = common.to_tensor(camera.camera._render_cameras[0].get_picture("Color"))[
-                            None, ...
-                        ]
-                        rgb = (rgb[..., :3] * 255).to(torch.uint8)
-                    images.append(rgb)
-            else:
-                for name in self.scene.human_render_cameras.keys():
-                    camera_group = self.scene.camera_groups[name]
-                    if camera_name is not None and name != camera_name:
-                        continue
-                    camera_group.take_picture()
-                    rgb = camera_group.get_picture_cuda("Color").torch()[..., :3].clone()
-                    images.append(rgb)
-        else:
-            for name, camera in self.scene.human_render_cameras.items():
-                if camera_name is not None and name != camera_name:
-                    continue
-                camera.capture()
-                if self.shader_dir == "default":
-                    rgb = (camera.get_picture("Color")[..., :3]).to(torch.uint8)
-                else:
-                    rgb = (camera.get_picture("Color")[..., :3] * 255).to(torch.uint8)
-                images.append(rgb)
+        render_images = self.scene.get_human_render_camera_images()
+        for image in render_images.values():
+            images.append(image)
         if len(images) == 0:
             return None
         if len(images) == 1:
@@ -1167,6 +1145,22 @@ class BaseEnv(gym.Env):
             images.append(image)
         return tile_images(images)
 
+    def render_all(self):
+        """Renders all human render cameras and sensors together"""
+        self.render_rgb_array()
+        for obj in self._hidden_objects:
+            obj.hide_visual()
+        images = []
+        self.scene.update_render()
+        self.capture_sensor_data()
+        sensor_images = self.get_sensor_images()
+        render_images = self.scene.get_human_render_camera_images()
+        for image in render_images.values():
+            images.append(image)
+        for image in sensor_images.values():
+            images.append(image)
+        return tile_images(images)
+
     def render(self):
         """
         Either opens a viewer if render_mode is "human", or returns an array that you can use to save videos.
@@ -1185,6 +1179,8 @@ class BaseEnv(gym.Env):
         elif self.render_mode == "sensors":
             res = self.render_sensors()
             return res
+        elif self.render_mode == "all":
+            return self.render_all()
         else:
             raise NotImplementedError(f"Unsupported render mode {self.render_mode}.")
 

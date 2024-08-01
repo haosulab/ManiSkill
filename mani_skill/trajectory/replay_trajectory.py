@@ -572,6 +572,7 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
                 if args.verbose:
                     print("info", info)
         else:
+            env.flush_video(save=False)
             tqdm.write(f"Episode {episode_id} is not replayed successfully. Skipping")
 
     # Cleanup
