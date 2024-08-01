@@ -16,7 +16,7 @@ obs, rew, terminated, truncated, info = env.step(env.action_space.sample())
 
 ## Gym Environment API
 
-If you want to use the CPU simulator / a single environment, you can apply the `ManiSkillCPUGymWrapper` which essentially unbatches everything and turns everything into numpy so the environment behaves just like a normal gym environment. The API for a gym environment is detailed on [their documentation](https://gymnasium.farama.org/api/env/).
+If you want to use the CPU simulator / a single environment, you can apply the `CPUGymWrapper` which essentially unbatches everything and turns everything into numpy so the environment behaves just like a normal gym environment. The API for a gym environment is detailed on [their documentation](https://gymnasium.farama.org/api/env/).
 
 ```python
 import mani_skill.envs
