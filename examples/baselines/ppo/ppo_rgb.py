@@ -33,7 +33,7 @@ class Args:
     """if toggled, cuda will be enabled by default"""
     track: bool = False
     """if toggled, this experiment will be tracked with Weights and Biases"""
-    wandb_project_name: str = "cleanRL"
+    wandb_project_name: str = "ManiSkill"
     """the wandb's project name"""
     wandb_entity: str = None
     """the entity (team) of wandb's project"""
@@ -41,10 +41,6 @@ class Args:
     """whether to capture videos of the agent performances (check out `videos` folder)"""
     save_model: bool = True
     """whether to save model into the `runs/{run_name}` folder"""
-    upload_model: bool = False
-    """whether to upload the saved model to huggingface"""
-    hf_entity: str = ""
-    """the user or org name of the model repository from the Hugging Face Hub"""
     evaluate: bool = False
     """if toggled, only runs evaluation with the given model checkpoint and saves the evaluation trajectories"""
     checkpoint: str = None
@@ -67,6 +63,8 @@ class Args:
     """the number of steps to run in each environment per policy rollout"""
     num_eval_steps: int = 50
     """the number of steps to run in each evaluation environment during evaluation"""
+    reconfiguration_freq: Optional[int] = None
+    """for benchmarking purposes we want to reconfigure the eval environment each reset to ensure objects are randomized in some tasks"""
     anneal_lr: bool = False
     """Toggle learning rate annealing for policy and value networks"""
     gamma: float = 0.8
@@ -91,6 +89,8 @@ class Args:
     """the maximum norm for the gradient clipping"""
     target_kl: float = 0.2
     """the target KL divergence threshold"""
+    reward_scale: float = 1.0
+    """Scale the reward by this factor"""
     eval_freq: int = 25
     """evaluation frequency in terms of iterations"""
     save_train_video_freq: Optional[int] = None
@@ -447,6 +447,8 @@ if __name__ == "__main__":
                 logger.add_scalar("train/return", episodic_return.cpu().numpy().mean(), global_step)
                 logger.add_scalar("train/episode_len", episode_len.cpu().numpy().mean(), global_step)
                 logger.add_scalar("train/reward", (episodic_return.sum() / episode_len.sum()).cpu().numpy().mean(), global_step)
+                for k in infos["final_observation"]:
+                    infos["final_observation"][k] = infos["final_observation"][k][done_mask]
                 with torch.no_grad():
                     final_values[step, torch.arange(args.num_envs, device=device)[done_mask]] = agent.get_value(infos["final_observation"]).view(-1)
         rollout_time = time.time() - rollout_time
