@@ -15,7 +15,7 @@ from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import GPUMemoryConfig, SceneConfig, SimConfig
 
 
-class QuadrupedReachEnv(BaseEnv):
+class QuadrupedSpinEnv(BaseEnv):
     SUPPORTED_ROBOTS = ["anymal_c", "unitree_go2_simplified_locomotion"]
     agent: ANYmalC
     default_qpos: torch.Tensor
@@ -36,7 +36,7 @@ class QuadrupedReachEnv(BaseEnv):
 
     @property
     def _default_sensor_configs(self):
-        pose = sapien_utils.look_at(eye=[0.5, 0, 0.1], target=[1.0, 0, 0.0])
+        pose = sapien_utils.look_at([-1.0, 1.0, 2], [0, 0.0, 0.5])
         return [
             CameraConfig(
                 "base_camera",
@@ -46,13 +46,12 @@ class QuadrupedReachEnv(BaseEnv):
                 fov=np.pi / 2,
                 near=0.01,
                 far=100,
-                mount=self.agent.robot.links[0],
             )
         ]
 
     @property
     def _default_human_render_camera_configs(self):
-        pose = sapien_utils.look_at([-2.0, 1.5, 3], [1.5, 0.0, 0.5])
+        pose = sapien_utils.look_at([-1.0, 1.0, 2], [0, 0.0, 0.5])
         return [
             CameraConfig(
                 "render_camera",
@@ -68,41 +67,18 @@ class QuadrupedReachEnv(BaseEnv):
 
     def _load_scene(self, options: dict):
         self.ground = build_ground(self.scene, floor_width=400)
-        self.goal = actors.build_sphere(
-            self.scene,
-            radius=0.2,
-            color=[0, 1, 0, 1],
-            name="goal",
-            add_collision=False,
-            body_type="kinematic",
-        )
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
-            b = len(env_idx)
+            len(env_idx)
             keyframe = self.agent.keyframes["standing"]
             self.agent.robot.set_pose(keyframe.pose)
             self.agent.robot.set_qpos(keyframe.qpos)
-            # sample random goal
-            xyz = torch.zeros((b, 3))
-            xyz[:, 0] = 2.5
-            noise_scale = 1
-            xyz[:, 0] = torch.rand(size=(b,)) * noise_scale - noise_scale / 2 + 2.5
-            noise_scale = 2
-            xyz[:, 1] = torch.rand(size=(b,)) * noise_scale - noise_scale / 2
-            self.goal.set_pose(Pose.create_from_pq(xyz))
 
     def evaluate(self):
         is_fallen = self.agent.is_fallen()
-        robot_to_goal_dist = torch.linalg.norm(
-            self.goal.pose.p[:, :2] - self.agent.robot.pose.p[:, :2], axis=1
-        )
-        reached_goal = robot_to_goal_dist < 0.35
         return {
-            "success": reached_goal & ~is_fallen,
             "fail": is_fallen,
-            "robot_to_goal_dist": robot_to_goal_dist,
-            "reached_goal": reached_goal,
             "is_fallen": is_fallen,
         }
 
@@ -111,11 +87,6 @@ class QuadrupedReachEnv(BaseEnv):
             root_linear_velocity=self.agent.robot.root_linear_velocity,
             root_angular_velocity=self.agent.robot.root_angular_velocity,
         )
-        if self.obs_mode in ["state", "state_dict"]:
-            obs.update(
-                goal_pos=self.goal.pose.p[:, :2],
-                robot_to_goal=self.goal.pose.p[:, :2] - self.agent.robot.pose.p[:, :2],
-            )
         return obs
 
     def _compute_undesired_contacts(self, threshold=1.0):
@@ -126,9 +97,7 @@ class QuadrupedReachEnv(BaseEnv):
         return contact_exists
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        robot_to_goal_dist = info["robot_to_goal_dist"]
-        reaching_reward = 1 - torch.tanh(1 * robot_to_goal_dist)
-
+        rotation_reward = self.agent.robot.root_angular_velocity[:, 2]
         # various penalties:
         lin_vel_z_l2 = torch.square(self.agent.robot.root_linear_velocity[:, 2])
         ang_vel_xy_l2 = (
@@ -141,19 +110,19 @@ class QuadrupedReachEnv(BaseEnv):
             + torch.linalg.norm(self.agent.robot.qpos - self.default_qpos, axis=1)
             * -0.05
         )
-        reward = 1 + 2 * reaching_reward + penalties
-        reward[info["fail"]] = 0
+        reward = 2 * rotation_reward + penalties
+        reward[info["fail"]] = -100
         return reward
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        max_reward = 3.0
+        max_reward = 2.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
 
 
-@register_env("AnymalC-Reach-v1", max_episode_steps=200)
-class AnymalCReachEnv(QuadrupedReachEnv):
+@register_env("AnymalC-Spin-v1", max_episode_steps=200)
+class AnymalCSpinEnv(QuadrupedSpinEnv):
     _UNDESIRED_CONTACT_LINK_NAMES = ["LF_KFE", "RF_KFE", "LH_KFE", "RH_KFE"]
 
     def __init__(self, *args, robot_uids="anymal_c", **kwargs):
@@ -161,14 +130,3 @@ class AnymalCReachEnv(QuadrupedReachEnv):
         self.default_qpos = torch.from_numpy(ANYmalC.keyframes["standing"].qpos).to(
             self.device
         )
-
-
-@register_env("UnitreeGo2-Reach-v1", max_episode_steps=200)
-class UnitreeGo2ReachEnv(QuadrupedReachEnv):
-    _UNDESIRED_CONTACT_LINK_NAMES = ["FR_thigh", "RR_thigh", "FL_thigh", "RL_thigh"]
-
-    def __init__(self, *args, robot_uids="unitree_go2_simplified_locomotion", **kwargs):
-        super().__init__(*args, robot_uids=robot_uids, **kwargs)
-        self.default_qpos = torch.from_numpy(
-            UnitreeGo2Simplified.keyframes["standing"].qpos
-        ).to(self.device)

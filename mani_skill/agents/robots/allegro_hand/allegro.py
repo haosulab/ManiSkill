@@ -159,7 +159,9 @@ class AllegroHandRight(BaseAgent):
         """
         Get the tip pose for each of the finger, four fingers in total
         """
-        tip_poses = [vectorize_pose(link.pose) for link in self.tip_links]
+        tip_poses = [
+            vectorize_pose(link.pose, device=self.device) for link in self.tip_links
+        ]
         return torch.stack(tip_poses, dim=-2)
 
     @property
@@ -167,7 +169,7 @@ class AllegroHandRight(BaseAgent):
         """
         Get the palm pose for allegro hand
         """
-        return vectorize_pose(self.palm_link.pose)
+        return vectorize_pose(self.palm_link.pose, device=self.device)
 
 
 @register_agent()
