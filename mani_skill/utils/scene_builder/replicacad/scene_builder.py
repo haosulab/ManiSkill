@@ -303,6 +303,7 @@ class ReplicaCADSceneBuilder(SceneBuilder):
             if isinstance(obj, Articulation):
                 # note that during initialization you may only ever change poses/qpos of objects in scenes being reset
                 obj.set_qpos(obj.qpos[0] * 0)
+                obj.set_qvel(obj.qvel[0] * 0)
 
     def disable_fetch_move_collisions(
         self,

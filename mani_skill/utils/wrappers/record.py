@@ -472,14 +472,12 @@ class RecordEpisode(gym.Wrapper):
             image = self.capture_image()
 
             if self.info_on_video:
-                info = common.to_numpy(info)
-                scalar_info = gym_utils.extract_scalars_from_info(info)
+                scalar_info = gym_utils.extract_scalars_from_info(common.to_numpy(info))
                 if isinstance(rew, torch.Tensor) and len(rew.shape) > 1:
                     rew = rew[0]
                 rew = float(common.to_numpy(rew))
                 extra_texts = [
                     f"reward: {rew:.3f}",
-                    "action: {}".format(",".join([f"{x:.2f}" for x in action])),
                 ]
                 image = put_info_on_image(image, scalar_info, extras=extra_texts)
 

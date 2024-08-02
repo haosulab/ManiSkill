@@ -98,6 +98,9 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
             len(build_config_idxs) == self.env.num_envs
         ), f"Got {len(build_config_idxs)} build_config_idxs but only have {self.env.num_envs} envs"
 
+        # delete cached properties which are dependent on values recomputed at build time
+        self.__dict__.pop("init_config_names_to_idxs", None)
+
         # the build_config_idxs are idxs for the RCAD build configs
         # super().build builds the base RCAD scenes (including static objects)
         super().build(build_config_idxs)
@@ -246,21 +249,22 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
         assert all(
             [isinstance(bci, int) for bci in init_config_idxs]
         ), f"init_config_idxs should be list of ints, instead got {init_config_idxs}"
-        assert len(init_config_idxs) == self.env.num_envs
+        assert len(init_config_idxs) == len(env_idx)
 
         # initialize base scenes
         super().initialize(env_idx)
 
         # get sampled init configs
         sampled_init_configs = [
-            env_init_configs[idx]
-            for env_init_configs, idx in zip(self.init_configs, init_config_idxs)
+            self.init_configs[env_num][idx]
+            for env_num, idx in zip(env_idx, init_config_idxs)
         ]
 
         # if pose given by init config, set pose
         # if pose not given, hide extra ycb obj by teleporting away and
         #       turning off collisions with other hidden objs
-        for ycb_objs, init_poses in zip(self.ycb_objs_per_env, sampled_init_configs):
+        for env_num, init_poses in zip(env_idx, sampled_init_configs):
+            ycb_objs = self.ycb_objs_per_env[env_num]
             for obj_name in ycb_objs:
                 for obj, pose in itertools.zip_longest(
                     ycb_objs[obj_name], init_poses[obj_name], fillvalue=None
@@ -270,6 +274,11 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
                     else:
                         self.show_actor(obj, pose)
 
+        # set articulation qpos as needed
+        # TODO (arth): also shift objs inside the articulation as needed
+        # NOTE (arth): for now the rearrange configs only have the fridge move,
+        #       so above only an issue when one can generate their own
+        #       set the kitchen counter in the ao_configs
         for env_num, ici in zip(env_idx, init_config_idxs):
             rcad_config = self.build_configs[self.build_config_idxs[env_num]]
             ao_states = self.rcad_config_to_rearrange_ao_states[rcad_config][ici]
@@ -277,7 +286,8 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
                 base_qpos = articulation.qpos
                 base_qpos[articulation._scene_idxs.tolist().index(env_num)] *= 0
                 base_qpos[articulation._scene_idxs.tolist().index(env_num)] = qpos
-                articulation.set_qpos(base_qpos)
+                articulation.set_qpos(base_qpos[env_idx])
+                articulation.set_qvel(articulation.qvel[env_idx] * 0)
 
     def sample_build_config_idxs(self):
         used_build_config_idxs = list(self.used_build_config_idxs)
@@ -310,7 +320,7 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
     def init_config_names_to_idxs(self) -> int:
 
         _init_config_names_to_idx = dict()
-        for rcad_config, rearrange_configs in self.rcad_to_rearrange_configs.items():
+        for rearrange_configs in self.rcad_to_rearrange_configs.values():
             for i, rc in enumerate(rearrange_configs):
                 _init_config_names_to_idx[rc] = i
 
