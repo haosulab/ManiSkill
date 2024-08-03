@@ -127,6 +127,9 @@ def sensor_data_to_voxel(
     device = obs_mode_config["device"] # device on which doing voxelization
     seg = obs_mode_config["segmentation"] # device on which doing voxelization
     pcd_rgb_observations = dict()
+    bb_maxs = torch.tensor(coord_bounds[3:6]) # max voxel scene boundary
+    bb_maxs = bb_maxs.to(torch.float)
+    bb_maxs = bb_maxs.unsqueeze(0)
 
     # Collect all cameras' observations
     for (cam_uid, images), (sensor_uid, sensor) in zip(
@@ -141,23 +144,31 @@ def sensor_data_to_voxel(
             position = images["PositionSegmentation"]
             if seg:
                 segmentation = position[..., 3].clone()
-            position = position.float()
-            position[..., 3] = 1 # convert to homogeneious coordinates
+            position[..., 3] = position[..., 3] != 0 # mask out infinitely far points
+            position = position.float() # position -> camera-frame xyzw coordinates
+
+            # Record w=0 (infinitely far) points' indices
+            out_indices = (position[..., 3] == 0)
+            out_indices = out_indices.reshape(out_indices.shape[0], -1)            
+
+            # Convert to world space position and update camera data
+            position[..., 3] = 1 # for matrix multiplication
             position[..., :3] = (
                 position[..., :3] / 1000.0
             )  # convert the raw depth from millimeters to meters
-
-            # Convert to world space position and update camera data
             cam2world = camera_params[cam_uid]["cam2world_gl"]
             xyzw = position.reshape(position.shape[0], -1, 4) @ cam2world.transpose(
                 1, 2
             )
+            
+            # Set w=0 points outside the bounds, so that they can be cropped during voxelization
             xyz = xyzw[..., :3] / xyzw[..., 3].unsqueeze(-1) # dehomogeneize
+            xyz[out_indices, :] = bb_maxs + 1
             cam_data["xyz"] = xyz
+
+            # Extract seg and rgb data 
             if seg:
                 cam_data["seg"] = segmentation.reshape(segmentation.shape[0], -1, 1)
-
-            # Extract rgb data
             if "Color" in images:
                 rgb = images["Color"][..., :3].clone()
                 rgb = rgb / 255 # convert to range [0, 1]
