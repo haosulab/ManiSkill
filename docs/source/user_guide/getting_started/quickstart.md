@@ -3,7 +3,7 @@
 <!-- TODO: add link to new sapien website eventually -->
 ManiSkill is a robotics simulator built on top of SAPIEN. It provides a standard Gym/Gymnasium interface for easy use with existing learning workflows like RL and imitation learning. Moreover ManiSkill supports simulation on both the GPU and CPU, as well as fast parallelized rendering.
 
-## Gym Interface
+## Interface
 
 Here is a basic example of how to run a ManiSkill task following the interface of [Gymnasium](https://gymnasium.farama.org/) and execute a random policy.
 
@@ -31,7 +31,7 @@ while not done:
 env.close()
 ```
 
-Changing `num_envs` to a value > 1 will automatically turn on the GPU simulation mode. More quick details [covered below](#gpu-parallelizedvectorized-tasks)
+Changing `num_envs` to a value > 1 will automatically turn on the GPU simulation mode. More quick details [covered below](#gpu-parallelizedvectorized-tasks). You will also notice that all data returned is a batched torch tensor. To have the exact same API defined by [gym/gymnasium](https://gymnasium.farama.org/) see the section on [reinforcement learning setups](../reinforcement_learning/setup.md)
 
 You can also run the same code from the command line to demo random actions
 
@@ -73,9 +73,9 @@ python -m mani_skill.examples.demo_random_action -e "ReplicaCAD_SceneManipulatio
 You may notice that everything returned by the environment is a torch Tensor and has a batch dimension with value 1. To reduce extra code handling numpy vs torch, cpu vs gpu sim, everything in ManiSkill defaults to serving/using batched torch Tensors of all data. To change the environment to serve numpy, unbatched data simply do the following
 
 ```python
-from mani_skill.utils.wrappers.gymnasium import ManiSkillCPUGymWrapper
+from mani_skill.utils.wrappers.gymnasium import CPUGymWrapper
 env = gym.make(env_id)
-env = ManiSkillCPUGymWrapper(env)
+env = CPUGymWrapper(env)
 obs, _ = env.reset() # obs is numpy and unbatched
 ```
 
@@ -161,19 +161,9 @@ This will then open up a GUI that looks like so:
 
 ### Additional GPU simulation/rendering customization
 
-Finally on servers with multiple GPUs you can directly pick which devices/backends to use for simulation and rendering.
+Finally on servers with multiple GPUs you can directly pick which devices/backends to use for simulation and rendering by setting the `CUDA_VISIBLE_DEVICES` environment variable. You can do this by e.g. running `export CUDA_VISIBLE_DEVICES=1` and then run the same code. While everything is labeled as device "cuda:0" it is actually using GPU device 1 now, which you can verify by running `nvidia-smi`.
 
-```python
-import gymnasium as gym
-import mani_skill.envs
-
-env = gym.make(
-    "PickCube-v1",
-    num_envs=16,
-    sim_backend="cuda:1", # selects the GPU with index 1
-    render_backend="cuda", # auto selects a GPU
-)
-```
+We currently do not properly support exposing multiple visible CUDA devices to a single process as it has some rendering bugs at the moment.
 
 ## Task Instantiation Options
 

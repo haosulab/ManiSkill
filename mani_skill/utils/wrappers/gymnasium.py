@@ -5,11 +5,13 @@ from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.utils import common
 
 
-class ManiSkillCPUGymWrapper(gym.Wrapper):
+class CPUGymWrapper(gym.Wrapper):
     """This wrapper wraps any maniskill env created via gym.make to ensure the outputs of
-    env.render, env.reset, env.step are all numpy arrays and are not batched. This is only useful
-    for use with the CPU simulation backend of ManiSkill. This wrapper should generally be applied after
-    wrappers as most wrappers for ManiSkill assume data returned is batched and is a torch tensor"""
+    env.render, env.reset, env.step are all numpy arrays and are not batched.
+    Essentially ensuring the environment conforms entirely to the standard gymnasium API https://gymnasium.farama.org/api/env/.
+
+    This wrapper should generally be applied after all other
+    wrappers as most wrappers for ManiSkill assume data returned is a batched torch tensor"""
 
     def __init__(self, env: gym.Env):
         super().__init__(env)
