@@ -5,6 +5,7 @@ from typing import Any, Dict, Union
 import numpy as np
 import sapien
 import torch
+from transforms3d.euler import euler2quat
 
 from mani_skill.agents.robots.humanoid import Humanoid
 from mani_skill.envs.sapien_env import BaseEnv
@@ -16,7 +17,6 @@ from mani_skill.utils.geometry import rotation_conversions
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import Array, SceneConfig, SimConfig
-from transforms3d.euler import euler2quat
 
 # Height of head above which stand reward is 1.
 _STAND_HEIGHT = 1.4
@@ -54,12 +54,14 @@ class HumanoidEnvBase(BaseEnv):
                 fov=np.pi / 4,
                 near=0.01,
                 far=100,
-                mount=self.camera_mount
+                mount=self.camera_mount,
             ),
         ]
-    
+
     def _before_control_step(self):
-        self.camera_mount.set_pose(Pose.create_from_pq(p=self.agent.robot.links_map["torso"].pose.p))
+        self.camera_mount.set_pose(
+            Pose.create_from_pq(p=self.agent.robot.links_map["torso"].pose.p)
+        )
         if sapien.physx.is_gpu_enabled():
             # we update just actor pose here, no need to call apply_all/fetch_all
             self.scene.px.gpu_apply_rigid_dynamic_data()
@@ -74,10 +76,10 @@ class HumanoidEnvBase(BaseEnv):
                 pose=sapien_utils.look_at(eye=[0, -3, 1], target=[0, 0, 0]),
                 width=512,
                 height=512,
-                fov= 60 * np.pi/180,
+                fov=60 * np.pi / 180,
                 near=0.01,
                 far=100,
-                mount=self.camera_mount
+                mount=self.camera_mount,
             ),
         ]
 
@@ -116,8 +118,10 @@ class HumanoidEnvBase(BaseEnv):
     @property
     def center_of_mass_velocity(self):
         # """Returns the center of mass velocity of robot"""
-        vels = torch.stack([link.get_linear_velocity() for link in self.active_links],dim=0)  # (num_links, b, 3)
-        vels *= self.robot_links_mass.view(-1,1,1)
+        vels = torch.stack(
+            [link.get_linear_velocity() for link in self.active_links], dim=0
+        )  # (num_links, b, 3)
+        vels *= self.robot_links_mass.view(-1, 1, 1)
         com_vel = vels.sum(dim=0) / self.robot_mass  # (b, 3)
 
         return com_vel
@@ -127,7 +131,7 @@ class HumanoidEnvBase(BaseEnv):
             torso_xmat=self.agent.robot.links_map[
                 "torso"
             ].pose.to_transformation_matrix(),
-            cmass_linvel=self.center_of_mass_velocity
+            cmass_linvel=self.center_of_mass_velocity,
         )
 
     def _load_scene(self, options: dict):
@@ -141,23 +145,27 @@ class HumanoidEnvBase(BaseEnv):
         self.ground = build_ground(self.scene)
 
         # allow tracking of humanoid
-        self.camera_mount = self.scene.create_actor_builder().build_kinematic("camera_mount")
+        self.camera_mount = self.scene.create_actor_builder().build_kinematic(
+            "camera_mount"
+        )
 
         # cache for com velocity calc - doing so gives + 10 fps boost for 1024 envs
         self.active_links = [
             link for link in self.agent.robot.get_links() if "dummy" not in link.name
         ]
-        self.robot_links_mass = torch.stack([link.mass[0] for link in self.active_links]).to(self.device)
+        self.robot_links_mass = torch.stack(
+            [link.mass[0] for link in self.active_links]
+        ).to(self.device)
         self.robot_mass = torch.sum(self.robot_links_mass).item()
 
     def standing_rew(self):
         return rewards.tolerance(
             self.head_height,
             lower=_STAND_HEIGHT,
-            upper=float('inf'),
+            upper=float("inf"),
             margin=_STAND_HEIGHT / 4,
         ).view(-1)
-    
+
     def upright_rew(self, info: Dict):
         return rewards.tolerance(
             self.torso_upright(info),
@@ -167,25 +175,35 @@ class HumanoidEnvBase(BaseEnv):
             margin=1.9,
             value_at_margin=0,
         ).view(-1)
-    
+
     def control_rew(self, action: Array):
-        return rewards.tolerance(
-            action, margin=1, value_at_margin=0, sigmoid="quadratic"
-        ).mean(dim=-1).view(-1)  # (b, a) -> (b)
+        return (
+            rewards.tolerance(action, margin=1, value_at_margin=0, sigmoid="quadratic")
+            .mean(dim=-1)
+            .view(-1)
+        )  # (b, a) -> (b)
 
     def dont_move_rew(self, info):
-        return rewards.tolerance(info['cmass_linvel'][:, :2], margin=2).mean(dim=-1).view(-1)  # (b,3) -> (b)
-    
+        return (
+            rewards.tolerance(info["cmass_linvel"][:, :2], margin=2)
+            .mean(dim=-1)
+            .view(-1)
+        )  # (b,3) -> (b)
+
     def move_rew(self, info, move_speed=10):
-        com_vel = torch.linalg.norm(info['cmass_linvel'][:, :2], dim=-1)
-        return rewards.tolerance(com_vel, 
-                                 lower=move_speed,
-                                 upper=np.inf,
-                                 margin=move_speed,
-                                 value_at_margin=0,
-                                 sigmoid="linear").mean(dim=-1).view(-1)  # (b,3) -> (b)
-
-
+        com_vel = torch.linalg.norm(info["cmass_linvel"][:, :2], dim=-1)
+        return (
+            rewards.tolerance(
+                com_vel,
+                lower=move_speed,
+                upper=np.inf,
+                margin=move_speed,
+                value_at_margin=0,
+                sigmoid="linear",
+            )
+            .mean(dim=-1)
+            .view(-1)
+        )  # (b,3) -> (b)
 
     # def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
     #     standing = rewards.tolerance(
@@ -219,6 +237,8 @@ class HumanoidEnvBase(BaseEnv):
     # def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
     #     max_reward = 1.0
     #     return self.compute_dense_reward(obs, action, info) / max_reward
+
+
 ###
 class HumanoidEnvStandard(HumanoidEnvBase):
     agent: Union[Humanoid]
@@ -231,15 +251,23 @@ class HumanoidEnvStandard(HumanoidEnvBase):
         # global dpos/dt and root (torso) dquaterion/dt lost
         # we replace with linear root linvel and root angularvel (equivalent info)
         return dict(
-            agent=self._get_obs_agent(), # (b, 21*2) root joint not included in our qpos
-            root_vel=self.agent.robot.links_map["dummy_root_0"].get_linear_velocity(), # free joint info, (b, 3)
-            root_quat_vel = self.agent.robot.links_map["dummy_root_0"].get_angular_velocity(), # free joint info, (b, 3)
+            agent=self._get_obs_agent(),  # (b, 21*2) root joint not included in our qpos
+            root_vel=self.agent.robot.links_map[
+                "dummy_root_0"
+            ].get_linear_velocity(),  # free joint info, (b, 3)
+            root_quat_vel=self.agent.robot.links_map[
+                "dummy_root_0"
+            ].get_angular_velocity(),  # free joint info, (b, 3)
             head_height=self.head_height,  # (b,1)
-            com_velocity=info['cmass_linvel'],  # (b, 3)
+            com_velocity=info["cmass_linvel"],  # (b, 3)
             extremities=self.extremities(info),
-            link_linvels=torch.stack([link.get_linear_velocity() for link in self.active_links], dim=1).view(-1,16*3),
-            link_angvels=torch.stack([link.get_angular_velocity() for link in self.active_links], dim=1).view(-1,16*3),
-            qfrc=self.agent.robot.get_qf()
+            link_linvels=torch.stack(
+                [link.get_linear_velocity() for link in self.active_links], dim=1
+            ).view(-1, 16 * 3),
+            link_angvels=torch.stack(
+                [link.get_angular_velocity() for link in self.active_links], dim=1
+            ).view(-1, 16 * 3),
+            qfrc=self.agent.robot.get_qf(),
         )
 
     # our standard humanoid env resets if torso is below a certain point
@@ -253,24 +281,31 @@ class HumanoidEnvStandard(HumanoidEnvBase):
 
     def evaluate(self) -> Dict:
         info = super().evaluate()
-        torso_z = self.agent.robot.links_map["torso"].pose.p[:,-1]
+        torso_z = self.agent.robot.links_map["torso"].pose.p[:, -1]
         failure = torch.logical_or(torso_z < 1.0, torso_z > 2.0)
         info.update(fail=failure)
         return info
-    
+
     def _initialize_episode(self, env_idx: torch.Tensor, options: Dict):
-        #self.camera_mount.set_pose(Pose.create_from_pq(p=self.agent.robot.links_map["torso"].pose.p))
+        # self.camera_mount.set_pose(Pose.create_from_pq(p=self.agent.robot.links_map["torso"].pose.p))
         with torch.device(self.device):
             b = len(env_idx)
             # set agent root pose - torso now centered at dummy root at (0,0,0)
-            pose = Pose.create_from_pq(p=torch.tensor([0, 0, 1.3]).unsqueeze(0).repeat(b,1))
+            pose = Pose.create_from_pq(
+                p=torch.tensor([0, 0, 1.3]).unsqueeze(0).repeat(b, 1)
+            )
             self.agent.robot.set_root_pose(pose)
             # set randomized qpos
             noise_scale = 1e-2
-            qpos_noise = (torch.rand(b, self.agent.robot.dof[0]) * (2*noise_scale)) - noise_scale
-            qvel_noise = (torch.rand(b, self.agent.robot.dof[0]) * (2*noise_scale)) - noise_scale
+            qpos_noise = (
+                torch.rand(b, self.agent.robot.dof[0]) * (2 * noise_scale)
+            ) - noise_scale
+            qvel_noise = (
+                torch.rand(b, self.agent.robot.dof[0]) * (2 * noise_scale)
+            ) - noise_scale
             self.agent.robot.set_qpos(qpos_noise)
             self.agent.robot.set_qvel(qvel_noise)
+
 
 @register_env("MS-HumanoidStand-v1", max_episode_steps=100)
 class HumanoidStand(HumanoidEnvStandard):
@@ -280,11 +315,19 @@ class HumanoidStand(HumanoidEnvStandard):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        small_control = (4 + self.control_rew(action))/5
-        return small_control * self.standing_rew() * self.upright_rew(info) * self.dont_move_rew(info)
-    
-    def compute_normalized_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+        small_control = (4 + self.control_rew(action)) / 5
+        return (
+            small_control
+            * self.standing_rew()
+            * self.upright_rew(info)
+            * self.dont_move_rew(info)
+        )
+
+    def compute_normalized_dense_reward(
+        self, obs: Any, action: torch.Tensor, info: Dict
+    ):
         return self.compute_dense_reward(obs, action, info)
+
 
 class HumanoidEnvHard(HumanoidEnvBase):
     agent: Union[Humanoid]
@@ -297,17 +340,23 @@ class HumanoidEnvHard(HumanoidEnvBase):
         # global dpos/dt and root (torso) dquaterion/dt lost
         # we replace with linear root linvel and root angularvel (equivalent info)
         return dict(
-            agent=self._get_obs_agent(), # (b, 21*2) root joint not included in our qpos
+            agent=self._get_obs_agent(),  # (b, 21*2) root joint not included in our qpos
             head_height=self.head_height,  # (b,1)
             extremities=self.extremities(info),  # (b, 12)
             torso_vertical=self.torso_vertical_orientation(info),  # (b, 3)
-            com_velocity=info['cmass_linvel'],  # (b, 3)
-            root_vel=self.agent.robot.links_map["dummy_root_0"].get_linear_velocity(), # free joint info, (b, 3)
-            root_quat_vel = self.agent.robot.links_map["dummy_root_0"].get_angular_velocity() # free joint info, (b, 3)
+            com_velocity=info["cmass_linvel"],  # (b, 3)
+            root_vel=self.agent.robot.links_map[
+                "dummy_root_0"
+            ].get_linear_velocity(),  # free joint info, (b, 3)
+            root_quat_vel=self.agent.robot.links_map[
+                "dummy_root_0"
+            ].get_angular_velocity(),  # free joint info, (b, 3)
         )
-    
+
     def _initialize_episode(self, env_idx: torch.Tensor, options: Dict):
-        self.camera_mount.set_pose(Pose.create_from_pq(p=self.agent.robot.links_map["torso"].pose.p))
+        self.camera_mount.set_pose(
+            Pose.create_from_pq(p=self.agent.robot.links_map["torso"].pose.p)
+        )
         with torch.device(self.device):
             b = len(env_idx)
             # set agent root pose - torso now centered at dummy root at (0,0,0)
@@ -323,6 +372,7 @@ class HumanoidEnvHard(HumanoidEnvBase):
             random_qpos += q_lims[..., 0]
             self.agent.reset(random_qpos)
 
+
 ###
 @register_env("MS-HumanoidStandHard-v1", max_episode_steps=100)
 class HumanoidStandHard(HumanoidEnvHard):
@@ -332,11 +382,19 @@ class HumanoidStandHard(HumanoidEnvHard):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        small_control = (4 + self.control_rew(action))/5
-        return small_control * self.standing_rew() * self.upright_rew(info) * self.dont_move_rew(info)
-    
-    def compute_normalized_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+        small_control = (4 + self.control_rew(action)) / 5
+        return (
+            small_control
+            * self.standing_rew()
+            * self.upright_rew(info)
+            * self.dont_move_rew(info)
+        )
+
+    def compute_normalized_dense_reward(
+        self, obs: Any, action: torch.Tensor, info: Dict
+    ):
         return self.compute_dense_reward(obs, action, info)
+
 
 @register_env("MS-HumanoidWalkHard-v1", max_episode_steps=100)
 class HumanoidWalkHard(HumanoidEnvHard):
@@ -346,12 +404,20 @@ class HumanoidWalkHard(HumanoidEnvHard):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        small_control = (4 + self.control_rew(action))/5
-        return small_control * self.standing_rew() * self.upright_rew(info) * self.move_rew(info, _WALK_SPEED)
-    
-    def compute_normalized_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+        small_control = (4 + self.control_rew(action)) / 5
+        return (
+            small_control
+            * self.standing_rew()
+            * self.upright_rew(info)
+            * self.move_rew(info, _WALK_SPEED)
+        )
+
+    def compute_normalized_dense_reward(
+        self, obs: Any, action: torch.Tensor, info: Dict
+    ):
         return self.compute_dense_reward(obs, action, info)
-    
+
+
 @register_env("MS-HumanoidRunHard-v1", max_episode_steps=100)
 class HumanoidRunHard(HumanoidEnvHard):
     agent: Union[Humanoid]
@@ -360,9 +426,15 @@ class HumanoidRunHard(HumanoidEnvHard):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        small_control = (4 + self.control_rew(action))/5
-        return small_control * self.standing_rew() * self.upright_rew(info) * self.move_rew(info, _RUN_SPEED)
-    
-    def compute_normalized_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+        small_control = (4 + self.control_rew(action)) / 5
+        return (
+            small_control
+            * self.standing_rew()
+            * self.upright_rew(info)
+            * self.move_rew(info, _RUN_SPEED)
+        )
+
+    def compute_normalized_dense_reward(
+        self, obs: Any, action: torch.Tensor, info: Dict
+    ):
         return self.compute_dense_reward(obs, action, info)
-    
