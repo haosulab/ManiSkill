@@ -57,17 +57,19 @@ def parse_cfg(cfg: OmegaConf) -> OmegaConf:
 
 
 	# Maniskill
-	cfg.env_cfg.env_id = cfg.env_id
-	cfg.env_cfg.obs_mode = cfg.obs # state or rgb
-	cfg.env_cfg.reward_mode = 'normalized_dense'
-	cfg.env_cfg.num_envs = cfg.num_envs
+	cfg.env_cfg.env_id = cfg.eval_env_cfg.env_id = cfg.env_id
+	cfg.env_cfg.obs_mode = cfg.eval_env_cfg.obs_mode = cfg.obs # state or rgb
+	cfg.env_cfg.reward_mode = cfg.eval_env_cfg.reward_mode = 'normalized_dense'
+	cfg.env_cfg.num_envs = cfg.eval_env_cfg.num_envs = cfg.num_envs # eval_env num_envs can change (tbd)
 	if cfg.num_envs == 1:
-		cfg.env_cfg.sim_backend = 'CPU'
+		cfg.env_cfg.sim_backend = cfg.eval_env_cfg.sim_backend = 'cpu'
 	else:
-		cfg.env_cfg.sim_backend = 'GPU'
+		cfg.env_cfg.sim_backend = cfg.eval_env_cfg.sim_backend = 'gpu'
+	
+	cfg.eval_env_cfg.num_eval_episodes = cfg.eval_episodes
 		
-	# cfg.env_cfg.control_mode is defined in maniskill.py
-	# cfg.env_cfg.env_horizon is defined in maniskill.py
+	# cfg.(eval_)env_cfg.control_mode is defined in maniskill.py
+	# cfg.(eval_)env_cfg.env_horizon is defined in maniskill.py
 	# cfg.discount is defined in tdmpc2.py
 
 	return cfg

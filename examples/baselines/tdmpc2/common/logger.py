@@ -142,12 +142,15 @@ class Logger:
 		import wandb
 
 		# Modified for Maniskill RL Baseline Logging Convention
+		wandb_tags = cfg_to_group(cfg, return_list=True) + [f"seed:{cfg.seed}"] + ["tdmpc2"]
+		if cfg.setting_tag != 'none':
+			wandb_tags += [cfg.setting_tag]
 		wandb.init(
 			project=self.project,
 			entity=self.entity,
 			name=self.name,
 			group=self.group,
-			tags=cfg_to_group(cfg, return_list=True) + [f"seed:{cfg.seed}"] + ["tdmpc2"],
+			tags=wandb_tags,
 			dir=self._log_dir,
 			config=OmegaConf.to_container(cfg, resolve=True),
 		)

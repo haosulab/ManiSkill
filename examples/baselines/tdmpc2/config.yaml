@@ -8,6 +8,7 @@ control_mode: default # or pd_joint_delta_pos or pd_ee_delta_pose
 num_envs: 32
 render_mode: rgb_array # ['rgb_array' for quality, or 'sensors' for speed]
 render_size: 64
+setting_tag: none # ['none', 'walltime_efficient', 'sample_efficient', ...] for wandb tags
 
 # evaluation
 checkpoint: ???
@@ -101,6 +102,15 @@ env_cfg:
     obs_mode: ???
     reward_mode: ??? 
     num_envs: ???
-    sim_backend: ??? # CPU or GPU
+    sim_backend: ??? # cpu or gpu
     env_horizon: ???
+eval_env_cfg:
+    env_id: ???
+    control_mode: ???
+    obs_mode: ???
+    reward_mode: ???
+    num_envs: ???
+    sim_backend: ???
+    env_horizon: ???
+    num_eval_episodes: ???
 discount: ???

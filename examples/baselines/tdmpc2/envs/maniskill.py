@@ -27,8 +27,8 @@ def make_envs(cfg):
 			num_envs=cfg.num_envs
 		)
 
-	cfg.env_cfg.control_mode = env.control_mode
+	cfg.env_cfg.control_mode = cfg.eval_env_cfg.control_mode = env.control_mode
 	env.max_episode_steps = env._max_episode_steps
-	cfg.env_cfg.env_horizon = env.max_episode_steps
+	cfg.env_cfg.env_horizon = cfg.eval_env_cfg.env_horizon = env.max_episode_steps
 	env = ManiSkillVectorEnv(env, ignore_terminations=True)
 	return env

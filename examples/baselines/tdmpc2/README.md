@@ -24,8 +24,9 @@ More advanced command with optional configs :
 ```bash
 python train.py model_size=5 steps=1_000_000 seed=1 exp_name=default \
   env_id=PushCube-v1 num_envs=32 control_mode=pd_ee_delta_pose obs=state \
-  wandb=true wandb_entity=??? wandb_project=??? wandb_group=??? wandb_name=???
+  wandb=true wandb_entity=??? wandb_project=??? wandb_group=??? wandb_name=??? setting_tag=???
 ```
+(*) The optional *setting_tag* is for adding a specific tag in the wandb log (e.g. sample_efficient, walltime_efficient, etc.)
 
 ## Visual (RGB) Based RL
 
@@ -33,7 +34,7 @@ The visual based RL expects model_size = 5. Also, make sure you have sufficient 
 ```bash
 python train.py buffer_size=500_000 steps=5_000_000 seed=1 exp_name=default \
   env_id=PushCube-v1 num_envs=32 control_mode=pd_ee_delta_pose obs=rgb \
-  wandb=true wandb_entity=??? wandb_project=??? wandb_group=??? wandb_name=???
+  wandb=true wandb_entity=??? wandb_project=??? wandb_group=??? wandb_name=??? setting_tag=???
 ```
 
 ## Replaying Evaluation Trajectories
