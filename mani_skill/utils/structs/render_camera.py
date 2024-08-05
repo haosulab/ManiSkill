@@ -19,7 +19,7 @@ from mani_skill.utils.structs.link import Link
 from mani_skill.utils.structs.pose import Pose
 
 if SAPIEN_RENDER_SYSTEM == "3.1":
-    sapien.render.RenderCameraGroup = "THIS IS NOT A TYPE"  # type: ignore
+    sapien.render.RenderCameraGroup = "oldtype"  # type: ignore
 
 # NOTE (stao): commented out functions are functions that are not confirmed to be working in the wrapped class but the original class has
 
