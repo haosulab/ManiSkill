@@ -318,10 +318,11 @@ class RecordEpisode(gym.Wrapper):
         self,
         *args,
         seed: Optional[Union[int, List[int]]] = None,
-        options: Optional[dict] = dict(),
+        options: Optional[dict] = None,
         **kwargs,
     ):
-
+        if options is None:
+            options =dict()
         if self.save_on_reset:
             if self.save_video and self.num_envs == 1:
                 self.flush_video()
