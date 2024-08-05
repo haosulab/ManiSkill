@@ -364,11 +364,11 @@ class ManiSkillScene:
     def _sapien_31_update_render(self):
         if physx.is_gpu_enabled():
             if self.render_system_group is None:
+                # TODO (stao): for new render system support the parallel in single scene rendering option
                 for scene in self.sub_scenes:
                     scene.update_render()
                 self._setup_gpu_rendering()
                 self._gpu_setup_sensors(self.sensors)
-                # assert len(self.human_render_cameras) == 0
 
             manager: sapien.render.GpuSyncManager = self.render_system_group
             manager.sync()
@@ -800,7 +800,6 @@ class ManiSkillScene:
         if SAPIEN_RENDER_SYSTEM == "3.1":
             for scene in self.sub_scenes:
                 scene.update_render()
-        print("GPU init")
         self.px.gpu_init()
         self.non_static_actors: List[Actor] = []
         # find non static actors, and set data indices that are now available after gpu_init was called
