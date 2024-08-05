@@ -5,11 +5,6 @@ In the beta release we are still in the process of documenting all of the functi
 Subpackages:
 
 ```{toctree}
-:titlesonly:
-:maxdepth: 1
-   
-mani_skill.envs.sapien_env
-
-mani_skill.utils.common
-mani_skill.utils.sapien_utils
+:maxdepth: 3
+autogendocs/mani_skill
 ```

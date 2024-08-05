@@ -13,3 +13,7 @@ sphinx-subfigure
 sphinxcontrib-video
 sphinx-togglebutton
 sphinx_design
+# For sphinx.ext.autodoc to correctly generate api documentation
+torch
+torchvision
+torchaudio

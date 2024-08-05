@@ -23,6 +23,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
+    "sphinx.ext.napoleon",
     "sphinx_copybutton",
     "myst_parser",
     "sphinx_subfigure",
@@ -71,3 +72,6 @@ html_static_path = ['_static']
 
 autodoc_typehints = "description"
 autodoc_typehints_description_target = "all"
+
+# Other autodoc configurations
+autodoc_default_flags = ['members', 'show-inheritance', 'undoc-members']
