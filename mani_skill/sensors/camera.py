@@ -9,6 +9,7 @@ import sapien
 import sapien.render
 from torch._tensor import Tensor
 
+from mani_skill.render import SAPIEN_RENDER_SYSTEM
 from mani_skill.utils.structs import Actor, Articulation, Link
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import Array
@@ -19,6 +20,10 @@ if TYPE_CHECKING:
 from mani_skill.utils import sapien_utils, visualization
 
 from .base_sensor import BaseSensor, BaseSensorConfig
+
+DEFAULT_TEXTURE_NAMES = ("Color", "PositionSegmentation")
+if SAPIEN_RENDER_SYSTEM == "3.1":
+    DEFAULT_TEXTURE_NAMES = ("Color", "Position", "Segmentation")
 
 
 @dataclass
@@ -44,7 +49,7 @@ class CameraConfig(BaseSensorConfig):
     """entity_uid (str, optional): unique id of the entity to mount the camera. Defaults to None."""
     mount: Union[Actor, Link] = None
     """the Actor or Link to mount the camera on top of. This means the global pose of the mounted camera is now mount.pose * local_pose"""
-    texture_names: Sequence[str] = ("Color", "PositionSegmentation")
+    texture_names: Sequence[str] = DEFAULT_TEXTURE_NAMES
     """texture_names (Sequence[str], optional): texture names to render. Defaults to ("Color", "PositionSegmentation"). Note that the renderign speed will not really change if you remove PositionSegmentation"""
 
     def __post_init__(self):

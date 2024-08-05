@@ -24,6 +24,7 @@ from mani_skill.envs.utils.observations import (
     sensor_data_to_pointcloud,
     sensor_data_to_rgbd,
 )
+from mani_skill.render import SAPIEN_RENDER_SYSTEM
 from mani_skill.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill.sensors.camera import (
     Camera,
@@ -240,32 +241,36 @@ class BaseEnv(gym.Env):
         self.sim_cfg = dacite.from_dict(data_class=SimConfig, data=merged_gpu_sim_cfg, config=dacite.Config(strict=True))
         """the final sim config after merging user overrides with the environment default"""
         physx.set_gpu_memory_config(**self.sim_cfg.gpu_memory_cfg.dict())
-        self.shader_dir = shader_dir
-        if self.shader_dir == "default":
-            sapien.render.set_camera_shader_dir("minimal")
-            sapien.render.set_picture_format("Color", "r8g8b8a8unorm")
-            sapien.render.set_picture_format("ColorRaw", "r8g8b8a8unorm")
-            sapien.render.set_picture_format("PositionSegmentation", "r16g16b16a16sint")
-        elif self.shader_dir == "rt":
-            sapien.render.set_camera_shader_dir("rt")
-            sapien.render.set_viewer_shader_dir("rt")
-            sapien.render.set_ray_tracing_samples_per_pixel(32)
-            sapien.render.set_ray_tracing_path_depth(16)
-            sapien.render.set_ray_tracing_denoiser(
-                "optix"
-            )  # TODO "optix or oidn?" previous value was just True
-        elif self.shader_dir == "rt-fast":
-            sapien.render.set_camera_shader_dir("rt")
-            sapien.render.set_viewer_shader_dir("rt")
-            sapien.render.set_ray_tracing_samples_per_pixel(2)
-            sapien.render.set_ray_tracing_path_depth(1)
-            sapien.render.set_ray_tracing_denoiser("optix")
-        elif self.shader_dir == "rt-med":
-            sapien.render.set_camera_shader_dir("rt")
-            sapien.render.set_viewer_shader_dir("rt")
-            sapien.render.set_ray_tracing_samples_per_pixel(4)
-            sapien.render.set_ray_tracing_path_depth(3)
-            sapien.render.set_ray_tracing_denoiser("optix")
+
+        if SAPIEN_RENDER_SYSTEM == "3.0":
+            self.shader_dir = shader_dir
+            if self.shader_dir == "default":
+                sapien.render.set_camera_shader_dir("minimal")
+                sapien.render.set_picture_format("Color", "r8g8b8a8unorm")
+                sapien.render.set_picture_format("ColorRaw", "r8g8b8a8unorm")
+                sapien.render.set_picture_format("PositionSegmentation", "r16g16b16a16sint")
+            elif self.shader_dir == "rt":
+                sapien.render.set_camera_shader_dir("rt")
+                sapien.render.set_viewer_shader_dir("rt")
+                sapien.render.set_ray_tracing_samples_per_pixel(32)
+                sapien.render.set_ray_tracing_path_depth(16)
+                sapien.render.set_ray_tracing_denoiser(
+                    "optix"
+                )  # TODO "optix or oidn?" previous value was just True
+            elif self.shader_dir == "rt-fast":
+                sapien.render.set_camera_shader_dir("rt")
+                sapien.render.set_viewer_shader_dir("rt")
+                sapien.render.set_ray_tracing_samples_per_pixel(2)
+                sapien.render.set_ray_tracing_path_depth(1)
+                sapien.render.set_ray_tracing_denoiser("optix")
+            elif self.shader_dir == "rt-med":
+                sapien.render.set_camera_shader_dir("rt")
+                sapien.render.set_viewer_shader_dir("rt")
+                sapien.render.set_ray_tracing_samples_per_pixel(4)
+                sapien.render.set_ray_tracing_path_depth(3)
+                sapien.render.set_ray_tracing_denoiser("optix")
+        elif SAPIEN_RENDER_SYSTEM == "3.1":
+            self.shader_dir = "None"
         sapien.render.set_log_level(os.getenv("MS_RENDERER_LOG_LEVEL", "warn"))
 
         # Set simulation and control frequency
