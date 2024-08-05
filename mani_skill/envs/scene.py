@@ -103,8 +103,6 @@ class ManiSkillScene:
         self.parallel_in_single_scene: bool = parallel_in_single_scene
         """Whether rendering all parallel scenes in the viewer/gui is enabled"""
 
-        self.camera_mounts: List[sapien.Entity] = []
-
     # -------------------------------------------------------------------------- #
     # Functions from sapien.Scene
     # -------------------------------------------------------------------------- #
@@ -332,7 +330,6 @@ class ManiSkillScene:
                 camera_mount.add_component(camera)
                 camera_mount.name = f"scene-{i}_{name}"
                 scene.add_entity(camera_mount)
-                self.camera_mounts.append(camera_mount)
             if len(pose) == 1:
                 camera.local_pose = pose.sp
             else:
@@ -979,24 +976,6 @@ class ManiSkillScene:
         sync_manager.set_cuda_poses(px.cuda_rigid_body_data)
         sync_manager.set_render_shapes(shape_pose_indices, shapes)
         sync_manager.set_cameras(cam_pose_indices, cams)
-
-        # # for cameras that are mounted
-        # camera_mounts_indices = [
-        #     c.find_component_by_type(
-        #         sapien.physx.PhysxRigidBodyComponent
-        #     )
-        #     for c in self.camera_mounts
-        # ]
-        # camera_mounts_indices = [x.gpu_pose_index for x in camera_mounts_indices if x is not None]
-
-        # px.gpu_fetch_rigid_dynamic_data()
-        # identity = torch.tensor([0, 0, 0, 1, 0, 0, 0]).float().cuda()
-        # import ipdb;ipdb.set_trace()
-        # px.cuda_rigid_body_data.torch()[
-        #     torch.tensor(camera_mounts_indices), :7
-        # ] = identity
-        # px.gpu_apply_rigid_dynamic_data()
-        # px.gpu_fetch_rigid_dynamic_data()
 
         self.render_system_group = sync_manager
 
