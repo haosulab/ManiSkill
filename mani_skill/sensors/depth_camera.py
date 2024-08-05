@@ -5,7 +5,11 @@ import numpy as np
 import sapien
 import sapien.physx as physx
 from gymnasium import spaces
-from sapien.sensor import StereoDepthSensor, StereoDepthSensorConfig
+
+from mani_skill.render import SAPIEN_RENDER_SYSTEM
+
+if SAPIEN_RENDER_SYSTEM == "3.0":
+    from sapien.sensor import StereoDepthSensor, StereoDepthSensorConfig
 
 from mani_skill.utils import sapien_utils
 
