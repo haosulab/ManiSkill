@@ -1,4 +1,3 @@
-from contextlib import contextmanager
 from functools import cached_property
 from typing import Dict, List, Optional, Tuple, Union
 
@@ -9,7 +8,7 @@ import sapien.render
 import torch
 from sapien.render import RenderCameraComponent
 
-from mani_skill.render import SAPIEN_RENDER_SYSTEM
+from mani_skill.render import SAPIEN_RENDER_SYSTEM, set_shader_pack
 from mani_skill.sensors.base_sensor import BaseSensor
 from mani_skill.sensors.camera import Camera
 from mani_skill.utils import common, sapien_utils
@@ -26,16 +25,7 @@ if SAPIEN_RENDER_SYSTEM == "3.1":
     from sapien.wrapper.scene import get_camera_shader_pack
 
     GlobalShaderPack = None
-    sapien.render.RenderCameraGroup = "THIS IS NOT A TYPE"  # type: ignore
-    # sapien.sensor.StereoDepthSensor = None # type: ignore
-    # sapien.sensor.StereoDepthSensorConfig = None # type: ignore
-    @contextmanager
-    def set_shader_pack(shader_pack):
-        global GlobalShaderPack
-        old = GlobalShaderPack
-        GlobalShaderPack = shader_pack
-        yield
-        GlobalShaderPack = old
+    sapien.render.RenderCameraGroup = "oldtype"  # type: ignore
 
 
 class ManiSkillScene:
