@@ -4,5 +4,6 @@ from .humanoid import (
     HumanoidRunHard,
     HumanoidStand,
     HumanoidStandHard,
+    HumanoidWalk,
     HumanoidWalkHard,
 )
