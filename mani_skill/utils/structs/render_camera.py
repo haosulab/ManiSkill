@@ -156,7 +156,10 @@ class RenderCamera:
 
     def get_picture(self, name: str):
         if physx.is_gpu_enabled():
-            return self.camera_group.get_picture_cuda(name).torch()
+            if SAPIEN_RENDER_SYSTEM == "3.0":
+                return self.camera_group.get_picture_cuda(name).torch()
+            elif SAPIEN_RENDER_SYSTEM == "3.1":
+                return self.camera_group.get_cuda_pictures([name])[0].torch()
         else:
             return common.to_tensor(self._render_cameras[0].get_picture(name))[
                 None, ...

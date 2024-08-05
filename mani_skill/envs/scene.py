@@ -183,7 +183,7 @@ class ManiSkillScene:
     ) -> RenderCamera:
         """Add's a (mounted) camera to the scene"""
         if SAPIEN_RENDER_SYSTEM == "3.1":
-            return self._new_sapien_add_camera(
+            return self._sapien_31_add_camera(
                 name, pose, width, height, near, far, fovy, intrinsic, mount
             )
         else:
@@ -270,7 +270,7 @@ class ManiSkillScene:
             cameras.append(camera)
         return RenderCamera.create(cameras, self, mount=mount)
 
-    def _new_sapien_add_camera(
+    def _sapien_31_add_camera(
         self,
         name,
         pose,
@@ -327,10 +327,11 @@ class ManiSkillScene:
                 else:
                     mount._objs[i].add_component(camera)
             else:
-                camera_mount = scene.create_actor_builder().build_kinematic()
+                camera_mount = sapien.Entity()
                 camera_mount.set_pose(sapien.Pose([0, 0, 0]))
                 camera_mount.add_component(camera)
                 camera_mount.name = f"scene-{i}_{name}"
+                scene.add_entity(camera_mount)
                 self.camera_mounts.append(camera_mount)
             if len(pose) == 1:
                 camera.local_pose = pose.sp
@@ -380,7 +381,7 @@ class ManiSkillScene:
                     scene.update_render()
                 self._setup_gpu_rendering()
                 self._gpu_setup_sensors(self.sensors)
-                assert len(self.human_render_cameras) == 0
+                # assert len(self.human_render_cameras) == 0
 
             manager: sapien.render.GpuSyncManager = self.render_system_group
             manager.sync()
@@ -812,6 +813,7 @@ class ManiSkillScene:
         if SAPIEN_RENDER_SYSTEM == "3.1":
             for scene in self.sub_scenes:
                 scene.update_render()
+        print("GPU init")
         self.px.gpu_init()
         self.non_static_actors: List[Actor] = []
         # find non static actors, and set data indices that are now available after gpu_init was called
@@ -978,20 +980,23 @@ class ManiSkillScene:
         sync_manager.set_render_shapes(shape_pose_indices, shapes)
         sync_manager.set_cameras(cam_pose_indices, cams)
 
-        camera_mounts_indices = [
-            c.find_component_by_type(
-                sapien.physx.PhysxRigidBodyComponent
-            ).gpu_pose_index
-            for c in getattr(self, "camera_mounts", [])
-        ]
+        # # for cameras that are mounted
+        # camera_mounts_indices = [
+        #     c.find_component_by_type(
+        #         sapien.physx.PhysxRigidBodyComponent
+        #     )
+        #     for c in self.camera_mounts
+        # ]
+        # camera_mounts_indices = [x.gpu_pose_index for x in camera_mounts_indices if x is not None]
 
-        px.gpu_fetch_rigid_dynamic_data()
-        identity = torch.tensor([0, 0, 0, 1, 0, 0, 0]).float().cuda()
-        px.cuda_rigid_body_data.torch()[
-            torch.tensor(camera_mounts_indices), :7
-        ] = identity
-        px.gpu_apply_rigid_dynamic_data()
-        px.gpu_fetch_rigid_dynamic_data()
+        # px.gpu_fetch_rigid_dynamic_data()
+        # identity = torch.tensor([0, 0, 0, 1, 0, 0, 0]).float().cuda()
+        # import ipdb;ipdb.set_trace()
+        # px.cuda_rigid_body_data.torch()[
+        #     torch.tensor(camera_mounts_indices), :7
+        # ] = identity
+        # px.gpu_apply_rigid_dynamic_data()
+        # px.gpu_fetch_rigid_dynamic_data()
 
         self.render_system_group = sync_manager
 
