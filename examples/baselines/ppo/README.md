@@ -60,7 +60,9 @@ python ppo_rgb.py --env_id="PickCube-v1" \
 
 and it will save videos to the `path/to/test_videos`.
 
-The results of running the baseline scripts for RGB based PPO are a WIP.
+The examples.sh file has a full list of tested commands for running RGB based PPO successfully on many tasks.
+
+The results of running the baseline scripts for RGB based PPO are here: https://wandb.ai/stonet2000/ManiSkill/groups/PPO/workspace?nw=69soa2dqa9h
 
 ## Visual (RGB+Depth) Based RL
 
