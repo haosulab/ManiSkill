@@ -268,6 +268,7 @@ class HumanoidEnvStandard(HumanoidEnvBase):
                 [link.get_angular_velocity() for link in self.active_links], dim=1
             ).view(-1, 16 * 3),
             qfrc=self.agent.robot.get_qf(),
+            orient=self.agent.robot.links_map["dummy_root_0"].pose.q,
         )
 
     # our standard humanoid env resets if torso is below a certain point
@@ -320,7 +321,7 @@ class HumanoidEnvStandard(HumanoidEnvBase):
         )  # (b,3) -> (b)
 
 
-@register_env("MS-HumanoidStand-v1", max_episode_steps=100)
+@register_env("MS-HumanoidStand-v1", max_episode_steps=200)
 class HumanoidStand(HumanoidEnvStandard):
     agent: Union[Humanoid]
 
@@ -351,11 +352,55 @@ class HumanoidWalk(HumanoidEnvStandard):
 
     # def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
     #     small_control = (4 + self.control_rew(action)) / 5
+    #     walk_rew = (
+    #         small_control
+    #         * self.standing_rew()
+    #         * self.upright_rew(info)
+    #         * self.move_x_rew(info, _WALK_SPEED)
+    #     )
+
+    #     return (1 + 2*walk_rew) / 3
+
+    # def compute_normalized_dense_reward(
+    #     self, obs: Any, action: torch.Tensor, info: Dict
+    # ):
+    #     return self.compute_dense_reward(obs, action, info)
+
+    def compute_normalized_dense_reward(
+        self, obs: Any, action: torch.Tensor, info: Dict
+    ):
+        small_control = (4 + self.control_rew(action)) / 5
+        walk_rew = self.move_x_rew(info, _WALK_SPEED)
+
+        return (
+            1
+            + (small_control * walk_rew * self.upright_rew(info) * self.standing_rew())
+        ) / 2
+
+    # def compute_normalized_dense_reward(
+    #     self, obs: Any, action: torch.Tensor, info: Dict
+    # ):
+    #     #small_control = (4 + self.control_rew(action).pow(2)) / 5
+    #     small_control = (3 - action.pow(2).mean(-1)) / 3
+    #     walk_rew = self.move_x_rew(info, _WALK_SPEED)
+
+    #     return (1+(2*small_control*walk_rew*self.standing_rew())) / 3
+
+
+@register_env("MS-HumanoidRun-v1", max_episode_steps=200)
+class HumanoidRun(HumanoidEnvStandard):
+    agent: Union[Humanoid]
+
+    def __init__(self, *args, robot_uids="humanoid", **kwargs):
+        super().__init__(*args, robot_uids=robot_uids, **kwargs)
+
+    # def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+    #     small_control = (4 + self.control_rew(action)) / 5
     #     return (
     #         small_control
     #         * self.standing_rew()
     #         * self.upright_rew(info)
-    #         * ((5*self.move_x_rew(info, _RUN_SPEED)+1)/6)
+    #         * ((5*self.move_x_rew(info, _WALK_SPEED)+1)/6)
     #     )
 
     # def compute_normalized_dense_reward(
@@ -374,28 +419,6 @@ class HumanoidWalk(HumanoidEnvStandard):
                 - (0.1 * (action.pow(2).sum(dim=-1)))
             )
         )
-
-
-@register_env("MS-HumanoidRun-v1", max_episode_steps=100)
-class HumanoidRun(HumanoidEnvStandard):
-    agent: Union[Humanoid]
-
-    def __init__(self, *args, robot_uids="humanoid", **kwargs):
-        super().__init__(*args, robot_uids=robot_uids, **kwargs)
-
-    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        small_control = (4 + self.control_rew(action)) / 5
-        return (
-            small_control
-            * self.standing_rew()
-            * self.upright_rew(info)
-            * self.move_x_rew(info, _RUN_SPEED)
-        )
-
-    def compute_normalized_dense_reward(
-        self, obs: Any, action: torch.Tensor, info: Dict
-    ):
-        return self.compute_dense_reward(obs, action, info)
 
 
 class HumanoidEnvHard(HumanoidEnvBase):
