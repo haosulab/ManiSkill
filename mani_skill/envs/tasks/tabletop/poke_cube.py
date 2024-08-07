@@ -40,6 +40,13 @@ class PokeCubeEnv(BaseEnv):
         pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.2, 0.2, 0.35])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
+    @property
+    def _default_voxel_config(self):
+        return {"coord_bounds": [-1, -1, -1, 2, 2, 2],
+                    "voxel_size": 200, 
+                    "device": torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
+                    "segmentation": True}
+    
     def _load_scene(self, options: dict):
         self.table_scene = TableSceneBuilder(
             self, robot_init_qpos_noise=self.robot_init_qpos_noise

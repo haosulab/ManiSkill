@@ -68,6 +68,13 @@ class TurnFaucetEnv(BaseEnv):
         pose = sapien_utils.look_at([0.5, 0.5, 1.0], [0.0, 0.0, 0.5])
         return CameraConfig("render_camera", pose=pose, width=512, height=512, fov=1)
 
+    @property
+    def _default_voxel_config(self):
+        return {"coord_bounds": [-1, -1, -1, 2, 2, 2],
+                    "voxel_size": 200, 
+                    "device": torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
+                    "segmentation": True}
+    
     def _load_scene(self, options: dict):
         self.scene_builder = TableSceneBuilder(
             self, robot_init_qpos_noise=self.robot_init_qpos_noise

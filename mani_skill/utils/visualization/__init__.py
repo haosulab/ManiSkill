@@ -8,3 +8,4 @@ from .misc import (
     tile_images,
 )
 from .renderer import ImageRenderer
+from .voxel_visualizer import *
