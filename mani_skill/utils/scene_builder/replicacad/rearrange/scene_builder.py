@@ -283,11 +283,17 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
             rcad_config = self.build_configs[self.build_config_idxs[env_num]]
             ao_states = self.rcad_config_to_rearrange_ao_states[rcad_config][ici]
             for articulation, qpos in ao_states:
+                articulation_scene_idxs = articulation._scene_idxs.tolist()
                 base_qpos = articulation.qpos
-                base_qpos[articulation._scene_idxs.tolist().index(env_num)] *= 0
-                base_qpos[articulation._scene_idxs.tolist().index(env_num)] = qpos
-                articulation.set_qpos(base_qpos[env_idx])
-                articulation.set_qvel(articulation.qvel[env_idx] * 0)
+                base_qpos[articulation_scene_idxs.index(env_num)] *= 0
+                base_qpos[articulation_scene_idxs.index(env_num)] = qpos
+                reset_idxs = [
+                    bn
+                    for bn, en in enumerate(articulation._scene_idxs)
+                    if en in env_idx
+                ]
+                articulation.set_qpos(base_qpos[reset_idxs])
+                articulation.set_qvel(articulation.qvel[reset_idxs] * 0)
 
     def sample_build_config_idxs(self):
         used_build_config_idxs = list(self.used_build_config_idxs)
