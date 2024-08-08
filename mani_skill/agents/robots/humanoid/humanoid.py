@@ -60,30 +60,7 @@ class Humanoid(BaseAgent):
             normalize_action=False,
         )
 
-        # joints_dict = {
-        #     "abdomen_y":      {"damping":5, "stiffness":40},
-        #     "abdomen_z":      {"damping":5, "stiffness":40},
-        #     "abdomen_x":      {"damping":5, "stiffness":40},
-        #     "right_hip_x":    {"damping":5, "stiffness":40},
-        #     "right_hip_z":    {"damping":5, "stiffness":40},
-        #     "right_hip_y":    {"damping":5, "stiffness":120},
-        #     "right_knee":     {"damping":1, "stiffness":80},
-        #     "right_ankle_x":  {"damping":3, "stiffness":20},
-        #     "right_ankle_y":  {"damping":3, "stiffness":20},
-        #     "left_hip_x":     {"damping":5, "stiffness":40},
-        #     "left_hip_z":     {"damping":5, "stiffness":40},
-        #     "left_hip_y":     {"damping":5, "stiffness":120},
-        #     "left_knee":      {"damping":1, "stiffness":80},
-        #     "left_ankle_x":   {"damping":3, "stiffness":20},
-        #     "left_ankle_y":   {"damping":3, "stiffness":20},
-        #     "right_shoulder1":{"damping":1, "stiffness":20},
-        #     "right_shoulder2":{"damping":1, "stiffness":20},
-        #     "right_elbow":    {"damping":0, "stiffness":40},
-        #     "left_shoulder1": {"damping":1, "stiffness":20},
-        #     "left_shoulder2": {"damping":1, "stiffness":20},
-        #     "left_elbow":     {"damping":0, "stiffness":40},
-        # }
-
+        # for pd_joint_delta_pos control
         joints_dict = {
             "abdomen_y": {"damping": 5, "stiffness": 40},
             "abdomen_z": {"damping": 5, "stiffness": 40},
