@@ -21,6 +21,7 @@ from mani_skill.agents.base_agent import BaseAgent
 from mani_skill.agents.multi_agent import MultiAgent
 from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.envs.utils.observations import (
+    parse_visual_obs_mode_to_struct,
     sensor_data_to_pointcloud,
     sensor_data_to_rgbd,
 )
@@ -106,7 +107,7 @@ class BaseEnv(gym.Env):
     SUPPORTED_ROBOTS: List[Union[str, Tuple[str]]] = None
     """Override this to enforce which robots or tuples of robots together are supported in the task. During env creation,
     setting robot_uids auto loads all desired robots into the scene, but not all tasks are designed to support some robot setups"""
-    SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "sensor_data", "rgb", "rgbd", "pointcloud")
+    SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "sensor_data", "rgb", "rgbd", "rgb+depth", "rgb+depth+segmentation", "rgb+segmentation", "depth+segmentation", "pointcloud")
     SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "sparse", "none")
     SUPPORTED_RENDER_MODES = ("human", "rgb_array", "sensors")
     """The supported render modes. Human opens up a GUI viewer. rgb_array returns an rgb array showing the current environment state.
@@ -288,6 +289,7 @@ class BaseEnv(gym.Env):
         if obs_mode not in self.SUPPORTED_OBS_MODES:
             raise NotImplementedError("Unsupported obs mode: {}".format(obs_mode))
         self._obs_mode = obs_mode
+        self._visual_obs_mode_struct = parse_visual_obs_mode_to_struct(self._obs_mode)
 
         # Reward mode
         if reward_mode is None:
@@ -452,15 +454,13 @@ class BaseEnv(gym.Env):
             obs = common.flatten_state_dict(state_dict, use_torch=True, device=self.device)
         elif self._obs_mode == "state_dict":
             obs = self._get_obs_state_dict(info)
-        elif self._obs_mode in ["sensor_data", "rgbd", "rgb", "pointcloud"]:
+        elif self._obs_mode == "pointcloud":
+            # TODO support more flexible pcd obs mode with new render system
+            obs = sensor_data_to_pointcloud(obs, self._sensors)
+        # checking if self._visual_obs_mode_struct is not None is equivalent to checking if the obs mode is visual
+        elif self._visual_obs_mode_struct is not None:
             obs = self._get_obs_with_sensor_data(info)
-            if self._obs_mode == "rgbd":
-                obs = sensor_data_to_rgbd(obs, self._sensors, rgb=True, depth=True, segmentation=True)
-            elif self._obs_mode == "rgb":
-                # NOTE (stao): this obs mode is merely a convenience, it does not make simulation run noticebally faster
-                obs = sensor_data_to_rgbd(obs, self._sensors, rgb=True, depth=False, segmentation=True)
-            elif self.obs_mode == "pointcloud":
-                obs = sensor_data_to_pointcloud(obs, self._sensors)
+            obs = sensor_data_to_rgbd(obs, self._sensors, rgb=self._visual_obs_mode_struct.color, depth=self._visual_obs_mode_struct.depth, segmentation=self._visual_obs_mode_struct.segmentation)
         else:
             raise NotImplementedError(self._obs_mode)
         return obs
@@ -505,11 +505,15 @@ class BaseEnv(gym.Env):
             obj.hide_visual()
         self.scene.update_render()
         self.capture_sensor_data()
+        sensor_obs = self.get_sensor_obs()
+        # explicitly synchronize and wait for cuda kernels to finish
+        # this prevents the GPU from making poor scheduling decisions when other physx code begins to run
+        torch.cuda.synchronize()
         return dict(
             agent=self._get_obs_agent(),
             extra=self._get_obs_extra(info),
             sensor_param=self.get_sensor_params(),
-            sensor_data=self.get_sensor_obs(),
+            sensor_data=sensor_obs,
         )
 
     @property
@@ -626,6 +630,23 @@ class BaseEnv(gym.Env):
         self._agent_sensor_configs = parse_camera_cfgs(self.agent._sensor_configs)
         self._sensor_configs.update(self._agent_sensor_configs)
 
+        # based on obs mode, automatically modify the default texture names
+        textures_struct = parse_visual_obs_mode_to_struct(self.obs_mode)
+        for sensor_cfg in self._sensor_configs.values():
+            if isinstance(sensor_cfg, CameraConfig):
+                if sensor_cfg.texture_names is None:
+                    sensor_cfg.texture_names = []
+                if textures_struct.color:
+                    sensor_cfg.texture_names.append("Color")
+                if SAPIEN_RENDER_SYSTEM == "3.0":
+                    if textures_struct.depth or textures_struct.segmentation:
+                        sensor_cfg.texture_names.append("PositionSegmentation")
+                elif SAPIEN_RENDER_SYSTEM == "3.1":
+                    if textures_struct.depth:
+                        sensor_cfg.texture_names.append("Depth")
+                    if textures_struct.segmentation:
+                        sensor_cfg.texture_names.append("Segmentation")
+
         # Add human render camera configs
         self._human_render_camera_configs = parse_camera_cfgs(
             self._default_human_render_camera_configs
@@ -654,6 +675,7 @@ class BaseEnv(gym.Env):
                 sensor_cls = StereoDepthCamera
             elif isinstance(sensor_cfg, CameraConfig):
                 sensor_cls = Camera
+                print(sensor_cfg.texture_names)
             self._sensors[uid] = sensor_cls(
                 sensor_cfg,
                 self.scene,
@@ -663,6 +685,7 @@ class BaseEnv(gym.Env):
         # Cameras for rendering only
         self._human_render_cameras = dict()
         for uid, camera_cfg in self._human_render_camera_configs.items():
+            camera_cfg.texture_names = ("Color", ) # only capture color
             self._human_render_cameras[uid] = Camera(
                 camera_cfg,
                 self.scene,
@@ -876,7 +899,7 @@ class BaseEnv(gym.Env):
             if self.num_envs == 1 and action_is_unbatched:
                 action = common.batch(action)
             self.agent.set_action(action)
-            if physx.is_gpu_enabled():
+            if self._sim_device.is_cuda():
                 self.scene.px.gpu_apply_articulation_target_position()
                 self.scene.px.gpu_apply_articulation_target_velocity()
         self._before_control_step()
