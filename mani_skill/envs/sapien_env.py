@@ -675,7 +675,6 @@ class BaseEnv(gym.Env):
                 sensor_cls = StereoDepthCamera
             elif isinstance(sensor_cfg, CameraConfig):
                 sensor_cls = Camera
-                print(sensor_cfg.texture_names)
             self._sensors[uid] = sensor_cls(
                 sensor_cfg,
                 self.scene,
