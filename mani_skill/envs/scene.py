@@ -8,6 +8,7 @@ import sapien.render
 import torch
 from sapien.render import RenderCameraComponent
 
+from mani_skill.render import SAPIEN_RENDER_SYSTEM, set_shader_pack
 from mani_skill.sensors.base_sensor import BaseSensor
 from mani_skill.sensors.camera import Camera
 from mani_skill.utils import common, sapien_utils
@@ -18,6 +19,13 @@ from mani_skill.utils.structs.link import Link
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.render_camera import RenderCamera
 from mani_skill.utils.structs.types import Array, Device, SimConfig
+
+# try and determine which render system is used by the installed sapien package
+if SAPIEN_RENDER_SYSTEM == "3.1":
+    from sapien.wrapper.scene import get_camera_shader_pack
+
+    GlobalShaderPack = None
+    sapien.render.RenderCameraGroup = "oldtype"  # type: ignore
 
 
 class ManiSkillScene:
@@ -157,9 +165,31 @@ class ManiSkillScene:
         height,
         near,
         far,
-        fovy: float = None,
-        intrinsic: Array = None,
-        mount: Union[Actor, Link] = None,
+        fovy: Union[float, List, None] = None,
+        intrinsic: Union[Array, None] = None,
+        mount: Union[Actor, Link, None] = None,
+    ) -> RenderCamera:
+        """Add's a (mounted) camera to the scene"""
+        if SAPIEN_RENDER_SYSTEM == "3.1":
+            return self._sapien_31_add_camera(
+                name, pose, width, height, near, far, fovy, intrinsic, mount
+            )
+        else:
+            return self._sapien_add_camera(
+                name, pose, width, height, near, far, fovy, intrinsic, mount
+            )
+
+    def _sapien_add_camera(
+        self,
+        name,
+        pose,
+        width,
+        height,
+        near,
+        far,
+        fovy: Union[float, List, None] = None,
+        intrinsic: Union[Array, None] = None,
+        mount: Union[Actor, Link, None] = None,
     ) -> RenderCamera:
         """internal helper function to add (mounted) cameras"""
         cameras = []
@@ -228,6 +258,77 @@ class ManiSkillScene:
             cameras.append(camera)
         return RenderCamera.create(cameras, self, mount=mount)
 
+    def _sapien_31_add_camera(
+        self,
+        name,
+        pose,
+        width,
+        height,
+        near,
+        far,
+        fovy: Union[float, List, None] = None,
+        intrinsic: Union[Array, None] = None,
+        mount: Union[Actor, Link, None] = None,
+    ) -> RenderCamera:
+        """internal helper function to add (mounted) cameras"""
+        cameras = []
+        pose = Pose.create(pose)
+        # TODO (stao): support scene idxs property for cameras in the future
+        # move intrinsic to np and batch intrinsic if it is not batched
+        if intrinsic is not None:
+            intrinsic = common.to_numpy(intrinsic)
+            if len(intrinsic.shape) == 2:
+                intrinsic = intrinsic[None, :]
+                if len(self.sub_scenes) > 1:
+                    # repeat the intrinsic along batch dim
+                    intrinsic = intrinsic.repeat(len(self.sub_scenes), 0)
+            assert len(intrinsic) == len(
+                self.sub_scenes
+            ), "intrinsic matrix batch dim not equal to the number of sub-scenes"
+
+        for i, scene in enumerate(self.sub_scenes):
+            # Create camera component
+            camera = RenderCameraComponent(
+                width, height, GlobalShaderPack or get_camera_shader_pack()
+            )
+            if fovy is not None:
+                if isinstance(fovy, (float, int)):
+                    camera.set_fovy(fovy, compute_x=True)
+                else:
+                    camera.set_fovy(fovy[i], compute_x=True)
+            elif intrinsic is not None:
+                camera.set_focal_lengths(intrinsic[i, 0, 0], intrinsic[i, 1, 1])
+                camera.set_principal_point(intrinsic[i, 0, 2], intrinsic[i, 1, 2])
+            if isinstance(near, (float, int)):
+                camera.near = near
+            else:
+                camera.near = near[i]
+            if isinstance(far, (float, int)):
+                camera.far = far
+            else:
+                camera.far = far[i]
+
+            # mount camera to actor/link
+            if mount is not None:
+                if isinstance(mount, Link):
+                    mount._objs[i].entity.add_component(camera)
+                else:
+                    mount._objs[i].add_component(camera)
+            else:
+                camera_mount = sapien.Entity()
+                camera_mount.set_pose(sapien.Pose([0, 0, 0]))
+                camera_mount.add_component(camera)
+                camera_mount.name = f"scene-{i}_{name}"
+                scene.add_entity(camera_mount)
+            if len(pose) == 1:
+                camera.local_pose = pose.sp
+            else:
+                camera.local_pose = pose[i].sp
+            camera.name = f"scene-{i}_{name}"
+            cameras.append(camera)
+            scene.update_render()
+        return RenderCamera.create(cameras, self, mount=mount)
+
     # def remove_camera(self, camera):
     #     self.remove_entity(camera.entity)
 
@@ -241,6 +342,12 @@ class ManiSkillScene:
         self.px.step()
 
     def update_render(self):
+        if SAPIEN_RENDER_SYSTEM == "3.1":
+            self._sapien_31_update_render()
+        else:
+            self._sapien_update_render()
+
+    def _sapien_update_render(self):
         if physx.is_gpu_enabled():
             if not self.parallel_in_single_scene:
                 if self.render_system_group is None:
@@ -251,6 +358,20 @@ class ManiSkillScene:
             else:
                 self.px.sync_poses_gpu_to_cpu()
                 self.sub_scenes[0].update_render()
+        else:
+            self.sub_scenes[0].update_render()
+
+    def _sapien_31_update_render(self):
+        if physx.is_gpu_enabled():
+            if self.render_system_group is None:
+                # TODO (stao): for new render system support the parallel in single scene rendering option
+                for scene in self.sub_scenes:
+                    scene.update_render()
+                self._setup_gpu_rendering()
+                self._gpu_setup_sensors(self.sensors)
+
+            manager: sapien.render.GpuSyncManager = self.render_system_group
+            manager.sync()
         else:
             self.sub_scenes[0].update_render()
 
@@ -676,6 +797,9 @@ class ManiSkillScene:
         """
         Start the GPU simulation and allocate all buffers and initialize objects
         """
+        if SAPIEN_RENDER_SYSTEM == "3.1":
+            for scene in self.sub_scenes:
+                scene.update_render()
         self.px.gpu_init()
         self.non_static_actors: List[Actor] = []
         # find non static actors, and set data indices that are now available after gpu_init was called
@@ -784,6 +908,12 @@ class ManiSkillScene:
         return all_render_bodies
 
     def _setup_gpu_rendering(self):
+        if SAPIEN_RENDER_SYSTEM == "3.1":
+            self._sapien_31_setup_gpu_rendering()
+        else:
+            self._sapien_setup_gpu_rendering()
+
+    def _sapien_setup_gpu_rendering(self):
         """
         Prepares the scene for GPU parallelized rendering to enable taking e.g. RGB images
         """
@@ -796,7 +926,55 @@ class ManiSkillScene:
         )
         self.render_system_group.set_cuda_poses(self.px.cuda_rigid_body_data)
 
+    def _sapien_31_setup_gpu_rendering(self):
+        """
+        Prepares the scene for GPU parallelized rendering to enable taking e.g. RGB images
+        """
+
+        px: physx.PhysxGpuSystem = self.px
+
+        shape_pose_indices = []
+        shapes = []
+        scene_id = 0
+        for scene in self.sub_scenes:
+            scene_id += 1
+            for body in scene.render_system.render_bodies:
+                b = body.entity.find_component_by_type(
+                    sapien.physx.PhysxRigidBodyComponent
+                )
+                if b is None:
+                    continue
+                for s in body.render_shapes:
+                    shape_pose_indices.append(b.gpu_pose_index)
+                    shapes.append(s)
+
+        cam_pose_indices = []
+        cams = []
+        for cameras in self.sensors.values():
+            assert isinstance(cameras, Camera), f"Expected Camera, got {cameras}"
+            for c in cameras.camera._render_cameras:
+                b = c.entity.find_component_by_type(
+                    sapien.physx.PhysxRigidBodyComponent
+                )
+                if b is None:
+                    continue
+                cam_pose_indices.append(b.gpu_pose_index)
+                cams.append(c)
+
+        sync_manager = sapien.render.GpuSyncManager()
+        sync_manager.set_cuda_poses(px.cuda_rigid_body_data)
+        sync_manager.set_render_shapes(shape_pose_indices, shapes)
+        sync_manager.set_cameras(cam_pose_indices, cams)
+
+        self.render_system_group = sync_manager
+
     def _gpu_setup_sensors(self, sensors: Dict[str, BaseSensor]):
+        if SAPIEN_RENDER_SYSTEM == "3.1":
+            self._sapien_31_gpu_setup_sensors(sensors)
+        else:
+            self._sapien_gpu_setup_sensors(sensors)
+
+    def _sapien_gpu_setup_sensors(self, sensors: Dict[str, BaseSensor]):
         for name, sensor in sensors.items():
             if isinstance(sensor, Camera):
                 try:
@@ -813,6 +991,22 @@ class ManiSkillScene:
             else:
                 raise NotImplementedError(
                     f"This sensor {sensor} of type {sensor.__class__} has not been implemented yet on the GPU"
+                )
+
+    def _sapien_31_gpu_setup_sensors(self, sensors: dict[str, BaseSensor]):
+        for name, sensor in sensors.items():
+            if isinstance(sensor, Camera):
+                batch_renderer = sapien.render.RenderManager(
+                    sapien.render.get_shader_pack("default")
+                )
+                batch_renderer.set_size(sensor.cfg.width, sensor.cfg.height)
+
+                batch_renderer.set_cameras(sensor.camera._render_cameras)
+                batch_renderer.take_picture()
+                sensor.camera.camera_group = self.camera_groups[name] = batch_renderer
+            else:
+                raise NotImplementedError(
+                    f"This sensor {sensor} of type {sensor.__class__} has not bget_picture_cuda implemented yet on the GPU"
                 )
 
     def get_sensor_obs(self) -> Dict[str, Dict[str, torch.Tensor]]:

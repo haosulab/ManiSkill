@@ -141,14 +141,14 @@ class QuadrupedReachEnv(BaseEnv):
             + torch.linalg.norm(self.agent.robot.qpos - self.default_qpos, axis=1)
             * -0.05
         )
-        reward = 2 * reaching_reward + penalties
-        reward[info["fail"]] = -100
+        reward = 1 + 2 * reaching_reward + penalties
+        reward[info["fail"]] = 0
         return reward
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        max_reward = 2.0
+        max_reward = 3.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
 
 
