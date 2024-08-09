@@ -8,23 +8,27 @@ Currently we just compare ManiSkill and [IsaacLab](https://github.com/isaac-sim/
 
 Raw benchmark results can be read from the .csv files in the [results folder on GitHub](https://github.com/haosulab/ManiSkill/blob/main/docs/source/user_guide/additional_resources/benchmarking_results). There are also plotted figures in that folder. Below we show a selection of some of the figures/results from testing on a RTX 3080. The figures are also sometimes annotated with the GPU memory usage in GB or the number of parallel environments used for that result.
 
-*Note IsaacLab currently does not support RGB+Depth, or multiple cameras per sub-scene so there may not be results for IsaacLab on some figures
+*Note IsaacLab currently does not support RGB+Depth, or multiple cameras per sub-scene so there may not be results for IsaacLab on some figures.
 
 ### Cartpole Balance
 
 #### State
 
+CartPoleBalance simulation only performance results showing FPS vs number of environments, annotated by GPU memory usage in GB on top of data points.
 :::{figure} benchmarking_results/rtx_3080/fps:num_envs_state.png
 :::
 
 #### RGB
 
+CartPoleBalance sim+rendering performance results showing FPS vs number of environments, annotated by GPU memory usage in GB on top of data points.
 :::{figure} benchmarking_results/rtx_3080/fps:num_envs_1x256x256_rgb.png
 :::
 
+CartPoleBalance sim+rendering performance results showing FPS vs number of cameras, annotated by max number of parallel environments runnable under 16GB of GPU memory.
 :::{figure} benchmarking_results/rtx_3080/fps:num_cameras_rgb.png
 :::
 
+CartPoleBalance sim+rendering performance results showing FPS vs camera size, annotated by max number of parallel environments runnable under 16GB of GPU memory.
 :::{figure} benchmarking_results/rtx_3080/fps:camera_size_rgb.png
 :::
 
