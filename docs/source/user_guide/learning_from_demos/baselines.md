@@ -1,15 +1,14 @@
-# Learning from Demonstrations / Imitation Learning
+# Baselines
 
-We provide a number of different baselines spanning different categories of learning from demonstrations research: Behavior Cloning / Supervised Learning, Offline Reinforcement Learning, and Online Learning from Demonstrations.
+We provide a number of different baselines spanning different categories of learning from demonstrations research: Behavior Cloning / Supervised Learning, Offline Reinforcement Learning, and Online Learning from Demonstrations. This page is still a WIP as we finish running experiments and establish clear baselines and benchmarking setups.
 
-As part of these baselines we establish a few standard learning from demonstration benchmarks that cover a wide range of difficulty (easy to solve for verification but not saturated) and diversity in types of demonstrations (human collected, motion planning collected, neural net policy generated)
+<!-- As part of these baselines we establish a few standard learning from demonstration benchmarks that cover a wide range of difficulty (easy to solve for verification but not saturated) and diversity in types of demonstrations (human collected, motion planning collected, neural net policy generated) -->
 
 **Behavior Cloning Baselines**
-| Baseline                           | Code | Results |
-| ---------------------------------- | ---- | ------- |
-| Standard Behavior Cloning (BC) | WIP  | WIP     |
-| Diffusion Policy (DP)                   | WIP  | WIP     |
-| Action Chunk Transformers (ACT)    | WIP  | WIP     |
+| Baseline                        | Code | Results |
+| ------------------------------- | ---- | ------- |
+| Standard Behavior Cloning (BC)  | WIP  | WIP     |
+| Diffusion Policy (DP)           | WIP  | WIP     |
 
 
 **Online Learning from Demonstrations Baselines**

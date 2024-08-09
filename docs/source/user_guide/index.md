@@ -42,6 +42,7 @@ concepts/index
 datasets/index
 data_collection/index
 reinforcement_learning/index
+learning_from_demos/index
 ```
 
 ```{toctree}

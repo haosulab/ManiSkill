@@ -1,6 +1,6 @@
 import os
 import sys
-sys.path.insert(0, os.path.abspath("../../mani_skill"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../mani_skill"))
 __version__ = "3.0.0b5"
 # Configuration file for the Sphinx documentation builder.
 #

@@ -684,16 +684,19 @@ class BaseEnv(gym.Env):
     # Reset
     # -------------------------------------------------------------------------- #
     def reset(self, seed=None, options=None):
-        """
-        Reset the ManiSkill environment. If options["env_idx"] is given, will only reset the selected parallel environments. If
+        """Reset the ManiSkill environment. If options["env_idx"] is given, will only reset the selected parallel environments. If
         options["reconfigure"] is True, will call self._reconfigure() which deletes the entire physx scene and reconstructs everything.
         Users building custom tasks generally do not need to override this function.
 
         Returns the first observation and a info dictionary. The info dictionary is of type
-        ```
-        {
-            "reconfigure": bool (True if the environment reconfigured. False otherwise)
-        }
+
+
+        .. highlight:: python
+        .. code-block:: python
+
+            {
+                "reconfigure": bool # (True if the env reconfigured. False otherwise)
+            }
 
 
 
