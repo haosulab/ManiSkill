@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, Sequence, Union
+from typing import TYPE_CHECKING, Dict, Optional, Sequence, Union
 
 import numpy as np
 import sapien
@@ -49,7 +49,7 @@ class CameraConfig(BaseSensorConfig):
     """entity_uid (str, optional): unique id of the entity to mount the camera. Defaults to None."""
     mount: Union[Actor, Link] = None
     """the Actor or Link to mount the camera on top of. This means the global pose of the mounted camera is now mount.pose * local_pose"""
-    texture_names: Sequence[str] = DEFAULT_TEXTURE_NAMES
+    texture_names: Optional[Sequence[str]] = None
     """texture_names (Sequence[str], optional): texture names to render. Defaults to ("Color", "PositionSegmentation"). Note that the renderign speed will not really change if you remove PositionSegmentation"""
 
     def __post_init__(self):
