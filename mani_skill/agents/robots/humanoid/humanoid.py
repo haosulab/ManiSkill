@@ -59,15 +59,47 @@ class Humanoid(BaseAgent):
             damping=10,
             normalize_action=False,
         )
+
+        # for pd_joint_delta_pos control
+        joints_dict = {
+            "abdomen_y": {"damping": 5, "stiffness": 40},
+            "abdomen_z": {"damping": 5, "stiffness": 40},
+            "abdomen_x": {"damping": 5, "stiffness": 40},
+            "right_hip_x": {"damping": 5, "stiffness": 40},
+            "right_hip_z": {"damping": 5, "stiffness": 40},
+            "right_hip_y": {"damping": 5, "stiffness": 120},
+            "right_knee": {"damping": 1, "stiffness": 80},
+            "right_ankle_x": {"damping": 3, "stiffness": 20},
+            "right_ankle_y": {"damping": 3, "stiffness": 40},
+            "left_hip_x": {"damping": 5, "stiffness": 40},
+            "left_hip_z": {"damping": 5, "stiffness": 40},
+            "left_hip_y": {"damping": 5, "stiffness": 120},
+            "left_knee": {"damping": 1, "stiffness": 80},
+            "left_ankle_x": {"damping": 3, "stiffness": 20},
+            "left_ankle_y": {"damping": 3, "stiffness": 40},
+            "right_shoulder1": {"damping": 1, "stiffness": 20},
+            "right_shoulder2": {"damping": 1, "stiffness": 20},
+            "right_elbow": {"damping": 0, "stiffness": 40},
+            "left_shoulder1": {"damping": 1, "stiffness": 20},
+            "left_shoulder2": {"damping": 1, "stiffness": 20},
+            "left_elbow": {"damping": 0, "stiffness": 40},
+        }
+
+        joint_names = list(joints_dict.keys())
+        assert sorted(joint_names) == sorted([x.name for x in self.robot.active_joints])
+
+        damping = np.array([joint["damping"] for joint in joints_dict.values()])
+        stiffness = np.array([joint["stiffness"] for joint in joints_dict.values()])
+
         pd_joint_delta_pos = PDJointPosControllerConfig(
-            [j.name for j in self.robot.active_joints],
-            -1,
-            1,
-            damping=5,
-            stiffness=20,
-            force_limit=100,
+            joint_names,
+            -2,
+            2,
+            damping=damping,
+            stiffness=stiffness,
             use_delta=True,
         )
+
         return deepcopy_dict(
             dict(
                 pd_joint_pos=dict(body=pd_joint_pos, balance_passive_force=False),
