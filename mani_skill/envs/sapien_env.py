@@ -695,7 +695,7 @@ class BaseEnv(gym.Env):
         .. code-block:: python
 
             {
-                "reconfigure": bool (True if the environment reconfigured. False otherwise)
+                "reconfigure": bool # (True if the env reconfigured. False otherwise)
             }
 
 
