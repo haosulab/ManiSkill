@@ -71,6 +71,7 @@ train:
   curriculum_method: "per_demo"
   per_demo_buffer_size: 3
   demo_horizon_to_max_steps_ratio: 3
+  train_on_demo_actions: True
 
   load_actor: True
   load_critic: True

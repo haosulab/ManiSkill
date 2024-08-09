@@ -2,10 +2,10 @@
 
 Fast offline/online imitation learning from sparse rewards from very few demonstrations in simulation based on ["Reverse Forward Curriculum Learning for Extreme Sample and Demo Efficiency in Reinforcement Learning (ICLR 2024)"](https://arxiv.org/abs/2405.03379). Code adapted from https://github.com/StoneT2000/rfcl/
 
-This code can be useful for solving tasks, verifying tasks are solvable via neural nets, and generating infinite demonstrations via trained neural nets, all without using dense rewards (provided the task is not too long horizon).
+This code can be useful for solving tasks, verifying tasks are solvable via neural nets, generating infinite demonstrations via trained neural nets, all without using dense rewards and optionally without action labels.
 
 ## Installation
-To get started run `git clone https://github.com/StoneT2000/rfcl.git rfcl_jax --branch ms3-gpu` which contains the code for RFCL written in jax. While ManiSkill3 does run on torch, the jax implementation is much more optimized and trains faster.
+To get started run `git clone https://github.com/StoneT2000/rfcl.git rfcl_jax` which contains the code for RFCL written in jax. While ManiSkill3 does run on torch, the jax implementation is much more optimized and trains faster.
 
 We recommend using conda/mamba and you can install the dependencies as so:
 
@@ -59,7 +59,9 @@ XLA_PYTHON_CLIENT_PREALLOCATE=false python rfcl_jax/train.py configs/base_sac_ms
   train.dataset_path="~/.maniskill/demos/${env_id}/motionplanning/trajectory.state.pd_joint_delta_pos.h5" 
 ```
 
-Version of RFCL that runs on the GPU vectorized environments is currently not implemented as the current code is already quite fast
+You can add `train.train_on_demo_actions=False` to train on demonstrations without any action labels, just environment states. This may be useful if you can only download a dataset but can't convert the actions to the desired action space (some tasks can't easily convert actions)/
+
+Version of RFCL that runs on the GPU vectorized environments is currently not implemented as the current code is already quite fast and will require future research to investigate how to leverage GPU simulation with RFCL.
 
 <!-- To train with the GPU vectorization TODO (stao):
 ```bash
