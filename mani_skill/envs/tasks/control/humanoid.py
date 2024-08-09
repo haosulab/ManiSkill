@@ -290,19 +290,55 @@ class HumanoidStand(HumanoidEnvStandard):
     def __init__(self, *args, robot_uids="humanoid", **kwargs):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
-    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+    def _get_obs_state_dict(self, info: Dict):
+        # make all obs completely egocentric, for z rotation invariance, since stand has z rot randomization
+        root_pose_mat = self.agent.robot.links_map[
+            "dummy_root_0"
+        ].pose.to_transformation_matrix()[:, :3, :3]
+        lin_vels = [
+            link.get_linear_velocity() for link in self.active_links
+        ]  # (links, b, 3)
+        ang_vels = [
+            link.get_angular_velocity() for link in self.active_links
+        ]  # (links, b, 3)
+        non_ego_vels = torch.stack(
+            [*lin_vels, *ang_vels, info["cmass_linvel"]], dim=1
+        )  # (b, len(lin_vels)+len(ang_vels)+1, 3)
+        ego_vels = (non_ego_vels @ root_pose_mat).view(
+            -1, (len(lin_vels) + len(ang_vels) + 1) * 3
+        )
+        return dict(
+            agent=self._get_obs_agent(),  # (b, 21*2) root joint not included in our qpos
+            head_height=self.head_height,  # (b,1)
+            egocentric_vels=ego_vels,
+            extremities=self.extremities(info),
+        )
+
+    # in stand, we also randomize the agent rotation around z axis
+    def _initialize_episode(self, env_idx: torch.Tensor, options: Dict):
+        super()._initialize_episode(env_idx=env_idx, options=options)
+        with torch.device(self.device):
+            b = len(env_idx)
+            # randomize z rotation for humanoid pose
+            alphas = torch.rand(b) * 2 * torch.pi
+            quats = torch.zeros(b, 4)
+            quats[:, 0] = (alphas / 2).cos()
+            quats[:, -1] = (alphas / 2).sin()
+            pose = Pose.create_from_pq(p=[0, 0, 1.3], q=quats)
+            self.agent.robot.set_root_pose(pose)
+
+    def compute_normalized_dense_reward(
+        self, obs: Any, action: torch.Tensor, info: Dict
+    ):
         small_control = (4 + self.control_rew(action)) / 5
-        return (
+        stand_rew = (
             small_control
             * self.standing_rew()
             * self.upright_rew(info)
             * self.dont_move_rew(info)
         )
 
-    def compute_normalized_dense_reward(
-        self, obs: Any, action: torch.Tensor, info: Dict
-    ):
-        return self.compute_dense_reward(obs, action, info)
+        return stand_rew
 
 
 @register_env("MS-HumanoidWalk-v1", max_episode_steps=1000)
