@@ -5,7 +5,6 @@ import numpy as np
 import torch
 from gymnasium import spaces
 
-from mani_skill import logger
 from mani_skill.agents.controllers.utils.kinematics import Kinematics
 from mani_skill.utils import gym_utils
 from mani_skill.utils.geometry.rotation_conversions import (
