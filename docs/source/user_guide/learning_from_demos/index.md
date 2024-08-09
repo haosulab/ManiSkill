@@ -5,6 +5,5 @@ ManiSkill supports all kinds of learning from demonstration methods via a unifie
 ```{toctree}
 :titlesonly:
 
-setup
 baselines
 ```
