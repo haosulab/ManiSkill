@@ -398,9 +398,12 @@ class Fetch(BaseAgent):
         )
         return torch.logical_and(lflag, rflag)
 
-    def is_static(self, threshold: float = 0.2):
-        qvel = self.robot.get_qvel()[..., :-2]
-        return torch.max(torch.abs(qvel), 1)[0] <= threshold
+    def is_static(self, threshold: float = 0.2, base_threshold: float = 0.05):
+        body_qvel = self.robot.get_qvel()[..., 3:-2]
+        base_qvel = self.robot.get_qvel()[..., :3]
+        return torch.all(body_qvel <= threshold, dim=1) & torch.all(
+            base_qvel <= base_threshold, dim=1
+        )
 
     @staticmethod
     def build_grasp_pose(approaching, closing, center):
