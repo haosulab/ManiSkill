@@ -1,27 +1,20 @@
 from dataclasses import dataclass
 from typing import Literal, Sequence, Union
 
-from mani_skill.agents.controllers.utils.kinematics import Kinematics
-
-try:
-    import fast_kinematics
-except:
-    # not all systems support the fast_kinematics package at the moment
-    fast_kinematics = None
 import numpy as np
-import sapien.physx as physx
 import torch
 from gymnasium import spaces
 
 from mani_skill import logger
-from mani_skill.utils import common, gym_utils, sapien_utils
+from mani_skill.agents.controllers.utils.kinematics import Kinematics
+from mani_skill.utils import gym_utils
 from mani_skill.utils.geometry.rotation_conversions import (
     euler_angles_to_matrix,
     matrix_to_quaternion,
     quaternion_apply,
     quaternion_multiply,
 )
-from mani_skill.utils.structs import ArticulationJoint, Pose
+from mani_skill.utils.structs import Pose
 from mani_skill.utils.structs.types import Array, DriveMode
 
 from .base_controller import ControllerConfig

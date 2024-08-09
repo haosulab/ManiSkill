@@ -14,11 +14,12 @@ from mani_skill.utils.structs.articulation import Articulation
 from mani_skill.utils.structs.articulation_joint import ArticulationJoint
 from mani_skill.utils.structs.pose import Pose
 
-try:
-    import fast_kinematics
-except:
-    # not all systems support the fast_kinematics package at the moment
-    fast_kinematics = None
+# currently fast_kinematics has some bugs on some systems so we use the slower pytorch kinematics package instead.
+# try:
+#     import fast_kinematics
+# except:
+#     # not all systems support the fast_kinematics package at the moment
+#     fast_kinematics = None
 
 
 class Kinematics:
