@@ -262,7 +262,7 @@ def main(cfg: SACExperiment):
             }
         fixed_wb_cfgs = {"env_cfg": parse_env_cfg(env_cfg), "eval_env_cfg": parse_env_cfg(eval_env_cfg), "num_demos": cfg.train.num_demos, "demo_type": cfg.demo_type}
         wb.config.update({**fixed_wb_cfgs}, allow_val_change=True)
-        algo.logger.wandb_run.tags = ["rlpd", cfg.config_type]
+        algo.logger.wandb_run.tags = ["rfcl", cfg.config_type]
 
 
     ###########################################
