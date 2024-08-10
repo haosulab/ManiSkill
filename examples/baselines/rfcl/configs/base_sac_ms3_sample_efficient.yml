@@ -22,22 +22,22 @@ sac:
   seed_with_policy: False
   replay_buffer_capacity: 1_000_000
   batch_size: 256
-  steps_per_env: 4
-  grad_updates_per_step: 16
-  actor_update_freq: 1
+  steps_per_env: 1
+  grad_updates_per_step: 80
+  actor_update_freq: 20
 
-  num_qs: 2
+  num_qs: 10
   num_min_qs: 2
 
   discount: 0.9
   tau: 0.005
   backup_entropy: False
 
-  eval_freq: 50_000
-  eval_steps: 250
+  eval_freq: 5_000
+  eval_steps: 500
 
   log_freq: 1000
-  save_freq: 50_000
+  save_freq: 10_000
 
   learnable_temp: True
   initial_temperature: 1.0
