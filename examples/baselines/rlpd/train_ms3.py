@@ -60,6 +60,10 @@ class SACExperiment:
     save_eval_video: bool = True  # whether to save eval videos
     demo_seed: int = None  # fix a seed to fix which demonstrations are sampled from a dataset
 
+    """additional tags/configs for logging purposes to wandb and shared comparisons with other algorithms"""
+    demo_type: str = None
+    config_type: str = None # "sample_efficient" or "walltime_efficient"
+
 
 from dacite import from_dict
 
@@ -183,9 +187,9 @@ def main(cfg: SACExperiment):
                 "obs_mode": cfg.env.env_kwargs.get("obs_mode"),
                 "control_mode": cfg.env.env_kwargs.get("control_mode"),
             }
-        fixed_wb_cfgs = {"env_cfg": parse_env_cfg(env_cfg), "eval_env_cfg": parse_env_cfg(eval_env_cfg)}
+        fixed_wb_cfgs = {"env_cfg": parse_env_cfg(env_cfg), "eval_env_cfg": parse_env_cfg(eval_env_cfg), "num_demos": cfg.train.num_demos, "demo_type": cfg.demo_type}
         wb.config.update({**fixed_wb_cfgs}, allow_val_change=True)
-
+        algo.logger.wandb_run.tags = ["rlpd", cfg.config_type]
     algo.offline_buffer = demo_replay_dataset  # create offline buffer to oversample from
     rng_key, train_rng_key = jax.random.split(jax.random.PRNGKey(cfg.seed), 2)
     algo.train(
