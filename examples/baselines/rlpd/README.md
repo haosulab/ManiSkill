@@ -7,7 +7,7 @@ RLPD leverages prior collected trajectory data (expert and non-expert work) and 
 
 ## Installation
 
-To get started run `git clone https://github.com/StoneT2000/rfcl.git rlpd_jax --branch ms3-gpu` which contains the code for RLPD written in jax (a partial fork of the original RLPD and JaxRL repos that has been optimized to run faster and support vectorized environments).
+To get started run `git clone https://github.com/StoneT2000/rfcl.git rlpd_jax` which contains the code for RLPD written in jax (a partial fork of the original RLPD and JaxRL repos that has been optimized to run faster and support vectorized environments).
 
 We recommend using conda/mamba and you can install the dependencies as so:
 
