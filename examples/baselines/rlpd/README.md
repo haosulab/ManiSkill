@@ -7,7 +7,7 @@ RLPD leverages prior collected trajectory data (expert and non-expert work) and 
 
 ## Installation
 
-To get started run `git clone https://github.com/StoneT2000/rfcl.git rlpd_jax --branch ms3-gpu` which contains the code for RLPD written in jax (a partial fork of the original RLPD and JaxRL repos that has been optimized to run faster and support vectorized environments).
+To get started run `git clone https://github.com/StoneT2000/rfcl.git rlpd_jax` which contains the code for RLPD written in jax (a partial fork of the original RLPD and JaxRL repos that has been optimized to run faster and support vectorized environments).
 
 We recommend using conda/mamba and you can install the dependencies as so:
 
@@ -59,7 +59,8 @@ XLA_PYTHON_CLIENT_PREALLOCATE=false python train_ms3.py configs/base_rlpd_ms3.ym
   logger.exp_name="rlpd-${env_id}-state-${demos}_rl_demos-${seed}-walltime_efficient" logger.wandb=True \
   seed=${seed} train.num_demos=${demos} train.steps=200_000 \
   env.env_id=${env_id} \
-  train.dataset_path="~/.maniskill/demos/${env_id}/rl/trajectory.state.pd_joint_delta_pos.h5" 
+  train.dataset_path="~/.maniskill/demos/${env_id}/rl/trajectory.state.pd_joint_delta_pos.h5" \
+  demo_type="rl" config_type="walltime_efficient" # additional tags for logging purposes on wandb
 ```
 
 This should solve the PickCube-v1 task in a few minutes, but won't get good sample efficiency.
@@ -74,14 +75,15 @@ XLA_PYTHON_CLIENT_PREALLOCATE=false python train_ms3.py configs/base_rlpd_ms3_sa
   logger.exp_name="rlpd-${env_id}-state-${demos}_rl_demos-${seed}-sample_efficient" logger.wandb=True \
   seed=${seed} train.num_demos=${demos} train.steps=100_000 \
   env.env_id=${env_id} \
-  train.dataset_path="~/.maniskill/demos/${env_id}/rl/trajectory.state.pd_joint_delta_pos.h5"
+  train.dataset_path="~/.maniskill/demos/${env_id}/rl/trajectory.state.pd_joint_delta_pos.h5" \
+  demo_type="rl" config_type="sample_efficient" # additional tags for logging purposes on wandb
 ```
 
 evaluation videos are saved to `exps/<exp_name>/videos`.
 
 ## Generating Demonstrations / Evaluating policies
 
-To generate 1000 demonstrations you can run
+To generate 1000 demonstrations with a trained policy you can run
 
 ```bash
 XLA_PYTHON_CLIENT_PREALLOCATE=false python rlpd_jax/scripts/collect_demos.py exps/path/to/model.jx \

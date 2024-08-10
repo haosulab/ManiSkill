@@ -46,41 +46,43 @@ python -m mani_skill.trajectory.replay_trajectory \
 
 ## Train
 
-To train with CPU vectorization (faster with a small number of parallel environments) run
+To train with CPU vectorization (faster with a small number of parallel environments) with walltime efficient hyperparameters run
 
 ```bash
 env_id=PickCube-v1
 demos=5 # number of demos to train on
 seed=42
-XLA_PYTHON_CLIENT_PREALLOCATE=false python rfcl_jax/train.py configs/base_sac_ms3.yml \
-  logger.exp_name="ms3/${env_id}/rfcl_${demos}_demos_s${seed}" logger.wandb=True \
+XLA_PYTHON_CLIENT_PREALLOCATE=false python train.py configs/base_sac_ms3.yml \
+  logger.exp_name=rfcl-${env_id}-state-${demos}_motionplanning_demos-${seed}-walltime_efficient logger.wandb=True \
   seed=${seed} train.num_demos=${demos} train.steps=1_000_000 \
   env.env_id=${env_id} \
-  train.dataset_path="~/.maniskill/demos/${env_id}/motionplanning/trajectory.state.pd_joint_delta_pos.h5" 
+  train.dataset_path="~/.maniskill/demos/${env_id}/motionplanning/trajectory.state.pd_joint_delta_pos.h5" \
+  demo_type="motionplanning" config_type="walltime_efficient" # additional tags for logging purposes on wandb
 ```
 
 You can add `train.train_on_demo_actions=False` to train on demonstrations without any action labels, just environment states. This may be useful if you can only download a dataset but can't convert the actions to the desired action space (some tasks can't easily convert actions)/
 
-Version of RFCL that runs on the GPU vectorized environments is currently not implemented as the current code is already quite fast and will require future research to investigate how to leverage GPU simulation with RFCL.
+To train with sample efficient hyperparameters run
 
-<!-- To train with the GPU vectorization TODO (stao):
 ```bash
-env=pickcube
-demos=5
-seed=1
-XLA_PYTHON_CLIENT_PREALLOCATE=false python train_ms3.py rfcl_jax/configs/ms3-gpu/sac_ms3_${env}.yml \
-  logger.exp_name="ms3/${env}/${name_prefix}_${demos}_demos_s${seed}-gpusim" \
-  logger.wandb=False \
-  train.num_demos=${demos} \
-  seed=${seed} \
-  train.steps=4000000
-``` -->
+env_id=PickCube-v1
+demos=5 # number of demos to train on
+seed=42
+XLA_PYTHON_CLIENT_PREALLOCATE=false python train.py configs/base_sac_ms3_sample_efficient.yml \
+  logger.exp_name=rfcl-${env_id}-state-${demos}_motionplanning_demos-${seed}-sample_efficient logger.wandb=True \
+  seed=${seed} train.num_demos=${demos} train.steps=1_000_000 \
+  env.env_id=${env_id} \
+  train.dataset_path="~/.maniskill/demos/${env_id}/motionplanning/trajectory.state.pd_joint_delta_pos.h5" \
+  demo_type="motionplanning" config_type="sample_efficient" # additional tags for logging purposes on wandb
+```
+
+Version of RFCL that runs on the GPU vectorized environments is currently not implemented as the current code is already quite fast and will require future research to investigate how to leverage GPU simulation with RFCL.
 
 
 ## Generating Demonstrations with Learned Policy 
 
 
-To generate 1000 demonstrations you can run
+To generate 1000 demonstrations with a trained policy you can run
 
 ```bash
 XLA_PYTHON_CLIENT_PREALLOCATE=false python rfcl_jax/scripts/collect_demos.py exps/path/to/model.jx \
@@ -90,7 +92,7 @@ This saves the demos which uses CPU vectorization to generate demonstrations in 
 
 ```bash
 python -m mani_skill.trajectory.replay_trajectory \
-  --traj-path exps/ms3/PickCube-v1/_5_demos_s42/eval_videos/trajectory.h5 \
+  --traj-path exps/<exp_name>/eval_videos/trajectory.h5 \
   -b gpu --use-first-env-state
 ```
 
