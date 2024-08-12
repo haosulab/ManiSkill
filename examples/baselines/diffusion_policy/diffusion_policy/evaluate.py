@@ -31,11 +31,11 @@ def evaluate(n, agent, eval_envs, device):
         while eps_count < n:
             if is_cpu_sim:
                 action_seq = agent.get_eval_action(torch.Tensor(obs).to(device)).cpu().numpy()
-                for action in action_seq:
+                for i in range(action_seq.shape[1]):
                     eps_lens += 1
-                    obs, rew, terminated, truncated, info = eval_envs.step(action)
+                    obs, rew, terminated, truncated, info = eval_envs.step(action_seq[:, i])
                     eps_rets += rew
-                    if truncated:
+                    if truncated.any():
                         break
             else:
                 action_seq = agent.get_eval_action(obs)

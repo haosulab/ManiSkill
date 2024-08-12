@@ -268,10 +268,6 @@ if __name__ == "__main__":
     else:
         run_name = args.exp_name
 
-    args.num_eval_envs = min(args.num_eval_envs, args.num_eval_episodes)
-    assert args.num_eval_episodes % args.num_eval_envs == 0
-    if args.num_eval_envs == 1:
-        args.sync_venv = True
     if args.demo_path.endswith('.h5'):
         import json
         json_file = args.demo_path[:-2] + 'json'

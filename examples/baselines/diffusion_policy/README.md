@@ -25,7 +25,7 @@ env_id="PickCube-v1"
 python -m mani_skill.trajectory.replay_trajectory \
   --traj-path ~/.maniskill/demos/${env_id}/motionplanning/trajectory.h5 \
   --use-first-env-state \
-  -c pd_ee_delta_pose -o state \
+  -c pd_joint_delta_pos -o state \
   --save-traj --num-procs 10
 ```
 
@@ -53,8 +53,10 @@ You can also choose to train on trajectories generated in the GPU simulation and
 ```bash
 env_id="PickCube-v1"
 python -m mani_skill.trajectory.replay_trajectory \
-  --traj-path ~/.maniskill/demos/${env_id}/motionplanning/trajectory.state.pd_joint_delta_pos.cpu.h5 \
-  -b gpu --use-first-env-state --save-traj
+  --traj-path ~/.maniskill/demos/${env_id}/motionplanning/trajectory.h5 \
+  --use-first-env-state \
+  -c pd_joint_delta_pos -o state \
+  -b gpu --save-traj --count 100
 ```
 
 ```bash
