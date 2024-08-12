@@ -99,7 +99,7 @@ class ManiSkillVectorEnv(VectorEnv):
         infos[
             "real_next_obs"
         ] = obs  # not part of standard API but makes some RL code slightly less complicated
-        if dones.any():
+        if dones.any() and self.auto_reset:
             infos["episode"]["r"] = self.returns.clone()
             final_obs = obs
             env_idx = torch.arange(0, self.num_envs, device=self.device)[dones]

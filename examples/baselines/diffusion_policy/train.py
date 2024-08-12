@@ -12,6 +12,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
+from diffusion_policy.evaluate import evaluate
 from mani_skill.utils.registration import REGISTERED_ENVS
 
 from collections import defaultdict
@@ -250,34 +251,6 @@ class Agent(nn.Module):
         start = self.obs_horizon - 1
         end = start + self.act_horizon
         return noisy_action_seq[:, start:end] # (B, act_horizon, act_dim)
-# TODO (stao): support gpu and cpu env evals
-def collect_episode_info(infos, result=None):
-    if result is None:
-        result = defaultdict(list)
-    if "final_info" in infos: # infos is a dict
-        indices = np.where(infos["_final_info"])[0] # not all envs are done at the same time
-        for i in indices:
-            info = infos["final_info"][i] # info is also a dict
-            ep = info['episode']
-            result['return'].append(ep['r'][0])
-            result['len'].append(ep["l"][0])
-            if "success" in info:
-                result['success'].append(info['success'])
-            if "fail" in info:
-                result['fail'].append(info['fail'])
-    return result
-
-def evaluate(n, agent, eval_envs, device):
-    agent.eval()
-    result = defaultdict(list)
-    obs, info = eval_envs.reset(options=dict()) # don't seed here
-    while len(result['return']) < n:
-        with torch.no_grad():
-            action = agent.get_eval_action(torch.Tensor(obs).to(device))
-        obs, rew, terminated, truncated, info = eval_envs.step(action.cpu().numpy())
-        collect_episode_info(info, result)
-    agent.train()
-    return result
 
 def save_ckpt(run_name, tag):
     os.makedirs(f'runs/{run_name}/checkpoints', exist_ok=True)
@@ -324,7 +297,8 @@ if __name__ == "__main__":
 
     # env setup
     max_episode_steps = args.max_episode_steps if args.max_episode_steps is not None else REGISTERED_ENVS[args.env_id].max_episode_steps
-    env_kwargs = dict(control_mode=args.control_mode, reward_mode="sparse", obs_mode="state", render_mode="rgb_array", max_episode_steps=max_episode_steps)
+    # note we set reconfiguration_freq to 1 to ensure that the env is reconfigured after each episode to sufficiently randomize object geometries
+    env_kwargs = dict(control_mode=args.control_mode, reward_mode="sparse", obs_mode="state", render_mode="rgb_array", max_episode_steps=max_episode_steps, reconfiguration_freq=1)
     other_kwargs = dict(obs_horizon=args.obs_horizon)
     eval_envs = make_env(args.env_id, args.num_eval_envs, args.sim_backend, args.seed, env_kwargs, other_kwargs, video_dir=f'runs/{run_name}/videos' if args.capture_video else None)
     eval_envs.reset(seed=args.seed) # seed eval_envs here
@@ -346,6 +320,7 @@ if __name__ == "__main__":
         args.num_demos = len(dataset)
 
     # agent setup
+    import ipdb; ipdb.set_trace()
     agent = Agent(envs, args).to(device)
     optimizer = optim.AdamW(params=agent.parameters(),
         lr=args.lr, betas=(0.95, 0.999), weight_decay=1e-6)

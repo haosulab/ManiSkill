@@ -93,7 +93,7 @@ This saves the demos which uses CPU vectorization to generate demonstrations in 
 ```bash
 python -m mani_skill.trajectory.replay_trajectory \
   --traj-path exps/<exp_name>/eval_videos/trajectory.h5 \
-  -b gpu --use-first-env-state
+  -b gpu --use-first-env-state --save-traj
 ```
 
 The replay_trajectory tool can also be used to generate videos
