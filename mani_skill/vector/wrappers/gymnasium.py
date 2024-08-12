@@ -6,7 +6,6 @@ import gymnasium as gym
 import torch
 from gymnasium.vector import VectorEnv
 
-from mani_skill.utils import gym_utils
 from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:

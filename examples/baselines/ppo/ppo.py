@@ -212,6 +212,7 @@ if __name__ == "__main__":
             import wandb
             config = vars(args)
             config["env_cfg"] = dict(**env_kwargs, num_envs=args.num_envs, env_id=args.env_id, reward_mode="normalized_dense", env_horizon=max_episode_steps)
+            config["eval_env_cfg"] = dict(**env_kwargs, num_envs=args.num_eval_envs, env_id=args.env_id, reward_mode="normalized_dense", env_horizon=max_episode_steps)
             wandb.init(
                 project=args.wandb_project_name,
                 entity=args.wandb_entity,

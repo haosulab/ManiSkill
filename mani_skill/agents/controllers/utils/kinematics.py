@@ -45,6 +45,25 @@ class Kinematics:
         self.active_joint_indices = active_joint_indices
         self.articulation = articulation
         self.device = articulation.device
+        # note that everything past the end-link is ignored. Any joint whose ancestor is self.end_link is ignored
+        cur_link = self.end_link.joint.parent_link
+        active_ancestor_joints: List[ArticulationJoint] = []
+        while cur_link is not None:
+            if cur_link.joint.active_index is not None:
+                active_ancestor_joints.append(cur_link.joint)
+            cur_link = cur_link.joint.parent_link
+        active_ancestor_joints = active_ancestor_joints[::-1]
+        self.active_ancestor_joints = active_ancestor_joints
+
+        # initially self.active_joint_indices references active joints that are controlled.
+        # we also make the assumption that the active index is the same across all parallel managed joints
+        self.active_ancestor_joint_idxs = [
+            (x.active_index[0]).cpu().item() for x in self.active_ancestor_joints
+        ]
+        self.controlled_joints_idx_in_qmask = [
+            self.active_ancestor_joint_idxs.index(idx)
+            for idx in self.active_joint_indices
+        ]
         if self.device.type == "cuda":
             self.use_gpu_ik = True
             self._setup_gpu()
@@ -84,29 +103,10 @@ class Kinematics:
                 end_link_name=self.end_link.name,
             ).to(device=self.device)
 
-        # note that everything past the end-link is ignored. Any joint whose ancestor is self.end_link is ignored
-        cur_link = self.end_link.joint.parent_link
-        active_ancestor_joints: List[ArticulationJoint] = []
-        while cur_link is not None:
-            if cur_link.joint.active_index is not None:
-                active_ancestor_joints.append(cur_link.joint)
-            cur_link = cur_link.joint.parent_link
-        active_ancestor_joints = active_ancestor_joints[::-1]
-        self.active_ancestor_joints = active_ancestor_joints
-
-        # initially self.active_joint_indices references active joints that are controlled.
-        # we also make the assumption that the active index is the same across all parallel managed joints
-        self.active_ancestor_joint_idxs = [
-            (x.active_index[0]).cpu().item() for x in self.active_ancestor_joints
-        ]
-        controlled_joints_idx_in_qmask = [
-            self.active_ancestor_joint_idxs.index(idx)
-            for idx in self.active_joint_indices
-        ]
         self.qmask = torch.zeros(
             len(self.active_ancestor_joints), dtype=bool, device=self.device
         )
-        self.qmask[controlled_joints_idx_in_qmask] = 1
+        self.qmask[self.controlled_joints_idx_in_qmask] = 1
 
     def compute_ik(
         self, target_pose: Pose, q0: torch.Tensor, pos_only: bool = False, action=None
@@ -134,7 +134,7 @@ class Kinematics:
             result, success, error = self.pmodel.compute_inverse_kinematics(
                 self.end_link_idx,
                 target_pose.sp,
-                initial_qpos=q0,
+                initial_qpos=q0.cpu().numpy()[0],
                 active_qmask=self.qmask,
                 max_iterations=100,
             )
