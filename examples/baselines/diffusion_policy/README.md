@@ -29,9 +29,14 @@ python -m mani_skill.trajectory.replay_trajectory \
   --save-traj
 ```
 
+## Training
+
+We further add a `--max_episode_steps` argument to the training script to allow for longer demonstrations to be learned from (such as motionplanning / teleoperated demonstrations). By default the max episode steps of most environments are tuned lower so reinforcement learning agents can learn faster.
 
 ```bash
-python train.py --env-id "PickCube-v1" --control-mode "pd_joint_delta_pos" \
+python train.py --env-id "PickCube-v1" --max_episode_steps 100 \
+  --control-mode "pd_joint_delta_pos" \
   --demo-path ~/.maniskill/demos/PickCube-v1/motionplanning/trajectory.state.pd_joint_delta_pos.h5
 ```
+
 ## Evaluation

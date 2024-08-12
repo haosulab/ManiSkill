@@ -12,10 +12,9 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
+from mani_skill.utils.registration import REGISTERED_ENVS
 
-import datetime
 from collections import defaultdict
-# from rookie.utils.profiling import NonOverlappingTimeProfiler
 
 from torch.utils.data.dataset import Dataset
 from torch.utils.data.sampler import RandomSampler, BatchSampler
@@ -41,7 +40,7 @@ class Args:
     """if toggled, cuda will be enabled by default"""
     track: bool = False
     """if toggled, this experiment will be tracked with Weights and Biases"""
-    wandb_project_name: str = "Rookie-dev"
+    wandb_project_name: str = "ManiSkill"
     """the wandb's project name"""
     wandb_entity: Optional[str] = None
     """the entity (team) of wandb's project"""
@@ -52,7 +51,7 @@ class Args:
     """the id of the environment"""
     demo_path: str = 'data/ms2_official_demos/rigid_body/PegInsertionSide-v0/trajectory.state.pd_ee_delta_pose.h5'
     """the path of demo dataset (pkl or h5)"""
-    num_demo_traj: Optional[int] = None
+    num_demos: Optional[int] = None
     """number of trajectories to load from the demo dataset"""
     total_iters: int = 1_000_000
     """total timesteps of the experiments"""
@@ -67,6 +66,9 @@ class Args:
     diffusion_step_embed_dim: int = 64 # not very important
     unet_dims: List[int] = field(default_factory=lambda: [64, 128, 256]) # default setting is about ~4.5M params
     n_groups: int = 8 # jigu says it is better to let each group have at least 8 channels; it seems 4 and 8 are simila
+    max_episode_steps: Optional[int] = None
+    """Change the environments' max_episode_steps to this value. Sometimes necessary if the demonstrations being imitated are too short. Typically the default
+    max episode steps of environments in ManiSkill are tuned lower so reinforcement learning agents can learn faster."""
 
     # Environment/experiment specific arguments
     output_dir: str = 'output'
@@ -79,6 +81,9 @@ class Args:
     num_dataload_workers: int = 0
     control_mode: str = 'pd_joint_delta_pos'
     obj_ids: List[str] = field(default_factory=list)
+
+    # additional tags/configs for logging purposes to wandb and shared comparisons with other algorithms
+    demo_type: Optional[str] = None
 
 
 class SmallDemoDataset_DiffusionPolicy(Dataset): # Load everything into GPU memory
@@ -274,16 +279,21 @@ def evaluate(n, agent, eval_envs, device):
     agent.train()
     return result
 
-def save_ckpt(tag):
-    os.makedirs(f'{log_path}/checkpoints', exist_ok=True)
+def save_ckpt(run_name, tag):
+    os.makedirs(f'runs/{run_name}/checkpoints', exist_ok=True)
     ema.copy_to(ema_agent.parameters())
     torch.save({
         'agent': agent.state_dict(),
         'ema_agent': ema_agent.state_dict(),
-    }, f'{log_path}/checkpoints/{tag}.pt')
+    }, f'runs/{run_name}/checkpoints/{tag}.pt')
 
 if __name__ == "__main__":
     args = tyro.cli(Args)
+    if args.exp_name is None:
+        args.exp_name = os.path.basename(__file__)[: -len(".py")]
+        run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
+    else:
+        run_name = args.exp_name
 
     args.num_eval_envs = min(args.num_eval_envs, args.num_eval_episodes)
     assert args.num_eval_episodes % args.num_eval_envs == 0
@@ -304,34 +314,6 @@ if __name__ == "__main__":
     assert args.obs_horizon + args.act_horizon - 1 <= args.pred_horizon
     assert args.obs_horizon >= 1 and args.act_horizon >= 1 and args.pred_horizon >= 1
 
-    now = datetime.datetime.now().strftime("%y%m%d-%H%M%S")
-    tag = '{:s}_{:d}'.format(now, args.seed)
-    if args.exp_name: tag += '_' + args.exp_name
-    log_name = os.path.join(args.env_id, ALGO_NAME, tag)
-    log_path = os.path.join(args.output_dir, log_name)
-
-    if args.track:
-        import wandb
-
-        wandb.init(
-            project=args.wandb_project_name,
-            entity=args.wandb_entity,
-            sync_tensorboard=True,
-            config=vars(args),
-            name=log_name.replace(os.path.sep, "__"),
-            monitor_gym=True,
-            save_code=True,
-            tags=["diffusion_policy"]
-        )
-    writer = SummaryWriter(log_path)
-    writer.add_text(
-        "hyperparameters",
-        "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
-    )
-    import json
-    with open(f'{log_path}/args.json', 'w') as f:
-        json.dump(vars(args), f, indent=4)
-
     # TRY NOT TO MODIFY: seeding
     random.seed(args.seed)
     np.random.seed(args.seed)
@@ -341,17 +323,16 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # env setup
-    # VecEnv = gym.vector.SyncVectorEnv if args.sync_venv or args.num_eval_envs == 1 \
-        # else lambda x: gym.vector.AsyncVectorEnv(x, context='forkserver')
-    env_kwargs = dict(control_mode=args.control_mode, reward_mode="sparse", obs_mode="state")
+    max_episode_steps = args.max_episode_steps if args.max_episode_steps is not None else REGISTERED_ENVS[args.env_id].max_episode_steps
+    env_kwargs = dict(control_mode=args.control_mode, reward_mode="sparse", obs_mode="state", render_mode="rgb_array", max_episode_steps=max_episode_steps)
     other_kwargs = dict(obs_horizon=args.obs_horizon)
-    eval_envs = make_env(args.env_id, args.num_eval_envs, args.sim_backend, args.seed, env_kwargs, other_kwargs, video_dir=f'{log_path}/videos' if args.capture_video else None)
+    eval_envs = make_env(args.env_id, args.num_eval_envs, args.sim_backend, args.seed, env_kwargs, other_kwargs, video_dir=f'runs/{run_name}/videos' if args.capture_video else None)
     eval_envs.reset(seed=args.seed) # seed eval_envs here
     envs = eval_envs
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
     # dataloader setup
-    dataset = SmallDemoDataset_DiffusionPolicy(args.demo_path, device, num_traj=args.num_demo_traj)
+    dataset = SmallDemoDataset_DiffusionPolicy(args.demo_path, device, num_traj=args.num_demos)
     sampler = RandomSampler(dataset, replacement=False)
     batch_sampler = BatchSampler(sampler, batch_size=args.batch_size, drop_last=True)
     batch_sampler = IterationBasedBatchSampler(batch_sampler, args.total_iters)
@@ -361,6 +342,8 @@ if __name__ == "__main__":
         num_workers=args.num_dataload_workers,
         worker_init_fn=lambda worker_id: worker_init_fn(worker_id, base_seed=args.seed),
     )
+    if args.num_demos is None:
+        args.num_demos = len(dataset)
 
     # agent setup
     agent = Agent(envs, args).to(device)
@@ -381,6 +364,30 @@ if __name__ == "__main__":
     ema = EMAModel(parameters=agent.parameters(), power=0.75)
     ema_agent = Agent(envs, args).to(device)
 
+
+
+    if args.track:
+        import wandb
+        config = vars(args)
+        config["eval_env_cfg"] = dict(**env_kwargs, num_envs=args.num_eval_envs, env_id=args.env_id, env_horizon=max_episode_steps)
+        wandb.init(
+            project=args.wandb_project_name,
+            entity=args.wandb_entity,
+            sync_tensorboard=True,
+            config=config,
+            name=run_name,
+            save_code=True,
+            group="DiffusionPolicy",
+            tags=["diffusion_policy"]
+        )
+    writer = SummaryWriter(f"runs/{run_name}")
+    writer.add_text(
+        "hyperparameters",
+        "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
+    )
+    import json
+    with open(f'runs/{run_name}/args.json', 'w') as f:
+        json.dump(vars(args), f, indent=4)
 
     # ---------------------------------------------------------------------------- #
     # Training begins.
@@ -434,11 +441,11 @@ if __name__ == "__main__":
             print(f"Success Rate: {sr:.4f}")
             if sr > best_success_rate:
                 best_success_rate = sr
-                save_ckpt('best_eval_success_rate')
+                save_ckpt(run_name, 'best_eval_success_rate')
                 print(f'New best success rate: {sr:.4f}. Saving checkpoint.')
 
         # Checkpoint
         if args.save_freq and cur_iter % args.save_freq == 0:
-            save_ckpt(str(cur_iter))
+            save_ckpt(run_name, str(cur_iter))
     envs.close()
     writer.close()

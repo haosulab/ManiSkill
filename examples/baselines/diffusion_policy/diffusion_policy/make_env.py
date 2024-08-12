@@ -25,7 +25,7 @@ def make_env(env_id, num_envs: int, sim_backend: str, seed: int, env_kwargs: dic
                 return env
 
             return thunk
-        vector_cls = gym.vector.SyncVectorEnv if num_envs > 1 else gym.vector.AsyncVectorEnv
+        vector_cls = gym.vector.SyncVectorEnv if num_envs == 1 else lambda x : gym.vector.AsyncVectorEnv(x, context="forkserver")
         env = vector_cls([cpu_make_env(env_id, seed, video_dir if seed == 0 else None, env_kwargs, other_kwargs) for seed in range(num_envs)])
     else:
         env = gym.make(env_id, num_envs=num_envs, sim_backend=sim_backend, **env_kwargs)
