@@ -424,7 +424,7 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
     # Prepare for recording
     output_dir = os.path.dirname(traj_path)
     ori_traj_name = os.path.splitext(os.path.basename(traj_path))[0]
-    suffix = "{}.{}".format(env.obs_mode, env.control_mode)
+    suffix = "{}.{}.{}".format(env.obs_mode, env.control_mode, env.device.type)
     new_traj_name = ori_traj_name + "." + suffix
     if num_procs > 1:
         new_traj_name = new_traj_name + "." + str(proc_id)
