@@ -48,7 +48,7 @@ Note that we further add a `--max_episode_steps` argument to the training script
 
 ## Train and Evaluate with GPU Simulation
 
-You can also choose to train on trajectories in the GPU simulation and evaluate faster with the GPU simulation. You simply need to re-preprocess demos in the GPU simulation and set --sim-backend="gpu".  
+You can also choose to train on trajectories in the GPU simulation and evaluate faster with the GPU simulation. You simply need to re-preprocess demos in the GPU simulation and set --sim-backend="gpu". It is also recommended to not save videos if you are using a lot of parallel environments as the video size can get very large.
 
 ```bash
 env_id="PickCube-v1"
@@ -64,6 +64,6 @@ python train.py --env-id ${env_id} --max_episode_steps 100 --total_iters 30000 \
   --control-mode "pd_ee_delta_pose" --num-demos ${demos} --seed ${seed} \
   --demo-path ~/.maniskill/demos/${env_id}/motionplanning/trajectory.state.pd_ee_delta_pose.h5 \
   --exp-name diffusion_policy-${env_id}-state-${demos}_motionplanning_demos-${seed} \
-  --sim-backend="gpu" \
+  --sim-backend="gpu" --num-eval-envs 100 --no-capture-video \
   --demo_type="motionplanning" --track # additional tag for logging purposes on wandb
 ```

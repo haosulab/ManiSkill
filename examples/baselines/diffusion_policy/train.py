@@ -320,7 +320,6 @@ if __name__ == "__main__":
         args.num_demos = len(dataset)
 
     # agent setup
-    import ipdb; ipdb.set_trace()
     agent = Agent(envs, args).to(device)
     optimizer = optim.AdamW(params=agent.parameters(),
         lr=args.lr, betas=(0.95, 0.999), weight_decay=1e-6)
