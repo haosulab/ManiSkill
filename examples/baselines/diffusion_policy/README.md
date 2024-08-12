@@ -40,7 +40,7 @@ env_id="PickCube-v1"
 python train.py --env-id ${env_id} --max_episode_steps 100 \
   --control-mode "pd_joint_delta_pos" --num-demos ${demos} --seed ${seed} \
   --demo-path ~/.maniskill/demos/${env_id}/motionplanning/trajectory.state.pd_joint_delta_pos.h5 \
-  --exp-name rfcl-${env_id}-state-${demos}_motionplanning_demos-${seed} \
+  --exp-name diffusion_policy-${env_id}-state-${demos}_motionplanning_demos-${seed} \
   --demo_type="motionplanning" --track # additional tag for logging purposes on wandb
 ```
 

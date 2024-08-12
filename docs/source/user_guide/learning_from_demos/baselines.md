@@ -5,10 +5,10 @@ We provide a number of different baselines spanning different categories of lear
 <!-- As part of these baselines we establish a few standard learning from demonstration benchmarks that cover a wide range of difficulty (easy to solve for verification but not saturated) and diversity in types of demonstrations (human collected, motion planning collected, neural net policy generated) -->
 
 **Behavior Cloning Baselines**
-| Baseline                        | Code | Results |
-| ------------------------------- | ---- | ------- |
-| Standard Behavior Cloning (BC)  | WIP  | WIP     |
-| Diffusion Policy (DP)           | WIP  | WIP     |
+| Baseline                       | Code                                                                                        | Results | Paper                                      |
+| ------------------------------ | ------------------------------------------------------------------------------------------- | ------- | ------------------------------------------ |
+| Standard Behavior Cloning (BC) | WIP                                                                                         | WIP     | N/A                                        |
+| Diffusion Policy (DP)          | [Link](https://github.com/haosulab/ManiSkill/blob/main/examples/baselines/diffusion_policy) | WIP     | [Link](https://arxiv.org/abs/2303.04137v4) |
 
 
 **Online Learning from Demonstrations Baselines**
