@@ -43,5 +43,3 @@ python train.py --env-id ${env_id} --max_episode_steps 100 \
   --exp-name diffusion_policy-${env_id}-state-${demos}_motionplanning_demos-${seed} \
   --demo_type="motionplanning" --track # additional tag for logging purposes on wandb
 ```
-
-## Evaluation
