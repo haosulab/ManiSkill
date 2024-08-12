@@ -20,124 +20,73 @@ from collections import defaultdict
 from torch.utils.data.dataset import Dataset
 from torch.utils.data.sampler import RandomSampler, BatchSampler
 from torch.utils.data.dataloader import DataLoader
-from utils import IterationBasedBatchSampler, worker_init_fn
-
+from diffusion_policy.utils import IterationBasedBatchSampler, worker_init_fn
+from diffusion_policy.make_env import make_env
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 from diffusers.training_utils import EMAModel
 from diffusers.optimization import get_scheduler
-from conditional_unet1d import ConditionalUnet1D
+from diffusion_policy.conditional_unet1d import ConditionalUnet1D
+from dataclasses import dataclass, field
+from typing import Optional, List
+import tyro
+@dataclass
+class Args:
+    exp_name: Optional[str] = None
+    """the name of this experiment"""
+    seed: int = 1
+    """seed of the experiment"""
+    torch_deterministic: bool = True
+    """if toggled, `torch.backends.cudnn.deterministic=False`"""
+    cuda: bool = True
+    """if toggled, cuda will be enabled by default"""
+    track: bool = False
+    """if toggled, this experiment will be tracked with Weights and Biases"""
+    wandb_project_name: str = "Rookie-dev"
+    """the wandb's project name"""
+    wandb_entity: Optional[str] = None
+    """the entity (team) of wandb's project"""
+    capture_video: bool = True
+    """whether to capture videos of the agent performances (check out `videos` folder)"""
 
-
-def parse_args():
-    # fmt: off
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--exp-name", type=str, default=None,
-        help="the name of this experiment")
-    parser.add_argument("--seed", type=int, default=1,
-        help="seed of the experiment")
-    parser.add_argument("--torch-deterministic", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
-        help="if toggled, `torch.backends.cudnn.deterministic=False`")
-    parser.add_argument("--cuda", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
-        help="if toggled, cuda will be enabled by default")
-    parser.add_argument("--track", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
-        help="if toggled, this experiment will be tracked with Weights and Biases")
-    parser.add_argument("--wandb-project-name", type=str, default="Rookie-dev",
-        help="the wandb's project name")
-    parser.add_argument("--wandb-entity", type=str, default=None,
-        help="the entity (team) of wandb's project")
-    parser.add_argument("--capture-video", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
-        help="whether to capture videos of the agent performances (check out `videos` folder)")
-
-    # Algorithm specific arguments
-    parser.add_argument("--env-id", type=str, default="PegInsertionSide-v0",
-        help="the id of the environment")
-    parser.add_argument("--demo-path", type=str, default='data/ms2_official_demos/rigid_body/PegInsertionSide-v0/trajectory.state.pd_ee_delta_pose.h5',
-        help="the path of demo dataset (pkl or h5)")
-    parser.add_argument("--num-demo-traj", type=int, default=None)
-    parser.add_argument("--total-iters", type=int, default=1_000_000, # for easier task, we can train shorter
-        help="total timesteps of the experiments")
-    parser.add_argument("--batch-size", type=int, default=1024, # 2048 does not further improve
-        help="the batch size of sample from the replay memory")
+    env_id: str = "PegInsertionSide-v0"
+    """the id of the environment"""
+    demo_path: str = 'data/ms2_official_demos/rigid_body/PegInsertionSide-v0/trajectory.state.pd_ee_delta_pose.h5'
+    """the path of demo dataset (pkl or h5)"""
+    num_demo_traj: Optional[int] = None
+    """number of trajectories to load from the demo dataset"""
+    total_iters: int = 1_000_000
+    """total timesteps of the experiments"""
+    batch_size: int = 1024
+    """the batch size of sample from the replay memory"""
 
     # Diffusion Policy specific arguments
-    parser.add_argument("--lr", type=float, default=1e-4) # 1e-4 is a safe choice
-    parser.add_argument("--obs-horizon", type=int, default=2)
-    # Seems not very important in ManiSkill, 1, 2, 4 work well
-    parser.add_argument("--act-horizon", type=int, default=8)
-    # Seems not very important in ManiSkill, 4, 8, 15 work well
-    parser.add_argument("--pred-horizon", type=int, default=16)
-    # 16->8 leads to worse performance, maybe it is like generate a half image; 16->32, improvement is very marginal
-    parser.add_argument("--diffusion-step-embed-dim", type=int, default=64) # not very important
-    parser.add_argument("--unet-dims", metavar='N', type=int, nargs='+', default=[64, 128, 256]) # ~4.5M params
-    parser.add_argument("--n-groups", type=int, default=8)
-    # Jiayuan told me it is better to let each group has at least 8 channels; it seems 4 and 8 are similar
+    lr: float = 1e-4
+    obs_horizon: int = 2 # Seems not very important in ManiSkill, 1, 2, 4 work well
+    act_horizon: int = 8 # Seems not very important in ManiSkill, 4, 8, 15 work well
+    pred_horizon: int = 16 # 16->8 leads to worse performance, maybe it is like generate a half image; 16->32, improvement is very marginal
+    diffusion_step_embed_dim: int = 64 # not very important
+    unet_dims: List[int] = field(default_factory=lambda: [64, 128, 256]) # default setting is about ~4.5M params
+    n_groups: int = 8 # jigu says it is better to let each group have at least 8 channels; it seems 4 and 8 are simila
 
-    parser.add_argument("--output-dir", type=str, default='output')
-    parser.add_argument("--log-freq", type=int, default=1000)
-    parser.add_argument("--eval-freq", type=int, default=10000)
-    parser.add_argument("--save-freq", type=int, default=None)
-    parser.add_argument("--num-eval-episodes", type=int, default=100)
-    parser.add_argument("--num-eval-envs", type=int, default=10) # NOTE: should not be too large, otherwise bias to short episodes
-    parser.add_argument("--sync-venv", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True)
-    parser.add_argument("--num-dataload-workers", type=int, default=0)
-    parser.add_argument("--control-mode", type=str, default='pd_ee_delta_pose')
-    parser.add_argument("--obj-ids", metavar='N', type=str, nargs='+', default=[])
+    # Environment/experiment specific arguments
+    output_dir: str = 'output'
+    log_freq: int = 1000
+    eval_freq: int = 5000
+    save_freq: Optional[int] = None
+    num_eval_episodes: int = 100
+    num_eval_envs: int = 10
+    sim_backend: str = "cpu"
+    num_dataload_workers: int = 0
+    control_mode: str = 'pd_joint_delta_pos'
+    obj_ids: List[str] = field(default_factory=list)
 
-    args = parser.parse_args()
-    args.algo_name = ALGO_NAME
-    args.script = __file__
-    args.num_eval_envs = min(args.num_eval_envs, args.num_eval_episodes)
-    assert args.num_eval_episodes % args.num_eval_envs == 0
-    if args.num_eval_envs == 1:
-        args.sync_venv = True
-    if args.demo_path.endswith('.h5'):
-        import json
-        json_file = args.demo_path[:-2] + 'json'
-        with open(json_file, 'r') as f:
-            demo_info = json.load(f)
-            if 'control_mode' in demo_info['env_info']['env_kwargs']:
-                control_mode = demo_info['env_info']['env_kwargs']['control_mode']
-            elif 'control_mode' in demo_info['episodes'][0]:
-                control_mode = demo_info['episodes'][0]['control_mode']
-            else:
-                raise Exception('Control mode not found in json')
-            assert control_mode == args.control_mode, 'Control mode mismatched'
-    assert args.obs_horizon + args.act_horizon - 1 <= args.pred_horizon
-    assert args.obs_horizon >= 1 and args.act_horizon >= 1 and args.pred_horizon >= 1
-    # fmt: on
-    return args
-
-import mani_skill.envs
-from mani_skill.utils.wrappers import RecordEpisode
-from mani_skill.utils.wrappers.gymnasium import CPUGymWrapper
-from wrappers import SeqActionWrapper
-
-def make_env(env_id, seed, control_mode=None, video_dir=None, other_kwargs={}):
-    def thunk():
-        env_kwargs = {'model_ids': other_kwargs['obj_ids']} if len(other_kwargs['obj_ids']) > 0 else {}
-        env = gym.make(env_id, reward_mode='sparse', obs_mode='state', control_mode=control_mode,
-                        render_mode='all' if video_dir else None, **env_kwargs)
-        env = CPUGymWrapper(env)
-        if video_dir:
-            env = RecordEpisode(env, output_dir=video_dir, save_trajectory=False, info_on_video=True)
-
-        env = gym.wrappers.RecordEpisodeStatistics(env)
-        env = gym.wrappers.ClipAction(env)
-        env = gym.wrappers.FrameStack(env, other_kwargs['obs_horizon'])
-        env = SeqActionWrapper(env)
-
-        env.action_space.seed(seed)
-        env.observation_space.seed(seed)
-        return env
-
-    return thunk
 
 class SmallDemoDataset_DiffusionPolicy(Dataset): # Load everything into GPU memory
     def __init__(self, data_path, device, num_traj):
         if data_path[-4:] == '.pkl':
             raise NotImplementedError()
         else:
-            from utils import load_demo_dataset
+            from diffusion_policy.utils import load_demo_dataset
             trajectories = load_demo_dataset(data_path, num_traj=num_traj, concat=False)
             # trajectories['observations'] is a list of np.ndarray (L+1, obs_dim)
             # trajectories['actions'] is a list of np.ndarray (L, act_dim)
@@ -151,8 +100,8 @@ class SmallDemoDataset_DiffusionPolicy(Dataset): # Load everything into GPU memo
             self.pad_action_arm = torch.zeros((trajectories['actions'][0].shape[1]-1,), device=device)
             # to make the arm stay still, we pad the action with 0 in 'delta_pos' control mode
             # gripper action needs to be copied from the last action
-        else:
-            raise NotImplementedError(f'Control Mode {args.control_mode} not supported')
+        # else:
+        #     raise NotImplementedError(f'Control Mode {args.control_mode} not supported')
         self.obs_horizon, self.pred_horizon = obs_horizon, pred_horizon = args.obs_horizon, args.pred_horizon
         self.slices = []
         num_traj = len(trajectories['actions'])
@@ -296,7 +245,7 @@ class Agent(nn.Module):
         start = self.obs_horizon - 1
         end = start + self.act_horizon
         return noisy_action_seq[:, start:end] # (B, act_horizon, act_dim)
-
+# TODO (stao): support gpu and cpu env evals
 def collect_episode_info(infos, result=None):
     if result is None:
         result = defaultdict(list)
@@ -305,23 +254,23 @@ def collect_episode_info(infos, result=None):
         for i in indices:
             info = infos["final_info"][i] # info is also a dict
             ep = info['episode']
-            print(f"Episode {i}: global_step={cur_iter}, ep_return={ep['r'][0]:.2f}, ep_len={ep['l'][0]}, success={info['success']}")
             result['return'].append(ep['r'][0])
             result['len'].append(ep["l"][0])
-            result['success'].append(info['success'])
+            if "success" in info:
+                result['success'].append(info['success'])
+            if "fail" in info:
+                result['fail'].append(info['fail'])
     return result
 
 def evaluate(n, agent, eval_envs, device):
     agent.eval()
-    print('======= Evaluation Starts =========')
     result = defaultdict(list)
-    obs, info = eval_envs.reset() # don't seed here
+    obs, info = eval_envs.reset(options=dict()) # don't seed here
     while len(result['return']) < n:
         with torch.no_grad():
             action = agent.get_eval_action(torch.Tensor(obs).to(device))
         obs, rew, terminated, truncated, info = eval_envs.step(action.cpu().numpy())
         collect_episode_info(info, result)
-    print('======= Evaluation Ends =========')
     agent.train()
     return result
 
@@ -334,7 +283,26 @@ def save_ckpt(tag):
     }, f'{log_path}/checkpoints/{tag}.pt')
 
 if __name__ == "__main__":
-    args = parse_args()
+    args = tyro.cli(Args)
+
+    args.num_eval_envs = min(args.num_eval_envs, args.num_eval_episodes)
+    assert args.num_eval_episodes % args.num_eval_envs == 0
+    if args.num_eval_envs == 1:
+        args.sync_venv = True
+    if args.demo_path.endswith('.h5'):
+        import json
+        json_file = args.demo_path[:-2] + 'json'
+        with open(json_file, 'r') as f:
+            demo_info = json.load(f)
+            if 'control_mode' in demo_info['env_info']['env_kwargs']:
+                control_mode = demo_info['env_info']['env_kwargs']['control_mode']
+            elif 'control_mode' in demo_info['episodes'][0]:
+                control_mode = demo_info['episodes'][0]['control_mode']
+            else:
+                raise Exception('Control mode not found in json')
+            assert control_mode == args.control_mode, f"Control mode mismatched. Dataset has control mode {control_mode}, but args has control mode {args.control_mode}"
+    assert args.obs_horizon + args.act_horizon - 1 <= args.pred_horizon
+    assert args.obs_horizon >= 1 and args.act_horizon >= 1 and args.pred_horizon >= 1
 
     now = datetime.datetime.now().strftime("%y%m%d-%H%M%S")
     tag = '{:s}_{:d}'.format(now, args.seed)
@@ -353,6 +321,7 @@ if __name__ == "__main__":
             name=log_name.replace(os.path.sep, "__"),
             monitor_gym=True,
             save_code=True,
+            tags=["diffusion_policy"]
         )
     writer = SummaryWriter(log_path)
     writer.add_text(
@@ -372,15 +341,12 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # env setup
-    VecEnv = gym.vector.SyncVectorEnv if args.sync_venv or args.num_eval_envs == 1 \
-        else lambda x: gym.vector.AsyncVectorEnv(x, context='forkserver')
-    eval_envs = VecEnv(
-        [make_env(args.env_id, args.seed + 1000 + i, args.control_mode,
-                f'{log_path}/videos' if args.capture_video and i == 0 else None,
-                other_kwargs=args.__dict__)
-        for i in range(args.num_eval_envs)]
-    )
-    eval_envs.reset(seed=args.seed+1000) # seed eval_envs here, and no more seeding during evaluation
+    # VecEnv = gym.vector.SyncVectorEnv if args.sync_venv or args.num_eval_envs == 1 \
+        # else lambda x: gym.vector.AsyncVectorEnv(x, context='forkserver')
+    env_kwargs = dict(control_mode=args.control_mode, reward_mode="sparse", obs_mode="state")
+    other_kwargs = dict(obs_horizon=args.obs_horizon)
+    eval_envs = make_env(args.env_id, args.num_eval_envs, args.sim_backend, args.seed, env_kwargs, other_kwargs, video_dir=f'{log_path}/videos' if args.capture_video else None)
+    eval_envs.reset(seed=args.seed) # seed eval_envs here
     envs = eval_envs
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
@@ -422,14 +388,10 @@ if __name__ == "__main__":
     agent.train()
     best_success_rate = -1
 
-    # timer = NonOverlappingTimeProfiler()
     timings = defaultdict(float)
-    last_tick = time.time()
 
     for iteration, data_batch in enumerate(train_dataloader):
         cur_iter = iteration + 1
-        timings["data"] += time.time() - last_tick
-        last_tick = time.time()
 
         # # copy data from cpu to gpu
         # data_batch = {k: v.cuda(non_blocking=True) for k, v in data_batch.items()}
@@ -439,21 +401,16 @@ if __name__ == "__main__":
             obs_seq=data_batch['observations'], # (B, L, obs_dim)
             action_seq=data_batch['actions'], # (B, L, act_dim)
         )
-        timings["forward"] += time.time() - last_tick
-        last_tick = time.time()
 
         # backward
         optimizer.zero_grad()
         total_loss.backward()
         optimizer.step()
         lr_scheduler.step() # step lr scheduler every batch, this is different from standard pytorch behavior
-        timings["backward"] += time.time() - last_tick
         last_tick = time.time()
 
         # update Exponential Moving Average of the model weights
         ema.step(agent.parameters())
-        # timer.end('EMA')
-
         # TRY NOT TO MODIFY: record rewards for plotting purposes
         if cur_iter % args.log_freq == 0:
             print(f"Iteration {cur_iter}, loss: {total_loss.item()}")
@@ -463,31 +420,25 @@ if __name__ == "__main__":
                 writer.add_scalar(f"time/{k}", v, cur_iter)
         # Evaluation
         if cur_iter % args.eval_freq == 0:
-            # result = evaluate(args.num_eval_episodes, agent, eval_envs, device)
-            # for k, v in result.items():
-            #     writer.add_scalar(f"eval/{k}", np.mean(v), cur_iter)
-
-            # ema.copy_to(ema_agent.parameters())
-            # ema_result = evaluate(args.num_eval_episodes, ema_agent, eval_envs, device)
-            # for k, v in ema_result.items():
-            #     writer.add_scalar(f"eval/ema_{k}", np.mean(v), cur_iter)
+            print('Evaluating')
+            last_tick = time.time()
 
             ema.copy_to(ema_agent.parameters())
             result = evaluate(args.num_eval_episodes, ema_agent, eval_envs, device)
+            timings["eval"] += time.time() - last_tick
+
             for k, v in result.items():
                 writer.add_scalar(f"eval/{k}", np.mean(v), cur_iter)
-
-            timings["eval"] += time.time() - last_tick
-            last_tick = time.time()
             sr = np.mean(result['success'])
+            print(f"Evaluated {len(result['return'])} episodes")
+            print(f"Success Rate: {sr:.4f}")
             if sr > best_success_rate:
                 best_success_rate = sr
                 save_ckpt('best_eval_success_rate')
-                print(f'### Update best success rate: {sr:.4f}')
+                print(f'New best success rate: {sr:.4f}. Saving checkpoint.')
 
         # Checkpoint
         if args.save_freq and cur_iter % args.save_freq == 0:
             save_ckpt(str(cur_iter))
-
     envs.close()
     writer.close()

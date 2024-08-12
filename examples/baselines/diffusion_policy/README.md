@@ -9,18 +9,18 @@ To get started, we recommend using conda/mamba to create a new environment and i
 ```bash
 conda create -n diffusion-policy-ms python=3.9
 conda activate diffusion-policy-ms
-pip install diffusers tensorboard wandb
-```
-
-Then you can install ManiSkill
-
-```bash
-pip install mani_skill
+pip install -e .
 ```
 
 ## Demonstration Download and Preprocessing
 
+By default for fast downloads and smaller file sizes, ManiSkill demonstrations are stored in a highly reduced/compressed format which includes not keeping any observation data. Run the command to download the demonstration and convert it to a format that includes observation data and the desired action space.
+
+```bash
+python -m mani_skill.utils.download_demo "PickCube-v1"
 ```
+
+```bash
 env_id="PickCube-v1"
 python -m mani_skill.trajectory.replay_trajectory \
   --traj-path ~/.maniskill/demos/${env_id}/motionplanning/trajectory.h5 \
@@ -31,6 +31,7 @@ python -m mani_skill.trajectory.replay_trajectory \
 
 
 ```bash
-python train.py -e "PickCube-v1" --dataset_path "~/.maniskill/demos/PickCube-v1/motionplanning/trajectory.h5"
+python train.py --env-id "PickCube-v1" --control-mode "pd_joint_delta_pos" \
+  --demo-path ~/.maniskill/demos/PickCube-v1/motionplanning/trajectory.state.pd_joint_delta_pos.h5
 ```
 ## Evaluation
