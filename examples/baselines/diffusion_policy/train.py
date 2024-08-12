@@ -4,7 +4,7 @@ import argparse
 import os
 import random
 from distutils.util import strtobool
-
+import time
 import gymnasium as gym
 import numpy as np
 import torch
@@ -15,13 +15,12 @@ from torch.utils.tensorboard import SummaryWriter
 
 import datetime
 from collections import defaultdict
-from rookie.utils.profiling import NonOverlappingTimeProfiler
+# from rookie.utils.profiling import NonOverlappingTimeProfiler
 
 from torch.utils.data.dataset import Dataset
 from torch.utils.data.sampler import RandomSampler, BatchSampler
 from torch.utils.data.dataloader import DataLoader
-from rookie.utils.sampler import IterationBasedBatchSampler
-from rookie.utils.torch_utils import worker_init_fn
+from utils import IterationBasedBatchSampler, worker_init_fn
 
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 from diffusers.training_utils import EMAModel
@@ -46,7 +45,7 @@ def parse_args():
         help="the wandb's project name")
     parser.add_argument("--wandb-entity", type=str, default=None,
         help="the entity (team) of wandb's project")
-    parser.add_argument("--capture-video", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
+    parser.add_argument("--capture-video", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
         help="whether to capture videos of the agent performances (check out `videos` folder)")
 
     # Algorithm specific arguments
@@ -110,22 +109,15 @@ def parse_args():
 
 import mani_skill.envs
 from mani_skill.utils.wrappers import RecordEpisode
-
-class SeqActionWrapper(gym.Wrapper):
-    def step(self, action_seq):
-        rew_sum = 0
-        for action in action_seq:
-            obs, rew, terminated, truncated, info = self.env.step(action)
-            rew_sum += rew
-            if terminated or truncated:
-                break
-        return obs, rew_sum, terminated, truncated, info
+from mani_skill.utils.wrappers.gymnasium import CPUGymWrapper
+from wrappers import SeqActionWrapper
 
 def make_env(env_id, seed, control_mode=None, video_dir=None, other_kwargs={}):
     def thunk():
         env_kwargs = {'model_ids': other_kwargs['obj_ids']} if len(other_kwargs['obj_ids']) > 0 else {}
         env = gym.make(env_id, reward_mode='sparse', obs_mode='state', control_mode=control_mode,
-                        render_mode='cameras' if video_dir else None, **env_kwargs)
+                        render_mode='all' if video_dir else None, **env_kwargs)
+        env = CPUGymWrapper(env)
         if video_dir:
             env = RecordEpisode(env, output_dir=video_dir, save_trajectory=False, info_on_video=True)
 
@@ -145,7 +137,7 @@ class SmallDemoDataset_DiffusionPolicy(Dataset): # Load everything into GPU memo
         if data_path[-4:] == '.pkl':
             raise NotImplementedError()
         else:
-            from utils.ms2_data import load_demo_dataset
+            from utils import load_demo_dataset
             trajectories = load_demo_dataset(data_path, num_traj=num_traj, concat=False)
             # trajectories['observations'] is a list of np.ndarray (L+1, obs_dim)
             # trajectories['actions'] is a list of np.ndarray (L, act_dim)
@@ -313,7 +305,7 @@ def collect_episode_info(infos, result=None):
         for i in indices:
             info = infos["final_info"][i] # info is also a dict
             ep = info['episode']
-            print(f"global_step={cur_iter}, ep_return={ep['r'][0]:.2f}, ep_len={ep['l'][0]}, success={info['success']}")
+            print(f"Episode {i}: global_step={cur_iter}, ep_return={ep['r'][0]:.2f}, ep_len={ep['l'][0]}, success={info['success']}")
             result['return'].append(ep['r'][0])
             result['len'].append(ep["l"][0])
             result['success'].append(info['success'])
@@ -430,11 +422,14 @@ if __name__ == "__main__":
     agent.train()
     best_success_rate = -1
 
-    timer = NonOverlappingTimeProfiler()
+    # timer = NonOverlappingTimeProfiler()
+    timings = defaultdict(float)
+    last_tick = time.time()
 
     for iteration, data_batch in enumerate(train_dataloader):
         cur_iter = iteration + 1
-        timer.end('data')
+        timings["data"] += time.time() - last_tick
+        last_tick = time.time()
 
         # # copy data from cpu to gpu
         # data_batch = {k: v.cuda(non_blocking=True) for k, v in data_batch.items()}
@@ -444,26 +439,28 @@ if __name__ == "__main__":
             obs_seq=data_batch['observations'], # (B, L, obs_dim)
             action_seq=data_batch['actions'], # (B, L, act_dim)
         )
-        timer.end('forward')
+        timings["forward"] += time.time() - last_tick
+        last_tick = time.time()
 
         # backward
         optimizer.zero_grad()
         total_loss.backward()
         optimizer.step()
         lr_scheduler.step() # step lr scheduler every batch, this is different from standard pytorch behavior
-        timer.end('backward')
+        timings["backward"] += time.time() - last_tick
+        last_tick = time.time()
 
         # update Exponential Moving Average of the model weights
         ema.step(agent.parameters())
-        timer.end('EMA')
+        # timer.end('EMA')
 
         # TRY NOT TO MODIFY: record rewards for plotting purposes
         if cur_iter % args.log_freq == 0:
-            print(cur_iter, total_loss.item())
+            print(f"Iteration {cur_iter}, loss: {total_loss.item()}")
             writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], cur_iter)
             writer.add_scalar("losses/total_loss", total_loss.item(), cur_iter)
-            timer.dump_to_writer(writer, cur_iter)
-
+            for k, v in timings.items():
+                writer.add_scalar(f"time/{k}", v, cur_iter)
         # Evaluation
         if cur_iter % args.eval_freq == 0:
             # result = evaluate(args.num_eval_episodes, agent, eval_envs, device)
@@ -480,7 +477,8 @@ if __name__ == "__main__":
             for k, v in result.items():
                 writer.add_scalar(f"eval/{k}", np.mean(v), cur_iter)
 
-            timer.end('eval')
+            timings["eval"] += time.time() - last_tick
+            last_tick = time.time()
             sr = np.mean(result['success'])
             if sr > best_success_rate:
                 best_success_rate = sr
