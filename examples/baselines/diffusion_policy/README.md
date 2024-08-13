@@ -31,7 +31,7 @@ python -m mani_skill.trajectory.replay_trajectory \
 
 ## Training
 
-
+Example training, learning from 100 demonstrations generated via motionplanning in the PickCube-v1 task
 ```bash
 seed=42
 demos=100
@@ -42,22 +42,16 @@ python train.py --env-id ${env_id} --max_episode_steps 100 --total_iters 30000 \
   --exp-name diffusion_policy-${env_id}-state-${demos}_motionplanning_demos-${seed} \
   --demo_type="motionplanning" --track # additional tag for logging purposes on wandb
 ```
-
+In tensorboard/wandb there are two success rates reported, `success_once` and `success_at_end`. `success_once` considers success when the episode achieves success at any point in the episode, and `success_at_end` considers success only when the episode achieves success at the last step after `max_episode_steps` are reached.
 
 Note that we further add a `--max_episode_steps` argument to the training script to allow for longer demonstrations to be learned from (such as motionplanning / teleoperated demonstrations). By default the max episode steps of most environments are tuned lower so reinforcement learning agents can learn faster. You may need to increase this value depending on the task and the demonstrations you are using. 
 
 ## Train and Evaluate with GPU Simulation
 
-You can also choose to train on trajectories generated in the GPU simulation and evaluate faster with the GPU simulation. You simply need to re-preprocess demos in the GPU simulation and set --sim-backend="gpu". It is also recommended to not save videos if you are using a lot of parallel environments as the video size can get very large.
+You can also choose to train on trajectories generated in the GPU simulation and evaluate faster with the GPU simulation. However as most demonstrations are usually generated in the CPU simulation (via motionplanning or teleoperation), you may observe worse performance when evaluating on the GPU simulation vs the CPU simulation.
 
-```bash
-env_id="PickCube-v1"
-python -m mani_skill.trajectory.replay_trajectory \
-  --traj-path ~/.maniskill/demos/${env_id}/motionplanning/trajectory.h5 \
-  --use-first-env-state \
-  -c pd_joint_delta_pos -o state \
-  -b gpu --save-traj --count 100
-```
+
+It is also recommended to not save videos if you are using a lot of parallel environments as the video size can get very large.
 
 ```bash
 seed=42
