@@ -2,7 +2,7 @@
 
 Robots that don't fit into other standard categories (e.g. floating grippers)
 
-## Fetch Robot
+## Panda Gripper
 
 ```{figure} ../images/floating_panda_gripper.png
 ```

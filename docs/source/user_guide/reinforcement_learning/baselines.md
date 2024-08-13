@@ -1,6 +1,6 @@
 # Baselines
 
-We provide a number of different baselines that learn from rewards. 
+We provide a number of different baselines that learn from rewards via online reinforcement learning.
 <!-- For RL baselines that leverage demonstrations see the [learning from demos section](../learning_from_demos/) -->
 
 As part of these baselines we establish standardized [reinforcement learning benchmarks](#standard-benchmark) that cover a wide range of difficulties (easy to solve for verification but not saturated) and diversity in types of robotics task, including but not limited to classic control, dextrous manipulation, table-top manipulation, mobile manipulation etc.
@@ -8,7 +8,7 @@ As part of these baselines we establish standardized [reinforcement learning ben
 
 ## Online Reinforcement Learning Baselines
 
-List of already implemented and tested online reinforcement learning baselines
+List of already implemented and tested online reinforcement learning baselines. Note that there are also reinforcement learning (offline RL, online imitation learning) baselines that leverage demonstrations, see the [learning from demos page](../learning_from_demos/index.md) for more information.
 
 | Baseline                                                            | Code                                                                           | Results | Paper                                    |
 | ------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ------- | ---------------------------------------- |

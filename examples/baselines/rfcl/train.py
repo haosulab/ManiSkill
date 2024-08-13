@@ -3,7 +3,6 @@ Code to run Reverse Forward Curriculum Learning.
 Configs can be a bit complicated, we recommend directly looking at configs/ms2/base_sac_ms2_sample_efficient.yml for what options are available.
 Alternatively, go to the file defining each of the nested configurations and see the comments.
 """
-
 import copy
 import os
 import os.path as osp
@@ -11,18 +10,19 @@ import sys
 import warnings
 from dataclasses import asdict, dataclass
 from typing import Optional
-import torch
+
 import gymnasium as gym
 import jax
 import numpy as np
 import optax
 from omegaconf import OmegaConf
+import wandb as wb
 
 from rfcl.agents.sac import SAC, ActorCritic, SACConfig
 from rfcl.agents.sac.networks import DiagGaussianActor
 from rfcl.data.dataset import ReplayDataset, get_states_dataset
-from rfcl.envs.make_env import EnvConfig, make_env_from_cfg
-from curriculum_wrappers import ReverseCurriculumWrapper, ReverseCurriculumConfig
+from rfcl.envs.make_env import EnvConfig, get_initial_state_wrapper, make_env_from_cfg
+from rfcl.envs.wrappers.curriculum import ReverseCurriculumWrapper
 from rfcl.envs.wrappers.forward_curriculum import SeedBasedForwardCurriculumWrapper
 from rfcl.logger import LoggerConfig
 from rfcl.models import NetworkConfig, build_network_from_cfg
@@ -50,6 +50,7 @@ class TrainConfig:
     start_step_sampler: str
     per_demo_buffer_size: int
     demo_horizon_to_max_steps_ratio: float
+    train_on_demo_actions: bool
 
     # forward curriculum configs
     forward_curriculum: str
@@ -67,7 +68,7 @@ class TrainConfig:
     load_as_online_buffer: bool
 
     # other configs that are generally used for experimentation
-    # use_orig_env_for_eval: bool = True
+    use_orig_env_for_eval: bool = True
     eval_start_of_demos: bool = False
 
 
@@ -88,12 +89,15 @@ class SACExperiment:
     logger: Optional[LoggerConfig]
     verbose: int
     algo: str = "sac"
-    stage_1_model_path: Optional[str] = None  # if not None, will load pretrained stage 1 model and skip to stage 2 of training
+    stage_1_model_path: str = None  # if not None, will load pretrained stage 1 model and skip to stage 2 of training
     save_eval_video: bool = True  # whether to save eval videos
     stage_1_only: bool = False  # stop training after reverse curriculum completes
-    stage_2_only: bool = False  # skip stage 1 training
-    demo_seed: Optional[int] = None  # fix a seed to fix which demonstrations are sampled from a dataset
+    stage_2_only: bool = False # skip stage 1 training
+    demo_seed: int = None  # fix a seed to fix which demonstrations are sampled from a dataset
 
+    """additional tags/configs for logging purposes to wandb and shared comparisons with other algorithms"""
+    demo_type: str = None
+    config_type: str = None # "sample_efficient" or "walltime_efficient"
 
 from dacite import from_dict
 
@@ -142,48 +146,64 @@ def main(cfg: SACExperiment):
     else:
         raise ValueError("reward_mode is not specified")
 
-    demo_replay_dataset = ReplayDataset(
-        cfg.train.dataset_path,
-        shuffle=cfg.train.shuffle_demos,
-        skip_failed=False,
-        num_demos=cfg.train.num_demos,
-        reward_mode=reward_mode,
-        eps_ids=states_dataset.keys(),  # forces the demo replay dataset used as the offline buffer to use the same demos as the reverse curriculum
-        data_action_scale=cfg.train.data_action_scale,
-    )
-    if demo_replay_dataset.action_scale is not None:
-        env_cfg.action_scale = demo_replay_dataset.action_scale.tolist()
-        eval_env_cfg.action_scale = env_cfg.action_scale
+    if cfg.train.train_on_demo_actions:
+        demo_replay_dataset = ReplayDataset(
+            cfg.train.dataset_path,
+            shuffle=cfg.train.shuffle_demos,
+            skip_failed=False,
+            num_demos=cfg.train.num_demos,
+            reward_mode=reward_mode,
+            eps_ids=states_dataset.keys(), # forces the demo replay dataset used as the offline buffer to use the same demos as the reverse curriculum
+            data_action_scale=cfg.train.data_action_scale,
+        )
+        if demo_replay_dataset.action_scale is not None:
+            env_cfg.action_scale = demo_replay_dataset.action_scale.tolist()
+            eval_env_cfg.action_scale = env_cfg.action_scale
+    InitialStateWrapper = get_initial_state_wrapper(cfg.env.env_id)
     np.random.seed(cfg.seed)
-    env, env_meta = make_env_from_cfg(env_cfg, seed=cfg.seed)
+    wrappers = [
+        lambda env: InitialStateWrapper(
+            env,
+            states_dataset=states_dataset,
+            demo_horizon_to_max_steps_ratio=cfg.train.demo_horizon_to_max_steps_ratio,
+        )
+    ]
+    env, env_meta = make_env_from_cfg(env_cfg, seed=cfg.seed, wrappers=wrappers)
     eval_env = None
+    use_orig_env_for_eval = cfg.train.use_orig_env_for_eval
     if cfg.sac.num_eval_envs > 0:
         eval_wrappers = []
+        if not use_orig_env_for_eval:
+            eval_wrappers = wrappers
         eval_env, _ = make_env_from_cfg(
             eval_env_cfg,
             seed=cfg.seed + 1_000_000,
             video_path=video_path if cfg.save_eval_video else None,
+            wrappers=eval_wrappers,
         )
-        if cfg.save_eval_video:
-            from mani_skill.utils.wrappers import RecordEpisode as RecordEpisodeWrapper
-            eval_env = RecordEpisodeWrapper(eval_env, video_path, save_trajectory=False, max_steps_per_video=cfg.eval_env.max_episode_steps)
-
-    curr_wrapped_env = ReverseCurriculumWrapper(
-        env,
-        dataset_path=cfg.train.dataset_path,
-        cfg=ReverseCurriculumConfig(
-            reverse_curriculum_sampler=cfg.train.start_step_sampler,
-            demo_horizon_to_max_steps_ratio=cfg.train.demo_horizon_to_max_steps_ratio,
-            max_steps_min=16,
-            per_demo_buffer_size=cfg.train.per_demo_buffer_size,
+    # add reverse curriculum wrapper
+    link_envs = []
+    if not use_orig_env_for_eval:
+        eval_env = ReverseCurriculumWrapper(
+            eval_env,
+            eval_mode=True,
+            eval_start_of_demos=cfg.train.eval_start_of_demos,
+            states_dataset=states_dataset,
             reverse_step_size=cfg.train.reverse_step_size,
-            traj_ids=list(states_dataset.keys()),
-        ),
+            curriculum_method=cfg.train.curriculum_method,
+            per_demo_buffer_size=cfg.train.per_demo_buffer_size,
+            start_step_sampler=cfg.train.start_step_sampler,
+        )
+        link_envs = [eval_env]
+    env = ReverseCurriculumWrapper(
+        env,
+        states_dataset=states_dataset,
+        reverse_step_size=cfg.train.reverse_step_size,
+        curriculum_method=cfg.train.curriculum_method,
+        per_demo_buffer_size=cfg.train.per_demo_buffer_size,
+        start_step_sampler=cfg.train.start_step_sampler,
+        link_envs=link_envs,
     )
-    from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
-
-    env = ManiSkillVectorEnv(curr_wrapped_env, cfg.env.num_envs, ignore_terminations=True)
-    eval_env = ManiSkillVectorEnv(eval_env, cfg.eval_env.num_envs, ignore_terminations=True)
 
     sample_obs, sample_acts = env_meta.sample_obs, env_meta.sample_acts
 
@@ -215,32 +235,54 @@ def main(cfg: SACExperiment):
     algo = SAC(
         env=env,
         eval_env=eval_env,
-        env_type=env_cfg.env_type,
+        env_type=cfg.env.env_type,
         ac=ac,
         logger_cfg=logger_cfg,
         cfg=cfg.sac,
     )
+
+    # for ManiSkill 3 baselines, try to modify the wandb config to match other baselines env_cfg setups.
+    if algo.logger.wandb:
+        import wandb as wb
+        sim_backend = "cpu"
+        if cfg.env.env_type == "gym:cpu":
+            sim_backend = "cpu"
+        elif cfg.env.env_type == "gym:gpu":
+            sim_backend = "gpu"
+        def parse_env_cfg(env_cfg):
+            return {
+                "env_id": cfg.env.env_id,
+                "env_kwargs": cfg.env.env_kwargs,
+                "num_envs": cfg.env.num_envs,
+                "env_horizon": cfg.env.max_episode_steps,
+                "sim_backend": sim_backend,
+                "reward_mode": cfg.env.env_kwargs.get("reward_mode"),
+                "obs_mode": cfg.env.env_kwargs.get("obs_mode"),
+                "control_mode": cfg.env.env_kwargs.get("control_mode"),
+            }
+        fixed_wb_cfgs = {"env_cfg": parse_env_cfg(env_cfg), "eval_env_cfg": parse_env_cfg(eval_env_cfg), "num_demos": cfg.train.num_demos, "demo_type": cfg.demo_type}
+        wb.config.update({**fixed_wb_cfgs}, allow_val_change=True)
+        algo.logger.wandb_run.tags = ["rfcl", cfg.config_type]
+
+
     ###########################################
     # Stage 1 Training: Reverse Curriculum RL #
     ###########################################
 
-    algo.offline_buffer = demo_replay_dataset  # create offline buffer to oversample from
-    if not cfg.stage_2_only:
+    if cfg.train.train_on_demo_actions:
+        algo.offline_buffer = demo_replay_dataset  # create offline buffer to oversample from
 
+    if not cfg.stage_2_only:
         def early_stop_fn(locals):
             # callback function to log reverse curriculum metrics and stop training once reverse curriculum is done
-            nonlocal curr_wrapped_env, algo
+            nonlocal env, algo
             logger = algo.logger
-            # pts = torch.divide(curr_wrapped_env.demo_curriculum_step, curr_wrapped_env.demo_horizon - 1).cpu().numpy()
-            # solved_frac = (curr_wrapped_env.demo_solved).float().mean().item()
-            demo_metadata = curr_wrapped_env.demo_metadata
+            demo_metadata = env.demo_metadata
             pts = []
             solved_frac = 0
             for k in demo_metadata:
                 pts.append(demo_metadata[k].start_step / (demo_metadata[k].total_steps - 1))
                 solved_frac += int(demo_metadata[k].solved)
-                logger.tb_writer.add_scalar(f"train_stats/traj_{k}_sr_buffer", np.mean(demo_metadata[k].success_rate_buffer), algo.state.total_env_steps)
-                logger.tb_writer.add_scalar(f"train_stats/traj_{k}_start_step_frac_avg", demo_metadata[k].start_step, algo.state.total_env_steps)
             solved_frac = solved_frac / len(demo_metadata)
             mean_start_step = np.mean(pts)
             logger.tb_writer.add_histogram("train_stats/start_step_frac_dist", pts, algo.state.total_env_steps)
@@ -289,11 +331,15 @@ def main(cfg: SACExperiment):
         # if not stage 2 only, there is a stage 1 replay buffer we can use
         # Load previous model's replay buffer as a separate offline buffer to sample from or directly into the online buffer
         if cfg.train.load_as_offline_buffer:
-            print(f"Loading replay buffer as offline buffer which contains {algo.replay_buffer.size() * algo.replay_buffer.num_envs} interactions. Reset online buffer")
+            print(
+                f"Loading replay buffer as offline buffer which contains {algo.replay_buffer.size() * algo.replay_buffer.num_envs} interactions. Reset online buffer"
+            )
             algo.offline_buffer = copy.deepcopy(algo.replay_buffer)
             algo.replay_buffer.reset()
         if cfg.train.load_as_online_buffer:
-            print(f"Loading replay buffer into online buffer which contains {algo.replay_buffer.size() * algo.replay_buffer.num_envs} interactions. No offline buffer")
+            print(
+                f"Loading replay buffer into online buffer which contains {algo.replay_buffer.size() * algo.replay_buffer.num_envs} interactions. No offline buffer"
+            )
             algo.offline_buffer = None
 
     # Switch environments from the reverse curriculum environments to a normal environment
