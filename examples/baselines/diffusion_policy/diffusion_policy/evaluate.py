@@ -27,16 +27,18 @@ def evaluate(n, agent, eval_envs, device):
         obs, info = eval_envs.reset(options=dict(reconfigure=True))
         eps_rets = np.zeros(eval_envs.num_envs)
         eps_lens = np.zeros(eval_envs.num_envs)
+        eps_success_once = np.zeros(eval_envs.num_envs)
         eps_count = 0
         while eps_count < n:
             if is_cpu_sim:
                 action_seq = agent.get_eval_action(torch.Tensor(obs).to(device)).cpu().numpy()
-                for action in action_seq:
+                for i in range(action_seq.shape[1]):
                     eps_lens += 1
-                    obs, rew, terminated, truncated, info = eval_envs.step(action)
+                    obs, rew, terminated, truncated, info = eval_envs.step(action_seq[:, i])
                     eps_rets += rew
-                    if truncated:
+                    if truncated.any():
                         break
+                    eps_success_once += info["success"]
             else:
                 action_seq = agent.get_eval_action(obs)
                 for i in range(action_seq.shape[1]):
@@ -45,6 +47,7 @@ def evaluate(n, agent, eval_envs, device):
                     eps_rets += rew.cpu().numpy()
                     if truncated.any():
                         break
+                    eps_success_once += info["success"].cpu().numpy()
 
             if truncated.any():
                 assert truncated.all() == truncated.any(), "all episodes should truncate at the same time for fair evaluation with other algorithms"
@@ -54,12 +57,15 @@ def evaluate(n, agent, eval_envs, device):
                         eps_success.append(info["final_info"][i]['success'])
                 else:
                     eps_success = info["final_info"]['success'].cpu().numpy()
-                result['success'].append(eps_success)
+                eps_success_once += eps_success
+                result['success_once'].append(eps_success_once > 0)
+                result['success_at_end'].append(eps_success)
                 result['episode_len'].append(eps_lens)
                 result['return'].append(eps_rets)
                 eps_count += eval_envs.num_envs
                 eps_rets = np.zeros(eval_envs.num_envs)
                 eps_lens = np.zeros(eval_envs.num_envs)
+                eps_success_once = np.zeros(eval_envs.num_envs)
     agent.train()
     result = {k: np.concatenate(v) for k, v in result.items()}
     return result
