@@ -50,7 +50,6 @@ Note that we further add a `--max_episode_steps` argument to the training script
 
 You can also choose to train on trajectories generated in the GPU simulation and evaluate faster with the GPU simulation. However as most demonstrations are usually generated in the CPU simulation (via motionplanning or teleoperation), you may observe worse performance when evaluating on the GPU simulation vs the CPU simulation.
 
-
 It is also recommended to not save videos if you are using a lot of parallel environments as the video size can get very large.
 
 ```bash
