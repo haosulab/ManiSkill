@@ -373,8 +373,8 @@ if __name__ == "__main__":
         if iteration % args.eval_freq == 1:
             # evaluate
             print("Evaluating")
-            eval_envs.reset()
             eval_total_reward = 0
+            eval_obs, _ = eval_envs.reset()
             returns = []
             eps_lens = []
             successes = []

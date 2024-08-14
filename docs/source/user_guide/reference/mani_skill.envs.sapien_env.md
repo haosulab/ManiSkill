@@ -3,5 +3,4 @@
 ```{eval-rst}  
 .. automodule:: mani_skill.envs.sapien_env
     :members:
-    :undoc-members:
 ```

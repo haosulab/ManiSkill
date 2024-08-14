@@ -12,10 +12,14 @@ import sapien.physx as physx
 import sapien.render
 import torch
 
+from mani_skill.render import SAPIEN_RENDER_SYSTEM
 from mani_skill.utils import common
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.link import Link
 from mani_skill.utils.structs.pose import Pose
+
+if SAPIEN_RENDER_SYSTEM == "3.1":
+    sapien.render.RenderCameraGroup = "oldtype"  # type: ignore
 
 # NOTE (stao): commented out functions are functions that are not confirmed to be working in the wrapped class but the original class has
 
@@ -152,7 +156,10 @@ class RenderCamera:
 
     def get_picture(self, name: str):
         if physx.is_gpu_enabled():
-            return self.camera_group.get_picture_cuda(name).torch()
+            if SAPIEN_RENDER_SYSTEM == "3.0":
+                return self.camera_group.get_picture_cuda(name).torch()
+            elif SAPIEN_RENDER_SYSTEM == "3.1":
+                return self.camera_group.get_cuda_pictures([name])[0].torch()
         else:
             return common.to_tensor(self._render_cameras[0].get_picture(name))[
                 None, ...

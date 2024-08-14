@@ -3,11 +3,13 @@
 
 from typing import Dict
 
+import gymnasium as gym
 import numpy as np
 import torch
 from gymnasium import spaces
 
 from mani_skill.utils.logging_utils import logger
+from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 
 
 def find_max_episode_steps_value(env):
@@ -16,6 +18,14 @@ def find_max_episode_steps_value(env):
     This is a useful utility as not all specs may include max episode steps and some wrappers
     may need access to this in order to implement e.g. TimeLimits correctly on the GPU sim."""
     cur = env
+    if isinstance(cur, gym.vector.SyncVectorEnv):
+        cur = env.envs[0]
+    elif isinstance(cur, gym.vector.AsyncVectorEnv):
+        raise NotImplementedError(
+            "Currently cannot get max episode steps of an environment wrapped with gym.vector.AsyncVectorEnv"
+        )
+    elif isinstance(cur, ManiSkillVectorEnv):
+        cur = env._env
     while cur is not None:
         if hasattr(cur, "max_episode_steps"):
             return cur.max_episode_steps
