@@ -11,6 +11,7 @@ class CameraObsTextures:
 
 
 def parse_visual_obs_mode_to_struct(obs_mode: str) -> CameraObsTextures:
+    """Given user supplied observation mode, return a struct with the relevant textures that are to be captured"""
     if obs_mode == "rgb":
         return CameraObsTextures(color=True, depth=False, segmentation=False)
     elif obs_mode == "rgbd":

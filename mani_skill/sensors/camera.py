@@ -10,7 +10,7 @@ import sapien.render
 import torch
 from torch._tensor import Tensor
 
-from mani_skill.render import SAPIEN_RENDER_SYSTEM
+from mani_skill.render import SAPIEN_RENDER_SYSTEM, SHADER_CONFIGS, set_shader_pack
 from mani_skill.utils.structs import Actor, Articulation, Link
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import Array
@@ -51,14 +51,13 @@ class CameraConfig(BaseSensorConfig):
     mount: Union[Actor, Link] = None
     """the Actor or Link to mount the camera on top of. This means the global pose of the mounted camera is now mount.pose * local_pose"""
     texture_names: Optional[Sequence[str]] = None
-    """texture_names (Sequence[str], optional): texture names to render. Defaults to ("Color", "PositionSegmentation"). Note that the rendering speed will not really change if you remove PositionSegmentation"""
+    """texture_names (Sequence[str], optional): texture names to render."""
     shader_pack: str = "minimal"
     """The shader to use for rendering. Defaults to "minimal" which is the fastest rendering system with minimal GPU memory usage. There is also `default`."""
 
     def __post_init__(self):
         self.pose = Pose.create(self.pose)
-        if self.texture_names is None:
-            self.texture_names = DEFAULT_TEXTURE_NAMES
+        self.shader_config = SHADER_CONFIGS[self.shader_pack]
 
     def __repr__(self) -> str:
         return self.__class__.__name__ + "(" + str(self.__dict__) + ")"
@@ -101,6 +100,8 @@ def update_camera_configs_from_dict(
         if "pose" in v and isinstance(v["pose"], list):
             v["pose"] = sapien.Pose(v["pose"][:3], v["pose"][3:])
         config.__dict__.update(v)
+    for config in camera_configs.values():
+        config.__post_init__()
 
 
 def parse_camera_configs(camera_configs):
@@ -149,6 +150,7 @@ class Camera(BaseSensor):
         )
 
         # Add camera to scene. Add mounted one if a entity is given
+        set_shader_pack(self.config.shader_config)
         if self.entity is None:
             self.camera = scene.add_camera(
                 name=camera_config.uid,
@@ -173,7 +175,7 @@ class Camera(BaseSensor):
                 far=camera_config.far,
             )
         # Filter texture names according to renderer type if necessary (legacy for Kuafu)
-        self.texture_names = camera_config.texture_names
+        self.texture_names = self.config.shader_config.texture_names
 
     def capture(self):
         self.camera.take_picture()
@@ -186,7 +188,14 @@ class Camera(BaseSensor):
         return images_dict
 
     def get_picture(self, name: str):
+        if self.config.shader_pack == "minimal":
+            rgb = (self.camera.get_picture("Color")[0][..., :3]).to(torch.uint8)
+        else:
+            rgb = (self.camera.get_picture("Color")[0][..., :3] * 255).to(torch.uint8)
+        import matplotlib.pyplot as plt
 
+        print(self.config.shader_pack, self.uid)
+        # plt.imshow(rgb.cpu().numpy()[0]);plt.show()
         return self.camera.get_picture(name)
 
     def get_images(self) -> Tensor:

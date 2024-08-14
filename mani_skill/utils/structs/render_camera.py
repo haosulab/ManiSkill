@@ -154,7 +154,7 @@ class RenderCamera:
     def get_near(self) -> float:
         return self._render_cameras[0].get_near()
 
-    def get_picture(self, names: Union[str, List[str]]):
+    def get_picture(self, names: Union[str, List[str]]) -> List[torch.Tensor]:
         if isinstance(names, str):
             names = [names]
         if physx.is_gpu_enabled():
@@ -165,8 +165,9 @@ class RenderCamera:
             elif SAPIEN_RENDER_SYSTEM == "3.1":
                 return [x.torch() for x in self.camera_group.get_cuda_pictures(names)]
         else:
-            return common.to_tensor(self._render_cameras[0].get_picture(name))[
-                None, ...
+            return [
+                common.to_tensor(self._render_cameras[0].get_picture(name))[None, ...]
+                for name in names
             ]
 
     def get_picture_cuda(self, name: str):

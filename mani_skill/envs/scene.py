@@ -981,7 +981,7 @@ class ManiSkillScene:
                 try:
                     camera_group = self.render_system_group.create_camera_group(
                         sensor.camera._render_cameras,
-                        sensor.texture_names,
+                        sensor.config.shader_config.texture_names,
                     )
                 except RuntimeError as e:
                     raise RuntimeError(
@@ -998,12 +998,12 @@ class ManiSkillScene:
         for name, sensor in sensors.items():
             if isinstance(sensor, Camera):
                 batch_renderer = sapien.render.RenderManager(
-                    sapien.render.get_shader_pack("minimal")
+                    sapien.render.get_shader_pack(
+                        sensor.config.shader_config.shader_pack
+                    )
                 )
                 batch_renderer.set_size(sensor.config.width, sensor.config.height)
-
                 batch_renderer.set_cameras(sensor.camera._render_cameras)
-                # batch_renderer.take_picture()
                 sensor.camera.camera_group = self.camera_groups[name] = batch_renderer
             else:
                 raise NotImplementedError(
@@ -1068,9 +1068,6 @@ class ManiSkillScene:
                 if camera_name is not None and name != camera_name:
                     continue
                 camera.capture()
-                if self.shader_dir == "default":
-                    rgb = (camera.get_picture("Color")[..., :3]).to(torch.uint8)
-                else:
-                    rgb = (camera.get_picture("Color")[..., :3] * 255).to(torch.uint8)
+                rgb = camera.get_picture("rgb")
                 image_data[name] = rgb
         return image_data
