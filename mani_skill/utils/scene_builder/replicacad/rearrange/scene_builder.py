@@ -194,14 +194,11 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
             num_ycb_objs_to_build = rcad_config_to_num_ycb_objs_to_build[rcad_config]
 
             ycb_objs = defaultdict(list)
-            build_pos = [0, 0, 100]
             for actor_id, num_objs in num_ycb_objs_to_build.items():
                 for no in range(num_objs):
                     obj_instance_name = f"env-{env_num}_{actor_id}-{no}"
                     builder = actors.get_actor_builder(self.scene, id=f"ycb:{actor_id}")
                     builder.set_scene_idxs([env_num])
-                    builder.initial_pose = sapien.Pose(p=build_pos)
-                    build_pos[2] += 10
                     actor = builder.build(name=obj_instance_name)
 
                     ycb_objs[actor_id].append(actor)
