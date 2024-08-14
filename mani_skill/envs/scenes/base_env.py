@@ -75,7 +75,7 @@ class SceneManipulationEnv(BaseEnv):
     def _default_sim_config(self):
         return SimConfig(
             spacing=50,
-            gpu_memory_cfg=GPUMemoryConfig(
+            gpu_memory_config=GPUMemoryConfig(
                 found_lost_pairs_capacity=2**25,
                 max_rigid_patch_count=2**21,
                 max_rigid_contact_count=2**23,

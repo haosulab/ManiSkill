@@ -69,7 +69,7 @@ class RotateSingleObjectInHand(BaseEnv):
     @property
     def _default_sim_config(self):
         return SimConfig(
-            gpu_memory_cfg=GPUMemoryConfig(
+            gpu_memory_config=GPUMemoryConfig(
                 max_rigid_contact_count=self.num_envs * max(1024, self.num_envs) * 8,
                 max_rigid_patch_count=self.num_envs * max(1024, self.num_envs) * 2,
                 found_lost_pairs_capacity=2**26,

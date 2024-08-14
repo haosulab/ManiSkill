@@ -1,5 +1,6 @@
 import copy
 import gc
+import logging
 import os
 from functools import cached_property
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
@@ -29,8 +30,8 @@ from mani_skill.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill.sensors.camera import (
     Camera,
     CameraConfig,
-    parse_camera_cfgs,
-    update_camera_cfgs_from_dict,
+    parse_camera_configs,
+    update_camera_configs_from_dict,
 )
 from mani_skill.sensors.depth_camera import StereoDepthCamera, StereoDepthCameraConfig
 from mani_skill.utils import common, gym_utils, sapien_utils
@@ -59,22 +60,26 @@ class BaseEnv(gym.Env):
 
         render_mode: render mode registered in @SUPPORTED_RENDER_MODES.
 
-        shader_dir (str): shader directory. Defaults to "default".
-            "default", "rt", "rt-fast" are built-in options with SAPIEN. Other options are user-defined. "rt" means ray-tracing which results
+        shader_dir (Optional[str]): shader directory. Defaults to None.
+            Setting this will override the shader used for all cameras in the environment. This is legacy behavior kept for backwards compatibility.
+            The proper way to change the shaders used for cameras is to either change the environment code or pass in sensor_configs/human_render_camera_configs with the desired shaders.
+
+
+            Previously the options are "default", "rt", "rt-fast". "rt" means ray-tracing which results
             in more photorealistic renders but is slow, "rt-fast" is a lower quality but faster version of "rt".
 
         enable_shadow (bool): whether to enable shadow for lights. Defaults to False.
 
-        sensor_cfgs (dict): configurations of sensors. See notes for more details.
+        sensor_configs (dict): configurations of sensors. See notes for more details.
 
-        human_render_camera_cfgs (dict): configurations of human rendering cameras. Similar usage as @sensor_cfgs.
+        human_render_camera_configs (dict): configurations of human rendering cameras. Similar usage as @human_render_camera_configs.
 
         robot_uids (Union[str, BaseAgent, List[Union[str, BaseAgent]]]): List of robots to instantiate and control in the environment.
 
-        sim_cfg (Union[SimConfig, dict]): Configurations for simulation if used that override the environment defaults. If given
-            a dictionary, it can just override specific attributes e.g. `sim_cfg=dict(scene_cfg=dict(solver_iterations=25))`. If
+        sim_config (Union[SimConfig, dict]): Configurations for simulation if used that override the environment defaults. If given
+            a dictionary, it can just override specific attributes e.g. `sim_config=dict(scene_config=dict(solver_iterations=25))`. If
             passing in a SimConfig object, while typed, will override every attribute including the task defaults. Some environments
-            define their own recommended default sim configurations via the `self._default_sim_cfg` attribute that generally should not be
+            define their own recommended default sim configurations via the `self._default_sim_config` attribute that generally should not be
             completely overriden. For a full detail/explanation of what is in the sim config see the type hints / go to the source
             https://github.com/haosulab/ManiSkill/blob/main/mani_skill/utils/structs/types.py
 
@@ -97,7 +102,7 @@ class BaseEnv(gym.Env):
             otherwise as it slows down simulation and rendering.
 
     Note:
-        `sensor_cfgs` is used to update environement-specific sensor configurations.
+        `sensor_configs` is used to update environement-specific sensor configurations.
         If the key is one of sensor names (e.g. a camera), the value will be applied to the corresponding sensor.
         Otherwise, the value will be applied to all sensors (but overridden by sensor-specific values).
     """
@@ -159,12 +164,12 @@ class BaseEnv(gym.Env):
         reward_mode: str = None,
         control_mode: str = None,
         render_mode: str = None,
-        shader_dir: str = "default",
+        shader_dir: Optional[str] = None,
         enable_shadow: bool = False,
         sensor_configs: dict = None,
         human_render_camera_configs: dict = None,
         robot_uids: Union[str, BaseAgent, List[Union[str, BaseAgent]]] = None,
-        sim_cfg: Union[SimConfig, dict] = dict(),
+        sim_config: Union[SimConfig, dict] = dict(),
         reconfiguration_freq: int = None,
         sim_backend: str = "auto",
         render_backend: str = "gpu",
@@ -219,6 +224,10 @@ class BaseEnv(gym.Env):
         elif render_backend[:4] == "cuda":
             self._render_device = sapien.Device(render_backend)
 
+
+        if shader_dir is not None:
+            logging.warn("shader_dir argument will be deprecated. Please use sensor_configs/human_render_camera_configs to set shaders.")
+
         # raise a number of nicer errors
         if sim_backend == "cpu" and num_envs > 1:
             raise RuntimeError("""Cannot set the sim backend to 'cpu' and have multiple environments.
@@ -234,13 +243,13 @@ class BaseEnv(gym.Env):
         assert not parallel_in_single_scene or (obs_mode not in ["sensor_data", "pointcloud", "rgb", "depth", "rgbd"]), \
             "Parallel rendering from parallel cameras is only supported when the gui/viewer is not used. parallel_in_single_scene must be False if using parallel rendering. If True only state based observations are supported."
 
-        if isinstance(sim_cfg, SimConfig):
-            sim_cfg = sim_cfg.dict()
-        merged_gpu_sim_cfg = self._default_sim_config.dict()
-        common.dict_merge(merged_gpu_sim_cfg, sim_cfg)
-        self.sim_cfg = dacite.from_dict(data_class=SimConfig, data=merged_gpu_sim_cfg, config=dacite.Config(strict=True))
+        if isinstance(sim_config, SimConfig):
+            sim_config = sim_config.dict()
+        merged_gpu_sim_config = self._default_sim_config.dict()
+        common.dict_merge(merged_gpu_sim_config, sim_config)
+        self.sim_config = dacite.from_dict(data_class=SimConfig, data=merged_gpu_sim_config, config=dacite.Config(strict=True))
         """the final sim config after merging user overrides with the environment default"""
-        physx.set_gpu_memory_config(**self.sim_cfg.gpu_memory_cfg.dict())
+        physx.set_gpu_memory_config(**self.sim_config.gpu_memory_config.dict())
 
         if SAPIEN_RENDER_SYSTEM == "3.0":
             self.shader_dir = shader_dir
@@ -274,8 +283,8 @@ class BaseEnv(gym.Env):
         sapien.render.set_log_level(os.getenv("MS_RENDERER_LOG_LEVEL", "warn"))
 
         # Set simulation and control frequency
-        self._sim_freq = self.sim_cfg.sim_freq
-        self._control_freq = self.sim_cfg.control_freq
+        self._sim_freq = self.sim_config.sim_freq
+        self._control_freq = self.sim_config.control_freq
         if self._sim_freq % self._control_freq != 0:
             logger.warn(
                 f"sim_freq({self._sim_freq}) is not divisible by control_freq({self._control_freq}).",
@@ -619,25 +628,25 @@ class BaseEnv(gym.Env):
         self._sensor_configs = dict()
 
         # Add task/external sensors
-        self._sensor_configs.update(parse_camera_cfgs(self._default_sensor_configs))
+        self._sensor_configs.update(parse_camera_configs(self._default_sensor_configs))
 
         # Add agent sensors
         self._agent_sensor_configs = dict()
-        self._agent_sensor_configs = parse_camera_cfgs(self.agent._sensor_configs)
+        self._agent_sensor_configs = parse_camera_configs(self.agent._sensor_configs)
         self._sensor_configs.update(self._agent_sensor_configs)
 
         # Add human render camera configs
-        self._human_render_camera_configs = parse_camera_cfgs(
+        self._human_render_camera_configs = parse_camera_configs(
             self._default_human_render_camera_configs
         )
 
         # Override camera configurations with user supplied configurations
         if self._custom_sensor_configs is not None:
-            update_camera_cfgs_from_dict(
+            update_camera_configs_from_dict(
                 self._sensor_configs, self._custom_sensor_configs
             )
         if self._custom_human_render_camera_configs is not None:
-            update_camera_cfgs_from_dict(
+            update_camera_configs_from_dict(
                 self._human_render_camera_configs,
                 self._custom_human_render_camera_configs,
             )
@@ -645,26 +654,26 @@ class BaseEnv(gym.Env):
         # Now we instantiate the actual sensor objects
         self._sensors = dict()
 
-        for uid, sensor_cfg in self._sensor_configs.items():
+        for uid, sensor_config in self._sensor_configs.items():
             if uid in self._agent_sensor_configs:
                 articulation = self.agent.robot
             else:
                 articulation = None
-            if isinstance(sensor_cfg, StereoDepthCameraConfig):
+            if isinstance(sensor_config, StereoDepthCameraConfig):
                 sensor_cls = StereoDepthCamera
-            elif isinstance(sensor_cfg, CameraConfig):
+            elif isinstance(sensor_config, CameraConfig):
                 sensor_cls = Camera
             self._sensors[uid] = sensor_cls(
-                sensor_cfg,
+                sensor_config,
                 self.scene,
                 articulation=articulation,
             )
 
         # Cameras for rendering only
         self._human_render_cameras = dict()
-        for uid, camera_cfg in self._human_render_camera_configs.items():
+        for uid, camera_config in self._human_render_camera_configs.items():
             self._human_render_cameras[uid] = Camera(
-                camera_cfg,
+                camera_config,
                 self.scene,
             )
 
@@ -933,11 +942,10 @@ class BaseEnv(gym.Env):
     # Simulation and other gym interfaces
     # -------------------------------------------------------------------------- #
     def _set_scene_config(self):
-        # **self.sim_cfg.scene_cfg.dict()
-        physx.set_shape_config(contact_offset=self.sim_cfg.scene_cfg.contact_offset, rest_offset=self.sim_cfg.scene_cfg.rest_offset)
-        physx.set_body_config(solver_position_iterations=self.sim_cfg.scene_cfg.solver_position_iterations, solver_velocity_iterations=self.sim_cfg.scene_cfg.solver_velocity_iterations, sleep_threshold=self.sim_cfg.scene_cfg.sleep_threshold)
-        physx.set_scene_config(gravity=self.sim_cfg.scene_cfg.gravity, bounce_threshold=self.sim_cfg.scene_cfg.bounce_threshold, enable_pcm=self.sim_cfg.scene_cfg.enable_pcm, enable_tgs=self.sim_cfg.scene_cfg.enable_tgs, enable_ccd=self.sim_cfg.scene_cfg.enable_ccd, enable_enhanced_determinism=self.sim_cfg.scene_cfg.enable_enhanced_determinism, enable_friction_every_iteration=self.sim_cfg.scene_cfg.enable_friction_every_iteration, cpu_workers=self.sim_cfg.scene_cfg.cpu_workers )
-        physx.set_default_material(**self.sim_cfg.default_materials_cfg.dict())
+        physx.set_shape_config(contact_offset=self.sim_config.scene_config.contact_offset, rest_offset=self.sim_config.scene_config.rest_offset)
+        physx.set_body_config(solver_position_iterations=self.sim_config.scene_config.solver_position_iterations, solver_velocity_iterations=self.sim_config.scene_config.solver_velocity_iterations, sleep_threshold=self.sim_config.scene_config.sleep_threshold)
+        physx.set_scene_config(gravity=self.sim_config.scene_config.gravity, bounce_threshold=self.sim_config.scene_config.bounce_threshold, enable_pcm=self.sim_config.scene_config.enable_pcm, enable_tgs=self.sim_config.scene_config.enable_tgs, enable_ccd=self.sim_config.scene_config.enable_ccd, enable_enhanced_determinism=self.sim_config.scene_config.enable_enhanced_determinism, enable_friction_every_iteration=self.sim_config.scene_config.enable_friction_every_iteration, cpu_workers=self.sim_config.scene_config.cpu_workers )
+        physx.set_default_material(**self.sim_config.default_materials_config.dict())
 
     def _setup_scene(self):
         """Setup the simulation scene instance.
@@ -959,8 +967,8 @@ class BaseEnv(gym.Env):
                 self.physx_system.set_scene_offset(
                     scene,
                     [
-                        scene_x * self.sim_cfg.spacing,
-                        scene_y * self.sim_cfg.spacing,
+                        scene_x * self.sim_config.spacing,
+                        scene_y * self.sim_config.spacing,
                         0,
                     ],
                 )
@@ -973,7 +981,7 @@ class BaseEnv(gym.Env):
         # create a "global" scene object that users can work with that is linked with all other scenes created
         self.scene = ManiSkillScene(
             sub_scenes,
-            sim_cfg=self.sim_cfg,
+            sim_config=self.sim_config,
             device=self.device,
             parallel_in_single_scene=self._parallel_in_single_scene,
             shader_dir=self.shader_dir
@@ -1229,8 +1237,8 @@ class BaseEnv(gym.Env):
         sensor_settings_str = []
         for uid, cam in self._sensors.items():
             if isinstance(cam, Camera):
-                cfg = cam.cfg
-                sensor_settings_str.append(f"RGBD({cfg.width}x{cfg.height})")
+                config = cam.config
+                sensor_settings_str.append(f"RGBD({config.width}x{config.height})")
         sensor_settings_str = ", ".join(sensor_settings_str)
         sim_backend = "gpu" if physx.is_gpu_enabled() else "cpu"
         print(

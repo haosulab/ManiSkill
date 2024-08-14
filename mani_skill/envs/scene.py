@@ -8,7 +8,7 @@ import sapien.render
 import torch
 from sapien.render import RenderCameraComponent
 
-from mani_skill.render import SAPIEN_RENDER_SYSTEM, set_shader_pack
+from mani_skill.render import SAPIEN_RENDER_SYSTEM
 from mani_skill.sensors.base_sensor import BaseSensor
 from mani_skill.sensors.camera import Camera
 from mani_skill.utils import common, sapien_utils
@@ -40,7 +40,7 @@ class ManiSkillScene:
     def __init__(
         self,
         sub_scenes: List[sapien.Scene] = None,
-        sim_cfg: SimConfig = SimConfig(),
+        sim_config: SimConfig = SimConfig(),
         debug_mode: bool = True,
         device: Device = None,
         parallel_in_single_scene: bool = False,
@@ -52,7 +52,7 @@ class ManiSkillScene:
         self.px: Union[physx.PhysxCpuSystem, physx.PhysxGpuSystem] = self.sub_scenes[
             0
         ].physx_system
-        self.sim_cfg = sim_cfg
+        self.sim_config = sim_config
         self._gpu_sim_initialized = False
         self.debug_mode = debug_mode
         self.device = device
@@ -369,6 +369,7 @@ class ManiSkillScene:
                     scene.update_render()
                 self._setup_gpu_rendering()
                 self._gpu_setup_sensors(self.sensors)
+                self._gpu_setup_sensors(self.human_render_cameras)
 
             manager: sapien.render.GpuSyncManager = self.render_system_group
             manager.sync()
@@ -997,12 +998,12 @@ class ManiSkillScene:
         for name, sensor in sensors.items():
             if isinstance(sensor, Camera):
                 batch_renderer = sapien.render.RenderManager(
-                    sapien.render.get_shader_pack("default")
+                    sapien.render.get_shader_pack("minimal")
                 )
-                batch_renderer.set_size(sensor.cfg.width, sensor.cfg.height)
+                batch_renderer.set_size(sensor.config.width, sensor.config.height)
 
                 batch_renderer.set_cameras(sensor.camera._render_cameras)
-                batch_renderer.take_picture()
+                # batch_renderer.take_picture()
                 sensor.camera.camera_group = self.camera_groups[name] = batch_renderer
             else:
                 raise NotImplementedError(
@@ -1050,7 +1051,9 @@ class ManiSkillScene:
                         continue
                     camera_group.take_picture()
                     rgb = (
-                        camera_group.get_picture_cuda("Color").torch()[..., :3].clone()
+                        camera_group.get_cuda_pictures(["Color"])[0]
+                        .torch()[..., :3]
+                        .clone()
                     )
                     image_data[name] = rgb
         else:

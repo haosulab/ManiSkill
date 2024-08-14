@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, Sequence, Union
+from typing import TYPE_CHECKING, Dict, Optional, Sequence, Union
 
 import numpy as np
 import sapien
@@ -23,7 +23,7 @@ from .base_sensor import BaseSensor, BaseSensorConfig
 
 DEFAULT_TEXTURE_NAMES = ("Color", "PositionSegmentation")
 if SAPIEN_RENDER_SYSTEM == "3.1":
-    DEFAULT_TEXTURE_NAMES = ("Color", "Position", "Segmentation")
+    DEFAULT_TEXTURE_NAMES = ("Color", "PositionSegmentation")
 
 
 @dataclass
@@ -49,84 +49,88 @@ class CameraConfig(BaseSensorConfig):
     """entity_uid (str, optional): unique id of the entity to mount the camera. Defaults to None."""
     mount: Union[Actor, Link] = None
     """the Actor or Link to mount the camera on top of. This means the global pose of the mounted camera is now mount.pose * local_pose"""
-    texture_names: Sequence[str] = DEFAULT_TEXTURE_NAMES
-    """texture_names (Sequence[str], optional): texture names to render. Defaults to ("Color", "PositionSegmentation"). Note that the renderign speed will not really change if you remove PositionSegmentation"""
+    texture_names: Optional[Sequence[str]] = None
+    """texture_names (Sequence[str], optional): texture names to render. Defaults to ("Color", "PositionSegmentation"). Note that the rendering speed will not really change if you remove PositionSegmentation"""
+    shader: str = "minimal"
+    """The shader to use for rendering. Defaults to "minimal" which is the fastest rendering system with minimal GPU memory usage. There is also `default`."""
 
     def __post_init__(self):
         self.pose = Pose.create(self.pose)
+        if self.texture_names is None:
+            self.texture_names = DEFAULT_TEXTURE_NAMES
 
     def __repr__(self) -> str:
         return self.__class__.__name__ + "(" + str(self.__dict__) + ")"
 
 
-def update_camera_cfgs_from_dict(
-    camera_cfgs: Dict[str, CameraConfig], cfg_dict: Dict[str, dict]
+def update_camera_configs_from_dict(
+    camera_configs: Dict[str, CameraConfig], config_dict: Dict[str, dict]
 ):
     # Update CameraConfig to StereoDepthCameraConfig
-    if cfg_dict.pop("use_stereo_depth", False):
+    if config_dict.pop("use_stereo_depth", False):
         from .depth_camera import StereoDepthCameraConfig  # fmt: skip
-        for name, cfg in camera_cfgs.items():
-            camera_cfgs[name] = StereoDepthCameraConfig.fromCameraConfig(cfg)
+        for name, config in camera_configs.items():
+            camera_configs[name] = StereoDepthCameraConfig.fromCameraConfig(config)
 
     # First, apply global configuration
-    for k, v in cfg_dict.items():
-        if k in camera_cfgs:
+    for k, v in config_dict.items():
+        if k in camera_configs:
             continue
-        for cfg in camera_cfgs.values():
-            if not hasattr(cfg, k):
+        for config in camera_configs.values():
+            if not hasattr(config, k):
                 raise AttributeError(f"{k} is not a valid attribute of CameraConfig")
             else:
-                setattr(cfg, k, v)
+                setattr(config, k, v)
     # Then, apply camera-specific configuration
-    for name, v in cfg_dict.items():
-        if name not in camera_cfgs:
+    for name, v in config_dict.items():
+        if name not in camera_configs:
             continue
 
         # Update CameraConfig to StereoDepthCameraConfig
         if v.pop("use_stereo_depth", False):
             from .depth_camera import StereoDepthCameraConfig  # fmt: skip
-            cfg = camera_cfgs[name]
-            camera_cfgs[name] = StereoDepthCameraConfig.fromCameraConfig(cfg)
+            config = camera_configs[name]
+            camera_configs[name] = StereoDepthCameraConfig.fromCameraConfig(config)
 
-        cfg = camera_cfgs[name]
+        config = camera_configs[name]
         for kk in v:
-            assert hasattr(cfg, kk), f"{kk} is not a valid attribute of CameraConfig"
+            assert hasattr(config, kk), f"{kk} is not a valid attribute of CameraConfig"
         v = copy.deepcopy(v)
         # for json serailizable gym.make args, user has to pass a list, not a Pose object.
         if "pose" in v and isinstance(v["pose"], list):
             v["pose"] = sapien.Pose(v["pose"][:3], v["pose"][3:])
-        cfg.__dict__.update(v)
+        config.__dict__.update(v)
 
 
-def parse_camera_cfgs(camera_cfgs):
-    if isinstance(camera_cfgs, (tuple, list)):
-        return dict([(cfg.uid, cfg) for cfg in camera_cfgs])
-    elif isinstance(camera_cfgs, dict):
-        return dict(camera_cfgs)
-    elif isinstance(camera_cfgs, CameraConfig):
-        return dict([(camera_cfgs.uid, camera_cfgs)])
+def parse_camera_configs(camera_configs):
+    if isinstance(camera_configs, (tuple, list)):
+        return dict([(config.uid, config) for config in camera_configs])
+    elif isinstance(camera_configs, dict):
+        return dict(camera_configs)
+    elif isinstance(camera_configs, CameraConfig):
+        return dict([(camera_configs.uid, camera_configs)])
     else:
-        raise TypeError(type(camera_cfgs))
+        raise TypeError(type(camera_configs))
 
 
 class Camera(BaseSensor):
     """Implementation of the Camera sensor which uses the sapien Camera."""
 
-    cfg: CameraConfig
+    config: CameraConfig
 
     def __init__(
         self,
-        camera_cfg: CameraConfig,
+        camera_config: CameraConfig,
         scene: ManiSkillScene,
         articulation: Articulation = None,
     ):
-        super().__init__(cfg=camera_cfg)
+        super().__init__(config=camera_config)
 
-        self.camera_cfg = camera_cfg
+        self.camera_config = camera_config
 
-        entity_uid = camera_cfg.entity_uid
-        if camera_cfg.mount is not None:
-            self.entity = camera_cfg.mount
+        entity_uid = camera_config.entity_uid
+        if camera_config.mount is not None:
+            self.entity = camera_config.mount
         elif entity_uid is None:
             self.entity = None
         else:
@@ -141,47 +145,47 @@ class Camera(BaseSensor):
             if self.entity is None:
                 raise RuntimeError(f"Mount entity ({entity_uid}) is not found")
 
-        intrinsic = camera_cfg.intrinsic
-        assert (camera_cfg.fov is None and intrinsic is not None) or (
-            camera_cfg.fov is not None and intrinsic is None
+        intrinsic = camera_config.intrinsic
+        assert (camera_config.fov is None and intrinsic is not None) or (
+            camera_config.fov is not None and intrinsic is None
         )
 
         # Add camera to scene. Add mounted one if a entity is given
         if self.entity is None:
             self.camera = scene.add_camera(
-                name=camera_cfg.uid,
-                pose=camera_cfg.pose,
-                width=camera_cfg.width,
-                height=camera_cfg.height,
-                fovy=camera_cfg.fov,
+                name=camera_config.uid,
+                pose=camera_config.pose,
+                width=camera_config.width,
+                height=camera_config.height,
+                fovy=camera_config.fov,
                 intrinsic=intrinsic,
-                near=camera_cfg.near,
-                far=camera_cfg.far,
+                near=camera_config.near,
+                far=camera_config.far,
             )
         else:
             self.camera = scene.add_camera(
-                name=camera_cfg.uid,
+                name=camera_config.uid,
                 mount=self.entity,
-                pose=camera_cfg.pose,
-                width=camera_cfg.width,
-                height=camera_cfg.height,
-                fovy=camera_cfg.fov,
+                pose=camera_config.pose,
+                width=camera_config.width,
+                height=camera_config.height,
+                fovy=camera_config.fov,
                 intrinsic=intrinsic,
-                near=camera_cfg.near,
-                far=camera_cfg.far,
+                near=camera_config.near,
+                far=camera_config.far,
             )
         # Filter texture names according to renderer type if necessary (legacy for Kuafu)
-        self.texture_names = camera_cfg.texture_names
+        self.texture_names = camera_config.texture_names
 
     def capture(self):
         self.camera.take_picture()
 
     def get_obs(self):
-        images = {}
-        for name in self.texture_names:
-            image = self.get_picture(name)
-            images[name] = image
-        return images
+        images_dict = {}
+        images = self.get_picture(self.texture_names)
+        for img, name in zip(images, self.texture_names):
+            images_dict[name] = img
+        return images_dict
 
     def get_picture(self, name: str):
         return self.camera.get_picture(name)
