@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Dict, Optional, Sequence, Union
 import numpy as np
 import sapien
 import sapien.render
+import torch
 from torch._tensor import Tensor
 
 from mani_skill.render import SAPIEN_RENDER_SYSTEM
@@ -51,7 +52,7 @@ class CameraConfig(BaseSensorConfig):
     """the Actor or Link to mount the camera on top of. This means the global pose of the mounted camera is now mount.pose * local_pose"""
     texture_names: Optional[Sequence[str]] = None
     """texture_names (Sequence[str], optional): texture names to render. Defaults to ("Color", "PositionSegmentation"). Note that the rendering speed will not really change if you remove PositionSegmentation"""
-    shader: str = "minimal"
+    shader_pack: str = "minimal"
     """The shader to use for rendering. Defaults to "minimal" which is the fastest rendering system with minimal GPU memory usage. There is also `default`."""
 
     def __post_init__(self):
@@ -125,9 +126,6 @@ class Camera(BaseSensor):
         articulation: Articulation = None,
     ):
         super().__init__(config=camera_config)
-
-        self.camera_config = camera_config
-
         entity_uid = camera_config.entity_uid
         if camera_config.mount is not None:
             self.entity = camera_config.mount
@@ -188,6 +186,7 @@ class Camera(BaseSensor):
         return images_dict
 
     def get_picture(self, name: str):
+
         return self.camera.get_picture(name)
 
     def get_images(self) -> Tensor:

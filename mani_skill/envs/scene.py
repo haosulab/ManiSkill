@@ -1050,11 +1050,18 @@ class ManiSkillScene:
                     if camera_name is not None and name != camera_name:
                         continue
                     camera_group.take_picture()
-                    rgb = (
-                        camera_group.get_cuda_pictures(["Color"])[0]
-                        .torch()[..., :3]
-                        .clone()
-                    )
+                    if SAPIEN_RENDER_SYSTEM == "3.1":
+                        rgb = (
+                            camera_group.get_cuda_pictures(["Color"])[0]
+                            .torch()[..., :3]
+                            .clone()
+                        )
+                    else:
+                        rgb = (
+                            camera_group.get_picture_cuda("Color")
+                            .torch()[..., :3]
+                            .clone()
+                        )
                     image_data[name] = rgb
         else:
             for name, camera in self.human_render_cameras.items():

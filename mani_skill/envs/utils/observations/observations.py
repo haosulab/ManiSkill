@@ -8,6 +8,7 @@ import numpy as np
 import sapien.physx as physx
 import torch
 
+from mani_skill.render import SAPIEN_RENDER_SYSTEM
 from mani_skill.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill.sensors.camera import Camera
 from mani_skill.utils import common
@@ -34,28 +35,32 @@ def sensor_data_to_rgbd(
             new_images = dict()
             ori_images: Dict[str, torch.Tensor]
             for key in ori_images:
-                if key == "Color":
-                    if rgb:
+                if SAPIEN_RENDER_SYSTEM == "3.0":
+                    if key == "Color":
+                        if rgb:
+                            rgb_data = ori_images[key][..., :3].clone()  # [H, W, 4]
+                            new_images["rgb"] = rgb_data  # [H, W, 4]
+                    elif key == "PositionSegmentation":
+                        if depth:
+                            depth_data = -ori_images[key][..., [2]]  # [H, W, 1]
+                            new_images["depth"] = depth_data
+                        if segmentation:
+                            segmentation_data = ori_images[key][..., [3]]
+                            new_images["segmentation"] = segmentation_data  # [H, W, 1]
+                    else:
+                        new_images[key] = ori_images[key]
+                elif SAPIEN_RENDER_SYSTEM == "3.1":
+                    if key == "Color" and rgb:
                         rgb_data = ori_images[key][..., :3].clone()  # [H, W, 4]
                         new_images["rgb"] = rgb_data  # [H, W, 4]
-                elif key == "PositionSegmentation":
-                    if depth:
+                    elif key == "Depth" and depth:
                         depth_data = -ori_images[key][..., [2]]  # [H, W, 1]
-                        # NOTE (stao): This is a bit of a hack since normally we have generic to_numpy call to convert
-                        # internal torch tensors to numpy if we do not use GPU simulation
-                        # but torch does not have a uint16 type so we convert that here earlier
-                        # if not physx.is_gpu_enabled():
-                        #     depth_data = depth_data.numpy().astype(np.uint16)
                         new_images["depth"] = depth_data
-                    if segmentation:
+                    elif key == "Segmentation" and segmentation:
                         segmentation_data = ori_images[key][..., [3]]
-                        # if not physx.is_gpu_enabled():
-                        #     segmentation_data = segmentation_data.numpy().astype(
-                        #         np.uint16
-                        #     )
                         new_images["segmentation"] = segmentation_data  # [H, W, 1]
-                else:
-                    new_images[key] = ori_images[key]
+                    else:
+                        new_images[key] = ori_images[key]
             sensor_data[cam_uid] = new_images
     return observation
 
