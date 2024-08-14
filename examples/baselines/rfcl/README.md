@@ -99,3 +99,25 @@ python -m mani_skill.trajectory.replay_trajectory \
 The replay_trajectory tool can also be used to generate videos
 
 See the rlpd_jax/scripts/collect_demos.py code for details on how to load the saved policies and modify it to your needs.
+
+
+## Citation
+
+If you use this baseline please cite the following
+```
+@inproceedings{DBLP:conf/iclr/TaoSC024,
+  author       = {Stone Tao and
+                  Arth Shukla and
+                  Tse{-}kai Chan and
+                  Hao Su},
+  title        = {Reverse Forward Curriculum Learning for Extreme Sample and Demo Efficiency},
+  booktitle    = {The Twelfth International Conference on Learning Representations,
+                  {ICLR} 2024, Vienna, Austria, May 7-11, 2024},
+  publisher    = {OpenReview.net},
+  year         = {2024},
+  url          = {https://openreview.net/forum?id=w4rODxXsmM},
+  timestamp    = {Wed, 07 Aug 2024 17:11:53 +0200},
+  biburl       = {https://dblp.org/rec/conf/iclr/TaoSC024.bib},
+  bibsource    = {dblp computer science bibliography, https://dblp.org}
+}
+```
