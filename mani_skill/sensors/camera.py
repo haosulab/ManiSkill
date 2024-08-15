@@ -10,7 +10,12 @@ import sapien.render
 import torch
 from torch._tensor import Tensor
 
-from mani_skill.render import SAPIEN_RENDER_SYSTEM, SHADER_CONFIGS, set_shader_pack
+from mani_skill.render import (
+    PREBUILT_SHADER_CONFIGS,
+    SAPIEN_RENDER_SYSTEM,
+    ShaderConfig,
+    set_shader_pack,
+)
 from mani_skill.utils.structs import Actor, Articulation, Link
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import Array
@@ -52,12 +57,17 @@ class CameraConfig(BaseSensorConfig):
     """the Actor or Link to mount the camera on top of. This means the global pose of the mounted camera is now mount.pose * local_pose"""
     texture_names: Optional[Sequence[str]] = None
     """texture_names (Sequence[str], optional): texture names to render."""
-    shader_pack: str = "minimal"
-    """The shader to use for rendering. Defaults to "minimal" which is the fastest rendering system with minimal GPU memory usage. There is also `default`."""
+    shader_pack: Optional[str] = "minimal"
+    """The shader to use for rendering. Defaults to "minimal" which is the fastest rendering system with minimal GPU memory usage. There is also `default` and `rt`."""
+    shader_config: Optional[ShaderConfig] = None
+    """The shader config to use for rendering. If None, the shader_pack will be used to search amongst prebuilt shader configs to create a ShaderConfig."""
 
     def __post_init__(self):
         self.pose = Pose.create(self.pose)
-        self.shader_config = SHADER_CONFIGS[self.shader_pack]
+        if self.shader_config is None:
+            self.shader_config = PREBUILT_SHADER_CONFIGS[self.shader_pack]
+        else:
+            self.shader_pack = self.shader_config.shader_pack
 
     def __repr__(self) -> str:
         return self.__class__.__name__ + "(" + str(self.__dict__) + ")"
@@ -80,6 +90,8 @@ def update_camera_configs_from_dict(
             if not hasattr(config, k):
                 raise AttributeError(f"{k} is not a valid attribute of CameraConfig")
             else:
+                if k == "shader_pack":
+                    config.shader_config = None
                 setattr(config, k, v)
     # Then, apply camera-specific configuration
     for name, v in config_dict.items():
@@ -94,6 +106,8 @@ def update_camera_configs_from_dict(
 
         config = camera_configs[name]
         for kk in v:
+            if kk == "shader_pack":
+                config.shader_config = None
             assert hasattr(config, kk), f"{kk} is not a valid attribute of CameraConfig"
         v = copy.deepcopy(v)
         # for json serailizable gym.make args, user has to pass a list, not a Pose object.
@@ -175,28 +189,31 @@ class Camera(BaseSensor):
                 far=camera_config.far,
             )
         # Filter texture names according to renderer type if necessary (legacy for Kuafu)
-        self.texture_names = self.config.shader_config.texture_names
 
     def capture(self):
         self.camera.take_picture()
 
-    def get_obs(self):
+    def get_obs(self, rgb: bool = True, depth: bool = True, segmentation: bool = True):
         images_dict = {}
-        images = self.get_picture(self.texture_names)
-        for img, name in zip(images, self.texture_names):
-            images_dict[name] = img
+        # determine which textures are needed to get the desired modalities
+        required_texture_names = []
+        for (
+            texture_name,
+            output_modalities,
+        ) in self.config.shader_config.texture_names.items():
+            if rgb and "rgb" in output_modalities:
+                required_texture_names.append(texture_name)
+            if depth and "depth" in output_modalities:
+                required_texture_names.append(texture_name)
+            if segmentation and "segmentation" in output_modalities:
+                required_texture_names.append(texture_name)
+        # fetch the image data
+        output_textures = self.camera.get_picture(required_texture_names)
+        for texture_name, texture in zip(required_texture_names, output_textures):
+            images_dict |= self.config.shader_config.texture_transforms[texture_name](
+                texture
+            )
         return images_dict
-
-    def get_picture(self, name: str):
-        if self.config.shader_pack == "minimal":
-            rgb = (self.camera.get_picture("Color")[0][..., :3]).to(torch.uint8)
-        else:
-            rgb = (self.camera.get_picture("Color")[0][..., :3] * 255).to(torch.uint8)
-        import matplotlib.pyplot as plt
-
-        print(self.config.shader_pack, self.uid)
-        # plt.imshow(rgb.cpu().numpy()[0]);plt.show()
-        return self.camera.get_picture(name)
 
     def get_images(self) -> Tensor:
         return visualization.tile_images(

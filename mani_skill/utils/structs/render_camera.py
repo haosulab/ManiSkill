@@ -170,11 +170,11 @@ class RenderCamera:
                 for name in names
             ]
 
-    def get_picture_cuda(self, name: str):
-        return self._render_cameras[0].get_picture_cuda(name)
+    # def get_picture_cuda(self, name: str):
+    #     return self._render_cameras[0].get_picture_cuda(name)
 
-    def get_picture_names(self) -> list[str]:
-        return self._render_cameras[0].get_picture_names()
+    # def get_picture_names(self) -> list[str]:
+    #     return self._render_cameras[0].get_picture_names()
 
     def get_projection_matrix(self):
         return self._render_cameras[0].get_projection_matrix()

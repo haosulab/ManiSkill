@@ -1010,13 +1010,6 @@ class ManiSkillScene:
                     f"This sensor {sensor} of type {sensor.__class__} has not bget_picture_cuda implemented yet on the GPU"
                 )
 
-    def get_sensor_obs(self) -> Dict[str, Dict[str, torch.Tensor]]:
-        """Get raw sensor data for use as observations."""
-        sensor_data = dict()
-        for name, sensor in self.sensors.items():
-            sensor_data[name] = sensor.get_obs()
-        return sensor_data
-
     def get_sensor_images(self) -> Dict[str, Dict[str, torch.Tensor]]:
         """Get raw sensor data as images for visualization purposes."""
         sensor_data = dict()
@@ -1068,6 +1061,6 @@ class ManiSkillScene:
                 if camera_name is not None and name != camera_name:
                     continue
                 camera.capture()
-                rgb = camera.get_picture("rgb")
+                rgb = camera.get_obs(rgb=True, depth=False, segmentation=False)
                 image_data[name] = rgb
         return image_data

@@ -30,7 +30,7 @@ class BaseSensor:
         non-blocking function if possible.
         """
 
-    def get_obs(self):
+    def get_obs(self, **kwargs):
         """
         Retrieves captured sensor data as an observation for use by an agent.
         """

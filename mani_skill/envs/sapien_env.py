@@ -23,7 +23,6 @@ from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.envs.utils.observations import (
     parse_visual_obs_mode_to_struct,
     sensor_data_to_pointcloud,
-    sensor_data_to_rgbd,
 )
 from mani_skill.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill.sensors.camera import (
@@ -36,7 +35,7 @@ from mani_skill.sensors.depth_camera import StereoDepthCamera, StereoDepthCamera
 from mani_skill.utils import common, gym_utils, sapien_utils
 from mani_skill.utils.structs import Actor, Articulation
 from mani_skill.utils.structs.types import Array, SimConfig
-from mani_skill.utils.visualization.misc import observations_to_images, tile_images
+from mani_skill.utils.visualization.misc import tile_images
 from mani_skill.viewer import create_viewer
 
 
@@ -184,6 +183,11 @@ class BaseEnv(gym.Env):
         self.num_envs = num_envs
         self.reconfiguration_freq = reconfiguration_freq if reconfiguration_freq is not None else 0
         self._reconfig_counter = 0
+        if shader_dir is not None:
+            logging.warn("shader_dir argument will be deprecated after ManiSkill v3.0.0 official release. Please use sensor_configs/human_render_camera_configs to set shaders.")
+            sensor_configs |= dict(shader_pack=shader_dir)
+            human_render_camera_configs |= dict(shader_pack=shader_dir)
+            viewer_camera_configs |= dict(shader_pack=shader_dir)
         self._custom_sensor_configs = sensor_configs
         self._custom_human_render_camera_configs = human_render_camera_configs
         self._custom_viewer_camera_configs = viewer_camera_configs
@@ -231,8 +235,7 @@ class BaseEnv(gym.Env):
             self._render_device = sapien.Device(render_backend)
 
 
-        if shader_dir is not None:
-            logging.warn("shader_dir argument will be deprecated. Please use sensor_configs/human_render_camera_configs to set shaders.")
+
 
         # raise a number of nicer errors
         if sim_backend == "cpu" and num_envs > 1:
@@ -242,9 +245,6 @@ class BaseEnv(gym.Env):
 
         if shader_dir is not None:
             if "rt" == shader_dir[:2]:
-                if obs_mode in ["sensor_data", "rgb", "rgbd", "pointcloud"]:
-                    raise RuntimeError("""Currently you cannot use ray-tracing while running simulation with visual observation modes. You may still use
-                    env.render_rgb_array() or the RecordEpisode wrapper to save videos of ray-traced results""")
                 if num_envs > 1 and parallel_in_single_scene == False:
                     raise RuntimeError("""Currently you cannot run ray-tracing on more than one environment in a single process""")
 
@@ -263,10 +263,7 @@ class BaseEnv(gym.Env):
         # Set simulation and control frequency
         self._sim_freq = self.sim_config.sim_freq
         self._control_freq = self.sim_config.control_freq
-        if self._sim_freq % self._control_freq != 0:
-            logger.warn(
-                f"sim_freq({self._sim_freq}) is not divisible by control_freq({self._control_freq}).",
-            )
+        assert self._sim_freq % self._control_freq == 0, f"sim_freq({self._sim_freq}) is not divisible by control_freq({self._control_freq})."
         self._sim_steps_per_control = self._sim_freq // self._control_freq
 
         # Observation mode
@@ -453,7 +450,6 @@ class BaseEnv(gym.Env):
         # checking if self._visual_obs_mode_struct is not None is equivalent to checking if the obs mode is visual
         elif self._visual_obs_mode_struct is not None:
             obs = self._get_obs_with_sensor_data(info)
-            obs = sensor_data_to_rgbd(obs, self._sensors, rgb=self._visual_obs_mode_struct.color, depth=self._visual_obs_mode_struct.depth, segmentation=self._visual_obs_mode_struct.segmentation)
         else:
             raise NotImplementedError(self._obs_mode)
         return obs
@@ -478,10 +474,6 @@ class BaseEnv(gym.Env):
         for sensor in self._sensors.values():
             sensor.capture()
 
-    def get_sensor_obs(self) -> Dict[str, Dict[str, torch.Tensor]]:
-        """Get raw sensor data for use as observations."""
-        return self.scene.get_sensor_obs()
-
     def get_sensor_images(self) -> Dict[str, Dict[str, torch.Tensor]]:
         """Get raw sensor data as images for visualization purposes."""
         return self.scene.get_sensor_images()
@@ -498,7 +490,10 @@ class BaseEnv(gym.Env):
             obj.hide_visual()
         self.scene.update_render()
         self.capture_sensor_data()
-        sensor_obs = self.get_sensor_obs()
+        sensor_obs = dict()
+        for name, sensor in self.scene.sensors.items():
+            if isinstance(sensor, Camera):
+                sensor_obs[name] = sensor.get_obs(rgb=self._visual_obs_mode_struct.rgb, depth=self._visual_obs_mode_struct.depth, segmentation=self._visual_obs_mode_struct.segmentation)
         # explicitly synchronize and wait for cuda kernels to finish
         # this prevents the GPU from making poor scheduling decisions when other physx code begins to run
         torch.cuda.synchronize()
@@ -622,23 +617,6 @@ class BaseEnv(gym.Env):
         self._agent_sensor_configs = dict()
         self._agent_sensor_configs = parse_camera_configs(self.agent._sensor_configs)
         self._sensor_configs.update(self._agent_sensor_configs)
-
-        # based on obs mode, automatically modify the default texture names
-        # textures_struct = parse_visual_obs_mode_to_struct(self.obs_mode)
-        # for sensor_cfg in self._sensor_configs.values():
-        #     if isinstance(sensor_cfg, CameraConfig):
-        #         if sensor_cfg.texture_names is None:
-        #             sensor_cfg.texture_names = []
-        #         if textures_struct.color:
-        #             sensor_cfg.texture_names.append("Color")
-        #         if SAPIEN_RENDER_SYSTEM == "3.0":
-        #             if textures_struct.depth or textures_struct.segmentation:
-        #                 sensor_cfg.texture_names.append("PositionSegmentation")
-        #         elif SAPIEN_RENDER_SYSTEM == "3.1":
-        #             if textures_struct.depth:
-        #                 sensor_cfg.texture_names.append("Depth")
-        #             if textures_struct.segmentation:
-        #                 sensor_cfg.texture_names.append("Segmentation")
 
         # Add human render camera configs
         self._human_render_camera_configs = parse_camera_configs(
