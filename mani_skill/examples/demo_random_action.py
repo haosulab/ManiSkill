@@ -41,8 +41,6 @@ def parse_args(args=None):
 
 
 def main(args):
-    import torch
-    torch.set_default_device("cuda")
     np.set_printoptions(suppress=True, precision=3)
     verbose = not args.quiet
     if args.seed is not None:
