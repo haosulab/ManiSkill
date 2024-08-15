@@ -8,7 +8,7 @@ As part of these baselines we establish standardized [reinforcement learning ben
 
 ## Online Reinforcement Learning Baselines
 
-List of already implemented and tested online reinforcement learning baselines. Note that there are also reinforcement learning (offline RL, online imitation learning) baselines that leverage demonstrations, see the [learning from demos page](../learning_from_demos/index.md) for more information.
+List of already implemented and tested online reinforcement learning baselines. The results link take you to the respective wandb pages for the results. You can change filters/views in the wandb workspace to view results with other settings (e.g. state based or RGB based training). Note that there are also reinforcement learning (offline RL, online imitation learning) baselines that leverage demonstrations, see the [learning from demos page](../learning_from_demos/index.md) for more information.
 
 | Baseline                                                            | Code                                                                           | Results | Paper                                    |
 | ------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ------- | ---------------------------------------- |
@@ -18,7 +18,7 @@ List of already implemented and tested online reinforcement learning baselines. 
 
 ## Standard Benchmark
 
-The standard benchmark for RL in ManiSkill consists of two groups, a small set of 10 tasks, and a large set of 50 tasks, both with state based and visual based settings. All standard benchmark tasks come with normalized dense reward functions. A recommended small set is created so researchers without access to a lot of compute can still reasonably benchmark/compare their work. The large set is still being developed and tested. 
+The standard benchmark for RL in ManiSkill consists of two groups, a small set of 8 tasks, and a large set of 50 tasks, both with state based and visual based settings. All standard benchmark tasks come with normalized dense reward functions. A recommended small set is created so researchers without access to a lot of compute can still reasonably benchmark/compare their work. The large set is still being developed and tested. 
 
 
 These tasks span an extremely wide range of problems in robotics/reinforcement learning, namely: high dimensional observations/actions, large initial state distributions, articulated object manipulation, generalizable manipulation, mobile manipulation, locomotion etc.
@@ -26,7 +26,7 @@ These tasks span an extremely wide range of problems in robotics/reinforcement l
 
 **Small Set Environment IDs**: 
 <!-- PushCube-v1, PickCube-v1, StackCube-v1, PegInsertionSide-v1, PushT-v1, PickSingleYCB-v1, PlugCharger-v1, OpenCabinetDrawer-v1, HumanoidPlaceAppleInBowl-v1, AnymalC-Reach-v1 -->
-PushCube-v1, PickCube-v1, PegInsertionSide-v1, PushT-v1, HumanoidPlaceAppleInBowl-v1, AnymalC-Reach-v1
+PushCube-v1, PickCube-v1, PegInsertionSide-v1, PushT-v1, HumanoidPlaceAppleInBowl-v1, AnymalC-Reach-v1, OpenCabinetDrawer-v1
 <!-- TODO: add image of all tasks / gif of them -->
 
 <!-- 

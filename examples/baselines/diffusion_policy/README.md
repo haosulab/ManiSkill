@@ -1,6 +1,6 @@
 # Diffusion Policy
 
-Code for running the Diffusion Policy algorithm is adapted from [CleanRL](https://github.com/vwxyzjn/cleanrl/). It is written to be single-file and easy to follow/read, and supports state-based RL and visual-based RL code.
+Code for running the Diffusion Policy algorithm based on ["Diffusion Policy: Visuomotor Policy Learning via Action Diffusion"](https://arxiv.org/abs/2303.04137v4). It is adapted from the [original code](https://github.com/real-stanford/diffusion_policy).
 
 ## Installation
 
@@ -29,7 +29,7 @@ python -m mani_skill.trajectory.replay_trajectory \
   --save-traj --num-procs 10
 ```
 
-## Training
+## State-Based Training
 
 Example training, learning from 100 demonstrations generated via motionplanning in the PickCube-v1 task
 ```bash
@@ -61,4 +61,32 @@ python train.py --env-id ${env_id} --max_episode_steps 100 --total_iters 30000 \
   --exp-name diffusion_policy-${env_id}-state-${demos}_motionplanning_demos-${seed} \
   --sim-backend="gpu" --num-eval-envs 100 --no-capture-video \
   --demo_type="motionplanning" --track # additional tag for logging purposes on wandb
+```
+
+## Citation
+
+If you use this baseline please cite the following
+```
+@inproceedings{DBLP:conf/rss/ChiFDXCBS23,
+  author       = {Cheng Chi and
+                  Siyuan Feng and
+                  Yilun Du and
+                  Zhenjia Xu and
+                  Eric Cousineau and
+                  Benjamin Burchfiel and
+                  Shuran Song},
+  editor       = {Kostas E. Bekris and
+                  Kris Hauser and
+                  Sylvia L. Herbert and
+                  Jingjin Yu},
+  title        = {Diffusion Policy: Visuomotor Policy Learning via Action Diffusion},
+  booktitle    = {Robotics: Science and Systems XIX, Daegu, Republic of Korea, July
+                  10-14, 2023},
+  year         = {2023},
+  url          = {https://doi.org/10.15607/RSS.2023.XIX.026},
+  doi          = {10.15607/RSS.2023.XIX.026},
+  timestamp    = {Mon, 29 Apr 2024 21:28:50 +0200},
+  biburl       = {https://dblp.org/rec/conf/rss/ChiFDXCBS23.bib},
+  bibsource    = {dblp computer science bibliography, https://dblp.org}
+}
 ```

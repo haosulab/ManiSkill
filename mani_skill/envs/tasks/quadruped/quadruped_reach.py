@@ -110,6 +110,7 @@ class QuadrupedReachEnv(BaseEnv):
         obs = dict(
             root_linear_velocity=self.agent.robot.root_linear_velocity,
             root_angular_velocity=self.agent.robot.root_angular_velocity,
+            reached_goal=info["success"],
         )
         if self.obs_mode in ["state", "state_dict"]:
             obs.update(

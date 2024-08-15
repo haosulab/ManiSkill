@@ -1154,14 +1154,17 @@ class BaseEnv(gym.Env):
 
     def render_all(self):
         """Renders all human render cameras and sensors together"""
-        self.render_rgb_array()
+        images = []
+        for obj in self._hidden_objects:
+            obj.show_visual()
+        self.scene.update_render()
+        render_images = self.scene.get_human_render_camera_images()
+
         for obj in self._hidden_objects:
             obj.hide_visual()
-        images = []
         self.scene.update_render()
         self.capture_sensor_data()
         sensor_images = self.get_sensor_images()
-        render_images = self.scene.get_human_render_camera_images()
         for image in render_images.values():
             images.append(image)
         for image in sensor_images.values():

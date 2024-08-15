@@ -100,3 +100,33 @@ python -m mani_skill.trajectory.replay_trajectory \
 The replay_trajectory tool can also be used to generate videos
 
 See the rlpd_jax/scripts/collect_demos.py code for details on how to load the saved policies and modify it to your needs.
+
+## Citation
+
+If you use this baseline please cite the following
+```
+@inproceedings{DBLP:conf/icml/BallSKL23,
+  author       = {Philip J. Ball and
+                  Laura M. Smith and
+                  Ilya Kostrikov and
+                  Sergey Levine},
+  editor       = {Andreas Krause and
+                  Emma Brunskill and
+                  Kyunghyun Cho and
+                  Barbara Engelhardt and
+                  Sivan Sabato and
+                  Jonathan Scarlett},
+  title        = {Efficient Online Reinforcement Learning with Offline Data},
+  booktitle    = {International Conference on Machine Learning, {ICML} 2023, 23-29 July
+                  2023, Honolulu, Hawaii, {USA}},
+  series       = {Proceedings of Machine Learning Research},
+  volume       = {202},
+  pages        = {1577--1594},
+  publisher    = {{PMLR}},
+  year         = {2023},
+  url          = {https://proceedings.mlr.press/v202/ball23a.html},
+  timestamp    = {Mon, 28 Aug 2023 17:23:08 +0200},
+  biburl       = {https://dblp.org/rec/conf/icml/BallSKL23.bib},
+  bibsource    = {dblp computer science bibliography, https://dblp.org}
+}
+```
