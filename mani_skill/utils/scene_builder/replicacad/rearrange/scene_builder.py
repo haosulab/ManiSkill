@@ -10,6 +10,7 @@ from functools import cached_property
 
 import numpy as np
 import sapien
+import sapien.physx as physx
 import torch
 import transforms3d
 
@@ -251,6 +252,9 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
         # initialize base scenes
         super().initialize(env_idx)
 
+        # teleport robot away for init
+        self.env.agent.robot.set_pose(sapien.Pose([0, 0, 100]))
+
         # get sampled init configs
         sampled_init_configs = [
             self.init_configs[env_num][idx]
@@ -291,6 +295,19 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
                 ]
                 articulation.set_qpos(base_qpos[reset_idxs])
                 articulation.set_qvel(articulation.qvel[reset_idxs] * 0)
+
+        if physx.is_gpu_enabled():
+            self.scene._gpu_apply_all()
+            self.scene.px.gpu_update_articulation_kinematics()
+            self.scene.px.step()
+            self.scene._gpu_fetch_all()
+
+        # teleport robot back to correct location
+        if self.env.robot_uids == "fetch":
+            self.env.agent.reset(self.env.agent.keyframes["rest"].qpos)
+            self.env.agent.robot.set_pose(sapien.Pose([-1, 0, 0.02]))
+        else:
+            raise NotImplementedError(self.env.robot_uids)
 
     def sample_build_config_idxs(self):
         used_build_config_idxs = list(self.used_build_config_idxs)

@@ -12,6 +12,7 @@ from collections import defaultdict
 
 import numpy as np
 import sapien
+import sapien.physx as physx
 import torch
 import transforms3d
 import trimesh
@@ -285,14 +286,9 @@ class ReplicaCADSceneBuilder(SceneBuilder):
         self.disable_fetch_move_collisions(self.bg)
 
     def initialize(self, env_idx: torch.Tensor):
-        if self.env.robot_uids == "fetch":
-            agent: Fetch = self.env.agent
-            rest_keyframe = agent.keyframes["rest"]
-            agent.reset(rest_keyframe.qpos)
 
-            agent.robot.set_pose(sapien.Pose([-1, 0, 0.02]))
-        else:
-            raise NotImplementedError(self.env.robot_uids)
+        # teleport robot away for init
+        self.env.agent.robot.set_pose(sapien.Pose([0, 0, 100]))
 
         for obj, pose in self._default_object_poses:
             obj.set_pose(pose)
@@ -300,6 +296,19 @@ class ReplicaCADSceneBuilder(SceneBuilder):
                 # note that during initialization you may only ever change poses/qpos of objects in scenes being reset
                 obj.set_qpos(obj.qpos[0] * 0)
                 obj.set_qvel(obj.qvel[0] * 0)
+
+        if physx.is_gpu_enabled():
+            self.scene._gpu_apply_all()
+            self.scene.px.gpu_update_articulation_kinematics()
+            self.scene.px.step()
+            self.scene._gpu_fetch_all()
+
+        # teleport robot back to correct location
+        if self.env.robot_uids == "fetch":
+            self.env.agent.reset(self.env.agent.keyframes["rest"].qpos)
+            self.env.agent.robot.set_pose(sapien.Pose([-1, 0, 0.02]))
+        else:
+            raise NotImplementedError(self.env.robot_uids)
 
     def disable_fetch_move_collisions(
         self,
