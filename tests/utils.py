@@ -42,8 +42,10 @@ VENV_OBS_MODES = [
 ]
 SINGLE_ARM_STATIONARY_ROBOTS = ["panda", "xmate3_robotiq"]
 
-LOW_MEM_SIM_CFG = dict(
-    gpu_memory_cfg=dict(max_rigid_patch_count=81920, found_lost_pairs_capacity=262144)
+LOW_MEM_SIM_CONFIG = dict(
+    gpu_memory_config=dict(
+        max_rigid_patch_count=81920, found_lost_pairs_capacity=262144
+    )
 )
 
 

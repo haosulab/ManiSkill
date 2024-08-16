@@ -10,7 +10,7 @@ from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 from tests.utils import (
     CONTROL_MODES_STATIONARY_SINGLE_ARM,
     ENV_IDS,
-    LOW_MEM_SIM_CFG,
+    LOW_MEM_SIM_CONFIG,
     MULTI_AGENT_ENV_IDS,
     OBS_MODES,
     SINGLE_ARM_STATIONARY_ROBOTS,
@@ -24,10 +24,10 @@ from tests.utils import (
 @pytest.mark.gpu_sim
 @pytest.mark.parametrize("env_id", ENV_IDS)
 def test_all_envs(env_id):
-    sim_cfg = dict()
+    sim_config = dict()
     if "Scene" not in env_id:
-        sim_cfg = LOW_MEM_SIM_CFG
-    env = gym.make(env_id, num_envs=16, obs_mode="state", sim_cfg=sim_cfg)
+        sim_config = LOW_MEM_SIM_CONFIG
+    env = gym.make(env_id, num_envs=16, obs_mode="state", sim_config=sim_config)
     obs, _ = env.reset()
     action_space = env.action_space
     for _ in range(5):
@@ -47,7 +47,7 @@ def test_envs_obs_modes(env_id, obs_mode):
         env_id,
         num_envs=16,
         vectorization_mode="custom",
-        vector_kwargs=dict(obs_mode=obs_mode, sim_cfg=LOW_MEM_SIM_CFG),
+        vector_kwargs=dict(obs_mode=obs_mode, sim_config=LOW_MEM_SIM_CONFIG),
     )
     obs, _ = env.reset()
     assert_isinstance(obs, torch.Tensor)
@@ -94,7 +94,7 @@ def test_envs_obs_modes(env_id, obs_mode):
 #         env_id,
 #         num_envs=16,
 #         vectorization_mode="custom",
-#         vector_kwargs=dict(obs_mode=obs_mode, sim_cfg=LOW_MEM_SIM_CFG),
+#         vector_kwargs=dict(obs_mode=obs_mode, sim_config=LOW_MEM_SIM_CONFIG),
 #     )
 #     obs, _ = env.reset()
 #     assert_isinstance(obs, torch.Tensor)
@@ -118,7 +118,7 @@ def test_env_control_modes(env_id, control_mode):
         env_id,
         num_envs=16,
         vectorization_mode="custom",
-        vector_kwargs=dict(control_mode=control_mode, sim_cfg=LOW_MEM_SIM_CFG),
+        vector_kwargs=dict(control_mode=control_mode, sim_config=LOW_MEM_SIM_CONFIG),
     )
     env.reset()
     action_space = env.action_space
@@ -191,7 +191,7 @@ def test_env_reconfiguration(env_id):
 def test_raw_sim_states():
     # Test sim state get and set works for environment without overriden get_state_dict functions
     env = gym.make(
-        "PickCube-v1", num_envs=16, obs_mode="state_dict", sim_cfg=LOW_MEM_SIM_CFG
+        "PickCube-v1", num_envs=16, obs_mode="state_dict", sim_config=LOW_MEM_SIM_CONFIG
     )
     base_env: BaseEnv = env.unwrapped
     obs1, _ = env.reset()
@@ -233,7 +233,7 @@ def test_robots(env_id, robot_uids):
         env_id,
         num_envs=16,
         vectorization_mode="custom",
-        vector_kwargs=dict(robot_uids=robot_uids, sim_cfg=LOW_MEM_SIM_CFG),
+        vector_kwargs=dict(robot_uids=robot_uids, sim_config=LOW_MEM_SIM_CONFIG),
     )
     env.reset()
     action_space = env.action_space
@@ -250,7 +250,7 @@ def test_multi_agent(env_id):
         env_id,
         num_envs=16,
         vectorization_mode="custom",
-        vector_kwargs=dict(sim_cfg=LOW_MEM_SIM_CFG),
+        vector_kwargs=dict(sim_config=LOW_MEM_SIM_CONFIG),
     )
     env.reset()
     action_space = env.action_space
@@ -270,7 +270,7 @@ def test_partial_resets(env_id):
         env_id,
         num_envs=16,
         vectorization_mode="custom",
-        vector_kwargs=dict(sim_cfg=LOW_MEM_SIM_CFG),
+        vector_kwargs=dict(sim_config=LOW_MEM_SIM_CONFIG),
     )
     obs, _ = env.reset()
     action_space = env.action_space
@@ -298,7 +298,7 @@ def test_timelimits():
         "PickCube-v1",
         num_envs=16,
         vectorization_mode="custom",
-        vector_kwargs=dict(sim_cfg=LOW_MEM_SIM_CFG),
+        vector_kwargs=dict(sim_config=LOW_MEM_SIM_CONFIG),
     )
     obs, _ = env.reset()
     for _ in range(50):

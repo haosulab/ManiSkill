@@ -68,7 +68,7 @@ class PushCube(BaseEnv):
     @property
     def _default_sim_config(self):
         return SimConfig(
-            gpu_memory_cfg=GPUMemoryConfig(
+            gpu_memory_config=GPUMemoryConfig(
                 found_lost_pairs_capacity=2**25, max_rigid_patch_count=2**18
             )
         )
@@ -83,7 +83,7 @@ class RotateSingleObjectInHand(BaseEnv):
     @property
     def _default_sim_config(self):
         return SimConfig(
-            gpu_memory_cfg=GPUMemoryConfig(
+            gpu_memory_config=GPUMemoryConfig(
                 max_rigid_contact_count=self.num_envs * max(1024, self.num_envs) * 8,
                 max_rigid_patch_count=self.num_envs * max(1024, self.num_envs) * 2,
                 found_lost_pairs_capacity=2**26,
@@ -91,7 +91,7 @@ class RotateSingleObjectInHand(BaseEnv):
         )
 ```
 
-For GPU simulation tuning, there are generally two considerations, memory and speed. It is recommended to set `gpu_memory_cfg` in such a way so that no errors are outputted when simulating as many as `4096` parallel environments with state observations on a single GPU. 
+For GPU simulation tuning, there are generally two considerations, memory and speed. It is recommended to set `gpu_memory_config` in such a way so that no errors are outputted when simulating as many as `4096` parallel environments with state observations on a single GPU. 
 
 A simple way to test is to run the GPU sim benchmarking script on your already registered environment and check if any errors are reported
 
