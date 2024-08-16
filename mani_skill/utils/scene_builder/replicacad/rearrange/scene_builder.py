@@ -249,6 +249,12 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
         ), f"init_config_idxs should be list of ints, instead got {init_config_idxs}"
         assert len(init_config_idxs) == len(env_idx)
 
+        for env_num, init_poses in zip(env_idx, sampled_init_configs):
+            ycb_objs = self.ycb_objs_per_env[env_num]
+            for obj_name in ycb_objs:
+                for obj in ycb_objs[obj_name]:
+                    self.hide_actor(obj)
+
         # initialize base scenes
         super().initialize(env_idx)
 
