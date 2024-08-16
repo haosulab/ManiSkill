@@ -2,6 +2,7 @@ import argparse
 
 import gymnasium as gym
 import numpy as np
+import sapien
 
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.utils.wrappers import RecordEpisode
@@ -80,7 +81,8 @@ def main(args):
     env.action_space.seed(args.seed)
     if args.render_mode is not None:
         viewer = env.render()
-        viewer.paused = args.pause
+        if isinstance(viewer, sapien.utils.Viewer):
+            viewer.paused = args.pause
         env.render()
     while True:
         action = env.action_space.sample()

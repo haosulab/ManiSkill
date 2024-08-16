@@ -14,57 +14,6 @@ from mani_skill.sensors.camera import Camera
 from mani_skill.utils import common
 
 
-def sensor_data_to_rgbd(
-    observation: Dict,
-    sensors: Dict[str, BaseSensor],
-    rgb=True,
-    depth=True,
-    segmentation=True,
-):
-    """
-    Converts all camera data to a easily usable rgb+depth format
-
-    Optionally can include segmentation
-    """
-    sensor_data = observation["sensor_data"]
-    for (cam_uid, ori_images), (sensor_uid, sensor) in zip(
-        sensor_data.items(), sensors.items()
-    ):
-        assert cam_uid == sensor_uid
-        if isinstance(sensor, Camera):
-            new_images = dict()
-            ori_images: Dict[str, torch.Tensor]
-            for key in ori_images:
-                if SAPIEN_RENDER_SYSTEM == "3.0":
-                    if key == "Color":
-                        if rgb:
-                            rgb_data = ori_images[key][..., :3].clone()  # [H, W, 4]
-                            new_images["rgb"] = rgb_data  # [H, W, 4]
-                    elif key == "PositionSegmentation":
-                        if depth:
-                            depth_data = -ori_images[key][..., [2]]  # [H, W, 1]
-                            new_images["depth"] = depth_data
-                        if segmentation:
-                            segmentation_data = ori_images[key][..., [3]]
-                            new_images["segmentation"] = segmentation_data  # [H, W, 1]
-                    else:
-                        new_images[key] = ori_images[key]
-                elif SAPIEN_RENDER_SYSTEM == "3.1":
-                    if key == "Color" and rgb:
-                        rgb_data = ori_images[key][..., :3].clone()  # [H, W, 4]
-                        new_images["rgb"] = rgb_data  # [H, W, 4]
-                    elif key == "Depth" and depth:
-                        depth_data = -ori_images[key][..., [2]]  # [H, W, 1]
-                        new_images["depth"] = depth_data
-                    elif key == "Segmentation" and segmentation:
-                        segmentation_data = ori_images[key][..., [3]]
-                        new_images["segmentation"] = segmentation_data  # [H, W, 1]
-                    else:
-                        new_images[key] = ori_images[key]
-            sensor_data[cam_uid] = new_images
-    return observation
-
-
 def sensor_data_to_pointcloud(observation: Dict, sensors: Dict[str, BaseSensor]):
     """convert all camera data in sensor to pointcloud data"""
     sensor_data = observation["sensor_data"]
@@ -77,30 +26,29 @@ def sensor_data_to_pointcloud(observation: Dict, sensors: Dict[str, BaseSensor])
         assert cam_uid == sensor_uid
         if isinstance(sensor, Camera):
             cam_pcd = {}
-
+            # TODO: double check if the .clone()s are necessary
             # Each pixel is (x, y, z, actor_id) in OpenGL camera space
             # actor_id = 0 for the background
             images: Dict[str, torch.Tensor]
-            position = images["PositionSegmentation"]
-            segmentation = position[..., 3].clone()
+            position = images["position"].clone()
+            segmentation = images["segmentation"].clone()
             position = position.float()
-            position[..., 3] = position[..., 3] != 0
             position[..., :3] = (
                 position[..., :3] / 1000.0
             )  # convert the raw depth from millimeters to meters
 
             # Convert to world space
             cam2world = camera_params[cam_uid]["cam2world_gl"]
-            xyzw = position.reshape(position.shape[0], -1, 4) @ cam2world.transpose(
-                1, 2
-            )
+            xyzw = torch.cat([position, segmentation != 0], dim=-1).reshape(
+                position.shape[0], -1, 4
+            ) @ cam2world.transpose(1, 2)
             cam_pcd["xyzw"] = xyzw
 
             # Extra keys
-            if "Color" in images:
-                rgb = images["Color"][..., :3].clone()
+            if "rgb" in images:
+                rgb = images["rgb"][..., :3].clone()
                 cam_pcd["rgb"] = rgb.reshape(rgb.shape[0], -1, 3)
-            if "PositionSegmentation" in images:
+            if "segmentation" in images:
                 cam_pcd["segmentation"] = segmentation.reshape(
                     segmentation.shape[0], -1, 1
                 )

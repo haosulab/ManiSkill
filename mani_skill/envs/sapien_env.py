@@ -446,6 +446,7 @@ class BaseEnv(gym.Env):
             obs = self._get_obs_state_dict(info)
         elif self._obs_mode == "pointcloud":
             # TODO support more flexible pcd obs mode with new render system
+            obs = self._get_obs_with_sensor_data(info)
             obs = sensor_data_to_pointcloud(obs, self._sensors)
         # checking if self._visual_obs_mode_struct is not None is equivalent to checking if the obs mode is visual
         elif self._visual_obs_mode_struct is not None:

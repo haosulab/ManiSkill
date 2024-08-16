@@ -18,10 +18,11 @@ class ShaderConfig:
     Texture transforms must be defined and are used to process the texture data into more standard formats for use. Some textures might be combined textures (e.g. depth+segmentation together)
     due to shader optimizations. texture transforms must then split these combined textures back into their component parts.
 
-    The standard image modalities and expected dtypes are:
-        - rgb (torch.uint8)
-        - depth (torch.int16)
-        - segmentation (torch.int16)
+    The standard image modalities and expected dtypes/shapes are:
+        - rgb (torch.uint8, shape: [H, W, 3])
+        - depth (torch.int16, shape: [H, W])
+        - segmentation (torch.int16, shape: [H, W])
+        - position (torch.float32, shape: [H, W, 3]) (infinite points have segmentation == 0)
     """
 
     shader_pack: str
@@ -42,11 +43,12 @@ PREBUILT_SHADER_CONFIGS = {
         shader_pack="minimal",
         texture_names={
             "Color": ["rgb"],
-            "PositionSegmentation": ["depth", "segmentation"],
+            "PositionSegmentation": ["position", "depth", "segmentation"],
         },
         texture_transforms={
             "Color": lambda data: {"rgb": data[..., :3]},
             "PositionSegmentation": lambda data: {
+                "position": data[..., :3],
                 "depth": -data[..., [2]],
                 "segmentation": data[..., [3]],
             },
@@ -56,13 +58,14 @@ PREBUILT_SHADER_CONFIGS = {
         shader_pack="default",
         texture_names={
             "Color": ["rgb"],
-            "Position": ["depth"],
+            "Position": ["position", "depth"],
             "Segmentation": ["segmentation"],
         },
         texture_transforms={
             "Color": lambda data: {"rgb": (data[..., :3] * 255).to(torch.uint8)},
             "Position": lambda data: {
-                "depth": (-data[..., [2]] * 1000).to(torch.int16)
+                "depth": (-data[..., [2]] * 1000).to(torch.int16),
+                "position": data[..., :3],
             },
             "Segmentation": lambda data: {"segmentation": data[..., [3]]},
         },

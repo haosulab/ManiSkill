@@ -7,9 +7,9 @@ from typing import List
 
 try:
     import pytorch_kinematics as pk
-finally:
-    print(
-        "pytorch_kinematics not installed. Install with pip install pytorch_kinematics_ms"
+except ImportError:
+    raise ImportError(
+        "pytorch_kinematics_ms not installed. Install with pip install pytorch_kinematics_ms"
     )
 import torch
 from sapien.wrapper.pinocchio_model import PinocchioModel
