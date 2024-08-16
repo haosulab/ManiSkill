@@ -249,23 +249,27 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
         ), f"init_config_idxs should be list of ints, instead got {init_config_idxs}"
         assert len(init_config_idxs) == len(env_idx)
 
+        # get sampled init configs
+        sampled_init_configs = [
+            self.init_configs[env_num][idx]
+            for env_num, idx in zip(env_idx, init_config_idxs)
+        ]
+
         for env_num, init_poses in zip(env_idx, sampled_init_configs):
             ycb_objs = self.ycb_objs_per_env[env_num]
             for obj_name in ycb_objs:
                 for obj in ycb_objs[obj_name]:
                     self.hide_actor(obj)
 
+        if physx.is_gpu_enabled():
+            self.scene._gpu_apply_all()
+            self.scene._gpu_fetch_all()
+
         # initialize base scenes
         super().initialize(env_idx)
 
         # teleport robot away for init
         self.env.agent.robot.set_pose(sapien.Pose([0, 0, 100]))
-
-        # get sampled init configs
-        sampled_init_configs = [
-            self.init_configs[env_num][idx]
-            for env_num, idx in zip(env_idx, init_config_idxs)
-        ]
 
         # if pose given by init config, set pose
         # if pose not given, hide extra ycb obj by teleporting away and
