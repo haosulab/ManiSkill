@@ -193,7 +193,13 @@ class Camera(BaseSensor):
     def capture(self):
         self.camera.take_picture()
 
-    def get_obs(self, rgb: bool = True, depth: bool = True, segmentation: bool = True):
+    def get_obs(
+        self,
+        rgb: bool = True,
+        depth: bool = True,
+        segmentation: bool = True,
+        apply_texture_transforms: bool = True,
+    ):
         images_dict = {}
         # determine which textures are needed to get the desired modalities
         required_texture_names = []
@@ -210,9 +216,12 @@ class Camera(BaseSensor):
         # fetch the image data
         output_textures = self.camera.get_picture(required_texture_names)
         for texture_name, texture in zip(required_texture_names, output_textures):
-            images_dict |= self.config.shader_config.texture_transforms[texture_name](
-                texture
-            )
+            if apply_texture_transforms:
+                images_dict |= self.config.shader_config.texture_transforms[
+                    texture_name
+                ](texture)
+            else:
+                images_dict[texture_name] = texture
         return images_dict
 
     def get_images(self) -> Tensor:

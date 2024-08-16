@@ -116,7 +116,7 @@ class BaseEnv(gym.Env):
     setting robot_uids auto loads all desired robots into the scene, but not all tasks are designed to support some robot setups"""
     SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "sensor_data", "rgb", "rgbd", "rgb+depth", "rgb+depth+segmentation", "rgb+segmentation", "depth+segmentation", "pointcloud")
     SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "sparse", "none")
-    SUPPORTED_RENDER_MODES = ("human", "rgb_array", "sensors")
+    SUPPORTED_RENDER_MODES = ("human", "rgb_array", "sensors", "all")
     """The supported render modes. Human opens up a GUI viewer. rgb_array returns an rgb array showing the current environment state.
     sensors returns an rgb array but only showing all data collected by sensors as images put together"""
 
@@ -448,8 +448,10 @@ class BaseEnv(gym.Env):
             # TODO support more flexible pcd obs mode with new render system
             obs = self._get_obs_with_sensor_data(info)
             obs = sensor_data_to_pointcloud(obs, self._sensors)
-        # checking if self._visual_obs_mode_struct is not None is equivalent to checking if the obs mode is visual
-        elif self._visual_obs_mode_struct is not None:
+        elif self._obs_mode == "sensor_data":
+            # return raw texture data dependent on choice of shader
+            obs = self._get_obs_with_sensor_data(info, apply_texture_transforms=False)
+        elif self._obs_mode in ["rgb", "depth", "rgbd", "rgb+depth", "rgb+depth+segmentation", "depth+segmentation", "rgb+segmentation"]:
             obs = self._get_obs_with_sensor_data(info)
         else:
             raise NotImplementedError(self._obs_mode)
@@ -486,7 +488,7 @@ class BaseEnv(gym.Env):
             params[name] = sensor.get_params()
         return params
 
-    def _get_obs_with_sensor_data(self, info: Dict) -> dict:
+    def _get_obs_with_sensor_data(self, info: Dict, apply_texture_transforms: bool = True) -> dict:
         for obj in self._hidden_objects:
             obj.hide_visual()
         self.scene.update_render()
@@ -494,7 +496,7 @@ class BaseEnv(gym.Env):
         sensor_obs = dict()
         for name, sensor in self.scene.sensors.items():
             if isinstance(sensor, Camera):
-                sensor_obs[name] = sensor.get_obs(rgb=self._visual_obs_mode_struct.rgb, depth=self._visual_obs_mode_struct.depth, segmentation=self._visual_obs_mode_struct.segmentation)
+                sensor_obs[name] = sensor.get_obs(rgb=self._visual_obs_mode_struct.rgb, depth=self._visual_obs_mode_struct.depth, segmentation=self._visual_obs_mode_struct.segmentation, apply_texture_transforms=apply_texture_transforms)
         # explicitly synchronize and wait for cuda kernels to finish
         # this prevents the GPU from making poor scheduling decisions when other physx code begins to run
         torch.cuda.synchronize()
