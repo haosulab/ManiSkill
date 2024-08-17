@@ -1065,6 +1065,6 @@ class ManiSkillScene:
                 camera.capture()
                 rgb = camera.get_obs(
                     rgb=True, depth=False, segmentation=False, position=False
-                )
+                )["rgb"]
                 image_data[name] = rgb
         return image_data

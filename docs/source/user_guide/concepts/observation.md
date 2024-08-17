@@ -27,7 +27,7 @@ It is a flat version of *state_dict*. The observation space is `gym.spaces.Box`.
 
 ### sensor_data
 
-In addition to `agent` and `extra`, `sensor_data` and `sensor_param` are introduced. At the moment there are only Camera type sensors. Cameras are special in that they can be run with different choices of shaders. The default shader is called `minimal` which is the fastest and most memory efficient option. The shader chosen determines what data is stored in this observation mode. We describe the raw data format for the `minimal` shader here (other shaders are detailed on [Github](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/render/shaders.py))
+In addition to `agent` and `extra`, `sensor_data` and `sensor_param` are introduced. At the moment there are only Camera type sensors. Cameras are special in that they can be run with different choices of shaders. The default shader is called `minimal` which is the fastest and most memory efficient option. The shader chosen determines what data is stored in this observation mode. We describe the raw data format for the `minimal` shader here. Detailed information on how sensors/cameras can be customized can be found in the [sensors](../tutorials/sensors/index.md) section.
 
 - `sensor_data`: data captured by sensors configured in the environment
   - `{sensor_uid}`:

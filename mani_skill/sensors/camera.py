@@ -222,6 +222,7 @@ class Camera(BaseSensor):
         output_textures = self.camera.get_picture(required_texture_names)
         for texture_name, texture in zip(required_texture_names, output_textures):
             if apply_texture_transforms:
+                # import ipdb; ipdb.set_trace()
                 images_dict |= self.config.shader_config.texture_transforms[
                     texture_name
                 ](texture)
