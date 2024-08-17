@@ -27,10 +27,6 @@ from mani_skill.utils import sapien_utils, visualization
 
 from .base_sensor import BaseSensor, BaseSensorConfig
 
-DEFAULT_TEXTURE_NAMES = ("Color", "PositionSegmentation")
-if SAPIEN_RENDER_SYSTEM == "3.1":
-    DEFAULT_TEXTURE_NAMES = ("Color", "PositionSegmentation")
-
 
 @dataclass
 class CameraConfig(BaseSensorConfig):
