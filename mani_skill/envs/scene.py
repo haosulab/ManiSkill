@@ -1,5 +1,5 @@
 from functools import cached_property
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import sapien
@@ -1010,11 +1010,13 @@ class ManiSkillScene:
                     f"This sensor {sensor} of type {sensor.__class__} has not bget_picture_cuda implemented yet on the GPU"
                 )
 
-    def get_sensor_images(self) -> Dict[str, Dict[str, torch.Tensor]]:
+    def get_sensor_images(
+        self, obs: Dict[str, Any]
+    ) -> Dict[str, Dict[str, torch.Tensor]]:
         """Get raw sensor data as images for visualization purposes."""
         sensor_data = dict()
         for name, sensor in self.sensors.items():
-            sensor_data[name] = sensor.get_images()
+            sensor_data[name] = sensor.get_images(obs[name])
         return sensor_data
 
     def get_human_render_camera_images(
@@ -1061,6 +1063,8 @@ class ManiSkillScene:
                 if camera_name is not None and name != camera_name:
                     continue
                 camera.capture()
-                rgb = camera.get_obs(rgb=True, depth=False, segmentation=False)
+                rgb = camera.get_obs(
+                    rgb=True, depth=False, segmentation=False, position=False
+                )
                 image_data[name] = rgb
         return image_data

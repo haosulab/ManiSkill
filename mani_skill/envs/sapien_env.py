@@ -465,11 +465,12 @@ class BaseEnv(gym.Env):
         )
 
     def _get_obs_agent(self):
-        """Get observations from the agent's sensors, e.g., proprioceptive sensors."""
+        """Get observations about the agent's state. By default it is proprioceptive observations which include qpos and qvel.
+        Controller state is also included although most default controllers do not have any state."""
         return self.agent.get_proprioception()
 
     def _get_obs_extra(self, info: Dict):
-        """Get task-relevant extra observations."""
+        """Get task-relevant extra observations. Usually defined on a task by task basis"""
         return dict()
 
     def capture_sensor_data(self):
@@ -478,8 +479,8 @@ class BaseEnv(gym.Env):
             sensor.capture()
 
     def get_sensor_images(self) -> Dict[str, Dict[str, torch.Tensor]]:
-        """Get raw sensor data as images for visualization purposes."""
-        return self.scene.get_sensor_images()
+        """Get image (RGB) visualizations of what sensors currently sense"""
+        return self.scene.get_sensor_images(self._get_obs_sensor_data())
 
     def get_sensor_params(self) -> Dict[str, Dict[str, torch.Tensor]]:
         """Get all sensor parameters."""
@@ -488,7 +489,8 @@ class BaseEnv(gym.Env):
             params[name] = sensor.get_params()
         return params
 
-    def _get_obs_with_sensor_data(self, info: Dict, apply_texture_transforms: bool = True) -> dict:
+    def _get_obs_sensor_data(self, apply_texture_transforms: bool = True) -> dict:
+        """get only data from sensors. Auto hides any objects that are designated to be hidden"""
         for obj in self._hidden_objects:
             obj.hide_visual()
         self.scene.update_render()
@@ -496,15 +498,18 @@ class BaseEnv(gym.Env):
         sensor_obs = dict()
         for name, sensor in self.scene.sensors.items():
             if isinstance(sensor, Camera):
-                sensor_obs[name] = sensor.get_obs(rgb=self._visual_obs_mode_struct.rgb, depth=self._visual_obs_mode_struct.depth, segmentation=self._visual_obs_mode_struct.segmentation, apply_texture_transforms=apply_texture_transforms)
+                sensor_obs[name] = sensor.get_obs(rgb=self._visual_obs_mode_struct.rgb, depth=self._visual_obs_mode_struct.depth, position=self._visual_obs_mode_struct.position, segmentation=self._visual_obs_mode_struct.segmentation, apply_texture_transforms=apply_texture_transforms)
         # explicitly synchronize and wait for cuda kernels to finish
         # this prevents the GPU from making poor scheduling decisions when other physx code begins to run
         torch.cuda.synchronize()
+        return sensor_obs
+    def _get_obs_with_sensor_data(self, info: Dict, apply_texture_transforms: bool = True) -> dict:
+        """Get the observation with sensor data"""
         return dict(
             agent=self._get_obs_agent(),
             extra=self._get_obs_extra(info),
             sensor_param=self.get_sensor_params(),
-            sensor_data=sensor_obs,
+            sensor_data=self._get_obs_sensor_data(apply_texture_transforms),
         )
 
     @property
@@ -979,8 +984,7 @@ class BaseEnv(gym.Env):
             sub_scenes,
             sim_config=self.sim_config,
             device=self.device,
-            parallel_in_single_scene=self._parallel_in_single_scene,
-            # shader_dir=self.shader_dir
+            parallel_in_single_scene=self._parallel_in_single_scene
         )
         self.physx_system.timestep = 1.0 / self._sim_freq
 
@@ -1131,11 +1135,7 @@ class BaseEnv(gym.Env):
         """
         Renders all sensors that the agent can use and see and displays them
         """
-        for obj in self._hidden_objects:
-            obj.hide_visual()
         images = []
-        self.scene.update_render()
-        self.capture_sensor_data()
         sensor_images = self.get_sensor_images()
         for image in sensor_images.values():
             images.append(image)
@@ -1149,15 +1149,13 @@ class BaseEnv(gym.Env):
         self.scene.update_render()
         render_images = self.scene.get_human_render_camera_images()
 
-        for obj in self._hidden_objects:
-            obj.hide_visual()
-        self.scene.update_render()
-        self.capture_sensor_data()
         sensor_images = self.get_sensor_images()
         for image in render_images.values():
-            images.append(image)
+            for img in image.values():
+                images.append(img)
         for image in sensor_images.values():
-            images.append(image)
+            for img in image.values():
+                images.append(img)
         return tile_images(images)
 
     def render(self):

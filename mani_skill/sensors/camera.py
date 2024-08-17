@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Union
 
 import numpy as np
 import sapien
@@ -197,6 +197,7 @@ class Camera(BaseSensor):
         self,
         rgb: bool = True,
         depth: bool = True,
+        position: bool = True,
         segmentation: bool = True,
         apply_texture_transforms: bool = True,
     ):
@@ -211,8 +212,12 @@ class Camera(BaseSensor):
                 required_texture_names.append(texture_name)
             if depth and "depth" in output_modalities:
                 required_texture_names.append(texture_name)
+            if position and "position" in output_modalities:
+                required_texture_names.append(texture_name)
             if segmentation and "segmentation" in output_modalities:
                 required_texture_names.append(texture_name)
+        required_texture_names = list(set(required_texture_names))
+
         # fetch the image data
         output_textures = self.camera.get_picture(required_texture_names)
         for texture_name, texture in zip(required_texture_names, output_textures):
@@ -222,12 +227,18 @@ class Camera(BaseSensor):
                 ](texture)
             else:
                 images_dict[texture_name] = texture
+        if not rgb and "rgb" in images_dict:
+            del images_dict["rgb"]
+        if not depth and "depth" in images_dict:
+            del images_dict["depth"]
+        if not position and "position" in images_dict:
+            del images_dict["position"]
+        if not segmentation and "segmentation" in images_dict:
+            del images_dict["segmentation"]
         return images_dict
 
-    def get_images(self) -> Tensor:
-        return visualization.tile_images(
-            visualization.observations_to_images(self.get_obs())
-        )
+    def get_images(self, obs) -> Tensor:
+        return camera_observations_to_images(obs)
 
     # TODO (stao): Computing camera parameters on GPU sim is not that fast, especially with mounted cameras and for model_matrix computation.
     def get_params(self):
@@ -236,3 +247,44 @@ class Camera(BaseSensor):
             cam2world_gl=self.camera.get_model_matrix(),
             intrinsic_cv=self.camera.get_intrinsic_matrix(),
         )
+
+
+def normalize_depth(depth, min_depth=0, max_depth=None):
+    if min_depth is None:
+        min_depth = depth.min()
+    if max_depth is None:
+        max_depth = depth.max()
+    depth = (depth - min_depth) / (max_depth - min_depth)
+    depth = depth.clip(0, 1)
+    return depth
+
+
+def camera_observations_to_images(
+    observations: Dict[str, torch.Tensor], max_depth=None
+) -> List[Array]:
+    """Parse images from camera observations."""
+    images = dict()
+    for key in observations:
+        if "rgb" in key or "Color" in key:
+            rgb = observations[key][..., :3]
+            if torch is not None and rgb.dtype == torch.float:
+                rgb = torch.clip(rgb * 255, 0, 255).to(torch.uint8)
+            images[key] = rgb
+        elif "depth" in key or "position" in key:
+            depth = observations[key]
+            if "position" in key:  # [H, W, 4]
+                depth = -depth[..., 2:3]
+            # [H, W, 1]
+            depth = normalize_depth(depth, max_depth=max_depth)
+            depth = (depth * 255).clip(0, 255)
+
+            depth = depth.to(torch.uint8)
+            depth = torch.repeat_interleave(depth, 3, dim=-1)
+            images[key] = depth
+        elif "segmentation" in key:
+            seg = observations[key]  # [H, W, 1]
+            assert seg.ndim == 4 and seg.shape[-1] == 1, seg.shape
+            # A heuristic way to colorize labels
+            seg = (seg * torch.tensor([11, 61, 127], device=seg.device)).to(torch.uint8)
+            images[key] = seg
+    return images

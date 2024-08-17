@@ -80,6 +80,9 @@ PREBUILT_SHADER_CONFIGS = {
             "ray_tracing_path_depth": 16,
             "ray_tracing_denoiser": "optix",
         },
+        texture_transforms={
+            "Color": lambda data: {"rgb": (data[..., :3] * 255).to(torch.uint8)},
+        },
     ),
     "rt-med": ShaderConfig(
         shader_pack="rt",
@@ -91,6 +94,9 @@ PREBUILT_SHADER_CONFIGS = {
             "ray_tracing_path_depth": 3,
             "ray_tracing_denoiser": "optix",
         },
+        texture_transforms={
+            "Color": lambda data: {"rgb": (data[..., :3] * 255).to(torch.uint8)},
+        },
     ),
     "rt-fast": ShaderConfig(
         shader_pack="rt",
@@ -101,6 +107,9 @@ PREBUILT_SHADER_CONFIGS = {
             "ray_tracing_samples_per_pixel": 2,
             "ray_tracing_path_depth": 1,
             "ray_tracing_denoiser": "optix",
+        },
+        texture_transforms={
+            "Color": lambda data: {"rgb": (data[..., :3] * 255).to(torch.uint8)},
         },
     ),
 }
