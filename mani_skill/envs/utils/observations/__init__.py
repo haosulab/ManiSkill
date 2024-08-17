@@ -21,6 +21,14 @@ def parse_visual_obs_mode_to_struct(obs_mode: str) -> CameraObsTextures:
         return CameraObsTextures(
             rgb=True, depth=True, segmentation=False, position=False
         )
+    elif obs_mode == "depth":
+        return CameraObsTextures(
+            rgb=False, depth=True, segmentation=False, position=False
+        )
+    elif obs_mode == "segmentation":
+        return CameraObsTextures(
+            rgb=False, depth=False, segmentation=True, position=False
+        )
     elif obs_mode == "rgb+depth":
         return CameraObsTextures(
             rgb=True, depth=True, segmentation=False, position=False

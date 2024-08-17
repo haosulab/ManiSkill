@@ -1021,7 +1021,7 @@ class ManiSkillScene:
 
     def get_human_render_camera_images(
         self, camera_name: str = None
-    ) -> Dict[str, Dict[str, torch.Tensor]]:
+    ) -> Dict[str, torch.Tensor]:
         image_data = dict()
         if physx.is_gpu_enabled():
             if self.parallel_in_single_scene:

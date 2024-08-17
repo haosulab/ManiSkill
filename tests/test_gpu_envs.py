@@ -71,8 +71,6 @@ def test_envs_obs_modes(env_id, obs_mode):
             assert obs["sensor_data"][cam]["rgb"].shape == (16, 128, 128, 3)
             assert obs["sensor_data"][cam]["depth"].shape == (16, 128, 128, 1)
             assert obs["sensor_data"][cam]["depth"].dtype == torch.int16
-            assert obs["sensor_data"][cam]["segmentation"].shape == (16, 128, 128, 1)
-            assert obs["sensor_data"][cam]["segmentation"].dtype == torch.int16
             assert obs["sensor_param"][cam]["extrinsic_cv"].shape == (16, 3, 4)
             assert obs["sensor_param"][cam]["intrinsic_cv"].shape == (16, 3, 3)
             assert obs["sensor_param"][cam]["cam2world_gl"].shape == (16, 4, 4)
@@ -82,6 +80,14 @@ def test_envs_obs_modes(env_id, obs_mode):
         assert obs["pointcloud"]["rgb"].shape == (16, num_pts, 3)
         assert obs["pointcloud"]["segmentation"].shape == (16, num_pts, 1)
         assert obs["pointcloud"]["segmentation"].dtype == torch.int16
+    elif obs_mode == "rgb":
+        for cam in obs["sensor_data"].keys():
+            assert obs["sensor_data"][cam]["rgb"].shape == (16, 128, 128, 3)
+            assert obs["sensor_param"][cam]["extrinsic_cv"].shape == (16, 3, 4)
+    elif obs_mode == "depth+segmentation":
+        for cam in obs["sensor_data"].keys():
+            assert obs["sensor_data"][cam]["depth"].shape == (16, 128, 128, 1)
+            assert obs["sensor_data"][cam]["segmentation"].shape == (16, 128, 128, 1)
     env.close()
     del env
 

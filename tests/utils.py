@@ -28,7 +28,10 @@ CONTROL_MODES_STATIONARY_SINGLE_ARM = [
 OBS_MODES = [
     "state_dict",
     "state",
+    "rgb",
     "rgbd",
+    "rgb+depth+segmentation",
+    "depth+segmentation",
     "pointcloud",
     # "rgbd_robot_seg",
     # "pointcloud_robot_seg",
