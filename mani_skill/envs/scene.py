@@ -44,7 +44,6 @@ class ManiSkillScene:
         debug_mode: bool = True,
         device: Device = None,
         parallel_in_single_scene: bool = False,
-        shader_dir: str = "default",
     ):
         if sub_scenes is None:
             sub_scenes = [sapien.Scene()]
@@ -56,7 +55,6 @@ class ManiSkillScene:
         self._gpu_sim_initialized = False
         self.debug_mode = debug_mode
         self.device = device
-        self.shader_dir = shader_dir
 
         self.render_system_group: sapien.render.RenderSystemGroup = None
         self.camera_groups: Dict[str, sapien.render.RenderCameraGroup] = dict()

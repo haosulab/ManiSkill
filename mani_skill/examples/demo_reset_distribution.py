@@ -10,7 +10,7 @@ def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--env-id", type=str, default="PushCube-v1", help="The environment ID of the task you want to simulate")
     parser.add_argument("-b", "--sim-backend", type=str, default="auto", help="Which simulation backend to use. Can be 'auto', 'cpu', 'gpu'")
-    parser.add_argument("--shader", default="default", type=str, help="Change shader used for rendering. Default is 'default' which is very fast. Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer")
+    parser.add_argument("--shader", default="minimal", type=str, help="Change shader used for rendering. Default is 'default' which is very fast. Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer")
     parser.add_argument("--render-mode", type=str, default="rgb_array", help="Can be 'human' to open a viewer, or rgb_array / sensors which change the cameras saved videos use")
     parser.add_argument("--record-dir", type=str, default="videos/reset_distributions", help="Where to save recorded videos. If none, no videos are saved")
     parser.add_argument("-n", "--num-resets", type=int, default=20, help="Number of times to reset the environment")

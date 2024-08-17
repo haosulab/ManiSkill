@@ -67,7 +67,7 @@ PREBUILT_SHADER_CONFIGS = {
                 "depth": (-data[..., [2]] * 1000).to(torch.int16),
                 "position": data[..., :3],
             },
-            "Segmentation": lambda data: {"segmentation": data[..., [3]]},
+            "Segmentation": lambda data: {"segmentation": data[..., 3][..., None]},
         },
     ),
     "rt": ShaderConfig(
