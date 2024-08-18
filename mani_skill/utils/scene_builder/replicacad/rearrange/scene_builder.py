@@ -87,8 +87,6 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
                 bc_to_idx[Path(episode_json["scene_id"]).name]
             )
 
-        self.before_hide_collision_groups: Dict[str, List[int]] = dict()
-
     def build(self, build_config_idxs: List[int]):
         if isinstance(build_config_idxs, int):
             build_config_idxs = [build_config_idxs] * self.env.num_envs
@@ -255,11 +253,20 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
             for env_num, idx in zip(env_idx, init_config_idxs)
         ]
 
+        # sometimes, poses from end of prev episode can cause issues with articulations
+        # we can avoid this by setting poses, but shifting non-hidden objects away from the scene
         for env_num, init_poses in zip(env_idx, sampled_init_configs):
             ycb_objs = self.ycb_objs_per_env[env_num]
             for obj_name in ycb_objs:
-                for obj in ycb_objs[obj_name]:
-                    self.hide_actor(obj)
+                for obj, pose in itertools.zip_longest(
+                    ycb_objs[obj_name], init_poses[obj_name], fillvalue=None
+                ):
+                    if pose is None:
+                        self.hide_actor(obj)
+                    else:
+                        temp_p = pose.p
+                        temp_p[..., 2] += 1000
+                        self.show_actor(obj, sapien.Pose(q=pose.q, p=temp_p))
 
         if physx.is_gpu_enabled():
             self.scene._gpu_apply_all()
