@@ -1,7 +1,0 @@
-# Workflows
-```{toctree}
-:titlesonly:
-:glob:
-
-*
-```

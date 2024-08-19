@@ -3,13 +3,11 @@ Instantiates a empty environment with a floor, and attempts to place any given r
 """
 
 import argparse
-import sys
 
 import gymnasium as gym
-
-import mani_skill.envs
+import mani_skill
+from mani_skill.agents.controllers.base_controller import DictController
 from mani_skill.envs.sapien_env import BaseEnv
-from mani_skill.utils.structs.types import SceneConfig, SimConfig
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-r", "--robot-uid", type=str, default="panda", help="The id of the robot to place in the environment")
@@ -37,21 +35,26 @@ def main():
         enable_shadow=True,
         control_mode=args.control_mode,
         robot_uids=args.robot_uid,
-        shader_dir=args.shader,
+        sensor_configs=dict(shader_pack=args.shader),
+        human_render_camera_configs=dict(shader_pack=args.shader),
+        viewer_camera_configs=dict(shader_pack=args.shader),
         render_mode="human",
         sim_backend=args.sim_backend,
     )
     env.reset(seed=0)
     env: BaseEnv = env.unwrapped
+    print(f"Selected robot {args.robot_uid}. Control mode: {args.control_mode}")
     print("Selected Robot has the following keyframes to view: ")
     print(env.agent.keyframes.keys())
     env.agent.robot.set_qpos(env.agent.robot.qpos * 0)
     kf = None
     if len(env.agent.keyframes) > 0:
+        kf_name = None
         if args.keyframe is not None:
-            kf = env.agent.keyframes[args.keyframe]
+            kf_name = args.keyframe
+            kf = env.agent.keyframes[kf_name]
         else:
-            for kf in env.agent.keyframes.values():
+            for kf_name, kf in env.agent.keyframes.items():
                 # keep the first keyframe we find
                 break
         if kf.qpos is not None:
@@ -59,6 +62,8 @@ def main():
         if kf.qvel is not None:
             env.agent.robot.set_qvel(kf.qvel)
         env.agent.robot.set_pose(kf.pose)
+        if kf_name is not None:
+            print(f"Viewing keyframe {kf_name}")
     if env.gpu_sim_enabled:
         env.scene._gpu_apply_all()
         env.scene.px.gpu_update_articulation_kinematics()
@@ -71,7 +76,10 @@ def main():
             env.step(env.action_space.sample())
         elif args.keyframe_actions:
             assert kf is not None, "this robot has no keyframes, cannot use it to set actions"
-            env.step(kf.qpos)
+            if isinstance(env.agent.controller, DictController):
+                env.step(env.agent.controller.from_qpos(kf.qpos))
+            else:
+                env.step(kf.qpos)
         viewer = env.render()
 
 if __name__ == "__main__":

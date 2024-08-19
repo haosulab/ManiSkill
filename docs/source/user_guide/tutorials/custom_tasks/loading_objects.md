@@ -22,11 +22,11 @@ def _load_scene(self, options):
 
 ### Using the ActorBuilder API
 
-To build custom actors in python code, you first create the ArticulationBuilder as so in your task:
+To build custom actors in python code, you first create the ActorBuilder as so in your task:
 
 ```python
 def _load_scene(self, options):
-    builder = self.scene.create_articulation_builder()
+    builder = self.scene.create_actor_builder()
 ```
 
 Then you can use the standard SAPIEN API for creating actors, a tutorial of which can be found on the [SAPIEN actors tutorial documentation](https://sapien.ucsd.edu/docs/latest/tutorial/basic/create_actors.html)
@@ -58,7 +58,7 @@ def _load_scene(self, options):
     builder = self.scene.create_articulation_builder()
 ```
 
-Then you can use the standard SAPIEN API for creating articulations, a tutorial of which can be found on the [SAPIEN articulation tutorial documentation](https://sapien.ucsd.edu/docs/latest/tutorial/basic/create_articulations.html)
+Then you can use the standard SAPIEN API for creating articulations, a tutorial of which can be found on the [SAPIEN articulation tutorial documentation](https://sapien.ucsd.edu/docs/latest/tutorial/basic/create_articulations.html). You essentially just need to define what the links and joints are and how they connect. Links are created like Actors and can have visual and collision shapes added via the python API.
 
 ### Using the URDF Loader
 
@@ -73,6 +73,37 @@ def _load_scene(self, options):
     builder = articulation_builders[0]
     builder.build(name="my_articulation")
 ```
+
+You can also programmatically change various properties of articulations and their links prior to building it, see below for examples which range from fixing root links, collision mesh loading logic, and modifying physical properties. These can be useful for e.g. domain randomization
+
+```python
+def _load_scene(self, options):
+    loader = scene.create_urdf_loader()
+    
+    # change friction values of all links
+    loader.set_material(static_friction, dynamic_friction, restitution)
+    # change friction values of specific links
+    loader.set_link_material(link_name, static_friction, dynamic_friction, restitution)
+    # change patch radius values of specific links
+    loader.set_link_min_patch_radius(link_name, min_patch_radius)
+    loader.set_link_patch_radius(link_name, patch_radius)
+    # set density of all links
+    loader.set_density(density)
+    # set density of specific links
+    loader.set_link_density(link_name, density)
+    # fix/unfix root link in place
+    loader.fix_root_link = True # or False
+    # change the scale of the loaded articulation geometries (visual+collision)
+    loader.scale = 1.0 # default is 1.0
+    # if collision meshes contain multiple convex meshes
+    # you can set this to True to try and load them
+    loader.load_multiple_collisions_from_file = True
+
+    articulation_builders, _, _ = loader.parse(str(urdf_path))
+    builder = articulation_builders[0]
+    builder.build(name="my_articulation")
+```
+
 ## Reconfiguring and Optimization
 
 In general loading is always quite slow, especially on the GPU so by default, ManiSkill reconfigures just once. Any call to `env.reset()` will not trigger a reconfiguration unless you call `env.reset(seed=seed, options=dict(reconfigure=True))` (seed is not needed but recommended if you are reconfiguring for reproducibility). 
@@ -80,9 +111,6 @@ In general loading is always quite slow, especially on the GPU so by default, Ma
 However, during CPU simulation with just a single environment (or GPU simulation with very few environments) the loaded object geometries never get to change as reconfiguration doesn't happen more than once. This behavior can be changed by setting the `reconfiguration_freq` value of your task. 
 
 The recommended way to do this is as follows (taken from the PickSingleYCB task):
-
-
-
 
 ```python
 class PickSingleYCBEnv(BaseEnv):

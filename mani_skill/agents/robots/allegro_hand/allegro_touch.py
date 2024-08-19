@@ -129,7 +129,9 @@ class AllegroHandRightTouch(AllegroHandRight):
         else:
             internal_fsr_links = [link._bodies[0].entity for link in self.fsr_links]
             contacts = self.scene.get_contacts()
-            contact_map = sapien_utils.get_actors_contacts(contacts, internal_fsr_links)
+            contact_map = sapien_utils.get_cpu_actors_contacts(
+                contacts, internal_fsr_links
+            )
             sorted_contacts = [contact_map[link] for link in internal_fsr_links]
             contact_forces = [
                 sapien_utils.compute_total_impulse(contact)

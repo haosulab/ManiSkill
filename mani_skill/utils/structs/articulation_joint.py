@@ -12,6 +12,7 @@ import torch
 from mani_skill.utils import common
 from mani_skill.utils.structs.base import BaseStruct
 from mani_skill.utils.structs.decorators import before_gpu_init
+from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:
@@ -40,14 +41,14 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
 
     _physx_articulations: List[physx.PhysxArticulation] = None
 
-    def __hash__(self):
-        return self._objs[0].__hash__()
-
     def __str__(self):
         return f"<{self.name}: struct of type {self.__class__}; managing {self._num_objs} {self._objs[0].__class__} objects>"
 
     def __repr__(self):
         return self.__str__()
+
+    def __hash__(self):
+        return self.__maniskill_hash__
 
     @classmethod
     def create(
@@ -143,7 +144,9 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
     def get_friction(self):
         return self.friction
 
-    # def get_global_pose(self) -> sapien.pysapien.Pose: ...
+    def get_global_pose(self):
+        return self.global_pose
+
     def get_limits(self):
         return self.limits
 
@@ -153,8 +156,12 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
     def get_parent_link(self):
         return self.parent_link
 
-    # def get_pose_in_child(self) -> sapien.pysapien.Pose: ...
-    # def get_pose_in_parent(self) -> sapien.pysapien.Pose: ...
+    def get_pose_in_child(self):
+        return self.pose_in_child
+
+    def get_pose_in_parent(self):
+        return self.pose_in_parent
+
     def get_stiffness(self) -> float:
         return self.stiffness
 
@@ -273,15 +280,15 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
 
     @friction.setter
     # @before_gpu_init
+    # TODO (stao): can we set this after gpu is initialized?
     def friction(self, arg1: float) -> None:
         for joint in self._objs:
             joint.friction = arg1
 
-    # @property
-    # def global_pose(self) -> sapien.pysapien.Pose:
-    #     """
-    #     :type: sapien.pysapien.Pose
-    #     """
+    @property
+    def global_pose(self) -> Pose:
+        return self.pose_in_child * self.child_link.pose
+
     @property
     def limits(self) -> torch.Tensor:
         # TODO (stao): create a decorator that caches results once gpu sim is initialized for performance
@@ -306,19 +313,26 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
     #     """
     #     :type: PhysxArticulationLinkComponent
     #     """
-    # @property
-    # def pose_in_child(self) -> sapien.pysapien.Pose:
-    #     """
-    #     :type: sapien.pysapien.Pose
-    #     """
+    @cached_property
+    def pose_in_child(self):
+        raw_poses = np.stack(
+            [np.concatenate([x.pose_in_child.p, x.pose_in_child.q]) for x in self._objs]
+        )
+        return Pose.create(common.to_tensor(raw_poses))
+
     # @pose_in_child.setter
     # def pose_in_child(self, arg1: sapien.pysapien.Pose) -> None:
     #     pass
-    # @property
-    # def pose_in_parent(self) -> sapien.pysapien.Pose:
-    #     """
-    #     :type: sapien.pysapien.Pose
-    #     """
+    @cached_property
+    def pose_in_parent(self):
+        raw_poses = np.stack(
+            [
+                np.concatenate([x.pose_in_parent.p, x.pose_in_parent.q])
+                for x in self._objs
+            ]
+        )
+        return Pose.create(common.to_tensor(raw_poses))
+
     # @pose_in_parent.setter
     # def pose_in_parent(self, arg1: sapien.pysapien.Pose) -> None:
     #     pass

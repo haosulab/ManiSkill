@@ -14,12 +14,14 @@ from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import common, io_utils, sapien_utils
 from mani_skill.utils.geometry import rotation_conversions
 from mani_skill.utils.registration import register_env
-from mani_skill.utils.scene_builder.table.table_scene_builder import TableSceneBuilder
+from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs import Actor, Pose
 from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 
 
-@register_env("AssemblingKits-v1", max_episode_steps=200)
+@register_env(
+    "AssemblingKits-v1", asset_download_ids=["assembling_kits"], max_episode_steps=200
+)
 class AssemblingKitsEnv(BaseEnv):
     SUPPORTED_REWARD_MODES = ["sparse", "none"]
     SUPPORTED_ROBOTS = ["panda_wristcam"]
@@ -65,7 +67,7 @@ class AssemblingKitsEnv(BaseEnv):
     @property
     def _default_sim_config(self):
         return SimConfig(
-            gpu_memory_cfg=GPUMemoryConfig(max_rigid_contact_count=2**20)
+            gpu_memory_config=GPUMemoryConfig(max_rigid_contact_count=2**20)
         )
 
     @property

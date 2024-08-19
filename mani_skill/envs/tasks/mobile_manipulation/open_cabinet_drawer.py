@@ -21,9 +21,15 @@ from mani_skill.utils.structs import Articulation, Link, Pose
 from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 
 CABINET_COLLISION_BIT = 29
+
+
 # TODO (stao): we need to cut the meshes of all the cabinets in this dataset for gpu sim, there may be some wierd physics
 # that may happen although it seems okay for state based RL
-@register_env("OpenCabinetDrawer-v1", max_episode_steps=100)
+@register_env(
+    "OpenCabinetDrawer-v1",
+    asset_download_ids=["partnet_mobility_cabinet"],
+    max_episode_steps=100,
+)
 class OpenCabinetDrawerEnv(BaseEnv):
 
     SUPPORTED_ROBOTS = ["fetch"]
@@ -66,7 +72,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
     def _default_sim_config(self):
         return SimConfig(
             spacing=10,
-            gpu_memory_cfg=GPUMemoryConfig(
+            gpu_memory_config=GPUMemoryConfig(
                 max_rigid_contact_count=2**21, max_rigid_patch_count=2**19
             ),
         )
@@ -89,10 +95,10 @@ class OpenCabinetDrawerEnv(BaseEnv):
         sapien.set_log_level("off")
         self._load_cabinets(self.handle_types)
         sapien.set_log_level("warn")
-        from mani_skill.agents.robots.fetch import FETCH_UNIQUE_COLLISION_BIT
+        from mani_skill.agents.robots.fetch import FETCH_WHEELS_COLLISION_BIT
 
         self.ground.set_collision_group_bit(
-            group=2, bit_idx=FETCH_UNIQUE_COLLISION_BIT, bit=1
+            group=2, bit_idx=FETCH_WHEELS_COLLISION_BIT, bit=1
         )
         self.ground.set_collision_group_bit(
             group=2, bit_idx=CABINET_COLLISION_BIT, bit=1

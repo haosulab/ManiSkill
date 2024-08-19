@@ -37,6 +37,10 @@ imgui.ini
 /videos
 /examples/benchmarking/videos
 
+# benchmarking
+/benchmark_results
+/mani_skill/examples/benchmarking/benchmark_results
+/mani_skill/examples/benchmarking/videos
 # testing
 .coverage*
 htmlcov/

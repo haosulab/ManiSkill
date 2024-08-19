@@ -7,7 +7,8 @@ from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
 
 
-@register_agent()
+# TODO (stao) (xuanlin): model it properly based on real2sim
+@register_agent(asset_download_ids=["widowx250s"])
 class WidowX250S(BaseAgent):
     uid = "widowx250s"
     urdf_path = f"{ASSET_DIR}/robots/widowx/wx250s.urdf"

@@ -8,7 +8,7 @@ from mani_skill import ASSET_DIR
 
 
 @dataclass
-class SceneConfig:
+class AI2BuildConfig:
     config_file: str
     source: str
     spawn_pos_file: str = None
@@ -41,7 +41,7 @@ def load_ai2thor_metadata():
         "BreadSliced",
         "Chair",
         "HousePlant",
-        "" "Pot",
+        "Pot",
         "Pan",
         "Knife",
         "Fork",

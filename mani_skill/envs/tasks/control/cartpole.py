@@ -3,7 +3,9 @@ import os
 from typing import Any, Dict, Union
 
 import numpy as np
+import sapien
 import torch
+from transforms3d.euler import euler2quat
 
 from mani_skill.agents.base_agent import BaseAgent
 from mani_skill.agents.controllers import *
@@ -26,6 +28,7 @@ MJCF_FILE = f"{os.path.join(os.path.dirname(__file__), 'assets/cartpole.xml')}"
 class CartPoleRobot(BaseAgent):
     uid = "cart_pole"
     mjcf_path = MJCF_FILE
+    disable_self_collisions = True
 
     @property
     def _controller_configs(self):
@@ -87,9 +90,10 @@ class CartpoleEnv(BaseEnv):
     @property
     def _default_sim_config(self):
         return SimConfig(
-            sim_freq=100,
-            control_freq=100,
-            scene_cfg=SceneConfig(solver_position_iterations=2),
+            spacing=20,
+            scene_config=SceneConfig(
+                solver_position_iterations=4, solver_velocity_iterations=0
+            ),
         )
 
     @property
@@ -107,6 +111,17 @@ class CartpoleEnv(BaseEnv):
         articulation_builders, actor_builders, sensor_configs = loader.parse(MJCF_FILE)
         for a in actor_builders:
             a.build(a.name)
+
+        # background visual wall
+        self.wall = self.scene.create_actor_builder()
+        self.wall.add_box_visual(
+            half_size=(1e-3, 20, 10),
+            pose=sapien.Pose(p=[0, 1, 1], q=euler2quat(0, 0, np.pi / 2)),
+            material=sapien.render.RenderMaterial(
+                base_color=np.array([0.3, 0.3, 0.3, 1])
+            ),
+        )
+        self.wall.build_static(name="wall")
 
     def evaluate(self):
         return dict()

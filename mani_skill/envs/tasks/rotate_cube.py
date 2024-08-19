@@ -1,4 +1,4 @@
-from typing import Any, Dict, Tuple, Union
+from typing import Any, Dict, Tuple
 
 import numpy as np
 import torch
@@ -26,11 +26,11 @@ class RotateCubeEnv(BaseEnv):
     SUPPORTED_ROBOTS = ["trifingerpro"]
 
     # Specify some supported robot types
-    agent: Union[TriFingerPro]
+    agent: TriFingerPro
 
     # Specify default simulation/gpu memory configurations.
-    sim_cfg = SimConfig(
-        gpu_memory_cfg=GPUMemoryConfig(
+    sim_config = SimConfig(
+        gpu_memory_config=GPUMemoryConfig(
             found_lost_pairs_capacity=2**25, max_rigid_patch_count=2**18
         )
     )

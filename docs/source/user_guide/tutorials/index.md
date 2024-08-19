@@ -10,6 +10,7 @@ For those looking for a quickstart/tutorial on Google Colab, checkout the [quick
 
 custom_tasks/index
 custom_robots
+sensors/index
 custom_reusable_scenes
 domain_randomization
 ```

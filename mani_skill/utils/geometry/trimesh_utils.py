@@ -33,6 +33,11 @@ def get_component_meshes(component: physx.PhysxRigidBaseComponent):
             faces = geom.get_triangles()
             vertices = vertices * geom.scale
             mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
+        elif isinstance(geom, physx.PhysxCollisionShapeTriangleMesh):
+            vertices = geom.vertices
+            faces = geom.get_triangles()
+            vertices = vertices * geom.scale
+            mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
         else:
             raise TypeError(type(geom))
         mesh.apply_transform(geom.get_local_pose().to_transformation_matrix())

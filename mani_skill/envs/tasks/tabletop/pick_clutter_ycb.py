@@ -14,7 +14,7 @@ from mani_skill.utils.building import actors
 from mani_skill.utils.building.actor_builder import ActorBuilder
 from mani_skill.utils.io_utils import load_json
 from mani_skill.utils.registration import register_env
-from mani_skill.utils.scene_builder.table.table_scene_builder import TableSceneBuilder
+from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs import Actor, Pose
 from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 
@@ -68,7 +68,7 @@ class PickClutterEnv(BaseEnv):
     @property
     def _default_sim_config(self):
         return SimConfig(
-            gpu_memory_cfg=GPUMemoryConfig(
+            gpu_memory_config=GPUMemoryConfig(
                 max_rigid_contact_count=2**21, max_rigid_patch_count=2**19
             )
         )
@@ -119,14 +119,14 @@ class PickClutterEnv(BaseEnv):
         for i, eps_idx in enumerate(eps_idxs):
             self.selectable_target_objects.append([])
             episode = self._episodes[eps_idx]
-            for actor_cfg in episode["actors"]:
-                builder = self._load_model(actor_cfg["model_id"])
-                init_pose = actor_cfg["pose"]
+            for actor_config in episode["actors"]:
+                builder = self._load_model(actor_config["model_id"])
+                init_pose = actor_config["pose"]
                 builder.initial_pose = sapien.Pose(p=init_pose[:3], q=init_pose[3:])
                 builder.set_scene_idxs([i])
-                obj = builder.build(name=f"set_{i}_{actor_cfg['model_id']}")
+                obj = builder.build(name=f"set_{i}_{actor_config['model_id']}")
                 all_objects.append(obj)
-                if actor_cfg["rep_pts"] is not None:
+                if actor_config["rep_pts"] is not None:
                     # rep_pts is representative points, representing visible points
                     # we only permit selecting target objects that are visible
                     self.selectable_target_objects[-1].append(obj)
@@ -196,7 +196,11 @@ class PickClutterEnv(BaseEnv):
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
 
 
-@register_env("PickClutterYCB-v1", max_episode_steps=100)
+@register_env(
+    "PickClutterYCB-v1",
+    asset_download_ids=["ycb", "pick_clutter_ycb_configs"],
+    max_episode_steps=100,
+)
 class PickClutterYCBEnv(PickClutterEnv):
     DEFAULT_EPISODE_JSON = f"{ASSET_DIR}/tasks/pick_clutter/ycb_train_5k.json.gz"
 

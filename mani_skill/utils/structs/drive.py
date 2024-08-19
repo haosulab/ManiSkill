@@ -24,6 +24,10 @@ if TYPE_CHECKING:
 @dataclass
 class Drive(PhysxJointComponentStruct[physx.PhysxDriveComponent]):
     # drive_target: Pose # TODO (stao): what is this?
+
+    def __hash__(self):
+        return self.__maniskill_hash__
+
     @classmethod
     def create_from_entities(
         cls,

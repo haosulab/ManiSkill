@@ -24,7 +24,8 @@ pip install torch torchvision torchaudio
 ```
 
 :::{note}
-While state-based simulation does not require any additional dependencies, a GPU with the Vulkan driver installed is required to enable rendering in ManiSkill. See [here](#vulkan) for how to install and configure Vulkan on Ubuntu.
+While state-based simulation does not require any additional dependencies, a GPU with the Vulkan driver installed is required to enable rendering in ManiSkill. See [here](#vulkan) for how to install and configure Vulkan on Ubuntu. Furthermore we currently best support linux machines with NVIDIA GPUs, with limited support on other systems, see the [system requirements](#system-support) section for details.
+
 :::
 
 The rigid-body tasks, powered by SAPIEN, are ready to use after installation. Test your installation:
@@ -86,6 +87,18 @@ the GPU connected to your display (e.g., monitor screen).
 :::{warning}
 All soft-body tasks require runtime compilation and cache generation. The cache is generated in parallel. Thus, to avoid race conditions, before you create soft-body tasks in parallel, please make sure the cache is already generated. You can generate cache in advance by `python -m mani_skill.utils.precompile_mpm -e {ENV_ID}` (or without an option for all soft-body tasks).
 ::: -->
+
+## System Support
+
+We currently best support Linux based systems. There is limited support for windows and no support for MacOS at the moment. We are working on trying to support more features on other systems but this may take some time. Most constraints stem from what the [SAPIEN](https://github.com/haosulab/SAPIEN/) package is capable of supporting.
+
+| System / GPU         | CPU Sim | GPU Sim | Rendering |
+| -------------------- | ------- | ------- | --------- |
+| Linux / NVIDIA GPU   | ✅      | ✅      | ✅        |
+| Windows / NVIDIA GPU | ✅      | ❌      | ✅        |
+| Windows / AMD GPU    | ✅      | ❌      | ✅        |
+| WSL / Anything       | ✅      | ❌      | ❌        |
+| MacOS / Anything     | ❌      | ❌      | ❌        |
 
 ## Troubleshooting
 

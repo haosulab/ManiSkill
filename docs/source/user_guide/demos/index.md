@@ -21,7 +21,7 @@ python -m mani_skill.examples.demo_random_action -e "ReplicaCAD_SceneManipulatio
   --render-mode="human" # run with GUI
 ```
 
-To turn ray-tracing on for more photo-realistic rendering, you can add `--shader="rt"` or `--shader="rt-fast`
+To turn ray-tracing on for more photo-realistic rendering, you can add `--shader="rt"` or `--shader="rt-fast"`
 
 ```bash
 python -m mani_skill.examples.demo_random_action -e "ReplicaCAD_SceneManipulation-v1" \

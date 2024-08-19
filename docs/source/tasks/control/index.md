@@ -46,3 +46,45 @@ Use the Cartpole robot to swing up a pole on a cart.
 **Success Conditions:**
 - No specific success conditions. The task is considered successful if the pole is upright for the whole episode. We can threshold the episode accumulated reward to determine success.
 :::
+
+## MS-HopperHop-v1
+![dense-reward][reward-badge]
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+Hopper robot stays upright and moves in positive x direction with hopping motion
+
+
+**Supported Robots: Hopper**
+ 
+**Randomizations:**
+- Hopper robot is randomly rotated [-pi, pi] radians about y axis.
+- Hopper qpos are uniformly sampled within their allowed ranges
+
+**Success Conditions:**
+- No specific success conditions. The task is considered successful if the pole is upright for the whole episode. We can threshold the episode accumulated reward to determine success.
+:::
+
+## MS-HopperStand-v1
+![dense-reward][reward-badge]
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+Hopper robot stands upright
+
+
+**Supported Robots: Hopper**
+
+**Randomizations:**
+- Hopper robot is randomly rotated [-pi, pi] radians about y axis.
+- Hopper qpos are uniformly sampled within their allowed ranges
+
+**Success Conditions:**
+- No specific success conditions. We can threshold the episode accumulated reward to determine success.
+:::

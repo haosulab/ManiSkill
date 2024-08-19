@@ -144,6 +144,7 @@ Pick up a orange-white peg and insert the orange end into the box with a hole in
 </video>
 
 ## LiftPegUpright-v1
+![dense-reward][reward-badge]
 :::{dropdown} Task Card
 :icon: note
 :color: primary
@@ -157,7 +158,7 @@ A simple task where the objective is to move a peg laying on the table to any up
 - the peg's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat along it's length on the table
 
 **Success Conditions:**
-- the absolute value of the peg's z euler angle is within 0.08 of $\pi$/2 and the z position of the peg is within 0.005 of its half-length (0.12).
+- the absolute value of the peg's y euler angle is within 0.08 of $\pi$/2 and the z position of the peg is within 0.005 of its half-length (0.12).
 :::
 
 <video preload="auto" controls="True" width="100%">
@@ -188,6 +189,7 @@ A simple task where the objective is to push and move a cube to a goal region in
 </video>
 
 ## PullCube-v1
+![dense-reward][reward-badge]
 :::{dropdown} Task Card
 :icon: note
 :color: primary
@@ -281,4 +283,113 @@ One robot must push/give the cube on its side to the other side so the other rob
 
 <video preload="auto" controls="True" width="100%">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/TwoRobotStackCube-v1_rt.mp4" type="video/mp4">
+</video>
+
+
+## PokeCube-v1
+![dense-reward][reward-badge]
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+A simple task where the objective is to poke a red cube with a peg and push it to a target goal position.
+
+**Supported Robots: Panda, Fetch, xArm**
+
+**Randomizations:**
+- the peg's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat along it's length on the table
+- the cube's x-coordinate is fixed to peg's x-coordinate + peg half-length (0.12) + 0.1 and y-coordinate is randomized in range [-0.1, 0.1]. It is placed flat on the table
+- the cube's z-axis rotation is randomized in range [-$\pi$/ 6, $\pi$ / 6]
+- the target goal region is marked by a red/white circular target. The position of the target is fixed to be the cube xy position + [0.05 + goal_radius, 0]
+
+**Success Conditions:**
+- the cube's xy position is within goal_radius (default 0.05) of the target's xy position by euclidean distance
+- the face of peg's head is close to the cube's face and the orientation is aligned
+- the peg's z position is within 0.005 of its half-width (0.25), that is close the table
+
+:::
+
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PokeCube-v1_rt.mp4" type="video/mp4">
+</video>
+
+## PlaceSphere-v1
+![dense-reward][reward-badge]
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+A simple task where the objective is to grasp a sphere and place it on top of a little bin.
+
+**Supported Robots: Panda**
+
+**Randomizations:**
+- the sphere's xy position is randomized on top of a table in the region [-0.1, -0.05] x [-0.1, 0.1]. It is placed at the first 1/4 zone along the x-axis
+- the bin's xy position is randomized on top of a table in the region [0.0, 1.0] x [-0.1, 0.1]. It is placed at the last 1/2 zone along the x-axis so that it doesn't collide the sphere
+
+**Success Conditions:**
+- the sphere is on top of the bin. That is, the sphere's xy-distance to the bin goes near 0, and its z-distance to the bin goes near the sphere radius + the bottom bin block's side length
+- the object is static. That is, its linear and angular velocities are bounded with a small value
+- the gripper is not grasping the object
+:::
+
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PlaceSphere-v1_rt.mp4" type="video/mp4">
+</video>
+  
+## RollBall-v1
+![dense-reward][reward-badge]
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+A simple task where the objective is to push and roll a ball to a goal region at the other end of the table.
+
+**Supported Robots: (Panda)**
+
+**Randomizations:**
+- the ball's xy position is randomized on top of a table in the region [0.2, 0.5] x [-0.4, 0.7]. It is placed flat on the table
+- the target goal region is marked by a red/white circular target. The position of the target is randomized on top of a table in the region [-0.4, -0.7] x [0.2, -0.9]
+
+**Success Conditions:**
+-  the ball's xy position is within goal_radius (default 0.1) of the target's xy position by euclidean distance.
+:::
+
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/RollBall-v1_rt.mp4" type="video/mp4">
+</video>
+
+## PushT-v1
+![dense-reward][reward-badge]
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+Digital Twin of real life push-T task from Diffusion Policy: https://diffusion-policy.cs.columbia.edu/
+
+"In this task, the robot needs to \
+1 precisely push the T- shaped block into the target region, and \
+2 move the end-effector to the end-zone which terminates the episode." \
+[We do not require 2 for the digital task]
+
+**Supported Robots: PandaStick (WIP UR5e)**
+
+**Randomizations:**
+- The 3D T block's initial center of mass is randomized in the region on the table: [-1,1] x [-1,2] + T Goal initial position. It is placed flat on the table
+- The 3D T block's initial z rotation is randomized in [0,2pi] around the center of mass of the block
+
+**Success Conditions:**
+- The 3D T block covers at least 90% of the 2D T goal zone
+:::
+
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PushT-v1_rt.mp4" type="video/mp4">
 </video>

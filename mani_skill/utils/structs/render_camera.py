@@ -12,10 +12,14 @@ import sapien.physx as physx
 import sapien.render
 import torch
 
+from mani_skill.render import SAPIEN_RENDER_SYSTEM
 from mani_skill.utils import common
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.link import Link
 from mani_skill.utils.structs.pose import Pose
+
+if SAPIEN_RENDER_SYSTEM == "3.1":
+    sapien.render.RenderCameraGroup = "oldtype"  # type: ignore
 
 # NOTE (stao): commented out functions are functions that are not confirmed to be working in the wrapped class but the original class has
 
@@ -150,19 +154,27 @@ class RenderCamera:
     def get_near(self) -> float:
         return self._render_cameras[0].get_near()
 
-    def get_picture(self, name: str):
-        if physx.is_gpu_enabled():
-            return self.camera_group.get_picture_cuda(name).torch()
+    def get_picture(self, names: Union[str, List[str]]) -> List[torch.Tensor]:
+        if isinstance(names, str):
+            names = [names]
+        if physx.is_gpu_enabled() and not self.scene.parallel_in_single_scene:
+            if SAPIEN_RENDER_SYSTEM == "3.0":
+                return [
+                    self.camera_group.get_picture_cuda(name).torch() for name in names
+                ]
+            elif SAPIEN_RENDER_SYSTEM == "3.1":
+                return [x.torch() for x in self.camera_group.get_cuda_pictures(names)]
         else:
-            return common.to_tensor(self._render_cameras[0].get_picture(name))[
-                None, ...
+            return [
+                common.to_tensor(self._render_cameras[0].get_picture(name))[None, ...]
+                for name in names
             ]
 
-    def get_picture_cuda(self, name: str):
-        return self._render_cameras[0].get_picture_cuda(name)
+    # def get_picture_cuda(self, name: str):
+    #     return self._render_cameras[0].get_picture_cuda(name)
 
-    def get_picture_names(self) -> list[str]:
-        return self._render_cameras[0].get_picture_names()
+    # def get_picture_names(self) -> list[str]:
+    #     return self._render_cameras[0].get_picture_names()
 
     def get_projection_matrix(self):
         return self._render_cameras[0].get_projection_matrix()
@@ -222,9 +234,15 @@ class RenderCamera:
     # def set_property(self, name: str, value: float) -> None:
     #     self._render_cameras[0].set_property(name, value)
 
-    # @typing.overload
-    # def set_property(self, name: str, value: int) -> None:
-    #     self._render_cameras[0].set_property(name, value)
+    def set_property(self, name: str, value: Any) -> None:
+        """change properties of the camera. This is not well documented at the moment and is a heavily overloaded function.
+
+        At the moment you can do this:
+
+        - set_property("toneMapper", value) where value is 0 (gamma), 1 (sRGB), 2 (filmic) change the color management used. Default is 0 (gamma)
+        - set_property("exposure", value) where value is the exposure. Default is 1.0
+        """
+        self._render_cameras[0].set_property(name, value)
 
     def set_skew(self, skew: float) -> None:
         for obj in self._render_cameras:

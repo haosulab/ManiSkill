@@ -6,7 +6,6 @@ import gymnasium as gym
 import torch
 from gymnasium.vector import VectorEnv
 
-from mani_skill.utils import gym_utils
 from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:
@@ -36,7 +35,6 @@ class ManiSkillVectorEnv(VectorEnv):
         env: Union[BaseEnv, str],
         num_envs: int = None,
         auto_reset: bool = True,
-        max_episode_steps: int = None,
         ignore_terminations: bool = False,
         **kwargs,
     ):
@@ -47,20 +45,15 @@ class ManiSkillVectorEnv(VectorEnv):
             num_envs = self.base_env.num_envs
         self.auto_reset = auto_reset
         self.ignore_terminations = ignore_terminations
+        self.spec = self._env.spec
         super().__init__(
             num_envs, self._env.single_observation_space, self._env.single_action_space
         )
-
+        if not self.ignore_terminations and auto_reset:
+            assert (
+                self.base_env.reconfiguration_freq == 0
+            ), "With partial resets, environment cannot be reconfigured automatically"
         self.returns = torch.zeros(self.num_envs, device=self.base_env.device)
-        self.max_episode_steps = max_episode_steps
-        if (
-            self.max_episode_steps is None
-            and self.base_env.spec.max_episode_steps is not None
-        ):
-            self.max_episode_steps = self.base_env.spec.max_episode_steps
-        if self.max_episode_steps is None:
-            # search wrappers to find where max episode steps may have been defined
-            self.max_episode_steps = gym_utils.find_max_episode_steps_value(env)
 
     @property
     def device(self):
@@ -97,12 +90,7 @@ class ManiSkillVectorEnv(VectorEnv):
         self.returns += rew
 
         infos["episode"] = dict(r=self.returns)
-        if self.max_episode_steps is not None:
-            truncations: torch.Tensor = (
-                self.base_env.elapsed_steps >= self.max_episode_steps
-            )
-        if isinstance(truncations, bool):
-            truncations = torch.tensor([truncations], device=self.device)
+
         if isinstance(terminations, bool):
             terminations = torch.tensor([terminations], device=self.device)
         if self.ignore_terminations:
@@ -111,19 +99,19 @@ class ManiSkillVectorEnv(VectorEnv):
         infos[
             "real_next_obs"
         ] = obs  # not part of standard API but makes some RL code slightly less complicated
-        if dones.any():
+        if dones.any() and self.auto_reset:
             infos["episode"]["r"] = self.returns.clone()
             final_obs = obs
             env_idx = torch.arange(0, self.num_envs, device=self.device)[dones]
             obs, _ = self.reset(options=dict(env_idx=env_idx))
-            infos["final_info"] = infos
+            infos["episode"]["_r"] = dones
+            infos["final_info"] = infos.copy()
             # gymnasium calls it final observation but it really is just o_{t+1} or the true next observation
             infos["final_observation"] = final_obs
             # NOTE (stao): that adding masks like below is a bit redundant and not necessary
             # but this is to follow the standard gymnasium API
             infos["_final_info"] = dones
             infos["_final_observation"] = dones
-            infos["episode"]["_r"] = dones
             infos["_elapsed_steps"] = dones
             # NOTE (stao): Unlike gymnasium, the code here does not add masks for every key in the info object.
         return obs, rew, terminations, truncations, infos

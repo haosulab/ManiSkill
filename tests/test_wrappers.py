@@ -10,7 +10,7 @@ from mani_skill.utils.wrappers.flatten import (
 from mani_skill.utils.wrappers.visual_encoders import VisualEncoderWrapper
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 from tests.utils import (
-    LOW_MEM_SIM_CFG,
+    LOW_MEM_SIM_CONFIG,
     MULTI_AGENT_ENV_IDS,
     OBS_MODES,
     STATIONARY_ENV_IDS,
@@ -27,7 +27,7 @@ def test_recordepisode_wrapper_gpu(env_id, obs_mode):
         render_mode="rgb_array",
         max_episode_steps=10,
         num_envs=16,
-        sim_cfg=LOW_MEM_SIM_CFG,
+        sim_config=LOW_MEM_SIM_CONFIG,
     )
     env = RecordEpisode(
         env,
@@ -81,11 +81,11 @@ def test_recordepisode_wrapper_gpu_render_sensor(env_id, obs_mode):
         obs_mode=obs_mode,
         render_mode="sensors",
         num_envs=16,
-        sim_cfg=LOW_MEM_SIM_CFG,
+        sim_config=LOW_MEM_SIM_CONFIG,
     )
     env = RecordEpisode(
         env,
-        output_dir=f"videos/pytest/{env_id}-gpu-render-sensor",
+        output_dir=f"videos/pytest/{env_id}-gpu-{obs_mode}-render-sensor",
         trajectory_name=f"test_traj_{obs_mode}",
         save_trajectory=True,
         max_steps_per_video=50,
@@ -113,7 +113,7 @@ def test_recordepisode_wrapper_render_sensor(env_id, obs_mode):
     )
     env = RecordEpisode(
         env,
-        output_dir=f"videos/pytest/{env_id}-render-sensor",
+        output_dir=f"videos/pytest/{env_id}-{obs_mode}-render-sensor",
         trajectory_name=f"test_traj_{obs_mode}",
         info_on_video=True,
     )
@@ -136,11 +136,11 @@ def test_recordepisode_wrapper_partial_reset_gpu(env_id, obs_mode):
         obs_mode=obs_mode,
         render_mode="rgb_array",
         num_envs=16,
-        sim_cfg=LOW_MEM_SIM_CFG,
+        sim_config=LOW_MEM_SIM_CONFIG,
     )
     env = RecordEpisode(
         env,
-        output_dir=f"videos/pytest/{env_id}-gpu-partial-resets",
+        output_dir=f"videos/pytest/{env_id}-gpu-{obs_mode}-partial-resets",
         trajectory_name=f"test_traj_{obs_mode}",
         save_trajectory=True,
         max_steps_per_video=50,
@@ -169,11 +169,11 @@ def test_recordepisode_wrapper_partial_reset(env_id, obs_mode):
         obs_mode=obs_mode,
         num_envs=1,
         render_mode="rgb_array",
-        sim_cfg=LOW_MEM_SIM_CFG,
+        sim_config=LOW_MEM_SIM_CONFIG,
     )
     env = RecordEpisode(
         env,
-        output_dir=f"videos/pytest/{env_id}-partial-resets",
+        output_dir=f"videos/pytest/{env_id}-{obs_mode}-partial-resets",
         trajectory_name=f"test_traj_{obs_mode}",
         save_trajectory=True,
         max_steps_per_video=50,
@@ -202,7 +202,7 @@ def test_visualencoders_gpu(env_id):
         render_mode="rgb_array",
         max_episode_steps=10,
         num_envs=16,
-        sim_cfg=LOW_MEM_SIM_CFG,
+        sim_config=LOW_MEM_SIM_CONFIG,
     )
     assert (
         "embedding" not in env.observation_space.keys()
@@ -238,7 +238,7 @@ def test_visualencoder_flatten_gpu(env_id):
         render_mode="rgb_array",
         max_episode_steps=10,
         num_envs=16,
-        sim_cfg=LOW_MEM_SIM_CFG,
+        sim_config=LOW_MEM_SIM_CONFIG,
     )
     env = VisualEncoderWrapper(env, encoder="r3m")
     env = FlattenObservationWrapper(env)
@@ -264,7 +264,7 @@ def test_visualencoder_flatten_gpu(env_id):
 @pytest.mark.gpu_sim
 @pytest.mark.parametrize("env_id", MULTI_AGENT_ENV_IDS[:1])
 def test_multi_agent_flatten_action_space_gpu(env_id):
-    env = gym.make(env_id, num_envs=16, sim_cfg=LOW_MEM_SIM_CFG)
+    env = gym.make(env_id, num_envs=16, sim_config=LOW_MEM_SIM_CONFIG)
     env = FlattenActionSpaceWrapper(env)
     env.reset()
     action_space = env.action_space

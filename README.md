@@ -1,8 +1,10 @@
 # ManiSkill 3 (Beta)
 
+
 ![teaser](figures/teaser.png)
 <p style="text-align: center; font-size: 0.8rem; color: #999;margin-top: -1rem;">Sample of environments/robots rendered with ray-tracing. Scene datasets sourced from AI2THOR and ReplicaCAD</p>
 
+[![Downloads](https://static.pepy.tech/badge/mani_skill)](https://pepy.tech/project/mani_skill)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/haosulab/ManiSkill/blob/main/examples/tutorials/1_quickstart.ipynb)
 [![PyPI version](https://badge.fury.io/py/mani-skill.svg)](https://badge.fury.io/py/mani-skill)
 [![Docs status](https://img.shields.io/badge/docs-passing-brightgreen.svg)](https://maniskill.readthedocs.io/en/latest/)
@@ -48,6 +50,24 @@ To get started, check out the quick start documentation: https://maniskill.readt
 We also have a quick start [colab notebook](https://colab.research.google.com/github/haosulab/ManiSkill/blob/main/examples/tutorials/1_quickstart.ipynb) that lets you try out GPU parallelized simulation without needing your own hardware. Everything is runnable on Colab free tier.
 
 For a full list of example scripts you can run see [the docs](https://maniskill.readthedocs.io/en/latest/user_guide/demos/index.html).
+
+## System Support
+
+We currently best support Linux based systems. There is limited support for windows and no support for MacOS at the moment. We are working on trying to support more features on other systems but this may take some time. Most constraints stem from what the [SAPIEN](https://github.com/haosulab/SAPIEN/) package is capable of supporting.
+
+| System / GPU         | CPU Sim | GPU Sim | Rendering |
+| -------------------- | ------- | ------- | --------- |
+| Linux / NVIDIA GPU   | ✅      | ✅      | ✅        |
+| Windows / NVIDIA GPU | ✅      | ❌      | ✅        |
+| Windows / AMD GPU    | ✅      | ❌      | ✅        |
+| WSL / Anything       | ✅      | ❌      | ❌        |
+| MacOS / Anything     | ❌      | ❌      | ❌        |
+
+## Citation and Core Team
+
+ManiSkill 3 will have a technical paper coming out. 
+
+The current author list is as follows: Stone Tao*, Fanbo Xiang*, Arth Shukla, Chen Bao, Nan Xiao, Rui Chen, Tongzhou Mu, Tse-Kai Chan, Xander Hinrichsen, Xiaodi Yuan, Xinsong Lin, Xuanlin Li, Yuan Gao, Yuzhe Qin, Zhiao Huang, Hao Su
 
 ## License
 

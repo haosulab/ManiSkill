@@ -1,1 +1,1 @@
-from .table_scene_builder import TableSceneBuilder
+from .scene_builder import TableSceneBuilder

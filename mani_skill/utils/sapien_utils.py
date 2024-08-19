@@ -143,18 +143,18 @@ def parse_urdf_config(config_dict: dict) -> Dict:
 
 def apply_urdf_config(loader: sapien.wrapper.urdf_loader.URDFLoader, urdf_config: dict):
     if "link" in urdf_config:
-        for name, link_cfg in urdf_config["link"].items():
-            if "material" in link_cfg:
-                mat: physx.PhysxMaterial = link_cfg["material"]
+        for name, link_config in urdf_config["link"].items():
+            if "material" in link_config:
+                mat: physx.PhysxMaterial = link_config["material"]
                 loader.set_link_material(
                     name, mat.static_friction, mat.dynamic_friction, mat.restitution
                 )
-            if "patch_radius" in link_cfg:
-                loader.set_link_patch_radius(name, link_cfg["patch_radius"])
-            if "min_patch_radius" in link_cfg:
-                loader.set_link_min_patch_radius(name, link_cfg["min_patch_radius"])
-            if "density" in link_cfg:
-                loader.set_link_density(name, link_cfg["density"])
+            if "patch_radius" in link_config:
+                loader.set_link_patch_radius(name, link_config["patch_radius"])
+            if "min_patch_radius" in link_config:
+                loader.set_link_min_patch_radius(name, link_config["min_patch_radius"])
+            if "density" in link_config:
+                loader.set_link_density(name, link_config["density"])
     if "material" in urdf_config:
         mat: physx.PhysxMaterial = urdf_config["material"]
         loader.set_material(mat.static_friction, mat.dynamic_friction, mat.restitution)
@@ -266,7 +266,7 @@ def get_pairwise_contact_impulse(
     return total_impulse
 
 
-def get_actor_contacts(
+def get_cpu_actor_contacts(
     contacts: List[physx.PhysxContact], actor: sapien.Entity
 ) -> List[Tuple[physx.PhysxContact, bool]]:
     entity_contacts = []
@@ -278,7 +278,7 @@ def get_actor_contacts(
     return entity_contacts
 
 
-def get_actors_contacts(
+def get_cpu_actors_contacts(
     contacts: List[physx.PhysxContact], actors: List[sapien.Entity]
 ) -> Dict[sapien.Entity, List[Tuple[physx.PhysxContact, bool]]]:
     """
@@ -293,7 +293,7 @@ def get_actors_contacts(
     return entity_contacts
 
 
-def get_articulation_contacts(
+def get_cpu_articulation_contacts(
     contacts: List[physx.PhysxContact],
     articulation: physx.PhysxArticulation,
     excluded_entities: Optional[List[sapien.Entity]] = None,
@@ -336,7 +336,7 @@ def get_articulation_max_impulse_norm(
     articulation: physx.PhysxArticulation,
     excluded_entities: Optional[List[sapien.Entity]] = None,
 ):
-    articulation_contacts = get_articulation_contacts(
+    articulation_contacts = get_cpu_articulation_contacts(
         contacts, articulation, excluded_entities
     )
     max_impulse_norm = compute_max_impulse_norm(articulation_contacts)

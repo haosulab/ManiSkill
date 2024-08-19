@@ -4,16 +4,17 @@ from dataclasses import dataclass
 from functools import cached_property
 from typing import TYPE_CHECKING, Generic, List, TypeVar
 
+import numpy as np
 import sapien.physx as physx
 import torch
 
 from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.structs.decorators import before_gpu_init
+from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:
     from mani_skill.envs.scene import ManiSkillScene
-    from mani_skill.utils.structs.pose import Pose
 T = TypeVar("T")
 
 
@@ -24,7 +25,7 @@ class BaseStruct(Generic[T]):
     """
 
     _objs: List[T]
-    """list of objects of type T managed by this dataclass"""
+    """list of objects of type T managed by this dataclass. This should not be modified after initialization. The struct hash is dependent on the hash of this list."""
     _scene_idxs: torch.Tensor
     """a list of indexes parallel to `self._objs` indicating which sub-scene each of those objects are actually in by index"""
     scene: ManiSkillScene
@@ -32,7 +33,8 @@ class BaseStruct(Generic[T]):
 
     def __post_init__(self):
         if not isinstance(self._scene_idxs, torch.Tensor):
-            self._scene_idxs = common.to_tensor(self._scene_idxs).to(torch.int)
+            self._scene_idxs = common.to_tensor(self._scene_idxs)
+        self._scene_idxs = self._scene_idxs.to(torch.int).to(self.device)
 
     def __str__(self):
         return f"<struct of type {self.__class__}; managing {self._num_objs} {self._objs[0].__class__} objects>"
@@ -40,12 +42,18 @@ class BaseStruct(Generic[T]):
     def __repr__(self):
         return self.__str__()
 
+    def __hash__(self):
+        return self.__maniskill_hash__
+
+    @cached_property
+    def __maniskill_hash__(self):
+        """A better hash to use compared to the default frozen dataclass hash.
+        It is tied directly to the only immutable field (the _objs list)."""
+        return hash(tuple([obj.__hash__() for obj in self._objs]))
+
     @property
     def device(self):
-        if physx.is_gpu_enabled():
-            return torch.device("cuda")
-        else:
-            return torch.device("cpu")
+        return self.scene.device
 
     @property
     def _num_objs(self):
@@ -83,6 +91,7 @@ class PhysxRigidBaseComponentStruct(BaseStruct[T], Generic[T]):
 
 @dataclass
 class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]):
+    _bodies: List[physx.PhysxRigidBodyComponent]
     _body_data_name: str
     _body_data_index_internal: slice = None
 
@@ -96,7 +105,7 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
         """a list of indexes of each GPU rigid body in the `px.cuda_rigid_body_data` buffer, one for each element in `self._objs`"""
         if self._body_data_index_internal is None:
             self._body_data_index_internal = torch.tensor(
-                [body.gpu_pose_index for body in self._bodies], device="cuda"
+                [body.gpu_pose_index for body in self._bodies], device=self.device
             )
         return self._body_data_index_internal
 
@@ -109,20 +118,28 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
         return self.px.gpu_create_contact_body_impulse_query(self._bodies)
 
     def get_net_contact_forces(self):
+        """
+        Get the net contact forces on this body. Returns force vector of shape (N, 3)
+        where N is the number of environments, and 3 is the dimension of the force vector itself,
+        representing x, y, and z direction of force.
+        """
+        return self.get_net_contact_impulses() / self.scene.timestep
+
+    def get_net_contact_impulses(self):
+        """
+        Get the net contact impulses on this body. Returns impulse vector of shape (N, 3)
+        where N is the number of environments, and 3 is the dimension of the impulse vector itself,
+        representing x, y, and z direction of impulse.
+        """
         if physx.is_gpu_enabled():
             self.px.gpu_query_contact_body_impulses(self._body_force_query)
-            # NOTE (stao): physx5 calls the output forces but they are actually impulses
-            return (
-                self._body_force_query.cuda_impulses.torch().clone()
-                / self.scene.timestep
-            )
+            return self._body_force_query.cuda_impulses.torch().clone()
         else:
-            body_contacts = sapien_utils.get_actor_contacts(
+            body_contacts = sapien_utils.get_cpu_actor_contacts(
                 self.px.get_contacts(), self._bodies[0].entity
             )
-            net_force = (
-                common.to_tensor(sapien_utils.compute_total_impulse(body_contacts))
-                / self.scene.timestep
+            net_force = common.to_tensor(
+                sapien_utils.compute_total_impulse(body_contacts)
             )
             return net_force[None, :]
 
@@ -142,7 +159,9 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
     def get_auto_compute_mass(self) -> bool:
         return self.auto_compute_mass
 
-    # def get_cmass_local_pose(self) -> sapien.pysapien.Pose: ...
+    def get_cmass_local_pose(self) -> Pose:
+        return
+
     def get_disable_gravity(self) -> bool:
         return self.disable_gravity
 
@@ -187,6 +206,9 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
     @property
     def angular_velocity(self) -> torch.Tensor:
         if physx.is_gpu_enabled():
+            # NOTE (stao): Currently physx has a bug that sapien inherits where link bodies on the GPU put linear/angular velocities in the wrong order...
+            if isinstance(self._objs[0], physx.PhysxArticulationLinkComponent):
+                return self._body_data[self._body_data_index, 7:10]
             return self._body_data[self._body_data_index, 10:13]
         else:
             return torch.from_numpy(self._bodies[0].angular_velocity[None, :])
@@ -195,11 +217,16 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
     def auto_compute_mass(self) -> torch.Tensor:
         return torch.tensor([body.auto_compute_mass for body in self._bodies])
 
-    # @property
-    # def cmass_local_pose(self) -> sapien.pysapien.Pose:
-    #     """
-    #     :type: sapien.pysapien.Pose
-    #     """
+    @cached_property
+    def cmass_local_pose(self) -> Pose:
+        raw_poses = np.stack(
+            [
+                np.concatenate([x.cmass_local_pose.p, x.cmass_local_pose.q])
+                for x in self._bodies
+            ]
+        )
+        return Pose.create(common.to_tensor(raw_poses))
+
     # @cmass_local_pose.setter
     # def cmass_local_pose(self, arg1: sapien.pysapien.Pose) -> None:
     #     pass
@@ -234,6 +261,9 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
     @property
     def linear_velocity(self) -> torch.Tensor:
         if physx.is_gpu_enabled():
+            # NOTE (stao): Currently physx has a bug that sapien inherits where link bodies on the GPU put linear/angular velocities in the wrong order...
+            if isinstance(self._objs[0], physx.PhysxArticulationLinkComponent):
+                return self._body_data[self._body_data_index, 10:13]
             return self._body_data[self._body_data_index, 7:10]
         else:
             return torch.from_numpy(self._bodies[0].linear_velocity[None, :])
@@ -316,7 +346,9 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
     @property
     def angular_velocity(self) -> torch.Tensor:
         if physx.is_gpu_enabled():
-            # TODO (stao): turn 10:13 etc. slices into constants
+            # NOTE (stao): Currently physx has a bug that sapien inherits where link bodies on the GPU put linear/angular velocities in the wrong order...
+            if isinstance(self._objs[0], physx.PhysxArticulationLinkComponent):
+                return self._body_data[self._body_data_index, 7:10]
             return self._body_data[self._body_data_index, 10:13]
         else:
             return torch.from_numpy(self._bodies[0].angular_velocity[None, :])
@@ -385,6 +417,9 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
     @property
     def linear_velocity(self) -> torch.Tensor:
         if physx.is_gpu_enabled():
+            # NOTE (stao): Currently physx has a bug that sapien inherits where link bodies on the GPU put linear/angular velocities in the wrong order...
+            if isinstance(self._objs[0], physx.PhysxArticulationLinkComponent):
+                return self._body_data[self._body_data_index, 10:13]
             return self._body_data[self._body_data_index, 7:10]
         else:
             return torch.from_numpy(self._bodies[0].linear_velocity[None, :])

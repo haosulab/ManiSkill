@@ -1,13 +1,15 @@
 import signal
+import sys
+
+from matplotlib import pyplot as plt
 
 from mani_skill.utils import common
-from mani_skill.utils.visualization.misc import tile_images
+from mani_skill.utils import visualization
 signal.signal(signal.SIGINT, signal.SIG_DFL) # allow ctrl+c
 
 import argparse
 
 import gymnasium as gym
-import cv2
 import numpy as np
 
 from mani_skill.envs.sapien_env import BaseEnv
@@ -16,6 +18,7 @@ def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--env-id", type=str, default="PushCube-v1", help="The environment ID of the task you want to simulate")
     parser.add_argument("-o", "--obs-mode", type=str, default="rgbd", help="Can be rgb or rgbd")
+    parser.add_argument("--shader", default="minimal", type=str, help="Change shader used for all cameras in the environment for rendering. Default is 'minimal' which is very fast. Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer")
     parser.add_argument("--num-envs", type=int, default=1, help="Number of environments to run. Used for some basic testing and not visualized")
     parser.add_argument("--cam-width", type=int, help="Override the width of every camera in the environment")
     parser.add_argument("--cam-height", type=int, help="Override the height of every camera in the environment")
@@ -28,6 +31,12 @@ def parse_args(args=None):
     args = parser.parse_args()
     return args
 
+import matplotlib.pyplot as plt
+import numpy as np
+
+
+
+
 
 def main(args):
     if args.seed is not None:
@@ -37,6 +46,7 @@ def main(args):
         sensor_configs["width"] = args.cam_width
     if args.cam_height:
         sensor_configs["height"] = args.cam_height
+    sensor_configs["shader_pack"] = args.shader
     env: BaseEnv = gym.make(
         args.env_id,
         obs_mode=args.obs_mode,
@@ -51,6 +61,8 @@ def main(args):
             n_cams += 1
     print(f"Visualizing {n_cams} RGBD cameras")
 
+    renderer = visualization.ImageRenderer()
+
     while True:
         action = env.action_space.sample()
         obs, reward, terminated, truncated, info = env.step(action)
@@ -58,7 +70,6 @@ def main(args):
         imgs=[]
         for cam in obs["sensor_data"].keys():
             if "rgb" in obs["sensor_data"][cam]:
-
                 rgb = common.to_numpy(obs["sensor_data"][cam]["rgb"][0])
                 imgs.append(rgb)
                 if "depth" in obs["sensor_data"][cam]:
@@ -68,10 +79,8 @@ def main(args):
                     depth_rgb[..., :] = depth*255
                     imgs.append(depth_rgb)
                 cam_num += 1
-        img = tile_images(imgs, nrows=n_cams)
-        cv2.imshow('image',cv2.cvtColor(img.astype(np.uint8), cv2.COLOR_RGB2BGR))
-        cv2.waitKey(0)
-
+        img = visualization.tile_images(imgs, nrows=n_cams)
+        renderer(img)
 
 if __name__ == "__main__":
     main(parse_args())
