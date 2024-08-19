@@ -125,7 +125,13 @@ def set_shader_pack(shader_config: ShaderConfig):
             sapien.render.set_picture_format("Color", "r8g8b8a8unorm")
             sapien.render.set_picture_format("ColorRaw", "r8g8b8a8unorm")
             sapien.render.set_picture_format("PositionSegmentation", "r16g16b16a16sint")
-
+        if shader_config.shader_pack == "default":
+            sapien.render.set_camera_shader_dir("default")
+            sapien.render.set_picture_format("Color", "r32g32b32a32sfloat")
+            sapien.render.set_picture_format("ColorRaw", "r32g32b32a32sfloat")
+            sapien.render.set_picture_format(
+                "PositionSegmentation", "r32g32b32a32sfloat"
+            )
         if shader_config.shader_pack[:2] == "rt":
             sapien.render.set_ray_tracing_samples_per_pixel(
                 shader_config.shader_pack_config["ray_tracing_samples_per_pixel"]
