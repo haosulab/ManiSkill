@@ -1025,36 +1025,23 @@ class ManiSkillScene:
             if self.parallel_in_single_scene:
                 for name, camera in self.human_render_cameras.items():
                     camera.camera._render_cameras[0].take_picture()
-                    # TODO (stao): in the future shaders will be handled more cleanly
-                    if self.shader_dir == "default":
-                        rgb = common.to_tensor(
-                            camera.camera._render_cameras[0].get_picture("Color")
-                        )[None, ...]
-                        rgb = (rgb[..., :3]).to(torch.uint8)
-                    else:
-                        rgb = common.to_tensor(
-                            camera.camera._render_cameras[0].get_picture("Color")
-                        )[None, ...]
-                        rgb = (rgb[..., :3] * 255).to(torch.uint8)
+                    rgb = camera.get_obs(
+                        rgb=True, depth=False, segmentation=False, position=False
+                    )["rgb"]
                     image_data[name] = rgb
             else:
-                for name in self.human_render_cameras.keys():
-                    camera_group = self.camera_groups[name]
+                for name, camera in self.human_render_cameras.items():
                     if camera_name is not None and name != camera_name:
                         continue
-                    camera_group.take_picture()
-                    if SAPIEN_RENDER_SYSTEM == "3.1":
-                        rgb = (
-                            camera_group.get_cuda_pictures(["Color"])[0]
-                            .torch()[..., :3]
-                            .clone()
-                        )
-                    else:
-                        rgb = (
-                            camera_group.get_picture_cuda("Color")
-                            .torch()[..., :3]
-                            .clone()
-                        )
+                    assert camera.config.shader_config.shader_pack not in [
+                        "rt",
+                        "rt-fast",
+                        "rt-med",
+                    ], "ray tracing shaders do not work with parallel rendering"
+                    camera.capture()
+                    rgb = camera.get_obs(
+                        rgb=True, depth=False, segmentation=False, position=False
+                    )["rgb"]
                     image_data[name] = rgb
         else:
             for name, camera in self.human_render_cameras.items():

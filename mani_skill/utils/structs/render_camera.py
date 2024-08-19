@@ -157,7 +157,7 @@ class RenderCamera:
     def get_picture(self, names: Union[str, List[str]]) -> List[torch.Tensor]:
         if isinstance(names, str):
             names = [names]
-        if physx.is_gpu_enabled():
+        if physx.is_gpu_enabled() and not self.scene.parallel_in_single_scene:
             if SAPIEN_RENDER_SYSTEM == "3.0":
                 return [
                     self.camera_group.get_picture_cuda(name).torch() for name in names
