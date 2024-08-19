@@ -160,6 +160,8 @@ class BaseEnv(gym.Env):
     _render_device: sapien.Device = None
     """the sapien device object the renderer runs on"""
 
+    _viewer: Union[sapien.utils.Viewer, None] = None
+
     def __init__(
         self,
         num_envs: int = 1,
