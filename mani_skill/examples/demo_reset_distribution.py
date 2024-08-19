@@ -33,7 +33,9 @@ def main(args):
         obs_mode="none",
         reward_mode="none",
         render_mode=args.render_mode,
-        shader_dir=args.shader,
+        sensor_configs=dict(shader_pack=args.shader),
+        human_render_camera_configs=dict(shader_pack=args.shader),
+        viewer_camera_configs=dict(shader_pack=args.shader),
         sim_backend=args.sim_backend,
     )
     if args.record_dir is not None and args.render_mode != "human":

@@ -151,7 +151,7 @@ env = gym.make(
     control_mode="pd_joint_delta_pos",
     num_envs=16,
     parallel_in_single_scene=True,
-    shader_dir="rt-fast" # optionally set this argument for more photo-realistic rendering
+    viewer_camera_configs=dict(shader_pack="rt-fast"),
 )
 ```
 

@@ -126,5 +126,5 @@ Examples of task cards are found throughout the [task documentation](../tasks/in
 When contributing the task, make sure you do the following:
 
 - The task code itself should have a reasonable unique name and be placed in `mani_skill/envs/tasks`.
-- Added a demo video of the task being solved successfully (for each variation if there are several) to `figures/environment_demos`. The video should have ray-tracing on so it looks nicer! This can be done by replaying a trajectory with `shader_dir="rt"` passed into `gym.make` when making the environment.
+- Added a demo video of the task being solved successfully (for each variation if there are several) to `figures/environment_demos`. The video should have ray-tracing on so it looks nicer! This can be done by replaying a trajectory with `human_render_camera_configs=dict(shader_pack="rt")` passed into `gym.make` when making the environment.
 - Added a task card to `docs/source/tasks/index.md`.
