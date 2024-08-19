@@ -98,7 +98,7 @@ class BaseEnv(gym.Env):
             Note that if this is "cpu", num_envs can only be equal to 1.
 
         render_backend (str): By default this is "gpu". If render_backend is "gpu", then we auto select a GPU to render with.
-            It can be "cuda:n" where n is the ID of the GPU to render with. If this is "cpu", then we render on the CPU.
+            It can be "cuda:n" where n is the ID of the GPU to render with. If this is "cpu", then we render on the CPU if possible. If "disable", all rendering is disabled and only simulation is running.
 
         parallel_in_single_scene (bool): By default this is False. If True, rendered images and the GUI will show all objects in one view.
             This is only really useful for generating cool videos showing all environments at once but it is not recommended
@@ -157,7 +157,7 @@ class BaseEnv(gym.Env):
     _sim_device: sapien.Device = None
     """the sapien device object the simulation runs on"""
 
-    _render_device: sapien.Device = None
+    _render_device: Union[sapien.Device, None] = None
     """the sapien device object the renderer runs on"""
 
     _viewer: Union[sapien.utils.Viewer, None] = None
@@ -229,12 +229,15 @@ class BaseEnv(gym.Env):
                 physx.enable_gpu()
 
         # determine render device
+        render_backend = "disable"
         if render_backend == "gpu" or render_backend == "cuda":
             self._render_device = sapien.Device("cuda")
         elif render_backend == "cpu":
             self._render_device = sapien.Device("cpu")
         elif render_backend[:4] == "cuda":
             self._render_device = sapien.Device(render_backend)
+        elif render_backend == "disable":
+            self._render_device = None
 
 
 
@@ -590,6 +593,8 @@ class BaseEnv(gym.Env):
         self._clear()
         # load everything into the scene first before initializing anything
         self._setup_scene()
+
+
         self._load_agent(options)
         self._load_scene(options)
         self._load_lighting(options)
@@ -968,8 +973,11 @@ class BaseEnv(gym.Env):
                     scene_idx % scene_grid_length - scene_grid_length // 2,
                     scene_idx // scene_grid_length - scene_grid_length // 2,
                 )
+                systems = [self.physx_system]
+                if self._render_device is not None:
+                    systems.append(sapien.render.RenderSystem(self._render_device))
                 scene = sapien.Scene(
-                    systems=[self.physx_system, sapien.render.RenderSystem(self._render_device)]
+                    systems=systems
                 )
                 self.physx_system.set_scene_offset(
                     scene,
@@ -982,8 +990,11 @@ class BaseEnv(gym.Env):
                 sub_scenes.append(scene)
         else:
             self.physx_system = physx.PhysxCpuSystem()
+            systems = [self.physx_system]
+            if self._render_device is not None:
+                systems.append(sapien.render.RenderSystem(self._render_device))
             sub_scenes = [
-                sapien.Scene([self.physx_system, sapien.render.RenderSystem(self._render_device)])
+                sapien.Scene(systems)
             ]
         # create a "global" scene object that users can work with that is linked with all other scenes created
         self.scene = ManiSkillScene(

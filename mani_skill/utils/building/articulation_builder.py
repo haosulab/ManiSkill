@@ -130,6 +130,9 @@ class ArticulationBuilder(SapienArticulationBuilder):
                 sub_scene = self.scene.sub_scenes[0]
             else:
                 sub_scene = self.scene.sub_scenes[scene_idx]
+            import ipdb
+
+            ipdb.set_trace()
             links: List[sapien.Entity] = self.build_entities(
                 name_prefix=f"scene-{scene_idx}-{self.name}_"
             )
