@@ -1,7 +1,7 @@
 import json
 import os
 import os.path as osp
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 from pathlib import Path
 from collections import defaultdict
 import copy
@@ -87,7 +87,9 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
                 bc_to_idx[Path(episode_json["scene_id"]).name]
             )
 
-    def build(self, build_config_idxs: List[int]):
+    def build(
+        self, build_config_idxs: List[int], init_config_names: Optional[list] = None
+    ):
         if isinstance(build_config_idxs, int):
             build_config_idxs = [build_config_idxs] * self.env.num_envs
         assert all(
@@ -121,7 +123,9 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
         # default_object_poses: default poses for ycb objects from each rearrange episode config
         self.rcad_to_rearrange_configs: Dict[str, List[str]] = dict()
         default_object_poses: Dict[str, Dict[str, List[sapien.Pose]]] = dict()
-        for rc in self._rearrange_configs:
+        if init_config_names is None:
+            init_config_names = self._rearrange_configs
+        for rc in init_config_names:
             objects: Dict[str, List[sapien.Pose]] = defaultdict(list)
 
             with open(
