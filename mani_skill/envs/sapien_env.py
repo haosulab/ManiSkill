@@ -1,5 +1,6 @@
 import copy
 import gc
+import logging
 import os
 from functools import cached_property
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
@@ -13,7 +14,6 @@ import sapien.render
 import sapien.utils.viewer.control_window
 import torch
 from gymnasium.vector.utils import batch_space
-from sapien.utils import Viewer
 
 from mani_skill import PACKAGE_ASSET_DIR, logger
 from mani_skill.agents import REGISTERED_AGENTS
@@ -21,22 +21,22 @@ from mani_skill.agents.base_agent import BaseAgent
 from mani_skill.agents.multi_agent import MultiAgent
 from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.envs.utils.observations import (
+    parse_visual_obs_mode_to_struct,
     sensor_data_to_pointcloud,
-    sensor_data_to_rgbd,
 )
-from mani_skill.render import SAPIEN_RENDER_SYSTEM
 from mani_skill.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill.sensors.camera import (
     Camera,
     CameraConfig,
-    parse_camera_cfgs,
-    update_camera_cfgs_from_dict,
+    parse_camera_configs,
+    update_camera_configs_from_dict,
 )
 from mani_skill.sensors.depth_camera import StereoDepthCamera, StereoDepthCameraConfig
 from mani_skill.utils import common, gym_utils, sapien_utils
 from mani_skill.utils.structs import Actor, Articulation
 from mani_skill.utils.structs.types import Array, SimConfig
-from mani_skill.utils.visualization.misc import observations_to_images, tile_images
+from mani_skill.utils.visualization.misc import tile_images
+from mani_skill.viewer import create_viewer
 
 
 class BaseEnv(gym.Env):
@@ -50,7 +50,9 @@ class BaseEnv(gym.Env):
         gpu_sim_backend: The GPU simulation backend to use (only used if the given num_envs argument is > 1). This affects the type of tensor
             returned by the environment for e.g. observations and rewards. Can be "torch" or "jax". Default is "torch"
 
-        obs_mode: observation mode to be used. Must be one of ("state", "state_dict", "none", "sensor_data", "rgb", "rgbd", "pointcloud")
+        obs_mode: observation mode to be used. Must be one of ("state", "state_dict", "none", "sensor_data", "rgb", "depth", "segmentation", "rgbd", "rgb+depth", "rgb+depth+segmentation", "rgb+segmentation", "depth+segmentation", "pointcloud")
+            The obs_mode is mostly for convenience to automatically optimize/setup all sensors/cameras for the given observation mode to render the correct data and try to ignore unecesary rendering.
+            For the most advanced use cases (e.g. you have 1 RGB only camera and 1 depth only camera)
 
         reward_mode: reward mode to use. Must be one of ("normalized_dense", "dense", "sparse", "none"). With "none" the reward returned is always 0
 
@@ -59,22 +61,28 @@ class BaseEnv(gym.Env):
 
         render_mode: render mode registered in @SUPPORTED_RENDER_MODES.
 
-        shader_dir (str): shader directory. Defaults to "default".
-            "default", "rt", "rt-fast" are built-in options with SAPIEN. Other options are user-defined. "rt" means ray-tracing which results
+        shader_dir (Optional[str]): shader directory. Defaults to None.
+            Setting this will override the shader used for all cameras in the environment. This is legacy behavior kept for backwards compatibility.
+            The proper way to change the shaders used for cameras is to either change the environment code or pass in sensor_configs/human_render_camera_configs with the desired shaders.
+
+
+            Previously the options are "default", "rt", "rt-fast". "rt" means ray-tracing which results
             in more photorealistic renders but is slow, "rt-fast" is a lower quality but faster version of "rt".
 
         enable_shadow (bool): whether to enable shadow for lights. Defaults to False.
 
-        sensor_cfgs (dict): configurations of sensors. See notes for more details.
+        sensor_configs (dict): configurations of sensors. See notes for more details.
 
-        human_render_camera_cfgs (dict): configurations of human rendering cameras. Similar usage as @sensor_cfgs.
+        human_render_camera_configs (dict): configurations of human rendering cameras. Similar usage as @sensor_configs.
+
+        viewer_camera_configs (dict): configurations of the viewer camera in the GUI. Similar usage as @sensor_configs.
 
         robot_uids (Union[str, BaseAgent, List[Union[str, BaseAgent]]]): List of robots to instantiate and control in the environment.
 
-        sim_cfg (Union[SimConfig, dict]): Configurations for simulation if used that override the environment defaults. If given
-            a dictionary, it can just override specific attributes e.g. `sim_cfg=dict(scene_cfg=dict(solver_iterations=25))`. If
+        sim_config (Union[SimConfig, dict]): Configurations for simulation if used that override the environment defaults. If given
+            a dictionary, it can just override specific attributes e.g. `sim_config=dict(scene_config=dict(solver_iterations=25))`. If
             passing in a SimConfig object, while typed, will override every attribute including the task defaults. Some environments
-            define their own recommended default sim configurations via the `self._default_sim_cfg` attribute that generally should not be
+            define their own recommended default sim configurations via the `self._default_sim_config` attribute that generally should not be
             completely overriden. For a full detail/explanation of what is in the sim config see the type hints / go to the source
             https://github.com/haosulab/ManiSkill/blob/main/mani_skill/utils/structs/types.py
 
@@ -97,7 +105,7 @@ class BaseEnv(gym.Env):
             otherwise as it slows down simulation and rendering.
 
     Note:
-        `sensor_cfgs` is used to update environement-specific sensor configurations.
+        `sensor_configs` is used to update environement-specific sensor configurations.
         If the key is one of sensor names (e.g. a camera), the value will be applied to the corresponding sensor.
         Otherwise, the value will be applied to all sensors (but overridden by sensor-specific values).
     """
@@ -106,9 +114,9 @@ class BaseEnv(gym.Env):
     SUPPORTED_ROBOTS: List[Union[str, Tuple[str]]] = None
     """Override this to enforce which robots or tuples of robots together are supported in the task. During env creation,
     setting robot_uids auto loads all desired robots into the scene, but not all tasks are designed to support some robot setups"""
-    SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "sensor_data", "rgb", "rgbd", "pointcloud")
+    SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "sensor_data", "rgb", "depth", "segmentation", "rgbd", "rgb+depth", "rgb+depth+segmentation", "rgb+segmentation", "depth+segmentation", "pointcloud")
     SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "sparse", "none")
-    SUPPORTED_RENDER_MODES = ("human", "rgb_array", "sensors")
+    SUPPORTED_RENDER_MODES = ("human", "rgb_array", "sensors", "all")
     """The supported render modes. Human opens up a GUI viewer. rgb_array returns an rgb array showing the current environment state.
     sensors returns an rgb array but only showing all data collected by sensors as images put together"""
 
@@ -159,12 +167,13 @@ class BaseEnv(gym.Env):
         reward_mode: str = None,
         control_mode: str = None,
         render_mode: str = None,
-        shader_dir: str = "default",
+        shader_dir: Optional[str] = None,
         enable_shadow: bool = False,
-        sensor_configs: dict = None,
-        human_render_camera_configs: dict = None,
+        sensor_configs: Optional[dict] = dict(),
+        human_render_camera_configs: Optional[dict] = dict(),
+        viewer_camera_configs: Optional[dict] = dict(),
         robot_uids: Union[str, BaseAgent, List[Union[str, BaseAgent]]] = None,
-        sim_cfg: Union[SimConfig, dict] = dict(),
+        sim_config: Union[SimConfig, dict] = dict(),
         reconfiguration_freq: int = None,
         sim_backend: str = "auto",
         render_backend: str = "gpu",
@@ -174,8 +183,14 @@ class BaseEnv(gym.Env):
         self.num_envs = num_envs
         self.reconfiguration_freq = reconfiguration_freq if reconfiguration_freq is not None else 0
         self._reconfig_counter = 0
+        if shader_dir is not None:
+            logging.warn("shader_dir argument will be deprecated after ManiSkill v3.0.0 official release. Please use sensor_configs/human_render_camera_configs to set shaders.")
+            sensor_configs |= dict(shader_pack=shader_dir)
+            human_render_camera_configs |= dict(shader_pack=shader_dir)
+            viewer_camera_configs |= dict(shader_pack=shader_dir)
         self._custom_sensor_configs = sensor_configs
         self._custom_human_render_camera_configs = human_render_camera_configs
+        self._custom_viewer_camera_configs = viewer_camera_configs
         self._parallel_in_single_scene = parallel_in_single_scene
         self.robot_uids = robot_uids
         if self.SUPPORTED_ROBOTS is not None:
@@ -219,67 +234,36 @@ class BaseEnv(gym.Env):
         elif render_backend[:4] == "cuda":
             self._render_device = sapien.Device(render_backend)
 
+
+
+
         # raise a number of nicer errors
         if sim_backend == "cpu" and num_envs > 1:
             raise RuntimeError("""Cannot set the sim backend to 'cpu' and have multiple environments.
             If you want to do CPU sim backends and have environment vectorization you must use multi-processing across CPUs.
             This can be done via the gymnasium's AsyncVectorEnv API""")
-        if "rt" == shader_dir[:2]:
-            if obs_mode in ["sensor_data", "rgb", "rgbd", "pointcloud"]:
-                raise RuntimeError("""Currently you cannot use ray-tracing while running simulation with visual observation modes. You may still use
-                env.render_rgb_array() or the RecordEpisode wrapper to save videos of ray-traced results""")
-            if num_envs > 1 and parallel_in_single_scene == False:
-                raise RuntimeError("""Currently you cannot run ray-tracing on more than one environment in a single process""")
+
+        if shader_dir is not None:
+            if "rt" == shader_dir[:2]:
+                if num_envs > 1 and parallel_in_single_scene == False:
+                    raise RuntimeError("""Currently you cannot run ray-tracing on more than one environment in a single process""")
 
         assert not parallel_in_single_scene or (obs_mode not in ["sensor_data", "pointcloud", "rgb", "depth", "rgbd"]), \
             "Parallel rendering from parallel cameras is only supported when the gui/viewer is not used. parallel_in_single_scene must be False if using parallel rendering. If True only state based observations are supported."
 
-        if isinstance(sim_cfg, SimConfig):
-            sim_cfg = sim_cfg.dict()
-        merged_gpu_sim_cfg = self._default_sim_config.dict()
-        common.dict_merge(merged_gpu_sim_cfg, sim_cfg)
-        self.sim_cfg = dacite.from_dict(data_class=SimConfig, data=merged_gpu_sim_cfg, config=dacite.Config(strict=True))
+        if isinstance(sim_config, SimConfig):
+            sim_config = sim_config.dict()
+        merged_gpu_sim_config = self._default_sim_config.dict()
+        common.dict_merge(merged_gpu_sim_config, sim_config)
+        self.sim_config = dacite.from_dict(data_class=SimConfig, data=merged_gpu_sim_config, config=dacite.Config(strict=True))
         """the final sim config after merging user overrides with the environment default"""
-        physx.set_gpu_memory_config(**self.sim_cfg.gpu_memory_cfg.dict())
-
-        if SAPIEN_RENDER_SYSTEM == "3.0":
-            self.shader_dir = shader_dir
-            if self.shader_dir == "default":
-                sapien.render.set_camera_shader_dir("minimal")
-                sapien.render.set_picture_format("Color", "r8g8b8a8unorm")
-                sapien.render.set_picture_format("ColorRaw", "r8g8b8a8unorm")
-                sapien.render.set_picture_format("PositionSegmentation", "r16g16b16a16sint")
-            elif self.shader_dir == "rt":
-                sapien.render.set_camera_shader_dir("rt")
-                sapien.render.set_viewer_shader_dir("rt")
-                sapien.render.set_ray_tracing_samples_per_pixel(32)
-                sapien.render.set_ray_tracing_path_depth(16)
-                sapien.render.set_ray_tracing_denoiser(
-                    "optix"
-                )  # TODO "optix or oidn?" previous value was just True
-            elif self.shader_dir == "rt-fast":
-                sapien.render.set_camera_shader_dir("rt")
-                sapien.render.set_viewer_shader_dir("rt")
-                sapien.render.set_ray_tracing_samples_per_pixel(2)
-                sapien.render.set_ray_tracing_path_depth(1)
-                sapien.render.set_ray_tracing_denoiser("optix")
-            elif self.shader_dir == "rt-med":
-                sapien.render.set_camera_shader_dir("rt")
-                sapien.render.set_viewer_shader_dir("rt")
-                sapien.render.set_ray_tracing_samples_per_pixel(4)
-                sapien.render.set_ray_tracing_path_depth(3)
-                sapien.render.set_ray_tracing_denoiser("optix")
-        elif SAPIEN_RENDER_SYSTEM == "3.1":
-            self.shader_dir = "None"
+        physx.set_gpu_memory_config(**self.sim_config.gpu_memory_config.dict())
         sapien.render.set_log_level(os.getenv("MS_RENDERER_LOG_LEVEL", "warn"))
 
         # Set simulation and control frequency
-        self._sim_freq = self.sim_cfg.sim_freq
-        self._control_freq = self.sim_cfg.control_freq
-        if self._sim_freq % self._control_freq != 0:
-            logger.warn(
-                f"sim_freq({self._sim_freq}) is not divisible by control_freq({self._control_freq}).",
-            )
+        self._sim_freq = self.sim_config.sim_freq
+        self._control_freq = self.sim_config.control_freq
+        assert self._sim_freq % self._control_freq == 0, f"sim_freq({self._sim_freq}) is not divisible by control_freq({self._control_freq})."
         self._sim_steps_per_control = self._sim_freq // self._control_freq
 
         # Observation mode
@@ -288,6 +272,7 @@ class BaseEnv(gym.Env):
         if obs_mode not in self.SUPPORTED_OBS_MODES:
             raise NotImplementedError("Unsupported obs mode: {}".format(obs_mode))
         self._obs_mode = obs_mode
+        self._visual_obs_mode_struct = parse_visual_obs_mode_to_struct(self._obs_mode)
 
         # Reward mode
         if reward_mode is None:
@@ -392,10 +377,17 @@ class BaseEnv(gym.Env):
     def _default_human_render_camera_configs(
         self,
     ) -> Union[
-        BaseSensorConfig, Sequence[BaseSensorConfig], Dict[str, BaseSensorConfig]
+        CameraConfig, Sequence[CameraConfig], Dict[str, CameraConfig]
     ]:
         """Add default cameras for rendering when using render_mode='rgb_array'. These can be overriden by the user at env creation time """
         return []
+
+    @property
+    def _default_viewer_camera_configs(
+        self,
+    ) -> CameraConfig:
+        """Default configuration for the viewer camera, controlling shader, fov, etc. By default if there is a human render camera called "render_camera" then the viewer will use that camera's pose."""
+        return CameraConfig(uid="viewer", pose=sapien.Pose([0, 0, 1]), width=1920, height=1080, shader_pack="minimal")
 
     @property
     def sim_freq(self):
@@ -452,15 +444,15 @@ class BaseEnv(gym.Env):
             obs = common.flatten_state_dict(state_dict, use_torch=True, device=self.device)
         elif self._obs_mode == "state_dict":
             obs = self._get_obs_state_dict(info)
-        elif self._obs_mode in ["sensor_data", "rgbd", "rgb", "pointcloud"]:
+        elif self._obs_mode == "pointcloud":
+            # TODO support more flexible pcd obs mode with new render system
             obs = self._get_obs_with_sensor_data(info)
-            if self._obs_mode == "rgbd":
-                obs = sensor_data_to_rgbd(obs, self._sensors, rgb=True, depth=True, segmentation=True)
-            elif self._obs_mode == "rgb":
-                # NOTE (stao): this obs mode is merely a convenience, it does not make simulation run noticebally faster
-                obs = sensor_data_to_rgbd(obs, self._sensors, rgb=True, depth=False, segmentation=True)
-            elif self.obs_mode == "pointcloud":
-                obs = sensor_data_to_pointcloud(obs, self._sensors)
+            obs = sensor_data_to_pointcloud(obs, self._sensors)
+        elif self._obs_mode == "sensor_data":
+            # return raw texture data dependent on choice of shader
+            obs = self._get_obs_with_sensor_data(info, apply_texture_transforms=False)
+        elif self._obs_mode in ["rgb", "depth", "segmentation", "rgbd", "rgb+depth", "rgb+depth+segmentation", "depth+segmentation", "rgb+segmentation"]:
+            obs = self._get_obs_with_sensor_data(info)
         else:
             raise NotImplementedError(self._obs_mode)
         return obs
@@ -473,11 +465,12 @@ class BaseEnv(gym.Env):
         )
 
     def _get_obs_agent(self):
-        """Get observations from the agent's sensors, e.g., proprioceptive sensors."""
+        """Get observations about the agent's state. By default it is proprioceptive observations which include qpos and qvel.
+        Controller state is also included although most default controllers do not have any state."""
         return self.agent.get_proprioception()
 
     def _get_obs_extra(self, info: Dict):
-        """Get task-relevant extra observations."""
+        """Get task-relevant extra observations. Usually defined on a task by task basis"""
         return dict()
 
     def capture_sensor_data(self):
@@ -485,13 +478,9 @@ class BaseEnv(gym.Env):
         for sensor in self._sensors.values():
             sensor.capture()
 
-    def get_sensor_obs(self) -> Dict[str, Dict[str, torch.Tensor]]:
-        """Get raw sensor data for use as observations."""
-        return self.scene.get_sensor_obs()
-
     def get_sensor_images(self) -> Dict[str, Dict[str, torch.Tensor]]:
-        """Get raw sensor data as images for visualization purposes."""
-        return self.scene.get_sensor_images()
+        """Get image (RGB) visualizations of what sensors currently sense"""
+        return self.scene.get_sensor_images(self._get_obs_sensor_data())
 
     def get_sensor_params(self) -> Dict[str, Dict[str, torch.Tensor]]:
         """Get all sensor parameters."""
@@ -500,16 +489,31 @@ class BaseEnv(gym.Env):
             params[name] = sensor.get_params()
         return params
 
-    def _get_obs_with_sensor_data(self, info: Dict) -> dict:
+    def _get_obs_sensor_data(self, apply_texture_transforms: bool = True) -> dict:
+        """get only data from sensors. Auto hides any objects that are designated to be hidden"""
         for obj in self._hidden_objects:
             obj.hide_visual()
         self.scene.update_render()
         self.capture_sensor_data()
+        sensor_obs = dict()
+        for name, sensor in self.scene.sensors.items():
+            if isinstance(sensor, Camera):
+                if self.obs_mode in ["state", "state_dict"]:
+                    # normally in non visual observation modes we do not render sensor observations. But some users may want to render sensor data for debugging or various algorithms
+                    sensor_obs[name] = sensor.get_obs(position=False, segmentation=False, apply_texture_transforms=apply_texture_transforms)
+                else:
+                    sensor_obs[name] = sensor.get_obs(rgb=self._visual_obs_mode_struct.rgb, depth=self._visual_obs_mode_struct.depth, position=self._visual_obs_mode_struct.position, segmentation=self._visual_obs_mode_struct.segmentation, apply_texture_transforms=apply_texture_transforms)
+        # explicitly synchronize and wait for cuda kernels to finish
+        # this prevents the GPU from making poor scheduling decisions when other physx code begins to run
+        torch.cuda.synchronize()
+        return sensor_obs
+    def _get_obs_with_sensor_data(self, info: Dict, apply_texture_transforms: bool = True) -> dict:
+        """Get the observation with sensor data"""
         return dict(
             agent=self._get_obs_agent(),
             extra=self._get_obs_extra(info),
             sensor_param=self.get_sensor_params(),
-            sensor_data=self.get_sensor_obs(),
+            sensor_data=self._get_obs_sensor_data(apply_texture_transforms),
         )
 
     @property
@@ -619,52 +623,62 @@ class BaseEnv(gym.Env):
         self._sensor_configs = dict()
 
         # Add task/external sensors
-        self._sensor_configs.update(parse_camera_cfgs(self._default_sensor_configs))
+        self._sensor_configs.update(parse_camera_configs(self._default_sensor_configs))
 
         # Add agent sensors
         self._agent_sensor_configs = dict()
-        self._agent_sensor_configs = parse_camera_cfgs(self.agent._sensor_configs)
+        self._agent_sensor_configs = parse_camera_configs(self.agent._sensor_configs)
         self._sensor_configs.update(self._agent_sensor_configs)
 
         # Add human render camera configs
-        self._human_render_camera_configs = parse_camera_cfgs(
+        self._human_render_camera_configs = parse_camera_configs(
             self._default_human_render_camera_configs
+        )
+
+        self._viewer_camera_config = parse_camera_configs(
+            self._default_viewer_camera_configs
         )
 
         # Override camera configurations with user supplied configurations
         if self._custom_sensor_configs is not None:
-            update_camera_cfgs_from_dict(
+            update_camera_configs_from_dict(
                 self._sensor_configs, self._custom_sensor_configs
             )
         if self._custom_human_render_camera_configs is not None:
-            update_camera_cfgs_from_dict(
+            update_camera_configs_from_dict(
                 self._human_render_camera_configs,
                 self._custom_human_render_camera_configs,
             )
+        if self._custom_viewer_camera_configs is not None:
+            update_camera_configs_from_dict(
+                self._viewer_camera_config,
+                self._custom_viewer_camera_configs,
+            )
+        self._viewer_camera_config = self._viewer_camera_config["viewer"]
 
         # Now we instantiate the actual sensor objects
         self._sensors = dict()
 
-        for uid, sensor_cfg in self._sensor_configs.items():
+        for uid, sensor_config in self._sensor_configs.items():
             if uid in self._agent_sensor_configs:
                 articulation = self.agent.robot
             else:
                 articulation = None
-            if isinstance(sensor_cfg, StereoDepthCameraConfig):
+            if isinstance(sensor_config, StereoDepthCameraConfig):
                 sensor_cls = StereoDepthCamera
-            elif isinstance(sensor_cfg, CameraConfig):
+            elif isinstance(sensor_config, CameraConfig):
                 sensor_cls = Camera
             self._sensors[uid] = sensor_cls(
-                sensor_cfg,
+                sensor_config,
                 self.scene,
                 articulation=articulation,
             )
 
         # Cameras for rendering only
         self._human_render_cameras = dict()
-        for uid, camera_cfg in self._human_render_camera_configs.items():
+        for uid, camera_config in self._human_render_camera_configs.items():
             self._human_render_cameras[uid] = Camera(
-                camera_cfg,
+                camera_config,
                 self.scene,
             )
 
@@ -879,7 +893,7 @@ class BaseEnv(gym.Env):
             if self.num_envs == 1 and action_is_unbatched:
                 action = common.batch(action)
             self.agent.set_action(action)
-            if physx.is_gpu_enabled():
+            if self._sim_device.is_cuda():
                 self.scene.px.gpu_apply_articulation_target_position()
                 self.scene.px.gpu_apply_articulation_target_velocity()
         self._before_control_step()
@@ -933,11 +947,10 @@ class BaseEnv(gym.Env):
     # Simulation and other gym interfaces
     # -------------------------------------------------------------------------- #
     def _set_scene_config(self):
-        # **self.sim_cfg.scene_cfg.dict()
-        physx.set_shape_config(contact_offset=self.sim_cfg.scene_cfg.contact_offset, rest_offset=self.sim_cfg.scene_cfg.rest_offset)
-        physx.set_body_config(solver_position_iterations=self.sim_cfg.scene_cfg.solver_position_iterations, solver_velocity_iterations=self.sim_cfg.scene_cfg.solver_velocity_iterations, sleep_threshold=self.sim_cfg.scene_cfg.sleep_threshold)
-        physx.set_scene_config(gravity=self.sim_cfg.scene_cfg.gravity, bounce_threshold=self.sim_cfg.scene_cfg.bounce_threshold, enable_pcm=self.sim_cfg.scene_cfg.enable_pcm, enable_tgs=self.sim_cfg.scene_cfg.enable_tgs, enable_ccd=self.sim_cfg.scene_cfg.enable_ccd, enable_enhanced_determinism=self.sim_cfg.scene_cfg.enable_enhanced_determinism, enable_friction_every_iteration=self.sim_cfg.scene_cfg.enable_friction_every_iteration, cpu_workers=self.sim_cfg.scene_cfg.cpu_workers )
-        physx.set_default_material(**self.sim_cfg.default_materials_cfg.dict())
+        physx.set_shape_config(contact_offset=self.sim_config.scene_config.contact_offset, rest_offset=self.sim_config.scene_config.rest_offset)
+        physx.set_body_config(solver_position_iterations=self.sim_config.scene_config.solver_position_iterations, solver_velocity_iterations=self.sim_config.scene_config.solver_velocity_iterations, sleep_threshold=self.sim_config.scene_config.sleep_threshold)
+        physx.set_scene_config(gravity=self.sim_config.scene_config.gravity, bounce_threshold=self.sim_config.scene_config.bounce_threshold, enable_pcm=self.sim_config.scene_config.enable_pcm, enable_tgs=self.sim_config.scene_config.enable_tgs, enable_ccd=self.sim_config.scene_config.enable_ccd, enable_enhanced_determinism=self.sim_config.scene_config.enable_enhanced_determinism, enable_friction_every_iteration=self.sim_config.scene_config.enable_friction_every_iteration, cpu_workers=self.sim_config.scene_config.cpu_workers )
+        physx.set_default_material(**self.sim_config.default_materials_config.dict())
 
     def _setup_scene(self):
         """Setup the simulation scene instance.
@@ -959,8 +972,8 @@ class BaseEnv(gym.Env):
                 self.physx_system.set_scene_offset(
                     scene,
                     [
-                        scene_x * self.sim_cfg.spacing,
-                        scene_y * self.sim_cfg.spacing,
+                        scene_x * self.sim_config.spacing,
+                        scene_y * self.sim_config.spacing,
                         0,
                     ],
                 )
@@ -973,10 +986,9 @@ class BaseEnv(gym.Env):
         # create a "global" scene object that users can work with that is linked with all other scenes created
         self.scene = ManiSkillScene(
             sub_scenes,
-            sim_cfg=self.sim_cfg,
+            sim_config=self.sim_config,
             device=self.device,
-            parallel_in_single_scene=self._parallel_in_single_scene,
-            shader_dir=self.shader_dir
+            parallel_in_single_scene=self._parallel_in_single_scene
         )
         self.physx_system.timestep = 1.0 / self._sim_freq
 
@@ -1078,21 +1090,6 @@ class BaseEnv(gym.Env):
 
         Called by `self._reconfigure`
         """
-        # commented code below is for a different parallel render system in the GUI but it does not support ray tracing
-        # instead to show parallel envs in the GUI they are all spawned into the same sub scene and offsets are auto
-        # added / subtracted from object poses.
-        # if self.num_envs > 1:
-        #     side = int(np.ceil(self.num_envs ** 0.5))
-        #     idx = np.arange(self.num_envs)
-        #     offsets = np.stack([idx // side, idx % side, np.zeros_like(idx)], axis=1) * self.sim_cfg.spacing
-        #     self.viewer.set_scenes(self.scene.sub_scenes, offsets=offsets)
-        #     vs = self.viewer.window._internal_scene  # type: ignore
-        #     cubemap = self.scene.sub_scenes[0].render_system.get_cubemap()
-        #     if cubemap is not None:  # type: ignore [sapien may return None]
-        #         vs.set_cubemap(cubemap._internal_cubemap)
-        #     else:
-        #         vs.set_ambient_light([0.5, 0.5, 0.5])
-        # else:
         self._viewer.set_scene(self.scene.sub_scenes[0])
         control_window: sapien.utils.viewer.control_window.ControlWindow = (
             sapien_utils.get_obj_by_type(
@@ -1110,7 +1107,7 @@ class BaseEnv(gym.Env):
         for obj in self._hidden_objects:
             obj.show_visual()
         if self._viewer is None:
-            self._viewer = Viewer()
+            self._viewer = create_viewer(self._viewer_camera_config)
             self._setup_viewer()
         if physx.is_gpu_enabled() and self.scene._gpu_sim_initialized:
             self.physx_system.sync_poses_gpu_to_cpu()
@@ -1142,14 +1139,11 @@ class BaseEnv(gym.Env):
         """
         Renders all sensors that the agent can use and see and displays them
         """
-        for obj in self._hidden_objects:
-            obj.hide_visual()
         images = []
-        self.scene.update_render()
-        self.capture_sensor_data()
         sensor_images = self.get_sensor_images()
         for image in sensor_images.values():
-            images.append(image)
+            for img in image.values():
+                images.append(img)
         return tile_images(images)
 
     def render_all(self):
@@ -1160,15 +1154,13 @@ class BaseEnv(gym.Env):
         self.scene.update_render()
         render_images = self.scene.get_human_render_camera_images()
 
-        for obj in self._hidden_objects:
-            obj.hide_visual()
-        self.scene.update_render()
-        self.capture_sensor_data()
         sensor_images = self.get_sensor_images()
         for image in render_images.values():
-            images.append(image)
+            for img in image.values():
+                images.append(img)
         for image in sensor_images.values():
-            images.append(image)
+            for img in image.values():
+                images.append(img)
         return tile_images(images)
 
     def render(self):
@@ -1229,8 +1221,8 @@ class BaseEnv(gym.Env):
         sensor_settings_str = []
         for uid, cam in self._sensors.items():
             if isinstance(cam, Camera):
-                cfg = cam.cfg
-                sensor_settings_str.append(f"RGBD({cfg.width}x{cfg.height})")
+                config = cam.config
+                sensor_settings_str.append(f"RGBD({config.width}x{config.height})")
         sensor_settings_str = ", ".join(sensor_settings_str)
         sim_backend = "gpu" if physx.is_gpu_enabled() else "cpu"
         print(

@@ -16,7 +16,6 @@ def main():
         control_mode="pd_joint_pos",
         render_mode="rgb_array",
         reward_mode="dense",
-        # shader_dir="rt-fast",
     )
     for seed in range(100):
         res = solve(env, seed=seed, debug=False, vis=True)

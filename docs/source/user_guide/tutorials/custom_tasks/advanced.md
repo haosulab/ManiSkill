@@ -168,7 +168,7 @@ In the drop down below is a copy of all the configurations possible
 :::{dropdown} All sim configs
 :icon: code
 
-```
+```python
 @dataclass
 class GPUMemoryConfig:
     """A gpu memory configuration dataclass that neatly holds all parameters that configure physx GPU memory for simulation"""
@@ -232,16 +232,16 @@ class DefaultMaterialsConfig:
 
 @dataclass
 class SimConfig:
-    spacing: int = 5
+    spacing: float = 5
     """Controls the spacing between parallel environments when simulating on GPU in meters. Increase this value
     if you expect objects in one parallel environment to impact objects within this spacing distance"""
     sim_freq: int = 100
     """simulation frequency (Hz)"""
     control_freq: int = 20
     """control frequency (Hz). Every control step (e.g. env.step) contains sim_freq / control_freq physx simulation steps"""
-    gpu_memory_cfg: GPUMemoryConfig = field(default_factory=GPUMemoryConfig)
-    scene_cfg: SceneConfig = field(default_factory=SceneConfig)
-    default_materials_cfg: DefaultMaterialsConfig = field(
+    gpu_memory_config: GPUMemoryConfig = field(default_factory=GPUMemoryConfig)
+    scene_config: SceneConfig = field(default_factory=SceneConfig)
+    default_materials_config: DefaultMaterialsConfig = field(
         default_factory=DefaultMaterialsConfig
     )
 
@@ -259,7 +259,7 @@ class MyCustomTask(BaseEnv):
     @property
     def _default_sim_config(self):
         return SimConfig(
-            gpu_memory_cfg=GPUMemoryConfig(
+            gpu_memory_config=GPUMemoryConfig(
                 max_rigid_contact_count=self.num_envs * max(1024, self.num_envs) * 8,
                 max_rigid_patch_count=self.num_envs * max(1024, self.num_envs) * 2,
                 found_lost_pairs_capacity=2**26,

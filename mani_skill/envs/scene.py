@@ -1,5 +1,5 @@
 from functools import cached_property
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import sapien
@@ -8,7 +8,7 @@ import sapien.render
 import torch
 from sapien.render import RenderCameraComponent
 
-from mani_skill.render import SAPIEN_RENDER_SYSTEM, set_shader_pack
+from mani_skill.render import SAPIEN_RENDER_SYSTEM
 from mani_skill.sensors.base_sensor import BaseSensor
 from mani_skill.sensors.camera import Camera
 from mani_skill.utils import common, sapien_utils
@@ -40,11 +40,10 @@ class ManiSkillScene:
     def __init__(
         self,
         sub_scenes: List[sapien.Scene] = None,
-        sim_cfg: SimConfig = SimConfig(),
+        sim_config: SimConfig = SimConfig(),
         debug_mode: bool = True,
         device: Device = None,
         parallel_in_single_scene: bool = False,
-        shader_dir: str = "default",
     ):
         if sub_scenes is None:
             sub_scenes = [sapien.Scene()]
@@ -52,11 +51,10 @@ class ManiSkillScene:
         self.px: Union[physx.PhysxCpuSystem, physx.PhysxGpuSystem] = self.sub_scenes[
             0
         ].physx_system
-        self.sim_cfg = sim_cfg
+        self.sim_config = sim_config
         self._gpu_sim_initialized = False
         self.debug_mode = debug_mode
         self.device = device
-        self.shader_dir = shader_dir
 
         self.render_system_group: sapien.render.RenderSystemGroup = None
         self.camera_groups: Dict[str, sapien.render.RenderCameraGroup] = dict()
@@ -369,6 +367,7 @@ class ManiSkillScene:
                     scene.update_render()
                 self._setup_gpu_rendering()
                 self._gpu_setup_sensors(self.sensors)
+                self._gpu_setup_sensors(self.human_render_cameras)
 
             manager: sapien.render.GpuSyncManager = self.render_system_group
             manager.sync()
@@ -980,7 +979,7 @@ class ManiSkillScene:
                 try:
                     camera_group = self.render_system_group.create_camera_group(
                         sensor.camera._render_cameras,
-                        sensor.texture_names,
+                        list(sensor.config.shader_config.texture_names.keys()),
                     )
                 except RuntimeError as e:
                     raise RuntimeError(
@@ -997,70 +996,60 @@ class ManiSkillScene:
         for name, sensor in sensors.items():
             if isinstance(sensor, Camera):
                 batch_renderer = sapien.render.RenderManager(
-                    sapien.render.get_shader_pack("default")
+                    sapien.render.get_shader_pack(
+                        sensor.config.shader_config.shader_pack
+                    )
                 )
-                batch_renderer.set_size(sensor.cfg.width, sensor.cfg.height)
-
+                batch_renderer.set_size(sensor.config.width, sensor.config.height)
                 batch_renderer.set_cameras(sensor.camera._render_cameras)
-                batch_renderer.take_picture()
                 sensor.camera.camera_group = self.camera_groups[name] = batch_renderer
             else:
                 raise NotImplementedError(
                     f"This sensor {sensor} of type {sensor.__class__} has not bget_picture_cuda implemented yet on the GPU"
                 )
 
-    def get_sensor_obs(self) -> Dict[str, Dict[str, torch.Tensor]]:
-        """Get raw sensor data for use as observations."""
-        sensor_data = dict()
-        for name, sensor in self.sensors.items():
-            sensor_data[name] = sensor.get_obs()
-        return sensor_data
-
-    def get_sensor_images(self) -> Dict[str, Dict[str, torch.Tensor]]:
+    def get_sensor_images(
+        self, obs: Dict[str, Any]
+    ) -> Dict[str, Dict[str, torch.Tensor]]:
         """Get raw sensor data as images for visualization purposes."""
         sensor_data = dict()
         for name, sensor in self.sensors.items():
-            sensor_data[name] = sensor.get_images()
+            sensor_data[name] = sensor.get_images(obs[name])
         return sensor_data
 
     def get_human_render_camera_images(
         self, camera_name: str = None
-    ) -> Dict[str, Dict[str, torch.Tensor]]:
+    ) -> Dict[str, torch.Tensor]:
         image_data = dict()
         if physx.is_gpu_enabled():
             if self.parallel_in_single_scene:
                 for name, camera in self.human_render_cameras.items():
                     camera.camera._render_cameras[0].take_picture()
-                    # TODO (stao): in the future shaders will be handled more cleanly
-                    if self.shader_dir == "default":
-                        rgb = common.to_tensor(
-                            camera.camera._render_cameras[0].get_picture("Color")
-                        )[None, ...]
-                        rgb = (rgb[..., :3]).to(torch.uint8)
-                    else:
-                        rgb = common.to_tensor(
-                            camera.camera._render_cameras[0].get_picture("Color")
-                        )[None, ...]
-                        rgb = (rgb[..., :3] * 255).to(torch.uint8)
+                    rgb = camera.get_obs(
+                        rgb=True, depth=False, segmentation=False, position=False
+                    )["rgb"]
                     image_data[name] = rgb
             else:
-                for name in self.human_render_cameras.keys():
-                    camera_group = self.camera_groups[name]
+                for name, camera in self.human_render_cameras.items():
                     if camera_name is not None and name != camera_name:
                         continue
-                    camera_group.take_picture()
-                    rgb = (
-                        camera_group.get_picture_cuda("Color").torch()[..., :3].clone()
-                    )
+                    assert camera.config.shader_config.shader_pack not in [
+                        "rt",
+                        "rt-fast",
+                        "rt-med",
+                    ], "ray tracing shaders do not work with parallel rendering"
+                    camera.capture()
+                    rgb = camera.get_obs(
+                        rgb=True, depth=False, segmentation=False, position=False
+                    )["rgb"]
                     image_data[name] = rgb
         else:
             for name, camera in self.human_render_cameras.items():
                 if camera_name is not None and name != camera_name:
                     continue
                 camera.capture()
-                if self.shader_dir == "default":
-                    rgb = (camera.get_picture("Color")[..., :3]).to(torch.uint8)
-                else:
-                    rgb = (camera.get_picture("Color")[..., :3] * 255).to(torch.uint8)
+                rgb = camera.get_obs(
+                    rgb=True, depth=False, segmentation=False, position=False
+                )["rgb"]
                 image_data[name] = rgb
         return image_data

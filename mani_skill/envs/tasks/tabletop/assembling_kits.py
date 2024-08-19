@@ -67,7 +67,7 @@ class AssemblingKitsEnv(BaseEnv):
     @property
     def _default_sim_config(self):
         return SimConfig(
-            gpu_memory_cfg=GPUMemoryConfig(max_rigid_contact_count=2**20)
+            gpu_memory_config=GPUMemoryConfig(max_rigid_contact_count=2**20)
         )
 
     @property

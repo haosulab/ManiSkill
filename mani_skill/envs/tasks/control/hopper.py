@@ -111,7 +111,7 @@ class HopperEnv(BaseEnv):
     @property
     def _default_sim_config(self):
         return SimConfig(
-            scene_cfg=SceneConfig(
+            scene_config=SceneConfig(
                 solver_position_iterations=4, solver_velocity_iterations=1
             ),
             sim_freq=100,
