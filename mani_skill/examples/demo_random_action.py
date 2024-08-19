@@ -81,8 +81,6 @@ def main(args):
     env.action_space.seed(args.seed)
     if args.render_mode is not None:
         viewer = env.render()
-        viewer.draw_aabb(np.array([0, 0, 0]), np.array([1, 1, 1]), np.array([1, 0, 0]))
-
         if isinstance(viewer, sapien.utils.Viewer):
             viewer.paused = args.pause
         env.render()
