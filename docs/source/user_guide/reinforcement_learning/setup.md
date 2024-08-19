@@ -65,10 +65,10 @@ Note that for efficiency, everything returned by the environment will be a batch
 
 RL practitioners often use wrappers to modify and augment environments. These are documented in the [wrappers](../wrappers/index.md) section. Some commonly used ones include:
 - [RecordEpisode](../wrappers/record.md) for recording videos/trajectories of rollouts.
-
+- [FlattenRGBDObservations](../wrappers/flatten.md#flatten-rgbd-observations) for flattening the `obs_mode="rgbd"` or `obs_mode="rgb+depth"` observations into a simple dictionary with just a combined `rgbd` tensor and `state` tensor.
 
 ## Common Mistakes / Gotchas
 
-In old environments/benchmarks, people often have used `env.render(mode="rgb_array")` or `env.render()` to get image inputs for RL agents. This is not correct because image observations are returned by `env.reset()` and `env.step()` directly and `env.render` is just for visualization/video recording only. 
+In old environments/benchmarks, people often have used `env.render(mode="rgb_array")` or `env.render()` to get image inputs for RL agents. This is not correct because image observations are returned by `env.reset()` and `env.step()` directly and `env.render` is just for visualization/video recording only in ManiSkill.
 
 For robotics tasks observations often are composed of state information (like robot joint angles) and image observations (like camera images). All tasks in ManiSkill will specifically remove certain priviliged state information from the observations when the `obs_mode` is not `state` or `state_dict` like ground truth object poses. Moreover, the image observations returned by `env.reset()` and `env.step()` are usually from cameras that are positioned in specific locations to provide a good view of the task to make it solvable.
