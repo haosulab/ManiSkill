@@ -17,7 +17,7 @@ def parse_args(args=None):
     parser.add_argument("--num-envs", type=int, default=1, help="Number of environments to run.")
     parser.add_argument("-c", "--control-mode", type=str)
     parser.add_argument("--render-mode", type=str, default="rgb_array")
-    parser.add_argument("--shader", default="minimal", type=str, help="Change shader used for all cameras in the environment for rendering. Default is 'minimal' which is very fast. Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer")
+    parser.add_argument("--shader", default="default", type=str, help="Change shader used for all cameras in the environment for rendering. Default is 'minimal' which is very fast. Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer")
     parser.add_argument("--record-dir", type=str)
     parser.add_argument("-p", "--pause", action="store_true", help="If using human render mode, auto pauses the simulation upon loading")
     parser.add_argument("--quiet", action="store_true", help="Disable verbose output.")
@@ -81,6 +81,8 @@ def main(args):
     env.action_space.seed(args.seed)
     if args.render_mode is not None:
         viewer = env.render()
+        viewer.draw_aabb(np.array([0, 0, 0]), np.array([1, 1, 1]), np.array([1, 0, 0]))
+
         if isinstance(viewer, sapien.utils.Viewer):
             viewer.paused = args.pause
         env.render()
@@ -94,7 +96,6 @@ def main(args):
             print("info", info)
         if args.render_mode is not None:
             env.render()
-
         if args.render_mode is None or args.render_mode != "human":
             if (terminated | truncated).any():
                 break
