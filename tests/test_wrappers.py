@@ -85,7 +85,7 @@ def test_recordepisode_wrapper_gpu_render_sensor(env_id, obs_mode):
     )
     env = RecordEpisode(
         env,
-        output_dir=f"videos/pytest/{env_id}-gpu-render-sensor",
+        output_dir=f"videos/pytest/{env_id}-gpu-{obs_mode}-render-sensor",
         trajectory_name=f"test_traj_{obs_mode}",
         save_trajectory=True,
         max_steps_per_video=50,
@@ -113,7 +113,7 @@ def test_recordepisode_wrapper_render_sensor(env_id, obs_mode):
     )
     env = RecordEpisode(
         env,
-        output_dir=f"videos/pytest/{env_id}-render-sensor",
+        output_dir=f"videos/pytest/{env_id}-{obs_mode}-render-sensor",
         trajectory_name=f"test_traj_{obs_mode}",
         info_on_video=True,
     )
@@ -140,7 +140,7 @@ def test_recordepisode_wrapper_partial_reset_gpu(env_id, obs_mode):
     )
     env = RecordEpisode(
         env,
-        output_dir=f"videos/pytest/{env_id}-gpu-partial-resets",
+        output_dir=f"videos/pytest/{env_id}-gpu-{obs_mode}-partial-resets",
         trajectory_name=f"test_traj_{obs_mode}",
         save_trajectory=True,
         max_steps_per_video=50,
@@ -173,7 +173,7 @@ def test_recordepisode_wrapper_partial_reset(env_id, obs_mode):
     )
     env = RecordEpisode(
         env,
-        output_dir=f"videos/pytest/{env_id}-partial-resets",
+        output_dir=f"videos/pytest/{env_id}-{obs_mode}-partial-resets",
         trajectory_name=f"test_traj_{obs_mode}",
         save_trajectory=True,
         max_steps_per_video=50,
