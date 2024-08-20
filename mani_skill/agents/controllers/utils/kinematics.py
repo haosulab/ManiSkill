@@ -5,7 +5,12 @@ from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from os import devnull
 from typing import List
 
-import pytorch_kinematics as pk
+try:
+    import pytorch_kinematics as pk
+except ImportError:
+    raise ImportError(
+        "pytorch_kinematics_ms not installed. Install with pip install pytorch_kinematics_ms"
+    )
 import torch
 from sapien.wrapper.pinocchio_model import PinocchioModel
 

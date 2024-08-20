@@ -36,7 +36,9 @@ def main(args):
         control_mode="pd_joint_pos",
         render_mode=args.render_mode,
         reward_mode="dense" if args.reward_mode is None else args.reward_mode,
-        shader_dir=args.shader,
+        sensor_configs=dict(shader_pack=args.shader),
+        human_render_camera_configs=dict(shader_pack=args.shader),
+        viewer_camera_configs=dict(shader_pack=args.shader),
         sim_backend=args.sim_backend
     )
     if env_id not in MP_SOLUTIONS:

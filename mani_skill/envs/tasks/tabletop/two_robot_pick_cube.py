@@ -39,13 +39,17 @@ class TwoRobotPickCube(BaseEnv):
     Visualization: TODO
     """
 
-    SUPPORTED_ROBOTS = [("panda", "panda")]
+    SUPPORTED_ROBOTS = [("panda_wristcam", "panda_wristcam")]
     agent: MultiAgent[Tuple[Panda, Panda]]
     cube_half_size = 0.02
     goal_thresh = 0.025
 
     def __init__(
-        self, *args, robot_uids=("panda", "panda"), robot_init_qpos_noise=0.02, **kwargs
+        self,
+        *args,
+        robot_uids=("panda_wristcam", "panda_wristcam"),
+        robot_init_qpos_noise=0.02,
+        **kwargs
     ):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
@@ -53,7 +57,7 @@ class TwoRobotPickCube(BaseEnv):
     @property
     def _default_sim_config(self):
         return SimConfig(
-            gpu_memory_cfg=GPUMemoryConfig(
+            gpu_memory_config=GPUMemoryConfig(
                 found_lost_pairs_capacity=2**25,
                 max_rigid_patch_count=2**19,
                 max_rigid_contact_count=2**21,

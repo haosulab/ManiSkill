@@ -72,7 +72,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
     def _default_sim_config(self):
         return SimConfig(
             spacing=10,
-            gpu_memory_cfg=GPUMemoryConfig(
+            gpu_memory_config=GPUMemoryConfig(
                 max_rigid_contact_count=2**21, max_rigid_patch_count=2**19
             ),
         )

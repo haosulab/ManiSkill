@@ -6,8 +6,8 @@ This code is also heavily commented to serve as a tutorial for how to build cust
 
 import json
 import os.path as osp
-from typing import Dict, List, Tuple, Union
 from pathlib import Path
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
 import sapien
@@ -16,9 +16,9 @@ import transforms3d
 
 from mani_skill import ASSET_DIR
 from mani_skill.agents.robots.fetch import (
-    Fetch,
-    FETCH_WHEELS_COLLISION_BIT,
     FETCH_BASE_COLLISION_BIT,
+    FETCH_WHEELS_COLLISION_BIT,
+    Fetch,
 )
 from mani_skill.utils.scene_builder import SceneBuilder
 from mani_skill.utils.scene_builder.registration import register_scene_builder
@@ -82,14 +82,14 @@ class ReplicaCADSceneBuilder(SceneBuilder):
 
             env_idx = [i for i, v in enumerate(build_config_idxs) if v == bci]
             unique_id = "scs-" + str(env_idx).replace(" ", "")
-            build_cfg_path = self.build_configs[bci]
+            build_config_path = self.build_configs[bci]
 
             # We read the json config file describing the scene setup for the selected ReplicaCAD scene
             with open(
                 osp.join(
                     ASSET_DIR,
                     "scene_datasets/replica_cad_dataset/configs/scenes",
-                    build_cfg_path,
+                    build_config_path,
                 ),
                 "rb",
             ) as f:
@@ -132,19 +132,19 @@ class ReplicaCADSceneBuilder(SceneBuilder):
 
                 # Again, for any dataset you will have to figure out how they reference object files
                 # Note that ASSET_DIR will always refer to the ~/.maniskill/data folder or whatever MS_ASSET_DIR is set to
-                obj_cfg_path = osp.join(
+                obj_config_path = osp.join(
                     ASSET_DIR,
                     "scene_datasets/replica_cad_dataset/configs/objects",
                     f"{osp.basename(obj_meta['template_name'])}.object_config.json",
                 )
-                with open(obj_cfg_path) as f:
-                    obj_cfg = json.load(f)
+                with open(obj_config_path) as f:
+                    obj_config = json.load(f)
                 visual_file = osp.join(
-                    osp.dirname(obj_cfg_path), obj_cfg["render_asset"]
+                    osp.dirname(obj_config_path), obj_config["render_asset"]
                 )
-                if "collision_asset" in obj_cfg:
+                if "collision_asset" in obj_config:
                     collision_file = osp.join(
-                        osp.dirname(obj_cfg_path), obj_cfg["collision_asset"]
+                        osp.dirname(obj_config_path), obj_config["collision_asset"]
                     )
                 builder = self.scene.create_actor_builder()
                 pos = obj_meta["translation"]
@@ -157,8 +157,8 @@ class ReplicaCADSceneBuilder(SceneBuilder):
                 if obj_meta["motion_type"] == "DYNAMIC":
                     builder.add_visual_from_file(visual_file)
                     if (
-                        "use_bounding_box_for_collision" in obj_cfg
-                        and obj_cfg["use_bounding_box_for_collision"]
+                        "use_bounding_box_for_collision" in obj_config
+                        and obj_config["use_bounding_box_for_collision"]
                     ):
                         # some dynamic objects do not have decomposed convex meshes and instead should use a simple bounding box for collision detection
                         # in this case we use the add_convex_collision_from_file function of SAPIEN which just creates a convex collision based on the visual mesh
@@ -215,12 +215,12 @@ class ReplicaCADSceneBuilder(SceneBuilder):
 
                 # for now classify articulated objects as "movable" object
                 for env_num in env_idx:
-                    self.articulations[f"env-{env_num}_{articulation.name}"] = (
-                        articulation
-                    )
-                    self.scene_objects[f"env-{env_num}_{articulation.name}"] = (
-                        articulation
-                    )
+                    self.articulations[
+                        f"env-{env_num}_{articulation.name}"
+                    ] = articulation
+                    self.scene_objects[
+                        f"env-{env_num}_{articulation.name}"
+                    ] = articulation
 
             # ReplicaCAD also specifies where to put lighting
             with open(
@@ -230,19 +230,19 @@ class ReplicaCADSceneBuilder(SceneBuilder):
                     f"{osp.basename(build_config_json['default_lighting'])}.lighting_config.json",
                 )
             ) as f:
-                lighting_cfg = json.load(f)
-            for light_cfg in lighting_cfg["lights"].values():
+                lighting_config = json.load(f)
+            for light_config in lighting_config["lights"].values():
                 # It appears ReplicaCAD only specifies point light sources so we only use those here
-                if light_cfg["type"] == "point":
+                if light_config["type"] == "point":
                     light_pos_fixed = (
-                        sapien.Pose(q=q) * sapien.Pose(p=light_cfg["position"])
+                        sapien.Pose(q=q) * sapien.Pose(p=light_config["position"])
                     ).p
                     # In SAPIEN, one can set color to unbounded values, higher just means more intense. ReplicaCAD provides color and intensity separately so
                     # we multiply it together here. We also take absolute value of intensity since some scene configs write negative intensities (which result in black holes)
                     self.scene.add_point_light(
                         light_pos_fixed,
-                        color=np.array(light_cfg["color"])
-                        * np.abs(light_cfg["intensity"]),
+                        color=np.array(light_config["color"])
+                        * np.abs(light_config["intensity"]),
                         scene_idxs=env_idx,
                     )
             self.scene.set_ambient_light([0.3, 0.3, 0.3])

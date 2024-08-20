@@ -3,7 +3,7 @@ from typing import Any, Dict, Union
 import numpy as np
 import torch
 
-from mani_skill.agents.robots import Fetch, Panda, Xmate3Robotiq
+from mani_skill.agents.robots import Fetch, Panda
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.utils import randomization
 from mani_skill.sensors.camera import CameraConfig
@@ -17,10 +17,12 @@ from mani_skill.utils.structs.pose import Pose
 @register_env("StackCube-v1", max_episode_steps=50)
 class StackCubeEnv(BaseEnv):
 
-    SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
-    agent: Union[Panda, Xmate3Robotiq, Fetch]
+    SUPPORTED_ROBOTS = ["panda_wristcam", "panda", "fetch"]
+    agent: Union[Panda, Fetch]
 
-    def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
+    def __init__(
+        self, *args, robot_uids="panda_wristcam", robot_init_qpos_noise=0.02, **kwargs
+    ):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 

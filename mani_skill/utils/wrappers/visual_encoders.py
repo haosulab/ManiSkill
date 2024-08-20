@@ -8,7 +8,7 @@ from mani_skill.utils import common
 
 
 class VisualEncoderWrapper(gym.ObservationWrapper):
-    def __init__(self, env, encoder: Literal["r3m"], encoder_cfg=dict()):
+    def __init__(self, env, encoder: Literal["r3m"], encoder_config=dict()):
         self.base_env: BaseEnv = env.unwrapped
         assert encoder == "r3m", "Only encoder='r3m' is supported at the moment"
         if encoder == "r3m":
