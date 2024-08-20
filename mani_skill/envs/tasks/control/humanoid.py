@@ -5,12 +5,11 @@ from typing import Any, Dict, Union
 import numpy as np
 import sapien
 import torch
-from transforms3d.euler import euler2quat
 
 from mani_skill.agents.robots.humanoid import Humanoid
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.utils import randomization, rewards
-from mani_skill.sensors.camera import CameraConfig, update_camera_cfgs_from_dict
+from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.building.ground import build_ground
 from mani_skill.utils.geometry import rotation_conversions
@@ -34,7 +33,7 @@ class HumanoidEnvBase(BaseEnv):
     @property
     def _default_sim_config(self):
         return SimConfig(
-            scene_cfg=SceneConfig(
+            scene_config=SceneConfig(
                 solver_position_iterations=4, solver_velocity_iterations=1
             ),
             spacing=20,

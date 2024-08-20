@@ -252,7 +252,7 @@ class MJCFLoader:
         if _parse_int(geom_attrib, "condim", 0) == 1:
             friction = _parse_float(
                 geom_attrib, "friction", 0.3
-            )  # maniskill default frection is 0.3
+            )  # maniskill default friction is 0.3
             physx_material = PhysxMaterial(
                 static_friction=friction, dynamic_friction=friction, restitution=0
             )
