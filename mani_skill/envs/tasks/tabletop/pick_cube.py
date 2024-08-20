@@ -17,7 +17,7 @@ from mani_skill.utils.structs.types import SimConfig
 
 @register_env("PickCube-v1", max_episode_steps=50)
 class PickCubeEnv(BaseEnv):
-    SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
+    SUPPORTED_ROBOTS = ["panda", "fetch"]
     agent: Union[Panda, Xmate3Robotiq, Fetch]
     cube_half_size = 0.02
     goal_thresh = 0.025

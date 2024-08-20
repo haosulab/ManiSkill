@@ -36,7 +36,7 @@ class PlaceSphereEnv(BaseEnv):
     The sphere is place on the top of the bin. The robot remains static and the gripper is not closed at the end state
     """
 
-    SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
+    SUPPORTED_ROBOTS = ["panda", "fetch"]
 
     # Specify some supported robot types
     agent: Union[Panda, Xmate3Robotiq, Fetch]

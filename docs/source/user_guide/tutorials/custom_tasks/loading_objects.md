@@ -115,7 +115,7 @@ The recommended way to do this is as follows (taken from the PickSingleYCB task)
 ```python
 class PickSingleYCBEnv(BaseEnv):
 
-    SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
+    SUPPORTED_ROBOTS = ["panda", "fetch"]
     agent: Union[Panda, Xmate3Robotiq, Fetch]
     goal_thresh = 0.025
 

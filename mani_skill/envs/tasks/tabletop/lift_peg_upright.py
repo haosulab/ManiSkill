@@ -19,7 +19,7 @@ from mani_skill.utils.structs.types import Array
 
 @register_env("LiftPegUpright-v1", max_episode_steps=50)
 class LiftPegUprightEnv(BaseEnv):
-    SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
+    SUPPORTED_ROBOTS = ["panda", "fetch"]
     agent: Union[Panda, Xmate3Robotiq, Fetch]
 
     peg_half_width = 0.025

@@ -60,7 +60,7 @@ from mani_skill.agents.robots import Fetch, Panda, Xmate3Robotiq
 
 class PushCubeEnv(BaseEnv):
 
-    SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
+    SUPPORTED_ROBOTS = ["panda", "fetch"]
 
     agent: Union[Panda, Xmate3Robotiq, Fetch]
 

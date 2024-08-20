@@ -52,7 +52,7 @@ class PushCubeEnv(BaseEnv):
     Visualization: https://maniskill.readthedocs.io/en/latest/tasks/index.html#pushcube-v1
     """
 
-    SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
+    SUPPORTED_ROBOTS = ["panda", "fetch"]
 
     # Specify some supported robot types
     agent: Union[Panda, Xmate3Robotiq, Fetch]
