@@ -56,13 +56,13 @@ Building objects in ManiSkill is nearly the exact same as it is in SAPIEN. You c
 This is the simplest part and requires almost no additional work here. Robots are added in for you automatically and have their base initialized at 0. You can specify the default robot(s) added in via the init function. In PushCube this is done as so by adding `SUPPORTED_ROBOTS` to ensure users can only run your task with the selected robots. You can further add typing if you wish to the `agent` class attribute. 
 
 ```python
-from mani_skill.agents.robots import Fetch, Panda, Xmate3Robotiq
+from mani_skill.agents.robots import Fetch, Panda
 
 class PushCubeEnv(BaseEnv):
 
-    SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
+    SUPPORTED_ROBOTS = ["panda", "fetch"]
 
-    agent: Union[Panda, Xmate3Robotiq, Fetch]
+    agent: Union[Panda, Fetch]
 
     def __init__(self, *args, robot_uids="panda", **kwargs):
         # robot_uids="fetch" is possible, or even multi-robot 

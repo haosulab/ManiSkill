@@ -43,7 +43,7 @@ VENV_OBS_MODES = [
     # "rgbd_robot_seg",
     # "pointcloud_robot_seg",
 ]
-SINGLE_ARM_STATIONARY_ROBOTS = ["panda", "xmate3_robotiq"]
+SINGLE_ARM_STATIONARY_ROBOTS = ["panda"]
 
 LOW_MEM_SIM_CONFIG = dict(
     gpu_memory_config=dict(
