@@ -2,6 +2,7 @@ import argparse
 
 import gymnasium as gym
 import numpy as np
+import sapien
 
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.utils.wrappers import RecordEpisode
@@ -16,7 +17,7 @@ def parse_args(args=None):
     parser.add_argument("--num-envs", type=int, default=1, help="Number of environments to run.")
     parser.add_argument("-c", "--control-mode", type=str)
     parser.add_argument("--render-mode", type=str, default="rgb_array")
-    parser.add_argument("--shader", default="default", type=str, help="Change shader used for rendering. Default is 'default' which is very fast. Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer")
+    parser.add_argument("--shader", default="default", type=str, help="Change shader used for all cameras in the environment for rendering. Default is 'minimal' which is very fast. Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer")
     parser.add_argument("--record-dir", type=str)
     parser.add_argument("-p", "--pause", action="store_true", help="If using human render mode, auto pauses the simulation upon loading")
     parser.add_argument("--quiet", action="store_true", help="Disable verbose output.")
@@ -57,7 +58,9 @@ def main(args):
         reward_mode=args.reward_mode,
         control_mode=args.control_mode,
         render_mode=args.render_mode,
-        shader_dir=args.shader,
+        sensor_configs=dict(shader_pack=args.shader),
+        human_render_camera_configs=dict(shader_pack=args.shader),
+        viewer_camera_configs=dict(shader_pack=args.shader),
         num_envs=args.num_envs,
         sim_backend=args.sim_backend,
         parallel_in_single_scene=parallel_in_single_scene,
@@ -78,7 +81,8 @@ def main(args):
     env.action_space.seed(args.seed)
     if args.render_mode is not None:
         viewer = env.render()
-        viewer.paused = args.pause
+        if isinstance(viewer, sapien.utils.Viewer):
+            viewer.paused = args.pause
         env.render()
     while True:
         action = env.action_space.sample()
@@ -90,7 +94,6 @@ def main(args):
             print("info", info)
         if args.render_mode is not None:
             env.render()
-
         if args.render_mode is None or args.render_mode != "human":
             if (terminated | truncated).any():
                 break

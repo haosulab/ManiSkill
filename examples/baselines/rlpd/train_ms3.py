@@ -60,6 +60,10 @@ class SACExperiment:
     save_eval_video: bool = True  # whether to save eval videos
     demo_seed: int = None  # fix a seed to fix which demonstrations are sampled from a dataset
 
+    """additional tags/configs for logging purposes to wandb and shared comparisons with other algorithms"""
+    demo_type: str = None
+    config_type: str = None # "sample_efficient" or "walltime_efficient"
+
 
 from dacite import from_dict
 
@@ -163,6 +167,29 @@ def main(cfg: SACExperiment):
         logger_cfg=logger_cfg,
         cfg=cfg.sac,
     )
+
+    # for ManiSkill 3 baselines, try to modify the wandb config to match other baselines env_cfg setups.
+    if algo.logger.wandb:
+        import wandb as wb
+        sim_backend = "cpu"
+        if cfg.env.env_type == "gym:cpu":
+            sim_backend = "cpu"
+        elif cfg.env.env_type == "gym:gpu":
+            sim_backend = "gpu"
+        def parse_env_cfg(env_cfg):
+            return {
+                "env_id": cfg.env.env_id,
+                "env_kwargs": cfg.env.env_kwargs,
+                "num_envs": cfg.env.num_envs,
+                "env_horizon": cfg.env.max_episode_steps,
+                "sim_backend": sim_backend,
+                "reward_mode": cfg.env.env_kwargs.get("reward_mode"),
+                "obs_mode": cfg.env.env_kwargs.get("obs_mode"),
+                "control_mode": cfg.env.env_kwargs.get("control_mode"),
+            }
+        fixed_wb_cfgs = {"env_cfg": parse_env_cfg(env_cfg), "eval_env_cfg": parse_env_cfg(eval_env_cfg), "num_demos": cfg.train.num_demos, "demo_type": cfg.demo_type}
+        wb.config.update({**fixed_wb_cfgs}, allow_val_change=True)
+        algo.logger.wandb_run.tags = ["rlpd", cfg.config_type]
     algo.offline_buffer = demo_replay_dataset  # create offline buffer to oversample from
     rng_key, train_rng_key = jax.random.split(jax.random.PRNGKey(cfg.seed), 2)
     algo.train(

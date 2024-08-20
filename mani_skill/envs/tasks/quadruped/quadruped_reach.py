@@ -28,8 +28,8 @@ class QuadrupedReachEnv(BaseEnv):
     @property
     def _default_sim_config(self):
         return SimConfig(
-            gpu_memory_cfg=GPUMemoryConfig(max_rigid_contact_count=2**20),
-            scene_cfg=SceneConfig(
+            gpu_memory_config=GPUMemoryConfig(max_rigid_contact_count=2**20),
+            scene_config=SceneConfig(
                 solver_position_iterations=4, solver_velocity_iterations=0
             ),
         )
@@ -110,6 +110,7 @@ class QuadrupedReachEnv(BaseEnv):
         obs = dict(
             root_linear_velocity=self.agent.robot.root_linear_velocity,
             root_angular_velocity=self.agent.robot.root_angular_velocity,
+            reached_goal=info["success"],
         )
         if self.obs_mode in ["state", "state_dict"]:
             obs.update(

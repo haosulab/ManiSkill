@@ -23,11 +23,11 @@ BENCHMARK_ENVS = ["PickCubeBenchmark-v1", "CartpoleBalanceBenchmark-v1"]
 def main(args):
     profiler = Profiler(output_format="stdout")
     num_envs = args.num_envs
-    sim_cfg = dict()
+    sim_config = dict()
     if args.control_freq:
-        sim_cfg["control_freq"] = args.control_freq
+        sim_config["control_freq"] = args.control_freq
     if args.sim_freq:
-        sim_cfg["sim_freq"] = args.sim_freq
+        sim_config["sim_freq"] = args.sim_freq
     if not args.cpu_sim:
         kwargs = dict()
         if args.env_id in BENCHMARK_ENVS:
@@ -44,7 +44,7 @@ def main(args):
             # enable_shadow=True,
             render_mode=args.render_mode,
             control_mode=args.control_mode,
-            sim_cfg=sim_cfg,
+            sim_config=sim_config,
             **kwargs
         )
         if isinstance(env.action_space, gym.spaces.Dict):

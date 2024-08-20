@@ -4,7 +4,7 @@ import numpy as np
 import sapien
 import torch
 
-from mani_skill.agents.robots import UnitreeH1Simplified, UnitreeG1Simplified
+from mani_skill.agents.robots import UnitreeG1Simplified, UnitreeH1Simplified
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import common, sapien_utils
@@ -74,7 +74,7 @@ class UnitreeH1StandEnv(HumanoidStandEnv):
     @property
     def _default_sim_config(self):
         return SimConfig(
-            gpu_memory_cfg=GPUMemoryConfig(
+            gpu_memory_config=GPUMemoryConfig(
                 max_rigid_contact_count=2**22, max_rigid_patch_count=2**21
             )
         )
@@ -89,11 +89,9 @@ class UnitreeH1StandEnv(HumanoidStandEnv):
             b = len(env_idx)
             standing_keyframe = self.agent.keyframes["standing"]
             random_qpos = (
-                torch.randn(
-                    size=(b, self.agent.robot.dof[0]), dtype=torch.float) * 0.05
+                torch.randn(size=(b, self.agent.robot.dof[0]), dtype=torch.float) * 0.05
             )
-            random_qpos += common.to_tensor(standing_keyframe.qpos,
-                                            device=self.device)
+            random_qpos += common.to_tensor(standing_keyframe.qpos, device=self.device)
             self.agent.robot.set_qpos(random_qpos)
             self.agent.robot.set_pose(sapien.Pose(p=[0, 0, 0.975]))
 
@@ -109,7 +107,7 @@ class UnitreeG1StandEnv(HumanoidStandEnv):
     @property
     def _default_sim_config(self):
         return SimConfig(
-            gpu_memory_cfg=GPUMemoryConfig(
+            gpu_memory_config=GPUMemoryConfig(
                 max_rigid_contact_count=2**22, max_rigid_patch_count=2**21
             )
         )

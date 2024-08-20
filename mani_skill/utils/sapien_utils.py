@@ -143,18 +143,18 @@ def parse_urdf_config(config_dict: dict) -> Dict:
 
 def apply_urdf_config(loader: sapien.wrapper.urdf_loader.URDFLoader, urdf_config: dict):
     if "link" in urdf_config:
-        for name, link_cfg in urdf_config["link"].items():
-            if "material" in link_cfg:
-                mat: physx.PhysxMaterial = link_cfg["material"]
+        for name, link_config in urdf_config["link"].items():
+            if "material" in link_config:
+                mat: physx.PhysxMaterial = link_config["material"]
                 loader.set_link_material(
                     name, mat.static_friction, mat.dynamic_friction, mat.restitution
                 )
-            if "patch_radius" in link_cfg:
-                loader.set_link_patch_radius(name, link_cfg["patch_radius"])
-            if "min_patch_radius" in link_cfg:
-                loader.set_link_min_patch_radius(name, link_cfg["min_patch_radius"])
-            if "density" in link_cfg:
-                loader.set_link_density(name, link_cfg["density"])
+            if "patch_radius" in link_config:
+                loader.set_link_patch_radius(name, link_config["patch_radius"])
+            if "min_patch_radius" in link_config:
+                loader.set_link_min_patch_radius(name, link_config["min_patch_radius"])
+            if "density" in link_config:
+                loader.set_link_density(name, link_config["density"])
     if "material" in urdf_config:
         mat: physx.PhysxMaterial = urdf_config["material"]
         loader.set_material(mat.static_friction, mat.dynamic_friction, mat.restitution)

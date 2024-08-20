@@ -6,7 +6,7 @@ ManiSkill leverages [PhysX](https://github.com/NVIDIA-Omniverse/PhysX) to perfor
 
 With GPU parallelization, the concept is that one can simulate a task thousands of times at once per GPU. In ManiSkill/SAPIEN this is realized by effectively putting all actors and articulations <span style="color:#F1A430">**into the same physx scene**</span> and give each task it's own small workspace in the physx scene known as a <span style="color:#0086E7">**sub-scene**</span>. 
 
-The idea of sub-scenes is that reading data of e.g. actor poses is automatically pre-processed to be relative to the center of the sub-scene and not the physx scene. The diagram below shows how 64 sub-scenes may be organized. Note that each sub-scene's distance to each other is defined by the simulation configuration `sim_cfg.spacing` value which can be set when building your own task.
+The idea of sub-scenes is that reading data of e.g. actor poses is automatically pre-processed to be relative to the center of the sub-scene and not the physx scene. The diagram below shows how 64 sub-scenes may be organized. Note that each sub-scene's distance to each other is defined by the simulation configuration `sim_config.spacing` value which can be set when building your own task.
 
 :::{figure} images/physx_scene_subscene_relationship.png 
 :::

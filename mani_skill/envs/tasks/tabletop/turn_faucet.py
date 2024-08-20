@@ -22,14 +22,14 @@ from mani_skill.utils.structs.types import SimConfig
 @register_env("TurnFaucet-v1", max_episode_steps=200)
 class TurnFaucetEnv(BaseEnv):
     SUPPORTED_REWARD_MODES = ["sparse", "none"]
-    SUPPORTED_ROBOTS = ["panda", "fetch"]
+    SUPPORTED_ROBOTS = ["panda", "panda_wristcam", "fetch"]
     agent: Union[Panda, Fetch]
     TRAIN_JSON = PACKAGE_ASSET_DIR / "partnet_mobility/meta/info_faucet_train.json"
 
     def __init__(
         self,
         *args,
-        robot_uids="panda",
+        robot_uids="panda_wristcam",
         robot_init_qpos_noise=0.02,
         reconfiguration_freq=None,
         num_envs=1,
