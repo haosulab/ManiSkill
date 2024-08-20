@@ -12,10 +12,10 @@ from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
 
 
-@register_agent()
+@register_agent(asset_download_ids=["robotiq_2f"])
 class FloatingRobotiq2F85Gripper(BaseAgent):
     uid = "floating_robotiq_2f_85_gripper"
-    urdf_path = f"{ASSET_DIR}/robots/robotiq_2f_85/floating_robotiq_2f_85.urdf"
+    urdf_path = f"{ASSET_DIR}/robots/robotiq_2f/floating_robotiq_2f_85.urdf"
     disable_self_collisions = True
     urdf_config = dict(
         _materials=dict(
