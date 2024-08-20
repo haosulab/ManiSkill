@@ -28,7 +28,7 @@ WARNED_ONCE = False
 class PickSingleYCBEnv(BaseEnv):
 
     SUPPORTED_ROBOTS = ["panda", "panda_wristcam", "fetch"]
-    agent: Union[Panda, PandaWristCam, Xmate3Robotiq, Fetch]
+    agent: Union[Panda, PandaWristCam, Fetch]
     goal_thresh = 0.025
 
     def __init__(
