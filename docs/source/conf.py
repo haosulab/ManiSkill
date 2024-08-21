@@ -46,7 +46,8 @@ exclude_patterns = []
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = "pydata_sphinx_theme"
-
+html_logo = "_static/logo.svg"
+html_favicon = "_static/logo.svg"
 
 
 json_url = "https://maniskill.readthedocs.io/en/docs-upgrades/_static/version_switcher.json"
@@ -65,7 +66,11 @@ html_theme_options = {
     "external_links": [
         {"name": "Changelog", "url": "https://github.com/haosulab/ManiSkill/releases"},
     ],
+    "logo": {
+        "text": "ManiSkill",
+    },
     "navbar_center": ["version-switcher", "navbar-nav"],
+    "show_version_warning_banner": True,
     "switcher": {
         "json_url": json_url,
         "version_match": version_match,
