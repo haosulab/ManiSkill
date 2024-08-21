@@ -7,9 +7,7 @@ Subpackages:
 ```{toctree}
 :titlesonly:
 :maxdepth: 1
-   
-mani_skill.envs.sapien_env
+:glob:
+*
 
-mani_skill.utils.common
-mani_skill.utils.sapien_utils
 ```

@@ -5,7 +5,7 @@ ManiSkill is a robotics simulator built on top of SAPIEN. It provides a standard
 
 ## Interface
 
-Here is a basic example of how to run a ManiSkill task following the interface of [Gymnasium](https://gymnasium.farama.org/) and execute a random policy.
+Here is a basic example of how to run a ManiSkill task following the interface of [Gymnasium](https://gymnasium.farama.org/) and execute a random policy with a few basic options
 
 ```python
 import gymnasium as gym
@@ -31,15 +31,15 @@ while not done:
 env.close()
 ```
 
-Changing `num_envs` to a value > 1 will automatically turn on the GPU simulation mode. More quick details [covered below](#gpu-parallelizedvectorized-tasks). You will also notice that all data returned is a batched torch tensor. To have the exact same API defined by [gym/gymnasium](https://gymnasium.farama.org/) see the section on [reinforcement learning setups](../reinforcement_learning/setup.md)
+Changing `num_envs` to a value > 1 will automatically turn on the GPU simulation mode. More quick details [covered below](#gpu-parallelizedvectorized-tasks).
 
-You can also run the same code from the command line to demo random actions
+You can also run the same code from the command line to demo random actions and play with rendering options
 
 ```bash
 # run headless / without a display
 python -m mani_skill.examples.demo_random_action -e PickCube-v1
-# run with A GUI
-python -m mani_skill.examples.demo_random_action -e PickCube-v1 --render-mode="human"
+# run with A GUI and ray tracing
+python -m mani_skill.examples.demo_random_action -e PickCube-v1 --render-mode="human" --shader="rt-fast"
 ```
 
 Running with `render_mode="human"` will open up a GUI shown below that you can use to interactively explore the scene, pause/play the script, teleport objects around, and more.
@@ -49,7 +49,7 @@ Running with `render_mode="human"` will open up a GUI shown below that you can u
 alt: SAPIEN GUI showing the PickCube task
 ---
 ```
-
+<!-- 
 We also have demos for simulations of more interesting scenes like ReplicaCAD, which can be run by doing
 
 ```bash
@@ -67,21 +67,23 @@ python -m mani_skill.examples.demo_random_action -e "ReplicaCAD_SceneManipulatio
 
 <video preload="auto" controls="True" width="100%">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/docs/source/_static/videos/fetch_random_action_replica_cad_rt.mp4" type="video/mp4">
-</video>
+</video> -->
 
-
-You may notice that everything returned by the environment is a torch Tensor and has a batch dimension with value 1. To reduce extra code handling numpy vs torch, cpu vs gpu sim, everything in ManiSkill defaults to serving/using batched torch Tensors of all data. To change the environment to serve numpy, unbatched data simply do the following
+You will also notice that all data returned is a batched torch tensor. To reduce extra code handling numpy vs torch, cpu vs gpu sim, everything in ManiSkill defaults to serving/using batched torch Tensors of all data. To change the environment to serve numpy, unbatched data simply do the following
 
 ```python
 from mani_skill.utils.wrappers.gymnasium import CPUGymWrapper
-env = gym.make(env_id)
+env = gym.make(env_id, num_envs=1)
 env = CPUGymWrapper(env)
 obs, _ = env.reset() # obs is numpy and unbatched
 ```
 
+To have the exact same API defined by [gym/gymnasium](https://gymnasium.farama.org/) for single/vectorized environments see the section on [reinforcement learning setups](../reinforcement_learning/setup.md).
+
 For a compilation of demos you can run without having to write any extra code check out the [demos page](../demos/index)
 
-For the full documentation of options you can provide for gym.make see the [docstring in our repo](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/sapien_env.py)
+See {py:class}`mani_skill.envs.sapien_env` for the full list of environment instantiation options.
+
 
 
 ## GPU Parallelized/Vectorized Tasks
@@ -153,6 +155,10 @@ env = gym.make(
     parallel_in_single_scene=True,
     viewer_camera_configs=dict(shader_pack="rt-fast"),
 )
+env.reset()
+while True:
+    env.step(env.action_space.sample())
+    env.render_human()
 ```
 
 This will then open up a GUI that looks like so:
@@ -166,6 +172,8 @@ Finally on servers with multiple GPUs you can directly pick which devices/backen
 We currently do not properly support exposing multiple visible CUDA devices to a single process as it has some rendering bugs at the moment.
 
 ## Task Instantiation Options
+
+For the full list of environment instantiation options see {py:class}`mani_skill.envs.sapien_env`. Here we list some common options:
 
 
 Each ManiSkill task supports different **observation modes** and **control modes**, which determine its **observation space** and **action space**. They can be specified by `gym.make(env_id, obs_mode=..., control_mode=...)`.

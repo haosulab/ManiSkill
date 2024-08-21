@@ -23,8 +23,10 @@ version = __version__
 
 extensions = [
     "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
+    "sphinx.ext.napoleon",
     "sphinx_copybutton",
     "myst_parser",
     "sphinx_subfigure",
@@ -94,5 +96,11 @@ html_css_files = [
 ]
 html_static_path = ['_static']
 
+### Autodoc configurations ###
 autodoc_typehints = "description"
 autodoc_typehints_description_target = "all"
+autodoc_default_flags = ['members', 'show-inheritance', 'undoc-members']
+
+autosummary_generate = True
+
+# remove_from_toctrees = ["_autosummary/*"]
