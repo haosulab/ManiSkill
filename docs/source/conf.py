@@ -1,7 +1,9 @@
 import os
 import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../mani_skill"))
-__version__ = "3.0.0b8"
+import mani_skill
+__version__ = mani_skill.__version__
 # Configuration file for the Sphinx documentation builder.
 #
 # For the full list of built-in configuration values, see the documentation:
@@ -44,6 +46,13 @@ exclude_patterns = []
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = "pydata_sphinx_theme"
+
+
+
+json_url = "https://maniskill.readthedocs.io/en/docs-upgrades/_static/version_switcher.json"
+version_match = "latest" #os.environ.get("READTHEDOCS_VERSION")
+release = __version__
+
 html_theme_options = {
     "use_edit_page_button": True,
     "icon_links": [
@@ -55,8 +64,12 @@ html_theme_options = {
     ],
     "external_links": [
         {"name": "Changelog", "url": "https://github.com/haosulab/ManiSkill/releases"},
-    ]
-
+    ],
+    "navbar_center": ["version-switcher", "navbar-nav"],
+    "switcher": {
+        "json_url": json_url,
+        "version_match": version_match,
+    },
 }
 html_context = {
     "display_github": True,
