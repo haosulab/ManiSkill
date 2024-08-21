@@ -42,7 +42,7 @@ myst_enable_extensions = ["colon_fence", "dollarmath"]
 myst_heading_anchors = 4
 
 templates_path = ["_templates"]
-exclude_patterns = []
+exclude_patterns = ["user_guide/reference/_autosummary/*"]
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -104,6 +104,6 @@ autodoc_default_flags = ['members', 'show-inheritance', 'undoc-members']
 
 autosummary_generate = True
 
-# remove_from_toctrees = ["_autosummary/*"]
+remove_from_toctrees = ["_autosummary/*"]
 
 intersphinx_mapping = {'gymnasium': ('https://gymnasium.farama.org/', None)}
