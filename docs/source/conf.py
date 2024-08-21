@@ -27,6 +27,7 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
+    "sphinx.ext.intersphinx",
     "sphinx_copybutton",
     "myst_parser",
     "sphinx_subfigure",
@@ -104,3 +105,5 @@ autodoc_default_flags = ['members', 'show-inheritance', 'undoc-members']
 autosummary_generate = True
 
 # remove_from_toctrees = ["_autosummary/*"]
+
+intersphinx_mapping = {'gymnasium': ('https://gymnasium.farama.org/', None)}

@@ -15,3 +15,4 @@ Structs in ManiSkill are objects that efficiently wrap around raw SAPIEN objects
     Articulation
     Link
     ArticulationJoint
+    SimConfig
