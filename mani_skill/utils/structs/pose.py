@@ -37,35 +37,48 @@ class Pose:
     As a result pose.p and pose.q will return shapes (N, 3) and (N, 4) respectively for N poses being stored. pose.raw_pose stores all the pose data as a single
     2D array of shape (N, 7).
 
-    All sapien.Pose API are re-implemented in batch mode here to support GPU simulation. E.g. pose multiplication and inverse with `pose_1.inv() * pose_2`,
-    or creating transformation matrices with `pose_1.to_transformation_matrix()` are suppported they same way they are in sapien.Pose.
+    All sapien.Pose API are re-implemented in batch mode here to support GPU simulation. E.g. pose multiplication and inverse with ``pose_1.inv() * pose_2``,
+    or creating transformation matrices with ``pose_1.to_transformation_matrix()`` are suppported they same way they are in sapien.Pose.
 
-    ## Pose Creation
+    Pose Creation
+    -------------
 
-    To create a batched pose with a given position `p` and/or quaternion `q`, you run
+    To create a batched pose with a given position ``p`` and/or quaternion ``q``, you run:
 
-    ```
-    pose = Pose.create_from_pq(p=p, q=q)
-    ```
-    p and q can be a torch tensor, numpy array, and/or list, or None.
+    .. code-block:: python
 
-    If p or q have only 1 value/not batched, then we automatically repeat the value to the batch size of the other given value.
-    For example, if p has a batch dimension of size > 1, and q has a batch dimension of size 1 or is a flat list, then the
-    code automatically repeats the q value to the batch size of p. Likewise in the reverse direction the same repeating occurs.
+        pose = Pose.create_from_pq(p=p, q=q)
 
-    If p and q have the same batch size, they are stored as so.
+    ``p`` and ``q`` can be a torch tensor, numpy array, and/or list, or None.
 
-    If p and q have no batch dimensions, one is automatically added (e.g. p having shape (3, ) now becomes (1, 3))
+    If ``p`` or ``q`` have only 1 value/not batched, then we automatically repeat the value to the batch size of the other given value.
+    For example, if ``p`` has a batch dimension of size > 1, and ``q`` has a batch dimension of size 1 or is a flat list, then the
+    code automatically repeats the ``q`` value to the batch size of ``p``. Likewise in the reverse direction the same repeating occurs.
 
-    If p is None, it is auto filled with zeros
+    If ``p`` and ``q`` have the same batch size, they are stored as so.
 
-    If q is None, it is auto filled with the [1, 0, 0, 0] quaternion.
+    If ``p`` and ``q`` have no batch dimensions, one is automatically added (e.g. ``p`` having shape (3,) now becomes (1, 3))
 
-    If you have a sapien.Pose, another Pose object, or a raw pose tensor of shape (N, 7) or (7, ) called `x`, you can create this Pose object with
-    pose = Pose.create(x)
+    If ``p`` is None, it is auto filled with zeros.
 
-    If you want a sapien.Pose object instead of this batched Pose, you can do pose.sp to get the sapien.Pose version (which is not batched). Note that
+    If ``q`` is None, it is auto filled with the [1, 0, 0, 0] quaternion.
+
+    If you have a sapien.Pose, another Pose object, or a raw pose tensor of shape (N, 7) or (7,) called ``x``, you can create this Pose object with:
+
+    .. code-block:: python
+
+        pose = Pose.create(x)
+
+    If you want a sapien.Pose object instead of this batched Pose, you can do ``pose.sp`` to get the sapien.Pose version (which is not batched). Note that
     this is only permitted if this Pose has a batch size of 1.
+
+    Pose Indexing
+    -------------
+
+    You can index into a Pose object like numpy/torch arrays to get a new Pose object with the indexed data.
+
+    For example if ``pose`` has a batch size of 4, then ``pose[0]`` will be a Pose object with batch size of 1, and
+    ``pose[1:3]`` will be a Pose object with batch size of 2.
 
     """
 
@@ -75,6 +88,7 @@ class Pose:
     def create_from_pq(
         cls, p: torch.Tensor = None, q: torch.Tensor = None, device: Device = None
     ):
+        """Creates a Pose object from a given position ``p`` and/or quaternion ``q``"""
         if p is None:
             p = torch.zeros((1, 3), device=device)
         if q is None:
@@ -98,6 +112,7 @@ class Pose:
         pose: Union[torch.Tensor, sapien.Pose, List[sapien.Pose], "Pose"],
         device: Optional[Device] = None,
     ) -> "Pose":
+        """Creates a Pose object from a given ``pose``, which can be a torch tensor, sapien.Pose, list of sapien.Pose, or Pose"""
         if isinstance(pose, sapien.Pose):
             raw_pose = torch.hstack(
                 [
@@ -134,14 +149,17 @@ class Pose:
         return len(self.raw_pose)
 
     @property
-    def shape(self):
+    def shape(self) -> torch.Size:
+        """Shape of the Pose object"""
         return self.raw_pose.shape
 
     @property
-    def device(self):
+    def device(self) -> Device:
+        """Torch Device the Pose object is on"""
         return self.raw_pose.device
 
     def to(self, device: Device):
+        """Move the Pose object to a different device"""
         if self.raw_pose.device == device:
             return self
         return Pose.create(self.raw_pose.to(device))
@@ -173,13 +191,16 @@ class Pose:
     # def __repr__(self) -> str: ...
     # def __setstate__(self, arg0: tuple) -> None: ...
     def get_p(self):
+        """Returns self.p, the position"""
         return self.p
 
     def get_q(self):
+        """Returns self.q, the quaternion"""
         return self.q
 
     # def get_rpy(self) -> numpy.ndarray[numpy.float32, _Shape, _Shape[3]]: ...
-    def inv(self) -> "Pose":
+    def inv(self):
+        """Returns the inverse of this pose"""
         inverted_raw_pose = self.raw_pose.clone()
         inverted_raw_pose[..., 4:] = -inverted_raw_pose[..., 4:]
         new_p = quaternion_apply(inverted_raw_pose[..., 3:], -self.p)
@@ -187,13 +208,16 @@ class Pose:
         return Pose.create(inverted_raw_pose)
 
     def set_p(self, p: torch.Tensor) -> None:
+        """Sets the position of this pose"""
         self.p = p
 
     def set_q(self, q: torch.Tensor) -> None:
+        """Sets the quaternion of this pose"""
         self.q = q
 
     # def set_rpy(self, arg0: numpy.ndarray[numpy.float32, _Shape, _Shape[3]]) -> None: ...
     def to_transformation_matrix(self):
+        """Returns the (N, 4, 4) shaped transformation matrix equivalent to this pose"""
         b = self.raw_pose.shape[0]
         mat = torch.zeros((b, 4, 4), device=self.raw_pose.device)
         mat[..., :3, :3] = quaternion_to_matrix(self.q)
@@ -204,12 +228,13 @@ class Pose:
     @property
     def sp(self):
         """
-        Returns the equivalent sapien pose
+        Returns the equivalent sapien pose. Note that this is only permitted if this Pose has a batch size of 1.
         """
         return to_sapien_pose(self)
 
     @property
     def p(self):
+        """The position of this pose"""
         return self.raw_pose[..., :3]
 
     @p.setter
@@ -218,6 +243,7 @@ class Pose:
 
     @property
     def q(self):
+        """The quaternion of this pose"""
         return self.raw_pose[..., 3:]
 
     @q.setter
