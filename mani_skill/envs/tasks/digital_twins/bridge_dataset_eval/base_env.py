@@ -23,7 +23,8 @@ class WidowX250SBridgeDatasetFlatTable(WidowX250S):
             CameraConfig(
                 uid="3rd_view_camera",  # the camera used in the Bridge dataset
                 pose=sapien.Pose(
-                    [0.00, -0.16, 0.336], [0.909182, -0.0819809, 0.347277, 0.214629]
+                    [0.00, -0.16, 0.36],
+                    [0.8992917, -0.09263245, 0.35892478, 0.23209205],
                 ),
                 width=640,
                 height=480,
@@ -59,7 +60,7 @@ class WidowX250SBridgeDatasetSink(WidowX250S):
 class BaseBridgeEnv(BaseDigitalTwinEnv):
     """Base Digital Twin environment for digital twins of the BridgeData v2"""
 
-    SUPPORTED_OBS_MODES = ["rgb", "rgb+depth+segmentation"]
+    SUPPORTED_OBS_MODES = ["rgb+segmentation"]
     SUPPORTED_REWARD_MODES = ["none"]
     scene_setting: Literal["flat_table", "sink"] = "flat_table"
     rgb_overlay_cameras = ["3rd_view_camera"]
@@ -181,6 +182,7 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
                         0.037,
                     ]
                 )
+
                 self.agent.robot.set_pose(
                     sapien.Pose([0.147, 0.028, 0.870], q=[0, 0, 0, 1])
                 )
@@ -202,6 +204,7 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
                 )
             self.agent.robot.set_qpos(qpos)
 
+            print(self.agent.robot.qpos)
             for i, actor in enumerate(self.objs.values()):
                 xyz = self.xyz_configs[pos_episode_ids, i]
                 actor.set_pose(
