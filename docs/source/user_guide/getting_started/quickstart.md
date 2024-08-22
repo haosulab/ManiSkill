@@ -182,7 +182,7 @@ The common observation modes are `state`, `rgbd`, `pointcloud`. We also support 
 
 We support a wide range of controllers. Different controllers can have different effects on your algorithms. Thus, it is recommended to understand the action space you are going to use. Please refer to [Controllers](../concepts/controllers.md) for more details.
 
-Some tasks require **downloading assets** that are not stored in the python package itself. You can download task-specific assets by `python -m mani_skill.utils.download_asset ${ENV_ID}`. The assets will be downloaded to `~/maniskill/data` by default, but you can also use the environment variable `MS_ASSET_DIR` to change this destination. Please refer to [Tasks](../../tasks/index.md) for all tasks built in out of the box, and which tasks require downloading assets.
+Some tasks require **downloading assets** that are not stored in the python package itself. You can download task-specific assets by `python -m mani_skill.utils.download_asset ${ENV_ID}`. The assets will be downloaded to `~/maniskill/data` by default, but you can also use the environment variable `MS_ASSET_DIR` to change this destination. If you don't download assets ahead of the time you will be prompted to do so if they are missing when running an environment.
 
 Some ManiSkill tasks also support swapping robot embodiments such as the `PickCube-v1` task. You can try using the fetch robot instead by running
 
