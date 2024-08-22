@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
 import numpy as np
 import sapien
@@ -36,25 +36,23 @@ class CameraConfig(BaseSensorConfig):
     pose: Pose
     """Pose of the camera"""
     width: int
-    """width (int): width of the camera"""
+    """width of the camera"""
     height: int
-    """height (int): height of the camera"""
+    """height of the camera"""
     fov: float = None
     """The field of view of the camera. Either fov or intrinsic must be given"""
     near: float = 0.01
-    """near (float): near plane of the camera"""
+    """near plane of the camera"""
     far: float = 100
-    """far (float): far plane of the camera"""
+    """far plane of the camera"""
     intrinsic: Array = None
     """intrinsics matrix of the camera. Either fov or intrinsic must be given"""
-    entity_uid: str = None
-    """entity_uid (str, optional): unique id of the entity to mount the camera. Defaults to None."""
+    entity_uid: Optional[str] = None
+    """unique id of the entity to mount the camera. Defaults to None. Only used by agent classes that want to define mounted cameras."""
     mount: Union[Actor, Link] = None
     """the Actor or Link to mount the camera on top of. This means the global pose of the mounted camera is now mount.pose * local_pose"""
-    texture_names: Optional[Sequence[str]] = None
-    """texture_names (Sequence[str], optional): texture names to render."""
     shader_pack: Optional[str] = "minimal"
-    """The shader to use for rendering. Defaults to "minimal" which is the fastest rendering system with minimal GPU memory usage. There is also `default` and `rt`."""
+    """The shader to use for rendering. Defaults to "minimal" which is the fastest rendering system with minimal GPU memory usage. There is also ``default`` and ``rt``."""
     shader_config: Optional[ShaderConfig] = None
     """The shader config to use for rendering. If None, the shader_pack will be used to search amongst prebuilt shader configs to create a ShaderConfig."""
 

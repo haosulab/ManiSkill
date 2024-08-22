@@ -17,13 +17,12 @@ from mani_skill.agents.controllers.pd_joint_pos import (
 )
 from mani_skill.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill.utils import assets, download_asset, sapien_utils
-from mani_skill.utils.structs import Actor, Array, Articulation, Pose
+from mani_skill.utils.structs import Actor, Array, Articulation
 
 from .controllers.base_controller import (
     BaseController,
     CombinedController,
     ControllerConfig,
-    DictController,
 )
 
 if TYPE_CHECKING:
@@ -34,35 +33,38 @@ DictControllerConfig = Dict[str, ControllerConfig]
 @dataclass
 class Keyframe:
     pose: sapien.Pose
+    """sapien Pose object describe this keyframe's pose"""
     qpos: Optional[Array] = None
+    """the qpos of the robot at this keyframe"""
     qvel: Optional[Array] = None
+    """the qvel of the robot at this keyframe"""
 
 
 class BaseAgent:
-    """Base class for agents.
-
-    Agent is an interface of an articulated robot (physx.PhysxArticulation).
+    """Base class for agents/robots, forming an interface of an articulated robot (SAPIEN's physx.PhysxArticulation).
+    Users implementing their own agents/robots should inherit from this class.
+    A tutorial on how to build your own agent can be found in :doc:`its tutorial </user_guide/tutorials/custom_robots>`
 
     Args:
-        scene (sapien.Scene): simulation scene instance.
+        scene (ManiSkillScene): simulation scene instance.
         control_freq (int): control frequency (Hz).
-        control_mode: uid of controller to use
-        fix_root_link: whether to fix the robot root link
-        config: agent configuration
-        agent_idx: an index for this agent in a multi-agent task setup If None, the task should be single-agent
+        control_mode (str | None): uid of controller to use
+        fix_root_link (bool): whether to fix the robot root link
+        agent_idx (str | None): an index for this agent in a multi-agent task setup If None, the task should be single-agent
     """
 
     uid: str
     """unique identifier string of this"""
-    urdf_path: str = None
-    """path to the .urdf file describe the agent's geometry and visuals"""
-    urdf_config: dict = None
+    urdf_path: Union[str, None] = None
+    """path to the .urdf file describe the agent's geometry and visuals. One of urdf_path or mjcf_path must be provided."""
+    urdf_config: Union[str, Dict] = None
     """Optional provide a urdf_config to further modify the created articulation"""
-    mjcf_path: str = None
-    """path to a MJCF .xml file defining a robot. This will only load the articulation defined in the XML and nothing else"""
+    mjcf_path: Union[str, None] = None
+    """path to a MJCF .xml file defining a robot. This will only load the articulation defined in the XML and nothing else.
+    One of urdf_path or mjcf_path must be provided."""
 
     fix_root_link: bool = True
-    """Whether to fix the root link of the robot"""
+    """Whether to fix the root link of the robot in place."""
     load_multiple_collisions: bool = False
     """Whether the referenced collision meshes of a robot definition should be loaded as multiple convex collisions"""
     disable_self_collisions: bool = False
@@ -85,15 +87,18 @@ class BaseAgent:
         self._agent_idx = agent_idx
 
         self.robot: Articulation = None
+        """The robot object, which is an Articulation. Data like pose, qpos etc. can be accessed from this object."""
         self.controllers: Dict[str, BaseController] = dict()
+        """The controllers of the robot."""
         self.sensors: Dict[str, BaseSensor] = dict()
+        """The sensors that come with the robot."""
 
-        self.controllers = dict()
         self._load_articulation()
         self._after_loading_articulation()
 
         # Controller
         self.supported_control_modes = list(self._controller_configs.keys())
+        """List of all possible control modes for this robot."""
         if control_mode is None:
             control_mode = self.supported_control_modes[0]
         # The control mode after reset for consistency
@@ -104,13 +109,14 @@ class BaseAgent:
 
     @property
     def _sensor_configs(self) -> List[BaseSensorConfig]:
+        """Returns a list of sensor configs for this agent. By default this is empty."""
         return []
 
     @property
     def _controller_configs(
         self,
     ) -> Dict[str, Union[ControllerConfig, DictControllerConfig]]:
-
+        """Returns a dict of controller configs for this agent. By default this is a PDJointPos (delta and non delta) controller for all active joints."""
         return dict(
             pd_joint_pos=PDJointPosControllerConfig(
                 [x.name for x in self.robot.active_joints],
@@ -137,7 +143,7 @@ class BaseAgent:
 
     def _load_articulation(self):
         """
-        Load the robot articulation
+        Loads the robot articulation
         """
         if self.urdf_path is not None:
             loader = self.scene.create_urdf_loader()
@@ -184,12 +190,11 @@ class BaseAgent:
         self.robot_link_ids = [link.name for link in self.robot.get_links()]
 
     def _after_loading_articulation(self):
-        """After loading articulation and before setting up controller. Not recommended, but is useful for when creating
-        robot classes that inherit controllers from another and only change which joints are controlled
-        """
+        """Called after loading articulation and before setting up any controllers. By default this is empty."""
 
     def _after_init(self):
-        """After initialization. E.g., caching the end-effector link."""
+        """Code that is run after initialization. Some example robot implementations use this to cache a reference to special
+        robot links like an end-effector link. By default this is empty."""
 
     # -------------------------------------------------------------------------- #
     # Controllers
@@ -200,8 +205,9 @@ class BaseAgent:
         """Get the currently activated controller uid."""
         return self._control_mode
 
-    def set_control_mode(self, control_mode=None):
-        """Set the controller and drive properties. This does not reset the controller. If given control mode is None, will set defaults"""
+    def set_control_mode(self, control_mode: str = None):
+        """Sets the controller to an pre-existing controller of this agent.
+        This does not reset the controller. If given control mode is None, will set to the default control mode."""
         if control_mode is None:
             control_mode = self._default_control_mode
         assert (
@@ -234,7 +240,7 @@ class BaseAgent:
                     link.disable_gravity = True
 
     @property
-    def controller(self):
+    def controller(self) -> BaseController:
         """Get currently activated controller."""
         if self._control_mode is None:
             raise RuntimeError("Please specify a control mode first")
@@ -242,7 +248,7 @@ class BaseAgent:
             return self.controllers[self._control_mode]
 
     @property
-    def action_space(self):
+    def action_space(self) -> spaces.Space:
         if self._control_mode is None:
             return spaces.Dict(
                 {
@@ -254,7 +260,7 @@ class BaseAgent:
             return self.controller.action_space
 
     @property
-    def single_action_space(self):
+    def single_action_space(self) -> spaces.Space:
         if self._control_mode is None:
             return spaces.Dict(
                 {
@@ -267,7 +273,8 @@ class BaseAgent:
 
     def set_action(self, action):
         """
-        Set the agent's action which is to be executed in the next environment timestep
+        Set the agent's action which is to be executed in the next environment timestep.
+        This is essentially a wrapper around the controller's set_action method.
         """
         if not physx.is_gpu_enabled():
             if np.isnan(action).any():
@@ -275,6 +282,7 @@ class BaseAgent:
         self.controller.set_action(action)
 
     def before_simulation_step(self):
+        """Code that runs before each simulation step. By default it calls the controller's before_simulation_step method."""
         self.controller.before_simulation_step()
 
     # -------------------------------------------------------------------------- #
@@ -282,7 +290,7 @@ class BaseAgent:
     # -------------------------------------------------------------------------- #
     def get_proprioception(self):
         """
-        Get the proprioceptive state of the agent.
+        Get the proprioceptive state of the agent, default is the qpos and qvel of the robot and any controller state.
         """
         obs = dict(qpos=self.robot.get_qpos(), qvel=self.robot.get_qvel())
         controller_state = self.controller.get_state()
@@ -308,6 +316,8 @@ class BaseAgent:
         return state
 
     def set_state(self, state: Dict, ignore_controller=False):
+        """Set the state of the agent, including the robot state and controller state.
+        If ignore_controller is True, the controller state will not be updated."""
         # robot state
         self.robot.set_root_pose(state["robot_root_pose"])
         self.robot.set_root_linear_velocity(state["robot_root_vel"])
@@ -317,13 +327,20 @@ class BaseAgent:
 
         if not ignore_controller and "controller" in state:
             self.controller.set_state(state["controller"])
+        if self.device.type == "cuda":
+            self.scene._gpu_apply_all()
+            self.scene.px.gpu_update_articulation_kinematics()
+            self.scene._gpu_fetch_all()
 
     # -------------------------------------------------------------------------- #
     # Other
     # -------------------------------------------------------------------------- #
-    def reset(self, init_qpos=None):
+    def reset(self, init_qpos: torch.Tensor = None):
         """
-        Reset the robot to a rest position or a given q-position
+        Reset the robot to a clean state with zero velocity and forces. Furthermore it resets the current active controller.
+
+        Args:
+            init_qpos (torch.Tensor): The initial qpos to set the robot to. If None, the robot's qpos is not changed.
         """
         if init_qpos is not None:
             self.robot.set_qpos(init_qpos)
