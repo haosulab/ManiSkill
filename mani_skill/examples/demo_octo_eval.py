@@ -46,10 +46,6 @@ def parse_args(args=None):
 import matplotlib.pyplot as plt
 import numpy as np
 
-
-
-
-
 def main(args):
     if args.seed is not None:
         np.random.seed(args.seed)
@@ -81,7 +77,7 @@ def main(args):
         imgs=[]
         for cam in obs["sensor_data"].keys():
             if "rgb" in obs["sensor_data"][cam]:
-                rgb = common.to_numpy(obs["sensor_data"][cam]["rgb"][0])
+                rgb = common.to_numpy(obs["sensor_data"][cam]["rgb"][0], dtype=np.uint8)
                 imgs.append(rgb)
                 if "depth" in obs["sensor_data"][cam]:
                     depth = common.to_numpy(obs["sensor_data"][cam]["depth"][0]).astype(np.float32)
@@ -104,7 +100,7 @@ def main(args):
         i += 1
         if i >= len(gt_actions):
             break
-    import ipdb;ipdb.set_trace()
+    # import ipdb;ipdb.set_trace()
     images_to_video(images, "videos", "octo_eval", fps=10, verbose=True)
 
 if __name__ == "__main__":
