@@ -65,8 +65,11 @@ class BaseController:
         self._normalize_action = getattr(self.config, "normalize_action", False)
         if self._normalize_action:
             self._clip_and_scale_action_space()
-
-        self.action_space = batch_space(self.single_action_space, n=self.scene.num_envs)
+        self.action_space = self.single_action_space
+        if self.scene.num_envs > 1:
+            self.action_space = batch_space(
+                self.single_action_space, n=self.scene.num_envs
+            )
 
     @property
     def device(self):
