@@ -96,6 +96,7 @@ class ManiSkillScene:
     # -------------------------------------------------------------------------- #
     @property
     def timestep(self):
+        """The current simulation timestep"""
         return self.px.timestep
 
     @timestep.setter
@@ -103,22 +104,27 @@ class ManiSkillScene:
         self.px.timestep = timestep
 
     def set_timestep(self, timestep):
+        """Sets the current simulation timestep"""
         self.timestep = timestep
 
     def get_timestep(self):
+        """Returns the current simulation timestep"""
         return self.timestep
 
     def create_actor_builder(self):
+        """Creates an ActorBuilder object that can be used to build actors in this scene"""
         from ..utils.building.actor_builder import ActorBuilder
 
         return ActorBuilder().set_scene(self)
 
     def create_articulation_builder(self):
+        """Creates an ArticulationBuilder object that can be used to build articulations in this scene"""
         from ..utils.building.articulation_builder import ArticulationBuilder
 
         return ArticulationBuilder().set_scene(self)
 
     def create_urdf_loader(self):
+        """Creates a URDFLoader object that can be used to load URDF files into this scene"""
         from ..utils.building.urdf_loader import URDFLoader
 
         loader = URDFLoader()
@@ -126,26 +132,30 @@ class ManiSkillScene:
         return loader
 
     def create_mjcf_loader(self):
+        """Creates a MJCFLoader object that can be used to load MJCF files into this scene"""
         from ..utils.building.mjcf_loader import MJCFLoader
 
         loader = MJCFLoader()
         loader.set_scene(self)
         return loader
 
-    def create_physical_material(
-        self, static_friction: float, dynamic_friction: float, restitution: float
-    ):
-        return physx.PhysxMaterial(static_friction, dynamic_friction, restitution)
+    # def create_physical_material(
+    #     self, static_friction: float, dynamic_friction: float, restitution: float
+    # ):
+    #     return physx.PhysxMaterial(static_friction, dynamic_friction, restitution)
 
-    def remove_actor(self, actor):
+    def remove_actor(self, actor: Actor):
+        """Removes an actor from the scene. Only works in CPU simulation."""
         if physx.is_gpu_enabled():
             raise NotImplementedError(
                 "Cannot remove actors after creating them in GPU sim at the moment"
             )
         else:
-            self.sub_scenes[0].remove_entity(actor)
+            self.sub_scenes[0].remove_entity(actor._objs[0].entity)
+            self.actors.pop(actor.name)
 
     def remove_articulation(self, articulation: Articulation):
+        """Removes an articulation from the scene. Only works in CPU simulation."""
         if physx.is_gpu_enabled():
             raise NotImplementedError(
                 "Cannot remove articulations after creating them in GPU sim at the moment"
@@ -154,6 +164,7 @@ class ManiSkillScene:
             entities = [l.entity for l in articulation._objs[0].links]
             for e in entities:
                 self.sub_scenes[0].remove_entity(e)
+            self.articulations.pop(articulation.name)
 
     def add_camera(
         self,

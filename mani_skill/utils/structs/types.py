@@ -80,6 +80,8 @@ class DefaultMaterialsConfig:
 
 @dataclass
 class SimConfig:
+    """Simulation configurations for ManiSkill environments"""
+
     spacing: float = 5
     """Controls the spacing between parallel environments when simulating on GPU in meters. Increase this value
     if you expect objects in one parallel environment to impact objects within this spacing distance"""

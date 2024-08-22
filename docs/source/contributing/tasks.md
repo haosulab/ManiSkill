@@ -36,8 +36,8 @@ Each task always requires some sort of "agent" which could be a standard industr
 
 ```python
 class YourEnv(BaseEnv):
-    SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
-    agent: Union[Panda, Xmate3Robotiq, Fetch]
+    SUPPORTED_ROBOTS = ["panda", "fetch"]
+    agent: Union[Panda, Fetch]
 ```
 
 ### Supported Reward Mode Labelling

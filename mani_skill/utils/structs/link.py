@@ -89,10 +89,12 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
             assert (
                 link.is_root == is_root
             ), "all links given to merge must all be root or all not be root links"
+            merged_scene_idxs.append(link._scene_idxs)
+            # if link is not root, then there are joints we can merge automatically
             if not is_root:
                 joint_objs += link.joint._objs
                 articulation_objs += link.articulation._objs
-                merged_scene_idxs.append(link._scene_idxs)
+
                 merged_active_joint_indexes.append(link.joint.active_index)
                 merged_joint_indexes.append(link.joint.index)
             assert (

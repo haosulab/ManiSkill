@@ -67,7 +67,8 @@ PREBUILT_SHADER_CONFIGS = {
                 "depth": (-data[..., [2]] * 1000).to(torch.int16),
                 "position": data[..., :3],
             },
-            "Segmentation": lambda data: {"segmentation": data[..., 3][..., None]},
+            # note in default shader pack, 0 is visual shape / mesh, 1 is actor/link level, 2 is parallel scene ID, 3 is unused
+            "Segmentation": lambda data: {"segmentation": data[..., 1][..., None]},
         },
     ),
     "rt": ShaderConfig(
