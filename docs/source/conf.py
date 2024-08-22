@@ -53,10 +53,11 @@ html_logo = "_static/logo_black.svg"
 html_favicon = "_static/favicon.svg"
 
 
-json_url = "https://maniskill.readthedocs.io/en/latest/_static/version_switcher.json"
-version_match = "latest" #os.environ.get("READTHEDOCS_VERSION")
-release = __version__
-
+# json_url = "https://maniskill.readthedocs.io/en/latest/_static/version_switcher.json"
+json_url = "_static/version_switcher.json"
+version_match = os.environ.get("READTHEDOCS_VERSION")
+if version_match is None:
+    version_match = "v" + __version__
 html_theme_options = {
     "use_edit_page_button": True,
     "icon_links": [
@@ -78,7 +79,7 @@ html_theme_options = {
         "image_dark": "_static/logo_white.svg",
     },
     "navbar_center": ["version-switcher", "navbar-nav"],
-    "show_version_warning_banner": True,
+    "show_version_warning_banner": False,
     "switcher": {
         "json_url": json_url,
         "version_match": version_match,
