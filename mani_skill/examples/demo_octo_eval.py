@@ -16,6 +16,7 @@ from matplotlib import pyplot as plt
 
 from mani_skill.utils import common
 from mani_skill.utils import visualization
+from mani_skill.utils.visualization.misc import images_to_video
 signal.signal(signal.SIGINT, signal.SIG_DFL) # allow ctrl+c
 
 import argparse
@@ -62,7 +63,7 @@ def main(args):
         args.env_id,
         obs_mode=args.obs_mode,
         num_envs=args.num_envs,
-        sensor_configs=sensor_configs
+        sensor_configs=sensor_configs,
     )
 
     obs, _ = env.reset(seed=args.seed)
@@ -91,14 +92,20 @@ def main(args):
                 cam_num += 1
         img = visualization.tile_images(imgs, nrows=n_cams)
         renderer(img)
-    render_obs(obs)
+        return img
+    images = []
+    images.append(render_obs(obs))
     i = 0
     while True:
         action = env.action_space.sample()
         action = gt_actions[i]
         obs, reward, terminated, truncated, info = env.step(action)
+        images.append(render_obs(obs))
         i += 1
-        render_obs(obs)
+        if i >= len(gt_actions):
+            break
+    import ipdb;ipdb.set_trace()
+    images_to_video(images, "videos", "octo_eval", fps=10, verbose=True)
 
 if __name__ == "__main__":
     main(parse_args())

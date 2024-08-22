@@ -6,6 +6,14 @@ import torch
 from sapien.physx import PhysxMaterial
 
 from mani_skill import ASSET_DIR
+from mani_skill.agents.base_agent import DictControllerConfig
+from mani_skill.agents.controllers.base_controller import ControllerConfig
+from mani_skill.agents.controllers.pd_ee_pose import PDEEPoseControllerConfig
+from mani_skill.agents.controllers.pd_joint_pos import (
+    PDJointPosController,
+    PDJointPosControllerConfig,
+    PDJointPosMimicControllerConfig,
+)
 from mani_skill.agents.robots.widowx.widowx import WidowX250S
 from mani_skill.envs.tasks.digital_twins.base_env import BaseDigitalTwinEnv
 from mani_skill.sensors.camera import CameraConfig
@@ -17,6 +25,15 @@ from mani_skill.utils.structs.types import SimConfig
 
 class WidowX250SBridgeDatasetFlatTable(WidowX250S):
     uid = "widowx250s_bridgedataset_flat_table"
+    arm_joint_names = [
+        "waist",
+        "shoulder",
+        "elbow",
+        "forearm_roll",
+        "wrist_angle",
+        "wrist_rotate",
+    ]
+    gripper_joint_names = ["left_finger", "right_finger"]
 
     @property
     def _sensor_configs(self):
@@ -35,6 +52,74 @@ class WidowX250SBridgeDatasetFlatTable(WidowX250S):
                 ),  # logitech C920
             ),
         ]
+
+    arm_stiffness = [
+        1169.7891719504198,
+        730.0,
+        808.4601346394447,
+        1229.1299089624076,
+        1272.2760456418862,
+        1056.3326605132252,
+    ]
+    arm_damping = [
+        330.0,
+        180.0,
+        152.12036565582588,
+        309.6215302722146,
+        201.04998711007383,
+        269.51458932695414,
+    ]
+
+    arm_force_limit = [200, 200, 100, 100, 100, 100]
+    arm_friction = 0.0
+    arm_vel_limit = 1.5
+    arm_acc_limit = 2.0
+
+    gripper_stiffness = 1000
+    gripper_damping = 200
+    gripper_pid_stiffness = 1000
+    gripper_pid_damping = 200
+    gripper_pid_integral = 300
+    gripper_force_limit = 60
+    gripper_vel_limit = 0.12
+    gripper_acc_limit = 0.50
+    gripper_jerk_limit = 5.0
+
+    @property
+    def _controller_configs(self):
+        arm_common_kwargs = dict(
+            joint_names=self.arm_joint_names,
+            pos_lower=-1.0,  # dummy limit, which is unused since normalize_action=False
+            pos_upper=1.0,
+            rot_lower=-np.pi / 2,
+            rot_upper=np.pi / 2,
+            stiffness=self.arm_stiffness,
+            damping=self.arm_damping,
+            force_limit=self.arm_force_limit,
+            friction=self.arm_friction,
+            ee_link="ee_gripper_link",
+            urdf_path=self.urdf_path,
+            normalize_action=False,
+        )
+        arm_pd_ee_target_delta_pose_align2 = PDEEPoseControllerConfig(
+            **arm_common_kwargs, use_target=True
+        )
+
+        extra_gripper_clearance = 0.001  # since real gripper is PID, we use extra clearance to mitigate PD small errors; also a trick to have force when grasping
+        gripper_pd_joint_pos = PDJointPosMimicControllerConfig(
+            joint_names=self.gripper_joint_names,
+            lower=0.015 - extra_gripper_clearance,
+            upper=0.037 + extra_gripper_clearance,
+            stiffness=self.gripper_stiffness,
+            damping=self.gripper_damping,
+            force_limit=self.gripper_force_limit,
+            normalize_action=True,
+            drive_mode="force",
+        )
+        controller = dict(
+            arm=arm_pd_ee_target_delta_pose_align2, gripper=gripper_pd_joint_pos
+        )
+        return dict(arm_pd_ee_target_delta_pose_align2_gripper_pd_joint_pos=controller)
 
 
 class WidowX250SBridgeDatasetSink(WidowX250S):
