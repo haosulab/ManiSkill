@@ -59,7 +59,7 @@ class WidowX250SBridgeDatasetSink(WidowX250S):
 class BaseBridgeEnv(BaseDigitalTwinEnv):
     """Base Digital Twin environment for digital twins of the BridgeData v2"""
 
-    SUPPORTED_OBS_MODES = ["rgb"]
+    SUPPORTED_OBS_MODES = ["rgb", "rgb+depth+segmentation"]
     SUPPORTED_REWARD_MODES = ["none"]
     scene_setting: Literal["flat_table", "sink"] = "flat_table"
     rgb_overlay_cameras = ["3rd_view_camera"]
