@@ -12,6 +12,7 @@ from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import common, io_utils, sapien_utils
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.pose import Pose
+from mani_skill.utils.structs.types import SimConfig
 
 
 class WidowX250SBridgeDatasetFlatTable(WidowX250S):
@@ -100,6 +101,10 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
             robot_uids=robot_cls,
             **kwargs,
         )
+
+    @property
+    def _default_sim_config(self):
+        return SimConfig(sim_freq=500, control_freq=5)
 
     @property
     def _default_human_render_camera_configs(self):
@@ -204,7 +209,6 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
                 )
             self.agent.robot.set_qpos(qpos)
 
-            print(self.agent.robot.qpos)
             for i, actor in enumerate(self.objs.values()):
                 xyz = self.xyz_configs[pos_episode_ids, i]
                 actor.set_pose(

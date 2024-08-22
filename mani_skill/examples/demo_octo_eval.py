@@ -8,6 +8,7 @@ pip install torch
 """
 
 
+import os
 import signal
 import sys
 
@@ -71,6 +72,8 @@ def main(args):
             n_cams += 1
     print(f"Visualizing {n_cams} RGBD cameras")
 
+    gt_actions = np.load(os.path.join(os.path.dirname(__file__), "actions.npy"))
+
     renderer = visualization.ImageRenderer()
     def render_obs(obs):
         cam_num = 0
@@ -89,9 +92,12 @@ def main(args):
         img = visualization.tile_images(imgs, nrows=n_cams)
         renderer(img)
     render_obs(obs)
+    i = 0
     while True:
         action = env.action_space.sample()
+        action = gt_actions[i]
         obs, reward, terminated, truncated, info = env.step(action)
+        i += 1
         render_obs(obs)
 
 if __name__ == "__main__":
