@@ -511,7 +511,7 @@ class BaseEnv(gym.Env):
             sensor.capture()
 
     def get_sensor_images(self) -> Dict[str, Dict[str, torch.Tensor]]:
-        """Get image (RGB) visualizations of what sensors currently sense"""
+        """Get image (RGB) visualizations of what sensors currently sense. This function calls self._get_obs_sensor_data() internally which automatically hides objects and updates the render"""
         return self.scene.get_sensor_images(self._get_obs_sensor_data())
 
     def get_sensor_params(self) -> Dict[str, Dict[str, torch.Tensor]]:
@@ -1189,12 +1189,10 @@ class BaseEnv(gym.Env):
             obj.show_visual()
         self.scene.update_render()
         render_images = self.scene.get_human_render_camera_images()
-        for obj in self._hidden_objects:
-            obj.hide_visual()
+        # note that get_sensor_images function will update the render and hide objects itself
         sensor_images = self.get_sensor_images()
         for image in render_images.values():
-            for img in image.values():
-                images.append(img)
+            images.append(image)
         for image in sensor_images.values():
             for img in image.values():
                 images.append(img)
