@@ -53,7 +53,7 @@ html_logo = "_static/logo_black.svg"
 html_favicon = "_static/favicon.svg"
 
 
-json_url = "https://maniskill.readthedocs.io/en/docs-upgrades/_static/version_switcher.json"
+json_url = "https://maniskill.readthedocs.io/en/latest/_static/version_switcher.json"
 version_match = "latest" #os.environ.get("READTHEDOCS_VERSION")
 release = __version__
 
