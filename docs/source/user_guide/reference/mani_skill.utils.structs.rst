@@ -9,6 +9,8 @@ Structs in ManiSkill are objects that efficiently wrap around raw SAPIEN objects
 
 .. autosummary::
 
+  :template: class_no_parameters.rst
+  
   :toctree: _autosummary
     Pose
     Actor
