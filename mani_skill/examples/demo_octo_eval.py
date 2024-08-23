@@ -90,7 +90,7 @@ def main(args):
     policy_setup = "widowx_bridge"
     model = OctoInference(model_type=model_name, policy_setup=policy_setup, init_rng=0)
 
-    instruction = "put carrot on plate"
+    instruction = env.unwrapped.get_language_instruction()
     print("instruction:", instruction)
     model.reset(instruction)
 
@@ -123,7 +123,7 @@ def main(args):
         obs, reward, terminated, truncated, info = env.step(action)
         truncated = bool(truncated)
         images.append(render_obs(obs))
-    images_to_video(images, "videos", "octo_eval", fps=10, verbose=True)
+    images_to_video(images, "videos/real2sim_eval/", "octo_eval", fps=10, verbose=True)
 
 if __name__ == "__main__":
     main(parse_args())
