@@ -91,7 +91,7 @@ class Kinematics:
     def _setup_gpu(self):
         """setup the kinematics solvers on the GPU"""
         self.use_gpu_ik = True
-        with open(self.urdf_path, "r") as f:
+        with open(self.urdf_path, "rb") as f:
             urdf_str = f.read()
 
         # NOTE (stao): it seems that the pk library currently always outputs some complaints if there are unknown attributes in a URDF. Hide it with this contextmanager here
@@ -102,11 +102,21 @@ class Kinematics:
                 with redirect_stderr(fnull) as err, redirect_stdout(fnull) as out:
                     yield (err, out)
 
-        with suppress_stdout_stderr():
-            self.pk_chain = pk.build_serial_chain_from_urdf(
-                urdf_str,
-                end_link_name=self.end_link.name,
-            ).to(device=self.device)
+        # with suppress_stdout_stderr():
+        self.pk_chain = pk.build_serial_chain_from_urdf(
+            urdf_str,
+            end_link_name=self.end_link.name,
+        ).to(device=self.device)
+        lim = torch.tensor(self.pk_chain.get_joint_limits(), device=self.device)
+        self.pik = pk.PseudoInverseIK(
+            self.pk_chain,
+            joint_limits=lim.T,
+            early_stopping_any_converged=True,
+            # early_stopping_no_improvement="all",
+            debug=True,
+            max_iterations=200,
+            num_retries=10,
+        )
 
         self.qmask = torch.zeros(
             len(self.active_ancestor_joints), dtype=bool, device=self.device
@@ -118,23 +128,65 @@ class Kinematics:
     ):
         """Given a target pose, via inverse kinematics compute the target joint positions that will achieve the target pose"""
         if self.use_gpu_ik:
-            q0 = q0[:, self.active_ancestor_joint_idxs]
-            jacobian = self.pk_chain.jacobian(q0)
-            # code commented out below is the fast kinematics method
-            # jacobian = (
-            #     self.fast_kinematics_model.jacobian_mixed_frame_pytorch(
-            #         self.articulation.get_qpos()[:, self.active_ancestor_joint_idxs]
-            #     )
-            #     .view(-1, len(self.active_ancestor_joints), 6)
-            #     .permute(0, 2, 1)
-            # )
-            # jacobian = jacobian[:, :, self.qmask]
-            if pos_only:
-                jacobian = jacobian[:, 0:3]
+            pos = torch.tensor([0.0, 0.0, 0.0], device=self.device)
+            rot = torch.tensor([0.0, 0.0, 0.0], device=self.device)
+            rob_tf = pk.Transform3d(
+                pos=-self.articulation.pose.p,
+                rot=self.articulation.pose.q[:, [3, 0, 1, 2]],
+                device=self.device,
+            )
 
-            # NOTE (stao): this method of IK is from https://mathweb.ucsd.edu/~sbuss/ResearchWeb/ikmethods/iksurvey.pdf by Samuel R. Buss
-            delta_joint_pos = torch.linalg.pinv(jacobian) @ action.unsqueeze(-1)
-            return q0 + delta_joint_pos.squeeze(-1)
+            # pytorch kinematics assumes? robot root link pose is at 0.
+
+            # Transform3D quaternion format is (w, x, y, z)? SAPIEN is (x, y, z, w)
+
+            fk_res = self.pk_chain.forward_kinematics(self.articulation.qpos)
+            # # print("FK", fk_res)
+            # # print("FK in SIM", self.end_link.pose.p - self.articulation.pose.p)
+            # # import ipdb; ipdb.set_trace()
+            # # fk_res.position  is self.end_link.pose.p - self.articulation.pose.p
+            # lim = torch.tensor(self.pk_chain.get_joint_limits(), device=self.device)
+            # ik = pk.PseudoInverseIK(self.pk_chain, max_iterations=200, num_retries=10,
+            #             joint_limits=lim.T,
+            #             # early_stopping_any_converged=True,
+            #             # early_stopping_no_improvement="all",
+            #             debug=True,
+            #             lr=0.1); solution = ik.solve(fk_res)
+            # import ipdb; ipdb.set_trace()
+            tf = pk.Transform3d(
+                pos=target_pose.p,
+                rot=target_pose.q[:, [3, 0, 1, 2]],
+                device=self.device,
+            )
+            goal_in_rob_frame_tf = rob_tf.inverse().compose(tf)
+            self.pik.solve(fk_res)
+
+            # problem, pk library does not support solving for IK of links that are not at the end?
+            self.pik.solve(goal_in_rob_frame_tf)
+            # import ipdb; ipdb.set_trace()
+            # fast IK solution for delta actions
+            if True:
+                import ipdb
+
+                ipdb.set_trace()
+            if False:
+                q0 = q0[:, self.active_ancestor_joint_idxs]
+                jacobian = self.pk_chain.jacobian(q0)
+                # code commented out below is the fast kinematics method
+                # jacobian = (
+                #     self.fast_kinematics_model.jacobian_mixed_frame_pytorch(
+                #         self.articulation.get_qpos()[:, self.active_ancestor_joint_idxs]
+                #     )
+                #     .view(-1, len(self.active_ancestor_joints), 6)
+                #     .permute(0, 2, 1)
+                # )
+                # jacobian = jacobian[:, :, self.qmask]
+                if pos_only:
+                    jacobian = jacobian[:, 0:3]
+
+                # NOTE (stao): this method of IK is from https://mathweb.ucsd.edu/~sbuss/ResearchWeb/ikmethods/iksurvey.pdf by Samuel R. Buss
+                delta_joint_pos = torch.linalg.pinv(jacobian) @ action.unsqueeze(-1)
+                return q0 + delta_joint_pos.squeeze(-1)
         else:
             result, success, error = self.pmodel.compute_inverse_kinematics(
                 self.end_link_idx,

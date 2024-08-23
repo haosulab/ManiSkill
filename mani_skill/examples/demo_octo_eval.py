@@ -74,6 +74,7 @@ def main(args):
         obs_mode=args.obs_mode,
         num_envs=args.num_envs,
         sensor_configs=sensor_configs,
+        sim_backend="gpu",
     )
 
     obs, _ = env.reset(seed=args.seed)
@@ -86,9 +87,9 @@ def main(args):
     from simpler_env.policies.octo.octo_model import OctoInference
 
 
-    model_name = "octo-base"
-    policy_setup = "widowx_bridge"
-    model = OctoInference(model_type=model_name, policy_setup=policy_setup, init_rng=0)
+    # model_name = "octo-base"
+    # policy_setup = "widowx_bridge"
+    # model = OctoInference(model_type=model_name, policy_setup=policy_setup, init_rng=0)
 
 
 
@@ -114,6 +115,8 @@ def main(args):
     # gt_actions = np.load(os.path.join(os.path.dirname(__file__), "actions.npy"))
     for seed in range(100, 200):
         obs, _ = env.reset(seed=seed)
+        while True:
+            env.step(env.action_space.sample())
         instruction = env.unwrapped.get_language_instruction()
         print("instruction:", instruction)
         model.reset(instruction)

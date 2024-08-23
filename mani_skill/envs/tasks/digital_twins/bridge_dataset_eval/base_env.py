@@ -250,8 +250,8 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
         for name in self.obj_names:
             self.objs[name] = self._build_actor_helper(name)
 
-        self.xyz_configs = common.to_tensor(self.xyz_configs)
-        self.quat_configs = common.to_tensor(self.quat_configs)
+        self.xyz_configs = common.to_tensor(self.xyz_configs).to(torch.float32)
+        self.quat_configs = common.to_tensor(self.quat_configs).to(torch.float32)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):

@@ -179,12 +179,6 @@ class PDEEPoseController(PDEEPosController):
         assert (
             self.config.frame == "root_translation:root_aligned_body_rotation"
         ), "currently only translation in the root frame for EE control is supported in GPU sim"
-        assert (
-            self.config.use_delta == True
-        ), "currently only delta EE control is supported in GPU sim"
-        assert (
-            self.config.use_target == False
-        ), "Currently cannot take actions relative to last target pose in GPU sim"
 
     def _initialize_action_space(self):
         low = np.float32(
@@ -218,11 +212,6 @@ class PDEEPoseController(PDEEPosController):
         ]
         rot_action = rot_action * self.config.rot_lower
         return torch.hstack([pos_action, rot_action])
-
-    def compute_ik(self, target_pose: Pose, action: Array, max_iterations=100):
-        return super().compute_ik(
-            target_pose, action, pos_only=False, max_iterations=max_iterations
-        )
 
     def compute_target_pose(self, prev_ee_pose_at_base: Pose, action):
         if self.config.use_delta:
