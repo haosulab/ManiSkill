@@ -811,6 +811,10 @@ class BaseEnv(gym.Env):
             self.scene._gpu_apply_all()
             self.scene.px.gpu_update_articulation_kinematics()
             self.scene._gpu_fetch_all()
+
+        # we reset controllers here because some controllers depend on the agent/articulation qpos/poses
+        self.agent.controller.reset()
+
         obs = self.get_obs()
 
         return obs, dict(reconfigure=reconfigure)

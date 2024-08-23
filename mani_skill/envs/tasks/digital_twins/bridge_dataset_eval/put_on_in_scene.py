@@ -44,11 +44,6 @@ class PutCarrotOnPlateInScene(BaseBridgeEnv):
                 ]
             )
         )
-        # TODO (stao): remove hardcoded xyz_configs. These correspond with seed 0 in original repo
-        # when using reset(seed=3) here.
-        # xyz_configs = torch.tensor(
-        #     [[[-0.0865486, -0.075, 0.887528], [-0.235, -0.075, 0.869531]]]
-        # )
         source_obj_name = "bridge_carrot_generated_modified"
         target_obj_name = "bridge_plate_objaverse_larger"
         super().__init__(

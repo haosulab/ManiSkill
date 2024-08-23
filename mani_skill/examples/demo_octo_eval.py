@@ -90,9 +90,7 @@ def main(args):
     policy_setup = "widowx_bridge"
     model = OctoInference(model_type=model_name, policy_setup=policy_setup, init_rng=0)
 
-    instruction = env.unwrapped.get_language_instruction()
-    print("instruction:", instruction)
-    model.reset(instruction)
+
 
     renderer = visualization.ImageRenderer(wait_for_button_press=False)
     def render_obs(obs):
@@ -112,18 +110,24 @@ def main(args):
         img = visualization.tile_images(imgs, nrows=n_cams)
         # renderer(img)
         return img
-    images = []
-    images.append(render_obs(obs))
-    i = 0
-    predicted_terminated, truncated = False, False
-    while not (predicted_terminated or truncated):
-        raw_action, action = model.step(images[-1])
-        predicted_terminated = bool(action["terminate_episode"][0] > 0)
-        action = np.concatenate([action["world_vector"], action["rot_axangle"], action["gripper"]])
-        obs, reward, terminated, truncated, info = env.step(action)
-        truncated = bool(truncated)
+
+    # gt_actions = np.load(os.path.join(os.path.dirname(__file__), "actions.npy"))
+    for seed in range(100, 200):
+        obs, _ = env.reset(seed=seed)
+        instruction = env.unwrapped.get_language_instruction()
+        print("instruction:", instruction)
+        model.reset(instruction)
+        images = []
         images.append(render_obs(obs))
-    images_to_video(images, "videos/real2sim_eval/", "octo_eval", fps=10, verbose=True)
+        predicted_terminated, truncated = False, False
+        while not (predicted_terminated or truncated):
+            raw_action, action = model.step(images[-1])
+            predicted_terminated = bool(action["terminate_episode"][0] > 0)
+            action = np.concatenate([action["world_vector"], action["rot_axangle"], action["gripper"]])
+            obs, reward, terminated, truncated, info = env.step(action)
+            truncated = bool(truncated)
+            images.append(render_obs(obs))
+        images_to_video(images, "videos/real2sim_eval/", f"octo_eval_{seed}", fps=10, verbose=True)
 
 if __name__ == "__main__":
     main(parse_args())

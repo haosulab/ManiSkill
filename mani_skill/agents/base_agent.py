@@ -337,7 +337,7 @@ class BaseAgent:
     # -------------------------------------------------------------------------- #
     def reset(self, init_qpos: torch.Tensor = None):
         """
-        Reset the robot to a clean state with zero velocity and forces. Furthermore it resets the current active controller.
+        Reset the robot to a clean state with zero velocity and forces.
 
         Args:
             init_qpos (torch.Tensor): The initial qpos to set the robot to. If None, the robot's qpos is not changed.
@@ -346,7 +346,6 @@ class BaseAgent:
             self.robot.set_qpos(init_qpos)
         self.robot.set_qvel(torch.zeros(self.robot.max_dof, device=self.device))
         self.robot.set_qf(torch.zeros(self.robot.max_dof, device=self.device))
-        self.controller.reset()
 
     # -------------------------------------------------------------------------- #
     # Optional per-agent APIs, implemented depending on agent affordances
