@@ -1,10 +1,24 @@
 """
 scripts:
 
-mamba create -n "ms3-octo" "python==3.10"
+## installation
+mamba create -n "ms3-octo" "python==3.10.12"
 mamba activate ms3-octo
 pip install -e .
-pip install torch
+pip install torch==2.3.1
+
+git clone https://github.com/simpler-env/SimplerEnv
+cd SimplerEnv
+pip install -e .
+pip install tensorflow==2.15.0
+pip install -r requirements_full_install.txt
+pip install tensorflow[and-cuda]==2.15.1 # tensorflow gpu support
+
+pip install --upgrade "jax[cuda12_pip]==0.4.20" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+git clone https://github.com/octo-models/octo/
+cd octo
+git checkout 653c54acde686fde619855f2eac0dd6edad7116b  # we use octo-1.0
+pip install -e .
 """
 
 
@@ -69,9 +83,18 @@ def main(args):
             n_cams += 1
     print(f"Visualizing {n_cams} RGBD cameras")
 
-    gt_actions = np.load(os.path.join(os.path.dirname(__file__), "actions.npy"))
+    from simpler_env.policies.octo.octo_model import OctoInference
 
-    renderer = visualization.ImageRenderer()
+
+    model_name = "octo-base"
+    policy_setup = "widowx_bridge"
+    model = OctoInference(model_type=model_name, policy_setup=policy_setup, init_rng=0)
+
+    instruction = "put carrot on plate"
+    print("instruction:", instruction)
+    model.reset(instruction)
+
+    renderer = visualization.ImageRenderer(wait_for_button_press=False)
     def render_obs(obs):
         cam_num = 0
         imgs=[]
@@ -87,20 +110,19 @@ def main(args):
                     imgs.append(depth_rgb)
                 cam_num += 1
         img = visualization.tile_images(imgs, nrows=n_cams)
-        renderer(img)
+        # renderer(img)
         return img
     images = []
     images.append(render_obs(obs))
     i = 0
-    while True:
-        action = env.action_space.sample()
-        action = gt_actions[i]
+    predicted_terminated, truncated = False, False
+    while not (predicted_terminated or truncated):
+        raw_action, action = model.step(images[-1])
+        predicted_terminated = bool(action["terminate_episode"][0] > 0)
+        action = np.concatenate([action["world_vector"], action["rot_axangle"], action["gripper"]])
         obs, reward, terminated, truncated, info = env.step(action)
+        truncated = bool(truncated)
         images.append(render_obs(obs))
-        i += 1
-        if i >= len(gt_actions):
-            break
-    # import ipdb;ipdb.set_trace()
     images_to_video(images, "videos", "octo_eval", fps=10, verbose=True)
 
 if __name__ == "__main__":
