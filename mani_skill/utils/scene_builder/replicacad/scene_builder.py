@@ -288,7 +288,7 @@ class ReplicaCADSceneBuilder(SceneBuilder):
     def initialize(self, env_idx: torch.Tensor):
 
         # teleport robot away for init
-        self.env.agent.robot.set_pose(sapien.Pose([-1, 0, -100]))
+        self.env.agent.robot.set_pose(sapien.Pose([-10, 0, -100]))
 
         for obj, pose in self._default_object_poses:
             obj.set_pose(pose)

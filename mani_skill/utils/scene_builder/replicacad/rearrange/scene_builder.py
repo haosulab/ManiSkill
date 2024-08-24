@@ -280,7 +280,7 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
         super().initialize(env_idx)
 
         # teleport robot away for init
-        self.env.agent.robot.set_pose(sapien.Pose([0, 0, 100]))
+        self.env.agent.robot.set_pose(sapien.Pose([-10, 0, -100]))
 
         # if pose given by init config, set pose
         # if pose not given, hide extra ycb obj by teleporting away and
