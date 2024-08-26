@@ -91,7 +91,7 @@ class CartpoleEnv(BaseEnv):
     def _default_sim_config(self):
         return SimConfig(
             spacing=20,
-            scene_cfg=SceneConfig(
+            scene_config=SceneConfig(
                 solver_position_iterations=4, solver_velocity_iterations=0
             ),
         )

@@ -4,6 +4,7 @@ import numpy as np
 import torch
 
 from mani_skill.agents.robots.anymal.anymal_c import ANYmalC
+from mani_skill.agents.robots.unitree_go.unitree_go2 import UnitreeGo2Simplified
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
@@ -15,8 +16,9 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SceneConfig, SimConf
 
 
 class QuadrupedReachEnv(BaseEnv):
-    SUPPORTED_ROBOTS = ["anymal_c"]
+    SUPPORTED_ROBOTS = ["anymal_c", "unitree_go2_simplified_locomotion"]
     agent: ANYmalC
+    default_qpos: torch.Tensor
 
     _UNDESIRED_CONTACT_LINK_NAMES: List[str] = None
 
@@ -26,8 +28,8 @@ class QuadrupedReachEnv(BaseEnv):
     @property
     def _default_sim_config(self):
         return SimConfig(
-            gpu_memory_cfg=GPUMemoryConfig(max_rigid_contact_count=2**20),
-            scene_cfg=SceneConfig(
+            gpu_memory_config=GPUMemoryConfig(max_rigid_contact_count=2**20),
+            scene_config=SceneConfig(
                 solver_position_iterations=4, solver_velocity_iterations=0
             ),
         )
@@ -108,6 +110,7 @@ class QuadrupedReachEnv(BaseEnv):
         obs = dict(
             root_linear_velocity=self.agent.robot.root_linear_velocity,
             root_angular_velocity=self.agent.robot.root_angular_velocity,
+            reached_goal=info["success"],
         )
         if self.obs_mode in ["state", "state_dict"]:
             obs.update(
@@ -136,15 +139,17 @@ class QuadrupedReachEnv(BaseEnv):
             lin_vel_z_l2 * -2
             + ang_vel_xy_l2 * -0.05
             + self._compute_undesired_contacts() * -1
+            + torch.linalg.norm(self.agent.robot.qpos - self.default_qpos, axis=1)
+            * -0.05
         )
-        reward = 2 * reaching_reward + penalties
-        reward[info["fail"]] = -100
+        reward = 1 + 2 * reaching_reward + penalties
+        reward[info["fail"]] = 0
         return reward
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        max_reward = 2.0
+        max_reward = 3.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
 
 
@@ -154,3 +159,17 @@ class AnymalCReachEnv(QuadrupedReachEnv):
 
     def __init__(self, *args, robot_uids="anymal_c", **kwargs):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
+        self.default_qpos = torch.from_numpy(ANYmalC.keyframes["standing"].qpos).to(
+            self.device
+        )
+
+
+@register_env("UnitreeGo2-Reach-v1", max_episode_steps=200)
+class UnitreeGo2ReachEnv(QuadrupedReachEnv):
+    _UNDESIRED_CONTACT_LINK_NAMES = ["FR_thigh", "RR_thigh", "FL_thigh", "RL_thigh"]
+
+    def __init__(self, *args, robot_uids="unitree_go2_simplified_locomotion", **kwargs):
+        super().__init__(*args, robot_uids=robot_uids, **kwargs)
+        self.default_qpos = torch.from_numpy(
+            UnitreeGo2Simplified.keyframes["standing"].qpos
+        ).to(self.device)

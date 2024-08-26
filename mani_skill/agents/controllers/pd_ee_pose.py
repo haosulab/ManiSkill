@@ -1,25 +1,19 @@
 from dataclasses import dataclass
-from typing import List, Literal, Sequence, Union
+from typing import Literal, Sequence, Union
 
-try:
-    import fast_kinematics
-except:
-    # not all systems support the fast_kinematics package at the moment
-    fast_kinematics = None
 import numpy as np
-import sapien.physx as physx
 import torch
 from gymnasium import spaces
 
-from mani_skill import logger
-from mani_skill.utils import common, gym_utils, sapien_utils
+from mani_skill.agents.controllers.utils.kinematics import Kinematics
+from mani_skill.utils import gym_utils
 from mani_skill.utils.geometry.rotation_conversions import (
     euler_angles_to_matrix,
     matrix_to_quaternion,
     quaternion_apply,
     quaternion_multiply,
 )
-from mani_skill.utils.structs import ArticulationJoint, Pose
+from mani_skill.utils.structs import Pose
 from mani_skill.utils.structs.types import Array, DriveMode
 
 from .base_controller import ControllerConfig
@@ -46,57 +40,16 @@ class PDEEPosController(PDJointPosController):
     def _initialize_joints(self):
         self.initial_qpos = None
         super()._initialize_joints()
-        if self.config.ee_link:
-            self.ee_link = sapien_utils.get_obj_by_name(
-                self.articulation.get_links(), self.config.ee_link
-            )
-        else:
-            # The child link of last joint is assumed to be the end-effector.
-            self.ee_link = self.joints[-1].get_child_link()
-            logger.warn(
-                "Configuration did not define a ee_link name, using the child link of the last joint"
-            )
-        self.ee_link_idx = self.articulation.get_links().index(self.ee_link)
-
-        if physx.is_gpu_enabled():
-            assert (
-                fast_kinematics is not None
-            ), "fast_kinematics is not installed. This is likely because your system does not support the fast_kinematics library which provides GPU accelerated inverse kinematics solvers"
+        if self.device.type == "cuda":
             self._check_gpu_sim_works()
-            self.fast_kinematics_model = fast_kinematics.FastKinematics(
-                self.config.urdf_path, self.scene.num_envs, self.config.ee_link
-            )
-            # note that everything past the end-effector is ignored. Any joint whose ancestor is self.ee_link is ignored
-            # get_joints returns the joints in level order
-            # for joint in joints
-            cur_link = self.ee_link.joint.parent_link
-            active_ancestor_joints: List[ArticulationJoint] = []
-            while cur_link is not None:
-                if cur_link.joint.active_index is not None:
-                    active_ancestor_joints.append(cur_link.joint)
-                cur_link = cur_link.joint.parent_link
-            active_ancestor_joints = active_ancestor_joints[::-1]
-            self.active_ancestor_joints = active_ancestor_joints
+        self.kinematics = Kinematics(
+            self.config.urdf_path,
+            self.config.ee_link,
+            self.articulation,
+            self.active_joint_indices,
+        )
 
-            # initially self.active_joint_indices references active joints that are controlled.
-            # we also make the assumption that the active index is the same across all parallel managed joints
-            self.active_ancestor_joint_idxs = [
-                (x.active_index[0]).cpu().item() for x in self.active_ancestor_joints
-            ]
-            controlled_joints_idx_in_qmask = [
-                self.active_ancestor_joint_idxs.index(idx)
-                for idx in self.active_joint_indices
-            ]
-            self.qmask = torch.zeros(
-                len(self.active_ancestor_joints), dtype=bool, device=self.device
-            )
-            self.qmask[controlled_joints_idx_in_qmask] = 1
-        else:
-            self.qmask = torch.zeros(
-                self.articulation.max_dof, dtype=bool, device=self.device
-            )
-            self.pmodel = self.articulation._objs[0].create_pinocchio_model()
-            self.qmask[self.active_joint_indices] = 1
+        self.ee_link = self.kinematics.end_link
 
     def _initialize_action_space(self):
         low = np.float32(np.broadcast_to(self.config.pos_lower, 3))
@@ -126,41 +79,6 @@ class PDEEPosController(PDJointPosController):
                 self.scene._reset_mask
             ] = self.ee_pose_at_base.raw_pose[self.scene._reset_mask]
 
-    def compute_ik(
-        self, target_pose: Pose, action: Array, pos_only=True, max_iterations=100
-    ):
-        # NOTE (stao): it is a bit strange code wise that target_pose and action are both given since
-        # GPU sim can only use the delta action directly and cannot generate joint targets via a target pose
-        if physx.is_gpu_enabled():
-            ## GPU IK mixed frame is basically all relative to base frame...
-            ## CPU depends...
-            jacobian = (
-                self.fast_kinematics_model.jacobian_mixed_frame_pytorch(
-                    self.articulation.get_qpos()[:, self.active_ancestor_joint_idxs]
-                )
-                .view(-1, len(self.active_ancestor_joints), 6)
-                .permute(0, 2, 1)
-            )
-            jacobian = jacobian[:, :, self.qmask]
-            if pos_only:
-                jacobian = jacobian[:, 0:3]
-
-            # NOTE (stao): this method of IK is from https://mathweb.ucsd.edu/~sbuss/ResearchWeb/ikmethods/iksurvey.pdf by Samuel R. Buss
-            delta_joint_pos = torch.linalg.pinv(jacobian) @ action.unsqueeze(-1)
-            return self.qpos + delta_joint_pos.squeeze(-1)
-        else:
-            result, success, error = self.pmodel.compute_inverse_kinematics(
-                self.ee_link_idx,
-                target_pose.sp,
-                initial_qpos=common.to_numpy(self.articulation.get_qpos()).squeeze(0),
-                active_qmask=self.qmask,
-                max_iterations=max_iterations,
-            )
-        if success:
-            return common.to_tensor([result[self.active_joint_indices]])
-        else:
-            return None
-
     def compute_target_pose(self, prev_ee_pose_at_base, action):
         # Keep the current rotation and change the position
         if self.config.use_delta:
@@ -187,7 +105,13 @@ class PDEEPosController(PDJointPosController):
             prev_ee_pose_at_base = self.ee_pose_at_base
 
         self._target_pose = self.compute_target_pose(prev_ee_pose_at_base, action)
-        self._target_qpos = self.compute_ik(self._target_pose, action)
+        pos_only = type(self.config) == PDEEPosControllerConfig
+        self._target_qpos = self.kinematics.compute_ik(
+            self._target_pose,
+            self.articulation.get_qpos(),
+            pos_only=pos_only,
+            action=action,
+        )
         if self._target_qpos is None:
             self._target_qpos = self._start_qpos
         if self.config.interpolate:

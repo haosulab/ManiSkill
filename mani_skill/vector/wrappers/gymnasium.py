@@ -6,7 +6,6 @@ import gymnasium as gym
 import torch
 from gymnasium.vector import VectorEnv
 
-from mani_skill.utils import gym_utils
 from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:
@@ -46,10 +45,14 @@ class ManiSkillVectorEnv(VectorEnv):
             num_envs = self.base_env.num_envs
         self.auto_reset = auto_reset
         self.ignore_terminations = ignore_terminations
+        self.spec = self._env.spec
         super().__init__(
             num_envs, self._env.single_observation_space, self._env.single_action_space
         )
-
+        if not self.ignore_terminations and auto_reset:
+            assert (
+                self.base_env.reconfiguration_freq == 0
+            ), "With partial resets, environment cannot be reconfigured automatically"
         self.returns = torch.zeros(self.num_envs, device=self.base_env.device)
 
     @property
@@ -96,7 +99,7 @@ class ManiSkillVectorEnv(VectorEnv):
         infos[
             "real_next_obs"
         ] = obs  # not part of standard API but makes some RL code slightly less complicated
-        if dones.any():
+        if dones.any() and self.auto_reset:
             infos["episode"]["r"] = self.returns.clone()
             final_obs = obs
             env_idx = torch.arange(0, self.num_envs, device=self.device)[dones]

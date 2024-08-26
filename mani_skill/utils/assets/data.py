@@ -153,7 +153,7 @@ def initialize_data_sources():
     )
     DATA_SOURCES["unitree_go2"] = DataSource(
         source_type="robot",
-        url="https://github.com/haosulab/ManiSkill-UnitreeGo2/archive/refs/tags/v0.1.0.zip",
+        url="https://github.com/haosulab/ManiSkill-UnitreeGo2/archive/refs/tags/v0.1.1.zip",
         target_path="robots/unitree_go2",
     )
     DATA_SOURCES["stompy"] = DataSource(
@@ -170,6 +170,11 @@ def initialize_data_sources():
         source_type="robot",
         url="https://github.com/haosulab/ManiSkill-GoogleRobot/archive/refs/tags/v0.1.0.zip",
         target_path="robots/googlerobot",
+    )
+    DATA_SOURCES["robotiq_2f"] = DataSource(
+        source_type="robot",
+        url="https://github.com/haosulab/ManiSkill-Robotiq_2F/archive/refs/tags/v0.1.0.zip",
+        target_path="robots/robotiq_2f",
     )
 
 

@@ -28,7 +28,10 @@ CONTROL_MODES_STATIONARY_SINGLE_ARM = [
 OBS_MODES = [
     "state_dict",
     "state",
+    "rgb",
     "rgbd",
+    "rgb+depth+segmentation",
+    "depth+segmentation",
     "pointcloud",
     # "rgbd_robot_seg",
     # "pointcloud_robot_seg",
@@ -40,10 +43,12 @@ VENV_OBS_MODES = [
     # "rgbd_robot_seg",
     # "pointcloud_robot_seg",
 ]
-SINGLE_ARM_STATIONARY_ROBOTS = ["panda", "xmate3_robotiq"]
+SINGLE_ARM_STATIONARY_ROBOTS = ["panda"]
 
-LOW_MEM_SIM_CFG = dict(
-    gpu_memory_cfg=dict(max_rigid_patch_count=81920, found_lost_pairs_capacity=262144)
+LOW_MEM_SIM_CONFIG = dict(
+    gpu_memory_config=dict(
+        max_rigid_patch_count=81920, found_lost_pairs_capacity=262144
+    )
 )
 
 

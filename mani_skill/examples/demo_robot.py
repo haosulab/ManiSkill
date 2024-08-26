@@ -17,6 +17,10 @@ def parse_args(args=None):
     parser.add_argument("--shader", default="default", type=str, help="Change shader used for rendering. Default is 'default' which is very fast. Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer")
     parser.add_argument("--keyframe-actions", action="store_true", help="Whether to use the selected keyframe to set joint targets to try and hold the robot in its position")
     parser.add_argument("--random-actions", action="store_true", help="Whether to sample random actions to control the agent. If False, no control signals are sent and it is just rendering.")
+    parser.add_argument("--none-actions", action="store_true", help="If set, then the scene and rendering will update each timestep but no joints will be controlled via code. You can use this to control the robot freely via the GUI.")
+    parser.add_argument("--zero-actions", action="store_true", help="Whether to send zero actions to the robot. If False, no control signals are sent and it is just rendering.")
+    parser.add_argument("--sim-freq", type=int, default=100, help="Simulation frequency")
+    parser.add_argument("--control-freq", type=int, default=20, help="Control frequency")
     parser.add_argument(
         "-s",
         "--seed",
@@ -35,8 +39,11 @@ def main():
         enable_shadow=True,
         control_mode=args.control_mode,
         robot_uids=args.robot_uid,
-        shader_dir=args.shader,
+        sensor_configs=dict(shader_pack=args.shader),
+        human_render_camera_configs=dict(shader_pack=args.shader),
+        viewer_camera_configs=dict(shader_pack=args.shader),
         render_mode="human",
+        sim_config=dict(sim_freq=args.sim_freq, control_freq=args.control_freq),
         sim_backend=args.sim_backend,
     )
     env.reset(seed=0)
@@ -72,6 +79,10 @@ def main():
     while True:
         if args.random_actions:
             env.step(env.action_space.sample())
+        elif args.none_actions:
+            env.step(None)
+        elif args.zero_actions:
+            env.step(env.action_space.sample() * 0)
         elif args.keyframe_actions:
             assert kf is not None, "this robot has no keyframes, cannot use it to set actions"
             if isinstance(env.agent.controller, DictController):

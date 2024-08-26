@@ -63,6 +63,11 @@ We currently best support Linux based systems. There is limited support for wind
 | WSL / Anything       | ✅      | ❌      | ❌        |
 | MacOS / Anything     | ❌      | ❌      | ❌        |
 
+## Citation and Core Team
+
+ManiSkill 3 will have a technical paper coming out. 
+
+The current author list is as follows: Stone Tao*, Fanbo Xiang*, Arth Shukla, Chen Bao, Nan Xiao, Rui Chen, Tongzhou Mu, Tse-Kai Chan, Xander Hinrichsen, Xiaodi Yuan, Xinsong Lin, Xuanlin Li, Yuan Gao, Yuzhe Qin, Zhiao Huang, Hao Su
 
 ## License
 

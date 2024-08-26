@@ -48,7 +48,7 @@ class FMBAssembly1Env(BaseEnv):
     @property
     def _default_sim_config(self):
         return SimConfig(
-            gpu_memory_cfg=GPUMemoryConfig(
+            gpu_memory_config=GPUMemoryConfig(
                 max_rigid_contact_count=2**21, max_rigid_patch_count=2**20
             )
         )
