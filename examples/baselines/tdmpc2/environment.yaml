@@ -32,7 +32,7 @@ dependencies:
     - opencv-contrib-python==4.9.0.80
     - opencv-python==4.9.0.80
     - pandas==2.1.4
-    - sapien==2.2.1
+    - sapien==3.0.0.b1
     - submitit==1.5.1
     - setuptools==65.5.0
     - patchelf==0.17.2.1
