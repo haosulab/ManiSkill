@@ -20,8 +20,7 @@ from mani_skill.utils.building import actors
 
 from ...replicacad import ReplicaCADSceneBuilder
 
-HIDDEN_OBJ_COLLISION_GROUP = 30
-HIDDEN_POSE = sapien.Pose(p=[99999] * 3)
+DEFAULT_HIDDEN_POS = [-10_000] * 3
 
 
 class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
@@ -192,6 +191,11 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
 
         # find max number of each ycb obj needed to support all init configs in each parallel env
         self.ycb_objs_per_env = []
+        _running_default_hidden_pos_by_env = dict(
+            (env_num, copy.deepcopy(DEFAULT_HIDDEN_POS))
+            for env_num in range(len(build_config_idxs))
+        )
+        self._default_hidden_poses: Dict[Actor, sapien.Pose] = dict()
         for env_num, bci in enumerate(build_config_idxs):
             rcad_config = self.build_configs[bci]
             num_ycb_objs_to_build = rcad_config_to_num_ycb_objs_to_build[rcad_config]
@@ -205,6 +209,10 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
                     actor = builder.build(name=obj_instance_name)
 
                     ycb_objs[actor_id].append(actor)
+                    self._default_hidden_poses[actor] = sapien.Pose(
+                        p=_running_default_hidden_pos_by_env[env_num]
+                    )
+                    _running_default_hidden_pos_by_env[env_num][2] -= 10
                     self.scene_objects[obj_instance_name] = actor
                     self.movable_objects[obj_instance_name] = actor
             self.ycb_objs_per_env.append(ycb_objs)
@@ -346,15 +354,9 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
         return (torch.randint(2**63 - 1, size=size) % (high - low) + low).int().tolist()
 
     def hide_actor(self, actor: Actor):
-        actor.set_collision_group_bit(
-            group=2, bit_idx=HIDDEN_OBJ_COLLISION_GROUP, bit=1
-        )
-        actor.set_pose(HIDDEN_POSE)
+        actor.set_pose(self._default_hidden_poses[actor])
 
     def show_actor(self, actor: Actor, pose: sapien.Pose):
-        actor.set_collision_group_bit(
-            group=2, bit_idx=HIDDEN_OBJ_COLLISION_GROUP, bit=0
-        )
         actor.set_pose(pose)
 
     @cached_property
