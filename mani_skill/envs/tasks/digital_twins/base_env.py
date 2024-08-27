@@ -1,5 +1,4 @@
 import os
-from pathlib import Path
 from typing import Dict, List
 
 import cv2
@@ -72,35 +71,6 @@ class BaseDigitalTwinEnv(BaseEnv):
         Load assets for a digital twin scene in
 
         """
-
-    def _build_actor_helper(
-        self,
-        model_id: str,
-        scale: float = 1.0,
-        physical_material: physx.PhysxMaterial = None,
-        density: float = 1000.0,
-        root_dir: str = ASSET_DIR / "custom",
-    ):
-        builder = self.scene.create_actor_builder()
-        model_dir = Path(root_dir) / "models" / model_id
-
-        collision_file = str(model_dir / "collision.obj")
-        builder.add_multiple_convex_collisions_from_file(
-            filename=collision_file,
-            scale=[scale] * 3,
-            material=physical_material,
-            density=density,
-        )
-
-        visual_file = str(model_dir / "textured.obj")
-        if not os.path.exists(visual_file):
-            visual_file = str(model_dir / "textured.dae")
-            if not os.path.exists(visual_file):
-                visual_file = str(model_dir / "textured.glb")
-        builder.add_visual_from_file(filename=visual_file, scale=[scale] * 3)
-
-        actor = builder.build(name=model_id)
-        return actor
 
     def _after_reconfigure(self, options):
         target_object_actor_ids = [

@@ -85,7 +85,11 @@ def main(args):
     print(f"Visualizing {n_cams} RGBD cameras")
 
     from simpler_env.policies.octo.octo_model import OctoInference
-
+    # viewer = env.render_human()
+    # viewer.paused=True;env.render_human()
+    # while True:
+    #     env.step(None)
+    #     env.render_human()
 
     model_name = "octo-base"
     policy_setup = "widowx_bridge"
@@ -107,14 +111,15 @@ def main(args):
                     imgs.append(depth_rgb)
                 cam_num += 1
         img = visualization.tile_images(imgs, nrows=n_cams)
-        renderer(img)
+        # renderer(img)
         return img
 
     # gt_actions = np.load(os.path.join(os.path.dirname(__file__), "actions.npy"))
     for seed in range(100, 200):
         obs, _ = env.reset(seed=seed)
         # while True:
-        #     env.step(env.action_space.sample())
+        #     render_obs(obs)
+        #     obs, _, _, _, _ = env.step(env.action_space.sample())
         instruction = env.unwrapped.get_language_instruction()
         print("instruction:", instruction)
         model.reset(instruction)

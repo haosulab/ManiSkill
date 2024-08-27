@@ -1,6 +1,8 @@
 """
 Base environment for Bridge dataset environments
 """
+import os
+from pathlib import Path
 from typing import Dict, List, Literal
 
 import numpy as np
@@ -148,7 +150,6 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
     SUPPORTED_OBS_MODES = ["rgb+segmentation"]
     SUPPORTED_REWARD_MODES = ["none"]
     scene_setting: Literal["flat_table", "sink"] = "flat_table"
-    """which cameras to apply green screening with the rgb_overlay_path image"""
     objs: Dict[str, Actor] = dict()
 
     obj_static_friction = 0.5
@@ -183,6 +184,12 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
         self.model_db: Dict[str, Dict] = io_utils.load_json(
             ASSET_DIR / "tasks/bridge_dataset/custom/info_bridge_custom_v0.json"
         )
+        if ("num_envs" in kwargs and kwargs["num_envs"] > 1) or (
+            "sim_backend" in kwargs and kwargs["sim_backend"] == "gpu"
+        ):
+            raise ValueError(
+                "SIMPLER Evaluation Digital twins currently do not suppport GPU simulation, only CPU simulation at the moment."
+            )
         super().__init__(
             robot_uids=robot_cls,
             **kwargs,
@@ -214,19 +221,42 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
         self,
         model_id: str,
         scale: float = 1,
+        kinematic: bool = False,
+        initial_pose: Pose = None,
     ):
+        """helper function to build actors by ID directly and auto configure physical materials"""
         density = self.model_db[model_id].get("density", 1000)
-        return super()._build_actor_helper(
-            model_id,
-            scale,
-            physical_material=PhysxMaterial(
-                static_friction=self.obj_static_friction,
-                dynamic_friction=self.obj_dynamic_friction,
-                restitution=0.0,
-            ),
-            density=density,
-            root_dir=ASSET_DIR / "tasks/bridge_dataset/custom",
+        physical_material = PhysxMaterial(
+            static_friction=self.obj_static_friction,
+            dynamic_friction=self.obj_dynamic_friction,
+            restitution=0.0,
         )
+        builder = self.scene.create_actor_builder()
+        model_dir = (
+            Path(ASSET_DIR / "tasks/bridge_dataset/custom") / "models" / model_id
+        )
+
+        collision_file = str(model_dir / "collision.obj")
+        builder.add_multiple_convex_collisions_from_file(
+            filename=collision_file,
+            scale=[scale] * 3,
+            material=physical_material,
+            density=density,
+        )
+
+        visual_file = str(model_dir / "textured.obj")
+        if not os.path.exists(visual_file):
+            visual_file = str(model_dir / "textured.dae")
+            if not os.path.exists(visual_file):
+                visual_file = str(model_dir / "textured.glb")
+        builder.add_visual_from_file(filename=visual_file, scale=[scale] * 3)
+        if initial_pose is not None:
+            builder.initial_pose = initial_pose
+        if kinematic:
+            actor = builder.build_kinematic(name=model_id)
+        else:
+            actor = builder.build(name=model_id)
+        return actor
 
     def _load_scene(self, options: dict):
         # load background
@@ -253,6 +283,13 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
 
         self.xyz_configs = common.to_tensor(self.xyz_configs).to(torch.float32)
         self.quat_configs = common.to_tensor(self.quat_configs).to(torch.float32)
+
+        if self.scene_setting == "sink":
+            self.sink = self._build_actor_helper(
+                "sink",
+                kinematic=True,
+                initial_pose=sapien.Pose([-0.16, 0.13, 0.88], [1, 0, 0, 0]),
+            )
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
@@ -300,6 +337,12 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
                 actor.set_pose(
                     Pose.create_from_pq(p=xyz, q=self.quat_configs[quat_episode_ids, i])
                 )
+        self._settle()
+
+    def _settle(self, steps: int = 10):
+        """run the simulation for some steps to help settle the objects"""
+        for _ in range(steps):
+            self.scene.step()
 
     def is_final_subtask(self):
         # whether the current subtask is the final one, only meaningful for long-horizon tasks

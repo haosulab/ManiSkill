@@ -60,6 +60,7 @@ class PutCarrotOnPlateInScene(BaseBridgeEnv):
 @register_env("PutEggplantInBasketScene-v0", max_episode_steps=120)
 class PutEggplantInBasketScene(BaseBridgeEnv):
     scene_setting = "sink"
+    rgb_always_overlay_objects = ["sink", "dummy_sink_target_plane"]
 
     def __init__(self, **kwargs):
         source_obj_name = "eggplant"
@@ -76,7 +77,9 @@ class PutEggplantInBasketScene(BaseBridgeEnv):
         grid_pos = []
         for x in np.linspace(-half_span_x, half_span_x, num_x):
             for y in np.linspace(-half_span_y, half_span_y, num_y):
-                grid_pos.append(np.array([x + xy_center[0], y + xy_center[1], 0.888]))
+                grid_pos.append(
+                    np.array([x + xy_center[0], y + xy_center[1], 0.937163])
+                )
         xyz_configs = [np.stack([pos, target_xy], axis=0) for pos in grid_pos]
         xyz_configs = torch.tensor(np.stack(xyz_configs))
         quat_configs = torch.tensor(
