@@ -1,3 +1,6 @@
+"""
+Base environment for Bridge dataset environments
+"""
 from typing import Dict, List, Literal
 
 import numpy as np
@@ -6,14 +9,8 @@ import torch
 from sapien.physx import PhysxMaterial
 
 from mani_skill import ASSET_DIR
-from mani_skill.agents.base_agent import DictControllerConfig
-from mani_skill.agents.controllers.base_controller import ControllerConfig
 from mani_skill.agents.controllers.pd_ee_pose import PDEEPoseControllerConfig
-from mani_skill.agents.controllers.pd_joint_pos import (
-    PDJointPosController,
-    PDJointPosControllerConfig,
-    PDJointPosMimicControllerConfig,
-)
+from mani_skill.agents.controllers.pd_joint_pos import PDJointPosMimicControllerConfig
 from mani_skill.agents.robots.widowx.widowx import WidowX250S
 from mani_skill.envs.tasks.digital_twins.base_env import BaseDigitalTwinEnv
 from mani_skill.sensors.camera import CameraConfig
@@ -23,6 +20,7 @@ from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import SimConfig
 
 
+# Real2Sim tuned WidowX250S robot
 class WidowX250SBridgeDatasetFlatTable(WidowX250S):
     uid = "widowx250s_bridgedataset_flat_table"
     arm_joint_names = [
@@ -122,6 +120,7 @@ class WidowX250SBridgeDatasetFlatTable(WidowX250S):
         return dict(arm_pd_ee_target_delta_pose_align2_gripper_pd_joint_pos=controller)
 
 
+# Tuned for the sink setup
 class WidowX250SBridgeDatasetSink(WidowX250S):
     uid = "widowx250s_bridgedataset_sink"
 

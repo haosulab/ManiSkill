@@ -18,19 +18,15 @@ from mani_skill.utils.structs.types import SimConfig
 class BaseDigitalTwinEnv(BaseEnv):
     """Base Environment class for easily setting up evaluation digital twins for real2sim and sim2real
 
-    This is based on the [SIMPLER](https://simpler-env.github.io/) and has the following tricks for
+    This is based on the [SIMPLER](https://simpler-env.github.io/) and currently has the following tricks for
     making accurate simulated environments of real world datasets
 
-    Greenscreening: TODO
-
-    Texture Matching: TODO
+    Greenscreening: Add a greenscreened real image to the background to make the images more realistic and more closer to the distribution
+    of real world data.
 
     Note that this is not a general purpose system for building digital twins you can train and then transfer
     to the real world. This is designed to support fast evaluation in simulation of real world policies.
-
     """
-
-    SUPPORTED_OBS_MODES = ["none", "state", "state_dict", "rgb", "rgbd"]
 
     rgb_overlay_path: Optional[str] = None
     """path to the file to place on the greenscreen"""
@@ -148,7 +144,7 @@ class BaseDigitalTwinEnv(BaseEnv):
                 self.rgb_overlay_images[camera_name] = common.to_tensor(rgb_overlay_img)
 
     def _green_sceen_rgb(self, rgb, segmentation, overlay_img):
-        """returns green screened RGB data"""
+        """returns green screened RGB data given a batch of RGB and segmentation images and one overlay image"""
         actor_seg = segmentation[..., 0]
         mask = torch.ones_like(actor_seg)
         if ("background" in self.rgb_overlay_mode) or (
@@ -188,9 +184,7 @@ class BaseDigitalTwinEnv(BaseEnv):
 
         # "greenscreen" process
         if self._obs_mode == "rgb+segmentation" and self.rgb_overlay_img is not None:
-            # TODO (parallelize this?)
             # get the actor ids of objects to manipulate; note that objects here are not articulated
-
             for camera_name in self.rgb_overlay_cameras:
                 # obtain overlay mask based on segmentation info
                 assert (
