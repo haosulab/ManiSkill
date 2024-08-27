@@ -121,7 +121,7 @@ class WidowX250SBridgeDatasetFlatTable(WidowX250S):
 
 
 # Tuned for the sink setup
-class WidowX250SBridgeDatasetSink(WidowX250S):
+class WidowX250SBridgeDatasetSink(WidowX250SBridgeDatasetFlatTable):
     uid = "widowx250s_bridgedataset_sink"
 
     @property
@@ -148,9 +148,7 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
     SUPPORTED_OBS_MODES = ["rgb+segmentation"]
     SUPPORTED_REWARD_MODES = ["none"]
     scene_setting: Literal["flat_table", "sink"] = "flat_table"
-    rgb_overlay_cameras = ["3rd_view_camera"]
-    rgb_overlay_path = ""
-    scene_table_height: float = 0.87
+    """which cameras to apply green screening with the rgb_overlay_path image"""
     objs: Dict[str, Actor] = dict()
 
     obj_static_friction = 0.5
@@ -167,15 +165,19 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
         self.xyz_configs = xyz_configs
         self.quat_configs = quat_configs
         if self.scene_setting == "flat_table":
-            self.rgb_overlay_path = str(
-                ASSET_DIR
-                / "tasks/bridge_dataset/real_inpainting/bridge_real_eval_1.png"
-            )
+            self.rgb_overlay_paths = {
+                "3rd_view_camera": str(
+                    ASSET_DIR
+                    / "tasks/bridge_dataset/real_inpainting/bridge_real_eval_1.png"
+                )
+            }
             robot_cls = WidowX250SBridgeDatasetFlatTable
         elif self.scene_setting == "sink":
-            self.rgb_overlay_path = str(
-                ASSET_DIR / "tasks/bridge_dataset/real_inpainting/bridge_sink.png"
-            )
+            self.rgb_overlay_paths = {
+                "3rd_view_camera": str(
+                    ASSET_DIR / "tasks/bridge_dataset/real_inpainting/bridge_sink.png"
+                )
+            }
             robot_cls = WidowX250SBridgeDatasetSink
 
         self.model_db: Dict[str, Dict] = io_utils.load_json(

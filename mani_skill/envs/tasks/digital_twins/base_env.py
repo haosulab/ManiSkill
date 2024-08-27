@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List
 
 import cv2
 import gymnasium as gym
@@ -28,12 +28,11 @@ class BaseDigitalTwinEnv(BaseEnv):
     to the real world. This is designed to support fast evaluation in simulation of real world policies.
     """
 
-    rgb_overlay_path: Optional[str] = None
-    """path to the file to place on the greenscreen"""
+    rgb_overlay_paths: Dict[str, str] = None
+    """dict mapping camera name to the file path of the greenscreening image"""
+    _rgb_overlay_images: Dict[str, torch.Tensor] = dict()
     rgb_always_overlay_objects: List[str] = []
-    """List of names of actors/links that should not be covered by the greenscreen"""
-    rgb_overlay_cameras: List[str]
-    """Cameras to do greenscreening over when fetching image observations"""
+    """List of names of actors/links that should be covered by the greenscreen"""
     rgb_overlay_mode: str = (
         "background"  # 'background' or 'object' or 'debug' or combinations of them
     )
@@ -41,18 +40,19 @@ class BaseDigitalTwinEnv(BaseEnv):
 
     def __init__(self, **kwargs):
         # Load the "greenscreen" image, which is used to overlay the background portions of simulation observation
-        if self.rgb_overlay_path is not None:
-            if not os.path.exists(self.rgb_overlay_path):
-                raise FileNotFoundError(
-                    f"rgb_overlay_path {self.rgb_overlay_path} is not found."
-                    "If you installed this repo through 'pip install .' , "
-                    "you can download this directory https://github.com/simpler-env/ManiSkill2_real2sim/tree/main/data to get the real-world image overlay assets. "
-                )
-            self.rgb_overlay_img = cv2.cvtColor(
-                cv2.imread(self.rgb_overlay_path), cv2.COLOR_BGR2RGB
-            )  # (H, W, 3); float32
+        if self.rgb_overlay_paths is not None:
+            for camera_name, path in self.rgb_overlay_paths.items():
+                if not os.path.exists(path):
+                    raise FileNotFoundError(
+                        f"rgb_overlay_path {path} is not found."
+                        "If you installed this repo through 'pip install .' , "
+                        "you can download this directory https://github.com/simpler-env/ManiSkill2_real2sim/tree/main/data to get the real-world image overlay assets. "
+                    )
+                self._rgb_overlay_images[camera_name] = cv2.cvtColor(
+                    cv2.imread(path), cv2.COLOR_BGR2RGB
+                )  # (H, W, 3); float32
         else:
-            self.rgb_overlay_img = None
+            self._rgb_overlay_images = None
 
         super().__init__(**kwargs)
 
@@ -134,14 +134,15 @@ class BaseDigitalTwinEnv(BaseEnv):
         #         other_link_ids.append(link.id)
         other_link_ids = np.array(other_link_ids, dtype=np.int32)
 
-        self.rgb_overlay_images: dict[str, torch.Tensor] = dict()
-        for camera_name in self.rgb_overlay_cameras:
+        for camera_name in self.rgb_overlay_paths.keys():
             sensor = self._sensor_configs[camera_name]
             if isinstance(sensor, CameraConfig):
                 rgb_overlay_img = cv2.resize(
-                    self.rgb_overlay_img, (sensor.width, sensor.height)
+                    self._rgb_overlay_images[camera_name], (sensor.width, sensor.height)
                 )
-                self.rgb_overlay_images[camera_name] = common.to_tensor(rgb_overlay_img)
+                self._rgb_overlay_images[camera_name] = common.to_tensor(
+                    rgb_overlay_img
+                )
 
     def _green_sceen_rgb(self, rgb, segmentation, overlay_img):
         """returns green screened RGB data given a batch of RGB and segmentation images and one overlay image"""
@@ -183,9 +184,9 @@ class BaseDigitalTwinEnv(BaseEnv):
         obs = super().get_obs(info)
 
         # "greenscreen" process
-        if self._obs_mode == "rgb+segmentation" and self.rgb_overlay_img is not None:
+        if self._obs_mode == "rgb+segmentation" and self.rgb_overlay_paths is not None:
             # get the actor ids of objects to manipulate; note that objects here are not articulated
-            for camera_name in self.rgb_overlay_cameras:
+            for camera_name in self._rgb_overlay_images.keys():
                 # obtain overlay mask based on segmentation info
                 assert (
                     "segmentation" in obs["sensor_data"][camera_name].keys()
@@ -193,7 +194,7 @@ class BaseDigitalTwinEnv(BaseEnv):
                 green_screened_rgb = self._green_sceen_rgb(
                     obs["sensor_data"][camera_name]["rgb"],
                     obs["sensor_data"][camera_name]["segmentation"],
-                    self.rgb_overlay_images[camera_name],
+                    self._rgb_overlay_images[camera_name],
                 )
                 obs["sensor_data"][camera_name]["rgb"] = green_screened_rgb
         return obs

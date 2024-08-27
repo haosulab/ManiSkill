@@ -107,7 +107,7 @@ def main(args):
                     imgs.append(depth_rgb)
                 cam_num += 1
         img = visualization.tile_images(imgs, nrows=n_cams)
-        # renderer(img)
+        renderer(img)
         return img
 
     # gt_actions = np.load(os.path.join(os.path.dirname(__file__), "actions.npy"))
