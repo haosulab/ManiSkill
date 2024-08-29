@@ -1,9 +1,7 @@
 import datetime
 import os
 import random
-import uuid
 from dataclasses import asdict, dataclass
-from typing import Optional
 
 import gymnasium as gym
 import h5py
@@ -17,26 +15,24 @@ import wandb
 from mani_skill.utils.io_utils import load_json
 from mani_skill.utils.wrappers.gymnasium import CPUGymWrapper
 from mani_skill.utils.wrappers.record import RecordEpisode
+from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.sampler import BatchSampler, RandomSampler
-from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 from tqdm import tqdm
 
 
 @dataclass
 class Config:
     # wandb project name
-    project: str = "maniskill"
+    project: str = "ManiSkill"
     # wandb group name
-    group: str = "maniskill"
+    group: str = "BehaviorCloning"
     # training dataset and evaluation environment
     env: str = "PickCube-v1"
     # total gradient updates during training
     max_timesteps: int = int(1e6)
     # training batch size
     batch_size: int = 128
-    # maximum possible trajectory length
-    max_traj_len: int = 100
     # evaluation frequency, will evaluate eval_freq training steps
     eval_freq: int = int(500)
     # record videos
@@ -67,6 +63,8 @@ class Config:
     save_freq: int = 10000
     # sim backend
     sim_backend: str = "cpu"
+    # max number of evaluation steps per eval episode
+    max_episode_steps: int = 100
 
 
 def set_seed(seed: int, deterministic_torch: bool = False):
@@ -82,14 +80,18 @@ def wandb_init(config: dict) -> None:
         project=config["project"],
         group=config["group"],
         name=log_name.replace(os.path.sep, "__"),
-        id=str(uuid.uuid4()),
-        tags=["BC"]
+        tags=["bc"],
     )
     wandb.run.save()
 
 
 def build_env(
-    env, video=False, normalize_states=False, state_stats: tuple = (), seed=0, control_mode="",
+    env,
+    video=False,
+    normalize_states=False,
+    state_stats: tuple = (),
+    seed=0,
+    control_mode="",
 ):
     def norm_states(state):
         return (state - state_stats[0]) / state_stats[1]
@@ -101,12 +103,15 @@ def build_env(
             obs_mode="state",
             control_mode=control_mode,
             render_mode="rgb_array" if video else "sensors",
-            max_episode_steps=100,
+            max_episode_steps=args.max_episode_steps,
             sim_backend="cpu",
         )
         if video:
             x = RecordEpisode(
-                x, os.path.join(log_path, args.video_path), save_trajectory=False, info_on_video=True
+                x,
+                os.path.join(log_path, args.video_path),
+                save_trajectory=False,
+                info_on_video=True,
             )
         if normalize_states:
             x = gym.wrappers.TransformObservation(x, norm_states)
@@ -120,19 +125,23 @@ def build_env(
     return inner
 
 
-def make_eval_envs(env, num_envs, stats, control_mode, gpu = False):
-    if gpu:
+def make_eval_envs(env, num_envs, stats, control_mode, gpu_sim=False):
+    if gpu_sim:
         env = gym.make(
             env,
             num_envs=num_envs,
             obs_mode="state",
             control_mode=control_mode,
             render_mode="sensors",
+            max_episode_steps=args.max_episode_steps,
         )
         env = ManiSkillVectorEnv(env)
         if args.video:
             env = RecordEpisode(
-                env, os.path.join(log_path, args.video_path), save_trajectory=False, max_steps_per_video= args.max_traj_len
+                env,
+                os.path.join(log_path, args.video_path),
+                save_trajectory=False,
+                max_steps_per_video=args.max_episode_steps,
             )
         return env
 
@@ -144,7 +153,7 @@ def make_eval_envs(env, num_envs, stats, control_mode, gpu = False):
                 normalize_states=args.normalize_states,
                 state_stats=stats,
                 seed=j,
-                control_mode = control_mode
+                control_mode=control_mode,
             )
             for j in range(num_envs)
         ]
@@ -192,7 +201,6 @@ def load_h5_data(data):
     return out
 
 
-
 class ManiSkillDataset(Dataset):
     def __init__(
         self,
@@ -219,7 +227,11 @@ class ManiSkillDataset(Dataset):
         self.total_frames = 0
         self.device = device
 
-        load_count = len(self.episodes) if load_count == -1 else load_count
+        if load_count > len(self.episodes):
+            print(
+                f"Load count exceeds number of available episodes, loading {len(self.episodes)} which is the max number of episodes present"
+            )
+            load_count = len(self.episodes)
 
         for eps_id in tqdm(range(load_count)):
             eps = self.episodes[eps_id]
@@ -273,32 +285,34 @@ class Actor(nn.Module):
         return self.net(state)
 
     @torch.no_grad()
-    def act(self, state, gpu = False):
-        if gpu:
+    def act(self, state, gpu_sim=False):
+        if gpu_sim:
             return self(state)
         state = torch.from_numpy(state).to(device="cuda:0")
         return self(state).cpu().data.numpy()
 
 
 def save_ckpt(tag):
-    os.makedirs(f'{log_path}/checkpoints', exist_ok=True)
-    torch.save({
-        'actor': actor.state_dict(),
-    }, f'{log_path}/checkpoints/{tag}.pt')
+    os.makedirs(f"{log_path}/checkpoints", exist_ok=True)
+    torch.save(
+        {
+            "actor": actor.state_dict(),
+        },
+        f"{log_path}/checkpoints/{tag}.pt",
+    )
+
 
 if __name__ == "__main__":
     args = tyro.cli(Config)
     set_seed(args.seed)
 
     now = datetime.datetime.now().strftime("%y%m%d-%H%M%S")
-    tag = '{:s}_{:d}'.format(now, args.seed)
+    tag = "{:s}_{:d}".format(now, args.seed)
     log_name = os.path.join(args.env, "BC", tag)
     log_path = os.path.join(args.output_dir, log_name)
 
-
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
     control_mode = os.path.split(args.demo_path)[1].split(".")[2]
-
 
     if args.wandb:
         wandb_init(asdict(args))
@@ -311,9 +325,9 @@ if __name__ == "__main__":
     stats = ds.get_state_stats()
 
     if args.video:
-       os.makedirs(os.path.join(log_path, args.video_path))
-    gpu = args.sim_backend == "gpu"
-    envs = make_eval_envs(args.env, args.num_envs, stats, control_mode,gpu)
+        os.makedirs(os.path.join(log_path, args.video_path))
+    gpu_sim = args.sim_backend == "gpu"
+    envs = make_eval_envs(args.env, args.num_envs, stats, control_mode, gpu_sim)
     obs, _ = envs.reset(seed=args.seed)
     sampler = RandomSampler(ds)
     batchsampler = BatchSampler(sampler, args.batch_size, drop_last=True)
@@ -336,7 +350,7 @@ if __name__ == "__main__":
         loss.backward()
         optimizer.step()
 
-        log_dict["charts/loss"] = loss.item()
+        log_dict["losses/total_loss"] = loss.item()
 
         if i % args.eval_freq == 0:
 
@@ -347,12 +361,16 @@ if __name__ == "__main__":
             obs, _ = envs.reset()
             rewards = np.zeros((args.num_envs,))
 
-            for _ in range(100):
-                obs, reward, terminated, truncated, info = envs.step(actor.act(obs, gpu))
+            for _ in range(args.max_episode_steps):
+                obs, reward, terminated, truncated, info = envs.step(
+                    actor.act(obs, gpu_sim)
+                )
 
                 if "success" in info:
-                    success_once += info["success"].cpu().numpy() if gpu else info["success"]
-                if gpu:
+                    success_once += (
+                        info["success"].cpu().numpy() if gpu_sim else info["success"]
+                    )
+                if gpu_sim:
                     rewards += reward.cpu().numpy()
                 else:
                     rewards += reward
@@ -361,7 +379,7 @@ if __name__ == "__main__":
                     fin_info = info["final_info"]
                     mask = info["_final_info"]
 
-                    if gpu:
+                    if gpu_sim:
                         el_steps.append(fin_info["elapsed_steps"][mask].cpu().numpy())
 
                         if "success" in fin_info:
@@ -371,30 +389,29 @@ if __name__ == "__main__":
                     else:
                         fin_info = fin_info[mask]
                         fin_info = {
-                            k: np.array([dic[k] for dic in fin_info]) for k in fin_info[0]
+                            k: np.array([dic[k] for dic in fin_info])
+                            for k in fin_info[0]
                         }
                         el_steps.append(fin_info["elapsed_steps"])
                         if "success" in fin_info:
                             successes.append(fin_info["success"])
                     returns.append(rewards[mask])
 
-
-            log_dict["charts/eval_elapsed_steps"] = np.concatenate(el_steps).mean()
-            log_dict["charts/return"] = np.concatenate(returns).mean()
+            log_dict["charts/global_step"] = i
+            log_dict["eval/episode_len"] = np.concatenate(el_steps).mean()
+            log_dict["eval/return"] = np.concatenate(returns).mean()
 
             if len(successes) > 0:
-                s = np.concatenate(
-                    successes
-                )
-                log_dict["charts/eval_success_at_end"] = s.mean().item()
+                s = np.concatenate(successes)
+                log_dict["eval/success_at_end"] = s.mean().item()
                 success_once += s
-                if log_dict["charts/eval_success_at_end"] > best_sr:
+                if log_dict["eval/success_at_end"] > best_sr:
                     save_ckpt("best_eval_sr")
-                    best_sr = log_dict["charts/eval_success_at_end"]
-            log_dict["charts/eval_success_once"] = (success_once > 0).mean()
+                    best_sr = log_dict["eval/success_at_end"]
+            log_dict["eval/success_once"] = (success_once > 0).mean()
             out = f"Step: {i} " + ", ".join(
                 [
-                    f"{k.replace('charts/','')}: " + str(round(log_dict[k], 4))
+                    f"{k.replace('eval/','')}: " + str(round(log_dict[k], 4))
                     for k in log_dict
                 ]
             )
