@@ -292,10 +292,17 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
             )
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
+        # NOTE: this part of code is not GPU parallelized
         with torch.device(self.device):
             b = len(env_idx)
             pos_episode_ids = torch.randint(0, len(self.xyz_configs), size=(b,))
             quat_episode_ids = torch.randint(0, len(self.quat_configs), size=(b,))
+            for i, actor in enumerate(self.objs.values()):
+                xyz = self.xyz_configs[pos_episode_ids, i]
+                actor.set_pose(
+                    Pose.create_from_pq(p=xyz, q=self.quat_configs[quat_episode_ids, i])
+                )
+            self._settle()
             # measured values for bridge dataset
             if self.scene_setting == "flat_table":
                 qpos = np.array(
@@ -330,19 +337,137 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
                 self.agent.robot.set_pose(
                     sapien.Pose([0.147, 0.070, 0.85], q=[0, 0, 0, 1])
                 )
-            self.agent.robot.set_qpos(qpos)
+            # self._settle(t=0.5)
+            self.agent.reset(init_qpos=qpos)
 
-            for i, actor in enumerate(self.objs.values()):
-                xyz = self.xyz_configs[pos_episode_ids, i]
-                actor.set_pose(
-                    Pose.create_from_pq(p=xyz, q=self.quat_configs[quat_episode_ids, i])
-                )
-        self._settle()
+            self.consecutive_grasp = 0
+            self.episode_stats = dict(
+                all_obj_keep_height=False,
+                moved_correct_obj=False,
+                moved_wrong_obj=False,
+                near_tgt_obj=False,
+                is_closest_to_tgt=False,
+            )
 
-    def _settle(self, steps: int = 10):
+    def _settle(self, t: int = 0.5):
         """run the simulation for some steps to help settle the objects"""
-        for _ in range(steps):
+        sim_steps = int(self.sim_freq * t / self.control_freq)
+        for _ in range(sim_steps):
             self.scene.step()
+
+    def _evaluate(
+        self,
+        source_object: Actor,
+        target_object: Actor,
+        success_require_src_completely_on_target=True,
+        z_flag_required_offset=0.02,
+        **kwargs
+    ):
+        self.source_obj_pose
+        self.target_obj_pose
+
+        # whether moved the correct object
+        # source_obj_xy_move_dist = np.linalg.norm(
+        #     self.episode_source_obj_xyz_after_settle[:2] - self.source_obj_pose.p[:2]
+        # )
+        # other_obj_xy_move_dist = []
+        # for obj, obj_xyz_after_settle in zip(
+        #     self.episode_objs, self.episode_obj_xyzs_after_settle
+        # ):
+        #     if obj.name == self.episode_source_obj.name:
+        #         continue
+        #     other_obj_xy_move_dist.append(
+        #         np.linalg.norm(obj_xyz_after_settle[:2] - obj.pose.p[:2])
+        #     )
+        # moved_correct_obj = (source_obj_xy_move_dist > 0.03) and (
+        #     all([x < source_obj_xy_move_dist for x in other_obj_xy_move_dist])
+        # )
+        # moved_wrong_obj = any([x > 0.03 for x in other_obj_xy_move_dist]) and any(
+        #     [x > source_obj_xy_move_dist for x in other_obj_xy_move_dist]
+        # )
+        moved_correct_obj = False
+        moved_wrong_obj = False
+
+        # whether the source object is grasped
+        is_src_obj_grasped = self.agent.is_grasping(source_object)
+        if is_src_obj_grasped:
+            self.consecutive_grasp += 1
+        else:
+            self.consecutive_grasp = 0
+        consecutive_grasp = self.consecutive_grasp >= 5
+
+        # # whether the source object is on the target object based on bounding box position
+        # tgt_obj_half_length_bbox = (
+        #     self.episode_target_obj_bbox_world / 2
+        # )  # get half-length of bbox xy diagonol distance in the world frame at timestep=0
+        # src_obj_half_length_bbox = self.episode_source_obj_bbox_world / 2
+
+        # pos_src = source_obj_pose.p
+        # pos_tgt = target_obj_pose.p
+        # offset = pos_src - pos_tgt
+        # xy_flag = (
+        #     np.linalg.norm(offset[:2])
+        #     <= np.linalg.norm(tgt_obj_half_length_bbox[:2]) + 0.003
+        # )
+        # z_flag = (offset[2] > 0) and (
+        #     offset[2] - tgt_obj_half_length_bbox[2] - src_obj_half_length_bbox[2]
+        #     <= z_flag_required_offset
+        # )
+        # src_on_target = xy_flag and z_flag
+        src_on_target = False
+
+        if success_require_src_completely_on_target:
+            # whether the source object is on the target object based on contact information
+            contacts = self.scene.get_pairwise_contact_forces(
+                source_object, target_object
+            )
+            # torch.linalg.norm(contacts, dim=1)
+            # contacts = self._scene.get_contacts()
+            # flag = True
+            # robot_link_names = [x.name for x in self.agent.robot.get_links()]
+            # tgt_obj_name = self.episode_target_obj.name
+            # ignore_actor_names = [tgt_obj_name] + robot_link_names
+            # for contact in contacts:
+            #     actor_0, actor_1 = contact.actor0, contact.actor1
+            #     other_obj_contact_actor_name = None
+            #     if actor_0.name == self.episode_source_obj.name:
+            #         other_obj_contact_actor_name = actor_1.name
+            #     elif actor_1.name == self.episode_source_obj.name:
+            #         other_obj_contact_actor_name = actor_0.name
+            #     if other_obj_contact_actor_name is not None:
+            #         # the object is in contact with an actor
+            #         contact_impulse = np.sum(
+            #             [point.impulse for point in contact.points], axis=0
+            #         )
+            #         if (other_obj_contact_actor_name not in ignore_actor_names) and (
+            #             np.linalg.norm(contact_impulse) > 1e-6
+            #         ):
+            #             # the object has contact with an actor other than the robot link or the target object, so the object is not yet put on the target object
+            #             flag = False
+            #             break
+            # src_on_target = src_on_target and flag
+
+        success = src_on_target
+
+        self.episode_stats["moved_correct_obj"] = moved_correct_obj
+        self.episode_stats["moved_wrong_obj"] = moved_wrong_obj
+        self.episode_stats["src_on_target"] = src_on_target
+        self.episode_stats["is_src_obj_grasped"] = (
+            self.episode_stats["is_src_obj_grasped"] or is_src_obj_grasped
+        )
+        self.episode_stats["consecutive_grasp"] = (
+            self.episode_stats["consecutive_grasp"] or consecutive_grasp
+        )
+
+        return dict(
+            moved_correct_obj=moved_correct_obj,
+            moved_wrong_obj=moved_wrong_obj,
+            is_src_obj_grasped=is_src_obj_grasped,
+            consecutive_grasp=consecutive_grasp,
+            src_on_target=src_on_target,
+            episode_stats=self.episode_stats,
+            success=success,
+        )
 
     def is_final_subtask(self):
         # whether the current subtask is the final one, only meaningful for long-horizon tasks

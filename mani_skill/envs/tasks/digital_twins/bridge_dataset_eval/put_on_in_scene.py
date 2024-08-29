@@ -53,6 +53,9 @@ class PutCarrotOnPlateInScene(BaseBridgeEnv):
             **kwargs,
         )
 
+    def evaluate(self):
+        return self._evaluate()
+
     def get_language_instruction(self, **kwargs):
         return "put carrot on plate"
 

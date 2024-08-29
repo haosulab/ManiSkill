@@ -91,9 +91,9 @@ def main(args):
     #     env.step(None)
     #     env.render_human()
 
-    model_name = "octo-base"
-    policy_setup = "widowx_bridge"
-    model = OctoInference(model_type=model_name, policy_setup=policy_setup, init_rng=0)
+    # model_name = "octo-base"
+    # policy_setup = "widowx_bridge"
+    # model = OctoInference(model_type=model_name, policy_setup=policy_setup, init_rng=0)
 
     renderer = visualization.ImageRenderer(wait_for_button_press=False)
     def render_obs(obs):
@@ -111,15 +111,15 @@ def main(args):
                     imgs.append(depth_rgb)
                 cam_num += 1
         img = visualization.tile_images(imgs, nrows=n_cams)
-        # renderer(img)
+        renderer(img)
         return img
 
     # gt_actions = np.load(os.path.join(os.path.dirname(__file__), "actions.npy"))
     for seed in range(100, 200):
         obs, _ = env.reset(seed=seed)
-        # while True:
-        #     render_obs(obs)
-        #     obs, _, _, _, _ = env.step(env.action_space.sample())
+        while True:
+            render_obs(obs)
+            obs, _, _, _, _ = env.step(env.action_space.sample())
         instruction = env.unwrapped.get_language_instruction()
         print("instruction:", instruction)
         model.reset(instruction)
