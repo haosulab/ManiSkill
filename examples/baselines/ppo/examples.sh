@@ -49,17 +49,21 @@ python ppo.py --env_id="MS-CartpoleSwingUp-v1" \
    --total_timesteps=10_000_000 --num-steps=250 --num-eval-steps=1000 \
    --gamma=0.99 --gae_lambda=0.95 \
    --eval_freq=5
-python ppo.py --env_id="MS-HumanoidStand-v1" --num_envs=2048 \
+python ppo.py --env_id="MS-AntWalk-v1" --num_envs=2048 --eval_freq=10 \
+  --update_epochs=8 --num_minibatches=32 --total_timesteps=20_000_000 \
+  --num_eval_steps=1000 --num_steps=200 --gamma=0.97 --ent_coef=1e-3
+python ppo.py --env_id="MS-AntRun-v1" --num_envs=2048 --eval_freq=10 \
+  --update_epochs=8 --num_minibatches=32 --total_timesteps=20_000_000 \
+  --num_eval_steps=1000 --num_steps=200 --gamma=0.97 --ent_coef=1e-3
+python ppo.py --env_id="MS-HumanoidStand-v1" --num_envs=2048 --eval_freq=10 \
   --update_epochs=8 --num_minibatches=32 --total_timesteps=40_000_000 \
-  --eval_freq=10 --num_eval_steps=1000 --num_steps=200 --gamma=0.95
-python ppo.py --env_id="MS-HumanoidWalk-v1" --num_envs=2048 \
+  --num_eval_steps=1000 --num_steps=200 --gamma=0.95
+python ppo.py --env_id="MS-HumanoidWalk-v1" --num_envs=2048 --eval_freq=10 \
   --update_epochs=8 --num_minibatches=32 --total_timesteps=80_000_000 \
-  --eval_freq=10 --num_eval_steps=1000 --num_steps=200 --gamma=0.97 \
-  --ent_coef=1e-3
-python ppo.py --env_id="MS-HumanoidRun-v1" --num_envs=2048 \
+  --num_eval_steps=1000 --num_steps=200 --gamma=0.97 --ent_coef=1e-3
+python ppo.py --env_id="MS-HumanoidRun-v1" --num_envs=2048 --eval_freq=10 \
   --update_epochs=8 --num_minibatches=32 --total_timesteps=60_000_000 \
-  --eval_freq=10 --num_eval_steps=1000 --num_steps=200 --gamma=0.97 \
-  --ent_coef=1e-3
+  --num_eval_steps=1000 --num_steps=200 --gamma=0.97 --ent_coef=1e-3
 python ppo.py --env_id="UnitreeG1PlaceAppleInBowl-v1" \
   --num_envs=512 --update_epochs=8 --num_minibatches=32 \
   --total_timesteps=50_000_000 --num-steps=100 --num-eval-steps=100
