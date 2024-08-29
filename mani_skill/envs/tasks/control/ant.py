@@ -72,10 +72,6 @@ class AntRobot(BaseAgent):
         assert self.robot is not None, f"Fail to load URDF/MJCF from {asset_path}"
         self.robot_link_ids = [link.name for link in self.robot.get_links()]
 
-        # cache robot mass for com computation
-        self.robot_links_mass = [link.mass[0].item() for link in self.robot.get_links()]
-        self.robot_mass = np.sum(self.robot_links_mass[3:])
-
 
 class AntEnv(BaseEnv):
     agent: Union[AntRobot]
