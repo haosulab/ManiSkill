@@ -4,6 +4,7 @@ from typing import Any, Dict, Union
 import numpy as np
 import sapien
 import torch
+from transforms3d.euler import euler2quat
 
 from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
@@ -11,19 +12,18 @@ from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.utils import randomization, rewards
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import common, sapien_utils
+from mani_skill.utils.building.ground import build_ground
 from mani_skill.utils.geometry import rotation_conversions
 from mani_skill.utils.registration import register_env
-
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import Array, SceneConfig, SimConfig
-from mani_skill.utils.building.ground import build_ground
-from transforms3d.euler import euler2quat
 
 _STAND_HEIGHT = 0.55
 _WALK_SPEED = 0.5
 _RUN_SPEED = 4
 
 MJCF_FILE = f"{os.path.join(os.path.dirname(__file__), 'assets/ant.xml')}"
+
 
 class AntRobot(BaseAgent):
     uid = "ant"
@@ -32,10 +32,8 @@ class AntRobot(BaseAgent):
 
     keyframes = dict(
         stand=Keyframe(
-            qpos=np.array(
-                [0,0,0,0, 1, -1, -1, 1]
-            ),
-            pose=sapien.Pose(p=[0, 0, -0.175], q=euler2quat(0,0,np.pi/2)),
+            qpos=np.array([0, 0, 0, 0, 1, -1, -1, 1]),
+            pose=sapien.Pose(p=[0, 0, -0.175], q=euler2quat(0, 0, np.pi / 2)),
         )
     )
 
@@ -77,6 +75,7 @@ class AntRobot(BaseAgent):
         # cache robot mass for com computation
         self.robot_links_mass = [link.mass[0].item() for link in self.robot.get_links()]
         self.robot_mass = np.sum(self.robot_links_mass[3:])
+
 
 class AntEnv(BaseEnv):
     agent: Union[AntRobot]
@@ -141,7 +140,7 @@ class AntEnv(BaseEnv):
             "camera_mount"
         )
 
-        # cache for com velocity calc 
+        # cache for com velocity calc
         self.active_links = [
             link for link in self.agent.robot.get_links() if "dummy" not in link.name
         ]
@@ -150,7 +149,9 @@ class AntEnv(BaseEnv):
         ).to(self.device)
         self.robot_mass = torch.sum(self.robot_links_mass).item()
 
-        self.force_sensor_links = [link.name for link in self.active_links if "foot" in link.name]
+        self.force_sensor_links = [
+            link.name for link in self.active_links if "foot" in link.name
+        ]
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: Dict):
         with torch.device(self.device):
@@ -159,7 +160,11 @@ class AntEnv(BaseEnv):
             self.agent.robot.set_root_pose(self.agent.keyframes["stand"].pose)
 
             # set randomized qpos
-            base_qpos = torch.tensor(self.agent.keyframes["stand"].qpos, dtype=torch.float32).unsqueeze(0).repeat(b,1)
+            base_qpos = (
+                torch.tensor(self.agent.keyframes["stand"].qpos, dtype=torch.float32)
+                .unsqueeze(0)
+                .repeat(b, 1)
+            )
             noise_scale = 1e-2
             qpos_noise = (
                 torch.rand(b, self.agent.robot.dof[0]) * (2 * noise_scale)
@@ -167,15 +172,15 @@ class AntEnv(BaseEnv):
             qvel_noise = (
                 torch.rand(b, self.agent.robot.dof[0]) * (2 * noise_scale)
             ) - noise_scale
-            self.agent.robot.set_qpos(base_qpos+qpos_noise)
+            self.agent.robot.set_qpos(base_qpos + qpos_noise)
             self.agent.robot.set_qvel(qvel_noise)
 
-            #set the camera to begin tracking the agent
+            # set the camera to begin tracking the agent
             self.camera_mount.set_pose(
                 Pose.create_from_pq(p=self.agent.robot.links_map["torso"].pose.p)
             )
 
-    # reset the camera mount every timstep 
+    # reset the camera mount every timstep
     # necessary because we want camera to follow torso pos only, not orientation
     def _after_control_step(self):
         self.camera_mount.set_pose(
@@ -199,26 +204,36 @@ class AntEnv(BaseEnv):
 
         batch_angvels = angvels.view(-1, len(self.active_links) * 3)
         batch_linvels = linvels.view(-1, len(self.active_links) * 3)
-    
+
         com_vel = linvels * self.robot_links_mass.view(1, -1, 1)
         com_vel = com_vel.sum(dim=1) / self.robot_mass  # (b, 3)
 
         return batch_angvels, batch_linvels, com_vel
-    
+
     @property
     def torso_height(self):
-        return self.agent.robot.links_map["torso"].pose.raw_pose[:,-1]
-    
+        return self.agent.robot.links_map["torso"].pose.raw_pose[:, -1]
+
     @property
     def foot_contact_forces(self):
         """Returns log1p of force on foot links"""
-        force_vecs = torch.stack([self.agent.robot.get_net_contact_forces([link]) for link in self.force_sensor_links], dim=1)
-        force_mag = torch.linalg.norm(force_vecs, dim=-1).view(-1, len(self.force_sensor_links)) # (b, len(self.force_sensor_links))
+        force_vecs = torch.stack(
+            [
+                self.agent.robot.get_net_contact_forces([link])
+                for link in self.force_sensor_links
+            ],
+            dim=1,
+        )
+        force_mag = torch.linalg.norm(force_vecs, dim=-1).view(
+            -1, len(self.force_sensor_links)
+        )  # (b, len(self.force_sensor_links))
         return torch.log1p(force_mag)
 
     @property
     def link_orientations(self):
-        return torch.stack([link.pose.q for link in self.active_links], dim=-1).view(-1,len(self.active_links)*4)
+        return torch.stack([link.pose.q for link in self.active_links], dim=-1).view(
+            -1, len(self.active_links) * 4
+        )
 
     # cache re-used computation
     def evaluate(self) -> Dict:
@@ -236,7 +251,7 @@ class AntEnv(BaseEnv):
                 cmass=info["cmass_linvel"],
                 link_angvels=info["link_angvels"],
                 link_linvels=info["link_linvels"],
-                height=self.torso_height.view(-1,1),
+                height=self.torso_height.view(-1, 1),
                 link_orientations=self.link_orientations,
                 foot_contact_forces=self.foot_contact_forces,
             )
@@ -267,18 +282,24 @@ class AntEnv(BaseEnv):
             .mean(dim=-1)
             .view(-1)
         )
-    
+
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         small_control = (4 + self.control_rew(action)) / 5
-        return small_control * self.move_x_rew(info, self.move_speed) * self.standing_rew()
+        return (
+            small_control * self.move_x_rew(info, self.move_speed) * self.standing_rew()
+        )
 
-    def compute_normalized_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+    def compute_normalized_dense_reward(
+        self, obs: Any, action: torch.Tensor, info: Dict
+    ):
         return self.compute_dense_reward(obs, action, info)
+
 
 @register_env("MS-AntWalk-v1", max_episode_steps=1000)
 class AntWalk(AntEnv):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, robot_uids=AntRobot, move_speed=_WALK_SPEED, **kwargs)
+
 
 @register_env("MS-AntRun-v1", max_episode_steps=1000)
 class AntRun(AntEnv):
