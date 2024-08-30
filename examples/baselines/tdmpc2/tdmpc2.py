@@ -123,10 +123,11 @@ class TDMPC2:
 
 		Returns:
 			torch.Tensor: Action to take in the environment.
-		"""		
+		"""	
+		num_envs = self.cfg.num_eval_envs if eval_mode else self.cfg.num_envs
 		# Sample policy trajectories
 		if self.cfg.num_pi_trajs > 0:
-			pi_actions = torch.empty(self.cfg.num_envs, self.cfg.horizon, self.cfg.num_pi_trajs, self.cfg.action_dim, device=self.device)
+			pi_actions = torch.empty(num_envs, self.cfg.horizon, self.cfg.num_pi_trajs, self.cfg.action_dim, device=self.device)
 			_z = z.unsqueeze(1).repeat(1, self.cfg.num_pi_trajs, 1) # (num_envs, num_pi_trajs, latent_dim)
 			for t in range(self.cfg.horizon-1):
 				pi_actions[:, t] = self.model.pi(_z, task)[1]
@@ -135,11 +136,14 @@ class TDMPC2:
 
 		# Initialize state and parameters
 		z = z.unsqueeze(1).repeat(1, self.cfg.num_samples, 1) # (num_envs, num_samples, latent_dim)
-		mean = torch.zeros(self.cfg.num_envs, self.cfg.horizon, self.cfg.action_dim, device=self.device)
-		std = self.cfg.max_std*torch.ones(self.cfg.num_envs, self.cfg.horizon, self.cfg.action_dim, device=self.device)
+		mean = torch.zeros(num_envs, self.cfg.horizon, self.cfg.action_dim, device=self.device)
+		std = self.cfg.max_std*torch.ones(num_envs, self.cfg.horizon, self.cfg.action_dim, device=self.device)
 		if not t0 and hasattr(self, '_prev_mean'):
-			mean[:, :-1] = self._prev_mean[:, 1:]
-		actions = torch.empty(self.cfg.num_envs, self.cfg.horizon, self.cfg.num_samples, 
+			if eval_mode: # Added to avoid the problem with shape (num_envs) mismatch with train and eval env
+				mean[:, :-1] = self._prev_mean_eval[:, 1:]
+			else:
+				mean[:, :-1] = self._prev_mean[:, 1:]
+		actions = torch.empty(num_envs, self.cfg.horizon, self.cfg.num_samples, 
 						self.cfg.action_dim, device=self.device) # # (num_envs, horizon, num_samples, latent_dim)
 		if self.cfg.num_pi_trajs > 0:
 			actions[:, :, :self.cfg.num_pi_trajs] = pi_actions
@@ -149,7 +153,7 @@ class TDMPC2:
 
 			# Sample actions
 			actions[:, :, self.cfg.num_pi_trajs:] = (mean.unsqueeze(2) + std.unsqueeze(2) * \
-				torch.randn(self.cfg.num_envs, self.cfg.horizon, self.cfg.num_samples-self.cfg.num_pi_trajs, self.cfg.action_dim, device=std.device)) \
+				torch.randn(num_envs, self.cfg.horizon, self.cfg.num_samples-self.cfg.num_pi_trajs, self.cfg.action_dim, device=std.device)) \
 				.clamp(-1, 1)
 			if self.cfg.multitask:
 				actions = actions * self.model._action_masks[task]
@@ -157,8 +161,8 @@ class TDMPC2:
 			# Compute elite actions
 			value = self._estimate_value(z, actions, task).nan_to_num_(0) # (num_envs, num_samples, 1)
 			elite_idxs = torch.topk(value.squeeze(2), self.cfg.num_elites, dim=1).indices # (num_envs, num_elites)
-			elite_value = value[torch.arange(self.cfg.num_envs).unsqueeze(1), elite_idxs] # (num_envs, num_elites, 1)
-			# elite_actions = torch.zeros(self.cfg.num_envs, self.cfg.horizon, self.cfg.num_elites, self.cfg.action_dim, dtype=actions.dtype, device=actions.device)
+			elite_value = value[torch.arange(num_envs).unsqueeze(1), elite_idxs] # (num_envs, num_elites, 1)
+			# elite_actions = torch.zeros(num_envs, self.cfg.horizon, self.cfg.num_elites, self.cfg.action_dim, dtype=actions.dtype, device=actions.device)
 			# for j, curr_elites in enumerate(elite_idxs):
 			# 	elite_actions[j] = actions[j, :, curr_elites]
 			elite_actions = torch.gather(actions, 2, elite_idxs.unsqueeze(1).unsqueeze(3).expand(-1, self.cfg.horizon, -1, self.cfg.action_dim))
@@ -177,13 +181,16 @@ class TDMPC2:
 		# Select action
 		score = score.squeeze(2).cpu().numpy() # (num_envs, num_elites)
 		# (num_envs, horizon, num_elites, action_dim) for elite_actions
-		actions = torch.zeros(self.cfg.num_envs, self.cfg.horizon, self.cfg.action_dim, dtype=actions.dtype, device=actions.device)
+		actions = torch.zeros(num_envs, self.cfg.horizon, self.cfg.action_dim, dtype=actions.dtype, device=actions.device)
 		for i in range(len(score)):
 			actions[i] = elite_actions[i, :, np.random.choice(np.arange(score.shape[1]), p=score[i])]
-		self._prev_mean = mean # (num_envs, horizon, action_dim)
+		if eval_mode:
+			self._prev_mean_eval = mean # (num_eval_envs, horizon, action_dim)
+		else:
+			self._prev_mean = mean # (num_envs, horizon, action_dim)
 		a, std = actions[:, 0], std[:, 0]
 		if not eval_mode:
-			a += std * torch.randn(self.cfg.num_envs, self.cfg.action_dim, device=std.device)
+			a += std * torch.randn(num_envs, self.cfg.action_dim, device=std.device)
 		return a.clamp_(-1, 1)
 		
 	def update_pi(self, zs, task):

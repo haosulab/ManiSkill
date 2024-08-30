@@ -6,6 +6,7 @@ env_id: PushCube-v1
 obs: state # or rgb
 control_mode: default # or pd_joint_delta_pos or pd_ee_delta_pose
 num_envs: 32
+num_eval_envs: 4
 render_mode: rgb_array # ['rgb_array' for quality, or 'sensors' for speed]
 render_size: 64
 setting_tag: none # ['none', 'walltime_efficient', 'sample_efficient', ...] for wandb tags

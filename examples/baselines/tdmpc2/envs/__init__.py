@@ -12,16 +12,16 @@ try:
 	from envs.maniskill import make_envs as make_maniskill_vec_env
 except:
 	make_maniskill_env = missing_dependencies
-
+from mani_skill.utils import gym_utils
 
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 
-def make_envs(cfg):
+def make_envs(cfg, num_envs):
 	from envs.maniskill import make_envs as make_maniskill_vec_env
-	env = make_maniskill_vec_env(cfg)
+	env = make_maniskill_vec_env(cfg, num_envs)
 
 	if cfg.get('obs', 'state') == 'rgb':
-		env = PixelWrapper(cfg, env)
+		env = PixelWrapper(cfg, env, num_envs)
 
 	try: # Dict
 		cfg.obs_shape = {k: v.shape[1:] for k, v in env.observation_space.spaces.items()}
