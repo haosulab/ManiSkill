@@ -506,18 +506,18 @@ class PushTEnv(BaseEnv):
 
         return {
             "success": success,
+            "inter_area": inter_area,
         }
 
     def _get_obs_extra(self, info: Dict):
         # ee position is super useful for pandastick robot
-        obs = dict(
-            tcp_pose=self.agent.tcp.pose.raw_pose,
-        )
+        obs = dict(tcp_pose=self.agent.tcp.pose.raw_pose)
         if self._obs_mode in ["state", "state_dict"]:
             # state based gets info on goal position and t full pose - necessary to learn task
             obs.update(
                 goal_pos=self.goal_tee.pose.p,
                 obj_pose=self.tee.pose.raw_pose,
+                inter_area=info["inter_area"],
             )
         return obs
 
@@ -550,8 +550,8 @@ class PushTEnv(BaseEnv):
         tcp_to_push_pose_dist = torch.linalg.norm(tcp_to_push_pose, axis=1)
         reward += ((1 - torch.tanh(5 * tcp_to_push_pose_dist)).sqrt()) / 20
 
-        # assign rewards to parallel environments that achieved success to the maximum of 3.
-        reward[info["success"]] = 3
+        reward += info["inter_area"] / 2
+
         return reward
 
     def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
