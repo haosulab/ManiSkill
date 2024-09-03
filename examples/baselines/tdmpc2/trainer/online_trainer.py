@@ -28,36 +28,46 @@ class OnlineTrainer(Trainer):
 		"""Evaluate a TD-MPC2 agent."""
 		has_success, has_fail = False, False # if task has success or/and fail (added for maniskill)
 		ep_rewards, ep_successes, ep_fails = [], [], []
-		for i in range((self.cfg.eval_episodes - 1) // self.cfg.num_envs + 1):
-			obs, _ = self.env.reset()
-			done = torch.full((self.cfg.num_envs, ), False, device=obs.device) # ms3: done is truncated since the ms3 ignore_terminations.
-			ep_reward, t = torch.zeros((self.cfg.num_envs, ), device=obs.device), 0
+		for i in range((self.cfg.eval_episodes - 1) // self.cfg.num_eval_envs + 1):
+			obs, _ = self.eval_env.reset()
+			done = torch.full((self.cfg.num_eval_envs, ), False, device=obs.device) # ms3: done is truncated since the ms3 ignore_terminations.
+			ep_reward, t = torch.zeros((self.cfg.num_eval_envs, ), device=obs.device), 0
 			if self.cfg.save_video:
-				self.logger.video.init(self.env, enabled=(i==0))
+				self.logger.video.init_cur_eps(self.eval_env, enabled=(i==0))
 			while not done[0]: # done is truncated and should be the same
 				action = self.agent.act(obs, t0=t==0, eval_mode=True)
-				obs, reward, terminated, truncated, info = self.env.step(action)
+				obs, reward, terminated, truncated, info = self.eval_env.step(action)
 				done = terminated | truncated
 				ep_reward += reward
 				t += 1
 				if self.cfg.save_video:
-					self.logger.video.record(self.env)
-			ep_rewards.append(ep_reward.mean().item())
+					self.logger.video.record_cur_eps(self.eval_env)
+			ep_rewards.extend(ep_reward.tolist())
 
 			if 'success' in info: 
 				has_success = True
-				ep_successes.append(info['success'].float().mean().item())
+				ep_successes.extend(info['success'].float().tolist())
 			
 			if 'fail' in info:
 				has_fail = True
-				ep_fails.append(info['fail'].float().mean().item())
+				ep_fails.extend(info['fail'].float().tolist())
 
 			if self.cfg.save_video:
-				self.logger.video.save(self._step)
+				self.logger.video.save_cur_eps()
+		if self.cfg.save_video:
+			self.logger.video.flush_saved_eps(step=self._step, num_episodes=self.cfg.eval_episodes)
+		# Truncate recorded episodes to self.cf.eval_episodes
+		ep_rewards = ep_rewards[:self.cfg.eval_episodes]
+		if has_success:
+			ep_successes = ep_successes[:self.cfg.eval_episodes]
+		if has_fail:
+			ep_fails = ep_fails[:self.cfg.eval_episodes]
+
+		# Update logger
 		eval_metrics = dict(
 			episode_reward=np.nanmean(ep_rewards),
-			episode_len=self.env.max_episode_steps,
-			episode_reward_avg=np.nanmean(ep_rewards)/self.env.max_episode_steps,
+			episode_len=self.eval_env.max_episode_steps,
+			episode_reward_avg=np.nanmean(ep_rewards)/self.eval_env.max_episode_steps,
 		)
 		if has_success:
 			eval_metrics.update(episode_success=np.nanmean(ep_successes))
@@ -138,7 +148,7 @@ class OnlineTrainer(Trainer):
 			# Collect experience
 			rollout_time = time()
 			if self._step > self.cfg.seed_steps:
-				action = self.agent.act(obs, t0=len(self._tds)==1) # t0 unchanged since all envs have same episode length
+				action = self.agent.act(obs, t0=len(self._tds)==1, eval_mode=False) # t0 unchanged since all envs have same episode length
 			else:
 				# action = torch.rand((self.cfg.num_envs, self.cfg.action_dim)) # self.env.rand_act()
 				action = torch.from_numpy(self.env.action_space.sample())

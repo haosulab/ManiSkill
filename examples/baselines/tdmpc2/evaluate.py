@@ -50,7 +50,7 @@ def evaluate(cfg: dict):
 	print(colored(f'Checkpoint: {cfg.checkpoint}', 'blue', attrs=['bold']))
 
 	# Make environment
-	env = make_envs(cfg)
+	env = make_envs(cfg, cfg.num_envs)
 
 	# Load agent
 	agent = TDMPC2(cfg)
