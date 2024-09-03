@@ -3,6 +3,7 @@
 This page documents key things to know when setting up ManiSkill environments for reinforcement learning, including:
 
 - How to convert ManiSkill environments to gymnasium API compatible environments, both [single](#gym-environment-api) and [vectorized](#gym-vectorized-environment-api) APIs.
+- How to [**correctly** evaluate RL policies fairly](#evaluation)
 - [Useful Wrappers](#useful-wrappers)
 
 ManiSkill environments are created by gymnasium's `make` function. The result is by default a "batched" environment where every input and output is batched. Note that this is not standard gymnasium API. If you want the standard gymnasium environemnt / vectorized environment API see the next sections.
@@ -60,6 +61,92 @@ obs, rew, terminated, truncated, info = env.step(env.action_space.sample())
 You may also notice that there are two additional options when creating a vector env. The `auto_reset` argument controls whether to automatically reset a parallel environment when it is terminated or truncated. This is useful depending on algorithm. The `ignore_terminations` argument controls whether environments reset upon terminated being True. Like gymnasium vector environments, partial resets can occur where some parallel environments reset while others do not.
 
 Note that for efficiency, everything returned by the environment will be a batched torch tensor on the GPU and not a batched numpy array on the CPU. This the only difference you may need to account for between ManiSkill vectorized environments and gymnasium vectorized environments.
+
+## Evaluation
+
+With the number of different types of environments, algorithms, and approaches to evaluation, we describe below a consistent and standardized way to evaluate all kinds of policies in ManiSkill fairly. In summary, the following setup is necessary to ensure fair evaluation:
+- Partial resets are turned off and environments do not reset upon success/fail/termination. Instead record multiple types of success/fail metrics.
+- All parallel environments reconfigure on reset, which randomizes object geometries if the task has object randomization.
+- Record standardized metrics on success/fail/return.
+
+
+
+
+
+Since GPU simulation is available, there are a few differences compared to past ManiSkill versions / CPU based gym environments. Namely for efficiency, environments by default do not *reconfigure* on each environment reset. Reconfiguration allows the environment to randomize loaded assets which is necessary for some tasks that procedurally generate objects (PegInsertionSide-v1) or sample random real world objects (PickSingleYCB-v1).
+
+Thus, for more fair comparison between different RL algorithms, when evaluating an RL policy, the environment must reconfigure and and have partial resets turned off (e.g. environments do not reset upon success/fail/termination, only upon episode truncation when `max_episode_steps` is reached). 
+
+For GPU vectorized environments the code to create a correct evaluation GPU environment by environment ID looks like this:
+
+```python
+import gymnasium as gym
+from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
+env_id = "PickCube-v1"
+num_eval_envs = 64
+env_kwargs = dict(obs_mode="state") # modify your env_kwargs here
+eval_envs = gym.make(env_id, num_envs=num_eval_envs, reconfiguration_freq=1, **env_kwargs)
+# add any other wrappers here
+eval_envs = ManiSkillVectorEnv(eval_envs, ignore_terminations=True)
+```
+
+And for CPU vectorization it looks like this:
+
+```python
+import gymnasium as gym
+from mani_skill.utils.wrappers import CPUGymWrapper
+env_id = "PickCube-v1"
+num_eval_envs = 8
+env_kwargs = dict(obs_mode="state") # modify your env_kwargs here
+def cpu_make_env(env_id, env_kwargs = dict()):
+    def thunk():
+        env = gym.make(env_id, reconfiguration_freq=1, **env_kwargs)
+        env = CPUGymWrapper(env, ignore_terminations=True, record_metrics=True)
+        # add any other wrappers here
+        return env
+    return thunk
+vector_cls = gym.vector.SyncVectorEnv if num_eval_envs == 1 else lambda x : gym.vector.AsyncVectorEnv(x, context="forkserver")
+eval_envs = vector_cls([cpu_make_env(env_id, env_kwargs) for _ in range(num_eval_envs)])
+
+# evaluation loop, which will record metrics for complete episodes only
+obs, _ = eval_envs.reset(seed=0)
+eval_metrics = defaultdict(list)
+for _ in range(500):
+    obs, rew, terminated, truncated, info = eval_envs.step(eval_envs.action_space.sample())
+    # note as there are no partial resets, truncated is True for all environments at the same time
+    if truncated.any():
+        for final_info in info["final_info"]:
+            for k, v in final_info["episode"].items():
+                eval_metrics[k].append(v)
+for k in eval_metrics.keys():
+    print(f"{k}_mean: {np.mean(eval_metrics[k])}")
+```
+
+Importantly there are many metrics in which policies can be evaluated over. We recommend always recording the following standard 3 metrics in evaluation which are recorded in all baselines:
+- `success_once`: Whether the task was successful at any point in the episode.
+- `success_at_end`: Whether the task was successful at the final step of the episode.
+- `return`: The total reward accumulated over the course of the episode.
+
+An example loop collecting this data would look like this:
+
+```python
+obs, _ = eval_envs.reset(seed=0)
+eps_returns = []
+eps_success_once = []
+eps_success_at_end = []
+success_once
+for _ in range(eval_envs.max_episode_steps):
+    action = policy(obs)
+    obs, rew, terminated, truncated, info = eval_envs.step(eval_envs.action_space.sample())
+    # note as there are no partial resets, truncated is True for all environments at the same time
+    eps_returns.append(rew)
+    if truncated.any():
+        returns.append(eval_infos["final_info"]["episode"]["r"][mask].cpu().numpy())
+        success_once = info["success_once"]
+        success_at_end = info["success_at_end"]
+    return = info["return"]
+```
+
 
 ## Useful Wrappers
 
