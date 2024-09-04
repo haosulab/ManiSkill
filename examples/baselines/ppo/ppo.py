@@ -63,7 +63,7 @@ class Args:
     """the number of steps to run in each environment per policy rollout"""
     num_eval_steps: int = 50
     """the number of steps to run in each evaluation environment during evaluation"""
-    reconfiguration_freq: Optional[int] = None
+    reconfiguration_freq: Optional[int] = 1
     """for benchmarking purposes we want to reconfigure the eval environment each reset to ensure objects are randomized in some tasks"""
     anneal_lr: bool = False
     """Toggle learning rate annealing for policy and value networks"""
