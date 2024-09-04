@@ -70,7 +70,7 @@ With the number of different types of environments, algorithms, and approaches t
 - All parallel environments reconfigure on reset (`reconfiguration_freq=1`), which randomizes object geometries if the task has object randomization.
 
 
-The code to fairly evaluate policies and record standard metrics in ManiSkill are shown below. For GPU vectorized environments the code to create a correct evaluation GPU environment by environment ID looks like this:
+The code to fairly evaluate policies and record standard metrics in ManiSkill are shown below. For GPU vectorized environments the code to evaluate policies by environment ID the following is recommended:
 
 ```python
 import gymnasium as gym
@@ -86,8 +86,8 @@ eval_envs = ManiSkillVectorEnv(eval_envs, ignore_terminations=True, record_metri
 obs, _ = eval_envs.reset(seed=0)
 eval_metrics = defaultdict(list)
 for _ in range(400):
-    # action = policy(obs)
-    obs, rew, terminated, truncated, info = eval_envs.step(eval_envs.action_space.sample())
+    action = eval_envs.action_space.sample() # replace with your policy action
+    obs, rew, terminated, truncated, info = eval_envs.step(action)
     # note as there are no partial resets, truncated is True for all environments at the same time
     if truncated.any():
         for k, v in info["final_info"]["episode"].items():
@@ -96,7 +96,7 @@ for k in eval_metrics.keys():
     print(f"{k}_mean: {torch.mean(torch.stack(eval_metrics[k])).item()}")
 ```
 
-And for CPU vectorization it looks like this:
+And for CPU vectorized environments the following is recommended for evaluation:
 
 ```python
 import gymnasium as gym
@@ -118,7 +118,8 @@ eval_envs = vector_cls([cpu_make_env(env_id, env_kwargs) for _ in range(num_eval
 obs, _ = eval_envs.reset(seed=0)
 eval_metrics = defaultdict(list)
 for _ in range(400):
-    obs, rew, terminated, truncated, info = eval_envs.step(eval_envs.action_space.sample())
+    action = eval_envs.action_space.sample() # replace with your policy action
+    obs, rew, terminated, truncated, info = eval_envs.step(action)
     # note as there are no partial resets, truncated is True for all environments at the same time
     if truncated.any():
         for final_info in info["final_info"]:
