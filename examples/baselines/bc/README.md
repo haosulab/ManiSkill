@@ -28,7 +28,7 @@ python -m mani_skill.trajectory.replay_trajectory \
   --save-traj --num-procs 10 -b cpu
 ```
 
-Set -o to rgbd for visual observations. Note that the control mode can heavily influence how well Behavior Cloning performs. By default we recommend using `pd_joint_delta_pos` for control mode as all tasks can be solved with that control mode, although it is harder to learn with BC than `pd_ee_delta_pos` or `pd_ee_delta_pose` for robots that have those control modes. Finally, the type of demonstration data used can also impact performance, with typically neural network generated demonstrations being easier to learn from than human/motion planning generated demonstrations.
+Set -o to rgbd for RGBD observations. Note that the control mode can heavily influence how well Behavior Cloning performs. By default we recommend using `pd_joint_delta_pos` for control mode as all tasks can be solved with that control mode, although it is harder to learn with BC than `pd_ee_delta_pos` or `pd_ee_delta_pose` for robots that have those control modes. Finally, the type of demonstration data used can also impact performance, with typically neural network generated demonstrations being easier to learn from than human/motion planning generated demonstrations.
 
 ## Training
 
