@@ -74,9 +74,9 @@ class CPUGymWrapper(gym.Wrapper):
             terminated = False
             if self.record_metrics:
                 if "success" in info:
-                    episode_info["success_at_end"] = self.success_once
+                    episode_info["success_at_end"] = info["success"]
                 if "fail" in info:
-                    episode_info["fail_at_end"] = self.fail_once
+                    episode_info["fail_at_end"] = info["fail"]
 
         if self.record_metrics:
             info["episode"] = episode_info

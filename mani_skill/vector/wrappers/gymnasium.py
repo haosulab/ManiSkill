@@ -130,9 +130,9 @@ class ManiSkillVectorEnv(VectorEnv):
             terminations[:] = False
             if self.record_metrics:
                 if "success" in infos:
-                    episode_info["success_at_end"] = self.success_once.clone()
+                    episode_info["success_at_end"] = infos["success"].clone()
                 if "fail" in infos:
-                    episode_info["fail_at_end"] = self.fail_once.clone()
+                    episode_info["fail_at_end"] = infos["fail"].clone()
         if self.record_metrics:
             infos["episode"] = episode_info
 
