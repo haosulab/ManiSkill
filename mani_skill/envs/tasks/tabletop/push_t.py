@@ -501,14 +501,10 @@ class PushTEnv(BaseEnv):
         # success is where the overlap is over intersection thresh and ee dist to start pos is less than it's own thresh
         inter_area = self.pseudo_render_intersection()
         tee_place_success = (inter_area) >= self.intersection_thresh
-        is_robot_static = self.agent.is_static(0.2)
-        success = tee_place_success & is_robot_static
 
-        return {
-            "success": success,
-            "tee_place_success": tee_place_success,
-            "inter_area": inter_area,
-        }
+        success = tee_place_success
+
+        return {"success": success, "inter_area": inter_area}
 
     def _get_obs_extra(self, info: Dict):
         # ee position is super useful for pandastick robot
@@ -551,19 +547,10 @@ class PushTEnv(BaseEnv):
         tcp_to_push_pose_dist = torch.linalg.norm(tcp_to_push_pose, axis=1)
         reward += ((1 - torch.tanh(5 * tcp_to_push_pose_dist)).sqrt()) / 20
 
-        static_reward = 1 - torch.tanh(
-            5 * torch.linalg.norm(self.agent.robot.get_qvel()[..., :-2], axis=1)
-        )
-        reward[info["tee_place_success"]] = (
-            2
-            + info["inter_area"][info["tee_place_success"]]
-            + static_reward[info["tee_place_success"]]
-        )
-
         # assign rewards to parallel environments that achieved success to the maximum of 3.
-        reward[info["success"]] = 4
+        reward[info["success"]] = 3
         return reward
 
     def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
-        max_reward = 4.0
+        max_reward = 3.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
