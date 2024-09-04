@@ -37,10 +37,11 @@ done
 
 for seed in ${seeds[@]}
 do
+  # no partial reset is used to help get higher success_at_end success rates
   python ppo.py --env_id="AnymalC-Reach-v1" --seed=${seed} \
     --num_envs=1024 --update_epochs=8 --num_minibatches=32 --gamma=0.99 --gae_lambda=0.95 \
     --total_timesteps=50_000_000 --num-steps=200 --num-eval-steps=200 \
-    --num_eval_envs=16 \
+    --num_eval_envs=16 --no-partial-reset \ 
     --exp-name="ppo-AnymalC-Reach-v1-state-${seed}-walltime_efficient" \
     --wandb_entity="stonet2000" --track
 done
@@ -78,11 +79,12 @@ done
 
 for seed in ${seeds[@]}
 do
+  # no partial reset is used to help get higher success_at_end success rates
   python ppo_rgb.py --env_id="AnymalC-Reach-v1" --seed=${seed} \
     --num_envs=256 --update_epochs=8 --num_minibatches=32 \
     --total_timesteps=50_000_000 --num-steps=200 --num-eval-steps=200 \
     --gamma=0.99 --gae_lambda=0.95 \
-    --num_eval_envs=16 \
+    --num_eval_envs=16 --no-partial-reset \
     --exp-name="ppo-AnymalC-Reach-v1-rgb-${seed}-walltime_efficient" \
     --wandb_entity="stonet2000" --track
 done
