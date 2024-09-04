@@ -29,23 +29,22 @@ python -m mani_skill.trajectory.replay_trajectory \
   --save-traj --num-procs 10
 ```
 
-## State-Based Training
+Set -o to rgbd for RGBD observations. Note that the control mode can heavily influence how well Behavior Cloning performs. By default we recommend using `pd_joint_delta_pos` for control mode as all tasks can be solved with that control mode, although it is harder to learn with BC than `pd_ee_delta_pos` or `pd_ee_delta_pose` for robots that have those control modes. Finally, the type of demonstration data used can also impact performance, with typically neural network generated demonstrations being easier to learn from than human/motion planning generated demonstrations.
+
+## Training
+
+We provide scripts to train the diffusion policy on demonstrations. Note that some demonstrations are slow and can exceed the default max episode steps. In this case, you can use the `--max-episode-steps` flag to set a higher value. Most of the time 2x the default value is sufficient.
+
 
 Example training, learning from 100 demonstrations generated via motionplanning in the PickCube-v1 task
 ```bash
-seed=42
-demos=100
-env_id="PickCube-v1"
-python train.py --env-id ${env_id} --max_episode_steps 100 --total_iters 30000 \
-  --control-mode "pd_joint_delta_pos" --num-demos ${demos} --seed ${seed} \
-  --demo-path ~/.maniskill/demos/${env_id}/motionplanning/trajectory.state.pd_joint_delta_pos.cpu.h5 \
-  --exp-name diffusion_policy-${env_id}-state-${demos}_motionplanning_demos-${seed} \
-  --demo_type="motionplanning" --track # additional tag for logging purposes on wandb
+python train.py --env-id PickCube-v1 \
+  --demo-path ~/.maniskill/demos/PickCube-v1/motionplanning/trajectory.state.pd_joint_delta_pos.cpu.h5 \
+  --control-mode "pd_ee_delta_pos" --num-demos 100 --max_episode_steps 100 \
+  --total_iters 30000 
 ```
-In tensorboard/wandb there are two success rates reported, `success_once` and `success_at_end`. `success_once` considers success when the episode achieves success at any point in the episode, and `success_at_end` considers success only when the episode achieves success at the last step after `max_episode_steps` are reached.
 
-Note that we further add a `--max_episode_steps` argument to the training script to allow for longer demonstrations to be learned from (such as motionplanning / teleoperated demonstrations). By default the max episode steps of most environments are tuned lower so reinforcement learning agents can learn faster. You may need to increase this value depending on the task and the demonstrations you are using. 
-
+<!-- 
 ## Train and Evaluate with GPU Simulation
 
 You can also choose to train on trajectories generated in the GPU simulation and evaluate faster with the GPU simulation. However as most demonstrations are usually generated in the CPU simulation (via motionplanning or teleoperation), you may observe worse performance when evaluating on the GPU simulation vs the CPU simulation.
@@ -61,7 +60,7 @@ python train.py --env-id ${env_id} --max_episode_steps 100 --total_iters 30000 \
   --exp-name diffusion_policy-${env_id}-state-${demos}_motionplanning_demos-${seed} \
   --sim-backend="gpu" --num-eval-envs 100 --no-capture-video \
   --demo_type="motionplanning" --track # additional tag for logging purposes on wandb
-```
+``` -->
 
 ## Citation
 

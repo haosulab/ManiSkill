@@ -3,6 +3,8 @@ import gymnasium
 import numpy as np
 import torch
 
+from mani_skill.utils import common
+
 def collect_episode_info(infos, result):
     if "final_info" in infos: # infos is a dict
 
@@ -18,54 +20,33 @@ def collect_episode_info(infos, result):
                 result['fail'].append(info['fail'])
     return result
 
-def evaluate(n, agent, eval_envs, device):
+def evaluate(n: int, agent, eval_envs, device, sim_backend: str):
     agent.eval()
-    is_cpu_sim = isinstance(eval_envs, gymnasium.vector.AsyncVectorEnv)
     with torch.no_grad():
-        result = defaultdict(list)
-        # reset with reconfigure=True to ensure sufficient randomness in object geometries otherwise they will be fixed in GPU sim.
-        obs, info = eval_envs.reset(options=dict(reconfigure=True))
-        eps_rets = np.zeros(eval_envs.num_envs)
-        eps_lens = np.zeros(eval_envs.num_envs)
-        eps_success_once = np.zeros(eval_envs.num_envs)
+        eval_metrics = defaultdict(list)
+        obs, info = eval_envs.reset()
         eps_count = 0
         while eps_count < n:
-            if is_cpu_sim:
-                action_seq = agent.get_eval_action(torch.Tensor(obs).to(device)).cpu().numpy()
-                for i in range(action_seq.shape[1]):
-                    eps_lens += 1
-                    obs, rew, terminated, truncated, info = eval_envs.step(action_seq[:, i])
-                    eps_rets += rew
-                    if truncated.any():
-                        break
-                    eps_success_once += info["success"]
-            else:
-                action_seq = agent.get_eval_action(obs)
-                for i in range(action_seq.shape[1]):
-                    eps_lens += 1
-                    obs, rew, terminated, truncated, info = eval_envs.step(action_seq[:, i])
-                    eps_rets += rew.cpu().numpy()
-                    if truncated.any():
-                        break
-                    eps_success_once += info["success"].cpu().numpy()
+            obs = common.to_tensor(obs, device)
+            action_seq = agent.get_action(obs)
+            if sim_backend == "cpu":
+                action_seq = action_seq.cpu().numpy()
+            for i in range(action_seq.shape[1]):
+                obs, rew, terminated, truncated, info = eval_envs.step(action_seq[:, i])
+                if truncated.any():
+                    break
 
             if truncated.any():
                 assert truncated.all() == truncated.any(), "all episodes should truncate at the same time for fair evaluation with other algorithms"
-                if is_cpu_sim:
-                    eps_success = []
-                    for i in range(eval_envs.num_envs):
-                        eps_success.append(info["final_info"][i]['success'])
+                if isinstance(info["final_info"], dict):
+                    for k, v in info["final_info"]["episode"].items():
+                        eval_metrics[k].append(v.float().cpu().numpy())
                 else:
-                    eps_success = info["final_info"]['success'].cpu().numpy()
-                eps_success_once += eps_success
-                result['success_once'].append(eps_success_once > 0)
-                result['success_at_end'].append(eps_success)
-                result['episode_len'].append(eps_lens)
-                result['return'].append(eps_rets)
+                    for final_info in info["final_info"]:
+                        for k, v in final_info["episode"].items():
+                            eval_metrics[k].append(v)
                 eps_count += eval_envs.num_envs
-                eps_rets = np.zeros(eval_envs.num_envs)
-                eps_lens = np.zeros(eval_envs.num_envs)
-                eps_success_once = np.zeros(eval_envs.num_envs)
     agent.train()
-    result = {k: np.concatenate(v) for k, v in result.items()}
-    return result
+    for k in eval_metrics.keys():
+        eval_metrics[k] = np.stack(eval_metrics[k])
+    return eval_metrics

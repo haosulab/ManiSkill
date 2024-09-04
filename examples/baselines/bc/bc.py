@@ -1,6 +1,4 @@
 from collections import defaultdict
-import datetime
-from functools import partial
 import os
 import random
 from dataclasses import dataclass
@@ -19,10 +17,6 @@ import tyro
 import wandb
 from mani_skill.utils import gym_utils
 from mani_skill.utils.io_utils import load_json
-from mani_skill.utils.registration import REGISTERED_ENVS
-from mani_skill.utils.wrappers.gymnasium import CPUGymWrapper
-from mani_skill.utils.wrappers.record import RecordEpisode
-from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.sampler import BatchSampler, RandomSampler
 from tqdm import tqdm
@@ -242,7 +236,6 @@ if __name__ == "__main__":
     torch.backends.cudnn.deterministic = args.torch_deterministic
 
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
-    control_mode = os.path.split(args.demo_path)[1].split(".")[2]
 
     # env setup
     env_kwargs = dict(control_mode=args.control_mode, reward_mode="sparse", obs_mode="state", render_mode="rgb_array")
