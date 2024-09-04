@@ -65,29 +65,35 @@ Note that for efficiency, everything returned by the environment will be a batch
 ## Evaluation
 
 With the number of different types of environments, algorithms, and approaches to evaluation, we describe below a consistent and standardized way to evaluate all kinds of policies in ManiSkill fairly. In summary, the following setup is necessary to ensure fair evaluation:
-- Partial resets are turned off and environments do not reset upon success/fail/termination. Instead record multiple types of success/fail metrics.
-- All parallel environments reconfigure on reset, which randomizes object geometries if the task has object randomization.
-- Record standardized metrics on success/fail/return.
+
+- Partial resets are turned off and environments do not reset upon success/fail/termination (`ignore_terminations=True`). Instead we record multiple types of success/fail metrics.
+- All parallel environments reconfigure on reset (`reconfiguration_freq=1`), which randomizes object geometries if the task has object randomization.
 
 
-
-
-
-Since GPU simulation is available, there are a few differences compared to past ManiSkill versions / CPU based gym environments. Namely for efficiency, environments by default do not *reconfigure* on each environment reset. Reconfiguration allows the environment to randomize loaded assets which is necessary for some tasks that procedurally generate objects (PegInsertionSide-v1) or sample random real world objects (PickSingleYCB-v1).
-
-Thus, for more fair comparison between different RL algorithms, when evaluating an RL policy, the environment must reconfigure and and have partial resets turned off (e.g. environments do not reset upon success/fail/termination, only upon episode truncation when `max_episode_steps` is reached). 
-
-For GPU vectorized environments the code to create a correct evaluation GPU environment by environment ID looks like this:
+The code to fairly evaluate policies and record standard metrics in ManiSkill are shown below. For GPU vectorized environments the code to create a correct evaluation GPU environment by environment ID looks like this:
 
 ```python
 import gymnasium as gym
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
-env_id = "PickCube-v1"
+env_id = "PushCube-v1"
 num_eval_envs = 64
 env_kwargs = dict(obs_mode="state") # modify your env_kwargs here
 eval_envs = gym.make(env_id, num_envs=num_eval_envs, reconfiguration_freq=1, **env_kwargs)
 # add any other wrappers here
-eval_envs = ManiSkillVectorEnv(eval_envs, ignore_terminations=True)
+eval_envs = ManiSkillVectorEnv(eval_envs, ignore_terminations=True, record_metrics=True)
+
+# evaluation loop, which will record metrics for complete episodes only
+obs, _ = eval_envs.reset(seed=0)
+eval_metrics = defaultdict(list)
+for _ in range(400):
+    # action = policy(obs)
+    obs, rew, terminated, truncated, info = eval_envs.step(eval_envs.action_space.sample())
+    # note as there are no partial resets, truncated is True for all environments at the same time
+    if truncated.any():
+        for k, v in info["final_info"]["episode"].items():
+            eval_metrics[k].append(v.float())
+for k in eval_metrics.keys():
+    print(f"{k}_mean: {torch.mean(torch.stack(eval_metrics[k])).item()}")
 ```
 
 And for CPU vectorization it looks like this:
@@ -111,7 +117,7 @@ eval_envs = vector_cls([cpu_make_env(env_id, env_kwargs) for _ in range(num_eval
 # evaluation loop, which will record metrics for complete episodes only
 obs, _ = eval_envs.reset(seed=0)
 eval_metrics = defaultdict(list)
-for _ in range(500):
+for _ in range(400):
     obs, rew, terminated, truncated, info = eval_envs.step(eval_envs.action_space.sample())
     # note as there are no partial resets, truncated is True for all environments at the same time
     if truncated.any():
@@ -122,31 +128,11 @@ for k in eval_metrics.keys():
     print(f"{k}_mean: {np.mean(eval_metrics[k])}")
 ```
 
-Importantly there are many metrics in which policies can be evaluated over. We recommend always recording the following standard 3 metrics in evaluation which are recorded in all baselines:
+The following metrics are recorded and explained below:
 - `success_once`: Whether the task was successful at any point in the episode.
 - `success_at_end`: Whether the task was successful at the final step of the episode.
+- `fail_once/fail_at_end`: Same as the above two but for failures. Note not all tasks have success/fail criteria.
 - `return`: The total reward accumulated over the course of the episode.
-
-An example loop collecting this data would look like this:
-
-```python
-obs, _ = eval_envs.reset(seed=0)
-eps_returns = []
-eps_success_once = []
-eps_success_at_end = []
-success_once
-for _ in range(eval_envs.max_episode_steps):
-    action = policy(obs)
-    obs, rew, terminated, truncated, info = eval_envs.step(eval_envs.action_space.sample())
-    # note as there are no partial resets, truncated is True for all environments at the same time
-    eps_returns.append(rew)
-    if truncated.any():
-        returns.append(eval_infos["final_info"]["episode"]["r"][mask].cpu().numpy())
-        success_once = info["success_once"]
-        success_at_end = info["success_at_end"]
-    return = info["return"]
-```
-
 
 ## Useful Wrappers
 

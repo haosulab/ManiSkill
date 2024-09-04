@@ -20,7 +20,7 @@ class CPUGymWrapper(gym.Wrapper):
         env (gym.Env): The environment to wrap.
         ignore_terminations (bool): If True, the environment will ignore termination signals
             and continue running until truncation. Default is False.
-        record_metrics (bool): If True, the returned info objects will contain the metrics: eps_ret, eps_len, success_once, success_at_end, fail_once, fail_at_end.
+        record_metrics (bool): If True, the returned info objects will contain the metrics: return, length, success_once, success_at_end, fail_once, fail_at_end.
             success/fail metrics are recorded only when the environment has success/fail criteria. success/fail_at_end are recorded only when ignore_terminations is True.
 
     """
@@ -43,9 +43,10 @@ class CPUGymWrapper(gym.Wrapper):
         self.ignore_terminations = ignore_terminations
         self.record_metrics = record_metrics
 
-        self.success_once = False
-        self.fail_once = False
-        self.eps_rews = []
+        if self.record_metrics:
+            self.success_once = False
+            self.fail_once = False
+            self.returns = []
 
     @property
     def base_env(self) -> BaseEnv:
@@ -57,15 +58,15 @@ class CPUGymWrapper(gym.Wrapper):
         info = common.to_numpy(info)
         if self.record_metrics:
             episode_info = dict()
-            self.eps_rews.append(reward)
+            self.returns.append(reward)
             if "success" in info:
                 self.success_once = self.success_once | info["success"]
                 episode_info["success_once"] = self.success_once
             if "fail" in info:
                 self.fail_once = self.fail_once | info["fail"]
                 episode_info["fail_once"] = self.fail_once
-            episode_info["return"] = np.sum(self.eps_rews)
-            episode_info["length"] = len(self.eps_rews)
+            episode_info["return"] = np.sum(self.returns)
+            episode_info["length"] = len(self.returns)
         if self.ignore_terminations:
             terminated = False
             if self.record_metrics:
@@ -86,9 +87,10 @@ class CPUGymWrapper(gym.Wrapper):
 
     def reset(self, *, seed=None, options=None):
         obs, info = self.env.reset(seed=seed, options=options)
-        self.success_once = False
-        self.fail_once = False
-        self.eps_rews = []
+        if self.record_metrics:
+            self.success_once = False
+            self.fail_once = False
+            self.returns = []
         return common.unbatch(common.to_numpy(obs), common.to_numpy(info))
 
     def render(self):
