@@ -1,7 +1,9 @@
 import datetime
+from functools import partial
 import os
 import random
 from dataclasses import asdict, dataclass
+from typing import Optional
 
 import gymnasium as gym
 import h5py
@@ -46,7 +48,7 @@ class Config:
     # learning rate
     lr = 3e-4
     # number of parallel eval envs
-    num_envs = 50
+    num_envs = 8
     # dataset directory
     demo_path: str = ""
     # log to wandb
@@ -54,7 +56,7 @@ class Config:
     # normalize states
     normalize_states: bool = False
     # number of trajectories to load, max is usually 1000
-    load_count: int = 500
+    load_count: Optional[int] = None
     # seed
     seed: int = 2024
     # where experiment outputs should be stored
@@ -125,7 +127,7 @@ def build_env(
     return inner
 
 
-def make_eval_envs(env, num_envs, stats, control_mode, gpu_sim=False):
+def make_eval_envs(env, num_envs, stats, control_mode, use_sync_vector_envs=False, gpu_sim=False):
     if gpu_sim:
         env = gym.make(
             env,
@@ -144,8 +146,8 @@ def make_eval_envs(env, num_envs, stats, control_mode, gpu_sim=False):
                 max_steps_per_video=args.max_episode_steps,
             )
         return env
-
-    return gym.vector.SyncVectorEnv(
+    vector_cls = gym.vector.SyncVectorEnv if num_envs == 1 or use_sync_vector_envs else partial(gym.vector.AsyncVectorEnv, context='forkserver')
+    return vector_cls(
         [
             build_env(
                 env,
@@ -226,12 +228,9 @@ class ManiSkillDataset(Dataset):
         self.dones = []
         self.total_frames = 0
         self.device = device
-
-        if load_count > len(self.episodes):
-            print(
-                f"Load count exceeds number of available episodes, loading {len(self.episodes)} which is the max number of episodes present"
-            )
+        if load_count is None:
             load_count = len(self.episodes)
+        print(f"Loading {load_count} episodes")
 
         for eps_id in tqdm(range(load_count)):
             eps = self.episodes[eps_id]
@@ -253,8 +252,6 @@ class ManiSkillDataset(Dataset):
         if normalize_states:
             mean, std = self.get_state_stats()
             self.observations = (self.observations - mean) / std
-
-        # self.rewards = np.vstack(self.rewards)
 
     def get_state_stats(self):
         return np.mean(self.observations), np.std(self.observations)
