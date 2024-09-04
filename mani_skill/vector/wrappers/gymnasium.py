@@ -118,7 +118,10 @@ class ManiSkillVectorEnv(VectorEnv):
                 self.fail_once = self.fail_once | infos["fail"]
                 episode_info["fail_once"] = self.fail_once.clone()
             episode_info["return"] = self.returns.clone()
-            episode_info["length"] = self.base_env.elapsed_steps.clone()
+            episode_info["episode_len"] = self.base_env.elapsed_steps.clone()
+            episode_info["reward"] = (
+                episode_info["return"] / episode_info["episode_len"]
+            )
 
         if isinstance(terminations, bool):
             terminations = torch.tensor([terminations], device=self.device)

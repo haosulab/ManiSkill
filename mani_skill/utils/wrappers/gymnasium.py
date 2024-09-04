@@ -66,7 +66,10 @@ class CPUGymWrapper(gym.Wrapper):
                 self.fail_once = self.fail_once | info["fail"]
                 episode_info["fail_once"] = self.fail_once
             episode_info["return"] = np.sum(self.returns)
-            episode_info["length"] = len(self.returns)
+            episode_info["episode_len"] = len(self.returns)
+            episode_info["reward"] = (
+                episode_info["return"] / episode_info["episode_len"]
+            )
         if self.ignore_terminations:
             terminated = False
             if self.record_metrics:
