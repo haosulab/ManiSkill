@@ -504,7 +504,7 @@ class PushTEnv(BaseEnv):
 
         success = tee_place_success
 
-        return {"success": success, "inter_area": inter_area}
+        return {"success": success}
 
     def _get_obs_extra(self, info: Dict):
         # ee position is super useful for pandastick robot
