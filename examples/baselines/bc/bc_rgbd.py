@@ -72,7 +72,7 @@ class Args:
     max episode steps of environments in ManiSkill are tuned lower so reinforcement learning agents can learn faster."""
     log_freq: int = 1000
     """the frequency of logging the training metrics"""
-    eval_freq: int = 5000
+    eval_freq: int = 1000
     """the frequency of evaluating the agent on the evaluation environments"""
     save_freq: Optional[int] = None
     """the frequency of saving the model checkpoints. By default this is None and will only save checkpoints based on the best evaluation metrics."""
@@ -199,15 +199,12 @@ class ManiSkillDataset(Dataset):
             )
             self.actions.append(trajectory["actions"])
 
-            # print(trajectory.keys())
         self.rgb = np.vstack(self.rgb) / 255.0
         self.depth = np.vstack(self.depth) / 1024.0
         self.states = np.vstack(self.states)
         self.actions = np.vstack(self.actions)
         assert self.depth.shape[0] == self.actions.shape[0]
         assert self.rgb.shape[0] == self.actions.shape[0]
-
-        # self.rewards = np.vstack(self.rewards
 
     def __len__(self):
         return len(self.rgb)
@@ -326,20 +323,6 @@ class Actor(nn.Module):
         x = torch.cat([feature, state], dim=1)
         return self.final_mlp(x)
 
-    @torch.no_grad()
-    def act(self, obs):
-
-        for k, v in obs.items():
-            if isinstance(v, np.ndarray):
-                obs[k] = torch.from_numpy(v).to(device=device)
-            obs[k] = obs[k].float()
-        obs["rgbd"][:, :, :, -1] = obs["rgbd"][:, :, :, -1] / 1024.0
-        obs["rgbd"][:, :, :, :3] = obs["rgbd"][:, :, :, :3] / 255.0
-
-        if gpu_sim:
-            return self(obs["rgbd"], obs["state"])
-        return self(obs["rgbd"], obs["state"]).cpu().data.numpy()
-
 
 def save_ckpt(run_name, tag):
     os.makedirs(f'runs/{run_name}/checkpoints', exist_ok=True)
@@ -410,7 +393,6 @@ if __name__ == "__main__":
         load_count=args.num_demos,
     )
 
-    # envs = make_eval_envs(args.env, args.num_envs, control_mode, gpu_sim)
     obs, _ = envs.reset(seed=args.seed)
 
     sampler = RandomSampler(ds)

@@ -59,8 +59,6 @@ class Args:
     """the batch size of sample from the replay memory"""
 
     # Behavior cloning specific arguments
-    normalize_states: bool = False
-    """if toggled, states are normalized to mean 0 and standard deviation 1"""
     lr: float = 3e-4
     """the learning rate for the actor"""
     normalize_states: bool = False
@@ -72,7 +70,7 @@ class Args:
     max episode steps of environments in ManiSkill are tuned lower so reinforcement learning agents can learn faster."""
     log_freq: int = 1000
     """the frequency of logging the training metrics"""
-    eval_freq: int = 5000
+    eval_freq: int = 1000
     """the frequency of evaluating the agent on the evaluation environments"""
     save_freq: Optional[int] = None
     """the frequency of saving the model checkpoints. By default this is None and will only save checkpoints based on the best evaluation metrics."""
