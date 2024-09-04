@@ -514,7 +514,6 @@ class PushTEnv(BaseEnv):
         if self._obs_mode in ["state", "state_dict"]:
             # state based gets info on goal position and t full pose - necessary to learn task
             obs.update(
-                inter_area=info["inter_area"],
                 goal_pos=self.goal_tee.pose.p,
                 obj_pose=self.tee.pose.raw_pose,
             )
