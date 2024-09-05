@@ -32,26 +32,69 @@ python -m mani_skill.trajectory.replay_trajectory \
 
 :::{dropdown} Click here to see the replay trajectory tool options
 
-Command Line Options:
-
-- `--save-traj`: save the replayed trajectory to the same folder as the original trajectory file.
-- `--target-control-mode`: The target control mode / action space to save into the trajectory file.
-- `--save-video`: Whether to save a video of the replayed trajectories
-- `--max-retry`: Max number of times to try and replay each trajectory
-- `--discard-timeout`: Whether to discard trajectories that time out due to the default environment's max episode steps config
-- `--allow-failure`: Whether to permit saving failed trajectories
-- `--vis`: Whether to open the GUI and show the replayed trajectories on a display
-- `--use-first-env-state`: Whether to use the first environment state of the given trajectory to initialize the environment
-- `--num-procs=10`: split trajectories to multiple processes (e.g., 10 processes) for acceleration. Note this is done via CPU parallelization, not GPU. This argument is also currently incompatible with using the GPU simulation to replay trajectories.
-- `--obs-mode=none`: specify the observation mode as `none`, i.e. not saving any observations.
-- `--obs-mode=rgbd`: (not included in the script above) specify the observation mode as `rgbd` to replay the trajectory. If `--save-traj`, the saved trajectory will contain the RGBD observations.
-- `--obs-mode=pointcloud`: (not included in the script above) specify the observation mode as `pointcloud`. We encourage you to further process the point cloud instead of using this point cloud directly (e.g. sub-sampling the pointcloud)
-- `--obs-mode=state`: (not included in the script above) specify the observation mode as `state`
-- `--use-env-states`: For each time step $t$, after replaying the action at this time step and obtaining a new observation at $t+1$, set the environment state at time $t+1$ as the recorded environment state at time $t+1$. This is necessary for successfully replaying trajectories for the tasks migrated from ManiSkill1.
-- `--count`: Number of demonstrations to replay before exiting. By default all demonstrations are replayed
-- `--shader`: "Change shader used for rendering. Default is 'default' which is very fast. Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer"
-- `--render-mode`: The render mode used in the video saving
-- `-b, --sim-backend`: Which simulation backend to use. Can be 'auto', 'cpu', or 'gpu'
+```
+╭─ options ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ -h, --help              show this help message and exit                                                               │
+│ --traj-path STR         Path to the trajectory .h5 file to replay (required)                                          │
+│ --sim-backend STR, -b STR                                                                                             │
+│                         Which simulation backend to use. Can be 'auto', 'cpu', 'gpu' (default: auto)                  │
+│ --obs-mode {None}|STR, -o {None}|STR                                                                                  │
+│                         Target observation mode to record in the trajectory. See                                      │
+│                         https://maniskill.readthedocs.io/en/latest/user_guide/concepts/observation.html for a full    │
+│                         list of supported observation modes. (default: None)                                          │
+│ --target-control-mode {None}|STR, -c {None}|STR                                                                       │
+│                         Target control mode to convert the demonstration actions to.                                  │
+│                         Note that not all control modes can be converted to others successfully and not all robots    │
+│                         have easy to convert control modes.                                                           │
+│                         Currently the Panda robots are the best supported when it comes to control mode conversion.   │
+│                         (default: None)                                                                               │
+│ --verbose, --no-verbose                                                                                               │
+│                         Whether to print verbose information during trajectory replays (default: False)               │
+│ --save-traj, --no-save-traj                                                                                           │
+│                         Whether to save trajectories to disk. This will not override the original trajectory file.    │
+│                         (default: False)                                                                              │
+│ --save-video, --no-save-video                                                                                         │
+│                         Whether to save videos (default: False)                                                       │
+│ --num-procs INT         Number of processes to use to help parallelize the trajectory replay process. This uses CPU   │
+│                         multiprocessing                                                                               │
+│                         and only works with the CPU simulation backend at the moment. (default: 1)                    │
+│ --max-retry INT         Maximum number of times to try and replay a trajectory until the task reaches a success state │
+│                         at the end. (default: 0)                                                                      │
+│ --discard-timeout, --no-discard-timeout                                                                               │
+│                         Whether to discard episodes that timeout and are truncated (depends on the max_episode_steps  │
+│                         parameter of task) (default: False)                                                           │
+│ --allow-failure, --no-allow-failure                                                                                   │
+│                         Whether to include episodes that fail in saved videos and trajectory data (default: False)    │
+│ --vis, --no-vis         Whether to visualize the trajectory replay via the GUI. (default: False)                      │
+│ --use-env-states, --no-use-env-states                                                                                 │
+│                         Whether to replay by environment states instead of actions. This guarantees that the          │
+│                         environment will look exactly                                                                 │
+│                         the same as the original trajectory at every step. (default: False)                           │
+│ --use-first-env-state, --no-use-first-env-state                                                                       │
+│                         Use the first env state in the trajectory to set initial state. This can be useful for trying │
+│                         to replay                                                                                     │
+│                         demonstrations collected in the CPU simulation in the GPU simulation by first starting with   │
+│                         the same initial                                                                              │
+│                         state as GPU simulated tasks will randomize initial states differently despite given the same │
+│                         seed compared to CPU sim. (default: False)                                                    │
+│ --count {None}|INT      Number of demonstrations to replay before exiting. By default will replay all demonstrations  │
+│                         (default: None)                                                                               │
+│ --reward-mode {None}|STR                                                                                              │
+│                         Specifies the reward type that the env should use. By default it will pick the first          │
+│                         supported reward mode. Most environments                                                      │
+│                         support 'sparse', 'none', and some further support 'normalized_dense' and 'dense' reward      │
+│                         modes (default: None)                                                                         │
+│ --record-rewards, --no-record-rewards                                                                                 │
+│                         Whether the replayed trajectory should include rewards (default: False)                       │
+│ --shader STR            Change shader used for rendering. Default is 'default' which is very fast. Can also be 'rt'   │
+│                         for ray tracing                                                                               │
+│                         and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality  │
+│                         ray-traced renderer (default: default)                                                        │
+│ --video-fps INT         The FPS of saved videos (default: 30)                                                         │
+│ --render-mode STR       The render mode used for saving videos. Typically there is also 'sensors' and 'all' render    │
+│                         modes which further render all sensor outputs like cameras. (default: rgb_array)              │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+```
 :::
 <!-- 
 :::{note}
@@ -97,3 +140,14 @@ python -m mani_skill.trajectory.replay_trajectory \
 ```
 
 Note that some target control modes are difficult to convert to due to inherent differences in controllers. For highly precise tasks like PegInsertionSide and PlugCharger the success rate of conversion from e.g. `pd_joint_pos` control to `pd_ee_delta_pose` control is low. For less precise tasks like PickCube the success rate is near 100%.
+
+### Adding rewards/observations in trajectories
+
+To conserve memory, demonstrations are stored without observations and rewards. The example below shows how to add rewards and RGB observations back in.
+
+```bash
+python -m mani_skill.trajectory.replay_trajectory \
+  --traj-path path/to/trajectory.h5 \
+  --record-rewards --reward-mode="normalized_dense" -o rgb \
+  --save-traj
+```
