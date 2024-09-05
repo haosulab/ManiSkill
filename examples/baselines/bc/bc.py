@@ -1,7 +1,9 @@
-import datetime
+from collections import defaultdict
 import os
 import random
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
+import time
+from typing import Optional
 
 import gymnasium as gym
 import h5py
@@ -10,155 +12,75 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torch.utils.tensorboard import SummaryWriter
 import tyro
 import wandb
+from mani_skill.utils import gym_utils
 from mani_skill.utils.io_utils import load_json
-from mani_skill.utils.wrappers.gymnasium import CPUGymWrapper
-from mani_skill.utils.wrappers.record import RecordEpisode
-from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.sampler import BatchSampler, RandomSampler
 from tqdm import tqdm
-
-
+from behavior_cloning.make_env import make_eval_envs
+from behavior_cloning.evaluate import evaluate
 @dataclass
-class Config:
-    # wandb project name
-    project: str = "ManiSkill"
-    # wandb group name
-    group: str = "BehaviorCloning"
-    # training dataset and evaluation environment
-    env: str = "PickCube-v1"
-    # total gradient updates during training
-    max_timesteps: int = int(1e6)
-    # training batch size
-    batch_size: int = 128
-    # evaluation frequency, will evaluate eval_freq training steps
-    eval_freq: int = int(500)
-    # record videos
-    video: bool = False
-    # video save path
-    video_path = "./videos"
-    # training random seed
-    seed: int = 42
-    # training device
-    device: str = "cuda"
-    # learning rate
-    lr = 3e-4
-    # number of parallel eval envs
-    num_envs = 50
-    # dataset directory
-    demo_path: str = ""
-    # log to wandb
-    wandb: bool = True
-    # normalize states
+class Args:
+    exp_name: Optional[str] = None
+    """the name of this experiment"""
+    seed: int = 1
+    """seed of the experiment"""
+    torch_deterministic: bool = True
+    """if toggled, `torch.backends.cudnn.deterministic=False`"""
+    cuda: bool = True
+    """if toggled, cuda will be enabled by default"""
+    track: bool = False
+    """if toggled, this experiment will be tracked with Weights and Biases"""
+    wandb_project_name: str = "ManiSkill"
+    """the wandb's project name"""
+    wandb_entity: Optional[str] = None
+    """the entity (team) of wandb's project"""
+    capture_video: bool = True
+    """whether to capture videos of the agent performances (check out `videos` folder)"""
+
+    env_id: str = "PegInsertionSide-v0"
+    """the id of the environment"""
+    demo_path: str = 'data/ms2_official_demos/rigid_body/PegInsertionSide-v0/trajectory.state.pd_ee_delta_pose.h5'
+    """the path of demo dataset (pkl or h5)"""
+    num_demos: Optional[int] = None
+    """number of trajectories to load from the demo dataset"""
+    total_iters: int = 1_000_000
+    """total timesteps of the experiment"""
+    batch_size: int = 1024
+    """the batch size of sample from the replay memory"""
+
+    # Behavior cloning specific arguments
+    lr: float = 3e-4
+    """the learning rate for the actor"""
     normalize_states: bool = False
-    # number of trajectories to load, max is usually 1000
-    load_count: int = 500
-    # seed
-    seed: int = 2024
-    # where experiment outputs should be stored
-    output_dir = "./output/"
-    # save frequency
-    save_freq: int = 10000
-    # sim backend
+    """if toggled, states are normalized to mean 0 and standard deviation 1"""
+
+    # Environment/experiment specific arguments
+    max_episode_steps: Optional[int] = None
+    """Change the environments' max_episode_steps to this value. Sometimes necessary if the demonstrations being imitated are too short. Typically the default
+    max episode steps of environments in ManiSkill are tuned lower so reinforcement learning agents can learn faster."""
+    log_freq: int = 1000
+    """the frequency of logging the training metrics"""
+    eval_freq: int = 1000
+    """the frequency of evaluating the agent on the evaluation environments"""
+    save_freq: Optional[int] = None
+    """the frequency of saving the model checkpoints. By default this is None and will only save checkpoints based on the best evaluation metrics."""
+    num_eval_episodes: int = 100
+    """the number of episodes to evaluate the agent on"""
+    num_eval_envs: int = 10
+    """the number of parallel environments to evaluate the agent on"""
     sim_backend: str = "cpu"
-    # max number of evaluation steps per eval episode
-    max_episode_steps: int = 100
+    """the simulation backend to use for evaluation environments. can be "cpu" or "gpu"""
+    num_dataload_workers: int = 0
+    """the number of workers to use for loading the training data in the torch dataloader"""
+    control_mode: str = 'pd_joint_delta_pos'
+    """the control mode to use for the evaluation environments. Must match the control mode of the demonstration dataset."""
 
-
-def set_seed(seed: int, deterministic_torch: bool = False):
-    np.random.seed(seed)
-    random.seed(seed)
-    torch.manual_seed(seed)
-    torch.use_deterministic_algorithms(deterministic_torch)
-
-
-def wandb_init(config: dict) -> None:
-    wandb.init(
-        config=config,
-        project=config["project"],
-        group=config["group"],
-        name=log_name.replace(os.path.sep, "__"),
-        tags=["bc"],
-    )
-    wandb.run.save()
-
-
-def build_env(
-    env,
-    video=False,
-    normalize_states=False,
-    state_stats: tuple = (),
-    seed=0,
-    control_mode="",
-):
-    def norm_states(state):
-        return (state - state_stats[0]) / state_stats[1]
-
-    def inner():
-
-        x = gym.make(
-            env,
-            obs_mode="state",
-            control_mode=control_mode,
-            render_mode="rgb_array" if video else "sensors",
-            max_episode_steps=args.max_episode_steps,
-            sim_backend="cpu",
-        )
-        if video:
-            x = RecordEpisode(
-                x,
-                os.path.join(log_path, args.video_path),
-                save_trajectory=False,
-                info_on_video=True,
-            )
-        if normalize_states:
-            x = gym.wrappers.TransformObservation(x, norm_states)
-        x = CPUGymWrapper(x)
-        x = gym.wrappers.ClipAction(x)
-
-        x.action_space.seed(seed)
-        x.observation_space.seed(seed)
-        return x
-
-    return inner
-
-
-def make_eval_envs(env, num_envs, stats, control_mode, gpu_sim=False):
-    if gpu_sim:
-        env = gym.make(
-            env,
-            num_envs=num_envs,
-            obs_mode="state",
-            control_mode=control_mode,
-            render_mode="sensors",
-            max_episode_steps=args.max_episode_steps,
-        )
-        env = ManiSkillVectorEnv(env)
-        if args.video:
-            env = RecordEpisode(
-                env,
-                os.path.join(log_path, args.video_path),
-                save_trajectory=False,
-                max_steps_per_video=args.max_episode_steps,
-            )
-        return env
-
-    return gym.vector.SyncVectorEnv(
-        [
-            build_env(
-                env,
-                video=(j == 0 and args.video),
-                normalize_states=args.normalize_states,
-                state_stats=stats,
-                seed=j,
-                control_mode=control_mode,
-            )
-            for j in range(num_envs)
-        ]
-    )
-
+    # additional tags/configs for logging purposes to wandb and shared comparisons with other algorithms
+    demo_type: Optional[str] = None
 
 # taken from here
 # https://github.com/NVIDIA/DeepLearningExamples/blob/master/PyTorch/Segmentation/MaskRCNN/pytorch/maskrcnn_benchmark/data/samplers/iteration_based_batch_sampler.py
@@ -226,12 +148,9 @@ class ManiSkillDataset(Dataset):
         self.dones = []
         self.total_frames = 0
         self.device = device
-
-        if load_count > len(self.episodes):
-            print(
-                f"Load count exceeds number of available episodes, loading {len(self.episodes)} which is the max number of episodes present"
-            )
+        if load_count is None:
             load_count = len(self.episodes)
+        print(f"Loading {load_count} episodes")
 
         for eps_id in tqdm(range(load_count)):
             eps = self.episodes[eps_id]
@@ -243,7 +162,7 @@ class ManiSkillDataset(Dataset):
             self.observations.append(trajectory["obs"][:-1])
             self.actions.append(trajectory["actions"])
             self.dones.append(trajectory["success"].reshape(-1, 1))
-            # print(trajectory.keys())
+
         self.observations = np.vstack(self.observations)
         self.actions = np.vstack(self.actions)
         self.dones = np.vstack(self.dones)
@@ -253,8 +172,6 @@ class ManiSkillDataset(Dataset):
         if normalize_states:
             mean, std = self.get_state_stats()
             self.observations = (self.observations - mean) / std
-
-        # self.rewards = np.vstack(self.rewards)
 
     def get_state_stats(self):
         return np.mean(self.observations), np.std(self.observations)
@@ -284,63 +201,90 @@ class Actor(nn.Module):
     def forward(self, state: torch.Tensor) -> torch.Tensor:
         return self.net(state)
 
-    @torch.no_grad()
-    def act(self, state, gpu_sim=False):
-        if gpu_sim:
-            return self(state)
-        state = torch.from_numpy(state).to(device="cuda:0")
-        return self(state).cpu().data.numpy()
 
-
-def save_ckpt(tag):
-    os.makedirs(f"{log_path}/checkpoints", exist_ok=True)
-    torch.save(
-        {
-            "actor": actor.state_dict(),
-        },
-        f"{log_path}/checkpoints/{tag}.pt",
-    )
-
+def save_ckpt(run_name, tag):
+    os.makedirs(f'runs/{run_name}/checkpoints', exist_ok=True)
+    torch.save({
+        "actor": actor.state_dict(),
+    }, f'runs/{run_name}/checkpoints/{tag}.pt')
 
 if __name__ == "__main__":
-    args = tyro.cli(Config)
-    set_seed(args.seed)
+    args = tyro.cli(Args)
 
-    now = datetime.datetime.now().strftime("%y%m%d-%H%M%S")
-    tag = "{:s}_{:d}".format(now, args.seed)
-    log_name = os.path.join(args.env, "BC", tag)
-    log_path = os.path.join(args.output_dir, log_name)
+    if args.exp_name is None:
+        args.exp_name = os.path.basename(__file__)[: -len(".py")]
+        run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
+    else:
+        run_name = args.exp_name
 
-    device = torch.device(args.device if torch.cuda.is_available() else "cpu")
-    control_mode = os.path.split(args.demo_path)[1].split(".")[2]
+    if args.demo_path.endswith('.h5'):
+        import json
+        json_file = args.demo_path[:-2] + 'json'
+        with open(json_file, 'r') as f:
+            demo_info = json.load(f)
+            if 'control_mode' in demo_info['env_info']['env_kwargs']:
+                control_mode = demo_info['env_info']['env_kwargs']['control_mode']
+            elif 'control_mode' in demo_info['episodes'][0]:
+                control_mode = demo_info['episodes'][0]['control_mode']
+            else:
+                raise Exception('Control mode not found in json')
+            assert control_mode == args.control_mode, f"Control mode mismatched. Dataset has control mode {control_mode}, but args has control mode {args.control_mode}"
 
-    if args.wandb:
-        wandb_init(asdict(args))
+    np.random.seed(args.seed)
+    random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    torch.backends.cudnn.deterministic = args.torch_deterministic
+
+    device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
+
+    # env setup
+    env_kwargs = dict(control_mode=args.control_mode, reward_mode="sparse", obs_mode="state", render_mode="rgb_array")
+    if args.max_episode_steps is not None:
+        env_kwargs["max_episode_steps"] = args.max_episode_steps
+    envs = make_eval_envs(args.env_id, args.num_eval_envs, args.sim_backend, env_kwargs, video_dir=f'runs/{run_name}/videos' if args.capture_video else None)
+
+    if args.track:
+        import wandb
+        config = vars(args)
+        config["eval_env_cfg"] = dict(**env_kwargs, num_envs=args.num_eval_envs, env_id=args.env_id, env_horizon=gym_utils.find_max_episode_steps_value(envs))
+        wandb.init(
+            project=args.wandb_project_name,
+            entity=args.wandb_entity,
+            sync_tensorboard=True,
+            config=config,
+            name=run_name,
+            save_code=True,
+            group="BehaviorCloning",
+            tags=["behavior_cloning"]
+        )
+    writer = SummaryWriter(f"runs/{run_name}")
+    writer.add_text(
+        "hyperparameters",
+        "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
+    )
+
     ds = ManiSkillDataset(
         args.demo_path,
         device=device,
-        load_count=args.load_count,
+        load_count=args.num_demos,
         normalize_states=args.normalize_states,
     )
-    stats = ds.get_state_stats()
 
-    if args.video:
-        os.makedirs(os.path.join(log_path, args.video_path))
-    gpu_sim = args.sim_backend == "gpu"
-    envs = make_eval_envs(args.env, args.num_envs, stats, control_mode, gpu_sim)
     obs, _ = envs.reset(seed=args.seed)
+
     sampler = RandomSampler(ds)
     batchsampler = BatchSampler(sampler, args.batch_size, drop_last=True)
-    itersampler = IterationBasedBatchSampler(batchsampler, args.max_timesteps)
-    dataloader = DataLoader(ds, batch_sampler=itersampler, num_workers=0)
+    itersampler = IterationBasedBatchSampler(batchsampler, args.total_iters)
+    dataloader = DataLoader(ds, batch_sampler=itersampler, num_workers=args.num_dataload_workers)
     actor = Actor(
         envs.single_observation_space.shape[0], envs.single_action_space.shape[0]
     )
     actor = actor.to(device=device)
     optimizer = optim.Adam(actor.parameters(), lr=args.lr)
-    best_sr = -1
 
-    for i, batch in enumerate(dataloader):
+    best_eval_metrics = defaultdict(float)
+
+    for iteration, batch in enumerate(dataloader):
         log_dict = {}
         obs, action, _ = batch
         pred_action = actor(obs)
@@ -350,76 +294,37 @@ if __name__ == "__main__":
         loss.backward()
         optimizer.step()
 
-        log_dict["losses/total_loss"] = loss.item()
+        if iteration % args.log_freq == 0:
+            print(f"Iteration {iteration}, loss: {loss.item()}")
+            writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], iteration)
+            writer.add_scalar("losses/total_loss", loss.item(), iteration)
 
-        if i % args.eval_freq == 0:
+        if iteration % args.eval_freq == 0:
+            actor.eval()
+            def sample_fn(obs):
+                if isinstance(obs, np.ndarray):
+                    obs = torch.from_numpy(obs).float().to(device)
+                action = actor(obs)
+                if args.sim_backend == "cpu":
+                    action = action.cpu().numpy()
+                return action
+            with torch.no_grad():
+                eval_metrics = evaluate(args.num_eval_episodes, sample_fn, envs)
+            actor.train()
+            print(f"Evaluated {len(eval_metrics['success_at_end'])} episodes")
+            for k in eval_metrics.keys():
+                eval_metrics[k] = np.mean(eval_metrics[k])
+                writer.add_scalar(f"eval/{k}", eval_metrics[k], iteration)
+                print(f"{k}: {eval_metrics[k]:.4f}")
 
-            successes = []
-            el_steps = []
-            returns = []
-            success_once = np.zeros((args.num_envs,))
-            obs, _ = envs.reset()
-            rewards = np.zeros((args.num_envs,))
+            save_on_best_metrics = ["success_once", "success_at_end"]
+            for k in save_on_best_metrics:
+                if k in eval_metrics and eval_metrics[k] > best_eval_metrics[k]:
+                    best_eval_metrics[k] = eval_metrics[k]
+                    save_ckpt(run_name, f"best_eval_{k}")
+                    print(f'New best {k}_rate: {eval_metrics[k]:.4f}. Saving checkpoint.')
 
-            for _ in range(args.max_episode_steps):
-                obs, reward, terminated, truncated, info = envs.step(
-                    actor.act(obs, gpu_sim)
-                )
-
-                if "success" in info:
-                    success_once += (
-                        info["success"].cpu().numpy() if gpu_sim else info["success"]
-                    )
-                if gpu_sim:
-                    rewards += reward.cpu().numpy()
-                else:
-                    rewards += reward
-
-                if "final_info" in info:
-                    fin_info = info["final_info"]
-                    mask = info["_final_info"]
-
-                    if gpu_sim:
-                        el_steps.append(fin_info["elapsed_steps"][mask].cpu().numpy())
-
-                        if "success" in fin_info:
-                            successes.append(fin_info["success"][mask].cpu().numpy())
-
-                        mask = mask.cpu().numpy()
-                    else:
-                        fin_info = fin_info[mask]
-                        fin_info = {
-                            k: np.array([dic[k] for dic in fin_info])
-                            for k in fin_info[0]
-                        }
-                        el_steps.append(fin_info["elapsed_steps"])
-                        if "success" in fin_info:
-                            successes.append(fin_info["success"])
-                    returns.append(rewards[mask])
-
-            log_dict["charts/global_step"] = i
-            log_dict["eval/episode_len"] = np.concatenate(el_steps).mean()
-            log_dict["eval/return"] = np.concatenate(returns).mean()
-
-            if len(successes) > 0:
-                s = np.concatenate(successes)
-                log_dict["eval/success_at_end"] = s.mean().item()
-                success_once += s
-                if log_dict["eval/success_at_end"] > best_sr:
-                    save_ckpt("best_eval_sr")
-                    best_sr = log_dict["eval/success_at_end"]
-            log_dict["eval/success_once"] = (success_once > 0).mean()
-            out = f"Step: {i} " + ", ".join(
-                [
-                    f"{k.replace('eval/','')}: " + str(round(log_dict[k], 4))
-                    for k in log_dict
-                ]
-            )
-            print(out)
-            if args.wandb:
-                wandb.log(log_dict, i)
-
-        if i % args.save_freq == 0 and i > 0:
-            save_ckpt(str(i))
+        if args.save_freq is not None and iteration % args.save_freq == 0:
+            save_ckpt(run_name, str(iteration))
     envs.close()
     wandb.finish()

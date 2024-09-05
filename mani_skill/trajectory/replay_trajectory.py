@@ -14,6 +14,7 @@ import gymnasium as gym
 import h5py
 import numpy as np
 import sapien
+import torch
 from tqdm.auto import tqdm
 from transforms3d.quaternions import quat2axangle
 
@@ -68,17 +69,20 @@ def delta_pose_to_pd_ee_delta(
     delta_pose: sapien.Pose,
     pos_only=False,
 ):
+    # TODO (stao): update this code to be parallelized / use GPU
     assert isinstance(controller, PDEEPosController)
     assert controller.config.use_delta
     assert controller.config.normalize_action
     low, high = controller.action_space_low, controller.action_space_high
     if pos_only:
-        return gym_utils.inv_scale_action(delta_pose.p, low, high)
+        return gym_utils.inv_scale_action(
+            delta_pose.p, low.cpu().numpy(), high.cpu().numpy()
+        )
     delta_pose = np.r_[
         delta_pose.p,
         compact_axis_angle_from_quaternion(delta_pose.q),
     ]
-    return gym_utils.inv_scale_action(delta_pose, low, high)
+    return gym_utils.inv_scale_action(delta_pose, low.cpu().numpy(), high.cpu().numpy())
 
 
 def from_pd_joint_pos_to_ee(
@@ -118,9 +122,13 @@ def from_pd_joint_pos_to_ee(
         if pbar is not None:
             pbar.update()
 
-        ori_action = ori_actions[t]
-        ori_action_dict = ori_controller.to_action_dict(ori_action)
-        output_action_dict = ori_action_dict.copy()  # do not in-place modify
+        ori_action = common.to_tensor(ori_actions[t], device=env.device)
+        ori_action_dict = common.to_tensor(
+            ori_controller.to_action_dict(ori_action), device=env.device
+        )
+        output_action_dict = common.to_tensor(
+            ori_action_dict.copy(), device=env.device
+        )  # do not in-place modify
         ori_env.step(ori_action)
         flag = True
 
@@ -145,8 +153,7 @@ def from_pd_joint_pos_to_ee(
                         tqdm.write(f"Rotation action is clipped: {arm_action[3:]}")
                     arm_action[3:] = arm_action[3:] / np.linalg.norm(arm_action[3:])
                     flag = False
-
-            output_action_dict["arm"] = arm_action
+            output_action_dict["arm"] = common.to_tensor(arm_action, device=env.device)
             output_action = controller.from_action_dict(output_action_dict)
 
             _, _, _, _, info = env.step(output_action)
@@ -217,7 +224,9 @@ def from_pd_joint_pos(
             arm_action = np.clip(arm_action, -1, 1)
             output_action_dict["arm"] = arm_action
 
-            output_action = controller.from_action_dict(output_action_dict)
+            output_action = controller.from_action_dict(
+                common.to_tensor(output_action_dict, device=env.device)
+            )
             _, _, _, _, info = env.step(output_action)
             if render:
                 env.render_human()
@@ -266,7 +275,9 @@ def from_pd_joint_delta_pos(
         ori_env.step(ori_action)
 
         output_action_dict["arm"] = arm_action
-        output_action = controller.from_action_dict(output_action_dict)
+        output_action = controller.from_action_dict(
+            common.to_tensor(output_action_dict, device=env.device)
+        )
         _, _, _, _, info = env.step(output_action)
 
         if render:

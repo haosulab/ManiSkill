@@ -309,4 +309,4 @@ class CombinedController(DictController):
 
     def from_action_dict(self, action_dict: dict):
         """Convert a dict of actions to a flat action."""
-        return np.hstack([action_dict[uid] for uid in self.controllers])
+        return torch.hstack([action_dict[uid] for uid in self.controllers])

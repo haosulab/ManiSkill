@@ -1,4 +1,4 @@
-from typing import Any, Dict, Union
+from typing import Any, Dict
 
 import numpy as np
 import torch
@@ -35,7 +35,7 @@ class RollBallEnv(BaseEnv):
 
     SUPPORTED_ROBOTS = ["panda"]
 
-    agent: Union[Panda]
+    agent: Panda
 
     goal_radius: float = 0.1  # radius of the goal region
     ball_radius: float = 0.035  # radius of the ball
