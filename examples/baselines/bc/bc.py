@@ -294,8 +294,6 @@ if __name__ == "__main__":
         loss.backward()
         optimizer.step()
 
-        writer.add_scalar("losses/total_loss", loss.item(), iteration)
-        # TRY NOT TO MODIFY: record rewards for plotting purposes
         if iteration % args.log_freq == 0:
             print(f"Iteration {iteration}, loss: {loss.item()}")
             writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], iteration)
