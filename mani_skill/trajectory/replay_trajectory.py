@@ -27,7 +27,7 @@ from mani_skill.utils import common, io_utils, wrappers
 class Args:
     traj_path: str
     """Path to the trajectory .h5 file to replay"""
-    sim_backend: str = "auto"
+    sim_backend: Annotated[str, tyro.conf.arg(aliases=["-b"])] = "auto"
     """Which simulation backend to use. Can be 'auto', 'cpu', 'gpu'"""
     obs_mode: Annotated[Optional[str], tyro.conf.arg(aliases=["-o"])] = None
     """Target observation mode to record in the trajectory. See

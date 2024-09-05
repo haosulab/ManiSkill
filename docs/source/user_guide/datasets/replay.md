@@ -36,8 +36,12 @@ python -m mani_skill.trajectory.replay_trajectory \
 ╭─ options ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ -h, --help              show this help message and exit                                                               │
 │ --traj-path STR         Path to the trajectory .h5 file to replay (required)                                          │
-│ --sim-backend STR       Which simulation backend to use. Can be 'auto', 'cpu', 'gpu' (default: auto)                  │
-│ --obs-mode {None}|STR   Target observation mode (default: None)                                                       │
+│ --sim-backend STR, -b STR                                                                                             │
+│                         Which simulation backend to use. Can be 'auto', 'cpu', 'gpu' (default: auto)                  │
+│ --obs-mode {None}|STR, -o {None}|STR                                                                                  │
+│                         Target observation mode to record in the trajectory. See                                      │
+│                         https://maniskill.readthedocs.io/en/latest/user_guide/concepts/observation.html for a full    │
+│                         list of supported observation modes. (default: None)                                          │
 │ --target-control-mode {None}|STR, -c {None}|STR                                                                       │
 │                         Target control mode to convert the demonstration actions to.                                  │
 │                         Note that not all control modes can be converted to others successfully and not all robots    │
