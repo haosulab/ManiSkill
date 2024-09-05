@@ -26,6 +26,7 @@ from mani_skill.trajectory import utils as trajectory_utils
 from mani_skill.trajectory.merge_trajectory import merge_h5
 from mani_skill.utils import common, gym_utils, io_utils, wrappers
 from mani_skill.utils.structs.link import Link
+from mani_skill.utils.structs.pose import Pose
 
 
 def qpos_to_pd_joint_delta_pos(controller: PDJointPosController, qpos):
@@ -112,10 +113,10 @@ def from_pd_joint_pos_to_ee(
         "root_translation:root_aligned_body_rotation",
         "root_translation",
     ], "Currently only support the 'root_translation:root_aligned_body_rotation' ee control frame for delta pose control and 'root_translation' ee control frame for delta pos control"
-    ori_ee_link = ori_env.agent.robot.links_map[arm_controller.ee_link.name]
+    ori_env.agent.robot.links_map[arm_controller.ee_link.name]
     ee_link: Link = arm_controller.ee_link
     pos_only = arm_controller.config.frame == "root_translation"
-
+    pin_model = ori_controller.articulation.create_pinocchio_model()
     info = {}
 
     for t in range(n):
@@ -130,15 +131,28 @@ def from_pd_joint_pos_to_ee(
             ori_action_dict.copy(), device=env.device
         )  # do not in-place modify
         ori_env.step(ori_action)
-        flag = True
 
+        # NOTE (stao): for high success rate of pd joint pos to pd ee delta pos/pose control, we need to use the current target qpos of the original
+        # environment controller to compute the target ee pose to try and reach. this is because if we attempt to reach the original envs ee link pose
+        # we may fall short and fail.
+        full_qpos = ori_controller.articulation.get_qpos()
+        full_qpos[
+            :, ori_arm_controller.active_joint_indices
+        ] = ori_arm_controller._target_qpos
+        pin_model.compute_forward_kinematics(full_qpos.cpu().numpy()[0])
+        target_ee_pose_pin = Pose.create(
+            ori_controller.articulation.pose.sp
+            * pin_model.get_link_pose(arm_controller.ee_link.index)
+        )
+        flag = True
         for _ in range(4):
             delta_q = [1, 0, 0, 0]
             if "root_translation" in arm_controller.config.frame:
-                delta_position = ori_ee_link.pose.p - ee_link.pose.p
+                delta_position = target_ee_pose_pin.p - ee_link.pose.p
             if "root_aligned_body_rotation" in arm_controller.config.frame:
-                delta_q = (ee_link.pose * ori_ee_link.pose.inv()).q.cpu().numpy()[0]
+                delta_q = (ee_link.pose.sp * target_ee_pose_pin.sp.inv()).q
             delta_pose = sapien.Pose(delta_position.cpu().numpy()[0], delta_q)
+
             arm_action = delta_pose_to_pd_ee_delta(
                 arm_controller, delta_pose, pos_only=pos_only
             )
@@ -162,7 +176,6 @@ def from_pd_joint_pos_to_ee(
 
             if flag:
                 break
-
     return info
 
 
