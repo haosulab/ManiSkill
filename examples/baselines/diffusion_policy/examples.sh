@@ -5,8 +5,7 @@
 # PushCube-v1
 python -m mani_skill.trajectory.replay_trajectory \
   --traj-path ~/.maniskill/demos/PushCube-v1/motionplanning/trajectory.h5 \
-  --use-first-env-state --allow-failure \
-  -c pd_ee_delta_pos -o state \
+  --use-first-env-state -c pd_ee_delta_pos -o state \
   --save-traj --num-procs 10 -b cpu
 
 python train.py --env-id PushCube-v1 \
@@ -17,8 +16,7 @@ python train.py --env-id PushCube-v1 \
 # PickCube-v1
 python -m mani_skill.trajectory.replay_trajectory \
   --traj-path ~/.maniskill/demos/PickCube-v1/motionplanning/trajectory.h5 \
-  --use-first-env-state --allow-failure \
-  -c pd_ee_delta_pos -o state \
+  --use-first-env-state -c pd_ee_delta_pos -o state \
   --save-traj --num-procs 10 -b cpu
 
 python train.py --env-id PickCube-v1 \
@@ -29,8 +27,7 @@ python train.py --env-id PickCube-v1 \
 # StackCube-v1
 python -m mani_skill.trajectory.replay_trajectory \
   --traj-path ~/.maniskill/demos/StackCube-v1/motionplanning/trajectory.h5 \
-  --use-first-env-state --allow-failure \
-  -c pd_ee_delta_pos -o state \
+  --use-first-env-state -c pd_ee_delta_pos -o state \
   --save-traj --num-procs 10 -b cpu
 
 python train.py --env-id StackCube-v1 \
@@ -41,8 +38,7 @@ python train.py --env-id StackCube-v1 \
 # PegInsertionSide-v1
 python -m mani_skill.trajectory.replay_trajectory \
   --traj-path ~/.maniskill/demos/PegInsertionSide-v1/motionplanning/trajectory.h5 \
-  --use-first-env-state --allow-failure \
-  -c pd_ee_delta_pose -o state \
+  --use-first-env-state -c pd_ee_delta_pose -o state \
   --save-traj --num-procs 10 -b cpu
 
 python train.py --env-id PegInsertionSide-v1 \

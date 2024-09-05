@@ -23,8 +23,7 @@ python -m mani_skill.utils.download_demo "PickCube-v1"
 ```bash
 python -m mani_skill.trajectory.replay_trajectory \
   --traj-path ~/.maniskill/demos/PickCube-v1/motionplanning/trajectory.h5 \
-  --use-first-env-state \
-  -c pd_ee_delta_pos -o state \
+  --use-first-env-state -c pd_ee_delta_pos -o state \
   --save-traj --num-procs 10
 ```
 
@@ -55,8 +54,7 @@ To replay trajectories in the GPU simulation, you can use the following command.
 ```bash
 python -m mani_skill.trajectory.replay_trajectory \
   --traj-path ~/.maniskill/demos/PickCube-v1/motionplanning/trajectory.h5 \
-  --use-first-env-state \
-  -c pd_ee_delta_pos -o state \
+  --use-first-env-state -c pd_ee_delta_pos -o state \
   --save-traj --num-procs 1 -b gpu --count 100 # process only 100 trajectories
 ```
 
