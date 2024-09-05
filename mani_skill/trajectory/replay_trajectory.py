@@ -224,7 +224,9 @@ def from_pd_joint_pos(
             arm_action = np.clip(arm_action, -1, 1)
             output_action_dict["arm"] = arm_action
 
-            output_action = controller.from_action_dict(output_action_dict)
+            output_action = controller.from_action_dict(
+                common.to_tensor(output_action_dict, device=env.device)
+            )
             _, _, _, _, info = env.step(output_action)
             if render:
                 env.render_human()
@@ -273,7 +275,9 @@ def from_pd_joint_delta_pos(
         ori_env.step(ori_action)
 
         output_action_dict["arm"] = arm_action
-        output_action = controller.from_action_dict(output_action_dict)
+        output_action = controller.from_action_dict(
+            common.to_tensor(output_action_dict, device=env.device)
+        )
         _, _, _, _, info = env.step(output_action)
 
         if render:
