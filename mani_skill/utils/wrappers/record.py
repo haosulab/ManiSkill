@@ -354,7 +354,9 @@ class RecordEpisode(gym.Wrapper):
             self._trajectory_buffer = None
         if self.save_trajectory:
             state_dict = self.base_env.get_state_dict()
-            action = common.batch(self.single_action_space.sample())
+            action = common.batch(
+                self.env.get_wrapper_attr("single_action_space").sample()
+            )
             first_step = Step(
                 state=common.to_numpy(common.batch(state_dict)),
                 observation=common.to_numpy(common.batch(obs)),
