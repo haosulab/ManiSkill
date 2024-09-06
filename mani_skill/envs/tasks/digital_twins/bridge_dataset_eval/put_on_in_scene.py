@@ -54,7 +54,9 @@ class PutCarrotOnPlateInScene(BaseBridgeEnv):
         )
 
     def evaluate(self):
-        return dict()
+        return super()._evaluate(
+            success_require_src_completely_on_target=True,
+        )
 
     def get_language_instruction(self, **kwargs):
         return "put carrot on plate"

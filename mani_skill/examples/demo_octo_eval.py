@@ -22,6 +22,7 @@ pip install -e .
 """
 
 
+from collections import defaultdict
 import os
 import signal
 import sys
@@ -31,6 +32,7 @@ from matplotlib import pyplot as plt
 from mani_skill.utils import common
 from mani_skill.utils import visualization
 from mani_skill.utils.visualization.misc import images_to_video
+from mani_skill.utils.wrappers.gymnasium import CPUGymWrapper
 signal.signal(signal.SIGINT, signal.SIG_DFL) # allow ctrl+c
 
 import argparse
@@ -73,6 +75,7 @@ def main(args):
         sensor_configs=sensor_configs,
         sim_backend="cpu",
     )
+    env = CPUGymWrapper(env)
 
     obs, _ = env.reset(seed=args.seed)
     n_cams = 0
@@ -94,11 +97,14 @@ def main(args):
 
     renderer = visualization.ImageRenderer(wait_for_button_press=False)
     def render_obs(obs):
+        # obs["sensor_data"]
+        # import ipdb; ipdb.set_trace()
+        return common.to_numpy(obs["sensor_data"]["3rd_view_camera"]["rgb"], dtype=np.uint8)
         cam_num = 0
         imgs=[]
         for cam in obs["sensor_data"].keys():
             if "rgb" in obs["sensor_data"][cam]:
-                rgb = common.to_numpy(obs["sensor_data"][cam]["rgb"][0], dtype=np.uint8)
+                rgb = common.to_numpy(obs["sensor_data"][cam]["rgb"], dtype=np.uint8)
                 imgs.append(rgb)
                 if "depth" in obs["sensor_data"][cam]:
                     depth = common.to_numpy(obs["sensor_data"][cam]["depth"][0]).astype(np.float32)
@@ -112,7 +118,9 @@ def main(args):
         return img
 
     # gt_actions = np.load(os.path.join(os.path.dirname(__file__), "actions.npy"))
-    for seed in range(100, 200):
+    infos = []
+    eval_metrics = defaultdict(list)
+    for seed in range(args.seed, args.seed+100):
         obs, _ = env.reset(seed=seed)
         # while True:
         #     render_obs(obs)
@@ -129,8 +137,16 @@ def main(args):
             action = np.concatenate([action["world_vector"], action["rot_axangle"], action["gripper"]])
             obs, reward, terminated, truncated, info = env.step(action)
             truncated = bool(truncated)
-            images.append(render_obs(obs))
+            img = render_obs(obs)
+            img = visualization.put_info_on_image(img, info)
+            # import ipdb; ipdb.set_trace()
+            images.append(img)
+        for k, v in info.items():
+            eval_metrics[k].append(v)
         images_to_video(images, "videos/real2sim_eval/", f"octo_eval_{seed}", fps=10, verbose=True)
+        for k, v in eval_metrics.items():
+            print(f"{k}: {np.mean(v)}")
 
+    import ipdb; ipdb.set_trace()
 if __name__ == "__main__":
     main(parse_args())

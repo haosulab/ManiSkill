@@ -9,6 +9,7 @@ import numpy as np
 import sapien
 import torch
 from sapien.physx import PhysxMaterial
+from transforms3d.quaternions import quat2mat
 
 from mani_skill import ASSET_DIR
 from mani_skill.agents.controllers.pd_ee_pose import PDEEPoseControllerConfig
@@ -17,6 +18,7 @@ from mani_skill.agents.robots.widowx.widowx import WidowX250S
 from mani_skill.envs.tasks.digital_twins.base_env import BaseDigitalTwinEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import common, io_utils, sapien_utils
+from mani_skill.utils.geometry import rotation_conversions
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import SimConfig
@@ -160,9 +162,11 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
         obj_names: List[str],
         xyz_configs: torch.Tensor,
         quat_configs: torch.Tensor,
-        **kwargs
+        **kwargs,
     ):
         self.obj_names = obj_names
+        self.source_obj_name = obj_names[0]
+        self.target_obj_name = obj_names[1]
         self.xyz_configs = xyz_configs
         self.quat_configs = quat_configs
         if self.scene_setting == "flat_table":
@@ -290,6 +294,35 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
                 kinematic=True,
                 initial_pose=sapien.Pose([-0.16, 0.13, 0.88], [1, 0, 0, 0]),
             )
+        # model scales
+        model_scales = None
+        if model_scales is None:
+            model_scales = dict()
+            for model_id in [self.source_obj_name, self.target_obj_name]:
+                this_available_model_scales = self.model_db[model_id].get(
+                    "scales", None
+                )
+                if this_available_model_scales is None:
+                    model_scales.append(1.0)
+                else:
+                    model_scales[model_id] = self.np_random.choice(
+                        this_available_model_scales
+                    )
+        self.episode_model_scales = model_scales
+        # import ipdb;ipdb.set_trace()
+        # if not all([model_scales[i] == self.episode_model_scales[i] for i in range(len(model_scales))]):
+        #     self.episode_model_scales = model_scales
+        model_bbox_sizes = dict()
+        for model_id in [self.source_obj_name, self.target_obj_name]:
+            model_info = self.model_db[model_id]
+            model_scale = self.episode_model_scales[model_id]
+            if "bbox" in model_info:
+                bbox = model_info["bbox"]
+                bbox_size = np.array(bbox["max"]) - np.array(bbox["min"])
+                model_bbox_sizes[model_id] = common.to_tensor(bbox_size * model_scale)
+            else:
+                raise ValueError(f"Model {model_id} does not have bbox info.")
+        self.episode_model_bbox_sizes = model_bbox_sizes
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         # NOTE: this part of code is not GPU parallelized
@@ -340,13 +373,46 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
             # self._settle(t=0.5)
             self.agent.reset(init_qpos=qpos)
 
-            self.consecutive_grasp = 0
+            # settle objects
+            self.episode_source_obj_xyz_after_settle = self.objs[
+                self.source_obj_name
+            ].pose.p
+            self.episode_target_obj_xyz_after_settle = self.objs[
+                self.target_obj_name
+            ].pose.p
+            self.episode_obj_xyzs_after_settle = {
+                obj_name: self.objs[obj_name].pose.p for obj_name in self.objs.keys()
+            }
+            self.episode_source_obj_bbox_world = self.episode_model_bbox_sizes[
+                self.source_obj_name
+            ].float()  # bbox xyz extents in the world frame at timestep=0
+            self.episode_target_obj_bbox_world = self.episode_model_bbox_sizes[
+                self.target_obj_name
+            ].float()
+            self.episode_source_obj_bbox_world = (
+                rotation_conversions.quaternion_to_matrix(
+                    self.objs[self.source_obj_name].pose.q
+                )
+                @ self.episode_source_obj_bbox_world[..., None]
+            )[0, :, 0]
+            """source object bbox size (3, )"""
+            self.episode_target_obj_bbox_world = (
+                rotation_conversions.quaternion_to_matrix(
+                    self.objs[self.target_obj_name].pose.q
+                )
+                @ self.episode_target_obj_bbox_world[..., None]
+            )[0, :, 0]
+            """target object bbox size (3, )"""
+
+            self.consecutive_grasp = torch.zeros((b,), dtype=torch.int32)
             self.episode_stats = dict(
-                all_obj_keep_height=False,
-                moved_correct_obj=False,
-                moved_wrong_obj=False,
-                near_tgt_obj=False,
-                is_closest_to_tgt=False,
+                all_obj_keep_height=torch.zeros((b,), dtype=torch.bool),
+                moved_correct_obj=torch.zeros((b,), dtype=torch.bool),
+                moved_wrong_obj=torch.zeros((b,), dtype=torch.bool),
+                near_tgt_obj=torch.zeros((b,), dtype=torch.bool),
+                is_src_obj_grasped=torch.zeros((b,), dtype=torch.bool),
+                is_closest_to_tgt=torch.zeros((b,), dtype=torch.bool),
+                consecutive_grasp=torch.zeros((b,), dtype=torch.bool),
             )
 
     def _settle(self, t: int = 0.5):
@@ -357,71 +423,86 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
 
     def _evaluate(
         self,
-        source_object: Actor,
-        target_object: Actor,
         success_require_src_completely_on_target=True,
         z_flag_required_offset=0.02,
-        **kwargs
+        **kwargs,
     ):
-        self.source_obj_pose
-        self.target_obj_pose
+        source_object = self.objs[self.source_obj_name]
+        target_object = self.objs[self.target_obj_name]
+        # TODO (stao): Parallelize the evaluation function in the future
+        source_obj_pose = source_object.pose
+        target_obj_pose = target_object.pose
 
         # whether moved the correct object
-        # source_obj_xy_move_dist = np.linalg.norm(
-        #     self.episode_source_obj_xyz_after_settle[:2] - self.source_obj_pose.p[:2]
-        # )
-        # other_obj_xy_move_dist = []
+        source_obj_xy_move_dist = torch.linalg.norm(
+            self.episode_source_obj_xyz_after_settle[:, :2] - source_obj_pose.p[:, :2],
+            dim=1,
+        )
+        other_obj_xy_move_dist = []
+        for obj_name in self.objs.keys():
+            obj = self.objs[obj_name]
+            obj_xyz_after_settle = self.episode_obj_xyzs_after_settle[obj_name]
+            if obj.name == self.source_obj_name:
+                continue
+            other_obj_xy_move_dist.append(
+                torch.linalg.norm(
+                    obj_xyz_after_settle[:, :2] - obj.pose.p[:, :2], dim=1
+                )
+            )
         # for obj, obj_xyz_after_settle in zip(
-        #     self.episode_objs, self.episode_obj_xyzs_after_settle
+        #     self.objs, self.episode_obj_xyzs_after_settle
         # ):
         #     if obj.name == self.episode_source_obj.name:
         #         continue
         #     other_obj_xy_move_dist.append(
         #         np.linalg.norm(obj_xyz_after_settle[:2] - obj.pose.p[:2])
         #     )
-        # moved_correct_obj = (source_obj_xy_move_dist > 0.03) and (
-        #     all([x < source_obj_xy_move_dist for x in other_obj_xy_move_dist])
-        # )
-        # moved_wrong_obj = any([x > 0.03 for x in other_obj_xy_move_dist]) and any(
-        #     [x > source_obj_xy_move_dist for x in other_obj_xy_move_dist]
-        # )
-        moved_correct_obj = False
-        moved_wrong_obj = False
+        moved_correct_obj = (source_obj_xy_move_dist > 0.03) and (
+            all([x < source_obj_xy_move_dist for x in other_obj_xy_move_dist])
+        )
+        moved_wrong_obj = any([x > 0.03 for x in other_obj_xy_move_dist]) and any(
+            [x > source_obj_xy_move_dist for x in other_obj_xy_move_dist]
+        )
+        # moved_correct_obj = False
+        # moved_wrong_obj = False
 
         # whether the source object is grasped
         is_src_obj_grasped = self.agent.is_grasping(source_object)
-        if is_src_obj_grasped:
-            self.consecutive_grasp += 1
-        else:
-            self.consecutive_grasp = 0
+        # if is_src_obj_grasped:
+        self.consecutive_grasp += is_src_obj_grasped
+        self.consecutive_grasp[is_src_obj_grasped == 0] = 0
         consecutive_grasp = self.consecutive_grasp >= 5
 
-        # # whether the source object is on the target object based on bounding box position
-        # tgt_obj_half_length_bbox = (
-        #     self.episode_target_obj_bbox_world / 2
-        # )  # get half-length of bbox xy diagonol distance in the world frame at timestep=0
-        # src_obj_half_length_bbox = self.episode_source_obj_bbox_world / 2
+        # whether the source object is on the target object based on bounding box position
+        tgt_obj_half_length_bbox = (
+            self.episode_target_obj_bbox_world / 2
+        )  # get half-length of bbox xy diagonol distance in the world frame at timestep=0
+        src_obj_half_length_bbox = self.episode_source_obj_bbox_world / 2
 
-        # pos_src = source_obj_pose.p
-        # pos_tgt = target_obj_pose.p
-        # offset = pos_src - pos_tgt
-        # xy_flag = (
-        #     np.linalg.norm(offset[:2])
-        #     <= np.linalg.norm(tgt_obj_half_length_bbox[:2]) + 0.003
-        # )
-        # z_flag = (offset[2] > 0) and (
-        #     offset[2] - tgt_obj_half_length_bbox[2] - src_obj_half_length_bbox[2]
-        #     <= z_flag_required_offset
-        # )
-        # src_on_target = xy_flag and z_flag
-        src_on_target = False
+        pos_src = source_obj_pose.p
+        pos_tgt = target_obj_pose.p
+        offset = pos_src - pos_tgt
+        xy_flag = (
+            torch.linalg.norm(offset[:, :2], dim=1)
+            <= torch.linalg.norm(tgt_obj_half_length_bbox[:2]) + 0.003
+        )
+        z_flag = (offset[:, 2] > 0) & (
+            offset[:, 2] - tgt_obj_half_length_bbox[2] - src_obj_half_length_bbox[2]
+            <= z_flag_required_offset
+        )
+        src_on_target = xy_flag and z_flag
+        # src_on_target = False
 
         if success_require_src_completely_on_target:
             # whether the source object is on the target object based on contact information
             contacts = self.scene.get_pairwise_contact_forces(
                 source_object, target_object
             )
-            # torch.linalg.norm(contacts, dim=1)
+            if contacts.sum() != 0:
+                # torch.linalg.norm(contacts, dim=1)
+                import ipdb
+
+                ipdb.set_trace()
             # contacts = self._scene.get_contacts()
             # flag = True
             # robot_link_names = [x.name for x in self.agent.robot.get_links()]
@@ -453,19 +534,24 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
         self.episode_stats["moved_wrong_obj"] = moved_wrong_obj
         self.episode_stats["src_on_target"] = src_on_target
         self.episode_stats["is_src_obj_grasped"] = (
-            self.episode_stats["is_src_obj_grasped"] or is_src_obj_grasped
+            self.episode_stats["is_src_obj_grasped"] | is_src_obj_grasped
         )
         self.episode_stats["consecutive_grasp"] = (
-            self.episode_stats["consecutive_grasp"] or consecutive_grasp
+            self.episode_stats["consecutive_grasp"] | consecutive_grasp
         )
 
         return dict(
+            # whether the correct object is moved
             moved_correct_obj=moved_correct_obj,
+            # whether the wrong object is moved
             moved_wrong_obj=moved_wrong_obj,
-            is_src_obj_grasped=is_src_obj_grasped,
-            consecutive_grasp=consecutive_grasp,
+            # whether the source object is on the target object
             src_on_target=src_on_target,
-            episode_stats=self.episode_stats,
+            # whether the source object is grasped at least once in the episode.
+            is_src_obj_grasped=is_src_obj_grasped,
+            # whether the source object is grasped consecutively for 5 steps. True if this occurs once in the episode
+            consecutive_grasp=consecutive_grasp,
+            # episode_stats=self.episode_stats,
             success=success,
         )
 

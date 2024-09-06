@@ -27,6 +27,10 @@ class WidowX250S(BaseAgent):
     ]
     gripper_joint_names = ["left_finger", "right_finger"]
 
+    def _after_loading_articulation(self):
+        self.finger1_link = self.robot.links_map["left_finger_link"]
+        self.finger2_link = self.robot.links_map["right_finger_link"]
+
     def is_grasping(self, object: Actor, min_force=0.5, max_angle=85):
         """Check if the robot is grasping an object
 
