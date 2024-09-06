@@ -16,29 +16,13 @@ from mani_skill.utils.structs.pose import vectorize_pose
 @register_agent()
 class Koch(BaseAgent):
     uid = "koch"
-    # mjcf_path = f"{PACKAGE_ASSET_DIR}/robots/koch/low_cost_robot.xml"
-    # urdf_config = dict()
-    #load_multiple_collisions = True
     urdf_path = f"{PACKAGE_ASSET_DIR}/robots/koch/Follower_Arm.urdf"
-    urdf_config = dict(
-        # _materials=dict(
-        #     pad=dict(static_friction=0.7, dynamic_friction=0.7, restitution=0.0)
-        # ),
-        # link={
-        #     "joint4-pad": dict(
-        #         material="pad", patch_radius=0.1, min_patch_radius=0.1
-        #     ),
-        #     "joint5-pad": dict(
-        #         material="pad", patch_radius=0.1, min_patch_radius=0.1
-        #     ),
-        # },
-    )
+    urdf_config = dict()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-
-    # NOTE: S
+    # NOTE: Controller is temporary - doesn't resemble real robot
     @property
     def _controller_configs(self):
         joint_delta_pos = PDJointPosControllerConfig(
