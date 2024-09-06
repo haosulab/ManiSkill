@@ -91,7 +91,7 @@ def main(args):
     #     env.step(None)
     #     env.render_human()
 
-    model_name = "octo-base"
+    model_name = "octo-small"
     policy_setup = "widowx_bridge"
     model = OctoInference(model_type=model_name, policy_setup=policy_setup, init_rng=0)
 
@@ -124,8 +124,10 @@ def main(args):
     for seed in range(args.seed, args.seed+100):
         obs, _ = env.reset(seed=seed)
         # while True:
-        #     render_obs(obs)
-        #     obs, _, _, _, _ = env.step(env.action_space.sample())
+        #     env.step(None)
+        #     env.render_human()
+        #     # render_obs(obs)
+        #     # obs, _, _, _, _ = env.step(env.action_space.sample())
         instruction = env.unwrapped.get_language_instruction()
         print("instruction:", instruction)
         model.reset(instruction)
@@ -143,7 +145,7 @@ def main(args):
             images.append(img)
         for k, v in info.items():
             eval_metrics[k].append(v)
-        images_to_video(images, f"videos/real2sim_eval/{args.env_id}", f"octo_eval_{seed}", fps=10, verbose=True)
+        images_to_video(images, f"videos/real2sim_eval/{model_name}_{args.env_id}", f"octo_eval_{seed}", fps=10, verbose=True)
         eps_count += 1
         print(f"Evaluated episode {eps_count}. Seed {seed}. Results after {eps_count} episodes:")
         for k, v in eval_metrics.items():

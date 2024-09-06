@@ -166,3 +166,51 @@ class StackGreenCubeOnYellowCubeInScene(BaseBridgeEnv):
 
     def get_language_instruction(self, **kwargs):
         return "stack the green block on the yellow block"
+
+
+@register_env("PutSpoonOnTableClothInScene-v1", max_episode_steps=60)
+class PutSpoonOnTableClothInScene(BaseBridgeEnv):
+    def __init__(
+        self,
+        **kwargs,
+    ):
+        xy_center = np.array([-0.16, 0.00])
+        half_edge_length_x = 0.075
+        half_edge_length_y = 0.075
+        grid_pos = np.array([[0, 0], [0, 1], [1, 0], [1, 1]]) * 2 - 1
+        grid_pos = (
+            grid_pos * np.array([half_edge_length_x, half_edge_length_y])[None]
+            + xy_center[None]
+        )
+
+        xyz_configs = []
+        for i, grid_pos_1 in enumerate(grid_pos):
+            for j, grid_pos_2 in enumerate(grid_pos):
+                if i != j:
+                    xyz_configs.append(
+                        np.array(
+                            [np.append(grid_pos_1, 0.88), np.append(grid_pos_2, 0.875)]
+                        )
+                    )
+
+        quat_configs = [
+            np.array([[1, 0, 0, 0], [1, 0, 0, 0]]),
+            np.array([euler2quat(0, 0, np.pi / 2), [1, 0, 0, 0]]),
+        ]
+        quat_configs = torch.tensor(quat_configs)
+        xyz_configs = torch.tensor(np.stack(xyz_configs))
+        source_obj_name = "bridge_spoon_generated_modified"
+        target_obj_name = "table_cloth_generated_shorter"
+        super().__init__(
+            obj_names=[source_obj_name, target_obj_name],
+            xyz_configs=xyz_configs,
+            quat_configs=quat_configs,
+            **kwargs,
+        )
+
+    def evaluate(self, success_require_src_completely_on_target=False, **kwargs):
+        # this environment allows spoons to be partially on the table cloth to be considered successful
+        return super()._evaluate(success_require_src_completely_on_target, **kwargs)
+
+    def get_language_instruction(self, **kwargs):
+        return "put the spoon on the towel"
