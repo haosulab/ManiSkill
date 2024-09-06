@@ -77,7 +77,6 @@ def extract_scalars_from_info(info: dict, blacklist=()) -> Dict[str, float]:
 
 def inv_scale_action(action, low, high):
     """Inverse of `clip_and_scale_action` without clipping."""
-    low, high = np.asarray(low), np.asarray(high)
     return (action - 0.5 * (high + low)) / (0.5 * (high - low))
 
 

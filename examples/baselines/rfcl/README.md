@@ -56,8 +56,7 @@ XLA_PYTHON_CLIENT_PREALLOCATE=false python train.py configs/base_sac_ms3.yml \
   logger.exp_name=rfcl-${env_id}-state-${demos}_motionplanning_demos-${seed}-walltime_efficient logger.wandb=True \
   seed=${seed} train.num_demos=${demos} train.steps=1_000_000 \
   env.env_id=${env_id} \
-  train.dataset_path="~/.maniskill/demos/${env_id}/motionplanning/trajectory.state.pd_joint_delta_pos.h5" \
-  demo_type="motionplanning" config_type="walltime_efficient" # additional tags for logging purposes on wandb
+  train.dataset_path="~/.maniskill/demos/${env_id}/motionplanning/trajectory.state.pd_joint_delta_pos.cpu.h5"
 ```
 
 You can add `train.train_on_demo_actions=False` to train on demonstrations without any action labels, just environment states. This may be useful if you can only download a dataset but can't convert the actions to the desired action space (some tasks can't easily convert actions)/
@@ -72,8 +71,7 @@ XLA_PYTHON_CLIENT_PREALLOCATE=false python train.py configs/base_sac_ms3_sample_
   logger.exp_name=rfcl-${env_id}-state-${demos}_motionplanning_demos-${seed}-sample_efficient logger.wandb=True \
   seed=${seed} train.num_demos=${demos} train.steps=1_000_000 \
   env.env_id=${env_id} \
-  train.dataset_path="~/.maniskill/demos/${env_id}/motionplanning/trajectory.state.pd_joint_delta_pos.h5" \
-  demo_type="motionplanning" config_type="sample_efficient" # additional tags for logging purposes on wandb
+  train.dataset_path="~/.maniskill/demos/${env_id}/motionplanning/trajectory.state.pd_joint_delta_pos.h5"
 ```
 
 Version of RFCL that runs on the GPU vectorized environments is currently not implemented as the current code is already quite fast and will require future research to investigate how to leverage GPU simulation with RFCL.
@@ -88,17 +86,10 @@ To generate 1000 demonstrations with a trained policy you can run
 XLA_PYTHON_CLIENT_PREALLOCATE=false python rfcl_jax/scripts/collect_demos.py exps/path/to/model.jx \
   num_envs=8 num_episodes=1000
 ```
-This saves the demos which uses CPU vectorization to generate demonstrations in parallel. Note that while the demos are generated on the CPU, you can always convert them to demonstrations on the GPU via the [replay trajectory tool](https://maniskill.readthedocs.io/en/latest/user_guide/datasets/replay.html) as so
 
-```bash
-python -m mani_skill.trajectory.replay_trajectory \
-  --traj-path exps/<exp_name>/eval_videos/trajectory.h5 \
-  -b gpu --use-first-env-state --save-traj
-```
+This saves the demos which uses CPU vectorization to generate demonstrations in parallel. The replay_trajectory tool can also be used to generate videos.
 
-The replay_trajectory tool can also be used to generate videos
-
-See the rlpd_jax/scripts/collect_demos.py code for details on how to load the saved policies and modify it to your needs.
+See the rfcl_jax/scripts/collect_demos.py code for details on how to load the saved policies and modify it to your needs.
 
 
 ## Citation

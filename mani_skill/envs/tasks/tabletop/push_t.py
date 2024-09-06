@@ -1,4 +1,4 @@
-from typing import Any, Dict, Union
+from typing import Any, Dict
 
 import numpy as np
 import sapien
@@ -104,7 +104,7 @@ class PushTEnv(BaseEnv):
     """
 
     SUPPORTED_ROBOTS = ["panda_stick"]
-    agent: Union[PandaStick]
+    agent: PandaStick
 
     # # # # # # # # All Unspecified real-life Parameters Here # # # # # # # #
     # Randomizations
@@ -504,9 +504,7 @@ class PushTEnv(BaseEnv):
 
         success = tee_place_success
 
-        return {
-            "success": success,
-        }
+        return {"success": success}
 
     def _get_obs_extra(self, info: Dict):
         # ee position is super useful for pandastick robot
@@ -536,7 +534,6 @@ class PushTEnv(BaseEnv):
         # subtract the goal z rotatation to get relative rotation
         rot_rew = (tee_z_eulers - self.goal_z_rot).cos()
         # cos output [-1,1], we want reward of 0.5
-        # reward = (rot_rew+1)/4
         reward = (((rot_rew + 1) / 2) ** 2) / 2
 
         # x and y distance as reward
@@ -545,7 +542,6 @@ class PushTEnv(BaseEnv):
         reward += ((1 - torch.tanh(5 * tee_to_goal_pose_dist)) ** 2) / 2
 
         # giving the robot a little help by rewarding it for having its end-effector close to the tee center of mass
-        # tcp_to_push_pose = self.tee.pose.p[:,0:2] - self.agent.tcp.pose.p[:,0:2]
         tcp_to_push_pose = self.tee.pose.p - self.agent.tcp.pose.p
         tcp_to_push_pose_dist = torch.linalg.norm(tcp_to_push_pose, axis=1)
         reward += ((1 - torch.tanh(5 * tcp_to_push_pose_dist)).sqrt()) / 20
