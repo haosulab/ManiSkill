@@ -9,7 +9,7 @@ from mani_skill.envs.tasks.digital_twins.bridge_dataset_eval.base_env import (
 from mani_skill.utils.registration import register_env
 
 
-@register_env("PutCarrotOnPlateInScene-v0", max_episode_steps=60)
+@register_env("PutCarrotOnPlateInScene-v1", max_episode_steps=60)
 class PutCarrotOnPlateInScene(BaseBridgeEnv):
     scene_setting = "flat_table"
 
@@ -54,7 +54,7 @@ class PutCarrotOnPlateInScene(BaseBridgeEnv):
         )
 
     def evaluate(self):
-        return self._evaluate()
+        return dict()
 
     def get_language_instruction(self, **kwargs):
         return "put carrot on plate"

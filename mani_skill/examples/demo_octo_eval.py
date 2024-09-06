@@ -4,7 +4,7 @@ scripts:
 ## installation
 mamba create -n "ms3-octo" "python==3.10.12"
 mamba activate ms3-octo
-pip install -e .
+pip install -e . # install mani_skill
 pip install torch==2.3.1
 
 git clone https://github.com/simpler-env/SimplerEnv
@@ -37,17 +37,14 @@ import argparse
 
 import gymnasium as gym
 import numpy as np
-
+from mani_skill.envs.tasks.digital_twins.bridge_dataset_eval import *
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import Camera
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-e", "--env-id", type=str, default="PushCube-v1", help="The environment ID of the task you want to simulate")
-    parser.add_argument("-o", "--obs-mode", type=str, default="rgbd", help="Can be rgb or rgbd")
+    parser.add_argument("-e", "--env-id", type=str, default="PutCarrotOnPlateInScene-v1", help="The environment ID of the task you want to simulate")
     parser.add_argument("--shader", default="minimal", type=str, help="Change shader used for all cameras in the environment for rendering. Default is 'minimal' which is very fast. Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer")
     parser.add_argument("--num-envs", type=int, default=1, help="Number of environments to run. Used for some basic testing and not visualized")
-    parser.add_argument("--cam-width", type=int, help="Override the width of every camera in the environment")
-    parser.add_argument("--cam-height", type=int, help="Override the height of every camera in the environment")
     parser.add_argument(
         "-s",
         "--seed",
@@ -64,14 +61,14 @@ def main(args):
     if args.seed is not None:
         np.random.seed(args.seed)
     sensor_configs = dict()
-    if args.cam_width:
-        sensor_configs["width"] = args.cam_width
-    if args.cam_height:
-        sensor_configs["height"] = args.cam_height
+    # if args.cam_width:
+    #     sensor_configs["width"] = args.cam_width
+    # if args.cam_height:
+    #     sensor_configs["height"] = args.cam_height
     sensor_configs["shader_pack"] = args.shader
     env: BaseEnv = gym.make(
         args.env_id,
-        obs_mode=args.obs_mode,
+        obs_mode="rgb+segmentation",
         num_envs=args.num_envs,
         sensor_configs=sensor_configs,
         sim_backend="cpu",
@@ -91,9 +88,9 @@ def main(args):
     #     env.step(None)
     #     env.render_human()
 
-    # model_name = "octo-base"
-    # policy_setup = "widowx_bridge"
-    # model = OctoInference(model_type=model_name, policy_setup=policy_setup, init_rng=0)
+    model_name = "octo-base"
+    policy_setup = "widowx_bridge"
+    model = OctoInference(model_type=model_name, policy_setup=policy_setup, init_rng=0)
 
     renderer = visualization.ImageRenderer(wait_for_button_press=False)
     def render_obs(obs):
@@ -111,15 +108,15 @@ def main(args):
                     imgs.append(depth_rgb)
                 cam_num += 1
         img = visualization.tile_images(imgs, nrows=n_cams)
-        renderer(img)
+        # renderer(img)
         return img
 
     # gt_actions = np.load(os.path.join(os.path.dirname(__file__), "actions.npy"))
     for seed in range(100, 200):
         obs, _ = env.reset(seed=seed)
-        while True:
-            render_obs(obs)
-            obs, _, _, _, _ = env.step(env.action_space.sample())
+        # while True:
+        #     render_obs(obs)
+        #     obs, _, _, _, _ = env.step(env.action_space.sample())
         instruction = env.unwrapped.get_language_instruction()
         print("instruction:", instruction)
         model.reset(instruction)
