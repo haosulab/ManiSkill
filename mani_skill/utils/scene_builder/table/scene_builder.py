@@ -136,7 +136,7 @@ class TableSceneBuilder(SceneBuilder):
             self.ground.set_collision_group_bit(
                 group=2, bit_idx=FETCH_WHEELS_COLLISION_BIT, bit=1
             )
-        elif self.env.robot_uids == ("panda", "panda") or ("panda_wristcam", "panda_wristcam"):
+        elif self.env.robot_uids == ("panda", "panda"):
             agent: MultiAgent = self.env.agent
             qpos = np.array(
                 [
