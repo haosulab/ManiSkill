@@ -247,8 +247,17 @@ class MJCFLoader:
             )
 
         geom_density = _parse_float(geom_attrib, "density", 1000.0)
-        physx_material = None
-        # TODO handle geometry material properties
+
+        # if condim is 1, we can easily model the material's friction
+        if _parse_int(geom_attrib, "condim", 0) == 1:
+            friction = _parse_float(
+                geom_attrib, "friction", 0.3
+            )  # maniskill default friction is 0.3
+            physx_material = PhysxMaterial(
+                static_friction=friction, dynamic_friction=friction, restitution=0
+            )
+        else:
+            physx_material = None
 
         geom_group = _parse_int(geom_attrib, "group", 0)
         # See note at top of file for how we handle geom groups
@@ -323,7 +332,7 @@ class MJCFLoader:
                         t_visual2link,
                         radius=geom_radius,
                         half_length=geom_half_length,
-                        # material=material,
+                        material=physx_material,
                         # name=geom_name,
                     )
             elif geom_type == "box":
@@ -337,8 +346,8 @@ class MJCFLoader:
                 if has_collisions:
                     builder.add_box_collision(
                         t_visual2link,
-                        half_size=geom_size
-                        # material=material,
+                        half_size=geom_size,
+                        material=physx_material,
                         # name=geom_name,
                     )
             elif geom_type == "cylinder":
@@ -355,7 +364,7 @@ class MJCFLoader:
                         t_visual2link,
                         radius=geom_radius,
                         half_length=geom_half_length,
-                        # material=material,
+                        material=physx_material,
                         # name=geom_name
                     )
 

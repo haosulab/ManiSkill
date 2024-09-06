@@ -20,7 +20,7 @@ class CartPoleBalanceBenchmarkEnv(CartpoleBalanceEnv):
             sim_freq=120,
             spacing=20,
             control_freq=60,
-            scene_cfg=SceneConfig(
+            scene_config=SceneConfig(
                 bounce_threshold=0.5,
                 solver_position_iterations=4, solver_velocity_iterations=0
             ),

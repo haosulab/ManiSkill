@@ -1,6 +1,6 @@
 # Demonstrations
 
-We provide a command line tool to download demonstrations directly from our [Hugging Face 🤗 dataset page](https://huggingface.co/datasets/haosulab/ManiSkill) which are done by task ID. The tool will download the demonstration files to a folder and also a few demonstration videos visualizing what the demonstrations look like. See [Tasks](../concepts/environments.md) for a list of all supported tasks.
+We provide a command line tool to download demonstrations directly from our [Hugging Face 🤗 dataset page](https://huggingface.co/datasets/haosulab/ManiSkill) which are done by task ID. The tool will download the demonstration files to a folder and also a few demonstration videos visualizing what the demonstrations look like. See [Tasks](../../tasks/index.md) for a list of all supported tasks.
 
 <!-- TODO: add a table here detailing the data info in detail -->
 <!-- Please see our [notes](https://docs.google.com/document/d/1bBKmsR-R_7tR9LwaT1c3J26SjIWw27tWSLdHnfBR01c/edit?usp=sharing) about the details of the demonstrations. -->

@@ -1,0 +1,117 @@
+defaults:
+    - override hydra/launcher: submitit_local
+
+# environment
+env_id: PushCube-v1
+obs: state # or rgb
+control_mode: default # or pd_joint_delta_pos or pd_ee_delta_pose
+num_envs: 32
+num_eval_envs: 4
+render_mode: rgb_array # ['rgb_array' for quality, or 'sensors' for speed]
+render_size: 64
+setting_tag: none # ['none', 'walltime_efficient', 'sample_efficient', ...] for wandb tags
+
+# evaluation
+checkpoint: ???
+eval_episodes: 10
+eval_freq: 50000
+
+# training
+steps: 1_000_000
+batch_size: 256
+reward_coef: 0.1
+value_coef: 0.1
+consistency_coef: 20
+rho: 0.5
+lr: 3e-4
+enc_lr_scale: 0.3
+grad_clip_norm: 20
+tau: 0.01
+discount_denom: 5
+discount_min: 0.95
+discount_max: 0.995
+buffer_size: 1_000_000
+exp_name: default
+data_dir: ???
+steps_per_update: 1
+
+# planning
+mpc: true
+iterations: 6
+num_samples: 512
+num_elites: 64
+num_pi_trajs: 24
+horizon: 3
+min_std: 0.05
+max_std: 2
+temperature: 0.5
+
+# actor
+log_std_min: -10
+log_std_max: 2
+entropy_coef: 1e-4
+
+# critic
+num_bins: 101
+vmin: -10
+vmax: +10
+
+# architecture
+model_size: ???
+num_enc_layers: 2
+enc_dim: 256
+num_channels: 32
+mlp_dim: 512
+latent_dim: 512
+task_dim: 0
+num_q: 5
+dropout: 0.01
+simnorm_dim: 8
+
+# logging
+wandb_project:
+wandb_group: 
+wandb_name:
+wandb_entity: 
+wandb_silent: false
+wandb: false # enable wandb
+save_csv: true
+
+# misc
+save_video: true
+save_agent: true
+seed: 1
+
+# convenience
+work_dir: ???
+task_title: ???
+multitask: ???
+tasks: ???
+obs_shape: ???
+action_dim: ???
+episode_length: ???
+obs_shapes: ???
+action_dims: ???
+episode_lengths: ???
+seed_steps: ???
+bin_size: ???
+
+# Added for Maniskill RL Baselines Config Convention (don't assign to them)
+env_cfg:
+    env_id: ???
+    control_mode: ??? # pd_joint_delta_pos or pd_ee_delta_pose
+    obs_mode: ???
+    reward_mode: ??? 
+    num_envs: ???
+    sim_backend: ??? # cpu or gpu
+    env_horizon: ???
+eval_env_cfg:
+    env_id: ???
+    control_mode: ???
+    obs_mode: ???
+    reward_mode: ???
+    num_envs: ???
+    sim_backend: ???
+    env_horizon: ???
+    num_eval_episodes: ???
+discount: ???

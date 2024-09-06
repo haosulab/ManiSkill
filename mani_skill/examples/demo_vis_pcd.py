@@ -47,10 +47,10 @@ def main(args):
 
 
         # view from first camera
-        for uid, cfg in env.unwrapped._sensor_configs.items():
-            if isinstance(cfg, CameraConfig):
+        for uid, config in env.unwrapped._sensor_configs.items():
+            if isinstance(config, CameraConfig):
                 cam2world = obs["sensor_param"][uid]["cam2world_gl"][0]
-                camera = trimesh.scene.Camera(uid, (1024, 1024), fov=(np.rad2deg(cfg.fov), np.rad2deg(cfg.fov)))
+                camera = trimesh.scene.Camera(uid, (1024, 1024), fov=(np.rad2deg(config.fov), np.rad2deg(config.fov)))
             break
         trimesh.Scene([pcd], camera=camera, camera_transform=cam2world).show()
         if terminated or truncated:

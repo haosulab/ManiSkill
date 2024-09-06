@@ -7,7 +7,7 @@ RLPD leverages prior collected trajectory data (expert and non-expert work) and 
 
 ## Installation
 
-To get started run `git clone https://github.com/StoneT2000/rfcl.git rlpd_jax --branch ms3-gpu` which contains the code for RLPD written in jax (a partial fork of the original RLPD and JaxRL repos that has been optimized to run faster and support vectorized environments).
+To get started run `git clone https://github.com/StoneT2000/rfcl.git rlpd_jax` which contains the code for RLPD written in jax (a partial fork of the original RLPD and JaxRL repos that has been optimized to run faster and support vectorized environments).
 
 We recommend using conda/mamba and you can install the dependencies as so:
 
@@ -59,7 +59,7 @@ XLA_PYTHON_CLIENT_PREALLOCATE=false python train_ms3.py configs/base_rlpd_ms3.ym
   logger.exp_name="rlpd-${env_id}-state-${demos}_rl_demos-${seed}-walltime_efficient" logger.wandb=True \
   seed=${seed} train.num_demos=${demos} train.steps=200_000 \
   env.env_id=${env_id} \
-  train.dataset_path="~/.maniskill/demos/${env_id}/rl/trajectory.state.pd_joint_delta_pos.h5" 
+  train.dataset_path="~/.maniskill/demos/${env_id}/rl/trajectory.state.pd_joint_delta_pos.h5"
 ```
 
 This should solve the PickCube-v1 task in a few minutes, but won't get good sample efficiency.
@@ -81,20 +81,42 @@ evaluation videos are saved to `exps/<exp_name>/videos`.
 
 ## Generating Demonstrations / Evaluating policies
 
-To generate 1000 demonstrations you can run
+To generate 1000 demonstrations with a trained policy you can run
 
 ```bash
 XLA_PYTHON_CLIENT_PREALLOCATE=false python rlpd_jax/scripts/collect_demos.py exps/path/to/model.jx \
   num_envs=8 num_episodes=1000
 ```
-This saves the demos which uses CPU vectorization to generate demonstrations in parallel. Note that while the demos are generated on the CPU, you can always convert them to demonstrations on the GPU via the [replay trajectory tool](https://maniskill.readthedocs.io/en/latest/user_guide/datasets/replay.html) as so
-
-```bash
-python -m mani_skill.trajectory.replay_trajectory \
-  --traj-path exps/<exp_name>/eval_videos/trajectory.h5 \
-  -b gpu --use-first-env-state
-```
-
-The replay_trajectory tool can also be used to generate videos
+This saves the demos which uses CPU vectorization to generate demonstrations in parallel. The replay_trajectory tool can also be used to generate videos.
 
 See the rlpd_jax/scripts/collect_demos.py code for details on how to load the saved policies and modify it to your needs.
+
+## Citation
+
+If you use this baseline please cite the following
+```
+@inproceedings{DBLP:conf/icml/BallSKL23,
+  author       = {Philip J. Ball and
+                  Laura M. Smith and
+                  Ilya Kostrikov and
+                  Sergey Levine},
+  editor       = {Andreas Krause and
+                  Emma Brunskill and
+                  Kyunghyun Cho and
+                  Barbara Engelhardt and
+                  Sivan Sabato and
+                  Jonathan Scarlett},
+  title        = {Efficient Online Reinforcement Learning with Offline Data},
+  booktitle    = {International Conference on Machine Learning, {ICML} 2023, 23-29 July
+                  2023, Honolulu, Hawaii, {USA}},
+  series       = {Proceedings of Machine Learning Research},
+  volume       = {202},
+  pages        = {1577--1594},
+  publisher    = {{PMLR}},
+  year         = {2023},
+  url          = {https://proceedings.mlr.press/v202/ball23a.html},
+  timestamp    = {Mon, 28 Aug 2023 17:23:08 +0200},
+  biburl       = {https://dblp.org/rec/conf/icml/BallSKL23.bib},
+  bibsource    = {dblp computer science bibliography, https://dblp.org}
+}
+```

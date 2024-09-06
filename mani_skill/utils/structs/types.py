@@ -80,6 +80,8 @@ class DefaultMaterialsConfig:
 
 @dataclass
 class SimConfig:
+    """Simulation configurations for ManiSkill environments"""
+
     spacing: float = 5
     """Controls the spacing between parallel environments when simulating on GPU in meters. Increase this value
     if you expect objects in one parallel environment to impact objects within this spacing distance"""
@@ -87,9 +89,9 @@ class SimConfig:
     """simulation frequency (Hz)"""
     control_freq: int = 20
     """control frequency (Hz). Every control step (e.g. env.step) contains sim_freq / control_freq physx simulation steps"""
-    gpu_memory_cfg: GPUMemoryConfig = field(default_factory=GPUMemoryConfig)
-    scene_cfg: SceneConfig = field(default_factory=SceneConfig)
-    default_materials_cfg: DefaultMaterialsConfig = field(
+    gpu_memory_config: GPUMemoryConfig = field(default_factory=GPUMemoryConfig)
+    scene_config: SceneConfig = field(default_factory=SceneConfig)
+    default_materials_config: DefaultMaterialsConfig = field(
         default_factory=DefaultMaterialsConfig
     )
 

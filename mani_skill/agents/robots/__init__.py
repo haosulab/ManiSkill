@@ -3,6 +3,7 @@ from .anymal import ANYmalC
 from .dclaw import DClaw
 from .fetch import Fetch
 from .floating_panda_gripper import FloatingPandaGripper
+from .floating_robotiq_2f_85_gripper import *
 from .googlerobot import *
 from .humanoid import Humanoid
 from .panda import *

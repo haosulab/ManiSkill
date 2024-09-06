@@ -51,18 +51,18 @@ At the start of any task, you must load in all objects (robots, assets, articula
 
 Building objects in ManiSkill is nearly the exact same as it is in SAPIEN. You create an `ActorBuilder` via `self.scene.create_actor_builder` and via the actor builder add visual and collision shapes. Visual shapes only affect visual rendering processes while collision shapes affect the physical simulation. ManiSkill further will create the actor for you in every sub-scene (unless you use [scene-masks/scene-idxs](./advanced.md#scene-masks), a more advanced feature).
 
-#### Building Robots
+### Building Robots
 
 This is the simplest part and requires almost no additional work here. Robots are added in for you automatically and have their base initialized at 0. You can specify the default robot(s) added in via the init function. In PushCube this is done as so by adding `SUPPORTED_ROBOTS` to ensure users can only run your task with the selected robots. You can further add typing if you wish to the `agent` class attribute. 
 
 ```python
-from mani_skill.agents.robots import Fetch, Panda, Xmate3Robotiq
+from mani_skill.agents.robots import Fetch, Panda
 
 class PushCubeEnv(BaseEnv):
 
-    SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
+    SUPPORTED_ROBOTS = ["panda", "fetch"]
 
-    agent: Union[Panda, Xmate3Robotiq, Fetch]
+    agent: Union[Panda, Fetch]
 
     def __init__(self, *args, robot_uids="panda", **kwargs):
         # robot_uids="fetch" is possible, or even multi-robot 
@@ -74,7 +74,7 @@ Initializing these robots occurs in the initialization / randomization section c
 
 To create your own custom robots/agents, see the [custom robots tutorial](../custom_robots.md).
 
-#### Building Actors
+### Building Actors
 
 the `_load_scene` function must be implemented to build objects besides agents. It is also given an `options` dictionary which is the same options dictionary passed to `env.reset` and defaults to an empty dictionary (which may be useful for controlling how to load a scene with just reset arguments).
 

@@ -4,22 +4,22 @@ import numpy as np
 import torch
 from transforms3d.euler import euler2quat
 
-from mani_skill.agents.robots import Fetch, Panda, Xmate3Robotiq
+from mani_skill.agents.robots import Fetch, Panda
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.utils import randomization
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.building import actors
-from mani_skill.utils.registration import register_env
 from mani_skill.utils.geometry import rotation_conversions
+from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs.pose import Pose
 
 
 @register_env("PokeCube-v1", max_episode_steps=50)
 class PokeCubeEnv(BaseEnv):
-    SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
-    agent: Union[Panda, Xmate3Robotiq, Fetch]
+    SUPPORTED_ROBOTS = ["panda", "fetch"]
+    agent: Union[Panda, Fetch]
 
     cube_half_size = 0.02
     peg_half_width = 0.025

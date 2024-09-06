@@ -36,7 +36,9 @@ def main(args):
         control_mode="pd_joint_pos",
         render_mode=args.render_mode,
         reward_mode="dense" if args.reward_mode is None else args.reward_mode,
-        shader_dir=args.shader,
+        sensor_configs=dict(shader_pack=args.shader),
+        human_render_camera_configs=dict(shader_pack=args.shader),
+        viewer_camera_configs=dict(shader_pack=args.shader),
         sim_backend=args.sim_backend
     )
     if env_id not in MP_SOLUTIONS:
@@ -55,13 +57,18 @@ def main(args):
     pbar = tqdm(range(args.num_traj))
     seed = 0
     successes = []
+    solution_episode_lengths = []
+    failed_motion_plans = 0
     passed = 0
     while True:
         res = solve(env, seed=seed, debug=False, vis=True if args.vis else False)
         if res == -1:
             success = False
+            failed_motion_plans += 1
         else:
             success = res[-1]["success"].item()
+            elapsed_steps = res[-1]["elapsed_steps"].item()
+            solution_episode_lengths.append(elapsed_steps)
         successes.append(success)
         if args.only_count_success and not success:
             seed += 1
@@ -74,7 +81,15 @@ def main(args):
             if args.save_video:
                 env.flush_video()
             pbar.update(1)
-            pbar.set_postfix(dict(success_rate=np.mean(successes)))
+            pbar.set_postfix(
+                dict(
+                    success_rate=np.mean(successes),
+                    failed_motion_plan_rate=failed_motion_plans / (seed + 1),
+                    avg_episode_length=np.mean(solution_episode_lengths),
+                    max_episode_length=np.max(solution_episode_lengths),
+                    # min_episode_length=np.min(solution_episode_lengths)
+                )
+            )
             seed += 1
             passed += 1
             if passed == args.num_traj:

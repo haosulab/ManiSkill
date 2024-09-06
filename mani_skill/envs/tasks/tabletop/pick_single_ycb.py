@@ -27,14 +27,14 @@ WARNED_ONCE = False
 @register_env("PickSingleYCB-v1", max_episode_steps=50, asset_download_ids=["ycb"])
 class PickSingleYCBEnv(BaseEnv):
 
-    SUPPORTED_ROBOTS = ["panda", "panda_wristcam", "xmate3_robotiq", "fetch"]
-    agent: Union[Panda, PandaWristCam, Xmate3Robotiq, Fetch]
+    SUPPORTED_ROBOTS = ["panda", "panda_wristcam", "fetch"]
+    agent: Union[Panda, PandaWristCam, Fetch]
     goal_thresh = 0.025
 
     def __init__(
         self,
         *args,
-        robot_uids="panda",
+        robot_uids="panda_wristcam",
         robot_init_qpos_noise=0.02,
         num_envs=1,
         reconfiguration_freq=None,

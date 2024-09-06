@@ -3,7 +3,7 @@ Common utilities often reused for internal code and task building for users.
 """
 
 from collections import defaultdict
-from typing import Dict, Sequence, Tuple, Union
+from typing import Dict, Optional, Sequence, Tuple, Union
 
 import gymnasium as gym
 import numpy as np
@@ -124,7 +124,7 @@ def index_dict_array(x1, idx: Union[int, slice], inplace=True):
 
 
 # TODO (stao): this code can be simplified
-def to_tensor(array: Union[torch.Tensor, np.array, Sequence], device: Device = None):
+def to_tensor(array: Array, device: Optional[Device] = None):
     """
     Maps any given sequence to a torch tensor on the CPU/GPU. If physx gpu is not enabled then we use CPU, otherwise GPU, unless specified
     by the device argument
@@ -149,13 +149,19 @@ def to_tensor(array: Union[torch.Tensor, np.array, Sequence], device: Device = N
         else:
             ret = torch.tensor(array)
         if device is None:
-            return ret.cuda()
+            if ret.device.type == "cpu":
+                # TODO (stao): note that .cuda does move a tensor to the torch.device context, it moves to the default
+                return ret.cuda()
+            # keep same device if already on GPU
+            return ret
         else:
             return ret.to(device)
     else:
         if isinstance(array, np.ndarray):
             if array.dtype == np.uint16:
                 array = array.astype(np.int32)
+            if array.dtype == np.uint32:
+                array = array.astype(np.int64)
             ret = torch.from_numpy(array)
             if ret.dtype == torch.float64:
                 ret = ret.float()
@@ -173,7 +179,7 @@ def to_tensor(array: Union[torch.Tensor, np.array, Sequence], device: Device = N
             return ret.to(device)
 
 
-def to_cpu_tensor(array: Union[torch.Tensor, np.array, Sequence]):
+def to_cpu_tensor(array: Array):
     """
     Maps any given sequence to a torch tensor on the CPU.
     """

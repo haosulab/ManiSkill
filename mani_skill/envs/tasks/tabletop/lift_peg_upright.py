@@ -5,7 +5,7 @@ import torch
 import torch.random
 from transforms3d.euler import euler2quat
 
-from mani_skill.agents.robots import Fetch, Panda, Xmate3Robotiq
+from mani_skill.agents.robots import Fetch, Panda
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils.building import actors
@@ -19,8 +19,8 @@ from mani_skill.utils.structs.types import Array
 
 @register_env("LiftPegUpright-v1", max_episode_steps=50)
 class LiftPegUprightEnv(BaseEnv):
-    SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
-    agent: Union[Panda, Xmate3Robotiq, Fetch]
+    SUPPORTED_ROBOTS = ["panda", "fetch"]
+    agent: Union[Panda, Fetch]
 
     peg_half_width = 0.025
     peg_half_length = 0.12

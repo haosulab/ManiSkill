@@ -88,3 +88,102 @@ Hopper robot stands upright
 **Success Conditions:**
 - No specific success conditions. We can threshold the episode accumulated reward to determine success.
 :::
+
+## MS-AntWalk-v1
+![dense-reward][reward-badge]
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+Ant moves in x direction at 0.5 m/s
+
+**Supported Robots: ant**
+
+**Randomizations:**
+- Ant qpos and qvel have added noise from uniform distribution [-1e-2, 1e-2]
+
+**Success Conditions:**
+- No specific success conditions. The task is considered successful if the ant walks at 0.5 m/s for the whole episode. We can threshold the episode accumulated reward to determine success.
+:::
+
+## MS-AntRun-v1
+![dense-reward][reward-badge]
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+Ant moves in x direction at 4 m/s
+
+**Supported Robots: ant**
+
+**Randomizations:**
+- Ant qpos and qvel have added noise from uniform distribution [-1e-2, 1e-2]
+
+**Success Conditions:**
+- No specific success conditions. The task is considered successful the ant walks at 4 m/s for the whole episode. We can threshold the episode accumulated reward to determine success.
+:::
+
+## MS-HumanoidStand-v1
+![dense-reward][reward-badge]
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+Humanoid robot stands upright
+
+
+**Supported Robots: humanoid**
+
+**Randomizations:**
+- Humanoid robot is randomly rotated [-pi, pi] radians about z axis.
+- Humanoid qpos and qvel have added noise from uniform distribution [-1e-2, 1e-2]
+
+**Fail Conditions:**
+- Humanoid robot torso link leaves z range [0.7, 1.0]
+:::
+
+## MS-HumanoidWalk-v1
+![dense-reward][reward-badge]
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+Humanoid moves in x direction at walking pace
+
+
+**Supported Robots: humanoid**
+
+**Randomizations:**
+- Humanoid qpos and qvel have added noise from uniform distribution [-1e-2, 1e-2]
+
+**Fail Conditions:**
+- Humanoid robot torso link leaves z range [0.7, 1.0]
+:::
+
+## MS-HumanoidRun-v1
+![dense-reward][reward-badge]
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+Humanoid moves in x direction at running pace
+
+
+**Supported Robots: humanoid**
+
+**Randomizations:**
+- Humanoid qpos and qvel have added noise from uniform distribution [-1e-2, 1e-2]
+
+**Fail Conditions:**
+- Humanoid robot torso link leaves z range [0.7, 1.0]
+:::

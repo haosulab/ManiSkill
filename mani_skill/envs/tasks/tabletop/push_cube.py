@@ -22,7 +22,7 @@ import torch
 import torch.random
 from transforms3d.euler import euler2quat
 
-from mani_skill.agents.robots import Fetch, Panda, Xmate3Robotiq
+from mani_skill.agents.robots import Fetch, Panda
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import common, sapien_utils
@@ -52,10 +52,10 @@ class PushCubeEnv(BaseEnv):
     Visualization: https://maniskill.readthedocs.io/en/latest/tasks/index.html#pushcube-v1
     """
 
-    SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
+    SUPPORTED_ROBOTS = ["panda", "fetch"]
 
     # Specify some supported robot types
-    agent: Union[Panda, Xmate3Robotiq, Fetch]
+    agent: Union[Panda, Fetch]
 
     # set some commonly used values
     goal_radius = 0.1
@@ -70,7 +70,7 @@ class PushCubeEnv(BaseEnv):
     @property
     def _default_sim_config(self):
         return SimConfig(
-            gpu_memory_cfg=GPUMemoryConfig(
+            gpu_memory_config=GPUMemoryConfig(
                 found_lost_pairs_capacity=2**25, max_rigid_patch_count=2**18
             )
         )

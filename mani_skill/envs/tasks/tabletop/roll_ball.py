@@ -1,11 +1,11 @@
-from typing import Any, Dict, Union
+from typing import Any, Dict
 
 import numpy as np
 import torch
 from transforms3d.euler import euler2quat
 
 import mani_skill.envs.utils.randomization as randomization
-from mani_skill.agents.robots import Fetch, Panda, Xmate3Robotiq
+from mani_skill.agents.robots import Fetch, Panda
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
@@ -35,7 +35,7 @@ class RollBallEnv(BaseEnv):
 
     SUPPORTED_ROBOTS = ["panda"]
 
-    agent: Union[Panda]
+    agent: Panda
 
     goal_radius: float = 0.1  # radius of the goal region
     ball_radius: float = 0.035  # radius of the ball
@@ -48,7 +48,7 @@ class RollBallEnv(BaseEnv):
     @property
     def _default_sim_config(self):
         return SimConfig(
-            gpu_memory_cfg=GPUMemoryConfig(
+            gpu_memory_config=GPUMemoryConfig(
                 found_lost_pairs_capacity=2**25, max_rigid_patch_count=2**18
             )
         )

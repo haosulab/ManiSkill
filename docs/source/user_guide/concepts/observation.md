@@ -1,14 +1,12 @@
 # Observation
 
-<!-- See our [colab tutorial](https://colab.research.google.com/github/haosulab/ManiSkill/blob/main/examples/tutorials/customize_environments.ipynb#scrollTo=NaSQ7CD2sswC) for how to customize cameras. -->
-
 ## Observation mode
 
 **The observation mode defines the observation space.**
 All ManiSkill tasks take the observation mode (`obs_mode`) as one of the input arguments of `__init__`.
 In general, the observation is organized as a dictionary (with an observation space of `gym.spaces.Dict`).
 
-There are two raw observations modes: `state_dict` (privileged states) and `sensor_data` (raw sensor data like visual data without postprocessing). `state` is a flat version of `state_dict`. `rgbd` and `pointcloud` apply post-processing on `sensor_data` to give convenient representations of visual data.
+There are two raw observations modes: `state_dict` (privileged states) and `sensor_data` (raw sensor data like visual data without postprocessing). `state` is a flat version of `state_dict`. `rgb+depth`, `rgb+depth+segmentation` (or any combination of `rgb`, `depth`, `segmentation`), and `pointcloud` apply post-processing on `sensor_data` to give convenient representations of visual data.
 
 The details here show the unbatched shapes. In general there is always a batch dimension unless you are using CPU simulation. Moreover, we annotate what dtype some values are, where some have both a torch and numpy dtype depending on whether you are using GPU or CPU simulation repspectively.
 
@@ -16,7 +14,7 @@ The details here show the unbatched shapes. In general there is always a batch d
 
 The observation is a dictionary of states. It usually contains privileged information such as object poses. It is not supported for soft-body tasks.
 
-- `agent`: robot proprioception
+- `agent`: robot proprioception (return value of a task's `_get_obs_agent` function)
   - `qpos`: [nq], current joint positions. *nq* is the degree of freedom.
   - `qvel`: [nq], current joint velocities
   <!-- - `base_pose`: [7], robot position (xyz) and quaternion (wxyz) in the world frame -->
@@ -29,7 +27,7 @@ It is a flat version of *state_dict*. The observation space is `gym.spaces.Box`.
 
 ### sensor_data
 
-In addition to `agent` and `extra`, `sensor_data` and `sensor_param` are introduced.
+In addition to `agent` and `extra`, `sensor_data` and `sensor_param` are introduced. At the moment there are only Camera type sensors. Cameras are special in that they can be run with different choices of shaders. The default shader is called `minimal` which is the fastest and most memory efficient option. The shader chosen determines what data is stored in this observation mode. We describe the raw data format for the `minimal` shader here. Detailed information on how sensors/cameras can be customized can be found in the [sensors](../tutorials/sensors/index.md) section.
 
 - `sensor_data`: data captured by sensors configured in the environment
   - `{sensor_uid}`:
@@ -46,7 +44,7 @@ In addition to `agent` and `extra`, `sensor_data` and `sensor_param` are introdu
     - `extrinsic_cv`: [4, 4], camera extrinsic (OpenCV convention)
     - `intrinsic_cv`: [3, 3], camera intrinsic (OpenCV convention)
 
-### rgbd
+### rgb+depth+segmentation
 
 This observation mode has the same data format as the [sensor_data mode](#sensor_data), but all sensor data from cameras are replaced with the following structure
 
@@ -58,9 +56,10 @@ This observation mode has the same data format as the [sensor_data mode](#sensor
     - `depth`: [H, W, 1], `torch.int16, np.uint16`. The unit is millimeters. 0 stands for an invalid pixel (beyond the camera far).
     - `segmentation`: [H, W, 1], `torch.int16, np.uint16`. See the [Segmentation data section](#segmentation-data) for more details.
 
-    Otherwise keep the same data without any additional processing as in the sensor_data mode
+Note that this data is not scaled/normalized to [0, 1] or [-1, 1] in order to conserve memory, so if you consider to train on RGB, depth, and/or segmentation data be sure to scale your data before training on it.
 
-Note that this data is not scaled/normalized to [0, 1] or [-1, 1] in order to conserve memory, so if you consider to train on RGBD data be sure to scale your data before training on it.
+
+ManiSkill by default flexibly supports different combinations of RGB, depth, and segmentation data, namely `rgb`, `depth`, `segmentation`, `rgb+depth`, `rgb+depth+segmentation`, `rgb+segmentation`, and`depth+segmentation`. (`rgbd` is a short hand for `rgb+depth`). Whichever image modality that is not chosen will not be included in the observation and conserves some memory and GPU bandwith.
 
 The RGB and depth data visualized can look like below:
 ```{image} images/replica_cad_rgbd.png
@@ -68,6 +67,8 @@ The RGB and depth data visualized can look like below:
 alt: RGBD from two cameras of Fetch robot inside the ReplicaCAD dataset scene
 ---
 ```
+
+
 
 ### pointcloud
 This observation mode has the same data format as the [sensor_data mode](#sensor_data), but all sensor data from cameras are removed and instead a new key is added called `pointcloud`.

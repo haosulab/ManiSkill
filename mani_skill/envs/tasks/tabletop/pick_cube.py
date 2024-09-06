@@ -4,7 +4,7 @@ import numpy as np
 import torch
 
 import mani_skill.envs.utils.randomization as randomization
-from mani_skill.agents.robots import Fetch, Panda, Xmate3Robotiq
+from mani_skill.agents.robots import Fetch, Panda
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
@@ -17,8 +17,8 @@ from mani_skill.utils.structs.types import SimConfig
 
 @register_env("PickCube-v1", max_episode_steps=50)
 class PickCubeEnv(BaseEnv):
-    SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
-    agent: Union[Panda, Xmate3Robotiq, Fetch]
+    SUPPORTED_ROBOTS = ["panda", "fetch"]
+    agent: Union[Panda, Fetch]
     cube_half_size = 0.02
     goal_thresh = 0.025
 

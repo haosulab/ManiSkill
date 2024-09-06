@@ -33,13 +33,11 @@ class BaseController:
     active_joint_indices: torch.Tensor
     """indices of active joints controlled. Equivalent to [x.active_index for x in self.joints]"""
     action_space: spaces.Space
-    """the action space. If the number of parallel environments is > 1, this action space is also batched"""
+    """the action space of the controller, which by default has a batch dimension. This is typically already normalized as well."""
     single_action_space: spaces.Space
     """The unbatched version of the action space which is also typically already normalized by this class"""
-    """The batched version of the action space which is also typically already normalized by this class"""
     _original_single_action_space: spaces.Space
     """The unbatched, original action space without any additional processing like normalization"""
-    """The batched, original action space without any additional processing like normalization"""
 
     def __init__(
         self,
@@ -67,7 +65,6 @@ class BaseController:
         self._normalize_action = getattr(self.config, "normalize_action", False)
         if self._normalize_action:
             self._clip_and_scale_action_space()
-
         self.action_space = self.single_action_space
         if self.scene.num_envs > 1:
             self.action_space = batch_space(
@@ -312,4 +309,4 @@ class CombinedController(DictController):
 
     def from_action_dict(self, action_dict: dict):
         """Convert a dict of actions to a flat action."""
-        return np.hstack([action_dict[uid] for uid in self.controllers])
+        return torch.hstack([action_dict[uid] for uid in self.controllers])

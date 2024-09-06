@@ -89,10 +89,12 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
             assert (
                 link.is_root == is_root
             ), "all links given to merge must all be root or all not be root links"
+            merged_scene_idxs.append(link._scene_idxs)
+            # if link is not root, then there are joints we can merge automatically
             if not is_root:
                 joint_objs += link.joint._objs
                 articulation_objs += link.articulation._objs
-                merged_scene_idxs.append(link._scene_idxs)
+
                 merged_active_joint_indexes.append(link.joint.active_index)
                 merged_joint_indexes.append(link.joint.index)
             assert (
@@ -213,7 +215,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
     def pose(self, arg1: Union[Pose, sapien.Pose, Array]) -> None:
         if physx.is_gpu_enabled():
             if not isinstance(arg1, torch.Tensor):
-                arg1 = vectorize_pose(arg1)
+                arg1 = vectorize_pose(arg1, device=self.device)
             if self.scene.parallel_in_single_scene:
                 if len(arg1.shape) == 1:
                     arg1 = arg1.view(1, -1)

@@ -14,8 +14,8 @@ class BaseSensor:
     Base class for all sensors
     """
 
-    def __init__(self, cfg: BaseSensorConfig) -> None:
-        self.cfg = cfg
+    def __init__(self, config: BaseSensorConfig) -> None:
+        self.config = config
 
     def setup(self) -> None:
         """
@@ -30,7 +30,7 @@ class BaseSensor:
         non-blocking function if possible.
         """
 
-    def get_obs(self):
+    def get_obs(self, **kwargs):
         """
         Retrieves captured sensor data as an observation for use by an agent.
         """
@@ -51,4 +51,4 @@ class BaseSensor:
 
     @property
     def uid(self):
-        return self.cfg.uid
+        return self.config.uid

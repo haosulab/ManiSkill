@@ -18,4 +18,5 @@ quadrupeds/index
 arms/index
 humanoids/index
 dextrous_hands/index
+other/index
 ```

@@ -5,7 +5,7 @@ import torch
 import torch.random
 from transforms3d.euler import euler2quat
 
-from mani_skill.agents.robots import Fetch, Panda, Xmate3Robotiq
+from mani_skill.agents.robots import Fetch, Panda
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils.building import actors
@@ -18,8 +18,8 @@ from mani_skill.utils.structs.types import Array
 
 @register_env("PullCube-v1", max_episode_steps=50)
 class PullCubeEnv(BaseEnv):
-    SUPPORTED_ROBOTS = ["panda", "xmate3_robotiq", "fetch"]
-    agent: Union[Panda, Xmate3Robotiq, Fetch]
+    SUPPORTED_ROBOTS = ["panda", "fetch"]
+    agent: Union[Panda, Fetch]
     goal_radius = 0.1
     cube_half_size = 0.02
 
