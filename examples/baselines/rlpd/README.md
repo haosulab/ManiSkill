@@ -59,8 +59,7 @@ XLA_PYTHON_CLIENT_PREALLOCATE=false python train_ms3.py configs/base_rlpd_ms3.ym
   logger.exp_name="rlpd-${env_id}-state-${demos}_rl_demos-${seed}-walltime_efficient" logger.wandb=True \
   seed=${seed} train.num_demos=${demos} train.steps=200_000 \
   env.env_id=${env_id} \
-  train.dataset_path="~/.maniskill/demos/${env_id}/rl/trajectory.state.pd_joint_delta_pos.h5" \
-  demo_type="rl" config_type="walltime_efficient" # additional tags for logging purposes on wandb
+  train.dataset_path="~/.maniskill/demos/${env_id}/rl/trajectory.state.pd_joint_delta_pos.h5"
 ```
 
 This should solve the PickCube-v1 task in a few minutes, but won't get good sample efficiency.
@@ -75,8 +74,7 @@ XLA_PYTHON_CLIENT_PREALLOCATE=false python train_ms3.py configs/base_rlpd_ms3_sa
   logger.exp_name="rlpd-${env_id}-state-${demos}_rl_demos-${seed}-sample_efficient" logger.wandb=True \
   seed=${seed} train.num_demos=${demos} train.steps=100_000 \
   env.env_id=${env_id} \
-  train.dataset_path="~/.maniskill/demos/${env_id}/rl/trajectory.state.pd_joint_delta_pos.h5" \
-  demo_type="rl" config_type="sample_efficient" # additional tags for logging purposes on wandb
+  train.dataset_path="~/.maniskill/demos/${env_id}/rl/trajectory.state.pd_joint_delta_pos.h5"
 ```
 
 evaluation videos are saved to `exps/<exp_name>/videos`.
@@ -89,15 +87,7 @@ To generate 1000 demonstrations with a trained policy you can run
 XLA_PYTHON_CLIENT_PREALLOCATE=false python rlpd_jax/scripts/collect_demos.py exps/path/to/model.jx \
   num_envs=8 num_episodes=1000
 ```
-This saves the demos which uses CPU vectorization to generate demonstrations in parallel. Note that while the demos are generated on the CPU, you can always convert them to demonstrations on the GPU via the [replay trajectory tool](https://maniskill.readthedocs.io/en/latest/user_guide/datasets/replay.html) as so
-
-```bash
-python -m mani_skill.trajectory.replay_trajectory \
-  --traj-path exps/<exp_name>/eval_videos/trajectory.h5 \
-  -b gpu --use-first-env-state
-```
-
-The replay_trajectory tool can also be used to generate videos
+This saves the demos which uses CPU vectorization to generate demonstrations in parallel. The replay_trajectory tool can also be used to generate videos.
 
 See the rlpd_jax/scripts/collect_demos.py code for details on how to load the saved policies and modify it to your needs.
 

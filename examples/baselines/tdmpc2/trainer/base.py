@@ -1,15 +1,17 @@
 from tdmpc2 import TDMPC2
 from common.buffer import Buffer
+from common.logger import Logger
 
 class Trainer:
 	"""Base trainer class for TD-MPC2."""
 
-	def __init__(self, cfg, env, agent, buffer, logger):
+	def __init__(self, cfg, env, eval_env, agent, buffer, logger):
 		self.cfg = cfg
 		self.env = env
+		self.eval_env = eval_env
 		self.agent: TDMPC2 = agent
 		self.buffer: Buffer = buffer
-		self.logger = logger
+		self.logger: Logger = logger
 		print('Architecture:', self.agent.model)
 		print("Learnable parameters: {:,}".format(self.agent.model.total_params))
 

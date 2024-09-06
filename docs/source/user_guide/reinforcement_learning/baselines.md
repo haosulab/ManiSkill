@@ -42,16 +42,4 @@ add large collage image of all tasks
 
 ## Evaluation
 
-Since GPU simulation is available, there are a few differences compared to past ManiSkill versions / CPU based gym environments. Namely for efficiency, environments by default do not *reconfigure* on each environment reset. Reconfiguration allows the environment to randomize loaded assets which is necessary for some tasks that procedurally generate objects (PegInsertionSide-v1) or sample random real world objects (PickSingleYCB-v1).
-
-Thus, for more fair comparison between different RL algorithms, when evaluating an RL policy, the environment must reconfigure and and have partial resets turned off (e.g. environments do not reset upon success/fail/termination, only upon episode truncation). 
-
-For vectorized environments the code to create a correct evaluation environment by environment ID looks like this:
-
-```python
-env_id = "PickCube-v1"
-num_eval_envs = 16
-env_kwargs = dict(obs_mode="state")
-eval_envs = gym.make(env_id, num_envs=num_eval_envs, reconfiguration_freq=1, **env_kwargs)
-eval_envs = ManiSkillVectorEnv(eval_envs, ignore_terminations=True)
-```
+For proper evaluation of RL policies, see how that code is setup in the [evaluation section in the RL setup page](./setup.md#evaluation). All results reported in the results linked above follow the same evaluation setup.
