@@ -1,5 +1,6 @@
 from .control import *
 from .dexterity import *
+from .draw import DrawLettersEnv
 from .empty_env import EmptyEnv
 from .fmb import *
 from .humanoid import *

@@ -7,6 +7,8 @@ from mani_skill.envs.sapien_env import BaseEnv
 
 from mani_skill.examples.motionplanning.panda.motionplanner import \
     PandaArmMotionPlanningSolver
+from mani_skill.examples.motionplanning.panda_stick.motionplanner import \
+    PandaStickMotionPlanningSolver
 import sapien.utils.viewer
 import h5py
 import json
@@ -21,6 +23,7 @@ def main(args):
         control_mode="pd_joint_pos",
         render_mode="rgb_array",
         reward_mode="sparse",
+        viewer_camera_configs=dict(shader_pack="rt-fast")
     )
     env = RecordEpisode(
         env,
@@ -93,21 +96,37 @@ def solve(env: BaseEnv, debug=False, vis=False):
         "pd_joint_pos",
         "pd_joint_pos_vel",
     ], env.unwrapped.control_mode
-    planner = PandaArmMotionPlanningSolver(
-        env,
-        debug=debug,
-        vis=vis,
-        base_pose=env.unwrapped.agent.robot.pose,
-        visualize_target_grasp_pose=False,
-        print_env_info=False,
-        joint_acc_limits=0.5,
-        joint_vel_limits=0.5,
-    )
+    robot_has_gripper = False
+    if env.unwrapped.robot_uids == "panda_stick":
+        planner = PandaStickMotionPlanningSolver(
+            env,
+            debug=debug,
+            vis=vis,
+            base_pose=env.unwrapped.agent.robot.pose,
+            visualize_target_grasp_pose=False,
+            print_env_info=False,
+            joint_acc_limits=0.5,
+            joint_vel_limits=0.5,
+        )
+    elif env.unwrapped.robot_uids == "panda" or env.unwrapped.robot_uids == "panda_wristcam":
+        robot_has_gripper = True
+        planner = PandaArmMotionPlanningSolver(
+            env,
+            debug=debug,
+            vis=vis,
+            base_pose=env.unwrapped.agent.robot.pose,
+            visualize_target_grasp_pose=False,
+            print_env_info=False,
+            joint_acc_limits=0.5,
+            joint_vel_limits=0.5,
+        )
     viewer = env.render_human()
 
     last_checkpoint_state = None
     gripper_open = True
-    viewer.select_entity(sapien_utils.get_obj_by_name(env.agent.robot.links, "panda_hand")._objs[0].entity)
+    def select_panda_hand():
+        viewer.select_entity(sapien_utils.get_obj_by_name(env.agent.robot.links, "panda_hand")._objs[0].entity)
+    select_panda_hand()
     for plugin in viewer.plugins:
         if isinstance(plugin, sapien.utils.viewer.viewer.TransformWindow):
             transform_window = plugin
@@ -150,7 +169,7 @@ def solve(env: BaseEnv, debug=False, vis=False):
         #     pass
         elif viewer.window.key_press("n"):
             execute_current_pose = True
-        elif viewer.window.key_press("g"):
+        elif viewer.window.key_press("g") and robot_has_gripper:
             if gripper_open:
                 gripper_open = False
                 _, reward, _ ,_, info = planner.close_gripper()
@@ -158,22 +177,36 @@ def solve(env: BaseEnv, debug=False, vis=False):
                 gripper_open = True
                 _, reward, _ ,_, info = planner.open_gripper()
             print(f"Reward: {reward}, Info: {info}")
-        # # TODO left, right depend on orientation really.
-        # elif viewer.window.key_press("down"):
-        #     pose = planner.grasp_pose_visual.pose
-        #     planner.grasp_pose_visual.set_pose(pose * sapien.Pose(p=[0, 0, 0.01]))
-        # elif viewer.window.key_press("up"):
-        #     pose = planner.grasp_pose_visual.pose
-        #     planner.grasp_pose_visual.set_pose(pose * sapien.Pose(p=[0, 0, -0.01]))
-        # elif viewer.window.key_press("right"):
-        #     pose = planner.grasp_pose_visual.pose
-        #     planner.grasp_pose_visual.set_pose(pose * sapien.Pose(p=[0, -0.01, 0]))
-        # elif viewer.window.key_press("left"):
-        #     pose = planner.grasp_pose_visual.pose
-        #     planner.grasp_pose_visual.set_pose(pose * sapien.Pose(p=[0, +0.01, 0]))
+        elif viewer.window.key_press("u"):
+            select_panda_hand()
+            transform_window.gizmo_matrix = (transform_window._gizmo_pose * sapien.Pose(p=[0, 0, -0.01])).to_transformation_matrix()
+            transform_window.update_ghost_objects()
+        elif viewer.window.key_press("j"):
+            select_panda_hand()
+            transform_window.gizmo_matrix = (transform_window._gizmo_pose * sapien.Pose(p=[0, 0, +0.01])).to_transformation_matrix()
+            transform_window.update_ghost_objects()
+        elif viewer.window.key_press("down"):
+            select_panda_hand()
+            transform_window.gizmo_matrix = (transform_window._gizmo_pose * sapien.Pose(p=[+0.01, 0, 0])).to_transformation_matrix()
+            transform_window.update_ghost_objects()
+        elif viewer.window.key_press("up"):
+            select_panda_hand()
+            transform_window.gizmo_matrix = (transform_window._gizmo_pose * sapien.Pose(p=[-0.01, 0, 0])).to_transformation_matrix()
+            transform_window.update_ghost_objects()
+        elif viewer.window.key_press("right"):
+            select_panda_hand()
+            transform_window.gizmo_matrix = (transform_window._gizmo_pose * sapien.Pose(p=[0, +0.01, 0])).to_transformation_matrix()
+            transform_window.update_ghost_objects()
+        elif viewer.window.key_press("left"):
+            select_panda_hand()
+            transform_window.gizmo_matrix = (transform_window._gizmo_pose * sapien.Pose(p=[0, -0.01, 0])).to_transformation_matrix()
+            transform_window.update_ghost_objects()
         if execute_current_pose:
             # z-offset of end-effector gizmo to TCP position is hardcoded for the panda robot here
-            result = planner.move_to_pose_with_screw(transform_window._gizmo_pose * sapien.Pose([0, 0, 0.102]), dry_run=True)
+            if env.unwrapped.robot_uids == "panda":
+                result = planner.move_to_pose_with_screw(transform_window._gizmo_pose * sapien.Pose([0, 0, 0.1]), dry_run=True)
+            elif env.unwrapped.robot_uids == "panda_stick":
+                result = planner.move_to_pose_with_screw(transform_window._gizmo_pose * sapien.Pose([0, 0, 0.15]), dry_run=True)
             if result != -1 and len(result["position"]) < 100:
                 _, reward, _ ,_, info = planner.follow_path(result)
                 print(f"Reward: {reward}, Info: {info}")
