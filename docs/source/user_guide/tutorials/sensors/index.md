@@ -4,7 +4,7 @@ This page documents how to use / customize sensors and cameras in ManiSkill in d
 
 ## Cameras
 
-Cameras in ManiSkill can capture a ton of different modalities of data. By default ManiSkill limits those to just `rgb`, `depth`, `position` (which is used to derive depth), and `segmentation`. Internally ManiSkill uses [SAPIEN](https://sapien.ucsd.edu/) which has a highly optimized rendering system that leverages shaders to render different modalities of data.
+Cameras in ManiSkill can capture a ton of different modalities of data. By default ManiSkill limits those to just `rgb`, `depth`, `position` (which is used to derive depth), and `segmentation`. Internally ManiSkill uses [SAPIEN](https://sapien.ucsd.edu/) which has a highly optimized rendering system that leverages shaders to render different modalities of data. The full set of configurations can be found in {py:class}`mani_skill.sensors.camera.CameraConfig`.
 
 Each shader has a preset configuration that generates textures containing data in a image format, often in a somewhat difficult to use format due to heavy optimization. ManiSkill uses a shader configuration system in python that parses these different shaders into more user friendly formats (namely the well known `rgb`, `depth`, `position`, and `segmentation` type data). This shader config system resides in this file on [Github](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/render/shaders.py) and defines a few friendly defaults for minimal/fast rendering and ray-tracing.
 

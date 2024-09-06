@@ -4,357 +4,81 @@ We support translating actions from certain controllers to a limited number of c
 The script is only tested for Panda, and may include some Panda-specific hardcode.
 """
 
-import argparse
 import multiprocessing as mp
 import os
 from copy import deepcopy
-from typing import Union
+from dataclasses import dataclass
+from typing import Annotated, Optional
 
 import gymnasium as gym
 import h5py
 import numpy as np
-import sapien
+import tyro
 from tqdm.auto import tqdm
-from transforms3d.quaternions import quat2axangle
 
 import mani_skill.envs
-from mani_skill.agents.controllers import *
-from mani_skill.agents.controllers.base_controller import CombinedController
-from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.trajectory import utils as trajectory_utils
 from mani_skill.trajectory.merge_trajectory import merge_h5
-from mani_skill.utils import common, gym_utils, io_utils, wrappers
-from mani_skill.utils.structs.link import Link
+from mani_skill.trajectory.utils.actions import conversion as action_conversion
+from mani_skill.utils import common, io_utils, wrappers
 
 
-def qpos_to_pd_joint_delta_pos(controller: PDJointPosController, qpos):
-    assert type(controller) == PDJointPosController
-    assert controller.config.use_delta
-    assert controller.config.normalize_action
-    delta_qpos = qpos - controller.qpos.cpu().numpy()[0]
-    low, high = controller.config.lower, controller.config.upper
-    return gym_utils.inv_scale_action(delta_qpos, low, high)
-
-
-def qpos_to_pd_joint_target_delta_pos(controller: PDJointPosController, qpos):
-    assert type(controller) == PDJointPosController
-    assert controller.config.use_delta
-    assert controller.config.use_target
-    assert controller.config.normalize_action
-    delta_qpos = qpos - controller._target_qpos.cpu().numpy()[0]
-    low, high = controller.config.lower, controller.config.upper
-    return gym_utils.inv_scale_action(delta_qpos, low, high)
-
-
-def qpos_to_pd_joint_vel(controller: PDJointVelController, qpos):
-    assert type(controller) == PDJointVelController
-    assert controller.config.normalize_action
-    delta_qpos = qpos - controller.qpos.cpu().numpy()[0]
-    qvel = delta_qpos * controller._control_freq
-    low, high = controller.config.lower, controller.config.upper
-    return gym_utils.inv_scale_action(qvel, low, high)
-
-
-def compact_axis_angle_from_quaternion(quat: np.ndarray) -> np.ndarray:
-    theta, omega = quat2axangle(quat)
-    # - 2 * np.pi to make the angle symmetrical around 0
-    if omega > np.pi:
-        omega = omega - 2 * np.pi
-    return omega * theta
-
-
-def delta_pose_to_pd_ee_delta(
-    controller: Union[PDEEPoseController, PDEEPosController],
-    delta_pose: sapien.Pose,
-    pos_only=False,
-):
-    assert isinstance(controller, PDEEPosController)
-    assert controller.config.use_delta
-    assert controller.config.normalize_action
-    low, high = controller.action_space_low, controller.action_space_high
-    if pos_only:
-        return gym_utils.inv_scale_action(delta_pose.p, low, high)
-    delta_pose = np.r_[
-        delta_pose.p,
-        compact_axis_angle_from_quaternion(delta_pose.q),
-    ]
-    return gym_utils.inv_scale_action(delta_pose, low, high)
-
-
-def from_pd_joint_pos_to_ee(
-    output_mode: str,
-    ori_actions,
-    ori_env: BaseEnv,
-    env: BaseEnv,
-    render=False,
-    pbar=None,
-    verbose=False,
-):
-    n = len(ori_actions)
-    if pbar is not None:
-        pbar.reset(total=n)
-
-    ori_controller: CombinedController = ori_env.agent.controller
-    controller: CombinedController = env.agent.controller
-    assert (
-        "arm" in ori_controller.controllers
-    ), "Could not find the controller for the robot arm. This controller conversion tool requires there to be a key called 'arm' in the controller"
-    ori_arm_controller: PDJointPosController = ori_controller.controllers["arm"]
-    arm_controller: PDEEPoseController = controller.controllers["arm"]
-    assert isinstance(arm_controller, PDEEPoseController) or isinstance(
-        arm_controller, PDEEPosController
-    ), "the arm controller must inherit PDEEPoseController or PDEEPosController"
-    assert arm_controller.config.frame in [
-        "root_translation:root_aligned_body_rotation",
-        "root_translation",
-    ], "Currently only support the 'root_translation:root_aligned_body_rotation' ee control frame for delta pose control and 'root_translation' ee control frame for delta pos control"
-    ori_ee_link = ori_env.agent.robot.links_map[arm_controller.ee_link.name]
-    ee_link: Link = arm_controller.ee_link
-    pos_only = arm_controller.config.frame == "root_translation"
-
-    info = {}
-
-    for t in range(n):
-        if pbar is not None:
-            pbar.update()
-
-        ori_action = ori_actions[t]
-        ori_action_dict = ori_controller.to_action_dict(ori_action)
-        output_action_dict = ori_action_dict.copy()  # do not in-place modify
-        ori_env.step(ori_action)
-        flag = True
-
-        for _ in range(4):
-            delta_q = [1, 0, 0, 0]
-            if "root_translation" in arm_controller.config.frame:
-                delta_position = ori_ee_link.pose.p - ee_link.pose.p
-            if "root_aligned_body_rotation" in arm_controller.config.frame:
-                delta_q = (ee_link.pose * ori_ee_link.pose.inv()).q.cpu().numpy()[0]
-            delta_pose = sapien.Pose(delta_position.cpu().numpy()[0], delta_q)
-            arm_action = delta_pose_to_pd_ee_delta(
-                arm_controller, delta_pose, pos_only=pos_only
-            )
-            if (np.abs(arm_action[:3])).max() > 1:  # position clipping
-                if verbose:
-                    tqdm.write(f"Position action is clipped: {arm_action[:3]}")
-                arm_action[:3] = np.clip(arm_action[:3], -1, 1)
-                flag = False
-            if not pos_only:
-                if np.linalg.norm(arm_action[3:]) > 1:  # rotation clipping
-                    if verbose:
-                        tqdm.write(f"Rotation action is clipped: {arm_action[3:]}")
-                    arm_action[3:] = arm_action[3:] / np.linalg.norm(arm_action[3:])
-                    flag = False
-
-            output_action_dict["arm"] = arm_action
-            output_action = controller.from_action_dict(output_action_dict)
-
-            _, _, _, _, info = env.step(output_action)
-            if render:
-                env.render_human()
-
-            if flag:
-                break
-
-    return info
-
-
-def from_pd_joint_pos(
-    output_mode,
-    ori_actions,
-    ori_env: BaseEnv,
-    env: BaseEnv,
-    render=False,
-    pbar=None,
-    verbose=False,
-):
-    if "ee" in output_mode:
-        return from_pd_joint_pos_to_ee(**locals())
-
-    n = len(ori_actions)
-    if pbar is not None:
-        pbar.reset(total=n)
-
-    ori_controller: CombinedController = ori_env.agent.controller
-    controller: CombinedController = env.agent.controller
-
-    info = {}
-
-    for t in range(n):
-        if pbar is not None:
-            pbar.update()
-
-        ori_action = ori_actions[t]
-        ori_action_dict = ori_controller.to_action_dict(ori_action)
-        output_action_dict = ori_action_dict.copy()  # do not in-place modify
-
-        ori_env.step(ori_action)
-        flag = True
-
-        for _ in range(2):
-            if output_mode == "pd_joint_delta_pos":
-                arm_action = qpos_to_pd_joint_delta_pos(
-                    controller.controllers["arm"], ori_action_dict["arm"]
-                )
-            elif output_mode == "pd_joint_target_delta_pos":
-                arm_action = qpos_to_pd_joint_target_delta_pos(
-                    controller.controllers["arm"], ori_action_dict["arm"]
-                )
-            elif output_mode == "pd_joint_vel":
-                arm_action = qpos_to_pd_joint_vel(
-                    controller.controllers["arm"], ori_action_dict["arm"]
-                )
-            else:
-                raise NotImplementedError(
-                    f"Does not support converting pd_joint_pos to {output_mode}"
-                )
-
-            # Assume normalized action
-            if np.max(np.abs(arm_action)) > 1 + 1e-3:
-                if verbose:
-                    tqdm.write(f"Arm action is clipped: {arm_action}")
-                flag = False
-            arm_action = np.clip(arm_action, -1, 1)
-            output_action_dict["arm"] = arm_action
-
-            output_action = controller.from_action_dict(output_action_dict)
-            _, _, _, _, info = env.step(output_action)
-            if render:
-                env.render_human()
-
-            if flag:
-                break
-
-    return info
-
-
-def from_pd_joint_delta_pos(
-    output_mode,
-    ori_actions,
-    ori_env: BaseEnv,
-    env: BaseEnv,
-    render=False,
-    pbar=None,
-    verbose=False,
-):
-    n = len(ori_actions)
-    if pbar is not None:
-        pbar.reset(total=n)
-
-    ori_controller: CombinedController = ori_env.agent.controller
-    controller: CombinedController = env.agent.controller
-    ori_arm_controller: PDJointPosController = ori_controller.controllers["arm"]
-
-    assert output_mode == "pd_joint_pos", output_mode
-    assert ori_arm_controller.config.normalize_action
-    low, high = ori_arm_controller.config.lower, ori_arm_controller.config.upper
-
-    info = {}
-
-    for t in range(n):
-        if pbar is not None:
-            pbar.update()
-
-        ori_action = ori_actions[t]
-        ori_action_dict = ori_controller.to_action_dict(ori_action)
-        output_action_dict = ori_action_dict.copy()  # do not in-place modify
-
-        prev_arm_qpos = ori_arm_controller.qpos
-        delta_qpos = gym_utils.clip_and_scale_action(ori_action_dict["arm"], low, high)
-        arm_action = prev_arm_qpos + delta_qpos
-
-        ori_env.step(ori_action)
-
-        output_action_dict["arm"] = arm_action
-        output_action = controller.from_action_dict(output_action_dict)
-        _, _, _, _, info = env.step(output_action)
-
-        if render:
-            env.render_human()
-
-    return info
+@dataclass
+class Args:
+    traj_path: str
+    """Path to the trajectory .h5 file to replay"""
+    sim_backend: Annotated[str, tyro.conf.arg(aliases=["-b"])] = "auto"
+    """Which simulation backend to use. Can be 'auto', 'cpu', 'gpu'"""
+    obs_mode: Annotated[Optional[str], tyro.conf.arg(aliases=["-o"])] = None
+    """Target observation mode to record in the trajectory. See
+    https://maniskill.readthedocs.io/en/latest/user_guide/concepts/observation.html for a full list of supported observation modes."""
+    target_control_mode: Annotated[Optional[str], tyro.conf.arg(aliases=["-c"])] = None
+    """Target control mode to convert the demonstration actions to.
+    Note that not all control modes can be converted to others successfully and not all robots have easy to convert control modes.
+    Currently the Panda robots are the best supported when it comes to control mode conversion.
+    """
+    verbose: bool = False
+    """Whether to print verbose information during trajectory replays"""
+    save_traj: bool = False
+    """Whether to save trajectories to disk. This will not override the original trajectory file."""
+    save_video: bool = False
+    """Whether to save videos"""
+    num_procs: int = 1
+    """Number of processes to use to help parallelize the trajectory replay process. This uses CPU multiprocessing
+    and only works with the CPU simulation backend at the moment."""
+    max_retry: int = 0
+    """Maximum number of times to try and replay a trajectory until the task reaches a success state at the end."""
+    discard_timeout: bool = False
+    """Whether to discard episodes that timeout and are truncated (depends on the max_episode_steps parameter of task)"""
+    allow_failure: bool = False
+    """Whether to include episodes that fail in saved videos and trajectory data"""
+    vis: bool = False
+    """Whether to visualize the trajectory replay via the GUI."""
+    use_env_states: bool = False
+    """Whether to replay by environment states instead of actions. This guarantees that the environment will look exactly
+    the same as the original trajectory at every step."""
+    use_first_env_state: bool = False
+    """Use the first env state in the trajectory to set initial state. This can be useful for trying to replay
+    demonstrations collected in the CPU simulation in the GPU simulation by first starting with the same initial
+    state as GPU simulated tasks will randomize initial states differently despite given the same seed compared to CPU sim."""
+    count: Optional[int] = None
+    """Number of demonstrations to replay before exiting. By default will replay all demonstrations"""
+    reward_mode: Optional[str] = None
+    """Specifies the reward type that the env should use. By default it will pick the first supported reward mode. Most environments
+    support 'sparse', 'none', and some further support 'normalized_dense' and 'dense' reward modes"""
+    record_rewards: bool = False
+    """Whether the replayed trajectory should include rewards"""
+    shader: str = "default"
+    """Change shader used for rendering. Default is 'default' which is very fast. Can also be 'rt' for ray tracing
+    and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer"""
+    video_fps: int = 30
+    """The FPS of saved videos"""
+    render_mode: str = "rgb_array"
+    """The render mode used for saving videos. Typically there is also 'sensors' and 'all' render modes which further render all sensor outputs like cameras."""
 
 
 def parse_args(args=None):
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--traj-path", type=str, required=True)
-    parser.add_argument(
-        "-b",
-        "--sim-backend",
-        type=str,
-        default="auto",
-        help="Which simulation backend to use. Can be 'auto', 'cpu', 'gpu'",
-    )
-    parser.add_argument("-o", "--obs-mode", type=str, help="target observation mode")
-    parser.add_argument(
-        "-c", "--target-control-mode", type=str, help="target control mode"
-    )
-    parser.add_argument("--verbose", action="store_true")
-    parser.add_argument(
-        "--save-traj", action="store_true", help="whether to save trajectories"
-    )
-    parser.add_argument(
-        "--save-video", action="store_true", help="whether to save videos"
-    )
-    parser.add_argument("--num-procs", type=int, default=1)
-    parser.add_argument("--max-retry", type=int, default=0)
-    parser.add_argument(
-        "--discard-timeout",
-        action="store_true",
-        help="whether to discard episodes that timeout and are truncated (depends on max_episode_steps parameter of task)",
-    )
-    parser.add_argument(
-        "--allow-failure", action="store_true", help="whether to allow failure episodes"
-    )
-    parser.add_argument("--vis", action="store_true")
-    parser.add_argument(
-        "--use-env-states",
-        action="store_true",
-        help="whether to replay by env states instead of actions",
-    )
-    parser.add_argument(
-        "--use-first-env-state",
-        action="store_true",
-        help="use the first env state in the trajectory to set initial state. This can be useful for trying to replay \
-            demonstrations collected in the CPU simulation in the GPU simulation by first starting with the same initial \
-            state as GPU simulated tasks will randomize initial states differently despite given the same seed compared to CPU sim.",
-    )
-    parser.add_argument(
-        "--count",
-        type=int,
-        default=None,
-        help="number of demonstrations to replay before exiting. By default will replay all demonstrations",
-    )
-
-    parser.add_argument(
-        "--reward-mode",
-        type=str,
-        help="specifies the reward type that the env should use. By default it will pick the first supported reward mode",
-    )
-
-    parser.add_argument(
-        "--record-rewards",
-        type=bool,
-        help="whether the replayed trajectory should include rewards",
-        default=False,
-    )
-    parser.add_argument(
-        "--shader",
-        default="default",
-        type=str,
-        help="Change shader used for rendering. Default is 'default' which is very fast. Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer",
-    )
-    parser.add_argument(
-        "--video-fps", default=30, type=int, help="The FPS of saved videos"
-    )
-    parser.add_argument(
-        "--render-mode",
-        default="rgb_array",
-        type=str,
-        help="The render mode used in the video saving",
-    )
-
-    return parser.parse_args(args)
+    return tyro.cli(Args)
 
 
 def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
@@ -532,7 +256,7 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
 
             # From joint position to others
             elif ori_control_mode == "pd_joint_pos":
-                info = from_pd_joint_pos(
+                info = action_conversion.from_pd_joint_pos(
                     target_control_mode,
                     ori_actions,
                     ori_env,
@@ -544,7 +268,7 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
 
             # From joint delta position to others
             elif ori_control_mode == "pd_joint_delta_pos":
-                info = from_pd_joint_delta_pos(
+                info = action_conversion.from_pd_joint_delta_pos(
                     target_control_mode,
                     ori_actions,
                     ori_env,

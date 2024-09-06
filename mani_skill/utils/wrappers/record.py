@@ -20,6 +20,7 @@ from mani_skill.utils.visualization.misc import (
     put_info_on_image,
     tile_images,
 )
+from mani_skill.utils.wrappers import CPUGymWrapper
 
 # NOTE (stao): The code for record.py is quite messy and perhaps confusing as it is trying to support both recording on CPU and GPU seamlessly
 # and handle partial resets. It works but can be claned up a lot.
@@ -287,6 +288,18 @@ class RecordEpisode(gym.Wrapper):
             )
         self.video_nrows = int(np.sqrt(self.unwrapped.num_envs))
 
+        # check if wrapped env is already wrapped by a CPU gym wrapper
+        cur_env = self.env
+        self.cpu_wrapped_env = False
+        while cur_env is not None:
+            if isinstance(cur_env, CPUGymWrapper):
+                self.cpu_wrapped_env = True
+                break
+            if hasattr(cur_env, "env"):
+                cur_env = cur_env.env
+            else:
+                break
+
     @property
     def num_envs(self):
         return self.base_env.num_envs
@@ -341,7 +354,9 @@ class RecordEpisode(gym.Wrapper):
             self._trajectory_buffer = None
         if self.save_trajectory:
             state_dict = self.base_env.get_state_dict()
-            action = common.batch(self.single_action_space.sample())
+            action = common.batch(
+                self.env.get_wrapper_attr("single_action_space").sample()
+            )
             first_step = Step(
                 state=common.to_numpy(common.batch(state_dict)),
                 observation=common.to_numpy(common.batch(obs)),
@@ -568,18 +583,24 @@ class RecordEpisode(gym.Wrapper):
                         group, self._trajectory_buffer.observation, "obs"
                     )
                 elif isinstance(self._trajectory_buffer.observation, np.ndarray):
-                    group.create_dataset(
-                        "obs",
-                        data=self._trajectory_buffer.observation[
-                            start_ptr:end_ptr, env_idx
-                        ],
-                        dtype=self._trajectory_buffer.observation.dtype,
-                    )
+                    if self.cpu_wrapped_env:
+                        group.create_dataset(
+                            "obs",
+                            data=self._trajectory_buffer.observation[start_ptr:end_ptr],
+                            dtype=self._trajectory_buffer.observation.dtype,
+                        )
+                    else:
+                        group.create_dataset(
+                            "obs",
+                            data=self._trajectory_buffer.observation[
+                                start_ptr:end_ptr, env_idx
+                            ],
+                            dtype=self._trajectory_buffer.observation.dtype,
+                        )
                 else:
                     raise NotImplementedError(
                         f"RecordEpisode wrapper does not know how to handle observation data of type {type(self._trajectory_buffer.observation)}"
                     )
-
                 episode_info = dict(
                     episode_id=self._episode_id,
                     episode_seed=self.base_env._episode_seed,
@@ -647,7 +668,6 @@ class RecordEpisode(gym.Wrapper):
 
                 self._json_data["episodes"].append(episode_info)
                 dump_json(self._json_path, self._json_data, indent=2)
-
                 if verbose:
                     if flush_count == 1:
                         print(f"Recorded episode {self._episode_id}")

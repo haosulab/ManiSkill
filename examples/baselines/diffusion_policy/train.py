@@ -13,6 +13,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
 from diffusion_policy.evaluate import evaluate
+from mani_skill.utils import gym_utils
 from mani_skill.utils.registration import REGISTERED_ENVS
 
 from collections import defaultdict
@@ -21,7 +22,7 @@ from torch.utils.data.dataset import Dataset
 from torch.utils.data.sampler import RandomSampler, BatchSampler
 from torch.utils.data.dataloader import DataLoader
 from diffusion_policy.utils import IterationBasedBatchSampler, worker_init_fn
-from diffusion_policy.make_env import make_env
+from diffusion_policy.make_env import make_eval_envs
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 from diffusers.training_utils import EMAModel
 from diffusers.optimization import get_scheduler
@@ -29,6 +30,7 @@ from diffusion_policy.conditional_unet1d import ConditionalUnet1D
 from dataclasses import dataclass, field
 from typing import Optional, List
 import tyro
+
 @dataclass
 class Args:
     exp_name: Optional[str] = None
@@ -55,33 +57,40 @@ class Args:
     num_demos: Optional[int] = None
     """number of trajectories to load from the demo dataset"""
     total_iters: int = 1_000_000
-    """total timesteps of the experiments"""
+    """total timesteps of the experiment"""
     batch_size: int = 1024
     """the batch size of sample from the replay memory"""
 
     # Diffusion Policy specific arguments
     lr: float = 1e-4
+    """the learning rate of the diffusion policy"""
     obs_horizon: int = 2 # Seems not very important in ManiSkill, 1, 2, 4 work well
     act_horizon: int = 8 # Seems not very important in ManiSkill, 4, 8, 15 work well
     pred_horizon: int = 16 # 16->8 leads to worse performance, maybe it is like generate a half image; 16->32, improvement is very marginal
     diffusion_step_embed_dim: int = 64 # not very important
     unet_dims: List[int] = field(default_factory=lambda: [64, 128, 256]) # default setting is about ~4.5M params
     n_groups: int = 8 # jigu says it is better to let each group have at least 8 channels; it seems 4 and 8 are simila
+
+    # Environment/experiment specific arguments
     max_episode_steps: Optional[int] = None
     """Change the environments' max_episode_steps to this value. Sometimes necessary if the demonstrations being imitated are too short. Typically the default
     max episode steps of environments in ManiSkill are tuned lower so reinforcement learning agents can learn faster."""
-
-    # Environment/experiment specific arguments
-    output_dir: str = 'output'
     log_freq: int = 1000
+    """the frequency of logging the training metrics"""
     eval_freq: int = 5000
+    """the frequency of evaluating the agent on the evaluation environments"""
     save_freq: Optional[int] = None
+    """the frequency of saving the model checkpoints. By default this is None and will only save checkpoints based on the best evaluation metrics."""
     num_eval_episodes: int = 100
+    """the number of episodes to evaluate the agent on"""
     num_eval_envs: int = 10
+    """the number of parallel environments to evaluate the agent on"""
     sim_backend: str = "cpu"
+    """the simulation backend to use for evaluation environments. can be "cpu" or "gpu"""
     num_dataload_workers: int = 0
+    """the number of workers to use for loading the training data in the torch dataloader"""
     control_mode: str = 'pd_joint_delta_pos'
-    obj_ids: List[str] = field(default_factory=list)
+    """the control mode to use for the evaluation environments. Must match the control mode of the demonstration dataset."""
 
     # additional tags/configs for logging purposes to wandb and shared comparisons with other algorithms
     demo_type: Optional[str] = None
@@ -186,11 +195,6 @@ class Agent(nn.Module):
             prediction_type='epsilon' # predict noise (instead of denoised action)
         )
 
-        self.get_eval_action = self.get_action
-
-    # def forward(self, obs_seq):
-    #     raise NotImplementedError()
-
     def compute_loss(self, obs_seq, action_seq):
         B = obs_seq.shape[0]
 
@@ -292,14 +296,31 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # env setup
-    max_episode_steps = args.max_episode_steps if args.max_episode_steps is not None else REGISTERED_ENVS[args.env_id].max_episode_steps
-    # note we set reconfiguration_freq to 1 to ensure that the env is reconfigured after each episode to sufficiently randomize object geometries
-    env_kwargs = dict(control_mode=args.control_mode, reward_mode="sparse", obs_mode="state", render_mode="rgb_array", max_episode_steps=max_episode_steps, reconfiguration_freq=1)
+    env_kwargs = dict(control_mode=args.control_mode, reward_mode="sparse", obs_mode="state", render_mode="rgb_array")
+    if args.max_episode_steps is not None:
+        env_kwargs["max_episode_steps"] = args.max_episode_steps
     other_kwargs = dict(obs_horizon=args.obs_horizon)
-    eval_envs = make_env(args.env_id, args.num_eval_envs, args.sim_backend, args.seed, env_kwargs, other_kwargs, video_dir=f'runs/{run_name}/videos' if args.capture_video else None)
-    eval_envs.reset(seed=args.seed) # seed eval_envs here
-    envs = eval_envs
-    assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
+    envs = make_eval_envs(args.env_id, args.num_eval_envs, args.sim_backend, env_kwargs, other_kwargs, video_dir=f'runs/{run_name}/videos' if args.capture_video else None)
+
+    if args.track:
+        import wandb
+        config = vars(args)
+        config["eval_env_cfg"] = dict(**env_kwargs, num_envs=args.num_eval_envs, env_id=args.env_id, env_horizon=gym_utils.find_max_episode_steps_value(envs))
+        wandb.init(
+            project=args.wandb_project_name,
+            entity=args.wandb_entity,
+            sync_tensorboard=True,
+            config=config,
+            name=run_name,
+            save_code=True,
+            group="DiffusionPolicy",
+            tags=["diffusion_policy"]
+        )
+    writer = SummaryWriter(f"runs/{run_name}")
+    writer.add_text(
+        "hyperparameters",
+        "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
+    )
 
     # dataloader setup
     dataset = SmallDemoDataset_DiffusionPolicy(args.demo_path, device, num_traj=args.num_demos)
@@ -334,43 +355,15 @@ if __name__ == "__main__":
     ema = EMAModel(parameters=agent.parameters(), power=0.75)
     ema_agent = Agent(envs, args).to(device)
 
-
-
-    if args.track:
-        import wandb
-        config = vars(args)
-        config["eval_env_cfg"] = dict(**env_kwargs, num_envs=args.num_eval_envs, env_id=args.env_id, env_horizon=max_episode_steps)
-        wandb.init(
-            project=args.wandb_project_name,
-            entity=args.wandb_entity,
-            sync_tensorboard=True,
-            config=config,
-            name=run_name,
-            save_code=True,
-            group="DiffusionPolicy",
-            tags=["diffusion_policy"]
-        )
-    writer = SummaryWriter(f"runs/{run_name}")
-    writer.add_text(
-        "hyperparameters",
-        "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
-    )
-    import json
-    with open(f'runs/{run_name}/args.json', 'w') as f:
-        json.dump(vars(args), f, indent=4)
-
     # ---------------------------------------------------------------------------- #
     # Training begins.
     # ---------------------------------------------------------------------------- #
     agent.train()
-    best_success_once_rate = -1
-    best_success_at_end_rate = -1
 
+    best_eval_metrics = defaultdict(float)
     timings = defaultdict(float)
 
     for iteration, data_batch in enumerate(train_dataloader):
-        cur_iter = iteration + 1
-
         # # copy data from cpu to gpu
         # data_batch = {k: v.cuda(non_blocking=True) for k, v in data_batch.items()}
 
@@ -390,38 +383,36 @@ if __name__ == "__main__":
         # update Exponential Moving Average of the model weights
         ema.step(agent.parameters())
         # TRY NOT TO MODIFY: record rewards for plotting purposes
-        if cur_iter % args.log_freq == 0:
-            print(f"Iteration {cur_iter}, loss: {total_loss.item()}")
-            writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], cur_iter)
-            writer.add_scalar("losses/total_loss", total_loss.item(), cur_iter)
+        if iteration % args.log_freq == 0:
+            print(f"Iteration {iteration}, loss: {total_loss.item()}")
+            writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], iteration)
+            writer.add_scalar("losses/total_loss", total_loss.item(), iteration)
             for k, v in timings.items():
-                writer.add_scalar(f"time/{k}", v, cur_iter)
+                writer.add_scalar(f"time/{k}", v, iteration)
         # Evaluation
-        if cur_iter % args.eval_freq == 0:
-            print('Evaluating')
+        if iteration % args.eval_freq == 0:
             last_tick = time.time()
 
             ema.copy_to(ema_agent.parameters())
-            result = evaluate(args.num_eval_episodes, ema_agent, eval_envs, device)
+            # def sample_fn(obs):
+
+            eval_metrics = evaluate(args.num_eval_episodes, ema_agent, envs, device, args.sim_backend)
             timings["eval"] += time.time() - last_tick
 
-            for k, v in result.items():
-                writer.add_scalar(f"eval/{k}", np.mean(v), cur_iter)
-            sr_once = np.mean(result['success_once'])
-            sr_at_end = np.mean(result['success_at_end'])
-            print(f"Evaluated {len(result['return'])} episodes")
-            print(f"Success Once Rate: {sr_once:.4f}")
-            print(f"Success At End Rate: {sr_at_end:.4f}")
-            if sr_once > best_success_once_rate:
-                best_success_once_rate = sr_once
-                save_ckpt(run_name, 'best_eval_success_rate')
-                print(f'New best success rate: {sr_once:.4f}. Saving checkpoint.')
-            if sr_at_end > best_success_at_end_rate:
-                best_success_at_end_rate = sr_at_end
-                save_ckpt(run_name, 'best_eval_success_rate_at_end')
-                print(f'New best success rate at end: {sr_at_end:.4f}. Saving checkpoint.')
+            print(f"Evaluated {len(eval_metrics['success_at_end'])} episodes")
+            for k in eval_metrics.keys():
+                eval_metrics[k] = np.mean(eval_metrics[k])
+                writer.add_scalar(f"eval/{k}", eval_metrics[k], iteration)
+                print(f"{k}: {eval_metrics[k]:.4f}")
+
+            save_on_best_metrics = ["success_once", "success_at_end"]
+            for k in save_on_best_metrics:
+                if k in eval_metrics and eval_metrics[k] > best_eval_metrics[k]:
+                    best_eval_metrics[k] = eval_metrics[k]
+                    save_ckpt(run_name, f"best_eval_{k}")
+                    print(f'New best {k}_rate: {eval_metrics[k]:.4f}. Saving checkpoint.')
         # Checkpoint
-        if args.save_freq and cur_iter % args.save_freq == 0:
-            save_ckpt(run_name, str(cur_iter))
+        if args.save_freq is not None and iteration % args.save_freq == 0:
+            save_ckpt(run_name, str(iteration))
     envs.close()
     writer.close()

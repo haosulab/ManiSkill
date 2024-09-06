@@ -124,9 +124,7 @@ def index_dict_array(x1, idx: Union[int, slice], inplace=True):
 
 
 # TODO (stao): this code can be simplified
-def to_tensor(
-    array: Union[torch.Tensor, np.array, Sequence], device: Optional[Device] = None
-):
+def to_tensor(array: Array, device: Optional[Device] = None):
     """
     Maps any given sequence to a torch tensor on the CPU/GPU. If physx gpu is not enabled then we use CPU, otherwise GPU, unless specified
     by the device argument
@@ -162,6 +160,8 @@ def to_tensor(
         if isinstance(array, np.ndarray):
             if array.dtype == np.uint16:
                 array = array.astype(np.int32)
+            if array.dtype == np.uint32:
+                array = array.astype(np.int64)
             ret = torch.from_numpy(array)
             if ret.dtype == torch.float64:
                 ret = ret.float()
@@ -179,7 +179,7 @@ def to_tensor(
             return ret.to(device)
 
 
-def to_cpu_tensor(array: Union[torch.Tensor, np.array, Sequence]):
+def to_cpu_tensor(array: Array):
     """
     Maps any given sequence to a torch tensor on the CPU.
     """

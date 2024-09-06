@@ -28,6 +28,8 @@ class ManiSkillVectorEnv(VectorEnv):
             the task reaching a success or fail state as defined in a task's evaluation function. Default is False, meaning there is early stop in
             episode rollouts. If set to True, this would generally for situations where you may want to model a task as infinite horizon where a task
             stops only due to the timelimit.
+        record_metrics (bool): If True, the returned info objects will contain the metrics: return, length, success_once, success_at_end, fail_once, fail_at_end.
+            success/fail metrics are recorded only when the environment has success/fail criteria. success/fail_at_end are recorded only when ignore_terminations is True.
     """
 
     def __init__(
@@ -36,6 +38,7 @@ class ManiSkillVectorEnv(VectorEnv):
         num_envs: int = None,
         auto_reset: bool = True,
         ignore_terminations: bool = False,
+        record_metrics: bool = False,
         **kwargs,
     ):
         if isinstance(env, str):
@@ -45,6 +48,7 @@ class ManiSkillVectorEnv(VectorEnv):
             num_envs = self.base_env.num_envs
         self.auto_reset = auto_reset
         self.ignore_terminations = ignore_terminations
+        self.record_metrics = record_metrics
         self.spec = self._env.spec
         super().__init__(
             num_envs, self._env.single_observation_space, self._env.single_action_space
@@ -53,7 +57,17 @@ class ManiSkillVectorEnv(VectorEnv):
             assert (
                 self.base_env.reconfiguration_freq == 0
             ), "With partial resets, environment cannot be reconfigured automatically"
-        self.returns = torch.zeros(self.num_envs, device=self.base_env.device)
+
+        if self.record_metrics:
+            self.success_once = torch.zeros(
+                self.num_envs, device=self.base_env.device, dtype=torch.bool
+            )
+            self.fail_once = torch.zeros(
+                self.num_envs, device=self.base_env.device, dtype=torch.bool
+            )
+            self.returns = torch.zeros(
+                self.num_envs, device=self.base_env.device, dtype=torch.float32
+            )
 
     @property
     def device(self):
@@ -78,33 +92,56 @@ class ManiSkillVectorEnv(VectorEnv):
             env_idx = options["env_idx"]
             mask = torch.zeros(self.num_envs, dtype=bool, device=self.base_env.device)
             mask[env_idx] = True
-            self.returns[mask] = 0
+            if self.record_metrics:
+                self.success_once[mask] = False
+                self.fail_once[mask] = False
+                self.returns[mask] = 0
         else:
-            self.returns *= 0
+            if self.record_metrics:
+                self.success_once[:] = False
+                self.fail_once[:] = False
+                self.returns[:] = 0
         return obs, info
 
     def step(
         self, actions: Union[Array, Dict]
     ) -> Tuple[Array, Array, Array, Array, Dict]:
         obs, rew, terminations, truncations, infos = self._env.step(actions)
-        self.returns += rew
 
-        infos["episode"] = dict(r=self.returns)
+        if self.record_metrics:
+            episode_info = dict()
+            self.returns += rew
+            if "success" in infos:
+                self.success_once = self.success_once | infos["success"]
+                episode_info["success_once"] = self.success_once.clone()
+            if "fail" in infos:
+                self.fail_once = self.fail_once | infos["fail"]
+                episode_info["fail_once"] = self.fail_once.clone()
+            episode_info["return"] = self.returns.clone()
+            episode_info["episode_len"] = self.base_env.elapsed_steps.clone()
+            episode_info["reward"] = (
+                episode_info["return"] / episode_info["episode_len"]
+            )
 
         if isinstance(terminations, bool):
             terminations = torch.tensor([terminations], device=self.device)
+
         if self.ignore_terminations:
             terminations[:] = False
+            if self.record_metrics:
+                if "success" in infos:
+                    episode_info["success_at_end"] = infos["success"].clone()
+                if "fail" in infos:
+                    episode_info["fail_at_end"] = infos["fail"].clone()
+        if self.record_metrics:
+            infos["episode"] = episode_info
+
         dones = torch.logical_or(terminations, truncations)
-        infos[
-            "real_next_obs"
-        ] = obs  # not part of standard API but makes some RL code slightly less complicated
+
         if dones.any() and self.auto_reset:
-            infos["episode"]["r"] = self.returns.clone()
             final_obs = obs
             env_idx = torch.arange(0, self.num_envs, device=self.device)[dones]
             obs, _ = self.reset(options=dict(env_idx=env_idx))
-            infos["episode"]["_r"] = dones
             infos["final_info"] = infos.copy()
             # gymnasium calls it final observation but it really is just o_{t+1} or the true next observation
             infos["final_observation"] = final_obs

@@ -48,7 +48,11 @@ class TwoRobotStackCube(BaseEnv):
     goal_radius = 0.06
 
     def __init__(
-        self, *args, robot_uids=("panda", "panda"), robot_init_qpos_noise=0.02, **kwargs
+        self,
+        *args,
+        robot_uids=("panda_wristcam", "panda_wristcam"),
+        robot_init_qpos_noise=0.02,
+        **kwargs
     ):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
