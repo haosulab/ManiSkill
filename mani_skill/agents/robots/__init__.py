@@ -16,3 +16,4 @@ from .ur_e import UR10e
 from .widowx import *
 from .xarm import XArm7Ability
 from .xmate3 import Xmate3Robotiq
+from .koch import Koch
