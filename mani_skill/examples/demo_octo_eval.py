@@ -23,6 +23,7 @@ pip install -e .
 
 
 from collections import defaultdict
+import json
 import os
 import signal
 import sys
@@ -42,19 +43,34 @@ import numpy as np
 from mani_skill.envs.tasks.digital_twins.bridge_dataset_eval import *
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import Camera
-def parse_args(args=None):
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-e", "--env-id", type=str, default="PutCarrotOnPlateInScene-v1", help="The environment ID of the task you want to simulate")
-    parser.add_argument("--shader", default="default", type=str)
-    parser.add_argument("--num-envs", type=int, default=1, help="Number of environments to run. Used for some basic testing and not visualized")
-    parser.add_argument(
-        "-s",
-        "--seed",
-        type=int,
-        help="Seed the random actions and environment. Default is no seed",
-    )
-    args = parser.parse_args()
-    return args
+import tyro
+from dataclasses import dataclass
+
+@dataclass
+class Args:
+    env_id: str = "PutCarrotOnPlateInScene-v1"
+    """The environment ID of the task you want to simulate. Can be one of
+    PutCarrotOnPlateInScene-v1, PutSpoonOnTableClothInScene-v1"""
+
+    shader: str = "default"
+
+    num_envs: int = 1
+    """Number of environments to run. Currently only 1 is supported"""
+
+    record_dir: str = "videos"
+    """The directory to save videos and results"""
+
+    model: str = "octo-base"
+    """The model to evaluate on the given environment. Can be one of octo-base or octo-small"""
+
+    seed: int = 0
+    """Seed the random actions and environment. Default seed is 0"""
+
+    num_episodes: int = 100
+    """Number of episodes to run and record evaluation metrics over"""
+
+def parse_args() -> Args:
+    return tyro.cli(Args)
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -62,6 +78,9 @@ import numpy as np
 def main(args):
     if args.seed is not None:
         np.random.seed(args.seed)
+
+    exp_dir = os.path.join(args.record_dir, f"real2sim_eval/{model_name}_{args.env_id}")
+
     sensor_configs = dict()
     # if args.cam_width:
     #     sensor_configs["width"] = args.cam_width
@@ -91,7 +110,7 @@ def main(args):
     #     env.step(None)
     #     env.render_human()
 
-    model_name = "octo-small"
+    model_name = "octo-base"
     policy_setup = "widowx_bridge"
     model = OctoInference(model_type=model_name, policy_setup=policy_setup, init_rng=0)
 
@@ -145,12 +164,15 @@ def main(args):
             images.append(img)
         for k, v in info.items():
             eval_metrics[k].append(v)
-        images_to_video(images, f"videos/real2sim_eval/{model_name}_{args.env_id}", f"octo_eval_{seed}", fps=10, verbose=True)
+        images_to_video(images, exp_dir, f"octo_eval_{seed}", fps=10, verbose=True)
         eps_count += 1
         print(f"Evaluated episode {eps_count}. Seed {seed}. Results after {eps_count} episodes:")
         for k, v in eval_metrics.items():
             print(f"{k}: {np.mean(v)}")
 
+    mean_metrics = {k: np.mean(v) for k, v in eval_metrics.items()}
+    with open(os.path.join(exp_dir, "eval_metrics.json"), "w") as f:
+        json.dump(mean_metrics, f)
     import ipdb; ipdb.set_trace()
 if __name__ == "__main__":
     main(parse_args())
