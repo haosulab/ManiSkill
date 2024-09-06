@@ -149,6 +149,7 @@ class WidowX250SBridgeDatasetSink(WidowX250SBridgeDatasetFlatTable):
 class BaseBridgeEnv(BaseDigitalTwinEnv):
     """Base Digital Twin environment for digital twins of the BridgeData v2"""
 
+    MODEL_JSON = "info_bridge_custom_v0.json"
     SUPPORTED_OBS_MODES = ["rgb+segmentation"]
     SUPPORTED_REWARD_MODES = ["none"]
     scene_setting: Literal["flat_table", "sink"] = "flat_table"
@@ -186,7 +187,7 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
             robot_cls = WidowX250SBridgeDatasetSink
 
         self.model_db: Dict[str, Dict] = io_utils.load_json(
-            ASSET_DIR / "tasks/bridge_dataset/custom/info_bridge_custom_v0.json"
+            ASSET_DIR / "tasks/bridge_dataset/custom/" / self.MODEL_JSON
         )
         if ("num_envs" in kwargs and kwargs["num_envs"] > 1) or (
             "sim_backend" in kwargs and kwargs["sim_backend"] == "gpu"
@@ -261,6 +262,18 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
         else:
             actor = builder.build(name=model_id)
         return actor
+
+    def _load_lighting(self, options: dict):
+        self.scene.set_ambient_light([0.3, 0.3, 0.3])
+        self.scene.add_directional_light(
+            [0, 0, -1],
+            [2.2, 2.2, 2.2],
+            shadow=False,
+            shadow_scale=5,
+            shadow_map_size=2048,
+        )
+        self.scene.add_directional_light([-1, -0.5, -1], [0.7, 0.7, 0.7])
+        self.scene.add_directional_light([1, 1, -1], [0.7, 0.7, 0.7])
 
     def _load_scene(self, options: dict):
         # load background
@@ -370,10 +383,9 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
                 self.agent.robot.set_pose(
                     sapien.Pose([0.147, 0.070, 0.85], q=[0, 0, 0, 1])
                 )
-            # self._settle(t=0.5)
             self.agent.reset(init_qpos=qpos)
 
-            # settle objects
+            # figure out object bounding boxes after settling. This is used to determine if an object is near the target object
             self.episode_source_obj_xyz_after_settle = self.objs[
                 self.source_obj_name
             ].pose.p
@@ -385,7 +397,7 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
             }
             self.episode_source_obj_bbox_world = self.episode_model_bbox_sizes[
                 self.source_obj_name
-            ].float()  # bbox xyz extents in the world frame at timestep=0
+            ].float()
             self.episode_target_obj_bbox_world = self.episode_model_bbox_sizes[
                 self.target_obj_name
             ].float()
@@ -404,6 +416,7 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
             )[0, :, 0]
             """target object bbox size (3, )"""
 
+            # stats to track
             self.consecutive_grasp = torch.zeros((b,), dtype=torch.int32)
             self.episode_stats = dict(
                 all_obj_keep_height=torch.zeros((b,), dtype=torch.bool),
@@ -490,43 +503,16 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
             offset[:, 2] - tgt_obj_half_length_bbox[2] - src_obj_half_length_bbox[2]
             <= z_flag_required_offset
         )
-        src_on_target = xy_flag and z_flag
+        src_on_target = xy_flag & z_flag
         # src_on_target = False
 
         if success_require_src_completely_on_target:
             # whether the source object is on the target object based on contact information
-            contacts = self.scene.get_pairwise_contact_forces(
+            contact_forces = self.scene.get_pairwise_contact_forces(
                 source_object, target_object
             )
-            if contacts.sum() != 0:
-                # torch.linalg.norm(contacts, dim=1)
-                import ipdb
-
-                ipdb.set_trace()
-            # contacts = self._scene.get_contacts()
-            # flag = True
-            # robot_link_names = [x.name for x in self.agent.robot.get_links()]
-            # tgt_obj_name = self.episode_target_obj.name
-            # ignore_actor_names = [tgt_obj_name] + robot_link_names
-            # for contact in contacts:
-            #     actor_0, actor_1 = contact.actor0, contact.actor1
-            #     other_obj_contact_actor_name = None
-            #     if actor_0.name == self.episode_source_obj.name:
-            #         other_obj_contact_actor_name = actor_1.name
-            #     elif actor_1.name == self.episode_source_obj.name:
-            #         other_obj_contact_actor_name = actor_0.name
-            #     if other_obj_contact_actor_name is not None:
-            #         # the object is in contact with an actor
-            #         contact_impulse = np.sum(
-            #             [point.impulse for point in contact.points], axis=0
-            #         )
-            #         if (other_obj_contact_actor_name not in ignore_actor_names) and (
-            #             np.linalg.norm(contact_impulse) > 1e-6
-            #         ):
-            #             # the object has contact with an actor other than the robot link or the target object, so the object is not yet put on the target object
-            #             flag = False
-            #             break
-            # src_on_target = src_on_target and flag
+            net_forces = torch.linalg.norm(contact_forces, dim=1)
+            src_on_target = src_on_target & (net_forces > 0.05)
 
         success = src_on_target
 
@@ -540,20 +526,7 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
             self.episode_stats["consecutive_grasp"] | consecutive_grasp
         )
 
-        return dict(
-            # whether the correct object is moved
-            moved_correct_obj=moved_correct_obj,
-            # whether the wrong object is moved
-            moved_wrong_obj=moved_wrong_obj,
-            # whether the source object is on the target object
-            src_on_target=src_on_target,
-            # whether the source object is grasped at least once in the episode.
-            is_src_obj_grasped=is_src_obj_grasped,
-            # whether the source object is grasped consecutively for 5 steps. True if this occurs once in the episode
-            consecutive_grasp=consecutive_grasp,
-            # episode_stats=self.episode_stats,
-            success=success,
-        )
+        return dict(**self.episode_stats, success=success)
 
     def is_final_subtask(self):
         # whether the current subtask is the final one, only meaningful for long-horizon tasks

@@ -45,7 +45,7 @@ from mani_skill.sensors.camera import Camera
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--env-id", type=str, default="PutCarrotOnPlateInScene-v1", help="The environment ID of the task you want to simulate")
-    parser.add_argument("--shader", default="minimal", type=str, help="Change shader used for all cameras in the environment for rendering. Default is 'minimal' which is very fast. Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer")
+    parser.add_argument("--shader", default="default", type=str)
     parser.add_argument("--num-envs", type=int, default=1, help="Number of environments to run. Used for some basic testing and not visualized")
     parser.add_argument(
         "-s",
@@ -120,6 +120,7 @@ def main(args):
     # gt_actions = np.load(os.path.join(os.path.dirname(__file__), "actions.npy"))
     infos = []
     eval_metrics = defaultdict(list)
+    eps_count = 0
     for seed in range(args.seed, args.seed+100):
         obs, _ = env.reset(seed=seed)
         # while True:
@@ -139,11 +140,12 @@ def main(args):
             truncated = bool(truncated)
             img = render_obs(obs)
             img = visualization.put_info_on_image(img, info)
-            # import ipdb; ipdb.set_trace()
             images.append(img)
         for k, v in info.items():
             eval_metrics[k].append(v)
-        images_to_video(images, "videos/real2sim_eval/", f"octo_eval_{seed}", fps=10, verbose=True)
+        images_to_video(images, f"videos/real2sim_eval/{args.env_id}", f"octo_eval_{seed}", fps=10, verbose=True)
+        eps_count += 1
+        print(f"Evaluated episode {eps_count}. Seed {seed}. Results after {eps_count} episodes:")
         for k, v in eval_metrics.items():
             print(f"{k}: {np.mean(v)}")
 

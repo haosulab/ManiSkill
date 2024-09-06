@@ -54,9 +54,12 @@ class PutCarrotOnPlateInScene(BaseBridgeEnv):
         )
 
     def evaluate(self):
-        return super()._evaluate(
+        info = super()._evaluate(
             success_require_src_completely_on_target=True,
         )
+        for x in ["all_obj_keep_height", "near_tgt_obj", "is_closest_to_tgt"]:
+            del info[x]
+        return info
 
     def get_language_instruction(self, **kwargs):
         return "put carrot on plate"
@@ -107,8 +110,10 @@ class PutEggplantInBasketScene(BaseBridgeEnv):
         return "put eggplant into yellow basket"
 
 
-@register_env("StackGreenCubeOnYellowCubeInScene-v0", max_episode_steps=60)
+@register_env("StackGreenCubeOnYellowCubeInScene-v1", max_episode_steps=60)
 class StackGreenCubeOnYellowCubeInScene(BaseBridgeEnv):
+    MODEL_JSON = "info_bridge_custom_baked_tex_v0.json"
+
     def __init__(
         self,
         **kwargs,
@@ -142,14 +147,22 @@ class StackGreenCubeOnYellowCubeInScene(BaseBridgeEnv):
         quat_configs = [np.array([[1, 0, 0, 0], [1, 0, 0, 0]])]
         quat_configs = torch.tensor(quat_configs)
         xyz_configs = torch.tensor(np.stack(xyz_configs))
-        source_obj_name = "green_cube_3cm"
-        target_obj_name = "yellow_cube_3cm"
+        source_obj_name = "baked_green_cube_3cm"
+        target_obj_name = "baked_yellow_cube_3cm"
         super().__init__(
             obj_names=[source_obj_name, target_obj_name],
             xyz_configs=xyz_configs,
             quat_configs=quat_configs,
             **kwargs,
         )
+
+    def evaluate(self):
+        info = super()._evaluate(
+            success_require_src_completely_on_target=True,
+        )
+        for x in ["all_obj_keep_height", "near_tgt_obj", "is_closest_to_tgt"]:
+            del info[x]
+        return info
 
     def get_language_instruction(self, **kwargs):
         return "stack the green block on the yellow block"
