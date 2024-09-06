@@ -13,14 +13,15 @@ from mani_skill.utils import sapien_utils
 from mani_skill.utils.building.ground import build_ground
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table.scene_builder import TableSceneBuilder
+from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 
-MAX_DOTS = 300
+MAX_DOTS = 1010
 DOT_THICKNESS = 0.004
 
 
-@register_env("DrawLetters-v1", max_episode_steps=MAX_DOTS)
+@register_env("DrawLetters-v1", max_episode_steps=MAX_DOTS - 10)
 class DrawLettersEnv(BaseEnv):
 
     SUPPORTED_REWARD_MODES = ["none"]
@@ -30,7 +31,7 @@ class DrawLettersEnv(BaseEnv):
 
     @property
     def _default_sim_config(self):
-        return SimConfig(sim_freq=100, control_freq=20)
+        return SimConfig(sim_freq=100, control_freq=50)
 
     @property
     def _default_sensor_configs(self):
@@ -51,11 +52,11 @@ class DrawLettersEnv(BaseEnv):
     def _default_human_render_camera_configs(self):
         pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
         return CameraConfig(
-            "render_camera", pose=pose, width=512, height=512, fov=1, near=0.01, far=100
+            "render_camera", pose=pose, width=640, height=480, fov=1, near=0.01, far=100
         )
 
     def _load_scene(self, options: dict):
-        self.table_scene = TableSceneBuilder(self)
+        self.table_scene = TableSceneBuilder(self, robot_init_qpos_noise=0)
         self.table_scene.build()
         # cheap way to un-texture table
         for part in self.table_scene.table._objs:
@@ -73,14 +74,39 @@ class DrawLettersEnv(BaseEnv):
                 triangle.material.set_roughness_texture(None)
         self.dots = []
         for i in range(MAX_DOTS):
-            builder = self.scene.create_actor_builder()
-            builder.add_cylinder_visual(
-                radius=0.01,
-                half_length=DOT_THICKNESS / 2,
-                material=sapien.render.RenderMaterial(base_color=[0.8, 0.2, 0.2, 1]),
-            )
-            actor = builder.build_kinematic(name=f"dot_{i}")
-            self.dots.append(actor)
+            if self.num_envs == 1:
+                builder = self.scene.create_actor_builder()
+                builder.add_cylinder_visual(
+                    radius=0.01,
+                    half_length=DOT_THICKNESS / 2,
+                    material=sapien.render.RenderMaterial(
+                        base_color=[0.8, 0.2, 0.2, 1]
+                    ),
+                )
+                actor1 = builder.build_kinematic(name=f"dot_{i}_1")
+                self.dots.append(actor1)
+            else:
+                builder = self.scene.create_actor_builder()
+                builder.add_cylinder_visual(
+                    radius=0.01,
+                    half_length=DOT_THICKNESS / 2,
+                    material=sapien.render.RenderMaterial(
+                        base_color=[0.8, 0.2, 0.2, 1]
+                    ),
+                )
+                builder.set_scene_idxs(list(range(self.num_envs // 2)))
+                actor1 = builder.build_kinematic(name=f"dot_{i}_1")
+                builder = self.scene.create_actor_builder()
+                builder.add_cylinder_visual(
+                    radius=0.01,
+                    half_length=DOT_THICKNESS / 2,
+                    material=sapien.render.RenderMaterial(
+                        base_color=[0.2, 0.2, 0.8, 1]
+                    ),
+                )
+                builder.set_scene_idxs(list(range(self.num_envs // 2, self.num_envs)))
+                actor2 = builder.build_kinematic(name=f"dot_{i}_2")
+                self.dots.append(Actor.merge([actor1, actor2]))
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         # NOTE (stao): for simplicity this task cannot handle partial resets
@@ -94,13 +120,12 @@ class DrawLettersEnv(BaseEnv):
                 )
 
     def _after_control_step(self):
-        # return super()._after_control_step()
-        # robot_brush_pos = self.agent.tcp.pose.p
+        if self.gpu_sim_enabled:
+            self.scene._gpu_fetch_all()
         # only draw if the robot is close to the table
-        robot_touching_table = self.agent.tcp.pose.p[:, 2] < 2
+        robot_touching_table = self.agent.tcp.pose.p[:, 2] < 0.02
         robot_brush_pos = torch.zeros((self.num_envs, 3), device=self.device)
         robot_brush_pos[:, 2] = -DOT_THICKNESS
-        # print(robot_touching_table)
         robot_brush_pos[robot_touching_table, :2] = self.agent.tcp.pose.p[
             robot_touching_table, :2
         ]
@@ -109,7 +134,8 @@ class DrawLettersEnv(BaseEnv):
             Pose.create_from_pq(robot_brush_pos, euler2quat(0, np.pi / 2, 0))
         )
         self.draw_step += 1
-        self.scene._gpu_apply_all()
+        if self.gpu_sim_enabled:
+            self.scene._gpu_apply_all()
 
     def evaluate(self):
         return {}

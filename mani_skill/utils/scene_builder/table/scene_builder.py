@@ -176,13 +176,13 @@ class TableSceneBuilder(SceneBuilder):
         elif self.env.robot_uids == "panda_stick":
             qpos = np.array(
                 [
-                    0.662,
-                    0.212,
-                    0.086,
-                    -2.685,
-                    -0.115,
-                    2.898,
-                    1.673,
+                    0.0,
+                    np.pi / 8,
+                    0,
+                    -np.pi * 5 / 8,
+                    0,
+                    np.pi * 3 / 4,
+                    np.pi / 4,
                 ]
             )
             qpos = (

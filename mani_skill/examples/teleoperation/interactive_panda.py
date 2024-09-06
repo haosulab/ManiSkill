@@ -22,7 +22,7 @@ def main(args):
         obs_mode=args.obs_mode,
         control_mode="pd_joint_pos",
         render_mode="rgb_array",
-        reward_mode="sparse",
+        reward_mode="none",
         viewer_camera_configs=dict(shader_pack="rt-fast")
     )
     env = RecordEpisode(
@@ -64,7 +64,8 @@ def main(args):
         obs_mode=args.obs_mode,
         control_mode="pd_joint_pos",
         render_mode="rgb_array",
-        reward_mode="sparse",
+        reward_mode="none",
+        human_render_camera_configs=dict(shader_pack="rt-fast"),
     )
     env = RecordEpisode(
         env,
@@ -207,7 +208,7 @@ def solve(env: BaseEnv, debug=False, vis=False):
                 result = planner.move_to_pose_with_screw(transform_window._gizmo_pose * sapien.Pose([0, 0, 0.1]), dry_run=True)
             elif env.unwrapped.robot_uids == "panda_stick":
                 result = planner.move_to_pose_with_screw(transform_window._gizmo_pose * sapien.Pose([0, 0, 0.15]), dry_run=True)
-            if result != -1 and len(result["position"]) < 100:
+            if result != -1 and len(result["position"]) < 150:
                 _, reward, _ ,_, info = planner.follow_path(result)
                 print(f"Reward: {reward}, Info: {info}")
             else:
