@@ -171,7 +171,7 @@ def solve(env: BaseEnv, debug=False, vis=False):
             arrow_keys: move the panda hand in the direction of the arrow keys
             n: execute command via motion planning to make the robot move to the target pose indicated by the ghost panda arm
             c: stop this episode and record the trajectory and move on to a new episode
-            q: quit the script and stop collecting data and save videos
+            q: quit the script and stop collecting data. Save trajectories and optionally videos.
             """)
             pass
         # elif viewer.window.key_press("k"):
