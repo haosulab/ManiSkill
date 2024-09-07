@@ -412,7 +412,7 @@ class BaseEnv(gym.Env):
         self,
     ) -> CameraConfig:
         """Default configuration for the viewer camera, controlling shader, fov, etc. By default if there is a human render camera called "render_camera" then the viewer will use that camera's pose."""
-        return CameraConfig(uid="viewer", pose=sapien.Pose([0, 0, 1]), width=1920, height=1080, shader_pack="default")
+        return CameraConfig(uid="viewer", pose=sapien.Pose([0, 0, 1]), width=1920, height=1080, shader_pack="default", near=0.0, far=1000)
 
     @property
     def sim_freq(self) -> int:
