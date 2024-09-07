@@ -1,5 +1,6 @@
 import argparse
 from ast import parse
+from typing import Annotated
 import gymnasium as gym
 import numpy as np
 import sapien.core as sapien
@@ -15,7 +16,26 @@ import json
 import mani_skill.trajectory.utils as trajectory_utils
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.wrappers.record import RecordEpisode
-def main(args):
+import tyro
+from dataclasses import dataclass
+
+@dataclass
+class Args:
+    env_id: Annotated[str, tyro.conf.arg(aliases=["-e"])] = "PickCube-v1"
+    obs_mode: str = "none"
+    robot_uid: Annotated[str, tyro.conf.arg(aliases=["-r"])] = "panda"
+    """The robot to use. Robot setups supported for teleop in this script are panda and panda_stick"""
+    record_dir: str = "demos"
+    """directory to record the demonstration data and optionally videos"""
+    save_video: bool = False
+    """whether to save the videos of the demonstrations after collecting them all"""
+    video_saving_shader: str = "rt-fast"
+    """the shader to use for the videos of the demonstrations. 'minimal' is the fast shader, 'rt' and 'rt-fast' are the ray tracing shaders"""
+
+def parse_args() -> Args:
+    return tyro.cli(Args)
+
+def main(args: Args):
     output_dir = f"{args.record_dir}/{args.env_id}/teleop/"
     env = gym.make(
         args.env_id,
@@ -54,41 +74,43 @@ def main(args):
     json_file_path = env._json_path
     env.close()
     del env
-    print(f"saving videos to {output_dir}")
+    print(f"Trajectories saved to {h5_file_path}")
+    if args.save_video:
+        print(f"Saving videos to {output_dir}")
 
-    trajectory_data = h5py.File(h5_file_path)
-    with open(json_file_path, "r") as f:
-        json_data = json.load(f)
-    env = gym.make(
-        args.env_id,
-        obs_mode=args.obs_mode,
-        control_mode="pd_joint_pos",
-        render_mode="rgb_array",
-        reward_mode="none",
-        human_render_camera_configs=dict(shader_pack="rt-fast"),
-    )
-    env = RecordEpisode(
-        env,
-        output_dir=output_dir,
-        trajectory_name="trajectory",
-        save_video=True,
-        info_on_video=False,
-        save_trajectory=False,
-        video_fps=30
-    )
-    for episode in json_data["episodes"]:
-        traj_id = f"traj_{episode['episode_id']}"
-        data = trajectory_data[traj_id]
-        env.reset(**episode["reset_kwargs"])
-        env_states_list = trajectory_utils.dict_to_list_of_dicts(data["env_states"])
+        trajectory_data = h5py.File(h5_file_path)
+        with open(json_file_path, "r") as f:
+            json_data = json.load(f)
+        env = gym.make(
+            args.env_id,
+            obs_mode=args.obs_mode,
+            control_mode="pd_joint_pos",
+            render_mode="rgb_array",
+            reward_mode="none",
+            human_render_camera_configs=dict(shader_pack=args.video_saving_shader),
+        )
+        env = RecordEpisode(
+            env,
+            output_dir=output_dir,
+            trajectory_name="trajectory",
+            save_video=True,
+            info_on_video=False,
+            save_trajectory=False,
+            video_fps=30
+        )
+        for episode in json_data["episodes"]:
+            traj_id = f"traj_{episode['episode_id']}"
+            data = trajectory_data[traj_id]
+            env.reset(**episode["reset_kwargs"])
+            env_states_list = trajectory_utils.dict_to_list_of_dicts(data["env_states"])
 
-        env.base_env.set_state_dict(env_states_list[0])
-        for action in np.array(data["actions"]):
-            env.step(action)
+            env.base_env.set_state_dict(env_states_list[0])
+            for action in np.array(data["actions"]):
+                env.step(action)
 
-    trajectory_data.close()
-    env.close()
-    del env
+        trajectory_data.close()
+        env.close()
+        del env
 
 
 
@@ -143,7 +165,10 @@ def solve(env: BaseEnv, debug=False, vis=False):
         if viewer.window.key_press("h"):
             print("""Available commands:
             h: print this help menu
-            g: toggle gripper to close/open
+            g: toggle gripper to close/open (if there is a gripper)
+            u: move the panda hand up
+            j: move the panda hand down
+            arrow_keys: move the panda hand in the direction of the arrow keys
             n: execute command via motion planning to make the robot move to the target pose indicated by the ghost panda arm
             c: stop this episode and record the trajectory and move on to a new episode
             q: quit the script and stop collecting data and save videos
@@ -196,11 +221,11 @@ def solve(env: BaseEnv, debug=False, vis=False):
             transform_window.update_ghost_objects()
         elif viewer.window.key_press("right"):
             select_panda_hand()
-            transform_window.gizmo_matrix = (transform_window._gizmo_pose * sapien.Pose(p=[0, +0.01, 0])).to_transformation_matrix()
+            transform_window.gizmo_matrix = (transform_window._gizmo_pose * sapien.Pose(p=[0, -0.01, 0])).to_transformation_matrix()
             transform_window.update_ghost_objects()
         elif viewer.window.key_press("left"):
             select_panda_hand()
-            transform_window.gizmo_matrix = (transform_window._gizmo_pose * sapien.Pose(p=[0, -0.01, 0])).to_transformation_matrix()
+            transform_window.gizmo_matrix = (transform_window._gizmo_pose * sapien.Pose(p=[0, +0.01, 0])).to_transformation_matrix()
             transform_window.update_ghost_objects()
         if execute_current_pose:
             # z-offset of end-effector gizmo to TCP position is hardcoded for the panda robot here
@@ -216,13 +241,7 @@ def solve(env: BaseEnv, debug=False, vis=False):
                 else: print("Generated motion plan was too long. Try a closer sub-goal")
             execute_current_pose = False
 
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-e", "--env-id", type=str, default="PickCube-v1")
-    parser.add_argument("-o", "--obs-mode", type=str, default="none")
-    parser.add_argument("-r", "--robot-uid", type=str, default="panda", help="Robot setups supported are ['panda']")
-    parser.add_argument("--record-dir", type=str, default="demos")
-    args, opts = parser.parse_known_args()
+
 
     return args
 if __name__ == "__main__":
