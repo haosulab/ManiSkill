@@ -66,8 +66,8 @@ class TableTopFreeDrawEnv(BaseEnv):
             CameraConfig(
                 "base_camera",
                 pose=pose,
-                width=128,
-                height=128,
+                width=320,
+                height=240,
                 fov=1.2,
                 near=0.01,
                 far=100,
@@ -80,8 +80,8 @@ class TableTopFreeDrawEnv(BaseEnv):
         return CameraConfig(
             "render_camera",
             pose=pose,
-            width=640,
-            height=480,
+            width=1280,
+            height=960,
             fov=1.2,
             near=0.01,
             far=100,
