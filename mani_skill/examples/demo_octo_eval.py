@@ -27,6 +27,7 @@ import json
 import os
 import signal
 import sys
+from typing import Annotated
 
 from matplotlib import pyplot as plt
 
@@ -48,7 +49,7 @@ from dataclasses import dataclass
 
 @dataclass
 class Args:
-    env_id: str = "PutCarrotOnPlateInScene-v1"
+    env_id: Annotated[str, tyro.conf.arg(aliases=["-e"])] = "PutCarrotOnPlateInScene-v1"
     """The environment ID of the task you want to simulate. Can be one of
     PutCarrotOnPlateInScene-v1, PutSpoonOnTableClothInScene-v1"""
 
@@ -63,7 +64,7 @@ class Args:
     model: str = "octo-base"
     """The model to evaluate on the given environment. Can be one of octo-base or octo-small"""
 
-    seed: int = 0
+    seed: Annotated[int, tyro.conf.arg(aliases=["-s"])] = 0
     """Seed the random actions and environment. Default seed is 0"""
 
     num_episodes: int = 100
@@ -79,7 +80,6 @@ def main(args):
     if args.seed is not None:
         np.random.seed(args.seed)
 
-    exp_dir = os.path.join(args.record_dir, f"real2sim_eval/{model_name}_{args.env_id}")
 
     sensor_configs = dict()
     # if args.cam_width:
@@ -113,12 +113,15 @@ def main(args):
     model_name = "octo-base"
     policy_setup = "widowx_bridge"
     model = OctoInference(model_type=model_name, policy_setup=policy_setup, init_rng=0)
+    exp_dir = os.path.join(args.record_dir, f"real2sim_eval/{model_name}_{args.env_id}")
 
     renderer = visualization.ImageRenderer(wait_for_button_press=False)
     def render_obs(obs):
         # obs["sensor_data"]
         # import ipdb; ipdb.set_trace()
-        return common.to_numpy(obs["sensor_data"]["3rd_view_camera"]["rgb"], dtype=np.uint8)
+        img =  common.to_numpy(obs["sensor_data"]["3rd_view_camera"]["rgb"], dtype=np.uint8)
+        # renderer(img)
+        return img
         cam_num = 0
         imgs=[]
         for cam in obs["sensor_data"].keys():
@@ -133,7 +136,7 @@ def main(args):
                     imgs.append(depth_rgb)
                 cam_num += 1
         img = visualization.tile_images(imgs, nrows=n_cams)
-        # renderer(img)
+        renderer(img)
         return img
 
     # gt_actions = np.load(os.path.join(os.path.dirname(__file__), "actions.npy"))
@@ -145,8 +148,8 @@ def main(args):
         # while True:
         #     env.step(None)
         #     env.render_human()
-        #     # render_obs(obs)
-        #     # obs, _, _, _, _ = env.step(env.action_space.sample())
+            # render_obs(obs)
+            # obs, _, _, _, _ = env.step(env.action_space.sample())
         instruction = env.unwrapped.get_language_instruction()
         print("instruction:", instruction)
         model.reset(instruction)

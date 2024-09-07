@@ -65,7 +65,7 @@ class PutCarrotOnPlateInScene(BaseBridgeEnv):
         return "put carrot on plate"
 
 
-@register_env("PutEggplantInBasketScene-v0", max_episode_steps=120)
+@register_env("PutEggplantInBasketScene-v1", max_episode_steps=120)
 class PutEggplantInBasketScene(BaseBridgeEnv):
     scene_setting = "sink"
     rgb_always_overlay_objects = ["sink", "dummy_sink_target_plane"]
@@ -106,8 +106,29 @@ class PutEggplantInBasketScene(BaseBridgeEnv):
             **kwargs,
         )
 
+    def evaluate(self, *args, **kwargs):
+        return super()._evaluate(
+            success_require_src_completely_on_target=False,
+            z_flag_required_offset=0.06,
+            *args,
+            **kwargs,
+        )
+
     def get_language_instruction(self, **kwargs):
         return "put eggplant into yellow basket"
+
+    def _load_lighting(self, options):
+        self.enable_shadow
+
+        self.scene.set_ambient_light([0.3, 0.3, 0.3])
+        self.scene.add_directional_light(
+            [0, 0, -1],
+            [0.3, 0.3, 0.3],
+            position=[0, 0, 1],
+            shadow=False,
+            shadow_scale=5,
+            shadow_map_size=2048,
+        )
 
 
 @register_env("StackGreenCubeOnYellowCubeInScene-v1", max_episode_steps=60)
