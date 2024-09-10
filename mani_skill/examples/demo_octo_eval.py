@@ -19,6 +19,29 @@ git clone https://github.com/octo-models/octo/
 cd octo
 git checkout 653c54acde686fde619855f2eac0dd6edad7116b  # we use octo-1.0
 pip install -e .
+
+#!/bin/bash
+
+models=("octo-small" "octo-base")
+env_ids=(
+    "PutCarrotOnPlateInScene-v1"
+    "PutSpoonOnTableClothInScene-v1"
+    "StackGreenCubeOnYellowCubeInScene-v1"
+)
+
+for model in "${models[@]}"; do
+    for env_id in "${env_ids[@]}"; do
+        echo "Running evaluation for model: $model, environment: $env_id"
+        XLA_PYTHON_CLIENT_PREALLOCATE=false python mani_skill/examples/demo_octo_eval.py \
+            --model="$model" -e "$env_id" -s 0 --num-episodes 24
+    done
+done
+
+echo "All evaluations completed."
+
+
+XLA_PYTHON_CLIENT_PREALLOCATE=false python mani_skill/examples/demo_octo_eval.py \
+    --model="octo-small" -e "StackGreenCubeOnYellowCubeInScene-v1" -s 0 --num-episodes 24
 """
 
 
@@ -68,6 +91,9 @@ class Args:
     reset_by_episode_id: bool = True
     """Whether to reset by fixed episode ids instead of random sampling initial states."""
 
+    info_on_video: bool = False
+    """Whether to write info text onto the video"""
+
 
 def main():
     args = tyro.cli(Args)
@@ -112,17 +138,17 @@ def main():
         print("instruction:", instruction)
         model.reset(instruction)
         images = []
-        images.append(render_obs(obs))
         predicted_terminated, truncated = False, False
+        images.append(render_obs(obs))
         while not (predicted_terminated or truncated):
-            raw_action, action = model.step(images[-1])
+            raw_action, action = model.step(images[-1], instruction)
             predicted_terminated = bool(action["terminate_episode"][0] > 0)
             action = np.concatenate([action["world_vector"], action["rot_axangle"], action["gripper"]])
             obs, reward, terminated, truncated, info = env.step(action)
             truncated = bool(truncated)
-            img = render_obs(obs)
-            img = visualization.put_info_on_image(img, info)
-            images.append(img)
+            if args.info_on_video:
+                images[-1] = visualization.put_info_on_image(images[-1], info)
+            images.append(render_obs(obs))
         for k, v in info.items():
             eval_metrics[k].append(v)
         images_to_video(images, exp_dir, f"octo_eval_{seed}", fps=10, verbose=True)
