@@ -26,18 +26,13 @@ from collections import defaultdict
 import json
 import os
 import signal
-import sys
+import numpy as np
 from typing import Annotated
-
-from matplotlib import pyplot as plt
-
 from mani_skill.utils import common
 from mani_skill.utils import visualization
 from mani_skill.utils.visualization.misc import images_to_video
 from mani_skill.utils.wrappers.gymnasium import CPUGymWrapper
 signal.signal(signal.SIGINT, signal.SIG_DFL) # allow ctrl+c
-
-import argparse
 
 import gymnasium as gym
 import numpy as np
@@ -56,7 +51,10 @@ class Args:
     shader: str = "default"
 
     num_envs: int = 1
-    """Number of environments to run. Currently only 1 is supported"""
+    """Number of environments to run. Currently only 1 is supported at the moment"""
+
+    num_episodes: int = 100
+    """Number of episodes to run and record evaluation metrics over"""
 
     record_dir: str = "videos"
     """The directory to save videos and results"""
@@ -70,22 +68,13 @@ class Args:
     num_episodes: int = 100
     """Number of episodes to run and record evaluation metrics over"""
 
-def parse_args() -> Args:
-    return tyro.cli(Args)
-
-import matplotlib.pyplot as plt
-import numpy as np
-
-def main(args):
+def main():
+    args = tyro.cli(Args)
     if args.seed is not None:
         np.random.seed(args.seed)
 
 
     sensor_configs = dict()
-    # if args.cam_width:
-    #     sensor_configs["width"] = args.cam_width
-    # if args.cam_height:
-    #     sensor_configs["height"] = args.cam_height
     sensor_configs["shader_pack"] = args.shader
     env: BaseEnv = gym.make(
         args.env_id,
@@ -94,6 +83,7 @@ def main(args):
         sensor_configs=sensor_configs,
         sim_backend="cpu",
     )
+    # TODO (stao): support GPU evals
     env = CPUGymWrapper(env)
 
     obs, _ = env.reset(seed=args.seed)
@@ -104,52 +94,21 @@ def main(args):
     print(f"Visualizing {n_cams} RGBD cameras")
 
     from simpler_env.policies.octo.octo_model import OctoInference
-    # viewer = env.render_human()
-    # viewer.paused=True;env.render_human()
-    # while True:
-    #     env.step(None)
-    #     env.render_human()
-
-    model_name = "octo-base"
+    model_name = "octo-small"
     policy_setup = "widowx_bridge"
     model = OctoInference(model_type=model_name, policy_setup=policy_setup, init_rng=0)
     exp_dir = os.path.join(args.record_dir, f"real2sim_eval/{model_name}_{args.env_id}")
 
-    renderer = visualization.ImageRenderer(wait_for_button_press=False)
+    # renderer = visualization.ImageRenderer(wait_for_button_press=False)
     def render_obs(obs):
-        # obs["sensor_data"]
-        # import ipdb; ipdb.set_trace()
         img =  common.to_numpy(obs["sensor_data"]["3rd_view_camera"]["rgb"], dtype=np.uint8)
         # renderer(img)
         return img
-        cam_num = 0
-        imgs=[]
-        for cam in obs["sensor_data"].keys():
-            if "rgb" in obs["sensor_data"][cam]:
-                rgb = common.to_numpy(obs["sensor_data"][cam]["rgb"], dtype=np.uint8)
-                imgs.append(rgb)
-                if "depth" in obs["sensor_data"][cam]:
-                    depth = common.to_numpy(obs["sensor_data"][cam]["depth"][0]).astype(np.float32)
-                    depth = depth / (depth.max() - depth.min())
-                    depth_rgb = np.zeros_like(rgb)
-                    depth_rgb[..., :] = depth*255
-                    imgs.append(depth_rgb)
-                cam_num += 1
-        img = visualization.tile_images(imgs, nrows=n_cams)
-        renderer(img)
-        return img
 
-    # gt_actions = np.load(os.path.join(os.path.dirname(__file__), "actions.npy"))
-    infos = []
     eval_metrics = defaultdict(list)
     eps_count = 0
-    for seed in range(args.seed, args.seed+100):
+    for seed in range(args.seed, args.seed+args.num_episodes):
         obs, _ = env.reset(seed=seed)
-        # while True:
-        #     env.step(None)
-        #     env.render_human()
-            # render_obs(obs)
-            # obs, _, _, _, _ = env.step(env.action_space.sample())
         instruction = env.unwrapped.get_language_instruction()
         print("instruction:", instruction)
         model.reset(instruction)
@@ -176,6 +135,6 @@ def main(args):
     mean_metrics = {k: np.mean(v) for k, v in eval_metrics.items()}
     with open(os.path.join(exp_dir, "eval_metrics.json"), "w") as f:
         json.dump(mean_metrics, f)
-    import ipdb; ipdb.set_trace()
+
 if __name__ == "__main__":
-    main(parse_args())
+    main()

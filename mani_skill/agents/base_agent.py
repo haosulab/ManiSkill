@@ -166,7 +166,7 @@ class BaseAgent:
 
         if not os.path.exists(asset_path):
             print(f"Robot {self.uid} definition file not found at {asset_path}")
-            if len(assets.DATA_GROUPS[self.uid]) > 0:
+            if self.uid in assets.DATA_GROUPS or len(assets.DATA_GROUPS[self.uid]) > 0:
                 response = download_asset.prompt_yes_no(
                     f"Robot {self.uid} has assets available for download. Would you like to download them now?"
                 )
@@ -181,7 +181,9 @@ class BaseAgent:
                     print(f"Exiting as assets for robot {self.uid} are not downloaded")
                     exit()
             else:
-                print(f"Exiting as assets for robot {self.uid} are not found")
+                print(
+                    f"Exiting as assets for robot {self.uid} are not found. Check that this agent is properly registered with the appropriate download asset ids"
+                )
                 exit()
         self.robot: Articulation = loader.load(asset_path)
         assert self.robot is not None, f"Fail to load URDF/MJCF from {asset_path}"

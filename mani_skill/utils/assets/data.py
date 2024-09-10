@@ -163,7 +163,7 @@ def initialize_data_sources():
     )
     DATA_SOURCES["widowx250s"] = DataSource(
         source_type="robot",
-        url="https://github.com/haosulab/ManiSkill-WidowX250S/archive/refs/tags/v0.1.0.zip",
+        url="https://github.com/haosulab/ManiSkill-WidowX250S/archive/refs/tags/v0.2.0.zip",
         target_path="robots/widowx",
     )
     DATA_SOURCES["googlerobot"] = DataSource(

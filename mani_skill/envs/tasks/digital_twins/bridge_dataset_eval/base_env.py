@@ -14,6 +14,7 @@ from transforms3d.quaternions import quat2mat
 from mani_skill import ASSET_DIR
 from mani_skill.agents.controllers.pd_ee_pose import PDEEPoseControllerConfig
 from mani_skill.agents.controllers.pd_joint_pos import PDJointPosMimicControllerConfig
+from mani_skill.agents.registration import register_agent
 from mani_skill.agents.robots.widowx.widowx import WidowX250S
 from mani_skill.envs.tasks.digital_twins.base_env import BaseDigitalTwinEnv
 from mani_skill.sensors.camera import CameraConfig
@@ -25,6 +26,7 @@ from mani_skill.utils.structs.types import SimConfig
 
 
 # Real2Sim tuned WidowX250S robot
+@register_agent(asset_download_ids=["widowx250s"])
 class WidowX250SBridgeDatasetFlatTable(WidowX250S):
     uid = "widowx250s_bridgedataset_flat_table"
     arm_joint_names = [
@@ -125,6 +127,7 @@ class WidowX250SBridgeDatasetFlatTable(WidowX250S):
 
 
 # Tuned for the sink setup
+@register_agent(asset_download_ids=["widowx250s"])
 class WidowX250SBridgeDatasetSink(WidowX250SBridgeDatasetFlatTable):
     uid = "widowx250s_bridgedataset_sink"
 
