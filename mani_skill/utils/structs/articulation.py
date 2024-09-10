@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import dataclass, field
 from functools import cached_property
 from typing import TYPE_CHECKING, Dict, List, Tuple, Union
@@ -377,16 +378,29 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
                 .transpose(1, 0)
             )
         else:
+            included_links = [self.links_map[k]._objs[0] for k in link_names]
+            contacts = self.px.get_contacts()
+            articulation_contacts = defaultdict(list)
+            for contact in contacts:
+                if contact.bodies[0] in included_links:
+                    articulation_contacts[contact.bodies[0].name].append(
+                        (contact, True)
+                    )
+                elif contact.bodies[1] in included_links:
+                    articulation_contacts[contact.bodies[1].name].append(
+                        (contact, False)
+                    )
 
-            body_contacts = sapien_utils.get_cpu_articulation_contacts(
-                self.px.get_contacts(),
-                self._objs[0],
-                included_links=[self.links_map[k]._objs[0] for k in link_names],
-            )
-            net_force = common.to_tensor(
-                sapien_utils.compute_total_impulse(body_contacts)
-            )
-            # TODO (stao): (unify contacts api between gpu / cpu)
+            net_force = torch.zeros(len(link_names), 3)
+            for link_name in link_names:
+                link_contacts = articulation_contacts[link_name]
+                if len(link_contacts) > 0:
+                    total_impulse = torch.zeros(3)
+                    for contact, flag in link_contacts:
+                        contact_impulse = torch.sum(
+                            [point.impulse for point in contact.points], axis=0
+                        )
+                        total_impulse += contact_impulse * (1 if flag else -1)
             return net_force[None, :]
 
     def get_net_contact_forces(self, link_names: Union[List[str], Tuple[str]]):

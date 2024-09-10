@@ -299,6 +299,8 @@ def get_cpu_articulation_contacts(
     excluded_entities: Optional[List[sapien.Entity]] = None,
     included_links: Optional[List[physx.PhysxArticulationLinkComponent]] = None,
 ) -> List[Tuple[physx.PhysxContact, bool]]:
+    """Gets all CPU contact objects that include any one of the links in `included_links` and excludes any of the entities in `excluded_entities`.
+    This also ignores contacts between links in `included_links` and the articulation itself"""
     articulation_contacts = []
     links = articulation.get_links()
     if excluded_entities is None:
