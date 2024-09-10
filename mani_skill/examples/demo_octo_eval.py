@@ -65,8 +65,6 @@ class Args:
     seed: Annotated[int, tyro.conf.arg(aliases=["-s"])] = 0
     """Seed the random actions and environment. Default seed is 0"""
 
-    num_episodes: int = 100
-    """Number of episodes to run and record evaluation metrics over"""
 
 def main():
     args = tyro.cli(Args)
@@ -94,10 +92,9 @@ def main():
     print(f"Visualizing {n_cams} RGBD cameras")
 
     from simpler_env.policies.octo.octo_model import OctoInference
-    model_name = "octo-small"
     policy_setup = "widowx_bridge"
-    model = OctoInference(model_type=model_name, policy_setup=policy_setup, init_rng=0)
-    exp_dir = os.path.join(args.record_dir, f"real2sim_eval/{model_name}_{args.env_id}")
+    model = OctoInference(model_type=args.model, policy_setup=policy_setup, init_rng=0)
+    exp_dir = os.path.join(args.record_dir, f"real2sim_eval/{args.model}_{args.env_id}")
 
     # renderer = visualization.ImageRenderer(wait_for_button_press=False)
     def render_obs(obs):
@@ -109,6 +106,10 @@ def main():
     eps_count = 0
     for seed in range(args.seed, args.seed+args.num_episodes):
         obs, _ = env.reset(seed=seed)
+        # while True:
+        #     # env.render_human()
+        #     render_obs(obs)
+        # exit()
         instruction = env.unwrapped.get_language_instruction()
         print("instruction:", instruction)
         model.reset(instruction)

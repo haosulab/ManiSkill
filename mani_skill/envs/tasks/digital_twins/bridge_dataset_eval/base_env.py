@@ -279,6 +279,11 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
         self.scene.add_directional_light([1, 1, -1], [0.7, 0.7, 0.7])
 
     def _load_scene(self, options: dict):
+        # original SIMPLER envs always do this? except for open drawer task
+        sapien_utils.set_articulation_render_material(
+            self.agent.robot._objs[0], specular=0.9, roughness=0.3
+        )
+
         # load background
         builder = self.scene.create_actor_builder()
         scene_pose = sapien.Pose(q=[0.707, 0.707, 0, 0])
