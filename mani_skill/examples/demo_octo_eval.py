@@ -65,6 +65,9 @@ class Args:
     seed: Annotated[int, tyro.conf.arg(aliases=["-s"])] = 0
     """Seed the random actions and environment. Default seed is 0"""
 
+    reset_by_episode_id: bool = True
+    """Whether to reset by fixed episode ids instead of random sampling initial states."""
+
 
 def main():
     args = tyro.cli(Args)
@@ -83,8 +86,6 @@ def main():
     )
     # TODO (stao): support GPU evals
     env = CPUGymWrapper(env)
-
-    obs, _ = env.reset(seed=args.seed)
     n_cams = 0
     for config in env.unwrapped._sensors.values():
         if isinstance(config, Camera):
@@ -105,11 +106,8 @@ def main():
     eval_metrics = defaultdict(list)
     eps_count = 0
     for seed in range(args.seed, args.seed+args.num_episodes):
-        obs, _ = env.reset(seed=seed)
-        # while True:
-        #     # env.render_human()
-        #     render_obs(obs)
-        # exit()
+        obs, _ = env.reset(seed=seed, options={"episode_id": seed})
+
         instruction = env.unwrapped.get_language_instruction()
         print("instruction:", instruction)
         model.reset(instruction)

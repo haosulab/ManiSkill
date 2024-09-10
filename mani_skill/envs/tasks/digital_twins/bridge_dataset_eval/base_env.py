@@ -349,8 +349,18 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
         # NOTE: this part of code is not GPU parallelized
         with torch.device(self.device):
             b = len(env_idx)
-            pos_episode_ids = torch.randint(0, len(self.xyz_configs), size=(b,))
-            quat_episode_ids = torch.randint(0, len(self.quat_configs), size=(b,))
+            if "episode_id" in options:
+                if isinstance(options["episode_id"], int):
+                    options["episode_id"] = torch.tensor([options["episode_id"]])
+                    assert len(options["episode_id"]) == b
+                pos_episode_ids = (
+                    options["episode_id"]
+                    % (len(self.xyz_configs) * len(self.quat_configs))
+                ) // len(self.quat_configs)
+                quat_episode_ids = options["episode_id"] % len(self.quat_configs)
+            else:
+                pos_episode_ids = torch.randint(0, len(self.xyz_configs), size=(b,))
+                quat_episode_ids = torch.randint(0, len(self.quat_configs), size=(b,))
             for i, actor in enumerate(self.objs.values()):
                 xyz = self.xyz_configs[pos_episode_ids, i]
                 actor.set_pose(
@@ -470,14 +480,6 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
                     obj_xyz_after_settle[:, :2] - obj.pose.p[:, :2], dim=1
                 )
             )
-        # for obj, obj_xyz_after_settle in zip(
-        #     self.objs, self.episode_obj_xyzs_after_settle
-        # ):
-        #     if obj.name == self.episode_source_obj.name:
-        #         continue
-        #     other_obj_xy_move_dist.append(
-        #         np.linalg.norm(obj_xyz_after_settle[:2] - obj.pose.p[:2])
-        #     )
         moved_correct_obj = (source_obj_xy_move_dist > 0.03) and (
             all([x < source_obj_xy_move_dist for x in other_obj_xy_move_dist])
         )
