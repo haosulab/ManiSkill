@@ -83,10 +83,13 @@ class Args:
     """The directory to save videos and results"""
 
     model: str = "octo-base"
-    """The model to evaluate on the given environment. Can be one of octo-base or octo-small"""
+    """The model to evaluate on the given environment. Can be one of octo-base, octo-small, rt-1x"""
+
+    ckpt_path: str = ""
+    """Checkpoint path for models. Only used for RT models"""
 
     seed: Annotated[int, tyro.conf.arg(aliases=["-s"])] = 0
-    """Seed the random actions and environment. Default seed is 0"""
+    """Seed the model and environment. Default seed is 0"""
 
     reset_by_episode_id: bool = True
     """Whether to reset by fixed episode ids instead of random sampling initial states."""
@@ -117,10 +120,18 @@ def main():
         if isinstance(config, Camera):
             n_cams += 1
     print(f"Visualizing {n_cams} RGBD cameras")
-
+    from simpler_env.policies.rt1.rt1_model import RT1Inference
     from simpler_env.policies.octo.octo_model import OctoInference
     policy_setup = "widowx_bridge"
-    model = OctoInference(model_type=args.model, policy_setup=policy_setup, init_rng=0)
+    if args.model == "octo-base" or args.model == "octo-small":
+        model = OctoInference(model_type=args.model, policy_setup=policy_setup, init_rng=args.seed, action_scale=1)
+    elif args.model == "rt-1x":
+        ckpt_path=args.ckpt_path
+        model = RT1Inference(
+            saved_model_path=ckpt_path,
+            policy_setup=policy_setup,
+            action_scale=1,
+        )
     exp_dir = os.path.join(args.record_dir, f"real2sim_eval/{args.model}_{args.env_id}")
 
     # renderer = visualization.ImageRenderer(wait_for_button_press=False)
