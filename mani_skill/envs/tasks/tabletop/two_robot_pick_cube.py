@@ -1,5 +1,6 @@
 from typing import Any, Dict, Tuple
 
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from transforms3d.euler import euler2quat
@@ -53,6 +54,11 @@ class TwoRobotPickCube(BaseEnv):
     ):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
+        self.right_agent_wrist = sapien_utils.get_obj_by_name(
+            self.right_agent.robot.get_links(), "panda_link7"
+        )
+
+        self.plot_list = []
 
     @property
     def _default_sim_config(self):
@@ -75,7 +81,6 @@ class TwoRobotPickCube(BaseEnv):
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
     def _load_scene(self, options: dict):
-        self.cube_half_size = 0.02
         self.table_scene = TableSceneBuilder(
             env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
         )
@@ -113,6 +118,8 @@ class TwoRobotPickCube(BaseEnv):
             goal_xyz[:, 1] = 0.15 + torch.rand((b,)) * 0.1 - 0.05
             goal_xyz[:, 2] = torch.rand((b,)) * 0.3 + xyz[:, 2]
             self.goal_site.set_pose(Pose.create_from_pq(goal_xyz))
+
+            self.plot_list = []
 
     @property
     def left_agent(self) -> Panda:
@@ -184,7 +191,7 @@ class TwoRobotPickCube(BaseEnv):
         reaching_reward = 1 - torch.tanh(5 * tcp_to_obj_dist)
         stage_2_reward = reaching_reward
 
-        # TODO: IDEA ADD REWARD FOR HEIGHT OF FINGERS - ideally middle of cube
+        # TODO: IDEA ADD REWARD FOR HEIGHT OF AND WIDTH BETWEEN FINGERS -> encourages open claw when grasping
         self.right_agent: Panda
         right_tip_1_height = self.right_agent.finger1_link.pose.p[:, 2]
         right_tip_2_height = self.right_agent.finger2_link.pose.p[:, 2]
@@ -200,14 +207,11 @@ class TwoRobotPickCube(BaseEnv):
                     - self.right_agent.finger2_link.pose.p,
                     axis=1,
                 )
-                - 0.08  # kinda hardcoded distance between fingers
+                - 0.07  # kinda hardcoded distance between fingers
             )
         )
         tip_reward = (tip_height_reward + tip_width_reward) / 2
         stage_2_reward += tip_reward
-
-        is_grasped = self.right_agent.is_grasping(self.cube)
-        stage_2_reward += 2 * is_grasped
 
         # make left arm move as close as possible to the y=-0.2 line
         left_arm_leave_reward = 1 - torch.tanh(
@@ -215,35 +219,69 @@ class TwoRobotPickCube(BaseEnv):
         )
         stage_2_reward += left_arm_leave_reward
 
+        is_grasped = self.right_agent.is_grasping(self.cube)
+        stage_2_reward += 2 * is_grasped
+
         reward[cube_at_other_side] = 2 + stage_2_reward[cube_at_other_side]
 
         # stage 2 passes if cube is grasped
 
-        # TODO: IDEA ADD INTERMEDIATE STAGE THAT REWARDS LIFTING THE CUBE OFF THE TABLE -> fails the bad grips
-        is_lifted = self.cube.pose.p[:, 2] > 0.02
+        # Stage 4: place object at goal
+        # tool_vector = self.right_agent.tcp.pose.p - self.right_agent_wrist.pose.p
+        # goal_vector = self.goal_site.pose.p - self.right_agent.tcp.pose.p
+        # normed_dot_product = torch.einsum("in,in->i", tool_vector, goal_vector) / (torch.norm(tool_vector, dim=1) * torch.norm(goal_vector, dim=1))
+        # alignment_reward = ((normed_dot_product / 2)) + 0.5
+        # stage_3_reward = alignment_reward
+        stage_3_reward = 0
 
-        reward[is_lifted] = 8 + is_lifted
+        # tool_vector = self.right_agent.tcp.pose.p - self.right_agent_wrist.pose.p
+        # z_vector = torch.tensor([0., 0., -1.], device=self.device).repeat(tool_vector.shape[0], 1)  # N x 3
+        # normed_dot_product = torch.einsum("in, in->i", tool_vector, z_vector) / (torch.norm(tool_vector, dim=1) * torch.norm(z_vector, dim=1))
+        # alignment_reward = ((normed_dot_product / 2)) + 0.5
 
-        # Stage 3: place object at goal
+        # stage_3_reward += alignment_reward
+
         obj_to_goal_dist = torch.linalg.norm(
-            self.goal_site.pose.p - self.cube.pose.p, axis=1
+            self.goal_site.pose.p - self.right_agent.tcp.pose.p, axis=1
         )
         place_reward = 1 - torch.tanh(5 * obj_to_goal_dist)
-        reward[is_grasped] = 8 + place_reward[is_grasped]
+        # place_reward = 1 / (1 + 2 * obj_to_goal_dist)
+        self.plot_list.append(obj_to_goal_dist[0].item())
 
-        # stage 3 passes if object is placed
+        stage_3_reward += place_reward
+
+        reward[is_grasped] = 8 + stage_3_reward[is_grasped]
+
+        is_obj_near = torch.logical_and(obj_to_goal_dist < 0.25, is_grasped)
+        reward[is_obj_near] = 10 + 2 * stage_3_reward[is_obj_near]
+
+        # stage 4 passes if object is placed
         is_obj_placed = info["is_obj_placed"]
 
-        # Stage 4: keep robot static at the goal
+        # Stage 5: keep robot static at the goal
         static_reward = 1 - torch.tanh(
             5 * torch.linalg.norm(self.right_agent.robot.get_qvel()[..., :-2], axis=1)
         )
-        reward[is_obj_placed] = 10 + static_reward[is_obj_placed]
+        # left_robot_static_reward = 1 - torch.tanh(
+        #     5 * torch.linalg.norm(self.left_agent.robot.get_qvel()[..., :-2], axis=1)
+        # )
+        reward[is_obj_placed] = 13 + static_reward[is_obj_placed]
 
-        reward[info["success"]] = 12
+        reward[info["success"]] = 15
+
+        if (is_grasped.shape[0] == 8) and len(self.plot_list) == 100:
+            print("IG", is_grasped)
+            print("reward", place_reward)
+            if is_grasped.any():
+                print("IOP", is_obj_placed)
+                print("reward", place_reward)
+            print("TOTAL REWARD", reward)
+            plt.plot(range(len(self.plot_list)), self.plot_list)
+            plt.show()
+
         return reward
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        return self.compute_dense_reward(obs=obs, action=action, info=info) / 12
+        return self.compute_dense_reward(obs=obs, action=action, info=info) / 15
