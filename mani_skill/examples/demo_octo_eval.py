@@ -33,7 +33,7 @@ for model in "${models[@]}"; do
     for env_id in "${env_ids[@]}"; do
         echo "Running evaluation for model: $model, environment: $env_id"
         XLA_PYTHON_CLIENT_PREALLOCATE=false python mani_skill/examples/demo_octo_eval.py \
-            --model="$model" -e "$env_id" -s 0 --num-episodes 24
+            --model="$model" -e "$env_id" -s 0 --num-episodes 72
     done
 done
 
@@ -134,17 +134,23 @@ def main():
         )
     exp_dir = os.path.join(args.record_dir, f"real2sim_eval/{args.model}_{args.env_id}")
 
-    # renderer = visualization.ImageRenderer(wait_for_button_press=False)
+    renderer = visualization.ImageRenderer(wait_for_button_press=False)
     def render_obs(obs):
         img =  common.to_numpy(obs["sensor_data"]["3rd_view_camera"]["rgb"], dtype=np.uint8)
-        # renderer(img)
+        renderer(img)
         return img
 
     eval_metrics = defaultdict(list)
     eps_count = 0
     for seed in range(args.seed, args.seed+args.num_episodes):
         obs, _ = env.reset(seed=seed, options={"episode_id": seed})
-
+        render_obs(obs)
+        env.render_human().paused=True
+        while True:
+            env.render_human()
+            obs, _, _, _, _ = env.step(None)
+        #     env.reset()
+        #     #
         instruction = env.unwrapped.get_language_instruction()
         print("instruction:", instruction)
         model.reset(instruction)

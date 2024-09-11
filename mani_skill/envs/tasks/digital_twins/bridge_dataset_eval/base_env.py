@@ -141,7 +141,10 @@ class WidowX250SBridgeDatasetSink(WidowX250SBridgeDatasetFlatTable):
                 ),
                 entity_uid="base_link",
                 width=640,
+                # fov=1.5,
                 height=480,
+                near=0.01,
+                far=10,
                 intrinsic=np.array(
                     [[623.588, 0, 319.501], [0, 623.588, 239.545], [0, 0, 1]]
                 ),
@@ -312,7 +315,7 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
         if self.scene_setting == "sink":
             self.sink = self._build_actor_helper(
                 "sink",
-                kinematic=True,
+                kinematic=False,
                 initial_pose=sapien.Pose([-0.16, 0.13, 0.88], [1, 0, 0, 0]),
             )
         # model scales
@@ -366,7 +369,22 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
                 actor.set_pose(
                     Pose.create_from_pq(p=xyz, q=self.quat_configs[quat_episode_ids, i])
                 )
-            self._settle()
+            if self.gpu_sim_enabled:
+                self.scene._gpu_apply_all()
+            self._settle(0.5)
+            if self.gpu_sim_enabled:
+                self.scene._gpu_fetch_all()
+            # Some objects need longer time to settle
+            lin_vel, ang_vel = 0.0, 0.0
+            for obj_name, obj in self.objs.items():
+                lin_vel += torch.linalg.norm(obj.linear_velocity)
+                ang_vel += torch.linalg.norm(obj.angular_velocity)
+            if lin_vel > 1e-3 or ang_vel > 1e-2:
+                if self.gpu_sim_enabled:
+                    self.scene._gpu_apply_all()
+                self._settle(1.5)
+                if self.gpu_sim_enabled:
+                    self.scene._gpu_fetch_all()
             # measured values for bridge dataset
             if self.scene_setting == "flat_table":
                 qpos = np.array(
@@ -399,7 +417,7 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
                     ]
                 )
                 self.agent.robot.set_pose(
-                    sapien.Pose([0.147, 0.070, 0.85], q=[0, 0, 0, 1])
+                    sapien.Pose([0.127, 0.060, 0.85], q=[0, 0, 0, 1])
                 )
             self.agent.reset(init_qpos=qpos)
 
