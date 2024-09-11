@@ -315,7 +315,7 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
         if self.scene_setting == "sink":
             self.sink = self._build_actor_helper(
                 "sink",
-                kinematic=False,
+                kinematic=True,
                 initial_pose=sapien.Pose([-0.16, 0.13, 0.88], [1, 0, 0, 0]),
             )
         # model scales
@@ -382,7 +382,7 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
             if lin_vel > 1e-3 or ang_vel > 1e-2:
                 if self.gpu_sim_enabled:
                     self.scene._gpu_apply_all()
-                self._settle(1.5)
+                self._settle(3)
                 if self.gpu_sim_enabled:
                     self.scene._gpu_fetch_all()
             # measured values for bridge dataset

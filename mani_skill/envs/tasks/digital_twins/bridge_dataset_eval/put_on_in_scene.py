@@ -85,11 +85,10 @@ class PutEggplantInBasketScene(BaseBridgeEnv):
         grid_pos = []
         for x in np.linspace(-half_span_x, half_span_x, num_x):
             for y in np.linspace(-half_span_y, half_span_y, num_y):
-                grid_pos.append(
-                    np.array([x + xy_center[0], y + xy_center[1], 0.937163])
-                )
+                grid_pos.append(np.array([x + xy_center[0], y + xy_center[1], 0.936]))
         xyz_configs = [np.stack([pos, target_xy], axis=0) for pos in grid_pos]
         xyz_configs = torch.tensor(np.stack(xyz_configs))
+        # Pose([-0.106847, 0.184165, 0.937616], [0.449144, 0.723185, 0.419872, 0.314612])
         quat_configs = torch.tensor(
             np.stack(
                 [
@@ -99,6 +98,21 @@ class PutEggplantInBasketScene(BaseBridgeEnv):
                 ]
             )
         )
+        # print(xyz_configs)
+        # Pose([-0.127357, 0.235652, 0.936485], [0.533208, 0.817232, -0.209365, -0.0631377])
+        quat_configs = torch.tensor(
+            [
+                [[0.543729, 0.82549, 0.0746101, 0.131747], [1, 0, 0, 0]],
+                # [[0.449144, 0.723185, 0.419872, 0.314612], [1, 0, 0, 0]],
+                [[0.559342, 0.817133, -0.138906, -0.0116353], [1, 0, 0, 0]],
+                [[0.543029, 0.789388, -0.267736, -0.101503], [1, 0, 0, 0]],
+            ]
+        )
+        # Pose([-0.121931, 0.200983, 0.94], [0.543029, 0.789388, -0.267736, -0.101503])
+        # Pose([-0.111394, 0.211813, 0.936457], [0.285242, 0.909909, -0.296087, -0.0550989])
+        # Pose([-0.117329, 0.212145, 0.943674], [-0.0160361, 0.950431, -0.310455, 0.00642143])
+
+        # Pose([-0.113776, 0.191183, 0.937244], )
         super().__init__(
             obj_names=[source_obj_name, target_obj_name],
             xyz_configs=xyz_configs,

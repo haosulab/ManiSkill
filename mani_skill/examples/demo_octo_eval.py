@@ -97,7 +97,10 @@ class Args:
     info_on_video: bool = False
     """Whether to write info text onto the video"""
 
-
+    debug: bool = False
+def parse_observation(obs):
+    img =  common.to_numpy(obs["sensor_data"]["3rd_view_camera"]["rgb"], dtype=np.uint8)
+    return img
 def main():
     args = tyro.cli(Args)
     if args.seed is not None:
@@ -115,13 +118,19 @@ def main():
     )
     # TODO (stao): support GPU evals
     env = CPUGymWrapper(env)
-    n_cams = 0
-    for config in env.unwrapped._sensors.values():
-        if isinstance(config, Camera):
-            n_cams += 1
-    print(f"Visualizing {n_cams} RGBD cameras")
+
+    if args.debug:
+        renderer = visualization.ImageRenderer(wait_for_button_press=False)
+        obs, _ = env.reset(seed=args.seed, options={"episode_id": args.seed})
+        env.render_human().paused=True
+        renderer(parse_observation(obs))
+        while True:
+            env.render_human()
+            env.step(None)
+
     from simpler_env.policies.rt1.rt1_model import RT1Inference
     from simpler_env.policies.octo.octo_model import OctoInference
+
     policy_setup = "widowx_bridge"
     if args.model == "octo-base" or args.model == "octo-small":
         model = OctoInference(model_type=args.model, policy_setup=policy_setup, init_rng=args.seed, action_scale=1)
@@ -134,21 +143,17 @@ def main():
         )
     exp_dir = os.path.join(args.record_dir, f"real2sim_eval/{args.model}_{args.env_id}")
 
-    renderer = visualization.ImageRenderer(wait_for_button_press=False)
-    def render_obs(obs):
-        img =  common.to_numpy(obs["sensor_data"]["3rd_view_camera"]["rgb"], dtype=np.uint8)
-        renderer(img)
-        return img
+
 
     eval_metrics = defaultdict(list)
     eps_count = 0
     for seed in range(args.seed, args.seed+args.num_episodes):
         obs, _ = env.reset(seed=seed, options={"episode_id": seed})
-        render_obs(obs)
-        env.render_human().paused=True
-        while True:
-            env.render_human()
-            obs, _, _, _, _ = env.step(None)
+        # render_obs(obs)
+        # env.render_human().paused=True
+        # while True:
+        #     env.render_human()
+        #     obs, _, _, _, _ = env.step(None)
         #     env.reset()
         #     #
         instruction = env.unwrapped.get_language_instruction()
@@ -156,7 +161,7 @@ def main():
         model.reset(instruction)
         images = []
         predicted_terminated, truncated = False, False
-        images.append(render_obs(obs))
+        images.append(parse_observation(obs))
         while not (predicted_terminated or truncated):
             raw_action, action = model.step(images[-1], instruction)
             predicted_terminated = bool(action["terminate_episode"][0] > 0)
@@ -165,7 +170,7 @@ def main():
             truncated = bool(truncated)
             if args.info_on_video:
                 images[-1] = visualization.put_info_on_image(images[-1], info)
-            images.append(render_obs(obs))
+            images.append(parse_observation(obs))
         for k, v in info.items():
             eval_metrics[k].append(v)
         images_to_video(images, exp_dir, f"octo_eval_{seed}", fps=10, verbose=True)
