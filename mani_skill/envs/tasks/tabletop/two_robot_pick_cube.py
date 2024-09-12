@@ -157,12 +157,6 @@ class TwoRobotPickCube(BaseEnv):
         return obs
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        # Stage 1 Max Reward - 2
-        # Stage 2 Max Reward - stage_1_max + 1 + 3
-        # Stage 3 Max Reward - stage_2_max + 1 + 1
-        # Stage 4 Max Reward - stage_3_max + 1 + 1
-        # Success Reward - 11
-
         # Stage 1: Reach and push cube to be near other robot
         tcp_to_obj_dist = torch.linalg.norm(
             self.cube.pose.p - self.left_agent.tcp.pose.p, axis=1
@@ -191,11 +185,10 @@ class TwoRobotPickCube(BaseEnv):
         reaching_reward = 1 - torch.tanh(5 * tcp_to_obj_dist)
         stage_2_reward = reaching_reward
 
-        # TODO: IDEA ADD REWARD FOR HEIGHT OF AND WIDTH BETWEEN FINGERS -> encourages open claw when grasping
+        # condition for good grasp: both fingers are at the same height and width is open
         self.right_agent: Panda
         right_tip_1_height = self.right_agent.finger1_link.pose.p[:, 2]
         right_tip_2_height = self.right_agent.finger2_link.pose.p[:, 2]
-
         tip_height_reward = 1 - torch.tanh(
             5 * torch.abs(right_tip_1_height - right_tip_2_height)
         )
@@ -226,48 +219,55 @@ class TwoRobotPickCube(BaseEnv):
 
         # stage 2 passes if cube is grasped
 
-        # Stage 4: place object at goal
-        # tool_vector = self.right_agent.tcp.pose.p - self.right_agent_wrist.pose.p
-        # goal_vector = self.goal_site.pose.p - self.right_agent.tcp.pose.p
-        # normed_dot_product = torch.einsum("in,in->i", tool_vector, goal_vector) / (torch.norm(tool_vector, dim=1) * torch.norm(goal_vector, dim=1))
-        # alignment_reward = ((normed_dot_product / 2)) + 0.5
-        # stage_3_reward = alignment_reward
+        # Stage 3: place object at goal
         stage_3_reward = 0
-
-        # tool_vector = self.right_agent.tcp.pose.p - self.right_agent_wrist.pose.p
-        # z_vector = torch.tensor([0., 0., -1.], device=self.device).repeat(tool_vector.shape[0], 1)  # N x 3
-        # normed_dot_product = torch.einsum("in, in->i", tool_vector, z_vector) / (torch.norm(tool_vector, dim=1) * torch.norm(z_vector, dim=1))
-        # alignment_reward = ((normed_dot_product / 2)) + 0.5
-
-        # stage_3_reward += alignment_reward
 
         obj_to_goal_dist = torch.linalg.norm(
             self.goal_site.pose.p - self.right_agent.tcp.pose.p, axis=1
         )
         place_reward = 1 - torch.tanh(5 * obj_to_goal_dist)
-        # place_reward = 1 / (1 + 2 * obj_to_goal_dist)
         self.plot_list.append(obj_to_goal_dist[0].item())
 
-        stage_3_reward += place_reward
+        stage_3_reward += 2 * place_reward
+
+        left_init_qpos = torch.tensor(
+            [
+                0.0,
+                np.pi / 8,
+                0,
+                -np.pi * 5 / 8,
+                0,
+                np.pi * 3 / 4,
+                np.pi / 4,
+                0.04,
+                0.04,
+            ]
+        ).to(self.device)
+        left_qpos_reward = 1 - torch.tanh(
+            torch.linalg.norm(self.left_agent.robot.get_qpos() - left_init_qpos, axis=1)
+        )
+        stage_3_reward += left_qpos_reward
 
         reward[is_grasped] = 8 + stage_3_reward[is_grasped]
 
         is_obj_near = torch.logical_and(obj_to_goal_dist < 0.25, is_grasped)
-        reward[is_obj_near] = 10 + 2 * stage_3_reward[is_obj_near]
+        reward[is_obj_near] = 12 + 2 * stage_3_reward[is_obj_near]
 
         # stage 4 passes if object is placed
         is_obj_placed = info["is_obj_placed"]
 
         # Stage 5: keep robot static at the goal
-        static_reward = 1 - torch.tanh(
+        right_static_reward = 1 - torch.tanh(
             5 * torch.linalg.norm(self.right_agent.robot.get_qvel()[..., :-2], axis=1)
         )
-        # left_robot_static_reward = 1 - torch.tanh(
-        #     5 * torch.linalg.norm(self.left_agent.robot.get_qvel()[..., :-2], axis=1)
-        # )
-        reward[is_obj_placed] = 13 + static_reward[is_obj_placed]
+        left_static_reward = 1 - torch.tanh(
+            5 * torch.linalg.norm(self.left_agent.robot.get_qvel()[..., :-2], axis=1)
+        )
+        static_reward = (right_static_reward + left_static_reward) / 2
 
-        reward[info["success"]] = 15
+        reward[is_obj_placed] = 19 + static_reward[is_obj_placed]
+
+        reward[info["success"]] = 21
 
         if (is_grasped.shape[0] == 8) and len(self.plot_list) == 100:
             print("IG", is_grasped)
@@ -284,4 +284,4 @@ class TwoRobotPickCube(BaseEnv):
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        return self.compute_dense_reward(obs=obs, action=action, info=info) / 15
+        return self.compute_dense_reward(obs=obs, action=action, info=info) / 21
