@@ -22,7 +22,7 @@ pip install -e .
 
 #!/bin/bash
 
-models=("octo-small" "octo-base")
+models=("octo-small" "octo-base", "rt-1x")
 env_ids=(
     "PutCarrotOnPlateInScene-v1"
     "PutSpoonOnTableClothInScene-v1"
@@ -50,7 +50,7 @@ import json
 import os
 import signal
 import numpy as np
-from typing import Annotated
+from typing import Annotated, Optional
 from mani_skill.utils import common
 from mani_skill.utils import visualization
 from mani_skill.utils.visualization.misc import images_to_video
@@ -69,7 +69,7 @@ from dataclasses import dataclass
 class Args:
     env_id: Annotated[str, tyro.conf.arg(aliases=["-e"])] = "PutCarrotOnPlateInScene-v1"
     """The environment ID of the task you want to simulate. Can be one of
-    PutCarrotOnPlateInScene-v1, PutSpoonOnTableClothInScene-v1"""
+    PutCarrotOnPlateInScene-v1, PutSpoonOnTableClothInScene-v1, StackGreenCubeOnYellowCubeInScene-v1, PutEggplantInBasketInScene-v1"""
 
     shader: str = "default"
 
@@ -82,8 +82,8 @@ class Args:
     record_dir: str = "videos"
     """The directory to save videos and results"""
 
-    model: str = "octo-base"
-    """The model to evaluate on the given environment. Can be one of octo-base, octo-small, rt-1x"""
+    model: Optional[str] = None
+    """The model to evaluate on the given environment. Can be one of octo-base, octo-small, rt-1x. If not given, random actions are sampled."""
 
     ckpt_path: str = ""
     """Checkpoint path for models. Only used for RT models"""
@@ -96,6 +96,9 @@ class Args:
 
     info_on_video: bool = False
     """Whether to write info text onto the video"""
+
+    save_video: bool = True
+    """Whether to save videos"""
 
     debug: bool = False
 def parse_observation(obs):
@@ -128,44 +131,49 @@ def main():
             env.render_human()
             env.step(None)
 
-    from simpler_env.policies.rt1.rt1_model import RT1Inference
-    from simpler_env.policies.octo.octo_model import OctoInference
+    model = None
+    try:
+        from simpler_env.policies.rt1.rt1_model import RT1Inference
+        from simpler_env.policies.octo.octo_model import OctoInference
+        policy_setup = "widowx_bridge"
+        if args.model == "octo-base" or args.model == "octo-small":
+            model = OctoInference(model_type=args.model, policy_setup=policy_setup, init_rng=args.seed, action_scale=1)
+        elif args.model == "rt-1x":
+            ckpt_path=args.ckpt_path
+            model = RT1Inference(
+                saved_model_path=ckpt_path,
+                policy_setup=policy_setup,
+                action_scale=1,
+            )
+        elif args.model is not None:
+            raise ValueError(f"Model {args.model} does not exist / is not supported.")
+    except:
+        if args.model is not None:
+            raise Exception("SIMPLER Env Policy Inference is not installed")
 
-    policy_setup = "widowx_bridge"
-    if args.model == "octo-base" or args.model == "octo-small":
-        model = OctoInference(model_type=args.model, policy_setup=policy_setup, init_rng=args.seed, action_scale=1)
-    elif args.model == "rt-1x":
-        ckpt_path=args.ckpt_path
-        model = RT1Inference(
-            saved_model_path=ckpt_path,
-            policy_setup=policy_setup,
-            action_scale=1,
-        )
-    exp_dir = os.path.join(args.record_dir, f"real2sim_eval/{args.model}_{args.env_id}")
-
-
+    model_name = args.model if args.model is not None else "random"
+    if model_name == "random":
+        print("Using random actions.")
+    exp_dir = os.path.join(args.record_dir, f"real2sim_eval/{model_name}_{args.env_id}")
 
     eval_metrics = defaultdict(list)
     eps_count = 0
     for seed in range(args.seed, args.seed+args.num_episodes):
         obs, _ = env.reset(seed=seed, options={"episode_id": seed})
-        # render_obs(obs)
-        # env.render_human().paused=True
-        # while True:
-        #     env.render_human()
-        #     obs, _, _, _, _ = env.step(None)
-        #     env.reset()
-        #     #
         instruction = env.unwrapped.get_language_instruction()
         print("instruction:", instruction)
-        model.reset(instruction)
+        if model is not None:
+            model.reset(instruction)
         images = []
         predicted_terminated, truncated = False, False
         images.append(parse_observation(obs))
         while not (predicted_terminated or truncated):
-            raw_action, action = model.step(images[-1], instruction)
-            predicted_terminated = bool(action["terminate_episode"][0] > 0)
-            action = np.concatenate([action["world_vector"], action["rot_axangle"], action["gripper"]])
+            if model is not None:
+                raw_action, action = model.step(images[-1], instruction)
+                predicted_terminated = bool(action["terminate_episode"][0] > 0)
+                action = np.concatenate([action["world_vector"], action["rot_axangle"], action["gripper"]])
+            else:
+                action = env.action_space.sample()
             obs, reward, terminated, truncated, info = env.step(action)
             truncated = bool(truncated)
             if args.info_on_video:
@@ -173,7 +181,8 @@ def main():
             images.append(parse_observation(obs))
         for k, v in info.items():
             eval_metrics[k].append(v)
-        images_to_video(images, exp_dir, f"octo_eval_{seed}", fps=10, verbose=True)
+        if args.save_video:
+            images_to_video(images, exp_dir, f"eval_{seed}_success={info['success']}", fps=10, verbose=True)
         eps_count += 1
         print(f"Evaluated episode {eps_count}. Seed {seed}. Results after {eps_count} episodes:")
         for k, v in eval_metrics.items():
@@ -182,6 +191,7 @@ def main():
     mean_metrics = {k: np.mean(v) for k, v in eval_metrics.items()}
     with open(os.path.join(exp_dir, "eval_metrics.json"), "w") as f:
         json.dump(mean_metrics, f)
+    print(f"Evaluation complete. Results saved to {exp_dir}")
 
 if __name__ == "__main__":
     main()

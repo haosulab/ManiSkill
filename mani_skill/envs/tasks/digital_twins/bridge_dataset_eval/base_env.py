@@ -382,7 +382,7 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
             if lin_vel > 1e-3 or ang_vel > 1e-2:
                 if self.gpu_sim_enabled:
                     self.scene._gpu_apply_all()
-                self._settle(3)
+                self._settle(6)
                 if self.gpu_sim_enabled:
                     self.scene._gpu_fetch_all()
             # measured values for bridge dataset
@@ -455,12 +455,12 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
             # stats to track
             self.consecutive_grasp = torch.zeros((b,), dtype=torch.int32)
             self.episode_stats = dict(
-                all_obj_keep_height=torch.zeros((b,), dtype=torch.bool),
+                # all_obj_keep_height=torch.zeros((b,), dtype=torch.bool),
                 moved_correct_obj=torch.zeros((b,), dtype=torch.bool),
                 moved_wrong_obj=torch.zeros((b,), dtype=torch.bool),
-                near_tgt_obj=torch.zeros((b,), dtype=torch.bool),
+                # near_tgt_obj=torch.zeros((b,), dtype=torch.bool),
                 is_src_obj_grasped=torch.zeros((b,), dtype=torch.bool),
-                is_closest_to_tgt=torch.zeros((b,), dtype=torch.bool),
+                # is_closest_to_tgt=torch.zeros((b,), dtype=torch.bool),
                 consecutive_grasp=torch.zeros((b,), dtype=torch.bool),
             )
 
