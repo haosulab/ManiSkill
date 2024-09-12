@@ -30,12 +30,6 @@ class PDEEPosController(PDJointPosController):
         assert (
             self.config.frame == "root_translation"
         ), "currently only translation in the root frame for EE control is supported in GPU sim"
-        assert (
-            self.config.use_delta == True
-        ), "currently only delta EE control is supported in GPU sim"
-        assert (
-            self.config.use_target == False
-        ), "Currently cannot take actions relative to last target pose in GPU sim"
 
     def _initialize_joints(self):
         self.initial_qpos = None
@@ -111,6 +105,7 @@ class PDEEPosController(PDJointPosController):
             self.articulation.get_qpos(),
             pos_only=pos_only,
             action=action,
+            use_delta=self.config.use_delta,
         )
         if self._target_qpos is None:
             self._target_qpos = self._start_qpos

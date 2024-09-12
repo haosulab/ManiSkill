@@ -113,9 +113,9 @@ class Kinematics:
             joint_limits=lim.T,
             early_stopping_any_converged=True,
             # early_stopping_no_improvement="all",
-            debug=True,
+            # debug=True,
             max_iterations=200,
-            num_retries=10,
+            num_retries=1,
         )
 
         self.qmask = torch.zeros(
@@ -124,52 +124,40 @@ class Kinematics:
         self.qmask[self.controlled_joints_idx_in_qmask] = 1
 
     def compute_ik(
-        self, target_pose: Pose, q0: torch.Tensor, pos_only: bool = False, action=None
+        self,
+        target_pose: Pose,
+        q0: torch.Tensor,
+        pos_only: bool = False,
+        action=None,
+        use_delta: bool = False,
     ):
-        """Given a target pose, via inverse kinematics compute the target joint positions that will achieve the target pose"""
+        """Given a target pose, via inverse kinematics compute the target joint positions that will achieve the target pose
+
+        Args:
+            target_pose (Pose): target pose of the end effector in the world frame. note this is not relative to the robot base frame!
+            q0 (torch.Tensor): initial joint positions of every active joint in the articulation
+            pos_only (bool): if True, only the position of the end link is considered in the IK computation
+            action (torch.Tensor): delta action to be applied to the articulation. Used for fast delta IK solutions on the GPU.
+            use_delta (bool): If true, returns the target joint positions that correspond with a delta IK solution. This is specifically
+                used for GPU simulation to determine which GPU IK algorithm to use.
+        """
         if self.use_gpu_ik:
-            pos = torch.tensor([0.0, 0.0, 0.0], device=self.device)
-            rot = torch.tensor([0.0, 0.0, 0.0], device=self.device)
-            rob_tf = pk.Transform3d(
-                pos=-self.articulation.pose.p,
-                rot=self.articulation.pose.q[:, [3, 0, 1, 2]],
-                device=self.device,
-            )
 
-            # pytorch kinematics assumes? robot root link pose is at 0.
-
-            # Transform3D quaternion format is (w, x, y, z)? SAPIEN is (x, y, z, w)
-
-            fk_res = self.pk_chain.forward_kinematics(self.articulation.qpos)
-            # # print("FK", fk_res)
-            # # print("FK in SIM", self.end_link.pose.p - self.articulation.pose.p)
-            # # import ipdb; ipdb.set_trace()
-            # # fk_res.position  is self.end_link.pose.p - self.articulation.pose.p
-            # lim = torch.tensor(self.pk_chain.get_joint_limits(), device=self.device)
-            # ik = pk.PseudoInverseIK(self.pk_chain, max_iterations=200, num_retries=10,
-            #             joint_limits=lim.T,
-            #             # early_stopping_any_converged=True,
-            #             # early_stopping_no_improvement="all",
-            #             debug=True,
-            #             lr=0.1); solution = ik.solve(fk_res)
-            # import ipdb; ipdb.set_trace()
-            tf = pk.Transform3d(
-                pos=target_pose.p,
-                rot=target_pose.q[:, [3, 0, 1, 2]],
-                device=self.device,
-            )
-            goal_in_rob_frame_tf = rob_tf.inverse().compose(tf)
-            self.pik.solve(fk_res)
-
-            # problem, pk library does not support solving for IK of links that are not at the end?
-            self.pik.solve(goal_in_rob_frame_tf)
-            # import ipdb; ipdb.set_trace()
-            # fast IK solution for delta actions
-            if True:
-                import ipdb
-
-                ipdb.set_trace()
-            if False:
+            q0 = q0[:, self.active_ancestor_joint_idxs]
+            if not use_delta:
+                tf = pk.Transform3d(
+                    pos=target_pose.p,
+                    rot=target_pose.q,
+                    device=self.device,
+                )
+                self.pik.initial_config  # shape (num_retries, active_ancestor_dof)
+                self.pik.initial_config = q0
+                result = self.pik.solve(
+                    tf
+                )  # produce solutions in shape (B, num_retries/initial_configs, active_ancestor_dof)
+                # TODO return mask for invalid solutions. CPU returns None at the moment
+                return result.solutions[:, 0, :]
+            else:
                 q0 = q0[:, self.active_ancestor_joint_idxs]
                 jacobian = self.pk_chain.jacobian(q0)
                 # code commented out below is the fast kinematics method
