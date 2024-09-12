@@ -72,7 +72,7 @@ class BaseDigitalTwinEnv(BaseEnv):
 
         """
 
-    def _after_reconfigure(self, options):
+    def _after_reconfigure(self, options: dict):
         target_object_actor_ids = [
             x._objs[0].per_scene_id
             for x in self.scene.actors.values()
@@ -84,25 +84,12 @@ class BaseDigitalTwinEnv(BaseEnv):
             target_object_actor_ids, dtype=torch.int16, device=self.device
         )
         # get the robot link ids
-        robot_links = (
-            self.agent.robot.get_links()
-        )  # e.g., [Actor(name="root", id="1"), Actor(name="root_arm_1_link_1", id="2"), Actor(name="root_arm_1_link_2", id="3"), ...]
+        robot_links = self.agent.robot.get_links()
         self.robot_link_ids = torch.tensor(
             [x._objs[0].entity.per_scene_id for x in robot_links],
             dtype=torch.int16,
             device=self.device,
         )
-
-        # get the link ids of other articulated objects
-        other_link_ids = []
-        # for art_obj in self._scene.get_all_articulations():
-        #     if art_obj is self.agent.robot:
-        #         continue
-        #     if art_obj.name in self.rgb_always_overlay_objects:
-        #         continue
-        #     for link in art_obj.get_links():
-        #         other_link_ids.append(link.id)
-        other_link_ids = np.array(other_link_ids, dtype=np.int32)
 
         for camera_name in self.rgb_overlay_paths.keys():
             sensor = self._sensor_configs[camera_name]
@@ -133,7 +120,6 @@ class BaseDigitalTwinEnv(BaseEnv):
                         ),
                     )
                 ] = 0
-                # mask[np.isin(actor_seg, np.concatenate([robot_link_ids, target_object_actor_ids, other_link_ids]))] = 0.0
             else:
                 # overlay everything except the robot links
                 mask[np.isin(actor_seg, self.robot_link_ids)] = 0.0
@@ -145,8 +131,6 @@ class BaseDigitalTwinEnv(BaseEnv):
         if "debug" not in self.rgb_overlay_mode:
             rgb = rgb * (1 - mask) + overlay_img * mask
         else:
-            # debug
-            # obs['sensor_data'][camera_name]['Color'][..., :3] = obs['sensor_data'][camera_name]['Color'][..., :3] * (1 - mask) + rgb_overlay_img * mask
             rgb = rgb * 0.5 + overlay_img * 0.5
         return rgb
 
