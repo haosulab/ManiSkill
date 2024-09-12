@@ -129,7 +129,7 @@ class Kinematics:
         q0: torch.Tensor,
         pos_only: bool = False,
         action=None,
-        use_delta: bool = False,
+        use_delta_ik_solver: bool = False,
     ):
         """Given a target pose, via inverse kinematics compute the target joint positions that will achieve the target pose
 
@@ -138,13 +138,13 @@ class Kinematics:
             q0 (torch.Tensor): initial joint positions of every active joint in the articulation
             pos_only (bool): if True, only the position of the end link is considered in the IK computation
             action (torch.Tensor): delta action to be applied to the articulation. Used for fast delta IK solutions on the GPU.
-            use_delta (bool): If true, returns the target joint positions that correspond with a delta IK solution. This is specifically
+            use_delta_ik_solver (bool): If true, returns the target joint positions that correspond with a delta IK solution. This is specifically
                 used for GPU simulation to determine which GPU IK algorithm to use.
         """
         if self.use_gpu_ik:
 
             q0 = q0[:, self.active_ancestor_joint_idxs]
-            if not use_delta:
+            if not use_delta_ik_solver:
                 tf = pk.Transform3d(
                     pos=target_pose.p,
                     rot=target_pose.q,
