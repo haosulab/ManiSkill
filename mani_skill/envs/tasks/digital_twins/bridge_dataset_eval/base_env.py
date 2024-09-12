@@ -195,12 +195,12 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
         self.model_db: Dict[str, Dict] = io_utils.load_json(
             ASSET_DIR / "tasks/bridge_dataset/custom/" / self.MODEL_JSON
         )
-        if ("num_envs" in kwargs and kwargs["num_envs"] > 1) or (
-            "sim_backend" in kwargs and kwargs["sim_backend"] == "gpu"
-        ):
-            raise ValueError(
-                "SIMPLER Evaluation Digital twins currently do not suppport GPU simulation, only CPU simulation at the moment."
-            )
+        # if ("num_envs" in kwargs and kwargs["num_envs"] > 1) or (
+        #     "sim_backend" in kwargs and kwargs["sim_backend"] == "gpu"
+        # ):
+        #     raise ValueError(
+        #         "SIMPLER Evaluation Digital twins currently do not suppport GPU simulation, only CPU simulation at the moment."
+        #     )
         super().__init__(
             robot_uids=robot_cls,
             **kwargs,
@@ -498,12 +498,12 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
                     obj_xyz_after_settle[:, :2] - obj.pose.p[:, :2], dim=1
                 )
             )
-        moved_correct_obj = (source_obj_xy_move_dist > 0.03) and (
-            all([x < source_obj_xy_move_dist for x in other_obj_xy_move_dist])
-        )
-        moved_wrong_obj = any([x > 0.03 for x in other_obj_xy_move_dist]) and any(
-            [x > source_obj_xy_move_dist for x in other_obj_xy_move_dist]
-        )
+        # moved_correct_obj = (source_obj_xy_move_dist > 0.03) and (
+        #     all([x < source_obj_xy_move_dist for x in other_obj_xy_move_dist])
+        # )
+        # moved_wrong_obj = any([x > 0.03 for x in other_obj_xy_move_dist]) and any(
+        #     [x > source_obj_xy_move_dist for x in other_obj_xy_move_dist]
+        # )
         # moved_correct_obj = False
         # moved_wrong_obj = False
 
@@ -544,8 +544,8 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
 
         success = src_on_target
 
-        self.episode_stats["moved_correct_obj"] = moved_correct_obj
-        self.episode_stats["moved_wrong_obj"] = moved_wrong_obj
+        # self.episode_stats["moved_correct_obj"] = moved_correct_obj
+        # self.episode_stats["moved_wrong_obj"] = moved_wrong_obj
         self.episode_stats["src_on_target"] = src_on_target
         self.episode_stats["is_src_obj_grasped"] = (
             self.episode_stats["is_src_obj_grasped"] | is_src_obj_grasped

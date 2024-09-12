@@ -5,7 +5,7 @@ scripts:
 mamba create -n "ms3-octo" "python==3.10.12"
 mamba activate ms3-octo
 pip install -e . # install mani_skill
-pip install torch==2.3.1
+pip install torch==2.3.1 tyro==0.8.5 # latest tyro is not compatible with python 3.10.12
 
 git clone https://github.com/simpler-env/SimplerEnv
 cd SimplerEnv
@@ -32,7 +32,7 @@ env_ids=(
 for model in "${models[@]}"; do
     for env_id in "${env_ids[@]}"; do
         echo "Running evaluation for model: $model, environment: $env_id"
-        XLA_PYTHON_CLIENT_PREALLOCATE=false python mani_skill/examples/demo_octo_eval.py \
+        XLA_PYTHON_CLIENT_PREALLOCATE=false python mani_skill/examples/demo_real2sim_eval.py \
             --model="$model" -e "$env_id" -s 0 --num-episodes 72
     done
 done
@@ -51,6 +51,8 @@ import os
 import signal
 import numpy as np
 from typing import Annotated, Optional
+
+import torch
 from mani_skill.utils import common
 from mani_skill.utils import visualization
 from mani_skill.utils.visualization.misc import images_to_video
@@ -117,16 +119,22 @@ def main():
         obs_mode="rgb+segmentation",
         num_envs=args.num_envs,
         sensor_configs=sensor_configs,
-        sim_backend="cpu",
+        sim_backend="gpu",
     )
     # TODO (stao): support GPU evals
-    env = CPUGymWrapper(env)
+    # env = CPUGymWrapper(env)
+    # import ipdb; ipdb.set_trace()
 
     if args.debug:
-        renderer = visualization.ImageRenderer(wait_for_button_press=False)
-        obs, _ = env.reset(seed=args.seed, options={"episode_id": args.seed})
+        renderer = visualization.ImageRenderer(wait_for_button_press=True)
+        obs, _ = env.reset(seed=args.seed, options={"episode_id": torch.tensor([args.seed + i for i in range(args.num_envs)])})
         env.render_human().paused=True
-        renderer(parse_observation(obs))
+        img = parse_observation(obs)
+        import ipdb; ipdb.set_trace()
+        if len(img) > 1:
+            # tile images
+            img = np.concatenate(img, axis=1)
+        renderer(img)
         while True:
             env.render_human()
             env.step(None)
@@ -158,8 +166,9 @@ def main():
 
     eval_metrics = defaultdict(list)
     eps_count = 0
-    for seed in range(args.seed, args.seed+args.num_episodes):
-        obs, _ = env.reset(seed=seed, options={"episode_id": seed})
+    while eps_count < args.num_episodes:
+        seed = args.seed + eps_count
+        obs, _ = env.reset(seed=seed, options={"episode_id": torch.tensor([seed + i for i in range(args.num_envs)])})
         instruction = env.unwrapped.get_language_instruction()
         print("instruction:", instruction)
         if model is not None:
@@ -167,24 +176,41 @@ def main():
         images = []
         predicted_terminated, truncated = False, False
         images.append(parse_observation(obs))
+        actions=[]
+        gt_actions = np.load(os.path.join(exp_dir, f"eval_{seed}_actions.npy"))
+        iit = 0
         while not (predicted_terminated or truncated):
             if model is not None:
-                raw_action, action = model.step(images[-1], instruction)
-                predicted_terminated = bool(action["terminate_episode"][0] > 0)
-                action = np.concatenate([action["world_vector"], action["rot_axangle"], action["gripper"]])
+                action = gt_actions[iit]
+                iit += 1
+                # raw_action, action = model.step(images[-1][0], instruction)
+                # raw_action, action2 = model.step(images[-1][1], instruction)
+                # import ipdb; ipdb.set_trace()
+                # TODO read the JAX arrays and DL pack them directly
+                # predicted_terminated = bool(action["terminate_episode"][0] > 0)
+                # action = np.concatenate([action["world_vector"], action["rot_axangle"], action["gripper"]])
+                # actions.append(action)
+                # action2 = np.concatenate([action2["world_vector"], action2["rot_axangle"], action2["gripper"]])
+                # action = common.to_tensor(np.stack([action, action2]))
             else:
                 action = env.action_space.sample()
             obs, reward, terminated, truncated, info = env.step(action)
-            truncated = bool(truncated)
+            truncated = bool(truncated.any())
             if args.info_on_video:
-                images[-1] = visualization.put_info_on_image(images[-1], info)
+                for i in range(len(images[-1])):
+                    images[-1][i] = visualization.put_info_on_image(images[-1][i], info)
             images.append(parse_observation(obs))
         for k, v in info.items():
-            eval_metrics[k].append(v)
+            eval_metrics[k].append(v.cpu().numpy().flatten())
         if args.save_video:
-            images_to_video(images, exp_dir, f"eval_{seed}_success={info['success']}", fps=10, verbose=True)
-        eps_count += 1
-        print(f"Evaluated episode {eps_count}. Seed {seed}. Results after {eps_count} episodes:")
+            for i in range(len(images[-1])):
+                images_to_video([img[i] for img in images], exp_dir, f"{'gpu' if env.device.type == 'cuda' else 'cpu'}_eval_{seed + i}_success={info['success'][i].item()}", fps=10, verbose=True)
+            # np.save(os.path.join(exp_dir, f"eval_{seed}_actions.npy"), np.stack(actions))
+        eps_count += args.num_envs
+        if args.num_envs == 1:
+            print(f"Evaluated episode {eps_count}. Seed {seed}. Results after {eps_count} episodes:")
+        else:
+            print(f"Evaluated {args.num_envs} episodes, seeds {seed} to {eps_count}. Results after {eps_count} episodes:")
         for k, v in eval_metrics.items():
             print(f"{k}: {np.mean(v)}")
 
