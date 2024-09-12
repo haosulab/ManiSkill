@@ -223,7 +223,7 @@
     <visual>
       <origin xyz="0 0 0.1" rpy="0 0 0"/>
       <geometry>
-        <capsule radius="0.008" length="0.1"/>
+        <cylinder radius="0.008" length="0.1"/>
       </geometry>
     </visual>
     <collision>
@@ -234,7 +234,7 @@
     <collision>
       <origin xyz="0 0 0.1" rpy="0 0 0"/>
       <geometry>
-        <capsule radius="0.008" length="0.1"/>
+        <cylinder radius="0.008" length="0.1"/>
       </geometry>
     </collision>
   </link>
