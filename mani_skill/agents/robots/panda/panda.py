@@ -126,8 +126,6 @@ class Panda(BaseAgent):
             joint_names=self.arm_joint_names,
             pos_lower=None,
             pos_upper=None,
-            # rot_lower=
-            # rot_upper=0.1,
             stiffness=self.arm_stiffness,
             damping=self.arm_damping,
             force_limit=self.arm_force_limit,

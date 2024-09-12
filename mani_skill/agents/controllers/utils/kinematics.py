@@ -102,18 +102,16 @@ class Kinematics:
                 with redirect_stderr(fnull) as err, redirect_stdout(fnull) as out:
                     yield (err, out)
 
-        # with suppress_stdout_stderr():
-        self.pk_chain = pk.build_serial_chain_from_urdf(
-            urdf_str,
-            end_link_name=self.end_link.name,
-        ).to(device=self.device)
+        with suppress_stdout_stderr():
+            self.pk_chain = pk.build_serial_chain_from_urdf(
+                urdf_str,
+                end_link_name=self.end_link.name,
+            ).to(device=self.device)
         lim = torch.tensor(self.pk_chain.get_joint_limits(), device=self.device)
         self.pik = pk.PseudoInverseIK(
             self.pk_chain,
             joint_limits=lim.T,
             early_stopping_any_converged=True,
-            # early_stopping_no_improvement="all",
-            # debug=True,
             max_iterations=200,
             num_retries=1,
         )
