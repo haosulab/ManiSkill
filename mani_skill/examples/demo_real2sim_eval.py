@@ -121,19 +121,21 @@ def main():
         sensor_configs=sensor_configs,
         sim_backend="gpu",
     )
+    sim_backend = 'gpu' if env.device.type == 'cuda' else 'cpu'
     # TODO (stao): support GPU evals
     # env = CPUGymWrapper(env)
     # import ipdb; ipdb.set_trace()
-
+    renderer = visualization.ImageRenderer(wait_for_button_press=True)
     if args.debug:
-        renderer = visualization.ImageRenderer(wait_for_button_press=True)
+
         obs, _ = env.reset(seed=args.seed, options={"episode_id": torch.tensor([args.seed + i for i in range(args.num_envs)])})
         env.render_human().paused=True
         img = parse_observation(obs)
-        import ipdb; ipdb.set_trace()
         if len(img) > 1:
             # tile images
             img = np.concatenate(img, axis=1)
+        else:
+            img = img[0]
         renderer(img)
         while True:
             env.render_human()
@@ -180,8 +182,12 @@ def main():
         images = []
         predicted_terminated, truncated = False, False
         images.append(parse_observation(obs))
+        elapsed_steps = 0
+        # actions = []
+        # gt_actions = np.load(os.path.join(exp_dir, f"cpu_eval_{seed}_actions.npy"))
         while not (predicted_terminated or truncated):
             if model is not None:
+                # renderer(images[-1][0])
                 raw_action, action = model.step(images[-1][0], instruction)
                 # raw_action, action2 = model.step(images[-1][1], instruction)
                 # import ipdb; ipdb.set_trace()
@@ -193,17 +199,26 @@ def main():
                 # action = common.to_tensor(np.stack([action, action2]))
             else:
                 action = env.action_space.sample()
+
+            # actions.append(action)
+            # action = gt_actions[elapsed_steps]
+            if elapsed_steps > 0:
+                if args.info_on_video:
+                    for i in range(len(images[-1])):
+                        images[-1][i] = visualization.put_info_on_image(images[-1][i], info)
             obs, reward, terminated, truncated, info = env.step(action)
+            elapsed_steps += 1
+            info = common.to_numpy(info)
             truncated = bool(truncated.any())
-            if args.info_on_video:
-                for i in range(len(images[-1])):
-                    images[-1][i] = visualization.put_info_on_image(images[-1][i], info)
             images.append(parse_observation(obs))
+
         for k, v in info.items():
-            eval_metrics[k].append(v.cpu().numpy().flatten())
+            eval_metrics[k].append(v.flatten())
         if args.save_video:
             for i in range(len(images[-1])):
-                images_to_video([img[i] for img in images], exp_dir, f"{'gpu' if env.device.type == 'cuda' else 'cpu'}_eval_{seed + i}_success={info['success'][i].item()}", fps=10, verbose=True)
+                images_to_video([img[i] for img in images], exp_dir, f"{sim_backend}_eval_{seed + i}_success={info['success'][i].item()}", fps=10, verbose=True)
+            # np.save(os.path.join(exp_dir, f"{sim_backend}_eval_{seed}_actions.npy"), actions)
+
         eps_count += args.num_envs
         if args.num_envs == 1:
             print(f"Evaluated episode {eps_count}. Seed {seed}. Results after {eps_count} episodes:")
@@ -213,7 +228,7 @@ def main():
             print(f"{k}: {np.mean(v)}")
 
     mean_metrics = {k: np.mean(v) for k, v in eval_metrics.items()}
-    with open(os.path.join(exp_dir, "eval_metrics.json"), "w") as f:
+    with open(os.path.join(exp_dir, f"{sim_backend}_eval_metrics.json"), "w") as f:
         json.dump(mean_metrics, f)
     print(f"Evaluation complete. Results saved to {exp_dir}")
 

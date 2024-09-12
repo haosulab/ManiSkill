@@ -139,7 +139,7 @@ class PutEggplantInBasketScene(BaseBridgeEnv):
         )
 
 
-@register_env("StackGreenCubeOnYellowCubeInScene-v1", max_episode_steps=60)
+@register_env("StackGreenCubeOnYellowCubeBakedTexInScene-v1", max_episode_steps=60)
 class StackGreenCubeOnYellowCubeInScene(BaseBridgeEnv):
     MODEL_JSON = "info_bridge_custom_baked_tex_v0.json"
 
