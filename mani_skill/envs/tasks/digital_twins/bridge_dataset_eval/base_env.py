@@ -208,7 +208,7 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
 
     @property
     def _default_sim_config(self):
-        return SimConfig(sim_freq=500, control_freq=5)
+        return SimConfig(sim_freq=500, control_freq=5, spacing=20)
 
     @property
     def _default_human_render_camera_configs(self):

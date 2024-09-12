@@ -60,7 +60,7 @@ class PutCarrotOnPlateInScene(BaseBridgeEnv):
         return info
 
     def get_language_instruction(self, **kwargs):
-        return "put carrot on plate"
+        return ["put carrot on plate"] * self.num_envs
 
 
 @register_env("PutEggplantInBasketScene-v1", max_episode_steps=120)
@@ -123,7 +123,7 @@ class PutEggplantInBasketScene(BaseBridgeEnv):
         )
 
     def get_language_instruction(self, **kwargs):
-        return "put eggplant into yellow basket"
+        return ["put eggplant into yellow basket"] * self.num_envs
 
     def _load_lighting(self, options):
         self.enable_shadow
@@ -140,7 +140,7 @@ class PutEggplantInBasketScene(BaseBridgeEnv):
 
 
 @register_env("StackGreenCubeOnYellowCubeBakedTexInScene-v1", max_episode_steps=60)
-class StackGreenCubeOnYellowCubeInScene(BaseBridgeEnv):
+class StackGreenCubeOnYellowCubeBakedTexInScene(BaseBridgeEnv):
     MODEL_JSON = "info_bridge_custom_baked_tex_v0.json"
 
     def __init__(
@@ -192,7 +192,7 @@ class StackGreenCubeOnYellowCubeInScene(BaseBridgeEnv):
         return info
 
     def get_language_instruction(self, **kwargs):
-        return "stack the green block on the yellow block"
+        return ["stack the green block on the yellow block"] * self.num_envs
 
 
 @register_env("PutSpoonOnTableClothInScene-v1", max_episode_steps=60)
@@ -224,7 +224,7 @@ class PutSpoonOnTableClothInScene(BaseBridgeEnv):
             np.array([[1, 0, 0, 0], [1, 0, 0, 0]]),
             np.array([euler2quat(0, 0, np.pi / 2), [1, 0, 0, 0]]),
         ]
-        quat_configs = torch.tensor(quat_configs)
+        quat_configs = torch.tensor(np.stack(quat_configs))
         xyz_configs = torch.tensor(np.stack(xyz_configs))
         source_obj_name = "bridge_spoon_generated_modified"
         target_obj_name = "table_cloth_generated_shorter"
@@ -240,4 +240,4 @@ class PutSpoonOnTableClothInScene(BaseBridgeEnv):
         return super()._evaluate(success_require_src_completely_on_target=False)
 
     def get_language_instruction(self, **kwargs):
-        return "put the spoon on the towel"
+        return ["put the spoon on the towel"] * self.num_envs
