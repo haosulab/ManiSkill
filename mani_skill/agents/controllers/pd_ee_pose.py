@@ -105,7 +105,7 @@ class PDEEPosController(PDJointPosController):
             self.articulation.get_qpos(),
             pos_only=pos_only,
             action=action,
-            use_delta=self.config.use_delta,
+            use_delta=self.config.use_delta and not self.config.use_target,
         )
         if self._target_qpos is None:
             self._target_qpos = self._start_qpos

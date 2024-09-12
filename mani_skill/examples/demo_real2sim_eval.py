@@ -141,20 +141,24 @@ def main():
 
     model = None
     try:
-        from simpler_env.policies.rt1.rt1_model import RT1Inference
-        from simpler_env.policies.octo.octo_model import OctoInference
+
         policy_setup = "widowx_bridge"
-        if args.model == "octo-base" or args.model == "octo-small":
-            model = OctoInference(model_type=args.model, policy_setup=policy_setup, init_rng=args.seed, action_scale=1)
-        elif args.model == "rt-1x":
-            ckpt_path=args.ckpt_path
-            model = RT1Inference(
-                saved_model_path=ckpt_path,
-                policy_setup=policy_setup,
-                action_scale=1,
-            )
-        elif args.model is not None:
-            raise ValueError(f"Model {args.model} does not exist / is not supported.")
+        if args.model is None:
+            pass
+        else:
+            from simpler_env.policies.rt1.rt1_model import RT1Inference
+            from simpler_env.policies.octo.octo_model import OctoInference
+            if args.model == "octo-base" or args.model == "octo-small":
+                model = OctoInference(model_type=args.model, policy_setup=policy_setup, init_rng=args.seed, action_scale=1)
+            elif args.model == "rt-1x":
+                ckpt_path=args.ckpt_path
+                model = RT1Inference(
+                    saved_model_path=ckpt_path,
+                    policy_setup=policy_setup,
+                    action_scale=1,
+                )
+            elif args.model is not None:
+                raise ValueError(f"Model {args.model} does not exist / is not supported.")
     except:
         if args.model is not None:
             raise Exception("SIMPLER Env Policy Inference is not installed")
@@ -176,19 +180,14 @@ def main():
         images = []
         predicted_terminated, truncated = False, False
         images.append(parse_observation(obs))
-        actions=[]
-        gt_actions = np.load(os.path.join(exp_dir, f"eval_{seed}_actions.npy"))
-        iit = 0
         while not (predicted_terminated or truncated):
             if model is not None:
-                action = gt_actions[iit]
-                iit += 1
-                # raw_action, action = model.step(images[-1][0], instruction)
+                raw_action, action = model.step(images[-1][0], instruction)
                 # raw_action, action2 = model.step(images[-1][1], instruction)
                 # import ipdb; ipdb.set_trace()
                 # TODO read the JAX arrays and DL pack them directly
                 # predicted_terminated = bool(action["terminate_episode"][0] > 0)
-                # action = np.concatenate([action["world_vector"], action["rot_axangle"], action["gripper"]])
+                action = np.concatenate([action["world_vector"], action["rot_axangle"], action["gripper"]])
                 # actions.append(action)
                 # action2 = np.concatenate([action2["world_vector"], action2["rot_axangle"], action2["gripper"]])
                 # action = common.to_tensor(np.stack([action, action2]))
@@ -205,7 +204,6 @@ def main():
         if args.save_video:
             for i in range(len(images[-1])):
                 images_to_video([img[i] for img in images], exp_dir, f"{'gpu' if env.device.type == 'cuda' else 'cpu'}_eval_{seed + i}_success={info['success'][i].item()}", fps=10, verbose=True)
-            # np.save(os.path.join(exp_dir, f"eval_{seed}_actions.npy"), np.stack(actions))
         eps_count += args.num_envs
         if args.num_envs == 1:
             print(f"Evaluated episode {eps_count}. Seed {seed}. Results after {eps_count} episodes:")
