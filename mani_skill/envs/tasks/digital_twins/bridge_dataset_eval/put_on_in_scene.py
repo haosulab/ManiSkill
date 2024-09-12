@@ -9,7 +9,11 @@ from mani_skill.envs.tasks.digital_twins.bridge_dataset_eval.base_env import (
 from mani_skill.utils.registration import register_env
 
 
-@register_env("PutCarrotOnPlateInScene-v1", max_episode_steps=60)
+@register_env(
+    "PutCarrotOnPlateInScene-v1",
+    max_episode_steps=60,
+    asset_download_ids=["bridge_v2_real2sim"],
+)
 class PutCarrotOnPlateInScene(BaseBridgeEnv):
     scene_setting = "flat_table"
 
@@ -63,7 +67,11 @@ class PutCarrotOnPlateInScene(BaseBridgeEnv):
         return ["put carrot on plate"] * self.num_envs
 
 
-@register_env("PutEggplantInBasketScene-v1", max_episode_steps=120)
+@register_env(
+    "PutEggplantInBasketScene-v1",
+    max_episode_steps=120,
+    asset_download_ids=["bridge_v2_real2sim"],
+)
 class PutEggplantInBasketScene(BaseBridgeEnv):
     scene_setting = "sink"
     rgb_always_overlay_objects = ["sink", "dummy_sink_target_plane"]
@@ -139,7 +147,11 @@ class PutEggplantInBasketScene(BaseBridgeEnv):
         )
 
 
-@register_env("StackGreenCubeOnYellowCubeBakedTexInScene-v1", max_episode_steps=60)
+@register_env(
+    "StackGreenCubeOnYellowCubeBakedTexInScene-v1",
+    max_episode_steps=60,
+    asset_download_ids=["bridge_v2_real2sim"],
+)
 class StackGreenCubeOnYellowCubeBakedTexInScene(BaseBridgeEnv):
     MODEL_JSON = "info_bridge_custom_baked_tex_v0.json"
 
@@ -195,7 +207,11 @@ class StackGreenCubeOnYellowCubeBakedTexInScene(BaseBridgeEnv):
         return ["stack the green block on the yellow block"] * self.num_envs
 
 
-@register_env("PutSpoonOnTableClothInScene-v1", max_episode_steps=60)
+@register_env(
+    "PutSpoonOnTableClothInScene-v1",
+    max_episode_steps=60,
+    asset_download_ids=["bridge_v2_real2sim"],
+)
 class PutSpoonOnTableClothInScene(BaseBridgeEnv):
     def __init__(
         self,

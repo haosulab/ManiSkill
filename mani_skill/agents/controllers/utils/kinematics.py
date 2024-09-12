@@ -140,7 +140,6 @@ class Kinematics:
                 used for GPU simulation to determine which GPU IK algorithm to use.
         """
         if self.use_gpu_ik:
-
             q0 = q0[:, self.active_ancestor_joint_idxs]
             if not use_delta_ik_solver:
                 tf = pk.Transform3d(
@@ -148,15 +147,13 @@ class Kinematics:
                     rot=target_pose.q,
                     device=self.device,
                 )
-                self.pik.initial_config  # shape (num_retries, active_ancestor_dof)
-                self.pik.initial_config = q0
+                self.pik.initial_config = q0  # shape (num_retries, active_ancestor_dof)
                 result = self.pik.solve(
                     tf
                 )  # produce solutions in shape (B, num_retries/initial_configs, active_ancestor_dof)
                 # TODO return mask for invalid solutions. CPU returns None at the moment
                 return result.solutions[:, 0, :]
             else:
-                q0 = q0[:, self.active_ancestor_joint_idxs]
                 jacobian = self.pk_chain.jacobian(q0)
                 # code commented out below is the fast kinematics method
                 # jacobian = (

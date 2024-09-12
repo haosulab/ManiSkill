@@ -2,7 +2,6 @@
 Base environment for Bridge dataset environments
 """
 import os
-from pathlib import Path
 from typing import Dict, List, Literal
 
 import numpy as np
@@ -24,7 +23,7 @@ from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import SimConfig
 
-
+BRIDGE_DATASET_ASSET_PATH = ASSET_DIR / "tasks/bridge_v2_real2sim_dataset/"
 # Real2Sim tuned WidowX250S robot
 @register_agent(asset_download_ids=["widowx250s"])
 class WidowX250SBridgeDatasetFlatTable(WidowX250S):
@@ -179,21 +178,20 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
         if self.scene_setting == "flat_table":
             self.rgb_overlay_paths = {
                 "3rd_view_camera": str(
-                    ASSET_DIR
-                    / "tasks/bridge_dataset/real_inpainting/bridge_real_eval_1.png"
+                    BRIDGE_DATASET_ASSET_PATH / "real_inpainting/bridge_real_eval_1.png"
                 )
             }
             robot_cls = WidowX250SBridgeDatasetFlatTable
         elif self.scene_setting == "sink":
             self.rgb_overlay_paths = {
                 "3rd_view_camera": str(
-                    ASSET_DIR / "tasks/bridge_dataset/real_inpainting/bridge_sink.png"
+                    BRIDGE_DATASET_ASSET_PATH / "real_inpainting/bridge_sink.png"
                 )
             }
             robot_cls = WidowX250SBridgeDatasetSink
 
         self.model_db: Dict[str, Dict] = io_utils.load_json(
-            ASSET_DIR / "tasks/bridge_dataset/custom/" / self.MODEL_JSON
+            BRIDGE_DATASET_ASSET_PATH / "custom/" / self.MODEL_JSON
         )
         # if ("num_envs" in kwargs and kwargs["num_envs"] > 1) or (
         #     "sim_backend" in kwargs and kwargs["sim_backend"] == "gpu"
@@ -243,9 +241,7 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
             restitution=0.0,
         )
         builder = self.scene.create_actor_builder()
-        model_dir = (
-            Path(ASSET_DIR / "tasks/bridge_dataset/custom") / "models" / model_id
-        )
+        model_dir = BRIDGE_DATASET_ASSET_PATH / "custom" / "models" / model_id
 
         collision_file = str(model_dir / "collision.obj")
         builder.add_multiple_convex_collisions_from_file(
@@ -292,14 +288,10 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
         scene_pose = sapien.Pose(q=[0.707, 0.707, 0, 0])
         scene_offset = np.array([-2.0634, -2.8313, 0.0])
         if self.scene_setting == "flat_table":
-            scene_file = str(
-                ASSET_DIR / "tasks/bridge_dataset/stages/bridge_table_1_v1.glb"
-            )
+            scene_file = str(BRIDGE_DATASET_ASSET_PATH / "stages/bridge_table_1_v1.glb")
 
         elif self.scene_setting == "sink":
-            scene_file = str(
-                ASSET_DIR / "tasks/bridge_dataset/stages/bridge_table_1_v2.glb"
-            )
+            scene_file = str(BRIDGE_DATASET_ASSET_PATH / "stages/bridge_table_1_v2.glb")
         builder.add_nonconvex_collision_from_file(scene_file, pose=scene_pose)
         builder.add_visual_from_file(scene_file, pose=scene_pose)
 
