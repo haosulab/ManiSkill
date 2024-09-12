@@ -1,9 +1,7 @@
 from typing import Any, Dict, Tuple
 
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from transforms3d.euler import euler2quat
 
 from mani_skill.agents.multi_agent import MultiAgent
 from mani_skill.agents.robots.panda import Panda
@@ -54,11 +52,6 @@ class TwoRobotPickCube(BaseEnv):
     ):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
-        self.right_agent_wrist = sapien_utils.get_obj_by_name(
-            self.right_agent.robot.get_links(), "panda_link7"
-        )
-
-        self.plot_list = []
 
     @property
     def _default_sim_config(self):
@@ -105,6 +98,7 @@ class TwoRobotPickCube(BaseEnv):
         with torch.device(self.device):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)
+            self.left_init_qpos = self.left_agent.robot.get_qpos()
             xyz = torch.zeros((b, 3))
             xyz[:, 0] = torch.rand((b,)) * 0.1 - 0.05
             # ensure cube is spawned on the left side of the table
@@ -118,8 +112,6 @@ class TwoRobotPickCube(BaseEnv):
             goal_xyz[:, 1] = 0.15 + torch.rand((b,)) * 0.1 - 0.05
             goal_xyz[:, 2] = torch.rand((b,)) * 0.3 + xyz[:, 2]
             self.goal_site.set_pose(Pose.create_from_pq(goal_xyz))
-
-            self.plot_list = []
 
     @property
     def left_agent(self) -> Panda:
@@ -185,7 +177,7 @@ class TwoRobotPickCube(BaseEnv):
         reaching_reward = 1 - torch.tanh(5 * tcp_to_obj_dist)
         stage_2_reward = reaching_reward
 
-        # condition for good grasp: both fingers are at the same height and width is open
+        # condition for good grasp: both fingers are at the same height and open
         self.right_agent: Panda
         right_tip_1_height = self.right_agent.finger1_link.pose.p[:, 2]
         right_tip_2_height = self.right_agent.finger2_link.pose.p[:, 2]
@@ -200,7 +192,7 @@ class TwoRobotPickCube(BaseEnv):
                     - self.right_agent.finger2_link.pose.p,
                     axis=1,
                 )
-                - 0.07  # kinda hardcoded distance between fingers
+                - 0.07
             )
         )
         tip_reward = (tip_height_reward + tip_width_reward) / 2
@@ -212,45 +204,32 @@ class TwoRobotPickCube(BaseEnv):
         )
         stage_2_reward += left_arm_leave_reward
 
+        # stage 2 passes if cube is grasped
         is_grasped = self.right_agent.is_grasping(self.cube)
         stage_2_reward += 2 * is_grasped
 
         reward[cube_at_other_side] = 2 + stage_2_reward[cube_at_other_side]
 
-        # stage 2 passes if cube is grasped
-
-        # Stage 3: place object at goal
-        stage_3_reward = 0
-
+        # Stage 3: bring cube towards goal
         obj_to_goal_dist = torch.linalg.norm(
             self.goal_site.pose.p - self.right_agent.tcp.pose.p, axis=1
         )
         place_reward = 1 - torch.tanh(5 * obj_to_goal_dist)
-        self.plot_list.append(obj_to_goal_dist[0].item())
+        stage_3_reward = 2 * place_reward
 
-        stage_3_reward += 2 * place_reward
-
-        left_init_qpos = torch.tensor(
-            [
-                0.0,
-                np.pi / 8,
-                0,
-                -np.pi * 5 / 8,
-                0,
-                np.pi * 3 / 4,
-                np.pi / 4,
-                0.04,
-                0.04,
-            ]
-        ).to(self.device)
+        # return left arm to original position
         left_qpos_reward = 1 - torch.tanh(
-            torch.linalg.norm(self.left_agent.robot.get_qpos() - left_init_qpos, axis=1)
+            torch.linalg.norm(
+                self.left_agent.robot.get_qpos() - self.left_init_qpos, axis=1
+            )
         )
         stage_3_reward += left_qpos_reward
 
         reward[is_grasped] = 8 + stage_3_reward[is_grasped]
 
+        # stage 3 passes if object is near goal (within 0.25m) - intermediate reward
         is_obj_near = torch.logical_and(obj_to_goal_dist < 0.25, is_grasped)
+        # Stage 4: reuse same reward as stage 3 but stronger incentive
         reward[is_obj_near] = 12 + 2 * stage_3_reward[is_obj_near]
 
         # stage 4 passes if object is placed
@@ -268,16 +247,6 @@ class TwoRobotPickCube(BaseEnv):
         reward[is_obj_placed] = 19 + static_reward[is_obj_placed]
 
         reward[info["success"]] = 21
-
-        if (is_grasped.shape[0] == 8) and len(self.plot_list) == 100:
-            print("IG", is_grasped)
-            print("reward", place_reward)
-            if is_grasped.any():
-                print("IOP", is_obj_placed)
-                print("reward", place_reward)
-            print("TOTAL REWARD", reward)
-            plt.plot(range(len(self.plot_list)), self.plot_list)
-            plt.show()
 
         return reward
 
