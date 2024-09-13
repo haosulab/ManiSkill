@@ -320,9 +320,6 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
                         this_available_model_scales
                     )
         self.episode_model_scales = model_scales
-        # import ipdb;ipdb.set_trace()
-        # if not all([model_scales[i] == self.episode_model_scales[i] for i in range(len(model_scales))]):
-        #     self.episode_model_scales = model_scales
         model_bbox_sizes = dict()
         for model_id in [self.source_obj_name, self.target_obj_name]:
             model_info = self.model_db[model_id]
@@ -465,7 +462,6 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
     ):
         source_object = self.objs[self.source_obj_name]
         target_object = self.objs[self.target_obj_name]
-        # TODO (stao): Parallelize the evaluation function in the future
         source_obj_pose = source_object.pose
         target_obj_pose = target_object.pose
 
