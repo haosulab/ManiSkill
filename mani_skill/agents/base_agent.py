@@ -72,6 +72,9 @@ class BaseAgent:
     However for some robots/tasks it may be easier to disable all self collisions between links in the robot to increase simulation speed
     """
 
+    scale: Union[float, list[float]] = 1.0
+    """The scale of the robot. If a list, then scale[i] is applied to robot in parallel environment i"""
+
     keyframes: Dict[str, Keyframe] = dict()
     """a dict of predefined keyframes similar to what Mujoco does that you can use to reset the agent to that may be of interest"""
 
@@ -158,7 +161,7 @@ class BaseAgent:
         loader.fix_root_link = self.fix_root_link
         loader.load_multiple_collisions_from_file = self.load_multiple_collisions
         loader.disable_self_collisions = self.disable_self_collisions
-
+        loader.scale = self.scale
         if self.urdf_config is not None:
             urdf_config = sapien_utils.parse_urdf_config(self.urdf_config)
             sapien_utils.check_urdf_config(urdf_config)

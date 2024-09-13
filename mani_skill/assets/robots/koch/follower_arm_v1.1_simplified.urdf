@@ -380,13 +380,48 @@
     </visual>
     <collision>
       <origin
+        xyz="-0.01488 0.000177 -0.017179"
+        rpy="0 0 0" />
+      <geometry>
+        <box size="0.011 0.0295 0.0344" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin
+        xyz="-0.015958 0.000027 -0.040602"
+        rpy="1.570796327 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/link_6_collision_part_2.glb" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin
+        xyz="-0.015268 -0.000307 -0.05429"
+        rpy="1.570796327 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/link_6_collision_part_3.glb" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin
+        xyz="0 0 0 "
+        rpy="1.570796327 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/link_6_collision_part_4.glb" />
+      </geometry>
+    </collision>
+    <!-- <collision>
+      <origin
         xyz="0 0 0"
         rpy="0 0 0" />
       <geometry>
         <mesh
           filename="package://koch/meshes/link_6.stl" />
       </geometry>
-    </collision>
+    </collision> -->
   </link>
   <joint
     name="joint_5"
@@ -433,12 +468,39 @@
     <collision>
       <origin
         xyz="0 0 0"
+        rpy="1.570796327 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/gripper_collision_part_1.glb" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="1.570796327 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/gripper_collision_part_2.glb" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="1.570796327 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/gripper_collision_part_3.glb" />
+      </geometry>
+    </collision>
+    <!-- <collision>
+      <origin
+        xyz="0 0 0"
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://koch/meshes/gripper.stl" />
+          filename="package://koch/meshes/gripper_collision.glb" />
       </geometry>
-    </collision>
+    </collision> -->
   </link>
   <joint
     name="joint_6"

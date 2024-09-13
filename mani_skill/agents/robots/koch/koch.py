@@ -60,8 +60,8 @@ class Koch(BaseAgent):
         )
 
         controller_configs = dict(
-            pd_joint_pos=pd_joint_pos,
             pd_joint_delta_pos=pd_joint_delta_pos,
+            pd_joint_pos=pd_joint_pos,
         )
         return deepcopy_dict(controller_configs)
 
