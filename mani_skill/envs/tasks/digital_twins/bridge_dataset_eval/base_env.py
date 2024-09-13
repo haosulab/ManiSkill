@@ -193,12 +193,6 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
         self.model_db: Dict[str, Dict] = io_utils.load_json(
             BRIDGE_DATASET_ASSET_PATH / "custom/" / self.MODEL_JSON
         )
-        # if ("num_envs" in kwargs and kwargs["num_envs"] > 1) or (
-        #     "sim_backend" in kwargs and kwargs["sim_backend"] == "gpu"
-        # ):
-        #     raise ValueError(
-        #         "SIMPLER Evaluation Digital twins currently do not suppport GPU simulation, only CPU simulation at the moment."
-        #     )
         super().__init__(
             robot_uids=robot_cls,
             **kwargs,
