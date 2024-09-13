@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <robot
   name="koch">
+  <material name="white">
+    <color rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+  </material>
+  <material name="motor">
+    <color rgba="0.1 0.1 0.1 1" />
+  </material>
   <link
     name="base_link">
     <inertial>
@@ -17,18 +23,16 @@
         iyz="-1.8015E-07"
         izz="3.8411E-05" />
     </inertial>
-    <visual>
+    <visual name="base_link_chassis">
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="1.570796327 0 0" />
       <geometry>
         <mesh
-          filename="package://koch/meshes/base_link.stl" />
+          filename="package://koch/meshes/base_link.glb" />
       </geometry>
       <material
-        name="">
-        <color
-          rgba="0.79216 0.81961 0.93333 1" />
+        name="white">
       </material>
     </visual>
     <!-- <collision>
@@ -57,18 +61,16 @@
         iyz="-2.55439306832928E-07"
         izz="9.91180823538587E-06" />
     </inertial>
-    <visual>
+    <visual name="link_1_motor">
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="1.570796327 0 0" />
       <geometry>
         <mesh
-          filename="package://koch/meshes/link_1.stl" />
+          filename="package://koch/meshes/link_1_motor.glb" />
       </geometry>
       <material
-        name="">
-        <color
-          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+        name="motor">
       </material>
     </visual>
     <collision>
@@ -110,21 +112,28 @@
         iyz="2.79698372869455E-08"
         izz="1.44673534182408E-05" />
     </inertial>
-    <visual>
+    <visual name="link_2_chassis">
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="1.570796327 0 0" />
       <geometry>
         <mesh
-          filename="package://koch/meshes/link_2.stl" />
+          filename="package://koch/meshes/link_2_rotation_connector.glb" />
       </geometry>
       <material
-        name="">
-        <color
-          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+        name="white">
       </material>
     </visual>
-    <collision>
+    <visual name="link_2_motor">
+      <origin
+        xyz="0 0 0"
+        rpy="1.570796327 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/link_2_motor.glb" />
+      </geometry>
+    </visual>
+    <!-- <collision>
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
@@ -132,7 +141,7 @@
         <mesh
           filename="package://koch/meshes/link_2.stl" />
       </geometry>
-    </collision>
+    </collision> -->
   </link>
   <joint
     name="joint_1"
@@ -164,18 +173,24 @@
         iyz="2.89589344417314E-06"
         izz="8.227755425135E-06" />
     </inertial>
-    <visual>
+    <visual name="link_3_motor">
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="1.570796327 0 0" />
       <geometry>
         <mesh
-          filename="package://koch/meshes/link_3.stl" />
+          filename="package://koch/meshes/link_3_motor.glb" />
       </geometry>
-      <material
-        name="">
-        <color
-          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+    </visual>
+    <visual name="link_3_chassis">
+      <origin
+        xyz="0 0 0"
+        rpy="1.570796327 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/link_3_part.glb" />
+      </geometry>
+      <material name="white">
       </material>
     </visual>
     <collision>
@@ -200,7 +215,7 @@
       link="link_3" />
     <axis
       xyz="1 0 0" />
-    <limit lower="-3.14159" upper="3.14159"/>
+    <limit lower="-1.4" upper="1.5707"/>
   </joint>
   <link
     name="link_4">
@@ -218,19 +233,26 @@
         iyz="1.89503580542288E-07"
         izz="2.44964228707391E-05" />
     </inertial>
-    <visual>
+    <visual name="link_4_chassis">
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="1.570796327 0 0" />
       <geometry>
         <mesh
-          filename="package://koch/meshes/link_4.stl" />
+          filename="package://koch/meshes/link_4_part.glb" />
       </geometry>
       <material
-        name="">
-        <color
-          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+        name="white">
       </material>
+    </visual>
+    <visual name="link_4_motor">
+      <origin
+        xyz="0 0 0"
+        rpy="1.570796327 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/link_4_motor.glb" />
+      </geometry>
     </visual>
     <collision>
       <origin
@@ -254,7 +276,8 @@
       link="link_4" />
     <axis
       xyz="1 0 0" />
-    <limit lower="-3.14159" upper="3.14159"/>
+    <!-- <limit lower="-3.14159" upper="3.14159"/> -->
+    <limit lower="-1.5707" upper="1.3"/>
   </joint>
   <link
     name="link_5">
@@ -272,19 +295,26 @@
         iyz="-1.33100790895479E-10"
         izz="2.95769278459524E-06" />
     </inertial>
-    <visual>
+    <visual name="link_5_chassis">
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="1.570796327 0 0" />
       <geometry>
         <mesh
-          filename="package://koch/meshes/link_5.stl" />
+          filename="package://koch/meshes/link_5_part.glb" />
       </geometry>
       <material
-        name="">
-        <color
-          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+        name="white">
       </material>
+    </visual>
+    <visual name="link_5_motor">
+      <origin
+        xyz="0 0 0"
+        rpy="1.570796327 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/link_5_motor.glb" />
+      </geometry>
     </visual>
     <collision>
       <origin
@@ -308,7 +338,8 @@
       link="link_5" />
     <axis
       xyz="1 0 0" />
-    <limit lower="-3.14159" upper="3.14159"/>
+    <!-- <limit lower="-3.14159" upper="3.14159"/> -->
+    <limit lower="-3.14159" upper="0.5"/>
   </joint>
   <link
     name="link_6">
@@ -326,19 +357,26 @@
         iyz="4.61842210237313E-08"
         izz="3.58058771769467E-06" />
     </inertial>
-    <visual>
+    <visual name="link_6_chassis">
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="1.570796327 0 0" />
       <geometry>
         <mesh
-          filename="package://koch/meshes/link_6.stl" />
+          filename="package://koch/meshes/link_6_part.glb" />
       </geometry>
       <material
-        name="">
-        <color
-          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+        name="white">
       </material>
+    </visual>
+    <visual name="link_6_motor">
+      <origin
+        xyz="0 0 0"
+        rpy="1.570796327 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/link_6_motor.glb" />
+      </geometry>
     </visual>
     <collision>
       <origin
@@ -380,18 +418,16 @@
         iyz="3.4089E-08"
         izz="1.5159E-06" />
     </inertial>
-    <visual>
+    <visual name="gripper_chassis">
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="1.570796327 0 0" />
       <geometry>
         <mesh
-          filename="package://koch/meshes/gripper.stl" />
+          filename="package://koch/meshes/gripper.glb" />
       </geometry>
       <material
-        name="">
-        <color
-          rgba="0.79216 0.81961 0.93333 1" />
+        name="white">
       </material>
     </visual>
     <collision>
