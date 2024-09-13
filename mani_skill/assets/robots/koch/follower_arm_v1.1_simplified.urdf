@@ -31,7 +31,7 @@
           rgba="0.79216 0.81961 0.93333 1" />
       </material>
     </visual>
-    <collision>
+    <!-- <collision>
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
@@ -39,7 +39,7 @@
         <mesh
           filename="package://koch/meshes/base_link.stl" />
       </geometry>
-    </collision>
+    </collision> -->
   </link>
   <link
     name="link_1">
@@ -417,5 +417,12 @@
     <axis
       xyz="0 1 0" />
     <limit lower="-1.75" upper="0"/>
+  </joint>
+  <!-- Define the hand_tcp frame -->
+  <link name="gripper_tcp"/>
+  <joint name="gripper_tcp_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="-0.008 0 -0.065"/>
+    <parent link="link_6"/>
+    <child link="gripper_tcp"/>
   </joint>
 </robot>

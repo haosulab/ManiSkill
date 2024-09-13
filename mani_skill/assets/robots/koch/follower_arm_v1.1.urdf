@@ -1,0 +1,428 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot
+  name="koch">
+  <link
+    name="base_link">
+    <inertial>
+      <origin
+        xyz="-0.011141 -0.10061 0.076043"
+        rpy="0 0 0" />
+      <mass
+        value="0.024929" />
+      <inertia
+        ixx="1.0987E-05"
+        ixy="-1.4265E-07"
+        ixz="-2.3161E-06"
+        iyy="4.9192E-05"
+        iyz="-1.8015E-07"
+        izz="3.8411E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/base_link.stl" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.79216 0.81961 0.93333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/base_link.stl" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="link_1">
+    <inertial>
+      <origin
+        xyz="0.00546148702076507 0.10467880012529 -0.0820307590787204"
+        rpy="0 0 0" />
+      <mass
+        value="0.0421762252650754" />
+      <inertia
+        ixx="1.09781766802375E-05"
+        ixy="4.40820563321132E-09"
+        ixz="5.24547826280305E-09"
+        iyy="6.35571344051651E-06"
+        iyz="-2.55439306832928E-07"
+        izz="9.91180823538587E-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/link_1.stl" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/link_1.stl" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="fixed_joint"
+    type="fixed">
+    <origin
+      xyz="0.005766 -0.028665  0.018513"
+      rpy="0 0 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="link_1" />
+    <axis
+      xyz="0 0 0" />
+  </joint>
+  <link
+    name="link_2">
+    <inertial>
+      <origin
+        xyz="-0.000599521251599892 -0.01214448812913 -0.0162228482755552"
+        rpy="0 0 0" />
+      <mass
+        value="0.0490602741822512" />
+      <inertia
+        ixx="1.23060578065707E-05"
+        ixy="2.48969011965324E-07"
+        ixz="-5.07587890385691E-09"
+        iyy="7.57948440389379E-06"
+        iyz="2.79698372869455E-08"
+        izz="1.44673534182408E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/link_2.stl" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/link_2.stl" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint_1"
+    type="revolute">
+    <origin
+      xyz="0 -0.011858  0.020066"
+      rpy="0 0 0" />
+    <parent
+      link="link_1" />
+    <child
+      link="link_2" />
+    <axis
+      xyz="0 0 1" />
+    <limit lower="-3.14159" upper="3.14159"/>
+  </joint>
+  <link
+    name="link_3">
+    <inertial>
+      <origin
+        xyz="0.000421340473778738 0.00663235728724902 0.0711027578821964"
+        rpy="0 0 0" />
+      <mass
+        value="0.0495780944252854" />
+      <inertia
+        ixx="3.37548285934918E-05"
+        ixy="-2.64464028650966E-09"
+        ixz="1.18369553327327E-10"
+        iyy="3.70078130346226E-05"
+        iyz="2.89589344417314E-06"
+        izz="8.227755425135E-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/link_3.stl" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/link_3.stl" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint_2"
+    type="revolute">
+    <origin
+      xyz="0.020713 0 0.015368"
+      rpy="0 0 0" />
+    <parent
+      link="link_2" />
+    <child
+      link="link_3" />
+    <axis
+      xyz="1 0 0" />
+    <limit lower="-3.14159" upper="3.14159"/>
+  </joint>
+  <link
+    name="link_4">
+    <inertial>
+      <origin
+        xyz="-0.000473888588224017 -0.0549425500579234 0.00286748944029759"
+        rpy="0 0 0" />
+      <mass
+        value="0.0631912511759639" />
+      <inertia
+        ixx="2.22133857277613E-05"
+        ixy="-2.60725068002433E-09"
+        ixz="-9.83232693502075E-11"
+        iyy="7.3328440154108E-06"
+        iyz="1.89503580542288E-07"
+        izz="2.44964228707391E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/link_4.stl" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/link_4.stl" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint_3"
+    type="revolute">
+    <origin
+      xyz="-0.038026 -0.014951  0.108424"
+      rpy="0 0 0" />
+    <parent
+      link="link_3" />
+    <child
+      link="link_4" />
+    <axis
+      xyz="1 0 0" />
+    <limit lower="-3.14159" upper="3.14159"/>
+  </joint>
+  <link
+    name="link_5">
+    <inertial>
+      <origin
+        xyz="0.00504501747147962 -9.06142822537648E-06 -0.0325201529652048"
+        rpy="0 0 0" />
+      <mass
+        value="0.0198049389956388" />
+      <inertia
+        ixx="1.07826423329981E-06"
+        ixy="1.37634813783634E-09"
+        ixz="2.83021319815508E-08"
+        iyy="2.87586796432686E-06"
+        iyz="-1.33100790895479E-10"
+        izz="2.95769278459524E-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/link_5.stl" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/link_5.stl" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint_4"
+    type="revolute">
+    <origin
+      xyz="-0.000251 -0.100502  0.002641"
+      rpy="0 0 0" />
+    <parent
+      link="link_4" />
+    <child
+      link="link_5" />
+    <axis
+      xyz="1 0 0" />
+    <limit lower="-3.14159" upper="3.14159"/>
+  </joint>
+  <link
+    name="link_6">
+    <inertial>
+      <origin
+        xyz="0.0083776132652086 0.221509253380248 -0.000322123870656721"
+        rpy="0 0 0" />
+      <mass
+        value="0.0286782121965461" />
+      <inertia
+        ixx="6.8235194033342E-06"
+        ixy="-2.84299175040268E-09"
+        ixz="1.06006884589027E-06"
+        iyy="8.09477227096767E-06"
+        iyz="4.61842210237313E-08"
+        izz="3.58058771769467E-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/link_6.stl" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/link_6.stl" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint_5"
+    type="revolute">
+    <origin
+      xyz="0.019234  0.00037 -0.044779"
+      rpy="0 0 0" />
+    <parent
+      link="link_5" />
+    <child
+      link="link_6" />
+    <axis
+      xyz="0 0 1" />
+    <limit lower="-3.14159" upper="3.14159"/>
+  </joint>
+  <link
+    name="gripper">
+    <inertial>
+      <origin
+        xyz="0.0010818 0.032382 -0.019069"
+        rpy="0 0 0" />
+      <mass
+        value="0.012831" />
+      <inertia
+        ixx="3.449E-06"
+        ixy="-3.8704E-09"
+        ixz="3.156E-07"
+        iyy="2.4565E-06"
+        iyz="3.4089E-08"
+        izz="1.5159E-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/gripper.stl" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.79216 0.81961 0.93333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/gripper.stl" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint_6"
+    type="revolute">
+    <origin
+      xyz="0.007429 -0.017441 -0.013336"
+      rpy="0 0 0" />
+    <parent
+      link="link_6" />
+    <child
+      link="gripper" />
+    <axis
+      xyz="0 1 0" />
+    <limit lower="-1.75" upper="0"/>
+  </joint>
+  <!-- Define the hand_tcp frame -->
+  <link name="gripper_tcp"/>
+  <joint name="gripper_tcp_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="-0.008 0 -0.065"/>
+    <parent link="link_6"/>
+    <child link="gripper_tcp"/>
+  </joint>
+</robot>
