@@ -113,7 +113,6 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
         scene = actors[0].scene
         _builder_initial_poses = []
         merged_scene_idxs = []
-        actors[0]._num_objs
         for actor in actors:
             objs += actor._objs
             merged_scene_idxs.append(actor._scene_idxs)
@@ -284,6 +283,14 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
         if first_only:
             return meshes[0]
         return meshes
+
+    @cached_property
+    def per_scene_id(self):
+        return torch.tensor(
+            [x.per_scene_id for x in self._objs],
+            device=self.device,
+            dtype=torch.int32,
+        )
 
     # -------------------------------------------------------------------------- #
     # Exposed actor properties, getters/setters that automatically handle

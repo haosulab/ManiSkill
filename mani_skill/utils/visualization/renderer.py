@@ -14,6 +14,7 @@ class ImageRenderer:
         """
         self._image = None
         self.last_event = None
+        self.wait_for_button_press = wait_for_button_press
 
     def event_handler(self, event):
         self.last_event = event
@@ -28,7 +29,8 @@ class ImageRenderer:
             self.fig.canvas.mpl_connect("key_press_event", self.event_handler)
         else:
             self._image.set_data(buffer)
-        plt.waitforbuttonpress()
+        if self.wait_for_button_press:
+            plt.waitforbuttonpress()
         plt.draw()
 
     def __del__(self):

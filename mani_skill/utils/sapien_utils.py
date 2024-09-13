@@ -3,7 +3,7 @@ Utilities that work with the simulation / SAPIEN
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, TypeVar
+from typing import TYPE_CHECKING, Dict, List, Tuple, TypeVar
 
 import numpy as np
 import sapien
@@ -291,56 +291,6 @@ def get_cpu_actors_contacts(
         elif contact.bodies[1].entity in actors:
             entity_contacts[contact.bodies[1].entity].append((contact, False))
     return entity_contacts
-
-
-def get_cpu_articulation_contacts(
-    contacts: List[physx.PhysxContact],
-    articulation: physx.PhysxArticulation,
-    excluded_entities: Optional[List[sapien.Entity]] = None,
-    included_links: Optional[List[physx.PhysxArticulationLinkComponent]] = None,
-) -> List[Tuple[physx.PhysxContact, bool]]:
-    articulation_contacts = []
-    links = articulation.get_links()
-    if excluded_entities is None:
-        excluded_entities = []
-    if included_links is None:
-        included_links = links
-    for contact in contacts:
-        if contact.bodies[0] in included_links:
-            if contact.bodies[1] in links:
-                continue
-            if contact.bodies[1].entity in excluded_entities:
-                continue
-            articulation_contacts.append((contact, True))
-        elif contact.bodies[1] in included_links:
-            if contact.bodies[0] in links:
-                continue
-            if contact.bodies[0].entity in excluded_entities:
-                continue
-            articulation_contacts.append((contact, False))
-    return articulation_contacts
-
-
-def compute_max_impulse_norm(contact_infos: List[Tuple[physx.PhysxContact, bool]]):
-    max_impulse_norms = [0]
-    for contact, flag in contact_infos:
-        max_impulse_norm = max(
-            [np.linalg.norm(point.impulse) for point in contact.points]
-        )
-        max_impulse_norms.append(max_impulse_norm)
-    return max(max_impulse_norms)
-
-
-def get_articulation_max_impulse_norm(
-    contacts: List[physx.PhysxContact],
-    articulation: physx.PhysxArticulation,
-    excluded_entities: Optional[List[sapien.Entity]] = None,
-):
-    articulation_contacts = get_cpu_articulation_contacts(
-        contacts, articulation, excluded_entities
-    )
-    max_impulse_norm = compute_max_impulse_norm(articulation_contacts)
-    return max_impulse_norm
 
 
 # -------------------------------------------------------------------------- #
