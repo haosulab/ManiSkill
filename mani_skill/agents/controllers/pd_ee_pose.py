@@ -30,12 +30,6 @@ class PDEEPosController(PDJointPosController):
         assert (
             self.config.frame == "root_translation"
         ), "currently only translation in the root frame for EE control is supported in GPU sim"
-        assert (
-            self.config.use_delta == True
-        ), "currently only delta EE control is supported in GPU sim"
-        assert (
-            self.config.use_target == False
-        ), "Currently cannot take actions relative to last target pose in GPU sim"
 
     def _initialize_joints(self):
         self.initial_qpos = None
@@ -111,6 +105,7 @@ class PDEEPosController(PDJointPosController):
             self.articulation.get_qpos(),
             pos_only=pos_only,
             action=action,
+            use_delta_ik_solver=self.config.use_delta and not self.config.use_target,
         )
         if self._target_qpos is None:
             self._target_qpos = self._start_qpos
@@ -179,12 +174,6 @@ class PDEEPoseController(PDEEPosController):
         assert (
             self.config.frame == "root_translation:root_aligned_body_rotation"
         ), "currently only translation in the root frame for EE control is supported in GPU sim"
-        assert (
-            self.config.use_delta == True
-        ), "currently only delta EE control is supported in GPU sim"
-        assert (
-            self.config.use_target == False
-        ), "Currently cannot take actions relative to last target pose in GPU sim"
 
     def _initialize_action_space(self):
         low = np.float32(
@@ -218,11 +207,6 @@ class PDEEPoseController(PDEEPosController):
         ]
         rot_action = rot_action * self.config.rot_lower
         return torch.hstack([pos_action, rot_action])
-
-    def compute_ik(self, target_pose: Pose, action: Array, max_iterations=100):
-        return super().compute_ik(
-            target_pose, action, pos_only=False, max_iterations=max_iterations
-        )
 
     def compute_target_pose(self, prev_ee_pose_at_base: Pose, action):
         if self.config.use_delta:
