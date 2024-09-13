@@ -32,7 +32,7 @@ class Koch(BaseAgent):
         )
     )
 
-    def __init__(self, *args, robot_chassis_colors=[0.9, 0.2, 0.1, 1], **kwargs):
+    def __init__(self, *args, robot_chassis_colors=[1, 1, 1, 1], **kwargs):
         self.robot_chassis_colors = robot_chassis_colors
         """either a RGBA color or a list of RGBA colors for each robot in each parallel environment to then customize the color of the robot chassis"""
         super().__init__(*args, **kwargs)
