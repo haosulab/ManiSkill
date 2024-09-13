@@ -13,6 +13,7 @@ from mani_skill.utils.structs.actor import Actor
 
 @register_agent()
 class Koch(BaseAgent):
+    scale = 2.0
     uid = "koch-v1.1"
     urdf_path = f"{PACKAGE_ASSET_DIR}/robots/koch/follower_arm_v1.1_simplified.urdf"
     urdf_config = dict(

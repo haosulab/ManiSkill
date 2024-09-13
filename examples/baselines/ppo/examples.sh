@@ -6,6 +6,9 @@
 python ppo.py --env_id="PickCube-v1" \
   --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
   --total_timesteps=10_000_000
+python ppo.py --env_id="TransferCube-v1" \
+  --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
+  --total_timesteps=20_000_000
 python ppo.py --env_id="StackCube-v1" \
   --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
   --total_timesteps=25_000_000
