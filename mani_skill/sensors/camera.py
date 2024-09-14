@@ -279,8 +279,6 @@ def camera_observations_to_images(
             seg = observations[key]  # [H, W, 1]
             assert seg.ndim == 4 and seg.shape[-1] == 1, seg.shape
             # A heuristic way to colorize labels
-            if seg.dtype == torch.uint32:
-                seg = seg.to(torch.int32)
             seg = (seg * torch.tensor([11, 61, 127], device=seg.device)).to(torch.uint8)
             images[key] = seg
     return images

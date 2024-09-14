@@ -90,29 +90,54 @@ class VideoRecorder:
 
 	def __init__(self, cfg, wandb, fps=15):
 		self.cfg = cfg
-		self.maniskill_video_nrows = int(np.sqrt(cfg.num_envs))
+		self.maniskill_video_nrows = int(np.sqrt(cfg.eval_episodes))
 		self._save_dir = make_dir(cfg.work_dir / 'eval_video')
 		self._wandb = wandb
 		self.fps = fps
-		self.frames = []
+		self.frames = [] # records only current num_eval_envs # of epsidoes (ep_len, num_eval_envs, h, w, 3)
+		self.videos = [] # records all episodes (eval_episodes, ep_len, h, w, 3)
 		self.enabled = False
 
-	def init(self, env, enabled=True):
+	def init_cur_eps(self, env, enabled=True):
+		"""
+		Init a new set of episodes in a frame buffer, later to be added together to the video buffer.
+		"""
 		self.frames = []
-		self.enabled = self._save_dir and self._wandb and enabled
-		self.record(env)
+		self.enabled = self._save_dir and self._wandb and enabled,
+		self.record_cur_eps(env)
 
-	def record(self, env):
+	def record_cur_eps(self, env):
+		"""
+		Record current episodes' frames to the frame buffer.
+		"""
 		if self.enabled:
-			self.frames.append(env.render())
+			self.frames.append(env.render().cpu().numpy())
 
-	def save(self, step, key='videos/eval_video'):
+	def save_cur_eps(self):
+		"""
+		Save current num_envs episodes to the video buffer.
+		"""
 		if self.enabled and len(self.frames) > 0:
-			self.frames = [tile_images(rgbs, nrows=self.maniskill_video_nrows) for rgbs in self.frames]
-			frames = np.stack(self.frames)
-			return self._wandb.log(
-				{key: self._wandb.Video(frames.transpose(0, 3, 1, 2), fps=self.fps, format='mp4')}, step=step
+			self.videos.extend(np.array(self.frames).transpose(1,0,2,3,4))
+			
+	def flush_saved_eps(self, step, num_episodes, key='videos/eval_video'):
+		"""
+		Flush all episodes in the video buffer to wandb. It will call reset() at the end.
+		"""
+		if self.enabled and len(self.frames) > 0:
+			videos = np.array(self.videos[:num_episodes]).transpose(1,0,2,3,4) # Truncate recorded episodes to self.cf.eval_episodes (ep_len, eval_episodes, h, w, 3)
+			videos = np.stack([tile_images(rgbs, nrows=self.maniskill_video_nrows) for rgbs in videos])
+			self._wandb.log(
+				{key: self._wandb.Video(videos.transpose(0, 3, 1, 2), fps=self.fps, format='mp4')}, step=step
 			)
+		self.reset()
+		
+	def reset(self):
+		"""
+		Reset video recorder, including the video buffer.
+		"""
+		self.frames = []
+		self.videos = []
 
 
 class Logger:

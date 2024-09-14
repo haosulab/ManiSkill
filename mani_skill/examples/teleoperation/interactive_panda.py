@@ -1,5 +1,6 @@
 import argparse
 from ast import parse
+from typing import Annotated
 import gymnasium as gym
 import numpy as np
 import sapien.core as sapien
@@ -7,20 +8,42 @@ from mani_skill.envs.sapien_env import BaseEnv
 
 from mani_skill.examples.motionplanning.panda.motionplanner import \
     PandaArmMotionPlanningSolver
+from mani_skill.examples.motionplanning.panda_stick.motionplanner import \
+    PandaStickMotionPlanningSolver
 import sapien.utils.viewer
 import h5py
 import json
 import mani_skill.trajectory.utils as trajectory_utils
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.wrappers.record import RecordEpisode
-def main(args):
+import tyro
+from dataclasses import dataclass
+
+@dataclass
+class Args:
+    env_id: Annotated[str, tyro.conf.arg(aliases=["-e"])] = "PickCube-v1"
+    obs_mode: str = "none"
+    robot_uid: Annotated[str, tyro.conf.arg(aliases=["-r"])] = "panda"
+    """The robot to use. Robot setups supported for teleop in this script are panda and panda_stick"""
+    record_dir: str = "demos"
+    """directory to record the demonstration data and optionally videos"""
+    save_video: bool = False
+    """whether to save the videos of the demonstrations after collecting them all"""
+    video_saving_shader: str = "rt-fast"
+    """the shader to use for the videos of the demonstrations. 'minimal' is the fast shader, 'rt' and 'rt-fast' are the ray tracing shaders"""
+
+def parse_args() -> Args:
+    return tyro.cli(Args)
+
+def main(args: Args):
     output_dir = f"{args.record_dir}/{args.env_id}/teleop/"
     env = gym.make(
         args.env_id,
         obs_mode=args.obs_mode,
         control_mode="pd_joint_pos",
         render_mode="rgb_array",
-        reward_mode="sparse",
+        reward_mode="none",
+        viewer_camera_configs=dict(shader_pack="rt-fast")
     )
     env = RecordEpisode(
         env,
@@ -51,40 +74,43 @@ def main(args):
     json_file_path = env._json_path
     env.close()
     del env
-    print(f"saving videos to {output_dir}")
+    print(f"Trajectories saved to {h5_file_path}")
+    if args.save_video:
+        print(f"Saving videos to {output_dir}")
 
-    trajectory_data = h5py.File(h5_file_path)
-    with open(json_file_path, "r") as f:
-        json_data = json.load(f)
-    env = gym.make(
-        args.env_id,
-        obs_mode=args.obs_mode,
-        control_mode="pd_joint_pos",
-        render_mode="rgb_array",
-        reward_mode="sparse",
-    )
-    env = RecordEpisode(
-        env,
-        output_dir=output_dir,
-        trajectory_name="trajectory",
-        save_video=True,
-        info_on_video=False,
-        save_trajectory=False,
-        video_fps=30
-    )
-    for episode in json_data["episodes"]:
-        traj_id = f"traj_{episode['episode_id']}"
-        data = trajectory_data[traj_id]
-        env.reset(**episode["reset_kwargs"])
-        env_states_list = trajectory_utils.dict_to_list_of_dicts(data["env_states"])
+        trajectory_data = h5py.File(h5_file_path)
+        with open(json_file_path, "r") as f:
+            json_data = json.load(f)
+        env = gym.make(
+            args.env_id,
+            obs_mode=args.obs_mode,
+            control_mode="pd_joint_pos",
+            render_mode="rgb_array",
+            reward_mode="none",
+            human_render_camera_configs=dict(shader_pack=args.video_saving_shader),
+        )
+        env = RecordEpisode(
+            env,
+            output_dir=output_dir,
+            trajectory_name="trajectory",
+            save_video=True,
+            info_on_video=False,
+            save_trajectory=False,
+            video_fps=30
+        )
+        for episode in json_data["episodes"]:
+            traj_id = f"traj_{episode['episode_id']}"
+            data = trajectory_data[traj_id]
+            env.reset(**episode["reset_kwargs"])
+            env_states_list = trajectory_utils.dict_to_list_of_dicts(data["env_states"])
 
-        env.base_env.set_state_dict(env_states_list[0])
-        for action in np.array(data["actions"]):
-            env.step(action)
+            env.base_env.set_state_dict(env_states_list[0])
+            for action in np.array(data["actions"]):
+                env.step(action)
 
-    trajectory_data.close()
-    env.close()
-    del env
+        trajectory_data.close()
+        env.close()
+        del env
 
 
 
@@ -93,21 +119,37 @@ def solve(env: BaseEnv, debug=False, vis=False):
         "pd_joint_pos",
         "pd_joint_pos_vel",
     ], env.unwrapped.control_mode
-    planner = PandaArmMotionPlanningSolver(
-        env,
-        debug=debug,
-        vis=vis,
-        base_pose=env.unwrapped.agent.robot.pose,
-        visualize_target_grasp_pose=False,
-        print_env_info=False,
-        joint_acc_limits=0.5,
-        joint_vel_limits=0.5,
-    )
+    robot_has_gripper = False
+    if env.unwrapped.robot_uids == "panda_stick":
+        planner = PandaStickMotionPlanningSolver(
+            env,
+            debug=debug,
+            vis=vis,
+            base_pose=env.unwrapped.agent.robot.pose,
+            visualize_target_grasp_pose=False,
+            print_env_info=False,
+            joint_acc_limits=0.5,
+            joint_vel_limits=0.5,
+        )
+    elif env.unwrapped.robot_uids == "panda" or env.unwrapped.robot_uids == "panda_wristcam":
+        robot_has_gripper = True
+        planner = PandaArmMotionPlanningSolver(
+            env,
+            debug=debug,
+            vis=vis,
+            base_pose=env.unwrapped.agent.robot.pose,
+            visualize_target_grasp_pose=False,
+            print_env_info=False,
+            joint_acc_limits=0.5,
+            joint_vel_limits=0.5,
+        )
     viewer = env.render_human()
 
     last_checkpoint_state = None
     gripper_open = True
-    viewer.select_entity(sapien_utils.get_obj_by_name(env.agent.robot.links, "panda_hand")._objs[0].entity)
+    def select_panda_hand():
+        viewer.select_entity(sapien_utils.get_obj_by_name(env.agent.robot.links, "panda_hand")._objs[0].entity)
+    select_panda_hand()
     for plugin in viewer.plugins:
         if isinstance(plugin, sapien.utils.viewer.viewer.TransformWindow):
             transform_window = plugin
@@ -123,10 +165,13 @@ def solve(env: BaseEnv, debug=False, vis=False):
         if viewer.window.key_press("h"):
             print("""Available commands:
             h: print this help menu
-            g: toggle gripper to close/open
+            g: toggle gripper to close/open (if there is a gripper)
+            u: move the panda hand up
+            j: move the panda hand down
+            arrow_keys: move the panda hand in the direction of the arrow keys
             n: execute command via motion planning to make the robot move to the target pose indicated by the ghost panda arm
             c: stop this episode and record the trajectory and move on to a new episode
-            q: quit the script and stop collecting data and save videos
+            q: quit the script and stop collecting data. Save trajectories and optionally videos.
             """)
             pass
         # elif viewer.window.key_press("k"):
@@ -150,7 +195,7 @@ def solve(env: BaseEnv, debug=False, vis=False):
         #     pass
         elif viewer.window.key_press("n"):
             execute_current_pose = True
-        elif viewer.window.key_press("g"):
+        elif viewer.window.key_press("g") and robot_has_gripper:
             if gripper_open:
                 gripper_open = False
                 _, reward, _ ,_, info = planner.close_gripper()
@@ -158,23 +203,37 @@ def solve(env: BaseEnv, debug=False, vis=False):
                 gripper_open = True
                 _, reward, _ ,_, info = planner.open_gripper()
             print(f"Reward: {reward}, Info: {info}")
-        # # TODO left, right depend on orientation really.
-        # elif viewer.window.key_press("down"):
-        #     pose = planner.grasp_pose_visual.pose
-        #     planner.grasp_pose_visual.set_pose(pose * sapien.Pose(p=[0, 0, 0.01]))
-        # elif viewer.window.key_press("up"):
-        #     pose = planner.grasp_pose_visual.pose
-        #     planner.grasp_pose_visual.set_pose(pose * sapien.Pose(p=[0, 0, -0.01]))
-        # elif viewer.window.key_press("right"):
-        #     pose = planner.grasp_pose_visual.pose
-        #     planner.grasp_pose_visual.set_pose(pose * sapien.Pose(p=[0, -0.01, 0]))
-        # elif viewer.window.key_press("left"):
-        #     pose = planner.grasp_pose_visual.pose
-        #     planner.grasp_pose_visual.set_pose(pose * sapien.Pose(p=[0, +0.01, 0]))
+        elif viewer.window.key_press("u"):
+            select_panda_hand()
+            transform_window.gizmo_matrix = (transform_window._gizmo_pose * sapien.Pose(p=[0, 0, -0.01])).to_transformation_matrix()
+            transform_window.update_ghost_objects()
+        elif viewer.window.key_press("j"):
+            select_panda_hand()
+            transform_window.gizmo_matrix = (transform_window._gizmo_pose * sapien.Pose(p=[0, 0, +0.01])).to_transformation_matrix()
+            transform_window.update_ghost_objects()
+        elif viewer.window.key_press("down"):
+            select_panda_hand()
+            transform_window.gizmo_matrix = (transform_window._gizmo_pose * sapien.Pose(p=[+0.01, 0, 0])).to_transformation_matrix()
+            transform_window.update_ghost_objects()
+        elif viewer.window.key_press("up"):
+            select_panda_hand()
+            transform_window.gizmo_matrix = (transform_window._gizmo_pose * sapien.Pose(p=[-0.01, 0, 0])).to_transformation_matrix()
+            transform_window.update_ghost_objects()
+        elif viewer.window.key_press("right"):
+            select_panda_hand()
+            transform_window.gizmo_matrix = (transform_window._gizmo_pose * sapien.Pose(p=[0, -0.01, 0])).to_transformation_matrix()
+            transform_window.update_ghost_objects()
+        elif viewer.window.key_press("left"):
+            select_panda_hand()
+            transform_window.gizmo_matrix = (transform_window._gizmo_pose * sapien.Pose(p=[0, +0.01, 0])).to_transformation_matrix()
+            transform_window.update_ghost_objects()
         if execute_current_pose:
             # z-offset of end-effector gizmo to TCP position is hardcoded for the panda robot here
-            result = planner.move_to_pose_with_screw(transform_window._gizmo_pose * sapien.Pose([0, 0, 0.102]), dry_run=True)
-            if result != -1 and len(result["position"]) < 100:
+            if env.unwrapped.robot_uids == "panda":
+                result = planner.move_to_pose_with_screw(transform_window._gizmo_pose * sapien.Pose([0, 0, 0.1]), dry_run=True)
+            elif env.unwrapped.robot_uids == "panda_stick":
+                result = planner.move_to_pose_with_screw(transform_window._gizmo_pose * sapien.Pose([0, 0, 0.15]), dry_run=True)
+            if result != -1 and len(result["position"]) < 150:
                 _, reward, _ ,_, info = planner.follow_path(result)
                 print(f"Reward: {reward}, Info: {info}")
             else:
@@ -182,13 +241,7 @@ def solve(env: BaseEnv, debug=False, vis=False):
                 else: print("Generated motion plan was too long. Try a closer sub-goal")
             execute_current_pose = False
 
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-e", "--env-id", type=str, default="PickCube-v1")
-    parser.add_argument("-o", "--obs-mode", type=str, default="none")
-    parser.add_argument("-r", "--robot-uid", type=str, default="panda", help="Robot setups supported are ['panda']")
-    parser.add_argument("--record-dir", type=str, default="demos")
-    args, opts = parser.parse_known_args()
+
 
     return args
 if __name__ == "__main__":

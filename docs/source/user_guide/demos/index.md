@@ -151,6 +151,10 @@ Example below shows what it looks like with the GUI:
 
 For more details check out the [motion planning page](../data_collection/motionplanning.md)
 
+## Real2Sim Evaluation
+
+ManiSkill3 supports extremely fast real2sim evaluation via GPU simulation + rendering of policies like RT-1 and Octo. See [this page](../../tasks/digital_twins/index.md) for more details on which environments are supported. To run inference of RT-1 and Octo, see the `maniskill3` branch of the [SimplerEnv Project](https://github.com/simpler-env/SimplerEnv/tree/maniskill3).
+
 ## Visualize Pointcloud Data
 
 You can run the following to visualize the pointcloud observations (require's a display to work)

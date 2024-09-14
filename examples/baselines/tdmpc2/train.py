@@ -52,7 +52,8 @@ def train(cfg: dict):
 	trainer_cls = OnlineTrainer # OfflineTrainer if cfg.multitask else OnlineTrainer
 	trainer = trainer_cls(
 		cfg=cfg,
-		env=make_envs(cfg),
+		env=make_envs(cfg, cfg.num_envs),
+		eval_env=make_envs(cfg, cfg.num_eval_envs),
 		agent=TDMPC2(cfg),
 		buffer=Buffer(cfg),
 		logger=Logger(cfg),

@@ -91,7 +91,7 @@ class Kinematics:
     def _setup_gpu(self):
         """setup the kinematics solvers on the GPU"""
         self.use_gpu_ik = True
-        with open(self.urdf_path, "r") as f:
+        with open(self.urdf_path, "rb") as f:
             urdf_str = f.read()
 
         # NOTE (stao): it seems that the pk library currently always outputs some complaints if there are unknown attributes in a URDF. Hide it with this contextmanager here
@@ -107,6 +107,14 @@ class Kinematics:
                 urdf_str,
                 end_link_name=self.end_link.name,
             ).to(device=self.device)
+        lim = torch.tensor(self.pk_chain.get_joint_limits(), device=self.device)
+        self.pik = pk.PseudoInverseIK(
+            self.pk_chain,
+            joint_limits=lim.T,
+            early_stopping_any_converged=True,
+            max_iterations=200,
+            num_retries=1,
+        )
 
         self.qmask = torch.zeros(
             len(self.active_ancestor_joints), dtype=bool, device=self.device
@@ -114,27 +122,54 @@ class Kinematics:
         self.qmask[self.controlled_joints_idx_in_qmask] = 1
 
     def compute_ik(
-        self, target_pose: Pose, q0: torch.Tensor, pos_only: bool = False, action=None
+        self,
+        target_pose: Pose,
+        q0: torch.Tensor,
+        pos_only: bool = False,
+        action=None,
+        use_delta_ik_solver: bool = False,
     ):
-        """Given a target pose, via inverse kinematics compute the target joint positions that will achieve the target pose"""
+        """Given a target pose, via inverse kinematics compute the target joint positions that will achieve the target pose
+
+        Args:
+            target_pose (Pose): target pose of the end effector in the world frame. note this is not relative to the robot base frame!
+            q0 (torch.Tensor): initial joint positions of every active joint in the articulation
+            pos_only (bool): if True, only the position of the end link is considered in the IK computation
+            action (torch.Tensor): delta action to be applied to the articulation. Used for fast delta IK solutions on the GPU.
+            use_delta_ik_solver (bool): If true, returns the target joint positions that correspond with a delta IK solution. This is specifically
+                used for GPU simulation to determine which GPU IK algorithm to use.
+        """
         if self.use_gpu_ik:
             q0 = q0[:, self.active_ancestor_joint_idxs]
-            jacobian = self.pk_chain.jacobian(q0)
-            # code commented out below is the fast kinematics method
-            # jacobian = (
-            #     self.fast_kinematics_model.jacobian_mixed_frame_pytorch(
-            #         self.articulation.get_qpos()[:, self.active_ancestor_joint_idxs]
-            #     )
-            #     .view(-1, len(self.active_ancestor_joints), 6)
-            #     .permute(0, 2, 1)
-            # )
-            # jacobian = jacobian[:, :, self.qmask]
-            if pos_only:
-                jacobian = jacobian[:, 0:3]
+            if not use_delta_ik_solver:
+                tf = pk.Transform3d(
+                    pos=target_pose.p,
+                    rot=target_pose.q,
+                    device=self.device,
+                )
+                self.pik.initial_config = q0  # shape (num_retries, active_ancestor_dof)
+                result = self.pik.solve(
+                    tf
+                )  # produce solutions in shape (B, num_retries/initial_configs, active_ancestor_dof)
+                # TODO return mask for invalid solutions. CPU returns None at the moment
+                return result.solutions[:, 0, :]
+            else:
+                jacobian = self.pk_chain.jacobian(q0)
+                # code commented out below is the fast kinematics method
+                # jacobian = (
+                #     self.fast_kinematics_model.jacobian_mixed_frame_pytorch(
+                #         self.articulation.get_qpos()[:, self.active_ancestor_joint_idxs]
+                #     )
+                #     .view(-1, len(self.active_ancestor_joints), 6)
+                #     .permute(0, 2, 1)
+                # )
+                # jacobian = jacobian[:, :, self.qmask]
+                if pos_only:
+                    jacobian = jacobian[:, 0:3]
 
-            # NOTE (stao): this method of IK is from https://mathweb.ucsd.edu/~sbuss/ResearchWeb/ikmethods/iksurvey.pdf by Samuel R. Buss
-            delta_joint_pos = torch.linalg.pinv(jacobian) @ action.unsqueeze(-1)
-            return q0 + delta_joint_pos.squeeze(-1)
+                # NOTE (stao): this method of IK is from https://mathweb.ucsd.edu/~sbuss/ResearchWeb/ikmethods/iksurvey.pdf by Samuel R. Buss
+                delta_joint_pos = torch.linalg.pinv(jacobian) @ action.unsqueeze(-1)
+                return q0 + delta_joint_pos.squeeze(-1)
         else:
             result, success, error = self.pmodel.compute_inverse_kinematics(
                 self.end_link_idx,

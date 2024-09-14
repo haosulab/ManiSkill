@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import dataclass, field
 from functools import cached_property
 from typing import TYPE_CHECKING, Dict, List, Tuple, Union
@@ -377,17 +378,31 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
                 .transpose(1, 0)
             )
         else:
+            included_links = [self.links_map[k]._objs[0].entity for k in link_names]
+            contacts = self.px.get_contacts()
+            articulation_contacts = defaultdict(list)
+            for contact in contacts:
+                if contact.bodies[0].entity in included_links:
+                    articulation_contacts[contact.bodies[0].entity.name].append(
+                        (contact, True)
+                    )
+                elif contact.bodies[1].entity in included_links:
+                    articulation_contacts[contact.bodies[1].entity.name].append(
+                        (contact, False)
+                    )
 
-            body_contacts = sapien_utils.get_cpu_articulation_contacts(
-                self.px.get_contacts(),
-                self._objs[0],
-                included_links=[self.links_map[k]._objs[0] for k in link_names],
-            )
-            net_force = common.to_tensor(
-                sapien_utils.compute_total_impulse(body_contacts)
-            )
-            # TODO (stao): (unify contacts api between gpu / cpu)
-            return net_force[None, :]
+            net_impulse = torch.zeros(len(link_names), 3)
+            for i, link_name in enumerate(link_names):
+                link_contacts = articulation_contacts[link_name]
+                if len(link_contacts) > 0:
+                    total_impulse = np.zeros(3)
+                    for contact, flag in link_contacts:
+                        contact_impulse = np.sum(
+                            [point.impulse for point in contact.points], axis=0
+                        )
+                        total_impulse += contact_impulse * (1 if flag else -1)
+                    net_impulse[i] = common.to_tensor(total_impulse)
+            return net_impulse[None, :]
 
     def get_net_contact_forces(self, link_names: Union[List[str], Tuple[str]]):
         """Get net contact forces for several links together. This should be faster compared to using
