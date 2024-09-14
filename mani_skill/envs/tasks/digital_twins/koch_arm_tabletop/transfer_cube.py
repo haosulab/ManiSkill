@@ -196,9 +196,9 @@ class TransferCubeEnv(BaseEnv):
 
         # stage 5, return to rest qpos
         stage_5_cond = is_obj_placed & ~is_grasped
-        reward[stage_5_cond] = (
-            10 + (1 - torch.tanh(5 * info["robot_to_rest_pose_dist"]))
-        )[stage_5_cond]
+        reward[stage_5_cond] = (10 + (1 - torch.tanh(info["robot_to_rest_pose_dist"])))[
+            stage_5_cond
+        ]
         reward[info["success"]] = 12
         return reward
 
