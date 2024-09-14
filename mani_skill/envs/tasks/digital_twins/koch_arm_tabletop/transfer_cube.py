@@ -17,7 +17,7 @@ from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import SimConfig
 
 
-@register_env("TransferCube-v1", max_episode_steps=60)
+@register_env("TransferCube-v1", max_episode_steps=80)
 class TransferCubeEnv(BaseEnv):
     SUPPORTED_ROBOTS = ["koch-v1.1"]
     agent: Koch
@@ -36,7 +36,7 @@ class TransferCubeEnv(BaseEnv):
             [-0.00347404, 0.136826, 0.496307],
             [0.138651, 0.345061, 0.0516183, -0.926846],
         )
-        return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
+        return [CameraConfig("base_camera", pose, 640, 480, np.pi / 2, 0.01, 100)]
 
     @property
     def _default_human_render_camera_configs(self):
@@ -44,7 +44,7 @@ class TransferCubeEnv(BaseEnv):
             [-0.00347404, 0.136826, 0.496307],
             [0.138651, 0.345061, 0.0516183, -0.926846],
         )
-        return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
+        return CameraConfig("render_camera", pose, 640, 480, 1, 0.01, 100)
 
     def build_square_boundary(
         self, size: float = 0.05, name: str = "square_boundary", color=[1, 1, 1, 1]
@@ -199,7 +199,6 @@ class TransferCubeEnv(BaseEnv):
         reward[stage_5_cond] = (
             10 + (1 - torch.tanh(5 * info["robot_to_rest_pose_dist"]))
         )[stage_5_cond]
-
         reward[info["success"]] = 12
         return reward
 

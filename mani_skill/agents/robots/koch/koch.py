@@ -68,8 +68,8 @@ class Koch(BaseAgent):
 
     def _after_loading_articulation(self):
         super()._after_loading_articulation()
-        self.finger1_link = self.robot.links_map["link_6"]
-        self.finger2_link = self.robot.links_map["gripper"]
+        self.finger1_link = self.robot.links_map["gripper"]
+        self.finger2_link = self.robot.links_map["link_6"]
         self.tcp = self.robot.links_map["gripper_tcp"]
         for link in self.robot.links:
             for i, obj in enumerate(link._objs):
@@ -88,7 +88,7 @@ class Koch(BaseAgent):
                             color = self.robot_chassis_colors
                         mesh.material.base_color = color
 
-    def is_grasping(self, object: Actor, min_force=0.5, max_angle=85):
+    def is_grasping(self, object: Actor, min_force=0.5, max_angle=110):
         """Check if the robot is grasping an object
 
         Args:

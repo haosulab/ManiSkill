@@ -9,6 +9,7 @@ import h5py
 import numpy as np
 import sapien.physx as physx
 import torch
+import tree
 
 from mani_skill import get_commit_info
 from mani_skill.envs.sapien_env import BaseEnv
@@ -282,10 +283,6 @@ class RecordEpisode(gym.Wrapper):
         self._save_video = save_video
         self.info_on_video = info_on_video
         self.render_images = []
-        if info_on_video and self.num_envs > 1:
-            raise ValueError(
-                "Cannot turn info_on_video=True when the number of environments parallelized is > 1"
-            )
         self.video_nrows = int(np.sqrt(self.unwrapped.num_envs))
 
         # check if wrapped env is already wrapped by a CPU gym wrapper
@@ -320,11 +317,6 @@ class RecordEpisode(gym.Wrapper):
     def capture_image(self):
         img = self.env.render()
         img = common.to_numpy(img)
-        if len(img.shape) > 3:
-            if len(img) == 1:
-                img = img[0]
-            else:
-                img = tile_images(img, nrows=self.video_nrows)
         return img
 
     def reset(
@@ -485,16 +477,25 @@ class RecordEpisode(gym.Wrapper):
             image = self.capture_image()
 
             if self.info_on_video:
-                info = common.to_numpy(info)
-                scalar_info = gym_utils.extract_scalars_from_info(info)
-                if isinstance(rew, torch.Tensor) and len(rew.shape) > 1:
-                    rew = rew[0]
-                rew = float(common.to_numpy(rew))
-                extra_texts = [
-                    f"reward: {rew:.3f}",
-                    "action: {}".format(",".join([f"{x:.2f}" for x in action])),
-                ]
-                image = put_info_on_image(image, scalar_info, extras=extra_texts)
+                # scalar_info = gym_utils.extract_scalars_from_info(common.to_numpy(info))
+                info_np = common.to_numpy(info)
+                rew_np = common.to_numpy(rew)
+                action_np = common.to_numpy(action)
+                for i in range(self.num_envs):
+                    extra_texts = [
+                        f"reward: {rew_np[i]:.3f}",
+                        "action: {}".format(
+                            ",".join([f"{x:.2f}" for x in action_np[i]])
+                        ),
+                    ]
+                    data_dict = gym_utils.extract_scalars_from_info(
+                        tree.map_structure(
+                            lambda x: x[i] if x is not None else None, info_np
+                        )
+                    )
+                    image[i] = put_info_on_image(
+                        image[i], data_dict, extras=extra_texts
+                    )
 
             self.render_images.append(image)
             if (
@@ -747,6 +748,15 @@ class RecordEpisode(gym.Wrapper):
                     video_name += "_" + suffix
             else:
                 video_name = name
+            # tile images
+            for i in range(len(self.render_images)):
+                image = self.render_images[i]
+                if len(image.shape) > 3:
+                    if len(image) == 1:
+                        image = image[0]
+                    else:
+                        image = tile_images(image, nrows=self.video_nrows)
+                self.render_images[i] = image
             images_to_video(
                 self.render_images,
                 str(self.output_dir),
