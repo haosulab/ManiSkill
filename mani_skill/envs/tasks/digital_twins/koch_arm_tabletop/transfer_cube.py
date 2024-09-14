@@ -17,7 +17,7 @@ from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import SimConfig
 
 
-@register_env("TransferCube-v1", max_episode_steps=50)
+@register_env("TransferCube-v1", max_episode_steps=60)
 class TransferCubeEnv(BaseEnv):
     SUPPORTED_ROBOTS = ["koch-v1.1"]
     agent: Koch
@@ -97,6 +97,10 @@ class TransferCubeEnv(BaseEnv):
             size=self.square_boundary_size, name="goal_boundary"
         )
 
+        self.rest_qpos = torch.from_numpy(self.agent.keyframes["rest"].qpos).to(
+            self.device
+        )
+
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
             b = len(env_idx)
@@ -144,15 +148,17 @@ class TransferCubeEnv(BaseEnv):
         within_end_boundary_xy = within_end_boundary_xy.all(1)
 
         is_obj_placed = within_end_boundary_xy & (
-            self.cube.pose.p[:, 2] < self.cube_half_size + 1e-3
+            self.cube.pose.p[:, 2] < self.cube_half_size + 5e-3
+        )
+        robot_to_rest_pose_dist = torch.linalg.norm(
+            self.agent.robot.qpos - self.rest_qpos, axis=1
         )
         is_grasped = self.agent.is_grasping(self.cube)
-        # is_robot_static = self.agent.is_static(0.2)
         return {
-            "success": is_obj_placed & ~is_grasped,
+            "success": is_obj_placed & ~is_grasped & (robot_to_rest_pose_dist < 0.15),
             "is_obj_placed": is_obj_placed,
             "within_end_boundary_xy": within_end_boundary_xy,
-            # "is_robot_static": is_robot_static,
+            "robot_to_rest_pose_dist": robot_to_rest_pose_dist,
             "is_grasped": is_grasped,
         }
 
@@ -175,29 +181,29 @@ class TransferCubeEnv(BaseEnv):
         gripper_height_reward = torch.tanh(
             torch.clamp(self.agent.tcp.pose.p[:, 2], 0, 0.12) / 0.12
         ) / np.tanh(1 + 1e-3)
-        reward[is_grasped] = (
-            reach_goal_reward[is_grasped] + gripper_height_reward[is_grasped] + 3
-        )
+        reward[is_grasped] = (reach_goal_reward + gripper_height_reward + 3)[is_grasped]
 
         # stage 3, get object as close as possible to the middle of the goal boundary
         within_end_boundary_xy = info["within_end_boundary_xy"]
-        reward[within_end_boundary_xy] = (
-            5
-            + obj_to_goal_dist[within_end_boundary_xy]
-            + gripper_height_reward[within_end_boundary_xy]
+        reward[within_end_boundary_xy] = 5 + obj_to_goal_dist[within_end_boundary_xy]
+
+        # stage 4, ensure object is at the desired location and not being grasped
+        is_obj_placed = info["is_obj_placed"]
+        ungrasp_reward = torch.tanh(
+            torch.clamp(self.agent.robot.qpos[:, -1], -1, 0) / -1
         )
+        reward[is_obj_placed] = (7 + ungrasp_reward)[is_obj_placed]
 
-        # stage 4, release object
+        # stage 5, return to rest qpos
+        stage_5_cond = is_obj_placed & ~is_grasped
+        reward[stage_5_cond] = (
+            10 + (1 - torch.tanh(5 * info["robot_to_rest_pose_dist"]))
+        )[stage_5_cond]
 
-        # static_reward = 1 - torch.tanh(
-        #     5 * torch.linalg.norm(self.agent.robot.get_qvel()[..., :-2], axis=1)
-        # )
-        # reward += static_reward * info["is_obj_placed"]
-
-        reward[info["success"]] = 8
+        reward[info["success"]] = 12
         return reward
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        return self.compute_dense_reward(obs=obs, action=action, info=info) / 8
+        return self.compute_dense_reward(obs=obs, action=action, info=info) / 12
