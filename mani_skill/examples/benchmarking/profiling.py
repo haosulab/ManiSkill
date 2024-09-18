@@ -5,7 +5,7 @@ from typing import Literal
 
 import psutil
 import torch
-
+import pynvml
 import subprocess as sp
 def flatten_dict_keys(d: dict, prefix=""):
     """Flatten a dict by expanding its keys recursively."""
@@ -27,6 +27,14 @@ class Profiler:
         self.output_format = output_format
         self.synchronize_torch = synchronize_torch
         self.stats = dict()
+        # Initialize NVML
+        pynvml.nvmlInit()
+
+        # Get handle for the first GPU (index 0)
+        self.handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+
+        # Get the PID of the current process
+        self.current_pid = os.getpid()
 
     def log(self, msg):
         """log a message to stdout"""
@@ -75,7 +83,7 @@ class Profiler:
         print(f"start recording {name} metrics")
         process = psutil.Process(os.getpid())
         cpu_mem_use = process.memory_info().rss
-        gpu_mem_use = torch.cuda.mem_get_info()
+        gpu_mem_use = self.get_current_process_gpu_memory()
         torch.cuda.synchronize()
         stime = time.time()
         yield
@@ -89,7 +97,7 @@ class Profiler:
             psps=total_steps / dt,
             total_steps=total_steps,
             cpu_mem_use=cpu_mem_use,
-            gpu_mem_use=gpu_mem_use[1] - gpu_mem_use[0],
+            gpu_mem_use=gpu_mem_use,
         )
         torch.cuda.synchronize()
 
@@ -101,3 +109,13 @@ class Profiler:
         self.log(
             f"{' ' * 4}CPU mem: {stats['cpu_mem_use'] / (1024**2):0.3f} MB, GPU mem: {stats['gpu_mem_use'] / (1024**2):0.3f} MB"
         )
+
+    def get_current_process_gpu_memory(self):
+        # Get all processes running on the GPU
+        processes = pynvml.nvmlDeviceGetComputeRunningProcesses(self.handle)
+
+        # Iterate through the processes to find the current process
+        for process in processes:
+            if process.pid == self.current_pid:
+                memory_usage = process.usedGpuMemory
+                return memory_usage
