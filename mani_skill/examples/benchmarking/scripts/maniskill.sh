@@ -12,7 +12,7 @@
 for n in 4 16 32 64 128 256 512 1024 2048 4096 8192
 do
   python gpu_sim.py -e "CartpoleBalanceBenchmark-v1" \
-    -n=$n -o=state
+    -n=$n -o=state --save-results
 done
 
 # Benchmark number of cameras
@@ -21,7 +21,7 @@ do
   for n in 4 16 32 64 128 256 512 1024
   do
     python gpu_sim.py -e "CartpoleBalanceBenchmark-v1" \
-      -n=$n -o=rgb --num-cams=$num_cams --cam-width=128 --cam-height=128
+      -n=$n -o=rgb --num-cams=$num_cams --cam-width=128 --cam-height=128 --save-results
   done
 done
 

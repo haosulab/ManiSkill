@@ -6,7 +6,7 @@ from mani_skill.utils import sapien_utils
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.structs.types import SceneConfig, SimConfig
 
-@register_env("CartpoleBalanceBenchmark-v1")
+@register_env("CartpoleBalanceBenchmark-v1", max_episode_steps=1000)
 class CartPoleBalanceBenchmarkEnv(CartpoleBalanceEnv):
     def __init__(self, *args, camera_width=128, camera_height=128, num_cameras=1, **kwargs):
         self.camera_width = camera_width
