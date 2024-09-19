@@ -14,6 +14,7 @@ from mani_skill.utils.building import actors
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs import Pose
+from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.types import Array, GPUMemoryConfig, SimConfig
 
 
@@ -158,8 +159,8 @@ class PushTEnv(BaseEnv):
             CameraConfig(
                 "base_camera",
                 pose=pose,
-                width=128,
-                height=128,
+                width=512,
+                height=512,
                 fov=np.pi / 2,
                 near=0.01,
                 far=100,
@@ -191,7 +192,9 @@ class PushTEnv(BaseEnv):
             np.array([194, 19, 22, 255]) / 255
         )  # same as mani_skill.utils.building.actors.common - goal target
 
-        def create_tee(name="tee", target=False, base_color=TARGET_RED):
+        def create_tee(
+            name="tee", target=False, base_color=TARGET_RED, scene_idxs=None
+        ):
             # dimensions of boxes that make tee
             # box2 is same as box1, except (3/4) the lenght, and rotated 90 degrees
             # these dimensions are an exact replica of the 3D tee model given by diffusion policy: https://cad.onshape.com/documents/f1140134e38f6ed6902648d5/w/a78cf81827600e4ff4058d03/e/f35f57fb7589f72e05c76caf
@@ -247,12 +250,24 @@ class PushTEnv(BaseEnv):
                     base_color=base_color,
                 ),
             )
+            if scene_idxs is not None:
+                builder.set_scene_idxs(scene_idxs)
             if not target:
                 return builder.build(name=name)
             else:
                 return builder.build_kinematic(name=name)
 
-        self.tee = create_tee(name="Tee", target=False)
+        tees = []
+        for i in range(self.num_envs):
+            tees.append(
+                create_tee(
+                    name=f"tee_{i}",
+                    target=False,
+                    base_color=[*np.random.rand(3), 1],
+                    scene_idxs=[i],
+                )
+            )
+        self.tee = Actor.merge(tees)
         self.goal_tee = create_tee(
             name="goal_Tee",
             target=True,
