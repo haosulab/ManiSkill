@@ -72,6 +72,7 @@ def main(args):
     plt.legend()
     plt.tight_layout()
     fig.savefig("benchmark_results/fps:camera_size_rgb.png")
+    print("Saved figure to benchmark_results/fps:camera_size_rgb.png")
 
 
     # generate plot of RGB FPS against number of 128x128 cameras under 16GB of GPU memory
@@ -94,6 +95,7 @@ def main(args):
     plt.legend()
     plt.tight_layout()
     fig.savefig("benchmark_results/fps:num_cameras_rgb.png")
+    print("Saved figure to benchmark_results/fps:num_cameras_rgb.png")
 
     ### State results ###
     # generate plot of state FPS against number of parallel environments
@@ -116,6 +118,7 @@ def main(args):
     plt.legend()
     plt.tight_layout()
     fig.savefig("benchmark_results/fps:num_envs_state.png")
+    print("Saved figure to benchmark_results/fps:num_envs_state.png")
 
 # To use this script, run it from the command line with the paths to the benchmark result files as arguments.
 # For example:

@@ -9,7 +9,7 @@
 # done
 
 # Benchmark state FPS
-for n in 4 16 32 64 128 256 512 1024 2048 4096 8192
+for n in 4 16 32 64 128 256 512 1024 2048 4096 8192 16384
 do
   python gpu_sim.py -e "CartpoleBalanceBenchmark-v1" \
     -n=$n -o=state --save-results
