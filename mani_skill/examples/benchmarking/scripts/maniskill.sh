@@ -34,3 +34,13 @@ do
       -n=$n -o=rgb --num-cams=1 --cam-width=$cam_size --cam-height=$cam_size
   done
 done
+
+# Benchmark different number of environments and default maniskill environments
+for env_id in "PickCube-v1" "OpenCabinetDrawer-v1"
+do
+  for n in 4 16 32 64 128 256 512 1024
+  do
+    python gpu_sim.py -e $env_id \
+      -n=$n -o=rgb --num-cams=1 --cam-width=128 --cam-height=128 --sim-freq=100 --control-freq=50 --save-results
+  done
+done
