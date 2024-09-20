@@ -58,6 +58,7 @@ setup(
             "build",
             "twine",
             "stable_baselines3",
+            "pynvml",
         ],
         "docs": [
             # Note that currently sphinx 7 does not work, so we must use v6.2.1. See https://github.com/kivy/kivy/issues/8230 which tracks this issue. Once fixed we can use a later version
