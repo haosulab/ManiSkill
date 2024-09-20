@@ -47,6 +47,9 @@ All scripts are provided in the scripts folder that you can simply run directly.
 ```bash
 python gpu_sim.py -e "CartpoleBalanceBenchmark-v1" \
     -n=2048 -o=state --save-results
+
+python gpu_sim.py -e "CartpoleBalanceBenchmark-v1" \
+    -n=1024 -o=rgb --num-cams=1 --cam-width=256 --cam-height=256 --save-results
 ```
 
 ### Isaac Lab
@@ -56,7 +59,8 @@ isaaclab -p isaac_lab_gpu_sim.py --task Isaac-Cartpole-Direct-Benchmark-v0 --hea
     --num-envs=2048 --obs-mode=state --save-results
 
 isaaclab -p isaac_lab_gpu_sim.py --task Isaac-Cartpole-RGB-Camera-Direct-v0 --headless \
-    --num-envs=4 --obs-mode=state --save-results --enable_cameras
+    --num-cams=1 --cam-width=256 --cam-height=256 --enable_cameras \
+    --num-envs=1024 --obs-mode=rgb --save-results
 ```
 
 <!-- ### Mujoco
