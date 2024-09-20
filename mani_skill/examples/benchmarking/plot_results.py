@@ -154,16 +154,6 @@ def main(args):
         ax.legend()
         plt.tight_layout()
         fig.savefig("benchmark_results/fps_vs_num_envs_different_tasks.png")
-        # fig, ax = plt.subplots()
-        # ax.grid(True, axis='y')
-        # ax.set_title(f"{args.env_id}: State FPS vs Number of Parallel Envs")
-        # ax.set_xlabel("Number of Parallel Envs")
-        # ax.set_ylabel("FPS")
-        # width = 0.8 / len(data)
-        # df = data["maniskill"]
-        # df = df[(df["obs_mode"] == "rgb") & (df["num_envs"] >= 32) & (df["num_cameras"] == 1)]
-        # df = df[df["camera_width"] == 128]
-        # import ipdb;ipdb.set_trace()
 
 # To use this script, run it from the command line with the paths to the benchmark result files as arguments.
 # For example:
