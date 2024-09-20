@@ -79,16 +79,16 @@ class Fetch(BaseAgent):
                 far=100,
                 entity_uid="head_camera_link",
             ),
-            CameraConfig(
-                uid="fetch_hand",
-                pose=Pose.create_from_pq([-0.1, 0, 0.1], [1, 0, 0, 0]),
-                width=128,
-                height=128,
-                fov=2,
-                near=0.01,
-                far=100,
-                entity_uid="gripper_link",
-            ),
+            # CameraConfig(
+            #     uid="fetch_hand",
+            #     pose=Pose.create_from_pq([-0.1, 0, 0.1], [1, 0, 0, 0]),
+            #     width=128,
+            #     height=128,
+            #     fov=2,
+            #     near=0.01,
+            #     far=100,
+            #     entity_uid="gripper_link",
+            # ),
         ]
 
     def __init__(self, *args, **kwargs):
