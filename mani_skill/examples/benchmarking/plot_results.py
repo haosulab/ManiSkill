@@ -23,7 +23,6 @@ def main(args):
 
     for file in args.files:
         df = pd.read_csv(file)
-        df = df[df["env_id"] == args.env_id]
         exp_name = os.path.basename(file).split('.')[0]
         data[exp_name] = df
     # modify matplotlib settings for higher quality images
@@ -42,6 +41,7 @@ def main(args):
         ax.set_xlabel("Number of Parallel Envs")
         ax.set_ylabel("FPS")
         for i, (exp_name, df) in enumerate(data.items()):
+            df = df[df["env_id"] == args.env_id]
             df = df[(df["obs_mode"] == "rgb") & (df["camera_width"] == cam_size) & (df["camera_height"] == cam_size) & (df["num_cameras"] == 1) & (df["env.step/gpu_mem_use"] < 16 * 1024 * 1024 * 1024)]
             if len(df) == 0: continue
             df = df.sort_values("num_envs")
@@ -59,6 +59,7 @@ def main(args):
     ax.set_ylabel("FPS")
     ax.set_title(f"{args.env_id}: Highest RGB FPS vs Camera Size under 16GB GPU memory")
     for i, (exp_name, df) in enumerate(data.items()):
+        df = df[df["env_id"] == args.env_id]
         df = df[df["env.step/gpu_mem_use"] < 16 * 1024 * 1024 * 1024]
         df = df[(df["obs_mode"] == "rgb")]
         df = df[df["num_cameras"] == 1]
@@ -82,6 +83,7 @@ def main(args):
     ax.set_ylabel("FPS")
     ax.set_title(f"{args.env_id}: Highest RGB FPS vs Number of 128x128 Cameras under 16GB GPU memory")
     for i, (exp_name, df) in enumerate(data.items()):
+        df = df[df["env_id"] == args.env_id]
         df = df[df["env.step/gpu_mem_use"] < 16 * 1024 * 1024 * 1024]
         df = df[(df["obs_mode"] == "rgb")]
         df = df[df["camera_width"] == 128]
@@ -107,6 +109,7 @@ def main(args):
     width = 0.8 / len(data)
 
     for i, (exp_name, df) in enumerate(data.items()):
+        df = df[df["env_id"] == args.env_id]
         df = df[(df["obs_mode"] == "state") & (df["num_envs"] >= 32)]
         if len(df) == 0: continue
         x = np.arange(len(df)) + i * width
@@ -119,6 +122,40 @@ def main(args):
     plt.tight_layout()
     fig.savefig("benchmark_results/fps:num_envs_state.png")
     print("Saved figure to benchmark_results/fps:num_envs_state.png")
+
+
+    ### Special figures for maniskill ###
+    if "maniskill" in data.keys():
+        # Generate line plots of rendering FPS for different env_ids against number of parallel environments
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.grid(True)
+        ax.set_xlabel("Number of Parallel Environments")
+        ax.set_ylabel("FPS")
+        ax.set_title("Simulation+Rendering FPS vs Number of Parallel Environments for Different Tasks")
+
+        df = data["maniskill"]
+        df = df[(df["obs_mode"] == "rgb") & (df["num_envs"] >= 16) & (df["num_cameras"] == 1) & (df["camera_width"] == 128)]
+        env_ids = df["env_id"].unique()
+        for i, env_id in enumerate(env_ids):
+            env_df = df[df["env_id"] == env_id].sort_values("num_envs")
+            ax.plot(env_df["num_envs"], env_df["env.step/fps"], '-o', label=env_id, color=COLOR_PALLETE[i % len(COLOR_PALLETE)])
+
+            for x, y, mem_use in zip(env_df["num_envs"], env_df["env.step/fps"], env_df["env.step/gpu_mem_use"]):
+                ax.annotate(f'{mem_use / (1024 * 1024 * 1024):0.1f} GB', (x, y), textcoords="offset points", xytext=(0,5), ha='center', fontsize=7)
+
+        ax.legend()
+        plt.tight_layout()
+        fig.savefig("benchmark_results/fps_vs_num_envs_different_tasks.png")
+        # fig, ax = plt.subplots()
+        # ax.grid(True, axis='y')
+        # ax.set_title(f"{args.env_id}: State FPS vs Number of Parallel Envs")
+        # ax.set_xlabel("Number of Parallel Envs")
+        # ax.set_ylabel("FPS")
+        # width = 0.8 / len(data)
+        # df = data["maniskill"]
+        # df = df[(df["obs_mode"] == "rgb") & (df["num_envs"] >= 32) & (df["num_cameras"] == 1)]
+        # df = df[df["camera_width"] == 128]
+        # import ipdb;ipdb.set_trace()
 
 # To use this script, run it from the command line with the paths to the benchmark result files as arguments.
 # For example:
