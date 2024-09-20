@@ -5,7 +5,6 @@ from matplotlib import pyplot as plt
 
 from mani_skill.utils import common
 from mani_skill.utils import visualization
-from mani_skill.utils.visualization.misc import tile_images
 signal.signal(signal.SIGINT, signal.SIG_DFL) # allow ctrl+c
 
 import argparse
@@ -52,7 +51,6 @@ def main(args):
         args.env_id,
         obs_mode=args.obs_mode,
         num_envs=args.num_envs,
-        enable_shadow=True,
         sensor_configs=sensor_configs
     )
 
@@ -62,12 +60,6 @@ def main(args):
         if isinstance(config, Camera):
             n_cams += 1
     print(f"Visualizing {n_cams} RGBD cameras")
-
-    img = np.concatenate(env.render_sensors().cpu().numpy(), axis=1)
-    # Save the image to disk as test.png
-    plt.imsave('test.png', img)
-    print("Image saved as test.png")
-
 
     renderer = visualization.ImageRenderer()
 
