@@ -33,71 +33,78 @@ def main(args):
 
     ### RENDERING RESULTS ###
     # generate plot of RGB FPS against number of parallel environments with 1x 128x128 camera
-    cam_sizes = [80, 128, 160, 224, 256, 512]
-    for cam_size in cam_sizes:
-        fig, ax = plt.subplots()
-        ax.grid(True)
-        ax.set_title(f"{args.env_id}: RGB FPS vs Number of Parallel Envs. 1x{cam_size}x{cam_size} RGB Camera")
-        ax.set_xlabel("Number of Parallel Envs")
-        ax.set_ylabel("FPS")
-        for i, (exp_name, df) in enumerate(data.items()):
-            df = df[df["env_id"] == args.env_id]
-            df = df[(df["obs_mode"] == "rgb") & (df["camera_width"] == cam_size) & (df["camera_height"] == cam_size) & (df["num_cameras"] == 1) & (df["env.step/gpu_mem_use"] < 16 * 1024 * 1024 * 1024)]
-            if len(df) == 0: continue
-            df = df.sort_values("num_envs")
-            for j, (x, y) in enumerate(zip(df["num_envs"], df["env.step/fps"])):
-                ax.annotate(f'{df["env.step/gpu_mem_use"].iloc[j] / (1024 * 1024 * 1024):0.1f} GB', (x, y), textcoords="offset points", xytext=(0,5), ha='center', fontsize=7)
-            ax.plot(df["num_envs"], df["env.step/fps"], '-o', label=exp_name, color=COLOR_PALLETE[i % len(COLOR_PALLETE)])
-        plt.legend()
-        plt.tight_layout()
-        fig.savefig(f"benchmark_results/fps:num_envs_1x{cam_size}x{cam_size}_rgb.png")
+    for obs_mode in ["rgb", "rgb+depth"]:
+        cam_sizes = [80, 128, 160, 224, 256, 512]
+        for cam_size in cam_sizes:
+            fig, ax = plt.subplots()
+            ax.grid(True)
+            ax.set_title(f"{args.env_id}: {obs_mode} FPS vs Number of Parallel Envs. 1x{cam_size}x{cam_size} Camera")
+            ax.set_xlabel("Number of Parallel Envs")
+            ax.set_ylabel("FPS")
+            for i, (exp_name, df) in enumerate(data.items()):
+                df = df[df["env_id"] == args.env_id]
+                df = df[(df["obs_mode"] == obs_mode) & (df["camera_width"] == cam_size) & (df["camera_height"] == cam_size) & (df["num_cameras"] == 1) & (df["env.step/gpu_mem_use"] < 16 * 1024 * 1024 * 1024)]
+                if len(df) == 0: continue
+                df = df.sort_values("num_envs")
+                for j, (x, y) in enumerate(zip(df["num_envs"], df["env.step/fps"])):
+                    ax.annotate(f'{df["env.step/gpu_mem_use"].iloc[j] / (1024 * 1024 * 1024):0.1f} GB', (x, y), textcoords="offset points", xytext=(0,5), ha='center', fontsize=7)
+                ax.plot(df["num_envs"], df["env.step/fps"], '-o', label=exp_name, color=COLOR_PALLETE[i % len(COLOR_PALLETE)])
+            plt.legend()
+            plt.tight_layout()
+            save_path = f"benchmark_results/fps:num_envs_1x{cam_size}x{cam_size}_{obs_mode}.png"
+            fig.savefig(save_path)
+            print(f"Saved figure to {save_path}")
 
     # generate plot of RGB FPS against camera width under 16GB of GPU memory
-    fig, ax = plt.subplots()
-    ax.grid(True)
-    ax.set_xlabel("Camera Width/Height")
-    ax.set_ylabel("FPS")
-    ax.set_title(f"{args.env_id}: Highest RGB FPS vs Camera Size under 16GB GPU memory")
-    for i, (exp_name, df) in enumerate(data.items()):
-        df = df[df["env_id"] == args.env_id]
-        df = df[df["env.step/gpu_mem_use"] < 16 * 1024 * 1024 * 1024]
-        df = df[(df["obs_mode"] == "rgb")]
-        df = df[df["num_cameras"] == 1]
-        if len(df) == 0: continue
-        ids = df.groupby("camera_width").idxmax()["env.step/fps"].to_list()
-        df = df.loc[ids]
-        df = df.sort_values("camera_width")
-        for j, (x, y) in enumerate(zip(df["camera_width"], df["env.step/fps"])):
-            ax.annotate(f'{df["num_envs"].iloc[j]} envs', (x, y), textcoords="offset points", xytext=(0,5), ha='center')
-        ax.plot(df["camera_width"], df["env.step/fps"], '-o', label=exp_name, color=COLOR_PALLETE[i % len(COLOR_PALLETE)])
-    plt.legend()
-    plt.tight_layout()
-    fig.savefig("benchmark_results/fps:camera_size_rgb.png")
-    print("Saved figure to benchmark_results/fps:camera_size_rgb.png")
+    for obs_mode in ["rgb", "rgb+depth"]:
+        fig, ax = plt.subplots()
+        ax.grid(True)
+        ax.set_xlabel("Camera Width/Height")
+        ax.set_ylabel("FPS")
+        ax.set_title(f"{args.env_id}: Highest RGB FPS vs Camera Size under 16GB GPU memory")
+        for i, (exp_name, df) in enumerate(data.items()):
+            df = df[df["env_id"] == args.env_id]
+            df = df[df["env.step/gpu_mem_use"] < 16 * 1024 * 1024 * 1024]
+            df = df[(df["obs_mode"] == obs_mode)]
+            df = df[df["num_cameras"] == 1]
+            if len(df) == 0: continue
+            ids = df.groupby("camera_width").idxmax()["env.step/fps"].to_list()
+            df = df.loc[ids]
+            df = df.sort_values("camera_width")
+            for j, (x, y) in enumerate(zip(df["camera_width"], df["env.step/fps"])):
+                ax.annotate(f'{df["num_envs"].iloc[j]} envs', (x, y), textcoords="offset points", xytext=(0,5), ha='center')
+            ax.plot(df["camera_width"], df["env.step/fps"], '-o', label=exp_name, color=COLOR_PALLETE[i % len(COLOR_PALLETE)])
+        plt.legend()
+        plt.tight_layout()
+        save_path = f"benchmark_results/fps:camera_size_{obs_mode}.png"
+        fig.savefig(save_path)
+        print(f"Saved figure to {save_path}")
 
 
     # generate plot of RGB FPS against number of 128x128 cameras under 16GB of GPU memory
-    fig, ax = plt.subplots()
-    ax.grid(True)
-    ax.set_xlabel("Number of Cameras")
-    ax.set_ylabel("FPS")
-    ax.set_title(f"{args.env_id}: Highest RGB FPS vs Number of 128x128 Cameras under 16GB GPU memory")
-    for i, (exp_name, df) in enumerate(data.items()):
-        df = df[df["env_id"] == args.env_id]
-        df = df[df["env.step/gpu_mem_use"] < 16 * 1024 * 1024 * 1024]
-        df = df[(df["obs_mode"] == "rgb")]
-        df = df[df["camera_width"] == 128]
-        ids = df.groupby("num_cameras").idxmax()["env.step/fps"].to_list()
-        df = df.loc[ids]
-        df = df.sort_values("camera_width")
-        if len(df) == 0: continue
-        for j, (x, y) in enumerate(zip(df["num_cameras"], df["env.step/fps"])):
-            ax.annotate(f'{df["num_envs"].iloc[j]} envs', (x, y), textcoords="offset points", xytext=(0,5), ha='center')
-        ax.plot(df["num_cameras"], df["env.step/fps"], '-o', label=exp_name, color=COLOR_PALLETE[i % len(COLOR_PALLETE)])
-    plt.legend()
-    plt.tight_layout()
-    fig.savefig("benchmark_results/fps:num_cameras_rgb.png")
-    print("Saved figure to benchmark_results/fps:num_cameras_rgb.png")
+    for obs_mode in ["rgb", "rgb+depth"]:
+        fig, ax = plt.subplots()
+        ax.grid(True)
+        ax.set_xlabel("Number of Cameras")
+        ax.set_ylabel("FPS")
+        ax.set_title(f"{args.env_id}: Highest RGB FPS vs Number of 128x128 Cameras under 16GB GPU memory")
+        for i, (exp_name, df) in enumerate(data.items()):
+            df = df[df["env_id"] == args.env_id]
+            df = df[df["env.step/gpu_mem_use"] < 16 * 1024 * 1024 * 1024]
+            df = df[(df["obs_mode"] == obs_mode)]
+            df = df[df["camera_width"] == 128]
+            ids = df.groupby("num_cameras").idxmax()["env.step/fps"].to_list()
+            df = df.loc[ids]
+            df = df.sort_values("camera_width")
+            if len(df) == 0: continue
+            for j, (x, y) in enumerate(zip(df["num_cameras"], df["env.step/fps"])):
+                ax.annotate(f'{df["num_envs"].iloc[j]} envs', (x, y), textcoords="offset points", xytext=(0,5), ha='center')
+            ax.plot(df["num_cameras"], df["env.step/fps"], '-o', label=exp_name, color=COLOR_PALLETE[i % len(COLOR_PALLETE)])
+        plt.legend()
+        plt.tight_layout()
+        save_path = f"benchmark_results/fps:num_cameras_{obs_mode}.png"
+        fig.savefig(save_path)
+        print(f"Saved figure to {save_path}")
 
     ### State results ###
     # generate plot of state FPS against number of parallel environments

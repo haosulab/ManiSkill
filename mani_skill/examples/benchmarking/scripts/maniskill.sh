@@ -26,12 +26,15 @@ do
 done
 
 # Benchmark different number of environments and camera sizes
-for n in 4 16 32 64 128 256 512 1024
+for obs_mode in rgb rgb+depth
 do
-  for cam_size in 80 128 160 224 256 512
+  for n in 4 16 32 64 128 256 512 1024
   do
-    python gpu_sim.py -e "CartpoleBalanceBenchmark-v1" \
-      -n=$n -o=rgb --num-cams=1 --cam-width=$cam_size --cam-height=$cam_size --save-results
+    for cam_size in 80 128 160 224 256 512
+    do
+      python gpu_sim.py -e "CartpoleBalanceBenchmark-v1" \
+        -n=$n -o=$obs_mode --num-cams=1 --cam-width=$cam_size --cam-height=$cam_size --save-results
+    done
   done
 done
 
