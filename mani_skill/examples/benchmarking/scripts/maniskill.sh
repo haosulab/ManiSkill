@@ -31,7 +31,7 @@ do
   for cam_size in 80 128 160 224 256 512
   do
     python gpu_sim.py -e "CartpoleBalanceBenchmark-v1" \
-      -n=$n -o=rgb --num-cams=1 --cam-width=$cam_size --cam-height=$cam_size
+      -n=$n -o=rgb --num-cams=1 --cam-width=$cam_size --cam-height=$cam_size --save-results
   done
 done
 

@@ -112,6 +112,7 @@ def main(args):
         df = df[df["env_id"] == args.env_id]
         df = df[(df["obs_mode"] == "state") & (df["num_envs"] >= 32)]
         if len(df) == 0: continue
+        df = df.sort_values("num_envs")
         x = np.arange(len(df)) + i * width
         ax.bar(x, df["env.step/fps"], label=exp_name, color=COLOR_PALLETE[i % len(COLOR_PALLETE)], width=width)
         num_envs_list = df["num_envs"]

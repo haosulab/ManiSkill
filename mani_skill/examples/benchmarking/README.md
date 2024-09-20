@@ -25,11 +25,42 @@ pip install mujoco-mjx
 pip install "jax[cuda12]"
 ```
 
+### Isaac Lab
+
+See https://isaac-sim.github.io/IsaacLab/source/setup/installation/index.html
+
+Then run `isaaclab -p -m pip install pynvml` to install pynvml which is used for GPU monitoring.
+
+<!-- ```bash
+mamba create -n "isaaclab" "python==3.10"
+mamba activate isaaclab
+pip install torch==2.2.2 --index-url https://download.pytorch.org/whl/cu118
+pip install isaacsim-rl isaacsim-replicator isaacsim-extscache-physics isaacsim-extscache-kit-sdk isaacsim-extscache-kit isaacsim-app --extra-index-url https://pypi.nvidia.com
+``` -->
+
 ## Running the Benchmark
 
+All scripts are provided in the scripts folder that you can simply run directly. Otherwise example usages are shown below for benchmarking simulation and simulation+rendering FPS. With --save-results flag on, resutls are saved to the `benchmark_results` folder in a .csv format. Running a benchmark with the same configurations of cameras/number of environments/choice of GPU will override the previous result.
 
-### Mujoco
+### ManiSkill
+
+```bash
+python gpu_sim.py -e "CartpoleBalanceBenchmark-v1" \
+    -n=2048 -o=state --save-results
+```
+
+### Isaac Lab
+
+```bash
+isaaclab -p isaac_lab_gpu_sim.py --task Isaac-Cartpole-Direct-Benchmark-v0 --headless \
+    --num-envs=2048 --obs-mode=state --save-results
+
+isaaclab -p isaac_lab_gpu_sim.py --task Isaac-Cartpole-RGB-Camera-Direct-v0 --headless \
+    --num-envs=4 --obs-mode=state --save-results --enable_cameras
+```
+
+<!-- ### Mujoco
 
 ```bash
 python -m mujoco.mjx.testspeed --mjcf=envs/mujoco/panda_pick_cube.xml   --base_path=. --batch_size=4096 --nstep=100
-```
+``` -->
