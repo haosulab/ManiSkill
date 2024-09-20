@@ -98,5 +98,5 @@ class CPUGymWrapper(gym.Wrapper):
 
     def render(self):
         ret = self.env.render()
-        if self.render_mode in ["rgb_array", "sensors"]:
+        if self.render_mode in ["rgb_array", "sensors", "all"]:
             return common.unbatch(common.to_numpy(ret))

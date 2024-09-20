@@ -303,6 +303,7 @@ class BaseEnv(gym.Env):
             torch.zeros(self.num_envs, device=self.device, dtype=torch.int32)
         )
         obs, _ = self.reset(seed=2022, options=dict(reconfigure=True))
+
         self._init_raw_obs = common.to_cpu_tensor(obs)
         """the raw observation returned by the env.reset (a cpu torch tensor/dict of tensors). Useful for future observation wrappers to use to auto generate observation spaces"""
         self._init_raw_state = common.to_cpu_tensor(self.get_state_dict())
@@ -549,9 +550,9 @@ class BaseEnv(gym.Env):
         )
 
     @property
-    def robot_link_ids(self):
+    def robot_link_names(self):
         """Get link ids for the robot. This is used for segmentation observations."""
-        return self.agent.robot_link_ids
+        return self.agent.robot_link_names
 
     # -------------------------------------------------------------------------- #
     # Reward mode
@@ -810,6 +811,10 @@ class BaseEnv(gym.Env):
             self.scene._gpu_apply_all()
             self.scene.px.gpu_update_articulation_kinematics()
             self.scene._gpu_fetch_all()
+
+        # we reset controllers here because some controllers depend on the agent/articulation qpos/poses
+        self.agent.controller.reset()
+
         obs = self.get_obs()
 
         return obs, dict(reconfigure=reconfigure)

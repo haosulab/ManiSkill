@@ -63,7 +63,7 @@ class CartPoleRobot(BaseAgent):
         assert self.robot is not None, f"Fail to load URDF/MJCF from {asset_path}"
 
         # Cache robot link ids
-        self.robot_link_ids = [link.name for link in self.robot.get_links()]
+        self.robot_link_names = [link.name for link in self.robot.get_links()]
 
 
 # @register_env("MS-CartPole-v1", max_episode_steps=500)
