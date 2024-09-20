@@ -15,7 +15,7 @@ for obs_mode in rgb rgb+depth
 do
   for n in 4 16 32 64 128 256 512 1024
   do
-    for cam_size in 80 128 160 224 256 512
+    for cam_size in 80 160 224 256 512
     do
       isaaclab -p isaac_lab_gpu_sim.py \
         --task "Isaac-Cartpole-RGB-Camera-Direct-Benchmark-v0" \
