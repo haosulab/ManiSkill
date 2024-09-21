@@ -40,7 +40,7 @@ setup(
         "mplib==0.1.1;platform_system=='Linux'",
         "fast_kinematics==0.2.2;platform_system=='Linux'",
         "IPython",
-        "pytorch_kinematics_ms==0.7.3",  # pytorch kinematics package for ManiSkill forked from https://github.com/UM-ARM-Lab/pytorch_kinematics
+        "pytorch_kinematics==0.7.4",
         "tyro>=0.8.5",  # nice, typed, command line arg parser
         "huggingface_hub",  # we use HF to version control some assets/datasets more easily
     ],
@@ -58,6 +58,7 @@ setup(
             "build",
             "twine",
             "stable_baselines3",
+            "pynvml",
         ],
         "docs": [
             # Note that currently sphinx 7 does not work, so we must use v6.2.1. See https://github.com/kivy/kivy/issues/8230 which tracks this issue. Once fixed we can use a later version

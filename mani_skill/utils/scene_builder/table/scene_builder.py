@@ -203,3 +203,23 @@ class TableSceneBuilder(SceneBuilder):
         ):
             # Need to specify the robot qpos for each sub-scenes using tensor api
             pass
+        elif self.env.robot_uids == "panda_stick":
+            qpos = np.array(
+                [
+                    0.0,
+                    np.pi / 8,
+                    0,
+                    -np.pi * 5 / 8,
+                    0,
+                    np.pi * 3 / 4,
+                    np.pi / 4,
+                ]
+            )
+            qpos = (
+                self.env._episode_rng.normal(
+                    0, self.robot_init_qpos_noise, (b, len(qpos))
+                )
+                + qpos
+            )
+            self.env.agent.reset(qpos)
+            self.env.agent.robot.set_pose(sapien.Pose([-0.615, 0, 0]))

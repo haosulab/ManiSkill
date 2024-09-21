@@ -28,4 +28,5 @@ humanoid/index
 mobile_manipulation/index
 dextrous/index
 digital_twins/index
+drawing/index
 ```

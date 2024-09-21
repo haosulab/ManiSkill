@@ -104,13 +104,13 @@ class CartpoleBenchmarkEnv(DirectRLEnv):
         return total_reward
 
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
-        self.joint_pos = self.cartpole.data.joint_pos
-        self.joint_vel = self.cartpole.data.joint_vel
+        # self.joint_pos = self.cartpole.data.joint_pos
+        # self.joint_vel = self.cartpole.data.joint_vel
 
         time_out = self.episode_length_buf >= self.max_episode_length - 1
-        out_of_bounds = torch.any(torch.abs(self.joint_pos[:, self._cart_dof_idx]) > self.cfg.max_cart_pos, dim=1)
-        out_of_bounds = out_of_bounds | torch.any(torch.abs(self.joint_pos[:, self._pole_dof_idx]) > math.pi / 2, dim=1)
-        return out_of_bounds, time_out
+        # out_of_bounds = torch.any(torch.abs(self.joint_pos[:, self._cart_dof_idx]) > self.cfg.max_cart_pos, dim=1)
+        # out_of_bounds = out_of_bounds | torch.any(torch.abs(self.joint_pos[:, self._pole_dof_idx]) > math.pi / 2, dim=1)
+        return time_out, time_out
 
     def _reset_idx(self, env_ids: Sequence[int] | None):
         if env_ids is None:
