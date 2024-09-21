@@ -50,6 +50,9 @@ python gpu_sim.py -e "CartpoleBalanceBenchmark-v1" \
 
 python gpu_sim.py -e "CartpoleBalanceBenchmark-v1" \
     -n=1024 -o=rgb --num-cams=1 --cam-width=256 --cam-height=256 --save-results
+
+python gpu_sim.py -e "FrankaCabinetBenchmarkEnv-v1" \
+    -n=2048 -o=state --save-results
 ```
 
 ### Isaac Lab
@@ -61,6 +64,13 @@ isaaclab -p isaac_lab_gpu_sim.py --task Isaac-Cartpole-Direct-Benchmark-v0 --hea
 isaaclab -p isaac_lab_gpu_sim.py --task Isaac-Cartpole-RGB-Camera-Direct-v0 --headless \
     --num-cams=1 --cam-width=256 --cam-height=256 --enable_cameras \
     --num-envs=1024 --obs-mode=rgb --save-results
+
+python isaac_lab_gpu_sim.py --task Isaac-Franka-Cabinet-Direct-Benchmark-v0 --headless \
+    --num-envs=2048 --obs-mode=state
+
+python isaac_lab_gpu_sim.py --task Isaac-Franka-Cabinet-Direct-Benchmark-v0 --headless \
+    --num-cams=1 --cam-width=128 --cam-height=128 --enable_cameras \
+    --num-envs=512 --obs-mode=rgb
 ```
 
 <!-- ### Mujoco
