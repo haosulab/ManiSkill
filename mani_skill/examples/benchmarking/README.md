@@ -58,12 +58,12 @@ python gpu_sim.py -e "FrankaCabinetBenchmarkEnv-v1" \
 ### Isaac Lab
 
 ```bash
-isaaclab -p isaac_lab_gpu_sim.py --task Isaac-Cartpole-Direct-Benchmark-v0 --headless \
+python isaac_lab_gpu_sim.py --task Isaac-Cartpole-Direct-Benchmark-v0 --headless \
     --num-envs=2048 --obs-mode=state --save-results
 
-isaaclab -p isaac_lab_gpu_sim.py --task Isaac-Cartpole-RGB-Camera-Direct-v0 --headless \
-    --num-cams=1 --cam-width=256 --cam-height=256 --enable_cameras \
-    --num-envs=1024 --obs-mode=rgb --save-results
+python isaac_lab_gpu_sim.py --task Isaac-Cartpole-RGB-Camera-Direct-Benchmark-v0 --headless \
+    --num-cams=1 --cam-width=512 --cam-height=512 --enable_cameras \
+    --num-envs=128 --obs-mode=rgb --save-results
 
 python isaac_lab_gpu_sim.py --task Isaac-Franka-Cabinet-Direct-Benchmark-v0 --headless \
     --num-envs=2048 --obs-mode=state

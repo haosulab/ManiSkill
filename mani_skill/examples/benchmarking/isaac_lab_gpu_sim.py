@@ -44,7 +44,7 @@ def main():
         args_cli.task, num_envs=args_cli.num_envs
     )
     # create isaac environment
-    if args_cli.obs_mode in ["rgb", "rgb+depth", "depth"]:
+    if args_cli.obs_mode != "state":
         env = gym.make(args_cli.task, cfg=env_cfg, camera_width=args_cli.cam_width, camera_height=args_cli.cam_height, num_cameras=args_cli.num_cams, obs_mode=args_cli.obs_mode)
     else:
         env = gym.make(args_cli.task, cfg=env_cfg)
