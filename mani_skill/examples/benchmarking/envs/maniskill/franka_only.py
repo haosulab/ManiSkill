@@ -12,7 +12,7 @@ from mani_skill.utils.building.ground import build_ground
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import SceneConfig, SimConfig
-@register_env("FrankaOnly-v1")
+@register_env("FrankaOnlyBenchmark-v1")
 class FrankaOnlyBenchmarkEnv(BaseEnv):
     def __init__(self, *args, robot_uids="panda", camera_width=128, camera_height=128, num_cameras=1, **kwargs):
         self.camera_width = camera_width
@@ -48,11 +48,11 @@ class FrankaOnlyBenchmarkEnv(BaseEnv):
         return {}
 
     def _load_scene(self, options: dict):
-        cabinet_builder = articulations.get_articulation_builder(
-            self.scene, f"partnet-mobility:{1052}"
-        )
-        cabinet_builder.disable_self_collisions = True
-        self.cabinet = cabinet_builder.build(name="cabinet", fix_root_link=True)
+        # cabinet_builder = articulations.get_articulation_builder(
+        #     self.scene, f"partnet-mobility:{1052}"
+        # )
+        # cabinet_builder.disable_self_collisions = True
+        # self.cabinet = cabinet_builder.build(name="cabinet", fix_root_link=True)
 
         # disable robot self collisions
         for link in self.agent.robot.get_links():

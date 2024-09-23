@@ -31,7 +31,7 @@ def main(args):
         exp_name = os.path.basename(file).split('.')[0]
         data[exp_name] = df
     # modify matplotlib settings for higher quality images
-    plt.rcParams["figure.figsize"] = [10, 6]  # set figure size
+    plt.rcParams["figure.figsize"] = [10, 4]  # set figure size
     plt.rcParams["figure.dpi"] = 200  # set figure dpi
     plt.rcParams["savefig.dpi"] = 200  # set savefig dpi
 
@@ -189,7 +189,7 @@ def main(args):
     ### Special figures for maniskill ###
     if "maniskill" in data.keys():
         # Generate line plots of rendering FPS for different env_ids against number of parallel environments
-        fig, ax = plt.subplots(figsize=(10, 6))
+        fig, ax = plt.subplots(figsize=(10, 4))
         ax.grid(True)
         ax.set_xlabel("Number of Parallel Environments")
         ax.set_ylabel("FPS")
