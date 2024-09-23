@@ -51,7 +51,7 @@ do
 done
 
 # rt dataset
-for n in 4 16 32 64 128 256
+for n in 4 16 32 64 128
 do
   python isaac_lab_gpu_sim.py \
     --task "Isaac-Cartpole-RGB-Camera-Direct-Benchmark-v0" \

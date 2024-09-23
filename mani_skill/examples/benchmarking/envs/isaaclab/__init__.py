@@ -1,6 +1,6 @@
 import gymnasium as gym
 
-from mani_skill.examples.benchmarking.envs.isaaclab.franka_only import FrankaOnlyEnvCfg
+from .franka_only import FrankaOnlyEnvCfg
 from .cartpole_visual import CartpoleRGBCameraBenchmarkEnvCfg
 from .cartpole_state import CartpoleEnvCfg
 from .franka_cabinet_state import FrankaCabinetEnvCfg
