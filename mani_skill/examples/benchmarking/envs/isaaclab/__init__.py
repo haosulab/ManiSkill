@@ -1,4 +1,6 @@
 import gymnasium as gym
+
+from mani_skill.examples.benchmarking.envs.isaaclab.franka_only import FrankaOnlyEnvCfg
 from .cartpole_visual import CartpoleRGBCameraBenchmarkEnvCfg
 from .cartpole_state import CartpoleEnvCfg
 from .franka_cabinet_state import FrankaCabinetEnvCfg
@@ -25,5 +27,14 @@ gym.register(
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": FrankaCabinetEnvCfg,
+    },
+)
+
+gym.register(
+    id="Isaac-Franka-Only-Direct-Benchmark-v0",
+    entry_point="envs.isaaclab.franka_only:FrankaOnlyBenchmarkEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": FrankaOnlyEnvCfg,
     },
 )
