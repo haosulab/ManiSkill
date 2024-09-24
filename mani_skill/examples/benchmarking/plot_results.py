@@ -83,9 +83,13 @@ def main(args):
     for file in args.files:
         df = pd.read_csv(file)
         exp_name = os.path.basename(file).split('.')[0]
+        if exp_name == "maniskill":
+            exp_name = "ManiSkill3"
+        if exp_name == "isaac_lab":
+            exp_name = "Isaac Lab"
         data[exp_name] = df
     # modify matplotlib settings for higher quality images
-    plt.rcParams["figure.figsize"] = [10, 6]  # set figure size
+    plt.rcParams["figure.figsize"] = [10, 4]  # set figure size
     plt.rcParams["figure.dpi"] = 200  # set figure dpi
     plt.rcParams["savefig.dpi"] = 200  # set savefig dpi
 

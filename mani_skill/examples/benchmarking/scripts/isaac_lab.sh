@@ -39,6 +39,22 @@ do
   done
 done
 
+# Benchmark high number of environments and small camera sizes
+for obs_mode in rgb rgb+depth
+do
+  for n in 2048 4096
+  do
+    for cam_size in 80 128
+    do
+      python isaac_lab_gpu_sim.py \
+        --task "Isaac-Cartpole-RGB-Camera-Direct-Benchmark-v0" \
+        --num-envs $n --obs-mode $obs_mode \
+        --num-cams=1 --cam-width=$cam_size --cam-height=$cam_size \
+        --enable_cameras --headless --save-results
+    done
+  done
+done
+
 # benchmark realistic settings
 # droid dataset
 for n in 4 16 32 64 128 256
