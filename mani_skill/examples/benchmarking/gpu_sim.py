@@ -1,17 +1,12 @@
 import argparse
 from pathlib import Path
-import sapien
 import gymnasium as gym
 import numpy as np
-import sapien.physx
-import sapien.render
 import torch
 import tqdm
 
 import mani_skill.envs
 from mani_skill.envs.sapien_env import BaseEnv
-from mani_skill.sensors.camera import Camera
-from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 from mani_skill.examples.benchmarking.profiling import Profiler
 from mani_skill.utils.visualization.misc import images_to_video, tile_images
 from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper
