@@ -20,8 +20,6 @@ import mani_skill.examples.benchmarking.envs # import benchmark env code
 BENCHMARK_ENVS = ["PickCubeBenchmark-v1", "CartpoleBalanceBenchmark-v1", "FrankaOnlyBenchmark-v1"]
 
 def main(args):
-    # renderer = sapien.render.SapienRenderer();sapien.render.get_shader_pack("minimal")
-
     profiler = Profiler(output_format="stdout")
     num_envs = args.num_envs
     sim_config = dict()
