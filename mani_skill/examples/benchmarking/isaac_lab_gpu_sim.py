@@ -44,7 +44,7 @@ def main():
         args_cli.task, num_envs=args_cli.num_envs
     )
     # create isaac environment
-    if args_cli.obs_mode in ["rgb", "rgb+depth", "depth"]:
+    if args_cli.obs_mode != "state":
         env = gym.make(args_cli.task, cfg=env_cfg, camera_width=args_cli.cam_width, camera_height=args_cli.cam_height, num_cameras=args_cli.num_cams, obs_mode=args_cli.obs_mode)
     else:
         env = gym.make(args_cli.task, cfg=env_cfg)
@@ -76,6 +76,17 @@ def main():
                     env.reset()
         profiler.log_stats("env.step+env.reset")
     env.close()
+    # import matplotlib.pyplot as plt
+    # import ipdb;ipdb.set_trace()
+    # if "rgb" in obs["sensors"]["cam_0"]:
+    #     rgb_images = obs["sensors"]["cam_0"]["rgb"].cpu().numpy()
+    #     plt.imsave("test.png", tile_images(rgb_images, nrows=int(np.sqrt(args_cli.num_envs))))
+    # if "depth" in obs["sensors"]["cam_0"]:
+    #     depth_images = obs["sensors"]["cam_0"]["depth"].cpu().numpy()
+    #     depth_images = tile_images(depth_images, nrows=int(np.sqrt(args_cli.num_envs)))
+    #     depth_images[depth_images == np.inf] = 0
+    #     plt.imsave("depth.png", depth_images[:, :, 0])
+    # tile_images()
 
     # append results to csv
     env_id_mapping = {

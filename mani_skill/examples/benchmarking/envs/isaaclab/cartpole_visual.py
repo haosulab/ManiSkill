@@ -27,7 +27,7 @@ from omni.isaac.lab.utils.math import sample_uniform
 @configclass
 class CartpoleRGBCameraBenchmarkEnvCfg(DirectRLEnvCfg):
     # simulation
-    sim: SimulationCfg = SimulationCfg(dt=1 / 120)
+    sim: SimulationCfg = SimulationCfg(dt=1 / 120, render_interval=2)
 
     # robot
     robot_cfg: ArticulationCfg = CARTPOLE_CFG.replace(prim_path="/World/envs/env_.*/Robot")
@@ -105,11 +105,13 @@ class CartpoleCameraBenchmarkEnv(DirectRLEnv):
         self, cfg: CartpoleRGBCameraBenchmarkEnvCfg | CartpoleDepthCameraBenchmarkEnvCfg, render_mode: str | None = None, camera_width=128, camera_height=128, num_cameras=1, obs_mode="rgb", **kwargs
     ):
         # configure cameras
-        data_types = ["rgb"]
-        if obs_mode == "rgb+depth":
-            data_types = ["rgb", "depth"]
-        elif obs_mode == "depth":
-            data_types = ["depth"]
+        data_types = []
+        if "rgb" in obs_mode:
+            data_types.append("rgb")
+        if "depth" in obs_mode:
+            data_types.append("depth")
+        if "segmentation" in obs_mode:
+            data_types.append("semantic_segmentation")
         self.data_types = data_types
 
         self.num_cameras = num_cameras

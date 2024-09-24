@@ -1,7 +1,7 @@
 # User Guide
 
 
-```{figure} teaser.png
+```{figure} teaser.jpg
 ```
 <p style="text-align: center; font-size: 0.8rem; color: #999;margin-top: -1rem;">Sample of environments/robots rendered with ray-tracing. Scene datasets sourced from AI2THOR and ReplicaCAD</p>
 
