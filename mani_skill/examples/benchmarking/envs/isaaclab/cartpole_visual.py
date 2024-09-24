@@ -27,7 +27,7 @@ from omni.isaac.lab.utils.math import sample_uniform
 @configclass
 class CartpoleRGBCameraBenchmarkEnvCfg(DirectRLEnvCfg):
     # simulation
-    sim: SimulationCfg = SimulationCfg(dt=1 / 120)
+    sim: SimulationCfg = SimulationCfg(dt=1 / 120, render_interval=2)
 
     # robot
     robot_cfg: ArticulationCfg = CARTPOLE_CFG.replace(prim_path="/World/envs/env_.*/Robot")

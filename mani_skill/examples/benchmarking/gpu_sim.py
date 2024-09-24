@@ -1,7 +1,6 @@
 import argparse
 from pathlib import Path
-from turtle import update
-
+import sapien
 import gymnasium as gym
 import numpy as np
 import sapien.physx
@@ -21,6 +20,8 @@ import mani_skill.examples.benchmarking.envs # import benchmark env code
 BENCHMARK_ENVS = ["PickCubeBenchmark-v1", "CartpoleBalanceBenchmark-v1", "FrankaOnlyBenchmark-v1"]
 
 def main(args):
+    # renderer = sapien.render.SapienRenderer();sapien.render.get_shader_pack("minimal")
+
     profiler = Profiler(output_format="stdout")
     num_envs = args.num_envs
     sim_config = dict()
@@ -116,7 +117,7 @@ def main(args):
                 camera_height=args.cam_height,
             )
             profiler.update_csv(
-                "benchmark_results/maniskill.csv",
+                args.save_results,
                 data,
             )
         except:
@@ -145,7 +146,7 @@ def parse_args():
         "--save-video", action="store_true", help="whether to save videos"
     )
     parser.add_argument(
-        "--save-results", action="store_true", help="whether to save results to a csv file"
+        "--save-results", type=str, help="path to save results to. Should be path/to/results.csv"
     )
     args = parser.parse_args()
     return args
