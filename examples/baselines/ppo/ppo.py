@@ -324,7 +324,7 @@ if __name__ == "__main__":
         # bootstrap value according to termination and truncation
         with torch.no_grad():
             next_value = agent.get_value(next_obs).reshape(1, -1)
-            advantages = torch.zeros_like(rewards).to(device)
+            advantages = torch.zeros_like(rewards, device=device)
             lastgaelam = 0
             for t in reversed(range(args.num_steps)):
                 if t == args.num_steps - 1:
