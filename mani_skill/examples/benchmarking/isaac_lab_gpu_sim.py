@@ -7,6 +7,7 @@ from omni.isaac.lab.app import AppLauncher
 # add argparse arguments
 parser = argparse.ArgumentParser(description="Benchmark Isaac Lab")
 parser.add_argument("--num-envs", type=int, default=None, help="Number of environments to simulate.")
+parser.add_argument("--save-example-image", action="store_true", help="Save the last image output of each modality and camera to disk")
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument("--obs-mode", type=str, default="state", help="Observation mode")
 parser.add_argument("--num-cams", type=int, default=None, help="Number of cameras. Only used by benchmark environments")
@@ -76,17 +77,18 @@ def main():
                     env.reset()
         profiler.log_stats("env.step+env.reset")
     env.close()
-    import matplotlib.pyplot as plt
-    # import ipdb;ipdb.set_trace()
-    if "rgb" in obs["sensors"]["cam_0"]:
-        rgb_images = obs["sensors"]["cam_0"]["rgb"].cpu().numpy()
-        plt.imsave("test.png", tile_images(rgb_images, nrows=int(np.sqrt(args_cli.num_envs))))
-    if "depth" in obs["sensors"]["cam_0"]:
-        depth_images = obs["sensors"]["cam_0"]["depth"].cpu().numpy()
-        depth_images = tile_images(depth_images, nrows=int(np.sqrt(args_cli.num_envs)))
-        depth_images[depth_images == np.inf] = 0
-        plt.imsave("depth.png", depth_images[:, :, 0])
-    # tile_images()
+    if args_cli.save_example_image:
+        import matplotlib.pyplot as plt
+        for cam_name, cam_data in obs["sensors"].items():
+            for k, v in cam_data.items():
+                imgs = v.cpu().numpy()
+                imgs = tile_images(imgs, nrows=int(np.sqrt(args_cli.num_envs)))
+                cmap = None
+                if k == "depth":
+                    imgs[imgs == np.inf] = 0
+                    imgs = imgs[ :, :, 0]
+                    cmap = "gray"
+                plt.imsave(f"isaac_{cam_name}_{k}.png", imgs, cmap=cmap)
 
     # append results to csv
     env_id_mapping = {
