@@ -9,7 +9,7 @@
 
   <default>
     <default class="pole">
-      <joint type="hinge" axis="0 1 0"  damping="2e-6"/>
+      <joint type="hinge" axis="0 1 0"  damping="2e-6" pos="0 0 -0.72"/>
       <!-- <geom type="capsule" fromto="0 0 0 0 0 1.2" size="0.045" material="self" mass=".1"/> -->
       <geom type="box" size="0.04 0.04 0.72" material="self" mass=".1"/>
     </default>
