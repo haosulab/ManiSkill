@@ -37,10 +37,10 @@ def main(args):
             args.env_id,
             num_envs=num_envs,
             obs_mode=args.obs_mode,
-            enable_shadow=True,
+            # enable_shadow=True,
             render_mode=args.render_mode,
             control_mode=args.control_mode,
-            # shader_dir="rt-fast",
+            shader_dir="default",
             sim_config=sim_config,
             **kwargs
         )
@@ -58,6 +58,8 @@ def main(args):
         env.reset(seed=2022)
         env.step(env.action_space.sample())  # warmup step
         env.reset(seed=2022)
+        # while True:
+        #     env.render_human()
         if args.save_video:
             images.append(env.render().cpu().numpy())
         N = 10
@@ -82,7 +84,7 @@ def main(args):
             )
             del images
         env.reset(seed=2022)
-        N = 10
+        N = 32
         with profiler.profile("env.step+env.reset", total_steps=N, num_envs=num_envs):
             for i in range(N):
                 actions = (

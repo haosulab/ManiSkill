@@ -101,9 +101,9 @@ class CartPoleBalanceBenchmarkEnv(CartpoleBalanceEnv):
         """Loads lighting into the scene. Called by `self._reconfigure`. If not overriden will set some simple default lighting"""
 
         shadow = self.enable_shadow
-        self.scene.set_ambient_light([0.1, 0.1, 0.1])
+        self.scene.set_ambient_light(np.array([1,1,1])*0.3)
         for i in range(self.num_envs):
-            self.scene.sub_scenes[i].set_environment_map(os.path.join(os.path.dirname(__file__), "overcast.exr"))
+            self.scene.sub_scenes[i].set_environment_map(os.path.join(os.path.dirname(__file__), "kloofendal_28d_misty_puresky_1k.hdr"))
         # self.scene.add_directional_light(
         #     [0.2, 0.2, -1], [1, 1, 1], shadow=shadow, shadow_scale=5, shadow_map_size=2048
         # )
