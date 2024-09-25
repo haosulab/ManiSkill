@@ -21,6 +21,7 @@ def build_ground(
     xy_origin: tuple = (0, 0),
     altitude=0,
     name="ground",
+    texture_file=osp.join(osp.dirname(__file__), "assets/grid_texture.png"),
 ):
     """Procedurally creates a checkered floor given a floor width in meters.
 
@@ -54,7 +55,7 @@ def build_ground(
 
     mat = sapien.render.RenderMaterial()
     mat.base_color_texture = sapien.render.RenderTexture2D(
-        filename=osp.join(osp.dirname(__file__), "assets/grid_texture.png"),
+        filename=texture_file,
         mipmap_levels=4,
     )
     mat_square_len = 4  # hardcoded for the floor tile picture, saying that square tile is 4 meters wide

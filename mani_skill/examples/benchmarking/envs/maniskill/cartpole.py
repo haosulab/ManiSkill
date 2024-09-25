@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import sapien
 import torch
 from mani_skill.agents.base_agent import BaseAgent
 from mani_skill.agents.controllers.passive_controller import PassiveControllerConfig
@@ -10,7 +11,7 @@ from mani_skill.utils import sapien_utils
 from mani_skill.utils.building.ground import build_ground
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.structs.types import SceneConfig, SimConfig
-MJCF_FILE = f"{os.path.join(os.path.dirname(__file__), 'cartpole.xml')}"
+MJCF_FILE = f"{os.path.join(os.path.dirname(__file__), 'assets/cartpole.xml')}"
 class CartPoleRobot(BaseAgent):
     uid = "cart_pole"
     mjcf_path = MJCF_FILE
@@ -46,6 +47,7 @@ class CartPoleRobot(BaseAgent):
 
         # only need the robot
         self.robot = loader.parse(asset_path)[0][0].build()
+
         assert self.robot is not None, f"Fail to load URDF/MJCF from {asset_path}"
 
         # Cache robot link ids
@@ -73,7 +75,8 @@ class CartPoleBalanceBenchmarkEnv(CartpoleBalanceEnv):
 
     @property
     def _default_sensor_configs(self):
-        pose = sapien_utils.look_at(eye=[0, -3, 2], target=[0, 0, 0.2])
+        # pose = sapien.Pose((-7.0, 0.0, 3.0), (0, 0.0, 0.1045, 0.9945))
+        pose = sapien_utils.look_at(eye=[0, -2.3, 2.8], target=[0, 4.8, 0.7])
         sensor_configs = []
         if self.num_cameras is not None:
             for i in range(self.num_cameras):
@@ -81,6 +84,7 @@ class CartPoleBalanceBenchmarkEnv(CartpoleBalanceEnv):
                                                 pose=pose,
                                                 width=self.camera_width,
                                                 height=self.camera_height,
+                                                far=25,
                                                 fov=np.pi / 2))
         return sensor_configs
 
@@ -91,16 +95,17 @@ class CartPoleBalanceBenchmarkEnv(CartpoleBalanceEnv):
             a.build(a.name)
 
         # background visual wall
-        self.ground = build_ground(self.scene)
+        self.ground = build_ground(self.scene, texture_file=os.path.join(os.path.dirname(__file__), "assets/black_grid.png"))
 
     def _load_lighting(self, options: dict):
         """Loads lighting into the scene. Called by `self._reconfigure`. If not overriden will set some simple default lighting"""
 
         shadow = self.enable_shadow
+        self.scene.set_ambient_light([0.1, 0.1, 0.1])
         for i in range(self.num_envs):
             self.scene.sub_scenes[i].set_environment_map(os.path.join(os.path.dirname(__file__), "overcast.exr"))
-        self.scene.add_directional_light(
-            [0.2, 0.2, -1], [1, 1, 1], shadow=shadow, shadow_scale=5, shadow_map_size=2048
-        )
+        # self.scene.add_directional_light(
+        #     [0.2, 0.2, -1], [1, 1, 1], shadow=shadow, shadow_scale=5, shadow_map_size=2048
+        # )
     def compute_dense_reward(self, obs, action, info):
         return torch.zeros(self.num_envs, device=self.device)
