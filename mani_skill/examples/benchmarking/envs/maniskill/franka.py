@@ -64,7 +64,7 @@ class FrankaBenchmarkEnv(BaseEnv):
 
         # texture_square_len should be 4, but IsaacLab has a franka robot model that seems? to be larger than normal.
         # instead of shrinking robot size we shrink the ground texture to visually match the isaac lab franka robot setup.
-        # self.ground = build_ground(self.scene, texture_file=os.path.join(os.path.dirname(__file__), "assets/black_grid.png"), texture_square_len=2.4)
+        self.ground = build_ground(self.scene, texture_file=os.path.join(os.path.dirname(__file__), "assets/black_grid.png"), texture_square_len=2.4)
 
         # self.ground.set_collision_group_bit(group=2, bit_idx=30, bit=1)
         pass
@@ -77,10 +77,10 @@ class FrankaBenchmarkEnv(BaseEnv):
             self.agent.robot.set_pose(sapien.Pose(p=[0, 0, 0]))
     def _load_lighting(self, options: Dict):
         # self.scene.set_ambient_light(np.array([1,1,1])*0.1)
-        # for i in range(self.num_envs):
-        #     self.scene.sub_scenes[i].set_environment_map(os.path.join(os.path.dirname(__file__), "kloofendal_28d_misty_puresky_1k.hdr"))
+        for i in range(self.num_envs):
+            self.scene.sub_scenes[i].set_environment_map(os.path.join(os.path.dirname(__file__), "kloofendal_28d_misty_puresky_1k.hdr"))
         self.scene.add_directional_light(
-            [0.3, 0.3, -1], [1, 1, 1], shadow=False, shadow_scale=5, shadow_map_size=2048
+            [0.3, 0.3, -1], [1, 1, 1], shadow=True, shadow_scale=5, shadow_map_size=2048
         )
     def evaluate(self):
         return {}

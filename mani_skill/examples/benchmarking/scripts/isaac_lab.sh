@@ -75,3 +75,12 @@ do
     --num-cams=1 --cam-width=640 --cam-height=480 \
     --enable_cameras --headless --save-results
 done
+
+for n in 4 16 32 64 128
+do
+  python isaac_lab_gpu_sim.py \
+    --task "Isaac-Franka-Direct-Benchmark-v0" \
+    --num-envs $n --obs-mode depth \
+    --num-cams=1 --cam-width=640 --cam-height=480 \
+    --enable_cameras --headless --save-results
+done
