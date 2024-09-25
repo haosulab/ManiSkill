@@ -158,7 +158,7 @@ class TransferCubeEnv(BaseEnv):
             "success": is_obj_placed & ~is_grasped & (robot_to_rest_pose_dist < 0.15),
             "is_obj_placed": is_obj_placed,
             "within_end_boundary_xy": within_end_boundary_xy,
-            "robot_to_rest_pose_dist": robot_to_rest_pose_dist,
+            "robot_to_rest_pose_dist": robot_to_rest_pose_dist.float(),
             "is_grasped": is_grasped,
         }
 

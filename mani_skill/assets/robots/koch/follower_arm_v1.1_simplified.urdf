@@ -124,6 +124,15 @@
         name="white">
       </material>
     </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="1.570796327 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/link_2_collision_chassis.glb" />
+      </geometry>
+    </collision>
     <visual name="link_2_motor">
       <origin
         xyz="0 0 0"
@@ -133,15 +142,15 @@
           filename="package://koch/meshes/link_2_motor.glb" />
       </geometry>
     </visual>
-    <!-- <collision>
+    <collision>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="1.570796327 0 0" />
       <geometry>
         <mesh
-          filename="package://koch/meshes/link_2.stl" />
+          filename="package://koch/meshes/link_2_collision_motor.glb" />
       </geometry>
-    </collision> -->
+    </collision>
   </link>
   <joint
     name="joint_1"
@@ -182,6 +191,15 @@
           filename="package://koch/meshes/link_3_motor.glb" />
       </geometry>
     </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="1.570796327 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/link_3_collision_motor.glb" />
+      </geometry>
+    </collision>
     <visual name="link_3_chassis">
       <origin
         xyz="0 0 0"
@@ -196,10 +214,46 @@
     <collision>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="1.570796327 0 0" />
       <geometry>
         <mesh
-          filename="package://koch/meshes/link_3.stl" />
+          filename="package://koch/meshes/link_3_collision_chassis_part_1.glb" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="1.570796327 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/link_3_collision_chassis_part_2.glb" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="1.570796327 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/link_3_collision_chassis_part_3.glb" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="1.570796327 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/link_3_collision_chassis_part_4.glb" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="1.570796327 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/link_3_collision_chassis_part_5.glb" />
       </geometry>
     </collision>
   </link>
@@ -245,6 +299,33 @@
         name="white">
       </material>
     </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="1.570796327 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/link_4_collision_chassis_part_1.glb" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="1.570796327 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/link_4_collision_chassis_part_2.glb" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="1.570796327 0 0" />
+      <geometry>
+        <mesh
+          filename="package://koch/meshes/link_4_collision_chassis_part_3.glb" />
+      </geometry>
+    </collision>
     <visual name="link_4_motor">
       <origin
         xyz="0 0 0"
@@ -257,10 +338,10 @@
     <collision>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="1.570796327 0 0" />
       <geometry>
         <mesh
-          filename="package://koch/meshes/link_4.stl" />
+          filename="package://koch/meshes/link_4_collision_motor.glb" />
       </geometry>
     </collision>
   </link>
@@ -277,7 +358,7 @@
     <axis
       xyz="1 0 0" />
     <!-- <limit lower="-3.14159" upper="3.14159"/> -->
-    <limit lower="0" upper="3.04"/>
+    <limit lower="0" upper="3.05"/>
   </joint>
   <link
     name="link_5">
