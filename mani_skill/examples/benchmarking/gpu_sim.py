@@ -84,7 +84,7 @@ def main(args):
             )
             del images
         env.reset(seed=2022)
-        N = 32
+        N = 52
         with profiler.profile("env.step+env.reset", total_steps=N, num_envs=num_envs):
             for i in range(N):
                 actions = (
@@ -96,11 +96,18 @@ def main(args):
         profiler.log_stats("env.step+env.reset")
     import matplotlib.pyplot as plt
     # # import ipdb;ipdb.set_trace()
-    for cam_name, cam_data in obs["sensor_data"].items():
-        for k, v in cam_data.items():
-            if "rgb" in k:
-                rgb_images = v.cpu().numpy()
-                plt.imsave(f"rgb_{cam_name}.png", tile_images(rgb_images, nrows=int(np.sqrt(args.num_envs))))
+    if args.save_example_image:
+        import matplotlib.pyplot as plt
+        for cam_name, cam_data in obs["sensor_data"].items():
+            for k, v in cam_data.items():
+                imgs = v.cpu().numpy()
+                imgs = tile_images(imgs, nrows=int(np.sqrt(args.num_envs)))
+                cmap = None
+                if k == "depth":
+                    imgs[imgs == np.inf] = 0
+                    imgs = imgs[ :, :, 0]
+                    cmap = "gray"
+                plt.imsave(f"maniskill_{cam_name}_{k}.png", imgs, cmap=cmap)
     # if "rgb" in obs["sensor_data"]["base_camera"]:
     #     rgb_images = obs["sensor_data"]["base_camera"]["rgb"].cpu().numpy()
     #     plt.imsave("test.png", tile_images(rgb_images, nrows=int(np.sqrt(args.num_envs))))
@@ -144,6 +151,7 @@ def parse_args():
     parser.add_argument("-c", "--control-mode", type=str, default="pd_joint_delta_pos")
     parser.add_argument("-n", "--num-envs", type=int, default=1024)
     parser.add_argument("--cpu-sim", action="store_true", help="Whether to use the CPU or GPU simulation")
+    parser.add_argument("--save-example-image", action="store_true", help="Whether to save images of each camera and modality of the last observation.")
     parser.add_argument("--control-freq", type=int, default=None, help="The control frequency to use")
     parser.add_argument("--sim-freq", type=int, default=None, help="The simulation frequency to use")
     parser.add_argument("--num-cams", type=int, default=None, help="Number of cameras. Only used by benchmark environments")

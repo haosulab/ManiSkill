@@ -76,7 +76,7 @@ class CartPoleBalanceBenchmarkEnv(CartpoleBalanceEnv):
     @property
     def _default_sensor_configs(self):
         # pose = sapien.Pose((-7.0, 0.0, 3.0), (0, 0.0, 0.1045, 0.9945))
-        pose = sapien_utils.look_at(eye=[0, -2.3, 2.8], target=[0, 4.8, 0.7])
+        pose = sapien_utils.look_at(eye=[0, -2.1, 2.9], target=[0, 5.0, 0.75])
         sensor_configs = []
         if self.num_cameras is not None:
             for i in range(self.num_cameras):
