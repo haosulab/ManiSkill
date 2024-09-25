@@ -32,7 +32,7 @@ class FrankaBenchmarkEnv(BaseEnv):
     def _default_sim_config(self):
         return SimConfig(
             sim_freq=120,
-            spacing=2.5,
+            spacing=5,
             control_freq=60,
             scene_config=SceneConfig(
                 bounce_threshold=0.5,
@@ -58,16 +58,16 @@ class FrankaBenchmarkEnv(BaseEnv):
         return sensor_configs
     @property
     def _default_human_render_camera_configs(self):
-        pose = sapien_utils.look_at([1.25, -1.25, 1.5], [0.0, 0.0, 0.2])
-        return CameraConfig("render_camera", pose, 2048, 2048, 1, 0.01, 100)
+        return dict()
 
     def _load_scene(self, options: dict):
 
         # texture_square_len should be 4, but IsaacLab has a franka robot model that seems? to be larger than normal.
         # instead of shrinking robot size we shrink the ground texture to visually match the isaac lab franka robot setup.
-        self.ground = build_ground(self.scene, texture_file=os.path.join(os.path.dirname(__file__), "assets/black_grid.png"), texture_square_len=2.4)
+        # self.ground = build_ground(self.scene, texture_file=os.path.join(os.path.dirname(__file__), "assets/black_grid.png"), texture_square_len=2.4)
 
-        self.ground.set_collision_group_bit(group=2, bit_idx=30, bit=1)
+        # self.ground.set_collision_group_bit(group=2, bit_idx=30, bit=1)
+        pass
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
@@ -77,10 +77,10 @@ class FrankaBenchmarkEnv(BaseEnv):
             self.agent.robot.set_pose(sapien.Pose(p=[0, 0, 0]))
     def _load_lighting(self, options: Dict):
         # self.scene.set_ambient_light(np.array([1,1,1])*0.1)
-        for i in range(self.num_envs):
-            self.scene.sub_scenes[i].set_environment_map(os.path.join(os.path.dirname(__file__), "kloofendal_28d_misty_puresky_1k.hdr"))
+        # for i in range(self.num_envs):
+        #     self.scene.sub_scenes[i].set_environment_map(os.path.join(os.path.dirname(__file__), "kloofendal_28d_misty_puresky_1k.hdr"))
         self.scene.add_directional_light(
-            [0.3, 0.3, -1], [1, 1, 1], shadow=True, shadow_scale=5, shadow_map_size=2048
+            [0.3, 0.3, -1], [1, 1, 1], shadow=False, shadow_scale=5, shadow_map_size=2048
         )
     def evaluate(self):
         return {}

@@ -87,7 +87,9 @@ class CartPoleBalanceBenchmarkEnv(CartpoleBalanceEnv):
                                                 far=25,
                                                 fov=np.pi / 2))
         return sensor_configs
-
+    @property
+    def _default_human_render_camera_configs(self):
+        return dict()
     def _load_scene(self, options: dict):
         loader = self.scene.create_mjcf_loader()
         articulation_builders, actor_builders, sensor_configs = loader.parse(MJCF_FILE)
