@@ -76,16 +76,16 @@ def main():
                     env.reset()
         profiler.log_stats("env.step+env.reset")
     env.close()
-    # import matplotlib.pyplot as plt
+    import matplotlib.pyplot as plt
     # import ipdb;ipdb.set_trace()
-    # if "rgb" in obs["sensors"]["cam_0"]:
-    #     rgb_images = obs["sensors"]["cam_0"]["rgb"].cpu().numpy()
-    #     plt.imsave("test.png", tile_images(rgb_images, nrows=int(np.sqrt(args_cli.num_envs))))
-    # if "depth" in obs["sensors"]["cam_0"]:
-    #     depth_images = obs["sensors"]["cam_0"]["depth"].cpu().numpy()
-    #     depth_images = tile_images(depth_images, nrows=int(np.sqrt(args_cli.num_envs)))
-    #     depth_images[depth_images == np.inf] = 0
-    #     plt.imsave("depth.png", depth_images[:, :, 0])
+    if "rgb" in obs["sensors"]["cam_0"]:
+        rgb_images = obs["sensors"]["cam_0"]["rgb"].cpu().numpy()
+        plt.imsave("test.png", tile_images(rgb_images, nrows=int(np.sqrt(args_cli.num_envs))))
+    if "depth" in obs["sensors"]["cam_0"]:
+        depth_images = obs["sensors"]["cam_0"]["depth"].cpu().numpy()
+        depth_images = tile_images(depth_images, nrows=int(np.sqrt(args_cli.num_envs)))
+        depth_images[depth_images == np.inf] = 0
+        plt.imsave("depth.png", depth_images[:, :, 0])
     # tile_images()
 
     # append results to csv

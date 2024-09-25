@@ -15,6 +15,8 @@ import mani_skill.examples.benchmarking.envs # import benchmark env code
 BENCHMARK_ENVS = ["PickCubeBenchmark-v1", "CartpoleBalanceBenchmark-v1", "FrankaOnlyBenchmark-v1"]
 
 def main(args):
+    import sapien
+    sapien.render
     profiler = Profiler(output_format="stdout")
     num_envs = args.num_envs
     sim_config = dict()
@@ -35,9 +37,10 @@ def main(args):
             args.env_id,
             num_envs=num_envs,
             obs_mode=args.obs_mode,
-            # enable_shadow=True,
+            enable_shadow=True,
             render_mode=args.render_mode,
             control_mode=args.control_mode,
+            # shader_dir="rt-fast",
             sim_config=sim_config,
             **kwargs
         )
@@ -57,7 +60,7 @@ def main(args):
         env.reset(seed=2022)
         if args.save_video:
             images.append(env.render().cpu().numpy())
-        N = 1000
+        N = 10
         with profiler.profile("env.step", total_steps=N, num_envs=num_envs):
             for i in range(N):
                 actions = (
@@ -79,7 +82,7 @@ def main(args):
             )
             del images
         env.reset(seed=2022)
-        N = 1000
+        N = 10
         with profiler.profile("env.step+env.reset", total_steps=N, num_envs=num_envs):
             for i in range(N):
                 actions = (
@@ -89,7 +92,22 @@ def main(args):
                 if i % 200 == 0 and i != 0:
                     env.reset()
         profiler.log_stats("env.step+env.reset")
-    env.close()
+    import matplotlib.pyplot as plt
+    # # import ipdb;ipdb.set_trace()
+    for cam_name, cam_data in obs["sensor_data"].items():
+        for k, v in cam_data.items():
+            if "rgb" in k:
+                rgb_images = v.cpu().numpy()
+                plt.imsave(f"rgb_{cam_name}.png", tile_images(rgb_images, nrows=int(np.sqrt(args.num_envs))))
+    # if "rgb" in obs["sensor_data"]["base_camera"]:
+    #     rgb_images = obs["sensor_data"]["base_camera"]["rgb"].cpu().numpy()
+    #     plt.imsave("test.png", tile_images(rgb_images, nrows=int(np.sqrt(args.num_envs))))
+    # if "depth" in obs["sensor_data"]["base_camera"]:
+    #     depth_images = obs["sensor_data"]["base_camera"]["depth"].cpu().numpy()
+    #     depth_images = tile_images(depth_images, nrows=int(np.sqrt(args.num_envs)))
+    #     depth_images[depth_images == np.inf] = 0
+    #     plt.imsave("depth.png", depth_images[:, :, 0])
+    # env.close()
     if args.save_results:
         # append results to csv
         try:

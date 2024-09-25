@@ -55,6 +55,7 @@ def build_ground(
     mat = sapien.render.RenderMaterial()
     mat.base_color_texture = sapien.render.RenderTexture2D(
         filename=osp.join(osp.dirname(__file__), "assets/grid_texture.png"),
+        mipmap_levels=4,
     )
     mat_square_len = 4  # hardcoded for the floor tile picture, saying that square tile is 4 meters wide
     uv_scale = floor_width / mat_square_len
