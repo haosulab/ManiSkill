@@ -110,6 +110,7 @@ def main(args):
                 {"env_id": args.env_id, "obs_mode": obs_mode, "camera_width": cam_size, "camera_height": cam_size, "num_cameras": 1}, annotate_label="env.step/gpu_mem_use")
             save_path = f"fps_num_envs_1x{cam_size}x{cam_size}_{obs_mode}.png"
             fig.savefig(osp.join(root_save_path, save_path))
+            plt.close(fig)
             print(f"Saved figure to {save_path}")
 
     # generate plot of RGB FPS against square cameras and camera width under 16GB of GPU memory
@@ -136,6 +137,7 @@ def main(args):
         plt.tight_layout()
         save_path = osp.join(root_save_path, f"fps_camera_size_{obs_mode}.png")
         fig.savefig(save_path)
+        plt.close(fig)
         print(f"Saved figure to {save_path}")
 
 
@@ -176,6 +178,7 @@ def main(args):
         plt.tight_layout()
         save_path = osp.join(root_save_path, f"fps_rt_dataset_setup_{obs_mode.lower()}_bar.png")
         fig.savefig(save_path)
+        plt.close(fig)
         print(f"Saved figure to {save_path}")
 
     # generate plot for droit dataset settings, which is 3x 320x180 cameras
@@ -185,6 +188,7 @@ def main(args):
         draw_bar_plot_envs_vs_fps(ax, data, {"env_id": args.env_id, "obs_mode": obs_mode.lower(), "num_cameras": 3, "camera_width": 320, "camera_height": 180}, annotate_label="env.step/gpu_mem_use")
         save_path = osp.join(root_save_path, f"fps_droid_dataset_setup_{obs_mode.lower()}.png")
         fig.savefig(save_path)
+        plt.close(fig)
         print(f"Saved figure to {save_path}")
 
     ### State results ###
@@ -194,6 +198,7 @@ def main(args):
     draw_bar_plot_envs_vs_fps(ax, data, {"env_id": args.env_id, "obs_mode": "state"}, annotate_label="env.step/gpu_mem_use")
     save_path = osp.join(root_save_path, f"fps_num_envs_state.png")
     fig.savefig(save_path)
+    plt.close(fig)
     print(f"Saved figure to {save_path}")
 
 

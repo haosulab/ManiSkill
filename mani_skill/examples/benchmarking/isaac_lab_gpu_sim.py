@@ -49,7 +49,7 @@ def main():
     if args_cli.obs_mode != "state":
         env = gym.make(args_cli.task, cfg=env_cfg, camera_width=args_cli.cam_width, camera_height=args_cli.cam_height, num_cameras=args_cli.num_cams, obs_mode=args_cli.obs_mode)
     else:
-        env = gym.make(args_cli.task, cfg=env_cfg)
+        env = gym.make(args_cli.task, cfg=env_cfg, obs_mode=args_cli.obs_mode, num_cameras=0)
     with torch.inference_mode():
         env.reset(seed=2022)
         env_created = True
@@ -78,34 +78,34 @@ def main():
                 if i % 200 == 0 and i != 0:
                     env.reset()
         profiler.log_stats("env.step+env.reset")
-    # Create a video from the collected images
-    if video_imgs:
-        from moviepy.editor import ImageSequenceClip
+        # Create a video from the collected images
+        if video_imgs:
+            from moviepy.editor import ImageSequenceClip
 
-        # Convert images to uint8 if they're not already
-        video_imgs = [np.uint8(img * 255) if img.dtype != np.uint8 else img for img in video_imgs]
+            # Convert images to uint8 if they're not already
+            video_imgs = [np.uint8(img * 255) if img.dtype != np.uint8 else img for img in video_imgs]
 
-        # Create the video clip
-        clip = ImageSequenceClip(video_imgs, fps=20)
+            # Create the video clip
+            clip = ImageSequenceClip(video_imgs, fps=20)
 
-        # Write the video file
-        output_path = "isaac_simulation_video.mp4"
-        clip.write_videofile(output_path, codec="libx264")
+            # Write the video file
+            output_path = "isaac_simulation_video.mp4"
+            clip.write_videofile(output_path, codec="libx264")
 
-        print(f"Video saved to {output_path}")
-    if args_cli.save_example_image:
-
-        import matplotlib.pyplot as plt
-        for cam_name, cam_data in obs["sensors"].items():
-            for k, v in cam_data.items():
-                imgs = v.cpu().numpy()
-                imgs = tile_images(imgs, nrows=np.sqrt(args_cli.num_envs))
-                cmap = None
-                if k == "depth":
-                    imgs[imgs == np.inf] = 0
-                    imgs = imgs[ :, :, 0]
-                    cmap = "gray"
-                plt.imsave(f"isaac_{cam_name}_{k}.png", imgs, cmap=cmap)
+            print(f"Video saved to {output_path}")
+        if args_cli.save_example_image:
+            obs, _ = env.reset(seed=2022)
+            import matplotlib.pyplot as plt
+            for cam_name, cam_data in obs["sensors"].items():
+                for k, v in cam_data.items():
+                    imgs = v.cpu().numpy()
+                    imgs = tile_images(imgs, nrows=int(np.sqrt(args_cli.num_envs)))
+                    cmap = None
+                    if k == "depth":
+                        imgs[imgs == np.inf] = 0
+                        imgs = imgs[ :, :, 0]
+                        cmap = "gray"
+                    plt.imsave(f"isaac_{cam_name}_{k}.png", imgs, cmap=cmap)
     env.close()
 
 
@@ -113,7 +113,8 @@ def main():
     env_id_mapping = {
         "Isaac-Cartpole-RGB-Camera-Direct-Benchmark-v0": "CartpoleBalanceBenchmark-v1",
         "Isaac-Cartpole-Direct-Benchmark-v0": "CartpoleBalanceBenchmark-v1",
-        "Isaac-Cartpole-Direct-v0": "CartpoleBalanceBenchmark-v1"
+        "Isaac-Cartpole-Direct-v0": "CartpoleBalanceBenchmark-v1",
+        "Isaac-Franka-Direct-Benchmark-v0": "FrankaBenchmark-v1",
     }
 
     if args_cli.obs_mode in ["rgb", "rgbd", "depth"]:

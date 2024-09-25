@@ -90,18 +90,19 @@ def main(args):
                 if i % 200 == 0 and i != 0:
                     env.reset()
         profiler.log_stats("env.step+env.reset")
-    if args.save_example_image:
-        import matplotlib.pyplot as plt
-        for cam_name, cam_data in obs["sensor_data"].items():
-            for k, v in cam_data.items():
-                imgs = v.cpu().numpy()
-                imgs = tile_images(imgs, nrows=int(np.sqrt(args.num_envs)))
-                cmap = None
-                if k == "depth":
-                    imgs[imgs == np.inf] = 0
-                    imgs = imgs[ :, :, 0]
-                    cmap = "gray"
-                plt.imsave(f"maniskill_{cam_name}_{k}.png", imgs, cmap=cmap)
+        if args.save_example_image:
+            obs, _ = env.reset(seed=2022)
+            import matplotlib.pyplot as plt
+            for cam_name, cam_data in obs["sensor_data"].items():
+                for k, v in cam_data.items():
+                    imgs = v.cpu().numpy()
+                    imgs = tile_images(imgs, nrows=int(np.sqrt(args.num_envs)))
+                    cmap = None
+                    if k == "depth":
+                        imgs[imgs == np.inf] = 0
+                        imgs = imgs[ :, :, 0]
+                        cmap = "gray"
+                    plt.imsave(f"maniskill_{cam_name}_{k}.png", imgs, cmap=cmap)
 
     env.close()
     if args.save_results:

@@ -72,3 +72,21 @@ do
       -n=$n -o=$obs_mode --num-cams=1 --cam-width=640 --cam-height=480 --save-results benchmark_results/maniskill.csv
   done
 done
+
+for obs_mode in depth rgb
+do
+  for n in 4 16 32 64 128 256 512 1024
+  do
+    python gpu_sim.py -e "FrankaBenchmark-v1" \
+      -n=$n -o=$obs_mode --num-cams=1 --cam-width=640 --cam-height=480 --save-results benchmark_results/maniskill.csv
+  done
+done
+
+for obs_mode in depth rgb
+do
+  for n in 4 16 32 64 128 256 512 1024
+  do
+    python gpu_sim.py -e "FrankaBenchmark-v1" \
+      -n=$n -o=$obs_mode --num-cams=3 --cam-width=320 --cam-height=180 --save-results benchmark_results/maniskill.csv
+  done
+done
