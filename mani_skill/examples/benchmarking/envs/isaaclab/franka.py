@@ -14,7 +14,7 @@ from pxr import UsdGeom
 
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.actuators.actuator_cfg import ImplicitActuatorCfg
-from omni.isaac.lab.assets import Articulation, ArticulationCfg
+from omni.isaac.lab.assets import Articulation, ArticulationCfg, RigidObject, RigidObjectCfg
 from omni.isaac.lab.envs import DirectRLEnv, DirectRLEnvCfg
 from omni.isaac.lab.scene import InteractiveSceneCfg
 from omni.isaac.lab.sim import SimulationCfg
@@ -50,7 +50,19 @@ class FrankaEnvCfg(DirectRLEnvCfg):
 
     # scene
     scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=20.0, replicate_physics=True)
-
+    # add cube
+    # cube: RigidObjectCfg = RigidObjectCfg(
+    #     prim_path="/World/envs/env_.*/cube",
+    #     spawn=sim_utils.CuboidCfg(
+    #         size=(0.1, 0.1, 0.1),
+    #         rigid_props=sim_utils.RigidBodyPropertiesCfg(max_depenetration_velocity=1.0, disable_gravity=False),
+    #         mass_props=sim_utils.MassPropertiesCfg(mass=1.0),
+    #         physics_material=sim_utils.RigidBodyMaterialCfg(),
+    #         collision_props=sim_utils.CollisionPropertiesCfg(),
+    #         visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.5, 0.0, 0.0)),
+    #     ),
+    #     init_state=RigidObjectCfg.InitialStateCfg(pos=(1.0, -0.2, 0.05)),
+    # )
     # robot
     robot = ArticulationCfg(
         prim_path="/World/envs/env_.*/Robot",
@@ -105,6 +117,25 @@ class FrankaEnvCfg(DirectRLEnvCfg):
             ),
         },
     )
+    # in-hand object
+    # object: RigidObjectCfg = RigidObjectCfg(
+    #     prim_path="/World/envs/env_.*/object",
+    #     spawn=sim_utils.UsdFileCfg(
+    #         usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Blocks/DexCube/dex_cube_instanceable.usd",
+    #         rigid_props=sim_utils.RigidBodyPropertiesCfg(
+    #             kinematic_enabled=False,
+    #             disable_gravity=False,
+    #             enable_gyroscopic_forces=True,
+    #             solver_position_iteration_count=8,
+    #             solver_velocity_iteration_count=0,
+    #             sleep_threshold=0.005,
+    #             stabilization_threshold=0.0025,
+    #             max_depenetration_velocity=1000.0,
+    #         ),
+    #         mass_props=sim_utils.MassPropertiesCfg(density=567.0),
+    #     ),
+    #     init_state=RigidObjectCfg.InitialStateCfg(pos=(1.0, -0.2, 0.1), rot=(1.0, 0.0, 0.0, 0.0)),
+    # )
 
     # ground plane
     terrain = TerrainImporterCfg(
@@ -176,7 +207,11 @@ class FrankaBenchmarkEnv(DirectRLEnv):
 
     def _setup_scene(self):
         self._robot = Articulation(self.cfg.robot)
+        # self._cube = RigidObject(self.cfg.cube)
         self.scene.articulations["robot"] = self._robot
+        # self.scene.rigid_objects["cube"] = self._cube
+        # self._object = RigidObject(self.cfg.object)
+        # self.scene.rigid_objects["object"] = self._object
 
         self.cfg.terrain.num_envs = self.scene.cfg.num_envs
         self.cfg.terrain.env_spacing = self.scene.cfg.env_spacing
@@ -195,7 +230,7 @@ class FrankaBenchmarkEnv(DirectRLEnv):
     # pre-physics step calls
 
     def _pre_physics_step(self, actions: torch.Tensor):
-        self.actions = actions.clone().clamp(-.1, 0.1)
+        self.actions = actions.clone().clamp(-1, 1) * 2
         # targets = self.robot_dof_targets + self.robot_dof_speed_scales * self.dt * self.actions * self.cfg.action_scale
         # delta joint pos controller
         self.robot_dof_targets[:] = torch.clamp(self.actions + self._robot.data.joint_pos, self.robot_dof_lower_limits, self.robot_dof_upper_limits)

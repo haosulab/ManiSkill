@@ -44,7 +44,7 @@ class FrankaBenchmarkEnv(BaseEnv):
     def _default_sensor_configs(self):
         from transforms3d.euler import euler2quat
         # pose = sapien.Pose((-7.0, 0.0, 3.0), (0, 0.0, 0.1045, 0.9945))
-        pose = sapien.Pose((1.3, 0.0, 0.9), euler2quat(0, 0.7, np.pi))
+        pose = sapien.Pose((1.2, 0.0, 0.9), euler2quat(0, 0.7, np.pi))
         # pose = sapien_utils.look_at(eye=[0, -2.1, 2.9], target=[0, 5.0, 0.75])
         sensor_configs = []
         if self.num_cameras is not None:
@@ -76,7 +76,7 @@ class FrankaBenchmarkEnv(BaseEnv):
             self.agent.robot.set_qpos(qpos)
             self.agent.robot.set_pose(sapien.Pose(p=[0, 0, 0]))
     def _load_lighting(self, options: Dict):
-        # self.scene.set_ambient_light(np.array([1,1,1])*0.1)
+        self.scene.set_ambient_light(np.array([1,1,1])*0.1)
         for i in range(self.num_envs):
             self.scene.sub_scenes[i].set_environment_map(os.path.join(os.path.dirname(__file__), "kloofendal_28d_misty_puresky_1k.hdr"))
         self.scene.add_directional_light(
