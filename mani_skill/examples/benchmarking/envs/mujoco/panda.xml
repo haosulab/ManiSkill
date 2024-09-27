@@ -1,0 +1,118 @@
+<mujoco model="panda">
+  <compiler angle="radian"/>
+  <option iterations="5" ls_iterations="8" cone="elliptic" impratio="10">
+    <flag eulerdamp="disable"/>
+  </option>
+
+  <custom>
+    <numeric data="16" name="max_contact_points"/>
+  </custom>
+
+  <default>
+    <mesh  maxhullvert="32"/>
+    <joint armature="0.1" damping="1"/>
+    <general dyntype="none" biastype="affine" ctrlrange="-2.8973 2.8973" forcerange="-87 87"/>
+    <geom contype="0" conaffinity="0" group="0"/>
+    <default class="arm_collision">
+      <geom contype="1" conaffinity="0" group="1"/>
+    </default>
+    <default class="gripper_collision">
+      <geom contype="2" conaffinity="0" group="2" condim="6" friction="1 5e-3 5e-4" solref=".01 1"/>
+    </default>
+  </default>
+
+  <asset>
+    <mesh name="link0" file="franka_description/meshes/collision/link0.stl"/>
+    <mesh name="link1" file="franka_description/meshes/collision/link1.stl"/>
+    <mesh name="link2" file="franka_description/meshes/collision/link2.stl"/>
+    <mesh name="link3" file="franka_description/meshes/collision/link3.stl"/>
+    <mesh name="link4" file="franka_description/meshes/collision/link4.stl"/>
+    <mesh name="link5" file="franka_description/meshes/collision/link5.stl"/>
+    <mesh name="link6" file="franka_description/meshes/collision/link6.stl"/>
+    <mesh name="link7" file="franka_description/meshes/collision/link7.stl"/>
+    <mesh name="hand" file="franka_description/meshes/collision/hand.stl"/>
+  </asset>
+
+  <worldbody>
+    <body name="panda_link0">
+      <inertial pos="-0.041018 -0.00014 0.049974" quat="0.00630474 0.751245 0.00741774 0.659952" mass="0.629769" diaginertia="0.00430465 0.00387984 0.00313051"/>
+      <geom type="mesh" mesh="link0" class="arm_collision"/>
+      <body name="panda_link1" pos="0 0 0.333">
+        <inertial pos="0.003875 0.002081 -0.04762" quat="0.711549 0.00634377 -0.0131124 0.702485" mass="4.97068" diaginertia="0.707137 0.703435 0.00852456"/>
+        <joint name="panda_joint1" pos="0 0 0" axis="0 0 1" range="-2.8973 2.8973" actuatorfrcrange="-87 87"/>
+        <geom type="mesh" mesh="link1" class="arm_collision"/>
+        <body name="panda_link2" quat="0.707107 -0.707107 0 0">
+          <inertial pos="-0.003141 -0.02872 0.003495" quat="-0.168175 0.828366 -0.122878 0.520027" mass="0.646926" diaginertia="0.0310326 0.0283001 0.00273425"/>
+          <joint name="panda_joint2" pos="0 0 0" axis="0 0 1" range="-1.7628 1.7628" actuatorfrcrange="-87 87"/>
+          <geom type="mesh" mesh="link2" class="arm_collision"/>
+          <body name="panda_link3" pos="0 -0.316 0" quat="0.707107 0.707107 0 0">
+            <inertial pos="0.027518 0.039252 -0.066502" quat="0.662769 -0.00678331 0.252053 0.705096" mass="3.2286" diaginertia="0.0415014 0.0414793 0.00124635"/>
+            <joint name="panda_joint3" pos="0 0 0" axis="0 0 1" range="-2.8973 2.8973" actuatorfrcrange="-87 87"/>
+            <geom type="mesh" mesh="link3" class="arm_collision"/>
+            <body name="panda_link4" pos="0.0825 0 0" quat="0.707107 0.707107 0 0">
+              <inertial pos="-0.05317 0.104419 0.027454" quat="0.65058 0.529822 -0.0962034 0.535518" mass="3.5879" diaginertia="0.0349596 0.0281483 0.0106201"/>
+              <joint name="panda_joint4" pos="0 0 0" axis="0 0 1" range="-3.0718 -0.0698" actuatorfrcrange="-87 87"/>
+              <geom type="mesh" mesh="link4" class="arm_collision"/>
+              <body name="panda_link5" pos="-0.0825 0.384 0" quat="0.707107 -0.707107 0 0">
+                <inertial pos="-0.011953 0.041065 -0.038437" quat="0.987313 -0.0121954 0.0719187 -0.141037" mass="1.22595" diaginertia="0.0367625 0.0288531 0.00803437"/>
+                <joint name="panda_joint5" pos="0 0 0" axis="0 0 1" range="-2.8973 2.8973" actuatorfrcrange="-12 12"/>
+                <geom type="mesh" mesh="link5" class="arm_collision"/>
+                <body name="panda_link6" quat="0.707107 0.707107 0 0">
+                  <inertial pos="0.060149 -0.014117 -0.010517" quat="0.101075 0.59332 0.0287227 0.798079" mass="1.66656" diaginertia="0.00584276 0.00431037 0.00159787"/>
+                  <joint name="panda_joint6" pos="0 0 0" axis="0 0 1" range="-0.0175 3.7525" actuatorfrcrange="-12 12"/>
+                  <geom type="mesh" mesh="link6" class="arm_collision"/>
+                  <body name="panda_link7" pos="0.088 0 0" quat="0.707107 0.707107 0 0">
+                    <inertial pos="0.010517 -0.004252 0.061597" quat="0.992939 -0.0762041 0.0733595 -0.0537067" mass="0.735522" diaginertia="0.0127345 0.0101055 0.00451803"/>
+                    <joint name="panda_joint7" pos="0 0 0" axis="0 0 1" range="-2.8973 2.8973" actuatorfrcrange="-12 12"/>
+                    <geom type="mesh" mesh="link7" class="arm_collision"/>
+                    <body name="panda_link8" pos="0 0 0.107">
+                      <body name="panda_hand" quat="0.92388 0 0 -0.382683">
+                        <inertial pos="-0.01 0 0.03" quat="0.5 0.5 0.5 0.5" mass="0.73" diaginertia="0.0025 0.0017 0.001"/>
+                        <geom type="mesh" mesh="hand" class="arm_collision"/>
+                        <!-- <body name="panda_hand_tcp" pos="0 0 0.1034"/> -->
+                        <body name="panda_leftfinger" pos="0 0 0.0584">
+                          <inertial pos="0 0 0" mass="0.015" diaginertia="2.375e-06 2.375e-06 7.5e-07"/>
+                          <joint name="panda_finger_joint1" pos="0 0 0" axis="0 1 0" type="slide" range="0 0.04" actuatorfrcrange="-100 100"/>
+                          <geom size="0.011 0.0075 0.01" pos="0 0.0185 0.011" type="box" class="gripper_collision"/>
+                          <geom size="0.011 0.0044 0.0019" pos="0 0.0068 0.0022" type="box" class="gripper_collision"/>
+                          <geom size="0.00875 0.0035 0.01175" pos="0 0.0159 0.02835" quat="0.965926 0.258819 0 0" type="box" class="gripper_collision"/>
+                          <geom size="0.00875 0.0076 0.00925" pos="0 0.00758 0.04525" type="box" class="gripper_collision" conaffinity="2"/>
+                          <!-- <body name="panda_leftfinger_pad" pos="0 0 0.0455"/> -->
+                        </body>
+                        <body name="panda_rightfinger" pos="0 0 0.0584">
+                          <inertial pos="0 0 0" mass="0.015" diaginertia="2.375e-06 2.375e-06 7.5e-07"/>
+                          <joint name="panda_finger_joint2" pos="0 0 0" axis="0 -1 0" type="slide" range="0 0.04" actuatorfrcrange="-100 100"/>
+                          <geom size="0.011 0.0075 0.01" pos="0 -0.0185 0.011" type="box" class="gripper_collision"/>
+                          <geom size="0.011 0.0044 0.0019" pos="0 -0.0068 0.0022" type="box" class="gripper_collision"/>
+                          <geom size="0.00875 0.0035 0.01175" pos="0 -0.0159 0.02835" quat="0.965926 -0.258819 0 0" type="box" class="gripper_collision"/>
+                          <geom size="0.00875 0.0076 0.00925" pos="0 -0.00758 0.04525" type="box" class="gripper_collision" conaffinity="2"/>
+                          <!-- <body name="panda_rightfinger_pad" pos="0 0 0.0455"/> -->
+                        </body>
+                      </body>
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <!-- arm actuator params copied from https://github.com/google-deepmind/mujoco_menagerie/blob/main/franka_emika_panda/panda.xml -->
+    <general name="actuator1" joint="panda_joint1" gainprm="4500" biasprm="0 -4500 -450" ctrlrange="-2.8973 2.8973"/>
+    <general name="actuator2" joint="panda_joint2" gainprm="4500" biasprm="0 -4500 -450" ctrlrange="-1.7628 1.7628"/>
+    <general name="actuator3" joint="panda_joint3" gainprm="3500" biasprm="0 -3500 -350" ctrlrange="-2.8973 2.8973"/>
+    <general name="actuator4" joint="panda_joint4" gainprm="3500" biasprm="0 -3500 -350" ctrlrange="-3.0718 -0.0698"/>
+    <general name="actuator5" joint="panda_joint5" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" ctrlrange="-2.8973 2.8973"/>
+    <general name="actuator6" joint="panda_joint6" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" ctrlrange="-0.0175 3.7525"/>
+    <general name="actuator7" joint="panda_joint7" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" ctrlrange="-2.8973 2.8973"/>
+    <position name="actuator8" joint="panda_finger_joint1"/>
+  </actuator>
+
+  <equality>
+    <joint joint1="panda_finger_joint1" joint2="panda_finger_joint2" polycoef="0 1 0 0 0"/>
+  </equality>
+</mujoco>

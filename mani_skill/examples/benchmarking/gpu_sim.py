@@ -1,24 +1,18 @@
 import argparse
 from pathlib import Path
-from turtle import update
-
 import gymnasium as gym
 import numpy as np
-import sapien.physx
-import sapien.render
 import torch
 import tqdm
 
 import mani_skill.envs
 from mani_skill.envs.sapien_env import BaseEnv
-from mani_skill.sensors.camera import Camera
-from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 from mani_skill.examples.benchmarking.profiling import Profiler
 from mani_skill.utils.visualization.misc import images_to_video, tile_images
 from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper
 import mani_skill.examples.benchmarking.envs # import benchmark env code
 
-BENCHMARK_ENVS = ["PickCubeBenchmark-v1", "CartpoleBalanceBenchmark-v1"]
+BENCHMARK_ENVS = ["PickCubeBenchmark-v1", "CartpoleBalanceBenchmark-v1", "FrankaOnlyBenchmark-v1"]
 
 def main(args):
     profiler = Profiler(output_format="stdout")
@@ -110,14 +104,13 @@ def main(args):
                 control_mode=args.control_mode,
                 gpu_type=torch.cuda.get_device_name()
             )
-            if args.env_id in BENCHMARK_ENVS:
-                data.update(
-                    num_cameras=args.num_cams,
-                    camera_width=args.cam_width,
-                    camera_height=args.cam_height,
-                )
+            data.update(
+                num_cameras=args.num_cams,
+                camera_width=args.cam_width,
+                camera_height=args.cam_height,
+            )
             profiler.update_csv(
-                "benchmark_results/maniskill.csv",
+                args.save_results,
                 data,
             )
         except:
@@ -146,7 +139,7 @@ def parse_args():
         "--save-video", action="store_true", help="whether to save videos"
     )
     parser.add_argument(
-        "--save-results", action="store_true", help="whether to save results to a csv file"
+        "--save-results", type=str, help="path to save results to. Should be path/to/results.csv"
     )
     args = parser.parse_args()
     return args
