@@ -75,8 +75,9 @@ class CartPoleBalanceBenchmarkEnv(CartpoleBalanceEnv):
 
     @property
     def _default_sensor_configs(self):
-        # pose = sapien.Pose((-7.0, 0.0, 3.0), (0, 0.0, 0.1045, 0.9945))
-        pose = sapien_utils.look_at(eye=[0, -2.1, 2.9], target=[0, 5.0, 0.75])
+        from transforms3d.euler import euler2quat
+        q = euler2quat(0,  np.deg2rad(11.988), np.pi/2)
+        pose = sapien.Pose((0.0, -4.0, 3.0), q=q)
         sensor_configs = []
         if self.num_cameras is not None:
             for i in range(self.num_cameras):
@@ -85,7 +86,7 @@ class CartPoleBalanceBenchmarkEnv(CartpoleBalanceEnv):
                                                 width=self.camera_width,
                                                 height=self.camera_height,
                                                 far=25,
-                                                fov=np.pi / 2))
+                                                fov=0.63))
         return sensor_configs
     @property
     def _default_human_render_camera_configs(self):
@@ -96,18 +97,13 @@ class CartPoleBalanceBenchmarkEnv(CartpoleBalanceEnv):
         for a in actor_builders:
             a.build(a.name)
 
-        # background visual wall
-        self.ground = build_ground(self.scene, texture_file=os.path.join(os.path.dirname(__file__), "assets/black_grid.png"))
+        # isaac uses a 0.5mx0.5m grid so we downscale the grid which is 4x4 squares by 2 by assumign the texture square length is 2
+        self.ground = build_ground(self.scene, texture_file=os.path.join(os.path.dirname(__file__), "assets/black_grid.png"), texture_square_len=2, mipmap_levels=7)
 
     def _load_lighting(self, options: dict):
         """Loads lighting into the scene. Called by `self._reconfigure`. If not overriden will set some simple default lighting"""
-
-        shadow = self.enable_shadow
         self.scene.set_ambient_light(np.array([1,1,1])*0.3)
         for i in range(self.num_envs):
             self.scene.sub_scenes[i].set_environment_map(os.path.join(os.path.dirname(__file__), "kloofendal_28d_misty_puresky_1k.hdr"))
-        # self.scene.add_directional_light(
-        #     [0.2, 0.2, -1], [1, 1, 1], shadow=shadow, shadow_scale=5, shadow_map_size=2048
-        # )
     def compute_dense_reward(self, obs, action, info):
         return torch.zeros(self.num_envs, device=self.device)
