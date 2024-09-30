@@ -66,9 +66,8 @@ def main():
                 )
                 obs, rew, terminated, truncated, info = env.step(actions)
         profiler.log_stats("env.step")
-        reset_obs, _ = env.reset(seed=2022)
+        env.reset(seed=2022)
         N = 1000
-        video_imgs = []
         with profiler.profile("env.step+env.reset", total_steps=N, num_envs=args_cli.num_envs):
             for i in range(N):
                 actions = (
@@ -78,21 +77,7 @@ def main():
                 if i % 200 == 0 and i != 0:
                     env.reset()
         profiler.log_stats("env.step+env.reset")
-        # Create a video from the collected images
-        if video_imgs:
-            from moviepy.editor import ImageSequenceClip
 
-            # Convert images to uint8 if they're not already
-            video_imgs = [np.uint8(img * 255) if img.dtype != np.uint8 else img for img in video_imgs]
-
-            # Create the video clip
-            clip = ImageSequenceClip(video_imgs, fps=20)
-
-            # Write the video file
-            output_path = "isaac_simulation_video.mp4"
-            clip.write_videofile(output_path, codec="libx264")
-
-            print(f"Video saved to {output_path}")
         if args_cli.save_example_image:
             obs, _ = env.reset(seed=2022)
             import matplotlib.pyplot as plt
