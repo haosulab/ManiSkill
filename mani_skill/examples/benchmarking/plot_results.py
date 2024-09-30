@@ -100,7 +100,7 @@ def main(args):
 
     ### RENDERING RESULTS ###
     # generate plot of RGB FPS against number of parallel environments with 1x 128x128 camera
-    for obs_mode in ["rgb", "rgb+depth"]:
+    for obs_mode in ["rgb", "rgb+depth", "depth"]:
         cam_sizes = [80, 128, 160, 224, 256, 512]
         for cam_size in cam_sizes:
             fig, ax = plt.subplots()
@@ -108,8 +108,9 @@ def main(args):
             draw_bar_plot_envs_vs_fps(
                 ax, data,
                 {"env_id": args.env_id, "obs_mode": obs_mode, "camera_width": cam_size, "camera_height": cam_size, "num_cameras": 1}, annotate_label="env.step/gpu_mem_use")
-            save_path = f"fps:num_envs_1x{cam_size}x{cam_size}_{obs_mode}.png"
+            save_path = f"fps_num_envs_1x{cam_size}x{cam_size}_{obs_mode}.png"
             fig.savefig(osp.join(root_save_path, save_path))
+            plt.close(fig)
             print(f"Saved figure to {save_path}")
 
     # generate plot of RGB FPS against square cameras and camera width under 16GB of GPU memory
@@ -134,8 +135,9 @@ def main(args):
             ax.plot(df["camera_width"], df["env.step/fps"], '-o', label=exp_name, color=COLOR_PALLETE[i % len(COLOR_PALLETE)])
         plt.legend()
         plt.tight_layout()
-        save_path = osp.join(root_save_path, f"fps:camera_size_{obs_mode}.png")
+        save_path = osp.join(root_save_path, f"fps_camera_size_{obs_mode}.png")
         fig.savefig(save_path)
+        plt.close(fig)
         print(f"Saved figure to {save_path}")
 
 
@@ -162,53 +164,41 @@ def main(args):
                 ax.plot(df["num_cameras"], df["env.step/fps"], '-o', label=exp_name, color=COLOR_PALLETE[i % len(COLOR_PALLETE)])
             plt.legend()
             plt.tight_layout()
-            save_path = osp.join(root_save_path, f"fps:num_cameras_{camera_size}x{camera_size}_{obs_mode}.png")
+            save_path = osp.join(root_save_path, f"fps_num_cameras_{camera_size}x{camera_size}_{obs_mode}.png")
             fig.savefig(save_path)
             print(f"Saved figure to {save_path}")
             plt.close(fig)
 
     # generate plot for RT/google dataset settings, which is 1x 640x480 cameras
-    fig, ax = plt.subplots()
-    ax.set_title(f"{args.env_id}: FPS with 1x 640x480 RGB Cameras (Google RT Setup)")
-    draw_line_plot_envs_vs_fps(ax, data, {"env_id": args.env_id, "obs_mode": "rgb", "num_cameras": 1, "camera_width": 640, "camera_height": 480}, annotate_label="env.step/gpu_mem_use")
-    plt.legend()
-    plt.tight_layout()
-    save_path = osp.join(root_save_path, f"fps:rt_dataset_setup.png")
-    fig.savefig(save_path)
-    print(f"Saved figure to {save_path}")
-    plt.close(fig)
-
-    fig, ax = plt.subplots()
-    ax.set_title(f"{args.env_id}: FPS with 1x 640x480 RGB Cameras (Google RT Setup)")
-    draw_bar_plot_envs_vs_fps(ax, data, {"env_id": args.env_id, "obs_mode": "rgb", "num_cameras": 1, "camera_width": 640, "camera_height": 480}, annotate_label="env.step/gpu_mem_use")
-    plt.legend()
-    plt.tight_layout()
-    save_path = osp.join(root_save_path, f"fps:rt_dataset_setup_bar.png")
-    fig.savefig(save_path)
-    print(f"Saved figure to {save_path}")
+    for obs_mode in ["RGB", "Depth"]:
+        fig, ax = plt.subplots(figsize=(8, 6))
+        ax.set_title(f"{args.env_id}: FPS with 1x 640x480 {obs_mode} Cameras")
+        draw_bar_plot_envs_vs_fps(ax, data, {"env_id": args.env_id, "obs_mode": obs_mode.lower(), "num_cameras": 1, "camera_width": 640, "camera_height": 480}, annotate_label="env.step/gpu_mem_use")
+        plt.legend()
+        plt.tight_layout()
+        save_path = osp.join(root_save_path, f"fps_rt_dataset_setup_{obs_mode.lower()}_bar.png")
+        fig.savefig(save_path)
+        plt.close(fig)
+        print(f"Saved figure to {save_path}")
 
     # generate plot for droit dataset settings, which is 3x 320x180 cameras
-    fig, ax = plt.subplots()
-    ax.set_title(f"{args.env_id}: FPS with 3x 320x180 RGB Cameras (Droid Setup)")
-    draw_line_plot_envs_vs_fps(ax, data, {"env_id": args.env_id, "obs_mode": "rgb", "num_cameras": 3, "camera_width": 320, "camera_height": 180}, annotate_label="env.step/gpu_mem_use")
-    save_path = osp.join(root_save_path, f"fps:droid_dataset_setup.png")
-    fig.savefig(save_path)
-    print(f"Saved figure to {save_path}")
-
-    fig, ax = plt.subplots()
-    ax.set_title(f"{args.env_id}: FPS with 3x 320x180 RGB Cameras (Droid Setup)")
-    draw_bar_plot_envs_vs_fps(ax, data, {"env_id": args.env_id, "obs_mode": "rgb", "num_cameras": 3, "camera_width": 320, "camera_height": 180}, annotate_label="env.step/gpu_mem_use")
-    save_path = osp.join(root_save_path, f"fps:droid_dataset_setup_bar.png")
-    fig.savefig(save_path)
-    print(f"Saved figure to {save_path}")
+    for obs_mode in ["RGB", "Depth"]:
+        fig, ax = plt.subplots(figsize=(8, 6))
+        ax.set_title(f"{args.env_id}: FPS with 3x 320x180 {obs_mode} Cameras")
+        draw_bar_plot_envs_vs_fps(ax, data, {"env_id": args.env_id, "obs_mode": obs_mode.lower(), "num_cameras": 3, "camera_width": 320, "camera_height": 180}, annotate_label="env.step/gpu_mem_use")
+        save_path = osp.join(root_save_path, f"fps_droid_dataset_setup_{obs_mode.lower()}.png")
+        fig.savefig(save_path)
+        plt.close(fig)
+        print(f"Saved figure to {save_path}")
 
     ### State results ###
     # generate plot of state FPS against number of parallel environments
     fig, ax = plt.subplots()
     ax.set_title(f"{args.env_id}: State FPS vs Number of Parallel Environments")
     draw_bar_plot_envs_vs_fps(ax, data, {"env_id": args.env_id, "obs_mode": "state"}, annotate_label="env.step/gpu_mem_use")
-    save_path = osp.join(root_save_path, f"fps:num_envs_state.png")
+    save_path = osp.join(root_save_path, f"fps_num_envs_state.png")
     fig.savefig(save_path)
+    plt.close(fig)
     print(f"Saved figure to {save_path}")
 
 

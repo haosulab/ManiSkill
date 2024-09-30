@@ -24,11 +24,11 @@ do
 done
 
 # Benchmark different number of environments and camera sizes
-for obs_mode in rgb rgb+depth
+for obs_mode in rgb rgb+depth depth
 do
-  for n in 4 16 32 64 128 256 512 1024
+  for cam_size in 80 128 160 224 256 512
   do
-    for cam_size in 80 128 160 224 256 512
+    for n in 4 16 32 64 128 256 512 1024
     do
       python isaac_lab_gpu_sim.py \
         --task "Isaac-Cartpole-RGB-Camera-Direct-Benchmark-v0" \
@@ -61,7 +61,7 @@ for n in 4 16 32 64 128 256
 do
   python isaac_lab_gpu_sim.py \
     --task "Isaac-Cartpole-RGB-Camera-Direct-Benchmark-v0" \
-    --num-envs $n --obs-mode rgb \
+    --num-envs $n --obs-mode depth \
     --num-cams=3 --cam-width=320 --cam-height=180 \
     --enable_cameras --headless --save-results
 done
@@ -71,7 +71,31 @@ for n in 4 16 32 64 128
 do
   python isaac_lab_gpu_sim.py \
     --task "Isaac-Cartpole-RGB-Camera-Direct-Benchmark-v0" \
-    --num-envs $n --obs-mode rgb \
+    --num-envs $n --obs-mode depth \
     --num-cams=1 --cam-width=640 --cam-height=480 \
     --enable_cameras --headless --save-results
+done
+
+for obs_mode in depth rgb
+do
+  for n in 4 16 32 64 128
+  do
+    python isaac_lab_gpu_sim.py \
+      --task "Isaac-Franka-Direct-Benchmark-v0" \
+      --num-envs $n --obs-mode $obs_mode \
+      --num-cams=1 --cam-width=640 --cam-height=480 \
+      --enable_cameras --headless --save-results
+  done
+done
+
+for obs_mode in rgb depth
+do
+  for n in 4 16 32 64 128 256
+  do
+    python isaac_lab_gpu_sim.py \
+      --task "Isaac-Franka-Direct-Benchmark-v0" \
+      --num-envs $n --obs-mode $obs_mode \
+      --num-cams=3 --cam-width=320 --cam-height=180 \
+      --enable_cameras --headless --save-results
+  done
 done
