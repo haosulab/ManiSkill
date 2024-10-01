@@ -2,13 +2,29 @@
 
 This page documents code and results of benchmarking various robotics simulators on a number of dimensions. It is still a WIP as we write more fair benchmarking code that more accurately compares simulators under the same conditions. We currently only have public graphs/results on one environment.
 
-Currently we just compare ManiSkill and [IsaacLab](https://github.com/isaac-sim/IsaacLab) on one task, Cartpole Balancing (control). For details on benchmarking methodology see [this section](#benchmarking-detailsmethodology)
+Currently we just compare ManiSkill and [Isaac Lab](https://github.com/isaac-sim/IsaacLab) on one task, Cartpole Balancing (control). For details on benchmarking methodology see [this section](#benchmarking-detailsmethodology)
 
 ## Results
 
 Raw benchmark results can be read from the .csv files in the [results folder on GitHub](https://github.com/haosulab/ManiSkill/blob/main/docs/source/user_guide/additional_resources/benchmarking_results). There are also plotted figures in that folder. Below we show a selection of some of the figures/results from testing on a RTX 4090. The figures are also sometimes annotated with the GPU memory usage in GB. 
 
-Overall, ManiSkill is faster than IsaacLab on the majority of settings and is much more GPU memory efficient, especially for realistic camera setups. GPU memory efficiency is particularly important for machine learning methods like RL which rely on large replay buffers on the GPU. 
+Overall, ManiSkill is faster than Isaac Lab on the majority of settings and is much more GPU memory efficient, especially for realistic camera setups. GPU memory efficiency is particularly important for machine learning methods like RL which rely on large replay buffers on the GPU. However we note that this is not a pure apples-to-apples comparison due to differences in rendering techniques and so we show a qualitative comparison of the same task in Isaac Lab and ManiSkill below. See the note below for more details.
+
+:::{dropdown} Note on rendering differences between simulators
+
+We acknowledge that these comparisons are not strictly apples-to-apples due to differences in rendering techniques. Isaac Lab employs ray-tracing for parallel rendering, while the ManiSkill3 results are generated using SAPIEN’s rasterization renderer (see image below for a qualitative comparison), although
+ManiSkill3 also supports a ray-tracing mode without parallelization. Ray-tracing generally offers
+greater flexibility in balancing rendering speed and quality through the adjustment of parameters
+such as samples per pixel. It’s worth noting that the Isaac Lab data presented here uses the fastest
+rendering settings available in Isaac Lab v1.2.0, although it can be easily tuned to achieve better rendering quality that may be
+helpful for sim2real. Despite the use of different rendering techniques, we believe this experiment
+provides a meaningful basis for comparison.
+:::
+
+:::{figure} images/cartpole-comparison.png
+Comparison of ManiSkill3 (Top row) and Isaac Lab (Bottom row) parallel rendering
+640x480 RGB and depth image outputs of the Cartpole benchmark task.
+:::
 
 ### Cartpole Balance
 
