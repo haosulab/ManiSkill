@@ -111,11 +111,6 @@ ManiSkill implements two types of rotation based control that are generally the 
 
 When `use_delta=False` this is enabled. Actions must then define a 3D position and rotation (via XYZ euler angles) and use the frame `root_translation:root_aligned_body_rotation` (which is also the default). This kind of control works more similarly to motion planning where you pick a target pose and ManiSkill picks joint actions that try to reach that target pose.
 
-### GPU Sim Caveats
-
-At the moment we only support fast GPU accelerated delta end-effector control. Support for GPU accelerated absolute end-effector control requires some much more complicated code but can be possible if one uses [cuRobo](https://github.com/NVlabs/curobo) to generate motion plans given target poses. 
-
-
 ## PD EE Pos
 
 ```python
