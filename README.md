@@ -10,7 +10,7 @@
 [![Docs status](https://img.shields.io/badge/docs-passing-brightgreen.svg)](https://maniskill.readthedocs.io/en/latest/)
 [![Discord](https://img.shields.io/discord/996566046414753822?logo=discord)](https://discord.gg/x8yUZe5AdN)
 
-ManiSkill is a powerful unified framework for robot simulation and training powered by [SAPIEN](https://sapien.ucsd.edu/). The entire tech stack is as open-source as possible and ManiSkill v3 is in beta release now. Among its features include:
+ManiSkill is a powerful unified framework for robot simulation and training powered by [SAPIEN](https://sapien.ucsd.edu/), with a strong focus on manipulation skills. The entire tech stack is as open-source as possible and ManiSkill v3 is in beta release now. Among its features include:
 - GPU parallelized visual data collection system. On the high end you can collect RGBD + Segmentation data at 30,000+ FPS with a 4090 GPU, 10-1000x faster compared to most other simulators.
 - GPU parallelized simulation, enabling high throughput state-based synthetic data collection in simulation
 - GPU parallelized heteogeneous simuluation, where every parallel environment has a completely different scene/set of objects
