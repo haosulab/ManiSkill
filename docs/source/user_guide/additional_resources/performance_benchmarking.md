@@ -32,7 +32,7 @@ Comparison of ManiSkill (Top row) and Isaac Lab (Bottom row) parallel rendering
 Video of the task above with ManiSkill on top and Isaac Lab below.
 
 <video preload="auto" controls="True" width="100%">
-<source src="https://github.com/haosulab/ManiSkill/raw/main/docs/source/_static/videos/performance_benchmarking/cartpole_video_comparison_640x480.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/docs/source/_static/videos/performance_benchmark/cartpole_video_comparison_640x480.mp4" type="video/mp4">
 </video>
 
 
