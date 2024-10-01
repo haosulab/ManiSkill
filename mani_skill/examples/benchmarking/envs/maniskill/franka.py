@@ -13,7 +13,7 @@ from mani_skill.utils import sapien_utils
 from mani_skill.utils.building.ground import build_ground
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.structs.types import GPUMemoryConfig, SceneConfig, SimConfig
-
+from transforms3d.euler import euler2quat
 
 @register_env("FrankaBenchmark-v1", max_episode_steps=200000)
 class FrankaBenchmarkEnv(BaseEnv):
@@ -42,10 +42,7 @@ class FrankaBenchmarkEnv(BaseEnv):
 
     @property
     def _default_sensor_configs(self):
-        from transforms3d.euler import euler2quat
-        # pose = sapien.Pose((-7.0, 0.0, 3.0), (0, 0.0, 0.1045, 0.9945))
-        pose = sapien.Pose((1.2, 0.0, 0.9), euler2quat(0, 0.7, np.pi))
-        # pose = sapien_utils.look_at(eye=[0, -2.1, 2.9], target=[0, 5.0, 0.75])
+        pose = sapien.Pose((-0.4, 0, 1.0), euler2quat(0, np.deg2rad(28.648), 0))
         sensor_configs = []
         if self.num_cameras is not None:
             for i in range(self.num_cameras):
@@ -54,7 +51,7 @@ class FrankaBenchmarkEnv(BaseEnv):
                                                 width=self.camera_width,
                                                 height=self.camera_height,
                                                 far=25,
-                                                fov=1))
+                                                fov=0.63))
         return sensor_configs
     @property
     def _default_human_render_camera_configs(self):
@@ -64,7 +61,7 @@ class FrankaBenchmarkEnv(BaseEnv):
 
         # texture_square_len should be 4, but IsaacLab has a franka robot model that seems? to be larger than normal.
         # instead of shrinking robot size we shrink the ground texture to visually match the isaac lab franka robot setup.
-        self.ground = build_ground(self.scene, texture_file=os.path.join(os.path.dirname(__file__), "assets/black_grid.png"), texture_square_len=2.4)
+        self.ground = build_ground(self.scene, texture_file=os.path.join(os.path.dirname(__file__), "assets/black_grid.png"), texture_square_len=2, mipmap_levels=6)
 
         # self.ground.set_collision_group_bit(group=2, bit_idx=30, bit=1)
         pass
@@ -74,7 +71,7 @@ class FrankaBenchmarkEnv(BaseEnv):
             qpos = self.agent.keyframes["rest"].qpos
             qpos[0] = 0.5
             self.agent.robot.set_qpos(qpos)
-            self.agent.robot.set_pose(sapien.Pose(p=[0, 0, 0]))
+            self.agent.robot.set_pose(sapien.Pose(p=[1.5, 0, 0], q=euler2quat(0, 0, np.pi)))
     def _load_lighting(self, options: Dict):
         self.scene.set_ambient_light(np.array([1,1,1])*0.1)
         for i in range(self.num_envs):

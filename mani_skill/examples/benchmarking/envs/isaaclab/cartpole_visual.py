@@ -50,7 +50,7 @@ class CartpoleRGBCameraBenchmarkEnvCfg(DirectRLEnvCfg):
     viewer = ViewerCfg(eye=(20.0, 20.0, 20.0))
 
     # scene
-    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=256, env_spacing=20.0, replicate_physics=True)
+    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=256, env_spacing=25.0, replicate_physics=True)
 
     # env
     decimation = 2
@@ -103,7 +103,7 @@ class CartpoleCameraBenchmarkEnv(DirectRLEnv):
                 offset=TiledCameraCfg.OffsetCfg(pos=(-4.0, 0.0, 3.0), rot=(0.9945, 0.0, 0.1045, 0.0), convention="world"),
                 data_types=data_types,
                 spawn=sim_utils.PinholeCameraCfg(
-                    focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 20.0)
+                    focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 24.7)
                 ),
                 width=camera_width,
                 height=camera_height,
