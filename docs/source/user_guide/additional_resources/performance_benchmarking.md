@@ -1,24 +1,48 @@
 # Performance Benchmarking
 
-This page documents code and results of benchmarking various robotics simulators on a number of dimensions. It is still a WIP as we write more fair benchmarking code that more accurately compares simulators under the same conditions. We currently only have public graphs/results on one environment.
+This page documents code and results of benchmarking various robotics simulators on a number of dimensions. It is still a WIP as we write more fair benchmarking environments for other simulators. Given the number of factors that impact simulation speed and rendering (e.g number of objects, geometry complexity etc.) trends that appear in results in this page may not necesarily be the case on some environments.
 
-Currently we just compare ManiSkill and [IsaacLab](https://github.com/isaac-sim/IsaacLab) on one task, Cartpole Balancing (control). For details on benchmarking methodology see [this section](#benchmarking-detailsmethodology)
-
-## Results
+Currently we just compare ManiSkill and [Isaac Lab](https://github.com/isaac-sim/IsaacLab) on one task, Cartpole Balancing (control). For details on benchmarking methodology see [this section](#benchmarking-detailsmethodology)
 
 Raw benchmark results can be read from the .csv files in the [results folder on GitHub](https://github.com/haosulab/ManiSkill/blob/main/docs/source/user_guide/additional_resources/benchmarking_results). There are also plotted figures in that folder. Below we show a selection of some of the figures/results from testing on a RTX 4090. The figures are also sometimes annotated with the GPU memory usage in GB. 
 
-Overall, ManiSkill is faster than IsaacLab on the majority of settings and is much more GPU memory efficient, especially for realistic camera setups. GPU memory efficiency is particularly important for machine learning methods like RL which rely on large replay buffers on the GPU. 
+Overall, ManiSkill is faster than Isaac Lab on the majority of settings and is much more GPU memory efficient, especially for realistic camera setups. GPU memory efficiency is particularly important for machine learning methods like RL which rely on large replay buffers on the GPU. However we note that this is not a pure apples-to-apples comparison due to differences in rendering techniques and so we show a qualitative comparison of the same task in Isaac Lab and ManiSkill. See the note below for more details.
 
-### Cartpole Balance
+:::{dropdown} Note on rendering differences between simulators
 
-#### State
+We acknowledge that these comparisons are not strictly apples-to-apples due to differences in rendering techniques. Isaac Lab employs ray-tracing for parallel rendering, while the ManiSkill3 results are generated using SAPIEN’s rasterization renderer (see image below for a qualitative comparison), although
+ManiSkill3 also supports a ray-tracing mode without parallelization. Ray-tracing generally offers
+greater flexibility in balancing rendering speed and quality through the adjustment of parameters
+such as samples per pixel. It’s worth noting that the Isaac Lab data presented here uses the fastest
+rendering settings available in Isaac Lab v1.2.0, although it can be easily tuned to achieve better rendering quality that may be
+helpful for sim2real. Despite the use of different rendering techniques, we believe this experiment
+provides a meaningful basis for comparison.
+:::
+
+
+## Cartpole Balance
+
+### Qualitative Comparisons
+
+:::{figure} images/cartpole-comparison.png
+Comparison of ManiSkill (Top row) and Isaac Lab (Bottom row) parallel rendering
+640x480 RGB and depth image outputs of the Cartpole benchmark task.
+:::
+
+Video of the task above with ManiSkill on top and Isaac Lab below.
+
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/docs/source/_static/videos/performance_benchmarking/cartpole_video_comparison_640x480.mp4" type="video/mp4">
+</video>
+
+
+### State
 
 CartPoleBalance simulation only performance results showing FPS vs number of environments, annotated by GPU memory usage in GB on top of data points.
 :::{figure} benchmarking_results/rtx_4090/fps:num_envs_state.png
 :::
 
-#### Realistic RGB Camera Setups
+### Realistic RGB Camera Setups
 
 The [Open-X](https://robotics-transformer-x.github.io/) and [Droid](https://droid-dataset.github.io/) datasets are two of the largest real-world robotics datasets. Open-X typically has a single 640x480 RGB observation while Droid has 3 320x180 RGB observations. The next 2 figures show the performance of simulators when mimicing the real world camera setups.
 
@@ -28,7 +52,7 @@ The [Open-X](https://robotics-transformer-x.github.io/) and [Droid](https://droi
 :::{figure} benchmarking_results/rtx_4090/fps:droid_dataset_setup_bar.png
 :::
 
-#### RGB
+### RGB
 
 CartPoleBalance simulation+rendering (rgb only) performance results showing FPS vs number of environments, annotated by GPU memory usage in GB on top of data points.
 :::{figure} benchmarking_results/rtx_4090/fps:num_envs_1x512x512_rgb.png
