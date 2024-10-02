@@ -1,0 +1,32 @@
+<mujoco model="panda scene">
+  <include file="panda.xml"/>
+
+  <statistic center="0.3 0 0.4" extent="1"/>
+
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0"/>
+    <rgba haze="0.15 0.25 0.35 1"/>
+    <global azimuth="120" elevation="-20"/>
+  </visual>
+
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="3072"/>
+    <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3"
+      markrgb="0.8 0.8 0.8" width="300" height="300"/>
+    <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.2"/>
+  </asset>
+
+  <worldbody>
+    <light pos="0 0 1.5" dir="0 0 -1" directional="true"/>
+    <geom name="floor" size="0 0 0.05" type="plane" material="groundplane" contype="3"/>
+    <body pos="0.5 0 0.05">
+      <freejoint/>
+      <geom type="box" rgba="0 1 0 1" size="0.03 0.02 0.03" contype="2" conaffinity="2"/>
+    </body>
+  </worldbody>
+  <keyframe>
+    <key qpos="0 0 0 -1.57079 0 1.57079 -0.7853 0.04 0.04 0.5 0 0.05 1 0 0 0" ctrl="0 0 0 -1.57079 0 1.57079 -0.7853 0"/>
+    <key qpos='-0.00119483 0.78797 -0.0261905 -1.5787 -0.0140711 2.1181 -0.948987 0.0405721 0.0401995 0.635204 -0.0161149 0.0298923 0.371325 0.601762 -0.371325 0.601763'
+        ctrl="-0.00119483 0.78797 -0.0261905 -1.5787 -0.0140711 2.1181 -0.948987 0"/>
+  </keyframe>
+</mujoco>

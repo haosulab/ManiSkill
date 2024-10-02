@@ -813,7 +813,11 @@ class BaseEnv(gym.Env):
             self.scene._gpu_fetch_all()
 
         # we reset controllers here because some controllers depend on the agent/articulation qpos/poses
-        self.agent.controller.reset()
+        if isinstance(self.agent.controller, dict):
+            for controller in self.agent.controller.values():
+                controller.reset()
+        else:
+            self.agent.controller.reset()
 
         obs = self.get_obs()
 
