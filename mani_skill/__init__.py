@@ -3,12 +3,12 @@ from pathlib import Path
 
 from .utils.logging_utils import logger
 
-__version__ = "3.0.0b10"
+_version_ = "3.0.0b10"
 
 # ---------------------------------------------------------------------------- #
 # Setup paths
 # ---------------------------------------------------------------------------- #
-PACKAGE_DIR = Path(__file__).parent.resolve()
+PACKAGE_DIR = Path(_file_).parent.resolve()
 PACKAGE_ASSET_DIR = PACKAGE_DIR / "assets"
 # Non-package data
 ASSET_DIR = Path(
@@ -53,11 +53,11 @@ def get_commit_info(show_modified_files=False, show_untracked_files=False):
             commit_info["modified"] = modified_files
 
         if show_untracked_files:
-            repo.untracked_files
-            commit_info["untracked"] = modified_files
+            untracked_files = repo.untracked_files  # Fix: assign untracked files
+            commit_info["untracked"] = untracked_files  # Fix: add untracked files to commit_info
 
         # https://github.com/gitpython-developers/GitPython/issues/718#issuecomment-360267779
-        repo.__del__()
+        repo._del_()
         return commit_info
 
 
