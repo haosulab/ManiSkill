@@ -60,3 +60,26 @@ class CustomEnv(BaseEnv):
     ):
         max_reward = 1.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
+
+    def reset(self):
+        """Reset the environment to an initial state."""
+        self._load_scene({})
+        self._initialize_episode(torch.tensor([0]), {})
+        return self._get_obs_extra({})
+
+    def step(self, action: torch.Tensor):
+        """Apply an action to the environment."""
+        # Placeholder for actual environment stepping logic
+        obs = self._get_obs_extra({})
+        reward = self.compute_dense_reward(obs, action, {})
+        done = torch.zeros(self.num_envs, device=self.device, dtype=bool)
+        info = {}
+        return obs, reward, done, info
+
+    def render(self, mode="human"):
+        """Render the environment."""
+        if mode == "human":
+            # Placeholder for actual rendering logic
+            pass
+        else:
+            raise NotImplementedError(f"Render mode {mode} is not supported.")
