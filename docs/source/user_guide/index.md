@@ -54,5 +54,6 @@ wrappers/index
 :caption: Additional Resources
 
 additional_resources/performance_benchmarking
+additional_resources/citation
 reference/index.rst
 ```
