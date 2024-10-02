@@ -19,7 +19,7 @@ ManiSkill is a powerful unified framework for robot simulation and training powe
 - Real2sim environments for scalably evaluating real-world policies 60-100x faster via GPU simulation.
 
 <!-- TODO replace paper link with arxiv link when it is out -->
-For more details we encourage you to take a look at our [paper](https://github.com/haosulab/ManiSkill/blob/main/figures/maniskill3_paper.pdf).
+For more details we encourage you to take a look at our [paper](https://arxiv.org/abs/2410.00425).
 
 There are more features to be added to ManiSkill 3, see [our roadmap](https://maniskill.readthedocs.io/en/latest/roadmap/index.html) for planned features that will be added over time before the official v3 is released.
 
@@ -66,9 +66,18 @@ We currently best support Linux based systems. There is limited support for wind
 | WSL / Anything       | ✅      | ❌      | ❌        |
 | MacOS / Anything     | ❌      | ❌      | ❌        |
 
-## Citation and Core Team
+## Citation
 
-ManiSkill 3 will have a technical paper coming out on arxiv soon that can be cited.
+If you use ManiSkill3 in your work please cite our [paper](https://arxiv.org/abs/2410.00425) as so:
+
+```
+@article{taomaniskill3,
+  title={ManiSkill3: GPU Parallelized Robotics Simulation and Rendering for Generalizable Embodied AI},
+  author={Stone Tao and Fanbo Xiang and Arth Shukla and Yuzhe Qin and Xander Hinrichsen and Xiaodi Yuan and Chen Bao and Xinsong Lin and Yulin Liu and Tse-kai Chan and Yuan Gao and Xuanlin Li and Tongzhou Mu and Nan Xiao and Arnav Gurha and Zhiao Huang and Roberto Calandra and Rui Chen and Shan Luo and Hao Su},
+  journal = {arXiv preprint arXiv:2410.00425},
+  year={2024},
+} 
+```
 
 ## License
 

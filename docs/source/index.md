@@ -18,7 +18,7 @@ ManiSkill is a powerful unified framework for robot simulation and training powe
 - Real2sim environments for scalably evaluating real-world policies 60-100x faster via GPU simulation.
 
 <!-- TODO replace paper link with arxiv link when it is out -->
-For more details we encourage you to take a look at our [paper](https://github.com/haosulab/ManiSkill/blob/main/figures/maniskill3_paper.pdf).
+For more details we encourage you to take a look at our [paper](https://arxiv.org/abs/2410.00425).
 
 There are more features to be added to ManiSkill 3, see [our roadmap](https://maniskill.readthedocs.io/en/latest/roadmap/index.html) for planned features that will be added over time before the official v3 is released.
 
