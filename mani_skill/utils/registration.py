@@ -7,6 +7,7 @@ from functools import partial
 from typing import TYPE_CHECKING, Dict, List, Optional, Type
 
 import gymnasium as gym
+import torch
 from gymnasium.envs.registration import EnvSpec as GymEnvSpec
 from gymnasium.envs.registration import WrapperSpec
 
@@ -137,10 +138,19 @@ class TimeLimitWrapper(gym.Wrapper):
             # do some wrapper surgery to remove the previous timelimit wrapper
             # with gymnasium 0.29.1, this will remove the timelimit wrapper and nothing else.
             curr_env = env
+            found_env = False
             while curr_env is not None:
                 if isinstance(curr_env, gym.wrappers.TimeLimit):
                     self.env = curr_env.env
+                    found_env = True
                     break
+                if hasattr(curr_env, "env"):
+                    curr_env = curr_env.env
+                else:
+                    break
+            if not found_env:
+                self.env = env
+
         self._max_episode_steps = max_episode_steps
 
     @property
@@ -149,7 +159,12 @@ class TimeLimitWrapper(gym.Wrapper):
 
     def step(self, action):
         observation, reward, terminated, truncated, info = self.env.step(action)
-        truncated = self.base_env.elapsed_steps >= self._max_episode_steps
+        if self._max_episode_steps is not None:
+            truncated = self.base_env.elapsed_steps >= self._max_episode_steps
+        else:
+            truncated = torch.zeros(
+                (self.base_env.num_envs,), dtype=torch.bool, device=self.base_env.device
+            )
         return observation, reward, terminated, truncated, info
 
 

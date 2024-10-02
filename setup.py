@@ -1,13 +1,14 @@
 from setuptools import find_packages, setup
 
-__version__ = "3.0.0b9"
+__version__ = "3.0.0b10"
 
-long_description = """ManiSkill is a powerful unified framework for robot simulation and training powered by [SAPIEN](https://sapien.ucsd.edu/). The entire stack is as open-source as possible and ManiSkill v3 is in beta release now. Among its features include:
-- GPU parallelized visual data collection system. On the high end you can collect RGBD + Segmentation data at 20k FPS with a 4090 GPU, 10-100x faster compared to most other simulators.
-- Example tasks covering a wide range of different robot embodiments (quadruped, mobile manipulators, single-arm robots) as well as a wide range of different tasks (table-top, locomotion, dextrous manipulation)
-- GPU parallelized tasks, enabling incredibly fast synthetic data collection in simulation
-- GPU parallelized tasks support simulating diverse scenes where every parallel environment has a completely different scene/set of objects
-- Flexible task building API that abstracts away much of the complex GPU memory management code
+long_description = """ManiSkill is a powerful unified framework for robot simulation and training powered by [SAPIEN](https://sapien.ucsd.edu/), with a strong focus on manipulation skills. The entire tech stack is as open-source as possible and ManiSkill v3 is in beta release now. Among its features include:
+- GPU parallelized visual data collection system. On the high end you can collect RGBD + Segmentation data at 30,000+ FPS with a 4090 GPU, 10-1000x faster compared to most other simulators.
+- GPU parallelized simulation, enabling high throughput state-based synthetic data collection in simulation
+- GPU parallelized heteogeneous simuluation, where every parallel environment has a completely different scene/set of objects
+- Example tasks cover a wide range of different robot embodiments (humanoids, mobile manipulators, single-arm robots) as well as a wide range of different tasks (table-top, drawing/cleaning, dextrous manipulation)
+- Flexible and simple task building API that abstracts away much of the complex GPU memory management code via an object oriented design
+- Real2sim environments for scalably evaluating real-world policies 60-100x faster via GPU simulation.
 
 Please refer our [documentation](https://maniskill.readthedocs.io/en/latest) to learn more information."""
 
@@ -41,6 +42,7 @@ setup(
         "fast_kinematics==0.2.2;platform_system=='Linux'",
         "IPython",
         "pytorch_kinematics==0.7.4",
+        "pynvml",  # gpu monitoring
         "tyro>=0.8.5",  # nice, typed, command line arg parser
         "huggingface_hub",  # we use HF to version control some assets/datasets more easily
     ],
@@ -58,6 +60,7 @@ setup(
             "build",
             "twine",
             "stable_baselines3",
+            "pynvml",
         ],
         "docs": [
             # Note that currently sphinx 7 does not work, so we must use v6.2.1. See https://github.com/kivy/kivy/issues/8230 which tracks this issue. Once fixed we can use a later version

@@ -1,8 +1,8 @@
-from collections import defaultdict
 import os
-from dataclasses import dataclass
 import random
 import time
+from collections import defaultdict
+from dataclasses import dataclass
 from typing import Optional
 
 import gymnasium as gym
@@ -13,15 +13,17 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import tyro
-import wandb
-from torch.utils.tensorboard import SummaryWriter
+from mani_skill.utils import gym_utils
 from mani_skill.utils.io_utils import load_json
 from mani_skill.utils.wrappers.flatten import FlattenRGBDObservationWrapper
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.sampler import BatchSampler, RandomSampler
+from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
-from behavior_cloning.make_env import make_eval_envs
+
 from behavior_cloning.evaluate import evaluate
+from behavior_cloning.make_env import make_eval_envs
+
 
 @dataclass
 class Args:
@@ -44,7 +46,7 @@ class Args:
 
     env_id: str = "PegInsertionSide-v0"
     """the id of the environment"""
-    demo_path: str = 'data/ms2_official_demos/rigid_body/PegInsertionSide-v0/trajectory.state.pd_ee_delta_pose.h5'
+    demo_path: str = "data/ms2_official_demos/rigid_body/PegInsertionSide-v0/trajectory.state.pd_ee_delta_pose.h5"
     """the path of demo dataset (pkl or h5)"""
     num_demos: Optional[int] = None
     """number of trajectories to load from the demo dataset"""
@@ -79,12 +81,11 @@ class Args:
     """the simulation backend to use for evaluation environments. can be "cpu" or "gpu"""
     num_dataload_workers: int = 0
     """the number of workers to use for loading the training data in the torch dataloader"""
-    control_mode: str = 'pd_joint_delta_pos'
+    control_mode: str = "pd_joint_delta_pos"
     """the control mode to use for the evaluation environments. Must match the control mode of the demonstration dataset."""
 
     # additional tags/configs for logging purposes to wandb and shared comparisons with other algorithms
     demo_type: Optional[str] = None
-
 
 
 def load_h5_data(data):
@@ -106,6 +107,7 @@ def make_mlp(in_channels, mlp_channels, act_builder=nn.ReLU, last_act=True):
             module_list.append(act_builder())
         c_in = c_out
     return nn.Sequential(*module_list)
+
 
 def flatten_state_dict_with_space(state_dict: dict) -> np.ndarray:
     states = []
@@ -165,10 +167,7 @@ class ManiSkillDataset(Dataset):
         self.total_frames = 0
         self.device = device
 
-        if load_count > len(self.episodes):
-            print(
-                f"Load count exceeds number of available episodes, loading {len(self.episodes)} which is the max number of episodes present"
-            )
+        if load_count is None:
             load_count = len(self.episodes)
 
         for eps_id in tqdm(range(load_count)):
@@ -320,10 +319,13 @@ class Actor(nn.Module):
 
 
 def save_ckpt(run_name, tag):
-    os.makedirs(f'runs/{run_name}/checkpoints', exist_ok=True)
-    torch.save({
-        "actor": actor.state_dict(),
-    }, f'runs/{run_name}/checkpoints/{tag}.pt')
+    os.makedirs(f"runs/{run_name}/checkpoints", exist_ok=True)
+    torch.save(
+        {
+            "actor": actor.state_dict(),
+        },
+        f"runs/{run_name}/checkpoints/{tag}.pt",
+    )
 
 
 if __name__ == "__main__":
@@ -335,18 +337,21 @@ if __name__ == "__main__":
     else:
         run_name = args.exp_name
 
-    if args.demo_path.endswith('.h5'):
+    if args.demo_path.endswith(".h5"):
         import json
-        json_file = args.demo_path[:-2] + 'json'
-        with open(json_file, 'r') as f:
+
+        json_file = args.demo_path[:-2] + "json"
+        with open(json_file, "r") as f:
             demo_info = json.load(f)
-            if 'control_mode' in demo_info['env_info']['env_kwargs']:
-                control_mode = demo_info['env_info']['env_kwargs']['control_mode']
-            elif 'control_mode' in demo_info['episodes'][0]:
-                control_mode = demo_info['episodes'][0]['control_mode']
+            if "control_mode" in demo_info["env_info"]["env_kwargs"]:
+                control_mode = demo_info["env_info"]["env_kwargs"]["control_mode"]
+            elif "control_mode" in demo_info["episodes"][0]:
+                control_mode = demo_info["episodes"][0]["control_mode"]
             else:
-                raise Exception('Control mode not found in json')
-            assert control_mode == args.control_mode, f"Control mode mismatched. Dataset has control mode {control_mode}, but args has control mode {args.control_mode}"
+                raise Exception("Control mode not found in json")
+            assert (
+                control_mode == args.control_mode
+            ), f"Control mode mismatched. Dataset has control mode {control_mode}, but args has control mode {args.control_mode}"
 
     np.random.seed(args.seed)
     random.seed(args.seed)
@@ -357,15 +362,33 @@ if __name__ == "__main__":
     control_mode = os.path.split(args.demo_path)[1].split(".")[2]
 
     # env setup
-    env_kwargs = dict(control_mode=args.control_mode, reward_mode="sparse", obs_mode="rgbd", render_mode="all")
+    env_kwargs = dict(
+        control_mode=args.control_mode,
+        reward_mode="sparse",
+        obs_mode="rgbd",
+        render_mode="all",
+    )
     if args.max_episode_steps is not None:
         env_kwargs["max_episode_steps"] = args.max_episode_steps
-    envs = make_eval_envs(args.env_id, args.num_eval_envs, args.sim_backend, env_kwargs, video_dir=f'runs/{run_name}/videos' if args.capture_video else None, wrappers=[FlattenRGBDObservationWrapper])
+    envs = make_eval_envs(
+        args.env_id,
+        args.num_eval_envs,
+        args.sim_backend,
+        env_kwargs,
+        video_dir=f"runs/{run_name}/videos" if args.capture_video else None,
+        wrappers=[FlattenRGBDObservationWrapper],
+    )
 
     if args.track:
         import wandb
+
         config = vars(args)
-        config["eval_env_cfg"] = dict(**env_kwargs, num_envs=args.num_eval_envs, env_id=args.env_id, env_horizon=gym_utils.find_max_episode_steps_value(envs))
+        config["eval_env_cfg"] = dict(
+            **env_kwargs,
+            num_envs=args.num_eval_envs,
+            env_id=args.env_id,
+            env_horizon=gym_utils.find_max_episode_steps_value(envs),
+        )
         wandb.init(
             project=args.wandb_project_name,
             entity=args.wandb_entity,
@@ -374,12 +397,13 @@ if __name__ == "__main__":
             name=run_name,
             save_code=True,
             group="BehaviorCloning",
-            tags=["behavior_cloning"]
+            tags=["behavior_cloning"],
         )
     writer = SummaryWriter(f"runs/{run_name}")
     writer.add_text(
         "hyperparameters",
-        "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
+        "|param|value|\n|-|-|\n%s"
+        % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
     )
 
     ds = ManiSkillDataset(
@@ -392,7 +416,7 @@ if __name__ == "__main__":
 
     sampler = RandomSampler(ds)
     batch_sampler = BatchSampler(sampler, args.batch_size, drop_last=True)
-    iter_sampler = IterationBasedBatchSampler(batch_sampler, args.max_timesteps)
+    iter_sampler = IterationBasedBatchSampler(batch_sampler, args.total_iters)
 
     data_loader = DataLoader(ds, batch_sampler=iter_sampler, num_workers=0)
     actor = Actor(ds.states.shape[1], envs.single_action_space.shape[0]).to(
@@ -413,18 +437,26 @@ if __name__ == "__main__":
 
         if iteration % args.log_freq == 0:
             print(f"Iteration {iteration}, loss: {loss.item()}")
-            writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], iteration)
+            writer.add_scalar(
+                "charts/learning_rate", optimizer.param_groups[0]["lr"], iteration
+            )
             writer.add_scalar("losses/total_loss", loss.item(), iteration)
 
         if iteration % args.eval_freq == 0:
             actor.eval()
+            norm_tensor = torch.Tensor([255.0, 255.0, 255.0, 1024.0]).to(device)
+
             def sample_fn(obs):
-                if isinstance(obs, np.ndarray):
-                    obs = torch.from_numpy(obs).float().to(device)
-                action = actor(obs)
+                if isinstance(obs["rgbd"], np.ndarray):
+                    for k, v in obs.items():
+                        obs[k] = torch.from_numpy(v).float().to(device)
+
+                obs["rgbd"] = torch.div(obs["rgbd"], norm_tensor)
+                action = actor(obs["rgbd"], obs["state"])
                 if args.sim_backend == "cpu":
                     action = action.cpu().numpy()
                 return action
+
             with torch.no_grad():
                 eval_metrics = evaluate(args.num_eval_episodes, sample_fn, envs)
             actor.train()
@@ -439,9 +471,12 @@ if __name__ == "__main__":
                 if k in eval_metrics and eval_metrics[k] > best_eval_metrics[k]:
                     best_eval_metrics[k] = eval_metrics[k]
                     save_ckpt(run_name, f"best_eval_{k}")
-                    print(f'New best {k}_rate: {eval_metrics[k]:.4f}. Saving checkpoint.')
+                    print(
+                        f"New best {k}_rate: {eval_metrics[k]:.4f}. Saving checkpoint."
+                    )
 
         if args.save_freq is not None and iteration % args.save_freq == 0:
             save_ckpt(run_name, str(iteration))
     envs.close()
-    wandb.finish()
+    if args.track:
+        wandb.finish()

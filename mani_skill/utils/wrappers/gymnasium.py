@@ -53,6 +53,7 @@ class CPUGymWrapper(gym.Wrapper):
         return self.env.unwrapped
 
     def step(self, action):
+        action = common.to_numpy(action)
         obs, reward, terminated, truncated, info = self.env.step(action)
         reward = common.to_numpy(reward)
         info = common.to_numpy(info)
@@ -98,5 +99,5 @@ class CPUGymWrapper(gym.Wrapper):
 
     def render(self):
         ret = self.env.render()
-        if self.render_mode in ["rgb_array", "sensors"]:
+        if self.render_mode in ["rgb_array", "sensors", "all"]:
             return common.unbatch(common.to_numpy(ret))
