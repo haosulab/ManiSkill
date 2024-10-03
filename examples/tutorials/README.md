@@ -1,7 +1,7 @@
 # ManiSkill Tutorials
 
 
-This folder contains some simple tutorial for how to use ManiSkill, leverage fast vectorized environments, and train agents with Reinforcement Learning. These notebooks are all designed to run both on Google Colab and locally..
+This folder contains some simple tutorial for how to use ManiSkill, leverage fast vectorized environments, and train agents with Reinforcement Learning. These notebooks are all designed to run both on Google Colab and locally.
 
 Getting Started and Feature Showcase: [Quickstart Tutorial](https://colab.research.google.com/github/haosulab/ManiSkill/blob/main/examples/tutorials/1_quickstart.ipynb)
 - Covers all the core features of ManiSkill.
