@@ -97,3 +97,12 @@ Note that some other assets, algorithms, etc. in ManiSkill are from other source
 All rigid body environments in ManiSkill are licensed under fully permissive licenses (e.g., Apache-2.0).
 
 The assets are licensed under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/legalcode).
+
+
+## Contributors
+
+We appreciate the efforts of everyone who has contributed to this project and invite others to join us in improving it.
+
+<a href="https://github.com/haosulab/ManiSkill/graphs/contributors">
+  <img alt="contributors" src="https://contrib.rocks/image?repo=haosulab/ManiSkill"/>
+</a>
