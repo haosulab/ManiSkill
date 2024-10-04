@@ -15,33 +15,33 @@ ManiSkill is a powerful unified framework for robot simulation and training powe
 - GPU parallelized simulation, enabling high throughput state-based synthetic data collection in simulation
 - GPU parallelized heterogeneous simulation, where every parallel environment has a completely different scene/set of objects
 - Example tasks cover a wide range of different robot embodiments (humanoids, mobile manipulators, single-arm robots) as well as a wide range of different tasks (table-top, drawing/cleaning, dextrous manipulation)
-- Flexible and simple task building API that abstracts away much of the complex GPU memory management code via an object oriented design
+- Flexible and simple task-building API that abstracts away much of the complex GPU memory management code via an object-oriented design
 - Real2sim environments for scalably evaluating real-world policies 60-100x faster via GPU simulation.
 
 <!-- TODO replace paper link with arxiv link when it is out -->
-For more details we encourage you to take a look at our [paper](https://arxiv.org/abs/2410.00425).
+We encourage you to look at our [paper](https://arxiv.org/abs/2410.00425) for more details.
 
 There are more features to be added to ManiSkill 3, see [our roadmap](https://maniskill.readthedocs.io/en/latest/roadmap/index.html) for planned features that will be added over time before the official v3 is released.
 
 Please refer to our [documentation](https://maniskill.readthedocs.io/en/latest/user_guide) to learn more information from tutorials on building tasks to data collection.
 
 **NOTE:**
-This project currently is in a **beta release**, so not all features have been added in yet and there may be some bugs. If you find any bugs or have any feature requests please post them to our [GitHub issues](https://github.com/haosulab/ManiSkill/issues/) or discuss about them on [GitHub discussions](https://github.com/haosulab/ManiSkill/discussions/). We also have a [Discord Server](https://discord.gg/x8yUZe5AdN) through which we make announcements and discuss about ManiSkill.
+This project is currently in a **beta release**, so not all features have been added yet, and there may be some bugs. If you find any bugs or have any feature requests please post them to our [GitHub issues](https://github.com/haosulab/ManiSkill/issues/) or discuss them on [GitHub discussions](https://github.com/haosulab/ManiSkill/discussions/). We also have a [Discord Server](https://discord.gg/x8yUZe5AdN) through which we make announcements and discuss ManiSkill.
 
 Users looking for the original ManiSkill2 can find the commit for that codebase at the [v0.5.3 tag](https://github.com/haosulab/ManiSkill/tree/v0.5.3)
 
 
 ## Installation
-Installation of ManiSkill is extremely simple, you only need to run a few pip installs and setup Vulkan for rendering.
+Installation of ManiSkill is extremely simple, you only need to run a few pip installs and set up Vulkan for rendering.
 
 ```bash
 # install the package
 pip install --upgrade mani_skill
-# install a version of torch that is compatible with your system
+# install a version of the torch that is compatible with your system
 pip install torch
 ```
 
-Finally you also need to set up Vulkan with [instructions here](https://maniskill.readthedocs.io/en/latest/user_guide/getting_started/installation.html#vulkan)
+Finally, you also need to set up Vulkan with [instructions here](https://maniskill.readthedocs.io/en/latest/user_guide/getting_started/installation.html#vulkan)
 
 For more details about installation (e.g. from source, or doing troubleshooting) see [the documentation](https://maniskill.readthedocs.io/en/latest/user_guide/getting_started/installation.html
 )
@@ -50,9 +50,9 @@ For more details about installation (e.g. from source, or doing troubleshooting)
 
 To get started, check out the quick start documentation: https://maniskill.readthedocs.io/en/latest/user_guide/getting_started/quickstart.html
 
-We also have a quick start [colab notebook](https://colab.research.google.com/github/haosulab/ManiSkill/blob/main/examples/tutorials/1_quickstart.ipynb) that lets you try out GPU parallelized simulation without needing your own hardware. Everything is runnable on Colab free tier.
+We also have a quick start [colab notebook](https://colab.research.google.com/github/haosulab/ManiSkill/blob/main/examples/tutorials/1_quickstart.ipynb) that lets you try out GPU parallelized simulation without needing your own hardware. Everything is runnable on the Colab free tier.
 
-For a full list of example scripts you can run see [the docs](https://maniskill.readthedocs.io/en/latest/user_guide/demos/index.html).
+For a full list of example scripts you can see [the docs](https://maniskill.readthedocs.io/en/latest/user_guide/demos/index.html).
 
 ## System Support
 
