@@ -163,7 +163,7 @@
     <child
       link="link_2" />
     <axis
-      xyz="0 0 1" />
+      xyz="0 0 -1" />
     <limit lower="-3.14159" upper="3.14159"/>
   </joint>
   <link
@@ -268,8 +268,8 @@
     <child
       link="link_3" />
     <axis
-      xyz="1 0 0" />
-    <limit lower="-2.5" upper="0"/>
+      xyz="-1 0 0" />
+    <limit lower="0" upper="2.5"/>
   </joint>
   <link
     name="link_4">
@@ -594,8 +594,8 @@
     <child
       link="gripper" />
     <axis
-      xyz="0 1 0" />
-    <limit lower="-1.75" upper="0"/>
+      xyz="0 -1 0" />
+    <limit lower="0" upper="1.75"/>
   </joint>
   <!-- Define the hand_tcp frame -->
   <link name="gripper_tcp"/>
