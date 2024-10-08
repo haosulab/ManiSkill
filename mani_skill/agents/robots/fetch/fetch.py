@@ -247,7 +247,8 @@ class Fetch(BaseAgent):
             use_delta=True,
         )
 
-        body_pd_joint_pos = PDJointPosControllerConfig(
+        # useful to keep body unmoving from passed position
+        stiff_body_pd_joint_pos = PDJointPosControllerConfig(
             self.body_joint_names,
             None,
             None,
@@ -337,10 +338,10 @@ class Fetch(BaseAgent):
                 body=body_pd_joint_delta_pos,
                 base=base_pd_joint_vel,
             ),
-            pd_joint_delta_pos_body_pos=dict(
+            pd_joint_delta_pos_stiff_body=dict(
                 arm=arm_pd_joint_delta_pos,
                 gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_pos,
+                body=stiff_body_pd_joint_pos,
                 base=base_pd_joint_vel,
             ),
         )
