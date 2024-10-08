@@ -17,6 +17,7 @@ import transforms3d
 from mani_skill import ASSET_DIR
 from mani_skill.utils.structs import Actor, Articulation
 from mani_skill.utils.building import actors
+from mani_skill.utils import common
 
 from ...replicacad import ReplicaCADSceneBuilder
 
@@ -255,9 +256,12 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
     # TODO (arth): fix this to work with partial resets
     def initialize(self, env_idx: torch.Tensor, init_config_idxs: List[int]):
         assert all(
-            [isinstance(bci, int) for bci in init_config_idxs]
+            [isinstance(ici, int) for ici in init_config_idxs]
         ), f"init_config_idxs should be list of ints, instead got {init_config_idxs}"
-        assert len(init_config_idxs) == len(env_idx)
+
+        init_config_idxs: torch.Tensor = common.to_tensor(init_config_idxs)
+        if env_idx.numel() != init_config_idxs.numel():
+            init_config_idxs = init_config_idxs[env_idx]
 
         # get sampled init configs
         sampled_init_configs = [
@@ -348,10 +352,14 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
         ]
 
     def sample_init_config_idxs(self):
-        low = torch.zeros(self.env.num_envs)
-        high = torch.tensor(self.num_init_configs_per_build_config)
+        low = torch.zeros(self.env.num_envs, dtype=torch.int)
+        high = torch.tensor(self.num_init_configs_per_build_config).int()
         size = (self.env.num_envs,)
-        return (torch.randint(2**63 - 1, size=size) % (high - low) + low).int().tolist()
+        return (
+            (torch.randint(2**63 - 1, size=size) % (high - low).int() + low)
+            .int()
+            .tolist()
+        )
 
     def hide_actor(self, actor: Actor):
         actor.set_pose(self._default_hidden_poses[actor])

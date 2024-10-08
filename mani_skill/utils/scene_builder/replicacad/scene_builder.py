@@ -9,6 +9,7 @@ import os.path as osp
 from pathlib import Path
 from collections import defaultdict
 from typing import Dict, List, Tuple, Union
+from functools import cached_property
 
 import numpy as np
 import sapien
@@ -63,6 +64,9 @@ class ReplicaCADSceneBuilder(SceneBuilder):
             build_config_idxs = [build_config_idxs] * self.env.num_envs
         assert all([isinstance(bci, int) for bci in build_config_idxs])
         assert len(build_config_idxs) == self.env.num_envs
+
+        # delete cached properties which are dependent on values recomputed at build time
+        self.__dict__.pop("ray_traced_lighting", None)
 
         # Keep track of movable and static objects, build_config_idxs for envs, and poses
         self.build_config_idxs = build_config_idxs
@@ -237,31 +241,6 @@ class ReplicaCADSceneBuilder(SceneBuilder):
 
                 articulation_to_num[template_name] += 1
 
-            # ReplicaCAD also specifies where to put lighting
-            with open(
-                osp.join(
-                    ASSET_DIR,
-                    "scene_datasets/replica_cad_dataset/configs/lighting",
-                    f"{osp.basename(build_config_json['default_lighting'])}.lighting_config.json",
-                )
-            ) as f:
-                lighting_config = json.load(f)
-            for light_config in lighting_config["lights"].values():
-                # It appears ReplicaCAD only specifies point light sources so we only use those here
-                if light_config["type"] == "point":
-                    light_pos_fixed = (
-                        sapien.Pose(q=q) * sapien.Pose(p=light_config["position"])
-                    ).p
-                    # In SAPIEN, one can set color to unbounded values, higher just means more intense. ReplicaCAD provides color and intensity separately so
-                    # we multiply it together here. We also take absolute value of intensity since some scene configs write negative intensities (which result in black holes)
-                    self.scene.add_point_light(
-                        light_pos_fixed,
-                        color=np.array(light_config["color"])
-                        * np.abs(light_config["intensity"]),
-                        scene_idxs=env_idx,
-                    )
-            self.scene.set_ambient_light([0.3, 0.3, 0.3])
-
             if self._navigable_positions[bci] is None:
                 mesh_fp = (
                     Path(ASSET_DIR)
@@ -273,6 +252,20 @@ class ReplicaCADSceneBuilder(SceneBuilder):
                 )
                 if mesh_fp.exists():
                     self._navigable_positions[bci] = trimesh.load(mesh_fp)
+
+        # ReplicaCAD's lighting isn't great for raytracing, so we define our own
+        self.scene.set_ambient_light([3 if self.ray_traced_lighting else 0.3] * 3)
+        color = np.array([1.0, 0.8, 0.5]) * (10 if self.ray_traced_lighting else 2)
+        # entrance
+        self.scene.add_point_light([-1.1, 2.775, 2.3], color=color)
+        # dining area
+        self.scene.add_point_light([-0.5, -1.44, 2.3], color=color)
+        # dining back
+        self.scene.add_point_light([2.4, -1.6, 2.3], color=color)
+        # living room
+        self.scene.add_point_light([2.5, -6.1, 2.3], color=color)
+        # stair
+        self.scene.add_point_light([3.14, 3.24, 3], color=color)
 
         # merge actors into one
         self.bg = Actor.create_from_entities(
@@ -326,3 +319,12 @@ class ReplicaCADSceneBuilder(SceneBuilder):
     @property
     def navigable_positions(self) -> List[trimesh.Trimesh]:
         return [self._navigable_positions[bci] for bci in self.build_config_idxs]
+
+    @cached_property
+    def ray_traced_lighting(self) -> bool:
+        return self.env._custom_human_render_camera_configs.get(
+            "shader_pack", None
+        ) in [
+            "rt",
+            "rt-fast",
+        ]
