@@ -27,7 +27,7 @@ def evaluate(cfg: dict):
 		`model_size`: model size, must be one of `[1, 5, 19, 48, 317]` (default: 5)
 		`checkpoint`: path to model checkpoint to load
 		`eval_episodes`: number of episodes to evaluate on per task (default: 10)
-		`save_video`: whether to save a video of the evaluation (default: True)
+		`save_video_local`: whether to save a video of the evaluation (default: True)
 		`seed`: random seed (default: 1)
 	
 	See config.yaml for a full list of args.
@@ -36,11 +36,12 @@ def evaluate(cfg: dict):
 	````
 		$ python evaluate.py task=mt80 model_size=48 checkpoint=/path/to/mt80-48M.pt
 		$ python evaluate.py task=mt30 model_size=317 checkpoint=/path/to/mt30-317M.pt
-		$ python evaluate.py task=dog-run checkpoint=/path/to/dog-1.pt save_video=true
+		$ python evaluate.py task=dog-run checkpoint=/path/to/dog-1.pt save_video_local=true
 	```
 	"""
 	assert torch.cuda.is_available()
-	assert cfg.eval_episodes > 0, 'Must evaluate at least 1 episode.'
+	assert cfg.eval_episodes_per_env > 0, 'Must evaluate at least 1 episode.'
+	eval_episodes = cfg.eval_episodes_per_env * cfg.num_eval_envs
 	cfg.num_envs = 1 # to keep the code similar and logging video simpler
 	cfg = parse_cfg(cfg)
 	assert not cfg.multitask, colored('Warning: multi-task models is not currently supported for maniskill.', 'red', attrs=['bold'])
@@ -50,7 +51,7 @@ def evaluate(cfg: dict):
 	print(colored(f'Checkpoint: {cfg.checkpoint}', 'blue', attrs=['bold']))
 
 	# Make environment
-	env = make_envs(cfg)
+	env = make_envs(cfg, cfg.num_envs, is_eval=True)
 
 	# Load agent
 	agent = TDMPC2(cfg)
@@ -62,7 +63,7 @@ def evaluate(cfg: dict):
 		print(colored(f'Evaluating agent on {len(cfg.tasks)} tasks:', 'yellow', attrs=['bold']))
 	else:
 		print(colored(f'Evaluating agent on {cfg.env_id}:', 'yellow', attrs=['bold']))
-	if cfg.save_video:
+	if cfg.save_video_local:
 		video_dir = os.path.join(cfg.work_dir, 'videos')
 		os.makedirs(video_dir, exist_ok=True)
 	scores = []
@@ -72,11 +73,11 @@ def evaluate(cfg: dict):
 			task_idx = None
 		has_success, has_fail = False, False # if task has success or/and fail (added for maniskill)
 		ep_rewards, ep_successes, ep_fails = [], [], []
-		for i in range(cfg.eval_episodes):
+		for i in range(eval_episodes):
 			obs, _ = env.reset()
 			done = False # ms3: done is truncated since the ms3 ignore_terminations.
 			ep_reward, t = 0, 0
-			if cfg.save_video:
+			if cfg.save_video_local:
 				frames = [env.render().squeeze()]
 			while not done: # done is truncated and should be the same
 				action = agent.act(obs, t0=t==0)
@@ -84,7 +85,7 @@ def evaluate(cfg: dict):
 				done = terminated | truncated
 				ep_reward += reward
 				t += 1
-				if cfg.save_video:
+				if cfg.save_video_local:
 					frames.append(env.render().squeeze())
 			ep_rewards.append(ep_reward.mean().item())
 			if 'success' in info: 
@@ -93,7 +94,7 @@ def evaluate(cfg: dict):
 			if 'fail' in info:
 				has_fail = True
 				ep_fails.append(info['fail'].float().mean().item())
-			if cfg.save_video:
+			if cfg.save_video_local:
 				imageio.mimsave(
 					os.path.join(video_dir, f'{task}-{i}.mp4'), frames, fps=15)
 		ep_rewards = np.nanmean(ep_rewards)

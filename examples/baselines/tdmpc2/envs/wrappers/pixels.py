@@ -10,18 +10,18 @@ class PixelWrapper(gym.Wrapper):
 	Wrapper for pixel observations. Works with Maniskill vectorized environments
 	"""
 
-	def __init__(self, cfg, env, num_frames=3):
+	def __init__(self, cfg, env, num_envs, num_frames=3):
 		super().__init__(env)
 		self.cfg = cfg
 		self.env = env
 		self.observation_space = gym.spaces.Box(
-			low=0, high=255, shape=(cfg.num_envs, num_frames*3, cfg.render_size, cfg.render_size), dtype=np.uint8
+			low=0, high=255, shape=(num_envs, num_frames*3, cfg.render_size, cfg.render_size), dtype=np.uint8
 		)
 		self._frames = deque([], maxlen=num_frames)
 		self._render_size = cfg.render_size
 
 		# # Using tensor to mimick self._frames = deque([], maxlen=num_frames) so the data remain on the same device **turned out to be slower**
-		# self._frames = torch.zeros((cfg.num_envs, num_frames*3, cfg.render_size, cfg.render_size)).to(self.env.device)
+		# self._frames = torch.zeros((num_envs, num_frames*3, cfg.render_size, cfg.render_size)).to(self.env.device)
 		# self._frames_idx = 0
 		# self._frames_maxlen = num_frames
 		# self._render_size = cfg.render_size

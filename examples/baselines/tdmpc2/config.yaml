@@ -6,13 +6,15 @@ env_id: PushCube-v1
 obs: state # or rgb
 control_mode: default # or pd_joint_delta_pos or pd_ee_delta_pose
 num_envs: 32
+num_eval_envs: 4
+env_type: gpu # cpu
 render_mode: rgb_array # ['rgb_array' for quality, or 'sensors' for speed]
 render_size: 64
 setting_tag: none # ['none', 'walltime_efficient', 'sample_efficient', ...] for wandb tags
 
 # evaluation
 checkpoint: ???
-eval_episodes: 10
+eval_episodes_per_env: 2 # total (eval_episodes_per_env * num_eval_envs number) of eval episodes
 eval_freq: 50000
 
 # training
@@ -77,7 +79,7 @@ wandb: false # enable wandb
 save_csv: true
 
 # misc
-save_video: true
+save_video_local: false # save video in eval_video for evaluation during training
 save_agent: true
 seed: 1
 
@@ -103,6 +105,7 @@ env_cfg:
     reward_mode: ??? 
     num_envs: ???
     sim_backend: ??? # cpu or gpu
+    partial_reset: false
     env_horizon: ???
 eval_env_cfg:
     env_id: ???
@@ -112,5 +115,6 @@ eval_env_cfg:
     num_envs: ???
     sim_backend: ???
     env_horizon: ???
+    partial_reset: false
     num_eval_episodes: ???
 discount: ???

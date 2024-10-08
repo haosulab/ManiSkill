@@ -32,7 +32,7 @@ dependencies:
     - opencv-contrib-python==4.9.0.80
     - opencv-python==4.9.0.80
     - pandas==2.1.4
-    - sapien==2.2.1
+    - sapien==3.0.0.b1
     - submitit==1.5.1
     - setuptools==65.5.0
     - patchelf==0.17.2.1
@@ -47,7 +47,7 @@ dependencies:
     - tqdm==4.66.1
     - wandb==0.16.2
     - wheel==0.38.0
-    - mani_skill>=3.0.0b9
+    - mani_skill>=3.0.0b10
     ####################
     # Gym:
     # (unmaintained but required for maniskill2/meta-world/myosuite)

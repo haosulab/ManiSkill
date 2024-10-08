@@ -1,7 +1,7 @@
 # ManiSkill 3 (Beta)
 
 
-![teaser](figures/teaser.png)
+![teaser](figures/teaser.jpg)
 <p style="text-align: center; font-size: 0.8rem; color: #999;margin-top: -1rem;">Sample of environments/robots rendered with ray-tracing. Scene datasets sourced from AI2THOR and ReplicaCAD</p>
 
 [![Downloads](https://static.pepy.tech/badge/mani_skill)](https://pepy.tech/project/mani_skill)
@@ -10,15 +10,18 @@
 [![Docs status](https://img.shields.io/badge/docs-passing-brightgreen.svg)](https://maniskill.readthedocs.io/en/latest/)
 [![Discord](https://img.shields.io/discord/996566046414753822?logo=discord)](https://discord.gg/x8yUZe5AdN)
 
-ManiSkill is a powerful unified framework for robot simulation and training powered by [SAPIEN](https://sapien.ucsd.edu/). The entire stack is as open-source as possible and ManiSkill v3 is in beta release now. Among its features include:
-- GPU parallelized visual data collection system. On the high end you can collect RGBD + Segmentation data at 20k FPS with a 4090 GPU, 10-100x faster compared to most other simulators.
-- Example tasks covering a wide range of different robot embodiments (quadruped, mobile manipulators, single-arm robots) as well as a wide range of different tasks (table-top, locomotion, dextrous manipulation)
-- GPU parallelized tasks, enabling incredibly fast synthetic data collection in simulation
-- GPU parallelized tasks support simulating diverse scenes where every parallel environment has a completely different scene/set of objects
-- Flexible task building API that abstracts away much of the complex GPU memory management code
-<!-- - Evaluate models trained on real-world data in simulation, no robot hardware needed -->
+ManiSkill is a powerful unified framework for robot simulation and training powered by [SAPIEN](https://sapien.ucsd.edu/), with a strong focus on manipulation skills. The entire tech stack is as open-source as possible and ManiSkill v3 is in beta release now. Among its features include:
+- GPU parallelized visual data collection system. On the high end you can collect RGBD + Segmentation data at 30,000+ FPS with a 4090 GPU, 10-1000x faster compared to most other simulators.
+- GPU parallelized simulation, enabling high throughput state-based synthetic data collection in simulation
+- GPU parallelized heterogeneous simulation, where every parallel environment has a completely different scene/set of objects
+- Example tasks cover a wide range of different robot embodiments (humanoids, mobile manipulators, single-arm robots) as well as a wide range of different tasks (table-top, drawing/cleaning, dextrous manipulation)
+- Flexible and simple task building API that abstracts away much of the complex GPU memory management code via an object oriented design
+- Real2sim environments for scalably evaluating real-world policies 60-100x faster via GPU simulation.
 
-ManiSkill plans to enable all kinds of workflows, including but not limited to 2D/3D vision-based reinforcement learning, imitation learning, sense-plan-act, etc. There will also be more assets/scenes supported by ManiSkill (e.g. [AI2THOR](https://ai2thor.allenai.org/)) in addition to other features such as [digital-twins for evaluation of real-world policies](https://github.com/simpler-env/SimplerEnv), see [our roadmap](https://maniskill.readthedocs.io/en/latest/roadmap/index.html) for planned features that will be added over time before the official v3 is released.
+<!-- TODO replace paper link with arxiv link when it is out -->
+For more details we encourage you to take a look at our [paper](https://arxiv.org/abs/2410.00425).
+
+There are more features to be added to ManiSkill 3, see [our roadmap](https://maniskill.readthedocs.io/en/latest/roadmap/index.html) for planned features that will be added over time before the official v3 is released.
 
 Please refer to our [documentation](https://maniskill.readthedocs.io/en/latest/user_guide) to learn more information from tutorials on building tasks to data collection.
 
@@ -29,13 +32,13 @@ Users looking for the original ManiSkill2 can find the commit for that codebase 
 
 
 ## Installation
-Installation of ManiSkill is extremely simple, you only need to run a few pip installs
+Installation of ManiSkill is extremely simple, you only need to run a few pip installs and setup Vulkan for rendering.
 
 ```bash
 # install the package
 pip install --upgrade mani_skill
 # install a version of torch that is compatible with your system
-pip install torch torchvision torchaudio
+pip install torch
 ```
 
 Finally you also need to set up Vulkan with [instructions here](https://maniskill.readthedocs.io/en/latest/user_guide/getting_started/installation.html#vulkan)
@@ -63,11 +66,31 @@ We currently best support Linux based systems. There is limited support for wind
 | WSL / Anything       | ✅      | ❌      | ❌        |
 | MacOS / Anything     | ❌      | ❌      | ❌        |
 
-## Citation and Core Team
+## Citation
 
-ManiSkill 3 will have a technical paper coming out. 
 
-The current author list is as follows: Stone Tao*, Fanbo Xiang*, Arth Shukla, Chen Bao, Nan Xiao, Rui Chen, Tongzhou Mu, Tse-Kai Chan, Xander Hinrichsen, Xiaodi Yuan, Xinsong Lin, Xuanlin Li, Yuan Gao, Yuzhe Qin, Zhiao Huang, Hao Su
+If you use ManiSkill3 (versions `mani_skill>=3.0.0`) in your work please cite our [ManiSkill3 paper](https://arxiv.org/abs/2410.00425) as so:
+
+```
+@article{taomaniskill3,
+  title={ManiSkill3: GPU Parallelized Robotics Simulation and Rendering for Generalizable Embodied AI},
+  author={Stone Tao and Fanbo Xiang and Arth Shukla and Yuzhe Qin and Xander Hinrichsen and Xiaodi Yuan and Chen Bao and Xinsong Lin and Yulin Liu and Tse-kai Chan and Yuan Gao and Xuanlin Li and Tongzhou Mu and Nan Xiao and Arnav Gurha and Zhiao Huang and Roberto Calandra and Rui Chen and Shan Luo and Hao Su},
+  journal = {arXiv preprint arXiv:2410.00425},
+  year={2024},
+} 
+```
+
+If you use ManiSkill2 (version `mani_skill==0.5.3` or lower) in your work please cite the ManiSkill2 paper as so:
+```
+@inproceedings{gu2023maniskill2,
+  title={ManiSkill2: A Unified Benchmark for Generalizable Manipulation Skills},
+  author={Gu, Jiayuan and Xiang, Fanbo and Li, Xuanlin and Ling, Zhan and Liu, Xiqiang and Mu, Tongzhou and Tang, Yihe and Tao, Stone and Wei, Xinyue and Yao, Yunchao and Yuan, Xiaodi and Xie, Pengwei and Huang, Zhiao and Chen, Rui and Su, Hao},
+  booktitle={International Conference on Learning Representations},
+  year={2023}
+}
+```
+
+Note that some other assets, algorithms, etc. in ManiSkill are from other sources/research. We try our best to include the correct citation bibtex where possible when introducing the different components provided by ManiSkill.
 
 ## License
 

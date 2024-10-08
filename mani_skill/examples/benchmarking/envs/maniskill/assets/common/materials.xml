@@ -1,0 +1,27 @@
+<!--
+Common textures, colors and materials to be used throughout this suite. Some
+materials such as xxx_highlight are activated on occurence of certain events,
+for example receiving a positive reward.
+-->
+<mujoco>
+  <asset>
+    <texture name="grid" type="2d" builtin="checker" rgb1=".1 .2 .3" rgb2=".2 .3 .4" width="300" height="300" mark="edge" markrgb=".2 .3 .4"/>
+    <material name="grid" texture="grid" texrepeat="1 1" texuniform="true" reflectance=".2"/>
+    <!-- <material name="self" rgba="0.51953125 0.59765625 0.8 1"/> -->
+    <!-- <material name="self" rgba="0.25893 0.36597 0.4700538627637411 1"/> -->
+    <material name="self" rgba="0.33493447 0.44319897 0.54274483 1"/>
+    <material name="self2" rgba="0.16 0.16 0.36 1"/>
+    <!-- <material name="self2" rgba="0.08997 0.12574 0.21263 1"/> -->
+    <material name="self_default" rgba=".7 .5 .3 1"/>
+    <material name="self_highlight" rgba="0 .5 .3 1"/>
+    <material name="effector" rgba=".7 .4 .2 1"/>
+    <material name="effector_default" rgba=".7 .4 .2 1"/>
+    <material name="effector_highlight" rgba="0 .5 .3 1"/>
+    <material name="decoration" rgba="0.890625 0.765625 0.30859375 1"/>
+    <material name="eye" rgba="0 .2 1 1"/>
+    <material name="target" rgba=".6 .3 .3 1"/>
+    <material name="target_default" rgba=".6 .3 .3 1"/>
+    <material name="target_highlight" rgba=".6 .3 .3 .4"/>
+    <material name="site" rgba=".5 .5 .5 .3"/>
+  </asset>
+</mujoco>

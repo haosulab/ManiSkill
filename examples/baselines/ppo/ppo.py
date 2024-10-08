@@ -1,3 +1,4 @@
+from collections import defaultdict
 import os
 import random
 import time
@@ -62,7 +63,7 @@ class Args:
     """the number of steps to run in each environment per policy rollout"""
     num_eval_steps: int = 50
     """the number of steps to run in each evaluation environment during evaluation"""
-    reconfiguration_freq: Optional[int] = None
+    reconfiguration_freq: Optional[int] = 1
     """for benchmarking purposes we want to reconfigure the eval environment each reset to ensure objects are randomized in some tasks"""
     anneal_lr: bool = False
     """Toggle learning rate annealing for policy and value networks"""
@@ -200,8 +201,8 @@ if __name__ == "__main__":
             save_video_trigger = lambda x : (x // args.num_steps) % args.save_train_video_freq == 0
             envs = RecordEpisode(envs, output_dir=f"runs/{run_name}/train_videos", save_trajectory=False, save_video_trigger=save_video_trigger, max_steps_per_video=args.num_steps, video_fps=30)
         eval_envs = RecordEpisode(eval_envs, output_dir=eval_output_dir, save_trajectory=args.evaluate, trajectory_name="trajectory", max_steps_per_video=args.num_eval_steps, video_fps=30)
-    envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=not args.partial_reset, **env_kwargs)
-    eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=not args.partial_reset, **env_kwargs)
+    envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=not args.partial_reset, record_metrics=True)
+    eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=True, record_metrics=True)
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
     max_episode_steps = gym_utils.find_max_episode_steps_value(envs._env)
@@ -212,7 +213,7 @@ if __name__ == "__main__":
             import wandb
             config = vars(args)
             config["env_cfg"] = dict(**env_kwargs, num_envs=args.num_envs, env_id=args.env_id, reward_mode="normalized_dense", env_horizon=max_episode_steps, partial_reset=args.partial_reset)
-            config["eval_env_cfg"] = dict(**env_kwargs, num_envs=args.num_eval_envs, env_id=args.env_id, reward_mode="normalized_dense", env_horizon=max_episode_steps, partial_reset=args.partial_reset)
+            config["eval_env_cfg"] = dict(**env_kwargs, num_envs=args.num_eval_envs, env_id=args.env_id, reward_mode="normalized_dense", env_horizon=max_episode_steps, partial_reset=False)
             wandb.init(
                 project=args.wandb_project_name,
                 entity=args.wandb_entity,
@@ -251,7 +252,6 @@ if __name__ == "__main__":
     next_done = torch.zeros(args.num_envs, device=device)
     eps_returns = torch.zeros(args.num_envs, dtype=torch.float, device=device)
     eps_lens = np.zeros(args.num_envs)
-    place_rew = torch.zeros(args.num_envs, device=device)
     print(f"####")
     print(f"args.num_iterations={args.num_iterations} args.num_envs={args.num_envs} args.num_eval_envs={args.num_eval_envs}")
     print(f"args.minibatch_size={args.minibatch_size} args.batch_size={args.batch_size} args.update_epochs={args.update_epochs}")
@@ -268,45 +268,23 @@ if __name__ == "__main__":
         final_values = torch.zeros((args.num_steps, args.num_envs), device=device)
         agent.eval()
         if iteration % args.eval_freq == 1:
-            # evaluate
             print("Evaluating")
             eval_obs, _ = eval_envs.reset()
-            eval_total_reward = 0
-            returns = []
-            eps_lens = []
-            successes = []
-            failures = []
+            eval_metrics = defaultdict(list)
             for _ in range(args.num_eval_steps):
                 with torch.no_grad():
                     eval_obs, eval_rew, eval_terminations, eval_truncations, eval_infos = eval_envs.step(agent.get_action(eval_obs, deterministic=True))
-                    eval_total_reward += eval_rew.sum()
                     if "final_info" in eval_infos:
                         mask = eval_infos["_final_info"]
-                        eps_lens.append(eval_infos["final_info"]["elapsed_steps"][mask].cpu().numpy())
-                        returns.append(eval_infos["final_info"]["episode"]["r"][mask].cpu().numpy())
-                        if "success" in eval_infos:
-                            successes.append(eval_infos["final_info"]["success"][mask].cpu().numpy())
-                        if "fail" in eval_infos:
-                            failures.append(eval_infos["final_info"]["fail"][mask].cpu().numpy())
-            returns = np.concatenate(returns)
-            eps_lens = np.concatenate(eps_lens)
+                        for k, v in eval_infos["final_info"]["episode"].items():
+                            eval_metrics[k].append(v)
             print(f"Evaluated {args.num_eval_steps * args.num_eval_envs} steps resulting in {len(eps_lens)} episodes")
-            if len(successes) > 0:
-                successes = np.concatenate(successes)
-                if logger is not None: logger.add_scalar("eval/success", successes.mean(), global_step)
-                print(f"eval_success_rate={successes.mean()}")
-            if len(failures) > 0:
-                failures = np.concatenate(failures)
-                if logger is not None: logger.add_scalar("eval/fail", failures.mean(), global_step)
-                print(f"eval_fail_rate={failures.mean()}")
-
-            print(f"eval_episodic_return={returns.mean()}")
-            if logger is not None:
-                logger.add_scalar("eval/reward", (eval_total_reward / (args.num_eval_steps * args.num_eval_envs)).mean().cpu().numpy(), global_step)
-                logger.add_scalar("eval/return", returns.mean(), global_step)
-                logger.add_scalar("eval/episode_len", eps_lens.mean(), global_step)
             if args.evaluate:
                 break
+            for k, v in eval_metrics.items():
+                mean = torch.stack(v).float().mean()
+                logger.add_scalar(f"eval/{k}", mean, global_step)
+                print(f"eval_{k}_mean={mean}")
         if args.save_model and iteration % args.eval_freq == 1:
             model_path = f"runs/{run_name}/ckpt_{iteration}.pt"
             torch.save(agent.state_dict(), model_path)
@@ -338,15 +316,8 @@ if __name__ == "__main__":
             if "final_info" in infos:
                 final_info = infos["final_info"]
                 done_mask = infos["_final_info"]
-                episode_len = final_info["elapsed_steps"][done_mask]
-                episodic_return = final_info['episode']['r'][done_mask]
-                if "success" in final_info:
-                    logger.add_scalar("train/success", final_info["success"][done_mask].cpu().numpy().mean(), global_step)
-                if "fail" in final_info:
-                    logger.add_scalar("train/fail", final_info["fail"][done_mask].cpu().numpy().mean(), global_step)
-                logger.add_scalar("train/return", episodic_return.cpu().numpy().mean(), global_step)
-                logger.add_scalar("train/episode_len", episode_len.cpu().numpy().mean(), global_step)
-                logger.add_scalar("train/reward", (episodic_return.sum() / episode_len.sum()).cpu().numpy().mean(), global_step)
+                for k, v in final_info["episode"].items():
+                    logger.add_scalar(f"train/{k}", v[done_mask].float().mean(), global_step)
                 with torch.no_grad():
                     final_values[step, torch.arange(args.num_envs, device=device)[done_mask]] = agent.get_value(infos["final_observation"][done_mask]).view(-1)
         rollout_time = time.time() - rollout_time

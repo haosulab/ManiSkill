@@ -85,7 +85,7 @@
   <link name="panda_hand">
     <visual>
       <geometry>
-        <mesh filename="franka_description/meshes/visual/hand.dae"/>
+        <mesh filename="franka_description/meshes/visual/hand.glb"/>
       </geometry>
     </visual>
     <collision>
@@ -109,7 +109,7 @@
   <link name="panda_leftfinger">
     <visual>
       <geometry>
-        <mesh filename="franka_description/meshes/visual/finger.dae"/>
+        <mesh filename="franka_description/meshes/visual/finger.glb"/>
       </geometry>
     </visual>
     <!-- screw mount -->
@@ -150,7 +150,7 @@
     <visual>
       <origin rpy="0 0 3.141592653589793" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="franka_description/meshes/visual/finger.dae"/>
+        <mesh filename="franka_description/meshes/visual/finger.glb"/>
       </geometry>
     </visual>
     <!-- screw mount -->

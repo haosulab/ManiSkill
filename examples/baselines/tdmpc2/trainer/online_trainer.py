@@ -1,3 +1,4 @@
+from collections import defaultdict
 from time import time
 
 import numpy as np
@@ -16,6 +17,20 @@ class OnlineTrainer(Trainer):
 		self._ep_idx = 0
 		self._start_time = time()
 
+	def final_info_metrics(self, info):
+		metrics = dict()
+		if self.cfg.env_type == 'gpu':
+			for k, v in info["final_info"]["episode"].items():
+				metrics[k]=v.float().mean().item()
+		else: # cpu
+			temp = defaultdict(list)
+			for final_info in info["final_info"]:
+				for k, v in final_info["episode"].items():
+					temp[k].append(v)
+			for k, v in temp.items():
+				metrics[k]=np.mean(v)
+		return metrics
+
 	def common_metrics(self):
 		"""Return a dictionary of current metrics."""
 		return dict(
@@ -27,42 +42,18 @@ class OnlineTrainer(Trainer):
 	def eval(self):
 		"""Evaluate a TD-MPC2 agent."""
 		has_success, has_fail = False, False # if task has success or/and fail (added for maniskill)
-		ep_rewards, ep_successes, ep_fails = [], [], []
-		for i in range((self.cfg.eval_episodes - 1) // self.cfg.num_envs + 1):
-			obs, _ = self.env.reset()
-			done = torch.full((self.cfg.num_envs, ), False, device=obs.device) # ms3: done is truncated since the ms3 ignore_terminations.
-			ep_reward, t = torch.zeros((self.cfg.num_envs, ), device=obs.device), 0
-			if self.cfg.save_video:
-				self.logger.video.init(self.env, enabled=(i==0))
+		for i in range(self.cfg.eval_episodes_per_env):
+			obs, _ = self.eval_env.reset()
+			done = torch.full((self.cfg.num_eval_envs, ), False, device=obs.device) # ms3: done is truncated since the ms3 ignore_terminations.
+			ep_reward, t = torch.zeros((self.cfg.num_eval_envs, ), device=obs.device), 0
 			while not done[0]: # done is truncated and should be the same
 				action = self.agent.act(obs, t0=t==0, eval_mode=True)
-				obs, reward, terminated, truncated, info = self.env.step(action)
+				obs, reward, terminated, truncated, info = self.eval_env.step(action)
 				done = terminated | truncated
-				ep_reward += reward
 				t += 1
-				if self.cfg.save_video:
-					self.logger.video.record(self.env)
-			ep_rewards.append(ep_reward.mean().item())
-
-			if 'success' in info: 
-				has_success = True
-				ep_successes.append(info['success'].float().mean().item())
-			
-			if 'fail' in info:
-				has_fail = True
-				ep_fails.append(info['fail'].float().mean().item())
-
-			if self.cfg.save_video:
-				self.logger.video.save(self._step)
-		eval_metrics = dict(
-			episode_reward=np.nanmean(ep_rewards),
-			episode_len=self.env.max_episode_steps,
-			episode_reward_avg=np.nanmean(ep_rewards)/self.env.max_episode_steps,
-		)
-		if has_success:
-			eval_metrics.update(episode_success=np.nanmean(ep_successes))
-		if has_fail:
-			eval_metrics.update(episode_fail=np.nanmean(ep_fails))
+		# Update logger
+		eval_metrics = dict()
+		eval_metrics.update(self.final_info_metrics(info))
 		return eval_metrics
 
 	def to_td(self, obs, num_envs, action=None, reward=None):
@@ -102,20 +93,12 @@ class OnlineTrainer(Trainer):
 					eval_metrics = self.eval()
 					eval_metrics.update(self.common_metrics())
 					self.logger.log(eval_metrics, 'eval')
+					self.logger.log_wandb_video(self._step)
 					eval_next = False
 
 				if self._step > 0:
 					tds = torch.cat(self._tds, dim=1) # [num_envs, episode_len + 1, ..]. Note it's different from official vectorized code
-					train_metrics.update(
-						episode_reward=tds['reward'].nansum(1).mean(), # first NaN is dropped by nansum
-						episode_len=self.env.max_episode_steps,
-						episode_reward_avg=tds['reward'].nansum(1).mean()/self.env.max_episode_steps,
-					)
-					if 'success' in vec_info:
-						train_metrics.update(episode_success=vec_info['success'].float().mean().item())
-					if 'fail' in vec_info:
-						train_metrics.update(episode_fail=vec_info['fail'].float().mean().item())
-
+					train_metrics.update(self.final_info_metrics(vec_info))
 					if seed_finish:
 						time_metrics.update(
 							rollout_time=np.mean(rollout_times),
@@ -138,16 +121,20 @@ class OnlineTrainer(Trainer):
 			# Collect experience
 			rollout_time = time()
 			if self._step > self.cfg.seed_steps:
-				action = self.agent.act(obs, t0=len(self._tds)==1) # t0 unchanged since all envs have same episode length
+				action = self.agent.act(obs, t0=len(self._tds)==1, eval_mode=False) # t0 unchanged since all envs have same episode length
 			else:
 				# action = torch.rand((self.cfg.num_envs, self.cfg.action_dim)) # self.env.rand_act()
 				action = torch.from_numpy(self.env.action_space.sample())
 			obs, reward, vec_terminated, vec_truncated, vec_info = self.env.step(action)
 
 			vec_done = vec_terminated | vec_truncated
-			if vec_done[0] and self.cfg.obs == 'state': # added in vectorization
-				obs = vec_info["final_observation"]
 
+			if vec_done[0]: # use actual final_observation
+				if self.cfg.obs == 'rgb':
+					obs[:,-3:,...] = vec_info["final_observation"]['sensor_data']['base_camera']['rgb'].permute(0,3,1,2) # TODO: rgb extraction hard-coded here. might want to change it in the future
+				else:
+					obs = vec_info["final_observation"]
+			
 			self._tds.append(self.to_td(obs, self.cfg.num_envs, action, reward))
 			rollout_time = time() - rollout_time
 			rollout_times.append(rollout_time)

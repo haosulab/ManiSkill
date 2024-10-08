@@ -64,6 +64,13 @@ def initialize_data_sources():
         checksum="44dae9a0804172515c290c1f49a1e7e72d76e40201a2c5c7d4a3ccd43b4d5be4",
     )
 
+    DATA_SOURCES["bridge_v2_real2sim"] = DataSource(
+        source_type="task_assets",
+        url="https://huggingface.co/datasets/haosulab/ManiSkill_bridge_v2_real2sim/resolve/main/bridge_v2_real2sim_dataset.zip",
+        target_path="tasks/bridge_v2_real2sim_dataset",
+        checksum="618512a205b4528cafecdad14b1788ed1130879f3064deb406516ed5b9c5ba92",
+    )
+
     # ---------------------------------------------------------------------------- #
     # PartNet-mobility
     # ---------------------------------------------------------------------------- #
@@ -163,7 +170,7 @@ def initialize_data_sources():
     )
     DATA_SOURCES["widowx250s"] = DataSource(
         source_type="robot",
-        url="https://github.com/haosulab/ManiSkill-WidowX250S/archive/refs/tags/v0.1.0.zip",
+        url="https://github.com/haosulab/ManiSkill-WidowX250S/archive/refs/tags/v0.2.0.zip",
         target_path="robots/widowx",
     )
     DATA_SOURCES["googlerobot"] = DataSource(

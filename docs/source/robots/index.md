@@ -1,6 +1,6 @@
 # Robots
 
-```{figure} images/robot-collage.png
+```{figure} images/robot-grid.png
 ```
 
 
