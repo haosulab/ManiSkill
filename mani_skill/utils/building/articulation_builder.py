@@ -60,6 +60,11 @@ class ArticulationBuilder(SapienArticulationBuilder):
 
         return builder
 
+    def build_entities(self, *args, **kwargs):
+        raise NotImplementedError(
+            "_build_entities is a private function in ManiSkill. Use build() to properly build articulation"
+        )
+
     def _build_entities(
         self, fix_root_link=None, name_prefix="", initial_pose=sapien.Pose()
     ):
