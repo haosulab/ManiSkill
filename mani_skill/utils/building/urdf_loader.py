@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, List, Tuple, Optional, Union, Sequence
+from typing import TYPE_CHECKING, Any, List, Tuple
 
-import numpy as np
-import torch
 from sapien.render import RenderCameraComponent
 from sapien.wrapper.urdf_loader import URDFLoader as SapienURDFLoader
 
@@ -11,7 +9,6 @@ from mani_skill.utils.building.actor_builder import ActorBuilder
 from mani_skill.utils.building.articulation_builder import ArticulationBuilder
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.articulation import Articulation
-from mani_skill.utils.structs.pose import Pose
 
 if TYPE_CHECKING:
     from mani_skill.envs.scene import ManiSkillScene
@@ -21,24 +18,6 @@ class URDFLoader(SapienURDFLoader):
     scene: ManiSkillScene
     name: str = None
     disable_self_collisions: bool = False
-
-    def __init__(self):
-        super().__init__()
-        self.name = None
-        self.scene_idxs = None
-        self.initial_pose = None
-
-    def set_scene_idxs(
-        self,
-        scene_idxs: Optional[
-            Union[List[int], Sequence[int], torch.Tensor, np.ndarray]
-        ] = None,
-    ):
-        """
-        Set a list of scene indices to build this object in. Cannot be used in conjunction with scene mask
-        """
-        self.scene_idxs = scene_idxs
-        return self
 
     def parse(
         self, urdf_file, srdf_file=None, package_dir=None
@@ -57,7 +36,11 @@ class URDFLoader(SapienURDFLoader):
                     l.collision_groups[2] |= 1 << 29
         for i, b in enumerate(actor_builders):
             b.set_name(f"{self.name}-actor-{i}")
-        return articulation_builders, actor_builders, cameras
+        return dict(
+            articulation_builders=articulation_builders,
+            actor_builders=actor_builders,
+            cameras=cameras,
+        )
 
     def load_file_as_articulation_builder(
         self, urdf_file, srdf_file=None, package_dir=None
@@ -86,22 +69,19 @@ class URDFLoader(SapienURDFLoader):
         """
         if name is not None:
             self.name = name
-        articulation_builders, actor_builders, cameras = self.parse(
-            urdf_file, srdf_file, package_dir
-        )
+        _parsed_urdf_data = self.parse(urdf_file, srdf_file, package_dir)
+        articulation_builders = _parsed_urdf_data["articulation_builders"]
+        actor_builders = _parsed_urdf_data["actor_builders"]
+        cameras = _parsed_urdf_data["cameras"]
 
         if len(articulation_builders) > 1 or len(actor_builders) != 0:
             raise Exception(
                 "URDF contains multiple objects, call load_multiple instead"
             )
 
-        if scene_idxs is not None:
-            self.set_scene_idxs(scene_idxs)
-
         articulations: List[Articulation] = []
         for b in articulation_builders:
-            b.initial_pose = self.initial_pose
-            b.set_scene_idxs(self.scene_idxs)
+            b.set_scene_idxs(scene_idxs)
             b.disable_self_collisions = self.disable_self_collisions
             articulations.append(b.build())
 

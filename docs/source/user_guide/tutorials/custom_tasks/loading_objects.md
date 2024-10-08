@@ -69,7 +69,7 @@ def _load_scene(self, options):
     loader = scene.create_urdf_loader()
     # the .parse function can also parse multiple articulations
     # actors and cameras but we only use the articulations
-    articulation_builders, _, _ = loader.parse(str(urdf_path))
+    articulation_builders = loader.parse(str(urdf_path))["articulation_builders"]
     builder = articulation_builders[0]
     builder.build(name="my_articulation")
 ```
@@ -99,7 +99,7 @@ def _load_scene(self, options):
     # you can set this to True to try and load them
     loader.load_multiple_collisions_from_file = True
 
-    articulation_builders, _, _ = loader.parse(str(urdf_path))
+    articulation_builders = loader.parse(str(urdf_path))["articulation_builders"]
     builder = articulation_builders[0]
     builder.build(name="my_articulation")
 ```

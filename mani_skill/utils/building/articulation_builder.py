@@ -60,7 +60,7 @@ class ArticulationBuilder(SapienArticulationBuilder):
 
         return builder
 
-    def build_entities(
+    def _build_entities(
         self, fix_root_link=None, name_prefix="", initial_pose=sapien.Pose()
     ):
         entities = []
@@ -156,7 +156,7 @@ class ArticulationBuilder(SapienArticulationBuilder):
                 articulation_pose = to_sapien_pose(initial_pose_np)
             else:
                 articulation_pose = to_sapien_pose(initial_pose_np[i])
-            links: List[sapien.Entity] = self.build_entities(
+            links: List[sapien.Entity] = self._build_entities(
                 name_prefix=f"scene-{scene_idx}-{self.name}_",
                 initial_pose=articulation_pose,
             )
