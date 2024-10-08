@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, List, Optional, Sequence, Union
-import warnings
 
 import numpy as np
 import sapien
@@ -10,6 +9,7 @@ import torch
 from sapien import ActorBuilder as SAPIENActorBuilder
 from sapien.wrapper.coacd import do_coacd
 
+from mani_skill import logger
 from mani_skill.utils import common
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.pose import Pose, to_sapien_pose
@@ -193,8 +193,8 @@ class ActorBuilder(SAPIENActorBuilder):
 
         if self.initial_pose is None:
             if self.physx_body_type == "static":
-                warnings.warn(
-                    f"initial pose not set for static object scene-{scene_idx}_{self.name}, setting to defaule pose q=[1,0,0,0], p=[0,0,0]"
+                logger.warn(
+                    f"initial pose not set for static object scene-{scene_idx}_{self.name}, setting to default pose q=[1,0,0,0], p=[0,0,0]"
                 )
                 self.initial_pose = Pose.create(sapien.Pose())
             else:

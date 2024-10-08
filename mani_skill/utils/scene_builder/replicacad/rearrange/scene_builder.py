@@ -18,6 +18,7 @@ from mani_skill import ASSET_DIR
 from mani_skill.utils.structs import Actor, Articulation
 from mani_skill.utils.building import actors
 from mani_skill.utils import common
+from mani_skill.utils.scene_builder.replicacad import ReplicaCADSceneBuilder
 
 from ...replicacad import ReplicaCADSceneBuilder
 

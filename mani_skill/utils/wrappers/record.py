@@ -205,6 +205,7 @@ class RecordEpisode(gym.Wrapper):
         record_reward: whether to record the reward in the trajectory data
         record_env_state: whether to record the environment state in the trajectory data
         video_fps (int): The FPS of the video to generate if save_video is True
+        avoid_overwriting_video (bool): If true, the wrapper will iterate over possible video names to avoid overwriting existing videos in the output directory. Useful for resuming training runs.
         source_type (Optional[str]): a word to describe the source of the actions used to record episodes (e.g. RL, motionplanning, teleoperation)
         source_desc (Optional[str]): A longer description describing how the demonstrations are collected
     """
