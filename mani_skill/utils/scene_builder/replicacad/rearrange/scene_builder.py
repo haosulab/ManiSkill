@@ -20,8 +20,6 @@ from mani_skill.utils.building import actors
 from mani_skill.utils import common
 from mani_skill.utils.scene_builder.replicacad import ReplicaCADSceneBuilder
 
-from ...replicacad import ReplicaCADSceneBuilder
-
 DEFAULT_HIDDEN_POS = [-10_000] * 3
 
 
