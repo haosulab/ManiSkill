@@ -150,10 +150,11 @@ class ActorBuilder(SAPIENActorBuilder):
                 shape.set_min_patch_radius(r.min_patch_radius)
                 component.attach(shape)
 
-        if not self._auto_inertial and self.physx_body_type != "kinematic":
-            component.mass = self._mass
-            component.cmass_local_pose = self._cmass_local_pose
-            component.inertia = self._inertia
+        if hasattr(self, "_auto_inertial"):
+            if not self._auto_inertial and self.physx_body_type != "kinematic":
+                component.mass = self._mass
+                component.cmass_local_pose = self._cmass_local_pose
+                component.inertia = self._inertia
 
         return component
 
