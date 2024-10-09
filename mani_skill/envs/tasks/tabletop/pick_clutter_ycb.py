@@ -74,6 +74,13 @@ class PickClutterEnv(BaseEnv):
         )
 
     @property
+    def _default_voxel_config(self):
+        return {"coord_bounds": [-1, -1, -1, 2, 2, 2],
+                    "voxel_size": 200, 
+                    "device": torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
+                    "segmentation": True}
+    
+    @property
     def _default_sensor_configs(self):
         pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
         return [

@@ -23,6 +23,7 @@ from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.envs.utils.observations import (
     parse_visual_obs_mode_to_struct,
     sensor_data_to_pointcloud,
+    sensor_data_to_voxel,
 )
 from mani_skill.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill.sensors.camera import (
@@ -78,6 +79,10 @@ class BaseEnv(gym.Env):
 
         human_render_camera_configs (dict): configurations of human rendering cameras to override any environment defaults. Similar usage as @sensor_configs.
 
+        obs_mode_config (dict): configuration hyperparameters of observations. See notes for more details.
+
+        human_render_camera_cfgs (dict): configurations of human rendering cameras. Similar usage as @sensor_cfgs.
+        
         viewer_camera_configs (dict): configurations of the viewer camera in the GUI to override any environment defaults. Similar usage as @sensor_configs.
 
         robot_uids (Union[str, BaseAgent, List[Union[str, BaseAgent]]]): List of robots to instantiate and control in the environment.
@@ -111,7 +116,8 @@ class BaseEnv(gym.Env):
     SUPPORTED_ROBOTS: List[Union[str, Tuple[str]]] = None
     """Override this to enforce which robots or tuples of robots together are supported in the task. During env creation,
     setting robot_uids auto loads all desired robots into the scene, but not all tasks are designed to support some robot setups"""
-    SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "sensor_data", "rgb", "depth", "segmentation", "rgbd", "rgb+depth", "rgb+depth+segmentation", "rgb+segmentation", "depth+segmentation", "pointcloud")
+
+    SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "sensor_data", "rgb", "depth", "segmentation", "rgbd", "rgb+depth", "rgb+depth+segmentation", "rgb+segmentation", "depth+segmentation", "pointcloud", "voxel")
     SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "sparse", "none")
     SUPPORTED_RENDER_MODES = ("human", "rgb_array", "sensors", "all")
     """The supported render modes. Human opens up a GUI viewer. rgb_array returns an rgb array showing the current environment state.
@@ -135,6 +141,8 @@ class BaseEnv(gym.Env):
     """all sensor configurations parsed from self._sensor_configs and agent._sensor_configs"""
     _agent_sensor_configs: Dict[str, BaseSensorConfig]
     """all agent sensor configs parsed from agent._sensor_configs"""
+    _obs_mode_config: Dict
+    """configurations for converting sensor data to observations under the current observation mode (e.g. voxel size and scene bounds for voxel observations)"""
     _human_render_cameras: Dict[str, Camera]
     """cameras used for rendering the current environment retrievable via `env.render_rgb_array()`. These are not used to generate observations"""
     _default_human_render_camera_configs: Dict[str, CameraConfig]
@@ -173,6 +181,7 @@ class BaseEnv(gym.Env):
         enable_shadow: bool = False,
         sensor_configs: Optional[dict] = dict(),
         human_render_camera_configs: Optional[dict] = dict(),
+        obs_mode_config: dict = None,
         viewer_camera_configs: Optional[dict] = dict(),
         robot_uids: Union[str, BaseAgent, List[Union[str, BaseAgent]]] = None,
         sim_config: Union[SimConfig, dict] = dict(),
@@ -195,6 +204,12 @@ class BaseEnv(gym.Env):
         self._custom_viewer_camera_configs = viewer_camera_configs
         self._parallel_in_single_scene = parallel_in_single_scene
         self.robot_uids = robot_uids
+
+        if obs_mode_config is None:
+            self._obs_mode_config = self._default_voxel_config
+        else:
+            self._obs_mode_config = obs_mode_config
+            
         if self.SUPPORTED_ROBOTS is not None:
             if robot_uids not in self.SUPPORTED_ROBOTS:
                 logger.warn(f"{robot_uids} is not in the task's list of supported robots. Code may not run as intended")
@@ -486,6 +501,15 @@ class BaseEnv(gym.Env):
             obs = self._get_obs_with_sensor_data(info, apply_texture_transforms=False)
         elif self._obs_mode in ["rgb", "depth", "segmentation", "rgbd", "rgb+depth", "rgb+depth+segmentation", "depth+segmentation", "rgb+segmentation"]:
             obs = self._get_obs_with_sensor_data(info)
+        elif self._obs_mode == "voxel":
+            # assert on _obs_mode_config here, and pass them to the convertion function
+            assert self._obs_mode_config != None, "You mush pass in configs in voxel observation mode via obs_mode_config keyword arg in gym.make(). See the Maniskill docs for details. No such config detected."
+            assert "voxel_size" in self._obs_mode_config.keys(), "Lacking voxel_size (voxel size) in observation configs"
+            assert "coord_bounds" in self._obs_mode_config.keys(), "Lacking coord_bounds (coordinate bounds) in observation configs"
+            assert "device" in self._obs_mode_config.keys(), "Lacking device (device for voxelizations) in observation configs"
+            assert "segmentation" in self._obs_mode_config.keys(), "Lacking segmentation (a boolean indicating whether including voxel segmentations) in observation configs"
+            obs = self._get_obs_with_sensor_data(info)
+            obs = sensor_data_to_voxel(obs, self._sensors, self._obs_mode_config)
         else:
             raise NotImplementedError(self._obs_mode)
         return obs
