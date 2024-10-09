@@ -194,7 +194,7 @@ class ActorBuilder(SAPIENActorBuilder):
         if self.initial_pose is None:
             if self.physx_body_type == "static":
                 logger.warn(
-                    f"initial pose not set for static object scene-{scene_idx}_{self.name}, setting to default pose q=[1,0,0,0], p=[0,0,0]"
+                    f"initial pose not set for static object scenes-{self.scene_idxs.tolist()}_{self.name}, setting to default pose q=[1,0,0,0], p=[0,0,0]"
                 )
                 self.initial_pose = Pose.create(sapien.Pose())
             else:
