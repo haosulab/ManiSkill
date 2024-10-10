@@ -22,19 +22,19 @@ def solve(env: PushCubeEnv, seed=None, debug=False, vis=False):
 
 
     rot = list(env.agent.tcp.pose.get_q()[0].cpu().numpy())
-    reach_pose = sapien.Pose(p=list(env.v1), q = rot)
+    reach_pose = sapien.Pose(p=list(env.vertices[0,0].numpy()), q = rot)
     res = planner.move_to_pose_with_screw(reach_pose)
     # -------------------------------------------------------------------------- #
     # Move to second vertex
     # -------------------------------------------------------------------------- #
 
-    reach_pose = sapien.Pose(p=list(env.v2), q = rot)
+    reach_pose = sapien.Pose(p=list(env.vertices[0,1]), q = rot)
     res = planner.move_to_pose_with_screw(reach_pose)
     
-    reach_pose = sapien.Pose(p=list(env.v3), q = rot)
+    reach_pose = sapien.Pose(p=list(env.vertices[0,2]), q = rot)
     res = planner.move_to_pose_with_screw(reach_pose)
 
-    reach_pose = sapien.Pose(p=list(env.v1), q = rot)
+    reach_pose = sapien.Pose(p=list(env.vertices[0,0]), q = rot)
     res = planner.move_to_pose_with_screw(reach_pose)
 
     planner.close()

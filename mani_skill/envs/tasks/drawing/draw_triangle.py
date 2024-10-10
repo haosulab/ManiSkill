@@ -5,7 +5,10 @@ import numpy as np
 import sapien
 import torch
 from transforms3d.euler import euler2quat
+from transforms3d.quaternions import quat2mat
 
+import mani_skill.envs.utils.randomization as randomization
+from mani_skill.utils.geometry.rotation_conversions import quaternion_to_matrix
 from mani_skill.agents.robots.panda.panda_stick import PandaStick
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
@@ -106,15 +109,13 @@ class DrawTriangle(BaseEnv):
             # approx div by sqrt(3)
             radius = (box1_half_w) / 1.73205080757
 
-            theta = random.random() * (2/3 * pi)
+            theta = pi/2
 
             # define centers and compute verticies, might need to adjust how centers are calculated or add a theta arg for variation
             c1 = np.array([radius* math.cos(theta),radius* math.sin(theta), 0.01])
             c2 = np.array([radius * math.cos(theta + (2* pi/3)), radius * math.sin(theta + (2* pi /3)), 0.01])
             c3 = np.array([radius * math.cos((theta+ (4*pi/3))), radius * math.sin(theta + (4*pi/3)), 0.01])
-            self.v1 = (c1 + c3) - c2
-            self.v2 = (c1 + c2) - c3
-            self.v3 = (c2 + c3) - c1
+            self.original_verts = np.array([(c1 + c3) - c2 , (c1 + c2) - c3, (c2 + c3) - c1])
 
             builder = self.scene.create_actor_builder()
             first_block_pose = sapien.Pose(list(c1), euler2quat(0,0,theta - (pi/2)))
@@ -164,7 +165,7 @@ class DrawTriangle(BaseEnv):
         self.canvas = self.canvas.build_static(name="canvas")
 
         self.dots = []
-        self.dot_pos = []
+        self.dot_pos = None
         color_choices = torch.randint(0, len(self.BRUSH_COLORS), (self.num_envs,))
         for i in range(self.MAX_DOTS):
             actors = []
@@ -193,7 +194,7 @@ class DrawTriangle(BaseEnv):
                 )
                 actor = builder.build_kinematic(name=f"dot_{i}")
                 self.dots.append(actor)
-        self.goal_tee = create_goal_triangle(
+        self.goal_tri = create_goal_triangle(
             name="goal_tri",
             base_color=np.array([255, 255, 255, 255/4]) / 255,
         )
@@ -202,7 +203,22 @@ class DrawTriangle(BaseEnv):
         # NOTE (stao): for simplicity this task cannot handle partial resets
         self.draw_step = 0
         with torch.device(self.device):
+            b = len(env_idx)
             self.table_scene.initialize(env_idx)
+            target_pos = torch.zeros((b, 3))
+
+            target_pos[:,:2] = torch.rand((b,2))*0.02-0.1
+            target_pos[:,-1] = 0.01
+            qs = randomization.random_quaternions(b, lock_x=True, lock_y=True)
+            mats = quaternion_to_matrix(qs)
+            self.goal_tri.set_pose(Pose.create_from_pq(p=target_pos, q=qs))
+            self.vertices = torch.from_numpy(np.tile(self.original_verts, (b, 1,1)))  # b, 3, 3
+            self.vertices = torch.matmul(self.vertices.double(), mats.double())
+            self.vertices += target_pos
+            
+
+            self.triangles = self.generate_triangle_with_points(100, self.vertices[:,:,:-1]) 
+
             for dot in self.dots:
                 # initially spawn dots in the table so they aren't seen
                 dot.set_pose(
@@ -237,7 +253,9 @@ class DrawTriangle(BaseEnv):
             new_dot_pos
         )
         if new_dot_pos.get_p()[:,-1] > 0:
-            self.dot_pos.append(new_dot_pos.get_p())
+            if self.dot_pos == None:
+                self.dot_pos = new_dot_pos.get_p()[:, None, :]
+            self.dot_pos = torch.cat((self.dot_pos, new_dot_pos.get_p()[:, None,: ]), dim=1)
 
         self.draw_step += 1
 
@@ -254,48 +272,33 @@ class DrawTriangle(BaseEnv):
             tcp_pose=self.agent.tcp.pose.raw_pose,
         )
 
-    def generate_triangle_with_points(self, n, vertices, interpolate = 0):
-        # Create an empty array to hold the points, starting with the vertices
+    def generate_triangle_with_points(self, n, vertices):
+        batch_size = vertices.shape[0]
+    
         all_points = []
 
-        # Loop through each side of the triangle and generate `n` points on each side
-        for i in range(len(vertices)):
-            start_vertex = vertices[i]
-            end_vertex = vertices[(i+1) % len(vertices)]
-
-            # Generate n+1 points between start and end vertex, including the start point but excluding the end point
-            intermediate_points = np.linspace(start_vertex, end_vertex, n+2)[:-1]
-
-            # Add the points to the all_points list
-            all_points.extend(intermediate_points)
-
-        # Convert the list of points to a numpy array
-        all_points = np.array(all_points)
-
-        for i in range(interpolate):
-            ind = i = np.random.randint(0, all_points.shape[0] - 1)
-            p1 = all_points[ind]
-            p2 = all_points[ind + 1]
-            p_interpolated = (0.5) * p1 + 0.5 * p2
-            all_points = np.insert(all_points, ind + 1, p_interpolated, axis=0)
-            
+        for i in range(vertices.shape[1]):
+            start_vertex = vertices[:, i, :] 
+            end_vertex = vertices[:, (i+1) % vertices.shape[1], :] 
+            t = torch.linspace(0, 1, n+2, device=vertices.device)[:-1]  
+            t = t.view(1, -1, 1).repeat(batch_size, 1, 2) 
+            intermediate_points = start_vertex.unsqueeze(1) * (1 - t) + end_vertex.unsqueeze(1) * t 
+            all_points.append(intermediate_points)
+        all_points = torch.cat(all_points, dim=1) 
 
         return all_points
 
     def success_check(self):
-        if len(self.dot_pos) == 0:
+        if self.dot_pos == None or len(self.dot_pos) == 0:
             return torch.Tensor([False]).to(bool)
-        d_points = []
-        for pos in self.dot_pos:
-            d_points.append(pos.cpu().numpy()[:,:-1])
-        
-        drawn_pts = np.vstack(d_points)
-        
-        target_points = self.generate_triangle_with_points(100, [self.v1[:-1], self.v2[:-1], self.v3[:-1]],0)
-        distance_matrix = np.sqrt(np.sum((drawn_pts[:, None, :] - target_points[None, :, :]) ** 2, axis=-1))
-        Y_closeness = np.min(distance_matrix, axis=0) < self.THRESHOLD
+        drawn_pts = self.dot_pos[:,:,:-1]
 
-        return torch.Tensor([np.all(Y_closeness)]).to(bool)
+        distance_matrix = torch.sqrt(
+            torch.sum(
+                (drawn_pts[:, :, None, :] - self.triangles[:, None, :, :]) ** 2,
+                axis=-1
+            )
+        )
 
-
-
+        Y_closeness = torch.min(distance_matrix, dim = 1).values < self.THRESHOLD
+        return torch.Tensor([torch.all(Y_closeness)]).to(bool)
