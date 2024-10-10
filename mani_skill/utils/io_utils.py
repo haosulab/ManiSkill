@@ -36,7 +36,7 @@ def load_json(filename: Union[str, Path]):
     return ret
 
 
-def dump_json(filename: Union[str, Path], obj, **kwargs):
+def dump_json(filename: Union[str, Path], obj, encoder_cls=CustomJsonEncoder, **kwargs):
     filename = str(filename)
     if filename.endswith(".gz"):
         f = gzip.open(filename, "wt")
@@ -44,7 +44,7 @@ def dump_json(filename: Union[str, Path], obj, **kwargs):
         f = open(filename, "wt")
     else:
         raise RuntimeError(f"Unsupported extension: {filename}")
-    json.dump(obj, f, cls=CustomJsonEncoder, **kwargs)
+    json.dump(obj, f, cls=encoder_cls, **kwargs)
     f.close()
 
 

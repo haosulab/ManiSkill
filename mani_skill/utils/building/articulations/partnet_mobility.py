@@ -65,6 +65,6 @@ def get_partnet_mobility_builder(
     )
     applied_urdf_config.update(**urdf_config)
     sapien_utils.apply_urdf_config(loader, applied_urdf_config)
-    articulation_builders, _, _ = loader.parse(str(urdf_path))
+    articulation_builders = loader.parse(str(urdf_path))["articulation_builders"]
     builder = articulation_builders[0]
     return builder

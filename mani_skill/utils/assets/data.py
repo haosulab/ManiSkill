@@ -121,7 +121,7 @@ def initialize_data_sources():
 
     DATA_SOURCES["ReplicaCADRearrange"] = DataSource(
         source_type="scene",
-        url="https://huggingface.co/datasets/haosulab/ReplicaCADRearrange/resolve/main/v1_extracted.zip",
+        url="https://huggingface.co/datasets/haosulab/ReplicaCADRearrange/resolve/main/rearrange.zip",
         target_path="scene_datasets/replica_cad_dataset/rearrange",
     )
 

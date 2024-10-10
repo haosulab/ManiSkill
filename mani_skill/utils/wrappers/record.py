@@ -205,6 +205,7 @@ class RecordEpisode(gym.Wrapper):
         record_reward: whether to record the reward in the trajectory data
         record_env_state: whether to record the environment state in the trajectory data
         video_fps (int): The FPS of the video to generate if save_video is True
+        avoid_overwriting_video (bool): If true, the wrapper will iterate over possible video names to avoid overwriting existing videos in the output directory. Useful for resuming training runs.
         source_type (Optional[str]): a word to describe the source of the actions used to record episodes (e.g. RL, motionplanning, teleoperation)
         source_desc (Optional[str]): A longer description describing how the demonstrations are collected
     """
@@ -224,6 +225,7 @@ class RecordEpisode(gym.Wrapper):
         record_reward: bool = True,
         record_env_state: bool = True,
         video_fps: int = 30,
+        avoid_overwriting_video: bool = False,
         source_type: Optional[str] = None,
         source_desc: Optional[str] = None,
     ) -> None:
@@ -287,6 +289,7 @@ class RecordEpisode(gym.Wrapper):
                 "Cannot turn info_on_video=True when the number of environments parallelized is > 1"
             )
         self.video_nrows = int(np.sqrt(self.unwrapped.num_envs))
+        self._avoid_overwriting_video = avoid_overwriting_video
 
         # check if wrapped env is already wrapped by a CPU gym wrapper
         cur_env = self.env
@@ -485,14 +488,12 @@ class RecordEpisode(gym.Wrapper):
             image = self.capture_image()
 
             if self.info_on_video:
-                info = common.to_numpy(info)
-                scalar_info = gym_utils.extract_scalars_from_info(info)
+                scalar_info = gym_utils.extract_scalars_from_info(common.to_numpy(info))
                 if isinstance(rew, torch.Tensor) and len(rew.shape) > 1:
                     rew = rew[0]
                 rew = float(common.to_numpy(rew))
                 extra_texts = [
                     f"reward: {rew:.3f}",
-                    "action: {}".format(",".join([f"{x:.2f}" for x in action])),
                 ]
                 image = put_info_on_image(image, scalar_info, extras=extra_texts)
 
@@ -745,6 +746,15 @@ class RecordEpisode(gym.Wrapper):
                 video_name = "{}".format(self._video_id)
                 if suffix:
                     video_name += "_" + suffix
+                if self._avoid_overwriting_video:
+                    while (
+                        Path(self.output_dir)
+                        / (video_name.replace(" ", "_").replace("\n", "_") + ".mp4")
+                    ).exists():
+                        self._video_id += 1
+                        video_name = "{}".format(self._video_id)
+                        if suffix:
+                            video_name += "_" + suffix
             else:
                 video_name = name
             images_to_video(

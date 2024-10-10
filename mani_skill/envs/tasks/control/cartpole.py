@@ -1,4 +1,5 @@
 """Adapted from https://github.com/google-deepmind/dm_control/blob/main/dm_control/suite/cartpole.py"""
+
 import os
 from typing import Any, Dict, Union
 
@@ -59,7 +60,7 @@ class CartPoleRobot(BaseAgent):
         loader.name = self.uid
 
         # only need the robot
-        self.robot = loader.parse(asset_path)[0][0].build()
+        self.robot = loader.parse(asset_path)["articulation_builders"][0].build()
         assert self.robot is not None, f"Fail to load URDF/MJCF from {asset_path}"
 
         # Cache robot link ids
@@ -108,7 +109,7 @@ class CartpoleEnv(BaseEnv):
 
     def _load_scene(self, options: dict):
         loader = self.scene.create_mjcf_loader()
-        articulation_builders, actor_builders, sensor_configs = loader.parse(MJCF_FILE)
+        actor_builders = loader.parse(MJCF_FILE)["actor_builders"]
         for a in actor_builders:
             a.build(a.name)
 
