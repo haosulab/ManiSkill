@@ -1,5 +1,3 @@
-import argparse
-
 import gymnasium as gym
 import numpy as np
 import sapien
@@ -10,7 +8,7 @@ from mani_skill.utils.wrappers import RecordEpisode
 
 import tyro
 from dataclasses import dataclass
-from typing import List, Optional, Dict, Any, Annotated, Union
+from typing import List, Optional, Annotated, Union
 
 @dataclass
 class Args:
@@ -49,16 +47,6 @@ class Args:
 
     seed: Annotated[Optional[Union[int, List[int]]], tyro.conf.arg(aliases=["-s"])] = None
     """Seed(s) for random actions and simulator. Can be a single integer or a list of integers. Default is None (no seeds)"""
-
-# def parse_args(args=None):
-#     parsed_args = tyro.cli(Args, args=args)
-
-#     # Parse env kwargs
-#     if not parsed_args.quiet:
-#         print("env_kwargs:", {})
-
-#     return parsed_args
-
 
 def main(args: Args):
     np.set_printoptions(suppress=True, precision=3)
