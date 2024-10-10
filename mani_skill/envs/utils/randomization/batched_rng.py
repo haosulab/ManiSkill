@@ -6,8 +6,11 @@ import numpy as np
 
 
 class BatchedRNG(np.random.RandomState):
-    def __init__(self, seeds: list[int]):
-        self.rngs = [np.random.RandomState(seed) for seed in seeds]
+    def __init__(self, seeds: list[int], backend: str = "numpy:random_state"):
+        if backend == "numpy:random_state":
+            self.rngs = [np.random.RandomState(seed) for seed in seeds]
+        else:
+            raise ValueError(f"Unknown batched RNG backend: {backend}")
         self.batch_size = len(seeds)
 
     def __getattribute__(self, item):

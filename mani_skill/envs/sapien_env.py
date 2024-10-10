@@ -158,6 +158,9 @@ class BaseEnv(gym.Env):
     """the recommended batched episode RNG to generate random numpy data consistently between single and parallel environments"""
     _episode_seed: List[int] = None
     """episode seed list for _episode_rng and _batched_episode_rng. _episode_rng uses _episode_seed[0]."""
+    _batched_rng_backend = "numpy:random_state"
+    """the backend to use for the batched RNG"""
+
 
     _parallel_in_single_scene: bool = False
     """whether all objects are placed in one scene for the purpose of rendering all objects together instead of in parallel"""
@@ -852,7 +855,7 @@ class BaseEnv(gym.Env):
         self._main_rng = np.random.RandomState(self._main_seed[0])
         if len(self._main_seed) == 1 and self.num_envs > 1:
             self._main_seed = self._main_seed + np.random.RandomState(self._main_seed[0]).randint(2**31, size=(self.num_envs - 1,)).tolist()
-        self._batched_main_rng = BatchedRNG(self._main_seed)
+        self._batched_main_rng = BatchedRNG(self._main_seed, backend=self._batched_rng_backend)
     def _set_episode_rng(self, seed: Union[None, list[int]]):
         """Set the random generator for current episode."""
         if isinstance(seed, int):
@@ -865,7 +868,7 @@ class BaseEnv(gym.Env):
             self._episode_seed = self._episode_seed + np.random.RandomState(self._episode_seed[0]).randint(2**31, size=(self.num_envs - 1,)).tolist()
         self._episode_rng = np.random.RandomState(self._episode_seed[0])
         # we keep _episode_rng for backwards compatibility but recommend using _batched_episode_rng for randomization
-        self._batched_episode_rng = BatchedRNG(self._episode_seed)
+        self._batched_episode_rng = BatchedRNG(self._episode_seed, backend=self._batched_rng_backend)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         """Initialize the episode, e.g., poses of actors and articulations, as well as task relevant data like randomizing
