@@ -4,7 +4,7 @@ from typing import Dict
 import numpy as np
 import sapien
 import torch
-from transforms3d.euler import euler2quat
+from transforms3d.euler import euler2quat, quat2euler
 from transforms3d.quaternions import quat2mat
 
 import mani_skill.envs.utils.randomization as randomization
@@ -40,7 +40,7 @@ class DrawTriangle(BaseEnv):
     """The brushes radius"""
     BRUSH_COLORS = [[0.8, 0.2, 0.2, 1]]
     """The colors of the brushes. If there is more than one color, each parallel environment will have a randomly sampled color."""
-    THRESHOLD = 0.1
+    THRESHOLD = 0.05
 
 
     SUPPORTED_REWARD_MODES = ["none"]
@@ -112,9 +112,9 @@ class DrawTriangle(BaseEnv):
             theta = pi/2
 
             # define centers and compute verticies, might need to adjust how centers are calculated or add a theta arg for variation
-            c1 = np.array([radius* math.cos(theta),radius* math.sin(theta), 0.01])
-            c2 = np.array([radius * math.cos(theta + (2* pi/3)), radius * math.sin(theta + (2* pi /3)), 0.01])
-            c3 = np.array([radius * math.cos((theta+ (4*pi/3))), radius * math.sin(theta + (4*pi/3)), 0.01])
+            c1 = np.array([radius* math.cos(theta),radius* math.sin(theta), 0.001])
+            c2 = np.array([radius * math.cos(theta + (2* pi/3)), radius * math.sin(theta + (2* pi /3)), 0.001])
+            c3 = np.array([radius * math.cos((theta+ (4*pi/3))), radius * math.sin(theta + (4*pi/3)), 0.001])
             self.original_verts = np.array([(c1 + c3) - c2 , (c1 + c2) - c3, (c2 + c3) - c1])
 
             builder = self.scene.create_actor_builder()
@@ -196,7 +196,7 @@ class DrawTriangle(BaseEnv):
                 self.dots.append(actor)
         self.goal_tri = create_goal_triangle(
             name="goal_tri",
-            base_color=np.array([255, 255, 255, 255/4]) / 255,
+            base_color=np.array([50, 50, 50, 200]) / 255,
         )
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
@@ -210,10 +210,11 @@ class DrawTriangle(BaseEnv):
             target_pos[:,:2] = torch.rand((b,2))*0.02-0.1
             target_pos[:,-1] = 0.01
             qs = randomization.random_quaternions(b, lock_x=True, lock_y=True)
-            mats = quaternion_to_matrix(qs)
-            self.goal_tri.set_pose(Pose.create_from_pq(p=target_pos, q=qs))
+            mats = quaternion_to_matrix(qs) 
+            self.goal_tri.set_pose(Pose.create_from_pq(p=target_pos, q= qs))
+
             self.vertices = torch.from_numpy(np.tile(self.original_verts, (b, 1,1)))  # b, 3, 3
-            self.vertices = torch.matmul(self.vertices.double(), mats.double())
+            self.vertices = (mats.double() @ self.vertices.transpose(-1,-2).double()).transpose(-1,-2) # apply rotation matrix
             self.vertices += target_pos
             
 
