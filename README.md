@@ -52,7 +52,7 @@ To get started, check out the quick start documentation: https://maniskill.readt
 
 We also have a quick start [colab notebook](https://colab.research.google.com/github/haosulab/ManiSkill/blob/main/examples/tutorials/1_quickstart.ipynb) that lets you try out GPU parallelized simulation without needing your own hardware. Everything is runnable on Colab free tier.
 
-For a full list of example scripts you can run see [the docs](https://maniskill.readthedocs.io/en/latest/user_guide/demos/index.html).
+For a full list of example scripts you can run, see [the docs](https://maniskill.readthedocs.io/en/latest/user_guide/demos/index.html).
 
 ## System Support
 
