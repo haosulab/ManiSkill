@@ -16,4 +16,4 @@ In your pull request, we ask you to do the following:
 
 
 
-There should be some automated test suites coming soon but for now maintainers will test the robot manually to see it generally works.
+There should be some automated test suites coming soon but for now, maintainers will test the robot manually to see if it generally works.
