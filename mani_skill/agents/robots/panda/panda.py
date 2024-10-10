@@ -168,6 +168,21 @@ class Panda(BaseAgent):
             self.arm_force_limit,
             use_delta=True,
         )
+        # arm level joint torque control
+        arm_joint_torque = TorqueJointControllerConfig(
+            joint_names=self.arm_joint_names,
+            lower=-self.arm_force_limit,
+            upper=self.arm_force_limit,
+            max_saturation=1.0,
+            use_delta=False,
+        )
+        arm_joint_torque_delta = TorqueJointControllerConfig(
+            joint_names=self.arm_joint_names,
+            lower=-self.arm_force_limit,
+            upper=self.arm_force_limit,
+            max_saturation=1.0,
+            use_delta=True,
+        )
 
         # -------------------------------------------------------------------------- #
         # Gripper
@@ -182,7 +197,6 @@ class Panda(BaseAgent):
             damping=self.gripper_damping,
             force_limit=self.gripper_force_limit,
         )
-
         controller_configs = dict(
             pd_joint_delta_pos=dict(
                 arm=arm_pd_joint_delta_pos, gripper=gripper_pd_joint_pos
@@ -211,6 +225,13 @@ class Panda(BaseAgent):
             pd_joint_delta_pos_vel=dict(
                 arm=arm_pd_joint_delta_pos_vel, gripper=gripper_pd_joint_pos
             ),
+            # joint torque controller
+            joint_torque=dict(
+                arm=arm_joint_torque, gripper=gripper_pd_joint_pos
+            )
+            joint_torque_delta=dict(
+                arm=arm_joint_torque_delta, gripper=gripper_pd_joint_pos
+            )
         )
 
         # Make a deepcopy in case users modify any config
