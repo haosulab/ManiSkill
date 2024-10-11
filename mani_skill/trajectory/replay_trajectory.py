@@ -18,7 +18,7 @@ from tqdm.auto import tqdm
 
 import mani_skill.envs
 from mani_skill.trajectory import utils as trajectory_utils
-from mani_skill.trajectory.merge_trajectory import merge_h5
+from mani_skill.trajectory.merge_trajectory import merge_trajectories
 from mani_skill.trajectory.utils.actions import conversion as action_conversion
 from mani_skill.utils import common, io_utils, wrappers
 
@@ -320,7 +320,7 @@ def main(args):
         if args.save_traj:
             # A hack to find the path
             output_path = res[0][: -len("0.h5")] + "h5"
-            merge_h5(output_path, res)
+            merge_trajectories(output_path, res)
             for h5_path in res:
                 tqdm.write(f"Remove {h5_path}")
                 os.remove(h5_path)

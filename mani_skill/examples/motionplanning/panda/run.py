@@ -8,7 +8,7 @@ import numpy as np
 from tqdm import tqdm
 import os.path as osp
 from mani_skill.utils.wrappers.record import RecordEpisode
-from mani_skill.trajectory.merge_trajectory import merge_h5
+from mani_skill.trajectory.merge_trajectory import merge_trajectories
 from mani_skill.examples.motionplanning.panda.solutions import solvePushCube, solvePickCube, solveStackCube, solvePegInsertionSide, solvePlugCharger
 MP_SOLUTIONS = {
     "PickCube-v1": solvePickCube,
@@ -122,7 +122,7 @@ def main(args):
         pool.close()
         # Merge trajectory files
         output_path = res[0][: -len("0.h5")] + "h5"
-        merge_h5(output_path, res)
+        merge_trajectories(output_path, res)
         for h5_path in res:
             tqdm.write(f"Remove {h5_path}")
             os.remove(h5_path)
