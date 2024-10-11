@@ -94,7 +94,7 @@ env_state_i = trajectory_utils.index_dict(env_states, i)
 # now env_state_i is the same as the data env.get_state_dict() returned at timestep i
 ```
 
-These tools are also used in the PyTorch Dataset implementation we provide which is explained the nect section
+These tools are also used in the PyTorch Dataset implementation we provide which is explained in the next section
 
 ## Loading Trajectory Datasets
 
