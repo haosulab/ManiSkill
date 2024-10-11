@@ -23,7 +23,7 @@ docker run --rm -it --gpus all maniskill/base python -m mani_skill.examples.demo
 docker run --rm -it --gpus all maniskill/base python -m mani_skill.examples.benchmarking.gpu_sim
 ```
 
-Note that inside a docker image you generally cannot render a GUI to see the results. You can still record videos and the demo scripts have options to record videos insteading of rendering a GUI.
+Note that inside a docker image you generally cannot render a GUI to see the results. You can still record videos and the demo scripts have options to record videos instead of rendering a GUI.
 
 <!-- 
 ## Run GUI Applications
