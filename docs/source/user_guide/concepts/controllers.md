@@ -122,7 +122,7 @@ The same as PD EE Pose controller but there is no rotation control and actions a
 
 ## Deep Dive Example of the Franka Emika Panda Robot Controllers:
 
-To help detail how controllers work in detail, below we explain with formulae how the controllers are controlling the root in simulation.
+To help detail how controllers work in detail, below we explain with formulae how the controllers are controlling the robot in simulation.
 
 ### Terminology
 
