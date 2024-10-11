@@ -1,10 +1,10 @@
 # Performance Benchmarking
 
-This page documents code and results of benchmarking various robotics simulators on a number of dimensions. It is still a WIP as we write more fair benchmarking environments for other simulators. Given the number of factors that impact simulation speed and rendering (e.g number of objects, geometry complexity etc.) trends that appear in results in this page may not necesarily be the case on some environments.
+This page documents code and results of benchmarking various robotics simulators on a number of dimensions. It is still a WIP as we write more fair benchmarking environments for other simulators. Given the number of factors that impact simulation speed and rendering (e.g number of objects, geometry complexity etc.) trends that appear in results in this page may not necessarily be the case on some environments.
 
 Currently we just compare ManiSkill and [Isaac Lab](https://github.com/isaac-sim/IsaacLab) on one task, Cartpole Balancing (control). For details on benchmarking methodology see [this section](#benchmarking-detailsmethodology)
 
-Raw benchmark results can be read from the .csv files in the [results folder on GitHub](https://github.com/haosulab/ManiSkill/blob/main/docs/source/user_guide/additional_resources/benchmarking_results). There are also plotted figures in that folder. Below we show a selection of some of the figures/results from testing on a RTX 4090. The figures are also sometimes annotated with the GPU memory usage in GB. 
+Raw benchmark results can be read from the .csv files in the [results folder on GitHub](https://github.com/haosulab/ManiSkill/blob/main/docs/source/user_guide/additional_resources/benchmarking_results). There are also plotted figures in that folder. Below we show a selection of some of the figures/results from testing on an RTX 4090. The figures are also sometimes annotated with the GPU memory usage in GB. 
 
 Overall, ManiSkill is faster than Isaac Lab on the majority of settings and is much more GPU memory efficient, especially for realistic camera setups. GPU memory efficiency is particularly important for machine learning methods like RL which rely on large replay buffers on the GPU. However we note that this is not a pure apples-to-apples comparison due to differences in rendering techniques and so we show a qualitative comparison of the same task in Isaac Lab and ManiSkill. See the note below for more details.
 
