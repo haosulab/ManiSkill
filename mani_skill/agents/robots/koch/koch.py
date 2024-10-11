@@ -28,7 +28,8 @@ class Koch(BaseAgent):
 
     keyframes = dict(
         rest=Keyframe(
-            qpos=np.array([0, -2.255, 3.04, -0.196, 0, -1]),
+            # resting qpos gathered from datasets
+            qpos=np.array([0, 2.2365, 3.0879, -0.2224, 0, 0.6044]),
             pose=sapien.Pose(),
         )
     )

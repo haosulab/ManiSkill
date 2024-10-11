@@ -515,7 +515,7 @@
     <child
       link="link_6" />
     <axis
-      xyz="0 0 1" />
+      xyz="0 0 -1" />
     <limit lower="-3.14159" upper="3.14159"/>
   </joint>
   <link
