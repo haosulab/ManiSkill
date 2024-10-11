@@ -113,7 +113,9 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
     return output_h5_path
 
 def main(args):
-    if args.num_procs > 1:
+    if args.num_procs > 1 and args.num_procs < args.num_traj:
+        if args.num_traj < args.num_procs:
+            raise ValueError("Number of trajectories should be greater than or equal to number of processes")
         args.num_traj = args.num_traj // args.num_procs
         seeds = [*range(0, args.num_procs * args.num_traj, args.num_traj)]
         pool = mp.Pool(args.num_procs)
