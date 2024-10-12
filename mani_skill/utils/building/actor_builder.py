@@ -187,7 +187,9 @@ class ActorBuilder(SAPIENActorBuilder):
 
         num_actors = self.scene.num_envs
         if self.scene_idxs is not None:
-            pass
+            self.scene_idxs = common.to_tensor(
+                self.scene_idxs, device=self.scene.device
+            ).to(torch.int)
         else:
             self.scene_idxs = torch.arange((self.scene.num_envs), dtype=int)
         num_actors = len(self.scene_idxs)

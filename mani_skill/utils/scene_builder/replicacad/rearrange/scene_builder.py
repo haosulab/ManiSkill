@@ -258,7 +258,9 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
             [isinstance(ici, int) for ici in init_config_idxs]
         ), f"init_config_idxs should be list of ints, instead got {init_config_idxs}"
 
-        init_config_idxs: torch.Tensor = common.to_tensor(init_config_idxs)
+        init_config_idxs: torch.Tensor = common.to_tensor(
+            init_config_idxs, device=self.env.device
+        ).to(torch.int)
         if env_idx.numel() != init_config_idxs.numel():
             init_config_idxs = init_config_idxs[env_idx]
 

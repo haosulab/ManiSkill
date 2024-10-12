@@ -1,6 +1,0 @@
-{
-    "exclude": [
-        "**/__pycache__",
-        "mani_skill/assets",
-    ],
-}

@@ -1,0 +1,168 @@
+============================= test session starts ==============================
+platform linux -- Python 3.9.20, pytest-8.3.3, pluggy-1.5.0
+rootdir: /home/arths/coding/sulab/ManiSkill
+configfile: pyproject.toml
+plugins: xdist-3.6.1, forked-1.6.0
+created: 6/6 workers
+6 workers [372 items]
+
+...............................F........................................ [ 19%]
+..............................................................s......... [ 38%]
+........................................................................ [ 58%]
+..................................s..................................... [ 77%]
+........................................................................ [ 96%]
+........F.F.                                                             [100%]
+=================================== FAILURES ===================================
+___________________________ test_download_asset_all ____________________________
+[gw0] linux -- Python 3.9.20 /home/arths/mambaforge/envs/ms/bin/python3.9
+@pytest.mark.slow
+    def test_download_asset_all():
+        from mani_skill.utils.download_asset import main, parse_args
+    
+>       main(parse_args(args=["all", "-y", "--quiet", "-o", "/tmp/ms2test"]))
+
+tests/test_downloads.py:10: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+args = Namespace(uid='all', list=None, quiet=True, non_interactive=True, output_dir='/tmp/ms2test')
+
+    def main(args):
+        verbose = not args.quiet
+    
+        if args.list:
+            downloadable_ids = []
+            for k, v in assets.DATA_SOURCES.items():
+                if v.source_type == args.list:
+                    downloadable_ids.append(k)
+            print(f"For category {args.list} the following asset UIDs are available")
+            print(downloadable_ids)
+            exit()
+        if args.uid == "":
+            print("Available asset (group) uids:")
+            print(list(assets.DATA_GROUPS.keys()))
+            return
+        if args.uid == "all":
+            if verbose:
+                print("All assets will be downloaded. This may take a while.")
+            uids = list(assets.DATA_SOURCES.keys())
+            show_progress = True
+        elif args.uid in assets.DATA_GROUPS:
+            uids = assets.expand_data_group_into_individual_data_source_ids(args.uid)
+            show_progress = True
+        elif args.uid in assets.DATA_SOURCES:
+            uids = [args.uid]
+            show_progress = False
+        else:
+            raise KeyError("{} not found.".format(args.uid))
+    
+        for i, uid in enumerate(uids):
+            if show_progress and verbose:
+                print("Downloading assets for {}: {}/{}".format(args.uid, i + 1, len(uids)))
+    
+            kwargs = dict()
+            kwargs["verbose"] = verbose
+            kwargs["non_interactive"] = args.non_interactive
+            if args.output_dir is not None:
+                kwargs["output_dir"] = args.output_dir
+>           output_path = download(assets.DATA_SOURCES[uid], **kwargs)
+E           TypeError: download() got an unexpected keyword argument 'output_dir'
+
+mani_skill/utils/download_asset.py:228: TypeError
+_____________________ test_visualencoders_gpu[PickCube-v1] _____________________
+[gw0] linux -- Python 3.9.20 /home/arths/mambaforge/envs/ms/bin/python3.9
+env_id = 'PickCube-v1'
+
+    @pytest.mark.gpu_sim
+    @pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS[:1])
+    def test_visualencoders_gpu(env_id):
+        env = gym.make(
+            env_id,
+            obs_mode="rgbd",
+            render_mode="rgb_array",
+            max_episode_steps=10,
+            num_envs=16,
+            sim_config=LOW_MEM_SIM_CONFIG,
+        )
+        assert (
+            "embedding" not in env.observation_space.keys()
+            and "sensor_data" in env.observation_space.keys()
+        )
+>       env = VisualEncoderWrapper(env, encoder="r3m")
+
+tests/test_wrappers.py:211: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <[RecursionError('maximum recursion depth exceeded while getting the str of an object') raised in repr()] VisualEncoderWrapper object at 0x77ddb81c5df0>
+env = <TimeLimitWrapper<OrderEnforcing<PickCubeEnv<PickCube-v1>>>>
+encoder = 'r3m', encoder_config = {}
+
+    def __init__(self, env, encoder: Literal["r3m"], encoder_config=dict()):
+        self.base_env: BaseEnv = env.unwrapped
+        assert encoder == "r3m", "Only encoder='r3m' is supported at the moment"
+        if encoder == "r3m":
+            assert self.base_env.obs_mode in [
+                "rgbd",
+                "rgb",
+            ], "r3m encoder requires obs_mode to be set to rgbd or rgb"
+            import torchvision.transforms as T
+>           from r3m import load_r3m
+E           ModuleNotFoundError: No module named 'r3m'
+
+mani_skill/utils/wrappers/visual_encoders.py:20: ModuleNotFoundError
+----------------------------- Captured stderr call -----------------------------
+[33;1m2024-10-11 22:31:55,828 - mani_skill  - WARNING - initial pose not set for static object scenes-[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]_ground, setting to default pose q=[1,0,0,0], p=[0,0,0][0m
+_________________ test_visualencoder_flatten_gpu[PickCube-v1] __________________
+[gw1] linux -- Python 3.9.20 /home/arths/mambaforge/envs/ms/bin/python3.9
+env_id = 'PickCube-v1'
+
+    @pytest.mark.gpu_sim
+    @pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS[:1])
+    def test_visualencoder_flatten_gpu(env_id):
+        env = gym.make(
+            env_id,
+            obs_mode="rgbd",
+            render_mode="rgb_array",
+            max_episode_steps=10,
+            num_envs=16,
+            sim_config=LOW_MEM_SIM_CONFIG,
+        )
+>       env = VisualEncoderWrapper(env, encoder="r3m")
+
+tests/test_wrappers.py:243: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <[RecursionError('maximum recursion depth exceeded while getting the str of an object') raised in repr()] VisualEncoderWrapper object at 0x76a0442cfac0>
+env = <TimeLimitWrapper<OrderEnforcing<PickCubeEnv<PickCube-v1>>>>
+encoder = 'r3m', encoder_config = {}
+
+    def __init__(self, env, encoder: Literal["r3m"], encoder_config=dict()):
+        self.base_env: BaseEnv = env.unwrapped
+        assert encoder == "r3m", "Only encoder='r3m' is supported at the moment"
+        if encoder == "r3m":
+            assert self.base_env.obs_mode in [
+                "rgbd",
+                "rgb",
+            ], "r3m encoder requires obs_mode to be set to rgbd or rgb"
+            import torchvision.transforms as T
+>           from r3m import load_r3m
+E           ModuleNotFoundError: No module named 'r3m'
+
+mani_skill/utils/wrappers/visual_encoders.py:20: ModuleNotFoundError
+----------------------------- Captured stderr call -----------------------------
+[33;1m2024-10-11 22:31:56,570 - mani_skill  - WARNING - initial pose not set for static object scenes-[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]_ground, setting to default pose q=[1,0,0,0], p=[0,0,0][0m
+=============================== warnings summary ===============================
+../../../mambaforge/envs/ms/lib/python3.9/site-packages/sapien/__init__.py:2
+../../../mambaforge/envs/ms/lib/python3.9/site-packages/sapien/__init__.py:2
+../../../mambaforge/envs/ms/lib/python3.9/site-packages/sapien/__init__.py:2
+../../../mambaforge/envs/ms/lib/python3.9/site-packages/sapien/__init__.py:2
+../../../mambaforge/envs/ms/lib/python3.9/site-packages/sapien/__init__.py:2
+../../../mambaforge/envs/ms/lib/python3.9/site-packages/sapien/__init__.py:2
+  /home/arths/mambaforge/envs/ms/lib/python3.9/site-packages/sapien/__init__.py:2: DeprecationWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html
+    import pkg_resources
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_downloads.py::test_download_asset_all
+FAILED tests/test_wrappers.py::test_visualencoders_gpu[PickCube-v1]
+FAILED tests/test_wrappers.py::test_visualencoder_flatten_gpu[PickCube-v1]
+======= 3 failed, 367 passed, 2 skipped, 6 warnings in 189.28s (0:03:09) =======
