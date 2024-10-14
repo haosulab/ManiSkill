@@ -1,24 +1,25 @@
+import math
 import random
 from typing import Dict
 
+import mani_skill.envs.utils.randomization as randomization
 import numpy as np
 import sapien
 import torch
-from transforms3d.euler import euler2quat, quat2euler
-from transforms3d.quaternions import quat2mat
-
-import mani_skill.envs.utils.randomization as randomization
-from mani_skill.utils.geometry.rotation_conversions import quaternion_to_matrix
 from mani_skill.agents.robots.panda.panda_stick import PandaStick
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
+from mani_skill.utils.geometry.rotation_conversions import quaternion_to_matrix
 from mani_skill.utils.registration import register_env
-from mani_skill.utils.scene_builder.table.scene_builder import TableSceneBuilder
+from mani_skill.utils.scene_builder.table.scene_builder import \
+    TableSceneBuilder
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import SceneConfig, SimConfig
-import math
+from transforms3d.euler import euler2quat, quat2euler
+from transforms3d.quaternions import quat2mat
+
 
 @register_env("DrawTriangle-v1", max_episode_steps=1000)
 class DrawTriangle(BaseEnv):
@@ -42,10 +43,9 @@ class DrawTriangle(BaseEnv):
     """The colors of the brushes. If there is more than one color, each parallel environment will have a randomly sampled color."""
     THRESHOLD = 0.05
 
-
     SUPPORTED_REWARD_MODES = ["none"]
 
-    SUPPORTED_ROBOTS: ["panda_stick"] # type: ignore
+    SUPPORTED_ROBOTS: ["panda_stick"]  # type: ignore
     agent: PandaStick
 
     def __init__(self, *args, robot_uids="panda_stick", **kwargs):
@@ -94,31 +94,44 @@ class DrawTriangle(BaseEnv):
         )
 
     def _load_scene(self, options: dict):
-        
+
         self.table_scene = TableSceneBuilder(self, robot_init_qpos_noise=0)
         self.table_scene.build()
+
         def create_goal_triangle(name="tri", base_color=None):
-           
+
             box1_half_w = 0.3 / 2
             box1_half_h = 0.01 / 2
-            half_thickness = 0.04 / 2 
+            half_thickness = 0.04 / 2
 
-            # change, rn too lazy to import pi correctly
-            pi = 3.1415926
+            radius = (box1_half_w) / math.sqrt(3)
 
-            # approx div by sqrt(3)
-            radius = (box1_half_w) / 1.73205080757
-
-            theta = pi/2
+            theta = np.pi / 2
 
             # define centers and compute verticies, might need to adjust how centers are calculated or add a theta arg for variation
-            c1 = np.array([radius* math.cos(theta),radius* math.sin(theta), 0.001])
-            c2 = np.array([radius * math.cos(theta + (2* pi/3)), radius * math.sin(theta + (2* pi /3)), 0.001])
-            c3 = np.array([radius * math.cos((theta+ (4*pi/3))), radius * math.sin(theta + (4*pi/3)), 0.001])
-            self.original_verts = np.array([(c1 + c3) - c2 , (c1 + c2) - c3, (c2 + c3) - c1])
+            c1 = np.array([radius * math.cos(theta), radius * math.sin(theta), 0.001])
+            c2 = np.array(
+                [
+                    radius * math.cos(theta + (2 * np.pi / 3)),
+                    radius * math.sin(theta + (2 * np.pi / 3)),
+                    0.001,
+                ]
+            )
+            c3 = np.array(
+                [
+                    radius * math.cos((theta + (4 * np.pi / 3))),
+                    radius * math.sin(theta + (4 * np.pi / 3)),
+                    0.001,
+                ]
+            )
+            self.original_verts = np.array(
+                [(c1 + c3) - c2, (c1 + c2) - c3, (c2 + c3) - c1]
+            )
 
             builder = self.scene.create_actor_builder()
-            first_block_pose = sapien.Pose(list(c1), euler2quat(0,0,theta - (pi/2)))
+            first_block_pose = sapien.Pose(
+                list(c1), euler2quat(0, 0, theta - (np.pi / 2))
+            )
             first_block_size = [box1_half_w, box1_half_h, half_thickness]
             builder.add_box_visual(
                 pose=first_block_pose,
@@ -127,10 +140,12 @@ class DrawTriangle(BaseEnv):
                     base_color=base_color,
                 ),
             )
-            
-            second_block_pose = sapien.Pose(list(c2), euler2quat(0,0,theta-(5*pi/6)))
+
+            second_block_pose = sapien.Pose(
+                list(c2), euler2quat(0, 0, theta - (5 * np.pi / 6))
+            )
             second_block_size = [box1_half_w, box1_half_h, half_thickness]
-                # builder.add_box_collision(pose=second_block_pose, half_size=second_block_size)
+            # builder.add_box_collision(pose=second_block_pose, half_size=second_block_size)
             builder.add_box_visual(
                 pose=second_block_pose,
                 half_size=second_block_size,
@@ -139,9 +154,11 @@ class DrawTriangle(BaseEnv):
                 ),
             )
 
-            third_block_pose = sapien.Pose(list(c3),euler2quat(0,0,theta -(pi/6)))
+            third_block_pose = sapien.Pose(
+                list(c3), euler2quat(0, 0, theta - (np.pi / 6))
+            )
             third_block_size = [box1_half_w, box1_half_h, half_thickness]
-                # builder.add_box_collision(pose=second_block_pose, half_size=second_block_size)
+            # builder.add_box_collision(pose=second_block_pose, half_size=second_block_size)
             builder.add_box_visual(
                 pose=third_block_pose,
                 half_size=third_block_size,
@@ -150,8 +167,7 @@ class DrawTriangle(BaseEnv):
                 ),
             )
             return builder.build_kinematic(name=name)
-        
-       
+
         # build a white canvas on the table
         self.canvas = self.scene.create_actor_builder()
         self.canvas.add_box_visual(
@@ -207,18 +223,25 @@ class DrawTriangle(BaseEnv):
             self.table_scene.initialize(env_idx)
             target_pos = torch.zeros((b, 3))
 
-            target_pos[:,:2] = torch.rand((b,2))*0.02-0.1
-            target_pos[:,-1] = 0.01
+            target_pos[:, :2] = torch.rand((b, 2)) * 0.02 - 0.1
+            target_pos[:, -1] = 0.01
             qs = randomization.random_quaternions(b, lock_x=True, lock_y=True)
-            mats = quaternion_to_matrix(qs) 
-            self.goal_tri.set_pose(Pose.create_from_pq(p=target_pos, q= qs))
+            mats = quaternion_to_matrix(qs)
+            self.goal_tri.set_pose(Pose.create_from_pq(p=target_pos, q=qs))
 
-            self.vertices = torch.from_numpy(np.tile(self.original_verts, (b, 1,1)))  # b, 3, 3
-            self.vertices = (mats.double() @ self.vertices.transpose(-1,-2).double()).transpose(-1,-2) # apply rotation matrix
+            self.vertices = torch.from_numpy(
+                np.tile(self.original_verts, (b, 1, 1))
+            )  # b, 3, 3
+            self.vertices = (
+                mats.double() @ self.vertices.transpose(-1, -2).double()
+            ).transpose(
+                -1, -2
+            )  # apply rotation matrix
             self.vertices += target_pos
-            
 
-            self.triangles = self.generate_triangle_with_points(100, self.vertices[:,:,:-1]) 
+            self.triangles = self.generate_triangle_with_points(
+                100, self.vertices[:, :, :-1]
+            )
 
             for dot in self.dots:
                 # initially spawn dots in the table so they aren't seen
@@ -250,13 +273,13 @@ class DrawTriangle(BaseEnv):
         )
         # move the next unused dot to the robot's brush position. All unused dots are initialized inside the table so they aren't visible
         new_dot_pos = Pose.create_from_pq(robot_brush_pos, euler2quat(0, np.pi / 2, 0))
-        self.dots[self.draw_step].set_pose(
-            new_dot_pos
-        )
-        if new_dot_pos.get_p()[:,-1] > 0:
+        self.dots[self.draw_step].set_pose(new_dot_pos)
+        if new_dot_pos.get_p()[:, -1] > 0:
             if self.dot_pos == None:
                 self.dot_pos = new_dot_pos.get_p()[:, None, :]
-            self.dot_pos = torch.cat((self.dot_pos, new_dot_pos.get_p()[:, None,: ]), dim=1)
+            self.dot_pos = torch.cat(
+                (self.dot_pos, new_dot_pos.get_p()[:, None, :]), dim=1
+            )
 
         self.draw_step += 1
 
@@ -266,7 +289,7 @@ class DrawTriangle(BaseEnv):
 
     def evaluate(self):
         out = self.success_check()
-        return { "success" : out}
+        return {"success": out}
 
     def _get_obs_extra(self, info: Dict):
         return dict(
@@ -275,31 +298,32 @@ class DrawTriangle(BaseEnv):
 
     def generate_triangle_with_points(self, n, vertices):
         batch_size = vertices.shape[0]
-    
+
         all_points = []
 
         for i in range(vertices.shape[1]):
-            start_vertex = vertices[:, i, :] 
-            end_vertex = vertices[:, (i+1) % vertices.shape[1], :] 
-            t = torch.linspace(0, 1, n+2, device=vertices.device)[:-1]  
-            t = t.view(1, -1, 1).repeat(batch_size, 1, 2) 
-            intermediate_points = start_vertex.unsqueeze(1) * (1 - t) + end_vertex.unsqueeze(1) * t 
+            start_vertex = vertices[:, i, :]
+            end_vertex = vertices[:, (i + 1) % vertices.shape[1], :]
+            t = torch.linspace(0, 1, n + 2, device=vertices.device)[:-1]
+            t = t.view(1, -1, 1).repeat(batch_size, 1, 2)
+            intermediate_points = (
+                start_vertex.unsqueeze(1) * (1 - t) + end_vertex.unsqueeze(1) * t
+            )
             all_points.append(intermediate_points)
-        all_points = torch.cat(all_points, dim=1) 
+        all_points = torch.cat(all_points, dim=1)
 
         return all_points
 
     def success_check(self):
         if self.dot_pos == None or len(self.dot_pos) == 0:
             return torch.Tensor([False]).to(bool)
-        drawn_pts = self.dot_pos[:,:,:-1]
+        drawn_pts = self.dot_pos[:, :, :-1]
 
         distance_matrix = torch.sqrt(
             torch.sum(
-                (drawn_pts[:, :, None, :] - self.triangles[:, None, :, :]) ** 2,
-                axis=-1
+                (drawn_pts[:, :, None, :] - self.triangles[:, None, :, :]) ** 2, axis=-1
             )
         )
 
-        Y_closeness = torch.min(distance_matrix, dim = 1).values < self.THRESHOLD
+        Y_closeness = torch.min(distance_matrix, dim=1).values < self.THRESHOLD
         return torch.Tensor([torch.all(Y_closeness)]).to(bool)
