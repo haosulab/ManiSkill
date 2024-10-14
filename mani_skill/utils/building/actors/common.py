@@ -2,12 +2,15 @@
 Common utilities for adding primitive prebuilt shapes to a scene
 """
 
+from typing import Optional, Union
+
 import numpy as np
 import sapien
 import sapien.render
 
 from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.utils.building.actor_builder import ActorBuilder
+from mani_skill.utils.structs.pose import Pose
 
 
 def _build_by_type(builder: ActorBuilder, name, body_type):
@@ -52,6 +55,7 @@ def build_box(
     name: str,
     body_type: str = "dynamic",
     add_collision: bool = True,
+    initial_pose: Optional[Union[Pose, sapien.Pose]] = None,
 ):
     builder = scene.create_actor_builder()
     if add_collision:
@@ -64,6 +68,7 @@ def build_box(
             base_color=color,
         ),
     )
+    builder.set_initial_pose(initial_pose)
     return _build_by_type(builder, name, body_type)
 
 
