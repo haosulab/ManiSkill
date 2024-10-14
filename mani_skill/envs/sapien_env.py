@@ -819,9 +819,11 @@ class BaseEnv(gym.Env):
         else:
             self.agent.controller.reset()
 
-        obs = self.get_obs()
+        info = self.get_info()
+        obs = self.get_obs(info)
 
-        return obs, dict(reconfigure=reconfigure)
+        info["reconfigure"] = reconfigure
+        return obs, info
 
     def _set_main_rng(self, seed):
         """Set the main random generator which is only used to set the seed of the episode RNG to improve reproducibility.

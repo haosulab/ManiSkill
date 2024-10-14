@@ -36,7 +36,11 @@ class URDFLoader(SapienURDFLoader):
                     l.collision_groups[2] |= 1 << 29
         for i, b in enumerate(actor_builders):
             b.set_name(f"{self.name}-actor-{i}")
-        return articulation_builders, actor_builders, cameras
+        return dict(
+            articulation_builders=articulation_builders,
+            actor_builders=actor_builders,
+            cameras=cameras,
+        )
 
     def load_file_as_articulation_builder(
         self, urdf_file, srdf_file=None, package_dir=None
@@ -65,9 +69,10 @@ class URDFLoader(SapienURDFLoader):
         """
         if name is not None:
             self.name = name
-        articulation_builders, actor_builders, cameras = self.parse(
-            urdf_file, srdf_file, package_dir
-        )
+        _parsed_urdf_data = self.parse(urdf_file, srdf_file, package_dir)
+        articulation_builders = _parsed_urdf_data["articulation_builders"]
+        actor_builders = _parsed_urdf_data["actor_builders"]
+        cameras = _parsed_urdf_data["cameras"]
 
         if len(articulation_builders) > 1 or len(actor_builders) != 0:
             raise Exception(

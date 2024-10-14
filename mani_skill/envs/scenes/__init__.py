@@ -9,6 +9,7 @@ from mani_skill.utils.scene_builder.registration import REGISTERED_SCENE_BUILDER
 from mani_skill.utils.scene_builder.replicacad.scene_builder import (
     ReplicaCADSceneBuilder,
 )
+from mani_skill.utils.scene_builder.replicacad.rearrange import *
 
 from .base_env import SceneManipulationEnv
 

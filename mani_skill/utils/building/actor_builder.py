@@ -9,12 +9,16 @@ import torch
 from sapien import ActorBuilder as SAPIENActorBuilder
 from sapien.wrapper.coacd import do_coacd
 
+from mani_skill import logger
 from mani_skill.utils import common
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.pose import Pose, to_sapien_pose
 
 if TYPE_CHECKING:
     from mani_skill.envs.scene import ManiSkillScene
+
+SPAWN_SPACING = 5
+SPAWN_START_GAP = 10
 
 
 class ActorBuilder(SAPIENActorBuilder):
@@ -27,7 +31,7 @@ class ActorBuilder(SAPIENActorBuilder):
 
     def __init__(self):
         super().__init__()
-        self.initial_pose = Pose.create(self.initial_pose)
+        self.initial_pose = None
         self.scene_idxs = None
         self._allow_overlapping_plane_collisions = False
         self._plane_collision_poses = set()
@@ -46,7 +50,8 @@ class ActorBuilder(SAPIENActorBuilder):
 
     def set_allow_overlapping_plane_collisions(self, v: bool):
         """Set whether or not to permit allowing overlapping plane collisions. In general if you are creating an Actor with a plane collision that is parallelized across multiple
-        sub-scenes, you only need one of those collision shapes. If you add multiple, it will cause the simulation to slow down significantly. By default this is set to False"""
+        sub-scenes, you only need one of those collision shapes. If you add multiple, it will cause the simulation to slow down significantly. By default this is set to False
+        """
         self._allow_overlapping_plane_collisions = v
         return self
 
@@ -182,14 +187,39 @@ class ActorBuilder(SAPIENActorBuilder):
 
         num_actors = self.scene.num_envs
         if self.scene_idxs is not None:
-            pass
+            self.scene_idxs = common.to_tensor(
+                self.scene_idxs, device=self.scene.device
+            ).to(torch.int)
         else:
             self.scene_idxs = torch.arange((self.scene.num_envs), dtype=int)
         num_actors = len(self.scene_idxs)
-        initial_pose = Pose.create(self.initial_pose)
-        initial_pose_b = initial_pose.raw_pose.shape[0]
+
+        if self.initial_pose is None:
+            if self.physx_body_type == "static":
+                logger.warn(
+                    f"initial pose not set for static object scenes-{self.scene_idxs.tolist()}_{self.name}, setting to default pose q=[1,0,0,0], p=[0,0,0]"
+                )
+                self.initial_pose = Pose.create(sapien.Pose())
+            else:
+                initial_ps = []
+                for scene_idx in self.scene_idxs:
+                    if self.scene.parallel_in_single_scene:
+                        sub_scene = self.scene.sub_scenes[0]
+                    else:
+                        sub_scene = self.scene.sub_scenes[scene_idx]
+                    entity_num = len(sub_scene.entities)
+                    # z_height starting at 100 (room for backgrounds, etc)
+                    z_height = SPAWN_SPACING * (entity_num // 2 + 1) + SPAWN_START_GAP
+                    # zdir, switch between -1 and 1 to flip above and below origin
+                    z_height *= 2 * (entity_num % 2) - 1
+                    initial_ps.append([0, 0, z_height])
+                self.initial_pose = Pose.create_from_pq(p=initial_ps)
+        else:
+            self.initial_pose = Pose.create(self.initial_pose)
+
+        initial_pose_b = self.initial_pose.raw_pose.shape[0]
         assert initial_pose_b == 1 or initial_pose_b == num_actors
-        initial_pose_np = common.to_numpy(initial_pose.raw_pose)
+        initial_pose_np = common.to_numpy(self.initial_pose.raw_pose)
         if initial_pose_b == 1:
             initial_pose_np = initial_pose_np.repeat(num_actors, axis=0)
         if self.scene.parallel_in_single_scene:
@@ -219,9 +249,9 @@ class ActorBuilder(SAPIENActorBuilder):
             and physx.is_gpu_enabled()
         ):
             actor.initial_pose = Pose.create(
-                initial_pose.raw_pose.repeat(num_actors, 1)
+                self.initial_pose.raw_pose.repeat(num_actors, 1)
             )
         else:
-            actor.initial_pose = initial_pose
+            actor.initial_pose = self.initial_pose
         self.scene.actors[self.name] = actor
         return actor
