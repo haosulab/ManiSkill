@@ -47,7 +47,7 @@ class PushCubeEnv(BaseEnv):
 ```
 ## Loading
 
-At the start of any task, you must load in all objects (robots, assets, articulations, lighting etc.) into each parallel environment, also known as a sub-scene. This is also known as **reconfiguration** and generally only ever occurs once. Loading these objects is done in the `_load_scene` function of your custom task class. The objective is to simply load objects in, and nothing else. For GPU simulation at this stage you cannot change object states (like pose, qpos), only initial poses can be modified. Changing/randomizing states is done in the section on [episode initialization / randomization](#episode-initialization--randomization).
+At the start of any task, you must load in all objects (robots, assets, articulations, lighting etc.) into each parallel environment, also known as a sub-scene. This is also known as **reconfiguration** and generally only ever occurs once. Loading these objects is done in the `_load_scene` function of your custom task class. The objective is to simply load objects in with initial poses that ensure they don't collide on the first step, and nothing else. For GPU simulation at this stage you cannot change any object states (like velocities, qpos), only initial poses can be modified. Changing/randomizing states is done in the section on [episode initialization / randomization](#episode-initialization--randomization).
 
 Building objects in ManiSkill is nearly the exact same as it is in SAPIEN. You create an `ActorBuilder` via `self.scene.create_actor_builder` and via the actor builder add visual and collision shapes. Visual shapes only affect visual rendering processes while collision shapes affect the physical simulation. ManiSkill further will create the actor for you in every sub-scene (unless you use [scene-masks/scene-idxs](./advanced.md#scene-masks), a more advanced feature).
 
@@ -96,9 +96,8 @@ class PushCubeEnv(BaseEnv):
                 base_color=[1, 0, 0, 1],
             ),
         )
-        # set an initial pose for the cube so that it initially spawns
-        # where nothing else can collide with it. We will randomize this later
-        builder.initial_pose = sapien.Pose(p=[1, 1, 1], q=[1, 0, 0, 0])
+        # optionally set an initial pose so that it initially spawns there
+        # self.builder.initial_pose = sapien.Pose(p=[1, 1, 1], q=[1, 0, 0, 0])
         self.obj = builder.build(name="cube")
         # PushCube has some other code after this removed for brevity that 
         # spawns a goal object (a red/white target) stored at self.goal_region
@@ -110,7 +109,7 @@ You can build a **kinematic** actor with `builder.build_kinematic` and a **stati
 - Kinematic actors can have their pose changed at any time. Static actors must have an initial pose set before calling `build_static` via `builder.initial_pose = ...`
 - Use static instead of kinematic whenever possible as it saves a lot of GPU memory. Static objects must have an initial pose set before building via `builder.initial_pose = ...`.
 
-You may notice that an initial pose is arbitrarily set for the cube. We **strongly recommend** you set initial poses of any objects created such that they do not collide if they were placed at those poses. This helps ensure the GPU simulation is stable on the first step of the environment and can be necessary to do even if you are setting object poses during episode initialization.
+Note that by default, if an object does not have an initial pose set in its builder, ManiSkill tries its best to choose initial poses of objects such that they are unlikely to collide with each other during GPU simulation initialization (which uses the initial poses of the builders). These poses are definitely not what you want for task initialization but need to be far apart initially to ensure stable GPU simulation.
 
 
 We also provide some functions that build some more complex shapes that you can use by importing the following:
