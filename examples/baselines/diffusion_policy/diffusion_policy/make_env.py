@@ -28,7 +28,8 @@ def make_eval_envs(env_id, num_envs: int, sim_backend: str, env_kwargs: dict, ot
                 env = CPUGymWrapper(env, ignore_terminations=True, record_metrics=True)
                 if video_dir:
                     env = RecordEpisode(env, output_dir=video_dir, save_trajectory=False, info_on_video=True, source_type="diffusion_policy", source_desc="diffusion_policy evaluation rollout")
-                env = gym.wrappers.FrameStack(env, other_kwargs['obs_horizon'])
+                if env_kwargs["obs_mode"] == "state":
+                    env = gym.wrappers.FrameStack(env, other_kwargs['obs_horizon'])
                 env.action_space.seed(seed)
                 env.observation_space.seed(seed)
                 return env

@@ -1,7 +1,10 @@
 from torch.utils.data.sampler import Sampler
 import numpy as np
 import torch
+import torch.nn as nn
 from h5py import File, Group, Dataset
+from gymnasium import spaces
+import torch.nn.functional as F
 
 class IterationBasedBatchSampler(Sampler):
     """Wraps a BatchSampler.
@@ -117,3 +120,97 @@ def load_demo_dataset(path, keys=['observations', 'actions'], num_traj=None, con
         else:
             print('Load', target_key, len(dataset[target_key]), type(dataset[target_key][0]))
     return dataset
+def convert_obs(obs, concat_fn, transpose_fn, state_obs_extractor):
+        img_dict = obs['sensor_data']
+        new_img_dict = {
+            key: transpose_fn(
+                concat_fn([v[key] for v in img_dict.values()])
+            ) # (C, H, W) or (B, C, H, W)
+            for key in ['rgb', 'depth']
+        }
+        # if isinstance(new_img_dict['depth'], torch.Tensor): # MS2 vec env uses float16, but gym AsyncVecEnv uses float32
+        #     new_img_dict['depth'] = new_img_dict['depth'].to(torch.float16)
+
+        # Unified version
+        states_to_stack = state_obs_extractor(obs)
+        for j in range(len(states_to_stack)):
+            if states_to_stack[j].dtype == np.float64:
+                states_to_stack[j] = states_to_stack[j].astype(np.float32)
+        try:
+            state = np.hstack(states_to_stack)
+        except: # dirty fix for concat trajectory of states
+            state = np.column_stack(states_to_stack)
+        if state.dtype == np.float64:
+            for x in states_to_stack:
+                print(x.shape, x.dtype)
+            import pdb; pdb.set_trace()
+
+        out_dict = {
+            'state': state,
+            'rgb': new_img_dict['rgb'], 
+            'depth': new_img_dict['depth'],
+        }
+        return out_dict
+
+def build_obs_space(env, depth_dtype, state_obs_extractor):
+        # NOTE: We have to use float32 for gym AsyncVecEnv since it does not support float16, but we can use float16 for MS2 vec env
+        obs_space = env.observation_space
+
+        # Unified version
+        state_dim = sum([v.shape[0] for v in state_obs_extractor(obs_space)])
+
+        single_img_space = next(iter(env.observation_space['image'].values()))
+        h, w, _ = single_img_space['rgb'].shape
+        n_images = len(env.observation_space['image'])
+
+        return spaces.Dict({
+            'state': spaces.Box(-float("inf"), float("inf"), shape=(state_dim,), dtype=np.float32),
+            'rgb': spaces.Box(0, 255, shape=(n_images*3, h,w), dtype=np.uint8),
+            'depth': spaces.Box(-float("inf"), float("inf"), shape=(n_images,h,w), dtype=depth_dtype),
+        })
+
+def build_state_obs_extractor(env_id):
+    env_name = env_id.split('-')[0]
+    if env_name in ['TurnFaucet', 'StackCube']:
+        return lambda obs: list(obs['extra'].values())
+    elif env_name == 'PushChair' or env_name == "PickCube":
+        return lambda obs: list(obs['agent'].values()) + list(obs['extra'].values())
+    else:
+        raise NotImplementedError(f'Please tune state obs by yourself')
+
+
+class RandomShiftsAug(nn.Module):
+    """
+    from https://github.com/facebookresearch/drqv2/blob/main/drqv2.py
+    """
+    def __init__(self, pad):
+        super().__init__()
+        self.pad = pad
+
+    def forward(self, x):
+        n, c, h, w = x.size()
+        assert h == w
+        padding = tuple([self.pad] * 4)
+        x = F.pad(x, padding, 'replicate')
+        eps = 1.0 / (h + 2 * self.pad)
+        arange = torch.linspace(-1.0 + eps,
+                                1.0 - eps,
+                                h + 2 * self.pad,
+                                device=x.device,
+                                dtype=x.dtype)[:h]
+        arange = arange.unsqueeze(0).repeat(h, 1).unsqueeze(2)
+        base_grid = torch.cat([arange, arange.transpose(1, 0)], dim=2)
+        base_grid = base_grid.unsqueeze(0).repeat(n, 1, 1, 1)
+
+        shift = torch.randint(0,
+                              2 * self.pad + 1,
+                              size=(n, 1, 1, 2),
+                              device=x.device,
+                              dtype=x.dtype)
+        shift *= 2.0 / (h + 2 * self.pad)
+
+        grid = base_grid + shift
+        return F.grid_sample(x,
+                             grid,
+                             padding_mode='zeros',
+                             align_corners=False)
