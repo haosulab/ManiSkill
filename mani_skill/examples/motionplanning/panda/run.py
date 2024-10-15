@@ -76,7 +76,12 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
     failed_motion_plans = 0
     passed = 0
     while True:
-        res = solve(env, seed=seed, debug=False, vis=True if args.vis else False)
+        try:
+            res = solve(env, seed=seed, debug=False, vis=True if args.vis else False)
+        except Exception as e:
+            print(f"Cannot find valid solution because of an error in motion planning solution: {e}")
+            res = -1
+
         if res == -1:
             success = False
             failed_motion_plans += 1
