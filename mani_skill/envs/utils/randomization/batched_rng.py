@@ -13,6 +13,9 @@ class BatchedRNG(np.random.RandomState):
             raise ValueError(f"Unknown batched RNG backend: {backend}")
         self.batch_size = len(seeds)
 
+    def __getitem__(self, idx: int):
+        return self.rngs[idx]
+
     def __getattribute__(self, item):
         if item in [
             "rngs",
@@ -21,6 +24,7 @@ class BatchedRNG(np.random.RandomState):
             "__getattribute__",
             "__str__",
             "__repr__",
+            "__getitem__",
             "batch_size",
         ]:
             return object.__getattribute__(self, item)
