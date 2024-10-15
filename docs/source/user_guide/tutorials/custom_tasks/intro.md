@@ -105,7 +105,7 @@ You can build a **kinematic** actor with `builder.build_kinematic` and a **stati
 - Dynamic actors can be moved around by forces/other objects (e.g. a robot) and are fully physically simulated
 - Kinematic and static actors are fixed in place but can block objects from moving through them (e.g. a wall, a kitchen counter).
 - Kinematic actors can have their pose changed at any time. Static actors must have an initial pose set before calling `build_static` via `builder.initial_pose = ...`
-- Use static instead of kinematic whenever possible as it saves a lot of GPU memory
+- Use static instead of kinematic whenever possible as it saves a lot of GPU memory. Static objects must have an initial pose set before building via `builder.initial_pose = ...`.
 
 We also provide some functions that build some more complex shapes that you can use by importing the following:
 ```
@@ -139,7 +139,9 @@ We recommend you to first complete this tutorial before moving onto the next.
 
 ## Episode Initialization / Randomization
 
-Task initialization and randomization is handled in the `_initialize_episode` function and is called whenever `env.reset` is called. The objective here is to set the initial states of objects, including the robot. As the task ideally should be simulatable on the GPU, batched code is unavoidable. Note that furthermore, by default everything in ManiSkill tries to stay batched, even if there is only one element. Finally, like `_load_scene` the options argument is also passed down here if needed.
+Task initialization and randomization is handled in the `_initialize_episode` function and is called whenever `env.reset` is called. The objective here is to set the initial states of all non-static objects, including the robot. Note that objects that do not have initial poses set when building or set during episode initialization won't necessarily spawn at the origin.
+
+As the task ideally should be simulatable on the GPU, batched code is unavoidable. Note that furthermore, by default everything in ManiSkill tries to stay batched, even if there is only one element. Finally, like `_load_scene` the options argument is also passed down here if needed.
 
 An example from part of the PushCube task
 
