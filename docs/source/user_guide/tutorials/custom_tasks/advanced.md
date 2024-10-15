@@ -62,7 +62,8 @@ ManiSkill defaults to actors/articulations when built to be built in every paral
 class MyCustomTask(BaseEnv):
     # ...
     def _load_scene(self, options: dict):
-        # ... sample a list of YCB object IDs
+        # sample a list of YCB object IDs for each parallel environment
+        model_ids = self._batched_episode_rng.choice(self.all_model_ids)
         for i, model_id in enumerate(model_ids):
             builder, obj_height = build_actor_ycb(
                 model_id, self.scene, name=model_id, return_builder=True
@@ -72,9 +73,11 @@ class MyCustomTask(BaseEnv):
 ```
 Here we have a list of YCB object ids in `model_ids`. For the ith `model_id` we create the ActorBuilder `builder` and run `builder.set_scene_idxs([i])`. Now when we call `builder.build` only the ith sub-scene has this particular object.
 
+Note that in this code we use `self._batched_episode_rng` to sample a list of model IDs for each parallel environment. This batched episode RNG object ensures the same models are sampled for the same list of seeds regardless of the number of parallel environments or if GPU/CPU simulation is being used. For more details on reproducibility and RNG see the page on [RNG](../../concepts/rng.md)
+
 ## Merging
 
-ManiSkill is able to easily support task building with diverse objects/articulations via a merging tool, which is way of viewing and reshaping existing data (on the GPU) into a single object to access from.
+ManiSkill is able to easily support task building with heterogeneous objects/articulations via a merging tool, which is way of viewing and reshaping existing data (on the GPU) into a single object to access from.
 
 ### Merging Actors
 
