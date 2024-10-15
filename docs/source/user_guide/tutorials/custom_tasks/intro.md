@@ -96,6 +96,9 @@ class PushCubeEnv(BaseEnv):
                 base_color=[1, 0, 0, 1],
             ),
         )
+        # set an initial pose for the cube so that it initially spawns
+        # where nothing else can collide with it. We will randomize this later
+        builder.initial_pose = sapien.Pose(p=[1, 1, 1], q=[1, 0, 0, 0])
         self.obj = builder.build(name="cube")
         # PushCube has some other code after this removed for brevity that 
         # spawns a goal object (a red/white target) stored at self.goal_region
@@ -107,8 +110,11 @@ You can build a **kinematic** actor with `builder.build_kinematic` and a **stati
 - Kinematic actors can have their pose changed at any time. Static actors must have an initial pose set before calling `build_static` via `builder.initial_pose = ...`
 - Use static instead of kinematic whenever possible as it saves a lot of GPU memory. Static objects must have an initial pose set before building via `builder.initial_pose = ...`.
 
+You may notice that an initial pose is arbitrarily set for the cube. We **strongly recommend** you set initial poses of any objects created such that they do not collide if they were placed at those poses. This helps ensure the GPU simulation is stable on the first step of the environment and can be necessary to do even if you are setting object poses during episode initialization.
+
+
 We also provide some functions that build some more complex shapes that you can use by importing the following:
-```
+```python
 from mani_skill.utils.building import actors
 ```
 
