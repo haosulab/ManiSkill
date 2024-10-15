@@ -87,7 +87,8 @@ def main(args: Args):
         print("Reward mode", env.unwrapped.reward_mode)
 
     obs, _ = env.reset(seed=args.seed, options=dict(reconfigure=True))
-    env.action_space.seed(args.seed[0])
+    if args.seed is not None:
+        env.action_space.seed(args.seed[0])
     if args.render_mode is not None:
         viewer = env.render()
         if isinstance(viewer, sapien.utils.Viewer):
