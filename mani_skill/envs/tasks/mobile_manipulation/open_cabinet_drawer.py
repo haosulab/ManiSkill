@@ -71,7 +71,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
     @property
     def _default_sim_config(self):
         return SimConfig(
-            spacing=10,
+            spacing=5,
             gpu_memory_config=GPUMemoryConfig(
                 max_rigid_contact_count=2**21, max_rigid_patch_count=2**19
             ),
@@ -107,12 +107,8 @@ class OpenCabinetDrawerEnv(BaseEnv):
     def _load_cabinets(self, joint_types: List[str]):
         # we sample random cabinet model_ids with numpy as numpy is always deterministic based on seed, regardless of
         # GPU/CPU simulation backends. This is useful for replaying demonstrations.
-        rand_idx = self._episode_rng.permutation(np.arange(0, len(self.all_model_ids)))
-        model_ids = self.all_model_ids[rand_idx]
-        model_ids = np.concatenate(
-            [model_ids] * np.ceil(self.num_envs / len(self.all_model_ids)).astype(int)
-        )[: self.num_envs]
-        link_ids = self._episode_rng.randint(0, 2**31, size=len(model_ids))
+        model_ids = self._batched_episode_rng.choice(self.all_model_ids)
+        link_ids = self._batched_episode_rng.randint(0, 2**31)
 
         self._cabinets = []
         handle_links: List[List[Link]] = []

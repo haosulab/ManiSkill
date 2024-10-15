@@ -105,12 +105,7 @@ class PickClutterEnv(BaseEnv):
         self.scene_builder.build()
 
         # sample some clutter configurations
-        eps_idxs = np.arange(0, len(self._episodes))
-        rand_idx = torch.randperm(len(eps_idxs), device=torch.device("cpu"))
-        eps_idxs = eps_idxs[rand_idx]
-        eps_idxs = np.concatenate(
-            [eps_idxs] * np.ceil(self.num_envs / len(eps_idxs)).astype(int)
-        )[: self.num_envs]
+        eps_idxs = self._batched_episode_rng.randint(0, len(self._episodes))
 
         self.selectable_target_objects: List[List[Actor]] = []
         """for each sub-scene, a list of objects that can be selected as targets"""

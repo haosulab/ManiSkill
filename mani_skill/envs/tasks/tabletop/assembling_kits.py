@@ -88,12 +88,12 @@ class AssemblingKitsEnv(BaseEnv):
             self.symmetry = common.to_tensor(self.symmetry)
 
             # sample some kits
-            eps_idxs = np.arange(0, len(self._episodes))
-            rand_idx = torch.randperm(len(eps_idxs), device=torch.device("cpu"))
-            eps_idxs = eps_idxs[rand_idx]
-            eps_idxs = np.concatenate(
-                [eps_idxs] * np.ceil(self.num_envs / len(eps_idxs)).astype(int)
-            )[: self.num_envs]
+            eps_idxs = self._batched_episode_rng.randint(0, len(self._episodes))
+            pick_color_ids = self._batched_episode_rng.choice(len(self.color))
+            other_color_ids = self._batched_episode_rng.choice(
+                len(self.color), size=(10,)
+            )
+
             kits = []
             objs_to_place = []
             all_other_objs = []
@@ -119,7 +119,9 @@ class AssemblingKitsEnv(BaseEnv):
                 kits.append(kit)
                 # create the object to place and make it dynamic
                 obj_to_place = (
-                    self._get_object_builder(episode["obj_to_place"])
+                    self._get_object_builder(
+                        episode["obj_to_place"], color_id=pick_color_ids[i]
+                    )
                     .set_scene_idxs(scene_idxs)
                     .build(f"obj_{i}")
                 )
@@ -128,7 +130,9 @@ class AssemblingKitsEnv(BaseEnv):
 
                 # create all other objects and leave them as static as they do not need to be manipulated
                 other_objs = [
-                    self._get_object_builder(obj_id, static=True)
+                    self._get_object_builder(
+                        obj_id, static=True, color_id=other_color_ids[i, j]
+                    )
                     .set_scene_idxs(scene_idxs)
                     .set_initial_pose(
                         sapien.Pose(
@@ -177,7 +181,9 @@ class AssemblingKitsEnv(BaseEnv):
         )
         return builder, object_goal_pos, objects_goal_rot
 
-    def _get_object_builder(self, object_id: str, static: bool = False):
+    def _get_object_builder(
+        self, object_id: str, static: bool = False, color_id: int = 0
+    ):
         collision_path = self._models_dir / "collision" / f"{object_id:02d}.obj"
         visual_path = self._models_dir / "visual" / f"{object_id:02d}.obj"
 
@@ -194,7 +200,7 @@ class AssemblingKitsEnv(BaseEnv):
             str(visual_path),
             scale=self.object_scale,
             material=sapien.render.RenderMaterial(
-                base_color=self.color[self._episode_rng.choice(len(self.color))],
+                base_color=self.color[color_id],
                 roughness=0.1,
                 specular=0.0,
             ),

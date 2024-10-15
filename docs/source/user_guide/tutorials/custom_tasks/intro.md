@@ -133,7 +133,9 @@ class PushCubeEnv(BaseEnv):
 ```
 The TableSceneBuilder is perfect for easily building table-top tasks, it creates a table and floor for you, and places the fetch and panda robots in reasonable locations.
 
-A tutorial on how to build actors beyond primitive shapes (boxes, spheres etc.) and load articulated objects is covered in the [tutorial after this one](./loading_objects.md). We recommend you to first complete this tutorial before moving onto the next.
+A tutorial on how to build actors beyond primitive shapes (boxes, spheres etc.) and load articulated objects is covered in the [tutorial after this one](./loading_objects.md). More advanced features like heterogeneous simulation with different objects/articulations in different parallel environments is covered in the [advanced features page](./advanced.md). Finally if you intend on randomizing objects/textures etc. in parallel environments, we highly recommend understanding the [batched RNG system](../../concepts/rng.md) which details how to ensure reproducibility in your environments.
+
+We recommend you to first complete this tutorial before moving onto the next.
 
 ## Episode Initialization / Randomization
 
