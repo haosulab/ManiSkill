@@ -36,7 +36,7 @@ class Args:
     """if toggled, this experiment will be tracked with Weights and Biases"""
     wandb_project_name: str = "ManiSkill"
     """the wandb's project name"""
-    wandb_entity: str = None
+    wandb_entity: Optional[str] = None
     """the entity (team) of wandb's project"""
     capture_video: bool = True
     """whether to capture videos of the agent performances (check out `videos` folder)"""
@@ -44,7 +44,7 @@ class Args:
     """whether to save model into the `runs/{run_name}` folder"""
     evaluate: bool = False
     """if toggled, only runs evaluation with the given model checkpoint and saves the evaluation trajectories"""
-    checkpoint: str = None
+    checkpoint: Optional[str] = None
     """path to a pretrained checkpoint file to start evaluation/training from"""
     render_mode: str = "all"
     """the environment rendering mode"""

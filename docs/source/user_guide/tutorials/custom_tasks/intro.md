@@ -47,7 +47,7 @@ class PushCubeEnv(BaseEnv):
 ```
 ## Loading
 
-At the start of any task, you must load in all objects (robots, assets, articulations, lighting etc.) into each parallel environment, also known as a sub-scene. This is also known as **reconfiguration** and generally only ever occurs once. Loading these objects is done in the `_load_scene` function of your custom task class. The objective is to simply load objects in, and nothing else. For GPU simulation at this stage you cannot change object states (like pose, qpos), only initial poses can be modified. Changing/randomizing states is done in the section on [episode initialization / randomization](#episode-initialization--randomization).
+At the start of any task, you must load in all objects (robots, assets, articulations, lighting etc.) into each parallel environment, also known as a sub-scene. This is also known as **reconfiguration** and generally only ever occurs once. Loading these objects is done in the `_load_scene` function of your custom task class. The objective is to simply load objects in with initial poses that ensure they don't collide on the first step, and nothing else. For GPU simulation at this stage you cannot change any object states (like velocities, qpos), only initial poses can be modified. Changing/randomizing states is done in the section on [episode initialization / randomization](#episode-initialization--randomization).
 
 Building objects in ManiSkill is nearly the exact same as it is in SAPIEN. You create an `ActorBuilder` via `self.scene.create_actor_builder` and via the actor builder add visual and collision shapes. Visual shapes only affect visual rendering processes while collision shapes affect the physical simulation. ManiSkill further will create the actor for you in every sub-scene (unless you use [scene-masks/scene-idxs](./advanced.md#scene-masks), a more advanced feature).
 
@@ -96,6 +96,8 @@ class PushCubeEnv(BaseEnv):
                 base_color=[1, 0, 0, 1],
             ),
         )
+        # optionally set an initial pose so that it initially spawns there
+        # self.builder.initial_pose = sapien.Pose(p=[1, 1, 1], q=[1, 0, 0, 0])
         self.obj = builder.build(name="cube")
         # PushCube has some other code after this removed for brevity that 
         # spawns a goal object (a red/white target) stored at self.goal_region
@@ -105,10 +107,13 @@ You can build a **kinematic** actor with `builder.build_kinematic` and a **stati
 - Dynamic actors can be moved around by forces/other objects (e.g. a robot) and are fully physically simulated
 - Kinematic and static actors are fixed in place but can block objects from moving through them (e.g. a wall, a kitchen counter).
 - Kinematic actors can have their pose changed at any time. Static actors must have an initial pose set before calling `build_static` via `builder.initial_pose = ...`
-- Use static instead of kinematic whenever possible as it saves a lot of GPU memory
+- Use static instead of kinematic whenever possible as it saves a lot of GPU memory. Static objects must have an initial pose set before building via `builder.initial_pose = ...`.
+
+Note that by default, if an object does not have an initial pose set in its builder, ManiSkill tries its best to choose initial poses of objects such that they are unlikely to collide with each other during GPU simulation initialization (which uses the initial poses of the builders). These poses are definitely not what you want for task initialization but need to be far apart initially to ensure stable GPU simulation.
+
 
 We also provide some functions that build some more complex shapes that you can use by importing the following:
-```
+```python
 from mani_skill.utils.building import actors
 ```
 
@@ -133,13 +138,15 @@ class PushCubeEnv(BaseEnv):
 ```
 The TableSceneBuilder is perfect for easily building table-top tasks, it creates a table and floor for you, and places the fetch and panda robots in reasonable locations.
 
-A tutorial on how to build actors beyond primitive shapes (boxes, spheres etc.) and load articulated objects is covered in the [tutorial after this one](./loading_objects.md). More advanced features like heterogeneous simulation with different objects/articulations in different parallel environments is covered in the [advanced features page](./advanced.md). Finally if you intend on randomizing objects/textures etc. in parallel environments, we highly recommend understanding the [batched RNG system](../../concepts/rng.md) which details how to ensure reproducibility in your environments.
+A tutorial on how to build actors beyond primitive shapes (boxes, spheres etc.) and load articulated objects is covered in the [tutorial after this one](./loading_objects.md). More advanced features like heterogeneous simulation with different objects/articulations in different parallel environments is covered in the [advanced features page](./advanced.md). Finally, if you intend on randomizing objects/textures etc. in parallel environments, we highly recommend understanding the [batched RNG system](../../concepts/rng.md) which details how to ensure reproducibility in your environments.
 
 We recommend you to first complete this tutorial before moving onto the next.
 
 ## Episode Initialization / Randomization
 
-Task initialization and randomization is handled in the `_initialize_episode` function and is called whenever `env.reset` is called. The objective here is to set the initial states of objects, including the robot. As the task ideally should be simulatable on the GPU, batched code is unavoidable. Note that furthermore, by default everything in ManiSkill tries to stay batched, even if there is only one element. Finally, like `_load_scene` the options argument is also passed down here if needed.
+Task initialization and randomization is handled in the `_initialize_episode` function and is called whenever `env.reset` is called. The objective here is to set the initial states of all non-static objects, including the robot. Note that objects that do not have initial poses set when building or set during episode initialization won't necessarily spawn at the origin.
+
+As the task ideally should be simulatable on the GPU, batched code is unavoidable. Note that furthermore, by default everything in ManiSkill tries to stay batched, even if there is only one element. Finally, like `_load_scene` the options argument is also passed down here if needed.
 
 An example from part of the PushCube task
 

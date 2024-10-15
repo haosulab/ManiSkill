@@ -121,6 +121,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
                 self.scene, f"partnet-mobility:{model_id}"
             )
             cabinet_builder.set_scene_idxs(scene_idxs=[i])
+            cabinet_builder.initial_pose = sapien.Pose(p=[0, 0, 0], q=[1, 0, 0, 0])
             cabinet = cabinet_builder.build(name=f"{model_id}-{i}")
 
             # this disables self collisions by setting the group 2 bit at CABINET_COLLISION_BIT all the same
