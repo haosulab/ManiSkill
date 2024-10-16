@@ -1,1 +1,2 @@
 from .open_cabinet_drawer import OpenCabinetDoorEnv, OpenCabinetDrawerEnv
+from .open_single_door_robocasa import RoboCasaOpenSingleDoorEnv
