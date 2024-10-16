@@ -33,7 +33,7 @@ Set -o to rgbd for RGBD observations. Note that the control mode can heavily inf
 
 We provide scripts for state based and rgbd based training. Make sure to use the same sim backend as the backend the demonstrations were collected with. 
 
-Moreover, some demonstrations are slow and can exceed the default max episode steps. In this case, you can use the `--max-episode-steps` flag to set a higher value. Most of the time 2x the default value is sufficient.
+Note that some demonstrations are slow (e.g. motion planning or human teleoperated) and can exceed the default max episode steps which can be an issue as imitation learning algorithms learn to solve the task at the same speed the demonstrations solve it. In this case, you can use the `--max-episode-steps` flag to set a higher value so that the policy can solve the task in time. General recommendation is to set `--max-episode-steps` to about 2x the length of the mean demonstrations length you are using for training. We provide recommended numbers for demonstrations in the examples.sh script.
 
 For state based training:
 

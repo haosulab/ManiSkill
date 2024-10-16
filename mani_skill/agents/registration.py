@@ -32,7 +32,7 @@ def register_agent(asset_download_ids: List[str] = [], override=False):
                 logger.warn(
                     f"Agent {agent_cls.uid} is already registered. Skip registration."
                 )
-            return agent_cls
+                return agent_cls
 
         REGISTERED_AGENTS[agent_cls.uid] = AgentSpec(
             agent_cls=agent_cls, asset_download_ids=asset_download_ids

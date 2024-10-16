@@ -128,9 +128,7 @@ class HumanoidEnvBase(BaseEnv):
 
     def _load_scene(self, options: dict):
         loader = self.scene.create_mjcf_loader()
-        articulation_builders, actor_builders, sensor_configs = loader.parse(
-            self.agent.mjcf_path
-        )
+        actor_builders = loader.parse(self.agent.mjcf_path)["actor_builders"]
         for a in actor_builders:
             a.build(a.name)
 

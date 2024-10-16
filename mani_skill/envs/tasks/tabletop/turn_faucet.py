@@ -73,12 +73,8 @@ class TurnFaucetEnv(BaseEnv):
             self, robot_init_qpos_noise=self.robot_init_qpos_noise
         )
         self.scene_builder.build()
-        rand_idx = self._episode_rng.permutation(np.arange(0, len(self.all_model_ids)))
-        model_ids = self.all_model_ids[rand_idx]
-        model_ids = np.concatenate(
-            [model_ids] * np.ceil(self.num_envs / len(self.all_model_ids)).astype(int)
-        )[: self.num_envs]
-        switch_link_ids = self._episode_rng.randint(0, 2**31, size=len(model_ids))
+        model_ids = self._batched_episode_rng.choice(self.all_model_ids)
+        switch_link_ids = self._batched_episode_rng.randint(0, 2**31)
 
         self._faucets = []
         self._target_switch_links: List[Link] = []
@@ -105,13 +101,18 @@ class TurnFaucetEnv(BaseEnv):
             for j, semantic in enumerate(model_info["semantics"]):
                 if semantic[2] == "switch":
                     switch_link_names.append(semantic[0])
-            # import ipdb;ipdb.set_trace()
             switch_link = faucet.links_map[
                 switch_link_names[switch_link_ids[i] % len(switch_link_names)]
             ]
             self._target_switch_links.append(switch_link)
             switch_link.joint.set_friction(0.1)
             switch_link.joint.set_drive_properties(0.0, 2.0)
+            sapien_utils.set_articulation_render_material(
+                faucet._objs[0],
+                color=sapien_utils.hex2rgba("#AAAAAA"),
+                metallic=1,
+                roughness=0.4,
+            )
 
         self.faucet = Articulation.merge(self._faucets, name="faucet")
         self.target_switch_link = Link.merge(self._target_switch_links, name="switch")

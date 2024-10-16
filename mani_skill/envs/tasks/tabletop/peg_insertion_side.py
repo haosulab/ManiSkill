@@ -94,12 +94,12 @@ class PegInsertionSideEnv(BaseEnv):
             self.table_scene = TableSceneBuilder(self)
             self.table_scene.build()
 
-            lengths = self._episode_rng.uniform(0.085, 0.125, size=(self.num_envs,))
-            radii = self._episode_rng.uniform(0.015, 0.025, size=(self.num_envs,))
+            lengths = self._batched_episode_rng.uniform(0.085, 0.125)
+            radii = self._batched_episode_rng.uniform(0.015, 0.025)
             centers = (
                 0.5
                 * (lengths - radii)[:, None]
-                * self._episode_rng.uniform(-1, 1, size=(self.num_envs, 2))
+                * self._batched_episode_rng.uniform(-1, 1, size=(2,))
             )
 
             # save some useful values for use later

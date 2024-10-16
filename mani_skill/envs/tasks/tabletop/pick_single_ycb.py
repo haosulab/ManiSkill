@@ -79,11 +79,7 @@ class PickSingleYCBEnv(BaseEnv):
 
         # randomize the list of all possible models in the YCB dataset
         # then sub-scene i will load model model_ids[i % number_of_ycb_objects]
-        rand_idx = torch.randperm(len(self.all_model_ids))
-        model_ids = self.all_model_ids[rand_idx]
-        model_ids = np.concatenate(
-            [model_ids] * np.ceil(self.num_envs / len(self.all_model_ids)).astype(int)
-        )[: self.num_envs]
+        model_ids = self._batched_episode_rng.choice(self.all_model_ids, replace=True)
         if (
             self.num_envs > 1
             and self.num_envs < len(self.all_model_ids)

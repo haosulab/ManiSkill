@@ -38,7 +38,11 @@ class MJCFLoader(SAPIENMJCFLoader):
                     l.collision_groups[2] |= 1 << 29
         for i, b in enumerate(actor_builders):
             b.set_name(f"{self.name}-actor-{i}")
-        return articulation_builders, actor_builders, cameras
+        return dict(
+            articulation_builders=articulation_builders,
+            actor_builders=actor_builders,
+            cameras=cameras,
+        )
 
     def load(
         self,
@@ -59,9 +63,10 @@ class MJCFLoader(SAPIENMJCFLoader):
         """
         if name is not None:
             self.name = name
-        articulation_builders, actor_builders, cameras = self.parse(
-            mjcf_file, package_dir
-        )
+        _parsed_mjcf_data = self.parse(mjcf_file, package_dir)
+        articulation_builders = _parsed_mjcf_data["articulation_builders"]
+        actor_builders = _parsed_mjcf_data["actor_builders"]
+        cameras = _parsed_mjcf_data["cameras"]
 
         articulations: List[Articulation] = []
         for b in articulation_builders[:1]:

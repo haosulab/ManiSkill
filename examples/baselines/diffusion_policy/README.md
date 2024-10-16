@@ -31,8 +31,10 @@ Set -o to rgbd for RGBD observations. Note that the control mode can heavily inf
 
 ## Training
 
-We provide scripts to train the diffusion policy on demonstrations. Note that some demonstrations are slow and can exceed the default max episode steps. In this case, you can use the `--max-episode-steps` flag to set a higher value. Most of the time 2x the default value is sufficient.
+We provide scripts to train the diffusion policy on demonstrations. Make sure to use the same sim backend as the backend the demonstrations were collected with.
 
+
+Note that some demonstrations are slow (e.g. motion planning or human teleoperated) and can exceed the default max episode steps which can be an issue as imitation learning algorithms learn to solve the task at the same speed the demonstrations solve it. In this case, you can use the `--max-episode-steps` flag to set a higher value so that the policy can solve the task in time. General recommendation is to set `--max-episode-steps` to about 2x the length of the mean demonstrations length you are using for training. We provide recommended numbers for demonstrations in the examples.sh script.
 
 Example training, learning from 100 demonstrations generated via motionplanning in the PickCube-v1 task
 ```bash

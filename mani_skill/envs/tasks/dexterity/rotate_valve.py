@@ -91,16 +91,16 @@ class RotateValveEnv(BaseEnv):
                 + base_angles[: int(self.num_envs % 3)]
             )
         elif self.difficulty_level == 2:
-            num_valve_head = self._main_rng.randint(3, 6, (self.num_envs,))
+            num_valve_head = self._batched_episode_rng.randint(3, 6)
             valve_angles_list = [
-                sample_valve_angles(num_head, self._main_rng)
-                for num_head in num_valve_head
+                sample_valve_angles(num_head, self._batched_episode_rng[i])
+                for i, num_head in enumerate(num_valve_head)
             ]
         elif self.difficulty_level >= 3:
-            num_valve_head = self._main_rng.randint(3, 6, (self.num_envs,))
+            num_valve_head = self._batched_episode_rng.randint(3, 6)
             valve_angles_list = [
-                sample_valve_angles(num_head, self._main_rng)
-                for num_head in num_valve_head
+                sample_valve_angles(num_head, self._batched_episode_rng[i])
+                for i, num_head in enumerate(num_valve_head)
             ]
         else:
             raise ValueError(
@@ -120,7 +120,7 @@ class RotateValveEnv(BaseEnv):
                     name=f"valve_station_{i}",
                 )
             else:
-                scales = self._main_rng.randn(2) * 0.1 + 1
+                scales = self._batched_episode_rng[i].randn(2) * 0.1 + 1
                 valve, capsule_len = build_robel_valve(
                     self.scene,
                     valve_angles=valve_angles,
