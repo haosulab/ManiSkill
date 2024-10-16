@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 
 from .observations import *
+from .voxelizer import *
+
 
 
 @dataclass

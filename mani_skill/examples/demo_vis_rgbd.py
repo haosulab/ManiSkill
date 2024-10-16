@@ -67,18 +67,21 @@ def main(args):
         action = env.action_space.sample()
         obs, reward, terminated, truncated, info = env.step(action)
         cam_num = 0
-        imgs=[]
+        rgbImgs=[]
+        depthImgs=[]
         for cam in obs["sensor_data"].keys():
             if "rgb" in obs["sensor_data"][cam]:
                 rgb = common.to_numpy(obs["sensor_data"][cam]["rgb"][0])
-                imgs.append(rgb)
-                if "depth" in obs["sensor_data"][cam]:
-                    depth = common.to_numpy(obs["sensor_data"][cam]["depth"][0]).astype(np.float32)
-                    depth = depth / (depth.max() - depth.min())
-                    depth_rgb = np.zeros_like(rgb)
-                    depth_rgb[..., :] = depth*255
-                    imgs.append(depth_rgb)
+                depth = common.to_numpy(obs["sensor_data"][cam]["depth"][0]).astype(np.float32)
+                depth = depth / (depth.max() - depth.min())
+                rgbImgs.append(rgb)
+                depth_rgb = np.zeros_like(rgb)
+                depth_rgb[..., :] = depth*255
+                depthImgs.append(depth_rgb)
+
                 cam_num += 1
+
+        imgs = rgbImgs + depthImgs
         img = visualization.tile_images(imgs, nrows=n_cams)
         renderer(img)
 
