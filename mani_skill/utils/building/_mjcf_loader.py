@@ -705,7 +705,9 @@ class MJCFLoader:
                 for c in compiler.attrib.get("eulerseq", "xyz").lower()
             ]
             self._mesh_dir = compiler.attrib.get("meshdir", ".")
-            self._mesh_dir = os.path.join(self.mjcf_dir, self._mesh_dir)
+        else:
+            self._mesh_dir = "."
+        self._mesh_dir = os.path.join(self.mjcf_dir, self._mesh_dir)
 
         ### Parse options/flags ###
         option = xml.find("option")
@@ -737,10 +739,11 @@ class MJCFLoader:
         actor_builders: List[ActorBuilder] = []
         for i, body in enumerate(xml.find("worldbody").findall("body")):
             # determine first if this body is really an articulation or a actor
-            body.find("joint") is not None
+
             has_freejoint = body.find("freejoint") is not None
-            # TODO (is it the case any <body> tag refers to an articulation?)
-            if True:
+            is_articulation = body.find("joint") is not None or has_freejoint
+            # <body> tag refers to an artciulation in physx only if there is another body tag inside it
+            if is_articulation:
                 builder = self.scene.create_articulation_builder()
                 articulation_builders.append(builder)
                 dummy_root_link = builder.create_link_builder(None)
@@ -760,11 +763,14 @@ class MJCFLoader:
                 builder = self.scene.create_actor_builder()
                 body_type = "dynamic" if has_freejoint else "static"
                 actor_builders.append(builder)
-                # TODO (stao): this may not be correct. Does mujoco support using multiple nested body tags to define geoms?
-                for i, geom in enumerate(body.findall("geom")):
-                    self._build_geom(geom, builder, self._root_default)
-                    builder.set_name(geom.get("name", ""))
-                builder.set_physx_body_type(body_type)
+                # NOTE that mujoco supports nested body tags to define groups of geoms
+                cur_body = body
+                while cur_body is not None:
+                    for i, geom in enumerate(cur_body.findall("geom")):
+                        self._build_geom(geom, builder, self._root_default)
+                        builder.set_name(geom.get("name", ""))
+                        builder.set_physx_body_type(body_type)
+                    cur_body = cur_body.find("body")
 
         ### Parse geoms in World Body ###
         # These can't have freejoints so they can't be dynamic

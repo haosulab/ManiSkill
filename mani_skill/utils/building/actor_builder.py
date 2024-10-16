@@ -341,12 +341,6 @@ class ActorBuilder(SAPIENActorBuilder):
                 )
             )
         triangles = np.concatenate(triangles)
-
-        # mat = sapien.render.RenderMaterial()
-        # mat.base_color_texture = sapien.render.RenderTexture2D(
-        #     filename=texture,
-        #     mipmap_levels=mipmap_levels,
-        # )
         shape = sapien.render.RenderShapeTriangleMesh(
             vertices=vertices,
             triangles=triangles,
