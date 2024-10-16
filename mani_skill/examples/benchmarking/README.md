@@ -12,7 +12,7 @@ Code Structure:
 
 ## Setup
 
-### ManiSkill
+### ManiSkill (latest)
 
 See https://maniskill.readthedocs.io/en/latest/user_guide/getting_started/installation.html and then run
 
@@ -28,6 +28,16 @@ mamba activate mujoco_benchmarking
 pip install mujoco-mjx
 pip install "jax[cuda12]"
 ``` -->
+### ManiSkill2
+
+Run
+
+```
+conda create -n ms2 "python=3.10"
+conda activate ms2
+pip install mani-skill2
+pip install pynvml torch tyro
+```
 
 ### Isaac Lab
 
@@ -54,6 +64,12 @@ python gpu_sim.py -e "CartpoleBalanceBenchmark-v1" \
 
 python gpu_sim.py -e "CartpoleBalanceBenchmark-v1" \
     -n=1024 -o=rgb --num-cams=1 --cam-width=256 --cam-height=256 --save-results
+```
+
+### ManiSkill2
+
+```bash
+python mani_skill2.py -e "PickCube-v0" -n=16 -o=state --save-results
 ```
 
 ### Isaac Lab
