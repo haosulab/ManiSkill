@@ -1,6 +1,7 @@
 ALGO_NAME = 'BC_Diffusion_rgbd_UNet'
 
 import argparse
+from collections import defaultdict
 from functools import partial
 import os
 import random
@@ -19,7 +20,6 @@ from mani_skill.utils import gym_utils
 from mani_skill.utils.wrappers.flatten import FlattenRGBDObservationWrapper
 from mani_skill.utils.registration import REGISTERED_ENVS
 
-from collections import defaultdict, deque
 
 from torch.utils.data.dataset import Dataset
 from torch.utils.data.sampler import RandomSampler, BatchSampler
@@ -33,10 +33,7 @@ from diffusion_policy.conditional_unet1d import ConditionalUnet1D
 from dataclasses import dataclass, field
 from typing import Optional, List
 import tyro
-
-from gymnasium.wrappers.frame_stack import FrameStack, LazyFrames
 from gymnasium import spaces
-from gymnasium.spaces import Box
 
 
 @dataclass
@@ -66,7 +63,7 @@ class Args:
     """number of trajectories to load from the demo dataset"""
     total_iters: int = 1_000_000
     """total timesteps of the experiment"""
-    batch_size: int = 1024
+    batch_size: int = 256
     """the batch size of sample from the replay memory"""
 
     # Diffusion Policy specific arguments
@@ -205,53 +202,7 @@ class SmallDemoDataset_DiffusionPolicy(Dataset): # Load everything into memory
 
     def __len__(self):
         return len(self.slices)
-class DictFrameStack(FrameStack):
-    def __init__(
-        self,
-        env: gym.Env,
-        num_stack: int,
-        lz4_compress: bool = False,
-    ):
-        """Observation wrapper that stacks the observations in a rolling manner.
 
-        Args:
-            env (Env): The environment to apply the wrapper
-            num_stack (int): The number of frames to stack
-            lz4_compress (bool): Use lz4 to compress the frames internally
-        """
-        gym.utils.RecordConstructorArgs.__init__(
-            self, num_stack=num_stack, lz4_compress=lz4_compress
-        )
-        gym.ObservationWrapper.__init__(self, env)
-
-        self.num_stack = num_stack
-        self.lz4_compress = lz4_compress
-
-        self.frames = deque(maxlen=num_stack)
-
-        new_observation_space = gym.spaces.Dict()
-        for k, v in self.observation_space.items():
-            low = np.repeat(v.low[np.newaxis, ...], num_stack, axis=1)
-            high = np.repeat(v.high[np.newaxis, ...], num_stack, axis=1)
-            new_observation_space[k] = Box(
-                low=low, high=high, dtype=v.dtype
-            )
-        self.observation_space = new_observation_space
-
-    def observation(self, observation):
-        """Converts the wrappers current frames to lazy frames.
-
-        Args:
-            observation: Ignored
-
-        Returns:
-            :class:`LazyFrames` object for the wrapper's frame buffer,  :attr:`self.frames`
-        """
-        assert len(self.frames) == self.num_stack, (len(self.frames), self.num_stack)
-        return {
-            k: LazyFrames([x[k] for x in self.frames], self.lz4_compress)
-            for k in self.observation_space.keys()
-        }
 
 class Agent(nn.Module):
     def __init__(self, env, args):
@@ -265,10 +216,10 @@ class Agent(nn.Module):
         # denoising results will be clipped to [-1,1], so the action should be in [-1,1] as well
         self.act_dim = env.single_action_space.shape[0]
         obs_state_dim = env.single_observation_space['state'].shape[1]
-        _, C, H, W = envs.single_observation_space['rgb'].shape
+        _, H, W, C = envs.single_observation_space['rgb'].shape
 
         visual_feature_dim = 256
-        self.visual_encoder = PlainConv(in_channels=int(C/3*4), out_dim=visual_feature_dim)
+        self.visual_encoder = PlainConv(in_channels=int(C/3*4), out_dim=visual_feature_dim, pool_feature_map=True)
         self.noise_pred_net = ConditionalUnet1D(
             input_dim=self.act_dim, # act_horizon is not used (U-Net doesn't care)
             global_cond_dim=self.obs_horizon * (visual_feature_dim + obs_state_dim),
@@ -284,9 +235,6 @@ class Agent(nn.Module):
             prediction_type='epsilon' # predict noise (instead of denoised action)
         )
 
-        if args.random_shift > 0:
-            from diffusion_policy.utils import RandomShiftsAug
-            self.aug = RandomShiftsAug(args.random_shift)
 
     def encode_obs(self, obs_seq, eval_mode):
         rgb = obs_seq['rgb'].float() / 255.0 # (B, obs_horizon, 3*k, H, W)
@@ -326,7 +274,7 @@ class Agent(nn.Module):
 
         return F.mse_loss(noise_pred, noise)
     
-    def get_eval_action(self, obs_seq):
+    def get_action(self, obs_seq):
         # init scheduler
         # self.noise_scheduler.set_timesteps(self.num_diffusion_iters)
         # set_timesteps will change noise_scheduler.timesteps is only used in noise_scheduler.step()
@@ -336,6 +284,9 @@ class Agent(nn.Module):
         # obs_seq['state']: (B, obs_horizon, obs_state_dim)
         B = obs_seq['state'].shape[0]
         with torch.no_grad():
+            obs_seq['rgb'] = obs_seq['rgb'].permute(0,1,4,2,3)
+            obs_seq['depth'] = obs_seq['depth'].permute(0,1,4,2,3)
+
             obs_cond = self.encode_obs(obs_seq, eval_mode=True) # (B, obs_horizon * obs_dim)
 
             # initialize action from Guassian noise
@@ -396,7 +347,7 @@ if __name__ == "__main__":
     if args.max_episode_steps is not None:
         env_kwargs["max_episode_steps"] = args.max_episode_steps
     other_kwargs = dict(obs_horizon=args.obs_horizon)
-    envs = make_eval_envs(args.env_id, args.num_eval_envs, args.sim_backend, env_kwargs, other_kwargs, video_dir=f'runs/{run_name}/videos' if args.capture_video else None, wrappers=[FlattenRGBDObservationWrapper, partial(DictFrameStack, num_stack = args.obs_horizon)])
+    envs = make_eval_envs(args.env_id, args.num_eval_envs, args.sim_backend, env_kwargs, other_kwargs, video_dir=f'runs/{run_name}/videos' if args.capture_video else None, wrappers=[partial(FlattenRGBDObservationWrapper, sep_depth=True)])
     if args.track:
         import wandb
         config = vars(args)
@@ -449,3 +400,86 @@ if __name__ == "__main__":
     )
 
     agent = Agent(envs, args).to(device)
+
+    optimizer = optim.AdamW(params=agent.parameters(), 
+        lr=args.lr, betas=(0.95, 0.999), weight_decay=1e-6)
+
+    # Cosine LR schedule with linear warmup
+    lr_scheduler = get_scheduler(
+        name='cosine',
+        optimizer=optimizer,
+        num_warmup_steps=500,
+        num_training_steps=args.total_iters,
+    )
+
+    # Exponential Moving Average
+    # accelerates training and improves stability
+    # holds a copy of the model weights
+    ema = EMAModel(parameters=agent.parameters(), power=0.75)
+    ema_agent = Agent(envs, args).to(device)
+
+    # ---------------------------------------------------------------------------- #
+    # Training begins.
+    # ---------------------------------------------------------------------------- #
+    agent.train()
+    
+    best_eval_metrics = defaultdict(float)
+    timings = defaultdict(float)
+
+    for iteration, data_batch in enumerate(train_dataloader):
+        # # copy data from cpu to gpu
+        # data_batch = {k: v.cuda(non_blocking=True) for k, v in data_batch.items()}
+
+        # forward and compute loss
+        obs_batch_dict = data_batch['observations']
+        obs_batch_dict = {k: v.cuda(non_blocking=True) for k, v in obs_batch_dict.items()}
+        act_batch = data_batch['actions'].cuda(non_blocking=True)
+
+        # forward and compute loss
+        total_loss = agent.compute_loss(
+            obs_seq=obs_batch_dict, # obs_batch_dict['state'] is (B, L, obs_dim)
+            action_seq=act_batch, # (B, L, act_dim)
+        )
+
+        # backward
+        optimizer.zero_grad()
+        total_loss.backward()
+        optimizer.step()
+        lr_scheduler.step() # step lr scheduler every batch, this is different from standard pytorch behavior
+        last_tick = time.time()
+
+        ema.step(agent.parameters())
+
+        if iteration % args.log_freq == 0:
+            print(f"Iteration {iteration}, loss: {total_loss.item()}")
+            writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], iteration)
+            writer.add_scalar("losses/total_loss", total_loss.item(), iteration)
+            for k, v in timings.items():
+                writer.add_scalar(f"time/{k}", v, iteration)
+        # Evaluation
+        if iteration % args.eval_freq == 0:
+            last_tick = time.time()
+
+            ema.copy_to(ema_agent.parameters())
+            # def sample_fn(obs):
+
+            eval_metrics = evaluate(args.num_eval_episodes, ema_agent, envs, device, args.sim_backend)
+            timings["eval"] += time.time() - last_tick
+
+            print(f"Evaluated {len(eval_metrics['success_at_end'])} episodes")
+            for k in eval_metrics.keys():
+                eval_metrics[k] = np.mean(eval_metrics[k])
+                writer.add_scalar(f"eval/{k}", eval_metrics[k], iteration)
+                print(f"{k}: {eval_metrics[k]:.4f}")
+
+            save_on_best_metrics = ["success_once", "success_at_end"]
+            for k in save_on_best_metrics:
+                if k in eval_metrics and eval_metrics[k] > best_eval_metrics[k]:
+                    best_eval_metrics[k] = eval_metrics[k]
+                    save_ckpt(run_name, f"best_eval_{k}")
+                    print(f'New best {k}_rate: {eval_metrics[k]:.4f}. Saving checkpoint.')
+        # Checkpoint
+        if args.save_freq is not None and iteration % args.save_freq == 0:
+            save_ckpt(run_name, str(iteration))
+    envs.close()
+    writer.close()

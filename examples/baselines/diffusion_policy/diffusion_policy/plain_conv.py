@@ -38,7 +38,7 @@ class PlainConv(nn.Module):
             self.fc = make_mlp(128, [out_dim], last_act=last_act)
         else:
             self.pool = None
-            self.fc = make_mlp(128 * 4 * 4, [out_dim], last_act=last_act)
+            self.fc = make_mlp(128 * 4 * 4 * 4, [out_dim], last_act=last_act)
 
         self.reset_parameters()
 
