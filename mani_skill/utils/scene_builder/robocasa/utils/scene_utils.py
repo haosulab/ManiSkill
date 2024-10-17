@@ -62,7 +62,9 @@ def initialize_fixture(scene: ManiSkillScene, config, cur_fixtures, rng=None):
     if "pos" not in config:
         # need position to initialize fixture, adjusted later fo relative positioning
         config["pos"] = [0.0, 0.0, 0.0]
-
+    # import ipdb;ipdb.set_trace()
+    if "interior_obj" in config:
+        del config["interior_obj"]
     # update fixture pointers
     for k in ATTACH_ARGS:
         if k in config:
@@ -75,9 +77,9 @@ def initialize_fixture(scene: ManiSkillScene, config, cur_fixtures, rng=None):
     # builder.add_box_visual(half_size=config["size"], material=render_material)
     # builder.add_box_collision(half_size=config["size"])
     # builder.initial_pose = sapien.Pose(config["pos"], config["quat"])
-    fixture = Wall(name=name, **config).build(scene)
+    # fixture = Wall(name=name, **config).build(scene)
     # fixture = builder.build_static(name=name)
-    # fixture = class_type(name=name, **config)
+    fixture = class_type(scene=scene, name=name, **config).build()
     # print(class_type, name, type(fixture))
     return fixture
 

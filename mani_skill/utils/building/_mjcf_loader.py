@@ -21,7 +21,8 @@ Notes:
     The default group of geoms is 0 in mujoco. From docs it appears only group 0 and 2 are rendered by default.
     This is also by default what the visualizer shows and presumably what image renders show.
     Any other group is treated as being invisible (e.g. in SAPIEN we do not add visual bodies). SAPIEN does not currently support
-    toggling render groups like Mujoco.
+    toggling render groups like Mujoco. Sometimes a MJCF might not follow this and will try and render other groups. In that case the loader supports
+    indicating which other groups to add visual bodies for.
 
     Ref: https://mujoco.readthedocs.io/en/stable/XMLreference.html#body-geom-group,
     https://mujoco.readthedocs.io/en/latest/modeling.html#composite-objects (says group 3 is turned off)
@@ -162,7 +163,7 @@ class MJCFLoader:
     Class to load MJCF into SAPIEN.
     """
 
-    def __init__(self, ignore_classes=["motor"]):
+    def __init__(self, ignore_classes=["motor"], visual_groups=[0, 2]):
         self.fix_root_link = True
         """whether to fix the root link. Note regardless of given XML, the root link is a dummy link this loader
         creates which makes a number of operations down the line easier. In general this should be False if there is a freejoint for the root body
@@ -176,6 +177,8 @@ class MJCFLoader:
         self.collision_is_visual = False
         self.revolute_unwrapped = False
         self.scale = 1.0
+
+        self.visual_groups = visual_groups
 
         self.scene: sapien.Scene = None
 
@@ -262,7 +265,7 @@ class MJCFLoader:
         geom_group = _parse_int(geom_attrib, "group", 0)
         # See note at top of file for how we handle geom groups
         has_visual_body = False
-        if geom_group == 0 or geom_group == 2:
+        if geom_group in self.visual_groups:
             has_visual_body = True
 
         geom_contype = _parse_int(geom_attrib, "contype", 1)
@@ -464,7 +467,7 @@ class MJCFLoader:
             metallic=_parse_float(material.attrib, "shininess", 0.5),
         )
         if texture is not None and texture.file is not None:
-            render_material.diffuse_texture = RenderTexture2D(filename=texture.file)
+            render_material.base_color_texture = RenderTexture2D(filename=texture.file)
         self._materials[name] = render_material
 
     def _parse_mesh(self, mesh: Element):
@@ -739,9 +742,17 @@ class MJCFLoader:
         actor_builders: List[ActorBuilder] = []
         for i, body in enumerate(xml.find("worldbody").findall("body")):
             # determine first if this body is really an articulation or a actor
-
             has_freejoint = body.find("freejoint") is not None
-            is_articulation = body.find("joint") is not None or has_freejoint
+
+            def has_joint(body):
+                if body.find("joint") is not None:
+                    return True
+                for child in body.findall("body"):
+                    if has_joint(child):
+                        return True
+                return False
+
+            is_articulation = has_joint(body) or has_freejoint
             # <body> tag refers to an artciulation in physx only if there is another body tag inside it
             if is_articulation:
                 builder = self.scene.create_articulation_builder()

@@ -5,12 +5,15 @@ from typing import List
 import torch
 import yaml
 
+from mani_skill.utils.scene_builder.robocasa.fixtures.counter import Counter
+from mani_skill.utils.scene_builder.robocasa.fixtures.sink import Sink
+from mani_skill.utils.scene_builder.robocasa.fixtures.wall import Wall
 from mani_skill.utils.scene_builder.robocasa.utils import scene_registry, scene_utils
 from mani_skill.utils.scene_builder.scene_builder import SceneBuilder
 
-FIXTURES = dict(wall=None)
+FIXTURES = dict(wall=Wall, counter=Counter, sink=Sink)
 # fixtures that are attached to other fixtures, disables positioning system in this script
-FIXTURES_INTERIOR = dict(sink=None, stovetop=None, accessory=None, wall_accessory=None)
+FIXTURES_INTERIOR = dict(sink=Sink, stovetop=None, accessory=None, wall_accessory=None)
 
 ALL_SIDES = ["left", "right", "front", "back", "bottom", "top"]
 
@@ -139,7 +142,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
         for fixture_config in arena:
             # scene_registry.check_syntax(fixture_config)
             fixture_name = fixture_config["name"]
-            if "wall" not in fixture_name:
+            if "wall" not in fixture_name and "sink" not in fixture_name:
                 continue
             # stack of fixtures, handled separately
             if fixture_config["type"] == "stack":
@@ -184,41 +187,41 @@ class RoboCasaSceneBuilder(SceneBuilder):
             configs[fixture_name] = fixture_config
 
             # update fixture position
-            if fixture_config["type"] not in FIXTURES_INTERIOR.values():
-                # relative positioning
-                if "align_to" in fixture_config:
-                    pos = scene_utils.get_relative_position(
-                        fixture,
-                        fixture_config,
-                        fixtures[fixture_config["align_to"]],
-                        configs[fixture_config["align_to"]],
-                    )
+            # if fixture_config["type"] not in FIXTURES_INTERIOR.values():
+            #     # relative positioning
+            #     if "align_to" in fixture_config:
+            #         pos = scene_utils.get_relative_position(
+            #             fixture,
+            #             fixture_config,
+            #             fixtures[fixture_config["align_to"]],
+            #             configs[fixture_config["align_to"]],
+            #         )
 
-                elif "stack_on" in fixture_config:
-                    stack_on = fixtures[fixture_config["stack_on"]]
+            #     elif "stack_on" in fixture_config:
+            #         stack_on = fixtures[fixture_config["stack_on"]]
 
-                    # account for off-centered objects
-                    stack_on_center = stack_on.center
+            #         # account for off-centered objects
+            #         stack_on_center = stack_on.center
 
-                    # infer unspecified axes of position
-                    pos = fixture_config["pos"]
-                    if pos[0] is None:
-                        pos[0] = stack_on.pos[0] + stack_on_center[0]
-                    if pos[1] is None:
-                        pos[1] = stack_on.pos[1] + stack_on_center[1]
+            #         # infer unspecified axes of position
+            #         pos = fixture_config["pos"]
+            #         if pos[0] is None:
+            #             pos[0] = stack_on.pos[0] + stack_on_center[0]
+            #         if pos[1] is None:
+            #             pos[1] = stack_on.pos[1] + stack_on_center[1]
 
-                    # calculate height of fixture
-                    pos[2] = (
-                        stack_on.pos[2] + stack_on.size[2] / 2 + fixture.size[2] / 2
-                    )
-                    pos[2] += stack_on_center[2]
-                else:
-                    # absolute position
-                    pos = fixture_config.get("pos", None)
+            #         # calculate height of fixture
+            #         pos[2] = (
+            #             stack_on.pos[2] + stack_on.size[2] / 2 + fixture.size[2] / 2
+            #         )
+            #         pos[2] += stack_on_center[2]
+            #     else:
+            #         # absolute position
+            #         pos = fixture_config.get("pos", None)
 
-                # TODO (stao): uncomment the next 2 lines
-                # if pos is not None and type(fixture) not in [Wall, Floor]:
-                #     fixture.set_pos(pos)
+            # TODO (stao): uncomment the next 2 lines
+            # if pos is not None and type(fixture) not in [Wall, Floor]:
+            #     fixture.set_pos(pos)
 
         # composites are non-MujocoObjects, must remove
         for composite in composites:

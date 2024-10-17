@@ -7,6 +7,7 @@ from mani_skill.envs.scene import ManiSkillScene
 class Wall:
     def __init__(
         self,
+        scene: ManiSkillScene,
         name="wall",
         texture="textures/bricks/white_bricks.png",
         pos=None,
@@ -86,10 +87,11 @@ class Wall:
         self.name = name
         self.size = size
         self.pos = pos
+        self.scene = scene
         print(mat_attrib)
 
-    def build(self, scene: ManiSkillScene):
-        builder = scene.create_actor_builder()
+    def build(self):
+        builder = self.scene.create_actor_builder()
         if self.backing:
             builder.add_box_visual(half_size=self.size, material=self.render_material)
         else:
