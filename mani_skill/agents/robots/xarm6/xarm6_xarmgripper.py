@@ -314,9 +314,3 @@ class XArm6XArmGripper(BaseAgent):
     def is_static(self, threshold: float = 0.2):
         qvel = self.robot.get_qvel()[..., :-1]
         return torch.max(torch.abs(qvel), 1)[0] <= threshold
-
-
-@register_agent()
-class XArm6NoGripper(BaseAgent):
-    uid = "xarm6_nogripper"
-    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/xarm6/xarm6_nogripper.urdf"
