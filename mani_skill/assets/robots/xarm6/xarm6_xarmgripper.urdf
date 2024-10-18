@@ -292,7 +292,7 @@
   <joint name="eef_joint" type="fixed">
     <parent link="xarm_gripper_base_link"/>
     <child link="eef"/>
-    <origin xyz="0 0 0.15" rpy="0 0 0"/>
+    <origin xyz="0 0 0.172" rpy="0 0 0"/>
   </joint>
 
   <link name="left_outer_knuckle">

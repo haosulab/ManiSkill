@@ -382,7 +382,7 @@ class XArm6AllegroRight(BaseAgent):
         return [
             CameraConfig(
                 uid="hand_camera",
-                pose=sapien.Pose(p=[0, 0, -0.05], q=[0.70710678, 0, 0.70710678, 0]),
+                pose=sapien.Pose(p=[-0.025, 0, 0.025], q=[0.70710678, 0, -0.70710678, 0]),
                 width=128,
                 height=128,
                 fov=np.pi / 2,
