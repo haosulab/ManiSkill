@@ -17,6 +17,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 import tyro
+from tqdm.auto import tqdm
 
 import mani_skill.envs
 
@@ -25,6 +26,10 @@ import mani_skill.envs
 class Args:
     exp_name: Optional[str] = None
     """the name of this experiment"""
+    robot: str = "panda"
+    """which robot to use for the experiment"""
+    control_mode: str = "pd_joint_pos"
+    """which control mode to use for the experiment"""
     seed: int = 1
     """seed of the experiment"""
     torch_deterministic: bool = True
@@ -127,6 +132,20 @@ class ReplayBuffer:
         self.dones = torch.zeros((buffer_size, num_envs)).to(storage_device)
         self.values = torch.zeros((buffer_size, num_envs)).to(storage_device)
 
+    def clean_samples(self, obs: torch.Tensor, next_obs: torch.Tensor, action: torch.Tensor, reward: torch.Tensor, done: torch.Tensor):
+        # Find row indices where any of the tensors are nan or too large
+        nan_mask = torch.isnan(obs).any(dim=1) | torch.isnan(next_obs).any(dim=1) | torch.isnan(action).any(dim=1)
+        large_mask = (obs > 1e4).any(dim=1) | (next_obs > 1e4).any(dim=1) | (action > 1e4).any(dim=1)
+        nan_or_large_indices = torch.where(nan_mask | large_mask)[0]
+        if len(nan_or_large_indices) > 0:
+            # print(f"NaN or large value detected: {len(nan_or_large_indices)} transitions converted to zero")
+            obs[nan_or_large_indices] = 0
+            next_obs[nan_or_large_indices] = 0
+            action[nan_or_large_indices] = 0
+            reward[nan_or_large_indices] = 0
+            done[nan_or_large_indices] = 0
+        return obs, next_obs, action, reward, done            
+
     def add(self, obs: torch.Tensor, next_obs: torch.Tensor, action: torch.Tensor, reward: torch.Tensor, done: torch.Tensor):
         if self.storage_device == torch.device("cpu"):
             obs = obs.cpu()
@@ -135,6 +154,7 @@ class ReplayBuffer:
             reward = reward.cpu()
             done = done.cpu()
 
+        obs, next_obs, action, reward, done = self.clean_samples(obs, next_obs, action, reward, done)
         self.obs[self.pos] = obs
         self.next_obs[self.pos] = next_obs
 
@@ -146,6 +166,7 @@ class ReplayBuffer:
         if self.pos == self.buffer_size:
             self.full = True
             self.pos = 0
+
     def sample(self, batch_size: int):
         if self.full:
             batch_inds = torch.randint(0, self.buffer_size, size=(batch_size, ))
@@ -242,7 +263,7 @@ if __name__ == "__main__":
     args.steps_per_env = args.training_freq // args.num_envs
     if args.exp_name is None:
         args.exp_name = os.path.basename(__file__)[: -len(".py")]
-        run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
+        run_name = f"{args.env_id}__{args.exp_name}__{args.robot}__{args.seed}__{int(time.time())}"
     else:
         run_name = args.exp_name
 
@@ -278,7 +299,7 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # env setup
-    env_kwargs = dict(obs_mode="state", control_mode="pd_joint_delta_pos", render_mode="rgb_array", sim_backend="gpu")
+    env_kwargs = dict(obs_mode="state", control_mode=args.control_mode, render_mode="rgb_array", sim_backend="gpu", robot_uids=args.robot)
     envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, **env_kwargs)
     eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, **env_kwargs)
     if isinstance(envs.action_space, gym.spaces.Dict):
@@ -293,8 +314,8 @@ if __name__ == "__main__":
             save_video_trigger = lambda x : (x // args.num_steps) % args.save_train_video_freq == 0
             envs = RecordEpisode(envs, output_dir=f"runs/{run_name}/train_videos", save_trajectory=False, save_video_trigger=save_video_trigger, max_steps_per_video=args.num_steps, video_fps=30)
         eval_envs = RecordEpisode(eval_envs, output_dir=eval_output_dir, save_trajectory=args.evaluate, trajectory_name="trajectory", max_steps_per_video=args.num_eval_steps, video_fps=30)
-    envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=not args.partial_reset, **env_kwargs)
-    eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=not args.partial_reset, **env_kwargs)
+    envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=not args.partial_reset, record_metrics=True, **env_kwargs)
+    eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=not args.partial_reset, record_metrics=True, **env_kwargs)
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
 
@@ -343,8 +364,9 @@ if __name__ == "__main__":
 
     global_steps_per_iteration = args.num_envs * (args.steps_per_env)
 
+    pbar = tqdm(total=args.total_timesteps, desc="Training SAC")
     while global_step < args.total_timesteps:
-        print(f"Global Step: {global_step}")
+        pbar.update(global_steps_per_iteration)
         if args.eval_freq > 0 and (global_step - args.training_freq) // args.eval_freq < global_step // args.eval_freq:
             # evaluate
             actor.eval()
@@ -360,7 +382,7 @@ if __name__ == "__main__":
                     if "final_info" in eval_infos:
                         mask = eval_infos["_final_info"]
                         eps_lens.append(eval_infos["final_info"]["elapsed_steps"][mask].cpu().numpy())
-                        returns.append(eval_infos["final_info"]["episode"]["r"][mask].cpu().numpy())
+                        returns.append(eval_infos["final_info"]["episode"]["return"][mask].cpu().numpy())
                         if "success" in eval_infos:
                             successes.append(eval_infos["final_info"]["success"][mask].cpu().numpy())
                         if "fail" in eval_infos:
@@ -419,7 +441,7 @@ if __name__ == "__main__":
                 final_info = infos["final_info"]
                 done_mask = infos["_final_info"]
                 real_next_obs[done_mask] = infos["final_observation"][done_mask]
-                episodic_return = final_info['episode']['r'][done_mask].cpu().numpy().mean()
+                episodic_return = final_info['episode']['return'][done_mask].cpu().numpy().mean()
                 if "success" in final_info:
                     writer.add_scalar("charts/success_rate", final_info["success"][done_mask].cpu().numpy().mean(), global_step)
                 if "fail" in final_info:
