@@ -7,11 +7,12 @@ from sapien.wrapper.actor_builder import CollisionShapeRecord, VisualShapeRecord
 
 from mani_skill import ASSET_DIR
 from mani_skill.envs.scene import ManiSkillScene
+from mani_skill.utils.scene_builder.robocasa.fixtures.fixture import Fixture
 
 SIDES = ["left", "right", "front", "back"]
 
 
-class Counter:
+class Counter(Fixture):
     """
     Initializes a counter fixture.
 
@@ -70,27 +71,28 @@ class Counter:
     ):
         self.has_opening = interior_obj is not None
         if self.has_opening:
-            self.xml = "fixtures/counters/counter_with_opening"
+            xml = "fixtures/counters/counter_with_opening"
         else:
-            self.xml = "fixtures/counters/counter"
-        self.xml = (
-            ASSET_DIR
-            / "scene_datasets/robocasa_dataset/assets"
-            / self.xml
-            / "model.xml"
-        )
+            xml = "fixtures/counters/counter"
+        # self.xml = (
+        #     ASSET_DIR
+        #     / "scene_datasets/robocasa_dataset/assets"
+        #     / self.xml
+        #     / "model.xml"
+        # )
         self.interior_obj = None
 
         self.size = size
         self.th = top_thickness
         self.overhang = overhang
         self.half_top = half_top
-        self.name = name
-
-        self.loader = scene.create_mjcf_loader()
-        self.actor_builder = self.loader.parse(
-            mjcf_file=self.xml, package_dir=self.xml / "../"
-        )["actor_builders"][0]
+        super().__init__(
+            scene=scene,
+            xml=xml,
+            name=name,
+            *args,
+            **kwargs,
+        )
 
         assert len(hollow) == 2
         self.hollow = hollow
@@ -245,7 +247,6 @@ class Counter:
             self.pos[1] + self.overhang / 2 + (y_percent - 0.50) * top_size[1],
             self.pos[2] + top_size[2] / 2 - self.interior_obj.height / 2,
         ]
-
         self.interior_obj.set_origin(interior_origin)
 
         # calculate the size of padding around the sink
@@ -296,28 +297,14 @@ class Counter:
         w, d, h = np.array(self.size)
         th = self.th
 
-        visual_records: dict[str, VisualShapeRecord] = dict()
-        collision_records: dict[str, CollisionShapeRecord] = dict()
-        for collision_record, visual_record in zip(
-            self.actor_builder.collision_records, self.actor_builder.visual_records
-        ):
-            # TODO(stao): sapien collision records dont have names at the moment. why?
-            visual_records[visual_record.name] = visual_record
-            collision_records[visual_record.name] = collision_record
-
-        # get the base geoms
-        # for side in SIDES:
-        #     geoms["base" + "_" + side] = list()
-        # for geom_name in geoms.keys():
-        #     for postfix in ["", "_visual"]:
-        #         g = find_elements(
-        #             root=self._obj,
-        #             tags="geom",
-        #             attribs={"name": "{}_{}{}".format(self.name, geom_name, postfix)},
-        #             return_first=True,
-        #         )
-        #         geoms[geom_name].append(g)
-
+        # visual_records: dict[str, VisualShapeRecord] = dict()
+        # collision_records: dict[str, CollisionShapeRecord] = dict()
+        # for collision_record, visual_record in zip(
+        #     self.actor_builder.collision_records, self.actor_builder.visual_records
+        # ):
+        #     # TODO(stao): sapien collision records dont have names at the moment. why?
+        #     visual_records[visual_record.name] = visual_record
+        #     collision_records[visual_record.name] = collision_record
         # counters with half-top can only either be right or left
         assert sum(self.half_top) < 2
         if sum(self.half_top) == 0:
@@ -333,9 +320,14 @@ class Counter:
                 # keep left half
                 pos = np.array([-w / 4, 0, h / 2 - th / 2])
 
-        size / 2
+        half_size = size / 2
         # self.actor_builder.visual_records.append(VisualShapeRecord)
-        # self.actor_builder.add_box_visual(name=self.name + "_top", half_size=half_size, pose=sapien.Pose(pos), material=self.loader._materials["counter_top"])
+        self.actor_builder.add_box_visual(
+            name=self.name + "_top",
+            half_size=half_size,
+            pose=sapien.Pose(pos),
+            material=self.loader._materials["counter_top"],
+        )
         # self.actor_builder.add_box_collision(name=self.name + "_top", half_size=half_size, pose=sapien.Pose(pos), density=10)
         # geom_name = self._name + "_top"
         # g_vis = new_geom(
@@ -355,7 +347,7 @@ class Counter:
         # self._visual_geoms.append("top_visual")
 
         # break the top width into chunks
-        chunk_positions, chunk_sizes = self._get_chunks(pos, size, chunk_size=0.5)
+        # chunk_positions, chunk_sizes = self._get_chunks(pos, size, chunk_size=0.5)
         # import ipdb;ipdb.set_trace()
         # for i in range(len(chunk_sizes)):
         #     g = new_geom(
@@ -387,21 +379,22 @@ class Counter:
         #         else:
         #             elem.set("pos", a2s(base_pos[side]))
         #             elem.set("size", a2s(base_size[side]))
-        for side in SIDES:
-            record = visual_records["base_{}".format(side)]
-            # if side == "front" and self.hollow[1]:
-            #     self._remove_element(elem)
-            # elif side == "back" and self.hollow[0]:
-            #     self._remove_element(elem)
-            # # houses bottom row cabinets
-            # # remove right and left base geoms if any of hollow is True
-            # elif sum(self.base_opening) == 0 and sum(self.hollow) > 0:
-            #     self._remove_element(elem)
-            # else:
-            #     elem.set("pos", a2s(base_pos[side]))
-            #     elem.set("size", a2s(base_size[side]))
-            record.pose.set_p(base_pos[side])
-            record.scale = base_size[side]
+        # for side in SIDES:
+        #     record = collision_records["base_{}".format(side)]
+        #     if side == "front" and self.hollow[1]:
+        #         del collision_records["base_{}".format(side)]
+        #     elif side == "back" and self.hollow[0]:
+        #         del collision_records["base_{}".format(side)]
+        #     # houses bottom row cabinets
+        #     # remove right and left base geoms if any of hollow is True
+        #     elif sum(self.base_opening) == 0 and sum(self.hollow) > 0:
+        #         del collision_records["base_{}".format(side)]
+        #     else:
+        #         record.pose.set_p(base_pos[side])
+        #         record.scale = base_size[side]
+        #         elem.set("size", a2s(base_size[side]))
+        #     record.pose.set_p(base_pos[side])
+        #     record.scale = base_size[side]
 
     def _make_counter_with_opening(self, padding):
         """
@@ -419,7 +412,6 @@ class Counter:
         th = self.th
         side_th = 0.2 if sum(self.base_opening) == 1 else 0.0002
         left_pad, right_pad, front_pad, back_pad = padding
-
         if front_pad < self.overhang:
             raise ValueError(
                 "Overhang value is too large, must be lower "
@@ -461,27 +453,8 @@ class Counter:
             base_pos["front"] = [0, 0, -th]
         elif self.base_opening[1]:
             base_pos["back"] = [0, 0, -th]
-        import ipdb
 
-        ipdb.set_trace()
-        visual_records = dict()
-        collision_records = dict()
-        for visual_record in self.actor_builder.visual_records:
-            visual_records[visual_record.name] = visual_record
-        for collision_record in self.actor_builder.collision_records:
-            collision_records[collision_record.name] = collision_record
-        # get the base geoms
-        # for side in SIDES:
-        #     geoms["base" + "_" + side] = list()
-        # for geom_name in geoms.keys():
-        #     for postfix in ["", "_visual"]:
-        #         g = find_elements(
-        #             root=self._obj,
-        #             tags="geom",
-        #             attribs={"name": "{}_{}{}".format(self.name, geom_name, postfix)},
-        #             return_first=True,
-        #         )
-        #         geoms[geom_name].append(g)
+        self.actor_builder.collision_records = []
 
         for side in SIDES:
             # convert coordinate of bottom-left corner to coordinate of center
@@ -491,19 +464,22 @@ class Counter:
             top_pos[side][2] /= 2
 
             base_pos[side] = np.array(base_pos[side]) / 2
-
-            for elem in geoms["base_{}".format(side)]:
-                # remove appropriate part of the base, based on hollow specification
-                if side == "front" and self.hollow[1]:
-                    self._remove_element(elem)
-                elif side == "back" and self.hollow[0]:
-                    self._remove_element(elem)
-                elif sum(self.base_opening) == 0 and sum(self.hollow) > 0:
-                    self._remove_element(elem)
-                else:
-                    elem.set("pos", a2s(base_pos[side]))
-                    # divide sizes by 2 according to mujoco convention
-                    elem.set("size", a2s(np.array(base_size[side]) / 2))
+            # NOTE (stao): the xmls for counters are only collisions, no visuals
+            # for elem in geoms["base_{}".format(side)]:
+            #     # remove appropriate part of the base, based on hollow specification
+            #     if side == "front" and self.hollow[1]:
+            #         # self._remove_element(elem)
+            #         pass
+            #     elif side == "back" and self.hollow[0]:
+            #         # self._remove_element(elem)
+            #         pass
+            #     elif sum(self.base_opening) == 0 and sum(self.hollow) > 0:
+            #         # self._remove_element(elem)
+            #         pass
+            #     else:
+            #         elem.set("pos", a2s(base_pos[side]))
+            #         # divide sizes by 2 according to mujoco convention
+            #         elem.set("size", a2s(np.array(base_size[side]) / 2))
 
             # for elem in geoms["top_{}".format(side)]:
             pos = np.array(top_pos[side])
@@ -516,39 +492,17 @@ class Counter:
                 size[1] += self.overhang
                 pos[1] -= self.overhang / 2
 
-            geom_name = self._name + "_top_{}".format(side)
-
             half_size = size / 2
-
-            g_vis = new_geom(
-                name=geom_name + "_visual",
-                type="box",
-                size=half_size,
-                pos=pos,
-                group=1,
-                material=self._name + "_counter_top",
-                density=10,
-                conaffinity=0,
-                contype=0,
-                mass=1e-8,
+            # I can't tell what robocasa is really doing with collisions via chunks? so we just do it ourselves
+            self.actor_builder.add_box_visual(
+                name=self.name + "_top_{}".format(side),
+                half_size=half_size,
+                pose=sapien.Pose(pos),
+                material=self.loader._materials["counter_top"],
             )
-            self._obj.append(g_vis)
-            # manually update visual geoms registry
-            self._visual_geoms.append("top_{}_visual".format(side))
-
-            chunk_positions, chunk_sizes = self._get_chunks(pos, size, chunk_size=0.5)
-            for i in range(len(chunk_sizes)):
-                g = new_geom(
-                    name=geom_name + "_{}".format(i),
-                    type="box",
-                    size=chunk_sizes[i] / 2,
-                    pos=chunk_positions[i],
-                    group=0,
-                    density=10,
-                    rgba="0.5 0 0 1",
-                )
-                self._obj.append(g)
-                self._contact_geoms.append("top_{}_{}".format(side, i))
+            self.actor_builder.add_box_collision(
+                half_size=half_size, pose=sapien.Pose(pos), density=10
+            )
 
     def _get_base_dimensions(self):
         """
@@ -701,17 +655,17 @@ class Counter:
                 geom_i += 1
         return reset_regions
 
-    def build(self):
-        # builder = scene.create_actor_builder()
-        return self.actor_builder.build_static(name=self.name)
-        assert len(actor_builder.visual_records) == 4
-        for record in actor_builder.visual_records:
-            record.name
-        import ipdb
+    # def build(self):
+    #     # builder = scene.create_actor_builder()
+    #     return self.actor_builder.build_static(name=self.name)
+    #     assert len(actor_builder.visual_records) == 4
+    #     for record in actor_builder.visual_records:
+    #         record.name
+    #     import ipdb
 
-        ipdb.set_trace()
-        return actor_builders[0].build_static(name=self.name)
-        # builder.add_box_visual(half_size=self.size, material=self.render_material)
-        # builder.add_box_collision(half_size=self.size)
-        # builder.initial_pose = sapien.Pose(self.pos, self.get_quat())
-        # return builder.build_static(name=self.name)
+    #     ipdb.set_trace()
+    #     return actor_builders[0].build_static(name=self.name)
+    #     # builder.add_box_visual(half_size=self.size, material=self.render_material)
+    #     # builder.add_box_collision(half_size=self.size)
+    #     # builder.initial_pose = sapien.Pose(self.pos, self.get_quat())
+    #     # return builder.build_static(name=self.name)

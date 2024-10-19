@@ -100,7 +100,8 @@ class Wall:
             )
         builder.add_box_collision(half_size=self.size)
         builder.initial_pose = sapien.Pose(self.pos, self.get_quat())
-        return builder.build_static(name=self.name)
+        self.actor = builder.build_static(name=self.name)
+        return self
 
     def get_quat(self):
         """

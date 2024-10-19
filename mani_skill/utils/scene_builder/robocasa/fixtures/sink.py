@@ -1,8 +1,11 @@
+import sapien
+
 from mani_skill import ASSET_DIR
 from mani_skill.envs.scene import ManiSkillScene
+from mani_skill.utils.scene_builder.robocasa.fixtures.fixture import Fixture
 
 
-class Sink:
+class Sink(Fixture):
     def __init__(
         self,
         scene: ManiSkillScene,
@@ -13,20 +16,14 @@ class Sink:
     ):
         self._handle_joint = None
         self._water_site = None
-        self.loader = scene.create_mjcf_loader()
-        self.loader.visual_groups = [
-            1
-        ]  # for robocasa, 1 is visualized, 0 is collisions
-        self.articulation_builder = self.loader.parse(
-            ASSET_DIR / "scene_datasets/robocasa_dataset/assets" / xml / "model.xml"
-        )["articulation_builders"][0]
-        self.name = name
-        # super().__init__(
-        #     xml=xml, name=name, duplicate_collision_geoms=False, *args, **kwargs
-        # )
-
-    def build(self):
-        return self.articulation_builder.build(name=self.name, fix_root_link=True)
+        super().__init__(
+            scene=scene,
+            xml=xml,
+            name=name,
+            duplicate_collision_geoms=False,
+            *args,
+            **kwargs
+        )
 
     # TODO (stao): Add fake water
     def update_state(self, env):

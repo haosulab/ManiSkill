@@ -684,6 +684,7 @@ class MJCFLoader:
     ) -> Tuple[List[ArticulationBuilder], List[ActorBuilder], None]:
         """Helper function for self.parse"""
         xml: Element = ET.fromstring(mjcf_string.encode("utf-8"))
+        self.xml = xml
         # handle includes
         for include in xml.findall("include"):
             include_file = include.attrib["file"]
