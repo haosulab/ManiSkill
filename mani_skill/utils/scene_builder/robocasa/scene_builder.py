@@ -7,8 +7,13 @@ import numpy as np
 import torch
 import yaml
 
+from mani_skill.utils.scene_builder.robocasa.fixtures.cabinet import (
+    HousingCabinet,
+    SingleCabinet,
+)
 from mani_skill.utils.scene_builder.robocasa.fixtures.counter import Counter
 from mani_skill.utils.scene_builder.robocasa.fixtures.floor import Floor
+from mani_skill.utils.scene_builder.robocasa.fixtures.fridge import Fridge
 from mani_skill.utils.scene_builder.robocasa.fixtures.sink import Sink
 from mani_skill.utils.scene_builder.robocasa.fixtures.stove import Oven, Stove, Stovetop
 from mani_skill.utils.scene_builder.robocasa.fixtures.wall import Wall
@@ -16,6 +21,8 @@ from mani_skill.utils.scene_builder.robocasa.utils import scene_registry, scene_
 from mani_skill.utils.scene_builder.scene_builder import SceneBuilder
 
 FIXTURES = dict(
+    housing_cabinet=HousingCabinet,
+    # single_cabinet=SingleCabinet,
     wall=Wall,
     counter=Counter,
     sink=Sink,
@@ -23,6 +30,7 @@ FIXTURES = dict(
     stove=Stove,
     stovetop=Stovetop,
     oven=Oven,
+    fridge=Fridge,
 )
 # fixtures that are attached to other fixtures, disables positioning system in this script
 FIXTURES_INTERIOR = dict(

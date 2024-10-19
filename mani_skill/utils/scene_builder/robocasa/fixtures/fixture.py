@@ -42,8 +42,18 @@ class Fixture:
         self.loader.visual_groups = [
             1
         ]  # for robocasa, 1 is visualized, 0 is collisions
-        xml = ASSET_DIR / "scene_datasets/robocasa_dataset/assets" / xml / "model.xml"
-        parsed = self.loader.parse(xml, package_dir=xml / "../")
+        orig_xml = xml
+        xml = (
+            ASSET_DIR
+            / "scene_datasets/robocasa_dataset/assets"
+            / orig_xml
+            / "model.xml"
+        )
+        if not xml.exists():
+            xml = ASSET_DIR / "scene_datasets/robocasa_dataset/assets" / orig_xml
+            parsed = self.loader.parse(xml, package_dir=xml / "./")
+        else:
+            parsed = self.loader.parse(xml, package_dir=xml / "../")
         assert (
             len(parsed["articulation_builders"]) + len(parsed["actor_builders"]) == 1
         ), "exepect robocasa xmls to either have one actor or one articulation"
@@ -189,6 +199,19 @@ class Fixture:
         for k, v in self._bounds_sites.items():
             self._bounds_sites[k] = np.multiply(v, self._scale)
 
+        # TODO (stao): is there a nicer way to move this scale code elsewhere.
+        if hasattr(self, "articulation_builder"):
+            for link in self.articulation_builder.link_builders:
+                for visual in link.visual_records:
+                    visual.scale = scale
+                for col in link.collision_records:
+                    col.scale = scale
+        elif hasattr(self, "actor_builder"):
+            for visual in self.actor_builder.visual_records:
+                visual.scale = scale
+            for col in self.actor_builder.collision_records:
+                col.scale = scale
+
     def get_reset_regions(self, *args, **kwargs):
         """
         returns dictionary of reset regions, each region defined as position, x_bounds, y_bounds
@@ -315,7 +338,7 @@ class Fixture:
             pos_dict (dict): Dictionary of sites and their new positions
         """
         for (name, pos) in pos_dict.items():
-            self._bounds_sites[name].set("pos", array_to_string(pos))
+            self._bounds_sites[name] = pos
 
     def get_ext_sites(self, all_points=False, relative=True):
         """
