@@ -35,7 +35,7 @@ class Fixture:
         self.pos = np.array([0, 0, 0])
         if pos is not None:
             self.pos = pos
-        self.quat = np.array([0, 0, 0, 1])
+        self.quat = np.array([1, 0, 0, 0])
         # load the mjcf file
         self.scene = scene
         self.loader = scene.create_mjcf_loader()
@@ -137,7 +137,7 @@ class Fixture:
     """Functions from RoboCasa MujocoXMLObject class"""
 
     def set_pos(self, pos):
-        self.pos = pos
+        self.pos = pos.copy()
         # if hasattr(self, "articulation"):
         #     self.articulation.set_root_pose(sapien.Pose(p=pos, q=self.quat))
         # else:

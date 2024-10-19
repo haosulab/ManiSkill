@@ -1,7 +1,9 @@
 """Implementation of the RoboCasa scene builder. Code ported from https://github.com/robocasa/robocasa"""
 
+from copy import deepcopy
 from typing import List
 
+import numpy as np
 import torch
 import yaml
 
@@ -196,6 +198,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
             fixture = scene_utils.initialize_fixture(
                 self.scene, fixture_config, fixtures, rng=self.env._episode_rng
             )
+
             fixtures[fixture_name] = fixture
             configs[fixture_name] = fixture_config
             pos = None
@@ -231,10 +234,11 @@ class RoboCasaSceneBuilder(SceneBuilder):
                 else:
                     # absolute position
                     pos = fixture_config.get("pos", None)
-
             if pos is not None and type(fixture) not in [Wall, Floor]:
-                fixture.set_pos(pos)
-
+                fixture.set_pos(deepcopy(pos))
+            if "stove_main_group" in fixtures:
+                print(fixture.name)
+                print("stove", fixtures["stove_main_group"].name, pos)
         # composites are non-MujocoObjects, must remove
         for composite in composites:
             del fixtures[composite]
@@ -254,6 +258,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
             displacement = [pos[0] - origin[0], pos[1] - origin[1]]
 
             if type(fixture) not in [Wall, Floor]:
+                print("reorient", fixture.name, origin, pos, z_rot)
                 dx = fixture.pos[0] - origin[0]
                 dy = fixture.pos[1] - origin[1]
                 dx_rot = dx * np.cos(z_rot) - dy * np.sin(z_rot)
@@ -277,8 +282,9 @@ class RoboCasaSceneBuilder(SceneBuilder):
                 fixture._obj.set("euler", a2s(rot_new))
 
         for k, v in fixtures.items():
-            print(k, v.pos)
+            print(k, v.pos, v.size, v.quat if hasattr(v, "quat") else None)
             v.build()
+        return fixtures
 
     def initialize(self, env_idx: torch.Tensor, init_config_idxs: List[int] = None):
         pass

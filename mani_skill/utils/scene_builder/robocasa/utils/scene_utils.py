@@ -158,8 +158,7 @@ def get_relative_position(fixture, config, prev_fxtr, prev_fxtr_config):
     side = config["side"].lower()
     alignment = config["alignment"].lower() if "alignment" in config else "center"
     size = fixture.size
-    prev_pos, prev_size = prev_fxtr.pos, prev_fxtr.size
-
+    prev_pos, prev_size = deepcopy(prev_fxtr.pos), deepcopy(prev_fxtr.size)
     # for fixtures that are not perfectly centered (e.g. stoves)
     prev_pos += prev_fxtr.origin_offset
 

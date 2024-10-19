@@ -382,7 +382,9 @@ class MJCFLoader:
                 mesh_name = geom_attrib.get("mesh")
                 builder.add_visual_from_file(
                     os.path.join(self._mesh_dir, self._meshes[mesh_name].get("file")),
-                    scale=(self.scale, self.scale, self.scale),
+                    scale=(self.scale, self.scale, self.scale)
+                    if type(self.scale) == float
+                    else self.scale,
                     material=render_material,
                 )
         elif geom_type == "sdf":
