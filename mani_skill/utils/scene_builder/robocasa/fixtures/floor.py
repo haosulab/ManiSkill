@@ -27,6 +27,7 @@ class Floor(Wall):
             size=size,
             name=name,
             texture=texture,
+            wall_side="floor",
             mat_attrib=mat_attrib,
             *args,
             **kwargs
@@ -34,7 +35,7 @@ class Floor(Wall):
         self.name = name
         self.scene = scene
         # import ipdb; ipdb.set_trace()
-        self.size = np.array(size)
+        # self.size = np.array(size)
         # self.pos = np.array(pos)
         # self.render_material = sapien.render.RenderMaterial()
         # texture = str(ASSET_DIR / "scene_datasets/robocasa_dataset/assets" / texture)

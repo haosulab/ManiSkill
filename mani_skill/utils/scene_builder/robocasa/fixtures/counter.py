@@ -103,7 +103,6 @@ class Counter(Fixture):
         if sum(self.base_opening) == 1:
             # overwrites hollow parameter
             self.hollow = [False, False]
-        print("counter", name)
         if interior_obj is None:
             self._make_counter()
         else:

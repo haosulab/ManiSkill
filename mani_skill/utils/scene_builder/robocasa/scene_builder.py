@@ -233,7 +233,6 @@ class RoboCasaSceneBuilder(SceneBuilder):
                     pos = fixture_config.get("pos", None)
 
             if pos is not None and type(fixture) not in [Wall, Floor]:
-                print("set", fixture.name, pos)
                 fixture.set_pos(pos)
 
         # composites are non-MujocoObjects, must remove
@@ -277,8 +276,9 @@ class RoboCasaSceneBuilder(SceneBuilder):
                 fixture._obj.set("pos", a2s(pos_new))
                 fixture._obj.set("euler", a2s(rot_new))
 
-        for fixture in fixtures.values():
-            fixture.build()
+        for k, v in fixtures.items():
+            print(k, v.pos)
+            v.build()
 
     def initialize(self, env_idx: torch.Tensor, init_config_idxs: List[int] = None):
         pass

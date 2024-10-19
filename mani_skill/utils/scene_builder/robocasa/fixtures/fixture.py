@@ -159,7 +159,6 @@ class Fixture:
         fixture_mat = euler2mat(*fixture_rot)
         # fixture_mat = T.euler2mat(fixture_rot)
         pos = origin + np.dot(fixture_mat, -self.origin_offset)
-        print(self.name, pos, origin, fixture_rot, self.rot)
 
         self.set_pos(pos)
 
