@@ -88,7 +88,6 @@ class Wall:
         self.size = size
         self.pos = pos
         self.scene = scene
-        print(mat_attrib)
 
     def build(self):
         builder = self.scene.create_actor_builder()

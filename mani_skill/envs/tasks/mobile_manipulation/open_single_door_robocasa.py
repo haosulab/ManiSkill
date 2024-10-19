@@ -38,10 +38,10 @@ class RoboCasaOpenSingleDoorEnv(BaseEnv):
     def _load_scene(self, options: dict):
         self.scene_builder = RoboCasaSceneBuilder(self)
         self.scene_builder.build()
-        self.ground = build_ground(self.scene)
-        self.ground.set_collision_group_bit(
-            group=2, bit_idx=FETCH_WHEELS_COLLISION_BIT, bit=1
-        )
+        # self.ground = build_ground(self.scene)
+        # self.ground.set_collision_group_bit(
+        #     group=2, bit_idx=FETCH_WHEELS_COLLISION_BIT, bit=1
+        # )
 
         self.agent.robot.set_pose(sapien.Pose(p=[0, 0, 0]))
 

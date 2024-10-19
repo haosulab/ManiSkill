@@ -8,13 +8,24 @@ import yaml
 from mani_skill.utils.scene_builder.robocasa.fixtures.counter import Counter
 from mani_skill.utils.scene_builder.robocasa.fixtures.floor import Floor
 from mani_skill.utils.scene_builder.robocasa.fixtures.sink import Sink
+from mani_skill.utils.scene_builder.robocasa.fixtures.stove import Oven, Stove, Stovetop
 from mani_skill.utils.scene_builder.robocasa.fixtures.wall import Wall
 from mani_skill.utils.scene_builder.robocasa.utils import scene_registry, scene_utils
 from mani_skill.utils.scene_builder.scene_builder import SceneBuilder
 
-FIXTURES = dict(wall=Wall, counter=Counter, sink=Sink, floor=Floor)
+FIXTURES = dict(
+    wall=Wall,
+    counter=Counter,
+    sink=Sink,
+    floor=Floor,
+    stove=Stove,
+    stovetop=Stovetop,
+    oven=Oven,
+)
 # fixtures that are attached to other fixtures, disables positioning system in this script
-FIXTURES_INTERIOR = dict(sink=Sink, stovetop=None, accessory=None, wall_accessory=None)
+FIXTURES_INTERIOR = dict(
+    sink=Sink, stovetop=Stovetop, accessory=None, wall_accessory=None
+)
 
 ALL_SIDES = ["left", "right", "front", "back", "bottom", "top"]
 
@@ -142,14 +153,10 @@ class RoboCasaSceneBuilder(SceneBuilder):
         for fixture_config in arena:
             # scene_registry.check_syntax(fixture_config)
             fixture_name = fixture_config["name"]
-            if (
-                "wall" not in fixture_name
-                and "sink" not in fixture_name
-                and "counter" not in fixture_name
-            ):
-                continue
+
             # stack of fixtures, handled separately
             if fixture_config["type"] == "stack":
+                continue
                 stack = FixtureStack(
                     fixture_config,
                     fixtures,
@@ -171,6 +178,8 @@ class RoboCasaSceneBuilder(SceneBuilder):
                 fixture_config = default_config
 
             # set fixture type
+            if fixture_config["type"] not in FIXTURES:
+                continue
             fixture_config["type"] = FIXTURES[fixture_config["type"]]
 
             # pre-processing for fixture size

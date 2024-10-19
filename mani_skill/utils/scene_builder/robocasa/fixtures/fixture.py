@@ -43,14 +43,14 @@ class Fixture:
             1
         ]  # for robocasa, 1 is visualized, 0 is collisions
         xml = ASSET_DIR / "scene_datasets/robocasa_dataset/assets" / xml / "model.xml"
-        if "sink" in name:
-            self.articulation_builder = self.loader.parse(xml, package_dir=xml / "../")[
-                "articulation_builders"
-            ][0]
+        parsed = self.loader.parse(xml, package_dir=xml / "../")
+        assert (
+            len(parsed["articulation_builders"]) + len(parsed["actor_builders"]) == 1
+        ), "exepect robocasa xmls to either have one actor or one articulation"
+        if len(parsed["actor_builders"]) == 1:
+            self.actor_builder = parsed["actor_builders"][0]
         else:
-            self.actor_builder = self.loader.parse(
-                mjcf_file=xml, package_dir=xml / "../"
-            )["actor_builders"][0]
+            self.articulation_builder = parsed["articulation_builders"][0]
 
         # set up exterior and interior sites
         self._bounds_sites = dict()
@@ -126,6 +126,7 @@ class Fixture:
             self.articulation = self.articulation_builder.build(
                 name=self.name, fix_root_link=True
             )
+            # TODO (stao): this might not be working on GPU sim
             self.articulation.set_root_pose(sapien.Pose(p=self.pos, q=self.quat))
         else:
             self.actor_builder.initial_pose = sapien.Pose(p=self.pos, q=self.quat)
@@ -136,7 +137,6 @@ class Fixture:
     """Functions from RoboCasa MujocoXMLObject class"""
 
     def set_pos(self, pos):
-        print("setpos", self.name, pos)
         self.pos = pos
         # if hasattr(self, "articulation"):
         #     self.articulation.set_root_pose(sapien.Pose(p=pos, q=self.quat))
