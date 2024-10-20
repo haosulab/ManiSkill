@@ -280,12 +280,13 @@ if __name__ == "__main__":
                         for k, v in eval_infos["final_info"]["episode"].items():
                             eval_metrics[k].append(v)
             print(f"Evaluated {args.num_eval_steps * args.num_eval_envs} steps resulting in {num_episodes} episodes")
-            if args.evaluate:
-                break
             for k, v in eval_metrics.items():
                 mean = torch.stack(v).float().mean()
-                logger.add_scalar(f"eval/{k}", mean, global_step)
+                if logger is not None:
+                    logger.add_scalar(f"eval/{k}", mean, global_step)
                 print(f"eval_{k}_mean={mean}")
+            if args.evaluate:
+                break
         if args.save_model and iteration % args.eval_freq == 1:
             model_path = f"runs/{run_name}/ckpt_{iteration}.pt"
             torch.save(agent.state_dict(), model_path)

@@ -388,7 +388,8 @@ if __name__ == "__main__":
             print(f"Evaluated {args.num_eval_steps * args.num_eval_envs} steps resulting in {num_episodes} episodes")
             for k, v in eval_metrics.items():
                 mean = torch.stack(v).float().mean()
-                logger.add_scalar(f"eval/{k}", mean, global_step)
+                if logger is not None:
+                    logger.add_scalar(f"eval/{k}", mean, global_step)
                 print(f"eval_{k}_mean={mean}")
             if args.evaluate:
                 break
