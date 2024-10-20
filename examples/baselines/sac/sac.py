@@ -57,6 +57,8 @@ class Args:
     """the number of parallel evaluation environments"""
     num_eval_steps: int = 50
     """the number of steps to take in evaluation environments"""
+    reconfiguration_freq: Optional[int] = 1
+    """for benchmarking purposes we want to reconfigure the eval environment each reset to ensure objects are randomized in some tasks"""
     log_freq: int = 1_000
     """logging frequency in terms of environment steps"""
     eval_freq: int = 100_000
@@ -368,14 +370,16 @@ if __name__ == "__main__":
             print("Evaluating")
             eval_obs, _ = eval_envs.reset()
             eval_metrics = defaultdict(list)
+            num_episodes = 0
             for _ in range(args.num_eval_steps):
                 with torch.no_grad():
                     eval_obs, eval_rew, eval_terminations, eval_truncations, eval_infos = eval_envs.step(actor.get_eval_action(eval_obs))
                     if "final_info" in eval_infos:
                         mask = eval_infos["_final_info"]
+                        num_episodes += mask.sum()
                         for k, v in eval_infos["final_info"]["episode"].items():
                             eval_metrics[k].append(v)
-            print(f"Evaluated {args.num_eval_steps * args.num_eval_envs} steps resulting in {len(eps_lens)} episodes")
+            print(f"Evaluated {args.num_eval_steps * args.num_eval_envs} steps resulting in {num_episodes} episodes")
             if args.evaluate:
                 break
             for k, v in eval_metrics.items():
@@ -383,8 +387,6 @@ if __name__ == "__main__":
                 logger.add_scalar(f"eval/{k}", mean, global_step)
                 print(f"eval_{k}_mean={mean}")
             actor.train()
-            if args.evaluate:
-                break
 
             if args.save_model:
                 model_path = f"runs/{run_name}/ckpt_{global_step}.pt"
@@ -407,7 +409,6 @@ if __name__ == "__main__":
             else:
                 actions, _, _ = actor.get_action(obs)
                 actions = actions.detach()
-                # actions = actions.detach().cpu().numpy()
 
             # TRY NOT TO MODIFY: execute the game and log data.
             next_obs, rewards, terminations, truncations, infos = envs.step(actions)
@@ -420,13 +421,8 @@ if __name__ == "__main__":
                 final_info = infos["final_info"]
                 done_mask = infos["_final_info"]
                 real_next_obs[done_mask] = infos["final_observation"][done_mask]
-                episodic_return = final_info['episode']['r'][done_mask].cpu().numpy().mean()
-                if "success" in final_info:
-                    writer.add_scalar("charts/success_rate", final_info["success"][done_mask].cpu().numpy().mean(), global_step)
-                if "fail" in final_info:
-                    writer.add_scalar("charts/fail_rate", final_info["fail"][done_mask].cpu().numpy().mean(), global_step)
-                writer.add_scalar("charts/episodic_return", episodic_return, global_step)
-                writer.add_scalar("charts/episodic_length", final_info["elapsed_steps"][done_mask].cpu().numpy().mean(), global_step)
+                for k, v in final_info["episode"].items():
+                    logger.add_scalar(f"train/{k}", v[done_mask].float().mean(), global_step)
 
             rb.add(obs, real_next_obs, actions, rewards, next_done)
 
