@@ -363,7 +363,6 @@ if __name__ == "__main__":
     global_steps_per_iteration = args.num_envs * (args.steps_per_env)
 
     while global_step < args.total_timesteps:
-        print(f"Global Step: {global_step}")
         if args.eval_freq > 0 and (global_step - args.training_freq) // args.eval_freq < global_step // args.eval_freq:
             # evaluate
             actor.eval()
@@ -495,18 +494,19 @@ if __name__ == "__main__":
 
         # Log training-related data
         if (global_step - args.training_freq) // args.log_freq < global_step // args.log_freq:
-            writer.add_scalar("losses/qf1_values", qf1_a_values.mean().item(), global_step)
-            writer.add_scalar("losses/qf2_values", qf2_a_values.mean().item(), global_step)
-            writer.add_scalar("losses/qf1_loss", qf1_loss.item(), global_step)
-            writer.add_scalar("losses/qf2_loss", qf2_loss.item(), global_step)
-            writer.add_scalar("losses/qf_loss", qf_loss.item() / 2.0, global_step)
-            writer.add_scalar("losses/actor_loss", actor_loss.item(), global_step)
-            writer.add_scalar("losses/alpha", alpha, global_step)
-            writer.add_scalar("charts/update_time", update_time, global_step)
-            writer.add_scalar("charts/rollout_time", rollout_time, global_step)
-            writer.add_scalar("charts/rollout_fps", global_steps_per_iteration / rollout_time, global_step)
+            print(f"Global Step: {global_step}")
+            logger.add_scalar("losses/qf1_values", qf1_a_values.mean().item(), global_step)
+            logger.add_scalar("losses/qf2_values", qf2_a_values.mean().item(), global_step)
+            logger.add_scalar("losses/qf1_loss", qf1_loss.item(), global_step)
+            logger.add_scalar("losses/qf2_loss", qf2_loss.item(), global_step)
+            logger.add_scalar("losses/qf_loss", qf_loss.item() / 2.0, global_step)
+            logger.add_scalar("losses/actor_loss", actor_loss.item(), global_step)
+            logger.add_scalar("losses/alpha", alpha, global_step)
+            logger.add_scalar("charts/update_time", update_time, global_step)
+            logger.add_scalar("charts/rollout_time", rollout_time, global_step)
+            logger.add_scalar("charts/rollout_fps", global_steps_per_iteration / rollout_time, global_step)
             if args.autotune:
-                writer.add_scalar("losses/alpha_loss", alpha_loss.item(), global_step)
+                logger.add_scalar("losses/alpha_loss", alpha_loss.item(), global_step)
 
     if not args.evaluate and args.save_model:
         model_path = f"runs/{run_name}/final_ckpt.pt"
