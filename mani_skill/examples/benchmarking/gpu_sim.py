@@ -1,6 +1,8 @@
 import argparse
+from functools import partial
 from pathlib import Path
 import gymnasium as gym
+from gymnasium.vector import AsyncVectorEnv, SyncVectorEnv, VectorEnv
 import numpy as np
 import torch
 import tqdm
@@ -22,29 +24,47 @@ def main(args):
         sim_config["control_freq"] = args.control_freq
     if args.sim_freq:
         sim_config["sim_freq"] = args.sim_freq
+    env_kwargs = dict()
+    if args.env_id in BENCHMARK_ENVS:
+        env_kwargs = dict(
+            camera_width=args.cam_width,
+            camera_height=args.cam_height,
+            num_cameras=args.num_cams,
+        )
+    env_kwargs["obs_mode"] = args.obs_mode
+    env_kwargs["render_mode"] = args.render_mode
+    env_kwargs["control_mode"] = args.control_mode
+    env_kwargs["sim_config"] = sim_config
     if not args.cpu_sim:
-        kwargs = dict()
-        if args.env_id in BENCHMARK_ENVS:
-            kwargs = dict(
-                camera_width=args.cam_width,
-                camera_height=args.cam_height,
-                num_cameras=args.num_cams,
-            )
 
         env = gym.make(
             args.env_id,
             num_envs=num_envs,
-            obs_mode=args.obs_mode,
-            render_mode=args.render_mode,
-            control_mode=args.control_mode,
-            sim_config=sim_config,
-            **kwargs
+            **env_kwargs
         )
         if isinstance(env.action_space, gym.spaces.Dict):
             env = FlattenActionSpaceWrapper(env)
         base_env: BaseEnv = env.unwrapped
     else:
-        env = gym.make_vec(args.env_id, num_envs=args.num_envs, vectorization_mode="async", vector_kwargs=dict(context="spawn"), obs_mode=args.obs_mode,)
+        # env = gym.make_vec(args.env_id, num_envs=args.num_envs, vectorization_mode="async", vector_kwargs=dict(context="spawn"), obs_mode=args.obs_mode,)
+        def env_factory(env_id, idx, env_kwargs):
+            def thunk():
+                env = gym.make(env_id, **env_kwargs)
+                return env
+            return thunk
+        vector_env_cls = partial(AsyncVectorEnv, context="spawn")
+        if args.num_envs == 1:
+            vector_env_cls = SyncVectorEnv
+        env: VectorEnv = vector_env_cls(
+            [
+                env_factory(
+                    args.env_id,
+                    idx,
+                    env_kwargs=env_kwargs,
+                )
+                for idx in range(args.num_envs)
+            ]
+        )
         base_env = gym.make(args.env_id, obs_mode=args.obs_mode).unwrapped
 
     base_env.print_sim_details()

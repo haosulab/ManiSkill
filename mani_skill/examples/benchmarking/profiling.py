@@ -104,6 +104,8 @@ class Profiler:
 
     def log_stats(self, name: str):
         stats = self.stats[name]
+        if stats['gpu_mem_use'] is None:
+            stats['gpu_mem_use'] = 0
         self.log(
             f"{name}: {stats['fps']:0.3f} steps/s, {stats['psps']:0.3f} parallel steps/s, {stats['total_steps']} steps in {stats['dt']:0.3f}s"
         )

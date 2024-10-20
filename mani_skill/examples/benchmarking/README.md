@@ -36,7 +36,7 @@ Run
 conda create -n ms2 "python=3.10"
 conda activate ms2
 pip install mani-skill2
-pip install pynvml torch tyro
+pip install pynvml torch tyro gymnasium==0.29
 ```
 
 ### Isaac Lab
