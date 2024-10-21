@@ -6,7 +6,7 @@ import math
 import torch
 from torch import nn
 
-from ..utils import NestedTensor
+from examples.baselines.act.act.utils import NestedTensor
 
 import IPython
 e = IPython.embed
