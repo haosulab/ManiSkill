@@ -321,10 +321,22 @@ class KnobHandle(Handle):
             "handle": [0.015, 0.017],
         }
 
-        geoms, bodies, joints = self._get_components()
-        for side in positions.keys():
-            for geom in geoms[side]:
-                if geom is None:
-                    continue
-                geom.set("pos", a2s(positions[side]))
-                geom.set("size", a2s(sizes[side]))
+        # geoms, bodies, joints = self._get_components()
+        # for side in positions.keys():
+        #     for geom in geoms[side]:
+        #         if geom is None:
+        #             continue
+        #         geom.set("pos", a2s(positions[side]))
+        #         geom.set("size", a2s(sizes[side]))
+        for i, side in enumerate(positions.keys()):
+            col_record = self.actor_builder.collision_records[i]
+            col_record.pose = sapien.Pose(p=positions[side], q=col_record.pose.q)
+            self.actor_builder.add_cylinder_visual(
+                pose=sapien.Pose(p=positions[side], q=col_record.pose.q),
+                radius=sizes[side][0],
+                half_length=sizes[side][1],
+                material=self.loader._materials["mat"],
+                name=side,
+            )
+            col_record.radius = sizes[side][0]
+            col_record.length = sizes[side][1]
