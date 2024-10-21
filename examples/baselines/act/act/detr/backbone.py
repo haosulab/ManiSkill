@@ -11,9 +11,8 @@ from torch import nn
 from torchvision.models._utils import IntermediateLayerGetter
 from typing import Dict, List
 
-from ManiSkill.examples.baselines.act.act.utils import NestedTensor, is_main_process
-
-from detr.position_encoding import build_position_encoding
+from examples.baselines.act.act.utils import NestedTensor, is_main_process
+from examples.baselines.act.act.detr.position_encoding import build_position_encoding
 
 import IPython
 e = IPython.embed
