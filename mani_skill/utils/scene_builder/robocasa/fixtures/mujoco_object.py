@@ -1,4 +1,5 @@
 import numpy as np
+import sapien
 
 from mani_skill import ASSET_DIR
 from mani_skill.envs.scene import ManiSkillScene
@@ -49,6 +50,7 @@ class MujocoObject:
         self.pos = pos.copy()
 
     def set_scale(self, scale):
+        """Based on https://github.com/ARISE-Initiative/robosuite/blob/robocasa_v0.1/robosuite/models/objects/objects.py#L507."""
         self.loader.scale = scale
         self._scale = np.array(scale)
         self.size = np.multiply(self.size, self._scale)
@@ -56,11 +58,33 @@ class MujocoObject:
         if hasattr(self, "articulation_builder"):
             for link in self.articulation_builder.link_builders:
                 for visual in link.visual_records:
+                    visual.pose = sapien.Pose(
+                        p=np.multiply(visual.pose.p, scale), q=visual.pose.q
+                    )
                     visual.scale = np.array(visual.scale) * scale
                 for col in link.collision_records:
-                    col.scale = np.array(col.scale) * scale
+                    col.pose = sapien.Pose(
+                        p=np.multiply(col.pose.p, scale), q=col.pose.q
+                    )
+                    if col.type == "cylinder" or col.type == "capsule":
+                        col.radius *= scale[0]
+                        col.length *= scale[1]
+                    else:
+                        col.scale = np.array(col.scale) * scale
         elif hasattr(self, "actor_builder"):
             for visual in self.actor_builder.visual_records:
-                visual.scale = np.array(visual.scale) * scale
+                visual.pose = sapien.Pose(
+                    p=np.multiply(visual.pose.p, scale), q=visual.pose.q
+                )
+                if visual.type == "cylinder" or visual.type == "capsule":
+                    visual.radius *= scale[0]
+                    visual.length *= scale[1]
+                else:
+                    visual.scale = np.array(visual.scale) * scale
             for col in self.actor_builder.collision_records:
-                col.scale = np.array(col.scale) * scale
+                col.pose = sapien.Pose(p=np.multiply(col.pose.p, scale), q=col.pose.q)
+                if col.type == "cylinder" or col.type == "capsule":
+                    col.radius *= scale[0]
+                    col.length *= scale[1]
+                else:
+                    col.scale = np.array(col.scale) * scale

@@ -8,6 +8,7 @@ import torch
 import yaml
 
 from mani_skill.utils.scene_builder.robocasa.fixtures.cabinet import (
+    HingeCabinet,
     HousingCabinet,
     SingleCabinet,
 )
@@ -15,6 +16,7 @@ from mani_skill.utils.scene_builder.robocasa.fixtures.counter import Counter
 from mani_skill.utils.scene_builder.robocasa.fixtures.fixture import Fixture
 from mani_skill.utils.scene_builder.robocasa.fixtures.floor import Floor
 from mani_skill.utils.scene_builder.robocasa.fixtures.fridge import Fridge
+from mani_skill.utils.scene_builder.robocasa.fixtures.microwave import Microwave
 from mani_skill.utils.scene_builder.robocasa.fixtures.sink import Sink
 from mani_skill.utils.scene_builder.robocasa.fixtures.stove import Oven, Stove, Stovetop
 from mani_skill.utils.scene_builder.robocasa.fixtures.wall import Wall
@@ -24,6 +26,7 @@ from mani_skill.utils.scene_builder.scene_builder import SceneBuilder
 FIXTURES = dict(
     housing_cabinet=HousingCabinet,
     single_cabinet=SingleCabinet,
+    hinge_cabinet=HingeCabinet,
     wall=Wall,
     counter=Counter,
     sink=Sink,
@@ -32,6 +35,7 @@ FIXTURES = dict(
     stovetop=Stovetop,
     oven=Oven,
     fridge=Fridge,
+    microwave=Microwave,
 )
 # fixtures that are attached to other fixtures, disables positioning system in this script
 FIXTURES_INTERIOR = dict(
@@ -247,6 +251,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
                 fixture.set_pos(deepcopy(pos))
         # composites are non-MujocoObjects, must remove
         for composite in composites:
+            print("removing composite", composite)
             del fixtures[composite]
 
         # update the rotation and postion of each fixture based on their group

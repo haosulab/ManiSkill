@@ -761,6 +761,13 @@ class MJCFLoader:
                 articulation_builders.append(builder)
                 dummy_root_link = builder.create_link_builder(None)
                 dummy_root_link.name = f"dummy_root_{i}"
+
+                # Check if the body tag only contains another body tag and nothing else
+                body_children = list(body)
+                if len(body_children) == 1 and body_children[0].tag == "body":
+                    # If so, skip the current body and continue with its child
+                    body = body_children[0]
+
                 self._parse_body(body, dummy_root_link, self._root_default, builder)
 
                 # handle free joints

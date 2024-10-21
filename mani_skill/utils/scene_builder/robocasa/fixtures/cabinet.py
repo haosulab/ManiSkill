@@ -157,7 +157,15 @@ class Cabinet(Fixture):
         raise NotImplementedError()
 
     def _add_door(
-        self, w, h, th, pos, parent_body, handle_hpos, handle_vpos, door_name="door"
+        self,
+        w,
+        h,
+        th,
+        pos,
+        parent_link_builder,
+        handle_hpos,
+        handle_vpos,
+        door_name="door",
     ):
         """
         Places a door on the cabinet
@@ -171,7 +179,7 @@ class Cabinet(Fixture):
 
             pos (list): position of the door
 
-            parent_body (ET.Element): parent body element
+            parent_link_builder (LinkBuilder): parent link builder
 
             handle_hpos (str): horizontal position of the handle
 
@@ -212,9 +220,9 @@ class Cabinet(Fixture):
         )
 
         # door_elem = door.get_obj()
-        link_builder = self.articulation_builder.link_builders[2]
+        link_builder = parent_link_builder
         link_builder.joint_record.pose_in_child = (
-            link_builder.joint_record.pose_in_child * sapien.Pose(p=-np.array(pos))
+            sapien.Pose(p=-np.array(pos)) * link_builder.joint_record.pose_in_child
         )
         for door_collision_record, door_visual_record in zip(
             door.actor_builder.collision_records, door.actor_builder.visual_records
@@ -351,7 +359,7 @@ class SingleCabinet(Cabinet):
             h=z * 2,
             th=th * 2,
             pos=door_pos,
-            parent_body="hingedoor",
+            parent_link_builder=self.articulation_builder.link_builders[2],
             handle_hpos=handle_hpos,
             handle_vpos=handle_vpos,
         )
@@ -484,15 +492,34 @@ class HingeCabinet(Cabinet):
         x, y, z = [dim / 2 if dim is not None else None for dim in self.size]
         th = self.thickness / 2
 
-        self.geoms, bodies, joints = self._get_cab_components()
+        # self.geoms, bodies, joints = self._get_cab_components()
 
         # set bodies positions
-        bodies["hingeleftdoor"].set("pos", a2s([0, 0, 0]))
-        bodies["hingerightdoor"].set("pos", a2s([0, 0, 0]))
+        # bodies["hingeleftdoor"].set("pos", a2s([0, 0, 0]))
+        # bodies["hingerightdoor"].set("pos", a2s([0, 0, 0]))
 
         # set joint positions
-        joints["leftdoorhinge"].set("pos", a2s([-x + th, -y, 0]))
-        joints["rightdoorhinge"].set("pos", a2s([x - th, -y, 0]))
+        # joints["leftdoorhinge"].set("pos", a2s([-x + th, -y, 0]))
+        # joints["rightdoorhinge"].set("pos", a2s([x - th, -y, 0]))
+        # note that there seems? to be maybe be a bug in RoboCasa hinge cabinets where they they write joint limits in radians
+        # but mujuco will parse them as degrees by default. That is manually fixed here.
+        joint_record = self.articulation_builder.link_builders[2].joint_record
+        joint_record.pose_in_parent = sapien.Pose(
+            p=[-x + th, -y, 0], q=joint_record.pose_in_parent.q
+        )
+        joint_record.pose_in_child = sapien.Pose(
+            [-x + th, -y, 0], q=joint_record.pose_in_child.q
+        )
+        joint_record.limits = [-3.00, 0]
+
+        joint_record = self.articulation_builder.link_builders[3].joint_record
+        joint_record.pose_in_parent = sapien.Pose(
+            p=[x - th, -y, 0], q=joint_record.pose_in_parent.q
+        )
+        joint_record.pose_in_child = sapien.Pose(
+            [x - th, -y, 0], q=joint_record.pose_in_child.q
+        )
+        joint_record.limits = [0, 3.00]
 
         # positions
         positions = {
@@ -511,8 +538,18 @@ class HingeCabinet(Cabinet):
             "right": [th, y - th, z - 2 * th],
             "shelf": [x - 2 * th, y - 0.05, th],
         }
-        set_geom_dimensions(sizes, positions, self.geoms, rotated=True)
-
+        # set_geom_dimensions(sizes, positions, self.geoms, rotated=True)
+        for i, ((part_name, size), (_, position)) in enumerate(
+            zip(sizes.items(), positions.items())
+        ):
+            col_record = self.articulation_builder.link_builders[1].collision_records[i]
+            col_record.scale = size
+            col_record.pose = sapien.Pose(p=position, q=col_record.pose.q)
+            self.articulation_builder.link_builders[1].add_box_visual(
+                pose=col_record.pose,
+                half_size=size,
+                material=self.loader._materials["mat"],
+            )
         # add doors
         door_x_positions = {"left": -x / 2, "right": x / 2}
         handle_vpos = self.panel_config.get("handle_vpos", "bottom")
@@ -523,7 +560,11 @@ class HingeCabinet(Cabinet):
                 h=z * 2,
                 th=th * 2,
                 pos=[door_x_positions[side], -y + th, 0],
-                parent_body=bodies["hinge{}door".format(side)],
+                parent_link_builder=next(
+                    lb
+                    for lb in self.articulation_builder.link_builders
+                    if f"hinge{side}door" in lb.name
+                ),
                 handle_hpos="left" if side == "right" else "right",
                 handle_vpos=handle_vpos,
                 door_name=side + "_door",
