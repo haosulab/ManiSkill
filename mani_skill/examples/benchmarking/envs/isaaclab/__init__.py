@@ -1,9 +1,8 @@
 import gymnasium as gym
 
-from .franka_only import FrankaOnlyEnvCfg
+from .franka import FrankaEnvCfg
 from .cartpole_visual import CartpoleRGBCameraBenchmarkEnvCfg
 from .cartpole_state import CartpoleEnvCfg
-from .franka_cabinet_state import FrankaCabinetEnvCfg
 gym.register(
     id="Isaac-Cartpole-RGB-Camera-Direct-Benchmark-v0",
     entry_point="envs.isaaclab.cartpole_visual:CartpoleCameraBenchmarkEnv",
@@ -22,19 +21,10 @@ gym.register(
 )
 
 gym.register(
-    id="Isaac-Franka-Cabinet-Direct-Benchmark-v0",
-    entry_point="envs.isaaclab.franka_cabinet_state:FrankaCabinetBenchmarkEnv",
+    id="Isaac-Franka-Direct-Benchmark-v0",
+    entry_point="envs.isaaclab.franka:FrankaBenchmarkEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": FrankaCabinetEnvCfg,
-    },
-)
-
-gym.register(
-    id="Isaac-Franka-Only-Direct-Benchmark-v0",
-    entry_point="envs.isaaclab.franka_only:FrankaOnlyBenchmarkEnv",
-    disable_env_checker=True,
-    kwargs={
-        "env_cfg_entry_point": FrankaOnlyEnvCfg,
+        "env_cfg_entry_point": FrankaEnvCfg,
     },
 )

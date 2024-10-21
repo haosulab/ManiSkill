@@ -12,7 +12,7 @@ from mani_skill.utils.visualization.misc import images_to_video, tile_images
 from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper
 import mani_skill.examples.benchmarking.envs # import benchmark env code
 
-BENCHMARK_ENVS = ["PickCubeBenchmark-v1", "CartpoleBalanceBenchmark-v1", "FrankaOnlyBenchmark-v1"]
+BENCHMARK_ENVS = ["PickCubeBenchmark-v1", "CartpoleBalanceBenchmark-v1", "FrankaBenchmark-v1"]
 
 def main(args):
     profiler = Profiler(output_format="stdout")
@@ -35,7 +35,6 @@ def main(args):
             args.env_id,
             num_envs=num_envs,
             obs_mode=args.obs_mode,
-            # enable_shadow=True,
             render_mode=args.render_mode,
             control_mode=args.control_mode,
             sim_config=sim_config,
@@ -89,6 +88,20 @@ def main(args):
                 if i % 200 == 0 and i != 0:
                     env.reset()
         profiler.log_stats("env.step+env.reset")
+        if args.save_example_image:
+            obs, _ = env.reset(seed=2022)
+            import matplotlib.pyplot as plt
+            for cam_name, cam_data in obs["sensor_data"].items():
+                for k, v in cam_data.items():
+                    imgs = v.cpu().numpy()
+                    imgs = tile_images(imgs, nrows=int(np.sqrt(args.num_envs)))
+                    cmap = None
+                    if k == "depth":
+                        imgs[imgs == np.inf] = 0
+                        imgs = imgs[ :, :, 0]
+                        cmap = "gray"
+                    plt.imsave(f"maniskill_{cam_name}_{k}.png", imgs, cmap=cmap)
+
     env.close()
     if args.save_results:
         # append results to csv
@@ -124,6 +137,7 @@ def parse_args():
     parser.add_argument("-c", "--control-mode", type=str, default="pd_joint_delta_pos")
     parser.add_argument("-n", "--num-envs", type=int, default=1024)
     parser.add_argument("--cpu-sim", action="store_true", help="Whether to use the CPU or GPU simulation")
+    parser.add_argument("--save-example-image", action="store_true", help="Whether to save images of each camera and modality of the last observation.")
     parser.add_argument("--control-freq", type=int, default=None, help="The control frequency to use")
     parser.add_argument("--sim-freq", type=int, default=None, help="The simulation frequency to use")
     parser.add_argument("--num-cams", type=int, default=None, help="Number of cameras. Only used by benchmark environments")

@@ -7,6 +7,7 @@ from omni.isaac.lab.app import AppLauncher
 # add argparse arguments
 parser = argparse.ArgumentParser(description="Benchmark Isaac Lab")
 parser.add_argument("--num-envs", type=int, default=None, help="Number of environments to simulate.")
+parser.add_argument("--save-example-image", action="store_true", help="Save the last image output of each modality and camera to disk")
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument("--obs-mode", type=str, default="state", help="Observation mode")
 parser.add_argument("--num-cams", type=int, default=None, help="Number of cameras. Only used by benchmark environments")
@@ -34,6 +35,7 @@ from profiling import Profiler, tile_images
 import torch
 from pathlib import Path
 import envs.isaaclab
+import numpy as np
 import omni.isaac.lab_tasks  # noqa: F401
 from omni.isaac.lab_tasks.utils import parse_env_cfg
 
@@ -47,7 +49,7 @@ def main():
     if args_cli.obs_mode != "state":
         env = gym.make(args_cli.task, cfg=env_cfg, camera_width=args_cli.cam_width, camera_height=args_cli.cam_height, num_cameras=args_cli.num_cams, obs_mode=args_cli.obs_mode)
     else:
-        env = gym.make(args_cli.task, cfg=env_cfg)
+        env = gym.make(args_cli.task, cfg=env_cfg, obs_mode=args_cli.obs_mode, num_cameras=0)
     with torch.inference_mode():
         env.reset(seed=2022)
         env_created = True
@@ -75,24 +77,29 @@ def main():
                 if i % 200 == 0 and i != 0:
                     env.reset()
         profiler.log_stats("env.step+env.reset")
+
+        if args_cli.save_example_image:
+            obs, _ = env.reset(seed=2022)
+            import matplotlib.pyplot as plt
+            for cam_name, cam_data in obs["sensors"].items():
+                for k, v in cam_data.items():
+                    imgs = v.cpu().numpy()
+                    imgs = tile_images(imgs, nrows=int(np.sqrt(args_cli.num_envs)))
+                    cmap = None
+                    if k == "depth":
+                        imgs[imgs == np.inf] = 0
+                        imgs = imgs[ :, :, 0]
+                        cmap = "gray"
+                    plt.imsave(f"isaac_{cam_name}_{k}.png", imgs, cmap=cmap)
     env.close()
-    # import matplotlib.pyplot as plt
-    # import ipdb;ipdb.set_trace()
-    # if "rgb" in obs["sensors"]["cam_0"]:
-    #     rgb_images = obs["sensors"]["cam_0"]["rgb"].cpu().numpy()
-    #     plt.imsave("test.png", tile_images(rgb_images, nrows=int(np.sqrt(args_cli.num_envs))))
-    # if "depth" in obs["sensors"]["cam_0"]:
-    #     depth_images = obs["sensors"]["cam_0"]["depth"].cpu().numpy()
-    #     depth_images = tile_images(depth_images, nrows=int(np.sqrt(args_cli.num_envs)))
-    #     depth_images[depth_images == np.inf] = 0
-    #     plt.imsave("depth.png", depth_images[:, :, 0])
-    # tile_images()
+
 
     # append results to csv
     env_id_mapping = {
         "Isaac-Cartpole-RGB-Camera-Direct-Benchmark-v0": "CartpoleBalanceBenchmark-v1",
         "Isaac-Cartpole-Direct-Benchmark-v0": "CartpoleBalanceBenchmark-v1",
-        "Isaac-Cartpole-Direct-v0": "CartpoleBalanceBenchmark-v1"
+        "Isaac-Cartpole-Direct-v0": "CartpoleBalanceBenchmark-v1",
+        "Isaac-Franka-Direct-Benchmark-v0": "FrankaBenchmark-v1",
     }
 
     if args_cli.obs_mode in ["rgb", "rgbd", "depth"]:

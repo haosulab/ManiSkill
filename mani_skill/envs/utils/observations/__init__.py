@@ -49,5 +49,7 @@ def parse_visual_obs_mode_to_struct(obs_mode: str) -> CameraObsTextures:
         return CameraObsTextures(
             rgb=True, depth=False, segmentation=True, position=True
         )
+    elif obs_mode == "sensor_data":
+        return CameraObsTextures(rgb=True, depth=True, segmentation=True, position=True)
     else:
         return None

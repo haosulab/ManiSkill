@@ -71,7 +71,7 @@ XLA_PYTHON_CLIENT_PREALLOCATE=false python train.py configs/base_sac_ms3_sample_
   logger.exp_name=rfcl-${env_id}-state-${demos}_motionplanning_demos-${seed}-sample_efficient logger.wandb=True \
   seed=${seed} train.num_demos=${demos} train.steps=1_000_000 \
   env.env_id=${env_id} \
-  train.dataset_path="~/.maniskill/demos/${env_id}/motionplanning/trajectory.state.pd_joint_delta_pos.h5"
+  train.dataset_path="~/.maniskill/demos/${env_id}/motionplanning/trajectory.state.pd_joint_delta_pos.cpu.h5"
 ```
 
 Version of RFCL that runs on the GPU vectorized environments is currently not implemented as the current code is already quite fast and will require future research to investigate how to leverage GPU simulation with RFCL.
