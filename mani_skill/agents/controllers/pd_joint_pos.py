@@ -54,7 +54,6 @@ class PDJointPosController(BaseController):
         if self._start_qpos is None:
             self._start_qpos = self.qpos.clone()
         else:
-
             self._start_qpos[self.scene._reset_mask] = self.qpos[
                 self.scene._reset_mask
             ].clone()
