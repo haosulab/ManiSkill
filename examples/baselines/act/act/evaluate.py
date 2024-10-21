@@ -17,14 +17,8 @@ def update_track_info(infos, ts_tracker, all_time_actions=None):
 def evaluate(n: int, agent, eval_envs, eval_kwargs):
     stats, num_queries, temporal_agg, max_timesteps, device, sim_backend = eval_kwargs.values()
 
-    # determine if visual obs (rgb or rgbd) is used
-    if "example_visual_obs" in stats:
-        use_visual_obs = True
-        #use_depth = stats["example_visual_obs"].shape[1] > 3 # (num_cams, C, 224, 224)
-        pre_process = lambda s_obs: (s_obs - stats['state_mean'].cuda()) / stats['state_std'].cuda()
-    else:
-        use_visual_obs = False
-        pre_process = lambda s_obs: (s_obs - stats['state_mean'].cuda()) / stats['state_std'].cuda()
+    use_visual_obs = "example_visual_obs" in stats # determine if visual obs (rgb or rgbd) is used
+    pre_process = lambda s_obs: (s_obs - stats['state_mean'].cuda()) / stats['state_std'].cuda()
     post_process = lambda a: a * stats['action_std'].cuda() + stats['action_mean'].cuda()
 
     # create action table for temporal ensembling
