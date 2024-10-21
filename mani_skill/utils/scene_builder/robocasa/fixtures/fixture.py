@@ -128,8 +128,12 @@ class Fixture:
         else:
             self.rng = np.random.default_rng()
 
+    @property
+    def is_articulation(self):
+        return hasattr(self, "articulation_builder")
+
     def build(self):
-        if hasattr(self, "articulation_builder"):
+        if self.is_articulation:
             self.articulation_builder.initial_pose = sapien.Pose(
                 p=self.pos, q=self.quat
             )
@@ -194,7 +198,7 @@ class Fixture:
         scale[1] = scale[1] or scale[0] or scale[2]
         scale[2] = scale[2] or scale[0] or scale[1]
         self.loader.scale = scale
-        self._scale = scale
+        self._scale = np.array(scale)
         self.size = np.multiply(self.size, self._scale)
         for k, v in self._bounds_sites.items():
             self._bounds_sites[k] = np.multiply(v, self._scale)
@@ -203,14 +207,14 @@ class Fixture:
         if hasattr(self, "articulation_builder"):
             for link in self.articulation_builder.link_builders:
                 for visual in link.visual_records:
-                    visual.scale = scale
+                    visual.scale = np.array(visual.scale) * scale
                 for col in link.collision_records:
-                    col.scale = scale
+                    col.scale = np.array(col.scale) * scale
         elif hasattr(self, "actor_builder"):
             for visual in self.actor_builder.visual_records:
-                visual.scale = scale
+                visual.scale = np.array(visual.scale) * scale
             for col in self.actor_builder.collision_records:
-                col.scale = scale
+                col.scale = np.array(col.scale) * scale
 
     def get_reset_regions(self, *args, **kwargs):
         """

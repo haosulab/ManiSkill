@@ -89,6 +89,10 @@ class Wall:
         self.pos = pos
         self.scene = scene
 
+    @property
+    def is_articulation(self):
+        return False
+
     def build(self):
         builder = self.scene.create_actor_builder()
         if self.backing:

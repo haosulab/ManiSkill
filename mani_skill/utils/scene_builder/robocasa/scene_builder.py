@@ -1,7 +1,7 @@
 """Implementation of the RoboCasa scene builder. Code ported from https://github.com/robocasa/robocasa"""
 
 from copy import deepcopy
-from typing import List
+from typing import Dict, List
 
 import numpy as np
 import torch
@@ -12,6 +12,7 @@ from mani_skill.utils.scene_builder.robocasa.fixtures.cabinet import (
     SingleCabinet,
 )
 from mani_skill.utils.scene_builder.robocasa.fixtures.counter import Counter
+from mani_skill.utils.scene_builder.robocasa.fixtures.fixture import Fixture
 from mani_skill.utils.scene_builder.robocasa.fixtures.floor import Floor
 from mani_skill.utils.scene_builder.robocasa.fixtures.fridge import Fridge
 from mani_skill.utils.scene_builder.robocasa.fixtures.sink import Sink
@@ -154,7 +155,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
             arena.extend(group_fixtures)
 
         # maps each fixture name to its object class
-        fixtures = dict()
+        fixtures: Dict[str, Fixture] = dict()
         # maps each fixture name to its configuration
         configs = dict()
         # names of composites, delete from fixtures before returning
@@ -291,7 +292,14 @@ class RoboCasaSceneBuilder(SceneBuilder):
 
         for k, v in fixtures.items():
             print(k, v.pos, v.size, v.quat if hasattr(v, "quat") else None)
-            v.build()
+            built = v.build()
+            # ensure all rooted articulated objects have collisions ignored with all static objects
+            if built.is_articulation and built.articulation.fixed_root_link.all():
+                for link in built.articulation.links:
+                    link.set_collision_group_bit(group=2, bit_idx=27, bit=1)
+            else:
+                if built.actor.px_body_type == "static":
+                    built.actor.set_collision_group_bit(group=2, bit_idx=27, bit=1)
         return fixtures
 
     def initialize(self, env_idx: torch.Tensor, init_config_idxs: List[int] = None):
