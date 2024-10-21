@@ -3,6 +3,13 @@ from copy import deepcopy
 import numpy as np
 import sapien
 
+from mani_skill.utils.scene_builder.robocasa.fixtures.cabinet_panels import (
+    DividedWindowCabinetPanel,
+    FullWindowedCabinetPanel,
+    RaisedCabinetPanel,
+    ShakerCabinetPanel,
+    SlabCabinetPanel,
+)
 from mani_skill.utils.scene_builder.robocasa.fixtures.fixture import Fixture
 
 # from robosuite.utils.mjcf_utils import array_to_string as a2s
@@ -195,6 +202,7 @@ class Cabinet(Fixture):
         panel_config["handle_vpos"] = handle_vpos
 
         door = panel_class(
+            scene=self.scene,
             size=[w - dg, th, h - dg],  # apply door gap to width and height
             name="{}_{}".format(self.name, door_name),
             texture=self.texture,
@@ -202,11 +210,21 @@ class Cabinet(Fixture):
             handle_config=self.handle_config,
             **panel_config,
         )
-        door_elem = door.get_obj()
-        door_elem.set("pos", a2s(pos))
 
-        self.merge_assets(door)
-        parent_body.append(door_elem)
+        # door_elem = door.get_obj()
+        link_builder = self.articulation_builder.link_builders[2]
+        link_builder.joint_record.pose_in_child = (
+            link_builder.joint_record.pose_in_child * sapien.Pose(p=-np.array(pos))
+        )
+        for door_collision_record, door_visual_record in zip(
+            door.actor_builder.collision_records, door.actor_builder.visual_records
+        ):
+            link_builder.collision_records.append(door_collision_record)
+            link_builder.visual_records.append(door_visual_record)
+        # door_elem.set("pos", a2s(pos))
+
+        # self.merge_assets(door)
+        # parent_body.append(door_elem)
 
     def set_door_state(self, min, max, env, rng):
         pass
@@ -293,45 +311,50 @@ class SingleCabinet(Cabinet):
             "right": [x - th, th, 0],
             "shelf": [0, 0.05 - th, 0],
         }
-        # import ipdb; ipdb.set_trace()
+
         # set_geom_dimensions(sizes, positions, self.geoms, rotated=True)
         for i, ((part_name, size), (_, position)) in enumerate(
             zip(sizes.items(), positions.items())
         ):
-            self.articulation_builder.link_builders[1].collision_records[i].scale = size
-            self.articulation_builder.link_builders[1].collision_records[
-                i
-            ].pose = sapien.Pose(position)
+            col_record = self.articulation_builder.link_builders[1].collision_records[i]
+            col_record.scale = size
+            col_record.pose = sapien.Pose(p=position, q=col_record.pose.q)
             self.articulation_builder.link_builders[1].add_box_visual(
-                pose=sapien.Pose(position),
+                pose=col_record.pose,
                 half_size=size,
                 material=self.loader._materials["mat"],
             )
 
-        # # cabinet door bodies and joints
-        # bodies["hingedoor"].set("pos", a2s([0, 0, 0]))
-        # # set joint position
-        # if self.orientation == "left":
-        #     joints["doorhinge"].set("pos", a2s([-x + th, -y, 0]))
-        #     joints["doorhinge"].set("range", a2s([-3.00, 0]))
-        # else:
-        #     joints["doorhinge"].set("pos", a2s([x - th, -y, 0]))
+        # cabinet door bodies and joints
+        joint_record = self.articulation_builder.link_builders[2].joint_record
+        joint_record.pose_in_parent = sapien.Pose(
+            p=[-x + th, -y, 0], q=joint_record.pose_in_parent.q
+        )
+        # set joint position
+        if self.orientation == "left":
+            joint_record.pose_in_child = sapien.Pose(
+                [-x + th, -y, 0], q=joint_record.pose_in_child.q
+            )
+            joint_record.limits = [-3.00, 0]
+        else:
+            joint_record.pose_in_child = sapien.Pose(
+                [x - th, -y, 0], q=joint_record.pose_in_child.q
+            )
+        # create door
+        door_pos = [0, -y + th, 0]
+        # if the door opens right the handle must be on the left side of the door and vice versa
+        handle_hpos = "right" if self.orientation == "left" else "left"
+        handle_vpos = self.panel_config.get("handle_vpos", "bottom")
 
-        # # create door
-        # door_pos = [0, -y + th, 0]
-        # # if the door opens right the handle must be on the left side of the door and vice versa
-        # handle_hpos = "right" if self.orientation == "left" else "left"
-        # handle_vpos = self.panel_config.get("handle_vpos", "bottom")
-
-        # self._add_door(
-        #     w=x * 2,
-        #     h=z * 2,
-        #     th=th * 2,
-        #     pos=door_pos,
-        #     parent_body=bodies["hingedoor"],
-        #     handle_hpos=handle_hpos,
-        #     handle_vpos=handle_vpos,
-        # )
+        self._add_door(
+            w=x * 2,
+            h=z * 2,
+            th=th * 2,
+            pos=door_pos,
+            parent_body="hingedoor",
+            handle_hpos=handle_hpos,
+            handle_vpos=handle_vpos,
+        )
 
         # set sites
         self.set_bounds_sites(

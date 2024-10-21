@@ -236,7 +236,6 @@ class MJCFLoader:
         geom_type = geom_attrib.get("type", "sphere")
         if "mesh" in geom_attrib:
             geom_type = "mesh"
-
         geom_size = _parse_vec(geom_attrib, "size", [1.0, 1.0, 1.0]) * self.scale
         geom_pos = _parse_vec(geom_attrib, "pos", (0.0, 0.0, 0.0)) * self.scale
         geom_rot = _parse_orientation(geom_attrib, self._use_degrees, self._euler_seq)
@@ -363,7 +362,7 @@ class MJCFLoader:
                         name=geom_name,
                     )
                 if has_collisions:
-                    builder.add_capsule_collision(
+                    builder.add_cylinder_collision(
                         t_visual2link,
                         radius=geom_radius,
                         half_length=geom_half_length,

@@ -6,6 +6,7 @@ import sapien
 from mani_skill import ASSET_DIR
 from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.utils.building.mjcf_loader import MJCFLoader
+from mani_skill.utils.scene_builder.robocasa.fixtures.mujoco_object import MujocoObject
 
 
 def site_pos(elem):
@@ -16,7 +17,7 @@ def site_pos(elem):
     return out
 
 
-class Fixture:
+class Fixture(MujocoObject):
     def __init__(
         self,
         scene: ManiSkillScene,
@@ -31,37 +32,7 @@ class Fixture:
     ):
         self.naming_prefix = ""  # not sure what this is
         self.rot = 0  # ??
-        self.name = name
-        self.pos = np.array([0, 0, 0])
-        if pos is not None:
-            self.pos = pos
-        self.quat = np.array([1, 0, 0, 0])
-        # load the mjcf file
-        self.scene = scene
-        self.loader = scene.create_mjcf_loader()
-        self.loader.visual_groups = [
-            1
-        ]  # for robocasa, 1 is visualized, 0 is collisions
-        orig_xml = xml
-        xml = (
-            ASSET_DIR
-            / "scene_datasets/robocasa_dataset/assets"
-            / orig_xml
-            / "model.xml"
-        )
-        if not xml.exists():
-            xml = ASSET_DIR / "scene_datasets/robocasa_dataset/assets" / orig_xml
-            parsed = self.loader.parse(xml, package_dir=xml / "./")
-        else:
-            parsed = self.loader.parse(xml, package_dir=xml / "../")
-        assert (
-            len(parsed["articulation_builders"]) + len(parsed["actor_builders"]) == 1
-        ), "exepect robocasa xmls to either have one actor or one articulation"
-        if len(parsed["actor_builders"]) == 1:
-            self.actor_builder = parsed["actor_builders"][0]
-        else:
-            self.articulation_builder = parsed["articulation_builders"][0]
-
+        super().__init__(scene, xml, name, pos)
         # set up exterior and interior sites
         self._bounds_sites = dict()
         for postfix in [
@@ -148,15 +119,6 @@ class Fixture:
             self.actor.set_pose(sapien.Pose(p=self.pos, q=self.quat))
         return self
 
-    """Functions from RoboCasa MujocoXMLObject class"""
-
-    def set_pos(self, pos):
-        self.pos = pos.copy()
-        # if hasattr(self, "articulation"):
-        #     self.articulation.set_root_pose(sapien.Pose(p=pos, q=self.quat))
-        # else:
-        #     self.actor.set_pose(sapien.Pose(p=pos, q=self.quat))
-
     """Functions from RoboCasa Fixture class"""
 
     def set_origin(self, origin):
@@ -197,24 +159,10 @@ class Fixture:
         scale[0] = scale[0] or scale[2] or scale[1]
         scale[1] = scale[1] or scale[0] or scale[2]
         scale[2] = scale[2] or scale[0] or scale[1]
-        self.loader.scale = scale
-        self._scale = np.array(scale)
-        self.size = np.multiply(self.size, self._scale)
         for k, v in self._bounds_sites.items():
-            self._bounds_sites[k] = np.multiply(v, self._scale)
+            self._bounds_sites[k] = np.multiply(v, scale)
 
-        # TODO (stao): is there a nicer way to move this scale code elsewhere.
-        if hasattr(self, "articulation_builder"):
-            for link in self.articulation_builder.link_builders:
-                for visual in link.visual_records:
-                    visual.scale = np.array(visual.scale) * scale
-                for col in link.collision_records:
-                    col.scale = np.array(col.scale) * scale
-        elif hasattr(self, "actor_builder"):
-            for visual in self.actor_builder.visual_records:
-                visual.scale = np.array(visual.scale) * scale
-            for col in self.actor_builder.collision_records:
-                col.scale = np.array(col.scale) * scale
+        self.set_scale(scale)
 
     def get_reset_regions(self, *args, **kwargs):
         """

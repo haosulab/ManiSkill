@@ -245,9 +245,6 @@ class RoboCasaSceneBuilder(SceneBuilder):
                     pos = fixture_config.get("pos", None)
             if pos is not None and type(fixture) not in [Wall, Floor]:
                 fixture.set_pos(deepcopy(pos))
-            if "stove_main_group" in fixtures:
-                print(fixture.name)
-                print("stove", fixtures["stove_main_group"].name, pos)
         # composites are non-MujocoObjects, must remove
         for composite in composites:
             del fixtures[composite]
