@@ -230,7 +230,9 @@ class DrawTriangle(BaseEnv):
 
             self.vertices = torch.from_numpy(
                 np.tile(self.original_verts, (b, 1, 1))
-            ).to(self.device) # b, 3, 3
+            ).to(
+                self.device
+            )  # b, 3, 3
             self.vertices = (
                 mats.double() @ self.vertices.transpose(-1, -2).double()
             ).transpose(

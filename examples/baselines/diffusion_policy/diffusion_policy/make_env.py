@@ -1,14 +1,15 @@
 from collections import deque
 from typing import Optional
+
 import gymnasium as gym
 import mani_skill.envs
-from mani_skill.utils import gym_utils
-from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
-from mani_skill.utils.wrappers import RecordEpisode, FrameStack, CPUGymWrapper
 import numpy as np
 from gymnasium.spaces import Box
 from gymnasium.wrappers.frame_stack import FrameStack as GymFrameStack
 from gymnasium.wrappers.frame_stack import LazyFrames
+from mani_skill.utils import gym_utils
+from mani_skill.utils.wrappers import CPUGymWrapper, FrameStack, RecordEpisode
+from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 
 
 class DictFrameStack(GymFrameStack):
@@ -39,9 +40,7 @@ class DictFrameStack(GymFrameStack):
         for k, v in self.observation_space.items():
             low = np.repeat(v.low[np.newaxis, ...], num_stack, axis=0)
             high = np.repeat(v.high[np.newaxis, ...], num_stack, axis=0)
-            new_observation_space[k] = Box(
-                low=low, high=high, dtype=v.dtype
-            )
+            new_observation_space[k] = Box(low=low, high=high, dtype=v.dtype)
         self.observation_space = new_observation_space
 
     def observation(self, observation):
@@ -60,7 +59,15 @@ class DictFrameStack(GymFrameStack):
         }
 
 
-def make_eval_envs(env_id, num_envs: int, sim_backend: str, env_kwargs: dict, other_kwargs: dict, video_dir: Optional[str] = None, wrappers: list[gym.Wrapper] = []):
+def make_eval_envs(
+    env_id,
+    num_envs: int,
+    sim_backend: str,
+    env_kwargs: dict,
+    other_kwargs: dict,
+    video_dir: Optional[str] = None,
+    wrappers: list[gym.Wrapper] = [],
+):
     """Create vectorized environment for evaluation and/or recording videos.
     For CPU vectorized environments only the first parallel environment is used to record videos.
     For GPU vectorized environments all parallel environments are used to record videos.
@@ -74,32 +81,72 @@ def make_eval_envs(env_id, num_envs: int, sim_backend: str, env_kwargs: dict, ot
         wrappers: the list of wrappers to apply to the environment.
     """
     if sim_backend == "cpu":
-        def cpu_make_env(env_id, seed, video_dir=None, env_kwargs = dict(), other_kwargs = dict()):
+
+        def cpu_make_env(
+            env_id, seed, video_dir=None, env_kwargs=dict(), other_kwargs=dict()
+        ):
             def thunk():
                 env = gym.make(env_id, reconfiguration_freq=1, **env_kwargs)
                 for wrapper in wrappers:
                     env = wrapper(env)
                 env = CPUGymWrapper(env, ignore_terminations=True, record_metrics=True)
                 if video_dir:
-                    env = RecordEpisode(env, output_dir=video_dir, save_trajectory=False, info_on_video=True, source_type="diffusion_policy", source_desc="diffusion_policy evaluation rollout")
+                    env = RecordEpisode(
+                        env,
+                        output_dir=video_dir,
+                        save_trajectory=False,
+                        info_on_video=True,
+                        source_type="diffusion_policy",
+                        source_desc="diffusion_policy evaluation rollout",
+                    )
                 if env_kwargs["obs_mode"] == "state":
-                    env = gym.wrappers.FrameStack(env, other_kwargs['obs_horizon'])
+                    env = gym.wrappers.FrameStack(env, other_kwargs["obs_horizon"])
                 elif env_kwargs["obs_mode"] == "rgbd":
-                    env = DictFrameStack(env, other_kwargs['obs_horizon'])
+                    env = DictFrameStack(env, other_kwargs["obs_horizon"])
                 env.action_space.seed(seed)
                 env.observation_space.seed(seed)
                 return env
 
             return thunk
-        vector_cls = gym.vector.SyncVectorEnv if num_envs == 1 else lambda x : gym.vector.AsyncVectorEnv(x, context="forkserver")
-        env = vector_cls([cpu_make_env(env_id, seed, video_dir if seed == 0 else None, env_kwargs, other_kwargs) for seed in range(num_envs)])
+
+        vector_cls = (
+            gym.vector.SyncVectorEnv
+            if num_envs == 1
+            else lambda x: gym.vector.AsyncVectorEnv(x, context="forkserver")
+        )
+        env = vector_cls(
+            [
+                cpu_make_env(
+                    env_id,
+                    seed,
+                    video_dir if seed == 0 else None,
+                    env_kwargs,
+                    other_kwargs,
+                )
+                for seed in range(num_envs)
+            ]
+        )
     else:
-        env = gym.make(env_id, num_envs=num_envs, sim_backend=sim_backend, reconfiguration_freq=1, **env_kwargs)
+        env = gym.make(
+            env_id,
+            num_envs=num_envs,
+            sim_backend=sim_backend,
+            reconfiguration_freq=1,
+            **env_kwargs
+        )
         max_episode_steps = gym_utils.find_max_episode_steps_value(env)
         for wrapper in wrappers:
             env = wrapper(env)
-        env = FrameStack(env, num_stack=other_kwargs['obs_horizon'])
+        env = FrameStack(env, num_stack=other_kwargs["obs_horizon"])
         if video_dir:
-            env = RecordEpisode(env, output_dir=video_dir, save_trajectory=False, save_video=True, source_type="diffusion_policy", source_desc="diffusion_policy evaluation rollout", max_steps_per_video=max_episode_steps)
+            env = RecordEpisode(
+                env,
+                output_dir=video_dir,
+                save_trajectory=False,
+                save_video=True,
+                source_type="diffusion_policy",
+                source_desc="diffusion_policy evaluation rollout",
+                max_steps_per_video=max_episode_steps,
+            )
         env = ManiSkillVectorEnv(env, ignore_terminations=True, record_metrics=True)
     return env
