@@ -71,6 +71,14 @@ class MujocoObject:
                         col.length *= scale[1]
                     else:
                         col.scale = np.array(col.scale) * scale
+                link.joint_record.pose_in_parent = sapien.Pose(
+                    p=np.multiply(link.joint_record.pose_in_parent.p, scale),
+                    q=link.joint_record.pose_in_parent.q,
+                )
+                link.joint_record.pose_in_child = sapien.Pose(
+                    p=np.multiply(link.joint_record.pose_in_child.p, scale),
+                    q=link.joint_record.pose_in_child.q,
+                )
         elif hasattr(self, "actor_builder"):
             for visual in self.actor_builder.visual_records:
                 visual.pose = sapien.Pose(
