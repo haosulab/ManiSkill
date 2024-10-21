@@ -5,7 +5,7 @@ DETR model and criterion classes.
 import torch
 from torch import nn
 from torch.autograd import Variable
-from .transformer import build_transformer, TransformerEncoder, TransformerEncoderLayer
+from examples.baselines.act.act.detr.transformer import build_transformer, TransformerEncoder, TransformerEncoderLayer
 
 import numpy as np
 
