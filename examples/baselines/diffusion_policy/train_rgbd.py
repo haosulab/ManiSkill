@@ -478,6 +478,7 @@ if __name__ == "__main__":
                     best_eval_metrics[k] = eval_metrics[k]
                     save_ckpt(run_name, f"best_eval_{k}")
                     print(f'New best {k}_rate: {eval_metrics[k]:.4f}. Saving checkpoint.')
+            
         # Checkpoint
         if args.save_freq is not None and iteration % args.save_freq == 0:
             save_ckpt(run_name, str(iteration))

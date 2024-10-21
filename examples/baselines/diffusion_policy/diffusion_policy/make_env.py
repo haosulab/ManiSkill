@@ -85,7 +85,7 @@ def make_eval_envs(env_id, num_envs: int, sim_backend: str, env_kwargs: dict, ot
                 if env_kwargs["obs_mode"] == "state":
                     env = gym.wrappers.FrameStack(env, other_kwargs['obs_horizon'])
                 elif env_kwargs["obs_mode"] == "rgbd":
-                    env = DictFrameStack(env, 2)
+                    env = DictFrameStack(env, other_kwargs['obs_horizon'])
                 env.action_space.seed(seed)
                 env.observation_space.seed(seed)
                 return env

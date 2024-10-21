@@ -43,7 +43,7 @@ class DrawTriangle(BaseEnv):
     """The colors of the brushes. If there is more than one color, each parallel environment will have a randomly sampled color."""
     THRESHOLD = 0.05
 
-    SUPPORTED_REWARD_MODES = ["none"]
+    SUPPORTED_REWARD_MODES = ["sparse"]
 
     SUPPORTED_ROBOTS: ["panda_stick"]  # type: ignore
     agent: PandaStick
@@ -216,7 +216,6 @@ class DrawTriangle(BaseEnv):
         )
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
-        # NOTE (stao): for simplicity this task cannot handle partial resets
         self.draw_step = 0
         with torch.device(self.device):
             b = len(env_idx)
@@ -226,18 +225,18 @@ class DrawTriangle(BaseEnv):
             target_pos[:, :2] = torch.rand((b, 2)) * 0.02 - 0.1
             target_pos[:, -1] = 0.01
             qs = randomization.random_quaternions(b, lock_x=True, lock_y=True)
-            mats = quaternion_to_matrix(qs)
+            mats = quaternion_to_matrix(qs).to(self.device)
             self.goal_tri.set_pose(Pose.create_from_pq(p=target_pos, q=qs))
 
             self.vertices = torch.from_numpy(
                 np.tile(self.original_verts, (b, 1, 1))
-            )  # b, 3, 3
+            ).to(self.device) # b, 3, 3
             self.vertices = (
                 mats.double() @ self.vertices.transpose(-1, -2).double()
             ).transpose(
                 -1, -2
             )  # apply rotation matrix
-            self.vertices += target_pos
+            self.vertices += target_pos.unsqueeze(1)
 
             self.triangles = self.generate_triangle_with_points(
                 100, self.vertices[:, :, :-1]
