@@ -274,7 +274,7 @@ class SingleCabinet(Cabinet):
 
         # get geoms, bodies, and joints
         # TODO: is adjusting the joint necessary?
-        self.geoms, bodies, joints = self._get_cab_components()
+        # self.geoms, bodies, joints = self._get_cab_components()
 
         # cabinet housing
         sizes = {
@@ -293,32 +293,45 @@ class SingleCabinet(Cabinet):
             "right": [x - th, th, 0],
             "shelf": [0, 0.05 - th, 0],
         }
-        set_geom_dimensions(sizes, positions, self.geoms, rotated=True)
+        # import ipdb; ipdb.set_trace()
+        # set_geom_dimensions(sizes, positions, self.geoms, rotated=True)
+        for i, ((part_name, size), (_, position)) in enumerate(
+            zip(sizes.items(), positions.items())
+        ):
+            self.articulation_builder.link_builders[1].collision_records[i].scale = size
+            self.articulation_builder.link_builders[1].collision_records[
+                i
+            ].pose = sapien.Pose(position)
+            self.articulation_builder.link_builders[1].add_box_visual(
+                pose=sapien.Pose(position),
+                half_size=size,
+                material=self.loader._materials["mat"],
+            )
 
-        # cabinet door bodies and joints
-        bodies["hingedoor"].set("pos", a2s([0, 0, 0]))
-        # set joint position
-        if self.orientation == "left":
-            joints["doorhinge"].set("pos", a2s([-x + th, -y, 0]))
-            joints["doorhinge"].set("range", a2s([-3.00, 0]))
-        else:
-            joints["doorhinge"].set("pos", a2s([x - th, -y, 0]))
+        # # cabinet door bodies and joints
+        # bodies["hingedoor"].set("pos", a2s([0, 0, 0]))
+        # # set joint position
+        # if self.orientation == "left":
+        #     joints["doorhinge"].set("pos", a2s([-x + th, -y, 0]))
+        #     joints["doorhinge"].set("range", a2s([-3.00, 0]))
+        # else:
+        #     joints["doorhinge"].set("pos", a2s([x - th, -y, 0]))
 
-        # create door
-        door_pos = [0, -y + th, 0]
-        # if the door opens right the handle must be on the left side of the door and vice versa
-        handle_hpos = "right" if self.orientation == "left" else "left"
-        handle_vpos = self.panel_config.get("handle_vpos", "bottom")
+        # # create door
+        # door_pos = [0, -y + th, 0]
+        # # if the door opens right the handle must be on the left side of the door and vice versa
+        # handle_hpos = "right" if self.orientation == "left" else "left"
+        # handle_vpos = self.panel_config.get("handle_vpos", "bottom")
 
-        self._add_door(
-            w=x * 2,
-            h=z * 2,
-            th=th * 2,
-            pos=door_pos,
-            parent_body=bodies["hingedoor"],
-            handle_hpos=handle_hpos,
-            handle_vpos=handle_vpos,
-        )
+        # self._add_door(
+        #     w=x * 2,
+        #     h=z * 2,
+        #     th=th * 2,
+        #     pos=door_pos,
+        #     parent_body=bodies["hingedoor"],
+        #     handle_hpos=handle_hpos,
+        #     handle_vpos=handle_vpos,
+        # )
 
         # set sites
         self.set_bounds_sites(

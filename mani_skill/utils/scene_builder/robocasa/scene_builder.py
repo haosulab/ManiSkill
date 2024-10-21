@@ -22,7 +22,7 @@ from mani_skill.utils.scene_builder.scene_builder import SceneBuilder
 
 FIXTURES = dict(
     housing_cabinet=HousingCabinet,
-    # single_cabinet=SingleCabinet,
+    single_cabinet=SingleCabinet,
     wall=Wall,
     counter=Counter,
     sink=Sink,
