@@ -20,7 +20,7 @@ from mani_skill.utils.structs.types import Array, GPUMemoryConfig, SimConfig
 import sapien
 
 
-@register_env("PullCubeTool-v1", max_episode_steps=100)
+@register_env(uid="PullCubeTool-v1", max_episode_steps=100)
 class PullCubeToolEnv(BaseEnv):
     """
     Task Description
@@ -40,6 +40,7 @@ class PullCubeToolEnv(BaseEnv):
     - The cube's xy position is within the goal region of the arm's base (marked by reachability)
     """
 
+    print("PullCubeTool-v1 registered")
     SUPPORTED_ROBOTS = ["panda", "fetch"]
     SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "sparse", "none")
 
@@ -160,32 +161,6 @@ class PullCubeToolEnv(BaseEnv):
             b = len(env_idx)
             self.scene_builder.initialize(env_idx)
 
-            # Initialize robot position and orientation
-            qpos = torch.tensor(
-                [
-                    0.0,
-                    np.pi / 8,
-                    0,
-                    -np.pi * 5 / 8,
-                    0,
-                    np.pi * 3 / 4,
-                    np.pi / 4,
-                    0.04,
-                    0.04,
-                ]
-            )
-
-            qpos = (
-                torch.normal(
-                    0, self.robot_init_qpos_noise, (b, len(qpos)), device=self.device
-                )
-                + qpos
-            )
-
-            qpos[:, -2:] = 0.04
-            self.agent.robot.set_qpos(qpos)
-            self.agent.robot.set_pose(sapien.Pose([-0.615, 0, 0]))
-
             # Initialize the tool
 
             tool_xyz = torch.zeros((b, 3))
@@ -203,7 +178,8 @@ class PullCubeToolEnv(BaseEnv):
             cube_xyz = torch.zeros((b, 3))
             cube_xyz[..., 0] = self.arm_reach + torch.rand(b) * (
                 self.handle_length - 0.08
-            )  # Just outside arm's reach
+            )
+            # Just outside arm's reach
             cube_xyz[..., 1] = torch.rand(b) * 0.4 - 0.2  # Random y position
             cube_xyz[..., 2] = self.cube_size / 2  # Place on the table
 
@@ -219,11 +195,21 @@ class PullCubeToolEnv(BaseEnv):
             self.cube.set_pose(cube_pose)
 
     def _get_obs_extra(self, info: Dict):
+
         obs = dict(
-            tcp_pose=self.agent.tcp.pose.raw_pose,
-            cube_pose=self.cube.pose.raw_pose,
-            tool_pose=self.l_shape_tool.pose.raw_pose,
-        )
+                tcp_pose=self.agent.tcp.pose.raw_pose,
+                cube_pose=self.cube.pose.raw_pose,
+                tool_pose=self.l_shape_tool.pose.raw_pose,
+            )
+
+        if self._obs_mode in ["state", "state_dict"]:
+            # if the observation mode is state/state_dict, we provide ground truth information about where the cube is.
+            # for visual observation modes one should rely on the sensed visual data to determine where the cube is
+                obs.update(
+                    cube_pose=self.cube.pose.raw_pose,
+                    tool_pose=self.l_shape_tool.pose.raw_pose,
+                )
+            
 
         return obs
 
@@ -244,7 +230,7 @@ class PullCubeToolEnv(BaseEnv):
         }
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        
+
         tcp_pos = self.agent.tcp.pose.p
         cube_pos = self.cube.pose.p
         tool_pos = self.l_shape_tool.pose.p
