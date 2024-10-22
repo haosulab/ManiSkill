@@ -6,7 +6,8 @@ import yaml
 
 from mani_skill import ASSET_DIR
 from mani_skill.envs.scene import ManiSkillScene
-from mani_skill.utils.scene_builder.robocasa.fixtures.others import Wall
+
+ROBOCASA_ASSET_DIR = ASSET_DIR / "scene_datasets/robocasa_dataset/assets"
 
 AXES_KEYWORDS = {0: ["left", "right"], 1: ["front", "back"], 2: ["bottom", "top"]}
 

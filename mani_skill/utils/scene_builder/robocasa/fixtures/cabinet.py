@@ -12,6 +12,7 @@ from mani_skill.utils.scene_builder.robocasa.fixtures.cabinet_panels import (
     SlabCabinetPanel,
 )
 from mani_skill.utils.scene_builder.robocasa.fixtures.fixture import Fixture
+from mani_skill.utils.scene_builder.robocasa.utils.scene_utils import ROBOCASA_ASSET_DIR
 
 # from robosuite.utils.mjcf_utils import array_to_string as a2s
 # from robosuite.utils.mjcf_utils import (
@@ -118,10 +119,10 @@ class Cabinet(Fixture):
         """
         if self.texture is None:
             return
+        import ipdb
 
-        self.texture = xml_path_completion(
-            self.texture, root=robocasa.models.assets_root
-        )
+        ipdb.set_trace()
+        self.texture = str(ROBOCASA_ASSET_DIR / self.texture)
 
         texture = find_elements(
             self.root, tags="texture", attribs={"name": "tex"}, return_first=True

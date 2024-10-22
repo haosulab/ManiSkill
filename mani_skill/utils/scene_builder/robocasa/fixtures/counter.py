@@ -3,9 +3,7 @@ import math
 
 import numpy as np
 import sapien
-from sapien.wrapper.actor_builder import CollisionShapeRecord, VisualShapeRecord
 
-from mani_skill import ASSET_DIR
 from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.utils.scene_builder.robocasa.fixtures.fixture import Fixture
 
@@ -74,12 +72,6 @@ class Counter(Fixture):
             xml = "fixtures/counters/counter_with_opening"
         else:
             xml = "fixtures/counters/counter"
-        # self.xml = (
-        #     ASSET_DIR
-        #     / "scene_datasets/robocasa_dataset/assets"
-        #     / self.xml
-        #     / "model.xml"
-        # )
         self.interior_obj = None
 
         self.size = size

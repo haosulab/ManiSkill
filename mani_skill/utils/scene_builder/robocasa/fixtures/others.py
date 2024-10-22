@@ -1,8 +1,8 @@
 import numpy as np
 import sapien
 
-from mani_skill import ASSET_DIR
 from mani_skill.envs.scene import ManiSkillScene
+from mani_skill.utils.scene_builder.robocasa.utils.scene_utils import ROBOCASA_ASSET_DIR
 
 
 class Box:
@@ -24,7 +24,7 @@ class Box:
         self.pos = pos
         self.scene = scene
         self.render_material = sapien.render.RenderMaterial()
-        texture = str(ASSET_DIR / "scene_datasets/robocasa_dataset/assets" / texture)
+        texture = str(ROBOCASA_ASSET_DIR / texture)
         self.render_material.base_color_texture = sapien.render.RenderTexture2D(
             filename=texture,
             mipmap_levels=1,
@@ -92,7 +92,7 @@ class Wall:
             texture = "textures/flat/light_gray.png"
         # self.render_material = sapien.render.RenderMaterial(base_color=[1, 1, 1, 1])
         self.render_material = sapien.render.RenderMaterial()
-        texture = str(ASSET_DIR / "scene_datasets/robocasa_dataset/assets" / texture)
+        texture = str(ROBOCASA_ASSET_DIR / texture)
         print(texture)
         self.render_material.base_color_texture = sapien.render.RenderTexture2D(
             filename=texture,

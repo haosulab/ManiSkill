@@ -1,8 +1,8 @@
 import numpy as np
 import sapien
 
-from mani_skill import ASSET_DIR
 from mani_skill.envs.scene import ManiSkillScene
+from mani_skill.utils.scene_builder.robocasa.utils.scene_utils import ROBOCASA_ASSET_DIR
 
 
 class MujocoObject:
@@ -25,14 +25,9 @@ class MujocoObject:
             1
         ]  # for robocasa, 1 is visualized, 0 is collisions
         orig_xml = xml
-        xml = (
-            ASSET_DIR
-            / "scene_datasets/robocasa_dataset/assets"
-            / orig_xml
-            / "model.xml"
-        )
+        xml = ROBOCASA_ASSET_DIR / orig_xml / "model.xml"
         if not xml.exists():
-            xml = ASSET_DIR / "scene_datasets/robocasa_dataset/assets" / orig_xml
+            xml = ROBOCASA_ASSET_DIR / orig_xml
             parsed = self.loader.parse(xml, package_dir=xml / "./")
         else:
             parsed = self.loader.parse(xml, package_dir=xml / "../")

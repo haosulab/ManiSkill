@@ -3,7 +3,6 @@ import abc
 import numpy as np
 import sapien
 
-from mani_skill import ASSET_DIR
 from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.utils.building.mjcf_loader import MJCFLoader
 from mani_skill.utils.scene_builder.robocasa.fixtures.mujoco_object import MujocoObject

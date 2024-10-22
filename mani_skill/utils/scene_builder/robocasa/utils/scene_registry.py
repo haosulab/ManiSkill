@@ -4,6 +4,7 @@ from collections import OrderedDict
 from enum import IntEnum
 
 from mani_skill import ASSET_DIR
+from mani_skill.utils.scene_builder.robocasa.utils.scene_utils import ROBOCASA_ASSET_DIR
 
 
 class LayoutType(IntEnum):
@@ -88,10 +89,7 @@ def get_layout_path(layout_id):
     if layout_name[1] == "_":
         layout_name = layout_name.capitalize()
 
-    return (
-        ASSET_DIR
-        / f"scene_datasets/robocasa_dataset/assets/scenes/kitchen_layouts/{layout_name}.yaml"
-    )
+    return str(ROBOCASA_ASSET_DIR / f"scenes/kitchen_layouts/{layout_name}.yaml")
 
 
 def get_style_path(style_id):
