@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import numpy as np
 import sapien
 from transforms3d.euler import euler2quat
@@ -43,7 +45,7 @@ class MujocoObject:
     """Functions from RoboCasa MujocoXMLObject class"""
 
     def set_pos(self, pos):
-        self.pos = pos.copy()
+        self.pos = deepcopy(pos)
 
     def set_euler(self, euler):
         self.quat = euler2quat(*euler)

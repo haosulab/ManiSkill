@@ -33,6 +33,8 @@ class Fixture(MujocoObject):
         self.naming_prefix = ""  # not sure what this is
         self.rot = 0  # ??
         super().__init__(scene, xml, name, pos)
+        if pos is not None:
+            self.set_pos(pos)
         # set up exterior and interior sites
         self._bounds_sites = dict()
         for postfix in [
@@ -135,7 +137,6 @@ class Fixture(MujocoObject):
         fixture_mat = euler2mat(*fixture_rot)
         # fixture_mat = T.euler2mat(fixture_rot)
         pos = origin + np.dot(fixture_mat, -self.origin_offset)
-
         self.set_pos(pos)
 
     def set_scale_from_size(self, size):

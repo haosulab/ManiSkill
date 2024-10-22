@@ -128,7 +128,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
     def build(self, build_config_idxs: List[int] = None):
         # return super().build(build_config_idxs)
         layout_path = scene_registry.get_layout_path(1)
-        style_path = scene_registry.get_style_path(3)
+        style_path = scene_registry.get_style_path(0)
         # load style
         with open(style_path, "r") as f:
             style = yaml.safe_load(f)
@@ -316,10 +316,8 @@ class RoboCasaSceneBuilder(SceneBuilder):
                     rot_new[2] += z_rot
                 else:
                     rot_new = [0, 0, z_rot]
-                fixture.set_pos(pos_new)
+                fixture.pos = pos_new.copy()
                 fixture.set_euler(rot_new)
-                # fixture._obj.set("pos", a2s(pos_new))
-                # fixture._obj.set("euler", a2s(rot_new))
 
         for k, v in fixtures.items():
             # print(k, v.pos, v.size, v.quat if hasattr(v, "quat") else None)
