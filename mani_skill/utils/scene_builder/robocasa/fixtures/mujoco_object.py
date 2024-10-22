@@ -1,4 +1,5 @@
 from copy import deepcopy
+from typing import Optional
 
 import numpy as np
 import sapien
@@ -14,7 +15,11 @@ class MujocoObject:
     """
 
     def __init__(
-        self, scene: ManiSkillScene, xml: str, name: str, pos: np.ndarray = None
+        self,
+        scene: ManiSkillScene,
+        xml: Optional[str],
+        name: str,
+        pos: np.ndarray = None,
     ):
         self.name = name
         self.pos = np.array([0, 0, 0])
@@ -27,20 +32,22 @@ class MujocoObject:
         self.loader.visual_groups = [
             1
         ]  # for robocasa, 1 is visualized, 0 is collisions
-        orig_xml = xml
-        xml = ROBOCASA_ASSET_DIR / orig_xml / "model.xml"
-        if not xml.exists():
-            xml = ROBOCASA_ASSET_DIR / orig_xml
-            parsed = self.loader.parse(xml, package_dir=xml / "./")
-        else:
-            parsed = self.loader.parse(xml, package_dir=xml / "../")
-        assert (
-            len(parsed["articulation_builders"]) + len(parsed["actor_builders"]) == 1
-        ), "exepect robocasa xmls to either have one actor or one articulation"
-        if len(parsed["actor_builders"]) == 1:
-            self.actor_builder = parsed["actor_builders"][0]
-        else:
-            self.articulation_builder = parsed["articulation_builders"][0]
+        if xml is not None:
+            orig_xml = xml
+            xml = ROBOCASA_ASSET_DIR / orig_xml / "model.xml"
+            if not xml.exists():
+                xml = ROBOCASA_ASSET_DIR / orig_xml
+                parsed = self.loader.parse(xml, package_dir=xml / "./")
+            else:
+                parsed = self.loader.parse(xml, package_dir=xml / "../")
+            assert (
+                len(parsed["articulation_builders"]) + len(parsed["actor_builders"])
+                == 1
+            ), "exepect robocasa xmls to either have one actor or one articulation"
+            if len(parsed["actor_builders"]) == 1:
+                self.actor_builder = parsed["actor_builders"][0]
+            else:
+                self.articulation_builder = parsed["articulation_builders"][0]
 
     """Functions from RoboCasa MujocoXMLObject class"""
 

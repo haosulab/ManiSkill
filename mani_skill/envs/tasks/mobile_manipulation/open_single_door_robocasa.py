@@ -53,6 +53,7 @@ class RoboCasaOpenSingleDoorEnv(BaseEnv):
         with torch.device(self.device):
             self.scene_builder.initialize(env_idx)
             self.agent.robot.set_qpos(self.agent.keyframes["rest"].qpos)
+            self.agent.robot.set_pose(sapien.Pose(p=[2.7, -1.5, 0]))
 
     def evaluate(self):
         return {}

@@ -32,6 +32,10 @@ from mani_skill.utils.scene_builder.robocasa.fixtures.microwave import Microwave
 from mani_skill.utils.scene_builder.robocasa.fixtures.others import Box, Floor, Wall
 from mani_skill.utils.scene_builder.robocasa.fixtures.sink import Sink
 from mani_skill.utils.scene_builder.robocasa.fixtures.stove import Oven, Stove, Stovetop
+from mani_skill.utils.scene_builder.robocasa.fixtures.windows import (
+    FramedWindow,
+    Window,
+)
 from mani_skill.utils.scene_builder.robocasa.utils import scene_registry, scene_utils
 from mani_skill.utils.scene_builder.scene_builder import SceneBuilder
 
@@ -64,8 +68,8 @@ FIXTURES = dict(
     toaster=Toaster,
     utensil_rack=WallAccessory,
     wall_accessory=WallAccessory,
-    # window=Window,
-    # framed_window=FramedWindow,
+    window=Window,
+    framed_window=FramedWindow,
     # needs some additional work
     # slide_cabinet=SlideCabinet,
 )
@@ -333,7 +337,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
                     fixture.set_euler(rot_new)
 
             for k, v in fixtures.items():
-                print(k, v.pos, v.size, v.quat if hasattr(v, "quat") else None)
+                # print(k, v.pos, v.size, v.quat if hasattr(v, "quat") else None)
                 built = v.build(scene_idxs=[scene_idx])
                 if built is not None:
                     # ensure all rooted articulated objects have collisions ignored with all static objects
