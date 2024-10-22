@@ -111,7 +111,7 @@ class Cabinet(Fixture):
             for elem in self.geoms["top"]:
                 self._remove_element(elem)
 
-        # self._set_texture()
+        self._set_texture()
 
     def _set_texture(self):
         """
@@ -119,28 +119,39 @@ class Cabinet(Fixture):
         """
         if self.texture is None:
             return
-        import ipdb
-
-        ipdb.set_trace()
         self.texture = str(ROBOCASA_ASSET_DIR / self.texture)
 
-        texture = find_elements(
-            self.root, tags="texture", attribs={"name": "tex"}, return_first=True
-        )
-        tex_is_2d = texture.get("type", None) == "2d"
-        tex_name = get_texture_name_from_file(self.texture)
-        if tex_is_2d:
-            tex_name += "_2d"
-        texture.set("name", tex_name)
-        texture.set("file", self.texture)
+        # if self.is_articulation:
+        #     for link_builder in self.articulation_builder.link_builders:
+        #         for visual_record in link_builder.visual_records:
+        #             visual_record.material.base_color_texture = sapien.render.RenderTexture2D(
+        #             filename=self.texture,
+        #             mipmap_levels=1,
+        #         )
+        # else:
+        #     for visual_record in self.actor_builder.visual_records:
+        #         visual_record.material.base_color_texture = sapien.render.RenderTexture2D(
+        #         filename=self.texture,
+        #         mipmap_levels=1,
+        #     )
 
-        material = find_elements(
-            self.root,
-            tags="material",
-            attribs={"name": "{}_mat".format(self.name)},
-            return_first=True,
-        )
-        material.set("texture", tex_name)
+        # texture = find_elements(
+        #     self.root, tags="texture", attribs={"name": "tex"}, return_first=True
+        # )
+        # tex_is_2d = texture.get("type", None) == "2d"
+        # tex_name = get_texture_name_from_file(self.texture)
+        # if tex_is_2d:
+        #     tex_name += "_2d"
+        # texture.set("name", tex_name)
+        # texture.set("file", self.texture)
+
+        # material = find_elements(
+        #     self.root,
+        #     tags="material",
+        #     attribs={"name": "{}_mat".format(self.name)},
+        #     return_first=True,
+        # )
+        # material.set("texture", tex_name)
 
     def get_reset_regions(self, env):
         """

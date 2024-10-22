@@ -11,6 +11,7 @@ from mani_skill.utils.scene_builder.robocasa.fixtures.handles import (
     KnobHandle,
 )
 from mani_skill.utils.scene_builder.robocasa.fixtures.mujoco_object import MujocoObject
+from mani_skill.utils.scene_builder.robocasa.utils.scene_utils import ROBOCASA_ASSET_DIR
 
 
 class CabinetPanel(MujocoObject):
@@ -63,7 +64,7 @@ class CabinetPanel(MujocoObject):
         self.handle_hpos = handle_hpos
         self.handle_vpos = handle_vpos
 
-        # self._set_texture()
+        self._set_texture()
         self._create_panel()
         self._add_handle()
 
@@ -120,28 +121,30 @@ class CabinetPanel(MujocoObject):
         """
         if self.texture is None:
             return
+        self.texture = str(ROBOCASA_ASSET_DIR / self.texture)
+        for visual_record in self.actor_builder.visual_records:
+            visual_record.material.base_color_texture = sapien.render.RenderTexture2D(
+                filename=self.texture,
+                mipmap_levels=1,
+            )
+        # texture = find_elements(
+        #     self.root, tags="texture", attribs={"name": "tex"}, return_first=True
+        # )
+        # tex_is_2d = texture.get("type", None) == "2d"
+        # tex_name = get_texture_name_from_file(self.texture)
+        # if tex_is_2d:
+        #     tex_name += "_2d"
+        # texture.set("name", tex_name)
+        # texture.set("file", self.texture)
 
-        self.texture = xml_path_completion(
-            self.texture, root=robocasa.models.assets_root
-        )
-        texture = find_elements(
-            self.root, tags="texture", attribs={"name": "tex"}, return_first=True
-        )
-        tex_is_2d = texture.get("type", None) == "2d"
-        tex_name = get_texture_name_from_file(self.texture)
-        if tex_is_2d:
-            tex_name += "_2d"
-        texture.set("name", tex_name)
-        texture.set("file", self.texture)
-
-        material = find_elements(
-            self.root,
-            tags="material",
-            attribs={"name": "{}_mat".format(self.name)},
-            return_first=True,
-        )
-        material.set("name", "{}_mat".format(self.name))
-        material.set("texture", tex_name)
+        # material = find_elements(
+        #     self.root,
+        #     tags="material",
+        #     attribs={"name": "{}_mat".format(self.name)},
+        #     return_first=True,
+        # )
+        # material.set("name", "{}_mat".format(self.name))
+        # material.set("texture", tex_name)
 
     def _add_handle(self):
         """
@@ -522,7 +525,7 @@ class CabinetShelf(MujocoObject):
         self._create_panel()
 
         self.texture = texture
-        # self._set_texture()
+        self._set_texture()
 
     def exclude_from_prefixing(self, inp):
         """
@@ -552,26 +555,33 @@ class CabinetShelf(MujocoObject):
         if self.texture is None:
             return
 
-        self.texture = xml_path_completion(
-            self.texture, root=robocasa.models.assets_root
-        )
-        texture = find_elements(
-            self.root, tags="texture", attribs={"name": "tex"}, return_first=True
-        )
-        tex_is_2d = texture.get("type", None) == "2d"
-        tex_name = get_texture_name_from_file(self.texture)
-        if tex_is_2d:
-            tex_name += "_2d"
-        texture.set("name", tex_name)
-        texture.set("file", self.texture)
+        self.texture = str(ROBOCASA_ASSET_DIR / self.texture)
+        for visual_record in self.actor_builder.visual_records:
+            visual_record.material.base_color_texture = sapien.render.RenderTexture2D(
+                filename=self.texture,
+                mipmap_levels=1,
+            )
 
-        material = find_elements(
-            self.root,
-            tags="material",
-            attribs={"name": "{}_mat".format(self.name)},
-            return_first=True,
-        )
-        material.set("texture", tex_name)
+        # self.texture = xml_path_completion(
+        #     self.texture, root=robocasa.models.assets_root
+        # )
+        # texture = find_elements(
+        #     self.root, tags="texture", attribs={"name": "tex"}, return_first=True
+        # )
+        # tex_is_2d = texture.get("type", None) == "2d"
+        # tex_name = get_texture_name_from_file(self.texture)
+        # if tex_is_2d:
+        #     tex_name += "_2d"
+        # texture.set("name", tex_name)
+        # texture.set("file", self.texture)
+
+        # material = find_elements(
+        #     self.root,
+        #     tags="material",
+        #     attribs={"name": "{}_mat".format(self.name)},
+        #     return_first=True,
+        # )
+        # material.set("texture", tex_name)
 
     def _get_components(self):
         """

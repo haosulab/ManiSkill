@@ -6,6 +6,7 @@ import sapien
 from transforms3d.euler import euler2quat
 
 from mani_skill.utils.scene_builder.robocasa.fixtures.mujoco_object import MujocoObject
+from mani_skill.utils.scene_builder.robocasa.utils.scene_utils import ROBOCASA_ASSET_DIR
 
 
 class Handle(MujocoObject):
@@ -49,6 +50,7 @@ class Handle(MujocoObject):
 
         self.length = length
         self.orientation = orientation
+        self.texture = str(ROBOCASA_ASSET_DIR / texture)
         # self.texture = xml_path_completion(texture, root=robocasa.models.assets_root)
         self.panel_w = panel_w
         self.panel_h = panel_h
@@ -57,7 +59,7 @@ class Handle(MujocoObject):
         self.side = None
 
         self._create_handle()
-        # self._set_texture()
+        self._set_texture()
 
     @abc.abstractmethod
     def _get_components(self):
@@ -89,21 +91,29 @@ class Handle(MujocoObject):
         """
         Set the texture of the handle
         """
+        if self.texture is None:
+            return
         # set texture
-        texture = find_elements(
-            self.root, tags="texture", attribs={"name": "tex"}, return_first=True
-        )
-        tex_name = get_texture_name_from_file(self.texture)
-        texture.set("file", self.texture)
-        texture.set("name", tex_name)
+        self.texture = str(ROBOCASA_ASSET_DIR / self.texture)
+        for visual_record in self.actor_builder.visual_records:
+            visual_record.material.base_color_texture = sapien.render.RenderTexture2D(
+                filename=self.texture,
+                mipmap_levels=1,
+            )
+        # texture = find_elements(
+        #     self.root, tags="texture", attribs={"name": "tex"}, return_first=True
+        # )
+        # tex_name = get_texture_name_from_file(self.texture)
+        # texture.set("file", self.texture)
+        # texture.set("name", tex_name)
 
-        material = find_elements(
-            self.root,
-            tags="material",
-            attribs={"name": "{}_mat".format(self.name)},
-            return_first=True,
-        )
-        material.set("texture", tex_name)
+        # material = find_elements(
+        #     self.root,
+        #     tags="material",
+        #     attribs={"name": "{}_mat".format(self.name)},
+        #     return_first=True,
+        # )
+        # material.set("texture", tex_name)
 
 
 class BarHandle(Handle):
