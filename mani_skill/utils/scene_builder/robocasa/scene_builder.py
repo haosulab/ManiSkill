@@ -13,6 +13,7 @@ from mani_skill.utils.scene_builder.robocasa.fixtures.cabinet import (
     SingleCabinet,
 )
 from mani_skill.utils.scene_builder.robocasa.fixtures.counter import Counter
+from mani_skill.utils.scene_builder.robocasa.fixtures.dishwasher import Dishwasher
 from mani_skill.utils.scene_builder.robocasa.fixtures.fixture import Fixture
 from mani_skill.utils.scene_builder.robocasa.fixtures.fixture_stack import FixtureStack
 from mani_skill.utils.scene_builder.robocasa.fixtures.fridge import Fridge
@@ -36,6 +37,7 @@ FIXTURES = dict(
     oven=Oven,
     fridge=Fridge,
     microwave=Microwave,
+    dishwasher=Dishwasher,
 )
 # fixtures that are attached to other fixtures, disables positioning system in this script
 FIXTURES_INTERIOR = dict(

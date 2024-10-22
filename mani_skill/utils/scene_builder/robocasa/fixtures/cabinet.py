@@ -363,16 +363,19 @@ class SingleCabinet(Cabinet):
 
         # cabinet door bodies and joints
         joint_record = self.articulation_builder.link_builders[2].joint_record
-        joint_record.pose_in_parent = sapien.Pose(
-            p=[-x + th, -y, 0], q=joint_record.pose_in_parent.q
-        )
         # set joint position
         if self.orientation == "left":
+            joint_record.pose_in_parent = sapien.Pose(
+                p=[-x + th, -y, 0], q=joint_record.pose_in_parent.q
+            )
             joint_record.pose_in_child = sapien.Pose(
                 [-x + th, -y, 0], q=joint_record.pose_in_child.q
             )
             joint_record.limits = [-3.00, 0]
         else:
+            joint_record.pose_in_parent = sapien.Pose(
+                p=[x - th, -y, 0], q=joint_record.pose_in_parent.q
+            )
             joint_record.pose_in_child = sapien.Pose(
                 [x - th, -y, 0], q=joint_record.pose_in_child.q
             )
