@@ -40,6 +40,7 @@ import math
 import os
 import re
 import xml.etree.ElementTree as ET
+from collections import defaultdict
 from copy import deepcopy
 from dataclasses import dataclass
 from functools import reduce
@@ -764,7 +765,14 @@ class MJCFLoader:
 
                 # Check if the body tag only contains another body tag and nothing else
                 body_children = list(body)
-                if len(body_children) == 1 and body_children[0].tag == "body":
+                tag_counts = defaultdict(int)
+                for child in body_children:
+                    tag_counts[child.tag] += 1
+                if (
+                    tag_counts["body"] == 1
+                    and "geom" not in tag_counts
+                    and "joint" not in tag_counts
+                ):
                     # If so, skip the current body and continue with its child
                     body = body_children[0]
 

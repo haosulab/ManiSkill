@@ -81,18 +81,19 @@ class CabinetPanel(MujocoObject):
         for i, ((part_name, size), (_, position)) in enumerate(
             zip(sizes.items(), positions.items())
         ):
+
             col_record = self.actor_builder.collision_records[i]
             col_record.scale = size
             col_record.pose = sapien.Pose(p=position, q=col_record.pose.q)
             mat = self.loader._materials["mat"]
             if part_name in self.material_overrides:
                 mat = self.material_overrides[part_name]
-                self.actor_builder.add_box_visual(
-                    name=self.name + "_" + part_name,
-                    pose=col_record.pose,
-                    half_size=size,
-                    material=mat,
-                )
+            self.actor_builder.add_box_visual(
+                name=self.name + "_" + part_name,
+                pose=col_record.pose,
+                half_size=size,
+                material=mat,
+            )
 
     @abc.abstractmethod
     def _get_components(self):

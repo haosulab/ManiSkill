@@ -128,7 +128,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
     def build(self, build_config_idxs: List[int] = None):
         # return super().build(build_config_idxs)
         layout_path = scene_registry.get_layout_path(0)
-        style_path = scene_registry.get_style_path(2)
+        style_path = scene_registry.get_style_path(3)
         # load style
         with open(style_path, "r") as f:
             style = yaml.safe_load(f)

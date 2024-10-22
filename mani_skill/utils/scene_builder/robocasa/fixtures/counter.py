@@ -6,6 +6,7 @@ import sapien
 
 from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.utils.scene_builder.robocasa.fixtures.fixture import Fixture
+from mani_skill.utils.scene_builder.robocasa.utils.scene_utils import ROBOCASA_ASSET_DIR
 
 SIDES = ["left", "right", "front", "back"]
 
@@ -42,6 +43,8 @@ class Counter(Fixture):
 
         obj_x_percent (float): Percentage of the counter's width taken up by the interior object
     """
+
+    material_overrides = dict()
 
     def __init__(
         self,
@@ -107,101 +110,142 @@ class Counter(Fixture):
             top_padding = self._place_interior_obj()
             self._make_counter_with_opening(top_padding)
 
-        # # set top texture
-        # self._set_texture(top_texture, base_texture, base_color)
+        # set top texture
+        self._set_texture(top_texture, base_texture, base_color)
 
-        # # set sites
-        # x, y, z = np.array(self.size) / 2
-        # self.set_bounds_sites(
-        #     {
-        #         "ext_p0": [-x, -y + self.overhang, -z],
-        #         "ext_px": [x, -y + self.overhang, -z],
-        #         "ext_py": [-x, y, -z],
-        #         "ext_pz": [-x, -y + self.overhang, z],
-        #     }
-        # )
+        # set sites
+        x, y, z = np.array(self.size) / 2
+        self.set_bounds_sites(
+            {
+                "ext_p0": [-x, -y + self.overhang, -z],
+                "ext_px": [x, -y + self.overhang, -z],
+                "ext_py": [-x, y, -z],
+                "ext_pz": [-x, -y + self.overhang, z],
+            }
+        )
 
     def _set_texture(self, top_texture, base_texture, base_color):
         # set top and bottom textures
-        self.top_texture = xml_path_completion(
-            top_texture, root=robocasa.models.assets_root
-        )
-        self.base_texture = xml_path_completion(
-            base_texture, root=robocasa.models.assets_root
-        )
+        # self.top_texture = xml_path_completion(
+        #     top_texture, root=robocasa.models.assets_root
+        # )
+        # self.base_texture = xml_path_completion(
+        #     base_texture, root=robocasa.models.assets_root
+        # )
+        # return
+        self.top_texture = str(ROBOCASA_ASSET_DIR / top_texture)
+        self.base_texture = str(ROBOCASA_ASSET_DIR / base_texture)
+        # import ipdb;ipdb.set_trace()
+        # # set top texture and materials
+        # texture = find_elements(
+        #     self.root, tags="texture", attribs={"name": "tex_top_2d"}, return_first=True
+        # )
+        for visual_record in self.actor_builder.visual_records:
+            shortname = visual_record.name.replace(self.name + "_", "")
+            if (
+                shortname in self.geom_names
+                and shortname not in self.material_overrides
+            ):
+                visual_record.material.base_color_texture = (
+                    sapien.render.RenderTexture2D(
+                        filename=self.top_texture
+                        if "top" in shortname
+                        else self.base_texture,
+                        mipmap_levels=1,
+                    )
+                )
+        # TODO (stao): is base color ever used?
+        # tex_name = get_texture_name_from_file(self.top_texture) + "_2d"
+        # texture.set("name", tex_name)
+        # texture.set("file", self.top_texture)
+        # material = find_elements(
+        #     self.root,
+        #     tags="material",
+        #     attribs={"name": "{}_counter_top".format(self.name)},
+        #     return_first=True,
+        # )
+        # material.set("texture", tex_name)
 
-        # set top texture and materials
-        texture = find_elements(
-            self.root, tags="texture", attribs={"name": "tex_top_2d"}, return_first=True
-        )
-        tex_name = get_texture_name_from_file(self.top_texture) + "_2d"
-        texture.set("name", tex_name)
-        texture.set("file", self.top_texture)
-        material = find_elements(
-            self.root,
-            tags="material",
-            attribs={"name": "{}_counter_top".format(self.name)},
-            return_first=True,
-        )
-        material.set("texture", tex_name)
+        # texture = find_elements(
+        #     self.root, tags="texture", attribs={"name": "tex_base"}, return_first=True
+        # )
+        # tex_name = get_texture_name_from_file(self.base_texture)
+        # texture.set("name", tex_name)
+        # texture.set("file", self.base_texture)
+        # material = find_elements(
+        #     self.root,
+        #     tags="material",
+        #     attribs={"name": "{}_counter_base".format(self.name)},
+        #     return_first=True,
+        # )
+        # material.set("texture", tex_name)
 
-        texture = find_elements(
-            self.root, tags="texture", attribs={"name": "tex_base"}, return_first=True
-        )
-        tex_name = get_texture_name_from_file(self.base_texture)
-        texture.set("name", tex_name)
-        texture.set("file", self.base_texture)
-        material = find_elements(
-            self.root,
-            tags="material",
-            attribs={"name": "{}_counter_base".format(self.name)},
-            return_first=True,
-        )
-        material.set("texture", tex_name)
+        # # need to look at this later, not sure why
+        # prefix = self.naming_prefix if self.name != "counter" else ""
 
-        # need to look at this later, not sure why
-        prefix = self.naming_prefix if self.name != "counter" else ""
+        # # set base color
+        # if base_color is not None:
+        #     self.base_color = base_color
+        #     base_material = find_elements(
+        #         self.root,
+        #         "material",
+        #         attribs={"name": prefix + "counter_base"},
+        #         return_first=True,
+        #     )
 
-        # set base color
-        if base_color is not None:
-            self.base_color = base_color
-            base_material = find_elements(
-                self.root,
-                "material",
-                attribs={"name": prefix + "counter_base"},
-                return_first=True,
-            )
+        #     if len(self.base_color) == 3:
+        #         self.base_color.append(1)
+        #     base_material.set("rgba", a2s(self.base_color))
 
-            if len(self.base_color) == 3:
-                self.base_color.append(1)
-            base_material.set("rgba", a2s(self.base_color))
-
-    def _get_counter_geoms(self):
-        """
-        searches for geoms corresponding to each of the four components of the counter.
-        Currently does not return collision geoms for top because does not account for the chunking!
-        """
-
-        geoms = dict()
+    @property
+    def geom_names(self):
+        geoms = set()
         for side in SIDES:
-            geoms["base" + "_" + side] = list()
+            geoms.add("base" + "_" + side)
 
         if self.has_opening:
             for side in SIDES:
-                geoms["top" + "_" + side] = list()
+                geoms.add("top" + "_" + side)
         else:
-            geoms["top"] = list()
+            geoms.add("top")
 
-        for geom_name in geoms.keys():
-            for postfix in ["", "_visual"]:
-                g = find_elements(
-                    root=self._obj,
-                    tags="geom",
-                    attribs={"name": "{}_{}{}".format(self.name, geom_name, postfix)},
-                    return_first=True,
-                )
-                geoms[geom_name].append(g)
+        # for geom_name in geoms.keys():
+        #     for postfix in ["", "_visual"]:
+        #         g = find_elements(
+        #             root=self._obj,
+        #             tags="geom",
+        #             attribs={"name": "{}_{}{}".format(self.name, geom_name, postfix)},
+        #             return_first=True,
+        #         )
+        #         geoms[geom_name].append(g)
         return geoms
+
+    # def _get_counter_geoms(self):
+    #     """
+    #     searches for geoms corresponding to each of the four components of the counter.
+    #     Currently does not return collision geoms for top because does not account for the chunking!
+    #     """
+
+    #     geoms = dict()
+    #     for side in SIDES:
+    #         geoms["base" + "_" + side] = list()
+
+    #     if self.has_opening:
+    #         for side in SIDES:
+    #             geoms["top" + "_" + side] = list()
+    #     else:
+    #         geoms["top"] = list()
+
+    #     for geom_name in geoms.keys():
+    #         for postfix in ["", "_visual"]:
+    #             g = find_elements(
+    #                 root=self._obj,
+    #                 tags="geom",
+    #                 attribs={"name": "{}_{}{}".format(self.name, geom_name, postfix)},
+    #                 return_first=True,
+    #             )
+    #             geoms[geom_name].append(g)
+    #     return geoms
 
     def _place_interior_obj(self):
         """
@@ -455,22 +499,28 @@ class Counter(Fixture):
             top_pos[side][2] /= 2
 
             base_pos[side] = np.array(base_pos[side]) / 2
-            # NOTE (stao): the xmls for counters are only collisions, no visuals
+
+            # handle base parts
             # for elem in geoms["base_{}".format(side)]:
             #     # remove appropriate part of the base, based on hollow specification
-            #     if side == "front" and self.hollow[1]:
-            #         # self._remove_element(elem)
-            #         pass
-            #     elif side == "back" and self.hollow[0]:
-            #         # self._remove_element(elem)
-            #         pass
-            #     elif sum(self.base_opening) == 0 and sum(self.hollow) > 0:
-            #         # self._remove_element(elem)
-            #         pass
-            #     else:
-            #         elem.set("pos", a2s(base_pos[side]))
-            #         # divide sizes by 2 according to mujoco convention
-            #         elem.set("size", a2s(np.array(base_size[side]) / 2))
+            if side == "front" and self.hollow[1]:
+                pass
+            elif side == "back" and self.hollow[0]:
+                pass
+            elif sum(self.base_opening) == 0 and sum(self.hollow) > 0:
+                pass
+            else:
+                # TODO (stao): does this work?
+                self.actor_builder.add_box_collision(
+                    pose=sapien.Pose(p=base_pos[side]),
+                    half_size=base_size[side] / 2,
+                )
+                self.actor_builder.add_box_visual(
+                    name=self.name + "_base_{}".format(side),
+                    half_size=base_size[side] / 2,
+                    pose=sapien.Pose(p=base_pos[side]),
+                    material=self.loader._materials["counter_base"],
+                )
 
             # for elem in geoms["top_{}".format(side)]:
             pos = np.array(top_pos[side])
