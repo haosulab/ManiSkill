@@ -43,7 +43,7 @@ class RoboCasaOpenSingleDoorEnv(BaseEnv):
         #     group=2, bit_idx=FETCH_WHEELS_COLLISION_BIT, bit=1
         # )
 
-        self.agent.robot.set_pose(sapien.Pose(p=[1.5, 1.5, 10]))
+        self.agent.robot.set_pose(sapien.Pose(p=[2.7, -1.8, 0]))
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
