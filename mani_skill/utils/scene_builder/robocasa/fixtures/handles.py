@@ -230,20 +230,22 @@ class BoxedHandle(Handle):
         handle_pad (float):  A minimum difference between handle length and cabinet panel height
     """
 
+    geom_names = set(["handle", "handle_connector_top", "handle_connector_bottom"])
+
     def __init__(self, length=0.24, handle_pad=0.04, *args, **kwargs):
         self.handle_pad = handle_pad
         super().__init__(
             xml="fixtures/handles/boxed_handle.xml", length=length, *args, **kwargs
         )
 
-    def _get_components(self):
-        """
-        Get the geoms of the handle
-        """
-        geom_names = ["handle", "handle_connector_top", "handle_connector_bottom"]
-        body_names = []
-        joint_names = []
-        return self._get_elements_by_name(geom_names, body_names, joint_names)
+    # def _get_components(self):
+    #     """
+    #     Get the geoms of the handle
+    #     """
+    #     geom_names = ["handle", "handle_connector_top", "handle_connector_bottom"]
+    #     body_names = []
+    #     joint_names = []
+    #     return self._get_elements_by_name(geom_names, body_names, joint_names)
 
     def _create_handle(self):
         """
@@ -280,17 +282,30 @@ class BoxedHandle(Handle):
                 "handle_connector_bottom"
             ][[2, 0]]
             eulers["handle"] = [0, 1.5708, 0]
+        for i, side in enumerate(positions.keys()):
+            pos = positions[side]
+            size = sizes[side]
+            quat = self.actor_builder.collision_records[i].pose.q
+            if side in eulers:
+                quat = euler2quat(*eulers[side])
+            self.actor_builder.add_box_visual(
+                pose=sapien.Pose(p=pos, q=quat),
+                half_size=size,
+                material=self.loader._materials["mat"],
+                name=side,
+            )
+            self.actor_builder.collision_records[i].scale = size
+            self.actor_builder.collision_records[i].pose = sapien.Pose(p=pos, q=quat)
+        # geoms, bodies, joints = self._get_components()
+        # for side in positions.keys():
+        #     for geom in geoms[side]:
+        #         if geom is None:
+        #             continue
+        #         geom.set("pos", a2s(positions[side]))
+        #         geom.set("size", a2s(sizes[side]))
 
-        geoms, bodies, joints = self._get_components()
-        for side in positions.keys():
-            for geom in geoms[side]:
-                if geom is None:
-                    continue
-                geom.set("pos", a2s(positions[side]))
-                geom.set("size", a2s(sizes[side]))
-
-                if eulers.get(side) is not None:
-                    geom.set("euler", a2s(eulers[side]))
+        #         if eulers.get(side) is not None:
+        #             geom.set("euler", a2s(eulers[side]))
 
 
 class KnobHandle(Handle):

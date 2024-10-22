@@ -37,6 +37,7 @@ class CabinetPanel(MujocoObject):
     """
 
     geom_names: set[str]
+    material_overrides: dict[str, sapien.render.RenderMaterial] = {}
 
     def __init__(
         self,
@@ -83,12 +84,15 @@ class CabinetPanel(MujocoObject):
             col_record = self.actor_builder.collision_records[i]
             col_record.scale = size
             col_record.pose = sapien.Pose(p=position, q=col_record.pose.q)
-            self.actor_builder.add_box_visual(
-                name=self.name + "_" + part_name,
-                pose=col_record.pose,
-                half_size=size,
-                material=self.loader._materials["mat"],
-            )
+            mat = self.loader._materials["mat"]
+            if part_name in self.material_overrides:
+                mat = self.material_overrides[part_name]
+                self.actor_builder.add_box_visual(
+                    name=self.name + "_" + part_name,
+                    pose=col_record.pose,
+                    half_size=size,
+                    material=mat,
+                )
 
     @abc.abstractmethod
     def _get_components(self):
@@ -125,7 +129,11 @@ class CabinetPanel(MujocoObject):
             return
         self.texture = str(ROBOCASA_ASSET_DIR / self.texture)
         for visual_record in self.actor_builder.visual_records:
-            if visual_record.name.replace(self.name + "_", "") in self.geom_names:
+            shortname = visual_record.name.replace(self.name + "_", "")
+            if (
+                shortname in self.geom_names
+                and shortname not in self.material_overrides
+            ):
                 visual_record.material.base_color_texture = (
                     sapien.render.RenderTexture2D(
                         filename=self.texture,
@@ -239,14 +247,14 @@ class SlabCabinetPanel(CabinetPanel):
         """
         Creates the cabinet panel. This involves setting the size and position of the panel's geom
         """
-        geoms = self._get_components()
+        # geoms = self._get_components()
 
         # divide by 2 for mujoco convention
         x, y, z = [dim / 2 for dim in self.size]
 
         sizes = {"door": [x, y, z]}
         positions = {"door": [0, 0, 0]}
-        set_geom_dimensions(sizes, positions, geoms, rotated=True)
+        self.set_geom_dimensions(sizes, positions, rotated=True)
 
 
 class ShakerCabinetPanel(CabinetPanel):
@@ -384,20 +392,8 @@ class DividedWindowCabinetPanel(CabinetPanel):
         trim_size (float): Size of the trims (width/height).
     """
 
-    def __init__(self, name, trim_th=0.02, trim_size=0.08, *args, **kwargs):
-
-        self.trim_th = trim_th
-        self.trim_size = trim_size
-
-        xml = "fixtures/cabinets/cabinet_panels/divided_window.xml"
-        super().__init__(xml=xml, name=name, *args, **kwargs)
-
-    def _get_components(self):
-        """
-        Gets the geoms for the cabinet panel. This includes the door, the 4 sorrounding trims,
-        and the 2 trims running down the middle of the window.
-        """
-        geom_names = [
+    geom_names = set(
+        [
             "door",
             "trim_left",
             "trim_right",
@@ -406,7 +402,31 @@ class DividedWindowCabinetPanel(CabinetPanel):
             "horiz_trim",
             "vert_trim",
         ]
-        return self._get_elements_by_name(geom_names)[0]
+    )
+
+    def __init__(self, name, trim_th=0.02, trim_size=0.08, *args, **kwargs):
+
+        self.trim_th = trim_th
+        self.trim_size = trim_size
+
+        xml = "fixtures/cabinets/cabinet_panels/divided_window.xml"
+        super().__init__(xml=xml, name=name, *args, **kwargs)
+
+    # def _get_components(self):
+    #     """
+    #     Gets the geoms for the cabinet panel. This includes the door, the 4 sorrounding trims,
+    #     and the 2 trims running down the middle of the window.
+    #     """
+    #     geom_names = [
+    #         "door",
+    #         "trim_left",
+    #         "trim_right",
+    #         "trim_bottom",
+    #         "trim_top",
+    #         "horiz_trim",
+    #         "vert_trim",
+    #     ]
+    #     return self._get_elements_by_name(geom_names)[0]
 
     def _create_panel(self):
         """
@@ -441,8 +461,9 @@ class DividedWindowCabinetPanel(CabinetPanel):
             "horiz_trim": [0, trim_y, 0],
         }
 
-        geoms = self._get_components()
-        set_geom_dimensions(sizes, positions, geoms, rotated=True)
+        # geoms = self._get_components()
+        self.material_overrides["door"] = self.loader._materials["transparent_material"]
+        self.set_geom_dimensions(sizes, positions, rotated=True)
 
 
 class FullWindowedCabinetPanel(CabinetPanel):
@@ -460,6 +481,9 @@ class FullWindowedCabinetPanel(CabinetPanel):
         opacity (float): Opacity of the window. Defaults to 0.5 to create a "frosted" effect.
     """
 
+    geom_names = set(["door", "trim_left", "trim_right", "trim_bottom", "trim_top"])
+    material_overrides: dict[str, sapien.render.RenderMaterial] = {}
+
     def __init__(
         self, name, trim_th=0.02, trim_size=0.08, opacity=0.5, *args, **kwargs
     ):
@@ -470,32 +494,52 @@ class FullWindowedCabinetPanel(CabinetPanel):
         xml = "fixtures/cabinets/cabinet_panels/full_window.xml"
         super().__init__(xml=xml, name=name, *args, **kwargs)
 
-    def _get_components(self):
-        """
-        Gets the geoms for the cabinet panel. This includes the door and the 4 sorrounding trims.
-        """
-        geom_names = ["door", "trim_left", "trim_right", "trim_bottom", "trim_top"]
-        return self._get_elements_by_name(geom_names)[0]
+    # def _get_components(self):
+    #     """
+    #     Gets the geoms for the cabinet panel. This includes the door and the 4 sorrounding trims.
+    #     """
+    #     geom_names = ["door", "trim_left", "trim_right", "trim_bottom", "trim_top"]
+    #     return self._get_elements_by_name(geom_names)[0]
 
     def _create_panel(self):
         """
         Creates the cabinet panel. This involves setting the size and position of the panel's door and trim geoms
         """
         # place the trims accordingly
+        self.material_overrides["door"] = self.loader._materials["transparent_material"]
         ShakerCabinetPanel._create_panel(self)
-        self._set_opacity()
 
-    def _set_opacity(self):
-        """
-        Set the opacity of the window.
-        """
-        transparent_mat = find_elements(
-            self.root,
-            tags="material",
-            attribs={"name": f"{self.name}_transparent_material"},
-            return_first=True,
-        )
-        transparent_mat.set("rgba", f"1 1 1 {self.opacity}")
+    # def _set_texture(self):
+    #     # TODO (stao): add opacity and fix for ray traced
+    #     # super()._set_texture()
+    #     if self.texture is None:
+    #         return
+    #     self.texture = str(ROBOCASA_ASSET_DIR / self.texture)
+    #     for visual_record in self.actor_builder.visual_records:
+    #         if visual_record.name.replace(self.name + "_", "") in self.geom_names:
+    #             import ipdb;ipdb.set_trace()
+    #             if visual_record.material.base_color_texture is not None:
+    #                 visual_record.material.base_color_texture = (
+    #                     sapien.render.RenderTexture2D(
+    #                     filename=self.texture,
+    #                         mipmap_levels=1,
+    #                     )
+    #                 )
+    #             # visual_record.material.base_color_texture = None
+    #             visual_record.material.base_color = [1, 1, 1, self.opacity]
+    #             # visual_record.material.transmission = 0.2
+
+    # def _set_opacity(self):
+    #     """
+    #     Set the opacity of the window.
+    #     """
+    #     transparent_mat = find_elements(
+    #         self.root,
+    #         tags="material",
+    #         attribs={"name": f"{self.name}_transparent_material"},
+    #         return_first=True,
+    #     )
+    #     transparent_mat.set("rgba", f"1 1 1 {self.opacity}")
 
 
 class CabinetShelf(MujocoObject):
