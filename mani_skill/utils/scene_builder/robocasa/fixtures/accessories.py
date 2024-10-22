@@ -1,4 +1,5 @@
 import numpy as np
+from transforms3d.euler import euler2quat
 
 from mani_skill.utils.scene_builder.robocasa.fixtures.fixture import Fixture
 
@@ -204,12 +205,18 @@ class WallAccessory(Fixture):
         """
         Place the accessory on the wall
         """
+        # note: for some reason the light mesh is rotated 90 degrees already
+        if "light" in self.name:
+            self.quat = euler2quat(0, 0, -np.pi / 2)
+
+        # TODO (stao): what is the actual scale? Couldn't find the code for that.
+        self.set_scale(0.15)
+
         if self.wall is None:
             # absolute position was specified
             return
 
         x, y, z = self.pos
-        # print(self.wall.wall_side, self.name)
 
         # update position and rotation of the object based on the wall it attaches to
         if self.wall.wall_side == "back":
@@ -229,10 +236,3 @@ class WallAccessory(Fixture):
             raise ValueError()
 
         self.set_pos([x, y, z])
-        from transforms3d.euler import euler2quat
-
-        # note: for some reason the light mesh is rotated 90 degrees already
-        if "light" in self.name:
-            self.quat = euler2quat(0, 0, -np.pi / 2)
-        # TODO (stao): what is the actual scale? Couldn't find the code for that.
-        self.set_scale(0.15)

@@ -518,7 +518,7 @@ class CabinetShelf(MujocoObject):
         )
 
         self.size = np.array(size)
-        self.pos = pos if pos is not None else [0, 0, 0]
+        self.pos = np.array(pos) if pos is not None else np.array([0, 0, 0])
         self._create_panel()
 
         self.texture = texture
@@ -588,10 +588,9 @@ class CabinetShelf(MujocoObject):
 
         sizes = {"shelf": self.size / 2}
         positions = {"shelf": self.pos}
-        # import ipdb; ipdb.set_trace()
         self.actor_builder.collision_records[0].scale = sizes["shelf"]
-        self.actor_builder.collision_records[0].pose = (
-            sapien.Pose(p=self.pos) * self.actor_builder.collision_records[0].pose
+        self.actor_builder.collision_records[0].pose = sapien.Pose(
+            p=positions["shelf"], q=self.actor_builder.collision_records[0].pose.q
         )
         self.actor_builder.add_box_visual(
             pose=self.actor_builder.collision_records[0].pose,

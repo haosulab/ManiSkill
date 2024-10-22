@@ -765,6 +765,14 @@ class OpenCabinet(Cabinet):
                 texture=self.texture,
             )
             self.shelves.append(shelf)
+            # TODO
+            self.actor_builder.collision_records.append(
+                shelf.actor_builder.collision_records[0]
+            )
+            self.actor_builder.visual_records.append(
+                shelf.actor_builder.visual_records[0]
+            )
+            # import ipdb; ipdb.set_trace()
 
             # merge shelves
             # self.merge_assets(shelf)
