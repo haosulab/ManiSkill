@@ -410,39 +410,30 @@ class Counter(Fixture):
         #     self._obj.append(g)
         #     # manually update contact geoms registry
         #     self._contact_geoms.append("top_{}".format(i))
-
+        self.actor_builder.collision_records = []
         base_size, base_pos = self._get_base_dimensions()
-
-        # for side in SIDES:
-        #     for elem in geoms["base_{}".format(side)]:
-        #         # remove appropriate part of the base if based on hollow specification
-        #         if side == "front" and self.hollow[1]:
-        #             self._remove_element(elem)
-        #         elif side == "back" and self.hollow[0]:
-        #             self._remove_element(elem)
-        #         # houses bottom row cabinets
-        #         # remove right and left base geoms if any of hollow is True
-        #         elif sum(self.base_opening) == 0 and sum(self.hollow) > 0:
-        #             self._remove_element(elem)
-        #         else:
-        #             elem.set("pos", a2s(base_pos[side]))
-        #             elem.set("size", a2s(base_size[side]))
-        # for side in SIDES:
-        #     record = collision_records["base_{}".format(side)]
-        #     if side == "front" and self.hollow[1]:
-        #         del collision_records["base_{}".format(side)]
-        #     elif side == "back" and self.hollow[0]:
-        #         del collision_records["base_{}".format(side)]
-        #     # houses bottom row cabinets
-        #     # remove right and left base geoms if any of hollow is True
-        #     elif sum(self.base_opening) == 0 and sum(self.hollow) > 0:
-        #         del collision_records["base_{}".format(side)]
-        #     else:
-        #         record.pose.set_p(base_pos[side])
-        #         record.scale = base_size[side]
-        #         elem.set("size", a2s(base_size[side]))
-        #     record.pose.set_p(base_pos[side])
-        #     record.scale = base_size[side]
+        for i, side in enumerate(SIDES):
+            # for elem in geoms["base_{}".format(side)]:
+            # remove appropriate part of the base if based on hollow specification
+            if side == "front" and self.hollow[1]:
+                pass
+            elif side == "back" and self.hollow[0]:
+                pass
+            # houses bottom row cabinets
+            # remove right and left base geoms if any of hollow is True
+            elif sum(self.base_opening) == 0 and sum(self.hollow) > 0:
+                pass
+            else:
+                self.actor_builder.add_box_collision(
+                    pose=sapien.Pose(p=base_pos[side]),
+                    half_size=base_size[side],
+                )
+                self.actor_builder.add_box_visual(
+                    name=self.name + "_base_{}".format(side),
+                    half_size=base_size[side],
+                    material=self.loader._materials["counter_base"],
+                    pose=sapien.Pose(p=base_pos[side]),
+                )
 
     def _make_counter_with_opening(self, padding):
         """
