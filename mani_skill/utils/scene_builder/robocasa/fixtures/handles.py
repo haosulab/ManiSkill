@@ -199,7 +199,6 @@ class BarHandle(Handle):
             size = sizes[side]
             quat = self.actor_builder.collision_records[i].pose.q
             if side in eulers:
-                print("euler", self.name, side, eulers[side])
                 quat = euler2quat(*eulers[side])
             self.actor_builder.add_cylinder_visual(
                 pose=sapien.Pose(p=pos, q=quat),

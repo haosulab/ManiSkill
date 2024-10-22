@@ -92,7 +92,6 @@ class Wall:
         # self.render_material = sapien.render.RenderMaterial(base_color=[1, 1, 1, 1])
         self.render_material = sapien.render.RenderMaterial()
         texture = str(ROBOCASA_ASSET_DIR / texture)
-        print(texture)
         self.render_material.base_color_texture = sapien.render.RenderTexture2D(
             filename=texture,
             mipmap_levels=1,

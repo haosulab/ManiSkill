@@ -36,6 +36,8 @@ class CabinetPanel(MujocoObject):
         texture (str): Path to the texture file for the cabinet panel.
     """
 
+    geom_names: set[str]
+
     def __init__(
         self,
         scene: ManiSkillScene,
@@ -63,9 +65,8 @@ class CabinetPanel(MujocoObject):
         self.handle_config = handle_config
         self.handle_hpos = handle_hpos
         self.handle_vpos = handle_vpos
-
-        self._set_texture()
         self._create_panel()
+        self._set_texture()
         self._add_handle()
 
     def set_geom_dimensions(self, sizes, positions, rotated=False):
@@ -83,6 +84,7 @@ class CabinetPanel(MujocoObject):
             col_record.scale = size
             col_record.pose = sapien.Pose(p=position, q=col_record.pose.q)
             self.actor_builder.add_box_visual(
+                name=self.name + "_" + part_name,
                 pose=col_record.pose,
                 half_size=size,
                 material=self.loader._materials["mat"],
@@ -123,10 +125,13 @@ class CabinetPanel(MujocoObject):
             return
         self.texture = str(ROBOCASA_ASSET_DIR / self.texture)
         for visual_record in self.actor_builder.visual_records:
-            visual_record.material.base_color_texture = sapien.render.RenderTexture2D(
-                filename=self.texture,
-                mipmap_levels=1,
-            )
+            if visual_record.name.replace(self.name + "_", "") in self.geom_names:
+                visual_record.material.base_color_texture = (
+                    sapien.render.RenderTexture2D(
+                        filename=self.texture,
+                        mipmap_levels=1,
+                    )
+                )
         # texture = find_elements(
         #     self.root, tags="texture", attribs={"name": "tex"}, return_first=True
         # )
@@ -217,16 +222,18 @@ class SlabCabinetPanel(CabinetPanel):
     Initialize a slab cabinet panel, which is a simple flat panel.
     """
 
+    geom_names = set(["door"])
+
     def __init__(self, *args, **kwargs):
         xml = "fixtures/cabinets/cabinet_panels/slab.xml"
         super().__init__(xml=xml, *args, **kwargs)
 
-    def _get_components(self):
-        """
-        Gets the geoms for the cabinet panel.
-        """
-        geom_names = ["door"]
-        return self._get_elements_by_name(geom_names)[0]
+    # def _get_components(self):
+    #     """
+    #     Gets the geoms for the cabinet panel.
+    #     """
+    #     geom_names = ["door"]
+    #     return self._get_elements_by_name(geom_names)[0]
 
     def _create_panel(self):
         """
@@ -252,6 +259,8 @@ class ShakerCabinetPanel(CabinetPanel):
         trim_size (float): Size of the trim (width/height).
     """
 
+    geom_names = set(["door", "trim_left", "trim_right", "trim_bottom", "trim_top"])
+
     def __init__(self, name, trim_th=0.02, trim_size=0.08, *args, **kwargs):
         self.trim_th = trim_th
         self.trim_size = trim_size
@@ -259,12 +268,11 @@ class ShakerCabinetPanel(CabinetPanel):
         xml = "fixtures/cabinets/cabinet_panels/shaker.xml"
         super().__init__(xml=xml, name=name, *args, **kwargs)
 
-    def _get_components(self):
-        """
-        Gets the geoms for the cabinet panel. This includes the door and the 4 sorrounding trims.
-        """
-        geom_names = ["door", "trim_left", "trim_right", "trim_bottom", "trim_top"]
-        return self._get_elements_by_name(geom_names)[0]
+    # def _get_components(self):
+    #     """
+    #     Gets the geoms for the cabinet panel. This includes the door and the 4 sorrounding trims.
+    #     """
+    #     return self._get_elements_by_name(geom_names)[0]
 
     def _create_panel(self):
         """

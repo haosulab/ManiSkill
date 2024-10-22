@@ -298,7 +298,6 @@ class RoboCasaSceneBuilder(SceneBuilder):
             displacement = [pos[0] - origin[0], pos[1] - origin[1]]
 
             if type(fixture) not in [Wall, Floor]:
-                print("reorient", fixture.name, origin, pos, z_rot)
                 dx = fixture.pos[0] - origin[0]
                 dy = fixture.pos[1] - origin[1]
                 dx_rot = dx * np.cos(z_rot) - dy * np.sin(z_rot)
@@ -322,7 +321,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
                 fixture._obj.set("euler", a2s(rot_new))
 
         for k, v in fixtures.items():
-            print(k, v.pos, v.size, v.quat if hasattr(v, "quat") else None)
+            # print(k, v.pos, v.size, v.quat if hasattr(v, "quat") else None)
             built = v.build()
             # ensure all rooted articulated objects have collisions ignored with all static objects
             if built.is_articulation and built.articulation.fixed_root_link.all():

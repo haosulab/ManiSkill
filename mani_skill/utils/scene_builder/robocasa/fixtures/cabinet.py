@@ -63,6 +63,8 @@ class Cabinet(Fixture):
         texture (str): path to texture file
     """
 
+    geom_names: set[str]
+
     def __init__(
         self,
         xml,
@@ -121,19 +123,28 @@ class Cabinet(Fixture):
             return
         self.texture = str(ROBOCASA_ASSET_DIR / self.texture)
 
-        # if self.is_articulation:
-        #     for link_builder in self.articulation_builder.link_builders:
-        #         for visual_record in link_builder.visual_records:
-        #             visual_record.material.base_color_texture = sapien.render.RenderTexture2D(
-        #             filename=self.texture,
-        #             mipmap_levels=1,
-        #         )
-        # else:
-        #     for visual_record in self.actor_builder.visual_records:
-        #         visual_record.material.base_color_texture = sapien.render.RenderTexture2D(
-        #         filename=self.texture,
-        #         mipmap_levels=1,
-        #     )
+        if self.is_articulation:
+            for link_builder in self.articulation_builder.link_builders:
+                for visual_record in link_builder.visual_records:
+                    if (
+                        visual_record.name.replace(self.name + "_", "")
+                        in self.geom_names
+                    ):
+                        visual_record.material.base_color_texture = (
+                            sapien.render.RenderTexture2D(
+                                filename=self.texture,
+                                mipmap_levels=1,
+                            )
+                        )
+        else:
+            for visual_record in self.actor_builder.visual_records:
+                if visual_record.name.replace(self.name + "_", "") in self.geom_names:
+                    visual_record.material.base_color_texture = (
+                        sapien.render.RenderTexture2D(
+                            filename=self.texture,
+                            mipmap_levels=1,
+                        )
+                    )
 
         # texture = find_elements(
         #     self.root, tags="texture", attribs={"name": "tex"}, return_first=True
@@ -206,7 +217,6 @@ class Cabinet(Fixture):
             raise ValueError(
                 "Either parent_actor_builder or parent_link_builder must be provided"
             )
-        print(self.name, self.panel_type)
         if self.panel_type == "slab" or self.panel_type is None:
             panel_class = SlabCabinetPanel
         elif self.panel_type == "shaker":
@@ -296,6 +306,8 @@ class SingleCabinet(Cabinet):
         name (str): name of the cabinet
     """
 
+    geom_names = set(["top", "bottom", "back", "right", "left", "shelf", "door"])
+
     def __init__(
         self,
         name="single_cab",
@@ -316,18 +328,18 @@ class SingleCabinet(Cabinet):
             **kwargs,
         )
 
-    def _get_cab_components(self):
-        """
-        Finds and returns all geoms, bodies, and joints used for single cabinets
+    # def _get_cab_components(self):
+    #     """
+    #     Finds and returns all geoms, bodies, and joints used for single cabinets
 
-        Returns:
-            dicts for geoms, bodies, and joints, mapping names to elements
-        """
-        geom_names = ["top", "bottom", "back", "right", "left", "shelf", "door"]
-        body_names = ["hingedoor"]
-        joint_names = ["doorhinge"]
+    #     Returns:
+    #         dicts for geoms, bodies, and joints, mapping names to elements
+    #     """
+    #     geom_names = ["top", "bottom", "back", "right", "left", "shelf", "door"]
+    #     body_names = ["hingedoor"]
+    #     joint_names = ["doorhinge"]
 
-        return self._get_elements_by_name(geom_names, body_names, joint_names)
+    #     return self._get_elements_by_name(geom_names, body_names, joint_names)
 
     def _create_cab(self):
         """
@@ -369,6 +381,7 @@ class SingleCabinet(Cabinet):
             col_record.scale = size
             col_record.pose = sapien.Pose(p=position, q=col_record.pose.q)
             self.articulation_builder.link_builders[1].add_box_visual(
+                name=self.name + "_" + part_name,
                 pose=col_record.pose,
                 half_size=size,
                 material=self.loader._materials["mat"],
@@ -488,6 +501,17 @@ class HingeCabinet(Cabinet):
         name (str): name of the cabinet
     """
 
+    geom_names = set(
+        [
+            "top",
+            "bottom",
+            "back",
+            "right",
+            "left",
+            "shelf",
+        ]
+    )
+
     def __init__(
         self,
         name="hinge_cab",
@@ -505,26 +529,26 @@ class HingeCabinet(Cabinet):
             **kwargs,
         )
 
-    def _get_cab_components(self):
-        """
-        Finds and returns all geoms, bodies, and joints used for single cabinets
+    # def _get_cab_components(self):
+    #     """
+    #     Finds and returns all geoms, bodies, and joints used for single cabinets
 
-        Returns:
-            dicts for geoms, bodies, and joints, mapping names to elements
-        """
+    #     Returns:
+    #         dicts for geoms, bodies, and joints, mapping names to elements
+    #     """
 
-        geom_names = [
-            "top",
-            "bottom",
-            "back",
-            "right",
-            "left",
-            "shelf",
-        ]
-        body_names = ["hingeleftdoor", "hingerightdoor"]
-        joint_names = ["leftdoorhinge", "rightdoorhinge"]
+    #     geom_names = [
+    #         "top",
+    #         "bottom",
+    #         "back",
+    #         "right",
+    #         "left",
+    #         "shelf",
+    #     ]
+    #     body_names = ["hingeleftdoor", "hingerightdoor"]
+    #     joint_names = ["leftdoorhinge", "rightdoorhinge"]
 
-        return self._get_elements_by_name(geom_names, body_names, joint_names)
+    #     return self._get_elements_by_name(geom_names, body_names, joint_names)
 
     def _create_cab(self):
         """
@@ -590,6 +614,7 @@ class HingeCabinet(Cabinet):
             col_record.scale = size
             col_record.pose = sapien.Pose(p=position, q=col_record.pose.q)
             self.articulation_builder.link_builders[1].add_box_visual(
+                name=self.name + "_" + part_name,
                 pose=col_record.pose,
                 half_size=size,
                 material=self.loader._materials["mat"],
@@ -722,6 +747,8 @@ class OpenCabinet(Cabinet):
         num_shelves (int): number of shelves in the cabinet
     """
 
+    geom_names = set(["top", "bottom"])
+
     def __init__(
         self,
         name="shelves",
@@ -738,15 +765,15 @@ class OpenCabinet(Cabinet):
             **kwargs,
         )
 
-    def _get_cab_components(self):
-        """
-        Finds and returns all geoms, bodies, and joints used for open cabinets
+    # def _get_cab_components(self):
+    #     """
+    #     Finds and returns all geoms, bodies, and joints used for open cabinets
 
-        Returns:
-            dicts for geoms, bodies, and joints, mapping names to elements
-        """
-        geom_names = ["top", "bottom"]
-        return self._get_elements_by_name(geom_names)[0]
+    #     Returns:
+    #         dicts for geoms, bodies, and joints, mapping names to elements
+    #     """
+    #     geom_names = ["top", "bottom"]
+    #     return self._get_elements_by_name(geom_names)[0]
 
     def _create_cab(self):
         """
@@ -819,6 +846,20 @@ class Drawer(Cabinet):
         handle_config (dict): configuration for handle. contains keyword arguments for handle class
     """
 
+    geom_names = set(
+        [
+            "top",
+            "bottom",
+            "back",
+            "right",
+            "left",
+            "inner_bottom",
+            "inner_back",
+            "inner_right",
+            "inner_left",
+        ]
+    )
+
     def __init__(
         self,
         name="drawer",
@@ -842,27 +883,27 @@ class Drawer(Cabinet):
             **kwargs,
         )
 
-    def _get_cab_components(self):
-        """
-        Finds and returns all geoms, bodies, and joints used for drawers
-        returns:
-            dicts for geoms, bodies, and joints, mapping names to elements
-        """
-        geom_names = [
-            "top",
-            "bottom",
-            "back",
-            "right",
-            "left",
-            "inner_bottom",
-            "inner_back",
-            "inner_right",
-            "inner_left",
-        ]
-        body_names = ["inner_box"]
-        joint_names = ["slidejoint"]
+    # def _get_cab_components(self):
+    #     """
+    #     Finds and returns all geoms, bodies, and joints used for drawers
+    #     returns:
+    #         dicts for geoms, bodies, and joints, mapping names to elements
+    #     """
+    #     geom_names = [
+    #         "top",
+    #         "bottom",
+    #         "back",
+    #         "right",
+    #         "left",
+    #         "inner_bottom",
+    #         "inner_back",
+    #         "inner_right",
+    #         "inner_left",
+    #     ]
+    #     body_names = ["inner_box"]
+    #     joint_names = ["slidejoint"]
 
-        return self._get_elements_by_name(geom_names, body_names, joint_names)
+    #     return self._get_elements_by_name(geom_names, body_names, joint_names)
 
     def _create_cab(self):
         """
@@ -920,6 +961,7 @@ class Drawer(Cabinet):
             col_record.scale = size
             col_record.pose = sapien.Pose(p=position, q=col_record.pose.q)
             link_builder.add_box_visual(
+                name=self.name + "_" + part_name,
                 pose=col_record.pose,
                 half_size=size,
                 material=self.loader._materials["mat"],
@@ -1052,6 +1094,8 @@ class PanelCabinet(Cabinet):
         solid_body (bool): whether to create a solid body for the cabinet behind the panel
     """
 
+    geom_names = set()
+
     def __init__(
         self,
         name="panel_cab",
@@ -1073,12 +1117,12 @@ class PanelCabinet(Cabinet):
             **kwargs,
         )
 
-    def _get_cab_components(self):
-        geom_names = []
-        body_names = []
-        joint_names = []
+    # def _get_cab_components(self):
+    #     geom_names = []
+    #     body_names = []
+    #     joint_names = []
 
-        return self._get_elements_by_name(geom_names, body_names, joint_names)
+    #     return self._get_elements_by_name(geom_names, body_names, joint_names)
 
     def _create_cab(self):
         """
@@ -1154,6 +1198,8 @@ class HousingCabinet(Cabinet):
 
         name (str): Name of the cabinet
     """
+
+    geom_names = set(["top", "bottom", "back", "right", "left"])
 
     def __init__(
         self,
