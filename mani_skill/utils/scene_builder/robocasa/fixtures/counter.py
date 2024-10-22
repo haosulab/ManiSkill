@@ -167,7 +167,6 @@ class Counter(Fixture):
                         mat=visual_record.material,
                         texture_repeat=[1, 1],
                     )
-                    # visual_record.scale = [0,0,0]
         # TODO (stao): is base color ever used?
         # tex_name = get_texture_name_from_file(self.top_texture) + "_2d"
         # texture.set("name", tex_name)
