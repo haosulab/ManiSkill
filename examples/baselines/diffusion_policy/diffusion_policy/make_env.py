@@ -12,7 +12,7 @@ from mani_skill.utils.wrappers import CPUGymWrapper, FrameStack, RecordEpisode
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 
 
-class DictFrameStack(GymFrameStack):
+class DictFrameStack(FrameStack):
     def __init__(
         self,
         env: gym.Env,
@@ -26,15 +26,11 @@ class DictFrameStack(GymFrameStack):
             num_stack (int): The number of frames to stack
             lz4_compress (bool): Use lz4 to compress the frames internally
         """
-        gym.utils.RecordConstructorArgs.__init__(
-            self, num_stack=num_stack, lz4_compress=lz4_compress
-        )
-        gym.ObservationWrapper.__init__(self, env)
-
-        self.num_stack = num_stack
-        self.lz4_compress = lz4_compress
-
-        self.frames = deque(maxlen=num_stack)
+        # gym.utils.RecordConstructorArgs.__init__(
+        #     self, num_stack=num_stack, lz4_compress=lz4_compress
+        # )
+        # gym.ObservationWrapper.__init__(self, env)
+        super().__init__(env, num_stack, lz4_compress)
 
         new_observation_space = gym.spaces.Dict()
         for k, v in self.observation_space.items():
@@ -42,6 +38,7 @@ class DictFrameStack(GymFrameStack):
             high = np.repeat(v.high[np.newaxis, ...], num_stack, axis=0)
             new_observation_space[k] = Box(low=low, high=high, dtype=v.dtype)
         self.observation_space = new_observation_space
+
 
     def observation(self, observation):
         """Converts the wrappers current frames to lazy frames.

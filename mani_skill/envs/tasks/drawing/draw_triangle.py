@@ -28,7 +28,7 @@ class DrawTriangle(BaseEnv):
     to create their own drawing type tasks.
     """
 
-    MAX_DOTS = 1010
+    MAX_DOTS = 300
     """
     The total "ink" available to use and draw with before you need to call env.reset. NOTE that on GPU simulation it is not recommended to have a very high value for this as it can slow down rendering
     when too many objects are being rendered in many scenes.
@@ -102,26 +102,26 @@ class DrawTriangle(BaseEnv):
 
             box1_half_w = 0.3 / 2
             box1_half_h = 0.01 / 2
-            half_thickness = 0.04 / 2
+            half_thickness = 0.001 / 2
 
             radius = (box1_half_w) / math.sqrt(3)
 
             theta = np.pi / 2
 
             # define centers and compute verticies, might need to adjust how centers are calculated or add a theta arg for variation
-            c1 = np.array([radius * math.cos(theta), radius * math.sin(theta), 0.001])
+            c1 = np.array([radius * math.cos(theta), radius * math.sin(theta), 0.01])
             c2 = np.array(
                 [
                     radius * math.cos(theta + (2 * np.pi / 3)),
                     radius * math.sin(theta + (2 * np.pi / 3)),
-                    0.001,
+                    0.01,
                 ]
             )
             c3 = np.array(
                 [
                     radius * math.cos((theta + (4 * np.pi / 3))),
                     radius * math.sin(theta + (4 * np.pi / 3)),
-                    0.001,
+                    0.01,
                 ]
             )
             self.original_verts = np.array(
@@ -212,7 +212,7 @@ class DrawTriangle(BaseEnv):
                 self.dots.append(actor)
         self.goal_tri = create_goal_triangle(
             name="goal_tri",
-            base_color=np.array([50, 50, 50, 200]) / 255,
+            base_color=np.array([50, 50, 50, 1]) / 255,
         )
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):

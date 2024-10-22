@@ -51,7 +51,6 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
         if self.include_rgb and not self.include_depth:
             ret["rgb"] = images
         elif self.include_rgb and self.include_depth:
-            # todo: might not be the best way or the right place to perform this
             if self.sep_depth:
                 ret["rgb"] = images[...,:-1]
                 ret["depth"] = images[...,-1:]

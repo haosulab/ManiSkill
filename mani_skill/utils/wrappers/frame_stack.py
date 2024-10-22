@@ -76,6 +76,15 @@ class LazyFrames:
             [self._check_decompress(f) for f in self._frames[int_or_slice]], axis=0
         )
 
+    def _check_decompress(self, frame):
+        if self.lz4_compress:
+            from lz4.block import decompress
+
+            return np.frombuffer(decompress(frame), dtype=self.dtype).reshape(
+                self.frame_shape
+            )
+        return frame
+
     def __eq__(self, other):
         """Checks that the current frames are equal to the other object."""
         return self.__array__() == other
@@ -98,6 +107,7 @@ class FrameStack(gym.ObservationWrapper):
         self,
         env: gym.Env,
         num_stack: int,
+        lz4_compress: bool = False
     ):
         """Observation wrapper that stacks the observations in a rolling manner.
 
@@ -110,6 +120,7 @@ class FrameStack(gym.ObservationWrapper):
 
         self.num_stack = num_stack
         self.frames = deque(maxlen=num_stack)
+        self.lz4_compress = lz4_compress
         [self.frames.append(self.base_env._init_raw_obs) for _ in range(self.num_stack)]
         new_obs = self.observation(self.base_env._init_raw_obs)
         self.base_env.update_obs_space(new_obs)
