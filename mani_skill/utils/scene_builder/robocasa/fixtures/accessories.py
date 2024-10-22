@@ -231,9 +231,8 @@ class WallAccessory(Fixture):
         self.set_pos([x, y, z])
         from transforms3d.euler import euler2quat
 
+        # note: for some reason the light mesh is rotated 90 degrees already
         if "light" in self.name:
             self.quat = euler2quat(0, 0, -np.pi / 2)
+        # TODO (stao): what is the actual scale? Couldn't find the code for that.
         self.set_scale(0.15)
-        import ipdb
-
-        ipdb.set_trace()
