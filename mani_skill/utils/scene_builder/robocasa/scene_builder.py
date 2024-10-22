@@ -201,8 +201,6 @@ class RoboCasaSceneBuilder(SceneBuilder):
 
             # stack of fixtures, handled separately
             if fixture_config["type"] == "stack":
-                print(fixture_config)
-                # continue
                 stack = FixtureStack(
                     self.scene,
                     fixture_config,
@@ -283,7 +281,6 @@ class RoboCasaSceneBuilder(SceneBuilder):
                 fixture.set_pos(deepcopy(pos))
         # composites are non-MujocoObjects, must remove
         for composite in composites:
-            print("removing composite", composite)
             del fixtures[composite]
 
         # update the rotation and postion of each fixture based on their group

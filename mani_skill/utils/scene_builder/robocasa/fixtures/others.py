@@ -77,7 +77,6 @@ class Wall:
         *args,
         **kwargs
     ):
-        print(name, mat_attrib, tex_attrib)
         self.mat_attrib = mat_attrib
         self.texture_repeat = [1, 1]
         if "texrepeat" in mat_attrib:
