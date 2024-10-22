@@ -77,6 +77,14 @@ class Wall:
         *args,
         **kwargs
     ):
+        print(name, mat_attrib, tex_attrib)
+        self.mat_attrib = mat_attrib
+        self.texture_repeat = [1, 1]
+        if "texrepeat" in mat_attrib:
+            self.texture_repeat = (
+                np.fromstring(mat_attrib["texrepeat"], sep=" ", dtype=np.float32) / 2
+            )
+        self.tex_attrib = tex_attrib
         # change texture if used for backing
         self.backing = backing
         if backing:
@@ -85,6 +93,7 @@ class Wall:
         # self.render_material = sapien.render.RenderMaterial(base_color=[1, 1, 1, 1])
         self.render_material = sapien.render.RenderMaterial()
         texture = str(ASSET_DIR / "scene_datasets/robocasa_dataset/assets" / texture)
+        print(texture)
         self.render_material.base_color_texture = sapien.render.RenderTexture2D(
             filename=texture,
             mipmap_levels=1,
@@ -105,6 +114,7 @@ class Wall:
         else:
             size[0] += default_wall_th * 2
             shift = size[2] if not backing else size[2] + default_wall_th * 2
+            self.shift = shift
             if self.wall_side == "left":
                 pos[0] -= shift
             elif self.wall_side == "right":
@@ -142,15 +152,27 @@ class Wall:
 
     def build(self):
         builder = self.scene.create_actor_builder()
+        pos = self.pos
         if self.backing:
             builder.add_box_visual(half_size=self.size, material=self.render_material)
         else:
-            builder.add_repeated_2D_texture(
-                half_size=self.size[:2], mat=self.render_material, texrepeat="3 3"
+            builder.add_flat_repeated_2D_texture(
+                half_size=self.size[:2],
+                mat=self.render_material,
+                texture_repeat=self.texture_repeat,
             )
+            if self.wall_side == "left":
+                pos[0] += self.shift
+            elif self.wall_side == "right":
+                pos[0] -= self.shift
+            elif self.wall_side == "back":
+                pos[1] -= self.shift
+            elif self.wall_side == "front":
+                pos[1] += self.shift
         builder.add_box_collision(half_size=self.size)
-        builder.initial_pose = sapien.Pose(self.pos, self.get_quat())
+        builder.initial_pose = sapien.Pose(pos, self.get_quat())
         self.actor = builder.build_static(name=self.name)
+        # TODO (stao) (don't include backing walls since we have backfaces?)
         return self
 
     def get_quat(self):
@@ -162,10 +184,10 @@ class Wall:
         """
         # quaternions are modified since the 2d repeated texture is flat and has a backface
         side_rots = {
-            "back": [0.707, 0.707, 0, 0],
+            "back": [-0.707, 0.707, 0, 0],
             "front": [0, 0, 0.707, -0.707],
-            "left": [0.5, 0.5, 0.5, 0.5],
-            "right": [0.5, -0.5, -0.5, 0.5],
+            "left": [0.5, 0.5, -0.5, -0.5],
+            "right": [-0.5, 0.5, -0.5, 0.5],
             "floor": [0.707, 0, 0, 0.707],
         }
         if self.wall_side not in side_rots:
@@ -218,8 +240,11 @@ class Floor(Wall):
         if self.backing:
             builder.add_box_visual(half_size=self.size, material=self.render_material)
         else:
-            builder.add_repeated_2D_texture(
-                half_size=self.size[:2], mat=self.render_material, texrepeat="3 3"
+            builder.add_flat_repeated_2D_texture(
+                pose=sapien.Pose(q=[0, 0, 1, 0]),
+                half_size=self.size[:2],
+                mat=self.render_material,
+                texture_repeat=self.texture_repeat,
             )
             builder.add_plane_collision(
                 pose=sapien.Pose(q=[0.7071068, 0, -0.7071068, 0])
