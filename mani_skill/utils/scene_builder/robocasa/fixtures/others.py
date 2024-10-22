@@ -223,17 +223,6 @@ class Floor(Wall):
         )
         self.name = name
         self.scene = scene
-        # import ipdb; ipdb.set_trace()
-        # self.size = np.array(size)
-        # self.pos = np.array(pos)
-        # self.render_material = sapien.render.RenderMaterial()
-        # texture = str(ASSET_DIR / "scene_datasets/robocasa_dataset/assets" / texture)
-        # if backing:
-        #     texture = str(ASSET_DIR / "scene_datasets/robocasa_dataset/assets/textures/flat/light_gray.png")
-        # self.render_material.base_color_texture = sapien.render.RenderTexture2D(
-        #     filename=texture,
-        #     mipmap_levels=1,
-        # )
 
     def build(self):
         builder = self.scene.create_actor_builder()
