@@ -46,6 +46,7 @@ class RoboCasaOpenSingleDoorEnv(BaseEnv):
         # self.ground.set_collision_group_bit(
         #     group=2, bit_idx=FETCH_WHEELS_COLLISION_BIT, bit=1
         # )
+        # TODO (stao): disable wheel collisions with floors.
 
         self.agent.robot.initial_pose = sapien.Pose(p=[2.7, -1.5, 0])
 
