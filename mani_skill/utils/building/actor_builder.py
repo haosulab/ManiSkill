@@ -276,7 +276,7 @@ class ActorBuilder(SAPIENActorBuilder):
     additional procedurally generated visual meshes
     """
 
-    def add_flat_repeated_2D_texture(
+    def add_plane_repeated_visual(
         self,
         pose: sapien.Pose = sapien.Pose(),
         half_size: List[float] = [5, 5],
@@ -366,13 +366,10 @@ class ActorBuilder(SAPIENActorBuilder):
 
         if half_size[1] < floor_half_length:
             diff = floor_half_length - half_size[1]
-            for sign in [-1]:
+            for sign in [-1, 1]:
                 mask = vertices[:, 1] == floor_half_length * sign
                 vertices[mask, 1] = half_size[1] * sign
-                # import ipdb; ipdb.set_trace()
                 uvs[mask, 1] -= diff * sign * texture_repeat[1]
-                # uvs[mask, 1] *= -1
-
         shape = sapien.render.RenderShapeTriangleMesh(
             vertices=vertices,
             triangles=triangles,

@@ -166,7 +166,7 @@ class Wall:
         if self.backing:
             builder.add_box_visual(half_size=self.size, material=self.render_material)
         else:
-            builder.add_flat_repeated_2D_texture(
+            builder.add_plane_repeated_visual(
                 half_size=self.size[:2],
                 mat=self.render_material,
                 texture_repeat=self.texture_repeat,
@@ -239,7 +239,7 @@ class Floor(Wall):
         if self.backing:
             builder.add_box_visual(half_size=self.size, material=self.render_material)
         else:
-            builder.add_flat_repeated_2D_texture(
+            builder.add_plane_repeated_visual(
                 pose=sapien.Pose(q=[0, 0, 1, 0]),
                 half_size=self.size[:2],
                 mat=self.render_material,
