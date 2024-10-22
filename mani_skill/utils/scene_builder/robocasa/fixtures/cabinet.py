@@ -1133,32 +1133,42 @@ class PanelCabinet(Cabinet):
         th = self.thickness / 2
         if self.solid_body:
             # TODO (stao)
-            geom_name = self._name + "_body"
+            geom_name = self.name + "_body"
             size = [x, y - th, z]
             pos = [0, th, 0]
-            g = new_geom(
+            self.actor_builder.add_box_visual(
                 name=geom_name,
-                type="box",
-                size=size,
-                pos=pos,
-                group=0,
-                density=10,
-                rgba="0.5 0 0 1",
+                half_size=size,
+                pose=sapien.Pose(p=pos),
+                material=self.loader._materials["mat"],
             )
-            g_vis = new_geom(
-                name=geom_name + "_visual",
-                type="box",
-                size=size,
-                pos=pos,
-                group=1,
-                material=self._name + "_mat",
-                density=10,
-                conaffinity=0,
-                contype=0,
-                mass=1e-8,
+            self.actor_builder.add_box_collision(
+                half_size=size,
+                pose=sapien.Pose(p=pos),
             )
-            self._obj.append(g)
-            self._obj.append(g_vis)
+            # g = new_geom(
+            #     name=geom_name,
+            #     type="box",
+            #     size=size,
+            #     pos=pos,
+            #     group=0,
+            #     density=10,
+            #     rgba="0.5 0 0 1",
+            # )
+            # g_vis = new_geom(
+            #     name=geom_name + "_visual",
+            #     type="box",
+            #     size=size,
+            #     pos=pos,
+            #     group=1,
+            #     material=self._name + "_mat",
+            #     density=10,
+            #     conaffinity=0,
+            #     contype=0,
+            #     mass=1e-8,
+            # )
+            # self._obj.append(g)
+            # self._obj.append(g_vis)
 
         ### make a door and merge in ###
         door_w, door_h, door_th = x * 2, z * 2, th * 2  # multiply by 2 to set full size

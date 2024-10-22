@@ -127,7 +127,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
 
     def build(self, build_config_idxs: List[int] = None):
         # return super().build(build_config_idxs)
-        layout_path = scene_registry.get_layout_path(0)
+        layout_path = scene_registry.get_layout_path(1)
         style_path = scene_registry.get_style_path(3)
         # load style
         with open(style_path, "r") as f:
@@ -309,16 +309,17 @@ class RoboCasaSceneBuilder(SceneBuilder):
                 pos_new = [x_rot + displacement[0], y_rot + displacement[1], z]
 
                 # account for previous z-axis rotation
-                rot_prev = fixture._obj.get("euler")
+                rot_prev = fixture.euler
                 if rot_prev is not None:
                     # TODO: switch to quaternion since euler rotations are ambiguous
-                    rot_new = s2a(rot_prev)
+                    rot_new = rot_prev
                     rot_new[2] += z_rot
                 else:
                     rot_new = [0, 0, z_rot]
-
-                fixture._obj.set("pos", a2s(pos_new))
-                fixture._obj.set("euler", a2s(rot_new))
+                fixture.set_pos(pos_new)
+                fixture.set_euler(rot_new)
+                # fixture._obj.set("pos", a2s(pos_new))
+                # fixture._obj.set("euler", a2s(rot_new))
 
         for k, v in fixtures.items():
             # print(k, v.pos, v.size, v.quat if hasattr(v, "quat") else None)

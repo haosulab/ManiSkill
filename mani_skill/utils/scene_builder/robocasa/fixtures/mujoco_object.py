@@ -1,5 +1,6 @@
 import numpy as np
 import sapien
+from transforms3d.euler import euler2quat
 
 from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.utils.scene_builder.robocasa.utils.scene_utils import ROBOCASA_ASSET_DIR
@@ -43,6 +44,9 @@ class MujocoObject:
 
     def set_pos(self, pos):
         self.pos = pos.copy()
+
+    def set_euler(self, euler):
+        self.quat = euler2quat(*euler)
 
     def set_scale(self, scale):
         """Based on https://github.com/ARISE-Initiative/robosuite/blob/robocasa_v0.1/robosuite/models/objects/objects.py#L507."""

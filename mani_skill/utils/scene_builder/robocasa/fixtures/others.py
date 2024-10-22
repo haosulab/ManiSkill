@@ -1,5 +1,6 @@
 import numpy as np
 import sapien
+from transforms3d.euler import euler2quat, quat2euler
 
 from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.utils.scene_builder.robocasa.utils.scene_utils import ROBOCASA_ASSET_DIR
@@ -22,6 +23,7 @@ class Box:
         self.name = name
         self.size = np.array(size)
         self.pos = pos
+        self.quat = [1, 0, 0, 0]
         self.scene = scene
         self.render_material = sapien.render.RenderMaterial()
         texture = str(ROBOCASA_ASSET_DIR / texture)
@@ -38,11 +40,21 @@ class Box:
         else:
             self.rng = np.random.default_rng()
 
+    def set_pos(self, pos):
+        self.pos = pos
+
+    def set_euler(self, euler):
+        self.quat = euler2quat(*euler)
+
+    @property
+    def euler(self):
+        return np.array(quat2euler(self.quat))
+
     def build(self):
         builder = self.scene.create_actor_builder()
         builder.add_box_visual(half_size=self.size / 2, material=self.render_material)
         builder.add_box_collision(half_size=self.size / 2)
-        builder.initial_pose = sapien.Pose(self.pos)
+        builder.initial_pose = sapien.Pose(self.pos, self.quat)
         self.actor = builder.build_static(name=self.name)
         return self
 

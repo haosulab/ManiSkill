@@ -2,6 +2,7 @@ import abc
 
 import numpy as np
 import sapien
+from transforms3d.euler import euler2quat, quat2euler
 
 from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.utils.building.mjcf_loader import MJCFLoader
@@ -218,11 +219,11 @@ class Fixture(MujocoObject):
 
     @property
     def euler(self):
-        euler = self._obj.get("euler")
+        euler = quat2euler(self.quat)
         if euler is None:
             # no rotation applied
-            euler = "0 0 0"
-        return np.array(_parse_vec(euler))
+            euler = [0, 0, 0]
+        return np.array(euler)
 
     @property
     def horizontal_radius(self):

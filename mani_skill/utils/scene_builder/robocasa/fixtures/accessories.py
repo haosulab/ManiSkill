@@ -35,6 +35,7 @@ class CoffeeMachine(Accessory):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        return
         self._turned_on = False
         # site where coffee liquid is poured
         self._receptacle_pouring_site = self.worldbody.find(
