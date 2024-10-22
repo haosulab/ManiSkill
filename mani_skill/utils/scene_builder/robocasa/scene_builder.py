@@ -7,9 +7,18 @@ import numpy as np
 import torch
 import yaml
 
+from mani_skill.utils.scene_builder.robocasa.fixtures.accessories import (
+    Accessory,
+    CoffeeMachine,
+    Toaster,
+    WallAccessory,
+)
 from mani_skill.utils.scene_builder.robocasa.fixtures.cabinet import (
+    Drawer,
     HingeCabinet,
     HousingCabinet,
+    OpenCabinet,
+    PanelCabinet,
     SingleCabinet,
 )
 from mani_skill.utils.scene_builder.robocasa.fixtures.counter import Counter
@@ -18,30 +27,49 @@ from mani_skill.utils.scene_builder.robocasa.fixtures.fixture import Fixture
 from mani_skill.utils.scene_builder.robocasa.fixtures.fixture_stack import FixtureStack
 from mani_skill.utils.scene_builder.robocasa.fixtures.fridge import Fridge
 from mani_skill.utils.scene_builder.robocasa.fixtures.microwave import Microwave
-from mani_skill.utils.scene_builder.robocasa.fixtures.others import Floor, Wall
+from mani_skill.utils.scene_builder.robocasa.fixtures.others import Box, Floor, Wall
 from mani_skill.utils.scene_builder.robocasa.fixtures.sink import Sink
 from mani_skill.utils.scene_builder.robocasa.fixtures.stove import Oven, Stove, Stovetop
 from mani_skill.utils.scene_builder.robocasa.utils import scene_registry, scene_utils
 from mani_skill.utils.scene_builder.scene_builder import SceneBuilder
 
 FIXTURES = dict(
-    housing_cabinet=HousingCabinet,
-    single_cabinet=SingleCabinet,
     hinge_cabinet=HingeCabinet,
-    wall=Wall,
+    single_cabinet=SingleCabinet,
+    open_cabinet=OpenCabinet,
+    panel_cabinet=PanelCabinet,
+    housing_cabinet=HousingCabinet,
+    drawer=Drawer,
     counter=Counter,
-    sink=Sink,
-    floor=Floor,
     stove=Stove,
     stovetop=Stovetop,
     oven=Oven,
-    fridge=Fridge,
     microwave=Microwave,
+    # hood=Hood,
+    sink=Sink,
+    fridge=Fridge,
     dishwasher=Dishwasher,
+    wall=Wall,
+    floor=Floor,
+    box=Box,
+    accessory=Accessory,
+    paper_towel=Accessory,
+    plant=Accessory,
+    knife_block=Accessory,
+    # stool=Stool,
+    utensil_holder=Accessory,
+    coffee_machine=CoffeeMachine,
+    toaster=Toaster,
+    utensil_rack=WallAccessory,
+    wall_accessory=WallAccessory,
+    # window=Window,
+    # framed_window=FramedWindow,
+    # needs some additional work
+    # slide_cabinet=SlideCabinet,
 )
 # fixtures that are attached to other fixtures, disables positioning system in this script
 FIXTURES_INTERIOR = dict(
-    sink=Sink, stovetop=Stovetop, accessory=None, wall_accessory=None
+    sink=Sink, stovetop=Stovetop, accessory=Accessory, wall_accessory=WallAccessory
 )
 
 ALL_SIDES = ["left", "right", "front", "back", "bottom", "top"]

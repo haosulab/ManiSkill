@@ -1,6 +1,7 @@
 import abc
 import xml
 
+import numpy as np
 import sapien
 
 from mani_skill.envs.scene import ManiSkillScene
@@ -502,19 +503,18 @@ class CabinetShelf(MujocoObject):
 
     def __init__(
         self,
+        scene,
         size,  # format: [w, d, h]
         texture,
         name,
         pos=None,
     ):
         super().__init__(
-            xml_path_completion(
-                "fixtures/cabinets/cabinet_panels/shelf.xml",
-                root=robocasa.models.assets_root,
-            ),
+            scene=scene,
+            xml="fixtures/cabinets/cabinet_panels/shelf.xml",
             name=name,
-            joints=None,
-            duplicate_collision_geoms=True,
+            # joints=None,
+            # duplicate_collision_geoms=True,
         )
 
         self.size = np.array(size)
@@ -522,7 +522,7 @@ class CabinetShelf(MujocoObject):
         self._create_panel()
 
         self.texture = texture
-        self._set_texture()
+        # self._set_texture()
 
     def exclude_from_prefixing(self, inp):
         """
@@ -584,8 +584,18 @@ class CabinetShelf(MujocoObject):
         """
         Creates the cabinet shelf. This involves setting the size and position of the panel's geom
         """
-        geoms = self._get_components()
+        # geoms = self._get_components()
 
         sizes = {"shelf": self.size / 2}
         positions = {"shelf": self.pos}
-        set_geom_dimensions(sizes, positions, geoms)
+        # import ipdb; ipdb.set_trace()
+        self.actor_builder.collision_records[0].scale = sizes["shelf"]
+        self.actor_builder.collision_records[0].pose = (
+            sapien.Pose(p=self.pos) * self.actor_builder.collision_records[0].pose
+        )
+        self.actor_builder.add_box_visual(
+            pose=self.actor_builder.collision_records[0].pose,
+            half_size=sizes["shelf"],
+            material=self.loader._materials["mat"],
+        )
+        # set_geom_dimensions(sizes, positions, geoms)

@@ -4,6 +4,7 @@ import numpy as np
 import sapien
 
 from mani_skill.utils.scene_builder.robocasa.fixtures.cabinet_panels import (
+    CabinetShelf,
     DividedWindowCabinetPanel,
     FullWindowedCabinetPanel,
     RaisedCabinetPanel,
@@ -757,6 +758,7 @@ class OpenCabinet(Cabinet):
         for i in range(self.num_shelves):
             shelf_pos = [0, 0, shelf_z_positions[i]]
             shelf = CabinetShelf(
+                scene=self.scene,
                 size=shelf_size,
                 pos=shelf_pos,
                 name="{}_shelf_{}".format(self.name, i),
@@ -765,9 +767,9 @@ class OpenCabinet(Cabinet):
             self.shelves.append(shelf)
 
             # merge shelves
-            self.merge_assets(shelf)
-            shelf_elem = shelf.get_obj()
-            self.get_obj().append(shelf_elem)
+            # self.merge_assets(shelf)
+            # shelf_elem = shelf.get_obj()
+            # self.get_obj().append(shelf_elem)
 
         self.set_bounds_sites(
             {
