@@ -225,7 +225,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
                         configs,
                         style,
                         default_texture=None,
-                        rng=self.env._episode_rng,
+                        rng=self.env._batched_episode_rng[scene_idx],
                     )
                     fixtures[fixture_name] = stack
                     configs[fixture_name] = fixture_config
