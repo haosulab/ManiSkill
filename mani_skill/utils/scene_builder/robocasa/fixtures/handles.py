@@ -180,7 +180,8 @@ class BarHandle(Handle):
             positions["handle_connector_bottom"][[0, 2]] = positions[
                 "handle_connector_bottom"
             ][[2, 0]]
-            eulers["handle"] = [0, 1.5708, 0]
+            # compared to original code this swaps xy due to convention difference
+            eulers["handle"] = [1.5708, 0, 0]
 
         # geoms, bodies, joints = self._get_components()
         for i, side in enumerate(positions.keys()):
@@ -188,6 +189,7 @@ class BarHandle(Handle):
             size = sizes[side]
             quat = self.actor_builder.collision_records[i].pose.q
             if side in eulers:
+                print("euler", self.name, side, eulers[side])
                 quat = euler2quat(*eulers[side])
             self.actor_builder.add_cylinder_visual(
                 pose=sapien.Pose(p=pos, q=quat),

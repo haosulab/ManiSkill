@@ -162,9 +162,10 @@ class Cabinet(Fixture):
         h,
         th,
         pos,
-        parent_link_builder,
-        handle_hpos,
-        handle_vpos,
+        parent_actor_builder=None,
+        parent_link_builder=None,
+        handle_hpos=None,
+        handle_vpos=None,
         door_name="door",
     ):
         """
@@ -188,6 +189,11 @@ class Cabinet(Fixture):
             door_name (str): name of the door
 
         """
+        if parent_actor_builder is None and parent_link_builder is None:
+            raise ValueError(
+                "Either parent_actor_builder or parent_link_builder must be provided"
+            )
+        print(self.name, self.panel_type)
         if self.panel_type == "slab" or self.panel_type is None:
             panel_class = SlabCabinetPanel
         elif self.panel_type == "shaker":
@@ -220,15 +226,37 @@ class Cabinet(Fixture):
         )
 
         # door_elem = door.get_obj()
-        link_builder = parent_link_builder
-        link_builder.joint_record.pose_in_child = (
-            sapien.Pose(p=-np.array(pos)) * link_builder.joint_record.pose_in_child
-        )
-        for door_collision_record, door_visual_record in zip(
-            door.actor_builder.collision_records, door.actor_builder.visual_records
-        ):
-            link_builder.collision_records.append(door_collision_record)
-            link_builder.visual_records.append(door_visual_record)
+        if parent_link_builder is not None:
+            link_builder = parent_link_builder
+            link_builder.joint_record.pose_in_child = (
+                sapien.Pose(p=-np.array(pos)) * link_builder.joint_record.pose_in_child
+            )
+            for door_collision_record, door_visual_record in zip(
+                door.actor_builder.collision_records, door.actor_builder.visual_records
+            ):
+                # TODO (stao): Not sure why but the parsed panel for drawers is in the middle instead of the edge of the drawer
+                if link_builder.joint_record.joint_type == "prismatic":
+                    door_collision_record.pose = (
+                        sapien.Pose(p=np.array(pos)) * door_collision_record.pose
+                    )
+                    door_visual_record.pose = (
+                        sapien.Pose(p=np.array(pos)) * door_visual_record.pose
+                    )
+                link_builder.collision_records.append(door_collision_record)
+                link_builder.visual_records.append(door_visual_record)
+        else:
+            actor_builder = parent_actor_builder
+            for door_collision_record, door_visual_record in zip(
+                door.actor_builder.collision_records, door.actor_builder.visual_records
+            ):
+                door_collision_record.pose = (
+                    sapien.Pose(p=np.array(pos)) * door_collision_record.pose
+                )
+                door_visual_record.pose = (
+                    sapien.Pose(p=np.array(pos)) * door_visual_record.pose
+                )
+                actor_builder.collision_records.append(door_collision_record)
+                actor_builder.visual_records.append(door_visual_record)
         # door_elem.set("pos", a2s(pos))
 
         # self.merge_assets(door)
@@ -820,7 +848,7 @@ class Drawer(Cabinet):
         x, y, z = [dim / 2 for dim in self.size]
         th = self.thickness / 2
 
-        self.geoms, bodies, joints = self._get_cab_components()
+        # self.geoms, bodies, joints = self._get_cab_components()
 
         """
         core cabinet housing
@@ -852,13 +880,39 @@ class Drawer(Cabinet):
             "inner_left": [-ix + th, 0, 0],
             "inner_right": [ix - th, 0, 0],
         }
-        set_geom_dimensions(sizes, positions, self.geoms, rotated=True)
+        # set_geom_dimensions(sizes, positions, self.geoms, rotated=True)
+        for i, ((part_name, size), (_, position)) in enumerate(
+            zip(sizes.items(), positions.items())
+        ):
+            # drawer is a bit weird since the referenced shapes are in one of 2 link builders
+            if "inner" in part_name:
+                link_builder = self.articulation_builder.link_builders[2]
+                index = i - 5
+            else:
+                link_builder = self.articulation_builder.link_builders[1]
+                index = i
+            col_record = link_builder.collision_records[index]
+            col_record.scale = size
+            col_record.pose = sapien.Pose(p=position, q=col_record.pose.q)
+            link_builder.add_box_visual(
+                pose=col_record.pose,
+                half_size=size,
+                material=self.loader._materials["mat"],
+            )
 
         # door body and joints
-        bodies["inner_box"].set("pos", a2s([0, 0, 0]))
+        # bodies["inner_box"].set("pos", a2s([0, 0, 0]))
         # set joint position
-        joints["slidejoint"].set("pos", a2s([0, -y, 0]))
-        joints["slidejoint"].set("range", a2s([-y * 2, 0]))
+        # joints["slidejoint"].set("pos", a2s([0, -y, 0]))
+        # joints["slidejoint"].set("range", a2s([-y * 2, 0]))
+        joint_record = self.articulation_builder.link_builders[2].joint_record
+        joint_record.pose_in_parent = sapien.Pose(
+            p=[0, y, 0], q=joint_record.pose_in_parent.q
+        )
+        # joint_record.pose_in_child = sapien.Pose(
+        #     [0, -y, 0], q=joint_record.pose_in_child.q
+        # )
+        joint_record.limits = [-y * 2, 0]
 
         # create door
         door_w, door_h, door_th = x * 2, z * 2, th * 2  # multiply by 2 to set full size
@@ -868,7 +922,7 @@ class Drawer(Cabinet):
             h=door_h,
             th=door_th,
             pos=door_pos,
-            parent_body=bodies["inner_box"],
+            parent_link_builder=self.articulation_builder.link_builders[2],
             handle_hpos="center",
             handle_vpos="center",
         )
@@ -1008,8 +1062,8 @@ class PanelCabinet(Cabinet):
         """
         x, y, z = [dim / 2 for dim in self.size]
         th = self.thickness / 2
-
         if self.solid_body:
+            # TODO (stao)
             geom_name = self._name + "_body"
             size = [x, y - th, z]
             pos = [0, th, 0]
@@ -1045,7 +1099,7 @@ class PanelCabinet(Cabinet):
             h=door_h,
             th=door_th,
             pos=door_pos,
-            parent_body=self.get_obj(),
+            parent_actor_builder=self.actor_builder,
             handle_hpos="center",
             handle_vpos="center",
         )

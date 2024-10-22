@@ -6,7 +6,7 @@ import yaml
 
 from mani_skill import ASSET_DIR
 from mani_skill.envs.scene import ManiSkillScene
-from mani_skill.utils.scene_builder.robocasa.fixtures.wall import Wall
+from mani_skill.utils.scene_builder.robocasa.fixtures.others import Wall
 
 AXES_KEYWORDS = {0: ["left", "right"], 1: ["front", "back"], 2: ["bottom", "top"]}
 
@@ -62,23 +62,13 @@ def initialize_fixture(scene: ManiSkillScene, config, cur_fixtures, rng=None):
     if "pos" not in config:
         # need position to initialize fixture, adjusted later fo relative positioning
         config["pos"] = [0.0, 0.0, 0.0]
-    # import ipdb;ipdb.set_trace()
     # update fixture pointers
     for k in ATTACH_ARGS:
         if k in config:
             config[k] = cur_fixtures[config[k]]
 
     config["rng"] = rng
-    # import ipdb;ipdb.set_trace()
-    # swap with textures later
-    # render_material = sapien.render.RenderMaterial(base_color=[1, 1, 1, 1])
-    # builder.add_box_visual(half_size=config["size"], material=render_material)
-    # builder.add_box_collision(half_size=config["size"])
-    # builder.initial_pose = sapien.Pose(config["pos"], config["quat"])
-    # fixture = Wall(name=name, **config).build(scene)
-    # fixture = builder.build_static(name=name)
     fixture = class_type(scene=scene, name=name, **config)
-    # print(class_type, name, type(fixture))
     return fixture
 
 

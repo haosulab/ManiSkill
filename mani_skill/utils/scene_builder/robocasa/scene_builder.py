@@ -14,12 +14,12 @@ from mani_skill.utils.scene_builder.robocasa.fixtures.cabinet import (
 )
 from mani_skill.utils.scene_builder.robocasa.fixtures.counter import Counter
 from mani_skill.utils.scene_builder.robocasa.fixtures.fixture import Fixture
-from mani_skill.utils.scene_builder.robocasa.fixtures.floor import Floor
+from mani_skill.utils.scene_builder.robocasa.fixtures.fixture_stack import FixtureStack
 from mani_skill.utils.scene_builder.robocasa.fixtures.fridge import Fridge
 from mani_skill.utils.scene_builder.robocasa.fixtures.microwave import Microwave
+from mani_skill.utils.scene_builder.robocasa.fixtures.others import Floor, Wall
 from mani_skill.utils.scene_builder.robocasa.fixtures.sink import Sink
 from mani_skill.utils.scene_builder.robocasa.fixtures.stove import Oven, Stove, Stovetop
-from mani_skill.utils.scene_builder.robocasa.fixtures.wall import Wall
 from mani_skill.utils.scene_builder.robocasa.utils import scene_registry, scene_utils
 from mani_skill.utils.scene_builder.scene_builder import SceneBuilder
 
@@ -171,14 +171,16 @@ class RoboCasaSceneBuilder(SceneBuilder):
 
             # stack of fixtures, handled separately
             if fixture_config["type"] == "stack":
-                continue
+                print(fixture_config)
+                # continue
                 stack = FixtureStack(
+                    self.scene,
                     fixture_config,
                     fixtures,
                     configs,
                     style,
                     default_texture=None,
-                    rng=rng,
+                    rng=self.env._episode_rng,
                 )
                 fixtures[fixture_name] = stack
                 configs[fixture_name] = fixture_config
