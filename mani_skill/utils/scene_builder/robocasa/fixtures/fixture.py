@@ -105,20 +105,24 @@ class Fixture(MujocoObject):
     def is_articulation(self):
         return hasattr(self, "articulation_builder")
 
-    def build(self):
+    def build(self, scene_idxs: list[int]):
         if self.is_articulation:
             self.articulation_builder.initial_pose = sapien.Pose(
                 p=self.pos, q=self.quat
             )
+            self.articulation_builder.set_scene_idxs(scene_idxs)
             self.articulation = self.articulation_builder.build(
-                name=self.name, fix_root_link=True
+                name=self.name + f"_{scene_idxs[0]}", fix_root_link=True
             )
             # TODO (stao): this might not be working on GPU sim
-            self.articulation.set_root_pose(sapien.Pose(p=self.pos, q=self.quat))
+            # self.articulation.set_root_pose(sapien.Pose(p=self.pos, q=self.quat))
         else:
+            self.actor_builder.set_scene_idxs(scene_idxs)
             self.actor_builder.initial_pose = sapien.Pose(p=self.pos, q=self.quat)
-            self.actor = self.actor_builder.build_static(name=self.name)
-            self.actor.set_pose(sapien.Pose(p=self.pos, q=self.quat))
+            self.actor = self.actor_builder.build_static(
+                name=self.name + f"_{scene_idxs[0]}"
+            )
+            # self.actor.set_pose(sapien.Pose(p=self.pos, q=self.quat))
         return self
 
     """Functions from RoboCasa Fixture class"""

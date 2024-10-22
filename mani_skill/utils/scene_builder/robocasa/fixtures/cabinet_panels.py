@@ -328,6 +328,17 @@ class RaisedCabinetPanel(CabinetPanel):
         raised_gap (float): Gap between the raised portion and the sorrounding trims
     """
 
+    geom_names = set(
+        [
+            "door",
+            "door_raised",
+            "trim_left",
+            "trim_right",
+            "trim_bottom",
+            "trim_top",
+        ]
+    )
+
     def __init__(
         self, name, trim_th=0.02, trim_size=0.08, raised_gap=0.01, *args, **kwargs
     ):
@@ -338,19 +349,19 @@ class RaisedCabinetPanel(CabinetPanel):
         xml = "fixtures/cabinets/cabinet_panels/raised.xml"
         super().__init__(xml=xml, name=name, *args, **kwargs)
 
-    def _get_components(self):
-        """
-        Gets the geoms for the cabinet panel. This includes the door, the 4 sorrounding trims, and the raised portion.
-        """
-        geom_names = [
-            "door",
-            "door_raised",
-            "trim_left",
-            "trim_right",
-            "trim_bottom",
-            "trim_top",
-        ]
-        return self._get_elements_by_name(geom_names)[0]
+    # def _get_components(self):
+    #     """
+    #     Gets the geoms for the cabinet panel. This includes the door, the 4 sorrounding trims, and the raised portion.
+    #     """
+    #     geom_names = [
+    #         "door",
+    #         "door_raised",
+    #         "trim_left",
+    #         "trim_right",
+    #         "trim_bottom",
+    #         "trim_top",
+    #     ]
+    # return self._get_elements_by_name(geom_names)[0]
 
     def _create_panel(self):
         """
@@ -376,8 +387,8 @@ class RaisedCabinetPanel(CabinetPanel):
         }
         positions = {"door_raised": [0, -(y - trim_th) / 2, 0]}
 
-        geoms = self._get_components()
-        set_geom_dimensions(sizes, positions, geoms, rotated=True)
+        # geoms = self._get_components()
+        self.set_geom_dimensions(sizes, positions, rotated=True)
 
 
 class DividedWindowCabinetPanel(CabinetPanel):

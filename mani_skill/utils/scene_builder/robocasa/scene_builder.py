@@ -1,7 +1,7 @@
 """Implementation of the RoboCasa scene builder. Code ported from https://github.com/robocasa/robocasa"""
 
 from copy import deepcopy
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import numpy as np
 import torch
@@ -10,6 +10,7 @@ import yaml
 from mani_skill.utils.scene_builder.robocasa.fixtures.accessories import (
     Accessory,
     CoffeeMachine,
+    Stool,
     Toaster,
     WallAccessory,
 )
@@ -26,6 +27,7 @@ from mani_skill.utils.scene_builder.robocasa.fixtures.dishwasher import Dishwash
 from mani_skill.utils.scene_builder.robocasa.fixtures.fixture import Fixture
 from mani_skill.utils.scene_builder.robocasa.fixtures.fixture_stack import FixtureStack
 from mani_skill.utils.scene_builder.robocasa.fixtures.fridge import Fridge
+from mani_skill.utils.scene_builder.robocasa.fixtures.hood import Hood
 from mani_skill.utils.scene_builder.robocasa.fixtures.microwave import Microwave
 from mani_skill.utils.scene_builder.robocasa.fixtures.others import Box, Floor, Wall
 from mani_skill.utils.scene_builder.robocasa.fixtures.sink import Sink
@@ -45,7 +47,7 @@ FIXTURES = dict(
     stovetop=Stovetop,
     oven=Oven,
     microwave=Microwave,
-    # hood=Hood,
+    hood=Hood,
     sink=Sink,
     fridge=Fridge,
     dishwasher=Dishwasher,
@@ -56,7 +58,7 @@ FIXTURES = dict(
     paper_towel=Accessory,
     plant=Accessory,
     knife_block=Accessory,
-    # stool=Stool,
+    stool=Stool,
     utensil_holder=Accessory,
     coffee_machine=CoffeeMachine,
     toaster=Toaster,
@@ -125,211 +127,228 @@ class RoboCasaSceneBuilder(SceneBuilder):
     TODO explain build config idxs and init config idxs
     """
 
-    def build(self, build_config_idxs: List[int] = None):
+    def build(self, build_config_idxs: Optional[List[int]] = None):
         # return super().build(build_config_idxs)
-        layout_path = scene_registry.get_layout_path(1)
-        style_path = scene_registry.get_style_path(0)
-        # load style
-        with open(style_path, "r") as f:
-            style = yaml.safe_load(f)
-
-        # load arena
-        with open(layout_path, "r") as f:
-            arena_config = yaml.safe_load(f)
-
-        # contains all fixtures with updated configs
-        arena = list()
-
-        # Update each fixture config. First iterate through groups: subparts of the arena that can be
-        # rotated and displaced together. example: island group, right group, room group, etc
-        for group_name, group_config in arena_config.items():
-            group_fixtures = list()
-            # each group is further divded into similar subcollections of fixtures
-            # ex: main group counter accessories, main group top cabinets, etc
-            for k, fixture_list in group_config.items():
-                # these values are rotations/displacements that are applied to all fixtures in the group
-                if k in ["group_origin", "group_z_rot", "group_pos"]:
-                    continue
-                elif type(fixture_list) != list:
-                    raise ValueError(
-                        '"{}" is not a valid argument for groups'.format(k)
+        if build_config_idxs is None:
+            build_config_idxs = []
+            for i in range(self.env.num_envs):
+                # TODO (stao): how do we know the total number of layouts and styles?
+                build_config_idxs.append(
+                    (
+                        self.env._batched_episode_rng[i].randint(0, 10),
+                        self.env._batched_episode_rng[i].randint(0, 12),
                     )
-
-                # add suffix to support different groups
-                for fxtr_config in fixture_list:
-                    fxtr_config["name"] += "_" + group_name
-                    # update fixture names for alignment, interior objects, etc.
-                    for k in scene_utils.ATTACH_ARGS + [
-                        "align_to",
-                        "stack_fixtures",
-                        "size",
-                    ]:
-                        if k in fxtr_config:
-                            if isinstance(fxtr_config[k], list):
-                                for i in range(len(fxtr_config[k])):
-                                    if isinstance(fxtr_config[k][i], str):
-                                        fxtr_config[k][i] += "_" + group_name
-                            else:
-                                if isinstance(fxtr_config[k], str):
-                                    fxtr_config[k] += "_" + group_name
-
-                group_fixtures.extend(fixture_list)
-
-            # update group rotation/displacement if necessary
-            if "group_origin" in group_config:
-                for fxtr_config in group_fixtures:
-                    # do not update the rotation of the walls/floor
-                    if fxtr_config["type"] in ["wall", "floor"]:
-                        continue
-                    fxtr_config["group_origin"] = group_config["group_origin"]
-                    fxtr_config["group_pos"] = group_config["group_pos"]
-                    fxtr_config["group_z_rot"] = group_config["group_z_rot"]
-
-            # addto overall fixture list
-            arena.extend(group_fixtures)
-
-        # maps each fixture name to its object class
-        fixtures: Dict[str, Fixture] = dict()
-        # maps each fixture name to its configuration
-        configs = dict()
-        # names of composites, delete from fixtures before returning
-        composites = list()
-
-        for fixture_config in arena:
-            # scene_registry.check_syntax(fixture_config)
-            fixture_name = fixture_config["name"]
-
-            # stack of fixtures, handled separately
-            if fixture_config["type"] == "stack":
-                stack = FixtureStack(
-                    self.scene,
-                    fixture_config,
-                    fixtures,
-                    configs,
-                    style,
-                    default_texture=None,
-                    rng=self.env._episode_rng,
                 )
-                fixtures[fixture_name] = stack
-                configs[fixture_name] = fixture_config
-                composites.append(fixture_name)
-                continue
+        for scene_idx, build_config_idx in enumerate(build_config_idxs):
+            layout_path = scene_registry.get_layout_path(build_config_idx[0])
+            style_path = scene_registry.get_style_path(build_config_idx[1])
+            # load style
+            with open(style_path, "r") as f:
+                style = yaml.safe_load(f)
 
-            # load style information and update config to include it
-            default_config = scene_utils.load_style_config(style, fixture_config)
-            if default_config is not None:
-                for k, v in fixture_config.items():
-                    default_config[k] = v
-                fixture_config = default_config
+            # load arena
+            with open(layout_path, "r") as f:
+                arena_config = yaml.safe_load(f)
 
-            # set fixture type
-            if fixture_config["type"] not in FIXTURES:
-                continue
-            fixture_config["type"] = FIXTURES[fixture_config["type"]]
+            # contains all fixtures with updated configs
+            arena = list()
 
-            # pre-processing for fixture size
-            size = fixture_config.get("size", None)
-            if isinstance(size, list):
-                for i in range(len(size)):
-                    elem = size[i]
-                    if isinstance(elem, str):
-                        ref_fxtr = fixtures[elem]
-                        size[i] = ref_fxtr.size[i]
+            # Update each fixture config. First iterate through groups: subparts of the arena that can be
+            # rotated and displaced together. example: island group, right group, room group, etc
+            for group_name, group_config in arena_config.items():
+                group_fixtures = list()
+                # each group is further divded into similar subcollections of fixtures
+                # ex: main group counter accessories, main group top cabinets, etc
+                for k, fixture_list in group_config.items():
+                    # these values are rotations/displacements that are applied to all fixtures in the group
+                    if k in ["group_origin", "group_z_rot", "group_pos"]:
+                        continue
+                    elif type(fixture_list) != list:
+                        raise ValueError(
+                            '"{}" is not a valid argument for groups'.format(k)
+                        )
 
-            # initialize fixture
-            # TODO (stao): use batched episode rng later
-            fixture = scene_utils.initialize_fixture(
-                self.scene, fixture_config, fixtures, rng=self.env._episode_rng
-            )
+                    # add suffix to support different groups
+                    for fxtr_config in fixture_list:
+                        fxtr_config["name"] += "_" + group_name
+                        # update fixture names for alignment, interior objects, etc.
+                        for k in scene_utils.ATTACH_ARGS + [
+                            "align_to",
+                            "stack_fixtures",
+                            "size",
+                        ]:
+                            if k in fxtr_config:
+                                if isinstance(fxtr_config[k], list):
+                                    for i in range(len(fxtr_config[k])):
+                                        if isinstance(fxtr_config[k][i], str):
+                                            fxtr_config[k][i] += "_" + group_name
+                                else:
+                                    if isinstance(fxtr_config[k], str):
+                                        fxtr_config[k] += "_" + group_name
 
-            fixtures[fixture_name] = fixture
-            configs[fixture_name] = fixture_config
-            pos = None
-            # update fixture position
-            if fixture_config["type"] not in FIXTURES_INTERIOR.values():
-                # relative positioning
-                if "align_to" in fixture_config:
-                    pos = scene_utils.get_relative_position(
-                        fixture,
+                    group_fixtures.extend(fixture_list)
+
+                # update group rotation/displacement if necessary
+                if "group_origin" in group_config:
+                    for fxtr_config in group_fixtures:
+                        # do not update the rotation of the walls/floor
+                        if fxtr_config["type"] in ["wall", "floor"]:
+                            continue
+                        fxtr_config["group_origin"] = group_config["group_origin"]
+                        fxtr_config["group_pos"] = group_config["group_pos"]
+                        fxtr_config["group_z_rot"] = group_config["group_z_rot"]
+
+                # addto overall fixture list
+                arena.extend(group_fixtures)
+
+            # maps each fixture name to its object class
+            fixtures: Dict[str, Fixture] = dict()
+            # maps each fixture name to its configuration
+            configs = dict()
+            # names of composites, delete from fixtures before returning
+            composites = list()
+
+            for fixture_config in arena:
+                # scene_registry.check_syntax(fixture_config)
+                fixture_name = fixture_config["name"]
+
+                # stack of fixtures, handled separately
+                if fixture_config["type"] == "stack":
+                    stack = FixtureStack(
+                        self.scene,
                         fixture_config,
-                        fixtures[fixture_config["align_to"]],
-                        configs[fixture_config["align_to"]],
+                        fixtures,
+                        configs,
+                        style,
+                        default_texture=None,
+                        rng=self.env._episode_rng,
                     )
+                    fixtures[fixture_name] = stack
+                    configs[fixture_name] = fixture_config
+                    composites.append(fixture_name)
+                    continue
 
-                elif "stack_on" in fixture_config:
-                    stack_on = fixtures[fixture_config["stack_on"]]
+                # load style information and update config to include it
+                default_config = scene_utils.load_style_config(style, fixture_config)
+                if default_config is not None:
+                    for k, v in fixture_config.items():
+                        default_config[k] = v
+                    fixture_config = default_config
 
-                    # account for off-centered objects
-                    stack_on_center = stack_on.center
+                # set fixture type
+                if fixture_config["type"] not in FIXTURES:
+                    continue
+                fixture_config["type"] = FIXTURES[fixture_config["type"]]
 
-                    # infer unspecified axes of position
-                    pos = fixture_config["pos"]
-                    if pos[0] is None:
-                        pos[0] = stack_on.pos[0] + stack_on_center[0]
-                    if pos[1] is None:
-                        pos[1] = stack_on.pos[1] + stack_on_center[1]
+                # pre-processing for fixture size
+                size = fixture_config.get("size", None)
+                if isinstance(size, list):
+                    for i in range(len(size)):
+                        elem = size[i]
+                        if isinstance(elem, str):
+                            ref_fxtr = fixtures[elem]
+                            size[i] = ref_fxtr.size[i]
 
-                    # calculate height of fixture
-                    pos[2] = (
-                        stack_on.pos[2] + stack_on.size[2] / 2 + fixture.size[2] / 2
-                    )
-                    pos[2] += stack_on_center[2]
-                else:
-                    # absolute position
-                    pos = fixture_config.get("pos", None)
-            if pos is not None and type(fixture) not in [Wall, Floor]:
-                fixture.set_pos(deepcopy(pos))
-        # composites are non-MujocoObjects, must remove
-        for composite in composites:
-            del fixtures[composite]
+                # initialize fixture
+                # TODO (stao): use batched episode rng later
+                fixture = scene_utils.initialize_fixture(
+                    self.scene, fixture_config, fixtures, rng=self.env._episode_rng
+                )
 
-        # update the rotation and postion of each fixture based on their group
-        for name, fixture in fixtures.items():
-            # check if updates are necessary
-            config = configs[name]
-            if "group_origin" not in config:
-                continue
+                fixtures[fixture_name] = fixture
+                configs[fixture_name] = fixture_config
+                pos = None
+                # update fixture position
+                if fixture_config["type"] not in FIXTURES_INTERIOR.values():
+                    # relative positioning
+                    if "align_to" in fixture_config:
+                        pos = scene_utils.get_relative_position(
+                            fixture,
+                            fixture_config,
+                            fixtures[fixture_config["align_to"]],
+                            configs[fixture_config["align_to"]],
+                        )
 
-            # TODO: add default for group origin?
-            # rotate about this coordinate (around the z-axis)
-            origin = config["group_origin"]
-            pos = config["group_pos"]
-            z_rot = config["group_z_rot"]
-            displacement = [pos[0] - origin[0], pos[1] - origin[1]]
+                    elif "stack_on" in fixture_config:
+                        stack_on = fixtures[fixture_config["stack_on"]]
 
-            if type(fixture) not in [Wall, Floor]:
-                dx = fixture.pos[0] - origin[0]
-                dy = fixture.pos[1] - origin[1]
-                dx_rot = dx * np.cos(z_rot) - dy * np.sin(z_rot)
-                dy_rot = dx * np.sin(z_rot) + dy * np.cos(z_rot)
+                        # account for off-centered objects
+                        stack_on_center = stack_on.center
 
-                x_rot = origin[0] + dx_rot
-                y_rot = origin[1] + dy_rot
-                z = fixture.pos[2]
-                pos_new = [x_rot + displacement[0], y_rot + displacement[1], z]
+                        # infer unspecified axes of position
+                        pos = fixture_config["pos"]
+                        if pos[0] is None:
+                            pos[0] = stack_on.pos[0] + stack_on_center[0]
+                        if pos[1] is None:
+                            pos[1] = stack_on.pos[1] + stack_on_center[1]
 
-                # account for previous z-axis rotation
-                rot_prev = fixture.euler
-                if rot_prev is not None:
-                    # TODO: switch to quaternion since euler rotations are ambiguous
-                    rot_new = rot_prev
-                    rot_new[2] += z_rot
-                else:
-                    rot_new = [0, 0, z_rot]
-                fixture.pos = pos_new.copy()
-                fixture.set_euler(rot_new)
+                        # calculate height of fixture
+                        pos[2] = (
+                            stack_on.pos[2] + stack_on.size[2] / 2 + fixture.size[2] / 2
+                        )
+                        pos[2] += stack_on_center[2]
+                    else:
+                        # absolute position
+                        pos = fixture_config.get("pos", None)
+                if pos is not None and type(fixture) not in [Wall, Floor]:
+                    fixture.set_pos(deepcopy(pos))
+            # composites are non-MujocoObjects, must remove
+            for composite in composites:
+                del fixtures[composite]
 
-        for k, v in fixtures.items():
-            # print(k, v.pos, v.size, v.quat if hasattr(v, "quat") else None)
-            built = v.build()
-            # ensure all rooted articulated objects have collisions ignored with all static objects
-            if built.is_articulation and built.articulation.fixed_root_link.all():
-                for link in built.articulation.links:
-                    link.set_collision_group_bit(group=2, bit_idx=27, bit=1)
-            else:
-                if built.actor.px_body_type == "static":
-                    built.actor.set_collision_group_bit(group=2, bit_idx=27, bit=1)
-        return fixtures
+            # update the rotation and postion of each fixture based on their group
+            for name, fixture in fixtures.items():
+                # check if updates are necessary
+                config = configs[name]
+                if "group_origin" not in config:
+                    continue
+
+                # TODO: add default for group origin?
+                # rotate about this coordinate (around the z-axis)
+                origin = config["group_origin"]
+                pos = config["group_pos"]
+                z_rot = config["group_z_rot"]
+                displacement = [pos[0] - origin[0], pos[1] - origin[1]]
+
+                if type(fixture) not in [Wall, Floor]:
+                    dx = fixture.pos[0] - origin[0]
+                    dy = fixture.pos[1] - origin[1]
+                    dx_rot = dx * np.cos(z_rot) - dy * np.sin(z_rot)
+                    dy_rot = dx * np.sin(z_rot) + dy * np.cos(z_rot)
+
+                    x_rot = origin[0] + dx_rot
+                    y_rot = origin[1] + dy_rot
+                    z = fixture.pos[2]
+                    pos_new = [x_rot + displacement[0], y_rot + displacement[1], z]
+
+                    # account for previous z-axis rotation
+                    rot_prev = fixture.euler
+                    if rot_prev is not None:
+                        # TODO: switch to quaternion since euler rotations are ambiguous
+                        rot_new = rot_prev
+                        rot_new[2] += z_rot
+                    else:
+                        rot_new = [0, 0, z_rot]
+                    fixture.pos = pos_new.copy()
+                    fixture.set_euler(rot_new)
+
+            for k, v in fixtures.items():
+                print(k, v.pos, v.size, v.quat if hasattr(v, "quat") else None)
+                built = v.build(scene_idxs=[scene_idx])
+                if built is not None:
+                    # ensure all rooted articulated objects have collisions ignored with all static objects
+                    if (
+                        built.is_articulation
+                        and built.articulation.fixed_root_link.all()
+                    ):
+                        for link in built.articulation.links:
+                            link.set_collision_group_bit(group=2, bit_idx=27, bit=1)
+                    else:
+                        if built.actor.px_body_type == "static":
+                            built.actor.set_collision_group_bit(
+                                group=2, bit_idx=27, bit=1
+                            )
+        # return fixtures
 
     def initialize(self, env_idx: torch.Tensor, init_config_idxs: List[int] = None):
         pass

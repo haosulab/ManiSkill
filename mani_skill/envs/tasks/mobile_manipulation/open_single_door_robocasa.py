@@ -26,6 +26,10 @@ class RoboCasaOpenSingleDoorEnv(BaseEnv):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     @property
+    def _default_sim_config(self):
+        return SimConfig(spacing=8)
+
+    @property
     def _default_sensor_configs(self):
         pose = sapien_utils.look_at([1.25, -1.25, 1.5], [0.0, 0.0, 0.2])
         return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
@@ -43,11 +47,12 @@ class RoboCasaOpenSingleDoorEnv(BaseEnv):
         #     group=2, bit_idx=FETCH_WHEELS_COLLISION_BIT, bit=1
         # )
 
-        self.agent.robot.set_pose(sapien.Pose(p=[2.7, -1.8, 0]))
+        self.agent.robot.initial_pose = sapien.Pose(p=[2.7, -1.5, 0])
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
             self.scene_builder.initialize(env_idx)
+            self.agent.robot.set_qpos(self.agent.keyframes["rest"].qpos)
 
     def evaluate(self):
         return {}

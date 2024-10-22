@@ -18,7 +18,7 @@ class Box:
         tex_attrib={"type": "cube"},
         rng=None,
         *args,
-        **kwargs
+        **kwargs,
     ):
         self.name = name
         self.size = np.array(size)
@@ -50,12 +50,13 @@ class Box:
     def euler(self):
         return np.array(quat2euler(self.quat))
 
-    def build(self):
+    def build(self, scene_idxs: list[int]):
         builder = self.scene.create_actor_builder()
+        builder.set_scene_idxs(scene_idxs)
         builder.add_box_visual(half_size=self.size / 2, material=self.render_material)
         builder.add_box_collision(half_size=self.size / 2)
         builder.initial_pose = sapien.Pose(self.pos, self.quat)
-        self.actor = builder.build_static(name=self.name)
+        self.actor = builder.build_static(name=self.name + f"_{scene_idxs[0]}")
         return self
 
     @property
@@ -87,7 +88,7 @@ class Wall:
         default_backing_th=0.1,
         rng=None,
         *args,
-        **kwargs
+        **kwargs,
     ):
         self.mat_attrib = mat_attrib
         self.texture_repeat = [1, 1]
@@ -160,10 +161,11 @@ class Wall:
     def is_articulation(self):
         return False
 
-    def build(self):
+    def build(self, scene_idxs: list[int]):
         builder = self.scene.create_actor_builder()
         pos = self.pos
         if self.backing:
+            return None
             builder.add_box_visual(half_size=self.size, material=self.render_material)
         else:
             builder.add_plane_repeated_visual(
@@ -181,7 +183,8 @@ class Wall:
                 pos[1] += self.shift
         builder.add_box_collision(half_size=self.size)
         builder.initial_pose = sapien.Pose(pos, self.get_quat())
-        self.actor = builder.build_static(name=self.name)
+        builder.set_scene_idxs(scene_idxs)
+        self.actor = builder.build_static(name=self.name + f"_{scene_idxs[0]}")
         # TODO (stao) (don't include backing walls since we have backfaces?)
         return self
 
@@ -219,7 +222,7 @@ class Floor(Wall):
             "shininess": "0.1",
         },
         *args,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             scene,
@@ -229,12 +232,12 @@ class Floor(Wall):
             wall_side="floor",
             mat_attrib=mat_attrib,
             *args,
-            **kwargs
+            **kwargs,
         )
         self.name = name
         self.scene = scene
 
-    def build(self):
+    def build(self, scene_idxs: list[int]):
         builder = self.scene.create_actor_builder()
         if self.backing:
             builder.add_box_visual(half_size=self.size, material=self.render_material)
@@ -252,7 +255,8 @@ class Floor(Wall):
 
         builder.initial_pose = sapien.Pose(p=self.pos)
         # builder.initial_pose = sapien.Pose(self.pos, self.get_quat())
-        self.actor = builder.build_static(name=self.name)
+        builder.set_scene_idxs(scene_idxs)
+        self.actor = builder.build_static(name=self.name + f"_{scene_idxs[0]}")
         return self
 
 
