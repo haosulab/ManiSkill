@@ -5,12 +5,11 @@ import gymnasium as gym
 import mani_skill.envs
 import numpy as np
 from gymnasium.spaces import Box
-from gymnasium.wrappers.frame_stack import FrameStack as GymFrameStack
 from gymnasium.wrappers.frame_stack import LazyFrames
 from mani_skill.utils import gym_utils
 from mani_skill.utils.wrappers import CPUGymWrapper, FrameStack, RecordEpisode
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
-
+# from mani_skill.utils.wrappers.frame_stack import LazyFrames
 
 class DictFrameStack(FrameStack):
     def __init__(
