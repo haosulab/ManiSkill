@@ -13,6 +13,8 @@ class Args:
     env_id: Annotated[str, tyro.conf.arg(aliases=["-e"])] = "PickCube-v0"
     num_envs: Annotated[int, tyro.conf.arg(aliases=["-n"])] = 16
     obs_mode: Annotated[str, tyro.conf.arg(aliases=["-o"])] = "state"
+    sim_freq: int = 100
+    control_freq: int = 20
 
 def env_factory(env_id, idx, env_kwargs):
     def thunk():
@@ -22,7 +24,7 @@ def env_factory(env_id, idx, env_kwargs):
 
 def main(args: Args):
     profiler = Profiler(output_format="stdout")
-    env_kwargs = dict(obs_mode=args.obs_mode)
+    env_kwargs = dict(obs_mode=args.obs_mode, sim_freq=args.sim_freq, control_freq=args.control_freq)
 
     # create a vector env parallelized across CPUs with the given timelimit and auto-reset
     vector_env_cls = partial(AsyncVectorEnv, context="spawn")

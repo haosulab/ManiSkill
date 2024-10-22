@@ -160,7 +160,7 @@ def to_tensor(array: Array, device: Optional[Device] = None):
         if isinstance(array, np.ndarray):
             if array.dtype == np.uint16:
                 array = array.astype(np.int32)
-            if array.dtype == np.uint32:
+            elif array.dtype == np.uint32:
                 array = array.astype(np.int64)
             ret = torch.from_numpy(array)
             if ret.dtype == torch.float64:

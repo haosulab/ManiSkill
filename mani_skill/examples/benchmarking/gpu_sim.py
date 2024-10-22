@@ -46,7 +46,6 @@ def main(args):
             env = FlattenActionSpaceWrapper(env)
         base_env: BaseEnv = env.unwrapped
     else:
-        # env = gym.make_vec(args.env_id, num_envs=args.num_envs, vectorization_mode="async", vector_kwargs=dict(context="spawn"), obs_mode=args.obs_mode,)
         def env_factory(env_id, idx, env_kwargs):
             def thunk():
                 env = gym.make(env_id, **env_kwargs)
@@ -79,10 +78,11 @@ def main(args):
         N = 1000
         with profiler.profile("env.step", total_steps=N, num_envs=num_envs):
             for i in range(N):
-                actions = (
-                    2 * torch.rand(env.action_space.shape, device=base_env.device)
-                    - 1
-                )
+                # actions = (
+                #     2 * torch.rand(env.action_space.shape, device=base_env.device)
+                #     - 1
+                # )
+                actions = env.action_space.sample()
                 obs, rew, terminated, truncated, info = env.step(actions)
                 if args.save_video:
                     images.append(env.render().cpu().numpy())
@@ -97,30 +97,30 @@ def main(args):
                 fps=30,
             )
             del images
-        env.reset(seed=2022)
-        N = 1000
-        with profiler.profile("env.step+env.reset", total_steps=N, num_envs=num_envs):
-            for i in range(N):
-                actions = (
-                    2 * torch.rand(env.action_space.shape, device=base_env.device) - 1
-                )
-                obs, rew, terminated, truncated, info = env.step(actions)
-                if i % 200 == 0 and i != 0:
-                    env.reset()
-        profiler.log_stats("env.step+env.reset")
-        if args.save_example_image:
-            obs, _ = env.reset(seed=2022)
-            import matplotlib.pyplot as plt
-            for cam_name, cam_data in obs["sensor_data"].items():
-                for k, v in cam_data.items():
-                    imgs = v.cpu().numpy()
-                    imgs = tile_images(imgs, nrows=int(np.sqrt(args.num_envs)))
-                    cmap = None
-                    if k == "depth":
-                        imgs[imgs == np.inf] = 0
-                        imgs = imgs[ :, :, 0]
-                        cmap = "gray"
-                    plt.imsave(f"maniskill_{cam_name}_{k}.png", imgs, cmap=cmap)
+        # env.reset(seed=2022)
+        # N = 1000
+        # with profiler.profile("env.step+env.reset", total_steps=N, num_envs=num_envs):
+        #     for i in range(N):
+        #         actions = (
+        #             2 * torch.rand(env.action_space.shape, device=base_env.device) - 1
+        #         )
+        #         obs, rew, terminated, truncated, info = env.step(actions)
+        #         if i % 200 == 0 and i != 0:
+        #             env.reset()
+        # profiler.log_stats("env.step+env.reset")
+        # if args.save_example_image:
+        #     obs, _ = env.reset(seed=2022)
+        #     import matplotlib.pyplot as plt
+        #     for cam_name, cam_data in obs["sensor_data"].items():
+        #         for k, v in cam_data.items():
+        #             imgs = v.cpu().numpy()
+        #             imgs = tile_images(imgs, nrows=int(np.sqrt(args.num_envs)))
+        #             cmap = None
+        #             if k == "depth":
+        #                 imgs[imgs == np.inf] = 0
+        #                 imgs = imgs[ :, :, 0]
+        #                 cmap = "gray"
+        #             plt.imsave(f"maniskill_{cam_name}_{k}.png", imgs, cmap=cmap)
 
     env.close()
     if args.save_results:

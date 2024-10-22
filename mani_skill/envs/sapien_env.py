@@ -2,6 +2,8 @@ import copy
 import gc
 import logging
 import os
+import time
+from collections import defaultdict
 from functools import cached_property
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
@@ -273,6 +275,8 @@ class BaseEnv(gym.Env):
         physx.set_gpu_memory_config(**self.sim_config.gpu_memory_config.dict())
         sapien.render.set_log_level(os.getenv("MS_RENDERER_LOG_LEVEL", "warn"))
 
+        self.timers = defaultdict(list)
+
         # Set simulation and control frequency
         self._sim_freq = self.sim_config.sim_freq
         self._control_freq = self.sim_config.control_freq
@@ -485,7 +489,9 @@ class BaseEnv(gym.Env):
             return dict()
         elif self._obs_mode == "state":
             state_dict = self._get_obs_state_dict(info)
+            start_time = time.time()
             obs = common.flatten_state_dict(state_dict, use_torch=True, device=self.device)
+            self.timers["get_obs_state_dict"].append(time.time() - start_time)
         elif self._obs_mode == "state_dict":
             obs = self._get_obs_state_dict(info)
         elif self._obs_mode == "pointcloud":
@@ -511,7 +517,10 @@ class BaseEnv(gym.Env):
     def _get_obs_agent(self):
         """Get observations about the agent's state. By default it is proprioceptive observations which include qpos and qvel.
         Controller state is also included although most default controllers do not have any state."""
-        return self.agent.get_proprioception()
+        start_time = time.time()
+        res = self.agent.get_proprioception()
+        self.timers["get_obs_agent"].append(time.time() - start_time)
+        return res
 
     def _get_obs_extra(self, info: Dict):
         """Get task-relevant extra observations. Usually defined on a task by task basis"""
@@ -904,9 +913,15 @@ class BaseEnv(gym.Env):
         """
         action = self._step_action(action)
         self._elapsed_steps += 1
+
         info = self.get_info()
+        start_time = time.time()
+
         obs = self.get_obs(info)
+        self.timers["get_obs"].append(time.time() - start_time)
+        start_time = time.time()
         reward = self.get_reward(obs=obs, action=action, info=info)
+        self.timers["get_reward"].append(time.time() - start_time)
         if "success" in info:
 
             if "fail" in info:
@@ -918,7 +933,6 @@ class BaseEnv(gym.Env):
                 terminated = info["fail"].clone()
             else:
                 terminated = torch.zeros(self.num_envs, dtype=bool, device=self.device)
-
         return (
             obs,
             reward,
@@ -930,6 +944,8 @@ class BaseEnv(gym.Env):
     def _step_action(
         self, action: Union[None, np.ndarray, torch.Tensor, Dict]
     ) -> Union[None, torch.Tensor]:
+        start_time = time.time()
+
         set_action = False
         action_is_unbatched = False
         if action is None:  # simulation without action
@@ -972,9 +988,14 @@ class BaseEnv(gym.Env):
             self._before_simulation_step()
             self.scene.step()
             self._after_simulation_step()
+        end_time = time.time()
         self._after_control_step()
         if physx.is_gpu_enabled():
             self.scene._gpu_fetch_all()
+
+        self.timers["sim_step"].append(end_time - start_time)
+        for k, v in self.timers.items():
+            print(f"{k}: {np.mean(v)}")
         return action
 
     def evaluate(self) -> dict:
