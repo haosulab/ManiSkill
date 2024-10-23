@@ -64,7 +64,7 @@ class Window:
         # self.window_bak = xml_path_completion(window_bak, robocasa.models.assets_root)
         self.window_bak = str(ROBOCASA_ASSET_DIR / window_bak)
         self.num_windows = num_windows
-        self.pos = [0, 0, 0] if pos is None else pos
+        self.pos = np.array([0, 0, 0]) if pos is None else np.array(pos)
         tex_attrib = {"type": "2d"}
         # now do not consider passed in quat bc havent combined
         # wanted quat with the rotation applied to the window
@@ -256,7 +256,7 @@ class Window:
         Args:
             pos (list): position of the window
         """
-        self.pos = pos
+        self.pos = np.array(pos)
         # self._obj.set("pos", a2s(pos))
 
     def update_state(self, env):
@@ -393,5 +393,5 @@ class FramedWindow(Window):
             pos (list): position of the window
 
         """
-        self.pos = pos
+        self.pos = np.array(pos)
         # self._obj.set("pos", a2s(pos))

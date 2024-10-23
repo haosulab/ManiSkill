@@ -1,4 +1,5 @@
 import abc
+from enum import IntEnum
 
 import numpy as np
 import sapien
@@ -15,6 +16,35 @@ def site_pos(elem):
     else:
         out = np.array([0, 0, 0], dtype=np.float32)
     return out
+
+
+class FixtureType(IntEnum):
+    """
+    Enum for fixture types in robosuite kitchen environments.
+    """
+
+    COUNTER = 1
+    MICROWAVE = 2
+    STOVE = 3
+    SINK = 4
+    CABINET = 5
+    DRAWER = 6
+    SHELF = 7
+    COFFEE_MACHINE = 8
+    DOOR = 9
+    DOOR_HINGE = 10
+    DOOR_HINGE_SINGLE = 11
+    DOOR_HINGE_DOUBLE = 12
+    DOOR_TOP_HINGE = 13
+    DOOR_TOP_HINGE_SINGLE = 14
+    DOOR_TOP_HINGE_DOUBLE = 15
+    CABINET_TOP = 16
+    TOASTER = 17
+    DINING_COUNTER = 18
+    TOP_DRAWER = 19
+    STOOL = 20
+    ISLAND = 21
+    COUNTER_NON_CORNER = 22
 
 
 class Fixture(MujocoObject):

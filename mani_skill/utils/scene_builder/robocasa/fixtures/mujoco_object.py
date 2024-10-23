@@ -1,4 +1,3 @@
-from copy import deepcopy
 from typing import Optional
 
 import numpy as np
@@ -24,7 +23,7 @@ class MujocoObject:
         self.name = name
         self.pos = np.array([0, 0, 0])
         if pos is not None:
-            self.pos = pos
+            self.pos = np.array(pos)
         self.quat = np.array([1, 0, 0, 0])
         # load the mjcf file
         self.scene = scene
@@ -52,7 +51,7 @@ class MujocoObject:
     """Functions from RoboCasa MujocoXMLObject class"""
 
     def set_pos(self, pos):
-        self.pos = deepcopy(pos)
+        self.pos = np.array(pos)
 
     def set_euler(self, euler):
         self.quat = euler2quat(*euler)

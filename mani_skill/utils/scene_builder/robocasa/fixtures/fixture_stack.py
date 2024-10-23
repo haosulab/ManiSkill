@@ -83,7 +83,7 @@ class FixtureStack:
         width_stack, depth, height_stack = self.size
 
         if "pos" in self.config:
-            self.pos = self.config["pos"]
+            self.pos = np.array(self.config["pos"])
         else:
             self.pos = scene_utils.get_relative_position(
                 self,

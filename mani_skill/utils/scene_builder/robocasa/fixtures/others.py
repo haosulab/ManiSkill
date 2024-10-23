@@ -22,7 +22,7 @@ class Box:
     ):
         self.name = name
         self.size = np.array(size)
-        self.pos = pos
+        self.pos = np.array(pos)
         self.quat = [1, 0, 0, 0]
         self.scene = scene
         self.render_material = sapien.render.RenderMaterial()
@@ -41,7 +41,7 @@ class Box:
             self.rng = np.random.default_rng()
 
     def set_pos(self, pos):
-        self.pos = pos
+        self.pos = np.array(pos)
 
     def set_euler(self, euler):
         self.quat = euler2quat(*euler)
@@ -154,7 +154,7 @@ class Wall:
                         pos[0] += default_backing_th
         self.name = name
         self.size = size
-        self.pos = pos
+        self.pos = np.array(pos)
         self.scene = scene
 
     @property

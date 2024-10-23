@@ -15,11 +15,11 @@ from mani_skill.utils.scene_builder.robocasa.scene_builder import RoboCasaSceneB
 from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 
 
-@register_env("RoboCasaOpenSingleDoor-v1", max_episode_steps=100)
-class RoboCasaOpenSingleDoorEnv(BaseEnv):
+@register_env("RoboCasaKitchen-v1", max_episode_steps=100)
+class RoboCasaKitchenEnv(BaseEnv):
     SUPPORTED_REWARD_MODES = ["none"]
     """
-    This is just a dummy environment for showcasing robots in a empty scene
+    This is a scene sampled from the RoboCasa dataset that you can explore and take random actions in. No rewards/success metrics are defined.
     """
 
     def __init__(self, *args, robot_uids="fetch", **kwargs):
@@ -31,6 +31,7 @@ class RoboCasaOpenSingleDoorEnv(BaseEnv):
 
     @property
     def _default_sensor_configs(self):
+        # TODO (fix cameras to be where robocasa places them)
         pose = sapien_utils.look_at([1.25, -1.25, 1.5], [0.0, 0.0, 0.2])
         return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
@@ -41,7 +42,10 @@ class RoboCasaOpenSingleDoorEnv(BaseEnv):
 
     def _load_scene(self, options: dict):
         self.scene_builder = RoboCasaSceneBuilder(self)
-        self.scene_builder.build()
+        data = self.scene_builder.build()
+        self.fixtures = data["fixtures"]
+        # self.actors = data["actors"]
+        self.fixture_configs = data["fixture_configs"]
         # self.ground = build_ground(self.scene)
         # self.ground.set_collision_group_bit(
         #     group=2, bit_idx=FETCH_WHEELS_COLLISION_BIT, bit=1

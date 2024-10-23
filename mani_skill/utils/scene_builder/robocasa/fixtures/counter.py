@@ -629,30 +629,46 @@ class Counter(Fixture):
         Returns:
             dict: dictionary of reset regions
         """
-        all_geoms = []
-        for (k, v) in self._get_counter_geoms().items():
-            # only reset on top geoms
-            if not k.startswith("top"):
+        all_records = []
+        for visual_record in self.actor_builder.visual_records:
+            if not visual_record.name.replace(self.name + "_", "").startswith("top"):
                 continue
-            geom = v[-1]
-            top_pos = s2a(geom.get("pos"))
-            this_top_size = s2a(geom.get("size")) * 2
-            # make sure region is sufficiently large
+            top_pos = visual_record.pose.p
+            this_top_size = visual_record.scale * 2
             if this_top_size[0] >= top_size[0] and this_top_size[1] >= top_size[1]:
-                all_geoms.append(geom)
+                all_records.append(visual_record)
+        # all_geoms = []
+        # for (k, v) in self._get_counter_geoms().items():
+        #     # only reset on top geoms
+        #     if not k.startswith("top"):
+        #         continue
+        #     geom = v[-1]
+        #     top_pos = s2a(geom.get("pos"))
+        #     this_top_size = s2a(geom.get("size")) * 2
+        #     # make sure region is sufficiently large
+        #     if this_top_size[0] >= top_size[0] and this_top_size[1] >= top_size[1]:
+        #         all_geoms.append(geom)
 
         reset_regions = {}
 
         if ref is None:
             geom_i = 0
-            for g in all_geoms:
-                top_pos = s2a(g.get("pos"))
-                top_half_size = s2a(g.get("size"))
+            for record in all_records:
+                top_pos = record.pose.p
+                top_half_size = record.scale
                 offset = (top_pos[0], top_pos[1], self.size[2] / 2)
                 size = (top_half_size[0] * 2, top_half_size[1] * 2)
                 reset_regions[f"geom_{geom_i}"] = dict(size=size, offset=offset)
                 geom_i += 1
+            # for g in all_geoms:
+            #     top_pos = s2a(g.get("pos"))
+            #     top_half_size = s2a(g.get("size"))
+            #     offset = (top_pos[0], top_pos[1], self.size[2] / 2)
+            #     size = (top_half_size[0] * 2, top_half_size[1] * 2)
+            #     reset_regions[f"geom_{geom_i}"] = dict(size=size, offset=offset)
+            #     geom_i += 1
         else:
+            # TODO (stao): add this?
             ref_fixture = env.get_fixture(ref)
 
             ### find an appropriate geom to sample ###
