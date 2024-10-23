@@ -96,7 +96,7 @@ FIXTURES_INTERIOR = dict(
 ALL_SIDES = ["left", "right", "front", "back", "bottom", "top"]
 
 ROBOT_FRONT_FACING_SIZE = dict(
-    fetch=0.7,
+    fetch=0.8,
 )
 
 
