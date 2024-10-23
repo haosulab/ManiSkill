@@ -811,7 +811,6 @@ class OpenCabinet(Cabinet):
             self.actor_builder.visual_records.append(
                 shelf.actor_builder.visual_records[0]
             )
-            # import ipdb; ipdb.set_trace()
 
             # merge shelves
             # self.merge_assets(shelf)

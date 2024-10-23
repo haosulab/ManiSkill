@@ -4,7 +4,7 @@ from enum import IntEnum
 import numpy as np
 import sapien
 import sapien.physx as physx
-from transforms3d.euler import quat2euler
+from transforms3d.euler import euler2mat, quat2euler, quat2mat
 
 from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.utils.scene_builder.robocasa.fixtures.mujoco_object import MujocoObject
@@ -362,10 +362,9 @@ class Fixture(MujocoObject):
         if trans is None:
             trans = self.pos
         if rot is not None:
-            rot = T.quat2mat(rot)
+            rot = quat2mat(rot)
         else:
-            rot = np.array([0, 0, self.rot])
-            rot = T.euler2mat(rot)
+            rot = euler2mat(0, 0, self.rot)
 
         points = [(np.matmul(rot, p) + trans) for p in bbox_offsets]
         return points

@@ -1,6 +1,8 @@
 import numpy as np
 from transforms3d.euler import euler2mat
 
+from mani_skill.utils.scene_builder.robocasa.fixtures.fixture import Fixture
+
 
 def get_rel_transform(fixture_A, fixture_B):
     """
@@ -55,9 +57,8 @@ def obj_in_region(
     check if object is in the region defined by the points.
     Uses either the objects bounding box or the object's horizontal radius
     """
-    from robocasa.models.fixtures import Fixture
 
-    if isinstance(obj, MJCFObject) or isinstance(obj, Fixture):
+    if isinstance(obj, Fixture):
         obj_points = obj.get_bbox_points(trans=obj_pos, rot=obj_quat)
     else:
         radius = obj.horizontal_radius

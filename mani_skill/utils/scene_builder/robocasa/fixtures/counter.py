@@ -139,7 +139,6 @@ class Counter(Fixture):
         # return
         self.top_texture = str(ROBOCASA_ASSET_DIR / top_texture)
         self.base_texture = str(ROBOCASA_ASSET_DIR / base_texture)
-        # import ipdb;ipdb.set_trace()
         # # set top texture and materials
         # texture = find_elements(
         #     self.root, tags="texture", attribs={"name": "tex_top_2d"}, return_first=True
@@ -406,7 +405,6 @@ class Counter(Fixture):
 
         # break the top width into chunks
         # chunk_positions, chunk_sizes = self._get_chunks(pos, size, chunk_size=0.5)
-        # import ipdb;ipdb.set_trace()
         # for i in range(len(chunk_sizes)):
         #     g = new_geom(
         #         name=geom_name + "_{}".format(i),
@@ -724,18 +722,3 @@ class Counter(Fixture):
                 reset_regions[f"geom_{geom_i}"] = dict(size=size, offset=offset)
                 geom_i += 1
         return reset_regions
-
-    # def build(self):
-    #     # builder = scene.create_actor_builder()
-    #     return self.actor_builder.build_static(name=self.name)
-    #     assert len(actor_builder.visual_records) == 4
-    #     for record in actor_builder.visual_records:
-    #         record.name
-    #     import ipdb
-
-    #     ipdb.set_trace()
-    #     return actor_builders[0].build_static(name=self.name)
-    #     # builder.add_box_visual(half_size=self.size, material=self.render_material)
-    #     # builder.add_box_collision(half_size=self.size)
-    #     # builder.initial_pose = sapien.Pose(self.pos, self.get_quat())
-    #     # return builder.build_static(name=self.name)

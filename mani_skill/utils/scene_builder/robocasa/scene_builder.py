@@ -395,10 +395,8 @@ class RoboCasaSceneBuilder(SceneBuilder):
         self.fxtr_placements = fxtr_placements
         # Loop through all objects and reset their positions
         for obj_pos, obj_quat, obj in fxtr_placements.values():
-            # import ipdb;ipdb.set_trace()
             assert isinstance(obj, Fixture)
             obj.actor.set_pose(sapien.Pose(p=obj_pos, q=obj_quat))
-            # obj.set_pos(obj_pos)
 
             # hacky code to set orientation
             # obj.set_euler(T.mat2euler(T.quat2mat(T.convert_quat(obj_quat, "xyzw"))))
@@ -445,7 +443,6 @@ class RoboCasaSceneBuilder(SceneBuilder):
         #         fixture = self.fixtures[fixture_config["name"]]
         #         placement = fixture_config["placement"]
         #         fixture_id = placement.get("fixture", None)
-        #         # import ipdb;ipdb.set_trace()
         #         if fixture_id is not None:
         #             actor = self.actors[fixture_id]
         #             actor.set_pose(sapien.Pose(p=placement["pos"]))

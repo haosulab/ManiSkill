@@ -187,3 +187,41 @@ class MujocoObject:
             #             raise ValueError
             #         s_size = array_to_string(s_size_np)
             #         elem.set("size", s_size)
+
+    def get_bbox_points(self, trans=None, rot=None):
+        """
+        Get the full 8 bounding box points of the object
+        rot: a rotation matrix
+        """
+        bbox_offsets = []
+
+        bottom_offset = self.bottom_offset
+        top_offset = self.top_offset
+        horizontal_radius_site = self.worldbody.find(
+            "./body/site[@name='{}horizontal_radius_site']".format(self.naming_prefix)
+        )
+        horiz_radius = string_to_array(horizontal_radius_site.get("pos"))[:2]
+
+        center = np.mean([bottom_offset, top_offset], axis=0)
+        half_size = [horiz_radius[0], horiz_radius[1], top_offset[2] - center[2]]
+
+        bbox_offsets = [
+            center + half_size * np.array([-1, -1, -1]),  # p0
+            center + half_size * np.array([1, -1, -1]),  # px
+            center + half_size * np.array([-1, 1, -1]),  # py
+            center + half_size * np.array([-1, -1, 1]),  # pz
+            center + half_size * np.array([1, 1, 1]),
+            center + half_size * np.array([-1, 1, 1]),
+            center + half_size * np.array([1, -1, 1]),
+            center + half_size * np.array([1, 1, -1]),
+        ]
+
+        if trans is None:
+            trans = np.array([0, 0, 0])
+        if rot is not None:
+            rot = T.quat2mat(rot)
+        else:
+            rot = np.eye(3)
+
+        points = [(np.matmul(rot, p) + trans) for p in bbox_offsets]
+        return points

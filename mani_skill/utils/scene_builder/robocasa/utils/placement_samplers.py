@@ -13,8 +13,10 @@ import numpy as np
 #     rotate_2d_point,
 # )
 from transforms3d.euler import euler2quat
+from transforms3d.quaternions import qmult
 
 from mani_skill.utils.scene_builder.robocasa.fixtures.mujoco_object import MujocoObject
+from mani_skill.utils.scene_builder.robocasa.utils.object_utils import obj_in_region
 
 
 # from robocasa.utils.object_utils import obj_in_region, objs_intersect
@@ -349,6 +351,7 @@ class UniformRandomSampler(ObjectPositionSampler):
             # ref_quat = convert_quat(
             #     mat2quat(euler2mat([0, 0, self.reference_rot])), to="wxyz"
             # )
+            ref_quat = euler2quat(0, 0, self.reference_rot)
 
             ### get boundary points ###
             region_points = np.array(
@@ -381,8 +384,9 @@ class UniformRandomSampler(ObjectPositionSampler):
 
                 # random rotation
                 quat = self._sample_quat()
-                # TODO (stao): randomize quats
-                # multiply this quat by the object's initial rotation if it has the attribute specified
+                quat = qmult(ref_quat, quat)
+
+                # note (stao): what is init_quat? we might not need it
                 # if hasattr(obj, "init_quat"):
                 #     quat = quat_multiply(obj.init_quat, quat)
                 # quat = convert_quat(
@@ -392,22 +396,22 @@ class UniformRandomSampler(ObjectPositionSampler):
                 #     ),
                 #     to="wxyz",
                 # )
-                # import ipdb;ipdb.set_trace()
 
                 location_valid = True
 
                 # ensure object placed fully in region
-                # if self.ensure_object_boundary_in_range and not obj_in_region(
-                #     obj,
-                #     obj_pos=[object_x, object_y, object_z],
-                #     obj_quat=convert_quat(quat, to="xyzw"),
-                #     p0=region_points[0],
-                #     px=region_points[1],
-                #     py=region_points[2],
-                # ):
-                #     location_valid = False
-                #     continue
+                if self.ensure_object_boundary_in_range and not obj_in_region(
+                    obj,
+                    obj_pos=[object_x, object_y, object_z],
+                    obj_quat=quat,
+                    p0=region_points[0],
+                    px=region_points[1],
+                    py=region_points[2],
+                ):
+                    location_valid = False
+                    continue
 
+                # TODO (stao): ensure no overlap
                 # objects cannot overlap
                 # if self.ensure_valid_placement:
                 #     for (x, y, z), other_quat, other_obj in placed_objects.values():

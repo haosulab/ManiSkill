@@ -521,38 +521,6 @@ class FullWindowedCabinetPanel(CabinetPanel):
         self.material_overrides["door"] = self.loader._materials["transparent_material"]
         ShakerCabinetPanel._create_panel(self)
 
-    # def _set_texture(self):
-    #     # TODO (stao): add opacity and fix for ray traced
-    #     # super()._set_texture()
-    #     if self.texture is None:
-    #         return
-    #     self.texture = str(ROBOCASA_ASSET_DIR / self.texture)
-    #     for visual_record in self.actor_builder.visual_records:
-    #         if visual_record.name.replace(self.name + "_", "") in self.geom_names:
-    #             import ipdb;ipdb.set_trace()
-    #             if visual_record.material.base_color_texture is not None:
-    #                 visual_record.material.base_color_texture = (
-    #                     sapien.render.RenderTexture2D(
-    #                     filename=self.texture,
-    #                         mipmap_levels=1,
-    #                     )
-    #                 )
-    #             # visual_record.material.base_color_texture = None
-    #             visual_record.material.base_color = [1, 1, 1, self.opacity]
-    #             # visual_record.material.transmission = 0.2
-
-    # def _set_opacity(self):
-    #     """
-    #     Set the opacity of the window.
-    #     """
-    #     transparent_mat = find_elements(
-    #         self.root,
-    #         tags="material",
-    #         attribs={"name": f"{self.name}_transparent_material"},
-    #         return_first=True,
-    #     )
-    #     transparent_mat.set("rgba", f"1 1 1 {self.opacity}")
-
 
 class CabinetShelf(MujocoObject):
     """
