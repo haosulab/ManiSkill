@@ -209,8 +209,8 @@ class BaseEnv(gym.Env):
         if isinstance(robot_uids, tuple) and len(robot_uids) == 1:
             self.robot_uids = robot_uids[0]
         if self.SUPPORTED_ROBOTS is not None:
-            if robot_uids not in self.SUPPORTED_ROBOTS:
-                logger.warn(f"{robot_uids} is not in the task's list of supported robots. Code may not run as intended")
+            if self.robot_uids not in self.SUPPORTED_ROBOTS:
+                logger.warn(f"{self.robot_uids} is not in the task's list of supported robots. Code may not run as intended")
 
         if physx.is_gpu_enabled() and num_envs == 1 and (sim_backend == "auto" or sim_backend == "cpu"):
             logger.warn("GPU simulation has already been enabled on this process, switching to GPU backend")

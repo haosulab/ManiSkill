@@ -474,7 +474,6 @@ class DividedWindowCabinetPanel(CabinetPanel):
         }
 
         # geoms = self._get_components()
-        self.material_overrides["door"] = self.loader._materials["transparent_material"]
         self.set_geom_dimensions(sizes, positions, rotated=True)
 
 
