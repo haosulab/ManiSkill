@@ -38,13 +38,13 @@ class PullCubeToolEnv(BaseEnv):
     agent: Union[Panda, Fetch]
 
     goal_radius = 0.1
-    cube_half_size = 0.02
-    handle_length = 0.15
+    cube_half_size = 0.01
+    handle_length = 0.20
     hook_length = 0.05
     width = 0.02
     height = 0.02
-    cube_size = 0.04
-    arm_reach = 0.85
+    cube_size = 0.02
+    arm_reach = 0.35
 
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
         self.robot_init_qpos_noise = robot_init_qpos_noise
@@ -110,7 +110,7 @@ class PullCubeToolEnv(BaseEnv):
         )
         builder.add_box_visual(
             sapien.Pose([handle_length - hook_length / 2, width, 0]),
-            [hook_length / 2, width / 2, height / 2],
+            [hook_length / 2, width, height / 2],
             material=mat,
         )
 
@@ -144,7 +144,7 @@ class PullCubeToolEnv(BaseEnv):
             self.scene_builder.initialize(env_idx)
 
             tool_xyz = torch.zeros((b, 3), device=self.device)
-            tool_xyz[..., :2] = torch.rand((b, 2), device=self.device) * 0.2 - 0.1
+            tool_xyz[..., :2] = - torch.rand((b, 2), device=self.device) * 0.2 - 0.1
             tool_xyz[..., 2] = self.height / 2
             tool_q = torch.tensor([1, 0, 0, 0], device=self.device).expand(b, 4)
 
@@ -153,9 +153,9 @@ class PullCubeToolEnv(BaseEnv):
 
             cube_xyz = torch.zeros((b, 3), device=self.device)
             cube_xyz[..., 0] = self.arm_reach + torch.rand(b, device=self.device) * (
-                self.handle_length - 0.08
-            )
-            cube_xyz[..., 1] = torch.rand(b, device=self.device) * 0.4 - 0.2
+                self.handle_length
+            ) - 0.15
+            cube_xyz[..., 1] = torch.rand(b, device=self.device) * 0.5 - 0.25
             cube_xyz[..., 2] = self.cube_size / 2
 
             cube_q = randomization.random_quaternions(
