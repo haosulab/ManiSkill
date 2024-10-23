@@ -106,12 +106,13 @@ class Cabinet(Fixture):
 
         # place and size each component
         self.geoms = None
+        self.open_top = open_top
         self._create_cab()
 
-        # remove top geom if necessary
-        if self.geoms is not None and "top" in self.geoms and open_top:
-            for elem in self.geoms["top"]:
-                self._remove_element(elem)
+        # # remove top geom if necessary
+        # if self.geoms is not None and "top" in self.geoms and open_top:
+        #     for elem in self.geoms["top"]:
+        #         self._remove_element(elem)
 
         self._set_texture()
 
@@ -372,11 +373,12 @@ class SingleCabinet(Cabinet):
             "right": [x - th, th, 0],
             "shelf": [0, 0.05 - th, 0],
         }
-
         # set_geom_dimensions(sizes, positions, self.geoms, rotated=True)
         for i, ((part_name, size), (_, position)) in enumerate(
             zip(sizes.items(), positions.items())
         ):
+            if self.open_top and part_name == "top":
+                continue
             col_record = self.articulation_builder.link_builders[1].collision_records[i]
             col_record.scale = size
             col_record.pose = sapien.Pose(p=position, q=col_record.pose.q)
@@ -386,7 +388,8 @@ class SingleCabinet(Cabinet):
                 half_size=size,
                 material=self.loader._materials["mat"],
             )
-
+        if self.open_top:
+            self.articulation_builder.link_builders[1].collision_records.pop(0)
         # cabinet door bodies and joints
         joint_record = self.articulation_builder.link_builders[2].joint_record
         # set joint position
@@ -610,6 +613,8 @@ class HingeCabinet(Cabinet):
         for i, ((part_name, size), (_, position)) in enumerate(
             zip(sizes.items(), positions.items())
         ):
+            if self.open_top and part_name == "top":
+                continue
             col_record = self.articulation_builder.link_builders[1].collision_records[i]
             col_record.scale = size
             col_record.pose = sapien.Pose(p=position, q=col_record.pose.q)
@@ -619,6 +624,8 @@ class HingeCabinet(Cabinet):
                 half_size=size,
                 material=self.loader._materials["mat"],
             )
+        if self.open_top:
+            self.articulation_builder.link_builders[1].collision_records.pop(0)
         # add doors
         door_x_positions = {"left": -x / 2, "right": x / 2}
         handle_vpos = self.panel_config.get("handle_vpos", "bottom")
@@ -949,6 +956,8 @@ class Drawer(Cabinet):
         for i, ((part_name, size), (_, position)) in enumerate(
             zip(sizes.items(), positions.items())
         ):
+            if self.open_top and part_name == "top":
+                continue
             # drawer is a bit weird since the referenced shapes are in one of 2 link builders
             if "inner" in part_name:
                 link_builder = self.articulation_builder.link_builders[2]
@@ -965,6 +974,8 @@ class Drawer(Cabinet):
                 half_size=size,
                 material=self.loader._materials["mat"],
             )
+        if self.open_top:
+            self.articulation_builder.link_builders[1].collision_records.pop(0)
 
         # door body and joints
         # bodies["inner_box"].set("pos", a2s([0, 0, 0]))
