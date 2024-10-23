@@ -1,4 +1,45 @@
 import numpy as np
+from transforms3d.euler import euler2mat
+
+
+def get_rel_transform(fixture_A, fixture_B):
+    """
+    Gets fixture_B's position and rotation relative to fixture_A's frame
+    """
+    A_trans = np.array(fixture_A.pos)
+    B_trans = np.array(fixture_B.pos)
+
+    # A_rot = np.array([0, 0, fixture_A.rot])
+    # B_rot = np.array([0, 0, fixture_B.rot])
+
+    A_mat = euler2mat(0, 0, fixture_A.rot)
+    B_mat = euler2mat(0, 0, fixture_B.rot)
+
+    T_WA = np.vstack((np.hstack((A_mat, A_trans[:, None])), [0, 0, 0, 1]))
+    T_WB = np.vstack((np.hstack((B_mat, B_trans[:, None])), [0, 0, 0, 1]))
+
+    T_AB = np.matmul(np.linalg.inv(T_WA), T_WB)
+
+    return T_AB[:3, 3], T_AB[:3, :3]
+
+
+def get_fixture_to_point_rel_offset(fixture, point):
+    """
+    get offset relative to fixture's frame, given a global point
+    """
+    global_offset = point - fixture.pos
+    T_WF = euler2mat(0, 0, fixture.rot)
+    rel_offset = np.matmul(np.linalg.inv(T_WF), global_offset)
+    return rel_offset
+
+
+def get_pos_after_rel_offset(fixture, offset):
+    """
+    get global position of a fixture, after applying offset relative to center of fixture
+    """
+    fixture_mat = euler2mat(0, 0, fixture.rot)
+
+    return fixture.pos + np.dot(fixture_mat, offset)
 
 
 def obj_in_region(

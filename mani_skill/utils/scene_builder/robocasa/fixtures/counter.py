@@ -6,6 +6,11 @@ import sapien
 
 from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.utils.scene_builder.robocasa.fixtures.fixture import Fixture
+from mani_skill.utils.scene_builder.robocasa.utils.object_utils import (
+    get_fixture_to_point_rel_offset,
+    get_pos_after_rel_offset,
+    get_rel_transform,
+)
 from mani_skill.utils.scene_builder.robocasa.utils.scene_utils import ROBOCASA_ASSET_DIR
 
 SIDES = ["left", "right", "front", "back"]
@@ -673,37 +678,37 @@ class Counter(Fixture):
             ### find an appropriate geom to sample ###
             fixture_to_geom_offsets = []
             for g in all_records:
-                g_pos = get_pos_after_rel_offset(self, s2a(g.get("pos")))
+                g_pos = get_pos_after_rel_offset(self, g.pose.p)
                 rel_offset = get_fixture_to_point_rel_offset(ref_fixture, g_pos)
                 fixture_to_geom_offsets.append(rel_offset)
 
-            valid_geoms = []
+            valid_records = []
 
             if loc == "nn":
                 dists = [np.linalg.norm(offset) for offset in fixture_to_geom_offsets]
-                chosen_top = all_geoms[np.argmin(dists)]
-                valid_geoms.append(chosen_top)
+                chosen_top = all_records[np.argmin(dists)]
+                valid_records.append(chosen_top)
             elif loc == "right":
-                for offset, g in zip(fixture_to_geom_offsets, all_geoms):
+                for offset, g in zip(fixture_to_geom_offsets, all_records):
                     if offset[0] > 0.30:
-                        valid_geoms.append(g)
+                        valid_records.append(g)
             elif loc == "left":
-                for offset, g in zip(fixture_to_geom_offsets, all_geoms):
+                for offset, g in zip(fixture_to_geom_offsets, all_records):
                     if offset[0] < -0.30:
-                        valid_geoms.append(g)
+                        valid_records.append(g)
             elif loc == "left_right":
-                for offset, g in zip(fixture_to_geom_offsets, all_geoms):
+                for offset, g in zip(fixture_to_geom_offsets, all_records):
                     if np.abs(offset[0]) > 0.30:
-                        valid_geoms.append(g)
+                        valid_records.append(g)
             elif loc == "any":
-                valid_geoms = all_geoms
+                valid_records = all_records
             else:
                 raise ValueError
 
             geom_i = 0
-            for g in valid_geoms:
-                top_pos = s2a(g.get("pos"))
-                top_half_size = s2a(g.get("size"))
+            for g in valid_records:
+                top_pos = g.pose.p
+                top_half_size = g.scale
                 offset = [top_pos[0], top_pos[1], self.size[2] / 2]
                 size = [top_half_size[0] * 2, top_half_size[1] * 2]
 

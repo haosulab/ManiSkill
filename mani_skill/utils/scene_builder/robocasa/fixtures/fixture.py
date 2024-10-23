@@ -53,7 +53,6 @@ class Fixture(MujocoObject):
         rng=None,
     ):
         self.naming_prefix = ""  # not sure what this is
-        self.rot = 0  # ??
         super().__init__(scene, xml, name, pos=pos, scale=scale)
         if pos is not None:
             self.set_pos(pos)

@@ -2,7 +2,7 @@ from typing import Optional
 
 import numpy as np
 import sapien
-from transforms3d.euler import euler2quat
+from transforms3d.euler import euler2quat, quat2euler
 
 from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.utils.scene_builder.robocasa.utils.scene_utils import ROBOCASA_ASSET_DIR
@@ -93,6 +93,11 @@ class MujocoObject:
             self.set_scale(scale)
 
     """Functions from RoboCasa MujocoXMLObject class"""
+
+    @property
+    def rot(self):
+        rot = quat2euler(self.quat)
+        return rot[2]
 
     def set_pos(self, pos):
         self.pos = np.array(pos)
