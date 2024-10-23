@@ -1,33 +1,26 @@
 from typing import Any, Dict, Union
-
 import numpy as np
 import torch
-import torch.random
-from transforms3d.euler import euler2quat
-
+import sapien
 from mani_skill.agents.robots import Fetch, Panda
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.utils import randomization
 from mani_skill.sensors.camera import CameraConfig
-from mani_skill.utils import common, sapien_utils
+from mani_skill.utils import sapien_utils
 from mani_skill.utils.building import actors
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs import Pose
-from mani_skill.utils.structs.types import Array, GPUMemoryConfig, SimConfig
+from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 
 
-import sapien
-
-
-@register_env(uid="PullCubeTool-v1", max_episode_steps=100)
+@register_env("PullCubeTool-v1", max_episode_steps=100)
 class PullCubeToolEnv(BaseEnv):
     """
     Task Description
     -----------------
     Given an L-shaped tool that is within the reach of the robot, leverage the
     tool to pull a cube that is out of it's reach
-
 
     Randomizations
     ---------------
@@ -40,27 +33,23 @@ class PullCubeToolEnv(BaseEnv):
     - The cube's xy position is within the goal region of the arm's base (marked by reachability)
     """
 
-    print("PullCubeTool-v1 registered")
     SUPPORTED_ROBOTS = ["panda", "fetch"]
     SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "sparse", "none")
+    agent: Union[Panda, Fetch]
 
     goal_radius = 0.1
     cube_half_size = 0.02
+    handle_length = 0.15
+    hook_length = 0.05
+    width = 0.02
+    height = 0.02
+    cube_size = 0.04
+    arm_reach = 0.85
 
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
-        # Initialize tool dimensions before super().__init__()
-        self.handle_length = 0.15
-        self.hook_length = 0.05
-        self.width = 0.02
-        self.height = 0.02
-        self.cube_size = 0.04
-        self.arm_reach = 0.85  # for setting boundary conditions of spawn
-
-        # defaulting to use panda arm
         self.robot_init_qpos_noise = robot_init_qpos_noise
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
-    # Specify default simulation/gpu memory configurations to override any default values
     @property
     def _default_sim_config(self):
         return SimConfig(
@@ -71,8 +60,6 @@ class PullCubeToolEnv(BaseEnv):
 
     @property
     def _default_sensor_configs(self):
-        # to register a 128x128 camera looking at the robot, cube and target
-        # set the camera's "eye"to be at 0.3,0,05 and the target pose as target
         pose = sapien_utils.look_at(eye=[0.3, 0, 0.5], target=[-0.1, 0, 0.1])
         return [
             CameraConfig(
@@ -88,34 +75,35 @@ class PullCubeToolEnv(BaseEnv):
 
     @property
     def _default_human_render_camera_configs(self):
-        # registers a more high-definition (512x512) camera used just for rendering
-        # when render_mode="rgb_array" or calling env.render_rgb_array()
         pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
-        return CameraConfig(
-            "render_camera", pose=pose, width=512, height=512, fov=1, near=0.01, far=100
-        )
+        return [
+            CameraConfig(
+                "render_camera",
+                pose=pose,
+                width=512,
+                height=512,
+                fov=1,
+                near=0.01,
+                far=100,
+            )
+        ]
 
     def _build_l_shaped_tool(self, handle_length, hook_length, width, height):
         builder = self.scene.create_actor_builder()
 
-        # Define material for the tool
         mat = sapien.render.RenderMaterial()
         mat.set_base_color([0.5, 0.5, 0.5, 1])
-        mat.metallic = 0.0
-        mat.roughness = 0.1
+        mat.metallic = 1.0
+        mat.roughness = 0.0
+        mat.specular = 1.0
 
-        # Add visual and collision shapes for the long part of the L
-        builder.add_box_collision(
-            sapien.Pose([handle_length / 2, 0, 0]),
-            [handle_length / 2, width / 2, height / 2],
-        )
+        builder.add_box_collision(sapien.Pose([handle_length / 2, 0, 0]),[handle_length / 2, width / 2, height / 2])
         builder.add_box_visual(
             sapien.Pose([handle_length / 2, 0, 0]),
             [handle_length / 2, width / 2, height / 2],
             material=mat,
         )
 
-        # Add visual and collision shapes for the short part of the L
         builder.add_box_collision(
             sapien.Pose([handle_length - hook_length / 2, width, 0]),
             [hook_length / 2, width / 2, height / 2],
@@ -134,7 +122,6 @@ class PullCubeToolEnv(BaseEnv):
         )
         self.scene_builder.build()
 
-        # Create the cube
         self.cube = actors.build_cube(
             self.scene,
             half_size=self.cube_half_size,
@@ -143,7 +130,6 @@ class PullCubeToolEnv(BaseEnv):
             body_type="dynamic",
         )
 
-        # Create the L-shaped tool
         self.l_shape_tool = self._build_l_shaped_tool(
             handle_length=self.handle_length,
             hook_length=self.hook_length,
@@ -151,41 +137,26 @@ class PullCubeToolEnv(BaseEnv):
             height=self.height,
         )
 
-        # Create initial poses using device tensors
-        init_tool_pos = torch.tensor([-0.1, -0.1, self.cube_half_size + self.height], 
-                                   device=self.device, dtype=torch.float32)
-        init_tool_quat = torch.tensor([1.0, 0.0, 0.0, 0.0], 
-                                    device=self.device, dtype=torch.float32)
-        
-        # Set the initial pose using Pose.create_from_pq
-        tool_pose = Pose.create_from_pq(p=init_tool_pos.unsqueeze(0), 
-                                      q=init_tool_quat.unsqueeze(0))
-        self.l_shape_tool.set_pose(tool_pose)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
             b = len(env_idx)
             self.scene_builder.initialize(env_idx)
 
-            # Initialize the tool
             tool_xyz = torch.zeros((b, 3), device=self.device)
-            tool_xyz[..., :2] = (
-                torch.rand((b, 2), device=self.device) * 0.2 - 0.1
-            )  # spawn tool in region where x,y in [-0.1, 0.1]
-            tool_xyz[..., 2] = self.height / 2  # place tool on table
-            tool_q = torch.tensor([1, 0, 0, 0], device=self.device).expand(b, 4)  # no rotation
+            tool_xyz[..., :2] = torch.rand((b, 2), device=self.device) * 0.2 - 0.1
+            tool_xyz[..., 2] = self.height / 2
+            tool_q = torch.tensor([1, 0, 0, 0], device=self.device).expand(b, 4)
 
             tool_pose = Pose.create_from_pq(p=tool_xyz, q=tool_q)
             self.l_shape_tool.set_pose(tool_pose)
 
-            # Initialize the cube a bit away from the base of the arm
             cube_xyz = torch.zeros((b, 3), device=self.device)
             cube_xyz[..., 0] = self.arm_reach + torch.rand(b, device=self.device) * (
                 self.handle_length - 0.08
             )
-            # Just outside arm's reach
-            cube_xyz[..., 1] = torch.rand(b, device=self.device) * 0.4 - 0.2  # Random y position
-            cube_xyz[..., 2] = self.cube_size / 2  # Place on the table
+            cube_xyz[..., 1] = torch.rand(b, device=self.device) * 0.4 - 0.2
+            cube_xyz[..., 2] = self.cube_size / 2
 
             cube_q = randomization.random_quaternions(
                 b,
@@ -193,32 +164,28 @@ class PullCubeToolEnv(BaseEnv):
                 lock_y=True,
                 lock_z=False,
                 bounds=(-np.pi / 6, np.pi / 6),
+                device=self.device,
             )
 
             cube_pose = Pose.create_from_pq(p=cube_xyz, q=cube_q)
             self.cube.set_pose(cube_pose)
 
     def _get_obs_extra(self, info: Dict):
-
         obs = dict(
-                tcp_pose=self.agent.tcp.pose.raw_pose,
+            tcp_pose=self.agent.tcp.pose.raw_pose,
+            cube_pose=self.cube.pose.raw_pose,
+            tool_pose=self.l_shape_tool.pose.raw_pose,
+        )
+
+        if self._obs_mode in ["state", "state_dict"]:
+            obs.update(
                 cube_pose=self.cube.pose.raw_pose,
                 tool_pose=self.l_shape_tool.pose.raw_pose,
             )
 
-        if self._obs_mode in ["state", "state_dict"]:
-            # if the observation mode is state/state_dict, we provide ground truth information about where the cube is.
-            # for visual observation modes one should rely on the sensed visual data to determine where the cube is
-                obs.update(
-                    cube_pose=self.cube.pose.raw_pose,
-                    tool_pose=self.l_shape_tool.pose.raw_pose,
-                )
-            
-
         return obs
 
     def evaluate(self):
-
         tcp_pos = self.agent.tcp.pose.p
         cube_pos = self.cube.pose.p
 
@@ -234,27 +201,21 @@ class PullCubeToolEnv(BaseEnv):
         }
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-
         tcp_pos = self.agent.tcp.pose.p
         cube_pos = self.cube.pose.p
         tool_pos = self.l_shape_tool.pose.p
 
-        # Reward for reaching the tool
         tcp_to_tool_dist = torch.linalg.norm(tcp_pos - tool_pos, dim=1)
         reaching_tool_reward = 1 - torch.tanh(5.0 * tcp_to_tool_dist)
 
-        # Reward for moving the tool towards the cube
         tool_to_cube_dist = torch.linalg.norm(tool_pos - cube_pos, dim=1)
         tool_cube_reward = 1 - torch.tanh(5.0 * tool_to_cube_dist)
 
-        # Reward for bringing the cube closer to the robot
         tcp_to_cube_dist = torch.linalg.norm(tcp_pos - cube_pos, dim=1)
         cube_close_reward = 1 - torch.tanh(5.0 * tcp_to_cube_dist)
 
-        # Success reward
         success_reward = info["success"].float() * 10
 
-        # Combine rewards
         reward = (
             reaching_tool_reward + tool_cube_reward + cube_close_reward + success_reward
         )
@@ -264,5 +225,5 @@ class PullCubeToolEnv(BaseEnv):
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        max_reward = 13.0  # 10 + 1 + 1 + 1
+        max_reward = 13.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
