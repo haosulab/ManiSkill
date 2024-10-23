@@ -376,6 +376,11 @@ class Counter(Fixture):
             pose=sapien.Pose(pos),
             material=self.loader._materials["counter_top"],
         )
+        self.actor_builder.add_box_collision(
+            half_size=half_size,
+            pose=sapien.Pose(pos),
+            density=10,
+        )
         # self.actor_builder.add_box_collision(name=self.name + "_top", half_size=half_size, pose=sapien.Pose(pos), density=10)
         # geom_name = self._name + "_top"
         # g_vis = new_geom(

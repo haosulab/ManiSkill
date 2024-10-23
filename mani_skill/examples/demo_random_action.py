@@ -72,6 +72,7 @@ def main(args: Args):
         viewer_camera_configs=dict(shader_pack=args.shader),
         num_envs=args.num_envs,
         sim_backend=args.sim_backend,
+        enable_shadow=True,
         parallel_in_single_scene=parallel_in_single_scene,
         # **args.env_kwargs
     )
