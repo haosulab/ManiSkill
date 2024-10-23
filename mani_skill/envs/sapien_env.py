@@ -206,6 +206,8 @@ class BaseEnv(gym.Env):
         self._custom_viewer_camera_configs = viewer_camera_configs
         self._parallel_in_single_scene = parallel_in_single_scene
         self.robot_uids = robot_uids
+        if isinstance(robot_uids, tuple) and len(robot_uids) == 1:
+            self.robot_uids = robot_uids[0]
         if self.SUPPORTED_ROBOTS is not None:
             if robot_uids not in self.SUPPORTED_ROBOTS:
                 logger.warn(f"{robot_uids} is not in the task's list of supported robots. Code may not run as intended")
@@ -380,7 +382,7 @@ class BaseEnv(gym.Env):
     def _load_agent(self, options: dict):
         agents = []
         robot_uids = self.robot_uids
-        if robot_uids == "":
+        if robot_uids == "none" or robot_uids == ("none", ):
             self.agent = None
             return
         if robot_uids is not None:

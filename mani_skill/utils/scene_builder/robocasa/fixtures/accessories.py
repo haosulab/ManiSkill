@@ -210,9 +210,6 @@ class WallAccessory(Fixture):
         if "light" in self.name:
             self.quat = euler2quat(0, 0, -np.pi / 2)
 
-        # TODO (stao): what is the actual scale? Couldn't find the code for that.
-        self.set_scale(0.15)
-
         if self.wall is None:
             # absolute position was specified
             return

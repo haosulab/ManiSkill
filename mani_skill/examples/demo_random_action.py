@@ -18,13 +18,16 @@ class Args:
     obs_mode: Annotated[str, tyro.conf.arg(aliases=["-o"])] = "none"
     """Observation mode"""
 
+    robot_uids: Annotated[Optional[str], tyro.conf.arg(aliases=["-r"])] = None
+    """Robot UID(s) to use. Can be a comma separated list of UIDs or empty string to have no agents. If not given then defaults to the environments default robot"""
+
     sim_backend: Annotated[str, tyro.conf.arg(aliases=["-b"])] = "auto"
     """Which simulation backend to use. Can be 'auto', 'cpu', 'gpu'"""
 
     reward_mode: Optional[str] = None
     """Reward mode"""
 
-    num_envs: int = 1
+    num_envs: Annotated[int, tyro.conf.arg(aliases=["-n"])] = 1
     """Number of environments to run."""
 
     control_mode: Annotated[Optional[str], tyro.conf.arg(aliases=["-c"])] = None
@@ -61,8 +64,7 @@ def main(args: Args):
         parallel_in_single_scene = False
     if args.render_mode == "human" and args.num_envs == 1:
         parallel_in_single_scene = False
-    env: BaseEnv = gym.make(
-        args.env_id,
+    env_kwargs = dict(
         obs_mode=args.obs_mode,
         reward_mode=args.reward_mode,
         control_mode=args.control_mode,
@@ -74,7 +76,12 @@ def main(args: Args):
         sim_backend=args.sim_backend,
         enable_shadow=True,
         parallel_in_single_scene=parallel_in_single_scene,
-        # **args.env_kwargs
+    )
+    if args.robot_uids is not None:
+        env_kwargs["robot_uids"] = tuple(args.robot_uids.split(","))
+    env: BaseEnv = gym.make(
+        args.env_id,
+        **env_kwargs
     )
     record_dir = args.record_dir
     if record_dir:
