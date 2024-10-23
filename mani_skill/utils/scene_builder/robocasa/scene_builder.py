@@ -155,7 +155,10 @@ class RoboCasaSceneBuilder(SceneBuilder):
         super().__init__(*args, **kwargs)
 
     def build(self, build_config_idxs: Optional[List[int]] = None):
-        robot_poses = self.env.agent.robot.initial_pose
+        if self.env.agent is not None:
+            robot_poses = self.env.agent.robot.initial_pose
+        else:
+            robot_poses = None
         if build_config_idxs is None:
             build_config_idxs = []
             for i in range(self.env.num_envs):
@@ -378,12 +381,14 @@ class RoboCasaSceneBuilder(SceneBuilder):
                 assert isinstance(obj, Fixture)
                 obj.pos = obj_pos
                 obj.quat = obj_quat
-            robot_poses.raw_pose[scene_idx][:3] = torch.from_numpy(robot_base_pos).to(
-                robot_poses.device
-            )
-            robot_poses.raw_pose[scene_idx][3:] = torch.from_numpy(
-                euler2quat(*robot_base_ori)
-            ).to(robot_poses.device)
+
+            if self.env.agent is not None:
+                robot_poses.raw_pose[scene_idx][:3] = torch.from_numpy(
+                    robot_base_pos
+                ).to(robot_poses.device)
+                robot_poses.raw_pose[scene_idx][3:] = torch.from_numpy(
+                    euler2quat(*robot_base_ori)
+                ).to(robot_poses.device)
 
             actors: Dict[str, Actor] = {}
             for k, v in fixtures.items():
@@ -457,9 +462,13 @@ class RoboCasaSceneBuilder(SceneBuilder):
                     continue
                 break
 
-        robot_base_pos, robot_base_ori = self.compute_robot_base_placement_pose(
-            ref_fixture=ref_fixture
-        )
+        if self.env.agent is not None:
+            robot_base_pos, robot_base_ori = self.compute_robot_base_placement_pose(
+                ref_fixture=ref_fixture
+            )
+        else:
+            robot_base_pos = None
+            robot_base_ori = None
         return fxtr_placements, robot_base_pos, robot_base_ori
 
     def initialize(self, env_idx: torch.Tensor, init_config_idxs: List[int] = None):

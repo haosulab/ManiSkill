@@ -17,6 +17,7 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 
 @register_env("RoboCasaKitchen-v1", max_episode_steps=100)
 class RoboCasaKitchenEnv(BaseEnv):
+    SUPPORTED_ROBOTS = ["fetch", ""]
     SUPPORTED_REWARD_MODES = ["none"]
     """
     This is a scene sampled from the RoboCasa dataset that you can explore and take random actions in. No rewards/success metrics are defined.
@@ -25,7 +26,7 @@ class RoboCasaKitchenEnv(BaseEnv):
         init_robot_base_pos (str): name of the fixture to place the robot near. If None, will randomly select a fixture.
     """
 
-    def __init__(self, *args, robot_uids="fetch", init_robot_base_pos=None, **kwargs):
+    def __init__(self, *args, robot_uids="", init_robot_base_pos=None, **kwargs):
         self.init_robot_base_pos = init_robot_base_pos
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
@@ -76,8 +77,9 @@ class RoboCasaKitchenEnv(BaseEnv):
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
             self.scene_builder.initialize(env_idx)
-            self.agent.robot.set_qpos(self.agent.keyframes["rest"].qpos)
-            # self.agent.robot.set_pose(sapien.Pose(p=[2.7, -1.5, 0]))
+            if self.agent is not None:
+                self.agent.robot.set_qpos(self.agent.keyframes["rest"].qpos)
+                # self.agent.robot.set_pose(sapien.Pose(p=[2.7, -1.5, 0]))
 
     def evaluate(self):
         return {}

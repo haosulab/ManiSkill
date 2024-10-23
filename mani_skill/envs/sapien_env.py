@@ -320,12 +320,15 @@ class BaseEnv(gym.Env):
         self._init_raw_state = common.to_cpu_tensor(self.get_state_dict())
         """the initial raw state returned by env.get_state. Useful for reconstructing state dictionaries from flattened state vectors"""
 
-        self.action_space = self.agent.action_space
-        """the batched action space of the environment, which is also the action space of the agent"""
-        self.single_action_space = self.agent.single_action_space
-        """the unbatched action space of the environment"""
-        self._orig_single_action_space = copy.deepcopy(self.single_action_space)
-        """the original unbatched action space of the environment"""
+        if self.agent is not None:
+            self.action_space = self.agent.action_space
+            """the batched action space of the environment, which is also the action space of the agent"""
+            self.single_action_space = self.agent.single_action_space
+            """the unbatched action space of the environment"""
+            self._orig_single_action_space = copy.deepcopy(self.single_action_space)
+            """the original unbatched action space of the environment"""
+        else:
+            self.action_space = None
         # initialize the cached properties
         self.single_observation_space
         self.observation_space
@@ -377,6 +380,9 @@ class BaseEnv(gym.Env):
     def _load_agent(self, options: dict):
         agents = []
         robot_uids = self.robot_uids
+        if robot_uids == "":
+            self.agent = None
+            return
         if robot_uids is not None:
             if not isinstance(robot_uids, tuple):
                 robot_uids = [robot_uids]
@@ -670,8 +676,9 @@ class BaseEnv(gym.Env):
 
         # Add agent sensors
         self._agent_sensor_configs = dict()
-        self._agent_sensor_configs = parse_camera_configs(self.agent._sensor_configs)
-        self._sensor_configs.update(self._agent_sensor_configs)
+        if self.agent is not None:
+            self._agent_sensor_configs = parse_camera_configs(self.agent._sensor_configs)
+            self._sensor_configs.update(self._agent_sensor_configs)
 
         # Add human render camera configs
         self._human_render_camera_configs = parse_camera_configs(
@@ -812,7 +819,8 @@ class BaseEnv(gym.Env):
             self._reconfig_counter -= 1
         # Set the episode rng again after reconfiguration to guarantee seed reproducibility
         self._set_episode_rng(self._episode_seed)
-        self.agent.reset()
+        if self.agent is not None:
+            self.agent.reset()
         with torch.random.fork_rng():
             torch.manual_seed(self._episode_seed[0])
             self._initialize_episode(env_idx, options)
@@ -827,11 +835,12 @@ class BaseEnv(gym.Env):
             self.scene._gpu_fetch_all()
 
         # we reset controllers here because some controllers depend on the agent/articulation qpos/poses
-        if isinstance(self.agent.controller, dict):
-            for controller in self.agent.controller.values():
-                controller.reset()
-        else:
-            self.agent.controller.reset()
+        if self.agent is not None:
+            if isinstance(self.agent.controller, dict):
+                for controller in self.agent.controller.values():
+                    controller.reset()
+            else:
+                self.agent.controller.reset()
 
         info = self.get_info()
         obs = self.get_obs(info)
@@ -967,7 +976,8 @@ class BaseEnv(gym.Env):
                 self.scene.px.gpu_apply_articulation_target_velocity()
         self._before_control_step()
         for _ in range(self._sim_steps_per_control):
-            self.agent.before_simulation_step()
+            if self.agent is not None:
+                self.agent.before_simulation_step()
             self._before_simulation_step()
             self.scene.step()
             self._after_simulation_step()

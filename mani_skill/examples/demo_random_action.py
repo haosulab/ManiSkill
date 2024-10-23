@@ -84,19 +84,20 @@ def main(args: Args):
     if verbose:
         print("Observation space", env.observation_space)
         print("Action space", env.action_space)
-        print("Control mode", env.unwrapped.control_mode)
+        if env.agent is not None:
+            print("Control mode", env.unwrapped.control_mode)
         print("Reward mode", env.unwrapped.reward_mode)
 
     obs, _ = env.reset(seed=args.seed, options=dict(reconfigure=True))
-    if args.seed is not None:
-        env.action_space.seed(args.seed[0])
+    if args.seed is not None and env.action_space is not None:
+            env.action_space.seed(args.seed[0])
     if args.render_mode is not None:
         viewer = env.render()
         if isinstance(viewer, sapien.utils.Viewer):
             viewer.paused = args.pause
         env.render()
     while True:
-        action = env.action_space.sample()
+        action = env.action_space.sample() if env.action_space is not None else None
         obs, reward, terminated, truncated, info = env.step(action)
         if verbose:
             print("reward", reward)
