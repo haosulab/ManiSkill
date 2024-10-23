@@ -48,18 +48,17 @@ class PullCubeToolEnv(BaseEnv):
     cube_half_size = 0.02
 
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
+        # Initialize tool dimensions before super().__init__()
+        self.handle_length = 0.15
+        self.hook_length = 0.05
+        self.width = 0.02
+        self.height = 0.02
+        self.cube_size = 0.04
+        self.arm_reach = 0.85  # for setting boundary conditions of spawn
+
         # defaulting to use panda arm
         self.robot_init_qpos_noise = robot_init_qpos_noise
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
-
-        self.handle_length = (0.15,)
-        self.hook_length = (0.05,)
-        self.width = (0.02,)
-        self.height = 0.02
-
-        self.cube_size = 0.04
-
-        self.arm_reach = 0.85  # for setting boundary conditions of spawn
 
     # Specify default simulation/gpu memory configurations to override any default values
     @property
@@ -144,17 +143,24 @@ class PullCubeToolEnv(BaseEnv):
             body_type="dynamic",
         )
 
-        # Create and position the L-shaped tool in the scene
-
+        # Create the L-shaped tool
         self.l_shape_tool = self._build_l_shaped_tool(
             handle_length=self.handle_length,
             hook_length=self.hook_length,
             width=self.width,
             height=self.height,
         )
-        self.l_shape_tool.set_pose(
-            sapien.Pose(p=[-0.1, -0.1, self.cube_half_size + self.height])
-        )
+
+        # Create initial poses using device tensors
+        init_tool_pos = torch.tensor([-0.1, -0.1, self.cube_half_size + self.height], 
+                                   device=self.device, dtype=torch.float32)
+        init_tool_quat = torch.tensor([1.0, 0.0, 0.0, 0.0], 
+                                    device=self.device, dtype=torch.float32)
+        
+        # Set the initial pose using Pose.create_from_pq
+        tool_pose = Pose.create_from_pq(p=init_tool_pos.unsqueeze(0), 
+                                      q=init_tool_quat.unsqueeze(0))
+        self.l_shape_tool.set_pose(tool_pose)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
@@ -162,25 +168,23 @@ class PullCubeToolEnv(BaseEnv):
             self.scene_builder.initialize(env_idx)
 
             # Initialize the tool
-
-            tool_xyz = torch.zeros((b, 3))
+            tool_xyz = torch.zeros((b, 3), device=self.device)
             tool_xyz[..., :2] = (
-                torch.rand((b, 2)) * 0.2 - 0.1
+                torch.rand((b, 2), device=self.device) * 0.2 - 0.1
             )  # spawn tool in region where x,y in [-0.1, 0.1]
             tool_xyz[..., 2] = self.height / 2  # place tool on table
-            tool_q = [1, 0, 0, 0]  # no rotation
+            tool_q = torch.tensor([1, 0, 0, 0], device=self.device).expand(b, 4)  # no rotation
 
             tool_pose = Pose.create_from_pq(p=tool_xyz, q=tool_q)
             self.l_shape_tool.set_pose(tool_pose)
 
             # Initialize the cube a bit away from the base of the arm
-
-            cube_xyz = torch.zeros((b, 3))
-            cube_xyz[..., 0] = self.arm_reach + torch.rand(b) * (
+            cube_xyz = torch.zeros((b, 3), device=self.device)
+            cube_xyz[..., 0] = self.arm_reach + torch.rand(b, device=self.device) * (
                 self.handle_length - 0.08
             )
             # Just outside arm's reach
-            cube_xyz[..., 1] = torch.rand(b) * 0.4 - 0.2  # Random y position
+            cube_xyz[..., 1] = torch.rand(b, device=self.device) * 0.4 - 0.2  # Random y position
             cube_xyz[..., 2] = self.cube_size / 2  # Place on the table
 
             cube_q = randomization.random_quaternions(
