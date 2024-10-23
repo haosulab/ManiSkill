@@ -8,6 +8,9 @@ from transforms3d.euler import euler2mat, quat2euler, quat2mat
 
 from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.utils.scene_builder.robocasa.fixtures.mujoco_object import MujocoObject
+from mani_skill.utils.scene_builder.robocasa.utils.object_utils import (
+    get_pos_after_rel_offset,
+)
 
 
 class FixtureType(IntEnum):

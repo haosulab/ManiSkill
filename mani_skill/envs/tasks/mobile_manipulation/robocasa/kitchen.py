@@ -20,9 +20,13 @@ class RoboCasaKitchenEnv(BaseEnv):
     SUPPORTED_REWARD_MODES = ["none"]
     """
     This is a scene sampled from the RoboCasa dataset that you can explore and take random actions in. No rewards/success metrics are defined.
+
+    Args:
+        init_robot_base_pos (str): name of the fixture to place the robot near. If None, will randomly select a fixture.
     """
 
-    def __init__(self, *args, robot_uids="fetch", **kwargs):
+    def __init__(self, *args, robot_uids="fetch", init_robot_base_pos=None, **kwargs):
+        self.init_robot_base_pos = init_robot_base_pos
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     @property
@@ -33,12 +37,29 @@ class RoboCasaKitchenEnv(BaseEnv):
     def _default_sensor_configs(self):
         # TODO (fix cameras to be where robocasa places them)
         pose = sapien_utils.look_at([1.25, -1.25, 1.5], [0.0, 0.0, 0.2])
-        return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
+        return [
+            CameraConfig("base_camera", pose, 128, 128, 60 * np.pi / 180, 0.01, 100)
+        ]
 
     @property
     def _default_human_render_camera_configs(self):
         pose = sapien_utils.look_at([1.25, -1.25, 1.5], [0.0, 0.0, 0.2])
-        return CameraConfig("render_camera", pose, 2048, 2048, 1, 0.01, 100)
+        return CameraConfig(
+            "render_camera", pose, 2048, 2048, 60 * np.pi / 180, 0.01, 100
+        )
+
+    @property
+    def _default_viewer_camera_config(self):
+        return CameraConfig(
+            uid="viewer",
+            pose=sapien.Pose([0, 0, 1]),
+            width=1920,
+            height=1080,
+            shader_pack="default",
+            near=0.0,
+            far=1000,
+            fov=60 * np.pi / 180,
+        )
 
     def _load_scene(self, options: dict):
         self.scene_builder = RoboCasaSceneBuilder(self)
@@ -52,13 +73,11 @@ class RoboCasaKitchenEnv(BaseEnv):
         # )
         # TODO (stao): disable wheel collisions with floors.
 
-        self.agent.robot.initial_pose = sapien.Pose(p=[2.7, -1.5, 0])
-
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
             self.scene_builder.initialize(env_idx)
             self.agent.robot.set_qpos(self.agent.keyframes["rest"].qpos)
-            self.agent.robot.set_pose(sapien.Pose(p=[2.7, -1.5, 0]))
+            # self.agent.robot.set_pose(sapien.Pose(p=[2.7, -1.5, 0]))
 
     def evaluate(self):
         return {}

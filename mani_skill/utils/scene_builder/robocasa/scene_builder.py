@@ -1,12 +1,13 @@
 """Implementation of the RoboCasa scene builder. Code ported from https://github.com/robocasa/robocasa"""
 
+import logging
 from copy import deepcopy
 from typing import Dict, List, Optional
 
 import numpy as np
-import sapien
 import torch
 import yaml
+from transforms3d.euler import euler2quat
 
 from mani_skill.utils.scene_builder.robocasa.fixtures.accessories import (
     Accessory,
@@ -43,6 +44,7 @@ from mani_skill.utils.scene_builder.robocasa.fixtures.windows import (
     FramedWindow,
     Window,
 )
+from mani_skill.utils.scene_builder.robocasa.utils import object_utils as OU
 from mani_skill.utils.scene_builder.robocasa.utils import scene_registry, scene_utils
 from mani_skill.utils.scene_builder.robocasa.utils.placement_samplers import (
     SequentialCompositeSampler,
@@ -50,6 +52,7 @@ from mani_skill.utils.scene_builder.robocasa.utils.placement_samplers import (
 )
 from mani_skill.utils.scene_builder.scene_builder import SceneBuilder
 from mani_skill.utils.structs import Actor
+from mani_skill.utils.structs.pose import Pose
 
 FIXTURES = dict(
     hinge_cabinet=HingeCabinet,
@@ -91,6 +94,10 @@ FIXTURES_INTERIOR = dict(
 )
 
 ALL_SIDES = ["left", "right", "front", "back", "bottom", "top"]
+
+ROBOT_FRONT_FACING_SIZE = dict(
+    fetch=0.7,
+)
 
 
 def check_syntax(fixture):
@@ -143,16 +150,20 @@ class RoboCasaSceneBuilder(SceneBuilder):
     TODO explain build config idxs and init config idxs
     """
 
+    def __init__(self, *args, init_robot_base_pos=None, **kwargs):
+        self.init_robot_base_pos = init_robot_base_pos
+        super().__init__(*args, **kwargs)
+
     def build(self, build_config_idxs: Optional[List[int]] = None):
-        # return super().build(build_config_idxs)
+        robot_poses = self.env.agent.robot.initial_pose
         if build_config_idxs is None:
             build_config_idxs = []
             for i in range(self.env.num_envs):
                 # TODO (stao): how do we know the total number of layouts and styles?
                 build_config_idxs.append(
                     (
-                        3,  # self.env._batched_episode_rng[i].randint(0, 10),
-                        7,  # self.env._batched_episode_rng[i].randint(0, 12),
+                        self.env._batched_episode_rng[i].randint(0, 10),
+                        self.env._batched_episode_rng[i].randint(0, 12),
                     )
                 )
         for scene_idx, build_config_idx in enumerate(build_config_idxs):
@@ -350,6 +361,30 @@ class RoboCasaSceneBuilder(SceneBuilder):
                     fixture.pos = np.array(pos_new)
                     fixture.set_euler(rot_new)
 
+            # self.actors = actors
+            self.fixtures = fixtures
+            self.fixture_cfgs = self.get_fixture_cfgs()
+            # generate initial poses for objects so that they are spawned in nice places during GPU initialization
+            # to be more performant
+            (
+                fxtr_placements,
+                robot_base_pos,
+                robot_base_ori,
+            ) = self._generate_initial_placements(
+                rng=self.env._batched_episode_rng[scene_idx]
+            )
+            # Loop through all objects and reset their positions
+            for obj_pos, obj_quat, obj in fxtr_placements.values():
+                assert isinstance(obj, Fixture)
+                obj.pos = obj_pos
+                obj.quat = obj_quat
+            robot_poses.raw_pose[scene_idx][:3] = torch.from_numpy(robot_base_pos).to(
+                robot_poses.device
+            )
+            robot_poses.raw_pose[scene_idx][3:] = torch.from_numpy(
+                euler2quat(*robot_base_ori)
+            ).to(robot_poses.device)
+
             actors: Dict[str, Actor] = {}
             for k, v in fixtures.items():
                 # print(k, v.pos, v.size, v.quat if hasattr(v, "quat") else None)
@@ -368,14 +403,13 @@ class RoboCasaSceneBuilder(SceneBuilder):
                             built.actor.set_collision_group_bit(
                                 group=2, bit_idx=27, bit=1
                             )
-        self.actors = actors
-        self.fixtures = fixtures
-        self.fixture_cfgs = self.get_fixture_cfgs()
+            self.actors = actors
         return dict(fixtures=fixtures, actors=actors, fixture_configs=arena)
 
-    def initialize(self, env_idx: torch.Tensor, init_config_idxs: List[int] = None):
+    def _generate_initial_placements(self, rng: np.random.RandomState):
+        """Generate and places randomized fixtures and robot(s) into the scene. This code is not parallelized"""
         fxtr_placement_initializer = self._get_placement_initializer(
-            self.fixture_cfgs, z_offset=0.0
+            self.fixture_cfgs, z_offset=0.0, rng=rng
         )
         fxtr_placements = None
         for i in range(10):
@@ -385,67 +419,51 @@ class RoboCasaSceneBuilder(SceneBuilder):
             # if macros.VERBOSE:
             # print("Ranomization error in initial placement. Try #{}".format(i))
             # continue
-            # break
+            break
         if fxtr_placements is None:
             # if macros.VERBOSE:
             print("Could not place fixtures. Trying again with self._load_model()")
             self._load_model()
             return
 
-        self.fxtr_placements = fxtr_placements
-        # Loop through all objects and reset their positions
-        for obj_pos, obj_quat, obj in fxtr_placements.values():
-            assert isinstance(obj, Fixture)
-            obj.actor.set_pose(sapien.Pose(p=obj_pos, q=obj_quat))
-
-            # hacky code to set orientation
-            # obj.set_euler(T.mat2euler(T.quat2mat(T.convert_quat(obj_quat, "xyzw"))))
-
         # setup internal references related to fixtures
         # self._setup_kitchen_references()
 
         # set robot position
-        # if self.init_robot_base_pos is not None:
-        #     ref_fixture = self.get_fixture(self.init_robot_base_pos)
-        # else:
-        #     fixtures = list(self.fixtures.values())
-        #     valid_src_fixture_classes = [
-        #         "CoffeeMachine",
-        #         "Toaster",
-        #         "Stove",
-        #         "Stovetop",
-        #         "SingleCabinet",
-        #         "HingeCabinet",
-        #         "OpenCabinet",
-        #         "Drawer",
-        #         "Microwave",
-        #         "Sink",
-        #         "Hood",
-        #         "Oven",
-        #         "Fridge",
-        #         "Dishwasher",
-        #     ]
-        #     while True:
-        #         ref_fixture = self.rng.choice(fixtures)
-        #         fxtr_class = type(ref_fixture).__name__
-        #         if fxtr_class not in valid_src_fixture_classes:
-        #             continue
-        #         break
+        if self.init_robot_base_pos is not None:
+            ref_fixture = self.get_fixture(self.init_robot_base_pos)
+        else:
+            fixtures = list(self.fixtures.values())
+            valid_src_fixture_classes = [
+                "CoffeeMachine",
+                "Toaster",
+                "Stove",
+                "Stovetop",
+                "SingleCabinet",
+                "HingeCabinet",
+                "OpenCabinet",
+                "Drawer",
+                "Microwave",
+                "Sink",
+                "Hood",
+                "Oven",
+                "Fridge",
+                "Dishwasher",
+            ]
+            while True:
+                ref_fixture = rng.choice(fixtures)
+                fxtr_class = type(ref_fixture).__name__
+                if fxtr_class not in valid_src_fixture_classes:
+                    continue
+                break
 
-        # robot_base_pos, robot_base_ori = self.compute_robot_base_placement_pose(
-        #     ref_fixture=ref_fixture
-        # )
-        # robot_model = self.robots[0].robot_model
-        # robot_model.set_base_xpos(robot_base_pos)
-        # robot_model.set_base_ori(robot_base_ori)
-        # for fixture_config in self.arena:
-        #     if "placement" in fixture_config:
-        #         fixture = self.fixtures[fixture_config["name"]]
-        #         placement = fixture_config["placement"]
-        #         fixture_id = placement.get("fixture", None)
-        #         if fixture_id is not None:
-        #             actor = self.actors[fixture_id]
-        #             actor.set_pose(sapien.Pose(p=placement["pos"]))
+        robot_base_pos, robot_base_ori = self.compute_robot_base_placement_pose(
+            ref_fixture=ref_fixture
+        )
+        return fxtr_placements, robot_base_pos, robot_base_ori
+
+    def initialize(self, env_idx: torch.Tensor, init_config_idxs: List[int] = None):
+        pass
 
     def get_fixture_cfgs(self):
         """
@@ -599,9 +617,16 @@ class RoboCasaSceneBuilder(SceneBuilder):
         # step 2: compute offset relative to this counter
         base_to_ref, _ = OU.get_rel_transform(base_fixture, ref_fixture)
         cntr_y = base_fixture.get_ext_sites(relative=True)[0][1]
+        if self.env.agent.robot.name in ROBOT_FRONT_FACING_SIZE:
+            front_face_size = ROBOT_FRONT_FACING_SIZE[self.env.agent.robot.name]
+        else:
+            logging.warning(
+                f"Robot {self.env.agent.robot.name} doesn't have a defined front facing size, defaulting to 0.7m"
+            )
+            front_face_size = 0.7
         base_to_edge = [
             base_to_ref[0],
-            cntr_y - 0.20,
+            cntr_y - front_face_size,
             0,
         ]
         if offset is not None:
@@ -624,7 +649,9 @@ class RoboCasaSceneBuilder(SceneBuilder):
 
         return robot_base_pos, robot_base_ori
 
-    def _get_placement_initializer(self, cfg_list, z_offset=0.01):
+    def _get_placement_initializer(
+        self, cfg_list, z_offset=0.01, rng: np.random.RandomState = None
+    ):
 
         """
         Creates a placement initializer for the objects/fixtures based on the specifications in the configurations list
@@ -639,9 +666,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
 
         """
 
-        placement_initializer = SequentialCompositeSampler(
-            name="SceneSampler", rng=self.env._batched_episode_rng
-        )
+        placement_initializer = SequentialCompositeSampler(name="SceneSampler", rng=rng)
 
         for (obj_i, cfg) in enumerate(cfg_list):
             # determine which object is being placed
@@ -693,7 +718,6 @@ class RoboCasaSceneBuilder(SceneBuilder):
 
                 # center inner region within outer region
                 if inner_xpos == "ref":
-                    raise NotImplementedError("inner_xpos=ref Not implemented")
                     # compute optimal placement of inner region to match up with the reference fixture
                     x_halfsize = outer_size[0] / 2 - inner_size[0] / 2
                     if x_halfsize == 0.0:
@@ -812,7 +836,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
                     reference_pos=ref_pos,
                     reference_rot=ref_rot,
                     z_offset=z_offset,
-                    rng=self.env._episode_rng,
+                    rng=rng,
                     rotation_axis=placement.get("rotation_axis", "z"),
                 ),
                 sample_args=placement.get("sample_args", None),

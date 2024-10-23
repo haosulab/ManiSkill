@@ -333,6 +333,9 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
     @pose.setter
     def pose(self, arg1: Union[Pose, sapien.Pose, Array]) -> None:
         if physx.is_gpu_enabled():
+            assert (
+                self.px_body_type != "static"
+            ), "Static objects cannot change poses in GPU sim after environment is loaded"
             if not isinstance(arg1, torch.Tensor):
                 arg1 = vectorize_pose(arg1, device=self.device)
             if self.hidden:

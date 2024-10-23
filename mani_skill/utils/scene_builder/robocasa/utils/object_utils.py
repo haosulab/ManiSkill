@@ -1,8 +1,6 @@
 import numpy as np
 from transforms3d.euler import euler2mat
 
-from mani_skill.utils.scene_builder.robocasa.fixtures.fixture import Fixture
-
 
 def get_rel_transform(fixture_A, fixture_B):
     """
@@ -57,6 +55,7 @@ def obj_in_region(
     check if object is in the region defined by the points.
     Uses either the objects bounding box or the object's horizontal radius
     """
+    from mani_skill.utils.scene_builder.robocasa.fixtures.fixture import Fixture
 
     if isinstance(obj, Fixture):
         obj_points = obj.get_bbox_points(trans=obj_pos, rot=obj_quat)
@@ -88,3 +87,29 @@ def obj_in_region(
                 return False
 
     return True
+
+
+def point_in_fixture(point, fixture, only_2d=False):
+    """
+    check if point is inside of the exterior bounding boxes of the fixture
+
+    Args:
+        point (np.array): point to check
+
+        fixture (Fixture): fixture object
+
+        only_2d (bool): whether to check only in 2D
+    """
+    p0, px, py, pz = fixture.get_ext_sites(relative=False)
+    th = 0.00
+    u = px - p0
+    v = py - p0
+    w = pz - p0
+    check1 = np.dot(u, p0) - th <= np.dot(u, point) <= np.dot(u, px) + th
+    check2 = np.dot(v, p0) - th <= np.dot(v, point) <= np.dot(v, py) + th
+    check3 = np.dot(w, p0) - th <= np.dot(w, point) <= np.dot(w, pz) + th
+
+    if only_2d:
+        return check1 and check2
+    else:
+        return check1 and check2 and check3

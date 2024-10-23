@@ -424,7 +424,7 @@ class BaseEnv(gym.Env):
         self,
     ) -> CameraConfig:
         """Default configuration for the viewer camera, controlling shader, fov, etc. By default if there is a human render camera called "render_camera" then the viewer will use that camera's pose."""
-        return CameraConfig(uid="viewer", pose=sapien.Pose([0, 0, 1]), width=1920, height=1080, shader_pack="default", near=0.0, far=1000)
+        return CameraConfig(uid="viewer", pose=sapien.Pose([0, 0, 1]), width=1920, height=1080, shader_pack="default", near=0.0, far=1000, fov=np.pi / 2)
 
     @property
     def sim_freq(self) -> int:
@@ -636,8 +636,7 @@ class BaseEnv(gym.Env):
         self._load_scene(options)
         self._load_lighting(options)
 
-        if physx.is_gpu_enabled():
-            self.scene._setup_gpu()
+        self.scene._setup(enable_gpu=self.gpu_sim_enabled)
         # for GPU sim, we have to setup sensors after we call setup gpu in order to enable loading mounted sensors as they depend on GPU buffer data
         self._setup_sensors(options)
         if self._viewer is not None:
