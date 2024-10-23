@@ -40,7 +40,7 @@ python -m mani_skill.examples.demo_random_action \
 python -m mani_skill.examples.demo_random_action \
   -e "RoboCasaKitchen-v1" \
   -n 4 -s 0 1 2 3 \
-  --render-mode="rgb_array" -r "fetch"
+  --render-mode="human" -r "fetch"
 ```
 
 You can also pass `-r "none"` to run the environments without any agents.
