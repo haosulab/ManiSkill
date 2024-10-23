@@ -91,7 +91,7 @@ def main(args: Args):
     if verbose:
         print("Observation space", env.observation_space)
         print("Action space", env.action_space)
-        if env.agent is not None:
+        if env.unwrapped.agent is not None:
             print("Control mode", env.unwrapped.control_mode)
         print("Reward mode", env.unwrapped.reward_mode)
 
