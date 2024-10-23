@@ -774,8 +774,7 @@ class MJCFLoader:
                     and "joint" not in tag_counts
                 ):
                     # If so, skip the current body and continue with its child
-                    body = body_children[0]
-
+                    body = body.find("body")
                 self._parse_body(body, dummy_root_link, self._root_default, builder)
 
                 # handle free joints
