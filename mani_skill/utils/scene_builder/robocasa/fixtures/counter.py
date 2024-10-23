@@ -670,10 +670,9 @@ class Counter(Fixture):
         else:
             # TODO (stao): add this?
             ref_fixture = env.get_fixture(ref)
-
             ### find an appropriate geom to sample ###
             fixture_to_geom_offsets = []
-            for g in all_geoms:
+            for g in all_records:
                 g_pos = get_pos_after_rel_offset(self, s2a(g.get("pos")))
                 rel_offset = get_fixture_to_point_rel_offset(ref_fixture, g_pos)
                 fixture_to_geom_offsets.append(rel_offset)

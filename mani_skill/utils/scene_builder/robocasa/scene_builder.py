@@ -655,10 +655,6 @@ class RoboCasaSceneBuilder(SceneBuilder):
             else:
                 print(cfg)
                 raise ValueError
-            if "plant" in cfg["name"]:
-                pass
-            else:
-                continue
             placement = cfg.get("placement", None)
             if placement is None:
                 continue
@@ -672,6 +668,8 @@ class RoboCasaSceneBuilder(SceneBuilder):
 
                 # calculate the total available space where object could be placed
                 sample_region_kwargs = placement.get("sample_region_kwargs", {})
+                if "ref" in sample_region_kwargs:
+                    continue
                 reset_region = fixture.sample_reset_region(
                     env=self, **sample_region_kwargs
                 )

@@ -363,7 +363,6 @@ class UniformRandomSampler(ObjectPositionSampler):
                     region_points[i][0:2], rot=self.reference_rot
                 )
             region_points += base_offset
-
             for i in range(5000):  # 5000 retries
                 # sample object coordinates
                 relative_x = self._sample_x()

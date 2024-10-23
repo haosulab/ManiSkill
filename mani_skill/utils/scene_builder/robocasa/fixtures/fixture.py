@@ -10,14 +10,6 @@ from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.utils.scene_builder.robocasa.fixtures.mujoco_object import MujocoObject
 
 
-def site_pos(elem):
-    if "pos" in elem.keys():
-        out = np.fromstring(elem.attrib["pos"], sep=" ", dtype=np.float32)
-    else:
-        out = np.array([0, 0, 0], dtype=np.float32)
-    return out
-
-
 class FixtureType(IntEnum):
     """
     Enum for fixture types in robosuite kitchen environments.
@@ -62,40 +54,10 @@ class Fixture(MujocoObject):
     ):
         self.naming_prefix = ""  # not sure what this is
         self.rot = 0  # ??
-        super().__init__(scene, xml, name, pos)
+        super().__init__(scene, xml, name, pos=pos, scale=scale)
         if pos is not None:
             self.set_pos(pos)
-        # set up exterior and interior sites
-        self._bounds_sites = dict()
-        for postfix in [
-            "ext_p0",
-            "ext_px",
-            "ext_py",
-            "ext_pz",
-            "int_p0",
-            "int_px",
-            "int_py",
-            "int_pz",
-        ]:
-            for elem in self.loader.xml.findall(".//*site"):
-                if elem.get("name") == f"{self.naming_prefix}{postfix}":
-                    self._bounds_sites[postfix] = site_pos(elem)
-                    break
-            # site = find_elements(
-            #     self.worldbody,
-            #     tags="site",
-            #     attribs={"name": "{}{}".format(self.naming_prefix, postfix)},
-            #     return_first=True,
-            # )
-            # if site is None:
-            #     continue
-            # rgba = string_to_array(site.get("rgba"))
-            # if macros.SHOW_SITES:
-            #     rgba[-1] = 1.0
-            # else:
-            #     rgba[-1] = 0.0
-            # site.set("rgba", array_to_string(rgba))
-            # self._bounds_sites[postfix] = site
+
         # scale based on specified max dimension
         self.size = np.array([self.width, self.depth, self.height])
         if size is not None:
@@ -195,9 +157,6 @@ class Fixture(MujocoObject):
         scale[0] = scale[0] or scale[2] or scale[1]
         scale[1] = scale[1] or scale[0] or scale[2]
         scale[2] = scale[2] or scale[0] or scale[1]
-        for k, v in self._bounds_sites.items():
-            self._bounds_sites[k] = np.multiply(v, scale)
-
         self.set_scale(scale)
 
     def get_reset_regions(self, *args, **kwargs):
