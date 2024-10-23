@@ -818,7 +818,8 @@ class ManiSkillScene:
             if actor.px_body_type == "static":
                 continue
             self.non_static_actors.append(actor)
-            actor._body_data_index  # only need to access this attribute to populate it
+            if enable_gpu:
+                actor._body_data_index  # only need to access this attribute to populate it
 
         for articulation in self.articulations.values():
             articulation._data_index
