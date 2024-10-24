@@ -248,14 +248,14 @@ class RoboCasaKitchenEnv(BaseEnv):
     @property
     def _default_sensor_configs(self):
         # TODO (fix cameras to be where robocasa places them)
-        pose = sapien_utils.look_at([1.25, -1.25, 1.5], [0.0, 0.0, 0.2])
+        pose = sapien_utils.look_at([3.0, -7.5, 2.5], [3.0, 0.0, 1.0])
         return [
             CameraConfig("base_camera", pose, 128, 128, 60 * np.pi / 180, 0.01, 100)
         ]
 
     @property
     def _default_human_render_camera_configs(self):
-        pose = sapien_utils.look_at([1.25, -1.25, 1.5], [0.0, 0.0, 0.2])
+        pose = sapien_utils.look_at([3.0, -7.5, 2.5], [3.0, 0.0, 1.0])
         return CameraConfig(
             "render_camera", pose, 2048, 2048, 60 * np.pi / 180, 0.01, 100
         )
