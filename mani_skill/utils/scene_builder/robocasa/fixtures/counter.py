@@ -346,17 +346,10 @@ class Counter(Fixture):
         """
         Creates a contigious counter with a top and possibly a base.
         """
+        self.actor_builder.collision_records = []
         w, d, h = np.array(self.size)
         th = self.th
 
-        # visual_records: dict[str, VisualShapeRecord] = dict()
-        # collision_records: dict[str, CollisionShapeRecord] = dict()
-        # for collision_record, visual_record in zip(
-        #     self.actor_builder.collision_records, self.actor_builder.visual_records
-        # ):
-        #     # TODO(stao): sapien collision records dont have names at the moment. why?
-        #     visual_records[visual_record.name] = visual_record
-        #     collision_records[visual_record.name] = collision_record
         # counters with half-top can only either be right or left
         assert sum(self.half_top) < 2
         if sum(self.half_top) == 0:
@@ -418,7 +411,6 @@ class Counter(Fixture):
         #     self._obj.append(g)
         #     # manually update contact geoms registry
         #     self._contact_geoms.append("top_{}".format(i))
-        self.actor_builder.collision_records = []
         base_size, base_pos = self._get_base_dimensions()
         for i, side in enumerate(SIDES):
             # for elem in geoms["base_{}".format(side)]:
