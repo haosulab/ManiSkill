@@ -90,8 +90,6 @@ class MujocoObject:
             #     rgba[-1] = 0.0
             # site.set("rgba", array_to_string(rgba))
             # self._bounds_sites[postfix] = site
-        # if scale != 1:
-        # NOTE (stao): this is a hacky way to try and imitate the original robocasa/robosuite scaling code.
         self.set_scale(scale)
 
     """Functions from RoboCasa MujocoXMLObject class"""
@@ -112,13 +110,13 @@ class MujocoObject:
 
         scale is a float or a array with 3 floats
         """
+        # NOTE (stao): this is a hacky way to try and imitate the original robocasa scaling code.
         if isinstance(scale, float) or isinstance(scale, int):
             scale = np.array([scale, scale, scale])
         self.loader.scale = scale
         self._scale = np.array(scale)
         if hasattr(self, "size"):
             self.size = np.multiply(self.size, self._scale)
-        # TODO (stao): is there a nicer way to move this scale code elsewhere.
         if hasattr(self, "articulation_builder"):
             for link in self.articulation_builder.link_builders:
                 for visual in link.visual_records:
@@ -201,8 +199,8 @@ class MujocoObject:
 
         bottom_offset = self.bottom_offset
         top_offset = self.top_offset
-        horizontal_radius_site = self.worldbody.find(
-            "./body/site[@name='{}horizontal_radius_site']".format(self.naming_prefix)
+        horizontal_radius_site = self.loader.xml.find(
+            ".//site[@name='{}horizontal_radius_site']".format(self.naming_prefix)
         )
         horiz_radius = string_to_array(horizontal_radius_site.get("pos"))[:2]
 

@@ -1,5 +1,3 @@
-import sapien
-
 from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.utils.scene_builder.robocasa.fixtures.fixture import Fixture
 

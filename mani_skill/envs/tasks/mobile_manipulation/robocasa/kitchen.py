@@ -5,14 +5,10 @@ import numpy as np
 import sapien
 import torch
 
-from mani_skill.agents.robots.fetch.fetch import FETCH_WHEELS_COLLISION_BIT, Fetch
-from mani_skill.agents.robots.panda.panda import Panda
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.registration import register_env
-
-# from mani_skill.utils.scene_builder.robocasa.objects.kitchen_object_utils import sample_kitchen_object
 from mani_skill.utils.scene_builder.robocasa.objects.kitchen_object_utils import (
     sample_kitchen_object,
 )
@@ -100,8 +96,6 @@ class RoboCasaKitchenEnv(BaseEnv):
 
         ignore_done (bool): True if never terminating the environment (ignore @horizon).
 
-        hard_reset (bool): If True, re-loads model, sim, and render object upon a reset call, else,
-            only calls sim.reset and resets all robosuite-internal variables
 
         camera_names (str or list of str): name of camera to be rendered. Should either be single str if
             same name is to be used for all cameras' rendering or else it should be a list of cameras to render.
@@ -182,7 +176,7 @@ class RoboCasaKitchenEnv(BaseEnv):
         control_freq=20,
         horizon=1000,
         ignore_done=False,
-        hard_reset=True,
+        # hard_reset=True,
         camera_names="agentview",
         camera_heights=256,
         camera_widths=256,
@@ -238,12 +232,11 @@ class RoboCasaKitchenEnv(BaseEnv):
         # intialize cameras
         # self._cam_configs = deepcopy(CamUtils.CAM_CONFIGS)
 
-        # set up currently unused variables (used in robosuite)
         self.use_object_obs = use_object_obs
         self.reward_scale = reward_scale
         self.reward_shaping = reward_shaping
 
-        ### code from robosuite's env class ###
+        ### code from original robocasa env class ###
         self._ep_meta = {}
         self.fixtures_only = fixtures_only
         super().__init__(*args, robot_uids=robot_uids, **kwargs)

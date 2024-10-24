@@ -1,6 +1,5 @@
 import numpy as np
 
-# from robocasa.models.scenes.scene_utils import *
 from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.utils.scene_builder.robocasa.fixtures.cabinet import *
 from mani_skill.utils.scene_builder.robocasa.fixtures.others import Box

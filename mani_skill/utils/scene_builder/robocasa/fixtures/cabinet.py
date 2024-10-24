@@ -14,26 +14,6 @@ from mani_skill.utils.scene_builder.robocasa.fixtures.cabinet_panels import (
 from mani_skill.utils.scene_builder.robocasa.fixtures.fixture import Fixture
 from mani_skill.utils.scene_builder.robocasa.utils.scene_utils import ROBOCASA_ASSET_DIR
 
-# from robosuite.utils.mjcf_utils import array_to_string as a2s
-# from robosuite.utils.mjcf_utils import (
-#     find_elements,
-#     find_parent,
-#     new_geom,
-#     xml_path_completion,
-# )
-
-# import robocasa
-# import robocasa.utils.object_utils as OU
-# from robocasa.models.fixtures.cabinet_panels import *
-# from robocasa.models.fixtures.fixture import (
-#     ProcGenFixture,
-#     get_texture_name_from_file,
-# )
-# from robocasa.utils.object_utils import (
-#     get_fixture_to_point_rel_offset,
-#     set_geom_dimensions,
-# )
-
 
 class Cabinet(Fixture):
     """
@@ -258,7 +238,6 @@ class Cabinet(Fixture):
             for door_collision_record, door_visual_record in zip(
                 door.actor_builder.collision_records, door.actor_builder.visual_records
             ):
-                # TODO (stao): Not sure why but the parsed panel for drawers is in the middle instead of the edge of the drawer
                 if link_builder.joint_record.joint_type == "prismatic":
                     door_collision_record.pose = (
                         sapien.Pose(p=np.array(pos)) * door_collision_record.pose
@@ -1142,7 +1121,6 @@ class PanelCabinet(Cabinet):
         x, y, z = [dim / 2 for dim in self.size]
         th = self.thickness / 2
         if self.solid_body:
-            # TODO (stao)
             geom_name = self.name + "_body"
             size = [x, y - th, z]
             pos = [0, th, 0]

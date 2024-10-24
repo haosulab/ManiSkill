@@ -2,21 +2,14 @@ import collections
 from copy import copy
 
 import numpy as np
-
-# from robosuite.models.objects import MujocoObject
-# from robosuite.utils import RandomizationError
-# from robosuite.utils.transform_utils import (
-#     convert_quat,
-#     euler2mat,
-#     mat2quat,
-#     quat_multiply,
-#     rotate_2d_point,
-# )
 from transforms3d.euler import euler2quat
 from transforms3d.quaternions import qmult
 
 from mani_skill.utils.scene_builder.robocasa.fixtures.mujoco_object import MujocoObject
-from mani_skill.utils.scene_builder.robocasa.utils.object_utils import obj_in_region
+from mani_skill.utils.scene_builder.robocasa.utils.object_utils import (
+    obj_in_region,
+    objs_intersect,
+)
 
 
 # from robocasa.utils.object_utils import obj_in_region, objs_intersect
@@ -417,18 +410,18 @@ class UniformRandomSampler(ObjectPositionSampler):
 
                 # TODO (stao): ensure no overlap
                 # objects cannot overlap
-                # if self.ensure_valid_placement:
-                #     for (x, y, z), other_quat, other_obj in placed_objects.values():
-                #         if objs_intersect(
-                #             obj=obj,
-                #             obj_pos=[object_x, object_y, object_z],
-                #             obj_quat=convert_quat(quat, to="xyzw"),
-                #             other_obj=other_obj,
-                #             other_obj_pos=[x, y, z],
-                #             other_obj_quat=convert_quat(other_quat, to="xyzw"),
-                #         ):
-                #             location_valid = False
-                #             break
+                if self.ensure_valid_placement:
+                    for (x, y, z), other_quat, other_obj in placed_objects.values():
+                        if objs_intersect(
+                            obj=obj,
+                            obj_pos=[object_x, object_y, object_z],
+                            obj_quat=quat,
+                            other_obj=other_obj,
+                            other_obj_pos=[x, y, z],
+                            other_obj_quat=other_quat,
+                        ):
+                            location_valid = False
+                            break
 
                 if location_valid:
                     # location is valid, put the object down

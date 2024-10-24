@@ -514,7 +514,6 @@ class Counter(Fixture):
             elif sum(self.base_opening) == 0 and sum(self.hollow) > 0:
                 pass
             else:
-                # TODO (stao): does this work?
                 self.actor_builder.add_box_collision(
                     pose=sapien.Pose(p=base_pos[side]),
                     half_size=base_size[side] / 2,
@@ -663,7 +662,6 @@ class Counter(Fixture):
             #     reset_regions[f"geom_{geom_i}"] = dict(size=size, offset=offset)
             #     geom_i += 1
         else:
-            # TODO (stao): add this?
             ref_fixture = env.get_fixture(fixtures, ref)
             ### find an appropriate geom to sample ###
             fixture_to_geom_offsets = []

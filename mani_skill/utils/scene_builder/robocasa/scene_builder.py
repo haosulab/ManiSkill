@@ -9,7 +9,6 @@ import torch
 import yaml
 from transforms3d.euler import euler2quat
 
-from mani_skill.agents.robots.fetch.fetch import Fetch
 from mani_skill.utils.scene_builder.robocasa.fixtures.accessories import (
     Accessory,
     CoffeeMachine,
@@ -283,7 +282,10 @@ class RoboCasaSceneBuilder(SceneBuilder):
                 # initialize fixture
                 # TODO (stao): use batched episode rng later
                 fixture = scene_utils.initialize_fixture(
-                    self.scene, fixture_config, fixtures, rng=self.env._episode_rng
+                    self.scene,
+                    fixture_config,
+                    fixtures,
+                    rng=self.env._batched_episode_rng[scene_idx],
                 )
 
                 fixtures[fixture_name] = fixture
@@ -495,7 +497,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
             self.env.agent.base_link.set_collision_group_bit(group=2, bit_idx=31, bit=1)
 
         elif self.env.robot_uids == "unitree_g1_simplified_upper_body":
-            # TODO (stao)
+            # TODO (stao): determine collisions to disable for unitree robot
             pass
 
     def _generate_initial_placements(

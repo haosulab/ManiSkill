@@ -3,7 +3,6 @@ from enum import IntEnum
 
 import numpy as np
 import sapien
-import sapien.physx as physx
 from transforms3d.euler import euler2mat, quat2euler, quat2mat
 
 from mani_skill.envs.scene import ManiSkillScene
@@ -15,7 +14,7 @@ from mani_skill.utils.scene_builder.robocasa.utils.object_utils import (
 
 class FixtureType(IntEnum):
     """
-    Enum for fixture types in robosuite kitchen environments.
+    Enum for fixture types in robocasa kitchen environments.
     """
 
     COUNTER = 1

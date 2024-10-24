@@ -185,7 +185,6 @@ class Wall:
         builder.initial_pose = sapien.Pose(pos, self.get_quat())
         builder.set_scene_idxs(scene_idxs)
         self.actor = builder.build_static(name=self.name + f"_{scene_idxs[0]}")
-        # TODO (stao) (don't include backing walls since we have backfaces?)
         return self
 
     def get_quat(self):

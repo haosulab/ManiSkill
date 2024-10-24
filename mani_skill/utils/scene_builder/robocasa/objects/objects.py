@@ -1,14 +1,9 @@
 import numpy as np
 import sapien
-import sapien.physx as physx
+from transforms3d.euler import quat2mat
 
 from mani_skill.utils.scene_builder.robocasa.fixtures.mujoco_object import MujocoObject
 from mani_skill.utils.scene_builder.robocasa.utils.mjcf_utils import string_to_array
-
-# import robosuite
-# import robosuite.utils.transform_utils as T
-# from robosuite.models.objects import MujocoXMLObject
-# from robosuite.utils.mjcf_utils import array_to_string, string_to_array
 
 
 class MJCFObject(MujocoObject):
@@ -40,6 +35,7 @@ class MJCFObject(MujocoObject):
             raise Exception("got invalid scale: {}".format(scale))
         scale = np.array(scale)
 
+        # note (stao): the values below are unused atm
         self.solimp = solimp
         self.solref = solref
         self.density = density
@@ -50,27 +46,9 @@ class MJCFObject(MujocoObject):
 
         self.rgba = rgba
 
-        # read default xml
-        xml_path = mjcf_path
-
-        # TODO (stao): why is there this postprocessing and file writing step in robocasa? It seems to be trying to find paths to robosuite assets but why?
-        # folder = os.path.dirname(xml_path)
-        # tree = ET.parse(xml_path)
-        # root = tree.getroot()
-
-        # # write modified xml (and make sure to postprocess any paths just in case)
-        # xml_str = ET.tostring(root, encoding="utf8").decode("utf8")
-        # xml_str = self.postprocess_model_xml(xml_str)
-        # time_str = str(time.time()).replace(".", "_")
-        # new_xml_path = os.path.join(folder, "{}_{}.xml".format(time_str, os.getpid()))
-        # f = open(new_xml_path, "w")
-        # f.write(xml_str)
-        # f.close()
-
-        # initialize object with new xml we wrote
         super().__init__(
             scene=scene,
-            xml=xml_path,
+            xml=mjcf_path,
             name=name,
             # joints=[dict(type="free", damping="0.0005")],
             # obj_type="all",
@@ -78,97 +56,13 @@ class MJCFObject(MujocoObject):
             scale=scale,
         )
 
-        # clean up xml - we don't need it anymore
-        # if os.path.exists(new_xml_path):
-        #     os.remove(new_xml_path)
-
     def build(self, scene_idxs: list[int]):
-        # if self.is_articulation:
-        #     self.articulation_builder.initial_pose = sapien.Pose(
-        #         p=self.pos, q=self.quat
-        #     )
-        #     self.articulation_builder.set_scene_idxs(scene_idxs)
-        #     self.articulation = self.articulation_builder.build(
-        #         name=self.name + f"_{scene_idxs[0]}", fix_root_link=True
-        #     )
-        #     if not physx.is_gpu_enabled():
-        #         self.articulation.set_root_pose(self.articulation_builder.initial_pose)
-        # else:
         self.actor_builder.set_scene_idxs(scene_idxs)
         self.actor_builder.initial_pose = sapien.Pose(p=self.pos, q=self.quat)
         self.actor = self.actor_builder.build_dynamic(
             name=self.name + f"_{scene_idxs[0]}"
         )
         return self
-
-    # def postprocess_model_xml(self, xml_str):
-    #     """
-    #     New version of postprocess model xml that only replaces robosuite file paths if necessary (otherwise
-    #     there is an error with the "max" operation)
-    #     """
-
-    #     path = os.path.split(robosuite.__file__)[0]
-    #     path_split = path.split("/")
-
-    #     # replace mesh and texture file paths
-    #     tree = ET.fromstring(xml_str)
-    #     root = tree
-    #     asset = root.find("asset")
-    #     meshes = asset.findall("mesh")
-    #     textures = asset.findall("texture")
-    #     all_elements = meshes + textures
-
-    #     for elem in all_elements:
-    #         old_path = elem.get("file")
-    #         if old_path is None:
-    #             continue
-
-    #         old_path_split = old_path.split("/")
-    #         # maybe replace all paths to robosuite assets
-    #         check_lst = [
-    #             loc for loc, val in enumerate(old_path_split) if val == "robosuite"
-    #         ]
-    #         if len(check_lst) > 0:
-    #             ind = max(check_lst)  # last occurrence index
-    #             new_path_split = path_split + old_path_split[ind + 1 :]
-    #             new_path = "/".join(new_path_split)
-    #             elem.set("file", new_path)
-
-    #     return ET.tostring(root, encoding="utf8").decode("utf8")
-
-    def _get_geoms(self, root, _parent=None):
-        """
-        Helper function to recursively search through element tree starting at @root and returns
-        a list of (parent, child) tuples where the child is a geom element
-
-        Args:
-            root (ET.Element): Root of xml element tree to start recursively searching through
-
-            _parent (ET.Element): Parent of the root element tree. Should not be used externally; only set
-                during the recursive call
-
-        Returns:
-            list: array of (parent, child) tuples where the child element is a geom type
-        """
-        geom_pairs = super(MJCFObject, self)._get_geoms(root=root, _parent=_parent)
-
-        # modify geoms according to the attributes
-        for i, (parent, element) in enumerate(geom_pairs):
-            element.set("solref", array_to_string(self.solref))
-            element.set("solimp", array_to_string(self.solimp))
-            element.set("density", str(self.density))
-            element.set("friction", array_to_string(self.friction))
-            if self.margin is not None:
-                element.set("margin", str(self.margin))
-
-            if (self.rgba is not None) and (element.get("group") == "1"):
-                element.set("rgba", array_to_string(self.rgba))
-
-            if self.priority is not None:
-                # set high priorit
-                element.set("priority", str(self.priority))
-
-        return geom_pairs
 
     @property
     def horizontal_radius(self):
@@ -209,7 +103,7 @@ class MJCFObject(MujocoObject):
         if trans is None:
             trans = np.array([0, 0, 0])
         if rot is not None:
-            rot = T.quat2mat(rot)
+            rot = quat2mat(rot)
         else:
             rot = np.eye(3)
 
