@@ -36,7 +36,9 @@ class CabinetPanel(MujocoObject):
         texture (str): Path to the texture file for the cabinet panel.
     """
 
-    geom_names: set[str]
+    geom_names: list[str]
+    """order of collision geometries loaded by the MJCF loader"""
+    geom_names_set: set[str]
     material_overrides: dict[str, sapien.render.RenderMaterial] = {}
 
     def __init__(
@@ -51,6 +53,7 @@ class CabinetPanel(MujocoObject):
         handle_vpos=None,
         texture=None,
     ):
+        self.geom_names_set = set(self.geom_names)
         super().__init__(
             scene=scene,
             xml=xml,
@@ -82,7 +85,9 @@ class CabinetPanel(MujocoObject):
             zip(sizes.items(), positions.items())
         ):
 
-            col_record = self.actor_builder.collision_records[i]
+            col_record = self.actor_builder.collision_records[
+                self.geom_names.index(part_name)
+            ]
             col_record.scale = size
             col_record.pose = sapien.Pose(p=position, q=col_record.pose.q)
             mat = self.loader._materials["mat"]
@@ -132,7 +137,7 @@ class CabinetPanel(MujocoObject):
         for visual_record in self.actor_builder.visual_records:
             shortname = visual_record.name.replace(self.name + "_", "")
             if (
-                shortname in self.geom_names
+                shortname in self.geom_names_set
                 and shortname not in self.material_overrides
             ):
                 visual_record.material.base_color_texture = (
@@ -231,7 +236,7 @@ class SlabCabinetPanel(CabinetPanel):
     Initialize a slab cabinet panel, which is a simple flat panel.
     """
 
-    geom_names = set(["door"])
+    geom_names = ["door"]
 
     def __init__(self, *args, **kwargs):
         xml = "fixtures/cabinets/cabinet_panels/slab.xml"
@@ -268,7 +273,7 @@ class ShakerCabinetPanel(CabinetPanel):
         trim_size (float): Size of the trim (width/height).
     """
 
-    geom_names = set(["door", "trim_left", "trim_right", "trim_bottom", "trim_top"])
+    geom_names = ["door", "trim_left", "trim_right", "trim_bottom", "trim_top"]
 
     def __init__(self, name, trim_th=0.02, trim_size=0.08, *args, **kwargs):
         self.trim_th = trim_th
@@ -328,16 +333,14 @@ class RaisedCabinetPanel(CabinetPanel):
         raised_gap (float): Gap between the raised portion and the sorrounding trims
     """
 
-    geom_names = set(
-        [
-            "door",
-            "door_raised",
-            "trim_left",
-            "trim_right",
-            "trim_bottom",
-            "trim_top",
-        ]
-    )
+    geom_names = [
+        "door",
+        "door_raised",
+        "trim_left",
+        "trim_right",
+        "trim_bottom",
+        "trim_top",
+    ]
 
     def __init__(
         self, name, trim_th=0.02, trim_size=0.08, raised_gap=0.01, *args, **kwargs
@@ -404,17 +407,15 @@ class DividedWindowCabinetPanel(CabinetPanel):
         trim_size (float): Size of the trims (width/height).
     """
 
-    geom_names = set(
-        [
-            "door",
-            "trim_left",
-            "trim_right",
-            "trim_bottom",
-            "trim_top",
-            "horiz_trim",
-            "vert_trim",
-        ]
-    )
+    geom_names = [
+        "door",
+        "trim_left",
+        "trim_right",
+        "trim_bottom",
+        "trim_top",
+        "horiz_trim",
+        "vert_trim",
+    ]
 
     def __init__(self, name, trim_th=0.02, trim_size=0.08, *args, **kwargs):
 
@@ -492,7 +493,7 @@ class FullWindowedCabinetPanel(CabinetPanel):
         opacity (float): Opacity of the window. Defaults to 0.5 to create a "frosted" effect.
     """
 
-    geom_names = set(["door", "trim_left", "trim_right", "trim_bottom", "trim_top"])
+    geom_names = ["door", "trim_left", "trim_right", "trim_bottom", "trim_top"]
     material_overrides: dict[str, sapien.render.RenderMaterial] = {}
 
     def __init__(
