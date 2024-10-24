@@ -133,8 +133,8 @@ def initialize_data_sources():
 
     DATA_SOURCES["RoboCasa"] = DataSource(
         source_type="scene",
-        url="https://huggingface.co/datasets/haosulab/RoboCasa/resolve/main/robo_casa_dataset.zip",
-        target_path="scene_datasets/robo_casa_dataset",
+        url="https://huggingface.co/datasets/haosulab/RoboCasa/resolve/main/robocasa_dataset.zip",
+        target_path="scene_datasets/robocasa_dataset",
     )
 
     # Robots

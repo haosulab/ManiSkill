@@ -77,9 +77,6 @@ class RoboCasaKitchenEnv(BaseEnv):
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
             self.scene_builder.initialize(env_idx)
-            if self.agent is not None:
-                if self.robot_uids == "fetch":
-                    self.agent.robot.set_qpos(self.agent.keyframes["rest"].qpos)
 
     def evaluate(self):
         return {}

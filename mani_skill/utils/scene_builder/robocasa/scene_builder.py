@@ -95,9 +95,7 @@ FIXTURES_INTERIOR = dict(
 
 ALL_SIDES = ["left", "right", "front", "back", "bottom", "top"]
 
-ROBOT_FRONT_FACING_SIZE = dict(
-    fetch=0.8,
-)
+ROBOT_FRONT_FACING_SIZE = dict(fetch=0.8, unitree_g1_simplified_upper_body=0.6)
 
 
 def check_syntax(fixture):
@@ -471,7 +469,19 @@ class RoboCasaSceneBuilder(SceneBuilder):
         return fxtr_placements, robot_base_pos, robot_base_ori
 
     def initialize(self, env_idx: torch.Tensor, init_config_idxs: List[int] = None):
-        pass
+        with torch.device(self.env.device):
+            if self.env.agent is not None:
+                if self.env.robot_uids == "fetch":
+                    self.env.agent.robot.set_qpos(self.env.agent.keyframes["rest"].qpos)
+                elif self.env.robot_uids == "unitree_g1_simplified_upper_body":
+                    self.env.agent.robot.set_qpos(
+                        self.env.agent.keyframes["standing"].qpos
+                    )
+                    xyz = self.env.agent.robot.pose.p
+                    xyz[:, 2] += self.env.agent.keyframes["standing"].pose.p[2]
+                    self.env.agent.robot.set_pose(
+                        Pose.create_from_pq(p=xyz, q=self.env.agent.robot.pose.q)
+                    )
 
     def get_fixture_cfgs(self):
         """
