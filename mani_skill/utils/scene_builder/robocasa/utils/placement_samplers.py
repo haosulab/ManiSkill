@@ -38,6 +38,10 @@ def rotate_2d_point(input, rot):
     return np.array([x, y])
 
 
+class RandomizationError(Exception):
+    pass
+
+
 class ObjectPositionSampler:
     """
     Base class of object placement sampler.

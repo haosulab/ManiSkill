@@ -19,6 +19,9 @@ from mani_skill.utils.scene_builder.robocasa.objects.kitchen_object_utils import
 from mani_skill.utils.scene_builder.robocasa.objects.objects import MJCFObject
 from mani_skill.utils.scene_builder.robocasa.scene_builder import RoboCasaSceneBuilder
 from mani_skill.utils.scene_builder.robocasa.utils import scene_registry
+from mani_skill.utils.scene_builder.robocasa.utils.placement_samplers import (
+    RandomizationError,
+)
 from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 
 
@@ -330,95 +333,97 @@ class RoboCasaKitchenEnv(BaseEnv):
                 object = MJCFObject(self.scene, name=cfg["name"], **object_kwargs)
                 return object, info
 
-            self.objects = {}
-            if "object_cfgs" in self._ep_meta:
-                self.object_cfgs = self._ep_meta["object_cfgs"]
-                for obj_num, cfg in enumerate(self.object_cfgs):
-                    model, info = _create_obj(cfg)
-                    cfg["info"] = info
-                    self.objects[model.name] = model
-                    # self.model.merge_objects([model])
-            else:
-                self.object_cfgs = self._get_obj_cfgs()
-                addl_obj_cfgs = []
-                for obj_num, cfg in enumerate(self.object_cfgs):
-                    cfg["type"] = "object"
-                    model, info = _create_obj(cfg)
-                    cfg["info"] = info
-                    self.objects[model.name] = model
-                    # self.model.merge_objects([model])
-
-                    try_to_place_in = cfg["placement"].get("try_to_place_in", None)
-
-                    # place object in a container and add container as an object to the scene
-                    if try_to_place_in and (
-                        "in_container" in cfg["info"]["groups_containing_sampled_obj"]
-                    ):
-                        container_cfg = {}
-                        container_cfg["name"] = cfg["name"] + "_container"
-                        container_cfg["obj_groups"] = try_to_place_in
-                        container_cfg["placement"] = deepcopy(cfg["placement"])
-                        container_cfg["type"] = "object"
-
-                        container_kwargs = cfg["placement"].get(
-                            "container_kwargs", None
-                        )
-                        if container_kwargs is not None:
-                            for k, v in container_kwargs.values():
-                                container_cfg[k] = v
-
-                        # add in the new object to the model
-                        addl_obj_cfgs.append(container_cfg)
-                        model, info = _create_obj(container_cfg)
-                        container_cfg["info"] = info
+            for _ in range(10):
+                self.objects = {}
+                if "object_cfgs" in self._ep_meta:
+                    self.object_cfgs = self._ep_meta["object_cfgs"]
+                    for obj_num, cfg in enumerate(self.object_cfgs):
+                        model, info = _create_obj(cfg)
+                        cfg["info"] = info
                         self.objects[model.name] = model
-                        self.model.merge_objects([model])
+                        # self.model.merge_objects([model])
+                else:
+                    self.object_cfgs = self._get_obj_cfgs()
+                    addl_obj_cfgs = []
+                    for obj_num, cfg in enumerate(self.object_cfgs):
+                        cfg["type"] = "object"
+                        model, info = _create_obj(cfg)
+                        cfg["info"] = info
+                        self.objects[model.name] = model
+                        # self.model.merge_objects([model])
 
-                        # modify object config to lie inside of container
-                        cfg["placement"] = dict(
-                            size=(0.01, 0.01),
-                            ensure_object_boundary_in_range=False,
-                            sample_args=dict(
-                                reference=container_cfg["name"],
-                            ),
-                        )
+                        try_to_place_in = cfg["placement"].get("try_to_place_in", None)
 
-                # prepend the new object configs in
-                self.object_cfgs = addl_obj_cfgs + self.object_cfgs
+                        # place object in a container and add container as an object to the scene
+                        if try_to_place_in and (
+                            "in_container"
+                            in cfg["info"]["groups_containing_sampled_obj"]
+                        ):
+                            container_cfg = {}
+                            container_cfg["name"] = cfg["name"] + "_container"
+                            container_cfg["obj_groups"] = try_to_place_in
+                            container_cfg["placement"] = deepcopy(cfg["placement"])
+                            container_cfg["type"] = "object"
 
-                # # remove objects that didn't get created
-                # self.object_cfgs = [cfg for cfg in self.object_cfgs if "model" in cfg]
-            placement_initializer = self.scene_builder._get_placement_initializer(
-                self.scene_builder.scene_data[self._scene_idx_to_be_loaded]["fixtures"],
-                self.objects,
-                self.object_cfgs,
-                rng=self._batched_episode_rng[scene_idx],
-            )
+                            container_kwargs = cfg["placement"].get(
+                                "container_kwargs", None
+                            )
+                            if container_kwargs is not None:
+                                for k, v in container_kwargs.values():
+                                    container_cfg[k] = v
 
-            object_placements = None
-            for i in range(1):
-                # try:
-                object_placements = placement_initializer.sample(
-                    placed_objects=self.scene_builder.scene_data[
-                        self._scene_idx_to_be_loaded
-                    ]["fxtr_placements"]
+                            # add in the new object to the model
+                            addl_obj_cfgs.append(container_cfg)
+                            model, info = _create_obj(container_cfg)
+                            container_cfg["info"] = info
+                            self.objects[model.name] = model
+                            self.model.merge_objects([model])
+
+                            # modify object config to lie inside of container
+                            cfg["placement"] = dict(
+                                size=(0.01, 0.01),
+                                ensure_object_boundary_in_range=False,
+                                sample_args=dict(
+                                    reference=container_cfg["name"],
+                                ),
+                            )
+
+                    # prepend the new object configs in
+                    self.object_cfgs = addl_obj_cfgs + self.object_cfgs
+
+                    # # remove objects that didn't get created
+                    # self.object_cfgs = [cfg for cfg in self.object_cfgs if "model" in cfg]
+                placement_initializer = self.scene_builder._get_placement_initializer(
+                    self.scene_builder.scene_data[self._scene_idx_to_be_loaded][
+                        "fixtures"
+                    ],
+                    self.objects,
+                    self.object_cfgs,
+                    rng=self._batched_episode_rng[scene_idx],
                 )
-                # except RandomizationError:
-                #     if macros.VERBOSE:
-                #         print("Ranomization error in initial placement. Try #{}".format(i))
-                #     continue
 
+                object_placements = None
+                for i in range(10):
+                    try:
+                        object_placements = placement_initializer.sample(
+                            placed_objects=self.scene_builder.scene_data[
+                                self._scene_idx_to_be_loaded
+                            ]["fxtr_placements"]
+                        )
+                    except RandomizationError:
+                        #     if macros.VERBOSE:
+                        #         print("Ranomization error in initial placement. Try #{}".format(i))
+                        continue
+
+                    break
+                if object_placements is None:
+                    print("Could not place objects. Trying again with new objects")
+                    continue
+                for obj_pos, obj_quat, obj in object_placements.values():
+                    obj.pos = obj_pos
+                    obj.quat = obj_quat
+                    obj.build(scene_idxs=[scene_idx])
                 break
-            for obj_pos, obj_quat, obj in object_placements.values():
-                obj.pos = obj_pos
-                obj.quat = obj_quat
-                obj.build(scene_idxs=[scene_idx])
-            # if object_placements is None:
-            #     if macros.VERBOSE:
-            #         print("Could not place objects. Trying again with self._load_model()")
-            #     self._load_model()
-            #     return
-            # self.object_placements = object_placements
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
