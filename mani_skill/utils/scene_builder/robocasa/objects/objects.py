@@ -1,21 +1,23 @@
-import os
-import time
-import xml.etree.ElementTree as ET
-
 import numpy as np
-import robosuite
-import robosuite.utils.transform_utils as T
-from robosuite.models.objects import MujocoXMLObject
-from robosuite.utils.mjcf_utils import array_to_string, string_to_array
+import sapien
+
+from mani_skill.utils.scene_builder.robocasa.fixtures.mujoco_object import MujocoObject
+from mani_skill.utils.scene_builder.robocasa.utils.mjcf_utils import string_to_array
+
+# import robosuite
+# import robosuite.utils.transform_utils as T
+# from robosuite.models.objects import MujocoXMLObject
+# from robosuite.utils.mjcf_utils import array_to_string, string_to_array
 
 
-class MJCFObject(MujocoXMLObject):
+class MJCFObject(MujocoObject):
     """
     Blender object with support for changing the scaling
     """
 
     def __init__(
         self,
+        scene,
         name,
         mjcf_path,
         scale=1.0,
@@ -49,67 +51,91 @@ class MJCFObject(MujocoXMLObject):
 
         # read default xml
         xml_path = mjcf_path
-        folder = os.path.dirname(xml_path)
-        tree = ET.parse(xml_path)
-        root = tree.getroot()
 
-        # write modified xml (and make sure to postprocess any paths just in case)
-        xml_str = ET.tostring(root, encoding="utf8").decode("utf8")
-        xml_str = self.postprocess_model_xml(xml_str)
-        time_str = str(time.time()).replace(".", "_")
-        new_xml_path = os.path.join(folder, "{}_{}.xml".format(time_str, os.getpid()))
-        f = open(new_xml_path, "w")
-        f.write(xml_str)
-        f.close()
+        # TODO (stao): why is there this postprocessing and file writing step in robocasa? It seems to be trying to find paths to robosuite assets but why?
+        # folder = os.path.dirname(xml_path)
+        # tree = ET.parse(xml_path)
+        # root = tree.getroot()
+
+        # # write modified xml (and make sure to postprocess any paths just in case)
+        # xml_str = ET.tostring(root, encoding="utf8").decode("utf8")
+        # xml_str = self.postprocess_model_xml(xml_str)
+        # time_str = str(time.time()).replace(".", "_")
+        # new_xml_path = os.path.join(folder, "{}_{}.xml".format(time_str, os.getpid()))
+        # f = open(new_xml_path, "w")
+        # f.write(xml_str)
+        # f.close()
 
         # initialize object with new xml we wrote
         super().__init__(
-            fname=new_xml_path,
+            scene=scene,
+            xml=xml_path,
             name=name,
-            joints=[dict(type="free", damping="0.0005")],
-            obj_type="all",
-            duplicate_collision_geoms=False,
+            # joints=[dict(type="free", damping="0.0005")],
+            # obj_type="all",
+            # duplicate_collision_geoms=False,
             scale=scale,
         )
 
         # clean up xml - we don't need it anymore
-        if os.path.exists(new_xml_path):
-            os.remove(new_xml_path)
+        # if os.path.exists(new_xml_path):
+        #     os.remove(new_xml_path)
 
-    def postprocess_model_xml(self, xml_str):
-        """
-        New version of postprocess model xml that only replaces robosuite file paths if necessary (otherwise
-        there is an error with the "max" operation)
-        """
+    def build(self, scene_idxs: list[int]):
+        # if self.is_articulation:
+        #     self.articulation_builder.initial_pose = sapien.Pose(
+        #         p=self.pos, q=self.quat
+        #     )
+        #     self.articulation_builder.set_scene_idxs(scene_idxs)
+        #     self.articulation = self.articulation_builder.build(
+        #         name=self.name + f"_{scene_idxs[0]}", fix_root_link=True
+        #     )
+        #     if not physx.is_gpu_enabled():
+        #         self.articulation.set_root_pose(self.articulation_builder.initial_pose)
+        # else:
+        self.actor_builder.set_scene_idxs(scene_idxs)
+        # self.actor_builder.initial_pose = sapien.Pose(p=self.pos, q=self.quat)
+        self.actor = self.actor_builder.build_dynamic(
+            name=self.name + f"_{scene_idxs[0]}"
+        )
+        # if not physx.is_gpu_enabled():
+        #     self.actor.set_pose(self.actor_builder.initial_pose)
+        return self
 
-        path = os.path.split(robosuite.__file__)[0]
-        path_split = path.split("/")
+    # def postprocess_model_xml(self, xml_str):
+    #     """
+    #     New version of postprocess model xml that only replaces robosuite file paths if necessary (otherwise
+    #     there is an error with the "max" operation)
+    #     """
 
-        # replace mesh and texture file paths
-        tree = ET.fromstring(xml_str)
-        root = tree
-        asset = root.find("asset")
-        meshes = asset.findall("mesh")
-        textures = asset.findall("texture")
-        all_elements = meshes + textures
+    #     path = os.path.split(robosuite.__file__)[0]
+    #     path_split = path.split("/")
 
-        for elem in all_elements:
-            old_path = elem.get("file")
-            if old_path is None:
-                continue
+    #     # replace mesh and texture file paths
+    #     tree = ET.fromstring(xml_str)
+    #     root = tree
+    #     asset = root.find("asset")
+    #     meshes = asset.findall("mesh")
+    #     textures = asset.findall("texture")
+    #     all_elements = meshes + textures
 
-            old_path_split = old_path.split("/")
-            # maybe replace all paths to robosuite assets
-            check_lst = [
-                loc for loc, val in enumerate(old_path_split) if val == "robosuite"
-            ]
-            if len(check_lst) > 0:
-                ind = max(check_lst)  # last occurrence index
-                new_path_split = path_split + old_path_split[ind + 1 :]
-                new_path = "/".join(new_path_split)
-                elem.set("file", new_path)
+    #     for elem in all_elements:
+    #         old_path = elem.get("file")
+    #         if old_path is None:
+    #             continue
 
-        return ET.tostring(root, encoding="utf8").decode("utf8")
+    #         old_path_split = old_path.split("/")
+    #         # maybe replace all paths to robosuite assets
+    #         check_lst = [
+    #             loc for loc, val in enumerate(old_path_split) if val == "robosuite"
+    #         ]
+    #         if len(check_lst) > 0:
+    #             ind = max(check_lst)  # last occurrence index
+    #             new_path_split = path_split + old_path_split[ind + 1 :]
+    #             new_path = "/".join(new_path_split)
+    #             elem.set("file", new_path)
+
+    #     return ET.tostring(root, encoding="utf8").decode("utf8")
 
     def _get_geoms(self, root, _parent=None):
         """
@@ -147,7 +173,7 @@ class MJCFObject(MujocoXMLObject):
 
     @property
     def horizontal_radius(self):
-        horizontal_radius_site = self.worldbody.find(
+        horizontal_radius_site = self.loader.xml.find(
             "./body/site[@name='{}horizontal_radius_site']".format(self.naming_prefix)
         )
         site_values = string_to_array(horizontal_radius_site.get("pos"))
@@ -162,7 +188,7 @@ class MJCFObject(MujocoXMLObject):
 
         bottom_offset = self.bottom_offset
         top_offset = self.top_offset
-        horizontal_radius_site = self.worldbody.find(
+        horizontal_radius_site = self.loader.xml.find(
             "./body/site[@name='{}horizontal_radius_site']".format(self.naming_prefix)
         )
         horiz_radius = string_to_array(horizontal_radius_site.get("pos"))[:2]

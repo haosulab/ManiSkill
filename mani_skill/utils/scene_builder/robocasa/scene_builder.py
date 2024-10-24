@@ -413,16 +413,16 @@ class RoboCasaSceneBuilder(SceneBuilder):
         fxtr_placement_initializer = self._get_placement_initializer(
             self.fixture_cfgs, z_offset=0.0, rng=rng
         )
-        fxtr_placements = None
+        self.fxtr_placements = None
         for i in range(10):
             # try:
-            fxtr_placements = fxtr_placement_initializer.sample()
+            self.fxtr_placements = fxtr_placement_initializer.sample()
             # except:
             # if macros.VERBOSE:
             # print("Ranomization error in initial placement. Try #{}".format(i))
             # continue
             break
-        if fxtr_placements is None:
+        if self.fxtr_placements is None:
             # if macros.VERBOSE:
             print("Could not place fixtures. Trying again with self._load_model()")
             self._load_model()
@@ -466,7 +466,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
         else:
             robot_base_pos = None
             robot_base_ori = None
-        return fxtr_placements, robot_base_pos, robot_base_ori
+        return self.fxtr_placements, robot_base_pos, robot_base_ori
 
     def initialize(self, env_idx: torch.Tensor, init_config_idxs: List[int] = None):
         with torch.device(self.env.device):

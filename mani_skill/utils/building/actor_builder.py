@@ -165,6 +165,10 @@ class ActorBuilder(SAPIENActorBuilder):
 
         return component
 
+    def build_dynamic(self, name):
+        self.set_physx_body_type("dynamic")
+        return self.build(name=name)
+
     def build_kinematic(self, name):
         self.set_physx_body_type("kinematic")
         return self.build(name=name)

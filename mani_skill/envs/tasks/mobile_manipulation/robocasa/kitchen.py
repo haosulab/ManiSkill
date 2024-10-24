@@ -16,6 +16,7 @@ from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.robocasa.objects.kitchen_object_utils import (
     sample_kitchen_object,
 )
+from mani_skill.utils.scene_builder.robocasa.objects.objects import MJCFObject
 from mani_skill.utils.scene_builder.robocasa.scene_builder import RoboCasaSceneBuilder
 from mani_skill.utils.scene_builder.robocasa.utils import scene_registry
 from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
@@ -318,11 +319,10 @@ class RoboCasaKitchenEnv(BaseEnv):
             if "name" not in cfg:
                 cfg["name"] = "obj_{}".format(obj_num + 1)
             info = object_info
-            import ipdb
+            # import ipdb
 
-            ipdb.set_trace()
-            object = MJCFObject(name=cfg["name"], **object_kwargs)
-
+            # ipdb.set_trace()
+            object = MJCFObject(self.scene, name=cfg["name"], **object_kwargs)
             return object, info
 
         self.objects = {}
@@ -332,7 +332,7 @@ class RoboCasaKitchenEnv(BaseEnv):
                 model, info = _create_obj(cfg)
                 cfg["info"] = info
                 self.objects[model.name] = model
-                self.model.merge_objects([model])
+                # self.model.merge_objects([model])
         else:
             self.object_cfgs = self._get_obj_cfgs()
             addl_obj_cfgs = []
@@ -381,28 +381,37 @@ class RoboCasaKitchenEnv(BaseEnv):
 
             # # remove objects that didn't get created
             # self.object_cfgs = [cfg for cfg in self.object_cfgs if "model" in cfg]
-        self.placement_initializer = self.scene_builder.get_placement_initializer(
+        for k, v in self.objects.items():
+            v.actor_builder.initial_pose = sapien.Pose([1, 1, 1])
+            v.build(scene_idxs=[0])
+            # print(k, v)
+            # v.pose = (sapien.Pose([1, 1, 1]))
+            # v.initial_pose = sapien.Pose([1, 1, 1])
+        placement_initializer = self.scene_builder._get_placement_initializer(
             self.object_cfgs
         )
 
         object_placements = None
         for i in range(1):
-            try:
-                object_placements = self.placement_initializer.sample(
-                    placed_objects=self.fxtr_placements
-                )
-            except RandomizationError:
-                if macros.VERBOSE:
-                    print("Ranomization error in initial placement. Try #{}".format(i))
-                continue
+            # try:
+            object_placements = placement_initializer.sample(
+                placed_objects=self.scene_builder.fxtr_placements
+            )
+            # except RandomizationError:
+            #     if macros.VERBOSE:
+            #         print("Ranomization error in initial placement. Try #{}".format(i))
+            #     continue
 
             break
-        if object_placements is None:
-            if macros.VERBOSE:
-                print("Could not place objects. Trying again with self._load_model()")
-            self._load_model()
-            return
-        self.object_placements = object_placements
+        import ipdb
+
+        ipdb.set_trace()
+        # if object_placements is None:
+        #     if macros.VERBOSE:
+        #         print("Could not place objects. Trying again with self._load_model()")
+        #     self._load_model()
+        #     return
+        # self.object_placements = object_placements
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):

@@ -36,6 +36,7 @@ Notes:
 
 
 """
+import logging
 import math
 import os
 import re
@@ -172,10 +173,10 @@ class MJCFLoader:
         must be handled on a case by case basis"""
 
         self.load_multiple_collisions_from_file = False
+        self.load_nonconvex_collisions = False
         self.multiple_collisions_decomposition = "none"
         self.multiple_collisions_decomposition_params = dict()
 
-        self.collision_is_visual = False
         self.revolute_unwrapped = False
         self.scale = 1.0
 
@@ -237,8 +238,12 @@ class MJCFLoader:
         geom_type = geom_attrib.get("type", "sphere")
         if "mesh" in geom_attrib:
             geom_type = "mesh"
-        geom_size = _parse_vec(geom_attrib, "size", [1.0, 1.0, 1.0]) * self.scale
-        geom_pos = _parse_vec(geom_attrib, "pos", (0.0, 0.0, 0.0)) * self.scale
+        geom_size = (
+            _parse_vec(geom_attrib, "size", np.array([1.0, 1.0, 1.0])) * self.scale
+        )
+        geom_pos = (
+            _parse_vec(geom_attrib, "pos", np.array([0.0, 0.0, 0.0])) * self.scale
+        )
         geom_rot = _parse_orientation(geom_attrib, self._use_degrees, self._euler_seq)
         _parse_float(geom_attrib, "density", self.density)
         if "material" in geom_attrib:
@@ -252,12 +257,22 @@ class MJCFLoader:
         geom_density = _parse_float(geom_attrib, "density", 1000.0)
 
         # if condim is 1, we can easily model the material's friction
-        if _parse_int(geom_attrib, "condim", 0) == 1:
-            friction = _parse_float(
-                geom_attrib, "friction", 0.3
+        condim = _parse_int(geom_attrib, "condim", 3)
+        if condim == 3:
+            friction = _parse_vec(
+                geom_attrib, "friction", np.array([0.3, 0.3, 0.3])
             )  # maniskill default friction is 0.3
+            # NOTE (stao): we only support sliding friction at the moment. see
+            # https://mujoco.readthedocs.io/en/stable/XMLreference.html#body-geom-friction
+            # we might be able to imitate their torsional frictions via patch radius attributes:
+            # https://nvidia-omniverse.github.io/PhysX/physx/5.4.0/_api_build/class_px_shape.html#_CPPv4N7PxShape23setTorsionalPatchRadiusE6PxReal
+            friction = friction[0]
             physx_material = PhysxMaterial(
                 static_friction=friction, dynamic_friction=friction, restitution=0
+            )
+        elif condim == 1:
+            physx_material = PhysxMaterial(
+                static_friction=0, dynamic_friction=0, restitution=0
             )
         else:
             physx_material = None
@@ -336,6 +351,7 @@ class MJCFLoader:
                         radius=geom_radius,
                         half_length=geom_half_length,
                         material=physx_material,
+                        density=geom_density,
                         # name=geom_name,
                     )
             elif geom_type == "box":
@@ -351,6 +367,7 @@ class MJCFLoader:
                         t_visual2link,
                         half_size=geom_size,
                         material=physx_material,
+                        density=geom_density,
                         # name=geom_name,
                     )
             elif geom_type == "cylinder":
@@ -368,25 +385,52 @@ class MJCFLoader:
                         radius=geom_radius,
                         half_length=geom_half_length,
                         material=physx_material,
+                        density=geom_density,
                         # name=geom_name
                     )
 
         elif geom_type == "plane":
-            pass
+            logging.warning(
+                "Currently ManiSkill does not support loading plane geometries from MJCFs"
+            )
         elif geom_type == "ellipsoid":
-            pass
-        elif geom_type == "cylinder":
-            pass
+            logging.warning(
+                "Currently ManiSkill does not support loading ellipsoid geometries from MJCFs"
+            )
         elif geom_type == "mesh":
+            mesh_name = geom_attrib.get("mesh")
+            mesh_attrib = self._meshes[mesh_name].attrib
+            mesh_scale = self.scale * np.array(
+                _parse_vec(mesh_attrib, "scale", np.array([1, 1, 1]))
+            )
+            # TODO refquat
+            mesh_file = os.path.join(self._mesh_dir, mesh_attrib["file"])
             if has_visual_body:
-                mesh_name = geom_attrib.get("mesh")
                 builder.add_visual_from_file(
-                    os.path.join(self._mesh_dir, self._meshes[mesh_name].get("file")),
-                    scale=(self.scale, self.scale, self.scale)
-                    if type(self.scale) == float
-                    else self.scale,
+                    mesh_file,
+                    pose=t_visual2link,
+                    scale=mesh_scale,
                     material=render_material,
                 )
+            if has_collisions:
+                if self.load_multiple_collisions_from_file:
+                    builder.add_multiple_convex_collisions_from_file(
+                        mesh_file,
+                        pose=t_visual2link,
+                        scale=mesh_scale,
+                        material=physx_material,
+                        density=geom_density,
+                    )
+                else:
+                    builder.add_convex_collision_from_file(
+                        mesh_file,
+                        pose=t_visual2link,
+                        scale=(self.scale, self.scale, self.scale)
+                        if type(self.scale) == float
+                        else self.scale,
+                        material=physx_material,
+                        density=geom_density,
+                    )
         elif geom_type == "sdf":
             raise NotImplementedError("SDF geom type not supported at the moment")
         elif geom_type == "hfield":
@@ -484,6 +528,8 @@ class MJCFLoader:
 
     @property
     def _root_default(self):
+        if "__root__" not in self._defaults:
+            return {}
         return self._defaults["__root__"]
 
     def _parse_default(self, node: Element, parent: Element):

@@ -29,6 +29,7 @@ class MujocoObject:
         pos: np.ndarray = None,
         scale: float = 1,
     ):
+        self.naming_prefix = ""  # not sure what this is
         self.name = name
         self.pos = np.array([0, 0, 0])
         if pos is not None:
@@ -88,9 +89,9 @@ class MujocoObject:
             #     rgba[-1] = 0.0
             # site.set("rgba", array_to_string(rgba))
             # self._bounds_sites[postfix] = site
-        if scale != 1:
-            # NOTE (stao): this is a hacky way to try and imitate the original robocasa/robosuite scaling code.
-            self.set_scale(scale)
+        # if scale != 1:
+        # NOTE (stao): this is a hacky way to try and imitate the original robocasa/robosuite scaling code.
+        self.set_scale(scale)
 
     """Functions from RoboCasa MujocoXMLObject class"""
 
@@ -110,6 +111,8 @@ class MujocoObject:
 
         scale is a float or a array with 3 floats
         """
+        if isinstance(scale, float) or isinstance(scale, int):
+            scale = np.array([scale, scale, scale])
         self.loader.scale = scale
         self._scale = np.array(scale)
         if hasattr(self, "size"):
