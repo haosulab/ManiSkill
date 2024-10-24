@@ -48,6 +48,7 @@ from mani_skill.utils.scene_builder.robocasa.fixtures.windows import (
 from mani_skill.utils.scene_builder.robocasa.utils import object_utils as OU
 from mani_skill.utils.scene_builder.robocasa.utils import scene_registry, scene_utils
 from mani_skill.utils.scene_builder.robocasa.utils.placement_samplers import (
+    RandomizationError,
     SequentialCompositeSampler,
     UniformRandomSampler,
 )
@@ -156,9 +157,9 @@ class RoboCasaSceneBuilder(SceneBuilder):
 
     def build(self, build_config_idxs: Optional[List[int]] = None):
         if self.env.agent is not None:
-            robot_poses = self.env.agent.robot.initial_pose
+            self.robot_poses = self.env.agent.robot.initial_pose
         else:
-            robot_poses = None
+            self.robot_poses = None
         if build_config_idxs is None:
             build_config_idxs = []
             for i in range(self.env.num_envs):
@@ -172,8 +173,6 @@ class RoboCasaSceneBuilder(SceneBuilder):
         for scene_idx, build_config_idx in enumerate(build_config_idxs):
             layout_path = scene_registry.get_layout_path(build_config_idx[0])
             style_path = scene_registry.get_style_path(build_config_idx[1])
-            print("BUILT", scene_idx, build_config_idx)
-            print(layout_path, style_path)
             # load style
             with open(style_path, "r") as f:
                 style = yaml.safe_load(f)
@@ -391,27 +390,31 @@ class RoboCasaSceneBuilder(SceneBuilder):
                 obj.quat = obj_quat
 
             if self.env.agent is not None:
-                robot_poses.raw_pose[scene_idx][:3] = torch.from_numpy(
+                self.robot_poses.raw_pose[scene_idx][:3] = torch.from_numpy(
                     robot_base_pos
-                ).to(robot_poses.device)
-                robot_poses.raw_pose[scene_idx][3:] = torch.from_numpy(
+                ).to(self.robot_poses.device)
+                self.robot_poses.raw_pose[scene_idx][3:] = torch.from_numpy(
                     euler2quat(*robot_base_ori)
-                ).to(robot_poses.device)
+                ).to(self.robot_poses.device)
 
             actors: Dict[str, Actor] = {}
 
             ### collision handling and optimization ###
             # Generally we aim to ensure all articulations in a stack have the same collision bits so they can't collide with each other
-            # and with a range of [26, 30] we can generally ensure adjacent articulations can collide with each other.
-            # walls and floors cannot collide with anything. Walls can only collide with the robot. They are assigned bits 25 to 30.
+            # and with a range of [22, 30] we can generally ensure adjacent articulations can collide with each other.
+            # walls and floors cannot collide with anything. Walls can only collide with the robot. They are assigned bits 22 to 30.
             # mobile base robots have their wheels/non base links assigned bit of 30 to not collide with the floor or walls.
             # the base links can optionally be also assigned a bit of 31 to not collide with walls.
 
-            collision_start_bit = 26
+            # fixtures that are not articulated are always static and cannot hit other non-articulated fixtures. This scenario is assigned bit 21.
+            actor_bit = 21
+            # prismatic_drawer_bit = 25
+
+            collision_start_bit = 22
             fixture_idx = 0
             stack_collision_bits = dict()
             for stack_index, stack in enumerate(composites):
-                stack_collision_bits[stack] = collision_start_bit + stack_index % 5
+                stack_collision_bits[stack] = collision_start_bit + stack_index % 9
             for k, v in fixtures.items():
                 fixture_idx += 1
                 built = v.build(scene_idxs=[scene_idx])
@@ -430,25 +433,54 @@ class RoboCasaSceneBuilder(SceneBuilder):
                                 if stack_group in v.name:
                                     collision_bit = stack_collision_bits[stack_group]
                                     break
+                        # is_prismatic_cabinet = False
+                        # for joint in built.articulation.joints:
+                        #     if joint.type[0] == "prismatic":
+                        #         is_prismatic_cabinet = True
+                        #         break
                         for link in built.articulation.links:
+                            # if "object" in link.name:
+                            #     import ipdb; ipdb.set_trace()
                             link.set_collision_group(
                                 group=2, value=0
                             )  # clear all default ignored collisions
+                            if link.joint.type[0] == "fixed":
+                                link.set_collision_group_bit(
+                                    group=2, bit_idx=actor_bit, bit=1
+                                )
                             link.set_collision_group_bit(
                                 group=2, bit_idx=collision_bit, bit=1
                             )
+
                     else:
                         if built.actor.px_body_type == "static":
-                            if isinstance(v, Floor) or isinstance(v, Wall):
-                                for bit_idx in range(collision_start_bit, 31):
+                            collision_bit = collision_start_bit + fixture_idx % 5
+                            if "stack" in v.name:
+                                for stack_group in stack_collision_bits.keys():
+                                    if stack_group in v.name:
+                                        collision_bit = stack_collision_bits[
+                                            stack_group
+                                        ]
+                                        break
+                            if isinstance(v, Floor):
+                                for bit_idx in range(21, 32):
                                     built.actor.set_collision_group_bit(
                                         group=2, bit_idx=bit_idx, bit=1
                                     )
+                            elif isinstance(v, Wall):
+                                for bit_idx in range(21, 31):
+                                    built.actor.set_collision_group_bit(
+                                        group=2, bit_idx=bit_idx, bit=1
+                                    )
+
                             else:
                                 built.actor.set_collision_group_bit(
                                     group=2,
-                                    bit_idx=collision_start_bit + fixture_idx % 5,
+                                    bit_idx=collision_bit,
                                     bit=1,
+                                )
+                                built.actor.set_collision_group_bit(
+                                    group=2, bit_idx=actor_bit, bit=1
                                 )
             # self.actors = actors
 
@@ -475,18 +507,18 @@ class RoboCasaSceneBuilder(SceneBuilder):
         )
         fxtr_placements = None
         for i in range(10):
-            # try:
-            fxtr_placements = fxtr_placement_initializer.sample()
-            # except:
-            # if macros.VERBOSE:
-            # print("Ranomization error in initial placement. Try #{}".format(i))
-            # continue
+            try:
+                fxtr_placements = fxtr_placement_initializer.sample()
+            except RandomizationError:
+                # if macros.VERBOSE:
+                #     print("Ranomization error in initial placement. Try #{}".format(i))
+                continue
             break
         if fxtr_placements is None:
             # if macros.VERBOSE:
-            print("Could not place fixtures. Trying again with self._load_model()")
-            self._load_model()
-            return
+            # print("Could not place fixtures.")
+            # self._load_model()
+            raise RuntimeError("Could not place fixtures.")
 
         # setup internal references related to fixtures
         # self._setup_kitchen_references()
@@ -532,6 +564,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
             if self.env.agent is not None:
                 if self.env.robot_uids == "fetch":
                     self.env.agent.robot.set_qpos(self.env.agent.keyframes["rest"].qpos)
+                    self.env.agent.robot.set_pose(self.robot_poses[env_idx])
                 elif self.env.robot_uids == "unitree_g1_simplified_upper_body":
                     self.env.agent.robot.set_qpos(
                         self.env.agent.keyframes["standing"].qpos

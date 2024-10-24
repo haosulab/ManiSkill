@@ -250,7 +250,7 @@ class RoboCasaKitchenEnv(BaseEnv):
 
     @property
     def _default_sim_config(self):
-        return SimConfig(spacing=8)
+        return SimConfig(spacing=8, control_freq=20)
 
     @property
     def _default_sensor_configs(self):
@@ -286,13 +286,15 @@ class RoboCasaKitchenEnv(BaseEnv):
         # self.fixtures = data["fixtures"]
         # self.actors = data["actors"]
         # self.fixture_configs = data["fixture_configs"]
-        self.fixture_refs = {}
+        self.fixture_refs = []
         self.objects = []
         self.object_cfgs = []
-        for i in range(self.num_envs):
-            self.fixture_refs[i] = dict()
-            self.objects[i] = {}
-            self.object_cfgs[i] = {}
+        self.object_actors = []
+        for _ in range(self.num_envs):
+            self.fixture_refs.append({})
+            self.objects.append({})
+            self.object_cfgs.append({})
+            self.object_actors.append({})
 
         # hacky way to ensure robocasa task classes can be easily imported into maniskill
         if not self.fixtures_only:
@@ -434,12 +436,20 @@ class RoboCasaKitchenEnv(BaseEnv):
                     for obj_pos, obj_quat, obj in object_placements.values():
                         obj.pos = obj_pos
                         obj.quat = obj_quat
-                        obj.build(scene_idxs=[scene_idx])
+                        actor = obj.build(scene_idxs=[scene_idx]).actor
+                        self.object_actors[scene_idx][obj.name] = {
+                            "actor": actor,
+                            "pose": sapien.Pose(obj_pos, obj_quat),
+                        }
                     break
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
             self.scene_builder.initialize(env_idx)
+            # TODO (stao): no way to make this faster atm on GPU without a lot of work
+            for scene_idx in range(self.num_envs):
+                for actor_data in self.object_actors[scene_idx].values():
+                    actor_data["actor"].set_pose(actor_data["pose"])
 
     def evaluate(self):
         return {}
@@ -480,10 +490,10 @@ class RoboCasaKitchenEnv(BaseEnv):
         """
         if ref_name not in self.fixture_refs:
             scene_idx = self._scene_idx_to_be_loaded
-            self.fixture_refs[ref_name] = self.scene_builder.get_fixture(
+            self.fixture_refs[scene_idx][ref_name] = self.scene_builder.get_fixture(
                 self.scene_builder.scene_data[scene_idx]["fixtures"], **fn_kwargs
             )
-        return self.fixture_refs[ref_name]
+        return self.fixture_refs[scene_idx][ref_name]
 
     def sample_object(
         self,
