@@ -150,6 +150,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
 
     def __init__(self, *args, init_robot_base_pos=None, **kwargs):
         self.init_robot_base_pos = init_robot_base_pos
+        self.scene_data = []  # maps scene_idx to {"fixtures", "fxtr_placements"}
         super().__init__(*args, **kwargs)
 
     def build(self, build_config_idxs: Optional[List[int]] = None):
@@ -363,8 +364,8 @@ class RoboCasaSceneBuilder(SceneBuilder):
                     fixture.set_euler(rot_new)
 
             # self.actors = actors
-            self.fixtures = fixtures
-            self.fixture_cfgs = self.get_fixture_cfgs()
+            # fixtures = fixtures
+            fixture_cfgs = self.get_fixture_cfgs(fixtures)
             # generate initial poses for objects so that they are spawned in nice places during GPU initialization
             # to be more performant
             (
@@ -372,8 +373,16 @@ class RoboCasaSceneBuilder(SceneBuilder):
                 robot_base_pos,
                 robot_base_ori,
             ) = self._generate_initial_placements(
-                rng=self.env._batched_episode_rng[scene_idx]
+                fixtures, fixture_cfgs, rng=self.env._batched_episode_rng[scene_idx]
             )
+            self.scene_data.append(
+                dict(
+                    fixtures=fixtures,
+                    fxtr_placements=fxtr_placements,
+                    fixture_cfgs=fixture_cfgs,
+                )
+            )
+
             # Loop through all objects and reset their positions
             for obj_pos, obj_quat, obj in fxtr_placements.values():
                 assert isinstance(obj, Fixture)
@@ -408,21 +417,23 @@ class RoboCasaSceneBuilder(SceneBuilder):
             self.actors = actors
         return dict(fixtures=fixtures, actors=actors, fixture_configs=arena)
 
-    def _generate_initial_placements(self, rng: np.random.RandomState):
+    def _generate_initial_placements(
+        self, fixtures, fixture_cfgs, rng: np.random.RandomState
+    ):
         """Generate and places randomized fixtures and robot(s) into the scene. This code is not parallelized"""
         fxtr_placement_initializer = self._get_placement_initializer(
-            self.fixture_cfgs, z_offset=0.0, rng=rng
+            fixtures, dict(), fixture_cfgs, z_offset=0.0, rng=rng
         )
-        self.fxtr_placements = None
+        fxtr_placements = None
         for i in range(10):
             # try:
-            self.fxtr_placements = fxtr_placement_initializer.sample()
+            fxtr_placements = fxtr_placement_initializer.sample()
             # except:
             # if macros.VERBOSE:
             # print("Ranomization error in initial placement. Try #{}".format(i))
             # continue
             break
-        if self.fxtr_placements is None:
+        if fxtr_placements is None:
             # if macros.VERBOSE:
             print("Could not place fixtures. Trying again with self._load_model()")
             self._load_model()
@@ -433,9 +444,8 @@ class RoboCasaSceneBuilder(SceneBuilder):
 
         # set robot position
         if self.init_robot_base_pos is not None:
-            ref_fixture = self.get_fixture(self.init_robot_base_pos)
+            ref_fixture = self.get_fixture(fixtures, self.init_robot_base_pos)
         else:
-            fixtures = list(self.fixtures.values())
             valid_src_fixture_classes = [
                 "CoffeeMachine",
                 "Toaster",
@@ -453,7 +463,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
                 "Dishwasher",
             ]
             while True:
-                ref_fixture = rng.choice(fixtures)
+                ref_fixture = rng.choice(list(fixtures.values()))
                 fxtr_class = type(ref_fixture).__name__
                 if fxtr_class not in valid_src_fixture_classes:
                     continue
@@ -461,12 +471,12 @@ class RoboCasaSceneBuilder(SceneBuilder):
 
         if self.env.agent is not None:
             robot_base_pos, robot_base_ori = self.compute_robot_base_placement_pose(
-                ref_fixture=ref_fixture
+                fixtures, ref_fixture
             )
         else:
             robot_base_pos = None
             robot_base_ori = None
-        return self.fxtr_placements, robot_base_pos, robot_base_ori
+        return fxtr_placements, robot_base_pos, robot_base_ori
 
     def initialize(self, env_idx: torch.Tensor, init_config_idxs: List[int] = None):
         with torch.device(self.env.device):
@@ -483,7 +493,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
                         Pose.create_from_pq(p=xyz, q=self.env.agent.robot.pose.q)
                     )
 
-    def get_fixture_cfgs(self):
+    def get_fixture_cfgs(self, fixtures):
         """
         Returns config data for all fixtures in the arena
 
@@ -491,7 +501,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
             list: list of fixture configurations
         """
         fixture_cfgs = []
-        for (name, fxtr) in self.fixtures.items():
+        for (name, fxtr) in fixtures.items():
             cfg = {}
             cfg["name"] = name
             cfg["model"] = fxtr
@@ -520,7 +530,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
                 return True
         return False
 
-    def get_fixture(self, id, ref=None, size=(0.2, 0.2)):
+    def get_fixture(self, fixtures, id, ref=None, size=(0.2, 0.2)):
         """
         search fixture by id (name, object, or type)
 
@@ -538,36 +548,36 @@ class RoboCasaSceneBuilder(SceneBuilder):
         if isinstance(id, Fixture):
             return id
         # case 2: id refers to exact name of fixture
-        elif id in self.fixtures.keys():
-            return self.fixtures[id]
+        elif id in fixtures.keys():
+            return fixtures[id]
 
         if ref is None:
             # find all fixtures with names containing given name
             if isinstance(id, FixtureType) or isinstance(id, int):
                 matches = [
                     name
-                    for (name, fxtr) in self.fixtures.items()
+                    for (name, fxtr) in fixtures.items()
                     if fixture_is_type(fxtr, id)
                 ]
             else:
-                matches = [name for name in self.fixtures.keys() if id in name]
+                matches = [name for name in fixtures.keys() if id in name]
             if id == FixtureType.COUNTER or id == FixtureType.COUNTER_NON_CORNER:
                 matches = [
                     name
                     for name in matches
-                    if self._is_fxtr_valid(self.fixtures[name], size)
+                    if self._is_fxtr_valid(fixtures[name], size)
                 ]
             assert len(matches) > 0
             # sample random key
             # TODO (stao): fix the key!
             key = self.env._episode_rng.choice(matches)
-            return self.fixtures[key]
+            return fixtures[key]
         else:
-            ref_fixture = self.get_fixture(ref)
+            ref_fixture = self.get_fixture(fixtures, ref)
 
             assert isinstance(id, FixtureType)
             cand_fixtures = []
-            for fxtr in self.fixtures.values():
+            for fxtr in fixtures.values():
                 if not fixture_is_type(fxtr, id):
                     continue
                 if fxtr is ref_fixture:
@@ -592,7 +602,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
             ]
             return self.rng.choice(close_fixtures)
 
-    def compute_robot_base_placement_pose(self, ref_fixture, offset=None):
+    def compute_robot_base_placement_pose(self, fixtures, ref_fixture, offset=None):
         """
         steps:
         1. find the nearest counter to this fixture
@@ -611,7 +621,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
         # get all base fixtures in the environment
         base_fixtures = [
             fxtr
-            for fxtr in self.fixtures.values()
+            for fxtr in fixtures.values()
             if isinstance(fxtr, Counter)
             or isinstance(fxtr, Stove)
             or isinstance(fxtr, Stovetop)
@@ -668,7 +678,12 @@ class RoboCasaSceneBuilder(SceneBuilder):
         return robot_base_pos, robot_base_ori
 
     def _get_placement_initializer(
-        self, cfg_list, z_offset=0.01, rng: np.random.RandomState = None
+        self,
+        fixtures,
+        objects,
+        cfg_list,
+        z_offset=0.01,
+        rng: np.random.RandomState = None,
     ):
 
         """
@@ -689,9 +704,9 @@ class RoboCasaSceneBuilder(SceneBuilder):
         for (obj_i, cfg) in enumerate(cfg_list):
             # determine which object is being placed
             if cfg["type"] == "fixture":
-                mj_obj = self.fixtures[cfg["name"]]
+                mj_obj = fixtures[cfg["name"]]
             elif cfg["type"] == "object":
-                mj_obj = self.objects[cfg["name"]]
+                mj_obj = objects[cfg["name"]]
             else:
                 raise ValueError
             placement = cfg.get("placement", None)
@@ -701,6 +716,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
             if fixture_id is not None:
                 # get fixture to place object on
                 fixture = self.get_fixture(
+                    fixtures,
                     id=fixture_id,
                     ref=placement.get("ref", None),
                 )
@@ -709,7 +725,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
                 sample_region_kwargs = placement.get("sample_region_kwargs", {})
 
                 reset_region = fixture.sample_reset_region(
-                    env=self, **sample_region_kwargs
+                    env=self, fixtures=fixtures, **sample_region_kwargs
                 )
                 outer_size = reset_region["size"]
                 margin = placement.get("margin", 0.04)
@@ -741,7 +757,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
                         inner_xpos = 0.0
                     else:
                         ref_fixture = self.get_fixture(
-                            placement["sample_region_kwargs"]["ref"]
+                            fixtures, placement["sample_region_kwargs"]["ref"]
                         )
                         ref_pos = ref_fixture.pos
                         fixture_to_ref = OU.get_rel_transform(fixture, ref_fixture)[0]

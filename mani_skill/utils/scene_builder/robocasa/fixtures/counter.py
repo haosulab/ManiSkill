@@ -610,7 +610,7 @@ class Counter(Fixture):
         if self.interior_obj is not None:
             self._place_interior_obj()
 
-    def get_reset_regions(self, env, ref=None, loc="nn", top_size=(0.4, 0.4)):
+    def get_reset_regions(self, env, fixtures, ref=None, loc="nn", top_size=(0.4, 0.4)):
         """
         returns dictionary of reset regions, each region defined as offsets and size
 
@@ -672,7 +672,7 @@ class Counter(Fixture):
             #     geom_i += 1
         else:
             # TODO (stao): add this?
-            ref_fixture = env.get_fixture(ref)
+            ref_fixture = env.get_fixture(fixtures, ref)
             ### find an appropriate geom to sample ###
             fixture_to_geom_offsets = []
             for g in all_records:

@@ -281,137 +281,144 @@ class RoboCasaKitchenEnv(BaseEnv):
         self.fixtures = data["fixtures"]
         # self.actors = data["actors"]
         self.fixture_configs = data["fixture_configs"]
+        self.fixture_refs = {}
+        for i in range(self.num_envs):
+            self.fixture_refs[i] = dict()
         # self.ground = build_ground(self.scene)
         # self.ground.set_collision_group_bit(
         #     group=2, bit_idx=FETCH_WHEELS_COLLISION_BIT, bit=1
         # )
         # TODO (stao): disable wheel collisions with floors.
-        self._setup_kitchen_references()
+        # hacky way to ensure robocasa task classes can be easily imported into maniskill
+        for i in range(self.num_envs):
+            self._scene_idx_to_be_loaded = i
+            self._setup_kitchen_references()
 
-        # add objects
-        def _create_obj(cfg):
-            if "info" in cfg:
-                """
-                if cfg has "info" key in it, that means it is storing meta data already
-                that indicates which object we should be using.
-                set the obj_groups to this path to do deterministic playback
-                """
-                mjcf_path = cfg["info"]["mjcf_path"]
-                # replace with correct base path
-                new_base_path = os.path.join(robocasa.models.assets_root, "objects")
-                new_path = os.path.join(new_base_path, mjcf_path.split("/objects/")[-1])
-                obj_groups = new_path
-                exclude_obj_groups = None
-            else:
-                obj_groups = cfg.get("obj_groups", "all")
-                exclude_obj_groups = cfg.get("exclude_obj_groups", None)
-            object_kwargs, object_info = self.sample_object(
-                obj_groups,
-                exclude_groups=exclude_obj_groups,
-                graspable=cfg.get("graspable", None),
-                washable=cfg.get("washable", None),
-                microwavable=cfg.get("microwavable", None),
-                cookable=cfg.get("cookable", None),
-                freezable=cfg.get("freezable", None),
-                max_size=cfg.get("max_size", (None, None, None)),
-                object_scale=cfg.get("object_scale", None),
-            )
-            if "name" not in cfg:
-                cfg["name"] = "obj_{}".format(obj_num + 1)
-            info = object_info
-            # import ipdb
-
-            # ipdb.set_trace()
-            object = MJCFObject(self.scene, name=cfg["name"], **object_kwargs)
-            return object, info
-
-        self.objects = {}
-        if "object_cfgs" in self._ep_meta:
-            self.object_cfgs = self._ep_meta["object_cfgs"]
-            for obj_num, cfg in enumerate(self.object_cfgs):
-                model, info = _create_obj(cfg)
-                cfg["info"] = info
-                self.objects[model.name] = model
-                # self.model.merge_objects([model])
-        else:
-            self.object_cfgs = self._get_obj_cfgs()
-            addl_obj_cfgs = []
-            for obj_num, cfg in enumerate(self.object_cfgs):
-                cfg["type"] = "object"
-                model, info = _create_obj(cfg)
-                cfg["info"] = info
-                self.objects[model.name] = model
-                # self.model.merge_objects([model])
-
-                try_to_place_in = cfg["placement"].get("try_to_place_in", None)
-
-                # place object in a container and add container as an object to the scene
-                if try_to_place_in and (
-                    "in_container" in cfg["info"]["groups_containing_sampled_obj"]
-                ):
-                    container_cfg = {}
-                    container_cfg["name"] = cfg["name"] + "_container"
-                    container_cfg["obj_groups"] = try_to_place_in
-                    container_cfg["placement"] = deepcopy(cfg["placement"])
-                    container_cfg["type"] = "object"
-
-                    container_kwargs = cfg["placement"].get("container_kwargs", None)
-                    if container_kwargs is not None:
-                        for k, v in container_kwargs.values():
-                            container_cfg[k] = v
-
-                    # add in the new object to the model
-                    addl_obj_cfgs.append(container_cfg)
-                    model, info = _create_obj(container_cfg)
-                    container_cfg["info"] = info
-                    self.objects[model.name] = model
-                    self.model.merge_objects([model])
-
-                    # modify object config to lie inside of container
-                    cfg["placement"] = dict(
-                        size=(0.01, 0.01),
-                        ensure_object_boundary_in_range=False,
-                        sample_args=dict(
-                            reference=container_cfg["name"],
-                        ),
+            # add objects
+            def _create_obj(cfg):
+                if "info" in cfg:
+                    """
+                    if cfg has "info" key in it, that means it is storing meta data already
+                    that indicates which object we should be using.
+                    set the obj_groups to this path to do deterministic playback
+                    """
+                    mjcf_path = cfg["info"]["mjcf_path"]
+                    # replace with correct base path
+                    new_base_path = os.path.join(robocasa.models.assets_root, "objects")
+                    new_path = os.path.join(
+                        new_base_path, mjcf_path.split("/objects/")[-1]
                     )
+                    obj_groups = new_path
+                    exclude_obj_groups = None
+                else:
+                    obj_groups = cfg.get("obj_groups", "all")
+                    exclude_obj_groups = cfg.get("exclude_obj_groups", None)
+                object_kwargs, object_info = self.sample_object(
+                    obj_groups,
+                    exclude_groups=exclude_obj_groups,
+                    graspable=cfg.get("graspable", None),
+                    washable=cfg.get("washable", None),
+                    microwavable=cfg.get("microwavable", None),
+                    cookable=cfg.get("cookable", None),
+                    freezable=cfg.get("freezable", None),
+                    max_size=cfg.get("max_size", (None, None, None)),
+                    object_scale=cfg.get("object_scale", None),
+                )
+                if "name" not in cfg:
+                    cfg["name"] = "obj_{}".format(obj_num + 1)
+                info = object_info
+                # import ipdb
 
-            # prepend the new object configs in
-            self.object_cfgs = addl_obj_cfgs + self.object_cfgs
+                # ipdb.set_trace()
+                object = MJCFObject(self.scene, name=cfg["name"], **object_kwargs)
+                return object, info
 
-            # # remove objects that didn't get created
-            # self.object_cfgs = [cfg for cfg in self.object_cfgs if "model" in cfg]
-        for k, v in self.objects.items():
-            v.actor_builder.initial_pose = sapien.Pose([1, 1, 1])
-            v.build(scene_idxs=[0])
-            # print(k, v)
-            # v.pose = (sapien.Pose([1, 1, 1]))
-            # v.initial_pose = sapien.Pose([1, 1, 1])
-        placement_initializer = self.scene_builder._get_placement_initializer(
-            self.object_cfgs
-        )
+            self.objects = {}
+            if "object_cfgs" in self._ep_meta:
+                self.object_cfgs = self._ep_meta["object_cfgs"]
+                for obj_num, cfg in enumerate(self.object_cfgs):
+                    model, info = _create_obj(cfg)
+                    cfg["info"] = info
+                    self.objects[model.name] = model
+                    # self.model.merge_objects([model])
+            else:
+                self.object_cfgs = self._get_obj_cfgs()
+                addl_obj_cfgs = []
+                for obj_num, cfg in enumerate(self.object_cfgs):
+                    cfg["type"] = "object"
+                    model, info = _create_obj(cfg)
+                    cfg["info"] = info
+                    self.objects[model.name] = model
+                    # self.model.merge_objects([model])
 
-        object_placements = None
-        for i in range(1):
-            # try:
-            object_placements = placement_initializer.sample(
-                placed_objects=self.scene_builder.fxtr_placements
-            )
-            # except RandomizationError:
+                    try_to_place_in = cfg["placement"].get("try_to_place_in", None)
+
+                    # place object in a container and add container as an object to the scene
+                    if try_to_place_in and (
+                        "in_container" in cfg["info"]["groups_containing_sampled_obj"]
+                    ):
+                        container_cfg = {}
+                        container_cfg["name"] = cfg["name"] + "_container"
+                        container_cfg["obj_groups"] = try_to_place_in
+                        container_cfg["placement"] = deepcopy(cfg["placement"])
+                        container_cfg["type"] = "object"
+
+                        container_kwargs = cfg["placement"].get(
+                            "container_kwargs", None
+                        )
+                        if container_kwargs is not None:
+                            for k, v in container_kwargs.values():
+                                container_cfg[k] = v
+
+                        # add in the new object to the model
+                        addl_obj_cfgs.append(container_cfg)
+                        model, info = _create_obj(container_cfg)
+                        container_cfg["info"] = info
+                        self.objects[model.name] = model
+                        self.model.merge_objects([model])
+
+                        # modify object config to lie inside of container
+                        cfg["placement"] = dict(
+                            size=(0.01, 0.01),
+                            ensure_object_boundary_in_range=False,
+                            sample_args=dict(
+                                reference=container_cfg["name"],
+                            ),
+                        )
+
+                # prepend the new object configs in
+                self.object_cfgs = addl_obj_cfgs + self.object_cfgs
+
+                # # remove objects that didn't get created
+                # self.object_cfgs = [cfg for cfg in self.object_cfgs if "model" in cfg]
+            for k, v in self.objects.items():
+                v.actor_builder.initial_pose = sapien.Pose([1, 1, 1])
+                v.build(scene_idxs=[0])
+                # print(k, v)
+                # v.pose = (sapien.Pose([1, 1, 1]))
+                # v.initial_pose = sapien.Pose([1, 1, 1])
+                # placement_initializer = self.scene_builder._get_placement_initializer(
+                #     self.object_cfgs
+                # )
+
+                # object_placements = None
+                # for i in range(1):
+                #     # try:
+                #     object_placements = placement_initializer.sample(
+                #         placed_objects=self.scene_builder.fxtr_placements
+                #     )
+                # except RandomizationError:
+                #     if macros.VERBOSE:
+                #         print("Ranomization error in initial placement. Try #{}".format(i))
+                #     continue
+
+                break
+            # if object_placements is None:
             #     if macros.VERBOSE:
-            #         print("Ranomization error in initial placement. Try #{}".format(i))
-            #     continue
-
-            break
-        import ipdb
-
-        ipdb.set_trace()
-        # if object_placements is None:
-        #     if macros.VERBOSE:
-        #         print("Could not place objects. Trying again with self._load_model()")
-        #     self._load_model()
-        #     return
-        # self.object_placements = object_placements
+            #         print("Could not place objects. Trying again with self._load_model()")
+            #     self._load_model()
+            #     return
+            # self.object_placements = object_placements
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
@@ -433,8 +440,12 @@ class RoboCasaKitchenEnv(BaseEnv):
         """
         serialized_refs = self._ep_meta.get("fixture_refs", {})
         # unserialize refs
-        self.fixture_refs = {
-            k: self.scene_builder.get_fixture(v) for (k, v) in serialized_refs.items()
+        self.fixture_refs[self._scene_idx_to_be_loaded] = {
+            k: self.scene_builder.get_fixture(
+                self.scene_builder.scene_data[self._scene_idx_to_be_loaded]["fixtures"],
+                v,
+            )
+            for (k, v) in serialized_refs.items()
         }
 
     def register_fixture_ref(self, ref_name, fn_kwargs):
@@ -451,7 +462,10 @@ class RoboCasaKitchenEnv(BaseEnv):
             Fixture: fixture object
         """
         if ref_name not in self.fixture_refs:
-            self.fixture_refs[ref_name] = self.scene_builder.get_fixture(**fn_kwargs)
+            scene_idx = self._scene_idx_to_be_loaded
+            self.fixture_refs[ref_name] = self.scene_builder.get_fixture(
+                self.scene_builder.scene_data[scene_idx]["fixtures"], **fn_kwargs
+            )
         return self.fixture_refs[ref_name]
 
     def sample_object(

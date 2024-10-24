@@ -425,9 +425,7 @@ class MJCFLoader:
                     builder.add_convex_collision_from_file(
                         mesh_file,
                         pose=t_visual2link,
-                        scale=(self.scale, self.scale, self.scale)
-                        if type(self.scale) == float
-                        else self.scale,
+                        scale=mesh_scale,
                         material=physx_material,
                         density=geom_density,
                     )
