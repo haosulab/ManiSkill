@@ -145,8 +145,6 @@ class Window:
         self.actor = self.actor_builder.build_static(
             name=self.name + f"_{scene_idxs[0]}"
         )
-        if not physx.is_gpu_enabled():
-            self.actor.set_pose(self.actor_builder.initial_pose)
         return self
 
     @property

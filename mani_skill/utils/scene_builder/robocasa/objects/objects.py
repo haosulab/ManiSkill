@@ -1,5 +1,6 @@
 import numpy as np
 import sapien
+import sapien.physx as physx
 
 from mani_skill.utils.scene_builder.robocasa.fixtures.mujoco_object import MujocoObject
 from mani_skill.utils.scene_builder.robocasa.utils.mjcf_utils import string_to_array
@@ -94,12 +95,10 @@ class MJCFObject(MujocoObject):
         #         self.articulation.set_root_pose(self.articulation_builder.initial_pose)
         # else:
         self.actor_builder.set_scene_idxs(scene_idxs)
-        # self.actor_builder.initial_pose = sapien.Pose(p=self.pos, q=self.quat)
+        self.actor_builder.initial_pose = sapien.Pose(p=self.pos, q=self.quat)
         self.actor = self.actor_builder.build_dynamic(
             name=self.name + f"_{scene_idxs[0]}"
         )
-        # if not physx.is_gpu_enabled():
-        #     self.actor.set_pose(self.actor_builder.initial_pose)
         return self
 
     # def postprocess_model_xml(self, xml_str):
@@ -174,7 +173,7 @@ class MJCFObject(MujocoObject):
     @property
     def horizontal_radius(self):
         horizontal_radius_site = self.loader.xml.find(
-            "./body/site[@name='{}horizontal_radius_site']".format(self.naming_prefix)
+            ".//site[@name='{}horizontal_radius_site']".format(self.naming_prefix)
         )
         site_values = string_to_array(horizontal_radius_site.get("pos"))
         return np.linalg.norm(site_values[0:2])
@@ -189,7 +188,7 @@ class MJCFObject(MujocoObject):
         bottom_offset = self.bottom_offset
         top_offset = self.top_offset
         horizontal_radius_site = self.loader.xml.find(
-            "./body/site[@name='{}horizontal_radius_site']".format(self.naming_prefix)
+            ".//site[@name='{}horizontal_radius_site']".format(self.naming_prefix)
         )
         horiz_radius = string_to_array(horizontal_radius_site.get("pos"))[:2]
 

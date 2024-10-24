@@ -107,16 +107,12 @@ class Fixture(MujocoObject):
             self.articulation = self.articulation_builder.build(
                 name=self.name + f"_{scene_idxs[0]}", fix_root_link=True
             )
-            if not physx.is_gpu_enabled():
-                self.articulation.set_root_pose(self.articulation_builder.initial_pose)
         else:
             self.actor_builder.set_scene_idxs(scene_idxs)
             self.actor_builder.initial_pose = sapien.Pose(p=self.pos, q=self.quat)
             self.actor = self.actor_builder.build_static(
                 name=self.name + f"_{scene_idxs[0]}"
             )
-            if not physx.is_gpu_enabled():
-                self.actor.set_pose(self.actor_builder.initial_pose)
         return self
 
     """Functions from RoboCasa Fixture class"""

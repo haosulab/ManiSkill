@@ -165,7 +165,7 @@ class Cabinet(Fixture):
         # )
         # material.set("texture", tex_name)
 
-    def get_reset_regions(self, env):
+    def get_reset_regions(self, env, fixtures):
         """
         Get the reset regions for the cabinet. This is used to reset the object to a specific location.
         Reset region is defined as the bottom of the cabinet

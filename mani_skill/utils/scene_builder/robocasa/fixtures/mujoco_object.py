@@ -5,6 +5,7 @@ import sapien
 from transforms3d.euler import euler2quat, quat2euler
 
 from mani_skill.envs.scene import ManiSkillScene
+from mani_skill.utils.scene_builder.robocasa.utils.mjcf_utils import string_to_array
 from mani_skill.utils.scene_builder.robocasa.utils.scene_utils import ROBOCASA_ASSET_DIR
 
 
@@ -228,3 +229,24 @@ class MujocoObject:
 
         points = [(np.matmul(rot, p) + trans) for p in bbox_offsets]
         return points
+
+    @property
+    def bottom_offset(self):
+        bottom_site = self.loader.xml.find(
+            ".//site[@name='{}bottom_site']".format(self.naming_prefix)
+        )
+        return string_to_array(bottom_site.get("pos"))
+
+    @property
+    def top_offset(self):
+        top_site = self.loader.xml.find(
+            ".//site[@name='{}top_site']".format(self.naming_prefix)
+        )
+        return string_to_array(top_site.get("pos"))
+
+    @property
+    def horizontal_radius(self):
+        horizontal_radius_site = self.loader.xml.find(
+            ".//site[@name='{}horizontal_radius_site']".format(self.naming_prefix)
+        )
+        return string_to_array(horizontal_radius_site.get("pos"))[0]

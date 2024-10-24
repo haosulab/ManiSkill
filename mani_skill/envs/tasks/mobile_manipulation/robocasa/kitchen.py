@@ -290,8 +290,8 @@ class RoboCasaKitchenEnv(BaseEnv):
         # )
         # TODO (stao): disable wheel collisions with floors.
         # hacky way to ensure robocasa task classes can be easily imported into maniskill
-        for i in range(self.num_envs):
-            self._scene_idx_to_be_loaded = i
+        for scene_idx in range(self.num_envs):
+            self._scene_idx_to_be_loaded = scene_idx
             self._setup_kitchen_references()
 
             # add objects
@@ -327,9 +327,6 @@ class RoboCasaKitchenEnv(BaseEnv):
                 if "name" not in cfg:
                     cfg["name"] = "obj_{}".format(obj_num + 1)
                 info = object_info
-                # import ipdb
-
-                # ipdb.set_trace()
                 object = MJCFObject(self.scene, name=cfg["name"], **object_kwargs)
                 return object, info
 
@@ -391,28 +388,31 @@ class RoboCasaKitchenEnv(BaseEnv):
 
                 # # remove objects that didn't get created
                 # self.object_cfgs = [cfg for cfg in self.object_cfgs if "model" in cfg]
-            for k, v in self.objects.items():
-                v.actor_builder.initial_pose = sapien.Pose([1, 1, 1])
-                v.build(scene_idxs=[0])
-                # print(k, v)
-                # v.pose = (sapien.Pose([1, 1, 1]))
-                # v.initial_pose = sapien.Pose([1, 1, 1])
-                # placement_initializer = self.scene_builder._get_placement_initializer(
-                #     self.object_cfgs
-                # )
+            placement_initializer = self.scene_builder._get_placement_initializer(
+                self.scene_builder.scene_data[self._scene_idx_to_be_loaded]["fixtures"],
+                self.objects,
+                self.object_cfgs,
+                rng=self._batched_episode_rng[scene_idx],
+            )
 
-                # object_placements = None
-                # for i in range(1):
-                #     # try:
-                #     object_placements = placement_initializer.sample(
-                #         placed_objects=self.scene_builder.fxtr_placements
-                #     )
+            object_placements = None
+            for i in range(1):
+                # try:
+                object_placements = placement_initializer.sample(
+                    placed_objects=self.scene_builder.scene_data[
+                        self._scene_idx_to_be_loaded
+                    ]["fxtr_placements"]
+                )
                 # except RandomizationError:
                 #     if macros.VERBOSE:
                 #         print("Ranomization error in initial placement. Try #{}".format(i))
                 #     continue
 
                 break
+            for obj_pos, obj_quat, obj in object_placements.values():
+                obj.pos = obj_pos
+                obj.quat = obj_quat
+                obj.build(scene_idxs=[scene_idx])
             # if object_placements is None:
             #     if macros.VERBOSE:
             #         print("Could not place objects. Trying again with self._load_model()")
