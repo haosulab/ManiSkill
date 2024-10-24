@@ -11,9 +11,20 @@ import sapien.render
 from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.utils.building.actor_builder import ActorBuilder
 from mani_skill.utils.structs.pose import Pose
+from mani_skill.utils.structs.types import Array
 
 
-def _build_by_type(builder: ActorBuilder, name, body_type):
+def _build_by_type(
+    builder: ActorBuilder,
+    name,
+    body_type,
+    scene_idxs: Optional[Array] = None,
+    initial_pose: Optional[Union[Pose, sapien.Pose]] = None,
+):
+    if scene_idxs is not None:
+        builder.set_scene_idxs(scene_idxs)
+    if initial_pose is not None:
+        builder.set_initial_pose(initial_pose)
     if body_type == "dynamic":
         actor = builder.build(name=name)
     elif body_type == "static":
@@ -33,6 +44,8 @@ def build_cube(
     name: str,
     body_type: str = "dynamic",
     add_collision: bool = True,
+    scene_idxs: Optional[Array] = None,
+    initial_pose: Optional[Union[Pose, sapien.Pose]] = None,
 ):
     builder = scene.create_actor_builder()
     if add_collision:
@@ -45,7 +58,7 @@ def build_cube(
             base_color=color,
         ),
     )
-    return _build_by_type(builder, name, body_type)
+    return _build_by_type(builder, name, body_type, scene_idxs, initial_pose)
 
 
 def build_box(
@@ -55,6 +68,7 @@ def build_box(
     name: str,
     body_type: str = "dynamic",
     add_collision: bool = True,
+    scene_idxs: Optional[Array] = None,
     initial_pose: Optional[Union[Pose, sapien.Pose]] = None,
 ):
     builder = scene.create_actor_builder()
@@ -68,8 +82,7 @@ def build_box(
             base_color=color,
         ),
     )
-    builder.set_initial_pose(initial_pose)
-    return _build_by_type(builder, name, body_type)
+    return _build_by_type(builder, name, body_type, scene_idxs, initial_pose)
 
 
 def build_cylinder(
@@ -80,6 +93,8 @@ def build_cylinder(
     name: str,
     body_type: str = "dynamic",
     add_collision: bool = True,
+    scene_idxs: Optional[Array] = None,
+    initial_pose: Optional[Union[Pose, sapien.Pose]] = None,
 ):
     builder = scene.create_actor_builder()
     if add_collision:
@@ -94,7 +109,7 @@ def build_cylinder(
             base_color=color,
         ),
     )
-    return _build_by_type(builder, name, body_type)
+    return _build_by_type(builder, name, body_type, scene_idxs, initial_pose)
 
 
 def build_sphere(
@@ -104,6 +119,8 @@ def build_sphere(
     name: str,
     body_type: str = "dynamic",
     add_collision: bool = True,
+    scene_idxs: Optional[Array] = None,
+    initial_pose: Optional[Union[Pose, sapien.Pose]] = None,
 ):
     builder = scene.create_actor_builder()
     if add_collision:
@@ -116,7 +133,7 @@ def build_sphere(
             base_color=color,
         ),
     )
-    return _build_by_type(builder, name, body_type)
+    return _build_by_type(builder, name, body_type, scene_idxs, initial_pose)
 
 
 def build_red_white_target(
@@ -126,6 +143,8 @@ def build_red_white_target(
     name: str,
     body_type: str = "dynamic",
     add_collision: bool = True,
+    scene_idxs: Optional[Array] = None,
+    initial_pose: Optional[Union[Pose, sapien.Pose]] = None,
 ):
     TARGET_RED = np.array([194, 19, 22, 255]) / 255
     builder = scene.create_actor_builder()
@@ -175,7 +194,7 @@ def build_red_white_target(
             radius=radius * 1 / 5,
             half_length=thickness / 2 + 4e-5,
         )
-    return _build_by_type(builder, name, body_type)
+    return _build_by_type(builder, name, body_type, scene_idxs, initial_pose)
 
 
 def build_twocolor_peg(
@@ -187,6 +206,8 @@ def build_twocolor_peg(
     name: str,
     body_type="dynamic",
     add_collision: bool = True,
+    scene_idxs: Optional[Array] = None,
+    initial_pose: Optional[Union[Pose, sapien.Pose]] = None,
 ):
     builder = scene.create_actor_builder()
     if add_collision:
@@ -207,7 +228,7 @@ def build_twocolor_peg(
             base_color=color_2,
         ),
     )
-    return _build_by_type(builder, name, body_type)
+    return _build_by_type(builder, name, body_type, scene_idxs, initial_pose)
 
 
 RED_COLOR = [220 / 255, 12 / 255, 12 / 255, 1]
@@ -226,6 +247,8 @@ def build_fourcolor_peg(
     color_4=[1, 1, 1, 1],
     body_type="dynamic",
     add_collision: bool = True,
+    scene_idxs: Optional[Array] = None,
+    initial_pose: Optional[Union[Pose, sapien.Pose]] = None,
 ):
     """
     A peg with four sections and four different colors. Useful for visualizing every possible rotation without any symmetries
@@ -263,7 +286,7 @@ def build_fourcolor_peg(
             base_color=color_4,
         ),
     )
-    return _build_by_type(builder, name, body_type)
+    return _build_by_type(builder, name, body_type, scene_idxs, initial_pose)
 
 
 def build_colorful_cube(
@@ -273,6 +296,8 @@ def build_colorful_cube(
     name: str,
     body_type: str = "dynamic",
     add_collision: bool = True,
+    scene_idxs: Optional[Array] = None,
+    initial_pose: Optional[Union[Pose, sapien.Pose]] = None,
 ):
     builder = scene.create_actor_builder()
 
@@ -291,4 +316,4 @@ def build_colorful_cube(
             base_color=color,
         ),
     )
-    return _build_by_type(builder, name, body_type)
+    return _build_by_type(builder, name, body_type, scene_idxs, initial_pose)
