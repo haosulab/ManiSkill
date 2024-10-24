@@ -455,4 +455,4 @@ class XArm6AllegroRight(BaseAgent):
 @register_agent()
 class XArm6AllegroLeft(XArm6AllegroRight):
     uid = "xarm6_allegro_left"
-    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/xarm6/xarm6_allegro_left_2023.urdf"
+    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/xarm6/xarm6_allegro_left.urdf"

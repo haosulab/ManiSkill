@@ -230,7 +230,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="meshes_allegro_right/visual/base_link.glb"/>
+        <mesh filename="../allegro/meshes/visual/base_link.glb"/>
       </geometry>
       <origin rpy="0 0 0" xyz="0 0 0 "/>
     </visual>
@@ -273,7 +273,7 @@
   <link name="link_0.0">
     <visual>
       <geometry>
-        <mesh filename="meshes_allegro_right/visual/link_0.0.glb"/>
+        <mesh filename="../allegro/meshes/visual/link_0.0.glb"/>
       </geometry>
     </visual>
     <collision>
@@ -303,7 +303,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="meshes_allegro_right/visual/link_1.0.glb"/>
+        <mesh filename="../allegro/meshes/visual/link_1.0.glb"/>
       </geometry>
     </visual>
     <collision>
@@ -328,7 +328,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="meshes_allegro_right/visual/link_2.0.glb"/>
+        <mesh filename="../allegro/meshes/visual/link_2.0.glb"/>
       </geometry>
     </visual>
     <collision>
@@ -348,7 +348,7 @@
   <link name="link_3.0">
     <visual>
       <geometry>
-        <mesh filename="meshes_allegro_right/visual/link_3.0.glb"/>
+        <mesh filename="../allegro/meshes/visual/link_3.0.glb"/>
       </geometry>
     </visual>
     <collision>
@@ -378,12 +378,12 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="meshes_allegro_right/visual/link_tip.glb"/>
+        <mesh filename="../allegro/meshes/visual/link_tip.glb"/>
       </geometry>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="meshes_allegro_right/collision/link_tip.obj"/>
+        <mesh filename="../allegro/meshes/collision/link_tip.obj"/>
       </geometry>
     </collision>
   </link>
@@ -400,7 +400,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="meshes_allegro_right/visual/link_0.0.glb"/>
+        <mesh filename="../allegro/meshes/visual/link_0.0.glb"/>
       </geometry>
     </visual>
     <collision>
@@ -425,7 +425,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="meshes_allegro_right/visual/link_1.0.glb"/>
+        <mesh filename="../allegro/meshes/visual/link_1.0.glb"/>
       </geometry>
     </visual>
     <collision>
@@ -450,7 +450,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="meshes_allegro_right/visual/link_2.0.glb"/>
+        <mesh filename="../allegro/meshes/visual/link_2.0.glb"/>
       </geometry>
     </visual>
     <collision>
@@ -475,7 +475,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="meshes_allegro_right/visual/link_3.0.glb"/>
+        <mesh filename="../allegro/meshes/visual/link_3.0.glb"/>
       </geometry>
     </visual>
     <collision>
@@ -500,12 +500,12 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="meshes_allegro_right/visual/link_tip.glb"/>
+        <mesh filename="../allegro/meshes/visual/link_tip.glb"/>
       </geometry>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="meshes_allegro_right/collision/link_tip.obj"/>
+        <mesh filename="../allegro/meshes/collision/link_tip.obj"/>
       </geometry>
     </collision>
   </link>
@@ -522,7 +522,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="meshes_allegro_right/visual/link_0.0.glb"/>
+        <mesh filename="../allegro/meshes/visual/link_0.0.glb"/>
       </geometry>
     </visual>
     <collision>
@@ -547,7 +547,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="meshes_allegro_right/visual/link_1.0.glb"/>
+        <mesh filename="../allegro/meshes/visual/link_1.0.glb"/>
       </geometry>
     </visual>
     <collision>
@@ -572,7 +572,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="meshes_allegro_right/visual/link_2.0.glb"/>
+        <mesh filename="../allegro/meshes/visual/link_2.0.glb"/>
       </geometry>
     </visual>
     <collision>
@@ -597,7 +597,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="meshes_allegro_right/visual/link_3.0.glb"/>
+        <mesh filename="../allegro/meshes/visual/link_3.0.glb"/>
       </geometry>
     </visual>
     <collision>
@@ -622,12 +622,12 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="meshes_allegro_right/visual/link_tip.glb"/>
+        <mesh filename="../allegro/meshes/visual/link_tip.glb"/>
       </geometry>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="meshes_allegro_right/collision/link_tip.obj"/>
+        <mesh filename="../allegro/meshes/collision/link_tip.obj"/>
       </geometry>
     </collision>
   </link>
@@ -644,7 +644,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="meshes_allegro_right/visual/link_12.0_right.glb"/>
+        <mesh filename="../allegro/meshes/visual/link_12.0_right.glb"/>
       </geometry>
     </visual>
     <collision>
@@ -669,7 +669,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="meshes_allegro_right/visual/link_13.0.glb"/>
+        <mesh filename="../allegro/meshes/visual/link_13.0.glb"/>
       </geometry>
     </visual>
     <collision>
@@ -694,7 +694,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="meshes_allegro_right/visual/link_14.0.glb"/>
+        <mesh filename="../allegro/meshes/visual/link_14.0.glb"/>
       </geometry>
     </visual>
     <collision>
@@ -719,7 +719,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="meshes_allegro_right/visual/link_15.0.glb"/>
+        <mesh filename="../allegro/meshes/visual/link_15.0.glb"/>
       </geometry>
     </visual>
     <collision>
@@ -744,12 +744,12 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="meshes_allegro_right/visual/link_tip.glb"/>
+        <mesh filename="../allegro/meshes/visual/link_tip.glb"/>
       </geometry>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="meshes_allegro_right/collision/link_tip.obj"/>
+        <mesh filename="../allegro/meshes/collision/link_tip.obj"/>
       </geometry>
     </collision>
   </link>
