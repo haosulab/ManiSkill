@@ -342,22 +342,6 @@ class XArm6Robotiq(BaseAgent):
         left_drive.set_limit_z(0, 0)
 
 
-    @property
-    def _sensor_configs(self):
-        return [
-            CameraConfig(
-                uid="hand_camera",
-                pose=sapien.Pose(p=[0, 0, -0.05], q=[0.70710678, 0, 0.70710678, 0]),
-                width=128,
-                height=128,
-                fov=np.pi / 2,
-                near=0.01,
-                far=100,
-                mount=self.robot.links_map["camera_link"],
-            )
-        ]
-    
-    
     def _after_init(self):
         self.finger1_link = sapien_utils.get_obj_by_name(
             self.robot.get_links(), "left_inner_finger"
@@ -368,6 +352,7 @@ class XArm6Robotiq(BaseAgent):
         self.tcp = sapien_utils.get_obj_by_name(
             self.robot.get_links(), self.ee_link_name
         )
+
 
     def is_grasping(self, object: Actor, min_force=0.5, max_angle=85):
         l_contact_forces = self.scene.get_pairwise_contact_forces(
@@ -395,3 +380,23 @@ class XArm6Robotiq(BaseAgent):
     def is_static(self, threshold: float = 0.2):
         qvel = self.robot.get_qvel()[..., :-1]
         return torch.max(torch.abs(qvel), 1)[0] <= threshold
+
+
+@register_agent()
+class XArm6RobotiqWristCamera(XArm6Robotiq):
+    uid = "xarm6_robotiq_wristcam"
+
+    @property
+    def _sensor_configs(self):
+        return [
+            CameraConfig(
+                uid="hand_camera",
+                pose=sapien.Pose(p=[0, 0, -0.05], q=[0.70710678, 0, 0.70710678, 0]),
+                width=128,
+                height=128,
+                fov=np.pi / 2,
+                near=0.01,
+                far=100,
+                mount=self.robot.links_map["camera_link"],
+            )
+        ]

@@ -377,22 +377,6 @@ class XArm6AllegroRight(BaseAgent):
         return vectorize_pose(self.palm_link.pose, device=self.device)
 
 
-    @property
-    def _sensor_configs(self):
-        return [
-            CameraConfig(
-                uid="hand_camera",
-                pose=sapien.Pose(p=[-0.025, 0, 0.025], q=[0.70710678, 0, -0.70710678, 0]),
-                width=128,
-                height=128,
-                fov=np.pi / 2,
-                near=0.01,
-                far=100,
-                mount=self.robot.links_map["base_link"],
-            )
-        ]
-    
-    
     def _after_init(self):
         self.tip_links: List[sapien.Entity] = sapien_utils.get_objs_by_names(
             self.robot.get_links(), self.tip_link_names
@@ -456,3 +440,42 @@ class XArm6AllegroRight(BaseAgent):
 class XArm6AllegroLeft(XArm6AllegroRight):
     uid = "xarm6_allegro_left"
     urdf_path = f"{PACKAGE_ASSET_DIR}/robots/xarm6/xarm6_allegro_left.urdf"
+
+
+@register_agent()
+class XArm6AllegroRightWristCamera(XArm6AllegroRight):
+    uid = "xarm6_allegro_right_wristcam"
+
+    @property
+    def _sensor_configs(self):
+        return [
+            CameraConfig(
+                uid="hand_camera",
+                pose=sapien.Pose(p=[-0.025, 0, 0.025], q=[0.70710678, 0, -0.70710678, 0]),
+                width=128,
+                height=128,
+                fov=np.pi / 2,
+                near=0.01,
+                far=100,
+                mount=self.robot.links_map["base_link"],
+            )
+        ]
+    
+@register_agent()
+class XArm6AllegroLeftWristCamera(XArm6AllegroLeft):
+    uid = "xarm6_allegro_left_wristcam"
+
+    @property
+    def _sensor_configs(self):
+        return [
+            CameraConfig(
+                uid="hand_camera",
+                pose=sapien.Pose(p=[-0.025, 0, 0.025], q=[0.70710678, 0, -0.70710678, 0]),
+                width=128,
+                height=128,
+                fov=np.pi / 2,
+                near=0.01,
+                far=100,
+                mount=self.robot.links_map["base_link"],
+            )
+        ]
