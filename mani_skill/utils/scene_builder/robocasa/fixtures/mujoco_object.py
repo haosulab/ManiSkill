@@ -235,18 +235,18 @@ class MujocoObject:
         bottom_site = self.loader.xml.find(
             ".//site[@name='{}bottom_site']".format(self.naming_prefix)
         )
-        return string_to_array(bottom_site.get("pos"))
+        return string_to_array(bottom_site.get("pos")) * self._scale
 
     @property
     def top_offset(self):
         top_site = self.loader.xml.find(
             ".//site[@name='{}top_site']".format(self.naming_prefix)
         )
-        return string_to_array(top_site.get("pos"))
+        return string_to_array(top_site.get("pos")) * self._scale
 
     @property
     def horizontal_radius(self):
         horizontal_radius_site = self.loader.xml.find(
             ".//site[@name='{}horizontal_radius_site']".format(self.naming_prefix)
         )
-        return string_to_array(horizontal_radius_site.get("pos"))[0]
+        return string_to_array(horizontal_radius_site.get("pos"))[0] * self._scale

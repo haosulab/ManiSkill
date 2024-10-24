@@ -865,12 +865,12 @@ class MJCFLoader:
         #         record = self._parse_constraint(constraint)
         #         builder.mimic_joint_records.append(record)
 
-        if not self._mjcf_options["contact"]:
-            for actor in actor_builders:
-                actor.collision_groups[2] |= 1 << 1
-            for art in articulation_builders:
-                for link in art.link_builders:
-                    link.collision_groups[2] |= 1 << 1
+        # if not self._mjcf_options["contact"]:
+        #     for actor in actor_builders:
+        #         actor.collision_groups[2] |= 1 << 1
+        #     for art in articulation_builders:
+        #         for link in art.link_builders:
+        #             link.collision_groups[2] |= 1 << 1
 
         return articulation_builders, actor_builders, []
 

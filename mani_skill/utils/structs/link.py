@@ -194,6 +194,13 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
                 cg[group] = (cg[group] & ~(1 << bit_idx)) | (bit << bit_idx)
                 cs.set_collision_groups(cg)
 
+    def set_collision_group(self, group: int, value):
+        for body in self._bodies:
+            for cs in body.get_collision_shapes():
+                cg = cs.get_collision_groups()
+                cg[group] = value
+                cs.set_collision_groups(cg)
+
     # -------------------------------------------------------------------------- #
     # Functions from sapien.Component
     # -------------------------------------------------------------------------- #

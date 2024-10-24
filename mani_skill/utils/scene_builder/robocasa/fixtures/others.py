@@ -248,13 +248,10 @@ class Floor(Wall):
                 mat=self.render_material,
                 texture_repeat=self.texture_repeat,
             )
-            builder.add_plane_collision(
-                pose=sapien.Pose(q=[0.7071068, 0, -0.7071068, 0])
-            )
-        # builder.add_plane_visual(scale=self.size * 2)
-
+            # Only ever add one plane collision
+            if 0 in scene_idxs:
+                builder.add_plane_collision(pose=sapien.Pose(q=[0, 0, 1, 0]))
         builder.initial_pose = sapien.Pose(p=self.pos)
-        # builder.initial_pose = sapien.Pose(self.pos, self.get_quat())
         builder.set_scene_idxs(scene_idxs)
         self.actor = builder.build_static(name=self.name + f"_{scene_idxs[0]}")
         return self

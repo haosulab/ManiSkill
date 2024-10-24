@@ -9,6 +9,7 @@ import torch
 import yaml
 from transforms3d.euler import euler2quat
 
+from mani_skill.agents.robots.fetch.fetch import Fetch
 from mani_skill.utils.scene_builder.robocasa.fixtures.accessories import (
     Accessory,
     CoffeeMachine,
@@ -398,24 +399,72 @@ class RoboCasaSceneBuilder(SceneBuilder):
                 ).to(robot_poses.device)
 
             actors: Dict[str, Actor] = {}
+
+            ### collision handling and optimization ###
+            # Generally we aim to ensure all articulations in a stack have the same collision bits so they can't collide with each other
+            # and with a range of [26, 30] we can generally ensure adjacent articulations can collide with each other.
+            # walls and floors cannot collide with anything. Walls can only collide with the robot. They are assigned bits 25 to 30.
+            # mobile base robots have their wheels/non base links assigned bit of 30 to not collide with the floor or walls.
+            # the base links can optionally be also assigned a bit of 31 to not collide with walls.
+
+            collision_start_bit = 26
+            fixture_idx = 0
+            stack_collision_bits = dict()
+            for stack_index, stack in enumerate(composites):
+                stack_collision_bits[stack] = collision_start_bit + stack_index % 5
             for k, v in fixtures.items():
+                fixture_idx += 1
                 built = v.build(scene_idxs=[scene_idx])
                 if built is not None:
                     actors[k] = built
                     # ensure all rooted articulated objects have collisions ignored with all static objects
+                    # ensure all articulations in the same stack have the same collision bits, since by definition for robocasa they cannot
+                    # collide with each other
                     if (
                         built.is_articulation
                         and built.articulation.fixed_root_link.all()
                     ):
+                        collision_bit = collision_start_bit + fixture_idx % 5
+                        if "stack" in v.name:
+                            for stack_group in stack_collision_bits.keys():
+                                if stack_group in v.name:
+                                    collision_bit = stack_collision_bits[stack_group]
+                                    break
                         for link in built.articulation.links:
-                            link.set_collision_group_bit(group=2, bit_idx=27, bit=1)
+                            link.set_collision_group(
+                                group=2, value=0
+                            )  # clear all default ignored collisions
+                            link.set_collision_group_bit(
+                                group=2, bit_idx=collision_bit, bit=1
+                            )
                     else:
                         if built.actor.px_body_type == "static":
-                            built.actor.set_collision_group_bit(
-                                group=2, bit_idx=27, bit=1
-                            )
-            self.actors = actors
-        return dict(fixtures=fixtures, actors=actors, fixture_configs=arena)
+                            if isinstance(v, Floor) or isinstance(v, Wall):
+                                for bit_idx in range(collision_start_bit, 31):
+                                    built.actor.set_collision_group_bit(
+                                        group=2, bit_idx=bit_idx, bit=1
+                                    )
+                            else:
+                                built.actor.set_collision_group_bit(
+                                    group=2,
+                                    bit_idx=collision_start_bit + fixture_idx % 5,
+                                    bit=1,
+                                )
+            # self.actors = actors
+
+        # disable collisions
+
+        if self.env.robot_uids == "fetch":
+            self.env.agent
+            for link in [self.env.agent.l_wheel_link, self.env.agent.r_wheel_link]:
+                for bit_idx in range(25, 31):
+                    link.set_collision_group_bit(group=2, bit_idx=bit_idx, bit=1)
+            # for bit_idx in range(25, 31):
+            self.env.agent.base_link.set_collision_group_bit(group=2, bit_idx=31, bit=1)
+
+        elif self.env.robot_uids == "unitree_g1_simplified_upper_body":
+            # TODO (stao)
+            pass
 
     def _generate_initial_placements(
         self, fixtures, fixture_cfgs, rng: np.random.RandomState
