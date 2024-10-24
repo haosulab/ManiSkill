@@ -297,7 +297,8 @@ class RoboCasaKitchenEnv(BaseEnv):
             self.object_actors.append({})
 
         # hacky way to ensure robocasa task classes can be easily imported into maniskill
-        if not self.fixtures_only:
+        # by manually setting into self the current scene idx to be loaded and checking if _get_obj_cfgs exists
+        if not self.fixtures_only and hasattr(self, "_get_obj_cfgs"):
             for scene_idx in range(self.num_envs):
                 self._scene_idx_to_be_loaded = scene_idx
                 self._setup_kitchen_references()
