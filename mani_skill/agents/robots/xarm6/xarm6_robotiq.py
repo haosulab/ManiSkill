@@ -13,9 +13,10 @@ from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.structs.actor import Actor
 
 @register_agent()
-class XArm6XArmGripper(BaseAgent):
-    uid = "xarm6_xarmgripper"
-    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/xarm6/xarm6_xarmgripper.urdf"
+class XArm6Robotiq(BaseAgent):
+    uid = "xarm6_robotiq"
+    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/xarm6/xarm6_robotiq.urdf"
+    # mjcf_path = f"{PACKAGE_ASSET_DIR}/robots/xarm6/xarm6_with_gripper.xml"
     
     disable_self_collisions = False
 
@@ -24,10 +25,10 @@ class XArm6XArmGripper(BaseAgent):
             gripper=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)
         ),
         link=dict(
-            left_finger=dict(
+            left_inner_finger_pad=dict(
                 material="gripper", patch_radius=0.1, min_patch_radius=0.1
             ),
-            right_finger=dict(
+            right_inner_finger_pad=dict(
                 material="gripper", patch_radius=0.1, min_patch_radius=0.1
             ),
         ),
@@ -78,24 +79,17 @@ class XArm6XArmGripper(BaseAgent):
         "joint5",
         "joint6",
     ]
-    gripper_joint_names = [
-        "drive_joint",
-        "left_finger_joint",
-        "left_inner_knuckle_joint",
-        "right_outer_knuckle_joint",
-        "right_finger_joint",
-        "right_inner_knuckle_joint",
-    ]
 
     arm_stiffness = 1000
     arm_damping = [50, 50, 50, 50, 50, 50]
+    # arm_damping = [0.1, 0.1, 0.1, 0.1, 0.01, 0.01]
     arm_friction = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
     arm_force_limit = 100
 
-    gripper_stiffness = [50, 2, 2, 2, 2, 2]
-    gripper_damping = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
-    gripper_force_limit = 1000
-    gripper_friction = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
+    gripper_stiffness = 1e5
+    gripper_damping = 1e3
+    gripper_force_limit = 0.1
+    gripper_friction = 0.05
 
     ee_link_name = "eef"
 
@@ -210,55 +204,142 @@ class XArm6XArmGripper(BaseAgent):
         # -------------------------------------------------------------------------- #
         # Gripper
         # -------------------------------------------------------------------------- #
-        # NOTE(jigu): IssacGym uses large P and D but with force limit
-        # However, tune a good force limit to have a good mimic behavior
-        gripper_pd_joint_pos = PDJointPosMimicControllerConfig(
-            self.gripper_joint_names,
-            lower=-0.01,  # a trick to have force when the object is thin
-            upper=0.04,
+        
+        # Define a passive controller config to simply "turn off" other joints from being controlled and set their properties (damping/friction) to 0.
+        # These joints are controlled passively by the mimic controller later on.
+        passive_finger_joint_names = [
+            "left_inner_knuckle_joint",
+            "right_inner_knuckle_joint",
+            "left_inner_finger_joint",
+            "right_inner_finger_joint",
+        ]
+
+        passive_finger_joints = PassiveControllerConfig(
+            joint_names=passive_finger_joint_names,
+            damping=0,
+            friction=0,
+        )
+        
+        finger_joint_names = ["left_outer_knuckle_joint", "right_outer_knuckle_joint"]
+
+        # Use a mimic controller config to define one action to control both fingers
+        finger_mimic_pd_joint_pos = PDJointPosMimicControllerConfig(
+            finger_joint_names,
+            lower=None,
+            upper=None,
             stiffness=self.gripper_stiffness,
             damping=self.gripper_damping,
             force_limit=self.gripper_force_limit,
             friction=self.gripper_friction,
+            normalize_action=False,
         )
-        # gripper_pd_joint_pos = PassiveControllerConfig(
-        #     self.gripper_joint_names,
-        #     damping=self.gripper_damping,
-        #     force_limit=self.gripper_force_limit,
-        # )
+
+        finger_mimic_pd_joint_delta_pos = PDJointPosMimicControllerConfig(
+            joint_names=finger_joint_names,
+            lower=-0.1,
+            upper=0.1,
+            stiffness=self.gripper_stiffness,
+            damping=self.gripper_damping,
+            force_limit=self.gripper_force_limit,
+            friction=self.gripper_friction,
+            normalize_action=True,
+            use_delta=True,
+        )
 
         controller_configs = dict(
             pd_joint_delta_pos=dict(
-                arm=arm_pd_joint_delta_pos, gripper=gripper_pd_joint_pos
+                arm=arm_pd_joint_delta_pos, 
+                gripper_active=finger_mimic_pd_joint_delta_pos, 
+                gripper_passive=passive_finger_joints
             ),
-            pd_joint_pos=dict(arm=arm_pd_joint_pos, gripper=gripper_pd_joint_pos),
-            pd_ee_delta_pos=dict(arm=arm_pd_ee_delta_pos, gripper=gripper_pd_joint_pos),
+            pd_joint_pos=dict(
+                arm=arm_pd_joint_pos, 
+                gripper_active=finger_mimic_pd_joint_pos, 
+                gripper_passive=passive_finger_joints
+            ),
+            pd_ee_delta_pos=dict(
+                arm=arm_pd_ee_delta_pos, 
+                gripper_active=finger_mimic_pd_joint_delta_pos, 
+                gripper_passive=passive_finger_joints
+            ),
             pd_ee_delta_pose=dict(
-                arm=arm_pd_ee_delta_pose, gripper=gripper_pd_joint_pos
+                arm=arm_pd_ee_delta_pose, 
+                gripper_active=finger_mimic_pd_joint_pos, 
+                gripper_passive=passive_finger_joints
             ),
-            pd_ee_pose=dict(arm=arm_pd_ee_pose, gripper=gripper_pd_joint_pos),
-            # TODO(jigu): how to add boundaries for the following controllers
+            pd_ee_pose=dict(
+                arm=arm_pd_ee_pose, 
+                gripper_active=finger_mimic_pd_joint_pos, 
+                gripper_passive=passive_finger_joints
+            ),
             pd_joint_target_delta_pos=dict(
-                arm=arm_pd_joint_target_delta_pos, gripper=gripper_pd_joint_pos
+                arm=arm_pd_joint_target_delta_pos, 
+                gripper_active=finger_mimic_pd_joint_delta_pos, 
+                gripper_passive=passive_finger_joints
             ),
             pd_ee_target_delta_pos=dict(
-                arm=arm_pd_ee_target_delta_pos, gripper=gripper_pd_joint_pos
+                arm=arm_pd_ee_target_delta_pos, 
+                gripper_active=finger_mimic_pd_joint_delta_pos, 
+                gripper_passive=passive_finger_joints
             ),
             pd_ee_target_delta_pose=dict(
-                arm=arm_pd_ee_target_delta_pose, gripper=gripper_pd_joint_pos
+                arm=arm_pd_ee_target_delta_pose, 
+                gripper_active=finger_mimic_pd_joint_delta_pos, 
+                gripper_passive=passive_finger_joints
             ),
             # Caution to use the following controllers
-            pd_joint_vel=dict(arm=arm_pd_joint_vel, gripper=gripper_pd_joint_pos),
+            pd_joint_vel=dict(
+                arm=arm_pd_joint_vel, 
+                gripper_active=finger_mimic_pd_joint_pos, 
+                gripper_passive=passive_finger_joints
+            ),
             pd_joint_pos_vel=dict(
-                arm=arm_pd_joint_pos_vel, gripper=gripper_pd_joint_pos
+                arm=arm_pd_joint_pos_vel, 
+                gripper_active=finger_mimic_pd_joint_pos, 
+                gripper_passive=passive_finger_joints
             ),
             pd_joint_delta_pos_vel=dict(
-                arm=arm_pd_joint_delta_pos_vel, gripper=gripper_pd_joint_pos
+                arm=arm_pd_joint_delta_pos_vel, 
+                gripper_active=finger_mimic_pd_joint_delta_pos, 
+                gripper_passive=passive_finger_joints
             ),
         )
 
         # Make a deepcopy in case users modify any config
         return deepcopy_dict(controller_configs)
+
+
+    def _after_loading_articulation(self):
+        outer_finger = self.robot.active_joints_map["right_inner_finger_joint"]
+        inner_knuckle = self.robot.active_joints_map["right_inner_knuckle_joint"]
+        pad = outer_finger.get_child_link()
+        lif = inner_knuckle.get_child_link()
+
+        # the next 4 magic arrays come from https://github.com/haosulab/cvpr-tutorial-2022/blob/master/debug/robotiq.py which was
+        # used to precompute these poses for drive creation
+        p_f_right = [-1.6048949e-08, 3.7600022e-02, 4.3000020e-02]
+        p_p_right = [1.3578170e-09, -1.7901104e-02, 6.5159947e-03]
+        p_f_left = [-1.8080145e-08, 3.7600014e-02, 4.2999994e-02]
+        p_p_left = [-1.4041154e-08, -1.7901093e-02, 6.5159872e-03]
+
+        right_drive = self.scene.create_drive(
+            lif, sapien.Pose(p_f_right), pad, sapien.Pose(p_p_right)
+        )
+        right_drive.set_limit_x(0, 0)
+        right_drive.set_limit_y(0, 0)
+        right_drive.set_limit_z(0, 0)
+
+        outer_finger = self.robot.active_joints_map["left_inner_finger_joint"]
+        inner_knuckle = self.robot.active_joints_map["left_inner_knuckle_joint"]
+        pad = outer_finger.get_child_link()
+        lif = inner_knuckle.get_child_link()
+
+        left_drive = self.scene.create_drive(
+            lif, sapien.Pose(p_f_left), pad, sapien.Pose(p_p_left)
+        )
+        left_drive.set_limit_x(0, 0)
+        left_drive.set_limit_y(0, 0)
+        left_drive.set_limit_z(0, 0)
 
 
     @property
@@ -279,10 +360,10 @@ class XArm6XArmGripper(BaseAgent):
     
     def _after_init(self):
         self.finger1_link = sapien_utils.get_obj_by_name(
-            self.robot.get_links(), "left_finger"
+            self.robot.get_links(), "left_inner_finger"
         )
         self.finger2_link = sapien_utils.get_obj_by_name(
-            self.robot.get_links(), "right_finger"
+            self.robot.get_links(), "right_inner_finger"
         )
         self.tcp = sapien_utils.get_obj_by_name(
             self.robot.get_links(), self.ee_link_name
