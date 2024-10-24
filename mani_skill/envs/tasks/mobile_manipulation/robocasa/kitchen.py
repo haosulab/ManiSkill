@@ -287,8 +287,12 @@ class RoboCasaKitchenEnv(BaseEnv):
         # self.actors = data["actors"]
         # self.fixture_configs = data["fixture_configs"]
         self.fixture_refs = {}
+        self.objects = []
+        self.object_cfgs = []
         for i in range(self.num_envs):
             self.fixture_refs[i] = dict()
+            self.objects[i] = {}
+            self.object_cfgs[i] = {}
 
         # hacky way to ensure robocasa task classes can be easily imported into maniskill
         if not self.fixtures_only:
@@ -327,6 +331,7 @@ class RoboCasaKitchenEnv(BaseEnv):
                         freezable=cfg.get("freezable", None),
                         max_size=cfg.get("max_size", (None, None, None)),
                         object_scale=cfg.get("object_scale", None),
+                        rng=self._batched_episode_rng[scene_idx],
                     )
                     if "name" not in cfg:
                         cfg["name"] = "obj_{}".format(obj_num + 1)
@@ -335,22 +340,22 @@ class RoboCasaKitchenEnv(BaseEnv):
                     return object, info
 
                 for _ in range(10):
-                    self.objects = {}
+                    objects = {}
                     if "object_cfgs" in self._ep_meta:
-                        self.object_cfgs = self._ep_meta["object_cfgs"]
-                        for obj_num, cfg in enumerate(self.object_cfgs):
+                        object_cfgs = self._ep_meta["object_cfgs"]
+                        for obj_num, cfg in enumerate(object_cfgs):
                             model, info = _create_obj(cfg)
                             cfg["info"] = info
-                            self.objects[model.name] = model
+                            objects[model.name] = model
                             # self.model.merge_objects([model])
                     else:
-                        self.object_cfgs = self._get_obj_cfgs()
+                        object_cfgs = self._get_obj_cfgs()
                         addl_obj_cfgs = []
-                        for obj_num, cfg in enumerate(self.object_cfgs):
+                        for obj_num, cfg in enumerate(object_cfgs):
                             cfg["type"] = "object"
                             model, info = _create_obj(cfg)
                             cfg["info"] = info
-                            self.objects[model.name] = model
+                            objects[model.name] = model
                             # self.model.merge_objects([model])
 
                             try_to_place_in = cfg["placement"].get(
@@ -379,8 +384,8 @@ class RoboCasaKitchenEnv(BaseEnv):
                                 addl_obj_cfgs.append(container_cfg)
                                 model, info = _create_obj(container_cfg)
                                 container_cfg["info"] = info
-                                self.objects[model.name] = model
-                                self.model.merge_objects([model])
+                                objects[model.name] = model
+                                # self.model.merge_objects([model])
 
                                 # modify object config to lie inside of container
                                 cfg["placement"] = dict(
@@ -392,17 +397,19 @@ class RoboCasaKitchenEnv(BaseEnv):
                                 )
 
                         # prepend the new object configs in
-                        self.object_cfgs = addl_obj_cfgs + self.object_cfgs
+                        object_cfgs = addl_obj_cfgs + object_cfgs
 
                         # # remove objects that didn't get created
                         # self.object_cfgs = [cfg for cfg in self.object_cfgs if "model" in cfg]
+                    self.object_cfgs[scene_idx] = object_cfgs
+                    self.objects[scene_idx] = objects
                     placement_initializer = (
                         self.scene_builder._get_placement_initializer(
                             self.scene_builder.scene_data[self._scene_idx_to_be_loaded][
                                 "fixtures"
                             ],
-                            self.objects,
-                            self.object_cfgs,
+                            objects,
+                            object_cfgs,
                             rng=self._batched_episode_rng[scene_idx],
                         )
                     )
@@ -491,6 +498,7 @@ class RoboCasaKitchenEnv(BaseEnv):
         obj_registries=None,
         max_size=(None, None, None),
         object_scale=None,
+        rng=None,
     ):
         """
         Sample a kitchen object from the specified groups and within max_size bounds.
@@ -536,7 +544,7 @@ class RoboCasaKitchenEnv(BaseEnv):
             microwavable=microwavable,
             cookable=cookable,
             freezable=freezable,
-            rng=self._episode_rng,
+            rng=rng,
             obj_registries=(obj_registries or self.obj_registries),
             split=(split or self.obj_instance_split),
             max_size=max_size,
