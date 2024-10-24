@@ -111,7 +111,7 @@ class TableSceneBuilder(SceneBuilder):
             self.env.agent.reset(qpos)
             self.env.agent.robot.set_pose(sapien.Pose([-0.562, 0, 0]))
         elif self.env.robot_uids in ["xarm6_allegro_left", "xarm6_allegro_right", 
-                                     "xarm6_xarmgripper", "xarm6_nogripper"]:
+                                     "xarm6_robotiq", "xarm6_nogripper"]:
             qpos = self.env.agent.keyframes["rest"].qpos
             qpos = (
                 self.env._episode_rng.normal(
