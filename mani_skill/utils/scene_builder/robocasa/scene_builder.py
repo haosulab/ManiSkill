@@ -170,8 +170,8 @@ class RoboCasaSceneBuilder(SceneBuilder):
         for scene_idx, build_config_idx in enumerate(build_config_idxs):
             layout_path = scene_registry.get_layout_path(build_config_idx[0])
             style_path = scene_registry.get_style_path(build_config_idx[1])
-            # print("BUILT", scene_idx, build_config_idx)
-            # print(layout_path, style_path)
+            print("BUILT", scene_idx, build_config_idx)
+            print(layout_path, style_path)
             # load style
             with open(style_path, "r") as f:
                 style = yaml.safe_load(f)
