@@ -188,65 +188,66 @@ class PullCubeToolEnv(BaseEnv):
     def evaluate(self):
       tcp_pos = self.agent.tcp.pose.p
       cube_pos = self.cube.pose.p
-
-      # Calculate distances and rewards similar to compute_dense_reward
-      tcp_to_tool_dist = torch.linalg.norm(tcp_pos - self.l_shape_tool.pose.p, dim=1)
-      reaching_tool_reward = 1 - torch.tanh(5.0 * tcp_to_tool_dist)
-
-      tool_to_cube_dist = torch.linalg.norm(self.l_shape_tool.pose.p - cube_pos, dim=1)
-      tool_cube_reward = 1 - torch.tanh(5.0 * tool_to_cube_dist)
-
-      tcp_to_cube_dist = torch.linalg.norm(tcp_pos - cube_pos, dim=1)
-      cube_close_reward = 1 - torch.tanh(5.0 * tcp_to_cube_dist)
-
-      # Success conditions
+      
+      # Success conditions - cube is within reach
       cube_in_reach = (
-          torch.linalg.norm(tcp_pos[:, :2] - cube_pos[:, :2], dim=1)
+          torch.linalg.norm(cube_pos[:, :2] - tcp_pos[:, :2], dim=1)
           < self.goal_radius
       )
-      cube_picked = self.agent.is_grasping(self.cube)
-      success = cube_picked | cube_in_reach
-
-      # Calculate total reward
-      total_reward = reaching_tool_reward + tool_cube_reward + cube_close_reward
-      total_reward[success] = 10.0  # Success reward
-
+      
+      # Calculate rewards for evaluation metrics
+      workspace_center = torch.zeros((len(cube_pos), 3), device=self.device)
+      workspace_center[:, 0] = self.arm_reach * 0.7
+      cube_to_workspace_dist = torch.linalg.norm(cube_pos - workspace_center, dim=1)
+      progress = 1 - torch.tanh(3.0 * cube_to_workspace_dist)
+      
       return {
-          "success": success,
-          "success_once": success,  
-          "success_at_end": success,  
-          "return": total_reward,  
-          "reward": total_reward / 13.0,  
-          "cube_in_reach": cube_in_reach.float().mean(), 
-          "cube_picked": cube_picked.float().mean(),  
+          "success": cube_in_reach,
+          "success_once": cube_in_reach,
+          "success_at_end": cube_in_reach,
+          "cube_progress": progress.mean(),
+          "cube_distance": cube_to_workspace_dist.mean(),
+          "reward": self.compute_normalized_dense_reward(None, None, {"success": cube_in_reach}),
       }
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        tcp_pos = self.agent.tcp.pose.p
-        cube_pos = self.cube.pose.p
-        tool_pos = self.l_shape_tool.pose.p
-
-        # Basic rewards
-        tcp_to_tool_dist = torch.linalg.norm(tcp_pos - tool_pos, dim=1)
-        reaching_tool_reward = 1 - torch.tanh(5.0 * tcp_to_tool_dist)
-
-        tool_to_cube_dist = torch.linalg.norm(tool_pos - cube_pos, dim=1)
-        tool_cube_reward = 1 - torch.tanh(5.0 * tool_to_cube_dist)
-
-        tcp_to_cube_dist = torch.linalg.norm(tcp_pos - cube_pos, dim=1)
-        cube_close_reward = 1 - torch.tanh(5.0 * tcp_to_cube_dist)
-
-        # Base reward
-        reward = reaching_tool_reward + tool_cube_reward + cube_close_reward
-        
-        # Add large reward for success
-        if "success" in info:
-            reward[info["success"]] = 10.0
-        
-        return reward
+      tcp_pos = self.agent.tcp.pose.p
+      cube_pos = self.cube.pose.p
+      tool_pos = self.l_shape_tool.pose.p
+      
+      
+      tcp_to_tool_dist = torch.linalg.norm(tcp_pos - tool_pos, dim=1)
+      reaching_tool_reward = 1 - torch.tanh(5.0 * tcp_to_tool_dist)
+      
+      
+      tool_pull_pos = cube_pos + torch.tensor(
+          [self.cube_half_size + 0.02, 0, 0], 
+          device=self.device
+      )
+      tool_to_pull_pos_dist = torch.linalg.norm(tool_pos - tool_pull_pos, dim=1)
+      tool_positioning_reward = 1 - torch.tanh(5.0 * tool_to_pull_pos_dist)
+      
+      
+      workspace_center = torch.zeros((len(cube_pos), 3), device=self.device)
+      workspace_center[:, 0] = self.arm_reach * 0.7  # Target position within reach
+      cube_to_workspace_dist = torch.linalg.norm(cube_pos - workspace_center, dim=1)
+      cube_progress_reward = 1 - torch.tanh(3.0 * cube_to_workspace_dist)
+      
+      
+      reward = (
+          0.3 * reaching_tool_reward +  # Getting to tool
+          0.3 * tool_positioning_reward +  # Positioning tool correctly
+          0.4 * cube_progress_reward  # Actually moving the cube
+      )
+      
+      # Success bonus
+      if "success" in info:
+          reward[info["success"]] += 5.0
+      
+      return reward
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        max_reward = 13.0  # Maximum possible reward (1 + 1 + 1 + success reward)
+        max_reward = 7.0  # Maximum possible reward (weighted components + success)
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
