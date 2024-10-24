@@ -21,7 +21,7 @@ from transforms3d.euler import euler2quat, quat2euler
 from transforms3d.quaternions import quat2mat
 
 
-@register_env("DrawTriangle-v1", max_episode_steps=1000)
+@register_env("DrawTriangle-v1", max_episode_steps=300)
 class DrawTriangle(BaseEnv):
     """
     This is a simple environment demonstrating drawing simulation on a table with a robot arm. There are no success/rewards defined, users can use this code as a starting point
