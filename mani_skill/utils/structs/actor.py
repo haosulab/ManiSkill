@@ -235,6 +235,13 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
                 cg[group] = (cg[group] & ~(1 << bit_idx)) | (bit << bit_idx)
                 cs.set_collision_groups(cg)
 
+    def set_collision_group(self, group: int, value):
+        for body in self._bodies:
+            for cs in body.get_collision_shapes():
+                cg = cs.get_collision_groups()
+                cg[group] = value
+                cs.set_collision_groups(cg)
+
     def get_first_collision_mesh(self, to_world_frame: bool = True) -> trimesh.Trimesh:
         """
         Returns the collision mesh of the first managed actor object. Note results of this are not cached or optimized at the moment
@@ -333,6 +340,9 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
     @pose.setter
     def pose(self, arg1: Union[Pose, sapien.Pose, Array]) -> None:
         if physx.is_gpu_enabled():
+            assert (
+                self.px_body_type != "static"
+            ), "Static objects cannot change poses in GPU sim after environment is loaded"
             if not isinstance(arg1, torch.Tensor):
                 arg1 = vectorize_pose(arg1, device=self.device)
             if self.hidden:

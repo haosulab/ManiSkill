@@ -248,6 +248,14 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             dtype=torch.int32,
         )
 
+    @cached_property
+    def fixed_root_link(self):
+        return torch.tensor(
+            [x.links[0].entity.components[0].joint.type == "fixed" for x in self._objs],
+            device=self.device,
+            dtype=torch.bool,
+        )
+
     def get_state(self):
         pose = self.root.pose
         vel = self.root.get_linear_velocity()  # [N, 3]
