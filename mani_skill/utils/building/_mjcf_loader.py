@@ -73,6 +73,9 @@ class MJCFTexture:
 DEFAULT_MJCF_OPTIONS = dict(contact=True)
 
 
+WARNED_ONCE = defaultdict(lambda: False)
+
+
 def _parse_int(attrib, key, default):
     if key in attrib:
         return int(attrib[key])
@@ -390,13 +393,17 @@ class MJCFLoader:
                     )
 
         elif geom_type == "plane":
-            logging.warning(
-                "Currently ManiSkill does not support loading plane geometries from MJCFs"
-            )
+            if not WARNED_ONCE["plane"]:
+                logging.warning(
+                    "Currently ManiSkill does not support loading plane geometries from MJCFs"
+                )
+                WARNED_ONCE["plane"] = True
         elif geom_type == "ellipsoid":
-            logging.warning(
-                "Currently ManiSkill does not support loading ellipsoid geometries from MJCFs"
-            )
+            if not WARNED_ONCE["ellipsoid"]:
+                logging.warning(
+                    "Currently ManiSkill does not support loading ellipsoid geometries from MJCFs"
+                )
+                WARNED_ONCE["ellipsoid"] = True
         elif geom_type == "mesh":
             mesh_name = geom_attrib.get("mesh")
             mesh_attrib = self._meshes[mesh_name].attrib
