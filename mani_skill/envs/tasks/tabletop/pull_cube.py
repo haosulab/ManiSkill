@@ -1,50 +1,27 @@
 from typing import Any, Dict, Union
+
 import numpy as np
 import torch
-import sapien
+import torch.random
+from transforms3d.euler import euler2quat
+
 from mani_skill.agents.robots import Fetch, Panda
 from mani_skill.envs.sapien_env import BaseEnv
-from mani_skill.envs.utils import randomization
 from mani_skill.sensors.camera import CameraConfig
-from mani_skill.utils import sapien_utils
 from mani_skill.utils.building import actors
 from mani_skill.utils.registration import register_env
+from mani_skill.utils.sapien_utils import look_at
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
-from mani_skill.utils.structs import Pose
-from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
+from mani_skill.utils.structs.pose import Pose
+from mani_skill.utils.structs.types import Array
 
 
-@register_env("PullCubeTool-v1", max_episode_steps=50)
-class PullCubeToolEnv(BaseEnv):
-    """
-    Task Description
-    -----------------
-    Given an L-shaped tool that is within the reach of the robot, leverage the
-    tool to pull a cube that is out of it's reach
-
-    Randomizations
-    ---------------
-    - The cube's position (x,y) is randomized on top of a table in the region "<out of manipulator
-    reach, but within reach of tool>". It is placed flat on the table
-    - The target goal region is the region on top of the table marked by "<within reach of arm>"
-
-    Success Conditions
-    -----------------
-    - The cube's xy position is within the goal region of the arm's base (marked by reachability)
-    """
-
+@register_env("PullCube-v1", max_episode_steps=50)
+class PullCubeEnv(BaseEnv):
     SUPPORTED_ROBOTS = ["panda", "fetch"]
-    SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "sparse", "none")
     agent: Union[Panda, Fetch]
-
     goal_radius = 0.1
-    cube_half_size = 0.01
-    handle_length = 0.20
-    hook_length = 0.05
-    width = 0.02
-    height = 0.02
-    cube_size = 0.02
-    arm_reach = 0.35
+    cube_half_size = 0.02
 
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
         self.robot_init_qpos_noise = robot_init_qpos_noise
@@ -130,54 +107,27 @@ class PullCubeToolEnv(BaseEnv):
             )
         return obs
 
-    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        tcp_pos = self.agent.tcp.pose.p
-        cube_pos = self.cube.pose.p
-        tool_pos = self.l_shape_tool.pose.p
-        
-        
-        tool_grasp_pos = tool_pos + torch.tensor(
-            [0.02, 0, 0],  # Slight offset for better grasping
-            device=self.device
+    def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
+        # grippers should close and pull from behind the cube, not grip it
+        # distance to backside of cube (+ 2*0.005) sufficiently encourages this
+        tcp_pull_pos = self.obj.pose.p + torch.tensor(
+            [self.cube_half_size + 2 * 0.005, 0, 0], device=self.device
         )
-        tcp_to_tool_dist = torch.linalg.norm(tcp_pos - tool_grasp_pos, dim=1)
-        reaching_tool_reward = 1 - torch.tanh(5.0 * tcp_to_tool_dist)
-        
-        
-        tool_reached = tcp_to_tool_dist < 0.01
-        
-        
-        hook_end_pos = tool_pos + torch.tensor(
-            [self.handle_length - self.hook_length/2, self.width, 0], 
-            device=self.device
+        tcp_to_pull_pose = tcp_pull_pos - self.agent.tcp.pose.p
+        tcp_to_pull_pose_dist = torch.linalg.norm(tcp_to_pull_pose, axis=1)
+        reaching_reward = 1 - torch.tanh(5 * tcp_to_pull_pose_dist)
+        reward = reaching_reward
+
+        reached = tcp_to_pull_pose_dist < 0.01
+        obj_to_goal_dist = torch.linalg.norm(
+            self.obj.pose.p[..., :2] - self.goal_region.pose.p[..., :2], axis=1
         )
-        ideal_hook_pos = cube_pos + torch.tensor(
-            [-self.cube_half_size - 0.02, 0, 0],  
-            device=self.device
-        )
-        hook_to_target_dist = torch.linalg.norm(hook_end_pos - ideal_hook_pos, dim=1)
-        tool_positioning_reward = 1 - torch.tanh(5.0 * hook_to_target_dist)
-        
-        
-        workspace_center = torch.zeros((len(cube_pos), 3), device=self.device)
-        workspace_center[:, 0] = self.arm_reach * 0.7
-        cube_to_workspace_dist = torch.linalg.norm(cube_pos - workspace_center, dim=1)
-        cube_progress_reward = 1 - torch.tanh(5.0 * cube_to_workspace_dist)
-        
-        
-        reward = reaching_tool_reward
-        reward += tool_positioning_reward * tool_reached
-        reward += cube_progress_reward * (hook_to_target_dist < 0.02)  # Only when hook is positioned
-        
-        
-        if "success" in info:
-            reward[info["success"]] = 3.0
-            
+        place_reward = 1 - torch.tanh(5 * obj_to_goal_dist)
+        reward += place_reward * reached
+
+        reward[info["success"]] = 3
         return reward
 
-    def compute_normalized_dense_reward(
-        self, obs: Any, action: torch.Tensor, info: Dict
-    ):
-        # CHANGE: Use same max reward as template
+    def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
         max_reward = 3.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
