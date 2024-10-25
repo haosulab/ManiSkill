@@ -96,8 +96,8 @@ class PushCubeEnv(BaseEnv):
                 base_color=[1, 0, 0, 1],
             ),
         )
-        # optionally set an initial pose so that it initially spawns there
-        # self.builder.initial_pose = sapien.Pose(p=[1, 1, 1], q=[1, 0, 0, 0])
+        # strongly recommended to set initial poses for objects, even if you plan to modify them later
+        builder.initial_pose = sapien.Pose(p=[0, 0, 0.02], q=[1, 0, 0, 0])
         self.obj = builder.build(name="cube")
         # PushCube has some other code after this removed for brevity that 
         # spawns a goal object (a red/white target) stored at self.goal_region
@@ -109,8 +109,7 @@ You can build a **kinematic** actor with `builder.build_kinematic` and a **stati
 - Kinematic actors can have their pose changed at any time. Static actors must have an initial pose set before calling `build_static` via `builder.initial_pose = ...`
 - Use static instead of kinematic whenever possible as it saves a lot of GPU memory. Static objects must have an initial pose set before building via `builder.initial_pose = ...`.
 
-Note that by default, if an object does not have an initial pose set in its builder, ManiSkill tries its best to choose initial poses of objects such that they are unlikely to collide with each other during GPU simulation initialization (which uses the initial poses of the builders). These poses are definitely not what you want for task initialization but need to be far apart initially to ensure stable GPU simulation.
-
+Note that by default, if an object does not have an initial pose set in its builder, ManiSkill will set it to a default pose of `q=[1,0,0,0], p=[0,0,0]` and a give a warning. For simple tasks this may not matter but when working with more complex objects and articulations, it is strongly recommended to set initial poses for all objects as GPU simulation might run into bugs/issues if the objects at their initial poses collide.
 
 We also provide some functions that build some more complex shapes that you can use by importing the following:
 ```python

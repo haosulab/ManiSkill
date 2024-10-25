@@ -111,17 +111,18 @@ class CartpoleEnv(BaseEnv):
         loader = self.scene.create_mjcf_loader()
         actor_builders = loader.parse(MJCF_FILE)["actor_builders"]
         for a in actor_builders:
+            a.initial_pose = sapien.Pose()
             a.build(a.name)
 
         # background visual wall
         self.wall = self.scene.create_actor_builder()
         self.wall.add_box_visual(
             half_size=(1e-3, 20, 10),
-            pose=sapien.Pose(p=[0, 1, 1], q=euler2quat(0, 0, np.pi / 2)),
             material=sapien.render.RenderMaterial(
                 base_color=np.array([0.3, 0.3, 0.3, 1])
             ),
         )
+        self.wall.initial_pose = sapien.Pose(p=[0, 1, 1], q=euler2quat(0, 0, np.pi / 2))
         self.wall.build_static(name="wall")
 
     def evaluate(self):
