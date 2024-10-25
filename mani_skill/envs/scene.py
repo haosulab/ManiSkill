@@ -803,21 +803,23 @@ class ManiSkillScene:
     # ---------------------------------------------------------------------------- #
     # GPU Simulation Management
     # ---------------------------------------------------------------------------- #
-    def _setup_gpu(self):
+    def _setup(self, enable_gpu: bool):
         """
-        Start the GPU simulation and allocate all buffers and initialize objects
+        Start the CPU/GPU simulation and allocate all buffers and initialize objects
         """
-        if SAPIEN_RENDER_SYSTEM == "3.1":
-            for scene in self.sub_scenes:
-                scene.update_render()
-        self.px.gpu_init()
+        if enable_gpu:
+            if SAPIEN_RENDER_SYSTEM == "3.1":
+                for scene in self.sub_scenes:
+                    scene.update_render()
+            self.px.gpu_init()
         self.non_static_actors: List[Actor] = []
         # find non static actors, and set data indices that are now available after gpu_init was called
         for actor in self.actors.values():
             if actor.px_body_type == "static":
                 continue
             self.non_static_actors.append(actor)
-            actor._body_data_index  # only need to access this attribute to populate it
+            if enable_gpu:
+                actor._body_data_index  # only need to access this attribute to populate it
 
         for articulation in self.articulations.values():
             articulation._data_index
@@ -831,21 +833,22 @@ class ManiSkillScene:
         for articulation in self.articulations.values():
             articulation.set_pose(articulation.initial_pose)
 
-        self.px.cuda_rigid_body_data.torch()[:, 7:] = torch.zeros_like(
-            self.px.cuda_rigid_body_data.torch()[:, 7:]
-        )  # zero out all velocities
-        self.px.cuda_articulation_qvel.torch()[:, :] = torch.zeros_like(
-            self.px.cuda_articulation_qvel.torch()
-        )  # zero out all q velocities
+        if enable_gpu:
+            self.px.cuda_rigid_body_data.torch()[:, 7:] = torch.zeros_like(
+                self.px.cuda_rigid_body_data.torch()[:, 7:]
+            )  # zero out all velocities
+            self.px.cuda_articulation_qvel.torch()[:, :] = torch.zeros_like(
+                self.px.cuda_articulation_qvel.torch()
+            )  # zero out all q velocities
 
-        self.px.gpu_apply_rigid_dynamic_data()
-        self.px.gpu_apply_articulation_root_pose()
-        self.px.gpu_apply_articulation_root_velocity()
-        self.px.gpu_apply_articulation_qvel()
+            self.px.gpu_apply_rigid_dynamic_data()
+            self.px.gpu_apply_articulation_root_pose()
+            self.px.gpu_apply_articulation_root_velocity()
+            self.px.gpu_apply_articulation_qvel()
 
-        self._gpu_sim_initialized = True
-        self.px.gpu_update_articulation_kinematics()
-        self._gpu_fetch_all()
+            self._gpu_sim_initialized = True
+            self.px.gpu_update_articulation_kinematics()
+            self._gpu_fetch_all()
 
     def _gpu_apply_all(self):
         """
