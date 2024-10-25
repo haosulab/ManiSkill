@@ -98,7 +98,7 @@ class BaseDigitalTwinEnv(BaseEnv):
                     self._rgb_overlay_images[camera_name], (sensor.width, sensor.height)
                 )
                 self._rgb_overlay_images[camera_name] = common.to_tensor(
-                    rgb_overlay_img
+                    rgb_overlay_img, device=self.device
                 )
 
     def _green_sceen_rgb(self, rgb, segmentation, overlay_img):

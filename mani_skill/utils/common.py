@@ -10,7 +10,7 @@ import numpy as np
 import sapien.physx as physx
 import torch
 
-from mani_skill.utils.structs.types import Array, Device, get_backend_name
+from mani_skill.utils.structs.types import Array, Device
 
 # -------------------------------------------------------------------------- #
 # Utilities for working with tensors, numpy arrays, and batched data

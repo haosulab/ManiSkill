@@ -86,7 +86,10 @@ class Pose:
 
     @classmethod
     def create_from_pq(
-        cls, p: torch.Tensor = None, q: torch.Tensor = None, device: Device = None
+        cls,
+        p: Optional[torch.Tensor] = None,
+        q: Optional[torch.Tensor] = None,
+        device: Optional[Device] = None,
     ):
         """Creates a Pose object from a given position ``p`` and/or quaternion ``q``"""
         if p is None:
@@ -135,7 +138,7 @@ class Pose:
 
         else:
             assert len(pose.shape) <= 2 and len(pose.shape) > 0
-            pose = common.to_tensor(pose)
+            pose = common.to_tensor(pose, device=device)
             pose = add_batch_dim(pose)
             if pose.shape[-1] == 3:
                 return cls.create_from_pq(p=pose, device=pose.device)

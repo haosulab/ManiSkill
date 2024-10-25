@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 import sapien
@@ -164,7 +164,8 @@ class OpenCabinetDrawerEnv(BaseEnv):
                     meshes[link_ids[i] % len(meshes)].bounding_box.center_mass
                     for i, meshes in enumerate(handle_links_meshes)
                 ]
-            )
+            ),
+            device=self.device,
         )
 
         self.handle_link_goal = actors.build_sphere(
@@ -187,22 +188,22 @@ class OpenCabinetDrawerEnv(BaseEnv):
         for cabinet in self._cabinets:
             collision_mesh = cabinet.get_first_collision_mesh()
             self.cabinet_zs.append(-collision_mesh.bounding_box.bounds[0, 2])
-        self.cabinet_zs = common.to_tensor(self.cabinet_zs)
+        self.cabinet_zs = common.to_tensor(self.cabinet_zs, device=self.device)
 
         # get the qmin qmax values of the joint corresponding to the selected links
         target_qlimits = self.handle_link.joint.limits  # [b, 1, 2]
         qmin, qmax = target_qlimits[..., 0], target_qlimits[..., 1]
         self.target_qpos = qmin + (qmax - qmin) * self.min_open_frac
 
-    def handle_link_positions(self, env_idx: torch.Tensor = None):
+    def handle_link_positions(self, env_idx: Optional[torch.Tensor] = None):
         if env_idx is None:
             return transform_points(
                 self.handle_link.pose.to_transformation_matrix().clone(),
-                common.to_tensor(self.handle_link_pos),
+                common.to_tensor(self.handle_link_pos, device=self.device),
             )
         return transform_points(
             self.handle_link.pose[env_idx].to_transformation_matrix().clone(),
-            common.to_tensor(self.handle_link_pos[env_idx]),
+            common.to_tensor(self.handle_link_pos[env_idx], device=self.device),
         )
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
@@ -257,7 +258,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
             # themselves on the first step. It's unclear why this happens on GPU sim only atm.
             # moreover despite setting qpos/qvel to 0, the cabinets might still move on their own a little bit.
             # this may be due to oblong meshes.
-            if physx.is_gpu_enabled():
+            if self.gpu_sim_enabled:
                 self.scene._gpu_apply_all()
                 self.scene.px.gpu_update_articulation_kinematics()
                 self.scene.px.step()

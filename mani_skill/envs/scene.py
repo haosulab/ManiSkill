@@ -153,7 +153,7 @@ class ManiSkillScene:
 
     def remove_actor(self, actor: Actor):
         """Removes an actor from the scene. Only works in CPU simulation."""
-        if physx.is_gpu_enabled():
+        if self.gpu_sim_enabled:
             raise NotImplementedError(
                 "Cannot remove actors after creating them in GPU sim at the moment"
             )
@@ -163,7 +163,7 @@ class ManiSkillScene:
 
     def remove_articulation(self, articulation: Articulation):
         """Removes an articulation from the scene. Only works in CPU simulation."""
-        if physx.is_gpu_enabled():
+        if self.gpu_sim_enabled:
             raise NotImplementedError(
                 "Cannot remove articulations after creating them in GPU sim at the moment"
             )
@@ -244,7 +244,7 @@ class ManiSkillScene:
 
             # mount camera to actor/link
             if mount is not None:
-                if physx.is_gpu_enabled():
+                if self.gpu_sim_enabled:
                     if isinstance(mount, Actor):
                         camera.set_gpu_pose_batch_index(
                             mount._objs[i]
@@ -364,7 +364,7 @@ class ManiSkillScene:
             self._sapien_update_render()
 
     def _sapien_update_render(self):
-        if physx.is_gpu_enabled():
+        if self.gpu_sim_enabled:
             if not self.parallel_in_single_scene:
                 if self.render_system_group is None:
                     self._setup_gpu_rendering()
@@ -378,7 +378,7 @@ class ManiSkillScene:
             self.sub_scenes[0].update_render()
 
     def _sapien_31_update_render(self):
-        if physx.is_gpu_enabled():
+        if self.gpu_sim_enabled:
             if self.render_system_group is None:
                 # TODO (stao): for new render system support the parallel in single scene rendering option
                 for scene in self.sub_scenes:
@@ -699,7 +699,7 @@ class ManiSkillScene:
         # TODO (stao): Is there any optimization improvement when putting all queries all together and fetched together
         # vs multiple smaller queries? If so, might be worth exposing a helpful API for that instead of having user
         # write this code below themselves.
-        if physx.is_gpu_enabled():
+        if self.gpu_sim_enabled:
             query_hash = hash((obj1, obj2))
             query_key = obj1.name + obj2.name
 
@@ -1039,7 +1039,7 @@ class ManiSkillScene:
         self, camera_name: str = None
     ) -> Dict[str, torch.Tensor]:
         image_data = dict()
-        if physx.is_gpu_enabled():
+        if self.gpu_sim_enabled:
             if self.parallel_in_single_scene:
                 for name, camera in self.human_render_cameras.items():
                     camera.camera._render_cameras[0].take_picture()

@@ -272,7 +272,7 @@ class ActorBuilder(SAPIENActorBuilder):
         if (
             self.physx_body_type == "static"
             and initial_pose_b == 1
-            and physx.is_gpu_enabled()
+            and self.scene.gpu_sim_enabled
         ):
             actor.initial_pose = Pose.create(
                 self.initial_pose.raw_pose.repeat(num_actors, 1)

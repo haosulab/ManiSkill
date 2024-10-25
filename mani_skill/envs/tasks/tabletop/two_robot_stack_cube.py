@@ -79,7 +79,7 @@ class TwoRobotStackCube(BaseEnv):
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
     def _load_scene(self, options: dict):
-        self.cube_half_size = common.to_tensor([0.02] * 3)
+        self.cube_half_size = common.to_tensor([0.02] * 3, device=self.device)
         self.table_scene = TableSceneBuilder(
             env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
         )
