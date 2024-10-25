@@ -313,7 +313,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
 
     @property
     def pose(self) -> Pose:
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             if self.px_body_type == "static":
                 # NOTE (stao): usually _builder_initial_pose is just one pose, but for static objects in GPU sim we repeat it if necessary so it can be used
                 # as part of observations if needed
@@ -339,7 +339,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
 
     @pose.setter
     def pose(self, arg1: Union[Pose, sapien.Pose, Array]) -> None:
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             assert (
                 self.px_body_type != "static"
             ), "Static objects cannot change poses in GPU sim after environment is loaded"
@@ -367,7 +367,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
                 for obj in self._objs:
                     obj.pose = arg1
             else:
-                if len(arg1.shape) == 2:
+                if isinstance(arg1, Pose) and len(arg1.shape) == 2:
                     for i, obj in enumerate(self._objs):
                         obj.pose = arg1[i].sp
                 else:

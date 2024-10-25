@@ -122,7 +122,7 @@ class Pose:
             )
             return cls(raw_pose=add_batch_dim(raw_pose))
         elif isinstance(pose, cls):
-            return pose
+            return pose.to(device)
         elif isinstance(pose, list) and isinstance(pose[0], sapien.Pose):
             ps = []
             qs = []
@@ -267,17 +267,14 @@ def vectorize_pose(
     Maps several formats of Pose representation to the appropriate tensor representation
     """
     if isinstance(pose, sapien.Pose):
-        if physx.is_gpu_enabled():
-            return torch.concatenate(
-                [
-                    common.to_tensor(pose.p, device=device),
-                    common.to_tensor(pose.q, device=device),
-                ]
-            )
-        else:
-            return np.hstack([pose.p, pose.q])
+        return torch.concatenate(
+            [
+                common.to_tensor(pose.p, device=device),
+                common.to_tensor(pose.q, device=device),
+            ]
+        )
     elif isinstance(pose, Pose):
-        return pose.raw_pose
+        return pose.raw_pose.to(device)
     else:
         return common.to_tensor(pose, device=device)
 

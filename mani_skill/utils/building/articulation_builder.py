@@ -132,7 +132,9 @@ class ArticulationBuilder(SapienArticulationBuilder):
         num_arts = len(self.scene_idxs)
 
         if self.initial_pose is None:
-            initial_ps = []
+            initial_ps = torch.zeros(
+                (len(self.scene_idxs), 3), device=self.scene.device
+            )
             for scene_idx in self.scene_idxs:
                 if self.scene.parallel_in_single_scene:
                     sub_scene = self.scene.sub_scenes[0]
@@ -143,10 +145,14 @@ class ArticulationBuilder(SapienArticulationBuilder):
                 z_height = SPAWN_SPACING * (entity_num // 2 + 1) + SPAWN_START_GAP
                 # zdir, switch between -1 and 1 to flip above and below origin
                 z_height *= 2 * (entity_num % 2) - 1
-                initial_ps.append([0, 0, z_height])
-            self.initial_pose = Pose.create_from_pq(p=initial_ps)
+                initial_ps[scene_idx] = torch.tensor(
+                    [0, 0, z_height], device=self.scene.device
+                )
+            self.initial_pose = Pose.create_from_pq(
+                p=initial_ps, device=self.scene.device
+            )
         else:
-            self.initial_pose = Pose.create(self.initial_pose)
+            self.initial_pose = Pose.create(self.initial_pose, device=self.scene.device)
         initial_pose_b = self.initial_pose.raw_pose.shape[0]
         assert initial_pose_b == 1 or initial_pose_b == num_arts
         initial_pose_np = common.to_numpy(self.initial_pose.raw_pose)

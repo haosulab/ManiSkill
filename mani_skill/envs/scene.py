@@ -39,7 +39,7 @@ class ManiSkillScene:
 
     def __init__(
         self,
-        sub_scenes: List[sapien.Scene] = None,
+        sub_scenes: Optional[List[sapien.Scene]] = None,
         sim_config: SimConfig = SimConfig(),
         debug_mode: bool = True,
         device: Device = None,
@@ -51,6 +51,13 @@ class ManiSkillScene:
         self.px: Union[physx.PhysxCpuSystem, physx.PhysxGpuSystem] = self.sub_scenes[
             0
         ].physx_system
+        assert all(
+            isinstance(s.physx_system, type(self.px)) for s in self.sub_scenes
+        ), "all sub-scenes must use the same simulation backend"
+        self.gpu_sim_enabled = (
+            True if isinstance(self.px, physx.PhysxGpuSystem) else False
+        )
+        """whether the sub scenes are using the GPU or CPU backend"""
         self.sim_config = sim_config
         self._gpu_sim_initialized = False
         self.debug_mode = debug_mode
@@ -825,9 +832,6 @@ class ManiSkillScene:
             articulation._data_index
             for link in articulation.links:
                 link._body_data_index
-
-        # As physx_system.gpu_init() was called a single physx step was also taken. So we need to reset
-        # all the actors and articulations to their original poses as they likely have collided
         for actor in self.non_static_actors:
             actor.set_pose(actor.initial_pose)
         for articulation in self.articulations.values():

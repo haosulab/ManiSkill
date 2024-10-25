@@ -416,7 +416,7 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
     #     pass
     @property
     def linear_velocity(self) -> torch.Tensor:
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             # NOTE (stao): Currently physx has a bug that sapien inherits where link bodies on the GPU put linear/angular velocities in the wrong order...
             if isinstance(self._objs[0], physx.PhysxArticulationLinkComponent):
                 return self._body_data[self._body_data_index, 10:13]
@@ -426,7 +426,7 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
 
     @linear_velocity.setter
     def linear_velocity(self, arg1: Array):
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             arg1 = common.to_tensor(arg1)
             self._body_data[
                 self._body_data_index[self.scene._reset_mask[self._scene_idxs]], 7:10

@@ -137,46 +137,56 @@ def to_tensor(array: Array, device: Optional[Device] = None):
     """
     if isinstance(array, (dict)):
         return {k: to_tensor(v, device=device) for k, v in array.items()}
-    if physx.is_gpu_enabled():
-        if isinstance(array, np.ndarray):
-            if array.dtype == np.uint16:
-                array = array.astype(np.int32)
-            ret = torch.from_numpy(array)
-            if ret.dtype == torch.float64:
-                ret = ret.float()
-        elif isinstance(array, torch.Tensor):
-            ret = array
-        else:
-            ret = torch.tensor(array)
-        if device is None:
-            if ret.device.type == "cpu":
-                # TODO (stao): note that .cuda does move a tensor to the torch.device context, it moves to the default
-                return ret.cuda()
-            # keep same device if already on GPU
-            return ret
-        else:
-            return ret.to(device)
+    elif isinstance(array, torch.Tensor):
+        ret = array.to(device)
+    elif isinstance(array, np.ndarray):
+        # TODO (stao): check of doing .to(device) is slow even if its just CPU
+        ret = torch.from_numpy(array).to(device)
     else:
-        if isinstance(array, np.ndarray):
-            if array.dtype == np.uint16:
-                array = array.astype(np.int32)
-            if array.dtype == np.uint32:
-                array = array.astype(np.int64)
-            ret = torch.from_numpy(array)
-            if ret.dtype == torch.float64:
-                ret = ret.float()
-        elif isinstance(array, list) and isinstance(array[0], np.ndarray):
-            ret = torch.from_numpy(np.array(array))
-            if ret.dtype == torch.float64:
-                ret = ret.float()
-        elif np.iterable(array):
-            ret = torch.Tensor(array)
-        else:
-            ret = torch.Tensor(array)
-        if device is None:
-            return ret
-        else:
-            return ret.to(device)
+        ret = torch.tensor(array, device=device)
+    if ret.dtype == torch.float64:
+        ret = ret.float()
+    return ret
+    # if physx.is_gpu_enabled():
+    #     if isinstance(array, np.ndarray):
+    #         if array.dtype == np.uint16:
+    #             array = array.astype(np.int32)
+    #         ret = torch.from_numpy(array)
+    #         if ret.dtype == torch.float64:
+    #             ret = ret.float()
+    #     elif isinstance(array, torch.Tensor):
+    #         ret = array
+    #     else:
+    #         ret = torch.tensor(array)
+    #     if device is None:
+    #         if ret.device.type == "cpu":
+    #             # TODO (stao): note that .cuda does move a tensor to the torch.device context, it moves to the default
+    #             return ret.cuda()
+    #         # keep same device if already on GPU
+    #         return ret
+    #     else:
+    #         return ret.to(device)
+    # else:
+    #     if isinstance(array, np.ndarray):
+    #         if array.dtype == np.uint16:
+    #             array = array.astype(np.int32)
+    #         if array.dtype == np.uint32:
+    #             array = array.astype(np.int64)
+    #         ret = torch.from_numpy(array)
+    #         if ret.dtype == torch.float64:
+    #             ret = ret.float()
+    #     elif isinstance(array, list) and isinstance(array[0], np.ndarray):
+    #         ret = torch.from_numpy(np.array(array))
+    #         if ret.dtype == torch.float64:
+    #             ret = ret.float()
+    #     elif np.iterable(array):
+    #         ret = torch.Tensor(array)
+    #     else:
+    #         ret = torch.Tensor(array)
+    #     if device is None:
+    #         return ret
+    #     else:
+    #         return ret.to(device)
 
 
 def to_cpu_tensor(array: Array):

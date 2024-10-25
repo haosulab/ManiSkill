@@ -607,7 +607,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     @property
     def qpos(self):
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             # NOTE (stao): cuda_articulation_qpos is of shape (M, N) where M is the total number of articulations in the physx scene,
             # N is the max dof of all those articulations.
             return self.px.cuda_articulation_qpos.torch()[
@@ -618,7 +618,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     @qpos.setter
     def qpos(self, arg1: torch.Tensor):
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             arg1 = common.to_tensor(arg1)
             self.px.cuda_articulation_qpos.torch()[
                 self._data_index[self.scene._reset_mask[self._scene_idxs]],
@@ -723,7 +723,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
         TODO (stao): can we use joint indices for the CPU sim as well? Some global joint indices?
         """
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             targets = common.to_tensor(targets)
             if joint_indices not in self._cached_joint_target_indices:
                 self._cached_joint_target_indices[joint_indices] = torch.meshgrid(
@@ -746,7 +746,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
         TODO (stao): can we use joint indices for the CPU sim as well? Some global joint indices?
         """
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             targets = common.to_tensor(targets)
             if joint_indices not in self._cached_joint_target_indices:
                 self._cached_joint_target_indices[joint_indices] = torch.meshgrid(
