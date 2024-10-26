@@ -43,7 +43,7 @@ class TwoRobotStackCube(BaseEnv):
     Visualization: TODO
     """
 
-    SUPPORTED_ROBOTS = [("panda", "panda")]
+    SUPPORTED_ROBOTS = [("panda_wristcam", "panda_wristcam")]
     agent: MultiAgent[Tuple[Panda, Panda]]
 
     goal_radius = 0.06
@@ -95,14 +95,14 @@ class TwoRobotStackCube(BaseEnv):
             half_size=0.02,
             color=np.array([12, 42, 160, 255]) / 255,
             name="cubeA",
-            initial_pose=sapien.Pose(p=[1, 0, self.cube_half_size]),
+            initial_pose=sapien.Pose(p=[1, 0, 0.02]),
         )
         self.cubeB = actors.build_cube(
             self.scene,
             half_size=0.02,
             color=[0, 1, 0, 1],
             name="cubeB",
-            initial_pose=sapien.Pose(p=[-1, 0, self.cube_half_size]),
+            initial_pose=sapien.Pose(p=[-1, 0, 0.02]),
         )
         self.goal_region = actors.build_red_white_target(
             self.scene,

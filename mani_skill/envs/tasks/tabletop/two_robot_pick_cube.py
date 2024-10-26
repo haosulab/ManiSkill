@@ -89,7 +89,7 @@ class TwoRobotPickCube(BaseEnv):
             half_size=self.cube_half_size,
             color=[1, 0, 0, 1],
             name="cube",
-            initial_pose=sapien.Pose(p=[0, 0, self.cube_half_size]),
+            initial_pose=sapien.Pose(p=[0, 0, 0.02]),
         )
         self.goal_site = actors.build_sphere(
             self.scene,
