@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from typing import TYPE_CHECKING, List, Optional, Sequence, Union
 
 import numpy as np
@@ -133,8 +132,8 @@ class ArticulationBuilder(SapienArticulationBuilder):
         num_arts = len(self.scene_idxs)
 
         if self.initial_pose is None:
-            logging.warning(
-                f"No initial pose set for articulation {self.name}, setting to default pose q=[1,0,0,0], p=[0,0,0]. There may be simulation issues/bugs if this articulation at it's initial pose collides with other objects at their initial poses."
+            logger.warn(
+                f"No initial pose set for articulation builder of {self.name}, setting to default pose q=[1,0,0,0], p=[0,0,0]. There may be simulation issues/bugs if this articulation at it's initial pose collides with other objects at their initial poses."
             )
             self.initial_pose = sapien.Pose()
         self.initial_pose = Pose.create(self.initial_pose)

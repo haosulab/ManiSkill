@@ -1,6 +1,7 @@
 from typing import Any, Dict, Union
 
 import numpy as np
+import sapien
 import torch
 
 import mani_skill.envs.utils.randomization as randomization
@@ -42,7 +43,11 @@ class PickCubeEnv(BaseEnv):
         )
         self.table_scene.build()
         self.cube = actors.build_cube(
-            self.scene, half_size=self.cube_half_size, color=[1, 0, 0, 1], name="cube"
+            self.scene,
+            half_size=self.cube_half_size,
+            color=[1, 0, 0, 1],
+            name="cube",
+            initial_pose=sapien.Pose(p=[0, 0, self.cube_half_size]),
         )
         self.goal_site = actors.build_sphere(
             self.scene,
@@ -51,6 +56,7 @@ class PickCubeEnv(BaseEnv):
             name="goal_site",
             body_type="kinematic",
             add_collision=False,
+            initial_pose=sapien.Pose(),
         )
         self._hidden_objects.append(self.goal_site)
 

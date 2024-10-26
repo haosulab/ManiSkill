@@ -36,7 +36,6 @@ Notes:
 
 
 """
-import logging
 import math
 import os
 import re
@@ -59,6 +58,8 @@ from sapien.wrapper.articulation_builder import (
     MimicJointRecord,
 )
 from transforms3d import euler, quaternions
+
+from mani_skill import logger
 
 
 @dataclass
@@ -394,13 +395,13 @@ class MJCFLoader:
 
         elif geom_type == "plane":
             if not WARNED_ONCE["plane"]:
-                logging.warning(
+                logger.warn(
                     "Currently ManiSkill does not support loading plane geometries from MJCFs"
                 )
                 WARNED_ONCE["plane"] = True
         elif geom_type == "ellipsoid":
             if not WARNED_ONCE["ellipsoid"]:
-                logging.warning(
+                logger.warn(
                     "Currently ManiSkill does not support loading ellipsoid geometries from MJCFs"
                 )
                 WARNED_ONCE["ellipsoid"] = True
