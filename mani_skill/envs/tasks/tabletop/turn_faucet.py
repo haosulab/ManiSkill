@@ -1,6 +1,7 @@
 from typing import Dict, List, Union
 
 import numpy as np
+import sapien
 import sapien.physx as physx
 import torch
 
@@ -68,6 +69,9 @@ class TurnFaucetEnv(BaseEnv):
         pose = sapien_utils.look_at([0.5, 0.5, 1.0], [0.0, 0.0, 0.5])
         return CameraConfig("render_camera", pose=pose, width=512, height=512, fov=1)
 
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
+
     def _load_scene(self, options: dict):
         self.scene_builder = TableSceneBuilder(
             self, robot_init_qpos_noise=self.robot_init_qpos_noise
@@ -90,6 +94,7 @@ class TurnFaucetEnv(BaseEnv):
                 urdf_config=dict(density=model_info.get("density", 8e3)),
             )
             builder.set_scene_idxs(scene_idxs=[i])
+            builder.initial_pose = sapien.Pose(p=[0, 0, model_info["offset"][2]])
             faucet = builder.build(name=f"{model_id}-{i}")
             for joint in faucet.active_joints:
                 joint.set_friction(1.0)

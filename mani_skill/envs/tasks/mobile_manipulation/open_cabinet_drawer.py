@@ -88,6 +88,9 @@ class OpenCabinetDrawerEnv(BaseEnv):
             "render_camera", pose=pose, width=512, height=512, fov=1, near=0.01, far=100
         )
 
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose(p=[1, 0, 0]))
+
     def _load_scene(self, options: dict):
         self.ground = build_ground(self.scene)
         # temporarily turn off the logging as there will be big red warnings

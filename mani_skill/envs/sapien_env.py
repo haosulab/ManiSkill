@@ -1,6 +1,5 @@
 import copy
 import gc
-import logging
 import os
 from functools import cached_property
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
@@ -35,6 +34,7 @@ from mani_skill.sensors.camera import (
 from mani_skill.sensors.depth_camera import StereoDepthCamera, StereoDepthCameraConfig
 from mani_skill.utils import common, gym_utils, sapien_utils
 from mani_skill.utils.structs import Actor, Articulation
+from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import Array, SimConfig
 from mani_skill.utils.visualization.misc import tile_images
 from mani_skill.viewer import create_viewer
@@ -197,7 +197,7 @@ class BaseEnv(gym.Env):
         self.reconfiguration_freq = reconfiguration_freq if reconfiguration_freq is not None else 0
         self._reconfig_counter = 0
         if shader_dir is not None:
-            logging.warn("shader_dir argument will be deprecated after ManiSkill v3.0.0 official release. Please use sensor_configs/human_render_camera_configs to set shaders.")
+            logger.warn("shader_dir argument will be deprecated after ManiSkill v3.0.0 official release. Please use sensor_configs/human_render_camera_configs to set shaders.")
             sensor_configs |= dict(shader_pack=shader_dir)
             human_render_camera_configs |= dict(shader_pack=shader_dir)
             viewer_camera_configs |= dict(shader_pack=shader_dir)
@@ -379,9 +379,11 @@ class BaseEnv(gym.Env):
     @property
     def _default_sim_config(self):
         return SimConfig()
-    def _load_agent(self, options: dict):
+    def _load_agent(self, options: dict, initial_agent_poses: Optional[Union[sapien.Pose, Pose]] = None):
         agents = []
         robot_uids = self.robot_uids
+        if not isinstance(initial_agent_poses, list):
+            initial_agent_poses = [initial_agent_poses]
         if robot_uids == "none" or robot_uids == ("none", ):
             self.agent = None
             return
@@ -402,6 +404,7 @@ class BaseEnv(gym.Env):
                     self._control_freq,
                     self._control_mode,
                     agent_idx=i if len(robot_uids) > 1 else None,
+                    initial_pose=initial_agent_poses[i] if initial_agent_poses is not None else None,
                 )
                 agents.append(agent)
         if len(agents) == 1:
@@ -640,7 +643,9 @@ class BaseEnv(gym.Env):
         self._clear()
         # load everything into the scene first before initializing anything
         self._setup_scene()
+
         self._load_agent(options)
+
         self._load_scene(options)
         self._load_lighting(options)
 

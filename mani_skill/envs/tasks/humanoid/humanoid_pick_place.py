@@ -43,6 +43,9 @@ class HumanoidPickPlaceEnv(BaseEnv):
         pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
         return CameraConfig("render_camera", pose=pose, width=512, height=512, fov=1)
 
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose(p=[0, 0, 1]))
+
     def _load_scene(self, options: dict):
         self.scene_builder = KitchenCounterSceneBuilder(self)
         self.kitchen_scene = self.scene_builder.build(scale=self.kitchen_scene_scale)

@@ -35,6 +35,9 @@ class TableSceneBuilder(SceneBuilder):
         builder.add_visual_from_file(
             filename=table_model_file, scale=[scale] * 3, pose=table_pose
         )
+        builder.initial_pose = sapien.Pose(
+            p=[-0.12, 0, -0.9196429], q=euler2quat(0, 0, np.pi / 2)
+        )
         table = builder.build_kinematic(name="table-workspace")
         aabb = (
             table._objs[0]
@@ -57,7 +60,7 @@ class TableSceneBuilder(SceneBuilder):
         # table_height = 0.9196429
         b = len(env_idx)
         self.table.set_pose(
-            sapien.Pose(p=[-0.12, 0, -self.table_height], q=euler2quat(0, 0, np.pi / 2))
+            sapien.Pose(p=[-0.12, 0, -0.9196429], q=euler2quat(0, 0, np.pi / 2))
         )
         if self.env.robot_uids == "panda":
             qpos = np.array(
