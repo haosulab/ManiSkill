@@ -23,11 +23,6 @@ from transforms3d.quaternions import quat2mat
 
 @register_env("DrawTriangle-v1", max_episode_steps=300)
 class DrawTriangle(BaseEnv):
-    """
-    This is a simple environment demonstrating drawing simulation on a table with a robot arm. There are no success/rewards defined, users can use this code as a starting point
-    to create their own drawing type tasks.
-    """
-
     MAX_DOTS = 300
     """
     The total "ink" available to use and draw with before you need to call env.reset. NOTE that on GPU simulation it is not recommended to have a very high value for this as it can slow down rendering
