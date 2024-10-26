@@ -604,4 +604,11 @@
     <parent link="link_6"/>
     <child link="gripper_tcp"/>
   </joint>
+
+  <link name="gripper_tcp2"/>
+  <joint name="gripper_tcp_joint2" type="fixed">
+    <origin rpy="0 0 0" xyz="-0.0135 0.0172 -0.0514"/>
+    <parent link="gripper"/>
+    <child link="gripper_tcp2"/>
+  </joint>
 </robot>

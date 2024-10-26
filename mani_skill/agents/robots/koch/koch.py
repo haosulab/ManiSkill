@@ -72,6 +72,7 @@ class Koch(BaseAgent):
         self.finger1_link = self.robot.links_map["gripper"]
         self.finger2_link = self.robot.links_map["link_6"]
         self.tcp = self.robot.links_map["gripper_tcp"]
+        self.tcp2 = self.robot.links_map["gripper_tcp2"]
         for link in self.robot.links:
             for i, obj in enumerate(link._objs):
                 rb_comp = obj.entity.find_component_by_type(
