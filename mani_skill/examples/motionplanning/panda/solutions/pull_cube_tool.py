@@ -14,49 +14,84 @@ def solve(env: PullCubeToolEnv, seed=None, debug=False, vis=False):
         base_pose=env.unwrapped.agent.robot.pose,
         visualize_target_grasp_pose=vis,
         print_env_info=False,
+        joint_vel_limits=0.75,
+        joint_acc_limits=0.75,
     )
 
     env = env.unwrapped
-    
-    # Get tool OBB for grasping
+
+    # Get tool OBB and compute grasp pose
     tool_obb = get_actor_obb(env.l_shape_tool)
-    
-    # Define grasp approach for the tool
     approaching = np.array([0, 0, -1])
     target_closing = env.agent.tcp.pose.to_transformation_matrix()[0, :3, 1].cpu().numpy()
     
-    # Compute grasp pose for the tool
     grasp_info = compute_grasp_info_by_obb(
         tool_obb,
         approaching=approaching,
         target_closing=target_closing,
-        depth=0.02,  # Finger penetration depth
+        depth=0.02,
     )
     closing, center = grasp_info["closing"], grasp_info["center"]
     grasp_pose = env.agent.build_grasp_pose(approaching, closing, env.l_shape_tool.pose.sp.p)
 
-    # Pre-grasp pose slightly above the tool
-    pre_grasp_pose = grasp_pose * sapien.Pose([0, 0, -0.05])
-    planner.move_to_pose_with_screw(pre_grasp_pose)
-    
-    # Move to grasp pose and close gripper
-    planner.move_to_pose_with_screw(grasp_pose)
+    # -------------------------------------------------------------------------- #
+    # Reach
+    # -------------------------------------------------------------------------- #
+    reach_pose = grasp_pose * sapien.Pose([0, 0, -0.05])
+    res = planner.move_to_pose_with_screw(reach_pose)
+    if res == -1: return res
+
+    # -------------------------------------------------------------------------- #
+    # Grasp
+    # -------------------------------------------------------------------------- #
+    res = planner.move_to_pose_with_screw(grasp_pose)
+    if res == -1: return res
     planner.close_gripper()
 
-    # Calculate position behind the cube for hooking
+    # -------------------------------------------------------------------------- #
+    # Lift tool to safe height
+    # -------------------------------------------------------------------------- #
+    lift_height = 0.25  
+    lift_pose = grasp_pose * sapien.Pose([0, 0, lift_height])
+    res = planner.move_to_pose_with_screw(lift_pose)
+    if res == -1: return res
+
+    # -------------------------------------------------------------------------- #
+    # Position tool slightly ahead of cube at height
+    # -------------------------------------------------------------------------- #
     cube_pos = env.cube.pose.sp.p
-    hook_offset = np.array([-env.hook_length - env.cube_half_size, 0, 0])
-    hook_pose = sapien.Pose(cube_pos + hook_offset, grasp_pose.q)
+    approach_offset = sapien.Pose(
+        [-(env.hook_length + env.cube_half_size + 0.08),  
+        -0.15,  
+        lift_height - 0.05]  
+    )
+    approach_pose = sapien.Pose(cube_pos) * approach_offset
+    approach_pose.set_q(grasp_pose.q)
     
-    # Move tool behind cube
-    planner.move_to_pose_with_screw(hook_pose)
+    res = planner.move_to_pose_with_screw(approach_pose)
+    if res == -1: return res
+
+    # -------------------------------------------------------------------------- #
+    # Lower tool behind cube
+    # -------------------------------------------------------------------------- #
+    behind_offset = sapien.Pose(
+        [-(env.hook_length + env.cube_half_size + 0.02),  # Further back (increased from 0.02)
+        -0.10,  # Slight offset to ensure proper L-shape enclosure
+        0]  # At cube height
+    )
+    hook_pose = sapien.Pose(cube_pos) * behind_offset
+    hook_pose.set_q(grasp_pose.q)
     
-    # Calculate target position within arm's workspace
-    workspace_center = np.array([env.arm_reach * 0.7, 0, cube_pos[2]])
-    target_pose = sapien.Pose(workspace_center, grasp_pose.q)
-    
-    # Pull cube to target position
+    res = planner.move_to_pose_with_screw(hook_pose)
+    if res == -1: return res
+
+    # -------------------------------------------------------------------------- #
+    # Pull cube
+    # -------------------------------------------------------------------------- #
+    pull_offset = sapien.Pose([-0.2, 0, 0])
+    target_pose = hook_pose * pull_offset
     res = planner.move_to_pose_with_screw(target_pose)
+    if res == -1: return res
 
     planner.close()
     return res
