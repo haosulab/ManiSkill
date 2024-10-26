@@ -42,7 +42,7 @@ class PullCubeToolEnv(BaseEnv):
     handle_length = 0.20
     hook_length = 0.05
     width = 0.05
-    height = 0.04
+    height = 0.03
     cube_size = 0.02
     arm_reach = 0.35
 
@@ -155,7 +155,7 @@ class PullCubeToolEnv(BaseEnv):
             cube_xyz[..., 0] = self.arm_reach + torch.rand(b, device=self.device) * (
                 self.handle_length
             ) - 0.35
-            cube_xyz[..., 1] = torch.rand(b, device=self.device) * 0.2 - 0.3
+            cube_xyz[..., 1] = torch.rand(b, device=self.device) * 0.3 - 0.25
             cube_xyz[..., 2] = self.cube_size / 2
 
             cube_q = randomization.random_quaternions(
