@@ -34,6 +34,9 @@ class EmptyEnv(BaseEnv):
         pose = sapien_utils.look_at([1.25, -1.25, 1.5], [0.0, 0.0, 0.2])
         return CameraConfig("render_camera", pose, 2048, 2048, 1, 0.01, 100)
 
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose())
+
     def _load_scene(self, options: dict):
         self.ground = build_ground(self.scene)
         self.ground.set_collision_group_bit(group=2, bit_idx=30, bit=1)

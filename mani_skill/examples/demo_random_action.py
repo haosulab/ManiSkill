@@ -18,13 +18,16 @@ class Args:
     obs_mode: Annotated[str, tyro.conf.arg(aliases=["-o"])] = "none"
     """Observation mode"""
 
+    robot_uids: Annotated[Optional[str], tyro.conf.arg(aliases=["-r"])] = None
+    """Robot UID(s) to use. Can be a comma separated list of UIDs or empty string to have no agents. If not given then defaults to the environments default robot"""
+
     sim_backend: Annotated[str, tyro.conf.arg(aliases=["-b"])] = "auto"
     """Which simulation backend to use. Can be 'auto', 'cpu', 'gpu'"""
 
     reward_mode: Optional[str] = None
     """Reward mode"""
 
-    num_envs: int = 1
+    num_envs: Annotated[int, tyro.conf.arg(aliases=["-n"])] = 1
     """Number of environments to run."""
 
     control_mode: Annotated[Optional[str], tyro.conf.arg(aliases=["-c"])] = None
@@ -61,8 +64,7 @@ def main(args: Args):
         parallel_in_single_scene = False
     if args.render_mode == "human" and args.num_envs == 1:
         parallel_in_single_scene = False
-    env: BaseEnv = gym.make(
-        args.env_id,
+    env_kwargs = dict(
         obs_mode=args.obs_mode,
         reward_mode=args.reward_mode,
         control_mode=args.control_mode,
@@ -72,8 +74,14 @@ def main(args: Args):
         viewer_camera_configs=dict(shader_pack=args.shader),
         num_envs=args.num_envs,
         sim_backend=args.sim_backend,
+        enable_shadow=True,
         parallel_in_single_scene=parallel_in_single_scene,
-        # **args.env_kwargs
+    )
+    if args.robot_uids is not None:
+        env_kwargs["robot_uids"] = tuple(args.robot_uids.split(","))
+    env: BaseEnv = gym.make(
+        args.env_id,
+        **env_kwargs
     )
     record_dir = args.record_dir
     if record_dir:
@@ -83,19 +91,20 @@ def main(args: Args):
     if verbose:
         print("Observation space", env.observation_space)
         print("Action space", env.action_space)
-        print("Control mode", env.unwrapped.control_mode)
+        if env.unwrapped.agent is not None:
+            print("Control mode", env.unwrapped.control_mode)
         print("Reward mode", env.unwrapped.reward_mode)
 
     obs, _ = env.reset(seed=args.seed, options=dict(reconfigure=True))
-    if args.seed is not None:
-        env.action_space.seed(args.seed[0])
+    if args.seed is not None and env.action_space is not None:
+            env.action_space.seed(args.seed[0])
     if args.render_mode is not None:
         viewer = env.render()
         if isinstance(viewer, sapien.utils.Viewer):
             viewer.paused = args.pause
         env.render()
     while True:
-        action = env.action_space.sample()
+        action = env.action_space.sample() if env.action_space is not None else None
         obs, reward, terminated, truncated, info = env.step(action)
         if verbose:
             print("reward", reward)

@@ -128,6 +128,9 @@ class PlaceSphereEnv(BaseEnv):
         # build the kinematic bin
         return builder.build_kinematic(name="bin")
 
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
+
     def _load_scene(self, options: dict):
         # load the table
         self.table_scene = TableSceneBuilder(

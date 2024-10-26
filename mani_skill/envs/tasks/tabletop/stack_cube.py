@@ -1,6 +1,7 @@
 from typing import Any, Dict, Union
 
 import numpy as np
+import sapien
 import torch
 
 from mani_skill.agents.robots import Fetch, Panda
@@ -36,6 +37,9 @@ class StackCubeEnv(BaseEnv):
         pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
+
     def _load_scene(self, options: dict):
         self.cube_half_size = common.to_tensor([0.02] * 3)
         self.table_scene = TableSceneBuilder(
@@ -43,10 +47,18 @@ class StackCubeEnv(BaseEnv):
         )
         self.table_scene.build()
         self.cubeA = actors.build_cube(
-            self.scene, half_size=0.02, color=[1, 0, 0, 1], name="cubeA"
+            self.scene,
+            half_size=0.02,
+            color=[1, 0, 0, 1],
+            name="cubeA",
+            initial_pose=sapien.Pose(p=[0, 0, 0.1]),
         )
         self.cubeB = actors.build_cube(
-            self.scene, half_size=0.02, color=[0, 1, 0, 1], name="cubeB"
+            self.scene,
+            half_size=0.02,
+            color=[0, 1, 0, 1],
+            name="cubeB",
+            initial_pose=sapien.Pose(p=[1, 0, 0.1]),
         )
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):

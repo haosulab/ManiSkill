@@ -1,6 +1,5 @@
 import copy
 import gc
-import logging
 import os
 from functools import cached_property
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
@@ -35,6 +34,7 @@ from mani_skill.sensors.camera import (
 from mani_skill.sensors.depth_camera import StereoDepthCamera, StereoDepthCameraConfig
 from mani_skill.utils import common, gym_utils, sapien_utils
 from mani_skill.utils.structs import Actor, Articulation
+from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import Array, SimConfig
 from mani_skill.utils.visualization.misc import tile_images
 from mani_skill.viewer import create_viewer
@@ -197,7 +197,7 @@ class BaseEnv(gym.Env):
         self.reconfiguration_freq = reconfiguration_freq if reconfiguration_freq is not None else 0
         self._reconfig_counter = 0
         if shader_dir is not None:
-            logging.warn("shader_dir argument will be deprecated after ManiSkill v3.0.0 official release. Please use sensor_configs/human_render_camera_configs to set shaders.")
+            logger.warn("shader_dir argument will be deprecated after ManiSkill v3.0.0 official release. Please use sensor_configs/human_render_camera_configs to set shaders.")
             sensor_configs |= dict(shader_pack=shader_dir)
             human_render_camera_configs |= dict(shader_pack=shader_dir)
             viewer_camera_configs |= dict(shader_pack=shader_dir)
@@ -206,9 +206,11 @@ class BaseEnv(gym.Env):
         self._custom_viewer_camera_configs = viewer_camera_configs
         self._parallel_in_single_scene = parallel_in_single_scene
         self.robot_uids = robot_uids
+        if isinstance(robot_uids, tuple) and len(robot_uids) == 1:
+            self.robot_uids = robot_uids[0]
         if self.SUPPORTED_ROBOTS is not None:
-            if robot_uids not in self.SUPPORTED_ROBOTS:
-                logger.warn(f"{robot_uids} is not in the task's list of supported robots. Code may not run as intended")
+            if self.robot_uids not in self.SUPPORTED_ROBOTS:
+                logger.warn(f"{self.robot_uids} is not in the task's list of supported robots. Code may not run as intended")
 
         if physx.is_gpu_enabled() and num_envs == 1 and (sim_backend == "auto" or sim_backend == "cpu"):
             logger.warn("GPU simulation has already been enabled on this process, switching to GPU backend")
@@ -320,12 +322,15 @@ class BaseEnv(gym.Env):
         self._init_raw_state = common.to_cpu_tensor(self.get_state_dict())
         """the initial raw state returned by env.get_state. Useful for reconstructing state dictionaries from flattened state vectors"""
 
-        self.action_space = self.agent.action_space
-        """the batched action space of the environment, which is also the action space of the agent"""
-        self.single_action_space = self.agent.single_action_space
-        """the unbatched action space of the environment"""
-        self._orig_single_action_space = copy.deepcopy(self.single_action_space)
-        """the original unbatched action space of the environment"""
+        if self.agent is not None:
+            self.action_space = self.agent.action_space
+            """the batched action space of the environment, which is also the action space of the agent"""
+            self.single_action_space = self.agent.single_action_space
+            """the unbatched action space of the environment"""
+            self._orig_single_action_space = copy.deepcopy(self.single_action_space)
+            """the original unbatched action space of the environment"""
+        else:
+            self.action_space = None
         # initialize the cached properties
         self.single_observation_space
         self.observation_space
@@ -374,9 +379,14 @@ class BaseEnv(gym.Env):
     @property
     def _default_sim_config(self):
         return SimConfig()
-    def _load_agent(self, options: dict):
+    def _load_agent(self, options: dict, initial_agent_poses: Optional[Union[sapien.Pose, Pose]] = None):
         agents = []
         robot_uids = self.robot_uids
+        if not isinstance(initial_agent_poses, list):
+            initial_agent_poses = [initial_agent_poses]
+        if robot_uids == "none" or robot_uids == ("none", ):
+            self.agent = None
+            return
         if robot_uids is not None:
             if not isinstance(robot_uids, tuple):
                 robot_uids = [robot_uids]
@@ -394,6 +404,7 @@ class BaseEnv(gym.Env):
                     self._control_freq,
                     self._control_mode,
                     agent_idx=i if len(robot_uids) > 1 else None,
+                    initial_pose=initial_agent_poses[i] if initial_agent_poses is not None else None,
                 )
                 agents.append(agent)
         if len(agents) == 1:
@@ -424,7 +435,7 @@ class BaseEnv(gym.Env):
         self,
     ) -> CameraConfig:
         """Default configuration for the viewer camera, controlling shader, fov, etc. By default if there is a human render camera called "render_camera" then the viewer will use that camera's pose."""
-        return CameraConfig(uid="viewer", pose=sapien.Pose([0, 0, 1]), width=1920, height=1080, shader_pack="default", near=0.0, far=1000)
+        return CameraConfig(uid="viewer", pose=sapien.Pose([0, 0, 1]), width=1920, height=1080, shader_pack="default", near=0.0, far=1000, fov=np.pi / 2)
 
     @property
     def sim_freq(self) -> int:
@@ -632,12 +643,13 @@ class BaseEnv(gym.Env):
         self._clear()
         # load everything into the scene first before initializing anything
         self._setup_scene()
+
         self._load_agent(options)
+
         self._load_scene(options)
         self._load_lighting(options)
 
-        if physx.is_gpu_enabled():
-            self.scene._setup_gpu()
+        self.scene._setup(enable_gpu=self.gpu_sim_enabled)
         # for GPU sim, we have to setup sensors after we call setup gpu in order to enable loading mounted sensors as they depend on GPU buffer data
         self._setup_sensors(options)
         if self._viewer is not None:
@@ -671,8 +683,9 @@ class BaseEnv(gym.Env):
 
         # Add agent sensors
         self._agent_sensor_configs = dict()
-        self._agent_sensor_configs = parse_camera_configs(self.agent._sensor_configs)
-        self._sensor_configs.update(self._agent_sensor_configs)
+        if self.agent is not None:
+            self._agent_sensor_configs = parse_camera_configs(self.agent._sensor_configs)
+            self._sensor_configs.update(self._agent_sensor_configs)
 
         # Add human render camera configs
         self._human_render_camera_configs = parse_camera_configs(
@@ -813,7 +826,8 @@ class BaseEnv(gym.Env):
             self._reconfig_counter -= 1
         # Set the episode rng again after reconfiguration to guarantee seed reproducibility
         self._set_episode_rng(self._episode_seed)
-        self.agent.reset()
+        if self.agent is not None:
+            self.agent.reset()
         with torch.random.fork_rng():
             torch.manual_seed(self._episode_seed[0])
             self._initialize_episode(env_idx, options)
@@ -828,11 +842,12 @@ class BaseEnv(gym.Env):
             self.scene._gpu_fetch_all()
 
         # we reset controllers here because some controllers depend on the agent/articulation qpos/poses
-        if isinstance(self.agent.controller, dict):
-            for controller in self.agent.controller.values():
-                controller.reset()
-        else:
-            self.agent.controller.reset()
+        if self.agent is not None:
+            if isinstance(self.agent.controller, dict):
+                for controller in self.agent.controller.values():
+                    controller.reset()
+            else:
+                self.agent.controller.reset()
 
         info = self.get_info()
         obs = self.get_obs(info)
@@ -968,7 +983,8 @@ class BaseEnv(gym.Env):
                 self.scene.px.gpu_apply_articulation_target_velocity()
         self._before_control_step()
         for _ in range(self._sim_steps_per_control):
-            self.agent.before_simulation_step()
+            if self.agent is not None:
+                self.agent.before_simulation_step()
             self._before_simulation_step()
             self.scene.step()
             self._after_simulation_step()
