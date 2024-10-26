@@ -1,6 +1,7 @@
 from typing import Any, Dict
 
 import numpy as np
+import sapien
 import torch
 from transforms3d.euler import euler2quat
 
@@ -63,6 +64,9 @@ class RollBallEnv(BaseEnv):
         pose = sapien_utils.look_at([-0.6, 1.3, 0.8], [0.0, 0.13, 0.0])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
+
     def _load_scene(self, options: dict):
         self.table_scene = TableSceneBuilder(
             self, robot_init_qpos_noise=self.robot_init_qpos_noise
@@ -74,6 +78,7 @@ class RollBallEnv(BaseEnv):
             radius=self.ball_radius,
             color=[0, 0.2, 0.8, 1],
             name="ball",
+            initial_pose=sapien.Pose(p=[0, 0, 0.1]),
         )
 
         self.goal_region = actors.build_red_white_target(
@@ -83,6 +88,7 @@ class RollBallEnv(BaseEnv):
             name="goal_region",
             add_collision=False,
             body_type="kinematic",
+            initial_pose=sapien.Pose(p=[0, 0, 0.1]),
         )
         self.reached_status = torch.zeros(self.num_envs, dtype=torch.float32)
 

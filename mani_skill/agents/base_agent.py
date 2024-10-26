@@ -193,7 +193,7 @@ class BaseAgent:
                 exit()
         builder = loader.parse(asset_path)["articulation_builders"][0]
         builder.initial_pose = initial_pose
-        self.robot = builder.build(self.uid)
+        self.robot = builder.build()
         assert self.robot is not None, f"Fail to load URDF/MJCF from {asset_path}"
 
         # Cache robot link names

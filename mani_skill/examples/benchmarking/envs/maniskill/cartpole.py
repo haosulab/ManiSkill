@@ -107,6 +107,9 @@ class CartPoleBalanceBenchmarkEnv(CartpoleBalanceEnv):
     def _default_human_render_camera_configs(self):
         return dict()
 
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose())
+
     def _load_scene(self, options: dict):
         loader = self.scene.create_mjcf_loader()
         actor_builders = loader.parse(MJCF_FILE)["actor_builders"]
