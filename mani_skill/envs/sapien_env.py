@@ -867,7 +867,7 @@ class BaseEnv(gym.Env):
         self._main_rng = np.random.RandomState(self._main_seed[0])
         if len(self._main_seed) == 1 and self.num_envs > 1:
             self._main_seed = self._main_seed + np.random.RandomState(self._main_seed[0]).randint(2**31, size=(self.num_envs - 1,)).tolist()
-        self._batched_main_rng = BatchedRNG(self._main_seed, backend=self._batched_rng_backend)
+        self._batched_main_rng = BatchedRNG.from_seeds(self._main_seed, backend=self._batched_rng_backend)
     def _set_episode_rng(self, seed: Union[None, list[int]]):
         """Set the random generator for current episode."""
         if isinstance(seed, int):
@@ -880,7 +880,7 @@ class BaseEnv(gym.Env):
             self._episode_seed = self._episode_seed + np.random.RandomState(self._episode_seed[0]).randint(2**31, size=(self.num_envs - 1,)).tolist()
         self._episode_rng = np.random.RandomState(self._episode_seed[0])
         # we keep _episode_rng for backwards compatibility but recommend using _batched_episode_rng for randomization
-        self._batched_episode_rng = BatchedRNG(self._episode_seed, backend=self._batched_rng_backend)
+        self._batched_episode_rng = BatchedRNG.from_seeds(self._episode_seed, backend=self._batched_rng_backend)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         """Initialize the episode, e.g., poses of actors and articulations, as well as task relevant data like randomizing
