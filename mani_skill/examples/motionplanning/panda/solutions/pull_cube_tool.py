@@ -33,6 +33,8 @@ def solve(env: PullCubeToolEnv, seed=None, debug=False, vis=False):
     )
     closing, center = grasp_info["closing"], grasp_info["center"]
     grasp_pose = env.agent.build_grasp_pose(approaching, closing, env.l_shape_tool.pose.sp.p)
+    offset = sapien.Pose([0.02, 0, 0])
+    grasp_pose = grasp_pose * (offset)
 
     # -------------------------------------------------------------------------- #
     # Reach
@@ -62,7 +64,7 @@ def solve(env: PullCubeToolEnv, seed=None, debug=False, vis=False):
     cube_pos = env.cube.pose.sp.p
     approach_offset = sapien.Pose(
         [-(env.hook_length + env.cube_half_size + 0.08),  
-        -0.15,  
+        -0.0,  
         lift_height - 0.05]  
     )
     approach_pose = sapien.Pose(cube_pos) * approach_offset
@@ -76,7 +78,7 @@ def solve(env: PullCubeToolEnv, seed=None, debug=False, vis=False):
     # -------------------------------------------------------------------------- #
     behind_offset = sapien.Pose(
         [-(env.hook_length + env.cube_half_size + 0.02),  # Further back (increased from 0.02)
-        -0.10,  # Slight offset to ensure proper L-shape enclosure
+        -0.07,  # Slight offset to ensure proper L-shape enclosure
         0]  # At cube height
     )
     hook_pose = sapien.Pose(cube_pos) * behind_offset
