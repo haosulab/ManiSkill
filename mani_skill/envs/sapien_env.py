@@ -14,6 +14,7 @@ import sapien.render
 import sapien.utils.viewer.control_window
 import torch
 from gymnasium.vector.utils import batch_space
+
 from mani_skill import PACKAGE_ASSET_DIR, logger
 from mani_skill.agents import REGISTERED_AGENTS
 from mani_skill.agents.base_agent import BaseAgent
@@ -803,6 +804,8 @@ class BaseEnv(gym.Env):
                 torch.manual_seed(seed=self._episode_seed[0])
                 self._reconfigure(options)
                 self._after_reconfigure(options)
+            # Set the episode rng again after reconfiguration to guarantee seed reproducibility
+            self._set_episode_rng(self._episode_seed, env_idx)
 
         # TODO (stao): Reconfiguration when there is partial reset might not make sense and certainly broken here now.
         # Solution to resolve that would be to ensure tasks that do reconfigure more than once are single-env only / cpu sim only
@@ -816,8 +819,7 @@ class BaseEnv(gym.Env):
         self._clear_sim_state()
         if self.reconfiguration_freq != 0:
             self._reconfig_counter -= 1
-        # Set the episode rng again after reconfiguration to guarantee seed reproducibility
-        self._set_episode_rng(self._episode_seed, env_idx)
+
         if self.agent is not None:
             self.agent.reset()
         with torch.random.fork_rng():
