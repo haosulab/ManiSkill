@@ -154,7 +154,7 @@ class PullCubeToolEnv(BaseEnv):
             cube_xyz = torch.zeros((b, 3), device=self.device)
             cube_xyz[..., 0] = self.arm_reach + torch.rand(b, device=self.device) * (
                 self.handle_length
-            ) - 0.30
+            ) - 0.35
             cube_xyz[..., 1] = torch.rand(b, device=self.device) * 0.2 - 0.3
             cube_xyz[..., 2] = self.cube_size / 2
 
