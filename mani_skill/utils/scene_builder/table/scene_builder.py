@@ -74,7 +74,7 @@ class TableSceneBuilder(SceneBuilder):
                 ]
             )
             qpos = (
-                self.env._batched_episode_rng[env_idx.tolist()].normal(
+                self.env._batched_episode_rng[env_idx].normal(
                     0, self.robot_init_qpos_noise, len(qpos)
                 )
                 + qpos
@@ -89,7 +89,7 @@ class TableSceneBuilder(SceneBuilder):
             )
             # fmt: on
             qpos = (
-                self.env._batched_episode_rng[env_idx.tolist()].normal(
+                self.env._batched_episode_rng[env_idx].normal(
                     0, self.robot_init_qpos_noise, len(qpos)
                 )
                 + qpos
@@ -102,7 +102,7 @@ class TableSceneBuilder(SceneBuilder):
                 [0, np.pi / 6, 0, np.pi / 3, 0, np.pi / 2, -np.pi / 2, 0, 0]
             )
             qpos = (
-                self.env._batched_episode_rng[env_idx.tolist()].normal(
+                self.env._batched_episode_rng[env_idx].normal(
                     0, self.robot_init_qpos_noise, len(qpos)
                 )
                 + qpos
@@ -152,7 +152,7 @@ class TableSceneBuilder(SceneBuilder):
                 ]
             )
             qpos = (
-                self.env._batched_episode_rng[env_idx.tolist()].normal(
+                self.env._batched_episode_rng[env_idx].normal(
                     0, self.robot_init_qpos_noise, len(qpos)
                 )
                 + qpos
@@ -182,7 +182,7 @@ class TableSceneBuilder(SceneBuilder):
                 ]
             )
             qpos = (
-                self.env._batched_episode_rng[env_idx.tolist()].normal(
+                self.env._batched_episode_rng[env_idx].normal(
                     0, self.robot_init_qpos_noise, len(qpos)
                 )
                 + qpos
@@ -216,7 +216,7 @@ class TableSceneBuilder(SceneBuilder):
                 ]
             )
             qpos = (
-                self.env._batched_episode_rng[env_idx.tolist()].normal(
+                self.env._batched_episode_rng[env_idx].normal(
                     0, self.robot_init_qpos_noise, len(qpos)
                 )
                 + qpos
