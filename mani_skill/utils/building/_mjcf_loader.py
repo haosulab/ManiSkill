@@ -36,7 +36,6 @@ Notes:
 
 
 """
-import logging
 import math
 import os
 import re
@@ -60,6 +59,8 @@ from sapien.wrapper.articulation_builder import (
 )
 from transforms3d import euler, quaternions
 
+from mani_skill import logger
+
 
 @dataclass
 class MJCFTexture:
@@ -71,6 +72,9 @@ class MJCFTexture:
 
 
 DEFAULT_MJCF_OPTIONS = dict(contact=True)
+
+
+WARNED_ONCE = defaultdict(lambda: False)
 
 
 def _parse_int(attrib, key, default):
@@ -390,13 +394,17 @@ class MJCFLoader:
                     )
 
         elif geom_type == "plane":
-            logging.warning(
-                "Currently ManiSkill does not support loading plane geometries from MJCFs"
-            )
+            if not WARNED_ONCE["plane"]:
+                logger.warn(
+                    "Currently ManiSkill does not support loading plane geometries from MJCFs"
+                )
+                WARNED_ONCE["plane"] = True
         elif geom_type == "ellipsoid":
-            logging.warning(
-                "Currently ManiSkill does not support loading ellipsoid geometries from MJCFs"
-            )
+            if not WARNED_ONCE["ellipsoid"]:
+                logger.warn(
+                    "Currently ManiSkill does not support loading ellipsoid geometries from MJCFs"
+                )
+                WARNED_ONCE["ellipsoid"] = True
         elif geom_type == "mesh":
             mesh_name = geom_attrib.get("mesh")
             mesh_attrib = self._meshes[mesh_name].attrib
@@ -865,12 +873,13 @@ class MJCFLoader:
         #         record = self._parse_constraint(constraint)
         #         builder.mimic_joint_records.append(record)
 
-        # if not self._mjcf_options["contact"]:
-        #     for actor in actor_builders:
-        #         actor.collision_groups[2] |= 1 << 1
-        #     for art in articulation_builders:
-        #         for link in art.link_builders:
-        #             link.collision_groups[2] |= 1 << 1
+        if not self._mjcf_options["contact"]:
+            # means to disable all contacts
+            for actor in actor_builders:
+                actor.collision_groups[2] |= 1 << 1
+            for art in articulation_builders:
+                for link in art.link_builders:
+                    link.collision_groups[2] |= 1 << 1
 
         return articulation_builders, actor_builders, []
 

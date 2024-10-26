@@ -18,6 +18,7 @@ from mani_skill.utils.scene_builder.robocasa.utils import scene_registry
 from mani_skill.utils.scene_builder.robocasa.utils.placement_samplers import (
     RandomizationError,
 )
+from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 
 
@@ -272,6 +273,11 @@ class RoboCasaKitchenEnv(BaseEnv):
             far=1000,
             fov=60 * np.pi / 180,
         )
+
+    def _load_agent(self, options: dict):
+        ps = torch.zeros((self.num_envs, 3), device=self.device)
+        ps[:, 2] = 5
+        super()._load_agent(options, Pose.create_from_pq(p=ps))
 
     def _load_scene(self, options: dict):
         self.scene_builder = RoboCasaSceneBuilder(self)

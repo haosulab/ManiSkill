@@ -1,6 +1,7 @@
 from typing import Any, Dict, Union
 
 import numpy as np
+import sapien
 import torch
 from transforms3d.euler import euler2quat
 
@@ -40,6 +41,9 @@ class PokeCubeEnv(BaseEnv):
         pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.2, 0.2, 0.35])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
+
     def _load_scene(self, options: dict):
         self.table_scene = TableSceneBuilder(
             self, robot_init_qpos_noise=self.robot_init_qpos_noise
@@ -52,6 +56,7 @@ class PokeCubeEnv(BaseEnv):
             color=[1, 0, 0, 1],
             name="cube",
             body_type="dynamic",
+            initial_pose=sapien.Pose(p=[1, 0, self.cube_half_size]),
         )
 
         self.peg = actors.build_twocolor_peg(
@@ -62,6 +67,7 @@ class PokeCubeEnv(BaseEnv):
             color_2=np.array([12, 42, 160, 255]) / 255,
             name="peg",
             body_type="dynamic",
+            initial_pose=sapien.Pose(p=[0, 0, self.peg_half_width]),
         )
 
         self.goal_region = actors.build_red_white_target(

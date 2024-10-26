@@ -215,25 +215,10 @@ class ActorBuilder(SAPIENActorBuilder):
         num_actors = len(self.scene_idxs)
 
         if self.initial_pose is None:
-            if self.physx_body_type == "static":
-                logger.warn(
-                    f"initial pose not set for static object scenes-{self.scene_idxs.tolist()}_{self.name}, setting to default pose q=[1,0,0,0], p=[0,0,0]"
-                )
-                self.initial_pose = Pose.create(sapien.Pose())
-            else:
-                initial_ps = []
-                for scene_idx in self.scene_idxs:
-                    if self.scene.parallel_in_single_scene:
-                        sub_scene = self.scene.sub_scenes[0]
-                    else:
-                        sub_scene = self.scene.sub_scenes[scene_idx]
-                    entity_num = len(sub_scene.entities)
-                    # z_height starting at 100 (room for backgrounds, etc)
-                    z_height = SPAWN_SPACING * (entity_num // 2 + 1) + SPAWN_START_GAP
-                    # zdir, switch between -1 and 1 to flip above and below origin
-                    z_height *= 2 * (entity_num % 2) - 1
-                    initial_ps.append([0, 0, z_height])
-                self.initial_pose = Pose.create_from_pq(p=initial_ps)
+            logger.warn(
+                f"No initial pose set for actor builder of {self.name}, setting to default pose q=[1,0,0,0], p=[0,0,0]."
+            )
+            self.initial_pose = Pose.create(sapien.Pose())
         else:
             self.initial_pose = Pose.create(self.initial_pose)
 

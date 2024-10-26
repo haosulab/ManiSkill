@@ -24,6 +24,7 @@ mani_skill /envs/tasks/push_cube.py which is annotated with comments to explain 
 from typing import Any, Dict, Union
 
 import numpy as np
+import sapien
 import torch
 
 from mani_skill.agents.multi_agent import MultiAgent
@@ -96,9 +97,9 @@ class CustomEnv(BaseEnv):
     """
 
     def _load_agent(self, options: dict):
-        # this code loads the agent into the current scene. You can usually ignore this function by deleting it or calling the inherited
-        # BaseEnv._load_agent function
-        super()._load_agent()
+        # this code loads the agent into the current scene. You should use it to specify the initial pose(s) of the agent(s)
+        # such that they don't collide with other objects initially
+        super()._load_agent(options, sapien.Pose(p=[0, 0, 0]))
 
     def _load_scene(self, options: dict):
         # here you add various objects like actors and articulations. If your task was to push a ball, you may add a dynamic sphere object on the ground

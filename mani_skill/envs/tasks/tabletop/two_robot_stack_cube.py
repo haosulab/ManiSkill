@@ -1,6 +1,7 @@
 from typing import Any, Dict, Tuple
 
 import numpy as np
+import sapien
 import torch
 from transforms3d.euler import euler2quat
 
@@ -42,7 +43,7 @@ class TwoRobotStackCube(BaseEnv):
     Visualization: TODO
     """
 
-    SUPPORTED_ROBOTS = [("panda", "panda")]
+    SUPPORTED_ROBOTS = [("panda_wristcam", "panda_wristcam")]
     agent: MultiAgent[Tuple[Panda, Panda]]
 
     goal_radius = 0.06
@@ -78,6 +79,11 @@ class TwoRobotStackCube(BaseEnv):
         pose = sapien_utils.look_at(eye=[0.6, 0.2, 0.4], target=[-0.1, 0, 0.1])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
+    def _load_agent(self, options: dict):
+        super()._load_agent(
+            options, [sapien.Pose(p=[0, -1, 0]), sapien.Pose(p=[0, 1, 0])]
+        )
+
     def _load_scene(self, options: dict):
         self.cube_half_size = common.to_tensor([0.02] * 3)
         self.table_scene = TableSceneBuilder(
@@ -89,9 +95,14 @@ class TwoRobotStackCube(BaseEnv):
             half_size=0.02,
             color=np.array([12, 42, 160, 255]) / 255,
             name="cubeA",
+            initial_pose=sapien.Pose(p=[1, 0, 0.02]),
         )
         self.cubeB = actors.build_cube(
-            self.scene, half_size=0.02, color=[0, 1, 0, 1], name="cubeB"
+            self.scene,
+            half_size=0.02,
+            color=[0, 1, 0, 1],
+            name="cubeB",
+            initial_pose=sapien.Pose(p=[-1, 0, 0.02]),
         )
         self.goal_region = actors.build_red_white_target(
             self.scene,
@@ -100,6 +111,7 @@ class TwoRobotStackCube(BaseEnv):
             name="goal_region",
             add_collision=False,
             body_type="kinematic",
+            initial_pose=sapien.Pose(),
         )
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
