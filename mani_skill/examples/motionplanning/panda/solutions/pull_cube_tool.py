@@ -29,7 +29,7 @@ def solve(env: PullCubeToolEnv, seed=None, debug=False, vis=False):
         tool_obb,
         approaching=approaching,
         target_closing=target_closing,
-        depth=0.02,
+        depth=0.03,
     )
     closing, center = grasp_info["closing"], grasp_info["center"]
     grasp_pose = env.agent.build_grasp_pose(approaching, closing, env.l_shape_tool.pose.sp.p)
@@ -53,7 +53,7 @@ def solve(env: PullCubeToolEnv, seed=None, debug=False, vis=False):
     # -------------------------------------------------------------------------- #
     # Lift tool to safe height
     # -------------------------------------------------------------------------- #
-    lift_height = 0.25  
+    lift_height = 0.35  
     lift_pose = grasp_pose * sapien.Pose([0, 0, lift_height])
     res = planner.move_to_pose_with_screw(lift_pose)
     if res == -1: return res

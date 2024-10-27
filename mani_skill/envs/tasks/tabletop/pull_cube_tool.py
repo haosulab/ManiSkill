@@ -42,7 +42,7 @@ class PullCubeToolEnv(BaseEnv):
     handle_length = 0.20
     hook_length = 0.05
     width = 0.05
-    height = 0.03
+    height = 0.05
     cube_size = 0.02
     arm_reach = 0.35
 
