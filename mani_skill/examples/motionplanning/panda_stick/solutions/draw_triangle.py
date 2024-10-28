@@ -1,10 +1,10 @@
 import sapien
-from mani_skill.envs.tasks import PushCubeEnv
+from mani_skill.envs.tasks import DrawTriangleEnv
 from mani_skill.examples.motionplanning.panda_stick.motionplanner import \
     PandaStickMotionPlanningSolver
 
 
-def solve(env: PushCubeEnv, seed=None, debug=False, vis=False):
+def solve(env: DrawTriangleEnv, seed=None, debug=False, vis=False):
     env.reset(seed=seed)
     planner = PandaStickMotionPlanningSolver(
         env,

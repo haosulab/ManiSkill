@@ -22,7 +22,7 @@ from transforms3d.quaternions import quat2mat
 
 
 @register_env("DrawTriangle-v1", max_episode_steps=300)
-class DrawTriangle(BaseEnv):
+class DrawTriangleEnv(BaseEnv):
     MAX_DOTS = 300
     """
     The total "ink" available to use and draw with before you need to call env.reset. NOTE that on GPU simulation it is not recommended to have a very high value for this as it can slow down rendering
