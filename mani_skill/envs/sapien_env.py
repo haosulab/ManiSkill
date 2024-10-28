@@ -879,12 +879,12 @@ class BaseEnv(gym.Env):
             self._episode_seed = common.to_numpy(seed, dtype=np.int64)
             if len(self._episode_seed) == 1 and self.num_envs > 1:
                 self._episode_seed = np.concatenate((self._episode_seed, np.random.RandomState(self._episode_seed[0]).randint(2**31, size=(self.num_envs - 1,))))
-        self._episode_rng = np.random.RandomState(self._episode_seed[0])
         # we keep _episode_rng for backwards compatibility but recommend using _batched_episode_rng for randomization
         if seed is not None or self._batched_episode_rng is None:
             self._batched_episode_rng = BatchedRNG.from_seeds(self._episode_seed, backend=self._batched_rng_backend)
         else:
             self._batched_episode_rng[env_idx] = BatchedRNG.from_seeds(self._episode_seed[env_idx], backend=self._batched_rng_backend)
+        self._episode_rng = self._batched_episode_rng[0]
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         """Initialize the episode, e.g., poses of actors and articulations, as well as task relevant data like randomizing
