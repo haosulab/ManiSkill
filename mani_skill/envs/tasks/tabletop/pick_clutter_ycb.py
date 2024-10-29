@@ -98,6 +98,9 @@ class PickClutterEnv(BaseEnv):
     def _load_model(self, model_id: str) -> ActorBuilder:
         raise NotImplementedError()
 
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
+
     def _load_scene(self, options: dict):
         self.scene_builder = TableSceneBuilder(
             self, robot_init_qpos_noise=self.robot_init_qpos_noise
@@ -135,6 +138,7 @@ class PickClutterEnv(BaseEnv):
             name="goal_site",
             body_type="kinematic",
             add_collision=False,
+            initial_pose=sapien.Pose(),
         )
         self._hidden_objects.append(self.goal_site)
 
