@@ -92,6 +92,15 @@ class Pose:
         device: Optional[Device] = None,
     ):
         """Creates a Pose object from a given position ``p`` and/or quaternion ``q``"""
+        if device is None:
+            # try to guess which device to use
+            device = (
+                p.device
+                if p is not None and isinstance(p, torch.Tensor)
+                else q.device
+                if q is not None and isinstance(q, torch.Tensor)
+                else None
+            )
         if p is None:
             p = torch.zeros((1, 3), device=device)
         if q is None:
