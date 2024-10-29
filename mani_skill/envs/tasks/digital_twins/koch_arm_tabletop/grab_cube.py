@@ -15,7 +15,7 @@ from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs import Actor
 from mani_skill.utils.structs.pose import Pose
-from mani_skill.utils.structs.types import SimConfig
+from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 
 
 # grab cube and return to rest keyframe
@@ -41,7 +41,7 @@ class GrabCubeEnv(BaseEnv):
 
     mean_action_mag = 0
 
-    cube_goal_pos = [-0.34, 0, 0.08]
+    cube_goal_pos = [-0.34, 0, 0.1]
 
     def __init__(
         self,
@@ -59,16 +59,26 @@ class GrabCubeEnv(BaseEnv):
             robot_uids=robot_uids,
             reconfiguration_freq=reconfiguration_freq,
             num_envs=num_envs,
+            enable_shadow=True,
             **kwargs,
         )
 
+    # @property
+    # def _default_sim_config(self):
+    #     return SimConfig(
+    #         gpu_memory_config=GPUMemoryConfig(
+    #             found_lost_pairs_capacity=2**25, max_rigid_patch_count=2**18
+    #         )
+    #     )
+
     @property
     def _default_sensor_configs(self):
-        pose = sapien.Pose(
-            [-0.00347404, 0.136826, 0.496307],
-            [0.138651, 0.345061, 0.0516183, -0.926846],
+        pose = sapien_utils.look_at(
+            eye=[0.3 - 0.071, 0.4 - 0.047, 0.3 + 0.05], target=[-0.2, 0, 0.1]
         )
-        return [CameraConfig("base_camera", pose, 640, 480, np.pi / 2, 0.01, 100)]
+        return CameraConfig(
+            "base_camera", pose=pose, width=128, height=128, fov=1, near=0.01, far=100
+        )
 
     @property
     def _default_human_render_camera_configs(self):
@@ -160,10 +170,11 @@ class GrabCubeEnv(BaseEnv):
                 restitution=0,
             )
             builder.add_box_collision(half_size=[half_size] * 3, material=material)
+            color = np.random.rand(3)
             builder.add_box_visual(
                 half_size=[half_size] * 3,
                 material=sapien.render.RenderMaterial(
-                    base_color=[1, 0, 0, 1],
+                    base_color=[color[0], color[1], color[2], 1],
                 ),
             )
             # setting new pose for cube
@@ -215,7 +226,8 @@ class GrabCubeEnv(BaseEnv):
                 grippers_distance=torch.linalg.norm(
                     self.agent.tcp.pose.p - self.agent.tcp2.pose.p, axis=-1
                 ),
-                goal=self.cube_goal_pos.view(1, -1).repeat(self.num_envs, 1),
+                # goal=self.cube_goal_pos.view(1, -1).repeat(self.num_envs, 1),
+                goal=self.rest_qpos.view(1, -1).repeat(self.num_envs, 1).float(),
             )
         return obs
 
@@ -253,28 +265,37 @@ class GrabCubeEnv(BaseEnv):
         reward += is_grasped.float()
 
         # stage 3, lift the cube
-        # cube_lifted = self.cube.pose.p[..., -1] >= (self.cube_half_sizes + 1e-3)
-        # reward += cube_lifted.float()
+        cube_lifted = self.cube.pose.p[..., -1] >= (self.cube_half_sizes + 1e-3)
+        reward += cube_lifted.float()
 
         # stage 4, demotivate flipping the cube on x or y axis before grapsing
         # can rotate around z axis, but other axes off limits
-        no_rot_reward = 1 - (
+        # no_rot_reward = 1 - (
+        #     torch.tanh(torch.linalg.norm(self.cube.angular_velocity[..., :-1], axis=1))
+        #     * ~is_grasped
+        # )
+        pre_rot_rew = (
             torch.tanh(torch.linalg.norm(self.cube.angular_velocity[..., :-1], axis=1))
             * ~is_grasped
         )
 
         # stage 5, return to rest position while grasping and lifting cube
-        # reward += ((1 - torch.tanh(5 * info["robot_to_grasped_rest_dist"])) * is_grasped * cube_lifted)
-        # reward += 3*(1 - torch.tanh(4 * info["robot_to_grasped_rest_dist"])) * is_grasped * cube_lifted
-        cube_to_goal_dist = torch.linalg.norm(
-            self.cube.pose.p - self.cube_goal_pos, axis=-1
-        )[is_grasped]
-        reward[is_grasped] += 2 * (1 - torch.tanh(5 * cube_to_goal_dist))
+        reward += (
+            9
+            * (1 - torch.tanh(4 * info["robot_to_grasped_rest_dist"]))
+            * is_grasped
+            * cube_lifted
+        )
 
         # return (reward * ~info["touching_table"])  * (no_rot_reward) - (torch.linalg.norm(action, axis=1) / (10))
-        return reward
+        # works well
+        # return ((reward - 0.1*info["touching_table"])  - 0.1*pre_rot_rew) - 0.1*torch.linalg.norm(action, axis=1)
+        return (
+            (reward - 0.1 * info["touching_table"]) - 0.1 * pre_rot_rew
+        ) - 0.2 * torch.linalg.norm(action, axis=1)
+        # return ((reward * ~info["touching_table"])  * (1-pre_rot_rew)) - 0.1*torch.linalg.norm(action, axis=1)
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        return self.compute_dense_reward(obs=obs, action=action, info=info) / 3
+        return self.compute_dense_reward(obs=obs, action=action, info=info) / 12
