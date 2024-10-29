@@ -104,7 +104,7 @@ class PickSingleYCBEnv(BaseEnv):
                 self.scene,
                 id=f"ycb:{model_id}",
             )
-            builder.initial_pose = sapien.Pose(p=[0, 0, 0.1])
+            builder.initial_pose = sapien.Pose(p=[0, 0, 0])
             builder.set_scene_idxs([i])
             self._objs.append(builder.build(name=f"{model_id}-{i}"))
         self.obj = Actor.merge(self._objs, name="ycb_object")
@@ -135,7 +135,7 @@ class PickSingleYCBEnv(BaseEnv):
             xyz = torch.zeros((b, 3))
             xyz[:, :2] = torch.rand((b, 2)) * 0.2 - 0.1
             xyz[:, 2] = self.object_zs[env_idx]
-
+            print(xyz)
             qs = random_quaternions(b, lock_x=True, lock_y=True)
             self.obj.set_pose(Pose.create_from_pq(p=xyz, q=qs))
 
