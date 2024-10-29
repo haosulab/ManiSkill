@@ -177,6 +177,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
             name="handle_link_goal",
             body_type="kinematic",
             add_collision=False,
+            initial_pose=sapien.Pose(p=[0, 0, 0], q=[1, 0, 0, 0]),
         )
 
     def _after_reconfigure(self, options):
@@ -270,17 +271,26 @@ class OpenCabinetDrawerEnv(BaseEnv):
                 Pose.create_from_pq(p=self.handle_link_positions(env_idx))
             )
 
+    def _after_control_step(self):
+        # after each control step, we update the goal position of the handle link
+        # for GPU sim we need to update the kinematics data to get latest pose information for up to date link poses
+        # and fetch it, followed by an apply call to ensure the GPU sim is up to date
+        if physx.is_gpu_enabled():
+            self.scene.px.gpu_update_articulation_kinematics()
+            self.scene._gpu_fetch_all()
+        self.handle_link_goal.set_pose(
+            Pose.create_from_pq(p=self.handle_link_positions())
+        )
+        if physx.is_gpu_enabled():
+            self.scene._gpu_apply_all()
+
     def evaluate(self):
         # even though self.handle_link is a different link across different articulations
         # we can still fetch a joint that represents the parent joint of all those links
         # and easily get the qpos value.
         open_enough = self.handle_link.joint.qpos >= self.target_qpos
         handle_link_pos = self.handle_link_positions()
-        # TODO (stao): setting the pose of the visual sphere here seems to cause mayhem with cabinet qpos
-        # self.handle_link_goal.set_pose(Pose.create_from_pq(p=self.handle_link_positions()))
-        # self.scene._gpu_apply_all()
-        # self.scene._gpu_fetch_all()
-        # update the goal sphere to its new position
+
         link_is_static = (
             torch.linalg.norm(self.handle_link.angular_velocity, axis=1) <= 1
         ) & (torch.linalg.norm(self.handle_link.linear_velocity, axis=1) <= 0.1)

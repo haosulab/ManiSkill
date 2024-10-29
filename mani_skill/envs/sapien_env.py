@@ -819,7 +819,8 @@ class BaseEnv(gym.Env):
                 self._reconfigure(options)
                 self._after_reconfigure(options)
             # Set the episode rng again after reconfiguration to guarantee seed reproducibility
-            self._set_episode_rng(self._episode_seed, env_idx)
+            if seed is not None or self._enhanced_determinism:
+                self._set_episode_rng(self._episode_seed, env_idx)
 
         # TODO (stao): Reconfiguration when there is partial reset might not make sense and certainly broken here now.
         # Solution to resolve that would be to ensure tasks that do reconfigure more than once are single-env only / cpu sim only
