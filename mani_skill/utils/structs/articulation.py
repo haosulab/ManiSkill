@@ -59,9 +59,9 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     _cached_joint_target_indices: Dict[int, torch.Tensor] = field(default_factory=dict)
     """Map from a set of joints of this articulation and the indexing torch tensor to use for setting drive targets"""
 
-    _net_contact_force_queries: Dict[
-        Tuple, physx.PhysxGpuContactBodyImpulseQuery
-    ] = field(default_factory=dict)
+    _net_contact_force_queries: Dict[Tuple, physx.PhysxGpuContactBodyImpulseQuery] = (
+        field(default_factory=dict)
+    )
     """Maps a tuple of link names to pre-saved net contact force queries"""
 
     def __str__(self):
@@ -177,12 +177,12 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
                         len(joints), dtype=torch.int32, device=self.device
                     )
                     + joint_index,
-                    active_joint_index=torch.zeros(
-                        len(joints), dtype=torch.int32, device=self.device
-                    )
-                    + active_joint_index
-                    if active_joint_index is not None
-                    else None,
+                    active_joint_index=(
+                        torch.zeros(len(joints), dtype=torch.int32, device=self.device)
+                        + active_joint_index
+                        if active_joint_index is not None
+                        else None
+                    ),
                 )
                 wrapped_joint.name = "_".join(
                     joints[0].name.replace(self.name, "", 1).split("_")[1:]
@@ -374,9 +374,9 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
                 bodies = []
                 for k in link_names:
                     bodies += self.links_map[k]._bodies
-                self._net_contact_force_queries[
-                    tuple(link_names)
-                ] = self.px.gpu_create_contact_body_impulse_query(bodies)
+                self._net_contact_force_queries[tuple(link_names)] = (
+                    self.px.gpu_create_contact_body_impulse_query(bodies)
+                )
             query = self._net_contact_force_queries[tuple(link_names)]
             self.px.gpu_query_contact_body_impulses(query)
             return (
@@ -663,7 +663,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             arg1 = common.to_tensor(arg1, device=self.device)
             self.px.cuda_rigid_body_data.torch()[
                 self.root._body_data_index[self.scene._reset_mask[self._scene_idxs]],
-                10:13,
+                7:10,
             ] = arg1
         else:
             arg1 = common.to_numpy(arg1)
@@ -681,7 +681,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             arg1 = common.to_tensor(arg1, device=self.device)
             self.px.cuda_rigid_body_data.torch()[
                 self.root._body_data_index[self.scene._reset_mask[self._scene_idxs]],
-                7:10,
+                10:13,
             ] = arg1
         else:
             arg1 = common.to_numpy(arg1)
