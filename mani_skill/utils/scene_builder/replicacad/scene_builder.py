@@ -170,6 +170,7 @@ class ReplicaCADSceneBuilder(SceneBuilder):
                         builder.add_convex_collision_from_file(visual_file)
                     else:
                         builder.add_multiple_convex_collisions_from_file(collision_file)
+                    builder.initial_pose = pose
                     builder.set_scene_idxs(env_idx)
                     actor = builder.build(name=f"{unique_id}_{actor_name}")
                     self._default_object_poses.append((actor, pose))
@@ -220,8 +221,11 @@ class ReplicaCADSceneBuilder(SceneBuilder):
                 urdf_loader.disable_self_collisions = True
                 if "uniform_scale" in articulated_meta:
                     urdf_loader.scale = articulated_meta["uniform_scale"]
-                articulation = urdf_loader.load(urdf_path, scene_idxs=env_idx)
+                builder = urdf_loader.parse(urdf_path)["articulation_builders"][0]
                 pose = sapien.Pose(q=q) * sapien.Pose(pos, rot)
+                builder.initial_pose = pose
+                builder.set_scene_idxs(env_idx)
+                articulation = builder.build(name=articulation_name)
                 self._default_object_poses.append((articulation, pose))
 
                 # for now classify articulated objects as "movable" object
