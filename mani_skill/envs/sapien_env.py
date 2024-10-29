@@ -156,11 +156,11 @@ class BaseEnv(gym.Env):
     """the numpy RNG that you can use to generate random numpy data. It is not recommended to use this. Instead use the _batched_episode_rng which helps ensure GPU and CPU simulation generate the same data with the same seeds."""
     _batched_episode_rng: BatchedRNG = None
     """the recommended batched episode RNG to generate random numpy data consistently between single and parallel environments"""
-    _episode_seed: List[int] = None
+    _episode_seed: np.ndarray = None
     """episode seed list for _episode_rng and _batched_episode_rng. _episode_rng uses _episode_seed[0]."""
     _batched_rng_backend = "numpy:random_state"
     """the backend to use for the batched RNG"""
-
+    _enhanced_determinism: bool = False
 
     _parallel_in_single_scene: bool = False
     """whether all objects are placed in one scene for the purpose of rendering all objects together instead of in parallel"""
@@ -192,7 +192,11 @@ class BaseEnv(gym.Env):
         render_backend: str = "gpu",
 
         parallel_in_single_scene: bool = False,
+
+        enhanced_determinism: bool = False,
     ):
+        self._enhanced_determinism = enhanced_determinism
+
         self.num_envs = num_envs
         self.reconfiguration_freq = reconfiguration_freq if reconfiguration_freq is not None else 0
         self._reconfig_counter = 0
@@ -789,43 +793,42 @@ class BaseEnv(gym.Env):
         """
         if options is None:
             options = dict()
-        self._set_main_rng(seed)
-        # we first set the first episode seed to allow environments to use it to reconfigure the environment with a seed
-        self._set_episode_rng(seed)
-
         reconfigure = options.get("reconfigure", False)
         reconfigure = reconfigure or (
             self._reconfig_counter == 0 and self.reconfiguration_freq != 0
         )
+        if "env_idx" in options:
+            env_idx = options["env_idx"]
+            if len(env_idx) != self.num_envs and reconfigure:
+                raise RuntimeError("Cannot do a partial reset and reconfigure the environment. You must do one or the other.")
+        else:
+            env_idx = torch.arange(0, self.num_envs, device=self.device)
+
+        self._set_main_rng(seed)
+        # we first set the first episode seed to allow environments to use it to reconfigure the environment with a seed
+        self._set_episode_rng(seed, env_idx)
+
         if reconfigure:
             with torch.random.fork_rng():
                 torch.manual_seed(seed=self._episode_seed[0])
                 self._reconfigure(options)
                 self._after_reconfigure(options)
+            # Set the episode rng again after reconfiguration to guarantee seed reproducibility
+            self._set_episode_rng(self._episode_seed, env_idx)
 
         # TODO (stao): Reconfiguration when there is partial reset might not make sense and certainly broken here now.
         # Solution to resolve that would be to ensure tasks that do reconfigure more than once are single-env only / cpu sim only
         # or disable partial reset features explicitly for tasks that have a reconfiguration frequency
-        if "env_idx" in options:
-            env_idx = options["env_idx"]
-            if len(env_idx) != self.num_envs and reconfigure:
-                raise RuntimeError("Cannot do a partial reset and reconfigure the environment. You must do one or the other.")
-            self.scene._reset_mask = torch.zeros(
-                self.num_envs, dtype=bool, device=self.device
-            )
-            self.scene._reset_mask[env_idx] = True
-        else:
-            env_idx = torch.arange(0, self.num_envs, device=self.device)
-            self.scene._reset_mask = torch.ones(
-                self.num_envs, dtype=bool, device=self.device
-            )
+        self.scene._reset_mask = torch.zeros(
+            self.num_envs, dtype=torch.bool, device=self.device
+        )
+        self.scene._reset_mask[env_idx] = True
         self._elapsed_steps[env_idx] = 0
 
         self._clear_sim_state()
         if self.reconfiguration_freq != 0:
             self._reconfig_counter -= 1
-        # Set the episode rng again after reconfiguration to guarantee seed reproducibility
-        self._set_episode_rng(self._episode_seed)
+
         if self.agent is not None:
             self.agent.reset()
         with torch.random.fork_rng():
@@ -872,20 +875,26 @@ class BaseEnv(gym.Env):
         self._main_rng = np.random.RandomState(self._main_seed[0])
         if len(self._main_seed) == 1 and self.num_envs > 1:
             self._main_seed = self._main_seed + np.random.RandomState(self._main_seed[0]).randint(2**31, size=(self.num_envs - 1,)).tolist()
-        self._batched_main_rng = BatchedRNG(self._main_seed, backend=self._batched_rng_backend)
-    def _set_episode_rng(self, seed: Union[None, list[int]]):
+        self._batched_main_rng = BatchedRNG.from_seeds(self._main_seed, backend=self._batched_rng_backend)
+
+    def _set_episode_rng(self, seed: Union[None, list[int]], env_idx: torch.Tensor):
         """Set the random generator for current episode."""
-        if isinstance(seed, int):
-            seed = [seed]
-        if seed is None:
-            self._episode_seed = self._batched_main_rng.randint(2**31).tolist()
-        else:
-            self._episode_seed = seed
-        if len(self._episode_seed) == 1 and self.num_envs > 1:
-            self._episode_seed = self._episode_seed + np.random.RandomState(self._episode_seed[0]).randint(2**31, size=(self.num_envs - 1,)).tolist()
-        self._episode_rng = np.random.RandomState(self._episode_seed[0])
-        # we keep _episode_rng for backwards compatibility but recommend using _batched_episode_rng for randomization
-        self._batched_episode_rng = BatchedRNG(self._episode_seed, backend=self._batched_rng_backend)
+        if seed is not None or self._enhanced_determinism:
+            if isinstance(seed, int):
+                seed = [seed]
+            env_idx = common.to_numpy(env_idx)
+            if seed is None:
+                self._episode_seed[env_idx] = self._batched_main_rng[env_idx].randint(2**31)
+            else:
+                self._episode_seed = common.to_numpy(seed, dtype=np.int64)
+                if len(self._episode_seed) == 1 and self.num_envs > 1:
+                    self._episode_seed = np.concatenate((self._episode_seed, np.random.RandomState(self._episode_seed[0]).randint(2**31, size=(self.num_envs - 1,))))
+            # we keep _episode_rng for backwards compatibility but recommend using _batched_episode_rng for randomization
+            if seed is not None or self._batched_episode_rng is None:
+                self._batched_episode_rng = BatchedRNG.from_seeds(self._episode_seed, backend=self._batched_rng_backend)
+            else:
+                self._batched_episode_rng[env_idx] = BatchedRNG.from_seeds(self._episode_seed[env_idx], backend=self._batched_rng_backend)
+            self._episode_rng = self._batched_episode_rng[0]
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         """Initialize the episode, e.g., poses of actors and articulations, as well as task relevant data like randomizing
