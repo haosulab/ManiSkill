@@ -812,7 +812,7 @@ class BaseEnv(gym.Env):
         self._set_main_rng(seed)
 
         if reconfigure:
-            self._set_episode_rng(seed if seed is not None else self._main_rng.randint(2**31), env_idx)
+            self._set_episode_rng(seed if seed is not None else self._batched_main_rng.randint(2**31), env_idx)
             with torch.random.fork_rng():
                 torch.manual_seed(seed=self._episode_seed[0])
                 self._reconfigure(options)
