@@ -202,7 +202,7 @@ class PokeCubeEnv(BaseEnv):
         static_reward = 1 - torch.tanh(
             5 * torch.linalg.norm(self.agent.robot.get_qvel()[..., :-2], axis=1)
         )
-        reward[info["is_cube_placed"]] += static_reward
+        reward[info["is_cube_placed"]] += static_reward[info["is_cube_placed"]]
 
         reward[info["success"]] = 10
         return reward
