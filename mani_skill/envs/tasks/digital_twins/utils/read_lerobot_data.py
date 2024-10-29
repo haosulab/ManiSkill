@@ -1,5 +1,5 @@
 """
-Functions for reading from lerobot datasets e.g. returning actions and qpos data from a trajectory or the entire dataset
+Functions for reading from lerobot datasets e.g. returning actions and qpos data from a trajectory or the entire dataset in contiguous mem
 """
 
 import numpy as np

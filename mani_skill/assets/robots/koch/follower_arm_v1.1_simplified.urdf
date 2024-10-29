@@ -598,10 +598,30 @@
     <limit lower="0" upper="1.75"/>
   </joint>
   <!-- Define the hand_tcp frame -->
-  <link name="gripper_tcp"/>
+  <!-- <link name="gripper_tcp"/>
   <joint name="gripper_tcp_joint" type="fixed">
     <origin rpy="0 0 0" xyz="-0.008 0 -0.065"/>
     <parent link="link_6"/>
     <child link="gripper_tcp"/>
+  </joint>
+
+  <link name="gripper_tcp2"/>
+  <joint name="gripper_tcp_joint2" type="fixed">
+    <origin rpy="0 0 0" xyz="-0.0135 0.0172 -0.0514"/>
+    <parent link="gripper"/>
+    <child link="gripper_tcp2"/>
+  </joint> -->
+  <link name="gripper_tcp"/>
+  <joint name="gripper_tcp_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="-0.011337 0 -0.05574"/>
+    <parent link="link_6"/>
+    <child link="gripper_tcp"/>
+  </joint>
+
+  <link name="gripper_tcp2"/>
+  <joint name="gripper_tcp_joint2" type="fixed">
+    <origin rpy="0 0 0" xyz="-0.010505 0.017151 -0.041535"/>
+    <parent link="gripper"/>
+    <child link="gripper_tcp2"/>
   </joint>
 </robot>

@@ -29,7 +29,7 @@ class Koch(BaseAgent):
     keyframes = dict(
         rest=Keyframe(
             # resting qpos gathered from datasets
-            qpos=np.array([0, 2.2365, 3.0879, -0.2224, 0, 0.6044]),
+            qpos=np.array([0, 2.312, 3.017, -0.26, 0, 0.6044]),
             pose=sapien.Pose(),
         )
     )
@@ -72,6 +72,7 @@ class Koch(BaseAgent):
         self.finger1_link = self.robot.links_map["gripper"]
         self.finger2_link = self.robot.links_map["link_6"]
         self.tcp = self.robot.links_map["gripper_tcp"]
+        self.tcp2 = self.robot.links_map["gripper_tcp2"]
         for link in self.robot.links:
             for i, obj in enumerate(link._objs):
                 rb_comp = obj.entity.find_component_by_type(
@@ -118,6 +119,21 @@ class Koch(BaseAgent):
             rforce >= min_force, torch.rad2deg(rangle) <= max_angle
         )
         return torch.logical_and(lflag, rflag)
+
+    def _compute_undesired_contacts(self, object: Actor, threshold: float = 1e-2):
+        l_contact_forces = self.scene.get_pairwise_contact_forces(
+            self.finger1_link, object
+        )
+        r_contact_forces = self.scene.get_pairwise_contact_forces(
+            self.finger2_link, object
+        )
+        lforce = torch.linalg.norm(l_contact_forces, axis=1)
+        rforce = torch.linalg.norm(r_contact_forces, axis=1)
+
+        return torch.logical_or(
+            lforce >= threshold,
+            rforce >= threshold,
+        )
 
     def is_static(self, threshold: float = 0.2):
         qvel = self.robot.get_qvel()[..., :-1]
