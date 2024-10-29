@@ -214,7 +214,7 @@ def to_cpu_tensor(array: Array):
 
 # TODO (stao): Clean up this code
 def flatten_state_dict(
-    state_dict: dict, use_torch=False, device: Device = None
+    state_dict: dict, use_torch=False, device: Optional[Device] = None
 ) -> Array:
     """Flatten a dictionary containing states recursively. Expects all data to be either torch or numpy
 
