@@ -141,7 +141,11 @@ def to_tensor(array: Array, device: Optional[Device] = None):
         ret = array.to(device)
     elif isinstance(array, np.ndarray):
         # TODO (stao): check of doing .to(device) is slow even if its just CPU
+        if array.dtype == np.uint16:
+            array = array.astype(np.int32)
         ret = torch.from_numpy(array).to(device)
+        if ret.dtype == torch.float64:
+            ret = ret.to(torch.float32)
     else:
         ret = torch.tensor(array, device=device)
     if ret.dtype == torch.float64:
