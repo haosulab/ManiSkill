@@ -837,8 +837,12 @@ class BaseEnv(gym.Env):
 
         if self.agent is not None:
             self.agent.reset()
-        with torch.random.fork_rng():
-            torch.manual_seed(self._episode_seed[0])
+
+        if seed is not None or self._enhanced_determinism:
+            with torch.random.fork_rng():
+                torch.manual_seed(self._episode_seed[0])
+                self._initialize_episode(env_idx, options)
+        else:
             self._initialize_episode(env_idx, options)
         # reset the reset mask back to all ones so any internal code in maniskill can continue to manipulate all scenes at once as usual
         self.scene._reset_mask = torch.ones(
