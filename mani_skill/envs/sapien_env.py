@@ -106,6 +106,10 @@ class BaseEnv(gym.Env):
         parallel_in_single_scene (bool): By default this is False. If True, rendered images and the GUI will show all objects in one view.
             This is only really useful for generating cool videos showing all environments at once but it is not recommended
             otherwise as it slows down simulation and rendering.
+
+        enhanced_determinism (bool): By default this is False and env resets will reset the episode RNG only when a seed / seed list is given.
+            If True, the environment will reset the episode RNG upon each reset regardless of whether a seed is provided.
+            Generally enhanced_determinisim is not needed and users are recommended to pass seeds into the env reset function instead.
     """
 
     # fmt: off
@@ -161,6 +165,7 @@ class BaseEnv(gym.Env):
     _batched_rng_backend = "numpy:random_state"
     """the backend to use for the batched RNG"""
     _enhanced_determinism: bool = False
+    """whether to reset the episode RNG upon each reset regardless of whether a seed is provided"""
 
     _parallel_in_single_scene: bool = False
     """whether all objects are placed in one scene for the purpose of rendering all objects together instead of in parallel"""
