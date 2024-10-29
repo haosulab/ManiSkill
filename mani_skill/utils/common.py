@@ -147,6 +147,8 @@ def to_tensor(array: Array, device: Optional[Device] = None):
             array = array.astype(np.int64)
         ret = torch.tensor(array).to(device)
     else:
+        if isinstance(array, list) and isinstance(array[0], np.ndarray):
+            array = np.array(array)
         ret = torch.tensor(array, device=device)
     if ret.dtype == torch.float64:
         ret = ret.to(torch.float32)
