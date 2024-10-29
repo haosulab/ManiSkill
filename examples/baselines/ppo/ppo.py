@@ -63,7 +63,7 @@ class Args:
     """the number of steps to run in each environment per policy rollout"""
     num_eval_steps: int = 50
     """the number of steps to run in each evaluation environment during evaluation"""
-    reconfiguration_freq: Optional[int] = 1
+    eval_reconfiguration_freq: Optional[int] = 1
     """for benchmarking purposes we want to reconfigure the eval environment each reset to ensure objects are randomized in some tasks"""
     anneal_lr: bool = False
     """Toggle learning rate annealing for policy and value networks"""
@@ -188,7 +188,7 @@ if __name__ == "__main__":
     # env setup
     env_kwargs = dict(obs_mode="state", control_mode="pd_joint_delta_pos", render_mode="rgb_array", sim_backend="gpu")
     envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, **env_kwargs)
-    eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, reconfiguration_freq=args.reconfiguration_freq, **env_kwargs)
+    eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, reconfiguration_freq=args.eval_reconfiguration_freq, **env_kwargs)
     if isinstance(envs.action_space, gym.spaces.Dict):
         envs = FlattenActionSpaceWrapper(envs)
         eval_envs = FlattenActionSpaceWrapper(eval_envs)
