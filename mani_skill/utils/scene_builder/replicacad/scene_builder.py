@@ -225,7 +225,7 @@ class ReplicaCADSceneBuilder(SceneBuilder):
                 pose = sapien.Pose(q=q) * sapien.Pose(pos, rot)
                 builder.initial_pose = pose
                 builder.set_scene_idxs(env_idx)
-                articulation = builder.build(name=articulation_name)
+                articulation = builder.build()
                 self._default_object_poses.append((articulation, pose))
 
                 # for now classify articulated objects as "movable" object

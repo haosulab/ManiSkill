@@ -189,7 +189,7 @@ class Pose:
         Multiply two poses. Supports multiplying singular poses like sapien.Pose or Pose object with batch size of 1 with Pose objects with batch size > 1.
         """
         # NOTE (stao): this code is probably slower than SAPIEN's pose multiplication but it is batched
-        arg0 = Pose.create(arg0)
+        arg0 = Pose.create(arg0, device=self.device)
         pose = self
         if len(arg0) == 1 and len(pose) > 1:
             # repeat arg0 to match shape of self
