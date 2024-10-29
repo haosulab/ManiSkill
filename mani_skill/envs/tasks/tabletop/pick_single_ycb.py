@@ -126,7 +126,7 @@ class PickSingleYCBEnv(BaseEnv):
             collision_mesh = obj.get_first_collision_mesh()
             # this value is used to set object pose so the bottom is at z=0
             self.object_zs.append(-collision_mesh.bounding_box.bounds[0, 2])
-        self.object_zs = common.to_tensor(self.object_zs)
+        self.object_zs = common.to_tensor(self.object_zs, device=self.device)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):

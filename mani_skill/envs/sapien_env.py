@@ -221,9 +221,9 @@ class BaseEnv(gym.Env):
             if self.robot_uids not in self.SUPPORTED_ROBOTS:
                 logger.warn(f"{self.robot_uids} is not in the task's list of supported robots. Code may not run as intended")
 
-        if physx.is_gpu_enabled() and num_envs == 1 and (sim_backend == "auto" or sim_backend == "cpu"):
-            logger.warn("GPU simulation has already been enabled on this process, switching to GPU backend")
-            sim_backend == "gpu"
+        # if self.gpu_sim_enabled and num_envs == 1 and (sim_backend == "auto" or sim_backend == "cpu"):
+        #     logger.warn("GPU simulation has already been enabled on this process, switching to GPU backend")
+        #     sim_backend == "gpu"
 
         # determine the sim and render devices
         if sim_backend == "auto":
@@ -382,8 +382,8 @@ class BaseEnv(gym.Env):
 
     @property
     def gpu_sim_enabled(self):
-        """Whether the gpu simulation is enabled. A wrapper over physx.is_gpu_enabled()"""
-        return physx.is_gpu_enabled()
+        """Whether the gpu simulation is enabled."""
+        return self.scene.gpu_sim_enabled
 
     @property
     def _default_sim_config(self):
@@ -844,7 +844,7 @@ class BaseEnv(gym.Env):
         self.scene._reset_mask = torch.ones(
             self.num_envs, dtype=bool, device=self.device
         )
-        if physx.is_gpu_enabled():
+        if self.gpu_sim_enabled:
             # ensure all updates to object poses and configurations are applied on GPU after task initialization
             self.scene._gpu_apply_all()
             self.scene.px.gpu_update_articulation_kinematics()
@@ -911,13 +911,13 @@ class BaseEnv(gym.Env):
         """Clear simulation state (velocities)"""
         for actor in self.scene.actors.values():
             if actor.px_body_type == "dynamic":
-                actor.set_linear_velocity([0., 0., 0.])
-                actor.set_angular_velocity([0., 0., 0.])
+                actor.set_linear_velocity(torch.zeros(3, device=self.device))
+                actor.set_angular_velocity(torch.zeros(3, device=self.device))
         for articulation in self.scene.articulations.values():
-            articulation.set_qvel(np.zeros(articulation.max_dof))
-            articulation.set_root_linear_velocity([0., 0., 0.])
-            articulation.set_root_angular_velocity([0., 0., 0.])
-        if physx.is_gpu_enabled():
+            articulation.set_qvel(torch.zeros(articulation.max_dof, device=self.device))
+            articulation.set_root_linear_velocity(torch.zeros(3, device=self.device))
+            articulation.set_root_angular_velocity(torch.zeros(3, device=self.device))
+        if self.gpu_sim_enabled:
             self.scene._gpu_apply_all()
             self.scene._gpu_fetch_all()
             # TODO (stao): This may be an unnecessary fetch and apply.
@@ -965,7 +965,7 @@ class BaseEnv(gym.Env):
         if action is None:  # simulation without action
             pass
         elif isinstance(action, np.ndarray) or isinstance(action, torch.Tensor):
-            action = common.to_tensor(action)
+            action = common.to_tensor(action, device=self.device)
             if action.shape == self._orig_single_action_space.shape:
                 action_is_unbatched = True
             set_action = True
@@ -974,13 +974,13 @@ class BaseEnv(gym.Env):
                 if action["control_mode"] != self.agent.control_mode:
                     self.agent.set_control_mode(action["control_mode"])
                     self.agent.controller.reset()
-                action = common.to_tensor(action["action"])
+                action = common.to_tensor(action["action"], device=self.device)
             else:
                 assert isinstance(
                     self.agent, MultiAgent
                 ), "Received a dictionary for an action but there are not multiple robots in the environment"
                 # assume this is a multi-agent action
-                action = common.to_tensor(action)
+                action = common.to_tensor(action, device=self.device)
                 for k, a in action.items():
                     if a.shape == self._orig_single_action_space[k].shape:
                         action_is_unbatched = True
@@ -1004,7 +1004,7 @@ class BaseEnv(gym.Env):
             self.scene.step()
             self._after_simulation_step()
         self._after_control_step()
-        if physx.is_gpu_enabled():
+        if self.gpu_sim_enabled:
             self.scene._gpu_fetch_all()
         return action
 
@@ -1026,7 +1026,7 @@ class BaseEnv(gym.Env):
         """
         info = dict(
             elapsed_steps=self.elapsed_steps
-            if not physx.is_gpu_enabled()
+            if not self.gpu_sim_enabled
             else self._elapsed_steps.clone()
         )
         info.update(self.evaluate())
@@ -1151,7 +1151,7 @@ class BaseEnv(gym.Env):
         `env.get_state_dict()` or the result of `env.get_state()`
         """
         self.scene.set_sim_state(state, env_idx)
-        if physx.is_gpu_enabled():
+        if self.gpu_sim_enabled:
             self.scene._gpu_apply_all()
             self.scene.px.gpu_update_articulation_kinematics()
             self.scene._gpu_fetch_all()
@@ -1211,7 +1211,7 @@ class BaseEnv(gym.Env):
         if self._viewer is None:
             self._viewer = create_viewer(self._viewer_camera_config)
             self._setup_viewer()
-        if physx.is_gpu_enabled() and self.scene._gpu_sim_initialized:
+        if self.gpu_sim_enabled and self.scene._gpu_sim_initialized:
             self.scene.px.sync_poses_gpu_to_cpu()
         self._viewer.render()
         for obj in self._hidden_objects:
@@ -1329,7 +1329,7 @@ class BaseEnv(gym.Env):
                 config = cam.config
                 sensor_settings_str.append(f"RGBD({config.width}x{config.height})")
         sensor_settings_str = ", ".join(sensor_settings_str)
-        sim_backend = "gpu" if physx.is_gpu_enabled() else "cpu"
+        sim_backend = "gpu" if self.gpu_sim_enabled else "cpu"
         print(
         "# -------------------------------------------------------------------------- #"
         )

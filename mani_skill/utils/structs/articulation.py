@@ -265,13 +265,13 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         return torch.hstack([pose.p, pose.q, vel, ang_vel, qpos, qvel])
 
     def set_state(self, state: Array, env_idx: torch.Tensor = None):
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             if env_idx is not None:
                 prev_reset_mask = self.scene._reset_mask.clone()
                 # safe guard against setting the wrong states
                 self.scene._reset_mask[:] = False
                 self.scene._reset_mask[env_idx] = True
-            state = common.to_tensor(state)
+            state = common.to_tensor(state, device=self.device)
             self.set_root_pose(Pose.create(state[:, :7]))
             self.set_root_linear_velocity(state[:, 7:10])
             self.set_root_angular_velocity(state[:, 10:13])
@@ -328,7 +328,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         assert (
             not self.merged
         ), "Currently you cannot fetch collision meshes of merged articulations as merged articulations only share a root link"
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             assert (
                 self.scene._gpu_sim_initialized
             ), "During GPU simulation link pose data is not accessible until after \
@@ -369,7 +369,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
         Returns impulse vector of shape (N, len(link_names), 3) where N is the number of environments
         """
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             if tuple(link_names) not in self._net_contact_force_queries:
                 bodies = []
                 for k in link_names:
@@ -425,9 +425,9 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     # Functions from physx.PhysxArticulation
     # -------------------------------------------------------------------------- #
     def compute_passive_force(self, *args, **kwargs):
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             raise NotImplementedError(
-                "Passive force computation is currently not supported in PhysX"
+                "Passive force computation is currently not supported in GPU PhysX"
             )
         else:
             return self._objs[0].compute_passive_force(*args, **kwargs)
@@ -561,7 +561,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     @property
     def qacc(self):
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             return self.px.cuda_articulation_qacc.torch()[
                 self._data_index, : self.max_dof
             ]
@@ -573,7 +573,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     #     pass
     @property
     def qf(self):
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             return self.px.cuda_articulation_qf.torch()[
                 self._data_index, : self.max_dof
             ]
@@ -582,8 +582,8 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     @qf.setter
     def qf(self, arg1: torch.Tensor):
-        if physx.is_gpu_enabled():
-            arg1 = common.to_tensor(arg1)
+        if self.scene.gpu_sim_enabled:
+            arg1 = common.to_tensor(arg1, device=self.device)
             self.px.cuda_articulation_qf.torch()[
                 self._data_index[self.scene._reset_mask[self._scene_idxs]],
                 : self.max_dof,
@@ -607,7 +607,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     @property
     def qpos(self):
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             # NOTE (stao): cuda_articulation_qpos is of shape (M, N) where M is the total number of articulations in the physx scene,
             # N is the max dof of all those articulations.
             return self.px.cuda_articulation_qpos.torch()[
@@ -618,8 +618,8 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     @qpos.setter
     def qpos(self, arg1: torch.Tensor):
-        if physx.is_gpu_enabled():
-            arg1 = common.to_tensor(arg1)
+        if self.scene.gpu_sim_enabled:
+            arg1 = common.to_tensor(arg1, device=self.device)
             self.px.cuda_articulation_qpos.torch()[
                 self._data_index[self.scene._reset_mask[self._scene_idxs]],
                 : self.max_dof,
@@ -632,7 +632,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     @property
     def qvel(self):
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             return self.px.cuda_articulation_qvel.torch()[
                 self._data_index, : self.max_dof
             ]
@@ -641,8 +641,8 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     @qvel.setter
     def qvel(self, arg1: torch.Tensor):
-        if physx.is_gpu_enabled():
-            arg1 = common.to_tensor(arg1)
+        if self.scene.gpu_sim_enabled:
+            arg1 = common.to_tensor(arg1, device=self.device)
             self.px.cuda_articulation_qvel.torch()[
                 self._data_index[self.scene._reset_mask[self._scene_idxs]],
                 : self.max_dof,
@@ -659,8 +659,8 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     @root_angular_velocity.setter
     def root_angular_velocity(self, arg1: Array) -> None:
-        if physx.is_gpu_enabled():
-            arg1 = common.to_tensor(arg1)
+        if self.scene.gpu_sim_enabled:
+            arg1 = common.to_tensor(arg1, device=self.device)
             self.px.cuda_rigid_body_data.torch()[
                 self.root._body_data_index[self.scene._reset_mask[self._scene_idxs]],
                 10:13,
@@ -677,8 +677,8 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     @root_linear_velocity.setter
     def root_linear_velocity(self, arg1: Array) -> None:
-        if physx.is_gpu_enabled():
-            arg1 = common.to_tensor(arg1)
+        if self.scene.gpu_sim_enabled:
+            arg1 = common.to_tensor(arg1, device=self.device)
             self.px.cuda_rigid_body_data.torch()[
                 self.root._body_data_index[self.scene._reset_mask[self._scene_idxs]],
                 7:10,
@@ -702,9 +702,9 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     # -------------------------------------------------------------------------- #
     def create_pinocchio_model(self):
         # NOTE (stao): This is available but not typed in SAPIEN
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             raise NotImplementedError(
-                "Cannot create a pinocchio model when GPU is enabled. If you wish to do inverse kinematics you must use fast_kinematics"
+                "Cannot create a pinocchio model when GPU is enabled."
             )
         else:
             return self._objs[0].create_pinocchio_model()
@@ -723,8 +723,8 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
         TODO (stao): can we use joint indices for the CPU sim as well? Some global joint indices?
         """
-        if physx.is_gpu_enabled():
-            targets = common.to_tensor(targets)
+        if self.scene.gpu_sim_enabled:
+            targets = common.to_tensor(targets, device=self.device)
             if joint_indices not in self._cached_joint_target_indices:
                 self._cached_joint_target_indices[joint_indices] = torch.meshgrid(
                     self._data_index, joint_indices, indexing="ij"
@@ -746,8 +746,8 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
         TODO (stao): can we use joint indices for the CPU sim as well? Some global joint indices?
         """
-        if physx.is_gpu_enabled():
-            targets = common.to_tensor(targets)
+        if self.scene.gpu_sim_enabled:
+            targets = common.to_tensor(targets, device=self.device)
             if joint_indices not in self._cached_joint_target_indices:
                 self._cached_joint_target_indices[joint_indices] = torch.meshgrid(
                     self._data_index, joint_indices, indexing="ij"
