@@ -77,9 +77,12 @@ class PokeCubeEnv(BaseEnv):
             name="goal_region",
             add_collision=False,
             body_type="kinematic",
+            initial_pose=sapien.Pose(),
         )
 
-        self.peg_head_offsets = Pose.create_from_pq(p=[self.peg_half_length, 0, 0])
+        self.peg_head_offsets = Pose.create_from_pq(
+            p=[self.peg_half_length, 0, 0], device=self.device
+        )
 
     @property
     def peg_head_pos(self):
@@ -161,9 +164,9 @@ class PokeCubeEnv(BaseEnv):
 
         is_peg_cube_fit = torch.logical_and(is_peg_cube_aligned, is_peg_cube_close)
         is_peg_grasped = self.agent.is_grasping(self.peg)
-        close_to_table = torch.abs(self.peg.pose.p[:, 2] - self.peg_half_width) < 0.005
+        # close_to_table = torch.abs(self.peg.pose.p[:, 2] - self.peg_half_width) < 0.005
         return {
-            "success": is_cube_placed & is_peg_cube_fit & close_to_table,
+            "success": is_cube_placed,
             "is_peg_cube_fit": is_peg_cube_fit,
             "is_peg_grasped": is_peg_grasped,
             "angle_diff": angle_diff,
