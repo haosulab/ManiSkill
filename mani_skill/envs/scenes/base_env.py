@@ -83,9 +83,9 @@ class SceneManipulationEnv(BaseEnv):
         )
 
     def reset(self, seed=None, options=None):
-        self._set_episode_rng(seed)
         if options is None:
             options = dict(reconfigure=False)
+        self._set_episode_rng(seed, options.get("env_idx", torch.arange(self.num_envs)))
         if "reconfigure" in options and options["reconfigure"]:
             self.build_config_idxs = options.get(
                 "build_config_idxs", self.build_config_idxs
