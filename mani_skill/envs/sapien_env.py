@@ -810,17 +810,17 @@ class BaseEnv(gym.Env):
             env_idx = torch.arange(0, self.num_envs, device=self.device)
 
         self._set_main_rng(seed)
-        # we first set the first episode seed to allow environments to use it to reconfigure the environment with a seed
-        self._set_episode_rng(seed, env_idx)
 
         if reconfigure:
+            self._set_episode_rng(seed if seed is not None else self._batched_main_rng.randint(2**31), env_idx)
             with torch.random.fork_rng():
                 torch.manual_seed(seed=self._episode_seed[0])
                 self._reconfigure(options)
                 self._after_reconfigure(options)
             # Set the episode rng again after reconfiguration to guarantee seed reproducibility
-            if seed is not None or self._enhanced_determinism:
-                self._set_episode_rng(self._episode_seed, env_idx)
+            self._set_episode_rng(self._episode_seed, env_idx)
+        else:
+            self._set_episode_rng(seed, env_idx)
 
         # TODO (stao): Reconfiguration when there is partial reset might not make sense and certainly broken here now.
         # Solution to resolve that would be to ensure tasks that do reconfigure more than once are single-env only / cpu sim only
@@ -875,7 +875,7 @@ class BaseEnv(gym.Env):
             if self._main_seed is not None:
                 return
             seed = np.random.RandomState().randint(2**31, size=(self.num_envs,))
-        if isinstance(seed, int):
+        if not np.iterable(seed):
             seed = [seed]
         self._main_seed = seed
         self._main_rng = np.random.RandomState(self._main_seed[0])
@@ -886,7 +886,7 @@ class BaseEnv(gym.Env):
     def _set_episode_rng(self, seed: Union[None, list[int]], env_idx: torch.Tensor):
         """Set the random generator for current episode."""
         if seed is not None or self._enhanced_determinism:
-            if isinstance(seed, int):
+            if not np.iterable(seed):
                 seed = [seed]
             env_idx = common.to_numpy(env_idx)
             if seed is None:
