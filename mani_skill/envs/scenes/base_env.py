@@ -109,6 +109,9 @@ class SceneManipulationEnv(BaseEnv):
             return
         return super()._load_lighting(options)
 
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose())
+
     def _load_scene(self, options: dict):
         if self.scene_builder.build_configs is not None:
             self.scene_builder.build(

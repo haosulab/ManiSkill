@@ -4,7 +4,13 @@
     "url": "https://maniskill.readthedocs.io/en/latest/"
   },
   {
-    "name": "3.0.0b10 (stable)",
+    "name": "3.0.0b11 (stable)",
+    "version": "v3.0.0b11",
+    "url": "https://maniskill.readthedocs.io/en/v3.0.0b11/",
+    "preferred": true
+  }
+  {
+    "name": "3.0.0b10",
     "version": "v3.0.0b10",
     "url": "https://maniskill.readthedocs.io/en/v3.0.0b10/",
     "preferred": true

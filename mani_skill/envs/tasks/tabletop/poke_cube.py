@@ -77,9 +77,12 @@ class PokeCubeEnv(BaseEnv):
             name="goal_region",
             add_collision=False,
             body_type="kinematic",
+            initial_pose=sapien.Pose(),
         )
 
-        self.peg_head_offsets = Pose.create_from_pq(p=[self.peg_half_length, 0, 0])
+        self.peg_head_offsets = Pose.create_from_pq(
+            p=[self.peg_half_length, 0, 0], device=self.device
+        )
 
     @property
     def peg_head_pos(self):
@@ -161,9 +164,10 @@ class PokeCubeEnv(BaseEnv):
 
         is_peg_cube_fit = torch.logical_and(is_peg_cube_aligned, is_peg_cube_close)
         is_peg_grasped = self.agent.is_grasping(self.peg)
-        close_to_table = torch.abs(self.peg.pose.p[:, 2] - self.peg_half_width) < 0.005
+        is_robot_static = self.agent.is_static(0.2)
         return {
-            "success": is_cube_placed & is_peg_cube_fit & close_to_table,
+            "success": is_cube_placed & is_robot_static,
+            "is_cube_placed": is_cube_placed,
             "is_peg_cube_fit": is_peg_cube_fit,
             "is_peg_grasped": is_peg_grasped,
             "angle_diff": angle_diff,
@@ -195,11 +199,16 @@ class PokeCubeEnv(BaseEnv):
         is_peg_cube_fit = info["is_peg_cube_fit"] * is_peg_grasped
         reward[is_peg_cube_fit] = (7 + place_reward)[is_peg_cube_fit]
 
-        reward[info["success"]] = 9
+        static_reward = 1 - torch.tanh(
+            5 * torch.linalg.norm(self.agent.robot.get_qvel()[..., :-2], axis=1)
+        )
+        reward[info["is_cube_placed"]] += static_reward[info["is_cube_placed"]]
+
+        reward[info["success"]] = 10
         return reward
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        max_reward = 9.0
+        max_reward = 10.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
