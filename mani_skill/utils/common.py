@@ -240,20 +240,20 @@ def flatten_state_dict(
             if state.size == 0:
                 state = None
             if use_torch:
-                state = to_tensor(state)
+                state = to_tensor(state, device=device)
         elif isinstance(value, (tuple, list)):
             state = None if len(value) == 0 else value
             if use_torch:
-                state = to_tensor(state)
+                state = to_tensor(state, device=device)
         elif isinstance(value, (bool, np.bool_, int, np.int32, np.int64)):
             # x = np.array(1) > 0 is np.bool_ instead of ndarray
             state = int(value)
             if use_torch:
-                state = to_tensor(state)
+                state = to_tensor(state, device=device)
         elif isinstance(value, (float, np.float32, np.float64)):
             state = np.float32(value)
             if use_torch:
-                state = to_tensor(state)
+                state = to_tensor(state, device=device)
         elif isinstance(value, np.ndarray):
             if value.ndim > 2:
                 raise AssertionError(
@@ -261,7 +261,7 @@ def flatten_state_dict(
                 )
             state = value if value.size > 0 else None
             if use_torch:
-                state = to_tensor(state)
+                state = to_tensor(state, device=device)
 
         elif isinstance(value, torch.Tensor):
             state = value
