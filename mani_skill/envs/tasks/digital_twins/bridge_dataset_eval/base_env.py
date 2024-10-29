@@ -271,6 +271,11 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
         self.scene.add_directional_light([-1, -0.5, -1], [0.7, 0.7, 0.7])
         self.scene.add_directional_light([1, 1, -1], [0.7, 0.7, 0.7])
 
+    def _load_agent(self, options: dict):
+        super()._load_agent(
+            options, sapien.Pose(p=[0.127, 0.060, 0.85], q=[0, 0, 0, 1])
+        )
+
     def _load_scene(self, options: dict):
         # original SIMPLER envs always do this? except for open drawer task
         for i in range(self.num_envs):

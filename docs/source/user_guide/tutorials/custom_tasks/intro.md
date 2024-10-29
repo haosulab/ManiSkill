@@ -49,11 +49,11 @@ class PushCubeEnv(BaseEnv):
 
 At the start of any task, you must load in all objects (robots, assets, articulations, lighting etc.) into each parallel environment, also known as a sub-scene. This is also known as **reconfiguration** and generally only ever occurs once. Loading these objects is done in the `_load_scene` function of your custom task class. The objective is to simply load objects in with initial poses that ensure they don't collide on the first step, and nothing else. For GPU simulation at this stage you cannot change any object states (like velocities, qpos), only initial poses can be modified. Changing/randomizing states is done in the section on [episode initialization / randomization](#episode-initialization--randomization).
 
-Building objects in ManiSkill is nearly the exact same as it is in SAPIEN. You create an `ActorBuilder` via `self.scene.create_actor_builder` and via the actor builder add visual and collision shapes. Visual shapes only affect visual rendering processes while collision shapes affect the physical simulation. ManiSkill further will create the actor for you in every sub-scene (unless you use [scene-masks/scene-idxs](./advanced.md#scene-masks), a more advanced feature).
+Building objects in ManiSkill is nearly the exact same as it is in SAPIEN. You create an `ActorBuilder` via `self.scene.create_actor_builder` and via the actor builder add visual and collision shapes. Visual shapes only affect visual rendering processes while collision shapes affect the physical simulation. ManiSkill further will create the actor for you in every sub-scene (unless you use [scene-masks/scene-idxs](./advanced.md#scene-masks), a more advanced feature for enabling heterogeneous simulation).
 
 ### Building Robots
 
-This is the simplest part and requires almost no additional work here. Robots are added in for you automatically and have their base initialized at 0. You can specify the default robot(s) added in via the init function. In PushCube this is done as so by adding `SUPPORTED_ROBOTS` to ensure users can only run your task with the selected robots. You can further add typing if you wish to the `agent` class attribute. 
+This is the simplest part and requires almost no additional work here. Robots are added in for you automatically and by default are initialized at the origin. You can specify the default robot(s) added in via the init function. In PushCube this is done as so by adding `SUPPORTED_ROBOTS` to ensure users can only run your task with the selected robots. You can further add typing if you wish to the `agent` class attribute. 
 
 ```python
 from mani_skill.agents.robots import Fetch, Panda
@@ -68,15 +68,20 @@ class PushCubeEnv(BaseEnv):
         # robot_uids="fetch" is possible, or even multi-robot 
         # setups via robot_uids=("fetch", "panda")
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
-```
 
-Initializing these robots occurs in the initialization / randomization section covered later. With this setup you can later access agent data via `self.agent` and the specific articulation data of the robot via `self.agent.robot`. For multi-robot setups you can access each agent via `self.agent.agents`.
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose(p=[0, 0, 1]))
+```
+To define the initial pose of the robot you ovverride the `_load_agent` function. This is done in PushCube above. It is recommended to set initial poses for all objects such that if they were spawned there they don't intersect other objects. Here we spawn the robot 1 meter above the ground which won't clash with anything else.
+
+
+Initializing/randomizing these robots occurs in the initialization / randomization section covered later. With this setup you can later access agent data via `self.agent` and the specific articulation data of the robot via `self.agent.robot`. For multi-robot setups you can access each agent via `self.agent.agents`.
 
 To create your own custom robots/agents, see the [custom robots tutorial](../custom_robots.md).
 
 ### Building Actors
 
-the `_load_scene` function must be implemented to build objects besides agents. It is also given an `options` dictionary which is the same options dictionary passed to `env.reset` and defaults to an empty dictionary (which may be useful for controlling how to load a scene with just reset arguments).
+The `_load_scene` function must be implemented to build objects besides agents. It is also given an `options` dictionary which is the same options dictionary passed to `env.reset` and defaults to an empty dictionary (which may be useful for controlling how to load a scene with just reset arguments).
 
 Building a **dynamic** actor like a cube in PushCube is done as so
 ```python
@@ -96,8 +101,8 @@ class PushCubeEnv(BaseEnv):
                 base_color=[1, 0, 0, 1],
             ),
         )
-        # optionally set an initial pose so that it initially spawns there
-        # self.builder.initial_pose = sapien.Pose(p=[1, 1, 1], q=[1, 0, 0, 0])
+        # strongly recommended to set initial poses for objects, even if you plan to modify them later
+        builder.initial_pose = sapien.Pose(p=[0, 0, 0.02], q=[1, 0, 0, 0])
         self.obj = builder.build(name="cube")
         # PushCube has some other code after this removed for brevity that 
         # spawns a goal object (a red/white target) stored at self.goal_region
@@ -109,8 +114,7 @@ You can build a **kinematic** actor with `builder.build_kinematic` and a **stati
 - Kinematic actors can have their pose changed at any time. Static actors must have an initial pose set before calling `build_static` via `builder.initial_pose = ...`
 - Use static instead of kinematic whenever possible as it saves a lot of GPU memory. Static objects must have an initial pose set before building via `builder.initial_pose = ...`.
 
-Note that by default, if an object does not have an initial pose set in its builder, ManiSkill tries its best to choose initial poses of objects such that they are unlikely to collide with each other during GPU simulation initialization (which uses the initial poses of the builders). These poses are definitely not what you want for task initialization but need to be far apart initially to ensure stable GPU simulation.
-
+Note that by default, if an object does not have an initial pose set in its builder, ManiSkill will set it to a default pose of `q=[1,0,0,0], p=[0,0,0]` and give a warning. For simple tasks this may not matter but when working with more complex objects and articulations, it is strongly recommended to set initial poses for all objects as GPU simulation might run into bugs/issues if the objects at their initial poses collide.
 
 We also provide some functions that build some more complex shapes that you can use by importing the following:
 ```python
@@ -144,7 +148,7 @@ We recommend you to first complete this tutorial before moving onto the next.
 
 ## Episode Initialization / Randomization
 
-Task initialization and randomization is handled in the `_initialize_episode` function and is called whenever `env.reset` is called. The objective here is to set the initial states of all non-static objects, including the robot. Note that objects that do not have initial poses set when building or set during episode initialization won't necessarily spawn at the origin.
+Task initialization and randomization is handled in the `_initialize_episode` function and is called whenever `env.reset` is called. The objective here is to set the initial states of all non-static objects, including the robot.
 
 As the task ideally should be simulatable on the GPU, batched code is unavoidable. Note that furthermore, by default everything in ManiSkill tries to stay batched, even if there is only one element. Finally, like `_load_scene` the options argument is also passed down here if needed.
 

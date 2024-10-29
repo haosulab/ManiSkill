@@ -68,7 +68,7 @@ class Args:
     """the number of steps to run in each environment per policy rollout"""
     num_eval_steps: int = 50
     """the number of steps to run in each evaluation environment during evaluation"""
-    reconfiguration_freq: Optional[int] = 1
+    eval_reconfiguration_freq: Optional[int] = 1
     """for benchmarking purposes we want to reconfigure the eval environment each reset to ensure objects are randomized in some tasks"""
     anneal_lr: bool = False
     """Toggle learning rate annealing for policy and value networks"""
@@ -292,7 +292,7 @@ if __name__ == "__main__":
 
     # env setup
     env_kwargs = dict(obs_mode="rgb", control_mode="pd_joint_delta_pos", render_mode=args.render_mode, sim_backend="gpu")
-    eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, **env_kwargs)
+    eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, reconfigure_freq=args.eval_reconfiguration_freq, **env_kwargs)
     envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, **env_kwargs)
 
     # rgbd obs mode returns a dict of data, we flatten it so there is just a rgbd key and state key
