@@ -276,13 +276,13 @@ class OpenCabinetDrawerEnv(BaseEnv):
         # after each control step, we update the goal position of the handle link
         # for GPU sim we need to update the kinematics data to get latest pose information for up to date link poses
         # and fetch it, followed by an apply call to ensure the GPU sim is up to date
-        if physx.is_gpu_enabled():
+        if self.gpu_sim_enabled:
             self.scene.px.gpu_update_articulation_kinematics()
             self.scene._gpu_fetch_all()
         self.handle_link_goal.set_pose(
             Pose.create_from_pq(p=self.handle_link_positions())
         )
-        if physx.is_gpu_enabled():
+        if self.gpu_sim_enabled:
             self.scene._gpu_apply_all()
 
     def evaluate(self):
