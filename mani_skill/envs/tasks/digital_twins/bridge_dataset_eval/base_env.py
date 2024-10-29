@@ -301,8 +301,12 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
         for name in self.obj_names:
             self.objs[name] = self._build_actor_helper(name)
 
-        self.xyz_configs = common.to_tensor(self.xyz_configs).to(torch.float32)
-        self.quat_configs = common.to_tensor(self.quat_configs).to(torch.float32)
+        self.xyz_configs = common.to_tensor(self.xyz_configs, device=self.device).to(
+            torch.float32
+        )
+        self.quat_configs = common.to_tensor(self.quat_configs, device=self.device).to(
+            torch.float32
+        )
 
         if self.scene_setting == "sink":
             self.sink = self._build_actor_helper(
@@ -321,6 +325,7 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
                 if this_available_model_scales is None:
                     model_scales.append(1.0)
                 else:
+                    # TODO (stao): use the batched RNG
                     model_scales[model_id] = self.np_random.choice(
                         this_available_model_scales
                     )
@@ -332,7 +337,9 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
             if "bbox" in model_info:
                 bbox = model_info["bbox"]
                 bbox_size = np.array(bbox["max"]) - np.array(bbox["min"])
-                model_bbox_sizes[model_id] = common.to_tensor(bbox_size * model_scale)
+                model_bbox_sizes[model_id] = common.to_tensor(
+                    bbox_size * model_scale, device=self.device
+                )
             else:
                 raise ValueError(f"Model {model_id} does not have bbox info.")
         self.episode_model_bbox_sizes = model_bbox_sizes
