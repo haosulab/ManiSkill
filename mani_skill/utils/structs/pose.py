@@ -21,10 +21,10 @@ def add_batch_dim(x):
     return x
 
 
-def to_batched_tensor(x: Union[List, Array]):
+def to_batched_tensor(x: Union[List, Array], device: Optional[Device] = None):
     if x is None:
         return None
-    return add_batch_dim(common.to_tensor(x))
+    return add_batch_dim(common.to_tensor(x, device=device))
 
 
 @dataclass
@@ -106,7 +106,7 @@ class Pose:
         if q is None:
             q = torch.zeros((1, 4), device=device)
             q[:, 0] = 1
-        p, q = to_batched_tensor(p), to_batched_tensor(q)
+        p, q = to_batched_tensor(p, device=device), to_batched_tensor(q, device=device)
 
         # correct batch sizes if needed
         if p.shape[0] > q.shape[0]:

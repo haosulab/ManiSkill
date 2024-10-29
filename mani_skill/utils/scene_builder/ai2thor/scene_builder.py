@@ -164,7 +164,7 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
             builder.add_visual_from_file(bg_path, pose=bg_pose)
             builder.add_nonconvex_collision_from_file(bg_path, pose=bg_pose)
             builder.set_scene_idxs(env_idx)
-            bg.initial_pose = sapien.Pose()
+            builder.initial_pose = sapien.Pose()
             bg = builder.build_static(name=f"{unique_id}_scene_background")
             for i, env_num in enumerate(env_idx):
                 bgs[env_num] = bg._objs[i]
