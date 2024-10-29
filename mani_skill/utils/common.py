@@ -146,12 +146,10 @@ def to_tensor(array: Array, device: Optional[Device] = None):
         elif array.dtype == np.uint32:
             array = array.astype(np.int64)
         ret = torch.tensor(array).to(device)
-        if ret.dtype == torch.float64:
-            ret = ret.to(torch.float32)
     else:
         ret = torch.tensor(array, device=device)
     if ret.dtype == torch.float64:
-        ret = ret.float()
+        ret = ret.to(torch.float32)
     return ret
     # if physx.is_gpu_enabled():
     #     if isinstance(array, np.ndarray):
