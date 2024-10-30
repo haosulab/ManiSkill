@@ -258,7 +258,6 @@ class DrawSVG(BaseEnv):
             ) # b, n, 3
             
             self.points = (rot_mat.double() @ self.points.transpose(-1,-2).double()).transpose(-1, -2) # rotation matrix
-            target_pos[:, -1] = 0.01
             self.points += target_pos.unsqueeze(1)
 
             for dot in self.dots:
