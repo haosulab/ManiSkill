@@ -294,7 +294,7 @@ class BaseEnv(gym.Env):
         if obs_mode is None:
             obs_mode = self.SUPPORTED_OBS_MODES[0]
         if obs_mode not in self.SUPPORTED_OBS_MODES:
-            raise NotImplementedError("Unsupported obs mode: {}".format(obs_mode))
+            raise NotImplementedError(f"Unsupported obs mode: {obs_mode}. Must be one of {self.SUPPORTED_OBS_MODES}")
         self._obs_mode = obs_mode
         self._visual_obs_mode_struct = parse_visual_obs_mode_to_struct(self._obs_mode)
 
