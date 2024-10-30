@@ -1,5 +1,6 @@
 
 import sapien
+import numpy as np
 
 from mani_skill.examples.motionplanning.panda_stick.motionplanner import \
     PandaStickMotionPlanningSolver
@@ -24,9 +25,12 @@ def solve(env, seed=None, debug=False, vis=False):
 
     rot = list(env.agent.tcp.pose.get_q()[0].cpu().numpy())
     res = None
-    for point in env.points[0]:
+    for i, point in enumerate(env.points[0]):
         reach_pose = sapien.Pose(p=list(point.cpu().numpy()), q=rot)
         res = planner.move_to_pose_with_screw(reach_pose)
+        
+        if i-1 in env.disconts:
+            res = planner.move_to_pose_with_screw(sapien.Pose(p=list(point.cpu().numpy() + np.array([0,0,0.1])), q=rot))
 
     planner.close()
     return res

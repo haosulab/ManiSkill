@@ -2,9 +2,6 @@ import math
 import random
 from typing import Dict
 
-
-
-
 import mani_skill.envs.utils.randomization as randomization
 import numpy as np
 import sapien
@@ -20,8 +17,7 @@ from mani_skill.utils.scene_builder.table.scene_builder import \
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import SceneConfig, SimConfig
-from transforms3d.euler import euler2quat, quat2euler
-from transforms3d.quaternions import quat2mat
+from transforms3d.euler import euler2quat
 
 import svgpathtools
 from svgpathtools import Line, QuadraticBezier, CubicBezier
@@ -51,7 +47,7 @@ class DrawSVG(BaseEnv):
 
     def __init__(self, *args, svg=None, robot_uids="panda_stick", **kwargs):
         if svg == None:
-            self.svg ="M316.9 18C311.6 7 300.4 0 288.1 0s-23.4 7-28.8 18L195 150.3 51.4 171.5c-12 1.8-22 10.2-25.7 21.7s-.7 24.2 7.9 32.7L137.8 329 113.2 474.7c-2 12 3 24.2 12.9 31.3s23 8 33.8 2.3l128.3-68.5 128.3 68.5c10.8 5.7 23.9 4.9 33.8-2.3s14.9-19.3 12.9-31.3L438.5 329 542.7 225.9c8.6-8.5 11.7-21.2 7.9-32.7s-13.7-19.9-25.7-21.7L381.2 150.3 316.9 18z"
+            self.svg ="""M88 0C74.7 0 64 10.7 64 24c0 38.9 23.4 59.4 39.1 73.1l1.1 1C120.5 112.3 128 119.9 128 136c0 13.3 10.7 24 24 24s24-10.7 24-24c0-38.9-23.4-59.4-39.1-73.1l-1.1-1C119.5 47.7 112 40.1 112 24c0-13.3-10.7-24-24-24zM32 192c-17.7 0-32 14.3-32 32L0 416c0 53 43 96 96 96l192 0c53 0 96-43 96-96l16 0c61.9 0 112-50.1 112-112s-50.1-112-112-112l-48 0L32 192zm352 64l16 0c26.5 0 48 21.5 48 48s-21.5 48-48 48l-16 0 0-96zM224 24c0-13.3-10.7-24-24-24s-24 10.7-24 24c0 38.9 23.4 59.4 39.1 73.1l1.1 1C232.5 112.3 240 119.9 240 136c0 13.3 10.7 24 24 24s24-10.7 24-24c0-38.9-23.4-59.4-39.1-73.1l-1.1-1C231.5 47.7 224 40.1 224 24z"""
         else:
             self.svg = svg
 
@@ -145,8 +141,6 @@ class DrawSVG(BaseEnv):
 
         parsed_svg = svgpathtools.parse_path(self.svg)
         
-        if not parsed_svg.iscontinuous():
-            raise ValueError("SVG path must be continuous")
         lines = []
         for path in parsed_svg:
             if isinstance(path,QuadraticBezier) or isinstance(path, CubicBezier):
@@ -155,12 +149,18 @@ class DrawSVG(BaseEnv):
                     lines.append([pts[i],pts[i+1]])
             if isinstance(path, Line):
                 lines.append([[p.real, p.imag] for p in path.bpoints()])
-        lines = np.array(lines) # n, 2, 2
+        lines = np.array(lines) # n, 2, 2 
         lines = (lines / np.max(lines)) * 0.25 # scale the svg down to fit
         lines = np.concatenate([lines, np.ones((*lines.shape[:-1],1)) * 0.01], -1) # b, 2, 3
         center = lines[:,:1,:].mean(axis=0) * np.array([[1,1,0]]) # calculate transform to be in range of arm
         lines = lines - center
-        self.original_points = np.concatenate((lines[:1,0],lines[:,1,:])) 
+        if not parsed_svg.iscontinuous():
+
+            disconts = lines[1:,0] -lines[:-1,1]
+            self.disconts = list(np.nonzero(np.logical_or(disconts[:,0], disconts[:,1]))[0]) # indices of where the discontinuities are ie. [1,]: discont betw ind 1 and 2
+            self.continuous = False
+
+        self.original_points = np.concatenate((lines[:1,0],lines[:,1,:]))
 
         def create_goal_outline(name="svg", base_color=None):
             midpoints = np.mean(lines, axis=1) # midpoints of line segments
