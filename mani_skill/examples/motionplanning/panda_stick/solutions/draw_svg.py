@@ -23,38 +23,10 @@ def solve(env, seed=None, debug=False, vis=False):
     
 
     rot = list(env.agent.tcp.pose.get_q()[0].cpu().numpy())
-    for point in env.original_points:
-        reach_pose = sapien.Pose(p=list(point), q=rot)
+    res = None
+    for point in env.points[0]:
+        reach_pose = sapien.Pose(p=list(point.cpu().numpy()), q=rot)
         res = planner.move_to_pose_with_screw(reach_pose)
-        
-
-    # # -------------------------------------------------------------------------- #
-    # # Move to first vertex
-    # # -------------------------------------------------------------------------- #
-
-    # reach_pose = sapien.Pose(p=list(env.vertices[0, 0].numpy()), q=rot)
-    # res = planner.move_to_pose_with_screw(reach_pose)
-
-    # # -------------------------------------------------------------------------- #
-    # # Move to second vertex
-    # # -------------------------------------------------------------------------- #
-
-    # reach_pose = sapien.Pose(p=list(env.vertices[0, 1]), q=rot)
-    # res = planner.move_to_pose_with_screw(reach_pose)
-    
-    # # -------------------------------------------------------------------------- #
-    # # Move to third vertex
-    # # -------------------------------------------------------------------------- #
-
-    # reach_pose = sapien.Pose(p=list(env.vertices[0, 2]), q=rot)
-    # res = planner.move_to_pose_with_screw(reach_pose)
-
-    # # -------------------------------------------------------------------------- #
-    # # Move back to first vertex
-    # # -------------------------------------------------------------------------- #
-
-    # reach_pose = sapien.Pose(p=list(env.vertices[0, 0]), q=rot)
-    # res = planner.move_to_pose_with_screw(reach_pose)
 
     planner.close()
     return res

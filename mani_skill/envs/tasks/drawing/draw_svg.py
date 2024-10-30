@@ -51,11 +51,7 @@ class DrawSVG(BaseEnv):
 
     def __init__(self, *args, svg=None, robot_uids="panda_stick", **kwargs):
         if svg == None:
-            self.svg = """M 100,30
-                C 60,30 30,60 30,100
-                C 30,140 60,170 100,190
-                C 140,170 170,140 170,100
-                C 170,60 140,30 100,30"""
+            self.svg ="M316.9 18C311.6 7 300.4 0 288.1 0s-23.4 7-28.8 18L195 150.3 51.4 171.5c-12 1.8-22 10.2-25.7 21.7s-.7 24.2 7.9 32.7L137.8 329 113.2 474.7c-2 12 3 24.2 12.9 31.3s23 8 33.8 2.3l128.3-68.5 128.3 68.5c10.8 5.7 23.9 4.9 33.8-2.3s14.9-19.3 12.9-31.3L438.5 329 542.7 225.9c8.6-8.5 11.7-21.2 7.9-32.7s-13.7-19.9-25.7-21.7L381.2 150.3 316.9 18z"
         else:
             self.svg = svg
 
@@ -110,7 +106,7 @@ class DrawSVG(BaseEnv):
         
 
 
-        def bezier_points(points, num_points=10):
+        def bezier_points(points, num_points=5):
             """
             Generate points along a quadratic or cubic Bezier curve using numpy.
             
@@ -159,24 +155,26 @@ class DrawSVG(BaseEnv):
                     lines.append([pts[i],pts[i+1]])
             if isinstance(path, Line):
                 lines.append([[p.real, p.imag] for p in path.bpoints()])
-        lines = np.array(lines)
-        lines = (lines / np.max(lines)) * 0.3
-        lines = np.concatenate([lines, np.ones((*lines.shape[:-1],1)) * 0.02], -1)
-        center = lines[:,:1,:].mean(axis=0) * np.array([[1,1,0]])
+        lines = np.array(lines) # n, 2, 2
+        lines = (lines / np.max(lines)) * 0.25 # scale the svg down to fit
+        lines = np.concatenate([lines, np.ones((*lines.shape[:-1],1)) * 0.01], -1) # b, 2, 3
+        center = lines[:,:1,:].mean(axis=0) * np.array([[1,1,0]]) # calculate transform to be in range of arm
         lines = lines - center
-        self.original_points = np.concatenate((lines[:1,0],lines[:,1,:]))
+        self.original_points = np.concatenate((lines[:1,0],lines[:,1,:])) 
 
         def create_goal_outline(name="svg", base_color=None):
-            midpoints = np.mean(lines, axis=1)
+            midpoints = np.mean(lines, axis=1) # midpoints of line segments
             box_half_ws = np.linalg.norm(lines[:,1]-lines[:,0], axis=1) / 2
 
             box_half_h = 0.01 / 2
             half_thickness = 0.001 / 2
             mids = midpoints[:,:2]
-            ends = lines[:,1,:2] # 36, 2
-            vec = ends-mids
-            print(vec)
-            angles = np.arccos(vec.dot(np.array([0,-1])) / (box_half_ws*2))
+            ends = lines[:,1,:2] # n, 2
+
+            # calculate rot angles abt z axis
+            vec = ends-mids 
+            angles = np.arctan2(vec[:,1], vec[:,0]) 
+            
 
             builder = self.scene.create_actor_builder()
             for i,m in enumerate(midpoints):
@@ -235,9 +233,9 @@ class DrawSVG(BaseEnv):
                 )
                 actor = builder.build_kinematic(name=f"dot_{i}")
                 self.dots.append(actor)
-        self.goal_tri = create_goal_outline(
+        self.goal_outline = create_goal_outline(
             name="goal_tri",
-            base_color=np.array([10, 10, 10,255]) / 255,
+            base_color=np.array([10, 10, 10, 255]) / 255,
         )
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
@@ -245,29 +243,23 @@ class DrawSVG(BaseEnv):
         with torch.device(self.device):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)
-            # target_pos = torch.zeros((b, 3))
+            target_pos = torch.zeros((b, 3))
 
-            # target_pos[:, :2] = torch.rand((b, 2)) * 0.02 - 0.1
-            # target_pos[:, -1] = 0.01
-            # qs = randomization.random_quaternions(b, lock_x=True, lock_y=True)
-            # mats = quaternion_to_matrix(qs).to(self.device)
-            # self.goal_tri.set_pose(Pose.create_from_pq(p=target_pos, q=qs))
+            target_pos[:, :2] = torch.rand((b, 2)) * 0.02 - 0.1
+            target_pos[:, -1] = 0.01
+            qs = randomization.random_quaternions(b, lock_x=True, lock_y=True)
+            rot_mat = quaternion_to_matrix(qs).to(self.device)
+            self.goal_outline.set_pose(Pose.create_from_pq(p=target_pos, q=qs))
 
-            # self.vertices = torch.from_numpy(
-            #     np.tile(self.original_verts, (b, 1, 1))
-            # ).to(
-            #     self.device
-            # )  # b, 3, 3
-            # self.vertices = (
-            #     mats.double() @ self.vertices.transpose(-1, -2).double()
-            # ).transpose(
-            #     -1, -2
-            # )  # apply rotation matrix
-            # self.vertices += target_pos.unsqueeze(1)
-
-            # self.triangles = self.generate_triangle_with_points(
-            #     100, self.vertices[:, :, :-1]
-            # )
+            self.points = torch.from_numpy(
+                np.tile(self.original_points, (b, 1, 1)) 
+            ).to(
+                self.device
+            ) # b, n, 3
+            
+            self.points = (rot_mat.double() @ self.points.transpose(-1,-2).double()).transpose(-1, -2) # rotation matrix
+            target_pos[:, -1] = 0.01
+            self.points += target_pos.unsqueeze(1)
 
             for dot in self.dots:
                 # initially spawn dots in the table so they aren't seen
@@ -332,34 +324,17 @@ class DrawSVG(BaseEnv):
 
         return obs
 
-    def generate_triangle_with_points(self, n, vertices):
-        batch_size = vertices.shape[0]
 
-        all_points = []
+    # def success_check(self):
+    #     if self.dot_pos == None or len(self.dot_pos) == 0:
+    #         return torch.Tensor([False]).to(bool)
+    #     drawn_pts = self.dot_pos[:, :, :-1]
 
-        for i in range(vertices.shape[1]):
-            start_vertex = vertices[:, i, :]
-            end_vertex = vertices[:, (i + 1) % vertices.shape[1], :]
-            t = torch.linspace(0, 1, n + 2, device=vertices.device)[:-1]
-            t = t.view(1, -1, 1).repeat(batch_size, 1, 2)
-            intermediate_points = (
-                start_vertex.unsqueeze(1) * (1 - t) + end_vertex.unsqueeze(1) * t
-            )
-            all_points.append(intermediate_points)
-        all_points = torch.cat(all_points, dim=1)
+    #     distance_matrix = torch.sqrt(
+    #         torch.sum(
+    #             (drawn_pts[:, :, None, :] - self.triangles[:, None, :, :]) ** 2, axis=-1
+    #         )
+    #     )
 
-        return all_points
-
-    def success_check(self):
-        if self.dot_pos == None or len(self.dot_pos) == 0:
-            return torch.Tensor([False]).to(bool)
-        drawn_pts = self.dot_pos[:, :, :-1]
-
-        distance_matrix = torch.sqrt(
-            torch.sum(
-                (drawn_pts[:, :, None, :] - self.triangles[:, None, :, :]) ** 2, axis=-1
-            )
-        )
-
-        Y_closeness = torch.min(distance_matrix, dim=1).values < self.THRESHOLD
-        return torch.Tensor([torch.all(Y_closeness)]).to(bool)
+    #     Y_closeness = torch.min(distance_matrix, dim=1).values < self.THRESHOLD
+    #     return torch.Tensor([torch.all(Y_closeness)]).to(bool)
