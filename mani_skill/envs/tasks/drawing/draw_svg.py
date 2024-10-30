@@ -305,35 +305,35 @@ class DrawSVG(BaseEnv):
             self.scene._gpu_apply_all()
 
     def evaluate(self):
-        # out = self.success_check()
-        return {"success": torch.zeros(self.num_envs).to(bool)}
+        out = self.success_check()
+        return {"success": out}
 
     def _get_obs_extra(self, info: Dict):
         obs = dict(
             tcp_pose=self.agent.tcp.pose.raw_pose,
         )
 
-        # if "state" in self.obs_mode:
-        #     obs.update(
-        #         goal_pose = self.goal_tri.pose.raw_pose,
-        #         tcp_to_verts_pos = self.vertices - self.agent.tcp.pose.p.unsqueeze(1),
-        #         goal_pos=self.goal_tri.pose.p,
-        #         vertices = self.vertices
-        #     )
+        if "state" in self.obs_mode:
+            obs.update(
+                goal_pose = self.goal_outline.pose.raw_pose,
+                tcp_to_verts_pos = self.points - self.agent.tcp.pose.p.unsqueeze(1),
+                goal_pos=self.goal_outline.pose.p,
+                vertices = self.points
+            )
 
         return obs
 
 
-    # def success_check(self):
-    #     if self.dot_pos == None or len(self.dot_pos) == 0:
-    #         return torch.Tensor([False]).to(bool)
-    #     drawn_pts = self.dot_pos[:, :, :-1]
+    def success_check(self):
+        if self.dot_pos == None or len(self.dot_pos) == 0:
+            return torch.Tensor([False]).to(bool)
+        drawn_pts = self.dot_pos[:, :, :-1]
 
-    #     distance_matrix = torch.sqrt(
-    #         torch.sum(
-    #             (drawn_pts[:, :, None, :] - self.triangles[:, None, :, :]) ** 2, axis=-1
-    #         )
-    #     )
+        distance_matrix = torch.sqrt(
+            torch.sum(
+                (drawn_pts[:, :, None, :] - self.points[:, None, :, :2]) ** 2, axis=-1
+            )
+        )
 
-    #     Y_closeness = torch.min(distance_matrix, dim=1).values < self.THRESHOLD
-    #     return torch.Tensor([torch.all(Y_closeness)]).to(bool)
+        Y_closeness = torch.min(distance_matrix, dim=1).values < self.THRESHOLD
+        return torch.Tensor([torch.all(Y_closeness)]).to(bool)
