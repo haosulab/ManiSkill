@@ -94,6 +94,8 @@ class BaseDigitalTwinEnv(BaseEnv):
         for camera_name in self.rgb_overlay_paths.keys():
             sensor = self._sensor_configs[camera_name]
             if isinstance(sensor, CameraConfig):
+                if isinstance(self._rgb_overlay_images[camera_name], torch.Tensor):
+                    continue
                 rgb_overlay_img = cv2.resize(
                     self._rgb_overlay_images[camera_name], (sensor.width, sensor.height)
                 )
