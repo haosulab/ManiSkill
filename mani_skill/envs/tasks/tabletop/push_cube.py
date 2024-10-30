@@ -18,6 +18,7 @@ See comments for how to make your own environment and what each required functio
 from typing import Any, Dict, Union
 
 import numpy as np
+import sapien
 import torch
 import torch.random
 from transforms3d.euler import euler2quat
@@ -100,6 +101,10 @@ class PushCubeEnv(BaseEnv):
             "render_camera", pose=pose, width=512, height=512, fov=1, near=0.01, far=100
         )
 
+    def _load_agent(self, options: dict):
+        # set a reasonable initial pose for the agent that doesn't intersect other objects
+        super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
+
     def _load_scene(self, options: dict):
         # we use a prebuilt scene builder class that automatically loads in a floor and table.
         self.table_scene = TableSceneBuilder(
@@ -109,12 +114,14 @@ class PushCubeEnv(BaseEnv):
 
         # we then add the cube that we want to push and give it a color and size using a convenience build_cube function
         # we specify the body_type to be "dynamic" as it should be able to move when touched by other objects / the robot
+        # finally we specify an initial pose for the cube so that it doesn't collide with other objects initially
         self.obj = actors.build_cube(
             self.scene,
             half_size=self.cube_half_size,
             color=np.array([12, 42, 160, 255]) / 255,
             name="cube",
             body_type="dynamic",
+            initial_pose=sapien.Pose(p=[0, 0, self.cube_half_size]),
         )
 
         # we also add in red/white target to visualize where we want the cube to be pushed to

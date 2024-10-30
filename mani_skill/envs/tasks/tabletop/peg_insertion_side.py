@@ -89,17 +89,20 @@ class PegInsertionSideEnv(BaseEnv):
         pose = sapien_utils.look_at([0.5, -0.5, 0.8], [0.05, -0.1, 0.4])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
+
     def _load_scene(self, options: dict):
         with torch.device(self.device):
             self.table_scene = TableSceneBuilder(self)
             self.table_scene.build()
 
-            lengths = self._episode_rng.uniform(0.085, 0.125, size=(self.num_envs,))
-            radii = self._episode_rng.uniform(0.015, 0.025, size=(self.num_envs,))
+            lengths = self._batched_episode_rng.uniform(0.085, 0.125)
+            radii = self._batched_episode_rng.uniform(0.015, 0.025)
             centers = (
                 0.5
                 * (lengths - radii)[:, None]
-                * self._episode_rng.uniform(-1, 1, size=(self.num_envs, 2))
+                * self._batched_episode_rng.uniform(-1, 1, size=(2,))
             )
 
             # save some useful values for use later
@@ -145,6 +148,7 @@ class PegInsertionSideEnv(BaseEnv):
                     half_size=[length / 2, radius, radius],
                     material=mat,
                 )
+                builder.initial_pose = sapien.Pose(p=[0, 0, 0.1])
                 builder.set_scene_idxs(scene_idxs)
                 peg = builder.build(f"peg_{i}")
 
@@ -158,6 +162,7 @@ class PegInsertionSideEnv(BaseEnv):
                 builder = _build_box_with_hole(
                     self.scene, inner_radius, outer_radius, depth, center=centers[i]
                 )
+                builder.initial_pose = sapien.Pose(p=[0, 1, 0.1])
                 builder.set_scene_idxs(scene_idxs)
                 box = builder.build_kinematic(f"box_with_hole_{i}")
 

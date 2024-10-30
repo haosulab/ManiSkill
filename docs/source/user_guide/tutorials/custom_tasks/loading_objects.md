@@ -11,12 +11,15 @@ ManiSkill provides two ways to load actors, loading directly from existing simul
 ManiSkill supports easily loading assets from existing datasets such as the YCB dataset. In the beta release this is the only asset database available, more will be provided once we finish integrating a 3D asset database system.
 
 ```python
+import sapien
 from mani_skill.utils.building import actors
 def _load_scene(self, options):
     builder = actors.get_actor_builder(
         self.scene,
         id=f"ycb:{model_id}",
     )
+    # choose a reasonable initial pose that doesn't intersect other objects
+    builder.inital_pose = sapien.Pose(p=[0, 0, 0.5])
     builder.build(name="object")
 ```
 
@@ -45,6 +48,9 @@ def _load_scene(self, options):
     builder = articulations.get_articulation_builder(
         self.scene, f"partnet-mobility:{model_id}"
     )
+    # choose a reasonable initial pose that doesn't intersect other objects
+    # this matters a lot for articulations in GPU sim or else simulation bugs can occur
+    builder.inital_pose = sapien.Pose(p=[0, 0, 0.5])
     builder.build(name="object")
 ```
 
@@ -69,8 +75,11 @@ def _load_scene(self, options):
     loader = scene.create_urdf_loader()
     # the .parse function can also parse multiple articulations
     # actors and cameras but we only use the articulations
-    articulation_builders, _, _ = loader.parse(str(urdf_path))
+    articulation_builders = loader.parse(str(urdf_path))["articulation_builders"]
     builder = articulation_builders[0]
+    # choose a reasonable initial pose that doesn't intersect other objects
+    # this matters a lot for articulations in GPU sim or else simulation bugs can occur
+    builder.initial_pose = sapien.Pose(p=[0, 0, 0.5])
     builder.build(name="my_articulation")
 ```
 
@@ -99,7 +108,7 @@ def _load_scene(self, options):
     # you can set this to True to try and load them
     loader.load_multiple_collisions_from_file = True
 
-    articulation_builders, _, _ = loader.parse(str(urdf_path))
+    articulation_builders = loader.parse(str(urdf_path))["articulation_builders"]
     builder = articulation_builders[0]
     builder.build(name="my_articulation")
 ```

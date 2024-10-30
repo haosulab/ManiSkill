@@ -98,6 +98,9 @@ class PickClutterEnv(BaseEnv):
     def _load_model(self, model_id: str) -> ActorBuilder:
         raise NotImplementedError()
 
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
+
     def _load_scene(self, options: dict):
         self.scene_builder = TableSceneBuilder(
             self, robot_init_qpos_noise=self.robot_init_qpos_noise
@@ -105,12 +108,7 @@ class PickClutterEnv(BaseEnv):
         self.scene_builder.build()
 
         # sample some clutter configurations
-        eps_idxs = np.arange(0, len(self._episodes))
-        rand_idx = torch.randperm(len(eps_idxs), device=torch.device("cpu"))
-        eps_idxs = eps_idxs[rand_idx]
-        eps_idxs = np.concatenate(
-            [eps_idxs] * np.ceil(self.num_envs / len(eps_idxs)).astype(int)
-        )[: self.num_envs]
+        eps_idxs = self._batched_episode_rng.randint(0, len(self._episodes))
 
         self.selectable_target_objects: List[List[Actor]] = []
         """for each sub-scene, a list of objects that can be selected as targets"""
@@ -140,6 +138,7 @@ class PickClutterEnv(BaseEnv):
             name="goal_site",
             body_type="kinematic",
             add_collision=False,
+            initial_pose=sapien.Pose(),
         )
         self._hidden_objects.append(self.goal_site)
 

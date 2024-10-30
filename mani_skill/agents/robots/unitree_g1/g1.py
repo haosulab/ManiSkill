@@ -19,8 +19,25 @@ class UnitreeG1(BaseAgent):
     keyframes = dict(
         standing=Keyframe(
             pose=sapien.Pose(p=[0, 0, 0.755]),
-            qpos=np.array([0.0] * 37) * 1,
-        )
+            # fmt: off
+            qpos=np.array(
+                [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.2, -0.2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.9, 0.9, 0.0, 0.0, 0.0, 0.0, 0.0, -0.77, -0.77, 0.0, 0.77, 0.77, 0.1, -0.92, -0.92, -0.1, 0.92, 0.92, 0.92, -0.92]
+            ),
+        ),
+        right_knee_up=Keyframe(
+            pose=sapien.Pose(p=[0, 0, 0.755]),
+            # fmt: off
+            qpos=np.array(
+                [0.0, -1.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.2, -0.2, 0.0, 1.5, 0.0, 0.0, 0.0, 0.0, 0.9, 0.9, 0.0, 0.0, 0.0, 0.0, 0.0, -0.77, -0.77, 0.0, 0.77, 0.77, 0.1, -0.92, -0.92, -0.1, 0.92, 0.92, 0.92, -0.92]
+            ),
+        ),
+        left_knee_up=Keyframe(
+            pose=sapien.Pose(p=[0, 0, 0.755]),
+            # fmt: off
+            qpos=np.array(
+                [-1.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.2, -0.2, 1.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.9, 0.9, 0.0, 0.0, 0.0, 0.0, 0.0, -0.77, -0.77, 0.0, 0.77, 0.77, 0.1, -0.92, -0.92, -0.1, 0.92, 0.92, 0.92, -0.92]
+            ),
+        ),
     )
 
     body_joints = [
@@ -65,6 +82,52 @@ class UnitreeG1(BaseAgent):
     body_stiffness = 50
     body_damping = 1
     body_force_limit = 100
+
+    lower_body_joints = [
+        "left_hip_pitch_joint",
+        "right_hip_pitch_joint",
+        "left_hip_roll_joint",
+        "right_hip_roll_joint",
+        "left_hip_yaw_joint",
+        "right_hip_yaw_joint",
+        "left_knee_joint",
+        "right_knee_joint",
+        "left_ankle_pitch_joint",
+        "right_ankle_pitch_joint",
+        "left_ankle_roll_joint",
+        "right_ankle_roll_joint",
+    ]
+    upper_body_joints = [
+        "torso_joint",
+        "left_shoulder_pitch_joint",
+        "right_shoulder_pitch_joint",
+        "left_shoulder_roll_joint",
+        "right_shoulder_roll_joint",
+        "left_shoulder_yaw_joint",
+        "right_shoulder_yaw_joint",
+        "left_elbow_pitch_joint",
+        "right_elbow_pitch_joint",
+        "left_elbow_roll_joint",
+        "right_elbow_roll_joint",
+    ]
+    left_hand_joints = [
+        "left_zero_joint",
+        "left_three_joint",
+        "left_five_joint",
+        "left_one_joint",
+        "left_four_joint",
+        "left_six_joint",
+        "left_two_joint",
+    ]
+    right_hand_joints = [
+        "right_zero_joint",
+        "right_three_joint",
+        "right_five_joint",
+        "right_one_joint",
+        "right_four_joint",
+        "right_six_joint",
+        "right_two_joint",
+    ]
 
     @property
     def _controller_configs(self):

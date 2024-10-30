@@ -121,7 +121,7 @@ def initialize_data_sources():
 
     DATA_SOURCES["ReplicaCADRearrange"] = DataSource(
         source_type="scene",
-        url="https://huggingface.co/datasets/haosulab/ReplicaCADRearrange/resolve/main/v1_extracted.zip",
+        url="https://huggingface.co/datasets/haosulab/ReplicaCADRearrange/resolve/main/rearrange.zip",
         target_path="scene_datasets/replica_cad_dataset/rearrange",
     )
 
@@ -129,6 +129,12 @@ def initialize_data_sources():
         source_type="scene",
         url="https://huggingface.co/datasets/haosulab/AI2THOR/resolve/main/ai2thor.zip",
         target_path="scene_datasets/ai2thor",
+    )
+
+    DATA_SOURCES["RoboCasa"] = DataSource(
+        source_type="scene",
+        url="https://huggingface.co/datasets/haosulab/RoboCasa/resolve/main/robocasa_dataset.zip",
+        target_path="scene_datasets/robocasa_dataset",
     )
 
     # Robots

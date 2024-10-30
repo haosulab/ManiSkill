@@ -1,10 +1,12 @@
 
+from collections import defaultdict
 from dataclasses import dataclass
 import os
 import random
 import time
 from typing import Optional
 
+from mani_skill.utils import gym_utils
 from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper
 from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
@@ -33,9 +35,9 @@ class Args:
     """if toggled, cuda will be enabled by default"""
     track: bool = False
     """if toggled, this experiment will be tracked with Weights and Biases"""
-    wandb_project_name: str = "cleanRL"
+    wandb_project_name: str = "ManiSkill"
     """the wandb's project name"""
-    wandb_entity: str = None
+    wandb_entity: Optional[str] = None
     """the entity (team) of wandb's project"""
     evaluate: bool = False
     """if toggled, only runs evaluation with the given model checkpoint and saves the evaluation trajectories"""
@@ -55,6 +57,8 @@ class Args:
     """the number of parallel evaluation environments"""
     num_eval_steps: int = 50
     """the number of steps to take in evaluation environments"""
+    reconfiguration_freq: Optional[int] = 1
+    """for benchmarking purposes we want to reconfigure the eval environment each reset to ensure objects are randomized in some tasks"""
     log_freq: int = 1_000
     """logging frequency in terms of environment steps"""
     eval_freq: int = 100_000
@@ -236,6 +240,17 @@ class Actor(nn.Module):
         self.action_bias = self.action_bias.to(device)
         return super().to(device)
 
+class Logger:
+    def __init__(self, log_wandb=False, tensorboard: SummaryWriter = None) -> None:
+        self.writer = tensorboard
+        self.log_wandb = log_wandb
+    def add_scalar(self, tag, scalar_value, step):
+        if self.log_wandb:
+            wandb.log({tag: scalar_value}, step=step)
+        self.writer.add_scalar(tag, scalar_value, step)
+    def close(self):
+        self.writer.close()
+
 if __name__ == "__main__":
     args = tyro.cli(Args)
     args.grad_steps_per_iteration = int(args.training_freq * args.utd)
@@ -245,29 +260,6 @@ if __name__ == "__main__":
         run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
     else:
         run_name = args.exp_name
-
-    writer = None
-    if not args.evaluate:
-        print("Running training")
-        if args.track:
-            import wandb
-
-            wandb.init(
-                project=args.wandb_project_name,
-                entity=args.wandb_entity,
-                sync_tensorboard=True,
-                config=vars(args),
-                name=run_name,
-                monitor_gym=True,
-                save_code=True,
-            )
-        writer = SummaryWriter(f"runs/{run_name}")
-        writer.add_text(
-            "hyperparameters",
-            "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
-        )
-    else:
-        print("Running evaluation")
 
     # TRY NOT TO MODIFY: seeding
     random.seed(args.seed)
@@ -280,7 +272,7 @@ if __name__ == "__main__":
     # env setup
     env_kwargs = dict(obs_mode="state", control_mode="pd_joint_delta_pos", render_mode="rgb_array", sim_backend="gpu")
     envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, **env_kwargs)
-    eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, **env_kwargs)
+    eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, reconfiguration_freq=args.reconfiguration_freq, **env_kwargs)
     if isinstance(envs.action_space, gym.spaces.Dict):
         envs = FlattenActionSpaceWrapper(envs)
         eval_envs = FlattenActionSpaceWrapper(eval_envs)
@@ -293,10 +285,37 @@ if __name__ == "__main__":
             save_video_trigger = lambda x : (x // args.num_steps) % args.save_train_video_freq == 0
             envs = RecordEpisode(envs, output_dir=f"runs/{run_name}/train_videos", save_trajectory=False, save_video_trigger=save_video_trigger, max_steps_per_video=args.num_steps, video_fps=30)
         eval_envs = RecordEpisode(eval_envs, output_dir=eval_output_dir, save_trajectory=args.evaluate, trajectory_name="trajectory", max_steps_per_video=args.num_eval_steps, video_fps=30)
-    envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=not args.partial_reset, **env_kwargs)
-    eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=not args.partial_reset, **env_kwargs)
+    envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=not args.partial_reset, record_metrics=True)
+    eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=True, record_metrics=True)
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
+    max_episode_steps = gym_utils.find_max_episode_steps_value(envs._env)
+    logger = None
+    if not args.evaluate:
+        print("Running training")
+        if args.track:
+            import wandb
+            config = vars(args)
+            config["env_cfg"] = dict(**env_kwargs, num_envs=args.num_envs, env_id=args.env_id, reward_mode="normalized_dense", env_horizon=max_episode_steps, partial_reset=args.partial_reset)
+            config["eval_env_cfg"] = dict(**env_kwargs, num_envs=args.num_eval_envs, env_id=args.env_id, reward_mode="normalized_dense", env_horizon=max_episode_steps, partial_reset=False)
+            wandb.init(
+                project=args.wandb_project_name,
+                entity=args.wandb_entity,
+                sync_tensorboard=False,
+                config=config,
+                name=run_name,
+                save_code=True,
+                group="PPO",
+                tags=["ppo", "walltime_efficient"]
+            )
+        writer = SummaryWriter(f"runs/{run_name}")
+        writer.add_text(
+            "hyperparameters",
+            "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
+        )
+        logger = Logger(log_wandb=args.track, tensorboard=writer)
+    else:
+        print("Running evaluation")
 
     max_action = float(envs.single_action_space.high[0])
 
@@ -344,46 +363,30 @@ if __name__ == "__main__":
     global_steps_per_iteration = args.num_envs * (args.steps_per_env)
 
     while global_step < args.total_timesteps:
-        print(f"Global Step: {global_step}")
         if args.eval_freq > 0 and (global_step - args.training_freq) // args.eval_freq < global_step // args.eval_freq:
             # evaluate
             actor.eval()
             print("Evaluating")
-            eval_envs.reset()
-            returns = []
-            eps_lens = []
-            successes = []
-            failures = []
+            eval_obs, _ = eval_envs.reset()
+            eval_metrics = defaultdict(list)
+            num_episodes = 0
             for _ in range(args.num_eval_steps):
                 with torch.no_grad():
-                    eval_obs, _, eval_terminations, eval_truncations, eval_infos = eval_envs.step(actor.get_eval_action(eval_obs))
+                    eval_obs, eval_rew, eval_terminations, eval_truncations, eval_infos = eval_envs.step(actor.get_eval_action(eval_obs))
                     if "final_info" in eval_infos:
                         mask = eval_infos["_final_info"]
-                        eps_lens.append(eval_infos["final_info"]["elapsed_steps"][mask].cpu().numpy())
-                        returns.append(eval_infos["final_info"]["episode"]["r"][mask].cpu().numpy())
-                        if "success" in eval_infos:
-                            successes.append(eval_infos["final_info"]["success"][mask].cpu().numpy())
-                        if "fail" in eval_infos:
-                            failures.append(eval_infos["final_info"]["fail"][mask].cpu().numpy())
-            returns = np.concatenate(returns)
-            eps_lens = np.concatenate(eps_lens)
-            print(f"Evaluated {args.num_eval_steps * args.num_eval_envs} steps resulting in {len(eps_lens)} episodes")
-            if len(successes) > 0:
-                successes = np.concatenate(successes)
-                if writer is not None: writer.add_scalar("charts/eval_success_rate", successes.mean(), global_step)
-                print(f"eval_success_rate={successes.mean()}")
-            if len(failures) > 0:
-                failures = np.concatenate(failures)
-                if writer is not None: writer.add_scalar("charts/eval_fail_rate", failures.mean(), global_step)
-                print(f"eval_fail_rate={failures.mean()}")
-
-            print(f"eval_episodic_return={returns.mean()}")
-            if writer is not None:
-                writer.add_scalar("charts/eval_episodic_return", returns.mean(), global_step)
-                writer.add_scalar("charts/eval_episodic_length", eps_lens.mean(), global_step)
-            actor.train()
+                        num_episodes += mask.sum()
+                        for k, v in eval_infos["final_info"]["episode"].items():
+                            eval_metrics[k].append(v)
+            print(f"Evaluated {args.num_eval_steps * args.num_eval_envs} steps resulting in {num_episodes} episodes")
+            for k, v in eval_metrics.items():
+                mean = torch.stack(v).float().mean()
+                if logger is not None:
+                    logger.add_scalar(f"eval/{k}", mean, global_step)
+                print(f"eval_{k}_mean={mean}")
             if args.evaluate:
                 break
+            actor.train()
 
             if args.save_model:
                 model_path = f"runs/{run_name}/ckpt_{global_step}.pt"
@@ -406,7 +409,6 @@ if __name__ == "__main__":
             else:
                 actions, _, _ = actor.get_action(obs)
                 actions = actions.detach()
-                # actions = actions.detach().cpu().numpy()
 
             # TRY NOT TO MODIFY: execute the game and log data.
             next_obs, rewards, terminations, truncations, infos = envs.step(actions)
@@ -419,13 +421,8 @@ if __name__ == "__main__":
                 final_info = infos["final_info"]
                 done_mask = infos["_final_info"]
                 real_next_obs[done_mask] = infos["final_observation"][done_mask]
-                episodic_return = final_info['episode']['r'][done_mask].cpu().numpy().mean()
-                if "success" in final_info:
-                    writer.add_scalar("charts/success_rate", final_info["success"][done_mask].cpu().numpy().mean(), global_step)
-                if "fail" in final_info:
-                    writer.add_scalar("charts/fail_rate", final_info["fail"][done_mask].cpu().numpy().mean(), global_step)
-                writer.add_scalar("charts/episodic_return", episodic_return, global_step)
-                writer.add_scalar("charts/episodic_length", final_info["elapsed_steps"][done_mask].cpu().numpy().mean(), global_step)
+                for k, v in final_info["episode"].items():
+                    logger.add_scalar(f"train/{k}", v[done_mask].float().mean(), global_step)
 
             rb.add(obs, real_next_obs, actions, rewards, next_done)
 
@@ -498,18 +495,19 @@ if __name__ == "__main__":
 
         # Log training-related data
         if (global_step - args.training_freq) // args.log_freq < global_step // args.log_freq:
-            writer.add_scalar("losses/qf1_values", qf1_a_values.mean().item(), global_step)
-            writer.add_scalar("losses/qf2_values", qf2_a_values.mean().item(), global_step)
-            writer.add_scalar("losses/qf1_loss", qf1_loss.item(), global_step)
-            writer.add_scalar("losses/qf2_loss", qf2_loss.item(), global_step)
-            writer.add_scalar("losses/qf_loss", qf_loss.item() / 2.0, global_step)
-            writer.add_scalar("losses/actor_loss", actor_loss.item(), global_step)
-            writer.add_scalar("losses/alpha", alpha, global_step)
-            writer.add_scalar("charts/update_time", update_time, global_step)
-            writer.add_scalar("charts/rollout_time", rollout_time, global_step)
-            writer.add_scalar("charts/rollout_fps", global_steps_per_iteration / rollout_time, global_step)
+            print(f"Global Step: {global_step}")
+            logger.add_scalar("losses/qf1_values", qf1_a_values.mean().item(), global_step)
+            logger.add_scalar("losses/qf2_values", qf2_a_values.mean().item(), global_step)
+            logger.add_scalar("losses/qf1_loss", qf1_loss.item(), global_step)
+            logger.add_scalar("losses/qf2_loss", qf2_loss.item(), global_step)
+            logger.add_scalar("losses/qf_loss", qf_loss.item() / 2.0, global_step)
+            logger.add_scalar("losses/actor_loss", actor_loss.item(), global_step)
+            logger.add_scalar("losses/alpha", alpha, global_step)
+            logger.add_scalar("charts/update_time", update_time, global_step)
+            logger.add_scalar("charts/rollout_time", rollout_time, global_step)
+            logger.add_scalar("charts/rollout_fps", global_steps_per_iteration / rollout_time, global_step)
             if args.autotune:
-                writer.add_scalar("losses/alpha_loss", alpha_loss.item(), global_step)
+                logger.add_scalar("losses/alpha_loss", alpha_loss.item(), global_step)
 
     if not args.evaluate and args.save_model:
         model_path = f"runs/{run_name}/final_ckpt.pt"

@@ -1,6 +1,7 @@
 """
 Useful utilities for creating the ground of a scene
 """
+
 from __future__ import annotations
 
 import os.path as osp
@@ -21,6 +22,10 @@ def build_ground(
     xy_origin: tuple = (0, 0),
     altitude=0,
     name="ground",
+    texture_file=osp.join(osp.dirname(__file__), "assets/grid_texture.png"),
+    texture_square_len=4,
+    mipmap_levels=4,
+    add_collision=True,
 ):
     """Procedurally creates a checkered floor given a floor width in meters.
 
@@ -28,9 +33,11 @@ def build_ground(
     and usually is never run more than once as it is for building a scene, not loading.
     """
     ground = scene.create_actor_builder()
-    ground.add_plane_collision(
-        sapien.Pose(p=[0, 0, altitude], q=[0.7071068, 0, -0.7071068, 0]),
-    )
+    if add_collision:
+        ground.add_plane_collision(
+            sapien.Pose(p=[0, 0, altitude], q=[0.7071068, 0, -0.7071068, 0]),
+        )
+    ground.initial_pose = sapien.Pose(p=[0, 0, 0], q=[1, 0, 0, 0])
     if scene.parallel_in_single_scene:
         # when building a ground and using a parallel render in the GUI, we want to only build one ground visual+collision plane
         ground.set_scene_idxs([0])
@@ -54,10 +61,10 @@ def build_ground(
 
     mat = sapien.render.RenderMaterial()
     mat.base_color_texture = sapien.render.RenderTexture2D(
-        filename=osp.join(osp.dirname(__file__), "assets/grid_texture.png"),
+        filename=texture_file,
+        mipmap_levels=mipmap_levels,
     )
-    mat_square_len = 4  # hardcoded for the floor tile picture, saying that square tile is 4 meters wide
-    uv_scale = floor_width / mat_square_len
+    uv_scale = floor_width / texture_square_len
     uvs = np.zeros((len(vertices), 2))
     uvs[:, 0] = (xys[:, 0] * uv_scale + floor_half_width) / floor_width
     uvs[:, 1] = (xys[:, 1] * uv_scale + floor_half_width) / floor_width

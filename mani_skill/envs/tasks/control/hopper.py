@@ -1,7 +1,7 @@
 """Adapted from https://github.com/google-deepmind/dm_control/blob/main/dm_control/suite/hopper.py"""
 
 import os
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional, Union
 
 import numpy as np
 import sapien
@@ -75,7 +75,9 @@ class HopperRobot(BaseAgent):
             )
         )
 
-    def _load_articulation(self):
+    def _load_articulation(
+        self, initial_pose: Optional[Union[sapien.Pose, Pose]] = None
+    ):
         """
         Load the robot articulation
         """
@@ -84,7 +86,9 @@ class HopperRobot(BaseAgent):
 
         loader.name = self.uid
 
-        self.robot = loader.parse(asset_path)[0][0].build()
+        builder = loader.parse(asset_path)["articulation_builders"][0]
+        builder.initial_pose = initial_pose
+        self.robot = builder.build()
         assert self.robot is not None, f"Fail to load URDF/MJCF from {asset_path}"
         self.robot_link_ids = [link.name for link in self.robot.get_links()]
 
@@ -152,7 +156,7 @@ class HopperEnv(BaseEnv):
 
     def _load_scene(self, options: dict):
         loader = self.scene.create_mjcf_loader()
-        articulation_builders, actor_builders, sensor_configs = loader.parse(MJCF_FILE)
+        actor_builders = loader.parse(MJCF_FILE)["actor_builders"]
         for a in actor_builders:
             a.build(a.name)
 

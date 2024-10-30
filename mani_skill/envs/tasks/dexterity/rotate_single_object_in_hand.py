@@ -105,7 +105,7 @@ class RotateSingleObjectInHand(BaseEnv):
             )
             obj_heights.append(0.03)
         elif self.difficulty_level == 1:
-            half_sizes = (torch.randn(self.num_envs) * 0.1 + 1) * 0.04
+            half_sizes = (self._batched_episode_rng.randn() * 0.1 + 1) * 0.04
             self._objs: List[Actor] = []
             for i, half_size in enumerate(half_sizes):
                 builder = self.scene.create_actor_builder()
@@ -130,11 +130,7 @@ class RotateSingleObjectInHand(BaseEnv):
                     ).keys()
                 )
             )
-            rand_idx = torch.randperm(len(all_model_ids))
-            model_ids = all_model_ids[rand_idx]
-            model_ids = np.concatenate(
-                [model_ids] * np.ceil(self.num_envs / len(all_model_ids)).astype(int)
-            )[: self.num_envs]
+            model_ids = self._batched_episode_rng.choice(all_model_ids)
             self._objs: List[Actor] = []
             for i, model_id in enumerate(model_ids):
                 builder = actors.get_actor_builder(self.scene, id=f"ycb:{model_id}")
@@ -148,7 +144,7 @@ class RotateSingleObjectInHand(BaseEnv):
 
         if self.difficulty_level < 2:
             # for levels 0 and 1 we already know object heights. For other levels we need to compute them
-            self.obj_heights = common.to_tensor(obj_heights)
+            self.obj_heights = common.to_tensor(obj_heights, device=self.device)
 
     def _after_reconfigure(self, options: dict):
         if self.difficulty_level >= 2:
@@ -157,7 +153,7 @@ class RotateSingleObjectInHand(BaseEnv):
                 collision_mesh = obj.get_first_collision_mesh()
                 # this value is used to set object pose so the bottom is at z=0
                 self.obj_heights.append(-collision_mesh.bounding_box.bounds[0, 2])
-            self.obj_heights = common.to_tensor(self.obj_heights)
+            self.obj_heights = common.to_tensor(self.obj_heights, device=self.device)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         self._initialize_actors(env_idx)
