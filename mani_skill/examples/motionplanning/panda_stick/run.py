@@ -3,12 +3,12 @@ import os.path as osp
 
 import gymnasium as gym
 import numpy as np
-from mani_skill.examples.motionplanning.panda_stick.solutions import \
-    solveDrawTriangle
+from mani_skill.examples.motionplanning.panda_stick.solutions import (
+    solveDrawSVG, solveDrawTriangle)
 from mani_skill.utils.wrappers.record import RecordEpisode
 from tqdm import tqdm
 
-MP_SOLUTIONS = {"DrawTriangle-v1": solveDrawTriangle}
+MP_SOLUTIONS = {"DrawTriangle-v1": solveDrawTriangle, "DrawSVG-v1": solveDrawSVG}
 
 
 def parse_args(args=None):

@@ -1,10 +1,9 @@
-import math
-import random
 from typing import Dict
 
 import mani_skill.envs.utils.randomization as randomization
 import numpy as np
 import sapien
+import svgpathtools
 import torch
 from mani_skill.agents.robots.panda.panda_stick import PandaStick
 from mani_skill.envs.sapien_env import BaseEnv
@@ -17,13 +16,14 @@ from mani_skill.utils.scene_builder.table.scene_builder import \
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import SceneConfig, SimConfig
-from transforms3d.euler import euler2quat, quat2euler
-from transforms3d.quaternions import quat2mat
+from svgpathtools import CubicBezier, Line, QuadraticBezier
+from transforms3d.euler import euler2quat
 
 
-@register_env("DrawTriangle-v1", max_episode_steps=300)
-class DrawTriangleEnv(BaseEnv):
-    MAX_DOTS = 300
+@register_env("DrawSVG-v1", max_episode_steps=500)
+class DrawSVGEnv(BaseEnv):
+
+    MAX_DOTS = 1000
     """
     The total "ink" available to use and draw with before you need to call env.reset. NOTE that on GPU simulation it is not recommended to have a very high value for this as it can slow down rendering
     when too many objects are being rendered in many scenes.
@@ -43,7 +43,13 @@ class DrawTriangleEnv(BaseEnv):
     SUPPORTED_ROBOTS: ["panda_stick"]  # type: ignore
     agent: PandaStick
 
-    def __init__(self, *args, robot_uids="panda_stick", **kwargs):
+    def __init__(self, *args, svg=None, robot_uids="panda_stick", **kwargs):
+        if svg == None:
+            self.svg = "M7.875 0L0 7.875V55.125L7.875 63H23.763L23.7235 62.9292L11.8418 51.2859L11.8418 35.6268L21.1302 26.915L23.9193 11.6649L40.9773 6.3631L46.8835 16.5929L33.2356 19.926L32.6417 29.1349L41.1407 33.618L50.8511 23.465L56.6781 33.5577L43.5576 45.6794L28.9369 40.4365L26.1844 42.4266L26.1844 45.6794L43.2157 63H55.125L63 55.125V7.875L55.125 0H7.875Z"
+            self.continuous = True
+        else:
+            self.svg = svg
+
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     @property
@@ -93,74 +99,95 @@ class DrawTriangleEnv(BaseEnv):
         self.table_scene = TableSceneBuilder(self, robot_init_qpos_noise=0)
         self.table_scene.build()
 
-        def create_goal_triangle(name="tri", base_color=None):
+        def bezier_points(points, num_points=5):
+            """
+            Generate points along a quadratic or cubic Bezier curve using numpy.
 
-            box1_half_w = 0.3 / 2
-            box1_half_h = 0.01 / 2
+            Args:
+                *points: Variable number of control points as (x,y) tuples:
+                        - For quadratic: (start, control, end)
+                        - For cubic: (start, control1, control2, end)
+                num_points: Number of points to generate along curve
+
+            Returns:
+                Array of points along the curve, shape (num_points, 2)
+            """
+            points = np.array(points)
+
+            if len(points) not in [3, 4]:
+                raise ValueError(
+                    "Must provide either 3 points (quadratic) or 4 points (cubic)"
+                )
+            t = np.linspace(0, 1, num_points).reshape(-1, 1)
+
+            if len(points) == 3:
+                p0, p1, p2 = points
+                points = (1 - t) ** 2 * p0 + 2 * t * (1 - t) * p1 + t**2 * p2
+            else:
+                p0, p1, p2, p3 = points
+                points = (
+                    (1 - t) ** 3 * p0
+                    + 3 * t * (1 - t) ** 2 * p1
+                    + 3 * t**2 * (1 - t) * p2
+                    + t**3 * p3
+                )
+
+            return points
+
+        parsed_svg = svgpathtools.parse_path(self.svg)
+
+        lines = []
+        for path in parsed_svg:
+            if isinstance(path, QuadraticBezier) or isinstance(path, CubicBezier):
+                pts = bezier_points([[p.real, p.imag] for p in path.bpoints()])
+                for i in range(len(pts) - 1):
+                    lines.append([pts[i], pts[i + 1]])
+            if isinstance(path, Line):
+                lines.append([[p.real, p.imag] for p in path.bpoints()])
+        lines = np.array(lines)  # n, 2, 2
+        lines = (lines / np.max(lines)) * 0.25  # scale the svg down to fit
+        lines = np.concatenate(
+            [lines, np.ones((*lines.shape[:-1], 1)) * 0.01], -1
+        )  # b, 2, 3
+        center = lines[:, :1, :].mean(axis=0) * np.array(
+            [[1, 1, 0]]
+        )  # calculate transform to be in range of arm
+        lines = lines - center
+        if not parsed_svg.iscontinuous():
+
+            disconts = lines[1:, 0] - lines[:-1, 1]
+            self.disconts = list(
+                np.nonzero(np.logical_or(disconts[:, 0], disconts[:, 1]))[0]
+            )  # indices of where the discontinuities are ie. [1,]: discont betw ind 1 and 2
+            self.continuous = False
+
+        self.original_points = np.concatenate((lines[:1, 0], lines[:, 1, :]))
+
+        def create_goal_outline(name="svg", base_color=None):
+            midpoints = np.mean(lines, axis=1)  # midpoints of line segments
+            box_half_ws = np.linalg.norm(lines[:, 1] - lines[:, 0], axis=1) / 2
+
+            box_half_h = 0.01 / 2
             half_thickness = 0.001 / 2
+            mids = midpoints[:, :2]
+            ends = lines[:, 1, :2]  # n, 2
 
-            radius = (box1_half_w) / math.sqrt(3)
-
-            theta = np.pi / 2
-
-            # define centers and compute verticies, might need to adjust how centers are calculated or add a theta arg for variation
-            c1 = np.array([radius * math.cos(theta), radius * math.sin(theta), 0.01])
-            c2 = np.array(
-                [
-                    radius * math.cos(theta + (2 * np.pi / 3)),
-                    radius * math.sin(theta + (2 * np.pi / 3)),
-                    0.01,
-                ]
-            )
-            c3 = np.array(
-                [
-                    radius * math.cos((theta + (4 * np.pi / 3))),
-                    radius * math.sin(theta + (4 * np.pi / 3)),
-                    0.01,
-                ]
-            )
-            self.original_verts = np.array(
-                [(c1 + c3) - c2, (c1 + c2) - c3, (c2 + c3) - c1]
-            )
+            # calculate rot angles abt z axis
+            vec = ends - mids
+            angles = np.arctan2(vec[:, 1], vec[:, 0])
 
             builder = self.scene.create_actor_builder()
-            first_block_pose = sapien.Pose(
-                list(c1), euler2quat(0, 0, theta - (np.pi / 2))
-            )
-            first_block_size = [box1_half_w, box1_half_h, half_thickness]
-            builder.add_box_visual(
-                pose=first_block_pose,
-                half_size=first_block_size,
-                material=sapien.render.RenderMaterial(
-                    base_color=base_color,
-                ),
-            )
+            for i, m in enumerate(midpoints):
+                pose = sapien.Pose(p=m, q=euler2quat(0, 0, angles[i]))
 
-            second_block_pose = sapien.Pose(
-                list(c2), euler2quat(0, 0, theta - (5 * np.pi / 6))
-            )
-            second_block_size = [box1_half_w, box1_half_h, half_thickness]
-            # builder.add_box_collision(pose=second_block_pose, half_size=second_block_size)
-            builder.add_box_visual(
-                pose=second_block_pose,
-                half_size=second_block_size,
-                material=sapien.render.RenderMaterial(
-                    base_color=base_color,
-                ),
-            )
+                builder.add_box_visual(
+                    pose=pose,
+                    half_size=[box_half_ws[i], box_half_h, half_thickness],  # type: ignore
+                    material=sapien.render.RenderMaterial(
+                        base_color=base_color,
+                    ),
+                )
 
-            third_block_pose = sapien.Pose(
-                list(c3), euler2quat(0, 0, theta - (np.pi / 6))
-            )
-            third_block_size = [box1_half_w, box1_half_h, half_thickness]
-            # builder.add_box_collision(pose=second_block_pose, half_size=second_block_size)
-            builder.add_box_visual(
-                pose=third_block_pose,
-                half_size=third_block_size,
-                material=sapien.render.RenderMaterial(
-                    base_color=base_color,
-                ),
-            )
             return builder.build_kinematic(name=name)
 
         # build a white canvas on the table
@@ -205,7 +232,7 @@ class DrawTriangleEnv(BaseEnv):
                 )
                 actor = builder.build_kinematic(name=f"dot_{i}")
                 self.dots.append(actor)
-        self.goal_tri = create_goal_triangle(
+        self.goal_outline = create_goal_outline(
             name="goal_tri",
             base_color=np.array([10, 10, 10, 255]) / 255,
         )
@@ -220,24 +247,19 @@ class DrawTriangleEnv(BaseEnv):
             target_pos[:, :2] = torch.rand((b, 2)) * 0.02 - 0.1
             target_pos[:, -1] = 0.01
             qs = randomization.random_quaternions(b, lock_x=True, lock_y=True)
-            mats = quaternion_to_matrix(qs).to(self.device)
-            self.goal_tri.set_pose(Pose.create_from_pq(p=target_pos, q=qs))
+            rot_mat = quaternion_to_matrix(qs).to(self.device)
+            self.goal_outline.set_pose(Pose.create_from_pq(p=target_pos, q=qs))
 
-            self.vertices = torch.from_numpy(
-                np.tile(self.original_verts, (b, 1, 1))
-            ).to(
+            self.points = torch.from_numpy(np.tile(self.original_points, (b, 1, 1))).to(
                 self.device
-            )  # b, 3, 3
-            self.vertices = (
-                mats.double() @ self.vertices.transpose(-1, -2).double()
+            )  # b, n, 3
+
+            self.points = (
+                rot_mat.double() @ self.points.transpose(-1, -2).double()
             ).transpose(
                 -1, -2
-            )  # apply rotation matrix
-            self.vertices += target_pos.unsqueeze(1)
-
-            self.triangles = self.generate_triangle_with_points(
-                100, self.vertices[:, :, :-1]
-            )
+            )  # rotation matrix
+            self.points += target_pos.unsqueeze(1)
 
             for dot in self.dots:
                 # initially spawn dots in the table so they aren't seen
@@ -294,31 +316,14 @@ class DrawTriangleEnv(BaseEnv):
 
         if "state" in self.obs_mode:
             obs.update(
-                goal_pose=self.goal_tri.pose.raw_pose,
-                tcp_to_verts_pos=self.vertices - self.agent.tcp.pose.p.unsqueeze(1),
-                goal_pos=self.goal_tri.pose.p,
-                vertices=self.vertices,
+                goal_pose=self.goal_outline.pose.raw_pose,
+                tcp_to_verts_pos=self.points - self.agent.tcp.pose.p.unsqueeze(1),
+                goal_pos=self.goal_outline.pose.p,
+                vertices=self.points,
+                continuous=self.continuous,  # if the path is continuous
             )
 
         return obs
-
-    def generate_triangle_with_points(self, n, vertices):
-        batch_size = vertices.shape[0]
-
-        all_points = []
-
-        for i in range(vertices.shape[1]):
-            start_vertex = vertices[:, i, :]
-            end_vertex = vertices[:, (i + 1) % vertices.shape[1], :]
-            t = torch.linspace(0, 1, n + 2, device=vertices.device)[:-1]
-            t = t.view(1, -1, 1).repeat(batch_size, 1, 2)
-            intermediate_points = (
-                start_vertex.unsqueeze(1) * (1 - t) + end_vertex.unsqueeze(1) * t
-            )
-            all_points.append(intermediate_points)
-        all_points = torch.cat(all_points, dim=1)
-
-        return all_points
 
     def success_check(self):
         if self.dot_pos == None or len(self.dot_pos) == 0:
@@ -327,7 +332,7 @@ class DrawTriangleEnv(BaseEnv):
 
         distance_matrix = torch.sqrt(
             torch.sum(
-                (drawn_pts[:, :, None, :] - self.triangles[:, None, :, :]) ** 2, axis=-1
+                (drawn_pts[:, :, None, :] - self.points[:, None, :, :2]) ** 2, axis=-1
             )
         )
 

@@ -49,3 +49,26 @@ Instantiates a table with a white canvas on it and a goal triangle with an outli
 <video preload="auto" controls="True" width="100%">
 <source src="https://github.com/haosulab/ManiSkill/raw/figures/environment_demos/DrawTriangle-v1_rt.mp4" type="video/mp4">
 </video>
+
+## DrawSVG-v1
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+Instantiates a table with a white canvas on it and a svg path specified with an outline. A robot with a stick is to draw the triangle with a red line.
+
+**Supported Robots: PandaStick**
+
+**Randomizations:**
+- the goal svg's position on the xy-plane is randomized
+- the goal svg's z-rotation is randomized in range [0, 2 $\pi$]
+
+**Success Conditions:**
+- the drawn points by the robot are within a euclidean distance of 0.05m with points on the goal svg
+:::
+
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill/raw/figures/environment_demos/DrawSVG-v1_rt.mp4" type="video/mp4">
+</video>
