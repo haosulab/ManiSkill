@@ -1,15 +1,20 @@
 # docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/ppo/#ppo_continuous_actionpy
 import os
 
+from mani_skill.utils import gym_utils
+from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper
+from mani_skill.utils.wrappers.record import RecordEpisode
+from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
+
 os.environ["TORCHDYNAMO_INLINE_INBUILT_NN_MODULES"] = "1"
 
 import math
 import os
 import random
 import time
-from collections import deque
+from collections import defaultdict, deque
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Optional, Tuple
 
 import gymnasium as gym
 import numpy as np
@@ -19,6 +24,7 @@ import torch.nn as nn
 import torch.optim as optim
 import tqdm
 import tyro
+from torch.utils.tensorboard import SummaryWriter
 import wandb
 from tensordict import from_module
 from tensordict.nn import CudaGraphModule
@@ -27,7 +33,7 @@ from torch.distributions.normal import Normal
 
 @dataclass
 class Args:
-    exp_name: str = os.path.basename(__file__)[: -len(".py")]
+    exp_name: Optional[str] = None
     """the name of this experiment"""
     seed: int = 1
     """seed of the experiment"""
@@ -35,6 +41,12 @@ class Args:
     """if toggled, `torch.backends.cudnn.deterministic=False`"""
     cuda: bool = True
     """if toggled, cuda will be enabled by default"""
+    track: bool = False
+    """if toggled, this experiment will be tracked with Weights and Biases"""
+    wandb_project_name: str = "ManiSkill"
+    """the wandb's project name"""
+    wandb_entity: Optional[str] = None
+    """the entity (team) of wandb's project"""
     capture_video: bool = False
     """whether to capture videos of the agent performances (check out `videos` folder)"""
 
@@ -84,6 +96,15 @@ class Args:
 
     measure_burnin: int = 3
     """Number of burn-in iterations for speed measure."""
+
+    eval_freq: int = 25
+    save_train_video_freq: int = None
+    evaluate: bool = False
+    num_eval_steps: int = 50
+    num_eval_envs: int = 16
+    reconfiguration_freq: int = None
+    eval_reconfiguration_freq: int = 1
+    partial_reset: bool = True
 
     compile: bool = False
     """whether to use torch.compile."""
@@ -147,6 +168,16 @@ class Agent(nn.Module):
             action = action_mean + action_std * torch.randn_like(action_mean)
         return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(obs)
 
+class Logger:
+    def __init__(self, log_wandb=False, tensorboard: SummaryWriter = None) -> None:
+        self.writer = tensorboard
+        self.log_wandb = log_wandb
+    def add_scalar(self, tag, scalar_value, step):
+        if self.log_wandb:
+            wandb.log({tag: scalar_value}, step=step)
+        self.writer.add_scalar(tag, scalar_value, step)
+    def close(self):
+        self.writer.close()
 
 def gae(next_obs, next_done, container):
     # bootstrap value if not done
@@ -268,14 +299,11 @@ if __name__ == "__main__":
     args.minibatch_size = batch_size // args.num_minibatches
     args.batch_size = args.num_minibatches * args.minibatch_size
     args.num_iterations = args.total_timesteps // args.batch_size
-    run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{args.compile}__{args.cudagraphs}"
-
-    wandb.init(
-        project="ppo_continuous_action",
-        name=f"{os.path.splitext(os.path.basename(__file__))[0]}-{run_name}",
-        config=vars(args),
-        save_code=True,
-    )
+    if args.exp_name is None:
+        args.exp_name = os.path.basename(__file__)[: -len(".py")]
+        run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
+    else:
+        run_name = args.exp_name
 
     # TRY NOT TO MODIFY: seeding
     random.seed(args.seed)
@@ -286,9 +314,56 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     ####### Environment setup #######
-    envs = gym.vector.SyncVectorEnv(
-        [make_env(args.env_id, i, args.capture_video, run_name, args.gamma) for i in range(args.num_envs)]
-    )
+    # envs = gym.vector.SyncVectorEnv(
+    #     [make_env(args.env_id, i, args.capture_video, run_name, args.gamma) for i in range(args.num_envs)]
+    # )
+    # env setup
+    env_kwargs = dict(obs_mode="state", control_mode="pd_joint_delta_pos", render_mode="rgb_array", sim_backend="gpu")
+    envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, reconfiguration_freq=args.reconfiguration_freq, **env_kwargs)
+    eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, reconfiguration_freq=args.eval_reconfiguration_freq, **env_kwargs)
+    if isinstance(envs.action_space, gym.spaces.Dict):
+        envs = FlattenActionSpaceWrapper(envs)
+        eval_envs = FlattenActionSpaceWrapper(eval_envs)
+    if args.capture_video:
+        eval_output_dir = f"runs/{run_name}/videos"
+        if args.evaluate:
+            eval_output_dir = f"{os.path.dirname(args.checkpoint)}/test_videos"
+        print(f"Saving eval videos to {eval_output_dir}")
+        if args.save_train_video_freq is not None:
+            save_video_trigger = lambda x : (x // args.num_steps) % args.save_train_video_freq == 0
+            envs = RecordEpisode(envs, output_dir=f"runs/{run_name}/train_videos", save_trajectory=False, save_video_trigger=save_video_trigger, max_steps_per_video=args.num_steps, video_fps=30)
+        eval_envs = RecordEpisode(eval_envs, output_dir=eval_output_dir, save_trajectory=args.evaluate, trajectory_name="trajectory", max_steps_per_video=args.num_eval_steps, video_fps=30)
+    envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=not args.partial_reset, record_metrics=True)
+    eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=True, record_metrics=True)
+    assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
+
+    max_episode_steps = gym_utils.find_max_episode_steps_value(envs._env)
+    logger = None
+    if not args.evaluate:
+        print("Running training")
+        if args.track:
+            import wandb
+            config = vars(args)
+            config["env_cfg"] = dict(**env_kwargs, num_envs=args.num_envs, env_id=args.env_id, reward_mode="normalized_dense", env_horizon=max_episode_steps, partial_reset=args.partial_reset)
+            config["eval_env_cfg"] = dict(**env_kwargs, num_envs=args.num_eval_envs, env_id=args.env_id, reward_mode="normalized_dense", env_horizon=max_episode_steps, partial_reset=False)
+            wandb.init(
+                project=args.wandb_project_name,
+                entity=args.wandb_entity,
+                sync_tensorboard=False,
+                config=config,
+                name=run_name,
+                save_code=True,
+                group="PPO",
+                tags=["ppo", "walltime_efficient"]
+            )
+        writer = SummaryWriter(f"runs/{run_name}")
+        writer.add_text(
+            "hyperparameters",
+            "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
+        )
+        logger = Logger(log_wandb=args.track, tensorboard=writer)
+    else:
+        print("Running evaluation")
     n_act = math.prod(envs.single_action_space.shape)
     n_obs = math.prod(envs.single_observation_space.shape)
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
@@ -339,8 +414,39 @@ if __name__ == "__main__":
     # max_ep_ret = -float("inf")
     pbar = tqdm.tqdm(range(1, args.num_iterations + 1))
     # desc = ""
+
+    cumulative_times = defaultdict(float)
+
     global_step_burnin = None
     for iteration in pbar:
+        print(f"Epoch: {iteration}, global_step={global_step}")
+        agent.eval()
+        if iteration % args.eval_freq == 1:
+            print("Evaluating")
+            stime = time.perf_counter()
+            eval_obs, _ = eval_envs.reset()
+            eval_metrics = defaultdict(list)
+            num_episodes = 0
+            for _ in range(args.num_eval_steps):
+                with torch.no_grad():
+                    eval_obs, eval_rew, eval_terminations, eval_truncations, eval_infos = eval_envs.step(agent.get_action(eval_obs, deterministic=True))
+                    if "final_info" in eval_infos:
+                        mask = eval_infos["_final_info"]
+                        num_episodes += mask.sum()
+                        for k, v in eval_infos["final_info"]["episode"].items():
+                            eval_metrics[k].append(v)
+            print(f"Evaluated {args.num_eval_steps * args.num_eval_envs} steps resulting in {num_episodes} episodes")
+            for k, v in eval_metrics.items():
+                mean = torch.stack(v).float().mean()
+                if logger is not None:
+                    logger.add_scalar(f"eval/{k}", mean, global_step)
+                print(f"eval_{k}_mean={mean}")
+            if logger is not None:
+                eval_time = time.perf_counter() - stime
+                cumulative_times["eval_time"] += eval_time
+                logger.add_scalar("time/eval_time", eval_time, global_step)
+            if args.evaluate:
+                break
         if iteration == args.measure_burnin:
             global_step_burnin = global_step
             start_time = time.time()
