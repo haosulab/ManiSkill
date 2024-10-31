@@ -98,11 +98,11 @@ class Args:
     """Number of burn-in iterations for speed measure."""
 
     eval_freq: int = 25
-    save_train_video_freq: int = None
+    save_train_video_freq: Optional[int] = None
     evaluate: bool = False
     num_eval_steps: int = 50
     num_eval_envs: int = 16
-    reconfiguration_freq: int = None
+    reconfiguration_freq: Optional[int] = None
     eval_reconfiguration_freq: int = 1
     partial_reset: bool = True
     env_vectorization: str = "gpu"
@@ -407,7 +407,7 @@ if __name__ == "__main__":
     global_step = 0
     start_time = time.time()
     container_local = None
-    next_obs = torch.tensor(envs.reset()[0], device=device, dtype=torch.float)
+    next_obs = envs.reset()[0]
     next_done = torch.zeros(args.num_envs, device=device, dtype=torch.bool)
     # max_ep_ret = -float("inf")
     pbar = tqdm.tqdm(range(1, args.num_iterations + 1))

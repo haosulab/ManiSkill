@@ -31,7 +31,7 @@ do
         --num_eval_envs=16 \
         --num-steps=10 --eval-freq=10 \
         --exp-name="ppo-leanrl-compile-cudagraphs-PickCube-v1-state-${seed}-no-finite-horizon-gae-4096envs-10steps-walltime_efficient" \
-        --wandb_entity="stonet2000" --wandb_project_name="PPO-ManiSkill-GPU-SpeedRun" --compile
+        --wandb_entity="stonet2000" --wandb_project_name="PPO-ManiSkill-GPU-SpeedRun" --compile --cudagraphs
 done
 
 
