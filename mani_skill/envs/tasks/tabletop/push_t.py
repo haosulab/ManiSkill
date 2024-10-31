@@ -173,6 +173,9 @@ class PushTEnv(BaseEnv):
             "render_camera", pose=pose, width=512, height=512, fov=1, near=0.01, far=100
         )
 
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
+
     def _load_scene(self, options: dict):
         # have to put these parmaeters to device - defined before we had access to device
         # load scene is a convienent place for this one time operation
@@ -247,6 +250,7 @@ class PushTEnv(BaseEnv):
                     base_color=base_color,
                 ),
             )
+            builder.initial_pose = sapien.Pose(p=[0, 0, 0.1])
             if not target:
                 return builder.build(name=name)
             else:
@@ -268,6 +272,7 @@ class PushTEnv(BaseEnv):
                 base_color=np.array([128, 128, 128, 255]) / 255
             ),
         )
+        builder.initial_pose = sapien.Pose(p=[0, 0, 0.1])
         self.ee_goal_pos = builder.build_kinematic(name="goal_ee")
 
         # Rest of function is setting up for Custom 2D "Pseudo-Rendering" function below

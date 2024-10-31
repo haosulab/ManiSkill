@@ -47,7 +47,7 @@ dependencies:
     - tqdm==4.66.1
     - wandb==0.16.2
     - wheel==0.38.0
-    - mani_skill>=3.0.0b10
+    - mani_skill>=3.0.0b12
     ####################
     # Gym:
     # (unmaintained but required for maniskill2/meta-world/myosuite)

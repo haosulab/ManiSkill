@@ -70,6 +70,9 @@ class PickSingleYCBEnv(BaseEnv):
         pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
+
     def _load_scene(self, options: dict):
         global WARNED_ONCE
         self.table_scene = TableSceneBuilder(
@@ -101,6 +104,7 @@ class PickSingleYCBEnv(BaseEnv):
                 self.scene,
                 id=f"ycb:{model_id}",
             )
+            builder.initial_pose = sapien.Pose(p=[0, 0, 0])
             builder.set_scene_idxs([i])
             self._objs.append(builder.build(name=f"{model_id}-{i}"))
         self.obj = Actor.merge(self._objs, name="ycb_object")
@@ -112,6 +116,7 @@ class PickSingleYCBEnv(BaseEnv):
             name="goal_site",
             body_type="kinematic",
             add_collision=False,
+            initial_pose=sapien.Pose(),
         )
         self._hidden_objects.append(self.goal_site)
 
@@ -121,7 +126,7 @@ class PickSingleYCBEnv(BaseEnv):
             collision_mesh = obj.get_first_collision_mesh()
             # this value is used to set object pose so the bottom is at z=0
             self.object_zs.append(-collision_mesh.bounding_box.bounds[0, 2])
-        self.object_zs = common.to_tensor(self.object_zs)
+        self.object_zs = common.to_tensor(self.object_zs, device=self.device)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
@@ -130,7 +135,7 @@ class PickSingleYCBEnv(BaseEnv):
             xyz = torch.zeros((b, 3))
             xyz[:, :2] = torch.rand((b, 2)) * 0.2 - 0.1
             xyz[:, 2] = self.object_zs[env_idx]
-
+            print(xyz)
             qs = random_quaternions(b, lock_x=True, lock_y=True)
             self.obj.set_pose(Pose.create_from_pq(p=xyz, q=qs))
 
