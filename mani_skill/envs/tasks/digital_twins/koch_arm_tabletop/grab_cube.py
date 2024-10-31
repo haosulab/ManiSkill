@@ -48,16 +48,13 @@ class GrabCubeEnv(BaseEnv):
         *args,
         robot_uids="koch-v1.1",
         robot_init_qpos_noise=0.02,
-        reconfiguration_freq=1,
         num_envs=1,
         **kwargs,
     ):
         self.robot_init_qpos_noise = robot_init_qpos_noise
-        reconfiguration_freq = 1
         super().__init__(
             *args,
             robot_uids=robot_uids,
-            reconfiguration_freq=reconfiguration_freq,
             num_envs=num_envs,
             enable_shadow=True,
             **kwargs,
