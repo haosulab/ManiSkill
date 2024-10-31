@@ -13,7 +13,7 @@ def solve(env: DrawTriangleEnv, seed=None, debug=False, vis=False):
         base_pose=env.unwrapped.agent.robot.pose,
         visualize_target_grasp_pose=vis,
         print_env_info=False,
-        joint_vel_limits = 0.3
+        joint_vel_limits=0.3,
     )
 
     FINGER_LENGTH = 0.025
@@ -34,7 +34,7 @@ def solve(env: DrawTriangleEnv, seed=None, debug=False, vis=False):
 
     reach_pose = sapien.Pose(p=list(env.vertices[0, 1]), q=rot)
     res = planner.move_to_pose_with_screw(reach_pose)
-    
+
     # -------------------------------------------------------------------------- #
     # Move to third vertex
     # -------------------------------------------------------------------------- #

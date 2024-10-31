@@ -1,10 +1,9 @@
-import math
-import random
 from typing import Dict
 
 import mani_skill.envs.utils.randomization as randomization
 import numpy as np
 import sapien
+import svgpathtools
 import torch
 from mani_skill.agents.robots.panda.panda_stick import PandaStick
 from mani_skill.envs.sapien_env import BaseEnv
@@ -17,13 +16,12 @@ from mani_skill.utils.scene_builder.table.scene_builder import \
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import SceneConfig, SimConfig
+from svgpathtools import CubicBezier, Line, QuadraticBezier
 from transforms3d.euler import euler2quat
 
-import svgpathtools
-from svgpathtools import Line, QuadraticBezier, CubicBezier
 
-@register_env("DrawSVG-v1", max_episode_steps=300)
-class DrawSVG(BaseEnv):
+@register_env("DrawSVG-v1", max_episode_steps=500)
+class DrawSVGEnv(BaseEnv):
 
     MAX_DOTS = 1000
     """
@@ -47,7 +45,8 @@ class DrawSVG(BaseEnv):
 
     def __init__(self, *args, svg=None, robot_uids="panda_stick", **kwargs):
         if svg == None:
-            self.svg ="""M88 0C74.7 0 64 10.7 64 24c0 38.9 23.4 59.4 39.1 73.1l1.1 1C120.5 112.3 128 119.9 128 136c0 13.3 10.7 24 24 24s24-10.7 24-24c0-38.9-23.4-59.4-39.1-73.1l-1.1-1C119.5 47.7 112 40.1 112 24c0-13.3-10.7-24-24-24zM32 192c-17.7 0-32 14.3-32 32L0 416c0 53 43 96 96 96l192 0c53 0 96-43 96-96l16 0c61.9 0 112-50.1 112-112s-50.1-112-112-112l-48 0L32 192zm352 64l16 0c26.5 0 48 21.5 48 48s-21.5 48-48 48l-16 0 0-96zM224 24c0-13.3-10.7-24-24-24s-24 10.7-24 24c0 38.9 23.4 59.4 39.1 73.1l1.1 1C232.5 112.3 240 119.9 240 136c0 13.3 10.7 24 24 24s24-10.7 24-24c0-38.9-23.4-59.4-39.1-73.1l-1.1-1C231.5 47.7 224 40.1 224 24z"""
+            self.svg = "M7.875 0L0 7.875V55.125L7.875 63H23.763L23.7235 62.9292L11.8418 51.2859L11.8418 35.6268L21.1302 26.915L23.9193 11.6649L40.9773 6.3631L46.8835 16.5929L33.2356 19.926L32.6417 29.1349L41.1407 33.618L50.8511 23.465L56.6781 33.5577L43.5576 45.6794L28.9369 40.4365L26.1844 42.4266L26.1844 45.6794L43.2157 63H55.125L63 55.125V7.875L55.125 0H7.875Z"
+            self.continuous = True
         else:
             self.svg = svg
 
@@ -99,95 +98,95 @@ class DrawSVG(BaseEnv):
 
         self.table_scene = TableSceneBuilder(self, robot_init_qpos_noise=0)
         self.table_scene.build()
-        
-
 
         def bezier_points(points, num_points=5):
             """
             Generate points along a quadratic or cubic Bezier curve using numpy.
-            
+
             Args:
                 *points: Variable number of control points as (x,y) tuples:
                         - For quadratic: (start, control, end)
                         - For cubic: (start, control1, control2, end)
                 num_points: Number of points to generate along curve
-                
+
             Returns:
                 Array of points along the curve, shape (num_points, 2)
             """
             points = np.array(points)
-            
+
             if len(points) not in [3, 4]:
-                raise ValueError("Must provide either 3 points (quadratic) or 4 points (cubic)")
+                raise ValueError(
+                    "Must provide either 3 points (quadratic) or 4 points (cubic)"
+                )
             t = np.linspace(0, 1, num_points).reshape(-1, 1)
-            
+
             if len(points) == 3:
                 p0, p1, p2 = points
-                points = (
-                    (1 - t)**2 * p0 +
-                    2 * t * (1 - t) * p1 +
-                    t**2 * p2
-                )
+                points = (1 - t) ** 2 * p0 + 2 * t * (1 - t) * p1 + t**2 * p2
             else:
                 p0, p1, p2, p3 = points
                 points = (
-                    (1 - t)**3 * p0 +
-                    3 * t * (1 - t)**2 * p1 +
-                    3 * t**2 * (1 - t) * p2 +
-                    t**3 * p3
+                    (1 - t) ** 3 * p0
+                    + 3 * t * (1 - t) ** 2 * p1
+                    + 3 * t**2 * (1 - t) * p2
+                    + t**3 * p3
                 )
-            
+
             return points
 
         parsed_svg = svgpathtools.parse_path(self.svg)
-        
+
         lines = []
         for path in parsed_svg:
-            if isinstance(path,QuadraticBezier) or isinstance(path, CubicBezier):
+            if isinstance(path, QuadraticBezier) or isinstance(path, CubicBezier):
                 pts = bezier_points([[p.real, p.imag] for p in path.bpoints()])
-                for i in range(len(pts)-1):
-                    lines.append([pts[i],pts[i+1]])
+                for i in range(len(pts) - 1):
+                    lines.append([pts[i], pts[i + 1]])
             if isinstance(path, Line):
                 lines.append([[p.real, p.imag] for p in path.bpoints()])
-        lines = np.array(lines) # n, 2, 2 
-        lines = (lines / np.max(lines)) * 0.25 # scale the svg down to fit
-        lines = np.concatenate([lines, np.ones((*lines.shape[:-1],1)) * 0.01], -1) # b, 2, 3
-        center = lines[:,:1,:].mean(axis=0) * np.array([[1,1,0]]) # calculate transform to be in range of arm
+        lines = np.array(lines)  # n, 2, 2
+        lines = (lines / np.max(lines)) * 0.25  # scale the svg down to fit
+        lines = np.concatenate(
+            [lines, np.ones((*lines.shape[:-1], 1)) * 0.01], -1
+        )  # b, 2, 3
+        center = lines[:, :1, :].mean(axis=0) * np.array(
+            [[1, 1, 0]]
+        )  # calculate transform to be in range of arm
         lines = lines - center
         if not parsed_svg.iscontinuous():
 
-            disconts = lines[1:,0] -lines[:-1,1]
-            self.disconts = list(np.nonzero(np.logical_or(disconts[:,0], disconts[:,1]))[0]) # indices of where the discontinuities are ie. [1,]: discont betw ind 1 and 2
+            disconts = lines[1:, 0] - lines[:-1, 1]
+            self.disconts = list(
+                np.nonzero(np.logical_or(disconts[:, 0], disconts[:, 1]))[0]
+            )  # indices of where the discontinuities are ie. [1,]: discont betw ind 1 and 2
             self.continuous = False
 
-        self.original_points = np.concatenate((lines[:1,0],lines[:,1,:]))
+        self.original_points = np.concatenate((lines[:1, 0], lines[:, 1, :]))
 
         def create_goal_outline(name="svg", base_color=None):
-            midpoints = np.mean(lines, axis=1) # midpoints of line segments
-            box_half_ws = np.linalg.norm(lines[:,1]-lines[:,0], axis=1) / 2
+            midpoints = np.mean(lines, axis=1)  # midpoints of line segments
+            box_half_ws = np.linalg.norm(lines[:, 1] - lines[:, 0], axis=1) / 2
 
             box_half_h = 0.01 / 2
             half_thickness = 0.001 / 2
-            mids = midpoints[:,:2]
-            ends = lines[:,1,:2] # n, 2
+            mids = midpoints[:, :2]
+            ends = lines[:, 1, :2]  # n, 2
 
             # calculate rot angles abt z axis
-            vec = ends-mids 
-            angles = np.arctan2(vec[:,1], vec[:,0]) 
-            
+            vec = ends - mids
+            angles = np.arctan2(vec[:, 1], vec[:, 0])
 
             builder = self.scene.create_actor_builder()
-            for i,m in enumerate(midpoints):
-                pose = sapien.Pose(p=m, q = euler2quat(0,0,angles[i]))
-                
+            for i, m in enumerate(midpoints):
+                pose = sapien.Pose(p=m, q=euler2quat(0, 0, angles[i]))
+
                 builder.add_box_visual(
                     pose=pose,
-                    half_size = [box_half_ws[i], box_half_h, half_thickness], # type: ignore
+                    half_size=[box_half_ws[i], box_half_h, half_thickness],  # type: ignore
                     material=sapien.render.RenderMaterial(
                         base_color=base_color,
                     ),
                 )
-            
 
             return builder.build_kinematic(name=name)
 
@@ -251,13 +250,15 @@ class DrawSVG(BaseEnv):
             rot_mat = quaternion_to_matrix(qs).to(self.device)
             self.goal_outline.set_pose(Pose.create_from_pq(p=target_pos, q=qs))
 
-            self.points = torch.from_numpy(
-                np.tile(self.original_points, (b, 1, 1)) 
-            ).to(
+            self.points = torch.from_numpy(np.tile(self.original_points, (b, 1, 1))).to(
                 self.device
-            ) # b, n, 3
-            
-            self.points = (rot_mat.double() @ self.points.transpose(-1,-2).double()).transpose(-1, -2) # rotation matrix
+            )  # b, n, 3
+
+            self.points = (
+                rot_mat.double() @ self.points.transpose(-1, -2).double()
+            ).transpose(
+                -1, -2
+            )  # rotation matrix
             self.points += target_pos.unsqueeze(1)
 
             for dot in self.dots:
@@ -315,14 +316,14 @@ class DrawSVG(BaseEnv):
 
         if "state" in self.obs_mode:
             obs.update(
-                goal_pose = self.goal_outline.pose.raw_pose,
-                tcp_to_verts_pos = self.points - self.agent.tcp.pose.p.unsqueeze(1),
+                goal_pose=self.goal_outline.pose.raw_pose,
+                tcp_to_verts_pos=self.points - self.agent.tcp.pose.p.unsqueeze(1),
                 goal_pos=self.goal_outline.pose.p,
-                vertices = self.points
+                vertices=self.points,
+                continuous=self.continuous,  # if the path is continuous
             )
 
         return obs
-
 
     def success_check(self):
         if self.dot_pos == None or len(self.dot_pos) == 0:

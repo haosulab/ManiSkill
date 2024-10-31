@@ -207,7 +207,7 @@ class DrawTriangleEnv(BaseEnv):
                 self.dots.append(actor)
         self.goal_tri = create_goal_triangle(
             name="goal_tri",
-            base_color=np.array([10, 10, 10,255]) / 255,
+            base_color=np.array([10, 10, 10, 255]) / 255,
         )
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
@@ -294,10 +294,10 @@ class DrawTriangleEnv(BaseEnv):
 
         if "state" in self.obs_mode:
             obs.update(
-                goal_pose = self.goal_tri.pose.raw_pose,
-                tcp_to_verts_pos = self.vertices - self.agent.tcp.pose.p.unsqueeze(1),
+                goal_pose=self.goal_tri.pose.raw_pose,
+                tcp_to_verts_pos=self.vertices - self.agent.tcp.pose.p.unsqueeze(1),
                 goal_pos=self.goal_tri.pose.p,
-                vertices = self.vertices
+                vertices=self.vertices,
             )
 
         return obs

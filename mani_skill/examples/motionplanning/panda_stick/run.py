@@ -3,8 +3,8 @@ import os.path as osp
 
 import gymnasium as gym
 import numpy as np
-from mani_skill.examples.motionplanning.panda_stick.solutions import \
-    solveDrawTriangle, solveDrawSVG
+from mani_skill.examples.motionplanning.panda_stick.solutions import (
+    solveDrawSVG, solveDrawTriangle)
 from mani_skill.utils.wrappers.record import RecordEpisode
 from tqdm import tqdm
 
@@ -17,7 +17,7 @@ def parse_args(args=None):
         "-e",
         "--env-id",
         type=str,
-        default="DrawSVG-v1",
+        default="DrawTriangle-v1",
         help=f"Environment to run motion planning solver on. Available options are {list(MP_SOLUTIONS.keys())}",
     )
     parser.add_argument(
@@ -104,7 +104,7 @@ def main(args):
         source_desc="official motion planning solution from ManiSkill contributors",
         video_fps=30,
         save_on_reset=False,
-        record_reward=False
+        record_reward=False,
     )
     solve = MP_SOLUTIONS[env_id]
     print(f"Motion Planning Running on {env_id}")
