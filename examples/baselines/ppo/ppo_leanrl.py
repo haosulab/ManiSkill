@@ -474,6 +474,7 @@ if __name__ == "__main__":
                 container_local = container_flat[b]
 
                 out = update(container_local, tensordict_out=tensordict.TensorDict())
+                clipfracs.append(out["clipfrac"])
                 if args.target_kl is not None and out["approx_kl"] > args.target_kl:
                     break
             else:
@@ -489,7 +490,7 @@ if __name__ == "__main__":
         logger.add_scalar("losses/entropy", out["entropy_loss"].item(), global_step)
         logger.add_scalar("losses/old_approx_kl", out["old_approx_kl"].item(), global_step)
         logger.add_scalar("losses/approx_kl", out["approx_kl"].item(), global_step)
-        logger.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
+        logger.add_scalar("losses/clipfrac", torch.stack(clipfracs).mean().cpu().item(), global_step)
         # logger.add_scalar("losses/explained_variance", explained_var, global_step)
         print("SPS:", int(global_step / (time.time() - start_time)))
         logger.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
