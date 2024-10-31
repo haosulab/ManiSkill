@@ -49,17 +49,35 @@ class Args:
     capture_video: bool = True
     """whether to capture videos of the agent performances (check out `videos` folder)"""
 
-    # Algorithm specific arguments
-    env_id: str = "HalfCheetah-v4"
+    # Environment specific arguments
+    env_id: str = "PickCube-v1"
     """the id of the environment"""
-    total_timesteps: int = 1000000
+    env_vectorization: str = "gpu"
+    """the type of environment vectorization to use"""
+    num_envs: int = 512
+    """the number of parallel environments"""
+    num_eval_envs: int = 8
+    """the number of parallel evaluation environments"""
+    partial_reset: bool = True
+    """whether to let parallel environments reset upon termination instead of truncation"""
+    num_steps: int = 50
+    """the number of steps to run in each environment per policy rollout"""
+    num_eval_steps: int = 50
+    """the number of steps to run in each evaluation environment during evaluation"""
+    reconfiguration_freq: Optional[int] = None
+    """how often to reconfigure the environment during training"""
+    eval_reconfiguration_freq: Optional[int] = 1
+    """for benchmarking purposes we want to reconfigure the eval environment each reset to ensure objects are randomized in some tasks"""
+    eval_freq: int = 25
+    """evaluation frequency in terms of iterations"""
+    save_train_video_freq: Optional[int] = None
+    """frequency to save training videos in terms of iterations"""
+
+    # Algorithm specific arguments
+    total_timesteps: int = 10000000
     """total timesteps of the experiments"""
     learning_rate: float = 3e-4
     """the learning rate of the optimizer"""
-    num_envs: int = 512
-    """the number of parallel game environments"""
-    num_steps: int = 50
-    """the number of steps to run in each environment per policy rollout"""
     anneal_lr: bool = False
     """Toggle learning rate annealing for policy and value networks"""
     gamma: float = 0.8
@@ -84,6 +102,9 @@ class Args:
     """the maximum norm for the gradient clipping"""
     target_kl: float = 0.1
     """the target KL divergence threshold"""
+    reward_scale: float = 1.0
+    """Scale the reward by this factor"""
+    finite_horizon_gae: bool = False
 
     # to be filled in runtime
     batch_size: int = 0
@@ -93,16 +114,7 @@ class Args:
     num_iterations: int = 0
     """the number of iterations (computed in runtime)"""
 
-    eval_freq: int = 25
-    save_train_video_freq: Optional[int] = None
-    evaluate: bool = False
-    num_eval_steps: int = 50
-    num_eval_envs: int = 16
-    reconfiguration_freq: Optional[int] = None
-    eval_reconfiguration_freq: int = 1
-    partial_reset: bool = True
-    env_vectorization: str = "gpu"
-
+    # Torch optimizations
     compile: bool = False
     """whether to use torch.compile."""
     cudagraphs: bool = False
