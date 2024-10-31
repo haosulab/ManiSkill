@@ -104,7 +104,6 @@ def main(args):
         source_desc="official motion planning solution from ManiSkill contributors",
         video_fps=30,
         save_on_reset=False,
-        record_reward=False,
     )
     solve = MP_SOLUTIONS[env_id]
     print(f"Motion Planning Running on {env_id}")
