@@ -47,7 +47,7 @@ class Args:
     """the wandb's project name"""
     wandb_entity: Optional[str] = None
     """the entity (team) of wandb's project"""
-    capture_video: bool = False
+    capture_video: bool = True
     """whether to capture videos of the agent performances (check out `videos` folder)"""
 
     # Algorithm specific arguments
@@ -57,25 +57,25 @@ class Args:
     """total timesteps of the experiments"""
     learning_rate: float = 3e-4
     """the learning rate of the optimizer"""
-    num_envs: int = 1
+    num_envs: int = 512
     """the number of parallel game environments"""
-    num_steps: int = 2048
+    num_steps: int = 50
     """the number of steps to run in each environment per policy rollout"""
-    anneal_lr: bool = True
+    anneal_lr: bool = False
     """Toggle learning rate annealing for policy and value networks"""
-    gamma: float = 0.99
+    gamma: float = 0.8
     """the discount factor gamma"""
-    gae_lambda: float = 0.95
+    gae_lambda: float = 0.9
     """the lambda for the general advantage estimation"""
     num_minibatches: int = 32
     """the number of mini-batches"""
-    update_epochs: int = 10
+    update_epochs: int = 4
     """the K epochs to update the policy"""
     norm_adv: bool = True
     """Toggles advantages normalization"""
     clip_coef: float = 0.2
     """the surrogate clipping coefficient"""
-    clip_vloss: bool = True
+    clip_vloss: bool = False
     """Toggles whether or not to use a clipped loss for the value function, as per the paper."""
     ent_coef: float = 0.0
     """coefficient of the entropy"""
@@ -83,7 +83,7 @@ class Args:
     """coefficient of the value function"""
     max_grad_norm: float = 0.5
     """the maximum norm for the gradient clipping"""
-    target_kl: float = None
+    target_kl: float = 0.1
     """the target KL divergence threshold"""
 
     # to be filled in runtime
@@ -105,31 +105,12 @@ class Args:
     reconfiguration_freq: int = None
     eval_reconfiguration_freq: int = 1
     partial_reset: bool = True
+    env_vectorization: str = "gpu"
 
     compile: bool = False
     """whether to use torch.compile."""
     cudagraphs: bool = False
     """whether to use cudagraphs on top of compile."""
-
-
-def make_env(env_id, idx, capture_video, run_name, gamma):
-    def thunk():
-        if capture_video and idx == 0:
-            env = gym.make(env_id, render_mode="rgb_array")
-            env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
-        else:
-            env = gym.make(env_id)
-        env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
-        env = gym.wrappers.RecordEpisodeStatistics(env)
-        env = gym.wrappers.ClipAction(env)
-        env = gym.wrappers.NormalizeObservation(env)
-        env = gym.wrappers.TransformObservation(env, lambda obs: np.clip(obs, -10, 10))
-        env = gym.wrappers.NormalizeReward(env, gamma=gamma)
-        env = gym.wrappers.TransformReward(env, lambda reward: np.clip(reward, -10, 10))
-        return env
-
-    return thunk
-
 
 def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     torch.nn.init.orthogonal_(layer.weight, std)
@@ -141,18 +122,22 @@ class Agent(nn.Module):
     def __init__(self, n_obs, n_act, device=None):
         super().__init__()
         self.critic = nn.Sequential(
-            layer_init(nn.Linear(n_obs, 64, device=device)),
+            layer_init(nn.Linear(n_obs, 256, device=device)),
             nn.Tanh(),
-            layer_init(nn.Linear(64, 64, device=device)),
+            layer_init(nn.Linear(256, 256, device=device)),
             nn.Tanh(),
-            layer_init(nn.Linear(64, 1, device=device), std=1.0),
+            layer_init(nn.Linear(256, 256, device=device)),
+            nn.Tanh(),
+            layer_init(nn.Linear(256, 1, device=device)),
         )
         self.actor_mean = nn.Sequential(
-            layer_init(nn.Linear(n_obs, 64, device=device)),
+            layer_init(nn.Linear(n_obs, 256, device=device)),
             nn.Tanh(),
-            layer_init(nn.Linear(64, 64, device=device)),
+            layer_init(nn.Linear(256, 256, device=device)),
             nn.Tanh(),
-            layer_init(nn.Linear(64, n_act, device=device), std=0.01),
+            layer_init(nn.Linear(256, 256, device=device)),
+            nn.Tanh(),
+            layer_init(nn.Linear(256, n_act, device=device), std=0.01*np.sqrt(2)),
         )
         self.actor_logstd = nn.Parameter(torch.zeros(1, n_act, device=device))
 
@@ -179,7 +164,7 @@ class Logger:
     def close(self):
         self.writer.close()
 
-def gae(next_obs, next_done, container):
+def gae(next_obs, next_done, container, final_values):
     # bootstrap value if not done
     next_value = get_value(next_obs).reshape(-1)
     lastgaelam = 0
@@ -193,7 +178,9 @@ def gae(next_obs, next_done, container):
     nextvalues = next_value
     for t in range(args.num_steps - 1, -1, -1):
         cur_val = vals_unbind[t]
-        delta = rewards[t] + args.gamma * nextvalues * nextnonterminal - cur_val
+        # real_next_values = nextvalues * nextnonterminal
+        real_next_values = nextnonterminal * nextvalues + final_values[t] # t instead of t+1
+        delta = rewards[t] + args.gamma * real_next_values - cur_val
         advantages.append(delta + args.gamma * args.gae_lambda * nextnonterminal * lastgaelam)
         lastgaelam = advantages[-1]
 
@@ -207,6 +194,7 @@ def gae(next_obs, next_done, container):
 
 def rollout(obs, done, avg_returns=[]):
     ts = []
+    final_values = torch.zeros((args.num_steps, args.num_envs), device=device)
     for step in range(args.num_steps):
         # ALGO LOGIC: action logic
         action, logprob, _, value = policy(obs=obs)
@@ -215,11 +203,19 @@ def rollout(obs, done, avg_returns=[]):
         next_obs, reward, next_done, infos = step_func(action)
 
         if "final_info" in infos:
-            for info in infos["final_info"]:
-                r = float(info["episode"]["r"].reshape(()))
-                # max_ep_ret = max(max_ep_ret, r)
-                avg_returns.append(r)
-            # desc = f"global_step={global_step}, episodic_return={torch.tensor(avg_returns).mean(): 4.2f} (max={max_ep_ret: 4.2f})"
+            final_info = infos["final_info"]
+            done_mask = infos["_final_info"]
+            for k, v in final_info["episode"].items():
+                logger.add_scalar(f"train/{k}", v[done_mask].float().mean(), global_step)
+            with torch.no_grad():
+                final_values[step, torch.arange(args.num_envs, device=device)[done_mask]] = agent.get_value(infos["final_observation"][done_mask]).view(-1)
+
+        # if "final_info" in infos:
+        #     for info in infos["final_info"]:
+        #         r = float(info["episode"]["r"].reshape(()))
+        #         # max_ep_ret = max(max_ep_ret, r)
+        #         avg_returns.append(r)
+        #     # desc = f"global_step={global_step}, episodic_return={torch.tensor(avg_returns).mean(): 4.2f} (max={max_ep_ret: 4.2f})"
 
         ts.append(
             tensordict.TensorDict._new_unsafe(
@@ -233,12 +229,12 @@ def rollout(obs, done, avg_returns=[]):
                 batch_size=(args.num_envs,),
             )
         )
-
-        obs = next_obs = next_obs.to(device, non_blocking=True)
-        done = next_done.to(device, non_blocking=True)
-
+        # NOTE (stao): change here for gpu env
+        obs = next_obs = next_obs
+        done = next_done
+    # NOTE (stao): need to do .to(device) i think? otherwise container.device is None, not sure if this affects anything
     container = torch.stack(ts, 0).to(device)
-    return next_obs, done, container
+    return next_obs, done, container, final_values
 
 
 def update(obs, actions, logprobs, advantages, returns, vals):
@@ -371,9 +367,10 @@ if __name__ == "__main__":
     # Register step as a special op not to graph break
     # @torch.library.custom_op("mylib::step", mutates_args=())
     def step_func(action: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        next_obs_np, reward, terminations, truncations, info = envs.step(action.cpu().numpy())
-        next_done = np.logical_or(terminations, truncations)
-        return torch.as_tensor(next_obs_np, dtype=torch.float), torch.as_tensor(reward), torch.as_tensor(next_done), info
+        # NOTE (stao): change here for gpu env
+        next_obs, reward, terminations, truncations, info = envs.step(action)
+        next_done = torch.logical_or(terminations, truncations)
+        return next_obs, reward, next_done, info
 
     ####### Agent #######
     agent = Agent(n_obs, n_act, device=device)
@@ -408,6 +405,7 @@ if __name__ == "__main__":
 
     avg_returns = deque(maxlen=20)
     global_step = 0
+    start_time = time.time()
     container_local = None
     next_obs = torch.tensor(envs.reset()[0], device=device, dtype=torch.float)
     next_done = torch.zeros(args.num_envs, device=device, dtype=torch.bool)
@@ -429,7 +427,7 @@ if __name__ == "__main__":
             num_episodes = 0
             for _ in range(args.num_eval_steps):
                 with torch.no_grad():
-                    eval_obs, eval_rew, eval_terminations, eval_truncations, eval_infos = eval_envs.step(agent.get_action(eval_obs, deterministic=True))
+                    eval_obs, eval_rew, eval_terminations, eval_truncations, eval_infos = eval_envs.step(agent.actor_mean(eval_obs))
                     if "final_info" in eval_infos:
                         mask = eval_infos["_final_info"]
                         num_episodes += mask.sum()
@@ -458,10 +456,14 @@ if __name__ == "__main__":
             optimizer.param_groups[0]["lr"].copy_(lrnow)
 
         torch.compiler.cudagraph_mark_step_begin()
-        next_obs, next_done, container = rollout(next_obs, next_done, avg_returns=avg_returns)
+        rollout_time = time.perf_counter()
+        next_obs, next_done, container, final_values = rollout(next_obs, next_done, avg_returns=avg_returns)
+        rollout_time = time.perf_counter() - rollout_time
+        cumulative_times["rollout_time"] += rollout_time
         global_step += container.numel()
 
-        container = gae(next_obs, next_done, container)
+        update_time = time.perf_counter()
+        container = gae(next_obs, next_done, container, final_values)
         container_flat = container.view(-1)
 
         # Optimizing the policy and value network
@@ -477,33 +479,53 @@ if __name__ == "__main__":
             else:
                 continue
             break
+        update_time = time.perf_counter() - update_time
+        cumulative_times["update_time"] += update_time
 
-        if global_step_burnin is not None and iteration % 10 == 0:
-            speed = (global_step - global_step_burnin) / (time.time() - start_time)
-            r = container["rewards"].mean()
-            r_max = container["rewards"].max()
-            avg_returns_t = torch.tensor(avg_returns).mean()
+        # ["approx_kl", "v_loss", "pg_loss", "entropy_loss", "old_approx_kl", "clipfrac", "gn"],
+        logger.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
+        logger.add_scalar("losses/value_loss", out["v_loss"].item(), global_step)
+        logger.add_scalar("losses/policy_loss", out["pg_loss"].item(), global_step)
+        logger.add_scalar("losses/entropy", out["entropy_loss"].item(), global_step)
+        logger.add_scalar("losses/old_approx_kl", out["old_approx_kl"].item(), global_step)
+        logger.add_scalar("losses/approx_kl", out["approx_kl"].item(), global_step)
+        logger.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
+        # logger.add_scalar("losses/explained_variance", explained_var, global_step)
+        print("SPS:", int(global_step / (time.time() - start_time)))
+        logger.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
+        logger.add_scalar("time/step", global_step, global_step)
+        logger.add_scalar("time/update_time", update_time, global_step)
+        logger.add_scalar("time/rollout_time", rollout_time, global_step)
+        logger.add_scalar("time/rollout_fps", args.num_envs * args.num_steps / rollout_time, global_step)
+        for k, v in cumulative_times.items():
+            logger.add_scalar(f"time/total_{k}", v, global_step)
+        logger.add_scalar("time/total_rollout+update_time", cumulative_times["rollout_time"] + cumulative_times["update_time"], global_step)
+        # if global_step_burnin is not None and iteration % 10 == 0:
+        #     speed = (global_step - global_step_burnin) / (time.time() - start_time)
+        #     r = container["rewards"].mean()
+        #     r_max = container["rewards"].max()
+        #     avg_returns_t = torch.tensor(avg_returns).mean()
 
-            with torch.no_grad():
-                logs = {
-                    "episode_return": np.array(avg_returns).mean(),
-                    "logprobs": container["logprobs"].mean(),
-                    "advantages": container["advantages"].mean(),
-                    "returns": container["returns"].mean(),
-                    "vals": container["vals"].mean(),
-                    "gn": out["gn"].mean(),
-                }
+        #     with torch.no_grad():
+        #         logs = {
+        #             "episode_return": np.array(avg_returns).mean(),
+        #             "logprobs": container["logprobs"].mean(),
+        #             "advantages": container["advantages"].mean(),
+        #             "returns": container["returns"].mean(),
+        #             "vals": container["vals"].mean(),
+        #             "gn": out["gn"].mean(),
+        #         }
 
-            lr = optimizer.param_groups[0]["lr"]
-            pbar.set_description(
-                f"speed: {speed: 4.1f} sps, "
-                f"reward avg: {r :4.2f}, "
-                f"reward max: {r_max:4.2f}, "
-                f"returns: {avg_returns_t: 4.2f},"
-                f"lr: {lr: 4.2f}"
-            )
-            wandb.log(
-                {"speed": speed, "episode_return": avg_returns_t, "r": r, "r_max": r_max, "lr": lr, **logs}, step=global_step
-            )
+        #     lr = optimizer.param_groups[0]["lr"]
+        #     pbar.set_description(
+        #         f"speed: {speed: 4.1f} sps, "
+        #         f"reward avg: {r :4.2f}, "
+        #         f"reward max: {r_max:4.2f}, "
+        #         f"returns: {avg_returns_t: 4.2f},"
+        #         f"lr: {lr: 4.2f}"
+        #     )
+        #     wandb.log(
+        #         {"speed": speed, "episode_return": avg_returns_t, "r": r, "r_max": r_max, "lr": lr, **logs}, step=global_step
+        #     )
 
     envs.close()
