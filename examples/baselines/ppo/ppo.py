@@ -20,7 +20,6 @@ from mani_skill.utils import gym_utils
 from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper
 from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
-from tensordict import from_module
 
 @dataclass
 class Args:
@@ -46,8 +45,6 @@ class Args:
     """if toggled, only runs evaluation with the given model checkpoint and saves the evaluation trajectories"""
     checkpoint: Optional[str] = None
     """path to a pretrained checkpoint file to start evaluation/training from"""
-    compile: bool = False
-    """whether to use torch.compile, which can speed up training"""
 
     # Algorithm specific arguments
     env_id: str = "PickCube-v1"
@@ -170,7 +167,6 @@ class Logger:
     def close(self):
         self.writer.close()
 
-
 if __name__ == "__main__":
     args = tyro.cli(Args)
     args.batch_size = int(args.num_envs * args.num_steps)
@@ -240,9 +236,6 @@ if __name__ == "__main__":
         print("Running evaluation")
 
     agent = Agent(envs).to(device)
-    agent_inference = Agent(envs).to(device)
-    agent_inference_p = from_module(agent).data
-    agent_inference_p.to_module(agent_inference)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     # ALGO Logic: Storage setup
@@ -268,59 +261,10 @@ if __name__ == "__main__":
     def clip_action(action: torch.Tensor):
         return torch.clamp(action.detach(), action_space_low, action_space_high)
 
-    # compile and cuda graphs
-    policy = agent_inference_p.get_action_and_value
-    get_value = agent_inference_p.get_value
-    def update(obs, actions, logprobs, advantages, returns, vals):
-        _, newlogprob, entropy, newvalue = agent.get_action_and_value(obs, actions)
-        logratio = newlogprob - logprobs
-        ratio = logratio.exp()
-
-        with torch.no_grad():
-            # calculate approx_kl http://joschu.net/blog/kl-approx.html
-            old_approx_kl = (-logratio).mean()
-            approx_kl = ((ratio - 1) - logratio).mean()
-            clipfrac = ((ratio - 1.0).abs() > args.clip_coef).float().mean()
-
-        if args.norm_adv:
-            advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
-
-        # Policy loss
-        pg_loss1 = -advantages * ratio
-        pg_loss2 = -advantages * torch.clamp(ratio, 1 - args.clip_coef, 1 + args.clip_coef)
-        pg_loss = torch.max(pg_loss1, pg_loss2).mean()
-
-        # Value loss
-        newvalue = newvalue.view(-1)
-        if args.clip_vloss:
-            v_loss_unclipped = (newvalue - returns) ** 2
-            v_clipped = vals + torch.clamp(
-                newvalue - vals,
-                -args.clip_coef,
-                args.clip_coef,
-            )
-            v_loss_clipped = (v_clipped - returns) ** 2
-            v_loss_max = torch.max(v_loss_unclipped, v_loss_clipped)
-            v_loss = 0.5 * v_loss_max.mean()
-        else:
-            v_loss = 0.5 * ((newvalue - returns) ** 2).mean()
-
-        entropy_loss = entropy.mean()
-        loss = pg_loss - args.ent_coef * entropy_loss + v_loss * args.vf_coef
-
-        optimizer.zero_grad()
-        loss.backward()
-        nn.utils.clip_grad_norm_(agent.parameters(), args.max_grad_norm)
-        optimizer.step()
-        return approx_kl, v_loss.detach(), pg_loss.detach(), entropy_loss.detach(), old_approx_kl, clipfrac
-
-    policy = torch.compile(policy)
-    # gae = torch.compile(gae, fullgraph=True)
-    update = torch.compile(update)
-
-
     if args.checkpoint:
         agent.load_state_dict(torch.load(args.checkpoint))
+
+    cumulative_times = defaultdict(float)
 
     for iteration in range(1, args.num_iterations + 1):
         print(f"Epoch: {iteration}, global_step={global_step}")
@@ -328,6 +272,7 @@ if __name__ == "__main__":
         agent.eval()
         if iteration % args.eval_freq == 1:
             print("Evaluating")
+            stime = time.perf_counter()
             eval_obs, _ = eval_envs.reset()
             eval_metrics = defaultdict(list)
             num_episodes = 0
@@ -345,6 +290,10 @@ if __name__ == "__main__":
                 if logger is not None:
                     logger.add_scalar(f"eval/{k}", mean, global_step)
                 print(f"eval_{k}_mean={mean}")
+            if logger is not None:
+                eval_time = time.perf_counter() - stime
+                cumulative_times["eval_time"] += eval_time
+                logger.add_scalar("time/eval_time", eval_time, global_step)
             if args.evaluate:
                 break
         if args.save_model and iteration % args.eval_freq == 1:
@@ -357,7 +306,7 @@ if __name__ == "__main__":
             lrnow = frac * args.learning_rate
             optimizer.param_groups[0]["lr"] = lrnow
 
-        rollout_time = time.time()
+        rollout_time = time.perf_counter()
         for step in range(0, args.num_steps):
             global_step += args.num_envs
             obs[step] = next_obs
@@ -365,7 +314,7 @@ if __name__ == "__main__":
 
             # ALGO LOGIC: action logic
             with torch.no_grad():
-                action, logprob, _, value = policy(next_obs)
+                action, logprob, _, value = agent.get_action_and_value(next_obs)
                 values[step] = value.flatten()
             actions[step] = action
             logprobs[step] = logprob
@@ -381,12 +330,13 @@ if __name__ == "__main__":
                 for k, v in final_info["episode"].items():
                     logger.add_scalar(f"train/{k}", v[done_mask].float().mean(), global_step)
                 with torch.no_grad():
-                    final_values[step, torch.arange(args.num_envs, device=device)[done_mask]] = get_value(infos["final_observation"][done_mask]).view(-1)
-        rollout_time = time.time() - rollout_time
+                    final_values[step, torch.arange(args.num_envs, device=device)[done_mask]] = agent.get_value(infos["final_observation"][done_mask]).view(-1)
+        rollout_time = time.perf_counter() - rollout_time
+        cumulative_times["rollout_time"] += rollout_time
         # bootstrap value according to termination and truncation
         with torch.no_grad():
-            next_value = get_value(next_obs).reshape(1, -1)
-            advantages = torch.zeros_like(rewards, device=device)
+            next_value = agent.get_value(next_obs).reshape(1, -1)
+            advantages = torch.zeros_like(rewards).to(device)
             lastgaelam = 0
             for t in reversed(range(args.num_steps)):
                 if t == args.num_steps - 1:
@@ -438,29 +388,67 @@ if __name__ == "__main__":
         agent.train()
         b_inds = np.arange(args.batch_size)
         clipfracs = []
-        update_time = time.time()
-        gradient_updates = 0
+        update_time = time.perf_counter()
         for epoch in range(args.update_epochs):
             np.random.shuffle(b_inds)
             for start in range(0, args.batch_size, args.minibatch_size):
                 end = start + args.minibatch_size
                 mb_inds = b_inds[start:end]
-                approx_kl, v_loss, pg_loss, entropy_loss, old_approx_kl, clipfrac = update(b_obs[mb_inds], b_actions[mb_inds], b_logprobs[mb_inds], b_advantages[mb_inds], b_returns[mb_inds], b_values[mb_inds])
-                gradient_updates += 1
-                clipfracs += [clipfrac.item()]
+
+                _, newlogprob, entropy, newvalue = agent.get_action_and_value(b_obs[mb_inds], b_actions[mb_inds])
+                logratio = newlogprob - b_logprobs[mb_inds]
+                ratio = logratio.exp()
+
+                with torch.no_grad():
+                    # calculate approx_kl http://joschu.net/blog/kl-approx.html
+                    old_approx_kl = (-logratio).mean()
+                    approx_kl = ((ratio - 1) - logratio).mean()
+                    clipfracs += [((ratio - 1.0).abs() > args.clip_coef).float().mean().item()]
+
                 if args.target_kl is not None and approx_kl > args.target_kl:
                     break
-            else:
-                continue
-            break
-        update_time = time.time() - update_time
 
+                mb_advantages = b_advantages[mb_inds]
+                if args.norm_adv:
+                    mb_advantages = (mb_advantages - mb_advantages.mean()) / (mb_advantages.std() + 1e-8)
+
+                # Policy loss
+                pg_loss1 = -mb_advantages * ratio
+                pg_loss2 = -mb_advantages * torch.clamp(ratio, 1 - args.clip_coef, 1 + args.clip_coef)
+                pg_loss = torch.max(pg_loss1, pg_loss2).mean()
+
+                # Value loss
+                newvalue = newvalue.view(-1)
+                if args.clip_vloss:
+                    v_loss_unclipped = (newvalue - b_returns[mb_inds]) ** 2
+                    v_clipped = b_values[mb_inds] + torch.clamp(
+                        newvalue - b_values[mb_inds],
+                        -args.clip_coef,
+                        args.clip_coef,
+                    )
+                    v_loss_clipped = (v_clipped - b_returns[mb_inds]) ** 2
+                    v_loss_max = torch.max(v_loss_unclipped, v_loss_clipped)
+                    v_loss = 0.5 * v_loss_max.mean()
+                else:
+                    v_loss = 0.5 * ((newvalue - b_returns[mb_inds]) ** 2).mean()
+
+                entropy_loss = entropy.mean()
+                loss = pg_loss - args.ent_coef * entropy_loss + v_loss * args.vf_coef
+
+                optimizer.zero_grad()
+                loss.backward()
+                nn.utils.clip_grad_norm_(agent.parameters(), args.max_grad_norm)
+                optimizer.step()
+
+            if args.target_kl is not None and approx_kl > args.target_kl:
+                break
+        update_time = time.perf_counter() - update_time
+        cumulative_times["update_time"] += update_time
         y_pred, y_true = b_values.cpu().numpy(), b_returns.cpu().numpy()
         var_y = np.var(y_true)
         explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
 
         logger.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
-        logger.add_scalar("charts/gradient_updates", gradient_updates, global_step)
         logger.add_scalar("losses/value_loss", v_loss.item(), global_step)
         logger.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
         logger.add_scalar("losses/entropy", entropy_loss.item(), global_step)
@@ -474,6 +462,9 @@ if __name__ == "__main__":
         logger.add_scalar("time/update_time", update_time, global_step)
         logger.add_scalar("time/rollout_time", rollout_time, global_step)
         logger.add_scalar("time/rollout_fps", args.num_envs * args.num_steps / rollout_time, global_step)
+        for k, v in cumulative_times.items():
+            logger.add_scalar(f"time/total_{k}", v, global_step)
+        logger.add_scalar("time/total_rollout+update_time", cumulative_times["rollout_time"] + cumulative_times["update_time"], global_step)
     if not args.evaluate:
         if args.save_model:
             model_path = f"runs/{run_name}/final_ckpt.pt"
