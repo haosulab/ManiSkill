@@ -48,6 +48,12 @@ class Args:
     """the entity (team) of wandb's project"""
     capture_video: bool = True
     """whether to capture videos of the agent performances (check out `videos` folder)"""
+    save_model: bool = True
+    """whether to save model into the `runs/{run_name}` folder"""
+    evaluate: bool = False
+    """if toggled, only runs evaluation with the given model checkpoint and saves the evaluation trajectories"""
+    checkpoint: Optional[str] = None
+    """path to a pretrained checkpoint file to start evaluation/training from"""
 
     # Environment specific arguments
     env_id: str = "PickCube-v1"
@@ -200,7 +206,7 @@ def gae(next_obs, next_done, container, final_values):
     return container
 
 
-def rollout(obs, done, avg_returns=[]):
+def rollout(obs, done):
     ts = []
     final_values = torch.zeros((args.num_steps, args.num_envs), device=device)
     for step in range(args.num_steps):
@@ -375,6 +381,8 @@ if __name__ == "__main__":
 
     ####### Agent #######
     agent = Agent(n_obs, n_act, device=device)
+    if args.checkpoint:
+        agent.load_state_dict(torch.load(args.checkpoint))
     # Make a version of agent with detached params
     agent_inference = Agent(n_obs, n_act, device=device)
     agent_inference_p = from_module(agent).data
@@ -404,21 +412,16 @@ if __name__ == "__main__":
         gae = CudaGraphModule(gae)
         update = CudaGraphModule(update)
 
-    avg_returns = deque(maxlen=20)
     global_step = 0
     start_time = time.time()
     container_local = None
     next_obs = envs.reset()[0]
     next_done = torch.zeros(args.num_envs, device=device, dtype=torch.bool)
-    # max_ep_ret = -float("inf")
     pbar = tqdm.tqdm(range(1, args.num_iterations + 1))
-    # desc = ""
 
     cumulative_times = defaultdict(float)
 
-    global_step_burnin = None
     for iteration in pbar:
-        print(f"Epoch: {iteration}, global_step={global_step}")
         agent.eval()
         if iteration % args.eval_freq == 1:
             print("Evaluating")
@@ -446,6 +449,10 @@ if __name__ == "__main__":
                 logger.add_scalar("time/eval_time", eval_time, global_step)
             if args.evaluate:
                 break
+        if args.save_model and iteration % args.eval_freq == 1:
+            model_path = f"runs/{run_name}/ckpt_{iteration}.pt"
+            torch.save(agent.state_dict(), model_path)
+            print(f"model saved to {model_path}")
         # Annealing the rate if instructed to do so.
         if args.anneal_lr:
             frac = 1.0 - (iteration - 1.0) / args.num_iterations
@@ -454,7 +461,7 @@ if __name__ == "__main__":
 
         torch.compiler.cudagraph_mark_step_begin()
         rollout_time = time.perf_counter()
-        next_obs, next_done, container, final_values = rollout(next_obs, next_done, avg_returns=avg_returns)
+        next_obs, next_done, container, final_values = rollout(next_obs, next_done)
         rollout_time = time.perf_counter() - rollout_time
         cumulative_times["rollout_time"] += rollout_time
         global_step += container.numel()
@@ -480,7 +487,6 @@ if __name__ == "__main__":
         update_time = time.perf_counter() - update_time
         cumulative_times["update_time"] += update_time
 
-        # ["approx_kl", "v_loss", "pg_loss", "entropy_loss", "old_approx_kl", "clipfrac", "gn"],
         logger.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
         logger.add_scalar("losses/value_loss", out["v_loss"].item(), global_step)
         logger.add_scalar("losses/policy_loss", out["pg_loss"].item(), global_step)
@@ -489,7 +495,6 @@ if __name__ == "__main__":
         logger.add_scalar("losses/approx_kl", out["approx_kl"].item(), global_step)
         logger.add_scalar("losses/clipfrac", torch.stack(clipfracs).mean().cpu().item(), global_step)
         # logger.add_scalar("losses/explained_variance", explained_var, global_step)
-        print("SPS:", int(global_step / (time.time() - start_time)))
         logger.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
         logger.add_scalar("time/step", global_step, global_step)
         logger.add_scalar("time/update_time", update_time, global_step)
@@ -498,32 +503,5 @@ if __name__ == "__main__":
         for k, v in cumulative_times.items():
             logger.add_scalar(f"time/total_{k}", v, global_step)
         logger.add_scalar("time/total_rollout+update_time", cumulative_times["rollout_time"] + cumulative_times["update_time"], global_step)
-        # if global_step_burnin is not None and iteration % 10 == 0:
-        #     speed = (global_step - global_step_burnin) / (time.time() - start_time)
-        #     r = container["rewards"].mean()
-        #     r_max = container["rewards"].max()
-        #     avg_returns_t = torch.tensor(avg_returns).mean()
-
-        #     with torch.no_grad():
-        #         logs = {
-        #             "episode_return": np.array(avg_returns).mean(),
-        #             "logprobs": container["logprobs"].mean(),
-        #             "advantages": container["advantages"].mean(),
-        #             "returns": container["returns"].mean(),
-        #             "vals": container["vals"].mean(),
-        #             "gn": out["gn"].mean(),
-        #         }
-
-        #     lr = optimizer.param_groups[0]["lr"]
-        #     pbar.set_description(
-        #         f"speed: {speed: 4.1f} sps, "
-        #         f"reward avg: {r :4.2f}, "
-        #         f"reward max: {r_max:4.2f}, "
-        #         f"returns: {avg_returns_t: 4.2f},"
-        #         f"lr: {lr: 4.2f}"
-        #     )
-        #     wandb.log(
-        #         {"speed": speed, "episode_return": avg_returns_t, "r": r, "r_max": r_max, "lr": lr, **logs}, step=global_step
-        #     )
 
     envs.close()
