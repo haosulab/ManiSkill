@@ -1,4 +1,3 @@
-# docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/ppo/#ppo_continuous_actionpy
 import os
 
 from mani_skill.utils import gym_utils
@@ -93,9 +92,6 @@ class Args:
     """the mini-batch size (computed in runtime)"""
     num_iterations: int = 0
     """the number of iterations (computed in runtime)"""
-
-    measure_burnin: int = 3
-    """Number of burn-in iterations for speed measure."""
 
     eval_freq: int = 25
     save_train_video_freq: Optional[int] = None
@@ -209,13 +205,6 @@ def rollout(obs, done, avg_returns=[]):
                 logger.add_scalar(f"train/{k}", v[done_mask].float().mean(), global_step)
             with torch.no_grad():
                 final_values[step, torch.arange(args.num_envs, device=device)[done_mask]] = agent.get_value(infos["final_observation"][done_mask]).view(-1)
-
-        # if "final_info" in infos:
-        #     for info in infos["final_info"]:
-        #         r = float(info["episode"]["r"].reshape(()))
-        #         # max_ep_ret = max(max_ep_ret, r)
-        #         avg_returns.append(r)
-        #     # desc = f"global_step={global_step}, episodic_return={torch.tensor(avg_returns).mean(): 4.2f} (max={max_ep_ret: 4.2f})"
 
         ts.append(
             tensordict.TensorDict._new_unsafe(
@@ -445,10 +434,6 @@ if __name__ == "__main__":
                 logger.add_scalar("time/eval_time", eval_time, global_step)
             if args.evaluate:
                 break
-        if iteration == args.measure_burnin:
-            global_step_burnin = global_step
-            start_time = time.time()
-
         # Annealing the rate if instructed to do so.
         if args.anneal_lr:
             frac = 1.0 - (iteration - 1.0) / args.num_iterations
