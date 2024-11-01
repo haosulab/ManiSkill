@@ -220,7 +220,7 @@ class ActorBuilder(SAPIENActorBuilder):
             )
             self.initial_pose = Pose.create(sapien.Pose())
         else:
-            self.initial_pose = Pose.create(self.initial_pose)
+            self.initial_pose = Pose.create(self.initial_pose, device=self.scene.device)
 
         initial_pose_b = self.initial_pose.raw_pose.shape[0]
         assert initial_pose_b == 1 or initial_pose_b == num_actors
@@ -251,7 +251,7 @@ class ActorBuilder(SAPIENActorBuilder):
         if (
             self.physx_body_type == "static"
             and initial_pose_b == 1
-            and physx.is_gpu_enabled()
+            and self.scene.gpu_sim_enabled
         ):
             actor.initial_pose = Pose.create(
                 self.initial_pose.raw_pose.repeat(num_actors, 1)

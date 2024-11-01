@@ -140,13 +140,13 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
         return torch.hstack([pose.p, pose.q, vel, ang_vel])
 
     def set_state(self, state: Array, env_idx: torch.Tensor = None):
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             if env_idx is not None:
                 prev_reset_mask = self.scene._reset_mask.clone()
                 # safe guard against setting the wrong states
                 self.scene._reset_mask[:] = False
                 self.scene._reset_mask[env_idx] = True
-            state = common.to_tensor(state)
+            state = common.to_tensor(state, device=self.device)
             self.set_pose(Pose.create(state[:, :7]))
             self.set_linear_velocity(state[:, 7:10])
             self.set_angular_velocity(state[:, 10:13])
@@ -184,7 +184,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
         assert not self.has_collision_shapes
         if self.hidden:
             return
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             self.before_hide_pose = self.pose.raw_pose.clone()
 
             temp_pose = self.pose.raw_pose
@@ -206,7 +206,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
             return
         # set hidden *before* setting/getting so not applied to self.before_hide_pose erroenously
         self.hidden = False
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             if hasattr(self, "before_hide_pose"):
                 self.pose = self.before_hide_pose
                 self.px.gpu_apply_rigid_dynamic_data()
@@ -304,7 +304,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
     # CPU and GPU based actors
     # -------------------------------------------------------------------------- #
     def remove_from_scene(self):
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             raise RuntimeError(
                 "Cannot physically remove object from scene during GPU simulation. This can only be done in CPU simulation. If you wish to remove an object physically, the best way is to move the object far away."
             )
@@ -313,7 +313,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
 
     @property
     def pose(self) -> Pose:
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             if self.px_body_type == "static":
                 # NOTE (stao): usually _builder_initial_pose is just one pose, but for static objects in GPU sim we repeat it if necessary so it can be used
                 # as part of observations if needed
@@ -339,7 +339,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
 
     @pose.setter
     def pose(self, arg1: Union[Pose, sapien.Pose, Array]) -> None:
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             assert (
                 self.px_body_type != "static"
             ), "Static objects cannot change poses in GPU sim after environment is loaded"
@@ -367,7 +367,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
                 for obj in self._objs:
                     obj.pose = arg1
             else:
-                if len(arg1.shape) == 2:
+                if isinstance(arg1, Pose) and len(arg1.shape) == 2:
                     for i, obj in enumerate(self._objs):
                         obj.pose = arg1[i].sp
                 else:
