@@ -230,12 +230,12 @@ class ReplicaCADSceneBuilder(SceneBuilder):
 
                 # for now classify articulated objects as "movable" object
                 for env_num in env_idx:
-                    self.articulations[
-                        f"env-{env_num}_{articulation_name}"
-                    ] = articulation
-                    self.scene_objects[
-                        f"env-{env_num}_{articulation_name}"
-                    ] = articulation
+                    self.articulations[f"env-{env_num}_{articulation_name}"] = (
+                        articulation
+                    )
+                    self.scene_objects[f"env-{env_num}_{articulation_name}"] = (
+                        articulation
+                    )
 
                 for link in articulation.links:
                     link.set_collision_group_bit(
@@ -293,7 +293,7 @@ class ReplicaCADSceneBuilder(SceneBuilder):
                 obj.set_qpos(obj.qpos[0] * 0)
                 obj.set_qvel(obj.qvel[0] * 0)
 
-        if self.scene.gpu_sim_enabled:
+        if self.scene.gpu_sim_enabled and len(env_idx) == self.env.num_envs:
             self.scene._gpu_apply_all()
             self.scene.px.gpu_update_articulation_kinematics()
             self.scene.px.step()
