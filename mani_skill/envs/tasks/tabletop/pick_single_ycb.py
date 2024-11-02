@@ -93,7 +93,7 @@ class PickSingleYCBEnv(BaseEnv):
             print(
                 """There are less parallel environments than total available models to sample.
                 Not all models will be used during interaction even after resets unless you call env.reset(options=dict(reconfigure=True))
-                or set reconfiguration_freq to be > 1."""
+                or set reconfiguration_freq to be >= 1."""
             )
 
         self._objs: List[Actor] = []
