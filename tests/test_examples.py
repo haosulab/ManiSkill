@@ -6,6 +6,6 @@ scripts = pathlib.Path(__file__, "..", "scripts").resolve().glob("*.py")
 
 
 def test_demo_random_action():
-    from mani_skill.examples.demo_random_action import main, parse_args
+    from mani_skill.examples.demo_random_action import Args, main
 
-    main(parse_args(args=["--quiet"]))
+    main(Args(quiet=True))

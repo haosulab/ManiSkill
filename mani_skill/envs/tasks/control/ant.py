@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional, Union
 
 import numpy as np
 import sapien
@@ -59,7 +59,9 @@ class AntRobot(BaseAgent):
             )
         )
 
-    def _load_articulation(self):
+    def _load_articulation(
+        self, initial_pose: Optional[Union[sapien.Pose, Pose]] = None
+    ):
         """
         Load the robot articulation
         """
@@ -68,7 +70,9 @@ class AntRobot(BaseAgent):
 
         loader.name = self.uid
 
-        self.robot = loader.parse(asset_path)["articulation_builders"][0].build()
+        builder = loader.parse(asset_path)["articulation_builders"][0]
+        builder.initial_pose = initial_pose
+        self.robot = builder.build()
         assert self.robot is not None, f"Fail to load URDF/MJCF from {asset_path}"
         self.robot_link_ids = [link.name for link in self.robot.get_links()]
 
@@ -181,7 +185,7 @@ class AntEnv(BaseEnv):
             Pose.create_from_pq(p=self.agent.robot.links_map["torso"].pose.p)
         )
         # gpu requires that we manually apply this update
-        if sapien.physx.is_gpu_enabled():
+        if self.gpu_sim_enabled:
             # we update just actor pose here, no need to call apply_all/fetch_all
             self.scene.px.gpu_apply_rigid_dynamic_data()
             self.scene.px.gpu_fetch_rigid_dynamic_data()
