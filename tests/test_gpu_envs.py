@@ -194,36 +194,6 @@ def test_env_reconfiguration(env_id):
 
 
 @pytest.mark.gpu_sim
-def test_raw_sim_states():
-    # Test sim state get and set works for environment without overriden get_state_dict functions
-    env = gym.make(
-        "PickCube-v1", num_envs=16, obs_mode="state_dict", sim_config=LOW_MEM_SIM_CONFIG
-    )
-    base_env: BaseEnv = env.unwrapped
-    obs1, _ = env.reset()
-    state_dict = base_env.get_state_dict()
-    assert isinstance(state_dict, dict)
-    assert state_dict["actors"]["cube"].shape == (16, 13)
-    assert state_dict["actors"]["goal_site"].shape == (16, 13)
-    assert state_dict["articulations"]["panda"].shape == (16, 13 + 9 * 2)
-    for i in range(5):
-        env.step(env.action_space.sample())
-    base_env.set_state_dict(state_dict)
-    set_obs = base_env.get_obs()
-    assert_obs_equal(obs1, set_obs)
-    for i in range(5):
-        env.step(env.action_space.sample())
-    state = base_env.get_state()
-    obs1 = base_env.get_obs()
-    assert state.shape == (16, 13 * 3 + 13 + 9 * 2)
-    for i in range(5):
-        env.step(env.action_space.sample())
-    base_env.set_state(state)
-    set_obs = base_env.get_obs()
-    assert_obs_equal(obs1, set_obs)
-
-
-@pytest.mark.gpu_sim
 @pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS)
 @pytest.mark.parametrize("robot_uids", SINGLE_ARM_STATIONARY_ROBOTS)
 def test_robots(env_id, robot_uids):

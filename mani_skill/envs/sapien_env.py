@@ -1132,6 +1132,11 @@ class BaseEnv(gym.Env):
                 res[link._objs[0].entity.per_scene_id] = link
         return res
 
+    def add_to_state_dict_registry(self, object: Union[Actor, Articulation]):
+        self.scene.add_to_state_dict_registry(object)
+    def remove_from_state_dict_registry(self, object: Union[Actor, Articulation]):
+        self.scene.remove_from_state_dict_registry(object)
+
     def get_state_dict(self):
         """
         Get environment state dictionary. Override to include task information (e.g., goal)
