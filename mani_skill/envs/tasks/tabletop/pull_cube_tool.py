@@ -254,5 +254,5 @@ class PullCubeToolEnv(BaseEnv):
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        max_reward = 3.0  # Maximum possible reward (matches template)
+        max_reward = 3.0 
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
