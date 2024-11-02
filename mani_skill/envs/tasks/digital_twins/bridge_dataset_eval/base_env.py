@@ -158,7 +158,6 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
     SUPPORTED_OBS_MODES = ["rgb+segmentation"]
     SUPPORTED_REWARD_MODES = ["none"]
     scene_setting: Literal["flat_table", "sink"] = "flat_table"
-    objs: Dict[str, Actor] = dict()
 
     obj_static_friction = 0.5
     obj_dynamic_friction = 0.5
@@ -170,6 +169,7 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
         quat_configs: torch.Tensor,
         **kwargs,
     ):
+        self.objs: Dict[str, Actor] = dict()
         self.obj_names = obj_names
         self.source_obj_name = obj_names[0]
         self.target_obj_name = obj_names[1]
