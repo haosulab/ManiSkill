@@ -92,7 +92,7 @@ class PullCubeToolEnv(BaseEnv):
         builder = self.scene.create_actor_builder()
 
         mat = sapien.render.RenderMaterial()
-        mat.set_base_color([0.5, 0.5, 0.5, 1])
+        mat.set_base_color([1, 0, 0, 1])
         mat.metallic = 1.0
         mat.roughness = 0.0
         mat.specular = 1.0
