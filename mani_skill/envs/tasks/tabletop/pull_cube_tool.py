@@ -97,7 +97,8 @@ class PullCubeToolEnv(BaseEnv):
         mat.roughness = 0.0
         mat.specular = 1.0
 
-        builder.add_box_collision(sapien.Pose([handle_length / 2, 0, 0]),[handle_length / 2, width / 2, height / 2])
+        builder.add_box_collision(sapien.Pose([handle_length / 2, 0, 0]),[handle_length / 2, width / 2, height / 2]
+                                  , density= 700)
         builder.add_box_visual(
             sapien.Pose([handle_length / 2, 0, 0]),
             [handle_length / 2, width / 2, height / 2],

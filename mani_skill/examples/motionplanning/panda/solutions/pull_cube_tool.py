@@ -54,7 +54,8 @@ def solve(env: PullCubeToolEnv, seed=None, debug=False, vis=False):
     # Lift tool to safe height
     # -------------------------------------------------------------------------- #
     lift_height = 0.35  
-    lift_pose = grasp_pose * sapien.Pose([0, 0, lift_height])
+    lift_pose = sapien.Pose(grasp_pose.p + np.array([0, 0, lift_height]))
+    lift_pose.set_q(grasp_pose.q)  # Maintain grasp orientation
     res = planner.move_to_pose_with_screw(lift_pose)
     if res == -1: return res
 
