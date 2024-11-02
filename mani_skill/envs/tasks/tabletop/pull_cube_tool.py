@@ -37,9 +37,9 @@ class PullCubeToolEnv(BaseEnv):
     SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "sparse", "none")
     agent: Union[Panda, Fetch]
 
-    goal_radius = 0.1
-    cube_half_size = 0.01
-    handle_length = 0.20
+    goal_radius = 0.3
+    cube_half_size = 0.02
+    handle_length = 0.2
     hook_length = 0.05
     width = 0.05
     height = 0.05
@@ -98,7 +98,7 @@ class PullCubeToolEnv(BaseEnv):
         mat.specular = 1.0
 
         builder.add_box_collision(sapien.Pose([handle_length / 2, 0, 0]),[handle_length / 2, width / 2, height / 2]
-                                  , density= 700)
+                                  , density= 500)
         builder.add_box_visual(
             sapien.Pose([handle_length / 2, 0, 0]),
             [handle_length / 2, width / 2, height / 2],
@@ -107,7 +107,7 @@ class PullCubeToolEnv(BaseEnv):
 
         builder.add_box_collision(
             sapien.Pose([handle_length - hook_length / 2, width, 0]),
-            [hook_length / 2, width / 2, height / 2],
+            [hook_length / 2, width , height / 2],
         )
         builder.add_box_visual(
             sapien.Pose([handle_length - hook_length / 2, width, 0]),
@@ -155,7 +155,7 @@ class PullCubeToolEnv(BaseEnv):
             cube_xyz = torch.zeros((b, 3), device=self.device)
             cube_xyz[..., 0] = self.arm_reach + torch.rand(b, device=self.device) * (
                 self.handle_length
-            ) - 0.35
+            ) - 0.3
             cube_xyz[..., 1] = torch.rand(b, device=self.device) * 0.3 - 0.25
             cube_xyz[..., 2] = self.cube_size / 2
 
@@ -185,34 +185,38 @@ class PullCubeToolEnv(BaseEnv):
         return obs
 
     def evaluate(self):
-      tcp_pos = self.agent.tcp.pose.p
-      cube_pos = self.cube.pose.p
-      
-      # Success conditions - cube is within reach
-      cube_in_reach = (
-          torch.linalg.norm(cube_pos[:, :2] - tcp_pos[:, :2], dim=1)
-          < self.goal_radius
-      )
-      
-      # Calculate rewards for evaluation metrics
-      workspace_center = torch.zeros((len(cube_pos), 3), device=self.device)
-      workspace_center[:, 0] = self.arm_reach * 0.7
-      cube_to_workspace_dist = torch.linalg.norm(cube_pos - workspace_center, dim=1)
-      progress = 1 - torch.tanh(3.0 * cube_to_workspace_dist)
-      
-      return {
-          "success": cube_in_reach,
-          "success_once": cube_in_reach,
-          "success_at_end": cube_in_reach,
-          "cube_progress": progress.mean(),
-          "cube_distance": cube_to_workspace_dist.mean(),
-          "reward": self.compute_normalized_dense_reward(None, None, {"success": cube_in_reach}),
-      }
+        cube_pos = self.cube.pose.p
+        
+        # Get the actual robot base position from the root link
+        robot_base_pos = self.agent.robot.get_links()[0].pose.p
+        
+        # Calculate distance between cube and actual robot base position
+        # Only consider x-y plane for top-down distance
+        cube_to_base_dist = torch.linalg.norm(cube_pos[:, :2] - robot_base_pos[:, :2], dim=1)
+        
+        # Success condition - cube is pulled close enough to the actual base
+        cube_pulled_close = cube_to_base_dist < 0.7 # (panda arm length is about 85 cm)        
+
+        # Calculate rewards for evaluation metrics...
+        workspace_center = robot_base_pos.clone()
+        workspace_center[:, 0] += self.arm_reach * 0.1  # Offset in x direction from base
+        cube_to_workspace_dist = torch.linalg.norm(cube_pos - workspace_center, dim=1)
+        progress = 1 - torch.tanh(3.0 * cube_to_workspace_dist)
+
+        return {
+            "success": cube_pulled_close,
+            "success_once": cube_pulled_close,
+            "success_at_end": cube_pulled_close,
+            "cube_progress": progress.mean(),
+            "cube_distance": cube_to_workspace_dist.mean(),
+            "reward": self.compute_normalized_dense_reward(None, None, {"success": cube_pulled_close}),
+        }
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         tcp_pos = self.agent.tcp.pose.p
         cube_pos = self.cube.pose.p
         tool_pos = self.l_shape_tool.pose.p
+        robot_base_pos = self.agent.robot.get_links()[0].pose.p
         
         # Reaching the tool
         tool_grasp_pos = tool_pos + torch.tensor(
@@ -233,8 +237,7 @@ class PullCubeToolEnv(BaseEnv):
         tool_to_target_dist = torch.linalg.norm(tool_to_target, dim=1)
         tool_positioning_reward = 1 - torch.tanh(5.0 * tool_to_target_dist)
         
-        workspace_center = torch.zeros((len(cube_pos), 3), device=self.device)
-        workspace_center[:, 0] = self.arm_reach * 0.7
+        workspace_center = robot_base_pos.clone()
         cube_to_workspace = cube_pos - workspace_center
         cube_to_workspace_dist = torch.linalg.norm(cube_to_workspace, dim=1)
         cube_progress_reward = 1 - torch.tanh(5.0 * cube_to_workspace_dist)

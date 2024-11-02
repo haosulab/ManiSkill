@@ -75,8 +75,8 @@ def solve(env: PullCubeToolEnv, seed=None, debug=False, vis=False):
     # Lower tool behind cube
     # -------------------------------------------------------------------------- #
     behind_offset = sapien.Pose(
-        [-(env.hook_length + env.cube_half_size + 0.02),  
-        -0.07,  
+        [-(env.hook_length + env.cube_half_size),  
+        -0.067,  
         0] 
     )
     hook_pose = sapien.Pose(cube_pos) * behind_offset
@@ -88,7 +88,7 @@ def solve(env: PullCubeToolEnv, seed=None, debug=False, vis=False):
     # -------------------------------------------------------------------------- #
     # Pull cube
     # -------------------------------------------------------------------------- #
-    pull_offset = sapien.Pose([-0.2, 0, 0])
+    pull_offset = sapien.Pose([-0.4, 0, 0])
     target_pose = hook_pose * pull_offset
     res = planner.move_to_pose_with_screw(target_pose)
     if res == -1: return res
