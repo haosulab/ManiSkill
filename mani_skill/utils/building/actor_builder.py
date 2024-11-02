@@ -259,6 +259,7 @@ class ActorBuilder(SAPIENActorBuilder):
         else:
             actor.initial_pose = self.initial_pose
         self.scene.actors[self.name] = actor
+        self.scene.add_to_state_dict_registry(actor)
         return actor
 
     """

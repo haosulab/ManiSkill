@@ -93,7 +93,7 @@ class PickSingleYCBEnv(BaseEnv):
             print(
                 """There are less parallel environments than total available models to sample.
                 Not all models will be used during interaction even after resets unless you call env.reset(options=dict(reconfigure=True))
-                or set reconfiguration_freq to be > 1."""
+                or set reconfiguration_freq to be >= 1."""
             )
 
         self._objs: List[Actor] = []
@@ -107,7 +107,9 @@ class PickSingleYCBEnv(BaseEnv):
             builder.initial_pose = sapien.Pose(p=[0, 0, 0])
             builder.set_scene_idxs([i])
             self._objs.append(builder.build(name=f"{model_id}-{i}"))
+            self.remove_from_state_dict_registry(self._objs[-1])
         self.obj = Actor.merge(self._objs, name="ycb_object")
+        self.add_to_state_dict_registry(self.obj)
 
         self.goal_site = actors.build_sphere(
             self.scene,
@@ -135,7 +137,6 @@ class PickSingleYCBEnv(BaseEnv):
             xyz = torch.zeros((b, 3))
             xyz[:, :2] = torch.rand((b, 2)) * 0.2 - 0.1
             xyz[:, 2] = self.object_zs[env_idx]
-            print(xyz)
             qs = random_quaternions(b, lock_x=True, lock_y=True)
             self.obj.set_pose(Pose.create_from_pq(p=xyz, q=qs))
 
