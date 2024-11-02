@@ -813,11 +813,11 @@ class ManiSkillScene:
         state_dict = dict()
         state_dict["actors"] = dict()
         state_dict["articulations"] = dict()
-        for actor in self.actors.values():
+        for actor in self.state_dict_registry.actors.values():
             if actor.px_body_type == "static":
                 continue
             state_dict["actors"][actor.name] = actor.get_state().clone()
-        for articulation in self.articulations.values():
+        for articulation in self.state_dict_registry.articulations.values():
             state_dict["articulations"][
                 articulation.name
             ] = articulation.get_state().clone()
