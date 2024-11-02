@@ -141,7 +141,9 @@ def test_env_seeded_reset():
 
 def test_env_seeded_sequence_reset():
     N = 17
-    env = gym.make(STATIONARY_ENV_IDS[0], max_episode_steps=5)
+    env = gym.make(
+        STATIONARY_ENV_IDS[0], max_episode_steps=5, enhanced_determinism=True
+    )
     obs, _ = env.reset(seed=2000)
     actions = [env.action_space.sample() for _ in range(N)]
     for i in range(N):

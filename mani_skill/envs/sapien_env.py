@@ -890,12 +890,12 @@ class BaseEnv(gym.Env):
     def _set_episode_rng(self, seed: Union[None, list[int]], env_idx: torch.Tensor):
         """Set the random generator for current episode."""
         if seed is not None or self._enhanced_determinism:
-            if not np.iterable(seed):
-                seed = [seed]
             env_idx = common.to_numpy(env_idx)
             if seed is None:
                 self._episode_seed[env_idx] = self._batched_main_rng[env_idx].randint(2**31)
             else:
+                if not np.iterable(seed):
+                    seed = [seed]
                 self._episode_seed = common.to_numpy(seed, dtype=np.int64)
                 if len(self._episode_seed) == 1 and self.num_envs > 1:
                     self._episode_seed = np.concatenate((self._episode_seed, np.random.RandomState(self._episode_seed[0]).randint(2**31, size=(self.num_envs - 1,))))
