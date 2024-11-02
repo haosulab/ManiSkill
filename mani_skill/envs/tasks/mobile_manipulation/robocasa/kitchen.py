@@ -22,7 +22,9 @@ from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 
 
-@register_env("RoboCasaKitchen-v1", max_episode_steps=100)
+@register_env(
+    "RoboCasaKitchen-v1", max_episode_steps=100, asset_download_ids=["RoboCasa"]
+)
 class RoboCasaKitchenEnv(BaseEnv):
     SUPPORTED_ROBOTS = ["fetch", "none"]
     SUPPORTED_REWARD_MODES = ["none"]

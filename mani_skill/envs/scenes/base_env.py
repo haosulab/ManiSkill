@@ -83,9 +83,9 @@ class SceneManipulationEnv(BaseEnv):
         )
 
     def reset(self, seed=None, options=None):
-        self._set_episode_rng(seed)
         if options is None:
             options = dict(reconfigure=False)
+        self._set_episode_rng(seed, options.get("env_idx", torch.arange(self.num_envs)))
         if "reconfigure" in options and options["reconfigure"]:
             self.build_config_idxs = options.get(
                 "build_config_idxs", self.build_config_idxs
@@ -108,6 +108,9 @@ class SceneManipulationEnv(BaseEnv):
         if self.scene_builder.builds_lighting:
             return
         return super()._load_lighting(options)
+
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose())
 
     def _load_scene(self, options: dict):
         if self.scene_builder.build_configs is not None:

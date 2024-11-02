@@ -604,7 +604,7 @@ class RecordEpisode(gym.Wrapper):
                     )
                 episode_info = dict(
                     episode_id=self._episode_id,
-                    episode_seed=self.base_env._episode_seed,
+                    episode_seed=self.base_env._episode_seed[env_idx],
                     control_mode=self.base_env.control_mode,
                     elapsed_steps=end_ptr - start_ptr - 1,
                 )

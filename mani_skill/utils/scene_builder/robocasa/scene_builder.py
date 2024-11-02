@@ -162,16 +162,15 @@ class RoboCasaSceneBuilder(SceneBuilder):
         if build_config_idxs is None:
             build_config_idxs = []
             for i in range(self.env.num_envs):
-                # TODO (stao): how do we know the total number of layouts and styles?
-                build_config_idxs.append(
-                    (
-                        self.env._batched_episode_rng[i].randint(0, 10),
-                        self.env._batched_episode_rng[i].randint(0, 12),
-                    )
-                )
+                # Total number of configs is 10 * 12 = 120
+                config_idx = self.env._batched_episode_rng[i].randint(0, 120)
+                build_config_idxs.append(config_idx)
+
         for scene_idx, build_config_idx in enumerate(build_config_idxs):
-            layout_path = scene_registry.get_layout_path(build_config_idx[0])
-            style_path = scene_registry.get_style_path(build_config_idx[1])
+            layout_idx = build_config_idx // 12  # Get layout index (0-9)
+            style_idx = build_config_idx % 12  # Get style index (0-11)
+            layout_path = scene_registry.get_layout_path(layout_idx)
+            style_path = scene_registry.get_style_path(style_idx)
             # load style
             with open(style_path, "r") as f:
                 style = yaml.safe_load(f)

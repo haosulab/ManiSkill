@@ -158,7 +158,7 @@ class TurnFaucetEnv(BaseEnv):
             self.faucet.set_pose(Pose.create_from_pq(p, q))
 
             # apply pose changes and update kinematics to get updated link poses.
-            if physx.is_gpu_enabled():
+            if self.gpu_sim_enabled:
                 self.scene._gpu_apply_all()
                 self.scene.px.gpu_update_articulation_kinematics()
                 self.scene.px.step()
