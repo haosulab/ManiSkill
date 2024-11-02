@@ -839,12 +839,14 @@ class ManiSkillScene:
                 if len(actor_state.shape) == 1:
                     actor_state = actor_state[None, :]
                 # do not pass in env_idx to avoid redundant reset mask changes
-                self.actors[actor_id].set_state(actor_state, None)
+                self.state_dict_registry.actors[actor_id].set_state(actor_state, None)
         if "articulations" in state:
             for art_id, art_state in state["articulations"].items():
                 if len(art_state.shape) == 1:
                     art_state = art_state[None, :]
-                self.articulations[art_id].set_state(art_state, None)
+                self.state_dict_registry.articulations[art_id].set_state(
+                    art_state, None
+                )
         if env_idx is not None:
             self._reset_mask = prev_reset_mask
 
