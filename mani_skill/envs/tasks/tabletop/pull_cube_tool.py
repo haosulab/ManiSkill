@@ -14,7 +14,7 @@ from mani_skill.utils.structs import Pose
 from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 
 
-@register_env("PullCubeTool-v1", max_episode_steps=200)
+@register_env("PullCubeTool-v1", max_episode_steps=100)
 class PullCubeToolEnv(BaseEnv):
     """
     Task Description
