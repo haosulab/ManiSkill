@@ -146,7 +146,7 @@ class PullCubeToolEnv(BaseEnv):
 
             tool_xyz = torch.zeros((b, 3), device=self.device)
             tool_xyz[..., :2] = - torch.rand((b, 2), device=self.device) * 0.2 - 0.1
-            tool_xyz[..., 2] = self.height / 2
+            tool_xyz[..., 2] = self.height / 2 
             tool_q = torch.tensor([1, 0, 0, 0], device=self.device).expand(b, 4)
 
             tool_pose = Pose.create_from_pq(p=tool_xyz, q=tool_q)
@@ -157,7 +157,7 @@ class PullCubeToolEnv(BaseEnv):
                 self.handle_length
             ) - 0.3
             cube_xyz[..., 1] = torch.rand(b, device=self.device) * 0.3 - 0.25
-            cube_xyz[..., 2] = self.cube_size / 2
+            cube_xyz[..., 2] = self.cube_size / 2 + 0.015
 
             cube_q = randomization.random_quaternions(
                 b,
@@ -195,7 +195,7 @@ class PullCubeToolEnv(BaseEnv):
         cube_to_base_dist = torch.linalg.norm(cube_pos[:, :2] - robot_base_pos[:, :2], dim=1)
         
         # Success condition - cube is pulled close enough to the actual base
-        cube_pulled_close = cube_to_base_dist < 0.6 # (panda arm length is about 85 cm)        
+        cube_pulled_close = cube_to_base_dist < 0.7 # (panda arm length is about 85 cm)        
 
         # Calculate rewards for evaluation metrics...
         workspace_center = robot_base_pos.clone()

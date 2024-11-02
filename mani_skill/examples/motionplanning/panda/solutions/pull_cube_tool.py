@@ -88,7 +88,7 @@ def solve(env: PullCubeToolEnv, seed=None, debug=False, vis=False):
     # -------------------------------------------------------------------------- #
     # Pull cube
     # -------------------------------------------------------------------------- #
-    pull_offset = sapien.Pose([-0.4, 0, 0])
+    pull_offset = sapien.Pose([-0.3, 0, 0])
     target_pose = hook_pose * pull_offset
     res = planner.move_to_pose_with_screw(target_pose)
     if res == -1: return res
