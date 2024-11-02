@@ -217,42 +217,47 @@ class PullCubeToolEnv(BaseEnv):
         cube_pos = self.cube.pose.p
         tool_pos = self.l_shape_tool.pose.p
         robot_base_pos = self.agent.robot.get_links()[0].pose.p
-        
-        # Reaching the tool
-        tool_grasp_pos = tool_pos + torch.tensor(
-            [0.02, 0, 0],  # Slight offset for better grasping
-            device=self.device
-        )
-        tcp_to_tool = tcp_pos - tool_grasp_pos
-        tcp_to_tool_dist = torch.linalg.norm(tcp_to_tool, dim=1)
-        reaching_tool_reward = 1 - torch.tanh(5.0 * tcp_to_tool_dist)
-        
+
+        # Stage 1: Reach and grasp tool
+        tool_grasp_pos = tool_pos + torch.tensor([0.02, 0, 0], device=self.device)
+        tcp_to_tool_dist = torch.linalg.norm(tcp_pos - tool_grasp_pos, dim=1)
+        reaching_reward = 2.0 * (1 - torch.tanh(5.0 * tcp_to_tool_dist))
         tool_reached = tcp_to_tool_dist < 0.01
-        
+
+        # Stage 2: Position tool behind cube (matching motion planner positioning)
         ideal_hook_pos = cube_pos + torch.tensor(
-            [-self.cube_half_size - 0.02, 0, 0],  # Position behind cube
+            [-(self.hook_length + self.cube_half_size), -0.067, 0],
             device=self.device
         )
-        tool_to_target = tool_pos - ideal_hook_pos
-        tool_to_target_dist = torch.linalg.norm(tool_to_target, dim=1)
-        tool_positioning_reward = 1 - torch.tanh(5.0 * tool_to_target_dist)
-        
-        workspace_center = robot_base_pos.clone()
-        cube_to_workspace = cube_pos - workspace_center
-        cube_to_workspace_dist = torch.linalg.norm(cube_to_workspace, dim=1)
-        cube_progress_reward = 1 - torch.tanh(5.0 * cube_to_workspace_dist)
-        
-        reward = reaching_tool_reward
-        reward += tool_positioning_reward * tool_reached
-        reward += cube_progress_reward * (tool_to_target_dist < 0.02)  # Only when tool is positioned
-        
+        tool_positioning_dist = torch.linalg.norm(tool_pos - ideal_hook_pos, dim=1)
+        positioning_reward = 1.5 * (1 - torch.tanh(3.0 * tool_positioning_dist))
+        tool_positioned = tool_positioning_dist < 0.05
+
+        # Stage 3: Pull cube to workspace
+        workspace_target = robot_base_pos + torch.tensor([0.2, 0, 0], device=self.device)
+        cube_to_workspace_dist = torch.linalg.norm(cube_pos - workspace_target, dim=1)
+        initial_dist = torch.linalg.norm(
+            torch.tensor([self.arm_reach + 0.1, 0, self.cube_size/2], device=self.device) - workspace_target,
+            dim=1
+        )
+        pulling_progress = (initial_dist - cube_to_workspace_dist) / initial_dist
+        pulling_reward = 3.0 * pulling_progress * tool_positioned
+
+        # Combine rewards with proper staging
+        reward = reaching_reward
+        reward += positioning_reward * tool_reached
+        reward += pulling_reward
+
+        # Penalties
+        cube_pushed_away = cube_pos[:, 0] > (self.arm_reach + 0.15)
+        reward[cube_pushed_away] -= 2.0
+
+        # Success bonus
         if "success" in info:
-            reward[info["success"]] = 3.0
-            
+            reward[info["success"]] = 5.0
+
         return reward
 
-    def compute_normalized_dense_reward(
-        self, obs: Any, action: torch.Tensor, info: Dict
-    ):
-        max_reward = 3.0 
+    def compute_normalized_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+        max_reward = 5.0  # Maximum possible reward (success bonus)
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
