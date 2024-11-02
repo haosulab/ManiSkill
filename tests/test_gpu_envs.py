@@ -27,7 +27,7 @@ def test_all_envs(env_id):
     sim_config = dict()
     if "Scene" not in env_id:
         sim_config = LOW_MEM_SIM_CONFIG
-    env = gym.make(env_id, num_envs=16, obs_mode="state", sim_config=sim_config)
+    env = gym.make(env_id, num_envs=16, sim_config=sim_config)
     obs, _ = env.reset()
     action_space = env.action_space
     for _ in range(5):
