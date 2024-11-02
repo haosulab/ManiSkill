@@ -1,12 +1,31 @@
+import gymnasium as gym
 import numpy as np
 import sapien
 
-from mani_skill.envs.tasks import PullCubeToolEnv
+from mani_skill.envs.tasks import LiftPegUprightEnv
 from mani_skill.examples.motionplanning.panda.motionplanner import PandaArmMotionPlanningSolver
 from mani_skill.examples.motionplanning.panda.utils import compute_grasp_info_by_obb, get_actor_obb
 
-def solve(env: PullCubeToolEnv, seed=None, debug=False, vis=False):
+def main():
+    env: LiftPegUprightEnv = gym.make(
+        "LiftPegUpright-v1",
+        obs_mode="none",
+        control_mode="pd_joint_pos",
+        render_mode="rgb_array",
+        reward_mode="dense",
+    )
+    for seed in range(100):
+        res = solve(env, seed=seed, debug=False, vis=True)
+        print(res[-1])
+    env.close()
+
+def solve(env: LiftPegUprightEnv, seed=None, debug=False, vis=False):
     env.reset(seed=seed)
+    assert env.unwrapped.control_mode in [
+        "pd_joint_pos",
+        "pd_joint_pos_vel",
+    ], env.unwrapped.control_mode
+    
     planner = PandaArmMotionPlanningSolver(
         env,
         debug=debug,
@@ -17,24 +36,25 @@ def solve(env: PullCubeToolEnv, seed=None, debug=False, vis=False):
         joint_vel_limits=0.75,
         joint_acc_limits=0.75,
     )
-
+    
     env = env.unwrapped
+    FINGER_LENGTH = 0.025
 
-    # Get tool OBB and compute grasp pose
-    tool_obb = get_actor_obb(env.l_shape_tool)
+    obb = get_actor_obb(env.peg)
     approaching = np.array([0, 0, -1])
     target_closing = env.agent.tcp.pose.to_transformation_matrix()[0, :3, 1].cpu().numpy()
-    
+    peg_init_pose = env.peg.pose
+
     grasp_info = compute_grasp_info_by_obb(
-        tool_obb,
+        obb,
         approaching=approaching,
         target_closing=target_closing,
-        depth=0.03,
+        depth=FINGER_LENGTH
     )
     closing, center = grasp_info["closing"], grasp_info["center"]
-    grasp_pose = env.agent.build_grasp_pose(approaching, closing, env.l_shape_tool.pose.sp.p)
-    offset = sapien.Pose([0.02, 0, 0])
-    grasp_pose = grasp_pose * (offset)
+    grasp_pose = env.agent.build_grasp_pose(approaching, closing, center)
+    offset = sapien.Pose([-max(0.05, env.peg_half_width + 0.01), 0, 0])
+    grasp_pose = grasp_pose * offset
 
     # -------------------------------------------------------------------------- #
     # Reach
@@ -51,47 +71,21 @@ def solve(env: PullCubeToolEnv, seed=None, debug=False, vis=False):
     planner.close_gripper()
 
     # -------------------------------------------------------------------------- #
-    # Lift tool to safe height
+    # Lift
     # -------------------------------------------------------------------------- #
-    lift_height = 0.35  
-    lift_pose = sapien.Pose(grasp_pose.p + np.array([0, 0, lift_height]))
-    lift_pose.set_q(grasp_pose.q)  # Maintain grasp orientation
+    lift_pose = sapien.Pose([0, 0, 0.2]) * grasp_pose
     res = planner.move_to_pose_with_screw(lift_pose)
     if res == -1: return res
 
-    cube_pos = env.cube.pose.sp.p
-    approach_offset = sapien.Pose(
-        [-(env.hook_length + env.cube_half_size + 0.08),  
-        -0.0,  
-        lift_height - 0.05]  
-    )
-    approach_pose = sapien.Pose(cube_pos) * approach_offset
-    approach_pose.set_q(grasp_pose.q)
-    
-    res = planner.move_to_pose_with_screw(approach_pose)
-    if res == -1: return res
-
     # -------------------------------------------------------------------------- #
-    # Lower tool behind cube
+    # Place upright
     # -------------------------------------------------------------------------- #
-    behind_offset = sapien.Pose(
-        [-(env.hook_length + env.cube_half_size + 0.02),  
-        -0.07,  
-        0] 
-    )
-    hook_pose = sapien.Pose(cube_pos) * behind_offset
-    hook_pose.set_q(grasp_pose.q)
-    
-    res = planner.move_to_pose_with_screw(hook_pose)
-    if res == -1: return res
-
-    # -------------------------------------------------------------------------- #
-    # Pull cube
-    # -------------------------------------------------------------------------- #
-    pull_offset = sapien.Pose([-0.2, 0, 0])
-    target_pose = hook_pose * pull_offset
-    res = planner.move_to_pose_with_screw(target_pose)
+    final_pose = lift_pose * sapien.Pose([0, 0, -0.1])
+    res = planner.move_to_pose_with_screw(final_pose)
     if res == -1: return res
 
     planner.close()
     return res
+
+if __name__ == "__main__":
+    main()
