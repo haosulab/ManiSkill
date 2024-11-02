@@ -87,7 +87,7 @@ def main(args: Args):
     record_dir = args.record_dir
     if record_dir:
         record_dir = record_dir.format(env_id=args.env_id)
-        env = RecordEpisode(env, record_dir, info_on_video=False, save_trajectory=True, max_steps_per_video=gym_utils.find_max_episode_steps_value(env))
+        env = RecordEpisode(env, record_dir, info_on_video=False, save_trajectory=False, max_steps_per_video=gym_utils.find_max_episode_steps_value(env))
 
     if verbose:
         print("Observation space", env.observation_space)
