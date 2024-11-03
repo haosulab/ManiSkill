@@ -59,9 +59,9 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     _cached_joint_target_indices: Dict[int, torch.Tensor] = field(default_factory=dict)
     """Map from a set of joints of this articulation and the indexing torch tensor to use for setting drive targets"""
 
-    _net_contact_force_queries: Dict[Tuple, physx.PhysxGpuContactBodyImpulseQuery] = (
-        field(default_factory=dict)
-    )
+    _net_contact_force_queries: Dict[
+        Tuple, physx.PhysxGpuContactBodyImpulseQuery
+    ] = field(default_factory=dict)
     """Maps a tuple of link names to pre-saved net contact force queries"""
 
     def __str__(self):
@@ -275,9 +275,8 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             self.set_root_pose(Pose.create(state[:, :7]))
             self.set_root_linear_velocity(state[:, 7:10])
             self.set_root_angular_velocity(state[:, 10:13])
-            # TODO (stao): Handle get/set state for envs with different DOFs. Perhaps need to let user set a padding ahead of time to ensure state is the same?
             self.set_qpos(state[:, 13 : 13 + self.max_dof])
-            self.set_qvel(state[:, 13 + self.max_dof :])
+            self.set_qvel(state[:, 13 + self.max_dof : 13 + self.max_dof * 2])
             if env_idx is not None:
                 self.scene._reset_mask = prev_reset_mask
         else:
@@ -285,7 +284,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             self.set_root_pose(sapien.Pose(state[0:3], state[3:7]))
             self.set_root_linear_velocity(state[7:10])
             self.set_root_angular_velocity(state[10:13])
-            qpos, qvel = np.split(state[13:], 2)
+            qpos, qvel = np.split(state[13 : 13 + self.max_dof * 2], 2)
             self.set_qpos(qpos)
             self.set_qvel(qvel)
 
@@ -374,9 +373,9 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
                 bodies = []
                 for k in link_names:
                     bodies += self.links_map[k]._bodies
-                self._net_contact_force_queries[tuple(link_names)] = (
-                    self.px.gpu_create_contact_body_impulse_query(bodies)
-                )
+                self._net_contact_force_queries[
+                    tuple(link_names)
+                ] = self.px.gpu_create_contact_body_impulse_query(bodies)
             query = self._net_contact_force_queries[tuple(link_names)]
             self.px.gpu_query_contact_body_impulses(query)
             return (

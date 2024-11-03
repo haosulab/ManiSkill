@@ -229,7 +229,7 @@ def solve(env: BaseEnv, debug=False, vis=False):
             transform_window.update_ghost_objects()
         if execute_current_pose:
             # z-offset of end-effector gizmo to TCP position is hardcoded for the panda robot here
-            if env.unwrapped.robot_uids == "panda":
+            if env.unwrapped.robot_uids == "panda" or env.unwrapped.robot_uids == "panda_wristcam":
                 result = planner.move_to_pose_with_screw(transform_window._gizmo_pose * sapien.Pose([0, 0, 0.1]), dry_run=True)
             elif env.unwrapped.robot_uids == "panda_stick":
                 result = planner.move_to_pose_with_screw(transform_window._gizmo_pose * sapien.Pose([0, 0, 0.15]), dry_run=True)

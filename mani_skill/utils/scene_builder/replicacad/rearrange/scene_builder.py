@@ -330,7 +330,7 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
                 articulation.set_qpos(base_qpos[reset_idxs])
                 articulation.set_qvel(articulation.qvel[reset_idxs] * 0)
 
-        if self.scene.gpu_sim_enabled:
+        if self.scene.gpu_sim_enabled and len(env_idx) == self.env.num_envs:
             self.scene._gpu_apply_all()
             self.scene.px.gpu_update_articulation_kinematics()
             self.scene.px.step()
