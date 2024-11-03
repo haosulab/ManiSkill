@@ -344,8 +344,6 @@ def look_at(eye, target, up=(0, 0, 1)) -> Pose:
         assert up.ndim == 1, up.ndim
         assert len(up) == 3, len(up)
 
-    assert eye.shape == target.shape, (eye.shape, target.shape)
-
     def normalize_tensor(x, eps=1e-6):
         x = x.view(-1, 3)
         norm = torch.linalg.norm(x, dim=-1)
