@@ -195,7 +195,7 @@ class PullCubeToolEnv(BaseEnv):
         cube_to_base_dist = torch.linalg.norm(cube_pos[:, :2] - robot_base_pos[:, :2], dim=1)
         
         # Success condition - cube is pulled close enough to the actual base
-        cube_pulled_close = cube_to_base_dist < 0.7 # (panda arm length is about 85 cm)        
+        cube_pulled_close = cube_to_base_dist < 0.65 # (panda arm length is about 85 cm)        
 
         # Calculate rewards for evaluation metrics...
         workspace_center = robot_base_pos.clone()
@@ -224,26 +224,27 @@ class PullCubeToolEnv(BaseEnv):
         reaching_reward = 2.0 * (1 - torch.tanh(5.0 * tcp_to_tool_dist))
         tool_reached = tcp_to_tool_dist < 0.01
 
-        # Stage 2: Position tool behind cube (matching motion planner positioning)
+        # Stage 2: Position tool behind cube
         ideal_hook_pos = cube_pos + torch.tensor(
             [-(self.hook_length + self.cube_half_size), -0.067, 0],
             device=self.device
         )
         tool_positioning_dist = torch.linalg.norm(tool_pos - ideal_hook_pos, dim=1)
         positioning_reward = 1.5 * (1 - torch.tanh(3.0 * tool_positioning_dist))
-        tool_positioned = tool_positioning_dist < 0.05
 
         # Stage 3: Pull cube to workspace
         workspace_target = robot_base_pos + torch.tensor([0.2, 0, 0], device=self.device)
         cube_to_workspace_dist = torch.linalg.norm(cube_pos - workspace_target, dim=1)
         initial_dist = torch.linalg.norm(
-            torch.tensor([self.arm_reach + 0.1, 0, self.cube_size/2], device=self.device) - workspace_target,
+            torch.tensor([self.arm_reach + 0.1, 0, self.cube_size/2], device=self.device) 
+            - workspace_target, 
             dim=1
         )
         pulling_progress = (initial_dist - cube_to_workspace_dist) / initial_dist
+        tool_positioned = tool_positioning_dist < 0.05
         pulling_reward = 3.0 * pulling_progress * tool_positioned
 
-        # Combine rewards with proper staging
+        # Combine rewards with staging
         reward = reaching_reward
         reward += positioning_reward * tool_reached
         reward += pulling_reward
@@ -254,10 +255,14 @@ class PullCubeToolEnv(BaseEnv):
 
         # Success bonus
         if "success" in info:
-            reward[info["success"]] = 5.0
+            reward[info["success"]] += 5.0
 
         return reward
 
     def compute_normalized_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        max_reward = 5.0  # Maximum possible reward (success bonus)
-        return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
+        """
+        Normalizes the dense reward by the maximum possible reward (success bonus)
+        """
+        max_reward = 5.0  # Maximum possible reward from success bonus
+        dense_reward = self.compute_dense_reward(obs=obs, action=action, info=info)
+        return dense_reward / max_reward
