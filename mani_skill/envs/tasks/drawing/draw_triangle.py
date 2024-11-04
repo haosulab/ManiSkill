@@ -294,10 +294,10 @@ class DrawTriangleEnv(BaseEnv):
 
         if "state" in self.obs_mode:
             obs.update(
-                goal_pose=self.goal_tri.pose.raw_pose,
-                tcp_to_verts_pos=self.vertices - self.agent.tcp.pose.p.unsqueeze(1),
-                goal_pos=self.goal_tri.pose.p,
-                vertices=self.vertices,
+                goal_pose=self.goal_tri.pose.raw_pose.reshape(self.num_envs, -1),
+                tcp_to_verts_pos=(self.vertices - self.agent.tcp.pose.p.unsqueeze(1)).reshape(self.num_envs, -1),
+                goal_pos=self.goal_tri.pose.p.reshape(self.num_envs, -1),
+                vertices=self.vertices.reshape(self.num_envs, -1),
             )
 
         return obs
