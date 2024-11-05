@@ -11,48 +11,6 @@ from mani_skill.examples.motionplanning.panda.utils import (
     compute_grasp_info_by_obb, get_actor_obb)
 from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.utils.structs import Pose
-from mani_skill.utils.logging_utils import logger
-
-FINGER_LENGTH = 0.025
-
-def move_and_grasp(cube, env, planner):
-    """Moves to the cube, checks for collisions, and attempts a grasp."""
-    obb = get_actor_obb(cube)
-    approaching = np.array([0, 0, -1])
-    target_closing = env.agent.tcp.pose.to_transformation_matrix()[0, :3, 1].cpu().numpy()
-    grasp_info = compute_grasp_info_by_obb(
-        obb,
-        approaching=approaching,
-        target_closing=target_closing,
-        depth=FINGER_LENGTH,
-    )
-    closing, center = grasp_info["closing"], grasp_info["center"]
-    grasp_pose = env.agent.build_grasp_pose(approaching, closing, center)
-    
-    # Try alternative angles if collision occurs
-    angles = np.linspace(0, np.pi, 4)
-    for angle in angles:
-        delta_pose = sapien.Pose(q=euler2quat(0, 0, angle))
-        adjusted_grasp_pose = grasp_pose * delta_pose
-        res = planner.move_to_pose_with_screw(adjusted_grasp_pose, dry_run=True)
-        if res == -1:
-            continue
-
-        # Reach to grasp pose
-        planner.move_to_pose_with_screw(adjusted_grasp_pose)
-        
-        # Attempt to grasp
-        planner.close_gripper()
-
-        # Check if the object is grasped
-        if is_object_grasped(cube, env, planner):
-            logger.debug(f"Successfully grasped {cube}")
-            return True, adjusted_grasp_pose  # Successful grasp
-        else:
-            # Open gripper if grasp failed and try the next angle
-            planner.open_gripper()
-    logger.debug(f"Failed to grasp {cube}")
-    return False, None
 
 def solve(env: StackPyramidEnv, seed=None, debug=False, vis=False):
     env.reset(seed=seed)
@@ -68,37 +26,105 @@ def solve(env: StackPyramidEnv, seed=None, debug=False, vis=False):
         visualize_target_grasp_pose=vis,
         print_env_info=False,
     )
+    FINGER_LENGTH = 0.025
     env = env.unwrapped
 
     # -------------------------------------------------------------------------- #
     # Push Cube A to be next to Cube B
     # -------------------------------------------------------------------------- #
-    distance = np.linalg.norm(env.cubeA.pose.sp.p, axis=0) - np.linalg.norm(env.cubeB.pose.sp.p, axis=0)
-    threshold = 0.025
-    if (distance >= threshold):
-        logger.debug(f"Distance >= {threshold}: {distance}")
-        success, grasp_pose_A = move_and_grasp(env.cubeA, env, planner)
-        if success:
-            goal_pose = sapien.Pose(env.cubeB.pose.sp.p, grasp_pose_A.q)
-            planner.move_to_pose_with_screw(goal_pose)
-            planner.open_gripper()
+    # Move Gripper to Cube A
+    obb = get_actor_obb(env.cubeA)
+    approaching = np.array([0, 0, -1])
+    target_closing = env.agent.tcp.pose.to_transformation_matrix()[0, :3, 1].cpu().numpy()
+    grasp_info = compute_grasp_info_by_obb(
+        obb,
+        approaching=approaching,
+        target_closing=target_closing,
+        depth=FINGER_LENGTH,
+    )
+    closing, center = grasp_info["closing"], grasp_info["center"]
+    distance = np.abs(np.linalg.norm(env.cubeA.pose.sp.p, axis=0) - np.linalg.norm(env.cubeB.pose.sp.p, axis=0))
+    print(f"Distance: {distance}")
+    if (distance > 0.009):
+        print(f"Distance >= 0.009: {distance}")
+        planner.close_gripper()
+        grasp_pose = env.agent.build_grasp_pose(approaching, closing, env.cubeA.pose.sp.p)
+
+        # Reach
+        reach_pose = grasp_pose * sapien.Pose([0, 0, -0.05])
+        planner.move_to_pose_with_screw(reach_pose)
+
+        # Grasp
+        planner.move_to_pose_with_screw(grasp_pose)
+        planner.close_gripper()
+
+        # Move to Goal Pose
+        goal_pose = sapien.Pose(env.cubeB.pose.sp.p * 0.8, grasp_pose.q)
+        planner.move_to_pose_with_screw(goal_pose)
+        res = planner.open_gripper()
 
     # -------------------------------------------------------------------------- #
     # Stack Cube C onto Cube A and B
     # -------------------------------------------------------------------------- #
-    success, grasp_pose_C = move_and_grasp(env.cubeC, env, planner)
-    if success:
-        goal_pose_A = env.cubeA.pose * sapien.Pose([0, 0, env.cube_half_size[2] * 2])
-        goal_pose_B = env.cubeB.pose * sapien.Pose([0, 0, env.cube_half_size[2] * 2])
-        goal_pose_p = (goal_pose_A.p + goal_pose_B.p) / 2
-        offset = (goal_pose_p - env.cubeC.pose.p).numpy()[0]  # remember that all data in ManiSkill is batched and a torch tensor
-        align_pose = sapien.Pose(grasp_pose_C.p + offset, grasp_pose_C.q)
-        planner.move_to_pose_with_screw(align_pose)
 
-        res = planner.open_gripper()
-        planner.close()
-        return res
+    obb = get_actor_obb(env.cubeC)
+    target_closing = env.agent.tcp.pose.to_transformation_matrix()[0, :3, 1].numpy()
+    grasp_info = compute_grasp_info_by_obb(
+        obb,
+        approaching=approaching,
+        target_closing=target_closing,
+        depth=FINGER_LENGTH,
+    )
+    closing, center = grasp_info["closing"], grasp_info["center"]
+    grasp_pose = env.agent.build_grasp_pose(approaching, closing, center)
+
+    # Search a valid pose
+    angles = np.arange(0, np.pi * 2 / 3, np.pi / 2)
+    angles = np.repeat(angles, 2)
+    angles[1::2] *= -1
+    for angle in angles:
+        delta_pose = sapien.Pose(q=euler2quat(0, 0, angle))
+        grasp_pose2 = grasp_pose * delta_pose
+        res = planner.move_to_pose_with_screw(grasp_pose2, dry_run=True)
+        if res == -1:
+            continue
+        grasp_pose = grasp_pose2
+        break
     else:
-        logger.debug("Failed to grasp Cube C")
-        planner.close()
-        return -1
+        print("Fail to find a valid grasp pose")
+
+    # -------------------------------------------------------------------------- #
+    # Reach
+    # -------------------------------------------------------------------------- #
+
+    # planner.planner.update_attached_box([0.04, 0.04, 0.04], Pose.create(env.cubeB.pose).raw_pose.numpy().astype(np.float64).reshape(7,1))
+
+    reach_pose = grasp_pose * sapien.Pose([0, 0, -0.05])
+    planner.move_to_pose_with_screw(reach_pose)
+
+    # -------------------------------------------------------------------------- #
+    # Grasp
+    # -------------------------------------------------------------------------- #
+    planner.move_to_pose_with_screw(grasp_pose)
+    planner.close_gripper()
+
+    # -------------------------------------------------------------------------- #
+    # Lift
+    # -------------------------------------------------------------------------- #
+    lift_pose = sapien.Pose([0, 0, 0.1]) * grasp_pose
+    planner.move_to_pose_with_screw(lift_pose)
+
+    # -------------------------------------------------------------------------- #
+    # Stack
+    # -------------------------------------------------------------------------- #
+    goal_pose_A = env.cubeA.pose * sapien.Pose([0, 0, env.cube_half_size[2] * 2])
+    goal_pose_B = env.cubeB.pose * sapien.Pose([0, 0, env.cube_half_size[2] * 2])
+    goal_pose_p = (goal_pose_A.p + goal_pose_B.p)/2
+    offset = (goal_pose_p - env.cubeC.pose.p).numpy()[0] # remember that all data in ManiSkill is batched and a torch tensor
+    align_pose = sapien.Pose(lift_pose.p + offset, lift_pose.q)
+    planner.move_to_pose_with_screw(align_pose)
+
+    res = planner.open_gripper()
+    planner.close()
+    return res
+
