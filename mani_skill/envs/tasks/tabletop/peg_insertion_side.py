@@ -151,7 +151,7 @@ class PegInsertionSideEnv(BaseEnv):
                 builder.initial_pose = sapien.Pose(p=[0, 0, 0.1])
                 builder.set_scene_idxs(scene_idxs)
                 peg = builder.build(f"peg_{i}")
-
+                self.remove_from_state_dict_registry(peg)
                 # box with hole
 
                 inner_radius, outer_radius, depth = (
@@ -165,11 +165,16 @@ class PegInsertionSideEnv(BaseEnv):
                 builder.initial_pose = sapien.Pose(p=[0, 1, 0.1])
                 builder.set_scene_idxs(scene_idxs)
                 box = builder.build_kinematic(f"box_with_hole_{i}")
-
+                self.remove_from_state_dict_registry(box)
                 pegs.append(peg)
                 boxes.append(box)
             self.peg = Actor.merge(pegs, "peg")
             self.box = Actor.merge(boxes, "box_with_hole")
+
+            # to support heterogeneous simulation state dictionaries we register merged versions
+            # of the parallel actors
+            self.add_to_state_dict_registry(self.peg)
+            self.add_to_state_dict_registry(self.box)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):

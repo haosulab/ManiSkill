@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from functools import cached_property
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -26,6 +27,12 @@ if SAPIEN_RENDER_SYSTEM == "3.1":
 
     GlobalShaderPack = None
     sapien.render.RenderCameraGroup = "oldtype"  # type: ignore
+
+
+@dataclass
+class StateDictRegistry:
+    actors: Dict[str, Actor]
+    articulations: Dict[str, Articulation]
 
 
 class ManiSkillScene:
@@ -97,6 +104,11 @@ class ManiSkillScene:
 
         self.parallel_in_single_scene: bool = parallel_in_single_scene
         """Whether rendering all parallel scenes in the viewer/gui is enabled"""
+
+        self.state_dict_registry: StateDictRegistry = StateDictRegistry(
+            actors=dict(), articulations=dict()
+        )
+        """state dict registry that map actor/articulation names to Actor/Articulation struct references. Only these structs are used for the environment state"""
 
     # -------------------------------------------------------------------------- #
     # Functions from sapien.Scene
@@ -762,6 +774,35 @@ class ManiSkillScene:
     # -------------------------------------------------------------------------- #
     # Simulation state (required for MPC)
     # -------------------------------------------------------------------------- #
+
+    def add_to_state_dict_registry(self, object: Union[Actor, Articulation]):
+        if isinstance(object, Actor):
+            assert (
+                object.name not in self.state_dict_registry.actors
+            ), f"Object {object.name} already in state dict registry"
+            self.state_dict_registry.actors[object.name] = object
+        elif isinstance(object, Articulation):
+            assert (
+                object.name not in self.state_dict_registry.articulations
+            ), f"Object {object.name} already in state dict registry"
+            self.state_dict_registry.articulations[object.name] = object
+        else:
+            raise ValueError(f"Expected Actor or Articulation, got {object}")
+
+    def remove_from_state_dict_registry(self, object: Union[Actor, Articulation]):
+        if isinstance(object, Actor):
+            assert (
+                object.name in self.state_dict_registry.actors
+            ), f"Object {object.name} not in state dict registry"
+            del self.state_dict_registry.actors[object.name]
+        elif isinstance(object, Articulation):
+            assert (
+                object.name in self.state_dict_registry.articulations
+            ), f"Object {object.name} not in state dict registry"
+            del self.state_dict_registry.articulations[object.name]
+        else:
+            raise ValueError(f"Expected Actor or Articulation, got {object}")
+
     def get_sim_state(self) -> torch.Tensor:
         """Get simulation state. Returns a dictionary with two nested dictionaries "actors" and "articulations".
         In the nested dictionaries they map the actor/articulation name to a vector of shape (N, D) for N parallel
@@ -772,11 +813,11 @@ class ManiSkillScene:
         state_dict = dict()
         state_dict["actors"] = dict()
         state_dict["articulations"] = dict()
-        for actor in self.actors.values():
+        for actor in self.state_dict_registry.actors.values():
             if actor.px_body_type == "static":
                 continue
             state_dict["actors"][actor.name] = actor.get_state().clone()
-        for articulation in self.articulations.values():
+        for articulation in self.state_dict_registry.articulations.values():
             state_dict["articulations"][
                 articulation.name
             ] = articulation.get_state().clone()
@@ -798,12 +839,14 @@ class ManiSkillScene:
                 if len(actor_state.shape) == 1:
                     actor_state = actor_state[None, :]
                 # do not pass in env_idx to avoid redundant reset mask changes
-                self.actors[actor_id].set_state(actor_state, None)
+                self.state_dict_registry.actors[actor_id].set_state(actor_state, None)
         if "articulations" in state:
             for art_id, art_state in state["articulations"].items():
                 if len(art_state.shape) == 1:
                     art_state = art_state[None, :]
-                self.articulations[art_id].set_state(art_state, None)
+                self.state_dict_registry.articulations[art_id].set_state(
+                    art_state, None
+                )
         if env_idx is not None:
             self._reset_mask = prev_reset_mask
 

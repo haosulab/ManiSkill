@@ -12,8 +12,9 @@ import torch
 
 from mani_skill import get_commit_info
 from mani_skill.envs.sapien_env import BaseEnv
-from mani_skill.utils import common, gym_utils
+from mani_skill.utils import common, gym_utils, sapien_utils
 from mani_skill.utils.io_utils import dump_json
+from mani_skill.utils.logging_utils import logger
 from mani_skill.utils.structs.types import Array
 from mani_skill.utils.visualization.misc import (
     images_to_video,
@@ -291,6 +292,8 @@ class RecordEpisode(gym.Wrapper):
         self.video_nrows = int(np.sqrt(self.unwrapped.num_envs))
         self._avoid_overwriting_video = avoid_overwriting_video
 
+        self._already_warned_about_state_dict_inconsistency = False
+
         # check if wrapped env is already wrapped by a CPU gym wrapper
         cur_env = self.env
         self.cpu_wrapped_env = False
@@ -360,8 +363,16 @@ class RecordEpisode(gym.Wrapper):
             action = common.batch(
                 self.env.get_wrapper_attr("single_action_space").sample()
             )
+            # check if state_dict is consistent
+            if not sapien_utils.is_state_dict_consistent(state_dict):
+                self.record_env_state = False
+                if not self._already_warned_about_state_dict_inconsistency:
+                    logger.warn(
+                        f"State dictionary is not consistent, disabling recording of environment states for {self.env}"
+                    )
+                    self._already_warned_about_state_dict_inconsistency = True
             first_step = Step(
-                state=common.to_numpy(common.batch(state_dict)),
+                state=None,
                 observation=common.to_numpy(common.batch(obs)),
                 # note first reward/action etc. are ignored when saving trajectories to disk
                 action=common.to_numpy(common.batch(action.repeat(self.num_envs, 0))),
@@ -381,6 +392,8 @@ class RecordEpisode(gym.Wrapper):
                 fail=np.zeros((1, self.num_envs), dtype=bool),
                 env_episode_ptr=np.zeros((self.num_envs,), dtype=int),
             )
+            if self.record_env_state:
+                first_step.state = common.to_numpy(common.batch(state_dict))
             env_idx = np.arange(self.num_envs)
             if "env_idx" in options:
                 env_idx = common.to_numpy(options["env_idx"])
