@@ -7,4 +7,3 @@ from .pull_cube_tool import solve as solvePullCubeTool
 from .lift_peg_upright import solve as solveLiftPegUpright
 from .pull_cube import solve as solvePullCube
 from .stack_pyramid import solve as solveStackPyramid
-from .pick_and_place import solve as solvePickAndPlace
