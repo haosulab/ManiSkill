@@ -302,7 +302,7 @@ The goal is to pick up a red cube, place it next to the green cube, and stack th
 :::
 
 <video preload="auto" controls="True" width="100%">
-<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/StackCube-v1_rt.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/StackPyramid-v1_rt.mp4" type="video/mp4">
 </video>
 
 
