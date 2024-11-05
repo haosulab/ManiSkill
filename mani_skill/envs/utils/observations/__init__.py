@@ -22,14 +22,31 @@ def parse_visual_obs_mode_to_struct(obs_mode: str) -> CameraObsTextures:
     # parse obs mode into a string of possible textures
     if obs_mode == "rgbd":
         return CameraObsTextures(
-            rgb=True, depth=True, segmentation=False, position=False
+            rgb=True,
+            depth=True,
+            segmentation=False,
+            position=False,
+            normal=False,
+            albedo=False,
         )
     elif obs_mode == "pointcloud":
         return CameraObsTextures(
-            rgb=True, depth=False, segmentation=True, position=True
+            rgb=True,
+            depth=False,
+            segmentation=True,
+            position=True,
+            normal=False,
+            albedo=False,
         )
     elif obs_mode == "sensor_data":
-        return CameraObsTextures(rgb=True, depth=True, segmentation=True, position=True)
+        return CameraObsTextures(
+            rgb=True,
+            depth=True,
+            segmentation=True,
+            position=True,
+            normal=False,
+            albedo=False,
+        )
     elif obs_mode == "state" or obs_mode == "state_dict":
         return None
     else:
