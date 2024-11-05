@@ -54,7 +54,7 @@ python -m mani_skill.examples.motionplanning.panda.run -e "StackPyramid-v1" \
   --traj-name $stack_pyramid_traj_name
 
 python -m mani_skill.trajectory.replay_trajectory  -b cpu \
-  --traj-path  ./demos/StackPyramid-v1/motionplanning/$stack_pyramid_traj_name \
+  --traj-path  ./demos/StackPyramid-v1/motionplanning/$stack_pyramid_traj_name.h5 \
   --use-first-env-state -c pd_joint_delta_pos -o state \
   --save-traj --num-procs 20
 
