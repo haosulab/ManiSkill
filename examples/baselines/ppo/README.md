@@ -1,10 +1,19 @@
 # Proximal Policy Optimization (PPO)
 
-Code for running the PPO RL algorithm is adapted from [CleanRL](https://github.com/vwxyzjn/cleanrl/). It is written to be single-file and easy to follow/read, and supports state-based RL and visual-based RL code.
+Code for running the PPO RL algorithm is adapted from [CleanRL](https://github.com/vwxyzjn/cleanrl/) and [LeanRL](https://github.com/pytorch-labs/LeanRL/). It is written to be single-file and easy to follow/read, and supports state-based RL and visual-based RL code.
 
 Note that ManiSkill is still in beta, so we have not finalized training scripts for every pre-built task (some of which are simply too hard to solve with RL anyway).
 
 Official baseline results can be run by using the scripts in the baselines.sh file. Results are organized and published to our [wandb page](https://wandb.ai/stonet2000/ManiSkill/groups/PPO/workspace?nw=0pe9ybwmza7)
+
+To get started make sure to have maniskill installed and to also install [torchrl](https://github.com/pytorch/rl) and [tensordict](https://github.com/pytorch/tensordict/):
+
+```bash
+pip install torchrl tensordict
+```
+
+torchrl and tensordict simplify RL code and make it possible to leverage [CUDA Graphs](https://pytorch.org/blog/accelerating-pytorch-with-cuda-graphs/) to make PPO run very fast. Note that torchrl installs torch and may upgrade it to a different version, you can pip install a specific version of torch if necessary.
+
 
 ## State Based RL
 
