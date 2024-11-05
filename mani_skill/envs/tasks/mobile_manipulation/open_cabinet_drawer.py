@@ -126,7 +126,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
             cabinet_builder.set_scene_idxs(scene_idxs=[i])
             cabinet_builder.initial_pose = sapien.Pose(p=[0, 0, 0], q=[1, 0, 0, 0])
             cabinet = cabinet_builder.build(name=f"{model_id}-{i}")
-
+            self.remove_from_state_dict_registry(cabinet)
             # this disables self collisions by setting the group 2 bit at CABINET_COLLISION_BIT all the same
             # that bit is also used to disable collision with the ground plane
             for link in cabinet.links:
@@ -156,6 +156,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
         # allowing you to manage all of them under one object and retrieve data like qpos, pose, etc. all together
         # and with high performance. Note that some properties such as qpos and qlimits are now padded.
         self.cabinet = Articulation.merge(self._cabinets, name="cabinet")
+        self.add_to_state_dict_registry(self.cabinet)
         self.handle_link = Link.merge(
             [links[link_ids[i] % len(links)] for i, links in enumerate(handle_links)],
             name="handle_link",

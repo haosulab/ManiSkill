@@ -72,7 +72,7 @@ class PushCubeEnv(BaseEnv):
     def _load_agent(self, options: dict):
         super()._load_agent(options, sapien.Pose(p=[0, 0, 1]))
 ```
-To define the initial pose of the robot you ovverride the `_load_agent` function. This is done in PushCube above. It is recommended to set initial poses for all objects such that if they were spawned there they don't intersect other objects. Here we spawn the robot 1 meter above the ground which won't clash with anything else.
+To define the initial pose of the robot you ovverride the `_load_agent` function. This is done in PushCube above. It is recommended to set initial poses for all objects such that if they were spawned there they don't intersect other objects. Here we spawn the robot 1 meter above the ground which won't clash with anything else. If you are intending to spawn multiple robots you can pass a list of poses to the `_load_agent` function.
 
 
 Initializing/randomizing these robots occurs in the initialization / randomization section covered later. With this setup you can later access agent data via `self.agent` and the specific articulation data of the robot via `self.agent.robot`. For multi-robot setups you can access each agent via `self.agent.agents`.
