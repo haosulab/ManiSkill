@@ -46,6 +46,8 @@ In addition to `agent` and `extra`, `sensor_data` and `sensor_param` are introdu
 
 ### rgb+depth+segmentation
 
+There are many combinations of image textures (rgb, depth, segmentation, albedo, normal, etc.) that can be requested in the observation mode by simply specifying them as a string separated by `+`. We describe how the data is organized for "rgb+depth+segmentation" as an example here. The choice of shader used will change what textures are available and can be found on the [camera shaders](../concepts/sensors.md#shaders-and-textures) section.
+
 This observation mode has the same data format as the [sensor_data mode](#sensor_data), but all sensor data from cameras are replaced with the following structure
 
 - `sensor_data`:
@@ -71,7 +73,7 @@ alt: RGBD from two cameras of Fetch robot inside the ReplicaCAD dataset scene
 
 
 ### pointcloud
-This observation mode has the same data format as the [sensor_data mode](#sensor_data), but all sensor data from cameras are removed and instead a new key is added called `pointcloud`.
+This observation mode has the same data format as the [sensor_data mode](#sensor_data), but all sensor data from cameras are removed and instead a new key is added called `pointcloud`. This is specially handled and is different to specifying various textures like done in the previous section.
 
 - `pointcloud`:
   - `xyzw`: [N, 4], `torch.float32, np.float32`. Point cloud fused from all cameras in the world frame. "xyzw" is a homogeneous representation. `w=0` for infinite points (beyond the camera far), and `w=1` for the rest.
