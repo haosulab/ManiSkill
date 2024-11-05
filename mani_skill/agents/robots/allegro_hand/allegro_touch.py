@@ -60,7 +60,7 @@ class AllegroHandRightTouch(AllegroHandRight):
         )
 
     def get_fsr_obj_impulse(self, obj: Actor = None):
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             px: physx.PhysxGpuSystem = self.scene.px
             # Create contact query if it is not existed
             if obj.name not in self.pair_query:
@@ -102,7 +102,7 @@ class AllegroHandRightTouch(AllegroHandRight):
             return np.stack(contact_forces)
 
     def get_fsr_impulse(self):
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             px: physx.PhysxGpuSystem = self.scene.px
             # Create contact query if it is not existed
             if self.body_query is None:

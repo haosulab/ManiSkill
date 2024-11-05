@@ -36,7 +36,7 @@ class CPUGymWrapper(gym.Wrapper):
             self.base_env.num_envs == 1
         ), "This wrapper is only for environments without parallelization"
         assert (
-            not physx.is_gpu_enabled()
+            not self.base_env.gpu_sim_enabled
         ), "This wrapper is only for environments on the CPU backend"
         self.observation_space = self.base_env.single_observation_space
         self.action_space = self.base_env.single_action_space

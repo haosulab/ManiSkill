@@ -44,7 +44,9 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
 
         images = torch.concat(images, axis=-1)
         # flatten the rest of the data which should just be state data
-        observation = common.flatten_state_dict(observation, use_torch=True)
+        observation = common.flatten_state_dict(
+            observation, use_torch=True, device=self.base_env.device
+        )
         ret = dict()
         if self.include_state:
             ret["state"] = observation

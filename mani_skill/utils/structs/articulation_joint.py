@@ -96,7 +96,7 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
         assert (
             self.active_index is not None
         ), "Inactive joints do not have qpos/qvel values"
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             return self.px.cuda_articulation_qpos.torch()[
                 self._data_index, self.active_index
             ]
@@ -111,7 +111,7 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
         assert (
             self.active_index is not None
         ), "Inactive joints do not have qpos/qvel values"
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             return self.px.cuda_articulation_qvel.torch()[
                 self._data_index, self.active_index
             ]
@@ -226,7 +226,7 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
 
     @property
     def drive_target(self) -> torch.Tensor:
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             raise NotImplementedError(
                 "Getting drive targets of individual joints is not implemented yet."
             )
@@ -235,8 +235,8 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
 
     @drive_target.setter
     def drive_target(self, arg1: Array) -> None:
-        arg1 = common.to_tensor(arg1)
-        if physx.is_gpu_enabled():
+        arg1 = common.to_tensor(arg1, device=self.device)
+        if self.scene.gpu_sim_enabled:
             raise NotImplementedError(
                 "Setting drive targets of individual joints is not implemented yet."
             )
@@ -249,7 +249,7 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
 
     @property
     def drive_velocity_target(self) -> torch.Tensor:
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             raise NotImplementedError(
                 "Cannot read drive velocity targets at the moment in GPU simulation"
             )
@@ -258,8 +258,8 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
 
     @drive_velocity_target.setter
     def drive_velocity_target(self, arg1: Array) -> None:
-        if physx.is_gpu_enabled():
-            arg1 = common.to_tensor(arg1)
+        arg1 = common.to_tensor(arg1, device=self.device)
+        if self.scene.gpu_sim_enabled:
             raise NotImplementedError(
                 "Cannot set drive velocity targets at the moment in GPU simulation"
             )
@@ -292,7 +292,9 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
     @property
     def limits(self) -> torch.Tensor:
         # TODO (stao): create a decorator that caches results once gpu sim is initialized for performance
-        return common.to_tensor(np.array([obj.limits[0] for obj in self._objs]))
+        return common.to_tensor(
+            np.array([obj.limits[0] for obj in self._objs]), device=self.device
+        )
 
     @limits.setter
     @before_gpu_init
@@ -318,7 +320,7 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
         raw_poses = np.stack(
             [np.concatenate([x.pose_in_child.p, x.pose_in_child.q]) for x in self._objs]
         )
-        return Pose.create(common.to_tensor(raw_poses))
+        return Pose.create(common.to_tensor(raw_poses), device=self.device)
 
     # @pose_in_child.setter
     # def pose_in_child(self, arg1: sapien.pysapien.Pose) -> None:
@@ -331,7 +333,7 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
                 for x in self._objs
             ]
         )
-        return Pose.create(common.to_tensor(raw_poses))
+        return Pose.create(common.to_tensor(raw_poses, device=self.device))
 
     # @pose_in_parent.setter
     # def pose_in_parent(self, arg1: sapien.pysapien.Pose) -> None:
@@ -356,7 +358,7 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
             "fixed", "revolute", "revolute_unwrapped", "prismatic", "free"
         ],
     ) -> None:
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             return NotImplementedError("Cannot set type of the joint when using GPU")
         else:
             self._objs[0].type = arg1

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, List, Tuple
+from typing import TYPE_CHECKING, Any, List, TypedDict
 
 from sapien.render import RenderCameraComponent
 from sapien.wrapper.urdf_loader import URDFLoader as SapienURDFLoader
@@ -14,14 +14,18 @@ if TYPE_CHECKING:
     from mani_skill.envs.scene import ManiSkillScene
 
 
+class ParsedURDFData(TypedDict):
+    articulation_builders: List[ArticulationBuilder]
+    actor_builders: List[ActorBuilder]
+    cameras: List[Any]
+
+
 class URDFLoader(SapienURDFLoader):
     scene: ManiSkillScene
     name: str = None
     disable_self_collisions: bool = False
 
-    def parse(
-        self, urdf_file, srdf_file=None, package_dir=None
-    ) -> Tuple[List[ArticulationBuilder], List[ActorBuilder], List[Any]]:
+    def parse(self, urdf_file, srdf_file=None, package_dir=None) -> ParsedURDFData:
         articulation_builders, actor_builders, cameras = super().parse(
             urdf_file, srdf_file, package_dir
         )

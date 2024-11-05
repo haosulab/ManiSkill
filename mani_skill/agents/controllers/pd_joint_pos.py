@@ -72,7 +72,6 @@ class PDJointPosController(BaseController):
 
     def set_action(self, action: Array):
         action = self._preprocess_action(action)
-        action = common.to_tensor(action)
         self._step = 0
         self._start_qpos = self.qpos
         if self.config.use_delta:

@@ -27,10 +27,14 @@ def find_max_episode_steps_value(env):
     elif isinstance(cur, ManiSkillVectorEnv):
         cur = env._env
     while cur is not None:
-        if hasattr(cur, "max_episode_steps"):
-            return cur.max_episode_steps
-        if hasattr(cur, "_max_episode_steps"):
-            return cur._max_episode_steps
+        try:
+            return cur.get_wrapper_attr("max_episode_steps")
+        except AttributeError:
+            pass
+        try:
+            return cur.get_wrapper_attr("_max_episode_steps")
+        except AttributeError:
+            pass
         if cur.spec is not None and cur.spec.max_episode_steps is not None:
             return cur.spec.max_episode_steps
         if hasattr(cur, "env"):

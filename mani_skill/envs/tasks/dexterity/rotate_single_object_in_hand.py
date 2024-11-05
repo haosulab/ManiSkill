@@ -144,7 +144,7 @@ class RotateSingleObjectInHand(BaseEnv):
 
         if self.difficulty_level < 2:
             # for levels 0 and 1 we already know object heights. For other levels we need to compute them
-            self.obj_heights = common.to_tensor(obj_heights)
+            self.obj_heights = common.to_tensor(obj_heights, device=self.device)
 
     def _after_reconfigure(self, options: dict):
         if self.difficulty_level >= 2:
@@ -153,7 +153,7 @@ class RotateSingleObjectInHand(BaseEnv):
                 collision_mesh = obj.get_first_collision_mesh()
                 # this value is used to set object pose so the bottom is at z=0
                 self.obj_heights.append(-collision_mesh.bounding_box.bounds[0, 2])
-            self.obj_heights = common.to_tensor(self.obj_heights)
+            self.obj_heights = common.to_tensor(self.obj_heights, device=self.device)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         self._initialize_actors(env_idx)

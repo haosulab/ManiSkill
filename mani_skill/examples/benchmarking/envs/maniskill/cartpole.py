@@ -10,8 +10,9 @@ from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.building.ground import build_ground
 from mani_skill.utils.registration import register_env
+from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import SceneConfig, SimConfig
-
+from typing import Optional, Union
 MJCF_FILE = f"{os.path.join(os.path.dirname(__file__), 'assets/cartpole.xml')}"
 
 
@@ -39,7 +40,7 @@ class CartPoleRobot(BaseAgent):
             )
         )
 
-    def _load_articulation(self):
+    def _load_articulation(self, initial_pose: Optional[Union[sapien.Pose, Pose]] = None):
         """
         Load the robot articulation
         """
@@ -49,8 +50,9 @@ class CartPoleRobot(BaseAgent):
         loader.name = self.uid
 
         # only need the robot
-        self.robot = loader.parse(asset_path)["articulation_builders"][0].build()
-
+        builder = loader.parse(asset_path)["articulation_builders"][0]
+        builder.initial_pose = initial_pose
+        self.robot = builder.build(name="cartpole")
         assert self.robot is not None, f"Fail to load URDF/MJCF from {asset_path}"
 
         # Cache robot link ids
@@ -105,12 +107,15 @@ class CartPoleBalanceBenchmarkEnv(CartpoleBalanceEnv):
     def _default_human_render_camera_configs(self):
         return dict()
 
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose())
+
     def _load_scene(self, options: dict):
         loader = self.scene.create_mjcf_loader()
         actor_builders = loader.parse(MJCF_FILE)["actor_builders"]
         for a in actor_builders:
+            a.initial_pose = sapien.Pose()
             a.build(a.name)
-
         # isaac uses a 0.5mx0.5m grid so we downscale the grid which is 4x4 squares by 2 by assumign the texture square length is 2
         self.ground = build_ground(
             self.scene,

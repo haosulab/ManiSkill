@@ -9,47 +9,58 @@ class CameraObsTextures:
     depth: bool
     segmentation: bool
     position: bool
+    normal: bool
+    albedo: bool
+
+
+ALL_TEXTURES = ["rgb", "depth", "segmentation", "position", "normal", "albedo"]
+"""set of all standard textures that can come from cameras"""
 
 
 def parse_visual_obs_mode_to_struct(obs_mode: str) -> CameraObsTextures:
     """Given user supplied observation mode, return a struct with the relevant textures that are to be captured"""
-    if obs_mode == "rgb":
+    # parse obs mode into a string of possible textures
+    if obs_mode == "rgbd":
         return CameraObsTextures(
-            rgb=True, depth=False, segmentation=False, position=False
-        )
-    elif obs_mode == "rgbd":
-        return CameraObsTextures(
-            rgb=True, depth=True, segmentation=False, position=False
-        )
-    elif obs_mode == "depth":
-        return CameraObsTextures(
-            rgb=False, depth=True, segmentation=False, position=False
-        )
-    elif obs_mode == "segmentation":
-        return CameraObsTextures(
-            rgb=False, depth=False, segmentation=True, position=False
-        )
-    elif obs_mode == "rgb+depth":
-        return CameraObsTextures(
-            rgb=True, depth=True, segmentation=False, position=False
-        )
-    elif obs_mode == "rgb+depth+segmentation":
-        return CameraObsTextures(
-            rgb=True, depth=True, segmentation=True, position=False
-        )
-    elif obs_mode == "rgb+segmentation":
-        return CameraObsTextures(
-            rgb=True, depth=False, segmentation=True, position=False
-        )
-    elif obs_mode == "depth+segmentation":
-        return CameraObsTextures(
-            rgb=False, depth=True, segmentation=True, position=False
+            rgb=True,
+            depth=True,
+            segmentation=False,
+            position=False,
+            normal=False,
+            albedo=False,
         )
     elif obs_mode == "pointcloud":
         return CameraObsTextures(
-            rgb=True, depth=False, segmentation=True, position=True
+            rgb=True,
+            depth=False,
+            segmentation=True,
+            position=True,
+            normal=False,
+            albedo=False,
         )
     elif obs_mode == "sensor_data":
-        return CameraObsTextures(rgb=True, depth=True, segmentation=True, position=True)
-    else:
+        return CameraObsTextures(
+            rgb=True,
+            depth=True,
+            segmentation=True,
+            position=True,
+            normal=False,
+            albedo=False,
+        )
+    elif obs_mode in ["state", "state_dict", "none"]:
         return None
+    else:
+        # Parse obs mode into individual texture types
+        textures = obs_mode.split("+")
+        for texture in textures:
+            assert (
+                texture in ALL_TEXTURES
+            ), f"Invalid texture type '{texture}' requested in the obs mode '{obs_mode}'. Each individual texture must be one of {ALL_TEXTURES}"
+        return CameraObsTextures(
+            rgb="rgb" in textures,
+            depth="depth" in textures,
+            segmentation="segmentation" in textures,
+            position="position" in textures,
+            normal="normal" in textures,
+            albedo="albedo" in textures,
+        )

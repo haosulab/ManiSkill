@@ -1,6 +1,7 @@
 from typing import Any, Dict, Tuple
 
 import numpy as np
+import sapien
 import torch
 
 from mani_skill.agents.multi_agent import MultiAgent
@@ -73,6 +74,11 @@ class TwoRobotPickCube(BaseEnv):
         pose = sapien_utils.look_at([1.4, 0.8, 0.75], [0.0, 0.1, 0.1])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
+    def _load_agent(self, options: dict):
+        super()._load_agent(
+            options, [sapien.Pose(p=[0, -1, 0]), sapien.Pose(p=[0, 1, 0])]
+        )
+
     def _load_scene(self, options: dict):
         self.table_scene = TableSceneBuilder(
             env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
@@ -83,6 +89,7 @@ class TwoRobotPickCube(BaseEnv):
             half_size=self.cube_half_size,
             color=[1, 0, 0, 1],
             name="cube",
+            initial_pose=sapien.Pose(p=[0, 0, 0.02]),
         )
         self.goal_site = actors.build_sphere(
             self.scene,
@@ -91,6 +98,7 @@ class TwoRobotPickCube(BaseEnv):
             name="goal_site",
             body_type="kinematic",
             add_collision=False,
+            initial_pose=sapien.Pose(),
         )
         self._hidden_objects.append(self.goal_site)
 

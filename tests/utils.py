@@ -7,6 +7,7 @@ from mani_skill.utils import common
 from mani_skill.utils.registration import REGISTERED_ENVS
 
 ENV_IDS = list(REGISTERED_ENVS.keys())
+ENV_IDS.remove("RoboCasaKitchen-v1")  # remove slow envs
 MULTI_AGENT_ENV_IDS = ["TwoRobotStackCube-v1", "TwoRobotPickCube-v1"]
 
 STATIONARY_ENV_IDS = [

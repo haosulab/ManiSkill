@@ -1,6 +1,7 @@
 from typing import Any, Dict, List
 
 import numpy as np
+import sapien
 import torch
 
 from mani_skill.agents.robots.anymal.anymal_c import ANYmalC
@@ -65,6 +66,9 @@ class QuadrupedReachEnv(BaseEnv):
                 # mount=self.agent.robot.links[0],
             )
         ]
+
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose(p=[0, 0, 1]))
 
     def _load_scene(self, options: dict):
         self.ground = build_ground(self.scene, floor_width=400)

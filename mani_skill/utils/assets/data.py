@@ -131,6 +131,12 @@ def initialize_data_sources():
         target_path="scene_datasets/ai2thor",
     )
 
+    DATA_SOURCES["RoboCasa"] = DataSource(
+        source_type="scene",
+        url="https://huggingface.co/datasets/haosulab/RoboCasa/resolve/main/robocasa_dataset.zip",
+        target_path="scene_datasets/robocasa_dataset",
+    )
+
     # Robots
     DATA_SOURCES["xmate3_robotiq"] = DataSource(
         source_type="robot",

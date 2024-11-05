@@ -76,7 +76,7 @@ class HumanoidEnvBase(BaseEnv):
         self.camera_mount.set_pose(
             Pose.create_from_pq(p=self.agent.robot.links_map["torso"].pose.p)
         )
-        if sapien.physx.is_gpu_enabled():
+        if self.gpu_sim_enabled:
             # we update just actor pose here, no need to call apply_all/fetch_all
             self.scene.px.gpu_apply_rigid_dynamic_data()
             self.scene.px.gpu_fetch_rigid_dynamic_data()

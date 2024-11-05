@@ -7,6 +7,7 @@ from typing import List, Tuple
 import torch
 
 from mani_skill.utils import common
+from mani_skill.utils.geometry.rotation_conversions import Device
 
 
 class UniformPlacementSampler:
@@ -19,10 +20,13 @@ class UniformPlacementSampler:
     """
 
     def __init__(
-        self, bounds: Tuple[List[float], List[float]], batch_size: int
+        self,
+        bounds: Tuple[List[float], List[float]],
+        batch_size: int,
+        device: Device = None,
     ) -> None:
         assert len(bounds) == 2 and len(bounds[0]) == len(bounds[1])
-        self._bounds = common.to_tensor(bounds)
+        self._bounds = common.to_tensor(bounds, device=device)
         self._ranges = self._bounds[1] - self._bounds[0]
         self.fixtures_radii = None
         self.fixture_positions = None

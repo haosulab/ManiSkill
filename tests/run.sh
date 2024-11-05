@@ -26,8 +26,8 @@ do
         "haosulab/mani-skill2_py$PYTHON_VERSION"
     # uninstall the pypi mani_skill2, install the local version and pytest, then run pytest
     echo "Installing Dependencies"
-    docker exec ${container_name} /bin/bash -c "cd ~ && pip uninstall -y mani_skill2 && pip install -e . && pip install pytest-xdist[psutil]" > /dev/null 2>&1
-    docker exec ${container_name} /bin/bash -c "cd ~ && pytest -n auto tests"
+    docker exec ${container_name} /bin/bash -c "cd ~ && pip uninstall -y mani_skill2 && pip install -e .[dev]" > /dev/null 2>&1
+    docker exec ${container_name} /bin/bash -c "cd ~ && pytest -n auto --forked tests"
     docker container stop ${container_name}
     docker container rm ${container_name}
 done

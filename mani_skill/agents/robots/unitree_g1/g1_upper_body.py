@@ -90,10 +90,10 @@ class UnitreeG1UpperBody(BaseAgent):
             use_delta=True,
         )
         return dict(
-            pd_joint_pos=dict(body=body_pd_joint_pos, balance_passive_force=True),
             pd_joint_delta_pos=dict(
                 body=body_pd_joint_delta_pos, balance_passive_force=True
             ),
+            pd_joint_pos=dict(body=body_pd_joint_pos, balance_passive_force=True),
         )
 
     @property

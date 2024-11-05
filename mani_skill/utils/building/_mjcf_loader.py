@@ -21,7 +21,8 @@ Notes:
     The default group of geoms is 0 in mujoco. From docs it appears only group 0 and 2 are rendered by default.
     This is also by default what the visualizer shows and presumably what image renders show.
     Any other group is treated as being invisible (e.g. in SAPIEN we do not add visual bodies). SAPIEN does not currently support
-    toggling render groups like Mujoco.
+    toggling render groups like Mujoco. Sometimes a MJCF might not follow this and will try and render other groups. In that case the loader supports
+    indicating which other groups to add visual bodies for.
 
     Ref: https://mujoco.readthedocs.io/en/stable/XMLreference.html#body-geom-group,
     https://mujoco.readthedocs.io/en/latest/modeling.html#composite-objects (says group 3 is turned off)
@@ -39,6 +40,7 @@ import math
 import os
 import re
 import xml.etree.ElementTree as ET
+from collections import defaultdict
 from copy import deepcopy
 from dataclasses import dataclass
 from functools import reduce
@@ -57,6 +59,8 @@ from sapien.wrapper.articulation_builder import (
 )
 from transforms3d import euler, quaternions
 
+from mani_skill import logger
+
 
 @dataclass
 class MJCFTexture:
@@ -68,6 +72,9 @@ class MJCFTexture:
 
 
 DEFAULT_MJCF_OPTIONS = dict(contact=True)
+
+
+WARNED_ONCE = defaultdict(lambda: False)
 
 
 def _parse_int(attrib, key, default):
@@ -162,7 +169,7 @@ class MJCFLoader:
     Class to load MJCF into SAPIEN.
     """
 
-    def __init__(self, ignore_classes=["motor"]):
+    def __init__(self, ignore_classes=["motor"], visual_groups=[0, 2]):
         self.fix_root_link = True
         """whether to fix the root link. Note regardless of given XML, the root link is a dummy link this loader
         creates which makes a number of operations down the line easier. In general this should be False if there is a freejoint for the root body
@@ -170,12 +177,14 @@ class MJCFLoader:
         must be handled on a case by case basis"""
 
         self.load_multiple_collisions_from_file = False
+        self.load_nonconvex_collisions = False
         self.multiple_collisions_decomposition = "none"
         self.multiple_collisions_decomposition_params = dict()
 
-        self.collision_is_visual = False
         self.revolute_unwrapped = False
         self.scale = 1.0
+
+        self.visual_groups = visual_groups
 
         self.scene: sapien.Scene = None
 
@@ -233,9 +242,12 @@ class MJCFLoader:
         geom_type = geom_attrib.get("type", "sphere")
         if "mesh" in geom_attrib:
             geom_type = "mesh"
-
-        geom_size = _parse_vec(geom_attrib, "size", [1.0, 1.0, 1.0]) * self.scale
-        geom_pos = _parse_vec(geom_attrib, "pos", (0.0, 0.0, 0.0)) * self.scale
+        geom_size = (
+            _parse_vec(geom_attrib, "size", np.array([1.0, 1.0, 1.0])) * self.scale
+        )
+        geom_pos = (
+            _parse_vec(geom_attrib, "pos", np.array([0.0, 0.0, 0.0])) * self.scale
+        )
         geom_rot = _parse_orientation(geom_attrib, self._use_degrees, self._euler_seq)
         _parse_float(geom_attrib, "density", self.density)
         if "material" in geom_attrib:
@@ -249,12 +261,22 @@ class MJCFLoader:
         geom_density = _parse_float(geom_attrib, "density", 1000.0)
 
         # if condim is 1, we can easily model the material's friction
-        if _parse_int(geom_attrib, "condim", 0) == 1:
-            friction = _parse_float(
-                geom_attrib, "friction", 0.3
+        condim = _parse_int(geom_attrib, "condim", 3)
+        if condim == 3:
+            friction = _parse_vec(
+                geom_attrib, "friction", np.array([0.3, 0.3, 0.3])
             )  # maniskill default friction is 0.3
+            # NOTE (stao): we only support sliding friction at the moment. see
+            # https://mujoco.readthedocs.io/en/stable/XMLreference.html#body-geom-friction
+            # we might be able to imitate their torsional frictions via patch radius attributes:
+            # https://nvidia-omniverse.github.io/PhysX/physx/5.4.0/_api_build/class_px_shape.html#_CPPv4N7PxShape23setTorsionalPatchRadiusE6PxReal
+            friction = friction[0]
             physx_material = PhysxMaterial(
                 static_friction=friction, dynamic_friction=friction, restitution=0
+            )
+        elif condim == 1:
+            physx_material = PhysxMaterial(
+                static_friction=0, dynamic_friction=0, restitution=0
             )
         else:
             physx_material = None
@@ -262,7 +284,7 @@ class MJCFLoader:
         geom_group = _parse_int(geom_attrib, "group", 0)
         # See note at top of file for how we handle geom groups
         has_visual_body = False
-        if geom_group == 0 or geom_group == 2:
+        if geom_group in self.visual_groups:
             has_visual_body = True
 
         geom_contype = _parse_int(geom_attrib, "contype", 1)
@@ -333,6 +355,7 @@ class MJCFLoader:
                         radius=geom_radius,
                         half_length=geom_half_length,
                         material=physx_material,
+                        density=geom_density,
                         # name=geom_name,
                     )
             elif geom_type == "box":
@@ -348,6 +371,7 @@ class MJCFLoader:
                         t_visual2link,
                         half_size=geom_size,
                         material=physx_material,
+                        density=geom_density,
                         # name=geom_name,
                     )
             elif geom_type == "cylinder":
@@ -360,28 +384,59 @@ class MJCFLoader:
                         name=geom_name,
                     )
                 if has_collisions:
-                    builder.add_capsule_collision(
+                    builder.add_cylinder_collision(
                         t_visual2link,
                         radius=geom_radius,
                         half_length=geom_half_length,
                         material=physx_material,
+                        density=geom_density,
                         # name=geom_name
                     )
 
         elif geom_type == "plane":
-            pass
+            if not WARNED_ONCE["plane"]:
+                logger.warn(
+                    "Currently ManiSkill does not support loading plane geometries from MJCFs"
+                )
+                WARNED_ONCE["plane"] = True
         elif geom_type == "ellipsoid":
-            pass
-        elif geom_type == "cylinder":
-            pass
+            if not WARNED_ONCE["ellipsoid"]:
+                logger.warn(
+                    "Currently ManiSkill does not support loading ellipsoid geometries from MJCFs"
+                )
+                WARNED_ONCE["ellipsoid"] = True
         elif geom_type == "mesh":
+            mesh_name = geom_attrib.get("mesh")
+            mesh_attrib = self._meshes[mesh_name].attrib
+            mesh_scale = self.scale * np.array(
+                _parse_vec(mesh_attrib, "scale", np.array([1, 1, 1]))
+            )
+            # TODO refquat
+            mesh_file = os.path.join(self._mesh_dir, mesh_attrib["file"])
             if has_visual_body:
-                mesh_name = geom_attrib.get("mesh")
                 builder.add_visual_from_file(
-                    os.path.join(self._mesh_dir, self._meshes[mesh_name].get("file")),
-                    scale=(self.scale, self.scale, self.scale),
+                    mesh_file,
+                    pose=t_visual2link,
+                    scale=mesh_scale,
                     material=render_material,
                 )
+            if has_collisions:
+                if self.load_multiple_collisions_from_file:
+                    builder.add_multiple_convex_collisions_from_file(
+                        mesh_file,
+                        pose=t_visual2link,
+                        scale=mesh_scale,
+                        material=physx_material,
+                        density=geom_density,
+                    )
+                else:
+                    builder.add_convex_collision_from_file(
+                        mesh_file,
+                        pose=t_visual2link,
+                        scale=mesh_scale,
+                        material=physx_material,
+                        density=geom_density,
+                    )
         elif geom_type == "sdf":
             raise NotImplementedError("SDF geom type not supported at the moment")
         elif geom_type == "hfield":
@@ -464,7 +519,7 @@ class MJCFLoader:
             metallic=_parse_float(material.attrib, "shininess", 0.5),
         )
         if texture is not None and texture.file is not None:
-            render_material.diffuse_texture = RenderTexture2D(filename=texture.file)
+            render_material.base_color_texture = RenderTexture2D(filename=texture.file)
         self._materials[name] = render_material
 
     def _parse_mesh(self, mesh: Element):
@@ -479,6 +534,8 @@ class MJCFLoader:
 
     @property
     def _root_default(self):
+        if "__root__" not in self._defaults:
+            return {}
         return self._defaults["__root__"]
 
     def _parse_default(self, node: Element, parent: Element):
@@ -681,6 +738,7 @@ class MJCFLoader:
     ) -> Tuple[List[ArticulationBuilder], List[ActorBuilder], None]:
         """Helper function for self.parse"""
         xml: Element = ET.fromstring(mjcf_string.encode("utf-8"))
+        self.xml = xml
         # handle includes
         for include in xml.findall("include"):
             include_file = include.attrib["file"]
@@ -705,7 +763,9 @@ class MJCFLoader:
                 for c in compiler.attrib.get("eulerseq", "xyz").lower()
             ]
             self._mesh_dir = compiler.attrib.get("meshdir", ".")
-            self._mesh_dir = os.path.join(self.mjcf_dir, self._mesh_dir)
+        else:
+            self._mesh_dir = "."
+        self._mesh_dir = os.path.join(self.mjcf_dir, self._mesh_dir)
 
         ### Parse options/flags ###
         option = xml.find("option")
@@ -737,14 +797,36 @@ class MJCFLoader:
         actor_builders: List[ActorBuilder] = []
         for i, body in enumerate(xml.find("worldbody").findall("body")):
             # determine first if this body is really an articulation or a actor
-            body.find("joint") is not None
             has_freejoint = body.find("freejoint") is not None
-            # TODO (is it the case any <body> tag refers to an articulation?)
-            if True:
+
+            def has_joint(body):
+                if body.find("joint") is not None:
+                    return True
+                for child in body.findall("body"):
+                    if has_joint(child):
+                        return True
+                return False
+
+            is_articulation = has_joint(body) or has_freejoint
+            # <body> tag refers to an artciulation in physx only if there is another body tag inside it
+            if is_articulation:
                 builder = self.scene.create_articulation_builder()
                 articulation_builders.append(builder)
                 dummy_root_link = builder.create_link_builder(None)
                 dummy_root_link.name = f"dummy_root_{i}"
+
+                # Check if the body tag only contains another body tag and nothing else
+                body_children = list(body)
+                tag_counts = defaultdict(int)
+                for child in body_children:
+                    tag_counts[child.tag] += 1
+                if (
+                    tag_counts["body"] == 1
+                    and "geom" not in tag_counts
+                    and "joint" not in tag_counts
+                ):
+                    # If so, skip the current body and continue with its child
+                    body = body.find("body")
                 self._parse_body(body, dummy_root_link, self._root_default, builder)
 
                 # handle free joints
@@ -760,11 +842,14 @@ class MJCFLoader:
                 builder = self.scene.create_actor_builder()
                 body_type = "dynamic" if has_freejoint else "static"
                 actor_builders.append(builder)
-                # TODO (stao): this may not be correct. Does mujoco support using multiple nested body tags to define geoms?
-                for i, geom in enumerate(body.findall("geom")):
-                    self._build_geom(geom, builder, self._root_default)
-                    builder.set_name(geom.get("name", ""))
-                builder.set_physx_body_type(body_type)
+                # NOTE that mujoco supports nested body tags to define groups of geoms
+                cur_body = body
+                while cur_body is not None:
+                    for i, geom in enumerate(cur_body.findall("geom")):
+                        self._build_geom(geom, builder, self._root_default)
+                        builder.set_name(geom.get("name", ""))
+                        builder.set_physx_body_type(body_type)
+                    cur_body = cur_body.find("body")
 
         ### Parse geoms in World Body ###
         # These can't have freejoints so they can't be dynamic
@@ -789,6 +874,7 @@ class MJCFLoader:
         #         builder.mimic_joint_records.append(record)
 
         if not self._mjcf_options["contact"]:
+            # means to disable all contacts
             for actor in actor_builders:
                 actor.collision_groups[2] |= 1 << 1
             for art in articulation_builders:

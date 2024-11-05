@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, List, Tuple
+from typing import TYPE_CHECKING, Any, List, TypedDict
 
 from mani_skill.utils.building.actor_builder import ActorBuilder
 from mani_skill.utils.building.articulation_builder import ArticulationBuilder
@@ -12,6 +12,12 @@ if TYPE_CHECKING:
 from ._mjcf_loader import MJCFLoader as SAPIENMJCFLoader
 
 
+class ParsedMJCFData(TypedDict):
+    articulation_builders: List[ArticulationBuilder]
+    actor_builders: List[ActorBuilder]
+    cameras: List[Any]
+
+
 class MJCFLoader(SAPIENMJCFLoader):
     """
     Wrapper for the SAPIEN MJCF Loader to support easy parallelization
@@ -21,9 +27,7 @@ class MJCFLoader(SAPIENMJCFLoader):
     name: str = None
     disable_self_collisions: bool = False
 
-    def parse(
-        self, mjcf_file, package_dir=None
-    ) -> Tuple[List[ArticulationBuilder], List[ActorBuilder], List[Any]]:
+    def parse(self, mjcf_file, package_dir=None) -> ParsedMJCFData:
         articulation_builders, actor_builders, cameras = super().parse(
             mjcf_file, package_dir
         )
@@ -65,7 +69,7 @@ class MJCFLoader(SAPIENMJCFLoader):
             self.name = name
         _parsed_mjcf_data = self.parse(mjcf_file, package_dir)
         articulation_builders = _parsed_mjcf_data["articulation_builders"]
-        actor_builders = _parsed_mjcf_data["actor_builders"]
+        _parsed_mjcf_data["actor_builders"]
         cameras = _parsed_mjcf_data["cameras"]
 
         articulations: List[Articulation] = []

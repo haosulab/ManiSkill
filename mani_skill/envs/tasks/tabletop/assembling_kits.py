@@ -80,6 +80,9 @@ class AssemblingKitsEnv(BaseEnv):
         pose = sapien_utils.look_at([0.3, 0.3, 0.8], [0.0, 0.0, 0.1])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
+
     def _load_scene(self, options: dict):
         with torch.device(self.device):
             self.table_scene = TableSceneBuilder(self)
@@ -123,6 +126,7 @@ class AssemblingKitsEnv(BaseEnv):
                         episode["obj_to_place"], color_id=pick_color_ids[i]
                     )
                     .set_scene_idxs(scene_idxs)
+                    .set_initial_pose(sapien.Pose(p=[0, 0, 0.1]))
                     .build(f"obj_{i}")
                 )
                 self.object_ids.append(episode["obj_to_place"])
