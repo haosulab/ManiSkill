@@ -71,12 +71,16 @@ PREBUILT_SHADER_CONFIGS = {
             "Color": ["rgb"],
             "Position": ["position", "depth"],
             "Segmentation": ["segmentation"],
+            "Normal": ["normal"],
+            "Albedo": ["albedo"],
         },
         texture_transforms={
             "Color": lambda data: {"rgb": (data[..., :3] * 255).to(torch.uint8)},
             "Position": default_position_texture_transform,
             # note in default shader pack, 0 is visual shape / mesh, 1 is actor/link level, 2 is parallel scene ID, 3 is unused
             "Segmentation": lambda data: {"segmentation": data[..., 1][..., None]},
+            "Normal": lambda data: {"normal": data},
+            "Albedo": lambda data: {"albedo": (data[..., :3] * 255).to(torch.uint8)},
         },
     ),
     "rt": ShaderConfig(
