@@ -47,7 +47,7 @@ def parse_visual_obs_mode_to_struct(obs_mode: str) -> CameraObsTextures:
             normal=False,
             albedo=False,
         )
-    elif obs_mode == "state" or obs_mode == "state_dict":
+    elif obs_mode in ["state", "state_dict", "none"]:
         return None
     else:
         # Parse obs mode into individual texture types
