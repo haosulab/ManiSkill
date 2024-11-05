@@ -30,6 +30,8 @@ def parse_visual_obs_mode_to_struct(obs_mode: str) -> CameraObsTextures:
         )
     elif obs_mode == "sensor_data":
         return CameraObsTextures(rgb=True, depth=True, segmentation=True, position=True)
+    elif obs_mode == "state" or obs_mode == "state_dict":
+        return None
     else:
         # Parse obs mode into individual texture types
         textures = obs_mode.split("+")
