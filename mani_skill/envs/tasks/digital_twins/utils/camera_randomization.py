@@ -68,7 +68,7 @@ def make_camera_rectangular_prism(n, scale=[0.1, 0.1, 0.1], center=[0, 0, 0], th
     assert len(center) == 3, len(center)
     scale = torch.tensor(scale) if not isinstance(scale, torch.Tensor) else scale
     center = torch.tensor(center) if not isinstance(center, torch.Tensor) else center
-    xyz = torch.rand(n, 3) * scale
+    xyz = (torch.rand(n, 3) - 0.5) * scale
     rot_mat = euler_angles_to_matrix(
         torch.tensor([0, 0, theta], dtype=torch.float32), convention="XYZ"
     )
