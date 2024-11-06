@@ -186,9 +186,9 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
 
         reset_kwargs = ep["reset_kwargs"].copy()
         if "seed" in reset_kwargs:
-            assert reset_kwargs["seed"] == ep["episode_seed"]
+            assert reset_kwargs["seed"] == ep["episode_seed"][0]
         else:
-            reset_kwargs["seed"] = ep["episode_seed"]
+            reset_kwargs["seed"] = ep["episode_seed"][0]
         seed = reset_kwargs.pop("seed")
 
         ori_control_mode = ep["control_mode"]

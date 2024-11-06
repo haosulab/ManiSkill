@@ -239,6 +239,8 @@ if __name__ == "__main__":
             assert (
                 control_mode == args.control_mode
             ), f"Control mode mismatched. Dataset has control mode {control_mode}, but args has control mode {args.control_mode}"
+            if "robot_uids" in demo_info["env_info"]["env_kwargs"]:
+                args.robot_uids = demo_info["env_info"]["env_kwargs"]["robot_uids"]
 
     np.random.seed(args.seed)
     random.seed(args.seed)
@@ -249,6 +251,7 @@ if __name__ == "__main__":
 
     # env setup
     env_kwargs = dict(
+        robot_uids=args.robot_uids,
         control_mode=args.control_mode,
         reward_mode="sparse",
         obs_mode="state",
