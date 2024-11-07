@@ -16,7 +16,7 @@ from mani_skill.utils.structs.actor import Actor
 @register_agent()
 class Panda(BaseAgent):
     uid = "panda"
-    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/panda/panda_v3.urdf"
+    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/panda/panda_v2.urdf"
     urdf_config = dict(
         _materials=dict(
             gripper=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)

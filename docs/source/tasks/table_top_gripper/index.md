@@ -297,7 +297,6 @@ The goal is to pick up a red cube, place it next to the green cube, and stack th
 **Success Conditions:**
 - the blue cube is static
 - the blue cube is on top of both the red and green cube (to within half of the cube size)
-- the blue cube is static
 - none of the red, green, blue cubes are grasped by the robot (robot must let go of the cubes)
 :::
 
