@@ -1,16 +1,11 @@
 """
 Code for kinematics utilities on CPU/GPU
 """
+
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from os import devnull
 from typing import List
 
-try:
-    import pytorch_kinematics as pk
-except ImportError:
-    raise ImportError(
-        "pytorch_kinematics_ms not installed. Install with pip install pytorch_kinematics_ms"
-    )
 import torch
 from sapien.wrapper.pinocchio_model import PinocchioModel
 
@@ -89,6 +84,13 @@ class Kinematics:
         self.qmask[self.active_joint_indices] = 1
 
     def _setup_gpu(self):
+        try:
+            import pytorch_kinematics as pk
+        except ImportError:
+            raise ImportError(
+                "pytorch_kinematics_ms not installed. Install with pip install pytorch_kinematics_ms"
+            )
+
         """setup the kinematics solvers on the GPU"""
         self.use_gpu_ik = True
         with open(self.urdf_path, "rb") as f:
@@ -140,6 +142,13 @@ class Kinematics:
                 used for GPU simulation to determine which GPU IK algorithm to use.
         """
         if self.use_gpu_ik:
+            try:
+                import pytorch_kinematics as pk
+            except ImportError:
+                raise ImportError(
+                    "pytorch_kinematics_ms not installed. Install with pip install pytorch_kinematics_ms"
+                )
+
             q0 = q0[:, self.active_ancestor_joint_idxs]
             if not use_delta_ik_solver:
                 tf = pk.Transform3d(
