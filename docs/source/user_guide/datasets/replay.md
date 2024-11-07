@@ -106,7 +106,7 @@ The conversion between controllers (or action spaces) is not yet supported for m
 ::: -->
 
 :::{caution}
-Since some demonstrations are collected in a non-quasi-static way (objects are not fixed relative to the manipulator during manipulation) for some challenging tasks (e.g., `TurnFaucet` and tasks migrated from ManiSkill1), replaying actions can fail due to non-determinism in simulation. Thus, replaying trajectories by environment states is required (passing `--use-env-states`).
+Since some demonstrations are collected in a non-quasi-static way (objects are not fixed relative to the manipulator during manipulation) or require high precision for some challenging tasks (e.g. PushT-v1 or PickSingleYCB-v1), replaying actions/converting actions can fail due to non-determinism in simulation . Thus, replaying trajectories by environment states is required by passing `--use-env-states` to ensure that the state/observation data replayed is the same.
 :::
 
 ## Example Usages
