@@ -55,6 +55,16 @@ python ppo_fast.py --env_id="RollBall-v1" --evaluate \
   --checkpoint=runs/data_generation/RollBall-v1-ppo/final_ckpt.pt \
   --num_eval_envs=1024 --num-eval-steps=80 --no-capture-video --save-trajectory
 
+### PokeCube-v1 ###
+python ppo_fast.py --env_id="PokeCube-v1" \
+  --num_envs=4096 --num-steps=4 --update_epochs=8 --num_minibatches=32 \
+  --total_timesteps=15_000_000 --eval_freq=100 \
+  --save-model --cudagraphs --exp-name="data_generation/PokeCube-v1-ppo"
+
+python ppo_fast.py --env_id="PokeCube-v1" --evaluate \
+  --checkpoint=runs/data_generation/PokeCube-v1-ppo/final_ckpt.pt \
+  --num_eval_envs=1024 --num-eval-steps=50 --no-capture-video --save-trajectory
+
 ### AnymalC-Reach-v1 ###
 python ppo_fast.py --env_id="AnymalC-Reach-v1" \
   --num_envs=4096 --num-steps=16 --update_epochs=8 --num_minibatches=32 \
