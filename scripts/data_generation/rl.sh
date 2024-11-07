@@ -48,7 +48,7 @@ python ppo_fast.py --env_id="PushT-v1" --evaluate \
 ### RollBall-v1 ###
 python ppo_fast.py --env_id="RollBall-v1" \
   --num_envs=4096 --num-steps=16 --update_epochs=8 --num_minibatches=32 \
-  --total_timesteps=10_000_000 --num-eval-steps=80 \
+  --total_timesteps=20_000_000 --num-eval-steps=80 --gamma=0.95 \
   --save-model --cudagraphs --exp-name="data_generation/RollBall-v1-ppo"
 
 python ppo_fast.py --env_id="RollBall-v1" --evaluate \
