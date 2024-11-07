@@ -11,12 +11,16 @@ python ppo_fast.py --env_id="PickCube-v1" \
 
 python ppo_fast.py --env_id="PickCube-v1" --evaluate \
   --checkpoint=runs/data_generation/PickCube-v1-ppo/final_ckpt.pt \
-  --num_eval_envs=1024 --num-eval-steps=50 --no-capture-video
+  --num_eval_envs=1024 --num-eval-steps=50 --no-capture-video --save-trajectory
 
-# python ppo_fast.py --env_id="StackCube-v1" \
-#   --num_envs=4096 --num-steps=16 --update_epochs=8 --num_minibatches=32 \
-#   --total_timesteps=35_000_000 --cudagraphs
+python ppo_fast.py --env_id="StackCube-v1" \
+  --num_envs=4096 --num-steps=16 --update_epochs=8 --num_minibatches=32 \
+  --total_timesteps=50_000_000 \
+  --save-model --cudagraphs --exp-name="data_generation/StackCube-v1-ppo"
 
+python ppo_fast.py --env_id="StackCube-v1" --evaluate \
+  --checkpoint=runs/data_generation/StackCube-v1-ppo/final_ckpt.pt \
+  --num_eval_envs=1024 --num-eval-steps=50 --no-capture-video --save-trajectory
 
 python ppo_fast.py --env_id="PushT-v1" \
   --num_envs=4096 --num-steps=16 --update_epochs=8 --num_minibatches=32 \
@@ -25,8 +29,4 @@ python ppo_fast.py --env_id="PushT-v1" \
 
 python ppo_fast.py --env_id="PushT-v1" --evaluate \
   --checkpoint=runs/data_generation/PushT-v1-ppo/final_ckpt.pt \
-  --num_eval_envs=1024 --num-eval-steps=100 --no-capture-video
-
-
-# TODO script ot then read all datasets in data_generation and update the jsons with new elapsed steps by truncating the trajectories to first success / removing failed trajectories
-# and collecting all policy weights as well
+  --num_eval_envs=1024 --num-eval-steps=100 --no-capture-video --save-trajectory
