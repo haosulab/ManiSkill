@@ -3,7 +3,6 @@ from typing import Dict
 import mani_skill.envs.utils.randomization as randomization
 import numpy as np
 import sapien
-import svgpathtools
 import torch
 from mani_skill.agents.robots.panda.panda_stick import PandaStick
 from mani_skill.envs.sapien_env import BaseEnv
