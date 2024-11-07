@@ -65,6 +65,26 @@ python ppo_fast.py --env_id="PokeCube-v1" --evaluate \
   --checkpoint=runs/data_generation/PokeCube-v1-ppo/final_ckpt.pt \
   --num_eval_envs=1024 --num-eval-steps=50 --no-capture-video --save-trajectory
 
+### PullCube-v1 ###
+python ppo_fast.py --env_id="PullCube-v1" \
+  --num_envs=4096 --num-steps=4 --update_epochs=8 --num_minibatches=32 \
+  --total_timesteps=5_000_000 --eval_freq=100 \
+  --save-model --cudagraphs --exp-name="data_generation/PullCube-v1-ppo"
+
+python ppo_fast.py --env_id="PullCube-v1" --evaluate \
+  --checkpoint=runs/data_generation/PullCube-v1-ppo/final_ckpt.pt \
+  --num_eval_envs=1024 --num-eval-steps=50 --no-capture-video --save-trajectory
+
+### LiftPegUpright-v1 ###
+python ppo_fast.py --env_id="LiftPegUpright-v1" \
+  --num_envs=4096 --num-steps=4 --update_epochs=8 --num_minibatches=32 \
+  --total_timesteps=8_000_000 --eval_freq=100 \
+  --save-model --cudagraphs --exp-name="data_generation/LiftPegUpright-v1-ppo"
+
+python ppo_fast.py --env_id="LiftPegUpright-v1" --evaluate \
+  --checkpoint=runs/data_generation/LiftPegUpright-v1-ppo/final_ckpt.pt \
+  --num_eval_envs=1024 --num-eval-steps=50 --no-capture-video --save-trajectory
+
 ### AnymalC-Reach-v1 ###
 python ppo_fast.py --env_id="AnymalC-Reach-v1" \
   --num_envs=4096 --num-steps=16 --update_epochs=8 --num_minibatches=32 \
