@@ -18,14 +18,13 @@ from mani_skill.utils.logging_utils import logger
 class StackPyramidEnv(BaseEnv):
 
     SUPPORTED_ROBOTS = ["panda_wristcam", "panda", "fetch"]
-    SUPPORTED_REWARD_MODES = ["sparse", "none"]
+    SUPPORTED_REWARD_MODES = ["none", "sparse"]
     
     agent: Union[Panda, Fetch]
 
     def __init__(
         self, *args, robot_uids="panda_wristcam", robot_init_qpos_noise=0.02, **kwargs
     ):
-        self.num_cubes = 6 # 3 + 2 + 1
         self.robot_init_qpos_noise = robot_init_qpos_noise
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
@@ -116,34 +115,16 @@ class StackPyramidEnv(BaseEnv):
                 xy_flag = xy_offset <= tolerance
                 z_flag = z_offset <= tolerance
 
-                logger.debug(f"TOP Distance XY: {xy_offset}")
-                logger.debug(f"TOP Distance Z: {z_offset}")
             else:
                 xy_offset = torch.linalg.norm(offset[..., :2], axis=-1) - torch.linalg.norm(2 * self.cube_half_size[:2])
                 z_offset = torch.abs(offset[..., 2] - self.cube_half_size[2])
                 xy_flag = xy_offset <= 0.05
                 z_flag = z_offset <= 0.05
-                logger.debug(f"NEXT TO Distance XY: {xy_offset}")
-                logger.debug("NEXT TO Distance Z:", z_offset)
-            
-            if (xy_flag == False):
-                logger.debug("XY FLAG FALSE")
-            if (z_flag == False):
-                logger.debug("Z FLAG FALSE")
             is_cubeA_on_cubeB = torch.logical_and(xy_flag, z_flag)
             is_cubeA_static = cube_a.is_static(lin_thresh=1e-2, ang_thresh=0.5)
             is_cubeA_grasped = self.agent.is_grasping(cube_a)
-            success = is_cubeA_on_cubeB & is_cubeA_static & (~is_cubeA_grasped)
 
-            logger.debug("offset:", offset)
-            logger.debug(f"Evaluating {cube_a} on {cube_b} ({top_or_next}):")
-            logger.debug("  xy_flag:", xy_flag)
-            logger.debug("  z_flag:", z_flag)
-            logger.debug("  is_cubeA_on_cubeB:", is_cubeA_on_cubeB)
-            logger.debug("  is_cubeA_static:", is_cubeA_static)
-            logger.debug("  is_cubeA_grasped:", is_cubeA_grasped)
-            logger.debug("  success:", success)
-
+            success = is_cubeA_on_cubeB & is_cubeA_static & (~is_cubeA_grasped)            
             return success.bool()
 
         success_A_B = evaluate_cube_distance(offset_AB, self.cubeA, self.cubeB, "next_to")
