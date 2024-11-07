@@ -6,14 +6,11 @@ Note that ManiSkill is still in beta, so we have not finalized training scripts 
 
 Official baseline results can be run by using the scripts in the baselines.sh file. Results are organized and published to our [wandb page](https://wandb.ai/stonet2000/ManiSkill/groups/PPO/workspace?nw=0pe9ybwmza7)
 
-To get started make sure to have maniskill installed and to also install [torchrl](https://github.com/pytorch/rl) and [tensordict](https://github.com/pytorch/tensordict/):
+There is also now experimental support for PPO compiled and with CUDA Graphs enabled based on LeanRL. The code is in ppo_fast.py and you need to install [torchrl](https://github.com/pytorch/rl) and [tensordict](https://github.com/pytorch/tensordict/):
 
 ```bash
 pip install torchrl tensordict
 ```
-
-torchrl and tensordict simplify RL code and make it possible to leverage [CUDA Graphs](https://pytorch.org/blog/accelerating-pytorch-with-cuda-graphs/) to make PPO run very fast. Note that torchrl installs torch and may upgrade it to a different version, you can pip install a specific version of torch if necessary.
-
 
 ## State Based RL
 
