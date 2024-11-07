@@ -507,6 +507,11 @@ if __name__ == "__main__":
         for k, v in cumulative_times.items():
             logger.add_scalar(f"time/total_{k}", v, global_step)
         logger.add_scalar("time/total_rollout+update_time", cumulative_times["rollout_time"] + cumulative_times["update_time"], global_step)
-
+    if not args.evaluate:
+        if args.save_model:
+            model_path = f"runs/{run_name}/final_ckpt.pt"
+            torch.save(agent.state_dict(), model_path)
+            print(f"model saved to {model_path}")
+        logger.close()
     envs.close()
     eval_envs.close()
