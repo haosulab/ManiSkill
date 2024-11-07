@@ -113,6 +113,31 @@ Since some demonstrations are collected in a non-quasi-static way (objects are n
 
 As the replay trajectory tool is fairly complex and feature rich, we suggest a few example workflows that may be useful for various use cases
 
+### Replaying Trajectories from One Control Mode to a Easier to Learn Control Mode
+
+In machine learning workflows, it can sometimes be easier to learn from some control modes such as end-effector control ones. The example below does that exactly
+
+```bash
+python -m mani_skill.trajectory.replay_trajectory \
+  --traj-path path/to/trajectory.h5 \
+  -c pd_ee_delta_pose -o state \
+  --save-traj
+```
+
+Note that some target control modes are difficult to convert to due to inherent differences in controllers and the behavior of the demonstrations.
+
+### Adding rewards/observations in trajectories
+
+To conserve memory, demonstrations are typically stored without observations and rewards. The example below shows how to add rewards and RGB observations and normalized dense rewards (assuming the environment supports dense rewards) back in. `--use-env-states` is added as a way to ensure the state/observation data replayed exactly as the original trajectory generated.
+
+```bash
+python -m mani_skill.trajectory.replay_trajectory \
+  --traj-path path/to/trajectory.h5 \
+  --record-rewards --reward-mode="normalized_dense" -o rgb \
+  --use-env-states \
+  --save-traj
+```
+
 
 ### Replaying Trajectories collected in CPU/GPU sim to GPU/CPU sim
 
@@ -125,29 +150,5 @@ python -m mani_skill.trajectory.replay_trajectory \
   --traj-path path/to/trajectory.h5 \
   --use-first-env-state -b "gpu" \
   -c pd_joint_delta_pos -o state \
-  --save-traj
-```
-
-### Replaying Trajectories from One Control Mode to a Easier to Learn Control Mode
-
-In machine learning workflows, it can sometimes be easier to learn from some control modes such as end-effector control ones. The example below does that exactly
-
-```bash
-python -m mani_skill.trajectory.replay_trajectory \
-  --traj-path path/to/trajectory.h5 \
-  -c pd_ee_delta_pose -o state \
-  --save-traj
-```
-
-Note that some target control modes are difficult to convert to due to inherent differences in controllers. For highly precise tasks like PegInsertionSide and PlugCharger the success rate of conversion from e.g. `pd_joint_pos` control to `pd_ee_delta_pose` control is low. For less precise tasks like PickCube the success rate is near 100%.
-
-### Adding rewards/observations in trajectories
-
-To conserve memory, demonstrations are stored without observations and rewards. The example below shows how to add rewards and RGB observations back in.
-
-```bash
-python -m mani_skill.trajectory.replay_trajectory \
-  --traj-path path/to/trajectory.h5 \
-  --record-rewards --reward-mode="normalized_dense" -o rgb \
   --save-traj
 ```
