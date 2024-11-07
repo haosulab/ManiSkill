@@ -1,6 +1,7 @@
 from typing import Any, Dict, Union
 
 import numpy as np
+import sapien
 import torch
 
 from mani_skill.agents.robots import Fetch, Panda
@@ -45,13 +46,13 @@ class StackPyramidEnv(BaseEnv):
         )
         self.table_scene.build()
         self.cubeA = actors.build_cube(
-            self.scene, half_size=0.02, color=[1, 0, 0, 1], name="cubeA"
+            self.scene, half_size=0.02, color=[1, 0, 0, 1], name="cubeA", initial_pose=sapien.Pose(p=[0, 0, 0.1])
         )
         self.cubeB = actors.build_cube(
-            self.scene, half_size=0.02, color=[0, 1, 0, 1], name="cubeB"
+            self.scene, half_size=0.02, color=[0, 1, 0, 1], name="cubeB", initial_pose=sapien.Pose(p=[1, 0, 0.1])
         )
         self.cubeC = actors.build_cube(
-            self.scene, half_size=0.02, color=[0, 0, 1, 1], name="cubeC"
+            self.scene, half_size=0.02, color=[0, 0, 1, 1], name="cubeC", initial_pose=sapien.Pose(p=[-1, 0, 0.1])
         )
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
