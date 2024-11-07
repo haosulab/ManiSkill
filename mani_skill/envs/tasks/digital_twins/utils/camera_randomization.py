@@ -21,11 +21,11 @@ class Args:
     n_points: int = 200
     """seed of the experiment"""
     scale_x: float = 0.1
-    """length of the prism"""
+    """total length of the prism"""
     scale_y: float = 0.1
-    """width of the prism"""
+    """total width of the prism"""
     scale_z: float = 0.1
-    """height of the prism"""
+    """total height of the prism"""
     theta: float = 0
     """rotation of the prism about the z axis"""
     x: float = 0.1
@@ -51,7 +51,7 @@ class Args:
     """camera resolution height"""
     fov: float = 1
     """camera fov parameter"""
-    near: float = 0.01
+    near: float = -1
     """camera near plane parameter"""
     far: float = 100
     """camera far plane parameter"""
@@ -87,6 +87,10 @@ if __name__ == "__main__":
     target = torch.tensor([args.target_x, args.target_y, args.target_z]).float()
     points = make_camera_rectangular_prism(args.n_points, scale, center, args.theta)
 
+    # make clipping plane further than the max distance of a ray within the volume of the cube
+    if args.near == -1:
+        args.near = np.linalg.norm(np.array(scale), axis=0) + 1e-6
+
     env_class = REGISTERED_ENVS[args.env_id].cls
 
     @register_env("CopyEnv-v1", max_episode_steps=1e6)
@@ -109,14 +113,14 @@ if __name__ == "__main__":
         @property
         def _default_sensor_configs(self):
             cameras = []
+            pt_indexes = np.arange(args.n_points)
             for i in range(args.n_cameras):
-                pt_index = np.random.choice(args.n_points)
                 pose = sapien_utils.look_at(
-                    eye=list(self.camera_positions[pt_index].pose.p.view(-1)),
+                    eye=list(self.camera_positions[pt_indexes[i]].pose.p.view(-1)),
                     target=target,
                 )
                 camera = CameraConfig(
-                    f"camera{pt_index}",
+                    f"camera{pt_indexes[i]}",
                     pose=pose,
                     width=args.resolution_width,
                     height=args.resolution_height,
