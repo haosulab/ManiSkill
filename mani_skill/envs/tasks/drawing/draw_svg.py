@@ -16,7 +16,6 @@ from mani_skill.utils.scene_builder.table.scene_builder import \
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import SceneConfig, SimConfig
-from svgpathtools import CubicBezier, Line, QuadraticBezier
 from transforms3d.euler import euler2quat
 
 
@@ -44,6 +43,9 @@ class DrawSVGEnv(BaseEnv):
     agent: PandaStick
 
     def __init__(self, *args, svg=None, robot_uids="panda_stick", **kwargs):
+        import svgpathtools
+        from svgpathtools import CubicBezier, Line, QuadraticBezier
+
         if svg == None:
             self.svg = "M7.875 0L0 7.875V55.125L7.875 63H23.763L23.7235 62.9292L11.8418 51.2859L11.8418 35.6268L21.1302 26.915L23.9193 11.6649L40.9773 6.3631L46.8835 16.5929L33.2356 19.926L32.6417 29.1349L41.1407 33.618L50.8511 23.465L56.6781 33.5577L43.5576 45.6794L28.9369 40.4365L26.1844 42.4266L26.1844 45.6794L43.2157 63H55.125L63 55.125V7.875L55.125 0H7.875Z"
             self.continuous = True
