@@ -1,5 +1,6 @@
 import copy
 import json
+import shutil
 from dataclasses import dataclass
 
 import gymnasium as gym
@@ -143,6 +144,12 @@ def main():
             f"Saved to {os.path.join(args.out_dir, f'{env_id}/rl/trajectory.state.pd_joint_delta_pos.cuda.json')}"
         )
         out_file.close()
+
+        # Copy checkpoint to output dir
+        checkpoint_path = env_path["checkpoint"]
+        checkpoint_out_path = os.path.join(args.out_dir, f"{env_id}/rl/ppo_ckpt.pt")
+        os.makedirs(os.path.dirname(checkpoint_out_path), exist_ok=True)
+        shutil.copy(checkpoint_path, checkpoint_out_path)
 
 
 if __name__ == "__main__":
