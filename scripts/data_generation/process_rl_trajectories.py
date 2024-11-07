@@ -51,7 +51,6 @@ def main():
             "trajectory": str(traj_path),
             "metadata": str(traj_metadata_path),
         }
-    print(env_paths)
 
     for env_name, env_path in env_paths.items():
         print(f"Processing {env_name}")
