@@ -134,7 +134,7 @@ class Pose:
             )
             return cls(raw_pose=add_batch_dim(raw_pose))
         elif isinstance(pose, cls):
-            return pose.to(device)
+            return cls(raw_pose=pose.raw_pose.to(device))
         elif isinstance(pose, list) and isinstance(pose[0], sapien.Pose):
             ps = []
             qs = []
