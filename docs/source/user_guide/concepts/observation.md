@@ -27,7 +27,7 @@ It is a flat version of *state_dict*. The observation space is `gym.spaces.Box`.
 
 ### sensor_data
 
-In addition to `agent` and `extra`, `sensor_data` and `sensor_param` are introduced. At the moment there are only Camera type sensors. Cameras are special in that they can be run with different choices of shaders. The default shader is called `minimal` which is the fastest and most memory efficient option. The shader chosen determines what data is stored in this observation mode. We describe the raw data format for the `minimal` shader here. Detailed information on how sensors/cameras can be customized can be found in the [sensors](../tutorials/sensors/index.md) section.
+In addition to `agent` and `extra`, `sensor_data` and `sensor_param` are introduced. At the moment there are only Camera type sensors. Cameras are special in that they can be run with different choices of shaders. The default shader is called `minimal` which is the fastest and most memory efficient option. The shader chosen determines what data is stored in this observation mode. We describe the raw data format for the `minimal` shader here. Detailed information on how sensors/cameras can be customized can be found in the [sensors](../concepts/sensors.md) section.
 
 - `sensor_data`: data captured by sensors configured in the environment
   - `{sensor_uid}`:
@@ -45,6 +45,8 @@ In addition to `agent` and `extra`, `sensor_data` and `sensor_param` are introdu
     - `intrinsic_cv`: [3, 3], camera intrinsic (OpenCV convention)
 
 ### rgb+depth+segmentation
+
+There are many combinations of image textures (rgb, depth, segmentation, albedo, normal, etc.) that can be requested in the observation mode by simply specifying them as a string separated by `+`. We describe how the data is organized for "rgb+depth+segmentation" as an example here. The choice of shader used will change what textures are available and can be found on the [camera shaders](../concepts/sensors.md#shaders-and-textures) section.
 
 This observation mode has the same data format as the [sensor_data mode](#sensor_data), but all sensor data from cameras are replaced with the following structure
 
@@ -71,7 +73,7 @@ alt: RGBD from two cameras of Fetch robot inside the ReplicaCAD dataset scene
 
 
 ### pointcloud
-This observation mode has the same data format as the [sensor_data mode](#sensor_data), but all sensor data from cameras are removed and instead a new key is added called `pointcloud`.
+This observation mode has the same data format as the [sensor_data mode](#sensor_data), but all sensor data from cameras are removed and instead a new key is added called `pointcloud`. This is specially handled and is different to specifying various textures like done in the previous section.
 
 - `pointcloud`:
   - `xyzw`: [N, 4], `torch.float32, np.float32`. Point cloud fused from all cameras in the world frame. "xyzw" is a homogeneous representation. `w=0` for infinite points (beyond the camera far), and `w=1` for the rest.

@@ -211,4 +211,5 @@ class ArticulationBuilder(SapienArticulationBuilder):
         )
         articulation.initial_pose = self.initial_pose
         self.scene.articulations[self.name] = articulation
+        self.scene.add_to_state_dict_registry(articulation)
         return articulation
