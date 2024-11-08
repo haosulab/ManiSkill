@@ -121,7 +121,7 @@ python ppo_fast.py --env_id="AnymalC-Spin-v1" \
 python train.py --env-id StackCube-v1 \
   --demo-path ../../../demos/StackCube-v1/rl/trajectory.state.pd_ee_delta_pos.cuda.h5 \
   --control-mode "pd_ee_delta_pos" --sim-backend "gpu"  --max_episode_steps 50 \
-  --total_iters 30000 --num_eval_envs 16
+  --total_iters 100000 --num_eval_envs 16
 
 python bc.py --env-id "StackCube-v1" \
   --demo-path ../../../demos/StackCube-v1/rl/trajectory.state.pd_ee_delta_pos.cuda.h5 \
