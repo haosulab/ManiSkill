@@ -195,7 +195,7 @@ class PullCubeToolEnv(BaseEnv):
         cube_to_base_dist = torch.linalg.norm(cube_pos[:, :2] - robot_base_pos[:, :2], dim=1)
         
         # Success condition - cube is pulled close enough to the actual base
-        cube_pulled_close = cube_to_base_dist < 0.65 # (panda arm length is about 85 cm)        
+        cube_pulled_close = cube_to_base_dist < 0.6 # (panda arm length is about 85 cm)        
 
         # Calculate rewards for evaluation metrics...
         workspace_center = robot_base_pos.clone()

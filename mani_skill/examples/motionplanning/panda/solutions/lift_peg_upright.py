@@ -53,7 +53,7 @@ def solve(env: LiftPegUprightEnv, seed=None, debug=False, vis=False):
     )
     closing, center = grasp_info["closing"], grasp_info["center"]
     grasp_pose = env.agent.build_grasp_pose(approaching, closing, center)
-    offset = sapien.Pose([-max(0.05, env.peg_half_width + 0.01), 0, 0])
+    offset = sapien.Pose([0.10, 0, 0])
     grasp_pose = grasp_pose * offset
 
     # -------------------------------------------------------------------------- #
@@ -68,23 +68,39 @@ def solve(env: LiftPegUprightEnv, seed=None, debug=False, vis=False):
     # -------------------------------------------------------------------------- #
     res = planner.move_to_pose_with_screw(grasp_pose)
     if res == -1: return res
-    planner.close_gripper()
+    planner.close_gripper(gripper_state=-0.6)
 
     # -------------------------------------------------------------------------- #
     # Lift
     # -------------------------------------------------------------------------- #
-    lift_pose = sapien.Pose([0, 0, 0.2]) * grasp_pose
+    lift_pose = sapien.Pose([0, 0, 0.30]) * grasp_pose
     res = planner.move_to_pose_with_screw(lift_pose)
     if res == -1: return res
 
     # -------------------------------------------------------------------------- #
     # Place upright
     # -------------------------------------------------------------------------- #
-    final_pose = lift_pose * sapien.Pose([0, 0, -0.1])
+    # Using quaternion that represents rotation around Y-axis by 45 degrees
+    theta = np.pi/10  # half of 45 degrees because quaternions use half angles
+    rotation_quat = np.array([np.cos(theta), 0, np.sin(theta), 0])  # [w, x, y, z]
+    
+    final_pose = lift_pose * sapien.Pose(
+        p=[0, 0, 0],
+        q=rotation_quat
+    )
     res = planner.move_to_pose_with_screw(final_pose)
     if res == -1: return res
 
+    # -------------------------------------------------------------------------- #
+    # Lower
+    # -------------------------------------------------------------------------- #
+    lower_pose = sapien.Pose([0, 0, -0.10]) * final_pose
+    res = planner.move_to_pose_with_screw(lower_pose)
+    if res == -1: return res
+
     planner.close()
+    
+    planner.open_gripper()
     return res
 
 if __name__ == "__main__":
