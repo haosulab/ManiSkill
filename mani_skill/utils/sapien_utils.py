@@ -10,6 +10,7 @@ import sapien
 import sapien.physx as physx
 import sapien.render
 import sapien.wrapper.urdf_loader
+
 from mani_skill.utils.geometry.rotation_conversions import matrix_to_quaternion
 from mani_skill.utils.structs.pose import Pose
 
@@ -349,7 +350,7 @@ def look_at(eye, target, up=(0, 0, 1)) -> Pose:
         norm = torch.linalg.norm(x, dim=-1)
         zero_vectors = norm < eps
         x[zero_vectors] = torch.zeros(3).float()
-        x[~zero_vectors] /= norm[~zero_vectors].view(-1,1)
+        x[~zero_vectors] /= norm[~zero_vectors].view(-1, 1)
         return x
 
     forward = normalize_tensor(target - eye)
@@ -426,10 +427,11 @@ def is_state_dict_consistent(state_dict: dict):
     """Checks if the given state dictionary (generated via env.get_state_dict()) is consistent where each actor/articulation has the same batch dimension"""
     batch_size = None
     for name in ["actors", "articulations"]:
-        for k, v in state_dict[name].items():
-            if batch_size is None:
-                batch_size = v.shape[0]
-            else:
-                if v.shape[0] != batch_size:
-                    return False
+        if name in state_dict:
+            for k, v in state_dict[name].items():
+                if batch_size is None:
+                    batch_size = v.shape[0]
+                else:
+                    if v.shape[0] != batch_size:
+                        return False
     return True
