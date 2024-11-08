@@ -6,24 +6,29 @@
 
 
 ### PushCube-v1 ###
-python ppo_fast.py --env_id="PushCube-v1" \
-  --num_envs=4096 --num-steps=4 --update_epochs=8 --num_minibatches=32 \
-  --total_timesteps=5_000_000 --eval_freq=100 \
-  --save-model --cudagraphs --exp-name="data_generation/PushCube-v1-ppo"
+for control_mode in "pd_joint_delta_pos" "pd_ee_delta_pos" "pd_ee_delta_pose"; do
+  python ppo_fast.py --env_id="PushCube-v1" \
+    --num_envs=4096 --num-steps=4 --update_epochs=8 --num_minibatches=32 \
+    --total_timesteps=5_000_000 --eval_freq=100 \
+    --save-model --cudagraphs --exp-name="data_generation/PushCube-v1-ppo-${control_mode}" --control-mode ${control_mode}
+  
+  python ppo_fast.py --env_id="PushCube-v1" --evaluate \
+    --checkpoint=runs/data_generation/PushCube-v1-ppo-${control_mode}/final_ckpt.pt \
+    --num_eval_envs=1024 --num-eval-steps=50 --no-capture-video --save-trajectory
+done
 
-python ppo_fast.py --env_id="PushCube-v1" --evaluate \
-  --checkpoint=runs/data_generation/PushCube-v1-ppo/final_ckpt.pt \
-  --num_eval_envs=1024 --num-eval-steps=50 --no-capture-video --save-trajectory
 
 ### PickCube-v1 ###
-python ppo_fast.py --env_id="PickCube-v1" \
-  --num_envs=4096 --num-steps=4 --update_epochs=8 --num_minibatches=32 \
-  --total_timesteps=5_000_000 --eval_freq=100 \
-  --save-model --cudagraphs --exp-name="data_generation/PickCube-v1-ppo"
+for control_mode in "pd_joint_delta_pos" "pd_ee_delta_pos" "pd_ee_delta_pose"; do
+  python ppo_fast.py --env_id="PickCube-v1" \
+    --num_envs=4096 --num-steps=4 --update_epochs=8 --num_minibatches=32 \
+    --total_timesteps=5_000_000 --eval_freq=100 \
+    --save-model --cudagraphs --exp-name="data_generation/PickCube-v1-ppo-${control_mode}" --control-mode ${control_mode}
 
-python ppo_fast.py --env_id="PickCube-v1" --evaluate \
-  --checkpoint=runs/data_generation/PickCube-v1-ppo/final_ckpt.pt \
-  --num_eval_envs=1024 --num-eval-steps=50 --no-capture-video --save-trajectory
+  python ppo_fast.py --env_id="PickCube-v1" --evaluate \
+    --checkpoint=runs/data_generation/PickCube-v1-ppo-${control_mode}/final_ckpt.pt \
+    --num_eval_envs=1024 --num-eval-steps=50 --no-capture-video --save-trajectory
+done
 
 ### StackCube-v1 ###
 python ppo_fast.py --env_id="StackCube-v1" \
