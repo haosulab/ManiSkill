@@ -1,4 +1,4 @@
-# State-based RL/PPO used to learn a policy to then rollout success demonstrations
+# State-based RL/PPO used to learn a policy to then rollout success demonstrations for different controller modes
 # Weights for the trained models are on our hugging face dataset: TODO
 
 # to use these commands you need to install torchrl and tensordict. If cudagraphs does not work you can remove that flag
@@ -12,7 +12,7 @@ for control_mode in "pd_joint_delta_pos" "pd_ee_delta_pos" "pd_ee_delta_pose"; d
     --total_timesteps=5_000_000 --eval_freq=100 \
     --save-model --cudagraphs --exp-name="data_generation/PushCube-v1-ppo-${control_mode}" --control-mode ${control_mode}
   
-  python ppo_fast.py --env_id="PushCube-v1" --evaluate \
+  python ppo_fast.py --env_id="PushCube-v1" --evaluate --control-mode ${control_mode} \
     --checkpoint=runs/data_generation/PushCube-v1-ppo-${control_mode}/final_ckpt.pt \
     --num_eval_envs=1024 --num-eval-steps=50 --no-capture-video --save-trajectory
 done
@@ -25,30 +25,33 @@ for control_mode in "pd_joint_delta_pos" "pd_ee_delta_pos" "pd_ee_delta_pose"; d
     --total_timesteps=5_000_000 --eval_freq=100 \
     --save-model --cudagraphs --exp-name="data_generation/PickCube-v1-ppo-${control_mode}" --control-mode ${control_mode}
 
-  python ppo_fast.py --env_id="PickCube-v1" --evaluate \
+  python ppo_fast.py --env_id="PickCube-v1" --evaluate --control-mode ${control_mode} \
     --checkpoint=runs/data_generation/PickCube-v1-ppo-${control_mode}/final_ckpt.pt \
     --num_eval_envs=1024 --num-eval-steps=50 --no-capture-video --save-trajectory
 done
 
 ### StackCube-v1 ###
-python ppo_fast.py --env_id="StackCube-v1" \
-  --num_envs=4096 --num-steps=16 --update_epochs=8 --num_minibatches=32 \
-  --total_timesteps=50_000_000 \
-  --save-model --cudagraphs --exp-name="data_generation/StackCube-v1-ppo"
+for control_mode in "pd_joint_delta_pos" "pd_ee_delta_pos" "pd_ee_delta_pose"; do
+  python ppo_fast.py --env_id="StackCube-v1" \
+    --num_envs=4096 --num-steps=16 --update_epochs=8 --num_minibatches=32 \
+    --total_timesteps=50_000_000 \
+    --save-model --cudagraphs --exp-name="data_generation/StackCube-v1-ppo-${control_mode}" --control-mode ${control_mode}
 
-python ppo_fast.py --env_id="StackCube-v1" --evaluate \
-  --checkpoint=runs/data_generation/StackCube-v1-ppo/final_ckpt.pt \
-  --num_eval_envs=1024 --num-eval-steps=50 --no-capture-video --save-trajectory
+  python ppo_fast.py --env_id="StackCube-v1" --evaluate --control-mode ${control_mode} \
+    --checkpoint=runs/data_generation/StackCube-v1-ppo-${control_mode}/final_ckpt.pt \
+    --num_eval_envs=1024 --num-eval-steps=50 --no-capture-video --save-trajectory
+done
 
 ### PushT-v1 ###
-python ppo_fast.py --env_id="PushT-v1" \
-  --num_envs=4096 --num-steps=16 --update_epochs=8 --num_minibatches=32 \
-  --total_timesteps=25_000_000 --num-eval-steps=100 --gamma=0.99 \
-  --save-model --cudagraphs --exp-name="data_generation/PushT-v1-ppo"
-
-python ppo_fast.py --env_id="PushT-v1" --evaluate \
-  --checkpoint=runs/data_generation/PushT-v1-ppo/final_ckpt.pt \
-  --num_eval_envs=1024 --num-eval-steps=100 --no-capture-video --save-trajectory
+for control_mode in "pd_joint_delta_pos" "pd_ee_delta_pos" "pd_ee_delta_pose"; do
+  python ppo_fast.py --env_id="PushT-v1" \
+    --num_envs=4096 --num-steps=16 --update_epochs=8 --num_minibatches=32 \
+    --total_timesteps=25_000_000 --num-eval-steps=100 --gamma=0.99 \
+    --save-model --cudagraphs --exp-name="data_generation/PushT-v1-ppo-${control_mode}" --control-mode ${control_mode}
+  python ppo_fast.py --env_id="PushT-v1" --evaluate --control-mode ${control_mode} \
+    --checkpoint=runs/data_generation/PushT-v1-ppo-${control_mode}/final_ckpt.pt \
+    --num_eval_envs=1024 --num-eval-steps=100 --no-capture-video --save-trajectory
+done
 
 ### RollBall-v1 ###
 python ppo_fast.py --env_id="RollBall-v1" \
@@ -116,6 +119,6 @@ python ppo_fast.py --env_id="AnymalC-Spin-v1" \
 
 
 python train.py --env-id StackCube-v1 \
-  --demo-path ../../../demos/StackCube-v1/rl/trajectory.state.pd_joint_delta_pos.cuda.h5 \
-  --control-mode "pd_joint_delta_pos" --sim-backend "gpu" --num-demos 100 --max_episode_steps 50 \
-  --total_iters 30000 --num_eval_envs 100
+  --demo-path ../../../demos/StackCube-v1/rl/trajectory.state.pd_ee_delta_pos.cuda.h5 \
+  --control-mode "pd_ee_delta_pos" --sim-backend "gpu"  --max_episode_steps 50 \
+  --total_iters 30000 --num_eval_envs 16
