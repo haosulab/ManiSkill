@@ -112,18 +112,3 @@ python ppo_fast.py --env_id="AnymalC-Spin-v1" \
   --save-model --cudagraphs --exp-name="data_generation/AnymalC-Spin-v1-ppo"
 
 # task has no success so no demos for now
-
-
-
-
-
-
-python train.py --env-id StackCube-v1 \
-  --demo-path ../../../demos/StackCube-v1/rl/trajectory.state.pd_ee_delta_pos.cuda.h5 \
-  --control-mode "pd_ee_delta_pos" --sim-backend "gpu"  --max_episode_steps 50 \
-  --total_iters 100000 --num_eval_envs 16
-
-python bc.py --env-id "StackCube-v1" \
-  --demo-path ../../../demos/StackCube-v1/rl/trajectory.state.pd_ee_delta_pos.cuda.h5 \
-  --control-mode "pd_ee_delta_pos" --sim-backend "gpu" --max-episode-steps 50 \
-  --total-iters 10000 --num_eval_envs 16
