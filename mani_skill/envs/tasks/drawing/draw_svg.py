@@ -324,7 +324,7 @@ class DrawSVGEnv(BaseEnv):
                 tcp_to_verts_pos=(self.points - self.agent.tcp.pose.p.unsqueeze(1)).reshape(self.num_envs, -1),
                 goal_pos=(self.goal_outline.pose.p).reshape(self.num_envs, -1),
                 vertices=self.points.reshape(self.num_envs, -1),
-                continuous=self.continuous.reshape(self.num_envs, -1),  # if the path is continuous
+                continuous=torch.ones((self.num_envs, 1)) * self.continuous  # if the path is continuous
             )
 
         return obs
