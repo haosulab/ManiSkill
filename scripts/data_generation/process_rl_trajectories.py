@@ -131,7 +131,7 @@ def main():
                 env_kwargs["human_render_camera_configs"] = {"shader_pack": "rt-med"}
                 env = gym.make(env_id, **env_kwargs)
                 env.reset(seed=episode["episode_seed"], **new_episode["reset_kwargs"])
-                imgs = [env.render_rgb_array().cpu().numpy()[0]]
+                imgs = []
                 env_states = utils.dict_to_list_of_dicts(
                     out_file[traj_id]["env_states"]
                 )
