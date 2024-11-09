@@ -211,8 +211,9 @@ class PullCubeToolEnv(BaseEnv):
             "cube_distance": cube_to_workspace_dist.mean(),
             "reward": self.compute_normalized_dense_reward(None, None, {"success": cube_pulled_close}),
         }
-
+    
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+            
         tcp_pos = self.agent.tcp.pose.p
         cube_pos = self.cube.pose.p
         tool_pos = self.l_shape_tool.pose.p
@@ -222,32 +223,35 @@ class PullCubeToolEnv(BaseEnv):
         tool_grasp_pos = tool_pos + torch.tensor([0.02, 0, 0], device=self.device)
         tcp_to_tool_dist = torch.linalg.norm(tcp_pos - tool_grasp_pos, dim=1)
         reaching_reward = 2.0 * (1 - torch.tanh(5.0 * tcp_to_tool_dist))
+        
+        # Add specific grasping reward
+        is_grasping = self.agent.is_grasping(self.l_shape_tool, max_angle=20)  # Similar to PegInsertion env[2]
+        grasping_reward = 2.0 * is_grasping
         tool_reached = tcp_to_tool_dist < 0.01
 
         # Stage 2: Position tool behind cube
         ideal_hook_pos = cube_pos + torch.tensor(
-            [-(self.hook_length + self.cube_half_size), -0.067, 0],
+            [-(self.hook_length + self.cube_half_size), -0.067, 0], 
             device=self.device
         )
         tool_positioning_dist = torch.linalg.norm(tool_pos - ideal_hook_pos, dim=1)
         positioning_reward = 1.5 * (1 - torch.tanh(3.0 * tool_positioning_dist))
+        tool_positioned = tool_positioning_dist < 0.05
 
         # Stage 3: Pull cube to workspace
-        workspace_target = robot_base_pos + torch.tensor([0.2, 0, 0], device=self.device)
+        workspace_target = robot_base_pos + torch.tensor([0.05, 0, 0], device=self.device)
         cube_to_workspace_dist = torch.linalg.norm(cube_pos - workspace_target, dim=1)
         initial_dist = torch.linalg.norm(
-            torch.tensor([self.arm_reach + 0.1, 0, self.cube_size/2], device=self.device) 
-            - workspace_target, 
+            torch.tensor([self.arm_reach + 0.1, 0, self.cube_size/2], device=self.device) - workspace_target, 
             dim=1
         )
         pulling_progress = (initial_dist - cube_to_workspace_dist) / initial_dist
-        tool_positioned = tool_positioning_dist < 0.05
         pulling_reward = 3.0 * pulling_progress * tool_positioned
 
-        # Combine rewards with staging
-        reward = reaching_reward
-        reward += positioning_reward * tool_reached
-        reward += pulling_reward
+        # Combine rewards with staging and grasping dependency
+        reward = reaching_reward + grasping_reward
+        reward += positioning_reward * is_grasping  # Only give positioning reward if tool is grasped
+        reward += pulling_reward * is_grasping  # Only give pulling reward if tool is grasped
 
         # Penalties
         cube_pushed_away = cube_pos[:, 0] > (self.arm_reach + 0.15)
