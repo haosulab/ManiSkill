@@ -10,6 +10,8 @@ import tyro
 from tqdm import tqdm
 
 import mani_skill.envs
+from mani_skill.trajectory import utils
+from mani_skill.utils.visualization.misc import images_to_video
 
 
 @dataclass
@@ -63,10 +65,8 @@ def main():
         new_metadata = copy.deepcopy(metadata)
         new_metadata["episodes"] = []
         control_mode = new_metadata["env_info"]["env_kwargs"]["control_mode"]
-
-        out_trajectory_path = os.path.join(
-            args.out_dir, f"{env_id}/rl/trajectory.state.{control_mode}.cuda.h5"
-        )
+        traj_filename = f"{env_id}/rl/trajectory.none.{control_mode}.cuda"
+        out_trajectory_path = os.path.join(args.out_dir, f"{traj_filename}.h5")
         os.makedirs(os.path.dirname(out_trajectory_path), exist_ok=True)
         out_file = h5py.File(out_trajectory_path, "w")
 
@@ -75,11 +75,11 @@ def main():
         avg_episode_length = 0
         original_episode_count = len(metadata["episodes"])
         first_success_indexes = []
+        recorded_sample_video = False
         for episode in tqdm(metadata["episodes"]):
             traj_id = f"traj_{episode['episode_id']}"
             traj = file[traj_id]
             success = np.array(traj["success"])
-
             if not success.any():
                 # this failed
                 failed_count += 1
@@ -96,6 +96,8 @@ def main():
             def recursive_copy_and_slice(
                 key, source_group, target_group, add_last_frame=False
             ):
+                if key == "obs" or key == "rewards":
+                    return
                 if isinstance(target_group, h5py.Dataset):
                     if not add_last_frame and ("obs" == key or "env_states" == key):
                         add_last_frame = True
@@ -120,6 +122,29 @@ def main():
             new_episode["success"] = True
             new_episode["episode_length"] = last_success_index + 1
             new_metadata["episodes"].append(new_episode)
+
+            if not recorded_sample_video:
+                recorded_sample_video = True
+                env_kwargs = new_metadata["env_info"]["env_kwargs"]
+                env_kwargs["num_envs"] = 1
+                env_kwargs["sim_backend"] = "cpu"
+                env_kwargs["human_render_camera_configs"] = {"shader_pack": "rt-med"}
+                env = gym.make(env_id, **env_kwargs)
+                env.reset(seed=episode["episode_seed"], **new_episode["reset_kwargs"])
+                imgs = [env.render_rgb_array().cpu().numpy()[0]]
+                env_states = utils.dict_to_list_of_dicts(
+                    out_file[traj_id]["env_states"]
+                )
+                for step in range(new_episode["episode_length"]):
+                    env.set_state_dict(env_states[step])
+                    imgs.append(env.render_rgb_array().cpu().numpy()[0])
+                env.close()
+                images_to_video(
+                    imgs,
+                    output_dir=os.path.join(args.out_dir, env_id, "rl"),
+                    video_name=f"sample_{control_mode}",
+                    fps=30,
+                )
         final_episode_count = len(new_metadata["episodes"])
         avg_episode_length /= final_episode_count
         avg_steps_to_first_success = np.mean(first_success_indexes)
@@ -134,14 +159,12 @@ def main():
         with open(
             os.path.join(
                 args.out_dir,
-                f"{env_id}/rl/trajectory.state.{control_mode}.cuda.json",
+                f"{traj_filename}.json",
             ),
             "w",
         ) as f:
             json.dump(new_metadata, f, indent=2)
-        print(
-            f"Saved to {os.path.join(args.out_dir, f'{env_id}/rl/trajectory.state.{control_mode}.cuda.json')}"
-        )
+        print(f"Saved to {os.path.join(args.out_dir, f'{traj_filename}.json')}")
         out_file.close()
 
         # Copy checkpoint to output dir
