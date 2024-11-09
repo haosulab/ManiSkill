@@ -77,7 +77,7 @@ class BaseDigitalTwinEnv(BaseEnv):
             x._objs[0].per_scene_id
             for x in self.scene.actors.values()
             if x.name
-            not in ["ground", "goal_site", "", "arena"]
+            not in ["ground", "goal_site", "", "arena", "agent", "table-workspace"]
             + self.rgb_always_overlay_objects
         ]
         self.target_object_actor_ids = torch.tensor(

@@ -284,5 +284,5 @@ class TableSceneBuilder(SceneBuilder):
             )
             self.env.agent.reset(qpos)
             self.env.agent.robot.set_pose(
-                sapien.Pose([-0.635, 0, 0], q=euler2quat(0, 0, np.pi / 2))
+                sapien.Pose([-0.68, 0, 5e-3], q=euler2quat(0, 0, np.pi / 2))
             )

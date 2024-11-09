@@ -29,7 +29,8 @@ class Koch(BaseAgent):
     keyframes = dict(
         rest=Keyframe(
             # resting qpos gathered from datasets
-            qpos=np.array([0, 2.312, 3.017, -0.26, 0, 0.6044]),
+            # qpos=np.array([0, 2.312, 3.017, -0.26, 0, 0.6044]),
+            qpos=np.array([0, 2.245, 3.017, -0.25, 0, 0.6044]),
             pose=sapien.Pose(),
         )
     )
@@ -53,8 +54,8 @@ class Koch(BaseAgent):
         )
         pd_joint_delta_pos = PDJointPosControllerConfig(
             [joint.name for joint in self.robot.active_joints],
-            -0.2,
-            0.2,
+            [-0.15, -0.15, -0.15, -0.15, -0.2, -0.15],
+            [0.15, 0.15, 0.15, 0.15, 0.2, 0.15],
             stiffness=1e3,
             damping=1e2,
             force_limit=100,

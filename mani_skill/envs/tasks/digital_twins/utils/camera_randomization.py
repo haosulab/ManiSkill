@@ -95,7 +95,7 @@ def noised_look_at(eye, target, look_at_noise=1e-2, view_axis_rot_noise=2e-1) ->
     center: [x,y,z] scaled unit cube coordinates
     theta: [0,2pi] rotation about the z axis
     look_at_noise: std of noise added to target in lookat transform
-    camera_axis_rotaiton_noise: std of noise added to rotation about the looking direction
+    view_axis_rot_noise: std of noise added to rotation about the looking direction
     """
     target = (
         torch.tensor(target).float() if not isinstance(target, torch.Tensor) else target
@@ -182,6 +182,15 @@ if __name__ == "__main__":
                     far=args.far,
                 )
                 cameras.append(camera)
+            cameras.append(
+                CameraConfig(
+                    f"base_camera",
+                    pose=Pose.create_from_pq(p=torch.zeros(3)),
+                    width=10,
+                    height=10,
+                    fov=1,
+                )
+            )
             return cameras
 
     # get the robot position
@@ -206,6 +215,7 @@ if __name__ == "__main__":
         "cameras center position in env coordinates",
         np.array(center) + robot_pos.numpy(),
     )
+    print("empirical", points.view(-1, 3).mean(0))
     print("cameras target position in env coordinates", np.array(target))
 
     env = gym.make("CopyEnv-v1", num_envs=1, render_mode="human")
