@@ -8,7 +8,7 @@ YCB_DATASET = dict()
 def _load_ycb_dataset():
     global YCB_DATASET
     YCB_DATASET = {
-        "model_data": load_json(ASSET_DIR / "assets/mani_skill2_ycb/info_pick_v0.json"),
+        "model_data": load_json(ASSET_DIR / "assets/mani_skill2_ycb/info_raw.json"),
     }
 
 
