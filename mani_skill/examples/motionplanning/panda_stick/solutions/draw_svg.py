@@ -18,7 +18,6 @@ def solve(env: DrawSVGEnv, seed=None, debug=False, vis=False):
 
     FINGER_LENGTH = 0.025
     env = env.unwrapped
-    env.reset()
 
     rot = list(env.agent.tcp.pose.get_q()[0].cpu().numpy())
     res = None
