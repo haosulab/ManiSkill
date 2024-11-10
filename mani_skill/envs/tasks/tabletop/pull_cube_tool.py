@@ -191,15 +191,13 @@ class PullCubeToolEnv(BaseEnv):
         robot_base_pos = self.agent.robot.get_links()[0].pose.p
         
         # Calculate distance between cube and actual robot base position
-        # Only consider x-y plane for top-down distance
         cube_to_base_dist = torch.linalg.norm(cube_pos[:, :2] - robot_base_pos[:, :2], dim=1)
         
         # Success condition - cube is pulled close enough to the actual base
         cube_pulled_close = cube_to_base_dist < 0.6 # (panda arm length is about 85 cm)        
 
-        # Calculate rewards for evaluation metrics...
         workspace_center = robot_base_pos.clone()
-        workspace_center[:, 0] += self.arm_reach * 0.1  # Offset in x direction from base
+        workspace_center[:, 0] += self.arm_reach * 0.1  
         cube_to_workspace_dist = torch.linalg.norm(cube_pos - workspace_center, dim=1)
         progress = 1 - torch.tanh(3.0 * cube_to_workspace_dist)
 
@@ -225,7 +223,7 @@ class PullCubeToolEnv(BaseEnv):
         reaching_reward = 2.0 * (1 - torch.tanh(5.0 * tcp_to_tool_dist))
         
         # Add specific grasping reward
-        is_grasping = self.agent.is_grasping(self.l_shape_tool, max_angle=20)  # Similar to PegInsertion env[2]
+        is_grasping = self.agent.is_grasping(self.l_shape_tool, max_angle=20)  
         grasping_reward = 2.0 * is_grasping
         tool_reached = tcp_to_tool_dist < 0.01
 
@@ -250,8 +248,8 @@ class PullCubeToolEnv(BaseEnv):
 
         # Combine rewards with staging and grasping dependency
         reward = reaching_reward + grasping_reward
-        reward += positioning_reward * is_grasping  # Only give positioning reward if tool is grasped
-        reward += pulling_reward * is_grasping  # Only give pulling reward if tool is grasped
+        reward += positioning_reward * is_grasping  
+        reward += pulling_reward * is_grasping  
 
         # Penalties
         cube_pushed_away = cube_pos[:, 0] > (self.arm_reach + 0.15)

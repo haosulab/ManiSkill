@@ -80,9 +80,8 @@ def solve(env: LiftPegUprightEnv, seed=None, debug=False, vis=False):
     # -------------------------------------------------------------------------- #
     # Place upright
     # -------------------------------------------------------------------------- #
-    # Using quaternion that represents rotation around Y-axis by 45 degrees
-    theta = np.pi/10  # half of 45 degrees because quaternions use half angles
-    rotation_quat = np.array([np.cos(theta), 0, np.sin(theta), 0])  # [w, x, y, z]
+    theta = np.pi/10  
+    rotation_quat = np.array([np.cos(theta), 0, np.sin(theta), 0])  
     
     final_pose = lift_pose * sapien.Pose(
         p=[0, 0, 0],
