@@ -48,60 +48,68 @@ for control_mode in "pd_joint_delta_pos" "pd_ee_delta_pos" "pd_ee_delta_pose"; d
     --num_envs=4096 --num-steps=16 --update_epochs=8 --num_minibatches=32 \
     --total_timesteps=25_000_000 --num-eval-steps=100 --gamma=0.99 \
     --save-model --cudagraphs --exp-name="data_generation/PushT-v1-ppo-${control_mode}" --control-mode ${control_mode}
+  
   python ppo_fast.py --env_id="PushT-v1" --evaluate --control-mode ${control_mode} \
     --checkpoint=runs/data_generation/PushT-v1-ppo-${control_mode}/final_ckpt.pt \
     --num_eval_envs=1024 --num-eval-steps=100 --no-capture-video --save-trajectory
 done
 
 ### RollBall-v1 ###
-python ppo_fast.py --env_id="RollBall-v1" \
-  --num_envs=4096 --num-steps=16 --update_epochs=8 --num_minibatches=32 \
-  --total_timesteps=20_000_000 --num-eval-steps=80 --gamma=0.95 \
-  --save-model --cudagraphs --exp-name="data_generation/RollBall-v1-ppo"
+for control_mode in "pd_joint_delta_pos" "pd_ee_delta_pos" "pd_ee_delta_pose"; do
+  python ppo_fast.py --env_id="RollBall-v1" \
+    --num_envs=4096 --num-steps=16 --update_epochs=8 --num_minibatches=32 \
+    --total_timesteps=20_000_000 --num-eval-steps=80 --gamma=0.95 \
+    --save-model --cudagraphs --exp-name="data_generation/RollBall-v1-ppo-${control_mode}" --control-mode ${control_mode}
 
-python ppo_fast.py --env_id="RollBall-v1" --evaluate \
-  --checkpoint=runs/data_generation/RollBall-v1-ppo/final_ckpt.pt \
-  --num_eval_envs=1024 --num-eval-steps=80 --no-capture-video --save-trajectory
+  python ppo_fast.py --env_id="RollBall-v1" --evaluate --control-mode ${control_mode} \
+    --checkpoint=runs/data_generation/RollBall-v1-ppo-${control_mode}/final_ckpt.pt \
+    --num_eval_envs=1024 --num-eval-steps=80 --no-capture-video --save-trajectory
+done
 
 ### PokeCube-v1 ###
-python ppo_fast.py --env_id="PokeCube-v1" \
-  --num_envs=4096 --num-steps=4 --update_epochs=8 --num_minibatches=32 \
-  --total_timesteps=15_000_000 --eval_freq=100 \
-  --save-model --cudagraphs --exp-name="data_generation/PokeCube-v1-ppo"
+for control_mode in "pd_joint_delta_pos" "pd_ee_delta_pos" "pd_ee_delta_pose"; do
+  python ppo_fast.py --env_id="PokeCube-v1" \
+    --num_envs=4096 --num-steps=4 --update_epochs=8 --num_minibatches=32 \
+    --total_timesteps=20_000_000 --eval_freq=100 \
+    --save-model --cudagraphs --exp-name="data_generation/PokeCube-v1-ppo-${control_mode}" --control-mode ${control_mode}
 
-python ppo_fast.py --env_id="PokeCube-v1" --evaluate \
-  --checkpoint=runs/data_generation/PokeCube-v1-ppo/final_ckpt.pt \
-  --num_eval_envs=1024 --num-eval-steps=50 --no-capture-video --save-trajectory
+  python ppo_fast.py --env_id="PokeCube-v1" --evaluate --control-mode ${control_mode} \
+    --checkpoint=runs/data_generation/PokeCube-v1-ppo-${control_mode}/final_ckpt.pt \
+    --num_eval_envs=1024 --num-eval-steps=50 --no-capture-video --save-trajectory
+done
 
 ### PullCube-v1 ###
-python ppo_fast.py --env_id="PullCube-v1" \
-  --num_envs=4096 --num-steps=4 --update_epochs=8 --num_minibatches=32 \
-  --total_timesteps=5_000_000 --eval_freq=100 \
-  --save-model --cudagraphs --exp-name="data_generation/PullCube-v1-ppo"
-
-python ppo_fast.py --env_id="PullCube-v1" --evaluate \
-  --checkpoint=runs/data_generation/PullCube-v1-ppo/final_ckpt.pt \
-  --num_eval_envs=1024 --num-eval-steps=50 --no-capture-video --save-trajectory
+for control_mode in "pd_joint_delta_pos" "pd_ee_delta_pos" "pd_ee_delta_pose"; do
+  python ppo_fast.py --env_id="PullCube-v1" \
+    --num_envs=4096 --num-steps=4 --update_epochs=8 --num_minibatches=32 \
+    --total_timesteps=5_000_000 --eval_freq=100 \
+    --save-model --cudagraphs --exp-name="data_generation/PullCube-v1-ppo-${control_mode}" --control-mode ${control_mode}
+  python ppo_fast.py --env_id="PullCube-v1" --evaluate --control-mode ${control_mode} \
+    --checkpoint=runs/data_generation/PullCube-v1-ppo-${control_mode}/final_ckpt.pt \
+    --num_eval_envs=1024 --num-eval-steps=50 --no-capture-video --save-trajectory
+done
 
 ### LiftPegUpright-v1 ###
-python ppo_fast.py --env_id="LiftPegUpright-v1" \
-  --num_envs=4096 --num-steps=4 --update_epochs=8 --num_minibatches=32 \
-  --total_timesteps=8_000_000 --eval_freq=100 \
-  --save-model --cudagraphs --exp-name="data_generation/LiftPegUpright-v1-ppo"
+for control_mode in "pd_joint_delta_pos" "pd_ee_delta_pose"; do
+  python ppo_fast.py --env_id="LiftPegUpright-v1" \
+    --num_envs=4096 --num-steps=4 --update_epochs=8 --num_minibatches=32 \
+    --total_timesteps=8_000_000 --eval_freq=100 \
+    --save-model --cudagraphs --exp-name="data_generation/LiftPegUpright-v1-ppo-${control_mode}" --control-mode ${control_mode}
 
-python ppo_fast.py --env_id="LiftPegUpright-v1" --evaluate \
-  --checkpoint=runs/data_generation/LiftPegUpright-v1-ppo/final_ckpt.pt \
-  --num_eval_envs=1024 --num-eval-steps=50 --no-capture-video --save-trajectory
+  python ppo_fast.py --env_id="LiftPegUpright-v1" --evaluate --control-mode ${control_mode} \
+    --checkpoint=runs/data_generation/LiftPegUpright-v1-ppo-${control_mode}/final_ckpt.pt \
+    --num_eval_envs=1024 --num-eval-steps=50 --no-capture-video --save-trajectory
+done
 
 ### AnymalC-Reach-v1 ###
 python ppo_fast.py --env_id="AnymalC-Reach-v1" \
   --num_envs=4096 --num-steps=16 --update_epochs=8 --num_minibatches=32 \
   --total_timesteps=10_000_000 --num-eval-steps=200 \
   --gamma=0.99 --gae_lambda=0.95 \
-  --save-model --cudagraphs --exp-name="data_generation/AnymalC-Reach-v1-ppo"
+  --save-model --cudagraphs --exp-name="data_generation/AnymalC-Reach-v1-ppo-pd_joint_delta_pos"
 
 python ppo_fast.py --env_id="AnymalC-Reach-v1" --evaluate \
-  --checkpoint=runs/data_generation/AnymalC-Reach-v1-ppo/final_ckpt.pt \
+  --checkpoint=runs/data_generation/AnymalC-Reach-v1-ppo-pd_joint_delta_pos/final_ckpt.pt \
   --num_eval_envs=1024 --num-eval-steps=200 --no-capture-video --save-trajectory
 
 ### AnymalC-Spin-v1 ###
@@ -109,6 +117,22 @@ python ppo_fast.py --env_id="AnymalC-Spin-v1" \
   --num_envs=4096 --num-steps=16 --update_epochs=8 --num_minibatches=32 \
   --total_timesteps=10_000_000 --num-eval-steps=200 \
   --gamma=0.99 --gae_lambda=0.95 \
-  --save-model --cudagraphs --exp-name="data_generation/AnymalC-Spin-v1-ppo"
+  --save-model --cudagraphs --exp-name="data_generation/AnymalC-Spin-v1-ppo-pd_joint_delta_pos"
 
 # task has no success so no demos for now
+
+### PegInsertionSide-v1 ###
+for control_mode in "pd_ee_delta_pose"; do
+  python ppo_fast.py --env_id="PegInsertionSide-v1" \
+    --num_envs=1024 --num-steps=100 --update_epochs=8 --num_minibatches=32 \
+    --total_timesteps=100_000_000 --num-eval-steps=100 --gamma=0.97 --gae_lambda=0.95 \
+    --save-model --cudagraphs --exp-name="data_generation/PegInsertionSide-v1-ppo-${control_mode}" --control-mode ${control_mode}
+done
+
+
+for control_mode in "pd_joint_delta_pos"; do
+  python ppo_fast.py --env_id="TwoRobotPickCube-v1" \
+    --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
+    --total_timesteps=35_000_000 --num-steps=100 --num-eval-steps=100 \
+    --save-model --cudagraphs --exp-name="data_generation/TwoRobotPickCube-v1-ppo-${control_mode}" --control-mode ${control_mode}
+done
