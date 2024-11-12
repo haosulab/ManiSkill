@@ -15,13 +15,13 @@ python bc.py --env-id "PushCube-v1" \
 
 # PickCube-v1
 python -m mani_skill.trajectory.replay_trajectory \
-  --traj-path ~/.maniskill/demos/PickCube-v1/motionplanning/trajectory.h5 \
-  --use-first-env-state -c pd_ee_delta_pos -o state \
+  --traj-path /home/dwait/ManiSkill/mani_skill/examples/motionplanning/xarm6/demos/PickCube-v1/motionplanning/trajectory_simplest.h5 \
+  --use-first-env-state -c pd_joint_vel -o state \
   --save-traj --num-procs 10 -b cpu
 
 python bc.py --env-id "PickCube-v1" \
-  --demo-path ~/.maniskill/demos/PickCube-v1/motionplanning/trajectory.state.pd_ee_delta_pos.cpu.h5 \
-  --control-mode "pd_ee_delta_pos" --sim-backend "cpu" --max-episode-steps 100 \
+  --demo-path /home/dwait/ManiSkill/mani_skill/examples/motionplanning/xarm6/demos/PickCube-v1/motionplanning/trajectory_simplest.state.pd_joint_vel.cpu.h5 \
+  --control-mode "pd_joint_vel" --sim-backend "cpu" --max-episode-steps 100 \
   --total-iters 10000
 
 

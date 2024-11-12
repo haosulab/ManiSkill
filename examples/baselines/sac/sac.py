@@ -48,7 +48,7 @@ class Args:
     """path to a pretrained checkpoint file to start evaluation/training from"""
     capture_video: bool = True
     """whether to capture videos of the agent performances (check out `videos` folder)"""
-    wandb_video_freq: int = 900_000
+    wandb_video_freq: int = 0
     """frequency to log videos to wandb in terms of environment steps (multiple of eval_freq)"""
     save_model: bool = True
     """whether to save the model checkpoints"""

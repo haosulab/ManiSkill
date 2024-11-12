@@ -331,6 +331,16 @@ class XArm6PandaGripper(BaseAgent):
         T[:3, :3] = np.stack([ortho, closing, approaching], axis=1)
         T[:3, 3] = center
         return sapien.Pose(T)
+    
+    def get_proprioception(self):
+        qpos=self.robot.get_qpos()
+        qpos = qpos[..., :-2]
+        qpos_cos = torch.cos(qpos)
+        qpos_sin = torch.sin(qpos)
+        qvel=self.robot.get_qvel()
+        qvel = qvel[..., :-2]
+        obs = dict(qpos_cos=qpos_cos, qpos_sin=qpos_sin, qvel=qvel)
+        return obs
 
 
 @register_agent()

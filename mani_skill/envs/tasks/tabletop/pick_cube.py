@@ -61,25 +61,27 @@ class PickCubeEnv(BaseEnv):
             xyz = torch.zeros((b, 3))
             xyz[:, :2] = torch.rand((b, 2)) * 0.2 - 0.1
             xyz[:, 2] = self.cube_half_size
-            qs = randomization.random_quaternions(b, lock_x=True, lock_y=True)
+            qs = randomization.random_quaternions(b, lock_x=True, lock_y=True, lock_z=True)
             self.cube.set_pose(Pose.create_from_pq(xyz, qs))
 
-            goal_xyz = torch.zeros((b, 3))
-            goal_xyz[:, :2] = torch.rand((b, 2)) * 0.2 - 0.1
-            goal_xyz[:, 2] = torch.rand((b)) * 0.3 + xyz[:, 2]
+            # goal_xyz = torch.zeros((b, 3))
+            # goal_xyz[:, :2] = torch.rand((b, 2)) * 0.2 - 0.1
+            # goal_xyz[:, 2] = torch.rand((b)) * 0.3 + xyz[:, 2]
+            goal_xyz = xyz.clone()
+            goal_xyz[:, 2] = xyz[:, 2] + 0.2
             self.goal_site.set_pose(Pose.create_from_pq(goal_xyz))
 
     def _get_obs_extra(self, info: Dict):
         # in reality some people hack is_grasped into observations by checking if the gripper can close fully or not
         obs = dict(
             is_grasped=info["is_grasped"],
-            tcp_pose=self.agent.tcp.pose.raw_pose,
-            goal_pos=self.goal_site.pose.p,
+            # tcp_pose=self.agent.tcp.pose.raw_pose,
+            # goal_pos=self.goal_site.pose.p,
         )
         if "state" in self.obs_mode:
             obs.update(
-                obj_pose=self.cube.pose.raw_pose,
-                tcp_to_obj_pos=self.cube.pose.p - self.agent.tcp.pose.p,
+                # obj_pose=self.cube.pose.raw_pose,
+                obj_to_tcp_pos=self.agent.tcp.pose.p - self.cube.pose.p,
                 obj_to_goal_pos=self.goal_site.pose.p - self.cube.pose.p,
             )
         return obs
@@ -97,6 +99,27 @@ class PickCubeEnv(BaseEnv):
             "is_robot_static": is_robot_static,
             "is_grasped": is_grasped,
         }
+
+    def staged_rewards(self, obs: Any, action: torch.Tensor, info: Dict):
+        tcp_to_obj_dist = torch.linalg.norm(
+            self.cube.pose.p - self.agent.tcp.pose.p, axis=1
+        )
+        reaching_reward = 1 - torch.tanh(5 * tcp_to_obj_dist)
+
+        is_grasped = info["is_grasped"]
+
+        obj_to_goal_dist = torch.linalg.norm(
+            self.goal_site.pose.p - self.cube.pose.p, axis=1
+        )
+        place_reward = 1 - torch.tanh(5 * obj_to_goal_dist)
+        place_reward *= is_grasped
+
+        static_reward = 1 - torch.tanh(
+            5 * torch.linalg.norm(self.agent.robot.get_qvel()[..., :-2], axis=1)
+        )
+        static_reward *= info["is_obj_placed"]
+
+        return reaching_reward.mean(), is_grasped.mean(), place_reward.mean(), static_reward.mean()
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         tcp_to_obj_dist = torch.linalg.norm(

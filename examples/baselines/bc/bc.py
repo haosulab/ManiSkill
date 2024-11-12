@@ -13,7 +13,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import tyro
-from mani_skill.utils import gym_utils
+from mani_skill.utils import gym_utils, common
 from mani_skill.utils.io_utils import load_json
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.sampler import BatchSampler, RandomSampler
@@ -36,9 +36,9 @@ class Args:
     """if toggled, cuda will be enabled by default"""
     track: bool = False
     """if toggled, this experiment will be tracked with Weights and Biases"""
-    wandb_project_name: str = "ManiSkill"
+    wandb_project_name: str = "maniskill_experiments"
     """the wandb's project name"""
-    wandb_entity: Optional[str] = None
+    wandb_entity: Optional[str] = "ucsd_erl"
     """the entity (team) of wandb's project"""
     capture_video: bool = True
     """whether to capture videos of the agent performances (check out `videos` folder)"""
@@ -198,6 +198,8 @@ class Actor(nn.Module):
             nn.ReLU(),
             nn.Linear(256, 256),
             nn.ReLU(),
+            nn.Linear(256, 256),
+            nn.ReLU(),
             nn.Linear(256, action_dim),
         )
 
@@ -275,7 +277,7 @@ if __name__ == "__main__":
             **env_kwargs,
             num_envs=args.num_eval_envs,
             env_id=args.env_id,
-            env_horizon=gym_utils.find_max_episode_steps_value(envs),
+            env_horizon=100 # gym_utils.find_max_episode_steps_value(envs),
         )
         wandb.init(
             project=args.wandb_project_name,
@@ -303,6 +305,9 @@ if __name__ == "__main__":
 
     obs, _ = envs.reset(seed=args.seed)
 
+    print("Observation space", envs.single_observation_space.shape)
+    print("Action space", envs.single_action_space.shape)
+
     sampler = RandomSampler(ds)
     batchsampler = BatchSampler(sampler, args.batch_size, drop_last=True)
     itersampler = IterationBasedBatchSampler(batchsampler, args.total_iters)
@@ -317,7 +322,7 @@ if __name__ == "__main__":
 
     best_eval_metrics = defaultdict(float)
 
-    for iteration, batch in enumerate(dataloader):
+    for iteration, batch in tqdm(enumerate(dataloader), total=args.total_iters):
         log_dict = {}
         obs, action, _ = batch
         pred_action = actor(obs)
