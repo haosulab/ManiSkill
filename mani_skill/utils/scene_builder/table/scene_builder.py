@@ -121,6 +121,16 @@ class TableSceneBuilder(SceneBuilder):
             )
             self.env.agent.reset(qpos)
             self.env.agent.robot.set_pose(sapien.Pose([-0.45, 0, 0]))
+        elif self.env.robot_uids == "floating_robotiq_2f_85_gripper":
+            qpos = self.env.agent.keyframes["open_facing_side"].qpos
+            qpos = (
+                self.env._episode_rng.normal(
+                    0, self.robot_init_qpos_noise, (b, len(qpos))
+                )
+                + qpos
+            )
+            self.env.agent.reset(qpos)
+            self.env.agent.robot.set_pose(sapien.Pose([-0.5, 0, 0.05]))
         elif self.env.robot_uids == "fetch":
             qpos = np.array(
                 [
