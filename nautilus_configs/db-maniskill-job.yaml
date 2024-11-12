@@ -1,0 +1,89 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-maniskill-job-xarm6
+spec:
+  template:
+    spec:
+      containers:
+      - name: gpu-container
+        image: dhbhatt/maniskill-experiments:latest
+        command: ["/bin/bash", "-c"]
+        args: [
+          "export WANDB_API_KEY=<wandb-api-key> && \
+          python examples/baselines/sac/sac.py \
+                 --wandb-entity ucsd_erl --wandb-project-name maniskill_experiments \
+                 --exp_name PickCube_xarm6_allegro_left_joint_vel \
+                 --env-id PickCube-v1 \
+                 --robot xarm6_allegro_left \
+                 --control_mode pd_joint_vel \
+                 --num-envs 128 \
+                 --training-freq 128 \
+                 --num-eval-steps 100 \
+                 --total-timesteps 10000000 \
+                 --wandb-video-freq 1900000 \
+                 --track \
+            > /pers_vol/dwait/logs/$(date +%Y-%m-%d_%H-%M-%S).log"
+        ]
+        volumeMounts:
+        - mountPath: /pers_vol
+          name: db-cephfs-volume
+        resources:
+          limits:
+            nvidia.com/gpu: "1"
+            memory: "156G"
+            cpu: "32"
+          requests:
+            nvidia.com/gpu: "1"
+            memory: "128G"
+            cpu: "24"
+      affinity:
+        # nodeAffinity:
+        # nodeSelectorTerms:
+        # - matchExpressions:
+        #   - key: nvidia.com/gpu.product
+        #     operator: In
+        #     values:
+        #     - "NVIDIA-A100-80GB-PCIe"
+        #     - "NVIDIA-A100-SXM4-80GB"      
+        #     - "NVIDIA-GeForce-RTX-4090"
+        #     - "NVIDIA-GeForce-RTX-3090"
+        #     - "NVIDIA-A40"
+        #     - "NVIDIA-A10"
+        #     - "Tesla-V100-SXM2-32GB"
+        #     - "NVIDIA_TITAN_RTX"
+        #     - "NVIDIA-RTX-A6000"
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - weight: 80
+            preference:
+              matchExpressions:
+              - key: nvidia.com/gpu.product
+                operator: In
+                values:
+                - "NVIDIA-A100-80GB-PCIe"
+                - "NVIDIA-A100-SXM4-80GB"      
+                - "NVIDIA-GeForce-RTX-4090"
+                - "NVIDIA-GeForce-RTX-3090"
+          - weight: 15
+            preference:
+              matchExpressions:
+              - key: nvidia.com/gpu.product
+                operator: In
+                values:
+                - "NVIDIA-A40"
+                - "NVIDIA-A10"
+                - "Tesla-V100-SXM2-32GB"
+          - weight: 5
+            preference:
+              matchExpressions:
+              - key: nvidia.com/gpu.product
+                operator: In
+                values:
+                - "NVIDIA_TITAN_RTX"
+                - "NVIDIA-RTX-A6000"
+      restartPolicy: Never
+      volumes:
+        - name: db-cephfs-volume
+          persistentVolumeClaim:
+            claimName: db-cephfs-volume

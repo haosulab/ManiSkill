@@ -1,0 +1,80 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: db-maniskill-pod
+spec:
+  containers:
+  - name: gpu-container
+    image: dhbhatt/maniskill-experiments:latest
+    command: ["/bin/bash", "-c"]
+    # args: [
+    #   "jupyter lab --NotebookApp.token=627a7b3b --ip=0.0.0.0 --allow-root >> /pers_vol/dwait/jupyter.log 2>&1"
+    # ]
+    args: [
+          "export WANDB_API_KEY=<wandb-api-key> && \
+          python examples/baselines/sac/sac.py \
+                 --wandb-entity ucsd_erl --wandb-project-name maniskill_experiments \
+                 --env-id PickCube-v1 \
+                 --robot panda \
+                 --training_freq 64 \
+                 --num-envs 64 \
+                 --num-eval-steps 100 \
+                 --track \
+            > /pers_vol/dwait/logs/$(date +%Y-%m-%d_%H-%M-%S).log"
+        ]
+    volumeMounts:
+    - mountPath: /pers_vol
+      name: db-cephfs-volume
+    resources:
+      limits:
+        nvidia.com/gpu: "2"
+        memory: "32G"
+        cpu: "16"
+      requests:
+        nvidia.com/gpu: "2"
+        memory: "32G"
+        cpu: "12"
+  restartPolicy: Never
+  # affinity:
+  #   nodeAffinity:
+  #     requiredDuringSchedulingIgnoredDuringExecution:
+  #       nodeSelectorTerms:
+  #       - matchExpressions:
+  #         - key: nvidia.com/gpu.product
+  #           operator: In
+  #           values:
+  #           - RTX-3090
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 80
+        preference:
+          matchExpressions:
+          - key: nvidia.com/gpu.product
+            operator: In
+            values:
+            - "NVIDIA-A100-80GB-PCIe"
+            - "NVIDIA-A100-SXM4-80GB"      
+            - "NVIDIA-GeForce-RTX-4090"
+            - "NVIDIA-GeForce-RTX-3090"
+      - weight: 15
+        preference:
+          matchExpressions:
+          - key: nvidia.com/gpu.product
+            operator: In
+            values:
+            - "NVIDIA-A40"
+            - "NVIDIA-A10"
+            - "Tesla-V100-SXM2-32GB"
+      - weight: 5
+        preference:
+          matchExpressions:
+          - key: nvidia.com/gpu.product
+            operator: In
+            values:
+            - "NVIDIA_TITAN_RTX"
+            - "NVIDIA-RTX-A6000"
+  volumes:
+    - name: db-cephfs-volume
+      persistentVolumeClaim:
+        claimName: db-cephfs-volume
