@@ -422,6 +422,8 @@ if __name__ == "__main__":
     start_time = time.time()
     container_local = None
     next_obs = envs.reset()[0]
+    # envs.base_env._elapsed_steps = torch.arange(args.num_envs, device=device) % max_episode_steps
+    # next_obs = envs._env.get_obs()
     next_done = torch.zeros(args.num_envs, device=device, dtype=torch.bool)
     pbar = tqdm.tqdm(range(1, args.num_iterations + 1))
 
