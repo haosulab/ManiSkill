@@ -162,7 +162,9 @@ def main():
             f"{env_id}: Failed: {failed_count}/{original_episode_count}, Truncated: {truncated_count}/{original_episode_count}, Final Episodes: {final_episode_count}, Avg Episode Length: {avg_episode_length}, Avg Steps to First Success: {avg_steps_to_first_success}"
         )
         if failed_count / original_episode_count >= 0.05:
-            high_fail_rate_envs.append(env_name)
+            high_fail_rate_envs.append(
+                (env_name, failed_count / original_episode_count)
+            )
 
         new_metadata["source_type"] = "rl"
         new_metadata[
@@ -186,8 +188,10 @@ def main():
             os.makedirs(os.path.dirname(checkpoint_out_path), exist_ok=True)
             shutil.copy(checkpoint_path, checkpoint_out_path)
 
-    for env_name in high_fail_rate_envs:
-        print(f"Warning: {env_name} has >= 5% failed episodes. Need a better policy.")
+    for env_name, fail_rate in high_fail_rate_envs:
+        print(
+            f"Warning: {env_name} has {fail_rate*100:0.1f} >= 5% failed episodes. Need a better policy."
+        )
 
 
 if __name__ == "__main__":
