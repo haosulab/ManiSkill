@@ -176,7 +176,6 @@ class DrawTriangleEnv(BaseEnv):
         self.canvas = self.canvas.build_static(name="canvas")
 
         self.dots = []
-        self.dot_pos = None
         color_choices = torch.randint(0, len(self.BRUSH_COLORS), (self.num_envs,))
         for i in range(self.MAX_DOTS):
             actors = []
@@ -213,7 +212,8 @@ class DrawTriangleEnv(BaseEnv):
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         self.draw_step = 0
         with torch.device(self.device):
-            b = len(env_idx)
+            self.dot_pos = []
+            b = self.num_envs
             self.table_scene.initialize(env_idx)
             target_pos = torch.zeros((b, 3))
 
@@ -228,6 +228,9 @@ class DrawTriangleEnv(BaseEnv):
             ).to(
                 self.device
             )  # b, 3, 3
+            print(self.original_verts)
+            print(self.vertices.shape)
+
             self.vertices = (
                 mats.double() @ self.vertices.transpose(-1, -2).double()
             ).transpose(
@@ -268,15 +271,10 @@ class DrawTriangleEnv(BaseEnv):
             self.DOT_THICKNESS / 2 + self.CANVAS_THICKNESS
         )
         # move the next unused dot to the robot's brush position. All unused dots are initialized inside the table so they aren't visible
+        self.dot_pos.append(robot_brush_pos)
         new_dot_pos = Pose.create_from_pq(robot_brush_pos, euler2quat(0, np.pi / 2, 0))
         self.dots[self.draw_step].set_pose(new_dot_pos)
-        if new_dot_pos.get_p()[:, -1] > 0:
-            if self.dot_pos == None:
-                self.dot_pos = new_dot_pos.get_p()[:, None, :]
-            self.dot_pos = torch.cat(
-                (self.dot_pos, new_dot_pos.get_p()[:, None, :]), dim=1
-            )
-
+       
         self.draw_step += 1
 
         # on GPU sim we have to call _gpu_apply_all() to apply the changes we make to object poses.
@@ -321,15 +319,28 @@ class DrawTriangleEnv(BaseEnv):
         return all_points
 
     def success_check(self):
-        if self.dot_pos == None or len(self.dot_pos) == 0:
-            return torch.Tensor([False]).to(bool)
-        drawn_pts = self.dot_pos[:, :, :-1]
 
-        distance_matrix = torch.sqrt(
-            torch.sum(
-                (drawn_pts[:, :, None, :] - self.triangles[:, None, :, :]) ** 2, axis=-1
-            )
-        )
+        if len(self.dot_pos) == 0:
+            return torch.zeros((self.num_envs), device=self.device).to(bool)
+        
+        dot_pos = torch.vstack(self.dot_pos).reshape(self.num_envs, -1, 3)
+        positive_z_mask = dot_pos[:, :, 2] > 0  
+        
+        batch_size = dot_pos.shape[0]
+        result = torch.zeros(batch_size, dtype=torch.bool, device=self.device)
+        
+        for b in range(batch_size):
+            valid_points = dot_pos[b][positive_z_mask[b]][...,:2]  # shape: [num_valid_in_batch, 3]
+            if len(valid_points) > 0:  
+                distance_matrix = torch.sqrt(
+                    torch.sum(
+                        (valid_points[:, None, :] - self.triangles[b]) ** 2,
+                        dim=-1
+                    )
+                )  
+                min_distances = torch.min(distance_matrix, dim=1).values  # shape: [num_valid_in_batch]
+                result[b] = torch.all(min_distances < self.THRESHOLD)
+            else:
+                result[b] = False 
 
-        Y_closeness = torch.min(distance_matrix, dim=1).values < self.THRESHOLD
-        return torch.Tensor([torch.all(Y_closeness)]).to(bool)
+        return result
