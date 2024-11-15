@@ -3,7 +3,8 @@
 
 # to use these commands you need to install torchrl and tensordict. If cudagraphs does not work you can remove that flag
 # then go to the examples/baselines/ppo folder and run the commands there
-
+# Then run the following commands to preprocess the demos
+# python scripts/data_generation/process_rl_trajectories.py --runs_path examples/baselines/ppo/runs/data_generation/ --out-dir ~/.maniskill/demos/
 
 ### PushCube-v1 ###
 for control_mode in "pd_joint_delta_pos" "pd_ee_delta_pos" "pd_ee_delta_pose"; do
