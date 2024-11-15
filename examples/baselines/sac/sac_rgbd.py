@@ -123,6 +123,10 @@ class Args:
     """whether to let parallel environments reset upon termination instead of truncation"""
     bootstrap_at_done: str = "always"
     """the bootstrap method to use when a done signal is received. Can be 'always' or 'never'"""
+    camera_width: Optional[int] = None
+    """the width of the camera image. If none it will use the default the environment specifies"""
+    camera_height: Optional[int] = None
+    """the height of the camera image. If none it will use the default the environment specifies."""
 
     # to be filled in runtime
     grad_steps_per_iteration: int = 0
@@ -245,22 +249,21 @@ class PlainConv(nn.Module):
                  out_dim=256,
                  pool_feature_map=False,
                  last_act=True, # True for ConvBody, False for CNN
+                 image_size=[128, 128]
                  ):
         super().__init__()
-        # assume input image size is 128x128
+        # assume input image size is 128x128 or 64x64
 
         self.out_dim = out_dim
         self.cnn = nn.Sequential(
             nn.Conv2d(in_channels, 16, 3, padding=1, bias=True), nn.ReLU(inplace=True),
-            nn.MaxPool2d(4, 4),  # [32, 32]
+            nn.MaxPool2d(4, 4) if image_size[0] == 128 and image_size[1] == 128 else nn.MaxPool2d(2, 2),  # [32, 32]
             nn.Conv2d(16, 32, 3, padding=1, bias=True), nn.ReLU(inplace=True),
             nn.MaxPool2d(2, 2),  # [16, 16]
             nn.Conv2d(32, 64, 3, padding=1, bias=True), nn.ReLU(inplace=True),
             nn.MaxPool2d(2, 2),  # [8, 8]
             nn.Conv2d(64, 64, 3, padding=1, bias=True), nn.ReLU(inplace=True),
             nn.MaxPool2d(2, 2),  # [4, 4]
-            # nn.Conv2d(128, 128, 3, padding=1, bias=True), nn.ReLU(inplace=True),
-            # nn.MaxPool2d(2, 2),  # [4, 4]
             nn.Conv2d(64, 64, 1, padding=0, bias=True), nn.ReLU(inplace=True),
         )
 
@@ -394,9 +397,16 @@ class Actor(nn.Module):
         super().__init__()
         action_dim = np.prod(envs.single_action_space.shape)
         state_dim = envs.single_observation_space['state'].shape[0]
-        in_channels = sample_obs["rgb"].shape[-1]
+        # count number of channels and image size
+        if "rgb" in sample_obs:
+            in_channels += sample_obs["rgb"].shape[-1]
+            image_size = sample_obs["rgb"].shape[1:3]
+        if "depth" in sample_obs:
+            in_channels += sample_obs["depth"].shape[-1]
+            image_size = sample_obs["depth"].shape[1:3]
+
         self.encoder = EncoderObsWrapper(
-            PlainConv(in_channels=in_channels, out_dim=256) # assume image is 64x64
+            PlainConv(in_channels=in_channels, out_dim=256, image_size=image_size) # assume image is 64x64
         )
         self.mlp = make_mlp(self.encoder.encoder.out_dim+state_dim, [512, 256], last_act=True)
         self.fc_mean = nn.Linear(256, action_dim)
