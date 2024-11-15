@@ -1,8 +1,8 @@
 # State-based RL/PPO used to learn a policy to then rollout success demonstrations for different controller modes
-# Weights for the trained models are on our hugging face dataset: TODO
+# Weights for the trained models and pre-generated demos are on our hugging face dataset: https://huggingface.co/datasets/haosulab/ManiSkill_Demonstrations
 
 # to use these commands you need to install torchrl and tensordict. If cudagraphs does not work you can remove that flag
-# then go to the examples/baselines/ppo folder
+# then go to the examples/baselines/ppo folder and run the commands there
 
 
 ### PushCube-v1 ###
@@ -129,7 +129,7 @@ for control_mode in "pd_ee_delta_pose"; do
     --save-model --cudagraphs --exp-name="data_generation/PegInsertionSide-v1-ppo-${control_mode}" --control-mode ${control_mode}
 done
 
-
+### TwoRobotPickCube-v1 ###
 for control_mode in "pd_joint_delta_pos"; do
   python ppo_fast.py --env_id="TwoRobotPickCube-v1" \
     --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
