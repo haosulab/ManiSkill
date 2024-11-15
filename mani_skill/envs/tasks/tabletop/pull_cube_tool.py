@@ -187,14 +187,12 @@ class PullCubeToolEnv(BaseEnv):
     def evaluate(self):
         cube_pos = self.cube.pose.p
         
-        # Get the actual robot base position from the root link
         robot_base_pos = self.agent.robot.get_links()[0].pose.p
         
-        # Calculate distance between cube and actual robot base position
         cube_to_base_dist = torch.linalg.norm(cube_pos[:, :2] - robot_base_pos[:, :2], dim=1)
         
-        # Success condition - cube is pulled close enough to the actual base
-        cube_pulled_close = cube_to_base_dist < 0.6 # (panda arm length is about 85 cm)        
+        # Success condition - cube is pulled close enough 
+        cube_pulled_close = cube_to_base_dist < 0.6 #         
 
         workspace_center = robot_base_pos.clone()
         workspace_center[:, 0] += self.arm_reach * 0.1  
