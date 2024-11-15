@@ -99,7 +99,7 @@ class Args:
     """the discount factor gamma"""
     tau: float = 0.01
     """target smoothing coefficient"""
-    batch_size: int = 1024
+    batch_size: int = 512
     """the batch size of sample from the replay memory"""
     learning_starts: int = 4_000
     """timestep to start learning"""
@@ -117,7 +117,7 @@ class Args:
     """automatic tuning of the entropy coefficient"""
     training_freq: int = 64
     """training frequency (in steps)"""
-    utd: float = 0.5
+    utd: float = 0.25
     """update to data ratio"""
     partial_reset: bool = False
     """whether to let parallel environments reset upon termination instead of truncation"""
@@ -193,17 +193,17 @@ class ReplayBuffer:
         self.num_envs = num_envs
         self.storage_device = storage_device
         self.sample_device = sample_device
-        per_env_buffer_size = buffer_size // num_envs
+        self.per_env_buffer_size = buffer_size // num_envs
         # note 128x128x3 RGB data with replay buffer size 100_000 takes up around 4.7GB of GPU memory
         # 32 parallel envs with rendering uses up around 2.2GB of GPU memory.
-        self.obs = DictArray((per_env_buffer_size, num_envs), env.single_observation_space, device=storage_device)
+        self.obs = DictArray((self.per_env_buffer_size, num_envs), env.single_observation_space, device=storage_device)
         # TODO (stao): optimize final observation storage
-        self.next_obs = DictArray((per_env_buffer_size, num_envs), env.single_observation_space, device=storage_device)
-        self.actions = torch.zeros((per_env_buffer_size, num_envs) + env.single_action_space.shape, device=storage_device)
-        self.logprobs = torch.zeros((per_env_buffer_size, num_envs), device=storage_device)
-        self.rewards = torch.zeros((per_env_buffer_size, num_envs), device=storage_device)
-        self.dones = torch.zeros((per_env_buffer_size, num_envs), device=storage_device)
-        self.values = torch.zeros((per_env_buffer_size, num_envs), device=storage_device)
+        self.next_obs = DictArray((self.per_env_buffer_size, num_envs), env.single_observation_space, device=storage_device)
+        self.actions = torch.zeros((self.per_env_buffer_size, num_envs) + env.single_action_space.shape, device=storage_device)
+        self.logprobs = torch.zeros((self.per_env_buffer_size, num_envs), device=storage_device)
+        self.rewards = torch.zeros((self.per_env_buffer_size, num_envs), device=storage_device)
+        self.dones = torch.zeros((self.per_env_buffer_size, num_envs), device=storage_device)
+        self.values = torch.zeros((self.per_env_buffer_size, num_envs), device=storage_device)
 
     def add(self, obs: torch.Tensor, next_obs: torch.Tensor, action: torch.Tensor, reward: torch.Tensor, done: torch.Tensor):
         if self.storage_device == torch.device("cpu"):
@@ -221,7 +221,7 @@ class ReplayBuffer:
         self.dones[self.pos] = done
 
         self.pos += 1
-        if self.pos == self.buffer_size:
+        if self.pos == self.per_env_buffer_size:
             self.full = True
             self.pos = 0
     def sample(self, batch_size: int):
@@ -239,58 +239,125 @@ class ReplayBuffer:
         )
 
 # ALGO LOGIC: initialize agent here:
-
-class Encoder(nn.Module):
-    def __init__(self, sample_obs):
+class PlainConv(nn.Module):
+    def __init__(self,
+                 in_channels=3,
+                 out_dim=256,
+                 pool_feature_map=False,
+                 last_act=True, # True for ConvBody, False for CNN
+                 ):
         super().__init__()
+        # assume input image size is 128x128
 
-        extractors = {}
-
-        self.out_features = 0
-        feature_size = 256
-        in_channels=sample_obs["rgb"].shape[-1]
-        image_size=(sample_obs["rgb"].shape[1], sample_obs["rgb"].shape[2])
-
-
-        # here we use a NatureCNN architecture to process images, but any architecture is permissble here
-        cnn = nn.Sequential(
-            nn.Conv2d(
-                in_channels=in_channels,
-                out_channels=32,
-                kernel_size=8,
-                stride=4,
-                padding=0,
-            ),
-            nn.ReLU(),
-            nn.Conv2d(
-                in_channels=32, out_channels=64, kernel_size=4, stride=2, padding=0
-            ),
-            nn.ReLU(),
-            nn.Conv2d(
-                in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=0
-            ),
-            nn.ReLU(),
-            nn.Flatten(),
+        self.out_dim = out_dim
+        self.cnn = nn.Sequential(
+            nn.Conv2d(in_channels, 16, 3, padding=1, bias=True), nn.ReLU(inplace=True),
+            nn.MaxPool2d(4, 4),  # [32, 32]
+            nn.Conv2d(16, 32, 3, padding=1, bias=True), nn.ReLU(inplace=True),
+            nn.MaxPool2d(2, 2),  # [16, 16]
+            nn.Conv2d(32, 64, 3, padding=1, bias=True), nn.ReLU(inplace=True),
+            nn.MaxPool2d(2, 2),  # [8, 8]
+            nn.Conv2d(64, 64, 3, padding=1, bias=True), nn.ReLU(inplace=True),
+            nn.MaxPool2d(2, 2),  # [4, 4]
+            # nn.Conv2d(128, 128, 3, padding=1, bias=True), nn.ReLU(inplace=True),
+            # nn.MaxPool2d(2, 2),  # [4, 4]
+            nn.Conv2d(64, 64, 1, padding=0, bias=True), nn.ReLU(inplace=True),
         )
 
-        # to easily figure out the dimensions after flattening, we pass a test tensor
-        with torch.no_grad():
-            n_flatten = cnn(sample_obs["rgb"].float().permute(0,3,1,2).cpu()).shape[1]
-            fc = nn.Sequential(nn.Linear(n_flatten, feature_size), nn.ReLU())
-        extractors["rgb"] = nn.Sequential(cnn, fc)
-        self.out_features += feature_size
-        self.extractors = nn.ModuleDict(extractors)
+        if pool_feature_map:
+            self.pool = nn.AdaptiveMaxPool2d((1, 1))
+            self.fc = make_mlp(128, [out_dim], last_act=last_act)
+        else:
+            self.pool = None
+            self.fc = make_mlp(64 * 4 * 4, [out_dim], last_act=last_act)
 
-    def forward(self, observations) -> torch.Tensor:
-        encoded_tensor_list = []
-        # self.extractors contain nn.Modules that do all the processing.
-        for key, extractor in self.extractors.items():
-            obs = observations[key]
-            if key == "rgb":
-                obs = obs.float().permute(0,3,1,2)
-                obs = obs / 255
-            encoded_tensor_list.append(extractor(obs))
-        return torch.cat(encoded_tensor_list, dim=1)
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        for name, module in self.named_modules():
+            if isinstance(module, (nn.Linear, nn.Conv1d, nn.Conv2d)):
+                if module.bias is not None:
+                    nn.init.zeros_(module.bias)
+
+    def forward(self, image):
+        x = self.cnn(image)
+        if self.pool is not None:
+            x = self.pool(x)
+        x = x.flatten(1)
+        x = self.fc(x)
+        return x
+
+# class Encoder(nn.Module):
+#     def __init__(self, sample_obs):
+#         super().__init__()
+
+#         extractors = {}
+
+#         self.out_features = 0
+#         feature_size = 256
+#         in_channels=sample_obs["rgb"].shape[-1]
+#         image_size=(sample_obs["rgb"].shape[1], sample_obs["rgb"].shape[2])
+
+
+#         # here we use a NatureCNN architecture to process images, but any architecture is permissble here
+#         cnn = nn.Sequential(
+#             nn.Conv2d(
+#                 in_channels=in_channels,
+#                 out_channels=32,
+#                 kernel_size=8,
+#                 stride=4,
+#                 padding=0,
+#             ),
+#             nn.ReLU(),
+#             nn.Conv2d(
+#                 in_channels=32, out_channels=64, kernel_size=4, stride=2, padding=0
+#             ),
+#             nn.ReLU(),
+#             nn.Conv2d(
+#                 in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=0
+#             ),
+#             nn.ReLU(),
+#             nn.Flatten(),
+#         )
+
+#         # to easily figure out the dimensions after flattening, we pass a test tensor
+#         with torch.no_grad():
+#             n_flatten = cnn(sample_obs["rgb"].float().permute(0,3,1,2).cpu()).shape[1]
+#             fc = nn.Sequential(nn.Linear(n_flatten, feature_size), nn.ReLU())
+#         extractors["rgb"] = nn.Sequential(cnn, fc)
+#         self.out_features += feature_size
+#         self.extractors = nn.ModuleDict(extractors)
+
+#     def forward(self, observations) -> torch.Tensor:
+#         encoded_tensor_list = []
+#         # self.extractors contain nn.Modules that do all the processing.
+#         for key, extractor in self.extractors.items():
+#             obs = observations[key]
+#             if key == "rgb":
+#                 obs = obs.float().permute(0,3,1,2)
+#                 obs = obs / 255
+#             encoded_tensor_list.append(extractor(obs))
+#         return torch.cat(encoded_tensor_list, dim=1)
+class EncoderObsWrapper(nn.Module):
+    def __init__(self, encoder):
+        super().__init__()
+        self.encoder = encoder
+
+    def forward(self, obs):
+        if "rgb" in obs:
+            rgb = obs['rgb'].float() / 255.0 # (B, H, W, 3*k)
+        if "depth" in obs:
+            depth = obs['depth'].float() # (B, H, W, 1*k)
+        if "rgb" and "depth" in obs:
+            img = torch.cat([rgb, depth], dim=3) # (B, H, W, C)
+        elif "rgb" in obs:
+            img = rgb
+        elif "depth" in obs:
+            img = depth
+        else:
+            raise ValueError(f"Observation dict must contain 'rgb' or 'depth'")
+        img = img.permute(0, 3, 1, 2) # (B, C, H, W)
+        return self.encoder(img)
 
 def make_mlp(in_channels, mlp_channels, act_builder=nn.ReLU, last_act=True):
     c_in = in_channels
@@ -303,12 +370,12 @@ def make_mlp(in_channels, mlp_channels, act_builder=nn.ReLU, last_act=True):
     return nn.Sequential(*module_list)
 
 class SoftQNetwork(nn.Module):
-    def __init__(self, envs, encoder: Encoder):
+    def __init__(self, envs, encoder: EncoderObsWrapper):
         super().__init__()
         self.encoder = encoder
         action_dim = np.prod(envs.single_action_space.shape)
         state_dim = envs.single_observation_space['state'].shape[0]
-        self.mlp = make_mlp(encoder.out_features+action_dim+state_dim, [512, 256, 1], last_act=False)
+        self.mlp = make_mlp(encoder.encoder.out_dim+action_dim+state_dim, [512, 256, 1], last_act=False)
 
     def forward(self, obs, action, visual_feature=None, detach_encoder=False):
         if visual_feature is None:
@@ -327,8 +394,11 @@ class Actor(nn.Module):
         super().__init__()
         action_dim = np.prod(envs.single_action_space.shape)
         state_dim = envs.single_observation_space['state'].shape[0]
-        self.encoder = Encoder(sample_obs)
-        self.mlp = make_mlp(self.encoder.out_features+state_dim, [512, 256], last_act=True)
+        in_channels = sample_obs["rgb"].shape[-1]
+        self.encoder = EncoderObsWrapper(
+            PlainConv(in_channels=in_channels, out_dim=256) # assume image is 64x64
+        )
+        self.mlp = make_mlp(self.encoder.encoder.out_dim+state_dim, [512, 256], last_act=True)
         self.fc_mean = nn.Linear(256, action_dim)
         self.fc_logstd = nn.Linear(256, action_dim)
         # action rescaling
@@ -568,7 +638,7 @@ if __name__ == "__main__":
 
             # TRY NOT TO MODIFY: execute the game and log data.
             next_obs, rewards, terminations, truncations, infos = envs.step(actions)
-            real_next_obs = next_obs
+            real_next_obs = {k:v.clone() for k, v in next_obs.items()}
             if args.bootstrap_at_done == 'never':
                 need_final_obs = torch.ones_like(terminations, dtype=torch.bool)
                 stop_bootstrap = truncations | terminations # always stop bootstrap when episode ends
@@ -583,7 +653,7 @@ if __name__ == "__main__":
                 final_info = infos["final_info"]
                 done_mask = infos["_final_info"]
                 for k in real_next_obs.keys():
-                    real_next_obs[k][need_final_obs] = infos["final_observation"][k][need_final_obs]
+                    real_next_obs[k][need_final_obs] = infos["final_observation"][k][need_final_obs].clone()
                 for k, v in final_info["episode"].items():
                     logger.add_scalar(f"train/{k}", v[done_mask].float().mean(), global_step)
 
