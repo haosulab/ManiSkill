@@ -14,9 +14,21 @@ python sac.py --env_id="PushCube-v1" \
   --num_envs=32 --utd=0.5 --buffer_size=200_000 \
   --total_timesteps=200_000 --eval_freq=50_000
 python sac.py --env_id="PickCube-v1" \
-  --num_envs=32 --utd=0.5 --buffer_size=1_000_000 \
-  --total_timesteps=1_000_000 --eval_freq=50_000
+  --num_envs=32 --utd=0.5 --buffer_size=200_000 \
+  --total_timesteps=200_000 --eval_freq=50_000
 ```
+
+## Vision Based RL (RGBD)
+
+Below is a sample of various commands for training a image-based policy with SAC that are lightly tuned. The fastest again is also PushCube-v1 which can take about 1-5 minutes and PickCube-v1 which takes 15-45 minutes. You will need to tune the buffer size accordingly as image based observations can take up a lot of memory. The settings below should all take less than 15GB of GPU memory. The examples.sh file has a full list of tested commands for running visual based SAC successfully on many tasks. Change the `-o` argument to "rgb" or "rgb+depth" to train on RGB or RGBD observations. Add `--no-include-state` to exclude any state based information from observations.
+
+
+```bash
+python sac_rgbd.py --env_id="PickCube-v1" \
+  --num_envs=32 --utd=0.5 --buffer_size=100_000 \
+  --total_timesteps=1_000_000 --eval_freq=10_000 --control-mode="pd_ee_delta_pos"
+```
+
 
 ## Citation
 

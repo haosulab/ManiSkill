@@ -131,9 +131,14 @@ class DictArray(object):
             self.data = {}
             for k, v in element_space.items():
                 if isinstance(v, gym.spaces.dict.Dict):
-                    self.data[k] = DictArray(buffer_shape, v)
+                    self.data[k] = DictArray(buffer_shape, v, device=device)
                 else:
-                    self.data[k] = torch.zeros(buffer_shape + v.shape).to(device)
+                    dtype = (torch.float32 if v.dtype in (np.float32, np.float64) else
+                            torch.uint8 if v.dtype == np.uint8 else
+                            torch.int16 if v.dtype == np.int16 else
+                            torch.int32 if v.dtype == np.int32 else
+                            v.dtype)
+                    self.data[k] = torch.zeros(buffer_shape + v.shape, dtype=dtype, device=device)
 
     def keys(self):
         return self.data.keys()

@@ -139,13 +139,14 @@ class ReplayBuffer:
         self.num_envs = num_envs
         self.storage_device = storage_device
         self.sample_device = sample_device
-        self.obs = torch.zeros((buffer_size, num_envs) + env.single_observation_space.shape).to(storage_device)
-        self.next_obs = torch.zeros((buffer_size, num_envs) + env.single_observation_space.shape).to(storage_device)
-        self.actions = torch.zeros((buffer_size, num_envs) + env.single_action_space.shape).to(storage_device)
-        self.logprobs = torch.zeros((buffer_size, num_envs)).to(storage_device)
-        self.rewards = torch.zeros((buffer_size, num_envs)).to(storage_device)
-        self.dones = torch.zeros((buffer_size, num_envs)).to(storage_device)
-        self.values = torch.zeros((buffer_size, num_envs)).to(storage_device)
+        per_env_buffer_size = buffer_size // num_envs
+        self.obs = torch.zeros((per_env_buffer_size, num_envs) + env.single_observation_space.shape).to(storage_device)
+        self.next_obs = torch.zeros((per_env_buffer_size, num_envs) + env.single_observation_space.shape).to(storage_device)
+        self.actions = torch.zeros((per_env_buffer_size, num_envs) + env.single_action_space.shape).to(storage_device)
+        self.logprobs = torch.zeros((per_env_buffer_size, num_envs)).to(storage_device)
+        self.rewards = torch.zeros((per_env_buffer_size, num_envs)).to(storage_device)
+        self.dones = torch.zeros((per_env_buffer_size, num_envs)).to(storage_device)
+        self.values = torch.zeros((per_env_buffer_size, num_envs)).to(storage_device)
 
     def add(self, obs: torch.Tensor, next_obs: torch.Tensor, action: torch.Tensor, reward: torch.Tensor, done: torch.Tensor):
         if self.storage_device == torch.device("cpu"):
