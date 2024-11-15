@@ -92,7 +92,7 @@ class Args:
     gamma: float = 0.8
     """the discount factor gamma"""
     tau: float = 0.01
-    """target smoothing coefficient (default: 0.005)"""
+    """target smoothing coefficient"""
     batch_size: int = 1024
     """the batch size of sample from the replay memory"""
     learning_starts: int = 4_000
@@ -441,18 +441,24 @@ if __name__ == "__main__":
             # TRY NOT TO MODIFY: execute the game and log data.
             next_obs, rewards, terminations, truncations, infos = envs.step(actions)
             real_next_obs = next_obs.clone()
-            if args.bootstrap_at_done == 'always':
-                next_done = torch.zeros_like(terminations).to(torch.float32)
+            if args.bootstrap_at_done == 'never':
+                need_final_obs = torch.ones_like(terminations, dtype=torch.bool)
+                stop_bootstrap = truncations | terminations # always stop bootstrap when episode ends
             else:
-                next_done = (terminations | truncations).to(torch.float32)
+                if args.bootstrap_at_done == 'always':
+                    need_final_obs = truncations | terminations # always need final obs when episode ends
+                    stop_bootstrap = torch.zeros_like(terminations, dtype=torch.bool) # never stop bootstrap
+                else: # bootstrap at truncated
+                    need_final_obs = truncations & (~terminations) # only need final obs when truncated and not terminated
+                    stop_bootstrap = terminations # only stop bootstrap when terminated, don't stop when truncated
             if "final_info" in infos:
                 final_info = infos["final_info"]
                 done_mask = infos["_final_info"]
-                real_next_obs[done_mask] = infos["final_observation"][done_mask]
+                real_next_obs[need_final_obs] = infos["final_observation"][need_final_obs]
                 for k, v in final_info["episode"].items():
                     logger.add_scalar(f"train/{k}", v[done_mask].float().mean(), global_step)
 
-            rb.add(obs, real_next_obs, actions, rewards, next_done)
+            rb.add(obs, real_next_obs, actions, rewards, stop_bootstrap)
 
             # TRY NOT TO MODIFY: CRUCIAL step easy to overlook
             obs = next_obs
@@ -533,9 +539,9 @@ if __name__ == "__main__":
             logger.add_scalar("losses/qf_loss", qf_loss.item() / 2.0, global_step)
             logger.add_scalar("losses/actor_loss", actor_loss.item(), global_step)
             logger.add_scalar("losses/alpha", alpha, global_step)
-            logger.add_scalar("charts/update_time", update_time, global_step)
-            logger.add_scalar("charts/rollout_time", rollout_time, global_step)
-            logger.add_scalar("charts/rollout_fps", global_steps_per_iteration / rollout_time, global_step)
+            logger.add_scalar("time/update_time", update_time, global_step)
+            logger.add_scalar("time/rollout_time", rollout_time, global_step)
+            logger.add_scalar("time/rollout_fps", global_steps_per_iteration / rollout_time, global_step)
             for k, v in cumulative_times.items():
                 logger.add_scalar(f"time/total_{k}", v, global_step)
             logger.add_scalar("time/total_rollout+update_time", cumulative_times["rollout_time"] + cumulative_times["update_time"], global_step)
