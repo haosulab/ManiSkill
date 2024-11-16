@@ -6,21 +6,21 @@ Note that ManiSkill is still in beta, so we have not finalized training scripts 
 
 ## State Based RL
 
-Below is a sample of various commands you can run to train a state-based policy to solve various tasks with SAC that are lightly tuned already. The fastest one is the PushCube-v1 task which can take about 5 minutes to train on a GPU.
+Below is a sample of various commands you can run to train a state-based policy to solve various tasks with SAC that are lightly tuned already. Note that control modes can be changed and can be important for improving sample efficiency.
 
 
 ```bash
 python sac.py --env_id="PushCube-v1" \
   --num_envs=32 --utd=0.5 --buffer_size=200_000 \
-  --total_timesteps=200_000 --eval_freq=50_000
+  --total_timesteps=200_000 --eval_freq=50_000 --control-mode="pd_ee_delta_pos" 
 python sac.py --env_id="PickCube-v1" \
   --num_envs=32 --utd=0.5 --buffer_size=200_000 \
-  --total_timesteps=200_000 --eval_freq=50_000
+  --total_timesteps=200_000 --eval_freq=50_000 --control-mode="pd_ee_delta_pos" 
 ```
 
 ## Vision Based RL (RGBD)
 
-Below is a sample of various commands for training a image-based policy with SAC that are lightly tuned. The fastest again is also PushCube-v1 which can take about 1-5 minutes and PickCube-v1 which takes 15-45 minutes. You will need to tune the buffer size accordingly as image based observations can take up a lot of memory. The settings below should all take less than 15GB of GPU memory. The examples.sh file has a full list of tested commands for running visual based SAC successfully on many tasks. Change the `-o` argument to "rgb", "rgb+depth", "depth" to train on RGB or RGBD observations or Depth observations. 
+Below is a sample of various commands for training a image-based policy with SAC that are lightly tuned. You will need to tune the buffer size accordingly as image based observations can take up a lot of memory. The settings below should all take less than 15GB of GPU memory. The examples.sh file has a full list of tested commands for running visual based SAC successfully on many tasks. Change the `--obs_mode` argument to "rgb", "rgb+depth", "depth" to train on RGB or RGBD observations or Depth observations. 
 
 ```bash
 python sac_rgbd.py --env_id="PickCube-v1" --obs_mode="rgb" \
@@ -28,8 +28,8 @@ python sac_rgbd.py --env_id="PickCube-v1" --obs_mode="rgb" \
   --control-mode="pd_ee_delta_pos" --camera_width=64 --camera_height=64 \
   --total_timesteps=1_000_000 --eval_freq=10_000
 
-python sac_rgbd.py --env_id="PickCube-v1" -o rgb+depth \
-  --num_envs=16 --utd=0.5 --buffer_size=300_000 \
+python sac_rgbd.py --env_id="PickCube-v1" --obs_mode rgb+depth \
+  --num_envs=32 --utd=0.5 --buffer_size=300_000 \
   --control-mode="pd_ee_delta_pos" --camera_width=64 --camera_height=64 \
   --total_timesteps=1_000_000 --eval_freq=10_000 
 ```
