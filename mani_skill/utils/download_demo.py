@@ -25,17 +25,18 @@ DATASET_SOURCES: dict[str, DemoDatasetSource] = {}
 
 # Rigid body envs
 for env_id in [
-    "PickCube-v1",
-    "PushCube-v1",
-    "StackCube-v1",
-    "PegInsertionSide-v1",
-    "PlugCharger-v1",
-    "PushT-v1",
     "AnymalC-Reach-v1",
+    "LiftPegUpright-v1",
+    "PegInsertionSide-v1",
+    "PickCube-v1",
+    "PlugCharger-v1",
     "PokeCube-v1",
     "PullCube-v1",
+    "PushCube-v1",
+    "PushT-v1",
     "RollBall-v1",
-    "LiftPegUpright-v1",
+    "StackCube-v1",
+    "TwoRobotPickCube-v1",
 ]:
     DATASET_SOURCES[env_id] = DemoDatasetSource(
         raw_dataset_url=f"https://huggingface.co/datasets/haosulab/ManiSkill_Demonstrations/resolve/main/demos/{env_id}.zip?download=true"

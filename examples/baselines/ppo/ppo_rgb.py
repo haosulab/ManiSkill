@@ -38,6 +38,8 @@ class Args:
     """the wandb's project name"""
     wandb_entity: Optional[str] = None
     """the entity (team) of wandb's project"""
+    wandb_group: str = "PPO"
+    """the group of the run for wandb"""
     capture_video: bool = True
     """whether to capture videos of the agent performances (check out `videos` folder)"""
     save_model: bool = True
@@ -131,9 +133,14 @@ class DictArray(object):
             self.data = {}
             for k, v in element_space.items():
                 if isinstance(v, gym.spaces.dict.Dict):
-                    self.data[k] = DictArray(buffer_shape, v)
+                    self.data[k] = DictArray(buffer_shape, v, device=device)
                 else:
-                    self.data[k] = torch.zeros(buffer_shape + v.shape).to(device)
+                    dtype = (torch.float32 if v.dtype in (np.float32, np.float64) else
+                            torch.uint8 if v.dtype == np.uint8 else
+                            torch.int16 if v.dtype == np.int16 else
+                            torch.int32 if v.dtype == np.int32 else
+                            v.dtype)
+                    self.data[k] = torch.zeros(buffer_shape + v.shape, dtype=dtype, device=device)
 
     def keys(self):
         return self.data.keys()
@@ -339,7 +346,7 @@ if __name__ == "__main__":
                 config=config,
                 name=run_name,
                 save_code=True,
-                group="PPO",
+                group=args.wandb_group,
                 tags=["ppo", "walltime_efficient"]
             )
         writer = SummaryWriter(f"runs/{run_name}")
