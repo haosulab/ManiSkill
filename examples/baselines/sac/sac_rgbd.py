@@ -211,8 +211,8 @@ class ReplayBuffer:
 
     def add(self, obs: torch.Tensor, next_obs: torch.Tensor, action: torch.Tensor, reward: torch.Tensor, done: torch.Tensor):
         if self.storage_device == torch.device("cpu"):
-            obs = obs.cpu()
-            next_obs = next_obs.cpu()
+            obs = {k: v.cpu() for k, v in obs.items()}
+            next_obs = {k: v.cpu() for k, v in next_obs.items()}
             action = action.cpu()
             reward = reward.cpu()
             done = done.cpu()
@@ -230,16 +230,20 @@ class ReplayBuffer:
             self.pos = 0
     def sample(self, batch_size: int):
         if self.full:
-            batch_inds = torch.randint(0, self.buffer_size, size=(batch_size, ))
+            batch_inds = torch.randint(0, self.per_env_buffer_size, size=(batch_size, ))
         else:
             batch_inds = torch.randint(0, self.pos, size=(batch_size, ))
         env_inds = torch.randint(0, self.num_envs, size=(batch_size, ))
+        obs_sample = self.obs[batch_inds, env_inds]
+        next_obs_sample = self.next_obs[batch_inds, env_inds]
+        obs_sample = {k: v.to(self.sample_device) for k, v in obs_sample.items()}
+        next_obs_sample = {k: v.to(self.sample_device) for k, v in next_obs_sample.items()}
         return ReplayBufferSample(
-            obs=self.obs[batch_inds, env_inds],#.to(self.sample_device),
-            next_obs=self.next_obs[batch_inds, env_inds],#.to(self.sample_device),
-            actions=self.actions[batch_inds, env_inds],#.to(self.sample_device),
-            rewards=self.rewards[batch_inds, env_inds],#.to(self.sample_device),
-            dones=self.dones[batch_inds, env_inds]#.to(self.sample_device)
+            obs=obs_sample,
+            next_obs=next_obs_sample,
+            actions=self.actions[batch_inds, env_inds].to(self.sample_device),
+            rewards=self.rewards[batch_inds, env_inds].to(self.sample_device),
+            dones=self.dones[batch_inds, env_inds].to(self.sample_device)
         )
 
 # ALGO LOGIC: initialize agent here:
@@ -398,6 +402,7 @@ class Actor(nn.Module):
         action_dim = np.prod(envs.single_action_space.shape)
         state_dim = envs.single_observation_space['state'].shape[0]
         # count number of channels and image size
+        in_channels = 0
         if "rgb" in sample_obs:
             in_channels += sample_obs["rgb"].shape[-1]
             image_size = sample_obs["rgb"].shape[1:3]
@@ -485,9 +490,14 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     ####### Environment setup #######
-    env_kwargs = dict(obs_mode=args.obs_mode, render_mode=args.render_mode, sim_backend="gpu")
+    env_kwargs = dict(obs_mode=args.obs_mode, render_mode=args.render_mode, sim_backend="gpu", sensor_configs=dict())
     if args.control_mode is not None:
         env_kwargs["control_mode"] = args.control_mode
+    if args.camera_width is not None:
+        # this overrides every sensor used for observation generation
+        env_kwargs["sensor_configs"]["width"] = args.camera_width
+    if args.camera_height is not None:
+        env_kwargs["sensor_configs"]["height"] = args.camera_height
     envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, reconfiguration_freq=args.reconfiguration_freq, **env_kwargs)
     eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, reconfiguration_freq=args.eval_reconfiguration_freq, human_render_camera_configs=dict(shader_pack="default"), **env_kwargs)
 

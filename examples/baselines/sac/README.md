@@ -20,19 +20,25 @@ python sac.py --env_id="PickCube-v1" \
 
 ## Vision Based RL (RGBD)
 
-Below is a sample of various commands for training a image-based policy with SAC that are lightly tuned. The fastest again is also PushCube-v1 which can take about 1-5 minutes and PickCube-v1 which takes 15-45 minutes. You will need to tune the buffer size accordingly as image based observations can take up a lot of memory. The settings below should all take less than 15GB of GPU memory. The examples.sh file has a full list of tested commands for running visual based SAC successfully on many tasks. Change the `-o` argument to "rgb" or "rgb+depth" to train on RGB or RGBD observations. Add `--no-include-state` to exclude any state based information from observations.
+Below is a sample of various commands for training a image-based policy with SAC that are lightly tuned. The fastest again is also PushCube-v1 which can take about 1-5 minutes and PickCube-v1 which takes 15-45 minutes. You will need to tune the buffer size accordingly as image based observations can take up a lot of memory. The settings below should all take less than 15GB of GPU memory. The examples.sh file has a full list of tested commands for running visual based SAC successfully on many tasks. Change the `-o` argument to "rgb", "rgb+depth", "depth" to train on RGB or RGBD observations or Depth observations. 
 
 ```bash
-python sac_rgbd.py --env_id="PickCube-v1" \
-  --num_envs=32 --utd=0.5 --buffer_size=100_000 \
+python sac_rgbd.py --env_id="PickCube-v1" --obs_mode="rgb" \
+  --num_envs=32 --utd=0.5 --buffer_size=300_000 \
+  --control-mode="pd_ee_delta_pos" --camera_width=64 --camera_height=64 \
+  --total_timesteps=1_000_000 --eval_freq=10_000
+
+python sac_rgbd.py --env_id="PickCube-v1" -o rgb+depth \
+  --num_envs=16 --utd=0.5 --buffer_size=300_000 \
   --control-mode="pd_ee_delta_pos" --camera_width=64 --camera_height=64 \
   --total_timesteps=1_000_000 --eval_freq=10_000 
 ```
 
 ### Notes and Optimization Tips
 
-By default, most environments in ManiSkill generate 128x128 images or larger. However some tasks don't need such high resolution images to be solved like PushCube-v1 and PickCube-v1. Lower camera resolutions significantly reduce memory usage and can speed up training time. Currently the SAC rgbd baseline code is written to support 128x128 and 64x64 images only, for other resolutions you need to modify the neural network architecture accordingly
+By default, most environments in ManiSkill generate 128x128 images or larger. However some tasks don't need such high resolution images to be solved like PushCube-v1 and PickCube-v1. Lower camera resolutions significantly reduce memory usage and can speed up training time. Currently the SAC rgbd baseline code is written to support 128x128 and 64x64 images only, for other resolutions you need to modify the neural network architecture accordingly.
 
+You can add `--no-include-state` to exclude any state based information from observations. Note however use this with caution as many environements have goal specification information that is part of the state.
 
 ## Citation
 
