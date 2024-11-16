@@ -11,11 +11,11 @@ Below is a sample of various commands you can run to train a state-based policy 
 
 ```bash
 python sac.py --env_id="PushCube-v1" \
-  --num_envs=32 --utd=0.5 --buffer_size=200_000 \
-  --total_timesteps=200_000 --eval_freq=50_000 --control-mode="pd_ee_delta_pos" 
+  --num_envs=32 --utd=0.5 --buffer_size=500_000 \
+  --total_timesteps=500_000 --eval_freq=50_000 --control-mode="pd_ee_delta_pos" 
 python sac.py --env_id="PickCube-v1" \
-  --num_envs=32 --utd=0.5 --buffer_size=200_000 \
-  --total_timesteps=200_000 --eval_freq=50_000 --control-mode="pd_ee_delta_pos" 
+  --num_envs=32 --utd=0.5 --buffer_size=500_000 \
+  --total_timesteps=500_000 --eval_freq=50_000 --control-mode="pd_ee_delta_pos" 
 ```
 
 ## Vision Based RL (RGBD)
