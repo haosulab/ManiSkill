@@ -25,7 +25,7 @@ def solve(env: PushCubeEnv, seed=None, debug=False, vis=False):
     # -------------------------------------------------------------------------- #
     # Move to goal pose
     # -------------------------------------------------------------------------- #
-    goal_pose = sapien.Pose(p=env.goal_region.pose.sp.p + np.array([0.02, 0, 0]),q=env.agent.tcp.pose.sp.q)
+    goal_pose = sapien.Pose(p=env.goal_region.pose.sp.p + np.array([0.05, 0, 0]),q=env.agent.tcp.pose.sp.q)
     res = planner.move_to_pose_with_screw(goal_pose)
 
     planner.close()
