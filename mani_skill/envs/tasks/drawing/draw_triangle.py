@@ -36,7 +36,7 @@ class DrawTriangleEnv(BaseEnv):
     """The brushes radius"""
     BRUSH_COLORS = [[0.8, 0.2, 0.2, 1]]
     """The colors of the brushes. If there is more than one color, each parallel environment will have a randomly sampled color."""
-    THRESHOLD = 0.05
+    THRESHOLD = 0.02
 
     SUPPORTED_REWARD_MODES = ["sparse"]
 
@@ -212,8 +212,7 @@ class DrawTriangleEnv(BaseEnv):
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         self.draw_step = 0
         with torch.device(self.device):
-            self.dot_pos = []
-            b = self.num_envs
+            b = len(env_idx)
             self.table_scene.initialize(env_idx)
             target_pos = torch.zeros((b, 3))
 
@@ -222,21 +221,26 @@ class DrawTriangleEnv(BaseEnv):
             qs = randomization.random_quaternions(b, lock_x=True, lock_y=True)
             mats = quaternion_to_matrix(qs).to(self.device)
             self.goal_tri.set_pose(Pose.create_from_pq(p=target_pos, q=qs))
+            
+            if hasattr(self, "vertices"):
+                self.vertices[env_idx] = torch.from_numpy(
+                    np.tile(self.original_verts, (b, 1, 1))
+                ).to(
+                    self.device
+                )  # b, 3, 3
+            else:
+                self.vertices = torch.from_numpy(
+                    np.tile(self.original_verts, (b, 1, 1))
+                ).to(
+                    self.device
+                )
 
-            self.vertices = torch.from_numpy(
-                np.tile(self.original_verts, (b, 1, 1))
-            ).to(
-                self.device
-            )  # b, 3, 3
-            print(self.original_verts)
-            print(self.vertices.shape)
-
-            self.vertices = (
-                mats.double() @ self.vertices.transpose(-1, -2).double()
+            self.vertices[env_idx] = (
+                mats.double() @ self.vertices[env_idx].transpose(-1, -2).double()
             ).transpose(
                 -1, -2
             )  # apply rotation matrix
-            self.vertices += target_pos.unsqueeze(1)
+            self.vertices[env_idx] += target_pos.unsqueeze(1)
 
             self.triangles = self.generate_triangle_with_points(
                 100, self.vertices[:, :, :-1]
@@ -271,7 +275,6 @@ class DrawTriangleEnv(BaseEnv):
             self.DOT_THICKNESS / 2 + self.CANVAS_THICKNESS
         )
         # move the next unused dot to the robot's brush position. All unused dots are initialized inside the table so they aren't visible
-        self.dot_pos.append(robot_brush_pos)
         new_dot_pos = Pose.create_from_pq(robot_brush_pos, euler2quat(0, np.pi / 2, 0))
         self.dots[self.draw_step].set_pose(new_dot_pos)
        
@@ -319,11 +322,18 @@ class DrawTriangleEnv(BaseEnv):
         return all_points
 
     def success_check(self):
+        import time
+        a = time.time()
+        dot_pos = []
+        for index in range(self.draw_step):
+            dot_pos.append(self.dots[index].pose.p)
+        print(time.time() -a)
 
-        if len(self.dot_pos) == 0:
+        if len(dot_pos) < 10:
             return torch.zeros((self.num_envs), device=self.device).to(bool)
         
-        dot_pos = torch.vstack(self.dot_pos).reshape(self.num_envs, -1, 3)
+        a = time.time()
+        dot_pos = torch.vstack(dot_pos).reshape(self.num_envs, -1, 3)
         positive_z_mask = dot_pos[:, :, 2] > 0  
         
         batch_size = dot_pos.shape[0]
