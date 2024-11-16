@@ -20,7 +20,7 @@ python sac.py --env_id="PickCube-v1" \
 
 ## Vision Based RL (RGBD)
 
-Below is a sample of various commands for training a image-based policy with SAC that are lightly tuned. You will need to tune the buffer size accordingly as image based observations can take up a lot of memory. The settings below should all take less than 15GB of GPU memory. The examples.sh file has a full list of tested commands for running visual based SAC successfully on many tasks. Change the `--obs_mode` argument to "rgb", "rgb+depth", "depth" to train on RGB or RGBD observations or Depth observations. 
+Below is a sample of various commands for training a image-based policy with SAC that are lightly tuned. You will need to tune the buffer size accordingly as image based observations can take up a lot of memory. The settings below should all take less than 16GB of GPU memory. The examples.sh file has a full list of tested commands for running visual based SAC successfully on many tasks. Change the `--obs_mode` argument to "rgb", "rgb+depth", "depth" to train on RGB or RGBD observations or Depth observations. 
 
 ```bash
 python sac_rgbd.py --env_id="PickCube-v1" --obs_mode="rgb" \
