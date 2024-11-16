@@ -65,8 +65,10 @@ class Args:
     """the number of parallel environments"""
     num_eval_envs: int = 16
     """the number of parallel evaluation environments"""
-    partial_reset: bool = True
+    partial_reset: bool = False
     """whether to let parallel environments reset upon termination instead of truncation"""
+    eval_partial_reset: bool = False
+    """whether to let parallel evaluation environments reset upon termination instead of truncation"""
     num_steps: int = 50
     """the number of steps to run in each environment per policy rollout"""
     num_eval_steps: int = 50
@@ -139,14 +141,14 @@ class ReplayBuffer:
         self.num_envs = num_envs
         self.storage_device = storage_device
         self.sample_device = sample_device
-        per_env_buffer_size = buffer_size // num_envs
-        self.obs = torch.zeros((per_env_buffer_size, num_envs) + env.single_observation_space.shape).to(storage_device)
-        self.next_obs = torch.zeros((per_env_buffer_size, num_envs) + env.single_observation_space.shape).to(storage_device)
-        self.actions = torch.zeros((per_env_buffer_size, num_envs) + env.single_action_space.shape).to(storage_device)
-        self.logprobs = torch.zeros((per_env_buffer_size, num_envs)).to(storage_device)
-        self.rewards = torch.zeros((per_env_buffer_size, num_envs)).to(storage_device)
-        self.dones = torch.zeros((per_env_buffer_size, num_envs)).to(storage_device)
-        self.values = torch.zeros((per_env_buffer_size, num_envs)).to(storage_device)
+        self.per_env_buffer_size = buffer_size // num_envs
+        self.obs = torch.zeros((self.per_env_buffer_size, self.num_envs) + env.single_observation_space.shape).to(storage_device)
+        self.next_obs = torch.zeros((self.per_env_buffer_size, self.num_envs) + env.single_observation_space.shape).to(storage_device)
+        self.actions = torch.zeros((self.per_env_buffer_size, self.num_envs) + env.single_action_space.shape).to(storage_device)
+        self.logprobs = torch.zeros((self.per_env_buffer_size, self.num_envs)).to(storage_device)
+        self.rewards = torch.zeros((self.per_env_buffer_size, self.num_envs)).to(storage_device)
+        self.dones = torch.zeros((self.per_env_buffer_size, self.num_envs)).to(storage_device)
+        self.values = torch.zeros((self.per_env_buffer_size, self.num_envs)).to(storage_device)
 
     def add(self, obs: torch.Tensor, next_obs: torch.Tensor, action: torch.Tensor, reward: torch.Tensor, done: torch.Tensor):
         if self.storage_device == torch.device("cpu"):
@@ -169,7 +171,7 @@ class ReplayBuffer:
             self.pos = 0
     def sample(self, batch_size: int):
         if self.full:
-            batch_inds = torch.randint(0, self.buffer_size, size=(batch_size, ))
+            batch_inds = torch.randint(0, self.per_env_buffer_size, size=(batch_size, ))
         else:
             batch_inds = torch.randint(0, self.pos, size=(batch_size, ))
         env_inds = torch.randint(0, self.num_envs, size=(batch_size, ))
@@ -305,7 +307,7 @@ if __name__ == "__main__":
             envs = RecordEpisode(envs, output_dir=f"runs/{run_name}/train_videos", save_trajectory=False, save_video_trigger=save_video_trigger, max_steps_per_video=args.num_steps, video_fps=30)
         eval_envs = RecordEpisode(eval_envs, output_dir=eval_output_dir, save_trajectory=args.save_trajectory, save_video=args.capture_video, trajectory_name="trajectory", max_steps_per_video=args.num_eval_steps, video_fps=30)
     envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=not args.partial_reset, record_metrics=True)
-    eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=True, record_metrics=True)
+    eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=not args.eval_partial_reset, record_metrics=True)
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
     max_episode_steps = gym_utils.find_max_episode_steps_value(envs._env)
