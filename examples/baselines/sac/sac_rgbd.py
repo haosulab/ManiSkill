@@ -537,8 +537,8 @@ if __name__ == "__main__":
                 config=config,
                 name=run_name,
                 save_code=True,
-                group="PPO",
-                tags=["ppo", "walltime_efficient"]
+                group=args.wandb_group,
+                tags=["sac", "walltime_efficient"]
             )
         writer = SummaryWriter(f"runs/{run_name}")
         writer.add_text(
