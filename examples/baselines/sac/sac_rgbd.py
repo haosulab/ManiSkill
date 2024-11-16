@@ -9,7 +9,7 @@ from typing import Optional
 import tqdm
 
 from mani_skill.utils import gym_utils
-from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper
+from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper, FlattenRGBDObservationWrapper
 from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 
@@ -59,6 +59,10 @@ class Args:
     # Environment specific arguments
     env_id: str = "PickCube-v1"
     """the id of the environment"""
+    obs_mode: str = "rgb"
+    """the observation mode to use"""
+    include_state: bool = True
+    """whether to include the state in the observation"""
     env_vectorization: str = "gpu"
     """the type of environment vectorization to use"""
     num_envs: int = 16
@@ -83,19 +87,21 @@ class Args:
     """frequency to save training videos in terms of iterations"""
     control_mode: Optional[str] = "pd_joint_delta_pos"
     """the control mode to use for the environment"""
+    render_mode: str = "all"
+    """the environment rendering mode"""
 
     # Algorithm specific arguments
     total_timesteps: int = 1_000_000
     """total timesteps of the experiments"""
     buffer_size: int = 1_000_000
     """the replay memory buffer size"""
-    buffer_device: str = "cpu"
+    buffer_device: str = "cuda"
     """where the replay buffer is stored. Can be 'cpu' or 'cuda' for GPU"""
     gamma: float = 0.8
     """the discount factor gamma"""
     tau: float = 0.01
     """target smoothing coefficient"""
-    batch_size: int = 1024
+    batch_size: int = 512
     """the batch size of sample from the replay memory"""
     learning_starts: int = 4_000
     """timestep to start learning"""
@@ -113,19 +119,71 @@ class Args:
     """automatic tuning of the entropy coefficient"""
     training_freq: int = 64
     """training frequency (in steps)"""
-    utd: float = 0.5
+    utd: float = 0.25
     """update to data ratio"""
     partial_reset: bool = False
     """whether to let parallel environments reset upon termination instead of truncation"""
     bootstrap_at_done: str = "always"
     """the bootstrap method to use when a done signal is received. Can be 'always' or 'never'"""
+    camera_width: Optional[int] = None
+    """the width of the camera image. If none it will use the default the environment specifies"""
+    camera_height: Optional[int] = None
+    """the height of the camera image. If none it will use the default the environment specifies."""
 
     # to be filled in runtime
     grad_steps_per_iteration: int = 0
     """the number of gradient updates per iteration"""
     steps_per_env: int = 0
     """the number of steps each parallel env takes per iteration"""
+class DictArray(object):
+    def __init__(self, buffer_shape, element_space, data_dict=None, device=None):
+        self.buffer_shape = buffer_shape
+        if data_dict:
+            self.data = data_dict
+        else:
+            assert isinstance(element_space, gym.spaces.dict.Dict)
+            self.data = {}
+            for k, v in element_space.items():
+                if isinstance(v, gym.spaces.dict.Dict):
+                    self.data[k] = DictArray(buffer_shape, v, device=device)
+                else:
+                    dtype = (torch.float32 if v.dtype in (np.float32, np.float64) else
+                            torch.uint8 if v.dtype == np.uint8 else
+                            torch.int16 if v.dtype == np.int16 else
+                            torch.int32 if v.dtype == np.int32 else
+                            v.dtype)
+                    self.data[k] = torch.zeros(buffer_shape + v.shape, dtype=dtype, device=device)
 
+    def keys(self):
+        return self.data.keys()
+
+    def __getitem__(self, index):
+        if isinstance(index, str):
+            return self.data[index]
+        return {
+            k: v[index] for k, v in self.data.items()
+        }
+
+    def __setitem__(self, index, value):
+        if isinstance(index, str):
+            self.data[index] = value
+        for k, v in value.items():
+            self.data[k][index] = v
+
+    @property
+    def shape(self):
+        return self.buffer_shape
+
+    def reshape(self, shape):
+        t = len(self.buffer_shape)
+        new_dict = {}
+        for k,v in self.data.items():
+            if isinstance(v, DictArray):
+                new_dict[k] = v.reshape(shape)
+            else:
+                new_dict[k] = v.reshape(shape + v.shape[t:])
+        new_buffer_shape = next(iter(new_dict.values())).shape[:len(shape)]
+        return DictArray(new_buffer_shape, None, data_dict=new_dict)
 @dataclass
 class ReplayBufferSample:
     obs: torch.Tensor
@@ -142,18 +200,21 @@ class ReplayBuffer:
         self.storage_device = storage_device
         self.sample_device = sample_device
         self.per_env_buffer_size = buffer_size // num_envs
-        self.obs = torch.zeros((self.per_env_buffer_size, self.num_envs) + env.single_observation_space.shape).to(storage_device)
-        self.next_obs = torch.zeros((self.per_env_buffer_size, self.num_envs) + env.single_observation_space.shape).to(storage_device)
-        self.actions = torch.zeros((self.per_env_buffer_size, self.num_envs) + env.single_action_space.shape).to(storage_device)
-        self.logprobs = torch.zeros((self.per_env_buffer_size, self.num_envs)).to(storage_device)
-        self.rewards = torch.zeros((self.per_env_buffer_size, self.num_envs)).to(storage_device)
-        self.dones = torch.zeros((self.per_env_buffer_size, self.num_envs)).to(storage_device)
-        self.values = torch.zeros((self.per_env_buffer_size, self.num_envs)).to(storage_device)
+        # note 128x128x3 RGB data with replay buffer size 100_000 takes up around 4.7GB of GPU memory
+        # 32 parallel envs with rendering uses up around 2.2GB of GPU memory.
+        self.obs = DictArray((self.per_env_buffer_size, num_envs), env.single_observation_space, device=storage_device)
+        # TODO (stao): optimize final observation storage
+        self.next_obs = DictArray((self.per_env_buffer_size, num_envs), env.single_observation_space, device=storage_device)
+        self.actions = torch.zeros((self.per_env_buffer_size, num_envs) + env.single_action_space.shape, device=storage_device)
+        self.logprobs = torch.zeros((self.per_env_buffer_size, num_envs), device=storage_device)
+        self.rewards = torch.zeros((self.per_env_buffer_size, num_envs), device=storage_device)
+        self.dones = torch.zeros((self.per_env_buffer_size, num_envs), device=storage_device)
+        self.values = torch.zeros((self.per_env_buffer_size, num_envs), device=storage_device)
 
     def add(self, obs: torch.Tensor, next_obs: torch.Tensor, action: torch.Tensor, reward: torch.Tensor, done: torch.Tensor):
         if self.storage_device == torch.device("cpu"):
-            obs = obs.cpu()
-            next_obs = next_obs.cpu()
+            obs = {k: v.cpu() for k, v in obs.items()}
+            next_obs = {k: v.cpu() for k, v in next_obs.items()}
             action = action.cpu()
             reward = reward.cpu()
             done = done.cpu()
@@ -166,7 +227,7 @@ class ReplayBuffer:
         self.dones[self.pos] = done
 
         self.pos += 1
-        if self.pos == self.buffer_size:
+        if self.pos == self.per_env_buffer_size:
             self.full = True
             self.pos = 0
     def sample(self, batch_size: int):
@@ -175,73 +236,215 @@ class ReplayBuffer:
         else:
             batch_inds = torch.randint(0, self.pos, size=(batch_size, ))
         env_inds = torch.randint(0, self.num_envs, size=(batch_size, ))
+        obs_sample = self.obs[batch_inds, env_inds]
+        next_obs_sample = self.next_obs[batch_inds, env_inds]
+        obs_sample = {k: v.to(self.sample_device) for k, v in obs_sample.items()}
+        next_obs_sample = {k: v.to(self.sample_device) for k, v in next_obs_sample.items()}
         return ReplayBufferSample(
-            obs=self.obs[batch_inds, env_inds].to(self.sample_device),
-            next_obs=self.next_obs[batch_inds, env_inds].to(self.sample_device),
+            obs=obs_sample,
+            next_obs=next_obs_sample,
             actions=self.actions[batch_inds, env_inds].to(self.sample_device),
             rewards=self.rewards[batch_inds, env_inds].to(self.sample_device),
             dones=self.dones[batch_inds, env_inds].to(self.sample_device)
         )
 
 # ALGO LOGIC: initialize agent here:
-class SoftQNetwork(nn.Module):
-    def __init__(self, env):
+class PlainConv(nn.Module):
+    def __init__(self,
+                 in_channels=3,
+                 out_dim=256,
+                 pool_feature_map=False,
+                 last_act=True, # True for ConvBody, False for CNN
+                 image_size=[128, 128]
+                 ):
         super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(np.array(env.single_observation_space.shape).prod() + np.prod(env.single_action_space.shape), 256),
-            nn.ReLU(),
-            nn.Linear(256, 256),
-            nn.ReLU(),
-            nn.Linear(256, 256),
-            nn.ReLU(),
-            nn.Linear(256, 1),
+        # assume input image size is 128x128 or 64x64
+
+        self.out_dim = out_dim
+        self.cnn = nn.Sequential(
+            nn.Conv2d(in_channels, 16, 3, padding=1, bias=True), nn.ReLU(inplace=True),
+            nn.MaxPool2d(4, 4) if image_size[0] == 128 and image_size[1] == 128 else nn.MaxPool2d(2, 2),  # [32, 32]
+            nn.Conv2d(16, 32, 3, padding=1, bias=True), nn.ReLU(inplace=True),
+            nn.MaxPool2d(2, 2),  # [16, 16]
+            nn.Conv2d(32, 64, 3, padding=1, bias=True), nn.ReLU(inplace=True),
+            nn.MaxPool2d(2, 2),  # [8, 8]
+            nn.Conv2d(64, 64, 3, padding=1, bias=True), nn.ReLU(inplace=True),
+            nn.MaxPool2d(2, 2),  # [4, 4]
+            nn.Conv2d(64, 64, 1, padding=0, bias=True), nn.ReLU(inplace=True),
         )
 
-    def forward(self, x, a):
-        x = torch.cat([x, a], 1)
-        return self.net(x)
+        if pool_feature_map:
+            self.pool = nn.AdaptiveMaxPool2d((1, 1))
+            self.fc = make_mlp(128, [out_dim], last_act=last_act)
+        else:
+            self.pool = None
+            self.fc = make_mlp(64 * 4 * 4, [out_dim], last_act=last_act)
+
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        for name, module in self.named_modules():
+            if isinstance(module, (nn.Linear, nn.Conv1d, nn.Conv2d)):
+                if module.bias is not None:
+                    nn.init.zeros_(module.bias)
+
+    def forward(self, image):
+        x = self.cnn(image)
+        if self.pool is not None:
+            x = self.pool(x)
+        x = x.flatten(1)
+        x = self.fc(x)
+        return x
+
+# class Encoder(nn.Module):
+#     def __init__(self, sample_obs):
+#         super().__init__()
+
+#         extractors = {}
+
+#         self.out_features = 0
+#         feature_size = 256
+#         in_channels=sample_obs["rgb"].shape[-1]
+#         image_size=(sample_obs["rgb"].shape[1], sample_obs["rgb"].shape[2])
+
+
+#         # here we use a NatureCNN architecture to process images, but any architecture is permissble here
+#         cnn = nn.Sequential(
+#             nn.Conv2d(
+#                 in_channels=in_channels,
+#                 out_channels=32,
+#                 kernel_size=8,
+#                 stride=4,
+#                 padding=0,
+#             ),
+#             nn.ReLU(),
+#             nn.Conv2d(
+#                 in_channels=32, out_channels=64, kernel_size=4, stride=2, padding=0
+#             ),
+#             nn.ReLU(),
+#             nn.Conv2d(
+#                 in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=0
+#             ),
+#             nn.ReLU(),
+#             nn.Flatten(),
+#         )
+
+#         # to easily figure out the dimensions after flattening, we pass a test tensor
+#         with torch.no_grad():
+#             n_flatten = cnn(sample_obs["rgb"].float().permute(0,3,1,2).cpu()).shape[1]
+#             fc = nn.Sequential(nn.Linear(n_flatten, feature_size), nn.ReLU())
+#         extractors["rgb"] = nn.Sequential(cnn, fc)
+#         self.out_features += feature_size
+#         self.extractors = nn.ModuleDict(extractors)
+
+#     def forward(self, observations) -> torch.Tensor:
+#         encoded_tensor_list = []
+#         # self.extractors contain nn.Modules that do all the processing.
+#         for key, extractor in self.extractors.items():
+#             obs = observations[key]
+#             if key == "rgb":
+#                 obs = obs.float().permute(0,3,1,2)
+#                 obs = obs / 255
+#             encoded_tensor_list.append(extractor(obs))
+#         return torch.cat(encoded_tensor_list, dim=1)
+class EncoderObsWrapper(nn.Module):
+    def __init__(self, encoder):
+        super().__init__()
+        self.encoder = encoder
+
+    def forward(self, obs):
+        if "rgb" in obs:
+            rgb = obs['rgb'].float() / 255.0 # (B, H, W, 3*k)
+        if "depth" in obs:
+            depth = obs['depth'].float() # (B, H, W, 1*k)
+        if "rgb" and "depth" in obs:
+            img = torch.cat([rgb, depth], dim=3) # (B, H, W, C)
+        elif "rgb" in obs:
+            img = rgb
+        elif "depth" in obs:
+            img = depth
+        else:
+            raise ValueError(f"Observation dict must contain 'rgb' or 'depth'")
+        img = img.permute(0, 3, 1, 2) # (B, C, H, W)
+        return self.encoder(img)
+
+def make_mlp(in_channels, mlp_channels, act_builder=nn.ReLU, last_act=True):
+    c_in = in_channels
+    module_list = []
+    for idx, c_out in enumerate(mlp_channels):
+        module_list.append(nn.Linear(c_in, c_out))
+        if last_act or idx < len(mlp_channels) - 1:
+            module_list.append(act_builder())
+        c_in = c_out
+    return nn.Sequential(*module_list)
+
+class SoftQNetwork(nn.Module):
+    def __init__(self, envs, encoder: EncoderObsWrapper):
+        super().__init__()
+        self.encoder = encoder
+        action_dim = np.prod(envs.single_action_space.shape)
+        state_dim = envs.single_observation_space['state'].shape[0]
+        self.mlp = make_mlp(encoder.encoder.out_dim+action_dim+state_dim, [512, 256, 1], last_act=False)
+
+    def forward(self, obs, action, visual_feature=None, detach_encoder=False):
+        if visual_feature is None:
+            visual_feature = self.encoder(obs)
+        if detach_encoder:
+            visual_feature = visual_feature.detach()
+        x = torch.cat([visual_feature, obs["state"], action], dim=1)
+        return self.mlp(x)
 
 
 LOG_STD_MAX = 2
 LOG_STD_MIN = -5
 
-
 class Actor(nn.Module):
-    def __init__(self, env):
+    def __init__(self, envs, sample_obs):
         super().__init__()
-        self.backbone = nn.Sequential(
-            nn.Linear(np.array(env.single_observation_space.shape).prod(), 256),
-            nn.ReLU(),
-            nn.Linear(256, 256),
-            nn.ReLU(),
-            nn.Linear(256, 256),
-            nn.ReLU(),
-        )
-        self.fc_mean = nn.Linear(256, np.prod(env.single_action_space.shape))
-        self.fc_logstd = nn.Linear(256, np.prod(env.single_action_space.shape))
-        # action rescaling
-        h, l = env.single_action_space.high, env.single_action_space.low
-        self.register_buffer("action_scale", torch.tensor((h - l) / 2.0, dtype=torch.float32))
-        self.register_buffer("action_bias", torch.tensor((h + l) / 2.0, dtype=torch.float32))
-        # will be saved in the state_dict
+        action_dim = np.prod(envs.single_action_space.shape)
+        state_dim = envs.single_observation_space['state'].shape[0]
+        # count number of channels and image size
+        in_channels = 0
+        if "rgb" in sample_obs:
+            in_channels += sample_obs["rgb"].shape[-1]
+            image_size = sample_obs["rgb"].shape[1:3]
+        if "depth" in sample_obs:
+            in_channels += sample_obs["depth"].shape[-1]
+            image_size = sample_obs["depth"].shape[1:3]
 
-    def forward(self, x):
-        x = self.backbone(x)
+        self.encoder = EncoderObsWrapper(
+            PlainConv(in_channels=in_channels, out_dim=256, image_size=image_size) # assume image is 64x64
+        )
+        self.mlp = make_mlp(self.encoder.encoder.out_dim+state_dim, [512, 256], last_act=True)
+        self.fc_mean = nn.Linear(256, action_dim)
+        self.fc_logstd = nn.Linear(256, action_dim)
+        # action rescaling
+        self.action_scale = torch.FloatTensor((envs.single_action_space.high - envs.single_action_space.low) / 2.0)
+        self.action_bias = torch.FloatTensor((envs.single_action_space.high + envs.single_action_space.low) / 2.0)
+
+    def get_feature(self, obs, detach_encoder=False):
+        visual_feature = self.encoder(obs)
+        if detach_encoder:
+            visual_feature = visual_feature.detach()
+        x = torch.cat([visual_feature, obs['state']], dim=1)
+        return self.mlp(x), visual_feature
+
+    def forward(self, obs, detach_encoder=False):
+        x, visual_feature = self.get_feature(obs, detach_encoder)
         mean = self.fc_mean(x)
         log_std = self.fc_logstd(x)
         log_std = torch.tanh(log_std)
         log_std = LOG_STD_MIN + 0.5 * (LOG_STD_MAX - LOG_STD_MIN) * (log_std + 1)  # From SpinUp / Denis Yarats
 
-        return mean, log_std
+        return mean, log_std, visual_feature
 
-    def get_eval_action(self, x):
-        x = self.backbone(x)
-        mean = self.fc_mean(x)
+    def get_eval_action(self, obs):
+        mean, log_std, _ = self(obs)
         action = torch.tanh(mean) * self.action_scale + self.action_bias
         return action
 
-    def get_action(self, x):
-        mean, log_std = self(x)
+    def get_action(self, obs, detach_encoder=False):
+        mean, log_std, visual_feature = self(obs, detach_encoder)
         std = log_std.exp()
         normal = torch.distributions.Normal(mean, std)
         x_t = normal.rsample()  # for reparameterization trick (mean + std * N(0,1))
@@ -252,7 +455,7 @@ class Actor(nn.Module):
         log_prob -= torch.log(self.action_scale * (1 - y_t.pow(2)) + 1e-6)
         log_prob = log_prob.sum(1, keepdim=True)
         mean = torch.tanh(mean) * self.action_scale + self.action_bias
-        return action, log_prob, mean
+        return action, log_prob, mean, visual_feature
 
     def to(self, device):
         self.action_scale = self.action_scale.to(device)
@@ -289,11 +492,21 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     ####### Environment setup #######
-    env_kwargs = dict(obs_mode="state", render_mode="rgb_array", sim_backend="gpu")
+    env_kwargs = dict(obs_mode=args.obs_mode, render_mode=args.render_mode, sim_backend="gpu", sensor_configs=dict())
     if args.control_mode is not None:
         env_kwargs["control_mode"] = args.control_mode
+    if args.camera_width is not None:
+        # this overrides every sensor used for observation generation
+        env_kwargs["sensor_configs"]["width"] = args.camera_width
+    if args.camera_height is not None:
+        env_kwargs["sensor_configs"]["height"] = args.camera_height
     envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, reconfiguration_freq=args.reconfiguration_freq, **env_kwargs)
     eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, reconfiguration_freq=args.eval_reconfiguration_freq, human_render_camera_configs=dict(shader_pack="default"), **env_kwargs)
+
+    # rgbd obs mode returns a dict of data, we flatten it so there is just a rgbd key and state key
+    envs = FlattenRGBDObservationWrapper(envs, rgb=True, depth=False, state=args.include_state)
+    eval_envs = FlattenRGBDObservationWrapper(eval_envs, rgb=True, depth=False, state=args.include_state)
+
     if isinstance(envs.action_space, gym.spaces.Dict):
         envs = FlattenActionSpaceWrapper(envs)
         eval_envs = FlattenActionSpaceWrapper(eval_envs)
@@ -338,32 +551,6 @@ if __name__ == "__main__":
     else:
         print("Running evaluation")
 
-    max_action = float(envs.single_action_space.high[0])
-
-    actor = Actor(envs).to(device)
-    qf1 = SoftQNetwork(envs).to(device)
-    qf2 = SoftQNetwork(envs).to(device)
-    qf1_target = SoftQNetwork(envs).to(device)
-    qf2_target = SoftQNetwork(envs).to(device)
-    if args.checkpoint is not None:
-        ckpt = torch.load(args.checkpoint)
-        actor.load_state_dict(ckpt['actor'])
-        qf1.load_state_dict(ckpt['qf1'])
-        qf2.load_state_dict(ckpt['qf2'])
-    qf1_target.load_state_dict(qf1.state_dict())
-    qf2_target.load_state_dict(qf2.state_dict())
-    q_optimizer = optim.Adam(list(qf1.parameters()) + list(qf2.parameters()), lr=args.q_lr)
-    actor_optimizer = optim.Adam(list(actor.parameters()), lr=args.policy_lr)
-
-    # Automatic entropy tuning
-    if args.autotune:
-        target_entropy = -torch.prod(torch.Tensor(envs.single_action_space.shape).to(device)).item()
-        log_alpha = torch.zeros(1, requires_grad=True, device=device)
-        alpha = log_alpha.exp().item()
-        a_optimizer = optim.Adam([log_alpha], lr=args.q_lr)
-    else:
-        alpha = args.alpha
-
     envs.single_observation_space.dtype = np.float32
     rb = ReplayBuffer(
         env=envs,
@@ -377,6 +564,36 @@ if __name__ == "__main__":
     # TRY NOT TO MODIFY: start the game
     obs, info = envs.reset(seed=args.seed) # in Gymnasium, seed is given to reset() instead of seed()
     eval_obs, _ = eval_envs.reset(seed=args.seed)
+
+    # architecture is all actor, q-networks share the same vision encoder. Output of encoder is concatenates with any state data followed by separate MLPs.
+    actor = Actor(envs, sample_obs=obs).to(device)
+    qf1 = SoftQNetwork(envs, actor.encoder).to(device)
+    qf2 = SoftQNetwork(envs, actor.encoder).to(device)
+    qf1_target = SoftQNetwork(envs, actor.encoder).to(device)
+    qf2_target = SoftQNetwork(envs, actor.encoder).to(device)
+    if args.checkpoint is not None:
+        ckpt = torch.load(args.checkpoint)
+        actor.load_state_dict(ckpt['actor'])
+        qf1.load_state_dict(ckpt['qf1'])
+        qf2.load_state_dict(ckpt['qf2'])
+    qf1_target.load_state_dict(qf1.state_dict())
+    qf2_target.load_state_dict(qf2.state_dict())
+    q_optimizer = optim.Adam(
+        list(qf1.mlp.parameters()) +
+        list(qf2.mlp.parameters()) +
+        list(qf1.encoder.parameters()),
+        lr=args.q_lr)
+    actor_optimizer = optim.Adam(list(actor.parameters()), lr=args.policy_lr)
+
+    # Automatic entropy tuning
+    if args.autotune:
+        target_entropy = -torch.prod(torch.Tensor(envs.single_action_space.shape).to(device)).item()
+        log_alpha = torch.zeros(1, requires_grad=True, device=device)
+        alpha = log_alpha.exp().item()
+        a_optimizer = optim.Adam([log_alpha], lr=args.q_lr)
+    else:
+        alpha = args.alpha
+
     global_step = 0
     global_update = 0
     learning_has_started = False
@@ -438,12 +655,12 @@ if __name__ == "__main__":
             if not learning_has_started:
                 actions = torch.tensor(envs.action_space.sample(), dtype=torch.float32, device=device)
             else:
-                actions, _, _ = actor.get_action(obs)
+                actions, _, _, _ = actor.get_action(obs)
                 actions = actions.detach()
 
             # TRY NOT TO MODIFY: execute the game and log data.
             next_obs, rewards, terminations, truncations, infos = envs.step(actions)
-            real_next_obs = next_obs.clone()
+            real_next_obs = {k:v.clone() for k, v in next_obs.items()}
             if args.bootstrap_at_done == 'never':
                 need_final_obs = torch.ones_like(terminations, dtype=torch.bool)
                 stop_bootstrap = truncations | terminations # always stop bootstrap when episode ends
@@ -457,7 +674,8 @@ if __name__ == "__main__":
             if "final_info" in infos:
                 final_info = infos["final_info"]
                 done_mask = infos["_final_info"]
-                real_next_obs[need_final_obs] = infos["final_observation"][need_final_obs]
+                for k in real_next_obs.keys():
+                    real_next_obs[k][need_final_obs] = infos["final_observation"][k][need_final_obs].clone()
                 for k, v in final_info["episode"].items():
                     logger.add_scalar(f"train/{k}", v[done_mask].float().mean(), global_step)
 
@@ -481,15 +699,15 @@ if __name__ == "__main__":
 
             # update the value networks
             with torch.no_grad():
-                next_state_actions, next_state_log_pi, _ = actor.get_action(data.next_obs)
-                qf1_next_target = qf1_target(data.next_obs, next_state_actions)
-                qf2_next_target = qf2_target(data.next_obs, next_state_actions)
+                next_state_actions, next_state_log_pi, _, visual_feature = actor.get_action(data.next_obs)
+                qf1_next_target = qf1_target(data.next_obs, next_state_actions, visual_feature)
+                qf2_next_target = qf2_target(data.next_obs, next_state_actions, visual_feature)
                 min_qf_next_target = torch.min(qf1_next_target, qf2_next_target) - alpha * next_state_log_pi
                 next_q_value = data.rewards.flatten() + (1 - data.dones.flatten()) * args.gamma * (min_qf_next_target).view(-1)
                 # data.dones is "stop_bootstrap", which is computed earlier according to args.bootstrap_at_done
-
-            qf1_a_values = qf1(data.obs, data.actions).view(-1)
-            qf2_a_values = qf2(data.obs, data.actions).view(-1)
+            visual_feature = actor.encoder(data.obs)
+            qf1_a_values = qf1(data.obs, data.actions, visual_feature).view(-1)
+            qf2_a_values = qf2(data.obs, data.actions, visual_feature).view(-1)
             qf1_loss = F.mse_loss(qf1_a_values, next_q_value)
             qf2_loss = F.mse_loss(qf2_a_values, next_q_value)
             qf_loss = qf1_loss + qf2_loss
@@ -500,10 +718,10 @@ if __name__ == "__main__":
 
             # update the policy network
             if global_update % args.policy_frequency == 0:  # TD 3 Delayed update support
-                pi, log_pi, _ = actor.get_action(data.obs)
-                qf1_pi = qf1(data.obs, pi)
-                qf2_pi = qf2(data.obs, pi)
-                min_qf_pi = torch.min(qf1_pi, qf2_pi)
+                pi, log_pi, _, visual_feature = actor.get_action(data.obs)
+                qf1_pi = qf1(data.obs, pi, visual_feature, detach_encoder=True)
+                qf2_pi = qf2(data.obs, pi, visual_feature, detach_encoder=True)
+                min_qf_pi = torch.min(qf1_pi, qf2_pi).view(-1)
                 actor_loss = ((alpha * log_pi) - min_qf_pi).mean()
 
                 actor_optimizer.zero_grad()
@@ -512,7 +730,7 @@ if __name__ == "__main__":
 
                 if args.autotune:
                     with torch.no_grad():
-                        _, log_pi, _ = actor.get_action(data.obs)
+                        _, log_pi, _, _ = actor.get_action(data.obs)
                     # if args.correct_alpha:
                     alpha_loss = (-log_alpha.exp() * (log_pi + target_entropy)).mean()
                     # else:
