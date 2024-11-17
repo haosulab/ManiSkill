@@ -25,7 +25,6 @@ from torch.utils.data.dataloader import DataLoader
 from act.utils import IterationBasedBatchSampler, worker_init_fn
 from act.make_env import make_eval_envs
 from diffusers.training_utils import EMAModel
-from diffusers.optimization import get_scheduler
 from act.detr.transformer import build_transformer
 from act.detr.detr_vae import build_encoder, DETRVAE
 from dataclasses import dataclass, field
@@ -59,14 +58,16 @@ class Args:
     """number of trajectories to load from the demo dataset"""
     total_iters: int = 1_000_000
     """total timesteps of the experiment"""
-    batch_size: int = 512
+    batch_size: int = 1024
     """the batch size of sample from the replay memory"""
 
     # ACT specific arguments
     lr: float = 1e-4
     """the learning rate of the Action Chunking with Transformers"""
     kl_weight: float = 10 
+    """weight for the kl loss term"""
     temporal_agg: bool = True
+    """if toggled, temporal ensembling will be performed"""
 
     # Backbone
     position_embedding: str = 'sine'
@@ -110,7 +111,7 @@ class Args:
     demo_type: Optional[str] = None
 
 
-class SmallDemoDataset_ACTPolicy(Dataset):
+class SmallDemoDataset_ACTPolicy(Dataset): # Load everything into GPU memory
     def __init__(self, data_path, num_queries, device, num_traj):
         if data_path[-4:] == '.pkl':
             raise NotImplementedError()
@@ -132,30 +133,45 @@ class SmallDemoDataset_ACTPolicy(Dataset):
         # else:
         #     raise NotImplementedError(f'Control Mode {args.control_mode} not supported')
 
+        self.slices = []
+        self.num_traj = len(trajectories['actions'])
+        for traj_idx in range(self.num_traj):
+            episode_len = trajectories['actions'][traj_idx].shape[0]
+            self.slices += [
+                (traj_idx, ts) for ts in range(episode_len)
+            ]
+
+        print(f"Length of Dataset: {len(self.slices)}")
+
         self.num_queries = num_queries
         self.trajectories = trajectories
-        self.norm_stats = self.get_norm_stats()
+        self.delta_control = 'delta' in args.control_mode
+        self.norm_stats = self.get_norm_stats() if not self.delta_control else None
 
     def __getitem__(self, index):
-        traj_idx = index
-        episode_len = self.trajectories['actions'][traj_idx].shape[0]
-        start_ts = np.random.choice(episode_len)
+        traj_idx, ts = self.slices[index]
 
-        # get observation at start_ts only
-        obs = self.trajectories['observations'][traj_idx][start_ts]
+        # get observation at ts only
+        obs = self.trajectories['observations'][traj_idx][ts]
         # get num_queries actions
-        act_seq = self.trajectories['actions'][traj_idx][start_ts:start_ts+self.num_queries]
+        act_seq = self.trajectories['actions'][traj_idx][ts:ts+self.num_queries]
         action_len = act_seq.shape[0]
-        # normalize obs and act_seq
-        obs = (obs - self.norm_stats["state_mean"]) / self.norm_stats["state_std"]
-        act_seq = (act_seq - self.norm_stats["action_mean"]) / self.norm_stats["action_std"]
 
         # Pad after the trajectory, so all the observations are utilized in training
         if action_len < self.num_queries:
-            gripper_action = act_seq[-1, -1]
-            pad_action = torch.cat((self.pad_action_arm, gripper_action[None]), dim=0)
-            act_seq = torch.cat([act_seq, pad_action.repeat(self.num_queries-action_len, 1)], dim=0)
-            # making the robot (arm and gripper) stay still
+            if 'delta_pos' in args.control_mode or args.control_mode == 'base_pd_joint_vel_arm_pd_joint_vel':
+                gripper_action = act_seq[-1, -1]
+                pad_action = torch.cat((self.pad_action_arm, gripper_action[None]), dim=0)
+                act_seq = torch.cat([act_seq, pad_action.repeat(self.num_queries-action_len, 1)], dim=0)
+                # making the robot (arm and gripper) stay still
+            elif not self.delta_control:
+                target = act_seq[-1]
+                act_seq = torch.cat([act_seq, target.repeat(self.num_queries-action_len, 1)], dim=0)
+        
+        # normalize obs and act_seq
+        if not self.delta_control:
+            obs = (obs - self.norm_stats["state_mean"][0]) / self.norm_stats["state_std"][0]
+            act_seq = (act_seq - self.norm_stats["action_mean"]) / self.norm_stats["action_std"]
 
         return {
             'observations': obs,
@@ -163,42 +179,45 @@ class SmallDemoDataset_ACTPolicy(Dataset):
         }
 
     def __len__(self):
-        return len(self.trajectories['actions'])
+        return len(self.slices)
 
     def get_norm_stats(self):
-        all_state_data = []
-        all_action_data = []
-        for traj_idx in range(len(self)):
-            state = self.trajectories['observations'][traj_idx]
-            action_seq = self.trajectories['actions'][traj_idx]
-            all_state_data.append(state)
-            all_action_data.append(action_seq)
-        all_state_data = torch.concatenate(all_state_data)
-        all_action_data = torch.concatenate(all_action_data)
+        traj_idx, ts = self.slices[index]
 
-        # normalize obs (state) data
-        state_mean = all_state_data.mean(dim=0)
-        state_std = all_state_data.std(dim=0)
-        state_std = torch.clip(state_std, 1e-2, np.inf) # clipping
+        # get observation at start_ts only
+        obs = self.trajectories['observations'][traj_idx][ts]
+        # get num_queries actions
+        act_seq = self.trajectories['actions'][traj_idx][ts:ts+self.num_queries]
+        action_len = act_seq.shape[0]
 
-        # normalize action data
-        action_mean = all_action_data.mean(dim=0, keepdim=True)
-        action_std = all_action_data.std(dim=0, keepdim=True)
-        action_std = torch.clip(action_std, 1e-2, np.inf) # clipping
+        # Pad after the trajectory, so all the observations are utilized in training
+        if action_len < self.num_queries:
+            if 'delta_pos' in args.control_mode or args.control_mode == 'base_pd_joint_vel_arm_pd_joint_vel':
+                gripper_action = act_seq[-1, -1]
+                pad_action = torch.cat((self.pad_action_arm, gripper_action[None]), dim=0)
+                act_seq = torch.cat([act_seq, pad_action.repeat(self.num_queries-action_len, 1)], dim=0)
+                # making the robot (arm and gripper) stay still
+            elif not self.delta_control:
+                target = act_seq[-1]
+                act_seq = torch.cat([act_seq, target.repeat(self.num_queries-action_len, 1)], dim=0)
+        
+        # normalize obs and act_seq
+        if not self.delta_control:
+            obs = (obs - self.norm_stats["state_mean"][0]) / self.norm_stats["state_std"][0]
+            act_seq = (act_seq - self.norm_stats["action_mean"]) / self.norm_stats["action_std"]
 
-        stats = {"action_mean": action_mean, "action_std": action_std,
-                 "state_mean": state_mean, "state_std": state_std, 
-                 "example_state": state}
+        return {
+            'observations': obs,
+            'actions': act_seq,
+        }
 
-        return stats
-    
 
 class Agent(nn.Module):
     def __init__(self, env, args):
         super().__init__()
         assert len(env.single_observation_space.shape) == 1 # (obs_dim,)
         assert len(env.single_action_space.shape) == 1 # (act_dim,)
-        assert (env.single_action_space.high == 1).all() and (env.single_action_space.low == -1).all()
+        #assert (env.single_action_space.high == 1).all() and (env.single_action_space.low == -1).all()
 
         self.kl_weight = args.kl_weight
         self.state_dim = env.single_observation_space.shape[0]
@@ -264,6 +283,7 @@ def save_ckpt(run_name, tag):
     os.makedirs(f'runs/{run_name}/checkpoints', exist_ok=True)
     ema.copy_to(ema_agent.parameters())
     torch.save({
+        'norm_stats': dataset.norm_stats,
         'agent': agent.state_dict(),
         'ema_agent': ema_agent.state_dict(),
     }, f'runs/{run_name}/checkpoints/{tag}.pt')
@@ -349,15 +369,11 @@ if __name__ == "__main__":
             "lr": args.lr_backbone,
         },
     ]
-    optimizer = optim.AdamW(param_dicts, lr=args.lr, betas=(0.95, 0.999), weight_decay=1e-6)
+    optimizer = optim.AdamW(param_dicts, lr=args.lr, weight_decay=1e-4)
 
-    # Cosine LR schedule with linear warmup
-    lr_scheduler = get_scheduler(
-        name='cosine',
-        optimizer=optimizer,
-        num_warmup_steps=500,
-        num_training_steps=args.total_iters,
-    )
+    # LR drop by a factor of 10 after lr_drop iters
+    lr_drop = int((2/3)*args.total_iters)
+    lr_scheduler = optim.lr_scheduler.StepLR(optimizer, lr_drop)
 
     # Exponential Moving Average
     # accelerates training and improves stability
@@ -380,6 +396,8 @@ if __name__ == "__main__":
     timings = defaultdict(float)
 
     for iteration, data_batch in enumerate(train_dataloader):
+        cur_iter = iteration + 1
+        
         # forward and compute loss
         loss_dict = agent.compute_loss(
             obs=data_batch['observations'],  # (B, obs_dim)
@@ -397,15 +415,15 @@ if __name__ == "__main__":
         # update Exponential Moving Average of the model weights
         ema.step(agent.parameters())
         # TRY NOT TO MODIFY: record rewards for plotting purposes
-        if iteration % args.log_freq == 0:
-            print(f"Iteration {iteration}, loss: {total_loss.item()}")
-            writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], iteration)
-            writer.add_scalar("losses/total_loss", total_loss.item(), iteration)
+        if cur_iter % args.log_freq == 0:
+            print(f"Iteration {cur_iter}, loss: {total_loss.item()}")
+            writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], cur_iter)
+            writer.add_scalar("losses/total_loss", total_loss.item(), cur_iter)
             for k, v in timings.items():
-                writer.add_scalar(f"time/{k}", v, iteration)
+                writer.add_scalar(f"time/{k}", v, cur_iter)
 
         # Evaluation
-        if iteration % args.eval_freq == 0:
+        if cur_iter % args.eval_freq == 0:
             last_tick = time.time()
 
             ema.copy_to(ema_agent.parameters())
@@ -416,7 +434,7 @@ if __name__ == "__main__":
             print(f"Evaluated {len(eval_metrics['success_at_end'])} episodes")
             for k in eval_metrics.keys():
                 eval_metrics[k] = np.mean(eval_metrics[k])
-                writer.add_scalar(f"eval/{k}", eval_metrics[k], iteration)
+                writer.add_scalar(f"eval/{k}", eval_metrics[k], cur_iter)
                 print(f"{k}: {eval_metrics[k]:.4f}")
 
             save_on_best_metrics = ["success_once", "success_at_end"]
@@ -427,8 +445,8 @@ if __name__ == "__main__":
                     print(f'New best {k}_rate: {eval_metrics[k]:.4f}. Saving checkpoint.')
         
         # Checkpoint
-        if args.save_freq is not None and iteration % args.save_freq == 0:
-            save_ckpt(run_name, str(iteration))
+        if args.save_freq is not None and cur_iter % args.save_freq == 0:
+            save_ckpt(run_name, str(cur_iter))
 
     envs.close()
     writer.close()
