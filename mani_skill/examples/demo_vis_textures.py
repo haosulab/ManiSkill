@@ -2,6 +2,7 @@ import signal
 import sys
 
 from matplotlib import pyplot as plt
+import torch
 
 from mani_skill.utils import common
 from mani_skill.utils import visualization
@@ -17,8 +18,8 @@ from mani_skill.sensors.camera import Camera
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--env-id", type=str, default="PushCube-v1", help="The environment ID of the task you want to simulate")
-    parser.add_argument("-o", "--obs-mode", type=str, default="rgbd", help="Can be rgb or rgbd")
-    parser.add_argument("--shader", default="minimal", type=str, help="Change shader used for all cameras in the environment for rendering. Default is 'minimal' which is very fast. Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer")
+    parser.add_argument("-o", "--obs-mode", type=str, default="rgb+depth", help="Can be rgb or rgb+depth, rgb+normal, albedo+depth etc. Which ever image-like textures you want to visualize can be tacked on")
+    parser.add_argument("--shader", default="default", type=str, help="Change shader used for all cameras in the environment for rendering. Default is 'minimal' which is very fast. Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer")
     parser.add_argument("--num-envs", type=int, default=1, help="Number of environments to run. Used for some basic testing and not visualized")
     parser.add_argument("--cam-width", type=int, help="Override the width of every camera in the environment")
     parser.add_argument("--cam-height", type=int, help="Override the height of every camera in the environment")
@@ -33,9 +34,6 @@ def parse_args(args=None):
 
 import matplotlib.pyplot as plt
 import numpy as np
-
-
-
 
 
 def main(args):
@@ -59,7 +57,7 @@ def main(args):
     for config in env.unwrapped._sensors.values():
         if isinstance(config, Camera):
             n_cams += 1
-    print(f"Visualizing {n_cams} RGBD cameras")
+    print(f"Visualizing {n_cams} cameras")
 
     renderer = visualization.ImageRenderer()
 
@@ -69,16 +67,17 @@ def main(args):
         cam_num = 0
         imgs=[]
         for cam in obs["sensor_data"].keys():
-            if "rgb" in obs["sensor_data"][cam]:
-                rgb = common.to_numpy(obs["sensor_data"][cam]["rgb"][0])
-                imgs.append(rgb)
-                if "depth" in obs["sensor_data"][cam]:
-                    depth = common.to_numpy(obs["sensor_data"][cam]["depth"][0]).astype(np.float32)
-                    depth = depth / (depth.max() - depth.min())
-                    depth_rgb = np.zeros_like(rgb)
-                    depth_rgb[..., :] = depth*255
-                    imgs.append(depth_rgb)
-                cam_num += 1
+            for texture in obs["sensor_data"][cam].keys():
+                if obs["sensor_data"][cam][texture].dtype == torch.uint8:
+                    data = common.to_numpy(obs["sensor_data"][cam][texture][0])
+                    imgs.append(data)
+                else:
+                    data = common.to_numpy(obs["sensor_data"][cam][texture][0]).astype(np.float32)
+                    data = data / (data.max() - data.min())
+                    data_rgb = np.zeros((data.shape[0], data.shape[1], 3), dtype=np.uint8)
+                    data_rgb[..., :] = data * 255
+                    imgs.append(data_rgb)
+            cam_num += 1
         img = visualization.tile_images(imgs, nrows=n_cams)
         renderer(img)
 

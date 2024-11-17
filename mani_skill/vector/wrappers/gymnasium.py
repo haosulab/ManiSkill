@@ -55,7 +55,7 @@ class ManiSkillVectorEnv(VectorEnv):
         )
         if not self.ignore_terminations and auto_reset:
             assert (
-                self.base_env.reconfiguration_freq == 0
+                self.base_env.reconfiguration_freq == 0 or self.base_env.num_envs == 1
             ), "With partial resets, environment cannot be reconfigured automatically"
 
         if self.record_metrics:

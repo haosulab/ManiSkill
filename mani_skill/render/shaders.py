@@ -47,6 +47,23 @@ def default_position_texture_transform(data: torch.Tensor):
     }
 
 
+rt_texture_transforms = {
+    "Color": lambda data: {"rgb": (data[..., :3] * 255).to(torch.uint8)},
+    "Position": default_position_texture_transform,
+    # note in default shader pack, 0 is visual shape / mesh, 1 is actor/link level, 2 is parallel scene ID, 3 is unused
+    "Segmentation": lambda data: {"segmentation": data[..., 1][..., None]},
+    "Normal": lambda data: {"normal": data[..., :3]},
+    "Albedo": lambda data: {"albedo": (data[..., :3] * 255).to(torch.uint8)},
+}
+rt_texture_names = {
+    "Color": ["rgb"],
+    "Position": ["position", "depth"],
+    "Segmentation": ["segmentation"],
+    "Normal": ["normal"],
+    "Albedo": ["albedo"],
+}
+
+
 PREBUILT_SHADER_CONFIGS = {
     "minimal": ShaderConfig(
         shader_pack="minimal",
@@ -71,55 +88,47 @@ PREBUILT_SHADER_CONFIGS = {
             "Color": ["rgb"],
             "Position": ["position", "depth"],
             "Segmentation": ["segmentation"],
+            "Normal": ["normal"],
+            "Albedo": ["albedo"],
         },
         texture_transforms={
             "Color": lambda data: {"rgb": (data[..., :3] * 255).to(torch.uint8)},
             "Position": default_position_texture_transform,
             # note in default shader pack, 0 is visual shape / mesh, 1 is actor/link level, 2 is parallel scene ID, 3 is unused
             "Segmentation": lambda data: {"segmentation": data[..., 1][..., None]},
+            "Normal": lambda data: {"normal": data[..., :3]},
+            "Albedo": lambda data: {"albedo": (data[..., :3] * 255).to(torch.uint8)},
         },
     ),
     "rt": ShaderConfig(
         shader_pack="rt",
-        texture_names={
-            "Color": ["rgb"],
-        },
+        texture_names=rt_texture_names,
         shader_pack_config={
             "ray_tracing_samples_per_pixel": 32,
             "ray_tracing_path_depth": 16,
             "ray_tracing_denoiser": "optix",
         },
-        texture_transforms={
-            "Color": lambda data: {"rgb": (data[..., :3] * 255).to(torch.uint8)},
-        },
+        texture_transforms=rt_texture_transforms,
     ),
     "rt-med": ShaderConfig(
         shader_pack="rt",
-        texture_names={
-            "Color": ["rgb"],
-        },
+        texture_names=rt_texture_names,
         shader_pack_config={
             "ray_tracing_samples_per_pixel": 4,
             "ray_tracing_path_depth": 3,
             "ray_tracing_denoiser": "optix",
         },
-        texture_transforms={
-            "Color": lambda data: {"rgb": (data[..., :3] * 255).to(torch.uint8)},
-        },
+        texture_transforms=rt_texture_transforms,
     ),
     "rt-fast": ShaderConfig(
         shader_pack="rt",
-        texture_names={
-            "Color": ["rgb"],
-        },
+        texture_names=rt_texture_names,
         shader_pack_config={
             "ray_tracing_samples_per_pixel": 2,
             "ray_tracing_path_depth": 1,
             "ray_tracing_denoiser": "optix",
         },
-        texture_transforms={
-            "Color": lambda data: {"rgb": (data[..., :3] * 255).to(torch.uint8)},
-        },
+        texture_transforms=rt_texture_transforms,
     ),
 }
 """pre-defined shader configs"""

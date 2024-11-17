@@ -106,12 +106,37 @@ The conversion between controllers (or action spaces) is not yet supported for m
 ::: -->
 
 :::{caution}
-Since some demonstrations are collected in a non-quasi-static way (objects are not fixed relative to the manipulator during manipulation) for some challenging tasks (e.g., `TurnFaucet` and tasks migrated from ManiSkill1), replaying actions can fail due to non-determinism in simulation. Thus, replaying trajectories by environment states is required (passing `--use-env-states`).
+Since some demonstrations are collected in a non-quasi-static way (objects are not fixed relative to the manipulator during manipulation) or require high precision for some challenging tasks (e.g. PushT-v1 or PickSingleYCB-v1), replaying actions/converting actions can fail due to non-determinism in simulation . Thus, replaying trajectories by environment states is required by passing `--use-env-states` to ensure that the state/observation data replayed is the same.
 :::
 
 ## Example Usages
 
 As the replay trajectory tool is fairly complex and feature rich, we suggest a few example workflows that may be useful for various use cases
+
+### Replaying Trajectories from One Control Mode to a Easier to Learn Control Mode
+
+In machine learning workflows, it can sometimes be easier to learn from some control modes such as end-effector control ones. The example below does that exactly
+
+```bash
+python -m mani_skill.trajectory.replay_trajectory \
+  --traj-path path/to/trajectory.h5 \
+  -c pd_ee_delta_pose -o state \
+  --save-traj
+```
+
+Note that some target control modes are difficult to convert to due to inherent differences in controllers and the behavior of the demonstrations.
+
+### Adding rewards/observations in trajectories
+
+To conserve memory, demonstrations are typically stored without observations and rewards. The example below shows how to add rewards and RGB observations and normalized dense rewards (assuming the environment supports dense rewards) back in. `--use-env-states` is added as a way to ensure the state/observation data replayed exactly as the original trajectory generated.
+
+```bash
+python -m mani_skill.trajectory.replay_trajectory \
+  --traj-path path/to/trajectory.h5 \
+  --record-rewards --reward-mode="normalized_dense" -o rgb \
+  --use-env-states \
+  --save-traj
+```
 
 
 ### Replaying Trajectories collected in CPU/GPU sim to GPU/CPU sim
@@ -125,29 +150,5 @@ python -m mani_skill.trajectory.replay_trajectory \
   --traj-path path/to/trajectory.h5 \
   --use-first-env-state -b "gpu" \
   -c pd_joint_delta_pos -o state \
-  --save-traj
-```
-
-### Replaying Trajectories from One Control Mode to a Easier to Learn Control Mode
-
-In machine learning workflows, it can sometimes be easier to learn from some control modes such as end-effector control ones. The example below does that exactly
-
-```bash
-python -m mani_skill.trajectory.replay_trajectory \
-  --traj-path path/to/trajectory.h5 \
-  -c pd_ee_delta_pose -o state \
-  --save-traj
-```
-
-Note that some target control modes are difficult to convert to due to inherent differences in controllers. For highly precise tasks like PegInsertionSide and PlugCharger the success rate of conversion from e.g. `pd_joint_pos` control to `pd_ee_delta_pose` control is low. For less precise tasks like PickCube the success rate is near 100%.
-
-### Adding rewards/observations in trajectories
-
-To conserve memory, demonstrations are stored without observations and rewards. The example below shows how to add rewards and RGB observations back in.
-
-```bash
-python -m mani_skill.trajectory.replay_trajectory \
-  --traj-path path/to/trajectory.h5 \
-  --record-rewards --reward-mode="normalized_dense" -o rgb \
   --save-traj
 ```
