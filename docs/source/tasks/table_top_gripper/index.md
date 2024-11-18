@@ -83,6 +83,32 @@ The goal is to pick up a red cube and stack it on top of a green cube and let go
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/StackCube-v1_rt.mp4" type="video/mp4">
 </video>
 
+## StackPyramid-v1
+![dense-reward][reward-badge]
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+The goal is to pick up a red cube, place it next to the green cube, and stack the blue cube on top of the red and green cube without it falling off.
+
+**Supported Robots: Panda**
+
+**Randomizations:**
+- both cubes have their z-axis rotation randomized
+- both cubes have their xy positions on top of the table scene randomized. The positions are sampled such that the cubes do not collide with each other
+
+**Success Conditions:**
+- the blue cube is static
+- the blue cube is on top of both the red and green cube (to within half of the cube size)
+- none of the red, green, blue cubes are grasped by the robot (robot must let go of the cubes)
+:::
+
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/StackPyramid-v1_rt.mp4" type="video/mp4">
+</video>
+
+
 ## PickSingleYCB-v1
 ![download-asset][asset-badge] ![dense-reward][reward-badge]
 
