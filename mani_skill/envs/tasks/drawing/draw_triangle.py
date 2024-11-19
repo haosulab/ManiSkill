@@ -11,8 +11,7 @@ from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.geometry.rotation_conversions import quaternion_to_matrix
 from mani_skill.utils.registration import register_env
-from mani_skill.utils.scene_builder.table.scene_builder import \
-    TableSceneBuilder
+from mani_skill.utils.scene_builder.table.scene_builder import TableSceneBuilder
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import SceneConfig, SimConfig
@@ -206,8 +205,8 @@ class DrawTriangleEnv(BaseEnv):
             name="goal_tri",
             base_color=np.array([10, 10, 10, 255]) / 255,
         )
-        self.dots_dist = torch.ones((self.num_envs, 300)) * -1
-        self.ref_dist = torch.zeros((self.num_envs, 153)).to(bool)
+        self.dots_dist = torch.ones((self.num_envs, 300), device=self.device) * -1
+        self.ref_dist = torch.zeros((self.num_envs, 153), device=self.device).to(bool)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         self.draw_step = 0
@@ -352,7 +351,9 @@ class DrawTriangleEnv(BaseEnv):
 
             # if current drawn point is close to a reference point. -1 if the drawn point hasn't actually been drawn yet
             self.dots_dist[:, self.draw_step - 1] = torch.where(
-                z_mask, -1, torch.any(dist, dim=-1).reshape(self.num_envs, 1)
+                z_mask, -1, torch.any(dist, dim=-1)
+            ).reshape(
+                self.num_envs,
             )
 
             mask = self.dots_dist > -1

@@ -10,8 +10,7 @@ from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.geometry.rotation_conversions import quaternion_to_matrix
 from mani_skill.utils.registration import register_env
-from mani_skill.utils.scene_builder.table.scene_builder import \
-    TableSceneBuilder
+from mani_skill.utils.scene_builder.table.scene_builder import TableSceneBuilder
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import SceneConfig, SimConfig
@@ -44,7 +43,7 @@ class DrawSVGEnv(BaseEnv):
     def __init__(self, *args, svg=None, robot_uids="panda_stick", **kwargs):
 
         if svg == None:
-            self.svg = "M7.875 0L0 7.875V55.125L7.875 63H23.763L23.7235 62.9292L11.8418 51.2859L11.8418 35.6268L21.1302 26.915L23.9193 11.6649L40.9773 6.3631L46.8835 16.5929L33.2356 19.926L32.6417 29.1349L41.1407 33.618L50.8511 23.465L56.6781 33.5577L43.5576 45.6794L28.9369 40.4365L26.1844 42.4266L26.1844 45.6794L43.2157 63H55.125L63 55.125V7.875L55.125 0H7.875Z"
+            self.svg = """M7.875 0L0 7.875V55.125L7.875 63H23.763L23.7235 62.9292L11.8418 51.2859L11.8418 35.6268L21.1302 26.915L23.9193 11.6649L40.9773 6.3631L46.8835 16.5929L33.2356 19.926L32.6417 29.1349L41.1407 33.618L50.8511 23.465L56.6781 33.5577L43.5576 45.6794L28.9369 40.4365L26.1844 42.4266L26.1844 45.6794L43.2157 63H55.125L63 55.125V7.875L55.125 0H7.875Z"""
             self.continuous = True
         else:
             self.svg = svg
@@ -242,10 +241,10 @@ class DrawSVGEnv(BaseEnv):
             base_color=np.array([10, 10, 10, 255]) / 255,
         )
 
-        self.dots_dist = torch.ones((self.num_envs, 500)) * -1
-        self.ref_dist = torch.zeros((self.num_envs, self.original_points.shape[0])).to(
-            bool
-        )
+        self.dots_dist = torch.ones((self.num_envs, 500), device=self.device) * -1
+        self.ref_dist = torch.zeros(
+            (self.num_envs, self.original_points.shape[0]), device=self.device
+        ).to(bool)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         self.draw_step = 0
@@ -363,7 +362,9 @@ class DrawSVGEnv(BaseEnv):
                 self.ref_dist, (1 - z_mask.int()) * dist.reshape((self.num_envs, -1))
             )
             self.dots_dist[:, self.draw_step - 1] = torch.where(
-                z_mask, -1, torch.any(dist, dim=-1).reshape(self.num_envs, 1)
+                z_mask, -1, torch.any(dist, dim=-1)
+            ).reshape(
+                self.num_envs,
             )
 
             mask = self.dots_dist > -1
