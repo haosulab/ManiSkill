@@ -1,8 +1,4 @@
 # Code to generate task documentation automatically
-
-import mani_skill.envs
-from mani_skill.utils.registration import REGISTERED_ENVS
-
 TASK_CATEGORIES_TO_INCLUDE = [
     "tabletop",
     "humanoid",
@@ -13,7 +9,8 @@ TASK_CATEGORIES_NAME_MAP = {
     "tabletop": "table_top_gripper"
 }
 
-GLOBAL_TASK_HEADER = """[asset-badge]: https://img.shields.io/badge/download%20asset-yes-blue.svg
+GLOBAL_TASK_HEADER = """<!-- THIS IS ALL GENERATED DOCUMENTATION. DO NOT MODIFY THIS FILE -->
+[asset-badge]: https://img.shields.io/badge/download%20asset-yes-blue.svg
 [dense-reward-badge]: https://img.shields.io/badge/dense%20reward-yes-green.svg
 [sparse-reward-badge]: https://img.shields.io/badge/sparse%20reward-yes-green.svg
 [no-dense-reward-badge]: https://img.shields.io/badge/dense%20reward-no-red.svg
@@ -44,12 +41,18 @@ These are classic control tasks where the objective is to control a robot to rea
 
 These are tasks where the robot is controlled to draw a specific shape or pattern""",
 }
+import urllib.request
+import mani_skill.envs
+from mani_skill.utils.registration import REGISTERED_ENVS
+import os
+import importlib
+import inspect
+from pathlib import Path
+import cv2
+import tempfile
 
 def main():
-    import os
-    import importlib
-    import inspect
-    from pathlib import Path
+
 
     # Get the path to mani_skill/envs/tasks
     tasks_dir = Path(mani_skill.envs.__file__).parent / "tasks"
@@ -81,7 +84,7 @@ def main():
 
                 except Exception as e:
                     print(f"Error importing {module_path}: {e}")
-    # Filter to only include registered environment classes
+    # Filter to only include registered environment classes and those with docstrings
     filtered_task_info = {}
     for module_path, classes in task_info.items():
         registered_classes = []
@@ -120,6 +123,62 @@ def main():
             with open(f"source/tasks_generated/{category_name}/index.md", "w") as f:
                 f.write(GLOBAL_TASK_HEADER)
                 f.write(TASK_CATEGORIES_HEADERS[category])
+
+        # Generate the short TLDR table of tasks
+        with open(f"source/tasks_generated/{category_name}/index.md", "a") as f:
+            f.write("\n| Environment | Preview | Dense Reward | Sparse Reward |\n")
+            f.write("|-------------|----------|--------------|---------------|\n")
+            for module in sorted(modules):
+                environment_data = task_info[module]
+                classes = [env_data["cls"] for env_data in environment_data]
+                env_ids = [env_data["env_id"] for env_data in environment_data]
+
+                # Add row for each environment
+                for cls, env_id in zip(classes, env_ids):
+                    # Get reward mode info
+                    dense = "✓" if hasattr(cls, 'SUPPORTED_REWARD_MODES') and "dense" in cls.SUPPORTED_REWARD_MODES else "✗"
+                    sparse = "✓" if hasattr(cls, 'SUPPORTED_REWARD_MODES') and "sparse" in cls.SUPPORTED_REWARD_MODES else "✗"
+
+                    # Get video thumbnail if available
+                    thumbnail = ""
+                    if hasattr(cls, '_sample_video_link') and cls._sample_video_link:
+                        video_url = cls._sample_video_link
+                        thumbnail_path = video_url.replace('.mp4', '_thumb.png')
+                        # Check if thumbnail already exists online
+                        thumbnail_exists = False
+                        try:
+                            urllib.request.urlopen(thumbnail_path)
+                            # If no error, thumbnail exists
+                            thumbnail_exists = True
+                        except urllib.error.URLError:
+                            thumbnail_exists = False
+                        # Also check locally in figures/env_demos
+                        local_thumbnail_path = os.path.join(os.path.dirname(__file__), "..", "figures/environment_demos", os.path.basename(thumbnail_path))
+                        if os.path.exists(local_thumbnail_path):
+                            thumbnail_exists = True
+                        print(thumbnail_exists, thumbnail_path)
+
+                        if not thumbnail_exists:
+
+                            # Create temp file to store video
+                            with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as tmp_video:
+                                urllib.request.urlretrieve(video_url, tmp_video.name)
+
+                                # Extract first frame
+                                cap = cv2.VideoCapture(tmp_video.name)
+                                ret, frame = cap.read()
+                                cap.release()
+                                cv2.imwrite(os.path.join(os.path.dirname(__file__), "..", "figures/environment_demos", os.path.basename(thumbnail_path)), frame)
+                            # Clean up temp file
+                            os.unlink(tmp_video.name)
+                        thumbnail = f"![{env_id}]({video_url.replace('.mp4', '_thumb.png')})"
+
+
+                    f.write(f"| {env_id} | {thumbnail} | {dense} | {sparse} |")
+
+                f.write("\n")
+
+        # Generate all the detailed task cards
         for module in sorted(modules):
             environment_data = task_info[module]
             classes = [env_data["cls"] for env_data in environment_data]
@@ -177,8 +236,6 @@ def main():
                             print(f"Warning: {cls.__name__}, {env_id} has no sample video link")
                 else:
                     print(f"Warning: {cls.__name__}, {env_id} has no docstring")
-                    pass
-                    # print("      No documentation available")
 
 if __name__ == "__main__":
     main()
