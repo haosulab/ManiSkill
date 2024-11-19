@@ -8,7 +8,7 @@ TASK_CATEGORIES_TO_INCLUDE = [
 TASK_CATEGORIES_NAME_MAP = {
     "tabletop": "table_top_gripper"
 }
-GENERATED_TASKS_DOCS_FOLDER = "source/tasks_generated"
+GENERATED_TASKS_DOCS_FOLDER = "source/tasks"
 GLOBAL_TASK_HEADER = """<!-- THIS IS ALL GENERATED DOCUMENTATION. DO NOT MODIFY THIS FILE -->
 [asset-badge]: https://img.shields.io/badge/download%20asset-yes-blue.svg
 [dense-reward-badge]: https://img.shields.io/badge/dense%20reward-yes-green.svg
