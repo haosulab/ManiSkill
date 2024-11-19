@@ -182,40 +182,40 @@ def main():
 
                         if not thumbnails_exist:
                             # Create temp file to store video
-                            with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as tmp_video:
-                                urllib.request.urlretrieve(video_url, tmp_video.name)
+                            # with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as tmp_video:
+                                # urllib.request.urlretrieve(video_url, tmp_video.name)
 
-                                # Extract first frame and resize maintaining aspect ratio
-                                cap = cv2.VideoCapture(tmp_video.name)
-                                # Get first frame
-                                ret, first_frame = cap.read()
+                            # Extract first frame and resize maintaining aspect ratio
+                            cap = cv2.VideoCapture(os.path.join(os.path.dirname(__file__), "../figures/environment_demos", os.path.basename(video_url)))
+                            # Get first frame
+                            ret, first_frame = cap.read()
 
-                                # Get last frame by seeking to end
-                                frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-                                cap.set(cv2.CAP_PROP_POS_FRAMES, frame_count - 1)
-                                ret, last_frame = cap.read()
-                                cap.release()
+                            # Get last frame by seeking to end
+                            frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                            cap.set(cv2.CAP_PROP_POS_FRAMES, frame_count - 1)
+                            ret, last_frame = cap.read()
+                            cap.release()
 
-                                # Process both frames
-                                for frame, output_path in [(first_frame, thumbnail_paths[0]), (last_frame, thumbnail_paths[1])]:
-                                    height, width = frame.shape[:2]
-                                    if height > width:
-                                        # Scale height to 256, maintain aspect ratio
-                                        scale = 256.0 / height
-                                        new_width = int(width * scale)
-                                        frame = cv2.resize(frame, (new_width, 256), interpolation=cv2.INTER_AREA)
-                                    else:
-                                        # Scale width to 256, maintain aspect ratio
-                                        scale = 256.0 / width
-                                        new_height = int(height * scale)
-                                        frame = cv2.resize(frame, (256, new_height), interpolation=cv2.INTER_AREA)
+                            # Process both frames
+                            for frame, output_path in [(first_frame, thumbnail_paths[0]), (last_frame, thumbnail_paths[1])]:
+                                height, width = frame.shape[:2]
+                                if height > width:
+                                    # Scale height to 256, maintain aspect ratio
+                                    scale = 256.0 / height
+                                    new_width = int(width * scale)
+                                    frame = cv2.resize(frame, (new_width, 256), interpolation=cv2.INTER_AREA)
+                                else:
+                                    # Scale width to 256, maintain aspect ratio
+                                    scale = 256.0 / width
+                                    new_height = int(height * scale)
+                                    frame = cv2.resize(frame, (256, new_height), interpolation=cv2.INTER_AREA)
 
-                                    # Save as compressed PNG
-                                    output_path = os.path.join(os.path.dirname(__file__), GENERATED_TASKS_DOCS_FOLDER, "env_thumbnails", os.path.basename(output_path))
-                                    cv2.imwrite(output_path, frame, [cv2.IMWRITE_PNG_COMPRESSION, 9])
+                                # Save as compressed PNG
+                                output_path = os.path.join(os.path.dirname(__file__), "source/_static/env_thumbnails", os.path.basename(output_path))
+                                cv2.imwrite(output_path, frame, [cv2.IMWRITE_PNG_COMPRESSION, 9])
 
-                            # Clean up temp file
-                            os.unlink(tmp_video.name)
+                            # # Clean up temp file
+                            # os.unlink(tmp_video.name)
                         thumbnail_first_path = os.path.join('/_static/env_thumbnails', os.path.basename(video_url.replace('.mp4', '_thumb_first.png')))
                         thumbnail_last_path = os.path.join('/_static/env_thumbnails', os.path.basename(video_url.replace('.mp4', '_thumb_last.png')))
                         thumbnail = f"<img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='{thumbnail_first_path}' alt='{env_id}'>"

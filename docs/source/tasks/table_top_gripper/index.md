@@ -50,7 +50,7 @@ Table of all tasks/environments in this category. Task column is the environment
 </tr>
 <tr class="row-odd">
 <td><p><a href="#pickclutterycb-v1">PickClutterYCB-v1</a></p></td>
-<td><div style='display:flex;gap:4px;align-items:center'> </div></td>
+<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/PickClutterYCB-v1_rt_thumb_first.png' alt='PickClutterYCB-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/PickClutterYCB-v1_rt_thumb_last.png' alt='PickClutterYCB-v1'></div></td>
 <td><p>❌</p></td>
 <td><p>❌</p></td>
 <td><p>❌</p></td>
