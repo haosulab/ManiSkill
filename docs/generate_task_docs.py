@@ -8,13 +8,14 @@ TASK_CATEGORIES_TO_INCLUDE = [
 TASK_CATEGORIES_NAME_MAP = {
     "tabletop": "table_top_gripper"
 }
-GENERATED_TASKS_DOCS_FOLDER = "source/tasks"
+GENERATED_TASKS_DOCS_FOLDER = "tasks"
 GLOBAL_TASK_HEADER = """<!-- THIS IS ALL GENERATED DOCUMENTATION. DO NOT MODIFY THIS FILE -->
 [asset-badge]: https://img.shields.io/badge/download%20asset-yes-blue.svg
 [dense-reward-badge]: https://img.shields.io/badge/dense%20reward-yes-green.svg
 [sparse-reward-badge]: https://img.shields.io/badge/sparse%20reward-yes-green.svg
 [no-dense-reward-badge]: https://img.shields.io/badge/dense%20reward-no-red.svg
 [no-sparse-reward-badge]: https://img.shields.io/badge/sparse%20reward-no-red.svg
+[demos-badge]: https://img.shields.io/badge/demos-yes-green.svg
 """
 GLOBAL_TASK_POST_HEADER = """
 The document here has both a high-level overview/list of all tasks in a table as well as detailed task cards with video demonstrations after.
@@ -26,7 +27,7 @@ TASK_CATEGORIES_HEADERS = {
 These are tasks situated on table and involve a two-finger gripper arm robot manipulating objects on the surface.""",
 
     "humanoid": """# Humanoid Tasks
-Both real-world humanoids and the Mujoco humanoid are supported in ManiSkill, and we are still in the process of adding more tasks. Humanoid category of tasks generally considers control of robots with legs and two arms.""",
+Both real-world humanoids and the Mujoco humanoid are supported in ManiSkill, and we are still in the process of adding more tasks. Humanoid category of tasks generally considers control of robots with two legs and two arms.""",
 
     "mobile_manipulation": """# Mobile Manipulation Tasks
 
@@ -46,6 +47,7 @@ These are tasks where the robot is controlled to draw a specific shape or patter
 }
 import urllib.request
 import mani_skill.envs
+from mani_skill.utils.download_demo import DATASET_SOURCES
 from mani_skill.utils.registration import REGISTERED_ENVS
 import os
 import importlib
@@ -117,27 +119,31 @@ def main():
         print(f"\n{category}:")
         # Create directory if it doesn't exist
         category_name = TASK_CATEGORIES_NAME_MAP.get(category, category)
-        os.makedirs(f"source/tasks_generated/{category_name}", exist_ok=True)
+        os.makedirs(f"source/{GENERATED_TASKS_DOCS_FOLDER}/{category_name}", exist_ok=True)
 
         # Delete existing index.md file for this category
-        if os.path.exists(f"source/tasks_generated/{category_name}/index.md"):
-            os.remove(f"source/tasks_generated/{category_name}/index.md")
+        if os.path.exists(f"source/{GENERATED_TASKS_DOCS_FOLDER}/{category_name}/index.md"):
+            os.remove(f"source/{GENERATED_TASKS_DOCS_FOLDER}/{category_name}/index.md")
         if category in TASK_CATEGORIES_HEADERS:
-            with open(f"source/tasks_generated/{category_name}/index.md", "w") as f:
+            with open(f"source/{GENERATED_TASKS_DOCS_FOLDER}/{category_name}/index.md", "w") as f:
                 f.write(GLOBAL_TASK_HEADER)
                 f.write(TASK_CATEGORIES_HEADERS[category])
+                f.write(GLOBAL_TASK_POST_HEADER)
 
         # Generate the short TLDR table of tasks
         env_id_to_thumbnail_path = {}
-        with open(f"source/tasks_generated/{category_name}/index.md", "a") as f:
+        with open(f"source/{GENERATED_TASKS_DOCS_FOLDER}/{category_name}/index.md", "a") as f:
             f.write("\n## Task Table\n")
+            f.write("Table of all tasks/environments in this category. Task column is the environment ID, Preview is a thumbnail pair of the first and last frames of an example success demonstration. Max steps is the task's default max episode steps, generally tuned for RL workflows.")
             f.write("\n<table class=\"table\">")
             f.write("\n<thead>")
             f.write("\n<tr class=\"row-odd\">")
-            f.write("\n<th class=\"head\"><p>Environment</p></th>")
+            f.write("\n<th class=\"head\"><p>Task</p></th>")
             f.write("\n<th class=\"head\"><p>Preview</p></th>")
             f.write("\n<th class=\"head\"><p>Dense Reward</p></th>")
             f.write("\n<th class=\"head\"><p>Success/Fail Conditions</p></th>")
+            f.write("\n<th class=\"head\"><p>Demos</p></th>")
+            f.write("\n<th class=\"head\"><p>Max Episode Steps</p></th>")
             f.write("\n</tr>")
             f.write("\n</thead>")
             f.write("\n<tbody>")
@@ -151,7 +157,8 @@ def main():
                     # Get reward mode info
                     dense = "✅" if hasattr(cls, 'SUPPORTED_REWARD_MODES') and "dense" in cls.SUPPORTED_REWARD_MODES else "❌"
                     sparse = "✅" if hasattr(cls, 'SUPPORTED_REWARD_MODES') and "sparse" in cls.SUPPORTED_REWARD_MODES else "❌"
-
+                    max_eps_steps = REGISTERED_ENVS[env_id].max_episode_steps if REGISTERED_ENVS[env_id].max_episode_steps is not None else "N/A"
+                    demos = "✅" if env_id in DATASET_SOURCES else "❌"
                     # Get video thumbnail if available
                     thumbnail = ""
                     thumbnail_last = ""
@@ -211,16 +218,18 @@ def main():
                             os.unlink(tmp_video.name)
                         thumbnail_first_path = os.path.join('/_static/env_thumbnails', os.path.basename(video_url.replace('.mp4', '_thumb_first.png')))
                         thumbnail_last_path = os.path.join('/_static/env_thumbnails', os.path.basename(video_url.replace('.mp4', '_thumb_last.png')))
-                        thumbnail = f"<img style='min-width:min(50%, 128px);max-width:128px;height:auto' src='{thumbnail_first_path}' alt='{env_id}'>"
-                        thumbnail_last = f"<img style='min-width:min(50%, 128px);max-width:128px;height:auto' src='{thumbnail_last_path}' alt='{env_id}'>"
+                        thumbnail = f"<img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='{thumbnail_first_path}' alt='{env_id}'>"
+                        thumbnail_last = f"<img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='{thumbnail_last_path}' alt='{env_id}'>"
                         env_id_to_thumbnail_path[env_id] = [thumbnail_first_path, thumbnail_last_path]
 
                     # f.write(f"| {env_id} | <div style='display:flex;gap:4px;align-items:center'>{thumbnail} {thumbnail_last}</div> | {dense} | {sparse} |")
                     f.write(f"\n<tr class=\"row-{'even' if row_idx % 2 == 1 else 'odd'}\">")
-                    f.write(f"\n<td><p>{env_id}</p></td>")
+                    f.write(f"\n<td><p><a href=\"#{env_id.lower()}\">{env_id}</a></p></td>")
                     f.write(f"\n<td><div style='display:flex;gap:4px;align-items:center'>{thumbnail if thumbnail != '' else ''} {thumbnail_last if thumbnail_last != '' else ''}</div></td>")
                     f.write(f"\n<td><p>{dense}</p></td>")
                     f.write(f"\n<td><p>{sparse}</p></td>")
+                    f.write(f"\n<td><p>{demos}</p></td>")
+                    f.write(f"\n<td><p>{max_eps_steps}</p></td>")
                     f.write(f"\n</tr>")
 
             f.write("\n</tbody>")
@@ -248,7 +257,7 @@ def main():
 
                 # Extract docstring
                 if cls.__doc__:
-                    with open(f"source/tasks_generated/{category_name}/index.md", "a") as f:
+                    with open(f"source/{GENERATED_TASKS_DOCS_FOLDER}/{category_name}/index.md", "a") as f:
                         f.write(f"\n## {env_id}\n\n")
                         # Write reward modes if available
                         if hasattr(cls, 'SUPPORTED_REWARD_MODES'):
@@ -260,6 +269,8 @@ def main():
                                 f.write("![sparse-reward][sparse-reward-badge]\n")
                             else:
                                 f.write("![no-sparse-reward][no-sparse-reward-badge]\n")
+                            if env_id in DATASET_SOURCES:
+                                f.write("![demos][demos-badge]\n")
                         if REGISTERED_ENVS[env_id].asset_download_ids is not None and len(REGISTERED_ENVS[env_id].asset_download_ids) > 0:
                             f.write("![asset-badge][asset-badge]\n")
                         """:::{dropdown} Task Card\n:icon: note\n:color: primary"""
