@@ -32,6 +32,8 @@ class PullCubeToolEnv(BaseEnv):
     - The cube's xy position is within the goal region of the arm's base (marked by reachability)
     """
 
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PullCubeTool-v1_rt.mp4"
+
     SUPPORTED_ROBOTS = ["panda", "fetch"]
     SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "sparse", "none")
     agent: Union[Panda, Fetch]
