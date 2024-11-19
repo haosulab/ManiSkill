@@ -26,7 +26,7 @@ Table of all tasks/environments in this category. Task column is the environment
 <tbody>
 <tr class="row-odd">
 <td><p><a href="#anymalc-reach-v1">AnymalC-Reach-v1</a></p></td>
-<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/AnymalC-Reach-v1_rt_thumb_first.png' alt='AnymalC-Reach-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/AnymalC-Reach-v1_rt_thumb_last.png' alt='AnymalC-Reach-v1'></div></td>
+<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/AnymalC-Reach-v1_rt_thumb_first.png' alt='AnymalC-Reach-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/AnymalC-Reach-v1_rt_thumb_last.png' alt='AnymalC-Reach-v1'></div></td>
 <td><p>✅</p></td>
 <td><p>✅</p></td>
 <td><p>✅</p></td>
@@ -42,7 +42,7 @@ Table of all tasks/environments in this category. Task column is the environment
 </tr>
 <tr class="row-odd">
 <td><p><a href="#anymalc-spin-v1">AnymalC-Spin-v1</a></p></td>
-<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/AnymalC-Spin-v1_rt_thumb_first.png' alt='AnymalC-Spin-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/AnymalC-Spin-v1_rt_thumb_last.png' alt='AnymalC-Spin-v1'></div></td>
+<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/AnymalC-Spin-v1_rt_thumb_first.png' alt='AnymalC-Spin-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/AnymalC-Spin-v1_rt_thumb_last.png' alt='AnymalC-Spin-v1'></div></td>
 <td><p>✅</p></td>
 <td><p>✅</p></td>
 <td><p>❌</p></td>
@@ -78,7 +78,7 @@ Control the AnymalC robot to reach a target location in front of it. Note the cu
 :::
 
 <div style="display: flex; justify-content: center;">
-<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="/_static/env_thumbnails/AnymalC-Reach-v1_rt_thumb_first.png">
+<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="../../_static/env_thumbnails/AnymalC-Reach-v1_rt_thumb_first.png">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/AnymalC-Reach-v1_rt.mp4" type="video/mp4">
 </video>
 </div>
@@ -102,7 +102,7 @@ Control the AnymalC robot to spin around in place as fast as possible and is rew
 :::
 
 <div style="display: flex; justify-content: center;">
-<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="/_static/env_thumbnails/AnymalC-Spin-v1_rt_thumb_first.png">
+<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="../../_static/env_thumbnails/AnymalC-Spin-v1_rt_thumb_first.png">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/AnymalC-Spin-v1_rt.mp4" type="video/mp4">
 </video>
 </div>

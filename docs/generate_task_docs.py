@@ -216,8 +216,8 @@ def main():
 
                             # # Clean up temp file
                             # os.unlink(tmp_video.name)
-                        thumbnail_first_path = os.path.join('/_static/env_thumbnails', os.path.basename(video_url.replace('.mp4', '_thumb_first.png')))
-                        thumbnail_last_path = os.path.join('/_static/env_thumbnails', os.path.basename(video_url.replace('.mp4', '_thumb_last.png')))
+                        thumbnail_first_path = os.path.join('../../_static/env_thumbnails', os.path.basename(video_url.replace('.mp4', '_thumb_first.png')))
+                        thumbnail_last_path = os.path.join('../../_static/env_thumbnails', os.path.basename(video_url.replace('.mp4', '_thumb_last.png')))
                         thumbnail = f"<img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='{thumbnail_first_path}' alt='{env_id}'>"
                         thumbnail_last = f"<img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='{thumbnail_last_path}' alt='{env_id}'>"
                         env_id_to_thumbnail_path[env_id] = [thumbnail_first_path, thumbnail_last_path]

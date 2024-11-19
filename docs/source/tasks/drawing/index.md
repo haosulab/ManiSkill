@@ -26,7 +26,7 @@ Table of all tasks/environments in this category. Task column is the environment
 <tbody>
 <tr class="row-odd">
 <td><p><a href="#tabletopfreedraw-v1">TableTopFreeDraw-v1</a></p></td>
-<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/TableTopFreeDraw-v1_rt_thumb_first.png' alt='TableTopFreeDraw-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/TableTopFreeDraw-v1_rt_thumb_last.png' alt='TableTopFreeDraw-v1'></div></td>
+<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/TableTopFreeDraw-v1_rt_thumb_first.png' alt='TableTopFreeDraw-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/TableTopFreeDraw-v1_rt_thumb_last.png' alt='TableTopFreeDraw-v1'></div></td>
 <td><p>❌</p></td>
 <td><p>❌</p></td>
 <td><p>❌</p></td>
@@ -58,7 +58,7 @@ None
 :::
 
 <div style="display: flex; justify-content: center;">
-<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="/_static/env_thumbnails/TableTopFreeDraw-v1_rt_thumb_first.png">
+<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="../../_static/env_thumbnails/TableTopFreeDraw-v1_rt_thumb_first.png">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/TableTopFreeDraw-v1_rt.mp4" type="video/mp4">
 </video>
 </div>

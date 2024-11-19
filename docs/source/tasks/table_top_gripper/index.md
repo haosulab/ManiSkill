@@ -26,7 +26,7 @@ Table of all tasks/environments in this category. Task column is the environment
 <tbody>
 <tr class="row-odd">
 <td><p><a href="#assemblingkits-v1">AssemblingKits-v1</a></p></td>
-<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/AssemblingKits-v1_rt_thumb_first.png' alt='AssemblingKits-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/AssemblingKits-v1_rt_thumb_last.png' alt='AssemblingKits-v1'></div></td>
+<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/AssemblingKits-v1_rt_thumb_first.png' alt='AssemblingKits-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/AssemblingKits-v1_rt_thumb_last.png' alt='AssemblingKits-v1'></div></td>
 <td><p>❌</p></td>
 <td><p>✅</p></td>
 <td><p>❌</p></td>
@@ -34,7 +34,7 @@ Table of all tasks/environments in this category. Task column is the environment
 </tr>
 <tr class="row-odd">
 <td><p><a href="#liftpegupright-v1">LiftPegUpright-v1</a></p></td>
-<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/LiftPegUpright-v1_rt_thumb_first.png' alt='LiftPegUpright-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/LiftPegUpright-v1_rt_thumb_last.png' alt='LiftPegUpright-v1'></div></td>
+<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/LiftPegUpright-v1_rt_thumb_first.png' alt='LiftPegUpright-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/LiftPegUpright-v1_rt_thumb_last.png' alt='LiftPegUpright-v1'></div></td>
 <td><p>✅</p></td>
 <td><p>✅</p></td>
 <td><p>✅</p></td>
@@ -42,7 +42,7 @@ Table of all tasks/environments in this category. Task column is the environment
 </tr>
 <tr class="row-odd">
 <td><p><a href="#peginsertionside-v1">PegInsertionSide-v1</a></p></td>
-<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/PegInsertionSide-v1_rt_thumb_first.png' alt='PegInsertionSide-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/PegInsertionSide-v1_rt_thumb_last.png' alt='PegInsertionSide-v1'></div></td>
+<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PegInsertionSide-v1_rt_thumb_first.png' alt='PegInsertionSide-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PegInsertionSide-v1_rt_thumb_last.png' alt='PegInsertionSide-v1'></div></td>
 <td><p>✅</p></td>
 <td><p>✅</p></td>
 <td><p>✅</p></td>
@@ -50,7 +50,7 @@ Table of all tasks/environments in this category. Task column is the environment
 </tr>
 <tr class="row-odd">
 <td><p><a href="#pickclutterycb-v1">PickClutterYCB-v1</a></p></td>
-<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/PickClutterYCB-v1_rt_thumb_first.png' alt='PickClutterYCB-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/PickClutterYCB-v1_rt_thumb_last.png' alt='PickClutterYCB-v1'></div></td>
+<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PickClutterYCB-v1_rt_thumb_first.png' alt='PickClutterYCB-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PickClutterYCB-v1_rt_thumb_last.png' alt='PickClutterYCB-v1'></div></td>
 <td><p>❌</p></td>
 <td><p>❌</p></td>
 <td><p>❌</p></td>
@@ -58,7 +58,7 @@ Table of all tasks/environments in this category. Task column is the environment
 </tr>
 <tr class="row-odd">
 <td><p><a href="#pickcube-v1">PickCube-v1</a></p></td>
-<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/PickCube-v1_rt_thumb_first.png' alt='PickCube-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/PickCube-v1_rt_thumb_last.png' alt='PickCube-v1'></div></td>
+<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PickCube-v1_rt_thumb_first.png' alt='PickCube-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PickCube-v1_rt_thumb_last.png' alt='PickCube-v1'></div></td>
 <td><p>✅</p></td>
 <td><p>✅</p></td>
 <td><p>✅</p></td>
@@ -66,7 +66,7 @@ Table of all tasks/environments in this category. Task column is the environment
 </tr>
 <tr class="row-odd">
 <td><p><a href="#picksingleycb-v1">PickSingleYCB-v1</a></p></td>
-<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/PickSingleYCB-v1_rt_thumb_first.png' alt='PickSingleYCB-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/PickSingleYCB-v1_rt_thumb_last.png' alt='PickSingleYCB-v1'></div></td>
+<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PickSingleYCB-v1_rt_thumb_first.png' alt='PickSingleYCB-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PickSingleYCB-v1_rt_thumb_last.png' alt='PickSingleYCB-v1'></div></td>
 <td><p>✅</p></td>
 <td><p>✅</p></td>
 <td><p>❌</p></td>
@@ -74,7 +74,7 @@ Table of all tasks/environments in this category. Task column is the environment
 </tr>
 <tr class="row-odd">
 <td><p><a href="#placesphere-v1">PlaceSphere-v1</a></p></td>
-<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/PlaceSphere-v1_rt_thumb_first.png' alt='PlaceSphere-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/PlaceSphere-v1_rt_thumb_last.png' alt='PlaceSphere-v1'></div></td>
+<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PlaceSphere-v1_rt_thumb_first.png' alt='PlaceSphere-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PlaceSphere-v1_rt_thumb_last.png' alt='PlaceSphere-v1'></div></td>
 <td><p>✅</p></td>
 <td><p>✅</p></td>
 <td><p>❌</p></td>
@@ -82,7 +82,7 @@ Table of all tasks/environments in this category. Task column is the environment
 </tr>
 <tr class="row-odd">
 <td><p><a href="#plugcharger-v1">PlugCharger-v1</a></p></td>
-<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/PlugCharger-v1_rt_thumb_first.png' alt='PlugCharger-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/PlugCharger-v1_rt_thumb_last.png' alt='PlugCharger-v1'></div></td>
+<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PlugCharger-v1_rt_thumb_first.png' alt='PlugCharger-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PlugCharger-v1_rt_thumb_last.png' alt='PlugCharger-v1'></div></td>
 <td><p>✅</p></td>
 <td><p>✅</p></td>
 <td><p>✅</p></td>
@@ -90,7 +90,7 @@ Table of all tasks/environments in this category. Task column is the environment
 </tr>
 <tr class="row-odd">
 <td><p><a href="#pokecube-v1">PokeCube-v1</a></p></td>
-<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/PokeCube-v1_rt_thumb_first.png' alt='PokeCube-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/PokeCube-v1_rt_thumb_last.png' alt='PokeCube-v1'></div></td>
+<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PokeCube-v1_rt_thumb_first.png' alt='PokeCube-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PokeCube-v1_rt_thumb_last.png' alt='PokeCube-v1'></div></td>
 <td><p>✅</p></td>
 <td><p>✅</p></td>
 <td><p>✅</p></td>
@@ -98,7 +98,7 @@ Table of all tasks/environments in this category. Task column is the environment
 </tr>
 <tr class="row-odd">
 <td><p><a href="#pullcube-v1">PullCube-v1</a></p></td>
-<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/PullCube-v1_rt_thumb_first.png' alt='PullCube-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/PullCube-v1_rt_thumb_last.png' alt='PullCube-v1'></div></td>
+<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PullCube-v1_rt_thumb_first.png' alt='PullCube-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PullCube-v1_rt_thumb_last.png' alt='PullCube-v1'></div></td>
 <td><p>✅</p></td>
 <td><p>✅</p></td>
 <td><p>✅</p></td>
@@ -114,7 +114,7 @@ Table of all tasks/environments in this category. Task column is the environment
 </tr>
 <tr class="row-odd">
 <td><p><a href="#pushcube-v1">PushCube-v1</a></p></td>
-<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/PushCube-v1_rt_thumb_first.png' alt='PushCube-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/PushCube-v1_rt_thumb_last.png' alt='PushCube-v1'></div></td>
+<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PushCube-v1_rt_thumb_first.png' alt='PushCube-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PushCube-v1_rt_thumb_last.png' alt='PushCube-v1'></div></td>
 <td><p>✅</p></td>
 <td><p>✅</p></td>
 <td><p>✅</p></td>
@@ -122,7 +122,7 @@ Table of all tasks/environments in this category. Task column is the environment
 </tr>
 <tr class="row-odd">
 <td><p><a href="#pusht-v1">PushT-v1</a></p></td>
-<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/PushT-v1_rt_thumb_first.png' alt='PushT-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/PushT-v1_rt_thumb_last.png' alt='PushT-v1'></div></td>
+<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PushT-v1_rt_thumb_first.png' alt='PushT-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PushT-v1_rt_thumb_last.png' alt='PushT-v1'></div></td>
 <td><p>✅</p></td>
 <td><p>✅</p></td>
 <td><p>✅</p></td>
@@ -130,7 +130,7 @@ Table of all tasks/environments in this category. Task column is the environment
 </tr>
 <tr class="row-odd">
 <td><p><a href="#rollball-v1">RollBall-v1</a></p></td>
-<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/RollBall-v1_rt_thumb_first.png' alt='RollBall-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/RollBall-v1_rt_thumb_last.png' alt='RollBall-v1'></div></td>
+<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/RollBall-v1_rt_thumb_first.png' alt='RollBall-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/RollBall-v1_rt_thumb_last.png' alt='RollBall-v1'></div></td>
 <td><p>✅</p></td>
 <td><p>✅</p></td>
 <td><p>✅</p></td>
@@ -138,7 +138,7 @@ Table of all tasks/environments in this category. Task column is the environment
 </tr>
 <tr class="row-odd">
 <td><p><a href="#stackcube-v1">StackCube-v1</a></p></td>
-<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/StackCube-v1_rt_thumb_first.png' alt='StackCube-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/StackCube-v1_rt_thumb_last.png' alt='StackCube-v1'></div></td>
+<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/StackCube-v1_rt_thumb_first.png' alt='StackCube-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/StackCube-v1_rt_thumb_last.png' alt='StackCube-v1'></div></td>
 <td><p>✅</p></td>
 <td><p>✅</p></td>
 <td><p>✅</p></td>
@@ -154,7 +154,7 @@ Table of all tasks/environments in this category. Task column is the environment
 </tr>
 <tr class="row-odd">
 <td><p><a href="#tworobotpickcube-v1">TwoRobotPickCube-v1</a></p></td>
-<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/TwoRobotPickCube-v1_rt_thumb_first.png' alt='TwoRobotPickCube-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/TwoRobotPickCube-v1_rt_thumb_last.png' alt='TwoRobotPickCube-v1'></div></td>
+<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/TwoRobotPickCube-v1_rt_thumb_first.png' alt='TwoRobotPickCube-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/TwoRobotPickCube-v1_rt_thumb_last.png' alt='TwoRobotPickCube-v1'></div></td>
 <td><p>✅</p></td>
 <td><p>✅</p></td>
 <td><p>✅</p></td>
@@ -162,7 +162,7 @@ Table of all tasks/environments in this category. Task column is the environment
 </tr>
 <tr class="row-odd">
 <td><p><a href="#tworobotstackcube-v1">TwoRobotStackCube-v1</a></p></td>
-<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/TwoRobotStackCube-v1_rt_thumb_first.png' alt='TwoRobotStackCube-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/TwoRobotStackCube-v1_rt_thumb_last.png' alt='TwoRobotStackCube-v1'></div></td>
+<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/TwoRobotStackCube-v1_rt_thumb_first.png' alt='TwoRobotStackCube-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/TwoRobotStackCube-v1_rt_thumb_last.png' alt='TwoRobotStackCube-v1'></div></td>
 <td><p>✅</p></td>
 <td><p>✅</p></td>
 <td><p>❌</p></td>
@@ -193,7 +193,7 @@ The robot must pick up one of the misplaced shapes on the board/kit and insert i
 :::
 
 <div style="display: flex; justify-content: center;">
-<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="/_static/env_thumbnails/AssemblingKits-v1_rt_thumb_first.png">
+<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="../../_static/env_thumbnails/AssemblingKits-v1_rt_thumb_first.png">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/AssemblingKits-v1_rt.mp4" type="video/mp4">
 </video>
 </div>
@@ -218,7 +218,7 @@ A simple task where the objective is to move a peg laying on the table to any up
 :::
 
 <div style="display: flex; justify-content: center;">
-<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="/_static/env_thumbnails/LiftPegUpright-v1_rt_thumb_first.png">
+<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="../../_static/env_thumbnails/LiftPegUpright-v1_rt_thumb_first.png">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/LiftPegUpright-v1_rt.mp4" type="video/mp4">
 </video>
 </div>
@@ -246,7 +246,7 @@ Pick up a orange-white peg and insert the orange end into the box with a hole in
 :::
 
 <div style="display: flex; justify-content: center;">
-<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="/_static/env_thumbnails/PegInsertionSide-v1_rt_thumb_first.png">
+<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="../../_static/env_thumbnails/PegInsertionSide-v1_rt_thumb_first.png">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PegInsertionSide-v1_rt.mp4" type="video/mp4">
 </video>
 </div>
@@ -274,7 +274,7 @@ A simple task where the objective is to grasp a red cube and move it to a target
 :::
 
 <div style="display: flex; justify-content: center;">
-<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="/_static/env_thumbnails/PickCube-v1_rt_thumb_first.png">
+<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="../../_static/env_thumbnails/PickCube-v1_rt_thumb_first.png">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PickCube-v1_rt.mp4" type="video/mp4">
 </video>
 </div>
@@ -308,7 +308,7 @@ Pick up a random object sampled from the [YCB dataset](https://www.ycbbenchmarks
 :::
 
 <div style="display: flex; justify-content: center;">
-<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="/_static/env_thumbnails/PickSingleYCB-v1_rt_thumb_first.png">
+<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="../../_static/env_thumbnails/PickSingleYCB-v1_rt_thumb_first.png">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PickSingleYCB-v1_rt.mp4" type="video/mp4">
 </video>
 </div>
@@ -333,7 +333,7 @@ and the sphere is initialized in [-0.1, -0.05] x [-0.1, 0.1]
 :::
 
 <div style="display: flex; justify-content: center;">
-<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="/_static/env_thumbnails/PlaceSphere-v1_rt_thumb_first.png">
+<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="../../_static/env_thumbnails/PlaceSphere-v1_rt_thumb_first.png">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PlaceSphere-v1_rt.mp4" type="video/mp4">
 </video>
 </div>
@@ -360,7 +360,7 @@ fixed relative to the receptacle.
 :::
 
 <div style="display: flex; justify-content: center;">
-<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="/_static/env_thumbnails/PlugCharger-v1_rt_thumb_first.png">
+<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="../../_static/env_thumbnails/PlugCharger-v1_rt_thumb_first.png">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PlugCharger-v1_rt.mp4" type="video/mp4">
 </video>
 </div>
@@ -389,7 +389,7 @@ A simple task where the objective is to poke a red cube with a peg and push it t
 :::
 
 <div style="display: flex; justify-content: center;">
-<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="/_static/env_thumbnails/PokeCube-v1_rt_thumb_first.png">
+<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="../../_static/env_thumbnails/PokeCube-v1_rt_thumb_first.png">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PokeCube-v1_rt.mp4" type="video/mp4">
 </video>
 </div>
@@ -415,7 +415,7 @@ A simple task where the objective is to pull a cube onto a target.
 :::
 
 <div style="display: flex; justify-content: center;">
-<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="/_static/env_thumbnails/PullCube-v1_rt_thumb_first.png">
+<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="../../_static/env_thumbnails/PullCube-v1_rt_thumb_first.png">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PullCube-v1_rt.mp4" type="video/mp4">
 </video>
 </div>
@@ -463,7 +463,7 @@ A simple task where the objective is to push and move a cube to a goal region in
 :::
 
 <div style="display: flex; justify-content: center;">
-<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="/_static/env_thumbnails/PushCube-v1_rt_thumb_first.png">
+<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="../../_static/env_thumbnails/PushCube-v1_rt_thumb_first.png">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PushCube-v1_rt.mp4" type="video/mp4">
 </video>
 </div>
@@ -493,7 +493,7 @@ In this task, the robot needs to:
 :::
 
 <div style="display: flex; justify-content: center;">
-<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="/_static/env_thumbnails/PushT-v1_rt_thumb_first.png">
+<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="../../_static/env_thumbnails/PushT-v1_rt_thumb_first.png">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PushT-v1_rt.mp4" type="video/mp4">
 </video>
 </div>
@@ -519,7 +519,7 @@ A simple task where the objective is to push and roll a ball to a goal region at
 :::
 
 <div style="display: flex; justify-content: center;">
-<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="/_static/env_thumbnails/RollBall-v1_rt_thumb_first.png">
+<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="../../_static/env_thumbnails/RollBall-v1_rt_thumb_first.png">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/RollBall-v1_rt.mp4" type="video/mp4">
 </video>
 </div>
@@ -547,7 +547,7 @@ The goal is to pick up a red cube and stack it on top of a green cube and let go
 :::
 
 <div style="display: flex; justify-content: center;">
-<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="/_static/env_thumbnails/StackCube-v1_rt_thumb_first.png">
+<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="../../_static/env_thumbnails/StackCube-v1_rt_thumb_first.png">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/StackCube-v1_rt.mp4" type="video/mp4">
 </video>
 </div>
@@ -577,7 +577,7 @@ to move the cube to the goal.
 :::
 
 <div style="display: flex; justify-content: center;">
-<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="/_static/env_thumbnails/TwoRobotPickCube-v1_rt_thumb_first.png">
+<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="../../_static/env_thumbnails/TwoRobotPickCube-v1_rt_thumb_first.png">
 <source src="https://github.com/haosulab/ManiSkill/raw/refs/heads/main/figures/environment_demos/TwoRobotPickCube-v1_rt.mp4" type="video/mp4">
 </video>
 </div>
@@ -610,7 +610,7 @@ The cubes are initially positioned such that each robot can only reach one cube 
 :::
 
 <div style="display: flex; justify-content: center;">
-<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="/_static/env_thumbnails/TwoRobotStackCube-v1_rt_thumb_first.png">
+<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="../../_static/env_thumbnails/TwoRobotStackCube-v1_rt_thumb_first.png">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/TwoRobotStackCube-v1_rt.mp4" type="video/mp4">
 </video>
 </div>

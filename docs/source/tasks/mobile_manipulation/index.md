@@ -26,7 +26,7 @@ Table of all tasks/environments in this category. Task column is the environment
 <tbody>
 <tr class="row-odd">
 <td><p><a href="#opencabinetdoor-v1">OpenCabinetDoor-v1</a></p></td>
-<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/OpenCabinetDrawer-v1_rt_thumb_first.png' alt='OpenCabinetDoor-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/OpenCabinetDrawer-v1_rt_thumb_last.png' alt='OpenCabinetDoor-v1'></div></td>
+<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/OpenCabinetDrawer-v1_rt_thumb_first.png' alt='OpenCabinetDoor-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/OpenCabinetDrawer-v1_rt_thumb_last.png' alt='OpenCabinetDoor-v1'></div></td>
 <td><p>✅</p></td>
 <td><p>✅</p></td>
 <td><p>❌</p></td>
@@ -34,7 +34,7 @@ Table of all tasks/environments in this category. Task column is the environment
 </tr>
 <tr class="row-even">
 <td><p><a href="#opencabinetdrawer-v1">OpenCabinetDrawer-v1</a></p></td>
-<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/OpenCabinetDrawer-v1_rt_thumb_first.png' alt='OpenCabinetDrawer-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/OpenCabinetDrawer-v1_rt_thumb_last.png' alt='OpenCabinetDrawer-v1'></div></td>
+<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/OpenCabinetDrawer-v1_rt_thumb_first.png' alt='OpenCabinetDrawer-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/OpenCabinetDrawer-v1_rt_thumb_last.png' alt='OpenCabinetDrawer-v1'></div></td>
 <td><p>✅</p></td>
 <td><p>✅</p></td>
 <td><p>❌</p></td>
@@ -77,7 +77,7 @@ Use the Fetch mobile manipulation robot to move towards a target cabinet and ope
 :::
 
 <div style="display: flex; justify-content: center;">
-<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="/_static/env_thumbnails/OpenCabinetDrawer-v1_rt_thumb_first.png">
+<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="../../_static/env_thumbnails/OpenCabinetDrawer-v1_rt_thumb_first.png">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/OpenCabinetDrawer-v1_rt.mp4" type="video/mp4">
 </video>
 </div>
