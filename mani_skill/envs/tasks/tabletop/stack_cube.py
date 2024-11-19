@@ -17,7 +17,21 @@ from mani_skill.utils.structs.pose import Pose
 
 @register_env("StackCube-v1", max_episode_steps=50)
 class StackCubeEnv(BaseEnv):
+    """
+    **Task Description:**
+    The goal is to pick up a red cube and stack it on top of a green cube and let go of the cube without it falling
 
+    **Randomizations:**
+    - both cubes have their z-axis rotation randomized
+    - both cubes have their xy positions on top of the table scene randomized. The positions are sampled such that the cubes do not collide with each other
+
+    **Success Conditions:**
+    - the red cube is on top of the green cube (to within half of the cube size)
+    - the red cube is static
+    - the red cube is not being grasped by the robot (robot must let go of the cube)
+    """
+
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/StackCube-v1_rt.mp4"
     SUPPORTED_ROBOTS = ["panda_wristcam", "panda", "fetch"]
     agent: Union[Panda, Fetch]
 

@@ -19,6 +19,22 @@ from mani_skill.utils.structs.pose import Pose
 
 @register_env("PokeCube-v1", max_episode_steps=50)
 class PokeCubeEnv(BaseEnv):
+    """
+    **Task Description:**
+    A simple task where the objective is to poke a red cube with a peg and push it to a target goal position.
+
+    **Randomizations:**
+    - the peg's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat along it's length on the table
+    - the cube's x-coordinate is fixed to peg's x-coordinate + peg half-length (0.12) + 0.1 and y-coordinate is randomized in range [-0.1, 0.1]. It is placed flat on the table
+    - the cube's z-axis rotation is randomized in range [-$\pi$/ 6, $\pi$ / 6]
+    - the target goal region is marked by a red/white circular target. The position of the target is fixed to be the cube xy position + [0.05 + goal_radius, 0]
+
+    **Success Conditions:**
+    - the cube's xy position is within goal_radius (default 0.05) of the target's xy position by euclidean distance
+    - the robot is static
+    """
+
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PokeCube-v1_rt.mp4"
     SUPPORTED_ROBOTS = ["panda", "fetch"]
     agent: Union[Panda, Fetch]
 

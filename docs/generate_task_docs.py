@@ -141,8 +141,10 @@ def main():
                             f.write(f"<source src=\"{cls._sample_video_link}\" type=\"video/mp4\">\n")
                             f.write("</video>\n")
                             f.write("</div>\n")
-
+                        else:
+                            print(f"Warning: {cls.__name__}, {env_id} has no sample video link")
                 else:
+                    print(f"Warning: {cls.__name__}, {env_id} has no docstring")
                     pass
                     # print("      No documentation available")
 

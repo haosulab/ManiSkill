@@ -23,8 +23,6 @@ class PlugChargerEnv(BaseEnv):
     **Task Description:**
     The robot must pick up one of the misplaced shapes on the board/kit and insert it into the correct empty slot.
 
-    **Supported Robots: Panda with RealSense wrist camera**
-
     **Randomizations:**
     - The charger position is randomized on the XY plane on top of the table. The rotation is also randomized
     - The receptacle position is randomized on the XY plane and the rotation is also randomized. Note that the human render camera has its pose
