@@ -205,6 +205,8 @@ class UnitreeG1PlaceAppleInBowlEnv(HumanoidPlaceAppleInBowl):
     - The bowl's 3D position
     """
 
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/UnitreeG1PlaceAppleInBowl-v1_rt.mp4"
+
     SUPPORTED_ROBOTS = ["unitree_g1_simplified_upper_body_right_arm"]
     agent: Union[UnitreeG1UpperBodyRightArm]
     kitchen_scene_scale = 0.82
