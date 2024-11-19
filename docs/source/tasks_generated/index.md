@@ -24,6 +24,13 @@ Note that some tasks have different state observation data provided depending on
 
 ```{toctree}
 :maxdepth: 1
+
+control/index
 table_top_gripper/index
+quadruped/index
 humanoid/index
+mobile_manipulation/index
+dextrous/index
+digital_twins/index
+drawing/index
 ```

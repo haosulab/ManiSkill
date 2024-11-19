@@ -3,18 +3,48 @@
 import mani_skill.envs
 from mani_skill.utils.registration import REGISTERED_ENVS
 
-TASK_CATEGORIES_TO_INCLUDE = ["tabletop", "humanoid"]#"mobile_manipulation", "quadruped", "control", "drawing", "dexterity"]
-TASK_CATEGORIES_NAME_MAP = {"tabletop": "table_top_gripper"}
+TASK_CATEGORIES_TO_INCLUDE = [
+    "tabletop",
+    "humanoid",
+    "mobile_manipulation", "quadruped", "control", "drawing"
+]
+
+TASK_CATEGORIES_NAME_MAP = {
+    "tabletop": "table_top_gripper"
+}
+
 GLOBAL_TASK_HEADER = """[asset-badge]: https://img.shields.io/badge/download%20asset-yes-blue.svg
 [dense-reward-badge]: https://img.shields.io/badge/dense%20reward-yes-green.svg
 [sparse-reward-badge]: https://img.shields.io/badge/sparse%20reward-yes-green.svg
 [no-dense-reward-badge]: https://img.shields.io/badge/dense%20reward-no-red.svg
 [no-sparse-reward-badge]: https://img.shields.io/badge/sparse%20reward-no-red.svg
 """
-TASK_CATEGORIES_HEADERS = {"tabletop":"""# Table-Top 2 Finger Gripper Tasks
 
-These are tasks situated on table and involve a two-finger gripper arm robot manipulating objects on the surface."""
+TASK_CATEGORIES_HEADERS = {
+    "tabletop": """# Table-Top 2 Finger Gripper Tasks
+
+These are tasks situated on table and involve a two-finger gripper arm robot manipulating objects on the surface.""",
+
+    "humanoid": """# Humanoid Tasks
+Both real-world humanoids and the Mujoco humanoid are supported in ManiSkill, and we are still in the process of adding more tasks. Humanoid category of tasks generally considers control of robots with legs and two arms.""",
+
+    "mobile_manipulation": """# Mobile Manipulation Tasks
+
+These are tasks where a mobile manipulator is used to manipulate objects. This cateogry primarily uses robots with mobile bases like Fetch or Stretch robots""",
+
+    "quadruped": """# Quadruped Tasks
+
+These are tasks where a quadruped robot is used for locomotion and/or manipulation. This cateogry primarily uses robots with four legs like the ANYmal or Unitree go robots""",
+
+    "control": """# Control Tasks
+
+These are classic control tasks where the objective is to control a robot to reach a particular state, similar to the [DM Control suite](https://github.com/deepmind/dm_control) but with GPU parallelized simulation and rendering""",
+
+    "drawing": """# Drawing Tasks
+
+These are tasks where the robot is controlled to draw a specific shape or pattern""",
 }
+
 def main():
     import os
     import importlib
