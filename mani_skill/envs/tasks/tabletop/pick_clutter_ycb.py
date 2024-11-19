@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, List, Union
+from typing import Dict, List, Union
 
 import numpy as np
 import sapien
@@ -23,7 +23,7 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 class PickClutterEnv(BaseEnv):
     """Base environment picking items out of clutter type of tasks. Flexibly supports using different configurations and object datasets"""
 
-    SUPPORTED_REWARD_MODES = ["sparse", "none"]
+    SUPPORTED_REWARD_MODES = ["none"]
     SUPPORTED_ROBOTS = ["panda", "fetch"]
     agent: Union[Panda, Fetch]
 
@@ -183,16 +183,8 @@ class PickClutterEnv(BaseEnv):
         }
 
     def _get_obs_extra(self, info: Dict):
+
         return dict()
-
-    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        return torch.zeros(self.num_envs, device=self.device)
-
-    def compute_normalized_dense_reward(
-        self, obs: Any, action: torch.Tensor, info: Dict
-    ):
-        max_reward = 1.0
-        return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
 
 
 @register_env(
@@ -202,6 +194,7 @@ class PickClutterEnv(BaseEnv):
 )
 class PickClutterYCBEnv(PickClutterEnv):
     DEFAULT_EPISODE_JSON = f"{ASSET_DIR}/tasks/pick_clutter/ycb_train_5k.json.gz"
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PickClutterYCB-v1_rt.mp4"
 
     def _load_model(self, model_id):
         builder = actors.get_actor_builder(self.scene, id=f"ycb:{model_id}")

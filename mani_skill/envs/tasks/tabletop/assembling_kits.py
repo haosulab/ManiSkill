@@ -23,6 +23,21 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
     "AssemblingKits-v1", asset_download_ids=["assembling_kits"], max_episode_steps=200
 )
 class AssemblingKitsEnv(BaseEnv):
+    """
+    **Task Description:**
+    The robot must pick up one of the misplaced shapes on the board/kit and insert it into the correct empty slot.
+
+    **Randomizations:**
+    - the kit geometry is randomized, with different already inserted shapes and different holes affording insertion of specific shapes. (during reconfiguration)
+    - the misplaced shape's geometry is sampled from one of 20 different shapes. (during reconfiguration)
+    - the misplaced shape is randomly spawned anywhere on top of the board with a random z-axis rotation
+
+    **Success Conditions:**
+    - the misplaced shape is inserted completely into the correct slot
+    """
+
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/AssemblingKits-v1_rt.mp4"
+
     SUPPORTED_REWARD_MODES = ["sparse", "none"]
     SUPPORTED_ROBOTS = ["panda_wristcam"]
     agent: Union[PandaWristCam]

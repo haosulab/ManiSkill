@@ -188,6 +188,25 @@ class HumanoidPlaceAppleInBowl(HumanoidPickPlaceEnv):
 
 @register_env("UnitreeG1PlaceAppleInBowl-v1", max_episode_steps=100)
 class UnitreeG1PlaceAppleInBowlEnv(HumanoidPlaceAppleInBowl):
+    """
+    **Task Description:**
+    Control the humanoid unitree G1 robot to grab an apple with its right arm and place it in a bowl to the side
+
+    **Randomizations:**
+    - the bowl's xy position is randomized on top of a table in the region [0.025, 0.025] x [-0.025, -0.025]. It is placed flat on the table
+    - the apple's xy position is randomized on top of a table in the region [0.025, 0.025] x [-0.025, -0.025]. It is placed flat on the table
+    - the apple's z-axis rotation is randomized to a random angle
+
+    **Success Conditions:**
+    - the apple position is within 0.05m euclidean distance of the bowl's position.
+    - the robot's right hand is kept outside the bowl and is above it by at least 0.125m.
+
+    **Goal Specification:**
+    - The bowl's 3D position
+    """
+
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/UnitreeG1PlaceAppleInBowl-v1_rt.mp4"
+
     SUPPORTED_ROBOTS = ["unitree_g1_simplified_upper_body_right_arm"]
     agent: Union[UnitreeG1UpperBodyRightArm]
     kitchen_scene_scale = 0.82

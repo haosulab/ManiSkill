@@ -20,20 +20,18 @@ from mani_skill.utils.structs.types import Array, GPUMemoryConfig, SimConfig
 @register_env("RollBall-v1", max_episode_steps=80)
 class RollBallEnv(BaseEnv):
     """
-    Task Description
-    ----------------
+    **Task Description:**
     A simple task where the objective is to push and roll a ball to a goal region at the other end of the table
 
-    Randomizations
-    --------------
-    - the ball's xy position is randomized on top of a table in the region [0.2, 0.5] x [-0.4, 0.7]. It is placed flat on the table
-    - the target goal region is marked by a red/white circular target. The position of the target is randomized on top of a table in the region [-0.4, -0.7] x [0.2, -0.9]
+    **Randomizations:**
+    - The ball's xy position is randomized on top of a table in the region [0.2, 0.5] x [-0.4, 0.7]. It is placed flat on the table
+    - The target goal region is marked by a red/white circular target. The position of the target is randomized on top of a table in the region [-0.4, -0.7] x [0.2, -0.9]
 
-    Success Conditions
-    ------------------
-    - the ball's xy position is within goal_radius (default 0.1) of the target's xy position by euclidean distance.
+    **Success Conditions:**
+    - The ball's xy position is within goal_radius (default 0.1) of the target's xy position by euclidean distance.
     """
 
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/RollBall-v1_rt.mp4"
     SUPPORTED_ROBOTS = ["panda"]
 
     agent: Panda
