@@ -26,6 +26,27 @@ WARNED_ONCE = False
 
 @register_env("PickSingleYCB-v1", max_episode_steps=50, asset_download_ids=["ycb"])
 class PickSingleYCBEnv(BaseEnv):
+    """
+    **Task Description:**
+    Pick up a random object sampled from the [YCB dataset](https://www.ycbbenchmarks.com/) and move it to a random goal position
+
+    **Randomizations:**
+    - the object's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat on the table
+    - the object's z-axis rotation is randomized
+    - the object geometry is randomized by randomly sampling any YCB object. (during reconfiguration)
+
+    **Success Conditions:**
+    - the object position is within goal_thresh (default 0.025) euclidean distance of the goal position
+    - the robot is static (q velocity < 0.2)
+
+    **Goal Specification:**
+    - 3D goal position (also visualized in human renders)
+
+    **Additional Notes**
+    - On GPU simulation, in order to collect data from every possible object in the YCB database we recommend using at least 128 parallel environments or more, otherwise you will need to reconfigure in order to sample new objects.
+    """
+
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PickSingleYCB-v1_rt.mp4"
 
     SUPPORTED_ROBOTS = ["panda", "panda_wristcam", "fetch"]
     agent: Union[Panda, PandaWristCam, Fetch]
