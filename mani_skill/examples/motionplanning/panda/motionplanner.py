@@ -170,8 +170,8 @@ class PandaArmMotionPlanningSolver:
                 self.base_env.render_human()
         return obs, reward, terminated, truncated, info
 
-    def close_gripper(self, t=6):
-        self.gripper_state = CLOSED
+    def close_gripper(self, t=6, gripper_state = CLOSED):
+        self.gripper_state = gripper_state
         qpos = self.robot.get_qpos()[0, :-2].cpu().numpy()
         for i in range(t):
             if self.control_mode == "pd_joint_pos":
