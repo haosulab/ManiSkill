@@ -2,7 +2,7 @@
 
 ## Panda Arm Solutions ##
 
-for env_id in PushCube-v1 PickCube-v1 StackCube-v1 PegInsertionSide-v1 PlugCharger-v1
+for env_id in PushCube-v1 PickCube-v1 StackCube-v1 PegInsertionSide-v1 PlugCharger-v1 LiftPegUpright-v1 PullCubeTool-v1 PullCube-v1
 do
     python -m mani_skill.examples.motionplanning.panda.run --env-id $env_id \
       --traj-name="trajectory" --only-count-success --save-video -n 1 \
