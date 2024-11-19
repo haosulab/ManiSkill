@@ -130,7 +130,7 @@ def main():
                 from mani_skill.envs.sapien_env import BaseEnv
                 has_custom_dense = (
                     hasattr(cls, "compute_dense_reward") and
-                    cls.compute_dense_reward != BaseEnv.compute_dense_reward
+                    (cls.compute_dense_reward != BaseEnv.compute_dense_reward or cls.compute_normalized_dense_reward != BaseEnv.compute_normalized_dense_reward)
                 )
                 if has_custom_dense and "dense" not in cls.SUPPORTED_REWARD_MODES:
                     print(f"Warning: {cls.__name__}, {env_id} has custom dense reward but dense not in SUPPORTED_REWARD_MODES")
@@ -152,6 +152,7 @@ def main():
                                 f.write("![sparse-reward][sparse-reward-badge]\n")
                             else:
                                 f.write("![no-sparse-reward][no-sparse-reward-badge]\n")
+
                         """:::{dropdown} Task Card\n:icon: note\n:color: primary"""
                         # Clean up docstring and write to file
                         f.write(":::{dropdown} Task Card\n:icon: note\n:color: primary\n\n")

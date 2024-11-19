@@ -33,6 +33,8 @@ class TableTopFreeDrawEnv(BaseEnv):
     None
     """
 
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/TableTopFreeDraw-v1_rt.mp4"
+
     MAX_DOTS = 1010
     """
     The total "ink" available to use and draw with before you need to call env.reset. NOTE that on GPU simulation it is not recommended to have a very high value for this as it can slow down rendering
