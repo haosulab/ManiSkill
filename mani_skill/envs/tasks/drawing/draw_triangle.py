@@ -241,7 +241,7 @@ class DrawTriangleEnv(BaseEnv):
             self.vertices[env_idx] += target_pos.unsqueeze(1)
 
             self.triangles = self.generate_triangle_with_points(
-                self.n, self.vertices[:, :, :-1]
+                50, self.vertices[:, :, :-1]
             )
 
             self.dots_dist[env_idx] = torch.ones((b, 300)) * -1
