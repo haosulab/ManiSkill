@@ -245,7 +245,7 @@ class DrawTriangleEnv(BaseEnv):
             )
 
             self.dots_dist[env_idx] = torch.ones((b, 300)) * -1
-            self.ref_dist[env_idx] = torch.zeros((b, (self.n * 3) + 3)).to(bool)
+            self.ref_dist[env_idx] = torch.zeros((b, 153)).to(bool)
 
             for dot in self.dots:
                 # initially spawn dots in the table so they aren't seen
