@@ -105,6 +105,14 @@ Table of all tasks/environments in this category. Task column is the environment
 <td><p>50</p></td>
 </tr>
 <tr class="row-odd">
+<td><p><a href="#pullcubetool-v1">PullCubeTool-v1</a></p></td>
+<td><div style='display:flex;gap:4px;align-items:center'> </div></td>
+<td><p>✅</p></td>
+<td><p>✅</p></td>
+<td><p>✅</p></td>
+<td><p>100</p></td>
+</tr>
+<tr class="row-odd">
 <td><p><a href="#pushcube-v1">PushCube-v1</a></p></td>
 <td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/PushCube-v1_rt_thumb_first.png' alt='PushCube-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='/_static/env_thumbnails/PushCube-v1_rt_thumb_last.png' alt='PushCube-v1'></div></td>
 <td><p>✅</p></td>
@@ -411,6 +419,28 @@ A simple task where the objective is to pull a cube onto a target.
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PullCube-v1_rt.mp4" type="video/mp4">
 </video>
 </div>
+
+## PullCubeTool-v1
+
+![dense-reward][dense-reward-badge]
+![sparse-reward][sparse-reward-badge]
+![demos][demos-badge]
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description**
+Given an L-shaped tool that is within the reach of the robot, leverage the
+tool to pull a cube that is out of it's reach
+
+**Randomizations**
+- The cube's position (x,y) is randomized on top of a table in the region "<out of manipulator
+reach, but within reach of tool>". It is placed flat on the table
+- The target goal region is the region on top of the table marked by "<within reach of arm>"
+
+**Success Conditions**
+- The cube's xy position is within the goal region of the arm's base (marked by reachability)
+:::
 
 ## PushCube-v1
 
