@@ -34,7 +34,7 @@ class DrawSVGEnv(BaseEnv):
     """The brushes radius"""
     BRUSH_COLORS = [[0.8, 0.2, 0.2, 1]]
     """The colors of the brushes. If there is more than one color, each parallel environment will have a randomly sampled color."""
-    THRESHOLD = 0.05
+    THRESHOLD = 0.1
 
     SUPPORTED_REWARD_MODES = ["sparse"]
 
@@ -98,8 +98,10 @@ class DrawSVGEnv(BaseEnv):
             import svgpathtools
             from svgpathtools import CubicBezier, Line, QuadraticBezier
         except ImportError:
-            raise ImportError("svgpathtools not installed. Install with pip install svgpathtools")
-        
+            raise ImportError(
+                "svgpathtools not installed. Install with pip install svgpathtools"
+            )
+
         self.table_scene = TableSceneBuilder(self, robot_init_qpos_noise=0)
         self.table_scene.build()
 
@@ -207,7 +209,6 @@ class DrawSVGEnv(BaseEnv):
         self.canvas = self.canvas.build_static(name="canvas")
 
         self.dots = []
-        self.dot_pos = None
         color_choices = torch.randint(0, len(self.BRUSH_COLORS), (self.num_envs,))
         for i in range(self.MAX_DOTS):
             actors = []
@@ -241,6 +242,11 @@ class DrawSVGEnv(BaseEnv):
             base_color=np.array([10, 10, 10, 255]) / 255,
         )
 
+        self.dots_dist = torch.ones((self.num_envs, 500)) * -1
+        self.ref_dist = torch.zeros((self.num_envs, self.original_points.shape[0])).to(
+            bool
+        )
+
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         self.draw_step = 0
         with torch.device(self.device):
@@ -254,16 +260,27 @@ class DrawSVGEnv(BaseEnv):
             rot_mat = quaternion_to_matrix(qs).to(self.device)
             self.goal_outline.set_pose(Pose.create_from_pq(p=target_pos, q=qs))
 
-            self.points = torch.from_numpy(np.tile(self.original_points, (b, 1, 1))).to(
-                self.device
-            )  # b, n, 3
+            if hasattr(self, "vertices"):
+                self.points[env_idx] = torch.from_numpy(
+                    np.tile(self.original_points, (b, 1, 1))
+                ).to(
+                    self.device
+                )  # b, 3, 3
+            else:
+                self.points = torch.from_numpy(
+                    np.tile(self.original_points, (b, 1, 1))
+                ).to(self.device)
 
-            self.points = (
-                rot_mat.double() @ self.points.transpose(-1, -2).double()
+            self.points[env_idx] = (
+                rot_mat.double() @ self.points[env_idx].transpose(-1, -2).double()
             ).transpose(
                 -1, -2
             )  # rotation matrix
-            self.points += target_pos.unsqueeze(1)
+            self.points[env_idx] += target_pos.unsqueeze(1)
+            self.dots_dist[env_idx] = torch.ones((self.num_envs, 500)) * -1
+            self.ref_dist[env_idx] = torch.zeros(
+                (self.num_envs, self.original_points.shape[0])
+            ).to(bool)
 
             for dot in self.dots:
                 # initially spawn dots in the table so they aren't seen
@@ -296,12 +313,6 @@ class DrawSVGEnv(BaseEnv):
         # move the next unused dot to the robot's brush position. All unused dots are initialized inside the table so they aren't visible
         new_dot_pos = Pose.create_from_pq(robot_brush_pos, euler2quat(0, np.pi / 2, 0))
         self.dots[self.draw_step].set_pose(new_dot_pos)
-        if new_dot_pos.get_p()[:, -1] > 0:
-            if self.dot_pos == None:
-                self.dot_pos = new_dot_pos.get_p()[:, None, :]
-            self.dot_pos = torch.cat(
-                (self.dot_pos, new_dot_pos.get_p()[:, None, :]), dim=1
-            )
 
         self.draw_step += 1
 
@@ -321,24 +332,44 @@ class DrawSVGEnv(BaseEnv):
         if "state" in self.obs_mode:
             obs.update(
                 goal_pose=self.goal_outline.pose.raw_pose.reshape(self.num_envs, -1),
-                tcp_to_verts_pos=(self.points - self.agent.tcp.pose.p.unsqueeze(1)).reshape(self.num_envs, -1),
+                tcp_to_verts_pos=(
+                    self.points - self.agent.tcp.pose.p.unsqueeze(1)
+                ).reshape(self.num_envs, -1),
                 goal_pos=(self.goal_outline.pose.p).reshape(self.num_envs, -1),
                 vertices=self.points.reshape(self.num_envs, -1),
-                continuous=torch.ones((self.num_envs, 1),device=self.device) * self.continuous  # if the path is continuous
+                continuous=torch.ones((self.num_envs, 1), device=self.device)
+                * self.continuous,  # if the path is continuous
             )
 
         return obs
 
     def success_check(self):
-        if self.dot_pos == None or len(self.dot_pos) == 0:
-            return torch.Tensor([False]).to(bool)
-        drawn_pts = self.dot_pos[:, :, :-1]
-
-        distance_matrix = torch.sqrt(
-            torch.sum(
-                (drawn_pts[:, :, None, :] - self.points[:, None, :, :2]) ** 2, axis=-1
+        if self.draw_step > 0:
+            current_dot = self.dots[self.draw_step - 1].pose.p.reshape(
+                self.num_envs, 1, 3
+            )  # b,3
+            z_mask = current_dot[:, :, 2] < 0
+            dist = (
+                torch.sqrt(
+                    torch.sum(
+                        (current_dot[:, :, None, :2] - self.points[:, None, :, :2])
+                        ** 2,
+                        dim=-1,
+                    )
+                )
+                < self.THRESHOLD
             )
-        )
+            self.ref_dist = torch.logical_or(
+                self.ref_dist, (1 - z_mask.int()) * dist.reshape((self.num_envs, -1))
+            )
+            self.dots_dist[:, self.draw_step - 1] = torch.where(
+                z_mask, -1, torch.any(dist, dim=-1).reshape(self.num_envs, 1)
+            )
 
-        Y_closeness = torch.min(distance_matrix, dim=1).values < self.THRESHOLD
-        return torch.Tensor([torch.all(Y_closeness)]).to(bool)
+            mask = self.dots_dist > -1
+            # for valid drawn points
+            return torch.logical_and(
+                torch.all(self.dots_dist[mask], dim=-1),
+                torch.all(self.ref_dist, dim=-1),
+            )
+        return torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)

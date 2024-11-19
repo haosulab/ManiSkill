@@ -1,5 +1,4 @@
 import math
-import random
 from typing import Dict
 
 import mani_skill.envs.utils.randomization as randomization
@@ -17,8 +16,7 @@ from mani_skill.utils.scene_builder.table.scene_builder import \
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import SceneConfig, SimConfig
-from transforms3d.euler import euler2quat, quat2euler
-from transforms3d.quaternions import quat2mat
+from transforms3d.euler import euler2quat
 
 
 @register_env("DrawTriangle-v1", max_episode_steps=300)
@@ -208,6 +206,8 @@ class DrawTriangleEnv(BaseEnv):
             name="goal_tri",
             base_color=np.array([10, 10, 10, 255]) / 255,
         )
+        self.dots_dist = torch.ones((self.num_envs, 300)) * -1
+        self.ref_dist = torch.zeros((self.num_envs, 153)).to(bool)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         self.draw_step = 0
@@ -221,7 +221,7 @@ class DrawTriangleEnv(BaseEnv):
             qs = randomization.random_quaternions(b, lock_x=True, lock_y=True)
             mats = quaternion_to_matrix(qs).to(self.device)
             self.goal_tri.set_pose(Pose.create_from_pq(p=target_pos, q=qs))
-            
+
             if hasattr(self, "vertices"):
                 self.vertices[env_idx] = torch.from_numpy(
                     np.tile(self.original_verts, (b, 1, 1))
@@ -231,9 +231,7 @@ class DrawTriangleEnv(BaseEnv):
             else:
                 self.vertices = torch.from_numpy(
                     np.tile(self.original_verts, (b, 1, 1))
-                ).to(
-                    self.device
-                )
+                ).to(self.device)
 
             self.vertices[env_idx] = (
                 mats.double() @ self.vertices[env_idx].transpose(-1, -2).double()
@@ -243,8 +241,11 @@ class DrawTriangleEnv(BaseEnv):
             self.vertices[env_idx] += target_pos.unsqueeze(1)
 
             self.triangles = self.generate_triangle_with_points(
-                100, self.vertices[:, :, :-1]
+                self.n, self.vertices[:, :, :-1]
             )
+
+            self.dots_dist[env_idx] = torch.ones((b, 300)) * -1
+            self.ref_dist[env_idx] = torch.zeros((b, (self.n * 3) + 3)).to(bool)
 
             for dot in self.dots:
                 # initially spawn dots in the table so they aren't seen
@@ -277,7 +278,7 @@ class DrawTriangleEnv(BaseEnv):
         # move the next unused dot to the robot's brush position. All unused dots are initialized inside the table so they aren't visible
         new_dot_pos = Pose.create_from_pq(robot_brush_pos, euler2quat(0, np.pi / 2, 0))
         self.dots[self.draw_step].set_pose(new_dot_pos)
-       
+
         self.draw_step += 1
 
         # on GPU sim we have to call _gpu_apply_all() to apply the changes we make to object poses.
@@ -296,7 +297,9 @@ class DrawTriangleEnv(BaseEnv):
         if "state" in self.obs_mode:
             obs.update(
                 goal_pose=self.goal_tri.pose.raw_pose.reshape(self.num_envs, -1),
-                tcp_to_verts_pos=(self.vertices - self.agent.tcp.pose.p.unsqueeze(1)).reshape(self.num_envs, -1),
+                tcp_to_verts_pos=(
+                    self.vertices - self.agent.tcp.pose.p.unsqueeze(1)
+                ).reshape(self.num_envs, -1),
                 goal_pos=self.goal_tri.pose.p.reshape(self.num_envs, -1),
                 vertices=self.vertices.reshape(self.num_envs, -1),
             )
@@ -304,6 +307,7 @@ class DrawTriangleEnv(BaseEnv):
         return obs
 
     def generate_triangle_with_points(self, n, vertices):
+        # interpolates a triangle from vertices to have n points. total
         batch_size = vertices.shape[0]
 
         all_points = []
@@ -322,35 +326,39 @@ class DrawTriangleEnv(BaseEnv):
         return all_points
 
     def success_check(self):
-        import time
-        a = time.time()
-        dot_pos = []
-        for index in range(self.draw_step):
-            dot_pos.append(self.dots[index].pose.p)
-        print(time.time() -a)
 
-        if len(dot_pos) < 10:
-            return torch.zeros((self.num_envs), device=self.device).to(bool)
-        
-        a = time.time()
-        dot_pos = torch.vstack(dot_pos).reshape(self.num_envs, -1, 3)
-        positive_z_mask = dot_pos[:, :, 2] > 0  
-        
-        batch_size = dot_pos.shape[0]
-        result = torch.zeros(batch_size, dtype=torch.bool, device=self.device)
-        
-        for b in range(batch_size):
-            valid_points = dot_pos[b][positive_z_mask[b]][...,:2]  # shape: [num_valid_in_batch, 3]
-            if len(valid_points) > 0:  
-                distance_matrix = torch.sqrt(
+        if self.draw_step > 0:
+            current_dot = self.dots[self.draw_step - 1].pose.p.reshape(
+                self.num_envs, 1, 3
+            )  # b,3
+            z_mask = current_dot[:, :, 2] < 0
+
+            # distance for newly added pointed to all ref points
+            dist = (
+                torch.sqrt(
                     torch.sum(
-                        (valid_points[:, None, :] - self.triangles[b]) ** 2,
-                        dim=-1
+                        (current_dot[:, :, None, :2] - self.triangles[:, None, :, :2])
+                        ** 2,
+                        dim=-1,
                     )
-                )  
-                min_distances = torch.min(distance_matrix, dim=1).values  # shape: [num_valid_in_batch]
-                result[b] = torch.all(min_distances < self.THRESHOLD)
-            else:
-                result[b] = False 
+                )
+                < self.THRESHOLD
+            )
 
-        return result
+            # if a reference point has a draw point near it
+            self.ref_dist = torch.logical_or(
+                self.ref_dist, (1 - z_mask.int()) * dist.reshape((self.num_envs, 153))
+            )
+
+            # if current drawn point is close to a reference point. -1 if the drawn point hasn't actually been drawn yet
+            self.dots_dist[:, self.draw_step - 1] = torch.where(
+                z_mask, -1, torch.any(dist, dim=-1).reshape(self.num_envs, 1)
+            )
+
+            mask = self.dots_dist > -1
+            # for valid drawn points
+            return torch.logical_and(
+                torch.all(self.dots_dist[mask], dim=-1),
+                torch.all(self.ref_dist, dim=-1),
+            )
+        return torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
