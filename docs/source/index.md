@@ -34,6 +34,7 @@ Users looking for the original ManiSkill2 can find the commit for that codebase 
 
 user_guide/index
 tasks/index
+tasks_generated/index
 robots/index
 contributing/index
 roadmap/index
