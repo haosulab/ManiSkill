@@ -152,7 +152,8 @@ def main():
                                 f.write("![sparse-reward][sparse-reward-badge]\n")
                             else:
                                 f.write("![no-sparse-reward][no-sparse-reward-badge]\n")
-
+                        if REGISTERED_ENVS[env_id].asset_download_ids is not None and len(REGISTERED_ENVS[env_id].asset_download_ids) > 0:
+                            f.write("![asset-badge][asset-badge]\n")
                         """:::{dropdown} Task Card\n:icon: note\n:color: primary"""
                         # Clean up docstring and write to file
                         f.write(":::{dropdown} Task Card\n:icon: note\n:color: primary\n\n")
