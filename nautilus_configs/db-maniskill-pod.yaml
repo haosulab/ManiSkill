@@ -11,16 +11,24 @@ spec:
     #   "jupyter lab --NotebookApp.token=627a7b3b --ip=0.0.0.0 --allow-root >> /pers_vol/dwait/jupyter.log 2>&1"
     # ]
     args: [
-          "export WANDB_API_KEY=<wandb-api-key> && \
-          python examples/baselines/sac/sac.py \
-                 --wandb-entity ucsd_erl --wandb-project-name maniskill_experiments \
-                 --env-id PickCube-v1 \
-                 --robot panda \
-                 --training_freq 64 \
-                 --num-envs 64 \
-                 --num-eval-steps 100 \
-                 --track \
-            > /pers_vol/dwait/logs/$(date +%Y-%m-%d_%H-%M-%S).log"
+          # "export WANDB_API_KEY=ebf815cc1a406e10c78314a2a137fa38d83c0b02 && \
+          # python examples/baselines/sac/sac.py \
+          #        --wandb-entity ucsd_erl --wandb-project-name maniskill_experiments \
+          #        --env-id PickCube-v1 \
+          #        --robot panda \
+          #        --training_freq 64 \
+          #        --num-envs 64 \
+          #        --num-eval-steps 100 \
+          #        --track \
+          #   > /pers_vol/dwait/logs/$(date +%Y-%m-%d_%H-%M-%S).log"
+          "export WANDB_API_KEY=ebf815cc1a406e10c78314a2a137fa38d83c0b02 && \
+          python examples/baselines/tdmpc2/train.py \
+                  model_size=5 steps=10_000_000 seed=1 exp_name=tdmpc2_test \
+                  env_id=PickCube-v1 robot_uids=xarm6_allegro_left \
+                  control_mode=pd_joint_vel \
+                  env_type=gpu num_envs=32 obs=state \ 
+                  save_video_local=true wandb=true \
+              > /pers_vol/dwait/logs/$(date +%Y-%m-%d_%H-%M-%S)-tdmpc.log"
         ]
     volumeMounts:
     - mountPath: /pers_vol

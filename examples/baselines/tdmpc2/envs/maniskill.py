@@ -40,6 +40,7 @@ def make_envs(cfg, num_envs, record_video_path, is_eval, logger):
 		gym.make, 
 		disable_env_checker=True,
 		id=cfg.env_id, 
+		robot_uids=cfg.robot_uids,
 		obs_mode=cfg.obs, 
 		render_mode=cfg.render_mode, 
 		sensor_configs=dict(width=cfg.render_size, height=cfg.render_size)

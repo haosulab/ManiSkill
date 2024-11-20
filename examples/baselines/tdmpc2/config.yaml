@@ -3,6 +3,7 @@ defaults:
 
 # environment
 env_id: PushCube-v1
+robot_uids: panda
 obs: state # or rgb
 control_mode: default # or pd_joint_delta_pos or pd_ee_delta_pose
 num_envs: 32
@@ -70,10 +71,10 @@ dropout: 0.01
 simnorm_dim: 8
 
 # logging
-wandb_project:
+wandb_entity: ucsd_erl 
+wandb_project: maniskill_experiments
 wandb_group: 
-wandb_name:
-wandb_entity: 
+wandb_name: tdmpc2
 wandb_silent: false
 wandb: false # enable wandb
 save_csv: true
