@@ -1,6 +1,7 @@
 from typing import Any, Dict, Union
 
 import numpy as np
+import sapien
 import torch
 import torch.random
 from transforms3d.euler import euler2quat
@@ -18,6 +19,19 @@ from mani_skill.utils.structs.types import Array
 
 @register_env("PullCube-v1", max_episode_steps=50)
 class PullCubeEnv(BaseEnv):
+    """
+    **Task Description:**
+    A simple task where the objective is to pull a cube onto a target.
+
+    **Randomizations:**
+    - the cube's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1].
+    - the target goal region is marked by a red and white target. The position of the target is fixed to be the cube's xy position - [0.1 + goal_radius, 0]
+
+    **Success Conditions:**
+    - the cube's xy position is within goal_radius (default 0.1) of the target's xy position by euclidean distance.
+    """
+
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PullCube-v1_rt.mp4"
     SUPPORTED_ROBOTS = ["panda", "fetch"]
     agent: Union[Panda, Fetch]
     goal_radius = 0.1
@@ -37,6 +51,9 @@ class PullCubeEnv(BaseEnv):
         pose = look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
+
     def _load_scene(self, options: dict):
         self.table_scene = TableSceneBuilder(
             env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
@@ -50,6 +67,7 @@ class PullCubeEnv(BaseEnv):
             color=np.array([12, 42, 160, 255]) / 255,
             name="cube",
             body_type="dynamic",
+            initial_pose=sapien.Pose(p=[0, 0, self.cube_half_size]),
         )
 
         # create target

@@ -65,44 +65,22 @@ class WhiteTableSceneBuilder(TableSceneBuilder):
 @register_env("PushT-v1", max_episode_steps=100)
 class PushTEnv(BaseEnv):
     """
-    Task Description
-    ----------------
-    Easier Digital Twin of real life push-T task from Diffusion Policy: https://diffusion-policy.cs.columbia.edu/
-    "In this task, the robot needs to
-    1 precisely push the T- shaped block into the target region, and
-    2 move the end-effector to the end-zone which terminates the episode. [2 Not required for PushT-easy-v1]"
+    **Task Description:**
+    A simulated version of the real-world push-T task from Diffusion Policy: https://diffusion-policy.cs.columbia.edu/
 
-    Randomizations
-    --------------
+    In this task, the robot needs to:
+    1. Precisely push the T-shaped block into the target region, and
+    2. Move the end-effector to the end-zone which terminates the episode. [2 Not required for PushT-easy-v1]
+
+    **Randomizations:**
     - 3D T block initial position on table  [-1,1] x [-1,2] + T Goal initial position
     - 3D T block initial z rotation         [0,2pi]
 
-    Success Conditions
-    ------------------
+    **Success Conditions:**
     - The T block covers 90% of the 2D goal T's area
-
-    Identical Parameters
-    --------------------
-    - 3D T block                     (3D cad link in their github README: https://github.com/real-stanford/diffusion_policy)
-    - TODO (xhin): ur5e end-effector (3D cad link in their github README: https://github.com/real-stanford/diffusion_policy)
-
-    Params To-Tune (Unspecified Real-World Parameters)
-    --------------------------------------------------
-    - Randomizations
-    - T Goal initial position on table      [-0.156,-0.1] (center of mass of T)
-    - T Goal initial z rotation             (5pi/3)
-    - End-effector initial position         [-0.322, 0.284, 0.024]
-    - intersection % threshold for success  90%
-    - Table View Camera parameters          sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
-
-    TODO's (xhin):
-    --------------
-    - Add hand mounted camera for panda_stick robot, for visual rl
-    - Add support for ur5e robot with hand mounted camera and real life end effector (3D cad link in their github README)
-    - Tune Unspecified Real-World Parameters
-    - Add robot qpos to randomizations
     """
 
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PushT-v1_rt.mp4"
     SUPPORTED_ROBOTS = ["panda_stick"]
     agent: PandaStick
 
@@ -172,6 +150,9 @@ class PushTEnv(BaseEnv):
         return CameraConfig(
             "render_camera", pose=pose, width=512, height=512, fov=1, near=0.01, far=100
         )
+
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
 
     def _load_scene(self, options: dict):
         # have to put these parmaeters to device - defined before we had access to device
@@ -247,6 +228,7 @@ class PushTEnv(BaseEnv):
                     base_color=base_color,
                 ),
             )
+            builder.initial_pose = sapien.Pose(p=[0, 0, 0.1])
             if not target:
                 return builder.build(name=name)
             else:
@@ -268,6 +250,7 @@ class PushTEnv(BaseEnv):
                 base_color=np.array([128, 128, 128, 255]) / 255
             ),
         )
+        builder.initial_pose = sapien.Pose(p=[0, 0, 0.1])
         self.ee_goal_pos = builder.build_kinematic(name="goal_ee")
 
         # Rest of function is setting up for Custom 2D "Pseudo-Rendering" function below

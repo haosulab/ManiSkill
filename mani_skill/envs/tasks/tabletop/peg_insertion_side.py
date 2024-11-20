@@ -49,7 +49,21 @@ def _build_box_with_hole(
 
 @register_env("PegInsertionSide-v1", max_episode_steps=100)
 class PegInsertionSideEnv(BaseEnv):
-    SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "sparse", "none")
+    """
+    **Task Description:**
+    Pick up a orange-white peg and insert the orange end into the box with a hole in it.
+
+    **Randomizations:**
+    - Peg half length is randomized between 0.085 and 0.125 meters. Box half length is the same value. (during reconfiguration)
+    - Peg radius/half-width is randomized between 0.015 and 0.025 meters. Box hole's radius is same value + 0.003m of clearance. (during reconfiguration)
+    - Peg is laid flat on table and has it's xy position and z-axis rotation randomized
+    - Box is laid flat on table and has it's xy position and z-axis rotation randomized
+
+    **Success Conditions:**
+    - The white end of the peg is within 0.015m of the center of the box (inserted mid way).
+    """
+
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PegInsertionSide-v1_rt.mp4"
     SUPPORTED_ROBOTS = ["panda_wristcam"]
     agent: Union[PandaWristCam]
     _clearance = 0.003
@@ -89,17 +103,20 @@ class PegInsertionSideEnv(BaseEnv):
         pose = sapien_utils.look_at([0.5, -0.5, 0.8], [0.05, -0.1, 0.4])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
+
     def _load_scene(self, options: dict):
         with torch.device(self.device):
             self.table_scene = TableSceneBuilder(self)
             self.table_scene.build()
 
-            lengths = self._episode_rng.uniform(0.085, 0.125, size=(self.num_envs,))
-            radii = self._episode_rng.uniform(0.015, 0.025, size=(self.num_envs,))
+            lengths = self._batched_episode_rng.uniform(0.085, 0.125)
+            radii = self._batched_episode_rng.uniform(0.015, 0.025)
             centers = (
                 0.5
                 * (lengths - radii)[:, None]
-                * self._episode_rng.uniform(-1, 1, size=(self.num_envs, 2))
+                * self._batched_episode_rng.uniform(-1, 1, size=(2,))
             )
 
             # save some useful values for use later
@@ -145,9 +162,10 @@ class PegInsertionSideEnv(BaseEnv):
                     half_size=[length / 2, radius, radius],
                     material=mat,
                 )
+                builder.initial_pose = sapien.Pose(p=[0, 0, 0.1])
                 builder.set_scene_idxs(scene_idxs)
                 peg = builder.build(f"peg_{i}")
-
+                self.remove_from_state_dict_registry(peg)
                 # box with hole
 
                 inner_radius, outer_radius, depth = (
@@ -158,13 +176,19 @@ class PegInsertionSideEnv(BaseEnv):
                 builder = _build_box_with_hole(
                     self.scene, inner_radius, outer_radius, depth, center=centers[i]
                 )
+                builder.initial_pose = sapien.Pose(p=[0, 1, 0.1])
                 builder.set_scene_idxs(scene_idxs)
                 box = builder.build_kinematic(f"box_with_hole_{i}")
-
+                self.remove_from_state_dict_registry(box)
                 pegs.append(peg)
                 boxes.append(box)
             self.peg = Actor.merge(pegs, "peg")
             self.box = Actor.merge(boxes, "box_with_hole")
+
+            # to support heterogeneous simulation state dictionaries we register merged versions
+            # of the parallel actors
+            self.add_to_state_dict_registry(self.peg)
+            self.add_to_state_dict_registry(self.box)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):

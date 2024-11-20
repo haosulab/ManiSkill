@@ -51,7 +51,7 @@ class Kinematics:
         self.articulation = articulation
         self.device = articulation.device
         # note that everything past the end-link is ignored. Any joint whose ancestor is self.end_link is ignored
-        cur_link = self.end_link.joint.parent_link
+        cur_link = self.end_link
         active_ancestor_joints: List[ArticulationJoint] = []
         while cur_link is not None:
             if cur_link.joint.active_index is not None:

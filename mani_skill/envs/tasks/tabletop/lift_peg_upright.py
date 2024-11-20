@@ -1,6 +1,7 @@
 from typing import Any, Dict, Union
 
 import numpy as np
+import sapien
 import torch
 import torch.random
 from transforms3d.euler import euler2quat
@@ -19,6 +20,18 @@ from mani_skill.utils.structs.types import Array
 
 @register_env("LiftPegUpright-v1", max_episode_steps=50)
 class LiftPegUprightEnv(BaseEnv):
+    """
+    **Task Description:**
+    A simple task where the objective is to move a peg laying on the table to any upright position on the table
+
+    **Randomizations:**
+    - the peg's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat along it's length on the table
+
+    **Success Conditions:**
+    - the absolute value of the peg's y euler angle is within 0.08 of $\pi$/2 and the z position of the peg is within 0.005 of its half-length (0.12).
+    """
+
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/LiftPegUpright-v1_rt.mp4"
     SUPPORTED_ROBOTS = ["panda", "fetch"]
     agent: Union[Panda, Fetch]
 
@@ -39,6 +52,9 @@ class LiftPegUprightEnv(BaseEnv):
         pose = look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
+
     def _load_scene(self, options: dict):
         self.table_scene = TableSceneBuilder(
             env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
@@ -54,6 +70,7 @@ class LiftPegUprightEnv(BaseEnv):
             color_2=np.array([12, 42, 160, 255]) / 255,
             name="peg",
             body_type="dynamic",
+            initial_pose=sapien.Pose(p=[0, 0, 0.1]),
         )
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):

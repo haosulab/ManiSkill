@@ -23,19 +23,18 @@ from mani_skill.utils.structs.types import Array, GPUMemoryConfig, SimConfig
 @register_env("PlaceSphere-v1", max_episode_steps=50)
 class PlaceSphereEnv(BaseEnv):
     """
-    Task Description
-    ----------------
+    **Task Description:**
     Place the sphere into the shallow bin.
 
-    Randomizations
-    --------------
-    The position of the bin and the sphere are randomized: The bin is inited in [0, 0.1]x[-0.1, 0.1], and the sphere is inited in [-0.1, -0.05]x[-0.1, 0.1]
+    **Randomizations:**
+    - The position of the bin and the sphere are randomized: The bin is initialized in [0, 0.1] x [-0.1, 0.1],
+    and the sphere is initialized in [-0.1, -0.05] x [-0.1, 0.1]
 
-    Success Conditions
-    ------------------
-    The sphere is place on the top of the bin. The robot remains static and the gripper is not closed at the end state
+    **Success Conditions:**
+    - The sphere is placed on the top of the bin. The robot remains static and the gripper is not closed at the end state.
     """
 
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PlaceSphere-v1_rt.mp4"
     SUPPORTED_ROBOTS = ["panda", "fetch"]
 
     # Specify some supported robot types
@@ -127,6 +126,9 @@ class PlaceSphereEnv(BaseEnv):
 
         # build the kinematic bin
         return builder.build_kinematic(name="bin")
+
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
 
     def _load_scene(self, options: dict):
         # load the table

@@ -132,21 +132,11 @@ class ArticulationBuilder(SapienArticulationBuilder):
         num_arts = len(self.scene_idxs)
 
         if self.initial_pose is None:
-            initial_ps = []
-            for scene_idx in self.scene_idxs:
-                if self.scene.parallel_in_single_scene:
-                    sub_scene = self.scene.sub_scenes[0]
-                else:
-                    sub_scene = self.scene.sub_scenes[scene_idx]
-                entity_num = len(sub_scene.entities)
-                # z_height starting at 100 (room for backgrounds, etc)
-                z_height = SPAWN_SPACING * (entity_num // 2 + 1) + SPAWN_START_GAP
-                # zdir, switch between -1 and 1 to flip above and below origin
-                z_height *= 2 * (entity_num % 2) - 1
-                initial_ps.append([0, 0, z_height])
-            self.initial_pose = Pose.create_from_pq(p=initial_ps)
-        else:
-            self.initial_pose = Pose.create(self.initial_pose)
+            logger.warn(
+                f"No initial pose set for articulation builder of {self.name}, setting to default pose q=[1,0,0,0], p=[0,0,0]. There may be simulation issues/bugs if this articulation at it's initial pose collides with other objects at their initial poses."
+            )
+            self.initial_pose = sapien.Pose()
+        self.initial_pose = Pose.create(self.initial_pose)
         initial_pose_b = self.initial_pose.raw_pose.shape[0]
         assert initial_pose_b == 1 or initial_pose_b == num_arts
         initial_pose_np = common.to_numpy(self.initial_pose.raw_pose)
@@ -221,4 +211,5 @@ class ArticulationBuilder(SapienArticulationBuilder):
         )
         articulation.initial_pose = self.initial_pose
         self.scene.articulations[self.name] = articulation
+        self.scene.add_to_state_dict_registry(articulation)
         return articulation

@@ -1,6 +1,7 @@
 from typing import Any, Dict, Tuple
 
 import numpy as np
+import sapien
 import torch
 
 from mani_skill.agents.multi_agent import MultiAgent
@@ -19,24 +20,22 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 @register_env("TwoRobotPickCube-v1", max_episode_steps=100)
 class TwoRobotPickCube(BaseEnv):
     """
-    Task Description
-    ----------------
+    **Task Description:**
     The goal is to pick up a red cube and lift it to a goal location. There are two robots in this task and the
     goal location is out of reach of the left robot while the cube is out of reach of the right robot, thus the two robots must work together
     to move the cube to the goal.
 
-    Randomizations
-    --------------
+    **Randomizations:**
     - cube has its z-axis rotation randomized
     - cube has its xy positions on top of the table scene randomized such that it is in within reach of the left robot but not the right.
     - the target goal position (marked by a green sphere) of the cube is randomized such that it is within reach of the right robot but not the left.
 
 
-    Success Conditions
-    ------------------
+    **Success Conditions:**
     - red cube is at the goal location
-    Visualization: TODO
     """
+
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/refs/heads/main/figures/environment_demos/TwoRobotPickCube-v1_rt.mp4"
 
     SUPPORTED_ROBOTS = [("panda_wristcam", "panda_wristcam")]
     agent: MultiAgent[Tuple[Panda, Panda]]
@@ -73,6 +72,11 @@ class TwoRobotPickCube(BaseEnv):
         pose = sapien_utils.look_at([1.4, 0.8, 0.75], [0.0, 0.1, 0.1])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
+    def _load_agent(self, options: dict):
+        super()._load_agent(
+            options, [sapien.Pose(p=[0, -1, 0]), sapien.Pose(p=[0, 1, 0])]
+        )
+
     def _load_scene(self, options: dict):
         self.table_scene = TableSceneBuilder(
             env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
@@ -83,6 +87,7 @@ class TwoRobotPickCube(BaseEnv):
             half_size=self.cube_half_size,
             color=[1, 0, 0, 1],
             name="cube",
+            initial_pose=sapien.Pose(p=[0, 0, 0.02]),
         )
         self.goal_site = actors.build_sphere(
             self.scene,
@@ -91,6 +96,7 @@ class TwoRobotPickCube(BaseEnv):
             name="goal_site",
             body_type="kinematic",
             add_collision=False,
+            initial_pose=sapien.Pose(),
         )
         self._hidden_objects.append(self.goal_site)
 

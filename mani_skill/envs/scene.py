@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from functools import cached_property
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -28,6 +29,12 @@ if SAPIEN_RENDER_SYSTEM == "3.1":
     sapien.render.RenderCameraGroup = "oldtype"  # type: ignore
 
 
+@dataclass
+class StateDictRegistry:
+    actors: Dict[str, Actor]
+    articulations: Dict[str, Articulation]
+
+
 class ManiSkillScene:
     """
     Class that manages a list of sub-scenes (sapien.Scene). In CPU simulation there should only be one sub-scene.
@@ -39,7 +46,7 @@ class ManiSkillScene:
 
     def __init__(
         self,
-        sub_scenes: List[sapien.Scene] = None,
+        sub_scenes: Optional[List[sapien.Scene]] = None,
         sim_config: SimConfig = SimConfig(),
         debug_mode: bool = True,
         device: Device = None,
@@ -51,6 +58,13 @@ class ManiSkillScene:
         self.px: Union[physx.PhysxCpuSystem, physx.PhysxGpuSystem] = self.sub_scenes[
             0
         ].physx_system
+        assert all(
+            isinstance(s.physx_system, type(self.px)) for s in self.sub_scenes
+        ), "all sub-scenes must use the same simulation backend"
+        self.gpu_sim_enabled = (
+            True if isinstance(self.px, physx.PhysxGpuSystem) else False
+        )
+        """whether the sub scenes are using the GPU or CPU backend"""
         self.sim_config = sim_config
         self._gpu_sim_initialized = False
         self.debug_mode = debug_mode
@@ -90,6 +104,11 @@ class ManiSkillScene:
 
         self.parallel_in_single_scene: bool = parallel_in_single_scene
         """Whether rendering all parallel scenes in the viewer/gui is enabled"""
+
+        self.state_dict_registry: StateDictRegistry = StateDictRegistry(
+            actors=dict(), articulations=dict()
+        )
+        """state dict registry that map actor/articulation names to Actor/Articulation struct references. Only these structs are used for the environment state"""
 
     # -------------------------------------------------------------------------- #
     # Functions from sapien.Scene
@@ -146,7 +165,7 @@ class ManiSkillScene:
 
     def remove_actor(self, actor: Actor):
         """Removes an actor from the scene. Only works in CPU simulation."""
-        if physx.is_gpu_enabled():
+        if self.gpu_sim_enabled:
             raise NotImplementedError(
                 "Cannot remove actors after creating them in GPU sim at the moment"
             )
@@ -156,7 +175,7 @@ class ManiSkillScene:
 
     def remove_articulation(self, articulation: Articulation):
         """Removes an articulation from the scene. Only works in CPU simulation."""
-        if physx.is_gpu_enabled():
+        if self.gpu_sim_enabled:
             raise NotImplementedError(
                 "Cannot remove articulations after creating them in GPU sim at the moment"
             )
@@ -237,7 +256,7 @@ class ManiSkillScene:
 
             # mount camera to actor/link
             if mount is not None:
-                if physx.is_gpu_enabled():
+                if self.gpu_sim_enabled:
                     if isinstance(mount, Actor):
                         camera.set_gpu_pose_batch_index(
                             mount._objs[i]
@@ -357,7 +376,7 @@ class ManiSkillScene:
             self._sapien_update_render()
 
     def _sapien_update_render(self):
-        if physx.is_gpu_enabled():
+        if self.gpu_sim_enabled:
             if not self.parallel_in_single_scene:
                 if self.render_system_group is None:
                     self._setup_gpu_rendering()
@@ -371,7 +390,7 @@ class ManiSkillScene:
             self.sub_scenes[0].update_render()
 
     def _sapien_31_update_render(self):
-        if physx.is_gpu_enabled():
+        if self.gpu_sim_enabled:
             if self.render_system_group is None:
                 # TODO (stao): for new render system support the parallel in single scene rendering option
                 for scene in self.sub_scenes:
@@ -692,7 +711,7 @@ class ManiSkillScene:
         # TODO (stao): Is there any optimization improvement when putting all queries all together and fetched together
         # vs multiple smaller queries? If so, might be worth exposing a helpful API for that instead of having user
         # write this code below themselves.
-        if physx.is_gpu_enabled():
+        if self.gpu_sim_enabled:
             query_hash = hash((obj1, obj2))
             query_key = obj1.name + obj2.name
 
@@ -755,6 +774,35 @@ class ManiSkillScene:
     # -------------------------------------------------------------------------- #
     # Simulation state (required for MPC)
     # -------------------------------------------------------------------------- #
+
+    def add_to_state_dict_registry(self, object: Union[Actor, Articulation]):
+        if isinstance(object, Actor):
+            assert (
+                object.name not in self.state_dict_registry.actors
+            ), f"Object {object.name} already in state dict registry"
+            self.state_dict_registry.actors[object.name] = object
+        elif isinstance(object, Articulation):
+            assert (
+                object.name not in self.state_dict_registry.articulations
+            ), f"Object {object.name} already in state dict registry"
+            self.state_dict_registry.articulations[object.name] = object
+        else:
+            raise ValueError(f"Expected Actor or Articulation, got {object}")
+
+    def remove_from_state_dict_registry(self, object: Union[Actor, Articulation]):
+        if isinstance(object, Actor):
+            assert (
+                object.name in self.state_dict_registry.actors
+            ), f"Object {object.name} not in state dict registry"
+            del self.state_dict_registry.actors[object.name]
+        elif isinstance(object, Articulation):
+            assert (
+                object.name in self.state_dict_registry.articulations
+            ), f"Object {object.name} not in state dict registry"
+            del self.state_dict_registry.articulations[object.name]
+        else:
+            raise ValueError(f"Expected Actor or Articulation, got {object}")
+
     def get_sim_state(self) -> torch.Tensor:
         """Get simulation state. Returns a dictionary with two nested dictionaries "actors" and "articulations".
         In the nested dictionaries they map the actor/articulation name to a vector of shape (N, D) for N parallel
@@ -765,11 +813,11 @@ class ManiSkillScene:
         state_dict = dict()
         state_dict["actors"] = dict()
         state_dict["articulations"] = dict()
-        for actor in self.actors.values():
+        for actor in self.state_dict_registry.actors.values():
             if actor.px_body_type == "static":
                 continue
             state_dict["actors"][actor.name] = actor.get_state().clone()
-        for articulation in self.articulations.values():
+        for articulation in self.state_dict_registry.articulations.values():
             state_dict["articulations"][
                 articulation.name
             ] = articulation.get_state().clone()
@@ -791,61 +839,63 @@ class ManiSkillScene:
                 if len(actor_state.shape) == 1:
                     actor_state = actor_state[None, :]
                 # do not pass in env_idx to avoid redundant reset mask changes
-                self.actors[actor_id].set_state(actor_state, None)
+                self.state_dict_registry.actors[actor_id].set_state(actor_state, None)
         if "articulations" in state:
             for art_id, art_state in state["articulations"].items():
                 if len(art_state.shape) == 1:
                     art_state = art_state[None, :]
-                self.articulations[art_id].set_state(art_state, None)
+                self.state_dict_registry.articulations[art_id].set_state(
+                    art_state, None
+                )
         if env_idx is not None:
             self._reset_mask = prev_reset_mask
 
     # ---------------------------------------------------------------------------- #
     # GPU Simulation Management
     # ---------------------------------------------------------------------------- #
-    def _setup_gpu(self):
+    def _setup(self, enable_gpu: bool):
         """
-        Start the GPU simulation and allocate all buffers and initialize objects
+        Start the CPU/GPU simulation and allocate all buffers and initialize objects
         """
-        if SAPIEN_RENDER_SYSTEM == "3.1":
-            for scene in self.sub_scenes:
-                scene.update_render()
-        self.px.gpu_init()
+        if enable_gpu:
+            if SAPIEN_RENDER_SYSTEM == "3.1":
+                for scene in self.sub_scenes:
+                    scene.update_render()
+            self.px.gpu_init()
         self.non_static_actors: List[Actor] = []
         # find non static actors, and set data indices that are now available after gpu_init was called
         for actor in self.actors.values():
             if actor.px_body_type == "static":
                 continue
             self.non_static_actors.append(actor)
-            actor._body_data_index  # only need to access this attribute to populate it
+            if enable_gpu:
+                actor._body_data_index  # only need to access this attribute to populate it
 
         for articulation in self.articulations.values():
             articulation._data_index
             for link in articulation.links:
                 link._body_data_index
-
-        # As physx_system.gpu_init() was called a single physx step was also taken. So we need to reset
-        # all the actors and articulations to their original poses as they likely have collided
         for actor in self.non_static_actors:
             actor.set_pose(actor.initial_pose)
         for articulation in self.articulations.values():
             articulation.set_pose(articulation.initial_pose)
 
-        self.px.cuda_rigid_body_data.torch()[:, 7:] = torch.zeros_like(
-            self.px.cuda_rigid_body_data.torch()[:, 7:]
-        )  # zero out all velocities
-        self.px.cuda_articulation_qvel.torch()[:, :] = torch.zeros_like(
-            self.px.cuda_articulation_qvel.torch()
-        )  # zero out all q velocities
+        if enable_gpu:
+            self.px.cuda_rigid_body_data.torch()[:, 7:] = torch.zeros_like(
+                self.px.cuda_rigid_body_data.torch()[:, 7:]
+            )  # zero out all velocities
+            self.px.cuda_articulation_qvel.torch()[:, :] = torch.zeros_like(
+                self.px.cuda_articulation_qvel.torch()
+            )  # zero out all q velocities
 
-        self.px.gpu_apply_rigid_dynamic_data()
-        self.px.gpu_apply_articulation_root_pose()
-        self.px.gpu_apply_articulation_root_velocity()
-        self.px.gpu_apply_articulation_qvel()
+            self.px.gpu_apply_rigid_dynamic_data()
+            self.px.gpu_apply_articulation_root_pose()
+            self.px.gpu_apply_articulation_root_velocity()
+            self.px.gpu_apply_articulation_qvel()
 
-        self._gpu_sim_initialized = True
-        self.px.gpu_update_articulation_kinematics()
-        self._gpu_fetch_all()
+            self._gpu_sim_initialized = True
+            self.px.gpu_update_articulation_kinematics()
+            self._gpu_fetch_all()
 
     def _gpu_apply_all(self):
         """
@@ -1032,7 +1082,7 @@ class ManiSkillScene:
         self, camera_name: str = None
     ) -> Dict[str, torch.Tensor]:
         image_data = dict()
-        if physx.is_gpu_enabled():
+        if self.gpu_sim_enabled:
             if self.parallel_in_single_scene:
                 for name, camera in self.human_render_cameras.items():
                     camera.camera._render_cameras[0].take_picture()

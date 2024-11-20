@@ -9,6 +9,7 @@ from .place_sphere import PlaceSphereEnv
 from .plug_charger import PlugChargerEnv
 from .poke_cube import PokeCubeEnv
 from .pull_cube import PullCubeEnv
+from .pull_cube_tool import PullCubeToolEnv
 from .push_cube import PushCubeEnv
 from .push_t import PushTEnv
 from .roll_ball import RollBallEnv

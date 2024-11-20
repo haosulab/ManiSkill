@@ -1,6 +1,7 @@
 """
 Useful utilities for creating the ground of a scene
 """
+
 from __future__ import annotations
 
 import os.path as osp
@@ -24,6 +25,7 @@ def build_ground(
     texture_file=osp.join(osp.dirname(__file__), "assets/grid_texture.png"),
     texture_square_len=4,
     mipmap_levels=4,
+    add_collision=True,
 ):
     """Procedurally creates a checkered floor given a floor width in meters.
 
@@ -31,9 +33,11 @@ def build_ground(
     and usually is never run more than once as it is for building a scene, not loading.
     """
     ground = scene.create_actor_builder()
-    ground.add_plane_collision(
-        sapien.Pose(p=[0, 0, altitude], q=[0.7071068, 0, -0.7071068, 0]),
-    )
+    if add_collision:
+        ground.add_plane_collision(
+            sapien.Pose(p=[0, 0, altitude], q=[0.7071068, 0, -0.7071068, 0]),
+        )
+    ground.initial_pose = sapien.Pose(p=[0, 0, 0], q=[1, 0, 0, 0])
     if scene.parallel_in_single_scene:
         # when building a ground and using a parallel render in the GUI, we want to only build one ground visual+collision plane
         ground.set_scene_idxs([0])

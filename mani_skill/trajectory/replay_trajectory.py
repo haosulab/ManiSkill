@@ -76,6 +76,9 @@ class Args:
     render_mode: str = "rgb_array"
     """The render mode used for saving videos. Typically there is also 'sensors' and 'all' render modes which further render all sensor outputs like cameras."""
 
+    num_envs: Optional[int] = None
+    """Number of environments to run to replay trajectories # TODO ELABORATE."""
+
 
 def parse_args(args=None):
     return tyro.cli(Args, args=args)
@@ -114,23 +117,23 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
         env_kwargs["control_mode"] = target_control_mode
     env_kwargs["shader_dir"] = args.shader
     env_kwargs["reward_mode"] = args.reward_mode
-    env_kwargs["render_mode"] = (
+    env_kwargs[
+        "render_mode"
+    ] = (
         args.render_mode
     )  # note this only affects the videos saved as RecordEpisode wrapper calls env.render
 
     # handle warnings/errors for replaying trajectories generated during GPU simulation
+    if args.num_envs is not None:
+        env_kwargs["num_envs"] = args.num_envs
     if "num_envs" in env_kwargs:
         if env_kwargs["num_envs"] > 1:
             raise RuntimeError(
-                """Cannot replay trajectories that were generated in a GPU
-            simulation with more than one environment. To replay trajectories generated during GPU simulation,
-            make sure to set num_envs=1 and sim_backend="gpu" in the env kwargs."""
+                """Currently cannot replay trajectories in parallelized environments with num_envs > 1.
+                Either num_envs>1 in the CLI args or the trajectory data itself was created with num_envs>1.
+                Please set --num-envs=1
+                """
             )
-        if "sim_backend" in env_kwargs:
-            # if sim backend is "gpu", we change it to CPU if ray tracing shader is used as RT is not supported yet on GPU sim backends
-            # TODO (stao): remove this if we ever support RT on GPU sim.
-            if args.shader[:2] == "rt":
-                env_kwargs["sim_backend"] = "cpu"
 
     if args.sim_backend:
         env_kwargs["sim_backend"] = args.sim_backend
@@ -146,6 +149,9 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
     # Prepare for recording
     output_dir = os.path.dirname(traj_path)
     ori_traj_name = os.path.splitext(os.path.basename(traj_path))[0]
+    parts = ori_traj_name.split(".")
+    if len(parts) > 1:
+        ori_traj_name = parts[0]
     suffix = "{}.{}.{}".format(env.obs_mode, env.control_mode, env.device.type)
     new_traj_name = ori_traj_name + "." + suffix
     if num_procs > 1:
