@@ -131,6 +131,7 @@ class PushCubeEnv(BaseEnv):
             name="goal_region",
             add_collision=False,
             body_type="kinematic",
+            initial_pose=sapien.Pose(p=[0, 0, 1e-3]),
         )
 
         # optionally you can automatically hide some Actors from view by appending to the self._hidden_objects list. When visual observations
