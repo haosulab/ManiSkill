@@ -181,6 +181,9 @@ class BaseEnv(gym.Env):
 
     _viewer: Union[sapien.utils.Viewer, None] = None
 
+    _sample_video_link: Optional[str] = None
+    """a link to a sample video of the task. This is mostly used for automatic documentation generation"""
+
     def __init__(
         self,
         num_envs: int = 1,

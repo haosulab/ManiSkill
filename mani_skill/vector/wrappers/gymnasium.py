@@ -51,7 +51,9 @@ class ManiSkillVectorEnv(VectorEnv):
         self.record_metrics = record_metrics
         self.spec = self._env.spec
         super().__init__(
-            num_envs, self._env.single_observation_space, self._env.single_action_space
+            num_envs,
+            self._env.get_wrapper_attr("single_observation_space"),
+            self._env.get_wrapper_attr("single_action_space"),
         )
         if not self.ignore_terminations and auto_reset:
             assert (

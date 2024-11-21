@@ -20,24 +20,22 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 @register_env("TwoRobotPickCube-v1", max_episode_steps=100)
 class TwoRobotPickCube(BaseEnv):
     """
-    Task Description
-    ----------------
+    **Task Description:**
     The goal is to pick up a red cube and lift it to a goal location. There are two robots in this task and the
     goal location is out of reach of the left robot while the cube is out of reach of the right robot, thus the two robots must work together
     to move the cube to the goal.
 
-    Randomizations
-    --------------
+    **Randomizations:**
     - cube has its z-axis rotation randomized
     - cube has its xy positions on top of the table scene randomized such that it is in within reach of the left robot but not the right.
     - the target goal position (marked by a green sphere) of the cube is randomized such that it is within reach of the right robot but not the left.
 
 
-    Success Conditions
-    ------------------
+    **Success Conditions:**
     - red cube is at the goal location
-    Visualization: TODO
     """
+
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/refs/heads/main/figures/environment_demos/TwoRobotPickCube-v1_rt.mp4"
 
     SUPPORTED_ROBOTS = [("panda_wristcam", "panda_wristcam")]
     agent: MultiAgent[Tuple[Panda, Panda]]

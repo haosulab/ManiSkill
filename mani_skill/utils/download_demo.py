@@ -32,6 +32,7 @@ for env_id in [
     "PlugCharger-v1",
     "PokeCube-v1",
     "PullCube-v1",
+    "PullCubeTool-v1",
     "PushCube-v1",
     "PushT-v1",
     "RollBall-v1",
