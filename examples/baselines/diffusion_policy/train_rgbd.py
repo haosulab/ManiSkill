@@ -124,7 +124,7 @@ def reorder_keys(d, ref_dict):
 
 
 class SmallDemoDataset_DiffusionPolicy(Dataset):  # Load everything into memory
-    def __init__(self, data_path, obs_process_fn, obs_space, num_traj):
+    def __init__(self, data_path, obs_process_fn, obs_space, device, num_traj):
         if data_path[-4:] == ".pkl":
             raise NotImplementedError()
         else:
@@ -145,17 +145,21 @@ class SmallDemoDataset_DiffusionPolicy(Dataset):  # Load everything into memory
             _obs_traj_dict = obs_process_fn(_obs_traj_dict)
             _obs_traj_dict["depth"] = torch.Tensor(
                 _obs_traj_dict["depth"].astype(np.float32) / 1024
-            ).to(torch.float16)
-            _obs_traj_dict["rgb"] = torch.from_numpy(
-                _obs_traj_dict["rgb"]
+            ).to(device=device, dtype=torch.float16)
+            _obs_traj_dict["rgb"] = torch.from_numpy(_obs_traj_dict["rgb"]).to(
+                device
             )  # still uint8
-            _obs_traj_dict["state"] = torch.from_numpy(_obs_traj_dict["state"])
+            _obs_traj_dict["state"] = torch.from_numpy(_obs_traj_dict["state"]).to(
+                device
+            )
             obs_traj_dict_list.append(_obs_traj_dict)
         trajectories["observations"] = obs_traj_dict_list
         self.obs_keys = list(_obs_traj_dict.keys())
         # Pre-process the actions
         for i in range(len(trajectories["actions"])):
-            trajectories["actions"][i] = torch.Tensor(trajectories["actions"][i])
+            trajectories["actions"][i] = torch.Tensor(trajectories["actions"][i]).to(
+                device=device
+            )
         print(
             "Obs/action pre-processing is done, start to pre-compute the slice indices..."
         )
@@ -166,7 +170,7 @@ class SmallDemoDataset_DiffusionPolicy(Dataset):  # Load everything into memory
             or args.control_mode == "base_pd_joint_vel_arm_pd_joint_vel"
         ):
             self.pad_action_arm = torch.zeros(
-                (trajectories["actions"][0].shape[1] - 1,)
+                (trajectories["actions"][0].shape[1] - 1,), device=device
             )
             # to make the arm stay still, we pad the action with 0 in 'delta_pos' control mode
             # gripper action needs to be copied from the last action
@@ -368,6 +372,18 @@ class Agent(nn.Module):
         return noisy_action_seq[:, start:end]  # (B, act_horizon, act_dim)
 
 
+def save_ckpt(run_name, tag):
+    os.makedirs(f"runs/{run_name}/checkpoints", exist_ok=True)
+    ema.copy_to(ema_agent.parameters())
+    torch.save(
+        {
+            "agent": agent.state_dict(),
+            "ema_agent": ema_agent.state_dict(),
+        },
+        f"runs/{run_name}/checkpoints/{tag}.pt",
+    )
+
+
 if __name__ == "__main__":
     args = tyro.cli(Args)
 
@@ -459,7 +475,7 @@ if __name__ == "__main__":
     orignal_obs_space = tmp_env.observation_space
     tmp_env.close()
     dataset = SmallDemoDataset_DiffusionPolicy(
-        args.demo_path, obs_process_fn, orignal_obs_space, args.num_demos
+        args.demo_path, obs_process_fn, orignal_obs_space, device, args.num_demos
     )
     sampler = RandomSampler(dataset, replacement=False)
     batch_sampler = BatchSampler(sampler, batch_size=args.batch_size, drop_last=True)
@@ -469,18 +485,6 @@ if __name__ == "__main__":
         batch_sampler=batch_sampler,
         num_workers=args.num_dataload_workers,
         worker_init_fn=lambda worker_id: worker_init_fn(worker_id, base_seed=args.seed),
-        pin_memory=True,
-        persistent_workers=(args.num_dataload_workers > 0),
-    )
-    sampler = RandomSampler(dataset, replacement=False)
-    batch_sampler = BatchSampler(sampler, batch_size=args.batch_size, drop_last=True)
-    batch_sampler = IterationBasedBatchSampler(batch_sampler, args.total_iters)
-    train_dataloader = DataLoader(
-        dataset,
-        batch_sampler=batch_sampler,
-        num_workers=args.num_dataload_workers,
-        worker_init_fn=lambda worker_id: worker_init_fn(worker_id, base_seed=args.seed),
-        pin_memory=True,
         persistent_workers=(args.num_dataload_workers > 0),
     )
 
@@ -518,10 +522,10 @@ if __name__ == "__main__":
 
         # forward and compute loss
         obs_batch_dict = data_batch["observations"]
-        obs_batch_dict = {
-            k: v.cuda(non_blocking=True) for k, v in obs_batch_dict.items()
-        }
-        act_batch = data_batch["actions"].cuda(non_blocking=True)
+        # obs_batch_dict = {
+        #     k: v.cuda(non_blocking=True) for k, v in obs_batch_dict.items()
+        # }
+        act_batch = data_batch["actions"]
 
         # forward and compute loss
         total_loss = agent.compute_loss(

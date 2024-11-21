@@ -199,11 +199,11 @@ def build_obs_space(env, depth_dtype, state_obs_extractor):
 
 
 def build_state_obs_extractor(env_id):
+    agent_extra_envs = ["PickCube", "PushChair", "DrawTriangle", "DrawSVG"]
     env_name = env_id.split("-")[0]
     if env_name in ["TurnFaucet", "StackCube"]:
         return lambda obs: list(obs["extra"].values())
-    elif env_name == "PushChair" or env_name == "PickCube":
+    elif env_name in agent_extra_envs:
         return lambda obs: list(obs["agent"].values()) + list(obs["extra"].values())
     else:
         raise NotImplementedError(f"Please tune state obs by yourself")
-
