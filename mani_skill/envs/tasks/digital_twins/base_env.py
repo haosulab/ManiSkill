@@ -12,6 +12,7 @@ from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.structs.types import SimConfig
+from mani_skill.utils.visualization.misc import tile_images
 
 
 class BaseDigitalTwinEnv(BaseEnv):
@@ -36,6 +37,8 @@ class BaseDigitalTwinEnv(BaseEnv):
         "background"  # 'background' or 'object' or 'debug' or combinations of them
     )
     """which RGB overlay mode to use during the greenscreen process"""
+    render_greenscreening = True
+    """toggle greenscreening for render_rgb_array in the environment"""
 
     def __init__(self, **kwargs):
         # Load the "greenscreen" image, which is used to overlay the background portions of simulation observation
@@ -52,8 +55,15 @@ class BaseDigitalTwinEnv(BaseEnv):
                 )  # (H, W, 3); float32
         else:
             self._rgb_overlay_images = None
+            print(
+                "Warning GreenScreening is OFF: BaseDigitalTwinEnv contains no overlay images"
+            )
 
         super().__init__(**kwargs)
+        if self._obs_mode != "rgb+segmentation":
+            print(
+                f"Warning GreenScreening is OFF: environment obs_mode is {self._obs_mode}, obs_mode='rgb+segmentation' required"
+            )
 
     @property
     def _default_sim_config(self):
@@ -154,3 +164,12 @@ class BaseDigitalTwinEnv(BaseEnv):
                 )
                 obs["sensor_data"][camera_name]["rgb"] = green_screened_rgb
         return obs
+
+    def render_rgb_array(self, camera_name: str = None):
+        if self.render_greenscreening:
+            obs = self.get_obs(None)["sensor_data"]
+            images = []
+            for camera_name in obs.keys():
+                images.append(obs[camera_name]["rgb"])
+            return tile_images(images).to(torch.uint8)
+        return super().render_rgb_array(camera_name)

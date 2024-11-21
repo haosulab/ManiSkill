@@ -269,7 +269,7 @@
       link="link_3" />
     <axis
       xyz="-1 0 0" />
-    <limit lower="0" upper="2.5"/>
+    <limit lower="0" upper="2.2"/>
   </joint>
   <link
     name="link_4">

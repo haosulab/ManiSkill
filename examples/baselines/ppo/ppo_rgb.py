@@ -48,6 +48,8 @@ class Args:
     """path to a pretrained checkpoint file to start evaluation/training from"""
     render_mode: str = "all"
     """the environment rendering mode"""
+    obs_mode: str = "rgb"
+    """the environment observation mode"""
 
     # Algorithm specific arguments
     env_id: str = "PickCube-v1"
@@ -205,6 +207,7 @@ class NatureCNN(nn.Module):
         if "state" in sample_obs:
             # for state data we simply pass it through a single linear layer
             state_size = sample_obs["state"].shape[-1]
+            print("STATE_SIZE", state_size)
             extractors["state"] = nn.Linear(state_size, 256)
             self.out_features += 256
 
@@ -293,7 +296,7 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # env setup
-    env_kwargs = dict(obs_mode="rgb", control_mode="pd_joint_delta_pos", render_mode=args.render_mode, sim_backend="gpu")
+    env_kwargs = dict(obs_mode=args.obs_mode, control_mode="pd_joint_delta_pos", render_mode=args.render_mode, sim_backend="gpu")
     eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, reconfiguration_freq=args.eval_reconfiguration_freq, **env_kwargs)
     envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, reconfiguration_freq=args.reconfiguration_freq, **env_kwargs)
 

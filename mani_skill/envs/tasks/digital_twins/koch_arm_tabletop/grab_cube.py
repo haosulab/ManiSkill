@@ -20,7 +20,7 @@ from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs import Actor
 from mani_skill.utils.structs.pose import Pose
-from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
+from mani_skill.utils.structs.types import GPUMemoryConfig, SceneConfig, SimConfig
 
 
 # grab cube and return to rest keyframe
@@ -37,7 +37,7 @@ class GrabCubeEnv(BaseDigitalTwinEnv):
     # robot
     SUPPORTED_ROBOTS = ["koch-v1.1"]
     agent: Koch
-    rgb_overlay_paths = dict(base_camera="square_bkgr.jpg")
+    rgb_overlay_paths = dict(base_camera="obs_img_new.png")
     dist_from_table_edge = 0.5
 
     # Task DR
@@ -80,6 +80,16 @@ class GrabCubeEnv(BaseDigitalTwinEnv):
             target=self.camera_target,
             look_at_noise=self.camera_target_noise,
             view_axis_rot_noise=self.camera_view_rot_noise,
+        )
+
+    @property
+    def _default_sim_config(self):
+        return SimConfig(
+            gpu_memory_config=GPUMemoryConfig(
+                max_rigid_contact_count=2**22, max_rigid_patch_count=2**21
+            ),
+            sim_freq=120,
+            control_freq=30,
         )
 
     @property
@@ -143,7 +153,9 @@ class GrabCubeEnv(BaseDigitalTwinEnv):
                 dynamic_friction=friction,
                 restitution=0,
             )
-            builder.add_box_collision(half_size=[half_size] * 3, material=material)
+            builder.add_box_collision(
+                half_size=[half_size] * 3, material=material, density=25
+            )
             color = list(torch.rand(3))
             builder.add_box_visual(
                 half_size=[half_size] * 3,
@@ -228,6 +240,11 @@ class GrabCubeEnv(BaseDigitalTwinEnv):
                 tcp2_pose=self.agent.tcp2.pose.raw_pose,
                 cube_side_length=self.cube_half_sizes * 2,
             )
+        obs.update(
+            to_rest_dist=self.rest_qpos[:-1] - self.agent.robot.qpos[..., :-1],
+            rest_qpos=self.rest_qpos[:-1].view(1, 5).repeat(self.num_envs, 1),
+            target_qpos=self.agent.controller._target_qpos.clone(),
+        )
         return obs
 
     def evaluate(self):
@@ -240,11 +257,11 @@ class GrabCubeEnv(BaseDigitalTwinEnv):
             grippers_distance >= (2 * self.cube_half_sizes)
         )
         robot_to_rest_pose_dist = torch.linalg.norm(
-            (self.agent.robot.qpos[..., :-1] / (2 * np.pi))
+            (self.agent.controller._target_qpos.clone()[..., :-1] / (2 * np.pi))
             - (self.rest_qpos[:-1] / (2 * np.pi)),
             axis=1,
         )
-        success = (robot_to_rest_pose_dist < 0.05) * is_properly_grasped
+        success = (robot_to_rest_pose_dist < 0.05) * is_grasped
         return {
             "is_grasped": is_grasped,
             "grippers_distance": grippers_distance,
@@ -255,6 +272,7 @@ class GrabCubeEnv(BaseDigitalTwinEnv):
         }
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+        is_grasped = info["is_grasped"]
         is_properly_grasped = info["is_properly_grasped"]
         gripper_finger_dist = torch.linalg.norm(
             self.agent.tcp.pose.p - self.agent.tcp2.pose.p, axis=-1
@@ -278,7 +296,7 @@ class GrabCubeEnv(BaseDigitalTwinEnv):
             self.num_envs
         )
         reward += (
-            orientation_reward * ~is_properly_grasped
+            orientation_reward * ~is_grasped  # * ~is_properly_grasped
         )  # only reward for orienting when cube is not grasped
 
         # stage 2, reward for properly grasping the cube, + additional 1 to replace the lost orientation reward
@@ -287,35 +305,29 @@ class GrabCubeEnv(BaseDigitalTwinEnv):
         # stage 3, lift the cube
         cube_lifted = (
             self.cube.pose.p[..., -1] >= (self.cube_half_sizes + 1e-3)
-        ) * is_properly_grasped
-        reward += cube_lifted.float()
+        ) * is_grasped  # * is_properly_grasped
+
+        # reward += cube_lifted.float()
+        # cube_zdist = ((self.cube.pose.p[..., -1] - self.cube_half_sizes) - 0.04).abs()
+        cube_zdist = ((self.cube.pose.p[..., -1] - self.cube_half_sizes) - 0.05).abs()
+        reward += (
+            1 - torch.tanh(20 * cube_zdist)
+        ) * is_grasped  # * is_properly_grasped
 
         # stage 4 alternative
         reward += (
-            6 * (1 - torch.tanh(4 * info["robot_to_grasped_rest_dist"])) * cube_lifted
+            8 * (1 - torch.tanh(4 * info["robot_to_grasped_rest_dist"])) * cube_lifted
         )
-        # additional help to move motor at -2 back to rest, since it learned this entire time to turn otherwise
-        to_rest_normalized_dist = (
-            (self.agent.robot.qpos[..., [0, -2]] - self.rest_qpos[[0, -2]]).abs()
-            / (np.pi)
-        ).sqrt()
-        reward += (2 - (to_rest_normalized_dist).sum(-1)) * cube_lifted
-
-        to_rest_normalized_dist2 = (
-            (self.agent.robot.qpos[..., 1] - self.rest_qpos[1]).abs() / (2 * np.pi)
-        ).sqrt()
-        reward += (1 - (to_rest_normalized_dist2)) * cube_lifted
 
         # negative reward: closing gripper for no reason
         closed_gripper = gripper_finger_dist <= ((4 / 5) * 2 * self.cube_half_sizes)
         closed_gripper_rew = closed_gripper * (
             1 - (gripper_finger_dist / (2 * self.cube_half_sizes))
         )
-        return (
-            (reward - 0.1 * info["touching_table"]) - closed_gripper_rew
-        ) - 0.2 * torch.linalg.norm(action[..., :-2], dim=-1)
+
+        return (reward - 2 * info["touching_table"]) - closed_gripper_rew
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        return self.compute_dense_reward(obs=obs, action=action, info=info) / 13
+        return self.compute_dense_reward(obs=obs, action=action, info=info) / 12

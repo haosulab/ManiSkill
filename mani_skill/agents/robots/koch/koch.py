@@ -28,9 +28,7 @@ class Koch(BaseAgent):
 
     keyframes = dict(
         rest=Keyframe(
-            # resting qpos gathered from datasets
-            # qpos=np.array([0, 2.312, 3.017, -0.26, 0, 0.6044]),
-            qpos=np.array([0, 2.245, 3.017, -0.25, 0, 0.6044]),
+            qpos=np.array([0, 2.2, 3.017, -0.25, 0, 0.6044]),
             pose=sapien.Pose(),
         )
     )
@@ -47,19 +45,21 @@ class Koch(BaseAgent):
             [joint.name for joint in self.robot.active_joints],
             lower=None,
             upper=None,
-            stiffness=1e3,
-            damping=1e2,
+            stiffness=[1e3] * 5 + [1e2],
+            damping=[1e2] * 5 + [1e0],
             force_limit=100,
             normalize_action=False,
         )
+
         pd_joint_delta_pos = PDJointPosControllerConfig(
             [joint.name for joint in self.robot.active_joints],
-            [-0.15, -0.15, -0.15, -0.15, -0.2, -0.15],
-            [0.15, 0.15, 0.15, 0.15, 0.2, 0.15],
-            stiffness=1e3,
-            damping=1e2,
+            [-0.05, -0.05, -0.05, -0.05, -0.1, -0.05],
+            [0.05, 0.05, 0.05, 0.05, 0.1, 0.05],
+            stiffness=[1e3] * 5 + [1e1],
+            damping=[1e2] * 5 + [1e-1],
             force_limit=100,
             use_delta=True,
+            use_target=True,
         )
 
         controller_configs = dict(
@@ -139,3 +139,7 @@ class Koch(BaseAgent):
     def is_static(self, threshold: float = 0.2):
         qvel = self.robot.get_qvel()[..., :-1]
         return torch.max(torch.abs(qvel), 1)[0] <= threshold
+
+    # remove default qvel from agent observations
+    def get_proprioception(self):
+        return dict(qpos=self.robot.get_qpos())
