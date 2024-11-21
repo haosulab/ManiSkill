@@ -17,6 +17,7 @@ from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 
 if TYPE_CHECKING:
     from mani_skill.envs.sapien_env import BaseEnv
+    from mani_skill.envs.tasks.digital_twins.utils.real_env import BaseRealEnv
 
 
 class EnvSpec:
@@ -104,11 +105,12 @@ def register(
 
     # hacky way to avoid circular import errors when users inherit a task in ManiSkill and try to register it themselves
     from mani_skill.envs.sapien_env import BaseEnv
+    from mani_skill.envs.tasks.digital_twins.utils.real_env import BaseRealEnv
 
     if name in REGISTERED_ENVS:
         logger.warn(f"Env {name} already registered")
-    if not issubclass(cls, BaseEnv):
-        raise TypeError(f"Env {name} must inherit from BaseEnv")
+    if not issubclass(cls, BaseEnv) and not issubclass(cls, BaseRealEnv):
+        raise TypeError(f"Env {name} must inherit from BaseEnv or BaseRealEnv")
 
     for asset_id in asset_download_ids:
         if asset_id not in assets.DATA_SOURCES and asset_id not in assets.DATA_GROUPS:
