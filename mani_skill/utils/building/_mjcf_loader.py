@@ -171,10 +171,13 @@ class MJCFLoader:
 
     def __init__(self, ignore_classes=["motor"], visual_groups=[0, 2]):
         self.fix_root_link = True
-        """whether to fix the root link. Note regardless of given XML, the root link is a dummy link this loader
+        """Whether to fix the root link. Note regardless of given XML, the root link is a dummy link this loader
         creates which makes a number of operations down the line easier. In general this should be False if there is a freejoint for the root body
         of articulations in the XML and should be true if there are no free joints. At the moment when modelling a robot from Mujoco this
         must be handled on a case by case basis"""
+
+        self.group_collisions_by_depth = False
+        """Whether to set collision groups by depth. This is only used when loading .mjcf files."""
 
         self.load_multiple_collisions_from_file = False
         self.load_nonconvex_collisions = False
@@ -567,6 +570,7 @@ class MJCFLoader:
         parent: LinkBuilder,
         incoming_defaults: dict,
         builder: ArticulationBuilder,
+        depth: int = 0,
     ):
         body_class = body.get("childclass")
         if body_class is None:
@@ -709,16 +713,25 @@ class MJCFLoader:
                     damping,
                 )
 
+        group = depth if self.group_collisions_by_depth else self._group_count
+
         # ensure adjacent links do not collide. Normally SAPIEN does this
         # but we often create dummy links to support multiple joints between two link functionality
         # that mujoco has so it must be done here.
         if parent is not None:
-            parent.collision_groups[2] |= 1 << (self._group_count)
-            link_builder.collision_groups[2] |= 1 << (self._group_count)
+            if group >= 32:
+                raise ValueError(
+                    f"Exceeded maximum number of collision groups (32). "
+                    f"Cannot prevent adjacent link collisions beyond this limit. "
+                    f"Try setting `group_collisions_by_depth = True`. "
+                    f"Current number of collision exceptions: {self._group_count + 1}"
+                )
+            parent.collision_groups[2] |= 1 << group
+            link_builder.collision_groups[2] |= 1 << group
             self._group_count += 1
 
         for child in body.findall("body"):
-            self._parse_body(child, link_builder, defaults, builder)
+            self._parse_body(child, link_builder, defaults, builder, depth=depth+1)
 
     def _parse_constraint(self, constraint: Element):
         joint_elems = []
