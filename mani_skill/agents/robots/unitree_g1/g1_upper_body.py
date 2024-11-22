@@ -186,8 +186,55 @@ class UnitreeG1UpperBody(BaseAgent):
             torch.abs(self.robot.qpos[:, self.left_finger_joint_indexes]), dim=1
         )
 
+    def left_hand_is_grasping(self, object: Actor, min_force=0.5, max_angle=85):
+        """Check if the robot is grasping an object with just its left hand
+
+        Args:
+            object (Actor): The object to check if the robot is grasping
+            min_force (float, optional): Minimum force before the robot is considered to be grasping the object in Newtons. Defaults to 0.5.
+            max_angle (int, optional): Maximum angle of contact to consider grasping. Defaults to 85.
+        """
+        l_contact_forces = self.scene.get_pairwise_contact_forces(
+            self.left_hand_finger_link_l_1, object
+        )
+        r_contact_forces_1 = self.scene.get_pairwise_contact_forces(
+            self.left_hand_finger_link_r_1, object
+        )
+        r_contact_forces_2 = self.scene.get_pairwise_contact_forces(
+            self.left_hand_finger_link_r_2, object
+        )
+        lforce = torch.linalg.norm(l_contact_forces, axis=1)
+        rforce_1 = torch.linalg.norm(r_contact_forces_1, axis=1)
+        rforce_2 = torch.linalg.norm(r_contact_forces_2, axis=1)
+
+        # direction to open the gripper
+        ldirection = self.left_hand_finger_link_l_1.pose.to_transformation_matrix()[
+            ..., :3, 1
+        ]
+        rdirection1 = -self.left_hand_finger_link_r_1.pose.to_transformation_matrix()[
+            ..., :3, 1
+        ]
+        rdirection2 = -self.left_hand_finger_link_r_2.pose.to_transformation_matrix()[
+            ..., :3, 1
+        ]
+
+        langle = common.compute_angle_between(ldirection, l_contact_forces)
+        rangle1 = common.compute_angle_between(rdirection1, r_contact_forces_1)
+        rangle2 = common.compute_angle_between(rdirection2, r_contact_forces_2)
+        lflag = torch.logical_and(
+            lforce >= min_force, torch.rad2deg(langle) <= max_angle
+        )
+        rflag1 = torch.logical_and(
+            rforce_1 >= min_force, torch.rad2deg(rangle1) <= max_angle
+        )
+        rflag2 = torch.logical_and(
+            rforce_2 >= min_force, torch.rad2deg(rangle2) <= max_angle
+        )
+        rflag = rflag1 | rflag2
+        return torch.logical_and(lflag, rflag)
+
     def right_hand_is_grasping(self, object: Actor, min_force=0.5, max_angle=85):
-        """Check if the robot is grasping an object
+        """Check if the robot is grasping an object with just its right hand
 
         Args:
             object (Actor): The object to check if the robot is grasping
