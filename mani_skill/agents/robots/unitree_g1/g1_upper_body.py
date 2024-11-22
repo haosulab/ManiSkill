@@ -17,7 +17,25 @@ class UnitreeG1UpperBody(BaseAgent):
 
     uid = "unitree_g1_simplified_upper_body"
     urdf_path = f"{PACKAGE_ASSET_DIR}/robots/g1_humanoid/g1_simplified_upper_body.urdf"
-    urdf_config = dict()
+    urdf_config = dict(
+        _materials=dict(
+            finger=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)
+        ),
+        link={
+            **{
+                f"left_{k}_link": dict(
+                    material="finger", patch_radius=0.1, min_patch_radius=0.1
+                )
+                for k in ["one", "two", "three", "four", "five", "six"]
+            },
+            **{
+                f"right_{k}_link": dict(
+                    material="finger", patch_radius=0.1, min_patch_radius=0.1
+                )
+                for k in ["one", "two", "three", "four", "five", "six"]
+            },
+        },
+    )
     fix_root_link = True
     load_multiple_collisions = False
 
