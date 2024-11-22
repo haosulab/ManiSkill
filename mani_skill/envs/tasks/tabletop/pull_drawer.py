@@ -1,62 +1,82 @@
-from typing import Dict, List, Union
+from typing import Dict, Union, Any
 import numpy as np
 import sapien
 import torch
-from mani_skill import PACKAGE_ASSET_DIR
 from mani_skill.agents.robots import Fetch, Panda
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.utils import randomization
 from mani_skill.sensors.camera import CameraConfig
-from mani_skill.utils import common, io_utils, sapien_utils
-from mani_skill.utils.building import actors, articulations
+from mani_skill.utils import sapien_utils
+from mani_skill.utils.building import actors
 from mani_skill.utils.registration import register_env
-from mani_skill.utils.scene_builder.table.scene_builder import TableSceneBuilder
-from mani_skill.utils.structs.articulation import Articulation
-from mani_skill.utils.structs.link import Link
-from mani_skill.utils.structs.pose import Pose
-from mani_skill.utils.structs.types import SimConfig
+from mani_skill.utils.scene_builder.table import TableSceneBuilder
+from mani_skill.utils.structs import Pose
+from mani_skill.utils.structs.types import SimConfig, GPUMemoryConfig
 
 @register_env("PullDrawer-v1", max_episode_steps=200)
 class PullDrawerEnv(BaseEnv):
-    SUPPORTED_REWARD_MODES = ["sparse", "none"]
-    SUPPORTED_ROBOTS = ["panda", "panda_wristcam", "fetch"]
+    SUPPORTED_REWARD_MODES = ("sparse", "dense", "normalized_dense", "none")
+    SUPPORTED_ROBOTS = ["panda", "fetch"]
     agent: Union[Panda, Fetch]
+
+    
+    drawer_half_size = [0.1, 0.15, 0.01]
+    drawer_body_half_size = [0.09, 0.14, 0.05]
+    target_pos = -0.125
+    max_pull_distance = 0.15
 
     def __init__(
         self,
         *args,
-        robot_uids="panda_wristcam",
+        robot_uids="panda",
         robot_init_qpos_noise=0.02,
-        reconfiguration_freq=None,
-        num_envs=1,
-        **kwargs,
+        **kwargs
     ):
         self.robot_init_qpos_noise = robot_init_qpos_noise
-        
-        if reconfiguration_freq is None:
-            reconfiguration_freq = 1 if num_envs == 1 else 0
-            
         super().__init__(
             *args,
             robot_uids=robot_uids,
-            reconfiguration_freq=reconfiguration_freq,
-            num_envs=num_envs,
-            **kwargs,
+            **kwargs
         )
 
     @property
     def _default_sim_config(self):
-        return SimConfig()
+        return SimConfig(
+            gpu_memory_config=GPUMemoryConfig(
+                found_lost_pairs_capacity=2**25, 
+                max_rigid_patch_count=2**18
+            )
+        )
 
     @property
     def _default_sensor_configs(self):
-        pose = sapien_utils.look_at([-0.4, 0, 0.3], [0, 0, 0.1])
+        pose = sapien_utils.look_at([0.2, -0.3, 0.3], [0, 0, 0.1])
         return [
-            CameraConfig("base_camera", pose=pose, width=128, height=128, fov=np.pi / 2)
+            CameraConfig(
+                "base_camera", 
+                pose=pose, 
+                width=128, 
+                height=128, 
+                fov=np.pi / 2,
+                near=0.01,
+                far=100
+            )
         ]
 
-    def _load_agent(self, options: dict):
-        super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
+    @property
+    def _default_human_render_camera_configs(self):
+        pose = sapien_utils.look_at([-0.4, -0.5, 0.6], [0.0, 0.0, 0.2])
+        return [
+            CameraConfig(
+                "render_camera", 
+                pose=pose, 
+                width=512, 
+                height=512, 
+                fov=1,
+                near=0.01,
+                far=100
+            )
+        ]
 
     def _load_scene(self, options: dict):
         self.scene_builder = TableSceneBuilder(
@@ -64,93 +84,137 @@ class PullDrawerEnv(BaseEnv):
         )
         self.scene_builder.build()
 
-        # Create a simple drawer using ArticulationBuilder
+        # Create drawer
         builder = self.scene.create_articulation_builder()
         
-        # Create the base (fixed part)
+        # Base/outer casing with walls
         base = builder.create_link_builder()
-        base.add_box_collision(half_size=[0.2, 0.3, 0.02])
-        base.add_box_visual(half_size=[0.2, 0.3, 0.02], color=[0.8, 0.8, 0.8, 1])
-        
-        # Create the drawer (moving part)
+        base.name = "drawer_base"
+        wall_thickness = 0.01
+
+        # Back wall
+        base.add_box_collision(
+            sapien.Pose([-(self.drawer_half_size[0] - wall_thickness/2), 0, 0]),
+            [wall_thickness/2, self.drawer_half_size[1], self.drawer_half_size[2]]
+        )
+        base.add_box_visual(
+            sapien.Pose([-(self.drawer_half_size[0] - wall_thickness/2), 0, 0]),
+            [wall_thickness/2, self.drawer_half_size[1], self.drawer_half_size[2]]
+        )
+
+        # Side walls
+        for y_sign in [-1, 1]:
+            base.add_box_collision(
+                sapien.Pose([0, y_sign * (self.drawer_half_size[1] - wall_thickness/2), 0]),
+                [self.drawer_half_size[0], wall_thickness/2, self.drawer_half_size[2]]
+            )
+            base.add_box_visual(
+                sapien.Pose([0, y_sign * (self.drawer_half_size[1] - wall_thickness/2), 0]),
+                [self.drawer_half_size[0], wall_thickness/2, self.drawer_half_size[2]]
+            )
+
+        # Bottom wall
+        base.add_box_collision(
+            sapien.Pose([0, 0, -(self.drawer_half_size[2] - wall_thickness/2)]),
+            [self.drawer_half_size[0], self.drawer_half_size[1], wall_thickness/2]
+        )
+        base.add_box_visual(
+            sapien.Pose([0, 0, -(self.drawer_half_size[2] - wall_thickness/2)]),
+            [self.drawer_half_size[0], self.drawer_half_size[1], wall_thickness/2]
+        )
+
+        # Inner sliding drawer
         drawer = builder.create_link_builder(parent=base)
-        drawer.add_box_collision(half_size=[0.18, 0.28, 0.1])
-        drawer.add_box_visual(half_size=[0.18, 0.28, 0.1], color=[0.6, 0.6, 0.6, 1])
-        
+        drawer.name = "drawer_body"
+        drawer.add_box_collision(half_size=self.drawer_body_half_size)
+        drawer.add_box_visual(half_size=self.drawer_body_half_size)
+
+        # Add handle
+        handle_size = [0.02, 0.04, 0.01]
+        handle_offset = 0.02
+        drawer.add_box_collision(
+            sapien.Pose([self.drawer_body_half_size[0] + handle_offset, 0, 0]),
+            handle_size
+        )
+        drawer.add_box_visual(
+            sapien.Pose([self.drawer_body_half_size[0] + handle_offset, 0, 0]),
+            handle_size
+        )
 
         drawer.set_joint_properties(
             type="prismatic",
-            limits=(-0.3, 0),  # 30cm travel range
-            pose_in_parent=sapien.Pose([0, 0, 0.1]), 
-            pose_in_child=sapien.Pose(),  
+            limits=(-self.max_pull_distance, 0),
+            pose_in_parent=sapien.Pose([0, 0, 0]),
+            pose_in_child=sapien.Pose(),
             friction=0.1,
             damping=10
         )
-        drawer.set_joint_name("drawer_joint")
 
-        # Build the articulation
-        builder.set_initial_pose(sapien.Pose(p=[0, 0, 0.5]))  
-        self.drawer = builder.build(fix_root_link=True)  
+        # Build articulation with drawer slightly ajar
+        builder.set_scene_idxs(scene_idxs=range(self.num_envs))
+        builder.set_initial_pose(sapien.Pose(p=[0.12, 0, 0.2]))
         
-        self.drawer_link = self.drawer.get_links()[1]  
-        self.target_pos = -0.25  # set target position as 25cm out
+        self.drawer = builder.build(fix_root_link=True, name="drawer_articulation")
+        self.drawer_link = self.drawer.get_links()[1]
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
+            b = len(env_idx)
             self.scene_builder.initialize(env_idx)
-            # Reset drawer position
-            self.drawer.set_qpos([0])  # Close the drawer initially
-
-    @property
-    def current_pos(self):
-        return self.drawer.get_qpos()[0]
-
-    def evaluate(self):
-        pos_dist = self.target_pos - self.current_pos
-        return dict(
-            success=abs(pos_dist) < 0.02,  # 2cm threshold
-            pos_dist=pos_dist
-        )
+            
+            init_pos = torch.zeros((b, 1), device=self.device)
+            noise = torch.rand((b, 1), device=self.device) * 0.02
+            init_pos -= noise
+            
+            self.drawer.set_qpos(init_pos)
 
     def _get_obs_extra(self, info: Dict):
-        return dict(
+        obs = dict(
             tcp_pose=self.agent.tcp.pose.raw_pose,
-            drawer_pos=self.current_pos,
-            target_pos=self.target_pos,
-            drawer_link_pos=self.drawer_link.pose.p
         )
+        
+        if self._obs_mode in ["state", "state_dict"]:
+            obs.update(
+                drawer_pose=self.drawer.pose.raw_pose,
+                drawer_qpos=self.drawer.get_qpos(),
+            )
+        return obs
+
+    def evaluate(self):
+        drawer_qpos = self.drawer.get_qpos()
+        pos_dist = torch.abs(self.target_pos - drawer_qpos)
+        cube_pulled_close = pos_dist.squeeze(-1) < 0.007
+        
+        progress = 1 - torch.tanh(5.0 * pos_dist)
+        
+        return {
+            "success": cube_pulled_close,
+            "success_once": cube_pulled_close,
+            "success_at_end": cube_pulled_close,
+            "drawer_progress": progress.mean(),
+            "drawer_distance": pos_dist.mean(),
+            "reward": self.compute_normalized_dense_reward(
+                None, None, {"success": cube_pulled_close}
+            ),
+        }
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        reward = 0.0
+        drawer_qpos = self.drawer.get_qpos()
+        pos_dist = torch.abs(self.target_pos - drawer_qpos)
         
-        # Success bonus
-        if info["success"]:
-            return 10.0
+        distance_reward = 2.0 * (1 - torch.tanh(5.0 * pos_dist)).squeeze(-1)
         
-        # Distance reward
-        pos_dist = abs(info["pos_dist"])
-        reward += 1 - np.tanh(pos_dist * 5.0)
+        is_grasping = self.agent.is_grasping(self.drawer_link, max_angle=30)
+        grasping_reward = 2.0 * is_grasping
         
-        # Contact reward
-        is_contacted = any(self.agent.check_contact_fingers(self.drawer_link))
-        if is_contacted:
-            reward += 0.25
+        success_mask = info.get("success", torch.zeros_like(is_grasping))
+        success_reward = torch.where(success_mask, 5.0, 0.0)
         
-        # Movement reward based on position difference
-        pos_diff = info["pos_dist"] - self.last_pos_dist
-        if info["pos_dist"] > 0:
-            # Penalize moving away from target
-            movement_reward = -np.tanh(pos_diff * 2) * 5
-        else:
-            # Reward moving toward target
-            movement_reward = np.tanh(pos_diff * 2) * 5
-        reward += movement_reward
-        
-        # Store current distance for next step
-        self.last_pos_dist = info["pos_dist"]
-        
-        return reward
+        return distance_reward + grasping_reward + success_reward
 
-    def compute_normalized_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        max_reward = 10.0
-        return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
+    def compute_normalized_dense_reward(
+        self, obs: Any, action: torch.Tensor, info: Dict
+    ):
+        max_reward = 5.0
+        dense_reward = self.compute_dense_reward(obs=obs, action=action, info=info)
+        return dense_reward / max_reward
