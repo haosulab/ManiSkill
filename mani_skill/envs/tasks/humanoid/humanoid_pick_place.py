@@ -207,7 +207,7 @@ class UnitreeG1PlaceAppleInBowlEnv(HumanoidPlaceAppleInBowl):
 
     _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/UnitreeG1PlaceAppleInBowl-v1_rt.mp4"
 
-    SUPPORTED_ROBOTS = ["unitree_g1_simplified_upper_body_right_arm"]
+    SUPPORTED_ROBOTS = ["unitree_g1_simplified_upper_body"]
     agent: Union[UnitreeG1UpperBodyRightArm]
     kitchen_scene_scale = 0.82
 
@@ -216,9 +216,7 @@ class UnitreeG1PlaceAppleInBowlEnv(HumanoidPlaceAppleInBowl):
             UnitreeG1UpperBodyRightArm.keyframes["standing"].pose
         )
         self.init_robot_pose.p = [-0.3, 0, 0.755]
-        super().__init__(
-            *args, robot_uids="unitree_g1_simplified_upper_body_right_arm", **kwargs
-        )
+        super().__init__(*args, robot_uids="unitree_g1_simplified_upper_body", **kwargs)
 
     @property
     def _default_sim_config(self):
