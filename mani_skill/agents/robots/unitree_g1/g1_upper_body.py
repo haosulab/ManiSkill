@@ -106,7 +106,7 @@ class UnitreeG1UpperBody(BaseAgent):
         self.right_hand_finger_link_l_1 = self.robot.links_map["right_two_link"]
         self.right_hand_finger_link_r_1 = self.robot.links_map["right_four_link"]
         self.right_hand_finger_link_r_2 = self.robot.links_map["right_six_link"]
-        self.right_tcp = self.robot.links_map["right_palm_link"]
+        self.right_tcp = self.robot.links_map["right_tcp_link"]
         self.right_finger_joints = [
             "right_one_joint",
             "right_two_joint",
@@ -123,7 +123,7 @@ class UnitreeG1UpperBody(BaseAgent):
         self.left_hand_finger_link_l_1 = self.robot.links_map["left_two_link"]
         self.left_hand_finger_link_r_1 = self.robot.links_map["left_four_link"]
         self.left_hand_finger_link_r_2 = self.robot.links_map["left_six_link"]
-        self.left_tcp = self.robot.links_map["left_palm_link"]
+        self.left_tcp = self.robot.links_map["left_tcp_link"]
 
         self.left_finger_joints = [
             "left_one_joint",
