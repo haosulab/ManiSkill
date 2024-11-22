@@ -13,6 +13,8 @@ from mani_skill.utils.structs.actor import Actor
 
 @register_agent(asset_download_ids=["unitree_g1"])
 class UnitreeG1UpperBody(BaseAgent):
+    """The G1 Robot with control over its torso rotation and its two arms. Legs are fixed."""
+
     uid = "unitree_g1_simplified_upper_body"
     urdf_path = f"{ASSET_DIR}/robots/unitree_g1/g1_simplified_upper_body.urdf"
     urdf_config = dict()
@@ -22,18 +24,18 @@ class UnitreeG1UpperBody(BaseAgent):
     keyframes = dict(
         standing=Keyframe(
             pose=sapien.Pose(p=[0, 0, 0.755]),
-            qpos=np.array([0.0] * (24)),
+            qpos=np.array([0.0] * (25)),
         )
     )
 
     body_joints = [
         # "left_hip_pitch_joint",
         # "right_hip_pitch_joint",
-        # "torso_joint",
+        "torso_joint",
         # "left_hip_roll_joint",
         # "right_hip_roll_joint",
-        # "left_shoulder_pitch_joint",
-        # "right_shoulder_pitch_joint",
+        "left_shoulder_pitch_joint",
+        "right_shoulder_pitch_joint",
         # "left_hip_yaw_joint",
         # "right_hip_yaw_joint",
         "left_shoulder_roll_joint",
