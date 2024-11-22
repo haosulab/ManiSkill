@@ -1293,14 +1293,14 @@
     </collision>
   </link>
   <joint name="left_tcp_joint" type="fixed">
-    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <origin xyz="0.07 -0.035 0" rpy="0 0 0"/>
     <parent link="left_palm_link"/>
     <child link="left_tcp_link"/>
     <axis xyz="0 0 0"/>
   </joint>
   <link name="left_tcp_link">
     <visual>
-      <origin xyz="0.07 -0.035 0" rpy="0 0 0"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
         <sphere radius="0.012"/>
       </geometry>
@@ -1310,14 +1310,14 @@
     </visual>
   </link>
   <joint name="right_tcp_joint" type="fixed">
-    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <origin xyz="0.07 0.035 0" rpy="0 0 0"/>
     <parent link="right_palm_link"/>
     <child link="right_tcp_link"/>
     <axis xyz="0 0 0"/>
   </joint>
   <link name="right_tcp_link">
     <visual>
-      <origin xyz="0.07 0.035 0" rpy="0 0 0"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
         <sphere radius="0.012"/>
       </geometry>
