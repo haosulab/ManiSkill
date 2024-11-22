@@ -2,7 +2,7 @@ import numpy as np
 import sapien
 import torch
 
-from mani_skill import ASSET_DIR
+from mani_skill import PACKAGE_ASSET_DIR
 from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
@@ -11,15 +11,15 @@ from mani_skill.utils import common
 from mani_skill.utils.structs.actor import Actor
 
 
-@register_agent(asset_download_ids=["unitree_g1"])
+@register_agent()
 class UnitreeG1UpperBody(BaseAgent):
     """The G1 Robot with control over its torso rotation and its two arms. Legs are fixed."""
 
     uid = "unitree_g1_simplified_upper_body"
-    urdf_path = f"{ASSET_DIR}/robots/unitree_g1/g1_simplified_upper_body.urdf"
+    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/g1_humanoid/g1_simplified_upper_body.urdf"
     urdf_config = dict()
     fix_root_link = True
-    load_multiple_collisions = True
+    load_multiple_collisions = False
 
     keyframes = dict(
         standing=Keyframe(
@@ -146,7 +146,9 @@ class UnitreeG1UpperBody(BaseAgent):
 
     def left_hand_dist_to_open_grasp(self):
         """compute the distance from the current qpos to a open grasp qpos for the left hand"""
-        return torch.abs(self.robot.qpos[:, self.left_finger_joint_indexes])
+        return torch.mean(
+            torch.abs(self.robot.qpos[:, self.left_finger_joint_indexes]), dim=1
+        )
 
     def right_hand_is_grasping(self, object: Actor, min_force=0.5, max_angle=85):
         """Check if the robot is grasping an object
@@ -196,10 +198,10 @@ class UnitreeG1UpperBody(BaseAgent):
         return torch.logical_and(lflag, rflag)
 
 
-@register_agent(asset_download_ids=["unitree_g1"])
+@register_agent()
 class UnitreeG1UpperBodyRightArm(UnitreeG1UpperBody):
     uid = "unitree_g1_simplified_upper_body_right_arm"
-    urdf_path = f"{ASSET_DIR}/robots/unitree_g1/g1_simplified_upper_body.urdf"
+    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/g1_humanoid/g1_simplified_upper_body.urdf"
 
     keyframes = dict(
         standing=Keyframe(
