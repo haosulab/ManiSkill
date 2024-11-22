@@ -483,12 +483,12 @@
         <color rgba="0.2 0.2 0.2 1"/>
       </material>
     </visual>
-    <!-- <collision>
+    <collision>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
         <mesh filename="meshes/head_link.STL"/>
       </geometry>
-    </collision> -->
+    </collision>
   </link>
   <joint name="head_joint" type="fixed">
     <origin xyz="0 0 0" rpy="0 0 0"/>

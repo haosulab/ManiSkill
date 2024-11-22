@@ -67,6 +67,20 @@ class HumanoidPlaceAppleInBowl(HumanoidPickPlaceEnv):
     SUPPORTED_REWARD_MODES = ["normalized_dense", "dense", "sparse", "none"]
 
     @property
+    def _default_sensor_configs(self):
+        return CameraConfig(
+            "base_camera",
+            sapien.Pose(
+                [0.279123, 0.303438, 1.34794], [0.252428, 0.396735, 0.114442, -0.875091]
+            ),
+            128,
+            128,
+            np.pi / 2,
+            0.01,
+            100,
+        )
+
+    @property
     def _default_human_render_camera_configs(self):
         return CameraConfig(
             "render_camera",
