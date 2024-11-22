@@ -174,22 +174,53 @@ class TransportBoxEnv(BaseEnv):
             "right_hand_hit_box": r_contact_forces > 0,
             "box_grasped": box_grasped,
             "box_at_correct_table_xy": box_at_correct_table_xy,
+            "facing_table_with_box": facing_table_with_box,
         }
 
     def _get_obs_extra(self, info: Dict):
-        return dict()
+        obs = dict(
+            right_tcp_pose=self.agent.right_tcp.pose.raw_pose,
+            left_tcp_pose=self.agent.left_tcp.pose.raw_pose,
+        )
+        if "state" in self.obs_mode:
+            obs.update(
+                box_pose=self.box.pose.raw_pose,
+                right_tcp_to_box_pos=self.box.pose.p - self.agent.right_tcp.pose.p,
+                left_tcp_to_box_pos=self.box.pose.p - self.agent.left_tcp.pose.p,
+            )
+        return obs
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         # Stage 1, move to face the box on the table. Succeeds if facing_table_with_box
+        reward = 1 - torch.tanh((self.agent.robot.qpos[:, 0] + 1.4).abs())
 
         # Stage 2, grasp the box stably. Succeeds if box_grasped
-
+        # encourage arms to go down essentially
+        stage_2_reward = (
+            1
+            + (1 - torch.tanh((self.agent.robot.qpos[:, 3]).abs())) / 2
+            + (1 - torch.tanh((self.agent.robot.qpos[:, 4]).abs())) / 2
+        )
+        reward[info["facing_table_with_box"]] = stage_2_reward[
+            info["facing_table_with_box"]
+        ]
         # Stage 3 transport box to above the other table, Succeeds if box_at_correct_table_xy
-
+        stage_3_reward = 2 + 1 - torch.tanh((self.agent.robot.qpos[:, 0] - 1.4).abs())
+        reward[info["box_grasped"]] = stage_3_reward[info["box_grasped"]]
         # Stage 4 let go of the box. Succeeds if success (~box_grasped & box_at_correct_table)
-        pass
+        stage_4_reward = (
+            3
+            + (1 - torch.tanh((self.agent.robot.qpos[:, 3]).abs() - 1.25)) / 2
+            + (1 - torch.tanh((self.agent.robot.qpos[:, 4]).abs() - 1.25)) / 2
+        )
+        reward[info["box_at_correct_table_xy"]] = stage_4_reward[
+            info["box_at_correct_table_xy"]
+        ]
+        # encourage agent to stay close to a target qposition?
+        reward[info["success"]] = 5
+        return reward
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        return super().compute_dense_reward(obs, action, info) / 10
+        return super().compute_dense_reward(obs, action, info) / 5
