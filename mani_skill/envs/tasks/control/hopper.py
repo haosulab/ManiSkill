@@ -216,6 +216,18 @@ class HopperEnv(BaseEnv):
 
 @register_env("MS-HopperStand-v1", max_episode_steps=600)
 class HopperStandEnv(HopperEnv):
+    """
+    **Task Description:**
+    Hopper robot stands upright
+
+    **Randomizations:**
+    - Hopper robot is randomly rotated [-pi, pi] radians about y axis.
+    - Hopper qpos are uniformly sampled within their allowed ranges
+
+    **Success Conditions:**
+    - No specific success conditions.
+    """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -231,6 +243,18 @@ class HopperStandEnv(HopperEnv):
 
 @register_env("MS-HopperHop-v1", max_episode_steps=600)
 class HopperHopEnv(HopperEnv):
+    """
+    **Task Description:**
+    Hopper robot stays upright and moves in positive x direction with hopping motion
+
+    **Randomizations:**
+    - Hopper robot is randomly rotated [-pi, pi] radians about y axis.
+    - Hopper qpos are uniformly sampled within their allowed ranges
+
+    **Success Conditions:**
+    - No specific success conditions. The task is considered successful if the pole is upright for the whole episode.
+    """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 

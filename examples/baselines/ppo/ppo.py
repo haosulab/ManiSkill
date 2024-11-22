@@ -59,6 +59,8 @@ class Args:
     """the number of parallel evaluation environments"""
     partial_reset: bool = True
     """whether to let parallel environments reset upon termination instead of truncation"""
+    eval_partial_reset: bool = False
+    """whether to let parallel evaluation environments reset upon termination instead of truncation"""
     num_steps: int = 50
     """the number of steps to run in each environment per policy rollout"""
     num_eval_steps: int = 50
@@ -67,6 +69,8 @@ class Args:
     """how often to reconfigure the environment during training"""
     eval_reconfiguration_freq: Optional[int] = 1
     """for benchmarking purposes we want to reconfigure the eval environment each reset to ensure objects are randomized in some tasks"""
+    control_mode: Optional[str] = "pd_joint_delta_pos"
+    """the control mode to use for the environment"""
     anneal_lr: bool = False
     """Toggle learning rate annealing for policy and value networks"""
     gamma: float = 0.8
@@ -188,7 +192,9 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # env setup
-    env_kwargs = dict(obs_mode="state", control_mode="pd_joint_delta_pos", render_mode="rgb_array", sim_backend="gpu")
+    env_kwargs = dict(obs_mode="state", render_mode="rgb_array", sim_backend="gpu")
+    if args.control_mode is not None:
+        env_kwargs["control_mode"] = args.control_mode
     envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, reconfiguration_freq=args.reconfiguration_freq, **env_kwargs)
     eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, reconfiguration_freq=args.eval_reconfiguration_freq, **env_kwargs)
     if isinstance(envs.action_space, gym.spaces.Dict):
@@ -204,7 +210,7 @@ if __name__ == "__main__":
             envs = RecordEpisode(envs, output_dir=f"runs/{run_name}/train_videos", save_trajectory=False, save_video_trigger=save_video_trigger, max_steps_per_video=args.num_steps, video_fps=30)
         eval_envs = RecordEpisode(eval_envs, output_dir=eval_output_dir, save_trajectory=args.evaluate, trajectory_name="trajectory", max_steps_per_video=args.num_eval_steps, video_fps=30)
     envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=not args.partial_reset, record_metrics=True)
-    eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=True, record_metrics=True)
+    eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=not args.eval_partial_reset, record_metrics=True)
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
     max_episode_steps = gym_utils.find_max_episode_steps_value(envs._env)
@@ -434,6 +440,7 @@ if __name__ == "__main__":
 
             if args.target_kl is not None and approx_kl > args.target_kl:
                 break
+
         update_time = time.time() - update_time
 
         y_pred, y_true = b_values.cpu().numpy(), b_returns.cpu().numpy()

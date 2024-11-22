@@ -70,6 +70,8 @@ class Args:
     """the number of parallel evaluation environments"""
     partial_reset: bool = True
     """whether to let parallel environments reset upon termination instead of truncation"""
+    eval_partial_reset: bool = False
+    """whether to let parallel evaluation environments reset upon termination instead of truncation"""
     num_steps: int = 50
     """the number of steps to run in each environment per policy rollout"""
     num_eval_steps: int = 50
@@ -82,6 +84,8 @@ class Args:
     """evaluation frequency in terms of iterations"""
     save_train_video_freq: Optional[int] = None
     """frequency to save training videos in terms of iterations"""
+    control_mode: Optional[str] = "pd_joint_delta_pos"
+    """the control mode to use for the environment"""
 
     # Algorithm specific arguments
     total_timesteps: int = 10000000
@@ -321,7 +325,9 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     ####### Environment setup #######
-    env_kwargs = dict(obs_mode="state", control_mode="pd_joint_delta_pos", render_mode="rgb_array", sim_backend="gpu")
+    env_kwargs = dict(obs_mode="state", render_mode="rgb_array", sim_backend="gpu")
+    if args.control_mode is not None:
+        env_kwargs["control_mode"] = args.control_mode
     envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, reconfiguration_freq=args.reconfiguration_freq, **env_kwargs)
     eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, reconfiguration_freq=args.eval_reconfiguration_freq, human_render_camera_configs=dict(shader_pack="default"), **env_kwargs)
     if isinstance(envs.action_space, gym.spaces.Dict):
@@ -337,7 +343,7 @@ if __name__ == "__main__":
             envs = RecordEpisode(envs, output_dir=f"runs/{run_name}/train_videos", save_trajectory=False, save_video_trigger=save_video_trigger, max_steps_per_video=args.num_steps, video_fps=30)
         eval_envs = RecordEpisode(eval_envs, output_dir=eval_output_dir, save_trajectory=args.save_trajectory, save_video=args.capture_video, trajectory_name="trajectory", max_steps_per_video=args.num_eval_steps, video_fps=30)
     envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=not args.partial_reset, record_metrics=True)
-    eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=True, record_metrics=True)
+    eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=not args.eval_partial_reset, record_metrics=True)
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
     max_episode_steps = gym_utils.find_max_episode_steps_value(envs._env)
@@ -505,6 +511,11 @@ if __name__ == "__main__":
         for k, v in cumulative_times.items():
             logger.add_scalar(f"time/total_{k}", v, global_step)
         logger.add_scalar("time/total_rollout+update_time", cumulative_times["rollout_time"] + cumulative_times["update_time"], global_step)
-
+    if not args.evaluate:
+        if args.save_model:
+            model_path = f"runs/{run_name}/final_ckpt.pt"
+            torch.save(agent.state_dict(), model_path)
+            print(f"model saved to {model_path}")
+        logger.close()
     envs.close()
     eval_envs.close()

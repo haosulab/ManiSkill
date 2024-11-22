@@ -7,7 +7,7 @@ import numpy as np
 
 signal.signal(signal.SIGINT, signal.SIG_DFL) # allow ctrl+c
 from mani_skill.envs.sapien_env import BaseEnv
-from mani_skill.utils import visualization
+from mani_skill.utils import common, visualization
 from mani_skill.utils.wrappers import RecordEpisode
 
 
@@ -223,6 +223,7 @@ def main():
         # Post-process action
         # -------------------------------------------------------------------------- #
         action_dict = dict(base=base_action, arm=ee_action, body=body_action, gripper=gripper_action)
+        action_dict = common.to_tensor(action_dict)
         action = env.agent.controller.from_action_dict(action_dict)
 
         obs, reward, terminated, truncated, info = env.step(action)

@@ -24,21 +24,24 @@ class DemoDatasetSource:
 DATASET_SOURCES: dict[str, DemoDatasetSource] = {}
 
 # Rigid body envs
-DATASET_SOURCES["PickCube-v1"] = DemoDatasetSource(
-    raw_dataset_url="https://huggingface.co/datasets/haosulab/ManiSkill_PickCube/resolve/main/PickCube-v1.zip?download=true"
-)
-DATASET_SOURCES["PushCube-v1"] = DemoDatasetSource(
-    raw_dataset_url="https://huggingface.co/datasets/haosulab/ManiSkill_PushCube/resolve/main/PushCube-v1.zip?download=true"
-)
-DATASET_SOURCES["StackCube-v1"] = DemoDatasetSource(
-    raw_dataset_url="https://huggingface.co/datasets/haosulab/ManiSkill_StackCube/resolve/main/StackCube-v1.zip?download=true"
-)
-DATASET_SOURCES["PegInsertionSide-v1"] = DemoDatasetSource(
-    raw_dataset_url="https://huggingface.co/datasets/haosulab/ManiSkill_PegInsertionSide/resolve/main/PegInsertionSide-v1.zip?download=true"
-)
-DATASET_SOURCES["PlugCharger-v1"] = DemoDatasetSource(
-    raw_dataset_url="https://huggingface.co/datasets/haosulab/ManiSkill_PlugCharger/resolve/main/PlugCharger-v1.zip?download=true"
-)
+for env_id in [
+    "AnymalC-Reach-v1",
+    "LiftPegUpright-v1",
+    "PegInsertionSide-v1",
+    "PickCube-v1",
+    "PlugCharger-v1",
+    "PokeCube-v1",
+    "PullCube-v1",
+    "PullCubeTool-v1",
+    "PushCube-v1",
+    "PushT-v1",
+    "RollBall-v1",
+    "StackCube-v1",
+    "TwoRobotPickCube-v1",
+]:
+    DATASET_SOURCES[env_id] = DemoDatasetSource(
+        raw_dataset_url=f"https://huggingface.co/datasets/haosulab/ManiSkill_Demonstrations/resolve/main/demos/{env_id}.zip?download=true"
+    )
 
 pbar = None
 

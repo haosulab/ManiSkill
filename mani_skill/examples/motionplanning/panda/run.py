@@ -9,13 +9,17 @@ from tqdm import tqdm
 import os.path as osp
 from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.trajectory.merge_trajectory import merge_trajectories
-from mani_skill.examples.motionplanning.panda.solutions import solvePushCube, solvePickCube, solveStackCube, solvePegInsertionSide, solvePlugCharger
+from mani_skill.examples.motionplanning.panda.solutions import solvePushCube, solvePickCube, solveStackCube, solvePegInsertionSide, solvePlugCharger, solvePullCubeTool, solveLiftPegUpright, solvePullCube
 MP_SOLUTIONS = {
     "PickCube-v1": solvePickCube,
     "StackCube-v1": solveStackCube,
     "PegInsertionSide-v1": solvePegInsertionSide,
     "PlugCharger-v1": solvePlugCharger,
     "PushCube-v1": solvePushCube,
+    "PullCubeTool-v1": solvePullCubeTool,
+    "LiftPegUpright-v1": solveLiftPegUpright,
+    "PullCube-v1": solvePullCube
+
 }
 def parse_args(args=None):
     parser = argparse.ArgumentParser()

@@ -18,6 +18,21 @@ from mani_skill.utils.structs.types import SimConfig
 
 @register_env("PickCube-v1", max_episode_steps=50)
 class PickCubeEnv(BaseEnv):
+    """
+    **Task Description:**
+    A simple task where the objective is to grasp a red cube and move it to a target goal position.
+
+    **Randomizations:**
+    - the cube's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat on the table
+    - the cube's z-axis rotation is randomized to a random angle
+    - the target goal position (marked by a green sphere) of the cube has its xy position randomized in the region [0.1, 0.1] x [-0.1, -0.1] and z randomized in [0, 0.3]
+
+    **Success Conditions:**
+    - the cube position is within `goal_thresh` (default 0.025m) euclidean distance of the goal position
+    - the robot is static (q velocity < 0.2)
+    """
+
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PickCube-v1_rt.mp4"
     SUPPORTED_ROBOTS = ["panda", "fetch"]
     agent: Union[Panda, Fetch]
     cube_half_size = 0.02
