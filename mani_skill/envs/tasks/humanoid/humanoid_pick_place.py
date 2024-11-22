@@ -29,7 +29,11 @@ class HumanoidPickPlaceEnv(BaseEnv):
 
     @property
     def _default_sim_config(self):
-        return SimConfig()
+        return SimConfig(
+            gpu_memory_config=GPUMemoryConfig(
+                max_rigid_contact_count=2**22,
+            )
+        )
 
     @property
     def _default_sensor_configs(self):

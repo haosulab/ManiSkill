@@ -84,8 +84,8 @@ class UnitreeG1UpperBody(BaseAgent):
         )
         body_pd_joint_delta_pos = PDJointPosControllerConfig(
             self.body_joints,
-            lower=-0.2,
-            upper=0.2,
+            lower=[-0.2] * 11 + [-0.5] * 14,
+            upper=[0.2] * 11 + [0.5] * 14,
             stiffness=self.body_stiffness,
             damping=self.body_damping,
             force_limit=self.body_force_limit,
