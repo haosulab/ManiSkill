@@ -138,6 +138,24 @@ class UnitreeG1UpperBody(BaseAgent):
             for joint in self.left_finger_joints
         ]
 
+        # disable collisions between fingers. Done in python here instead of the srdf as we can use less collision bits this way and do it more smartly
+        # note that the two link of the fingers can collide with other finger links and the palm link so its not included
+        link_names = ["one", "three", "four", "five", "six"]
+        for ln in link_names:
+            self.robot.links_map[f"left_{ln}_link"].set_collision_group_bit(2, 1, 1)
+            self.robot.links_map[f"right_{ln}_link"].set_collision_group_bit(2, 2, 1)
+        self.robot.links_map["left_palm_link"].set_collision_group_bit(2, 1, 1)
+        self.robot.links_map["right_palm_link"].set_collision_group_bit(2, 2, 1)
+        self.robot.links_map["left_elbow_roll_link"].set_collision_group_bit(2, 1, 1)
+        self.robot.links_map["right_elbow_roll_link"].set_collision_group_bit(2, 2, 1)
+
+        # disable collisions between torso and some other links
+        self.robot.links_map["torso_link"].set_collision_group_bit(2, 3, 1)
+        self.robot.links_map["left_shoulder_roll_link"].set_collision_group_bit(2, 3, 1)
+        self.robot.links_map["right_shoulder_roll_link"].set_collision_group_bit(
+            2, 3, 1
+        )
+
     def right_hand_dist_to_open_grasp(self):
         """compute the distance from the current qpos to a open grasp qpos for the right hand"""
         return torch.mean(

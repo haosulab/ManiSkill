@@ -1,4 +1,0 @@
-<robot name="unitree_g1_simplified_upper_body">
-  <!-- <disable_collisions link1="torso_link" link2="left_shoulder_pitch_link" reason="Default"/>
-  <disable_collisions link1="left_one_link" link2="left_elbow_row_link" reason="Default"/> -->
-</robot>
