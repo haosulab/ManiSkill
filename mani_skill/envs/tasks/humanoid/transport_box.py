@@ -22,7 +22,7 @@ from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import GPUMemoryConfig, SceneConfig, SimConfig
 
 
-@register_env("UnitreeG1TransportBox-v1", max_episode_steps=100)
+@register_env("UnitreeG1TransportBox-v1", max_episode_steps=50)
 class TransportBoxEnv(BaseEnv):
     SUPPORTED_ROBOTS = ["unitree_g1_simplified_upper_body_with_head_camera"]
     agent: UnitreeG1UpperBodyWithHeadCamera

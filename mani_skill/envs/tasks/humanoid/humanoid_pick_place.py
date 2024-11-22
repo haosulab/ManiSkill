@@ -1,6 +1,6 @@
 import copy
 import os
-from typing import Any, Dict, Union
+from typing import Any, Dict
 
 import numpy as np
 import sapien
@@ -225,16 +225,20 @@ class UnitreeG1PlaceAppleInBowlEnv(HumanoidPlaceAppleInBowl):
 
     _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/UnitreeG1PlaceAppleInBowl-v1_rt.mp4"
 
-    SUPPORTED_ROBOTS = ["unitree_g1_simplified_upper_body"]
-    agent: Union[UnitreeG1UpperBodyRightArm]
+    SUPPORTED_ROBOTS = ["unitree_g1_simplified_upper_body_with_head_camera"]
+    agent: UnitreeG1UpperBodyWithHeadCamera
     kitchen_scene_scale = 0.82
 
     def __init__(self, *args, **kwargs):
         self.init_robot_pose = copy.deepcopy(
-            UnitreeG1UpperBodyRightArm.keyframes["standing"].pose
+            UnitreeG1UpperBodyWithHeadCamera.keyframes["standing"].pose
         )
         self.init_robot_pose.p = [-0.3, 0, 0.755]
-        super().__init__(*args, robot_uids="unitree_g1_simplified_upper_body", **kwargs)
+        super().__init__(
+            *args,
+            robot_uids="unitree_g1_simplified_upper_body_with_head_camera",
+            **kwargs
+        )
 
     @property
     def _default_sim_config(self):
