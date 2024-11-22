@@ -8,7 +8,9 @@ import sapien
 import torch
 from transforms3d.euler import euler2quat
 
-from mani_skill.agents.robots.unitree_g1.g1_upper_body import UnitreeG1UpperBody
+from mani_skill.agents.robots.unitree_g1.g1_upper_body import (
+    UnitreeG1UpperBodyWithHeadCamera,
+)
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.utils import randomization
 from mani_skill.sensors.camera import CameraConfig
@@ -22,18 +24,24 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SceneConfig, SimConf
 
 @register_env("UnitreeG1TransportBox-v1", max_episode_steps=100)
 class TransportBoxEnv(BaseEnv):
-    SUPPORTED_ROBOTS = ["unitree_g1_simplified_upper_body"]
-    agent: UnitreeG1UpperBody
+    SUPPORTED_ROBOTS = ["unitree_g1_simplified_upper_body_with_head_camera"]
+    agent: UnitreeG1UpperBodyWithHeadCamera
 
     def __init__(self, *args, **kwargs):
         self.init_robot_pose = copy.deepcopy(
-            UnitreeG1UpperBody.keyframes["standing"].pose
+            UnitreeG1UpperBodyWithHeadCamera.keyframes["standing"].pose
         )
         self.init_robot_pose.p = [-0.1, 0, 0.755]
-        self.init_robot_qpos = UnitreeG1UpperBody.keyframes["standing"].qpos.copy()
+        self.init_robot_qpos = UnitreeG1UpperBodyWithHeadCamera.keyframes[
+            "standing"
+        ].qpos.copy()
         self.init_robot_qpos[4] = -1.25
         self.init_robot_qpos[3] = 1.25
-        super().__init__(*args, robot_uids="unitree_g1_simplified_upper_body", **kwargs)
+        super().__init__(
+            *args,
+            robot_uids="unitree_g1_simplified_upper_body_with_head_camera",
+            **kwargs
+        )
 
     @property
     def _default_sim_config(self):

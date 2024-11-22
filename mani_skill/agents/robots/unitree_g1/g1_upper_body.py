@@ -1,6 +1,7 @@
 import numpy as np
 import sapien
 import torch
+from transforms3d.euler import euler2quat
 
 from mani_skill import PACKAGE_ASSET_DIR
 from mani_skill.agents.base_agent import BaseAgent, Keyframe
@@ -118,7 +119,7 @@ class UnitreeG1UpperBody(BaseAgent):
 
     @property
     def _sensor_configs(self):
-        return []  # TODO: Add sensors
+        return []
 
     def _after_init(self):
         self.right_hand_finger_link_l_1 = self.robot.links_map["right_two_link"]
@@ -279,6 +280,26 @@ class UnitreeG1UpperBody(BaseAgent):
         )
         rflag = rflag1 | rflag2
         return torch.logical_and(lflag, rflag)
+
+
+@register_agent()
+class UnitreeG1UpperBodyWithHeadCamera(UnitreeG1UpperBody):
+    uid = "unitree_g1_simplified_upper_body_with_head_camera"
+
+    @property
+    def _sensor_configs(self):
+        return [
+            CameraConfig(
+                "head_camera",
+                pose=sapien.Pose(p=[0.05, 0, 0.46], q=euler2quat(0, np.pi / 6, 0)),
+                width=128,
+                height=128,
+                near=0.01,
+                far=100,
+                fov=np.pi / 2,
+                mount=self.robot.links_map["head_link"],
+            )
+        ]
 
 
 @register_agent()
