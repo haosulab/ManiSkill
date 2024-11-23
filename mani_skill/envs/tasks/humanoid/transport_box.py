@@ -17,7 +17,6 @@ from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.building import ground
 from mani_skill.utils.registration import register_env
-from mani_skill.utils.scene_builder.kitchen_counter import KitchenCounterSceneBuilder
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import GPUMemoryConfig, SceneConfig, SimConfig
 
@@ -64,26 +63,25 @@ class TransportBoxEnv(BaseEnv):
             scene_config=SceneConfig(contact_offset=0.02),
         )
 
-    # TODO tune cameras
     @property
     def _default_sensor_configs(self):
-        pose = sapien_utils.look_at([0.53, 0.0, 1.4], [-0.2, 0.0, 0.65])
+        pose = sapien_utils.look_at([1.0, 0.0, 1.6], [0, 0.0, 0.65])
         return [
-            CameraConfig("base_camera", pose=pose, width=128, height=128, fov=np.pi / 2)
+            CameraConfig("base_camera", pose=pose, width=128, height=128, fov=np.pi / 3)
         ]
 
     @property
     def _default_human_render_camera_configs(self):
-        pose = sapien_utils.look_at([0.53, 0.0, 1.4], [-0.2, 0.0, 0.65])
+        pose = sapien_utils.look_at([1.0, 0.0, 1.6], [0, 0.0, 0.65])
         return CameraConfig(
-            "render_camera", pose=pose, width=512, height=512, fov=np.pi / 2
+            "render_camera", pose=pose, width=512, height=512, fov=np.pi / 3
         )
 
     def _load_agent(self, options: dict):
         super()._load_agent(options, sapien.Pose(p=[0, 0, 1]))
 
     def _load_scene(self, options: dict):
-        self.ground = ground.build_ground(self.scene)
+        self.ground = ground.build_ground(self.scene, mipmap_levels=7)
         # build two tables
 
         model_dir = Path(
