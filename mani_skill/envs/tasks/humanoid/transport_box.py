@@ -114,10 +114,11 @@ class TransportBoxEnv(BaseEnv):
         self.table_2 = builder.build_static(name="table-2")
 
         builder = self.scene.create_actor_builder()
-        builder.add_box_collision(half_size=(0.18, 0.1, 0.12), density=200)
-        builder.add_box_visual(
-            half_size=(0.18, 0.1, 0.12),
-            material=sapien.render.RenderMaterial(base_color=[0.3, 0.6, 0.2, 1]),
+        builder.add_box_collision(half_size=(0.18, 0.12, 0.12), density=200)
+        builder.add_visual_from_file(
+            filename=os.path.join(os.path.dirname(__file__), "assets/box.glb"),
+            scale=[0.12, 0.12, 0.12],
+            pose=sapien.Pose(q=euler2quat(0, 0, np.pi / 2)),
         )
         builder.initial_pose = sapien.Pose(p=[-0.1, -0.37, 0.7508])
         self.box = builder.build(name="box")
