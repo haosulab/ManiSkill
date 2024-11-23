@@ -37,8 +37,10 @@ class PullDrawerEnv(BaseEnv):
         self.inner_height = self.outer_height - 2.2 * self.wall_thickness
         
         # Handle dimensions (scaled down)
-        self.handle_radius = 0.01  # (was 0.02)
-        self.handle_depth = 0.02   # (was 0.04)
+        self.handle_width = 0.04    # Width of handle bar
+        self.handle_height = 0.02   # Height of handle from drawer face
+        self.handle_thickness = 0.01  # Thickness of handle material
+        self.handle_offset = 0.02   # Offset from drawer front (new parameter)
         
         # Movement parameters (scaled proportionally)
         self.max_pull_distance = self.outer_depth * 0.8  # Can pull out 80% of depth
@@ -59,33 +61,33 @@ class PullDrawerEnv(BaseEnv):
             )
         )
 
-    @property
+   @property
     def _default_sensor_configs(self):
-        pose = sapien_utils.look_at([0.2, -0.3, 0.3], [0, 0, 0.1])
+        pose = sapien_utils.look_at(eye=[0.3, 0, 0.5], target=[-0.1, 0, 0.1])
         return [
             CameraConfig(
-                "base_camera", 
-                pose=pose, 
-                width=128, 
-                height=128, 
+                "base_camera",
+                pose=pose,
+                width=128,
+                height=128,
                 fov=np.pi / 2,
                 near=0.01,
-                far=100
+                far=100,
             )
         ]
 
     @property
     def _default_human_render_camera_configs(self):
-        pose = sapien_utils.look_at([-0.6, -0.8, 0.6], [0.0, 0.0, 0.2])
+        pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
         return [
             CameraConfig(
-                "render_camera", 
-                pose=pose, 
-                width=512, 
-                height=512, 
+                "render_camera",
+                pose=pose,
+                width=512,
+                height=512,
                 fov=1,
                 near=0.01,
-                far=100
+                far=100,
             )
         ]
 
@@ -187,22 +189,36 @@ class PullDrawerEnv(BaseEnv):
             half_size=[self.inner_width/2, self.wall_thickness/2, self.inner_height/2],
         )
         
-        # Handle (simple curved hook)
+        # Handle (horizontal bar) - Now positioned clearly in front of drawer
         mat = sapien.render.RenderMaterial()
         mat.set_base_color([1, 0, 0, 1])
         mat.metallic = 1.0
         mat.roughness = 0.0
         mat.specular = 1.0
         
-        drawer.add_sphere_collision(
-            sapien.Pose([0, self.inner_depth/2 + self.handle_depth, 0]),
-            radius=self.handle_radius
+        # Main handle bar
+        drawer.add_box_collision(
+            sapien.Pose([0, self.inner_depth/2 + self.handle_offset, 0]),
+            half_size=[self.handle_width/2, self.handle_thickness/2, self.handle_thickness/2]
         )
-        drawer.add_sphere_visual(
-            sapien.Pose([0, self.inner_depth/2 + self.handle_depth, 0]),
-            radius=self.handle_radius,
-            material = mat
+        drawer.add_box_visual(
+            sapien.Pose([0, self.inner_depth/2 + self.handle_offset, 0]),
+            half_size=[self.handle_width/2, self.handle_thickness/2, self.handle_thickness/2],
+            material=mat
         )
+        
+        # Handle supports (vertical bars connecting to drawer front)
+        for x_sign in [-1, 1]:
+            support_x = x_sign * (self.handle_width/2 - self.handle_thickness/2)
+            drawer.add_box_collision(
+                sapien.Pose([support_x, self.inner_depth/2 + self.handle_offset/2, 0]),
+                half_size=[self.handle_thickness/2, self.handle_offset/2, self.handle_thickness/2]
+            )
+            drawer.add_box_visual(
+                sapien.Pose([support_x, self.inner_depth/2 + self.handle_offset/2, 0]),
+                half_size=[self.handle_thickness/2, self.handle_offset/2, self.handle_thickness/2],
+                material=mat
+            )
 
         # Configure drawer joint
         drawer.set_joint_properties(
@@ -216,7 +232,7 @@ class PullDrawerEnv(BaseEnv):
 
         # Build and position the drawer
         builder.set_scene_idxs(scene_idxs=range(self.num_envs))
-        builder.set_initial_pose(sapien.Pose(p=[0, 0.1, 0.3]))  
+        builder.set_initial_pose(sapien.Pose(p=[-0.2, -0.5, 0.3]))  
         
         self.drawer = builder.build(fix_root_link=True, name="drawer_articulation")
         self.drawer_link = self.drawer.get_links()[1]
@@ -266,18 +282,30 @@ class PullDrawerEnv(BaseEnv):
         drawer_qpos = self.drawer.get_qpos()
         pos_dist = torch.abs(self.target_pos - drawer_qpos)
         
+        # Get gripper position relative to handle
+        tcp_pose = self.agent.tcp.pose.raw_pose
+        tcp_pos = tcp_pose[..., :3]
+        # Updated handle position calculation to match new handle position
+        handle_pos = torch.tensor(
+            [-0.2, -0.5 + self.inner_depth/2 + self.handle_offset, 0.3], 
+            device=self.device
+        )
+        reach_dist = torch.norm(tcp_pos - handle_pos, dim=-1)
+        
+        # Compute rewards
         distance_reward = 2.0 * (1 - torch.tanh(5.0 * pos_dist)).squeeze(-1)
+        reaching_reward = 1.0 * (1 - torch.tanh(10.0 * reach_dist))
         is_grasping = self.agent.is_grasping(self.drawer_link, max_angle=30)
         grasping_reward = 2.0 * is_grasping
         
         success_mask = info.get("success", torch.zeros_like(is_grasping))
         success_reward = torch.where(success_mask, 5.0, 0.0)
         
-        return distance_reward + grasping_reward + success_reward
+        return distance_reward + reaching_reward + grasping_reward + success_reward
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        max_reward = 5.0
+        max_reward = 10.0  # Maximum possible reward (2 + 1 + 2 + 5)
         dense_reward = self.compute_dense_reward(obs=obs, action=action, info=info)
         return dense_reward / max_reward
