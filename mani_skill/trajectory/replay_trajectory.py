@@ -253,8 +253,6 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
                     if pbar is not None:
                         pbar.update()
                     _, _, _, truncated, info = env.step(a)
-                    if t > 40:
-                        break
                     if args.use_env_states:
                         env.base_env.set_state_dict(ori_env_states[t])
                     if args.vis:
