@@ -47,6 +47,14 @@ Table of all tasks/environments in this category. Task column is the environment
 <td><p>❌</p></td>
 <td><p>1000</p></td>
 </tr>
+<tr class="row-odd">
+<td><p><a href="#unitreeg1transportbox-v1">UnitreeG1TransportBox-v1</a></p></td>
+<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/UnitreeG1TransportBox-v1_rt_thumb_first.png' alt='UnitreeG1TransportBox-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/UnitreeG1TransportBox-v1_rt_thumb_last.png' alt='UnitreeG1TransportBox-v1'></div></td>
+<td><p>✅</p></td>
+<td><p>✅</p></td>
+<td><p>❌</p></td>
+<td><p>100</p></td>
+</tr>
 </tbody>
 </table>
 
@@ -77,5 +85,30 @@ Control the humanoid unitree G1 robot to grab an apple with its right arm and pl
 <div style="display: flex; justify-content: center;">
 <video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="../../_static/env_thumbnails/UnitreeG1PlaceAppleInBowl-v1_rt_thumb_first.png">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/UnitreeG1PlaceAppleInBowl-v1_rt.mp4" type="video/mp4">
+</video>
+</div>
+
+## UnitreeG1TransportBox-v1
+
+![dense-reward][dense-reward-badge]
+![sparse-reward][sparse-reward-badge]
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+A G1 humanoid robot must find a box on a table and transport it to the other table and place it there.
+
+**Randomizations:**
+- the box's xy position is randomized in the region [-0.05, -0.05] x [0.2, 0.05]
+- the box's z-axis rotation is randomized to a random angle in [0, np.pi/6]
+
+**Success Conditions:**
+- the box is resting on top of the other table
+:::
+
+<div style="display: flex; justify-content: center;">
+<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="../../_static/env_thumbnails/UnitreeG1TransportBox-v1_rt_thumb_first.png">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/UnitreeG1TransportBox-v1_rt.mp4" type="video/mp4">
 </video>
 </div>
