@@ -35,6 +35,12 @@ class UnitreeG1UpperBody(BaseAgent):
                 )
                 for k in ["one", "two", "three", "four", "five", "six"]
             },
+            "left_palm_link": dict(
+                material="finger", patch_radius=0.1, min_patch_radius=0.1
+            ),
+            "right_palm_link": dict(
+                material="finger", patch_radius=0.1, min_patch_radius=0.1
+            ),
         },
     )
     fix_root_link = True

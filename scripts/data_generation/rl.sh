@@ -144,9 +144,18 @@ done
 
 
 ### UnitreeG1PlaceAppleInBowl-v1 ###
+# num-steps=32 can be optimized down probably
 for control_mode in "pd_joint_delta_pos"; do
   python ppo_fast.py --env_id="UnitreeG1PlaceAppleInBowl-v1" \
-    --num_envs=512 --update_epochs=8 --num_minibatches=32 \
-    --total_timesteps=100_000_000 --num-steps=32 --num-eval-steps=100 \
+    --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
+    --total_timesteps=50_000_000 --num-steps=32 --num-eval-steps=100 \
     --save-model --cudagraphs --exp-name="data_generation/UnitreeG1PlaceAppleInBowl-v1-ppo-${control_mode}" --control-mode ${control_mode}
+done
+
+### UnitreeG1TransportBox-v1 ###
+for control_mode in "pd_joint_delta_pos"; do
+  python ppo_fast.py --env_id="UnitreeG1TransportBox-v1" \
+    --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
+    --total_timesteps=100_000_000 --num-steps=32 --num-eval-steps=100 \
+    --save-model --cudagraphs --exp-name="data_generation/UnitreeG1TransportBox-v1-ppo-${control_mode}" --control-mode ${control_mode}
 done

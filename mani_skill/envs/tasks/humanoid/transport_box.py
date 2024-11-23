@@ -22,7 +22,7 @@ from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import GPUMemoryConfig, SceneConfig, SimConfig
 
 
-@register_env("UnitreeG1TransportBox-v1", max_episode_steps=50)
+@register_env("UnitreeG1TransportBox-v1", max_episode_steps=100)
 class TransportBoxEnv(BaseEnv):
     SUPPORTED_ROBOTS = ["unitree_g1_simplified_upper_body_with_head_camera"]
     agent: UnitreeG1UpperBodyWithHeadCamera
@@ -122,20 +122,20 @@ class TransportBoxEnv(BaseEnv):
         builder.initial_pose = sapien.Pose(p=[-0.1, -0.37, 0.7508])
         self.box = builder.build(name="box")
 
-        # DEBUG
-        # builder=self.scene.create_actor_builder()
-        # builder.add_sphere_visual(radius=0.05, material=sapien.render.RenderMaterial(base_color=[1, 0, 0, 1]))
-        # self.box_right_grasp_point_obj = builder.build_kinematic(name="box_right_grasp_point")
-        # builder=self.scene.create_actor_builder()
-        # builder.add_sphere_visual(radius=0.05, material=sapien.render.RenderMaterial(base_color=[0, 0, 1, 1]))
-        # self.box_left_grasp_point_obj = builder.build_kinematic(name="box_left_grasp_point")
-
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
-            len(env_idx)
+            b = len(env_idx)
             self.agent.robot.set_qpos(self.init_robot_qpos)
             self.agent.robot.set_pose(self.init_robot_pose)
-            self.box.set_pose(sapien.Pose(p=[-0.1, -0.37, 0.7508]))
+            xyz = torch.zeros((b, 3))
+            xyz[:, 2] = 0.7508
+            xyz[:, 0] = randomization.uniform(-0.05, 0.2, size=(b,))
+            xyz[:, 1] = randomization.uniform(-0.05, 0.05, size=(b,))
+            xyz[:, :2] += torch.tensor([-0.1, -0.37])
+            quat = randomization.random_quaternions(
+                n=b, device=self.device, lock_x=True, lock_y=True, bounds=(0, np.pi / 6)
+            )
+            self.box.set_pose(Pose.create_from_pq(xyz, quat))
 
     def evaluate(self):
         # left_hand_grasped_box = self.agent.left_hand_is_grasping(self.box, max_angle=110)
@@ -172,18 +172,18 @@ class TransportBoxEnv(BaseEnv):
         )
         left_hand_hit_box = l_contact_forces > 10
         right_hand_hit_box = r_contact_forces > 10
-        right_tcp_to_box_dist = torch.linalg.norm(
-            self.agent.right_tcp.pose.p - self.box_right_grasp_point.p, dim=1
-        )
-        left_tcp_to_box_dist = torch.linalg.norm(
-            self.agent.left_tcp.pose.p - self.box_left_grasp_point.p, dim=1
-        )
-        # is grasping the box if grasping it from the right grasp points on the box and achieving contact
+        # is grasping the box if both hands contact the box and the tcp of the hands are below the grasp points on the box.
         box_grasped = (
             left_hand_hit_box
             & right_hand_hit_box
-            & (right_tcp_to_box_dist < 0.05)
-            & (left_tcp_to_box_dist < 0.05)
+            & (
+                self.agent.right_tcp.pose.p[:, 2]
+                < self.box_right_grasp_point.p[:, 2] + 0.04
+            )
+            & (
+                self.agent.left_tcp.pose.p[:, 2]
+                < self.box_left_grasp_point.p[:, 2] + 0.04
+            )
         )
 
         # simply requires box to be resting somewhere on the correct table
@@ -200,10 +200,8 @@ class TransportBoxEnv(BaseEnv):
         box_at_correct_table = box_at_correct_table_z & box_at_correct_table_xy
 
         facing_table_with_box = (-1.7 < self.agent.robot.qpos[:, 0]) & (
-            self.agent.robot.qpos[:, 0] < -1.5
+            self.agent.robot.qpos[:, 0] < -1.4
         )  # in this range the robot is probably facing the box on the left table.
-        # self.box_left_grasp_point_obj.set_pose(self.box_left_grasp_point)
-        # self.box_right_grasp_point_obj.set_pose(self.box_right_grasp_point)
         return {
             "success": ~box_grasped & box_at_correct_table,
             "left_hand_hit_box": l_contact_forces > 0,
@@ -230,18 +228,18 @@ class TransportBoxEnv(BaseEnv):
     @property
     def box_right_grasp_point(self):
         return self.box.pose * Pose.create_from_pq(
-            torch.tensor([-0.165, 0.05, 0.09], device=self.device)
+            torch.tensor([-0.165, 0.07, 0.05], device=self.device)
         )
 
     @property
     def box_left_grasp_point(self):
         return self.box.pose * Pose.create_from_pq(
-            torch.tensor([0.165, 0.05, 0.09], device=self.device)
+            torch.tensor([0.165, 0.07, 0.05], device=self.device)
         )
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         # Stage 1, move to face the box on the table. Succeeds if facing_table_with_box
-        reward = 1 - torch.tanh((self.agent.robot.qpos[:, 0] + 1.5).abs())
+        reward = 1 - torch.tanh((self.agent.robot.qpos[:, 0] + 1.4).abs())
 
         # Stage 2, grasp the box stably. Succeeds if box_grasped
         # encourage arms to go down essentially and for tcps to be close to the edge of the box
@@ -271,19 +269,19 @@ class TransportBoxEnv(BaseEnv):
             )
             / 4
         )
-        # print((1 - torch.tanh(torch.linalg.norm(self.agent.right_tcp.pose.p - self.box_right_grasp_point, dim=1))) / 4, (1 - torch.tanh(torch.linalg.norm(self.agent.left_tcp.pose.p - self.box_left_grasp_point, dim=1))) / 4)
-        # print(1 - torch.tanh(3*torch.linalg.norm(self.agent.right_tcp.pose.p - self.box_right_grasp_point, dim=1)))
         reward[info["facing_table_with_box"]] = stage_2_reward[
             info["facing_table_with_box"]
         ]
         # Stage 3 transport box to above the other table, Succeeds if box_at_correct_table_xy
-        stage_3_reward = 2 + 1 - torch.tanh((self.agent.robot.qpos[:, 0] - 1.4).abs())
+        stage_3_reward = (
+            2 + 1 - torch.tanh((self.agent.robot.qpos[:, 0] - 1.4).abs() / 5)
+        )
         reward[info["box_grasped"]] = stage_3_reward[info["box_grasped"]]
         # Stage 4 let go of the box. Succeeds if success (~box_grasped & box_at_correct_table)
         stage_4_reward = (
             3
-            + (1 - torch.tanh((self.agent.robot.qpos[:, 3]).abs() - 1.25)) / 2
-            + (1 - torch.tanh((self.agent.robot.qpos[:, 4]).abs() - 1.25)) / 2
+            + (1 - torch.tanh((self.agent.robot.qpos[:, 3] - 1.25).abs())) / 2
+            + (1 - torch.tanh((self.agent.robot.qpos[:, 4] + 1.25).abs())) / 2
         )
         reward[info["box_at_correct_table_xy"]] = stage_4_reward[
             info["box_at_correct_table_xy"]
