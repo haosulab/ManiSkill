@@ -24,6 +24,18 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SceneConfig, SimConf
 
 @register_env("UnitreeG1TransportBox-v1", max_episode_steps=100)
 class TransportBoxEnv(BaseEnv):
+    """
+    **Task Description:**
+    A G1 humanoid robot must find a box on a table and transport it to the other table and place it there.
+
+    **Randomizations:**
+    - the box's xy position is randomized in the region [-0.05, -0.05] x [0.2, 0.05]
+    - the box's z-axis rotation is randomized to a random angle in [0, np.pi/6]
+
+    **Success Conditions:**
+    - the box is resting on top of the other table
+    """
+
     SUPPORTED_ROBOTS = ["unitree_g1_simplified_upper_body_with_head_camera"]
     agent: UnitreeG1UpperBodyWithHeadCamera
 
@@ -115,9 +127,12 @@ class TransportBoxEnv(BaseEnv):
 
         builder = self.scene.create_actor_builder()
         builder.add_box_collision(half_size=(0.18, 0.12, 0.12), density=200)
+        visual_file = os.path.join(
+            os.path.dirname(__file__), "assets/cardboard_box/textured.obj"
+        )
         builder.add_visual_from_file(
-            filename=os.path.join(os.path.dirname(__file__), "assets/box.glb"),
-            scale=[0.12, 0.12, 0.12],
+            filename=visual_file,
+            scale=[0.12] * 3,
             pose=sapien.Pose(q=euler2quat(0, 0, np.pi / 2)),
         )
         builder.initial_pose = sapien.Pose(p=[-0.1, -0.37, 0.7508])
