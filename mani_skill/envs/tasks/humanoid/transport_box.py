@@ -172,8 +172,21 @@ class TransportBoxEnv(BaseEnv):
         )
         left_hand_hit_box = l_contact_forces > 10
         right_hand_hit_box = r_contact_forces > 10
-        box_grasped = left_hand_hit_box & right_hand_hit_box
-        # simply requires box to be resting on the correct table
+        right_tcp_to_box_dist = torch.linalg.norm(
+            self.agent.right_tcp.pose.p - self.box_right_grasp_point.p, dim=1
+        )
+        left_tcp_to_box_dist = torch.linalg.norm(
+            self.agent.left_tcp.pose.p - self.box_left_grasp_point.p, dim=1
+        )
+        # is grasping the box if grasping it from the right grasp points on the box and achieving contact
+        box_grasped = (
+            left_hand_hit_box
+            & right_hand_hit_box
+            & (right_tcp_to_box_dist < 0.05)
+            & (left_tcp_to_box_dist < 0.05)
+        )
+
+        # simply requires box to be resting somewhere on the correct table
         box_at_correct_table_z = (0.751 > self.box.pose.p[:, 2]) & (
             self.box.pose.p[:, 2] > 0.750
         )
@@ -189,6 +202,8 @@ class TransportBoxEnv(BaseEnv):
         facing_table_with_box = (-1.7 < self.agent.robot.qpos[:, 0]) & (
             self.agent.robot.qpos[:, 0] < -1.5
         )  # in this range the robot is probably facing the box on the left table.
+        # self.box_left_grasp_point_obj.set_pose(self.box_left_grasp_point)
+        # self.box_right_grasp_point_obj.set_pose(self.box_right_grasp_point)
         return {
             "success": ~box_grasped & box_at_correct_table,
             "left_hand_hit_box": l_contact_forces > 0,
@@ -214,11 +229,15 @@ class TransportBoxEnv(BaseEnv):
 
     @property
     def box_right_grasp_point(self):
-        return self.box.pose.p + torch.tensor([-0.18, 0.05, 0.11], device=self.device)
+        return self.box.pose * Pose.create_from_pq(
+            torch.tensor([-0.165, 0.05, 0.09], device=self.device)
+        )
 
     @property
     def box_left_grasp_point(self):
-        return self.box.pose.p + torch.tensor([0.18, 0.05, 0.11], device=self.device)
+        return self.box.pose * Pose.create_from_pq(
+            torch.tensor([0.165, 0.05, 0.09], device=self.device)
+        )
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         # Stage 1, move to face the box on the table. Succeeds if facing_table_with_box
@@ -235,7 +254,8 @@ class TransportBoxEnv(BaseEnv):
                 - torch.tanh(
                     3
                     * torch.linalg.norm(
-                        self.agent.right_tcp.pose.p - self.box_right_grasp_point, dim=1
+                        self.agent.right_tcp.pose.p - self.box_right_grasp_point.p,
+                        dim=1,
                     )
                 )
             )
@@ -245,7 +265,7 @@ class TransportBoxEnv(BaseEnv):
                 - torch.tanh(
                     3
                     * torch.linalg.norm(
-                        self.agent.left_tcp.pose.p - self.box_left_grasp_point, dim=1
+                        self.agent.left_tcp.pose.p - self.box_left_grasp_point.p, dim=1
                     )
                 )
             )
