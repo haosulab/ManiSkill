@@ -25,13 +25,13 @@ class PullDrawerEnv(BaseEnv):
     ):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         
-        # Outer cabinet dimensions (scaled down by 0.5)
-        self.outer_width = 0.15    # x (was 0.3)
-        self.outer_depth = 0.2     # y (was 0.4)
-        self.outer_height = 0.15   # z (was 0.3)
-        self.wall_thickness = 0.01  # (was 0.02)
+        # Outer cabinet dimensions 
+        self.outer_width = 0.15    
+        self.outer_depth = 0.2     
+        self.outer_height = 0.15   
+        self.wall_thickness = 0.01  
         
-        # Inner drawer dimensions (slightly smaller to fit inside)
+        # Inner drawer dimensions 
         self.inner_width = self.outer_width - 2.2 * self.wall_thickness
         self.inner_depth = self.outer_depth - 1.2 * self.wall_thickness
         self.inner_height = self.outer_height - 2.2 * self.wall_thickness
@@ -40,10 +40,10 @@ class PullDrawerEnv(BaseEnv):
         self.handle_width = 0.04    # Width of handle bar
         self.handle_height = 0.02   # Height of handle from drawer face
         self.handle_thickness = 0.01  # Thickness of handle material
-        self.handle_offset = 0.02   # Offset from drawer front (new parameter)
+        self.handle_offset = 0.02   # Offset from drawer side
         
         # Movement parameters (scaled proportionally)
-        self.max_pull_distance = self.outer_depth * 0.8  # Can pull out 80% of depth
+        self.max_pull_distance = self.outer_width * 0.8  # Can pull out 80% of width
         self.target_pos = -self.max_pull_distance * 0.8
         
         super().__init__(
@@ -78,7 +78,7 @@ class PullDrawerEnv(BaseEnv):
 
     @property
     def _default_human_render_camera_configs(self):
-        pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
+        pose = sapien_utils.look_at([-0.7, -0.7, 0.6], [0.0, 0.0, 0.0])
         return [
             CameraConfig(
                 "render_camera",
@@ -99,7 +99,7 @@ class PullDrawerEnv(BaseEnv):
 
         builder = self.scene.create_articulation_builder()
         
-        # Create outer cabinet (fixed base)
+        # Create outer cabinet 
         base = builder.create_link_builder()
         base.name = "cabinet"
         
@@ -123,7 +123,7 @@ class PullDrawerEnv(BaseEnv):
             half_size=[self.outer_width/2, self.outer_depth/2, self.wall_thickness/2],
         )
         
-        # Back wall
+        # Back wall 
         base.add_box_collision(
             sapien.Pose([0, -self.outer_depth/2, 0]),
             half_size=[self.outer_width/2, self.wall_thickness/2, self.outer_height/2]
@@ -133,16 +133,25 @@ class PullDrawerEnv(BaseEnv):
             half_size=[self.outer_width/2, self.wall_thickness/2, self.outer_height/2],
         )
         
-        # Side walls
-        for x_sign in [-1, 1]:
-            base.add_box_collision(
-                sapien.Pose([x_sign * self.outer_width/2, 0, 0]),
-                half_size=[self.wall_thickness/2, self.outer_depth/2, self.outer_height/2]
-            )
-            base.add_box_visual(
-                sapien.Pose([x_sign * self.outer_width/2, 0, 0]),
-                half_size=[self.wall_thickness/2, self.outer_depth/2, self.outer_height/2],
-            )
+        # Front wall 
+        base.add_box_collision(
+            sapien.Pose([0, self.outer_depth/2, 0]),
+            half_size=[self.outer_width/2, self.wall_thickness/2, self.outer_height/2]
+        )
+        base.add_box_visual(
+            sapien.Pose([0, self.outer_depth/2, 0]),
+            half_size=[self.outer_width/2, self.wall_thickness/2, self.outer_height/2],
+        )
+        
+        # Right wall 
+        base.add_box_collision(
+            sapien.Pose([self.outer_width/2, 0, 0]),
+            half_size=[self.wall_thickness/2, self.outer_depth/2, self.outer_height/2]
+        )
+        base.add_box_visual(
+            sapien.Pose([self.outer_width/2, 0, 0]),
+            half_size=[self.wall_thickness/2, self.outer_depth/2, self.outer_height/2],
+        )
         
         # Create sliding drawer
         drawer = builder.create_link_builder(parent=base)
@@ -158,7 +167,7 @@ class PullDrawerEnv(BaseEnv):
             half_size=[self.inner_width/2, self.inner_depth/2, self.wall_thickness/2],
         )
         
-        # Drawer back
+        # Drawer back 
         drawer.add_box_collision(
             sapien.Pose([0, -self.inner_depth/2, 0]),
             half_size=[self.inner_width/2, self.wall_thickness/2, self.inner_height/2]
@@ -168,18 +177,7 @@ class PullDrawerEnv(BaseEnv):
             half_size=[self.inner_width/2, self.wall_thickness/2, self.inner_height/2],
         )
         
-        # Drawer sides
-        for x_sign in [-1, 1]:
-            drawer.add_box_collision(
-                sapien.Pose([x_sign * self.inner_width/2, 0, 0]),
-                half_size=[self.wall_thickness/2, self.inner_depth/2, self.inner_height/2]
-            )
-            drawer.add_box_visual(
-                sapien.Pose([x_sign * self.inner_width/2, 0, 0]),
-                half_size=[self.wall_thickness/2, self.inner_depth/2, self.inner_height/2],
-            )
-        
-        # Drawer front
+        # Drawer front 
         drawer.add_box_collision(
             sapien.Pose([0, self.inner_depth/2, 0]),
             half_size=[self.inner_width/2, self.wall_thickness/2, self.inner_height/2]
@@ -189,50 +187,70 @@ class PullDrawerEnv(BaseEnv):
             half_size=[self.inner_width/2, self.wall_thickness/2, self.inner_height/2],
         )
         
-        # Handle (horizontal bar) - Now positioned clearly in front of drawer
+        # Drawer right side 
+        drawer.add_box_collision(
+            sapien.Pose([self.inner_width/2, 0, 0]),
+            half_size=[self.wall_thickness/2, self.inner_depth/2, self.inner_height/2]
+        )
+        drawer.add_box_visual(
+            sapien.Pose([self.inner_width/2, 0, 0]),
+            half_size=[self.wall_thickness/2, self.inner_depth/2, self.inner_height/2],
+        )
+
+        # Drawer left side 
+        drawer.add_box_collision(
+            sapien.Pose([-self.inner_width/2, 0, 0]),
+            half_size=[self.wall_thickness/2, self.inner_depth/2, self.inner_height/2]
+        )
+        drawer.add_box_visual(
+            sapien.Pose([-self.inner_width/2, 0, 0]),
+            half_size=[self.wall_thickness/2, self.inner_depth/2, self.inner_height/2],
+        )
+        
+        # Handle material 
         mat = sapien.render.RenderMaterial()
         mat.set_base_color([1, 0, 0, 1])
         mat.metallic = 1.0
         mat.roughness = 0.0
         mat.specular = 1.0
         
-        # Main handle bar
+        # Main handle bar 
         drawer.add_box_collision(
-            sapien.Pose([0, self.inner_depth/2 + self.handle_offset, 0]),
-            half_size=[self.handle_width/2, self.handle_thickness/2, self.handle_thickness/2]
+            sapien.Pose([-self.inner_width/2 - self.handle_offset, 0, 0]),
+            half_size=[self.handle_thickness/2, self.handle_width/2, self.handle_thickness/2]
         )
         drawer.add_box_visual(
-            sapien.Pose([0, self.inner_depth/2 + self.handle_offset, 0]),
-            half_size=[self.handle_width/2, self.handle_thickness/2, self.handle_thickness/2],
+            sapien.Pose([-self.inner_width/2 - self.handle_offset, 0, 0]),
+            half_size=[self.handle_thickness/2, self.handle_width/2, self.handle_thickness/2],
             material=mat
         )
         
-        # Handle supports (vertical bars connecting to drawer front)
-        for x_sign in [-1, 1]:
-            support_x = x_sign * (self.handle_width/2 - self.handle_thickness/2)
+        # Handle supports 
+        for y_sign in [-1, 1]:
+            support_y = y_sign * (self.handle_width/2 - self.handle_thickness/2)
             drawer.add_box_collision(
-                sapien.Pose([support_x, self.inner_depth/2 + self.handle_offset/2, 0]),
-                half_size=[self.handle_thickness/2, self.handle_offset/2, self.handle_thickness/2]
+                sapien.Pose([-self.inner_width/2 - self.handle_offset/2, support_y, 0]),
+                half_size=[self.handle_offset/2, self.handle_thickness/2, self.handle_thickness/2]
             )
             drawer.add_box_visual(
-                sapien.Pose([support_x, self.inner_depth/2 + self.handle_offset/2, 0]),
-                half_size=[self.handle_thickness/2, self.handle_offset/2, self.handle_thickness/2],
+                sapien.Pose([-self.inner_width/2 - self.handle_offset/2, support_y, 0]),
+                half_size=[self.handle_offset/2, self.handle_thickness/2, self.handle_thickness/2],
                 material=mat
             )
 
-        # Configure drawer joint
+        # Configure drawer joint 
         drawer.set_joint_properties(
             type="prismatic",
             limits=(-self.max_pull_distance, 0),
-            pose_in_parent=sapien.Pose([0, 0, 0]),
+            pose_in_parent=sapien.Pose(),
             pose_in_child=sapien.Pose(),
             friction=0.1,
             damping=10
         )
 
-        # Build and position the drawer
+        
         builder.set_scene_idxs(scene_idxs=range(self.num_envs))
-        builder.set_initial_pose(sapien.Pose(p=[0, -0.3, 0.151]))  
+        builder.set_initial_pose(sapien.Pose(p=[0, -0.3, 0.077]))  
         
         self.drawer = builder.build(fix_root_link=True, name="drawer_articulation")
         self.drawer_link = self.drawer.get_links()[1]
@@ -282,12 +300,11 @@ class PullDrawerEnv(BaseEnv):
         drawer_qpos = self.drawer.get_qpos()
         pos_dist = torch.abs(self.target_pos - drawer_qpos)
         
-        # Get gripper position relative to handle
+        # Update handle position for reward calculation
         tcp_pose = self.agent.tcp.pose.raw_pose
         tcp_pos = tcp_pose[..., :3]
-        # Updated handle position calculation to match new handle position
         handle_pos = torch.tensor(
-            [-0.2, -0.5 + self.inner_depth/2 + self.handle_offset, 0.3], 
+            [-0.2 - self.inner_width/2 - self.handle_offset, -0.3, 0.3], 
             device=self.device
         )
         reach_dist = torch.norm(tcp_pos - handle_pos, dim=-1)
