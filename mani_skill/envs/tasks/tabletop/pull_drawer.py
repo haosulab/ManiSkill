@@ -250,7 +250,7 @@ class PullDrawerEnv(BaseEnv):
 
         
         builder.set_scene_idxs(scene_idxs=range(self.num_envs))
-        builder.set_initial_pose(sapien.Pose(p=[0, -0.3, 0.077]))  
+        builder.set_initial_pose(sapien.Pose(p=[0, 0.3, 0.077]))  
         
         self.drawer = builder.build(fix_root_link=True, name="drawer_articulation")
         self.drawer_link = self.drawer.get_links()[1]
