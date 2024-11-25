@@ -37,10 +37,10 @@ class PullDrawerEnv(BaseEnv):
         self.inner_height = self.outer_height - 2.2 * self.wall_thickness
         
         # Handle dimensions 
-        self.handle_width = 0.04    # Width of handle bar
-        self.handle_height = 0.02   # Height of handle from drawer face
-        self.handle_thickness = 0.01  # Thickness of handle material
-        self.handle_offset = 0.02   # Offset from drawer side
+        self.handle_width = 0.08    # Width of handle bar
+        self.handle_height = 0.04   # Height of handle from drawer face
+        self.handle_thickness = 0.02  # Thickness of handle material
+        self.handle_offset = 0.03   # Offset from drawer side
         
         # Movement parameters (scaled proportionally)
         self.max_pull_distance = self.outer_width * 0.8  # Can pull out 80% of width
@@ -244,13 +244,13 @@ class PullDrawerEnv(BaseEnv):
             limits=(-self.max_pull_distance, 0),
             pose_in_parent=sapien.Pose(),
             pose_in_child=sapien.Pose(),
-            friction=0.1,
+            friction=0.3,
             damping=10
         )
 
         
         builder.set_scene_idxs(scene_idxs=range(self.num_envs))
-        builder.set_initial_pose(sapien.Pose(p=[0, 0.3, 0.077]))  
+        builder.set_initial_pose(sapien.Pose(p=[0, 0.15, 0.077]))  
         
         self.drawer = builder.build(fix_root_link=True, name="drawer_articulation")
         self.drawer_link = self.drawer.get_links()[1]
@@ -313,7 +313,7 @@ class PullDrawerEnv(BaseEnv):
         distance_reward = 2.0 * (1 - torch.tanh(5.0 * pos_dist)).squeeze(-1)
         reaching_reward = 1.0 * (1 - torch.tanh(10.0 * reach_dist))
         is_grasping = self.agent.is_grasping(self.drawer_link, max_angle=30)
-        grasping_reward = 2.0 * is_grasping
+        grasping_reward = 4.0 * is_grasping
         
         success_mask = info.get("success", torch.zeros_like(is_grasping))
         success_reward = torch.where(success_mask, 5.0, 0.0)
@@ -323,6 +323,6 @@ class PullDrawerEnv(BaseEnv):
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        max_reward = 10.0  # Maximum possible reward (2 + 1 + 2 + 5)
+        max_reward = 12.0  # Maximum possible reward (2 + 1 + 4 + 5)
         dense_reward = self.compute_dense_reward(obs=obs, action=action, info=info)
         return dense_reward / max_reward
