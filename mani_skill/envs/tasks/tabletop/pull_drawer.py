@@ -36,7 +36,7 @@ class PullDrawerEnv(BaseEnv):
         self.inner_depth = self.outer_depth - 1.2 * self.wall_thickness
         self.inner_height = self.outer_height - 2.2 * self.wall_thickness
         
-        # Handle dimensions (scaled down)
+        # Handle dimensions 
         self.handle_width = 0.04    # Width of handle bar
         self.handle_height = 0.02   # Height of handle from drawer face
         self.handle_thickness = 0.01  # Thickness of handle material
@@ -78,7 +78,7 @@ class PullDrawerEnv(BaseEnv):
 
     @property
     def _default_human_render_camera_configs(self):
-        pose = sapien_utils.look_at([-0.7, -0.7, 0.6], [0.0, 0.0, 0.0])
+        pose = sapien_utils.look_at([-0.7, 0.7, 0.4], [0.0, 0.0, 0.0])
         return [
             CameraConfig(
                 "render_camera",
