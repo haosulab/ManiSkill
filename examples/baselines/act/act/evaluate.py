@@ -8,16 +8,11 @@ from mani_skill.utils import common
 def evaluate(n: int, agent, eval_envs, eval_kwargs):
     stats, num_queries, temporal_agg, max_timesteps, device, sim_backend = eval_kwargs.values()
 
+    use_visual_obs = isinstance(eval_envs.single_observation_space.sample(), dict)
     delta_control = not stats
-    # determine if visual obs (rgb or rgbd) is used
-    #use_visual_obs = "example_visual_obs" in stats
-    use_visual_obs = False # set to False for now
-
     if not delta_control:
         pre_process = lambda s_obs: (s_obs - stats['state_mean'].cpu().numpy()) / stats['state_std'].cpu().numpy()
         post_process = lambda a: a * stats['action_std'].cpu().numpy() + stats['action_mean'].cpu().numpy()
-    # stats['state_mean'] & stats['state_std'] should be of shape (1, state_dim) if obs is of shape (num_envs, state_dim)
-    # stats['action_mean'] & stats['action_std'] should be of shape (1, act_dim)
 
     # create action table for temporal ensembling
     action_dim = eval_envs.action_space.shape[-1]
@@ -37,8 +32,8 @@ def evaluate(n: int, agent, eval_envs, eval_kwargs):
         while eps_count < n:
             # pre-process obs
             if use_visual_obs:
+                obs['state'] = pre_process(obs['state']) if not delta_control else obs['state']  # (num_envs, obs_dim)
                 obs = {k: common.to_tensor(v, device) for k, v in obs.items()}
-                #obs['state'] = pre_process(obs['state'])  # (num_envs, obs_dim)
             else:
                 obs = pre_process(obs) if not delta_control else obs  # (num_envs, obs_dim)
                 obs = common.to_tensor(obs, device)
