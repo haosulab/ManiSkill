@@ -304,7 +304,7 @@ class PullDrawerEnv(BaseEnv):
         tcp_pose = self.agent.tcp.pose.raw_pose
         tcp_pos = tcp_pose[..., :3]
         handle_pos = torch.tensor(
-            [-0.2 - self.inner_width/2 - self.handle_offset, -0.3, 0.3], 
+            [-0.2 - self.inner_width/2 - self.handle_offset, -0.15, 0.15], 
             device=self.device
         )
         reach_dist = torch.norm(tcp_pos - handle_pos, dim=-1)
