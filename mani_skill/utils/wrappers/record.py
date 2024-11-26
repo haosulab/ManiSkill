@@ -285,10 +285,6 @@ class RecordEpisode(gym.Wrapper):
         self._save_video = save_video
         self.info_on_video = info_on_video
         self.render_images = []
-        if info_on_video and self.num_envs > 1:
-            raise ValueError(
-                "Cannot turn info_on_video=True when the number of environments parallelized is > 1"
-            )
         self.video_nrows = int(np.sqrt(self.unwrapped.num_envs))
         self._avoid_overwriting_video = avoid_overwriting_video
 
@@ -323,9 +319,13 @@ class RecordEpisode(gym.Wrapper):
         else:
             return self._save_video
 
-    def capture_image(self):
+    def capture_image(self, infos=None):
         img = self.env.render()
         img = common.to_numpy(img)
+        if infos is not None:
+            for i in range(len(img)):
+                info_item = {k: v[i] for k, v in infos.items()}
+                img[i] = put_info_on_image(img[i], info_item)
         if len(img.shape) > 3:
             if len(img) == 1:
                 img = img[0]
@@ -498,17 +498,14 @@ class RecordEpisode(gym.Wrapper):
 
         if self.save_video:
             self._video_steps += 1
-            image = self.capture_image()
-
             if self.info_on_video:
-                scalar_info = gym_utils.extract_scalars_from_info(common.to_numpy(info))
-                if isinstance(rew, torch.Tensor) and len(rew.shape) > 1:
-                    rew = rew[0]
-                rew = float(common.to_numpy(rew))
-                extra_texts = [
-                    f"reward: {rew:.3f}",
-                ]
-                image = put_info_on_image(image, scalar_info, extras=extra_texts)
+                scalar_info = gym_utils.extract_scalars_from_info(
+                    common.to_numpy(info), batch_size=self.num_envs
+                )
+                scalar_info["reward"] = [float(rew) for rew in common.to_numpy(rew)]
+                image = self.capture_image(scalar_info)
+            else:
+                image = self.capture_image()
 
             self.render_images.append(image)
             if (

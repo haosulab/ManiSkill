@@ -1,13 +1,15 @@
 import copy
 import os
-from typing import Any, Dict, Union
+from typing import Any, Dict
 
 import numpy as np
 import sapien
 import torch
 from transforms3d.euler import euler2quat
 
-from mani_skill.agents.robots.unitree_g1.g1_upper_body import UnitreeG1UpperBodyRightArm
+from mani_skill.agents.robots.unitree_g1.g1_upper_body import (
+    UnitreeG1UpperBodyWithHeadCamera,
+)
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.utils import randomization
 from mani_skill.sensors.camera import CameraConfig
@@ -29,7 +31,11 @@ class HumanoidPickPlaceEnv(BaseEnv):
 
     @property
     def _default_sim_config(self):
-        return SimConfig()
+        return SimConfig(
+            gpu_memory_config=GPUMemoryConfig(
+                max_rigid_contact_count=2**22,
+            )
+        )
 
     @property
     def _default_sensor_configs(self):
@@ -65,6 +71,20 @@ class HumanoidPickPlaceEnv(BaseEnv):
 
 class HumanoidPlaceAppleInBowl(HumanoidPickPlaceEnv):
     SUPPORTED_REWARD_MODES = ["normalized_dense", "dense", "sparse", "none"]
+
+    @property
+    def _default_sensor_configs(self):
+        return CameraConfig(
+            "base_camera",
+            sapien.Pose(
+                [0.279123, 0.303438, 1.34794], [0.252428, 0.396735, 0.114442, -0.875091]
+            ),
+            128,
+            128,
+            np.pi / 2,
+            0.01,
+            100,
+        )
 
     @property
     def _default_human_render_camera_configs(self):
@@ -207,17 +227,19 @@ class UnitreeG1PlaceAppleInBowlEnv(HumanoidPlaceAppleInBowl):
 
     _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/UnitreeG1PlaceAppleInBowl-v1_rt.mp4"
 
-    SUPPORTED_ROBOTS = ["unitree_g1_simplified_upper_body_right_arm"]
-    agent: Union[UnitreeG1UpperBodyRightArm]
+    SUPPORTED_ROBOTS = ["unitree_g1_simplified_upper_body_with_head_camera"]
+    agent: UnitreeG1UpperBodyWithHeadCamera
     kitchen_scene_scale = 0.82
 
     def __init__(self, *args, **kwargs):
         self.init_robot_pose = copy.deepcopy(
-            UnitreeG1UpperBodyRightArm.keyframes["standing"].pose
+            UnitreeG1UpperBodyWithHeadCamera.keyframes["standing"].pose
         )
         self.init_robot_pose.p = [-0.3, 0, 0.755]
         super().__init__(
-            *args, robot_uids="unitree_g1_simplified_upper_body_right_arm", **kwargs
+            *args,
+            robot_uids="unitree_g1_simplified_upper_body_with_head_camera",
+            **kwargs
         )
 
     @property
