@@ -32,8 +32,8 @@ class PullDrawerEnv(BaseEnv):
         self.wall_thickness = 0.01  
         
         # Inner drawer dimensions 
-        self.inner_width = self.outer_width - 2.2 * self.wall_thickness
-        self.inner_depth = self.outer_depth - 1.2 * self.wall_thickness
+        self.inner_width = self.outer_width - 1.2 * self.wall_thickness
+        self.inner_depth = self.outer_depth - 2.2 * self.wall_thickness
         self.inner_height = self.outer_height - 2.2 * self.wall_thickness
         
         # Handle dimensions 
@@ -101,7 +101,7 @@ class PullDrawerEnv(BaseEnv):
         
         # Create outer cabinet 
         base = builder.create_link_builder()
-        base.name = "cabinet"
+        base.set_name('cabinet')
         
         # Bottom base
         base.add_box_collision(
@@ -123,7 +123,7 @@ class PullDrawerEnv(BaseEnv):
             half_size=[self.outer_width/2, self.outer_depth/2, self.wall_thickness/2],
         )
         
-        # Back wall 
+        # Left wall 
         base.add_box_collision(
             sapien.Pose([0, -self.outer_depth/2, 0]),
             half_size=[self.outer_width/2, self.wall_thickness/2, self.outer_height/2]
@@ -133,7 +133,7 @@ class PullDrawerEnv(BaseEnv):
             half_size=[self.outer_width/2, self.wall_thickness/2, self.outer_height/2],
         )
         
-        # Front wall 
+        # Left wall 
         base.add_box_collision(
             sapien.Pose([0, self.outer_depth/2, 0]),
             half_size=[self.outer_width/2, self.wall_thickness/2, self.outer_height/2]
@@ -155,7 +155,7 @@ class PullDrawerEnv(BaseEnv):
         
         # Create sliding drawer
         drawer = builder.create_link_builder(parent=base)
-        drawer.name = "drawer"
+        drawer.set_name('drawer')
         
         # Drawer bottom
         drawer.add_box_collision(
@@ -167,7 +167,7 @@ class PullDrawerEnv(BaseEnv):
             half_size=[self.inner_width/2, self.inner_depth/2, self.wall_thickness/2],
         )
         
-        # Drawer back 
+        # Drawer right 
         drawer.add_box_collision(
             sapien.Pose([0, -self.inner_depth/2, 0]),
             half_size=[self.inner_width/2, self.wall_thickness/2, self.inner_height/2]
@@ -177,7 +177,7 @@ class PullDrawerEnv(BaseEnv):
             half_size=[self.inner_width/2, self.wall_thickness/2, self.inner_height/2],
         )
         
-        # Drawer front 
+        # Drawer left 
         drawer.add_box_collision(
             sapien.Pose([0, self.inner_depth/2, 0]),
             half_size=[self.inner_width/2, self.wall_thickness/2, self.inner_height/2]
@@ -187,7 +187,7 @@ class PullDrawerEnv(BaseEnv):
             half_size=[self.inner_width/2, self.wall_thickness/2, self.inner_height/2],
         )
         
-        # Drawer right side 
+        # Drawer back
         drawer.add_box_collision(
             sapien.Pose([self.inner_width/2, 0, 0]),
             half_size=[self.wall_thickness/2, self.inner_depth/2, self.inner_height/2]
@@ -197,7 +197,7 @@ class PullDrawerEnv(BaseEnv):
             half_size=[self.wall_thickness/2, self.inner_depth/2, self.inner_height/2],
         )
 
-        # Drawer left side 
+        # Drawer front 
         drawer.add_box_collision(
             sapien.Pose([-self.inner_width/2, 0, 0]),
             half_size=[self.wall_thickness/2, self.inner_depth/2, self.inner_height/2]
@@ -243,7 +243,7 @@ class PullDrawerEnv(BaseEnv):
             type="prismatic",
             limits=(-self.max_pull_distance, 0),
             pose_in_parent=sapien.Pose(),
-            pose_in_child=sapien.Pose(),
+            pose_in_child=sapien.Pose(),                # try setting the link's position to be on the handle in child frame
             friction=0.3,
             damping=10
         )
@@ -261,8 +261,6 @@ class PullDrawerEnv(BaseEnv):
             self.scene_builder.initialize(env_idx)
             
             init_pos = torch.zeros((b, 1), device=self.device)
-            noise = torch.rand((b, 1), device=self.device) * 0.02
-            init_pos -= noise
             
             self.drawer.set_qpos(init_pos)
 
@@ -281,7 +279,7 @@ class PullDrawerEnv(BaseEnv):
     def evaluate(self):
         drawer_qpos = self.drawer.get_qpos()
         pos_dist = torch.abs(self.target_pos - drawer_qpos)
-        drawer_pulled = pos_dist.squeeze(-1) < 0.01
+        drawer_pulled = pos_dist.squeeze(-1) < 0.025
         
         progress = 1 - torch.tanh(5.0 * pos_dist)
         
@@ -304,7 +302,7 @@ class PullDrawerEnv(BaseEnv):
         tcp_pose = self.agent.tcp.pose.raw_pose
         tcp_pos = tcp_pose[..., :3]
         handle_pos = torch.tensor(
-            [-0.2 - self.inner_width/2 - self.handle_offset, -0.15, 0.15], 
+            [-self.inner_width/2, 0.15, 0.075],            # hardcoded values, change later to make it offset from drawer qpos
             device=self.device
         )
         reach_dist = torch.norm(tcp_pos - handle_pos, dim=-1)
