@@ -95,7 +95,9 @@ class DETRVAE(nn.Module):
 
         # CVAE decoder
         if self.backbones is not None:
-            vis_data = obs['rgb'] if "rgb" in obs else obs['rgbd']
+            vis_data = obs['rgb']
+            if "depth" in obs:
+                vis_data = torch.cat([vis_data, obs['depth']], dim=2)
             num_cams = vis_data.shape[1]
 
             # Image observation features and position embeddings
