@@ -15,6 +15,7 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 
 @register_env("UnitreeG1PutAwayCup-v1", max_episode_steps=50)
 class UnitreeG1PutAwayCupEnv(BaseEnv):
+    SUPPORTED_REWARD_MODES = ["none"]
     SUPPORTED_ROBOTS = ["unitree_g1_simplified_upper_body_with_head_camera"]
 
     def __init__(
@@ -35,14 +36,16 @@ class UnitreeG1PutAwayCupEnv(BaseEnv):
 
     @property
     def _default_sensor_configs(self):
-        pose = sapien_utils.look_at([1.0, 0.0, 1.6], [0, 0.0, 0.65])
+        pose = sapien_utils.look_at([0.6, -0.3, 1.3], [-0.4, 0.0, 0.75])
         return [
             CameraConfig("base_camera", pose=pose, width=128, height=128, fov=np.pi / 3)
         ]
 
     @property
     def _default_human_render_camera_configs(self):
-        pose = sapien_utils.look_at([1.0, 0.0, 1.6], [0, 0.0, 0.65])
+        #         camera = add_camera(name="", width=1920, height=1080, fovy=1.05, near=0.1, far=1e+03)
+        # camera.set_local_pose(Pose([1.23103, -0.0627828, 1.46073], [0.00841862, 0.138384, 0.00117677, -0.990342]))
+        pose = sapien_utils.look_at([1.3, 0.6, 1.3], [-0.4, 0.0, 0.75])
         return CameraConfig(
             "render_camera", pose=pose, width=512, height=512, fov=np.pi / 3
         )
@@ -57,6 +60,7 @@ class UnitreeG1PutAwayCupEnv(BaseEnv):
 
     def _load_scene(self, options: dict):
         self.scene_builder = DiningTableSceneBuilder(self)
+        self.scene_builder.pose = sapien.Pose(p=[2.0, 0, 0])
         self.scene_builder.build()
 
     def _initialize_episode(self, env_idx: Tensor, options: dict):

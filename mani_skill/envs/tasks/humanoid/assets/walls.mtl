@@ -1,0 +1,23 @@
+# Blender 4.3.0 MTL File: 'dining_table_scene.blend'
+# www.blender.org
+
+newmtl Material
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+
+newmtl laminate_floor_03
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd /home/stao/work/blender/textures/laminate_floor_03_diff_4k.jpg
+map_Ns /home/stao/work/blender/textures/laminate_floor_03_rough_4k.exr
+map_Bump -bm 1.000000 /home/stao/work/blender/textures/laminate_floor_03_nor_gl_4k.exr
