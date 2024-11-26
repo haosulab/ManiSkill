@@ -674,11 +674,19 @@ class ManiSkillScene:
     # def remove_light(self, light):
     #     self.remove_entity(light.entity)
 
-    # def set_environment_map(self, cubemap: str):
-    #     if isinstance(cubemap, str):
-    #         self.render_system.cubemap = sapien.render.RenderCubemap(cubemap)
-    #     else:
-    #         self.render_system.cubemap = cubemap
+    def set_environment_map(
+        self,
+        cubemap: Union[
+            str,
+            sapien.render.RenderCubemap,
+            List[Union[str, sapien.render.RenderCubemap]],
+        ],
+    ):
+        cubemaps = cubemap
+        if not isinstance(cubemap, list):
+            cubemaps = [cubemap] * len(self.sub_scenes)
+        for scene, cubemap in zip(self.sub_scenes, cubemaps):
+            scene.set_environment_map(cubemap)
 
     # def set_environment_map_from_files(
     #     self, px: str, nx: str, py: str, ny: str, pz: str, nz: str
