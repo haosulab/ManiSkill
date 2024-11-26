@@ -94,11 +94,6 @@ class TransportBoxEnv(BaseEnv):
         scale = 1.2
         table_pose = sapien.Pose(q=euler2quat(0, 0, np.pi / 2))
         builder = self.scene.create_actor_builder()
-        builder.add_visual_from_file(
-            filename=table_model_file,
-            scale=[scale] * 3,
-            pose=sapien.Pose(q=euler2quat(0, 0, np.pi / 2)),
-        )
         builder.add_box_collision(
             pose=sapien.Pose(p=[0, 0, 0.630612274 / 2]),
             half_size=(1.658057143 / 2, 0.829028571 / 2, 0.630612274 / 2),
@@ -109,11 +104,6 @@ class TransportBoxEnv(BaseEnv):
         builder.initial_pose = sapien.Pose(p=[0, 0.66, 0])
         self.table_1 = builder.build_static(name="table-1")
         builder = self.scene.create_actor_builder()
-        builder.add_visual_from_file(
-            filename=table_model_file,
-            scale=[scale] * 3,
-            pose=sapien.Pose(q=euler2quat(0, 0, np.pi / 2)),
-        )
         builder.add_box_collision(
             pose=sapien.Pose(p=[0, 0, 0.630612274 / 2]),
             half_size=(1.658057143 / 2, 0.829028571 / 2, 0.630612274 / 2),
