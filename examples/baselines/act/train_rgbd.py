@@ -160,7 +160,8 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
                 images_depth.append(resized_depth)
 
         rgb = torch.stack(images_rgb, dim=1) # (1, num_cams, C, 224, 224), uint8
-        depth = torch.stack(images_depth, dim=1) # (1, num_cams, C, 224, 224), float16
+        if self.include_depth:
+            depth = torch.stack(images_depth, dim=1) # (1, num_cams, C, 224, 224), float16
 
         # flatten the rest of the data which should just be state data
         observation = common.flatten_state_dict(observation, use_torch=True)
@@ -284,15 +285,16 @@ class SmallDemoDataset_ACTPolicy(Dataset): # Load everything into memory
             resized_rgb = self.transforms(
                 rgb.permute(0, 3, 1, 2) 
             )  # (ep_len, 3, 224, 224); pre-trained models from torchvision.models expect input image to be at least 224x224
+            images_rgb.append(resized_rgb)
             if self.include_depth:
                 depth = torch.Tensor(cam_data["depth"].astype(np.float32) / 1024).to(torch.float16) # (ep_len, H, W, 1)
                 resized_depth = self.transforms(
                     depth.permute(0, 3, 1, 2) 
                 )  # (ep_len, 1, 224, 224); pre-trained models from torchvision.models expect input image to be at least 224x224
-            images_rgb.append(resized_rgb)
-            images_depth.append(resized_depth)
+                images_depth.append(resized_depth)
         rgb = torch.stack(images_rgb, dim=1) # (ep_len, num_cams, 3, 224, 224) # still uint8
-        depth = torch.stack(images_depth, dim=1) # (ep_len, num_cams, 1, 224, 224) # float16
+        if self.include_depth:
+            depth = torch.stack(images_depth, dim=1) # (ep_len, num_cams, 1, 224, 224) # float16
 
         # flatten the rest of the data which should just be state data
         obs_dict['extra'] = {k: v[:, None] if len(v.shape) == 1 else v for k, v in obs_dict['extra'].items()} # dirty fix for data that has one dimension (e.g. is_grasped)
