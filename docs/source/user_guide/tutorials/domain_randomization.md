@@ -106,38 +106,48 @@ The result is the same as during reconfiguration, but instead every episode rese
 
 ## Actor/Link Physical and Visual Randomizations
 
-By default ManiSkill provides some convenient APIs that accept batched inputs for randomizing some properties of objects such as setting joint properties or disabling gravity on an object. In general if you want to randomize properties more granularly or if there isn't a convenience API available, you can do so by modifying each actor/link's components individually. Note at this granular level all values are expected to be python primitives or numpy based, torch tensors are not used.
+By default ManiSkill provides some convenient APIs that accept batched inputs for randomizing some properties of objects such as setting joint properties or disabling gravity on an object. In general if you want to randomize properties more granularly or if there isn't a convenience API available, you can do so by modifying each actor/link's components individually. Note at this granular level all values are expected to be python primitives or numpy based, torch tensors are not used. Normally these randomizations should be done during the `_load_scene` function.
 
 
 ```python
 import numpy as np
 from sapien.physx import PhysxRigidBodyComponent
 from sapien.render import RenderBodyComponent
-actor: Actor | Link
-for obj in actor._objs:
-    # modify some property of obj's components here, which is one of the actors/links 
-    # managed in parallel by the `actor` object
-    
-    # modifying physical properties
-    rigid_body_component: PhysxRigidBodyComponent = obj.find_component_by_type(PhysxRigidBodyComponent)
-    rigid_body_component.mass = 1.0
-    rigid_body_component.angular_damping = 20.0
-    
-    # modifying visual properties
-    render_body_component: RenderBodyComponent = obj.find_component_by_type(RenderBodyComponent)
-    for render_shape in render_body_component.render_shapes:
-        for part in render_shape.parts:
-            # you can change color, use texture files etc.
-            part.material.set_base_color(np.array([255, 255, 255, 255]) / 255)
-            part.material.set_base_color_texture(None)
-            part.material.set_normal_texture(None)
-            part.material.set_emission_texture(None)
-            part.material.set_transmission_texture(None)
-            part.material.set_metallic_texture(None)
-            part.material.set_roughness_texture(None)
+
+def _load_scene(self, options: dict):
+    actor: Actor | Link
+    for obj in actor._objs:
+        # modify some property of obj's components here, which is one of the actors/links 
+        # managed in parallel by the `actor` object
+        
+        # modifying physical properties
+        rigid_body_component: PhysxRigidBodyComponent = obj.find_component_by_type(PhysxRigidBodyComponent)
+        rigid_body_component.mass = 1.0
+        rigid_body_component.angular_damping = 20.0
+        # modify per collision shape properties
+        for shape in obj.collision_shapes:
+            shape.physical_material.dynamic_friction = 0.2
+            shape.physical_material.static_friction = 0.4
+            shape.physical_material.restitution = 0.2
+            shape.density = 1000
+            shape.patch_radius = 0.1
+            shape.min_patch_radius = 0.1
+        
+        # modifying visual properties
+        render_body_component: RenderBodyComponent = obj.find_component_by_type(RenderBodyComponent)
+        for render_shape in render_body_component.render_shapes:
+            for part in render_shape.parts:
+                # you can change color, use texture files etc.
+                part.material.set_base_color(np.array([255, 255, 255, 255]) / 255)
+                part.material.set_base_color_texture(None)
+                part.material.set_normal_texture(None)
+                part.material.set_emission_texture(None)
+                part.material.set_transmission_texture(None)
+                part.material.set_metallic_texture(None)
+                part.material.set_roughness_texture(None)
 ```
 
-Note that during GPU simulation most physical properties must be set in an environment during the `_load_scene` function which runs before the GPU simulation initialization. Once the GPU simulation is initialized, many properties are fixed and can only be changed again if the environment is reconfigured.
+Note that during GPU simulation most physical properties must be set in an environment during the `_load_scene` function which runs before the GPU simulation initialization. Once the GPU simulation is initialized, some properties are fixed and can only be changed again if the environment is reconfigured.
 
 Also note that in GPU simulation, due to rendering optimizations changing the visual property of one actor/link may also change the properties of other actors/links that share the same render material object. To fix this you should build each actor separately instead of all together in each parallel environment using scene masks/idxs (see [Scene Masks](./custom_tasks/advanced.md#scene-masks)) with a different color / `sapien.render.RenderMaterial` object.
 
@@ -172,4 +182,7 @@ def _load_scene(self, options: dict):
                 shape.density = 1000
                 shape.patch_radius = 0.1
                 shape.min_patch_radius = 0.1
+                
 ```
+
+Note you can do in place changes to physical material properties like above, we do not recommend creating a new PhysxMaterial object as there is a limit to the number of PhysxMaterials that can be created (64K).
