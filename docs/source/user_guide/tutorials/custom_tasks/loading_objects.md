@@ -32,7 +32,7 @@ def _load_scene(self, options):
     builder = self.scene.create_actor_builder()
 ```
 
-Then you can use the standard SAPIEN API for creating actors, a tutorial of which can be found on the [SAPIEN actors tutorial documentation](https://sapien.ucsd.edu/docs/latest/tutorial/basic/create_actors.html)
+Then you can use the standard SAPIEN API for creating actors, a tutorial of which can be found on the [SAPIEN actors tutorial documentation](https://sapien-sim.github.io/docs/user_guide/getting_started/create_actors.html#create-an-actor-with-actorbuilder)
 
 ## Loading Articulations
 
@@ -64,7 +64,7 @@ def _load_scene(self, options):
     builder = self.scene.create_articulation_builder()
 ```
 
-Then you can use the standard SAPIEN API for creating articulations, a tutorial of which can be found on the [SAPIEN articulation tutorial documentation](https://sapien.ucsd.edu/docs/latest/tutorial/basic/create_articulations.html). You essentially just need to define what the links and joints are and how they connect. Links are created like Actors and can have visual and collision shapes added via the python API.
+Then you can use the standard SAPIEN API for creating articulations, a tutorial of which can be found on the [SAPIEN articulation tutorial documentation](https://sapien-sim.github.io/docs/user_guide/getting_started/create_articulations.html). You essentially just need to define what the links and joints are and how they connect. Links are created like Actors and can have visual and collision shapes added via the python API.
 
 ### Using the URDF Loader
 
@@ -112,6 +112,10 @@ def _load_scene(self, options):
     builder = articulation_builders[0]
     builder.build(name="my_articulation")
 ```
+
+### Using the MJCF Loader
+
+
 
 ## Reconfiguring and Optimization
 
