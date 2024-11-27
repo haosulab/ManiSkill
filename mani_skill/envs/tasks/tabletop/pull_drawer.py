@@ -243,7 +243,7 @@ class PullDrawerEnv(BaseEnv):
             type="prismatic",
             limits=(-self.max_pull_distance, 0),
             pose_in_parent=sapien.Pose(),
-            pose_in_child=sapien.Pose(),                # try setting the link's position to be on the handle in child frame
+            pose_in_child=sapien.Pose(),                
             friction=0.3,
             damping=10
         )
@@ -302,7 +302,7 @@ class PullDrawerEnv(BaseEnv):
         batch_size = drawer_qpos.shape[0]
         handle_pos = torch.zeros((batch_size, 3), device=self.device)
         handle_pos[:] = torch.tensor(
-            [-self.inner_width/2 - self.handle_offset, 0.15, 0],
+            [-self.inner_width/2 - self.handle_offset, 0.15, -0.07],
             device=self.device
         )
         
