@@ -250,7 +250,7 @@ class PullDrawerEnv(BaseEnv):
 
         
         builder.set_scene_idxs(scene_idxs=range(self.num_envs))
-        builder.set_initial_pose(sapien.Pose(p=[0.05, 0.15, 0]))  
+        builder.set_initial_pose(sapien.Pose(p=[0.05, 0.15, 0.077]))  
         
         self.drawer = builder.build(fix_root_link=True, name="drawer_articulation")
         self.drawer_link = self.drawer.get_links()[1]
@@ -302,7 +302,7 @@ class PullDrawerEnv(BaseEnv):
         batch_size = drawer_qpos.shape[0]
         handle_pos = torch.zeros((batch_size, 3), device=self.device)
         handle_pos[:] = torch.tensor(
-            [-self.inner_width/2 - self.handle_offset, 0.15, -0.077],
+            [-self.inner_width/2 - self.handle_offset, 0.15, 0],
             device=self.device
         )
         
