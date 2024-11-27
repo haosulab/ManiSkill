@@ -65,7 +65,7 @@ class DiningTableSceneBuilder(SceneBuilder):
         # table_pose = sapien.Pose(q=euler2quat(0, 0, np.pi / 2))
         builder = self.scene.create_actor_builder()
         builder.add_box_collision(
-            pose=sapien.Pose(p=[0, 0, scale[2] * 1.2 * 0.525510228 / 2]),
+            pose=sapien.Pose(p=[0, 0, scale[2] * 1.3 * 0.525510228 / 2]),
             half_size=(
                 scale[0] * 0.9 * 0.690857142 / 2,
                 scale[1] * 0.9 * 1.381714286 / 2,
