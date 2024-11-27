@@ -62,14 +62,14 @@ Note that there are a number of common issues users may face (often due to incor
 
 ManiSkill supports importing [Mujoco's MJCF format](https://mujoco.readthedocs.io/en/latest/modeling.html) of files to load robots (and other objects), although not all features are supported.
 
-For example code that loads the robot and the scene see https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/tasks/control/cartpole.py
+For example code that loads the robot and the scene see https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/tasks/control/cartpole.py. Generally you can simply replace the `urdf_path` property of the agent used in URDF based agents with `mjcf_path` property and it will use the MJCF loader instead.
 
 
 At the moment, the following are not supported:
 - Procedural texture generation
 - Importing motors and solver configurations
 - Correct use of contype and conaffinity attributes (contype of 0 means no collision mesh is added, otherwise it is always added)
-- Correct use of groups (at the moment anything in group 0 and 2 can be seen, other groups are hidden all the time)
+- Correct use of groups (at the moment anything in group 0 and 2 can be seen by default, other groups are hidden all the time)
 
 These may be supported in the future so stay tuned for updates.
 

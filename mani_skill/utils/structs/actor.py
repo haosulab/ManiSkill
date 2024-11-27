@@ -293,6 +293,9 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
 
     @cached_property
     def per_scene_id(self):
+        """
+        Returns a int32 torch tensor of the actor level segmentation ID for each managed actor object.
+        """
         return torch.tensor(
             [x.per_scene_id for x in self._objs],
             device=self.device,
