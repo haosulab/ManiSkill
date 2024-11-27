@@ -6,3 +6,4 @@ from .push_cube import solve as solvePushCube
 from .pull_cube_tool import solve as solvePullCubeTool
 from .lift_peg_upright import solve as solveLiftPegUpright
 from .pull_cube import solve as solvePullCube
+from .pull_drawer import solve as solvePullDrawer

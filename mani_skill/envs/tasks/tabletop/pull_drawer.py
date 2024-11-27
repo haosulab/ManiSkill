@@ -279,7 +279,7 @@ class PullDrawerEnv(BaseEnv):
     def evaluate(self):
         drawer_qpos = self.drawer.get_qpos()
         pos_dist = torch.abs(self.target_pos - drawer_qpos)
-        drawer_pulled = pos_dist.squeeze(-1) < 0.025
+        drawer_pulled = pos_dist.squeeze(-1) < 0.03
         
         progress = 1 - torch.tanh(5.0 * pos_dist)
         
@@ -302,7 +302,7 @@ class PullDrawerEnv(BaseEnv):
         tcp_pose = self.agent.tcp.pose.raw_pose
         tcp_pos = tcp_pose[..., :3]
         handle_pos = torch.tensor(
-            [-self.inner_width/2, 0.15, 0.075],            # hardcoded values, change later to make it offset from drawer qpos
+            [-self.inner_width/2, 0, 0],            # hardcoded values, change later to make it offset from drawer qpos
             device=self.device
         )
         reach_dist = torch.norm(tcp_pos - handle_pos, dim=-1)
