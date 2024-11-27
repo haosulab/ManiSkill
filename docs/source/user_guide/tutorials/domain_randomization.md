@@ -141,6 +141,8 @@ def _load_scene(self, options: dict):
             for part in render_shape.parts:
                 # you can change color, use texture files etc.
                 part.material.set_base_color(np.array([255, 255, 255, 255]) / 255)
+                # note that textures must use the sapien.render.RenderTexture2D 
+                # object which allows passing a texture image file path
                 part.material.set_base_color_texture(None)
                 part.material.set_normal_texture(None)
                 part.material.set_emission_texture(None)
@@ -216,3 +218,46 @@ def _load_lighting(self, options: dict)
 <br/>
 
 Note that cameras added to tasks by default use the ["minimal" shader pack](../concepts/sensors.md#shaders-and-textures) which has a pure black background. You may want to use a more advanced shader like the "default" shader which does render the background by adding `shader_pack="default"` to the camera config to more visibly see the randomization effects.
+
+## Background / Segmentation based Randomizations
+
+
+It is common to randomize the "background" or specific objects of a scene for domain randomization. There are two ways in which you can do this. One is via the task building APIs in ManiSkill, the other is do apply green-screening to outputted images by ManiSkill environments based on segmentation masks.
+
+### Via Task Building APIs
+
+Without green-screening you can simply modify object textures directly in the `_load_scene` function of your custom task. See the section above on [Actor/Link Visual Randomizations](#actorlink-physical-and-visual-randomizations) for more details. You can change color, textures and more. This is a simple and flexible way to randomize object textures as you do not need to deal with finding segmentation masks.
+
+### Green Screening
+
+ManiSkill environments provide access to segmentation mask IDs via the `per_scene_id` of {py:class}`mani_skill.utils.structs.Actor` and {py:class}`mani_skill.utils.structs.Link` objects. Note that the ID 0 is reserved for the background. After collecting the IDs of all entities you wish to green-screen out with an image/video, you need to generate a segmentation mask in addition to the image data.
+
+For sensor observations this can be done by ensuring you are using any observation mode that includes "segmentation" in the, which can be done by changing the `obs_mode` argument of `gym.make`. For example "rgb+segmentation" will output both RGB and segmentation images in environment observations returned by calls to `env.reset` and `env.step`. 
+
+Example code segmenting out the background and overlaying a green screen image is shown below.
+
+```python
+import mani_skill.envs
+import gymnasium as gym
+import torch
+import cv2
+import matplotlib.pyplot as plt
+env = gym.make("PickCube-v1", obs_mode="rgb+segmentation")
+# get obs from reset
+obs, _ = env.reset()
+# get obs from step
+obs, reward, terminated, truncated, info = env.step(env.action_space.sample())
+your_image = cv2.resize(cv2.imread("path/to/your/image"), (128, 128))
+green_screen_image = torch.from_numpy(your_image).to(device=env.device)
+# only green-screen out the background and floor/ground in this case
+seg_ids = torch.tensor([0], dtype=torch.int16, device=env.device)
+seg_ids = torch.concatenate([seg_ids, env.unwrapped.scene.actors["ground"].per_scene_id])
+for cam_name in obs["sensor_data"].keys():
+    camera_data = obs["sensor_data"][cam_name]
+    seg = camera_data["segmentation"]
+    mask = torch.zeros_like(seg)
+    mask[torch.isin(seg, seg_ids)] = 1
+    camera_data["rgb"] = camera_data["rgb"] * (1 - mask) + green_screen_image * mask
+    plt.imshow(camera_data["rgb"].cpu().numpy()[0])
+    plt.show()
+```
