@@ -243,14 +243,14 @@ class PullDrawerEnv(BaseEnv):
             type="prismatic",
             limits=(-self.max_pull_distance, 0),
             pose_in_parent=sapien.Pose(),
-            pose_in_child=sapien.Pose(),                
+            pose_in_child=sapien.Pose(),                # try setting the link's position to be on the handle in child frame
             friction=0.3,
             damping=10
         )
 
         
         builder.set_scene_idxs(scene_idxs=range(self.num_envs))
-        builder.set_initial_pose(sapien.Pose(p=[0.05, 0.15, 0.077]))  
+        builder.set_initial_pose(sapien.Pose(p=[0, 0.15, 0.077]))  
         
         self.drawer = builder.build(fix_root_link=True, name="drawer_articulation")
         self.drawer_link = self.drawer.get_links()[1]
@@ -295,22 +295,16 @@ class PullDrawerEnv(BaseEnv):
         }
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        drawer_qpos = self.drawer.get_qpos()  
+        drawer_qpos = self.drawer.get_qpos()
         pos_dist = torch.abs(self.target_pos - drawer_qpos)
         
-        # Create handle position with proper batch dimension
-        batch_size = drawer_qpos.shape[0]
-        handle_pos = torch.zeros((batch_size, 3), device=self.device)
-        handle_pos[:] = torch.tensor(
-            [-self.inner_width/2 - self.handle_offset, 0.15, -0.07],
-            device=self.device
-        )
-        
-        # Update x-position based on drawer movement
-        handle_pos[:, 0] = handle_pos[:, 0] + drawer_qpos.squeeze(-1)
-        
+        # Update handle position for reward calculation
         tcp_pose = self.agent.tcp.pose.raw_pose
         tcp_pos = tcp_pose[..., :3]
+        handle_pos = torch.tensor(
+            [-self.inner_width/2, 0.15, 0.075],            # hardcoded values, change later to make it offset from drawer qpos
+            device=self.device
+        )
         reach_dist = torch.norm(tcp_pos - handle_pos, dim=-1)
         
         # Compute rewards
@@ -318,6 +312,7 @@ class PullDrawerEnv(BaseEnv):
         reaching_reward = 1.0 * (1 - torch.tanh(10.0 * reach_dist))
         is_grasping = self.agent.is_grasping(self.drawer_link, max_angle=30)
         grasping_reward = 4.0 * is_grasping
+        
         success_mask = info.get("success", torch.zeros_like(is_grasping))
         success_reward = torch.where(success_mask, 5.0, 0.0)
         
