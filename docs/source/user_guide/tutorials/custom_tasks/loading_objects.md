@@ -113,9 +113,17 @@ def _load_scene(self, options):
     builder.build(name="my_articulation")
 ```
 
-### Using the MJCF Loader
+## Using the MJCF Loader
 
+If your actor/articulation is defined with a MJCF file, you can use a MJCF loader to load that articulation and make modifications as needed. It works the exact same as the [URDF loader](./loading_objects.md#using-the-urdf-loader). Note that however not all properties in MJCF/Mujoco are supported in SAPIEN/ManiSkill at this moment, so you should always verify your articulation/actors are loaded correctly from the MJCF. 
 
+```python
+def _load_scene(self, options):
+    loader = scene.create_mjcf_loader()
+    builders = loader.parse(str(mjcf_path))
+    articulation_builders = builders["articulation_builders"]
+    actor_builders = builders["actor_builders"]
+```
 
 ## Reconfiguring and Optimization
 
