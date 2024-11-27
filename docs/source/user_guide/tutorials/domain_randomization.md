@@ -8,7 +8,7 @@ For cameras, which are created by adding `CameraConfig` objects to your task's `
 
 ### During Reconfiguration
 
-Simply providing batched data to the CameraConfigs of your sensors as done below (pose, fov, near, and far are supported) will randomize the camera configuration across parallel scenes. The example below does it for camera poses by modifying the `_default_sensor_configs` property of the task class
+Simply providing batched data to the CameraConfigs of your sensors as done below (pose, intrinsic, fov, near, and far are supported) will randomize the camera configuration across parallel scenes. The example below does it for camera poses by modifying the `_default_sensor_configs` property of the task class
 
 ```python
 import torch
