@@ -134,7 +134,8 @@ def _load_scene(self, options: dict):
             shape.patch_radius = 0.1
             shape.min_patch_radius = 0.1
         
-        # modifying visual properties
+        # modifying visual properties. NOTE that you may need to build
+        # each actor separately instead of all together in each parallel and then merge them to do the following
         render_body_component: RenderBodyComponent = obj.find_component_by_type(RenderBodyComponent)
         for render_shape in render_body_component.render_shapes:
             for part in render_shape.parts:
@@ -152,8 +153,12 @@ Similarly joints can also be modified in the same manner by iterating over each 
 
 Note that during GPU simulation most physical properties must be set in an environment during the `_load_scene` function which runs before the GPU simulation initialization. Once the GPU simulation is initialized, some properties are fixed and can only be changed again if the environment is reconfigured.
 
-Also note that in GPU simulation, due to rendering optimizations changing the visual property of one actor/link may also change the properties of other actors/links that share the same render material object. To fix this you should build each actor separately instead of all together in each parallel environment using scene masks/idxs (see [Scene Masks](./custom_tasks/advanced.md#scene-masks)) with a different color / `sapien.render.RenderMaterial` object.
+Also note that in GPU simulation, due to rendering optimizations changing the visual property of one actor/link may also change the properties of other actors/links that share the same render material object. To fix this you should build each actor separately instead of all together in each parallel environment using scene masks/idxs (see [Scene Masks](./custom_tasks/advanced.md#scene-masks)) with a different color / `sapien.render.RenderMaterial` object. After doing so then merge the parallel actors to manage them as one object. You can then use the code above for randomizing visual properties
 
+Example of visual randomizations of object colors is shown below for the PushT task.
+
+:::{figure} images/color_domain_randomizations.png
+:::
 ## Agent/Robot and Controller Randomizations
 
 Agents/Robots and Controllers are abstractions around articulated objects to make it easy to swap controllers and load robots into scenes. Under the hood they have the same components as any other articulation.
