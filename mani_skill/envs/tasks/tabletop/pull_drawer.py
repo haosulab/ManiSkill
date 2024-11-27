@@ -302,25 +302,26 @@ class PullDrawerEnv(BaseEnv):
         tcp_pose = self.agent.tcp.pose.raw_pose
         tcp_pos = tcp_pose[..., :3]
         handle_pos = torch.tensor(
-            [-self.inner_width/2, 0, 0],            # hardcoded values, change later to make it offset from drawer qpos
+            [-self.inner_width/2 - self.handle_offset, 0, 0],  # Adjust to actual handle position
             device=self.device
         )
         reach_dist = torch.norm(tcp_pos - handle_pos, dim=-1)
         
-        # Compute rewards
-        distance_reward = 2.0 * (1 - torch.tanh(5.0 * pos_dist)).squeeze(-1)
-        reaching_reward = 1.0 * (1 - torch.tanh(10.0 * reach_dist))
-        is_grasping = self.agent.is_grasping(self.drawer_link, max_angle=30)
-        grasping_reward = 4.0 * is_grasping
+        # 1. Reaching reward: Incentivize moving towards the handle
+        reaching_reward = 2.0 * (1 - torch.tanh(10.0 * reach_dist))
         
-        success_mask = info.get("success", torch.zeros_like(is_grasping))
-        success_reward = torch.where(success_mask, 5.0, 0.0)
+        # 2. Pulling reward: Incentivize pulling the drawer
+        pulling_reward = 3.0 * (1 - torch.tanh(5.0 * pos_dist)).squeeze(-1)
         
-        return distance_reward + reaching_reward + grasping_reward + success_reward
+        # 3. Completion reward: Reward for successfully pulling the drawer
+        success_mask = info.get("success", torch.zeros_like(reaching_reward, dtype=torch.bool))
+        completion_reward = 5.0 * success_mask
+        
+        return reaching_reward + pulling_reward + completion_reward
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        max_reward = 12.0  # Maximum possible reward (2 + 1 + 4 + 5)
+        max_reward = 10.0  # Maximum possible reward (2 + 3 + 5)
         dense_reward = self.compute_dense_reward(obs=obs, action=action, info=info)
         return dense_reward / max_reward
