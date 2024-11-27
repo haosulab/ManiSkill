@@ -36,7 +36,7 @@ Then you can use the standard SAPIEN API for creating actors, a tutorial of whic
 
 ## Loading Articulations
 
-There are several ways to load articulations as detailed below.
+There are several ways to load articulations as detailed below as well as some limitations to be aware of
 
 ### Loading from Existing Datasets
 
@@ -112,6 +112,10 @@ def _load_scene(self, options):
     builder = articulation_builders[0]
     builder.build(name="my_articulation")
 ```
+
+### Articulation Limitations
+
+For the physx simulation backend, any single articulation can have a maximum of 64 links. More complex articulated objects will either need to be simplified by merging links together. Most of the time this is readily possible by inspecting the URDF and fusing together links held together by fixed joints. The less fixed joints and linsk there are, the better the simulation will run in terms of accuracy and speed.
 
 ## Using the MJCF Loader
 

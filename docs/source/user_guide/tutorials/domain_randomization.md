@@ -141,6 +141,35 @@ Note that during GPU simulation most physical properties must be set in an envir
 
 Also note that in GPU simulation, due to rendering optimizations changing the visual property of one actor/link may also change the properties of other actors/links that share the same render material object. To fix this you should build each actor separately instead of all together in each parallel environment using scene masks/idxs (see [Scene Masks](./custom_tasks/advanced.md#scene-masks)) with a different color / `sapien.render.RenderMaterial` object.
 
-## Agent/Controller Randomizations
+## Agent/Robot and Controller Randomizations
 
 Agents/Robots and Controllers are abstractions around articulated objects to make it easy to swap controllers and load robots into scenes. Under the hood they have the same components as any other articulation.
+
+Controller randomizations revolve around joint properties like damping/stiffness and friction values. To change each joint in each parallel environment at a granular level you can do the following:
+
+For example in a custom environment when you load the scene
+```python
+def _load_scene(self, options: dict):
+    for joint in self.agent.robot.joints:
+        for obj in joint._objs:
+            obj.set_drive_properties(stiffness=1000, damping=100, force_limit=1000)
+            obj.set_friction(friction=0.5)
+```
+The controller randomizations can also be done on the fly after the GPU simulation has initialized (e.g. during the `_initialize_episode` function). Some controllers may have specific functionalities that can be changed on the fly as well. You can access the currently used controller object of an environment via `env.agent.controller` and modify that.
+
+Other randomizations of the agent/robot outside of controllers revolve around the robot links itself (e.g. gripper frictions) you can do the following
+
+```python
+def _load_scene(self, options: dict):
+    # iterate over every link in the robot and each managed parallel link and modify the collision shape materials
+    # accordingly. Some examples are shown below.
+    for link in self.agent.robot.links:
+        for obj in link._objs:
+            for shape in obj.collision_shapes:
+                shape.physical_material.dynamic_friction = 0.2
+                shape.physical_material.static_friction = 0.4
+                shape.physical_material.restitution = 0.2
+                shape.density = 1000
+                shape.patch_radius = 0.1
+                shape.min_patch_radius = 0.1
+```
