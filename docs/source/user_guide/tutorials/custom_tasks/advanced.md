@@ -395,23 +395,4 @@ However as a user you don't need to worry about adding a plane collision in each
 
 ## Dynamically Updating Simulation Properties
 
-The GPU simulation has some restrictions on what can be updated after reconfiguration. At the moment you cannot modify the number of robots or add/remove objects after reconfiguration. You can however modify properties such as object textures and controller properties on the fly.
-
-
-### Texture Modification
-
-Currently there is not a general API for "batched" material modifications but you can modify each of the objects managed by an {py:class}`mani_skill.utils.structs.Actor` or {py:class}`mani_skill.utils.structs.Articulation` object in the `._objs` list property. For each of those objects you can directly change the attached RenderBodyComponent and replace with a different one to change the material. 
-
-### Controller Modification
-
-To modify controller properties on the fly, you can directly modify the controller configuration and call `set_drive_property` to apply the changes. For the controllers that come out of the box with ManiSkill there are some configuration parameters like stiffness and damping (PD parameters) that need to be applied before it takes effect since the modify properties of the articulation/robot, which is done by `set_drive_property`.
-
-For example if you had an environment `env` and are using the `"panda"` robot, and if you wanted to change the stiffness of the controller, you can do the following:
-
-```python
-# find the controller object to modify. The panda robot's pd_joint_delta_pos controller
-# has multiple sub-controllers, one for the "arm" and one for the "gripper".
-controller = env.agent.controllers["pd_joint_delta_pos"].controllers["arm"]
-controller.config.stiffness = 100
-controller.set_drive_property()
-```
+See the page on [domain randomization](../domain_randomization.md) for more information on modifying various simulation (visual/physical) properties on the fly.

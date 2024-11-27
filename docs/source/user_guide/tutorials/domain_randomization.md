@@ -106,7 +106,7 @@ The result is the same as during reconfiguration, but instead every episode rese
 
 ## Actor/Link Physical and Visual Randomizations
 
-By default ManiSkill provides some convenient APIs that accept batched inputs for randomizing some properties of objects such as setting joint properties or disabling gravity on an object. In general if you want to randomize properties more granularly or if there isn't a convenience API available, you can do so by modifying each actor/link's components individually. Note at this granular level all values are expected to be python primitives or numpy based, torch tensors are not used. Normally these randomizations should be done during the `_load_scene` function.
+By default ManiSkill provides some convenient APIs that accept batched inputs for randomizing some properties of {py:class}`mani_skill.utils.structs.Actor` or {py:class}`mani_skill.utils.structs.Link` objects. In general if you want to randomize properties more granularly or if there isn't a convenience API available, you can do so by modifying each actor/link's components individually. Note at this granular level all values are expected to be python primitives or numpy based, torch tensors are not used. Normally these randomizations should be done during the `_load_scene` function in custom tasks.
 
 
 ```python
@@ -115,6 +115,7 @@ from sapien.physx import PhysxRigidBodyComponent
 from sapien.render import RenderBodyComponent
 
 def _load_scene(self, options: dict):
+    # ... other code for loading objects
     actor: Actor | Link
     for obj in actor._objs:
         # modify some property of obj's components here, which is one of the actors/links 
@@ -146,6 +147,8 @@ def _load_scene(self, options: dict):
                 part.material.set_metallic_texture(None)
                 part.material.set_roughness_texture(None)
 ```
+
+Similarly joints can also be modified in the same manner by iterating over each the `._objs` list property of {py:class}`mani_skill.utils.structs.ArticulationJoint` objects.
 
 Note that during GPU simulation most physical properties must be set in an environment during the `_load_scene` function which runs before the GPU simulation initialization. Once the GPU simulation is initialized, some properties are fixed and can only be changed again if the environment is reconfigured.
 
@@ -186,3 +189,25 @@ def _load_scene(self, options: dict):
 ```
 
 Note you can do in place changes to physical material properties like above, we do not recommend creating a new PhysxMaterial object as there is a limit to the number of PhysxMaterials that can be created (64K).
+
+## Lighting/Rendering Randomizations
+
+You can also modify overall lighting properties of the scene by overriding the default lighting loaded in the task's `_load_lighting` function. By default ManiSkill adds ambient light, and two directional lights with shadows disabled. The code below shows an example randomizing just the ambient light applied to the PickCube task during GPU simulation and rendering (using the "default" shader pack).
+
+```python
+import numpy as np
+def _load_lighting(self, options: dict)
+    for scene in self.scene.sub_scenes:
+        scene.ambient_light = [np.random.uniform(0.2, 0.6), np.random.uniform(0.2, 0.6), np.random.uniform(0.2, 0.6)]
+        scene.add_directional_light([1, 1, -1], [1, 1, 1], shadow=True, shadow_scale=5, shadow_map_size=4096)
+        scene.add_directional_light([0, 0, -1], [1, 1, 1])
+```
+
+<div style="display: flex; justify-content: center;">
+<video controls="True" width="100%">
+<source src="../../_static/videos/dr_lighting.mp4" type="video/mp4">
+</video>
+</div>
+<br/>
+
+Note that cameras added to tasks by default use the ["minimal" shader pack](../concepts/sensors.md#shaders-and-textures) which has a pure black background. You may want to use a more advanced shader like the "default" shader which does render the background by adding `shader_pack="default"` to the camera config to more visibly see the randomization effects.
