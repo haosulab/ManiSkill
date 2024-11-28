@@ -16,7 +16,7 @@ ManiSkill is a powerful unified framework for robot simulation and training powe
 - GPU parallelized heterogeneous simulation, where every parallel environment has a completely different scene/set of objects
 - Example tasks cover a wide range of different robot embodiments (humanoids, mobile manipulators, single-arm robots) as well as a wide range of different tasks (table-top, drawing/cleaning, dextrous manipulation)
 - Flexible and simple task building API that abstracts away much of the complex GPU memory management code via an object oriented design
-- Real2sim environments for scalably evaluating real-world policies 60-100x faster via GPU simulation.
+- Real2sim environments for scalably evaluating real-world policies 100x faster via GPU simulation.
 
 <!-- TODO replace paper link with arxiv link when it is out -->
 For more details we encourage you to take a look at our [paper](https://arxiv.org/abs/2410.00425).

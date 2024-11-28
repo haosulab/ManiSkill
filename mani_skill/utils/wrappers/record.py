@@ -324,7 +324,9 @@ class RecordEpisode(gym.Wrapper):
         img = common.to_numpy(img)
         if infos is not None:
             for i in range(len(img)):
-                info_item = {k: v[i] for k, v in infos.items()}
+                info_item = {
+                    k: v if isinstance(v, float) else v[i] for k, v in infos.items()
+                }
                 img[i] = put_info_on_image(img[i], info_item)
         if len(img.shape) > 3:
             if len(img) == 1:

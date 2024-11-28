@@ -3,7 +3,7 @@ from pathlib import Path
 
 from .utils.logging_utils import logger
 
-__version__ = "3.0.0b12"
+__version__ = "3.0.0b14"
 
 # ---------------------------------------------------------------------------- #
 # Setup paths
