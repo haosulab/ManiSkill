@@ -322,10 +322,12 @@ class RecordEpisode(gym.Wrapper):
     def capture_image(self, infos=None):
         img = self.env.render()
         img = common.to_numpy(img)
+        if len(img.shape) == 3:
+            img = img[None]
         if infos is not None:
             for i in range(len(img)):
                 info_item = {
-                    k: v if isinstance(v, float) else v[i] for k, v in infos.items()
+                    k: v if np.size(v) == 1 else v[i] for k, v in infos.items()
                 }
                 img[i] = put_info_on_image(img[i], info_item)
         if len(img.shape) > 3:
@@ -504,7 +506,13 @@ class RecordEpisode(gym.Wrapper):
                 scalar_info = gym_utils.extract_scalars_from_info(
                     common.to_numpy(info), batch_size=self.num_envs
                 )
-                scalar_info["reward"] = [float(rew) for rew in common.to_numpy(rew)]
+                scalar_info["reward"] = common.to_numpy(rew)
+                if np.size(scalar_info["reward"]) > 1:
+                    scalar_info["reward"] = [
+                        float(rew) for rew in scalar_info["reward"]
+                    ]
+                else:
+                    scalar_info["reward"] = float(scalar_info["reward"])
                 image = self.capture_image(scalar_info)
             else:
                 image = self.capture_image()
