@@ -9,6 +9,7 @@ from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs.types import SimConfig, GPUMemoryConfig
 from mani_skill.sensors.camera import CameraConfig
+from mani_skill.utils.building import actors
 
 @register_env("PullDrawer-v1", max_episode_steps=200)
 class PullDrawerEnv(BaseEnv):
@@ -32,7 +33,7 @@ class PullDrawerEnv(BaseEnv):
         self.wall_thickness = 0.01  
         
         # Inner drawer dimensions 
-        self.inner_width = self.outer_width - 1.2 * self.wall_thickness
+        self.inner_width = self.outer_width - 3.5 * self.wall_thickness
         self.inner_depth = self.outer_depth - 2.2 * self.wall_thickness
         self.inner_height = self.outer_height - 2.2 * self.wall_thickness
         
@@ -40,7 +41,7 @@ class PullDrawerEnv(BaseEnv):
         self.handle_width = 0.08    # Width of handle bar
         self.handle_height = 0.04   # Height of handle from drawer face
         self.handle_thickness = 0.02  # Thickness of handle material
-        self.handle_offset = 0.03   # Offset from drawer side
+        self.handle_offset = 0.05   # Offset from drawer side
         
         # Movement parameters (scaled proportionally)
         self.max_pull_distance = self.outer_width * 0.8  # Can pull out 80% of width
@@ -244,8 +245,18 @@ class PullDrawerEnv(BaseEnv):
             limits=(-self.max_pull_distance, 0),
             pose_in_parent=sapien.Pose(),
             pose_in_child=sapien.Pose(),                # try setting the link's position to be on the handle in child frame
-            friction=0.3,
+            friction=0.4,
             damping=10
+        )
+
+        self.goal_site = actors.build_sphere(
+            self.scene,
+            radius=0.01,
+            color=[0, 1, 0, 1],
+            name="goal_site",
+            body_type="kinematic",
+            add_collision=False,
+            initial_pose=sapien.Pose(),
         )
 
         
