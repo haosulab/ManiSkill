@@ -307,10 +307,10 @@ class RecordEpisode(gym.Wrapper):
 
         self.render_substeps = render_substeps
         if self.render_substeps:
-            self._original_after_simulation_step = self.base_env._after_simulation_step
+            _original_after_simulation_step = self.base_env._after_simulation_step
 
             def wrapped_after_simulation_step():
-                self._original_after_simulation_step()
+                _original_after_simulation_step()
                 if self.save_video:
                     if self.base_env.gpu_sim_enabled:
                         self.base_env.scene._gpu_fetch_all()
