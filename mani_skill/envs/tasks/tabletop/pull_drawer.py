@@ -30,7 +30,7 @@ class PullDrawerEnv(BaseEnv):
         self.outer_width = 0.15    
         self.outer_depth = 0.2     
         self.outer_height = 0.15   
-        self.wall_thickness = 0.01  
+        self.wall_thickness = 0.025  
         
         # Inner drawer dimensions 
         self.inner_width = self.outer_width - 3.5 * self.wall_thickness
@@ -251,12 +251,12 @@ class PullDrawerEnv(BaseEnv):
 
         self.goal_site = actors.build_sphere(
             self.scene,
-            radius=0.01,
+            radius=0.02,
             color=[0, 1, 0, 1],
             name="goal_site",
             body_type="kinematic",
             add_collision=False,
-            initial_pose=sapien.Pose(),
+            initial_pose=sapien.Pose(p = [-0.1075, 0.15, 0.077]),
         )
 
         
