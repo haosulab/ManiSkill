@@ -244,7 +244,7 @@ class PullDrawerEnv(BaseEnv):
             type="prismatic",
             limits=(-self.max_pull_distance, 0),
             pose_in_parent=sapien.Pose(),
-            pose_in_child=sapien.Pose(),                # try setting the link's position to be on the handle in child frame
+            pose_in_child=sapien.Pose(),                
             friction=0.4,
             damping=10
         )
@@ -260,9 +260,11 @@ class PullDrawerEnv(BaseEnv):
         )
 
         
+
+        
         builder.set_scene_idxs(scene_idxs=range(self.num_envs))
         builder.set_initial_pose(sapien.Pose(p=[0, 0.15, 0.077]))  
-        
+          
         self.drawer = builder.build(fix_root_link=True, name="drawer_articulation")
         self.drawer_link = self.drawer.get_links()[1]
 
@@ -305,34 +307,38 @@ class PullDrawerEnv(BaseEnv):
             ),
         }
 
+
+
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+    
         drawer_qpos = self.drawer.get_qpos()
         pos_dist = torch.abs(self.target_pos - drawer_qpos)
+
+        self.scene.px.gpu_update_articulation_kinematics()
+        self.scene._gpu_fetch_all()
         
-        # Update handle position for reward calculation
         tcp_pose = self.agent.tcp.pose.raw_pose
+        
         tcp_pos = tcp_pose[..., :3]
-        handle_pos = torch.tensor(
-            [-self.inner_width/2 - self.handle_offset, 0, 0],  # Adjust to actual handle position
-            device=self.device
-        )
-        reach_dist = torch.norm(tcp_pos - handle_pos, dim=-1)
+        drawer_link_pose = self.drawer.links_map['drawer'].pose.raw_pose
+        handle_offset = torch.tensor([-self.inner_width/2 - self.handle_offset, 0, 0], device=drawer_link_pose.device)
+
+        offset_x, offset_y, offset_z = -self.inner_width/2 - self.handle_offset, 0, 0
+        handle_pose = drawer_link_pose[:, :3] + torch.tensor([offset_x, offset_y, offset_z], device=drawer_link_pose.device).unsqueeze(0)
+
+        reach_dist = torch.norm(tcp_pos - handle_pose, dim=-1)
         
-        # 1. Reaching reward: Incentivize moving towards the handle
-        reaching_reward = 2.0 * (1 - torch.tanh(10.0 * reach_dist))
-        
-        # 2. Pulling reward: Incentivize pulling the drawer
-        pulling_reward = 3.0 * (1 - torch.tanh(5.0 * pos_dist)).squeeze(-1)
-        
-        # 3. Completion reward: Reward for successfully pulling the drawer
+        reaching_reward = 4.0 * (1 - torch.tanh(10.0 * reach_dist))
+        pulling_reward = 4.0 * (1 - torch.tanh(5.0 * pos_dist)).squeeze(-1)
         success_mask = info.get("success", torch.zeros_like(reaching_reward, dtype=torch.bool))
-        completion_reward = 5.0 * success_mask
-        
+        completion_reward = 4.0 * success_mask
+            
         return reaching_reward + pulling_reward + completion_reward
+
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        max_reward = 10.0  # Maximum possible reward (2 + 3 + 5)
+        max_reward = 12.0  # Maximum possible reward (2 + 3 + 5)
         dense_reward = self.compute_dense_reward(obs=obs, action=action, info=info)
         return dense_reward / max_reward
