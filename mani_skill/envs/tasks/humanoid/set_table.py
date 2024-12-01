@@ -104,6 +104,7 @@ class UnitreeG1SetTableEnv(BaseEnv):
     def evaluate(self) -> dict:
         for k, v in self.success_constraints.items():
             self.scene.actors[v["object_a"]].pose
+        return dict()
 
 
 @register_env("UnitreeG1SetTableEasy-v1", max_episode_steps=50)
