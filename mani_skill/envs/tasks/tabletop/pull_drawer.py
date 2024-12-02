@@ -30,7 +30,7 @@ class PullDrawerEnv(BaseEnv):
         self.outer_width = 0.15    
         self.outer_depth = 0.2     
         self.outer_height = 0.15   
-        self.wall_thickness = 0.025  
+        self.wall_thickness = 0.01  
         
         # Inner drawer dimensions 
         self.inner_width = self.outer_width - 3.5 * self.wall_thickness
@@ -43,7 +43,7 @@ class PullDrawerEnv(BaseEnv):
         self.handle_thickness = 0.02  # Thickness of handle material
         self.handle_offset = 0.05   # Offset from drawer side
         
-        # Movement parameters (scaled proportionally)
+        # Movement parameters 
         self.max_pull_distance = self.outer_width * 0.8  # Can pull out 80% of width
         self.target_pos = -self.max_pull_distance * 0.8
         
@@ -259,9 +259,6 @@ class PullDrawerEnv(BaseEnv):
             initial_pose=sapien.Pose(p = [-0.1075, 0.15, 0.077]),
         )
 
-        
-
-        
         builder.set_scene_idxs(scene_idxs=range(self.num_envs))
         builder.set_initial_pose(sapien.Pose(p=[0, 0.15, 0.077]))  
           
@@ -308,30 +305,53 @@ class PullDrawerEnv(BaseEnv):
         }
 
 
-
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-    
+        
         drawer_qpos = self.drawer.get_qpos()
         pos_dist = torch.abs(self.target_pos - drawer_qpos)
 
+        self.scene._gpu_apply_all()
         self.scene.px.gpu_update_articulation_kinematics()
         self.scene._gpu_fetch_all()
         
         tcp_pose = self.agent.tcp.pose.raw_pose
-        
         tcp_pos = tcp_pose[..., :3]
         drawer_link_pose = self.drawer.links_map['drawer'].pose.raw_pose
+        
+        # Calculate handle pose more precisely
         handle_offset = torch.tensor([-self.inner_width/2 - self.handle_offset, 0, 0], device=drawer_link_pose.device)
+        handle_pose = drawer_link_pose[:, :3] + handle_offset
+        
 
-        offset_x, offset_y, offset_z = -self.inner_width/2 - self.handle_offset, 0, 0
-        handle_pose = drawer_link_pose[:, :3] + torch.tensor([offset_x, offset_y, offset_z], device=drawer_link_pose.device).unsqueeze(0)
-
+        # Compute distance to handle
         reach_dist = torch.norm(tcp_pos - handle_pose, dim=-1)
         
-        reaching_reward = 4.0 * (1 - torch.tanh(10.0 * reach_dist))
-        pulling_reward = 4.0 * (1 - torch.tanh(5.0 * pos_dist)).squeeze(-1)
+        # New condition: Check if TCP is close to handle
+        handle_contact_threshold = 0.015  # adjust based on your specific setup
+        is_handling_handle = reach_dist < handle_contact_threshold
+
+        # Modify rewards to be conditional on handle interaction
+        reaching_reward = torch.where(
+            is_handling_handle, 
+            4.0 * (1 - torch.tanh(10.0 * reach_dist)), 
+            torch.zeros_like(reach_dist)
+        )
+
+        print("reach reward", reaching_reward)
+        
+        
+        pulling_reward = torch.where(
+            is_handling_handle, 
+            4.0 * (1 - torch.tanh(5.0 * pos_dist)).squeeze(-1),
+            torch.zeros_like(pos_dist)
+        )
+
+        print("pulling reward", pulling_reward)
+        
         success_mask = info.get("success", torch.zeros_like(reaching_reward, dtype=torch.bool))
         completion_reward = 4.0 * success_mask
+
+        print("completion reward", completion_reward)
             
         return reaching_reward + pulling_reward + completion_reward
 
