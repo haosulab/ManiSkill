@@ -30,7 +30,7 @@ class PullDrawerEnv(BaseEnv):
         self.outer_width = 0.15    
         self.outer_depth = 0.2     
         self.outer_height = 0.15   
-        self.wall_thickness = 0.01  
+        self.wall_thickness = 0.02  
         
         # Inner drawer dimensions 
         self.inner_width = self.outer_width - 3.5 * self.wall_thickness
@@ -38,10 +38,10 @@ class PullDrawerEnv(BaseEnv):
         self.inner_height = self.outer_height - 2.2 * self.wall_thickness
         
         # Handle dimensions 
-        self.handle_width = 0.08    # Width of handle bar
+        self.handle_width = 0.12    # Width of handle bar
         self.handle_height = 0.04   # Height of handle from drawer face
         self.handle_thickness = 0.02  # Thickness of handle material
-        self.handle_offset = 0.05   # Offset from drawer side
+        self.handle_offset = 0.06   # Offset from drawer side
         
         # Movement parameters 
         self.max_pull_distance = self.outer_width * 0.8  # Can pull out 80% of width
