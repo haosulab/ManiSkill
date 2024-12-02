@@ -27,10 +27,10 @@ class PullDrawerEnv(BaseEnv):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         
         # Outer cabinet dimensions 
-        self.outer_width = 0.15    
-        self.outer_depth = 0.2     
-        self.outer_height = 0.15   
-        self.wall_thickness = 0.03  
+        self.outer_width = 0.225    
+        self.outer_depth = 0.3     
+        self.outer_height = 0.225   
+        self.wall_thickness = 0.04  
         
         # Inner drawer dimensions 
         self.inner_width = self.outer_width - 3 * self.wall_thickness
@@ -38,10 +38,10 @@ class PullDrawerEnv(BaseEnv):
         self.inner_height = self.outer_height - 2.2 * self.wall_thickness
         
         # Handle dimensions 
-        self.handle_width = 0.12    # Width of handle bar
-        self.handle_height = 0.04   # Height of handle from drawer face
-        self.handle_thickness = 0.02  # Thickness of handle material
-        self.handle_offset = 0.06   # Offset from drawer side
+        self.handle_width = 0.18    # Width of handle bar
+        self.handle_height = 0.06   # Height of handle from drawer face
+        self.handle_thickness = 0.03  # Thickness of handle material
+        self.handle_offset = 0.09   # Offset from drawer side
         
         # Movement parameters 
         self.max_pull_distance = self.outer_width * 0.8  # Can pull out 80% of width
@@ -256,7 +256,7 @@ class PullDrawerEnv(BaseEnv):
             name="goal_site",
             body_type="kinematic",
             add_collision=False,
-            initial_pose=sapien.Pose(p = [-0.0075, 0.15, 0.077]),
+            initial_pose=sapien.Pose(p = [-0.0095, 0.15, 0.077]),
         )
 
         builder.set_scene_idxs(scene_idxs=range(self.num_envs))
