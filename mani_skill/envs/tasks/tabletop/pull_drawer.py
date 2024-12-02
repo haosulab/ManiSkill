@@ -306,59 +306,69 @@ class PullDrawerEnv(BaseEnv):
 
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        
+
         drawer_qpos = self.drawer.get_qpos()
         pos_dist = torch.abs(self.target_pos - drawer_qpos)
-
-        self.scene._gpu_apply_all()
-        self.scene.px.gpu_update_articulation_kinematics()
-        self.scene._gpu_fetch_all()
-        
-        tcp_pose = self.agent.tcp.pose.raw_pose
-        tcp_pos = tcp_pose[..., :3]
-        drawer_link_pose = self.drawer.links_map['drawer'].pose.raw_pose
-        
-        # Calculate handle pose more precisely
-        handle_offset = torch.tensor([-self.inner_width/2 - self.handle_offset, 0, 0], device=drawer_link_pose.device)
-        handle_pose = drawer_link_pose[:, :3] + handle_offset
-        
-
-        # Compute distance to handle
-        reach_dist = torch.norm(tcp_pos - handle_pose, dim=-1)
-        
-        # New condition: Check if TCP is close to handle
-        handle_contact_threshold = 0.015  # adjust based on your specific setup
-        is_handling_handle = reach_dist < handle_contact_threshold
-
-        # Modify rewards to be conditional on handle interaction
-        reaching_reward = torch.where(
-            is_handling_handle, 
-            4.0 * (1 - torch.tanh(10.0 * reach_dist)), 
-            torch.zeros_like(reach_dist)
-        )
-
-        print("reach reward", reaching_reward)
-        
-        
-        pulling_reward = torch.where(
-            is_handling_handle, 
-            4.0 * (1 - torch.tanh(5.0 * pos_dist)).squeeze(-1),
-            torch.zeros_like(pos_dist)
-        )
-
-        print("pulling reward", pulling_reward)
-        
-        success_mask = info.get("success", torch.zeros_like(reaching_reward, dtype=torch.bool))
+   
+        pulling_reward = 4.0 * (1 - torch.tanh(5.0 * pos_dist)).squeeze(-1)
+   
+        success_mask = info.get("success", torch.zeros_like(pulling_reward, dtype=torch.bool))
         completion_reward = 4.0 * success_mask
+       
+        return pulling_reward + completion_reward
+        
+        # drawer_qpos = self.drawer.get_qpos()
+        # pos_dist = torch.abs(self.target_pos - drawer_qpos)
 
-        print("completion reward", completion_reward)
+        # self.scene._gpu_apply_all()
+        # self.scene.px.gpu_update_articulation_kinematics()
+        # self.scene._gpu_fetch_all()
+        
+        # tcp_pose = self.agent.tcp.pose.raw_pose
+        # tcp_pos = tcp_pose[..., :3]
+        # drawer_link_pose = self.drawer.links_map['drawer'].pose.raw_pose
+        
+        # # Calculate handle pose more precisely
+        # handle_offset = torch.tensor([-self.inner_width/2 - self.handle_offset, 0, 0], device=drawer_link_pose.device)
+        # handle_pose = drawer_link_pose[:, :3] + handle_offset
+        
+
+        # # Compute distance to handle
+        # reach_dist = torch.norm(tcp_pos - handle_pose, dim=-1)
+        
+        # # New condition: Check if TCP is close to handle
+        # handle_contact_threshold = 0.015  # adjust based on your specific setup
+        # is_handling_handle = reach_dist < handle_contact_threshold
+
+        # # Modify rewards to be conditional on handle interaction
+        # reaching_reward = torch.where(
+        #     is_handling_handle, 
+        #     4.0 * (1 - torch.tanh(10.0 * reach_dist)), 
+        #     torch.zeros_like(reach_dist)
+        # )
+
+        # # print("reach reward", reaching_reward)
+        
+        
+        # pulling_reward = torch.where(
+        #     is_handling_handle, 
+        #     4.0 * (1 - torch.tanh(5.0 * pos_dist)).squeeze(-1),
+        #     torch.zeros_like(pos_dist)
+        # )
+
+        # # print("pulling reward", pulling_reward)
+        
+        # success_mask = info.get("success", torch.zeros_like(reaching_reward, dtype=torch.bool))
+        # completion_reward = 4.0 * success_mask
+
+        # # print("completion reward", completion_reward)
             
-        return reaching_reward + pulling_reward + completion_reward
+        # return reaching_reward + pulling_reward + completion_reward
 
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        max_reward = 12.0  # Maximum possible reward (2 + 3 + 5)
+        max_reward = 8.0  # Maximum possible reward
         dense_reward = self.compute_dense_reward(obs=obs, action=action, info=info)
         return dense_reward / max_reward
