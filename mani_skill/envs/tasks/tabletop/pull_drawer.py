@@ -30,10 +30,10 @@ class PullDrawerEnv(BaseEnv):
         self.outer_width = 0.15    
         self.outer_depth = 0.2     
         self.outer_height = 0.15   
-        self.wall_thickness = 0.02  
+        self.wall_thickness = 0.03  
         
         # Inner drawer dimensions 
-        self.inner_width = self.outer_width - 3.5 * self.wall_thickness
+        self.inner_width = self.outer_width - 3 * self.wall_thickness
         self.inner_depth = self.outer_depth - 2.2 * self.wall_thickness
         self.inner_height = self.outer_height - 2.2 * self.wall_thickness
         
@@ -256,11 +256,11 @@ class PullDrawerEnv(BaseEnv):
             name="goal_site",
             body_type="kinematic",
             add_collision=False,
-            initial_pose=sapien.Pose(p = [-0.1075, 0.15, 0.077]),
+            initial_pose=sapien.Pose(p = [-0.0075, 0.15, 0.077]),
         )
 
         builder.set_scene_idxs(scene_idxs=range(self.num_envs))
-        builder.set_initial_pose(sapien.Pose(p=[0, 0.15, 0.077]))  
+        builder.set_initial_pose(sapien.Pose(p=[0.1, 0.15, 0.077]))  
           
         self.drawer = builder.build(fix_root_link=True, name="drawer_articulation")
         self.drawer_link = self.drawer.get_links()[1]
