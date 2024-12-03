@@ -166,7 +166,7 @@ class ReplayBuffer:
         self.dones[self.pos] = done
 
         self.pos += 1
-        if self.pos == self.buffer_size:
+        if self.pos == self.per_env_buffer_size:
             self.full = True
             self.pos = 0
     def sample(self, batch_size: int):
