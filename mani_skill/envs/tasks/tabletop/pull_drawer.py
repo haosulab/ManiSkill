@@ -30,12 +30,12 @@ class PullDrawerEnv(BaseEnv):
         self.outer_width = 0.225    
         self.outer_depth = 0.3     
         self.outer_height = 0.225   
-        self.wall_thickness = 0.04  
+        self.wall_thickness = 0.03  
         
         # Inner drawer dimensions 
-        self.inner_width = self.outer_width - 3 * self.wall_thickness
-        self.inner_depth = self.outer_depth - 2.2 * self.wall_thickness
-        self.inner_height = self.outer_height - 2.2 * self.wall_thickness
+        self.inner_width = self.outer_width - 2 * self.wall_thickness
+        self.inner_depth = self.outer_depth - 2.1 * self.wall_thickness
+        self.inner_height = self.outer_height - 2.1 * self.wall_thickness
         
         # Handle dimensions 
         self.handle_width = 0.18    # Width of handle bar
@@ -249,18 +249,18 @@ class PullDrawerEnv(BaseEnv):
             damping=10
         )
 
-        self.goal_site = actors.build_sphere(
-            self.scene,
-            radius=0.02,
-            color=[0, 1, 0, 1],
-            name="goal_site",
-            body_type="kinematic",
-            add_collision=False,
-            initial_pose=sapien.Pose(p = [-0.0095, 0.15, 0.12]),
-        )
+        # self.goal_site = actors.build_sphere(
+        #     self.scene,
+        #     radius=0.02,
+        #     color=[0, 1, 0, 1],
+        #     name="goal_site",
+        #     body_type="kinematic",
+        #     add_collision=False,
+        #     initial_pose=sapien.Pose(p = [-0.0095, 0.15, 0.13]),
+        # )
 
         builder.set_scene_idxs(scene_idxs=range(self.num_envs))
-        builder.set_initial_pose(sapien.Pose(p=[0.1, 0.15, 0.153]))  
+        builder.set_initial_pose(sapien.Pose(p=[0.1, 0.15, 0.12]))  
           
         self.drawer = builder.build(fix_root_link=True, name="drawer_articulation")
         self.drawer_link = self.drawer.get_links()[1]
