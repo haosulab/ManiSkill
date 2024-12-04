@@ -9,12 +9,14 @@ from mani_skill.utils.structs import Pose
 
 
 def main():
+    
     env: PullDrawerEnv = gym.make(
         "PullDrawer-v1",
         obs_mode="none", 
         control_mode="pd_joint_pos",
         render_mode="rgb_array",
         reward_mode="dense",
+        sim_backend="gpu"
     )
     
     for seed in range(100):
