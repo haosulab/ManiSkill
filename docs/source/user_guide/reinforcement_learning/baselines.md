@@ -12,7 +12,7 @@ List of already implemented and tested online reinforcement learning baselines. 
 
 | Baseline                                                            | Code                                                                           | Results | Paper                                    |
 | ------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ------- | ---------------------------------------- |
-| Proximal Policy Optimization (PPO)                                  | [Link](https://github.com/haosulab/ManiSkill/blob/main/examples/baselines/ppo) | [Link](https://wandb.ai/stonet2000/ManiSkill/groups/PPO/workspace?nw=0pe9ybwmza7)     | [Link](http://arxiv.org/abs/1707.06347)  |
+| Proximal Policy Optimization (PPO)                                  | [Link](https://github.com/haosulab/ManiSkill/blob/main/examples/baselines/ppo) | [Link](https://api.wandb.ai/links/stonet2000/k6lz966q)     | [Link](http://arxiv.org/abs/1707.06347)  |
 | Soft Actor Critic (SAC)                                             | [Link](https://github.com/haosulab/ManiSkill/blob/main/examples/baselines/sac) | WIP     | [Link](https://arxiv.org/abs/1801.01290) |
 | Temporal Difference Learning for Model Predictive Control (TD-MPC2) | WIP                                                                            | WIP     | [Link](https://arxiv.org/abs/2310.16828) |
 
