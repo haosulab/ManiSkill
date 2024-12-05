@@ -2,7 +2,6 @@ from typing import Dict, Union, Any
 import numpy as np
 import sapien
 import torch
-import random
 from mani_skill.agents.robots import Fetch, Panda
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.utils import sapien_utils
@@ -10,7 +9,6 @@ from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs.types import SimConfig, GPUMemoryConfig
 from mani_skill.sensors.camera import CameraConfig
-from mani_skill.utils.structs import Pose
 from mani_skill.utils.building import actors
 
 @register_env("PullDrawer-v1", max_episode_steps=200)
@@ -252,9 +250,7 @@ class PullDrawerEnv(BaseEnv):
         )
 
         builder.set_scene_idxs(scene_idxs=range(self.num_envs))
-        x = random.random()*0.05 + 0.17
-        y = random.random()*0.1 + 0.12
-        builder.set_initial_pose(sapien.Pose(p=[x, y, 0.12]))  
+        builder.set_initial_pose(sapien.Pose(p=[0.17, 0.15, 0.12]))  
           
         self.drawer = builder.build(fix_root_link=True, name="drawer_articulation")
         self.drawer_link = self.drawer.get_links()[1]
@@ -263,17 +259,7 @@ class PullDrawerEnv(BaseEnv):
         with torch.device(self.device):
             b = len(env_idx)
             self.scene_builder.initialize(env_idx)
-
-            drawer_xyz = torch.zeros((b,3), device=self.device)
-            drawer_xyz[..., 0] = torch.rand((b,1), device=self.device)*0.05 + 0.17
-            drawer_xyz[..., 1] = torch.rand((b,1), device= self.device)*0.1 + 0.12
-            drawer_xyz[..., 2] = self.outer_height/2 + 0.001
-
-            drawer_pose = Pose.create_from_pq(p = drawer_xyz)
-
-            self.drawer.set_pose(drawer_pose)
-
-
+            
             init_pos = torch.zeros((b, 1), device=self.device)
             
             self.drawer.set_qpos(init_pos)
@@ -310,20 +296,72 @@ class PullDrawerEnv(BaseEnv):
 
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-
+        # Update scene kinematics to ensure latest poses
+        self.scene._gpu_apply_all()
+        self.scene.px.gpu_update_articulation_kinematics()
+        self.scene._gpu_fetch_all()
+        
+        # Get TCP pose and drawer link pose
+        tcp_pose = self.agent.tcp.pose.raw_pose
+        tcp_pos = tcp_pose[..., :3]
+        drawer_link_pose = self.drawer.links_map['drawer'].pose.raw_pose
+        
+        # Calculate handle pose 
+        handle_offset = torch.tensor([-self.inner_width/2 - self.handle_offset, 0, 0], device=drawer_link_pose.device)
+        handle_pose = drawer_link_pose[:, :3] + handle_offset
+        
+        # Stage 1: Alignment Reward
+        # Compute alignment in XZ plane (ensure gripper is roughly parallel to handle's movement axis)
+        handle_dir = torch.tensor([0, 1, 0], device=tcp_pose.device)  # handle moves along Y axis
+        tcp_forward = tcp_pose[..., 3:6]  # gripper's forward direction
+        alignment_score = torch.abs(torch.nn.functional.cosine_similarity(tcp_forward, handle_dir, dim=-1))
+        alignment_reward = 2.0 * (1 - alignment_score)
+        
+        # Stage 2: Approach Reward
+        # Compute distance to handle
+        reach_dist = torch.norm(tcp_pos - handle_pose, dim=-1)
+        approach_reward = 2.0 * (1 - torch.tanh(5.0 * reach_dist))
+        
+        # Stage 3: Grasping Reward
+        # Define proximity and orientation conditions for proper grasping
+        grasp_dist_threshold = 0.02  # Close to handle
+        grasp_angle_threshold = 0.1  # Roughly aligned
+        is_near_handle = reach_dist < grasp_dist_threshold
+        
+        # Compute grasping reward that considers both distance and alignment
+        grasping_reward = torch.where(
+            is_near_handle,
+            2.0 * (1 - alignment_score),  # Reward for being close and aligned
+            torch.zeros_like(reach_dist)
+        )
+        
+        # Stage 4: Pulling Reward
         drawer_qpos = self.drawer.get_qpos()
         pos_dist = torch.abs(self.target_pos - drawer_qpos)
-   
-        pulling_reward = 4.0 * (1 - torch.tanh(5.0 * pos_dist)).squeeze(-1)
-   
+        pulling_reward = torch.where(
+            is_near_handle,  # Only reward pulling if properly grasping
+            4.0 * (1 - torch.tanh(5.0 * pos_dist)).squeeze(-1),
+            torch.zeros_like(pos_dist)
+        )
+        
+        # Final Stage: Completion Reward
         success_mask = info.get("success", torch.zeros_like(pulling_reward, dtype=torch.bool))
         completion_reward = 4.0 * success_mask
-       
-        return pulling_reward + completion_reward
+        
+        # Combine rewards
+        total_reward = (
+            alignment_reward + 
+            approach_reward + 
+            grasping_reward + 
+            pulling_reward + 
+            completion_reward
+        )
+        
+        return total_reward
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        max_reward = 8  # Sum of max individual reward components
+        max_reward = 7.5  # Sum of max individual reward components
         dense_reward = self.compute_dense_reward(obs=obs, action=action, info=info)
         return dense_reward / max_reward
