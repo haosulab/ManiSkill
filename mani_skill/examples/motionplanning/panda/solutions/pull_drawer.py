@@ -41,6 +41,7 @@ def solve(env: PullDrawerEnv, seed=None, debug=False, vis=False):
     move_in_offset = sapien.Pose(p = [0, 0, 0.13])
     grasp_pose = pre_grasp_pose * move_in_offset
 
+
     res = planner.move_to_pose_with_screw(grasp_pose)
 
 
@@ -63,8 +64,8 @@ def main():
         "PullDrawer-v1",
         obs_mode="none",
         control_mode="pd_joint_pos",
-        render_mode="rgb_array"
-        sim
+        render_mode="rgb_array",
+        sim_backend = "gpu"
     )
     
     for seed in range(100):
