@@ -2,6 +2,7 @@ from typing import Dict, Union, Any
 import numpy as np
 import sapien
 import torch
+import random
 from mani_skill.agents.robots import Fetch, Panda
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.utils import sapien_utils
@@ -9,6 +10,7 @@ from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs.types import SimConfig, GPUMemoryConfig
 from mani_skill.sensors.camera import CameraConfig
+from mani_skill.utils.structs import Pose
 from mani_skill.utils.building import actors
 
 @register_env("PullDrawer-v1", max_episode_steps=200)
@@ -249,18 +251,10 @@ class PullDrawerEnv(BaseEnv):
             damping=10
         )
 
-        # self.goal_site = actors.build_sphere(
-        #     self.scene,
-        #     radius=0.02,
-        #     color=[0, 1, 0, 1],
-        #     name="goal_site",
-        #     body_type="kinematic",
-        #     add_collision=False,
-        #     initial_pose=sapien.Pose(p = [-0.0095, 0.15, 0.13]),
-        # )
-
         builder.set_scene_idxs(scene_idxs=range(self.num_envs))
-        builder.set_initial_pose(sapien.Pose(p=[0.17, 0.15, 0.12]))  
+        x = random.random()*0.05 + 0.17
+        y = random.random()*0.1 + 0.12
+        builder.set_initial_pose(sapien.Pose(p=[x, y, 0.12]))  
           
         self.drawer = builder.build(fix_root_link=True, name="drawer_articulation")
         self.drawer_link = self.drawer.get_links()[1]
@@ -269,7 +263,17 @@ class PullDrawerEnv(BaseEnv):
         with torch.device(self.device):
             b = len(env_idx)
             self.scene_builder.initialize(env_idx)
-            
+
+            drawer_xyz = torch.zeros((b,3), device=self.device)
+            drawer_xyz[..., 0] = torch.rand((b,1), device=self.device)*0.05 + 0.17
+            drawer_xyz[..., 1] = torch.rand((b,1), device= self.device)*0.1 + 0.12
+            drawer_xyz[..., 2] = self.outer_height/2 + 0.001
+
+            drawer_pose = Pose.create_from_pq(p = drawer_xyz)
+
+            self.drawer.set_pose(drawer_pose)
+
+
             init_pos = torch.zeros((b, 1), device=self.device)
             
             self.drawer.set_qpos(init_pos)
