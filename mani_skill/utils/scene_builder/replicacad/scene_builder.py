@@ -259,12 +259,9 @@ class ReplicaCADSceneBuilder(SceneBuilder):
                     self._navigable_positions[bci] = trimesh.load(mesh_fp)
 
         # ReplicaCAD's lighting isn't great for raytracing, so we define our own
-        if self.ray_traced_lighting:
-            self.scene.set_ambient_light([0.3] * 3)
-        else:
-            self.scene.sub_scenes[0].set_environment_map(
-                str((Path(__file__).parent / "autumn_field_puresky_4k.hdr").absolute())
-            )
+        self.scene.sub_scenes[0].set_environment_map(
+            str((Path(__file__).parent / "autumn_field_puresky_4k.hdr").absolute())
+        )
         color = np.array([1.0, 0.8, 0.5]) * 2
         # entrance
         self.scene.add_point_light([-1.1, 2.775, 2.3], color=color)
