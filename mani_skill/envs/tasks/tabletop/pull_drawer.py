@@ -300,19 +300,47 @@ class PullDrawerEnv(BaseEnv):
         batch_size = self.drawer.get_qpos().shape[0]
         device = self.device
 
+        self.scene._gpu_apply_all()
+        self.scene.px.gpu_update_articulation_kinematics()
+        self.scene._gpu_fetch_all()
+        
+        # Get TCP pose and drawer link pose
+        tcp_pose = self.agent.tcp.pose.raw_pose
+        tcp_pos = tcp_pose[..., :3]
+        drawer_link_pose = self.drawer.links_map['drawer'].pose.raw_pose
+
+        handle_offset = torch.tensor([-self.inner_width/2 - self.handle_offset, 0, 0], device=drawer_link_pose.device)
+        handle_pose = drawer_link_pose[:, :3] + handle_offset
+
         # 1. Orientation Reward
         tcp_pose_q = self.agent.tcp.pose.q
         desired_q = torch.tensor([0.5, 0.5, 0.5, 0.5], device=device).expand(batch_size, 4)
         orientation_diff = torch.norm(tcp_pose_q - desired_q, dim=-1) < 0.02
 
         q_orientation_reward = 4 * orientation_diff
+
+        # 2. Approach Reward
+        reach_dist = torch.norm(tcp_pos - handle_pose, dim=-1)
+        approach_reward = 4.0 * (1 - torch.tanh(5.0 * reach_dist))
+
+        # 3. Progress Reward
+        drawer_qpos = self.drawer.get_qpos()
+        pos_dist = torch.abs(self.target_pos - drawer_qpos)
+   
+        pulling_reward = 4.0 * (1 - torch.tanh(5.0 * pos_dist)).squeeze(-1)
+   
+        # 4. Success Reward
+        success_mask = info.get("success", torch.zeros_like(pulling_reward, dtype=torch.bool))
+        completion_reward = 4.0 * success_mask
+
+        print(q_orientation_reward, pulling_reward, completion_reward)
         
 
-        return q_orientation_reward
+        return q_orientation_reward + approach_reward + pulling_reward + completion_reward
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        max_reward = 4.0  # Maximum possible reward
+        max_reward = 16.0  # Maximum possible reward
         dense_reward = self.compute_dense_reward(obs=obs, action=action, info=info)
         return dense_reward / max_reward
