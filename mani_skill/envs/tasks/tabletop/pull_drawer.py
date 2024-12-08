@@ -332,10 +332,7 @@ class PullDrawerEnv(BaseEnv):
         # 4. Success Reward
         success_mask = info.get("success", torch.zeros_like(pulling_reward, dtype=torch.bool))
         completion_reward = 4.0 * success_mask
-
-        print(q_orientation_reward, pulling_reward, completion_reward)
         
-
         return q_orientation_reward + approach_reward + pulling_reward + completion_reward
 
     def compute_normalized_dense_reward(
