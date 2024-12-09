@@ -34,7 +34,7 @@ from mani_skill.utils.structs import Pose
 from mani_skill.utils.structs.types import Array, GPUMemoryConfig, SimConfig
 
 
-@register_env("PushCube-v1", max_episode_steps=50)
+@register_env("PushCube-v1", max_episode_steps=200)
 class PushCubeEnv(BaseEnv):
     """
     Task Description

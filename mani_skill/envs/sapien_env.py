@@ -1,3 +1,4 @@
+from __future__ import annotations
 import copy
 import gc
 import os
@@ -312,6 +313,7 @@ class BaseEnv(gym.Env):
         if reward_mode not in self.SUPPORTED_REWARD_MODES:
             raise NotImplementedError("Unsupported reward mode: {}".format(reward_mode))
         self._reward_mode = reward_mode
+        self._reward_components = {}
 
         # Control mode
         self._control_mode = control_mode
@@ -955,12 +957,17 @@ class BaseEnv(gym.Env):
         info = self.get_info()
         obs = self.get_obs(info)
         reward = self.get_reward(obs=obs, action=action, info=info)
+        # Now that reward has been calculated, add reward components to info 
+        info["reward_components"] = self._reward_components
+        # print("Set reward components")
+        print("success:", info["success"])
         if "success" in info:
 
             if "fail" in info:
                 terminated = torch.logical_or(info["success"], info["fail"])
             else:
                 terminated = info["success"].clone()
+                # print("Terminated:", terminated)
         else:
             if "fail" in info:
                 terminated = info["fail"].clone()

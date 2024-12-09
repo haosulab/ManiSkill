@@ -2,6 +2,7 @@ from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.utils.building.actor_builder import ActorBuilder
 
 from .common import *
+from .ycb import *
 
 
 def get_actor_builder(
