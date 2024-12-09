@@ -19,6 +19,21 @@ from mani_skill.utils.structs.types import SimConfig
 
 @register_env("PlugCharger-v1", max_episode_steps=200)
 class PlugChargerEnv(BaseEnv):
+    """
+    **Task Description:**
+    The robot must pick up one of the misplaced shapes on the board/kit and insert it into the correct empty slot.
+
+    **Randomizations:**
+    - The charger position is randomized on the XY plane on top of the table. The rotation is also randomized
+    - The receptacle position is randomized on the XY plane and the rotation is also randomized. Note that the human render camera has its pose
+    fixed relative to the receptacle.
+
+    **Success Conditions:**
+    - The charger is inserted into the receptacle
+    """
+
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PlugCharger-v1_rt.mp4"
+
     _base_size = [2e-2, 1.5e-2, 1.2e-2]  # charger base half size
     _peg_size = [8e-3, 0.75e-3, 3.2e-3]  # charger peg half size
     _peg_gap = 7e-3  # charger peg gap
