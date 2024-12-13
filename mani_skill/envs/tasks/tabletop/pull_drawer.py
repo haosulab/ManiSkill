@@ -47,6 +47,7 @@ class PullDrawerEnv(BaseEnv):
         # Movement parameters 
         self.max_pull_distance = self.outer_width * 0.8  # Can pull out 80% of width
         self.target_pos = -self.max_pull_distance * 0.8
+        self.k = 0.01
         
         super().__init__(
             *args,
@@ -262,8 +263,8 @@ class PullDrawerEnv(BaseEnv):
             self.scene_builder.initialize(env_idx)
             
             drawer_xyz = torch.zeros((b, 3), device=self.device)
-            drawer_xyz[..., 0] = torch.rand((b,), device=self.device) * 0.01 + 0.17
-            drawer_xyz[..., 1] = torch.rand((b,), device=self.device) * 0.01 + 0.15
+            drawer_xyz[..., 0] = torch.rand((b,), device=self.device) * self.k + 0.17
+            drawer_xyz[..., 1] = torch.rand((b,), device=self.device) * self.k + 0.15
             drawer_xyz[..., 2] = self.outer_height / 2 + 0.005 
 
             init_pos = Pose.create_from_pq(p=drawer_xyz)
