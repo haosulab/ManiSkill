@@ -9,6 +9,7 @@ from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs.types import SimConfig, GPUMemoryConfig
 from mani_skill.sensors.camera import CameraConfig
+from mani_skill.utils.structs import Pose
 from mani_skill.utils.building import actors
 
 @register_env("PullDrawer-v1", max_episode_steps=200)
@@ -260,9 +261,14 @@ class PullDrawerEnv(BaseEnv):
             b = len(env_idx)
             self.scene_builder.initialize(env_idx)
             
-            init_pos = torch.zeros((b, 1), device=self.device)
+            drawer_xyz = torch.zeros((b, 3), device=self.device)
+            drawer_xyz[..., 0] = torch.rand((b,), device=self.device) * 0.005 + 0.17
+            drawer_xyz[..., 1] = torch.rand((b,), device=self.device) * 0.005 + 0.15
+            drawer_xyz[..., 2] = self.outer_height / 2 + 0.005 
+
+            init_pos = Pose.create_from_pq(p=drawer_xyz)
             
-            self.drawer.set_qpos(init_pos)
+            self.drawer.set_pose(init_pos)
 
     def _get_obs_extra(self, info: Dict):
         obs = dict(
