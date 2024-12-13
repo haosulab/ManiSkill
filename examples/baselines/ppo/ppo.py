@@ -28,7 +28,7 @@ class Args:
     seed: int = 1
     """seed of the experiment"""
     torch_deterministic: bool = True
-    """if toggled, `torch.backends.cudnn.deterministic=False`"""
+    """if toggled, `torch.backends.cudnn.deterministic=True`"""
     cuda: bool = True
     """if toggled, cuda will be enabled by default"""
     track: bool = False
