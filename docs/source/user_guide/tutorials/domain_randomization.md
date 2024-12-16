@@ -261,3 +261,16 @@ for cam_name in obs["sensor_data"].keys():
     plt.imshow(camera_data["rgb"].cpu().numpy()[0])
     plt.show()
 ```
+
+## External Forces / Perturbation based Randomization
+
+For training/evaluating robust robotics policies it is common to apply random external forces to objects in the scene.
+
+For {py:class}`mani_skill.utils.structs.Actor` objects you can apply external forces to the body's center of mass by calling the `apply_force` method.
+
+```python
+# apply upwards force of 10 newtons
+actor.apply_force(force=torch.tensor([0, 0, 10.0]))
+```
+
+Currently external forces are only supported for Actor objects.
