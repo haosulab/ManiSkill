@@ -1,4 +1,5 @@
 # docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/ppo/#ppo_continuous_actionpy
+from collections import defaultdict
 import os
 import random
 import time
@@ -16,6 +17,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 # ManiSkill specific imports
 import mani_skill.envs
+from mani_skill.utils import gym_utils
 from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper, FlattenRGBDObservationWrapper
 from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
@@ -32,26 +34,28 @@ class Args:
     """if toggled, cuda will be enabled by default"""
     track: bool = False
     """if toggled, this experiment will be tracked with Weights and Biases"""
-    wandb_project_name: str = "cleanRL"
+    wandb_project_name: str = "ManiSkill"
     """the wandb's project name"""
-    wandb_entity: str = None
+    wandb_entity: Optional[str] = None
     """the entity (team) of wandb's project"""
+    wandb_group: str = "PPO"
+    """the group of the run for wandb"""
     capture_video: bool = True
     """whether to capture videos of the agent performances (check out `videos` folder)"""
     save_model: bool = True
     """whether to save model into the `runs/{run_name}` folder"""
-    upload_model: bool = False
-    """whether to upload the saved model to huggingface"""
-    hf_entity: str = ""
-    """the user or org name of the model repository from the Hugging Face Hub"""
     evaluate: bool = False
     """if toggled, only runs evaluation with the given model checkpoint and saves the evaluation trajectories"""
-    checkpoint: str = None
+    checkpoint: Optional[str] = None
     """path to a pretrained checkpoint file to start evaluation/training from"""
+    render_mode: str = "all"
+    """the environment rendering mode"""
 
     # Algorithm specific arguments
     env_id: str = "PickCube-v1"
     """the id of the environment"""
+    include_state: bool = True
+    """whether to include state information in observations"""
     total_timesteps: int = 10000000
     """total timesteps of the experiments"""
     learning_rate: float = 3e-4
@@ -60,10 +64,20 @@ class Args:
     """the number of parallel environments"""
     num_eval_envs: int = 8
     """the number of parallel evaluation environments"""
+    partial_reset: bool = True
+    """whether to let parallel environments reset upon termination instead of truncation"""
+    eval_partial_reset: bool = False
+    """whether to let parallel evaluation environments reset upon termination instead of truncation"""
     num_steps: int = 50
     """the number of steps to run in each environment per policy rollout"""
     num_eval_steps: int = 50
     """the number of steps to run in each evaluation environment during evaluation"""
+    reconfiguration_freq: Optional[int] = None
+    """how often to reconfigure the environment during training"""
+    eval_reconfiguration_freq: Optional[int] = 1
+    """for benchmarking purposes we want to reconfigure the eval environment each reset to ensure objects are randomized in some tasks"""
+    control_mode: Optional[str] = "pd_joint_delta_pos"
+    """the control mode to use for the environment"""
     anneal_lr: bool = False
     """Toggle learning rate annealing for policy and value networks"""
     gamma: float = 0.8
@@ -88,6 +102,8 @@ class Args:
     """the maximum norm for the gradient clipping"""
     target_kl: float = 0.2
     """the target KL divergence threshold"""
+    reward_scale: float = 1.0
+    """Scale the reward by this factor"""
     eval_freq: int = 25
     """evaluation frequency in terms of iterations"""
     save_train_video_freq: Optional[int] = None
@@ -117,9 +133,14 @@ class DictArray(object):
             self.data = {}
             for k, v in element_space.items():
                 if isinstance(v, gym.spaces.dict.Dict):
-                    self.data[k] = DictArray(buffer_shape, v)
+                    self.data[k] = DictArray(buffer_shape, v, device=device)
                 else:
-                    self.data[k] = torch.zeros(buffer_shape + v.shape).to(device)
+                    dtype = (torch.float32 if v.dtype in (np.float32, np.float64) else
+                            torch.uint8 if v.dtype == np.uint8 else
+                            torch.int16 if v.dtype == np.int16 else
+                            torch.int32 if v.dtype == np.int32 else
+                            v.dtype)
+                    self.data[k] = torch.zeros(buffer_shape + v.shape, dtype=dtype, device=device)
 
     def keys(self):
         return self.data.keys()
@@ -162,7 +183,7 @@ class NatureCNN(nn.Module):
         feature_size = 256
         in_channels=sample_obs["rgb"].shape[-1]
         image_size=(sample_obs["rgb"].shape[1], sample_obs["rgb"].shape[2])
-        state_size=sample_obs["state"].shape[-1]
+
 
         # here we use a NatureCNN architecture to process images, but any architecture is permissble here
         cnn = nn.Sequential(
@@ -192,9 +213,11 @@ class NatureCNN(nn.Module):
         extractors["rgb"] = nn.Sequential(cnn, fc)
         self.out_features += feature_size
 
-        # for state data we simply pass it through a single linear layer
-        extractors["state"] = nn.Linear(state_size, 256)
-        self.out_features += 256
+        if "state" in sample_obs:
+            # for state data we simply pass it through a single linear layer
+            state_size = sample_obs["state"].shape[-1]
+            extractors["state"] = nn.Linear(state_size, 256)
+            self.out_features += 256
 
         self.extractors = nn.ModuleDict(extractors)
 
@@ -250,6 +273,16 @@ class Agent(nn.Module):
             action = probs.sample()
         return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x)
 
+class Logger:
+    def __init__(self, log_wandb=False, tensorboard: SummaryWriter = None) -> None:
+        self.writer = tensorboard
+        self.log_wandb = log_wandb
+    def add_scalar(self, tag, scalar_value, step):
+        if self.log_wandb:
+            wandb.log({tag: scalar_value}, step=step)
+        self.writer.add_scalar(tag, scalar_value, step)
+    def close(self):
+        self.writer.close()
 
 if __name__ == "__main__":
     args = tyro.cli(Args)
@@ -261,28 +294,6 @@ if __name__ == "__main__":
         run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
     else:
         run_name = args.exp_name
-    writer = None
-    if not args.evaluate:
-        print("Running training")
-        if args.track:
-            import wandb
-
-            wandb.init(
-                project=args.wandb_project_name,
-                entity=args.wandb_entity,
-                sync_tensorboard=True,
-                config=vars(args),
-                name=run_name,
-                monitor_gym=True,
-                save_code=True,
-            )
-        writer = SummaryWriter(f"runs/{run_name}")
-        writer.add_text(
-            "hyperparameters",
-            "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
-        )
-    else:
-        print("Running evaluation")
 
     # TRY NOT TO MODIFY: seeding
     random.seed(args.seed)
@@ -293,13 +304,15 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # env setup
-    env_kwargs = dict(obs_mode="rgbd", control_mode="pd_joint_delta_pos", render_mode="rgb_array", sim_backend="gpu")
-    eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, **env_kwargs)
-    envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, **env_kwargs)
+    env_kwargs = dict(obs_mode="rgb", render_mode=args.render_mode, sim_backend="gpu")
+    if args.control_mode is not None:
+        env_kwargs["control_mode"] = args.control_mode
+    eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, reconfiguration_freq=args.eval_reconfiguration_freq, **env_kwargs)
+    envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, reconfiguration_freq=args.reconfiguration_freq, **env_kwargs)
 
     # rgbd obs mode returns a dict of data, we flatten it so there is just a rgbd key and state key
-    envs = FlattenRGBDObservationWrapper(envs, rgb_only=True)
-    eval_envs = FlattenRGBDObservationWrapper(eval_envs, rgb_only=True)
+    envs = FlattenRGBDObservationWrapper(envs, rgb=True, depth=False, state=args.include_state)
+    eval_envs = FlattenRGBDObservationWrapper(eval_envs, rgb=True, depth=False, state=args.include_state)
 
     if isinstance(envs.action_space, gym.spaces.Dict):
         envs = FlattenActionSpaceWrapper(envs)
@@ -313,9 +326,37 @@ if __name__ == "__main__":
             save_video_trigger = lambda x : (x // args.num_steps) % args.save_train_video_freq == 0
             envs = RecordEpisode(envs, output_dir=f"runs/{run_name}/train_videos", save_trajectory=False, save_video_trigger=save_video_trigger, max_steps_per_video=args.num_steps, video_fps=30)
         eval_envs = RecordEpisode(eval_envs, output_dir=eval_output_dir, save_trajectory=args.evaluate, trajectory_name="trajectory", max_steps_per_video=args.num_eval_steps, video_fps=30)
-    envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=False, **env_kwargs)
-    eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=False, **env_kwargs)
+    envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=not args.partial_reset, record_metrics=True)
+    eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=not args.eval_partial_reset, record_metrics=True)
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
+
+    max_episode_steps = gym_utils.find_max_episode_steps_value(envs._env)
+    logger = None
+    if not args.evaluate:
+        print("Running training")
+        if args.track:
+            import wandb
+            config = vars(args)
+            config["env_cfg"] = dict(**env_kwargs, num_envs=args.num_envs, env_id=args.env_id, reward_mode="normalized_dense", env_horizon=max_episode_steps, partial_reset=args.partial_reset)
+            config["eval_env_cfg"] = dict(**env_kwargs, num_envs=args.num_eval_envs, env_id=args.env_id, reward_mode="normalized_dense", env_horizon=max_episode_steps, partial_reset=args.partial_reset)
+            wandb.init(
+                project=args.wandb_project_name,
+                entity=args.wandb_entity,
+                sync_tensorboard=False,
+                config=config,
+                name=run_name,
+                save_code=True,
+                group=args.wandb_group,
+                tags=["ppo", "walltime_efficient"]
+            )
+        writer = SummaryWriter(f"runs/{run_name}")
+        writer.add_text(
+            "hyperparameters",
+            "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
+        )
+        logger = Logger(log_wandb=args.track, tensorboard=writer)
+    else:
+        print("Running evaluation")
 
     # ALGO Logic: Storage setup
     obs = DictArray((args.num_steps, args.num_envs), envs.single_observation_space, device=device)
@@ -332,8 +373,6 @@ if __name__ == "__main__":
     eval_obs, _ = eval_envs.reset(seed=args.seed)
     next_done = torch.zeros(args.num_envs, device=device)
     eps_returns = torch.zeros(args.num_envs, dtype=torch.float, device=device)
-    eps_lens = np.zeros(args.num_envs)
-    place_rew = torch.zeros(args.num_envs, device=device)
     print(f"####")
     print(f"args.num_iterations={args.num_iterations} args.num_envs={args.num_envs} args.num_eval_envs={args.num_eval_envs}")
     print(f"args.minibatch_size={args.minibatch_size} args.batch_size={args.batch_size} args.update_epochs={args.update_epochs}")
@@ -349,40 +388,24 @@ if __name__ == "__main__":
         final_values = torch.zeros((args.num_steps, args.num_envs), device=device)
         agent.eval()
         if iteration % args.eval_freq == 1:
-            # evaluate
             print("Evaluating")
-            eval_envs.reset()
-            returns = []
-            eps_lens = []
-            successes = []
-            failures = []
+            eval_obs, _ = eval_envs.reset()
+            eval_metrics = defaultdict(list)
+            num_episodes = 0
             for _ in range(args.num_eval_steps):
                 with torch.no_grad():
-                    eval_obs, _, eval_terminations, eval_truncations, eval_infos = eval_envs.step(agent.get_action(eval_obs, deterministic=True))
+                    eval_obs, eval_rew, eval_terminations, eval_truncations, eval_infos = eval_envs.step(agent.get_action(eval_obs, deterministic=True))
                     if "final_info" in eval_infos:
                         mask = eval_infos["_final_info"]
-                        eps_lens.append(eval_infos["final_info"]["elapsed_steps"][mask].cpu().numpy())
-                        returns.append(eval_infos["final_info"]["episode"]["r"][mask].cpu().numpy())
-                        if "success" in eval_infos:
-                            successes.append(eval_infos["final_info"]["success"][mask].cpu().numpy())
-                        if "fail" in eval_infos:
-                            failures.append(eval_infos["final_info"]["fail"][mask].cpu().numpy())
-            returns = np.concatenate(returns)
-            eps_lens = np.concatenate(eps_lens)
-            print(f"Evaluated {args.num_eval_steps * args.num_eval_envs} steps resulting in {len(eps_lens)} episodes")
-            if len(successes) > 0:
-                successes = np.concatenate(successes)
-                if writer is not None: writer.add_scalar("charts/eval_success_rate", successes.mean(), global_step)
-                print(f"eval_success_rate={successes.mean()}")
-            if len(failures) > 0:
-                failures = np.concatenate(failures)
-                if writer is not None: writer.add_scalar("charts/eval_fail_rate", failures.mean(), global_step)
-                print(f"eval_fail_rate={failures.mean()}")
-
-            print(f"eval_episodic_return={returns.mean()}")
-            if writer is not None:
-                writer.add_scalar("charts/eval_episodic_return", returns.mean(), global_step)
-                writer.add_scalar("charts/eval_episodic_length", eps_lens.mean(), global_step)
+                        num_episodes += mask.sum()
+                        for k, v in eval_infos["final_info"]["episode"].items():
+                            eval_metrics[k].append(v)
+            print(f"Evaluated {args.num_eval_steps * args.num_eval_envs} steps resulting in {num_episodes} episodes")
+            for k, v in eval_metrics.items():
+                mean = torch.stack(v).float().mean()
+                if logger is not None:
+                    logger.add_scalar(f"eval/{k}", mean, global_step)
+                print(f"eval_{k}_mean={mean}")
             if args.evaluate:
                 break
         if args.save_model and iteration % args.eval_freq == 1:
@@ -410,18 +433,18 @@ if __name__ == "__main__":
             # TRY NOT TO MODIFY: execute the game and log data.
             next_obs, reward, terminations, truncations, infos = envs.step(action)
             next_done = torch.logical_or(terminations, truncations).to(torch.float32)
-            rewards[step] = reward.view(-1)
+            rewards[step] = reward.view(-1) * args.reward_scale
 
             if "final_info" in infos:
                 final_info = infos["final_info"]
                 done_mask = infos["_final_info"]
-                episodic_return = final_info['episode']['r'][done_mask].mean().cpu().numpy()
-                writer.add_scalar("charts/success_rate", final_info["success"][done_mask].float().mean().cpu().numpy(), global_step)
-                writer.add_scalar("charts/episodic_return", episodic_return, global_step)
-                writer.add_scalar("charts/episodic_length", final_info["elapsed_steps"][done_mask].float().mean().cpu().numpy(), global_step)
+                for k, v in final_info["episode"].items():
+                    logger.add_scalar(f"train/{k}", v[done_mask].float().mean(), global_step)
+
                 for k in infos["final_observation"]:
                     infos["final_observation"][k] = infos["final_observation"][k][done_mask]
-                final_values[step, torch.arange(args.num_envs, device=device)[done_mask]] = agent.get_value(infos["final_observation"]).view(-1)
+                with torch.no_grad():
+                    final_values[step, torch.arange(args.num_envs, device=device)[done_mask]] = agent.get_value(infos["final_observation"]).view(-1)
         rollout_time = time.time() - rollout_time
         # bootstrap value according to termination and truncation
         with torch.no_grad():
@@ -537,23 +560,24 @@ if __name__ == "__main__":
         var_y = np.var(y_true)
         explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
 
-        writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
-        writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
-        writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
-        writer.add_scalar("losses/entropy", entropy_loss.item(), global_step)
-        writer.add_scalar("losses/old_approx_kl", old_approx_kl.item(), global_step)
-        writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
-        writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
-        writer.add_scalar("losses/explained_variance", explained_var, global_step)
+        logger.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
+        logger.add_scalar("losses/value_loss", v_loss.item(), global_step)
+        logger.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
+        logger.add_scalar("losses/entropy", entropy_loss.item(), global_step)
+        logger.add_scalar("losses/old_approx_kl", old_approx_kl.item(), global_step)
+        logger.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
+        logger.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
+        logger.add_scalar("losses/explained_variance", explained_var, global_step)
         print("SPS:", int(global_step / (time.time() - start_time)))
-        writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
-        writer.add_scalar("charts/update_time", update_time, global_step)
-        writer.add_scalar("charts/rollout_time", rollout_time, global_step)
-        writer.add_scalar("charts/rollout_fps", args.num_envs * args.num_steps / rollout_time, global_step)
+        logger.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
+        logger.add_scalar("time/step", global_step, global_step)
+        logger.add_scalar("time/update_time", update_time, global_step)
+        logger.add_scalar("time/rollout_time", rollout_time, global_step)
+        logger.add_scalar("time/rollout_fps", args.num_envs * args.num_steps / rollout_time, global_step)
     if args.save_model and not args.evaluate:
         model_path = f"runs/{run_name}/final_ckpt.pt"
         torch.save(agent.state_dict(), model_path)
         print(f"model saved to {model_path}")
 
     envs.close()
-    if writer is not None: writer.close()
+    if logger is not None: logger.close()

@@ -1,6 +1,6 @@
 import gymnasium as gym
 import numpy as np
-import sapien.core as sapien
+import sapien
 
 from mani_skill.envs.tasks import PegInsertionSideEnv
 from mani_skill.examples.motionplanning.panda.motionplanner import \
@@ -16,7 +16,6 @@ def main():
         control_mode="pd_joint_pos",
         render_mode="rgb_array",
         reward_mode="dense",
-        # shader_dir="rt-fast",
     )
     for seed in range(100):
         res = solve(env, seed=seed, debug=False, vis=True)
@@ -37,8 +36,8 @@ def solve(env: PegInsertionSideEnv, seed=None, debug=False, vis=False):
         base_pose=env.unwrapped.agent.robot.pose,
         visualize_target_grasp_pose=vis,
         print_env_info=False,
-        joint_vel_limits=0.5,
-        joint_acc_limits=0.5,
+        joint_vel_limits=0.75,
+        joint_acc_limits=0.75,
     )
     env = env.unwrapped
     FINGER_LENGTH = 0.025
@@ -61,12 +60,13 @@ def solve(env: PegInsertionSideEnv, seed=None, debug=False, vis=False):
     # Reach
     # -------------------------------------------------------------------------- #
     reach_pose = grasp_pose * (sapien.Pose([0, 0, -0.05]))
-    planner.move_to_pose_with_screw(reach_pose)
-
+    res = planner.move_to_pose_with_screw(reach_pose)
+    if res == -1: return res
     # -------------------------------------------------------------------------- #
     # Grasp
     # -------------------------------------------------------------------------- #
-    planner.move_to_pose_with_screw(grasp_pose)
+    res = planner.move_to_pose_with_screw(grasp_pose)
+    if res == -1: return res
     planner.close_gripper()
 
     # -------------------------------------------------------------------------- #
@@ -77,17 +77,20 @@ def solve(env: PegInsertionSideEnv, seed=None, debug=False, vis=False):
     insert_pose = env.goal_pose * peg_init_pose.inv() * grasp_pose
     offset = sapien.Pose([-0.01 - env.peg_half_sizes[0, 0], 0, 0])
     pre_insert_pose = insert_pose * (offset)
-    planner.move_to_pose_with_screw(pre_insert_pose)
+    res = planner.move_to_pose_with_screw(pre_insert_pose)
+    if res == -1: return res
     # refine the insertion pose
     for i in range(3):
         delta_pose = env.goal_pose * (offset) * env.peg.pose.inv()
         pre_insert_pose = delta_pose * pre_insert_pose
-        planner.move_to_pose_with_screw(pre_insert_pose)
+        res = planner.move_to_pose_with_screw(pre_insert_pose)
+        if res == -1: return res
 
     # -------------------------------------------------------------------------- #
     # Insert
     # -------------------------------------------------------------------------- #
     res = planner.move_to_pose_with_screw(insert_pose * (sapien.Pose([0.05, 0, 0])))
+    if res == -1: return res
     planner.close()
     return res
 

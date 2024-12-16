@@ -25,7 +25,8 @@ class PandaArmMotionPlanningSolver:
         joint_acc_limits=0.9,
     ):
         self.env = env
-        self.env_agent: BaseAgent = self.env.unwrapped.agent
+        self.base_env: BaseEnv = env.unwrapped
+        self.env_agent: BaseAgent = self.base_env.agent
         self.robot = self.env_agent.robot
         self.joint_vel_limits = joint_vel_limits
         self.joint_acc_limits = joint_acc_limits
@@ -33,7 +34,7 @@ class PandaArmMotionPlanningSolver:
         self.base_pose = to_sapien_pose(base_pose)
 
         self.planner = self.setup_planner()
-        self.control_mode = self.env.unwrapped.control_mode
+        self.control_mode = self.base_env.control_mode
 
         self.debug = debug
         self.vis = vis
@@ -42,10 +43,13 @@ class PandaArmMotionPlanningSolver:
         self.gripper_state = OPEN
         self.grasp_pose_visual = None
         if self.vis and self.visualize_target_grasp_pose:
-            self.grasp_pose_visual = build_panda_gripper_grasp_pose_visual(
-                env.unwrapped.scene
-            )
-            self.grasp_pose_visual.set_pose(env.unwrapped.agent.tcp.pose)
+            if "grasp_pose_visual" not in self.base_env.scene.actors:
+                self.grasp_pose_visual = build_panda_gripper_grasp_pose_visual(
+                    self.base_env.scene
+                )
+            else:
+                self.grasp_pose_visual = self.base_env.scene.actors["grasp_pose_visual"]
+            self.grasp_pose_visual.set_pose(self.base_env.agent.tcp.pose)
         self.elapsed_steps = 0
 
         self.use_point_cloud = False
@@ -56,11 +60,11 @@ class PandaArmMotionPlanningSolver:
         if not self.vis or not self.debug:
             return
         print("Press [c] to continue")
-        viewer = self.env.unwrapped.render_human()
+        viewer = self.base_env.render_human()
         while True:
             if viewer.window.key_down("c"):
                 break
-            self.env.unwrapped.render_human()
+            self.base_env.render_human()
 
     def setup_planner(self):
         link_names = [link.get_name() for link in self.robot.get_links()]
@@ -82,7 +86,7 @@ class PandaArmMotionPlanningSolver:
         for i in range(n_step + refine_steps):
             qpos = result["position"][min(i, n_step - 1)]
             if self.control_mode == "pd_joint_pos_vel":
-                qvel = result["velocity"][(i, n_step - 1)]
+                qvel = result["velocity"][min(i, n_step - 1)]
                 action = np.hstack([qpos, qvel, self.gripper_state])
             else:
                 action = np.hstack([qpos, self.gripper_state])
@@ -93,19 +97,20 @@ class PandaArmMotionPlanningSolver:
                     f"[{self.elapsed_steps:3}] Env Output: reward={reward} info={info}"
                 )
             if self.vis:
-                self.env.unwrapped.render_human()
+                self.base_env.render_human()
         return obs, reward, terminated, truncated, info
 
     def move_to_pose_with_RRTConnect(
         self, pose: sapien.Pose, dry_run: bool = False, refine_steps: int = 0
     ):
+        pose = to_sapien_pose(pose)
         if self.grasp_pose_visual is not None:
             self.grasp_pose_visual.set_pose(pose)
         pose = sapien.Pose(p=pose.p, q=pose.q)
         result = self.planner.plan_qpos_to_pose(
             np.concatenate([pose.p, pose.q]),
             self.robot.get_qpos().cpu().numpy()[0],
-            time_step=self.env.unwrapped.control_timestep,
+            time_step=self.base_env.control_timestep,
             use_point_cloud=self.use_point_cloud,
             wrt_world=True,
         )
@@ -129,14 +134,14 @@ class PandaArmMotionPlanningSolver:
         result = self.planner.plan_screw(
             np.concatenate([pose.p, pose.q]),
             self.robot.get_qpos().cpu().numpy()[0],
-            time_step=self.env.unwrapped.control_timestep,
+            time_step=self.base_env.control_timestep,
             use_point_cloud=self.use_point_cloud,
         )
         if result["status"] != "Success":
             result = self.planner.plan_screw(
                 np.concatenate([pose.p, pose.q]),
                 self.robot.get_qpos().cpu().numpy()[0],
-                time_step=self.env.unwrapped.control_timestep,
+                time_step=self.base_env.control_timestep,
                 use_point_cloud=self.use_point_cloud,
             )
             if result["status"] != "Success":
@@ -163,11 +168,11 @@ class PandaArmMotionPlanningSolver:
                     f"[{self.elapsed_steps:3}] Env Output: reward={reward} info={info}"
                 )
             if self.vis:
-                self.env.unwrapped.render_human()
+                self.base_env.render_human()
         return obs, reward, terminated, truncated, info
 
-    def close_gripper(self, t=6):
-        self.gripper_state = CLOSED
+    def close_gripper(self, t=6, gripper_state = CLOSED):
+        self.gripper_state = gripper_state
         qpos = self.robot.get_qpos()[0, :-2].cpu().numpy()
         for i in range(t):
             if self.control_mode == "pd_joint_pos":
@@ -181,7 +186,7 @@ class PandaArmMotionPlanningSolver:
                     f"[{self.elapsed_steps:3}] Env Output: reward={reward} info={info}"
                 )
             if self.vis:
-                self.env.unwrapped.render_human()
+                self.base_env.render_human()
         return obs, reward, terminated, truncated, info
 
     def add_box_collision(self, extents: np.ndarray, pose: sapien.Pose):
@@ -206,10 +211,7 @@ class PandaArmMotionPlanningSolver:
         self.use_point_cloud = False
 
     def close(self):
-        if self.grasp_pose_visual is not None:
-            if not physx.is_gpu_enabled():
-                self.grasp_pose_visual.remove_from_scene()
-
+        pass
 
 from transforms3d import quaternions
 

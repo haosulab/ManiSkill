@@ -24,21 +24,24 @@ class DemoDatasetSource:
 DATASET_SOURCES: dict[str, DemoDatasetSource] = {}
 
 # Rigid body envs
-DATASET_SOURCES["PickCube-v1"] = DemoDatasetSource(
-    raw_dataset_url="https://huggingface.co/datasets/haosulab/ManiSkill_PickCube/resolve/main/PickCube-v1.zip?download=true"
-)
-DATASET_SOURCES["PushCube-v1"] = DemoDatasetSource(
-    raw_dataset_url="https://huggingface.co/datasets/haosulab/ManiSkill_PushCube/resolve/main/PushCube-v1.zip?download=true"
-)
-DATASET_SOURCES["StackCube-v1"] = DemoDatasetSource(
-    raw_dataset_url="https://huggingface.co/datasets/haosulab/ManiSkill_StackCube/resolve/main/StackCube-v1.zip?download=true"
-)
-DATASET_SOURCES["PegInsertionSide-v1"] = DemoDatasetSource(
-    raw_dataset_url="https://huggingface.co/datasets/haosulab/ManiSkill_PegInsertionSide/resolve/main/PegInsertionSide-v1.zip?download=true"
-)
-DATASET_SOURCES["PlugCharger-v1"] = DemoDatasetSource(
-    raw_dataset_url="https://huggingface.co/datasets/haosulab/ManiSkill_PlugCharger/resolve/main/PlugCharger-v1.zip?download=true"
-)
+for env_id in [
+    "AnymalC-Reach-v1",
+    "LiftPegUpright-v1",
+    "PegInsertionSide-v1",
+    "PickCube-v1",
+    "PlugCharger-v1",
+    "PokeCube-v1",
+    "PullCube-v1",
+    "PullCubeTool-v1",
+    "PushCube-v1",
+    "PushT-v1",
+    "RollBall-v1",
+    "StackCube-v1",
+    "TwoRobotPickCube-v1",
+]:
+    DATASET_SOURCES[env_id] = DemoDatasetSource(
+        raw_dataset_url=f"https://huggingface.co/datasets/haosulab/ManiSkill_Demonstrations/resolve/main/demos/{env_id}.zip?download=true"
+    )
 
 pbar = None
 
@@ -123,10 +126,11 @@ def main(args):
     for i, uid in enumerate(uids):
         meta = DATASET_SOURCES[uid]
         output_dir = str(DEMO_DIR)
-        final_path = osp.join(output_dir)
+        if args.output_dir:
+            output_dir = args.output_dir
         if verbose:
             print(
-                f"Downloading demonstrations to {final_path} - {i+1}/{len(uids)}, {uid}"
+                f"Downloading demonstrations to {osp.abspath(output_dir)} - {i+1}/{len(uids)}, {uid}"
             )
         local_path = download_file(
             output_dir,
@@ -134,7 +138,7 @@ def main(args):
         )
         if osp.splitext(local_path)[1] == ".zip":
             with zipfile.ZipFile(local_path, "r") as zip_ref:
-                zip_ref.extractall(final_path)
+                zip_ref.extractall(output_dir)
             os.remove(local_path)
 
 

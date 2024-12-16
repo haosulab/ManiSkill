@@ -33,13 +33,11 @@ class BaseController:
     active_joint_indices: torch.Tensor
     """indices of active joints controlled. Equivalent to [x.active_index for x in self.joints]"""
     action_space: spaces.Space
-    """the action space. If the number of parallel environments is > 1, this action space is also batched"""
+    """the action space of the controller, which by default has a batch dimension. This is typically already normalized as well."""
     single_action_space: spaces.Space
     """The unbatched version of the action space which is also typically already normalized by this class"""
-    """The batched version of the action space which is also typically already normalized by this class"""
     _original_single_action_space: spaces.Space
     """The unbatched, original action space without any additional processing like normalization"""
-    """The batched, original action space without any additional processing like normalization"""
 
     def __init__(
         self,
@@ -67,7 +65,6 @@ class BaseController:
         self._normalize_action = getattr(self.config, "normalize_action", False)
         if self._normalize_action:
             self._clip_and_scale_action_space()
-
         self.action_space = self.single_action_space
         if self.scene.num_envs > 1:
             self.action_space = batch_space(
@@ -85,7 +82,7 @@ class BaseController:
             self.joints = get_joints_by_names(self.articulation, joint_names)
             self.active_joint_indices = get_active_joint_indices(
                 self.articulation, joint_names
-            )
+            ).to(self.device)
         except Exception as err:
             print("Encounter error when parsing joint names.")
             active_joint_names = [x.name for x in self.articulation.get_active_joints()]
@@ -163,8 +160,8 @@ class BaseController:
             self._original_single_action_space.low,
             self._original_single_action_space.high,
         )
-        self.action_space_low = common.to_tensor(low)
-        self.action_space_high = common.to_tensor(high)
+        self.action_space_low = common.to_tensor(low, device=self.device)
+        self.action_space_high = common.to_tensor(high, device=self.device)
 
     def _clip_and_scale_action(self, action):
         return gym_utils.clip_and_scale_action(
@@ -211,6 +208,10 @@ class DictController(BaseController):
                 self.single_action_space, n=self.scene.num_envs
             )
 
+    def before_simulation_step(self):
+        for controller in self.controllers.values():
+            controller.before_simulation_step()
+
     def _initialize_action_space(self):
         # Explicitly create a list of key-value tuples
         # Otherwise, spaces.Dict will sort keys if a dict is provided
@@ -237,7 +238,7 @@ class DictController(BaseController):
 
     def set_action(self, action: Dict[str, np.ndarray]):
         for uid, controller in self.controllers.items():
-            controller.set_action(common.to_tensor(action[uid]))
+            controller.set_action(action[uid])
 
     def get_state(self) -> dict:
         states = {}
@@ -256,7 +257,7 @@ class DictController(BaseController):
         This can be useful for joint position control when setting a desired qposition even
         if some controllers merge some joints together like the mimic controller
         """
-        qpos = common.to_tensor(qpos)
+        qpos = common.to_tensor(qpos, device=self.device)
         if len(qpos.shape) > 1:
             assert qpos.shape[1] == len(self.joints)
         else:
@@ -312,4 +313,4 @@ class CombinedController(DictController):
 
     def from_action_dict(self, action_dict: dict):
         """Convert a dict of actions to a flat action."""
-        return np.hstack([action_dict[uid] for uid in self.controllers])
+        return torch.hstack([action_dict[uid] for uid in self.controllers])

@@ -29,8 +29,9 @@ class SceneManipulationEnv(BaseEnv):
             When True, will never reconfigure the environment during resets unless you run env.reset(seed=seed, options=dict(reconfigure=True))
             and explicitly reconfigure. If False, will reconfigure every reset.
 
-        scene_builder_cls: Scene builder class to build a scene with. Default is the ArchitecTHORSceneBuilder which builds a scene from AI2THOR.
-            Any of the AI2THOR SceneBuilders are supported in this environment
+        scene_builder_cls:
+            Scene builder class to build a scene with. Default is ReplicaCAD. Furthermore, any of the AI2THOR SceneBuilders are supported in
+            this environment.
 
         build_config_idxs (optional): which build configs (static builds) to sample. Your scene_builder_cls may or may not require these.
         init_config_idxs (optional): which init configs (additional init options) to sample. Your scene_builder_cls may or may not require these.
@@ -74,7 +75,7 @@ class SceneManipulationEnv(BaseEnv):
     def _default_sim_config(self):
         return SimConfig(
             spacing=50,
-            gpu_memory_cfg=GPUMemoryConfig(
+            gpu_memory_config=GPUMemoryConfig(
                 found_lost_pairs_capacity=2**25,
                 max_rigid_patch_count=2**21,
                 max_rigid_contact_count=2**23,
@@ -82,22 +83,34 @@ class SceneManipulationEnv(BaseEnv):
         )
 
     def reset(self, seed=None, options=None):
-        self._set_episode_rng(seed)
         if options is None:
             options = dict(reconfigure=False)
+        self._set_episode_rng(seed, options.get("env_idx", torch.arange(self.num_envs)))
         if "reconfigure" in options and options["reconfigure"]:
-            self.build_config_idxs = options.pop(
+            self.build_config_idxs = options.get(
                 "build_config_idxs", self.build_config_idxs
             )
-            self.init_config_idxs = options.pop(
+            self.init_config_idxs = options.get("init_config_idxs", None)
+        else:
+            assert (
+                "build_config_idxs" not in options
+            ), "options dict cannot contain build_config_idxs without reconfigure=True"
+            self.init_config_idxs = options.get(
                 "init_config_idxs", self.init_config_idxs
             )
+        if isinstance(self.build_config_idxs, int):
+            self.build_config_idxs = [self.build_config_idxs]
+        if isinstance(self.init_config_idxs, int):
+            self.init_config_idxs = [self.init_config_idxs]
         return super().reset(seed, options)
 
     def _load_lighting(self, options: dict):
         if self.scene_builder.builds_lighting:
             return
         return super()._load_lighting(options)
+
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose())
 
     def _load_scene(self, options: dict):
         if self.scene_builder.build_configs is not None:

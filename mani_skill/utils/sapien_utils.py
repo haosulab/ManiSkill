@@ -3,14 +3,16 @@ Utilities that work with the simulation / SAPIEN
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, TypeVar
+from typing import TYPE_CHECKING, Dict, List, Tuple, TypeVar
 
 import numpy as np
 import sapien
 import sapien.physx as physx
 import sapien.render
 import sapien.wrapper.urdf_loader
-from transforms3d.quaternions import mat2quat
+
+from mani_skill.utils.geometry.rotation_conversions import matrix_to_quaternion
+from mani_skill.utils.structs.pose import Pose
 
 if TYPE_CHECKING:
     from mani_skill.utils.structs.actor import Actor
@@ -143,18 +145,18 @@ def parse_urdf_config(config_dict: dict) -> Dict:
 
 def apply_urdf_config(loader: sapien.wrapper.urdf_loader.URDFLoader, urdf_config: dict):
     if "link" in urdf_config:
-        for name, link_cfg in urdf_config["link"].items():
-            if "material" in link_cfg:
-                mat: physx.PhysxMaterial = link_cfg["material"]
+        for name, link_config in urdf_config["link"].items():
+            if "material" in link_config:
+                mat: physx.PhysxMaterial = link_config["material"]
                 loader.set_link_material(
                     name, mat.static_friction, mat.dynamic_friction, mat.restitution
                 )
-            if "patch_radius" in link_cfg:
-                loader.set_link_patch_radius(name, link_cfg["patch_radius"])
-            if "min_patch_radius" in link_cfg:
-                loader.set_link_min_patch_radius(name, link_cfg["min_patch_radius"])
-            if "density" in link_cfg:
-                loader.set_link_density(name, link_cfg["density"])
+            if "patch_radius" in link_config:
+                loader.set_link_patch_radius(name, link_config["patch_radius"])
+            if "min_patch_radius" in link_config:
+                loader.set_link_min_patch_radius(name, link_config["min_patch_radius"])
+            if "density" in link_config:
+                loader.set_link_density(name, link_config["density"])
     if "material" in urdf_config:
         mat: physx.PhysxMaterial = urdf_config["material"]
         loader.set_material(mat.static_friction, mat.dynamic_friction, mat.restitution)
@@ -293,56 +295,6 @@ def get_cpu_actors_contacts(
     return entity_contacts
 
 
-def get_cpu_articulation_contacts(
-    contacts: List[physx.PhysxContact],
-    articulation: physx.PhysxArticulation,
-    excluded_entities: Optional[List[sapien.Entity]] = None,
-    included_links: Optional[List[physx.PhysxArticulationLinkComponent]] = None,
-) -> List[Tuple[physx.PhysxContact, bool]]:
-    articulation_contacts = []
-    links = articulation.get_links()
-    if excluded_entities is None:
-        excluded_entities = []
-    if included_links is None:
-        included_links = links
-    for contact in contacts:
-        if contact.bodies[0] in included_links:
-            if contact.bodies[1] in links:
-                continue
-            if contact.bodies[1].entity in excluded_entities:
-                continue
-            articulation_contacts.append((contact, True))
-        elif contact.bodies[1] in included_links:
-            if contact.bodies[0] in links:
-                continue
-            if contact.bodies[0].entity in excluded_entities:
-                continue
-            articulation_contacts.append((contact, False))
-    return articulation_contacts
-
-
-def compute_max_impulse_norm(contact_infos: List[Tuple[physx.PhysxContact, bool]]):
-    max_impulse_norms = [0]
-    for contact, flag in contact_infos:
-        max_impulse_norm = max(
-            [np.linalg.norm(point.impulse) for point in contact.points]
-        )
-        max_impulse_norms.append(max_impulse_norm)
-    return max(max_impulse_norms)
-
-
-def get_articulation_max_impulse_norm(
-    contacts: List[physx.PhysxContact],
-    articulation: physx.PhysxArticulation,
-    excluded_entities: Optional[List[sapien.Entity]] = None,
-):
-    articulation_contacts = get_cpu_articulation_contacts(
-        contacts, articulation, excluded_entities
-    )
-    max_impulse_norm = compute_max_impulse_norm(articulation_contacts)
-    return max_impulse_norm
-
-
 # -------------------------------------------------------------------------- #
 # Camera
 # -------------------------------------------------------------------------- #
@@ -361,7 +313,7 @@ def sapien_pose_to_opencv_extrinsic(sapien_pose_matrix: np.ndarray) -> np.ndarra
     return ex
 
 
-def look_at(eye, target, up=(0, 0, 1)) -> sapien.Pose:
+def look_at(eye, target, up=(0, 0, 1)) -> Pose:
     """Get the camera pose in SAPIEN by the Look-At method.
 
     Note:
@@ -376,24 +328,38 @@ def look_at(eye, target, up=(0, 0, 1)) -> sapien.Pose:
         up: a general direction of "up" from the camera.
 
     Returns:
-        sapien.Pose: camera pose
+        Pose: camera pose
     """
+    # only accept batched input as tensors
+    # accept all other input as 1 dimensional
+    if not isinstance(eye, torch.Tensor):
+        eye = torch.tensor(eye, dtype=torch.float32)
+        assert eye.ndim == 1, eye.ndim
+        assert len(eye) == 3, len(eye)
+    if not isinstance(target, torch.Tensor):
+        target = torch.tensor(target, dtype=torch.float32)
+        assert target.ndim == 1, target.ndim
+        assert len(target) == 3, len(target)
+    if not isinstance(up, torch.Tensor):
+        up = torch.tensor(up, dtype=torch.float32)
+        assert up.ndim == 1, up.ndim
+        assert len(up) == 3, len(up)
 
-    def normalize_vector(x, eps=1e-6):
-        x = np.asarray(x)
-        assert x.ndim == 1, x.ndim
-        norm = np.linalg.norm(x)
-        if norm < eps:
-            return np.zeros_like(x)
-        else:
-            return x / norm
+    def normalize_tensor(x, eps=1e-6):
+        x = x.view(-1, 3)
+        norm = torch.linalg.norm(x, dim=-1)
+        zero_vectors = norm < eps
+        x[zero_vectors] = torch.zeros(3).float()
+        x[~zero_vectors] /= norm[~zero_vectors].view(-1, 1)
+        return x
 
-    forward = normalize_vector(np.array(target) - np.array(eye))
-    up = normalize_vector(up)
-    left = np.cross(up, forward)
-    up = np.cross(forward, left)
-    rotation = np.stack([forward, left, up], axis=1)
-    return sapien.Pose(p=eye, q=mat2quat(rotation))
+    forward = normalize_tensor(target - eye)
+    up = normalize_tensor(up)
+    left = torch.cross(up, forward, dim=-1)
+    left = normalize_tensor(left)
+    up = torch.cross(forward, left, dim=-1)
+    rotation = torch.stack([forward, left, up], dim=-1)
+    return Pose.create_from_pq(p=eye, q=matrix_to_quaternion(rotation))
 
 
 def hex2rgba(h, correction=True):
@@ -455,3 +421,17 @@ def check_actor_static(actor: Actor, lin_thresh=1e-3, ang_thresh=1e-2):
         torch.linalg.norm(actor.linear_velocity, axis=1) <= lin_thresh,
         torch.linalg.norm(actor.angular_velocity, axis=1) <= ang_thresh,
     )
+
+
+def is_state_dict_consistent(state_dict: dict):
+    """Checks if the given state dictionary (generated via env.get_state_dict()) is consistent where each actor/articulation has the same batch dimension"""
+    batch_size = None
+    for name in ["actors", "articulations"]:
+        if name in state_dict:
+            for k, v in state_dict[name].items():
+                if batch_size is None:
+                    batch_size = v.shape[0]
+                else:
+                    if v.shape[0] != batch_size:
+                        return False
+    return True

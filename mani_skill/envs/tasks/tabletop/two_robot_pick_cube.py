@@ -1,8 +1,8 @@
 from typing import Any, Dict, Tuple
 
 import numpy as np
+import sapien
 import torch
-from transforms3d.euler import euler2quat
 
 from mani_skill.agents.multi_agent import MultiAgent
 from mani_skill.agents.robots.panda import Panda
@@ -20,32 +20,34 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 @register_env("TwoRobotPickCube-v1", max_episode_steps=100)
 class TwoRobotPickCube(BaseEnv):
     """
-    Task Description
-    ----------------
+    **Task Description:**
     The goal is to pick up a red cube and lift it to a goal location. There are two robots in this task and the
     goal location is out of reach of the left robot while the cube is out of reach of the right robot, thus the two robots must work together
     to move the cube to the goal.
 
-    Randomizations
-    --------------
+    **Randomizations:**
     - cube has its z-axis rotation randomized
     - cube has its xy positions on top of the table scene randomized such that it is in within reach of the left robot but not the right.
     - the target goal position (marked by a green sphere) of the cube is randomized such that it is within reach of the right robot but not the left.
 
 
-    Success Conditions
-    ------------------
+    **Success Conditions:**
     - red cube is at the goal location
-    Visualization: TODO
     """
 
-    SUPPORTED_ROBOTS = [("panda", "panda")]
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/refs/heads/main/figures/environment_demos/TwoRobotPickCube-v1_rt.mp4"
+
+    SUPPORTED_ROBOTS = [("panda_wristcam", "panda_wristcam")]
     agent: MultiAgent[Tuple[Panda, Panda]]
     cube_half_size = 0.02
     goal_thresh = 0.025
 
     def __init__(
-        self, *args, robot_uids=("panda", "panda"), robot_init_qpos_noise=0.02, **kwargs
+        self,
+        *args,
+        robot_uids=("panda_wristcam", "panda_wristcam"),
+        robot_init_qpos_noise=0.02,
+        **kwargs
     ):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
@@ -53,7 +55,7 @@ class TwoRobotPickCube(BaseEnv):
     @property
     def _default_sim_config(self):
         return SimConfig(
-            gpu_memory_cfg=GPUMemoryConfig(
+            gpu_memory_config=GPUMemoryConfig(
                 found_lost_pairs_capacity=2**25,
                 max_rigid_patch_count=2**19,
                 max_rigid_contact_count=2**21,
@@ -70,6 +72,11 @@ class TwoRobotPickCube(BaseEnv):
         pose = sapien_utils.look_at([1.4, 0.8, 0.75], [0.0, 0.1, 0.1])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
+    def _load_agent(self, options: dict):
+        super()._load_agent(
+            options, [sapien.Pose(p=[0, -1, 0]), sapien.Pose(p=[0, 1, 0])]
+        )
+
     def _load_scene(self, options: dict):
         self.table_scene = TableSceneBuilder(
             env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
@@ -77,9 +84,10 @@ class TwoRobotPickCube(BaseEnv):
         self.table_scene.build()
         self.cube = actors.build_cube(
             self.scene,
-            half_size=0.02,
+            half_size=self.cube_half_size,
             color=[1, 0, 0, 1],
             name="cube",
+            initial_pose=sapien.Pose(p=[0, 0, 0.02]),
         )
         self.goal_site = actors.build_sphere(
             self.scene,
@@ -88,6 +96,7 @@ class TwoRobotPickCube(BaseEnv):
             name="goal_site",
             body_type="kinematic",
             add_collision=False,
+            initial_pose=sapien.Pose(),
         )
         self._hidden_objects.append(self.goal_site)
 
@@ -95,6 +104,7 @@ class TwoRobotPickCube(BaseEnv):
         with torch.device(self.device):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)
+            self.left_init_qpos = self.left_agent.robot.get_qpos()
             xyz = torch.zeros((b, 3))
             xyz[:, 0] = torch.rand((b,)) * 0.1 - 0.05
             # ensure cube is spawned on the left side of the table
@@ -173,8 +183,26 @@ class TwoRobotPickCube(BaseEnv):
         reaching_reward = 1 - torch.tanh(5 * tcp_to_obj_dist)
         stage_2_reward = reaching_reward
 
-        is_grasped = self.right_agent.is_grasping(self.cube)
-        stage_2_reward += is_grasped
+        # condition for good grasp: both fingers are at the same height and open
+        self.right_agent: Panda
+        right_tip_1_height = self.right_agent.finger1_link.pose.p[:, 2]
+        right_tip_2_height = self.right_agent.finger2_link.pose.p[:, 2]
+        tip_height_reward = 1 - torch.tanh(
+            5 * torch.abs(right_tip_1_height - right_tip_2_height)
+        )
+        tip_width_reward = 1 - torch.tanh(
+            5
+            * torch.abs(
+                torch.linalg.norm(
+                    self.right_agent.finger1_link.pose.p
+                    - self.right_agent.finger2_link.pose.p,
+                    axis=1,
+                )
+                - 0.07
+            )
+        )
+        tip_reward = (tip_height_reward + tip_width_reward) / 2
+        stage_2_reward += tip_reward
 
         # make left arm move as close as possible to the y=-0.2 line
         left_arm_leave_reward = 1 - torch.tanh(
@@ -182,31 +210,53 @@ class TwoRobotPickCube(BaseEnv):
         )
         stage_2_reward += left_arm_leave_reward
 
+        # stage 2 passes if cube is grasped
+        is_grasped = self.right_agent.is_grasping(self.cube)
+        stage_2_reward += 2 * is_grasped
+
         reward[cube_at_other_side] = 2 + stage_2_reward[cube_at_other_side]
 
-        # stage 2 passes if cube is grasped
-        # is_grasped
-
-        # Stage 3: place object at goal
+        # Stage 3: bring cube towards goal
         obj_to_goal_dist = torch.linalg.norm(
-            self.goal_site.pose.p - self.cube.pose.p, axis=1
+            self.goal_site.pose.p - self.right_agent.tcp.pose.p, axis=1
         )
         place_reward = 1 - torch.tanh(5 * obj_to_goal_dist)
-        reward[is_grasped] = 6 + place_reward[is_grasped]
+        stage_3_reward = 2 * place_reward
 
-        # stage 3 passes if object is placed
+        # return left arm to original position
+        left_qpos_reward = 1 - torch.tanh(
+            torch.linalg.norm(
+                self.left_agent.robot.get_qpos() - self.left_init_qpos, axis=1
+            )
+        )
+        stage_3_reward += left_qpos_reward
+
+        reward[is_grasped] = 8 + stage_3_reward[is_grasped]
+
+        # stage 3 passes if object is near goal (within 0.25m) - intermediate reward
+        is_obj_near = torch.logical_and(obj_to_goal_dist < 0.25, is_grasped)
+        # Stage 4: reuse same reward as stage 3 but stronger incentive
+        reward[is_obj_near] = 12 + 2 * stage_3_reward[is_obj_near]
+
+        # stage 4 passes if object is placed
         is_obj_placed = info["is_obj_placed"]
 
-        # Stage 4: keep robot static at the goal
-        static_reward = 1 - torch.tanh(
+        # Stage 5: keep robot static at the goal
+        right_static_reward = 1 - torch.tanh(
             5 * torch.linalg.norm(self.right_agent.robot.get_qvel()[..., :-2], axis=1)
         )
-        reward[is_obj_placed] = 8 + static_reward[is_obj_placed]
+        left_static_reward = 1 - torch.tanh(
+            5 * torch.linalg.norm(self.left_agent.robot.get_qvel()[..., :-2], axis=1)
+        )
+        static_reward = (right_static_reward + left_static_reward) / 2
 
-        reward[info["success"]] = 10
+        reward[is_obj_placed] = 19 + static_reward[is_obj_placed]
+
+        reward[info["success"]] = 21
+
         return reward
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        return self.compute_dense_reward(obs=obs, action=action, info=info) / 10
+        return self.compute_dense_reward(obs=obs, action=action, info=info) / 21

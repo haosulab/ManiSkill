@@ -1,11 +1,15 @@
-from typing import Dict, List, Tuple, Union
+from dataclasses import dataclass
+from functools import cached_property
+from typing import Any, Dict, List, Optional, Tuple, Union
 
+import numpy as np
 import sapien
 import sapien.physx as physx
 import sapien.render
 import torch
 from sapien.render import RenderCameraComponent
 
+from mani_skill.render import SAPIEN_RENDER_SYSTEM
 from mani_skill.sensors.base_sensor import BaseSensor
 from mani_skill.sensors.camera import Camera
 from mani_skill.utils import common, sapien_utils
@@ -16,6 +20,19 @@ from mani_skill.utils.structs.link import Link
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.render_camera import RenderCamera
 from mani_skill.utils.structs.types import Array, Device, SimConfig
+
+# try and determine which render system is used by the installed sapien package
+if SAPIEN_RENDER_SYSTEM == "3.1":
+    from sapien.wrapper.scene import get_camera_shader_pack
+
+    GlobalShaderPack = None
+    sapien.render.RenderCameraGroup = "oldtype"  # type: ignore
+
+
+@dataclass
+class StateDictRegistry:
+    actors: Dict[str, Actor]
+    articulations: Dict[str, Articulation]
 
 
 class ManiSkillScene:
@@ -29,10 +46,11 @@ class ManiSkillScene:
 
     def __init__(
         self,
-        sub_scenes: List[sapien.Scene] = None,
-        sim_cfg: SimConfig = SimConfig(),
+        sub_scenes: Optional[List[sapien.Scene]] = None,
+        sim_config: SimConfig = SimConfig(),
         debug_mode: bool = True,
         device: Device = None,
+        parallel_in_single_scene: bool = False,
     ):
         if sub_scenes is None:
             sub_scenes = [sapien.Scene()]
@@ -40,7 +58,14 @@ class ManiSkillScene:
         self.px: Union[physx.PhysxCpuSystem, physx.PhysxGpuSystem] = self.sub_scenes[
             0
         ].physx_system
-        self.sim_cfg = sim_cfg
+        assert all(
+            isinstance(s.physx_system, type(self.px)) for s in self.sub_scenes
+        ), "all sub-scenes must use the same simulation backend"
+        self.gpu_sim_enabled = (
+            True if isinstance(self.px, physx.PhysxGpuSystem) else False
+        )
+        """whether the sub scenes are using the GPU or CPU backend"""
+        self.sim_config = sim_config
         self._gpu_sim_initialized = False
         self.debug_mode = debug_mode
         self.device = device
@@ -77,11 +102,20 @@ class ManiSkillScene:
         non-unique between episode resets in order to be easily rebuilt and deallocate old queries. This essentially acts as a way
         to invalidate the cached queries."""
 
+        self.parallel_in_single_scene: bool = parallel_in_single_scene
+        """Whether rendering all parallel scenes in the viewer/gui is enabled"""
+
+        self.state_dict_registry: StateDictRegistry = StateDictRegistry(
+            actors=dict(), articulations=dict()
+        )
+        """state dict registry that map actor/articulation names to Actor/Articulation struct references. Only these structs are used for the environment state"""
+
     # -------------------------------------------------------------------------- #
     # Functions from sapien.Scene
     # -------------------------------------------------------------------------- #
     @property
     def timestep(self):
+        """The current simulation timestep"""
         return self.px.timestep
 
     @timestep.setter
@@ -89,22 +123,27 @@ class ManiSkillScene:
         self.px.timestep = timestep
 
     def set_timestep(self, timestep):
+        """Sets the current simulation timestep"""
         self.timestep = timestep
 
     def get_timestep(self):
+        """Returns the current simulation timestep"""
         return self.timestep
 
     def create_actor_builder(self):
+        """Creates an ActorBuilder object that can be used to build actors in this scene"""
         from ..utils.building.actor_builder import ActorBuilder
 
         return ActorBuilder().set_scene(self)
 
     def create_articulation_builder(self):
+        """Creates an ArticulationBuilder object that can be used to build articulations in this scene"""
         from ..utils.building.articulation_builder import ArticulationBuilder
 
         return ArticulationBuilder().set_scene(self)
 
     def create_urdf_loader(self):
+        """Creates a URDFLoader object that can be used to load URDF files into this scene"""
         from ..utils.building.urdf_loader import URDFLoader
 
         loader = URDFLoader()
@@ -112,27 +151,31 @@ class ManiSkillScene:
         return loader
 
     def create_mjcf_loader(self):
+        """Creates a MJCFLoader object that can be used to load MJCF files into this scene"""
         from ..utils.building.mjcf_loader import MJCFLoader
 
         loader = MJCFLoader()
         loader.set_scene(self)
         return loader
 
-    def create_physical_material(
-        self, static_friction: float, dynamic_friction: float, restitution: float
-    ):
-        return physx.PhysxMaterial(static_friction, dynamic_friction, restitution)
+    # def create_physical_material(
+    #     self, static_friction: float, dynamic_friction: float, restitution: float
+    # ):
+    #     return physx.PhysxMaterial(static_friction, dynamic_friction, restitution)
 
-    def remove_actor(self, actor):
-        if physx.is_gpu_enabled():
+    def remove_actor(self, actor: Actor):
+        """Removes an actor from the scene. Only works in CPU simulation."""
+        if self.gpu_sim_enabled:
             raise NotImplementedError(
                 "Cannot remove actors after creating them in GPU sim at the moment"
             )
         else:
-            self.sub_scenes[0].remove_entity(actor)
+            self.sub_scenes[0].remove_entity(actor._objs[0].entity)
+            self.actors.pop(actor.name)
 
     def remove_articulation(self, articulation: Articulation):
-        if physx.is_gpu_enabled():
+        """Removes an articulation from the scene. Only works in CPU simulation."""
+        if self.gpu_sim_enabled:
             raise NotImplementedError(
                 "Cannot remove articulations after creating them in GPU sim at the moment"
             )
@@ -140,6 +183,7 @@ class ManiSkillScene:
             entities = [l.entity for l in articulation._objs[0].links]
             for e in entities:
                 self.sub_scenes[0].remove_entity(e)
+            self.articulations.pop(articulation.name)
 
     def add_camera(
         self,
@@ -149,9 +193,31 @@ class ManiSkillScene:
         height,
         near,
         far,
-        fovy: float = None,
-        intrinsic: Array = None,
-        mount: Union[Actor, Link] = None,
+        fovy: Union[float, List, None] = None,
+        intrinsic: Union[Array, None] = None,
+        mount: Union[Actor, Link, None] = None,
+    ) -> RenderCamera:
+        """Add's a (mounted) camera to the scene"""
+        if SAPIEN_RENDER_SYSTEM == "3.1":
+            return self._sapien_31_add_camera(
+                name, pose, width, height, near, far, fovy, intrinsic, mount
+            )
+        else:
+            return self._sapien_add_camera(
+                name, pose, width, height, near, far, fovy, intrinsic, mount
+            )
+
+    def _sapien_add_camera(
+        self,
+        name,
+        pose,
+        width,
+        height,
+        near,
+        far,
+        fovy: Union[float, List, None] = None,
+        intrinsic: Union[Array, None] = None,
+        mount: Union[Actor, Link, None] = None,
     ) -> RenderCamera:
         """internal helper function to add (mounted) cameras"""
         cameras = []
@@ -190,7 +256,7 @@ class ManiSkillScene:
 
             # mount camera to actor/link
             if mount is not None:
-                if physx.is_gpu_enabled():
+                if self.gpu_sim_enabled:
                     if isinstance(mount, Actor):
                         camera.set_gpu_pose_batch_index(
                             mount._objs[i]
@@ -220,6 +286,77 @@ class ManiSkillScene:
             cameras.append(camera)
         return RenderCamera.create(cameras, self, mount=mount)
 
+    def _sapien_31_add_camera(
+        self,
+        name,
+        pose,
+        width,
+        height,
+        near,
+        far,
+        fovy: Union[float, List, None] = None,
+        intrinsic: Union[Array, None] = None,
+        mount: Union[Actor, Link, None] = None,
+    ) -> RenderCamera:
+        """internal helper function to add (mounted) cameras"""
+        cameras = []
+        pose = Pose.create(pose)
+        # TODO (stao): support scene idxs property for cameras in the future
+        # move intrinsic to np and batch intrinsic if it is not batched
+        if intrinsic is not None:
+            intrinsic = common.to_numpy(intrinsic)
+            if len(intrinsic.shape) == 2:
+                intrinsic = intrinsic[None, :]
+                if len(self.sub_scenes) > 1:
+                    # repeat the intrinsic along batch dim
+                    intrinsic = intrinsic.repeat(len(self.sub_scenes), 0)
+            assert len(intrinsic) == len(
+                self.sub_scenes
+            ), "intrinsic matrix batch dim not equal to the number of sub-scenes"
+
+        for i, scene in enumerate(self.sub_scenes):
+            # Create camera component
+            camera = RenderCameraComponent(
+                width, height, GlobalShaderPack or get_camera_shader_pack()
+            )
+            if fovy is not None:
+                if isinstance(fovy, (float, int)):
+                    camera.set_fovy(fovy, compute_x=True)
+                else:
+                    camera.set_fovy(fovy[i], compute_x=True)
+            elif intrinsic is not None:
+                camera.set_focal_lengths(intrinsic[i, 0, 0], intrinsic[i, 1, 1])
+                camera.set_principal_point(intrinsic[i, 0, 2], intrinsic[i, 1, 2])
+            if isinstance(near, (float, int)):
+                camera.near = near
+            else:
+                camera.near = near[i]
+            if isinstance(far, (float, int)):
+                camera.far = far
+            else:
+                camera.far = far[i]
+
+            # mount camera to actor/link
+            if mount is not None:
+                if isinstance(mount, Link):
+                    mount._objs[i].entity.add_component(camera)
+                else:
+                    mount._objs[i].add_component(camera)
+            else:
+                camera_mount = sapien.Entity()
+                camera_mount.set_pose(sapien.Pose([0, 0, 0]))
+                camera_mount.add_component(camera)
+                camera_mount.name = f"scene-{i}_{name}"
+                scene.add_entity(camera_mount)
+            if len(pose) == 1:
+                camera.local_pose = pose.sp
+            else:
+                camera.local_pose = pose[i].sp
+            camera.name = f"scene-{i}_{name}"
+            cameras.append(camera)
+            scene.update_render()
+        return RenderCamera.create(cameras, self, mount=mount)
+
     # def remove_camera(self, camera):
     #     self.remove_entity(camera.entity)
 
@@ -233,12 +370,37 @@ class ManiSkillScene:
         self.px.step()
 
     def update_render(self):
-        if physx.is_gpu_enabled():
+        if SAPIEN_RENDER_SYSTEM == "3.1":
+            self._sapien_31_update_render()
+        else:
+            self._sapien_update_render()
+
+    def _sapien_update_render(self):
+        if self.gpu_sim_enabled:
+            if not self.parallel_in_single_scene:
+                if self.render_system_group is None:
+                    self._setup_gpu_rendering()
+                    self._gpu_setup_sensors(self.sensors)
+                    self._gpu_setup_sensors(self.human_render_cameras)
+                self.render_system_group.update_render()
+            else:
+                self.px.sync_poses_gpu_to_cpu()
+                self.sub_scenes[0].update_render()
+        else:
+            self.sub_scenes[0].update_render()
+
+    def _sapien_31_update_render(self):
+        if self.gpu_sim_enabled:
             if self.render_system_group is None:
+                # TODO (stao): for new render system support the parallel in single scene rendering option
+                for scene in self.sub_scenes:
+                    scene.update_render()
                 self._setup_gpu_rendering()
                 self._gpu_setup_sensors(self.sensors)
                 self._gpu_setup_sensors(self.human_render_cameras)
-            self.render_system_group.update_render()
+
+            manager: sapien.render.GpuSyncManager = self.render_system_group
+            manager.sync()
         else:
             self.sub_scenes[0].update_render()
 
@@ -375,15 +537,17 @@ class ManiSkillScene:
         shadow_near=0.1,
         shadow_far=10.0,
         shadow_map_size=2048,
-        scene_idxs=None,
+        scene_idxs: Optional[List[int]] = None,
     ):
-        lighting_scenes = (
-            self.sub_scenes
-            if scene_idxs is None
-            else [self.sub_scenes[i] for i in scene_idxs]
-        )
-        for scene in lighting_scenes:
+        if scene_idxs is None:
+            scene_idxs = list(range(len(self.sub_scenes)))
+        for scene_idx in scene_idxs:
+            if self.parallel_in_single_scene:
+                scene = self.sub_scenes[0]
+            else:
+                scene = self.sub_scenes[scene_idx]
             entity = sapien.Entity()
+            entity.name = "point_light"
             light = sapien.render.RenderPointLightComponent()
             entity.add_component(light)
             light.color = color
@@ -391,7 +555,11 @@ class ManiSkillScene:
             light.shadow_near = shadow_near
             light.shadow_far = shadow_far
             light.shadow_map_size = shadow_map_size
-            light.pose = sapien.Pose(position)
+            if self.parallel_in_single_scene:
+                light.pose = sapien.Pose(position + self.scene_offsets_np[scene_idx])
+            else:
+                light.pose = sapien.Pose(position)
+
             scene.add_entity(entity)
         return light
 
@@ -405,15 +573,17 @@ class ManiSkillScene:
         shadow_near=-10.0,
         shadow_far=10.0,
         shadow_map_size=2048,
-        scene_idxs=None,
+        scene_idxs: Optional[List[int]] = None,
     ):
-        lighting_scenes = (
-            self.sub_scenes
-            if scene_idxs is None
-            else [self.sub_scenes[i] for i in scene_idxs]
-        )
-        for scene in lighting_scenes:
+        if scene_idxs is None:
+            scene_idxs = list(range(len(self.sub_scenes)))
+        for scene_idx in scene_idxs:
+            if self.parallel_in_single_scene:
+                scene = self.sub_scenes[0]
+            else:
+                scene = self.sub_scenes[scene_idx]
             entity = sapien.Entity()
+            entity.name = "directional_light"
             light = sapien.render.RenderDirectionalLightComponent()
             entity.add_component(light)
             light.color = color
@@ -422,10 +592,19 @@ class ManiSkillScene:
             light.shadow_far = shadow_far
             light.shadow_half_size = shadow_scale
             light.shadow_map_size = shadow_map_size
+            if self.parallel_in_single_scene:
+                light_position = position + self.scene_offsets_np[scene_idx]
+            else:
+                light_position = position
             light.pose = sapien.Pose(
-                position, sapien.math.shortest_rotation([1, 0, 0], direction)
+                light_position, sapien.math.shortest_rotation([1, 0, 0], direction)
             )
             scene.add_entity(entity)
+            if self.parallel_in_single_scene:
+                # for directional lights adding multiple does not make much sense
+                # and for parallel gui rendering setup accurate lighting does not matter as it is only
+                # for demo purposes
+                break
         return
 
     def add_spot_light(
@@ -439,15 +618,17 @@ class ManiSkillScene:
         shadow_near=0.1,
         shadow_far=10.0,
         shadow_map_size=2048,
-        scene_idxs=None,
+        scene_idxs: Optional[List[int]] = None,
     ):
-        lighting_scenes = (
-            self.sub_scenes
-            if scene_idxs is None
-            else [self.sub_scenes[i] for i in scene_idxs]
-        )
-        for scene in lighting_scenes:
+        if scene_idxs is None:
+            scene_idxs = list(range(len(self.sub_scenes)))
+        for scene_idx in scene_idxs:
+            if self.parallel_in_single_scene:
+                scene = self.sub_scenes[0]
+            else:
+                scene = self.sub_scenes[scene_idx]
             entity = sapien.Entity()
+            entity.name = "spot_light"
             light = sapien.render.RenderSpotLightComponent()
             entity.add_component(light)
             light.color = color
@@ -457,8 +638,12 @@ class ManiSkillScene:
             light.shadow_map_size = shadow_map_size
             light.inner_fov = inner_fov
             light.outer_fov = outer_fov
+            if self.parallel_in_single_scene:
+                light_position = position + self.scene_offsets_np[scene_idx]
+            else:
+                light_position = position
             light.pose = sapien.Pose(
-                position, sapien.math.shortest_rotation([1, 0, 0], direction)
+                light_position, sapien.math.shortest_rotation([1, 0, 0], direction)
             )
             scene.add_entity(entity)
         return
@@ -526,7 +711,7 @@ class ManiSkillScene:
         # TODO (stao): Is there any optimization improvement when putting all queries all together and fetched together
         # vs multiple smaller queries? If so, might be worth exposing a helpful API for that instead of having user
         # write this code below themselves.
-        if physx.is_gpu_enabled():
+        if self.gpu_sim_enabled:
             query_hash = hash((obj1, obj2))
             query_key = obj1.name + obj2.name
 
@@ -569,9 +754,55 @@ class ManiSkillScene:
         """
         return self.get_pairwise_contact_impulses(obj1, obj2) / self.px.timestep
 
+    @cached_property
+    def scene_offsets(self):
+        """torch tensor of shape (num_envs, 3) representing the offset of each scene in the world frame"""
+        return torch.tensor(
+            np.array(
+                [self.px.get_scene_offset(sub_scene) for sub_scene in self.sub_scenes]
+            ),
+            device=self.device,
+        )
+
+    @cached_property
+    def scene_offsets_np(self):
+        """numpy array of shape (num_envs, 3) representing the offset of each scene in the world frame"""
+        return np.array(
+            [self.px.get_scene_offset(sub_scene) for sub_scene in self.sub_scenes]
+        )
+
     # -------------------------------------------------------------------------- #
     # Simulation state (required for MPC)
     # -------------------------------------------------------------------------- #
+
+    def add_to_state_dict_registry(self, object: Union[Actor, Articulation]):
+        if isinstance(object, Actor):
+            assert (
+                object.name not in self.state_dict_registry.actors
+            ), f"Object {object.name} already in state dict registry"
+            self.state_dict_registry.actors[object.name] = object
+        elif isinstance(object, Articulation):
+            assert (
+                object.name not in self.state_dict_registry.articulations
+            ), f"Object {object.name} already in state dict registry"
+            self.state_dict_registry.articulations[object.name] = object
+        else:
+            raise ValueError(f"Expected Actor or Articulation, got {object}")
+
+    def remove_from_state_dict_registry(self, object: Union[Actor, Articulation]):
+        if isinstance(object, Actor):
+            assert (
+                object.name in self.state_dict_registry.actors
+            ), f"Object {object.name} not in state dict registry"
+            del self.state_dict_registry.actors[object.name]
+        elif isinstance(object, Articulation):
+            assert (
+                object.name in self.state_dict_registry.articulations
+            ), f"Object {object.name} not in state dict registry"
+            del self.state_dict_registry.articulations[object.name]
+        else:
+            raise ValueError(f"Expected Actor or Articulation, got {object}")
+
     def get_sim_state(self) -> torch.Tensor:
         """Get simulation state. Returns a dictionary with two nested dictionaries "actors" and "articulations".
         In the nested dictionaries they map the actor/articulation name to a vector of shape (N, D) for N parallel
@@ -582,11 +813,11 @@ class ManiSkillScene:
         state_dict = dict()
         state_dict["actors"] = dict()
         state_dict["articulations"] = dict()
-        for actor in self.actors.values():
+        for actor in self.state_dict_registry.actors.values():
             if actor.px_body_type == "static":
                 continue
             state_dict["actors"][actor.name] = actor.get_state().clone()
-        for articulation in self.articulations.values():
+        for articulation in self.state_dict_registry.articulations.values():
             state_dict["articulations"][
                 articulation.name
             ] = articulation.get_state().clone()
@@ -608,57 +839,63 @@ class ManiSkillScene:
                 if len(actor_state.shape) == 1:
                     actor_state = actor_state[None, :]
                 # do not pass in env_idx to avoid redundant reset mask changes
-                self.actors[actor_id].set_state(actor_state, None)
+                self.state_dict_registry.actors[actor_id].set_state(actor_state, None)
         if "articulations" in state:
             for art_id, art_state in state["articulations"].items():
                 if len(art_state.shape) == 1:
                     art_state = art_state[None, :]
-                self.articulations[art_id].set_state(art_state, None)
+                self.state_dict_registry.articulations[art_id].set_state(
+                    art_state, None
+                )
         if env_idx is not None:
             self._reset_mask = prev_reset_mask
 
     # ---------------------------------------------------------------------------- #
     # GPU Simulation Management
     # ---------------------------------------------------------------------------- #
-    def _setup_gpu(self):
+    def _setup(self, enable_gpu: bool):
         """
-        Start the GPU simulation and allocate all buffers and initialize objects
+        Start the CPU/GPU simulation and allocate all buffers and initialize objects
         """
-        self.px.gpu_init()
+        if enable_gpu:
+            if SAPIEN_RENDER_SYSTEM == "3.1":
+                for scene in self.sub_scenes:
+                    scene.update_render()
+            self.px.gpu_init()
         self.non_static_actors: List[Actor] = []
         # find non static actors, and set data indices that are now available after gpu_init was called
         for actor in self.actors.values():
             if actor.px_body_type == "static":
                 continue
             self.non_static_actors.append(actor)
-            actor._body_data_index  # only need to access this attribute to populate it
+            if enable_gpu:
+                actor._body_data_index  # only need to access this attribute to populate it
 
         for articulation in self.articulations.values():
             articulation._data_index
             for link in articulation.links:
                 link._body_data_index
-
-        # As physx_system.gpu_init() was called a single physx step was also taken. So we need to reset
-        # all the actors and articulations to their original poses as they likely have collided
         for actor in self.non_static_actors:
             actor.set_pose(actor.initial_pose)
         for articulation in self.articulations.values():
             articulation.set_pose(articulation.initial_pose)
-        self.px.gpu_apply_rigid_dynamic_data()
-        self.px.gpu_apply_articulation_root_pose()
 
-        self.px.cuda_rigid_body_data.torch()[:, 7:] = (
-            self.px.cuda_rigid_body_data.torch()[:, 7:] * 0
-        )  # zero out all velocities
-        self.px.gpu_apply_articulation_root_velocity()
-        self.px.cuda_articulation_qvel.torch()[:, :] = (
-            self.px.cuda_articulation_qvel.torch() * 0
-        )  # zero out all q velocities
-        self.px.gpu_apply_articulation_qvel()
+        if enable_gpu:
+            self.px.cuda_rigid_body_data.torch()[:, 7:] = torch.zeros_like(
+                self.px.cuda_rigid_body_data.torch()[:, 7:]
+            )  # zero out all velocities
+            self.px.cuda_articulation_qvel.torch()[:, :] = torch.zeros_like(
+                self.px.cuda_articulation_qvel.torch()
+            )  # zero out all q velocities
 
-        self._gpu_sim_initialized = True
-        self.px.gpu_update_articulation_kinematics()
-        self._gpu_fetch_all()
+            self.px.gpu_apply_rigid_dynamic_data()
+            self.px.gpu_apply_articulation_root_pose()
+            self.px.gpu_apply_articulation_root_velocity()
+            self.px.gpu_apply_articulation_qvel()
+
+            self._gpu_sim_initialized = True
+            self.px.gpu_update_articulation_kinematics()
+            self._gpu_fetch_all()
 
     def _gpu_apply_all(self):
         """
@@ -692,11 +929,9 @@ class ManiSkillScene:
             self.px.gpu_fetch_articulation_link_velocity()
             self.px.gpu_fetch_articulation_qpos()
             self.px.gpu_fetch_articulation_qvel()
+            self.px.gpu_fetch_articulation_qacc()
             self.px.gpu_fetch_articulation_target_qpos()
             self.px.gpu_fetch_articulation_target_qvel()
-
-            # unused fetches
-            # self.px.gpu_fetch_articulation_qacc()
 
         self._needs_fetch = False
 
@@ -733,6 +968,12 @@ class ManiSkillScene:
         return all_render_bodies
 
     def _setup_gpu_rendering(self):
+        if SAPIEN_RENDER_SYSTEM == "3.1":
+            self._sapien_31_setup_gpu_rendering()
+        else:
+            self._sapien_setup_gpu_rendering()
+
+    def _sapien_setup_gpu_rendering(self):
         """
         Prepares the scene for GPU parallelized rendering to enable taking e.g. RGB images
         """
@@ -745,13 +986,61 @@ class ManiSkillScene:
         )
         self.render_system_group.set_cuda_poses(self.px.cuda_rigid_body_data)
 
+    def _sapien_31_setup_gpu_rendering(self):
+        """
+        Prepares the scene for GPU parallelized rendering to enable taking e.g. RGB images
+        """
+
+        px: physx.PhysxGpuSystem = self.px
+
+        shape_pose_indices = []
+        shapes = []
+        scene_id = 0
+        for scene in self.sub_scenes:
+            scene_id += 1
+            for body in scene.render_system.render_bodies:
+                b = body.entity.find_component_by_type(
+                    sapien.physx.PhysxRigidBodyComponent
+                )
+                if b is None:
+                    continue
+                for s in body.render_shapes:
+                    shape_pose_indices.append(b.gpu_pose_index)
+                    shapes.append(s)
+
+        cam_pose_indices = []
+        cams = []
+        for cameras in self.sensors.values():
+            assert isinstance(cameras, Camera), f"Expected Camera, got {cameras}"
+            for c in cameras.camera._render_cameras:
+                b = c.entity.find_component_by_type(
+                    sapien.physx.PhysxRigidBodyComponent
+                )
+                if b is None:
+                    continue
+                cam_pose_indices.append(b.gpu_pose_index)
+                cams.append(c)
+
+        sync_manager = sapien.render.GpuSyncManager()
+        sync_manager.set_cuda_poses(px.cuda_rigid_body_data)
+        sync_manager.set_render_shapes(shape_pose_indices, shapes)
+        sync_manager.set_cameras(cam_pose_indices, cams)
+
+        self.render_system_group = sync_manager
+
     def _gpu_setup_sensors(self, sensors: Dict[str, BaseSensor]):
+        if SAPIEN_RENDER_SYSTEM == "3.1":
+            self._sapien_31_gpu_setup_sensors(sensors)
+        else:
+            self._sapien_gpu_setup_sensors(sensors)
+
+    def _sapien_gpu_setup_sensors(self, sensors: Dict[str, BaseSensor]):
         for name, sensor in sensors.items():
             if isinstance(sensor, Camera):
                 try:
                     camera_group = self.render_system_group.create_camera_group(
                         sensor.camera._render_cameras,
-                        sensor.texture_names,
+                        list(sensor.config.shader_config.texture_names.keys()),
                     )
                 except RuntimeError as e:
                     raise RuntimeError(
@@ -764,16 +1053,64 @@ class ManiSkillScene:
                     f"This sensor {sensor} of type {sensor.__class__} has not been implemented yet on the GPU"
                 )
 
-    def get_sensor_obs(self) -> Dict[str, Dict[str, torch.Tensor]]:
-        """Get raw sensor data for use as observations."""
-        sensor_data = dict()
-        for name, sensor in self.sensors.items():
-            sensor_data[name] = sensor.get_obs()
-        return sensor_data
+    def _sapien_31_gpu_setup_sensors(self, sensors: dict[str, BaseSensor]):
+        for name, sensor in sensors.items():
+            if isinstance(sensor, Camera):
+                batch_renderer = sapien.render.RenderManager(
+                    sapien.render.get_shader_pack(
+                        sensor.config.shader_config.shader_pack
+                    )
+                )
+                batch_renderer.set_size(sensor.config.width, sensor.config.height)
+                batch_renderer.set_cameras(sensor.camera._render_cameras)
+                sensor.camera.camera_group = self.camera_groups[name] = batch_renderer
+            else:
+                raise NotImplementedError(
+                    f"This sensor {sensor} of type {sensor.__class__} has not bget_picture_cuda implemented yet on the GPU"
+                )
 
-    def get_sensor_images(self) -> Dict[str, Dict[str, torch.Tensor]]:
+    def get_sensor_images(
+        self, obs: Dict[str, Any]
+    ) -> Dict[str, Dict[str, torch.Tensor]]:
         """Get raw sensor data as images for visualization purposes."""
         sensor_data = dict()
         for name, sensor in self.sensors.items():
-            sensor_data[name] = sensor.get_images()
+            sensor_data[name] = sensor.get_images(obs[name])
         return sensor_data
+
+    def get_human_render_camera_images(
+        self, camera_name: str = None
+    ) -> Dict[str, torch.Tensor]:
+        image_data = dict()
+        if self.gpu_sim_enabled:
+            if self.parallel_in_single_scene:
+                for name, camera in self.human_render_cameras.items():
+                    camera.camera._render_cameras[0].take_picture()
+                    rgb = camera.get_obs(
+                        rgb=True, depth=False, segmentation=False, position=False
+                    )["rgb"]
+                    image_data[name] = rgb
+            else:
+                for name, camera in self.human_render_cameras.items():
+                    if camera_name is not None and name != camera_name:
+                        continue
+                    assert camera.config.shader_config.shader_pack not in [
+                        "rt",
+                        "rt-fast",
+                        "rt-med",
+                    ], "ray tracing shaders do not work with parallel rendering"
+                    camera.capture()
+                    rgb = camera.get_obs(
+                        rgb=True, depth=False, segmentation=False, position=False
+                    )["rgb"]
+                    image_data[name] = rgb
+        else:
+            for name, camera in self.human_render_cameras.items():
+                if camera_name is not None and name != camera_name:
+                    continue
+                camera.capture()
+                rgb = camera.get_obs(
+                    rgb=True, depth=False, segmentation=False, position=False
+                )["rgb"]
+                image_data[name] = rgb
+        return image_data

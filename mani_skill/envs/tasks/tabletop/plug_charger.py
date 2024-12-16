@@ -19,6 +19,21 @@ from mani_skill.utils.structs.types import SimConfig
 
 @register_env("PlugCharger-v1", max_episode_steps=200)
 class PlugChargerEnv(BaseEnv):
+    """
+    **Task Description:**
+    The robot must pick up one of the misplaced shapes on the board/kit and insert it into the correct empty slot.
+
+    **Randomizations:**
+    - The charger position is randomized on the XY plane on top of the table. The rotation is also randomized
+    - The receptacle position is randomized on the XY plane and the rotation is also randomized. Note that the human render camera has its pose
+    fixed relative to the receptacle.
+
+    **Success Conditions:**
+    - The charger is inserted into the receptacle
+    """
+
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PlugCharger-v1_rt.mp4"
+
     _base_size = [2e-2, 1.5e-2, 1.2e-2]  # charger base half size
     _peg_size = [8e-3, 0.75e-3, 3.2e-3]  # charger peg half size
     _peg_gap = 7e-3  # charger peg gap
@@ -86,7 +101,7 @@ class PlugChargerEnv(BaseEnv):
         builder.add_box_visual(
             sapien.Pose([-base_size[0], 0, 0]), base_size, material=mat
         )
-
+        builder.initial_pose = sapien.Pose(p=[0, 0, self._base_size[2]])
         return builder.build(name="charger")
 
     def _build_receptacle(self, peg_size, receptacle_size, gap):
@@ -136,8 +151,11 @@ class PlugChargerEnv(BaseEnv):
         builder.add_box_visual(pose, half_size, material=mat)
         pose = sapien.Pose([-receptacle_size[0], gap * 0.5 + peg_size[1], 0])
         builder.add_box_visual(pose, half_size, material=mat)
-
+        builder.initial_pose = sapien.Pose(p=[0, 0, 0.1])
         return builder.build_kinematic(name="receptacle")
+
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
 
     def _load_scene(self, options: dict):
         self.scene_builder = TableSceneBuilder(

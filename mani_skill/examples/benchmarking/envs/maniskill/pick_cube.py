@@ -11,7 +11,7 @@ class PickCubeBenchmarkEnv(PickCubeEnv):
         return SimConfig(
             sim_freq=100,
             control_freq=50,
-            scene_cfg=SceneConfig(
+            scene_config=SceneConfig(
                 bounce_threshold=0.01,
                 solver_position_iterations=8, solver_velocity_iterations=0
             ),

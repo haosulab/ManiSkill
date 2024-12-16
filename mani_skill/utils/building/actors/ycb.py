@@ -8,14 +8,13 @@ YCB_DATASET = dict()
 def _load_ycb_dataset():
     global YCB_DATASET
     YCB_DATASET = {
-        "model_data": load_json(ASSET_DIR / "assets/mani_skill2_ycb/info_pick_v0.json"),
+        "model_data": load_json(ASSET_DIR / "assets/mani_skill2_ycb/info_raw.json"),
     }
 
 
 def get_ycb_builder(
     scene: ManiSkillScene, id: str, add_collision: bool = True, add_visual: bool = True
 ):
-    global YCB_DATASET
     if "YCB" not in YCB_DATASET:
         _load_ycb_dataset()
     model_db = YCB_DATASET["model_data"]

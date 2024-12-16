@@ -12,10 +12,14 @@ import sapien.physx as physx
 import sapien.render
 import torch
 
+from mani_skill.render import SAPIEN_RENDER_SYSTEM
 from mani_skill.utils import common
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.link import Link
 from mani_skill.utils.structs.pose import Pose
+
+if SAPIEN_RENDER_SYSTEM == "3.1":
+    sapien.render.RenderCameraGroup = "oldtype"  # type: ignore
 
 # NOTE (stao): commented out functions are functions that are not confirmed to be working in the wrapped class but the original class has
 
@@ -71,7 +75,7 @@ class RenderCamera:
     # Functions from RenderCameraComponent
     # -------------------------------------------------------------------------- #
     def get_extrinsic_matrix(self):
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             if self._cached_extrinsic_matrix is not None:
                 return self._cached_extrinsic_matrix
             ros2opencv = torch.tensor(
@@ -102,20 +106,23 @@ class RenderCamera:
     def get_intrinsic_matrix(self):
         if self._cached_intrinsic_matrix is None:
             self._cached_intrinsic_matrix = common.to_tensor(
-                np.array([cam.get_intrinsic_matrix() for cam in self._render_cameras])
+                np.array([cam.get_intrinsic_matrix() for cam in self._render_cameras]),
+                device=self.scene.device,
             )
         return self._cached_intrinsic_matrix
 
     def get_local_pose(self) -> Pose:
         if self._cached_local_pose is None:
-            if physx.is_gpu_enabled():
+            if self.scene.gpu_sim_enabled:
                 ps = np.array(
                     [
                         np.concatenate([cam.get_local_pose().p, cam.get_local_pose().q])
                         for cam in self._render_cameras
                     ]
                 )
-                self._cached_local_pose = Pose.create(common.to_tensor(ps))
+                self._cached_local_pose = Pose.create(
+                    common.to_tensor(ps), device=self.scene.device
+                )
             else:
                 self._cached_local_pose = Pose.create_from_pq(
                     self._render_cameras[0].get_local_pose().p,
@@ -125,7 +132,7 @@ class RenderCamera:
 
     def get_model_matrix(self):
 
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             if self._cached_model_matrix is not None:
                 return self._cached_model_matrix
             # NOTE (stao): This code is based on SAPIEN. It cannot expose GPU buffers of this data of all cameras directly so
@@ -150,19 +157,27 @@ class RenderCamera:
     def get_near(self) -> float:
         return self._render_cameras[0].get_near()
 
-    def get_picture(self, name: str):
-        if physx.is_gpu_enabled():
-            return self.camera_group.get_picture_cuda(name).torch()
+    def get_picture(self, names: Union[str, List[str]]) -> List[torch.Tensor]:
+        if isinstance(names, str):
+            names = [names]
+        if self.scene.gpu_sim_enabled and not self.scene.parallel_in_single_scene:
+            if SAPIEN_RENDER_SYSTEM == "3.0":
+                return [
+                    self.camera_group.get_picture_cuda(name).torch() for name in names
+                ]
+            elif SAPIEN_RENDER_SYSTEM == "3.1":
+                return [x.torch() for x in self.camera_group.get_cuda_pictures(names)]
         else:
-            return common.to_tensor(self._render_cameras[0].get_picture(name))[
-                None, ...
+            return [
+                common.to_tensor(self._render_cameras[0].get_picture(name))[None, ...]
+                for name in names
             ]
 
-    def get_picture_cuda(self, name: str):
-        return self._render_cameras[0].get_picture_cuda(name)
+    # def get_picture_cuda(self, name: str):
+    #     return self._render_cameras[0].get_picture_cuda(name)
 
-    def get_picture_names(self) -> list[str]:
-        return self._render_cameras[0].get_picture_names()
+    # def get_picture_names(self) -> list[str]:
+    #     return self._render_cameras[0].get_picture_names()
 
     def get_projection_matrix(self):
         return self._render_cameras[0].get_projection_matrix()
@@ -222,9 +237,15 @@ class RenderCamera:
     # def set_property(self, name: str, value: float) -> None:
     #     self._render_cameras[0].set_property(name, value)
 
-    # @typing.overload
-    # def set_property(self, name: str, value: int) -> None:
-    #     self._render_cameras[0].set_property(name, value)
+    def set_property(self, name: str, value: Any) -> None:
+        """change properties of the camera. This is not well documented at the moment and is a heavily overloaded function.
+
+        At the moment you can do this:
+
+        - set_property("toneMapper", value) where value is 0 (gamma), 1 (sRGB), 2 (filmic) change the color management used. Default is 0 (gamma)
+        - set_property("exposure", value) where value is the exposure. Default is 1.0
+        """
+        self._render_cameras[0].set_property(name, value)
 
     def set_skew(self, skew: float) -> None:
         for obj in self._render_cameras:
@@ -237,7 +258,7 @@ class RenderCamera:
     #     self._render_cameras[0].set_texture_array(name, textures)
 
     def take_picture(self) -> None:
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             self.camera_group.take_picture()
         else:
             self._render_cameras[0].take_picture()
@@ -281,7 +302,7 @@ class RenderCamera:
 
     @property
     def global_pose(self) -> sapien.Pose:
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             if self.mount is not None:
                 return self.mount.pose * self.get_local_pose()
             return self.get_local_pose()

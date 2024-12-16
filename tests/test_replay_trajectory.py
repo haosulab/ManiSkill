@@ -11,7 +11,7 @@ from mani_skill import ASSET_DIR
         "pd_joint_delta_pos",
         "pd_joint_target_delta_pos",
         "pd_joint_vel",
-        # "pd_ee_delta_pose", # TODO (stao): This is bugged at the moment
+        "pd_ee_delta_pose",
     ],
 )
 def test_replay_trajectory(control_mode):

@@ -3,11 +3,13 @@
 
 from typing import Dict
 
+import gymnasium as gym
 import numpy as np
 import torch
 from gymnasium import spaces
 
 from mani_skill.utils.logging_utils import logger
+from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 
 
 def find_max_episode_steps_value(env):
@@ -16,19 +18,35 @@ def find_max_episode_steps_value(env):
     This is a useful utility as not all specs may include max episode steps and some wrappers
     may need access to this in order to implement e.g. TimeLimits correctly on the GPU sim."""
     cur = env
+    if isinstance(cur, gym.vector.SyncVectorEnv):
+        cur = env.envs[0]
+    elif isinstance(cur, gym.vector.AsyncVectorEnv):
+        raise NotImplementedError(
+            "Currently cannot get max episode steps of an environment wrapped with gym.vector.AsyncVectorEnv"
+        )
+    elif isinstance(cur, ManiSkillVectorEnv):
+        cur = env._env
     while cur is not None:
-        if hasattr(cur, "max_episode_steps"):
-            return cur.max_episode_steps
+        try:
+            return cur.get_wrapper_attr("max_episode_steps")
+        except AttributeError:
+            pass
+        try:
+            return cur.get_wrapper_attr("_max_episode_steps")
+        except AttributeError:
+            pass
         if cur.spec is not None and cur.spec.max_episode_steps is not None:
             return cur.spec.max_episode_steps
         if hasattr(cur, "env"):
-            cur = env.env
+            cur = cur.env
         else:
             cur = None
     return None
 
 
-def extract_scalars_from_info(info: dict, blacklist=()) -> Dict[str, float]:
+def extract_scalars_from_info(
+    info: dict, blacklist=(), batch_size=1
+) -> Dict[str, float]:
     """Recursively extract scalar metrics from an info dict returned by env.step.
 
     Args:
@@ -55,9 +73,14 @@ def extract_scalars_from_info(info: dict, blacklist=()) -> Dict[str, float]:
 
         # Things that are scalar-like will have an np.size of 1.
         # Strings also have an np.size of 1, so explicitly ban those
-        elif np.size(v) == 1 and not isinstance(v, str):
+        elif batch_size == 1 and np.size(v) == 1 and not isinstance(v, str):
             try:
                 ret[k] = float(v)
+            except:
+                pass
+        elif batch_size > 1 and np.size(v) == batch_size and not isinstance(v, str):
+            try:
+                ret[k] = [float(v_i) for v_i in v]
             except:
                 pass
     return ret
@@ -65,7 +88,6 @@ def extract_scalars_from_info(info: dict, blacklist=()) -> Dict[str, float]:
 
 def inv_scale_action(action, low, high):
     """Inverse of `clip_and_scale_action` without clipping."""
-    low, high = np.asarray(low), np.asarray(high)
     return (action - 0.5 * (high + low)) / (0.5 * (high - low))
 
 

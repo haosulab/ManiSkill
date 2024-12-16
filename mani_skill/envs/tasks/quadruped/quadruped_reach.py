@@ -1,9 +1,11 @@
 from typing import Any, Dict, List
 
 import numpy as np
+import sapien
 import torch
 
 from mani_skill.agents.robots.anymal.anymal_c import ANYmalC
+from mani_skill.agents.robots.unitree_go.unitree_go2 import UnitreeGo2Simplified
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
@@ -15,8 +17,9 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SceneConfig, SimConf
 
 
 class QuadrupedReachEnv(BaseEnv):
-    SUPPORTED_ROBOTS = ["anymal_c"]
+    SUPPORTED_ROBOTS = ["anymal_c", "unitree_go2_simplified_locomotion"]
     agent: ANYmalC
+    default_qpos: torch.Tensor
 
     _UNDESIRED_CONTACT_LINK_NAMES: List[str] = None
 
@@ -26,8 +29,8 @@ class QuadrupedReachEnv(BaseEnv):
     @property
     def _default_sim_config(self):
         return SimConfig(
-            gpu_memory_cfg=GPUMemoryConfig(max_rigid_contact_count=2**20),
-            scene_cfg=SceneConfig(
+            gpu_memory_config=GPUMemoryConfig(max_rigid_contact_count=2**20),
+            scene_config=SceneConfig(
                 solver_position_iterations=4, solver_velocity_iterations=0
             ),
         )
@@ -64,8 +67,11 @@ class QuadrupedReachEnv(BaseEnv):
             )
         ]
 
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose(p=[0, 0, 1]))
+
     def _load_scene(self, options: dict):
-        self.ground = build_ground(self.scene)
+        self.ground = build_ground(self.scene, floor_width=400)
         self.goal = actors.build_sphere(
             self.scene,
             radius=0.2,
@@ -86,6 +92,7 @@ class QuadrupedReachEnv(BaseEnv):
             xyz[:, 0] = 2.5
             noise_scale = 1
             xyz[:, 0] = torch.rand(size=(b,)) * noise_scale - noise_scale / 2 + 2.5
+            noise_scale = 2
             xyz[:, 1] = torch.rand(size=(b,)) * noise_scale - noise_scale / 2
             self.goal.set_pose(Pose.create_from_pq(xyz))
 
@@ -107,6 +114,7 @@ class QuadrupedReachEnv(BaseEnv):
         obs = dict(
             root_linear_velocity=self.agent.robot.root_linear_velocity,
             root_angular_velocity=self.agent.robot.root_angular_velocity,
+            reached_goal=info["success"],
         )
         if self.obs_mode in ["state", "state_dict"]:
             obs.update(
@@ -135,21 +143,56 @@ class QuadrupedReachEnv(BaseEnv):
             lin_vel_z_l2 * -2
             + ang_vel_xy_l2 * -0.05
             + self._compute_undesired_contacts() * -1
+            + torch.linalg.norm(self.agent.robot.qpos - self.default_qpos, axis=1)
+            * -0.05
         )
-        reward = 2 * reaching_reward + penalties
-        reward[info["fail"]] = -100
+        reward = 1 + 2 * reaching_reward + penalties
+        reward[info["fail"]] = 0
         return reward
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        max_reward = 2.0
+        max_reward = 3.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
 
 
 @register_env("AnymalC-Reach-v1", max_episode_steps=200)
 class AnymalCReachEnv(QuadrupedReachEnv):
+    """
+    **Task Description:**
+    Control the AnymalC robot to reach a target location in front of it. Note the current reward function works but more needs to be added to constrain the learned quadruped gait looks more natural
+
+    **Randomizations:**
+    - Robot is initialized in a stable rest/standing position
+    - The goal for the robot to reach is initialized 2.5 +/- 0.5 meters in front, and +/- 1 meters to either side
+
+    **Success Conditions:**
+    - If the robot position is within 0.35 meters of the goal
+
+    **Fail Conditions:**
+    - If the robot has fallen over, which is considered True when the main body (the center part) hits the ground
+
+    **Goal Specification:**
+    - The 2D goal position in the XY-plane
+    """
+
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/AnymalC-Reach-v1_rt.mp4"
     _UNDESIRED_CONTACT_LINK_NAMES = ["LF_KFE", "RF_KFE", "LH_KFE", "RH_KFE"]
 
     def __init__(self, *args, robot_uids="anymal_c", **kwargs):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
+        self.default_qpos = torch.from_numpy(ANYmalC.keyframes["standing"].qpos).to(
+            self.device
+        )
+
+
+@register_env("UnitreeGo2-Reach-v1", max_episode_steps=200)
+class UnitreeGo2ReachEnv(QuadrupedReachEnv):
+    _UNDESIRED_CONTACT_LINK_NAMES = ["FR_thigh", "RR_thigh", "FL_thigh", "RL_thigh"]
+
+    def __init__(self, *args, robot_uids="unitree_go2_simplified_locomotion", **kwargs):
+        super().__init__(*args, robot_uids=robot_uids, **kwargs)
+        self.default_qpos = torch.from_numpy(
+            UnitreeGo2Simplified.keyframes["standing"].qpos
+        ).to(self.device)

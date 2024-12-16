@@ -51,61 +51,6 @@ def images_to_video(
     writer.close()
 
 
-def normalize_depth(depth, min_depth=0, max_depth=None):
-    if min_depth is None:
-        min_depth = depth.min()
-    if max_depth is None:
-        max_depth = depth.max()
-    depth = (depth - min_depth) / (max_depth - min_depth)
-    depth = depth.clip(0, 1)
-    return depth
-
-
-def observations_to_images(observations, max_depth=None) -> List[Array]:
-    """Parse images from camera observations."""
-    images = []
-    # is_torch = False
-    # if torch is not None:
-    #     is_torch = isinstance(images[0], torch.Tensor)
-    for key in observations:
-        if "rgb" in key or "Color" in key:
-            rgb = observations[key][..., :3]
-            if rgb.dtype == np.float32:
-                rgb = np.clip(rgb * 255, 0, 255).astype(np.uint8)
-            if torch is not None and rgb.dtype == torch.float:
-                rgb = torch.clip(rgb * 255, 0, 255).to(torch.uint8)
-            images.append(rgb)
-        elif "depth" in key or "Position" in key:
-            depth = observations[key]
-            if "Position" in key:  # [H, W, 4]
-                depth = -depth[..., 2:3]
-            # [H, W, 1]
-            depth = normalize_depth(depth, max_depth=max_depth)
-            depth = (depth * 255).clip(0, 255)
-            if isinstance(depth, np.ndarray):
-                depth = depth.astype(np.uint8)
-                depth = np.repeat(depth, 3, axis=-1)
-            else:
-                depth = depth.to(torch.uint8)
-                depth = torch.repeat_interleave(depth, 3, dim=-1)
-            images.append(depth)
-        elif "seg" in key:
-            seg: Array = observations[key]  # [H, W, 1]
-            assert seg.ndim == 3 and seg.shape[-1] == 1, seg.shape
-            # A heuristic way to colorize labels
-            seg = np.uint8(seg * [11, 61, 127])  # [H, W, 3]
-            images.append(seg)
-        elif "Segmentation" in key:
-            seg: Array = observations[key]  # [H, W, 4]
-            assert seg.ndim == 3 and seg.shape[-1] == 4, seg.shape
-            # A heuristic way to colorize labels
-            visual_seg = np.uint8(seg[..., 0:1] * [11, 61, 127])  # [H, W, 3]
-            actor_seg = np.uint8(seg[..., 1:2] * [11, 61, 127])  # [H, W, 3]
-            images.append(visual_seg)
-            images.append(actor_seg)
-    return images
-
-
 def tile_images(images: List[Array], nrows=1) -> Array:
     """
     Tile multiple images to a single image comprised of nrows and an appropriate number of columns to fit all the images.
@@ -195,7 +140,10 @@ def put_text_on_image(image: np.ndarray, lines: List[str]):
 
 
 def put_info_on_image(image, info: Dict[str, float], extras=None, overlay=True):
-    lines = [f"{k}: {v:.3f}" for k, v in info.items()]
+    lines = [
+        f"{k}: {v:.3f}" if isinstance(v, float) else f"{k}: {v}"
+        for k, v in info.items()
+    ]
     if extras is not None:
         lines.extend(extras)
     return put_text_on_image(image, lines)

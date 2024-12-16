@@ -1,5 +1,4 @@
 from copy import deepcopy
-from typing import Dict, Tuple
 
 import numpy as np
 import sapien
@@ -123,15 +122,23 @@ class Panda(BaseAgent):
             ee_link=self.ee_link_name,
             urdf_path=self.urdf_path,
         )
+        arm_pd_ee_pose = PDEEPoseControllerConfig(
+            joint_names=self.arm_joint_names,
+            pos_lower=None,
+            pos_upper=None,
+            stiffness=self.arm_stiffness,
+            damping=self.arm_damping,
+            force_limit=self.arm_force_limit,
+            ee_link=self.ee_link_name,
+            urdf_path=self.urdf_path,
+            use_delta=False,
+            normalize_action=False,
+        )
 
         arm_pd_ee_target_delta_pos = deepcopy(arm_pd_ee_delta_pos)
         arm_pd_ee_target_delta_pos.use_target = True
         arm_pd_ee_target_delta_pose = deepcopy(arm_pd_ee_delta_pose)
         arm_pd_ee_target_delta_pose.use_target = True
-
-        # PD ee position (for human-interaction/teleoperation)
-        arm_pd_ee_delta_pose_align = deepcopy(arm_pd_ee_delta_pose)
-        arm_pd_ee_delta_pose_align.frame = "ee_align"
 
         # PD joint velocity
         arm_pd_joint_vel = PDJointVelControllerConfig(
@@ -185,9 +192,7 @@ class Panda(BaseAgent):
             pd_ee_delta_pose=dict(
                 arm=arm_pd_ee_delta_pose, gripper=gripper_pd_joint_pos
             ),
-            pd_ee_delta_pose_align=dict(
-                arm=arm_pd_ee_delta_pose_align, gripper=gripper_pd_joint_pos
-            ),
+            pd_ee_pose=dict(arm=arm_pd_ee_pose, gripper=gripper_pd_joint_pos),
             # TODO(jigu): how to add boundaries for the following controllers
             pd_joint_target_delta_pos=dict(
                 arm=arm_pd_joint_target_delta_pos, gripper=gripper_pd_joint_pos
@@ -227,10 +232,6 @@ class Panda(BaseAgent):
         self.tcp = sapien_utils.get_obj_by_name(
             self.robot.get_links(), self.ee_link_name
         )
-
-        self.queries: Dict[
-            str, Tuple[physx.PhysxGpuContactPairImpulseQuery, Tuple[int]]
-        ] = dict()
 
     def is_grasping(self, object: Actor, min_force=0.5, max_angle=85):
         """Check if the robot is grasping an object

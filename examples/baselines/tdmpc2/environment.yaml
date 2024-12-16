@@ -1,0 +1,67 @@
+name: tdmpc2-ms
+channels:
+  - pytorch-nightly
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - cudatoolkit=11.7
+  - glew=2.1.0
+  - glib=2.68.4
+  - pip=21.0
+  - python=3.9.0
+  - pytorch>=2.2.2
+  - torchvision>=0.16.2
+  - pip:
+    - absl-py==2.0.0
+    - "cython<3"
+    - dm-control==1.0.8
+    - ffmpeg==1.4
+    - glfw==2.6.4
+    - hydra-core==1.3.2
+    - hydra-submitit-launcher==1.2.0
+    - imageio==2.33.1
+    - imageio-ffmpeg==0.4.9
+    - kornia==0.7.1
+    - moviepy==1.0.3
+    - mujoco==2.3.1
+    - mujoco-py==2.1.2.14
+    - numpy==1.23.5
+    - omegaconf==2.3.0
+    - open3d==0.18.0
+    - opencv-contrib-python==4.9.0.80
+    - opencv-python==4.9.0.80
+    - pandas==2.1.4
+    - sapien==3.0.0.b1
+    - submitit==1.5.1
+    - setuptools==65.5.0
+    - patchelf==0.17.2.1
+    - protobuf==4.25.2
+    - pillow==10.2.0
+    - pyquaternion==0.9.9
+    - tensordict-nightly==2024.3.26
+    - termcolor==2.4.0
+    - torchrl-nightly==2024.3.26
+    - transforms3d==0.4.1
+    - trimesh==4.0.9
+    - tqdm==4.66.1
+    - wandb==0.16.2
+    - wheel==0.38.0
+    - mani_skill>=3.0.0b12
+    ####################
+    # Gym:
+    # (unmaintained but required for maniskill2/meta-world/myosuite)
+    # - gym==0.21.0
+    ####################
+    # ManiSkill2:
+    # (requires gym==0.21.0 which occasionally breaks)
+    # - mani-skill2==0.4.1
+    ####################
+    # Meta-World:
+    # (requires gym==0.21.0 which occasionally breaks)
+    # - git+https://github.com/Farama-Foundation/Metaworld.git@04be337a12305e393c0caf0cbf5ec7755c7c8feb
+    ####################
+    # MyoSuite:
+    # (requires gym==0.13 which conflicts with meta-world / mani-skill2)
+    # - myosuite
+    ####################
