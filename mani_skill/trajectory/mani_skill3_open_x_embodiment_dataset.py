@@ -12,7 +12,7 @@ import tensorflow_datasets as tfds
 import tensorflow_hub as hub
 
 
-class ManiSkill2Dataset(tfds.core.GeneratorBasedBuilder):
+class ManiSkill3OpenXEmbodimentDataset(tfds.core.GeneratorBasedBuilder):
     """
     Example RLDS dataset builder in the Open-X Embodiment format for some ManiSkill tasks/demonstrations.
 
@@ -22,6 +22,14 @@ class ManiSkill2Dataset(tfds.core.GeneratorBasedBuilder):
     the following tasks:
     - PickCube-v1
     - PushCube-v1
+
+    to load this: (WIP)
+
+    ```bash
+    python -m mani_skill.trajectory.replay_trajectory --traj-path ~/.maniskill/demos/PickCube-v1/motionplanning/trajectory.h5 -c pd_ee_target_delta_pose --vis
+
+    ```
+
 
     The specific parts of Open-X embodiment that are hard-coded in this conversion tool are noted below:
     - There are two cameras, a main (base) camera and a wrist camera
@@ -34,12 +42,16 @@ class ManiSkill2Dataset(tfds.core.GeneratorBasedBuilder):
     }
     NUM_EPISODES_PER_ENV = -1
 
-    def __init__(self, *args, **kwargs):
+    def __init__(
+        self, data_root: str = "/home/stao/.maniskill/demos/", *args, **kwargs
+    ):
         self.image_resolution = kwargs.pop("img_resolution", 256)
         super().__init__(*args, **kwargs)
-        self._embed = hub.load(
-            "https://tfhub.dev/google/universal-sentence-encoder-large/5"
-        )
+        # self.data_path = {}
+        # self._embed = hub.load(
+        #     "https://tfhub.dev/google/universal-sentence-encoder-large/5"
+        # )
+        self.data_root = data_root
         self.language_instruction_dict = {
             "PickCube-v1": "Pick up the red cube and move it to a goal position.",
             # "LiftCube-v0": "Lift up the red cube by 0.2 meters.",
@@ -312,7 +324,8 @@ class ManiSkill2Dataset(tfds.core.GeneratorBasedBuilder):
 
     def _split_generators(self, dl_manager: tfds.download.DownloadManager):
         """Define data splits."""
-        data_root = "/home/xuanlin/maniskill2_dev/ManiSkill2/demos/rigid_body/"
+        # data_root = self.data_path
+        data_root = "/home/stao/.maniskill/demos/"
         paths = [
             "PickCube-v1/trajectory.rgbd.pd_base_ee_target_delta_pose.h5",
             # "LiftCube-v0/trajectory.rgbd.pd_base_ee_target_delta_pose.h5",
@@ -368,6 +381,9 @@ class ManiSkill2Dataset(tfds.core.GeneratorBasedBuilder):
 
             episode = []
             ep_len = actions.shape[0] + 1
+            import ipdb
+
+            ipdb.set_trace()
             for i in range(ep_len):
                 base_image = obs["image/base_camera/rgb"][i]  # [img_res, img_res, 3]
                 wrist_image = obs["image/hand_camera/rgb"][i]  # [img_res, img_res, 3]
