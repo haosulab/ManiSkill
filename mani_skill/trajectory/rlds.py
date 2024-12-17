@@ -1,5 +1,5 @@
 """
-Code for converting to the RLDS format from ManiSkill dataset formats
+Code for converting to the Open-X Embodiment dataset format using RLDS from ManiSkill datasets
 """
 
 from typing import Any, Iterator, Tuple
@@ -13,6 +13,20 @@ import tensorflow_hub as hub
 
 
 class ManiSkill2Dataset(tfds.core.GeneratorBasedBuilder):
+    """
+    Example RLDS dataset builder in the Open-X Embodiment format for some ManiSkill tasks/demonstrations.
+
+    Given the highly specific nature of Open-X Embodiment dataset format, there is currently not a general tool
+    to convert to the specific format and strongly recommend you to use code as is or copy the code and modify
+    for your own needs. In particular the code here currently supports converting ManiSkill demonstrations for
+    the following tasks:
+    - PickCube-v1
+    - PushCube-v1
+
+    The specific parts of Open-X embodiment that are hard-coded in this conversion tool are noted below:
+    - There are two cameras, a main (base) camera and a wrist camera
+    - Each camera has a 256x256 resolution and provides RGB data only
+    """
 
     VERSION = tfds.core.Version("1.0.0")
     RELEASE_NOTES = {
@@ -27,17 +41,19 @@ class ManiSkill2Dataset(tfds.core.GeneratorBasedBuilder):
             "https://tfhub.dev/google/universal-sentence-encoder-large/5"
         )
         self.language_instruction_dict = {
-            "LiftCube-v0": "Lift up the red cube by 0.2 meters.",
-            "PickCube-v0": "Pick up the red cube and move it to a goal position.",
-            "StackCube-v0": "Stack the red cube on top of the green cube.",
-            "PlugCharger-v0": "Plug the charger into the wall socket.",
-            "PegInsertionSide-v0": "Insert the peg into the horizontal hole in a box.",
-            "AssemblingKits-v0": "Insert a designated object into the corresponding slot on a board.",
-            "PickSingleYCB-v0": "Pick up the object and move it to a goal position.",
-            "PickSingleEGAD-v0": "Pick up the object and move it to a goal position.",
-            "PickClutterYCB-v0": "Pick up a designated object from a clutter of objects.",
-            "TurnFaucet-v0": "Turn on the faucet by rotating a designated handle.",
+            "PickCube-v1": "Pick up the red cube and move it to a goal position.",
+            # "LiftCube-v0": "Lift up the red cube by 0.2 meters.",
+            # "PickCube-v0": "Pick up the red cube and move it to a goal position.",
+            # "StackCube-v0": "Stack the red cube on top of the green cube.",
+            # "PlugCharger-v0": "Plug the charger into the wall socket.",
+            # "PegInsertionSide-v0": "Insert the peg into the horizontal hole in a box.",
+            # "AssemblingKits-v0": "Insert a designated object into the corresponding slot on a board.",
+            # "PickSingleYCB-v0": "Pick up the object and move it to a goal position.",
+            # "PickSingleEGAD-v0": "Pick up the object and move it to a goal position.",
+            # "PickClutterYCB-v0": "Pick up a designated object from a clutter of objects.",
+            # "TurnFaucet-v0": "Turn on the faucet by rotating a designated handle.",
         }
+        """language instruction for each task"""
         self.target_object_or_part_initial_pose_fn_dict = {
             "LiftCube-v0": None,
             "PickCube-v0": None,
@@ -56,6 +72,7 @@ class ManiSkill2Dataset(tfds.core.GeneratorBasedBuilder):
                 [obs["extra/target_link_pos"][i], [1, 0, 0, 0]]
             ),
         }
+        """???"""
         self.target_object_or_part_initial_pose_valid_dict = {
             "LiftCube-v0": np.zeros(7, dtype=np.uint8),
             "PickCube-v0": np.zeros(7, dtype=np.uint8),
@@ -68,6 +85,7 @@ class ManiSkill2Dataset(tfds.core.GeneratorBasedBuilder):
             "PickClutterYCB-v0": np.array([1, 1, 1, 0, 0, 0, 0], dtype=np.uint8),
             "TurnFaucet-v0": np.array([1, 1, 1, 0, 0, 0, 0], dtype=np.uint8),
         }
+        """???"""
         self.target_object_or_part_final_pose_fn_dict = {
             "LiftCube-v0": None,
             "PickCube-v0": lambda obs, i: np.concatenate(
@@ -97,6 +115,7 @@ class ManiSkill2Dataset(tfds.core.GeneratorBasedBuilder):
                 ]
             ),
         }
+        """???"""
         self.target_object_or_part_final_pose_valid_dict = {
             "LiftCube-v0": np.zeros(7, dtype=np.uint8),
             "PickCube-v0": np.array([1, 1, 1, 0, 0, 0, 0], dtype=np.uint8),
@@ -109,6 +128,7 @@ class ManiSkill2Dataset(tfds.core.GeneratorBasedBuilder):
             "PickClutterYCB-v0": np.array([1, 1, 1, 0, 0, 0, 0], dtype=np.uint8),
             "TurnFaucet-v0": np.ones(7, dtype=np.uint8),
         }
+        """???"""
 
     def _info(self) -> tfds.core.DatasetInfo:
         """Dataset metadata (homepage, citation,...)."""
@@ -294,16 +314,17 @@ class ManiSkill2Dataset(tfds.core.GeneratorBasedBuilder):
         """Define data splits."""
         data_root = "/home/xuanlin/maniskill2_dev/ManiSkill2/demos/rigid_body/"
         paths = [
-            "LiftCube-v0/trajectory.rgbd.pd_base_ee_target_delta_pose.h5",
-            "PickCube-v0/trajectory.rgbd.pd_base_ee_target_delta_pose.h5",
-            "StackCube-v0/trajectory.rgbd.pd_base_ee_target_delta_pose.h5",
-            "PlugCharger-v0/trajectory.rgbd.pd_base_ee_target_delta_pose.h5",
-            "PegInsertionSide-v0/trajectory.rgbd.pd_base_ee_target_delta_pose.h5",
-            "AssemblingKits-v0/trajectory.rgbd.pd_base_ee_target_delta_pose.h5",
-            "PickSingleYCB-v0/trajectory_merged.rgbd.pd_base_ee_target_delta_pose.h5",
-            "PickSingleEGAD-v0/trajectory_merged.rgbd.pd_base_ee_target_delta_pose.h5",
-            "PickClutterYCB-v0/trajectory_merged.rgbd.pd_base_ee_target_delta_pose.h5",
-            "TurnFaucet-v0/trajectory_merged.rgbd.pd_base_ee_target_delta_pose.h5",
+            "PickCube-v1/trajectory.rgbd.pd_base_ee_target_delta_pose.h5",
+            # "LiftCube-v0/trajectory.rgbd.pd_base_ee_target_delta_pose.h5",
+            # "PickCube-v0/trajectory.rgbd.pd_base_ee_target_delta_pose.h5",
+            # "StackCube-v0/trajectory.rgbd.pd_base_ee_target_delta_pose.h5",
+            # "PlugCharger-v0/trajectory.rgbd.pd_base_ee_target_delta_pose.h5",
+            # "PegInsertionSide-v0/trajectory.rgbd.pd_base_ee_target_delta_pose.h5",
+            # "AssemblingKits-v0/trajectory.rgbd.pd_base_ee_target_delta_pose.h5",
+            # "PickSingleYCB-v0/trajectory_merged.rgbd.pd_base_ee_target_delta_pose.h5",
+            # "PickSingleEGAD-v0/trajectory_merged.rgbd.pd_base_ee_target_delta_pose.h5",
+            # "PickClutterYCB-v0/trajectory_merged.rgbd.pd_base_ee_target_delta_pose.h5",
+            # "TurnFaucet-v0/trajectory_merged.rgbd.pd_base_ee_target_delta_pose.h5",
         ]
         env_names = [path.split("/")[0] for path in paths]
         paths = [data_root + path for path in paths]

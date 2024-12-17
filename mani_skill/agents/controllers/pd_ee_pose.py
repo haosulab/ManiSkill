@@ -257,6 +257,8 @@ class PDEEPoseControllerConfig(PDEEPosControllerConfig):
         "root_translation:body_aligned_body_rotation",
     ] = "root_translation:root_aligned_body_rotation"
     """Choice of frame to use for translational and rotational control of the end-effector. To learn how these work explicitly
-    with videos of each one's behavior see https://maniskill.readthedocs.io/en/latest/user_guide/concepts/controllers.html#pd-ee-end-effector-pose"""
+    with videos of each one's behavior see https://maniskill.readthedocs.io/en/latest/user_guide/concepts/controllers.html#pd-ee-end-effector-pose.
+    The default frame is "root_translation:root_aligned_body_rotation" which is commonly used in the real world. Note that the "root_translation:root_aligned_body_rotation" frame was
+    previously called "base" in ManiSkill 2"""
 
     controller_cls = PDEEPoseController
