@@ -1056,7 +1056,7 @@ class BaseEnv(gym.Env):
         return info
 
     def _before_control_step(self):
-        """Code that runs before each action has been taken.
+        """Code that runs before each action has been taken via env.step(action).
         On GPU simulation this is called before observations are fetched from the GPU buffers."""
     def _after_control_step(self):
         """Code that runs after each action has been taken.

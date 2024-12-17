@@ -32,11 +32,11 @@ def _load_scene(self, options):
     builder = self.scene.create_actor_builder()
 ```
 
-Then you can use the standard SAPIEN API for creating actors, a tutorial of which can be found on the [SAPIEN actors tutorial documentation](https://sapien.ucsd.edu/docs/latest/tutorial/basic/create_actors.html)
+Then you can use the standard SAPIEN API for creating actors, a tutorial of which can be found on the [SAPIEN actors tutorial documentation](https://sapien-sim.github.io/docs/user_guide/getting_started/create_actors.html#create-an-actor-with-actorbuilder)
 
 ## Loading Articulations
 
-There are several ways to load articulations as detailed below.
+There are several ways to load articulations as detailed below as well as some limitations to be aware of
 
 ### Loading from Existing Datasets
 
@@ -64,7 +64,7 @@ def _load_scene(self, options):
     builder = self.scene.create_articulation_builder()
 ```
 
-Then you can use the standard SAPIEN API for creating articulations, a tutorial of which can be found on the [SAPIEN articulation tutorial documentation](https://sapien.ucsd.edu/docs/latest/tutorial/basic/create_articulations.html). You essentially just need to define what the links and joints are and how they connect. Links are created like Actors and can have visual and collision shapes added via the python API.
+Then you can use the standard SAPIEN API for creating articulations, a tutorial of which can be found on the [SAPIEN articulation tutorial documentation](https://sapien-sim.github.io/docs/user_guide/getting_started/create_articulations.html). You essentially just need to define what the links and joints are and how they connect. Links are created like Actors and can have visual and collision shapes added via the python API.
 
 ### Using the URDF Loader
 
@@ -111,6 +111,22 @@ def _load_scene(self, options):
     articulation_builders = loader.parse(str(urdf_path))["articulation_builders"]
     builder = articulation_builders[0]
     builder.build(name="my_articulation")
+```
+
+### Articulation Limitations
+
+For the physx simulation backend, any single articulation can have a maximum of 64 links. More complex articulated objects will either need to be simplified by merging links together. Most of the time this is readily possible by inspecting the URDF and fusing together links held together by fixed joints. The less fixed joints and linsk there are, the better the simulation will run in terms of accuracy and speed.
+
+## Using the MJCF Loader
+
+If your actor/articulation is defined with a MJCF file, you can use a MJCF loader to load that articulation and make modifications as needed. It works the exact same as the [URDF loader](./loading_objects.md#using-the-urdf-loader). Note that however not all properties in MJCF/Mujoco are supported in SAPIEN/ManiSkill at this moment, so you should always verify your articulation/actors are loaded correctly from the MJCF. 
+
+```python
+def _load_scene(self, options):
+    loader = scene.create_mjcf_loader()
+    builders = loader.parse(str(mjcf_path))
+    articulation_builders = builders["articulation_builders"]
+    actor_builders = builders["actor_builders"]
 ```
 
 ## Reconfiguring and Optimization

@@ -293,11 +293,27 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
 
     @cached_property
     def per_scene_id(self):
+        """
+        Returns a int32 torch tensor of the actor level segmentation ID for each managed actor object.
+        """
         return torch.tensor(
             [x.per_scene_id for x in self._objs],
             device=self.device,
             dtype=torch.int32,
         )
+
+    def apply_force(self, force: Array):
+        """Apply an instantaneous external force to this actor in Newtons to the body's center of mass. Once called no need to call any gpu_apply_x functions as this handles it for you."""
+        if self.scene.gpu_sim_enabled:
+            self.px.cuda_rigid_body_force.torch()[
+                self._body_data_index, :3
+            ] = common.to_tensor(force, device=self.device)
+            self.px.gpu_apply_rigid_dynamic_force()
+        else:
+            for body in self._bodies:
+                body.add_force_at_point(
+                    force=force, point=(body.pose * body.cmass_local_pose).p
+                )
 
     # -------------------------------------------------------------------------- #
     # Exposed actor properties, getters/setters that automatically handle

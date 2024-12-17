@@ -1,6 +1,6 @@
 # ManiSkill Baselines
 
-This folder contains code for all implemented ManiSkill baselines which currently include online Reinforcement Learning and Imitation Learning. All baseline results are published to our [public wandb page](https://wandb.ai/stonet2000/ManiSkill?nw=a37ldrsc2y).
+This folder contains code for all implemented ManiSkill baselines which currently include online Reinforcement Learning and Imitation Learning. All baseline results are published to our [public wandb page](https://wandb.ai/stonet2000/ManiSkill).
 
 For more details on baselines (e.g. how to setup maniskill for RL, run baselines etc.) follow the links below in our documentation:
 
