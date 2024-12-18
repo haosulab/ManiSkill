@@ -7,7 +7,7 @@ The script is only tested for Panda, and may include some Panda-specific hardcod
 import multiprocessing as mp
 import os
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Annotated, Optional
 
 import gymnasium as gym
@@ -79,6 +79,8 @@ class Args:
     num_envs: Optional[int] = None
     """Number of environments to run to replay trajectories # TODO ELABORATE."""
 
+    env_kwargs: dict = field(default_factory=dict)
+
 
 def parse_args(args=None):
     return tyro.cli(Args, args=args)
@@ -122,7 +124,7 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
     ] = (
         args.render_mode
     )  # note this only affects the videos saved as RecordEpisode wrapper calls env.render
-
+    env_kwargs = {**env_kwargs, **args.env_kwargs}
     # handle warnings/errors for replaying trajectories generated during GPU simulation
     if args.num_envs is not None:
         env_kwargs["num_envs"] = args.num_envs
