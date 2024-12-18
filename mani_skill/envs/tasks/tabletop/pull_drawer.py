@@ -47,7 +47,7 @@ class PullDrawerEnv(BaseEnv):
         # Movement parameters 
         self.max_pull_distance = self.outer_width * 0.8  # Can pull out 80% of width
         self.target_pos = -self.max_pull_distance * 0.8
-        self.k = 0.01
+        self.k = 0.05
         
         super().__init__(
             *args,
@@ -252,7 +252,7 @@ class PullDrawerEnv(BaseEnv):
         )
 
         builder.set_scene_idxs(scene_idxs=range(self.num_envs))
-        builder.set_initial_pose(sapien.Pose(p=[0.17, 0.15, 0.12]))  
+        # builder.set_initial_pose(sapien.Pose(p=[0.17, 0.15, 0.12]))  
           
         self.drawer = builder.build(fix_root_link=True, name="drawer_articulation")
         self.drawer_link = self.drawer.get_links()[1]
@@ -263,13 +263,17 @@ class PullDrawerEnv(BaseEnv):
             self.scene_builder.initialize(env_idx)
             
             drawer_xyz = torch.zeros((b, 3), device=self.device)
-            drawer_xyz[..., 0] = torch.rand((b,), device=self.device) * self.k + 0.17
+            drawer_xyz[..., 0] = torch.rand((b,), device=self.device) * self.k + 0.22
             drawer_xyz[..., 1] = torch.rand((b,), device=self.device) * self.k + 0.15
             drawer_xyz[..., 2] = self.outer_height / 2 + 0.005 
+
 
             init_pos = Pose.create_from_pq(p=drawer_xyz)
             
             self.drawer.set_pose(init_pos)
+
+            closed_qpos = torch.zeros((b, 1), device=self.device)
+            self.drawer.set_qpos(closed_qpos)
 
     def _get_obs_extra(self, info: Dict):
         obs = dict(
