@@ -7,7 +7,7 @@ If you plan to run the code here you need to git clone ManiSkill and change your
 Code Structure:
 - `scripts/`: Bash scripts to run a matrix of performance tests. Results are saved to a local `benchmark_results` folder
 - `plot_results.py`: Run this code to generate graphs of performance results saved to `benchmark_results`
-- `envs/`: custom environments built for benchmarking, designed to be as close as possible between different simulators. Currently only Cartpole environment is tuned correctly for benchmarking across all simulators. FrankaMove and FrankaPickCube environments are tuned for benchmarking between ManiSkilland Genesis.
+- `envs/`: custom environments built for benchmarking, designed to be as close as possible between different simulators. Currently only Cartpole environment is tuned correctly for benchmarking across all simulators. FrankaMove and FrankaPickCube environments are tuned for benchmarking between ManiSkill and Genesis.
 
 
 ## Setup
@@ -61,6 +61,12 @@ python gpu_sim.py -e "CartpoleBalanceBenchmark-v1" \
 
 python gpu_sim.py -e "CartpoleBalanceBenchmark-v1" \
     -n=1024 -o=rgb --num-cams=1 --cam-width=256 --cam-height=256 --save-results
+
+python gpu_sim.py -e "FrankaMoveBenchmark-v1" \
+    -n=2048 -o=state --save-results
+
+python gpu_sim.py -e "FrankaPickCubeBenchmark-v1" \
+    -n=2048 -o=state --save-results
 ```
 
 ### Isaac Lab
