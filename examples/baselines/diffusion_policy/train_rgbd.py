@@ -440,11 +440,19 @@ if __name__ == "__main__":
         import wandb
 
         config = vars(args)
+        
+        # TODO: Check if this is needed (if so non rgbd could use this as well)
+        # deals with gym utils not being able to access max episode steps for async vector envs
+        if args.sim_backend == "cpu" and args.num_eval_envs > 1:
+            assert args.max_episode_steps != None, "If using cpu environments max_steps must be specified"
+            horizon = args.max_episode_steps
+        else:
+            horizon = gym_utils.find_max_episode_steps_value(envs)
         config["eval_env_cfg"] = dict(
             **env_kwargs,
             num_envs=args.num_eval_envs,
             env_id=args.env_id,
-            env_horizon=gym_utils.find_max_episode_steps_value(envs),
+            env_horizon=horizon,
         )
         wandb.init(
             project=args.wandb_project_name,
