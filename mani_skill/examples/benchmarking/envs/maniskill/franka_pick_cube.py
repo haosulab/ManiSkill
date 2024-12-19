@@ -2,11 +2,10 @@ import os
 from typing import Dict
 
 import numpy as np
+from mani_skill.utils.building import actors
 import sapien
 import torch
 
-from mani_skill.agents.robots.fetch.fetch import Fetch
-from mani_skill.agents.robots.panda.panda import Panda
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
@@ -15,18 +14,26 @@ from mani_skill.utils.registration import register_env
 from mani_skill.utils.structs.types import GPUMemoryConfig, SceneConfig, SimConfig
 from transforms3d.euler import euler2quat
 
-@register_env("FrankaBenchmark-v1", max_episode_steps=200000)
-class FrankaBenchmarkEnv(BaseEnv):
+@register_env("FrankaPickCubeBenchmark-v1")
+class FrankaPickCubeBenchmarkEnv(BaseEnv):
     SUPPORTED_REWARD_MODES = ["none"]
-    """
-    This is just a dummy environment for showcasing robots in a empty scene
-    """
-
     def __init__(self, *args, camera_width=128, camera_height=128, num_cameras=1, **kwargs):
         self.camera_width = camera_width
         self.camera_height = camera_height
         self.num_cameras = num_cameras
         super().__init__(*args, robot_uids="panda", **kwargs)
+
+        self.fixed_trajectory = {
+            "pick_and_lift": {
+                "control_mode": "pd_joint_pos",
+                "actions": [(torch.tensor([0.0, 0.68, 0.0, -1.9292649, 0.0, 2.627549, 0.7840855, 0.04], device=self.device), 8),
+                            (torch.tensor([0.0, 0.68, 0.0, -1.9292649, 0.0, 2.627549, 0.7840855, -0.02], device=self.device), 7),
+                            (torch.tensor([0.0, 0.3, 0.0, -1.9292649, 0.0, 2.627549, 0.7840855, -0.02], device=self.device), 10),
+                            ],
+                "shake_action_fn": lambda : torch.cat([torch.rand(self.num_envs, 7, device=self.device) * 0.5 - 0.25, torch.ones(self.num_envs, 1, device=self.device) * -1], dim=-1),
+                "shake_steps": 75,
+            },
+        }
 
     @property
     def _default_sim_config(self):
@@ -42,7 +49,7 @@ class FrankaBenchmarkEnv(BaseEnv):
 
     @property
     def _default_sensor_configs(self):
-        pose = sapien.Pose((-0.4, 0, 1.0), euler2quat(0, np.deg2rad(28.648), 0))
+        pose = sapien_utils.look_at((2.5, -0.5, 1.0), (0, 0, 0.25))
         sensor_configs = []
         if self.num_cameras is not None:
             for i in range(self.num_cameras):
@@ -57,30 +64,24 @@ class FrankaBenchmarkEnv(BaseEnv):
     def _default_human_render_camera_configs(self):
         return CameraConfig(
             uid="render_camera",
-            pose=sapien.Pose((-0.4, 0, 1.0), euler2quat(0, np.deg2rad(28.648), 0)),
+            pose=sapien_utils.look_at((2.5, -0.5, 1.0), (0, 0, 0.25)),
             width=512,
             height=512,
             far=25,
             fov=0.63,
         )
-
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose(p=[0, 0, 0]))
     def _load_scene(self, options: dict):
-
-        # texture_square_len should be 4, but IsaacLab has a franka robot model that seems? to be larger than normal.
-        # instead of shrinking robot size we shrink the ground texture to visually match the isaac lab franka robot setup.
-        self.ground = build_ground(self.scene, texture_file=os.path.join(os.path.dirname(__file__), "assets/black_grid.png"), texture_square_len=2, mipmap_levels=6)
-
-        # self.ground.set_collision_group_bit(group=2, bit_idx=30, bit=1)
-        pass
-
+        self.ground = build_ground(self.scene, texture_square_len=2, mipmap_levels=6)
+        self.cube = actors.build_box(self.scene, half_sizes=(0.02, 0.02, 0.02), color=[1, 0, 0, 1], name="cube", initial_pose=sapien.Pose(p=[0.6, 0, 0.02]))
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
             qpos = self.agent.keyframes["rest"].qpos
-            qpos[0] = 0.5
             self.agent.robot.set_qpos(qpos)
-            self.agent.robot.set_pose(sapien.Pose(p=[1.5, 0, 0], q=euler2quat(0, 0, np.pi)))
+            self.cube.set_pose(sapien.Pose(p=[0.6, 0, 0.02]))
     def _load_lighting(self, options: Dict):
-        self.scene.set_ambient_light(np.array([1,1,1])*0.1)
+        # self.scene.set_ambient_light(np.array([1,1,1])*0.05)
         for i in range(self.num_envs):
             self.scene.sub_scenes[i].set_environment_map(os.path.join(os.path.dirname(__file__), "kloofendal_28d_misty_puresky_1k.hdr"))
         self.scene.add_directional_light(
