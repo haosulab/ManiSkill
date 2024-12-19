@@ -34,6 +34,8 @@ def main(args: Args):
     env = gym.make(args.env_id, num_envs=num_envs, sim_freq=args.sim_freq, control_freq=args.control_freq, render_mode=args.render_mode)
 
     obs, _ = env.reset()
+    env.step(torch.zeros(env.action_space.shape, device=gs.device)) # take one step in case genesis has some warm-start delays
+    obs, _ = env.reset()
     N = 100
     if args.save_video:
         images = [env.unwrapped.render_rgb_array()]
@@ -51,7 +53,13 @@ def main(args: Args):
         env.close()
         profiler.log_stats("env.step")
         if args.save_video:
-            images_to_video(images, output_dir="videos", video_name="genesis_franka_benchmark", fps=30)
+            images_to_video(
+                images,
+                output_dir="./videos/genesis_benchmark",
+                video_name=f"genesis_gpu_sim-{args.env_id}-num_envs={num_envs}-obs_mode={args.obs_mode}-render_mode={args.render_mode}",
+                fps=30,
+            )
+            del images
 
 if __name__ == "__main__":
     parsed_args = tyro.cli(Args)

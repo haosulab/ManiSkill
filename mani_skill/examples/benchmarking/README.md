@@ -80,6 +80,11 @@ python isaac_lab_gpu_sim.py --task Isaac-Cartpole-RGB-Camera-Direct-Benchmark-v0
 python genesis_gpu_sim.py -e Genesis-Franka-Benchmark-v0 \
     -n 16384 --sim-freq=100 --control-freq=50
 ```
+TODO (stao): clean up example scripts here
+TODO (stao): point out that due to how the solver in genesis is implemented it is hard to compare apples to apples since one action might correspond to differnet behaviors.
+```bash
+python genesis_gpu_sim.py -e Genesis-Franka-Benchmark-v0 -n 16 --sim-freq=100 --control-freq=100 --render-mode="rgb_array" --save-video
+```
 
 <!-- ### Mujoco
 

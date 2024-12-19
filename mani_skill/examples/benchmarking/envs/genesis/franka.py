@@ -36,9 +36,9 @@ class FrankaBenchmarkEnv(gym.Env):
 
         self.cam = self.scene.add_camera(
             res    = (512, 512),
-            pos    = (2.5, -3.8, 1.3),
-            lookat = (2.5, -2.5, 0.4),
-            fov    = 40,
+            pos    = (4.5, -2.5, 1.0),
+            lookat = (2.8, -2.5, 0.2),
+            fov    = np.rad2deg(0.63),
             GUI    = False
         )
         self.plane = self.scene.add_entity(

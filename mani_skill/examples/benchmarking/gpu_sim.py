@@ -72,7 +72,7 @@ def main(args):
             images = [tile_images(rgbs, nrows=video_nrows) for rgbs in images]
             images_to_video(
                 images,
-                output_dir="./videos/benchmark",
+                output_dir="./videos/ms3_benchmark",
                 video_name=f"mani_skill_gpu_sim-{args.env_id}-num_envs={num_envs}-obs_mode={args.obs_mode}-render_mode={args.render_mode}",
                 fps=30,
             )
