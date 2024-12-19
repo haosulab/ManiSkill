@@ -3,7 +3,7 @@ import genesis as gs
 import gymnasium as gym
 import numpy as np
 import torch
-class FrankaBenchmarkEnv(gym.Env):
+class FrankaPickCubeBenchmarkEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"]}
     def __init__(self, num_envs: int, sim_freq: int, control_freq: int, render_mode: str, control_mode: str = "pd_joint_delta_pos", enable_self_collision: bool = True, robot_uids: Union[str, List[str]] = "panda"):
         self.control_mode = control_mode
@@ -44,12 +44,18 @@ class FrankaBenchmarkEnv(gym.Env):
         self.robot = self.scene.add_entity(
             gs.morphs.MJCF(file='xml/franka_emika_panda/panda.xml'),
         )
+        self.cube = self.scene.add_entity(
+            gs.morphs.Box(
+                size = (0.04, 0.04, 0.04),
+                pos = (0.6, 0.0, 0.02),
+            ),
+        )
         self.scene.build(n_envs=self.num_envs, env_spacing=(5.0, 5.0))
 
         if robot_uids == "panda":
             self.rest_qpos = torch.tensor(
             [
-                0.5,
+                0.0,
                 np.pi / 8,
                 0,
                 -np.pi * 5 / 8,
@@ -73,7 +79,20 @@ class FrankaBenchmarkEnv(gym.Env):
         if self.control_mode == "pd_joint_delta_pos":
             self.action_space = gym.spaces.Box(low=-1, high=1, shape=(self.num_envs, 9))
             self.single_action_space = gym.spaces.Box(low=-1, high=1, shape=(9, ))
-        self.fixed_trajectory = {}
+
+
+        self.fixed_trajectory = {
+            "pick_and_lift": {
+                "control_mode": "pd_joint_pos",
+                "actions": [(torch.tensor([0.0, 0.68, 0.0, -1.9292649, 0.0, 2.627549, 0.7840855, 0.04, 0.04], device=gs.device), 5),
+                            (torch.tensor([0.0, 0.68, 0.0, -1.9292649, 0.0, 2.627549, 0.7840855, -0.01, -0.01], device=gs.device), 5),
+                            (torch.tensor([0.0, 0.35, 0.0, -1.9292649, 0.0, 2.627549, 0.7840855, -0.01, -0.01], device=gs.device), 5),
+                            ],
+                "shake_steps": 85,
+                "obs": None,
+            }
+        }
+
     def set_control_mode(self, control_mode: str):
         self.control_mode = control_mode
 

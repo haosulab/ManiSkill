@@ -56,10 +56,52 @@ def main(args: Args):
             images_to_video(
                 images,
                 output_dir="./videos/genesis_benchmark",
-                video_name=f"genesis_gpu_sim-{args.env_id}-num_envs={num_envs}-obs_mode={args.obs_mode}-render_mode={args.render_mode}",
+                video_name=f"genesis_gpu_sim-random_actions-{args.env_id}-num_envs={num_envs}-obs_mode={args.obs_mode}-render_mode={args.render_mode}",
                 fps=30,
             )
             del images
+    # if environment has some predefined actions run those
+    for k, v in env.unwrapped.fixed_trajectory.items():
+        obs, _ = env.reset()
+        env.step(torch.zeros(env.action_space.shape, device=gs.device)) # take one step in case genesis has some warm-start delays
+        obs, _ = env.reset()
+        if args.save_video:
+            images = [env.unwrapped.render_rgb_array()]
+        actions = v["actions"]
+        if v["control_mode"] == "pd_joint_pos":
+            env.unwrapped.set_control_mode(v["control_mode"])
+            N = v["shake_steps"] if "shake_steps" in v else 0
+            N += sum([a[1] for a in actions])
+            with profiler.profile(f"{k}_env.step", total_steps=N, num_envs=num_envs):
+                i = 0
+                for action in actions:
+                    for _ in range(action[1]):
+                        env.step(torch.tile(action[0], (num_envs, 1)))
+                        i += 1
+                        if args.save_video:
+                            rgb = env.unwrapped.render_rgb_array()
+                            images.append(rgb)
+                env.unwrapped.set_control_mode("pd_joint_delta_pos")
+                while i < N:
+                    actions = (
+                        2 * torch.rand(env.action_space.shape, device=gs.device)
+                        - 1
+                    )
+                    env.step(actions)
+                    if args.save_video:
+                        rgb = env.unwrapped.render_rgb_array()
+                        images.append(rgb)
+                    i += 1
+            env.close()
+            profiler.log_stats(f"{k}_env.step")
+            if args.save_video:
+                images_to_video(
+                    images,
+                    output_dir="./videos/genesis_benchmark",
+                    video_name=f"genesis_gpu_sim-fixed_trajectory={k}-{args.env_id}-num_envs={num_envs}-obs_mode={args.obs_mode}-render_mode={args.render_mode}",
+                    fps=30,
+                )
+                del images
 
 if __name__ == "__main__":
     parsed_args = tyro.cli(Args)
