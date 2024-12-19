@@ -10,6 +10,8 @@ class FrankaPickCubeBenchmarkEnv(BaseEnv):
     def __init__(self, num_envs: int, sim_freq: int, control_freq: int, render_mode: str, control_mode: str = "pd_joint_delta_pos", robot_uids: Union[str, List[str]] = "panda"):
         super().__init__(
             num_envs,
+            # NOTE (stao): it's unclear what the right solver parameters are. Documentation suggests substeps=4 but that doesn't work properly
+            # experimented with different integrators (mjx pick cube env uses implicitfast) and different number of iterations but to no avail
             sim_options=gs.options.SimOptions(dt=1/sim_freq, substeps=4),
             rigid_options=gs.options.RigidOptions(enable_self_collision=True),
             viewer_options=gs.options.ViewerOptions(
@@ -30,7 +32,7 @@ class FrankaPickCubeBenchmarkEnv(BaseEnv):
                             (torch.tensor([0.0, 0.68, 0.0, -1.9292649, 0.0, 2.627549, 0.7840855, -0.02, -0.02], device=gs.device), 7),
                             (torch.tensor([0.0, 0.3, 0.0, -1.9292649, 0.0, 2.627549, 0.7840855, -0.02, -0.02], device=gs.device), 10),
                             ],
-                "shake_action_fn": lambda : torch.cat([torch.rand(self.num_envs, 7, device=gs.device) - 0.5, torch.ones(self.num_envs, 2, device=gs.device) * -1], dim=-1),
+                "shake_action_fn": lambda : torch.cat([torch.rand(self.num_envs, 7, device=gs.device) * 0.5 - 0.25, torch.ones(self.num_envs, 2, device=gs.device) * -1], dim=-1),
                 "shake_steps": 75,
                 "obs": None,
             },
@@ -91,3 +93,4 @@ class FrankaPickCubeBenchmarkEnv(BaseEnv):
     def _initialize_episode(self):
         self.robot.set_qpos(torch.tile(self.rest_qpos, (self.num_envs, 1)), zero_velocity=True,)
         self.cube.set_pos(torch.tile(torch.tensor([0.6, 0.0, 0.02], device=gs.device), (self.num_envs, 1)))
+        self.cube.set_quat(torch.tile(torch.tensor([1, 0, 0, 0], device=gs.device), (self.num_envs, 1)))
