@@ -33,7 +33,14 @@ pip install "jax[cuda12]"
 
 See https://isaac-sim.github.io/IsaacLab/source/setup/installation/index.html to create a conda/mamba environment.
 
-Then run `pip install pynvml` to install pynvml which is used for GPU monitoring.
+Then run `pip install pynvml tyro`.
+
+
+### Genesis
+
+See https://genesis-world.readthedocs.io/en/latest/user_guide/overview/installation.html to install genesis.
+
+Then run `pip install pynvml tyro`.
 
 <!-- ```bash
 mamba create -n "isaaclab" "python==3.10"
@@ -65,6 +72,13 @@ python isaac_lab_gpu_sim.py --task Isaac-Cartpole-Direct-Benchmark-v0 --headless
 python isaac_lab_gpu_sim.py --task Isaac-Cartpole-RGB-Camera-Direct-Benchmark-v0 --headless \
     --num-cams=1 --cam-width=512 --cam-height=512 --enable_cameras \
     --num-envs=128 --obs-mode=rgb --save-results
+```
+
+### Genesis
+
+```bash
+python genesis_gpu_sim.py -e Genesis-Franka-Benchmark-v0 \
+    -n 16384 --sim-freq=100 --control-freq=50
 ```
 
 <!-- ### Mujoco

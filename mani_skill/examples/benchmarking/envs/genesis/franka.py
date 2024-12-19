@@ -1,0 +1,115 @@
+from typing import Any
+import genesis as gs
+import gymnasium as gym
+import numpy as np
+import torch
+class FrankaBenchmarkEnv(gym.Env):
+    metadata = {"render_modes": ["human", "rgb_array"]}
+    def __init__(self, num_envs: int, sim_freq: int, control_freq: int, render_mode: str, control_mode: str = "pd_joint_delta_pos"):
+        self.control_mode = control_mode
+        self.sim_freq = sim_freq
+        self.control_freq = control_freq
+        self.sim_steps_per_control_step = sim_freq // control_freq
+        self.num_envs = num_envs
+        self.render_mode = render_mode
+
+        # substeps = 4 is necessary for grasp capabilities
+        self.scene = gs.Scene(
+            show_viewer    = self.render_mode == "human",
+            sim_options = gs.options.SimOptions(
+                dt = 1 / sim_freq,
+                substeps = 4 # related to solver iterations essentially?,
+            ),
+            viewer_options = gs.options.ViewerOptions(
+                camera_pos    = (3.5, -1.2, 0.5),
+                camera_lookat = (0.0, 0.0, 0.25),
+                camera_fov    = 40,
+                max_FPS = 60,
+            ),
+            rigid_options = gs.options.RigidOptions(
+                # dt                = 1 / sim_freq,
+                enable_self_collision = True,
+                # ls_iterations = 200,
+                # ls_tolerance = 1e-4,
+            ),
+        )
+
+        self.cam = self.scene.add_camera(
+            res    = (512, 512),
+            pos    = (2.5, -3.8, 1.3),
+            lookat = (2.5, -2.5, 0.4),
+            fov    = 40,
+            GUI    = False
+        )
+        self.plane = self.scene.add_entity(
+            gs.morphs.Plane(),
+        )
+
+        self.robot = self.scene.add_entity(
+            gs.morphs.MJCF(file='xml/franka_emika_panda/panda.xml'),
+        )
+
+        self.motor_dofs = torch.arange(9, device=gs.device)
+        self.arm_dofs = self.motor_dofs[:7]
+        self.gripper_dofs = self.motor_dofs[7:]
+        self.scene.build(n_envs=self.num_envs, env_spacing=(5.0, 5.0))
+
+        # NOTE (stao): it is difficult to match the stiffness/damping parameters here with physx based sims, so genesis will behave differently
+        self.robot.set_dofs_kp(
+            np.array([1e3, 1e3, 1e3, 1e3, 1e3, 1e3, 1e3, 1e3, 1e3]),
+        )
+        self.robot.set_dofs_kv(
+            np.array([1e2, 1e2, 1e2, 1e2, 1e2, 1e2, 1e2, 1e2, 1e2]),
+        )
+
+        self.rest_qpos = torch.tensor(
+            [
+                0.5,
+                np.pi / 8,
+                0,
+                -np.pi * 5 / 8,
+                0,
+                np.pi * 3 / 4,
+                np.pi / 4,
+                0.04,
+                0.04,
+            ], device=gs.device)
+
+        if self.control_mode == "pd_joint_delta_pos":
+            self.action_space = gym.spaces.Box(low=-1, high=1, shape=(self.num_envs, 9))
+            self.single_action_space = gym.spaces.Box(low=-1, high=1, shape=(9, ))
+    def get_obs(self):
+        qpos = self.robot.get_dofs_position(self.motor_dofs)
+        qvel = self.robot.get_dofs_velocity(self.motor_dofs)
+        obs_buf = torch.cat(
+            [
+                qpos,
+                qvel,
+            ],
+            axis=-1,
+        )
+        return obs_buf
+    def step(self, action):
+        if self.control_mode == "pd_joint_delta_pos":
+            action = torch.clip(action, -1, 1)
+            # match maniskill action scaling
+            arm_action = action[:, :7] * 0.1
+            gripper_action = action[:, 7:] * 0.05 - 0.01
+            self.robot.set_dofs_position(arm_action + self.robot.get_dofs_position(self.arm_dofs), self.arm_dofs)
+            self.robot.set_dofs_position(gripper_action + self.robot.get_dofs_position(self.gripper_dofs), self.gripper_dofs)
+        elif self.control_mode == "pd_joint_pos":
+            target_qpos = action
+            self.robot.set_dofs_position(target_qpos)
+        for _ in range(self.sim_steps_per_control_step):
+            self.scene.step()
+        return self.get_obs(), None, None, None, {}
+    def reset(self, seed: int | None = None, options: dict[str, Any] | None = None):
+        self.robot.set_dofs_position(torch.tile(self.rest_qpos, (self.num_envs, 1)))
+        return self.get_obs(), {}
+    # NOTE (stao): currently with genesis there is no reasonable way to do human or rgb_array render modes gymnasium style.
+    # def render(self):
+    #     if self.render_mode == "human":
+    #     elif self.render_mode == "rgb_array":
+    def render_rgb_array(self):
+        rgb = self.cam.render(rgb=True)[0]
+        return rgb

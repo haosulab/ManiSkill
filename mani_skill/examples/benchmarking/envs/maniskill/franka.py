@@ -55,7 +55,14 @@ class FrankaBenchmarkEnv(BaseEnv):
         return sensor_configs
     @property
     def _default_human_render_camera_configs(self):
-        return dict()
+        return CameraConfig(
+            uid="render_camera",
+            pose=sapien.Pose((-0.4, 0, 1.0), euler2quat(0, np.deg2rad(28.648), 0)),
+            width=512,
+            height=512,
+            far=25,
+            fov=0.63,
+        )
 
     def _load_scene(self, options: dict):
 
