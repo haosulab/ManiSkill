@@ -32,7 +32,7 @@ python -m mani_skill.trajectory.replay_trajectory \
 
 python train.py --env-id StackCube-v1 \
   --demo-path ~/.maniskill/demos/StackCube-v1/motionplanning/trajectory.state.pd_ee_delta_pos.cpu.h5 \
-  --control-mode "pd_ee_delta_pos" --sim-backend "cpu" --num-demos 100 --max_episode_steps 100 \
+  --control-mode "pd_ee_delta_pos" --sim-backend "cpu" --num-demos 100 --max_episode_steps 200 \
   --total_iters 30000 
 
 # PegInsertionSide-v1

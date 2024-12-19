@@ -1,6 +1,7 @@
 from typing import Any, Dict, Union
 
 import numpy as np
+import sapien
 import torch
 
 from mani_skill.agents.robots import Fetch, Panda
@@ -16,7 +17,21 @@ from mani_skill.utils.structs.pose import Pose
 
 @register_env("StackCube-v1", max_episode_steps=50)
 class StackCubeEnv(BaseEnv):
+    """
+    **Task Description:**
+    The goal is to pick up a red cube and stack it on top of a green cube and let go of the cube without it falling
 
+    **Randomizations:**
+    - both cubes have their z-axis rotation randomized
+    - both cubes have their xy positions on top of the table scene randomized. The positions are sampled such that the cubes do not collide with each other
+
+    **Success Conditions:**
+    - the red cube is on top of the green cube (to within half of the cube size)
+    - the red cube is static
+    - the red cube is not being grasped by the robot (robot must let go of the cube)
+    """
+
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/StackCube-v1_rt.mp4"
     SUPPORTED_ROBOTS = ["panda_wristcam", "panda", "fetch"]
     agent: Union[Panda, Fetch]
 
@@ -36,17 +51,28 @@ class StackCubeEnv(BaseEnv):
         pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
+
     def _load_scene(self, options: dict):
-        self.cube_half_size = common.to_tensor([0.02] * 3)
+        self.cube_half_size = common.to_tensor([0.02] * 3, device=self.device)
         self.table_scene = TableSceneBuilder(
             env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
         )
         self.table_scene.build()
         self.cubeA = actors.build_cube(
-            self.scene, half_size=0.02, color=[1, 0, 0, 1], name="cubeA"
+            self.scene,
+            half_size=0.02,
+            color=[1, 0, 0, 1],
+            name="cubeA",
+            initial_pose=sapien.Pose(p=[0, 0, 0.1]),
         )
         self.cubeB = actors.build_cube(
-            self.scene, half_size=0.02, color=[0, 1, 0, 1], name="cubeB"
+            self.scene,
+            half_size=0.02,
+            color=[0, 1, 0, 1],
+            name="cubeB",
+            initial_pose=sapien.Pose(p=[1, 0, 0.1]),
         )
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
@@ -58,7 +84,9 @@ class StackCubeEnv(BaseEnv):
             xyz[:, 2] = 0.02
             xy = torch.rand((b, 2)) * 0.2 - 0.1
             region = [[-0.1, -0.2], [0.1, 0.2]]
-            sampler = randomization.UniformPlacementSampler(bounds=region, batch_size=b)
+            sampler = randomization.UniformPlacementSampler(
+                bounds=region, batch_size=b, device=self.device
+            )
             radius = torch.linalg.norm(torch.tensor([0.02, 0.02])) + 0.001
             cubeA_xy = xy + sampler.sample(radius, 100)
             cubeB_xy = xy + sampler.sample(radius, 100, verbose=False)

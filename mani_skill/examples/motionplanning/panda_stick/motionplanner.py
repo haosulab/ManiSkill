@@ -89,6 +89,7 @@ class PandaStickMotionPlanningSolver:
     def move_to_pose_with_RRTConnect(
         self, pose: sapien.Pose, dry_run: bool = False, refine_steps: int = 0
     ):
+        pose = to_sapien_pose(pose)
         if self.grasp_pose_visual is not None:
             self.grasp_pose_visual.set_pose(pose)
         pose = sapien.Pose(p=pose.p, q=pose.q)

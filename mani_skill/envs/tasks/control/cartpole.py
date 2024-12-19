@@ -1,6 +1,7 @@
 """Adapted from https://github.com/google-deepmind/dm_control/blob/main/dm_control/suite/cartpole.py"""
+
 import os
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional, Union
 
 import numpy as np
 import sapien
@@ -49,7 +50,9 @@ class CartPoleRobot(BaseAgent):
             )
         )
 
-    def _load_articulation(self):
+    def _load_articulation(
+        self, initial_pose: Optional[Union[sapien.Pose, Pose]] = None
+    ):
         """
         Load the robot articulation
         """
@@ -59,7 +62,9 @@ class CartPoleRobot(BaseAgent):
         loader.name = self.uid
 
         # only need the robot
-        self.robot = loader.parse(asset_path)[0][0].build()
+        builder = loader.parse(asset_path)["articulation_builders"][0]
+        builder.initial_pose = initial_pose
+        self.robot = builder.build()
         assert self.robot is not None, f"Fail to load URDF/MJCF from {asset_path}"
 
         # Cache robot link ids
@@ -108,19 +113,20 @@ class CartpoleEnv(BaseEnv):
 
     def _load_scene(self, options: dict):
         loader = self.scene.create_mjcf_loader()
-        articulation_builders, actor_builders, sensor_configs = loader.parse(MJCF_FILE)
+        actor_builders = loader.parse(MJCF_FILE)["actor_builders"]
         for a in actor_builders:
+            a.initial_pose = sapien.Pose()
             a.build(a.name)
 
         # background visual wall
         self.wall = self.scene.create_actor_builder()
         self.wall.add_box_visual(
             half_size=(1e-3, 20, 10),
-            pose=sapien.Pose(p=[0, 1, 1], q=euler2quat(0, 0, np.pi / 2)),
             material=sapien.render.RenderMaterial(
                 base_color=np.array([0.3, 0.3, 0.3, 1])
             ),
         )
+        self.wall.initial_pose = sapien.Pose(p=[0, 1, 1], q=euler2quat(0, 0, np.pi / 2))
         self.wall.build_static(name="wall")
 
     def evaluate(self):
@@ -171,6 +177,19 @@ class CartpoleEnv(BaseEnv):
 
 @register_env("MS-CartpoleBalance-v1", max_episode_steps=1000)
 class CartpoleBalanceEnv(CartpoleEnv):
+    """
+    **Task Description:**
+    Use the Cartpole robot to balance a pole on a cart.
+
+    **Randomizations:**
+    - Pole direction is randomized around the vertical axis. the range is [-0.05, 0.05] radians.
+
+    **Fail Conditions:**
+    - Pole is lower than the horizontal plane
+    """
+
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/MS-CartpoleBalance-v1_rt.mp4"
+
     def __init__(self, *args, **kwargs):
         super().__init__(
             *args,
@@ -193,6 +212,19 @@ class CartpoleBalanceEnv(CartpoleEnv):
 
 @register_env("MS-CartpoleSwingUp-v1", max_episode_steps=1000)
 class CartpoleSwingUpEnv(CartpoleEnv):
+    """
+    **Task Description:**
+    Use the Cartpole robot to swing up a pole on a cart.
+
+    **Randomizations:**
+    - Pole direction is randomized around the whole circle. the range is [-pi, pi] radians.
+
+    **Success Conditions:**
+    - No specific success conditions. The task is considered successful if the pole is upright for the whole episode.
+    """
+
+    SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "none")
+
     def __init__(self, *args, **kwargs):
         super().__init__(
             *args,

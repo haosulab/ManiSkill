@@ -1,30 +1,28 @@
+import copy
+import itertools
 import json
 import os
 import os.path as osp
-from typing import Dict, List
-from pathlib import Path
 from collections import defaultdict
-import copy
-import itertools
 from functools import cached_property
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import sapien
+import sapien.physx as physx
 import torch
 import transforms3d
 
 from mani_skill import ASSET_DIR
-from mani_skill.utils.scene_builder.registration import register_scene_builder
-from mani_skill.utils.structs import Actor
+from mani_skill.utils import common
 from mani_skill.utils.building import actors
-
 from mani_skill.utils.scene_builder.replicacad import ReplicaCADSceneBuilder
+from mani_skill.utils.structs import Actor, Articulation
 
-HIDDEN_OBJ_COLLISION_GROUP = 30
-HIDDEN_POSE = sapien.Pose(p=[99999] * 3)
+DEFAULT_HIDDEN_POS = [-10_000] * 3
 
 
-@register_scene_builder("ReplicaCADRearrange")
 class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
 
     task_names: List[str] = ["set_table:train"]
@@ -88,15 +86,20 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
                 bc_to_idx[Path(episode_json["scene_id"]).name]
             )
 
-        self.before_hide_collision_groups: Dict[str, List[int]] = dict()
-
-    def build(self, build_config_idxs: List[int]):
+    def build(
+        self, build_config_idxs: List[int], init_config_names: Optional[list] = None
+    ):
+        if isinstance(build_config_idxs, int):
+            build_config_idxs = [build_config_idxs] * self.env.num_envs
         assert all(
             [bci in self.used_build_config_idxs for bci in build_config_idxs]
         ), f"got one or more unused build_config_idxs in {build_config_idxs}; This RCAD Rearrange task only uses the following build_config_idxs: {self.used_build_config_idxs}"
         assert (
             len(build_config_idxs) == self.env.num_envs
         ), f"Got {len(build_config_idxs)} build_config_idxs but only have {self.env.num_envs} envs"
+
+        # delete cached properties which are dependent on values recomputed at build time
+        self.__dict__.pop("init_config_names_to_idxs", None)
 
         # the build_config_idxs are idxs for the RCAD build configs
         # super().build builds the base RCAD scenes (including static objects)
@@ -117,9 +120,11 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
 
         # self.rcad_to_rearrange_configs: which rearrange episode configs use each rcad config
         # default_object_poses: default poses for ycb objects from each rearrange episode config
-        self.rcad_to_rearrange_configs: Dict[str, List[str]] = defaultdict(list)
+        self.rcad_to_rearrange_configs: Dict[str, List[str]] = dict()
         default_object_poses: Dict[str, Dict[str, List[sapien.Pose]]] = dict()
-        for rc in self._rearrange_configs:
+        if init_config_names is None:
+            init_config_names = self._rearrange_configs
+        for rc in init_config_names:
             objects: Dict[str, List[sapien.Pose]] = defaultdict(list)
 
             with open(
@@ -138,9 +143,10 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
                     obj_transform * sapien.Pose(transformation) * world_transform
                 )
 
-            self.rcad_to_rearrange_configs[Path(episode_json["scene_id"]).name].append(
-                rc
-            )
+            rcad_config_name = Path(episode_json["scene_id"]).name
+            if rcad_config_name not in self.rcad_to_rearrange_configs:
+                self.rcad_to_rearrange_configs[rcad_config_name] = []
+            self.rcad_to_rearrange_configs[rcad_config_name].append(rc)
             default_object_poses[rc] = objects
 
         # create init config
@@ -185,6 +191,11 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
 
         # find max number of each ycb obj needed to support all init configs in each parallel env
         self.ycb_objs_per_env = []
+        _running_default_hidden_pos_by_env = dict(
+            (env_num, copy.deepcopy(DEFAULT_HIDDEN_POS))
+            for env_num in range(len(build_config_idxs))
+        )
+        self._default_hidden_poses: Dict[Actor, sapien.Pose] = dict()
         for env_num, bci in enumerate(build_config_idxs):
             rcad_config = self.build_configs[bci]
             num_ycb_objs_to_build = rcad_config_to_num_ycb_objs_to_build[rcad_config]
@@ -198,29 +209,97 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
                     actor = builder.build(name=obj_instance_name)
 
                     ycb_objs[actor_id].append(actor)
+                    self._default_hidden_poses[actor] = sapien.Pose(
+                        p=_running_default_hidden_pos_by_env[env_num]
+                    )
+                    _running_default_hidden_pos_by_env[env_num][2] -= 10
                     self.scene_objects[obj_instance_name] = actor
                     self.movable_objects[obj_instance_name] = actor
             self.ycb_objs_per_env.append(ycb_objs)
 
+        self.rcad_config_to_rearrange_ao_states: Dict[
+            str, List[List[Tuple[Articulation, torch.Tensor]]]
+        ] = defaultdict(list)
+        for env_num, bci in enumerate(build_config_idxs):
+            rcad_config = self.build_configs[bci]
+            rearrange_ao_states: List[List[Tuple[Articulation, torch.Tensor]]] = []
+            for rearrange_config in self.rcad_to_rearrange_configs[rcad_config]:
+                with open(
+                    osp.join(
+                        ASSET_DIR,
+                        "scene_datasets/replica_cad_dataset/rearrange",
+                        rearrange_config,
+                    ),
+                    "rb",
+                ) as f:
+                    episode_json = json.load(f)
+                episode_ao_states: Dict[str, Dict[str, int]] = episode_json["ao_states"]
+                articulation_qpos_pairs: List[Tuple[Articulation, torch.Tensor]] = []
+                for base_articulation_id, qpos_dict in episode_ao_states.items():
+                    aid, anum = base_articulation_id.split(":")
+                    articulation = self.articulations[
+                        f"env-{env_num}_{aid[:-1]}-{int(anum)}"
+                    ]
+                    base_qpos = torch.zeros(
+                        articulation.max_dof, device=self.env.device
+                    )
+                    for link_num, qpos_val in qpos_dict.items():
+                        qpos_idx = articulation.active_joints.index(
+                            articulation.joints[int(link_num)]
+                        )
+                        base_qpos[qpos_idx] = qpos_val
+                    articulation_qpos_pairs.append((articulation, base_qpos))
+                rearrange_ao_states.append(articulation_qpos_pairs)
+            self.rcad_config_to_rearrange_ao_states[rcad_config] = rearrange_ao_states
+
+    # TODO (arth): fix this to work with partial resets
     def initialize(self, env_idx: torch.Tensor, init_config_idxs: List[int]):
         assert all(
-            [isinstance(bci, int) for bci in init_config_idxs]
+            [isinstance(ici, int) for ici in init_config_idxs]
         ), f"init_config_idxs should be list of ints, instead got {init_config_idxs}"
-        assert len(init_config_idxs) == self.env.num_envs
+
+        init_config_idxs: torch.Tensor = common.to_tensor(
+            init_config_idxs, device=self.env.device
+        ).to(torch.int)
+        if env_idx.numel() != init_config_idxs.numel():
+            init_config_idxs = init_config_idxs[env_idx]
+
+        # get sampled init configs
+        sampled_init_configs = [
+            self.init_configs[env_num][idx]
+            for env_num, idx in zip(env_idx, init_config_idxs)
+        ]
+
+        # sometimes, poses from end of prev episode can cause issues with articulations
+        # we can avoid this by setting poses, but shifting non-hidden objects away from the scene
+        for env_num, init_poses in zip(env_idx, sampled_init_configs):
+            ycb_objs = self.ycb_objs_per_env[env_num]
+            for obj_name in ycb_objs:
+                for obj, pose in itertools.zip_longest(
+                    ycb_objs[obj_name], init_poses[obj_name], fillvalue=None
+                ):
+                    if pose is None:
+                        self.hide_actor(obj)
+                    else:
+                        temp_p = pose.p
+                        temp_p[..., 2] += 1000
+                        self.show_actor(obj, sapien.Pose(q=pose.q, p=temp_p))
+
+        if self.scene.gpu_sim_enabled:
+            self.scene._gpu_apply_all()
+            self.scene._gpu_fetch_all()
 
         # initialize base scenes
         super().initialize(env_idx)
 
-        # get sampled init configs
-        sampled_init_configs = [
-            env_init_configs[idx]
-            for env_init_configs, idx in zip(self.init_configs, init_config_idxs)
-        ]
+        # teleport robot away for init
+        self.env.agent.robot.set_pose(sapien.Pose([-10, 0, -100]))
 
         # if pose given by init config, set pose
         # if pose not given, hide extra ycb obj by teleporting away and
         #       turning off collisions with other hidden objs
-        for ycb_objs, init_poses in zip(self.ycb_objs_per_env, sampled_init_configs):
+        for env_num, init_poses in zip(env_idx, sampled_init_configs):
+            ycb_objs = self.ycb_objs_per_env[env_num]
             for obj_name in ycb_objs:
                 for obj, pose in itertools.zip_longest(
                     ycb_objs[obj_name], init_poses[obj_name], fillvalue=None
@@ -229,6 +308,40 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
                         self.hide_actor(obj)
                     else:
                         self.show_actor(obj, pose)
+
+        # set articulation qpos as needed
+        # TODO (arth): also shift objs inside the articulation as needed
+        # NOTE (arth): for now the rearrange configs only have the fridge move,
+        #       so above only an issue when one can generate their own
+        #       set the kitchen counter in the ao_configs
+        for env_num, ici in zip(env_idx, init_config_idxs):
+            rcad_config = self.build_configs[self.build_config_idxs[env_num]]
+            ao_states = self.rcad_config_to_rearrange_ao_states[rcad_config][ici]
+            for articulation, qpos in ao_states:
+                articulation_scene_idxs = articulation._scene_idxs.tolist()
+                base_qpos = articulation.qpos
+                base_qpos[articulation_scene_idxs.index(env_num)] *= 0
+                base_qpos[articulation_scene_idxs.index(env_num)] = qpos
+                reset_idxs = [
+                    bn
+                    for bn, en in enumerate(articulation._scene_idxs)
+                    if en in env_idx
+                ]
+                articulation.set_qpos(base_qpos[reset_idxs])
+                articulation.set_qvel(articulation.qvel[reset_idxs] * 0)
+
+        if self.scene.gpu_sim_enabled and len(env_idx) == self.env.num_envs:
+            self.scene._gpu_apply_all()
+            self.scene.px.gpu_update_articulation_kinematics()
+            self.scene.px.step()
+            self.scene._gpu_fetch_all()
+
+        # teleport robot back to correct location
+        if self.env.robot_uids == "fetch":
+            self.env.agent.reset(self.env.agent.keyframes["rest"].qpos)
+            self.env.agent.robot.set_pose(sapien.Pose([-1, 0, 0.02]))
+        else:
+            raise NotImplementedError(self.env.robot_uids)
 
     def sample_build_config_idxs(self):
         used_build_config_idxs = list(self.used_build_config_idxs)
@@ -240,28 +353,26 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
         ]
 
     def sample_init_config_idxs(self):
-        low = torch.zeros(self.env.num_envs)
-        high = torch.tensor(self.num_init_configs_per_build_config)
+        low = torch.zeros(self.env.num_envs, dtype=torch.int)
+        high = torch.tensor(self.num_init_configs_per_build_config).int()
         size = (self.env.num_envs,)
-        return (torch.randint(2**63 - 1, size=size) % (high - low) + low).int().tolist()
+        return (
+            (torch.randint(2**63 - 1, size=size) % (high - low).int() + low)
+            .int()
+            .tolist()
+        )
 
     def hide_actor(self, actor: Actor):
-        actor.set_collision_group_bit(
-            group=2, bit_idx=HIDDEN_OBJ_COLLISION_GROUP, bit=1
-        )
-        actor.set_pose(HIDDEN_POSE)
+        actor.set_pose(self._default_hidden_poses[actor])
 
     def show_actor(self, actor: Actor, pose: sapien.Pose):
-        actor.set_collision_group_bit(
-            group=2, bit_idx=HIDDEN_OBJ_COLLISION_GROUP, bit=0
-        )
         actor.set_pose(pose)
 
     @cached_property
     def init_config_names_to_idxs(self) -> int:
 
         _init_config_names_to_idx = dict()
-        for rcad_config, rearrange_configs in self.rcad_to_rearrange_configs.items():
+        for rearrange_configs in self.rcad_to_rearrange_configs.values():
             for i, rc in enumerate(rearrange_configs):
                 _init_config_names_to_idx[rc] = i
 

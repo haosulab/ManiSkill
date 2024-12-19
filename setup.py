@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-__version__ = "3.0.0b10"
+__version__ = "3.0.0b15"
 
 long_description = """ManiSkill is a powerful unified framework for robot simulation and training powered by [SAPIEN](https://sapien.ucsd.edu/), with a strong focus on manipulation skills. The entire tech stack is as open-source as possible and ManiSkill v3 is in beta release now. Among its features include:
 - GPU parallelized visual data collection system. On the high end you can collect RGBD + Segmentation data at 30,000+ FPS with a 4090 GPU, 10-1000x faster compared to most other simulators.
@@ -61,6 +61,8 @@ setup(
             "twine",
             "stable_baselines3",
             "pynvml",
+            "pytest-xdist[psutil]",
+            "pytest-forked",
         ],
         "docs": [
             # Note that currently sphinx 7 does not work, so we must use v6.2.1. See https://github.com/kivy/kivy/issues/8230 which tracks this issue. Once fixed we can use a later version

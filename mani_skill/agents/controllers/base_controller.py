@@ -82,7 +82,7 @@ class BaseController:
             self.joints = get_joints_by_names(self.articulation, joint_names)
             self.active_joint_indices = get_active_joint_indices(
                 self.articulation, joint_names
-            )
+            ).to(self.device)
         except Exception as err:
             print("Encounter error when parsing joint names.")
             active_joint_names = [x.name for x in self.articulation.get_active_joints()]
@@ -160,8 +160,8 @@ class BaseController:
             self._original_single_action_space.low,
             self._original_single_action_space.high,
         )
-        self.action_space_low = common.to_tensor(low)
-        self.action_space_high = common.to_tensor(high)
+        self.action_space_low = common.to_tensor(low, device=self.device)
+        self.action_space_high = common.to_tensor(high, device=self.device)
 
     def _clip_and_scale_action(self, action):
         return gym_utils.clip_and_scale_action(
@@ -208,6 +208,10 @@ class DictController(BaseController):
                 self.single_action_space, n=self.scene.num_envs
             )
 
+    def before_simulation_step(self):
+        for controller in self.controllers.values():
+            controller.before_simulation_step()
+
     def _initialize_action_space(self):
         # Explicitly create a list of key-value tuples
         # Otherwise, spaces.Dict will sort keys if a dict is provided
@@ -234,7 +238,7 @@ class DictController(BaseController):
 
     def set_action(self, action: Dict[str, np.ndarray]):
         for uid, controller in self.controllers.items():
-            controller.set_action(common.to_tensor(action[uid]))
+            controller.set_action(action[uid])
 
     def get_state(self) -> dict:
         states = {}
@@ -253,7 +257,7 @@ class DictController(BaseController):
         This can be useful for joint position control when setting a desired qposition even
         if some controllers merge some joints together like the mimic controller
         """
-        qpos = common.to_tensor(qpos)
+        qpos = common.to_tensor(qpos, device=self.device)
         if len(qpos.shape) > 1:
             assert qpos.shape[1] == len(self.joints)
         else:

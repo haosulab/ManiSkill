@@ -88,7 +88,7 @@ def main(args):
 
     env: BaseEnv = gym.make(
         args.env_id,
-        obs_mode="rgbd",
+        obs_mode="rgb+depth+segmentation",
         num_envs=args.num_envs,
         sensor_configs=sensor_configs
     )

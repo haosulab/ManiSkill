@@ -10,7 +10,7 @@ import numpy as np
 import sapien.physx as physx
 import torch
 
-from mani_skill.utils.structs.types import Array, Device, get_backend_name
+from mani_skill.utils.structs.types import Array, Device
 
 # -------------------------------------------------------------------------- #
 # Utilities for working with tensors, numpy arrays, and batched data
@@ -137,46 +137,22 @@ def to_tensor(array: Array, device: Optional[Device] = None):
     """
     if isinstance(array, (dict)):
         return {k: to_tensor(v, device=device) for k, v in array.items()}
-    if physx.is_gpu_enabled():
-        if isinstance(array, np.ndarray):
-            if array.dtype == np.uint16:
-                array = array.astype(np.int32)
-            ret = torch.from_numpy(array)
-            if ret.dtype == torch.float64:
-                ret = ret.float()
-        elif isinstance(array, torch.Tensor):
-            ret = array
-        else:
-            ret = torch.tensor(array)
-        if device is None:
-            if ret.device.type == "cpu":
-                # TODO (stao): note that .cuda does move a tensor to the torch.device context, it moves to the default
-                return ret.cuda()
-            # keep same device if already on GPU
-            return ret
-        else:
-            return ret.to(device)
+    elif isinstance(array, torch.Tensor):
+        ret = array.to(device)
+    elif isinstance(array, np.ndarray):
+        # TODO (stao): check of doing .to(device) is slow even if its just CPU
+        if array.dtype == np.uint16:
+            array = array.astype(np.int32)
+        elif array.dtype == np.uint32:
+            array = array.astype(np.int64)
+        ret = torch.tensor(array).to(device)
     else:
-        if isinstance(array, np.ndarray):
-            if array.dtype == np.uint16:
-                array = array.astype(np.int32)
-            if array.dtype == np.uint32:
-                array = array.astype(np.int64)
-            ret = torch.from_numpy(array)
-            if ret.dtype == torch.float64:
-                ret = ret.float()
-        elif isinstance(array, list) and isinstance(array[0], np.ndarray):
-            ret = torch.from_numpy(np.array(array))
-            if ret.dtype == torch.float64:
-                ret = ret.float()
-        elif np.iterable(array):
-            ret = torch.Tensor(array)
-        else:
-            ret = torch.Tensor(array)
-        if device is None:
-            return ret
-        else:
-            return ret.to(device)
+        if isinstance(array, list) and isinstance(array[0], np.ndarray):
+            array = np.array(array)
+        ret = torch.tensor(array, device=device)
+    if ret.dtype == torch.float64:
+        ret = ret.to(torch.float32)
+    return ret
 
 
 def to_cpu_tensor(array: Array):
@@ -198,7 +174,7 @@ def to_cpu_tensor(array: Array):
 
 # TODO (stao): Clean up this code
 def flatten_state_dict(
-    state_dict: dict, use_torch=False, device: Device = None
+    state_dict: dict, use_torch=False, device: Optional[Device] = None
 ) -> Array:
     """Flatten a dictionary containing states recursively. Expects all data to be either torch or numpy
 
@@ -221,23 +197,23 @@ def flatten_state_dict(
     for key, value in state_dict.items():
         if isinstance(value, dict):
             state = flatten_state_dict(value, use_torch=use_torch)
-            if state.size == 0:
+            if state.nelement() == 0:
                 state = None
-            if use_torch:
-                state = to_tensor(state)
+            elif use_torch:
+                state = to_tensor(state, device=device)
         elif isinstance(value, (tuple, list)):
             state = None if len(value) == 0 else value
             if use_torch:
-                state = to_tensor(state)
+                state = to_tensor(state, device=device)
         elif isinstance(value, (bool, np.bool_, int, np.int32, np.int64)):
             # x = np.array(1) > 0 is np.bool_ instead of ndarray
             state = int(value)
             if use_torch:
-                state = to_tensor(state)
+                state = to_tensor(state, device=device)
         elif isinstance(value, (float, np.float32, np.float64)):
             state = np.float32(value)
             if use_torch:
-                state = to_tensor(state)
+                state = to_tensor(state, device=device)
         elif isinstance(value, np.ndarray):
             if value.ndim > 2:
                 raise AssertionError(
@@ -245,7 +221,7 @@ def flatten_state_dict(
                 )
             state = value if value.size > 0 else None
             if use_torch:
-                state = to_tensor(state)
+                state = to_tensor(state, device=device)
 
         elif isinstance(value, torch.Tensor):
             state = value

@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 import sapien
@@ -31,6 +31,24 @@ CABINET_COLLISION_BIT = 29
     max_episode_steps=100,
 )
 class OpenCabinetDrawerEnv(BaseEnv):
+    """
+    **Task Description:**
+    Use the Fetch mobile manipulation robot to move towards a target cabinet and open the target drawer out.
+
+    **Randomizations:**
+    - Robot is randomly initialized 1.6 to 1.8 meters away from the cabinet and positioned to face it
+    - Robot's base orientation is randomized by -9 to 9 degrees
+    - The cabinet selected to manipulate is randomly sampled from all PartnetMobility cabinets that have drawers
+    - The drawer to open is randomly sampled from all drawers available to open
+
+    **Success Conditions:**
+    - The drawer is open at least 90% of the way, and the angular/linear velocities of the drawer link are small
+
+    **Goal Specification:**
+    - 3D goal position centered at the center of mass of the handle mesh on the drawer to open (also visualized in human renders with a sphere).
+    """
+
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/OpenCabinetDrawer-v1_rt.mp4"
 
     SUPPORTED_ROBOTS = ["fetch"]
     agent: Union[Fetch]
@@ -71,7 +89,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
     @property
     def _default_sim_config(self):
         return SimConfig(
-            spacing=10,
+            spacing=5,
             gpu_memory_config=GPUMemoryConfig(
                 max_rigid_contact_count=2**21, max_rigid_patch_count=2**19
             ),
@@ -87,6 +105,9 @@ class OpenCabinetDrawerEnv(BaseEnv):
         return CameraConfig(
             "render_camera", pose=pose, width=512, height=512, fov=1, near=0.01, far=100
         )
+
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose(p=[1, 0, 0]))
 
     def _load_scene(self, options: dict):
         self.ground = build_ground(self.scene)
@@ -107,12 +128,8 @@ class OpenCabinetDrawerEnv(BaseEnv):
     def _load_cabinets(self, joint_types: List[str]):
         # we sample random cabinet model_ids with numpy as numpy is always deterministic based on seed, regardless of
         # GPU/CPU simulation backends. This is useful for replaying demonstrations.
-        rand_idx = self._episode_rng.permutation(np.arange(0, len(self.all_model_ids)))
-        model_ids = self.all_model_ids[rand_idx]
-        model_ids = np.concatenate(
-            [model_ids] * np.ceil(self.num_envs / len(self.all_model_ids)).astype(int)
-        )[: self.num_envs]
-        link_ids = self._episode_rng.randint(0, 2**31, size=len(model_ids))
+        model_ids = self._batched_episode_rng.choice(self.all_model_ids)
+        link_ids = self._batched_episode_rng.randint(0, 2**31)
 
         self._cabinets = []
         handle_links: List[List[Link]] = []
@@ -125,8 +142,9 @@ class OpenCabinetDrawerEnv(BaseEnv):
                 self.scene, f"partnet-mobility:{model_id}"
             )
             cabinet_builder.set_scene_idxs(scene_idxs=[i])
+            cabinet_builder.initial_pose = sapien.Pose(p=[0, 0, 0], q=[1, 0, 0, 0])
             cabinet = cabinet_builder.build(name=f"{model_id}-{i}")
-
+            self.remove_from_state_dict_registry(cabinet)
             # this disables self collisions by setting the group 2 bit at CABINET_COLLISION_BIT all the same
             # that bit is also used to disable collision with the ground plane
             for link in cabinet.links:
@@ -156,6 +174,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
         # allowing you to manage all of them under one object and retrieve data like qpos, pose, etc. all together
         # and with high performance. Note that some properties such as qpos and qlimits are now padded.
         self.cabinet = Articulation.merge(self._cabinets, name="cabinet")
+        self.add_to_state_dict_registry(self.cabinet)
         self.handle_link = Link.merge(
             [links[link_ids[i] % len(links)] for i, links in enumerate(handle_links)],
             name="handle_link",
@@ -167,7 +186,8 @@ class OpenCabinetDrawerEnv(BaseEnv):
                     meshes[link_ids[i] % len(meshes)].bounding_box.center_mass
                     for i, meshes in enumerate(handle_links_meshes)
                 ]
-            )
+            ),
+            device=self.device,
         )
 
         self.handle_link_goal = actors.build_sphere(
@@ -177,6 +197,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
             name="handle_link_goal",
             body_type="kinematic",
             add_collision=False,
+            initial_pose=sapien.Pose(p=[0, 0, 0], q=[1, 0, 0, 0]),
         )
 
     def _after_reconfigure(self, options):
@@ -190,22 +211,22 @@ class OpenCabinetDrawerEnv(BaseEnv):
         for cabinet in self._cabinets:
             collision_mesh = cabinet.get_first_collision_mesh()
             self.cabinet_zs.append(-collision_mesh.bounding_box.bounds[0, 2])
-        self.cabinet_zs = common.to_tensor(self.cabinet_zs)
+        self.cabinet_zs = common.to_tensor(self.cabinet_zs, device=self.device)
 
         # get the qmin qmax values of the joint corresponding to the selected links
         target_qlimits = self.handle_link.joint.limits  # [b, 1, 2]
         qmin, qmax = target_qlimits[..., 0], target_qlimits[..., 1]
         self.target_qpos = qmin + (qmax - qmin) * self.min_open_frac
 
-    def handle_link_positions(self, env_idx: torch.Tensor = None):
+    def handle_link_positions(self, env_idx: Optional[torch.Tensor] = None):
         if env_idx is None:
             return transform_points(
                 self.handle_link.pose.to_transformation_matrix().clone(),
-                common.to_tensor(self.handle_link_pos),
+                common.to_tensor(self.handle_link_pos, device=self.device),
             )
         return transform_points(
             self.handle_link.pose[env_idx].to_transformation_matrix().clone(),
-            common.to_tensor(self.handle_link_pos[env_idx]),
+            common.to_tensor(self.handle_link_pos[env_idx], device=self.device),
         )
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
@@ -260,7 +281,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
             # themselves on the first step. It's unclear why this happens on GPU sim only atm.
             # moreover despite setting qpos/qvel to 0, the cabinets might still move on their own a little bit.
             # this may be due to oblong meshes.
-            if physx.is_gpu_enabled():
+            if self.gpu_sim_enabled:
                 self.scene._gpu_apply_all()
                 self.scene.px.gpu_update_articulation_kinematics()
                 self.scene.px.step()
@@ -270,17 +291,26 @@ class OpenCabinetDrawerEnv(BaseEnv):
                 Pose.create_from_pq(p=self.handle_link_positions(env_idx))
             )
 
+    def _after_control_step(self):
+        # after each control step, we update the goal position of the handle link
+        # for GPU sim we need to update the kinematics data to get latest pose information for up to date link poses
+        # and fetch it, followed by an apply call to ensure the GPU sim is up to date
+        if self.gpu_sim_enabled:
+            self.scene.px.gpu_update_articulation_kinematics()
+            self.scene._gpu_fetch_all()
+        self.handle_link_goal.set_pose(
+            Pose.create_from_pq(p=self.handle_link_positions())
+        )
+        if self.gpu_sim_enabled:
+            self.scene._gpu_apply_all()
+
     def evaluate(self):
         # even though self.handle_link is a different link across different articulations
         # we can still fetch a joint that represents the parent joint of all those links
         # and easily get the qpos value.
         open_enough = self.handle_link.joint.qpos >= self.target_qpos
         handle_link_pos = self.handle_link_positions()
-        # TODO (stao): setting the pose of the visual sphere here seems to cause mayhem with cabinet qpos
-        # self.handle_link_goal.set_pose(Pose.create_from_pq(p=self.handle_link_positions()))
-        # self.scene._gpu_apply_all()
-        # self.scene._gpu_fetch_all()
-        # update the goal sphere to its new position
+
         link_is_static = (
             torch.linalg.norm(self.handle_link.angular_velocity, axis=1) <= 1
         ) & (torch.linalg.norm(self.handle_link.linear_velocity, axis=1) <= 0.1)

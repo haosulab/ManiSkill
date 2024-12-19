@@ -1,6 +1,7 @@
 from typing import Any, Dict, List
 
 import numpy as np
+import sapien
 import torch
 
 from mani_skill.agents.robots.anymal.anymal_c import ANYmalC
@@ -65,6 +66,9 @@ class QuadrupedReachEnv(BaseEnv):
                 # mount=self.agent.robot.links[0],
             )
         ]
+
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose(p=[0, 0, 1]))
 
     def _load_scene(self, options: dict):
         self.ground = build_ground(self.scene, floor_width=400)
@@ -155,6 +159,25 @@ class QuadrupedReachEnv(BaseEnv):
 
 @register_env("AnymalC-Reach-v1", max_episode_steps=200)
 class AnymalCReachEnv(QuadrupedReachEnv):
+    """
+    **Task Description:**
+    Control the AnymalC robot to reach a target location in front of it. Note the current reward function works but more needs to be added to constrain the learned quadruped gait looks more natural
+
+    **Randomizations:**
+    - Robot is initialized in a stable rest/standing position
+    - The goal for the robot to reach is initialized 2.5 +/- 0.5 meters in front, and +/- 1 meters to either side
+
+    **Success Conditions:**
+    - If the robot position is within 0.35 meters of the goal
+
+    **Fail Conditions:**
+    - If the robot has fallen over, which is considered True when the main body (the center part) hits the ground
+
+    **Goal Specification:**
+    - The 2D goal position in the XY-plane
+    """
+
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/AnymalC-Reach-v1_rt.mp4"
     _UNDESIRED_CONTACT_LINK_NAMES = ["LF_KFE", "RF_KFE", "LH_KFE", "RH_KFE"]
 
     def __init__(self, *args, robot_uids="anymal_c", **kwargs):

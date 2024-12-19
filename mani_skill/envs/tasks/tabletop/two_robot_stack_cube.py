@@ -1,6 +1,7 @@
 from typing import Any, Dict, Tuple
 
 import numpy as np
+import sapien
 import torch
 from transforms3d.euler import euler2quat
 
@@ -20,29 +21,28 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 @register_env("TwoRobotStackCube-v1", max_episode_steps=100)
 class TwoRobotStackCube(BaseEnv):
     """
-    Task Description
-    ----------------
-    The goal is to have one robot pick up the green cube and the other robot pick up the blue cube. Then the green cube has to be placed down at
-    the target region and the blue cube has to be stacked on top. Note that each robot can only reach one of the cubes to begin with so they must work together
-    to solve the task efficiently. In particular, the green cube is close to the right robot, and the blue cube is close to the left robot.
+    **Task Description:**
+    A collaborative task where two robot arms need to work together to stack two cubes. One robot must pick up the green cube and place it on the target region, while the other robot picks up the blue cube and stacks it on top of the green cube.
 
-    Randomizations
-    --------------
-    - both cubes have their z-axis rotation randomized
-    - both cubes have their xy positions on top of the table scene randomized. The positions are sampled such that the cubes do not collide with each other and
-    so that the green cube is close to the robot on the right and the blue cube is close to the robot on the left.
-    - the goal region is initialized in the middle between the two robots (so its y = 0). The only randomization is that it can shift along the mid-line between the two robots
+    The cubes are initially positioned such that each robot can only reach one cube - the green cube is near the right robot and the blue cube is near the left robot. This requires coordination between the robots to complete the stacking task.
 
-    Success Conditions
-    ------------------
-    - the blue cube is on top of the green cube (to within half of the cube size)
-    - the green cube is on the red white target on the table
-    - the blue and green cube are both not being grasped by the robots (robots must let go of the cubes)
+    **Randomizations:**
+    - Both cubes have random rotations around their z-axis
+    - The xy positions of both cubes on the table are randomized, while ensuring:
+        - The cubes do not collide with each other
+        - The green cube remains reachable by the right robot
+        - The blue cube remains reachable by the left robot
+    - The goal region is placed along the midline between the robots (y=0), with randomized x position
 
-    Visualization: TODO
+    **Success Conditions:**
+    - The blue cube is stacked on top of the green cube (within half a cube size)
+    - The green cube is placed on the red/white target region
+    - Both cubes are released by the robots (not being grasped)
+
     """
 
-    SUPPORTED_ROBOTS = [("panda", "panda")]
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/TwoRobotStackCube-v1_rt.mp4"
+    SUPPORTED_ROBOTS = [("panda_wristcam", "panda_wristcam")]
     agent: MultiAgent[Tuple[Panda, Panda]]
 
     goal_radius = 0.06
@@ -78,8 +78,13 @@ class TwoRobotStackCube(BaseEnv):
         pose = sapien_utils.look_at(eye=[0.6, 0.2, 0.4], target=[-0.1, 0, 0.1])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
+    def _load_agent(self, options: dict):
+        super()._load_agent(
+            options, [sapien.Pose(p=[0, -1, 0]), sapien.Pose(p=[0, 1, 0])]
+        )
+
     def _load_scene(self, options: dict):
-        self.cube_half_size = common.to_tensor([0.02] * 3)
+        self.cube_half_size = common.to_tensor([0.02] * 3, device=self.device)
         self.table_scene = TableSceneBuilder(
             env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
         )
@@ -89,9 +94,14 @@ class TwoRobotStackCube(BaseEnv):
             half_size=0.02,
             color=np.array([12, 42, 160, 255]) / 255,
             name="cubeA",
+            initial_pose=sapien.Pose(p=[1, 0, 0.02]),
         )
         self.cubeB = actors.build_cube(
-            self.scene, half_size=0.02, color=[0, 1, 0, 1], name="cubeB"
+            self.scene,
+            half_size=0.02,
+            color=[0, 1, 0, 1],
+            name="cubeB",
+            initial_pose=sapien.Pose(p=[-1, 0, 0.02]),
         )
         self.goal_region = actors.build_red_white_target(
             self.scene,
@@ -100,6 +110,7 @@ class TwoRobotStackCube(BaseEnv):
             name="goal_region",
             add_collision=False,
             body_type="kinematic",
+            initial_pose=sapien.Pose(),
         )
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):

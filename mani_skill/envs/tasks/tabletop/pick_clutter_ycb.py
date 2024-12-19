@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, List, Union
+from typing import Dict, List, Union
 
 import numpy as np
 import sapien
@@ -23,7 +23,7 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 class PickClutterEnv(BaseEnv):
     """Base environment picking items out of clutter type of tasks. Flexibly supports using different configurations and object datasets"""
 
-    SUPPORTED_REWARD_MODES = ["sparse", "none"]
+    SUPPORTED_REWARD_MODES = ["none"]
     SUPPORTED_ROBOTS = ["panda", "fetch"]
     agent: Union[Panda, Fetch]
 
@@ -98,6 +98,9 @@ class PickClutterEnv(BaseEnv):
     def _load_model(self, model_id: str) -> ActorBuilder:
         raise NotImplementedError()
 
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
+
     def _load_scene(self, options: dict):
         self.scene_builder = TableSceneBuilder(
             self, robot_init_qpos_noise=self.robot_init_qpos_noise
@@ -105,12 +108,7 @@ class PickClutterEnv(BaseEnv):
         self.scene_builder.build()
 
         # sample some clutter configurations
-        eps_idxs = np.arange(0, len(self._episodes))
-        rand_idx = torch.randperm(len(eps_idxs), device=torch.device("cpu"))
-        eps_idxs = eps_idxs[rand_idx]
-        eps_idxs = np.concatenate(
-            [eps_idxs] * np.ceil(self.num_envs / len(eps_idxs)).astype(int)
-        )[: self.num_envs]
+        eps_idxs = self._batched_episode_rng.randint(0, len(self._episodes))
 
         self.selectable_target_objects: List[List[Actor]] = []
         """for each sub-scene, a list of objects that can be selected as targets"""
@@ -140,6 +138,7 @@ class PickClutterEnv(BaseEnv):
             name="goal_site",
             body_type="kinematic",
             add_collision=False,
+            initial_pose=sapien.Pose(),
         )
         self._hidden_objects.append(self.goal_site)
 
@@ -184,16 +183,8 @@ class PickClutterEnv(BaseEnv):
         }
 
     def _get_obs_extra(self, info: Dict):
+
         return dict()
-
-    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        return torch.zeros(self.num_envs, device=self.device)
-
-    def compute_normalized_dense_reward(
-        self, obs: Any, action: torch.Tensor, info: Dict
-    ):
-        max_reward = 1.0
-        return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
 
 
 @register_env(
@@ -203,6 +194,7 @@ class PickClutterEnv(BaseEnv):
 )
 class PickClutterYCBEnv(PickClutterEnv):
     DEFAULT_EPISODE_JSON = f"{ASSET_DIR}/tasks/pick_clutter/ycb_train_5k.json.gz"
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PickClutterYCB-v1_rt.mp4"
 
     def _load_model(self, model_id):
         builder = actors.get_actor_builder(self.scene, id=f"ycb:{model_id}")

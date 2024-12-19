@@ -1,6 +1,7 @@
 from typing import Dict, List, Union
 
 import numpy as np
+import sapien
 import sapien.physx as physx
 import torch
 
@@ -68,17 +69,16 @@ class TurnFaucetEnv(BaseEnv):
         pose = sapien_utils.look_at([0.5, 0.5, 1.0], [0.0, 0.0, 0.5])
         return CameraConfig("render_camera", pose=pose, width=512, height=512, fov=1)
 
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
+
     def _load_scene(self, options: dict):
         self.scene_builder = TableSceneBuilder(
             self, robot_init_qpos_noise=self.robot_init_qpos_noise
         )
         self.scene_builder.build()
-        rand_idx = self._episode_rng.permutation(np.arange(0, len(self.all_model_ids)))
-        model_ids = self.all_model_ids[rand_idx]
-        model_ids = np.concatenate(
-            [model_ids] * np.ceil(self.num_envs / len(self.all_model_ids)).astype(int)
-        )[: self.num_envs]
-        switch_link_ids = self._episode_rng.randint(0, 2**31, size=len(model_ids))
+        model_ids = self._batched_episode_rng.choice(self.all_model_ids)
+        switch_link_ids = self._batched_episode_rng.randint(0, 2**31)
 
         self._faucets = []
         self._target_switch_links: List[Link] = []
@@ -94,7 +94,9 @@ class TurnFaucetEnv(BaseEnv):
                 urdf_config=dict(density=model_info.get("density", 8e3)),
             )
             builder.set_scene_idxs(scene_idxs=[i])
+            builder.initial_pose = sapien.Pose(p=[0, 0, model_info["offset"][2]])
             faucet = builder.build(name=f"{model_id}-{i}")
+            self.remove_from_state_dict_registry(faucet)
             for joint in faucet.active_joints:
                 joint.set_friction(1.0)
                 joint.set_drive_properties(0, 10.0)
@@ -105,15 +107,21 @@ class TurnFaucetEnv(BaseEnv):
             for j, semantic in enumerate(model_info["semantics"]):
                 if semantic[2] == "switch":
                     switch_link_names.append(semantic[0])
-            # import ipdb;ipdb.set_trace()
             switch_link = faucet.links_map[
                 switch_link_names[switch_link_ids[i] % len(switch_link_names)]
             ]
             self._target_switch_links.append(switch_link)
             switch_link.joint.set_friction(0.1)
             switch_link.joint.set_drive_properties(0.0, 2.0)
+            sapien_utils.set_articulation_render_material(
+                faucet._objs[0],
+                color=sapien_utils.hex2rgba("#AAAAAA"),
+                metallic=1,
+                roughness=0.4,
+            )
 
         self.faucet = Articulation.merge(self._faucets, name="faucet")
+        self.add_to_state_dict_registry(self.faucet)
         self.target_switch_link = Link.merge(self._target_switch_links, name="switch")
         self.model_offsets = common.to_tensor(self.model_offsets, device=self.device)
         self.model_offsets[:, 2] += 0.01  # small clearance
@@ -152,7 +160,7 @@ class TurnFaucetEnv(BaseEnv):
             self.faucet.set_pose(Pose.create_from_pq(p, q))
 
             # apply pose changes and update kinematics to get updated link poses.
-            if physx.is_gpu_enabled():
+            if self.gpu_sim_enabled:
                 self.scene._gpu_apply_all()
                 self.scene.px.gpu_update_articulation_kinematics()
                 self.scene.px.step()
