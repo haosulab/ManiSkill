@@ -20,7 +20,7 @@ class FrankaMoveBenchmarkEnv(BaseEnv):
         self.camera_height = camera_height
         self.num_cameras = num_cameras
         super().__init__(*args, robot_uids="panda", **kwargs)
-
+        self.fixed_trajectory = {}
     @property
     def _default_sim_config(self):
         return SimConfig(
