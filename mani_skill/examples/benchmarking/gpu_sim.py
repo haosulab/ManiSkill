@@ -128,7 +128,7 @@ def main(args: Args):
                                 images.append(env.render().cpu().numpy())
                     # runs a "shake" test, typically used to check stability of contacts/grasping
                     if "shake_steps" in v:
-                        env.unwrapped.agent.set_control_mode("pd_joint_delta_pos")
+                        env.unwrapped.agent.set_control_mode("pd_joint_target_delta_pos")
                         env.unwrapped.agent.controller.reset()
                         while i < N:
                             actions = v["shake_action_fn"]()
