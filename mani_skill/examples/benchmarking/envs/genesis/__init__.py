@@ -1,11 +1,11 @@
 import gymnasium as gym
 
-from .franka import FrankaBenchmarkEnv
+from .franka_move import FrankaMoveBenchmarkEnv
 from .franka_pick_cube import FrankaPickCubeBenchmarkEnv
 
 gym.register(
-    id="Genesis-Franka-Benchmark-v0",
-    entry_point="envs.genesis.franka:FrankaBenchmarkEnv",
+    id="Genesis-FrankaMove-Benchmark-v0",
+    entry_point="envs.genesis.franka_move:FrankaMoveBenchmarkEnv",
     disable_env_checker=True
 )
 

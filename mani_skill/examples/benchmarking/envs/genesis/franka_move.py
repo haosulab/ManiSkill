@@ -5,7 +5,7 @@ from .base_env import BaseEnv
 import gymnasium as gym
 import numpy as np
 import torch
-class FrankaPickCubeBenchmarkEnv(BaseEnv):
+class FrankaMoveBenchmarkEnv(BaseEnv):
     metadata = {"render_modes": ["human", "rgb_array"]}
     def __init__(self, num_envs: int, sim_freq: int, control_freq: int, render_mode: str, control_mode: str = "pd_joint_delta_pos", robot_uids: Union[str, List[str]] = "panda"):
         super().__init__(
@@ -23,29 +23,10 @@ class FrankaPickCubeBenchmarkEnv(BaseEnv):
             control_mode=control_mode,
             robot_uids=robot_uids,
         )
-        self.fixed_trajectory = {
-            "pick_and_lift": {
-                "control_mode": "pd_joint_pos",
-                "actions": [(torch.tensor([0.0, 0.68, 0.0, -1.9292649, 0.0, 2.627549, 0.7840855, 0.04, 0.04], device=gs.device), 8),
-                            (torch.tensor([0.0, 0.68, 0.0, -1.9292649, 0.0, 2.627549, 0.7840855, -0.02, -0.02], device=gs.device), 7),
-                            (torch.tensor([0.0, 0.3, 0.0, -1.9292649, 0.0, 2.627549, 0.7840855, -0.02, -0.02], device=gs.device), 10),
-                            ],
-                "shake_action_fn": lambda : torch.cat([torch.rand(self.num_envs, 7, device=gs.device) - 0.5, torch.ones(self.num_envs, 2, device=gs.device) * -1], dim=-1),
-                "shake_steps": 75,
-                "obs": None,
-            },
-            "push": {
-                "control_mode": "pd_joint_pos",
-                "actions": [(torch.tensor([0.0, 0.68, 0.0, -1.9292649, 0.0, 2.627549, 0.7840855, 0.04, 0.04], device=gs.device), 8),
-                            (torch.tensor([0.0, 0.68, 0.0, -1.9292649, 0.0, 2.627549, 0.7840855, -0.02, -0.02], device=gs.device), 7),
-                            (torch.tensor([0.0, 0.68, 0.0, -1.6292649, 0.0, 2.627549, 0.7840855, -0.02, -0.02], device=gs.device), 10),
-                            ],
-                "obs": None,
-            }
-        }
+        self.fixed_trajectory = {}
         self.rest_qpos = torch.tensor(
             [
-                0.0,
+                0.5,
                 np.pi / 8,
                 0,
                 -np.pi * 5 / 8,
@@ -62,12 +43,6 @@ class FrankaPickCubeBenchmarkEnv(BaseEnv):
         )
         self.robot: RigidEntity = self.scene.add_entity(
             gs.morphs.MJCF(file='xml/franka_emika_panda/panda.xml'),
-        )
-        self.cube = self.scene.add_entity(
-            gs.morphs.Box(
-                size = (0.04, 0.04, 0.04),
-                pos = (0.6, 0.0, 0.02),
-            ),
         )
     def _load_sensors(self):
         self.cam = self.scene.add_camera(
@@ -89,5 +64,4 @@ class FrankaPickCubeBenchmarkEnv(BaseEnv):
         )
         return obs_buf
     def _initialize_episode(self):
-        self.robot.set_qpos(torch.tile(self.rest_qpos, (self.num_envs, 1)), zero_velocity=True,)
-        self.cube.set_pos(torch.tile(torch.tensor([0.6, 0.0, 0.02], device=gs.device), (self.num_envs, 1)))
+        self.robot.set_dofs_position(torch.tile(self.rest_qpos, (self.num_envs, 1)), zero_velocity=True,)

@@ -3,7 +3,7 @@ import genesis as gs
 import torch
 import numpy as np
 import gymnasium as gym
-from envs.genesis.franka import FrankaBenchmarkEnv
+import envs.genesis
 ########################## init ##########################
 gs.init(backend=gs.gpu, logging_level="warning")
 
@@ -13,11 +13,21 @@ from profiling import Profiler, images_to_video
 
 @dataclass
 class Args:
-    env_id: Annotated[str, tyro.conf.arg(aliases=["-e"])] = "Genesis-Franka-Benchmark-v0"
+    env_id: Annotated[str, tyro.conf.arg(aliases=["-e"])] = "Genesis-FrankaMove-Benchmark-v0"
     obs_mode: Annotated[str, tyro.conf.arg(aliases=["-o"])] = "state"
-    control_mode: Annotated[str, tyro.conf.arg(aliases=["-c"])] = "pd_joint_delta_pos"
+    control_mode: Annotated[str, tyro.conf.arg(aliases=["-c"])] = "pd_joint_target_delta_pos"
+    """The control mode to use. There is pd_joint_target_delta_pos, pd_joint_delta_pos, and pd_joint_pos.
+
+    # TODO (stao): add pd_joint_target_delta_pos to genesis benchmark
+
+    pd_joint_target_delta_pos is most similar to ManiSkill's pd_joint_delta_pos (the typical default)
+    in terms of behavior since ManiSkill disables robot gravity for simplicity whereas genesis currently does not
+    support disabling gravity on specific articulation/robot links. Without gravity disabled using a pd_joint_delta_pos controller
+    will typically cause the robot to slowly fall downwards since PD controller undershoots the target position.
+    """
     num_envs: Annotated[int, tyro.conf.arg(aliases=["-n"])] = 1024
     cpu_sim: bool = False
+    seed: int = 0
     save_example_image: bool = False
     control_freq: int | None = 60
     sim_freq: int | None = 120
@@ -29,9 +39,11 @@ class Args:
     save_results: str | None = None
 
 def main(args: Args):
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
     profiler = Profiler(output_format="stdout")
     num_envs = args.num_envs
-    env = gym.make(args.env_id, num_envs=num_envs, sim_freq=args.sim_freq, control_freq=args.control_freq, render_mode=args.render_mode)
+    env = gym.make(args.env_id, num_envs=num_envs, sim_freq=args.sim_freq, control_mode=args.control_mode, control_freq=args.control_freq, render_mode=args.render_mode)
 
     obs, _ = env.reset()
     env.step(torch.zeros(env.action_space.shape, device=gs.device)) # take one step in case genesis has some warm-start delays
@@ -81,17 +93,16 @@ def main(args: Args):
                         if args.save_video:
                             rgb = env.unwrapped.render_rgb_array()
                             images.append(rgb)
-                env.unwrapped.set_control_mode("pd_joint_delta_pos")
-                while i < N:
-                    actions = (
-                        2 * torch.rand(env.action_space.shape, device=gs.device)
-                        - 1
-                    )
-                    env.step(actions)
-                    if args.save_video:
-                        rgb = env.unwrapped.render_rgb_array()
-                        images.append(rgb)
-                    i += 1
+                # runs a "shake" test, typically used to check stability of contacts/grasping
+                if "shake_steps" in v:
+                    env.unwrapped.set_control_mode("pd_joint_target_delta_pos")
+                    while i < N:
+                        actions = v["shake_action_fn"]()
+                        env.step(actions)
+                        if args.save_video:
+                            rgb = env.unwrapped.render_rgb_array()
+                            images.append(rgb)
+                        i += 1
             env.close()
             profiler.log_stats(f"{k}_env.step")
             if args.save_video:
