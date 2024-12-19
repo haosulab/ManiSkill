@@ -56,7 +56,8 @@ class FrankaMoveBenchmarkEnv(BaseEnv):
             far=25,
             fov=0.63,
         )
-
+    def _load_agent(self, options):
+        super()._load_agent(options, sapien.Pose(p=[1.5, 0, 0], q=euler2quat(0, 0, np.pi)))
     def _load_scene(self, options: dict):
         self.ground = build_ground(self.scene, texture_file=os.path.join(os.path.dirname(__file__), "assets/black_grid.png"), texture_square_len=2, mipmap_levels=6)
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
@@ -64,7 +65,6 @@ class FrankaMoveBenchmarkEnv(BaseEnv):
             qpos = self.agent.keyframes["rest"].qpos
             qpos[0] = 0.5
             self.agent.robot.set_qpos(qpos)
-            self.agent.robot.set_pose(sapien.Pose(p=[1.5, 0, 0], q=euler2quat(0, 0, np.pi)))
     def _load_lighting(self, options: Dict):
         self.scene.set_ambient_light(np.array([1,1,1])*0.1)
         for i in range(self.num_envs):
