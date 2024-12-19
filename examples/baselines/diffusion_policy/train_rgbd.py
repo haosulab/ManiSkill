@@ -144,7 +144,7 @@ class SmallDemoDataset_DiffusionPolicy(Dataset):  # Load everything into memory
             )  # key order in demo is different from key order in env obs
             _obs_traj_dict = obs_process_fn(_obs_traj_dict)
             _obs_traj_dict["depth"] = torch.Tensor(
-                _obs_traj_dict["depth"].astype(np.float32) / 1024
+                _obs_traj_dict["depth"].astype(np.float32)
             ).to(device=device, dtype=torch.float16)
             _obs_traj_dict["rgb"] = torch.from_numpy(_obs_traj_dict["rgb"]).to(
                 device
@@ -285,7 +285,7 @@ class Agent(nn.Module):
     def encode_obs(self, obs_seq, eval_mode):
         rgb = obs_seq["rgb"].float() / 255.0  # (B, obs_horizon, 3*k, H, W)
         if args.depth:
-            depth = obs_seq["depth"].float()  # (B, obs_horizon, 1*k, H, W)
+            depth = obs_seq["depth"].float() / 1024.0  # (B, obs_horizon, 1*k, H, W)
             img_seq = torch.cat([rgb, depth], dim=2)  # (B, obs_horizon, C, H, W), C=4*k
         else:
             img_seq = rgb
@@ -340,7 +340,7 @@ class Agent(nn.Module):
         with torch.no_grad():
             obs_seq["rgb"] = obs_seq["rgb"].permute(0, 1, 4, 2, 3)
             if args.depth:
-                obs_seq["depth"] = obs_seq["depth"].permute(0, 1, 4, 2, 3) / 1024
+                obs_seq["depth"] = obs_seq["depth"].permute(0, 1, 4, 2, 3)
 
             obs_cond = self.encode_obs(
                 obs_seq, eval_mode=True
