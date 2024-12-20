@@ -69,6 +69,24 @@ These tasks are split into 4 subtasks: Pick Place, Open, and Close.
 
 **Fail Conditions:**
 - Robot exceeds cumulative collision force threshold (5000N for Pick, 7500N for Place, 10,000N for Open/Close)
+
+**Citation**
+```latex
+@article{shukla2024maniskillhab,
+	author		 = {Arth Shukla and Stone Tao and Hao Su},
+	title        = {ManiSkill-HAB: A Benchmark for Low-Level Manipulation in Home Rearrangement Tasks},
+	journal      = {CoRR},
+	volume       = {abs/2412.13211},
+	year         = {2024},
+	url          = {https://doi.org/10.48550/arXiv.2412.13211},
+	doi          = {10.48550/ARXIV.2412.13211},
+	eprinttype   = {arXiv},
+	eprint       = {2412.13211},
+	timestamp    = {Mon, 09 Dec 2024 01:29:24 +0100},
+	biburl       = {https://dblp.org/rec/journals/corr/abs-2412-13211.bib},
+	bibsource    = {dblp computer science bibliography, https://dblp.org}
+}
+```
 :::
 
 <div style="display: flex; justify-content: center;">
