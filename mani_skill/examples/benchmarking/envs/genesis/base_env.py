@@ -116,7 +116,7 @@ class BaseEnv(gym.Env):
         elif self.control_mode == "pd_joint_target_delta_pos":
             action = torch.clip(action, -1, 1)
             # match maniskill action scaling
-            arm_action = action[:, :7] * 0.1
+            arm_action = action[:, :7] * 0.02 # lower to account for the fact genesis covers more distance than usual
             gripper_action = action[:, 7:] * 0.05 - 0.01
             self._target_qpos = torch.cat([arm_action, gripper_action], dim=-1) + self._target_qpos
         elif self.control_mode == "pd_joint_pos":
