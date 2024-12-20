@@ -42,8 +42,7 @@ class FrankaPickCubeBenchmarkEnv(BaseEnv):
             spacing=5,
             control_freq=50,
             scene_config=SceneConfig(
-                bounce_threshold=0.5,
-                solver_position_iterations=8, solver_velocity_iterations=0
+                solver_position_iterations=10, solver_velocity_iterations=1
             ),
         )
 
