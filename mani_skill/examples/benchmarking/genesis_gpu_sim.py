@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Annotated
 import genesis as gs
 import torch
@@ -103,7 +104,6 @@ def main(args: Args):
                             rgb = env.unwrapped.render_rgb_array()
                             images.append(rgb)
                         i += 1
-            env.close()
             profiler.log_stats(f"{k}_env.step")
             if args.save_video:
                 images_to_video(
@@ -113,7 +113,32 @@ def main(args: Args):
                     fps=30,
                 )
                 del images
-
+    env.close()
+    if args.save_results:
+        # append results to csv
+        # try:
+        assert (
+            args.save_video == False
+        ), "Saving video slows down speed a lot and it will distort results"
+        Path("benchmark_results").mkdir(parents=True, exist_ok=True)
+        data = dict(
+            env_id=args.env_id,
+            obs_mode=args.obs_mode,
+            num_envs=args.num_envs,
+            control_mode=args.control_mode,
+            gpu_type=torch.cuda.get_device_name()
+        )
+        data.update(
+            num_cameras=args.num_cams,
+            camera_width=args.cam_width,
+            camera_height=args.cam_height,
+        )
+        profiler.update_csv(
+            args.save_results,
+            data,
+        )
+        # except:
+        #     pass
 if __name__ == "__main__":
     parsed_args = tyro.cli(Args)
     main(parsed_args)

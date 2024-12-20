@@ -201,6 +201,25 @@ def main(args):
     plt.close(fig)
     print(f"Saved figure to {save_path}")
 
+    # import ipdb; ipdb.set_trace()
+    # Print column names of first entry in data
+    first_key = list(data.keys())[0]
+    first_df = data[first_key]
+    fixed_trajectory_cols = []
+    for col in first_df.columns:
+        if "_env.step" in col:
+            # special fixed trajectory runs
+            fixed_trajectory_cols.append(col)
+    for col in fixed_trajectory_cols:
+        fig, ax = plt.subplots()
+        ax.set_title(f"{args.env_id}: State FPS vs Number of Parallel Environments")
+        draw_bar_plot_envs_vs_fps(ax, data, {"env_id": args.env_id, "obs_mode": "state"}, yname=col, annotate_label="env.step/gpu_mem_use")
+        save_path = osp.join(root_save_path, f"fps_num_envs_state_{col}.png")
+        fig.savefig(save_path)
+        plt.close(fig)
+        print(f"Saved figure to {save_path}")
+
+
 
 
     ### Special figures for maniskill ###

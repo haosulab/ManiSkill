@@ -33,14 +33,14 @@ pip install "jax[cuda12]"
 
 See https://isaac-sim.github.io/IsaacLab/source/setup/installation/index.html to create a conda/mamba environment.
 
-Then run `pip install pynvml tyro`.
+Then run `pip install pynvml tyro pandas`.
 
 
 ### Genesis
 
 See https://genesis-world.readthedocs.io/en/latest/user_guide/overview/installation.html to install genesis.
 
-Then run `pip install pynvml tyro gymnasium==0.29.1`.
+Then run `pip install pynvml tyro pandas gymnasium==0.29.1`.
 
 ## Running the Benchmark
 

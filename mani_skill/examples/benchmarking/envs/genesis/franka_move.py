@@ -10,7 +10,7 @@ class FrankaMoveBenchmarkEnv(BaseEnv):
     def __init__(self, num_envs: int, sim_freq: int, control_freq: int, render_mode: str, control_mode: str = "pd_joint_delta_pos", robot_uids: Union[str, List[str]] = "panda"):
         super().__init__(
             num_envs,
-            sim_options=gs.options.SimOptions(dt=1/sim_freq, substeps=4),
+            sim_options=gs.options.SimOptions(dt=1/sim_freq, substeps=1), # using less substeps here is faster but less accurate
             rigid_options=gs.options.RigidOptions(enable_self_collision=True),
             viewer_options=gs.options.ViewerOptions(
                 camera_pos    = (0.5, -0.5, 0.5),
