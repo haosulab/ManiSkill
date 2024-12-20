@@ -44,22 +44,24 @@ Then run `pip install pynvml tyro pandas gymnasium==0.29.1`.
 
 ## Running the Benchmark
 
-All scripts are provided in the scripts folder that you can simply run directly. Otherwise example usages are shown below for benchmarking simulation and simulation+rendering FPS. With --save-results flag on, resutls are saved to the `benchmark_results` folder in a .csv format. Running a benchmark with the same configurations of cameras/number of environments/choice of GPU will override the previous result. Example commands are shown below
+All scripts are provided in the scripts folder that you can simply run directly. Otherwise example usages are shown below for benchmarking simulation and simulation+rendering FPS.
+
+See the `scripts/` folder for the full list of commands used to generate official results, those commands save results to the `benchmark_results` folder in a .csv format. Running a benchmark with the same configurations of cameras/number of environments/choice of GPU will override the previous result. Example commands are shown below
 
 ### ManiSkill
 
 ```bash
 python gpu_sim.py -e "CartpoleBalanceBenchmark-v1" \
-    -n=2048 -o=state --save-results
+    -n=2048 -o=state
 
 python gpu_sim.py -e "CartpoleBalanceBenchmark-v1" \
-    -n=1024 -o=rgb --num-cams=1 --cam-width=256 --cam-height=256 --save-results
+    -n=1024 -o=rgb --num-cams=1 --cam-width=256 --cam-height=256
 
 python gpu_sim.py -e "FrankaMoveBenchmark-v1" \
-    -n=2048 -o=state --save-results
+    -n=2048 -o=state --sim-freq=100 --control-freq=50
 
 python gpu_sim.py -e "FrankaPickCubeBenchmark-v1" \
-    -n=2048 -o=state --save-results
+    -n=2048 -o=state --sim-freq=100 --control-freq=50
 ```
 
 ### Isaac Lab
@@ -76,17 +78,12 @@ python isaac_lab_gpu_sim.py --task Isaac-Cartpole-RGB-Camera-Direct-Benchmark-v0
 ### Genesis
 
 ```bash
-python genesis_gpu_sim.py -e Genesis-FrankaMove-Benchmark-v0 \
-    -n 16384 --sim-freq=100 --control-freq=50
-python genesis_gpu_sim.py -e Genesis-FrankaPickCube-Benchmark-v0 \
-    -n 16384 --sim-freq=100 --control-freq=50
+python genesis_gpu_sim.py -e FrankaMoveBenchmark-v1 \
+    -n 4096 -o=state --sim-freq=100 --control-freq=50
+python genesis_gpu_sim.py -e FrankaPickCubeBenchmark-v1 \
+    -n 4096 -o=state --sim-freq=100 --control-freq=50
 ```
-TODO (stao): clean up example scripts here
-TODO (stao): point out that due to how the solver in genesis is implemented it is hard to compare apples to apples since one action might correspond to differnet behaviors.
-```bash
-python genesis_gpu_sim.py -e Genesis-Franka-Benchmark-v0 -n 16 --sim-freq=100 --control-freq=100 --render-mode="rgb_array" --save-video
-```
-
+Note Genesis does not support parallel/tiled rendering at this time so no simulation+rendering FPS results are available.
 <!-- ### Mujoco
 
 ```bash
