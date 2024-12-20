@@ -47,7 +47,7 @@ class PullDrawerEnv(BaseEnv):
         # Movement parameters 
         self.max_pull_distance = self.outer_width * 0.8  # Can pull out 80% of width
         self.target_pos = -self.max_pull_distance * 0.8
-        self.k = 0.05
+        self.k = 0.03
         
         super().__init__(
             *args,
@@ -263,7 +263,7 @@ class PullDrawerEnv(BaseEnv):
             self.scene_builder.initialize(env_idx)
             
             drawer_xyz = torch.zeros((b, 3), device=self.device)
-            drawer_xyz[..., 0] = torch.rand((b,), device=self.device) * self.k + 0.22
+            drawer_xyz[..., 0] = torch.rand((b,), device=self.device) * self.k + 0.17
             drawer_xyz[..., 1] = torch.rand((b,), device=self.device) * self.k + 0.15
             drawer_xyz[..., 2] = self.outer_height / 2 + 0.005 
 
@@ -323,12 +323,19 @@ class PullDrawerEnv(BaseEnv):
         handle_offset = torch.tensor([-self.inner_width/2 - self.handle_offset, 0, 0], device=drawer_link_pose.device)
         handle_pose = drawer_link_pose[:, :3] + handle_offset
 
-        # 1. Orientation Reward
-        tcp_pose_q = self.agent.tcp.pose.q
+        # 1. Orientation Reward - Modified for continuous feedback
+        tcp_pose_q = self.agent.tcp.pose.q  # Current quaternion
         desired_q = torch.tensor([0.5, 0.5, 0.5, 0.5], device=device).expand(batch_size, 4)
-        orientation_diff = torch.norm(tcp_pose_q - desired_q, dim=-1) < 0.02
-
-        q_orientation_reward = 4 * orientation_diff
+        
+        # Calculate quaternion distance (dot product between quaternions)
+        # Abs because q and -q represent the same rotation
+        quat_dot = torch.abs(torch.sum(tcp_pose_q * desired_q, dim=-1))
+        # Clip to handle numerical errors
+        quat_dot = torch.clamp(quat_dot, -1.0, 1.0)
+        # Convert to angle (in radians)
+        angle_dist = 2.0 * torch.acos(quat_dot)
+        # Normalize to [0, 1] range and invert so smaller angles give higher rewards
+        orientation_reward = 4.0 * (1.0 - torch.tanh(2.0 * angle_dist))
 
         # 2. Approach Reward
         reach_dist = torch.norm(tcp_pos - handle_pose, dim=-1)
@@ -337,14 +344,13 @@ class PullDrawerEnv(BaseEnv):
         # 3. Progress Reward
         drawer_qpos = self.drawer.get_qpos()
         pos_dist = torch.abs(self.target_pos - drawer_qpos)
-   
         pulling_reward = 4.0 * (1 - torch.tanh(5.0 * pos_dist)).squeeze(-1)
-   
+
         # 4. Success Reward
         success_mask = info.get("success", torch.zeros_like(pulling_reward, dtype=torch.bool))
         completion_reward = 4.0 * success_mask
         
-        return q_orientation_reward + approach_reward + pulling_reward + completion_reward
+        return orientation_reward + approach_reward + pulling_reward + completion_reward
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
