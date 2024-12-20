@@ -87,6 +87,8 @@ def main(args):
             exp_name = "ManiSkill3"
         if exp_name == "isaac_lab":
             exp_name = "Isaac Lab"
+        if exp_name == "genesis":
+            exp_name = "Genesis"
         data[exp_name] = df
     # modify matplotlib settings for higher quality images
     plt.rcParams["figure.figsize"] = [10, 4]  # set figure size
@@ -194,7 +196,7 @@ def main(args):
     ### State results ###
     # generate plot of state FPS against number of parallel environments
     fig, ax = plt.subplots()
-    ax.set_title(f"{args.env_id}: State FPS vs Number of Parallel Environments")
+    ax.set_title(f"{args.env_id} randoma actions: State FPS vs Number of Parallel Environments")
     draw_bar_plot_envs_vs_fps(ax, data, {"env_id": args.env_id, "obs_mode": "state"}, annotate_label="env.step/gpu_mem_use")
     save_path = osp.join(root_save_path, f"fps_num_envs_state.png")
     fig.savefig(save_path)
@@ -206,14 +208,15 @@ def main(args):
     first_df = data[first_key]
     fixed_trajectory_cols = []
     for col in first_df.columns:
-        if "_env.step" in col:
+        if "_env.step/fps" in col:
             # special fixed trajectory runs
             fixed_trajectory_cols.append(col)
     for col in fixed_trajectory_cols:
+        fixed_name = '_'.join(col.split('_')[:-1])
         fig, ax = plt.subplots()
-        ax.set_title(f"{args.env_id}: State FPS vs Number of Parallel Environments")
+        ax.set_title(f"{args.env_id} {fixed_name} actions: State FPS vs Number of Parallel Environments")
         draw_bar_plot_envs_vs_fps(ax, data, {"env_id": args.env_id, "obs_mode": "state"}, yname=col, annotate_label="env.step/gpu_mem_use")
-        save_path = osp.join(root_save_path, f"fps_num_envs_state_{'_'.join(col.split('_')[:-1])}.png")
+        save_path = osp.join(root_save_path, f"fps_num_envs_state_{fixed_name}.png")
         fig.savefig(save_path)
         plt.close(fig)
         print(f"Saved figure to {save_path}")
