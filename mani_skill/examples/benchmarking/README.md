@@ -7,7 +7,7 @@ If you plan to run the code here you need to git clone ManiSkill and change your
 Code Structure:
 - `scripts/`: Bash scripts to run a matrix of performance tests. Results are saved to a local `benchmark_results` folder
 - `plot_results.py`: Run this code to generate graphs of performance results saved to `benchmark_results`
-- `envs/`: custom environments built for benchmarking, designed to be as close as possible between different simulators. Currently only Cartpole environment is tuned correctly for benchmarking.
+- `envs/`: custom environments built for benchmarking, designed to be as close as possible between different simulators. Currently only Cartpole environment is tuned correctly for benchmarking across all simulators. FrankaMove and FrankaPickCube environments are tuned for benchmarking between ManiSkill and Genesis.
 
 
 ## Setup
@@ -33,27 +33,35 @@ pip install "jax[cuda12]"
 
 See https://isaac-sim.github.io/IsaacLab/source/setup/installation/index.html to create a conda/mamba environment.
 
-Then run `pip install pynvml` to install pynvml which is used for GPU monitoring.
+Then run `pip install pynvml tyro pandas`.
 
-<!-- ```bash
-mamba create -n "isaaclab" "python==3.10"
-mamba activate isaaclab
-pip install torch==2.2.2 --index-url https://download.pytorch.org/whl/cu118
-pip install isaacsim-rl isaacsim-replicator isaacsim-extscache-physics isaacsim-extscache-kit-sdk isaacsim-extscache-kit isaacsim-app --extra-index-url https://pypi.nvidia.com
-``` -->
+
+### Genesis
+
+See https://genesis-world.readthedocs.io/en/latest/user_guide/overview/installation.html to install genesis.
+
+Then run `pip install pynvml tyro pandas gymnasium==0.29.1`.
 
 ## Running the Benchmark
 
-All scripts are provided in the scripts folder that you can simply run directly. Otherwise example usages are shown below for benchmarking simulation and simulation+rendering FPS. With --save-results flag on, resutls are saved to the `benchmark_results` folder in a .csv format. Running a benchmark with the same configurations of cameras/number of environments/choice of GPU will override the previous result. Example commands are shown below
+All scripts are provided in the scripts folder that you can simply run directly. Otherwise example usages are shown below for benchmarking simulation and simulation+rendering FPS.
+
+See the `scripts/` folder for the full list of commands used to generate official results, those commands save results to the `benchmark_results` folder in a .csv format. Running a benchmark with the same configurations of cameras/number of environments/choice of GPU will override the previous result. Example commands are shown below
 
 ### ManiSkill
 
 ```bash
 python gpu_sim.py -e "CartpoleBalanceBenchmark-v1" \
-    -n=2048 -o=state --save-results
+    -n=2048 -o=state
 
 python gpu_sim.py -e "CartpoleBalanceBenchmark-v1" \
-    -n=1024 -o=rgb --num-cams=1 --cam-width=256 --cam-height=256 --save-results
+    -n=1024 -o=rgb --num-cams=1 --cam-width=256 --cam-height=256
+
+python gpu_sim.py -e "FrankaMoveBenchmark-v1" \
+    -n=2048 -o=state --sim-freq=100 --control-freq=50
+
+python gpu_sim.py -e "FrankaPickCubeBenchmark-v1" \
+    -n=2048 -o=state --sim-freq=100 --control-freq=50
 ```
 
 ### Isaac Lab
@@ -67,8 +75,25 @@ python isaac_lab_gpu_sim.py --task Isaac-Cartpole-RGB-Camera-Direct-Benchmark-v0
     --num-envs=128 --obs-mode=rgb --save-results
 ```
 
+### Genesis
+
+```bash
+python genesis_gpu_sim.py -e FrankaMoveBenchmark-v1 \
+    -n 4096 -o=state --sim-freq=100 --control-freq=50
+python genesis_gpu_sim.py -e FrankaPickCubeBenchmark-v1 \
+    -n 4096 -o=state --sim-freq=100 --control-freq=50
+```
+Note Genesis does not support parallel/tiled rendering at this time so no simulation+rendering FPS results are available.
 <!-- ### Mujoco
 
 ```bash
 python -m mujoco.mjx.testspeed --mjcf=envs/mujoco/panda_pick_cube.xml   --base_path=. --batch_size=4096 --nstep=100
 ``` -->
+
+## Generating Plots
+
+Comparing ManiSkill and Genesis
+```bash
+python plot_results.py -e FrankaMoveBenchmark-v1 -f benchmark_results/maniskill.csv benchmark_results/genesis.csv
+python plot_results.py -e FrankaPickCubeBenchmark-v1 -f benchmark_results/maniskill.csv benchmark_results/genesis.csv
+```
