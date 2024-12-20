@@ -14,9 +14,3 @@ gym.register(
     entry_point="envs.genesis.franka_pick_cube:FrankaPickCubeBenchmarkEnv",
     disable_env_checker=True
 )
-
-gym.register(
-    id="FrankaStackCubeBenchmark-v1",
-    entry_point="envs.genesis.franka_stack_cube:FrankaStackCubeBenchmarkEnv",
-    disable_env_checker=True
-)
