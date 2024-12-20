@@ -17,10 +17,15 @@ def parse_args():
 COLOR_PALLETE = [
     "#e02b35",
     "#59a89c",
-    "#082a54",
+    "#4190F1",
     "#a559aa"
     "#f0c571"
 ]
+COLOR_MAP = {
+    "ManiSkill3": "#e02b35",
+    "Isaac Lab": "#59a89c",
+    "Genesis": "#3784E2",
+}
 
 def filter_df(df, df_filter):
     for k, v in df_filter.items():
@@ -44,7 +49,7 @@ def draw_bar_plot_envs_vs_fps(ax, data, df_filter, xname="num_envs", yname="env.
         if len(df) == 0: continue
         df = df.sort_values(xname)
         xs = np.arange(len(df)) + i * width
-        ax.bar(xs, df[yname], label=exp_name, color=COLOR_PALLETE[i % len(COLOR_PALLETE)], width=width, zorder=3)
+        ax.bar(xs, df[yname], label=exp_name, color=COLOR_MAP[exp_name], width=width, zorder=3)
         plotted_bars += 1
         if len(df[xname]) > len(num_envs_list):
             global_xs = np.arange(len(df)) + i * width
@@ -72,7 +77,7 @@ def draw_line_plot_envs_vs_fps(ax, data, df_filter, xname="num_envs", yname="env
                     ax.annotate(f'{df[annotate_label].iloc[j] / (1024 * 1024 * 1024):0.1f} GB', (x, y), textcoords="offset points", xytext=(0,5), ha='center', fontsize=7)
                 else:
                     ax.annotate(df[annotate_label].iloc[j], (x, y), textcoords="offset points", xytext=(0,5), ha='center', fontsize=7)
-        ax.plot(df[xname], df[yname], '-o', label=exp_name, color=COLOR_PALLETE[i % len(COLOR_PALLETE)], zorder=3)
+        ax.plot(df[xname], df[yname], '-o', label=exp_name, color=COLOR_MAP[exp_name], zorder=3)
     plt.legend()
     ax.grid(True, zorder=0)
     plt.tight_layout()
@@ -196,7 +201,7 @@ def main(args):
     ### State results ###
     # generate plot of state FPS against number of parallel environments
     fig, ax = plt.subplots()
-    ax.set_title(f"{args.env_id} randoma actions: State FPS vs Number of Parallel Environments")
+    ax.set_title(f"{args.env_id} random actions: State FPS vs Number of Parallel Environments")
     draw_bar_plot_envs_vs_fps(ax, data, {"env_id": args.env_id, "obs_mode": "state"}, annotate_label="env.step/gpu_mem_use")
     save_path = osp.join(root_save_path, f"fps_num_envs_state.png")
     fig.savefig(save_path)
