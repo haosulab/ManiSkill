@@ -93,7 +93,7 @@ def main(args):
     plt.rcParams["figure.dpi"] = 200  # set figure dpi
     plt.rcParams["savefig.dpi"] = 200  # set savefig dpi
 
-    root_save_path = f"benchmark_results/{'_'.join([os.path.basename(file).split('.')[0] for file in args.files])}"
+    root_save_path = f"benchmark_results/{'_'.join([os.path.basename(file).split('.')[0] for file in args.files])}/{args.env_id}"
     # Create root_save_path if it doesn't exist
     os.makedirs(root_save_path, exist_ok=True)
     print(f"Saving figures to {root_save_path}")

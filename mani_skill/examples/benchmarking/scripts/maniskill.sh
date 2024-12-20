@@ -15,9 +15,15 @@ do
     -n=$n -o=state --save-results benchmark_results/maniskill.csv
 done
 
-for n in 1024 2048 4096
+for n in 1024 2048 4096 8192 16384
 do 
   python gpu_sim.py -e "FrankaMoveBenchmark-v1" \
+    -n=$n -o=state --save-results benchmark_results/maniskill.csv
+done
+
+for n in 1024 2048 4096 8192 16384
+do 
+  python gpu_sim.py -e "FrankaPickCubeBenchmark-v1" \
     -n=$n -o=state --save-results benchmark_results/maniskill.csv
 done
 

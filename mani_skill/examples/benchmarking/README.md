@@ -40,7 +40,7 @@ Then run `pip install pynvml tyro`.
 
 See https://genesis-world.readthedocs.io/en/latest/user_guide/overview/installation.html to install genesis.
 
-Then run `pip install pynvml tyro`.
+Then run `pip install pynvml tyro gymnasium==0.29.1`.
 
 ## Running the Benchmark
 
@@ -92,3 +92,11 @@ python genesis_gpu_sim.py -e Genesis-Franka-Benchmark-v0 -n 16 --sim-freq=100 --
 ```bash
 python -m mujoco.mjx.testspeed --mjcf=envs/mujoco/panda_pick_cube.xml   --base_path=. --batch_size=4096 --nstep=100
 ``` -->
+
+## Generating Plots
+
+Comparing ManiSkill and Genesis
+```bash
+python plot_results.py -e FrankaMoveBenchmark-v1 -f benchmark_results/maniskill.csv benchmark_results/genesis.csv
+python plot_results.py -e FrankaPickCubeBenchmark-v1 -f benchmark_results/maniskill.csv benchmark_results/genesis.csv
+```

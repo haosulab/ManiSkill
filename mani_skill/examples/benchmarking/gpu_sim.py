@@ -82,7 +82,7 @@ def main(args: Args):
         env.reset(seed=2022)
         if args.save_video:
             images.append(env.render().cpu().numpy())
-        N = 100
+        N = 1000
         with profiler.profile("env.step", total_steps=N, num_envs=num_envs):
             for i in range(N):
                 actions = (

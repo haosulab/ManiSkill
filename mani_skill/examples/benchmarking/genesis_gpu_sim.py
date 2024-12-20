@@ -13,7 +13,7 @@ from profiling import Profiler, images_to_video
 
 @dataclass
 class Args:
-    env_id: Annotated[str, tyro.conf.arg(aliases=["-e"])] = "Genesis-FrankaMove-Benchmark-v0"
+    env_id: Annotated[str, tyro.conf.arg(aliases=["-e"])] = "FrankaMoveBenchmark-v1"
     obs_mode: Annotated[str, tyro.conf.arg(aliases=["-o"])] = "state"
     control_mode: Annotated[str, tyro.conf.arg(aliases=["-c"])] = "pd_joint_target_delta_pos"
     """The control mode to use. There is pd_joint_target_delta_pos, pd_joint_delta_pos, and pd_joint_pos.
@@ -48,7 +48,7 @@ def main(args: Args):
     obs, _ = env.reset()
     env.step(torch.zeros(env.action_space.shape, device=gs.device)) # take one step in case genesis has some warm-start delays
     obs, _ = env.reset()
-    N = 100
+    N = 1000
     if args.save_video:
         images = [env.unwrapped.render_rgb_array()]
     with torch.inference_mode():
