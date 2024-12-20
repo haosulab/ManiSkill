@@ -7,7 +7,7 @@
 [demos-badge]: https://img.shields.io/badge/demos-yes-green.svg
 # Control Tasks
 
-These are classic control tasks where the objective is to control a robot to reach a particular state, similar to the [DM Control suite](https://github.com/deepmind/dm_control) but with GPU parallelized simulation and rendering
+These are classic control tasks where the objective is to control a robot to reach a particular state, similar to the [DM Control suite](https://github.com/deepmind/dm_control) but with GPU parallelized simulation and rendering.
 The document here has both a high-level overview/list of all tasks in a table as well as detailed task cards with video demonstrations after.
 
 ## Task Table

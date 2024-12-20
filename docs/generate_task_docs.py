@@ -31,19 +31,22 @@ Both real-world humanoids and the Mujoco humanoid are supported in ManiSkill, an
 
     "mobile_manipulation": """# Mobile Manipulation Tasks
 
-These are tasks where a mobile manipulator is used to manipulate objects. This cateogry primarily uses robots with mobile bases like Fetch or Stretch robots""",
+These are tasks where a mobile manipulator is used to manipulate objects. This cateogry primarily uses robots with mobile bases like Fetch or Stretch robots.
+
+For additional tasks, including scene-level mobile manipulation, please check out the [community contributions page](../community_contributions/index.md).
+""",
 
     "quadruped": """# Quadruped Tasks
 
-These are tasks where a quadruped robot is used for locomotion and/or manipulation. This cateogry primarily uses robots with four legs like the ANYmal or Unitree go robots""",
+These are tasks where a quadruped robot is used for locomotion and/or manipulation. This cateogry primarily uses robots with four legs like the ANYmal or Unitree go robots.""",
 
     "control": """# Control Tasks
 
-These are classic control tasks where the objective is to control a robot to reach a particular state, similar to the [DM Control suite](https://github.com/deepmind/dm_control) but with GPU parallelized simulation and rendering""",
+These are classic control tasks where the objective is to control a robot to reach a particular state, similar to the [DM Control suite](https://github.com/deepmind/dm_control) but with GPU parallelized simulation and rendering.""",
 
     "drawing": """# Drawing Tasks
 
-These are tasks where the robot is controlled to draw a specific shape or pattern""",
+These are tasks where the robot is controlled to draw a specific shape or pattern.""",
 }
 import urllib.request
 import mani_skill.envs

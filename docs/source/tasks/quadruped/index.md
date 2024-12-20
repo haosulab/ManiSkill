@@ -7,7 +7,7 @@
 [demos-badge]: https://img.shields.io/badge/demos-yes-green.svg
 # Quadruped Tasks
 
-These are tasks where a quadruped robot is used for locomotion and/or manipulation. This cateogry primarily uses robots with four legs like the ANYmal or Unitree go robots
+These are tasks where a quadruped robot is used for locomotion and/or manipulation. This cateogry primarily uses robots with four legs like the ANYmal or Unitree go robots.
 The document here has both a high-level overview/list of all tasks in a table as well as detailed task cards with video demonstrations after.
 
 ## Task Table
