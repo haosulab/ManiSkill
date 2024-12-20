@@ -42,13 +42,6 @@ See https://genesis-world.readthedocs.io/en/latest/user_guide/overview/installat
 
 Then run `pip install pynvml tyro`.
 
-<!-- ```bash
-mamba create -n "isaaclab" "python==3.10"
-mamba activate isaaclab
-pip install torch==2.2.2 --index-url https://download.pytorch.org/whl/cu118
-pip install isaacsim-rl isaacsim-replicator isaacsim-extscache-physics isaacsim-extscache-kit-sdk isaacsim-extscache-kit isaacsim-app --extra-index-url https://pypi.nvidia.com
-``` -->
-
 ## Running the Benchmark
 
 All scripts are provided in the scripts folder that you can simply run directly. Otherwise example usages are shown below for benchmarking simulation and simulation+rendering FPS. With --save-results flag on, resutls are saved to the `benchmark_results` folder in a .csv format. Running a benchmark with the same configurations of cameras/number of environments/choice of GPU will override the previous result. Example commands are shown below

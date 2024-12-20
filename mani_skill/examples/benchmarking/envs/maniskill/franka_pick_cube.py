@@ -26,21 +26,21 @@ class FrankaPickCubeBenchmarkEnv(BaseEnv):
         self.fixed_trajectory = {
             "pick_and_lift": {
                 "control_mode": "pd_joint_pos",
-                "actions": [(torch.tensor([0.0, 0.68, 0.0, -1.9292649, 0.0, 2.627549, 0.7840855, 0.04], device=self.device), 8),
-                            (torch.tensor([0.0, 0.68, 0.0, -1.9292649, 0.0, 2.627549, 0.7840855, -0.02], device=self.device), 7),
-                            (torch.tensor([0.0, 0.3, 0.0, -1.9292649, 0.0, 2.627549, 0.7840855, -0.02], device=self.device), 10),
+                "actions": [(torch.tensor([0.0, 0.68, 0.0, -1.9292649, 0.0, 2.627549, 0.7840855, 0.04], device=self.device), 15),
+                            (torch.tensor([0.0, 0.68, 0.0, -1.9292649, 0.0, 2.627549, 0.7840855, -0.02], device=self.device), 15),
+                            (torch.tensor([0.0, 0.3, 0.0, -1.9292649, 0.0, 2.627549, 0.7840855, -0.02], device=self.device), 20),
                             ],
                 "shake_action_fn": lambda : torch.cat([torch.rand(self.num_envs, 7, device=self.device) * 0.5 - 0.25, torch.ones(self.num_envs, 1, device=self.device) * -1], dim=-1),
-                "shake_steps": 75,
+                "shake_steps": 150,
             },
         }
 
     @property
     def _default_sim_config(self):
         return SimConfig(
-            sim_freq=120,
+            sim_freq=100,
             spacing=5,
-            control_freq=60,
+            control_freq=50,
             scene_config=SceneConfig(
                 bounce_threshold=0.5,
                 solver_position_iterations=8, solver_velocity_iterations=0
