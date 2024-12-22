@@ -108,7 +108,7 @@ def main(args: Args):
         if hasattr(env.unwrapped, "fixed_trajectory"):
             for k, v in env.unwrapped.fixed_trajectory.items():
                 obs, _ = env.reset()
-                env.step(torch.zeros(env.action_space.shape, device=base_env.device)) # take one step in case genesis has some warm-start delays
+                env.step(torch.zeros(env.action_space.shape, device=base_env.device))
                 obs, _ = env.reset()
                 if args.save_video:
                     images = []
