@@ -321,7 +321,8 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
         return self.linear_velocity
 
     # NOTE (fxiang): Cannot lock after gpu setup
-    # def get_locked_motion_axes(self) -> list[bool]: ...
+    def get_locked_motion_axes(self) -> Array:
+        return self.locked_motion_axes
 
     # def put_to_sleep(self) -> None: ...
     def set_angular_velocity(self, arg0: Array):
@@ -331,6 +332,9 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
     # def set_kinematic_target(self, arg0: sapien.pysapien.Pose) -> None: ...
     def set_linear_velocity(self, arg0: Array):
         self.linear_velocity = arg0
+
+    def set_locked_motion_axes(self, axes: Array) -> None:
+        self.locked_motion_axes = axes
 
     # def set_locked_motion_axes(self, axes: list[bool]) -> None:
     #     """
@@ -437,11 +441,19 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
                 arg1 = arg1[0]
             self._bodies[0].linear_velocity = arg1
 
-    # @property
-    # def locked_motion_axes(self) -> list[bool]:
-    #     """
-    #     :type: list[bool]
-    #     """
+    @property
+    def locked_motion_axes(self) -> Array:
+        """
+        :type: list[bool]
+        """
+        return torch.tensor([body.locked_motion_axes for body in self._bodies])
+
+    @locked_motion_axes.setter
+    @before_gpu_init
+    def locked_motion_axes(self, arg1: Array) -> None:
+        arg1 = common.to_tensor(arg1, device=self.device)
+        for body in self._bodies:
+            body.set_locked_motion_axes(arg1)
 
 
 @dataclass
