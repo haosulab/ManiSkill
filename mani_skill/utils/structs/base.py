@@ -326,26 +326,36 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
 
     # def put_to_sleep(self) -> None: ...
     def set_angular_velocity(self, arg0: Array):
+        """
+        Set the angular velocity of the dynamic rigid body.
+        Args:
+            arg0: The angular velocity to set. Can be of shape (N, 3) where N is the number of managed bodies or (3, ) to apply the same angular velocity to all managed bodies.
+        """
         self.angular_velocity = arg0
 
     # def set_kinematic(self, arg0: bool) -> None: ...
     # def set_kinematic_target(self, arg0: sapien.pysapien.Pose) -> None: ...
     def set_linear_velocity(self, arg0: Array):
+        """
+        Set the linear velocity of the dynamic rigid body.
+        Args:
+            arg0: The linear velocity to set. Can be of shape (N, 3) where N is the number of managed bodies or (3, ) to apply the same linear velocity to all managed bodies.
+        """
         self.linear_velocity = arg0
 
     def set_locked_motion_axes(self, axes: Array) -> None:
+        """
+        Set some motion axes of the dynamic rigid body to be locked
+        Args:
+            axes: list of 6 true/false values indicating whether which  of the 6 DOFs of the body is locked.
+                  The order is linear X, Y, Z followed by angular X, Y, Z. If given a single list of length 6, it will be applied to all managed bodies.
+                  If given a a batch of shape (N, 6), you can modify the N managed bodies each in batch.
+
+        Example:
+            set_locked_motion_axes([True, False, False, False, True, False]) allows the object to move along the X axis and rotate about the Y axis
+        """
         self.locked_motion_axes = axes
 
-    # def set_locked_motion_axes(self, axes: list[bool]) -> None:
-    #     """
-    #     set some motion axes of the dynamic rigid body to be locked
-    #     Args:
-    #         axes: list of 6 true/false values indicating whether which  of the 6 DOFs of the body is locked.
-    #               The order is linear X, Y, Z followed by angular X, Y, Z.
-
-    #     Example:
-    #         set_locked_motion_axes([True, False, False, False, True, False]) allows the object to move along the X axis and rotate about the Y axis
-    #     """
     # def wake_up(self) -> None: ...
     @property
     def angular_velocity(self) -> torch.Tensor:
@@ -452,8 +462,12 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
     @before_gpu_init
     def locked_motion_axes(self, arg1: Array) -> None:
         arg1 = common.to_tensor(arg1, device=self.device)
-        for body in self._bodies:
-            body.set_locked_motion_axes(arg1)
+        if arg1.shape[0] == 6:
+            for body in self._bodies:
+                body.set_locked_motion_axes(arg1.cpu().tolist())
+        else:
+            for i, body in enumerate(self._bodies):
+                body.set_locked_motion_axes(arg1[i].cpu().tolist())
 
 
 @dataclass
