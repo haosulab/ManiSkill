@@ -456,7 +456,9 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
         """
         :type: list[bool]
         """
-        return torch.tensor([body.locked_motion_axes for body in self._bodies])
+        return torch.tensor(
+            [body.locked_motion_axes for body in self._bodies], device=self.device
+        )
 
     @locked_motion_axes.setter
     @before_gpu_init
