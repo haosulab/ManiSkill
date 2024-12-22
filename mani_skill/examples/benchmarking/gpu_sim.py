@@ -105,47 +105,48 @@ def main(args: Args):
             del images
 
         # if environment has some predefined actions run those
-        for k, v in env.unwrapped.fixed_trajectory.items():
-            obs, _ = env.reset()
-            env.step(torch.zeros(env.action_space.shape, device=base_env.device)) # take one step in case genesis has some warm-start delays
-            obs, _ = env.reset()
-            if args.save_video:
-                images = []
-                images.append(env.render().cpu().numpy())
-            actions = v["actions"]
-            if v["control_mode"] == "pd_joint_pos":
-                env.unwrapped.agent.set_control_mode(v["control_mode"])
-                env.unwrapped.agent.controller.reset()
-                N = v["shake_steps"] if "shake_steps" in v else 0
-                N += sum([a[1] for a in actions])
-                with profiler.profile(f"{k}_env.step", total_steps=N, num_envs=num_envs):
-                    i = 0
-                    for action in actions:
-                        for _ in range(action[1]):
-                            env.step(torch.tile(action[0], (num_envs, 1)))
-                            i += 1
-                            if args.save_video:
-                                images.append(env.render().cpu().numpy())
-                    # runs a "shake" test, typically used to check stability of contacts/grasping
-                    if "shake_steps" in v:
-                        env.unwrapped.agent.set_control_mode("pd_joint_target_delta_pos")
-                        env.unwrapped.agent.controller.reset()
-                        while i < N:
-                            actions = v["shake_action_fn"]()
-                            env.step(actions)
-                            if args.save_video:
-                                images.append(env.render().cpu().numpy())
-                            i += 1
-                profiler.log_stats(f"{k}_env.step")
+        if hasattr(env.unwrapped, "fixed_trajectory"):
+            for k, v in env.unwrapped.fixed_trajectory.items():
+                obs, _ = env.reset()
+                env.step(torch.zeros(env.action_space.shape, device=base_env.device))
+                obs, _ = env.reset()
                 if args.save_video:
-                    images = [tile_images(rgbs, nrows=video_nrows) for rgbs in images]
-                    images_to_video(
-                        images,
-                        output_dir="./videos/ms3_benchmark",
-                        video_name=f"mani_skill_gpu_sim-fixed_trajectory={k}-{args.env_id}-num_envs={num_envs}-obs_mode={args.obs_mode}-render_mode={args.render_mode}",
-                        fps=30,
-                    )
-                    del images
+                    images = []
+                    images.append(env.render().cpu().numpy())
+                actions = v["actions"]
+                if v["control_mode"] == "pd_joint_pos":
+                    env.unwrapped.agent.set_control_mode(v["control_mode"])
+                    env.unwrapped.agent.controller.reset()
+                    N = v["shake_steps"] if "shake_steps" in v else 0
+                    N += sum([a[1] for a in actions])
+                    with profiler.profile(f"{k}_env.step", total_steps=N, num_envs=num_envs):
+                        i = 0
+                        for action in actions:
+                            for _ in range(action[1]):
+                                env.step(torch.tile(action[0], (num_envs, 1)))
+                                i += 1
+                                if args.save_video:
+                                    images.append(env.render().cpu().numpy())
+                        # runs a "shake" test, typically used to check stability of contacts/grasping
+                        if "shake_steps" in v:
+                            env.unwrapped.agent.set_control_mode("pd_joint_target_delta_pos")
+                            env.unwrapped.agent.controller.reset()
+                            while i < N:
+                                actions = v["shake_action_fn"]()
+                                env.step(actions)
+                                if args.save_video:
+                                    images.append(env.render().cpu().numpy())
+                                i += 1
+                    profiler.log_stats(f"{k}_env.step")
+                    if args.save_video:
+                        images = [tile_images(rgbs, nrows=video_nrows) for rgbs in images]
+                        images_to_video(
+                            images,
+                            output_dir="./videos/ms3_benchmark",
+                            video_name=f"mani_skill_gpu_sim-fixed_trajectory={k}-{args.env_id}-num_envs={num_envs}-obs_mode={args.obs_mode}-render_mode={args.render_mode}",
+                            fps=30,
+                        )
+                        del images
         env.reset(seed=2022)
         N = 1000
         with profiler.profile("env.step+env.reset", total_steps=N, num_envs=num_envs):
