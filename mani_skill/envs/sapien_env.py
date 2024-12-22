@@ -351,6 +351,9 @@ class BaseEnv(gym.Env):
             """the original unbatched action space of the environment"""
         else:
             self.action_space = None
+        
+        self.fixed_trajectory = {}
+        
         # initialize the cached properties
         self.single_observation_space
         self.observation_space
