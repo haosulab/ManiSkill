@@ -17,6 +17,7 @@ from mani_skill.agents.controllers.pd_joint_pos import (
 )
 from mani_skill.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill.utils import assets, download_asset, sapien_utils
+from mani_skill.utils.logging_utils import logger
 from mani_skill.utils.structs import Actor, Array, Articulation
 from mani_skill.utils.structs.pose import Pose
 
@@ -246,8 +247,15 @@ class BaseAgent:
             self.controllers[control_mode].set_drive_property()
             if balance_passive_force:
                 # NOTE (stao): Balancing passive force is currently not supported in PhysX, so we work around by disabling gravity
-                for link in self.robot.links:
-                    link.disable_gravity = True
+                if not self.scene._gpu_sim_initialized:
+                    for link in self.robot.links:
+                        link.disable_gravity = True
+                else:
+                    for link in self.robot.links:
+                        if link.disable_gravity.all() != True:
+                            logger.warning(
+                                f"Attemped to set control mode and disable gravity for the links of {self.robot}. However the GPU sim has already initialized with the links having gravity enabled so this will not work."
+                            )
 
     @property
     def controller(self) -> BaseController:
