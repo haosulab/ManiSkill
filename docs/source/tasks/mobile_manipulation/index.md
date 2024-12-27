@@ -9,7 +9,7 @@
 
 These are tasks where a mobile manipulator is used to manipulate objects. This cateogry primarily uses robots with mobile bases like Fetch or Stretch robots.
 
-For additional tasks, including scene-level mobile manipulation, please check out the [community contributions page](../community_contributions/index.md).
+For additional tasks, including scene-level mobile manipulation, please check out the [external benchmarks/tasks page](../external/index.md).
 
 The document here has both a high-level overview/list of all tasks in a table as well as detailed task cards with video demonstrations after.
 

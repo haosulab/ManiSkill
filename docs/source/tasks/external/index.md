@@ -5,7 +5,7 @@
 [no-dense-reward-badge]: https://img.shields.io/badge/dense%20reward-no-red.svg
 [no-sparse-reward-badge]: https://img.shields.io/badge/sparse%20reward-no-red.svg
 [demos-badge]: https://img.shields.io/badge/demos-yes-green.svg
-# Community Contributed Projects
+# External Benchmarks/Tasks
 
 These are tasks and external libraries contributed by the community, built in ManiSkill.
 The document here has both a high-level overview/list of each project in a table as well as detailed task cards with video demonstrations after.

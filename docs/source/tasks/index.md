@@ -38,5 +38,5 @@ mobile_manipulation/index
 dextrous/index
 digital_twins/index
 drawing/index
-community_contributions/index
+external/index
 ```
