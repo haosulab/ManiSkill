@@ -19,6 +19,20 @@ from transforms3d.euler import euler2quat
 
 @register_env("DrawSVG-v1", max_episode_steps=500)
 class DrawSVGEnv(BaseEnv):
+    """
+    **Task Description:**
+    Instantiates a table with a white canvas on it and a svg path specified with an outline. A robot with a stick is to draw the triangle with a red line.
+    
+    **Randomizations:**
+    - the goal svg's position on the xy-plane is randomized
+    - the goal svg's z-rotation is randomized in range [0, 2 $\pi$]
+    
+    **Success Conditions:**
+    - the drawn points by the robot are within a euclidean distance of 0.05m with points on the goal svg
+    """
+
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/figures/environment_demos/DrawSVG-v1_rt.mp4"
+
 
     MAX_DOTS = 1000
     """

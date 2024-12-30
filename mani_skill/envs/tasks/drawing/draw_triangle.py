@@ -20,6 +20,21 @@ from transforms3d.euler import euler2quat
 
 @register_env("DrawTriangle-v1", max_episode_steps=300)
 class DrawTriangleEnv(BaseEnv):
+    """
+    **Task Description:**
+    Instantiates a table with a white canvas on it and a goal triangle with an outline. A robot with a stick is to draw the triangle with a red line.
+
+    **Randomizations:**
+    - the goal triangle's position on the xy-plane is randomized
+    - the goal triangle's z-rotation is randomized in range [0, 2 $\pi$]
+
+    **Success Conditions:**
+    - the drawn points by the robot are within a euclidean distance of 0.05m with points on the goal triangle
+    """
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/figures/environment_demos/DrawTriangle-v1_rt.mp4"
+
+
+
     MAX_DOTS = 300
     """
     The total "ink" available to use and draw with before you need to call env.reset. NOTE that on GPU simulation it is not recommended to have a very high value for this as it can slow down rendering
