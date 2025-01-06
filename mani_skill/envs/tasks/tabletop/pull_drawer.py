@@ -47,7 +47,7 @@ class PullDrawerEnv(BaseEnv):
         # Movement parameters 
         self.max_pull_distance = self.outer_width * 0.8  # Can pull out 80% of width
         self.target_pos = -self.max_pull_distance * 0.8
-        self.k = 0.005
+        self.k = 0.03
         
         super().__init__(
             *args,
