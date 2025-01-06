@@ -47,7 +47,7 @@ class PullDrawerEnv(BaseEnv):
         # Movement parameters 
         self.max_pull_distance = self.outer_width * 0.8  # Can pull out 80% of width
         self.target_pos = -self.max_pull_distance * 0.8
-        self.k = 0.03
+        self.k = 0.005
         
         super().__init__(
             *args,
@@ -319,9 +319,10 @@ class PullDrawerEnv(BaseEnv):
         tcp_pose = self.agent.tcp.pose.raw_pose
         tcp_pos = tcp_pose[..., :3]
         drawer_link_pose = self.drawer.links_map['drawer'].pose.raw_pose
+        drawer_pose = self.drawer.pose.raw_pose
 
         handle_offset = torch.tensor([-self.inner_width/2 - self.handle_offset, 0, 0], device=drawer_link_pose.device)
-        handle_pose = drawer_link_pose[:, :3] + handle_offset
+        handle_pose = drawer_pose[:, :3] + handle_offset
 
         # 1. Orientation Reward - Modified for continuous feedback
         tcp_pose_q = self.agent.tcp.pose.q  # Current quaternion
