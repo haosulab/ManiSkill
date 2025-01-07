@@ -275,12 +275,8 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
     @mass.setter
     @before_gpu_init
     def mass(self, arg1: float) -> None:
-        if self.scene.gpu_sim_enabled:
-            raise NotImplementedError(
-                "Setting mass is not supported on GPU sim at the moment."
-            )
-        else:
-            self._bodies[0].mass = arg1
+        for body in self._bodies:
+            body.set_mass(arg1)
 
     # @property
     # def max_contact_impulse(self) -> float:
