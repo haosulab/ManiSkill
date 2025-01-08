@@ -514,7 +514,6 @@ class RecordEpisode(gym.Wrapper):
                 )
             else:
                 self._trajectory_buffer.fail = None
-            self._last_info = common.to_numpy(info)
 
         if self.save_video:
             self._video_steps += 1
