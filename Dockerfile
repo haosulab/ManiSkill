@@ -46,11 +46,14 @@ COPY docker/nvidia_layers.json /etc/vulkan/implicit_layer.d/nvidia_layers.json
 RUN pip install torch 
 
 ARG CACHE_BUST=1
-RUN git clone https://github.com/dwaitbhatt/ManiSkill.git /workspace/ManiSkill
+RUN pip install nvitop
+RUN git clone -b main --single-branch https://github.com/dwaitbhatt/ManiSkill.git /workspace/ManiSkill
 WORKDIR /workspace/ManiSkill
 RUN pip install -e .
-ARG CACHE_BUST=0
 
+# For TD-MPC2
+COPY ./examples/baselines/tdmpc2/requirements.txt /workspace/ManiSkill/examples/baselines/tdmpc2/requirements.txt
+RUN pip install -r /workspace/ManiSkill/examples/baselines/tdmpc2/requirements.txt
 RUN pip install tensorboard wandb tqdm jupyterlab nvitop
 
 # download physx GPU binary via sapien

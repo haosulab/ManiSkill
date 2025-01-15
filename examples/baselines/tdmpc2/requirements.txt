@@ -67,7 +67,6 @@ kiwisolver==1.4.7
 kornia==0.7.1
 labmaze==1.0.6
 lxml==5.3.0
--e git+https://github.com/dwaitbhatt/ManiSkill.git@cd8a77778c958d1d92125c25ba3867c47d8e4780#egg=mani_skill
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 matplotlib==3.9.2
@@ -147,9 +146,9 @@ tensordict-nightly==2024.3.26
 termcolor==2.4.0
 threadpoolctl==3.5.0
 toppra==0.6.0
-torch==2.5.1+cu118
+torch
 torchrl-nightly==2024.3.26
-torchvision==0.20.1+cu118
+torchvision
 tqdm==4.66.1
 traitlets==5.14.3
 transforms3d==0.4.1
