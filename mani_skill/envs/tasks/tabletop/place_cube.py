@@ -8,7 +8,7 @@ import torch
 import torch.random
 from transforms3d.euler import euler2quat
 
-from mani_skill.agents.robots import Fetch, Panda
+from mani_skill.agents.robots import Fetch, Panda, XArm6PandaGripper
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.utils import randomization
 from mani_skill.sensors.camera import CameraConfig
@@ -36,15 +36,15 @@ class PlaceCubeEnv(BaseEnv):
     The cube is place on the top of the bin. The robot remains static and the gripper is not closed at the end state
     """
 
-    SUPPORTED_ROBOTS = ["panda", "fetch"]
+    SUPPORTED_ROBOTS = ["panda", "fetch", "xarm6_pandagripper"]
 
     # Specify some supported robot types
-    agent: Union[Panda, Fetch]
+    agent: Union[Panda, Fetch, XArm6PandaGripper]
 
     # set some commonly used values
     cube_half_length = 0.02  # half side length of the cube
-    inner_side_half_len = 0.025  # side length of the bin's inner square
-    short_side_half_size = 0.0025  # length of the shortest edge of the block
+    inner_side_half_len = 0.06  # side length of the bin's inner square
+    short_side_half_size = 0.008  # length of the shortest edge of the block
     block_half_size = [
         short_side_half_size,
         2 * short_side_half_size + inner_side_half_len,
@@ -155,12 +155,12 @@ class PlaceCubeEnv(BaseEnv):
 
             # init the cube in the first 1/4 zone along the x-axis (so that it doesn't collide the bin)
             xyz = torch.zeros((b, 3))
-            xyz[..., 0] = (torch.rand((b, 1)) * 0.05 - 0.1)[
+            xyz[..., 0] = (torch.rand((b, 1)) * 0.05 - 0.2)[
                 ..., 0
-            ]  # first 1/4 zone of x ([-0.1, -0.05])
-            xyz[..., 1] = (torch.rand((b, 1)) * 0.2 - 0.1)[
+            ]  # first 1/4 zone of x ([-0.2, -0.15])
+            xyz[..., 1] = (torch.rand((b, 1)) * 0.4 - 0.2)[
                 ..., 0
-            ]  # spanning all possible ys
+            ]  # spanning all possible ys ([])
             xyz[..., 2] = self.cube_half_length  # on the table
             q = [1, 0, 0, 0]
             obj_pose = Pose.create_from_pq(p=xyz, q=q)
@@ -200,13 +200,13 @@ class PlaceCubeEnv(BaseEnv):
 
     def _get_obs_extra(self, info: Dict):
         obs = dict(
-            is_grasped=info["is_obj_grasped"],
-            tcp_pose=self.agent.tcp.pose.raw_pose,
+            # is_grasped=info["is_obj_grasped"],
+            # tcp_pose=self.agent.tcp.pose.raw_pose,
             bin_pos=self.bin.pose.p,
         )
         if "state" in self.obs_mode:
             obs.update(
-                obj_pose=self.obj.pose.raw_pose,
+                # obj_pose=self.obj.pose.raw_pose,
                 tcp_to_obj_pos=self.obj.pose.p - self.agent.tcp.pose.p,
             )
         return obs
