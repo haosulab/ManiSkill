@@ -15,6 +15,9 @@ class Args:
     env_id: Annotated[str, tyro.conf.arg(aliases=["-e"])] = "PushCube-v1"
     """The environment ID of the task you want to simulate"""
 
+    robot: Annotated[Optional[str], tyro.conf.arg(aliases=["-r"])] = "panda"
+    """The robot uid to use"""
+
     obs_mode: Annotated[str, tyro.conf.arg(aliases=["-o"])] = "none"
     """Observation mode"""
 
@@ -63,6 +66,7 @@ def main(args: Args):
         parallel_in_single_scene = False
     env: BaseEnv = gym.make(
         args.env_id,
+        robot_uids=args.robot,
         obs_mode=args.obs_mode,
         reward_mode=args.reward_mode,
         control_mode=args.control_mode,

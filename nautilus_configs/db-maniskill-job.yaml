@@ -7,7 +7,7 @@ spec:
     spec:
       containers:
       - name: gpu-container
-        image: dhbhatt/maniskill-experiments:latest
+        image: dhbhatt/maniskill-experiments:v4.1_tdmpc
         command: ["/bin/bash", "-c"]
         args: [
           # "export WANDB_API_KEY=ebf815cc1a406e10c78314a2a137fa38d83c0b02 && \
@@ -23,22 +23,42 @@ spec:
           #        --total-timesteps 10000000 \
           #        --wandb-video-freq 1900000 \
           #        --track \
-          #   > /pers_vol/dwait/logs/$(date +%Y-%m-%d_%H-%M-%S).log"
+          #   > /pers_vol/dwait/logs/$(date +%Y-%m-%d_%H-%M-%S)-sac.log"
+
+          # "export WANDB_API_KEY=ebf815cc1a406e10c78314a2a137fa38d83c0b02 && \
+          # python examples/baselines/tdmpc2/train.py \
+          #         model_size=5 \
+          #         steps=5_000_000 \
+          #         seed=1 \
+          #         exp_name=PlaceCube_xarm6_pandagripper_joint_vel_tdmpc2 \
+          #         env_id=PlaceCube-v1 \
+          #         robot_uids=xarm6_pandagripper \
+          #         control_mode=pd_joint_vel \
+          #         env_type=gpu \
+          #         num_envs=32 \
+          #         obs=state \ 
+          #         save_video_local=true \
+          #         wandb=true \
+          #     > /pers_vol/dwait/logs/$(date +%Y-%m-%d_%H-%M-%S)-tdmpc.log"
+
           "export WANDB_API_KEY=ebf815cc1a406e10c78314a2a137fa38d83c0b02 && \
-          python examples/baselines/tdmpc2/train.py \
-                  model_size=5 \
-                  steps=10_000_000 \
-                  seed=1 \
-                  exp_name=PickCube_xarm6_allegro_left_joint_vel_tdmpc2 \
-                  env_id=PickCube-v1 \
-                  robot_uids=xarm6_allegro_left \
-                  control_mode=pd_joint_vel \
-                  env_type=gpu \
-                  num_envs=32 \
-                  obs=state \ 
-                  save_video_local=true \
-                  wandb=true \
-              > /pers_vol/dwait/logs/$(date +%Y-%m-%d_%H-%M-%S)-tdmpc.log"
+          python examples/baselines/ppo/ppo.py \
+                  --env_id=PlaceCube-v1 \
+                  --robot_uids=xarm6_pandagripper \
+                  --control_mode=pd_joint_vel \
+                  --exp_name=PlaceCube_xarm6_pandagripper_jv_ppo \
+                  --num_envs=512 \
+                  --num_eval_envs=8 \
+                  --eval_freq=10 \
+                  --total_timesteps=10_000_000 \
+                  --num_steps=50 \
+                  --num_minibatches=32 \
+                  --num_eval_steps=50 \
+                  --gamma=0.8 \
+                  --update_epochs=4 \
+                  --track \
+                  --wandb_video_freq=50 \
+              > /pers_vol/dwait/logs/$(date +%Y-%m-%d_%H-%M-%S)-ppo.log"
         ]
         volumeMounts:
         - mountPath: /pers_vol
@@ -69,7 +89,7 @@ spec:
         #     - "NVIDIA_TITAN_RTX"
         #     - "NVIDIA-RTX-A6000"
         nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
+          preferredDuringSchedulingIgnoredDuringExecution:
           - weight: 80
             preference:
               matchExpressions:

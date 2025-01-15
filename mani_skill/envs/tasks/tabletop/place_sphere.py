@@ -8,7 +8,7 @@ import torch
 import torch.random
 from transforms3d.euler import euler2quat
 
-from mani_skill.agents.robots import Fetch, Panda
+from mani_skill.agents.robots import Fetch, Panda, XArm6PandaGripper
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.utils import randomization
 from mani_skill.sensors.camera import CameraConfig
@@ -36,10 +36,10 @@ class PlaceSphereEnv(BaseEnv):
     The sphere is place on the top of the bin. The robot remains static and the gripper is not closed at the end state
     """
 
-    SUPPORTED_ROBOTS = ["panda", "fetch"]
+    SUPPORTED_ROBOTS = ["panda", "fetch", "xarm6_pandagripper"]
 
     # Specify some supported robot types
-    agent: Union[Panda, Fetch]
+    agent: Union[Panda, Fetch, XArm6PandaGripper]
 
     # set some commonly used values
     radius = 0.02  # radius of the sphere
@@ -200,13 +200,13 @@ class PlaceSphereEnv(BaseEnv):
 
     def _get_obs_extra(self, info: Dict):
         obs = dict(
-            is_grasped=info["is_obj_grasped"],
-            tcp_pose=self.agent.tcp.pose.raw_pose,
+            # is_grasped=info["is_obj_grasped"],
+            # tcp_pose=self.agent.tcp.pose.raw_pose,
             bin_pos=self.bin.pose.p,
         )
         if "state" in self.obs_mode:
             obs.update(
-                obj_pose=self.obj.pose.raw_pose,
+                # obj_pose=self.obj.pose.raw_pose,
                 tcp_to_obj_pos=self.obj.pose.p - self.agent.tcp.pose.p,
             )
         return obs
