@@ -218,14 +218,22 @@ class PlaceCubeEnv(BaseEnv):
         obj_to_tcp_dist = torch.linalg.norm(tcp_pose - obj_pos, axis=1)
         reward = 2 * (1 - torch.tanh(5 * obj_to_tcp_dist))
 
-        # grasp and place reward
+        # grasp and reach bin top reward
         obj_pos = self.obj.pose.p
-        self.bin.pose.p
         bin_top_pos = self.bin.pose.p.clone()
-        bin_top_pos[:, 2] = bin_top_pos[:, 2] + self.block_half_size[0] + self.cube_half_length
+        bin_top_pos[:, 2] = bin_top_pos[:, 2] + 2 * (self.block_half_size[0] + self.cube_half_length + 4 * self.short_side_half_size)
         obj_to_bin_top_dist = torch.linalg.norm(bin_top_pos - obj_pos, axis=1)
-        place_reward = 1 - torch.tanh(5.0 * obj_to_bin_top_dist)
-        reward[info["is_obj_grasped"]] = (4 + place_reward)[info["is_obj_grasped"]]
+        reach_bin_top_reward = 1 - torch.tanh(5.0 * obj_to_bin_top_dist)
+        reward[info["is_obj_grasped"]] = (4 + reach_bin_top_reward)[info["is_obj_grasped"]]
+        above_bin_xy = torch.linalg.norm(bin_top_pos[:, :2] - obj_pos[:, :2], axis=1)
+        reached_above_bin = info["is_obj_grasped"] & (above_bin_xy <= self.cube_half_length/2)
+
+        # reach inside bin reward
+        bin_inside_pos = self.bin.pose.p.clone()
+        bin_inside_pos[:, 2] = bin_inside_pos[:, 2] + 2 * (self.block_half_size[0] + self.cube_half_length + self.short_side_half_size)
+        obj_to_bin_inside_dist = torch.linalg.norm(bin_inside_pos - obj_pos, axis=1)
+        reach_bin_inside_reward = 1 - torch.tanh(5.0 * obj_to_bin_inside_dist)
+        reward[reached_above_bin] = (6 + reach_bin_inside_reward)[reached_above_bin]
 
         # ungrasp and static reward
         gripper_width = (self.agent.robot.get_qlimits()[0, -1, 1] * 2).to(self.device)
@@ -241,13 +249,13 @@ class PlaceCubeEnv(BaseEnv):
         static_reward = 1 - torch.tanh(v * 10 + av)
         robot_static_reward = self.agent.is_static(
             0.2
-        )  # keep the robot static at the end state, since the cube may spin when being placed on top
+        )  # keep the robot static at the end state
         reward[info["is_obj_on_bin"]] = (
-            6 + (ungrasp_reward + static_reward + robot_static_reward) / 3.0
+            8 + (ungrasp_reward + static_reward + robot_static_reward) / 3.0
         )[info["is_obj_on_bin"]]
 
         # success reward
-        reward[info["success"]] = 13
+        reward[info["success"]] = 15
         return reward
 
     def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):

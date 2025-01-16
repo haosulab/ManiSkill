@@ -411,7 +411,7 @@
     <child link="panda_leftfinger"/>
     <origin rpy="0 0 0" xyz="0 0 0.0584"/>
     <axis xyz="0 1 0"/>
-    <limit effort="100" lower="0.0" upper="0.04" velocity="0.2"/>
+    <limit effort="100" lower="-0.04" upper="0.04" velocity="0.2"/>  <!-- NOTE: Lower joint limit set to -0.04 instead of 0 for successful plan_screw with xarm6_pandagripper -->
     <dynamics damping="0.3"/>
   </joint>
   <joint name="panda_finger_joint2" type="prismatic">
@@ -419,7 +419,7 @@
     <child link="panda_rightfinger"/>
     <origin rpy="0 0 0" xyz="0 0 0.0584"/>
     <axis xyz="0 -1 0"/>
-    <limit effort="100" lower="0.0" upper="0.04" velocity="0.2"/>
+    <limit effort="100" lower="-0.04" upper="0.04" velocity="0.2"/>  <!-- NOTE: Lower joint limit set to -0.04 instead of 0 for successful plan_screw with xarm6_pandagripper -->
     <mimic joint="panda_finger_joint1"/>
     <dynamics damping="0.3"/>
   </joint>
