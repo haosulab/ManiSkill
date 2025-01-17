@@ -230,7 +230,7 @@ class PlaceCubeEnv(BaseEnv):
 
         # reach inside bin reward
         bin_inside_pos = self.bin.pose.p.clone()
-        bin_inside_pos[:, 2] = bin_inside_pos[:, 2] + 2 * (self.block_half_size[0] + self.cube_half_length + self.short_side_half_size)
+        bin_inside_pos[:, 2] = bin_inside_pos[:, 2] + 2 * (self.block_half_size[0] + self.cube_half_length + self.short_side_half_size) + 0.01
         obj_to_bin_inside_dist = torch.linalg.norm(bin_inside_pos - obj_pos, axis=1)
         reach_bin_inside_reward = 1 - torch.tanh(5.0 * obj_to_bin_inside_dist)
         reward[reached_above_bin] = (6 + reach_bin_inside_reward)[reached_above_bin]
@@ -243,7 +243,7 @@ class PlaceCubeEnv(BaseEnv):
         )
         ungrasp_reward[
             ~is_obj_grasped
-        ] = 16.0  # give ungrasp a bigger reward, so that it exceeds the robot static reward and the gripper can close
+        ] = 50.0  # give ungrasp a bigger reward, so that it exceeds the robot static reward and the gripper can close
         v = torch.linalg.norm(self.obj.linear_velocity, axis=1)
         av = torch.linalg.norm(self.obj.angular_velocity, axis=1)
         static_reward = 1 - torch.tanh(v * 10 + av)
@@ -255,7 +255,7 @@ class PlaceCubeEnv(BaseEnv):
         )[info["is_obj_on_bin"]]
 
         # success reward
-        reward[info["success"]] = 15
+        reward[info["success"]] = 30
         return reward
 
     def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):

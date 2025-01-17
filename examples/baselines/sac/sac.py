@@ -52,6 +52,8 @@ class Args:
     """frequency to log videos to wandb in terms of environment steps (multiple of eval_freq)"""
     save_model: bool = True
     """whether to save the model checkpoints"""
+    save_model_dir: Optional[str] = "runs"
+    """the directory to save the model"""
 
     # Env specific arguments
     env_id: str = "PushCube-v1"
@@ -410,7 +412,7 @@ if __name__ == "__main__":
                 break
 
             if args.save_model:
-                model_path = f"runs/{run_name}/ckpt_{global_step}.pt"
+                model_path = f"{args.save_model_dir}/{run_name}/ckpt_{global_step}.pt"
                 torch.save({
                     'actor': actor.state_dict(),
                     'qf1': qf1_target.state_dict(),
@@ -536,7 +538,7 @@ if __name__ == "__main__":
                 writer.add_scalar("losses/alpha_loss", alpha_loss.item(), global_step)
 
     if not args.evaluate and args.save_model:
-        model_path = f"runs/{run_name}/final_ckpt.pt"
+        model_path = f"{args.save_model_dir}/{run_name}/final_ckpt.pt"
         torch.save({
             'actor': actor.state_dict(),
             'qf1': qf1_target.state_dict(),

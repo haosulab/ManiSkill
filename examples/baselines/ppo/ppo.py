@@ -43,7 +43,9 @@ class Args:
     """frequency to log videos to wandb in terms of environment steps (multiple of eval_freq)"""
 
     save_model: bool = True
-    """whether to save model into the `runs/{run_name}` folder"""
+    """whether to save model into the `{save_model_dir}/{run_name}` folder"""
+    save_model_dir: Optional[str] = "runs"
+    """the directory to save the model"""
     evaluate: bool = False
     """if toggled, only runs evaluation with the given model checkpoint and saves the evaluation trajectories"""
     checkpoint: Optional[str] = None
@@ -293,7 +295,7 @@ if __name__ == "__main__":
                 logger.add_scalar(f"eval/{k}", mean, global_step)
                 print(f"eval_{k}_mean={mean}")
         if args.save_model and iteration % args.eval_freq == 1:
-            model_path = f"runs/{run_name}/ckpt_{iteration}.pt"
+            model_path = f"{args.save_model_dir}/{run_name}/ckpt_{iteration}.pt"
             torch.save(agent.state_dict(), model_path)
             print(f"model saved to {model_path}")
         # Annealing the rate if instructed to do so.
@@ -459,7 +461,7 @@ if __name__ == "__main__":
         logger.add_scalar("time/rollout_fps", args.num_envs * args.num_steps / rollout_time, global_step)
     if not args.evaluate:
         if args.save_model:
-            model_path = f"runs/{run_name}/final_ckpt.pt"
+            model_path = f"{args.save_model_dir}/{run_name}/final_ckpt.pt"
             torch.save(agent.state_dict(), model_path)
             print(f"model saved to {model_path}")
         logger.close()
