@@ -19,7 +19,7 @@ def _load_scene(self, options):
         id=f"ycb:{model_id}",
     )
     # choose a reasonable initial pose that doesn't intersect other objects
-    builder.inital_pose = sapien.Pose(p=[0, 0, 0.5])
+    builder.initial_pose = sapien.Pose(p=[0, 0, 0.5])
     builder.build(name="object")
 ```
 
@@ -115,7 +115,7 @@ def _load_scene(self, options):
 
 ### Articulation Limitations
 
-For the physx simulation backend, any single articulation can have a maximum of 64 links. More complex articulated objects will either need to be simplified by merging links together. Most of the time this is readily possible by inspecting the URDF and fusing together links held together by fixed joints. The less fixed joints and linsk there are, the better the simulation will run in terms of accuracy and speed.
+For the physx simulation backend, any single articulation can have a maximum of 64 links. More complex articulated objects will either need to be simplified by merging links together. Most of the time this is readily possible by inspecting the URDF and fusing together links held together by fixed joints. The less fixed joints and links there are, the better the simulation will run in terms of accuracy and speed.
 
 ## Using the MJCF Loader
 
@@ -165,6 +165,6 @@ class PickSingleYCBEnv(BaseEnv):
         )
 ```
 
-A `reconfiguration_freq` value of 1 means every during every reset we reconfigure. A `reconfiguration_freq` of `k` means every `k` resets we reconfigure. A `reconfiguration_freq` of 0 (the default) means we never reconfigure again.
+A `reconfiguration_freq` value of 1 means during every reset we reconfigure. A `reconfiguration_freq` of `k` means every `k` resets we reconfigure. A `reconfiguration_freq` of 0 (the default) means we never reconfigure again.
 
 In general one use case of setting a positive `reconfiguration_freq` value is for when you want to simulate a task in parallel where each parallel environment is working with a different object/articulation and there are way more object variants than number of parallel environments. For machine learning / RL workflows, setting `reconfiguration_freq` to e.g. 10 ensures every 10 resets the objects being simulated on are randomized which can diversify the data collected for online training while keeping simulation fast by reconfiguring infrequently.
