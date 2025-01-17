@@ -158,7 +158,7 @@ class PushCubeEnv(BaseEnv):
             q = [1, 0, 0, 0]
             # we can then create a pose object using Pose.create_from_pq to then set the cube pose with. Note that even though our quaternion
             # is not batched, Pose.create_from_pq will automatically batch p or q accordingly
-            # furthermore, notice how here we do not even using env_idx as a variable to say set the pose for objects in desired
+            # furthermore, notice how here we do not even use env_idx as a variable to say set the pose for objects in desired
             # environments. This is because internally any calls to set data on the GPU buffer (e.g. set_pose, set_linear_velocity etc.)
             # automatically are masked so that you can only set data on objects in environments that are meant to be initialized
             obj_pose = Pose.create_from_pq(p=xyz, q=q)
