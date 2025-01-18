@@ -34,7 +34,7 @@ In addition to `agent` and `extra`, `sensor_data` and `sensor_param` are introdu
     
     If the data comes from a camera sensor:
     - `Color`: [H, W, 4], `torch.uint8`. RGB+Alpha values..
-    - `PositionSegmentation`: [H, W, 4], `torch.int16`. The first 3 dimensions stand for (x, y, z) coordinates in the OpenGL/Blender convension. The unit is millimeters. The last dimension represents segmentation ID, see the [Segmentation data section](#segmentation-data) for more details.
+    - `PositionSegmentation`: [H, W, 4], `torch.int16`. The first 3 dimensions stand for (x, y, z) coordinates in the OpenGL/Blender convention. The unit is millimeters. The last dimension represents segmentation ID, see the [Segmentation data section](#segmentation-data) for more details.
 
 - `sensor_param`: parameters of each sensor, which varies depending on type of sensor
   - `{sensor_uid}`:
@@ -61,7 +61,7 @@ This observation mode has the same data format as the [sensor_data mode](#sensor
 Note that this data is not scaled/normalized to [0, 1] or [-1, 1] in order to conserve memory, so if you consider to train on RGB, depth, and/or segmentation data be sure to scale your data before training on it.
 
 
-ManiSkill by default flexibly supports different combinations of RGB, depth, and segmentation data, namely `rgb`, `depth`, `segmentation`, `rgb+depth`, `rgb+depth+segmentation`, `rgb+segmentation`, and`depth+segmentation`. (`rgbd` is a short hand for `rgb+depth`). Whichever image modality that is not chosen will not be included in the observation and conserves some memory and GPU bandwith.
+ManiSkill by default flexibly supports different combinations of RGB, depth, and segmentation data, namely `rgb`, `depth`, `segmentation`, `rgb+depth`, `rgb+depth+segmentation`, `rgb+segmentation`, and`depth+segmentation`. (`rgbd` is a short hand for `rgb+depth`). Whichever image modality that is not chosen will not be included in the observation and conserves some memory and GPU bandwidth.
 
 The RGB and depth data visualized can look like below:
 ```{image} images/replica_cad_rgbd.png

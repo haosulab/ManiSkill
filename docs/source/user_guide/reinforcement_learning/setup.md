@@ -60,7 +60,7 @@ obs, rew, terminated, truncated, info = env.step(env.action_space.sample())
 
 You may also notice that there are two additional options when creating a vector env. The `auto_reset` argument controls whether to automatically reset a parallel environment when it is terminated or truncated. This is useful depending on algorithm. The `ignore_terminations` argument controls whether environments reset upon terminated being True. Like gymnasium vector environments, partial resets can occur where some parallel environments reset while others do not.
 
-Note that for efficiency, everything returned by the environment will be a batched torch tensor on the GPU and not a batched numpy array on the CPU. This the only difference you may need to account for between ManiSkill vectorized environments and gymnasium vectorized environments.
+Note that for efficiency, everything returned by the environment will be a batched torch tensor on the GPU and not a batched numpy array on the CPU. This is the only difference you may need to account for between ManiSkill vectorized environments and gymnasium vectorized environments.
 
 ## Evaluation
 
