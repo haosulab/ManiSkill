@@ -146,7 +146,7 @@ class BaseDigitalTwinEnv(BaseEnv):
             rgb = rgb * 0.5 + overlay_img * 0.5
         return rgb
 
-    def get_obs(self, info: dict = None):
+    def get_obs(self, info: dict = None, alt_imgs=None):
         obs = super().get_obs(info)
 
         # "greenscreen" process
@@ -160,7 +160,9 @@ class BaseDigitalTwinEnv(BaseEnv):
                 green_screened_rgb = self._green_sceen_rgb(
                     obs["sensor_data"][camera_name]["rgb"],
                     obs["sensor_data"][camera_name]["segmentation"],
-                    self._rgb_overlay_images[camera_name],
+                    self._rgb_overlay_images[camera_name]
+                    if alt_imgs is None
+                    else alt_imgs[camera_name],
                 )
                 obs["sensor_data"][camera_name]["rgb"] = green_screened_rgb
         return obs

@@ -17,7 +17,7 @@ from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 
 if TYPE_CHECKING:
     from mani_skill.envs.sapien_env import BaseEnv
-    from mani_skill.envs.tasks.digital_twins.utils.real_env import BaseRealEnv
+    from mani_skill.envs.tasks.digital_twins.base_real_env import BaseRealEnv
 
 
 class EnvSpec:
@@ -105,7 +105,7 @@ def register(
 
     # hacky way to avoid circular import errors when users inherit a task in ManiSkill and try to register it themselves
     from mani_skill.envs.sapien_env import BaseEnv
-    from mani_skill.envs.tasks.digital_twins.utils.real_env import BaseRealEnv
+    from mani_skill.envs.tasks.digital_twins.base_real_env import BaseRealEnv
 
     if name in REGISTERED_ENVS:
         logger.warn(f"Env {name} already registered")

@@ -13,7 +13,6 @@ from mani_skill.utils.structs.actor import Actor
 
 @register_agent()
 class Koch(BaseAgent):
-    scale = 2.0
     uid = "koch-v1.1"
     urdf_path = f"{PACKAGE_ASSET_DIR}/robots/koch/follower_arm_v1.1_simplified.urdf"
     urdf_config = dict(
@@ -30,11 +29,34 @@ class Koch(BaseAgent):
         rest=Keyframe(
             qpos=np.array([0, 2.2, 3.017, -0.25, 0, 0.6044]),
             pose=sapien.Pose(),
-        )
+        ),
+        elevated_turn=Keyframe(
+            qpos=np.array([0, 2.2, 2.75, -0.25, -np.pi / 2, 1.0]),
+            pose=sapien.Pose(),
+        ),
+        to_push=Keyframe(
+            qpos=np.array([0, 2.2, 3.017, -0.25, -np.pi / 2, 0.6044]),
+            pose=sapien.Pose(),
+        ),
+        zero=Keyframe(
+            qpos=np.array([0.0] * 6),
+            pose=sapien.Pose(),
+        ),
     )
 
-    def __init__(self, *args, robot_chassis_colors=[1, 1, 1, 1], **kwargs):
-        self.robot_chassis_colors = robot_chassis_colors
+    def __init__(
+        self,
+        *args,
+        robot_chassis_colors=[0.95, 0.95, 0.95, 1],
+        robot_motor_colors=[0.05, 0.05, 0.05, 1],
+        **kwargs,
+    ):
+        self.robot_chassis_colors = torch.normal(
+            torch.tensor(robot_chassis_colors[:3]), torch.ones(3) * 0.05
+        ).clip(0, 1).tolist() + [1]
+        self.robot_motor_colors = torch.normal(
+            torch.tensor(robot_motor_colors[:3]), torch.ones(3) * 0.05
+        ).clip(0, 1).tolist() + [1]
         """either a RGBA color or a list of RGBA colors for each robot in each parallel environment to then customize the color of the robot chassis"""
         super().__init__(*args, **kwargs)
 
@@ -55,8 +77,8 @@ class Koch(BaseAgent):
             [joint.name for joint in self.robot.active_joints],
             [-0.05, -0.05, -0.05, -0.05, -0.1, -0.05],
             [0.05, 0.05, 0.05, 0.05, 0.1, 0.05],
-            stiffness=[1e3] * 5 + [1e1],
-            damping=[1e2] * 5 + [1e-1],
+            stiffness=[123, 50, 102.68, 145, 108.37, 93.3],
+            damping=[15.85, 6, 15.34, 16, 16.31, 16.3],
             force_limit=100,
             use_delta=True,
             use_target=True,
@@ -68,12 +90,15 @@ class Koch(BaseAgent):
         )
         return deepcopy_dict(controller_configs)
 
+    # TODO (xhin): have to make a proper api to turn on color randomization
+    # currently incompatible with koch prints of other colors
     def _after_loading_articulation(self):
         super()._after_loading_articulation()
         self.finger1_link = self.robot.links_map["gripper"]
         self.finger2_link = self.robot.links_map["link_6"]
         self.tcp = self.robot.links_map["gripper_tcp"]
         self.tcp2 = self.robot.links_map["gripper_tcp2"]
+        self.back_tcp = self.robot.links_map["back_tcp"]
         for link in self.robot.links:
             for i, obj in enumerate(link._objs):
                 rb_comp = obj.entity.find_component_by_type(
@@ -90,6 +115,17 @@ class Koch(BaseAgent):
                         else:
                             color = self.robot_chassis_colors
                         mesh.material.base_color = color
+
+                    other_meshes_to_modify = [
+                        x for x in rb_comp.render_shapes if "motor" in x.name
+                    ]
+                    for mesh in other_meshes_to_modify:
+                        if isinstance(self.robot_chassis_colors[0], list):
+                            color = self.robot_motor_colors[i]
+                        else:
+                            color = self.robot_motor_colors
+                        for part in mesh.parts:
+                            part.material.base_color = color
 
     def is_grasping(self, object: Actor, min_force=0.5, max_angle=110):
         """Check if the robot is grasping an object
@@ -142,4 +178,5 @@ class Koch(BaseAgent):
 
     # remove default qvel from agent observations
     def get_proprioception(self):
-        return dict(qpos=self.robot.get_qpos())
+        # return dict(qpos=self.robot.get_qpos())
+        return dict()

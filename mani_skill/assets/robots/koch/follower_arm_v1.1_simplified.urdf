@@ -29,7 +29,7 @@
         rpy="1.570796327 0 0" />
       <geometry>
         <mesh
-          filename="package://koch/meshes/base_link.glb" />
+          filename="package://koch/meshes/centered_base_link.stl" />
       </geometry>
       <material
         name="white">
@@ -87,7 +87,7 @@
     name="fixed_joint"
     type="fixed">
     <origin
-      xyz="0.005766 -0.028665  0.018513"
+      xyz="0.0005 -0.056 0.021"
       rpy="0 0 0" />
     <parent
       link="base_link" />
@@ -420,7 +420,7 @@
     <axis
       xyz="1 0 0" />
     <!-- <limit lower="-3.14159" upper="3.14159"/> -->
-    <limit lower="-1" upper="2.14159"/>
+    <limit lower="-1.5" upper="2.14159"/>
   </joint>
   <link
     name="link_6">
@@ -595,10 +595,10 @@
       link="gripper" />
     <axis
       xyz="0 -1 0" />
-    <limit lower="0" upper="1.75"/>
+    <limit lower="0" upper="1.6"/>
   </joint>
   <!-- Define the hand_tcp frame -->
-  <!-- <link name="gripper_tcp"/>
+  <link name="gripper_tcp"/>
   <joint name="gripper_tcp_joint" type="fixed">
     <origin rpy="0 0 0" xyz="-0.008 0 -0.065"/>
     <parent link="link_6"/>
@@ -610,8 +610,16 @@
     <origin rpy="0 0 0" xyz="-0.0135 0.0172 -0.0514"/>
     <parent link="gripper"/>
     <child link="gripper_tcp2"/>
-  </joint> -->
-  <link name="gripper_tcp"/>
+  </joint>
+
+
+  <link name="back_tcp"/>
+  <joint name="back_tcp_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="-0.00 0 -0.023"/>
+    <parent link="link_6"/>
+    <child link="back_tcp"/>
+  </joint>
+  <!-- <link name="gripper_tcp"/>
   <joint name="gripper_tcp_joint" type="fixed">
     <origin rpy="0 0 0" xyz="-0.011337 0 -0.05574"/>
     <parent link="link_6"/>
@@ -623,5 +631,5 @@
     <origin rpy="0 0 0" xyz="-0.010505 0.017151 -0.041535"/>
     <parent link="gripper"/>
     <child link="gripper_tcp2"/>
-  </joint>
+  </joint> -->
 </robot>

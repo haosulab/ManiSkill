@@ -275,7 +275,7 @@ class TableSceneBuilder(SceneBuilder):
             self.env.agent.reset(qpos)
             self.env.agent.robot.set_pose(sapien.Pose([-0.615, 0, 0]))
         elif self.env.robot_uids == "koch-v1.1":
-            qpos = self.env.agent.keyframes["rest"].qpos
+            qpos = self.env.agent.keyframes["elevated_turn"].qpos
             qpos = (
                 self.env._episode_rng.normal(
                     0, self.robot_init_qpos_noise, (b, len(qpos))
@@ -284,5 +284,5 @@ class TableSceneBuilder(SceneBuilder):
             )
             self.env.agent.reset(qpos)
             self.env.agent.robot.set_pose(
-                sapien.Pose([-0.68, 0, 5e-3], q=euler2quat(0, 0, np.pi / 2))
+                sapien.Pose([-0.737, 0, 1e-3], q=euler2quat(0, 0, np.pi / 2))
             )

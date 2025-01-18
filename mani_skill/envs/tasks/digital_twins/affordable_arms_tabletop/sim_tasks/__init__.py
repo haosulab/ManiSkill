@@ -1,3 +1,4 @@
 from .grab_cube import GrabCubeEnv
-from .real_grab_cube import RealGrabCubeEnv
+from .odd_cube_out import OddCubeOutEnv
+from .push_cube import PushCubeEnv
 from .transfer_cube import TransferCubeEnv
