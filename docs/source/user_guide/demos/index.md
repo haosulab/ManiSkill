@@ -10,7 +10,7 @@ python -m mani_skill.examples.demo_random_action -h
 ```
 for a full list of available commands.
 
-Some recommended examples that cover a number of features of ManiSkill
+Here are some recommended examples that cover a number of features of ManiSkill:
 
 Tasks in Realistic Scenes (ReplicaCAD dataset example)
 ```bash
@@ -21,7 +21,7 @@ python -m mani_skill.examples.demo_random_action -e "ReplicaCAD_SceneManipulatio
   --render-mode="human" # run with GUI
 ```
 
-To turn ray-tracing on for more photo-realistic rendering, you can add `--shader="rt"` or `--shader="rt-fast"`
+To enable ray-tracing for more photo-realistic rendering, add `--shader="rt"` or `--shader="rt-fast"`
 
 ```bash
 python -m mani_skill.examples.demo_random_action -e "ReplicaCAD_SceneManipulation-v1" \
@@ -92,7 +92,7 @@ To save videos of the visual observations the agent would get (in this case it i
 python -m mani_skill.examples.benchmarking.gpu_sim -e "PickCube-v1" -n 64 \
   --save-video --render-mode="sensors"
 ```
-it should run quite fast! (3000+ fps on a 4090, you can increase the number envs for higher FPS). You can change `--render-mode="rgb_array"` to render from higher quality cameras.
+It should run quite fast! (3000+ fps on a 4090. You can increase the number envs for higher FPS). You can change `--render-mode="rgb_array"` to render from higher quality cameras.
 
 <video preload="auto" controls="True" width="100%">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/docs/source/_static/videos/mani_skill_gpu_sim-PickCube-v1-num_envs=16-obs_mode=state-render_mode=sensors.mp4" type="video/mp4">
@@ -157,7 +157,7 @@ ManiSkill3 supports extremely fast real2sim evaluation via GPU simulation + rend
 
 ## Visualize Pointcloud Data
 
-You can run the following to visualize the pointcloud observations (require's a display to work)
+You can run the following to visualize the point cloud observations (requires a display to work)
 
 ```bash
 pip install "pyglet<2" # make sure to install this dependency
