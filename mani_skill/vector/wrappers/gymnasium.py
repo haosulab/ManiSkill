@@ -51,11 +51,13 @@ class ManiSkillVectorEnv(VectorEnv):
         self.record_metrics = record_metrics
         self.spec = self._env.spec
         super().__init__(
-            num_envs, self._env.single_observation_space, self._env.single_action_space
+            num_envs,
+            self._env.get_wrapper_attr("single_observation_space"),
+            self._env.get_wrapper_attr("single_action_space"),
         )
         if not self.ignore_terminations and auto_reset:
             assert (
-                self.base_env.reconfiguration_freq == 0
+                self.base_env.reconfiguration_freq == 0 or self.base_env.num_envs == 1
             ), "With partial resets, environment cannot be reconfigured automatically"
 
         if self.record_metrics:

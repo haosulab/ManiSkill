@@ -76,7 +76,7 @@ class HumanoidEnvBase(BaseEnv):
         self.camera_mount.set_pose(
             Pose.create_from_pq(p=self.agent.robot.links_map["torso"].pose.p)
         )
-        if sapien.physx.is_gpu_enabled():
+        if self.gpu_sim_enabled:
             # we update just actor pose here, no need to call apply_all/fetch_all
             self.scene.px.gpu_apply_rigid_dynamic_data()
             self.scene.px.gpu_fetch_rigid_dynamic_data()
@@ -128,9 +128,7 @@ class HumanoidEnvBase(BaseEnv):
 
     def _load_scene(self, options: dict):
         loader = self.scene.create_mjcf_loader()
-        articulation_builders, actor_builders, sensor_configs = loader.parse(
-            self.agent.mjcf_path
-        )
+        actor_builders = loader.parse(self.agent.mjcf_path)["actor_builders"]
         for a in actor_builders:
             a.build(a.name)
 
@@ -201,6 +199,7 @@ class HumanoidEnvBase(BaseEnv):
 
 ###
 class HumanoidEnvStandard(HumanoidEnvBase):
+    SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "none")
     agent: Union[Humanoid]
 
     def __init__(self, *args, robot_uids="humanoid", **kwargs):
@@ -284,6 +283,18 @@ class HumanoidEnvStandard(HumanoidEnvBase):
 
 @register_env("MS-HumanoidStand-v1", max_episode_steps=1000)
 class HumanoidStand(HumanoidEnvStandard):
+    """
+    **Task Description:**
+    Humanoid robot stands upright
+
+    **Randomizations:**
+    - Humanoid robot is randomly rotated [-pi, pi] radians about z axis.
+    - Humanoid qpos and qvel have added noise from uniform distribution [-1e-2, 1e-2]
+
+    **Fail Conditions:**
+    - Humanoid robot torso link leaves z range [0.7, 1.0]
+    """
+
     agent: Union[Humanoid]
 
     def __init__(self, *args, robot_uids="humanoid", **kwargs):
@@ -342,6 +353,17 @@ class HumanoidStand(HumanoidEnvStandard):
 
 @register_env("MS-HumanoidWalk-v1", max_episode_steps=1000)
 class HumanoidWalk(HumanoidEnvStandard):
+    """
+    **Task Description:**
+    Humanoid moves in x direction at walking pace
+
+    **Randomizations:**
+    - Humanoid qpos and qvel have added noise from uniform distribution [-1e-2, 1e-2]
+
+    **Fail Conditions:**
+    - Humanoid robot torso link leaves z range [0.7, 1.0]
+    """
+
     agent: Union[Humanoid]
 
     def __init__(self, *args, robot_uids="humanoid", **kwargs):
@@ -363,6 +385,17 @@ class HumanoidWalk(HumanoidEnvStandard):
 
 @register_env("MS-HumanoidRun-v1", max_episode_steps=1000)
 class HumanoidRun(HumanoidEnvStandard):
+    """
+    **Task Description:**
+    Humanoid moves in x direction at running pace
+
+    **Randomizations:**
+    - Humanoid qpos and qvel have added noise from uniform distribution [-1e-2, 1e-2]
+
+    **Fail Conditions:**
+    - Humanoid robot torso link leaves z range [0.7, 1.0]
+    """
+
     agent: Union[Humanoid]
 
     def __init__(self, *args, robot_uids="humanoid", **kwargs):

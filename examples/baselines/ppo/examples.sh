@@ -40,7 +40,7 @@ python ppo.py --env_id="TriFingerRotateCubeLevel4-v1" \
    --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
    --total_timesteps=500_000_000 --num-steps=250 --num-eval-steps=250
 python ppo.py --env_id="PokeCube-v1" --update_epochs=8 --num_minibatches=32 \
-  --num_envs=1024 --total_timesteps=3_000_000 --eval_freq=10 --num-steps=20
+  --num_envs=1024 --total_timesteps=5_000_000 --eval_freq=10 --num-steps=20
 python ppo.py --env_id="MS-CartpoleBalance-v1" \
    --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
    --total_timesteps=4_000_000 --num-steps=250 --num-eval-steps=1000 \

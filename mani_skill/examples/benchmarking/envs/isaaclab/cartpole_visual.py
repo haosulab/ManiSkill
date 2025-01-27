@@ -27,7 +27,7 @@ from omni.isaac.lab.utils.math import sample_uniform
 @configclass
 class CartpoleRGBCameraBenchmarkEnvCfg(DirectRLEnvCfg):
     # simulation
-    sim: SimulationCfg = SimulationCfg(dt=1 / 120)
+    sim: SimulationCfg = SimulationCfg(dt=1 / 120, render_interval=2)
 
     # robot
     robot_cfg: ArticulationCfg = CARTPOLE_CFG.replace(prim_path="/World/envs/env_.*/Robot")
@@ -50,7 +50,7 @@ class CartpoleRGBCameraBenchmarkEnvCfg(DirectRLEnvCfg):
     viewer = ViewerCfg(eye=(20.0, 20.0, 20.0))
 
     # scene
-    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=256, env_spacing=20.0, replicate_physics=True)
+    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=256, env_spacing=25.0, replicate_physics=True)
 
     # env
     decimation = 2
@@ -72,25 +72,6 @@ class CartpoleRGBCameraBenchmarkEnvCfg(DirectRLEnvCfg):
     rew_scale_cart_vel = -0.01
     rew_scale_pole_vel = -0.005
 
-
-class CartpoleDepthCameraBenchmarkEnvCfg(CartpoleRGBCameraBenchmarkEnvCfg):
-    # camera
-    tiled_camera: TiledCameraCfg = TiledCameraCfg(
-        prim_path="/World/envs/env_.*/Camera",
-        offset=TiledCameraCfg.OffsetCfg(pos=(-7.0, 0.0, 3.0), rot=(0.9945, 0.0, 0.1045, 0.0), convention="world"),
-        data_types=["depth"],
-        spawn=sim_utils.PinholeCameraCfg(
-            focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 20.0)
-        ),
-        width=80,
-        height=80,
-    )
-
-    # env
-    num_channels = 1
-    num_observations = num_channels * tiled_camera.height * tiled_camera.width
-
-
 class CartpoleCameraBenchmarkEnv(DirectRLEnv):
     """Benchmark environment for CartPole task with a camera.
 
@@ -99,17 +80,19 @@ class CartpoleCameraBenchmarkEnv(DirectRLEnv):
     - Support RGB+Depth and multiple camera setups
     """
 
-    cfg: CartpoleRGBCameraBenchmarkEnvCfg | CartpoleDepthCameraBenchmarkEnvCfg
+    cfg: CartpoleRGBCameraBenchmarkEnvCfg
 
     def __init__(
-        self, cfg: CartpoleRGBCameraBenchmarkEnvCfg | CartpoleDepthCameraBenchmarkEnvCfg, render_mode: str | None = None, camera_width=128, camera_height=128, num_cameras=1, obs_mode="rgb", **kwargs
+        self, cfg: CartpoleRGBCameraBenchmarkEnvCfg, render_mode: str | None = None, camera_width=128, camera_height=128, num_cameras=1, obs_mode="rgb", **kwargs
     ):
         # configure cameras
-        data_types = ["rgb"]
-        if obs_mode == "rgb+depth":
-            data_types = ["rgb", "depth"]
-        elif obs_mode == "depth":
-            data_types = ["depth"]
+        data_types = []
+        if "rgb" in obs_mode:
+            data_types.append("rgb")
+        if "depth" in obs_mode:
+            data_types.append("depth")
+        if "segmentation" in obs_mode:
+            data_types.append("semantic_segmentation")
         self.data_types = data_types
 
         self.num_cameras = num_cameras
@@ -120,7 +103,7 @@ class CartpoleCameraBenchmarkEnv(DirectRLEnv):
                 offset=TiledCameraCfg.OffsetCfg(pos=(-4.0, 0.0, 3.0), rot=(0.9945, 0.0, 0.1045, 0.0), convention="world"),
                 data_types=data_types,
                 spawn=sim_utils.PinholeCameraCfg(
-                    focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 20.0)
+                    focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 24.7)
                 ),
                 width=camera_width,
                 height=camera_height,

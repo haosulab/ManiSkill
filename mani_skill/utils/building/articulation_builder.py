@@ -19,6 +19,9 @@ from mani_skill.utils.structs.pose import to_sapien_pose
 if TYPE_CHECKING:
     from mani_skill.envs.scene import ManiSkillScene
 
+SPAWN_SPACING = 5
+SPAWN_START_GAP = 10
+
 
 class ArticulationBuilder(SapienArticulationBuilder):
     scene: ManiSkillScene
@@ -28,6 +31,7 @@ class ArticulationBuilder(SapienArticulationBuilder):
         super().__init__()
         self.name = None
         self.scene_idxs = None
+        self.initial_pose = None
 
     def set_name(self, name: str):
         self.name = name
@@ -56,7 +60,14 @@ class ArticulationBuilder(SapienArticulationBuilder):
 
         return builder
 
-    def build_entities(self, fix_root_link=None, name_prefix=""):
+    def build_entities(self, *args, **kwargs):
+        raise NotImplementedError(
+            "_build_entities is a private function in ManiSkill. Use build() to properly build articulation"
+        )
+
+    def _build_entities(
+        self, fix_root_link=None, name_prefix="", initial_pose=sapien.Pose()
+    ):
         entities = []
         links = []
         for b in self.link_builders:
@@ -99,7 +110,7 @@ class ArticulationBuilder(SapienArticulationBuilder):
             entities[0].components[0].joint.type = (
                 "fixed" if fix_root_link else "undefined"
             )
-        entities[0].pose = self.initial_pose
+        entities[0].pose = initial_pose
         return entities
 
     def build(
@@ -119,10 +130,16 @@ class ArticulationBuilder(SapienArticulationBuilder):
         else:
             self.scene_idxs = torch.arange((self.scene.num_envs), dtype=int)
         num_arts = len(self.scene_idxs)
-        initial_pose = Pose.create(self.initial_pose)
-        initial_pose_b = initial_pose.raw_pose.shape[0]
+
+        if self.initial_pose is None:
+            logger.warn(
+                f"No initial pose set for articulation builder of {self.name}, setting to default pose q=[1,0,0,0], p=[0,0,0]. There may be simulation issues/bugs if this articulation at it's initial pose collides with other objects at their initial poses."
+            )
+            self.initial_pose = sapien.Pose()
+        self.initial_pose = Pose.create(self.initial_pose)
+        initial_pose_b = self.initial_pose.raw_pose.shape[0]
         assert initial_pose_b == 1 or initial_pose_b == num_arts
-        initial_pose_np = common.to_numpy(initial_pose.raw_pose)
+        initial_pose_np = common.to_numpy(self.initial_pose.raw_pose)
 
         articulations = []
         for i, scene_idx in enumerate(self.scene_idxs):
@@ -130,8 +147,13 @@ class ArticulationBuilder(SapienArticulationBuilder):
                 sub_scene = self.scene.sub_scenes[0]
             else:
                 sub_scene = self.scene.sub_scenes[scene_idx]
-            links: List[sapien.Entity] = self.build_entities(
-                name_prefix=f"scene-{scene_idx}-{self.name}_"
+            if initial_pose_b == 1:
+                articulation_pose = to_sapien_pose(initial_pose_np)
+            else:
+                articulation_pose = to_sapien_pose(initial_pose_np[i])
+            links: List[sapien.Entity] = self._build_entities(
+                name_prefix=f"scene-{scene_idx}-{self.name}_",
+                initial_pose=articulation_pose,
             )
             if fix_root_link is not None:
                 links[0].components[0].joint.type = (
@@ -178,10 +200,7 @@ class ArticulationBuilder(SapienArticulationBuilder):
                             rest_length=offset,
                             stiffness=1e5,
                         )
-            if initial_pose_b == 1:
-                articulation.pose = to_sapien_pose(initial_pose_np)
-            else:
-                articulation.pose = to_sapien_pose(initial_pose_np[i])
+            articulation.pose = articulation_pose
             for l in links:
                 sub_scene.add_entity(l)
             articulation.name = f"scene-{scene_idx}_{self.name}"
@@ -190,6 +209,7 @@ class ArticulationBuilder(SapienArticulationBuilder):
         articulation: Articulation = Articulation.create_from_physx_articulations(
             articulations, self.scene, self.scene_idxs
         )
-        articulation.initial_pose = initial_pose
+        articulation.initial_pose = self.initial_pose
         self.scene.articulations[self.name] = articulation
+        self.scene.add_to_state_dict_registry(articulation)
         return articulation

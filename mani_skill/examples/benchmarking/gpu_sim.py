@@ -1,26 +1,46 @@
 import argparse
+from dataclasses import dataclass
 from pathlib import Path
-from turtle import update
-
+from typing import Annotated
 import gymnasium as gym
 import numpy as np
-import sapien.physx
-import sapien.render
 import torch
 import tqdm
+import tyro
 
 import mani_skill.envs
 from mani_skill.envs.sapien_env import BaseEnv
-from mani_skill.sensors.camera import Camera
-from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 from mani_skill.examples.benchmarking.profiling import Profiler
 from mani_skill.utils.visualization.misc import images_to_video, tile_images
 from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper
 import mani_skill.examples.benchmarking.envs # import benchmark env code
 
-BENCHMARK_ENVS = ["PickCubeBenchmark-v1", "CartpoleBalanceBenchmark-v1"]
-
-def main(args):
+BENCHMARK_ENVS = ["FrankaPickCubeBenchmark-v1", "CartpoleBalanceBenchmark-v1", "FrankaMoveBenchmark-v1"]
+@dataclass
+class Args:
+    env_id: Annotated[str, tyro.conf.arg(aliases=["-e"])] = "PickCube-v1"
+    obs_mode: Annotated[str, tyro.conf.arg(aliases=["-o"])] = "state"
+    control_mode: Annotated[str, tyro.conf.arg(aliases=["-c"])] = "pd_joint_delta_pos"
+    num_envs: Annotated[int, tyro.conf.arg(aliases=["-n"])] = 1024
+    cpu_sim: bool = False
+    """Whether to use the CPU or GPU simulation"""
+    seed: int = 0
+    save_example_image: bool = False
+    control_freq: int | None = 60
+    sim_freq: int | None = 120
+    num_cams: int | None = None
+    """Number of cameras. Only used by benchmark environments"""
+    cam_width: int | None = None
+    """Width of cameras. Only used by benchmark environments"""
+    cam_height: int | None = None
+    """Height of cameras. Only used by benchmark environments"""
+    render_mode: str = "rgb_array"
+    """Which set of cameras/sensors to render for video saving. 'cameras' value will save a video showing all sensor/camera data in the observation, e.g. rgb and depth. 'rgb_array' value will show a higher quality render of the environment running."""
+    save_video: bool = False
+    """Whether to save videos"""
+    save_results: str | None = None
+    """Path to save results to. Should be path/to/results.csv"""
+def main(args: Args):
     profiler = Profiler(output_format="stdout")
     num_envs = args.num_envs
     sim_config = dict()
@@ -41,7 +61,6 @@ def main(args):
             args.env_id,
             num_envs=num_envs,
             obs_mode=args.obs_mode,
-            # enable_shadow=True,
             render_mode=args.render_mode,
             control_mode=args.control_mode,
             sim_config=sim_config,
@@ -79,11 +98,55 @@ def main(args):
             images = [tile_images(rgbs, nrows=video_nrows) for rgbs in images]
             images_to_video(
                 images,
-                output_dir="./videos/benchmark",
-                video_name=f"mani_skill_gpu_sim-{args.env_id}-num_envs={num_envs}-obs_mode={args.obs_mode}-render_mode={args.render_mode}",
+                output_dir="./videos/ms3_benchmark",
+                video_name=f"mani_skill_gpu_sim-random_actions-{args.env_id}-num_envs={num_envs}-obs_mode={args.obs_mode}-render_mode={args.render_mode}",
                 fps=30,
             )
             del images
+
+        # if environment has some predefined actions run those
+        if hasattr(env.unwrapped, "fixed_trajectory"):
+            for k, v in env.unwrapped.fixed_trajectory.items():
+                obs, _ = env.reset()
+                env.step(torch.zeros(env.action_space.shape, device=base_env.device))
+                obs, _ = env.reset()
+                if args.save_video:
+                    images = []
+                    images.append(env.render().cpu().numpy())
+                actions = v["actions"]
+                if v["control_mode"] == "pd_joint_pos":
+                    env.unwrapped.agent.set_control_mode(v["control_mode"])
+                    env.unwrapped.agent.controller.reset()
+                    N = v["shake_steps"] if "shake_steps" in v else 0
+                    N += sum([a[1] for a in actions])
+                    with profiler.profile(f"{k}_env.step", total_steps=N, num_envs=num_envs):
+                        i = 0
+                        for action in actions:
+                            for _ in range(action[1]):
+                                env.step(torch.tile(action[0], (num_envs, 1)))
+                                i += 1
+                                if args.save_video:
+                                    images.append(env.render().cpu().numpy())
+                        # runs a "shake" test, typically used to check stability of contacts/grasping
+                        if "shake_steps" in v:
+                            env.unwrapped.agent.set_control_mode("pd_joint_target_delta_pos")
+                            env.unwrapped.agent.controller.reset()
+                            while i < N:
+                                actions = v["shake_action_fn"]()
+                                env.step(actions)
+                                if args.save_video:
+                                    images.append(env.render().cpu().numpy())
+                                i += 1
+                    profiler.log_stats(f"{k}_env.step")
+                    if args.save_video:
+                        images = [tile_images(rgbs, nrows=video_nrows) for rgbs in images]
+                        images_to_video(
+                            images,
+                            output_dir="./videos/ms3_benchmark",
+                            video_name=f"mani_skill_gpu_sim-fixed_trajectory={k}-{args.env_id}-num_envs={num_envs}-obs_mode={args.obs_mode}-render_mode={args.render_mode}",
+                            fps=30,
+                        )
+                        del images
         env.reset(seed=2022)
         N = 1000
         with profiler.profile("env.step+env.reset", total_steps=N, num_envs=num_envs):
@@ -95,6 +158,20 @@ def main(args):
                 if i % 200 == 0 and i != 0:
                     env.reset()
         profiler.log_stats("env.step+env.reset")
+        if args.save_example_image:
+            obs, _ = env.reset(seed=2022)
+            import matplotlib.pyplot as plt
+            for cam_name, cam_data in obs["sensor_data"].items():
+                for k, v in cam_data.items():
+                    imgs = v.cpu().numpy()
+                    imgs = tile_images(imgs, nrows=int(np.sqrt(args.num_envs)))
+                    cmap = None
+                    if k == "depth":
+                        imgs[imgs == np.inf] = 0
+                        imgs = imgs[ :, :, 0]
+                        cmap = "gray"
+                    plt.imsave(f"maniskill_{cam_name}_{k}.png", imgs, cmap=cmap)
+
     env.close()
     if args.save_results:
         # append results to csv
@@ -116,40 +193,11 @@ def main(args):
                 camera_height=args.cam_height,
             )
             profiler.update_csv(
-                "benchmark_results/maniskill.csv",
+                args.save_results,
                 data,
             )
         except:
             pass
 
-
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-e", "--env-id", type=str, default="PickCube-v1")
-    parser.add_argument("-o", "--obs-mode", type=str, default="state")
-    parser.add_argument("-c", "--control-mode", type=str, default="pd_joint_delta_pos")
-    parser.add_argument("-n", "--num-envs", type=int, default=1024)
-    parser.add_argument("--cpu-sim", action="store_true", help="Whether to use the CPU or GPU simulation")
-    parser.add_argument("--control-freq", type=int, default=None, help="The control frequency to use")
-    parser.add_argument("--sim-freq", type=int, default=None, help="The simulation frequency to use")
-    parser.add_argument("--num-cams", type=int, default=None, help="Number of cameras. Only used by benchmark environments")
-    parser.add_argument("--cam-width", type=int, default=None, help="Width of cameras. Only used by benchmark environments")
-    parser.add_argument("--cam-height", type=int, default=None, help="Height of cameras. Only used by benchmark environments")
-    parser.add_argument(
-        "--render-mode",
-        type=str,
-        default="sensors",
-        help="which set of cameras/sensors to render for video saving. 'cameras' value will save a video showing all sensor/camera data in the observation, e.g. rgb and depth. 'rgb_array' value will show a higher quality render of the environment running.",
-    ),
-    parser.add_argument(
-        "--save-video", action="store_true", help="whether to save videos"
-    )
-    parser.add_argument(
-        "--save-results", action="store_true", help="whether to save results to a csv file"
-    )
-    args = parser.parse_args()
-    return args
-
-
 if __name__ == "__main__":
-    main(parse_args())
+    main(tyro.cli(Args))

@@ -46,7 +46,7 @@ Once you are done here, you can head over to the [quickstart page](./quickstart.
 The following section is to install [NVIDIA Warp](https://github.com/NVIDIA/warp) for soft-body tasks. You can skip it if you do not need soft-body tasks yet.
 :::
 
-The soft-body tasks in ManiSkill are supported by SAPIEN and customized NVIDIA Warp. **CUDA toolkit >= 11.3 and gcc** are required. You can download and install the CUDA toolkit from the [offical website](https://developer.nvidia.com/cuda-downloads?target_os=Linux).
+The soft-body tasks in ManiSkill are supported by SAPIEN and customized NVIDIA Warp. **CUDA toolkit >= 11.3 and gcc** are required. You can download and install the CUDA toolkit from the [official website](https://developer.nvidia.com/cuda-downloads?target_os=Linux).
 
 Assuming the CUDA toolkit is installed at `/usr/local/cuda`, you need to ensure `CUDA_PATH` or `CUDA_HOME` is set properly:
 
@@ -201,7 +201,7 @@ If you still have some issues, you can check the NVIDIA drivers. First run
 ldconfig -p | grep libGLX_nvidia
 ```
 
-If `libGLX_nvidia.so` is not found, they it is likely that you have installed an incorrect driver. To get the right driver on linux, it is recommended to install `nvidia-driver-xxx` (do not use the ones with server in the package name) and to avoid using any other method of installation like a runfile
+If `libGLX_nvidia.so` is not found, then it is likely that you have installed an incorrect driver. To get the right driver on linux, it is recommended to install `nvidia-driver-xxx` (do not use the ones with server in the package name) and to avoid using any other method of installation like a runfile
 
 ### Uninstallation
 

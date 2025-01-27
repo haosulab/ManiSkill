@@ -21,10 +21,10 @@ def add_batch_dim(x):
     return x
 
 
-def to_batched_tensor(x: Union[List, Array]):
+def to_batched_tensor(x: Union[List, Array], device: Optional[Device] = None):
     if x is None:
         return None
-    return add_batch_dim(common.to_tensor(x))
+    return add_batch_dim(common.to_tensor(x, device=device))
 
 
 @dataclass
@@ -86,15 +86,27 @@ class Pose:
 
     @classmethod
     def create_from_pq(
-        cls, p: torch.Tensor = None, q: torch.Tensor = None, device: Device = None
+        cls,
+        p: Optional[torch.Tensor] = None,
+        q: Optional[torch.Tensor] = None,
+        device: Optional[Device] = None,
     ):
         """Creates a Pose object from a given position ``p`` and/or quaternion ``q``"""
+        if device is None:
+            # try to guess which device to use
+            device = (
+                p.device
+                if p is not None and isinstance(p, torch.Tensor)
+                else q.device
+                if q is not None and isinstance(q, torch.Tensor)
+                else None
+            )
         if p is None:
             p = torch.zeros((1, 3), device=device)
         if q is None:
             q = torch.zeros((1, 4), device=device)
             q[:, 0] = 1
-        p, q = to_batched_tensor(p), to_batched_tensor(q)
+        p, q = to_batched_tensor(p, device=device), to_batched_tensor(q, device=device)
 
         # correct batch sizes if needed
         if p.shape[0] > q.shape[0]:
@@ -122,7 +134,7 @@ class Pose:
             )
             return cls(raw_pose=add_batch_dim(raw_pose))
         elif isinstance(pose, cls):
-            return pose
+            return cls(raw_pose=pose.raw_pose.to(device))
         elif isinstance(pose, list) and isinstance(pose[0], sapien.Pose):
             ps = []
             qs = []
@@ -135,7 +147,7 @@ class Pose:
 
         else:
             assert len(pose.shape) <= 2 and len(pose.shape) > 0
-            pose = common.to_tensor(pose)
+            pose = common.to_tensor(pose, device=device)
             pose = add_batch_dim(pose)
             if pose.shape[-1] == 3:
                 return cls.create_from_pq(p=pose, device=pose.device)
@@ -177,7 +189,7 @@ class Pose:
         Multiply two poses. Supports multiplying singular poses like sapien.Pose or Pose object with batch size of 1 with Pose objects with batch size > 1.
         """
         # NOTE (stao): this code is probably slower than SAPIEN's pose multiplication but it is batched
-        arg0 = Pose.create(arg0)
+        arg0 = Pose.create(arg0, device=self.device)
         pose = self
         if len(arg0) == 1 and len(pose) > 1:
             # repeat arg0 to match shape of self
@@ -267,17 +279,14 @@ def vectorize_pose(
     Maps several formats of Pose representation to the appropriate tensor representation
     """
     if isinstance(pose, sapien.Pose):
-        if physx.is_gpu_enabled():
-            return torch.concatenate(
-                [
-                    common.to_tensor(pose.p, device=device),
-                    common.to_tensor(pose.q, device=device),
-                ]
-            )
-        else:
-            return np.hstack([pose.p, pose.q])
+        return torch.concatenate(
+            [
+                common.to_tensor(pose.p, device=device),
+                common.to_tensor(pose.q, device=device),
+            ]
+        )
     elif isinstance(pose, Pose):
-        return pose.raw_pose
+        return pose.raw_pose.to(device)
     else:
         return common.to_tensor(pose, device=device)
 

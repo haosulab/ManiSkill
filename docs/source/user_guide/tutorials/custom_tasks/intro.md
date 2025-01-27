@@ -47,13 +47,13 @@ class PushCubeEnv(BaseEnv):
 ```
 ## Loading
 
-At the start of any task, you must load in all objects (robots, assets, articulations, lighting etc.) into each parallel environment, also known as a sub-scene. This is also known as **reconfiguration** and generally only ever occurs once. Loading these objects is done in the `_load_scene` function of your custom task class. The objective is to simply load objects in, and nothing else. For GPU simulation at this stage you cannot change object states (like pose, qpos), only initial poses can be modified. Changing/randomizing states is done in the section on [episode initialization / randomization](#episode-initialization--randomization).
+At the start of any task, you must load in all objects (robots, assets, articulations, lighting etc.) into each parallel environment, also known as a sub-scene. This is also known as **reconfiguration** and generally only ever occurs once. Loading these objects is done in the `_load_scene` function of your custom task class. The objective is to simply load objects in with initial poses that ensure they don't collide on the first step, and nothing else. For GPU simulation at this stage you cannot change any object states (like velocities, qpos), only initial poses can be modified. Changing/randomizing states is done in the section on [episode initialization / randomization](#episode-initialization--randomization).
 
-Building objects in ManiSkill is nearly the exact same as it is in SAPIEN. You create an `ActorBuilder` via `self.scene.create_actor_builder` and via the actor builder add visual and collision shapes. Visual shapes only affect visual rendering processes while collision shapes affect the physical simulation. ManiSkill further will create the actor for you in every sub-scene (unless you use [scene-masks/scene-idxs](./advanced.md#scene-masks), a more advanced feature).
+Building objects in ManiSkill is nearly the exact same as it is in SAPIEN. You create an `ActorBuilder` via `self.scene.create_actor_builder` and via the actor builder add visual and collision shapes. Visual shapes only affect visual rendering processes while collision shapes affect the physical simulation. ManiSkill further will create the actor for you in every sub-scene (unless you use [scene-masks/scene-idxs](./advanced.md#scene-masks), a more advanced feature for enabling heterogeneous simulation).
 
 ### Building Robots
 
-This is the simplest part and requires almost no additional work here. Robots are added in for you automatically and have their base initialized at 0. You can specify the default robot(s) added in via the init function. In PushCube this is done as so by adding `SUPPORTED_ROBOTS` to ensure users can only run your task with the selected robots. You can further add typing if you wish to the `agent` class attribute. 
+This is the simplest part and requires almost no additional work here. Robots are added in for you automatically and by default are initialized at the origin. You can specify the default robot(s) added in via the init function. In PushCube this is done as so by adding `SUPPORTED_ROBOTS` to ensure users can only run your task with the selected robots. You can further add typing if you wish to the `agent` class attribute. 
 
 ```python
 from mani_skill.agents.robots import Fetch, Panda
@@ -68,15 +68,20 @@ class PushCubeEnv(BaseEnv):
         # robot_uids="fetch" is possible, or even multi-robot 
         # setups via robot_uids=("fetch", "panda")
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
-```
 
-Initializing these robots occurs in the initialization / randomization section covered later. With this setup you can later access agent data via `self.agent` and the specific articulation data of the robot via `self.agent.robot`. For multi-robot setups you can access each agent via `self.agent.agents`.
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose(p=[0, 0, 1]))
+```
+To define the initial pose of the robot you override the `_load_agent` function. This is done in PushCube above. It is recommended to set initial poses for all objects such that if they were spawned there they don't intersect other objects. Here we spawn the robot 1 meter above the ground which won't clash with anything else. If you are intending to spawn multiple robots you can pass a list of poses to the `_load_agent` function.
+
+
+Initializing/randomizing these robots occurs in the initialization / randomization section covered later. With this setup you can later access agent data via `self.agent` and the specific articulation data of the robot via `self.agent.robot`. For multi-robot setups you can access each agent via `self.agent.agents`.
 
 To create your own custom robots/agents, see the [custom robots tutorial](../custom_robots.md).
 
 ### Building Actors
 
-the `_load_scene` function must be implemented to build objects besides agents. It is also given an `options` dictionary which is the same options dictionary passed to `env.reset` and defaults to an empty dictionary (which may be useful for controlling how to load a scene with just reset arguments).
+The `_load_scene` function must be implemented to build objects besides agents. It is also given an `options` dictionary which is the same options dictionary passed to `env.reset` and defaults to an empty dictionary (which may be useful for controlling how to load a scene with just reset arguments).
 
 Building a **dynamic** actor like a cube in PushCube is done as so
 ```python
@@ -96,6 +101,8 @@ class PushCubeEnv(BaseEnv):
                 base_color=[1, 0, 0, 1],
             ),
         )
+        # strongly recommended to set initial poses for objects, even if you plan to modify them later
+        builder.initial_pose = sapien.Pose(p=[0, 0, 0.02], q=[1, 0, 0, 0])
         self.obj = builder.build(name="cube")
         # PushCube has some other code after this removed for brevity that 
         # spawns a goal object (a red/white target) stored at self.goal_region
@@ -105,10 +112,12 @@ You can build a **kinematic** actor with `builder.build_kinematic` and a **stati
 - Dynamic actors can be moved around by forces/other objects (e.g. a robot) and are fully physically simulated
 - Kinematic and static actors are fixed in place but can block objects from moving through them (e.g. a wall, a kitchen counter).
 - Kinematic actors can have their pose changed at any time. Static actors must have an initial pose set before calling `build_static` via `builder.initial_pose = ...`
-- Use static instead of kinematic whenever possible as it saves a lot of GPU memory
+- Use static instead of kinematic whenever possible as it saves a lot of GPU memory. Static objects must have an initial pose set before building via `builder.initial_pose = ...`.
+
+Note that by default, if an object does not have an initial pose set in its builder, ManiSkill will set it to a default pose of `q=[1,0,0,0], p=[0,0,0]` and give a warning. For simple tasks this may not matter but when working with more complex objects and articulations, it is strongly recommended to set initial poses for all objects as GPU simulation might run into bugs/issues if the objects at their initial poses collide.
 
 We also provide some functions that build some more complex shapes that you can use by importing the following:
-```
+```python
 from mani_skill.utils.building import actors
 ```
 
@@ -133,11 +142,15 @@ class PushCubeEnv(BaseEnv):
 ```
 The TableSceneBuilder is perfect for easily building table-top tasks, it creates a table and floor for you, and places the fetch and panda robots in reasonable locations.
 
-A tutorial on how to build actors beyond primitive shapes (boxes, spheres etc.) and load articulated objects is covered in the [tutorial after this one](./loading_objects.md). We recommend you to first complete this tutorial before moving onto the next.
+A tutorial on how to build actors beyond primitive shapes (boxes, spheres etc.) and load articulated objects is covered in the [tutorial after this one](./loading_objects.md). More advanced features like heterogeneous simulation with different objects/articulations in different parallel environments is covered in the [advanced features page](./advanced.md). Finally, if you intend on randomizing objects/textures etc. in parallel environments, we highly recommend understanding the [batched RNG system](../../concepts/rng.md) which details how to ensure reproducibility in your environments.
+
+We recommend you to first complete this tutorial before moving onto the next.
 
 ## Episode Initialization / Randomization
 
-Task initialization and randomization is handled in the `_initialize_episode` function and is called whenever `env.reset` is called. The objective here is to set the initial states of objects, including the robot. As the task ideally should be simulatable on the GPU, batched code is unavoidable. Note that furthermore, by default everything in ManiSkill tries to stay batched, even if there is only one element. Finally, like `_load_scene` the options argument is also passed down here if needed.
+Task initialization and randomization is handled in the `_initialize_episode` function and is called whenever `env.reset` is called. The objective here is to set the initial states of all non-static objects, including the robot.
+
+As the task ideally should be simulatable on the GPU, batched code is unavoidable. Note that furthermore, by default everything in ManiSkill tries to stay batched, even if there is only one element. Finally, like `_load_scene` the options argument is also passed down here if needed.
 
 An example from part of the PushCube task
 
@@ -147,7 +160,7 @@ import torch
 class PushCubeEnv(BaseEnv):
     # ...
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
-        # useing torch.device context manager to auto create tensors 
+        # using torch.device context manager to auto create tensors 
         # on CPU/CUDA depending on self.device, the device the env runs on
         with torch.device(self.device):
             b = len(env_idx)
@@ -288,7 +301,7 @@ class PushCubeEnv(BaseEnv):
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
 ```
 
-`compute_normalized_dense_reward` is the default reward function used and retuurned from `env.step`. We recommend defining normalized reward function as these tend to be easier to learn from, especially in algorithms that learn Q functions in RL. The result of `compute_dense_reward` is returned when an environment created as `gym.make(env_id=..., reward_mode="dense")`
+`compute_normalized_dense_reward` is the default reward function used and returned from `env.step`. We recommend defining normalized reward function as these tend to be easier to learn from, especially in algorithms that learn Q functions in RL. The result of `compute_dense_reward` is returned when an environment created as `gym.make(env_id=..., reward_mode="dense")`
 
 Dense reward functions are not required and can be skipped. If not implemented then those reward modes are not supported and will raise an error if you try to use dense reward modes. Sparse reward functions are available if the evaluation function returns a dictonary with the success/fail key. If the task is in a success state, +1 reward is given. If the task is in a fail state, -1 reward is given. Otherwise 0 is given.
 

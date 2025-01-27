@@ -1,2 +1,3 @@
 from .cartpole import CartPoleBalanceBenchmarkEnv
-from .pick_cube import PickCubeBenchmarkEnv
+from .franka_pick_cube import FrankaPickCubeBenchmarkEnv
+from .franka_move import FrankaMoveBenchmarkEnv

@@ -19,9 +19,21 @@ from mani_skill.utils.structs.types import SceneConfig, SimConfig
 @register_env("TableTopFreeDraw-v1", max_episode_steps=1000)
 class TableTopFreeDrawEnv(BaseEnv):
     """
-    This is a simple environment demonstrating drawing simulation on a table with a robot arm. There are no success/rewards defined, users can use this code as a starting point
-    to create their own drawing type tasks.
+    **Task Description:**
+    Instantiates a table with a white canvas on it and a robot with a stick that draws red lines. This environment is primarily for a reference / for others to copy
+    to make their own drawing tasks.
+
+    **Randomizations:**
+    None
+
+    **Success Conditions:**
+    None
+
+    **Goal Specification:**
+    None
     """
+
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/TableTopFreeDraw-v1_rt.mp4"
 
     MAX_DOTS = 1010
     """
@@ -87,6 +99,9 @@ class TableTopFreeDrawEnv(BaseEnv):
             far=100,
         )
 
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
+
     def _load_scene(self, options: dict):
         self.table_scene = TableSceneBuilder(self, robot_init_qpos_noise=0)
         self.table_scene.build()
@@ -118,6 +133,7 @@ class TableTopFreeDrawEnv(BaseEnv):
                         ),
                     )
                     builder.set_scene_idxs([env_idx])
+                    builder.initial_pose = sapien.Pose(p=[0, 0, 0])
                     actor = builder.build_kinematic(name=f"dot_{i}_{env_idx}")
                     actors.append(actor)
                 self.dots.append(Actor.merge(actors))
@@ -130,6 +146,7 @@ class TableTopFreeDrawEnv(BaseEnv):
                         base_color=self.BRUSH_COLORS[0]
                     ),
                 )
+                builder.initial_pose = sapien.Pose(p=[0, 0, 0])
                 actor = builder.build_kinematic(name=f"dot_{i}")
                 self.dots.append(actor)
 
