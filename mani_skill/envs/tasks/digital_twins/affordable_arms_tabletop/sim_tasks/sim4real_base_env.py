@@ -1,4 +1,4 @@
-import copy
+import json
 
 import numpy as np
 import sapien
@@ -50,7 +50,7 @@ class Sim4RealBaseEnv(BaseDigitalTwinEnv):
     rgb_overlay_mode: str = "background"  # , "debug"
 
     # used to allign user parameters with robot for real-life replication
-    robot_x_offset = -0.737
+    robot_x_offset = 0
 
     ################ Robot & camera params to match in real ################
     # all points centered at robot pos: [robot_x_offset,0,0]
@@ -95,16 +95,10 @@ class Sim4RealBaseEnv(BaseDigitalTwinEnv):
     ):
         # allow user provided camera pose
         if alignment_dots is not None:
-            alignment_dots = copy.deepcopy(alignment_dots)
-            alignment_dots[0] += self.robot_x_offset
             self.alignment_dots = alignment_dots
         if base_camera_pos is not None:
-            base_camera_pos = copy.deepcopy(base_camera_pos)
-            base_camera_pos[0] += self.robot_x_offset
             self.base_camera_pos = base_camera_pos
         if camera_target is not None:
-            camera_target = copy.deepcopy(camera_target)
-            camera_target[0] += self.robot_x_offset
             self.camera_target = camera_target
         if camera_fov is not None:
             self.camera_fov = camera_fov
@@ -122,6 +116,7 @@ class Sim4RealBaseEnv(BaseDigitalTwinEnv):
             self.robot_motor_color = robot_motor_color
 
         if rgb_overlay_path is not None:
+            self.rgb_overlay_path = rgb_overlay_path
             self.rgb_overlay_paths = dict(base_camera=rgb_overlay_path)
 
         self.robot_init_qpos_noise = robot_init_qpos_noise
@@ -161,6 +156,24 @@ class Sim4RealBaseEnv(BaseDigitalTwinEnv):
             enable_shadow=enable_shadow,
             **kwargs,
         )
+
+    ## utility functions for user control ##
+    # fetching all user customizable kwargs
+    def fetch_user_kwargs(self):
+        return dict(
+            robot_base_color=self.robot_base_color,
+            robot_motor_color=self.robot_motor_color,
+            rgb_overlay_path=self.rgb_overlay_path,
+            alignment_dots=self.alignment_dots,
+            base_camera_pos=self.base_camera_pos,
+            camera_target=self.camera_target,
+            camera_fov=self.camera_fov,
+        )
+
+    def save_user_kwargs(self, path):
+        user_kwargs = self.fetch_user_kwargs()
+        with open(path, "w") as f:
+            json.dump(user_kwargs, f, indent=2)
 
     def get_random_camera_pose(self, n=None):
         n = self.num_envs if n is None else n
@@ -265,10 +278,12 @@ class Sim4RealBaseEnv(BaseDigitalTwinEnv):
 
         # robot color randomization
         base_color = torch.normal(
-            torch.tensor(self.robot_base_color), torch.ones(3) * self.robot_color_noise
+            torch.tensor(self.robot_base_color, dtype=torch.float32),
+            torch.ones(3) * self.robot_color_noise,
         ).clip(0, 1).tolist() + [1]
         motor_color = torch.normal(
-            torch.tensor(self.robot_motor_color), torch.ones(3) * self.robot_color_noise
+            torch.tensor(self.robot_motor_color, dtype=torch.float32),
+            torch.ones(3) * self.robot_color_noise,
         ).clip(0, 1).tolist() + [1]
         self.agent.set_colors(base_color=base_color, motor_color=motor_color)
 

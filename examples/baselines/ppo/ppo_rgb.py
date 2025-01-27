@@ -5,6 +5,7 @@ import random
 import time
 from dataclasses import dataclass
 from typing import Optional
+import json
 
 import gymnasium as gym
 import numpy as np
@@ -105,6 +106,9 @@ class Args:
     save_train_video_freq: Optional[int] = None
     """frequency to save training videos in terms of iterations"""
     finite_horizon_gae: bool = True
+    """toggle finite horizon gae"""
+    user_kwargs_path: Optional[str] = None
+    """path to json with extra env kwargs"""
 
     # to be filled in runtime
     batch_size: int = 0
@@ -275,8 +279,8 @@ class Logger:
     def close(self):
         self.writer.close()
 
-
-def train(args, envs=None, eval_envs=None):
+if __name__ == "__main__":
+    args = tyro.cli(Args)
     args.batch_size = int(args.num_envs * args.num_steps)
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
     args.num_iterations = args.total_timesteps // args.batch_size
@@ -294,18 +298,20 @@ def train(args, envs=None, eval_envs=None):
 
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
-    # env setup if unspecified
+    # env setup
     env_kwargs = dict(obs_mode=args.obs_mode, control_mode="pd_joint_delta_pos", render_mode=args.render_mode, sim_backend="gpu")
-    if eval_envs is None:
-        eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, reconfiguration_freq=args.eval_reconfiguration_freq, **env_kwargs)
-        # rgbd obs mode returns a dict of data, we flatten it so there is just a rgbd key and state key
-        envs = FlattenRGBDObservationWrapper(envs, rgb=True, depth=False, state=args.include_state)
-    if envs is None:
-        envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, reconfiguration_freq=args.reconfiguration_freq, **env_kwargs)
-        eval_envs = FlattenRGBDObservationWrapper(eval_envs, rgb=True, depth=False, state=args.include_state)
+    if args.user_kwargs_path is not None:
+        with open(args.user_kwargs_path, "r") as f:
+            user_kwargs = json.load(f)
+        # add user_kwargs to env kwargs
+        env_kwargs.update(user_kwargs)
 
+    eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, reconfiguration_freq=args.eval_reconfiguration_freq, **env_kwargs)
+    envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, reconfiguration_freq=args.reconfiguration_freq, **env_kwargs)
 
-
+    # rgbd obs mode returns a dict of data, we flatten it so there is just a rgbd key and state key
+    envs = FlattenRGBDObservationWrapper(envs, rgb=True, depth=False, state=args.include_state)
+    eval_envs = FlattenRGBDObservationWrapper(eval_envs, rgb=True, depth=False, state=args.include_state)
 
     if isinstance(envs.action_space, gym.spaces.Dict):
         envs = FlattenActionSpaceWrapper(envs)
@@ -574,9 +580,3 @@ def train(args, envs=None, eval_envs=None):
 
     envs.close()
     if logger is not None: logger.close()
-    return agent
-
-
-if __name__ == "__main__":
-    args = tyro.cli(Args)
-    train(args)

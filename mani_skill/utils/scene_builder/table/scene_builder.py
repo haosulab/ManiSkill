@@ -283,6 +283,11 @@ class TableSceneBuilder(SceneBuilder):
                 + qpos
             )
             self.env.agent.reset(qpos)
+
+            # robot base pos at [0,0,0] for digital twin real setup convienence
             self.env.agent.robot.set_pose(
-                sapien.Pose([-0.737, 0, 1e-3], q=euler2quat(0, 0, np.pi / 2))
+                sapien.Pose([0, 0, 1e-3], q=euler2quat(0, 0, np.pi / 2))
             )
+            table_pose = self.table.pose
+            table_pose.p += -torch.tensor([-0.737, 0, 0])
+            self.table.set_pose(table_pose)

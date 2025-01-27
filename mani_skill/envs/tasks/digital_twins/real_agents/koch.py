@@ -16,8 +16,6 @@ from mani_skill.envs.tasks.digital_twins.base_real_agent import BaseRealAgent
 from mani_skill.utils import common
 from mani_skill.utils.visualization.misc import tile_images
 
-# from typing import Dict, Union
-
 
 class MS3RealKoch(BaseRealAgent):
     def __init__(

@@ -17,7 +17,7 @@ from .sim4real_base_env import Sim4RealBaseEnv
 # grab cube and return to rest keyframe
 @register_env("Affordable-PushCube-v1", max_episode_steps=50)
 class PushCubeEnv(Sim4RealBaseEnv):
-    table_edge_x = -0.737
+    table_edge_x = 0
     # While this is the goal x value, success is
     # pushing the cube to any x value gt the starting x position + 3 cm
     goal_pos_x = table_edge_x + 0.35

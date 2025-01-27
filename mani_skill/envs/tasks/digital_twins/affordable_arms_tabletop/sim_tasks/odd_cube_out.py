@@ -17,17 +17,12 @@ from .sim4real_base_env import Sim4RealBaseEnv
 # grab cube and return to rest keyframe
 @register_env("OddCubeOut-v1", max_episode_steps=50)
 class OddCubeOutEnv(Sim4RealBaseEnv):
-    table_edge_x = -0.737
+    table_edge_x = 0
 
     # Task DR
-    # spawn_box_half_size_y = 0.05 / 2
-    # spawn_box_half_size_x = 0.1 / 2
     spawn_box_half_size_y = 0.03 / 2
     spawn_box_half_size_x = 0.04 / 2
     spawn_box_x_offset = 0.25
-    # left_spawn_box_pos = torch.tensor([table_edge_x + spawn_box_x_offset, -0.07, 0])
-    # middle_spawn_box_pos = torch.tensor([table_edge_x + spawn_box_x_offset, 0, 0])
-    # right_spawn_box_pos = torch.tensor([table_edge_x + spawn_box_x_offset, 0.07, 0])
     left_spawn_box_pos = torch.tensor([table_edge_x + spawn_box_x_offset, -0.05, 0])
     middle_spawn_box_pos = torch.tensor([table_edge_x + spawn_box_x_offset, 0, 0])
     right_spawn_box_pos = torch.tensor([table_edge_x + spawn_box_x_offset, 0.05, 0])
