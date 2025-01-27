@@ -65,6 +65,15 @@ class BaseDigitalTwinEnv(BaseEnv):
                 f"Warning GreenScreening is OFF: environment obs_mode is {self._obs_mode}, obs_mode='rgb+segmentation' required"
             )
 
+    def set_overlay(self, camera_name, path):
+        self._rgb_overlay_images[camera_name] = cv2.cvtColor(
+            cv2.imread(path), cv2.COLOR_BGR2RGB
+        )
+        self._after_reconfigure(None)
+
+    def toggle_greenscreen(self):
+        self.render_greenscreening = not self.render_greenscreening
+
     @property
     def _default_sim_config(self):
         return SimConfig()

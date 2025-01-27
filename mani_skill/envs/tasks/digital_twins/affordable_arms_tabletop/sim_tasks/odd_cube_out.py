@@ -15,7 +15,7 @@ from .sim4real_base_env import Sim4RealBaseEnv
 
 
 # grab cube and return to rest keyframe
-@register_env("Affordable-OddCubeOut-v1", max_episode_steps=50)
+@register_env("OddCubeOut-v1", max_episode_steps=50)
 class OddCubeOutEnv(Sim4RealBaseEnv):
     table_edge_x = -0.737
 
@@ -216,26 +216,25 @@ class OddCubeOutEnv(Sim4RealBaseEnv):
             (distract_1_touch_pos - tcp_pos),
             axis=-1,
         )
-        reward -= 0.2 * (1 - torch.tanh(5 * tcp_to_obj_dist))
+        reward -= 0.2 * (1 - torch.tanh(20 * tcp_to_obj_dist))
 
         # negative reward for touching wrong cube 2
-        distract_1_touch_pos = self.first_d_cube.pose.p
+        distract_2_touch_pos = self.second_d_cube.pose.p
         tcp_to_obj_dist = torch.linalg.norm(
-            (distract_1_touch_pos - tcp_pos),
+            (distract_2_touch_pos - tcp_pos),
             axis=-1,
         )
-        reward -= 0.2 * (1 - torch.tanh(5 * tcp_to_obj_dist))
+        reward -= 0.2 * (1 - torch.tanh(20 * tcp_to_obj_dist))
 
         # reach tcp to object reward
         goal_touch_pos = self.goal_cube.pose.p
-        goal_touch_pos[..., 0] -= self.cube_half_sizes
-        goal_touch_pos[..., -1] = 0
+        # goal_touch_pos[..., 0] -= self.cube_half_sizes
+        # goal_touch_pos[..., -1] = 0
         tcp_to_obj_dist = torch.linalg.norm(
             (goal_touch_pos - tcp_pos),
             axis=-1,
         )
-        reaching_reward = 1 - torch.tanh(5 * tcp_to_obj_dist)
-        reward += 2 * reaching_reward
+        reward += 2 * (1 - torch.tanh(15 * tcp_to_obj_dist))
 
         reward += info["touch_goal"].float()
 

@@ -38,6 +38,10 @@ class Koch(BaseAgent):
             qpos=np.array([0, 2.2, 3.017, -0.25, -np.pi / 2, 0.6044]),
             pose=sapien.Pose(),
         ),
+        closed_gripper=Keyframe(
+            qpos=np.array([0, 2.2, 3.017, -0.25, -np.pi / 2, 0]),
+            pose=sapien.Pose(),
+        ),
         zero=Keyframe(
             qpos=np.array([0.0] * 6),
             pose=sapien.Pose(),
@@ -51,16 +55,11 @@ class Koch(BaseAgent):
         robot_motor_colors=[0.05, 0.05, 0.05, 1],
         **kwargs,
     ):
-        self.robot_chassis_colors = torch.normal(
-            torch.tensor(robot_chassis_colors[:3]), torch.ones(3) * 0.05
-        ).clip(0, 1).tolist() + [1]
-        self.robot_motor_colors = torch.normal(
-            torch.tensor(robot_motor_colors[:3]), torch.ones(3) * 0.05
-        ).clip(0, 1).tolist() + [1]
+        self.robot_chassis_colors = robot_chassis_colors
+        self.robot_motor_colors = robot_motor_colors
         """either a RGBA color or a list of RGBA colors for each robot in each parallel environment to then customize the color of the robot chassis"""
         super().__init__(*args, **kwargs)
 
-    # NOTE (xhinrichsen, stao): Controller is temporary - doesn't resemble real robot
     @property
     def _controller_configs(self):
         pd_joint_pos = PDJointPosControllerConfig(
@@ -90,15 +89,17 @@ class Koch(BaseAgent):
         )
         return deepcopy_dict(controller_configs)
 
-    # TODO (xhin): have to make a proper api to turn on color randomization
-    # currently incompatible with koch prints of other colors
-    def _after_loading_articulation(self):
-        super()._after_loading_articulation()
-        self.finger1_link = self.robot.links_map["gripper"]
-        self.finger2_link = self.robot.links_map["link_6"]
-        self.tcp = self.robot.links_map["gripper_tcp"]
-        self.tcp2 = self.robot.links_map["gripper_tcp2"]
-        self.back_tcp = self.robot.links_map["back_tcp"]
+    def set_colors(self, base_color=None, motor_color=None):
+        """
+        basecolor:  RGBA length 4
+        motorcolor: RBGA length 4
+        """
+        if base_color is not None:
+            assert len(base_color) == 4
+            self.robot_chassis_colors = base_color
+        if motor_color is not None:
+            assert len(motor_color) == 4
+            self.robot_motor_colors = motor_color
         for link in self.robot.links:
             for i, obj in enumerate(link._objs):
                 rb_comp = obj.entity.find_component_by_type(
@@ -126,6 +127,17 @@ class Koch(BaseAgent):
                             color = self.robot_motor_colors
                         for part in mesh.parts:
                             part.material.base_color = color
+
+    # TODO (xhin): have to make a proper api to turn on color randomization
+    # currently incompatible with koch prints of other colors
+    def _after_loading_articulation(self):
+        super()._after_loading_articulation()
+        self.set_colors()
+        self.finger1_link = self.robot.links_map["gripper"]
+        self.finger2_link = self.robot.links_map["link_6"]
+        self.tcp = self.robot.links_map["gripper_tcp"]
+        self.tcp2 = self.robot.links_map["gripper_tcp2"]
+        self.back_tcp = self.robot.links_map["back_tcp"]
 
     def is_grasping(self, object: Actor, min_force=0.5, max_angle=110):
         """Check if the robot is grasping an object

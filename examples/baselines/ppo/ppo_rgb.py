@@ -207,7 +207,6 @@ class NatureCNN(nn.Module):
         if "state" in sample_obs:
             # for state data we simply pass it through a single linear layer
             state_size = sample_obs["state"].shape[-1]
-            print("STATE_SIZE", state_size)
             extractors["state"] = nn.Linear(state_size, 256)
             self.out_features += 256
 
@@ -276,8 +275,8 @@ class Logger:
     def close(self):
         self.writer.close()
 
-if __name__ == "__main__":
-    args = tyro.cli(Args)
+
+def train(args, envs=None, eval_envs=None):
     args.batch_size = int(args.num_envs * args.num_steps)
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
     args.num_iterations = args.total_timesteps // args.batch_size
@@ -295,14 +294,18 @@ if __name__ == "__main__":
 
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
-    # env setup
+    # env setup if unspecified
     env_kwargs = dict(obs_mode=args.obs_mode, control_mode="pd_joint_delta_pos", render_mode=args.render_mode, sim_backend="gpu")
-    eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, reconfiguration_freq=args.eval_reconfiguration_freq, **env_kwargs)
-    envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, reconfiguration_freq=args.reconfiguration_freq, **env_kwargs)
+    if eval_envs is None:
+        eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, reconfiguration_freq=args.eval_reconfiguration_freq, **env_kwargs)
+        # rgbd obs mode returns a dict of data, we flatten it so there is just a rgbd key and state key
+        envs = FlattenRGBDObservationWrapper(envs, rgb=True, depth=False, state=args.include_state)
+    if envs is None:
+        envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, reconfiguration_freq=args.reconfiguration_freq, **env_kwargs)
+        eval_envs = FlattenRGBDObservationWrapper(eval_envs, rgb=True, depth=False, state=args.include_state)
 
-    # rgbd obs mode returns a dict of data, we flatten it so there is just a rgbd key and state key
-    envs = FlattenRGBDObservationWrapper(envs, rgb=True, depth=False, state=args.include_state)
-    eval_envs = FlattenRGBDObservationWrapper(eval_envs, rgb=True, depth=False, state=args.include_state)
+
+
 
     if isinstance(envs.action_space, gym.spaces.Dict):
         envs = FlattenActionSpaceWrapper(envs)
@@ -314,8 +317,8 @@ if __name__ == "__main__":
         print(f"Saving eval videos to {eval_output_dir}")
         if args.save_train_video_freq is not None:
             save_video_trigger = lambda x : (x // args.num_steps) % args.save_train_video_freq == 0
-            envs = RecordEpisode(envs, output_dir=f"runs/{run_name}/train_videos", save_trajectory=False, save_video_trigger=save_video_trigger, max_steps_per_video=args.num_steps, video_fps=30)
-        eval_envs = RecordEpisode(eval_envs, output_dir=eval_output_dir, save_trajectory=args.evaluate, trajectory_name="trajectory", max_steps_per_video=args.num_eval_steps, video_fps=30)
+            envs = RecordEpisode(envs, output_dir=f"runs/{run_name}/train_videos", save_trajectory=False, save_video_trigger=save_video_trigger, max_steps_per_video=args.num_steps, video_fps=15)
+        eval_envs = RecordEpisode(eval_envs, output_dir=eval_output_dir, save_trajectory=args.evaluate, trajectory_name="trajectory", max_steps_per_video=args.num_eval_steps, video_fps=15)
     envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=not args.partial_reset, record_metrics=True)
     eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=True, record_metrics=True)
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
@@ -571,3 +574,9 @@ if __name__ == "__main__":
 
     envs.close()
     if logger is not None: logger.close()
+    return agent
+
+
+if __name__ == "__main__":
+    args = tyro.cli(Args)
+    train(args)

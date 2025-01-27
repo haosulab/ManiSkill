@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 import sapien
 import torch
@@ -53,6 +55,8 @@ class Sim4RealBaseEnv(BaseDigitalTwinEnv):
     ################ Robot & camera params to match in real ################
     # all points centered at robot pos: [robot_x_offset,0,0]
     # camera parameters for lookat transform, supplied by user
+    robot_base_color = [0.95, 0.95, 0.95]  # RGB
+    robot_motor_color = [0.05, 0.05, 0.05]  # RGB
     base_camera_pos = [robot_x_offset + 0.40, 0 + 0.265, 0.1725]
     camera_target = [robot_x_offset + 0.2, 0, 0]
     camera_fov = 52 * (np.pi / 180)
@@ -67,7 +71,6 @@ class Sim4RealBaseEnv(BaseDigitalTwinEnv):
             0 + 0.1,
             0,
         ],  ## far infront of robot and close camera
-        camera_target,  # must be aligned
     ]
 
     def __init__(
@@ -76,6 +79,8 @@ class Sim4RealBaseEnv(BaseDigitalTwinEnv):
         robot_uids="koch-v1.1",
         robot_init_qpos_noise=0.02,
         num_envs=1,
+        robot_base_color=None,
+        robot_motor_color=None,
         rgb_overlay_path=None,
         alignment_dots=None,
         base_camera_pos=None,
@@ -90,16 +95,31 @@ class Sim4RealBaseEnv(BaseDigitalTwinEnv):
     ):
         # allow user provided camera pose
         if alignment_dots is not None:
+            alignment_dots = copy.deepcopy(alignment_dots)
             alignment_dots[0] += self.robot_x_offset
             self.alignment_dots = alignment_dots
         if base_camera_pos is not None:
+            base_camera_pos = copy.deepcopy(base_camera_pos)
             base_camera_pos[0] += self.robot_x_offset
             self.base_camera_pos = base_camera_pos
         if camera_target is not None:
+            camera_target = copy.deepcopy(camera_target)
             camera_target[0] += self.robot_x_offset
             self.camera_target = camera_target
         if camera_fov is not None:
             self.camera_fov = camera_fov
+
+        # allow user provided base robot colors
+        if robot_base_color is not None:
+            assert (
+                len(robot_base_color) == 3
+            ), f"expected RGB value of length 3, instead got {robot_base_color}"
+            self.robot_base_color = robot_base_color
+        if robot_motor_color is not None:
+            assert (
+                len(robot_motor_color) == 3
+            ), f"expected RGB value of length 3, instead got {robot_motor_color}"
+            self.robot_motor_color = robot_motor_color
 
         if rgb_overlay_path is not None:
             self.rgb_overlay_paths = dict(base_camera=rgb_overlay_path)
@@ -115,6 +135,9 @@ class Sim4RealBaseEnv(BaseDigitalTwinEnv):
         toggle_rand = 0.0 if ("debug" in self.rgb_overlay_mode or dr == False) else 1.0
 
         ################ Task-Agnostic Randmoizations ################
+        # robot color noise
+        self.robot_color_noise = 0.05
+
         # robot pose randomizations
         self.robot_zrot_noise = (3 * np.pi / 180) * toggle_rand
         self.robot_y_noise = 0.01 * toggle_rand  # cm offset
@@ -139,9 +162,10 @@ class Sim4RealBaseEnv(BaseDigitalTwinEnv):
             **kwargs,
         )
 
-    def get_random_camera_pose(self):
+    def get_random_camera_pose(self, n=None):
+        n = self.num_envs if n is None else n
         eyes = make_camera_rectangular_prism(
-            self.num_envs,
+            n,
             scale=self.max_camera_offset,
             center=self.base_camera_pos,
             theta=0,
@@ -210,22 +234,43 @@ class Sim4RealBaseEnv(BaseDigitalTwinEnv):
         self.init_cam_poses = self.get_random_camera_pose()
 
         # overlay table dots for camera alignment
+        def make_alignment_dot(name, color, init_pose):
+            builder = self.scene.create_actor_builder()
+            builder.add_cylinder_visual(
+                radius=0.005,
+                half_length=1e-4,
+                material=sapien.render.RenderMaterial(base_color=color),
+            )
+            builder.initial_pose = init_pose
+            return builder.build_kinematic(name=name)
+
         self.debugs = []
         if "debug" in self.rgb_overlay_mode:
             for i, pos in enumerate(self.alignment_dots):
-                builder = self.scene.create_actor_builder()
-                builder.add_cylinder_visual(
-                    radius=0.005,
-                    half_length=1e-4,
-                    material=sapien.render.RenderMaterial(
-                        base_color=np.array([0, 1, 0, 1])
-                    ),
+                dot = make_alignment_dot(
+                    f"position{i}",
+                    np.array([1, 1, 0, 1]),
+                    sapien.Pose(p=pos, q=euler2quat(0, np.pi / 2, 0)),
                 )
-                builder.initial_pose = sapien.Pose(p=pos, q=euler2quat(0, np.pi / 2, 0))
-                self.debugs.append(builder.build_kinematic(name=f"position{i}"))
+                self.debugs.append(dot)
+            cam_target_dot = make_alignment_dot(
+                f"cam_target_dot",
+                np.array([0, 1, 0, 1]),
+                sapien.Pose(p=self.camera_target, q=euler2quat(0, np.pi / 2, 0)),
+            )
+            self.debugs.append(cam_target_dot)
             print(
                 "Warning: debug mode on in digital_twins/sim_tasks/affordable_baseenv.py"
             )
+
+        # robot color randomization
+        base_color = torch.normal(
+            torch.tensor(self.robot_base_color), torch.ones(3) * self.robot_color_noise
+        ).clip(0, 1).tolist() + [1]
+        motor_color = torch.normal(
+            torch.tensor(self.robot_motor_color), torch.ones(3) * self.robot_color_noise
+        ).clip(0, 1).tolist() + [1]
+        self.agent.set_colors(base_color=base_color, motor_color=motor_color)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
@@ -235,7 +280,7 @@ class Sim4RealBaseEnv(BaseDigitalTwinEnv):
                 self.agent.robot.set_qpos(self.agent.keyframes[self.keyframe_id].qpos)
 
             # robot pose randomizations
-            robot_pos = self.agent.robot.pose.p
+            robot_pos = self.agent.robot.pose.p[env_idx]
             robot_pos[..., 1] += torch.normal(
                 torch.zeros(b), torch.ones(b) * self.robot_y_noise
             )
@@ -251,7 +296,7 @@ class Sim4RealBaseEnv(BaseDigitalTwinEnv):
 
             # if cam_rand_on_step is false, this will be the only place camera randomizaiton occurs
             # cam rand per subscene
-            self.camera_mount.set_pose(self.get_random_camera_pose())
+            self.camera_mount.set_pose(self.get_random_camera_pose(b))
 
     # camera randomziation per step
     def _before_control_step(self):
