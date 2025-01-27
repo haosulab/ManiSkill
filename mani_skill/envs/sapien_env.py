@@ -121,7 +121,7 @@ class BaseEnv(gym.Env):
     SUPPORTED_ROBOTS: List[Union[str, Tuple[str]]] = None
     """Override this to enforce which robots or tuples of robots together are supported in the task. During env creation,
     setting robot_uids auto loads all desired robots into the scene, but not all tasks are designed to support some robot setups"""
-    SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "sensor_data", "rgb", "depth", "segmentation", "rgbd", "rgb+depth", "rgb+depth+segmentation", "rgb+segmentation", "depth+segmentation", "pointcloud")
+    SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "sensor_data", "rgb", "depth", "segmentation", "rgbd", "rgb+depth", "rgb+depth+segmentation", "rgb+segmentation", "depth+segmentation", "pointcloud", "voxel")
     SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "sparse", "none")
     SUPPORTED_RENDER_MODES = ("human", "rgb_array", "sensors", "all")
     """The supported render modes. Human opens up a GUI viewer. rgb_array returns an rgb array showing the current environment state.
@@ -526,6 +526,15 @@ class BaseEnv(gym.Env):
             # TODO support more flexible pcd obs mode with new render system
             obs = self._get_obs_with_sensor_data(info)
             obs = sensor_data_to_pointcloud(obs, self._sensors)
+        elif self._obs_mode == "voxel":
+            # assert on _obs_mode_config here, and pass them to the convertion function
+            assert self._obs_mode_config != None, "You mush pass in configs in voxel observation mode via obs_mode_config keyword arg in gym.make(). See the Maniskill docs for details. No such config detected."
+            assert "voxel_size" in self._obs_mode_config.keys(), "Lacking voxel_size (voxel size) in observation configs"
+            assert "coord_bounds" in self._obs_mode_config.keys(), "Lacking coord_bounds (coordinate bounds) in observation configs"
+            assert "device" in self._obs_mode_config.keys(), "Lacking device (device for voxelizations) in observation configs"
+            assert "segmentation" in self._obs_mode_config.keys(), "Lacking segmentation (a boolean indicating whether including voxel segmentations) in observation configs"
+            obs = self._get_obs_with_sensor_data(info)
+            obs = sensor_data_to_voxel(obs, self._sensors, self._obs_mode_config)
         elif self._obs_mode == "sensor_data":
             # return raw texture data dependent on choice of shader
             obs = self._get_obs_with_sensor_data(info, apply_texture_transforms=False)
