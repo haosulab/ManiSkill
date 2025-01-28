@@ -38,6 +38,7 @@ for env_id in [
     "RollBall-v1",
     "StackCube-v1",
     "TwoRobotPickCube-v1",
+    "TwoRobotStackCube-v1",
 ]:
     DATASET_SOURCES[env_id] = DemoDatasetSource(
         raw_dataset_url=f"https://huggingface.co/datasets/haosulab/ManiSkill_Demonstrations/resolve/main/demos/{env_id}.zip?download=true"
