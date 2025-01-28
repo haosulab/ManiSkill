@@ -184,7 +184,9 @@ def main():
 
             # Copy checkpoint to output dir
             checkpoint_path = env_path["checkpoint"]
-            checkpoint_out_path = os.path.join(args.out_dir, f"{env_id}/rl/ppo_ckpt.pt")
+            checkpoint_out_path = os.path.join(
+                args.out_dir, f"{env_id}/rl/ppo_{control_mode}_ckpt.pt"
+            )
             os.makedirs(os.path.dirname(checkpoint_out_path), exist_ok=True)
             shutil.copy(checkpoint_path, checkpoint_out_path)
 
