@@ -8,7 +8,6 @@ import gymnasium as gym
 import numpy as np
 import torch
 from gymnasium.vector.utils import batch_space
-from lerobot.common.robot_devices.utils import busy_wait
 
 # ManiSkill imports
 from mani_skill.utils import common, gym_utils
@@ -151,7 +150,7 @@ class BaseRealEnv(gym.Env):
                 # move schedule to account for discrepancy
                 self.episode_start_time += curr_time - control_step_time
             else:
-                busy_wait(control_step_time - curr_time)
+                time.sleep(control_step_time - curr_time)
 
         # send robot action
         if set_action:
