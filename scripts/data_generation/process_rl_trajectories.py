@@ -67,7 +67,8 @@ def main():
         new_metadata = copy.deepcopy(metadata)
         new_metadata["episodes"] = []
         control_mode = new_metadata["env_info"]["env_kwargs"]["control_mode"]
-        traj_filename = f"{env_id}/rl/trajectory.none.{control_mode}.cuda"
+        sim_backend = new_metadata["env_info"]["env_kwargs"]["sim_backend"]
+        traj_filename = f"{env_id}/rl/trajectory.none.{control_mode}.{sim_backend}"
         out_trajectory_path = os.path.join(args.out_dir, f"{traj_filename}.h5")
 
         if not args.dry_run:

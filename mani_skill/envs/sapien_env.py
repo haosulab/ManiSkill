@@ -24,6 +24,7 @@ from mani_skill.envs.utils.observations import (
     sensor_data_to_pointcloud,
 )
 from mani_skill.envs.utils.randomization.batched_rng import BatchedRNG
+from mani_skill.envs.utils.system.backend import parse_sim_and_render_backend
 from mani_skill.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill.sensors.camera import (
     Camera,
@@ -47,9 +48,6 @@ class BaseEnv(gym.Env):
         num_envs: number of parallel environments to run. By default this is 1, which means a CPU simulation is used. If greater than 1,
             then we initialize the GPU simulation setup. Note that not all environments are faster when simulated on the GPU due to limitations of
             GPU simulations. For example, environments with many moving objects are better simulated by parallelizing across CPUs.
-
-        gpu_sim_backend: The GPU simulation backend to use (only used if the given num_envs argument is > 1). This affects the type of tensor
-            returned by the environment for e.g. observations and rewards. Can be "torch" or "jax". Default is "torch"
 
         obs_mode: observation mode to be used. Must be one of ("state", "state_dict", "none", "sensor_data", "rgb", "depth", "segmentation", "rgbd", "rgb+depth", "rgb+depth+segmentation", "rgb+segmentation", "depth+segmentation", "pointcloud")
             The obs_mode is mostly for convenience to automatically optimize/setup all sensors/cameras for the given observation mode to render the correct data and try to ignore unecesary rendering.
@@ -230,42 +228,19 @@ class BaseEnv(gym.Env):
         # if self.gpu_sim_enabled and num_envs == 1 and (sim_backend == "auto" or sim_backend == "cpu"):
         #     logger.warn("GPU simulation has already been enabled on this process, switching to GPU backend")
         #     sim_backend == "gpu"
-
-        # determine the sim and render devices
         if sim_backend == "auto":
             if num_envs > 1:
-                self.device = torch.device(
-                    "cuda"
-                )
-                self._sim_device = sapien.Device("cuda")
+                sim_backend = "physx_cuda"
             else:
-                self.device = torch.device("cpu")
-                self._sim_device = sapien.Device("cpu")
-        elif sim_backend == "cpu":
-            self.device = torch.device("cpu")
-            self._sim_device = sapien.Device("cpu")
-        elif sim_backend == "cuda" or sim_backend == "gpu":
-            self.device = torch.device(
-                "cuda"
-            )
-            self._sim_device = sapien.Device("cuda")
-        elif sim_backend[:4] == "cuda":
-            self.device = torch.device(sim_backend)
-            self._sim_device = sapien.Device(sim_backend)
+                sim_backend = "physx_cpu"
+        self.sim_backend = parse_sim_and_render_backend(sim_backend, render_backend)
+        # determine the sim and render devices
+        self.device = self.sim_backend.device
+        self._sim_device = self.sim_backend.sim_device
+        self._render_device = self.sim_backend.render_device
         if self.device.type == "cuda":
             if not physx.is_gpu_enabled():
                 physx.enable_gpu()
-
-        # determine render device
-        if render_backend == "gpu" or render_backend == "cuda":
-            self._render_device = sapien.Device("cuda")
-        elif render_backend == "cpu":
-            self._render_device = sapien.Device("cpu")
-        elif render_backend[:4] == "cuda":
-            self._render_device = sapien.Device(render_backend)
-
-
-
 
         # raise a number of nicer errors
         if sim_backend == "cpu" and num_envs > 1:
