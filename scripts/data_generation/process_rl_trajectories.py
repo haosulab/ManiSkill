@@ -1,7 +1,9 @@
 import copy
 import json
+import os
 import shutil
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional
 
 import gymnasium as gym
@@ -25,8 +27,8 @@ class Args:
 def main():
     args = tyro.cli(Args)
 
-    import os
-    from pathlib import Path
+    if args.dry_run:
+        print("Dry run, skipping actual processing")
 
     # Dictionary to store paths for each environment experiment
     env_paths = {}
