@@ -1,17 +1,16 @@
+import json
 from dataclasses import dataclass
+from typing import Optional
 
-# from mani_skill.utils import common, io_utils, wrappers
 import gymnasium as gym
 import matplotlib.pyplot as plt
 import numpy as np
-import torch
 import tyro
 
 from mani_skill.utils.visualization.misc import tile_images
 from mani_skill.utils.wrappers.flatten import FlattenRGBDObservationWrapper
 
 
-# TODO (xhin): support args to allow list of .png output filenames to save backgrounds to
 @dataclass
 class Args:
     robot_yaml_path: str = ""
@@ -20,7 +19,10 @@ class Args:
     real_env_id: str = "RealGrabCube-v1"
     keyframe_id: str = None
     """robot keyframe for task initial robot qpos"""
-    debug: bool = False
+    user_kwargs_path: Optional[str] = None
+    """path to json with extra env kwargs"""
+    output_photo_path: Optional[str] = None
+    """path to save photo from real_env"""
 
 
 def overlay_envs(sim_env, real_env):
@@ -50,12 +52,20 @@ if __name__ == "__main__":
     args = args = tyro.cli(Args)
 
     # set up environments
+    env_kwargs = dict()
+    if args.user_kwargs_path is not None:
+        with open(args.user_kwargs_path, "r") as f:
+            user_kwargs = json.load(f)
+        # add user_kwargs to env kwargs
+        env_kwargs.update(user_kwargs)
+
     sim_env = gym.make(
         args.sim_env_id,
         num_envs=1,
         obs_mode="rgb+segmentation",
         render_mode="rgb_array",
-        debug=args.debug,
+        debug=True,  # by default, basedigitaltwinsenv debug = True for 50/50 overlay
+        **env_kwargs,
     )
     sim_env = FlattenRGBDObservationWrapper(sim_env, rgb=True, depth=False, state=True)
     sim_obs, _ = sim_env.reset(seed=0)
@@ -66,23 +76,32 @@ if __name__ == "__main__":
         keyframe_id=args.keyframe_id,
         control_freq=sim_env.control_freq,
         control_mode=sim_env.control_mode,
-        control_timing=not args.debug,
+        control_timing=False,  # no stepping occurs
     )
     real_env = FlattenRGBDObservationWrapper(
         real_env, rgb=True, depth=False, state=True
     )
-    obs, _ = real_env.reset()
 
     # for plotting robot camera reads
     fig = plt.figure()
     ax = fig.add_subplot()
     im = ax.imshow(sim_env.render()[0] / 255)
-    while True:
-        overlaid_imgs = overlay_envs(sim_env, real_env)
-        im.set_data(overlaid_imgs)
-        # Redraw the plot
-        fig.canvas.draw()
-        fig.show()
-        fig.canvas.flush_events()
-        print("Press Enter to update overlay")
-        input()
+
+    if args.output_photo_path is not None:
+        path, ext = args.output_photo_path.split(".")
+        real_obs = real_env.get_obs()["sensor_data"]
+        for i, name in enumerate(real_obs):
+            plt.imsave(path + "_" + name + "." + ext, real_obs[name]["rgb"][0].numpy())
+    else:
+        obs, _ = real_env.reset()
+        print("Camera alignment: Move real camera to align, close figure to exit")
+        while True:
+            overlaid_imgs = overlay_envs(sim_env, real_env)
+            im.set_data(overlaid_imgs)
+            # Redraw the plot
+            fig.canvas.draw()
+            fig.show()
+            fig.canvas.flush_events()
+            if not plt.fignum_exists(fig.number):
+                print("The figure has been closed.")
+                break

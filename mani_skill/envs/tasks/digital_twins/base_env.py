@@ -71,8 +71,11 @@ class BaseDigitalTwinEnv(BaseEnv):
         )
         self._after_reconfigure(None)
 
-    def toggle_greenscreen(self):
-        self.render_greenscreening = not self.render_greenscreening
+    def toggle_greenscreen(self, boolean=None):
+        if boolean is None:
+            self.render_greenscreening = not self.render_greenscreening
+        else:
+            self.render_greenscreening = boolean
 
     @property
     def _default_sim_config(self):
@@ -110,17 +113,19 @@ class BaseDigitalTwinEnv(BaseEnv):
             device=self.device,
         )
 
-        for camera_name in self.rgb_overlay_paths.keys():
-            sensor = self._sensor_configs[camera_name]
-            if isinstance(sensor, CameraConfig):
-                if isinstance(self._rgb_overlay_images[camera_name], torch.Tensor):
-                    continue
-                rgb_overlay_img = cv2.resize(
-                    self._rgb_overlay_images[camera_name], (sensor.width, sensor.height)
-                )
-                self._rgb_overlay_images[camera_name] = common.to_tensor(
-                    rgb_overlay_img, device=self.device
-                )
+        if self.rgb_overlay_paths is not None:
+            for camera_name in self.rgb_overlay_paths.keys():
+                sensor = self._sensor_configs[camera_name]
+                if isinstance(sensor, CameraConfig):
+                    if isinstance(self._rgb_overlay_images[camera_name], torch.Tensor):
+                        continue
+                    rgb_overlay_img = cv2.resize(
+                        self._rgb_overlay_images[camera_name],
+                        (sensor.width, sensor.height),
+                    )
+                    self._rgb_overlay_images[camera_name] = common.to_tensor(
+                        rgb_overlay_img, device=self.device
+                    )
 
     def _green_sceen_rgb(self, rgb, segmentation, overlay_img):
         """returns green screened RGB data given a batch of RGB and segmentation images and one overlay image"""
@@ -159,9 +164,12 @@ class BaseDigitalTwinEnv(BaseEnv):
         obs = super().get_obs(info)
 
         # "greenscreen" process
-        if self._obs_mode == "rgb+segmentation" and self.rgb_overlay_paths is not None:
+        if self._obs_mode == "rgb+segmentation" and (
+            self.rgb_overlay_paths is not None or alt_imgs is not None
+        ):
             # get the actor ids of objects to manipulate; note that objects here are not articulated
-            for camera_name in self._rgb_overlay_images.keys():
+            overlays = alt_imgs if alt_imgs is not None else self._rgb_overlay_images
+            for camera_name in overlays.keys():
                 # obtain overlay mask based on segmentation info
                 assert (
                     "segmentation" in obs["sensor_data"][camera_name].keys()
@@ -169,9 +177,7 @@ class BaseDigitalTwinEnv(BaseEnv):
                 green_screened_rgb = self._green_sceen_rgb(
                     obs["sensor_data"][camera_name]["rgb"],
                     obs["sensor_data"][camera_name]["segmentation"],
-                    self._rgb_overlay_images[camera_name]
-                    if alt_imgs is None
-                    else alt_imgs[camera_name],
+                    overlays[camera_name],
                 )
                 obs["sensor_data"][camera_name]["rgb"] = green_screened_rgb
         return obs

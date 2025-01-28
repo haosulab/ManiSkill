@@ -46,8 +46,9 @@ class Sim4RealBaseEnv(BaseDigitalTwinEnv):
     agent: Koch
 
     # rgb overlay supplied by user
-    rgb_overlay_paths = dict(base_camera="example_greenscreen.png")
-    rgb_overlay_mode: str = "background"  # , "debug"
+    rgb_overlay_paths: None
+    """dict mapping camera name to the file path of the greenscreening image"""
+    rgb_overlay_mode: str = "background"
 
     # used to allign user parameters with robot for real-life replication
     robot_x_offset = 0
@@ -118,6 +119,8 @@ class Sim4RealBaseEnv(BaseDigitalTwinEnv):
         if rgb_overlay_path is not None:
             self.rgb_overlay_path = rgb_overlay_path
             self.rgb_overlay_paths = dict(base_camera=rgb_overlay_path)
+        else:
+            self.rgb_overlay_path = None
 
         self.robot_init_qpos_noise = robot_init_qpos_noise
         self.cam_rand_on_step = cam_rand_on_step
@@ -128,6 +131,7 @@ class Sim4RealBaseEnv(BaseDigitalTwinEnv):
             self.rgb_overlay_mode = tuple(overlay_mode)
 
         toggle_rand = 0.0 if ("debug" in self.rgb_overlay_mode or dr == False) else 1.0
+        self.toggle_rand = toggle_rand
 
         ################ Task-Agnostic Randmoizations ################
         # robot color noise
@@ -279,11 +283,11 @@ class Sim4RealBaseEnv(BaseDigitalTwinEnv):
         # robot color randomization
         base_color = torch.normal(
             torch.tensor(self.robot_base_color, dtype=torch.float32),
-            torch.ones(3) * self.robot_color_noise,
+            torch.ones(3) * self.robot_color_noise * self.toggle_rand,
         ).clip(0, 1).tolist() + [1]
         motor_color = torch.normal(
             torch.tensor(self.robot_motor_color, dtype=torch.float32),
-            torch.ones(3) * self.robot_color_noise,
+            torch.ones(3) * self.robot_color_noise * self.toggle_rand,
         ).clip(0, 1).tolist() + [1]
         self.agent.set_colors(base_color=base_color, motor_color=motor_color)
 
