@@ -199,9 +199,7 @@ class BaseEnv(gym.Env):
         reconfiguration_freq: Optional[int] = None,
         sim_backend: str = "auto",
         render_backend: str = "gpu",
-
         parallel_in_single_scene: bool = False,
-
         enhanced_determinism: bool = False,
     ):
         self._enhanced_determinism = enhanced_determinism
@@ -541,7 +539,7 @@ class BaseEnv(gym.Env):
         """get only data from sensors. Auto hides any objects that are designated to be hidden"""
         for obj in self._hidden_objects:
             obj.hide_visual()
-        self.scene.update_render()
+        self.scene.update_render(update_sensors=True, update_human_render_cameras=False)
         self.capture_sensor_data()
         sensor_obs = dict()
         for name, sensor in self.scene.sensors.items():
@@ -1227,7 +1225,7 @@ class BaseEnv(gym.Env):
         Otherwise all camera data is captured and returned as a single batched image. Any objects registered in the _hidden_objects list will be shown"""
         for obj in self._hidden_objects:
             obj.show_visual()
-        self.scene.update_render()
+        self.scene.update_render(update_sensors=False, update_human_render_cameras=True)
         images = []
         render_images = self.scene.get_human_render_camera_images(camera_name)
         for image in render_images.values():
@@ -1257,7 +1255,7 @@ class BaseEnv(gym.Env):
         images = []
         for obj in self._hidden_objects:
             obj.show_visual()
-        self.scene.update_render()
+        self.scene.update_render(update_sensors=True, update_human_render_cameras=True)
         render_images = self.scene.get_human_render_camera_images()
         # note that get_sensor_images function will update the render and hide objects itself
         sensor_images = self.get_sensor_images()
