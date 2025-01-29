@@ -21,6 +21,8 @@ class SimBackend:
     """the backend name of the renderer"""
 
 
+CPU_SIM_BACKENDS = set(["cpu", "physx_cpu"])
+
 sim_backend_name_mapping = {
     "cpu": "physx_cpu",
     "cuda": "physx_cuda",

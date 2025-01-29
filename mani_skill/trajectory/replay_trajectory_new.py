@@ -7,6 +7,8 @@ We support translating actions from certain controllers to a limited number of c
 The script is only tested for Panda, and may include some Panda-specific hardcode.
 """
 
+import copy
+import multiprocessing as mp
 import os
 from dataclasses import dataclass
 from typing import Annotated, Optional
@@ -19,6 +21,7 @@ import tyro
 from tqdm.auto import tqdm
 
 import mani_skill.envs
+from mani_skill.envs.utils.system.backend import CPU_SIM_BACKENDS
 from mani_skill.trajectory import utils as trajectory_utils
 from mani_skill.trajectory.merge_trajectory import merge_trajectories
 from mani_skill.trajectory.utils.actions import conversion as action_conversion
@@ -39,7 +42,7 @@ class Args:
     target_control_mode: Annotated[Optional[str], tyro.conf.arg(aliases=["-c"])] = None
     """Target control mode to convert the demonstration actions to.
     Note that not all control modes can be converted to others successfully and not all robots have easy to convert control modes.
-    Currently the Panda robots are the best supported when it comes to control mode conversion.
+    Currently the Panda robots are the best supported when it comes to control mode conversion. Furthermore control mode conversion is not supported in GPU parallelized environments.
     """
     verbose: bool = False
     """Whether to print verbose information during trajectory replays"""
@@ -54,7 +57,7 @@ class Args:
     discard_timeout: bool = False
     """Whether to discard episodes that timeout and are truncated (depends on the max_episode_steps parameter of task)"""
     allow_failure: bool = False
-    """Whether to include episodes that fail in saved videos and trajectory data"""
+    """Whether to include episodes that fail in saved videos and trajectory data based on the environment's evaluation returned "success" label"""
     vis: bool = False
     """Whether to visualize the trajectory replay via the GUI."""
     use_env_states: bool = False
@@ -71,9 +74,9 @@ class Args:
     support 'sparse', 'none', and some further support 'normalized_dense' and 'dense' reward modes"""
     record_rewards: bool = False
     """Whether the replayed trajectory should include rewards"""
-    shader: str = "default"
-    """Change shader used for rendering. Default is 'default' which is very fast. Can also be 'rt' for ray tracing
-    and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer"""
+    shader: Optional[str] = None
+    """Change shader used for rendering for all cameras. Default is none meaning it will use whatever was used in the original data collection or the environment default.
+    Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer"""
     video_fps: Optional[int] = None
     """The FPS of saved videos. Defaults to the control frequency"""
     render_mode: str = "rgb_array"
@@ -84,25 +87,26 @@ class Args:
     For parallelized simulation backends like physx_gpu, this is parallelized within a single python process by leveraging the GPU."""
 
 
+@dataclass
+class ReplayResult:
+    num_replays: int
+    successful_replays: int
+
+
 def replay_parallelized_sim(
     args: Args, env: RecordEpisode, pbar, episodes, trajectories
 ):
     # split all episodes into batches of args.num_envs environments and process each batch in parallel, truncating where necessary
     # add fake episode padding to the end of the episodes to make sure all batches are the same size
-    episodes = np.array(episodes)
-    # episodes = np.pad(episodes, (0, args.num_envs - len(episodes) % args.num_envs), mode='constant', constant_values=None)
-
-    # Pad array to be divisible by num_envs and reshape into batches
     n_pad = (args.num_envs - len(episodes) % args.num_envs) % args.num_envs
     batches = np.pad(
-        episodes, (0, n_pad), mode="constant", constant_values=episodes[-1]
+        np.array(episodes), (0, n_pad), mode="constant", constant_values=episodes[-1]
     ).reshape(-1, args.num_envs)
+
+    successful_replays = 0
     if pbar is not None:
         pbar.reset(total=len(episodes))
     for episode_batch in batches:
-        import ipdb
-
-        ipdb.set_trace()
         trajectory_ids = [episode["episode_id"] for episode in episode_batch]
         episode_lens = np.array([episode["elapsed_steps"] for episode in episode_batch])
         ori_control_mode = episode_batch[0]["control_mode"]
@@ -121,6 +125,7 @@ def replay_parallelized_sim(
         original_actions_batch = []
         env_states_batch = []  # list of batched env states shape (max_steps, D)
         for trajectory_id in trajectory_ids:
+            # note (stao): this code to reformat the trajectories into a list of batched dicts can be optimized
             env_states = trajectory_utils.dict_to_list_of_dicts(
                 trajectories[f"traj_{trajectory_id}"]["env_states"]
             )
@@ -187,18 +192,45 @@ def replay_parallelized_sim(
                     env.base_env.render_human()
                 # if the elapsed_steps mark saved in the trajectory is reached for any env, flush that trajectory buffer
 
-                envs_to_flush = (t >= episode_lens - 1) & (~flushed_trajectories)
-                if envs_to_flush.sum() > 0:
-                    pbar.update(n=envs_to_flush.sum())
-                    env.flush_trajectory(env_idxs_to_flush=np.where(envs_to_flush)[0])
-                flushed_trajectories |= envs_to_flush
+                if args.save_traj:
+                    envs_to_flush = (t >= episode_lens - 1) & (~flushed_trajectories)
+                    flushed_trajectories |= envs_to_flush
+                    if envs_to_flush.sum() > 0:
+                        pbar.update(n=envs_to_flush.sum())
+                        if not args.allow_failure:
+                            if "success" in info:
+                                envs_to_flush &= (info["success"] == True).cpu().numpy()
+                        if args.discard_timeout:
+                            envs_to_flush &= (truncated == False).cpu().numpy()
+                        successful_replays += envs_to_flush.sum()
+                        env.flush_trajectory(
+                            env_idxs_to_flush=np.where(envs_to_flush)[0]
+                        )
+        else:
+            raise NotImplementedError(
+                "Replay with different control modes are not supported when replaying on GPU parallelized environments"
+            )
+    return ReplayResult(
+        num_replays=len(episodes), successful_replays=successful_replays
+    )
 
 
-def parse_args(args=None):
-    return tyro.cli(Args, args=args)
+def replay_cpu_sim(args: Args, env: RecordEpisode, pbar, episodes, trajectories):
+    if pbar is not None:
+        pbar.reset(total=len(episodes))
 
 
-def _main(args: Args, proc_id: int = 0, num_procs=1, pbar=None):
+def _main(
+    args: Args,
+    use_cpu_backend,
+    env_id,
+    env_kwargs,
+    ori_env_kwargs,
+    record_episode_kwargs,
+    proc_id: int = 0,
+    num_procs=1,
+    pbar=None,
+):
     pbar = tqdm(position=proc_id, leave=None, unit="step", dynamic_ncols=True)
 
     # Load HDF5 containing trajectories
@@ -209,57 +241,22 @@ def _main(args: Args, proc_id: int = 0, num_procs=1, pbar=None):
     json_path = traj_path.replace(".h5", ".json")
     json_data = io_utils.load_json(json_path)
 
-    env_info = json_data["env_info"]
-    env_id = env_info["env_id"]
-    ori_env_kwargs = env_info["env_kwargs"]
-    env_kwargs = ori_env_kwargs.copy()
-
-    ### Environment Creation ###
-    # First we determine how to setup the environment to replay demonstrations and raise relevant warnings to the user
-    if ori_env_kwargs["sim_backend"] != args.sim_backend and args.use_env_states:
-        logger.warning(
-            f"Warning: Using different backend ({args.sim_backend}) than the original used to collect the trajectory data "
-            f"({ori_env_kwargs['sim_backend']}). This may cause replay failures due to "
-            f"differences in simulation/physics engine backend. Use the same backend by passing -b {ori_env_kwargs['sim_backend']} "
-            f"or replay by environment states by passing --use-env-states instead."
-        )
-        ori_env_kwargs["sim_backend"] = args.sim_backend
-        env_kwargs["sim_backend"] = args.sim_backend
-
-    # modify the env kwargs according to the users inputs
-    target_obs_mode = args.obs_mode
-    target_control_mode = args.target_control_mode
-    if target_obs_mode is not None:
-        env_kwargs["obs_mode"] = target_obs_mode
-    if target_control_mode is not None:
-        env_kwargs["control_mode"] = target_control_mode
-    env_kwargs["shader_dir"] = args.shader  # change all shaders
-    env_kwargs["reward_mode"] = args.reward_mode
-    env_kwargs[
-        "render_mode"
-    ] = (
-        args.render_mode
-    )  # note this only affects the videos saved as RecordEpisode wrapper calls env.render
-    env_kwargs["num_envs"] = args.num_envs
-
-    # create the original environment for replay
-    # ori_env = gym.make(env_id, **ori_env_kwargs)
     env = gym.make(env_id, **env_kwargs)
     # TODO (support adding wrappers to the recorded data?)
 
-    if pbar is not None:
-        pbar.set_postfix(
-            {
-                "control_mode": env_kwargs.get("control_mode"),
-                "obs_mode": env_kwargs.get("obs_mode"),
-            }
-        )
+    # if pbar is not None:
+    #     pbar.set_postfix(
+    #         {
+    #             "control_mode": env_kwargs.get("control_mode"),
+    #             "obs_mode": env_kwargs.get("obs_mode"),
+    #         }
+    #     )
 
     ### Prepare for recording ###
 
     # note for maniskill trajectory datasets the general naming format is <trajectory_name>.<obs_mode>.<control_mode>.<sim_backend>.h5
     # If it is called <file_name>.h5 then we assume obs_mode=None, control_mode=pd_joint_pos, and sim_backend=physx_cpu
-
+    # env = make_env(proc_id=proc_id)
     output_dir = os.path.dirname(traj_path)
     ori_traj_name = os.path.splitext(os.path.basename(traj_path))[0]
     parts = ori_traj_name.split(".")
@@ -269,22 +266,24 @@ def _main(args: Args, proc_id: int = 0, num_procs=1, pbar=None):
         env.unwrapped.obs_mode, env.unwrapped.control_mode, env.unwrapped.device.type
     )
     new_traj_name = ori_traj_name + "." + suffix
-    if num_procs > 1:
-        new_traj_name = new_traj_name + "." + str(proc_id)
+    if use_cpu_backend:
+        if num_procs > 1:
+            new_traj_name = new_traj_name + "." + str(proc_id)
+        if args.target_control_mode is not None:
+            gym.make(env_id, **ori_env_kwargs)
+        else:
+            pass
+    else:
+        pass
+
     env = wrappers.RecordEpisode(
         env,
         output_dir,
-        save_on_reset=False,
-        save_trajectory=args.save_traj,
         trajectory_name=new_traj_name,
-        save_video=args.save_video,
-        video_fps=args.video_fps
-        if args.video_fps is not None
-        else env.unwrapped.control_freq,
-        record_reward=args.record_rewards,
-        max_steps_per_video=env_info["max_episode_steps"]
-        if args.num_envs > 1
-        else None,
+        video_fps=(
+            args.video_fps if args.video_fps is not None else env.unwrapped.control_freq
+        ),
+        **record_episode_kwargs,
     )
 
     if env.save_trajectory:
@@ -294,13 +293,124 @@ def _main(args: Args, proc_id: int = 0, num_procs=1, pbar=None):
         output_h5_path = None
 
     episodes = json_data["episodes"][: args.count]
-    replay_parallelized_sim(args, env, pbar, episodes, ori_h5_file)
-    # n_ep = len(episodes)
-    # inds = np.arange(n_ep)
-    # inds = np.array_split(inds, num_procs)[proc_id]
-    # import ipdb; ipdb.set_trace()
+    replay_result = replay_parallelized_sim(args, env, pbar, episodes, ori_h5_file)
+
+    env.close()
+    ori_h5_file.close()
+    return output_h5_path, replay_result
+
+
+def parse_args(args=None):
+    return tyro.cli(Args, args=args)
+
+
+def main(args: Args):
+    traj_path = args.traj_path
+    # Load trajectorie's metadata json
+    json_path = traj_path.replace(".h5", ".json")
+    json_data = io_utils.load_json(json_path)
+
+    env_info = json_data["env_info"]
+    env_id = env_info["env_id"]
+    ori_env_kwargs = env_info["env_kwargs"]
+    env_kwargs = ori_env_kwargs.copy()
+
+    ### Checks and setting up env kwargs ###
+    # First we determine how to setup the environment to replay demonstrations and raise relevant warnings to the user
+    if ori_env_kwargs["sim_backend"] != args.sim_backend and args.use_env_states:
+        logger.warning(
+            f"Warning: Using different backend ({args.sim_backend}) than the original used to collect the trajectory data "
+            f"({ori_env_kwargs['sim_backend']}). This may cause replay failures due to "
+            f"differences in simulation/physics engine backend. Use the same backend by passing -b {ori_env_kwargs['sim_backend']} "
+            f"or replay by environment states by passing --use-env-states instead."
+        )
+    ori_env_kwargs["sim_backend"] = args.sim_backend
+    env_kwargs["sim_backend"] = args.sim_backend
+
+    # modify the env kwargs according to the users inputs
+    target_obs_mode = args.obs_mode
+    target_control_mode = args.target_control_mode
+    if target_obs_mode is not None:
+        env_kwargs["obs_mode"] = target_obs_mode
+    if target_control_mode is not None:
+        env_kwargs["control_mode"] = target_control_mode
+    if args.shader is not None:
+        env_kwargs["shader_dir"] = args.shader  # change all shaders
+    env_kwargs["reward_mode"] = args.reward_mode
+    env_kwargs[
+        "render_mode"
+    ] = (
+        args.render_mode
+    )  # note this only affects the videos saved as RecordEpisode wrapper calls env.render
+    env_kwargs["num_envs"] = args.num_envs
+
+    record_episode_kwargs = dict(
+        save_on_reset=False,
+        save_trajectory=args.save_traj,
+        save_video=args.save_video,
+        record_reward=args.record_rewards,
+    )
+
+    if args.count is not None and args.count > len(json_data["episodes"]):
+        logger.warning(
+            f"Warning: Requested to replay {args.count} demos but there are only {len(json_data['episodes'])} demos collected, replaying all demos now"
+        )
+        args.count = len(json_data["episodes"])
+
+    pbar = tqdm(total=args.count, unit="step", dynamic_ncols=True)
+    if env_kwargs["sim_backend"] not in CPU_SIM_BACKENDS:
+        record_episode_kwargs["max_steps_per_video"] = env_info["max_episode_steps"]
+        _, replay_result = _main(
+            args,
+            use_cpu_backend=False,
+            env_id=env_id,
+            env_kwargs=env_kwargs,
+            ori_env_kwargs=ori_env_kwargs,
+            record_episode_kwargs=record_episode_kwargs,
+            proc_id=0,
+            num_procs=1,
+            pbar=pbar,
+        )
+
+    else:
+        if args.num_envs > 1:
+            pool = mp.Pool(args.num_envs)
+            proc_args = [
+                (
+                    copy.deepcopy(args),
+                    env_id,
+                    env_kwargs,
+                    ori_env_kwargs,
+                    record_episode_kwargs,
+                    i,
+                    args.num_envs,
+                    pbar,
+                )
+                for i in range(args.num_envs)
+            ]
+            res = pool.starmap(_main, proc_args)
+            pool.close()
+            if args.save_traj:
+                # A hack to find the path
+                output_path = res[0][: -len("0.h5")] + "h5"
+                merge_trajectories(output_path, res)
+                for h5_path in res:
+                    tqdm.write(f"Remove {h5_path}")
+                    os.remove(h5_path)
+                    json_path = h5_path.replace(".h5", ".json")
+                    tqdm.write(f"Remove {json_path}")
+                    os.remove(json_path)
+        else:
+            _main(args)
+
+    pbar.close()
+    print(
+        f"Replayed {replay_result.num_replays} episodes, "
+        f"{replay_result.successful_replays}/{replay_result.num_replays}={replay_result.successful_replays/replay_result.num_replays*100:.2f}% demos saved"
+    )
 
 
 if __name__ == "__main__":
-    args = parse_args()
-    _main(args)
+    # spawn is needed due to warp init issue
+    mp.set_start_method("spawn")
+    main(parse_args())
