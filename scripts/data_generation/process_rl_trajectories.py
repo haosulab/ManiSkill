@@ -128,13 +128,13 @@ def main():
                 recursive_copy_and_slice(traj_id, out_file, traj)
             new_episode = copy.deepcopy(episode)
             new_episode["success"] = True
-            new_episode["episode_length"] = last_success_index + 1
+            new_episode["elapsed_steps"] = last_success_index + 1
             new_metadata["episodes"].append(new_episode)
 
             if not args.dry_run:
                 if not recorded_sample_video:
                     recorded_sample_video = True
-                    env_kwargs = new_metadata["env_info"]["env_kwargs"]
+                    env_kwargs = copy.deepcopy(new_metadata["env_info"]["env_kwargs"])
                     env_kwargs["num_envs"] = 1
                     env_kwargs["sim_backend"] = "cpu"
                     env_kwargs["human_render_camera_configs"] = {
@@ -148,7 +148,7 @@ def main():
                     env_states = utils.dict_to_list_of_dicts(
                         out_file[traj_id]["env_states"]
                     )
-                    for step in range(new_episode["episode_length"]):
+                    for step in range(new_episode["elapsed_steps"]):
                         env.set_state_dict(env_states[step])
                         imgs.append(env.render_rgb_array().cpu().numpy()[0])
                     env.close()
