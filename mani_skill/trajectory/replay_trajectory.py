@@ -569,9 +569,6 @@ def main(args: Args):
                     [x.successful_replays for x in replay_results_list]
                 ),
             )
-            import ipdb
-
-            ipdb.set_trace()
         else:
             _, replay_result = _main(
                 args,
