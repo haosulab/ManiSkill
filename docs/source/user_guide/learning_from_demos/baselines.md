@@ -16,7 +16,7 @@ BC Baselines are characterized by supervised learning focused algorithms for lea
 
 **Online Learning from Demonstrations Baselines**
 
-Online ;earning from demonstrations baselines are characterized by learning from demonstrations while also leveraging online environment interactions. 
+Online learning from demonstrations baselines are characterized by learning from demonstrations while also leveraging online environment interactions. 
 
 | Baseline                                      | Code                                                                            | Results | Paper                                    |
 | --------------------------------------------- | ------------------------------------------------------------------------------- | ------- | ---------------------------------------- |
