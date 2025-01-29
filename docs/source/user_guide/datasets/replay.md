@@ -143,12 +143,12 @@ python -m mani_skill.trajectory.replay_trajectory \
 
 Some demonstrations may have been collected on the CPU simulation but you want data that works for the GPU simulation and vice versa. Inherently CPU and GPU simulation will have slightly different behaviors given the same actions and the same start state.
 
-For example if you use teleoperation to collect demos, these are often collected in the CPU sim for flexibility and single-thread speed. However imitation/reinforcement learning workflows might use the GPU simulation for training. In order to ensure the demos can be learned from, we can replay them in the GPU simulation and save the ones that replay successfully. This is done by using the first environment state, force using the GPU simulation with `-b "gpu"`, and setting desired control and observation modes.
+For example if you use teleoperation to collect demos, these are often collected in the CPU sim for flexibility and single-thread speed. However imitation/reinforcement learning workflows might use the GPU simulation for training. In order to ensure the demos can be learned from, we can replay them in the GPU simulation and save the ones that replay successfully. This is done by using the first environment state, force using the GPU simulation with `-b "physx_cuda"`, and setting desired control and observation modes.
 
 ```bash
 python -m mani_skill.trajectory.replay_trajectory \
   --traj-path path/to/trajectory.h5 \
-  --use-first-env-state -b "gpu" \
+  --use-first-env-state -b "physx_cuda" \
   -c pd_joint_delta_pos -o state \
   --save-traj
 ```
