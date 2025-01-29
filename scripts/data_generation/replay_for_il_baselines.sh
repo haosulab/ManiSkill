@@ -29,8 +29,35 @@ python -m mani_skill.trajectory.replay_trajectory \
   --use-first-env-state -c pd_ee_delta_pose -o state \
   --save-traj --num-envs 10 -b physx_cpu
 
-
 python -m mani_skill.trajectory.replay_trajectory \
   --traj-path ~/.maniskill/demos/PushT-v1/rl/trajectory.none.pd_ee_delta_pos.physx_cuda.h5 \
   --use-env-states -c pd_ee_delta_pos -o state \
   --save-traj --num-envs 1024 -b physx_cuda
+
+### RGB-based demonstration replay ###
+
+python -m mani_skill.trajectory.replay_trajectory \
+  --traj-path ~/.maniskill/demos/PushCube-v1/motionplanning/trajectory.h5 \
+  --use-first-env-state -c pd_ee_delta_pos -o rgb \
+  --save-traj --num-envs 10 -b physx_cpu
+
+python -m mani_skill.trajectory.replay_trajectory \
+  --traj-path ~/.maniskill/demos/PickCube-v1/motionplanning/trajectory.h5 \
+  --use-first-env-state -c pd_ee_delta_pos -o rgb \
+  --save-traj --num-envs 10 -b physx_cpu
+
+python -m mani_skill.trajectory.replay_trajectory \
+  --traj-path ~/.maniskill/demos/StackCube-v1/motionplanning/trajectory.h5 \
+  --use-first-env-state -c pd_ee_delta_pos -o rgb \
+  --save-traj --num-envs 10 -b physx_cpu
+
+python -m mani_skill.trajectory.replay_trajectory \
+  --traj-path ~/.maniskill/demos/PegInsertionSide-v1/motionplanning/trajectory.h5 \
+  --use-first-env-state -c pd_ee_delta_pose -o rgb \
+  --save-traj --num-envs 10 -b physx_cpu
+
+
+python -m mani_skill.trajectory.replay_trajectory \
+  --traj-path ~/.maniskill/demos/PushT-v1/rl/trajectory.none.pd_ee_delta_pos.physx_cuda.h5 \
+  --use-env-states -c pd_ee_delta_pos -o rgb \
+  --save-traj --num-envs 256 -b physx_cuda

@@ -116,15 +116,18 @@ def replay_parallelized_sim(
     warned_reset_kwargs_options = False
     # split all episodes into batches of args.num_envs environments and process each batch in parallel, truncating where necessary
     # add fake episode padding to the end of the episodes to make sure all batches are the same size
-    n_pad = (args.num_envs - len(episodes) % args.num_envs) % args.num_envs
+    episode_pad = (args.num_envs - len(episodes) % args.num_envs) % args.num_envs
     batches = np.pad(
-        np.array(episodes), (0, n_pad), mode="constant", constant_values=episodes[-1]
+        np.array(episodes),
+        (0, episode_pad),
+        mode="constant",
+        constant_values=episodes[-1],
     ).reshape(-1, args.num_envs)
 
     successful_replays = 0
     if pbar is not None:
         pbar.reset(total=len(episodes))
-    for episode_batch in batches:
+    for episode_batch_index, episode_batch in enumerate(batches):
         trajectory_ids = [episode["episode_id"] for episode in episode_batch]
         episode_lens = np.array([episode["elapsed_steps"] for episode in episode_batch])
         ori_control_mode = episode_batch[0]["control_mode"]
@@ -208,6 +211,9 @@ def replay_parallelized_sim(
             or ori_control_mode == args.target_control_mode
         ):
             flushed_trajectories = np.zeros(len(episode_batch), dtype=bool)
+            # mark the fake padding trajectories as flushed
+            if episode_batch_index == len(batches) - 1:
+                flushed_trajectories[-episode_pad:] = True
             for t, a in enumerate(original_actions_batch):
                 _, _, _, truncated, info = env.step(a)
                 if args.use_env_states:
