@@ -18,7 +18,7 @@ import h5py
 import numpy as np
 import torch
 import tyro
-from tqdm.auto import tqdm
+from tqdm import tqdm
 
 import mani_skill.envs
 from mani_skill.envs.utils.system.backend import CPU_SIM_BACKENDS
@@ -93,9 +93,27 @@ class ReplayResult:
     successful_replays: int
 
 
+def sanity_check_and_format_seed(episode):
+    """sanity checks the trajectory seed aligns with the episode seed. reformats the reset kwargs seed if missing or formatted wrong"""
+    if "seed" in episode["reset_kwargs"]:
+        if isinstance(episode["reset_kwargs"]["seed"], list):
+
+            assert (
+                len(episode["reset_kwargs"]["seed"]) == 1
+            ), f"found multiple seeds for one trajectory (id={episode['episode_id']}) in the reset kwargs which means it is ambiguous which seed to use"
+            episode["reset_kwargs"]["seed"] = episode["reset_kwargs"]["seed"][0]
+        assert (
+            episode["reset_kwargs"]["seed"] == episode["episode_seed"]
+        ), f"found mismatch between trajectory seed and episode seed (id={episode['episode_id']})"
+    else:
+        episode["reset_kwargs"]["seed"] = episode["episode_seed"]
+
+
 def replay_parallelized_sim(
     args: Args, env: RecordEpisode, pbar, episodes, trajectories
 ):
+    pbar.reset(total=len(episodes))
+    warned_reset_kwargs_options = False
     # split all episodes into batches of args.num_envs environments and process each batch in parallel, truncating where necessary
     # add fake episode padding to the end of the episodes to make sure all batches are the same size
     n_pad = (args.num_envs - len(episodes) % args.num_envs) % args.num_envs
@@ -124,12 +142,21 @@ def replay_parallelized_sim(
         env_states_list = []
         original_actions_batch = []
         env_states_batch = []  # list of batched env states shape (max_steps, D)
-        for trajectory_id in trajectory_ids:
+        for i, trajectory_id in enumerate(trajectory_ids):
+
+            # sanity check seeds and warn user if reset kwargs includes options (which are not supported in GPU sim replay)
+            traj = trajectories[f"traj_{trajectory_id}"]
+            episode = episode_batch[i]
+            sanity_check_and_format_seed(episode)
+            if not warned_reset_kwargs_options and "options" in episode["reset_kwargs"]:
+                logger.warning(
+                    f"Reset kwargs includes options, which are not supported in GPU sim replay and will be ignored."
+                )
+                warned_reset_kwargs_options = True
+
             # note (stao): this code to reformat the trajectories into a list of batched dicts can be optimized
-            env_states = trajectory_utils.dict_to_list_of_dicts(
-                trajectories[f"traj_{trajectory_id}"]["env_states"]
-            )
-            actions = np.array(trajectories[f"traj_{trajectory_id}"]["actions"])
+            env_states = trajectory_utils.dict_to_list_of_dicts(traj["env_states"])
+            actions = np.array(traj["actions"])
 
             # padding
             for _ in range(episode_batch_max_len + 1 - len(env_states)):
@@ -215,9 +242,137 @@ def replay_parallelized_sim(
     )
 
 
-def replay_cpu_sim(args: Args, env: RecordEpisode, pbar, episodes, trajectories):
-    if pbar is not None:
-        pbar.reset(total=len(episodes))
+def replay_cpu_sim(
+    args: Args, env: RecordEpisode, ori_env, pbar, episodes, trajectories
+):
+    successful_replays = 0
+    for episode in episodes:
+        sanity_check_and_format_seed(episode)
+        episode_id = episode["episode_id"]
+        traj_id = f"traj_{episode_id}"
+        reset_kwargs = episode["reset_kwargs"]
+        ori_control_mode = episode["control_mode"]
+        if pbar is not None:
+            pbar.set_description(f"Replaying {traj_id}")
+        if traj_id not in trajectories:
+            tqdm.write(f"{traj_id} does not exist in {args.traj_path}")
+            continue
+
+        for _ in range(args.max_retry + 1):
+            # Each trial for each trajectory to replay, we reset the environment
+            # and optionally set the first environment state
+            env.reset(**reset_kwargs)
+            if ori_env is not None:
+                ori_env.reset(**reset_kwargs)
+
+            # set first environment state and update recorded env state
+            if args.use_first_env_state or args.use_env_states:
+                ori_env_states = trajectory_utils.dict_to_list_of_dicts(
+                    trajectories[traj_id]["env_states"]
+                )
+                if ori_env is not None:
+                    ori_env.set_state_dict(ori_env_states[0])
+                env.base_env.set_state_dict(ori_env_states[0])
+                ori_env_states = ori_env_states[1:]
+                if args.save_traj:
+                    # replace the first saved env state
+                    # since we set state earlier and RecordEpisode will save the reset to state.
+                    def recursive_replace(x, y):
+                        if isinstance(x, np.ndarray):
+                            x[-1, :] = y[-1, :]
+                        else:
+                            for k in x.keys():
+                                recursive_replace(x[k], y[k])
+
+                    recursive_replace(
+                        env._trajectory_buffer.state, common.batch(ori_env_states[0])
+                    )
+                    fixed_obs = env.base_env.get_obs()
+                    recursive_replace(
+                        env._trajectory_buffer.observation,
+                        common.to_numpy(common.batch(fixed_obs)),
+                    )
+            # Original actions to replay
+            ori_actions = trajectories[traj_id]["actions"][:]
+            info = {}
+
+            # Without conversion between control modes
+            assert (
+                args.target_control_mode is None
+                or ori_control_mode == args.target_control_mode
+                or not args.use_env_states
+            ), "Cannot use env states when trying to \
+                convert from one control mode to another. This is because control mode conversion causes there to be changes \
+                in how many actions are taken to achieve the same states"
+            if (
+                args.target_control_mode is None
+                or ori_control_mode == args.target_control_mode
+            ):
+                n = len(ori_actions)
+                if pbar is not None:
+                    pbar.reset(total=n)
+                for t, a in enumerate(ori_actions):
+                    if pbar is not None:
+                        pbar.update()
+                    _, _, _, truncated, info = env.step(a)
+                    if args.use_env_states:
+                        env.base_env.set_state_dict(ori_env_states[t])
+                    if args.vis:
+                        env.base_env.render_human()
+
+            # From joint position to others
+            elif ori_control_mode == "pd_joint_pos":
+                info = action_conversion.from_pd_joint_pos(
+                    args.target_control_mode,
+                    ori_actions,
+                    ori_env,
+                    env,
+                    render=args.vis,
+                    pbar=pbar,
+                    verbose=args.verbose,
+                )
+
+            # From joint delta position to others
+            elif ori_control_mode == "pd_joint_delta_pos":
+                info = action_conversion.from_pd_joint_delta_pos(
+                    args.target_control_mode,
+                    ori_actions,
+                    ori_env,
+                    env,
+                    render=args.vis,
+                    pbar=pbar,
+                    verbose=args.verbose,
+                )
+            else:
+                raise NotImplementedError(
+                    f"Script currently does not support converting {ori_control_mode} to {args.target_control_mode}"
+                )
+
+            success = info.get("success", False)
+            if args.discard_timeout:
+                success = success and (not truncated)
+
+            if success or args.allow_failure:
+                successful_replays += 1
+                if args.save_traj:
+                    env.flush_trajectory()
+                if args.save_video:
+                    env.flush_video(ignore_empty_transition=False)
+                break
+            else:
+                if args.verbose:
+                    print("info", info)
+        else:
+            env.flush_video(save=False)
+            tqdm.write(f"Episode {episode_id} is not replayed successfully. Skipping")
+
+    return ReplayResult(
+        num_replays=len(episodes), successful_replays=successful_replays
+    )
+
+
+def _main_helper(x):
+    return _main(*x)
 
 
 def _main(
@@ -229,7 +384,6 @@ def _main(
     record_episode_kwargs,
     proc_id: int = 0,
     num_procs=1,
-    pbar=None,
 ):
     pbar = tqdm(position=proc_id, leave=None, unit="step", dynamic_ncols=True)
 
@@ -240,7 +394,6 @@ def _main(
     # Load associated json
     json_path = traj_path.replace(".h5", ".json")
     json_data = io_utils.load_json(json_path)
-
     env = gym.make(env_id, **env_kwargs)
     # TODO (support adding wrappers to the recorded data?)
 
@@ -256,7 +409,6 @@ def _main(
 
     # note for maniskill trajectory datasets the general naming format is <trajectory_name>.<obs_mode>.<control_mode>.<sim_backend>.h5
     # If it is called <file_name>.h5 then we assume obs_mode=None, control_mode=pd_joint_pos, and sim_backend=physx_cpu
-    # env = make_env(proc_id=proc_id)
     output_dir = os.path.dirname(traj_path)
     ori_traj_name = os.path.splitext(os.path.basename(traj_path))[0]
     parts = ori_traj_name.split(".")
@@ -270,9 +422,9 @@ def _main(
         if num_procs > 1:
             new_traj_name = new_traj_name + "." + str(proc_id)
         if args.target_control_mode is not None:
-            gym.make(env_id, **ori_env_kwargs)
+            ori_env = gym.make(env_id, **ori_env_kwargs)
         else:
-            pass
+            ori_env = None
     else:
         pass
 
@@ -293,7 +445,14 @@ def _main(
         output_h5_path = None
 
     episodes = json_data["episodes"][: args.count]
-    replay_result = replay_parallelized_sim(args, env, pbar, episodes, ori_h5_file)
+    if use_cpu_backend:
+        inds = np.arange(len(episodes))
+        inds = np.array_split(inds, num_procs)[proc_id]
+        replay_result = replay_cpu_sim(
+            args, env, ori_env, pbar, [episodes[index] for index in inds], ori_h5_file
+        )
+    else:
+        replay_result = replay_parallelized_sim(args, env, pbar, episodes, ori_h5_file)
 
     env.close()
     ori_h5_file.close()
@@ -306,7 +465,7 @@ def parse_args(args=None):
 
 def main(args: Args):
     traj_path = args.traj_path
-    # Load trajectorie's metadata json
+    # Load trajectory metadata json
     json_path = traj_path.replace(".h5", ".json")
     json_data = io_utils.load_json(json_path)
 
@@ -342,7 +501,6 @@ def main(args: Args):
     ] = (
         args.render_mode
     )  # note this only affects the videos saved as RecordEpisode wrapper calls env.render
-    env_kwargs["num_envs"] = args.num_envs
 
     record_episode_kwargs = dict(
         save_on_reset=False,
@@ -356,9 +514,12 @@ def main(args: Args):
             f"Warning: Requested to replay {args.count} demos but there are only {len(json_data['episodes'])} demos collected, replaying all demos now"
         )
         args.count = len(json_data["episodes"])
+    elif args.count is None:
+        args.count = len(json_data["episodes"])
 
     pbar = tqdm(total=args.count, unit="step", dynamic_ncols=True)
     if env_kwargs["sim_backend"] not in CPU_SIM_BACKENDS:
+        env_kwargs["num_envs"] = args.num_envs
         record_episode_kwargs["max_steps_per_video"] = env_info["max_episode_steps"]
         _, replay_result = _main(
             args,
@@ -369,7 +530,6 @@ def main(args: Args):
             record_episode_kwargs=record_episode_kwargs,
             proc_id=0,
             num_procs=1,
-            pbar=pbar,
         )
 
     else:
@@ -378,30 +538,51 @@ def main(args: Args):
             proc_args = [
                 (
                     copy.deepcopy(args),
+                    True,
                     env_id,
                     env_kwargs,
                     ori_env_kwargs,
                     record_episode_kwargs,
                     i,
                     args.num_envs,
-                    pbar,
                 )
                 for i in range(args.num_envs)
             ]
-            res = pool.starmap(_main, proc_args)
+            # res = pool.starmap(_main, proc_args)
+            res = list(tqdm(pool.imap(_main_helper, proc_args), total=args.count))
+            replay_results_list = [x[1] for x in res]
+            trajectory_paths = [x[0] for x in res]
             pool.close()
             if args.save_traj:
                 # A hack to find the path
-                output_path = res[0][: -len("0.h5")] + "h5"
-                merge_trajectories(output_path, res)
-                for h5_path in res:
+                output_path = trajectory_paths[0][: -len("0.h5")] + "h5"
+                merge_trajectories(output_path, trajectory_paths)
+                for h5_path in trajectory_paths:
                     tqdm.write(f"Remove {h5_path}")
                     os.remove(h5_path)
                     json_path = h5_path.replace(".h5", ".json")
                     tqdm.write(f"Remove {json_path}")
                     os.remove(json_path)
+            replay_result = ReplayResult(
+                num_replays=sum([x.num_replays for x in replay_results_list]),
+                successful_replays=sum(
+                    [x.successful_replays for x in replay_results_list]
+                ),
+            )
+            import ipdb
+
+            ipdb.set_trace()
         else:
-            _main(args)
+            _, replay_result = _main(
+                args,
+                use_cpu_backend=True,
+                env_id=env_id,
+                env_kwargs=env_kwargs,
+                ori_env_kwargs=ori_env_kwargs,
+                record_episode_kwargs=record_episode_kwargs,
+                proc_id=0,
+                num_procs=1,
+            )
 
     pbar.close()
     print(

@@ -185,7 +185,7 @@ class PushCubeEnv(BaseEnv):
                 self.obj.pose.p[..., :2] - self.goal_region.pose.p[..., :2], axis=1
             )
             < self.goal_radius
-        ) & (self.obj.pose.p[..., 2] < self.cube_half_size + 1e-3)
+        ) & (self.obj.pose.p[..., 2] < self.cube_half_size + 5e-3)
 
         return {
             "success": is_obj_placed,
