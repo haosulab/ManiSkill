@@ -33,67 +33,65 @@ python -m mani_skill.trajectory.replay_trajectory \
 :::{dropdown} Click here to see the replay trajectory tool options
 
 ```
-╭─ options ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│ -h, --help              show this help message and exit                                                               │
-│ --traj-path STR         Path to the trajectory .h5 file to replay (required)                                          │
-│ --sim-backend STR, -b STR                                                                                             │
-│                         Which simulation backend to use. Can be 'auto', 'cpu', 'gpu' (default: auto)                  │
-│ --obs-mode {None}|STR, -o {None}|STR                                                                                  │
-│                         Target observation mode to record in the trajectory. See                                      │
-│                         https://maniskill.readthedocs.io/en/latest/user_guide/concepts/observation.html for a full    │
-│                         list of supported observation modes. (default: None)                                          │
-│ --target-control-mode {None}|STR, -c {None}|STR                                                                       │
-│                         Target control mode to convert the demonstration actions to.                                  │
-│                         Note that not all control modes can be converted to others successfully and not all robots    │
-│                         have easy to convert control modes.                                                           │
-│                         Currently the Panda robots are the best supported when it comes to control mode conversion.   │
-│                         (default: None)                                                                               │
-│ --verbose, --no-verbose                                                                                               │
-│                         Whether to print verbose information during trajectory replays (default: False)               │
-│ --save-traj, --no-save-traj                                                                                           │
-│                         Whether to save trajectories to disk. This will not override the original trajectory file.    │
-│                         (default: False)                                                                              │
-│ --save-video, --no-save-video                                                                                         │
-│                         Whether to save videos (default: False)                                                       │
-│ --num-procs INT         Number of processes to use to help parallelize the trajectory replay process. This uses CPU   │
-│                         multiprocessing                                                                               │
-│                         and only works with the CPU simulation backend at the moment. (default: 1)                    │
-│ --max-retry INT         Maximum number of times to try and replay a trajectory until the task reaches a success state │
-│                         at the end. (default: 0)                                                                      │
-│ --discard-timeout, --no-discard-timeout                                                                               │
-│                         Whether to discard episodes that timeout and are truncated (depends on the max_episode_steps  │
-│                         parameter of task) (default: False)                                                           │
-│ --allow-failure, --no-allow-failure                                                                                   │
-│                         Whether to include episodes that fail in saved videos and trajectory data (default: False)    │
-│ --vis, --no-vis         Whether to visualize the trajectory replay via the GUI. (default: False)                      │
-│ --use-env-states, --no-use-env-states                                                                                 │
-│                         Whether to replay by environment states instead of actions. This guarantees that the          │
-│                         environment will look exactly                                                                 │
-│                         the same as the original trajectory at every step. (default: False)                           │
-│ --use-first-env-state, --no-use-first-env-state                                                                       │
-│                         Use the first env state in the trajectory to set initial state. This can be useful for trying │
-│                         to replay                                                                                     │
-│                         demonstrations collected in the CPU simulation in the GPU simulation by first starting with   │
-│                         the same initial                                                                              │
-│                         state as GPU simulated tasks will randomize initial states differently despite given the same │
-│                         seed compared to CPU sim. (default: False)                                                    │
-│ --count {None}|INT      Number of demonstrations to replay before exiting. By default will replay all demonstrations  │
-│                         (default: None)                                                                               │
-│ --reward-mode {None}|STR                                                                                              │
-│                         Specifies the reward type that the env should use. By default it will pick the first          │
-│                         supported reward mode. Most environments                                                      │
-│                         support 'sparse', 'none', and some further support 'normalized_dense' and 'dense' reward      │
-│                         modes (default: None)                                                                         │
-│ --record-rewards, --no-record-rewards                                                                                 │
-│                         Whether the replayed trajectory should include rewards (default: False)                       │
-│ --shader STR            Change shader used for rendering. Default is 'default' which is very fast. Can also be 'rt'   │
-│                         for ray tracing                                                                               │
-│                         and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality  │
-│                         ray-traced renderer (default: default)                                                        │
-│ --video-fps INT         The FPS of saved videos (default: 30)                                                         │
-│ --render-mode STR       The render mode used for saving videos. Typically there is also 'sensors' and 'all' render    │
-│                         modes which further render all sensor outputs like cameras. (default: rgb_array)              │
-╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ options ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ -h, --help              show this help message and exit                                                                                        │
+│ --traj-path STR         Path to the trajectory .h5 file to replay (required)                                                                   │
+│ --sim-backend {None}|STR, -b {None}|STR                                                                                                        │
+│                         Which simulation backend to use. Can be 'physx_cpu', 'physx_gpu'. If not specified the backend used is the same as the │
+│                         one used to collect the trajectory data. (default: None)                                                               │
+│ --obs-mode {None}|STR, -o {None}|STR                                                                                                           │
+│                         Target observation mode to record in the trajectory. See                                                               │
+│                         https://maniskill.readthedocs.io/en/latest/user_guide/concepts/observation.html for a full list of supported           │
+│                         observation modes. (default: None)                                                                                     │
+│ --target-control-mode {None}|STR, -c {None}|STR                                                                                                │
+│                         Target control mode to convert the demonstration actions to.                                                           │
+│                         Note that not all control modes can be converted to others successfully and not all robots have easy to convert        │
+│                         control modes.                                                                                                         │
+│                         Currently the Panda robots are the best supported when it comes to control mode conversion. Furthermore control mode   │
+│                         conversion is not supported in GPU parallelized environments. (default: None)                                          │
+│ --verbose, --no-verbose                                                                                                                        │
+│                         Whether to print verbose information during trajectory replays (default: False)                                        │
+│ --save-traj, --no-save-traj                                                                                                                    │
+│                         Whether to save trajectories to disk. This will not override the original trajectory file. (default: False)            │
+│ --save-video, --no-save-video                                                                                                                  │
+│                         Whether to save videos (default: False)                                                                                │
+│ --num-procs INT         Number of processes to use to help parallelize the trajectory replay process. This argument is the same as num_envs    │
+│                         for the CPU backend and is kept for backwards compatibility. (default: 1)                                              │
+│ --max-retry INT         Maximum number of times to try and replay a trajectory until the task reaches a success state at the end. (default: 0) │
+│ --discard-timeout, --no-discard-timeout                                                                                                        │
+│                         Whether to discard episodes that timeout and are truncated (depends on the max_episode_steps parameter of task)        │
+│                         (default: False)                                                                                                       │
+│ --allow-failure, --no-allow-failure                                                                                                            │
+│                         Whether to include episodes that fail in saved videos and trajectory data based on the environment's evaluation        │
+│                         returned "success" label (default: False)                                                                              │
+│ --vis, --no-vis         Whether to visualize the trajectory replay via the GUI. (default: False)                                               │
+│ --use-env-states, --no-use-env-states                                                                                                          │
+│                         Whether to replay by environment states instead of actions. This guarantees that the environment will look exactly     │
+│                         the same as the original trajectory at every step. (default: False)                                                    │
+│ --use-first-env-state, --no-use-first-env-state                                                                                                │
+│                         Use the first env state in the trajectory to set initial state. This can be useful for trying to replay                │
+│                         demonstrations collected in the CPU simulation in the GPU simulation by first starting with the same initial           │
+│                         state as GPU simulated tasks will randomize initial states differently despite given the same seed compared to CPU     │
+│                         sim. (default: False)                                                                                                  │
+│ --count {None}|INT      Number of demonstrations to replay before exiting. By default will replay all demonstrations (default: None)           │
+│ --reward-mode {None}|STR                                                                                                                       │
+│                         Specifies the reward type that the env should use. By default it will pick the first supported reward mode. Most       │
+│                         environments                                                                                                           │
+│                         support 'sparse', 'none', and some further support 'normalized_dense' and 'dense' reward modes (default: None)         │
+│ --record-rewards, --no-record-rewards                                                                                                          │
+│                         Whether the replayed trajectory should include rewards (default: False)                                                │
+│ --shader {None}|STR     Change shader used for rendering for all cameras. Default is none meaning it will use whatever was used in the         │
+│                         original data collection or the environment default.                                                                   │
+│                         Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower  │
+│                         quality ray-traced renderer (default: None)                                                                            │
+│ --video-fps {None}|INT  The FPS of saved videos. Defaults to the control frequency (default: None)                                             │
+│ --render-mode STR       The render mode used for saving videos. Typically there is also 'sensors' and 'all' render modes which further render  │
+│                         all sensor outputs like cameras. (default: rgb_array)                                                                  │
+│ --num-envs INT, -n INT  Number of environments to run to replay trajectories. With CPU backends typically this is parallelized via python      │
+│                         multiprocessing.                                                                                                       │
+│                         For parallelized simulation backends like physx_gpu, this is parallelized within a single python process by leveraging │
+│                         the GPU. (default: 1)                                                                                                  │
+╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 :::
 <!-- 
