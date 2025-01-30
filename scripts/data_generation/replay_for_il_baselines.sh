@@ -30,8 +30,8 @@ python -m mani_skill.trajectory.replay_trajectory \
   --save-traj --num-envs 10 -b physx_cpu
 
 python -m mani_skill.trajectory.replay_trajectory \
-  --traj-path ~/.maniskill/demos/PushT-v1/rl/trajectory.none.pd_ee_delta_pos.physx_cuda.h5 \
-  --use-env-states -c pd_ee_delta_pos -o state \
+  --traj-path ~/.maniskill/demos/PushT-v1/rl/trajectory.none.pd_ee_delta_pose.physx_cuda.h5 \
+  --use-env-states -c pd_ee_delta_pose -o state \
   --save-traj --num-envs 1024 -b physx_cuda
 
 ### RGB-based demonstration replay ###
