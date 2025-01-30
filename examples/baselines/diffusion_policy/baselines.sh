@@ -9,7 +9,7 @@ do
   if [ -f "$demo_path" ]; then
     python train.py --env-id PickCube-v1 \
       --demo-path $demo_path \
-      --control-mode "pd_ee_delta_pos" --sim-backend "cpu" --num-demos ${demos} --max_episode_steps 100 \
+      --control-mode "pd_ee_delta_pos" --sim-backend "physx_cpu" --num-demos ${demos} --max_episode_steps 100 \
       --total_iters 30000 \
       --exp-name diffusion_policy-PickCube-v1-state-${demos}_motionplanning_demos-${seed} \
       --demo_type=${demo_type} --track # additional tag for logging purposes on wandb
@@ -21,7 +21,7 @@ do
   if [ -f "$demo_path" ]; then
     python train.py --env-id PushCube-v1 \
       --demo-path $demo_path \
-      --control-mode "pd_ee_delta_pos" --sim-backend "cpu" --num-demos ${demos} --max_episode_steps 100 \
+      --control-mode "pd_ee_delta_pos" --sim-backend "physx_cpu" --num-demos ${demos} --max_episode_steps 100 \
       --total_iters 30000 \
       --exp-name diffusion_policy-PushCube-v1-state-${demos}_motionplanning_demos-${seed} \
       --demo_type=${demo_type} --track # additional tag for logging purposes on wandb
@@ -32,9 +32,9 @@ do
   if [ -f "$demo_path" ]; then
     python train.py --env-id AnymalCReach-v1 \
       --demo-path $demo_path \
-      --control-mode "pd_joint_delta_pos" --sim-backend "gpu" --num-demos ${demos} --max_episode_steps 100 \
-      --total_iters 30000 \
-      --exp-name diffusion_policy-AnymalCReach-v1-state-${demos}_${demo_type}_demos-${seed} \
+      --control-mode "pd_joint_delta_pos" --sim-backend "physx_cuda" --num-demos ${demos} --max_episode_steps 100 --num_eval_envs 100 \
+      --total_iters 30000 --act_horizon 2 \
+      --exp-name diffusion_policy-AnymalCReach-v1-state-${demos}_${demo_type}_demos-${seed} --no_capture_video \
       --demo_type=${demo_type} --track # additional tag for logging purposes on wandb
   else
     echo "Demo path $demo_path does not exist. Skipping AnymalCReach-v1 for ${demo_type}."
@@ -56,7 +56,7 @@ do
   if [ -f "$demo_path" ]; then
     python train.py --env-id StackCube-v1 \
       --demo-path $demo_path \
-      --control-mode "pd_ee_delta_pos" --sim-backend "cpu" --num-demos ${demos} --max_episode_steps 100 \
+      --control-mode "pd_ee_delta_pos" --sim-backend "physx_cpu" --num-demos ${demos} --max_episode_steps 100 \
       --total_iters 30000 \
       --exp-name diffusion_policy-StackCube-v1-state-${demos}_${demo_type}_demos-${seed} \
       --demo_type=${demo_type} --track # additional tag for logging purposes on wandb
@@ -68,7 +68,7 @@ do
   if [ -f "$demo_path" ]; then
     python train.py --env-id PegInsertionSide-v1 \
       --demo-path $demo_path \
-      --control-mode "pd_ee_delta_pos" --sim-backend "cpu" --num-demos ${demos} --max_episode_steps 100 \
+      --control-mode "pd_ee_delta_pos" --sim-backend "physx_cpu" --num-demos ${demos} --max_episode_steps 100 \
       --total_iters 30000 \
       --exp-name diffusion_policy-PegInsertionSide-v1-state-${demos}_motionplanning_demos-${seed} \
       --demo_type=${demo_type} --track # additional tag for logging purposes on wandb

@@ -136,7 +136,7 @@ def main():
                     recorded_sample_video = True
                     env_kwargs = copy.deepcopy(new_metadata["env_info"]["env_kwargs"])
                     env_kwargs["num_envs"] = 1
-                    env_kwargs["sim_backend"] = "cpu"
+                    env_kwargs["sim_backend"] = "physx_cpu"
                     env_kwargs["human_render_camera_configs"] = {
                         "shader_pack": "rt-med"
                     }

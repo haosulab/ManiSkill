@@ -91,12 +91,12 @@ class BaseEnv(gym.Env):
             Generally for most users who are not building tasks this does not need to be changed. The default is 0, which means
             the environment reconfigures upon creation, and never again.
 
-        sim_backend (str): By default this is "auto". If sim_backend is "auto", then if ``num_envs == 1``, we use the CPU sim backend, otherwise
-            we use the GPU sim backend and automatically pick a GPU to use.
-            Can also be "cpu" or "gpu" to force usage of a particular sim backend.
+        sim_backend (str): By default this is "auto". If sim_backend is "auto", then if ``num_envs == 1``, we use the PhysX CPU sim backend, otherwise
+            we use the PhysX GPU sim backend and automatically pick a GPU to use.
+            Can also be "physx_cpu" or "physx_cuda" to force usage of a particular sim backend.
             To select a particular GPU to run the simulation on, you can pass "cuda:n" where n is the ID of the GPU,
             similar to the way PyTorch selects GPUs.
-            Note that if this is "cpu", num_envs can only be equal to 1.
+            Note that if this is "physx_cpu", num_envs can only be equal to 1.
 
         render_backend (str): By default this is "gpu". If render_backend is "gpu", then we auto select a GPU to render with.
             It can be "cuda:n" where n is the ID of the GPU to render with. If this is "cpu", then we render on the CPU.
@@ -223,9 +223,6 @@ class BaseEnv(gym.Env):
             if self.robot_uids not in self.SUPPORTED_ROBOTS:
                 logger.warn(f"{self.robot_uids} is not in the task's list of supported robots. Code may not run as intended")
 
-        # if self.gpu_sim_enabled and num_envs == 1 and (sim_backend == "auto" or sim_backend == "cpu"):
-        #     logger.warn("GPU simulation has already been enabled on this process, switching to GPU backend")
-        #     sim_backend == "gpu"
         if sim_backend == "auto":
             if num_envs > 1:
                 sim_backend = "physx_cuda"
@@ -1330,7 +1327,7 @@ class BaseEnv(gym.Env):
                 config = cam.config
                 sensor_settings_str.append(f"RGBD({config.width}x{config.height})")
         sensor_settings_str = ", ".join(sensor_settings_str)
-        sim_backend = "gpu" if self.gpu_sim_enabled else "cpu"
+        sim_backend = self.backend.sim_backend
         print(
         "# -------------------------------------------------------------------------- #"
         )
