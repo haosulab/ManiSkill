@@ -421,7 +421,9 @@ def _main(
     if len(parts) > 1:
         ori_traj_name = parts[0]
     suffix = "{}.{}.{}".format(
-        env.unwrapped.obs_mode, env.unwrapped.control_mode, env.unwrapped.device.type
+        env.unwrapped.obs_mode,
+        env.unwrapped.control_mode,
+        env.unwrapped.backend.sim_backend,
     )
     new_traj_name = ori_traj_name + "." + suffix
     if use_cpu_backend:

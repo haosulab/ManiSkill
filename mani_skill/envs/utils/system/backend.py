@@ -8,7 +8,7 @@ import torch
 
 
 @dataclass
-class SimBackend:
+class BackendInfo:
     device: torch.device
     """the device in which to return all simulation data on"""
     sim_device: sapien.Device
@@ -39,7 +39,7 @@ render_backend_name_mapping = {
 }
 
 
-def parse_sim_and_render_backend(sim_backend: str, render_backend: str) -> SimBackend:
+def parse_sim_and_render_backend(sim_backend: str, render_backend: str) -> BackendInfo:
     sim_backend = sim_backend_name_mapping[sim_backend]
     render_backend = render_backend_name_mapping[render_backend]
     if sim_backend == "physx_cpu":
@@ -64,7 +64,7 @@ def parse_sim_and_render_backend(sim_backend: str, render_backend: str) -> SimBa
         render_device = sapien.Device(render_backend)
     else:
         raise ValueError(f"Invalid render backend: {render_backend}")
-    return SimBackend(
+    return BackendInfo(
         device=device,
         sim_device=sim_device,
         sim_backend=sim_backend_name_mapping[sim_backend],
