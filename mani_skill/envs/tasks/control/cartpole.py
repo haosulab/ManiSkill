@@ -110,7 +110,7 @@ class CartpoleEnv(BaseEnv):
     def _default_human_render_camera_configs(self):
         pose = sapien_utils.look_at(eye=[0, -4, 1], target=[0, 0, 1])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
-
+    
     def _load_scene(self, options: dict):
         loader = self.scene.create_mjcf_loader()
         actor_builders = loader.parse(MJCF_FILE)["actor_builders"]

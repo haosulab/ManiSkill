@@ -65,7 +65,8 @@ def main(args):
         action = env.action_space.sample()
         obs, reward, terminated, truncated, info = env.step(action)
         cam_num = 0
-        imgs=[]
+        rgbImgs=[]
+        depthImgs=[]
         for cam in obs["sensor_data"].keys():
             for texture in obs["sensor_data"][cam].keys():
                 if obs["sensor_data"][cam][texture].dtype == torch.uint8:

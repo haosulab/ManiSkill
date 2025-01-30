@@ -59,7 +59,14 @@ class PlugChargerEnv(BaseEnv):
         return [
             CameraConfig("base_camera", pose=pose, width=128, height=128, fov=np.pi / 2)
         ]
-
+    
+    @property
+    def _default_voxel_config(self):
+        return {"coord_bounds": [-1, -1, -1, 2, 2, 2],
+                    "voxel_size": 200, 
+                    "device": torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
+                    "segmentation": True}
+        
     @property
     def _default_human_render_camera_configs(self):
         pose = sapien_utils.look_at([0.3, 0.4, 0.1], [0, 0, 0])

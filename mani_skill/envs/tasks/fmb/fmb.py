@@ -62,7 +62,7 @@ class FMBAssembly1Env(BaseEnv):
     def _default_human_render_camera_configs(self):
         pose = sapien_utils.look_at([1.0, 0.8, 0.8], [0.0, 0.0, 0.35])
         return CameraConfig("render_camera", pose, 1024, 1024, 1, 0.01, 100)
-
+    
     def _load_scene(self, options: dict):
         self.table_scene = TableSceneBuilder(
             env=self, robot_init_qpos_noise=self.robot_init_qpos_noise

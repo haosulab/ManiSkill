@@ -195,6 +195,19 @@ python -m mani_skill.examples.demo_vis_textures -e "OpenCabinetDrawer-v1" -o rgb
 ```{figure}  images/rgbd_vis.png
 ```
 
+## Visualize Voxel Data
+
+You can run the following to visualize the voxelized data. It will give you the following voxelized scene under the default sensor settings with only 1 camera at the front of the scene.
+
+```bash
+python -m mani_skill.examples.demo_vis_voxel -e "PushCube-v1" 
+```
+
+
+```{figure}  images/voxel_pushcube.png
+```
+
+
 ## Visualize Reset Distributions
 
 Determining how difficult a task might be for ML algorithms like reinforcement learning and imitation learning can heavily depend on the reset distribution of the task. To see what the reset distribution of any task (the result of repeated env.reset calls) looks like you can run the following to save a video to the `videos` folder

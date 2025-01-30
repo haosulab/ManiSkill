@@ -34,7 +34,7 @@ class HumanoidStandEnv(BaseEnv):
     def _default_human_render_camera_configs(self):
         pose = sapien_utils.look_at([1.0, 1.0, 2.5], [0.0, 0.0, 0.75])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
-
+    
     def _load_scene(self, options: dict):
         build_ground(self.scene)
 

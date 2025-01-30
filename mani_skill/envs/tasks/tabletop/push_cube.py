@@ -72,7 +72,14 @@ class PushCubeEnv(BaseEnv):
                 found_lost_pairs_capacity=2**25, max_rigid_patch_count=2**18
             )
         )
-
+    
+    @property
+    def _default_voxel_config(self):
+        return {"coord_bounds": [-1, -1, -1, 2, 2, 2],
+                    "voxel_size": 200, 
+                    "device": torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
+                    "segmentation": True}
+    
     @property
     def _default_sensor_configs(self):
         # registers one 128x128 camera looking at the robot, cube, and target
