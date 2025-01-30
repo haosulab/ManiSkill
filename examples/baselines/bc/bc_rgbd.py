@@ -161,6 +161,8 @@ class ManiSkillDataset(Dataset):
 
         self.rgb = []
         self.depth = []
+        self.hand_camera_rgb = []
+        self.hand_camera_depth = []
         self.actions = []
         self.dones = []
         self.states = []
@@ -191,10 +193,14 @@ class ManiSkillDataset(Dataset):
             self.depth.append(
                 trajectory["obs"]["sensor_data"]["base_camera"]["depth"][:-1]
             )
+            self.hand_camera_rgb.append(trajectory["obs"]["sensor_data"]["hand_camera"]["rgb"][:-1])
+            self.hand_camera_depth.append(trajectory["obs"]["sensor_data"]["hand_camera"]["depth"][:-1])
             self.actions.append(trajectory["actions"])
 
         self.rgb = np.vstack(self.rgb) / 255.0
         self.depth = np.vstack(self.depth) / 1024.0
+        self.hand_camera_rgb = np.vstack(self.hand_camera_rgb) / 255.0
+        self.hand_camera_depth = np.vstack(self.hand_camera_depth) / 1024.0
         self.states = np.vstack(self.states)
         self.actions = np.vstack(self.actions)
         assert self.depth.shape[0] == self.actions.shape[0]
@@ -210,7 +216,9 @@ class ManiSkillDataset(Dataset):
         )
         depth = torch.from_numpy(self.depth[idx]).float().to(device=self.device)
         rgb = torch.from_numpy(self.rgb[idx]).float().to(device=self.device)
-        out["rgbd"] = torch.cat([rgb, depth], dim=-1)
+        hand_camera_depth = torch.from_numpy(self.hand_camera_depth[idx]).float().to(device=self.device)
+        hand_camera_rgb = torch.from_numpy(self.hand_camera_rgb[idx]).float().to(device=self.device)
+        out["rgbd"] = torch.cat([rgb, depth, hand_camera_rgb, hand_camera_depth], dim=-1)
         out["state"] = torch.from_numpy(self.states[idx]).float().to(device=self.device)
         return out
 
@@ -301,10 +309,10 @@ class PlainConv(nn.Module):
 
 
 class Actor(nn.Module):
-    def __init__(self, state_dim, action_dim):
+    def __init__(self, state_dim, action_dim, camera_count=1):
         super().__init__()
         self.encoder = PlainConv(
-            in_channels=4, out_dim=256, max_pooling=False, inactivated_output=False
+            in_channels=4*camera_count, out_dim=256, max_pooling=False, inactivated_output=False
         )
         self.final_mlp = make_mlp(
             256 + state_dim, [512, 256, action_dim], last_act=False
@@ -419,7 +427,7 @@ if __name__ == "__main__":
     iter_sampler = IterationBasedBatchSampler(batch_sampler, args.total_iters)
 
     data_loader = DataLoader(ds, batch_sampler=iter_sampler, num_workers=0)
-    actor = Actor(ds.states.shape[1], envs.single_action_space.shape[0]).to(
+    actor = Actor(ds.states.shape[1], envs.single_action_space.shape[0], 2).to(
         device=device
     )
 
@@ -444,13 +452,12 @@ if __name__ == "__main__":
 
         if iteration % args.eval_freq == 0:
             actor.eval()
-            norm_tensor = torch.Tensor([255.0, 255.0, 255.0, 1024.0]).to(device)
+            norm_tensor = torch.Tensor([255.0, 255.0, 255.0, 1024.0, 255.0, 255.0, 255.0, 1024.0]).to(device)
 
             def sample_fn(obs):
                 if isinstance(obs["rgbd"], np.ndarray):
                     for k, v in obs.items():
                         obs[k] = torch.from_numpy(v).float().to(device)
-
                 obs["rgbd"] = torch.div(obs["rgbd"], norm_tensor)
                 action = actor(obs["rgbd"], obs["state"])
                 if args.sim_backend == "cpu":
