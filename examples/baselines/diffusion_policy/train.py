@@ -305,7 +305,7 @@ if __name__ == "__main__":
     if args.track:
         import wandb
         config = vars(args)
-        config["eval_env_cfg"] = dict(**env_kwargs, num_envs=args.num_eval_envs, env_id=args.env_id, env_horizon=gym_utils.find_max_episode_steps_value(envs))
+        config["eval_env_cfg"] = dict(**env_kwargs, num_envs=args.num_eval_envs, env_id=args.env_id, env_horizon=args.max_episode_steps or gym_utils.find_max_episode_steps_value(envs))
         wandb.init(
             project=args.wandb_project_name,
             entity=args.wandb_entity,

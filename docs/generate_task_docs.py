@@ -57,6 +57,7 @@ import tempfile
 
 
 def main():
+    base_dir = Path(__file__).parent / "source"
 
     # Get the path to mani_skill/envs/tasks
     tasks_dir = Path(mani_skill.envs.__file__).parent / "tasks"
@@ -122,17 +123,17 @@ def main():
         # Create directory if it doesn't exist
         category_name = TASK_CATEGORIES_NAME_MAP.get(category, category)
         os.makedirs(
-            f"source/{GENERATED_TASKS_DOCS_FOLDER}/{category_name}", exist_ok=True
+            f"{base_dir}/{GENERATED_TASKS_DOCS_FOLDER}/{category_name}", exist_ok=True
         )
 
         # Delete existing index.md file for this category
         if os.path.exists(
-            f"source/{GENERATED_TASKS_DOCS_FOLDER}/{category_name}/index.md"
+            f"{base_dir}/{GENERATED_TASKS_DOCS_FOLDER}/{category_name}/index.md"
         ):
-            os.remove(f"source/{GENERATED_TASKS_DOCS_FOLDER}/{category_name}/index.md")
+            os.remove(f"{base_dir}/{GENERATED_TASKS_DOCS_FOLDER}/{category_name}/index.md")
         if category in TASK_CATEGORIES_HEADERS:
             with open(
-                f"source/{GENERATED_TASKS_DOCS_FOLDER}/{category_name}/index.md", "w"
+                f"{base_dir}/{GENERATED_TASKS_DOCS_FOLDER}/{category_name}/index.md", "w"
             ) as f:
                 f.write(GLOBAL_TASK_HEADER)
                 f.write(TASK_CATEGORIES_HEADERS[category])
@@ -141,7 +142,7 @@ def main():
         # Generate the short TLDR table of tasks
         env_id_to_thumbnail_path = {}
         with open(
-            f"source/{GENERATED_TASKS_DOCS_FOLDER}/{category_name}/index.md", "a"
+            f"{base_dir}/{GENERATED_TASKS_DOCS_FOLDER}/{category_name}/index.md", "a"
         ) as f:
             f.write("\n## Task Table\n")
             f.write(
@@ -208,7 +209,7 @@ def main():
                         local_thumbnail_paths = [
                             os.path.join(
                                 os.path.dirname(__file__),
-                                "source/_static/env_thumbnails",
+                                f"{base_dir}/_static/env_thumbnails",
                                 os.path.basename(thumbnail_path),
                             )
                             for thumbnail_path in thumbnail_paths
@@ -268,7 +269,7 @@ def main():
                                 # Save as compressed PNG
                                 output_path = os.path.join(
                                     os.path.dirname(__file__),
-                                    "source/_static/env_thumbnails",
+                                    f"{base_dir}/_static/env_thumbnails",
                                     os.path.basename(output_path),
                                 )
                                 cv2.imwrite(
@@ -346,7 +347,7 @@ def main():
                 # Extract docstring
                 if cls.__doc__:
                     with open(
-                        f"source/{GENERATED_TASKS_DOCS_FOLDER}/{category_name}/index.md",
+                        f"{base_dir}/{GENERATED_TASKS_DOCS_FOLDER}/{category_name}/index.md",
                         "a",
                     ) as f:
                         f.write(f"\n## {env_id}\n\n")
