@@ -50,8 +50,6 @@ class Args:
     """Whether to save trajectories to disk. This will not override the original trajectory file."""
     save_video: bool = False
     """Whether to save videos"""
-    num_procs: int = 1
-    """Number of processes to use to help parallelize the trajectory replay process. This argument is the same as num_envs for the CPU backend and is kept for backwards compatibility."""
     max_retry: int = 0
     """Maximum number of times to try and replay a trajectory until the task reaches a success state at the end."""
     discard_timeout: bool = False
