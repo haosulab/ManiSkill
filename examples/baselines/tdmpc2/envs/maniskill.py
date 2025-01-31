@@ -12,9 +12,12 @@ from gymnasium.vector import AsyncVectorEnv, SyncVectorEnv, VectorEnv
 
 import mani_skill.envs
 
-def cpu_env_factory(env_make_fn, idx: int,record_video_path: str = None, record_episode_kwargs=dict(), logger: Logger = None):
+def cpu_env_factory(env_make_fn, idx: int, wrapper=[], record_video_path: str = None, record_episode_kwargs=dict(), logger: Logger = None):
 	def _init():
-		env = CPUGymWrapper(env_make_fn(), ignore_terminations=True, record_metrics=True)
+		env = env_make_fn()
+		for wrappers in wrappers:
+			env = wrapper(env)
+		env = CPUGymWrapper(env, ignore_terminations=True, record_metrics=True)
 		if record_video_path is not None and (not record_episode_kwargs["record_single"] or idx == 0):
 			env = RecordEpisodeWrapper(
                 env,
@@ -60,9 +63,12 @@ def make_envs(cfg, num_envs, record_video_path, is_eval, logger):
 		vector_env_cls = partial(AsyncVectorEnv, context="forkserver")
 		if num_envs == 1:
 			vector_env_cls = SyncVectorEnv
+		wrappers = []
+		if cfg['obs'] == 'rgb':
+			wrappers.append(partial(PixelWrapper(cfg=cfg, num_envs=num_envs)))
 		env: VectorEnv = vector_env_cls(
 			[
-				cpu_env_factory(env_make_fn, i, record_video_path, record_episode_kwargs, logger)
+				cpu_env_factory(env_make_fn, i, wrappers, record_video_path, record_episode_kwargs, logger)
 				for i in range(num_envs)
 			]
 		)
@@ -71,6 +77,8 @@ def make_envs(cfg, num_envs, record_video_path, is_eval, logger):
 		env = env_make_fn(num_envs=num_envs)
 		control_mode = env.control_mode
 		max_episode_steps = gym_utils.find_max_episode_steps_value(env)
+		if cfg['obs'] == 'rgb':
+			env = PixelWrapper(cfg, env, num_envs)
 		if record_video_path is not None:
 			env = RecordEpisodeWrapper(
 					env,
@@ -84,9 +92,6 @@ def make_envs(cfg, num_envs, record_video_path, is_eval, logger):
 		env = ManiSkillVectorEnv(env, ignore_terminations=True, record_metrics=True)
 	else:
 		raise Exception('env_type must be cpu or gpu')
-	
-	if cfg['obs'] == 'rgb':
-		env = PixelWrapper(cfg, env, num_envs)
 	cfg.env_cfg.control_mode = cfg.eval_env_cfg.control_mode = control_mode
 	cfg.env_cfg.env_horizon = cfg.eval_env_cfg.env_horizon = env.max_episode_steps = max_episode_steps
 	

@@ -3,7 +3,7 @@ from copy import deepcopy
 import numpy as np
 import torch
 import torch.nn as nn
-
+from tensordict.tensordict import TensorDict
 from common import layers, math, init
 
 
@@ -22,6 +22,8 @@ class WorldModel(nn.Module):
 			for i in range(len(cfg.tasks)):
 				self._action_masks[i, :cfg.action_dims[i]] = 1.
 		self._encoder = layers.enc(cfg)
+		if len(cfg.obs_shape) > 1: # 
+			self._encoder_fc = layers.mlp(cfg.latent_dim*len(cfg.obs_shape), [], cfg.latent_dim)
 		self._dynamics = layers.mlp(cfg.latent_dim + cfg.action_dim + cfg.task_dim, 2*[cfg.mlp_dim], cfg.latent_dim, act=layers.SimNorm(cfg))
 		self._reward = layers.mlp(cfg.latent_dim + cfg.action_dim + cfg.task_dim, 2*[cfg.mlp_dim], max(cfg.num_bins, 1))
 		self._pi = layers.mlp(cfg.latent_dim + cfg.task_dim, 2*[cfg.mlp_dim], 2*cfg.action_dim)
@@ -99,8 +101,13 @@ class WorldModel(nn.Module):
 		"""
 		if self.cfg.multitask:
 			obs = self.task_emb(obs, task)
-		if self.cfg.obs == 'rgb' and obs.ndim == 5:
-			return torch.stack([self._encoder[self.cfg.obs](o) for o in obs])
+		if self.cfg.obs == 'rgb' and isinstance(obs, dict):
+			return self._encoder_fc(torch.cat([self._encoder[k](o) for k, o in obs.items()], dim=1)) #  concats rgb and state latent, then encode to latent_dim
+		elif self.cfg.obs == 'rgb' and isinstance(obs, TensorDict): # Iterate through buffer batch for update
+			if obs.ndim == 2: # ndim=6 for rgb but ndim=2 here bc it's diffeerent with TensorDict
+				return torch.stack([self._encoder_fc(torch.cat([self._encoder[k](o) for k, o in os.items()], dim=1)) for os in obs])
+			else: # ndim=5 for rgb
+				return self._encoder_fc(torch.cat([self._encoder[k](o) for k, o in obs.items()], dim=1)) 
 		return self._encoder[self.cfg.obs](obs)
 
 	def next(self, z, a, task):
