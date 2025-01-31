@@ -101,7 +101,7 @@ class Args:
     """evaluation frequency in terms of iterations"""
     save_train_video_freq: Optional[int] = None
     """frequency to save training videos in terms of iterations"""
-    finite_horizon_gae: bool = True
+    finite_horizon_gae: bool = False
 
 
     # to be filled in runtime
