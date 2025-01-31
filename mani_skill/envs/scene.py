@@ -83,6 +83,8 @@ class ManiSkillScene:
 
         self.sensors: Dict[str, BaseSensor] = dict()
         self.human_render_cameras: Dict[str, Camera] = dict()
+        self._sensors_initialized = False
+        self._human_render_cameras_initialized = False
 
         self._reset_mask = torch.ones(len(sub_scenes), dtype=bool, device=self.device)
         """Used internally by various objects like Actor, Link, and Controllers to auto mask out sub-scenes so they do not get modified during
@@ -400,10 +402,15 @@ class ManiSkillScene:
             if not self.parallel_in_single_scene:
                 if self.render_system_group is None:
                     self._setup_gpu_rendering()
-                    if update_sensors:
-                        self._gpu_setup_sensors(self.sensors)
-                    if update_human_render_cameras:
-                        self._gpu_setup_sensors(self.human_render_cameras)
+                if not self._sensors_initialized and update_sensors:
+                    self._gpu_setup_sensors(self.sensors)
+                    self._sensors_initialized = True
+                if (
+                    not self._human_render_cameras_initialized
+                    and update_human_render_cameras
+                ):
+                    self._gpu_setup_sensors(self.human_render_cameras)
+                    self._human_render_cameras_initialized = True
                 self.render_system_group.update_render()
             else:
                 self.px.sync_poses_gpu_to_cpu()
@@ -420,10 +427,15 @@ class ManiSkillScene:
                 for scene in self.sub_scenes:
                     scene.update_render()
                 self._setup_gpu_rendering()
-                if update_sensors:
-                    self._gpu_setup_sensors(self.sensors)
-                if update_human_render_cameras:
-                    self._gpu_setup_sensors(self.human_render_cameras)
+            if not self._sensors_initialized and update_sensors:
+                self._gpu_setup_sensors(self.sensors)
+                self._sensors_initialized = True
+            if (
+                not self._human_render_cameras_initialized
+                and update_human_render_cameras
+            ):
+                self._gpu_setup_sensors(self.human_render_cameras)
+                self._human_render_cameras_initialized = True
 
             manager: sapien.render.GpuSyncManager = self.render_system_group
             manager.sync()
