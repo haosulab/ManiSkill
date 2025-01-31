@@ -178,13 +178,14 @@ class PushCubeEnv(BaseEnv):
 
     def evaluate(self):
         # success is achieved when the cube's xy position on the table is within the
-        # goal region's area (a circle centered at the goal region's xy position)
+        # goal region's area (a circle centered at the goal region's xy position) and
+        # the cube is still on the surface
         is_obj_placed = (
             torch.linalg.norm(
                 self.obj.pose.p[..., :2] - self.goal_region.pose.p[..., :2], axis=1
             )
             < self.goal_radius
-        )
+        ) & (self.obj.pose.p[..., 2] < self.cube_half_size + 5e-3)
 
         return {
             "success": is_obj_placed,

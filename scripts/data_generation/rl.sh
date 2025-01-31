@@ -142,6 +142,17 @@ for control_mode in "pd_joint_delta_pos"; do
     --num_eval_envs=1024 --num-eval-steps=100 --no-capture-video --save-trajectory
 done
 
+### TwoRobotStackCube-v1 ###
+for control_mode in "pd_joint_delta_pos"; do
+  python ppo_fast.py --env_id="TwoRobotStackCube-v1" \
+    --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
+    --total_timesteps=50_000_000 --num-steps=100 --num-eval-steps=100 \
+    --save-model --cudagraphs --exp-name="data_generation/TwoRobotStackCube-v1-ppo-${control_mode}" --control-mode ${control_mode}
+
+  python ppo_fast.py --env_id="TwoRobotStackCube-v1" --evaluate --control-mode ${control_mode} \
+    --checkpoint=runs/data_generation/TwoRobotStackCube-v1-ppo-${control_mode}/final_ckpt.pt \
+    --num_eval_envs=1024 --num-eval-steps=100 --no-capture-video --save-trajectory
+done
 
 ### UnitreeG1PlaceAppleInBowl-v1 ###
 # num-steps=32 can be optimized down probably
