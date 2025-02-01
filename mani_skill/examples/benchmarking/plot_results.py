@@ -23,8 +23,7 @@ COLOR_PALLETE = [
 ]
 COLOR_MAP = {
     "ManiSkill3": "#e02b35",
-    "Isaac Lab": "#59a89c",
-    "Genesis": "#3784E2",
+    "Isaac Lab": "#59a89c"
 }
 
 def filter_df(df, df_filter):
@@ -92,8 +91,6 @@ def main(args):
             exp_name = "ManiSkill3"
         if exp_name == "isaac_lab":
             exp_name = "Isaac Lab"
-        if exp_name == "genesis":
-            exp_name = "Genesis"
         data[exp_name] = df
     # modify matplotlib settings for higher quality images
     plt.rcParams["figure.figsize"] = [10, 4]  # set figure size
