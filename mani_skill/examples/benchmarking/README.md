@@ -92,8 +92,7 @@ python -m mujoco.mjx.testspeed --mjcf=envs/mujoco/panda_pick_cube.xml   --base_p
 
 ## Generating Plots
 
-Comparing ManiSkill and Genesis
+Comparing ManiSkill and Isaac Lab
 ```bash
-python plot_results.py -e FrankaMoveBenchmark-v1 -f benchmark_results/maniskill.csv benchmark_results/genesis.csv
-python plot_results.py -e FrankaPickCubeBenchmark-v1 -f benchmark_results/maniskill.csv benchmark_results/genesis.csv
+python plot_results.py -e CartpoleBalanceBenchmark-v1 -f benchmark_results/maniskill.csv benchmark_results/isaac_lab.csv
 ```
