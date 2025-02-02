@@ -12,10 +12,10 @@ from gymnasium.vector import AsyncVectorEnv, SyncVectorEnv, VectorEnv
 
 import mani_skill.envs
 
-def cpu_env_factory(env_make_fn, idx: int, wrapper=[], record_video_path: str = None, record_episode_kwargs=dict(), logger: Logger = None):
+def cpu_env_factory(env_make_fn, idx: int, wrappers=[], record_video_path: str = None, record_episode_kwargs=dict(), logger: Logger = None):
 	def _init():
 		env = env_make_fn()
-		for wrappers in wrappers:
+		for wrapper in wrappers:
 			env = wrapper(env)
 		env = CPUGymWrapper(env, ignore_terminations=True, record_metrics=True)
 		if record_video_path is not None and (not record_episode_kwargs["record_single"] or idx == 0):
@@ -50,7 +50,7 @@ def make_envs(cfg, num_envs, record_video_path, is_eval, logger):
 	if cfg.control_mode != 'default':
 		env_make_fn = partial(env_make_fn, control_mode=cfg.control_mode)
 	if is_eval: # https://maniskill.readthedocs.io/en/latest/user_guide/reinforcement_learning/setup.html#evaluation
-		env_make_fn = partial(env_make_fn, reconfiguration_freq=1)
+		env_make_fn = partial(env_make_fn, reconfiguration_freq=cfg.eval_reconfiguration_frequency)
 
 	if cfg.env_type == 'cpu':
 		# Get default control_mode and max_episode_steps values

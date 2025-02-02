@@ -44,8 +44,8 @@ class OnlineTrainer(Trainer):
 		has_success, has_fail = False, False # if task has success or/and fail (added for maniskill)
 		for i in range(self.cfg.eval_episodes_per_env):
 			obs, _ = self.eval_env.reset()
-			done = torch.full((self.cfg.num_eval_envs, ), False, device=self.eval_env.device) # ms3: done is truncated since the ms3 ignore_terminations.
-			ep_reward, t = torch.zeros((self.cfg.num_eval_envs, ), device=self.eval_env.device), 0
+			done = torch.full((self.cfg.num_eval_envs, ), False, device=('cuda' if self.cfg.env_type=='gpu' else 'cpu')) # ms3: done is truncated since the ms3 ignore_terminations.
+			ep_reward, t = torch.zeros((self.cfg.num_eval_envs, ), device=('cuda' if self.cfg.env_type=='gpu' else 'cpu')), 0
 			while not done[0]: # done is truncated and should be the same
 				action = self.agent.act(obs, t0=t==0, eval_mode=True)
 				obs, reward, terminated, truncated, info = self.eval_env.step(action)

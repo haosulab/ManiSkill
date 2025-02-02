@@ -16,6 +16,7 @@ setting_tag: none # ['none', 'walltime_efficient', 'sample_efficient', ...] for 
 checkpoint: ???
 eval_episodes_per_env: 2 # total (eval_episodes_per_env * num_eval_envs number) of eval episodes
 eval_freq: 50000
+eval_reconfiguration_frequency: 1
 
 # training
 steps: 1_000_000
