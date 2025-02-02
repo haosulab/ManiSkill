@@ -64,7 +64,7 @@ class Args:
     # ACT specific arguments
     lr: float = 1e-4
     """the learning rate of the Action Chunking with Transformers"""
-    kl_weight: float = 10 
+    kl_weight: float = 10
     """weight for the kl loss term"""
     temporal_agg: bool = True
     """if toggled, temporal ensembling will be performed"""
@@ -77,12 +77,12 @@ class Args:
     dilation: bool = False
 
     # Transformer
-    enc_layers: int = 4
-    dec_layers: int = 7
-    dim_feedforward: int = 1600
-    hidden_dim: int = 512
+    enc_layers: int = 2
+    dec_layers: int = 4
+    dim_feedforward: int = 512
+    hidden_dim: int = 256
     dropout: float = 0.1
-    nheads: int = 8
+    nheads: int = 4
     num_queries: int = 30
     pre_norm: bool = False
 
@@ -100,8 +100,8 @@ class Args:
     """the number of episodes to evaluate the agent on"""
     num_eval_envs: int = 10
     """the number of parallel environments to evaluate the agent on"""
-    sim_backend: str = "cpu"
-    """the simulation backend to use for evaluation environments. can be "cpu" or "gpu"""
+    sim_backend: str = "physx_cpu"
+    """the simulation backend to use for evaluation environments. can be "physx_cpu" or "physx_cuda" """
     num_dataload_workers: int = 0
     """the number of workers to use for loading the training data in the torch dataloader"""
     control_mode: str = 'pd_joint_delta_pos'
@@ -167,7 +167,7 @@ class SmallDemoDataset_ACTPolicy(Dataset): # Load everything into GPU memory
             elif not self.delta_control:
                 target = act_seq[-1]
                 act_seq = torch.cat([act_seq, target.repeat(self.num_queries-action_len, 1)], dim=0)
-        
+
         # normalize obs and act_seq
         if not self.delta_control:
             obs = (obs - self.norm_stats["state_mean"][0]) / self.norm_stats["state_std"][0]
@@ -200,7 +200,7 @@ class SmallDemoDataset_ACTPolicy(Dataset): # Load everything into GPU memory
             elif not self.delta_control:
                 target = act_seq[-1]
                 act_seq = torch.cat([act_seq, target.repeat(self.num_queries-action_len, 1)], dim=0)
-        
+
         # normalize obs and act_seq
         if not self.delta_control:
             obs = (obs - self.norm_stats["state_mean"][0]) / self.norm_stats["state_std"][0]
@@ -324,10 +324,24 @@ if __name__ == "__main__":
     other_kwargs = None
     envs = make_eval_envs(args.env_id, args.num_eval_envs, args.sim_backend, env_kwargs, other_kwargs, video_dir=f'runs/{run_name}/videos' if args.capture_video else None)
 
+    # dataloader setup
+    dataset = SmallDemoDataset_ACTPolicy(args.demo_path, args.num_queries, device, num_traj=args.num_demos)
+    sampler = RandomSampler(dataset, replacement=False)
+    batch_sampler = BatchSampler(sampler, batch_size=args.batch_size, drop_last=True)
+    batch_sampler = IterationBasedBatchSampler(batch_sampler, args.total_iters)
+    train_dataloader = DataLoader(
+        dataset,
+        batch_sampler=batch_sampler,
+        num_workers=args.num_dataload_workers,
+        worker_init_fn=lambda worker_id: worker_init_fn(worker_id, base_seed=args.seed),
+    )
+    if args.num_demos is None:
+        args.num_demos = dataset.num_traj
+
     if args.track:
         import wandb
         config = vars(args)
-        config["eval_env_cfg"] = dict(**env_kwargs, num_envs=args.num_eval_envs, env_id=args.env_id, env_horizon=gym_utils.find_max_episode_steps_value(envs))
+        config["eval_env_cfg"] = dict(**env_kwargs, num_envs=args.num_eval_envs, env_id=args.env_id, env_horizon=args.max_episode_steps)
         wandb.init(
             project=args.wandb_project_name,
             entity=args.wandb_entity,
@@ -344,23 +358,9 @@ if __name__ == "__main__":
         "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
     )
 
-    # dataloader setup
-    dataset = SmallDemoDataset_ACTPolicy(args.demo_path, args.num_queries, device, num_traj=args.num_demos)
-    sampler = RandomSampler(dataset, replacement=False)
-    batch_sampler = BatchSampler(sampler, batch_size=args.batch_size, drop_last=True)
-    batch_sampler = IterationBasedBatchSampler(batch_sampler, args.total_iters)
-    train_dataloader = DataLoader(
-        dataset,
-        batch_sampler=batch_sampler,
-        num_workers=args.num_dataload_workers,
-        worker_init_fn=lambda worker_id: worker_init_fn(worker_id, base_seed=args.seed),
-    )
-    if args.num_demos is None:
-        args.num_demos = len(dataset)
-
     # agent setup
     agent = Agent(envs, args).to(device)
-    
+
     # optimizer setup
     param_dicts = [
         {"params": [p for n, p in agent.named_parameters() if "backbone" not in n and p.requires_grad]},
@@ -382,22 +382,26 @@ if __name__ == "__main__":
     ema_agent = Agent(envs, args).to(device)
 
     # Evaluation
+    #eval_kwargs = dict(
+    #    stats=dataset.norm_stats, num_queries=args.num_queries, temporal_agg=args.temporal_agg,
+    #    max_timesteps=gym_utils.find_max_episode_steps_value(envs), device=device, sim_backend=args.sim_backend
+    #)
     eval_kwargs = dict(
         stats=dataset.norm_stats, num_queries=args.num_queries, temporal_agg=args.temporal_agg,
-        max_timesteps=gym_utils.find_max_episode_steps_value(envs), device=device, sim_backend=args.sim_backend
+        max_timesteps=args.max_episode_steps, device=device, sim_backend=args.sim_backend
     )
 
     # ---------------------------------------------------------------------------- #
     # Training begins.
     # ---------------------------------------------------------------------------- #
+    print("Training begins...")
     agent.train()
 
     best_eval_metrics = defaultdict(float)
     timings = defaultdict(float)
 
-    for iteration, data_batch in enumerate(train_dataloader):
-        cur_iter = iteration + 1
-        
+    for cur_iter, data_batch in enumerate(train_dataloader):
+        last_tick = time.time()
         # forward and compute loss
         loss_dict = agent.compute_loss(
             obs=data_batch['observations'],  # (B, obs_dim)
@@ -410,17 +414,10 @@ if __name__ == "__main__":
         total_loss.backward()
         optimizer.step()
         lr_scheduler.step() # step lr scheduler every batch, this is different from standard pytorch behavior
-        last_tick = time.time()
 
         # update Exponential Moving Average of the model weights
         ema.step(agent.parameters())
-        # TRY NOT TO MODIFY: record rewards for plotting purposes
-        if cur_iter % args.log_freq == 0:
-            print(f"Iteration {cur_iter}, loss: {total_loss.item()}")
-            writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], cur_iter)
-            writer.add_scalar("losses/total_loss", total_loss.item(), cur_iter)
-            for k, v in timings.items():
-                writer.add_scalar(f"time/{k}", v, cur_iter)
+        timings["update"] += time.time() - last_tick
 
         # Evaluation
         if cur_iter % args.eval_freq == 0:
@@ -430,6 +427,7 @@ if __name__ == "__main__":
 
             eval_metrics = evaluate(args.num_eval_episodes, ema_agent, envs, eval_kwargs)
             timings["eval"] += time.time() - last_tick
+
 
             print(f"Evaluated {len(eval_metrics['success_at_end'])} episodes")
             for k in eval_metrics.keys():
@@ -443,7 +441,13 @@ if __name__ == "__main__":
                     best_eval_metrics[k] = eval_metrics[k]
                     save_ckpt(run_name, f"best_eval_{k}")
                     print(f'New best {k}_rate: {eval_metrics[k]:.4f}. Saving checkpoint.')
-        
+
+        if cur_iter % args.log_freq == 0:
+            print(f"Iteration {cur_iter}, loss: {total_loss.item()}")
+            writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], cur_iter)
+            writer.add_scalar("losses/total_loss", total_loss.item(), cur_iter)
+            for k, v in timings.items():
+                writer.add_scalar(f"time/{k}", v, cur_iter)
         # Checkpoint
         if args.save_freq is not None and cur_iter % args.save_freq == 0:
             save_ckpt(run_name, str(cur_iter))

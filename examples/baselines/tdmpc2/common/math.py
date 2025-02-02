@@ -71,7 +71,7 @@ def two_hot(x, cfg):
 		return symlog(x)
 	x = torch.clamp(symlog(x), cfg.vmin, cfg.vmax).squeeze(1)
 	bin_idx = torch.floor((x - cfg.vmin) / cfg.bin_size).long()
-	bin_offset = ((x - cfg.vmin) / cfg.bin_size - bin_idx.float()).unsqueeze(-1)
+	bin_offset = ((x - cfg.vmin) / cfg.bin_size - bin_idx.float()).unsqueeze(-1).to(torch.float32)
 	soft_two_hot = torch.zeros(x.size(0), cfg.num_bins, device=x.device)
 	soft_two_hot.scatter_(1, bin_idx.unsqueeze(1), 1 - bin_offset)
 	soft_two_hot.scatter_(1, (bin_idx.unsqueeze(1) + 1) % cfg.num_bins, bin_offset)
