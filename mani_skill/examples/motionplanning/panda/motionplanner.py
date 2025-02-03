@@ -74,9 +74,9 @@ class PandaArmMotionPlanningSolver:
             srdf=self.env_agent.urdf_path.replace(".urdf", ".srdf"),
             user_link_names=link_names,
             user_joint_names=joint_names,
-            move_group="robotiq_arg2f_base_link",
-            joint_vel_limits=np.ones(6) * self.joint_vel_limits,
-            joint_acc_limits=np.ones(6) * self.joint_acc_limits,
+            move_group="panda_hand_tcp",
+            joint_vel_limits=np.ones(7) * self.joint_vel_limits,
+            joint_acc_limits=np.ones(7) * self.joint_acc_limits,
         )
         planner.set_base_pose(np.hstack([self.base_pose.p, self.base_pose.q]))
         return planner
